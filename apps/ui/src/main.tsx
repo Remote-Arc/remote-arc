@@ -8,6 +8,7 @@ import { createRoot } from "react-dom/client";
 import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
 import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
 import { releaseChinese } from "./release-locales.js";
+import { AdminOperations } from "./admin-operations.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
@@ -6688,6 +6689,8 @@ function Dashboard({
               <div><span>5xx · 1h</span><strong>{monitorState?.worker.errors1h ?? "—"}</strong><small>{tr("Last hour", "过去一小时")}</small></div>
               <div><span>5xx · 24h</span><strong>{monitorState?.worker.errors24h ?? "—"}</strong><small>{tr("Last 24 hours", "过去 24 小时")}</small></div>
             </section>
+
+            <AdminOperations />
 
             <section className="monitorMainGrid">
               <article className="monitorPanel">

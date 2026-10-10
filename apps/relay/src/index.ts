@@ -47,7 +47,7 @@ import { getAccountEntitlements } from "./entitlements.js";
 import { getMonthlyPlusUsage } from "./plus-usage.js";
 import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
-import { handleAdminOperations, handleAdminCallCredits } from "./admin-operations.js";
+import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
 import {
   handleAutomationCollection,
   handleAutomationItem,
@@ -395,6 +395,9 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
     if (url.pathname === "/api/admin/operations") {
       return handleAdminOperations(request, env);
+    }
+    if (url.pathname === "/api/admin/billing") {
+      return handleAdminBilling(request, env);
     }
     if (url.pathname === "/api/admin/call-credits") {
       return handleAdminCallCredits(request, env);

@@ -23,16 +23,35 @@ function configuredMonthlyLimit(env: UsageEnv) {
 }
 
 async function monthlyLimitForUser(env: UsageEnv, userId: string) {
-  const user = await env.DB.prepare(
+  let user: { role: string | null; email: string | null; plan: string | null; has_plus_grant: number; extra_calls: number } | null;
+  try {
+    user = await env.DB.prepare(
     `SELECT u.role, u.email, u.plan,
       EXISTS(
         SELECT 1 FROM plan_grants g WHERE g.user_id = u.id AND g.plan = 'plus'
         AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at > ?2)
-      ) AS has_plus_grant
+      ) AS has_plus_grant,
+      COALESCE((SELECT SUM(extra_calls) FROM user_call_credit_grants c
+        WHERE c.user_id = u.id AND c.month_key = ?3), 0) AS extra_calls
      FROM users u WHERE u.id = ?1 LIMIT 1`,
   )
-    .bind(userId, new Date().toISOString())
-    .first<{ role: string | null; email: string | null; plan: string | null; has_plus_grant: number }>();
+    .bind(userId, new Date().toISOString(), monthKey())
+    .first<{ role: string | null; email: string | null; plan: string | null; has_plus_grant: number; extra_calls: number }>();
+  } catch (error) {
+    if (!/no such table:\s*user_call_credit_grants/i.test(String(error))) throw error;
+    // Migration is not yet deployed: preserve every existing user's base
+    // quota while the administrator credit UI remains unavailable.
+    const old = await env.DB.prepare(
+      `SELECT u.role, u.email, u.plan,
+        EXISTS(SELECT 1 FROM plan_grants g WHERE g.user_id=u.id
+          AND g.plan='plus' AND g.revoked_at IS NULL
+          AND (g.expires_at IS NULL OR g.expires_at > ?2)) AS has_plus_grant
+      FROM users u WHERE u.id=?1 LIMIT 1`,
+    ).bind(userId, new Date().toISOString()).first<{
+      role: string | null; email: string | null; plan: string | null; has_plus_grant: number;
+    }>();
+    user = old ? { ...old, extra_calls: 0 } : null;
+  }
 
   const operatorEmail = env.OPERATOR_EMAIL?.trim().toLowerCase();
   if (
@@ -49,9 +68,10 @@ async function monthlyLimitForUser(env: UsageEnv, userId: string) {
     if (!Number.isSafeInteger(freeLimit) || freeLimit < 1) {
       throw new Error("FREE_MONTHLY_TOOL_CALL_LIMIT must be a positive integer");
     }
-    return freeLimit;
+    return freeLimit + (user?.extra_calls ?? 0);
   }
-  return configuredMonthlyLimit(env);
+  const base = configuredMonthlyLimit(env);
+  return base === null ? null : base + (user?.extra_calls ?? 0);
 }
 
 const isMissingUsageTableError = (error: unknown) =>

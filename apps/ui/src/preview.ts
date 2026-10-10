@@ -285,6 +285,32 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       } satisfies SecurityState);
     }
 
+    if (url.pathname === "/api/admin/operations") {
+      const day = new Date();
+      const sampleUsers = [
+        {id:"preview-user",email:"owner@example.com",name:"Operator",role:"admin",plan:"plus",used:1570,extra:0,allowance:null,device_count:2,online_devices:1,created_at:previewAgo(40*86400000),last_activity:previewAgo(600000),has_plus_grant:1},
+        {id:"u2",email:"tester@example.com",name:"Early tester",role:"user",plan:"free",used:720,extra:500,allowance:10500,device_count:1,online_devices:1,created_at:previewAgo(3*86400000),last_activity:previewAgo(3600000),has_plus_grant:0},
+        {id:"u3",email:"builder@example.com",name:"Developer",role:"user",plan:"plus",used:2400,extra:0,allowance:10000,device_count:2,online_devices:0,created_at:previewAgo(7*86400000),last_activity:previewAgo(29000000),has_plus_grant:1},
+      ];
+      return json({
+        checkedAt:previewNow(),month:day.toISOString().slice(0,7),page:0,pageSize:30,creditsReady:true,
+        totals:{users:7,devices:8,online:2,auditRows:33200,auditLast7d:10470,monthlyCalls:6750},
+        limits:{free:10000,plus:10000},users:sampleUsers,
+        devices:[
+          {id:"mac-a",user_id:"preview-user",name:"MacBook Pro",platform:"darwin",arch:"arm64",online:true,statusVerified:true,last_seen:previewAgo(30000),created_at:previewAgo(8*86400000)},
+          {id:"pc-a",user_id:"preview-user",name:"Windows Desktop",platform:"win32",arch:"x64",online:false,statusVerified:true,last_seen:previewAgo(3*3600000),created_at:previewAgo(9*86400000)},
+          {id:"laptop-b",user_id:"u2",name:"Laptop",platform:"darwin",arch:"arm64",online:true,statusVerified:true,last_seen:previewAgo(65000),created_at:previewAgo(2*86400000)},
+          {id:"linux-c",user_id:"u3",name:"Linux Server",platform:"linux",arch:"x64",online:false,statusVerified:true,last_seen:previewAgo(54000000),created_at:previewAgo(4*86400000)},
+        ],
+        activity:Array.from({length:168},(_,i)=>{
+          const time=new Date(Date.now()-(167-i)*3600000);
+          const hour=time.getUTCHours();
+          return {hour:time.toISOString().slice(0,13),calls:Math.max(0,Math.round((hour>7&&hour<19?20:4)*(0.5+(i%11)/11))),users:1+(i%3)};
+        }),
+        billing:{actualUsd:null,source:"unavailable",billingUrl:"https://dash.cloudflare.com/",note:"Actual billing not connected",services:["Workers Paid","D1","Durable Objects","R2","KV"]},
+      });
+    }
+
     if (url.pathname === "/api/monitor") {
       return json({
         status: "operational",

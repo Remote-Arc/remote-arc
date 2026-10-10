@@ -53,21 +53,18 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.6.0 — Native Go Agent and Execution Core by default**
+**remotelink 0.6.1 — Native pause, resume and recovery fixes**
 
-Published 2026-10-09
+Published 2026-10-11
 
-- Make the complete Go Agent the default for `npx remotelink`. Put the Go runtime in `apps/agent` and its independent filesystem/process/policy/Undo module in `packages/execution-core`; keep `apps/agent-ts` and `packages/execution-core-ts` as explicit `--ts` compatibility implementations.
-- Keep device configuration and Undo snapshots in the existing local `~/.remotearc` location and preserve current operation contracts, guards and runtime fallback.
-- Restore the Go terminal's colored status messages, readable connection and approval prompts, and approval expiry in the computer's local date and timezone. Keep journal files as plain text.
-- Preserve Undo ordering during rapid edits and clock rollback in both engines, and retain recovery evidence when an atomic replacement may have succeeded before a synchronization error.
-- Make file and Undo durability explicit, retaining the TS atomic default and Go durable default. Pairing, configuration and Go recovery checkpoints remain durable independently of workspace benchmark settings.
-- Reduce Windows path-policy overhead with fresh native metadata handles while preserving junction, protected-path and alternate-stream checks without a path cache.
-- Keep connection timestamps stable within a WebSocket session, record new session sequences, and normalize Go binary-file results in Relay file resources.
-- Add reproducible Core and full-Agent benchmarks, two-hour Mac/Windows residency results, and Linux/macOS/Windows compatibility, race, recovery, process, journal and distribution verification.
-- Publish six standalone `remotelink` binaries in one GitHub release, a primary Homebrew `remotelink` formula and the existing `remotelink-go` compatibility formula. Native installations need no Node.js. Keep `--go` as a compatibility alias and preserve one execution owner across both runtimes.
-- Update the website download page, installation guide, GitHub/npm documentation and system architecture together. Pin embedded contract line endings and verify stable Homebrew checksums before merging.
-- Keep TS recovery explicitly on `--ts`, including launchd, systemd, Windows supervision and child restart, so recovery cannot accidentally switch runtimes.
+- Pause a device from Dashboard without exposing its filesystem, terminal or process tools. The native Go runtime retains only an authenticated, supervised wake connection; an explicit owner-authorized request resumes execution.
+- Preserve the paused state across worker restarts and foreground/background execution-lease handoffs, without allocating an execution core while paused.
+- Disconnect Completely disables background supervision and login recovery, closes execution and wake connections, and requires a local restart before the device can reconnect. A paused device can also be fully disconnected.
+- Restore capability-gated remote Stop Agent for supported foreground and background runtimes, and verify that the device actually disconnects before reporting success.
+- Use a hidden, per-user Windows Script Host launcher for Windows login recovery and migrate owned legacy startup entries while preserving pairing. This remains user-login recovery rather than a privileged Windows service.
+- Wait for an abandoned TS/Go execution lease to expire before Windows Go recovery; never take over a live execution owner.
+- Migrate idle legacy macOS launchd Node/TS jobs to the native Go service, while preserving pairing and refusing takeover of an active foreign owner.
+- Publish six native binaries, checksum manifests, npm and Homebrew artifacts under version 0.6.1. Keep existing 0.6.0 and RC release assets unchanged.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->

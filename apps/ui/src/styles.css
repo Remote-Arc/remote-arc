@@ -1782,6 +1782,20 @@ html,body { max-width:100%; overflow-x:hidden; }
 }
 
 
+
+/* Support contact: readable and immediately actionable. */
+.supportEmailHero{margin:28px 0 30px;padding:27px 30px;background:var(--panel, #f7fafc);border:1px solid var(--line, #dae6eb);border-radius:18px}
+.supportEmailHero h2{font-size:clamp(21px,2.5vw,28px);line-height:1.24;margin:8px 0 9px;letter-spacing:-.03em}
+.supportEmailHero p{max-width:730px;line-height:1.75;color:var(--muted);margin:0 0 18px}
+.supportEmailLink{display:inline-flex;align-items:center;gap:12px;padding:11px 16px;background:#0b364d;color:#fff!important;border-radius:9px;font-weight:700;text-decoration:none;overflow-wrap:anywhere}
+.supportEmailLink:hover{background:#155475}
+.marketingEmailSettings{align-items:center}
+.marketingEmailSettings>div{min-width:0}
+.marketingEmailOptIn{display:flex;align-items:flex-start;gap:11px;margin-top:16px;cursor:pointer;font-size:13px;line-height:1.5;max-width:640px}
+.marketingEmailOptIn input{width:18px;height:18px;flex-shrink:0;margin:1px 0 0;accent-color:#087dab}
+.marketingEmailFeedback{margin-top:10px!important;font-size:13px!important}
+@media(max-width:600px){.supportEmailHero{padding:20px}.supportEmailLink{max-width:100%;font-size:14px}}
+
 /* Public legal and support pages */
 .publicPageShell { min-height:100vh; background:var(--bg); color:var(--text); }
 .legalPage { width:min(980px, calc(100% - 32px)); margin:0 auto; padding:110px 0 72px; }

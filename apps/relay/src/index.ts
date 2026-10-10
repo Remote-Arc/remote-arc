@@ -16,6 +16,7 @@ import {
 } from "./auth.js";
 import { handleLoginPage, handleReviewerLogin } from "./reviewer.js";
 import { handleEmailCodeRequest, handleEmailCodeVerify } from "./email-auth.js";
+import { handleMarketingPreferences, handleUnsubscribe, runReengagementCampaign } from "./marketing-email.js";
 import { dashboardSignInUrl, publicWebsiteRedirect } from "./host-routing.js";
 import {
   getDevicesForUser,
@@ -98,6 +99,8 @@ type Env = TaskEventEnv & {
   RESEND_API_KEY?: string;
   EMAIL_AUTH_SECRET?: string;
   EMAIL_FROM?: string;
+  MARKETING_REENGAGEMENT_ENABLED?: string;
+  MARKETING_FROM_EMAIL?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
   FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
   AUDIT_ARCHIVE?: R2Bucket;
@@ -310,6 +313,12 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return handleOAuthToken(request, env);
     }
 
+    if (url.pathname === "/unsubscribe") {
+      return handleUnsubscribe(request, env);
+    }
+    if (url.pathname === "/api/marketing/preferences") {
+      return handleMarketingPreferences(request, env);
+    }
     if (url.pathname === "/auth/login" && request.method === "GET") {
       return handleLoginPage(request, env);
     }
@@ -858,6 +867,13 @@ export default {
     }
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));
+      if (env.MARKETING_REENGAGEMENT_ENABLED === "1") {
+        ctx.waitUntil(runReengagementCampaign(env).then(result => {
+          if (result.sent) console.info("marketing_reengagement_sent", { count: result.sent });
+        }).catch(error => {
+          console.error("marketing_reengagement_failed", { message: error instanceof Error ? error.message : "unknown" });
+        }));
+      }
       if (env.AUDIT_ARCHIVE_ENABLED === "1") {
         ctx.waitUntil(archiveOldAudit(env).then(({ archived, batches }) => {
           if (archived) console.info("audit_archive_completed", { archived, batches });

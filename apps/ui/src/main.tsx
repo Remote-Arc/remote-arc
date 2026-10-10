@@ -3581,6 +3581,60 @@ function Metric({ label, value, detail, good = false }: { label: string; value: 
   );
 }
 
+function MarketingEmailSettings() {
+  const { tr } = useI18n();
+  const [preference, setPreference] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let active = true;
+    fetch("/api/marketing/preferences", { credentials: "same-origin" })
+      .then(async response => {
+        if (!response.ok) throw new Error("Unavailable");
+        return response.json() as Promise<{ opted_in: boolean }>;
+      })
+      .then(result => { if (active) setPreference(result.opted_in); })
+      .catch(() => { if (active) setMessage(tr("Unable to load email preferences.", "无法加载邮件偏好。")); });
+    return () => { active = false; };
+  }, []);
+  async function save(next: boolean) {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/marketing/preferences", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ opted_in: next }),
+      });
+      if (!response.ok) throw new Error("Unable to update preferences");
+      setPreference(next);
+      setMessage(next
+        ? tr("Product emails enabled. You can unsubscribe at any time.", "已同意接收产品邮件，你可以随时退订。")
+        : tr("Product emails are off.", "已关闭产品推广邮件。"));
+    } catch {
+      setMessage(tr("Could not save your choice. Please try again.", "无法保存选择，请稍后重试。"));
+    } finally { setBusy(false); }
+  }
+  return (
+    <article className="settingsCard marketingEmailSettings">
+      <div>
+        <h2>{tr("Product emails", "产品邮件")}</h2>
+        <p>{tr(
+          "Optional onboarding tips, product updates and occasional feature announcements. Sign-in codes and security emails are not affected.",
+          "可选的使用技巧、新功能和产品消息。关闭后仍能收到登录验证码及必要安全通知。",
+        )}</p>
+        <label className="marketingEmailOptIn">
+          <input type="checkbox" checked={preference === true} disabled={preference === null || busy} onChange={event => void save(event.target.checked)} />
+          <span>{tr("I agree to receive optional Remote Arc product emails.", "我同意接收 Remote Arc 可选的产品推广邮件。")}</span>
+        </label>
+        {message && <p role="status" className="marketingEmailFeedback">{message}</p>}
+      </div>
+      <a href="mailto:support@remotearc.app">{tr("Contact support", "联系支持")}</a>
+    </article>
+  );
+}
+
 function Dashboard({
   user,
   devices,
@@ -6750,6 +6804,7 @@ function Dashboard({
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
+              <MarketingEmailSettings />
               <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Plan & allowance", "套餐与额度")}</h2><p>{hasPlus ? tr("Remote Arc Plus enables binary reads, durable/overnight Tasks, schedules, planned Agent Goals and supported keep-awake.", "Remote Arc Plus 已启用二进制读取、持久/隔夜任务、定时任务、计划模式 Agent Goal 与受支持的保持唤醒。") : tr("Remote Arc Free includes core remote tools. Plus capabilities are enforced by the relay, not only hidden in the UI.", "Remote Arc Free 包含核心远程工具；Plus 能力由 Relay 强制执行，不只是界面隐藏。")}</p></div><div><div className="planValue">{hasPlus ? "Plus" : "Free"} · {usage?.unlimited ? tr("Unlimited", "无限") : `${usage?.used ?? 0} / ${usageLimitLabel}`}</div>{!hasPlus && <a className="pricingUsageLink" href={MARKETING_ORIGIN + "/pricing"}>{tr("Compare plans", "对比套餐")} →</a>}</div></article>
               <article className="settingsCard"><div><h2>{tr("Plans & capacity", "方案与容量")}</h2><p>{tr("Review the current allowance, how calls are counted and the support path for capacity needs.", "了解当前额度、调用计数方式和更多容量的咨询渠道。")}</p></div><a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("View pricing", "查看价格")}</a></article>
             </section>
@@ -7212,6 +7267,7 @@ function LegalPage({
         [tr("Reasoning controller processing", "推理控制器处理"), tr("Hosted Agent Goals send the objective, criteria, factual memory and bounded observations to the configured planner provider, such as Cloudflare Workers AI or a configured OpenAI Responses API integration. Source Agent Goals return saved context to the authorized source AI client, which decides the next action. Source mode does not silently switch to a hosted model. Decisions in both modes are validated against the frozen tool and device-policy boundary. Signed task events additionally store subscription metadata and encrypted callback signing secrets when configured.", "托管 Agent Goal 会把目标、标准、事实记忆和受限观察发给配置的 Planner 服务，例如 Cloudflare Workers AI 或已配置的 OpenAI Responses API 集成。源 Agent Goal 把保存上下文返回给已授权源 AI 客户端，由它决定下一步。源模式不会静默切换托管模型；两种模式的决策都受冻结工具与设备策略边界校验。配置签名任务事件时，还会保存订阅元数据和加密的回调签名 Secret。")],
         [tr("AI platforms", "AI 平台"), tr("When you connect Remote Arc to ChatGPT, Codex or another compatible MCP client, tool requests and results are also processed by that provider under the account, product settings, terms and privacy policy you use with that provider.", "当你将 Remote Arc 连接到 ChatGPT、Codex 或其他兼容 MCP 客户端时，工具请求与结果也会由该服务商按照你所使用账户和产品的设置、条款及隐私政策进行处理。")],
         [tr("Infrastructure", "基础设施"), tr("The hosted service uses Cloudflare infrastructure and Google OAuth. Their processing is governed by their respective terms and privacy policies.", "托管服务使用 Cloudflare 基础设施和 Google OAuth；相关处理同时受这些服务各自的条款和隐私政策约束。")],
+        [tr("Optional product emails", "可选产品邮件"), tr("Product updates and getting-started tips are sent only after you explicitly opt in under Dashboard Settings. You can opt out at any time using the account setting or the unsubscribe link in every promotional email. Login verification codes and important security notices are separate.", "只有你在控制台设置中主动勾选同意后，我们才会发送产品更新或入门提示。你可以随时在账户设置中关闭，或使用每封推广邮件的退订链接。登录验证码和必要安全通知不属于产品推广邮件。")],
         [tr("Control and deletion", "控制与删除"), tr("You can revoke individual devices from the Remote Arc dashboard. For account or hosted-data deletion requests, use the support contact below.", "你可以在 Remote Arc 控制台撤销单台设备。如需删除账户或托管数据，请通过下方支持渠道联系。")],
       ],
     },
@@ -7241,7 +7297,7 @@ function LegalPage({
         [tr("Documentation", "文档"), tr("Start with the MCP setup guide and product documentation for pairing, permissions and AI-client connection instructions.", "可先查看 MCP 接入指南和产品文档，了解配对、权限与 AI 客户端连接说明。")],
         [tr("Bug reports", "Bug 反馈"), tr("Use the GitHub repository for reproducible product and developer issues. Do not include device credentials, OAuth tokens or private file contents.", "可通过 GitHub 仓库提交可复现的产品与开发问题。请勿附带设备凭证、OAuth Token 或私人文件内容。")],
         [tr("Security", "安全问题"), tr("Review SECURITY.md before reporting a vulnerability and avoid publishing sensitive exploit details in a public issue.", "报告漏洞前请阅读 SECURITY.md，不要在公开 Issue 中发布敏感漏洞利用细节。")],
-        [tr("Account and data requests", "账户与数据请求"), tr("For account deletion or hosted-data requests, contact the project maintainer through the support channel published on the Remote Arc website or repository.", "如需删除账户或请求托管数据，请通过 Remote Arc 官网或仓库公开的支持渠道联系项目维护者。")],
+        [tr("Account and data requests", "账户与数据请求"), tr("For account deletion or hosted-data requests, email support@remotearc.app from your registered account email.", "如需删除账户或请求托管数据，请使用注册邮箱联系 support@remotearc.app。")],
       ],
     },
   }[kind];
@@ -7253,6 +7309,14 @@ function LegalPage({
         <span className="eyebrow">{content.eyebrow}</span>
         <h1>{content.title}</h1>
         <p className="legalIntro">{content.intro}</p>
+        {kind === "support" && (
+          <section className="supportEmailHero">
+            <span className="eyebrow">{tr("EMAIL SUPPORT", "邮件客服")}</span>
+            <h2>{tr("Get help from the Remote Arc team", "联系 Remote Arc 团队")}</h2>
+            <p>{tr("Need help with setup, a device, an account or a security question? Write directly to our support inbox. Please never include passwords, API keys or device credentials.", "安装、设备、账户或安全问题都可以直接联系我们。请勿在邮件中发送密码、API Key 或设备凭证。")}</p>
+            <a className="supportEmailLink" href="mailto:support@remotearc.app?subject=Remote%20Arc%20Support">✉ support@remotearc.app <span aria-hidden="true">↗</span></a>
+          </section>
+        )}
         <div className="legalGrid">
           {content.sections.map(([title, body]) => (
             <section className="legalCard" key={title}>

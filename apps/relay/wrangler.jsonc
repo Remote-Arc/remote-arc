@@ -82,6 +82,8 @@
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
     "MCP_METRICS_SAMPLE_RATE": "0.1",
     "AUDIT_ARCHIVE_ENABLED": "0",
+    "MARKETING_REENGAGEMENT_ENABLED": "0",
+    "MARKETING_FROM_EMAIL": "Remote Arc <updates@remotearc.app>",
     "AUDIT_RETENTION_DAYS": "30",
     "OPERATOR_EMAIL": "moviegoer24@gmail.com",
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",

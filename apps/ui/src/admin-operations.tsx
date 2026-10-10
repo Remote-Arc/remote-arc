@@ -88,7 +88,8 @@ export function AdminOperations() {
     const totals = Array.from({length:24},(_,i) => ({hour:i,calls:0}));
     list.forEach(item => { const index=Number(item.hour.slice(11,13)); if (index>=0 && index<24) totals[index]!.calls += item.calls; });
     return totals.sort((a,b) => a.calls-b.calls).slice(0,3).map(x => {
-      const utc = new Date("2026-10-10T"+String(x.hour).padStart(2,"0")+":00:00Z");
+      const utc = new Date();
+      utc.setUTCHours(x.hour,0,0,0);
       const local = new Intl.DateTimeFormat(locale==="zh"?"zh-NZ":"en-NZ",{
         timeZone:"Pacific/Auckland",hour:"2-digit",hour12:false,
       }).format(utc);

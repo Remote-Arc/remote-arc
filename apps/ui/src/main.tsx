@@ -2169,21 +2169,9 @@ function ClientInstallPage({
           </div>
         </header>
 
-        <section id="installation-example" className="installExampleFirst">
-          <div className="installExampleIntro">
-            <span className="eyebrow">{tr("SEE IT IN ACTION", "看看实际效果")}</span>
-            <h2>{tr("Example session", "示例会话")}</h2>
-            <p>{tr(
-              "See what a Remote Arc conversation looks like: the AI selects a paired computer, calls approved tools, and returns the result right in your chat.",
-              "先看看 Remote Arc 如何工作：AI 选择已配对的电脑，调用该设备允许的工具，并直接在聊天中返回结果。",
-            )}</p>
-          </div>
-          <InstallTypewriterDemo config={config.demo} />
-        </section>
-
         <section id="installation-command" className="installQuickStart" aria-label={tr("Install Remote Arc on your computer", "在电脑上安装 Remote Arc")}>
           <div className="installQuickStartCopy">
-            <span className="eyebrow">{tr("NEXT · GET STARTED", "下一步 · 开始安装")}</span>
+            <span className="eyebrow">{tr("START HERE · INSTALLATION", "从这里开始 · 安装指南")}</span>
             <h2>{tr("Install and pair your computer", "安装并配对你的电脑")}</h2>
             <p>{tr(
               "Run this on the Windows, macOS or Linux computer you want " + config.name + " to use. Then connect the MCP App / Connector below.",
@@ -2229,10 +2217,10 @@ function ClientInstallPage({
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("SETUP", "配置")}</strong>
-            <a href="#installation-example">{tr("Example session", "示例会话")}</a>
             <a href="#installation-command">{tr("Installation command", "安装命令")}</a>
             <a href="#installation-client">{tr("MCP App / Connector (required)", "MCP App / Connector（必需）")}</a>
             <a href="#installation">{tr("Computer setup (required)", "电脑端配置（必需）")}</a>
+            <a href="#installation-example">{tr("Example session (after setup)", "示例会话（安装之后）")}</a>
             <a href="/connect-ai">{tr("Connect another AI", "连接其他 AI")}</a>
             <a href="/docs">{tr("Documentation", "文档")}</a>
           </aside>
@@ -2295,6 +2283,19 @@ function ClientInstallPage({
             </section>
           </article>
         </div>
+
+        <section id="installation-example" className="installExampleFirst">
+          <div className="installExampleIntro">
+            <span className="eyebrow">{tr("AFTER SETUP · SEE IT IN ACTION", "完成安装后 · 查看效果")}</span>
+            <h2>{tr("Example session", "示例会话")}</h2>
+            <p>{tr(
+              "Once setup is complete, preview how your AI selects a paired computer, calls approved tools, and returns results in chat. This is a simulation, not a live device session.",
+              "完成上面的安装步骤后，可以在这里预览 AI 如何选择已配对电脑、调用获准工具，并在聊天中返回结果。这是模拟演示，不会连接真实设备。",
+            )}</p>
+          </div>
+          <InstallTypewriterDemo config={config.demo} />
+        </section>
+
       </main>
     </PublicLayout>
   );

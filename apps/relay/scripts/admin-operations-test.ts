@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { handleAdminCallCredits, handleAdminOperations } from "../src/admin-operations.js";
+import { handleAdminCallCredits, handleAdminOperations, handleAdminBilling } from "../src/admin-operations.js";
+import { summarizeCloudflareBillableUsage } from "../src/cloudflare-billing.js";
 import { getMonthlyUsage, consumeToolCall } from "../src/usage.js";
 const origin = "https://mcp.remotearc.app";
 const baseUser = {
@@ -32,7 +33,7 @@ function fakeDB(role = "admin") {
             if (sql.includes("FROM users u LEFT JOIN")) return {results:[{
               id:"target",email:"target@unit.test",name:"Target",role:"user",plan:"free",
               used:250,extra:500,device_count:1,last_activity:"2026-10-10T00:00:00Z",
-              created_at:"2026-10-01T00:00:00Z",has_plus_grant:0,
+              created_at:"2026-10-01T00:00:00Z",has_plus_grant:0,linked_login:"email_only",first_mcp_client:"ChatGPT",
             }]};
             if (sql.includes("FROM devices d WHERE")) return {results:[{
               id:"dev-1",user_id:"target",name:"Mac",platform:"darwin",arch:"arm64",
@@ -48,7 +49,7 @@ function fakeDB(role = "admin") {
   } as unknown as D1Database;
   const registry = {
     getByName() {return {
-      fetch: async () => Response.json([{id:"dev-1",status:"online"}]),
+      fetch: async () => Response.json([{id:"dev-1",status:"online",agentVersion:"0.6.1-rc.5",recovery_bundle_version:"0.6.1-rc.5"}]),
     };},
   } as unknown as DurableObjectNamespace;
   return {env:{DB:db,REGISTRY:registry,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,
@@ -74,6 +75,11 @@ const req = (path: string, token=true, init: RequestInit={}) => new Request(orig
   assert.equal(response.status,200);
   const data = await response.json() as any;
   assert.equal(data.totals.online,1);
+  assert.equal(data.devices[0].agent_version, "0.6.1-rc.5");
+  assert.deepEqual(data.users[0].live_agent_versions, ["0.6.1-rc.5"]);
+  assert.equal(data.users[0].linked_login, "email_only");
+  assert.equal(data.users[0].first_mcp_client, "ChatGPT");
+  assert.equal(writes.length,0, "reading live device versions and login hints must not write into D1");
   assert.equal(data.users[0].allowance,10500);
   assert.equal(data.billing.actualUsd,null);
   assert.ok(!JSON.stringify(data).includes("credential_hash"));
@@ -100,4 +106,17 @@ const req = (path: string, token=true, init: RequestInit={}) => new Request(orig
   const consumed = await consumeToolCall(env,"target");
   assert.equal(consumed.limit,10500);
 }
-console.log("Admin operations access control, real-time device status, bonus quotas and write audit test passed.");
+{
+  const parsed = summarizeCloudflareBillableUsage({result:[
+    {ServiceFamilyName:"Workers",ContractedCost:1.25,BillingCurrency:"USD"},
+    {ServiceFamilyName:"D1",ContractedCost:0.4,BillingCurrency:"USD"},
+    {ServiceFamilyName:"Workers",ContractedCost:0.35,BillingCurrency:"USD"},
+  ]});
+  assert.equal(parsed.total, 2);
+  assert.deepEqual(parsed.services, [{name:"Workers",cost:1.6},{name:"D1",cost:0.4}]);
+  assert.throws(() => summarizeCloudflareBillableUsage({result:[{ServiceName:"Unknown"}]}), /billing_costs_unavailable/);
+  const {env} = fakeDB();
+  assert.equal((await handleAdminBilling(req("/api/admin/billing",false),env)).status, 401);
+  assert.equal((await handleAdminBilling(req("/api/admin/billing"),env)).status, 503);
+}
+console.log("Admin operations status, agent versions, account hints and read-only billing tests passed.");

@@ -2,6 +2,19 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.6.1 - 2026-10-11
+
+### Native pause, resume and recovery fixes
+
+- Pause a device from Dashboard without exposing its filesystem, terminal or process tools. The native Go runtime retains only an authenticated, supervised wake connection; an explicit owner-authorized request resumes execution.
+- Preserve the paused state across worker restarts and foreground/background execution-lease handoffs, without allocating an execution core while paused.
+- Disconnect Completely disables background supervision and login recovery, closes execution and wake connections, and requires a local restart before the device can reconnect. A paused device can also be fully disconnected.
+- Restore capability-gated remote Stop Agent for supported foreground and background runtimes, and verify that the device actually disconnects before reporting success.
+- Use a hidden, per-user Windows Script Host launcher for Windows login recovery and migrate owned legacy startup entries while preserving pairing. This remains user-login recovery rather than a privileged Windows service.
+- Wait for an abandoned TS/Go execution lease to expire before Windows Go recovery; never take over a live execution owner.
+- Migrate idle legacy macOS launchd Node/TS jobs to the native Go service, while preserving pairing and refusing takeover of an active foreign owner.
+- Publish six native binaries, checksum manifests, npm and Homebrew artifacts under version 0.6.1. Keep existing 0.6.0 and RC release assets unchanged.
+
 ## 0.6.0 - 2026-10-09
 
 ### Native Go Agent and Execution Core by default

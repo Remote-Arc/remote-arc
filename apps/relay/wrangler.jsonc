@@ -88,7 +88,7 @@
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
     "ALERT_EMAIL": "moviegoer24@gmail.com",
     "ALERT_FROM_EMAIL": "alerts@remotearc.app",
-    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "0"
+    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "1"
   },
   "ratelimits": [
     {

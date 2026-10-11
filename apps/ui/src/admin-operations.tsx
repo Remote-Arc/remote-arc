@@ -58,6 +58,7 @@ export function AdminOperations() {
   const pendingCreditRequest = useRef<{ key:string; requestId:string } | null>(null);
 
   async function refresh(pageToLoad = page) {
+    setLoading(true);
     try {
       const res = await fetch("/api/admin/operations?page=" + pageToLoad, { credentials: "same-origin" });
       if (!res.ok) throw new Error(tr("Admin metrics could not be loaded", "无法加载管理员指标") + " · " + res.status);
@@ -68,10 +69,7 @@ export function AdminOperations() {
     } finally { setLoading(false); }
   }
   useEffect(() => {
-    setLoading(true);
     void refresh(page);
-    const interval = window.setInterval(() => void refresh(page), 45_000);
-    return () => window.clearInterval(interval);
   }, [page]);
 
   const filtered = useMemo(() => data?.users.filter(u => {

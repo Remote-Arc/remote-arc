@@ -3840,8 +3840,6 @@ function Dashboard({
   useEffect(() => {
     if (active !== "monitor" || !user.isAdmin) return;
     void refreshMonitor();
-    const timer = window.setInterval(() => void refreshMonitor(), 30_000);
-    return () => window.clearInterval(timer);
   }, [active, user.isAdmin]);
 
   async function refreshAutomations() {

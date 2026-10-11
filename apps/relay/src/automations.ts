@@ -18,6 +18,7 @@ import {
   type AgentToolName,
 } from "./agent-planner.js";
 import { takeSourceDecision } from "./source-goals.js";
+import { nextIntervalRun } from "./schedule-clock.js";
 import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { taskSchedulerHealth } from "./task-scheduler.js";
 import { binaryBytesRead, finishAutomationRunWithUsage, recordPlusUsage } from "./plus-usage.js";
@@ -1391,9 +1392,10 @@ async function beginCommand(
 
 function nextScheduleAfterRun(
   trigger: TriggerSpec,
+  createdAt: string,
   now: string,
 ) {
-  if (trigger.type === "interval") return addSeconds(now, trigger.every_seconds);
+  if (trigger.type === "interval") return nextIntervalRun(trigger, createdAt, now);
   return null;
 }
 
@@ -1449,7 +1451,7 @@ async function nextGoalRun(env: AutomationEnv, automation: AutomationRow, state:
   state.phase = "idle";
   state.trigger = trigger.type === "webhook" ? await takeQueuedEvent(env, automation.id) ?? undefined : undefined;
   return trigger.type === "webhook" ? { status: state.trigger ? "waiting" : "waiting_for_event", next: state.trigger ? now : null }
-    : { status: "waiting", next: nextScheduleAfterRun(trigger, now) };
+    : { status: "waiting", next: nextScheduleAfterRun(trigger, automation.created_at, now) };
 }
 
 async function executeAgentGoal(
@@ -2238,7 +2240,7 @@ async function executeAutomation(
 
   if (automation.kind === "schedule_watch") {
     const done = automation.max_runs > 0 && nextCount >= automation.max_runs;
-    const nextRun = done ? null : nextScheduleAfterRun(trigger, now);
+    const nextRun = done ? null : nextScheduleAfterRun(trigger, automation.created_at, now);
     await persistRuntime(
       env,
       automation,

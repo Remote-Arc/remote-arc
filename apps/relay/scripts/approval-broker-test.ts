@@ -5,9 +5,12 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import {
   decideApproval,
+  handleDeviceApprovalList,
   requestWriteApproval,
+  runApprovalMaintenance,
 } from "../src/approvals.js";
 import { callDevice } from "../src/device-call.js";
+import { retryTransientD1Read } from "../src/d1-read-retry.js";
 
 const relayDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sqlite = new DatabaseSync(":memory:");
@@ -19,6 +22,7 @@ for (const name of fs
   sqlite.exec(fs.readFileSync(path.join(relayDir, "migrations", name), "utf8"));
 }
 
+let d1Writes = 0;
 const db = {
   prepare(sql: string) {
     const stmt = sqlite.prepare(sql);
@@ -30,6 +34,7 @@ const db = {
         return { results: stmt.all(...args) as T[] };
       },
       async run() {
+        if (/^\s*(UPDATE|DELETE|INSERT)\b/i.test(sql)) d1Writes++;
         const result = stmt.run(...args);
         return { success: true, meta: { changes: Number(result.changes) } };
       },
@@ -220,6 +225,42 @@ const device = sqlite
 const roots = JSON.parse(device.workspace_roots) as string[];
 assert(roots.includes("/Users/test/Desktop/notes"));
 
+// A polled approval list must not write to D1 and must never show expired grants.
+const pollingToken = "poll-only-credential";
+const credentialHash = Array.from(new Uint8Array(await crypto.subtle.digest(
+  "SHA-256", new TextEncoder().encode(pollingToken),
+))).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+sqlite.prepare("UPDATE devices SET credential_hash=? WHERE id='device-1'").run(credentialHash);
+const expiredId = crypto.randomUUID();
+sqlite.prepare(
+  "INSERT INTO approval_requests (id,user_id,device_id,request_id,tool_name,target_path,args_hash,status,requested_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+).run(expiredId, "owner", "device-1", "expired-request", "write_file", "/tmp/old.txt", "old", "pending", new Date(Date.now() - 120_000).toISOString(), new Date(Date.now() - 60_000).toISOString());
+const d1WritesBeforePoll = d1Writes;
+const pollingResponse = await handleDeviceApprovalList(new Request(
+  "https://mcp.remotearc.app/api/device/approvals/pending",
+  { headers: { authorization: "Bearer " + pollingToken } },
+), env);
+assert.equal(pollingResponse.status, 200);
+assert.deepEqual(await pollingResponse.json(), []);
+assert.equal(d1Writes, d1WritesBeforePoll, "Polling must not execute D1 writes");
+assert.equal((sqlite.prepare("SELECT status FROM approval_requests WHERE id=?").get(expiredId) as { status: string }).status, "pending");
+await runApprovalMaintenance(env);
+assert.equal((sqlite.prepare("SELECT status FROM approval_requests WHERE id=?").get(expiredId) as { status: string }).status, "expired");
+
+let attempts = 0;
+assert.equal(await retryTransientD1Read(async () => {
+  attempts++;
+  if (attempts === 1) throw new Error("D1_ERROR: Network connection lost.");
+  return "recovered";
+}), "recovered");
+assert.equal(attempts, 2, "Retry a transport failure once");
+attempts = 0;
+await assert.rejects(retryTransientD1Read(async () => {
+  attempts++;
+  throw new Error("D1_ERROR: Your account has exceeded D1's free tier daily row read limit.");
+}), /free tier/);
+assert.equal(attempts, 1, "Never retry quota exhaustion");
+
 console.log(
-  "Approval Broker regression tests passed · once, timed file grant, trusted folder",
+  "Approval Broker regression tests passed · grants, read-only polling, expiry and bounded D1 retry",
 );

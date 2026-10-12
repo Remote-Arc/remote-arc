@@ -1,5 +1,6 @@
 import { authenticateDevice, getSessionUser, nowIso, type OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
+import { retryTransientD1Read } from "./d1-read-retry.js";
 
 type ApprovalDbEnv = {
   DB: D1Database;
@@ -136,6 +137,11 @@ async function expireStale(env: ApprovalDbEnv, userId?: string) {
   );
   if (userId) await cleanup.bind(cutoff, userId).run();
   else await cleanup.bind(cutoff).run();
+}
+
+// Run only on the five-minute cron, never on a polling GET.
+export async function runApprovalMaintenance(env: ApprovalDbEnv) {
+  await expireStale(env);
 }
 
 export async function findApprovedWriteApproval(
@@ -310,8 +316,9 @@ async function listApprovalsFor(
   env: ApprovalDbEnv,
   input: { userId: string; deviceId?: string },
 ) {
-  await expireStale(env, input.userId);
+  // Keep frequent approval polling read-only; expiry is checked in SQL.
   const deviceClause = input.deviceId ? " AND a.device_id = ?2" : "";
+  const expiryParameter = input.deviceId ? "?3" : "?2";
   const sql =
     `SELECT a.id, a.user_id, a.device_id, a.client_id, c.client_name,
             a.grant_id, a.request_id, a.tool_name, a.target_path, a.args_hash,
@@ -320,13 +327,16 @@ async function listApprovalsFor(
      FROM approval_requests a
      LEFT JOIN oauth_clients c ON c.client_id = a.client_id
      WHERE a.user_id = ?1${deviceClause}
-       AND a.status = 'pending'
+       AND a.status = 'pending' AND a.expires_at > ${expiryParameter}
      ORDER BY a.requested_at ASC
      LIMIT 50`;
-  const stmt = env.DB.prepare(sql);
-  const rows = input.deviceId
-    ? await stmt.bind(input.userId, input.deviceId).all<ApprovalRow>()
-    : await stmt.bind(input.userId).all<ApprovalRow>();
+  const now = nowIso();
+  const rows = await retryTransientD1Read(() => {
+    const stmt = env.DB.prepare(sql);
+    return input.deviceId
+      ? stmt.bind(input.userId, input.deviceId, now).all<ApprovalRow>()
+      : stmt.bind(input.userId, now).all<ApprovalRow>();
+  });
   return rows.results || [];
 }
 
@@ -493,7 +503,7 @@ export async function handleDeviceApprovalList(
   request: Request,
   env: ApprovalEnv,
 ) {
-  const identity = await authenticateDevice(request, env);
+  const identity = await authenticateDevice(request, env, { touchLastSeen: false });
   if (!identity) return Response.json({ error: "unauthorized" }, { status: 401 });
   return Response.json(
     await listApprovalsFor(env, {

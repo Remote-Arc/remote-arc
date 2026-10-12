@@ -11,6 +11,33 @@ the computers you explicitly pair through a secure outbound connection.
 npx remotelink
 ```
 
+From 0.6.0, this npm command starts the complete **native Go Agent** by default.
+The Node launcher verifies the matching platform binary against the SHA256
+manifest pinned to this npm release. `--go` remains an alias; `--ts` selects the
+retained TypeScript implementation.
+
+Without Node, use [standalone downloads](https://remotearc.app/downloads) or:
+
+```bash
+brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi
+brew install yaohuangguan/remote-arc/remotelink
+remotelink
+```
+
+Stop the current Go Agent before upgrading: `npx remotelink@latest --stop`, then
+`npx remotelink@latest --foreground`. Existing TS owners require
+`npx remotelink@latest --ts --no-background` and stopping their original terminal
+before Go starts. Go refuses to take execution from an active TS owner.
+Pairing, permissions and Undo records are preserved; commands are not replayed.
+For TS fallback, stop Go first, then run `npx remotelink@latest --ts`.
+
+The primary runtime is `apps/agent` and its independent Go module is
+`packages/execution-core`. `apps/agent-ts` and `packages/execution-core-ts` support
+explicit fallback and compatibility checks. The Cloudflare Relay and React
+Dashboard remain TypeScript; native device execution requires neither Node nor
+a local Go compiler.
+
 On first run, `remotelink`:
 
 1. creates a short-lived pairing request;
@@ -26,13 +53,18 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.4.8 — Device-local execution logs in Dashboard**
+**remotelink 0.6.1 — Native pause, resume and recovery fixes**
 
-Published 2026-10-08
+Published 2026-10-11
 
-- Add a live Device execution log to Dashboard → Activity & details, read on demand from the paired computer's local Remote Arc operation log.
-- Show recent tool calls, completion/failure state, reconnect and recovery events without turning the hosted audit store into a file-content or stdout archive.
-- Keep logs local when a device is offline and surface a clear update requirement for older remotelink Agents that do not support on-demand log reads.
+- Pause a device from Dashboard without exposing its filesystem, terminal or process tools. The native Go runtime retains only an authenticated, supervised wake connection; an explicit owner-authorized request resumes execution.
+- Preserve the paused state across worker restarts and foreground/background execution-lease handoffs, without allocating an execution core while paused.
+- Disconnect Completely disables background supervision and login recovery, closes execution and wake connections, and requires a local restart before the device can reconnect. A paused device can also be fully disconnected.
+- Restore capability-gated remote Stop Agent for supported foreground and background runtimes, and verify that the device actually disconnects before reporting success.
+- Use a hidden, per-user Windows Script Host launcher for Windows login recovery and migrate owned legacy startup entries while preserving pairing. This remains user-login recovery rather than a privileged Windows service.
+- Wait for an abandoned TS/Go execution lease to expire before Windows Go recovery; never take over a live execution owner.
+- Migrate idle legacy macOS launchd Node/TS jobs to the native Go service, while preserving pairing and refusing takeover of an active foreign owner.
+- Publish six native binaries, checksum manifests, npm and Homebrew artifacts under version 0.6.1. Keep existing 0.6.0 and RC release assets unchanged.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->
@@ -184,10 +216,39 @@ starts new devices read-only; enable additional skills only when you want the
 connected AI to use them. Full terminal access should be used only on computers
 you control.
 
-## Requirements
+## Requirements for npm / npx
+
+Node.js is required only for this npm package and the TS fallback. Standalone
+Agent binaries and Homebrew installations need no Node.js; see the
+[installation guide](https://remotearc.app/downloads).
 
 - Node.js 20 or later
 - Windows, macOS, or Linux
+
+### Runtime selection
+
+The CLI defaults to the complete native Go device runtime. `--go` remains a
+compatible alias; `--ts` selects the retained TS runtime. Native Go executables
+run without Node; npx requires Node for the installation and launch entry.
+The Go runtime uses the same paired device identity, permissions and execution
+lease. Stop the executing agent before switching runtimes.
+
+Start Go with `npx remotelink@latest --go --foreground`. Use
+`npx remotelink@latest --go --status` to inspect the native runtime, or
+`npx remotelink@latest --go --stop` to stop it before returning to TS.
+
+For native installation on macOS/Linux without Node:
+
+```sh
+brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi
+brew install yaohuangguan/remote-arc/remotelink
+remotelink --foreground
+```
+
+Go binaries accompany the matching npm release. For development builds,
+installation, compatibility coverage and recovery behavior, see the
+[Go device runtime guide](https://github.com/yaohuangguan/remote-arc/blob/master/apps/agent/README.md).
 
 ## Product vs package name
 

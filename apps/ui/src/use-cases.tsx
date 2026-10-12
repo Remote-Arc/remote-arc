@@ -1,9 +1,10 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
+import { localizedWebsiteHref } from "./marketing-paths.js";
 import { TaskAvailability } from "./product-docs.js";
 import "./public-docs.css";
 
-export const useCaseSlugs = ["remote-development", "file-organization", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support"] as const;
+export const useCaseSlugs = ["remote-development", "file-organization", "disk-space-cleanup", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff"] as const;
 export type UseCaseSlug = typeof useCaseSlugs[number];
 type Tr = (en: string, zh: string) => string;
 
@@ -26,6 +27,25 @@ function cases(tr: Tr) {
       steps: [tr("Inspect names and metadata; avoid reading unnecessary file contents.", "检查名称和元数据，避免读取不必要文件内容。"), tr("Review destinations, collisions and the exact move list.", "确认目标位置、重名冲突和具体移动清单。"), tr("Execute the approved plan and verify the before/after manifest.", "执行已批准计划并核对整理前后清单。")],
       proof: tr("The approved move list, collision handling and verified destination files.", "已批准移动清单、冲突处理与已核对的目标文件。"),
       limit: tr("No dedicated move-file MCP tool is currently exposed. Moves use terminal access with real local-user permissions. Shell moves are outside Local Undo; a manifest helps review but is not transactional rollback.", "当前没有专门的移动文件 MCP 工具，移动通过具有真实本机用户权限的终端执行。Shell 移动不属于 Local Undo，清单帮助检查但不是事务回滚。"), durable: false,
+    },
+    {
+      slug: "disk-space-cleanup", category: tr("DISK SPACE", "磁盘空间"),
+      title: tr("Find what is filling your Windows C: drive or Mac", "找出 Windows C 盘或 Mac 空间不足的原因"),
+      intro: tr("Inspect large folders, caches and duplicated build artifacts; preview reclaimable space before authorizing any deletion.", "分析大目录、缓存和重复构建文件；先预估可回收空间，确认后才执行任何删除。"),
+      prompt: tr(
+        "On my Windows PC, investigate why C: is filling up. Start with read-only disk and folder size checks, list the 20 largest safe-to-review candidates and estimate recoverable space. Do not delete, uninstall, change services or clear system caches until I approve each exact path and action. After approval, verify free space and report what changed.",
+        "在我的 Windows 电脑上排查 C 盘空间不足。先只读检查磁盘和目录占用，列出 20 个值得复核的大文件/缓存候选及预计可回收空间。未经我逐项确认具体路径与操作，不删除、不卸载、不改服务、不清系统缓存；获批执行后复测剩余空间并报告变化。",
+      ),
+      tools: "list_directory · get_file_info · start_process · process_output",
+      permission: tr("Read-only inspection first; separately approved terminal access and explicit deletion confirmation", "先只读检查；执行清理需单独授权终端权限，并逐项确认删除"),
+      steps: [
+        tr("Measure total free space and inspect only accessible paths. Use bounded PowerShell on Windows or du on macOS; do not scan protected system folders by force.", "先测量总剩余空间，只检查允许访问的目录；Windows 用有界 PowerShell、macOS 用 du，不强行扫描系统保护目录。"),
+        tr("Group candidates: temporary build outputs, installer leftovers, package caches and confirmed duplicate copies. List exact paths, sizes, ownership and risk.", "按临时构建产物、安装残留、包缓存、确认的重复副本等分类，列出具体路径、大小、归属和风险。"),
+        tr("Present a dry-run plan. Delete only individually approved, verified-safe paths, then remeasure disk space and preserve an audit list.", "给出只读预览计划；只删除逐项批准、验证安全的路径，之后重新测量剩余空间并保留操作清单。"),
+      ],
+      proof: tr("Before/after free space, exact approved paths, measured reclaimed bytes and skipped risky items.", "清理前后剩余空间、逐项获批路径、实际回收字节数以及跳过的高风险项目。"),
+      limit: tr("Never blindly purge Windows, WinSxS, System32, ProgramData, user profiles, Time Machine snapshots, backups or unknown application data. Native OS cleanup tools are preferable for system-managed files. Terminal operations are not protected by Remote Arc file-tool Undo, and folder access remains limited by the device's configured Workspace and approvals.", "严禁盲目删除 Windows、WinSxS、System32、ProgramData、用户资料、Time Machine 快照、备份或不明应用数据。系统管理文件优先用操作系统自带清理工具。终端清理不受 Remote Arc 文件工具 Undo 保护，访问范围仍取决于设备 Workspace 和审批。"),
+      durable: false,
     },
     {
       slug: "overnight-goals", category: tr("DURABLE LOOP", "持久循环"), title: tr("Leave a bounded fixed plan running", "离开前运行一个有界固定计划"),
@@ -73,6 +93,46 @@ function cases(tr: Tr) {
       limit: tr("File reads and command results can pass through the relay and AI client. Durable observations can retain excerpts. Keeping the dataset on the device does not mean no data ever leaves it.", "文件读取和命令结果可能经过 Relay 与 AI 客户端；持久观察可以保存片段。数据集留在设备上，不代表绝无数据离开设备。"), durable: false,
     },
     {
+      slug: "presentation-deck", category: tr("PRESENTATIONS", "演示文稿"),
+      title: tr("Turn local notes into a PowerPoint deck", "把本机资料变成 PowerPoint 演示文稿"),
+      intro: tr("Ask your AI to turn existing notes, reports and assets into an editable .pptx, using an authorized local script and installed document libraries.", "让 AI 使用已授权的本机脚本和已安装的文档库，把现有笔记、报告与配图整理成可编辑的 .pptx。"),
+      prompt: tr("On my workstation, turn slides/outline.md and the charts in reports/ into a 12-slide product presentation. Use the installed PPTX library, save slides/review.pptx, validate its slide count, and show the result before sharing.", "在我的工作站上，把 slides/outline.md 和 reports/ 里的图表整理成 12 页产品介绍 PPT。使用已安装的 PPTX 库，保存到 slides/review.pptx，检查页数，分享前让我确认。"),
+      tools: "read_file · list_directory · start_process · get_file_info", permission: tr("Read sources + enabled local terminal and output-directory access", "读取素材 + 本机终端授权及输出目录权限"),
+      steps: [tr("Inspect the outline, assets, installed library and intended slide structure.", "检查大纲、图片素材、已安装的文档库和幻灯片结构。"), tr("Generate the .pptx in the chosen local project folder.", "在指定项目文件夹内生成 .pptx。"), tr("Open or inspect the slide structure, count slides and report any layout limits.", "打开或检查演示文稿结构，核对页数并说明可能的排版限制。")],
+      proof: tr("An editable .pptx on the workstation, the generated slide count and verification output.", "工作站上的可编辑 .pptx、生成页数与验证结果。"),
+      limit: tr("This is a workflow using start_process and user-installed libraries such as PptxGenJS or python-pptx, not a built-in PowerPoint authoring MCP tool. Rendering depends on software installed on the computer; AI output needs visual review before delivery.", "这是通过 start_process 与本机已安装的 PptxGenJS 或 python-pptx 等文档库完成的工作流，不是内置 PowerPoint 制作 MCP 工具。渲染效果取决于电脑软件，交付前应人工检查。"), durable: false,
+    },
+    {
+      slug: "spreadsheet-report", category: tr("SPREADSHEETS", "电子表格"),
+      title: tr("Turn hundreds of files into a checked Excel report", "把数百个文件整理成可核验的 Excel"),
+      intro: tr("Read selected CSVs or structured documents in a local folder and generate an .xlsx with formulas, summaries and charts using the existing runtime.", "读取本机指定文件夹内的 CSV 或结构化资料，借助现有运行时生成带公式、汇总与图表的 .xlsx。"),
+      prompt: tr("On data-pc, combine reports/2026/*.csv into output/quarterly.xlsx, deduplicate by invoice ID, add monthly totals and a trend chart. Reconcile the input and output totals, and report any mismatches.", "在 data-pc 上合并 reports/2026/*.csv 到 output/quarterly.xlsx，按发票号去重，添加每月汇总和趋势图，核对输入输出合计并列出差异。"),
+      tools: "list_directory · read_file · start_process · get_file_info", permission: tr("Read access to input files + enabled terminal for workbook generation", "输入文件读取权限 + 用于生成工作簿的终端权限"),
+      steps: [tr("Inspect formats, headers and possible duplicates.", "检查文件格式、表头及潜在重复记录。"), tr("Run a reviewed script using Excel libraries already installed.", "运行使用已安装 Excel 文档库的已审查脚本。"), tr("Reconcile totals, inspect worksheets and return the path plus validation results.", "核对合计、检查工作表，并返回文件路径和验证结果。")],
+      proof: tr("A real .xlsx file with checked row counts, formulas and relevant discrepancy report.", "真实 .xlsx 文件、已核对行数与公式，以及差异报告。"),
+      limit: tr("Excel output requires a suitable installed runtime/library, and may not calculate formulas until opened in a compatible spreadsheet app. It is not a built-in spreadsheet API, and confidential data read by AI can pass through the relay.", "Excel 生成需要安装合适的运行时和文档库，公式可能要在兼容的表格软件中打开后才计算。它不是内置表格 API，AI 读取的敏感数据可能经过 Relay。"), durable: false,
+    },
+    {
+      slug: "desktop-automation", category: tr("DESKTOP AUTOMATION", "桌面自动化"),
+      title: tr("Run an approved mouse-and-keyboard automation script", "用已授权脚本操作鼠标与键盘"),
+      intro: tr("If the computer already has an OS automation utility, Remote Arc can run your reviewed script through the terminal to drive local desktop actions.", "如果电脑已安装系统自动化工具，Remote Arc 可以经由终端运行你确认过的脚本，间接执行本地桌面操作。"),
+      prompt: tr("On my unlocked test workstation, review the existing scripts/export-ui.js and tell me the clicks and keypresses it will make in the demo application. After approval, run it once and check the generated export. Stop if a dialog differs from the expected screen.", "在我已解锁的测试工作站上，先检查 scripts/export-ui.js，说明会在测试软件中做哪些鼠标点击和按键。经我确认后执行一次并检查导出结果；遇到不符合预期的弹窗立即停止。"),
+      tools: "read_file · start_process · get_file_info", permission: tr("Explicit terminal authorization, local interactive desktop session and OS input/accessibility permission", "明确的终端授权、本地图形桌面会话及系统输入或辅助功能权限"),
+      steps: [tr("Read the script and identify window targets, actions and high-impact side effects.", "审查脚本、目标窗口、操作步骤和高影响副作用。"), tr("Confirm the user is present or has explicitly approved the bounded workflow.", "确认用户在场或已明确批准该有界工作流。"), tr("Run the local script with enabled terminal permissions and verify the exported result.", "在已开启终端权限的设备上运行本机脚本并验证导出结果。")],
+      proof: tr("Script output, application export and an explicit report of what was actually verified.", "脚本输出、软件导出文件以及明确说明哪些操作已验证。"),
+      limit: tr("Remote Arc does NOT currently offer native screen capture, mouse-move, click or keyboard-input MCP tools. This example depends entirely on user-installed tools such as PowerShell UI Automation, AppleScript or other desktop scripting software, plus a logged-in interactive session. Browser click/fill uses a separate per-tab permission.", "Remote Arc 目前没有原生屏幕截图、移动鼠标、点击或键盘输入的 MCP 工具。本场景依赖本机安装的 PowerShell UI Automation、AppleScript 等桌面脚本软件，以及已登录的交互桌面会话。浏览器点击与填写另有独立的逐标签页授权。"), durable: false,
+    },
+    {
+      slug: "cross-device-handoff", category: tr("MULTI-COMPUTER", "多电脑协同"),
+      title: tr("Fix on one computer, verify on another", "在一台电脑修复，在另一台电脑验证"),
+      intro: tr("Ask your AI to inspect two explicitly paired devices, work in their existing checkouts and compare actual test results without remote desktop.", "让 AI 检查两台明确配对的设备，在各自已有的仓库中工作、对照真实测试结果，而不需要远程桌面。"),
+      prompt: tr("Use the linked Windows and Mac developer machines: inspect the same repository version on both, fix the cross-platform issue in the approved working tree and run the appropriate tests on each. Report the two results and do not deploy without confirmation.", "使用已连接的 Windows 和 Mac 开发机：检查两台机器上相同版本的代码，在已批准的工作区修复跨平台问题，分别运行测试并汇报；未经确认不要部署。"),
+      tools: "list_devices · read_file · edit_block · start_process", permission: tr("Separate device authorization, file editing and terminal permissions on each computer", "每台电脑单独授权文件编辑和终端权限"),
+      steps: [tr("Select each device and validate that it is online and authorized.", "分别选择设备、确认在线与已授权。"), tr("Run a bounded diagnostic and permitted edits in the correct checkout.", "在正确的代码库内执行有界诊断和允许的修改。"), tr("Verify tests separately on Windows and macOS and compare outcomes.", "分别验证 Windows 与 macOS 的测试，再对照结果。")],
+      proof: tr("Two actual run logs tied to each device plus a reviewed diff.", "分别对应设备的两份实际运行记录与已审核 diff。"),
+      limit: tr("There is no automatic cross-device file sync. The AI must coordinate explicitly, and each device needs to be online, independently authorized, and equipped with the required toolchain.", "Remote Arc 不会自动跨设备同步文件。AI 必须明确协调；每台设备都需要在线、独立授权并安装所需工具链。"), durable: false,
+    },
+    {
       slug: "home-lab", category: tr("HOME LAB", "家庭实验室"), title: tr("Inspect a headless host through its outbound connection", "通过出站连接检查无头主机"),
       intro: tr("Inspect services, logs and installed tooling without opening an inbound Remote Arc port. Save repeatable checks when you need them to run later.", "无需开放 Remote Arc 入站端口便可检查服务、日志和已有工具。需要稍后运行时，可保存可重复检查。"),
       prompt: tr("On home-server, inspect disk usage, failed systemd units and the last 100 lines of the media-service log. Explain the issue. Do not restart or reconfigure anything.", "在 home-server 上检查磁盘占用、失败的 systemd unit 和媒体服务日志最后 100 行，解释问题，不重启或修改配置。"),
@@ -103,14 +163,14 @@ function cases(tr: Tr) {
 }
 
 export function UseCaseCatalog() {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const items = cases(tr);
   return <main className="useCaseCatalog revisedUseCases">
     <header className="toolPageHeader"><span className="eyebrow">{tr("USE CASES", "使用场景")}</span><h1>{tr("What would you like done on your computer?", "你想让电脑上的哪项工作完成？")}</h1>
       <p>{tr("Start in your AI chat. Name the computer, describe the result and say how to check it. These examples show the tools, permissions and evidence each workflow needs.", "从 AI 聊天开始，说明目标电脑、想要的结果和检查方式。以下场景说明每种工作需要的工具、权限与证据。")}</p>
       <div className="useCaseEntry"><strong>{tr("Quick work uses tools. Ongoing work uses a saved Task.", "即时工作使用工具，持续工作保存为 Task。")}</strong><p>{tr("You do not need to configure every operation manually. Your AI can create an authorized long-running or scheduled task; Dashboard provides progress and stop controls.", "无需手动配置每次操作。AI 可以创建已授权长任务或定时任务，Dashboard 提供进度与停止控制。")}</p><a href="/docs/long-running-work">{tr("Understand durable work", "了解持久工作")} →</a></div>
     </header>
-    <section className="useCaseGrid" aria-label={tr("Workflows", "工作流程")}>{items.map(item => <a className="useCaseCard" key={item.slug} href={"/use-cases/" + item.slug}>
+    <section className="useCaseGrid" aria-label={tr("Workflows", "工作流程")}>{items.map(item => <a className="useCaseCard" key={item.slug} href={localizedWebsiteHref("/use-cases/" + item.slug, locale)}>
       <span className="eyebrow">{item.category}</span><h2>{item.title}</h2><p>{item.intro}</p><span className="caseMode">{item.durable ? tr("Saved Task · staged release", "持久 Task · 准备发布") : tr("Direct tools", "直接工具调用")}</span><b aria-hidden="true">↗</b>
     </a>)}</section>
     <TaskAvailability />
@@ -119,10 +179,10 @@ export function UseCaseCatalog() {
 }
 
 export function UseCaseDetail({ slug }: { slug: UseCaseSlug }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const item = cases(tr).find(entry => entry.slug === slug)!;
   return <main className="technicalDoc revisedUseCases">
-    <header className="articleHeader"><a className="caseBack" href="/use-cases">← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{item.title}</h1><p>{item.intro}</p>{item.durable && <TaskAvailability />}</header>
+    <header className="articleHeader"><a className="caseBack" href={localizedWebsiteHref("/use-cases", locale)}>← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{item.title}</h1><p>{item.intro}</p>{item.durable && <TaskAvailability />}</header>
     <article className="technicalArticle useCaseDetailBody">
       <section><h2>{tr("Ask in your AI chat", "在 AI 聊天中提出请求")}</h2><blockquote className="casePrompt">{item.prompt}</blockquote><p>{tr("This is a sample request, not an automatically started task. The AI resolves the device and checks your existing authorization before using tools or saving ongoing work.", "这是示例请求，不会自动启动任务。AI 会先确认设备和已有授权，再使用工具或保存持续工作。")}</p></section>
       <section><h2>{tr("How the work proceeds", "工作如何推进")}</h2><ol>{item.steps.map(step => <li key={step}>{step}</li>)}</ol></section>

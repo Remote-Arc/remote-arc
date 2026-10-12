@@ -73,7 +73,7 @@ registerMcpTool(fakeServer, "internal_probe", {}, async () => {
 });
 await assert.rejects(() => registeredHandler!({}), /D1_ERROR/);
 
-type UserRow = { role: string; email: string };
+type UserRow = { role: string; email: string; plan?: string; has_plus_grant?: number };
 function usageDb(user: UserRow, toolCalls: number) {
   return {
     prepare(sql: string) {
@@ -81,7 +81,7 @@ function usageDb(user: UserRow, toolCalls: number) {
         bind(..._args: unknown[]) {
           return {
             async first() {
-              if (sql.includes("SELECT role, email FROM users")) return user;
+              if (sql.includes("FROM users u WHERE u.id") || sql.includes("SELECT role, email FROM users")) return user;
               if (sql.includes("SELECT tool_calls FROM user_monthly_usage")) {
                 return { tool_calls: toolCalls };
               }
@@ -127,6 +127,27 @@ assert.equal(normalUsage.unlimited, false);
 assert.equal(normalUsage.limit, 10000);
 assert.equal(normalUsage.remaining, 9877);
 
+const freeLimitedEnv = {
+  DB: usageDb({ role: "user", email: "free@example.com", plan: "free", has_plus_grant: 0 }, 123),
+  MONTHLY_TOOL_CALL_LIMIT: "10000",
+  FREE_MONTHLY_TOOL_CALL_LIMIT: "1000",
+};
+assert.equal((await getMonthlyUsage(freeLimitedEnv, "free-user")).limit, 1000);
+
+const paidEnv = {
+  DB: usageDb({ role: "user", email: "plus@example.com", plan: "plus", has_plus_grant: 0 }, 123),
+  MONTHLY_TOOL_CALL_LIMIT: "10000",
+  FREE_MONTHLY_TOOL_CALL_LIMIT: "1000",
+};
+assert.equal((await getMonthlyUsage(paidEnv, "plus-user")).limit, 10000);
+
+const grantEnv = {
+  DB: usageDb({ role: "user", email: "grant@example.com", plan: "free", has_plus_grant: 1 }, 123),
+  MONTHLY_TOOL_CALL_LIMIT: "10000",
+  FREE_MONTHLY_TOOL_CALL_LIMIT: "1000",
+};
+assert.equal((await getMonthlyUsage(grantEnv, "grant-user")).limit, 10000);
+
 const authEnv = {
   PUBLIC_ORIGIN: "https://mcp.remotearc.app",
   DB: { prepare() { throw new Error("An OAuth scope challenge must not access storage"); } } as unknown as D1Database,
@@ -162,5 +183,26 @@ assert.deepEqual(await challengedScopes(authIdentity("computer:read"), "list_dev
 assert.deepEqual(await challengedScopes(authIdentity("devices:read computer:read computer:read offline_access"), "write_file", {
   device_id: "scope-test-device", path: "/scope-test.txt", content: "scope test",
 }), new Set(["devices:read", "computer:read", "computer:write", "offline_access"]));
+
+// Production deliberately disables experimental goal creation/decisions, but
+// read-only context for an existing goal must still be discoverable by clients.
+const disabledGoalsMcp = createRemoteLinkMcp(
+  { ...authEnv, ENABLE_EXPERIMENTAL_AGENT_GOALS: "0" },
+  authIdentity("automation:read"),
+);
+const listed = await disabledGoalsMcp.fetch(new Request(authEnv.PUBLIC_ORIGIN + "/mcp", {
+  method: "POST",
+  headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+  body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+}));
+const listedText = await listed.text();
+assert(listed.ok, listedText);
+const listedJson = JSON.parse(listedText.trim().startsWith("{")
+  ? listedText : listedText.split("\n").find(line => line.startsWith("data: "))!.slice(6));
+assert(!listedJson.error, listedText);
+const listedNames = new Set<string>(listedJson.result.tools.map((tool: { name: string }) => tool.name));
+assert(listedNames.has("get_goal_context"), "existing goal checkpoints remain readable in production");
+assert(!listedNames.has("create_agent_goal"), "experimental goal creation must stay disabled");
+assert(!listedNames.has("submit_goal_decision"), "experimental mutations must stay disabled");
 
 console.log("PASS: MCP error contract, incremental OAuth scopes, and admin/operator unlimited usage regressions");

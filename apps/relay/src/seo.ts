@@ -1,3 +1,7 @@
+import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
+import { localizedPages, isChineseMarketingPath, unprefixedMarketingPath } from "./marketing-locale.js";
+import { chineseSeo } from "./zh-seo.js";
+import { chineseResourceSeo } from "./zh-resources.js";
 
 const SITE = "https://remotearc.app";
 
@@ -9,6 +13,8 @@ type SeoPage = {
   type?: "website" | "article";
   author?: string;
   blocks?: ArticleBlock[];
+  publishedAt?: string;
+  sources?: Array<[string, string]>;
 };
 
 function esc(value: string) {
@@ -16,6 +22,28 @@ function esc(value: string) {
 }
 
 const articles: Record<string, SeoPage> = {
+  "/blogs/go-vs-typescript-agent-benchmarks": {
+    title: "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
+    description: "Native Go versus TypeScript Agent benchmarks on Intel Mac and Windows: the Windows regression and fix, atomic/durable write trade-offs, memory residency and unanswered L3 questions.",
+    canonical: SITE + "/blogs/go-vs-typescript-agent-benchmarks",
+    type: "article",
+    author: "Sam Yao",
+    publishedAt: "2026-10-09",
+    blocks: [
+      { text: "Go did not win every run. Remote Arc 0.6.0 uses a native Go Agent because of its long-running device-runtime model and low measured resident memory, not because Go is always faster than TypeScript." },
+      { heading: "A reproducible comparison, not a universal language contest", text: "L1 runs local Core JSONL IPC; L2 runs a complete foreground Agent against an authenticated loopback WebSocket relay. Three alternating rounds on the same host yielded 600 observations per file operation. Values below are L2 P50 milliseconds, with post-batch RSS in MiB, rather than production Cloudflare or ChatGPT timings." },
+      { heading: "Mac: compare atomic and durable separately", text: "At source f68ab09 on an Intel Mac, L2 atomic writes were 5.327 ms for TS and 2.713 ms for Go; memory was 100.69 MiB TS versus 16.35 MiB Go. In durable mode, write latency grew to 203.618 ms TS and 195.803 ms Go. Waiting for file and metadata synchronization dominates that difference. Mac fsync is not a full hardware power-loss guarantee." },
+      { heading: "Windows: the regression and its correction", text: "At f68ab09 on an Intel Windows PC, Go writes were slower: 29.152 ms against TS 20.977 ms, and Undo took 51.719 ms against TS 16.091 ms. The native Windows path-handling implementation was corrected and measured again at 71cde96. In that follow-up, L2 atomic writes took 9.687 ms for Go versus 21.294 ms for TS; Undo took 12.942 ms versus 16.189 ms. Keeping both reports is important because these are distinct source revisions." },
+      { heading: "Two-hour isolated native Agent residency", text: "In the older f68ab09 soak, the Mac completed 7,200 seconds with sampled native Go RSS growing from 14.11 to 17.33 MiB; Windows completed 7,200 seconds from 17.80 to 24.79 MiB, peak sampled 25.11 MiB. Tests covered Undo, file conflicts, managed processes and fixture reconnects. They are not a physical power-loss trial or production-service upgrade test." },
+      { heading: "What production benchmarking still needs", text: "L3 remains a future measured comparison: AI client to Cloudflare Relay to device, broken down by routing, network and execution time. Hardware durability, real outages and installed-service upgrade behavior remain distinct release checks. TS remains a compatibility fallback; the hosted Worker and Dashboard still use TypeScript." }
+    ],
+    sources: [
+      ["Mac + Windows baseline (f68ab09)", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-f68ab09.md"],
+      ["Windows fix and follow-up (71cde96)", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-71cde96.md"],
+      ["Reproduction protocol and raw artifact hashes", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/README.md"]
+    ]
+  },
+
   "/blogs/why-i-built-remote-arc": {
     title: "Why I built Remote Arc: AI should reach your computer without owning it",
     description: "Why Remote Arc exists: controlled access from AI clients to real computers without surrendering the security boundary.",
@@ -87,17 +115,24 @@ const articles: Record<string, SeoPage> = {
 };
 
 const pages: Record<string, SeoPage> = {
-  "/": { title: "Remote Arc — Controlled Computer Access for AI", description: "Connect ChatGPT, Claude, Codex and compatible MCP clients to paired Windows, macOS and Linux computers with explicit permissions and local safety controls.", canonical: SITE + "/" },
+  "/": { title: "Remote Arc — Let AI Chat Work on Your Computer, No API Key", description: "Turn compatible AI chats into real computer actions through secure Remote MCP. No separate model API key or pay-per-token API bill. Supported free chat plans can connect; provider tool limits apply.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
   "/install/cursor": { title: "Install Remote Arc for Cursor", description: "Use Remote Arc to give Cursor controlled access to paired Windows, macOS and Linux computers through MCP.", canonical: SITE + "/install/cursor" },
   "/pricing": { title: "Remote Arc Pricing — Hosted remote MCP for AI", description: "Start free with 10,000 monthly hosted MCP tool calls. Understand account usage, separate AI subscriptions and current capacity availability.", canonical: SITE + "/pricing" },
+  "/downloads": { title: "Remote Arc Downloads — Native Go Agent for Windows, macOS and Linux", description: "Download the native Remote Arc Agent or install with npm and Homebrew. Go Agent and Execution Core by default; standalone installs need no Node.js.", canonical: SITE + "/downloads" },
   "/releases": { title: "Remote Arc Releases — Product version history", description: "Remote Arc release history for remote MCP access, device controls, durable deterministic tasks, browser sharing and local execution safety.", canonical: SITE + "/releases" },
   "/demo": { title: "Remote Arc Plugin Demo — ChatGPT to a real computer", description: "Watch a real Remote Arc demo showing ChatGPT connecting to a paired Mac, inspecting a Node.js project and running its tests.", canonical: SITE + "/demo" },
   "/docs": { title: "Remote Arc Docs — Remote MCP & Computer Access", description: "Set up Remote Arc, connect AI clients, understand device permissions, MCP tools, long-running work, restart recovery, scheduling, isolation and task data.", canonical: SITE + "/docs" },
   "/docs/long-running-work": { title: "Remote Arc Long-running Work — Durable commands and schedules", description: "Learn how deterministic long tasks, schedules, device permissions and reconnect recovery work, and where fresh AI reasoning is still required.", canonical: SITE + "/docs/long-running-work" },
+  "/remote-mcp": {
+    title: "Remote MCP Server: What It Is & How to Connect | Remote Arc",
+    description: "Learn remote vs local MCP, how to connect ChatGPT, Claude and Cursor to a Remote MCP server, and how Remote Arc reaches your own computer securely.",
+    canonical: SITE + "/remote-mcp"
+  },
   "/docs/mcp": { title: "Remote Arc MCP Reference — OAuth, Tools & Browser", description: "Remote MCP connection, OAuth scopes, device tools, deterministic task controls and browser companion setup for Remote Arc.", canonical: SITE + "/docs/mcp" },
+  "/chrome-extension": { title: "Download Chrome Companion for Remote Arc — Extension Setup", description: "Download Remote Arc Chrome Companion, load the unpacked extension in Chrome, approve browser pairing and choose which tabs to share with AI.", canonical: SITE + "/chrome-extension" },
   "/connect-ai": { title: "Connect an AI client to Remote Arc", description: "Pair a computer, choose its device permissions, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.", canonical: SITE + "/connect-ai" },
   "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
   "/blogs": { title: "Remote Arc Blog — MCP, Security & Remote AI Engineering", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
@@ -111,6 +146,7 @@ const pages: Record<string, SeoPage> = {
 };
 
 const useCaseSeo: Record<string, [string, string]> = {
+  "disk-space-cleanup": ["Clean up Windows C: or Mac disk space safely", "Read-only disk usage audit, reviewed large-file candidates and explicit path-by-path confirmation before destructive cleanup."],
   "file-organization": ["Organize files with a reviewed move plan", "Inspect a folder, review destinations and collisions, then execute an authorized move plan with a before/after manifest."],
   "remote-development": ["Fix a project on your own computer", "Inspect, edit and test the existing checkout using Remote Arc device tools and explicit permissions."],
   "overnight-goals": ["Run durable work without pretending the AI stays awake", "Save deterministic commands and checks for later execution; fresh AI judgment still requires a live supported reasoning host."],
@@ -121,16 +157,29 @@ const useCaseSeo: Record<string, [string, string]> = {
   "home-lab": ["Inspect a headless host", "Inspect logs and services through an outbound device connection without opening an inbound Remote Arc port."],
   "browser-research": ["Work with explicitly shared browser tabs", "Read text, selections, links and tables, then optionally enable scoped click and fill on individual shared Chrome tabs."],
   "remote-support": ["Diagnose an authorized computer", "Read real logs and processes while keeping diagnosis and repair authorization separate."],
+  "presentation-deck": ["Create an editable PowerPoint on your own computer", "Turn local notes and charts into a checked PPTX using an authorized script and document libraries installed on the paired computer."],
+  "spreadsheet-report": ["Build a verified Excel workbook from local data", "Combine local CSV files into an XLSX, check totals and inspect formulas or charts using your installed runtime and spreadsheet libraries."],
+  "desktop-automation": ["Run reviewed desktop mouse and keyboard scripts", "Use an authorized local terminal to run user-installed desktop automation software, with interactive-session requirements and explicit approval."],
+  "cross-device-handoff": ["Work across Windows and macOS from one AI chat", "Coordinate actions on separately paired Windows and Mac computers, enforcing each device's own tool permissions and verifying results independently."],
 };
 for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   const path = "/use-cases/" + slug;
   pages[path] = { title: title + " — Remote Arc", description, canonical: SITE + path };
 }
 
-function blogIndexHtml() {
-  const items = Object.entries(articles).map(function(entry) {
-    return '<li><a href="' + entry[0] + '">' + esc(entry[1].title) + '</a><p>' + esc(entry[1].description) + '</p></li>';
+function blogIndexHtml(chinese = false) {
+  const items = Object.entries(articles).map(([path, english]) => {
+    const translated = chinese ? chineseResourceSeo[path] : null;
+    const href = chinese ? "/zh" + path : path;
+    return '<li><a href="' + href + '">' + esc(translated?.title ?? english.title) + '</a><p>' +
+      esc(translated?.description ?? english.description) + '</p></li>';
   }).join("");
+  if (chinese) {
+    return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">博客</p><h1>Remote Arc 博客</h1>' +
+      '<p>记录 Remote Arc 的真实工程实践、MCP 架构、安全设计和性能实测，解释产品做出这些技术取舍的原因。</p>' +
+      '<p>阅读每一篇完整中文文章，了解设备权限、OAuth、原生 Go Agent 与持久任务的真实能力和边界。</p><ol>' +
+      items + '</ol></section></main>';
+  }
   return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">BLOG</p><h1>Remote Arc blog</h1>' +
     '<p>Engineering notes, architecture decisions, security trade-offs and product reasoning from building a controlled Remote MCP bridge between AI clients and real computers.</p>' +
     '<p>The articles explain why Remote Arc separates the hosted control plane from local operating-system execution, how OAuth and paired-device identities fit together, why terminal access is treated differently from narrower file tools, and where durable task execution stops being the same thing as fresh AI reasoning.</p>' +
@@ -141,7 +190,13 @@ function articleHtml(page: SeoPage) {
   const blocks = (page.blocks || []).map(function(block) {
     return (block.heading ? '<h2>' + esc(block.heading) + '</h2>' : '') + '<p>' + esc(block.text) + '</p>';
   }).join("");
-  return '<main class="seo-blog-shell"><article><p class="seo-eyebrow">REMOTE ARC BLOG</p><h1>' + esc(page.title) + '</h1><p class="seo-byline">Sam Yao · Creator of Remote Arc · 27 Sep 2026</p>' + blocks + '</article></main>';
+  const date = page.publishedAt || "2026-09-27";
+  const references = (page.sources || []).map(([name, href]) =>
+    '<li><a href="' + esc(href) + '">' + esc(name) + '</a></li>'
+  ).join("");
+  return '<main class="seo-blog-shell"><article><p class="seo-eyebrow">REMOTE ARC BLOG</p><h1>' + esc(page.title) + '</h1><p class="seo-byline">Sam Yao · Creator of Remote Arc · ' + esc(date) + '</p>' + blocks +
+    (references ? '<nav aria-label="Benchmark source reports"><h2>Sources and reproduction</h2><ul>' + references + '</ul></nav>' : '') +
+    '</article></main>';
 }
 
 type CrawlSection = { heading: string; text: string };
@@ -155,7 +210,7 @@ type CrawlPage = {
 const crawlPages: Record<string, CrawlPage> = {
   "/": {
     h1: "Remote computer access for AI through MCP",
-    intro: "Remote Arc connects ChatGPT, Claude, Cursor and other compatible AI clients to Windows, macOS and Linux computers that you explicitly pair. It is a remote execution layer for work that already lives on your devices, not a replacement assistant, hosted desktop or general remote-control product.",
+    intro: "Don’t let AI stop at chat. Remote Arc connects compatible ChatGPT, Claude, Cursor and other AI clients through MCP to computers you explicitly pair. Let your existing chat work on files, terminals and processes without needing a separate model API key or token purchase. Existing AI plan limits still apply; your paired devices enforce their own permissions.",
     sections: [
       { heading: "Use the computer where the work already lives", text: "Your repositories, files, runtimes, credentials and command-line tools can stay on your own machine. Remote Arc exposes named MCP capabilities for inspecting directories, reading files, making supported edits, checking processes and running approved commands. The AI asks for a specific tool operation and the paired device executes it locally, so you do not need to move an entire development environment into a hosted VM just to let an AI help with real work." },
       { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client to your Remote Arc account, while each paired computer keeps its own policy. A development workstation can allow file edits and managed terminal commands while another machine remains read-only. Trusted Write Locations, protected paths, per-tool permissions and explicit approvals let you narrow ordinary file workflows without pretending that powerful terminal access is risk free." },
@@ -163,7 +218,7 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "Keep the AI client replaceable", text: "Remote Arc uses MCP as the product boundary exposed to compatible AI clients. That means the client can change without rebuilding the device connection model. You can connect ChatGPT, Claude, Cursor or another supported MCP client to the same account while keeping paired computers, device policy and revocation controls independent from the conversation interface." },
       { heading: "Support short actions and durable work", text: "For immediate work, an AI can inspect state and call device tools during the conversation. For deterministic work that must outlive one chat turn, Remote Arc can persist bounded commands, schedules, condition watches and task state on supported plans. Fresh reasoning is still treated separately: a saved task can continue deterministic execution, but Remote Arc does not claim that a model remains continuously conscious after the chat ends." }
     ],
-    links: [["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"], ["/use-cases", "Use cases"]]
+    links: [["/remote-mcp", "Remote MCP guide"], ["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"], ["/use-cases", "Use cases"]]
   },
   "/install/chatgpt": {
     h1: "Install Remote Arc for ChatGPT",
@@ -244,6 +299,31 @@ const crawlPages: Record<string, CrawlPage> = {
     ],
     links: [["/docs/mcp", "MCP reference"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"], ["/use-cases", "Use cases"], ["/connect-ai", "Connect an AI client"]]
   },
+  "/remote-mcp": {
+    h1: "Remote MCP Server: what it is and how to connect",
+    intro: "Remote MCP lets an AI client discover and call tools exposed by a server reachable over the network. Learn how this differs from locally launched MCP processes, how to connect a compatible ChatGPT, Claude or Cursor client, and how Remote Arc uses one hosted MCP endpoint to bridge approved tools on computers you explicitly pair.",
+    sections: [
+      { heading: "What is a remote MCP server?", text: "MCP, the Model Context Protocol, defines how a client discovers and invokes tools made available by a server. With a local MCP setup the AI host commonly starts the tool server as a child process and exchanges protocol messages over standard input and output (stdio). A remote MCP server is reachable through a network transport such as Streamable HTTP, so the AI host need not launch that MCP server as a local child process. Authentication and individual client compatibility still matter; a reachable URL alone does not make every MCP client able to connect or use every tool." },
+      { heading: "Local MCP versus remote MCP", text: "Local stdio MCP is useful when an AI client and tools live in the same development environment, or when you can configure and run a tool process next to your assistant. Remote MCP is useful for managed network services, centrally controlled OAuth integrations and clients that need tools hosted elsewhere. The word remote describes how the client reaches an MCP endpoint. It does not require every downstream operation to run on the server hosting that endpoint. Remote Arc, for example, routes permitted calls from a hosted MCP control plane to the local agent on a paired computer." },
+      { heading: "How to connect a Remote MCP server in three steps", text: "First, choose a supported remote MCP server and understand what capabilities it provides. For Remote Arc, run npx remotelink on the Windows, macOS or Linux computer that should receive tool calls, then approve pairing through the Remote Arc dashboard. Second, open the MCP apps or connectors configuration inside your AI client and add https://mcp.remotearc.app/mcp using its supported remote HTTP setup. Complete OAuth to authorize that client to your Remote Arc account. The menus and the availability of custom remote MCP connections depend on client version, account and workspace settings. Third, list paired devices through the connected client and make a harmless read-only test call before authorizing file edits, shell commands or other broader tools." },
+      { heading: "Remote MCP setup for ChatGPT, Claude and Cursor", text: "ChatGPT requires a supported app or MCP connector entry point; Remote Arc can be installed when available or connected through the appropriate developer setup. Claude exposes custom connector setup with OAuth where supported. Cursor supports remote MCP server configuration; confirm authorization and tool discovery before requesting work on a project. Follow the current Remote Arc install guide for each client instead of copying a configuration meant for a different application. Running a computer agent alone does not automatically add its hosted MCP endpoint to your ChatGPT, Claude or Cursor account." },
+      { heading: "Remote Arc architecture: from AI client to your computer", text: "Remote Arc separates the AI's reasoning from tool execution. Your AI client sends authenticated MCP requests over HTTPS to the Remote Arc endpoint. The hosted service checks account authorization and the selected device's policy, then routes the request through an outbound connection already established by that computer's local agent. Files, processes and approved terminal commands run on the selected computer. Ordinary setup does not open an inbound public MCP port on your laptop, expose a router port or require a VPN. A device still needs power, network connectivity and a working local agent to receive calls." },
+      { heading: "Security: OAuth is not permission to run everything", text: "OAuth grants a supported AI client access to the Remote Arc account, not a shared operating-system login or unconditional control of every paired machine. Each computer has its own revocable device identity and configurable tool permissions. Start with read access; enable writing or terminal calls only for workflows you trust. Trusted Write Locations and sensitive path rules narrow supported file operations. Terminal commands, when separately enabled, run under the local OS user and are not placed in an operating-system sandbox by those file rules. Requested data and tool results can pass through the hosted relay and AI provider, so review the security and privacy documentation." },
+      { heading: "Troubleshooting remote MCP connections", text: "If a client cannot discover tools, verify that your particular AI account supports remote MCP apps or connectors, that the endpoint is configured in that client and that OAuth completed. If the client connects but a computer appears offline, inspect the computer's power and network state and run npx remotelink to confirm the local agent is available. If a tool is denied, check the exact target device and its permissions; a successful OAuth login is separate from write or terminal authorization. The Free plan includes background agent recovery, but planned durable jobs, scheduling and keep-awake are separate Plus capabilities. Neither tier can execute on a powered-off computer." }
+    ],
+    links: [["/docs/mcp", "Remote Arc tool and OAuth reference"], ["/install/chatgpt", "Connect ChatGPT"], ["/install/claude", "Connect Claude"], ["/install/cursor", "Connect Cursor"], ["/mcp-computer-access", "Remote MCP computer access architecture"], ["/security-model", "Security and authorization"], ["/pricing", "Free and Plus capabilities"]]
+  },
+  "/chrome-extension": {
+    h1: "Download Chrome Companion for Remote Arc",
+    intro: "Install the scoped Chrome Companion extension to share individual Chrome browser tabs with your AI through Remote Arc. Get the current ZIP download immediately at the top of the page, then follow the Chrome installation instructions. This optional browser tool is not needed for file or terminal operations.",
+    sections: [
+      { heading: "Download the unpacked Chrome extension", text: "Download the Chrome Companion ZIP from the first card on this page. Unzip the package to a stable folder on your computer. Chrome Companion is currently distributed as an unpacked beta rather than through Chrome Web Store." },
+      { heading: "Install from chrome://extensions", text: "Open the Chrome extensions management page at chrome://extensions, enable Developer mode, choose Load unpacked and select the directory containing manifest.json. Open the extension popup, choose Connect to Remote Arc, confirm browser pairing and share the browser tab you want the AI to use." },
+      { heading: "Every shared tab starts read-only", text: "A newly shared Chrome tab provides read-only tools for page snapshots, selected text, links and tables. Click & fill requires separate explicit permission for that tab. Stale element references are rejected and recognized password, one-time-code, payment-card and file-picker fields are not available to normal browser filling." },
+      { heading: "Unpacked extensions need manual updates", text: "The download ZIP is rebuilt from current extension source when the production website is deployed, but Chrome does not automatically update an extension loaded using Load unpacked. To upgrade, download and unpack a new ZIP and reload the unpacked extension in Chrome." }
+    ],
+    links: [["/docs/mcp", "Browser MCP tools and scopes"], ["/security-model", "Security and per-device permissions"], ["/connect-ai", "Connect a ChatGPT, Claude or Cursor MCP app"]]
+  },
   "/docs/mcp": {
     h1: "Remote Arc Remote MCP reference",
     intro: "Reference for the Remote Arc MCP endpoint, OAuth authorization, device discovery, file and process tools, browser capabilities, durable task controls and client integration.",
@@ -254,7 +334,7 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "Browser companion capabilities", text: "When a Chrome tab is explicitly shared, Remote Arc can expose a simplified snapshot, selected text, links or table data. Click and fill capabilities require additional per-tab permission. Password, one-time-code, payment-card and file-upload fields remain outside the ordinary browser fill path." },
       { heading: "Durable tasks and reasoning boundaries", text: "Remote Arc can persist long commands, schedules, condition watches and bounded goal state so deterministic work can survive disconnects and chat endings. Task state and recovery do not imply that an AI model is continuously running. Any step that requires fresh interpretation still needs a reasoning controller to resume from saved context and choose the next allowed action." }
     ],
-    links: [["/mcp-computer-access", "MCP computer access overview"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"]]
+    links: [["/remote-mcp", "What is Remote MCP? Connection guide"], ["/mcp-computer-access", "MCP computer access overview"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"]]
   },
   "/docs/long-running-work": {
     h1: "Long-running AI work on your own computer",
@@ -362,6 +442,13 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
     proof: "A useful result includes the concrete diff, focused test output and a clear statement of any remaining failure instead of only saying that the task is done.",
     boundary: "Terminal commands run as the local operating-system user. Trusted Write Locations do not sandbox shell commands, and Local Undo covers supported file-tool edits rather than arbitrary shell edits or Git history."
   },
+  "disk-space-cleanup": {
+    prompt: "On my authorized Windows PC, run read-only disk-usage checks for C:, list the largest candidates and estimated reclaimable bytes, and wait for explicit path-by-path approval before deleting anything.",
+    flow: "Measure free space and inspect accessible directories, group build outputs and package caches as candidates, present exact paths and risks, then perform only individually approved operations and remeasure.",
+    tools: "Read-only file metadata and authorized start_process checks can profile disk usage. Actual deletion is a separate terminal operation requiring explicit authorization and appropriate workspace access.",
+    proof: "Record initial and final free space, exact approved deleted paths, measured reclaimed capacity and skipped risky candidates.",
+    boundary: "Never blindly purge WinSxS, System32, ProgramData, user profiles, backups or macOS snapshots. Prefer operating-system cleanup tools for managed system files. Shell deletion is outside Local Undo."
+  },
   "file-organization": {
     prompt: "Ask the AI to inspect a selected folder, propose an exact move plan, wait for approval, avoid deletion or overwrite, then save a before-and-after manifest.",
     flow: "Inspect names and metadata without reading unnecessary contents, review destination folders and filename collisions, execute only the approved moves, then verify that the expected files exist at their new locations.",
@@ -418,6 +505,34 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
     proof: "The returned facts should be tied to the explicitly shared page, such as extracted rows, visible links or selected text.",
     boundary: "Tabs begin read-only. Recognized password, one-time-code, payment-card and file-upload fields are blocked from the ordinary fill path, and browser tools are not the same thing as unrestricted profile-wide browser control."
   },
+  "presentation-deck": {
+    prompt: "Ask your AI to build a 12-slide editable PPTX from an outline and charts stored in an approved folder on the workstation.",
+    flow: "Read source notes and chart files, inspect the available local PPTX library, generate the presentation using an authorized terminal script, then validate slide count and document structure.",
+    tools: "This workflow uses read_file, list_directory, start_process and get_file_info. It requires an enabled terminal tool and a suitable PPTX library installed on the computer.",
+    proof: "Provide the real presentation file path, number of generated slides and the output of the document verification step.",
+    boundary: "Remote Arc has no built-in PowerPoint editor MCP tool. The locally installed software is responsible for file generation and rendering, and generated layouts should be visually reviewed before sharing."
+  },
+  "spreadsheet-report": {
+    prompt: "Ask your AI to combine authorized monthly CSV files into an Excel workbook with reconciled totals, deduplication and useful charts.",
+    flow: "Inspect input headers and schemas, run a reviewed local Python or Node XLSX generation script and check the output file, row counts and aggregate totals.",
+    tools: "This workflow requires file-read tools plus authorized start_process access and an appropriate local spreadsheet-generation library.",
+    proof: "Return an actual XLSX path, checked input/output totals and any discrepancies or formula issues found during validation.",
+    boundary: "An installed library is required and some Excel formulas calculate only when opened in a spreadsheet app. No built-in XLSX manipulation MCP tool is currently advertised, and tool results may pass through the hosted relay."
+  },
+  "desktop-automation": {
+    prompt: "Review a local mouse-and-keyboard automation script and, after explicit approval, execute it once in an unlocked test desktop session.",
+    flow: "Inspect the existing script, list the intended app interactions and side effects, confirm user authorization, then run the local utility through an enabled terminal and verify the result.",
+    tools: "Remote Arc can run locally installed automation software through start_process when authorized. Interactive OS session and appropriate accessibility or input permissions are required.",
+    proof: "Collect the actual script exit status and exported app output, and distinguish verified interactions from assumptions.",
+    boundary: "Remote Arc currently has no native screen capture, mouse-move, click or keyboard-control MCP tools. This is optional local scripting, not native remote GUI control; sensitive interaction should not run unattended without review."
+  },
+  "cross-device-handoff": {
+    prompt: "Use one chat to inspect a Windows workstation and a Mac developer machine, run authorized checks on each and compare cross-platform results.",
+    flow: "Identify both paired devices, check their separate availability and permissions, inspect the intended checkout on each, and validate any edits with platform-specific tests.",
+    tools: "Explicit device discovery, file inspection, edit_block and start_process are used independently for each connected computer.",
+    proof: "Return two device-identified test logs and a reviewed diff rather than a single merged claim that work succeeded everywhere.",
+    boundary: "Remote Arc does not automatically sync repositories across devices. Both machines must be reachable, separately authorized and equipped with their required local toolchain."
+  },
   "remote-support": {
     prompt: "On a computer you own or are authorized to administer, inspect logs and process state, explain the likely cause and ask before restarting or modifying anything.",
     flow: "Pair only an authorized computer, observe facts within the granted tools and paths, separate diagnosis from repair, and verify the post-repair state only after the requested repair authority exists.",
@@ -445,6 +560,21 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
 }
 
 function pageFor(pathname: string): SeoPage | null {
+  if (isChineseMarketingPath(pathname)) {
+    const base = unprefixedMarketingPath(pathname);
+    const original = pages[base] ?? articles[base];
+    const translated = chineseSeo[base] ?? chineseResourceSeo[base];
+    if (!original || !translated) return null;
+    return {
+      ...original,
+      title: translated.title,
+      description: translated.description,
+      canonical: SITE + pathname,
+      blocks: original.type === "article"
+        ? [{ text: translated.intro }, ...translated.sections.map(section => ({ heading: section.heading, text: section.text }))]
+        : original.blocks,
+    };
+  }
   return articles[pathname] ?? pages[pathname] ?? null;
 }
 
@@ -497,6 +627,7 @@ function howToSchema(pathname: string, page: SeoPage) {
 }
 
 function jsonLd(page: SeoPage, pathname: string) {
+  const schemaLanguage = page.canonical === SITE + "/zh" || page.canonical.startsWith(SITE + "/zh/") ? "zh-CN" : "en";
   const graph: unknown[] = [
     {
       "@type": "Organization",
@@ -512,7 +643,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       name: "Remote Arc",
       url: SITE,
       publisher: { "@id": SITE + "/#organization" },
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     }
   ];
 
@@ -522,13 +653,13 @@ function jsonLd(page: SeoPage, pathname: string) {
       "@id": page.canonical + "#article",
       headline: page.title,
       description: page.description,
-      datePublished: "2026-09-27",
-      dateModified: "2026-09-27",
+      datePublished: page.publishedAt || "2026-09-27",
+      dateModified: page.publishedAt || "2026-09-27",
       author: { "@type": "Person", name: page.author || "Sam Yao" },
       publisher: { "@id": SITE + "/#organization" },
       mainEntityOfPage: page.canonical,
       image: SITE + "/demos/connect-workflow-poster.webp",
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     });
   } else if (pathname === "/") {
     graph.push({
@@ -557,7 +688,7 @@ function jsonLd(page: SeoPage, pathname: string) {
     graph.push({ "@type": "CollectionPage", name: page.title, description: page.description, url: page.canonical, isPartOf: { "@id": SITE + "/#website" } });
   } else if (pathname === "/use-cases") {
     graph.push({ "@type": "CollectionPage", name: page.title, description: page.description, url: page.canonical, isPartOf: { "@id": SITE + "/#website" } });
-  } else if (pathname.startsWith("/docs") || pathname === "/security-model" || pathname === "/mcp-computer-access") {
+  } else if (pathname.startsWith("/docs") || pathname === "/security-model" || pathname === "/mcp-computer-access" || pathname === "/remote-mcp") {
     graph.push({
       "@type": "TechArticle",
       headline: page.title,
@@ -565,7 +696,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       url: page.canonical,
       author: { "@id": SITE + "/#organization" },
       publisher: { "@id": SITE + "/#organization" },
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     });
   } else {
     graph.push({
@@ -602,8 +733,29 @@ function jsonLd(page: SeoPage, pathname: string) {
   return { "@context": "https://schema.org", "@graph": graph };
 }
 
+crawlPages["/downloads"] = {
+  h1: "Download Remote Arc " + cliPackage.version,
+  intro: "The Agent and independent Execution Core are native Go. npm installs and verifies the same binary; standalone downloads and Homebrew need no Node.js. TypeScript is available only with the explicit --ts fallback.",
+  sections: [
+    { heading: "npm / npx", text: "Run npx remotelink@latest with Node.js 20+. Go is the default; --go remains a compatible alias." },
+    { heading: "Homebrew", text: "brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc. On Homebrew versions with trust support, trust the remotelink and remotelink-go formulae with brew trust --formula before running brew install yaohuangguan/remote-arc/remotelink. Existing remotelink-go users can upgrade that formula." },
+    { heading: "Upgrade safely", text: "Stop the current Agent before changing versions or runtimes. Ctrl+C stops foreground execution; remotelink --stop disables Go recovery and drains execution. Pairing and Undo formats are preserved." },
+  ],
+  links: [
+    ...["darwin", "windows", "linux"].flatMap(platform => ["amd64", "arm64"].map<[string, string]>(arch => ["https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v" + cliPackage.version + "/remotelink-v" + cliPackage.version + "-" + platform + "-" + arch + (platform === "windows" ? ".exe" : ""), platform + " / " + arch])),
+    ["https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v" + cliPackage.version + "/SHA256SUMS", "SHA256 checksums"],
+    ["/docs#docs-routing", "System architecture"],
+  ],
+};
+
 function crawlablePageHtml(pathname: string, page: SeoPage) {
-  const copy = crawlPages[pathname] ?? {
+  const translated = isChineseMarketingPath(pathname) ? (chineseSeo[unprefixedMarketingPath(pathname)] ?? chineseResourceSeo[unprefixedMarketingPath(pathname)]) : null;
+  const copy = translated ? {
+    h1: translated.h1,
+    intro: translated.intro,
+    sections: translated.sections,
+    links: [["/zh/docs", "中文文档"], ["/zh/install/chatgpt", "ChatGPT 安装教程"], ["/zh/pricing", "价格方案"]] as Array<[string, string]>
+  } : crawlPages[pathname] ?? {
     h1: page.title.replace(/ — Remote Arc$/, ""),
     intro: page.description,
     sections: [],
@@ -630,7 +782,9 @@ export function renderMarketingHtml(html: string, pathname: string) {
     canonical: SITE + pathname
   };
   const indexable = Boolean(page);
-  const structured = indexable ? JSON.stringify(jsonLd(resolved, pathname)).replaceAll("<", "\\u003c") : "";
+  const chinese = isChineseMarketingPath(pathname);
+  const basePath = unprefixedMarketingPath(pathname);
+  const structured = indexable ? JSON.stringify(jsonLd(resolved, basePath)).replaceAll("<", "\\u003c") : "";
   const robots = indexable
     ? "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
     : "noindex,nofollow,noarchive";
@@ -641,7 +795,12 @@ export function renderMarketingHtml(html: string, pathname: string) {
     '<meta name="bingbot" content="' + robots + '" />' +
     '<meta name="author" content="' + esc(resolved.type === "article" ? (resolved.author || "Sam Yao") : "Remote Arc") + '" />' +
     '<meta property="og:type" content="' + (resolved.type === "article" ? "article" : "website") + '" />' +
-    '<meta property="og:locale" content="en_US" />' +
+    '<meta property="og:locale" content="' + (chinese ? "zh_CN" : "en_US") + '" />' +
+    (indexable && localizedPages.includes(basePath as typeof localizedPages[number])
+      ? '<link rel="alternate" hreflang="en" href="' + SITE + (basePath === "/" ? "/" : basePath) + '" />' +
+        '<link rel="alternate" hreflang="zh-CN" href="' + SITE + (basePath === "/" ? "/zh" : "/zh" + basePath) + '" />' +
+        (basePath === "/" ? '<link rel="alternate" hreflang="x-default" href="' + SITE + '/" />' : '')
+      : '') +
     '<meta property="og:image" content="' + image + '" />' +
     '<meta property="og:image:secure_url" content="' + image + '" />' +
     '<meta property="og:image:type" content="image/webp" />' +
@@ -654,10 +813,11 @@ export function renderMarketingHtml(html: string, pathname: string) {
     '<meta name="twitter:image" content="' + image + '" />' +
     '<meta name="twitter:image:alt" content="Remote Arc connecting an AI client to a paired computer" />' +
     '<link rel="alternate" type="application/rss+xml" title="Remote Arc Blog" href="' + SITE + '/feed.xml" />' +
-    (resolved.type === "article" ? '<meta property="article:published_time" content="2026-09-27T00:00:00Z" /><meta property="article:modified_time" content="2026-09-27T00:00:00Z" />' : '') +
+    (resolved.type === "article" ? '<meta property="article:published_time" content="' + esc(resolved.publishedAt || "2026-09-27") + 'T00:00:00Z" /><meta property="article:modified_time" content="' + esc(resolved.publishedAt || "2026-09-27") + 'T00:00:00Z" />' : '') +
     (indexable ? '<script type="application/ld+json">' + structured + '</script>' : '');
 
   html = html
+    .replace('lang="en"', 'lang="' + (chinese ? 'zh-CN' : 'en') + '"')
     .replace(/<title>[\s\S]*?<\/title>/, '<title>' + esc(resolved.title) + '</title>')
     .replace(/<meta name="description"[^>]*>/, '<meta name="description" content="' + esc(resolved.description) + '" />')
     .replace(/<link rel="canonical"[^>]*>/, indexable ? '<link rel="canonical" href="' + esc(resolved.canonical) + '" />' : "")
@@ -671,7 +831,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
   // no-JavaScript fallback with the same product facts. This avoids a pre-mount
   // text flash for normal visitors while still giving non-JS clients a useful,
   // semantic document instead of an empty application root.
-  if (pathname === "/") {
+  if (pathname === "/" || pathname === "/zh") {
     return html.replace(
       '<div id="root"></div>',
       '<div id="root"><noscript>' + crawlablePageHtml(pathname, resolved) + '</noscript></div>',
@@ -681,10 +841,10 @@ export function renderMarketingHtml(html: string, pathname: string) {
   if (!page) {
     return html.replace('<div id="root"></div>', '<div id="root">' + notFoundHtml(pathname) + '</div>');
   }
-  if (pathname === "/blogs") {
-    return html.replace('<div id="root"></div>', '<div id="root">' + blogIndexHtml() + '</div>');
+  if (basePath === "/blogs") {
+    return html.replace('<div id="root"></div>', '<div id="root">' + blogIndexHtml(chinese) + '</div>');
   }
-  if (articles[pathname]) {
+  if (articles[basePath]) {
     return html.replace('<div id="root"></div>', '<div id="root">' + articleHtml(page) + '</div>');
   }
   return html.replace('<div id="root"></div>', '<div id="root">' + crawlablePageHtml(pathname, page) + '</div>');
@@ -692,22 +852,26 @@ export function renderMarketingHtml(html: string, pathname: string) {
 
 const sitemapPaths = [
   "/",
+  "/downloads",
   "/install/chatgpt",
   "/install/claude",
   "/install/cursor",
   "/chatgpt-computer-access",
   "/claude-computer-access",
   "/mcp-computer-access",
+  "/remote-mcp",
   "/connect-ai",
   "/docs",
   "/docs/long-running-work",
   "/docs/mcp",
+  "/chrome-extension",
   "/security-model",
   "/use-cases",
   "/pricing",
   "/releases",
   "/demo",
   "/blogs",
+  "/blogs/go-vs-typescript-agent-benchmarks",
   "/blogs/why-i-built-remote-arc",
   "/blogs/remote-arc-vs-openclaw",
   "/blogs/powerful-ai-access-without-exposing-your-computer",
@@ -718,20 +882,27 @@ const sitemapPaths = [
 ];
 
 export function sitemapXml() {
-  const paths = [...sitemapPaths, ...Object.keys(useCaseSeo).map(slug => "/use-cases/" + slug)];
-  return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+  const paths = [...sitemapPaths, ...Object.keys(useCaseSeo).map(slug => "/use-cases/" + slug), ...localizedPages.map(path => path === "/" ? "/zh" : "/zh" + path)];
+  return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' +
     paths.map(function(path) {
-      const isRoot = path === "/";
-      const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/docs/mcp";
-      return '<url><loc>' + SITE + path + '</loc><lastmod>2026-10-07</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
+      const base = unprefixedMarketingPath(path);
+      const localized = localizedPages.includes(base as typeof localizedPages[number]);
+      const alternates = localized
+        ? '<xhtml:link rel="alternate" hreflang="en" href="' + SITE + base + '"/>' +
+          '<xhtml:link rel="alternate" hreflang="zh-CN" href="' + SITE + (base === "/" ? "/zh" : "/zh" + base) + '"/>' +
+          (base === "/" ? '<xhtml:link rel="alternate" hreflang="x-default" href="' + SITE + '/"/>' : '')
+        : '';
+      const isRoot = path === "/" || path === "/zh";
+      const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/remote-mcp" || path === "/docs/mcp";
+      return '<url><loc>' + SITE + path + '</loc>' + alternates + '<lastmod>' + (path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
     }).join("") + '</urlset>';
 }
 
 export function feedXml() {
   const items = Object.entries(articles).map(([path, article]) =>
-    '<item><title>' + esc(article.title) + '</title><link>' + article.canonical + '</link><guid isPermaLink="true">' + article.canonical + '</guid><description>' + esc(article.description) + '</description><pubDate>Sun, 27 Sep 2026 00:00:00 GMT</pubDate></item>'
+    '<item><title>' + esc(article.title) + '</title><link>' + article.canonical + '</link><guid isPermaLink="true">' + article.canonical + '</guid><description>' + esc(article.description) + '</description><pubDate>' + new Date((article.publishedAt || '2026-09-27') + 'T00:00:00Z').toUTCString() + '</pubDate></item>'
   ).join("");
-  return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Remote Arc Blog</title><link>' + SITE + '/blogs</link><description>Engineering notes, architecture decisions and security trade-offs from Remote Arc.</description><language>en</language><lastBuildDate>Sun, 04 Oct 2026 00:00:00 GMT</lastBuildDate>' + items + '</channel></rss>';
+  return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Remote Arc Blog</title><link>' + SITE + '/blogs</link><description>Engineering notes, architecture decisions and security trade-offs from Remote Arc.</description><language>en</language><lastBuildDate>Fri, 09 Oct 2026 00:00:00 GMT</lastBuildDate>' + items + '</channel></rss>';
 }
 
 export function llmsTxt() {
@@ -742,6 +913,7 @@ export function llmsTxt() {
     "",
     "## Core pages",
     "- [Home](" + SITE + "/): product overview and setup path",
+    "- [Remote MCP guide](" + SITE + "/remote-mcp): remote vs local MCP, how to connect ChatGPT, Claude and Cursor, OAuth and troubleshooting",
     "- [Remote MCP computer access](" + SITE + "/mcp-computer-access): vendor-neutral architecture and capability overview",
     "- [ChatGPT computer access](" + SITE + "/chatgpt-computer-access): ChatGPT-specific setup and trust model",
     "- [Claude computer access](" + SITE + "/claude-computer-access): Claude-specific remote MCP setup",

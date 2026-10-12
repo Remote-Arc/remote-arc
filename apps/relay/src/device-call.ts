@@ -1,5 +1,6 @@
 import type { OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
+import { recordMcpTelemetry } from "./relay-telemetry.js";
 import {
   approvalTargetPath,
   consumeWriteApproval,
@@ -8,10 +9,25 @@ import {
 } from "./approvals.js";
 import { REVIEWER_DEMO_TOOLS, reviewerDemoResult } from "./reviewer-fixture.js";
 
+// A timeout proves only that the Relay did not observe the reply, not that
+// the device failed to execute the request.
+export function isDeviceCallTimeoutError(error: unknown): boolean {
+  return /device call timed out/i.test(error instanceof Error ? error.message : String(error));
+}
+
+export class UncertainDeviceDispatchError extends Error {
+  constructor(readonly tool: string) {
+    super("Device did not acknowledge " + tool + "; the operation may still be running. Inspect the device before any new dispatch.");
+    this.name = "UncertainDeviceDispatchError";
+  }
+}
+
 export type DeviceCallEnv = {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  MCP_ANALYTICS?: AnalyticsEngineDataset;
+  MCP_METRICS_SAMPLE_RATE?: string;
 };
 
 const parseStoredStringArray = (value: string | null) => {
@@ -37,6 +53,7 @@ export async function callDevice(
   args: Record<string, unknown>,
   taskWorkspaceRoot?: string,
 ) {
+  const started = Date.now();
   const ownedDevice = await env.DB.prepare(
     `SELECT id, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
             protect_sensitive_paths, undo_enabled
@@ -259,6 +276,14 @@ export async function callDevice(
     grantId: identity.grantId,
     outcome,
   }).catch(() => undefined);
+
+  recordMcpTelemetry(env, {
+    kind: "device_tool",
+    status: success ? 200 : 502,
+    method: "TOOL",
+    outcome,
+    durationMs: Date.now() - started,
+  });
 
   if (!success) {
     throw new Error(payload.error || `device call failed: ${response.status}`);

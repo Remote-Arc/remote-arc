@@ -9,7 +9,7 @@ import {
   type OAuthIdentity,
 } from "./auth.js";
 import { checkpointTask, journalStatement, LeaseLostError, renewTaskLease } from "./automation-store.js";
-import { callDevice, type DeviceCallEnv } from "./device-call.js";
+import { callDevice, isDeviceCallTimeoutError, UncertainDeviceDispatchError, type DeviceCallEnv } from "./device-call.js";
 import {
   agentPlannerConfigured,
   planAgentTurn,
@@ -942,6 +942,10 @@ export async function resumeAutomation(
   await requireAutomationEntitlements(env, userId, automation);
 
   const state = parseJson<RuntimeState>(automation.state_json, {});
+  if (state.inflight_action) {
+    throw new Error("Previous " + state.inflight_action.tool +
+      " outcome is unknown; inspect the device and cancel this task before creating a new one. Blind resume is blocked.");
+  }
   const trigger = parseJson<TriggerSpec | null>(automation.trigger_json, null);
   let status: AutomationStatus = "waiting";
   let nextRunAt: string | null = nowIso();
@@ -1277,6 +1281,28 @@ async function automationCall(env: AutomationEnv, automation: AutomationRow,
     }
   } catch (error) {
     if (effect) {
+      if (isDeviceCallTimeoutError(error)) {
+        // The call may have executed before its reply was lost. Preserve the
+        // unresolved intent and pause; never re-dispatch a build or file edit.
+        if (state.agent) state.agent.observation = "Unacknowledged " + tool + ": inspect the device before retrying.";
+        if (state.planned) {
+          // Planned goals preserve a fenced, read-only inspection path.
+          // No unacknowledged side effect can be replayed automatically.
+          state.planned.inspection_required = true;
+          state.planned.slice = undefined;
+          state.planned.candidate = { ...state.planned.candidate, status: "unknown",
+            evidence: "Device response timed out after dispatching " + tool + "." };
+          state.inflight_action = undefined;
+          await persistRuntime(env, automation, state, automation.status, nowIso(), null,
+            { retainLease: true, event: "outcome_unknown",
+              summary: "Unacknowledged " + tool + "; planned goal requires read-only inspection." });
+          throw error;
+        }
+        await persistRuntime(env, automation, state, "paused", null,
+          "Device call timed out after dispatching " + tool + "; outcome unknown. Inspect the device before creating another task.",
+          { event: "outcome_unknown", summary: "Paused unacknowledged " + tool + "; no automatic replay." });
+        throw new UncertainDeviceDispatchError(tool);
+      }
       state.inflight_action = undefined;
       if (state.agent) state.agent.observation = "Tool " + tool + " did not return a successful acknowledgement. Inspect current state before repeating: " + String(error);
       if (state.planned && !isDeviceOfflineError(error)) {
@@ -1342,6 +1368,11 @@ const isDeviceOfflineError = (error: unknown) =>
   String(error instanceof Error ? error.message : error)
     .toLowerCase()
     .includes("device offline");
+
+// Managed-process polls are separate from the task's recurrence/retry cadence.
+// A short command should not remain "running" for the default five minutes.
+export const managedProcessPollSeconds = (intervalSeconds: number) =>
+  Math.min(intervalSeconds, 30);
 
 const isLostProcessError = (error: unknown) => {
   const text = String(error instanceof Error ? error.message : error).toLowerCase();
@@ -1496,6 +1527,15 @@ async function executeAgentGoal(
         );
         return;
       }
+      if (isDeviceCallTimeoutError(error)) {
+        // The managed PID is still authoritative. Retry the *read-only*
+        // status query on the next tick; never run start_process again.
+        await persistRuntime(env, automation, state, "waiting",
+          addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
+          "Device status query timed out; managed process is not known to have failed. Retrying status only.",
+          { event: "process_poll_retry", summary: "Transient status timeout; preserved managed process handle." });
+        return;
+      }
       if (isLostProcessError(error)) {
         state.process_id = undefined;
         state.phase = "idle";
@@ -1521,7 +1561,7 @@ async function executeAgentGoal(
         automation,
         state,
         "running",
-        addSeconds(now, automation.interval_seconds),
+        addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
       );
       return;
     }
@@ -1893,8 +1933,10 @@ async function executeAutomation(
       state.phase = "idle";
       await persistRuntime(env, automation, state, "waiting", nowIso(), message, { event: "outcome_unknown" });
     } else {
-      await markRunFinished(env, automation, state, "failed", null, message);
-      await persistRuntime(env, automation, state, "failed", null, message, { event: "outcome_unknown" });
+      // The intent may already have executed. Pausing retains the evidence
+      // without authorizing a second invocation on a later scheduler tick.
+      await persistRuntime(env, automation, state, "paused", null, message,
+        { event: "outcome_unknown", summary: "Manual inspection required before replay." });
     }
     return;
   }
@@ -1963,6 +2005,15 @@ async function executeAutomation(
         );
         return;
       }
+      if (isDeviceCallTimeoutError(error)) {
+        // The managed PID is still authoritative. Retry the *read-only*
+        // status query on the next tick; never run start_process again.
+        await persistRuntime(env, automation, state, "waiting",
+          addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
+          "Device status query timed out; managed process is not known to have failed. Retrying status only.",
+          { event: "process_poll_retry", summary: "Transient status timeout; preserved managed process handle." });
+        return;
+      }
       if (isLostProcessError(error)) {
         if (action.recovery !== "fail") {
           state.process_id = undefined;
@@ -2005,7 +2056,7 @@ async function executeAutomation(
         automation,
         state,
         "running",
-        addSeconds(now, automation.interval_seconds),
+        addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
       );
       return;
     }
@@ -2173,7 +2224,7 @@ async function executeAutomation(
         automation,
         state,
         "running",
-        addSeconds(now, automation.interval_seconds),
+        addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
       );
       return;
     }
@@ -2210,7 +2261,7 @@ async function executeAutomation(
       automation,
       state,
       "running",
-      addSeconds(now, automation.interval_seconds),
+      addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
     );
     return;
   }
@@ -2415,7 +2466,7 @@ export async function runAutomationTick(
       await executeAutomation(env, automation);
       executed += 1;
     } catch (error) {
-      if (error instanceof LeaseLostError) continue;
+      if (error instanceof LeaseLostError || error instanceof UncertainDeviceDispatchError) continue;
       const message = error instanceof Error ? error.message : String(error);
       const state = parseJson<RuntimeState>(automation.state_json, {});
       if (isPlanUpgradeRequiredError(error)) {

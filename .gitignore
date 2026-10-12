@@ -9,3 +9,8 @@ dist/
 .DS_Store
 Thumbs.db
 apps/relay/wrangler.e2e.json
+work/
+apps/agent/coverage.out
+
+# Ephemeral local TS/Go parity benchmark binaries
+/benchmarks/.bin/

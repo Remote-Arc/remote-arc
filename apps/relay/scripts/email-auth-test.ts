@@ -1,0 +1,230 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { handleEmailCodeRequest, handleEmailCodeVerify } from "../src/email-auth.js";
+import { handleLoginPage } from "../src/reviewer.js";
+
+const ORIGIN = "https://mcp.remotearc.app";
+const sqlite = new DatabaseSync(":memory:");
+sqlite.exec(`
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  google_sub TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT,
+  avatar_url TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE sessions (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+`);
+sqlite.exec(readFileSync(new URL("../migrations/0024_email_login.sql", import.meta.url), "utf8"));
+
+function d1(sqliteDb: DatabaseSync) {
+  return {
+    prepare(sql: string) {
+      return {
+        bind(...args: unknown[]) {
+          return {
+            async first<T>() {
+              return (sqliteDb.prepare(sql).get(...args as (string | number | bigint | null)[]) as T | undefined) || null;
+            },
+            async run() {
+              const result = sqliteDb.prepare(sql).run(...args as (string | number | bigint | null)[]);
+              return { success: true, meta: { changes: Number(result.changes) } };
+            },
+          };
+        },
+        async first<T>() {
+          return (sqliteDb.prepare(sql).get() as T | undefined) || null;
+        },
+      };
+    },
+  } as unknown as D1Database;
+}
+
+const env = {
+  DB: d1(sqlite),
+  PUBLIC_ORIGIN: ORIGIN,
+  APP_ORIGIN: ORIGIN,
+  MARKETING_ORIGIN: "https://remotearc.app",
+  RESEND_API_KEY: "test-resend-key",
+  EMAIL_AUTH_SECRET: "test-secret-not-for-production",
+  ALLOW_SIGNUPS: "1",
+  REVIEWER_EMAIL: "openai-reviewer@remotearc.app",
+};
+
+function formRequest(route: string, values: Record<string, string>, origin: string = ORIGIN) {
+  return new Request(ORIGIN + route, {
+    method: "POST",
+    headers: { origin, "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(values),
+  });
+}
+let sent = 0;
+let code = "";
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (_input, init) => {
+  sent++;
+  const payload = JSON.parse(String(init?.body)) as { text: string; from: string; html: string; subject: string };
+  assert.match(payload.from, /remotearc\.app/);
+  assert.match(payload.subject, /Remote Arc verification code/);
+  assert.match(payload.text, /one-time Remote Arc code/);
+  assert.match(payload.html, /remote-arc-192\.png/);
+  assert.match(payload.html, /background-color:#071724/);
+  assert.match(payload.html, /#38bdf8/i);
+  assert.match(payload.html, /10 minutes/);
+  assert.match(payload.html, /mcp\.remotearc\.app/);
+  assert.match(payload.html, /wasn.t you/i);
+  assert.match(payload.html, /remote arc will never ask you/i);
+  assert.match(payload.html, /<table role="presentation"/);
+  assert.doesNotMatch(payload.html, /<script|<style|onerror=|src="data:/i);
+  code = payload.text.match(/\b[0-9]{6}\b/)?.[0] || "";
+  return Response.json({ id: "email-sent" });
+};
+try {
+  // Login page still provides Google and reviewer options, but email is feature-gated.
+  const login = handleLoginPage(new Request(ORIGIN + "/auth/login"), env);
+  const html = await login.text();
+  const csrfCookie = login.headers.get("set-cookie") || "";
+  const csrfToken = html.match(/name="email_csrf" value="([a-f0-9]{64})"/)?.[1] || "";
+  assert.match(csrfCookie, /__Host-ra_email_form=/);
+  assert.equal(csrfToken.length, 64);
+  assert.match(html, /Continue with Google/);
+  assert.match(html, /auth\/email\/request/);
+  assert.doesNotMatch(await (await handleLoginPage(new Request(ORIGIN + "/auth/login"), {
+    ...env, RESEND_API_KEY: undefined,
+  })).text(), /auth\/email\/request/);
+
+  assert.equal((await handleEmailCodeRequest(formRequest("/auth/email/request", {
+    email: "new@example.com",
+  }, "https://evil.example"), env)).status, 403);
+  assert.equal(sent, 0, "Cross-site requests must not send email");
+
+  const first = await handleEmailCodeRequest(formRequest("/auth/email/request", {
+    email: "NEW@EXAMPLE.COM", return_to: "https://evil.example/steal",
+  }), env);
+  assert.equal(first.status, 200);
+  assert.equal(sent, 1);
+  assert.match(await first.text(), /Check your inbox/);
+  assert.equal(code.length, 6);
+  assert.equal(sqlite.prepare("SELECT return_to FROM email_login_challenges WHERE email = ?").get("new@example.com")?.return_to, ORIGIN + "/");
+
+  // Per-address rate limit cannot be evaded with different capitalization.
+  await handleEmailCodeRequest(formRequest("/auth/email/request", { email: "new@example.com" }), env);
+  assert.equal(sent, 1);
+
+  assert.equal((await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+    email: "new@example.com", code: "999999", return_to: "/overview",
+  }), env)).status, 200);
+  assert.equal(sqlite.prepare("SELECT attempts FROM email_login_challenges WHERE email = ?").get("new@example.com")?.attempts, 1);
+
+  const success = await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+    email: "new@example.com", code, return_to: "/overview",
+  }), env);
+  assert.equal(success.status, 303);
+  assert.equal(success.headers.get("location"), ORIGIN + "/overview");
+  assert.match(success.headers.get("set-cookie") || "", /rl_session=/);
+  assert.match(String(sqlite.prepare("SELECT google_sub FROM users WHERE email = ?").get("new@example.com")?.google_sub), /^email:/);
+  assert.equal(Number(sqlite.prepare("SELECT COUNT(*) AS n FROM sessions").get()?.n), 1);
+  assert.equal((await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+    email: "new@example.com", code,
+  }), env)).status, 200);
+  assert.equal(Number(sqlite.prepare("SELECT COUNT(*) AS n FROM sessions").get()?.n), 1, "OTP must not be replayable");
+
+  // A verified Google account must retain its same user ID, devices and grants.
+  sqlite.prepare("INSERT INTO users (id, google_sub, email, created_at) VALUES (?, ?, ?, ?)")
+    .run("existing-google-user", "100000000001", "linked@example.com", new Date().toISOString());
+  await handleEmailCodeRequest(formRequest("/auth/email/request", { email: "linked@example.com" }), env);
+  const linked = await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+    email: "linked@example.com", code, return_to: "https://remotearc.app/dashboard",
+  }), env);
+  assert.equal(linked.status, 303);
+  assert.equal(linked.headers.get("location"), "https://remotearc.app/dashboard");
+  assert.equal(Number(sqlite.prepare("SELECT COUNT(*) AS n FROM users WHERE email = ?").get("linked@example.com")?.n), 1);
+  assert.equal(String(sqlite.prepare("SELECT user_id FROM sessions ORDER BY created_at DESC LIMIT 1").get()?.user_id) === "existing-google-user" ||
+    Number(sqlite.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?").get("existing-google-user")?.n) === 1, true);
+
+  // The marketing domain can legitimately be the form's Origin after a 307 to mcp.
+  const marketing = await handleEmailCodeRequest(formRequest("/auth/email/request", {
+    email: "marketing@example.com", return_to: "/overview",
+  }, "https://remotearc.app"), env);
+  assert.equal(marketing.status, 200);
+  assert.match(await marketing.text(), /Check your inbox/);
+  const marketingLogin = await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+    email: "marketing@example.com", code, return_to: "/overview",
+  }, "https://remotearc.app"), env);
+  assert.equal(marketingLogin.status, 303);
+
+  // A privacy browser can omit Origin and Referer, but the host-only
+  // double-submit cookie + hidden form token still authorizes the form.
+  const protectedForm = (path: string, email: string, token: string, cookie: string) =>
+    new Request(ORIGIN + path, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", cookie },
+      body: new URLSearchParams({
+        email, email_csrf: token, return_to: "/overview", ...(path.endsWith("/verify") ? { code } : {}),
+      }),
+    });
+  const cookieHeader = "__Host-ra_email_form=" + csrfToken;
+  const cookieRequest = await handleEmailCodeRequest(protectedForm(
+    "/auth/email/request", "privacy@example.com", csrfToken, cookieHeader,
+  ), env);
+  assert.equal(cookieRequest.status, 200);
+  assert.match(await cookieRequest.text(), /Check your inbox/);
+  assert.equal((await handleEmailCodeVerify(protectedForm(
+    "/auth/email/verify", "privacy@example.com", csrfToken, cookieHeader,
+  ), env)).status, 303);
+  assert.equal((await handleEmailCodeRequest(protectedForm(
+    "/auth/email/request", "bad-csrf@example.com", "0".repeat(64), cookieHeader,
+  ), env)).status, 403);
+  assert.equal((await handleEmailCodeRequest(new Request(ORIGIN + "/auth/email/request", {
+    method: "POST",
+    headers: { "origin": "null", "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ email: "null-origin@example.com" }),
+  }), env)).status, 403);
+
+  // Expired codes never create sessions even when the value is correct.
+  await handleEmailCodeRequest(formRequest("/auth/email/request", { email: "expired@example.com" }), env);
+  sqlite.prepare("UPDATE email_login_challenges SET expires_at = ? WHERE email = ?")
+    .run("2020-01-01T00:00:00.000Z", "expired@example.com");
+  assert.equal((await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+    email: "expired@example.com", code,
+  }), env)).status, 200);
+  assert.equal(sqlite.prepare("SELECT id FROM users WHERE email = ?").get("expired@example.com"), undefined);
+
+  // Five wrong attempts exhaust the OTP, even if the correct value is supplied later.
+  await handleEmailCodeRequest(formRequest("/auth/email/request", { email: "locked@example.com" }), env);
+  const validLockedCode = code;
+  const badCode = code === "000000" ? "111111" : "000000";
+  for (let i = 0; i < 5; i++) {
+    assert.equal((await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+      email: "locked@example.com", code: badCode,
+    }), env)).status, 200);
+  }
+  assert.equal((await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+    email: "locked@example.com", code: validLockedCode,
+  }), env)).status, 200);
+  assert.equal(sqlite.prepare("SELECT id FROM users WHERE email = ?").get("locked@example.com"), undefined);
+
+  // A service failure invalidates the challenge; no unusable code remains.
+  globalThis.fetch = async () => new Response("provider temporarily unavailable", { status: 503 });
+  const failure = await handleEmailCodeRequest(formRequest("/auth/email/request", { email: "failed@example.com" }), env);
+  assert.equal(failure.status, 503);
+  assert.equal(sqlite.prepare("SELECT code_hash FROM email_login_challenges WHERE email = ?").get("failed@example.com"), undefined);
+
+  // Reviewer-only demo identity must never become an email-login account.
+  globalThis.fetch = async () => { throw new Error("not expected"); };
+  const ignored = await handleEmailCodeRequest(formRequest("/auth/email/request", { email: env.REVIEWER_EMAIL }), env);
+  assert.equal(ignored.status, 200);
+  assert.equal(sqlite.prepare("SELECT * FROM email_login_challenges WHERE email = ?").get(env.REVIEWER_EMAIL), undefined);
+
+  console.log("PASS: email OTP signup, Google account reuse, origin checks, throttling, expiry, replay, provider failure and reviewer isolation");
+} finally {
+  globalThis.fetch = originalFetch;
+  sqlite.close();
+}

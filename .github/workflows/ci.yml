@@ -21,10 +21,79 @@ jobs:
           package-manager-cache: false
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm device:contract --check
       - run: pnpm run ci
       - run: pnpm build:ui
       - run: pnpm test:automations
       - run: pnpm test:recovery
+
+  go-distribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:device --release
+      - run: node scripts/verify-device-artifacts.mjs --candidate
+        if: github.ref != 'refs/heads/master'
+      - run: node scripts/verify-device-artifacts.mjs
+        if: github.ref == 'refs/heads/master'
+      - name: Verify committed stable Homebrew formula before merge
+        if: github.ref != 'refs/heads/master'
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          if [[ "$CLI_VERSION" != *-* ]]; then
+            node scripts/verify-device-artifacts.mjs
+          fi
+      - uses: actions/upload-artifact@v6
+        with:
+          name: go-device-binaries
+          path: work/go-device/*
+
+  go-device:
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:device
+      - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
+      - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: agent-validation-${{ matrix.os }}
+          path: work/benchmarks/*.json
 
   native-core:
     timeout-minutes: 15
@@ -46,7 +115,7 @@ jobs:
           package-manager-cache: false
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @remotearc/execution-core test:integration
+      - run: pnpm --filter @remotearc/execution-core-ts test:integration
       - run: pnpm --filter @remotearc/mcp test:smoke
-      - run: pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/goal-workspace-test.ts
+      - run: pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/goal-workspace-test.ts
       - run: pnpm test:recovery

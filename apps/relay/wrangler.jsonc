@@ -12,7 +12,7 @@
     "logs": {
       "enabled": true,
       "invocation_logs": true,
-      "head_sampling_rate": 1
+      "head_sampling_rate": 0.1
     }
   },
   "triggers": {
@@ -80,12 +80,15 @@
     "MARKETING_ORIGIN": "https://remotearc.app",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
+    "MCP_METRICS_SAMPLE_RATE": "0.1",
+    "AUDIT_ARCHIVE_ENABLED": "0",
+    "AUDIT_RETENTION_DAYS": "30",
     "OPERATOR_EMAIL": "moviegoer24@gmail.com",
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
     "ALERT_EMAIL": "moviegoer24@gmail.com",
     "ALERT_FROM_EMAIL": "alerts@remotearc.app",
-    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "0"
+    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "1"
   },
   "ratelimits": [
     {
@@ -97,10 +100,42 @@
       }
     },
     {
+      "name": "MCP_EDGE_RATE_LIMITER",
+      "namespace_id": "41004",
+      "simple": {
+        "limit": 3000,
+        "period": 60
+      }
+    },
+    {
+      "name": "MCP_ANON_RATE_LIMITER",
+      "namespace_id": "41005",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "INCIDENT_RATE_LIMITER",
+      "namespace_id": "41006",
+      "simple": {
+        "limit": 6,
+        "period": 60
+      }
+    },
+    {
       "name": "AUTH_RATE_LIMITER",
       "namespace_id": "41002",
       "simple": {
         "limit": 30,
+        "period": 60
+      }
+    },
+    {
+      "name": "EMAIL_RATE_LIMITER",
+      "namespace_id": "41003",
+      "simple": {
+        "limit": 3,
         "period": 60
       }
     }

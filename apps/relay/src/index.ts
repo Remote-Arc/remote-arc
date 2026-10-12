@@ -1,8 +1,10 @@
+import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
 import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { runScheduledTasks } from "./task-scheduler.js";
 import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
+import { legacyLanguageRedirect } from "./marketing-locale.js";
 import { createRemoteLinkMcp } from "./mcp.js";
 import {
   authenticateDevice,
@@ -13,6 +15,8 @@ import {
   handleLogout,
 } from "./auth.js";
 import { handleLoginPage, handleReviewerLogin } from "./reviewer.js";
+import { handleEmailCodeRequest, handleEmailCodeVerify } from "./email-auth.js";
+import { dashboardSignInUrl, publicWebsiteRedirect } from "./host-routing.js";
 import {
   getDevicesForUser,
   handleDeviceList,
@@ -26,6 +30,7 @@ import {
   handleDeviceUndoAction,
   handleDeviceDirectoryBrowse,
   handleDeviceBackgroundUpdate,
+  handleDeviceRuntimeUpdate,
   handleDeviceExecutionLog,
   handleDeviceManagedProcesses,
   handleDeviceManagedProcessOutput,
@@ -34,11 +39,15 @@ import {
   handlePairingLookup,
 } from "./device.js";
 import { readAudit } from "./audit.js";
+import { archiveOldAudit } from "./audit-archive.js";
+import { recordMcpTelemetry } from "./relay-telemetry.js";
+import { limitMcpIngress } from "./mcp-edge-guard.js";
 import { getMonthlyUsage } from "./usage.js";
 import { getAccountEntitlements } from "./entitlements.js";
 import { getMonthlyPlusUsage } from "./plus-usage.js";
 import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
+import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
 import {
   handleAutomationCollection,
   handleAutomationItem,
@@ -86,7 +95,16 @@ type Env = TaskEventEnv & {
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_AUTH_SECRET?: string;
+  EMAIL_FROM?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
+  FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
+  AUDIT_ARCHIVE?: R2Bucket;
+  AUDIT_ARCHIVE_ENABLED?: string;
+  AUDIT_RETENTION_DAYS?: string;
+  MCP_ANALYTICS?: AnalyticsEngineDataset;
+  MCP_METRICS_SAMPLE_RATE?: string;
   OPENAI_APPS_CHALLENGE?: string;
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
@@ -103,7 +121,11 @@ type Env = TaskEventEnv & {
   ALERT_EMAIL?: string;
   ALERT_FROM_EMAIL?: string;
   MCP_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  MCP_EDGE_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  MCP_ANON_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  INCIDENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
   AUTH_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  EMAIL_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
 };
 
 function withTrustedDeviceHeaders(
@@ -131,13 +153,17 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       url.pathname === "/oauth/decision" ||
       url.pathname === "/oauth/token" ||
       url.pathname === "/auth/reviewer" ||
+      url.pathname === "/auth/email/request" ||
+      url.pathname === "/auth/email/verify" ||
       url.pathname === "/api/device/start" ||
       url.pathname === "/api/device/token" ||
       url.pathname === "/api/pairing/approve";
 
     if (authSensitive) {
+      // Use Cloudflare's trusted visitor IP for pre-auth protection.
+      // Querystring client_id is attacker-controlled: never use it as the
+      // primary rate-limit identity for login, OAuth or device pairing.
       const actor =
-        url.searchParams.get("client_id") ||
         request.headers.get("cf-connecting-ip") ||
         request.headers.get("user-agent") ||
         "anonymous";
@@ -155,6 +181,14 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     if (url.hostname === "www.remotearc.app") {
       const canonical = new URL(url.pathname + url.search, marketingOrigin);
       return Response.redirect(canonical.toString(), 301);
+    }
+
+    if ((request.method === "GET" || request.method === "HEAD") &&
+      (url.hostname === "remotearc.app" || url.hostname === "www.remotearc.app")) {
+      const canonicalLanguage = legacyLanguageRedirect(url);
+      if (canonicalLanguage) {
+        return Response.redirect(new URL(canonicalLanguage, marketingOrigin).toString(), 301);
+      }
     }
 
     if (url.hostname === "remotearc.app" && url.pathname.length > 1 && url.pathname.endsWith("/")) {
@@ -181,8 +215,20 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return Response.redirect(new URL(nextPath + url.search, appOrigin).toString(), 302);
     }
 
-    if (url.hostname === "mcp.remotearc.app" && url.pathname === "/dashboard") {
-      return Response.redirect(new URL("/overview", appOrigin).toString(), 302);
+    if (url.hostname === "mcp.remotearc.app" && (request.method === "GET" || request.method === "HEAD") &&
+      (url.pathname === "/" || url.pathname === "/dashboard")) {
+      return Response.redirect(new URL("/overview" + url.search, appOrigin).toString(), 302);
+    }
+
+    // Only the main domain serves product pages. Leave OAuth, MCP and API routes untouched.
+    const websiteDestination = publicWebsiteRedirect(url, request.method, marketingOrigin);
+    if (websiteDestination) return Response.redirect(websiteDestination, 301);
+
+    // Keep /overview public as a real product preview, but sign in before
+    // opening private dashboard tabs. Preserve the requested destination.
+    const loginDestination = dashboardSignInUrl(url, request.method, appOrigin);
+    if (loginDestination && !(await getSessionUser(request, env))) {
+      return Response.redirect(loginDestination, 302);
     }
 
     if (url.hostname === "remotearc.app" && (
@@ -229,7 +275,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.4.4",
+        version: cliPackage.version,
         auth: "oauth2-pkce",
       });
     }
@@ -270,6 +316,17 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     if (url.pathname === "/auth/reviewer" && request.method === "POST") {
       return handleReviewerLogin(request, env);
+    }
+
+    if (url.pathname === "/auth/email/request" && request.method === "POST") {
+      const ip = request.headers.get("cf-connecting-ip") || "anonymous";
+      const { success } = await env.EMAIL_RATE_LIMITER.limit({ key: "email-request:" + ip });
+      if (!success) return new Response("Too many requests. Try again shortly.", { status: 429, headers: { "retry-after": "60" } });
+      return handleEmailCodeRequest(request, env);
+    }
+
+    if (url.pathname === "/auth/email/verify" && request.method === "POST") {
+      return handleEmailCodeVerify(request, env);
     }
 
     if (url.pathname === "/auth/google" && request.method === "GET") {
@@ -335,6 +392,15 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     if (url.pathname === "/api/monitor" && request.method === "GET") {
       return handleMonitorState(request, env);
+    }
+    if (url.pathname === "/api/admin/operations") {
+      return handleAdminOperations(request, env);
+    }
+    if (url.pathname === "/api/admin/billing") {
+      return handleAdminBilling(request, env);
+    }
+    if (url.pathname === "/api/admin/call-credits") {
+      return handleAdminCallCredits(request, env);
     }
 
     if (url.pathname === "/api/admin/plan-grants") {
@@ -508,6 +574,13 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
 
     if (
+      /^\/api\/devices\/[^/]+\/runtime$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceRuntimeUpdate(request, env);
+    }
+
+    if (
       /^\/api\/devices\/[^/]+\/background$/.test(url.pathname) &&
       request.method === "POST"
     ) {
@@ -581,6 +654,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
 
     if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
+      const ingressLimit = await limitMcpIngress(request, env);
+      if (ingressLimit) return ingressLimit;
       const identity = await authenticateMcp(request, env);
       const validIdentity =
         identity && identity.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp"
@@ -725,8 +800,13 @@ export default {
     env: Env,
     ctx: ExecutionContext,
   ): Promise<Response> {
+    const started = Date.now();
+    const isMcpRequest = ["/mcp", "/mcp/"].includes(new URL(request.url).pathname);
     try {
       const response = await handleFetch(request, env, ctx);
+      if (isMcpRequest) recordMcpTelemetry(env, {
+        status: response.status, durationMs: Date.now() - started, method: request.method,
+      });
       if (response.status >= 500) {
         ctx.waitUntil(
           recordServiceIncident(
@@ -742,6 +822,9 @@ export default {
       }
       return response;
     } catch (error) {
+      if (isMcpRequest) recordMcpTelemetry(env, {
+        status: 500, durationMs: Date.now() - started, method: request.method,
+      });
       const message = error instanceof Error ? error.message : String(error);
       console.error("worker_unhandled_exception", { message });
       ctx.waitUntil(
@@ -778,6 +861,13 @@ export default {
     }
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));
+      if (env.AUDIT_ARCHIVE_ENABLED === "1") {
+        ctx.waitUntil(archiveOldAudit(env).then(({ archived, batches }) => {
+          if (archived) console.info("audit_archive_completed", { archived, batches });
+        }).catch((error) => {
+          console.error("audit_archive_failed", { message: error instanceof Error ? error.message : String(error) });
+        }));
+      }
     }
   },
 };

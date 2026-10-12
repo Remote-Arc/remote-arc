@@ -1,5 +1,6 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
+import { ArchitectureDeepDive } from "./architecture-deep-dive.js";
 import "./public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
@@ -44,7 +45,14 @@ export function Documentation() {
   const { tr } = useI18n();
   const contents = [
     ["start", tr("Set up once", "一次配置")], ["model", tr("Chat, tools and Tasks", "聊天、工具与 Task")],
-    ["routing", tr("System architecture", "系统架构")], ["policy", tr("Device permissions", "设备权限")],
+    ["routing", tr("System architecture", "系统架构")],
+    ["architecture-deep", tr("Architecture deep dive", "架构技术详解")],
+    ["architecture-trust", tr("Trust boundaries", "信任边界")],
+    ["architecture-task", tr("Task lifecycle", "任务状态机")],
+    ["architecture-persistence", tr("Persistence and recovery", "持久化与恢复")],
+    ["architecture-data", tr("Storage and privacy", "存储与隐私")],
+    ["architecture-limits", tr("Experimental boundaries", "实验能力边界")],
+    ["policy", tr("Device permissions", "设备权限")],
     ["files", tr("Files and Undo", "文件与 Undo")], ["processes", tr("Processes and recovery", "进程与恢复")],
     ["automations", tr("Durable task modes", "持久任务模式")], ["continuation", tr("AI reasoning boundary", "AI 推理边界")],
     ["schedule", tr("Scheduling and sleep", "调度与休眠")], ["browser", tr("Browser context", "浏览器上下文")],
@@ -64,12 +72,14 @@ export function Documentation() {
       <article className="technicalArticle">
         <section id="docs-start">
           <h2>{tr("Set up the computer and the AI client once", "电脑和 AI 客户端各配置一次")}</h2>
-          <p>{tr("On the Windows, macOS or Linux computer that owns the project, run the command below with Node.js 20 or newer. The CLI opens a short-lived browser pairing flow. Sign in, compare the code and approve the correct machine.", "在保存项目的 Windows、macOS 或 Linux 电脑上，使用 Node.js 20 或更高版本运行以下命令。CLI 会打开短期浏览器配对流程；登录、核对配对码并确认正确的电脑。")}</p>
-          <Code>npx remotelink</Code>
+          <p>{tr("On the Windows, macOS or Linux computer that owns the project, install the native Agent using a download, Homebrew or npm/npx. Only the npm/npx command below requires Node.js 20 or newer. The Agent opens a short-lived browser pairing flow. Sign in, compare the code and approve the correct machine.", "在保存项目的 Windows、macOS 或 Linux 电脑上，通过直接下载、Homebrew 或 npm/npx 安装原生 Agent。只有下面的 npm/npx 命令需要 Node.js 20 或更高版本。Agent 会打开短期浏览器配对流程；登录、核对配对码并确认正确的电脑。")}</p>
+          <Code>npx remotelink@latest</Code>
+          <p>{tr("Remote Arc 0.6 uses the native Go Agent and Execution Core by default. npm downloads a verified binary; Homebrew and standalone downloads run without Node.js. The TS compatibility runtime remains available with --ts.", "Remote Arc 0.6 默认使用原生 Go Agent 和 Execution Core。npm 下载经过校验的二进制；Homebrew 和直接下载不需要 Node.js。--ts 保留 TS 兼容运行时。")}</p>
+          <p><a href="/downloads">{tr("Native downloads, Homebrew, upgrades and stopping the Agent", "原生下载、Homebrew、升级与停止 Agent")} →</a></p>
           <p>{tr("New devices start with read-oriented tools. File editing, terminal execution, workspace roots and login background connection are separate choices. Finish setup before connecting your AI. The background switch installs an OS login service only after setup, and Dashboard reports its verified local state.", "新设备从读取类工具开始。文件编辑、终端执行、工作区目录和登录后台连接可以分别选择。完成设备设置后再连接 AI；后台开关会在完成设置后安装 OS 登录服务，Dashboard 显示的是本机确认后的状态。")}</p>
           <Code>{endpoint}</Code>
           <p>{tr("Connect the AI client to this endpoint and complete Remote Arc OAuth. Use the client-specific installation guide for ChatGPT, Claude or Cursor. Pairing a computer and authorizing an AI client are independent: you can revoke either relationship separately.", "将 AI 客户端连接到这个地址并完成 Remote Arc OAuth。ChatGPT、Claude 和 Cursor 各有安装指南。配对电脑与授权 AI 客户端是两条独立关系，可以分别撤销。")}</p>
-          <div className="articleMetaLinks"><a href="/install/chatgpt">ChatGPT →</a><a href="/install/claude">Claude →</a><a href="/install/cursor">Cursor →</a></div>
+          <div className="articleMetaLinks"><a href="/remote-mcp">{tr("What is a remote MCP server?", "什么是 Remote MCP Server？")} →</a><a href="/install/chatgpt">ChatGPT →</a><a href="/install/claude">Claude →</a><a href="/install/cursor">Cursor →</a></div>
         </section>
         <section id="docs-model">
           <h2>{tr("Keep using your AI chat", "继续从 AI 聊天入口使用")}</h2>
@@ -78,11 +88,13 @@ export function Documentation() {
         </section>
         <section id="docs-routing">
           <h2>{tr("How execution reaches your computer", "执行如何抵达你的电脑")}</h2>
+          <p>{tr("The local execution plane is Go: apps/agent contains pairing, Relay sessions, process recovery and journals; packages/execution-core is an independent Go module for file/process tools, local policy and Undo. They compile into one native executable. The npm CLI only installs and launches it. TypeScript remains in the cloud Relay, Dashboard, shared wire contracts and explicit apps/agent-ts / packages/execution-core-ts fallback.", "本地执行面采用 Go：apps/agent 负责配对、Relay 会话、进程恢复和日志；packages/execution-core 是独立 Go 模块，负责文件与进程工具、本地策略和 Undo。两者编译为一个原生可执行文件，npm CLI 负责安装和启动。TypeScript 继续用于云端 Relay、Dashboard、共享协议及显式 apps/agent-ts / packages/execution-core-ts 回退。")}</p>
           <div className="articleFlow"><code>AI / Plugin</code><span>→</span><code>OAuth · MCP</code><span>→</span><code>Cloudflare Worker</code><span>→</span><code>Durable Object</code><span>→</span><code>outbound WSS</code><span>→</span><code>{tr("Local agent", "本地 Agent")}</code></div>
           <p>{tr("The Worker authenticates the account and client, checks policy and selects the device. Per-user Durable Objects route live requests over the device's outbound WebSocket. D1 stores accounts, authorization, policies and durable task progress. Commands and file operations execute on the paired computer using its installed software.", "Worker 认证账户与客户端、检查策略并选择设备。每用户 Durable Object 通过设备主动建立的出站 WebSocket 路由实时请求；D1 保存账户、授权、策略和持久任务进度。命令和文件操作在已配对电脑上执行，使用本机已经安装的软件。")}</p>
           <p>{tr("No public inbound port, router forwarding or VPN is required. Persistence is handled by the task scheduler and database; the device connection provides execution when the computer is available.", "无需公网入站端口、路由器映射或 VPN。任务调度器和数据库负责持久化，设备连接在电脑可用时提供真实执行。")}</p>
-          <a href={engineering + "system-architecture.md"}>{tr("Full engineering architecture", "完整系统技术文档")} ↗</a>
+          <div className="articleMetaLinks"><a href={engineering + "system-architecture.en.md"}>{tr("Engineering reference (English)", "英文工程参考")} ↗</a><a href={engineering + "system-architecture.md"}>{tr("Chinese reference", "中文工程参考")} ↗</a></div>
         </section>
+        <ArchitectureDeepDive />
         <section id="docs-policy">
           <h2>{tr("Choose permissions for each computer", "分别选择每台电脑的权限")}</h2>
           <div className="docsTableWrap"><table className="articleTable"><thead><tr><th>{tr("Control", "控制项")}</th><th>{tr("What it governs", "控制什么")}</th></tr></thead><tbody>
@@ -187,14 +199,14 @@ export function McpReference() {
       ["mcp-tools", tr("Tools and scopes", "工具与 Scope")], ["chrome-browser", tr("Browser companion", "浏览器 Companion")],
     ].map(([id, label]) => <a key={id} href={"#" + id}>{label}</a>)}</aside><article className="technicalArticle">
       <section id="mcp-connect"><h2>{tr("Connect using the client installation path", "通过客户端安装入口连接")}</h2>
-        <p>{tr("Pair your computer first. In ChatGPT, open Plugins and install Remote Arc when it is available to your account. For developer testing before publication, enable Developer mode under Settings → Security and login, add an MCP connection from the Plugins plus button and enter the endpoint above. Availability depends on your account and workspace policy.", "先配对电脑。在 ChatGPT 中打开 Plugins，账户可以看到 Remote Arc 时即可安装。发布前开发测试可在 Settings → Security and login 开启 Developer mode，再从 Plugins 加号添加 MCP 连接并填写上方地址。功能可用性取决于账户与工作区策略。")}</p>
+        <p>{tr("Pair your computer and separately add the MCP connection inside the AI app. For eligible ChatGPT accounts, open Plugins → + → Add custom MCP server, enter the Remote Arc HTTPS endpoint, complete OAuth and enable the resulting plugin. A public directory listing is not yet available. See the client-specific install guide for the complete UI steps.", "先配对电脑，再在 AI 客户端独立添加 MCP 连接。具备权限的 ChatGPT 账户可打开 Plugins → ＋ → Add custom MCP server，输入 Remote Arc HTTPS 地址、完成 OAuth 并启用插件。当前尚未公开上架。具体 UI 步骤见各客户端安装指南。")}</p>
         <p><a href="https://developers.openai.com/plugins/deploy/connect-chatgpt" target="_blank" rel="noreferrer">{tr("Official OpenAI connection guide", "OpenAI 官方连接指南")} ↗</a></p>
         <p>{tr("Claude uses a custom Remote MCP connector and OAuth. Cursor can use the generated MCP installation link or its remote server configuration. Other clients must support the endpoint transport and OAuth discovery; compatibility does not imply they can continue an agent overnight.", "Claude 使用自定义 Remote MCP Connector 和 OAuth；Cursor 可使用生成的 MCP 安装链接或远程服务器配置。其他客户端需要支持此端点的传输和 OAuth 发现。连接兼容不代表具备过夜 Agent 续接能力。")}</p>
         <div className="articleMetaLinks"><a href="/install/chatgpt">ChatGPT →</a><a href="/install/claude">Claude →</a><a href="/install/cursor">Cursor →</a></div>
       </section>
       <section id="mcp-auth"><h2>{tr("OAuth and device access are separate", "OAuth 与设备权限分离")}</h2>
         <p>{tr("The endpoint uses OAuth authorization code flow with PKCE and published discovery metadata. Sign in to Remote Arc and review the requested scopes. Device credentials stay with the local agent; you do not paste a computer credential into the AI client. Revoking a client grant, pausing account MCP access or revoking a device can stop access independently.", "端点使用带 PKCE 的 OAuth 授权码流程和公开发现元数据。登录 Remote Arc 并核对请求 Scope；设备凭证留在本地 Agent，不需要粘贴给 AI 客户端。客户端授权撤销、账户 MCP 暂停和设备撤销可分别切断访问。")}</p>
-        <p>{tr("Task permission is persistent authority for the saved work. Every future device action still checks ownership, revocation, approved tools and the local path policy. Pausing MCP client access and pausing a Task are separate controls; use task controls to stop unattended execution.", "任务授权赋予的是已保存工作的持续执行能力；未来每次设备动作仍检查归属、撤销、已批准工具和本地路径策略。暂停 MCP 客户端访问与暂停 Task 是独立控制；停止无人值守执行应使用任务控制。")}</p>
+        <p>{tr("Task permission is persistent authority for the saved work. Every future device action still checks ownership, revocation, approved tools and the local path policy. Account MCP Pause blocks AI client requests but does not disconnect device Agents or terminate independently running tasks. Device Pause shuts down the execution Core while preserving only an authenticated wake connection; Resume restores execution. Disconnect Completely closes both connections and disables remote waking.", "任务授权赋予的是已保存工作的持续执行能力；未来每次设备动作仍检查归属、撤销、已批准工具和本地路径策略。账户级 MCP Pause 只拦截 AI 客户端请求，不会让设备 Agent 断开或终止独立运行的任务。设备 Pause 关闭执行 Core，仅保留已认证的唤醒连接；Resume 恢复执行。完全断开会关闭两种连接并停用远程唤醒。")}</p>
       </section>
       <section id="mcp-device"><h2>{tr("Discover before acting", "先发现设备，再操作")}</h2>
         <ol><li>{tr("Call list_devices and resolve the user-named computer to device_id.", "调用 list_devices，把用户指定的电脑解析为 device_id。")}</li><li>{tr("Call device_tools for the tools available on that computer.", "调用 device_tools，查看目标电脑实际开放的工具。")}</li><li>{tr("Pass device_id with device tool calls; check the workspace and action's permission before a write or command.", "设备工具调用传入 device_id，写入或执行命令前检查工作区与动作权限。")}</li></ol>
@@ -203,8 +215,8 @@ export function McpReference() {
       </section>
       <section id="mcp-tools"><h2>{tr("Tools and required scopes", "工具与所需 Scope")}</h2><ToolReference /></section>
       <section id="chrome-browser"><h2>{tr("Install the scoped Chrome companion", "安装受控 Chrome Companion")}</h2>
-        <p>{tr("Download and unzip the extension. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted directory. Link it to the local agent, then explicitly share a tab. This beta is distributed as an unpacked extension, not through the Chrome Web Store.", "下载并解压扩展。在 chrome://extensions 开启 Developer mode，选择 Load unpacked 并选中解压目录。连接本地 Agent 后明确共享标签页。此 Beta 通过未打包扩展分发，未上架 Chrome Web Store。")}</p>
-        <p><a href="/downloads/remote-arc-browser.zip" download>{tr("Download Chrome companion (.zip)", "下载 Chrome Companion (.zip)")} ↓</a></p>
+        <p><a href="/chrome-extension">{tr("Open the Chrome Companion download and installation page", "打开 Chrome Companion 下载与安装页面")} →</a></p>
+        <p>{tr("Download and unzip the companion. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted folder. Open its popup, select Connect to Remote Arc and approve browser pairing, then explicitly Share this tab. It is an unpacked beta, not a Chrome Web Store extension; downloaded versions must be reloaded manually.", "下载并解压 Companion，在 chrome://extensions 开启开发者模式，选择「加载已解压的扩展程序」并指定解压文件夹。打开扩展，点击 Connect to Remote Arc 并批准浏览器配对，再手动 Share this tab。此 Beta 尚未上架 Chrome Web Store；以后更新仍需重新下载并加载。")}</p>
         <p>{tr("Use browser_list_tabs to select tab_id when several tabs are shared. browser_read_page returns a snapshotId plus stable refs for that snapshot. browser_click and browser_fill require both that snapshot and an explicit per-tab Click & fill grant; a click invalidates the snapshot and the page must be read again.", "同时共享多个标签页时，用 browser_list_tabs 选择 tab_id。browser_read_page 会返回 snapshotId 和当前快照内的元素 ref；browser_click 与 browser_fill 只有在该标签页明确开启 Click & fill 后才能使用。每次点击都会使当前快照失效，下一次交互前必须重新读取页面。")}</p>
       </section>
       <footer className="articleEndLinks"><a href="/docs">{tr("Product documentation", "产品文档")} →</a><a href="/security-model">{tr("Security model", "安全模型")} →</a></footer>

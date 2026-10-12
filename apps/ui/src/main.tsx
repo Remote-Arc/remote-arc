@@ -1,14 +1,20 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
+import { ClientMcpGuide } from "./client-setup-guides.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress, taskActivity } from "./dashboard-task-view.js";
 import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { I18nProvider, useI18n } from "./i18n.js";
+import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
+import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
+import { releaseChinese } from "./release-locales.js";
+import { AdminOperations } from "./admin-operations.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import { parsePendingApprovals, parseSecurityState, type PendingApproval } from "./security-state.js";
+import { SecurityAuthorizations } from "./security-authorizations.js";
+import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery.js";
 import "./styles.css";
 import "./dashboard.css";
 
@@ -34,8 +40,11 @@ function isOlderRelease(current: string | null | undefined, latest = LATEST_AGEN
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
 const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
 
+const NativeInstall = React.lazy(() => import("./native-install.js").then(module => ({ default: module.NativeInstall })));
 const Documentation = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.Documentation })));
 const McpReference = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.McpReference })));
+const ChromeExtensionPage = React.lazy(() => import("./chrome-extension-page.js").then(module => ({ default: module.ChromeExtensionPage })));
+const RemoteMcpGuide = React.lazy(() => import("./remote-mcp-guide.js").then(module => ({ default: module.RemoteMcpGuide })));
 const UseCaseCatalog = React.lazy(() => import("./use-cases.js").then(module => ({ default: module.UseCaseCatalog })));
 const UseCaseDetail = React.lazy(() => import("./use-cases.js").then(module => ({ default: module.UseCaseDetail })));
 
@@ -75,6 +84,9 @@ type Device = {
   undo_history_available?: boolean;
   background_agent_available?: boolean;
   background_recovery_available?: boolean;
+  stop_agent_available?: boolean;
+  pause_agent_available?: boolean;
+  execution_paused?: boolean;
   background_guard_active?: boolean;
   background_guard_pid?: number | null;
   execution_mode?: string | null;
@@ -433,8 +445,9 @@ function LogoMark({ className = "" }: { className?: string }) {
   );
 }
 function Brand({ compact = false }: { compact?: boolean }) {
+  const { locale } = useI18n();
   return (
-    <a href="/" className={"brand" + (compact ? " compactBrand" : "")}>
+    <a href={MARKETING_ORIGIN + (isWebsite() && locale === "zh" ? "/zh" : "")} title="Remote Arc website" className={"brand" + (compact ? " compactBrand" : "")}>
       <LogoMark className="brandLogo" />
       <span className="brandWords">
         <b>Remote</b><b>Arc</b>
@@ -471,16 +484,20 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
   );
 }
 function PublicHeader({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
-  const [showSignIn, setShowSignIn] = useState(false);
-  const returnTo = APP_ORIGIN + "/overview";
+  const { tr, locale } = useI18n();
+  const navHref = (path: string) => isWebsite() ? localizedWebsiteHref(path, locale) : path;
+  // From the website, sign-in visits the product preview. On that preview,
+  // the header sign-in control opens authentication rather than reloading itself.
+  const signInHref = location.hostname === "mcp.remotearc.app"
+    ? APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent("/overview")
+    : APP_ORIGIN + "/overview";
 
   return (
     <>
       <header className="landingNav publicNav">
         <Brand />
         <nav className="publicNavLinks">
-          <a href="/#how-it-works">{tr("How it works", "如何使用")}</a>
+          <a href={navHref("/#how-it-works")}>{tr("How it works", "如何使用")}</a>
 
           <div className="publicNavMenu">
             <button type="button" className="publicNavMenuTrigger">
@@ -491,49 +508,49 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>{tr("Connect Remote Arc", "连接 Remote Arc")}</strong>
                 <small>{tr("Pair a computer and authorize your AI client", "配对电脑并授权 AI 客户端")}</small>
               </a>
-              <a href="/install/chatgpt">
+              <a href={navHref("/install/chatgpt")}>
                 <strong>ChatGPT</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
-              <a href="/install/claude">
+              <a href={navHref("/install/claude")}>
                 <strong>Claude</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
-              <a href="/install/cursor">
+              <a href={navHref("/install/cursor")}>
                 <strong>Cursor</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
-              <a href="/docs/mcp#chrome-browser">
+              <a href="/chrome-extension">
                 <strong>Chrome Browser <span className="navBeta">Beta</span></strong>
                 <small>{tr("Share selected tabs with AI", "把指定浏览器标签页共享给 AI")}</small>
               </a>
             </div>
           </div>
 
-          <a href="/pricing">{tr("Pricing", "价格")}</a>
+          <a href={navHref("/pricing")}>{tr("Pricing", "价格")}</a>
 
           <div className="publicNavMenu">
             <button type="button" className="publicNavMenuTrigger">
               {tr("Resources", "资源")} <span aria-hidden="true">⌄</span>
             </button>
             <div className="publicNavDropdown resourceDropdown">
-              <a href="/blogs">
+              <a href={navHref("/blogs")}>
                 <strong>{tr("Blog", "博客")}</strong>
                 <small>{tr("Ideas, product notes and what we're building", "产品思考、开发记录与我们正在做的事")}</small>
               </a>
-              <a href="/use-cases">
+              <a href={navHref("/use-cases")}>
                 <strong>{tr("Use cases", "使用场景")}</strong>
                 <small>{tr("Real workflows with files, code and terminals", "文件、代码与终端的真实工作流")}</small>
               </a>
-              <a href="/docs">
+              <a href={navHref("/docs")}>
                 <strong>{tr("Docs", "文档")}</strong>
                 <small>{tr("Setup, tools, permissions and reference", "配置、工具、权限与参考")}</small>
               </a>
-              <a href="/security-model">
+              <a href={navHref("/security-model")}>
                 <strong>{tr("Security", "安全")}</strong>
                 <small>{tr("Trust boundaries, permissions and limits", "信任边界、权限与真实限制")}</small>
               </a>
-              <a href="/releases">
+              <a href={navHref("/releases")}>
                 <strong>{tr("Releases", "版本发布")}</strong>
                 <small>{tr("What's new in Remote Arc", "查看 Remote Arc 的版本更新")}</small>
               </a>
@@ -541,27 +558,17 @@ function PublicHeader({ user }: { user?: User | null }) {
           </div>
         </nav>
         <div className="publicNavActions">
+          <LanguageSwitcher compact syncUrl dropdown />
           <ThemeSwitcher compact />
           {user ? (
             <a className="navDashboard" href={dashboardHref("/overview")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
           ) : (
-            <button className="navLogin installNavCta" type="button" onClick={() => setShowSignIn(true)}>
+            <a className="navLogin installNavCta" href={signInHref} title={tr("Sign in with Google or email", "使用 Google 或邮箱登录")}>
               {tr("Sign in", "登录")} <span>→</span>
-            </button>
+            </a>
           )}
         </div>
       </header>
-      {showSignIn && (
-        <AuthProviderModal
-          returnTo={returnTo}
-          title={tr("Choose how to sign in.", "选择登录方式。")}
-          body={tr(
-            "Sign in to manage your Remote Arc account, paired computers and AI connections.",
-            "登录后管理你的 Remote Arc 账户、已配对电脑和 AI 连接。",
-          )}
-          onClose={() => setShowSignIn(false)}
-        />
-      )}
     </>
   );
 }
@@ -1643,21 +1650,22 @@ function PublicLayout({
   children: React.ReactNode;
   user?: User | null;
 }) {
+  const { tr } = useI18n();
   return (
     <main className="landing publicPage">
       <PublicHeader user={user} />
       {children}
       <footer className="publicFooter">
         <Brand compact />
-        <nav className="publicFooterLinks" aria-label="Remote Arc guides">
-          <a href="/mcp-computer-access">Remote MCP</a>
+        <nav className="publicFooterLinks" aria-label={tr("Remote Arc guides", "Remote Arc 使用指南")}>
+          <a href="/remote-mcp">{tr("Remote MCP guide", "Remote MCP 指南")}</a>
           <a href="/chatgpt-computer-access">ChatGPT</a>
           <a href="/claude-computer-access">Claude</a>
-          <a href="/docs/mcp">MCP Docs</a>
-          <a href="/security-model">Security</a>
+          <a href="/docs/mcp">{tr("MCP Docs", "MCP 文档")}</a>
+          <a href="/security-model">{tr("Security", "安全")}</a>
         </nav>
         <div className="publicFooterMeta">
-          <span>© 2026 Remote Arc · Proprietary</span>
+          <span>© 2026 Remote Arc · {tr("Proprietary", "专有软件")}</span>
           <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
         </div>
       </footer>
@@ -1926,7 +1934,11 @@ function AuthProviderModal({
         MARKETING_ORIGIN +
         "/auth/google?return_to=" +
         encodeURIComponent(absoluteReturnTo),
-      mark: "G",
+    },
+    {
+      id: "email",
+      label: tr("Continue with Email", "使用邮箱继续"),
+      href: MARKETING_ORIGIN + "/auth/login?return_to=" + encodeURIComponent(absoluteReturnTo) + "#email",
     },
   ];
 
@@ -1949,15 +1961,15 @@ function AuthProviderModal({
         <div className="installAuthProviders">
           {providers.map((provider) => (
             <a className={"authProviderButton " + provider.id} href={provider.href} key={provider.id}>
-              <span aria-hidden="true">{provider.mark}</span>
+              <span aria-hidden="true">{provider.id === "google" ? <img src="/google-g.svg" alt="" width={25} height={25} /> : "✉"}</span>
               <strong>{provider.label}</strong>
               <b>→</b>
             </a>
           ))}
         </div>
         <small>{note || tr(
-          "More sign-in methods can be added here later without changing your paired computers or AI connections.",
-          "以后可以在这里增加更多登录方式，而不会影响已经配对的电脑或 AI 连接。",
+          "Google and email sign-in use the same Remote Arc account. Your paired computers and AI connections stay attached.",
+          "Google 和邮箱登录使用同一个 Remote Arc 账户，已配对设备和 AI 连接会保留。",
         )}</small>
       </section>
     </div>
@@ -1986,8 +1998,8 @@ function ClientInstallPage({
           "Remote Arc is preparing its public ChatGPT Plugin listing. Until it is live, eligible accounts can use the developer-mode MCP connection in Plugins.",
           "Remote Arc 正在准备公开 ChatGPT Plugin 上架。在正式上线前，符合条件的账户仍可通过Plugins 中的开发模式 MCP 连接接入。",
         ),
-        externalHref: "https://chatgpt.com/",
-        externalLabel: tr("Open ChatGPT", "打开 ChatGPT"),
+        externalHref: CHATGPT_PLUGIN_DIRECTORY_URL,
+        externalLabel: tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins"),
         steps: [
           {
             title: tr("Pair your computer", "配对你的电脑"),
@@ -1997,8 +2009,8 @@ function ClientInstallPage({
           {
             title: tr("Connect the Remote Arc Plugin", "连接 Remote Arc Plugin"),
             body: tr(
-              "Open ChatGPT Plugins and install Remote Arc when it is available to your account. Before publication, developer testing uses Settings → Security and login → Developer mode, then the Plugins plus button to add the MCP endpoint. Complete Remote Arc OAuth; account and workspace policy can limit availability.",
-              "打开 ChatGPT Plugins，账户可见时安装 Remote Arc。发布前开发测试使用 Settings → Security and login → Developer mode，再从 Plugins 加号添加 MCP 地址并完成 Remote Arc OAuth；可用性取决于账户和工作区策略。",
+              "Open ChatGPT Plugins → + → Add custom MCP server (where available), enter the HTTPS endpoint, complete OAuth and install or enable the created plugin. Account and workspace permissions apply.",
+              "打开 ChatGPT Plugins → ＋ → Add custom MCP server（若账户支持），填写 HTTPS 地址、完成 OAuth，再安装或启用创建好的插件。具体权限受账户和工作区限制。",
             ),
             code: MCP_ENDPOINT,
           },
@@ -2036,8 +2048,8 @@ function ClientInstallPage({
             "Claude Custom Connectors 支持 Remote MCP。添加一次 Remote Arc 并完成授权后，你配对的电脑即可通过 Connector 使用。",
           ),
           availability: tr("Available through Claude custom connectors using remote MCP.", "可通过 Claude 的 Remote MCP Custom Connector 接入。"),
-          externalHref: "https://claude.ai/",
-          externalLabel: tr("Open Claude", "打开 Claude"),
+          externalHref: CLAUDE_CONNECTORS_URL,
+          externalLabel: tr("Open Claude Connectors", "打开 Claude Connectors"),
           steps: [
             {
               title: tr("Pair your computer", "配对你的电脑"),
@@ -2047,8 +2059,8 @@ function ClientInstallPage({
             {
               title: tr("Add a custom connector", "添加 Custom Connector"),
               body: tr(
-                "In Claude, open Settings → Connectors and add a custom connector that points to the Remote Arc MCP endpoint. Complete OAuth when Claude redirects you.",
-                "在 Claude 中打开 Settings → Connectors，添加一个指向 Remote Arc MCP 地址的 Custom Connector，并在跳转后完成 OAuth。",
+                "In Claude, open Customize → Connectors → + Add → Custom → Web (or Add custom connector). Enter the Remote Arc URL, select OAuth sign-in, then enable the connector in your conversation.",
+                "在 Claude 中进入 Customize → Connectors → ＋ Add → Custom → Web，输入 Remote Arc MCP 地址并完成 OAuth，随后在对话中启用连接。",
               ),
               code: MCP_ENDPOINT,
             },
@@ -2086,7 +2098,7 @@ function ClientInstallPage({
             "Cursor 支持带 OAuth 的 Remote HTTP MCP Server。把 Cursor 指向 Remote Arc，就能让文件系统和终端仍然运行在你配对的真实电脑上。",
           ),
           availability: tr("Supported through Cursor remote HTTP MCP with OAuth.", "可通过 Cursor 的 Remote HTTP MCP + OAuth 接入。"),
-          externalHref: "https://cursor.com/",
+          externalHref: "https://cursor.com/docs/mcp",
           externalLabel: tr("Open Cursor", "打开 Cursor"),
           steps: [
             {
@@ -2149,14 +2161,6 @@ function ClientInstallPage({
               <h1>{config.name} {tr("installation", "安装")}</h1>
               <p>{config.intro}</p>
             </div>
-            <div className="installPrimaryCommand compactCommand">
-              <span>{tr("RUN ON THE COMPUTER", "在电脑上运行")}</span>
-              <div className="installHeroCommand">
-                <code>npx remotelink</code>
-                <CopyButton value="npx remotelink" />
-              </div>
-              <small>{tr("Node.js 20+ · Windows, macOS or Linux · opens the pairing page automatically", "Node.js 20+ · Windows、macOS 或 Linux · 自动打开配对页面")}</small>
-            </div>
           </div>
 
           <div className="toolPageStatusLine">
@@ -2165,16 +2169,65 @@ function ClientInstallPage({
           </div>
         </header>
 
+        <section id="installation-command" className="installQuickStart" aria-label={tr("Install Remote Arc on your computer", "在电脑上安装 Remote Arc")}>
+          <div className="installQuickStartCopy">
+            <span className="eyebrow">{tr("START HERE · INSTALLATION", "从这里开始 · 安装指南")}</span>
+            <h2>{tr("Install and pair your computer", "安装并配对你的电脑")}</h2>
+            <p>{tr(
+              "Run this on the Windows, macOS or Linux computer you want " + config.name + " to use. Then connect the MCP App / Connector below.",
+              "在你希望 " + config.name + " 使用的 Windows、macOS 或 Linux 电脑上运行，然后按下方步骤连接 MCP App / Connector。",
+            )}</p>
+          </div>
+          <div className="installPrimaryCommand compactCommand">
+            <span>{tr("RUN ON YOUR COMPUTER", "在你的电脑上运行")}</span>
+            <div className="installHeroCommand">
+              <code>npx remotelink</code>
+              <CopyButton value="npx remotelink" />
+            </div>
+            <small>{tr("Pairs your computer through browser approval · requires Node.js for this npx entry", "通过浏览器确认完成配对 · 此 npx 安装方式需要 Node.js")}</small>
+          </div>
+          <div className="installQuickStartMcp">
+            <span>{tr("NEXT · ADD THIS REMOTE MCP ADDRESS IN YOUR AI CLIENT", "接下来 · 在 AI 客户端添加这个远程 MCP 地址")}</span>
+            <code>{MCP_ENDPOINT}</code>
+            <CopyButton value={MCP_ENDPOINT} />
+          </div>
+        </section>
+
+        <div className="installMustDo" aria-label={tr("Both setup steps are required", "安装必须完成两端设置")}>
+          <article className="installMustDoCard">
+            <span>{tr("REQUIRED 01 · AI CLIENT", "必需 01 · AI 客户端")}</span>
+            <h2>{tr("Add the MCP App / Connector", "添加 MCP App / Connector")}</h2>
+            <p>{tr("Add Remote Arc in " + config.name + " and finish OAuth. Without this step your AI cannot access the computer.", "在 " + config.name + " 里添加 Remote Arc 并完成 OAuth。缺少这一步，AI 就无法访问电脑。")}</p>
+            <a href="#installation-client">{tr("See UI setup steps", "查看平台内点击步骤")} ↗</a>
+          </article>
+          <article className="installMustDoCard">
+            <span>{tr("REQUIRED 02 · LOCAL COMPUTER", "必需 02 · 目标电脑")}</span>
+            <h2>{tr("Start and pair the local agent", "启动并配对本地 Agent")}</h2>
+            <p>{tr("Run the CLI on the machine you want the AI to use. The MCP connection alone cannot access local files.", "在需要使用的电脑上运行本地命令。只有 MCP 连接仍无法访问本机文件。")}</p>
+            <a href="#installation-command">{tr("Copy the installation command", "复制安装命令")} ↗</a>
+            <a href="#installation">{tr("Device pairing steps", "查看电脑配对步骤")} ↗</a>
+          </article>
+        </div>
+
+        {slug !== "cursor" && <div className="installFullWidthGuide">
+          <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
+            cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />
+        </div>}
+
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("SETUP", "配置")}</strong>
-            <a href="#installation">{tr("Three steps", "三个步骤")}</a>
-            <a href="#installation-example">{tr("Example session", "示例会话")}</a>
+            <a href="#installation-command">{tr("Installation command", "安装命令")}</a>
+            <a href="#installation-client">{tr("MCP App / Connector (required)", "MCP App / Connector（必需）")}</a>
+            <a href="#installation">{tr("Computer setup (required)", "电脑端配置（必需）")}</a>
+            <a href="#installation-example">{tr("Example session (after setup)", "示例会话（安装之后）")}</a>
             <a href="/connect-ai">{tr("Connect another AI", "连接其他 AI")}</a>
             <a href="/docs">{tr("Documentation", "文档")}</a>
           </aside>
 
           <article className="manualArticle">
+            {slug === "cursor" && <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
+              cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />}
             <section id="installation">
               <h2>{tr("Setup", "配置")}</h2>
               <p>{tr(
@@ -2189,6 +2242,7 @@ function ClientInstallPage({
                     <h3>{tr("Run Remote Arc on the computer", "在电脑上运行 Remote Arc")}</h3>
                     <p>{tr("The CLI creates a short-lived pairing request and opens the browser approval page.", "CLI 会创建一个短期配对请求，并自动打开浏览器确认页面。")}</p>
                     <div className="docsCodeLine"><code>npx remotelink</code><CopyButton value="npx remotelink" /></div>
+                    <p className="installAgentVersionNote">{tr("To explicitly fetch the latest published CLI, run npx --yes remotelink@latest. Previously installed background agents do not upgrade automatically.", "需要明确从 npm 获取最新 CLI 时运行 npx --yes remotelink@latest。之前安装的后台 Agent 不会自动升级。")}</p>
                   </div>
                 </li>
                 <li>
@@ -2222,15 +2276,6 @@ function ClientInstallPage({
               </div>
             </section>
 
-            <section id="installation-example">
-              <h2>{tr("Example session", "示例会话")}</h2>
-              <p>{tr(
-                "This is the shape of a normal Remote Arc request after setup: the AI chooses a paired device, calls only the tools allowed for that device, and receives the result in the same conversation.",
-                "完成配置后，一次普通 Remote Arc 请求大致如下：AI 选择已配对设备，只调用该设备允许的工具，并在同一对话中收到结果。",
-              )}</p>
-              <InstallTypewriterDemo config={config.demo} />
-            </section>
-
             <section className="manualFooterLinks">
               <a href="/connect-ai">{tr("Connection reference", "连接参考")} →</a>
               <a href="/docs">{tr("Read the documentation", "阅读文档")} →</a>
@@ -2238,6 +2283,19 @@ function ClientInstallPage({
             </section>
           </article>
         </div>
+
+        <section id="installation-example" className="installExampleFirst">
+          <div className="installExampleIntro">
+            <span className="eyebrow">{tr("AFTER SETUP · SEE IT IN ACTION", "完成安装后 · 查看效果")}</span>
+            <h2>{tr("Example session", "示例会话")}</h2>
+            <p>{tr(
+              "Once setup is complete, preview how your AI selects a paired computer, calls approved tools, and returns results in chat. This is a simulation, not a live device session.",
+              "完成上面的安装步骤后，可以在这里预览 AI 如何选择已配对电脑、调用获准工具，并在聊天中返回结果。这是模拟演示，不会连接真实设备。",
+            )}</p>
+          </div>
+          <InstallTypewriterDemo config={config.demo} />
+        </section>
+
       </main>
     </PublicLayout>
   );
@@ -2245,27 +2303,52 @@ function ClientInstallPage({
 
 function DashboardAccess() {
   const { tr } = useI18n();
-  const [showSignIn, setShowSignIn] = useState(false);
+  const target = encodeURIComponent(APP_ORIGIN + "/overview");
+  useEffect(() => {
+    // Keep the overview public as a product preview; other dashboard tabs
+    // still require login and preserve their original destination.
+    if (!UI_PREVIEW && location.pathname !== "/overview") {
+      const returnTo = location.pathname + location.search;
+      location.replace(APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent(returnTo));
+    }
+  }, []);
+  if (!UI_PREVIEW && location.pathname !== "/overview") {
+    return <CenteredCard title={tr("Opening sign in…", "正在打开登录页…")}
+      body={tr("Taking you to Google or email sign-in.", "正在跳转到 Google 或邮箱登录页。")} />;
+  }
   return (
     <>
     <PublicLayout>
       <section className="dashboardAccess">
         <div className="dashboardAccessCopy">
-          <span className="eyebrow">{tr("REMOTE ARC DASHBOARD", "REMOTE ARC 控制台")}</span>
+          <span className="eyebrow">{tr("YOUR REMOTE ARC CONTROL CENTER", "你的 REMOTE ARC 控制中心")}</span>
           <h1>{tr(
-            "Your devices, connections and access policy in one place.",
-            "在一个页面管理设备、连接与访问策略。"
+            "Your computers. One secure control center.",
+            "你的所有电脑，一个安全控制中心。"
           )}</h1>
           <p>{tr(
-            "Sign in to pair computers, inspect online state, review usage and connect your AI clients. The public website always remains available at the root domain.",
-            "登录后可配对电脑、查看在线状态、用量与 AI 客户端连接。根域名始终保留为公开官网。"
+            "Pair Windows, macOS or Linux. Connect ChatGPT or Claude. Review AI access, running tasks and actions from one dashboard — while your files stay on your own machines.",
+            "连接 Windows、macOS 或 Linux，将 ChatGPT 或 Claude 接入自己的电脑。在一个控制台里查看设备、AI 授权、任务和操作记录，文件仍保留在你自己的电脑上。"
           )}</p>
-          <button className="primaryButton" type="button" onClick={() => setShowSignIn(true)}>
-            {tr("Sign in to Remote Arc", "登录 Remote Arc")} <span>→</span>
-          </button>
+          <div className="guestDashboardActions">
+            <a className="guestGoogleButton" href={APP_ORIGIN + "/auth/google?return_to=" + target}>
+              <img src="/google-g.svg" alt="" width={22} height={22} />
+              {tr("Continue with Google", "使用 Google 继续")}
+            </a>
+            <a className="primaryButton" href={APP_ORIGIN + "/auth/login?return_to=" + target + "#email"}>
+              {tr("Continue with email", "使用邮箱继续")} <span>→</span>
+            </a>
+          </div>
+          <a className="guestDashboardWebsiteLink" href={MARKETING_ORIGIN}>
+            {tr("Not ready yet? Explore Remote Arc", "还想了解更多？前往产品官网")} ↗
+          </a>
+          <p className="guestDashboardHint">{tr(
+            "Continue with Google or email. No separate model API key is required when using a compatible MCP-enabled AI chat; your provider's limits still apply.",
+            "支持 Google 或邮箱登录。使用兼容 MCP 的 AI 对话时，不需要额外配置模型 API Key；仍受 AI 服务商自身的套餐与额度限制。"
+          )}</p>
         </div>
         <div className="dashboardAccessPreview" aria-hidden="true">
-          <div className="previewTop"><span>Remote Arc</span><i>Dashboard</i></div>
+          <div className="previewTop"><span>Remote Arc Dashboard</span><i>{tr("Illustrative preview · not live data", "界面示例 · 非实时数据")}</i></div>
           <div className="previewMetricRow">
             <div><small>ONLINE</small><strong>2</strong><span>devices</span></div>
             <div><small>USAGE</small><strong>1.8k</strong><span>/ 10k calls</span></div>
@@ -2276,15 +2359,24 @@ function DashboardAccess() {
           <div className="previewActivity"><span>Recent activity</span><strong>read_file</strong><small>Personal Mac · 12s ago</small></div>
         </div>
       </section>
+      <section className="guestDashboardBenefits" aria-label={tr("What you can do", "你可以做什么")}>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">01</span>
+          <h2>{tr("One place for every computer", "统一管理你的所有电脑")}</h2>
+          <p>{tr("See devices, connections and execution permissions without juggling terminals.", "查看设备状态、连接方式和执行权限，不必在多个终端之间来回切换。")}</p>
+        </article>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">02</span>
+          <h2>{tr("You control what AI can do", "每一步操作都由你掌控")}</h2>
+          <p>{tr("Approve available tools, control access and review recent actions from your dashboard.", "配置允许使用的工具、管理授权，并查看 AI 最近在电脑上执行的操作。")}</p>
+        </article>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">03</span>
+          <h2>{tr("Work that outlasts a chat", "聊天结束，工作状态仍在")}</h2>
+          <p>{tr("Save device-side tasks, track progress and resume where supported; AI decisions still require a connected model.", "保存设备端任务，追踪进度，并在支持的场景中继续；新的 AI 决策仍需要已连接的大模型。")}</p>
+        </article>
+      </section>
     </PublicLayout>
-    {showSignIn && (
-      <AuthProviderModal
-        returnTo="/overview"
-        title={tr("Choose how to sign in.", "选择登录方式。")}
-        body={tr("Sign in to manage your devices, permissions, usage and AI connections.", "登录后管理设备、权限、用量与 AI 连接。")}
-        onClose={() => setShowSignIn(false)}
-      />
-    )}
     </>
   );
 }
@@ -2299,25 +2391,30 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Give the AI you already use a persistent, permissioned runtime across your own computers. Start work now, save long-running goals, and return in a later chat without losing the execution state.",
-            "让你已经在用的 AI 获得跨真实电脑的持久化、可控 Runtime。现在开始工作，保存长任务与目标，换到之后的聊天仍可从已保存的执行状态继续。"
+            "Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects the tools, your AI does the thinking, and your machines do the work. Save a task and pick up its state in a later chat.",
+            "别让 AI 只停留在聊天。就在你熟悉的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 负责安全连接，你的模型负责思考，自己的电脑负责执行。已保存的任务状态还能跨聊天保留。"
           )}</p>
+          <div className="heroAiPlanNote">
+            <strong>{tr("No model API key to configure. No pay-per-token API bill to top up.", "不用配置模型 API Key，也不用额外充值按量计费的 API Token。")}</strong>
+            <span>{tr("A compatible free chat can be enough—for example, Claude Free currently supports one custom MCP connector. Your AI provider’s tool permissions, chat limits and Remote Arc tool-call limits still apply.", "如果免费聊天套餐支持自定义 MCP，也可以直接使用，例如 Claude Free 目前支持一个自定义连接器。AI 服务商的工具权限、聊天额度和 Remote Arc 工具调用额度仍然适用。")}</span>
+          </div>
           <div className="heroPrimaryCommand">
             <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
             <div>
               <code>{command}</code>
               <CopyButton value={command} />
             </div>
-            <small>{tr("Node.js 20+ · opens the browser pairing flow automatically", "Node.js 20+ · 自动打开浏览器配对流程")}</small>
+            <small>{tr("Go Agent · npm, Homebrew or standalone download", "Go Agent · npm、Homebrew 或直接下载")}</small>
           </div>
           <div className="landingActions">
             <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>
+            <a className="ghostLink" href="/downloads">{tr("Download Agent", "下载 Agent")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
-            <span>{tr("Build & test", "开发与测试")}</span>
-            <span>{tr("Overnight tasks", "过夜任务")}</span>
-            <span>{tr("Scheduled tasks", "定时任务")}</span>
+            <span>{tr("Chat → real actions", "聊天 → 真实执行")}</span>
+            <span>{tr("Free MCP chat options", "支持部分免费 AI 聊天")}</span>
+            <span>{tr("Your device. Your permissions.", "自己的电脑，权限自己定")}</span>
           </div>
           <a className="heroTaskAvailability" href="/docs/long-running-work">{tr("Long-running Tasks · staged preview · see requirements", "长任务准备发布中 · 查看运行条件")} →</a>
         </div>
@@ -2823,8 +2920,8 @@ function NotFoundPage({ user }: { user?: User | null }) {
 
 function PricingPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/google?return_to=/overview";
-  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/google?return_to=/settings";
+  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/login?return_to=/overview";
+  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/login?return_to=/settings";
   return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} currentPlan={user?.plan || null} /></React.Suspense></PublicLayout>;
 }
 
@@ -2853,11 +2950,29 @@ const blogPosts = [
     readTime: "9 min read",
     author: "Sam Yao",
   },
+  {
+    slug: "go-vs-typescript-agent-benchmarks",
+    date: "9 Oct 2026",
+    readTime: "9 min read",
+    author: "Sam Yao",
+  },
 ] as const;
 
 function BlogsPage({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const posts = [
+    {
+      ...blogPosts[4],
+      title: tr(
+        "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
+        "为什么 Remote Arc 选择 Go：在 Mac 和 Windows 上实测对比 TypeScript",
+      ),
+      summary: tr(
+        "An honest account of a Windows performance regression, its fix, matching atomic/durable workloads, two-hour Agent residency and what we still have not measured.",
+        "真实记录 Windows 上 Go 性能回退的发现与修复、相同持久化策略下的比较、两小时 Agent 驻留，以及尚未完成的实测范围。",
+      ),
+      tag: tr("ENGINEERING · BENCHMARK", "工程 · 基准测试"),
+    },
     {
       ...blogPosts[0],
       title: tr(
@@ -2919,16 +3034,16 @@ function BlogsPage({ user }: { user?: User | null }) {
           "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.",
           "记录 Remote Arc 的工程实现、架构决策、安全取舍和产品思考。",
         )}</p>
-        <nav className="readingPageLinks">
-          <a href="/docs">{tr("Docs", "文档")} →</a>
-          <a href="/security-model">{tr("Security", "安全")} →</a>
-          <a href="/docs#docs-routing">{tr("Architecture notes", "架构说明")} →</a>
+        <nav className="readingPageLinks" aria-label={tr("Explore related resources", "相关资源")}>
+          <a href={localizedWebsiteHref("/docs", locale)}>{tr("Docs", "文档")} →</a>
+          <a href={localizedWebsiteHref("/security-model", locale)}>{tr("Security", "安全")} →</a>
+          <a href={localizedWebsiteHref("/docs#docs-routing", locale)}>{tr("Architecture notes", "架构说明")} →</a>
         </nav>
       </section>
 
       <section className="blogIndex blogListPlain">
         {posts.map((post) => (
-          <a className="blogPostRow" href={"/blogs/" + post.slug} key={post.slug}>
+          <a className="blogPostRow" href={localizedWebsiteHref("/blogs/" + post.slug, locale)} key={post.slug}>
             <div className="blogLeadMeta">
               <span>{post.tag}</span>
               <span>{post.date}</span>
@@ -2944,6 +3059,122 @@ function BlogsPage({ user }: { user?: User | null }) {
   );
 }
 
+
+function BlogBackLink() {
+  const { tr, locale } = useI18n();
+  return <a className="blogBack" href={localizedWebsiteHref("/blogs", locale)}>← {tr("All posts", "全部文章")}</a>;
+}
+
+function GoVsTypescriptBenchmarkArticlePage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const rows = [
+    { host: "Mac", source: "f68ab09", profile: "atomic", engine: "TS", read: "2.284", write: "5.327", undo: "5.345", rss: "100.69" },
+    { host: "Mac", source: "f68ab09", profile: "atomic", engine: "Go", read: "0.964", write: "2.713", undo: "2.519", rss: "16.35" },
+    { host: "Mac", source: "f68ab09", profile: "durable", engine: "TS", read: "2.149", write: "203.618", undo: "53.092", rss: "101.36" },
+    { host: "Mac", source: "f68ab09", profile: "durable", engine: "Go", read: "0.972", write: "195.803", undo: "47.742", rss: "16.68" },
+    { host: "Windows", source: "f68ab09", profile: "atomic", engine: "TS", read: "5.337", write: "20.977", undo: "16.091", rss: "95.79" },
+    { host: "Windows", source: "f68ab09", profile: "atomic", engine: "Go", read: "22.660", write: "29.152", undo: "51.719", rss: "19.57" },
+    { host: "Windows", source: "71cde96", profile: "atomic", engine: "TS", read: "5.422", write: "21.294", undo: "16.189", rss: "98.99" },
+    { host: "Windows", source: "71cde96", profile: "atomic", engine: "Go", read: "4.168", write: "9.687", undo: "12.942", rss: "19.33" },
+  ];
+  return <PublicLayout user={user}>
+    <article className="blogArticle">
+      <header className="blogArticleHeader">
+        <BlogBackLink />
+        <span className="eyebrow">{tr("ENGINEERING NOTES · 9 OCT 2026", "工程笔记 · 2026 年 10 月 9 日")}</span>
+        <h1>{tr(
+          "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
+          "为什么 Remote Arc 选择 Go：在 Mac 和 Windows 上实测对比 TypeScript",
+        )}</h1>
+        <p className="blogDeck">{tr(
+          "Go did not win every test. Our first Windows build was slower. Here is what we measured, what we fixed, and why the native Agent still made sense.",
+          "Go 并不是一开始就全面胜出。早期 Windows 版本反而更慢。这篇文章记录我们测到了什么、修复了什么，以及为什么最终仍选择原生 Go Agent。",
+        )}</p>
+        <div className="blogByline"><span className="blogAuthorMark">SY</span><div>
+          <strong>Sam Yao</strong>
+          <span>{tr("Creator of Remote Arc", "Remote Arc 创建者")} · 9 Oct 2026 · 9 min</span>
+        </div></div>
+      </header>
+      <div className="blogArticleBody">
+        <p>{tr(
+          "Remote Arc is not a benchmark project. Its Agent needs to stay on the computer for hours, preserve one execution owner, reconnect safely and honor file permissions and Undo. Choosing Go was about the shape of that product, not a claim that Go is universally faster than Node.js.",
+          "Remote Arc 不是跑分项目。设备 Agent 需要长期驻留、确保只有一个执行者、可靠重连，并始终遵守文件权限和 Undo 语义。选择 Go 是基于这种产品形态，而不是宣称 Go 在所有场景中都比 Node.js 快。",
+        )}</p>
+        <h2>{tr("What exactly did we benchmark?", "我们到底测了什么？")}</h2>
+        <p>{tr(
+          "L1 measures each execution core through local JSONL IPC. L2 measures the complete foreground Agent through an authenticated loopback WebSocket relay. Both use matched operations, three alternating rounds, warmup outside the measured set and 600 samples per routine file operation. RSS is sampled after a batch, not peak RAM.",
+          "L1 通过本地 JSONL IPC 测量执行内核。L2 通过已认证的本机回环 WebSocket Relay 测试完整前台 Agent。两边执行相同操作，交替运行三轮，预热不计入测量，每项常规文件操作合计 600 次样本。RSS 是批次结束后的采样值，并非峰值内存。",
+        )}</p>
+        <p>{tr(
+          "The table below is L2 only: median (P50) latency in milliseconds and post-batch RSS in MiB. Source hashes matter: the Windows follow-up is a different, newer commit than the original baseline. These are not production Cloudflare or ChatGPT end-to-end timings.",
+          "下表只展示 L2：延迟为中位数 P50（毫秒），RSS 为批次结束后内存（MiB）。源码版本很重要：Windows 修复后测试使用的是不同于旧基线的新提交。这些不是生产 Cloudflare 或 ChatGPT 端到端延迟。",
+        )}</p>
+        <div className="benchmarkTableScroll" role="region" aria-label={tr("Agent benchmark results, scroll horizontally to see more columns", "Agent 基准结果表，可横向滚动查看更多列")} tabIndex={0}>
+          <table className="benchmarkTable">
+            <caption>{tr("Full Agent (L2): median time in ms, memory in MiB", "完整 Agent（L2）：延迟单位 ms，内存单位 MiB")}</caption>
+            <thead><tr>
+              <th scope="col">{tr("Host", "系统")}</th>
+              <th scope="col">{tr("Source", "版本")}</th>
+              <th scope="col">{tr("Mode", "模式")}</th>
+              <th scope="col">{tr("Engine", "引擎")}</th>
+              <th scope="col">{tr("Read", "读取")}</th>
+              <th scope="col">{tr("Write", "写入")}</th>
+              <th scope="col">Undo</th>
+              <th scope="col">RSS</th>
+            </tr></thead>
+            <tbody>{rows.map((item) => <tr key={item.host + item.source + item.profile + item.engine}>
+              <th scope="row">{item.host}</th><td><code>{item.source}</code></td><td>{item.profile}</td>
+              <td><strong>{item.engine}</strong></td><td>{item.read}</td><td>{item.write}</td><td>{item.undo}</td><td>{item.rss}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <p className="benchmarkMethodNote">{tr(
+          "Read/write/Undo values come from distinct three-round matched runs. Do not compare different hosts as if they had identical hardware. The Windows follow-up verified revised native-path handling, not a universal Go advantage.",
+          "读取、写入与 Undo 数据来自三轮同条件测试。Mac 和 Windows 硬件不同，不能把跨机器数字直接相除。Windows 后续测试验证的是原生路径处理修复后的实现，而不是 Go 的普遍速度优势。",
+        )}</p>
+        <h2>{tr("The Windows regression we nearly missed", "差点被忽略的 Windows 性能回退")}</h2>
+        <p>{tr(
+          "At source f68ab09, Go on Windows took 29.15 ms to write versus 20.98 ms for TS, and 51.72 ms to Undo versus 16.09 ms. The issue was not evidence that native Go was the wrong runtime: the native Windows path-handling implementation needed correction. After that change, source 71cde96 measured 9.69 ms Go versus 21.29 ms TS for writes, and 12.94 ms versus 16.19 ms for Undo. Both measurements remain published.",
+          "在 f68ab09 版本中，Windows 的 Go 写入需要 29.15 ms，TS 仅为 20.98 ms；Go Undo 需要 51.72 ms，TS 为 16.09 ms。但问题不代表 Go 运行时本身不合适，而是 Windows 原生路径处理需要修复。修复后，71cde96 测到 Go 写入 9.69 ms、TS 21.29 ms，Undo 则是 Go 12.94 ms、TS 16.19 ms。新旧两份结果都保留，不能只展示有利数字。",
+        )}</p>
+        <h2>{tr("Why durable writes look slow on the Mac", "为什么 Mac 上 durable 写入会变慢？")}</h2>
+        <p>{tr(
+          "In atomic mode the agent writes a temporary file and renames it, without explicitly waiting for storage flushes. Durable mode additionally synchronizes file data, Undo records and directory metadata. On this Intel Mac, L2 Go writes rose from 2.71 ms in atomic mode to 195.80 ms in durable mode. TS showed a similar jump (5.33 to 203.62 ms). Most of that difference is a stronger synchronization policy, not a proof that either language became slower.",
+          "atomic 模式通过临时文件加重命名进行原子替换，但不显式等待数据落盘。durable 模式还会同步文件数据、Undo 记录与目录元数据。在这台 Intel Mac 上，L2 Go 写入由 atomic 的 2.71 ms 上升至 durable 的 195.80 ms，TS 则由 5.33 ms 上升至 203.62 ms。主要差别是同步策略，而非语言性能突然下降。",
+        )}</p>
+        <p>{tr(
+          "The layered experiment keeps workspace writes atomic while persisting Undo state more strictly. It lowers some latency, but does not guarantee that the latest workspace edit survives sudden power loss. macOS fsync is not F_FULLFSYNC, and Windows directory synchronization has limits. We will not relabel this as full power-loss protection.",
+          "layered 实验让工作区写入保持 atomic，而对 Undo 状态采用更严格的同步。它能降低部分延迟，但不保证最近一次工作区修改在突然断电后仍然存在。macOS 的 fsync 不等于 F_FULLFSYNC；Windows 的目录同步也有限制。我们不会把它包装成完整断电安全。",
+        )}</p>
+        <h2>{tr("Long-running resources and the decision", "长期驻留与最终选择")}</h2>
+        <p>{tr(
+          "Under the earlier f68ab09 native-Go soak, the Mac ran for 7,200 seconds with sampled RSS growing from 14.11 to 17.33 MiB; Windows ran for 7,200 seconds from 17.80 to 24.79 MiB, with a sampled peak of 25.11 MiB. The runs included execution, Undo, conflict checks, managed processes and repeated WebSocket reconnects in an isolated fixture, not a real production outage.",
+          "在较早的 f68ab09 原生 Go 驻留实验中，Mac 运行 7,200 秒，采样 RSS 从 14.11 增至 17.33 MiB；Windows 同样运行 7,200 秒，从 17.80 增至 24.79 MiB，采样峰值为 25.11 MiB。测试覆盖文件操作、Undo、冲突检查、受管进程及隔离环境下的 WebSocket 重连，并不等于真实生产断网测试。",
+        )}</p>
+        <p>{tr(
+          "Remote Arc 0.6.0 therefore ships Go as the default native computer Agent: low measured resident memory, native distribution without a Node prerequisite, and one executable that owns the local execution boundary. TypeScript remains an explicit compatibility fallback. Cloudflare Worker and Dashboard still use TypeScript.",
+          "因此，Remote Arc 0.6.0 选择 Go 作为默认原生设备 Agent：实测较低的常驻内存、无需 Node 的原生分发，以及由同一个可执行文件负责本地执行边界。TypeScript 仍作为明确的兼容回退；Cloudflare Worker 和 Dashboard 依然使用 TypeScript。",
+        )}</p>
+        <h2>{tr("What we have not proved yet", "哪些事情仍没有证明？")}</h2>
+        <p>{tr(
+          "L3 is still outstanding: a formal paired TS/Go measurement of ChatGPT/client → production Cloudflare Relay → real device, separating network, routing and execution time. We also need installed-service upgrades, real power/network outages and hardware-specific crash-durability experiments. Benchmark samples are useful engineering evidence, not a blanket performance claim or production SLO.",
+          "L3 仍未完成：需要把 ChatGPT/客户端 → 生产 Cloudflare Relay → 真机的 TS/Go 对照拆成网络、路由和执行耗时。另外，安装后的后台服务升级、真实断网/断电，以及硬件层面的崩溃持久化测试仍需独立验收。基准样本是工程证据，不是普适性能承诺或生产 SLO。",
+        )}</p>
+        <div className="benchmarkSources">
+          <h2>{tr("Methods and source data", "方法与原始来源")}</h2>
+          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-f68ab09.md">{tr("Mac + Windows baseline (f68ab09)", "Mac + Windows 旧基线（f68ab09）")} ↗</a></p>
+          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-71cde96.md">{tr("Windows path-handling follow-up (71cde96)", "Windows 路径处理修复后测试（71cde96）")} ↗</a></p>
+          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/README.md">{tr("Reproduction steps, profiles and raw-artifact hashes", "复现步骤、同步模式和原始报告哈希")} ↗</a></p>
+        </div>
+        <footer className="blogArticleFooter">
+          <div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div>
+          <a href="/downloads">{tr("Download the native Go Agent", "下载原生 Go Agent")} →</a>
+        </footer>
+      </div>
+    </article>
+  </PublicLayout>;
+}
+
 function BlogArticlePage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const post = blogPosts[0];
@@ -2952,7 +3183,7 @@ function BlogArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("BUILDING REMOTE ARC", "构建 REMOTE ARC")}</span>
           <h1>{tr(
             "Why I built Remote Arc: AI should reach your computer without owning it",
@@ -3058,7 +3289,7 @@ function RemoteArcVsOpenClawArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("COMPARISON", "产品对比")}</span>
           <h1>{tr(
             "Remote Arc vs OpenClaw: two different layers of the AI stack",
@@ -3153,7 +3384,7 @@ function PowerfulAccessArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("SECURITY", "安全")}</span>
           <h1>{tr(
             "How Remote Arc keeps AI access powerful without exposing your computer",
@@ -3246,7 +3477,7 @@ function ArchitectureArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("ARCHITECTURE", "架构")}</span>
           <h1>{tr(
             "How Remote Arc works: Worker, Durable Objects, OAuth and the local agent",
@@ -3369,6 +3600,12 @@ function Dashboard({
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [backgroundUpdatingId, setBackgroundUpdatingId] = useState<string | null>(null);
+  const [backgroundTargetEnabled, setBackgroundTargetEnabled] = useState<boolean | null>(null);
+  const [backgroundPhase, setBackgroundPhase] = useState<"applying" | "verifying" | "stopping">("applying");
+  const backgroundMutationInFlight = useRef(false);
+  const runtimeMutationInFlight = useRef(false);
+  const [runtimeUpdatingId, setRuntimeUpdatingId] = useState<string | null>(null);
+  const [runtimeTargetPaused, setRuntimeTargetPaused] = useState<boolean | null>(null);
   const [managedDeviceId, setManagedDeviceId] = useState<string | null>(null);
   const [devicePanel, setDevicePanel] = useState<"access" | "tasks" | "activity">("access");
   const [securityState, setSecurityState] = useState<SecurityState | null>(null);
@@ -3603,8 +3840,6 @@ function Dashboard({
   useEffect(() => {
     if (active !== "monitor" || !user.isAdmin) return;
     void refreshMonitor();
-    const timer = window.setInterval(() => void refreshMonitor(), 30_000);
-    return () => window.clearInterval(timer);
   }, [active, user.isAdmin]);
 
   async function refreshAutomations() {
@@ -4035,7 +4270,7 @@ function Dashboard({
     enabled: boolean,
     stopCurrent = false,
   ) {
-    if (UI_PREVIEW) return;
+    if (UI_PREVIEW || backgroundMutationInFlight.current || runtimeMutationInFlight.current) return;
     if (device.status !== "online") {
       await showNotice(
         tr("Computer is offline", "电脑当前离线"),
@@ -4057,7 +4292,11 @@ function Dashboard({
       return;
     }
 
+    // Disable duplicate clicks synchronously, not after the next React render.
+    backgroundMutationInFlight.current = true;
     setBackgroundUpdatingId(device.id);
+    setBackgroundTargetEnabled(enabled);
+    setBackgroundPhase("applying");
     try {
       const response = await fetch(
         "/api/devices/" + encodeURIComponent(device.id) + "/background",
@@ -4083,11 +4322,110 @@ function Dashboard({
         );
         return;
       }
+      if (stopCurrent) {
+        // Stop is different from disabling recovery: confirm the *executor*
+        // leaves the Relay, not merely that a boolean was saved in D1.
+        setBackgroundPhase("stopping");
+        const offline = await waitForAgentOffline(device.id, {
+          read: async () => {
+            const statusResponse = await fetch("/api/devices", {
+              cache: "no-store",
+              signal: AbortSignal.timeout(4_000),
+            });
+            if (!statusResponse.ok) throw new Error("Device status unavailable");
+            return await statusResponse.json() as Device[];
+          },
+          pause: (ms) => new Promise((resolve) => window.setTimeout(resolve, ms)),
+        });
+        await refreshAll();
+        await showNotice(
+          offline ? tr("Agent stopped", "Agent 已停止") : tr("Stop still unconfirmed", "停止操作尚未确认"),
+          offline
+            ? tr("The Agent is offline and automatic recovery has been disabled. Restart it locally when you need access.", "Agent 已离线，自动恢复已关闭。需要重新使用时请在该电脑上启动。")
+            : tr("The stop request was accepted, but the Agent has not gone offline yet. Check the device status before retrying.", "停止请求已被接受，但设备尚未确认离线。请先检查设备状态，再决定是否重试。"),
+        );
+        return;
+      }
+      // The POST acknowledges the command, but the operating-system supervisor
+      // can take several seconds to start (or may still fail). Confirm a live
+      // guard from a fresh device snapshot before dismissing the spinner.
+      setBackgroundPhase("verifying");
+      const confirmed = await waitForRecoveryState(device.id, enabled, {
+        read: async () => {
+          const response = await fetch("/api/devices", {
+            cache: "no-store",
+            signal: AbortSignal.timeout(4_000),
+          });
+          if (!response.ok) throw new Error("Device status unavailable");
+          return await response.json() as Device[];
+        },
+        pause: (ms) => new Promise((resolve) => window.setTimeout(resolve, ms)),
+      });
       await refreshAll();
+      if (!confirmed) {
+        await showNotice(
+          tr("Still awaiting device confirmation", "仍在等待设备确认"),
+          tr("The command was accepted, but the device has not confirmed the requested supervisor state. Check its displayed status or refresh before retrying.", "操作请求已接受，但设备尚未确认守护进程的目标状态。请先检查当前状态或刷新设备列表，再决定是否重试。"),
+        );
+      }
     } catch {
+      await refreshAll().catch(() => undefined);
       await showNotice(tr("Background setting is unconfirmed", "后台设置尚未确认"), tr("The response was interrupted. Refresh the device state before trying again; the local setting may already have changed.", "响应已中断，请先刷新设备状态再尝试；本机设置可能已经发生变化。"));
-    } finally { setBackgroundUpdatingId(null); }
+    } finally {
+      backgroundMutationInFlight.current = false;
+      setBackgroundUpdatingId(null);
+      setBackgroundTargetEnabled(null);
+    }
 
+  }
+
+  async function updateDeviceRuntime(device: Device, paused: boolean) {
+    if (UI_PREVIEW || runtimeMutationInFlight.current || backgroundMutationInFlight.current) return;
+    if (device.status !== "online" || device.pause_agent_available !== true) return;
+    runtimeMutationInFlight.current = true;
+    setRuntimeUpdatingId(device.id);
+    setRuntimeTargetPaused(paused);
+    try {
+      const response = await fetch("/api/devices/" + encodeURIComponent(device.id) + "/runtime", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ paused }),
+      });
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        await refreshAll().catch(() => undefined);
+        await showNotice(tr("Runtime change not accepted", "切换执行状态失败"),
+          payload.error || tr("The current device cannot change runtime state.", "当前设备无法切换运行状态。"));
+        return;
+      }
+      let confirmed = false;
+      for (let attempt = 0; attempt < 18; attempt++) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1100));
+        try {
+          const result = await fetch("/api/devices", { cache: "no-store", signal: AbortSignal.timeout(4000) });
+          if (!result.ok) continue;
+          const list = await result.json() as Device[];
+          const current = list.find((item) => item.id === device.id);
+          if (current?.status === "online" && current.execution_paused === paused &&
+            (paused ? current.tools.length === 0 : (current.available_tools?.length ?? 0) > 0)) {
+            confirmed = true;
+            break;
+          }
+        } catch { /* Transport failure does not prove a state transition. */ }
+      }
+      await refreshAll().catch(() => undefined);
+      if (!confirmed) {
+        await showNotice(tr("Runtime state unconfirmed", "执行状态尚未确认"),
+          tr("The handoff may still be taking place. Refresh the device state before retrying; no second request was sent.", "执行实例可能仍在交接，请刷新设备状态确认后再重试；系统没有重复发送指令。"));
+      }
+    } catch {
+      await refreshAll().catch(() => undefined);
+      await showNotice(tr("Runtime state unconfirmed", "执行状态尚未确认"),
+        tr("The response was interrupted. Check whether the device is paused before retrying.", "请求中断，请检查设备是否已经暂停，再决定是否重试。"));
+    } finally {
+      runtimeMutationInFlight.current = false;
+      setRuntimeUpdatingId(null);
+      setRuntimeTargetPaused(null);
+    }
   }
 
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
@@ -4633,6 +4971,9 @@ function Dashboard({
     <div className="appFrame">
       <aside className="sidebar">
         <Brand />
+        <a className="dashboardWebsiteLink" href={MARKETING_ORIGIN}>
+          <span aria-hidden="true">↗</span> {tr("Back to website", "返回官网")}
+        </a>
         <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
           {navItems.map(([id, label]) => (
             <button key={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
@@ -5178,37 +5519,52 @@ function Dashboard({
                         }}>{tr("Copy update command", "复制更新命令")}</button>
                       </div>
                     )}
-                    <div className="deviceBackgroundRow">
+                    <div className="deviceBackgroundRow" aria-busy={backgroundUpdatingId === device.id}>
                       <div>
                         <div className="labelWithHelp">
                           <strong>{tr("Automatic recovery", "自动恢复")}</strong>
                           <HelpTip label={tr("About automatic recovery", "了解自动恢复")}
                             text={tr("The switch enables a local supervisor and login startup. It keeps your terminal and operation log open, and takes over if the executing Agent ends. Relay reconnect handles network interruptions separately. Turning recovery off preserves current execution; Stop background Agent also ends its work. Sleep, shutdown and logout can still make the device unavailable.", "此开关启用本机守护和登录自启，保留终端及操作日志，执行 Agent 结束后由守护接手。网络中断由独立的 Relay 重连处理。关闭恢复会保留当前执行；“停止后台 Agent”还会结束它的工作。睡眠、关机或退出登录仍可能让电脑不可用。")}/>
                         </div>
-                        <span>{device.status !== "online" ? tr("Reconnect to verify the local recovery setting", "重新连接后可确认本机恢复设置") : device.background_recovery_available
+                        <span>{backgroundUpdatingId === device.id
+                          ? backgroundPhase === "applying" ? tr("Sending device command…", "正在发送设备指令…") : backgroundPhase === "stopping" ? tr("Waiting for Agent to disconnect…", "正在等待 Agent 离线…") : tr("Waiting for supervisor confirmation…", "正在确认后台守护进程…")
+                          : device.status !== "online" ? tr("Reconnect to verify the local recovery setting", "重新连接后可确认本机恢复设置") : device.background_recovery_available
                           ? device.background_enabled ? tr("Enabled · login startup and process recovery", "已启用 · 登录自启与进程恢复") : tr("Off · current execution continues", "已关闭 · 当前执行继续")
                           : tr("Older client · login startup only. Update to keep the terminal attached and recover processes.", "旧版客户端仅提供登录自启。更新客户端后支持保留终端与进程恢复。")}</span>
                         <span>{tr("Supervisor: ", "守护：")}{device.background_guard_active
                           ? tr("Running", "运行中") + (device.background_guard_pid ? " · PID " + device.background_guard_pid : "")
                           : device.status !== "online" ? tr("Unconfirmed while offline", "离线，无法确认") : tr("Not confirmed", "尚未确认")}</span>
                         <span>{tr("Execution: ", "执行：")}{device.status !== "online" ? tr("Disconnected from Relay", "Relay 已断开")
+                          : device.execution_paused === true ? tr("Paused · wake-only control connected", "已暂停 · 仅唤醒控制通道在线")
                           : device.execution_mode === "foreground" ? tr("Foreground Agent connected", "前台 Agent 已连接")
                           : device.background_active ? tr("Background Agent connected", "后台 Agent 已连接") : tr("Agent connected", "Agent 已连接")}
                           {device.agent_pid ? " · PID " + device.agent_pid : ""}{device.agent_version ? " · v" + device.agent_version : ""}</span>
                       </div>
-                      <div className="managedProcessActions">
+                      <div className="managedProcessActions backgroundRecoveryControls">
+                        <span className="backgroundToggleProgress" data-pending={backgroundUpdatingId === device.id} id={"background-toggle-progress-" + device.id} role="status" aria-live="polite" aria-label={backgroundUpdatingId === device.id ? tr("Verifying background recovery on device", "正在设备上确认后台恢复") : undefined}>
+                          <span className="backgroundToggleSpinner" aria-hidden="true" />
+                        </span>
                         {device.background_enabled === true && device.background_guard_active !== true && device.status === "online" && device.background_recovery_available && (
                           <button className="ghostButton small" disabled={UI_PREVIEW || backgroundUpdatingId === device.id} onClick={() => void updateDeviceBackground(device, true, false)}>{tr("Repair recovery", "修复恢复")}</button>
                         )}
-                        {device.background_active === true && (
-                          <button className="dangerButton small" disabled={UI_PREVIEW || backgroundUpdatingId === device.id} onClick={async () => {
-                            if (await askConfirm(tr("Stop the background Agent?", "停止后台 Agent？"), tr("This disables recovery and stops the background Agent and its managed work. An attached log viewer may then become the executing foreground Agent.", "这会关闭恢复并停止后台 Agent 及其管理的工作。已打开的日志终端随后可能接手为前台 Agent。"))) await updateDeviceBackground(device, false, true);
-                          }}>{tr("Stop background Agent", "停止后台 Agent")}</button>
+                        {device.status === "online" && (
+                          <button
+                            className="dangerButton small"
+                            disabled={UI_PREVIEW || backgroundUpdatingId === device.id || !!runtimeUpdatingId || device.stop_agent_available !== true}
+                            title={device.stop_agent_available ? tr("Disable auto-recovery and stop this computer's Agent.", "关闭自动恢复并停止此电脑的 Agent。") : tr("Update this computer's Agent to use remote Stop Agent.", "请先升级此电脑 Agent，才能远程停止。")}
+                            onClick={async () => {
+                              if (await askConfirm(
+                                tr("Disconnect this computer completely?", "完全断开这台电脑？"),
+                                tr("This disables BOTH the execution Agent and the wake-only connection, and turns off future automatic recovery. Remote Arc cannot remotely start a fully disconnected computer. You must restart it locally.", "这会同时停止执行 Agent 和仅唤醒连接，并关闭之后的自动恢复。完全断开后 Remote Arc 无法再远程启动这台电脑，必须从本机重新启动。"),
+                              )) await updateDeviceBackground(device, false, true);
+                            }}
+                          >{device.stop_agent_available ? tr("Disconnect completely", "完全断开") : tr("Disconnect · update needed", "断开 · 需升级")}</button>
                         )}
                         <label className="compactSwitch">
                           <input type="checkbox" aria-label={tr("Automatic recovery", "自动恢复")}
-                            checked={device.background_enabled === true}
-                            disabled={UI_PREVIEW || backgroundUpdatingId === device.id || device.status !== "online" || !device.background_agent_available}
+                            checked={backgroundUpdatingId === device.id && backgroundTargetEnabled !== null ? backgroundTargetEnabled : device.background_enabled === true}
+                            disabled={UI_PREVIEW || backgroundUpdatingId === device.id || !!runtimeUpdatingId || device.execution_paused === true || device.status !== "online" || !device.background_agent_available}
+                            aria-describedby={backgroundUpdatingId === device.id ? "background-toggle-progress-" + device.id : undefined}
                             onChange={async (event) => {
                               const enabled = event.target.checked;
                               if (enabled && !device.background_recovery_available) {
@@ -5217,6 +5573,35 @@ function Dashboard({
                               await updateDeviceBackground(device, enabled, false);
                             }}/><span/>
                         </label>
+                      </div>
+                    </div>
+
+                    <div className="deviceBackgroundRow deviceRuntimePauseRow" aria-busy={runtimeUpdatingId === device.id}>
+                      <div>
+                        <strong>{tr("Execution control", "执行控制")}</strong>
+                        <span>{runtimeUpdatingId === device.id
+                          ? runtimeTargetPaused ? tr("Pausing execution and connecting the wake-only channel…", "正在停止执行并切换至仅唤醒通道…") : tr("Restoring the execution Agent…", "正在恢复执行 Agent…")
+                          : device.status !== "online" ? tr("Fully disconnected · restart Remote Arc locally", "已完全断开 · 请在电脑本机启动 Remote Arc")
+                          : device.execution_paused ? tr("Paused · computer tools are blocked; dashboard wake control stays connected", "已暂停 · 电脑操作已封锁，Dashboard 唤醒控制仍在线")
+                          : tr("Running · AI computer tools can execute according to device permissions", "运行中 · AI 可按设备权限执行电脑操作")}</span>
+                        <span>{tr("Pause keeps a minimal authenticated wake channel. Disconnect completely closes it as well.", "暂停时保留最小授权唤醒通道；完全断开则连该通道一起关闭。")}</span>
+                      </div>
+                      <div className="managedProcessActions backgroundRecoveryControls">
+                        <span className="backgroundToggleProgress" data-pending={runtimeUpdatingId === device.id} role="status" aria-live="polite">
+                          <span className="backgroundToggleSpinner" aria-hidden="true" />
+                        </span>
+                        <button className="ghostButton small"
+                          disabled={UI_PREVIEW || !!backgroundUpdatingId || !!runtimeUpdatingId || device.status !== "online" || device.pause_agent_available !== true || (!device.execution_paused && (!device.background_enabled || !device.background_guard_active))}
+                          title={device.pause_agent_available ? tr("Switch between full execution and wake-only control.", "切换完整执行和仅唤醒控制。") : tr("Upgrade remotelink for remote Pause / Resume.", "请升级 remotelink 后使用远程暂停与恢复。")}
+                          onClick={async () => {
+                            const resume = device.execution_paused === true;
+                            if (!resume && !await askConfirm(
+                              tr("Pause computer execution?", "暂停这台电脑的执行？"),
+                              tr("Remote file/terminal tools will stop working and running managed operations may be interrupted. Only a minimal authenticated wake connection stays online so you can resume from Dashboard.", "远程文件与终端工具将不可用，正在执行的受管操作可能中断。设备仅保留最小授权唤醒连接，之后可通过 Dashboard 恢复。"),
+                            )) return;
+                            await updateDeviceRuntime(device, !device.execution_paused);
+                          }}
+                        >{device.pause_agent_available ? device.execution_paused ? tr("Resume Agent", "恢复 Agent") : tr("Pause Agent", "暂停 Agent") : tr("Pause / Resume · update needed", "暂停 / 恢复 · 需升级")}</button>
                       </div>
                     </div>
 
@@ -6093,7 +6478,7 @@ function Dashboard({
               </div>
               <div className="securityTopActions">
                 <button className={securityState?.mcpPaused ? "goldButton" : "dangerButton"} disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void setMcpPaused(!securityState?.mcpPaused)}>
-                  {securityState?.mcpPaused ? tr("Resume Remote MCP", "恢复 Remote MCP") : tr("Pause Remote MCP", "暂停 Remote MCP")}
+                  {securityState?.mcpPaused ? tr("Resume AI MCP access", "恢复 AI MCP 访问") : tr("Pause AI MCP access", "暂停 AI MCP 访问")}
                 </button>
                 <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Device permissions", "设备权限")}</button>
                 <a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md" target="_blank" rel="noreferrer">SECURITY.md</a>
@@ -6110,7 +6495,7 @@ function Dashboard({
               <article className={"securityStatusCard primary" + (securityState?.mcpPaused ? " paused" : "")}>
                 <div><span>{tr("Remote MCP", "Remote MCP")}</span><i className={"healthDot " + (!securityState || securityState.mcpPaused ? "idle" : "good")} /></div>
                 <strong>{!securityState ? (securityError ? tr("Unavailable", "暂无法确认") : tr("Checking…", "正在检查…")) : securityState.mcpPaused ? tr("Paused", "已暂停") : tr("Protected", "已保护")}</strong>
-                <small>{!securityState ? tr("Waiting for the current access state from Remote Arc.", "等待 Remote Arc 返回当前访问状态。") : securityState.mcpPaused ? tr("All authenticated MCP calls are blocked until you resume access.", "所有已认证 MCP 调用都会被拦截，直到你恢复访问。") : tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
+                <small>{!securityState ? tr("Waiting for the current access state from Remote Arc.", "等待 Remote Arc 返回当前访问状态。") : securityState.mcpPaused ? tr("Authenticated AI MCP calls are blocked until resumed. This does not stop paired Agents or already-running tasks.", "已认证 AI MCP 请求会被拦截，直到恢复。此操作不会停止已配对的 Agent 或正在执行的独立任务。") : tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
               </article>
               <article className="securityStatusCard">
                 <div><span>{tr("Authentication", "身份验证")}</span><span className="securityMiniState">OAuth</span></div>
@@ -6118,9 +6503,9 @@ function Dashboard({
                 <small>{tr("Scoped access to the account you approve.", "仅授予你批准账户范围内的权限。")}</small>
               </article>
               <article className="securityStatusCard">
-                <div><span>{tr("Device credentials", "设备凭证")}</span><span className="securityMiniState">{devices.length}</span></div>
+                <div><span>{tr("Device pairing credentials", "设备配对凭证")}</span><span className="securityMiniState">{devices.length}</span></div>
                 <strong>{tr("Unique per device", "每设备独立")}</strong>
-                <small>{tr("Credentials are independently revocable; only hashes are stored.", "凭证可单独撤销，服务端仅保存哈希。")}</small>
+                <small>{tr("One pairing credential per device (not AI OAuth). Only hashes are stored in the cloud.", "每台设备一份配对凭证（不是 AI OAuth），云端仅保存哈希。")}</small>
               </article>
               <article className="securityStatusCard">
                 <div><span>{tr("Edge protection", "边缘保护")}</span><span className="securityMiniState">Cloudflare</span></div>
@@ -6162,7 +6547,7 @@ function Dashboard({
                     <div className="securityGrantDetails">
                       <span>{tr("Target", "目标")} <strong><code>{approval.target_path}</code></strong></span>
                       <span>{tr("Request", "请求")} <strong>{approval.request_id?.slice(0, 8) || "—"}</strong></span>
-                      <span>{tr("Expires", "过期")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { hour: "2-digit", minute: "2-digit" })}</strong></span>
+                      <span>{tr("Request expires", "请求过期时间")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}</strong></span>
                     </div>
                     <div className="securityGrantScopes">
                       <button className="goldButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
@@ -6198,52 +6583,12 @@ function Dashboard({
                 </div>
                 <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
               </div>
-              <div className="securityGrantList">
-                {(securityState?.grants || []).map((grant) => {
-                  const statusLabel =
-                    grant.status === "active"
-                      ? tr("Active now", "当前有效")
-                      : grant.status === "refreshable"
-                        ? tr("Refreshable", "可刷新")
-                        : tr("Expired", "已过期");
-                  const statusHelp =
-                    grant.status === "active"
-                      ? tr("Its current access token is still valid.", "当前 Access Token 仍有效。")
-                      : grant.status === "refreshable"
-                        ? tr("The short-lived access token expired, but the refresh authorization can still obtain a new one without asking you again.", "短期 Access Token 已过期，但 Refresh 授权仍可在无需再次询问你的情况下换取新 Token。")
-                        : tr("Both access and refresh authorization have expired. This grant can no longer access Remote Arc.", "Access 与 Refresh 授权均已过期，这条 Grant 已无法继续访问 Remote Arc。");
-                  return (
-                    <div className={"securityGrantRow " + grant.status} key={grant.grantId}>
-                      <div className="securityGrantIdentity">
-                        <span className="securityGrantIcon">AI</span>
-                        <div>
-                          <strong>{grant.clientName}</strong>
-                          <small>{tr("Authorization", "授权")} {grant.grantId.slice(0,12)}… · {tr("Client", "客户端")} {grant.clientId.slice(0,8)}…</small>
-                        </div>
-                      </div>
-                      <div className="securityGrantState">
-                        <span className={"grantState " + grant.status}>{statusLabel}</span>
-                        <HelpTip
-                          label={tr("About this authorization status", "了解此授权状态")}
-                          text={statusHelp}
-                        />
-                      </div>
-                      <div className="securityGrantDetails">
-                        <span>{tr("First authorized", "首次授权")} <strong>{timeAgo(grant.authorizedAt)}</strong></span>
-                        <span>{tr("Last token issued", "最近签发 Token")} <strong>{timeAgo(grant.lastTokenIssuedAt)}</strong></span>
-                        <span>{tr("Access token expires", "Access Token 到期")} <strong>{new Date(grant.accessExpiresAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-NZ", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>
-                        <span>{tr("Refresh authorization", "Refresh 授权")} <strong>{grant.refreshExpiresAt ? new Date(grant.refreshExpiresAt).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-NZ", { year: "numeric", month: "short", day: "numeric" }) : tr("None", "无")}</strong></span>
-                      </div>
-                      <div className="securityGrantScopes">{grant.scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
-                      <button className={grant.status === "expired" ? "ghostButton" : "dangerButton"} disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void revokeGrant(grant)}>
-                        {grant.status === "expired" ? tr("Remove expired", "移除过期授权") : tr("Disconnect access", "断开此授权")}
-                      </button>
-                    </div>
-                  );
-                })}
-                {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
-                {!securityState && <div className="securityEmptyState compact"><strong>{securityError ? tr("Authorizations unavailable", "暂无法获取授权") : tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
-              </div>
+              {securityState && securityState.grants.length > 0 && (
+                <SecurityAuthorizations grants={securityState.grants} busy={securityBusy}
+                  preview={UI_PREVIEW} timeAgo={timeAgo} revoke={revokeGrant} />
+              )}
+              {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
+              {!securityState && <div className="securityEmptyState compact"><strong>{securityError ? tr("Authorizations unavailable", "暂无法获取授权") : tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
             </section>
 
             <section className="securityMainGrid">
@@ -6343,6 +6688,8 @@ function Dashboard({
               <div><span>5xx · 1h</span><strong>{monitorState?.worker.errors1h ?? "—"}</strong><small>{tr("Last hour", "过去一小时")}</small></div>
               <div><span>5xx · 24h</span><strong>{monitorState?.worker.errors24h ?? "—"}</strong><small>{tr("Last 24 hours", "过去 24 小时")}</small></div>
             </section>
+
+            <AdminOperations />
 
             <section className="monitorMainGrid">
               <article className="monitorPanel">
@@ -6539,10 +6886,11 @@ function Dashboard({
             <p>{tr("No repository clone, environment file, token copy, public IP or router configuration. New devices start with read-only skills enabled.", "无需 clone 仓库、环境文件、复制 Token、公网 IP 或路由器配置。新设备默认只开启只读技能。")}</p>
             <div className="commandLabel">{tr("Recommended · Safe by default", "推荐 · 默认 Safe")}</div>
             <div className="commandBox"><code>{command}</code><CopyButton value={command}/></div>
+            <p><a href="/downloads" target="_blank" rel="noopener noreferrer">{tr("Install without Node.js: native download or Homebrew", "无需 Node.js：直接下载或使用 Homebrew")} →</a></p>
             <div className="commandLabel secondary">{tr("Optional local hard lock · always read-only", "可选本机硬限制 · 始终只读")}</div>
             <div className="commandBox muted"><code>{safeCommand}</code><CopyButton value={safeCommand}/></div>
             <div className="onboardingSteps">
-              <div><b>1</b><span><strong>{tr("Run the command", "运行命令")}</strong><small>Terminal / PowerShell · Node.js 20+</small></span></div>
+              <div><b>1</b><span><strong>{tr("Run the command", "运行命令")}</strong><small>npm / npx · Node.js 20+</small></span></div>
               <div><b>2</b><span><strong>{tr("Match the pairing code", "确认配对码")}</strong><small>{tr("The browser opens automatically", "浏览器会自动打开")}</small></span></div>
               <div><b>3</b><span><strong>{tr("Authorize the computer", "授权电脑")}</strong><small>{tr("It appears here after connecting", "连接后会自动出现在这里")}</small></span></div>
             </div>
@@ -6767,7 +7115,7 @@ const PRODUCT_RELEASES: ProductRelease[] = [
 ];
 
 function ReleasesPage({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const latest = PRODUCT_RELEASES[0]!;
 
   return (
@@ -6819,11 +7167,16 @@ function ReleasesPage({ user }: { user?: User | null }) {
                 </span>
               </aside>
               <div className="releaseBody">
-                <h2>{release.title}</h2>
-                <p className="releaseSummary">{release.summary}</p>
-                <ul>
-                  {release.changes.map((change) => <li key={change}>{change}</li>)}
-                </ul>
+                <h2>{locale === "zh" ? (releaseChinese[release.version]?.title ?? release.title) : release.title}</h2>
+                <p className="releaseSummary">{locale === "zh" ? (releaseChinese[release.version]?.summary ?? release.summary) : release.summary}</p>
+                {locale === "zh" ? (
+                  <details className="releaseOriginalNotes">
+                    <summary>{tr("Original technical change notes", "展开英文原始技术变更明细")}</summary>
+                    <ul>{release.changes.map((change) => <li key={change}>{change}</li>)}</ul>
+                  </details>
+                ) : (
+                  <ul>{release.changes.map((change) => <li key={change}>{change}</li>)}</ul>
+                )}
               </div>
             </article>
           ))}
@@ -6919,6 +7272,7 @@ function LegalPage({
 
 function App() {
   const { tr } = useI18n();
+  const routePath = isWebsite() && chinesePages.has(baseMarketingPath(location.pathname)) ? baseMarketingPath(location.pathname) : location.pathname;
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [devices, setDevices] = useState<Device[]>([]);
   const [status, setStatus] = useState<ProductStatus | null>(null);
@@ -6979,19 +7333,19 @@ function App() {
 
   const isAppHost = location.hostname === "mcp.remotearc.app";
   const isDashboardHost = isAppHost || UI_PREVIEW;
-  if (isAppHost && location.pathname === "/") {
+  if (isAppHost && routePath === "/") {
     history.replaceState({}, "", "/overview");
   }
 
-  if (location.pathname === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
-  if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
+  if (routePath === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
+  if (routePath === "/oauth/consent") return <OAuthConsent user={user} />;
 
-  if (location.pathname === "/install") {
+  if (routePath === "/install") {
     location.replace("/install/chatgpt");
     return <CenteredCard title={tr("Opening installation…", "正在打开安装页…")} body={tr("Redirecting to the ChatGPT installation guide.", "正在跳转到 ChatGPT 安装指南。")} />;
   }
 
-  const installMatch = location.pathname.match(/^\/install\/(chatgpt|claude|cursor)$/);
+  const installMatch = routePath.match(/^\/install\/(chatgpt|claude|cursor)$/);
   if (installMatch) {
     return (
       <ClientInstallPage
@@ -7001,44 +7355,48 @@ function App() {
     );
   }
 
-  if (location.pathname === "/demo") return <DemoPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
-  if (location.pathname === "/docs") return <DocsPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
-  const useCaseMatch = location.pathname.match(/^\/use-cases\/(remote-development|file-organization|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support)$/);
+  if (routePath === "/demo") return <DemoPage user={user === undefined ? null : user} />;
+  if (routePath === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
+  if (routePath === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
+  if (routePath === "/docs") return <DocsPage user={user === undefined ? null : user} />;
+  if (routePath === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
+  if (routePath === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
+  const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
   if (useCaseMatch) {
     return <UseCaseDetailPage slug={useCaseMatch[1] as UseCaseSlug} user={user === undefined ? null : user} />;
   }
-  if (location.pathname === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/resources") return <ResourcesRedirect />;
-  if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
-  if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
-  if (location.pathname === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
+  if (routePath === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (routePath === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
+  if (routePath === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/go-vs-typescript-agent-benchmarks") return <GoVsTypescriptBenchmarkArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/resources") return <ResourcesRedirect />;
+  if (routePath === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading guide…", "正在加载指南…")}</main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
+  if (routePath === "/chrome-extension") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="chromeExtensionPage" role="status">{tr("Loading Chrome extension…", "正在加载 Chrome 扩展页面…")}</main>}><ChromeExtensionPage /></React.Suspense></PublicLayout>;
+  if (routePath === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
+  if (routePath === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
+  if (routePath === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
+  if (routePath === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
-  if (isDashboardHost && (location.pathname === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(location.pathname))) {
+  if (isDashboardHost && (routePath === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(routePath))) {
     if (user === undefined) {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
     }
     if (!user) return <DashboardAccess />;
-    if (location.pathname === "/monitor" && !user.isAdmin) {
+    if (routePath === "/monitor" && !user.isAdmin) {
       return <CenteredCard title={tr("Admin only", "仅管理员可访问")} body={tr("Service monitoring is restricted to Remote Arc administrators.", "服务监控仅限 Remote Arc 管理员访问。")} />;
     }
     return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
   }
 
-  if (!isDashboardHost && location.pathname !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
+  if (!isDashboardHost && routePath !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
   return <Landing user={user === undefined ? null : user} />;
 }
 

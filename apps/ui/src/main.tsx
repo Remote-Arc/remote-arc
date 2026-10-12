@@ -504,6 +504,10 @@ function PublicHeader({ user }: { user?: User | null }) {
               MCP <span aria-hidden="true">⌄</span>
             </button>
             <div className="publicNavDropdown mcpDropdown">
+              <a href="/remote-mcp">
+                <strong>{tr("Remote MCP guide", "Remote MCP 指南")}</strong>
+                <small>{tr("How it works and why it matters", "了解远程 MCP 的原理和使用方式")}</small>
+              </a>
               <a href="/connect-ai">
                 <strong>{tr("Connect Remote Arc", "连接 Remote Arc")}</strong>
                 <small>{tr("Pair a computer and authorize your AI client", "配对电脑并授权 AI 客户端")}</small>
@@ -534,6 +538,10 @@ function PublicHeader({ user }: { user?: User | null }) {
               {tr("Resources", "资源")} <span aria-hidden="true">⌄</span>
             </button>
             <div className="publicNavDropdown resourceDropdown">
+              <a href="/demo">
+                <strong>{tr("Live demo", "真实演示")}</strong>
+                <small>{tr("Watch Remote Arc work with a paired computer", "观看 Remote Arc 与真实电脑交互")}</small>
+              </a>
               <a href={navHref("/blogs")}>
                 <strong>{tr("Blog", "博客")}</strong>
                 <small>{tr("Ideas, product notes and what we're building", "产品思考、开发记录与我们正在做的事")}</small>
@@ -1663,6 +1671,9 @@ function PublicLayout({
           <a href="/claude-computer-access">Claude</a>
           <a href="/docs/mcp">{tr("MCP Docs", "MCP 文档")}</a>
           <a href="/security-model">{tr("Security", "安全")}</a>
+          <a href="/support">{tr("Support", "支持")}</a>
+          <a href="/privacy">{tr("Privacy", "隐私")}</a>
+          <a href="/terms">{tr("Terms", "条款")}</a>
         </nav>
         <div className="publicFooterMeta">
           <span>© 2026 Remote Arc · {tr("Proprietary", "专有软件")}</span>

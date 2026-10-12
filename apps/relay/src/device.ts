@@ -808,6 +808,7 @@ export async function handleDevicePolicyUpdate(
     sensitive_paths?: unknown;
     sensitive_allow_paths?: unknown;
     protect_sensitive_paths?: unknown;
+    acknowledge_sensitive_path_risk?: unknown;
     undo_enabled?: unknown;
   };
 
@@ -830,11 +831,12 @@ export async function handleDevicePolicyUpdate(
       { status: 400 },
     );
   }
-  if (body.protect_sensitive_paths === false) {
+  // The default remains enabled. An authenticated owner must explicitly
+  // acknowledge the risk before disabling the entire sensitive-path guard.
+  if (body.protect_sensitive_paths === false && body.acknowledge_sensitive_path_risk !== true) {
     return Response.json(
       {
-        error:
-          "Built-in sensitive path protection cannot be disabled for remote MCP. Add a narrow sensitive_allow_paths exception instead.",
+        error: "Disabling Sensitive Path Policy may expose credentials to allowed file tools. Explicit risk acknowledgement is required.",
       },
       { status: 409 },
     );
@@ -882,7 +884,7 @@ export async function handleDevicePolicyUpdate(
       JSON.stringify(workspaceRoots),
       JSON.stringify(sensitivePaths),
       JSON.stringify(sensitiveAllowPaths),
-      1,
+      body.protect_sensitive_paths ? 1 : 0,
       body.undo_enabled ? 1 : 0,
       deviceId,
       user.id,
@@ -897,6 +899,9 @@ export async function handleDevicePolicyUpdate(
     userId: user.id,
     deviceId,
     eventType: "device.policy_updated",
+    outcome: body.protect_sensitive_paths
+      ? "sensitive_protection_on"
+      : "sensitive_protection_off",
   });
 
   return Response.json({
@@ -904,7 +909,7 @@ export async function handleDevicePolicyUpdate(
     workspace_roots: workspaceRoots,
     sensitive_paths: sensitivePaths,
     sensitive_allow_paths: sensitiveAllowPaths,
-    protect_sensitive_paths: true,
+    protect_sensitive_paths: body.protect_sensitive_paths,
     undo_enabled: body.undo_enabled,
   });
 }

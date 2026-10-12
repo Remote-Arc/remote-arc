@@ -3636,6 +3636,7 @@ function Dashboard({
   const [automationQuery, setAutomationQuery] = useState(() => new URLSearchParams(location.search).get("task") || "");
   const [automationFilter, setAutomationFilter] = useState<"all" | "active" | "attention" | "finished">("all");
   const [deviceTaskBusy, setDeviceTaskBusy] = useState<string | null>(null);
+  const [sensitivePolicyBusyId, setSensitivePolicyBusyId] = useState<string | null>(null);
   const [automationBusy, setAutomationBusy] = useState<string | null>(null);
   const [showAutomationCreate, setShowAutomationCreate] = useState(false);
   const [createdWebhook, setCreatedWebhook] = useState<string | null>(null);
@@ -4562,7 +4563,11 @@ function Dashboard({
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(next),
+        body: JSON.stringify({
+          ...next,
+          // Preserve an explicitly disabled state across other policy edits.
+          acknowledge_sensitive_path_risk: next.protect_sensitive_paths === false,
+        }),
       },
     );
     if (!response.ok) {
@@ -4575,6 +4580,37 @@ function Dashboard({
     }
     await refreshAll();
     return true;
+  }
+
+  async function updateSensitiveProtection(device: Device, enabled: boolean) {
+    if ((device.protect_sensitive_paths ?? true) === enabled || sensitivePolicyBusyId) return;
+    setSensitivePolicyBusyId(device.id);
+    try {
+      if (!enabled) {
+        const confirmed = await askConfirm(
+          tr("Disable Sensitive Path Protection on " + device.name + "?", "关闭 " + device.name + " 的敏感路径保护？"),
+          tr(
+            "This disables BOTH built-in and extra protected paths for file tools. If allowed, connected AI clients may read or change credentials, .env files, SSH keys and browser profiles. Trusted Write Locations and tool permissions still apply. Prefer a narrow exception whenever possible.",
+            "这会同时关闭文件工具的内置及额外敏感路径保护。只要其他权限允许，已连接的 AI 就可能读取或修改凭证、.env 文件、SSH 密钥和浏览器配置。可信写入区域及工具权限仍生效。能用单个路径例外时，建议优先使用例外。",
+          ),
+          tr("Disable protection", "确认关闭保护"),
+          "danger",
+        );
+        if (!confirmed) return;
+      }
+      await saveDevicePolicy(device, { protect_sensitive_paths: enabled });
+    } catch {
+      await refreshAll().catch(() => undefined);
+      await showNotice(
+        tr("Sensitive protection setting unconfirmed", "敏感路径保护状态尚未确认"),
+        tr(
+          "The request was interrupted. Refresh and verify the device policy before trying again.",
+          "请求中断。请刷新并核实设备策略，再决定是否重试。",
+        ),
+      );
+    } finally {
+      setSensitivePolicyBusyId(null);
+    }
   }
 
   async function addPolicyPath(
@@ -5283,14 +5319,28 @@ function Dashboard({
                             <HelpTip
                               label={tr("About Sensitive Path Policy", "了解敏感路径策略")}
                               text={tr(
-                                "Always protects built-in credential locations such as .ssh, .aws, browser profiles and .env files for remote MCP. Use a narrow exception below when one specific path must be accessible.",
-                                "远程 MCP 始终保护 .ssh、.aws、浏览器配置、.env 等内置敏感位置；确需访问某个路径时，请在下方添加窄范围例外。",
+                                "Enabled by default. Protects built-in credential locations such as .ssh, .aws, browser profiles and .env files, plus extra protected paths. You can turn it off per device after a warning; prefer a narrow exception whenever possible.",
+                                "默认开启。保护 .ssh、.aws、浏览器配置、.env 等内置敏感位置以及额外配置的保护路径。可以在确认风险后按设备关闭，但建议优先使用窄范围例外。",
                               )}
                             />
                           </div>
-                          <span className="privacyPill">{tr("Always on", "始终开启")}</span>
+                          <label className="compactSwitch" title={tr("Sensitive Path Protection (enabled by default)", "敏感路径保护（默认开启）")}>
+                            <input
+                              type="checkbox"
+                              checked={device.protect_sensitive_paths ?? true}
+                              disabled={UI_PREVIEW || sensitivePolicyBusyId === device.id}
+                              onChange={(event) => void updateSensitiveProtection(device, event.target.checked)}
+                            />
+                            <span />
+                          </label>
                         </div>
 
+                        {device.protect_sensitive_paths === false && (
+                          <p className="policyWarning" role="alert">{tr(
+                            "Sensitive Path Protection is OFF. Built-in and extra protected path rules are not applied to file tools. Connected AI clients can access credential paths if other tool and workspace permissions permit. Turn this back on when finished.",
+                            "敏感路径保护已关闭。文件工具不再应用内置和额外保护路径规则；如果其他工具及工作区权限允许，已连接的 AI 可能访问凭证文件。使用结束后请重新开启。",
+                          )}</p>
+                        )}
                         <div className="policyBlock">
                           <div className="policyBlockHead">
                             <div className="labelWithHelp">

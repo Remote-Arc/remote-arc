@@ -218,9 +218,9 @@ export async function callDevice(
           workspaceRoots: effectiveWorkspaceRoots,
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
           sensitiveAllowPaths: parseStoredStringArray(ownedDevice.sensitive_allow_paths),
-          // Remote MCP always keeps built-in sensitive locations protected.
-          // Narrow exceptions belong in sensitiveAllowPaths instead of a global bypass.
-          protectSensitivePaths: true,
+          // Read the per-device setting on every call. A missing or new D1
+          // setting remains fail-closed (protected) by default.
+          protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
           undoEnabled: ownedDevice.undo_enabled !== 0,
         },
       }),

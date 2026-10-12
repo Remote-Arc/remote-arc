@@ -65,6 +65,7 @@ import {
   handleApprovalList,
   handleDeviceApprovalDecision,
   handleDeviceApprovalList,
+  runApprovalMaintenance,
 } from "./approvals.js";
 import {
   handleMonitorState,
@@ -478,7 +479,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
 
     if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
-      const identity = await authenticateDevice(request, env);
+      // Heartbeat already updates last_seen below; avoid a second D1 write.
+      const identity = await authenticateDevice(request, env, { touchLastSeen: false });
       if (!identity) return Response.json({ error: "unauthorized" }, { status: 401 });
       const heartbeat = (await request.json().catch(() => ({}))) as {
         background_enabled?: unknown;
@@ -861,6 +863,7 @@ export default {
     }
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));
+      ctx.waitUntil(runApprovalMaintenance(env));
       if (env.AUDIT_ARCHIVE_ENABLED === "1") {
         ctx.waitUntil(archiveOldAudit(env).then(({ archived, batches }) => {
           if (archived) console.info("audit_archive_completed", { archived, batches });

@@ -3818,11 +3818,30 @@ function Dashboard({
     }
   }
 
+  // Approval prompts stay responsive, while the expensive OAuth grants summary
+  // is loaded on entry / explicit action and refreshed only once per minute.
+  async function refreshPendingApprovals() {
+    try {
+      const response = await fetch("/api/approvals");
+      if (!response.ok) return;
+      const pending = parsePendingApprovals(await response.json());
+      if (pending) setPendingApprovals(pending);
+    } catch { /* Retain the last known state until the next poll. */ }
+  }
+
   useEffect(() => {
     if (active !== "security") return;
     void refreshSecurity();
-    const timer = window.setInterval(() => void refreshSecurity(), 5_000);
-    return () => window.clearInterval(timer);
+    const approvalsTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshPendingApprovals();
+    }, 5_000);
+    const securityTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshSecurity();
+    }, 60_000);
+    return () => {
+      window.clearInterval(approvalsTimer);
+      window.clearInterval(securityTimer);
+    };
   }, [active]);
 
   async function refreshMonitor() {

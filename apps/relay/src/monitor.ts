@@ -198,13 +198,14 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
     env.DB.prepare(
       `SELECT
         SUM(CASE WHEN created_at >= ?1 THEN 1 ELSE 0 END) AS errors_15m,
+        SUM(CASE WHEN created_at >= ?1 AND (kind = 'synthetic_d1_failure' OR message LIKE 'D1_ERROR:%') THEN 1 ELSE 0 END) AS d1_errors_15m,
         SUM(CASE WHEN created_at >= ?2 THEN 1 ELSE 0 END) AS errors_1h,
         SUM(CASE WHEN created_at >= ?3 THEN 1 ELSE 0 END) AS errors_24h
        FROM service_incidents
        WHERE severity IN ('error', 'critical')`,
     )
       .bind(t15m, t1h, t24h)
-      .first<{ errors_15m: number | null; errors_1h: number | null; errors_24h: number | null }>(),
+      .first<{ errors_15m: number | null; d1_errors_15m: number | null; errors_1h: number | null; errors_24h: number | null }>(),
     env.DB.prepare(
       `SELECT id, created_at, severity, kind, status_code, method, path, message, ray_id, colo
        FROM service_incidents
@@ -254,7 +255,8 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
       errors24h: counts?.errors_24h || 0,
     },
     dependencies: {
-      d1: { status: "operational" },
+      // Successful reads mean D1 is reachable now; recent D1 failures still warrant a warning.
+      d1: { status: (counts?.d1_errors_15m || 0) > 0 ? "degraded" : "operational" },
       durableObjects: { status: durableObjectStatus },
     },
     account: {

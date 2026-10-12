@@ -1,3 +1,5 @@
+import { retryTransientD1Read } from "./d1-read-retry.js";
+
 type AuthEnv = {
   DB: D1Database;
   PUBLIC_ORIGIN: string;
@@ -103,7 +105,7 @@ export async function getSessionUser(
   if (!token) return null;
 
   const tokenHash = await sha256Hex(token);
-  const row = await env.DB.prepare(
+  const row = await retryTransientD1Read(() => env.DB.prepare(
     `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.plan,
        EXISTS(
          SELECT 1 FROM plan_grants g
@@ -125,7 +127,7 @@ export async function getSessionUser(
       role: "user" | "admin";
       plan: "free" | "plus" | null;
       has_plus_grant: number;
-    }>();
+    }>());
 
   if (!row) return null;
 
@@ -372,12 +374,16 @@ function deviceTokenFromRequest(request: Request) {
   return tokenProtocol ? tokenProtocol.slice("token.".length) : null;
 }
 
-export async function authenticateDevice(request: Request, env: AuthEnv) {
+export async function authenticateDevice(
+  request: Request,
+  env: AuthEnv,
+  options: { touchLastSeen?: boolean } = {},
+) {
   const token = deviceTokenFromRequest(request);
   if (!token) return null;
 
   const tokenHash = await sha256Hex(token);
-  const row = await env.DB.prepare(
+  const row = await retryTransientD1Read(() => env.DB.prepare(
     `SELECT id, user_id, name, platform, arch, hostname
      FROM devices
      WHERE credential_hash = ?1 AND revoked_at IS NULL`,
@@ -390,9 +396,11 @@ export async function authenticateDevice(request: Request, env: AuthEnv) {
       platform: string;
       arch: string | null;
       hostname: string | null;
-    }>();
+    }>());
 
   if (!row) return null;
+  // Polling only validates credentials; the regular device heartbeat owns presence.
+  if (options.touchLastSeen === false) return row;
 
   // Presence metadata is useful, but it is not part of credential validity.
   // A transient D1 write failure must not turn an otherwise valid WebSocket

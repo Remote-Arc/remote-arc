@@ -1,4 +1,5 @@
 import { callDevice } from "../src/device-call.js";
+import { handleDevicePolicyUpdate } from "../src/device.js";
 import { handleGrantRevoke, handleSecurityState } from "../src/security.js";
 import { parseSecurityState } from "../../ui/src/security-state.js";
 
@@ -348,4 +349,82 @@ function sessionDb(options?: {
   }
 }
 
-console.log("Security grant and workspace-boundary regression tests passed");
+{
+  // Sensitive protection must be enabled by default and can only be disabled
+  // deliberately by the authenticated owner; every MCP call gets fresh state.
+  const deviceRow = {
+    id: "device-1",
+    allowed_tools: JSON.stringify(["read_file"]),
+    workspace_roots: JSON.stringify(["/trusted/project"]),
+    sensitive_paths: JSON.stringify(["/trusted/project/private"]),
+    sensitive_allow_paths: "[]",
+    protect_sensitive_paths: 1,
+    undo_enabled: 1,
+  };
+  const { db, runs } = sessionDb({ deviceRow });
+  const postedPolicies: Array<Record<string, unknown>> = [];
+  const env = {
+    DB: db,
+    PUBLIC_ORIGIN: APP_ORIGIN,
+    REGISTRY: {
+      getByName() {
+        return {
+          async fetch(request: Request) {
+            const forwarded = await request.json() as { policy: Record<string, unknown> };
+            postedPolicies.push(forwarded.policy);
+            return Response.json({ result: { ok: true } });
+          },
+        };
+      },
+    },
+  };
+  const identity = {
+    userId: USER_ID,
+    clientId: "client-1",
+    grantId: "grant-1",
+    scope: "computer:read",
+    resource: APP_ORIGIN + "/mcp",
+  };
+  const save = (enabled: boolean, acknowledged?: boolean) => handleDevicePolicyUpdate(
+    new Request(APP_ORIGIN + "/api/devices/device-1/policy", {
+      method: "POST",
+      headers: { cookie: "rl_session=session-token", "content-type": "application/json" },
+      body: JSON.stringify({
+        workspace_roots: ["/trusted/project"],
+        sensitive_paths: ["/trusted/project/private"],
+        sensitive_allow_paths: [],
+        protect_sensitive_paths: enabled,
+        undo_enabled: true,
+        ...(acknowledged === undefined ? {} : { acknowledge_sensitive_path_risk: acknowledged }),
+      }),
+    }),
+    env as never,
+  );
+  await callDevice(env as never, identity, "device-1", "read_file", { path: "/trusted/project/file.txt" });
+  if (postedPolicies.at(-1)?.protectSensitivePaths !== true) throw new Error("on-by-default sensitive protection was lost");
+  const rejected = await save(false);
+  if (rejected.status !== 409 || runs.some((r) => r.sql.includes("UPDATE devices"))) {
+    throw new Error("sensitive protection disabled without explicit acknowledgement");
+  }
+  const disabled = await save(false, true);
+  const disabledBody = await disabled.json() as { protect_sensitive_paths: boolean };
+  if (!disabled.ok || disabledBody.protect_sensitive_paths !== false) throw new Error("explicit opt-out was rejected");
+  const disabledUpdate = runs.find((r) => r.sql.includes("UPDATE devices"));
+  if (!disabledUpdate || disabledUpdate.args[3] !== 0) throw new Error("disabled sensitive policy was not persisted");
+  if (!runs.some((r) => r.sql.includes("INSERT INTO audit_events") && r.args[9] === "sensitive_protection_off")) {
+    throw new Error("disabled sensitive-path state was not audited");
+  }
+  deviceRow.protect_sensitive_paths = 0;
+  await callDevice(env as never, identity, "device-1", "read_file", { path: "/trusted/project/private/key.txt" });
+  if (postedPolicies.at(-1)?.protectSensitivePaths !== false) throw new Error("MCP still forced sensitive protection on");
+  const reenabled = await save(true);
+  const reenabledBody = await reenabled.json() as { protect_sensitive_paths: boolean };
+  if (!reenabled.ok || reenabledBody.protect_sensitive_paths !== true) throw new Error("protection could not be re-enabled");
+  const updates = runs.filter((r) => r.sql.includes("UPDATE devices"));
+  if (updates.length !== 2 || updates[1].args[3] !== 1) throw new Error("re-enabled protection was not persisted");
+  deviceRow.protect_sensitive_paths = 1;
+  await callDevice(env as never, identity, "device-1", "read_file", { path: "/trusted/project/file.txt" });
+  if (postedPolicies.at(-1)?.protectSensitivePaths !== true) throw new Error("MCP did not restore sensitive protection");
+}
+
+console.log("Security grant, workspace-boundary and opt-in sensitive-path toggle regression tests passed");

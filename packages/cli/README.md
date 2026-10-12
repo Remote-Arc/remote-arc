@@ -175,10 +175,13 @@ out-of-scope write receives a matching Approval Broker grant. The dashboard and
 an interactive remotelink terminal can approve once, allow the same file
 briefly, trust the parent folder, or deny the request.
 
-Sensitive-path protection remains independent and stays enabled for common
-credential locations and `.env` files. A sensitive-path exception grants
-visibility to that path; it does not grant write authority outside Trusted Write
-Locations.
+Sensitive-path protection is **enabled by default** for credential locations
+and `.env` files. Device owners may explicitly turn it off in Dashboard after
+confirming the risks. Disabling it pauses both built-in and custom sensitive
+path restrictions for file tools, so a narrow exception is preferable whenever
+possible. A sensitive-path exception only grants file visibility; it does not
+allow writes outside Trusted Write Locations. Terminal execution is a separate
+high-risk capability and is not sandboxed by file policy.
 
 Filesystem paths are canonicalized and checked locally immediately before
 execution. Full terminal mode requires an in-scope `cwd` when trusted write

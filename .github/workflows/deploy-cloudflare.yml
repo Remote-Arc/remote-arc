@@ -68,6 +68,8 @@ jobs:
         env:
           # Separate, account-scoped D1 Edit token; never reuse the Worker deploy token.
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
+          # Wrangler can skip account enumeration for least-privilege D1 tokens.
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
         run: |
           set -euo pipefail
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then

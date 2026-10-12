@@ -134,6 +134,9 @@ assert.ok(zhBlogArticle.includes('"inLanguage":"zh-CN"'), "Chinese article schem
 const changelog = readFileSync(new URL("../../../CHANGELOG.md", import.meta.url), "utf8");
 const publishedVersions = [...changelog.matchAll(/^## (\d+\.\d+\.\d+) -/gm)].map(x => x[1]);
 const mainSource = readFileSync(new URL("../../ui/src/main.tsx", import.meta.url), "utf8");
+for (const page of ["/remote-mcp", "/demo", "/support", "/privacy", "/terms"]) {
+  assert.ok(mainSource.includes('href="' + page + '"'), "public navigation/footer must expose " + page);
+}
 const legacyBlock = mainSource.split("const LEGACY_PRODUCT_RELEASES: ProductRelease[] = [")[1]?.split("const PRODUCT_RELEASES")[0] || "";
 const legacyVersions = [...legacyBlock.matchAll(/version: "(\d+\.\d+\.\d+)"/g)].map(x => x[1]);
 for (const version of [...publishedVersions, ...legacyVersions]) {
@@ -186,10 +189,16 @@ assert.ok(mcp.includes('name="robots" content="index,follow'));
 assert.ok(mcp.includes('"@type":"TechArticle"'));
 assert.ok(mcp.includes('rel="canonical" href="https://remotearc.app/mcp-computer-access"'));
 
+const useCasesCatalog = renderMarketingHtml(shell, "/use-cases");
+for (const slug of ["desktop-automation", "remote-support", "browser-research", "data-work"]) {
+  assert.ok(useCasesCatalog.includes('href="/use-cases/' + slug + '"'), "server-rendered use-case catalog must link to " + slug);
+}
 const home = renderMarketingHtml(shell, "/");
 assert.ok(home.includes('"@type":"SoftwareApplication"'));
 assert.ok(home.includes('<noscript><main class="seo-blog-shell">'), "homepage should provide a no-JavaScript semantic fallback");
 assert.ok(home.includes('<h1>Remote computer access for AI through MCP</h1>'));
+assert.ok(home.includes('href="/demo"'), "homepage fallback must link to product demo");
+assert.ok(home.includes('href="/pricing"'), "homepage fallback must link to pricing");
 assert.ok(home.includes('Use the computer where the work already lives'));
 assert.ok(bodyWordCount(home) >= 350, "homepage fallback should contain substantive product copy");
 

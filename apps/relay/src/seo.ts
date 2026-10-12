@@ -226,7 +226,7 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "Keep the AI client replaceable", text: "Remote Arc uses MCP as the product boundary exposed to compatible AI clients. That means the client can change without rebuilding the device connection model. You can connect ChatGPT, Claude, Cursor or another supported MCP client to the same account while keeping paired computers, device policy and revocation controls independent from the conversation interface." },
       { heading: "Support short actions and durable work", text: "For immediate work, an AI can inspect state and call device tools during the conversation. For deterministic work that must outlive one chat turn, Remote Arc can persist bounded commands, schedules, condition watches and task state on supported plans. Fresh reasoning is still treated separately: a saved task can continue deterministic execution, but Remote Arc does not claim that a model remains continuously conscious after the chat ends." }
     ],
-    links: [["/remote-mcp", "Remote MCP guide"], ["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"], ["/use-cases", "Use cases"]]
+    links: [["/remote-mcp", "Remote MCP guide"], ["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"], ["/use-cases", "Use cases"], ["/pricing", "Pricing"], ["/demo", "See a real demo"]]
   },
   "/install/chatgpt": {
     h1: "Install Remote Arc for ChatGPT",
@@ -293,7 +293,7 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "Where the security boundary lives", text: "OAuth controls the AI client and per-device policy controls the computer. Trusted Write Locations and sensitive-path checks can narrow supported file operations. Terminal execution, when enabled, still inherits the permissions of the local operating-system user, so Remote Arc does not describe a terminal-enabled device as an OS sandbox." },
       { heading: "MCP keeps the reasoning client replaceable", text: "Remote Arc does not need to own the user's conversation, model or memory in order to provide computer access. A compatible MCP client can change while the paired computers and their policy remain attached to the Remote Arc account. This keeps the remote execution layer separate from the AI interface above it." }
     ],
-    links: [["/docs/mcp", "Remote MCP reference"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/security-model", "Security model"], ["/use-cases", "Use cases"]]
+    links: [["/docs/mcp", "Remote MCP reference"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/security-model", "Security model"], ["/use-cases", "Use cases"], ["/remote-mcp", "Remote MCP guide"], ["/demo", "Product demo"]]
   },
   "/docs": {
     h1: "Remote Arc documentation",
@@ -377,7 +377,7 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "Authorized diagnostics and support", text: "A paired machine can expose logs, file metadata and running processes for diagnosis before repair permissions are enabled. This separates observing a problem from changing the system and is useful for home-lab maintenance, remote support and incident investigation on computers you control." },
       { heading: "Explicit browser context", text: "The browser companion works only with tabs the user shares. An AI can read simplified page content, selections, links and tables, then use scoped click or fill capabilities only when interaction is enabled for that tab. This keeps browser access narrower than handing an agent unrestricted control of the whole browser profile." }
     ],
-    links: [["/use-cases/remote-development", "Remote development"], ["/use-cases/overnight-goals", "Overnight goals"], ["/use-cases/browser-research", "Browser research"], ["/use-cases/home-lab", "Home lab"], ["/use-cases/remote-support", "Remote support"], ["/docs", "Documentation"]]
+    links: [...Object.entries(useCaseSeo).map(([slug, [title]]): [string, string] => ["/use-cases/" + slug, title]), ["/docs", "Documentation"] as [string, string]]
   },
   "/pricing": {
     h1: "Remote Arc pricing",

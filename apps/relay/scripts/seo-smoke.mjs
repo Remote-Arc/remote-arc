@@ -8,11 +8,24 @@ import {
   canonicalForPath,
   feedXml,
   llmsTxt,
+  marketingHttpsRedirect,
   marketingStatusCode,
   renderMarketingHtml,
   robotsTxt,
   sitemapXml,
 } from "../src/seo.ts";
+
+// Marketing HTTP URLs must redirect to HTTPS without altering other hosts.
+for (const path of ["/", "/docs", "/zh/blogs", "/sitemap.xml", "/a%20b?utm_source=test"]) {
+  const input = new URL("http://remotearc.app" + path);
+  assert.equal(marketingHttpsRedirect(input), "https://remotearc.app" + path);
+}
+assert.equal(marketingHttpsRedirect(new URL("https://remotearc.app/docs")), null);
+assert.equal(marketingHttpsRedirect(new URL("http://mcp.remotearc.app/mcp")), null);
+assert.equal(marketingHttpsRedirect(new URL("http://www.remotearc.app/docs")), null);
+assert.equal(marketingHttpsRedirect(new URL("http://example.com/docs")), null);
+assert.equal(marketingHttpsRedirect(new URL("http://remotearc.app//outside.example/path")),
+  "https://remotearc.app//outside.example/path");
 
 const wranglerConfig = readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8");
 assert.ok(wranglerConfig.includes('"/*"'), "all document routes must run through the Worker before SPA asset fallback");

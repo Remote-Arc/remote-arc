@@ -5,6 +5,14 @@ import { chineseResourceSeo } from "./zh-resources.js";
 
 const SITE = "https://remotearc.app";
 
+// Normalize the public HTTP origin without resolving //paths as external hosts.
+export function marketingHttpsRedirect(url: URL): string | null {
+  if (url.hostname !== "remotearc.app" || url.protocol !== "http:") return null;
+  const target = new URL(url.href);
+  target.protocol = "https:";
+  return target.href;
+}
+
 type ArticleBlock = { heading?: string; text: string };
 type SeoPage = {
   title: string;

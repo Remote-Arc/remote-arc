@@ -3,7 +3,7 @@ import { handleDeviceTaskSettings } from "./device-task-settings.js";
 import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { runScheduledTasks } from "./task-scheduler.js";
 import { DeviceRegistry } from "./registry.js";
-import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
+import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingHttpsRedirect, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { legacyLanguageRedirect } from "./marketing-locale.js";
 import { createRemoteLinkMcp } from "./mcp.js";
 import {
@@ -146,6 +146,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
     const appOrigin = env.APP_ORIGIN || env.PUBLIC_ORIGIN;
+
+    // Serve one canonical public URL; do not alter HTTPS MCP or dashboard calls.
+    const httpsCanonical = marketingHttpsRedirect(url);
+    if (httpsCanonical) return Response.redirect(httpsCanonical, 301);
 
     const authSensitive =
       url.pathname === "/oauth/register" ||

@@ -36,6 +36,17 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
       { heading: "从只读工具开始", text: "在 Claude 对话中检查已配对设备和可用工具，然后再按需要增加设备执行权限。" }
     ]
   },
+  "/install/gemini": {
+    title: "Google Gemini 连接 Remote Arc 教程 — 自定义 MCP 安装",
+    description: "通过真实截图学习在 Gemini Connectors 中添加 Remote Arc，完成 Google 账户授权和设备配对，让 Gemini 安全使用电脑上的 MCP 工具。",
+    h1: "在 Google Gemini 中连接 Remote Arc",
+    intro: "在支持自定义 MCP 连接器的 Gemini 账户中，添加 Remote Arc MCP 地址，授权并配对电脑，即可从 Gemini 对话中使用受控设备工具。",
+    sections: [
+      { heading: "在 Gemini 添加自定义连接器", text: "打开 https://gemini.google.com/customize/connectors，点击 ＋ Custom，在 MCP Server URL 输入 https://mcp.remotearc.app/mcp，再点击 Next。" },
+      { heading: "完成授权并保存", text: "阅读 Google 账户关联权限，完成 Remote Arc OAuth 登录。将自定义应用命名为 Remote Arc，核对可用工具后点击 Connect。" },
+      { heading: "让 Gemini 开始使用", text: "在 Remote Arc 连接器详情中选择 Use now。目标电脑需运行 npx remotelink、完成配对并在线。首次测试先让 Gemini 列出设备，确认权限后再进行其他操作。" }
+    ]
+  },
   "/install/cursor": {
     title: "Cursor 连接 Remote Arc 教程 — Remote MCP 开发工作流",
     description: "将 Remote Arc 作为 Cursor 中的 Remote MCP 服务，安全访问配对电脑上的项目、文件与开发工具。",

@@ -3,11 +3,12 @@ import { ClientInstallWalkthrough } from "./client-install-walkthrough.js";
 import { useI18n } from "./i18n.js";
 import "./client-setup-guides.css";
 
-type Client = "chatgpt" | "claude" | "cursor";
+type Client = "chatgpt" | "claude" | "gemini" | "cursor";
 const chatgptPlugins = "https://chatgpt.com/plugins";
 const chatgptDocs = "https://developers.openai.com/plugins/deploy/connect-chatgpt";
 const chatgptAccess = "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt";
 const claudeConnectors = "https://claude.ai/settings/connectors";
+const geminiConnectors = "https://gemini.google.com/customize/connectors";
 const claudeDocs = "https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp";
 const cursorDocs = "https://cursor.com/docs/mcp";
 const cursorCustomize = "https://cursor.com/docs/customize-cursor";
@@ -59,6 +60,32 @@ export function ClientMcpGuide({
         important: tr("Team/Enterprise organization members may need an admin or owner to add the connector under Organization settings → Connectors first; each member then connects their own account.",
           "Team / Enterprise 成员可能需要管理员先从 Organization settings → Connectors 添加 Connector，随后成员各自连接自己的账户。"),
       }
+      : client === "gemini"
+        ? {
+            destination: geminiConnectors,
+            destinationLabel: tr("Open Gemini Connectors", "打开 Gemini Connectors"),
+            path: tr("Connectors → + Custom → MCP Server URL", "Connectors → ＋ Custom → MCP Server URL"),
+            steps: [
+              tr(
+                "Open Gemini's Connectors page and choose + Custom. Enter the full https://mcp.remotearc.app/mcp URL, then select Next.",
+                "进入 Gemini Connectors 页面，点击 ＋ Custom，输入完整的 https://mcp.remotearc.app/mcp 地址，点击 Next。",
+              ),
+              tr(
+                "Review Google's account linking consent. If you trust the connection, finish authorization and choose Remote Arc as the custom app name.",
+                "查看 Google 账户关联授权范围，确认信任后完成授权，将自定义 App 命名为 Remote Arc。",
+              ),
+              tr(
+                "Review the available actions and click Connect. In the connector menu choose Use now to start a conversation with Remote Arc.",
+                "核对可用的工具操作并点击 Connect，然后在连接器菜单中选择 Use now 开始对话。",
+              ),
+            ],
+            docs: geminiConnectors,
+            access: geminiConnectors,
+            important: tr(
+              "Google's custom connected app is not reviewed by Google. Only connect to the official Remote Arc MCP URL, verify the authorization screen, and keep device-side permissions restrictive.",
+              "Google 会提示自定义连接器未经 Google 审核。请核实连接的是 Remote Arc 官方 MCP 地址，并检查授权范围和设备端权限。",
+            ),
+          }
       : {
         destination: cursorInstallUrl,
         destinationLabel: tr("Add to Cursor (one click)", "一键添加到 Cursor"),
@@ -81,7 +108,7 @@ export function ClientMcpGuide({
     <div className="installClientDetailsHeading">
       <div>
         <span className="eyebrow">{tr("REQUIRED · AI CLIENT", "必需 · AI 客户端")}</span>
-        <h2>{tr("Add Remote Arc inside ", "在客户端中添加 Remote Arc · ") + (client === "chatgpt" ? "ChatGPT" : client === "claude" ? "Claude" : "Cursor")}</h2>
+        <h2>{tr("Add Remote Arc inside ", "在客户端中添加 Remote Arc · ") + (client === "chatgpt" ? "ChatGPT" : client === "claude" ? "Claude" : client === "gemini" ? "Gemini" : "Cursor")}</h2>
         <p>{tr("This is a separate step from pairing your computer. Without the app / connector, your AI cannot call Remote Arc tools even if the agent is running.",
           "这一步与配对电脑相互独立。即使本地 Agent 正在运行，没有安装 MCP App / Connector，AI 也无法调用 Remote Arc 工具。")}</p>
       </div>

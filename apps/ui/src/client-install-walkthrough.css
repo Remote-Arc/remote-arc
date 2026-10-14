@@ -74,3 +74,5 @@
  .claudeGuideModalContent {padding:8px;}
 }
 @media(prefers-reduced-motion:reduce) {.claudeGuideStep,.claudeGuideProgress i {transition:none;}}
+
+.claudeGuideImageArea--gemini img { width:min(100%,1040px); }

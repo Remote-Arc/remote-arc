@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./client-install-walkthrough.css";
 
-type Client = "claude" | "chatgpt";
+type Client = "claude" | "chatgpt" | "gemini";
 type StepKind = "add" | "auth" | "connect" | "tools" | "approval" | "running" | "result"
-  | "gpt-create" | "gpt-plugin" | "gpt-running" | "gpt-result";
+  | "gpt-create" | "gpt-plugin" | "gpt-running" | "gpt-result"
+  | "gemini-url" | "gemini-auth" | "gemini-connect" | "gemini-use" | "gemini-ready";
 
 const filenames: Record<StepKind, string> = {
   add: "01-add-custom-connector.png",
@@ -18,6 +19,11 @@ const filenames: Record<StepKind, string> = {
   "gpt-plugin": "02-plugin-ready.png",
   "gpt-running": "03-run-in-chat.png",
   "gpt-result": "04-mac-result.png",
+  "gemini-url": "step-01.png",
+  "gemini-auth": "step-02.png",
+  "gemini-connect": "step-03.png",
+  "gemini-use": "step-04.png",
+  "gemini-ready": "step-05.png",
 };
 
 function GuideScreenshot({ client, src, alt }: { client: Client; src: string; alt: string }) {
@@ -130,12 +136,49 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
         "这里展示的是历史实际操作案例，不代表你当前设备的实时状态；示例仅涉及已授权的读取操作。"),
     },
   ];
-  const steps = client === "claude" ? claudeSteps : chatgptSteps;
+  const geminiSteps: { kind: StepKind; group: string; title: string; detail: string; note: string }[] = [
+    {
+      kind: "gemini-url", group: tr("CONNECT", "添加连接"),
+      title: tr("Add the Remote Arc MCP URL", "添加 Remote Arc MCP 地址"),
+      detail: tr("Open Gemini → Connectors → + Custom. Paste https://mcp.remotearc.app/mcp into the MCP Server URL field and select Next.",
+        "在 Gemini 中进入 Connectors → ＋ Custom，将 https://mcp.remotearc.app/mcp 粘贴到 MCP Server URL 并点击 Next。"),
+      note: tr("Enter the complete HTTPS URL including /mcp. No API key or local command is needed in Gemini.", "填写包含 /mcp 的完整 HTTPS 地址；Gemini 中不需要 API Key 或本地命令。"),
+    },
+    {
+      kind: "gemini-auth", group: tr("AUTHORIZE", "授权连接"),
+      title: tr("Review Google account linking", "核对 Google 账户关联授权"),
+      detail: tr("Google displays the account linking permission screen. Read the requested scopes carefully before proceeding with Remote Arc authorization.",
+        "Google 会展示账户关联与权限确认页面。继续授权 Remote Arc 前，先核对页面列出的权限范围。"),
+      note: tr("Only authorize a connector you trust. Google explicitly warns that custom connected apps have not been reviewed.", "只授权你信任的连接器；Google 会明确提示自定义连接器未经审核。"),
+    },
+    {
+      kind: "gemini-connect", group: tr("CONNECT", "完成连接"),
+      title: tr("Name and connect the custom app", "命名并连接自定义 App"),
+      detail: tr("After linking, name the custom app Remote Arc. Review the available MCP actions, then select Connect.",
+        "完成账户关联后将自定义应用命名为 Remote Arc，核对列出的 MCP 工具，然后点击 Connect。"),
+      note: tr("Visible actions reflect the MCP server, not blanket permission to bypass the local device policy.", "列出的工具来自 MCP 服务，不代表可以绕过设备端权限策略。"),
+    },
+    {
+      kind: "gemini-use", group: tr("START", "开始使用"),
+      title: tr("Choose Use now", "选择 Use now"),
+      detail: tr("On the Remote Arc connector details page, open the more menu and select Use now to start using it with Gemini.",
+        "在 Remote Arc 连接器详情页打开更多菜单，选择 Use now，即可在 Gemini 中开始使用。"),
+      note: tr("Keep your computer online with npx remotelink before requesting device tools.", "调用设备工具前，请确保目标电脑正在运行 npx remotelink 并在线。"),
+    },
+    {
+      kind: "gemini-ready", group: tr("TRY IT", "验证连接"),
+      title: tr("Try a read-only task in Gemini", "在 Gemini 中进行只读测试"),
+      detail: tr("Ask Gemini to list your paired Remote Arc devices and available tools. Start with read-only operations to confirm the connector is working.",
+        "让 Gemini 列出已配对的 Remote Arc 设备和可用工具，先用只读操作确认连接正常。"),
+      note: tr("A connected app still needs an online, explicitly paired device for real computer access.", "连接器显示成功后，仍需要电脑在线并完成设备配对才能操作真实电脑。"),
+    },
+  ];
+  const steps = client === "claude" ? claudeSteps : client === "gemini" ? geminiSteps : chatgptSteps;
   const count = steps.length;
   const step = steps[selected]!;
-  const src = "/" + (client === "claude" ? "claude-setup/" : "chatgpt-setup/") + filenames[step.kind];
+  const src = "/" + (client === "claude" ? "claude-setup/" : client === "gemini" ? "guides/gemini/" : "chatgpt-setup/") + filenames[step.kind];
   const move = (next: number) => setSelected(Math.max(0, Math.min(count - 1, next)));
-  const clientName = client === "claude" ? "Claude" : "ChatGPT";
+  const clientName = client === "claude" ? "Claude" : client === "gemini" ? "Gemini" : "ChatGPT";
 
   return <div className="claudeWalkthrough">
     <div className="claudeGuideIntro">

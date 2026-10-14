@@ -326,6 +326,7 @@ const dashboardHref = (path: string) => UI_PREVIEW ? path : APP_ORIGIN + path;
 installUiPreviewFetchMock(MCP_ENDPOINT);
 const CHATGPT_PLUGIN_DIRECTORY_URL = "https://chatgpt.com/plugins?q=Remote%20Arc";
 const CLAUDE_CONNECTORS_URL = "https://claude.ai/settings/connectors";
+const GEMINI_CONNECTORS_URL = "https://gemini.google.com/customize/connectors";
 
 function cursorMcpInstallUrl() {
   const config = window.btoa(JSON.stringify({ url: MCP_ENDPOINT }));
@@ -485,6 +486,23 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 }
 function PublicHeader({ user }: { user?: User | null }) {
   const { tr, locale } = useI18n();
+  const [openMenu, setOpenMenu] = useState<"mcp" | "resources" | null>(null);
+  const navRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const onOutsideClick = (event: PointerEvent) => {
+      if (!navRef.current?.contains(event.target as Node)) setOpenMenu(null);
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenMenu(null);
+    };
+    document.addEventListener("pointerdown", onOutsideClick);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("pointerdown", onOutsideClick);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, []);
+  const arrow = <svg className="publicNavChevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>;
   const navHref = (path: string) => isWebsite() ? localizedWebsiteHref(path, locale) : path;
   // From the website, sign-in visits the product preview. On that preview,
   // the header sign-in control opens authentication rather than reloading itself.
@@ -496,72 +514,57 @@ function PublicHeader({ user }: { user?: User | null }) {
     <>
       <header className="landingNav publicNav">
         <Brand />
-        <nav className="publicNavLinks">
+        <nav ref={navRef} className="publicNavLinks">
           <a href={navHref("/#how-it-works")}>{tr("How it works", "如何使用")}</a>
 
-          <div className="publicNavMenu">
-            <button type="button" className="publicNavMenuTrigger">
-              MCP <span aria-hidden="true">⌄</span>
+          <div className="publicNavMenu" data-open={openMenu === "mcp"}
+            onMouseEnter={() => setOpenMenu("mcp")} onMouseLeave={() => setOpenMenu(null)}>
+            <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu === "mcp"}
+              aria-controls="public-nav-mcp" aria-haspopup="true" onClick={() => setOpenMenu("mcp")}>
+              MCP {arrow}
             </button>
-            <div className="publicNavDropdown mcpDropdown">
-              <a href="/remote-mcp">
-                <strong>{tr("Remote MCP guide", "Remote MCP 指南")}</strong>
-                <small>{tr("How it works and why it matters", "了解远程 MCP 的原理和使用方式")}</small>
-              </a>
-              <a href="/connect-ai">
-                <strong>{tr("Connect Remote Arc", "连接 Remote Arc")}</strong>
-                <small>{tr("Pair a computer and authorize your AI client", "配对电脑并授权 AI 客户端")}</small>
-              </a>
-              <a href={navHref("/install/chatgpt")}>
-                <strong>ChatGPT</strong>
-                <small>{tr("Installation guide", "安装指南")}</small>
-              </a>
-              <a href={navHref("/install/claude")}>
-                <strong>Claude</strong>
-                <small>{tr("Installation guide", "安装指南")}</small>
-              </a>
-              <a href={navHref("/install/cursor")}>
-                <strong>Cursor</strong>
-                <small>{tr("Installation guide", "安装指南")}</small>
-              </a>
-              <a href="/chrome-extension">
-                <strong>Chrome Browser <span className="navBeta">Beta</span></strong>
-                <small>{tr("Share selected tabs with AI", "把指定浏览器标签页共享给 AI")}</small>
-              </a>
+            <div id="public-nav-mcp" className="publicNavDropdown mcpDropdown">
+              <div className="publicNavDropdownColumns">
+                <section className="publicNavGroup">
+                  <span className="publicNavGroupLabel">{tr("Start here", "快速入门")}</span>
+                  <a href="/remote-mcp"><strong>{tr("Remote MCP guide", "Remote MCP 指南")}</strong><small>{tr("What it does and why it matters", "了解工作原理")}</small></a>
+                  <a href="/connect-ai"><strong>{tr("Connect Remote Arc", "连接 Remote Arc")}</strong><small>{tr("Pair a computer and authorize AI", "配对电脑并授权 AI")}</small></a>
+                  <a href="/chrome-extension"><strong>Chrome Browser <span className="navBeta">Beta</span></strong><small>{tr("Share selected browser tabs", "共享指定浏览器标签页")}</small></a>
+                </section>
+                <section className="publicNavGroup">
+                  <span className="publicNavGroupLabel">{tr("Install in your AI", "安装到 AI")}</span>
+                  <a href={navHref("/install/chatgpt")}><strong>ChatGPT</strong><small>{tr("Installation guide", "安装指南")}</small></a>
+                  <a href={navHref("/install/claude")}><strong>Claude</strong><small>{tr("Installation guide", "安装指南")}</small></a>
+                  <a href={navHref("/install/gemini")}><strong>Google Gemini</strong><small>{tr("Custom connector guide", "自定义连接器指南")}</small></a>
+                  <a href={navHref("/install/cursor")}><strong>Cursor</strong><small>{tr("Installation guide", "安装指南")}</small></a>
+                </section>
+              </div>
             </div>
           </div>
 
           <a href={navHref("/pricing")}>{tr("Pricing", "价格")}</a>
 
-          <div className="publicNavMenu">
-            <button type="button" className="publicNavMenuTrigger">
-              {tr("Resources", "资源")} <span aria-hidden="true">⌄</span>
+          <div className="publicNavMenu" data-open={openMenu === "resources"}
+            onMouseEnter={() => setOpenMenu("resources")} onMouseLeave={() => setOpenMenu(null)}>
+            <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu === "resources"}
+              aria-controls="public-nav-resources" aria-haspopup="true" onClick={() => setOpenMenu("resources")}>
+              {tr("Resources", "资源")} {arrow}
             </button>
-            <div className="publicNavDropdown resourceDropdown">
-              <a href="/demo">
-                <strong>{tr("Live demo", "真实演示")}</strong>
-                <small>{tr("Watch Remote Arc work with a paired computer", "观看 Remote Arc 与真实电脑交互")}</small>
-              </a>
-              <a href={navHref("/blogs")}>
-                <strong>{tr("Blog", "博客")}</strong>
-                <small>{tr("Ideas, product notes and what we're building", "产品思考、开发记录与我们正在做的事")}</small>
-              </a>
-              <a href={navHref("/use-cases")}>
-                <strong>{tr("Use cases", "使用场景")}</strong>
-                <small>{tr("Real workflows with files, code and terminals", "文件、代码与终端的真实工作流")}</small>
-              </a>
-              <a href={navHref("/docs")}>
-                <strong>{tr("Docs", "文档")}</strong>
-                <small>{tr("Setup, tools, permissions and reference", "配置、工具、权限与参考")}</small>
-              </a>
-              <a href={navHref("/security-model")}>
-                <strong>{tr("Security", "安全")}</strong>
-                <small>{tr("Trust boundaries, permissions and limits", "信任边界、权限与真实限制")}</small>
-              </a>
-              <a href={navHref("/releases")}>
-                <strong>{tr("Releases", "版本发布")}</strong>
-                <small>{tr("What's new in Remote Arc", "查看 Remote Arc 的版本更新")}</small>
-              </a>
+            <div id="public-nav-resources" className="publicNavDropdown resourceDropdown">
+              <div className="publicNavDropdownColumns">
+                <section className="publicNavGroup">
+                  <span className="publicNavGroupLabel">{tr("Explore", "探索")}</span>
+                  <a href="/demo"><strong>{tr("Live demo", "真实演示")}</strong><small>{tr("See Remote Arc in action", "看看 Remote Arc 如何工作")}</small></a>
+                  <a href={navHref("/blogs")}><strong>{tr("Blog", "博客")}</strong><small>{tr("Ideas and product updates", "产品思考与开发动态")}</small></a>
+                  <a href={navHref("/use-cases")}><strong>{tr("Use cases", "使用场景")}</strong><small>{tr("Real workflows on your devices", "真实设备工作流")}</small></a>
+                </section>
+                <section className="publicNavGroup">
+                  <span className="publicNavGroupLabel">{tr("Learn & trust", "文档与信任")}</span>
+                  <a href={navHref("/docs")}><strong>{tr("Docs", "文档")}</strong><small>{tr("Tools, setup and references", "工具、配置与参考")}</small></a>
+                  <a href={navHref("/security-model")}><strong>{tr("Security", "安全")}</strong><small>{tr("Permissions and trust boundaries", "权限与信任边界")}</small></a>
+                  <a href={navHref("/releases")}><strong>{tr("Releases", "版本发布")}</strong><small>{tr("What's new in Remote Arc", "查看 Remote Arc 更新")}</small></a>
+                </section>
+              </div>
             </div>
           </div>
         </nav>
@@ -1669,6 +1672,7 @@ function PublicLayout({
           <a href="/remote-mcp">{tr("Remote MCP guide", "Remote MCP 指南")}</a>
           <a href="/chatgpt-computer-access">ChatGPT</a>
           <a href="/claude-computer-access">Claude</a>
+          <a href="/install/gemini">Gemini</a>
           <a href="/docs/mcp">{tr("MCP Docs", "MCP 文档")}</a>
           <a href="/security-model">{tr("Security", "安全")}</a>
           <a href="/support">{tr("Support", "支持")}</a>
@@ -1687,6 +1691,7 @@ function PublicLayout({
 const aiClients = [
   { name: "ChatGPT", slug: "chatgpt", icon: "/ai-openai.svg", tone: "mono" },
   { name: "Claude", slug: "claude", icon: "/ai-claude.svg", tone: "color" },
+  { name: "Gemini", slug: "gemini", icon: "/ai-gemini.svg", tone: "color" },
   { name: "Cursor", slug: "cursor", icon: "/ai-cursor.svg", tone: "color" },
 ] as const;
 
@@ -1727,7 +1732,7 @@ function HelpTip({
   );
 }
 
-type InstallClientSlug = "chatgpt" | "claude" | "cursor";
+type InstallClientSlug = "chatgpt" | "claude" | "gemini" | "cursor";
 
 type InstallDemoConfig = {
   name: string;
@@ -2099,6 +2104,62 @@ function ClientInstallPage({
             ],
           },
         }
+      : slug === "gemini"
+        ? {
+            name: "Google Gemini",
+            icon: "/ai-gemini.svg",
+            eyebrow: tr("GEMINI INSTALLATION", "GEMINI 安装"),
+            title: tr("Connect Gemini to your own computers.", "让 Gemini 连接你自己的电脑。"),
+            intro: tr(
+              "Add Remote Arc as a Gemini custom MCP connector, authorize your account, and use the permitted tools on your paired computers.",
+              "在 Gemini 中添加 Remote Arc 自定义 MCP 连接器，授权账户后即可使用已配对电脑上允许的工具。",
+            ),
+            availability: tr(
+              "Available through Gemini's Custom MCP connectors. Feature availability depends on your Google account.",
+              "通过 Gemini 的自定义 MCP 连接器接入；可用性取决于 Google 账户。",
+            ),
+            externalHref: GEMINI_CONNECTORS_URL,
+            externalLabel: tr("Open Gemini Connectors", "打开 Gemini Connectors"),
+            steps: [
+              {
+                title: tr("Pair your computer", "配对电脑"),
+                body: tr("Run Remote Arc on the computer Gemini should access.", "在需要让 Gemini 使用的电脑上运行 Remote Arc。"),
+                code: "npx remotelink",
+              },
+              {
+                title: tr("Create a custom MCP connector", "添加自定义 MCP 连接器"),
+                body: tr(
+                  "Open Gemini Connectors → + Custom, paste the Remote Arc HTTPS MCP URL and continue through Google account authorization. Name the app Remote Arc and select Connect.",
+                  "打开 Gemini Connectors → ＋ Custom，粘贴 Remote Arc HTTPS MCP 地址，通过 Google 账户授权后将应用命名为 Remote Arc，再点击 Connect。",
+                ),
+                code: MCP_ENDPOINT,
+              },
+              {
+                title: tr("Use it in Gemini", "在 Gemini 中使用"),
+                body: tr(
+                  "On the Remote Arc connector, choose Use now or enable it in your chat. Ask Gemini to list a paired device first, then approve only the tools you intend to use.",
+                  "在 Remote Arc 连接器中选择 Use now，或在对话中启用它。先让 Gemini 列出已配对设备，再按需批准工具操作。",
+                ),
+              },
+            ],
+            demo: {
+              name: "Gemini",
+              icon: "/ai-gemini.svg",
+              prompt: tr("List my available Remote Arc devices", "列出我 Remote Arc 当前可用的设备"),
+              working: tr("Checking your paired devices…", "正在检查已配对设备…"),
+              resultLines: [
+                tr("Remote Arc connector is available.", "Remote Arc 连接器已就绪。"),
+                tr("Paired devices can be listed through MCP.", "可以通过 MCP 列出已配对设备。"),
+                tr("Each device enforces its own allowed tools.", "每台设备仍然独立执行工具权限限制。"),
+              ],
+              terminalLines: [
+                "Gemini → Remote Arc MCP",
+                "list_devices → allowed",
+                tr("device_tools → available capabilities", "device_tools → 可用工具"),
+                tr("policy → checked on the device", "policy → 设备端检查"),
+              ],
+            },
+          }
       : {
           name: "Cursor",
           icon: "/ai-cursor.svg",
@@ -7425,7 +7486,7 @@ function App() {
     return <CenteredCard title={tr("Opening installation…", "正在打开安装页…")} body={tr("Redirecting to the ChatGPT installation guide.", "正在跳转到 ChatGPT 安装指南。")} />;
   }
 
-  const installMatch = routePath.match(/^\/install\/(chatgpt|claude|cursor)$/);
+  const installMatch = routePath.match(/^\/install\/(chatgpt|claude|gemini|cursor)$/);
   if (installMatch) {
     return (
       <ClientInstallPage

@@ -124,9 +124,10 @@ const articles: Record<string, SeoPage> = {
 
 const pages: Record<string, SeoPage> = {
   "/": { title: "Remote Arc — Let AI Chat Work on Your Computer, No API Key", description: "Turn compatible AI chats into real computer actions through secure Remote MCP. No separate model API key or pay-per-token API bill. Supported free chat plans can connect; provider tool limits apply.", canonical: SITE + "/" },
-  "/install": { title: "Install Remote Arc for ChatGPT, Claude and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
+  "/install": { title: "Install Remote Arc for ChatGPT, Claude, Gemini and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
+  "/install/gemini": { title: "Connect Google Gemini to Your Computer | Remote Arc", description: "Step-by-step Gemini MCP Connector setup using real screenshots. Connect your Google account to Remote Arc, pair a computer and use secure remote MCP tools.", canonical: SITE + "/install/gemini" },
   "/install/cursor": { title: "Install Remote Arc for Cursor", description: "Use Remote Arc to give Cursor controlled access to paired Windows, macOS and Linux computers through MCP.", canonical: SITE + "/install/cursor" },
   "/pricing": { title: "Remote Arc Pricing — Hosted remote MCP for AI", description: "Start free with 10,000 monthly hosted MCP tool calls. Understand account usage, separate AI subscriptions and current capacity availability.", canonical: SITE + "/pricing" },
   "/downloads": { title: "Remote Arc Downloads — Native Go Agent for Windows, macOS and Linux", description: "Download the native Remote Arc Agent or install with npm and Homebrew. Go Agent and Execution Core by default; standalone installs need no Node.js.", canonical: SITE + "/downloads" },
@@ -249,6 +250,17 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "4. Test with a narrow first action", text: "Ask Claude to list devices and read a harmless file or inspect a project directory before enabling broader actions. Confirm the computer and path are correct, then add edit or terminal permissions only if the task actually needs them." }
     ],
     links: [["/claude-computer-access", "How Claude computer access works"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"], ["/use-cases/remote-development", "Remote development"]]
+  },
+  "/install/gemini": {
+    h1: "Connect Google Gemini to your computer with Remote Arc",
+    intro: "Add a Gemini custom MCP connector, authorize your Remote Arc account and discover tools on a paired Windows, macOS or Linux computer. The guide includes original screenshots of Gemini's setup screens.",
+    sections: [
+      { heading: "1. Pair your computer", text: "On the computer you want Gemini to use, run npx remotelink and complete Remote Arc device pairing. The computer controls which tools and workspaces are available." },
+      { heading: "2. Add the Google Gemini custom connector", text: "Open https://gemini.google.com/customize/connectors, choose + Custom and enter https://mcp.remotearc.app/mcp as the MCP Server URL. Click Next to begin account linking." },
+      { heading: "3. Authorize and name the connection", text: "Review Google's account linking consent, complete Remote Arc authorization, and save the custom app as Remote Arc. Review available MCP actions, then choose Connect." },
+      { heading: "4. Use now and verify", text: "In the Remote Arc connector details choose Use now, then ask Gemini to list paired devices. Start with read-only tools and grant broader permissions only when required. The target computer must remain online." }
+    ],
+    links: [["/connect-ai", "Connect an AI client"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"]]
   },
   "/install/cursor": {
     h1: "Install Remote Arc for Cursor",
@@ -863,6 +875,7 @@ const sitemapPaths = [
   "/downloads",
   "/install/chatgpt",
   "/install/claude",
+  "/install/gemini",
   "/install/cursor",
   "/chatgpt-computer-access",
   "/claude-computer-access",

@@ -15,7 +15,7 @@
 .claudeGuideStepText strong { color:var(--text);font-size:13px;line-height:1.45;font-weight:700; }
 .claudeGuideStep:focus-visible,.claudeGuidePreview:focus-visible,.claudeGuideControls button:focus-visible,.claudeGuideModalHeader button:focus-visible,.claudeGuideModalActions a:focus-visible {outline:2px solid var(--sky);outline-offset:3px;}
 .claudeGuideMain { background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden; min-width:0; }
-.claudeGuideText { padding:24px 30px 17px; max-width:920px; }
+.claudeGuideText { padding:24px 30px 17px; max-width:920px; min-height:200px; box-sizing:border-box; }
 .claudeGuideText>span { color:var(--sky-light);font-size:12px;font-weight:800;letter-spacing:.09em; }
 .claudeGuideText h4 { color:var(--text);font-size:clamp(18px,2.1vw,23px);line-height:1.35;letter-spacing:-.015em;margin:7px 0 9px; }
 .claudeGuideText p { margin:0;color:var(--muted);font-size:15px;line-height:1.75; }
@@ -23,10 +23,14 @@
 .claudeGuidePreview:hover { border-color:#718692; }
 .claudeGuideImageArea { width:100%; display:flex; justify-content:center; align-items:center; padding:20px; background:#111; box-sizing:border-box; min-width:0; }
 .claudeGuideImageArea img { display:block; max-width:100%; width:auto; height:auto; object-fit:contain; border-radius:5px; }
+/* The preview stage keeps its height across steps, regardless of source image proportions.
+   This applies only to the inline preview; the full-size modal uses the natural image height. */
+.claudeGuidePreview .claudeGuideImageArea { height:clamp(360px,44vw,580px); }
+.claudeGuidePreview .claudeGuideImageArea img { max-height:100%; }
 .claudeGuideImageArea--chatgpt img { width:min(100%,680px); }
 .claudeGuideImageArea--claude img { width:min(100%,1100px); }
 .claudeGuidePreviewCaption { display:flex; justify-content:center; gap:7px;align-items:center; padding:11px 14px; background:#1b1b1b; border-top:1px solid #343434; font-size:12px; font-weight:650; color:#c7d6db; }
-.claudeGuideHint { margin:0;padding:15px 30px 0;display:flex;gap:10px;align-items:flex-start;color:var(--muted);font-size:13px;line-height:1.65; }
+.claudeGuideHint { margin:0;padding:15px 30px 0;display:flex;gap:10px;align-items:flex-start;color:var(--muted);font-size:13px;line-height:1.65;min-height:80px;box-sizing:border-box; }
 .claudeGuideHint span { color:var(--sky-light);font-size:16px; }
 .claudeGuideControls { padding:21px 30px 24px;display:flex;justify-content:space-between;align-items:center;gap:18px; }
 .claudeGuideControls button { flex:0 0 auto;background:var(--panel);color:var(--text);border:1px solid var(--line);padding:12px 16px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer; }
@@ -48,7 +52,9 @@
 .claudeGuideModal>p {color:var(--muted);font-size:13px;line-height:1.7;margin:14px 20px 19px;}
 @media(max-width:900px) {
  .claudeGuideStep {flex:0 0 180px;}
- .claudeGuideText {padding:20px 20px 15px;}
+ .claudeGuideText {padding:20px 20px 15px;min-height:220px;}
+ .claudeGuidePreview .claudeGuideImageArea { height:clamp(320px,55vw,500px); }
+ .claudeGuideHint {min-height:96px;}
  .claudeGuidePreview {width:calc(100% - 32px);margin:0 16px;}
  .claudeGuideImageArea {padding:14px;}
  .claudeGuideHint {padding:14px 20px 0;}
@@ -58,7 +64,9 @@
  .claudeGuideIntro {align-items:start;}
  .claudeGuideCount {font-size:19px;}
  .claudeGuideStep {flex-basis:158px;padding:11px;}
- .claudeGuideText {padding:16px 15px 13px;}
+ .claudeGuideText {padding:16px 15px 13px;min-height:250px;}
+ .claudeGuidePreview .claudeGuideImageArea { height:clamp(280px,84vw,350px); }
+ .claudeGuideHint {min-height:122px;}
  .claudeGuideText p {font-size:14px;}
  .claudeGuidePreview {width:calc(100% - 20px);margin:0 10px;}
  .claudeGuideImageArea {padding:9px;}

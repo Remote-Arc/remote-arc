@@ -1,7 +1,7 @@
 export type SiteLocale = "en" | "zh";
 /** Synced with the public SEO route allowlist. */
 export const chinesePages = new Set([
- "/", "/install/chatgpt", "/install/claude", "/install/cursor",
+ "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work", "/pricing", "/downloads",
  "/blogs",
  "/blogs/go-vs-typescript-agent-benchmarks",

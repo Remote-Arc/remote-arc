@@ -1,6 +1,6 @@
 /** Public pages with both English and Simplified Chinese content. */
 export const localizedPages = [
- "/", "/install/chatgpt", "/install/claude", "/install/cursor",
+ "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work",
  "/pricing", "/downloads",
  "/blogs",

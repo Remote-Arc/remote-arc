@@ -5,6 +5,14 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const yaml = readFileSync(new URL("../.github/workflows/deploy-cloudflare.yml", import.meta.url), "utf8");
+assert.ok(yaml.includes("on:\n  workflow_dispatch:"), "production must require explicit promotion");
+assert.ok(!yaml.includes("workflow_run:"), "CI cannot deploy by itself");
+assert.ok(yaml.includes("github.ref == 'refs/heads/master'"), "reject feature branch releases");
+assert.ok(yaml.includes("actions: read"), "read-only CI verification scope");
+assert.ok(yaml.includes("git ls-remote origin refs/heads/master"), "reject stale release candidates");
+assert.ok(yaml.includes("actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA"), "exact-SHA CI check");
+assert.ok(yaml.includes('conclusion == "success"'), "CI must pass");
+assert.ok(yaml.includes("environment: production"), "production environment protection");
 const d1Name = "- name: Apply and verify production D1 migrations";
 const deployName = "- name: Deploy Remote Arc to Cloudflare";
 const start = yaml.indexOf(d1Name);

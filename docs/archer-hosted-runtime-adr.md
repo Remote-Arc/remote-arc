@@ -65,7 +65,7 @@ Deliver this as an **opt-in hosted execution lane** beside the existing **Connec
 ## Release procedure
 
 1. New code lives on feature branches and draft PRs. Confirm **all** CI jobs, permissions review, migration review and a sanitized full-schema replay.
-2. Confirm production **environment protection** is configured in GitHub (its YAML name alone is not proof of required reviewer approval).
+2. Confirm production **environment protection** is configured in GitHub (current public API reports no production protection rules as of 2026-10-16). Until then the deploy job is explicitly owner-only; its YAML environment name is NOT human approval.
 3. Verify a recoverable, independent D1 backup / Time Travel recovery point before any schema migration.
 4. Use explicit production workflow dispatch for a verified latest-master SHA only. If a newer master appears before promotion, stop and revalidate.
 5. Post-deploy validate: existing OAuth sign-in; remote device pairing/reconnect; MCP read/write permissions and approvals; task status; usage/billing; request-error rates. Keep Archer flags OFF.

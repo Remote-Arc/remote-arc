@@ -8,6 +8,7 @@ const yaml = readFileSync(new URL("../.github/workflows/deploy-cloudflare.yml", 
 assert.ok(yaml.includes("on:\n  workflow_dispatch:"), "production must require explicit promotion");
 assert.ok(!yaml.includes("workflow_run:"), "CI cannot deploy by itself");
 assert.ok(yaml.includes("github.ref == 'refs/heads/master'"), "reject feature branch releases");
+assert.ok(yaml.includes("github.actor == 'yaohuangguan'"), "only the repository owner can manually promote production");
 assert.ok(yaml.includes("actions: read"), "read-only CI verification scope");
 assert.ok(yaml.includes("git ls-remote origin refs/heads/master"), "reject stale release candidates");
 assert.ok(yaml.includes("actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA"), "exact-SHA CI check");

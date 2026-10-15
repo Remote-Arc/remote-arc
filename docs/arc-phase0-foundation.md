@@ -1,6 +1,6 @@
 # Arc / Remote Arc Workforce — Phase 0 Foundation
 
-**Status:** proposal and compatibility groundwork, NOT a launched AI employee product.
+**Status:** proposal and compatibility groundwork, NOT a launched AI employee product. Public hosted Arc also requires the [Billing and trial launch gates](arc-commercialization-roadmap.md).
 **Product naming:** Remote Arc is the platform. **Arc** is the future first-party AI assistant persona; it is not a new company, domain, device identity or paid tier.
 
 ## Existing production behavior we must preserve
@@ -17,12 +17,12 @@
 2. Keep all existing `user_id` foreign keys and current authorization flows unchanged. New organization tables are **not** a replacement for authorization checks. Personal organizations start with exactly one owner.
 3. Add organization-scoped resources later as new tables or nullable, validated `organization_id` columns. Default all existing devices, credentials, and automations to **private**. A user must opt into granting access to a team resource.
 4. Introduce dedicated `organization_resource_grants`, membership validation, audit and quotas before exposing resources to other members. NEVER infer permission from `organization_members` alone.
-5. Test backfills against a sanitized local schema snapshot, then apply a verified D1 backup strategy before production migration.
+5. Test backfills against a sanitized local schema snapshot, then obtain and securely record a fresh D1 Time Travel bookmark before production migration (confirmed working on 2026-10-16); arrange a restricted independent export in an approved window because export may make live D1 queries temporarily unavailable.
 
 ## Release contract
 
 - Never deploy from a feature branch or merge directly into production for this work.
-- All production releases require a verified passing CI run on the exact latest master SHA, and explicit manual promotion by the repository owner. The GitHub production environment currently has **no protection rules** (verified via GitHub API); configure Required Reviewers in repository Settings before treating environment approval as enforced.
+- All production releases require a verified passing CI run on the exact latest master SHA, and explicit manual promotion by the repository owner. GitHub production Required Reviewers were confirmed on 2026-10-16 via API (reviewer `yaohuangguan`; self-review allowed). For every release, still check protection rules have not changed.
 - D1 migrations are forward-only: take and verify an independent backup **before** changing production schema. Production promotion now requires entering `BACKUP_VERIFIED`, but this is an operator attestation rather than an automated backup. A Worker rollback does not roll back D1.
 - Keep changes additive (expand → deploy compatibility code → migrate reads/writes behind flags → contract only after verification).
 - Feature flags default **off** for hosted chat, autonomous work, external app connections, workspace sharing and hosted model billing.
@@ -32,7 +32,7 @@
 
 ## Later Arc rollout
 
-- **Phase 1:** isolated hosted chat, audited provider proxy, per-user + platform inference budgets; no organization sharing.
+- **Phase 1:** isolated hosted chat, audited provider proxy, per-user + platform inference budgets; no organization sharing. The public Arc beta is blocked until payment, trial budgets, subscription state, and verified billing webhooks are complete.
 - **Phase 2:** persistent approved routines, explicit failure/approval state, idempotency and verified outcomes.
 - **Phase 3:** native app connectors, organization-scoped resources with separate authorization and audit.
 - **Phase 4:** opt-in Teach / Watch & Learn and assistant personas. Keep the Remote Arc brand and existing Connect entry point.

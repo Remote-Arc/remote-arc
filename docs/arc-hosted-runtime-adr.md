@@ -71,6 +71,8 @@ Deliver this as an **opt-in hosted execution lane** beside the existing **Connec
 5. Post-deploy validate: existing OAuth sign-in; remote device pairing/reconnect; MCP read/write permissions and approvals; task status; usage/billing; request-error rates. Keep Arc flags OFF.
 6. Roll back **compatible Worker code** and turn feature flags OFF if any check fails. D1 schema changes are forward-only; never assume Worker rollback reverts D1.
 
+Before external public Arc access, meet the mandatory payment/credit/subscription gates in the [Arc commercialization roadmap](arc-commercialization-roadmap.md). Internal model tests remain allowlisted and spend-limited.
+
 ## First milestones after Phase 0
 
 1. Internal Arc chat calls **one** low-cost provider through the model gateway with global and user ceilings; no app mutations.

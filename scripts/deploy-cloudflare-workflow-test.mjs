@@ -17,6 +17,8 @@ assert.ok(yaml.includes("git ls-remote origin refs/heads/master"), "reject stale
 assert.ok(yaml.includes("actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA"), "exact-SHA CI check");
 assert.ok(yaml.includes('conclusion == "success"'), "CI must pass");
 assert.ok(yaml.includes("environment: production"), "production environment protection");
+const concurrency = yaml.slice(yaml.indexOf("concurrency:"), yaml.indexOf("jobs:"));
+assert.ok(concurrency.includes("group: remote-arc-production") && concurrency.includes("cancel-in-progress: false"), "do not cancel a running production migration");
 const backupStart = yaml.indexOf("- name: Require verified production database recovery point");
 const backupEnd = yaml.indexOf("- name: Verify latest master", backupStart);
 assert.ok(backupStart > 0 && backupEnd > backupStart, "recovery check precedes release verification");

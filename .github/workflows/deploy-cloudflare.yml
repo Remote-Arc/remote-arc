@@ -15,7 +15,8 @@ permissions:
 
 concurrency:
   group: remote-arc-production
-  cancel-in-progress: true
+  # Never cancel a production release halfway through its D1 migration.
+  cancel-in-progress: false
 
 jobs:
   deploy:

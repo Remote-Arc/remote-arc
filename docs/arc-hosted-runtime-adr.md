@@ -1,4 +1,4 @@
-# ADR: Archer Hosted Assistant on Remote Arc
+# ADR: Arc Hosted Assistant on Remote Arc
 
 **Status:** proposed; no production behavior or billing changes
 **Owners:** Remote Arc
@@ -6,12 +6,12 @@
 
 ## Decision
 
-Keep **Remote Arc** as the platform brand and **Archer** as its first-party assistant identity. Archer is a product surface (Chat + delegated work), **not** a new permission principal that can bypass tenant or device grants.
+Keep **Remote Arc** as the platform brand and **Arc** as its first-party assistant identity. Arc is a product surface (Chat + delegated work), **not** a new permission principal that can bypass tenant or device grants.
 
 Deliver this as an **opt-in hosted execution lane** beside the existing **Connect** lane:
 
 - **Connect:** the user's existing ChatGPT/Claude decides what to do. Existing device/MCP OAuth, local permissions, billing and task behavior must remain unchanged.
-- **Archer:** the user converses inside Remote Arc; our backend pays for/model-proxies reasoning, coordinates authorized app/device tools, keeps durable work state and presents approvals and evidence.
+- **Arc:** the user converses inside Remote Arc; our backend pays for/model-proxies reasoning, coordinates authorized app/device tools, keeps durable work state and presents approvals and evidence.
 - **No GPU at launch.** OpenAI/Anthropic APIs or metered Workers AI are model providers; do not assume a ChatGPT subscription covers API cost.
 - Existing goals may already use `controller=hosted` and `planAgentTurn` (OpenAI Responses or Workers AI) for a *narrow, device-centric next-action planner*. Do not mistake this for full hosted Chat. Reuse the permission/lease/evidence concepts, not its current one-decision prompt as a general assistant API.
 
@@ -23,7 +23,7 @@ Deliver this as an **opt-in hosted execution lane** beside the existing **Connec
 | `apps/relay/src/planned-goal-runtime.ts` | checkpointed goal progression, source vs hosted controller, quality checks | does not implement a user-facing conversation or agent-level billing |
 | `apps/relay/src/automation-store.ts` | fenced leases, revisions, durable audit journal | task and lease are currently user-scoped |
 | `apps/relay/src/task-scheduler.ts` | cron task execution and health checks | a cron tick is not a perpetual inference process |
-| `apps/relay/src/mcp.ts` | external AI, approved tools, client scopes | must continue to work independently of Archer |
+| `apps/relay/src/mcp.ts` | external AI, approved tools, client scopes | must continue to work independently of Arc |
 | `apps/relay/src/auth.ts` | user sessions and existing device grants | personal devices cannot be shared via org membership |
 | `apps/relay/migrations/0027_organization_foundation.sql` | additive private personal workspace | auth remains legacy user_id until explicit grants are implemented |
 
@@ -55,7 +55,7 @@ Deliver this as an **opt-in hosted execution lane** beside the existing **Connec
 
 ### 4. Rollout and safety
 
-- All Archer feature switches default OFF: `ARCHER_CHAT_ENABLED`, `ARCHER_HOSTED_EXECUTION_ENABLED`, `ARCHER_EXTERNAL_APPS_ENABLED`, `ARCHER_ORG_SHARING_ENABLED`.
+- All Arc feature switches default OFF: `ARC_CHAT_ENABLED`, `ARC_HOSTED_EXECUTION_ENABLED`, `ARC_EXTERNAL_APPS_ENABLED`, `ARC_ORG_SHARING_ENABLED`.
 - Start with internal single-tenant chat and read-only tools, then a tiny opted-in pilot. No default enrollment of Connect users.
 - Success means an *externally verified* result, not model self-report. Track model cost per verified task, failure/duplicate-action rate, approval-to-action latency, tenant-isolation tests and user activation.
 - Feature shutdown and budget kill switch must be possible without touching device MCP sessions.
@@ -68,12 +68,12 @@ Deliver this as an **opt-in hosted execution lane** beside the existing **Connec
 2. Confirm production **environment protection** is configured in GitHub (current public API reports no production protection rules as of 2026-10-16). Until then the deploy job is explicitly owner-only; its YAML environment name is NOT human approval.
 3. Verify a recoverable, independent D1 backup / Time Travel recovery point before any schema migration.
 4. Use explicit production workflow dispatch for a verified latest-master SHA only. If a newer master appears before promotion, stop and revalidate.
-5. Post-deploy validate: existing OAuth sign-in; remote device pairing/reconnect; MCP read/write permissions and approvals; task status; usage/billing; request-error rates. Keep Archer flags OFF.
+5. Post-deploy validate: existing OAuth sign-in; remote device pairing/reconnect; MCP read/write permissions and approvals; task status; usage/billing; request-error rates. Keep Arc flags OFF.
 6. Roll back **compatible Worker code** and turn feature flags OFF if any check fails. D1 schema changes are forward-only; never assume Worker rollback reverts D1.
 
 ## First milestones after Phase 0
 
-1. Internal Archer chat calls **one** low-cost provider through the model gateway with global and user ceilings; no app mutations.
+1. Internal Arc chat calls **one** low-cost provider through the model gateway with global and user ceilings; no app mutations.
 2. Chat can invoke **read-only** current-device tools via the same policy checks as Connect; each step has audit evidence.
 3. Save a single approved Routine, close the browser, resume later and show verified result or explicit failure.
 4. Only after that, implement native GitHub/Calendar/Notion connectors, opt-in org grants, billing and premium model classes.

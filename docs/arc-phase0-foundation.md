@@ -1,14 +1,14 @@
-# Archer / Remote Arc Workforce — Phase 0 Foundation
+# Arc / Remote Arc Workforce — Phase 0 Foundation
 
 **Status:** proposal and compatibility groundwork, NOT a launched AI employee product.
-**Product naming:** Remote Arc is the platform. **Archer** is the future first-party AI assistant persona; it is not a new company, domain, device identity or paid tier.
+**Product naming:** Remote Arc is the platform. **Arc** is the future first-party AI assistant persona; it is not a new company, domain, device identity or paid tier.
 
 ## Existing production behavior we must preserve
 
 - GPT/Claude remain the controller for the existing Connect / MCP path. Phase 0 must not route those calls through a paid hosted model.
 - `users.id` remains the authority for sessions, devices, device pairing, OAuth tokens, usage, automations, task events and security approvals. A team invite must **never** implicitly grant access to the inviter's personal devices, tasks or tokens.
 - Revocation, per-device tool permissions, sensitive-path policies, undo and execution audit cannot be bypassed by any hosted agent.
-- Scheduled deterministic actions are not the same as autonomous hosted LLM reasoning. Do not describe Archer as available until a real hosted agent is implemented.
+- Scheduled deterministic actions are not the same as autonomous hosted LLM reasoning. Do not describe Arc as available until a real hosted agent is implemented.
 - No data copy, re-parenting, or new organization-scoped queries are introduced by the Phase 0 schema migration.
 
 ## Additive migration strategy
@@ -30,7 +30,7 @@
 - After each release, check login, original MCP flows, browser sharing, device reconnect, task scheduling, billing grants, D1 error rate, and tool approval/undo. Stop if any regression occurs.
 - Treat migrations, authentication, credentials, permission boundaries, billing and background scheduling as HIGH RISK changes requiring separate review.
 
-## Later Archer rollout
+## Later Arc rollout
 
 - **Phase 1:** isolated hosted chat, audited provider proxy, per-user + platform inference budgets; no organization sharing.
 - **Phase 2:** persistent approved routines, explicit failure/approval state, idempotency and verified outcomes.

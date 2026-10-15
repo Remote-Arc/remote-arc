@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
- "runtime"
+	"runtime"
 	"strings"
 	"testing"
 )

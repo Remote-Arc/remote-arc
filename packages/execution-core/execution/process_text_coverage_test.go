@@ -5,7 +5,7 @@ import (
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 	"os"
 	"path/filepath"
- "runtime"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -27,7 +27,9 @@ func TestManagedProcessStopAndErrorExitReceipts(t *testing.T) {
 		t.Fatal("unbounded background duration accepted")
 	}
 	failureCommand := "echo okay; exit 7"
-	if runtime.GOOS == "windows" { failureCommand = "echo okay & exit /b 7" }
+	if runtime.GOOS == "windows" {
+		failureCommand = "echo okay & exit /b 7"
+	}
 	r, err := p.Run(context.Background(), failureCommand, "", 4000)
 	if err != nil || r["exit_code"] == 0 || strings.TrimSpace(r["stdout"].(string)) != "okay" {
 		t.Fatalf("failed command receipt: %v %v", r, err)

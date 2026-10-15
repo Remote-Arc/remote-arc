@@ -4309,11 +4309,13 @@ body{font-size:18px;line-height:1.6}
   border-top:1px solid rgba(148,163,184,.10);
   border-bottom:1px solid rgba(148,163,184,.10);
 }
-.deviceToolDetails summary{
+/* Use one CSS-drawn chevron for both expandable device settings.
+   Font glyphs (› and >) rendered at different sizes across platforms. */
+.deviceToolDetails summary,
+.deviceSafetyDetails summary{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  gap:12px;
+  gap:10px;
   padding:13px 2px;
   cursor:pointer;
   list-style:none;
@@ -4321,14 +4323,25 @@ body{font-size:18px;line-height:1.6}
   font-size:13px;
   font-weight:750;
 }
-.deviceToolDetails summary::-webkit-details-marker{display:none}
-.deviceToolDetails summary::before{
-  content:"›";
-  margin-right:7px;
-  color:#38bdf8;
+.deviceToolDetails summary::-webkit-details-marker,
+.deviceSafetyDetails summary::-webkit-details-marker{display:none}
+.deviceToolDetails summary::marker,
+.deviceSafetyDetails summary::marker{content:""}
+.deviceToolDetails summary::before,
+.deviceSafetyDetails summary::before{
+  content:"";
+  display:block;
+  width:7px;
+  height:7px;
+  flex:0 0 7px;
+  margin:0 3px 0 2px;
+  border-right:2px solid #38bdf8;
+  border-bottom:2px solid #38bdf8;
+  transform:rotate(-45deg);
   transition:transform .18s ease;
 }
-.deviceToolDetails[open] summary::before{transform:rotate(90deg)}
+.deviceToolDetails[open] summary::before,
+.deviceSafetyDetails[open] summary::before{transform:rotate(45deg)}
 .deviceToolDetails summary span{
   margin-left:auto;
   color:#607983;
@@ -5794,24 +5807,6 @@ body{font-size:18px;line-height:1.6}
 .deviceSafetyDetails{
   border-bottom:1px solid rgba(148,163,184,.10);
 }
-.deviceSafetyDetails summary{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:13px 2px;
-  cursor:pointer;
-  list-style:none;
-  color:#b7cbd1;
-  font-size:13px;
-  font-weight:750;
-}
-.deviceSafetyDetails summary::-webkit-details-marker{display:none}
-.deviceSafetyDetails summary::before{
-  content:">";
-  color:#38bdf8;
-  transition:transform .18s ease;
-}
-.deviceSafetyDetails[open] summary::before{transform:rotate(90deg)}
 .deviceSafetyDetails summary span{
   margin-left:auto;
   color:#607983;

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
 const db = new DatabaseSync(":memory:");
@@ -8,9 +8,12 @@ const migration = (name) => readFileSync(
   new URL(`../apps/relay/migrations/${name}`, import.meta.url), "utf8",
 );
 try {
-  db.exec(migration("0001_identity.sql"));
-  db.exec(migration("0002_product.sql"));
-  db.exec(migration("0010_automations.sql"));
+  // Apply all preceding migrations to exercise real deployed schema compatibility.
+  const preceding = readdirSync(new URL("../apps/relay/migrations/", import.meta.url))
+    .filter((name) => name.endsWith(".sql") && name < "0027_")
+    .sort();
+  assert.ok(preceding.length >= 26, "expected the complete legacy migration history");
+  for (const name of preceding) db.exec(migration(name));
   const timestamp = "2026-10-15T00:00:00.000Z";
   for (const [id, email] of [["alpha", "alpha@example.test"], ["beta", "beta@example.test"]]) {
     db.prepare("INSERT INTO users (id, google_sub, email, created_at) VALUES (?, ?, ?, ?)")

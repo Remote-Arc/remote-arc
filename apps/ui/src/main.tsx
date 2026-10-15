@@ -1,4 +1,5 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
+import { ArcTeaser, ArcComingSoonPageContent, ArcRoadmapPageContent } from "./arc-future.js";
 import { ClientMcpGuide } from "./client-setup-guides.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress, taskActivity } from "./dashboard-task-view.js";
@@ -542,6 +543,8 @@ function PublicHeader({ user }: { user?: User | null }) {
             </div>
           </div>
 
+          <a className="arcNavLink" href={navHref("/arc")}>Arc <span className="arcSoonLabel">{tr("Coming soon", "即将推出")}</span></a>
+
           <a href={navHref("/pricing")}>{tr("Pricing", "价格")}</a>
 
           <div className="publicNavMenu" data-open={openMenu === "resources"}
@@ -557,6 +560,7 @@ function PublicHeader({ user }: { user?: User | null }) {
                   <a href="/demo"><strong>{tr("Live demo", "真实演示")}</strong><small>{tr("See Remote Arc in action", "看看 Remote Arc 如何工作")}</small></a>
                   <a href={navHref("/blogs")}><strong>{tr("Blog", "博客")}</strong><small>{tr("Ideas and product updates", "产品思考与开发动态")}</small></a>
                   <a href={navHref("/use-cases")}><strong>{tr("Use cases", "使用场景")}</strong><small>{tr("Real workflows on your devices", "真实设备工作流")}</small></a>
+                  <a href={navHref("/roadmap")}><strong>{tr("Roadmap", "路线图")}</strong><small>{tr("What's live and what's next", "已上线与未来计划")}</small></a>
                 </section>
                 <section className="publicNavGroup">
                   <span className="publicNavGroupLabel">{tr("Learn & trust", "文档与信任")}</span>
@@ -1675,6 +1679,8 @@ function PublicLayout({
           <a href="/install/gemini">Gemini</a>
           <a href="/docs/mcp">{tr("MCP Docs", "MCP 文档")}</a>
           <a href="/security-model">{tr("Security", "安全")}</a>
+          <a href={tr("/arc", "/zh/arc")}>{tr("Arc", "Arc 助手")}</a>
+          <a href={tr("/roadmap", "/zh/roadmap")}>{tr("Roadmap", "路线图")}</a>
           <a href="/support">{tr("Support", "支持")}</a>
           <a href="/privacy">{tr("Privacy", "隐私")}</a>
           <a href="/terms">{tr("Terms", "条款")}</a>
@@ -2549,6 +2555,7 @@ function Landing({ user }: { user?: User | null }) {
         <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
       </section>
 
+      <ArcTeaser />
       <LandingContent />
     </PublicLayout>
   );
@@ -2558,6 +2565,14 @@ function Landing({ user }: { user?: User | null }) {
 
 const PLUGIN_DEMO_VIDEO_URL =
   "https://assets.ps6.space/remote-arc/openai-plugin-demo/remote-arc-plugin-demo.mp4";
+
+function ArcPage({ user }: { user?: User | null }) {
+  return <PublicLayout user={user}><ArcComingSoonPageContent /></PublicLayout>;
+}
+
+function RoadmapPage({ user }: { user?: User | null }) {
+  return <PublicLayout user={user}><ArcRoadmapPageContent /></PublicLayout>;
+}
 
 function DemoPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
@@ -7510,6 +7525,8 @@ function App() {
   if (routePath === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
   if (routePath === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
   if (routePath === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (routePath === "/arc") return <ArcPage user={user === undefined ? null : user} />;
+  if (routePath === "/roadmap") return <RoadmapPage user={user === undefined ? null : user} />;
   if (routePath === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
   if (routePath === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
   if (routePath === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;

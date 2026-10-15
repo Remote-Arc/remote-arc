@@ -2,7 +2,7 @@
 export const localizedPages = [
  "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work",
- "/pricing", "/downloads",
+ "/pricing", "/downloads", "/arc", "/roadmap",
  "/blogs",
  "/blogs/go-vs-typescript-agent-benchmarks",
  "/blogs/why-i-built-remote-arc",

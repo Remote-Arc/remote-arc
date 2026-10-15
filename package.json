@@ -27,6 +27,10 @@
     "device:contract": "pnpm --filter @remotearc/execution-core-ts exec tsx ../../scripts/generate-device-contract.ts",
     "build:device": "pnpm build:cli && node scripts/build-device.mjs",
     "test:device": "pnpm device:contract --check && pnpm build:device && node scripts/test-device.mjs",
+    "coverage:go": "node scripts/go-coverage.mjs",
+    "coverage:go:target": "node scripts/go-coverage.mjs --target",
+    "coverage:relay": "node scripts/relay-coverage.mjs",
+    "coverage:relay:target": "node scripts/relay-coverage.mjs --target",
     "test:device:soak": "node scripts/go-device-soak.mjs",
     "benchmark:core": "node benchmarks/build.mjs && node benchmarks/run.mjs",
     "benchmark:agent": "pnpm build:device && node benchmarks/agent.mjs",
@@ -38,5 +42,8 @@
     "release:sync": "node scripts/sync-release-docs.mjs --write",
     "release:check": "node scripts/sync-release-docs.mjs --check",
     "release:notes": "node scripts/sync-release-docs.mjs --notes"
+  },
+  "devDependencies": {
+    "c8": "12.0.0"
   }
 }

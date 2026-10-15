@@ -27,6 +27,42 @@ jobs:
       - run: pnpm test:automations
       - run: pnpm test:recovery
 
+  go-coverage:
+    # Initial measurable gate: prevent regression while lifting both full
+    # modules toward 90%. Strict 90% command remains available locally.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - name: Check Go coverage floors and protected packages
+        run: node scripts/go-coverage.mjs
+
+  relay-coverage:
+    # Instrument actual source files (not just passing test scripts).
+    # Raise these regression floors to 90 as uncovered branches are tested.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm coverage:relay
+
   go-distribution:
     runs-on: ubuntu-latest
     timeout-minutes: 15

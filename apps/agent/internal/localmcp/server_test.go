@@ -68,3 +68,13 @@ func TestOfficialClientNegotiationToolsValidationAndMutation(t *testing.T) {
 		})
 	}
 }
+
+func TestRunCancelledContextClosesExecutionCore(t *testing.T) {
+	t.Setenv("REMOTEARC_HOME", t.TempDir())
+	core := execution.New("safe")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := Run(ctx, core, "test"); err == nil {
+		t.Fatal("cancelled local MCP server should exit with an error")
+	}
+}

@@ -23,7 +23,7 @@
 
 - Never deploy from a feature branch or merge directly into production for this work.
 - All production releases require a verified passing CI run on the exact latest master SHA, and explicit manual promotion by the repository owner. The GitHub production environment currently has **no protection rules** (verified via GitHub API); configure Required Reviewers in repository Settings before treating environment approval as enforced.
-- D1 migrations are forward-only: take and verify an independent backup **before** changing production schema. A Worker rollback does not roll back D1.
+- D1 migrations are forward-only: take and verify an independent backup **before** changing production schema. Production promotion now requires entering `BACKUP_VERIFIED`, but this is an operator attestation rather than an automated backup. A Worker rollback does not roll back D1.
 - Keep changes additive (expand → deploy compatibility code → migrate reads/writes behind flags → contract only after verification).
 - Feature flags default **off** for hosted chat, autonomous work, external app connections, workspace sharing and hosted model billing.
 - Rollback means disabling flags and deploying the previous compatible Worker release, while retaining the expanded D1 schema.

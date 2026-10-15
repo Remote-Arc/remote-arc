@@ -3,6 +3,11 @@ name: Deploy Cloudflare
 # Production is an explicit promotion, never an automatic consequence of a merge.
 on:
   workflow_dispatch:
+    inputs:
+      backup_confirmation:
+        description: "Type BACKUP_VERIFIED after validating a recoverable production D1 backup"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -23,6 +28,15 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
+
+      - name: Require verified production database recovery point
+        env:
+          BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}
+        run: |
+          if [ "$BACKUP_CONFIRMATION" != "BACKUP_VERIFIED" ]; then
+            echo "::error::Verify a recoverable D1 production backup before promotion."
+            exit 1
+          fi
 
       - name: Verify latest master and successful CI for exact SHA
         env:

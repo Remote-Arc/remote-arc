@@ -9,6 +9,9 @@ assert.ok(yaml.includes("on:\n  workflow_dispatch:"), "production must require e
 assert.ok(!yaml.includes("workflow_run:"), "CI cannot deploy by itself");
 assert.ok(yaml.includes("github.ref == 'refs/heads/master'"), "reject feature branch releases");
 assert.ok(yaml.includes("github.actor == 'yaohuangguan'"), "only the repository owner can manually promote production");
+assert.ok(yaml.includes("backup_confirmation:"), "production release must require a D1 backup confirmation input");
+assert.ok(yaml.includes('BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}'), "read the confirmation provided for this release");
+assert.ok(yaml.includes('if [ "$BACKUP_CONFIRMATION" != "BACKUP_VERIFIED" ]'), "reject release without confirmation");
 assert.ok(yaml.includes("actions: read"), "read-only CI verification scope");
 assert.ok(yaml.includes("git ls-remote origin refs/heads/master"), "reject stale release candidates");
 assert.ok(yaml.includes("actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA"), "exact-SHA CI check");

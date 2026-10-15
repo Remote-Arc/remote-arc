@@ -1,5 +1,5 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
-import { ArcTeaser, ArcComingSoonPageContent, ArcRoadmapPageContent } from "./arc-future.js";
+import { ArcComingSoonPageContent, ArcRoadmapPageContent } from "./arc-future.js";
 import { ClientMcpGuide } from "./client-setup-guides.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress, taskActivity } from "./dashboard-task-view.js";
@@ -2555,7 +2555,6 @@ function Landing({ user }: { user?: User | null }) {
         <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
       </section>
 
-      <ArcTeaser />
       <LandingContent />
     </PublicLayout>
   );

@@ -20,6 +20,8 @@ All figures reflect statement coverage, not test pass rates. The Relay figure co
 - `pnpm coverage:go:target`: strict 90% aggregate gate for **both** Go modules. Intentionally fails while debt remains.
 - `pnpm coverage:relay`: measure Relay security-suite source coverage, with non-regression floors.
 - `pnpm coverage:relay:target`: strict 90% on Relay statements, lines, branches and functions (currently fails).
+- `pnpm coverage:ts`: execute the existing full CI under source-mapped c8 with all apps/packages TS/TSX source files included, enforcing today's non-regression floors. This replaces the duplicate uninstrumented test step in the CI `verify` job.
+- `pnpm coverage:ts:target`: strict 90% threshold for all four TypeScript coverage dimensions (currently fails).
 - Full existing CI measured with c8 across all apps/packages TS/TSX source: **28.4% statements, 71.24% branches, 54.06% functions**. This is only the instrumented Node CI suite; browser-runtime E2E execution still needs separate instrumentation.
 
 ## Priorities

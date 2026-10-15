@@ -31,6 +31,8 @@
     "coverage:go:target": "node scripts/go-coverage.mjs --target",
     "coverage:relay": "node scripts/relay-coverage.mjs",
     "coverage:relay:target": "node scripts/relay-coverage.mjs --target",
+    "coverage:ts": "node scripts/ts-coverage.mjs",
+    "coverage:ts:target": "node scripts/ts-coverage.mjs --target",
     "test:device:soak": "node scripts/go-device-soak.mjs",
     "benchmark:core": "node benchmarks/build.mjs && node benchmarks/run.mjs",
     "benchmark:agent": "pnpm build:device && node benchmarks/agent.mjs",

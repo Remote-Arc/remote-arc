@@ -17,6 +17,20 @@ assert.ok(yaml.includes("git ls-remote origin refs/heads/master"), "reject stale
 assert.ok(yaml.includes("actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA"), "exact-SHA CI check");
 assert.ok(yaml.includes('conclusion == "success"'), "CI must pass");
 assert.ok(yaml.includes("environment: production"), "production environment protection");
+const backupStart = yaml.indexOf("- name: Require verified production database recovery point");
+const backupEnd = yaml.indexOf("- name: Verify latest master", backupStart);
+assert.ok(backupStart > 0 && backupEnd > backupStart, "recovery check precedes release verification");
+const backupBlock = yaml.slice(backupStart, backupEnd);
+const backupBody = backupBlock.split("        run: |\n")[1];
+assert.ok(backupBody, "backup confirmation must execute a shell check");
+const backupScript = backupBody.split("\n").filter(line => line.startsWith("          "))
+  .map(line => line.slice(10)).join("\n");
+for (const [confirmation, shouldPass] of [["", false], ["not yet", false], ["BACKUP_VERIFIED", true]]) {
+  const result = spawnSync("bash", ["-e", "-c", backupScript], {
+    env: { ...process.env, BACKUP_CONFIRMATION: confirmation }, encoding: "utf8",
+  });
+  assert.equal(result.status === 0, shouldPass, "backup gate must enforce exact confirmation");
+}
 const d1Name = "- name: Apply and verify production D1 migrations";
 const deployName = "- name: Deploy Remote Arc to Cloudflare";
 const start = yaml.indexOf(d1Name);

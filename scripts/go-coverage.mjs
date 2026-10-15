@@ -12,8 +12,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const modules = [
-  { name: "Go Agent", dir: "apps/agent", baseline: 67.0, focus: { "internal/localmcp": 90 } },
-  { name: "Execution Core", dir: "packages/execution-core", baseline: 74.0, focus: { protocol: 90 } },
+  { name: "Go Agent", dir: "apps/agent", baseline: 69.0, focus: { "internal/localmcp": 90 } },
+  { name: "Execution Core", dir: "packages/execution-core", baseline: 90.0, focus: { protocol: 90 } },
 ];
 const root = resolve(import.meta.dirname, "..");
 const strict = process.argv.includes("--target");
@@ -49,7 +49,7 @@ try {
     run("go", ["test", "./...", "-coverprofile=" + profile, "-cover"], cwd);
     const all = summarise(profile);
     console.log(module.name + " statements: " + all.covered + "/" + all.total + " = " + all.percent + "% (target 90%)");
-    const threshold = strict ? 90 : module.baseline - 0.6;
+    const threshold = strict || module.baseline >= 90 ? 90 : module.baseline - 0.6;
     if (all.percent < threshold) failures.push(module.name + " " + all.percent + "% < " + threshold + "%");
     for (const [pkg, minimum] of Object.entries(module.focus)) {
       const result = summarise(profile, pkg);

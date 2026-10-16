@@ -3,6 +3,28 @@ type ChineseSeoContent = {
   sections: Array<{heading: string; text: string}>;
 };
 export const chineseSeo: Record<string, ChineseSeoContent> = {
+  "/arc": {
+    title: "Arc AI 助手即将推出 — Remote Arc",
+    description: "认识正在开发的 Arc AI 队友：内置聊天、连接云端应用、执行可授权的定期任务。现有 Remote Arc Connect 已可用。",
+    h1: "认识 Arc，你的 AI 工作队友",
+    intro: "Arc 正在开发中，计划提供独立 AI 对话、云应用连接和长期任务。现阶段 Connect MCP 已可使用；Arc 的托管模型和自动任务尚未公开开放。",
+    sections: [
+      { heading: "Arc Chat", text: "直接在 Remote Arc 与托管 AI 对话，Auto 计划按任务质量与使用预算选择模型。" },
+      { heading: "Connected Apps", text: "规划将已授权的云端应用与个人设备工具连接起来，并保留独立权限和审计。" },
+      { heading: "Routines", text: "规划让用户设置可暂停、可审批、可查看证据的重复工作流程，目前仍在验证。" }
+    ]
+  },
+  "/roadmap": {
+    title: "Remote Arc 产品路线图 — Arc Chat、Apps 与 Routines",
+    description: "了解 Remote Arc 已可用的 Connect MCP 能力，以及 Arc Chat、Auto、订阅收费、云应用集成和自动化任务的开发计划。",
+    h1: "Remote Arc 产品路线图",
+    intro: "清晰区分已经可用、正在开发和探索中的功能。计划可能随着技术验证、安全测试及真实成本数据而调整。",
+    sections: [
+      { heading: "已可用", text: "Remote MCP 连接已授权设备，支持设备级权限与持久任务基础。" },
+      { heading: "开发中", text: "Arc Chat、Auto 模型路由、费用记录和可靠的工具执行。" },
+      { heading: "规划中", text: "公开试用前完成 Billing 和预算保护，随后扩展应用集成、Routines 和 Teach Arc。" }
+    ]
+  },
   "/": {
     title: "Remote Arc — 让 AI 聊天真正操作你的电脑",
     description: "通过安全的 Remote MCP，把 ChatGPT、Claude 等兼容 AI 对话连接到自己已授权的 Windows、macOS 或 Linux。无需单独配置模型 API Key；AI 服务商的套餐和额度限制仍适用。",

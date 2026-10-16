@@ -6,6 +6,7 @@ import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingHttpsRedirect, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { legacyLanguageRedirect } from "./marketing-locale.js";
 import { createRemoteLinkMcp } from "./mcp.js";
+import { handleCloudSkills } from "./cloud-skills.js";
 import {
   authenticateDevice,
   authenticateMcp,
@@ -409,6 +410,15 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     if (url.pathname === "/api/admin/submissions") return listWebsiteSubmissions(request, env);
     const submissionMatch = url.pathname.match(/^\/api\/admin\/submissions\/([a-zA-Z0-9-]+)$/);
     if (submissionMatch) return updateWebsiteSubmission(request,env,submissionMatch[1]!);
+
+    // Cloud Skill Registry for Arc Connect and first-party Arc Agent.
+    // Never requires a device install; only reads versioned instructions.
+    if (url.pathname === "/api/skills" || url.pathname.startsWith("/api/skills/")) {
+      const session = await getSessionUser(request, env);
+      const oauth = session ? null : await authenticateMcp(request, env);
+      const identity = oauth && oauth.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp" ? oauth : null;
+      return handleCloudSkills(request, session ? { id: session.id } : identity ? { id: identity.userId } : null);
+    }
 
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);

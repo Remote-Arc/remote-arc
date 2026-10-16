@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "defaultMode": "guidance-only",
+  "provider": "Remote Arc curated original workflows, external executors optional",
+  "skills": [
+    {
+      "id": "browser-operator",
+      "name": "Browser Operator",
+      "priority": "P0",
+      "category": "browser",
+      "description": "Operate an authorized browser using DOM snapshots and repeatable actions.",
+      "engine": "agent-browser + Microsoft Playwright MCP",
+      "requires": [
+        "agent-browser"
+      ],
+      "scopes": [
+        "browser:read",
+        "browser:interact"
+      ],
+      "upstream": "https://github.com/vercel-labs/agent-browser",
+      "license": "Apache-2.0",
+      "optIn": false
+    },
+    {
+      "id": "autonomous-browser",
+      "name": "Autonomous Browser",
+      "priority": "P0",
+      "category": "browser",
+      "description": "Plan multi-step browser work using browser-use with an approved model budget.",
+      "engine": "browser-use Python library",
+      "requires": [
+        "browser-use"
+      ],
+      "scopes": [
+        "browser:read",
+        "browser:interact"
+      ],
+      "upstream": "https://github.com/browser-use/browser-use",
+      "license": "MIT",
+      "optIn": true
+    },
+    {
+      "id": "desktop-operator",
+      "name": "Desktop Operator",
+      "priority": "P0",
+      "category": "desktop",
+      "description": "Move pointer, drag, type and click in a permitted local desktop session.",
+      "engine": "PyAutoGUI / native OS accessibility",
+      "requires": [
+        "python3"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/asweigart/pyautogui",
+      "license": "BSD-3-Clause",
+      "optIn": true
+    },
+    {
+      "id": "video-creator",
+      "name": "Video Creator",
+      "priority": "P0",
+      "category": "media",
+      "description": "Storyboard, compose, caption and export predictable videos using local render engines.",
+      "engine": "Remotion skills + FFmpeg",
+      "requires": [
+        "ffmpeg",
+        "node"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/remotion-dev/skills",
+      "license": "Review Remotion commercial terms",
+      "optIn": true
+    },
+    {
+      "id": "image-studio",
+      "name": "Image Studio",
+      "priority": "P1",
+      "category": "media",
+      "description": "Generate, retouch and upscale images using a user-hosted ComfyUI backend.",
+      "engine": "ComfyUI",
+      "requires": [
+        "comfy"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/Comfy-Org/ComfyUI",
+      "license": "GPL-3.0; weights separate",
+      "optIn": true
+    },
+    {
+      "id": "ui-inspector",
+      "name": "UI Inspector",
+      "priority": "P1",
+      "category": "desktop",
+      "description": "Understand screenshot controls with DOM first and optional OmniParser vision.",
+      "engine": "OmniParser / screenshot tooling",
+      "requires": [
+        "python3"
+      ],
+      "scopes": [
+        "computer:read"
+      ],
+      "upstream": "https://github.com/microsoft/OmniParser",
+      "license": "Review repository and model terms",
+      "optIn": true
+    },
+    {
+      "id": "transcribe-subtitles",
+      "name": "Transcribe & Subtitles",
+      "priority": "P1",
+      "category": "media",
+      "description": "Transcribe authorized audio locally, timestamp captions and render with FFmpeg.",
+      "engine": "whisper.cpp + FFmpeg",
+      "requires": [
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ggml-org/whisper.cpp",
+      "license": "MIT; model weights separate",
+      "optIn": true
+    },
+    {
+      "id": "research-reports",
+      "name": "Research & Reports",
+      "priority": "P0",
+      "category": "productivity",
+      "description": "Gather cited evidence from authorized sources and create reproducible reports.",
+      "engine": "Browser Operator + existing file tools",
+      "requires": [],
+      "scopes": [
+        "browser:read",
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/microsoft/playwright-mcp",
+      "license": "RA authored skill instructions",
+      "optIn": false
+    },
+    {
+      "id": "scheduled-routines",
+      "name": "Scheduled Routines",
+      "priority": "P0",
+      "category": "productivity",
+      "description": "Create repeatable, bounded, resumable tasks using the existing Remote Arc scheduler.",
+      "engine": "Remote Arc automation runtime",
+      "requires": [],
+      "scopes": [
+        "automation:read",
+        "automation:write"
+      ],
+      "upstream": "https://remotearc.app",
+      "license": "RA authored skill instructions",
+      "optIn": false
+    }
+  ]
+}

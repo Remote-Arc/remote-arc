@@ -1,4 +1,5 @@
 import { getGoalContext, submitGoalDecision } from "./source-goals.js";
+import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";
 import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
@@ -207,8 +208,31 @@ export function createRemoteLinkMcp(
   return createMcpHandler(() => {
     const server = new McpServer(
       { name: "remotearc", version: "0.4.4" },
-      { capabilities: { tools: {} } },
+      {
+        capabilities: { tools: {}, resources: {} },
+        instructions: "Remote Arc offers nine curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed.",
+      },
     );
+
+    // Read-only MCP Resources, not new tools or expanded device permissions.
+    // Resources let any resource-capable Connect client discover reusable skills.
+    const catalogUri = "remotearc://skills/catalog";
+    server.registerResource("remote-arc-skill-catalog", catalogUri,
+      { title: "Remote Arc Skill Library", description: "Built-in skill index; optional local engines are not installed automatically.", mimeType: "application/json" },
+      async (uri) => {
+        if (!identity) throw new Error("Sign in to Remote Arc to read Skills");
+        return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(BUILTIN_SKILLS.map(({id,name,description,priority,category}) => ({id,name,description,priority,category}))) }] };
+      },
+    );
+    for (const skill of BUILTIN_SKILLS) {
+      server.registerResource("remote-arc-skill-" + skill.id, "remotearc://skills/" + skill.id,
+        { title: skill.name, description: skill.description, mimeType: "text/markdown" },
+        async (uri) => {
+          if (!identity) throw new Error("Sign in to Remote Arc to read Skills");
+          return { contents: [{ uri: uri.href, mimeType: "text/markdown", text: skill.content }] };
+        },
+      );
+    }
 
     registerMcpTool(server,
       "list_devices",

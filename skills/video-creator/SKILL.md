@@ -1,0 +1,27 @@
+---
+name: video-creator
+description: Storyboard, compose, caption and export predictable videos using local render engines.
+priority: P0
+category: media
+status: builtin-guidance
+---
+
+# Video Creator
+
+**Scope:** Remotion skills + FFmpeg. **Source:** https://github.com/remotion-dev/skills
+
+## Workflow
+
+Clarify desired duration, aspect ratio, language, captions, asset ownership and output directory. Favor low-cost reproducible assembly: HTML/CSS/React/Remotion animation where appropriately licensed, FFmpeg for transitions, cropping, overlays, aspect conversion and muxing, and approved local images/audio. Inspect FFmpeg availability before quoting rendering capability. Use the open Remotion skill guidance only when the user has the correct Remotion licensing rights. Avoid automatic downloads of media/model weights; ask for licensed assets and explicit model/API costs. Render a 3–5 second low-resolution proof first, verify video/audio streams with ffprobe, then do a full render after approval. Video generation APIs and paid models are optional, not bundled or free.
+
+## Device and permission gates
+
+Required authorization scopes: computer:read, computer:write. Scripts, OS/desktop actions, external service side effects, media generation and paid API usage require independent user-approved execution permissions. This skill does not elevate Remote Arc Tool privileges or authorize use of hidden credentials.
+
+## Preflight
+
+Call `remotelink skills doctor` on the selected device, or inspect dependencies using already authorized process/file tools. Missing executors must be installed explicitly on the correct user device. A Skill being built-in is NOT evidence an engine is present.
+
+## Evidence of completion
+
+Report input constraints, executed tools and device, verified output path/result, permissions used, cost (if known) and failures. Do not imply successful execution from merely writing a plan.

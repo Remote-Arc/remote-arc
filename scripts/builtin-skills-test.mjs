@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const registry=JSON.parse(fs.readFileSync(path.join(root,'skills/registry.json'),'utf8'));
+assert.equal(registry.schemaVersion,1);
+assert.equal(registry.skills.length,9);
+assert.equal(new Set(registry.skills.map(x=>x.id)).size,9);
+for(const skill of registry.skills){
+ assert.ok(['P0','P1'].includes(skill.priority),skill.id);
+ assert.ok(/^https:\/\//.test(skill.upstream),skill.id);
+ assert.ok(skill.scopes.length>0,skill.id);
+ const doc=fs.readFileSync(path.join(root,'skills',skill.id,'SKILL.md'),'utf8');
+ assert.ok(doc.startsWith('---\n'),skill.id);
+ assert.ok(doc.includes(`name: ${skill.id}`),skill.id);
+ assert.match(doc,/permission|授权/i,skill.id);
+ assert.match(doc,/verify|验证|evidence/i,skill.id);
+ assert.doesNotMatch(doc,/(curl\s+\S+\s*\|\s*(?:sh|bash)|wget\s+\S+\s*\|\s*(?:sh|bash))/i,'unreviewed remote execution in '+skill.id);
+}
+const remote=fs.readFileSync(path.join(root,'apps/relay/src/mcp.ts'),'utf8');
+const local=fs.readFileSync(path.join(root,'apps/mcp/src/index.ts'),'utf8');
+assert.match(remote,/BUILTIN_SKILLS/);
+assert.match(remote,/registerResource\(/);
+assert.match(remote,/remotearc:\/\/skills\/catalog/);
+assert.doesNotMatch(local,/BUILTIN_SKILLS|remote-arc-skill-catalog/,'local MCP must never package cloud Skills');
+const cli=fs.readFileSync(path.join(root,'packages/cli/src/index.ts'),'utf8');
+assert.doesNotMatch(cli,/handleSkillsCli|BUILTIN_SKILLS/,'device CLI must not bundle Skill instructions');
+const cat=fs.readFileSync(path.join(root,'packages/skills/src/catalog.generated.ts'),'utf8');
+assert.ok(cat.includes('BUILTIN_SKILLS_REVISION'));
+assert.ok(cat.includes('transcribe-subtitles'));
+const cloud=fs.readFileSync(path.join(root,'apps/relay/src/cloud-skills.ts'),'utf8');
+assert.match(cloud,/unauthorized/);
+assert.match(cloud,/mcp.remotearc.app/);
+assert.match(cloud,/BUILTIN_SKILLS_REVISION/);
+console.log(`Cloud Skill Pack contract tests passed: ${registry.skills.length} manifests, cloud resources, no device catalog duplication`);

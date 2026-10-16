@@ -1,0 +1,44 @@
+name: Release ready notification
+
+# Notify via GitHub issues/mentions. This NEVER dispatches production and does
+# not consume ChatGPT Scheduled Tasks. GitHub push/email notification settings
+# determine whether the user's phone receives a push.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: remote-arc-release-ready-notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'master' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      # workflow_run can have write privileges: NEVER check out, execute or
+      # evaluate artifacts from the upstream workflow, especially PR content.
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Open or update the single Release Ready notification
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CI_RUN_JSON: ${{ toJSON(github.event.workflow_run) }}
+        run: node .github/scripts/release-ready-notify.mjs

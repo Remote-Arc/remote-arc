@@ -20,7 +20,7 @@ export const chinesePages = new Set([
  "/use-cases/cross-device-handoff"
 ]);
 // Public PR previews serve the same marketing pages as the production website.
-const isMarketingPreview = (hostname: string) => /^pr-\\d+-remote-arc-ui-preview\\.nzp\\.workers\\.dev$/.test(hostname);
+const isMarketingPreview = (hostname: string) => /^pr-[0-9]+-remote-arc-ui-preview[.]nzp[.]workers[.]dev$/.test(hostname);
 export const isWebsite = () =>
   location.hostname === "remotearc.app" ||
   location.hostname === "www.remotearc.app" ||

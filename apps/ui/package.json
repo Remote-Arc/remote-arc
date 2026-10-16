@@ -8,6 +8,7 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test:onboarding": "node scripts/onboarding-flow-test.mjs",
+    "test:arc-experience": "node scripts/arc-capabilities-test.mjs",
     "test:onboarding-readability": "node scripts/onboarding-readability-test.mjs",
     "test:device-removal": "node scripts/device-removal-test.mjs",
     "test:device-execution-log": "node scripts/device-execution-log-test.mjs",

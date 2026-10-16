@@ -26,6 +26,16 @@ try {
   const before = db.prepare("SELECT id, user_id FROM devices").all();
   const beforeTask = db.prepare("SELECT id, user_id FROM automations").all();
 
+  // Production D1 already applied this legacy migration from the support
+  // branch before the Phase 0 release. Replaying the true production order
+  // catches accidental deletion/renaming of the historical migration file.
+  db.exec(migration("0027_marketing_email_preferences.sql"));
+  db.exec(migration("0027_marketing_email_preferences.sql"));
+  assert.equal(db.prepare("SELECT count(*) AS n FROM marketing_email_preferences").get().n, 0);
+  db.prepare("INSERT INTO marketing_email_preferences (user_id,updated_at) VALUES (?, ?)")
+    .run("beta", timestamp);
+  assert.equal(db.prepare("SELECT opted_in FROM marketing_email_preferences WHERE user_id = 'beta'").get().opted_in, 0);
+
   db.exec(migration("0027_organization_foundation.sql"));
   db.exec(migration("0027_organization_foundation.sql"));
   assert.equal(db.prepare("SELECT count(*) AS n FROM organizations").get().n, 2);

@@ -134,8 +134,7 @@ export function LandingContent() {
 
   return <div className="landingContent">
     <section className="landingWork sectionBlock" id="how-it-works">
-      <header className="modernSectionIntro"><span className="eyebrow">{tr("JUST CHAT. GET THINGS DONE.", "就在 AI 聊天里，真正做成事")}</span><h2>{tr("Don’t just chat. Watch AI do the work.", "别只和 AI 聊天，让它真正动手。")}</h2><p>{tr("Use the AI chat you already have. Tell it what to do, and Remote Arc connects it to the tools you approve on your computer. No separate model API account or pay-per-token API billing. Pick a task to see the conversation, real tool calls and verified results side by side.", "直接在你平时用的 AI 聊天里说出需求，Remote Arc 就会把它连接到你电脑上已授权的工具。不用单独开通模型 API，也没有额外的按 Token 计费 API 账单。选个任务，亲眼看看聊天、真实工具调用和验证结果。")}</p><div className="chatSellingPoints"><span>{tr("No extra model API key", "无需额外模型 API Key")}</span><span>{tr("No API token top-ups", "不用充值 API Token")}</span><span>{tr("Compatible free chat plans work too", "兼容的免费聊天套餐也能用")}</span></div></header>
-      <LandingInteractiveDemo />
+      <header className="modernSectionIntro"><span className="eyebrow">{tr("JUST CHAT. GET THINGS DONE.", "就在 AI 聊天里，真正做成事")}</span><h2>{tr("Your AI. Your computer. Your rules.", "你的 AI，你的电脑，你的规则。")}</h2><p>{tr("Use the AI chat you already have. Tell it what to do, and Remote Arc connects it to the tools you approve on your computer. No separate model API account or pay-per-token API billing. Connect once, approve the tools you need and review the work.", "直接在你平时用的 AI 聊天里说出需求，Remote Arc 就会把它连接到你电脑上已授权的工具。不用单独开通模型 API，也没有额外的按 Token 计费 API 账单。完成连接，授权所需工具，随时检查执行结果。")}</p><div className="chatSellingPoints"><span>{tr("No extra model API key", "无需额外模型 API Key")}</span><span>{tr("No API token top-ups", "不用充值 API Token")}</span><span>{tr("Compatible free chat plans work too", "兼容的免费聊天套餐也能用")}</span></div></header>
     </section>
 
     <ArcTeaser />

@@ -1,129 +1,162 @@
-import React from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
-import { useMarketingPlayback } from "./use-marketing-playback.js";
 import "./home-connection-scene.css";
 
 type AiClient = { name: string; slug: string; icon: string; tone: string };
+type Capability = "skills" | "execution" | "approvals" | "verified" | "calendar";
 
-function SceneIcon({ kind }: { kind: "lock" | "check" | "terminal" | "play" | "pause" | "arrow" }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {kind === "lock" && <><rect x="5" y="10" width="14" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></>}
-      {kind === "check" && <path d="m5 12 4.5 4.5L19 7" />}
-      {kind === "terminal" && <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m7 9 3 3-3 3m6 0h4" /></>}
-      {kind === "play" && <path d="m9 5 11 7-11 7V5Z" fill="currentColor" stroke="none" />}
-      {kind === "pause" && <><path d="M8 5v14M16 5v14" strokeWidth="3" /></>}
-      {kind === "arrow" && <><path d="M5 12h14m-6-6 6 6-6 6" /></>}
-    </svg>
-  );
+function CapabilityIcon({ name }: { name: Capability }) {
+  const paths: Record<Capability, string> = {
+    skills: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM16.5 13v7M13 16.5h7",
+    execution: "M4 7h10M4 12h7M4 17h10m2-10 5 5-5 5",
+    approvals: "M12 3 4 6v6c0 4.2 3.2 7 8 9 4.8-2 8-4.8 8-9V6l-8-3Zm-4 9 3 3 5-6",
+    verified: "M21 12a9 9 0 1 1-3.2-6.9M8 11l4 4L21 5",
+    calendar: "M5 5h14v15H5zM8 3v4m8-4v4M5 10h14m-10 4h2m2 0h2",
+  };
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>;
+}
+
+// Ambient motion has no progression or simulated execution. Pause its CSS
+// whenever the page is hidden, the overview is offscreen, or motion is reduced.
+function usePanoramaMotion() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [running, setRunning] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let inView = typeof IntersectionObserver === "undefined";
+    const update = () => setRunning(inView && document.visibilityState === "visible" && !media.matches);
+    const observer = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(entries => {
+      inView = entries.some(entry => entry.isIntersecting);
+      update();
+    }, { threshold: .08 });
+    if (ref.current) observer?.observe(ref.current);
+    media.addEventListener("change", update);
+    document.addEventListener("visibilitychange", update);
+    update();
+    return () => {
+      observer?.disconnect();
+      media.removeEventListener("change", update);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, []);
+  return { ref, running };
 }
 
 export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] }) {
   const { tr } = useI18n();
-  const { ref, step, setStep, playing, setPlaying, running, reducedMotion } = useMarketingPlayback(4, 3200);
-  const stages = [
-    { title: tr("Ask your AI", "向 AI 提问"), detail: tr("One request, in the chat you already use.", "在熟悉的 AI 对话里，提出一个需求。") },
-    { title: tr("Connect securely", "安全连接"), detail: tr("Remote Arc routes the request to approved tools.", "Remote Arc 将请求交给已授权的工具。") },
-    { title: tr("Work on your device", "电脑执行"), detail: tr("Read the file, apply the fix, run the test.", "读取文件、修改代码，再运行测试。") },
-    { title: tr("Get the result", "返回结果"), detail: tr("The output comes back to the same conversation.", "执行结果返回同一个 AI 对话。") },
+  const { ref, running } = usePanoramaMotion();
+  const headingId = useId();
+  const apps = [
+    { name: "GitHub", icon: "github", mono: true },
+    { name: "Slack", icon: "slack" },
+    { name: "Gmail", icon: "gmail" },
+    { name: "Outlook", icon: "microsoftoutlook" },
+    { name: "Google Calendar", icon: "googlecalendar" },
+    // Microsoft 365 calendars are an Outlook capability, not a separate
+    // fabricated product mark. Use the genuine Outlook logo with a calendar cue.
+    { name: "Microsoft Calendar", icon: "microsoftoutlook", calendar: true },
   ];
-  const currentStage = stages[step] ?? stages[0]!;
-  const toolNames = ["read_file", "edit_block", "start_process"];
+  const devices = [
+    { name: "Mac", icon: "macos", note: "macOS" },
+    { name: "Windows", icon: "windows", note: tr("Your PC", "你的电脑") },
+    { name: "Linux", icon: "linux", note: tr("Your environment", "你的运行环境") },
+    { name: "Browser", icon: "browser", note: tr("Shared tabs", "已共享的标签页") },
+  ];
+  const capabilities: { name: Capability; label: string }[] = [
+    { name: "skills", label: tr("Skills", "专业技能") },
+    { name: "execution", label: tr("Execution", "任务执行") },
+    { name: "approvals", label: tr("Approvals", "操作审批") },
+    { name: "verified", label: tr("Verified Results", "结果验证") },
+  ];
   return (
-    <div className="homeConnectionScene" ref={ref} data-step={step} data-running={running} data-reduced-motion={reducedMotion} aria-label={tr("Interactive illustration: AI request to computer execution", "交互演示：从 AI 请求到电脑执行")}>
-      <div className="hcsTopline">
-        <span className="hcsEyebrow">{tr("FROM CHAT TO ACTION", "让对话变成行动")}</span>
-        <span className="hcsDemoLabel">{tr("Product illustration", "产品交互示例")}</span>
-      </div>
+    <div ref={ref} className="homeConnectionScene" data-layout="panorama" data-running={running} role="region" aria-labelledby={headingId}>
+      <header className="hcsPanoramaHeader">
+        <h2 id={headingId}>{tr("FROM CHAT TO ACTION", "让对话变成行动")}</h2>
+        <span>{tr("AGENT INFRASTRUCTURE", "AGENT 基础设施")}</span>
+      </header>
 
-      <div className="hcsClients" aria-label={tr("AI client installation guides", "AI 客户端安装指南")}>
-        {clients.map(client => (
-          <a key={client.slug} href={"/install/" + client.slug} aria-label={tr("Install for " + client.name, "查看 " + client.name + " 安装指南")}>
-            <img src={client.icon} className={client.tone === "mono" ? "monoLogo" : "colorLogo"} alt="" width={19} height={19} />
-            <span>{client.name}</span>
-            <SceneIcon kind="arrow" />
-          </a>
-        ))}
-      </div>
-
-      <div className={"hcsRequest hcsPhaseCard" + (step === 0 ? " hcsActive" : "")}>
-        <div className="hcsRequestAvatar"><img src="/ai-openai.svg" className="monoLogo" alt="ChatGPT" width={23} height={23} /></div>
-        <div className="hcsRequestCopy">
-          <span>{step === 3 ? tr("BACK IN YOUR CHAT", "结果回到 AI 对话") : tr("YOUR REQUEST", "你的请求")}</span>
-          <p>{step === 3 ? tr("“Fixed the expiry check. The test passes.”", "「已修复过期检查，测试通过。」") : tr("“Fix the failing test in my project.”", "「修好我项目里失败的测试。」")}</p>
+      <div className="hcsAiEntry">
+        <span className="hcsAiEntryLabel">{tr("BRING YOUR AI", "接入你的 AI")}</span>
+        <div className="hcsClients" aria-label={tr("AI client installation guides", "AI 客户端安装指南")}>
+          {clients.map(client => (
+            <a key={client.slug} href={"/install/" + client.slug} aria-label={tr("Install for " + client.name, "查看 " + client.name + " 安装指南")}>
+              <img src={client.icon} className={client.tone === "mono" ? "monoLogo" : "colorLogo"} alt="" width={18} height={18} />
+              <span>{client.name}</span>
+            </a>
+          ))}
         </div>
-        <span className="hcsRequestState" aria-label={step === 3 ? tr("Result returned", "结果已返回") : tr("Request", "请求")}>
-          <SceneIcon kind={step === 3 ? "check" : "arrow"} />
-        </span>
+        <span className="hcsEntryStem" aria-hidden="true" />
       </div>
 
-      <div className="hcsRoute hcsRouteIn" aria-hidden="true">
-        <span className="hcsRouteLine" />
-        {(step === 0 || step === 3) && <i key={step} className={"hcsPacket" + (step === 3 ? " hcsPacketReturn" : "")} />}
-        <span className="hcsRouteCaption">Remote MCP + OAuth</span>
-      </div>
-
-      <div className={"hcsBridge hcsPhaseCard" + (step === 1 ? " hcsActive" : "")}>
-        <div className="hcsArcLogo"><img src="/remote-arc.svg" width={42} height={42} alt="" /></div>
-        <div className="hcsBridgeCopy">
-          <strong>Remote Arc</strong>
-          <span>{step === 0 ? tr("Your AI. Your tools. Your computer.", "你的 AI、工具和电脑。") : step === 1 ? tr("Checking workspace and tool permissions", "检查工作目录与工具权限") : tr("Approved tools · encrypted connection", "已授权工具 · 加密连接")}</span>
-        </div>
-        <span className="hcsShield"><SceneIcon kind={step > 1 ? "check" : "lock"} /></span>
-      </div>
-
-      <div className="hcsRoute hcsRouteOut" aria-hidden="true">
-        <span className="hcsRouteLine" />
-        {(step === 1 || step === 2 || step === 3) && <i key={step} className={"hcsPacket" + (step === 3 ? " hcsPacketReturn" : "")} />}
-        <span className="hcsRouteCaption">{tr("Outbound device connection", "设备出站连接")}</span>
-      </div>
-
-      <div className={"hcsDevice hcsPhaseCard" + (step >= 2 ? " hcsActive" : "")}>
-        <div className="hcsDeviceBar">
-          <span className="hcsWindowDots" aria-hidden="true"><i /><i /><i /></span>
-          <span className="hcsDeviceTitle"><SceneIcon kind="terminal" />{tr("Your computer", "你的电脑")}</span>
-          <span className="hcsPlatforms" aria-label="macOS, Windows, Linux">
-            <img src="/platform-brands/macos.svg" alt="macOS" width={14} height={14} />
-            <img src="/platform-brands/windows.svg" alt="Windows" width={14} height={14} />
-            <img src="/platform-brands/linux.svg" alt="Linux" width={14} height={14} />
-          </span>
-        </div>
-        <div className="hcsWorkspace">
-          <div className="hcsFileHeader"><span className="hcsFileDot" /><code>src/auth.ts</code><span>{step >= 2 ? tr("1 change", "1 处修改") : tr("Project workspace", "项目目录")}</span></div>
-          <div className="hcsCode" aria-label={tr("Illustrative code change", "代码修改示例")}>
-            <div><span className="hcsLineNo">12</span><code><em>function</em> isExpired(token) {'{'}</code></div>
-            <div className={step >= 2 ? "hcsCodeRemoved" : ""}><span className="hcsLineNo">{step >= 2 ? "−" : "13"}</span><code>  <em>return</em> token.expiresAt &lt; now;</code></div>
-            <div className={"hcsCodeAdded" + (step >= 2 ? " hcsCodeVisible" : "")}><span className="hcsLineNo">+</span><code>  <em>return</em> token.expiresAt &lt;= now;</code></div>
-            <div><span className="hcsLineNo">14</span><code>{'}'}</code></div>
-          </div>
-          <div className="hcsToolRail" aria-label={tr("Illustrative tool calls", "工具调用示例")}>
-            {toolNames.map((tool, index) => (
-              <span key={tool} className={step >= 2 ? "hcsToolDone" : ""} style={{ "--hcs-tool-delay": index * 400 + "ms" } as React.CSSProperties}>
-                <SceneIcon kind={step >= 2 ? "check" : "terminal"} /><code>{tool}</code>
-              </span>
+      <div className="hcsPanorama">
+        <section className="hcsResourceGroup hcsApps" aria-label={tr("Apps ecosystem", "应用生态")}>
+          <div className="hcsGroupTitle"><h3>Apps</h3><span>{tr("Cloud connections", "云端应用")}</span></div>
+          <div className="hcsAppGrid">
+            {apps.map(app => (
+              <div className="hcsAppNode" key={app.name}>
+                <span className={"hcsBrandFrame" + (app.mono ? " hcsBrandFrameMono" : "")}>
+                  <img src={"/app-brands/" + app.icon + ".svg"} alt="" width={27} height={27} />
+                  {app.calendar && <span className="hcsCalendarCue"><CapabilityIcon name="calendar" /></span>}
+                </span>
+                <strong>{app.name}</strong>
+              </div>
             ))}
           </div>
-          <div className={"hcsTerminal" + (step === 3 ? " hcsTerminalSuccess" : "")}>
-            <code><span className="hcsPrompt">$</span> npm test</code>
-            <span className="hcsTerminalOutput">
-              {step === 3 ? <><SceneIcon kind="check" />{tr("Test passed · fix verified", "测试通过 · 修复已验证")}</> : step === 2 ? <><i className="hcsBusyDot" />{tr("Running on your computer", "正在你的电脑上运行")}</> : <><SceneIcon kind="lock" />{tr("Waiting for approved tool access", "等待已授权的工具访问")}</>}
-            </span>
+          <span className="hcsResourceNote">{tr("An extensible ecosystem", "持续扩展的应用生态")}</span>
+        </section>
+
+        <div className="hcsCoreColumn">
+          <svg className="hcsConnectionPaths" viewBox="0 0 180 290" preserveAspectRatio="none" aria-hidden="true">
+            <g className="hcsConnectionBase">
+              <path d="M0 59H25Q40 59 40 74V130Q40 145 55 145H90" />
+              <path d="M0 145H90" />
+              <path d="M0 231H25Q40 231 40 216V160Q40 145 55 145H90" />
+              <path d="M90 145H125Q140 145 140 130V43Q140 28 155 28H180" />
+              <path d="M90 145H125Q140 145 140 130V121H180" />
+              <path d="M90 145H125Q140 145 140 160V169H180" />
+              <path d="M90 145H125Q140 145 140 160V247Q140 262 155 262H180" />
+            </g>
+            <g className="hcsConnectionFlow">
+              <path d="M0 59H25Q40 59 40 74V130Q40 145 55 145H90" />
+              <path d="M0 231H25Q40 231 40 216V160Q40 145 55 145H90" />
+              <path d="M90 145H125Q140 145 140 130V43Q140 28 155 28H180" />
+              <path d="M90 145H125Q140 145 140 160V247Q140 262 155 262H180" />
+            </g>
+          </svg>
+          <div className="hcsAgentCore">
+            <div className="hcsCoreHalo" aria-hidden="true" />
+            <div className="hcsCoreLogo"><img src="/remote-arc.svg" alt="" width={67} height={67} /></div>
+            <strong>Remote Arc</strong>
+            <span className="hcsAgentLabel">{tr("Agent Core", "Agent 能力核心")}</span>
+            <span className="hcsCoreDescriptor">{tr("Connect. Coordinate. Execute.", "连接 · 协调 · 执行")}</span>
           </div>
         </div>
+
+        <section className="hcsResourceGroup hcsDevices" aria-label={tr("Authorized devices", "已授权的设备")}>
+          <div className="hcsGroupTitle"><h3>Devices</h3><span>{tr("Your environments", "你的运行环境")}</span></div>
+          <div className="hcsDeviceGrid">
+            {devices.map(device => (
+              <div className="hcsDeviceNode" key={device.name}>
+                <img src={"/platform-brands/" + device.icon + ".svg"} alt="" width={26} height={26} />
+                <div><strong>{device.name}</strong><span>{device.note}</span></div>
+                <i aria-hidden="true" />
+              </div>
+            ))}
+          </div>
+          <span className="hcsResourceNote">{tr("Your rules. Your control.", "你的权限，由你掌控")}</span>
+        </section>
       </div>
 
-      <div className="hcsPlayback">
-        <div className="hcsStepText"><span>0{step + 1}<span> / 04</span></span><strong>{currentStage.title}</strong></div>
-        <button type="button" className="hcsPlayButton" onClick={() => setPlaying(!playing)} disabled={reducedMotion} aria-label={reducedMotion ? tr("Animation disabled by your motion preference", "已按系统偏好关闭动画") : playing ? tr("Pause product illustration", "暂停产品演示") : tr("Play product illustration", "播放产品演示")}>
-          <SceneIcon kind={playing && !reducedMotion ? "pause" : "play"} />
-          <span>{reducedMotion ? tr("Motion off", "动画已关闭") : playing ? tr("Pause", "暂停") : tr("Play", "播放")}</span>
-        </button>
+      <div className="hcsFoundation">
+        <span className="hcsFoundationStem" aria-hidden="true" />
+        <span className="hcsFoundationLabel">{tr("BUILT ON A SHARED FOUNDATION", "统一的平台能力")}</span>
+        <ul>{capabilities.map(capability => <li key={capability.name}><CapabilityIcon name={capability.name} /><span>{capability.label}</span></li>)}</ul>
       </div>
-      <p className="hcsStageDetail">{currentStage.detail}</p>
-      <div className="hcsSteps" aria-label={tr("Choose a demonstration step", "选择演示步骤")}>
-        {stages.map((stage, index) => <button key={stage.title} type="button" aria-label={tr("Step " + (index + 1) + ": ", "步骤 " + (index + 1) + "：") + stage.title} aria-pressed={step === index} onClick={() => { setPlaying(false); setStep(index); }} className={step === index ? "hcsStepActive" : ""}><span key={step === index ? step : "idle"} /></button>)}
-      </div>
-      <div className="hcsFootnote"><SceneIcon kind="lock" /><span>{tr("Illustrative workflow. Tool access stays under your control.", "流程示例。工具访问权限始终由你掌控。")}</span></div>
+      <footer className="hcsAvailability">
+        <span className="hcsConnectStatus"><i aria-hidden="true" />{tr("Connect available now", "Connect 现已可用")}</span>
+        <span>{tr("Arc Agent · Coming soon", "Arc Agent · 即将推出")}</span>
+      </footer>
+      <p className="hcsPlatformScope">{tr("Apps and cloud skills are in development.", "应用生态与云端技能正在建设中。")}</p>
     </div>
   );
 }

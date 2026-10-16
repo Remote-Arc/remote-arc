@@ -53,3 +53,39 @@
 .arcAppEcosystem button:focus-visible,.arcCapabilities button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media(max-width:1020px){.arcAppGrid{grid-template-columns:repeat(3,1fr)}.arcCapabilitiesSpotlight{grid-template-columns:1fr}.arcRoutineDemo{max-width:700px;width:100%;margin:auto}}
 @media(max-width:660px){.arcCapabilities,.arcAppEcosystem{padding:68px 0}.arcCapabilitiesIntro,.arcAppIntro{margin-bottom:34px}.arcCapabilitiesIntro h2,.arcAppIntro h2{font-size:clamp(34px,9vw,49px)}.arcCapabilitiesSpotlight{padding:25px 18px;gap:28px}.arcCapabilitiesGrid{grid-template-columns:1fr}.arcCapabilitiesGrid article{padding:27px}.arcAppGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.arcAppItem{gap:9px;padding:10px;min-height:66px}.arcAppItem strong{font-size:12px}.arcAppIcon{width:35px;height:35px}.arcEcosystemFoot{align-items:stretch;flex-direction:column}.arcEcosystemFoot>div{align-items:flex-start}.arcEcosystemFoot .arcFeatureIconFrame{flex:none;width:42px;height:42px}.arcRoutineFlow{gap:4px}.arcRoutineFlow>span{font-size:10px}}
+
+/* Genuine multi-color product symbols get their own space, not generic white stickers. */
+.arcAppItem{appearance:none;font-family:inherit;font-size:inherit;color:var(--text);text-align:left;cursor:pointer;position:relative;isolation:isolate;transition:transform .22s ease,background .24s ease,border-color .24s ease,box-shadow .24s ease;animation:arcAppEnter .45s cubic-bezier(.2,.8,.3,1) both}
+.arcAppItem:hover,.arcAppItem:focus-visible{transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 65%,var(--line));background:color-mix(in srgb,var(--accent) 7%,var(--panel));box-shadow:0 15px 28px rgba(0,0,0,.08)}
+.arcAppItem--selected{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+.arcAppItemArrow{margin-left:auto;font-size:15px;color:var(--accent);opacity:0;transform:translate(-3px,3px);transition:opacity .2s,transform .2s}
+.arcAppItem:hover .arcAppItemArrow,.arcAppItem:focus-visible .arcAppItemArrow,.arcAppItem--selected .arcAppItemArrow{opacity:1;transform:none}
+.arcAppIcon{width:45px;height:45px;background:transparent;box-shadow:none;padding:3px;border-radius:11px}
+.arcAppIcon img{width:36px;height:36px;object-fit:contain;transition:transform .3s ease}
+.arcAppItem:hover img,.arcAppItem--selected img{transform:scale(1.09)}
+.arcAppItem[data-app="notion"] .arcAppIcon,.arcAppItem[data-app="github"] .arcAppIcon{background:#fff;padding:6px}
+.arcAppItem[data-app="notion"] .arcAppIcon img,.arcAppItem[data-app="github"] .arcAppIcon img{width:31px;height:31px}
+.arcAppDetail{margin-top:16px;padding:25px 29px;display:flex;align-items:center;gap:27px;min-height:117px;border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));border-radius:18px;background:radial-gradient(ellipse 55% 140% at 100% 50%,color-mix(in srgb,var(--accent) 6%,transparent),transparent),var(--panel)}
+.arcAppDetailBrand{display:flex;align-items:center;gap:13px;min-width:230px}
+.arcAppDetailLogo{display:grid;place-items:center;flex:none;width:58px;height:58px;border-radius:13px;background:color-mix(in srgb,var(--text) 3%,transparent)}
+.arcAppDetailLogo[data-app="notion"],.arcAppDetailLogo[data-app="github"]{background:#fff}
+.arcAppDetailLogo img{width:42px;height:42px;object-fit:contain}
+.arcAppDetailBrand>div>span{color:var(--muted);font-size:10px;letter-spacing:.11em;font-weight:700}
+.arcAppDetail h3{font-size:21px;letter-spacing:-.03em;font-weight:730;margin:5px 0 0}
+.arcAppDetail p{flex:1;color:var(--text);font-size:14px;line-height:1.7;margin:0}
+.arcAppDetailStatus{border:1px solid var(--line);color:var(--muted);border-radius:100px;padding:8px 12px;font-size:11px;white-space:nowrap}
+@keyframes arcAppEnter{from{opacity:0;filter:blur(2px)}to{opacity:1;filter:none}}
+.arcRoutinePlayback{display:grid;place-items:center;margin-left:2px;background:var(--bg);color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:7px;cursor:pointer}
+.arcRoutinePlayback .arcFeatureSvg{width:14px;height:14px}
+.arcRoutinePlayback:hover,.arcRoutinePlayback:focus-visible{color:var(--accent);border-color:var(--accent)}
+.arcRoutineDemoTop small{margin-left:auto}
+.arcRoutineChoices button.selected{border-color:color-mix(in srgb,var(--accent) 42%,var(--line));background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+.arcRoutineLiveStatus{display:flex;align-items:center;gap:9px;margin:0 0 21px;font-size:12px;color:var(--accent);font-weight:700;min-height:22px}
+.arcRoutineLiveStatusDot{height:7px;width:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px color-mix(in srgb,var(--accent) 45%,transparent)}
+.arcRoutineFlow>span{transition:color .4s ease,transform .4s ease;color:var(--muted)}
+.arcRoutineFlow>span.current{color:var(--text);transform:translateY(-2px)}
+.arcRoutineFlow>span.current .arcFeatureSvg{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 65%,transparent))}
+.arcRoutineFlow>i{background:linear-gradient(90deg,var(--accent),var(--line));opacity:.6}
+@media(max-width:1000px){.arcAppDetail{flex-wrap:wrap;gap:15px}.arcAppDetailBrand{min-width:100%}.arcAppDetailStatus{margin-left:auto}}
+@media(max-width:660px){.arcAppIcon{width:38px;height:38px;padding:1px}.arcAppIcon img{width:33px;height:33px}.arcAppItem[data-app="notion"] .arcAppIcon,.arcAppItem[data-app="github"] .arcAppIcon{padding:5px}.arcAppItem[data-app="notion"] .arcAppIcon img,.arcAppItem[data-app="github"] .arcAppIcon img{width:28px;height:28px}.arcAppDetail{padding:19px}.arcAppItemArrow{display:none}}
+@media(prefers-reduced-motion:reduce){.arcAppItem{animation:none!important;transition:none!important}.arcAppItemArrow,.arcAppIcon img,.arcRoutineFlow>span{transition:none!important}}

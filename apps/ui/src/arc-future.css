@@ -1,7 +1,7 @@
 /* Arc: center-outward product concept. All selectors scoped to marketing surfaces. */
 .publicNavLinks .arcNavLink{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-weight:670;color:var(--text)}
 .arcNavLink .arcSoonLabel{border-left:1px solid var(--line);padding-left:8px;font-size:10px;color:var(--muted);font-weight:540}
-.arcV3{color:var(--text);min-width:0;overflow:clip}
+.arcV3{color:var(--text);min-width:0;overflow:visible}
 .arcV3Eyebrow{font-size:11px;letter-spacing:.18em;font-weight:740;color:var(--muted);text-transform:uppercase}
 .arcV3Status{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:11px;color:var(--muted);letter-spacing:.09em;font-weight:750;text-transform:uppercase}
 .arcV3Status i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 11%,transparent)}
@@ -30,7 +30,8 @@
 .arcV3TeaserEndnote{font-size:11px;color:var(--muted);margin-top:22px}
 /* Hero. Everything flows around the central stage, not a left/right split. */
 .arcV3Hero{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:center;text-align:center;padding:83px 0 94px}
-.arcV3HeroGlow{position:absolute;inset:-40px -20% 18%;z-index:-1;background:radial-gradient(ellipse 43% 36% at 50% 55%,color-mix(in srgb,var(--accent) 15%,transparent),transparent 95%);pointer-events:none}
+.arcV3HeroGlow{position:absolute;inset:-40px 0 0;z-index:-1;pointer-events:none;overflow:visible;background:radial-gradient(ellipse 61% 30% at 50% 28%,color-mix(in srgb,var(--accent) 14%,transparent) 0%,transparent 84%),radial-gradient(ellipse 45% 35% at 50% 68%,color-mix(in srgb,var(--accent) 12%,transparent) 0%,transparent 86%);mask-image:radial-gradient(ellipse 78% 72% at 50% 45%,#000 10%,transparent 100%);transform-origin:50% 46%;animation:arcHeroAtmosphere 18s ease-in-out infinite alternate}
+@keyframes arcHeroAtmosphere{0%{opacity:.68;transform:scale(.96) translateY(-8px)}100%{opacity:1;transform:scale(1.05) translateY(12px)}}
 .arcV3Hero h1{font-size:clamp(45px,6.5vw,83px);font-weight:680;line-height:1.05;letter-spacing:-.068em;max-width:900px;margin:22px auto 19px}
 .arcV3Hero>p:not(.arcV3Disclaimer){color:var(--muted);line-height:1.72;font-size:clamp(15px,1.65vw,19px);max-width:760px;margin:0 auto}
 .arcV3HeroCue{position:relative;display:grid;justify-items:center;gap:13px;margin-top:63px;font-size:10px;font-weight:750;letter-spacing:.17em;color:var(--muted)}
@@ -38,7 +39,8 @@
 .arcV3Disclaimer{margin:23px auto 0;font-size:11px;color:var(--muted);line-height:1.65;max-width:750px}
 /* Executable-looking diagram is explicitly labeled a concept. */
 .arcV3Stage{position:relative;isolation:isolate;width:min(100%,1030px);margin:19px auto 0;padding:26px clamp(10px,3vw,36px) 41px;border:1px solid color-mix(in srgb,var(--line) 75%,transparent);border-radius:26px;overflow:hidden;background:color-mix(in srgb,var(--panel) 39%,var(--bg) 61%);box-shadow:inset 0 1px rgba(255,255,255,.035),0 32px 82px rgba(0,0,0,.10)}
-.arcV3StageBackdrop{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 32% 32% at 50% 41%,color-mix(in srgb,var(--accent) 19%,transparent),transparent 100%),linear-gradient(to right,color-mix(in srgb,var(--line) 25%,transparent) 1px,transparent 1px),linear-gradient(to bottom,color-mix(in srgb,var(--line) 25%,transparent) 1px,transparent 1px);background-size:auto,56px 56px,56px 56px;mask-image:linear-gradient(transparent 3%,black 38%,black 60%,transparent)}
+.arcV3StageBackdrop{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 49% 45% at 50% 41%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 95%),linear-gradient(to right,color-mix(in srgb,var(--line) 22%,transparent) 1px,transparent 1px),linear-gradient(to bottom,color-mix(in srgb,var(--line) 22%,transparent) 1px,transparent 1px);background-size:auto,56px 56px,56px 56px;mask-image:linear-gradient(transparent 0%,black 23%,black 75%,transparent 100%);animation:arcSceneBackdrop 16s ease-in-out infinite alternate}
+@keyframes arcSceneBackdrop{0%{opacity:.68;transform:translateY(-4px)}100%{opacity:1;transform:translateY(7px)}}
 .arcV3StageLabel{display:flex;justify-content:center;gap:10px;align-items:center;font-size:10px;letter-spacing:.14em;color:var(--muted);font-weight:760;margin-bottom:24px}
 .arcV3StageLabel i{display:block;width:7px;height:7px;background:var(--accent);border-radius:50%}
 .arcV3Prompt{position:relative;display:flex;align-items:center;gap:15px;text-align:left;margin:0 auto;width:min(100%,640px);min-height:78px;padding:15px 18px;border:1px solid color-mix(in srgb,var(--line) 80%,var(--text) 20%);background:var(--bg);border-radius:15px;box-shadow:0 22px 43px rgba(0,0,0,.13)}
@@ -120,7 +122,7 @@
 .arcV3RoadmapFinish small{margin-top:25px;font-size:11px;color:var(--muted);max-width:650px;line-height:1.65}
 @media(max-width:850px){.arcV3Stage{padding-inline:16px}.arcV3Nodes{gap:7px}.arcV3Node{gap:9px;padding:11px}.arcV3NodeGlyph{width:30px;height:30px;font-size:18px}.arcV3Node strong{font-size:13px}.arcV3Node small{font-size:10px}.arcV3BranchBar{left:16.7%;right:16.7%}}
 @media(max-width:600px){.arcV3Hero{padding:60px 0 75px}.arcV3Hero h1{font-size:clamp(40px,10vw,59px)}.arcV3HeroCue{margin-top:35px}.arcV3Stage{padding:23px 12px 27px;border-radius:19px}.arcV3Prompt{padding:10px;gap:9px;min-height:73px}.arcV3PromptSymbol{width:30px;height:30px;font-size:18px}.arcV3PromptText span{font-size:9px}.arcV3PromptText strong{font-size:13px}.arcV3PromptSend{width:28px;height:28px}.arcV3Nexus{height:158px}.arcV3NexusCore{width:96px;height:96px;border-radius:26px}.arcV3NexusCore .arcV3Mark{transform:scale(.8) rotate(9deg)}.arcV3NexusAura{width:175px;height:175px}.arcV3Branch{height:45px}.arcV3BranchStem{height:22px}.arcV3BranchBar{top:22px;height:23px;left:16%;right:16%}.arcV3Nodes{gap:5px}.arcV3Node{display:grid;justify-items:center;text-align:center;gap:5px;padding:11px 3px;min-height:91px;border-radius:10px}.arcV3Node div{justify-items:center}.arcV3Node small{font-size:9px;line-height:1.3}.arcV3Node strong{font-size:11px}.arcV3NodeGlyph{font-size:19px;width:29px;height:29px}.arcV3Outcome{padding:10px}.arcV3Outcome strong{font-size:11px}.arcV3Outcome small{font-size:10px}.arcV3Energy{height:41px}.arcV3HeroActions{gap:14px}.arcV3Journey{padding:65px 0}.arcV3JourneyStep{padding-bottom:56px}.arcV3Split{padding:62px 0}.arcV3Mode{padding:24px 15px}.arcV3Final{padding:65px 0 87px}.arcV3RoadmapHero{padding:62px 0}.arcV3Milestone{padding-inline:4px}.arcV3RoadmapFinish{padding:66px 0 87px}.arcV3Teaser{padding:49px 12px 55px}.landingContent .arcV3Teaser h2{font-size:clamp(30px,8vw,42px)}.arcV3Teaser p{font-size:14px}}
-@media(prefers-reduced-motion:reduce){.arcV3Energy span{animation:none}.arcV3Primary{transition:none}}
+@media(prefers-reduced-motion:reduce){.arcV3Energy span{animation:none}.arcV3Primary{transition:none}.arcV3HeroGlow,.arcV3StageBackdrop{animation:none}.arcV3{scroll-behavior:auto}}
 
 /* Use the actual Remote Arc brand asset instead of a fabricated CSS glyph. */
 .arcV3Mark{filter:drop-shadow(0 0 19px color-mix(in srgb,var(--accent) 16%,transparent))}
@@ -153,3 +155,33 @@
   background:#eaf6fd!important;
   border-color:#0798c6!important;
 }
+
+/* The demo is visibly alive, but never implies a running hosted agent. */
+.arcV3Stage{transition:border-color .5s ease,box-shadow .5s ease}
+.arcV3StageLabel{position:relative;padding-right:104px;min-height:30px}
+.arcV3ScenePlayback{position:absolute;right:0;top:-5px;display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:7px 10px;background:color-mix(in srgb,var(--panel) 75%,var(--bg));color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:11px;font-weight:650;letter-spacing:0;text-transform:none}
+.arcV3ScenePlayback:hover,.arcV3ScenePlayback:focus-visible{border-color:var(--accent);outline-offset:3px}
+.arcV3ScenePlayback svg{width:14px;height:14px}
+.arcV3SceneProgress{width:min(100%,640px);margin:17px auto 6px;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;font-weight:640}
+.arcV3SceneProgressDot{width:7px;height:7px;flex:none;background:var(--accent);box-shadow:0 0 13px color-mix(in srgb,var(--accent) 67%,transparent);border-radius:100%}
+.arcV3SceneProgressNumber{margin-left:auto;font-variant-numeric:tabular-nums;font-size:11px;letter-spacing:.11em}
+.arcV3SceneProgressRail{height:2px;background:color-mix(in srgb,var(--line) 75%,transparent);width:min(100%,640px);margin:0 auto;border-radius:4px;overflow:hidden}
+.arcV3SceneProgressRail span{display:block;width:100%;height:100%;transform-origin:0 50%;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 28%,var(--line)),var(--accent));transition:transform .7s cubic-bezier(.2,.75,.25,1)}
+.arcV3Prompt,.arcV3NexusCore,.arcV3Node,.arcV3Outcome{transition:box-shadow .65s ease,border-color .65s ease,background .65s ease,transform .55s ease}
+.arcV3Stage[data-scene-step="0"] .arcV3Prompt{border-color:var(--accent);box-shadow:0 6px 35px color-mix(in srgb,var(--accent) 15%,transparent)}
+.arcV3Stage[data-scene-step="1"] .arcV3NexusCore{border-color:var(--accent);box-shadow:0 0 65px color-mix(in srgb,var(--accent) 28%,transparent)}
+.arcV3Stage[data-scene-step="2"] .arcV3Nodes .arcV3Node{border-color:color-mix(in srgb,var(--accent) 54%,var(--line));box-shadow:0 0 22px color-mix(in srgb,var(--accent) 13%,transparent)}
+.arcV3Stage[data-scene-step="3"] .arcV3Outcome{border-color:var(--accent);box-shadow:0 5px 34px color-mix(in srgb,var(--accent) 15%,transparent)}
+.arcV3Stage[data-scene-step="4"] .arcV3Outcome{border-color:var(--accent);box-shadow:0 0 36px color-mix(in srgb,var(--accent) 19%,transparent)}
+.arcV3NexusAura{animation:arcNexusBreathe 5.5s ease-in-out infinite alternate}
+.arcV3NexusCore{position:relative}
+.arcV3CoreOrbit{position:absolute;inset:-13px;border-radius:40px;border:1px dashed color-mix(in srgb,var(--accent) 30%,transparent);animation:arcCoreOrbit 28s linear infinite;pointer-events:none}
+.arcV3BranchStem{border-left-color:var(--accent);box-shadow:0 0 8px color-mix(in srgb,var(--accent) 24%,transparent)}
+.arcV3BranchBar{border-color:color-mix(in srgb,var(--accent) 42%,var(--line))}
+.arcV3BranchBar:before,.arcV3BranchBar:after{content:"";position:absolute;top:28px;width:4px;height:4px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:arcFlowLight 3.8s ease-in-out infinite}
+.arcV3BranchBar:before{left:0}.arcV3BranchBar:after{right:0;animation-delay:1.7s}
+@keyframes arcNexusBreathe{0%{opacity:.62;transform:scale(.83)}100%{opacity:1;transform:scale(1.14)}}
+@keyframes arcCoreOrbit{to{transform:rotate(360deg)}}
+@keyframes arcFlowLight{0%,100%{opacity:.25;transform:translateY(-9px)}50%{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){.arcV3StageLabel{padding-right:0;flex-wrap:wrap;margin-bottom:17px}.arcV3ScenePlayback{position:static;margin-left:4px}.arcV3SceneProgress{font-size:11px}.arcV3CoreOrbit{inset:-9px;border-radius:29px}}
+@media(prefers-reduced-motion:reduce){.arcV3NexusAura,.arcV3CoreOrbit,.arcV3BranchBar:before,.arcV3BranchBar:after{animation:none!important}.arcV3Prompt,.arcV3NexusCore,.arcV3Node,.arcV3Outcome,.arcV3SceneProgressRail span{transition:none!important}}

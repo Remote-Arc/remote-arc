@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./arc-future.css";
@@ -20,24 +20,44 @@ type PreviewCapability = "apps" | "devices" | "routines";
 function ArcExecutionScene() {
   const {tr,locale} = useI18n();
   const [selected,setSelected] = useState<PreviewCapability>("devices");
+  const [sceneStep,setSceneStep] = useState(0);
+  const [scenePlaying,setScenePlaying] = useState(() => typeof window === "undefined" || !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const sceneLabels = [
+    {en:"Understanding request",zh:"理解任务"},
+    {en:"Planning authorized steps",zh:"规划授权操作"},
+    {en:"Coordinating tools",zh:"协调连接工具"},
+    {en:"Checking results",zh:"检查执行结果"},
+    {en:"Ready for review",zh:"等待用户审核"}
+  ];
+  useEffect(()=>{
+    if(!scenePlaying)return;
+    const timer=window.setInterval(()=>{
+      if(document.visibilityState==="visible")setSceneStep(v=>(v+1)%sceneLabels.length);
+    },3100);
+    return ()=>window.clearInterval(timer);
+  },[scenePlaying]);
   const options = {
     apps: { en: "Connected apps — planned", zh: "连接应用 · 规划中", enDetail: "Integrations will require individual account authorization.", zhDetail: "应用集成需要单独授权对应账号。" },
     devices: { en: "Your devices — permissioned", zh: "你的设备 · 受控授权", enDetail: "Arc will use only approved computer tools and folders.", zhDetail: "Arc 只会使用已授权的电脑工具和目录。" },
     routines: { en: "Routines — planned", zh: "自动任务 · 规划中", enDetail: "Repeat work with budgets, pauses and review checkpoints.", zhDetail: "定期工作也要有费用上限、暂停和审批。" },
   } satisfies Record<PreviewCapability,{en:string;zh:string;enDetail:string;zhDetail:string}>;
   const current = options[selected];
-  return <div className="arcV3Stage" aria-label={tr("Concept illustration: a request flows through Arc to connected tools and a reviewable result. This is not a live interface.", "Arc 产品概念图：请求通过 Arc 连接工具并生成待审核结果，并非已上线功能。")}>
+  return <div className="arcV3Stage" data-scene-step={sceneStep} aria-label={tr("Concept illustration: a request flows through Arc to connected tools and a reviewable result. This is not a live interface.", "Arc 产品概念图：请求通过 Arc 连接工具并生成待审核结果，并非已上线功能。")}>
     <div className="arcV3StageBackdrop" aria-hidden="true" />
-    <div className="arcV3StageLabel"><i />{tr("PRODUCT CONCEPT / NOT LIVE", "产品概念 / 尚未上线")}</div>
+    <div className="arcV3StageLabel"><i />{tr("PRODUCT CONCEPT / NOT LIVE", "产品概念 / 尚未上线")}
+      <button className="arcV3ScenePlayback" type="button" aria-label={scenePlaying?tr("Pause demo animation","暂停示意动画"):tr("Play demo animation","播放示意动画")} aria-pressed={!scenePlaying} onClick={()=>setScenePlaying(v=>!v)}>{scenePlaying?tr("Pause","暂停"):tr("Play","播放")} <ArcFeatureIcon name={scenePlaying?"pause":"play"}/></button>
+    </div>
     <div className="arcV3Prompt">
-      <span className="arcV3PromptSymbol">↗</span>
+      <span className="arcV3PromptSymbol"><ArcFeatureIcon name="play"/></span>
       <div className="arcV3PromptText"><span>{tr("A request for Arc", "给 Arc 的任务")}</span><strong>{tr("Prepare my weekly project update", "整理本周项目进展")}</strong></div>
       <span className="arcV3PromptDemo">{tr("EXAMPLE", "示例")}</span>
     </div>
+    <div className="arcV3SceneProgress" role="status" aria-live="off"><span className="arcV3SceneProgressDot"/><span>{locale==="zh"?sceneLabels[sceneStep]?.zh:sceneLabels[sceneStep]?.en}</span><span className="arcV3SceneProgressNumber">0{sceneStep+1} / 05</span></div>
+    <div className="arcV3SceneProgressRail" aria-hidden="true"><span style={{transform:`scaleX(${(sceneStep+1)/5})`}} /></div>
     <div className="arcV3Energy" aria-hidden="true"><span /></div>
     <div className="arcV3Nexus">
       <div className="arcV3NexusAura" aria-hidden="true" />
-      <div className="arcV3NexusCore"><ArcMark /></div>
+      <div className="arcV3NexusCore"><span className="arcV3CoreOrbit" aria-hidden="true"/><ArcMark /></div>
       <div className="arcV3NexusLabel"><strong>arc</strong><small>{tr("Plans · Routes · Verifies", "规划 · 调度 · 验证")}</small></div>
     </div>
     <div className="arcV3Branch" aria-hidden="true"><span className="arcV3BranchStem" /><span className="arcV3BranchBar" /></div>

@@ -2475,8 +2475,8 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects the tools, your AI does the thinking, and your machines do the work. Save a task and pick up its state in a later chat.",
-            "别让 AI 只停留在聊天。就在你熟悉的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 负责安全连接，你的模型负责思考，自己的电脑负责执行。已保存的任务状态还能跨聊天保留。"
+            "Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects your tools and computers, so you can manage your device fleet, create your AI teammates, and keep work moving across chats.",
+            "别让 AI 只停留在聊天。就在你熟悉的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 连接你的工具与电脑，让你管理设备集群、创建 AI 队友，并让工作跨对话持续推进。"
           )}</p>
           <div className="heroAiPlanNote">
             <strong>{tr("No model API key to configure. No pay-per-token API bill to top up.", "不用配置模型 API Key，也不用额外充值按量计费的 API Token。")}</strong>

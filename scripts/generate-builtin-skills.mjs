@@ -16,7 +16,10 @@ const skills=registry.skills.map((item)=>{
  return {...item,content:text};
 });
 const revision=createHash('sha256').update(JSON.stringify(skills)).digest('hex').slice(0,16);
-const generated=`/* GENERATED. Run node scripts/generate-builtin-skills.mjs */\nexport const BUILTIN_SKILLS_REVISION = ${JSON.stringify(revision)};\nexport const BUILTIN_SKILLS = ${JSON.stringify(skills,null,2)} as const;\n`;
+// Store the JSON payload as a single string literal. This is immutable data,
+// not 30,000 executable AST statements; v8 coverage must not count catalog
+// properties as uncovered application branches.
+const generated=`/* GENERATED. Run node scripts/generate-builtin-skills.mjs */\nexport const BUILTIN_SKILLS_REVISION = ${JSON.stringify(revision)};\nexport type BuiltinSkill = { readonly id:string; readonly name:string; readonly priority:"P0"|"P1"; readonly category:string; readonly description:string; readonly engine:string; readonly requires:readonly string[]; readonly scopes:readonly string[]; readonly upstream:string; readonly license:string; readonly optIn:boolean; readonly content:string };\nexport const BUILTIN_SKILLS:readonly BuiltinSkill[] = JSON.parse(${JSON.stringify(JSON.stringify(skills))});\n`;
 const dest=path.join(root,'packages/skills/src/catalog.generated.ts');
 if(process.argv.includes('--check')){
  if(!fs.existsSync(dest)||fs.readFileSync(dest,'utf8')!==generated){console.error('Builtin Skill catalog drift. Run node scripts/generate-builtin-skills.mjs');process.exit(1)}

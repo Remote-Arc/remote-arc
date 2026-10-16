@@ -27,6 +27,14 @@ fs.writeFileSync(
 for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWith(".ts"))) {
   let input = fs.readFileSync(path.join(relay, "src", name), "utf8");
   input = input.replaceAll('from "@remotearc/protocol"', 'from "./protocol.js"');
+  // This isolated in-memory goal test transpiles relay files to /tmp.
+  // Cloud Skill instructions are hosted Worker resources, not a dependency
+  // of goal execution. Stub the static catalog rather than resolving /packages
+  // outside this fixture's module root.
+  if (name === "mcp.ts") input = input.replace(
+    'import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";',
+    'const BUILTIN_SKILLS = [];',
+  );
   if (name === "mcp.ts") for (const packageName of ["@modelcontextprotocol/server", "zod"]) {
     input = input.replace('from "' + packageName + '"', 'from "' + pathToFileURL(createRequire(path.join(relay, "package.json")).resolve(packageName)).href + '"');
   }

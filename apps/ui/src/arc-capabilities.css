@@ -12,24 +12,6 @@
 .arcFeaturePills{display:flex;gap:9px;flex-wrap:wrap;list-style:none;padding:0;margin:27px 0 0}
 .arcFeaturePills li{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--text);border:1px solid var(--line);padding:8px 11px;border-radius:100px}
 .arcFeaturePills .arcFeatureSvg{width:15px;height:15px;color:var(--accent)}
-.arcRoutineDemo{min-width:0;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--bg);box-shadow:0 28px 80px rgba(0,0,0,.08)}
-.arcRoutineDemoTop{display:flex;gap:9px;align-items:center;padding:20px 23px;border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.12em;font-weight:770;color:var(--muted)}
-.arcRoutineDemoTop small{margin-left:auto;font-size:10px;color:var(--muted);letter-spacing:.07em}
-.arcRoutineLiveDot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
-.arcRoutineChoices{display:grid;gap:5px;padding:12px}
-.arcRoutineChoices button{display:flex;gap:12px;align-items:center;width:100%;min-height:53px;background:transparent;color:var(--text);text-align:left;border:1px solid transparent;border-radius:11px;padding:12px 13px;cursor:pointer;font-size:14px;font-weight:670}
-.arcRoutineChoices button .arcFeatureSvg{width:20px;height:20px;color:var(--accent)}
-.arcRoutineChoices button>span:last-child{margin-left:auto;color:var(--muted)}
-.arcRoutineChoices button.selected{border-color:var(--line);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
-.arcRoutineChoices button:hover{border-color:var(--accent)}
-.arcRoutineOutcome{border-top:1px solid var(--line);padding:24px;background:color-mix(in srgb,var(--panel) 70%,var(--bg))}
-.arcRoutineOutcome>span{font-size:10px;color:var(--muted);font-weight:740;letter-spacing:.14em}
-.arcRoutineOutcome>strong{display:block;margin-top:10px;font-size:22px;letter-spacing:-.035em}
-.arcRoutineOutcome>p{margin:8px 0 20px;color:var(--muted);font-size:13px;line-height:1.6}
-.arcRoutineFlow{display:flex;align-items:center;gap:8px}
-.arcRoutineFlow>span{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:650;white-space:nowrap}
-.arcRoutineFlow>span>.arcFeatureSvg{width:15px;height:15px;color:var(--accent)}
-.arcRoutineFlow>i{min-width:8px;height:1px;flex:1;background:var(--line)}
 .arcCapabilitiesGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-top:17px}
 .arcCapabilitiesGrid article{padding:36px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 35%,var(--bg));border-radius:20px}
 .arcCapabilitiesGrid h3{font-size:clamp(23px,2.6vw,30px);font-weight:670;letter-spacing:-.043em;margin:25px 0 13px}
@@ -52,7 +34,7 @@
 .arcEcosystemFoot>a{flex:none;text-decoration:none;font-weight:700;color:var(--accent);font-size:14px}
 .arcAppEcosystem button:focus-visible,.arcCapabilities button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media(max-width:1020px){.arcAppGrid{grid-template-columns:repeat(3,1fr)}.arcCapabilitiesSpotlight{grid-template-columns:1fr}.arcRoutineDemo{max-width:700px;width:100%;margin:auto}}
-@media(max-width:660px){.arcCapabilities,.arcAppEcosystem{padding:68px 0}.arcCapabilitiesIntro,.arcAppIntro{margin-bottom:34px}.arcCapabilitiesIntro h2,.arcAppIntro h2{font-size:clamp(34px,9vw,49px)}.arcCapabilitiesSpotlight{padding:25px 18px;gap:28px}.arcCapabilitiesGrid{grid-template-columns:1fr}.arcCapabilitiesGrid article{padding:27px}.arcAppGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.arcAppItem{gap:9px;padding:10px;min-height:66px}.arcAppItem strong{font-size:12px}.arcAppIcon{width:35px;height:35px}.arcEcosystemFoot{align-items:stretch;flex-direction:column}.arcEcosystemFoot>div{align-items:flex-start}.arcEcosystemFoot .arcFeatureIconFrame{flex:none;width:42px;height:42px}.arcRoutineFlow{gap:4px}.arcRoutineFlow>span{font-size:10px}}
+@media(max-width:660px){.arcCapabilities,.arcAppEcosystem{padding:68px 0}.arcCapabilitiesIntro,.arcAppIntro{margin-bottom:34px}.arcCapabilitiesIntro h2,.arcAppIntro h2{font-size:clamp(34px,9vw,49px)}.arcCapabilitiesSpotlight{padding:25px 18px;gap:28px}.arcCapabilitiesGrid{grid-template-columns:1fr}.arcCapabilitiesGrid article{padding:27px}.arcAppGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.arcAppItem{gap:9px;padding:10px;min-height:66px}.arcAppItem strong{font-size:12px}.arcAppIcon{width:35px;height:35px}.arcEcosystemFoot{align-items:stretch;flex-direction:column}.arcEcosystemFoot>div{align-items:flex-start}.arcEcosystemFoot .arcFeatureIconFrame{flex:none;width:42px;height:42px}}
 
 /* Genuine multi-color product symbols get their own space, not generic white stickers. */
 .arcAppItem{appearance:none;font-family:inherit;font-size:inherit;color:var(--text);text-align:left;cursor:pointer;position:relative;isolation:isolate;transition:transform .22s ease,background .24s ease,border-color .24s ease,box-shadow .24s ease;animation:arcAppEnter .45s cubic-bezier(.2,.8,.3,1) both}
@@ -75,17 +57,83 @@
 .arcAppDetail p{flex:1;color:var(--text);font-size:14px;line-height:1.7;margin:0}
 .arcAppDetailStatus{border:1px solid var(--line);color:var(--muted);border-radius:100px;padding:8px 12px;font-size:11px;white-space:nowrap}
 @keyframes arcAppEnter{from{opacity:0;filter:blur(2px)}to{opacity:1;filter:none}}
-.arcRoutinePlayback{display:grid;place-items:center;margin-left:2px;background:var(--bg);color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:7px;cursor:pointer}
-.arcRoutinePlayback .arcFeatureSvg{width:14px;height:14px}
-.arcRoutinePlayback:hover,.arcRoutinePlayback:focus-visible{color:var(--accent);border-color:var(--accent)}
-.arcRoutineDemoTop small{margin-left:auto}
-.arcRoutineChoices button.selected{border-color:color-mix(in srgb,var(--accent) 42%,var(--line));background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
-.arcRoutineLiveStatus{display:flex;align-items:center;gap:9px;margin:0 0 21px;font-size:12px;color:var(--accent);font-weight:700;min-height:22px}
-.arcRoutineLiveStatusDot{height:7px;width:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px color-mix(in srgb,var(--accent) 45%,transparent)}
-.arcRoutineFlow>span{transition:color .4s ease,transform .4s ease;color:var(--muted)}
-.arcRoutineFlow>span.current{color:var(--text);transform:translateY(-2px)}
-.arcRoutineFlow>span.current .arcFeatureSvg{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 65%,transparent))}
-.arcRoutineFlow>i{background:linear-gradient(90deg,var(--accent),var(--line));opacity:.6}
 @media(max-width:1000px){.arcAppDetail{flex-wrap:wrap;gap:15px}.arcAppDetailBrand{min-width:100%}.arcAppDetailStatus{margin-left:auto}}
 @media(max-width:660px){.arcAppIcon{width:38px;height:38px;padding:1px}.arcAppIcon img{width:33px;height:33px}.arcAppItem[data-app="notion"] .arcAppIcon,.arcAppItem[data-app="github"] .arcAppIcon{padding:5px}.arcAppItem[data-app="notion"] .arcAppIcon img,.arcAppItem[data-app="github"] .arcAppIcon img{width:28px;height:28px}.arcAppDetail{padding:19px}.arcAppItemArrow{display:none}}
 @media(prefers-reduced-motion:reduce){.arcAppItem{animation:none!important;transition:none!important}.arcAppItemArrow,.arcAppIcon img,.arcRoutineFlow>span{transition:none!important}}
+
+/* A routine is shown through its inputs, draft and reviewable result. */
+.arcRoutineDemo{min-width:0;border:1px solid color-mix(in srgb,var(--accent) 21%,var(--line));border-radius:19px;overflow:hidden;background:var(--bg);box-shadow:0 25px 70px rgba(0,0,0,.09)}
+.arcRoutineDemoTop{display:flex;align-items:center;gap:8px;padding:15px 18px;border-bottom:1px solid var(--line);font-size:9px;letter-spacing:.1em;font-weight:750;color:var(--muted)}
+.arcRoutineDemoTop>span:nth-child(2){min-width:0}
+.arcRoutineDemoTop small{margin-left:auto;font-size:9px;letter-spacing:.05em;white-space:nowrap}
+.arcRoutineLiveDot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.arcRoutinePlayback{display:grid;place-items:center;flex:none;margin-left:2px;width:30px;height:30px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px;cursor:pointer}
+.arcRoutinePlayback .arcFeatureSvg{width:14px;height:14px}
+.arcRoutinePlayback:hover,.arcRoutinePlayback:focus-visible{color:var(--accent);border-color:var(--accent)}
+.arcRoutineChoices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:10px;border-bottom:1px solid var(--line)}
+.arcRoutineChoices button{appearance:none;font:inherit;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:48px;padding:8px 6px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer;text-align:left;font-size:11px;font-weight:680;line-height:1.35;transition:border-color .2s,background .2s,color .2s}
+.arcRoutineChoices .arcFeatureSvg{width:18px;height:18px;color:var(--muted)}
+.arcRoutineChoices button.selected{color:var(--text);border-color:color-mix(in srgb,var(--accent) 42%,var(--line));background:color-mix(in srgb,var(--accent) 9%,var(--panel))}
+.arcRoutineChoices button.selected .arcFeatureSvg{color:var(--accent)}
+.arcRoutineChoices button:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--text)}
+.arcRoutineStory{padding:20px 18px 14px}
+.arcRoutineRequest{display:grid;gap:7px;margin-bottom:16px}
+.arcRoutineRequest>span{font-size:9px;letter-spacing:.1em;font-weight:740;color:var(--accent)}
+.arcRoutineRequest>strong{font-size:clamp(16px,1.8vw,19px);font-weight:680;letter-spacing:-.035em;line-height:1.4}
+.arcRoutineSources{display:grid;gap:7px}
+.arcRoutineSource{display:flex;align-items:center;gap:10px;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--panel) 65%,var(--bg));}
+.arcRoutineSourceLogo{display:grid;place-items:center;flex:none;width:31px;height:31px;border-radius:8px;padding:4px;background:color-mix(in srgb,var(--text) 3%,transparent)}
+.arcRoutineSourceLogo[data-brand="github"],.arcRoutineSourceLogo[data-brand="notion"]{background:#fff;padding:5px}
+.arcRoutineSourceLogo img{display:block;width:24px;height:24px;object-fit:contain}
+.arcRoutineSource>div{display:grid;gap:3px;min-width:0;flex:1}
+.arcRoutineSource strong{font-size:11px;font-weight:700;line-height:1.4}
+.arcRoutineSource>div>span{font-size:10px;line-height:1.4;color:var(--muted)}
+.arcRoutineSourceState{display:grid;place-items:center;flex:none;width:22px;height:22px;color:var(--muted);border:1px solid var(--line);border-radius:50%;transition:color .3s,border-color .3s,background .3s}
+.arcRoutineSourceState .arcFeatureSvg{width:12px;height:12px}
+.arcRoutineSourceState.is-read{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 30%,var(--line));background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.arcRoutineProgress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:17px 0}
+.arcRoutineProgress button{appearance:none;font:inherit;display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:32px;padding:3px 0;border:0;border-bottom:2px solid var(--line);border-radius:0;background:transparent;color:var(--muted);cursor:pointer;font-size:10px;font-weight:650;transition:border-color .3s,color .3s}
+.arcRoutineProgress button>span{display:grid;place-items:center;font-size:9px;font-variant-numeric:tabular-nums}
+.arcRoutineProgress .arcFeatureSvg{width:10px;height:10px}
+.arcRoutineProgress button.current{color:var(--text);border-bottom-color:var(--accent)}
+.arcRoutineProgress button.complete{color:var(--accent);border-bottom-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.arcRoutineWorkbench{min-width:0}
+.arcRoutineWorkbenchHeading{display:flex;align-items:center;gap:9px;margin-bottom:12px;min-height:39px}
+.arcRoutineArcLogo{display:grid;place-items:center;flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.arcRoutineArcLogo img{width:25px;height:25px;display:block;object-fit:contain}
+.arcRoutineWorkbenchHeading>div{display:grid;gap:4px;flex:1;min-width:0}
+.arcRoutineWorkbenchHeading>div>span{font-size:8px;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.arcRoutineWorkbenchHeading strong{font-size:12px;font-weight:680;line-height:1.45}
+.arcRoutineBeat{flex:none;display:grid;place-items:center;width:18px;height:18px;color:var(--accent)}
+.arcRoutineBeat i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:arcRoutineWorking 1.4s ease-in-out infinite}
+.arcRoutineBeat .arcFeatureSvg{width:15px;height:15px}
+.arcRoutineArtifact{overflow:hidden;border:1px solid var(--line);border-radius:11px;background:color-mix(in srgb,var(--panel) 48%,var(--bg));transition:border-color .35s,box-shadow .35s}
+.arcRoutineArtifact[data-ready="true"]{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));box-shadow:0 8px 25px color-mix(in srgb,var(--accent) 5%,transparent)}
+.arcRoutineArtifactHeader{display:flex;align-items:center;gap:8px;padding:13px 13px 0;min-width:0}
+.arcRoutineArtifactHeader>.arcFeatureSvg{width:16px;height:16px;color:var(--accent)}
+.arcRoutineArtifactHeader>span{font-size:12px;line-height:1.4;font-weight:700;letter-spacing:-.02em;flex:1;min-width:0}
+.arcRoutineArtifactHeader small{font-size:8px;letter-spacing:.08em;color:var(--muted);padding:4px 5px;border:1px solid var(--line);border-radius:4px;flex:none}
+.arcRoutineArtifactWaiting,.arcRoutineDrafting,.arcRoutineArtifactLines{min-height:88px;margin:0;padding:13px;font-size:11px;line-height:1.65;color:var(--muted)}
+.arcRoutineArtifactWaiting{display:flex;align-items:center}
+.arcRoutineDrafting p{margin:0 0 10px;font-size:10px;line-height:1.5}
+.arcRoutineDrafting>span{display:block;height:4px;border-radius:4px;background:color-mix(in srgb,var(--accent) 18%,var(--line));width:88%;transform-origin:0 50%;animation:arcRoutineDraft 1.8s ease-in-out infinite}
+.arcRoutineDrafting>span+span{margin-top:6px;width:72%;animation-delay:.14s}
+.arcRoutineDrafting>span:last-child{width:51%;animation-delay:.28s}
+.arcRoutineArtifactLines{list-style:none;display:grid;align-content:start;gap:8px;color:var(--text)}
+.arcRoutineArtifactLines li{display:flex;align-items:flex-start;gap:7px}
+.arcRoutineArtifactLines .arcFeatureSvg{flex:none;width:12px;height:12px;margin-top:3px;color:var(--accent)}
+.arcRoutineReviewNote{display:flex;align-items:center;gap:7px;margin:0 13px 12px;padding:8px 9px;min-height:39px;border:1px solid transparent;border-radius:7px;visibility:hidden;color:var(--accent);font-size:10px;line-height:1.5}
+.arcRoutineReviewNote.visible{visibility:visible;border-color:color-mix(in srgb,var(--accent) 19%,var(--line));background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.arcRoutineReviewNote .arcFeatureSvg{width:14px;height:14px}
+.arcRoutineArtifactFile{display:flex;align-items:center;gap:8px;justify-content:space-between;min-width:0;border-top:1px solid var(--line);padding:10px 12px;font-size:8px;color:var(--muted)}
+.arcRoutineArtifactFile code{min-width:0;font-size:9px;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.5}
+.arcRoutineArtifactFile>span{flex:none;font-weight:650}
+.arcRoutineScope{font-size:9px;line-height:1.6;color:var(--muted);margin:11px 2px 0}
+.arcRoutineDemo[data-running="false"] *,.arcRoutineDemo[data-running="false"] *:before,.arcRoutineDemo[data-running="false"] *:after{animation-play-state:paused!important}
+@keyframes arcRoutineWorking{0%,100%{opacity:.35;box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 14%,transparent)}50%{opacity:1;box-shadow:0 0 0 5px transparent}}
+@keyframes arcRoutineDraft{0%,100%{opacity:.5;transform:scaleX(.88)}50%{opacity:1;transform:scaleX(1)}}
+@media(max-width:1020px){.arcRoutineDemo{max-width:590px;width:100%;margin:0 auto}.arcRoutineSource strong{font-size:12px}.arcRoutineSource>div>span{font-size:11px}.arcRoutineArtifactWaiting,.arcRoutineDrafting,.arcRoutineArtifactLines{min-height:85px}}
+@media(max-width:660px){.arcRoutineStory{padding:17px 12px 13px}.arcRoutineDemoTop{padding:12px;gap:6px;font-size:8px}.arcRoutineDemoTop small{font-size:8px}.arcRoutineChoices{padding:7px;gap:3px}.arcRoutineChoices button{flex-direction:column;text-align:center;gap:5px;min-height:59px;font-size:10px;padding:7px 3px}.arcRoutineRequest>strong{font-size:16px}.arcRoutineSource{padding:10px 8px;gap:8px}.arcRoutineSource strong{font-size:10px}.arcRoutineSource>div>span{font-size:9px}.arcRoutineSourceLogo{width:28px;height:28px}.arcRoutineSourceLogo img{width:21px;height:21px}.arcRoutineProgress button{font-size:9px;gap:4px}.arcRoutineWorkbenchHeading strong{font-size:11px}.arcRoutineWorkbenchHeading>div>span{font-size:7px}.arcRoutineArtifactHeader{padding:12px 10px 0}.arcRoutineArtifactHeader>span{font-size:11px}.arcRoutineArtifactWaiting,.arcRoutineDrafting,.arcRoutineArtifactLines{font-size:10px;padding:12px 10px;min-height:87px}.arcRoutineReviewNote{margin-left:10px;margin-right:10px;font-size:9px;min-height:42px}.arcRoutineArtifactFile{padding:9px 10px}.arcRoutineArtifactFile code{font-size:8px}.arcRoutineArtifactFile>span{font-size:8px}.arcRoutineScope{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.arcRoutineDemo *,.arcRoutineDemo *:before,.arcRoutineDemo *:after{animation:none!important;transition:none!important}}
+
+.arcRoutinePlayback:disabled{cursor:default;opacity:.65}

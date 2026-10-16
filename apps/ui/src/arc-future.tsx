@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./arc-future.css";
 import { ArcCapabilities, ArcFeatureIcon } from "./arc-capabilities.js";
+import { ArcExecutionScene } from "./arc-workspace-scene.js";
 
 // Only the concept's visual explanation is interactive. No model is called and
 // no data is sent to an unimplemented waitlist or paid-hosted service.
@@ -14,62 +14,6 @@ function ArcMark({ subtle = false }: { subtle?: boolean }) {
 
 function ArcStatus({ children }: { children: React.ReactNode }) {
   return <span className="arcV3Status"><i aria-hidden="true" />{children}</span>;
-}
-
-type PreviewCapability = "apps" | "devices" | "routines";
-function ArcExecutionScene() {
-  const {tr,locale} = useI18n();
-  const [selected,setSelected] = useState<PreviewCapability>("devices");
-  const [sceneStep,setSceneStep] = useState(0);
-  const [scenePlaying,setScenePlaying] = useState(() => typeof window === "undefined" || !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const sceneLabels = [
-    {en:"Understanding request",zh:"理解任务"},
-    {en:"Planning authorized steps",zh:"规划授权操作"},
-    {en:"Coordinating tools",zh:"协调连接工具"},
-    {en:"Checking results",zh:"检查执行结果"},
-    {en:"Ready for review",zh:"等待用户审核"}
-  ];
-  useEffect(()=>{
-    if(!scenePlaying)return;
-    const timer=window.setInterval(()=>{
-      if(document.visibilityState==="visible")setSceneStep(v=>(v+1)%sceneLabels.length);
-    },3100);
-    return ()=>window.clearInterval(timer);
-  },[scenePlaying]);
-  const options = {
-    apps: { en: "Connected apps — planned", zh: "连接应用 · 规划中", enDetail: "Integrations will require individual account authorization.", zhDetail: "应用集成需要单独授权对应账号。" },
-    devices: { en: "Your devices — permissioned", zh: "你的设备 · 受控授权", enDetail: "Arc will use only approved computer tools and folders.", zhDetail: "Arc 只会使用已授权的电脑工具和目录。" },
-    routines: { en: "Routines — planned", zh: "自动任务 · 规划中", enDetail: "Repeat work with budgets, pauses and review checkpoints.", zhDetail: "定期工作也要有费用上限、暂停和审批。" },
-  } satisfies Record<PreviewCapability,{en:string;zh:string;enDetail:string;zhDetail:string}>;
-  const current = options[selected];
-  return <div className="arcV3Stage" data-scene-step={sceneStep} aria-label={tr("Concept illustration: a request flows through Arc to connected tools and a reviewable result. This is not a live interface.", "Arc 产品概念图：请求通过 Arc 连接工具并生成待审核结果，并非已上线功能。")}>
-    <div className="arcV3StageBackdrop" aria-hidden="true" />
-    <div className="arcV3StageLabel"><i />{tr("PRODUCT CONCEPT / NOT LIVE", "产品概念 / 尚未上线")}
-      <button className="arcV3ScenePlayback" type="button" aria-label={scenePlaying?tr("Pause demo animation","暂停示意动画"):tr("Play demo animation","播放示意动画")} aria-pressed={!scenePlaying} onClick={()=>setScenePlaying(v=>!v)}>{scenePlaying?tr("Pause","暂停"):tr("Play","播放")} <ArcFeatureIcon name={scenePlaying?"pause":"play"}/></button>
-    </div>
-    <div className="arcV3Prompt">
-      <span className="arcV3PromptSymbol"><ArcFeatureIcon name="play"/></span>
-      <div className="arcV3PromptText"><span>{tr("A request for Arc", "给 Arc 的任务")}</span><strong>{tr("Prepare my weekly project update", "整理本周项目进展")}</strong></div>
-      <span className="arcV3PromptDemo">{tr("EXAMPLE", "示例")}</span>
-    </div>
-    <div className="arcV3SceneProgress" role="status" aria-live="off"><span className="arcV3SceneProgressDot"/><span>{locale==="zh"?sceneLabels[sceneStep]?.zh:sceneLabels[sceneStep]?.en}</span><span className="arcV3SceneProgressNumber">0{sceneStep+1} / 05</span></div>
-    <div className="arcV3SceneProgressRail" aria-hidden="true"><span style={{transform:`scaleX(${(sceneStep+1)/5})`}} /></div>
-    <div className="arcV3Energy" aria-hidden="true"><span /></div>
-    <div className="arcV3Nexus">
-      <div className="arcV3NexusAura" aria-hidden="true" />
-      <div className="arcV3NexusCore"><span className="arcV3CoreOrbit" aria-hidden="true"/><ArcMark /></div>
-      <div className="arcV3NexusLabel"><strong>arc</strong><small>{tr("Plans · Routes · Verifies", "规划 · 调度 · 验证")}</small></div>
-    </div>
-    <div className="arcV3Branch" aria-hidden="true"><span className="arcV3BranchStem" /><span className="arcV3BranchBar" /></div>
-    <div className="arcV3Nodes" role="group" aria-label={tr("Explore planned Arc capabilities", "查看 Arc 计划中的能力")}>
-      <button type="button" className={"arcV3Node" + (selected==="apps" ? " arcV3Node--main" : "")} aria-pressed={selected==="apps"} onClick={()=>setSelected("apps")}><span className="arcV3NodeGlyph" aria-hidden="true"><ArcFeatureIcon name="apps"/></span><span className="arcV3NodeContent"><strong>{tr("Apps", "云应用")}</strong><small>GitHub · Notion</small></span></button>
-      <button type="button" className={"arcV3Node" + (selected==="devices" ? " arcV3Node--main" : "")} aria-pressed={selected==="devices"} onClick={()=>setSelected("devices")}><span className="arcV3NodeGlyph" aria-hidden="true"><img src="/platform-brands/windows.svg" width="22" height="22" alt="" /></span><span className="arcV3NodeContent"><strong>{tr("Devices", "个人设备")}</strong><small>Mac · Windows</small></span></button>
-      <button type="button" className={"arcV3Node" + (selected==="routines" ? " arcV3Node--main" : "")} aria-pressed={selected==="routines"} onClick={()=>setSelected("routines")}><span className="arcV3NodeGlyph" aria-hidden="true"><ArcFeatureIcon name="routine"/></span><span className="arcV3NodeContent"><strong>Routines</strong><small>{tr("Scheduled work", "定期任务")}</small></span></button>
-    </div>
-    <div className="arcV3CapabilityDetail" aria-live="polite"><strong>{locale==="zh"?current.zh:current.en}</strong><span>{locale==="zh"?current.zhDetail:current.enDetail}</span></div>
-    <div className="arcV3Merge" aria-hidden="true" />
-    <div className="arcV3Outcome"><span className="arcV3OutcomeTick"><ArcFeatureIcon name="check"/></span><div><strong>{tr("Weekly update, ready to review", "项目进展已整理，等待审核")}</strong><small>{tr("Verified output · Your approval before sharing", "可查看结果 · 分享前由你审批")}</small></div><a className="arcV3OutcomeArrow" href={localizedWebsiteHref("/roadmap",locale)} aria-label={tr("See the Arc roadmap", "查看 Arc 路线图")}>↗</a></div>
-  </div>;
 }
 
 export function ArcTeaser() {
@@ -86,7 +30,7 @@ export function ArcTeaser() {
 }
 
 const story = [
-  {id:"01", en:"Start with intent",zh:"只需说出目标",detailEn:"Describe the result you want. Arc turns it into bounded, reviewable work.",detailZh:"告诉 Arc 你想要的结果，Arc 将目标转化成有边界、可审核的工作。",glyph:"play" as const},
+  {id:"01", en:"Start with intent",zh:"只需说出目标",detailEn:"Describe the result you want. Arc turns it into bounded, reviewable work.",detailZh:"告诉 Arc 你想要的结果，Arc 将目标转化成有边界、可审核的工作。",glyph:"message" as const},
   {id:"02", en:"Work across tools",zh:"连接真实工具",detailEn:"Cloud apps and devices, connected only within the permissions you give.",detailZh:"云端应用与个人设备协同执行，每项操作都遵守你的授权。",glyph:"apps" as const},
   {id:"03", en:"See what got done",zh:"看到真实成果",detailEn:"Review results and approvals instead of taking an AI's word for it.",detailZh:"检查执行结果和审批记录，而不只是相信 AI 的口头汇报。",glyph:"check" as const}
 ] as const;

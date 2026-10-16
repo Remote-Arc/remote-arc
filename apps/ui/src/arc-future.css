@@ -6,12 +6,7 @@
 .arcV3Status{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:11px;color:var(--muted);letter-spacing:.09em;font-weight:750;text-transform:uppercase}
 .arcV3Status i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 11%,transparent)}
 .arcV3Mark{display:inline-grid;position:relative;place-items:center;width:106px;height:106px;filter:drop-shadow(0 0 32px color-mix(in srgb,var(--accent) 22%,transparent))}
-.arcV3Mark:before,.arcV3Mark:after{content:"";position:absolute;inset:13%;border:7px solid transparent;border-top-color:var(--accent);border-left-color:color-mix(in srgb,var(--accent) 82%,white);border-radius:50%;transform:rotate(-35deg)}
-.arcV3Mark:after{inset:25%;border-width:4px;transform:rotate(150deg);border-top-color:color-mix(in srgb,var(--accent) 55%,white);border-left-color:transparent}
-.arcV3MarkCore{width:15px;height:15px;border-radius:50%;background:var(--text);box-shadow:0 0 24px color-mix(in srgb,var(--accent) 68%,transparent)}
-.arcV3MarkSlash{position:absolute;width:28px;height:4px;background:var(--text);border-radius:20px;transform:translate(31px,-31px) rotate(-45deg)}
 .arcV3Mark--small{width:54px;height:54px;filter:drop-shadow(0 0 15px color-mix(in srgb,var(--accent) 17%,transparent))}
-.arcV3Mark--small:before{border-width:4px}.arcV3Mark--small:after{border-width:2px}.arcV3Mark--small .arcV3MarkCore{width:7px;height:7px}.arcV3Mark--small .arcV3MarkSlash{width:12px;height:3px;transform:translate(17px,-17px) rotate(-45deg)}
 .arcV3Primary{display:inline-flex;align-items:center;justify-content:center;gap:27px;min-height:47px;background:var(--text);color:var(--bg)!important;padding:0 18px;border-radius:11px;text-decoration:none;font-size:14px;font-weight:730;transition:transform .18s,box-shadow .18s}
 .arcV3Primary:hover{transform:translateY(-2px);box-shadow:0 12px 27px color-mix(in srgb,var(--accent) 18%,transparent)}
 .arcV3Secondary{display:inline-flex;align-items:center;gap:13px;color:var(--text);font-size:14px;font-weight:620;text-decoration:none}
@@ -37,41 +32,6 @@
 .arcV3HeroCue{position:relative;display:grid;justify-items:center;gap:13px;margin-top:63px;font-size:10px;font-weight:750;letter-spacing:.17em;color:var(--muted)}
 .arcV3HeroCue span{height:34px;width:1px;background:linear-gradient(transparent,var(--accent))}
 .arcV3Disclaimer{margin:23px auto 0;font-size:11px;color:var(--muted);line-height:1.65;max-width:750px}
-/* Executable-looking diagram is explicitly labeled a concept. */
-.arcV3Stage{position:relative;isolation:isolate;width:min(100%,1030px);margin:19px auto 0;padding:26px clamp(10px,3vw,36px) 41px;border:1px solid color-mix(in srgb,var(--line) 75%,transparent);border-radius:26px;overflow:hidden;background:color-mix(in srgb,var(--panel) 39%,var(--bg) 61%);box-shadow:inset 0 1px rgba(255,255,255,.035),0 32px 82px rgba(0,0,0,.10)}
-.arcV3StageBackdrop{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 49% 45% at 50% 41%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 95%),linear-gradient(to right,color-mix(in srgb,var(--line) 22%,transparent) 1px,transparent 1px),linear-gradient(to bottom,color-mix(in srgb,var(--line) 22%,transparent) 1px,transparent 1px);background-size:auto,56px 56px,56px 56px;mask-image:linear-gradient(transparent 0%,black 23%,black 75%,transparent 100%);animation:arcSceneBackdrop 16s ease-in-out infinite alternate}
-@keyframes arcSceneBackdrop{0%{opacity:.68;transform:translateY(-4px)}100%{opacity:1;transform:translateY(7px)}}
-.arcV3StageLabel{display:flex;justify-content:center;gap:10px;align-items:center;font-size:10px;letter-spacing:.14em;color:var(--muted);font-weight:760;margin-bottom:24px}
-.arcV3StageLabel i{display:block;width:7px;height:7px;background:var(--accent);border-radius:50%}
-.arcV3Prompt{position:relative;display:flex;align-items:center;gap:15px;text-align:left;margin:0 auto;width:min(100%,640px);min-height:78px;padding:15px 18px;border:1px solid color-mix(in srgb,var(--line) 80%,var(--text) 20%);background:var(--bg);border-radius:15px;box-shadow:0 22px 43px rgba(0,0,0,.13)}
-.arcV3PromptSymbol{width:40px;height:40px;flex:none;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 10%,var(--panel));color:var(--accent);border:1px solid var(--line);border-radius:11px;font-size:23px}
-.arcV3PromptText{display:grid;gap:4px;min-width:0}
-.arcV3PromptText span{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:690}
-.arcV3PromptText strong{font-size:clamp(14px,1.7vw,19px);color:var(--text);font-weight:670;letter-spacing:-.03em}
-.arcV3PromptSend{margin-left:auto;flex:none;width:32px;height:32px;display:grid;place-items:center;background:var(--text);color:var(--bg);border-radius:9px;font-size:19px}
-.arcV3Energy{height:53px;width:1px;margin:0 auto;background:linear-gradient(var(--line),var(--accent));position:relative}
-.arcV3Energy span{position:absolute;left:-2px;top:5px;width:5px;height:16px;border-radius:8px;background:var(--accent);box-shadow:0 0 12px var(--accent);animation:arcV3Travel 3s ease-in-out infinite}
-@keyframes arcV3Travel{0%{transform:translateY(-8px);opacity:.2}50%{opacity:1}100%{transform:translateY(34px);opacity:.1}}
-.arcV3Nexus{height:201px;position:relative;display:flex;align-items:center;flex-direction:column;justify-content:center}
-.arcV3NexusAura{position:absolute;width:225px;height:225px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 26%,transparent),transparent 69%);filter:blur(15px);z-index:-1}
-.arcV3NexusCore{width:122px;height:122px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:30px;display:grid;place-items:center;transform:rotate(-9deg);background:linear-gradient(138deg,color-mix(in srgb,var(--panel) 73%,var(--accent) 27%),var(--bg));box-shadow:0 13px 55px color-mix(in srgb,var(--accent) 19%,transparent),inset 0 1px color-mix(in srgb,var(--text) 16%,transparent)}
-.arcV3NexusCore .arcV3Mark{transform:rotate(9deg)}
-.arcV3NexusLabel{display:flex;align-items:center;gap:13px;margin-top:9px}
-.arcV3NexusLabel strong{font-size:20px;letter-spacing:-.07em}.arcV3NexusLabel small{font-size:11px;color:var(--muted)}
-.arcV3Branch{position:relative;height:65px}
-.arcV3BranchStem{position:absolute;top:0;left:50%;height:31px;border-left:1px solid var(--accent)}
-.arcV3BranchBar{position:absolute;top:31px;left:16.8%;right:16.8%;height:34px;border:1px solid var(--line);border-bottom:0;border-radius:15px 15px 0 0}
-.arcV3Nodes{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;max-width:775px;margin:0 auto}
-.arcV3Node{display:flex;align-items:center;gap:13px;min-height:78px;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:14px;text-align:left;box-shadow:0 12px 29px rgba(0,0,0,.07)}
-.arcV3Node--main{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:0 0 20px color-mix(in srgb,var(--accent) 9%,transparent)}
-.arcV3NodeGlyph{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;border:1px solid var(--line);color:var(--accent);font-size:23px}
-.arcV3Node div{display:grid;gap:3px;min-width:0}
-.arcV3Node strong{font-size:14px;font-weight:690}.arcV3Node small{font-size:11px;color:var(--muted)}
-.arcV3Merge{height:45px;position:relative;width:1px;margin:0 auto;background:linear-gradient(var(--accent),var(--line))}
-.arcV3Outcome{display:flex;align-items:center;gap:13px;width:min(100%,550px);min-height:70px;border:1px solid color-mix(in srgb,var(--accent) 29%,var(--line));background:var(--bg);border-radius:13px;margin:0 auto;padding:13px 17px;text-align:left;box-shadow:0 10px 28px rgba(0,0,0,.05)}
-.arcV3OutcomeTick{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--green) 12%,var(--bg));color:var(--green);font-weight:800}
-.arcV3Outcome>div{display:grid;gap:3px;min-width:0}.arcV3Outcome strong{font-size:13px;font-weight:680}.arcV3Outcome small{font-size:11px;color:var(--muted)}
-.arcV3OutcomeArrow{margin-left:auto;color:var(--accent);font-size:17px}
 /* Vertical chapters, never a three-card grid. */
 .arcV3Journey{border-top:1px solid var(--line);padding:89px 0 85px;text-align:center}
 .arcV3Journey h2,.arcV3Split h2,.arcV3Final h2{font-size:clamp(34px,4.2vw,57px);line-height:1.13;letter-spacing:-.055em;font-weight:680;max-width:830px;margin:15px auto 16px}
@@ -126,62 +86,8 @@
 
 /* Use the actual Remote Arc brand asset instead of a fabricated CSS glyph. */
 .arcV3Mark{filter:drop-shadow(0 0 19px color-mix(in srgb,var(--accent) 16%,transparent))}
-.arcV3Mark::before,.arcV3Mark::after{content:none;display:none}
 .arcV3Mark .arcV3BrandImage{width:88px;height:88px;display:block;object-fit:contain}
 .arcV3Mark--small .arcV3BrandImage{width:47px;height:47px}
-.arcV3PromptDemo{margin-left:auto;flex:none;font-size:9px;letter-spacing:.1em;color:var(--muted);font-weight:740;border:1px solid var(--line);border-radius:7px;padding:7px 9px}
-.arcV3Node{appearance:none;font:inherit;color:var(--text);cursor:pointer;width:100%;transition:border-color .2s ease,transform .2s ease,background .2s ease}
-.arcV3Node:hover{transform:translateY(-2px);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--bg))}
-.arcV3Node:focus-visible,.arcV3OutcomeArrow:focus-visible,.arcV3TeaserAction:focus-visible,.arcV3Primary:focus-visible,.arcV3Secondary:focus-visible,.arcV3Mode a:focus-visible,.arcV3BackLink:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.arcV3NodeContent{display:grid;gap:3px;min-width:0}
-.arcV3NodeGlyph img{display:block;width:21px;height:21px;object-fit:contain}
-.arcV3CapabilityDetail{display:flex;flex-direction:column;align-items:center;gap:5px;min-height:65px;margin:17px auto 0;padding:10px 18px;width:min(100%,620px);font-size:12px;color:var(--muted);line-height:1.5}
-.arcV3CapabilityDetail strong{font-size:12px;font-weight:760;letter-spacing:.04em;color:var(--accent)}
-.arcV3CapabilityDetail span{text-align:center}
-.arcV3OutcomeArrow{display:grid;place-items:center;min-width:34px;min-height:34px;border:1px solid var(--line);border-radius:9px;color:var(--accent);text-decoration:none}
-.arcV3OutcomeArrow:hover{background:color-mix(in srgb,var(--accent) 9%,var(--bg))}
-@media(max-width:600px){.arcV3NodeContent{justify-items:center}.arcV3NodeGlyph img{width:19px;height:19px}.arcV3CapabilityDetail{margin-top:8px;padding:7px 5px;min-height:69px}.arcV3Mark .arcV3BrandImage{width:76px;height:76px}.arcV3Mark--small .arcV3BrandImage{width:43px;height:43px}.arcV3PromptDemo{font-size:8px;padding:6px}}
-@media(prefers-reduced-motion:reduce){.arcV3Node{transition:none}}
-
-/* Existing site-wide button skin takes precedence for native buttons in the
- * public light theme. Give concept selectors an explicit, readable surface. */
-:root[data-theme="light"] .arcV3Stage button.arcV3Node,
-:root[data-theme="light"] .arcV3Stage button.arcV3Node:hover{
-  background:#ffffff!important;
-  color:#10233f!important;
-  border-color:#d3e1eb!important;
-}
-:root[data-theme="light"] .arcV3Stage button.arcV3Node[aria-pressed="true"]{
-  background:#eaf6fd!important;
-  border-color:#0798c6!important;
-}
-
-/* The demo is visibly alive, but never implies a running hosted agent. */
-.arcV3Stage{transition:border-color .5s ease,box-shadow .5s ease}
-.arcV3StageLabel{position:relative;padding-right:104px;min-height:30px}
-.arcV3ScenePlayback{position:absolute;right:0;top:-5px;display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:7px 10px;background:color-mix(in srgb,var(--panel) 75%,var(--bg));color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:11px;font-weight:650;letter-spacing:0;text-transform:none}
-.arcV3ScenePlayback:hover,.arcV3ScenePlayback:focus-visible{border-color:var(--accent);outline-offset:3px}
-.arcV3ScenePlayback svg{width:14px;height:14px}
-.arcV3SceneProgress{width:min(100%,640px);margin:17px auto 6px;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;font-weight:640}
-.arcV3SceneProgressDot{width:7px;height:7px;flex:none;background:var(--accent);box-shadow:0 0 13px color-mix(in srgb,var(--accent) 67%,transparent);border-radius:100%}
-.arcV3SceneProgressNumber{margin-left:auto;font-variant-numeric:tabular-nums;font-size:11px;letter-spacing:.11em}
-.arcV3SceneProgressRail{height:2px;background:color-mix(in srgb,var(--line) 75%,transparent);width:min(100%,640px);margin:0 auto;border-radius:4px;overflow:hidden}
-.arcV3SceneProgressRail span{display:block;width:100%;height:100%;transform-origin:0 50%;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 28%,var(--line)),var(--accent));transition:transform .7s cubic-bezier(.2,.75,.25,1)}
-.arcV3Prompt,.arcV3NexusCore,.arcV3Node,.arcV3Outcome{transition:box-shadow .65s ease,border-color .65s ease,background .65s ease,transform .55s ease}
-.arcV3Stage[data-scene-step="0"] .arcV3Prompt{border-color:var(--accent);box-shadow:0 6px 35px color-mix(in srgb,var(--accent) 15%,transparent)}
-.arcV3Stage[data-scene-step="1"] .arcV3NexusCore{border-color:var(--accent);box-shadow:0 0 65px color-mix(in srgb,var(--accent) 28%,transparent)}
-.arcV3Stage[data-scene-step="2"] .arcV3Nodes .arcV3Node{border-color:color-mix(in srgb,var(--accent) 54%,var(--line));box-shadow:0 0 22px color-mix(in srgb,var(--accent) 13%,transparent)}
-.arcV3Stage[data-scene-step="3"] .arcV3Outcome{border-color:var(--accent);box-shadow:0 5px 34px color-mix(in srgb,var(--accent) 15%,transparent)}
-.arcV3Stage[data-scene-step="4"] .arcV3Outcome{border-color:var(--accent);box-shadow:0 0 36px color-mix(in srgb,var(--accent) 19%,transparent)}
-.arcV3NexusAura{animation:arcNexusBreathe 5.5s ease-in-out infinite alternate}
-.arcV3NexusCore{position:relative}
-.arcV3CoreOrbit{position:absolute;inset:-13px;border-radius:40px;border:1px dashed color-mix(in srgb,var(--accent) 30%,transparent);animation:arcCoreOrbit 28s linear infinite;pointer-events:none}
-.arcV3BranchStem{border-left-color:var(--accent);box-shadow:0 0 8px color-mix(in srgb,var(--accent) 24%,transparent)}
-.arcV3BranchBar{border-color:color-mix(in srgb,var(--accent) 42%,var(--line))}
-.arcV3BranchBar:before,.arcV3BranchBar:after{content:"";position:absolute;top:28px;width:4px;height:4px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:arcFlowLight 3.8s ease-in-out infinite}
-.arcV3BranchBar:before{left:0}.arcV3BranchBar:after{right:0;animation-delay:1.7s}
-@keyframes arcNexusBreathe{0%{opacity:.62;transform:scale(.83)}100%{opacity:1;transform:scale(1.14)}}
-@keyframes arcCoreOrbit{to{transform:rotate(360deg)}}
-@keyframes arcFlowLight{0%,100%{opacity:.25;transform:translateY(-9px)}50%{opacity:1;transform:translateY(0)}}
-@media(max-width:600px){.arcV3StageLabel{padding-right:0;flex-wrap:wrap;margin-bottom:17px}.arcV3ScenePlayback{position:static;margin-left:4px}.arcV3SceneProgress{font-size:11px}.arcV3CoreOrbit{inset:-9px;border-radius:29px}}
-@media(prefers-reduced-motion:reduce){.arcV3NexusAura,.arcV3CoreOrbit,.arcV3BranchBar:before,.arcV3BranchBar:after{animation:none!important}.arcV3Prompt,.arcV3NexusCore,.arcV3Node,.arcV3Outcome,.arcV3SceneProgressRail span{transition:none!important}}
+/* Focus and brand sizing for the retained marketing surfaces. */
+.arcV3TeaserAction:focus-visible,.arcV3Primary:focus-visible,.arcV3Secondary:focus-visible,.arcV3Mode a:focus-visible,.arcV3BackLink:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:600px){.arcV3Mark .arcV3BrandImage{width:76px;height:76px}.arcV3Mark--small .arcV3BrandImage{width:43px;height:43px}}

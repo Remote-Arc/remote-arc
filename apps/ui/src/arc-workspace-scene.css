@@ -1,0 +1,136 @@
+/* A task changes the workspace itself, from a brief to a sourced draft. */
+.arcDesk {
+  --desk-blue: #57c8f4;
+  --desk-green: #7fd8b2;
+  position: relative; isolation: isolate; width: min(100%, 1100px); margin: 22px auto 0;
+  color: var(--text); text-align: left; border: 1px solid color-mix(in srgb,var(--accent) 24%,var(--line));
+  border-radius: 22px; background: var(--bg); box-shadow: 0 32px 100px #0002, 0 0 70px color-mix(in srgb,var(--accent) 7%,transparent);
+}
+.arcDesk * { box-sizing: border-box }
+.arcDeskChrome { display:flex; align-items:center; gap:16px; min-height:66px; padding:16px 22px; border-bottom:1px solid var(--line); background:color-mix(in srgb,var(--panel) 65%,var(--bg)); border-radius:22px 22px 0 0 }
+.arcDeskIdentity { display:flex; align-items:center; gap:10px; font-size:11px; color:var(--muted); white-space:nowrap }
+.arcDeskIdentity strong { font-size:22px; color:var(--text); letter-spacing:-.07em; margin-right:5px }
+.arcDeskConcept { margin-left:auto; font-size:9px; letter-spacing:.1em; font-weight:700; color:var(--muted) }
+.arcDesk .arcV3ScenePlayback { position:static; flex:none; display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:6px 10px; margin:0; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text); cursor:pointer; font-size:11px; font-weight:650 }
+.arcDesk .arcV3ScenePlayback svg { width:14px; height:14px }
+.arcDesk button:focus-visible { outline:2px solid var(--accent); outline-offset:3px }
+.arcDesk button:disabled { cursor:default; opacity:.75 }
+.arcDeskBrief { display:flex; align-items:center; gap:15px; padding:24px 28px; border-bottom:1px solid var(--line) }
+.arcDeskAvatar { width:35px; height:35px; flex:none; border:1px solid var(--line); border-radius:50%; display:grid; place-items:center; color:var(--accent); background:color-mix(in srgb,var(--accent) 8%,var(--bg)); font-size:12px; font-weight:700 }
+.arcDeskBrief > div { flex:1; min-width:0 }
+.arcDeskBrief > div > span { display:block; color:var(--muted); font-size:9px; font-weight:750; letter-spacing:.13em; margin-bottom:7px }
+.arcDeskBrief strong { display:block; font-size:clamp(15px,2vw,20px); letter-spacing:-.035em; font-weight:650 }
+.arcDeskBrief p { margin:7px 0 0; color:var(--muted); font-size:12px; line-height:1.6 }
+.arcDeskBrief > svg { width:23px; height:23px; flex:none; color:var(--accent) }
+.arcDeskBody { display:grid; grid-template-columns:185px minmax(0,1fr) }
+.arcDeskTimeline { padding:26px 15px 20px; border-right:1px solid var(--line); background:color-mix(in srgb,var(--panel) 35%,var(--bg)) }
+.arcDeskOverline { display:block; font-size:9px; color:var(--muted); font-weight:750; letter-spacing:.12em }
+.arcDeskTimeline > .arcDeskOverline { margin:0 10px 19px }
+.arcDeskTimeline button { display:flex; align-items:center; gap:10px; width:100%; min-height:48px; padding:9px 10px; margin:5px 0; border:1px solid transparent; border-radius:9px; color:var(--muted); background:transparent; text-align:left; cursor:pointer; transition:background .4s,border-color .4s,color .4s }
+.arcDeskTimeline button > span { width:23px; height:23px; flex:none; display:grid; place-items:center; border:1px solid var(--line); border-radius:50%; font:9px ui-monospace,monospace }
+.arcDeskTimeline button svg { width:13px; height:13px }
+.arcDeskTimeline button strong { font-size:11px; font-weight:600; line-height:1.5 }
+.arcDeskTimeline button.current { border-color:color-mix(in srgb,var(--accent) 23%,var(--line)); background:color-mix(in srgb,var(--accent) 8%,var(--bg)); color:var(--text) }
+.arcDeskTimeline button.current > span { background:var(--accent); color:var(--bg); border-color:var(--accent); box-shadow:0 0 18px color-mix(in srgb,var(--accent) 25%,transparent) }
+.arcDeskTimeline button.complete > span { color:var(--desk-green); border-color:color-mix(in srgb,var(--desk-green) 40%,var(--line)) }
+.arcDeskScope { display:flex; align-items:flex-start; gap:8px; margin:26px 10px 0; font-size:10px; line-height:1.7; color:var(--muted) }
+.arcDeskScope svg { width:13px; height:13px; flex:none; margin-top:3px }
+.arcDeskWorkspace { position:relative; display:grid; grid-template-columns:minmax(0,.9fr) 25px minmax(0,1.15fr); align-items:start; padding:25px; min-width:0; background:radial-gradient(ellipse at 30% 75%,color-mix(in srgb,var(--accent) 6%,transparent),transparent 65%) }
+.arcDeskSectionLabel { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:9px; color:var(--muted); font-weight:730; letter-spacing:.08em; margin:0 0 12px }
+.arcDeskSectionLabel small { font:10px ui-monospace,monospace; letter-spacing:0 }
+.arcDeskSource { border:1px solid var(--line); border-radius:12px; margin-bottom:12px; background:var(--bg); transition:border-color .5s,box-shadow .5s,transform .5s }
+.arcDeskSourceHead { display:flex; align-items:center; gap:9px; padding:12px; border-bottom:1px solid var(--line) }
+.arcDeskBrand { width:35px; height:35px; flex:none; display:grid; place-items:center; border:1px solid #dce3e9; background:#fff; border-radius:9px }
+.arcDeskBrand img { width:23px; height:23px; object-fit:contain; filter:none }
+.arcDeskSourceHead > div { display:grid; gap:4px; min-width:0 }
+.arcDeskSourceHead strong { font-size:12px; font-weight:650 }
+.arcDeskSourceHead small { font-size:9px; color:var(--muted); line-height:1.5 }
+.arcDeskSourceState { margin-left:auto; color:var(--muted); font:10px ui-monospace,monospace }
+.arcDeskSourceState svg { display:block; width:14px; height:14px; color:var(--desk-green) }
+.arcDeskSourceContent { min-height:101px; padding:13px; position:relative }
+.arcDeskSourceContent > i,.arcDeskDocumentEmpty i { display:block; width:88%; height:6px; border-radius:5px; background:color-mix(in srgb,var(--muted) 12%,var(--bg)); margin:10px 0 14px }
+.arcDeskSourceContent > i:nth-child(2) { width:58% }
+.arcDeskSourceContent p { font-size:12px; line-height:1.55; margin:10px 0 7px; font-weight:600 }
+.arcDeskSourceContent > small { font-size:9px; color:var(--muted) }
+.arcDeskSourceTag { display:inline-block; font-size:8px; font-weight:750; letter-spacing:.08em; padding:4px 6px; border:1px solid color-mix(in srgb,var(--desk-green) 25%,var(--line)); border-radius:4px; color:var(--desk-green); background:color-mix(in srgb,var(--desk-green) 6%,var(--bg)) }
+.arcDeskSourceTag--notes { color:var(--desk-blue); border-color:color-mix(in srgb,var(--desk-blue) 25%,var(--line)); background:color-mix(in srgb,var(--desk-blue) 6%,var(--bg)) }
+.arcDesk[data-running="true"] .arcDeskSource[data-ready="true"] .arcDeskSourceContent { animation:arcDeskReveal .55s both }
+.arcDeskSource:nth-child(3) .arcDeskSourceContent { animation-delay:.16s }
+.arcDesk[data-step="1"] .arcDeskSource { border-color:color-mix(in srgb,var(--accent) 60%,var(--line)); box-shadow:0 0 23px color-mix(in srgb,var(--accent) 10%,transparent); transform:translateY(-2px) }
+.arcDeskConductor { display:flex; align-items:center; gap:9px; padding-top:5px; min-height:59px }
+.arcDeskConductorMark { display:grid; place-items:center; width:37px; height:37px; flex:none; border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line)); background:var(--panel); border-radius:12px }
+.arcDeskConductor > div { min-width:0 }
+.arcDeskConductor strong { display:block; font-size:10px; font-weight:650; line-height:1.6 }
+.arcDeskConductor div > span { display:block; font-size:9px; line-height:1.6; color:var(--muted); margin-top:3px }
+.arcDeskSignal { display:flex; gap:3px; align-items:center; height:20px; margin-left:auto }
+.arcDeskSignal i { display:block; width:2px; height:6px; background:var(--accent); border-radius:2px; animation:arcDeskSignal .9s ease-in-out infinite alternate }
+.arcDeskSignal i:nth-child(2) { height:15px; animation-delay:.2s }.arcDeskSignal i:nth-child(3) { height:10px; animation-delay:.4s }
+.arcDeskTransfer { position:relative; align-self:stretch }
+.arcDeskTransfer:before { content:""; position:absolute; top:46%; left:0; right:0; height:1px; background:var(--line) }
+.arcDeskTransfer i { position:absolute; top:calc(46% - 2px); left:0; width:6px; height:5px; background:var(--accent); box-shadow:0 0 10px var(--accent); border-radius:4px; animation:arcDeskTransfer 1.8s ease-in-out infinite; opacity:0 }
+.arcDeskTransfer i:nth-child(2) { animation-delay:.9s }
+.arcDesk[data-step="0"] .arcDeskTransfer i,.arcDesk[data-step="4"] .arcDeskTransfer i { display:none }
+.arcDeskDocument { position:relative; min-width:0; border:1px solid var(--line); border-radius:12px; background:color-mix(in srgb,var(--panel) 36%,var(--bg)); box-shadow:0 12px 24px #0001; overflow:hidden; transition:border-color .6s,box-shadow .6s }
+.arcDeskDocumentChrome { display:flex; gap:7px; align-items:center; min-height:40px; padding:10px 13px; border-bottom:1px solid var(--line); font:10px ui-monospace,monospace; color:var(--muted) }
+.arcDeskDocumentChrome svg { width:14px; height:14px; color:var(--accent) }
+.arcDeskDocumentChrome small { margin-left:auto; font-size:8px; letter-spacing:.06em; white-space:nowrap }
+.arcDeskPaper { position:relative; padding:22px 20px; min-height:333px }
+.arcDeskPaper h3 { font-size:clamp(18px,2vw,25px); font-weight:650; line-height:1.2; letter-spacing:-.045em; margin:10px 0 9px }
+.arcDeskDocumentSub { font-size:10px; line-height:1.7; color:var(--muted); margin:0 0 23px }
+.arcDeskDraftSection { margin-top:18px; transition:opacity .5s,transform .5s; opacity:0; transform:translateY(10px) }
+.arcDeskDraftSection:nth-of-type(2) { transition-delay:.2s }
+.arcDeskDraftSection[data-revealed="true"] { opacity:1; transform:translateY(0) }
+.arcDeskDraftSection > span { color:var(--accent); font-size:8px; font-weight:730; letter-spacing:.11em }
+.arcDeskDraftSection h4 { font-size:12px; line-height:1.6; margin:7px 0 5px; font-weight:650 }
+.arcDeskDraftSection p { font-size:10px; line-height:1.8; color:var(--muted); margin:0 }
+.arcDeskDraftSection sup { display:inline-grid; place-items:center; width:18px; height:15px; border-radius:3px; margin-left:5px; background:color-mix(in srgb,var(--muted) 12%,transparent); font-size:8px; color:var(--muted); transition:background .5s,color .5s }
+.arcDeskDraftSection sup.verified { background:color-mix(in srgb,var(--desk-green) 15%,transparent); color:var(--desk-green) }
+.arcDeskDocumentEmpty { position:absolute; left:20px; right:20px; top:140px; transition:opacity .3s }
+.arcDeskDocumentEmpty i:nth-child(2n) { width:67% }.arcDeskDocumentEmpty i:nth-child(3) { margin-top:30px; width:40% }
+.arcDeskDocument[data-ready="true"] .arcDeskDocumentEmpty { opacity:0 }
+.arcDeskDocumentFooter { display:flex; align-items:center; gap:7px; min-height:45px; padding:12px; border-top:1px solid var(--line); font-size:9px; color:var(--muted); transition:background .5s }
+.arcDeskDocumentFooter strong { font-size:9px; font-weight:600 }.arcDeskDocumentFooter > span:last-child { margin-left:auto; white-space:nowrap }
+.arcDeskReviewDot { width:5px; height:5px; border-radius:50%; background:var(--muted); flex:none }
+.arcDeskDocumentFooter[data-ready="true"] { color:var(--desk-green); background:color-mix(in srgb,var(--desk-green) 7%,var(--bg)) }.arcDeskDocumentFooter[data-ready="true"] .arcDeskReviewDot { background:var(--desk-green) }
+.arcDesk[data-step="2"] .arcDeskDocument,.arcDesk[data-step="3"] .arcDeskDocument { border-color:color-mix(in srgb,var(--accent) 55%,var(--line)); box-shadow:0 0 30px color-mix(in srgb,var(--accent) 10%,transparent) }
+.arcDesk[data-step="4"] .arcDeskDocument { border-color:color-mix(in srgb,var(--desk-green) 40%,var(--line)) }
+.arcDeskFooter { display:flex; align-items:center; gap:10px; min-height:48px; padding:12px 24px; border-top:1px solid var(--line); font-size:11px; color:var(--muted) }
+.arcDeskActivityDot { width:6px; height:6px; flex:none; border-radius:50%; background:var(--accent); box-shadow:0 0 10px color-mix(in srgb,var(--accent) 40%,transparent) }
+.arcDeskActivityText { line-height:1.6 }
+.arcDesk[data-running="true"] .arcDeskActivityText { animation:arcDeskReveal .35s both }
+.arcDeskCounter { margin-left:auto; white-space:nowrap; font:10px ui-monospace,monospace; color:var(--muted) }
+.arcDeskDisclosure { border-top:1px solid var(--line); font-size:10px; color:var(--muted); text-align:center; line-height:1.6; padding:11px 20px; margin:0 }
+.arcDesk[data-running="false"] *,.arcDesk[data-running="false"] *:before,.arcDesk[data-running="false"] *:after { animation-play-state:paused!important }
+@keyframes arcDeskReveal { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+@keyframes arcDeskSignal { to{transform:scaleY(.35);opacity:.4} }
+@keyframes arcDeskTransfer { 0%{transform:translateX(0);opacity:0}20%{opacity:1}80%{opacity:1}100%{transform:translateX(22px);opacity:0} }
+:root[data-theme="light"] .arcDesk { --desk-green:#167852; --desk-blue:#096b93 }
+:root[data-theme="light"] .arcDeskTimeline button { background:transparent!important; color:var(--muted)!important }
+:root[data-theme="light"] .arcDeskTimeline button.current { background:#eaf6fd!important; color:#10233f!important; border-color:#a4d9ed!important }
+:root[data-theme="light"] .arcDesk .arcV3ScenePlayback { background:white!important; color:#10233f!important; border-color:#d3e1eb!important }
+@media(max-width:900px) {
+  .arcDeskBody{grid-template-columns:155px minmax(0,1fr)}.arcDeskWorkspace{padding:18px;grid-template-columns:minmax(0,.85fr) 18px minmax(0,1.1fr)}
+  .arcDeskTimeline{padding-inline:9px}.arcDeskTimeline button{padding:8px 5px;gap:7px}.arcDeskPaper{padding:18px 14px}.arcDeskSourceHead{padding:10px;gap:7px}.arcDeskConcept{font-size:8px}
+}
+@media(max-width:680px) {
+  .arcDesk{border-radius:16px}.arcDeskChrome{padding:12px;gap:8px;flex-wrap:wrap;border-radius:16px 16px 0 0}.arcDeskIdentity{font-size:10px;gap:7px}.arcDeskIdentity strong{font-size:20px}
+  .arcDeskConcept{order:3;flex-basis:100%;margin:1px 0 0;text-align:center;font-size:8px}.arcDesk .arcV3ScenePlayback{margin-left:auto}
+  .arcDeskBrief{padding:18px 14px;gap:10px}.arcDeskBrief > svg{display:none}.arcDeskAvatar{width:28px;height:28px}.arcDeskBrief strong{font-size:15px}.arcDeskBrief p{font-size:11px}
+  .arcDeskBody{display:flex;flex-direction:column}.arcDeskTimeline{display:flex;gap:5px;align-items:center;border-right:0;border-bottom:1px solid var(--line);padding:12px 10px}
+  .arcDeskTimeline > .arcDeskOverline,.arcDeskScope{display:none}.arcDeskTimeline button{flex:1;flex-direction:column;justify-content:center;min-width:0;padding:8px 2px;gap:7px;margin:0}
+  .arcDeskTimeline button strong{font-size:10px;text-align:center;line-height:1.5}.arcDeskTimeline button > span{width:21px;height:21px;font-size:8px}
+  .arcDeskWorkspace{display:flex;flex-direction:column;gap:15px;padding:18px 14px}.arcDeskSources{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .arcDeskSectionLabel{grid-column:1/-1;margin:0}.arcDeskSource{margin:0}.arcDeskSourceHead{padding:9px;gap:6px}.arcDeskBrand{width:28px;height:28px;border-radius:7px}.arcDeskBrand img{width:19px;height:19px}
+  .arcDeskSourceHead strong{font-size:11px}.arcDeskSourceHead small{font-size:8px}.arcDeskSourceState{display:none}.arcDeskSourceContent{padding:10px;min-height:102px}.arcDeskSourceContent p{font-size:11px}.arcDeskSourceContent > small{font-size:8px}
+  .arcDeskSourceTag{font-size:7px}.arcDeskConductor{grid-column:1/-1;min-height:46px;padding-top:3px}.arcDeskConductor strong{font-size:11px}.arcDeskConductor div > span{font-size:9px}
+  .arcDeskTransfer{display:none}.arcDeskDocument{width:100%}.arcDeskPaper{min-height:307px;padding:21px}.arcDeskPaper h3{font-size:25px}.arcDeskDocumentSub{font-size:11px}
+  .arcDeskDraftSection h4{font-size:13px}.arcDeskDraftSection p{font-size:11px}.arcDeskDocumentFooter,.arcDeskDocumentFooter strong{font-size:10px}
+  .arcDeskFooter{padding:12px 14px;gap:8px;font-size:10px}.arcDeskCounter{font-size:9px}.arcDeskDisclosure{font-size:9px;padding:11px 14px}
+}
+@media(prefers-reduced-motion:reduce) {
+  .arcDesk *,.arcDesk *:before,.arcDesk *:after{animation:none!important;transition:none!important}
+}
+
+.arcV3Hero:has(.arcDesk[data-running="false"]) .arcV3HeroGlow { animation-play-state:paused }
+
+.arcDesk[data-step="4"] .arcDeskSignal i { animation:none; height:4px }

@@ -48,6 +48,7 @@ import { getMonthlyPlusUsage } from "./plus-usage.js";
 import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
+import { submitWebsiteInterest, listWebsiteSubmissions, updateWebsiteSubmission } from "./domains/engagement.js";
 import {
   handleAutomationCollection,
   handleAutomationItem,
@@ -92,6 +93,8 @@ type Env = TaskEventEnv & {
   PUBLIC_ORIGIN: string;
   APP_ORIGIN?: string;
   MARKETING_ORIGIN?: string;
+  ADMIN_ORIGIN?: string;
+  ENGAGEMENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{success: boolean}> };
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
@@ -147,6 +150,39 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
     const appOrigin = env.APP_ORIGIN || env.PUBLIC_ORIGIN;
+    const adminOrigin = env.ADMIN_ORIGIN || "https://admin.remotearc.app";
+    const isAdminHost = url.hostname === new URL(adminOrigin).hostname;
+
+    // Explicit host partition. It can later be extracted into a dedicated Worker
+    // without changing the public API contracts or frontend route boundaries.
+    if (isAdminHost) {
+      const staticAsset = url.pathname.startsWith("/assets/") ||
+        /^\/(?:remote-arc(?:-app-icon)?[.]svg|favicon[.]ico|manifest[.]webmanifest)$/.test(url.pathname);
+      const adminApi = url.pathname === "/api/me" || url.pathname === "/api/monitor" ||
+        url.pathname.startsWith("/api/admin/");
+      const document = url.pathname === "/" || url.pathname === "/overview";
+      if (!adminApi && !staticAsset && !document) {
+        return request.method === "GET" || request.method === "HEAD"
+          ? Response.redirect(adminOrigin + "/", 302)
+          : Response.json({error:"not_found"},{status:404});
+      }
+      if (document && (request.method === "GET" || request.method === "HEAD")) {
+        const session = await getSessionUser(request,env);
+        if (!session) {
+          const login = new URL("/auth/login", appOrigin);
+          login.searchParams.set("return_to",adminOrigin + "/");
+          return Response.redirect(login.toString(),302);
+        }
+        if (!session.isAdmin) return new Response("Forbidden", {status:403,headers:{"cache-control":"no-store","x-robots-tag":"noindex"}});
+      }
+    } else if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/monitor") {
+      // Admin data and mutation endpoints never run on public/consumer hosts.
+      return Response.json({error:"admin_host_required"},{status:404,headers:{"cache-control":"no-store"}});
+    }
+    if (!isAdminHost && url.pathname === "/monitor" && (request.method === "GET" || request.method === "HEAD")) {
+      return Response.redirect(adminOrigin + "/",302);
+    }
+
 
     // Serve one canonical public URL; do not alter HTTPS MCP or dashboard calls.
     const httpsCanonical = marketingHttpsRedirect(url);
@@ -363,6 +399,16 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
         decodeURIComponent(automationHook[2]!),
       );
     }
+
+    if (url.pathname === "/api/public/engagement") {
+      if (url.hostname !== "remotearc.app" && url.hostname !== "www.remotearc.app" &&
+          url.hostname !== "localhost") return Response.json({error:"not_found"},{status:404});
+      return submitWebsiteInterest(request, env);
+    }
+
+    if (url.pathname === "/api/admin/submissions") return listWebsiteSubmissions(request, env);
+    const submissionMatch = url.pathname.match(/^\/api\/admin\/submissions\/([a-zA-Z0-9-]+)$/);
+    if (submissionMatch) return updateWebsiteSubmission(request,env,submissionMatch[1]!);
 
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
@@ -782,6 +828,14 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
       if (!isMarketingHost) {
         headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+        if (isAdminHost) {
+          headers.set("x-frame-options", "DENY");
+          headers.set("referrer-policy", "no-referrer");
+          headers.set("content-security-policy",
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data:; connect-src 'self'; font-src 'self'; " +
+            "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+        }
       } else {
         const canonical = canonicalForPath(url.pathname);
         if (canonical) headers.set("link", "<" + canonical + '>; rel="canonical"');

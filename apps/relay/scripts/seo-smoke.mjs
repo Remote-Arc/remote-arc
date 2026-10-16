@@ -37,6 +37,8 @@ const known = [
   "/downloads",
   "/arc",
   "/roadmap",
+  "/early-access",
+  "/feedback",
   "/install/chatgpt",
   "/install/claude",
   "/install/gemini",
@@ -85,11 +87,13 @@ assert.equal(pageForLanguage("/", "zh"), "/zh");
 assert.equal(pageForLanguage("/docs/mcp", "zh"), "/zh/docs/mcp");
 assert.equal(pageForLanguage("/arc", "zh"), "/zh/arc");
 assert.equal(pageForLanguage("/roadmap", "zh"), "/zh/roadmap");
+assert.equal(pageForLanguage("/feedback", "zh"), "/zh/feedback");
+assert.equal(pageForLanguage("/early-access", "zh"), "/zh/early-access");
 assert.equal(pageForLanguage("/zh/pricing", "en"), "/pricing");
 assert.equal(pageForLanguage("/blogs/why-i-built-remote-arc", "zh"), "/zh/blogs/why-i-built-remote-arc");
 // Each translated page must be independently indexable and paired with English.
 for (const path of ["/zh", "/zh/docs", "/zh/docs/mcp", "/zh/docs/long-running-work",
-  "/zh/install/chatgpt", "/zh/install/claude", "/zh/install/gemini", "/zh/install/cursor", "/zh/pricing", "/zh/downloads", "/zh/arc", "/zh/roadmap"]) {
+  "/zh/install/chatgpt", "/zh/install/claude", "/zh/install/gemini", "/zh/install/cursor", "/zh/pricing", "/zh/downloads", "/zh/arc", "/zh/roadmap", "/zh/feedback", "/zh/early-access"]) {
   assert.equal(marketingStatusCode(path), 200, path + " should be indexable");
   assert.equal(canonicalForPath(path), "https://remotearc.app" + path);
   assert.ok(sitemap.includes("https://remotearc.app" + path), "sitemap missing " + path);

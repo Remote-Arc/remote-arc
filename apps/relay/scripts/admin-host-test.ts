@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { allowOnAdminHost } from "../src/admin-host.js";
+const req=(path:string,method="GET",host="admin.remotearc.app")=>new Request("https://"+host+path,{method});
+for(const path of ["/","/admin-console","/api/me","/api/monitor","/api/admin/operations","/api/admin/billing","/api/admin/call-credits","/api/admin/plan-grants","/api/admin/arc-interest","/assets/main.js","/remote-arc.svg"]) assert.equal(allowOnAdminHost(req(path)),true,path);
+for(const path of ["/mcp","/oauth/token","/oauth/authorize","/api/device/start","/api/automations","/api/public/arc-interest","/overview","/monitor","/unknown","/auth/google"]) assert.equal(allowOnAdminHost(req(path)),false,path);
+assert.equal(allowOnAdminHost(req("/api/public/arc-interest","POST")),false);
+assert.equal(allowOnAdminHost(req("/mcp","POST")),false);
+assert.equal(allowOnAdminHost(req("/api/admin/arc-interest","PATCH")),true);
+assert.equal(allowOnAdminHost(req("/api/admin/arc-interest","DELETE")),false);
+assert.equal(allowOnAdminHost(req("/mcp","POST","mcp.remotearc.app")),true);
+console.log("Admin hostname allowlist test passed");

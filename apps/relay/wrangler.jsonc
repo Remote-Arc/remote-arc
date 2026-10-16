@@ -49,6 +49,10 @@
     {
       "pattern": "mcp.remotearc.app",
       "custom_domain": true
+    },
+    {
+      "pattern": "admin.remotearc.app",
+      "custom_domain": true
     }
   ],
   "assets": {

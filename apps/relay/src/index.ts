@@ -48,6 +48,8 @@ import { getMonthlyPlusUsage } from "./plus-usage.js";
 import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
+import { submitArcInterest, adminArcInterest } from "./lead-intake.js";
+import { allowOnAdminHost } from "./admin-host.js";
 import {
   handleAutomationCollection,
   handleAutomationItem,
@@ -144,6 +146,8 @@ function withTrustedDeviceHeaders(
 
 async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    if (!allowOnAdminHost(request)) return new Response("Not found", { status: 404 });
 
     const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
     const appOrigin = env.APP_ORIGIN || env.PUBLIC_ORIGIN;
@@ -394,6 +398,14 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
         },
       });
     }
+
+    if (url.pathname === "/api/public/arc-interest") {
+      if (request.method !== "POST") return Response.json({error:"method_not_allowed"},{status:405});
+      const { success } = await env.MCP_ANON_RATE_LIMITER!.limit({key:"lead:"+ (request.headers.get("cf-connecting-ip")||"anonymous")});
+      if (!success) return Response.json({error:"rate_limited"},{status:429,headers:{"retry-after":"60"}});
+      return submitArcInterest(request,env);
+    }
+    if (url.pathname === "/api/admin/arc-interest") return adminArcInterest(request,env);
 
     if (url.pathname === "/api/monitor" && request.method === "GET") {
       return handleMonitorState(request, env);

@@ -11,6 +11,7 @@ import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
 import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
 import { releaseChinese } from "./release-locales.js";
 import { AdminOperations } from "./admin-operations.js";
+import { AdminConsole } from "./admin-console.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
@@ -5106,7 +5107,7 @@ function Dashboard({
     ["automations", tr("Tasks", "任务")],
     ["connect", tr("Connect AI", "连接 AI")],
     ["security", tr("Security", "安全")],
-    ...(user.isAdmin ? [["monitor", tr("Monitor", "监控")] as [DashboardTab, string]] : []),
+    // Operations live in the separate Admin workspace; never label customer activity "Monitor".
     ["settings", tr("Settings", "设置")],
   ];
 
@@ -5117,6 +5118,7 @@ function Dashboard({
         <a className="dashboardWebsiteLink" href={MARKETING_ORIGIN}>
           <span aria-hidden="true">↗</span> {tr("Back to website", "返回官网")}
         </a>
+        {user.isAdmin && <a className="dashboardWebsiteLink" href={location.hostname==="admin.remotearc.app"?"/":"https://admin.remotearc.app"}>{tr("Open Admin workspace", "打开运营后台")} ↗</a>}
         <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
           {navItems.map(([id, label]) => (
             <button key={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
@@ -7361,6 +7363,7 @@ function LegalPage({
       ),
       sections: [
         [tr("Account data", "账户数据"), tr("We use your Google account identity to create and secure your Remote Arc account. We store identifiers, display name, email address, session records and authorization metadata needed to operate the service.", "我们使用你的 Google 账户身份来创建并保护 Remote Arc 账户，并保存服务运行所需的标识符、显示名称、邮箱、会话记录和授权元数据。")],
+        [tr("Early access and feedback submissions", "抢先体验与反馈"), tr("When you submit an interest or feedback form, we store your email, optional name/company, message, source page, language, submission time, and our follow-up status. This information is visible only to authorized operators and used to review your request and reply to you. Submitting does not subscribe you to marketing emails. Contact support to request deletion of your submission.", "提交抢先体验或产品反馈时，我们保存邮箱、可选姓名和公司、留言、来源页面、语言、提交时间和跟进状态。这些信息仅供授权管理员查看，用于了解需求和回复。提交不会自动订阅营销邮件；如需删除留言可联系支持邮箱。")],
         [tr("Device data", "设备数据"), tr("For paired computers we store device identifiers, device names, platform metadata, credential hashes and connection timestamps. Raw device credentials are not stored in the hosted database.", "对于已配对电脑，我们保存设备标识、设备名称、平台信息、凭证哈希和连接时间。托管数据库不会保存原始设备凭证。")],
         [tr("Remote actions and tool results", "远程操作与工具结果"), tr("Remote Arc relays authorized MCP tool requests between your selected AI client and your connected device. Requested file contents, directory listings, process output and command results may pass through the hosted relay and be returned to the AI client to fulfill your request. Remote Arc audit records are designed to retain only operational metadata such as tool name, device, success state and time, not file contents, command arguments, OAuth tokens or device credentials.", "Remote Arc 会在你选择的 AI 客户端与已连接设备之间转发已授权的 MCP 工具请求。为完成你的请求，被读取的文件内容、目录列表、进程输出和命令结果可能经过托管 Relay 并返回给 AI 客户端。Remote Arc 的审计记录仅设计为保存工具名称、设备、成功状态和时间等运行元数据，不保存文件内容、命令参数、OAuth Token 或设备凭证。")],
         [tr("Durable automation and Agent Goal data", "持久自动化与 Agent Goal 数据"), tr("Durable tasks store their approved commands/plans, trigger, objective, success criteria, tool set, verification, limits, permission snapshot and progress. They also retain bounded tool/process observations, factual working memory, journal and decision summaries, run output summaries and completion evidence in the control plane. Observations can include file contents or command output. Pending source decisions may contain editing content; their bodies are cleared after consumption while idempotency hashes remain. This task storage is separate from metadata-only operational audit and is not a full archive of local stdout/stderr.", "持久任务保存已批准命令或计划、触发方式、目标、成功标准、工具集合、验证、限制、权限快照与进度。控制面还保存受限工具或进程观察、事实工作记忆、日志与决策摘要、运行输出摘要和完成证据。观察可能包含文件内容或命令输出；待消费源决策可能包含编辑内容，消费后清除正文并保留幂等 Hash。任务存储独立于仅保留元数据的运行审计，不属于本地 stdout/stderr 完整存档。")],
@@ -7492,6 +7495,11 @@ function App() {
   const isDashboardHost = isAppHost || UI_PREVIEW;
   if (isAppHost && routePath === "/") {
     history.replaceState({}, "", "/overview");
+  }
+
+  if (location.hostname === "admin.remotearc.app" || (UI_PREVIEW && routePath === "/admin-console")) {
+    if (user === undefined) return <CenteredCard title={tr("Loading admin…","加载管理后台……")} body={tr("Checking permissions","正在检查权限")} />;
+    return <AdminConsole user={user} />;
   }
 
   if (routePath === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;

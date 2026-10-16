@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./arc-future.css";
+import { ArcInterestForm } from "./arc-interest-form.js";
 
 // Only the concept's visual explanation is interactive. No model is called and
 // no data is sent to an unimplemented waitlist or paid-hosted service.
-const earlyAccessHref = "mailto:support@remotearc.app?subject=" +
-  encodeURIComponent("Arc early access") +
-  "&body=" + encodeURIComponent("The workflow I'd like Arc to handle is: ");
+const earlyAccessHref = "#arc-interest";
 
 function ArcMark({ subtle = false }: { subtle?: boolean }) {
   return <span className={"arcV3Mark" + (subtle ? " arcV3Mark--small" : "")} aria-hidden="true"><img className="arcV3BrandImage" src="/remote-arc.svg" alt="" width="106" height="106" /></span>;
@@ -118,5 +117,6 @@ export function ArcComingSoonPageContent() {
       <p>{tr("Tell us what you'd delegate to Arc. We'll build it step by step, with transparent permissions, results and release status.", "告诉我们你最希望 Arc 帮你完成什么。我们将逐步交付，公开权限、执行结果与开发状态。")}</p>
       <div className="arcV3HeroActions"><a href={earlyAccessHref} className="arcV3Primary">{tr("Share your workflow", "分享你的需求")} ↗</a><a href={localizedWebsiteHref("/roadmap",locale)} className="arcV3Secondary">{tr("Explore the roadmap", "查看路线图")} →</a></div>
     </section>
+    <ArcInterestForm />
   </main>;
 }

@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./arc-roadmap.css";
+import { ArcInterestForm } from "./arc-interest-form.js";
 
-const requestAccess = "mailto:support@remotearc.app?subject=" +
-  encodeURIComponent("Arc early access") +
-  "&body=" + encodeURIComponent("The workflow I'd like Arc to handle is: ");
+const requestAccess = "#arc-interest";
 
 const phases = [
   {id:"00",name:"Foundation",zhName:"连接基础",status:"available",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",subtitle:"CONNECT / RELIABILITY",zhSubtitle:"连接与可靠性",description:"Remote MCP, device permissions and durable task foundations already power Remote Arc. Organization boundaries and controlled production releases are being hardened.",zhDescription:"Remote MCP、设备权限和持久任务基础已支持 Remote Arc。组织隔离与受控生产发布正在加强。",bullets:["Remote MCP · connected devices","Permissioned execution · durable tasks","Organization and release safeguards"],zhBullets:["远程 MCP 与设备连接","受控执行与持久任务","组织隔离与发布保护"],state:"live"},
@@ -77,5 +76,6 @@ export function ArcRoadmapPageContent() {
       <div><a href={localizedWebsiteHref("/arc",locale)}>{tr("Meet Arc", "认识 Arc")} ↗</a><a href={requestAccess}>{tr("Tell us what to build", "告诉我们你的需求")} ↗</a></div>
       <small>{tr("Connect is available today; Arc Hosted and its model credits are not yet public.", "Connect 现已可用；Arc Hosted 与托管模型额度尚未公开开放。")}</small>
     </footer>
+    <ArcInterestForm source="roadmap" />
   </main>;
 }

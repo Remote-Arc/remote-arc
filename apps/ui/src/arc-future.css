@@ -140,3 +140,16 @@
 .arcV3OutcomeArrow:hover{background:color-mix(in srgb,var(--accent) 9%,var(--bg))}
 @media(max-width:600px){.arcV3NodeContent{justify-items:center}.arcV3NodeGlyph img{width:19px;height:19px}.arcV3CapabilityDetail{margin-top:8px;padding:7px 5px;min-height:69px}.arcV3Mark .arcV3BrandImage{width:76px;height:76px}.arcV3Mark--small .arcV3BrandImage{width:43px;height:43px}.arcV3PromptDemo{font-size:8px;padding:6px}}
 @media(prefers-reduced-motion:reduce){.arcV3Node{transition:none}}
+
+/* Existing site-wide button skin takes precedence for native buttons in the
+ * public light theme. Give concept selectors an explicit, readable surface. */
+:root[data-theme="light"] .arcV3Stage button.arcV3Node,
+:root[data-theme="light"] .arcV3Stage button.arcV3Node:hover{
+  background:#ffffff!important;
+  color:#10233f!important;
+  border-color:#d3e1eb!important;
+}
+:root[data-theme="light"] .arcV3Stage button.arcV3Node[aria-pressed="true"]{
+  background:#eaf6fd!important;
+  border-color:#0798c6!important;
+}

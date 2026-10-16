@@ -5,9 +5,7 @@ import "./arc-future.css";
 
 // Only the concept's visual explanation is interactive. No model is called and
 // no data is sent to an unimplemented waitlist or paid-hosted service.
-const earlyAccessHref = "mailto:support@remotearc.app?subject=" +
-  encodeURIComponent("Arc early access") +
-  "&body=" + encodeURIComponent("The workflow I'd like Arc to handle is: ");
+const earlyAccessHref = "/early-access?source=arc";
 
 function ArcMark({ subtle = false }: { subtle?: boolean }) {
   return <span className={"arcV3Mark" + (subtle ? " arcV3Mark--small" : "")} aria-hidden="true"><img className="arcV3BrandImage" src="/remote-arc.svg" alt="" width="106" height="106" /></span>;
@@ -80,7 +78,7 @@ export function ArcComingSoonPageContent() {
       <div className="arcV3HeroEyebrow"><ArcStatus>{tr("Introducing Arc · In development", "认识 Arc · 开发中")}</ArcStatus></div>
       <h1 id="arcV3HeroTitle">{tr("AI that moves work forward.", "让 AI，真正推动工作。")}</h1>
       <p>{tr("From conversation to connected action. We're building Arc, the AI teammate that can work with your apps and computers — with you in control.", "从一句话到真正的执行。我们正在打造 Arc：一个能够连接应用与电脑，同时始终由你掌控权限的 AI 队友。")}</p>
-      <div className="arcV3HeroActions"><a className="arcV3Primary" href={earlyAccessHref}>{tr("Get early access", "申请抢先体验")} <span>↗</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
+      <div className="arcV3HeroActions"><a className="arcV3Primary" href={localizedWebsiteHref(earlyAccessHref,locale)}>{tr("Get early access", "申请抢先体验")} <span>↗</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
       <div className="arcV3HeroCue"><span />{tr("A GLIMPSE OF WHAT'S NEXT", "下一阶段产品概念")}</div>
       <ArcExecutionScene />
       <p className="arcV3Disclaimer">{tr("Concept only. Arc Hosted is not publicly available. Early access opens an email draft.", "此为概念展示。Arc 托管服务尚未公开开放，申请体验将打开邮件草稿。")}</p>
@@ -107,7 +105,7 @@ export function ArcComingSoonPageContent() {
       <div className="arcV3Modes">
         <article className="arcV3Mode"><span className="arcV3ModeNumber">01 / {tr("AVAILABLE TODAY", "现已可用")}</span><h3>Remote Arc Connect</h3><p>{tr("Use ChatGPT, Claude or another compatible AI. Remote Arc connects it to authorized tools on your computers. No extra Remote Arc model API key required.", "继续使用 ChatGPT、Claude 等兼容 AI，连接电脑上的授权工具，不需要额外开通 Remote Arc 模型 API Key。")}</p><a href="/connect-ai">{tr("Connect your AI", "连接现有 AI")} ↗</a></article>
         <div className="arcV3ModesConnector" aria-hidden="true"><ArcMark subtle /></div>
-        <article className="arcV3Mode"><span className="arcV3ModeNumber">02 / {tr("COMING SOON", "即将推出")}</span><h3>Arc Hosted</h3><p>{tr("Talk to Arc directly and hand off work across apps and devices. Hosted model use will have separate pricing and usage limits; Connect's free MCP allowance does not cover it.", "直接与 Arc 对话，委派跨应用与设备的工作。托管模型将有独立费用和额度，不包含在 Connect 的免费 MCP 调用中。")}</p><a href={earlyAccessHref}>{tr("Request access", "申请体验")} ↗</a></article>
+        <article className="arcV3Mode"><span className="arcV3ModeNumber">02 / {tr("COMING SOON", "即将推出")}</span><h3>Arc Hosted</h3><p>{tr("Talk to Arc directly and hand off work across apps and devices. Hosted model use will have separate pricing and usage limits; Connect's free MCP allowance does not cover it.", "直接与 Arc 对话，委派跨应用与设备的工作。托管模型将有独立费用和额度，不包含在 Connect 的免费 MCP 调用中。")}</p><a href={localizedWebsiteHref(earlyAccessHref,locale)}>{tr("Request access", "申请体验")} ↗</a></article>
       </div>
     </section>
 
@@ -116,7 +114,7 @@ export function ArcComingSoonPageContent() {
       <span className="arcV3Eyebrow">{tr("THIS IS JUST THE BEGINNING", "这只是开始")}</span>
       <h2>{tr("Help us build what comes next.", "下一步，由真实需求决定。")}</h2>
       <p>{tr("Tell us what you'd delegate to Arc. We'll build it step by step, with transparent permissions, results and release status.", "告诉我们你最希望 Arc 帮你完成什么。我们将逐步交付，公开权限、执行结果与开发状态。")}</p>
-      <div className="arcV3HeroActions"><a href={earlyAccessHref} className="arcV3Primary">{tr("Share your workflow", "分享你的需求")} ↗</a><a href={localizedWebsiteHref("/roadmap",locale)} className="arcV3Secondary">{tr("Explore the roadmap", "查看路线图")} →</a></div>
+      <div className="arcV3HeroActions"><a href={localizedWebsiteHref(earlyAccessHref,locale)} className="arcV3Primary">{tr("Share your workflow", "分享你的需求")} ↗</a><a href={localizedWebsiteHref("/roadmap",locale)} className="arcV3Secondary">{tr("Explore the roadmap", "查看路线图")} →</a></div>
     </section>
   </main>;
 }

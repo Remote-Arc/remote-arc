@@ -3,9 +3,7 @@ import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./arc-roadmap.css";
 
-const requestAccess = "mailto:support@remotearc.app?subject=" +
-  encodeURIComponent("Arc early access") +
-  "&body=" + encodeURIComponent("The workflow I'd like Arc to handle is: ");
+const requestAccess = "/early-access?source=roadmap";
 
 const phases = [
   {id:"00",name:"Foundation",zhName:"连接基础",status:"available",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",subtitle:"CONNECT / RELIABILITY",zhSubtitle:"连接与可靠性",description:"Remote MCP, device permissions and durable task foundations already power Remote Arc. Organization boundaries and controlled production releases are being hardened.",zhDescription:"Remote MCP、设备权限和持久任务基础已支持 Remote Arc。组织隔离与受控生产发布正在加强。",bullets:["Remote MCP · connected devices","Permissioned execution · durable tasks","Organization and release safeguards"],zhBullets:["远程 MCP 与设备连接","受控执行与持久任务","组织隔离与发布保护"],state:"live"},
@@ -67,14 +65,14 @@ export function ArcRoadmapPageContent() {
         </div>
         <div className="arcTimelinePanelBottom">
           <span>{tr("Progress is directional, not a delivery-date promise.", "开发状态代表方向，不是上线日期承诺。")}</span>
-          <a href={active===0?"/connect-ai":requestAccess}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
+          <a href={active===0?"/connect-ai":localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
         </div>
       </article>
     </section>
 
     <footer className="arcTimelineFooter">
       <p>{tr("Follow the build. Shape the next milestone.", "关注开发进展，参与定义下一步。")}</p>
-      <div><a href={localizedWebsiteHref("/arc",locale)}>{tr("Meet Arc", "认识 Arc")} ↗</a><a href={requestAccess}>{tr("Tell us what to build", "告诉我们你的需求")} ↗</a></div>
+      <div><a href={localizedWebsiteHref("/arc",locale)}>{tr("Meet Arc", "认识 Arc")} ↗</a><a href={localizedWebsiteHref("/feedback?source=roadmap",locale)}>{tr("Tell us what to build", "告诉我们你的需求")} ↗</a></div>
       <small>{tr("Connect is available today; Arc Hosted and its model credits are not yet public.", "Connect 现已可用；Arc Hosted 与托管模型额度尚未公开开放。")}</small>
     </footer>
   </main>;

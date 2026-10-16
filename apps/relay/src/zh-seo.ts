@@ -3,6 +3,20 @@ type ChineseSeoContent = {
   sections: Array<{heading: string; text: string}>;
 };
 export const chineseSeo: Record<string, ChineseSeoContent> = {
+  "/early-access": {
+    title: "申请 Arc AI 助手抢先体验 — Remote Arc",
+    description: "加入 Remote Arc 的 Arc AI 助手抢先体验名单，填写希望自动完成的工作，订阅和托管模型尚未上线。",
+    h1: "申请 Arc 抢先体验",
+    intro: "告诉我们你想交给 Arc 的工作。仅在你明确同意后保存联系信息，用于联系和后续产品体验。",
+    sections: [{heading:"抢先体验申请",text:"提供邮箱和至少十个字符的使用场景。我们不会把联系同意视为无关营销的许可。"}]
+  },
+  "/feedback": {
+    title: "Remote Arc 用户反馈 — 告诉我们你的使用体验",
+    description: "提交 Remote Arc 的产品建议、使用问题或体验反馈，让团队了解真实用户需求。",
+    h1: "告诉我们你的体验",
+    intro: "有什么好用、难用或者希望增加的功能？通过表单向团队提交真实建议。",
+    sections: [{heading:"反馈与隐私",text:"你主动提交的邮箱、建议及联系同意仅供内部授权管理员跟进，并支持通过客服申请删除。"}]
+  },
   "/arc": {
     title: "Arc AI 助手即将推出 — Remote Arc",
     description: "认识正在开发的 Arc AI 队友：内置聊天、连接云端应用、执行可授权的定期任务。现有 Remote Arc Connect 已可用。",

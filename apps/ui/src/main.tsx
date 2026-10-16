@@ -1,5 +1,6 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
-import { ArcComingSoonPageContent, ArcRoadmapPageContent } from "./arc-future.js";
+import { ArcComingSoonPageContent } from "./arc-future.js";
+import { ArcRoadmapPageContent } from "./arc-roadmap.js";
 import { ClientMcpGuide } from "./client-setup-guides.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress, taskActivity } from "./dashboard-task-view.js";
@@ -1701,7 +1702,8 @@ const aiClients = [
   { name: "Cursor", slug: "cursor", icon: "/ai-cursor.svg", tone: "color" },
 ] as const;
 
-const topologyAiClients = aiClients;
+// Homepage YOUR AI topology stays on one line; Gemini remains in the install guides.
+const topologyAiClients = aiClients.filter((client) => client.slug !== "gemini");
 
 function AiClientBadge({ name, icon, note }: { name: string; icon: string; note: string }) {
   return (

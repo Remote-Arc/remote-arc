@@ -121,3 +121,22 @@
 @media(max-width:850px){.arcV3Stage{padding-inline:16px}.arcV3Nodes{gap:7px}.arcV3Node{gap:9px;padding:11px}.arcV3NodeGlyph{width:30px;height:30px;font-size:18px}.arcV3Node strong{font-size:13px}.arcV3Node small{font-size:10px}.arcV3BranchBar{left:16.7%;right:16.7%}}
 @media(max-width:600px){.arcV3Hero{padding:60px 0 75px}.arcV3Hero h1{font-size:clamp(40px,10vw,59px)}.arcV3HeroCue{margin-top:35px}.arcV3Stage{padding:23px 12px 27px;border-radius:19px}.arcV3Prompt{padding:10px;gap:9px;min-height:73px}.arcV3PromptSymbol{width:30px;height:30px;font-size:18px}.arcV3PromptText span{font-size:9px}.arcV3PromptText strong{font-size:13px}.arcV3PromptSend{width:28px;height:28px}.arcV3Nexus{height:158px}.arcV3NexusCore{width:96px;height:96px;border-radius:26px}.arcV3NexusCore .arcV3Mark{transform:scale(.8) rotate(9deg)}.arcV3NexusAura{width:175px;height:175px}.arcV3Branch{height:45px}.arcV3BranchStem{height:22px}.arcV3BranchBar{top:22px;height:23px;left:16%;right:16%}.arcV3Nodes{gap:5px}.arcV3Node{display:grid;justify-items:center;text-align:center;gap:5px;padding:11px 3px;min-height:91px;border-radius:10px}.arcV3Node div{justify-items:center}.arcV3Node small{font-size:9px;line-height:1.3}.arcV3Node strong{font-size:11px}.arcV3NodeGlyph{font-size:19px;width:29px;height:29px}.arcV3Outcome{padding:10px}.arcV3Outcome strong{font-size:11px}.arcV3Outcome small{font-size:10px}.arcV3Energy{height:41px}.arcV3HeroActions{gap:14px}.arcV3Journey{padding:65px 0}.arcV3JourneyStep{padding-bottom:56px}.arcV3Split{padding:62px 0}.arcV3Mode{padding:24px 15px}.arcV3Final{padding:65px 0 87px}.arcV3RoadmapHero{padding:62px 0}.arcV3Milestone{padding-inline:4px}.arcV3RoadmapFinish{padding:66px 0 87px}.arcV3Teaser{padding:49px 12px 55px}.landingContent .arcV3Teaser h2{font-size:clamp(30px,8vw,42px)}.arcV3Teaser p{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.arcV3Energy span{animation:none}.arcV3Primary{transition:none}}
+
+/* Use the actual Remote Arc brand asset instead of a fabricated CSS glyph. */
+.arcV3Mark{filter:drop-shadow(0 0 19px color-mix(in srgb,var(--accent) 16%,transparent))}
+.arcV3Mark::before,.arcV3Mark::after{content:none;display:none}
+.arcV3Mark .arcV3BrandImage{width:88px;height:88px;display:block;object-fit:contain}
+.arcV3Mark--small .arcV3BrandImage{width:47px;height:47px}
+.arcV3PromptDemo{margin-left:auto;flex:none;font-size:9px;letter-spacing:.1em;color:var(--muted);font-weight:740;border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+.arcV3Node{appearance:none;font:inherit;color:var(--text);cursor:pointer;width:100%;transition:border-color .2s ease,transform .2s ease,background .2s ease}
+.arcV3Node:hover{transform:translateY(-2px);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--bg))}
+.arcV3Node:focus-visible,.arcV3OutcomeArrow:focus-visible,.arcV3TeaserAction:focus-visible,.arcV3Primary:focus-visible,.arcV3Secondary:focus-visible,.arcV3Mode a:focus-visible,.arcV3BackLink:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.arcV3NodeContent{display:grid;gap:3px;min-width:0}
+.arcV3NodeGlyph img{display:block;width:21px;height:21px;object-fit:contain}
+.arcV3CapabilityDetail{display:flex;flex-direction:column;align-items:center;gap:5px;min-height:65px;margin:17px auto 0;padding:10px 18px;width:min(100%,620px);font-size:12px;color:var(--muted);line-height:1.5}
+.arcV3CapabilityDetail strong{font-size:12px;font-weight:760;letter-spacing:.04em;color:var(--accent)}
+.arcV3CapabilityDetail span{text-align:center}
+.arcV3OutcomeArrow{display:grid;place-items:center;min-width:34px;min-height:34px;border:1px solid var(--line);border-radius:9px;color:var(--accent);text-decoration:none}
+.arcV3OutcomeArrow:hover{background:color-mix(in srgb,var(--accent) 9%,var(--bg))}
+@media(max-width:600px){.arcV3NodeContent{justify-items:center}.arcV3NodeGlyph img{width:19px;height:19px}.arcV3CapabilityDetail{margin-top:8px;padding:7px 5px;min-height:69px}.arcV3Mark .arcV3BrandImage{width:76px;height:76px}.arcV3Mark--small .arcV3BrandImage{width:43px;height:43px}.arcV3PromptDemo{font-size:8px;padding:6px}}
+@media(prefers-reduced-motion:reduce){.arcV3Node{transition:none}}

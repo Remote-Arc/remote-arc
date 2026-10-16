@@ -2545,7 +2545,7 @@ function Landing({ user }: { user?: User | null }) {
 
       <section className="trustRail" aria-label={tr("Supported AI clients", "支持的 AI 客户端")}>
         <span>{tr("Install for your AI client", "选择你的 AI 客户端安装")}</span>
-        {aiClients.map((client) => (
+        {aiClients.filter((client) => client.slug !== "gemini").map((client) => (
           <a href={"/install/" + client.slug} key={client.name}>
             <img className={client.tone === "mono" ? "monoLogo" : "colorLogo"} src={client.icon} alt="" />
             <strong>{client.name}</strong>

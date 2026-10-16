@@ -2,107 +2,149 @@ import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./arc-future.css";
 
-// Public concepts only: no hosted AI endpoints or fake waitlist submissions.
+// Public previews are intentionally non-interactive. Arc Hosted and the waitlist
+// backend do not exist yet, so this page never pretends to run a model.
 const earlyAccessHref = "mailto:support@remotearc.app?subject=" +
   encodeURIComponent("Arc early access") +
-  "&body=" + encodeURIComponent("I'd like to try Arc. The workflow I'd delegate is: ");
+  "&body=" + encodeURIComponent("The workflow I'd like Arc to handle is: ");
 
-function Status({kind = "soon", children}: {kind?: "soon" | "live" | "build"; children: React.ReactNode}) {
-  return <span className={"arcState arcState--" + kind}><i aria-hidden="true" />{children}</span>;
+function ArcMark({ subtle = false }: { subtle?: boolean }) {
+  return <span className={"arcV3Mark" + (subtle ? " arcV3Mark--small" : "")} aria-hidden="true"><span className="arcV3MarkCore" /><span className="arcV3MarkSlash" /></span>;
 }
 
-function ArcConcept() {
+function ArcStatus({ children }: { children: React.ReactNode }) {
+  return <span className="arcV3Status"><i aria-hidden="true" />{children}</span>;
+}
+
+function ArcExecutionScene() {
   const {tr} = useI18n();
-  return <div className="arcConcept" aria-label={tr("Design concept illustrating a potential Arc workflow, not a live product", "Arc 未来工作流程的设计示意，并非已上线产品")}>
-    <div className="arcConceptChrome">
-      <div className="arcConceptIdentity"><span className="arcConceptLogo">a<span>·</span></span><span>Arc <small> / workspace</small></span></div>
-      <span className="arcConceptMeta">{tr("PRODUCT CONCEPT · NOT LIVE", "产品设计示意 · 尚未上线")}</span>
-      <span className="arcConceptMenu" aria-hidden="true">···</span>
+  return <div className="arcV3Stage" aria-label={tr("Concept illustration: a request flows through Arc to connected tools and a reviewable result. This is not a live interface.", "Arc 产品概念图：请求通过 Arc 连接工具并生成待审核结果，并非已上线功能。")}>
+    <div className="arcV3StageBackdrop" aria-hidden="true" />
+    <div className="arcV3StageLabel"><i />{tr("PRODUCT CONCEPT / NOT LIVE", "产品概念 / 尚未上线")}</div>
+    <div className="arcV3Prompt">
+      <span className="arcV3PromptSymbol">↗</span>
+      <div className="arcV3PromptText"><span>{tr("A request for Arc", "给 Arc 的任务")}</span><strong>{tr("Prepare my weekly project update", "整理本周项目进展")}</strong></div>
+      <span className="arcV3PromptSend" aria-hidden="true">↑</span>
     </div>
-    <div className="arcConceptBody">
-      <div className="arcConceptChat">
-        <div className="arcConceptAvatar">↗</div>
-        <div className="arcConceptPrompt">
-          <span>{tr("YOUR REQUEST", "你的请求")}</span>
-          <strong>{tr("Prepare my weekly project update.", "帮我准备本周项目进展汇总。")}</strong>
-          <p>{tr("Pull the latest issues, organize decisions, and prepare a reviewable draft.", "读取最新 Issue，整理关键决定，形成可审核的草稿。")}</p>
-        </div>
-      </div>
-      <div className="arcConceptFlow">
-        <div className="arcConceptConnector"><div className="arcConceptAppIcon arcConceptAppIcon--github" aria-hidden="true">GH</div><div><strong>GitHub</strong><small>{tr("Read project updates", "读取项目进度")}</small></div><span>↗</span></div>
-        <div className="arcConceptFlowLine"><i /></div>
-        <div className="arcConceptConnector"><div className="arcConceptAppIcon arcConceptAppIcon--notion" aria-hidden="true">N</div><div><strong>Notion</strong><small>{tr("Prepare a draft", "生成待审核草稿")}</small></div><span>↗</span></div>
-      </div>
-      <div className="arcConceptResult"><div className="arcConceptResultMark" aria-hidden="true">✓</div><div><strong>{tr("Weekly update drafted", "周报草稿已生成")}</strong><span>{tr("Awaiting your review before sharing", "发送之前，等待你的审核")}</span></div><span className="arcConceptReview">{tr("Review", "审核")}</span></div>
+    <div className="arcV3Energy" aria-hidden="true"><span /></div>
+    <div className="arcV3Nexus">
+      <div className="arcV3NexusAura" aria-hidden="true" />
+      <div className="arcV3NexusCore"><ArcMark /></div>
+      <div className="arcV3NexusLabel"><strong>arc</strong><small>{tr("Plans · Routes · Verifies", "规划 · 调度 · 验证")}</small></div>
     </div>
-    <div className="arcConceptFoot"><span><i /> {tr("Scoped access", "受限授权")}</span><span>{tr("Visible steps & approvals", "执行步骤与审批可见")}</span><span>↗</span></div>
+    <div className="arcV3Branch" aria-hidden="true"><span className="arcV3BranchStem" /><span className="arcV3BranchBar" /></div>
+    <div className="arcV3Nodes">
+      <div className="arcV3Node"><span className="arcV3NodeGlyph">⌘</span><div><strong>{tr("Apps", "云应用")}</strong><small>GitHub · Notion</small></div></div>
+      <div className="arcV3Node arcV3Node--main"><span className="arcV3NodeGlyph">▣</span><div><strong>{tr("Devices", "个人设备")}</strong><small>Mac · Windows</small></div></div>
+      <div className="arcV3Node"><span className="arcV3NodeGlyph">◷</span><div><strong>Routines</strong><small>{tr("Scheduled work", "定期任务")}</small></div></div>
+    </div>
+    <div className="arcV3Merge" aria-hidden="true" />
+    <div className="arcV3Outcome"><span className="arcV3OutcomeTick">✓</span><div><strong>{tr("Weekly update, ready to review", "项目进展已整理，等待审核")}</strong><small>{tr("Verified output · Your approval before sharing", "可查看结果 · 分享前由你审批")}</small></div><span className="arcV3OutcomeArrow">↗</span></div>
   </div>;
 }
 
 export function ArcTeaser() {
-  const {tr,locale} = useI18n();
-  return <section className="arcTeaser" aria-labelledby="arcTeaserTitle">
-    <div className="arcTeaserLead"><span className="arcOverline"><span className="arcNewDot" />{tr("THE NEXT CHAPTER", "下一阶段")}</span><span className="arcTeaserMark" aria-hidden="true">arc.</span></div>
-    <div className="arcTeaserMain">
-      <div><h2 id="arcTeaserTitle">{tr("Less asking. More getting things done.", "少一点反复交代，多一点真正完成。")}</h2><p>{tr("Meet Arc — the AI teammate we're building inside Remote Arc. Your conversations, apps and authorized computers, finally working toward the same goal.", "认识正在开发的 Arc：让对话、应用与已授权的电脑围绕同一项工作协作。")}</p><div className="arcTeaserMeta">{tr("CHAT · APPS · ROUTINES", "对话 · 应用 · 自动任务")} <span>·</span> {tr("IN DEVELOPMENT", "开发中")}</div></div>
-      <a href={localizedWebsiteHref("/arc",locale)} className="arcTeaserArrow" aria-label={tr("Explore Arc","了解 Arc")}><span aria-hidden="true">↗</span><small>{tr("Explore Arc", "了解 Arc")}</small></a>
-    </div>
+  const {tr,locale}=useI18n();
+  return <section className="arcV3Teaser" aria-labelledby="arcV3TeaserHeading">
+    <div className="arcV3TeaserAmbient" aria-hidden="true" />
+    <div className="arcV3TeaserLine">{tr("THE NEXT CHAPTER OF REMOTE ARC", "REMOTE ARC 的下一篇章")} <span>·</span> {tr("IN DEVELOPMENT", "开发中")}</div>
+    <ArcMark subtle />
+    <h2 id="arcV3TeaserHeading">{tr("Meet Arc. Work beyond the conversation.", "认识 Arc。让工作不止于对话。")}</h2>
+    <p>{tr("Your future AI teammate. One place for conversations, connected apps and real work across your devices.", "即将到来的 AI 队友，让对话、云端应用和真实设备汇聚在一起，完成你的工作。")}</p>
+    <a className="arcV3TeaserAction" href={localizedWebsiteHref("/arc",locale)}>{tr("Discover Arc", "了解 Arc")} <span aria-hidden="true">↗</span></a>
+    <span className="arcV3TeaserEndnote">{tr("Coming soon · Connect is available today", "即将推出 · Connect 现已可用")}</span>
   </section>;
 }
 
+const story = [
+  {id:"01", en:"Start with intent",zh:"只需说出目标",detailEn:"Describe the result you want. Arc turns it into bounded, reviewable work.",detailZh:"告诉 Arc 你想要的结果，Arc 将目标转化成有边界、可审核的工作。",glyph:"⌁"},
+  {id:"02", en:"Work across tools",zh:"连接真实工具",detailEn:"Cloud apps and devices, connected only within the permissions you give.",detailZh:"云端应用与个人设备协同执行，每项操作都遵守你的授权。",glyph:"⌘"},
+  {id:"03", en:"See what got done",zh:"看到真实成果",detailEn:"Review results and approvals instead of taking an AI's word for it.",detailZh:"检查执行结果和审批记录，而不只是相信 AI 的口头汇报。",glyph:"✓"}
+] as const;
+
 export function ArcComingSoonPageContent() {
-  const {tr,locale} = useI18n();
-  return <main className="arcNext">
-    <section className="arcNextHero">
-      <div className="arcNextCopy">
-        <div className="arcOverline"><span className="arcNewDot" />REMOTE ARC <span className="arcOverlineSlash">/</span> {tr("INTRODUCING ARC", "认识 ARC")}</div>
-        <h1>{tr("Give work a place to go.", "把工作，真正交给 AI。")}</h1>
-        <p>{tr("An AI teammate that doesn't stop at the answer. We're building Arc to connect your conversations, cloud apps and real devices — then turn a request into reviewable work.", "不只回答问题。我们正在打造 Arc，让对话、云端应用和真实设备串联起来，将一句需求变成可审核的工作成果。")}</p>
-        <div className="arcNextHeroActions"><a href={earlyAccessHref} className="arcPrimaryAction">{tr("Get early access", "申请抢先体验")} <span>↗</span></a><a className="arcQuietLink" href={localizedWebsiteHref("/roadmap",locale)}>{tr("View the roadmap", "查看路线图")} <span>→</span></a></div>
-        <div className="arcNextDisclosure"><Status>{tr("In development", "开发中")}</Status><span>{tr("Arc Hosted is not available yet. Early access opens an email draft.", "Arc 托管服务尚未开放。抢先体验将打开邮件客户端。")}</span></div>
+  const {tr,locale}=useI18n();
+  return <main className="arcV3">
+    <section className="arcV3Hero" aria-labelledby="arcV3HeroTitle">
+      <div className="arcV3HeroGlow" aria-hidden="true" />
+      <div className="arcV3HeroEyebrow"><ArcStatus>{tr("Introducing Arc · In development", "认识 Arc · 开发中")}</ArcStatus></div>
+      <h1 id="arcV3HeroTitle">{tr("AI that moves work forward.", "让 AI，真正推动工作。")}</h1>
+      <p>{tr("From conversation to connected action. We're building Arc, the AI teammate that can work with your apps and computers — with you in control.", "从一句话到真正的执行。我们正在打造 Arc：一个能够连接应用与电脑，同时始终由你掌控权限的 AI 队友。")}</p>
+      <div className="arcV3HeroActions"><a className="arcV3Primary" href={earlyAccessHref}>{tr("Get early access", "申请抢先体验")} <span>↗</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
+      <div className="arcV3HeroCue"><span />{tr("A GLIMPSE OF WHAT'S NEXT", "下一阶段产品概念")}</div>
+      <ArcExecutionScene />
+      <p className="arcV3Disclaimer">{tr("Concept only. Arc Hosted is not publicly available. Early access opens an email draft.", "此为概念展示。Arc 托管服务尚未公开开放，申请体验将打开邮件草稿。")}</p>
+    </section>
+
+    <section className="arcV3Journey" aria-labelledby="arcV3JourneyTitle">
+      <span className="arcV3Eyebrow">01 — {tr("FROM WORDS TO WORK", "从对话到执行")}</span>
+      <h2 id="arcV3JourneyTitle">{tr("One request. A thousand possibilities.", "一句需求，连接更多可能。")}</h2>
+      <p className="arcV3SectionIntro">{tr("Arc is designed to turn an intention into work that you can actually inspect.", "Arc 的目标不是生成更多回答，而是把你的想法变成有证据可查的执行成果。")}</p>
+      <div className="arcV3JourneyRail">
+        {story.map((step,index)=><article key={step.id} className="arcV3JourneyStep">
+          <span className="arcV3JourneyNumber">{step.id}</span>
+          <div className="arcV3JourneyGlyph" aria-hidden="true">{step.glyph}</div>
+          <h3>{locale==="zh"?step.zh:step.en}</h3>
+          <p>{locale==="zh"?step.detailZh:step.detailEn}</p>
+          {index!==story.length-1&&<div className="arcV3JourneyTrail" aria-hidden="true" />}
+        </article>)}
       </div>
-      <div className="arcNextVisual"><span className="arcCanvasCaption">{tr("A GLIMPSE OF WHAT'S NEXT", "下一阶段的产品设想")}</span><ArcConcept /></div>
     </section>
-    <section className="arcNextProcess" aria-labelledby="arcProcessTitle">
-      <div className="arcSectionHeading"><span className="arcOverline">01 / {tr("THE IDEA", "核心构想")}</span><h2 id="arcProcessTitle">{tr("One request. A connected way to finish it.", "一句需求，一条真正跑通的工作流。")}</h2><p>{tr("The goal isn't another chat box. It's a clear path from intent to action, using only the tools you authorize.", "我们不是再做一个聊天框，而是让目标、工具、执行和审核真正连成一条线。")}</p></div>
-      <ol className="arcSteps">
-        <li><span className="arcStepNum">01</span><div className="arcStepGlyph">◎</div><h3>{tr("Talk", "提出目标")}</h3><p>{tr("Describe the outcome in your own words.", "用自然语言描述最终要完成什么。")}</p></li>
-        <li><span className="arcStepNum">02</span><div className="arcStepGlyph">⊞</div><h3>{tr("Connect", "连接能力")}</h3><p>{tr("Select apps and devices within their permissions.", "连接经过授权的应用与设备。")}</p></li>
-        <li><span className="arcStepNum">03</span><div className="arcStepGlyph">↝</div><h3>{tr("Run", "完成执行")}</h3><p>{tr("Arc follows a bounded plan and records its steps.", "按照有预算和权限边界的计划执行。")}</p></li>
-        <li><span className="arcStepNum">04</span><div className="arcStepGlyph">✓</div><h3>{tr("Review", "检查成果")}</h3><p>{tr("Inspect results and approve consequential actions.", "查看执行证据，关键操作交给你审批。")}</p></li>
-      </ol>
-    </section>
-    <section className="arcNextModes">
-      <div className="arcSectionHeading"><span className="arcOverline">02 / {tr("THE PLATFORM", "平台能力")}</span><h2>{tr("The AI you already use. The AI we're building.", "保留熟悉的 AI，也可以拥有 Arc。")}</h2></div>
-      <div className="arcModeRows">
-        <div className="arcModeRow"><div className="arcModeName"><Status kind="live">{tr("Available now", "现已可用")}</Status><h3>Remote Arc Connect</h3></div><p>{tr("Keep using ChatGPT, Claude or another compatible AI client. Remote Arc securely links it to the tools you allow on your computers — without an additional model API key.", "继续使用 ChatGPT、Claude 等兼容 AI。Remote Arc 将其安全连接至电脑上允许使用的工具，无须另购模型 API Key。")}</p><a className="arcQuietLink" href="/connect-ai">{tr("Get started", "立即连接")} ↗</a></div>
-        <div className="arcModeRow"><div className="arcModeName"><Status>{tr("Coming next", "即将推出")}</Status><h3>Arc Hosted</h3></div><p>{tr("Chat directly with Arc, connect cloud apps and delegate recurring work. Hosted model usage will have its own pricing and safety limits; Connect's free MCP calls won't cover it.", "直接与 Arc 对话、连接云端应用、委派重复任务。托管模型将另行计费并设有额度保护，不包含在 Connect 免费 MCP 调用中。")}</p><a className="arcQuietLink" href={earlyAccessHref}>{tr("Join early access", "申请体验")} ↗</a></div>
+
+    <section className="arcV3Split" aria-labelledby="arcV3ModesTitle">
+      <span className="arcV3Eyebrow">02 — {tr("ONE PLATFORM", "同一个平台")}</span>
+      <h2 id="arcV3ModesTitle">{tr("Bring your AI. Or meet Arc.", "继续用熟悉的 AI，或者认识 Arc。")}</h2>
+      <div className="arcV3Modes">
+        <article className="arcV3Mode"><span className="arcV3ModeNumber">01 / {tr("AVAILABLE TODAY", "现已可用")}</span><h3>Remote Arc Connect</h3><p>{tr("Use ChatGPT, Claude or another compatible AI. Remote Arc connects it to authorized tools on your computers. No extra Remote Arc model API key required.", "继续使用 ChatGPT、Claude 等兼容 AI，连接电脑上的授权工具，不需要额外开通 Remote Arc 模型 API Key。")}</p><a href="/connect-ai">{tr("Connect your AI", "连接现有 AI")} ↗</a></article>
+        <div className="arcV3ModesConnector" aria-hidden="true"><ArcMark subtle /></div>
+        <article className="arcV3Mode"><span className="arcV3ModeNumber">02 / {tr("COMING SOON", "即将推出")}</span><h3>Arc Hosted</h3><p>{tr("Talk to Arc directly and hand off work across apps and devices. Hosted model use will have separate pricing and usage limits; Connect's free MCP allowance does not cover it.", "直接与 Arc 对话，委派跨应用与设备的工作。托管模型将有独立费用和额度，不包含在 Connect 的免费 MCP 调用中。")}</p><a href={earlyAccessHref}>{tr("Request access", "申请体验")} ↗</a></article>
       </div>
     </section>
-    <section className="arcNextClose"><div><span className="arcOverline">{tr("BUILDING THOUGHTFULLY", "认真打磨，逐步推出")}</span><h2>{tr("A little more than coming soon.", "不只是一句 Coming Soon。")}</h2><p>{tr("We publish what is ready, what is being built and what's still an idea. Follow along or tell us which workflow would matter to you.", "哪些已经可用、哪些正在开发、哪些还是设想，我们都会公开。欢迎告诉我们，你最想把什么工作交给 Arc。")}</p></div><a href={localizedWebsiteHref("/roadmap",locale)} className="arcRoundArrow" aria-label={tr("Open roadmap", "查看路线图")}>↗</a></section>
+
+    <section className="arcV3Final">
+      <ArcMark subtle />
+      <span className="arcV3Eyebrow">{tr("THIS IS JUST THE BEGINNING", "这只是开始")}</span>
+      <h2>{tr("Help us build what comes next.", "下一步，由真实需求决定。")}</h2>
+      <p>{tr("Tell us what you'd delegate to Arc. We'll build it step by step, with transparent permissions, results and release status.", "告诉我们你最希望 Arc 帮你完成什么。我们将逐步交付，公开权限、执行结果与开发状态。")}</p>
+      <div className="arcV3HeroActions"><a href={earlyAccessHref} className="arcV3Primary">{tr("Share your workflow", "分享你的需求")} ↗</a><a href={localizedWebsiteHref("/roadmap",locale)} className="arcV3Secondary">{tr("Explore the roadmap", "查看路线图")} →</a></div>
+    </section>
   </main>;
 }
 
-const milestones = [
-  {id:"01",en:"The foundation",zh:"先打好基础",detailEn:"Connect + permissions",detailZh:"连接与权限",status:"live",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",descriptionEn:"Remote MCP, device permissions and durable task foundations already power Remote Arc Connect. Organization and production-release safeguards are being hardened.",descriptionZh:"Remote MCP、设备权限和持久任务基础已支持现有 Connect。组织架构与生产发布保护仍在完善。"},
-  {id:"02",en:"Arc enters the chat",zh:"Arc 拥有自己的对话入口",detailEn:"Hosted chat + Auto",detailZh:"托管对话与 Auto",status:"active",enStatus:"IN DEVELOPMENT",zhStatus:"开发中",descriptionEn:"A first-party AI conversation, tested Auto model selection, tool auditing and hard limits on hosted inference spending.",descriptionZh:"第一方 AI 对话、经过验证的 Auto 模型路由、工具审计与托管模型费用硬上限。"},
-  {id:"03",en:"Ready for real customers",zh:"准备好让用户付费",detailEn:"Billing + safe trials",detailZh:"支付与受限试用",status:"planned",enStatus:"REQUIRED BEFORE PUBLIC BETA",zhStatus:"公开测试的前置条件",descriptionEn:"Checkout, subscription controls, usage visibility and bounded free trials must work before hosted Arc becomes public.",descriptionZh:"在公开推出 Arc 前完成支付、订阅管理、额度展示及严格封顶的免费试用。"},
-  {id:"04",en:"Connected work",zh:"让应用真正协作",detailEn:"Apps + Routines",detailZh:"应用与自动任务",status:"planned",enStatus:"PLANNED",zhStatus:"规划中",descriptionEn:"Reliable first-party integrations, a common tool registry and recurring work with approvals, recovery and visible outcomes.",descriptionZh:"稳定的原生应用集成、统一工具目录，以及可审批、可恢复、能验证结果的定期工作。"},
-  {id:"05",en:"Teach Arc",zh:"教会 Arc 新技能",detailEn:"Skills + ecosystem",detailZh:"技能与开放生态",status:"exploring",enStatus:"EXPLORING",zhStatus:"探索中",descriptionEn:"Learn from approved demonstrations, reuse skills and allow a wider community to extend the app ecosystem.",descriptionZh:"从授权的操作演示中学习、复用技能，再逐步开放更丰富的应用集成生态。"},
+const milestones=[
+  {id:"01",en:"The foundation",zh:"连接与安全基础",enFlag:"AVAILABLE / HARDENING",zhFlag:"已可用 / 持续完善",state:"live",enBody:"Remote MCP, device permissions and persistent tasks are already part of Remote Arc. Organization and controlled release safeguards are being completed.",zhBody:"Remote MCP、设备权限与持久任务已可用，组织架构及受控发布机制仍在完善。"},
+  {id:"02",en:"Arc Chat & Auto",zh:"Arc Chat 与 Auto",enFlag:"IN DEVELOPMENT",zhFlag:"开发中",state:"now",enBody:"Hosted chat, audited model routing and reliable execution within strict provider-cost ceilings.",zhBody:"独立托管对话、可审计模型路由，以及严格费用限制内的可靠任务执行。"},
+  {id:"03",en:"Billing & early access",zh:"付费与早期体验",enFlag:"PUBLIC BETA GATE",zhFlag:"公开测试前必须完成",state:"later",enBody:"Checkout, subscription management, metered AI credits and bounded free trials before Arc is made available publicly.",zhBody:"公开 Arc 之前必须完成支付、订阅管理、模型用量与封顶的免费试用。"},
+  {id:"04",en:"Connected apps & routines",zh:"应用连接与自动任务",enFlag:"PLANNED",zhFlag:"规划中",state:"later",enBody:"Carefully supported app integrations, resumable workflows and recurring jobs with reviewable outcomes.",zhBody:"稳定的应用集成、可恢复工作流和有结果可审核的定期任务。"},
+  {id:"05",en:"Teach Arc & ecosystem",zh:"Teach Arc 与开放生态",enFlag:"EXPLORING",zhFlag:"探索中",state:"later",enBody:"Reusable skills from approved demonstrations and an extensible integration ecosystem.",zhBody:"从已授权的演示中学习可复用技能，并逐步构建开放的连接器生态。"}
 ] as const;
 
 export function ArcRoadmapPageContent() {
-  const {tr,locale} = useI18n();
-  return <main className="arcRoadmap">
-    <div className="arcRoadmapLayout">
-      <div className="arcRoadmapIntro"><span className="arcOverline">REMOTE ARC / {tr("WHAT'S NEXT", "下一步")}</span><h1>{tr("Built step by step. Out in the open.", "一步一步做，进展公开看。")}</h1><p>{tr("We'd rather earn trust with useful releases than promise dates we can't guarantee. Here's where Remote Arc stands today and what we're working toward.", "比起承诺不确定的时间表，我们更愿意用可用的产品建立信任。这是 Remote Arc 当前的进展和接下来的方向。")}</p><div className="arcRoadmapGuide"><span className="arcNewDot"/>{tr("Current focus", "当前重点")} <strong>{tr("Hosted Arc foundations", "Arc 托管运行基础")}</strong></div><a className="arcQuietLink" href={localizedWebsiteHref("/arc",locale)}>{tr("Discover Arc", "认识 Arc")} ↗</a></div>
-      <div className="arcRoadmapTimeline" aria-label={tr("Remote Arc development milestones", "Remote Arc 开发里程碑")}>
-        {milestones.map(item=><article className={"arcMilestone arcMilestone--"+item.status} key={item.id}>
-          <div className="arcMilestoneRail"><span className="arcMilestonePoint" /><span className="arcMilestoneNumber">{item.id}</span></div>
-          <div className="arcMilestoneContent"><div className="arcMilestoneHeader"><span>{locale==="zh"?item.zhStatus:item.enStatus}</span>{item.status==="active"&&<span className="arcActiveIndicator" aria-hidden="true">↗</span>}</div><h2>{locale==="zh"?item.zh:item.en}</h2><div className="arcMilestoneDetail">{locale==="zh"?item.detailZh:item.detailEn}</div><p>{locale==="zh"?item.descriptionZh:item.descriptionEn}</p></div>
-        </article>)}
-      </div>
-    </div>
-    <div className="arcRoadmapEnd"><div><span className="arcOverline">{tr("HELP SHAPE THE NEXT RELEASE", "参与定义下一步")}</span><h2>{tr("What would you hand off to Arc?", "你最想交给 Arc 的工作是什么？")}</h2><p>{tr("Share a workflow you'd like to automate. Our early-access link opens an email, not an account registration.", "告诉我们你想自动完成什么。抢先体验入口目前仅打开邮件，不会自动创建账户。")}</p></div><div className="arcRoadmapEndActions"><a className="arcPrimaryAction" href={earlyAccessHref}>{tr("Tell us your use case", "告诉我们你的想法")} ↗</a><small>{tr("Roadmap priorities may change. Current Connect plans do not include hosted-model credits.", "开发计划可能调整；现有 Connect 方案不包含托管模型额度。")}</small></div></div>
+  const {tr,locale}=useI18n();
+  return <main className="arcV3 arcV3Roadmap">
+    <header className="arcV3RoadmapHero">
+      <ArcMark subtle />
+      <span className="arcV3Eyebrow">REMOTE ARC / {tr("THE ROAD AHEAD", "未来路线图")}</span>
+      <h1>{tr("Building what comes next.", "让每一步，都看得见。")}</h1>
+      <p>{tr("The next era of Remote Arc is taking shape. Here's what's available, what's in development and what's still on the horizon — no invented launch dates.", "Remote Arc 正在进化。这些是我们已经交付、正在开发与未来探索的方向；不承诺尚未确定的发布日期。")}</p>
+      <div className="arcV3RoadmapFocus"><ArcStatus>{tr("Current focus: Arc Chat & Auto", "当前重点：Arc Chat 与 Auto")}</ArcStatus></div>
+    </header>
+    <section className="arcV3Milestones" aria-label={tr("Development milestones", "开发里程碑")}>
+      {milestones.map((item,index)=><article className={"arcV3Milestone arcV3Milestone--"+item.state} key={item.id}>
+        <span className="arcV3MilestoneIndex">{item.id} <span className="arcV3MilestoneDot" /></span>
+        <span className="arcV3MilestoneStatus">{locale==="zh"?item.zhFlag:item.enFlag}</span>
+        <h2>{locale==="zh"?item.zh:item.en}</h2>
+        <p>{locale==="zh"?item.zhBody:item.enBody}</p>
+        {index < milestones.length-1 && <span className="arcV3MilestoneSpine" aria-hidden="true" />}
+      </article>)}
+    </section>
+    <footer className="arcV3RoadmapFinish">
+      <span className="arcV3Eyebrow">{tr("SHAPE WHAT'S NEXT", "一起决定下一步")}</span>
+      <h2>{tr("What should Arc do for you?", "你希望 Arc 帮你完成什么？")}</h2>
+      <p>{tr("We're listening. Tell us the workflows you'd like to automate.", "欢迎告诉我们，你最想交给 AI 自动完成的工作。")}</p>
+      <a href={earlyAccessHref} className="arcV3Primary">{tr("Tell us", "告诉我们")} ↗</a>
+      <a href={localizedWebsiteHref("/arc",locale)} className="arcV3BackLink">← {tr("Meet Arc", "认识 Arc")}</a>
+      <small>{tr("Plans can change. Current Connect usage does not include Arc Hosted model credits.", "路线图可能调整。现有 Connect 服务不包含 Arc 托管模型额度。")}</small>
+    </footer>
   </main>;
 }

@@ -13,7 +13,7 @@
 .adminSidebar nav{display:grid;gap:6px}
 .adminSidebar nav button{display:flex;align-items:center;gap:13px;width:100%;min-height:49px;text-align:left;font-size:14px;font-family:inherit;font-weight:650;line-height:1.4;color:var(--adminMuted);background:transparent;border:1px solid transparent;border-radius:11px;padding:12px 14px;cursor:pointer;transition:background .15s,border-color .15s}
 .adminSidebar nav button>svg:first-child{width:20px;height:20px;flex:none}
-.adminSidebar nav button>span{flex:1}
+.adminSidebar nav button>span{flex:1;white-space:nowrap}.adminSidebar nav button>svg:last-child{display:none}
 .adminSidebar nav button>svg:last-child{width:15px;height:15px;opacity:0;transform:translateX(-3px);transition:all .15s}
 .adminSidebar nav button:hover{background:color-mix(in srgb,var(--accent) 5%,var(--panel));color:var(--text)}
 .adminSidebar nav button[aria-current=page]{background:color-mix(in srgb,var(--accent) 9%,var(--panel));color:var(--text);border-color:color-mix(in srgb,var(--accent) 23%,var(--line))}

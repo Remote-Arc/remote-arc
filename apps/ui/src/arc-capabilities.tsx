@@ -85,7 +85,7 @@ export function ArcCapabilities() {
       <div className="arcAppFilters" role="group" aria-label={tr("Explore app categories", "筛选应用类型")}>
         {(["all","communication","work","extension"] as const).map(x=><button type="button" key={x} aria-pressed={category===x} className={category===x?"selected":""} onClick={()=>setCategory(x)}>{x==="all"?tr("All apps", "全部"):x==="communication"?tr("Communication","通讯协作"):x==="work"?tr("Projects & documents","项目与文档"):tr("Expanded ecosystem","扩展生态")}</button>)}
       </div>
-      <div className="arcAppGrid">{apps.filter(x=>category==="all"||x.group===category).map(app=><div className="arcAppItem" key={app.slug}><span className="arcAppIcon"><img src={"/app-brands/"+app.slug+".svg"} alt="" loading="lazy" width="28" height="28"/></span><strong>{app.name}</strong></div>)}</div>
+      <div className="arcAppGrid">{apps.filter(x=>category==="all"||x.group===category).map(app=><div className="arcAppItem" key={app.slug}><span className="arcAppIcon"><img src={"/app-brands/"+app.slug+".svg"} alt="" decoding="async" width="28" height="28"/></span><strong>{app.name}</strong></div>)}</div>
       <div className="arcEcosystemFoot"><div><span className="arcFeatureIconFrame"><ArcFeatureIcon name="apps"/></span><p><strong>{tr("An open connector ecosystem.", "可扩展的连接器生态。")}</strong><br/>{tr("Tool Registry, connection health, permission scopes and an SDK for third-party connectors — built around reliable execution, not logo count.", "统一工具目录、连接健康状态、授权范围和第三方 Connector SDK。我们优先保证连接质量，而不是单纯堆 Logo 数量。")}</p></div><a href={localizedWebsiteHref("/early-access?source=arc-apps",locale)}>{tr("Tell us which apps matter", "告诉我们你需要哪些应用")} ↗</a></div>
     </section>
   </>;

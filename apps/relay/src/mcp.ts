@@ -1,5 +1,6 @@
 import { getGoalContext, submitGoalDecision } from "./source-goals.js";
 import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";
+import { routeSkillIntent } from "./skill-runtime.js";
 import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
@@ -1291,7 +1292,17 @@ export function createRemoteLinkMcp(
       if (!identity || !hasScope(identity, "automation:read")) return authRequired(env, "automation:read", identity);
       const usageError = await consume(env, identity);
       if (usageError) return usageError;
-      return textResult(await getGoalContext(env.DB, identity.userId, automation_id, after_sequence));
+      const context = await getGoalContext(env.DB, identity.userId, automation_id, after_sequence);
+      // A source-controlled Agent Goal automatically receives relevant cloud
+      // Skill instructions as context, not new executable tools or permissions.
+      const objective = typeof context.goal?.objective === "string" ? context.goal.objective : "";
+      const matched = objective.trim() ? routeSkillIntent(objective.slice(0,2000)) : null;
+      const cloudSkills = matched?.steps.slice(0,2).map(step => {
+        const skill = BUILTIN_SKILLS.find(item => item.id === step.skill_id);
+        return skill ? {id:skill.id,execution_state:step.state,markdown:skill.content.slice(0,2500)} : null;
+      }).filter(Boolean) || [];
+      return textResult({...context,cloud_skills:cloudSkills,
+        cloud_skill_revision:matched?.revision ?? null});
     });
 
     if (env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0") {

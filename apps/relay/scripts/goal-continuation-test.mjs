@@ -35,6 +35,10 @@ for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWit
     'import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";',
     'const BUILTIN_SKILLS = [];',
   );
+  if (name === "mcp.ts") input = input.replace(
+    'import { routeSkillIntent } from "./skill-runtime.js";',
+    'const routeSkillIntent = () => ({ steps: [], revision: "test" });',
+  );
   if (name === "mcp.ts") for (const packageName of ["@modelcontextprotocol/server", "zod"]) {
     input = input.replace('from "' + packageName + '"', 'from "' + pathToFileURL(createRequire(path.join(relay, "package.json")).resolve(packageName)).href + '"');
   }

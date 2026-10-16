@@ -39,7 +39,7 @@ Both accept existing account session or OAuth bearer identity. Read-only, no dev
 - `remotearc://skills/catalog`: read-only JSON index.
 - `remotearc://skills/<id>`: full original Markdown Skill.
 
-Some ChatGPT/Claude clients do not expose MCP Resources to models automatically. The HTTP endpoint is intended for first-party Arc and authenticated integrations; future clients may surface selected instructions as an onboarding context hint without creating execution tools. Device-level execution policy, approval, filesystem roots, quotas and audit events remain in force. The resources are descriptive and not a privilege or execution interface.
+An existing source-owned Agent Goal also receives up to two relevant cloud Skill instructions in its authenticated get_goal_context response; no new Tools or device installations are required. Some ChatGPT/Claude clients do not expose MCP Resources to models automatically. The HTTP endpoint is intended for first-party Arc and authenticated integrations; future clients may surface selected instructions as an onboarding context hint without creating execution tools. Device-level execution policy, approval, filesystem roots, quotas and audit events remain in force. The resources are descriptive and not a privilege or execution interface.
 
 ## Packaging, versioning and trust
 

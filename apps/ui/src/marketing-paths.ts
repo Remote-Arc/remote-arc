@@ -19,7 +19,13 @@ export const chinesePages = new Set([
  "/use-cases/spreadsheet-report", "/use-cases/desktop-automation",
  "/use-cases/cross-device-handoff"
 ]);
-export const isWebsite = () => location.hostname === "remotearc.app" || location.hostname === "www.remotearc.app" || ((location.hostname === "localhost" || location.hostname === "127.0.0.1") && Boolean(location.port));
+// Public PR previews serve the same marketing pages as the production website.
+const isMarketingPreview = (hostname: string) => /^pr-\\d+-remote-arc-ui-preview\\.nzp\\.workers\\.dev$/.test(hostname);
+export const isWebsite = () =>
+  location.hostname === "remotearc.app" ||
+  location.hostname === "www.remotearc.app" ||
+  isMarketingPreview(location.hostname) ||
+  ((location.hostname === "localhost" || location.hostname === "127.0.0.1") && Boolean(location.port));
 export function baseMarketingPath(path: string): string {
  return path === "/zh" ? "/" : path.startsWith("/zh/") ? path.slice(3) : path;
 }

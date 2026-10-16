@@ -14,8 +14,8 @@ export function resolveProductionDeployPolicy(env = process.env) {
     allowed: false,
     source: "blocked",
     reason:
-      "Production deployment is automatic after CI succeeds on master. " +
-      "For an emergency manual deploy only, run " +
+      "Production requires explicit GitHub Actions workflow_dispatch on the latest verified master commit, " +
+      "with D1 backup confirmation. For an emergency manual deploy only, run " +
       "REMOTEARC_MANUAL_PROD_DEPLOY=1 pnpm deploy:relay",
   };
 }

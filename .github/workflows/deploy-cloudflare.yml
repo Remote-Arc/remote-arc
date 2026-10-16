@@ -1,35 +1,61 @@
 name: Deploy Cloudflare
 
+# Production is an explicit promotion, never an automatic consequence of a merge.
 on:
-  workflow_run:
-    workflows:
-      - CI
-    types:
-      - completed
-    branches:
-      - master
   workflow_dispatch:
+    inputs:
+      backup_confirmation:
+        description: "Type BACKUP_VERIFIED after validating a recoverable production D1 backup"
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: remote-arc-production
-  cancel-in-progress: true
+  # Never cancel a production release halfway through its D1 migration.
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && github.actor == 'yaohuangguan'
     runs-on: ubuntu-latest
     environment: production
 
     steps:
-      - name: Checkout verified commit
+      - name: Checkout promotion candidate
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
+
+      - name: Require verified production database recovery point
+        env:
+          BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}
+        run: |
+          if [ "$BACKUP_CONFIRMATION" != "BACKUP_VERIFIED" ]; then
+            echo "::error::Verify a recoverable D1 production backup before promotion."
+            exit 1
+          fi
+
+      - name: Verify latest master and successful CI for exact SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          LATEST="$(git ls-remote origin refs/heads/master | cut -f1)"
+          if [ "$LATEST" != "$GITHUB_SHA" ]; then
+            echo "::error::Master advanced since this release was requested."
+            exit 1
+          fi
+          PASSED_SHA="$(gh api "/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&per_page=30" \
+            --jq '.workflow_runs[] | select(.event == "push" and .conclusion == "success") | .head_sha')"
+          if ! printf '%s\n' "$PASSED_SHA" | grep -Fxq "$GITHUB_SHA"; then
+            echo "::error::Successful CI for the exact master SHA is required."
+            exit 1
+          fi
+          echo "Verified production candidate: $GITHUB_SHA"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -84,6 +110,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           REMOTEARC_PRODUCTION_DEPLOY: github-actions
-          REMOTEARC_DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          REMOTEARC_DEPLOY_SHA: ${{ github.sha }}
           REMOTEARC_DEPLOY_REF: master
         run: pnpm deploy:relay

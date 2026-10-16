@@ -6,7 +6,9 @@ import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingHttpsRedirect, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { legacyLanguageRedirect } from "./marketing-locale.js";
 import { createRemoteLinkMcp } from "./mcp.js";
-import { handleCloudSkills } from "./cloud-skills.js";
+import { handleCloudSkills, handleCloudSkillAction } from "./cloud-skills.js";
+import { callDevice } from "./device-call.js";
+import { consumeToolCall } from "./usage.js";
 import {
   authenticateDevice,
   authenticateMcp,
@@ -413,6 +415,30 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     // Cloud Skill Registry for Arc Connect and first-party Arc Agent.
     // Never requires a device install; only reads versioned instructions.
+    if (url.pathname === "/api/skills/plan" || url.pathname === "/api/skills/run") {
+      const session = await getSessionUser(request, env);
+      const oauth = session ? null : await authenticateMcp(request, env);
+      const validOAuth = oauth && oauth.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp" ? oauth : null;
+      const principal = session ? {id:session.id,oauth:false,scopes:""}
+        : validOAuth ? {id:validOAuth.userId,oauth:true,scopes:validOAuth.scope} : null;
+      if(principal){
+        const {success}=await env.MCP_RATE_LIMITER.limit({key:principal.id+":skill-action"});
+        if(!success)return Response.json({error:"rate_limited"},{status:429});
+      }
+      const deviceIdentity=validOAuth|| (session ? {
+        userId:session.id,clientId:"arc-cloud-skills",grantId:null,
+        scope:"browser:read",resource:(env.APP_ORIGIN || env.PUBLIC_ORIGIN)+"/mcp",
+      } : null);
+      return handleCloudSkillAction(request,principal,{
+        consume:async()=>{ if(!principal)throw Error("unauthorized");await consumeToolCall(env,principal.id); },
+        paused:async()=>!principal||await isMcpPaused(env,principal.id),
+        selectDevices:async()=>getDevicesForUser(env,principal!.id),
+        read:async(deviceId,_tabId,tool,args)=>{
+          if(!deviceIdentity)throw Error("unauthorized");
+          return callDevice(env,deviceIdentity,deviceId,tool,args);
+        },
+      });
+    }
     if (url.pathname === "/api/skills" || url.pathname.startsWith("/api/skills/")) {
       const session = await getSessionUser(request, env);
       const oauth = session ? null : await authenticateMcp(request, env);

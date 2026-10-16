@@ -15,7 +15,7 @@ Receiving push alerts on iPhone depends on your GitHub Mobile notification setti
 ## Manually launch from phone
 
 1. In mobile Safari/Chrome, open <https://github.com/yaohuangguan/remote-arc/actions/workflows/deploy-cloudflare.yml>. GitHub Mobile app may not show the workflow dispatch control; use a browser and request desktop site if necessary.
-2. Select **Run workflow** and branch `master`. Only confirm `BACKUP_VERIFIED` after actually verifying a recent recoverable D1 production backup. This is not automatic.
+2. Select **Run workflow** and branch `master`. Leave `backup_confirmation` empty for a release without pending production D1 migrations. Only enter `BACKUP_VERIFIED` after actually verifying a recent recoverable production backup when pending migrations are detected. The workflow enforces this against live remote D1 history.
 3. Open the newly created Actions run. Once it requests approval, select **Review deployments** → **production** → **Approve and deploy**.
 4. The protected production environment must approve before migration/deploy steps run. Verify the post-deploy health and runtime after the run finishes.
 

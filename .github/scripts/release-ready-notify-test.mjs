@@ -15,5 +15,5 @@ assert.ok(notice.includes('BACKUP_VERIFIED'));
 assert.ok(notice.includes('Review deployments'));
 assert.ok(notice.includes('https://github.com/yaohuangguan/remote-arc/actions/workflows/deploy-cloudflare.yml'));
 assert.ok(notice.includes('Release candidate SHA: `'+sha+'`'));
-assert.ok(notice.includes('\n- Check'));
+assert.ok(notice.includes('\n- Leave'));
 console.log('Release ready notification tests passed (only notify, never dispatch)');

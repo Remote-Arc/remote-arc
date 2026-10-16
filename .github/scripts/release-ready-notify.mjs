@@ -19,7 +19,7 @@ export function makeNotice(sha,repository,actor='yaohuangguan'){
     `@${actor} — **Remote Arc master ${short}** has passed CI and is **ready for a controlled production release**.`,
     '',
     `- [Start manual Deploy Cloudflare workflow](${workflowUrl}) (select \`master\`).`,
-    '- Check and independently verify a current recoverable production D1 backup **before** entering `BACKUP_VERIFIED`.',
+    '- Leave backup confirmation blank for a no-migration release. If D1 migrations are pending, verify a recoverable backup before entering `BACKUP_VERIFIED`.',
     '- After dispatch, open that GitHub Actions run and select **Review deployments → production → Approve and deploy**.',
     '- No production deployment is started by this notification. Existing users remain on the currently deployed release.',
     '',

@@ -7497,7 +7497,8 @@ function App() {
     history.replaceState({}, "", "/overview");
   }
 
-  if (location.hostname === "admin.remotearc.app" || (UI_PREVIEW && routePath === "/admin-console")) {
+  if (UI_PREVIEW && routePath === "/admin-console") return <AdminConsole previewMode user={{isAdmin:true,email:"preview@example.invalid"}} />;
+  if (location.hostname === "admin.remotearc.app") {
     if (user === undefined) return <CenteredCard title={tr("Loading admin…","加载管理后台……")} body={tr("Checking permissions","正在检查权限")} />;
     return <AdminConsole user={user} />;
   }

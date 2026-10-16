@@ -1,4 +1,5 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
+import { HomeConnectionScene } from "./home-connection-scene.js";
 import { ArcComingSoonPageContent } from "./arc-future.js";
 import { ArcRoadmapPageContent } from "./arc-roadmap.js";
 import { ClientMcpGuide } from "./client-setup-guides.js";
@@ -2474,8 +2475,8 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects the tools, your AI does the thinking, and your machines do the work. Save a task and pick up its state in a later chat.",
-            "别让 AI 只停留在聊天。就在你熟悉的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 负责安全连接，你的模型负责思考，自己的电脑负责执行。已保存的任务状态还能跨聊天保留。"
+            "Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects your tools and computers, so you can manage your device fleet, create your AI teammates, and keep work moving across chats.",
+            "别让 AI 只停留在聊天。就在你熟悉的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 连接你的工具与电脑，让你管理设备集群、创建 AI 队友，并让工作跨对话持续推进。"
           )}</p>
           <div className="heroAiPlanNote">
             <strong>{tr("No model API key to configure. No pay-per-token API bill to top up.", "不用配置模型 API Key，也不用额外充值按量计费的 API Token。")}</strong>
@@ -2501,51 +2502,7 @@ function Landing({ user }: { user?: User | null }) {
           </div>
           <a className="heroTaskAvailability" href="/docs/long-running-work">{tr("Long-running Tasks · staged preview · see requirements", "长任务准备发布中 · 查看运行条件")} →</a>
         </div>
-        <div className="heroArchitecture" aria-label={tr("How Remote Arc connects AI clients to your devices", "Remote Arc 如何连接 AI 客户端与设备")}>
-          <div className="architectureLabel">{tr("YOUR AI", "你的 AI")}</div>
-          <div className="architectureClients">
-            {topologyAiClients.map((client) => (
-              <a href={"/install/" + client.slug} key={client.name} aria-label={tr("Install Remote Arc in " + client.name, "在 " + client.name + " 中安装 Remote Arc")}>
-                <img
-                  className={client.tone === "mono" ? "monoLogo" : "colorLogo"}
-                  src={client.icon}
-                  alt=""
-                />
-                <strong>{client.name}</strong>
-                <span className="agentCardArrow">↗</span>
-              </a>
-            ))}
-          </div>
-          <div className="architectureCompatibility">
-            <span className="protocolMark">M</span>
-            <strong>{tr("Any compatible Remote MCP client", "任意兼容 Remote MCP 的客户端")}</strong>
-          </div>
-
-          <div className="architectureArrow">
-            <span>↓</span>
-            <small>{tr("Plugin / Remote MCP + OAuth", "Plugin / Remote MCP + OAuth")}</small>
-          </div>
-
-          <div className="architectureCore">
-            <LogoMark />
-            <div>
-              <strong>Remote Arc</strong>
-              <small>{tr("Persistent tasks · device presence · permissions", "持久任务 · 设备在线状态 · 权限控制")}</small>
-            </div>
-          </div>
-
-          <div className="architectureArrow">
-            <span>↓</span>
-            <small>{tr("Encrypted outbound device connection", "设备安全出站连接")}</small>
-          </div>
-
-          <div className="architectureLabel">{tr("YOUR DEVICES", "你的设备")}</div>
-          <div className="architectureDevices">
-            <div><span>⊞</span><strong>Windows</strong></div>
-            <div><span>⌘</span><strong>macOS</strong></div>
-            <div><span>›_</span><strong>Linux</strong></div>
-          </div>
-        </div>
+        <HomeConnectionScene clients={topologyAiClients} />
       </section>
 
       <section className="trustRail" aria-label={tr("Supported AI clients", "支持的 AI 客户端")}>

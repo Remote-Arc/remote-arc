@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./arc-future.css";
+import { ArcCapabilities, ArcFeatureIcon } from "./arc-capabilities.js";
 
 // Only the concept's visual explanation is interactive. No model is called and
 // no data is sent to an unimplemented waitlist or paid-hosted service.
@@ -41,13 +42,13 @@ function ArcExecutionScene() {
     </div>
     <div className="arcV3Branch" aria-hidden="true"><span className="arcV3BranchStem" /><span className="arcV3BranchBar" /></div>
     <div className="arcV3Nodes" role="group" aria-label={tr("Explore planned Arc capabilities", "查看 Arc 计划中的能力")}>
-      <button type="button" className={"arcV3Node" + (selected==="apps" ? " arcV3Node--main" : "")} aria-pressed={selected==="apps"} onClick={()=>setSelected("apps")}><span className="arcV3NodeGlyph" aria-hidden="true">▦</span><span className="arcV3NodeContent"><strong>{tr("Apps", "云应用")}</strong><small>GitHub · Notion</small></span></button>
+      <button type="button" className={"arcV3Node" + (selected==="apps" ? " arcV3Node--main" : "")} aria-pressed={selected==="apps"} onClick={()=>setSelected("apps")}><span className="arcV3NodeGlyph" aria-hidden="true"><ArcFeatureIcon name="apps"/></span><span className="arcV3NodeContent"><strong>{tr("Apps", "云应用")}</strong><small>GitHub · Notion</small></span></button>
       <button type="button" className={"arcV3Node" + (selected==="devices" ? " arcV3Node--main" : "")} aria-pressed={selected==="devices"} onClick={()=>setSelected("devices")}><span className="arcV3NodeGlyph" aria-hidden="true"><img src="/platform-brands/windows.svg" width="22" height="22" alt="" /></span><span className="arcV3NodeContent"><strong>{tr("Devices", "个人设备")}</strong><small>Mac · Windows</small></span></button>
-      <button type="button" className={"arcV3Node" + (selected==="routines" ? " arcV3Node--main" : "")} aria-pressed={selected==="routines"} onClick={()=>setSelected("routines")}><span className="arcV3NodeGlyph" aria-hidden="true">↻</span><span className="arcV3NodeContent"><strong>Routines</strong><small>{tr("Scheduled work", "定期任务")}</small></span></button>
+      <button type="button" className={"arcV3Node" + (selected==="routines" ? " arcV3Node--main" : "")} aria-pressed={selected==="routines"} onClick={()=>setSelected("routines")}><span className="arcV3NodeGlyph" aria-hidden="true"><ArcFeatureIcon name="routine"/></span><span className="arcV3NodeContent"><strong>Routines</strong><small>{tr("Scheduled work", "定期任务")}</small></span></button>
     </div>
     <div className="arcV3CapabilityDetail" aria-live="polite"><strong>{locale==="zh"?current.zh:current.en}</strong><span>{locale==="zh"?current.zhDetail:current.enDetail}</span></div>
     <div className="arcV3Merge" aria-hidden="true" />
-    <div className="arcV3Outcome"><span className="arcV3OutcomeTick">✓</span><div><strong>{tr("Weekly update, ready to review", "项目进展已整理，等待审核")}</strong><small>{tr("Verified output · Your approval before sharing", "可查看结果 · 分享前由你审批")}</small></div><a className="arcV3OutcomeArrow" href={localizedWebsiteHref("/roadmap",locale)} aria-label={tr("See the Arc roadmap", "查看 Arc 路线图")}>↗</a></div>
+    <div className="arcV3Outcome"><span className="arcV3OutcomeTick"><ArcFeatureIcon name="check"/></span><div><strong>{tr("Weekly update, ready to review", "项目进展已整理，等待审核")}</strong><small>{tr("Verified output · Your approval before sharing", "可查看结果 · 分享前由你审批")}</small></div><a className="arcV3OutcomeArrow" href={localizedWebsiteHref("/roadmap",locale)} aria-label={tr("See the Arc roadmap", "查看 Arc 路线图")}>↗</a></div>
   </div>;
 }
 
@@ -65,9 +66,9 @@ export function ArcTeaser() {
 }
 
 const story = [
-  {id:"01", en:"Start with intent",zh:"只需说出目标",detailEn:"Describe the result you want. Arc turns it into bounded, reviewable work.",detailZh:"告诉 Arc 你想要的结果，Arc 将目标转化成有边界、可审核的工作。",glyph:"⌁"},
-  {id:"02", en:"Work across tools",zh:"连接真实工具",detailEn:"Cloud apps and devices, connected only within the permissions you give.",detailZh:"云端应用与个人设备协同执行，每项操作都遵守你的授权。",glyph:"⌘"},
-  {id:"03", en:"See what got done",zh:"看到真实成果",detailEn:"Review results and approvals instead of taking an AI's word for it.",detailZh:"检查执行结果和审批记录，而不只是相信 AI 的口头汇报。",glyph:"✓"}
+  {id:"01", en:"Start with intent",zh:"只需说出目标",detailEn:"Describe the result you want. Arc turns it into bounded, reviewable work.",detailZh:"告诉 Arc 你想要的结果，Arc 将目标转化成有边界、可审核的工作。",glyph:"play" as const},
+  {id:"02", en:"Work across tools",zh:"连接真实工具",detailEn:"Cloud apps and devices, connected only within the permissions you give.",detailZh:"云端应用与个人设备协同执行，每项操作都遵守你的授权。",glyph:"apps" as const},
+  {id:"03", en:"See what got done",zh:"看到真实成果",detailEn:"Review results and approvals instead of taking an AI's word for it.",detailZh:"检查执行结果和审批记录，而不只是相信 AI 的口头汇报。",glyph:"check" as const}
 ] as const;
 
 export function ArcComingSoonPageContent() {
@@ -81,7 +82,7 @@ export function ArcComingSoonPageContent() {
       <div className="arcV3HeroActions"><a className="arcV3Primary" href={localizedWebsiteHref(earlyAccessHref,locale)}>{tr("Get early access", "申请抢先体验")} <span>↗</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
       <div className="arcV3HeroCue"><span />{tr("A GLIMPSE OF WHAT'S NEXT", "下一阶段产品概念")}</div>
       <ArcExecutionScene />
-      <p className="arcV3Disclaimer">{tr("Concept only. Arc Hosted is not publicly available. Early access opens an email draft.", "此为概念展示。Arc 托管服务尚未公开开放，申请体验将打开邮件草稿。")}</p>
+      <p className="arcV3Disclaimer">{tr("Concept only. Arc Hosted is not publicly available yet. The early-access form collects product interest only.", "此为概念展示。Arc 托管服务尚未公开开放，抢先体验表单仅用于收集使用意向。")}</p>
     </section>
 
     <section className="arcV3Journey" aria-labelledby="arcV3JourneyTitle">
@@ -91,7 +92,7 @@ export function ArcComingSoonPageContent() {
       <div className="arcV3JourneyRail">
         {story.map((step,index)=><article key={step.id} className="arcV3JourneyStep">
           <span className="arcV3JourneyNumber">{step.id}</span>
-          <div className="arcV3JourneyGlyph" aria-hidden="true">{step.glyph}</div>
+          <div className="arcV3JourneyGlyph" aria-hidden="true"><ArcFeatureIcon name={step.glyph}/></div>
           <h3>{locale==="zh"?step.zh:step.en}</h3>
           <p>{locale==="zh"?step.detailZh:step.detailEn}</p>
           {index!==story.length-1&&<div className="arcV3JourneyTrail" aria-hidden="true" />}
@@ -99,6 +100,7 @@ export function ArcComingSoonPageContent() {
       </div>
     </section>
 
+    <ArcCapabilities />
     <section className="arcV3Split" aria-labelledby="arcV3ModesTitle">
       <span className="arcV3Eyebrow">02 — {tr("ONE PLATFORM", "同一个平台")}</span>
       <h2 id="arcV3ModesTitle">{tr("Bring your AI. Or meet Arc.", "继续用熟悉的 AI，或者认识 Arc。")}</h2>

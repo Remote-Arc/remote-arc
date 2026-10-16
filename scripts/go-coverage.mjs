@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const modules = [
-  { name: "Go Agent", dir: "apps/agent", baseline: 69.0, focus: { "internal/localmcp": 90 } },
+  { name: "Go Agent", dir: "apps/agent", baseline: 70.5, focus: { "internal/localmcp": 90 } },
   { name: "Execution Core", dir: "packages/execution-core", baseline: 90.0, focus: { protocol: 90 } },
 ];
 const root = resolve(import.meta.dirname, "..");

@@ -4,7 +4,7 @@ Goal: **at least 90% statement coverage in every production module**; measure br
 
 | Scope | Baseline | After focused tests | Target |
 | --- | ---: | ---: | ---: |
-| Go Agent overall, including cmd | 64.8% | 69.0% | 90% |
+| Go Agent overall, including cmd | 64.8% | 70.5% | 90% |
 | Go Execution Core overall | 71.3% | 90.1% | 90% |
 | Go Agent local MCP | 87.0% | 95.7% | 90% |
 | Go Execution Core protocol | 46.9% | 100.0% | 90% |

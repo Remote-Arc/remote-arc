@@ -23,13 +23,13 @@ function ArcConcept() {
       <div className="arcConceptChat">
         <div className="arcConceptAvatar">↗</div>
         <div className="arcConceptPrompt">
-          <span>{tr("A WORK FOR ARC", "交给 ARC 的工作")}</span>
+          <span>{tr("YOUR REQUEST", "你的请求")}</span>
           <strong>{tr("Prepare my weekly project update.", "帮我准备本周项目进展汇总。")}</strong>
           <p>{tr("Pull the latest issues, organize decisions, and prepare a reviewable draft.", "读取最新 Issue，整理关键决定，形成可审核的草稿。")}</p>
         </div>
       </div>
       <div className="arcConceptFlow">
-        <div className="arcConceptConnector"><div className="arcConceptAppIcon" aria-hidden="true">⌘</div><div><strong>GitHub</strong><small>{tr("Read project updates", "读取项目进度")}</small></div><span>↗</span></div>
+        <div className="arcConceptConnector"><div className="arcConceptAppIcon arcConceptAppIcon--github" aria-hidden="true">GH</div><div><strong>GitHub</strong><small>{tr("Read project updates", "读取项目进度")}</small></div><span>↗</span></div>
         <div className="arcConceptFlowLine"><i /></div>
         <div className="arcConceptConnector"><div className="arcConceptAppIcon arcConceptAppIcon--notion" aria-hidden="true">N</div><div><strong>Notion</strong><small>{tr("Prepare a draft", "生成待审核草稿")}</small></div><span>↗</span></div>
       </div>

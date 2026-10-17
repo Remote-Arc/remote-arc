@@ -98,6 +98,7 @@ type Env = TaskEventEnv & AppEnv & {
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
   PUBLIC_ORIGIN: string;
+  DEPLOYMENT_SHA?: string;
   APP_ORIGIN?: string;
   MARKETING_ORIGIN?: string;
   ADMIN_ORIGIN?: string;
@@ -331,7 +332,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
         service: "remotearc-relay",
         version: cliPackage.version,
         auth: "oauth2-pkce",
-      });
+        ...(env.DEPLOYMENT_SHA && /^[a-f0-9]{40}$/.test(env.DEPLOYMENT_SHA) ? { deployment: env.DEPLOYMENT_SHA } : {}),
+      }, { headers: { "cache-control": "no-store" } });
     }
 
     if (

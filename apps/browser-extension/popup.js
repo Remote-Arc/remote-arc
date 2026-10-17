@@ -1,5 +1,7 @@
 const connection = document.querySelector("#connection");
 const tab = document.querySelector("#tab");
+const allTabs = document.querySelector("#all-tabs");
+const ALL_WEB_ORIGINS = { origins: ["http://*/*", "https://*/*"] };
 const sharedTabs = document.querySelector("#shared-tabs");
 const status = document.querySelector("#status");
 
@@ -32,6 +34,7 @@ async function render() {
 
   document.querySelector("#disconnect")?.addEventListener("click", async () => {
     await send("disconnect-browser");
+    await chrome.permissions.remove(ALL_WEB_ORIGINS).catch(() => undefined);
     status.textContent = "Browser disconnected.";
     await render();
   });
@@ -47,6 +50,31 @@ async function render() {
   const shared = Boolean(state.activeGrant);
   const interact = Boolean(state.activeGrant?.permissions?.includes("interact"));
 
+  allTabs.innerHTML = state.shareAllMode
+    ? `<div class="permission"><strong>Share all tabs</strong><span class="on">ON</span></div>
+       <p class="hint">All eligible browser tabs, including new tabs, are shared with read + click/fill access. Protected login/payment pages are excluded. Pause when browsing privately.</p>
+       <button class="secondary" id="disable-all">Stop sharing all tabs</button>`
+    : `<div class="permission"><strong>Share all tabs</strong><span>OFF</span></div>
+       <p class="hint">One switch shares eligible current and future tabs, including signed-in websites. AI can read, click and fill. Chrome will ask for website access once.</p>
+       <button class="primary" id="enable-all" ${state.connected ? "" : "disabled"}>Share all tabs (read + click/fill)</button>`;
+
+  document.querySelector("#enable-all")?.addEventListener("click", async () => {
+    status.textContent = "Requesting Chrome access to websites...";
+    const allowed = await chrome.permissions.request(ALL_WEB_ORIGINS).catch(() => false);
+    if (!allowed) { status.textContent = "Permission not granted. No tabs shared."; return; }
+    const result = await send("enable-share-all");
+    status.textContent = result?.error || "Shared " + result.shared + " tabs (" + result.skipped + " skipped).";
+    await render();
+  });
+  document.querySelector("#disable-all")?.addEventListener("click", async () => {
+    const result = await send("disable-share-all");
+    if (result?.error) { status.textContent = result.error; return; }
+    await chrome.permissions.remove(ALL_WEB_ORIGINS).catch(() => undefined);
+    status.textContent = "Whole-browser sharing stopped.";
+    await render();
+  });
+
+
   tab.innerHTML = shared
     ? `<div class="permission"><span>Current tab</span><span class="on">Shared</span></div>
        <div class="meta">${escapeHtml(state.activeGrant.title || shortUrl(state.activeGrant.url))}</div>
@@ -56,8 +84,8 @@ async function render() {
        <button class="${interact ? "secondary" : "primary"}" id="toggle-interact">${interact ? "Disable click & fill on this tab" : "Enable click & fill on this tab"}</button>
        <button class="secondary top-gap" id="revoke">Stop AI access on this tab</button>`
     : `<div class="permission"><span>Current tab</span><span>No access</span></div>
-       <p class="hint">Share this tab read-only first. You can separately enable click & fill after sharing it.</p>
-       <button class="primary" id="grant" ${state.connected ? "" : "disabled"}>Share this tab</button>`;
+       <p class="hint">Sharing enables click & fill by default. You can switch back to read-only.</p>
+       <button class="primary" id="grant" ${state.connected ? "" : "disabled"}>Share this tab (read + click/fill)</button>`;
 
   document.querySelector("#revoke")?.addEventListener("click", async () => {
     await send("revoke-tab");
@@ -71,7 +99,7 @@ async function render() {
       status.textContent = result.error;
       return;
     }
-    status.textContent = "Read-only access granted.";
+    status.textContent = "Read + click/fill access granted.";
     await render();
   });
 
@@ -89,7 +117,7 @@ async function render() {
 
   sharedTabs.innerHTML = `
     <div class="permission"><span>Shared tabs</span><span>${count}</span></div>
-    <p class="hint">Remote Arc does not impose a tab-count cap. Each tab is still shared explicitly.</p>
+    <p class="hint">Share all tabs includes new tabs automatically. Removing one excludes it until you restart the mode.</p>
     <div class="shared-list">
       ${grants.map((grant) => {
         const grantInteract = grant.permissions?.includes("interact");
@@ -103,7 +131,7 @@ async function render() {
         </div>`;
       }).join("") || '<p class="empty">No tabs shared yet.</p>'}
     </div>
-    ${count > 1 ? '<button class="secondary top-gap" id="revoke-all">Stop access on all shared tabs</button>' : ""}
+    ${count > 0 && !state.shareAllMode ? '<button class="secondary top-gap" id="revoke-all">Stop access on all shared tabs</button>' : ""}
   `;
 
   for (const button of sharedTabs.querySelectorAll("[data-revoke-tab]")) {

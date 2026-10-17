@@ -170,7 +170,7 @@ const useCaseSeo: Record<string, [string, string]> = {
   "ci-follow-up": ["Run an authorized CI follow-up", "Use a Condition Watch with explicit event matching, authorized actions and recorded outcomes."],
   "data-work": ["Process data in your local environment", "Use installed runtimes to analyze local files, validate results and understand task-data handling."],
   "home-lab": ["Inspect a headless host", "Inspect logs and services through an outbound device connection without opening an inbound Remote Arc port."],
-  "browser-research": ["Work with explicitly shared browser tabs", "Read text, selections, links and tables, then optionally enable scoped click and fill on individual shared Chrome tabs."],
+  "browser-research": ["Work with explicitly shared browser tabs", "Share a selected tab or opt into eligible tabs across Chrome, then read and interact using fresh page snapshots."],
   "remote-support": ["Diagnose an authorized computer", "Read real logs and processes while keeping diagnosis and repair authorization separate."],
   "presentation-deck": ["Create an editable PowerPoint on your own computer", "Turn local notes and charts into a checked PPTX using an authorized script and document libraries installed on the paired computer."],
   "spreadsheet-report": ["Build a verified Excel workbook from local data", "Combine local CSV files into an XLSX, check totals and inspect formulas or charts using your installed runtime and spreadsheet libraries."],
@@ -539,7 +539,7 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
     flow: "Install the browser companion, share the intended tab, select its tab identifier, request only the needed context and revoke sharing when the work is finished.",
     tools: "Read capabilities include browser_read_page, selected text, link extraction and table extraction. Click and fill require a separate per-tab opt-in and fresh snapshot references.",
     proof: "The returned facts should be tied to the explicitly shared page, such as extracted rows, visible links or selected text.",
-    boundary: "Tabs begin read-only. Recognized password, one-time-code, payment-card and file-upload fields are blocked from the ordinary fill path, and browser tools are not the same thing as unrestricted profile-wide browser control."
+    boundary: "Shared tabs default to read and click/fill; all-tabs mode requires explicit Chrome permission and excludes recognized protected pages. Password, one-time-code, card and file-upload fields remain blocked from filling."
   },
   "presentation-deck": {
     prompt: "Ask your AI to build a 12-slide editable PPTX from an outline and charts stored in an approved folder on the workstation.",

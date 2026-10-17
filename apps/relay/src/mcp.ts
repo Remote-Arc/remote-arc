@@ -477,7 +477,7 @@ export function createRemoteLinkMcp(
       {
         title: "Click an element in a shared browser tab",
         description:
-          "Click one element from the most recent browser_read_page snapshot. Requires the user to enable Click & fill for that specific tab. Clicks can navigate, submit forms, or trigger other page actions, so read the page again after each click.",
+          "Click one element from the most recent browser_read_page snapshot. Requires an active interaction grant on the shared tab (enabled by default when it is shared). Clicks can navigate, submit forms, or trigger other page actions, so read the page again after each click.",
         inputSchema: z.object({
           device_id: z.string(),
           tab_id: z.number().int().optional(),
@@ -508,7 +508,7 @@ export function createRemoteLinkMcp(
       {
         title: "Fill a field in a shared browser tab",
         description:
-          "Fill a non-sensitive field from the most recent browser_read_page snapshot. Requires the user to enable Click & fill for that specific tab. Recognized password, one-time-code, payment-card, and file fields remain blocked by the browser companion.",
+          "Fill a non-sensitive field from the most recent browser_read_page snapshot. Requires an active interaction grant on the shared tab (enabled by default when it is shared). Recognized password, one-time-code, payment-card, and file fields remain blocked by the browser companion.",
         inputSchema: z.object({
           device_id: z.string(),
           tab_id: z.number().int().optional(),

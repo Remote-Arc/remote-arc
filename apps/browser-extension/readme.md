@@ -1,51 +1,39 @@
 # Remote Arc Browser
 
-Scoped Chrome companion for Remote Arc.
+Chrome companion for Remote Arc. Version 0.4.
 
-## Security model
+## Sharing modes
 
-- No `<all_urls>` host permission.
-- No Chrome `debugger` / CDP permission.
-- No cookies, history, or password access.
-- The only fixed host permission is the Remote Arc relay itself.
-- A user must open the extension and click **Share this tab** for every tab they want to expose.
-- Remote Arc does not impose a hard tab-count limit. Multiple tabs can stay shared concurrently, subject only to normal browser resource limits.
-- Every shared tab starts read-only. **Click & fill** is a separate per-tab permission the user must explicitly enable in the popup.
-- Recognized password, one-time-code, payment-card, and file-picker fields cannot be filled through Remote Arc. Detection uses standard input types and autocomplete metadata; sites that mislabel sensitive fields can bypass this classification.
-- Interaction uses element refs from the most recent `browser_read_page` snapshot. Stale refs are rejected instead of being re-targeted.
-- A click invalidates the current interaction snapshot so the AI must read the page again before another click.
-- Access is revoked for a tab on navigation, reload, tab close, or manual revoke.
-- Browser tools operate on a simplified DOM snapshot rather than raw HTML and do not return form values.
-- WebSocket device credentials are sent as a WebSocket subprotocol, not in the URL.
+- **Share this tab:** One click grants read and click/fill access on the active eligible web page. The user can reduce that tab to read-only or revoke it.
+- **Share all tabs:** One deliberate switch asks Chrome for optional http/https site access, shares all eligible open tabs, and automatically shares newly opened tabs and navigated pages. The user can exclude any individual tab.
+- **Stop sharing all tabs:** Immediately clears browser grants and removes the optional broad Chrome site permission. Manual per-tab sharing can still be used.
+- Sharing state is saved only for the current browser session, so a browser restart requires enabling the global mode again. Background service-worker sleep does not erase the grants.
+- Special Chrome/extension pages, recognized sign-in/payment/secret-manager surfaces and unavailable tabs cannot be auto-shared. The extension shows a skipped count.
+- Recognized password, one-time-code, payment card and file upload fields are not fillable. This is a best-effort field classification, not a guarantee for sites with incorrect markup.
+- All interactions use fresh page snapshots and element references; a stale ref is rejected. AI clicks may still submit forms or have external effects. Do not turn on global sharing during private browsing or while handling sensitive accounts.
+- Tools do not return raw HTML, form field values, cookies, browser history or credentials.
+- The browser device must be paired; turning on Share all tabs is an explicit local Chrome user action. The AI cannot grant itself whole-browser host permissions over MCP.
 
-## Tools
+## Read tools
 
-Read scope:
+- browser_list_tabs
+- browser_get_current_tab
+- browser_read_page
+- browser_get_selected_text
+- browser_extract_links
+- browser_extract_table
 
-- `browser_list_tabs`
-- `browser_get_current_tab`
-- `browser_read_page`
-- `browser_get_selected_text`
-- `browser_extract_links`
-- `browser_extract_table`
+## Interactive tools
 
-Interaction scope:
+- browser_click
+- browser_fill
 
-- `browser_click`
-- `browser_fill`
+## Setup
 
-## Interaction flow
+1. Open `chrome://extensions`, enable Developer mode and load the packaged unpacked extension.
+2. Pair the browser with Remote Arc using the extension popup.
+3. Choose **Share this tab** or **Share all tabs**. The latter needs a Chrome site-permission prompt if that permission was not previously granted.
+4. The AI lists shared tabs, reads a tab snapshot, then clicks or fills using its returned snapshot ID and ref.
+5. Turn off Share all tabs before handling confidential pages. Chrome removes the optional site access automatically when global mode is disabled.
 
-1. Share a tab. It starts with read permission only.
-2. Call `browser_read_page` and keep the returned `snapshotId` plus element `ref`.
-3. If the user has enabled **Click & fill** for that tab, call `browser_fill` or `browser_click` with the same `snapshot_id` and `ref`.
-4. After a click, read the page again before the next interaction.
-
-## Load locally
-
-1. Open `chrome://extensions`.
-2. Enable Developer mode.
-3. Choose **Load unpacked**.
-4. Select `apps/browser-extension`.
-5. Open the extension and connect it to Remote Arc.
-6. On a normal HTTP/HTTPS page, click **Share this tab**.
+Existing independently paired computer tools and normal MCP permissions are unchanged.

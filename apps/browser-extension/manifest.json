@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Remote Arc Browser",
-  "version": "0.3.0",
-  "description": "Share selected browser tabs with AI, with per-tab read and interaction permission.",
+  "version": "0.4.0",
+  "description": "Share individual tabs or opt in to a whole-browser session, with explicit read and interaction controls.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -18,5 +18,9 @@
   "background": {
     "service_worker": "service-worker.js",
     "type": "module"
-  }
+  },
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
 }

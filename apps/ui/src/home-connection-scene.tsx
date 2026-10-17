@@ -1,24 +1,26 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { useI18n } from "./i18n.js";
 import "./home-connection-scene.css";
 
 type AiClient = { name: string; slug: string; icon: string; tone: string };
-type Capability = "skills" | "execution" | "approvals" | "verified" | "calendar";
+type Mode = "connect" | "arc";
+type OrbitNode = { name: string; icon: string; x: number; y: number; kind: "app" | "device"; calendar?: boolean };
 
-function CapabilityIcon({ name }: { name: Capability }) {
-  const paths: Record<Capability, string> = {
-    skills: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM16.5 13v7M13 16.5h7",
-    execution: "M4 7h10M4 12h7M4 17h10m2-10 5 5-5 5",
-    approvals: "M12 3 4 6v6c0 4.2 3.2 7 8 9 4.8-2 8-4.8 8-9V6l-8-3Zm-4 9 3 3 5-6",
-    verified: "M21 12a9 9 0 1 1-3.2-6.9M8 11l4 4L21 5",
-    calendar: "M5 5h14v15H5zM8 3v4m8-4v4M5 10h14m-10 4h2m2 0h2",
-  };
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>;
-}
+const resources: readonly OrbitNode[] = [
+  { name: "GitHub", icon: "/app-brands/github.svg", x: 115, y: 157, kind: "app" },
+  { name: "Slack", icon: "/app-brands/slack.svg", x: 57, y: 250, kind: "app" },
+  { name: "Gmail", icon: "/app-brands/gmail.svg", x: 95, y: 345, kind: "app" },
+  { name: "Outlook", icon: "/app-brands/microsoftoutlook.svg", x: 195, y: 414, kind: "app" },
+  { name: "Google Calendar", icon: "/app-brands/googlecalendar.svg", x: 310, y: 438, kind: "app" },
+  { name: "Outlook Calendar", icon: "/app-brands/microsoftoutlook.svg", x: 425, y: 414, kind: "app", calendar: true },
+  { name: "Mac", icon: "/platform-brands/macos.svg", x: 490, y: 145, kind: "device" },
+  { name: "Windows", icon: "/platform-brands/windows.svg", x: 544, y: 244, kind: "device" },
+  { name: "Linux", icon: "/platform-brands/linux.svg", x: 544, y: 340, kind: "device" },
+  { name: "Browser", icon: "/platform-brands/browser.svg", x: 555, y: 438, kind: "device" },
+];
+const aiPositions = [{ x: 202, y: 47 }, { x: 300, y: 33 }, { x: 398, y: 47 }];
 
-// Ambient motion has no progression or simulated execution. Pause its CSS
-// whenever the page is hidden, the overview is offscreen, or motion is reduced.
-function usePanoramaMotion() {
+function useAmbientMotion() {
   const ref = useRef<HTMLDivElement>(null);
   const [running, setRunning] = useState(false);
   useEffect(() => {
@@ -42,121 +44,125 @@ function usePanoramaMotion() {
   return { ref, running };
 }
 
+function connectionPath(node: OrbitNode) {
+  const dx = node.x - 300;
+  const dy = node.y - 246;
+  return `M300 246 C${300 + dx * .15} ${246 + dy * .7},${node.x - dx * .35} ${node.y},${node.x} ${node.y}`;
+}
+const position = (x: number, y: number, delay = 0): CSSProperties =>
+  ({ left: x / 6 + "%", top: y / 5 + "%", "--float-delay": delay + "s" } as CSSProperties);
+
 export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] }) {
   const { tr } = useI18n();
-  const { ref, running } = usePanoramaMotion();
-  const headingId = useId();
-  const apps = [
-    { name: "GitHub", icon: "github", mono: true },
-    { name: "Slack", icon: "slack" },
-    { name: "Gmail", icon: "gmail" },
-    { name: "Outlook", icon: "microsoftoutlook" },
-    { name: "Google Calendar", icon: "googlecalendar" },
-    // Microsoft 365 calendars are an Outlook capability, not a separate
-    // fabricated product mark. Use the genuine Outlook logo with a calendar cue.
-    { name: "Microsoft Calendar", icon: "microsoftoutlook", calendar: true },
-  ];
-  const devices = [
-    { name: "Mac", icon: "macos", note: "macOS" },
-    { name: "Windows", icon: "windows", note: tr("Your PC", "你的电脑") },
-    { name: "Linux", icon: "linux", note: tr("Your environment", "你的运行环境") },
-    { name: "Browser", icon: "browser", note: tr("Shared tabs", "已共享的标签页") },
-  ];
-  const capabilities: { name: Capability; label: string }[] = [
-    { name: "skills", label: tr("Skills", "专业技能") },
-    { name: "execution", label: tr("Execution", "任务执行") },
-    { name: "approvals", label: tr("Approvals", "操作审批") },
-    { name: "verified", label: tr("Verified Results", "结果验证") },
-  ];
+  const { ref, running } = useAmbientMotion();
+  const [mode, setMode] = useState<Mode>("connect");
+  const uid = useId();
+  const arc = mode === "arc";
+  const headlineId = uid + "-heading";
+  const descriptionId = uid + "-description";
+  const panelId = uid + "-panel";
+  const switchMode = (value: Mode) => setMode(value);
   return (
-    <div ref={ref} className="homeConnectionScene" data-layout="panorama" data-running={running} role="region" aria-labelledby={headingId}>
-      <header className="hcsPanoramaHeader">
-        <h2 id={headingId}>{tr("FROM CHAT TO ACTION", "让对话变成行动")}</h2>
-        <span>{tr("AGENT INFRASTRUCTURE", "AGENT 基础设施")}</span>
-      </header>
-
-      <div className="hcsAiEntry">
-        <span className="hcsAiEntryLabel">{tr("BRING YOUR AI", "接入你的 AI")}</span>
-        <div className="hcsClients" aria-label={tr("AI client installation guides", "AI 客户端安装指南")}>
-          {clients.map(client => (
-            <a key={client.slug} href={"/install/" + client.slug} aria-label={tr("Install for " + client.name, "查看 " + client.name + " 安装指南")}>
-              <img src={client.icon} className={client.tone === "mono" ? "monoLogo" : "colorLogo"} alt="" width={18} height={18} />
-              <span>{client.name}</span>
-            </a>
+    <div ref={ref} className="homeConnectionScene" data-layout="constellation" data-mode={mode} data-running={running} role="region" aria-labelledby={headlineId}>
+      <header className="hcsHeader">
+        <h2 id={headlineId}>{tr("FROM CHAT TO ACTION", "让对话变成行动")}</h2>
+        <div className="hcsModeSwitch" role="tablist" aria-label={tr("Explore Remote Arc modes", "查看 Remote Arc 两种模式")}>
+          {(["connect", "arc"] as const).map(value => (
+            <button key={value} id={uid + "-" + value} type="button" role="tab"
+              aria-selected={mode === value} aria-controls={panelId} tabIndex={mode === value ? 0 : -1}
+              onClick={() => switchMode(value)}
+              onKeyDown={event => {
+                if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+                  event.preventDefault();
+                  const next = event.key === "Home" ? "connect" : event.key === "End" ? "arc" : mode === "connect" ? "arc" : "connect";
+                  switchMode(next);
+                  document.getElementById(uid + "-" + next)?.focus();
+                }
+              }}>
+              {value === "connect" ? "Connect" : <>Arc<span className="hcsSoonDot" aria-hidden="true" /></>}
+              {value === "arc" && <span className="hcsScreenReader">{tr("Coming soon", "即将推出")}</span>}
+            </button>
           ))}
         </div>
-        <span className="hcsEntryStem" aria-hidden="true" />
+      </header>
+      <div className="hcsModeIntroduction" id={descriptionId} aria-live="polite">
+        <strong>{arc ? tr("An AI teammate of your own.", "创建属于你的 AI 队友。") : tr("Your favorite AI. Connected to your world.", "熟悉的 AI，连接你的整个世界。")}</strong>
+        <span>{arc ? tr("Natural language. One agent. Your apps and devices.", "用自然语言，让 Arc 协调你的应用与设备。") : tr("Bring ChatGPT, Claude or Cursor. Arc connects the tools.", "接入 ChatGPT、Claude 或 Cursor，Arc 连接工具与设备。")}</span>
       </div>
-
-      <div className="hcsPanorama">
-        <section className="hcsResourceGroup hcsApps" aria-label={tr("Apps ecosystem", "应用生态")}>
-          <div className="hcsGroupTitle"><h3>Apps</h3><span>{tr("Cloud connections", "云端应用")}</span></div>
-          <div className="hcsAppGrid">
-            {apps.map(app => (
-              <div className="hcsAppNode" key={app.name}>
-                <span className={"hcsBrandFrame" + (app.mono ? " hcsBrandFrameMono" : "")}>
-                  <img src={"/app-brands/" + app.icon + ".svg"} alt="" width={27} height={27} />
-                  {app.calendar && <span className="hcsCalendarCue"><CapabilityIcon name="calendar" /></span>}
-                </span>
-                <strong>{app.name}</strong>
-              </div>
-            ))}
-          </div>
-          <span className="hcsResourceNote">{tr("An extensible ecosystem", "持续扩展的应用生态")}</span>
-        </section>
-
-        <div className="hcsCoreColumn">
-          <svg className="hcsConnectionPaths" viewBox="0 0 180 290" preserveAspectRatio="none" aria-hidden="true">
-            <g className="hcsConnectionBase">
-              <path d="M0 59H25Q40 59 40 74V130Q40 145 55 145H90" />
-              <path d="M0 145H90" />
-              <path d="M0 231H25Q40 231 40 216V160Q40 145 55 145H90" />
-              <path d="M90 145H125Q140 145 140 130V43Q140 28 155 28H180" />
-              <path d="M90 145H125Q140 145 140 130V121H180" />
-              <path d="M90 145H125Q140 145 140 160V169H180" />
-              <path d="M90 145H125Q140 145 140 160V247Q140 262 155 262H180" />
-            </g>
-            <g className="hcsConnectionFlow">
-              <path d="M0 59H25Q40 59 40 74V130Q40 145 55 145H90" />
-              <path d="M0 231H25Q40 231 40 216V160Q40 145 55 145H90" />
-              <path d="M90 145H125Q140 145 140 130V43Q140 28 155 28H180" />
-              <path d="M90 145H125Q140 145 140 160V247Q140 262 155 262H180" />
-            </g>
-          </svg>
-          <div className="hcsAgentCore">
-            <div className="hcsCoreHalo" aria-hidden="true" />
-            <div className="hcsCoreLogo"><img src="/remote-arc.svg" alt="" width={67} height={67} /></div>
-            <strong>Remote Arc</strong>
-            <span className="hcsAgentLabel">{tr("Agent Core", "Agent 能力核心")}</span>
-            <span className="hcsCoreDescriptor">{tr("Connect. Coordinate. Execute.", "连接 · 协调 · 执行")}</span>
-          </div>
+      <div id={panelId} role="tabpanel" aria-labelledby={uid + "-" + mode} aria-describedby={descriptionId} className="hcsUniverse" tabIndex={0}>
+        <div className="hcsAtmosphere" aria-hidden="true" />
+        <svg className="hcsOrbitGeometry" viewBox="0 0 600 500" aria-hidden="true">
+          <defs>
+            <radialGradient id={uid + "-glow"}>
+              <stop stopColor="currentColor" stopOpacity=".13" />
+              <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+            </radialGradient>
+            <linearGradient id={uid + "-trace"} x1="0" x2="1">
+              <stop stopColor="currentColor" stopOpacity=".12" />
+              <stop offset=".5" stopColor="currentColor" stopOpacity=".45" />
+              <stop offset="1" stopColor="currentColor" stopOpacity=".12" />
+            </linearGradient>
+          </defs>
+          <ellipse className="hcsOrbitalRing hcsOrbitalRingOuter" cx="300" cy="260" rx="242" ry="188" transform="rotate(-13 300 260)" />
+          <ellipse className="hcsOrbitalRing hcsOrbitalRingInner" cx="300" cy="260" rx="189" ry="143" transform="rotate(15 300 260)" />
+          <circle cx="300" cy="246" r="143" fill={"url(#" + uid + "-glow)"} />
+          <g className="hcsOutboundPaths">
+            {resources.map(node => <path key={node.name} d={connectionPath(node)} stroke={"url(#" + uid + "-trace)"} />)}
+          </g>
+          <g className="hcsOutboundFlow">
+            {resources.map((node, index) => <path key={node.name} pathLength="100" d={connectionPath(node)} style={{ animationDelay: index * -.64 + "s" }} />)}
+          </g>
+          <g className="hcsInboundPaths">
+            {(arc ? [{ x: 300, y: 76 }] : aiPositions).map((node, index) => {
+              const d = `M${node.x} ${node.y + 20} C${node.x} 132,300 132,300 208`;
+              return <g key={index}><path d={d} /><path className="hcsInboundFlow" pathLength="100" d={d} style={{ animationDelay: index * -.8 + "s" }} /></g>;
+            })}
+          </g>
+          <g className="hcsStars">
+            {[[160,226],[430,256],[237,365],[357,136],[385,353],[172,102],[461,363],[253,173]].map(([x,y],i) => <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 1.6 : 1} />)}
+          </g>
+        </svg>
+        <div className={"hcsSource hcsSource--connect" + (arc ? " hcsSource--hidden" : "")} aria-hidden={arc}>
+          {clients.slice(0, 3).map((client, index) => {
+            const at = aiPositions[index]!;
+            return <a className={"hcsFloatingNode hcsAiNode " + (client.tone === "mono" ? "hcsAiNode--mono" : "")}
+              key={client.slug} href={"/install/" + client.slug} tabIndex={arc ? -1 : 0}
+              aria-label={tr("Connect " + client.name, "连接 " + client.name)} style={position(at.x, at.y, index * -1.7)}>
+              <span className="hcsLogoTile"><img src={client.icon} alt="" width={28} height={28} /></span><span className="hcsNodeLabel">{client.name}</span>
+            </a>;
+          })}
         </div>
-
-        <section className="hcsResourceGroup hcsDevices" aria-label={tr("Authorized devices", "已授权的设备")}>
-          <div className="hcsGroupTitle"><h3>Devices</h3><span>{tr("Your environments", "你的运行环境")}</span></div>
-          <div className="hcsDeviceGrid">
-            {devices.map(device => (
-              <div className="hcsDeviceNode" key={device.name}>
-                <img src={"/platform-brands/" + device.icon + ".svg"} alt="" width={26} height={26} />
-                <div><strong>{device.name}</strong><span>{device.note}</span></div>
-                <i aria-hidden="true" />
-              </div>
-            ))}
+        <div className={"hcsSource hcsSource--arc" + (arc ? "" : " hcsSource--hidden")} aria-hidden={!arc}>
+          <div className="hcsPromptBubble"><span className="hcsPromptAvatar" aria-hidden="true">You</span><span>{tr("Plan my week. Bring everything together.", "规划我的一周，把所有事情串联起来。")}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></div>
+        </div>
+        <span className="hcsGroupCaption hcsAppsCaption">APPS</span>
+        <span className="hcsGroupCaption hcsDevicesCaption">DEVICES</span>
+        {resources.map((node, index) => (
+          <div key={node.name} className={"hcsFloatingNode hcsResourceNode hcsResourceNode--" + node.kind} style={position(node.x, node.y, index * -.93)} data-resource={node.kind}>
+            <span className="hcsLogoTile">
+              <img src={node.icon} alt="" width={30} height={30} />
+              {node.calendar && <svg className="hcsCalendarCue" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" /><path d="M5 2v3m6-3v3M3 7h10M6 10h4" /></svg>}
+            </span>
+            <span className="hcsNodeLabel">{node.name}</span>
           </div>
-          <span className="hcsResourceNote">{tr("Your rules. Your control.", "你的权限，由你掌控")}</span>
-        </section>
+        ))}
+        <div className="hcsCore" style={position(300, 246)}>
+          <div className="hcsCoreEnergy" aria-hidden="true" />
+          <div className="hcsCoreRing hcsCoreRing--one" aria-hidden="true" />
+          <div className="hcsCoreRing hcsCoreRing--two" aria-hidden="true" />
+          <div className="hcsCoreMark"><img src="/remote-arc.svg" alt="Remote Arc" width={86} height={86} /></div>
+          <strong>{arc ? "Arc Agent" : "Remote Arc"}</strong>
+          <span>{arc ? tr("Your AI teammate.", "你的专属 AI 队友。") : tr("Your AI. Your rules.", "你的 AI，你的权限。")}</span>
+        </div>
       </div>
-
-      <div className="hcsFoundation">
-        <span className="hcsFoundationStem" aria-hidden="true" />
-        <span className="hcsFoundationLabel">{tr("BUILT ON A SHARED FOUNDATION", "统一的平台能力")}</span>
-        <ul>{capabilities.map(capability => <li key={capability.name}><CapabilityIcon name={capability.name} /><span>{capability.label}</span></li>)}</ul>
-      </div>
-      <footer className="hcsAvailability">
-        <span className="hcsConnectStatus"><i aria-hidden="true" />{tr("Connect available now", "Connect 现已可用")}</span>
-        <span>{tr("Arc Agent · Coming soon", "Arc Agent · 即将推出")}</span>
+      <ul className="hcsFoundation" aria-label={tr("Shared platform capabilities", "统一的平台能力")}>
+        {[tr("Skills", "专业技能"), tr("Execution", "任务执行"), tr("Approvals", "操作审批"), tr("Verified Results", "结果验证")].map(label => <li key={label}>{label}</li>)}
+      </ul>
+      <footer className="hcsFooter">
+        <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
+        <a href={arc ? "/arc" : "/connect-ai"}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
       </footer>
-      <p className="hcsPlatformScope">{tr("Apps and cloud skills are in development.", "应用生态与云端技能正在建设中。")}</p>
+      <p className="hcsPlatformScope">{tr("Apps ecosystem and cloud skills are in development.", "应用生态与云端技能正在建设中。")}</p>
     </div>
   );
 }

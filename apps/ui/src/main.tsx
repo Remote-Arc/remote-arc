@@ -2470,7 +2470,7 @@ function Landing({ user }: { user?: User | null }) {
   const command = "npx remotelink";
   return (
     <PublicLayout user={user}>
-      <section className="landingHero">
+      <section className="landingHero landingHero--constellation">
         <div className="heroCopy">
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />

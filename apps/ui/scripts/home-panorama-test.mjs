@@ -5,9 +5,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-
-// Exercise the actual component in both languages. CSS remains a browser
-// responsibility; loading it as an empty module keeps the public markup test portable.
 registerHooks({ load(url, context, nextLoad) {
   return url.endsWith(".css") ? { format: "module", source: "", shortCircuit: true } : nextLoad(url, context);
 } });
@@ -26,41 +23,41 @@ try {
   for (const locale of ["en", "zh"]) {
     globalThis.location = { origin: "https://remotearc.app", hostname: "remotearc.app", pathname: locale === "zh" ? "/zh" : "/", search: "" };
     globalThis.window = { location: globalThis.location };
-    const html = renderToStaticMarkup(React.createElement(I18nProvider, null,
-      React.createElement(HomeConnectionScene, { clients })));
-    const fullHome = renderToStaticMarkup(React.createElement(I18nProvider, null,
-      React.createElement(React.Fragment, null,
-        React.createElement(HomeConnectionScene, { clients }), React.createElement(LandingContent))));
-    assert.doesNotMatch(fullHome, /class="[^"]*(?:homeDemo|hcsPlayButton|hcsSteps)|npm test|src\/auth\.ts|Product illustration|Illustrative demo/, "The whole homepage must omit staged code execution and demo controls");
-    assert.ok(fullHome.includes('id="how-it-works"'), "Keep the existing how-it-works navigation target");
-    assert.ok(fullHome.includes("arcV3Teaser"), "Keep the Coming Soon Arc entry point");
+    const html = renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(HomeConnectionScene, { clients })));
+    const lowerHome = renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(LandingContent)));
     const body = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
-    assert.match(html, /role="region"[^>]*aria-labelledby=/, "The overview needs a named accessible region");
+    assert.match(html, /role="region"[^>]*aria-labelledby=/);
     const label = html.match(/aria-labelledby="([^"]+)"/)?.[1];
-    assert.ok(label && html.includes('id="' + label + '"'), "Region label must reference its visible heading");
-    for (const name of ["GitHub", "Slack", "Gmail", "Outlook", "Google Calendar", "Microsoft Calendar", "Mac", "Windows", "Linux", "Browser"]) {
-      assert.ok(body.includes(name), "Show " + name + " without waiting for a stage change");
-    }
-    for (const name of locale === "zh" ? ["专业技能", "任务执行", "操作审批", "结果验证"] : ["Skills", "Execution", "Approvals", "Verified Results"]) {
-      assert.ok(body.includes(name), "Show shared platform capability: " + name);
-    }
-    assert.match(body, locale === "zh" ? /Connect 现已可用/ : /Connect available now/, "Preserve the available Connect entry point");
-    assert.match(body, locale === "zh" ? /Arc Agent · 即将推出/ : /Arc Agent · Coming soon/, "Keep Arc Agent explicitly coming soon");
-    assert.match(body, locale === "zh" ? /应用生态与云端技能正在建设中/ : /Apps and cloud skills are in development/, "Distinguish platform direction from currently available integrations");
-    assert.doesNotMatch(html, /<button\b|data-step=|data-routine-step=/, "An overview must not expose playback or stage controls");
-    assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/, "Remove the simulated code demonstration");
-    for (const client of clients) assert.ok(html.includes('href="/install/' + client.slug + '"'), "Keep installation links for " + client.name);
+    assert.ok(label && html.includes('id="' + label + '"'));
+    for (const name of ["GitHub", "Slack", "Gmail", "Outlook", "Google Calendar", "Outlook Calendar", "Mac", "Windows", "Linux", "Browser"]) assert.ok(body.includes(name), "Present all resources together: " + name);
+    assert.equal((html.match(/data-resource="app"/g) || []).length, 6);
+    assert.equal((html.match(/data-resource="device"/g) || []).length, 4);
+    for (const name of locale === "zh" ? ["专业技能", "任务执行", "操作审批", "结果验证"] : ["Skills", "Execution", "Approvals", "Verified Results"]) assert.ok(body.includes(name));
+    assert.equal((html.match(/role="tab"/g) || []).length, 2, "Only manual product-mode controls");
+    assert.match(html, /role="tabpanel"/);
+    assert.match(html, /data-mode="connect"/, "Connect is the default; Arc is never publicly enabled");
+    assert.match(body, locale === "zh" ? /Connect 现已可用/ : /Connect available now/);
+    assert.match(body, locale === "zh" ? /即将推出/ : /Coming soon/);
+    assert.match(body, locale === "zh" ? /应用生态与云端技能正在建设中/ : /Apps ecosystem and cloud skills are in development/);
+    assert.doesNotMatch(html, /data-step=|data-routine-step=|hcsPlayButton|hcsSteps/);
+    assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/);
+    for (const client of clients) assert.ok(html.includes('href="/install/' + client.slug + '"'));
+    assert.match(lowerHome, /class="homeDemo"/, "Preserve the lower interactive conversation and execution demo");
+    assert.match(lowerHome, /id="how-it-works"/);
+    assert.match(lowerHome, /arcV3Teaser/);
+    for (const name of locale === "zh" ? ["修复项目", "GitHub → Slack", "整理邮件", "安排会议", "制作 PPT", "生成 Excel"] : ["Fix a project", "GitHub → Slack", "Tame your inbox", "Plan a meeting", "Create a PPT", "Build an Excel report"]) assert.ok(lowerHome.includes(name.replaceAll(">", "&gt;")), "Preserve selected task: " + name);
+    assert.match(lowerHome, locale === "zh" ? /别只和 AI 聊天，让它真正动手/ : /Don’t just chat. Watch AI do the work/);
     const images = [...html.matchAll(/<img\b[^>]*src="([^"]+)"/g)].map(match => match[1]);
-    assert.ok(images.includes("/remote-arc.svg"), "Use the genuine Remote Arc mark");
-    assert.ok(images.includes("/platform-brands/browser.svg"), "Use the bundled browser brand");
+    assert.ok(images.includes("/remote-arc.svg"));
+    assert.ok(images.includes("/platform-brands/browser.svg"));
     for (const src of new Set(images)) {
       const asset = path.join(publicDir, src);
-      assert.ok(existsSync(asset), "Image asset must exist: " + src);
-      assert.match(readFileSync(asset, "utf8"), /<svg\b[^>]*viewBox=/, "Brand SVG needs a viewBox: " + src);
+      assert.ok(existsSync(asset), "Bundled brand asset: " + src);
+      assert.match(readFileSync(asset, "utf8"), /<svg\b[^>]*viewBox=/);
     }
   }
 } finally {
   if (originalLocation === undefined) delete globalThis.location; else globalThis.location = originalLocation;
   if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow;
 }
-console.log("PASS: bilingual full platform panorama, genuine bundled marks, install links, accessible region and current/coming-soon boundaries");
+console.log("PASS: bilingual floating constellation, manual Connect/Arc modes, genuine brands, lower live demo and App examples");

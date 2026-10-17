@@ -59,9 +59,10 @@ const slack = "https://slack.com/api/";
 const gmail = "https://gmail.googleapis.com/gmail/v1/users/me";
 const graph = "https://graph.microsoft.com/v1.0/me";
 op("github", "repositories.list", "List accessible repositories", z.object({ limit: page }).strict(), a => ({ url: url(gh + "/user/repos", { per_page: a.limit, sort: "updated" }), method: "GET" }));
-for (const [name, path, description] of [["issues.list", "issues", "List repository issues"], ["pulls.list", "pulls", "List pull requests"], ["actions.list", "actions/runs", "List Actions runs"]]) {
+for (const [name, path, description] of [["issues.list", "issues", "List repository issues"], ["actions.list", "actions/runs", "List Actions runs"]]) {
   op("github", name!, description!, z.object({ repo, limit: page }).strict(), a => ({ url: url(`${gh}/repos/${ghRepo(a.repo)}/${path}`, { per_page: a.limit }), method: "GET" }));
 }
+op("github", "pulls.list", "List pull requests", z.object({ repo, limit: page, state: z.enum(["open", "closed", "all"]).optional() }).strict(), a => ({ url: url(`${gh}/repos/${ghRepo(a.repo)}/pulls`, { per_page: a.limit, state: a.state }), method: "GET" }));
 op("github", "contents.read", "Read repository content", z.object({ repo, path: z.string().max(500).refine(v => !v.split("/").some(p => p === "..") && !v.startsWith("/")), ref: id.optional() }).strict(), a => ({ url: url(`${gh}/repos/${ghRepo(a.repo)}/contents/${a.path.split("/").map(encode).join("/")}`, { ref: a.ref }), method: "GET" }));
 op("github", "issues.create", "Create a repository issue", z.object({ repo, title: header, body: text }).strict(), a => ({ url: `${gh}/repos/${ghRepo(a.repo)}/issues`, method: "POST", body: { title: a.title, body: a.body } }), "write");
 op("slack", "channels.list", "List public channels", z.object({ limit: page, cursor: id.optional() }).strict(), a => ({ url: url(slack + "conversations.list", { limit: a.limit, cursor: a.cursor, types: "public_channel" }), method: "GET" }));

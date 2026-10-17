@@ -29,7 +29,7 @@ try {
     assert.match(html, /role="region"[^>]*aria-labelledby=/);
     const label = html.match(/aria-labelledby="([^"]+)"/)?.[1];
     assert.ok(label && html.includes('id="' + label + '"'));
-    for (const name of ["GitHub", "Slack", "Gmail", "Outlook", "Google Calendar", "Outlook Calendar", "Mac", "Windows", "Linux", "Browser"]) assert.ok(body.includes(name), "Present all resources together: " + name);
+    for (const name of ["GitHub", "Slack", "Runway", "Vercel", "Google Drive", "Notion", "Mac", "Windows", "Linux", "Browser"]) assert.ok(body.includes(name), "Present all resources together: " + name);
     assert.equal((html.match(/data-resource="app"/g) || []).length, 6);
     assert.equal((html.match(/data-resource="device"/g) || []).length, 4);
     for (const name of locale === "zh" ? ["专业技能", "任务执行", "操作审批", "结果验证"] : ["Skills", "Execution", "Approvals", "Verified Results"]) assert.ok(body.includes(name));
@@ -38,14 +38,14 @@ try {
     assert.match(html, /data-mode="connect"/, "Connect is the default; Arc is never publicly enabled");
     assert.match(body, locale === "zh" ? /Connect 现已可用/ : /Connect available now/);
     assert.match(body, locale === "zh" ? /即将推出/ : /Coming soon/);
-    assert.match(body, locale === "zh" ? /应用生态与云端技能正在建设中/ : /Apps ecosystem and cloud skills are in development/);
+    assert.match(body, locale === "zh" ? /Connect Apps 独立发布/ : /Connect Apps ships independently/);
     assert.doesNotMatch(html, /data-step=|data-routine-step=|hcsPlayButton|hcsSteps/);
     assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/);
     for (const client of clients) assert.ok(html.includes('href="/install/' + client.slug + '"'));
     assert.match(lowerHome, /class="homeDemo"/, "Preserve the lower interactive conversation and execution demo");
     assert.match(lowerHome, /id="how-it-works"/);
     assert.match(lowerHome, /arcV3Teaser/);
-    for (const name of locale === "zh" ? ["修复项目", "GitHub → Slack", "整理邮件", "安排会议", "制作 PPT", "生成 Excel"] : ["Fix a project", "GitHub → Slack", "Tame your inbox", "Plan a meeting", "Create a PPT", "Build an Excel report"]) assert.ok(lowerHome.includes(name.replaceAll(">", "&gt;")), "Preserve selected task: " + name);
+    for (const name of locale === "zh" ? ["修复项目", "GitHub + Vercel", "Runway 创作", "Drive + Notion", "制作 PPT", "生成 Excel"] : ["Fix a project", "GitHub + Vercel", "Create with Runway", "Drive + Notion", "Create a PPT", "Build an Excel report"]) assert.ok(lowerHome.includes(name.replaceAll(">", "&gt;")), "Preserve selected task: " + name);
     assert.match(lowerHome, locale === "zh" ? /别只和 AI 聊天，让它真正动手/ : /Don’t just chat. Watch AI do the work/);
     const images = [...html.matchAll(/<img\b[^>]*src="([^"]+)"/g)].map(match => match[1]);
     assert.ok(images.includes("/remote-arc.svg"));

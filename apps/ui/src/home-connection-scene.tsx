@@ -9,10 +9,10 @@ type OrbitNode = { name: string; icon: string; x: number; y: number; kind: "app"
 const resources: readonly OrbitNode[] = [
   { name: "GitHub", icon: "/app-brands/github.svg", x: 115, y: 157, kind: "app" },
   { name: "Slack", icon: "/app-brands/slack.svg", x: 57, y: 250, kind: "app" },
-  { name: "Gmail", icon: "/app-brands/gmail.svg", x: 95, y: 345, kind: "app" },
-  { name: "Outlook", icon: "/app-brands/microsoftoutlook.svg", x: 195, y: 414, kind: "app" },
-  { name: "Google Calendar", icon: "/app-brands/googlecalendar.svg", x: 310, y: 438, kind: "app" },
-  { name: "Outlook Calendar", icon: "/app-brands/microsoftoutlook.svg", x: 425, y: 414, kind: "app", calendar: true },
+  { name: "Runway", icon: "/app-brands/runway.svg", x: 95, y: 345, kind: "app" },
+  { name: "Vercel", icon: "/app-brands/vercel.svg", x: 195, y: 414, kind: "app" },
+  { name: "Google Drive", icon: "/app-brands/googledrive.svg", x: 310, y: 438, kind: "app" },
+  { name: "Notion", icon: "/app-brands/notion.svg", x: 425, y: 414, kind: "app" },
   { name: "Mac", icon: "/platform-brands/macos.svg", x: 490, y: 145, kind: "device" },
   { name: "Windows", icon: "/platform-brands/windows.svg", x: 544, y: 244, kind: "device" },
   { name: "Linux", icon: "/platform-brands/linux.svg", x: 544, y: 340, kind: "device" },
@@ -162,7 +162,7 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
         <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
         <a href={arc ? "/arc" : "/connect-ai"}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
       </footer>
-      <p className="hcsPlatformScope">{tr("Apps ecosystem and cloud skills are in development.", "应用生态与云端技能正在建设中。")}</p>
+      <p className="hcsPlatformScope">{tr("Connect Apps ships independently. Provider setup and account authorization required.", "Connect Apps 独立发布，需要平台配置与账号授权。")}</p>
     </div>
   );
 }

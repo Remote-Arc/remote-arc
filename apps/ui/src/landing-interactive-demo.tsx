@@ -1,3 +1,4 @@
+import { findAppWorkflow, translateCopy } from "./app-workflow-examples.js";
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./landing-interactive-demo.css";
@@ -49,13 +50,9 @@ function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) 
 }
 
 function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEvent[] {
+  const workflow = findAppWorkflow(id);
+  if (workflow) return workflow.traces.map(trace => ({tool: trace.tool + (trace.provider ? " · " + trace.provider : ""), arguments: JSON.stringify(trace.input), output: translateCopy(trace.output,tr),duration: "example"}));
   switch (id) {
-    case "release":
-      return [
-        { tool: "list_apps", arguments: "{}", output: tr("GitHub · read access / Slack · approval required to post", "GitHub · 只读 / Slack · 发送前审批"), duration: "28ms" },
-        { tool: "call_app · GitHub", arguments: '{"operation":"pulls.list","arguments":{"repo":"team/product","limit":30}}', output: tr("4 merged pull requests · source links retained", "4 个已合并 PR · 保留来源链接"), duration: "146ms" },
-        { tool: "call_app · Slack", arguments: '{"operation":"messages.send","arguments":{"channel":"C_PRODUCT","text":"Release update: 4 merged improvements…"}}', output: tr("status: pending_approval · nothing posted", "状态：等待审批 · 尚未发送消息"), duration: "24ms" },
-      ];
     case "mail":
       return [
         { tool: "list_apps", arguments: "{}", output: tr("Gmail / Outlook · connected email accounts", "Gmail / Outlook · 已连接的邮箱"), duration: "25ms" },
@@ -113,13 +110,9 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
 type DemoProgress = { working: string; done: string };
 
 function progressFor(id: string, tr: (en: string, zh: string) => string): DemoProgress[] {
+  const workflow = findAppWorkflow(id);
+  if (workflow) return workflow.traces.map(trace => ({working: translateCopy(trace.working,tr),done:translateCopy(trace.output,tr)}));
   switch (id) {
-    case "release":
-      return [
-        { working: tr("Checking connected Apps and permissions…", "正在检查应用连接与权限…"), done: tr("GitHub and Slack connections are available.", "GitHub 与 Slack 连接已就绪。") },
-        { working: tr("Reading the merged pull requests…", "正在读取已合并的 PR…"), done: tr("Release notes are grounded in four source PRs.", "发布摘要依据 4 个来源 PR 整理。") },
-        { working: tr("Preparing the Slack update for your approval…", "正在准备 Slack 动态，等待你确认…"), done: tr("Update ready for review. Nothing has been posted.", "动态已准备好，尚未发出。") },
-      ];
     case "mail":
       return [
         { working: tr("Checking your connected email accounts…", "正在检查已连接的邮箱…"), done: tr("Your Gmail and Outlook connections are available.", "Gmail 与 Outlook 连接已就绪。") },
@@ -213,7 +206,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
 
   if (!scenario) return null;
 
-  const isAppScenario = ["release", "mail", "calendar"].includes(scenario.id);
+  const isAppScenario = Boolean(findAppWorkflow(scenario.id)) || ["mail", "calendar"].includes(scenario.id);
   const finalReply = isAppScenario
     ? scenario.result
     : scenarios[selected]?.id === "code"
@@ -395,7 +388,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
       </div>
 
       <div className="homeDemoUnder">
-        <p>{isAppScenario ? tr("Apps integrations are in development. This interactive preview uses example data and performs no live actions.", "Apps 集成正在开发中。本交互预览使用示例数据，不会操作真实账户。") : tr("Guided simulation with example data. No real device is connected and no commands are executed.", "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。")}</p>
+        <p>{isAppScenario ? tr("Interactive simulation with example accounts. Apps require provider setup and user authorization; this preview performs no live actions or paid generation.", "使用示例账号的交互模拟。Apps 需要平台配置与用户授权；本预览不会操作真实账户或付费生成。") : tr("Guided simulation with example data. No real device is connected and no commands are executed.", "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。")}</p>
         <a href={"/use-cases/" + scenario.link}>{tr("Explore this workflow", "了解这类工作流程")} ↗</a>
       </div>
     </div>

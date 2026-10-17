@@ -8,7 +8,7 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test:onboarding": "node scripts/onboarding-flow-test.mjs",
-    "test:arc-experience": "node scripts/arc-capabilities-test.mjs && node --experimental-strip-types scripts/marketing-playback-test.mjs && node --import tsx scripts/arc-positioning-test.mjs && node --import tsx scripts/home-panorama-test.mjs",
+    "test:arc-experience": "node scripts/arc-capabilities-test.mjs && node --experimental-strip-types scripts/marketing-playback-test.mjs && node --import tsx scripts/arc-positioning-test.mjs && node --import tsx scripts/home-panorama-test.mjs && node --import tsx scripts/apps-demo-contract-test.mjs",
     "test:onboarding-readability": "node scripts/onboarding-readability-test.mjs",
     "test:device-removal": "node scripts/device-removal-test.mjs",
     "test:device-execution-log": "node scripts/device-execution-log-test.mjs",

@@ -25,21 +25,6 @@
     "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/whatsapp.svg"
   },
   {
-    "brand": "jira",
-    "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/jira.svg"
-  },
-  {
-    "brand": "confluence",
-    "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/confluence.svg"
-  },
-  {
-    "brand": "notion",
-    "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/notion.svg"
-  },
-  {
     "brand": "shopify",
     "status": 200,
     "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/shopify.svg"
@@ -50,29 +35,9 @@
     "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/x.svg"
   },
   {
-    "brand": "googledrive",
-    "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googledrive.svg"
-  },
-  {
-    "brand": "googledocs",
-    "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googledocs.svg"
-  },
-  {
-    "brand": "googlesheets",
-    "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googlesheets.svg"
-  },
-  {
     "brand": "supabase",
     "status": 200,
     "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/supabase.svg"
-  },
-  {
-    "brand": "linear",
-    "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/linear.svg"
   },
   {
     "brand": "googlesearchconsole",
@@ -93,11 +58,6 @@
     "brand": "meta",
     "status": 200,
     "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/meta.svg"
-  },
-  {
-    "brand": "hubspot",
-    "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/hubspot.svg"
   },
   {
     "brand": "linkedin",

@@ -2,7 +2,7 @@
 
 Remote Arc Connect owns the Apps connection and execution layer. It works with compatible MCP clients without an Arc Agent deployment or hosted model. Lindy and Composio are references only; neither is a dependency. This implementation calls native provider APIs through bounded adapters. It does not borrow credentials or private tools from ChatGPT plugins, and it does not claim that every App exposes an official MCP server.
 
-The catalog contains **29 integrations in eight categories**. The directory is generated from the same executable registry used by the service. Run `pnpm --filter @remotearc/relay exec tsx scripts/apps-directory.ts` after registry changes; CI checks it with `--check`. Logos are genuine vendor marks; new asset sources are in `apps/ui/public/app-brands/SOURCES.json`.
+The catalog contains **29 integrations in eight categories**. The homepage floating hero features GitHub, Vercel, Runway, Drive, Notion and Slack. The preserved lower live demo and the Arc page share three schema-checked examples: GitHub + Vercel → Slack, Runway balance + reviewed video request, and Drive → reviewed Notion page. The Arc directory comes from the same executable registry; Arc Agent remains in development and Connect Apps rolls out independently. The directory is generated from the same executable registry used by the service. Run `pnpm --filter @remotearc/relay exec tsx scripts/apps-directory.ts` after registry changes; CI checks it with `--check`. Logos are genuine vendor marks; new asset sources are in `apps/ui/public/app-brands/SOURCES.json`.
 
 ## Authentication and scope
 

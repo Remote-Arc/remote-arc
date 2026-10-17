@@ -1,7 +1,8 @@
+import { AppsDirectory } from "./apps-directory.js";
+import { AppWorkflowShowcase } from "./app-workflow-showcase.js";
 import { useState } from "react";
 import { useMarketingPlayback } from "./use-marketing-playback.js";
 import { useI18n } from "./i18n.js";
-import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./arc-capabilities.css";
 
 type IconName = "routine" | "skills" | "apps" | "workspace" | "teach" | "shield" | "calendar" | "git" | "radar" | "play" | "pause" | "check" | "message" | "device" | "document";
@@ -130,50 +131,8 @@ function RoutineConceptDemo() {
   </div>;
 }
 
-const apps=[
-  {slug:"gmail",name:"Gmail",group:"communication"},
-  {slug:"googlecalendar",name:"Google Calendar",group:"communication"},
-  {slug:"slack",name:"Slack",group:"communication"},
-  {slug:"microsoftoutlook",name:"Outlook",group:"communication"},
-  {slug:"github",name:"GitHub",group:"work"},
-  {slug:"notion",name:"Notion",group:"work"},
-  {slug:"linear",name:"Linear",group:"work"},
-  {slug:"jira",name:"Jira",group:"work"},
-  {slug:"googledrive",name:"Google Drive",group:"work"},
-  {slug:"googlesheets",name:"Sheets",group:"work"},
-  {slug:"googledocs",name:"Docs",group:"work"},
-  {slug:"confluence",name:"Confluence",group:"work"},
-  {slug:"airtable",name:"Airtable",group:"extension"},
-  {slug:"hubspot",name:"HubSpot",group:"extension"},
-  {slug:"salesforce",name:"Salesforce",group:"extension"},
-  {slug:"discord",name:"Discord",group:"extension"},
-] as const;
-
-const appUseCases:Record<string,{en:string;zh:string}>={
-  gmail:{en:"Triage email and draft replies for approval",zh:"整理邮件并起草待审核回复"},
-  googlecalendar:{en:"Prepare a day plan from authorized calendars",zh:"基于授权日历整理一天的安排"},
-  slack:{en:"Summarize a team channel before posting updates",zh:"总结团队频道，再经审核发送更新"},
-  microsoftoutlook:{en:"Draft meeting follow-ups and sort incoming messages",zh:"整理 Outlook 邮件、起草会议后续"},
-  github:{en:"Gather issues and PRs into a verified release report",zh:"整理 Issue 和 PR，生成有依据的发布摘要"},
-  notion:{en:"Turn approved research into a structured knowledge page",zh:"把审核过的研究整理为知识页面"},
-  linear:{en:"Summarize project progress and blocked issues",zh:"汇总项目进度和阻塞任务"},
-  jira:{en:"Create a sprint summary from assigned tickets",zh:"从任务清单生成 Sprint 进展汇总"},
-  googledrive:{en:"Find project files within an authorized folder",zh:"在授权文件夹中查找项目文件"},
-  googlesheets:{en:"Prepare a recurring operational status spreadsheet",zh:"定期整理业务状态表"},
-  googledocs:{en:"Draft and review a shared project document",zh:"起草并审核共享项目文档"},
-  confluence:{en:"Keep team documentation up to date",zh:"帮助维护团队文档"},
-  airtable:{en:"Check records and prepare a change report",zh:"核查数据记录并生成变更汇报"},
-  hubspot:{en:"Prepare CRM updates for human approval",zh:"生成待人工审核的 CRM 更新"},
-  salesforce:{en:"Gather customer context without crossing permissions",zh:"在授权范围内汇总客户背景"},
-  discord:{en:"Summarize community threads into actionable highlights",zh:"汇总社区讨论并提炼关键行动"}
-};
-
 export function ArcCapabilities() {
-  const {tr,locale}=useI18n();
-  const [category,setCategory]=useState<"all"|"communication"|"work"|"extension">("all");
-  const [selectedApp,setSelectedApp]=useState<string>("gmail");
-  const selected=apps.find(app=>app.slug===selectedApp) || apps[0]!;
-  const appUseCase=appUseCases[selected.slug]!;
+  const {tr}=useI18n();
   return <>
     <section className="arcCapabilities" id="arc-capabilities">
       <div className="arcCapabilitiesIntro">
@@ -199,14 +158,7 @@ export function ArcCapabilities() {
       </div>
     </section>
 
-    <section className="arcAppEcosystem" id="arc-apps">
-      <div className="arcAppIntro"><span className="arcV3Eyebrow">{tr("CONNECTED APPS", "连接常用应用")}</span><h2>{tr("Your tools. Finally on the same team.", "熟悉的工具，终于可以一起工作。")}</h2><p>{tr("The target ecosystem starts with communication, projects and documents, and grows through a connector SDK and an extensible Tool Registry.", "我们计划优先覆盖邮件、协作、项目与文档工具，并通过 Connector SDK 和统一 Tool Registry 持续扩展生态。")}</p><span className="arcAppDisclosure">{tr("Integration targets shown below — not live connectors or an available app catalog.", "以下均为规划中的目标集成，并非已经上线或能够立即授权连接的应用。")}</span></div>
-      <div className="arcAppFilters" role="group" aria-label={tr("Explore app categories", "筛选应用类型")}>
-        {(["all","communication","work","extension"] as const).map(x=><button type="button" key={x} aria-pressed={category===x} className={category===x?"selected":""} onClick={()=>{setCategory(x);setSelectedApp(apps.find(a=>x==="all"||a.group===x)?.slug||"gmail");}}>{x==="all"?tr("All apps", "全部"):x==="communication"?tr("Communication","通讯协作"):x==="work"?tr("Projects & documents","项目与文档"):tr("Expanded ecosystem","扩展生态")}</button>)}
-      </div>
-      <div className="arcAppGrid">{apps.filter(x=>category==="all"||x.group===category).map((app,index)=><button type="button" className={"arcAppItem"+(selectedApp===app.slug?" arcAppItem--selected":"")} key={category+"-"+app.slug} data-app={app.slug} style={{animationDelay:Math.min(index,8)*45+"ms"}} aria-pressed={selectedApp===app.slug} onClick={()=>setSelectedApp(app.slug)}><span className="arcAppIcon"><img src={"/app-brands/"+app.slug+".svg"} alt="" decoding="async" width="35" height="35"/></span><strong>{app.name}</strong><span className="arcAppItemArrow" aria-hidden="true">↗</span></button>)}</div>
-      <div className="arcAppDetail" aria-live="polite"><div className="arcAppDetailBrand"><span className="arcAppDetailLogo" data-app={selected.slug}><img src={"/app-brands/"+selected.slug+".svg"} alt="" width="42" height="42"/></span><div><span>{tr("PLANNED INTEGRATION · INTERACTIVE CONCEPT", "规划中的集成 · 交互概念")}</span><h3>{selected.name}</h3></div></div><p>{locale==="zh"?appUseCase.zh:appUseCase.en}</p><span className="arcAppDetailStatus">{tr("Not yet connectable", "暂不可连接")}</span></div>
-      <div className="arcEcosystemFoot"><div><span className="arcFeatureIconFrame"><ArcFeatureIcon name="apps"/></span><p><strong>{tr("An open connector ecosystem.", "可扩展的连接器生态。")}</strong><br/>{tr("Tool Registry, connection health, permission scopes and an SDK for third-party connectors — built around reliable execution, not logo count.", "统一工具目录、连接健康状态、授权范围和第三方 Connector SDK。我们优先保证连接质量，而不是单纯堆 Logo 数量。")}</p></div><a href={localizedWebsiteHref("/early-access?source=arc-apps",locale)}>{tr("Tell us which apps matter", "告诉我们你需要哪些应用")} ↗</a></div>
-    </section>
+    <AppWorkflowShowcase />
+    <AppsDirectory id="arc-apps" />
   </>;
 }

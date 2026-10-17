@@ -186,6 +186,7 @@ assert.equal((await handleApps(req("/api/apps/connections","POST",{provider:"run
 assert.equal((await api("/api/apps/connections","POST",{provider:"whatsapp",credential:"own-secret-key",permissions:["read"],usageConsent:true})).status,400);
 assert.equal((await api("/api/apps/connections","POST",{provider:"runway",credential:"spaces are forbidden",permissions:["read"],usageConsent:true})).status,400);
 
+const closedPulls=appOperation("github","pulls.list");assert.equal(new URL(closedPulls.request(closedPulls.schema.parse({repo:"team/product",state:"closed"})).url).searchParams.get("state"),"closed");
 const upgrade=new DatabaseSync(":memory:");upgrade.exec("PRAGMA foreign_keys=ON");
 for(const file of fs.readdirSync(migrations).filter(v=>v.endsWith(".sql")&&v<"0031").sort())upgrade.exec(fs.readFileSync(path.join(migrations,file),"utf8"));
 upgrade.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES('old-user','old-user','old@example.invalid','user',?)").run(stamp);

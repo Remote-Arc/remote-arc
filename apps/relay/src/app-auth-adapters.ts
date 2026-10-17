@@ -32,7 +32,6 @@ export function providerHeaders(provider:AppProvider,tokens:AppTokens,env?:AppEn
   if(provider==="notion")headers["notion-version"]="2025-09-03";
   if(provider==="runway")headers["x-runway-version"]="2024-11-06";
   if(provider==="linkedin"){headers["linkedin-version"]="202609";headers["x-restli-protocol-version"]="2.0.0";}
-  if(provider==="linear")headers.authorization=tokens.accessToken;
   if(provider==="shopify"){delete headers.authorization;headers["x-shopify-access-token"]=tokens.accessToken;}
   if(provider==="google_ads"){if(!env?.APP_GOOGLE_ADS_DEVELOPER_TOKEN)throw new AppError("app_not_configured",503);headers["developer-token"]=env.APP_GOOGLE_ADS_DEVELOPER_TOKEN;}
   return headers;
@@ -88,11 +87,18 @@ export async function extraIdentity(provider:AppProvider,tokens:AppTokens,fetche
     if(!r.data?.shop?.id||r.data.shop.myshopifyDomain!==domain)throw new AppError("app_identity_unavailable",502);
     return{id:r.data.shop.id,label:r.data.shop.name||domain};
   }
+  if(provider==="vercel"&&tokens.context?.vercelConfigurationId){
+    const context=tokens.context,url=new URL("https://api.vercel.com/v1/integrations/configuration/"+encodeURIComponent(context.vercelConfigurationId!));
+    if(context.vercelTeamId)url.searchParams.set("teamId",context.vercelTeamId);
+    const r=await get(url.href);
+    if(r.id!==context.vercelConfigurationId||(r.teamId||undefined)!==context.vercelTeamId)throw new AppError("app_resource_not_authorized",403);
+    return{id:r.id,label:context.vercelTeamId?"Vercel team "+context.vercelTeamId:"Vercel integration "+r.id};
+  }
   if(provider==="vercel"){const r=await get("https://api.vercel.com/v2/user");if(!r.user?.id)throw new AppError("app_identity_unavailable",502);return{id:r.user.id,label:r.user.email||r.user.username||r.user.id};}
   if(provider==="linear"){const r=await providerJson("https://api.linear.app/graphql",{method:"POST",headers,body:JSON.stringify({query:"query { viewer { id name email } }"})},fetcher);if(!r.data?.viewer?.id)throw new AppError("app_identity_unavailable",502);return{id:r.data.viewer.id,label:r.data.viewer.email||r.data.viewer.name||r.data.viewer.id};}
   if(provider==="x"){const r=await get("https://api.x.com/2/users/me");if(!r.data?.id)throw new AppError("app_user_token_required",403);return{id:r.data.id,label:r.data.username||r.data.name||r.data.id};}
   if(provider==="runway"){const r=await get("https://api.dev.runwayml.com/v1/organization");if(typeof r.creditBalance!=="number"||!Number.isFinite(r.creditBalance))throw new AppError("app_identity_unavailable",502);return{id:"api-key:"+(await sha256Hex(tokens.accessToken)).slice(0,24),label:"Runway API organization"};}
-  if(provider==="supabase"){const r=await get("https://api.supabase.com/v1/organizations");if(!Array.isArray(r))throw new AppError("app_identity_unavailable",502);return{id:"api-key:"+(await sha256Hex(tokens.accessToken)).slice(0,24),label:"Supabase API access"};}
+  if(provider==="supabase"){const r=await get("https://api.supabase.com/v1/organizations");if(!Array.isArray(r)||!r.length||r.some(org=>typeof org.id!=="string"||!org.id))throw new AppError("app_identity_unavailable",502);const ids=[...new Set<string>(r.map(org=>org.id))].sort();tokens.context={...tokens.context,supabaseOrganizationIds:ids};return{id:"oauth:"+(await sha256Hex(JSON.stringify(ids))).slice(0,24),label:r.length===1?(r[0].name||"Supabase organization"):"Supabase · "+ids.length+" organizations"};}
   if(provider==="whatsapp"){
     const context=tokens.context;if(!context?.businessAccountId||!context.phoneNumberId||!context.graphVersion)throw new AppError("app_whatsapp_settings_required");
     const r=await get("https://graph.facebook.com/"+context.graphVersion+"/"+context.businessAccountId+"/phone_numbers");

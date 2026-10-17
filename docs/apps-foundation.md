@@ -4,7 +4,7 @@ Remote Arc runs its own connector infrastructure and calls provider APIs directl
 
 ## Implemented surface
 
-The registry now contains 29 native API integrations in eight categories: 23 OAuth connectors and six user-owned API credential connectors. See [Apps expansion and release gates](apps-expansion.md) for exact scope and costs. Each operation has a bounded schema and fixed provider URL. There is no arbitrary HTTP execution tool.
+The registry now contains 29 native API integrations in eight categories: 27 OAuth connectors and two user-owned API credential connectors. See [Apps expansion and release gates](apps-expansion.md) for exact scope and costs. Each operation has a bounded schema and fixed provider URL. There is no arbitrary HTTP execution tool.
 
 The authenticated App host exposes:
 - `GET /api/apps`: provider configuration state, available operations and the current user's connections.
@@ -34,7 +34,7 @@ Success currently means **provider acknowledgement**. It is not a claim of indep
 
 The migrations are `0030_apps_ecosystem.sql` and `0031_apps_registry_and_usage.sql`; the second preserves existing connections and dependent action records. Apps remain off unless `ENABLE_APPS=1`; no OAuth credentials or vault key are configured by this change. No production D1 migration or live account connection has been performed.
 
-See [registration and real-account acceptance](apps-oauth-registration.md) for the eleven platform registrations, 23 OAuth callback URLs and six user-owned API credential connections, least permissions, credential names, provider review requirements, and isolated account tests. Real external writes must use approved test destinations.
+See [registration and real-account acceptance](apps-oauth-registration.md) for the fifteen platform registrations, 27 OAuth callback URLs and two user-owned API credential connections, least permissions, credential names, provider review requirements, and isolated account tests. Real external writes must use approved test destinations.
 
 Run `pnpm coverage:apps` to enforce 90% coverage per metric for each Apps core module, using actual source, the real SQLite schema and mocked provider protocols. The same runtime cases run in the normal security suite. Full TypeScript coverage keeps the existing repository floors. Browser acceptance covers default read access, optional write consent, permission changes, disconnection, exact approvals, disabled configuration and session expiry in both locales/themes and desktop/mobile sizes.
 

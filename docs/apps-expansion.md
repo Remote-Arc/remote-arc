@@ -6,9 +6,9 @@ The catalog contains **29 integrations in eight categories**. The homepage float
 
 ## Authentication and scope
 
-There are 23 OAuth connectors covered by 11 identity-platform registrations: GitHub, Slack, Google, Microsoft, Meta, Atlassian, Notion, Shopify, LinkedIn, HubSpot and Salesforce. Remote Arc registers these developer applications once. Each user then consents for their own account. This is distinct from signing into Remote Arc with Google.
+There are 27 OAuth connectors covered by 11 identity-platform registrations: GitHub, Slack, Google, Microsoft, Meta, Atlassian, Notion, Shopify, LinkedIn, HubSpot and Salesforce. Remote Arc registers these developer applications once. Each user then consents for their own account. This is distinct from signing into Remote Arc with Google.
 
-Six connectors use the user's own API credential: Vercel, Runway, X, WhatsApp Business, Supabase and Linear. Users enter it only in the authenticated same-origin Apps form; the service validates the account and encrypts the credential with owner-bound AES-GCM. Secrets are absent from MCP input schemas, catalog data, query strings and browser storage. X currently accepts an OAuth 2.0 **user access token** from the user's developer project, not an app-only bearer token; reconnect it when expired. Automatic X token refresh and Remote Arc-managed X OAuth are not implemented.
+Six connectors use the user's own API credential: Runway and WhatsApp Business. Users enter it only in the authenticated same-origin Apps form; the service validates the account and encrypts the credential with owner-bound AES-GCM. Secrets are absent from MCP input schemas, catalog data, query strings and browser storage. X currently accepts an OAuth 2.0 **user access token** from the user's developer project, not an app-only bearer token; reconnect it when expired. Automatic X token refresh and Remote Arc-managed X OAuth are not implemented.
 
 Shopify validates a strict myshopify.com tenant and callback HMAC. Its initial support creates draft products, never automatically publishes them. Reading orders requires Shopify's applicable protected-customer-data approval. Atlassian uses Remote Arc's own 3LO application and authorized cloud IDs. Notion requires integration capabilities and user-selected shared pages. Instagram requires an eligible professional account linked to a Facebook Page. WhatsApp requires the user's Cloud API business account and owned phone number; free-form text remains subject to the provider's conversation-window rules.
 
@@ -51,3 +51,9 @@ The automated suite uses actual source and SQLite with mocked upstream protocols
 - [HubSpot OAuth token/introspection protocol](https://developers.hubspot.com/docs/api-reference/legacy/authentication/manage-oauth-tokens), [HubSpot version timeline](https://developers.hubspot.com/changelog/legacy-apis-and-legacy-apps-whats-going-unsupported-and-when?hs_amp=true)
 
 API versions are explicit in adapters and must be reviewed when the provider deprecates them. HubSpot's v3 support timeline requires a migration before its announced September 2027 enforcement.
+
+## Managed OAuth upgrades (2026-10-17)
+
+Vercel external Integration installation, Linear user-actor PKCE, Supabase Management API OAuth, and X confidential-client PKCE now use Remote Arc-managed clients. There are 27 OAuth connectors across 15 identity platforms and two user-credential connectors: Runway and WhatsApp Business. Vercel and Supabase configure upstream scopes on the platform app; local read/write choices and exact write approvals still apply. Vercel team access is fenced to the token-authorized installation. X API charges belong to Remote Arc’s developer project; do not enable automatic funding. See [cost ownership](apps-cost-ownership.md).
+
+The owner chose production code release followed by their own account trial instead of requiring 29 separate real-account acceptance runs before release. Automated checks remain required. Registration, platform review and runtime credentials remain necessary; unconfigured connectors are not shown as ready.

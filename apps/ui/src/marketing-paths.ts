@@ -1,6 +1,8 @@
+import { DOC_PATHS } from "../../../packages/docs/src/catalog.js";
 export type SiteLocale = "en" | "zh";
 /** Synced with the public SEO route allowlist. */
 export const chinesePages = new Set([
+ ...DOC_PATHS,
  "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work", "/integrations", "/pricing", "/downloads", "/arc", "/roadmap", "/feedback", "/early-access",
  "/blogs",

@@ -1,3 +1,4 @@
+import { DOC_TOPICS, DOC_PATHS } from "../../../packages/docs/src/catalog.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { localizedPages, isChineseMarketingPath, unprefixedMarketingPath } from "./marketing-locale.js";
 import { chineseSeo } from "./zh-seo.js";
@@ -594,6 +595,24 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   };
 }
 
+
+// Documentation topics share their route registry and new guide copy with the UI.
+const legacyDocSections: Record<string, number[]> = { connect:[0,1], devices:[0,2], files:[2,3], processes:[2,3,4], browser:[1,2], tasks:[3,4], security:[2,3], architecture:[0,1,3,4], troubleshooting:[0,1,2,4], reference:[0,1,2,3,4] };
+for (const topic of DOC_TOPICS) {
+  const path = "/docs/" + topic.slug;
+  pages[path] = { title: topic.title.en + " — Remote Arc Docs", description: topic.description.en, canonical: SITE + path };
+  crawlPages[path] = {
+    h1: topic.title.en, intro: topic.description.en,
+    sections: topic.sections?.map(section => ({ heading: section.heading.en, text: section.text.en })) ?? (legacyDocSections[topic.slug] || []).map(index => crawlPages["/docs"]!.sections![index]!),
+    links: [["/docs", "Documentation"], ...(topic.links?.map(([url,en]) => [url!,en!] as [string,string]) || []), ["/docs/apps", "Apps"], ["/docs/usage-and-costs", "Usage and costs"]]
+  };
+  chineseSeo[path] = {
+    title: topic.title.zh + " — Remote Arc 文档", description: topic.description.zh, h1: topic.title.zh, intro: topic.description.zh,
+    sections: topic.sections?.map(section => ({ heading: section.heading.zh, text: section.text.zh })) ?? chineseSeo["/docs"]!.sections
+  };
+}
+crawlPages["/docs"]!.links = [...DOC_TOPICS.map(topic => ["/docs/" + topic.slug, topic.title.en] as [string,string]), ...(crawlPages["/docs"]!.links || [])];
+
 function pageFor(pathname: string): SeoPage | null {
   if (isChineseMarketingPath(pathname)) {
     const base = unprefixedMarketingPath(pathname);
@@ -886,6 +905,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
 }
 
 const sitemapPaths = [
+  ...DOC_PATHS,
   "/",
   "/integrations",
   "/downloads",

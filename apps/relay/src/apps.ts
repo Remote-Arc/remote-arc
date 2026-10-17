@@ -88,6 +88,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   const payload = await unseal<string | { verifier: string; context: import("./app-catalog.js").AppContext }>(env, row.verifier_ciphertext, `app-oauth:${userId}:${stateHash}`);
   const verifier = typeof payload === "string" ? payload : payload.verifier;
   const context = typeof payload === "string" ? connectionContext(env, provider) : payload.context;
+  if(provider==="vercel"){const configuration=query.get("configurationId");if(!configuration||!/^icfg_[A-Za-z0-9_]{1,100}$/.test(configuration))throw new AppError("invalid_vercel_callback");context.vercelConfigurationId=configuration;}
   if (provider === "shopify") await checkShopifyCallback(request, env, context);
   const tokens = await exchangeTokens(env, provider, { code, verifier, context }, fetcher);
   const account = await providerIdentity(provider, tokens, fetcher, env);

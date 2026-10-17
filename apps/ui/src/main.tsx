@@ -43,6 +43,7 @@ function isOlderRelease(current: string | null | undefined, latest = LATEST_AGEN
   return false;
 }
 
+const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
 const IntegrationsPage = React.lazy(() => import("./integrations-page.js").then(module => ({ default: module.IntegrationsPage })));
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
 const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
@@ -7493,7 +7494,8 @@ function App() {
   if (routePath === "/demo") return <DemoPage user={user === undefined ? null : user} />;
   if (routePath === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
   if (routePath === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
-  if (routePath === "/docs") return <DocsPage user={user === undefined ? null : user} />;
+  if (routePath === "/docs" && window.location.hash.startsWith("#docs-")) return <DocsPage user={user === undefined ? null : user} />;
+  if (routePath === "/docs" || (routePath.startsWith("/docs/") && routePath !== "/docs/mcp")) return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><DocsPortal path={routePath}/></React.Suspense></PublicLayout>;
   if (routePath === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
   if (routePath === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
   const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);

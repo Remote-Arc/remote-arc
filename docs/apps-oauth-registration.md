@@ -6,7 +6,7 @@ Status: implementation in progress. No connector OAuth applications have been re
 
 Remote Arc registers one developer application per identity platform, configures its callback URLs, and stores its client credentials on the server. This identifies **Remote Arc** on the provider's consent screen. A developer registration grants access to no user's mailbox, calendar, repositories, or workspace.
 
-Each end user signs in to Remote Arc, chooses an App, and authorizes their **own account** on the provider's site. The resulting connection belongs to that Remote Arc user. For Remote Arc-managed OAuth integrations, users do not register developer applications, enter client credentials, or share passwords with Remote Arc. Six API-credential connectors instead use credentials from the user’s own API account/project; X requires the user’s developer project and user token. See [the expanded catalog and release gates](apps-expansion.md).
+Each end user signs in to Remote Arc, chooses an App, and authorizes their **own account** on the provider's site. The resulting connection belongs to that Remote Arc user. For Remote Arc-managed OAuth integrations, users do not register developer applications, enter client credentials, or share passwords with Remote Arc. Two API-credential connectors instead use credentials from the user’s own API account/project; X now uses Remote Arc-managed OAuth and platform-project API billing. See [the expanded catalog and release gates](apps-expansion.md).
 
 The product flow is: Apps → choose an integration → choose permissions → provider consent → return to Apps with the connected account and status. Write permission is an explicit choice; approval of an individual action remains separate from granting OAuth permissions. Reconnection is required when a provider revokes or expires the grant.
 
@@ -43,7 +43,7 @@ Use the actual HTTPS App origin of the environment being registered. Production 
 | Google | `https://mcp.remotearc.app/api/apps/oauth/gmail/callback`, `https://mcp.remotearc.app/api/apps/oauth/google_calendar/callback` |
 | Microsoft | `https://mcp.remotearc.app/api/apps/oauth/outlook/callback`, `https://mcp.remotearc.app/api/apps/oauth/microsoft_calendar/callback` |
 
-The original four platform registrations cover six initial connectors. The current generated pack expands this to eleven platform registrations covering 23 OAuth connectors, plus six user-owned API credential connectors. The table above documents the original callbacks; the generated pack is the complete current callback list. The pack declares the full supported scope set so it can support both read and write users. The actual authorization URL requests only the user's selected permissions.
+The original four platform registrations cover six initial connectors. The current generated pack expands this to fifteen platform registrations covering 27 OAuth connectors, plus two user-owned API credential connectors. The table above documents the original callbacks; the generated pack is the complete current callback list. The pack declares the full supported scope set so it can support both read and write users. The actual authorization URL requests only the user's selected permissions.
 
 ## GitHub
 

@@ -13,7 +13,7 @@ for(const file of fs.readdirSync(migrations).filter(v=>v.endsWith(".sql")).sort(
 const db={prepare(query:string){const stmt=sql.prepare(query);const b=(values:any[])=>({async first(){return stmt.get(...values)||null;},async all(){return{results:stmt.all(...values)};},async run(){const r=stmt.run(...values);return{success:true,meta:{changes:Number(r.changes)}};}});return{...b([]),bind(...values:any[]){assert(!values.includes(undefined),query);return b(values);}};}} as unknown as D1Database;
 const origin="https://mcp.remotearc.app",uuid="11111111-1111-4111-8111-111111111111",stamp=new Date().toISOString(),future=new Date(Date.now()+3600000).toISOString();
 for(const user of ["one","two"]){sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(user,user,user+"@example.invalid",stamp);sql.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)").run(await sha256Hex("session-"+user),user,future,stamp);}
-const env:AppEnv={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,ENABLE_APPS:"1",APP_TOKEN_KEY:Buffer.alloc(32,7).toString("base64"),APP_META_GRAPH_VERSION:"v26.0",APP_GOOGLE_ADS_DEVELOPER_TOKEN:"operator-ads-token"};
+const env:AppEnv={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,ENABLE_APPS:"1",APP_TOKEN_KEY:Buffer.alloc(32,7).toString("base64"),APP_VERCEL_INTEGRATION_SLUG:"remote-arc-test",APP_META_GRAPH_VERSION:"v26.0",APP_GOOGLE_ADS_DEVELOPER_TOKEN:"operator-ads-token"};
 for(const def of Object.values(APP_CATALOG)){if(def.credential){env["APP_"+def.credential+"_CLIENT_ID"]="client-"+def.credential;env["APP_"+def.credential+"_CLIENT_SECRET"]="secret-"+def.credential;}}
 const deny=(fn:()=>unknown,code:string)=>assert.rejects(async()=>fn(),(e:any)=>e instanceof AppError&&e.code===code);
 const records:{url:string;method:string;headers:Headers;body:any}[]=[];let active:AppProvider="youtube";
@@ -29,7 +29,7 @@ const fetcher:typeof fetch=async(input,init={})=>{
   if(active==="notion"){assert(headers.get("authorization")?.startsWith("Basic "));assert(!body.client_secret);}
   if(active==="shopify")assert.equal(body.grant_type,undefined);
   if(def.credential==="ATLASSIAN")assert.equal(body.grant_type,"authorization_code");
-  return json({access_token:"private-access-"+active,refresh_token:"private-refresh-"+active,expires_in:3600,scope:scopes(active).join(" "),...(active==="salesforce"?{instance_url:"https://example.my.salesforce.com"}:{})});
+  return json({access_token:"private-access-"+active,refresh_token:"private-refresh-"+active,expires_in:3600,scope:scopes(active).join(" "),...(active==="salesforce"?{instance_url:"https://example.my.salesforce.com"}:{}),...(active==="vercel"?{team_id:"team_Fixture"}:{})});
  }
  if(href.endsWith("/oauth2/v3/userinfo"))return json({sub:"google-user",email:"person@example.invalid"});
  if(href.endsWith("/me?fields=id,name"))return json({id:"meta-user",name:"Example Person"});
@@ -40,6 +40,7 @@ const fetcher:typeof fetch=async(input,init={})=>{
  if(href==="https://api.linkedin.com/v2/userinfo")return json({sub:"linkedin-user",name:"Example Person"});
  if(href.endsWith("/services/oauth2/userinfo"))return json({organization_id:"org-one",user_id:"sf-user",preferred_username:"person@example.invalid"});
  if(href.endsWith("/oauth/v3/token/introspect"))return json({active:true,hub_id:123,scopes:scopes(active),hub_domain:"example.invalid"});
+ if(href.includes("/v1/integrations/configuration/"))return json({id:"icfg_fixture",teamId:"team_Fixture"});
  if(href.endsWith("/v2/user"))return json({user:{id:"vercel-user",email:"person@example.invalid"}});
  if(href==="https://api.linear.app/graphql"&&String(init.body).includes("viewer"))return json({data:{viewer:{id:uuid,name:"Example",email:"person@example.invalid"}}});
  if(href==="https://api.x.com/2/users/me")return json({data:{id:"123",username:"example"}});
@@ -70,6 +71,7 @@ for(const provider of EXTRA_PROVIDER_IDS){
   if(APP_CATALOG[provider].credential==="ATLASSIAN")assert.equal(auth.searchParams.get("audience"),"api.atlassian.com");
   if(provider==="notion")assert.equal(auth.searchParams.get("owner"),"user");
   const q=new URLSearchParams({state:state!,code:"example-code"});
+  if(provider==="vercel")q.set("configurationId","icfg_fixture");
   if(provider==="shopify"){q.set("shop","test-shop.myshopify.com");q.set("timestamp","123");q.set("hmac",await signature(q));}
   response=await api("/api/apps/oauth/"+provider+"/callback?"+q);assert.equal(response.status,303,provider+":"+await response.clone().text());
   assert.equal((await api("/api/apps/oauth/"+provider+"/callback?"+q)).status,400,"OAuth states are single use");
@@ -104,7 +106,7 @@ for(const operation of APP_OPERATIONS.filter(o=>EXTRA_PROVIDER_IDS.includes(o.pr
  assert(!JSON.stringify(result).includes("must-never-return"));
  const beforeReplay=records.length;assert.equal((await callApp(env,idIdentity,input,fetcher)).status,"succeeded");assert.equal(records.length,beforeReplay,"Replay never dispatches");
  const request=records.at(-1)!;assert(new URL(request.url).protocol==="https:");assert(!request.url.includes("private"));
- if(active==="linear")assert.equal(request.headers.get("authorization"),"own-private-key-linear");
+ if(active==="linear")assert.equal(request.headers.get("authorization"),"Bearer private-access-linear");
  if(active==="runway")assert.equal(request.headers.get("x-runway-version"),"2024-11-06");
  if(active==="shopify"){assert.equal(request.headers.get("authorization"),null);assert.equal(request.headers.get("x-shopify-access-token"),"private-access-shopify");}
  if(active==="google_sheets"&&operation.name==="values.update"){assert.equal(request.method,"PUT");assert(new URL(request.url).searchParams.get("valueInputOption")==="RAW");assert.deepEqual(request.body.values,[["Verified",12]]);}
@@ -154,8 +156,8 @@ active="jira";await deny(()=>providerIdentity("jira",{...tokens,context:{}},asyn
 assert.equal(await extraIdentity("github",tokens,fetcher,env),null);
 assert.throws(()=>providerHeaders("google_ads",tokens,{} as AppEnv),/app_not_configured/);assert.equal(normalizeScope("profile"),"https://www.googleapis.com/auth/userinfo.profile");assert.equal(normalizeScope("email"),"https://www.googleapis.com/auth/userinfo.email");
 await deny(()=>dispatchHeaders(env,"facebook","posts.create",{pageId:"123"},{...tokens,context:context("facebook")},async()=>json({id:"other"})),"app_resource_not_authorized");
-for(const p of EXTRA_PROVIDER_IDS){active=p;const r=await revokeProvider(env,p,{...tokens,context:context(p)},async()=>json({}));if(APP_CATALOG[p].auth==="api_key")assert.deepEqual(r,{localOnly:true});else if(APP_CATALOG[p].credential!=="GOOGLE")assert(r.providerConsentUrl&&!r.providerConsentUrl.includes("undefined"));}
-const pack=registrationPack(origin);assert.equal(Object.keys(pack.callbacks).length,23);assert.equal(pack.apiKeyProviders.length,6);assert(pack.google.authorizedRedirectUris.length===9);assert.equal(pack.authBackend,"remote_arc_native");assert(!JSON.stringify(pack).includes("secret-GOOGLE"));
+for(const p of EXTRA_PROVIDER_IDS){active=p;const r=await revokeProvider(env,p,{...tokens,context:context(p)},async()=>json({}));if(APP_CATALOG[p].auth==="api_key")assert.deepEqual(r,{localOnly:true});else if(APP_CATALOG[p].credential!=="GOOGLE"&&!["linear","x"].includes(p))assert(r.providerConsentUrl&&!r.providerConsentUrl.includes("undefined"));}
+const pack=registrationPack(origin);assert.equal(Object.keys(pack.callbacks).length,27);assert.equal(pack.apiKeyProviders.length,2);assert(pack.google.authorizedRedirectUris.length===9);assert.equal(pack.authBackend,"remote_arc_native");assert(!JSON.stringify(pack).includes("secret-GOOGLE"));
 assert.equal((await api("/api/apps/connections","POST",{provider:"youtube",credential:"own-secret-key",permissions:["read"],usageConsent:true})).status,400);
 assert.equal((await api("/api/apps/connections","POST",{provider:"runway",credential:"own-secret-key",permissions:["read"]})).status,400);
 await deny(()=>providerJson("https://example.invalid",{},async()=>json({errors:[{message:"secret"}]})),"app_provider_failed");
@@ -204,3 +206,43 @@ upgrade.exec("BEGIN");upgrade.exec(fs.readFileSync(path.join(migrations,"0031_ap
 assert.equal(upgrade.prepare("SELECT account_label,daily_call_limit FROM app_connections WHERE id='old-connection'").get()?.daily_call_limit,100);assert.equal(upgrade.prepare("SELECT connection_id FROM app_calls WHERE id='old-call'").get()?.connection_id,"old-connection");assert.equal(upgrade.prepare("PRAGMA foreign_key_check").all().length,0);upgrade.close();
 console.log("Apps expansion: 23 new provider auth flows, every operation, reviewed writes, concurrent replay, billing limits, discovery and existing-data migration passed. Provider HTTP is mocked; no real account acceptance is claimed.");
 sql.close();
+
+for(const provider of ["linear","supabase","x"] as const){
+ const url=new URL(await authorizationUrl(env,provider,["read","write"],"stable-state","verifier"));
+ assert.equal(url.searchParams.get("code_challenge_method"),"S256");
+ if(provider==="linear"){assert.equal(url.searchParams.get("scope"),"read,issues:create");assert.equal(url.searchParams.get("actor"),"user");}
+ if(provider==="supabase")assert.equal(url.searchParams.get("scope"),null,"Supabase scopes are configured on the platform app");
+ let dispatched=0;
+ const inspect:typeof fetch=async(url,init)=>{
+  dispatched++;assert.equal(String(url),APP_CATALOG[provider].token);const headers=new Headers(init?.headers),form=init?.body as URLSearchParams;
+  if(provider!=="linear"){assert(headers.get("authorization")?.startsWith("Basic "));assert.equal(form.get("client_secret"),null);assert.equal(form.get("client_id"),null);}
+  if(form.get("grant_type")==="authorization_code")assert.equal(form.get("code_verifier"),"verifier");
+  else{assert.equal(form.get("grant_type"),"refresh_token");assert.equal(form.get("refresh_token"),"refresh-before");}
+  return json({access_token:"new-access",refresh_token:"refresh-after",expires_in:3600,...(provider==="linear"?{scope:["read","issues:create"]}:{})});
+ };
+ const token=await exchangeTokens(env,provider,{code:"code",verifier:"verifier"},inspect);
+ assert.equal(token.refreshToken,"refresh-after");
+ const refreshed=await exchangeTokens(env,provider,{refreshToken:"refresh-before",previous:{...token,scopes:scopes(provider)}},inspect);
+ assert.equal(refreshed.refreshToken,"refresh-after");assert.deepEqual(refreshed.scopes,scopes(provider));assert.equal(dispatched,2);
+}
+const vercelUrl=new URL(await authorizationUrl(env,"vercel",["read"],"state-for-vercel","unused"));
+assert.equal(vercelUrl.pathname,"/integrations/remote-arc-test/new");assert.equal(vercelUrl.searchParams.get("state"),"state-for-vercel");assert.equal(vercelUrl.searchParams.get("scope"),null);
+await deny(()=>authorizationUrl({...env,APP_VERCEL_INTEGRATION_SLUG:"../evil"},"vercel",["read"],"s","v"),"app_not_configured");
+await deny(()=>exchangeTokens(env,"vercel",{refreshToken:"r",previous:{accessToken:"a",scopes:[],expiresAt:null}}),"app_reauthorization_required");
+await deny(()=>exchangeTokens(env,"vercel",{code:"c",verifier:"v"},async()=>json({access_token:"a",team_id:"https://evil.invalid"})),"app_invalid_token_response");
+for(const provider of ["linear","x"] as const){
+ let urlSeen="",bodySeen:URLSearchParams;
+ await revokeProvider(env,provider,{accessToken:"a",refreshToken:"r",expiresAt:null,scopes:[]},async(url,init)=>{urlSeen=String(url);bodySeen=init?.body as URLSearchParams;assert(new Headers(init?.headers).get("authorization")?.startsWith("Basic "));return json({});});
+ assert(urlSeen.endsWith(provider==="linear"?"/oauth/revoke":"/2/oauth2/revoke"));assert.equal(bodySeen!.get("token"),"r");assert.equal(bodySeen!.get("token_type_hint"),"refresh_token");
+}
+const ctx={vercelConfigurationId:"icfg_fixture",vercelTeamId:"team_Fixture"};
+assert.equal(new URL(appOperation("vercel","projects.list").request({limit:20},ctx).url).searchParams.get("teamId"),"team_Fixture");
+assert.throws(()=>appOperation("vercel","projects.list").request({teamId:"team_Other",limit:20},ctx),/app_resource_not_authorized/);
+assert.equal(new URL(appOperation("vercel","projects.list").request({limit:20},{vercelConfigurationId:"icfg_personal"}).url).searchParams.get("teamId"),null);
+await deny(()=>providerIdentity("vercel",{accessToken:"a",expiresAt:null,scopes:[],context:ctx},async()=>json({id:"icfg_other",teamId:"team_Fixture"}),env),"app_resource_not_authorized");
+const supabaseToken={accessToken:"rotating-token",expiresAt:null,scopes:[]} as AppTokens;
+const supabaseA=await providerIdentity("supabase",supabaseToken,async()=>json([{id:"b",name:"B"},{id:"a",name:"A"}]),env);
+const supabaseB=await providerIdentity("supabase",{...supabaseToken,accessToken:"another-token"},async()=>json([{id:"a"},{id:"b"}]),env);
+assert.equal(supabaseA.id,supabaseB.id,"OAuth account identity is independent of token refresh and response order");
+await deny(()=>providerIdentity("supabase",supabaseToken,async()=>json([]),env),"app_identity_unavailable");
+console.log("Managed OAuth upgrades: Vercel installation/team fence, Linear PKCE/refresh, Supabase configured scopes/stable identity and X PKCE/refresh/revocation passed.");

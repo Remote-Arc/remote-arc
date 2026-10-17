@@ -592,7 +592,7 @@
       "name": "Vercel",
       "brand": "vercel",
       "category": "development",
-      "auth": "api_key",
+      "auth": "oauth",
       "operationCount": 3,
       "operations": [
         {
@@ -611,9 +611,10 @@
           "permission": "write"
         }
       ],
+      "connectionNote": "Install the Remote Arc integration and choose the projects it can access. Integration permissions are configured by Remote Arc; local read permission still denies writes.",
       "supportsWrite": true,
-      "billingNote": "Uses your Vercel access token and account; hosting and deployment charges follow your Vercel plan.",
-      "payer": "connected_account"
+      "billingNote": "Connect your Vercel account or team. Hosting and deployment charges follow its Vercel plan.",
+      "payer": "provider_rules"
     },
     {
       "provider": "runway",
@@ -649,7 +650,7 @@
       "name": "X",
       "brand": "x",
       "category": "social",
-      "auth": "api_key",
+      "auth": "oauth",
       "operationCount": 3,
       "operations": [
         {
@@ -668,10 +669,10 @@
           "permission": "write"
         }
       ],
-      "connectionNote": "Use an OAuth 2.0 user access token from your own X developer project. App-only bearer tokens cannot post on your behalf. Reconnect when the token expires.",
+      "connectionNote": "Sign in to X and authorize your own user account. Remote Arc manages the confidential OAuth client and token refresh.",
       "supportsWrite": true,
-      "billingNote": "API usage is billed to the developer project behind your user access token; X Premium is separate.",
-      "payer": "connected_account"
+      "billingNote": "Managed OAuth uses Remote Arc’s X developer project API credits; X Premium is separate. Provider API funding and limits must be configured by Remote Arc.",
+      "payer": "platform_project"
     },
     {
       "provider": "whatsapp",
@@ -858,7 +859,7 @@
       "name": "Supabase",
       "brand": "supabase",
       "category": "development",
-      "auth": "api_key",
+      "auth": "oauth",
       "operationCount": 3,
       "operations": [
         {
@@ -877,8 +878,9 @@
           "permission": "write"
         }
       ],
+      "connectionNote": "Choose the organization to authorize. Provider scopes are fixed in the OAuth app configuration; Remote Arc read permission separately denies all SQL writes.",
       "supportsWrite": true,
-      "billingNote": "Uses your Supabase Management API token and project. Database and hosting usage follow your own project plan.",
+      "billingNote": "Database and hosting usage follow the connected Supabase organization’s project plan.",
       "payer": "connected_account"
     },
     {
@@ -886,12 +888,12 @@
       "name": "Linear",
       "brand": "linear",
       "category": "development",
-      "auth": "api_key",
+      "auth": "oauth",
       "operationCount": 3,
       "operations": [
         {
           "name": "viewer.get",
-          "description": "Read the Linear account behind your API key",
+          "description": "Read the connected Linear account",
           "permission": "read"
         },
         {
@@ -905,8 +907,9 @@
           "permission": "write"
         }
       ],
+      "connectionNote": "Sign in to Linear and choose a workspace. Changes act as the user who authorized the connection.",
       "supportsWrite": true,
-      "billingNote": "Uses your personal Linear API key and workspace permissions.",
+      "billingNote": "Uses the connected Linear workspace’s permissions, plan and API limits.",
       "payer": "connected_account"
     },
     {

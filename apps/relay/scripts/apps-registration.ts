@@ -12,6 +12,10 @@ export function registrationPack(value: string) {
   const declaredScopes = (providers: typeof APP_PROVIDERS[number][]) => [...new Set(providers.flatMap(provider => appScopes(provider, ["read", "write"])))];
   const googleProviders = APP_PROVIDERS.filter(provider => APP_CATALOG[provider].credential === "GOOGLE");
   const additions = Object.fromEntries([
+    ["vercel","VERCEL","https://vercel.com/dashboard/integrations/console"],
+    ["linear","LINEAR","https://linear.app/settings/api/applications"],
+    ["supabase","SUPABASE","https://supabase.com/dashboard"],
+    ["x","X","https://developer.x.com/"],
     ["meta","META","https://developers.facebook.com/apps/"],
     ["atlassian","ATLASSIAN","https://developer.atlassian.com/console/myapps/"],
     ["notion","NOTION","https://www.notion.so/profile/integrations"],
@@ -23,6 +27,10 @@ export function registrationPack(value: string) {
     const providers = APP_PROVIDERS.filter(provider => APP_CATALOG[provider].credential === credential);
     return [name,{registrationUrl,applicationName:"Remote Arc Apps",providers,redirectUris:providers.map(provider=>callbacks[provider]),declaredScopes:declaredScopes(providers),clientIdSecretName:"APP_"+credential+"_CLIENT_ID",clientSecretSecretName:"APP_"+credential+"_CLIENT_SECRET",
       review:"Register the platform application once. Validate provider distribution, requested permissions and eligible account types before public onboarding.",
+      ...(name==="vercel"?{integrationSlugEnv:"APP_VERCEL_INTEGRATION_SLUG",configuredPermissions:["integration-configuration:read","project:read","deployment:read-write"],note:"External integration installation; register the exact callback, preserve state and configure project access. Provider permissions are fixed; Remote Arc enforces the user's local read/write choice."}:{}),
+      ...(name==="supabase"?{configuredPermissions:["organizations:read","projects:read","database:write"],note:"Management API OAuth app, not a Supabase Auth OAuth server. Scopes are configured on the app rather than in the authorization URL; local write approval remains required."}:{}),
+      ...(name==="linear"?{actor:"user",pkce:"S256",note:"User-actor OAuth with read and issues:create scopes, rotating refresh tokens."}:{}),
+      ...(name==="x"?{applicationType:"confidential_web",pkce:"S256",payer:"platform_project",note:"Remote Arc developer project owns API charges. Keep spending controls and funding explicit; no automatic top-ups."}:{}),
       ...(name==="meta"?{graphVersionEnv:"APP_META_GRAPH_VERSION",note:"Pin a currently supported Graph API version. Instagram requires an eligible professional account linked to a Facebook Page."}:{}),
       ...(name==="shopify"?{note:"Use a public app with authorization-code flow; validate the shop domain and callback HMAC. Request protected customer data access before exposing order data."}:{}),
       ...(name==="notion"?{note:"Enable the corresponding read/insert content capabilities. Users explicitly select pages shared with the public integration."}:{}),

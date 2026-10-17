@@ -48,12 +48,19 @@ export async function providerJson(url: string, init: RequestInit, fetcher: type
 }
 export async function authorizationUrl(env: AppEnv, provider: AppProvider, permissions: AppPermission[], state: string, verifier: string, context: AppContext = {}) {
   const def = APP_CATALOG[provider]; const { id } = credentials(env, provider);
+  if(provider==="vercel"){
+    const slug=env.APP_VERCEL_INTEGRATION_SLUG;
+    if(!slug||!/^[a-z0-9][a-z0-9-]{0,100}$/.test(slug))throw new AppError("app_not_configured",503);
+    const install=new URL("https://vercel.com/integrations/"+slug+"/new");install.searchParams.set("state",state);return install.href;
+  }
   const url = new URL(endpoint(def.authorize, context));
+  if(provider==="linear"){url.searchParams.set("actor","user");url.searchParams.set("prompt","consent");}
   if (def.credential === "ATLASSIAN") { url.searchParams.set("audience", "api.atlassian.com"); url.searchParams.set("prompt", "consent"); }
   if (provider === "notion") url.searchParams.set("owner", "user");
   url.searchParams.set("client_id", id); url.searchParams.set("redirect_uri", callbackUrl(env, provider));
   url.searchParams.set("response_type", "code"); url.searchParams.set("state", state);
-  url.searchParams.set(provider === "slack" ? "user_scope" : "scope", appScopes(provider, permissions).join(["slack", "shopify"].includes(provider) ? "," : " "));
+  url.searchParams.set(provider === "slack" ? "user_scope" : "scope", appScopes(provider, permissions).join(["slack", "shopify", "linear"].includes(provider) ? "," : " "));
+  if(provider==="supabase")url.searchParams.delete("scope");
   if (def.pkce) { url.searchParams.set("code_challenge", await pkceChallenge(verifier)); url.searchParams.set("code_challenge_method", "S256"); }
   if (def.credential === "GOOGLE") { url.searchParams.set("access_type", "offline"); url.searchParams.set("prompt", "consent"); url.searchParams.set("include_granted_scopes", "false"); }
   return url.toString();
@@ -64,19 +71,24 @@ export async function exchangeTokens(env: AppEnv, provider: AppProvider, input: 
   const form = new URLSearchParams({ client_id: id, client_secret: secret });
   if ("code" in input) { form.set("grant_type", "authorization_code"); form.set("code", input.code); form.set("redirect_uri", callbackUrl(env, provider)); if (def.pkce) form.set("code_verifier", input.verifier); }
   else { form.set("grant_type", "refresh_token"); form.set("refresh_token", input.refreshToken); }
-  const context = input.context || ("previous" in input ? input.previous.context : undefined) || connectionContext(env, provider);
+  const context = { ...(input.context || ("previous" in input ? input.previous.context : undefined) || connectionContext(env, provider)) };
   const headers: Record<string,string> = { "content-type": "application/x-www-form-urlencoded", accept: "application/json" };
   let body: BodyInit = form;
-  if (provider === "notion") { headers.authorization = "Basic " + btoa(id + ":" + secret); form.delete("client_id"); form.delete("client_secret"); }
+  if (["notion","supabase","x"].includes(provider)) { headers.authorization = "Basic " + btoa(id + ":" + secret); form.delete("client_id"); form.delete("client_secret"); }
+  if(provider==="vercel"){if(!("code" in input))throw new AppError("app_reauthorization_required",409);form.delete("grant_type");}
   if (["notion", "shopify"].includes(provider) || def.credential === "ATLASSIAN") { headers["content-type"] = "application/json"; const payload = Object.fromEntries(form); if (provider === "shopify" && "code" in input) delete payload.grant_type; body = JSON.stringify(payload); }
   const result = await providerJson(endpoint(def.token, context), { method: "POST", headers, body }, fetcher);
+  if(provider==="vercel"){
+    if(result.team_id!==undefined&&result.team_id!==null&&(typeof result.team_id!=="string"||!/^team_[A-Za-z0-9]+$/.test(result.team_id)))throw new AppError("app_invalid_token_response",502);
+    context.vercelTeamId=result.team_id||undefined;
+  }
   if (provider === "salesforce" && typeof result.instance_url === "string") context.instanceOrigin = new URL(result.instance_url).origin;
   const token = provider === "slack" && "code" in input ? result.authed_user : result;
   if (!token || typeof token.access_token !== "string" || !token.access_token) throw new AppError("app_invalid_token_response", 502);
   const previous = "previous" in input ? input.previous : null;
   const seconds = token.expires_in === undefined ? null : Number(token.expires_in);
   if (seconds !== null && (!Number.isFinite(seconds) || seconds < 1 || seconds > 31536000)) throw new AppError("app_invalid_token_response", 502);
-  return { accessToken: token.access_token, refreshToken: token.refresh_token || previous?.refreshToken, expiresAt: seconds === null ? null : new Date(Date.now() + seconds * 1000).toISOString(), scopes: (typeof token.scope === "string" ? token.scope.split(/[ ,]+/).filter(Boolean) : Array.isArray(token.scopes) && token.scopes.every((s:unknown)=>typeof s==="string") ? token.scopes : previous?.scopes || []).map((s:string)=>normalizeScope(s,provider)), context };
+  return { accessToken: token.access_token, refreshToken: token.refresh_token || previous?.refreshToken, expiresAt: seconds === null ? null : new Date(Date.now() + seconds * 1000).toISOString(), scopes: (typeof token.scope === "string" ? token.scope.split(/[ ,]+/).filter(Boolean) : Array.isArray(token.scope || token.scopes) && (token.scope || token.scopes).every((s:unknown)=>typeof s==="string") ? (token.scope || token.scopes) : previous?.scopes || []).map((s:string)=>normalizeScope(s,provider)), context };
 }
 export async function providerIdentity(provider: AppProvider, tokens: AppTokens, fetcher: typeof fetch = fetch, env?: AppEnv): Promise<{ id: string; label: string }> {
   const extra = await extraIdentity(provider, tokens, fetcher, env); if (extra) return extra;
@@ -92,11 +104,12 @@ export async function revokeProvider(env: AppEnv, provider: AppProvider, tokens:
   if (APP_CATALOG[provider].auth === "api_key") return { localOnly: true };
   const { id, secret } = credentials(env, provider);
   if (provider === "github") return providerJson(`https://api.github.com/applications/${encodeURIComponent(id)}/token`, { method: "DELETE", headers: { authorization: "Basic " + btoa(`${id}:${secret}`), "content-type": "application/json", "user-agent": "Remote-Arc-Apps" }, body: JSON.stringify({ access_token: tokens.accessToken }) }, fetcher);
+  if(provider==="linear"||provider==="x")return providerJson(provider==="linear"?"https://api.linear.app/oauth/revoke":"https://api.x.com/2/oauth2/revoke",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded",authorization:"Basic "+btoa(id+":"+secret)},body:new URLSearchParams({token:tokens.refreshToken||tokens.accessToken,token_type_hint:tokens.refreshToken?"refresh_token":"access_token"})},fetcher);
   if (provider === "slack") return providerJson("https://slack.com/api/auth.revoke", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token: tokens.accessToken }) }, fetcher);
   if (APP_CATALOG[provider].credential === "GOOGLE") return providerJson("https://oauth2.googleapis.com/revoke", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token: tokens.refreshToken || tokens.accessToken }) }, fetcher);
   // Microsoft has no per-refresh-token revocation endpoint. Delete the local
   // capability immediately; the user can remove provider consent separately.
-  const portals: Record<string,string> = { MICROSOFT:"https://myapplications.microsoft.com/", ATLASSIAN:"https://id.atlassian.com/manage-profile/apps", META:"https://www.facebook.com/settings?tab=business_tools", NOTION:"https://www.notion.so/my-integrations", LINKEDIN:"https://www.linkedin.com/mypreferences/d/permitted-services", HUBSPOT:"https://app.hubspot.com/", SALESFORCE:"https://login.salesforce.com/" };
+  const portals: Record<string,string> = { VERCEL:"https://vercel.com/dashboard/integrations", SUPABASE:"https://supabase.com/dashboard", MICROSOFT:"https://myapplications.microsoft.com/", ATLASSIAN:"https://id.atlassian.com/manage-profile/apps", META:"https://www.facebook.com/settings?tab=business_tools", NOTION:"https://www.notion.so/my-integrations", LINKEDIN:"https://www.linkedin.com/mypreferences/d/permitted-services", HUBSPOT:"https://app.hubspot.com/", SALESFORCE:"https://login.salesforce.com/" };
   return { providerConsentUrl: portals[APP_CATALOG[provider].credential] || "https://" + tokens.context?.shopDomain + "/admin/settings/apps", localOnly: true };
 }
 export const newVerifier = () => randomToken(32);

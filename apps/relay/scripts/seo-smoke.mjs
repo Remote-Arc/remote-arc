@@ -1,3 +1,4 @@
+import { DOC_TOPICS } from "../../../packages/docs/src/catalog.ts";
 import assert from "node:assert/strict";
 import { legacyLanguageRedirect, localizedPages } from "../src/marketing-locale.ts";
 import { chinesePages, pageForLanguage } from "../../ui/src/marketing-paths.ts";
@@ -237,3 +238,15 @@ for (const os of ["windows", "darwin", "linux"]) for (const arch of ["amd64", "a
 }
 assert.ok(downloads.includes("SHA256SUMS"));
 assert.ok(sitemapXml().includes("https://remotearc.app/downloads"));
+
+for (const topic of DOC_TOPICS) for (const prefix of ["","/zh"]) {
+ const path=prefix+"/docs/"+topic.slug;
+ assert.equal(marketingStatusCode(path),200,path);
+ assert.equal(canonicalForPath(path),"https://remotearc.app"+path);
+ assert.ok(sitemapXml().includes("<loc>https://remotearc.app"+path+"</loc>"));
+ assert.equal(pageForLanguage("/docs/"+topic.slug,prefix?"zh":"en"),path);
+ const html=renderMarketingHtml(shell,path);
+ assert.ok(html.includes(prefix?topic.title.zh:topic.title.en));
+}
+assert.equal(marketingStatusCode("/docs/unknown-guide"),404);
+assert.equal(marketingStatusCode("/zh/docs/unknown-guide"),404);

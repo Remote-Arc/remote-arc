@@ -6,13 +6,13 @@ export const CORE_APP_PROVIDERS = ["github", "slack", "gmail", "outlook", "googl
 export const APP_PROVIDERS = [...CORE_APP_PROVIDERS, ...EXTRA_PROVIDER_IDS] as const;
 export type AppProvider = typeof APP_PROVIDERS[number];
 export type AppPermission = "read" | "write";
-export type AppEnv = { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
+export type AppEnv = { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string; APP_VERCEL_INTEGRATION_SLUG?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
 export class AppError extends Error {
   constructor(public code: string, public status = 400) { super(code); }
 }
 export const providerSchema = z.enum(APP_PROVIDERS);
 export const permissionSchema = z.array(z.enum(["read", "write"])).min(1).max(2).transform(v => [...new Set(["read" as const, ...v])]);
-export type AppContext = { shopDomain?: string; instanceOrigin?: string; cloudIds?: string[]; graphVersion?: string; businessAccountId?: string; phoneNumberId?: string; subjectId?: string };
+export type AppContext = { vercelConfigurationId?: string; vercelTeamId?: string; supabaseOrganizationIds?: string[]; shopDomain?: string; instanceOrigin?: string; cloudIds?: string[]; graphVersion?: string; businessAccountId?: string; phoneNumberId?: string; subjectId?: string };
 export type AppQuote = { payer: string; unit: string; estimatedUnits: number; maximumApprovedUnits: number; model?: string; pricingUrl: string };
 export type ProviderDefinition = { name: string; brand: string; authorize: string; token: string; credential: string; scopes: Record<AppPermission, string[]>; pkce: boolean; auth?: "oauth" | "api_key"; category?: string; requiredEnv?: string[]; payer?: string; billingNote?: string; connectionNote?: string };
 const googleRead = "https://www.googleapis.com/auth/";

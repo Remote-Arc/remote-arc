@@ -1,5 +1,7 @@
+import { DOC_PATHS } from "../../../packages/docs/src/catalog.js";
 /** Public pages with both English and Simplified Chinese content. */
 export const localizedPages = [
+ ...DOC_PATHS,
  "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work",
  "/integrations", "/pricing", "/downloads", "/arc", "/roadmap", "/feedback", "/early-access",

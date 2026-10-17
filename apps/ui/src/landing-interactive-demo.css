@@ -121,6 +121,8 @@
 .homeDemoTraceArgs{padding-left:115px;margin:2px 0 14px;color:#a3b6c7;animation:homeDemoFade .2s ease-out}
 .homeDemoTraceArgs code{font:inherit;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
 .homeDemoTraceResult{margin:0 0 17px}
+.homeDemoTraceResult.homeDemoTraceResult--approval code,.homeDemoTerminalFinished.homeDemoTerminalFinished--approval{color:#c0adff}
+:root[data-theme="light"] .homeDemoTraceResult--approval code,:root[data-theme="light"] .homeDemoTerminalFinished--approval{color:#7053b1}
 .homeDemoTraceResult code{color:#ccebdc}
 .homeDemoTerminalFinished{margin-top:21px;padding-top:15px;border-top:1px solid #253748;font-size:12px;color:#70d3a2;font-weight:720}
 .homeDemoTerminalCursor{display:inline-block;animation:homeDemoBlink 1s step-end infinite;color:#55c4e0;margin-top:12px}

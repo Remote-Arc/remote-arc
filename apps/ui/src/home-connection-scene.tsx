@@ -1,129 +1,168 @@
-import React from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { useI18n } from "./i18n.js";
-import { useMarketingPlayback } from "./use-marketing-playback.js";
 import "./home-connection-scene.css";
 
 type AiClient = { name: string; slug: string; icon: string; tone: string };
+type Mode = "connect" | "arc";
+type OrbitNode = { name: string; icon: string; x: number; y: number; kind: "app" | "device"; calendar?: boolean };
 
-function SceneIcon({ kind }: { kind: "lock" | "check" | "terminal" | "play" | "pause" | "arrow" }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {kind === "lock" && <><rect x="5" y="10" width="14" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></>}
-      {kind === "check" && <path d="m5 12 4.5 4.5L19 7" />}
-      {kind === "terminal" && <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m7 9 3 3-3 3m6 0h4" /></>}
-      {kind === "play" && <path d="m9 5 11 7-11 7V5Z" fill="currentColor" stroke="none" />}
-      {kind === "pause" && <><path d="M8 5v14M16 5v14" strokeWidth="3" /></>}
-      {kind === "arrow" && <><path d="M5 12h14m-6-6 6 6-6 6" /></>}
-    </svg>
-  );
+const resources: readonly OrbitNode[] = [
+  { name: "GitHub", icon: "/app-brands/github.svg", x: 115, y: 157, kind: "app" },
+  { name: "Slack", icon: "/app-brands/slack.svg", x: 57, y: 250, kind: "app" },
+  { name: "Gmail", icon: "/app-brands/gmail.svg", x: 95, y: 345, kind: "app" },
+  { name: "Outlook", icon: "/app-brands/microsoftoutlook.svg", x: 195, y: 414, kind: "app" },
+  { name: "Google Calendar", icon: "/app-brands/googlecalendar.svg", x: 310, y: 438, kind: "app" },
+  { name: "Outlook Calendar", icon: "/app-brands/microsoftoutlook.svg", x: 425, y: 414, kind: "app", calendar: true },
+  { name: "Mac", icon: "/platform-brands/macos.svg", x: 490, y: 145, kind: "device" },
+  { name: "Windows", icon: "/platform-brands/windows.svg", x: 544, y: 244, kind: "device" },
+  { name: "Linux", icon: "/platform-brands/linux.svg", x: 544, y: 340, kind: "device" },
+  { name: "Browser", icon: "/platform-brands/browser.svg", x: 555, y: 438, kind: "device" },
+];
+const aiPositions = [{ x: 202, y: 47 }, { x: 300, y: 33 }, { x: 398, y: 47 }];
+
+function useAmbientMotion() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [running, setRunning] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let inView = typeof IntersectionObserver === "undefined";
+    const update = () => setRunning(inView && document.visibilityState === "visible" && !media.matches);
+    const observer = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(entries => {
+      inView = entries.some(entry => entry.isIntersecting);
+      update();
+    }, { threshold: .08 });
+    if (ref.current) observer?.observe(ref.current);
+    media.addEventListener("change", update);
+    document.addEventListener("visibilitychange", update);
+    update();
+    return () => {
+      observer?.disconnect();
+      media.removeEventListener("change", update);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, []);
+  return { ref, running };
 }
+
+function connectionPath(node: OrbitNode) {
+  const dx = node.x - 300;
+  const dy = node.y - 246;
+  return `M300 246 C${300 + dx * .15} ${246 + dy * .7},${node.x - dx * .35} ${node.y},${node.x} ${node.y}`;
+}
+const position = (x: number, y: number, delay = 0): CSSProperties =>
+  ({ left: x / 6 + "%", top: y / 5 + "%", "--float-delay": delay + "s" } as CSSProperties);
 
 export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] }) {
   const { tr } = useI18n();
-  const { ref, step, setStep, playing, setPlaying, running, reducedMotion } = useMarketingPlayback(4, 3200);
-  const stages = [
-    { title: tr("Ask your AI", "向 AI 提问"), detail: tr("One request, in the chat you already use.", "在熟悉的 AI 对话里，提出一个需求。") },
-    { title: tr("Connect securely", "安全连接"), detail: tr("Remote Arc routes the request to approved tools.", "Remote Arc 将请求交给已授权的工具。") },
-    { title: tr("Work on your device", "电脑执行"), detail: tr("Read the file, apply the fix, run the test.", "读取文件、修改代码，再运行测试。") },
-    { title: tr("Get the result", "返回结果"), detail: tr("The output comes back to the same conversation.", "执行结果返回同一个 AI 对话。") },
-  ];
-  const currentStage = stages[step] ?? stages[0]!;
-  const toolNames = ["read_file", "edit_block", "start_process"];
+  const { ref, running } = useAmbientMotion();
+  const [mode, setMode] = useState<Mode>("connect");
+  const uid = useId();
+  const arc = mode === "arc";
+  const headlineId = uid + "-heading";
+  const descriptionId = uid + "-description";
+  const panelId = uid + "-panel";
+  const switchMode = (value: Mode) => setMode(value);
   return (
-    <div className="homeConnectionScene" ref={ref} data-step={step} data-running={running} data-reduced-motion={reducedMotion} aria-label={tr("Interactive illustration: AI request to computer execution", "交互演示：从 AI 请求到电脑执行")}>
-      <div className="hcsTopline">
-        <span className="hcsEyebrow">{tr("FROM CHAT TO ACTION", "让对话变成行动")}</span>
-        <span className="hcsDemoLabel">{tr("Product illustration", "产品交互示例")}</span>
-      </div>
-
-      <div className="hcsClients" aria-label={tr("AI client installation guides", "AI 客户端安装指南")}>
-        {clients.map(client => (
-          <a key={client.slug} href={"/install/" + client.slug} aria-label={tr("Install for " + client.name, "查看 " + client.name + " 安装指南")}>
-            <img src={client.icon} className={client.tone === "mono" ? "monoLogo" : "colorLogo"} alt="" width={19} height={19} />
-            <span>{client.name}</span>
-            <SceneIcon kind="arrow" />
-          </a>
-        ))}
-      </div>
-
-      <div className={"hcsRequest hcsPhaseCard" + (step === 0 ? " hcsActive" : "")}>
-        <div className="hcsRequestAvatar"><img src="/ai-openai.svg" className="monoLogo" alt="ChatGPT" width={23} height={23} /></div>
-        <div className="hcsRequestCopy">
-          <span>{step === 3 ? tr("BACK IN YOUR CHAT", "结果回到 AI 对话") : tr("YOUR REQUEST", "你的请求")}</span>
-          <p>{step === 3 ? tr("“Fixed the expiry check. The test passes.”", "「已修复过期检查，测试通过。」") : tr("“Fix the failing test in my project.”", "「修好我项目里失败的测试。」")}</p>
+    <div ref={ref} className="homeConnectionScene" data-layout="constellation" data-mode={mode} data-running={running} role="region" aria-labelledby={headlineId}>
+      <header className="hcsHeader">
+        <h2 id={headlineId}>{tr("FROM CHAT TO ACTION", "让对话变成行动")}</h2>
+        <div className="hcsModeSwitch" role="tablist" aria-label={tr("Explore Remote Arc modes", "查看 Remote Arc 两种模式")}>
+          {(["connect", "arc"] as const).map(value => (
+            <button key={value} id={uid + "-" + value} type="button" role="tab"
+              aria-selected={mode === value} aria-controls={panelId} tabIndex={mode === value ? 0 : -1}
+              onClick={() => switchMode(value)}
+              onKeyDown={event => {
+                if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+                  event.preventDefault();
+                  const next = event.key === "Home" ? "connect" : event.key === "End" ? "arc" : mode === "connect" ? "arc" : "connect";
+                  switchMode(next);
+                  document.getElementById(uid + "-" + next)?.focus();
+                }
+              }}>
+              {value === "connect" ? "Connect" : <>Arc<span className="hcsSoonDot" aria-hidden="true" /></>}
+              {value === "arc" && <span className="hcsScreenReader">{tr("Coming soon", "即将推出")}</span>}
+            </button>
+          ))}
         </div>
-        <span className="hcsRequestState" aria-label={step === 3 ? tr("Result returned", "结果已返回") : tr("Request", "请求")}>
-          <SceneIcon kind={step === 3 ? "check" : "arrow"} />
-        </span>
+      </header>
+      <div className="hcsModeIntroduction" id={descriptionId} aria-live="polite">
+        <strong>{arc ? tr("An AI teammate of your own.", "创建属于你的 AI 队友。") : tr("Your favorite AI. Connected to your world.", "熟悉的 AI，连接你的整个世界。")}</strong>
+        <span>{arc ? tr("Natural language. One agent. Your apps and devices.", "用自然语言，让 Arc 协调你的应用与设备。") : tr("Bring ChatGPT, Claude or Cursor. Arc connects the tools.", "接入 ChatGPT、Claude 或 Cursor，Arc 连接工具与设备。")}</span>
       </div>
-
-      <div className="hcsRoute hcsRouteIn" aria-hidden="true">
-        <span className="hcsRouteLine" />
-        {(step === 0 || step === 3) && <i key={step} className={"hcsPacket" + (step === 3 ? " hcsPacketReturn" : "")} />}
-        <span className="hcsRouteCaption">Remote MCP + OAuth</span>
-      </div>
-
-      <div className={"hcsBridge hcsPhaseCard" + (step === 1 ? " hcsActive" : "")}>
-        <div className="hcsArcLogo"><img src="/remote-arc.svg" width={42} height={42} alt="" /></div>
-        <div className="hcsBridgeCopy">
-          <strong>Remote Arc</strong>
-          <span>{step === 0 ? tr("Your AI. Your tools. Your computer.", "你的 AI、工具和电脑。") : step === 1 ? tr("Checking workspace and tool permissions", "检查工作目录与工具权限") : tr("Approved tools · encrypted connection", "已授权工具 · 加密连接")}</span>
+      <div id={panelId} role="tabpanel" aria-labelledby={uid + "-" + mode} aria-describedby={descriptionId} className="hcsUniverse" tabIndex={0}>
+        <div className="hcsAtmosphere" aria-hidden="true" />
+        <svg className="hcsOrbitGeometry" viewBox="0 0 600 500" aria-hidden="true">
+          <defs>
+            <radialGradient id={uid + "-glow"}>
+              <stop stopColor="currentColor" stopOpacity=".13" />
+              <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+            </radialGradient>
+            <linearGradient id={uid + "-trace"} x1="0" x2="1">
+              <stop stopColor="currentColor" stopOpacity=".12" />
+              <stop offset=".5" stopColor="currentColor" stopOpacity=".45" />
+              <stop offset="1" stopColor="currentColor" stopOpacity=".12" />
+            </linearGradient>
+          </defs>
+          <ellipse className="hcsOrbitalRing hcsOrbitalRingOuter" cx="300" cy="260" rx="242" ry="188" transform="rotate(-13 300 260)" />
+          <ellipse className="hcsOrbitalRing hcsOrbitalRingInner" cx="300" cy="260" rx="189" ry="143" transform="rotate(15 300 260)" />
+          <circle cx="300" cy="246" r="143" fill={"url(#" + uid + "-glow)"} />
+          <g className="hcsOutboundPaths">
+            {resources.map(node => <path key={node.name} d={connectionPath(node)} stroke={"url(#" + uid + "-trace)"} />)}
+          </g>
+          <g className="hcsOutboundFlow">
+            {resources.map((node, index) => <path key={node.name} pathLength="100" d={connectionPath(node)} style={{ animationDelay: index * -.64 + "s" }} />)}
+          </g>
+          <g className="hcsInboundPaths">
+            {(arc ? [{ x: 300, y: 76 }] : aiPositions).map((node, index) => {
+              const d = `M${node.x} ${node.y + 20} C${node.x} 132,300 132,300 208`;
+              return <g key={index}><path d={d} /><path className="hcsInboundFlow" pathLength="100" d={d} style={{ animationDelay: index * -.8 + "s" }} /></g>;
+            })}
+          </g>
+          <g className="hcsStars">
+            {[[160,226],[430,256],[237,365],[357,136],[385,353],[172,102],[461,363],[253,173]].map(([x,y],i) => <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 1.6 : 1} />)}
+          </g>
+        </svg>
+        <div className={"hcsSource hcsSource--connect" + (arc ? " hcsSource--hidden" : "")} aria-hidden={arc}>
+          {clients.slice(0, 3).map((client, index) => {
+            const at = aiPositions[index]!;
+            return <a className={"hcsFloatingNode hcsAiNode " + (client.tone === "mono" ? "hcsAiNode--mono" : "")}
+              key={client.slug} href={"/install/" + client.slug} tabIndex={arc ? -1 : 0}
+              aria-label={tr("Connect " + client.name, "连接 " + client.name)} style={position(at.x, at.y, index * -1.7)}>
+              <span className="hcsLogoTile"><img src={client.icon} alt="" width={28} height={28} /></span><span className="hcsNodeLabel">{client.name}</span>
+            </a>;
+          })}
         </div>
-        <span className="hcsShield"><SceneIcon kind={step > 1 ? "check" : "lock"} /></span>
-      </div>
-
-      <div className="hcsRoute hcsRouteOut" aria-hidden="true">
-        <span className="hcsRouteLine" />
-        {(step === 1 || step === 2 || step === 3) && <i key={step} className={"hcsPacket" + (step === 3 ? " hcsPacketReturn" : "")} />}
-        <span className="hcsRouteCaption">{tr("Outbound device connection", "设备出站连接")}</span>
-      </div>
-
-      <div className={"hcsDevice hcsPhaseCard" + (step >= 2 ? " hcsActive" : "")}>
-        <div className="hcsDeviceBar">
-          <span className="hcsWindowDots" aria-hidden="true"><i /><i /><i /></span>
-          <span className="hcsDeviceTitle"><SceneIcon kind="terminal" />{tr("Your computer", "你的电脑")}</span>
-          <span className="hcsPlatforms" aria-label="macOS, Windows, Linux">
-            <img src="/platform-brands/macos.svg" alt="macOS" width={14} height={14} />
-            <img src="/platform-brands/windows.svg" alt="Windows" width={14} height={14} />
-            <img src="/platform-brands/linux.svg" alt="Linux" width={14} height={14} />
-          </span>
+        <div className={"hcsSource hcsSource--arc" + (arc ? "" : " hcsSource--hidden")} aria-hidden={!arc}>
+          <div className="hcsPromptBubble"><span className="hcsPromptAvatar" aria-hidden="true">You</span><span>{tr("Plan my week. Bring everything together.", "规划我的一周，把所有事情串联起来。")}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></div>
         </div>
-        <div className="hcsWorkspace">
-          <div className="hcsFileHeader"><span className="hcsFileDot" /><code>src/auth.ts</code><span>{step >= 2 ? tr("1 change", "1 处修改") : tr("Project workspace", "项目目录")}</span></div>
-          <div className="hcsCode" aria-label={tr("Illustrative code change", "代码修改示例")}>
-            <div><span className="hcsLineNo">12</span><code><em>function</em> isExpired(token) {'{'}</code></div>
-            <div className={step >= 2 ? "hcsCodeRemoved" : ""}><span className="hcsLineNo">{step >= 2 ? "−" : "13"}</span><code>  <em>return</em> token.expiresAt &lt; now;</code></div>
-            <div className={"hcsCodeAdded" + (step >= 2 ? " hcsCodeVisible" : "")}><span className="hcsLineNo">+</span><code>  <em>return</em> token.expiresAt &lt;= now;</code></div>
-            <div><span className="hcsLineNo">14</span><code>{'}'}</code></div>
-          </div>
-          <div className="hcsToolRail" aria-label={tr("Illustrative tool calls", "工具调用示例")}>
-            {toolNames.map((tool, index) => (
-              <span key={tool} className={step >= 2 ? "hcsToolDone" : ""} style={{ "--hcs-tool-delay": index * 400 + "ms" } as React.CSSProperties}>
-                <SceneIcon kind={step >= 2 ? "check" : "terminal"} /><code>{tool}</code>
-              </span>
-            ))}
-          </div>
-          <div className={"hcsTerminal" + (step === 3 ? " hcsTerminalSuccess" : "")}>
-            <code><span className="hcsPrompt">$</span> npm test</code>
-            <span className="hcsTerminalOutput">
-              {step === 3 ? <><SceneIcon kind="check" />{tr("Test passed · fix verified", "测试通过 · 修复已验证")}</> : step === 2 ? <><i className="hcsBusyDot" />{tr("Running on your computer", "正在你的电脑上运行")}</> : <><SceneIcon kind="lock" />{tr("Waiting for approved tool access", "等待已授权的工具访问")}</>}
+        <span className="hcsGroupCaption hcsAppsCaption">APPS</span>
+        <span className="hcsGroupCaption hcsDevicesCaption">DEVICES</span>
+        {resources.map((node, index) => (
+          <div key={node.name} className={"hcsFloatingNode hcsResourceNode hcsResourceNode--" + node.kind} style={position(node.x, node.y, index * -.93)} data-resource={node.kind}>
+            <span className="hcsLogoTile">
+              <img src={node.icon} alt="" width={30} height={30} />
+              {node.calendar && <svg className="hcsCalendarCue" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" /><path d="M5 2v3m6-3v3M3 7h10M6 10h4" /></svg>}
             </span>
+            <span className="hcsNodeLabel">{node.name}</span>
           </div>
+        ))}
+        <div className="hcsCore" style={position(300, 246)}>
+          <div className="hcsCoreEnergy" aria-hidden="true" />
+          <div className="hcsCoreRing hcsCoreRing--one" aria-hidden="true" />
+          <div className="hcsCoreRing hcsCoreRing--two" aria-hidden="true" />
+          <div className="hcsCoreMark"><img src="/remote-arc.svg" alt="Remote Arc" width={86} height={86} /></div>
+          <strong>{arc ? "Arc Agent" : "Remote Arc"}</strong>
+          <span>{arc ? tr("Your AI teammate.", "你的专属 AI 队友。") : tr("Your AI. Your rules.", "你的 AI，你的权限。")}</span>
         </div>
       </div>
-
-      <div className="hcsPlayback">
-        <div className="hcsStepText"><span>0{step + 1}<span> / 04</span></span><strong>{currentStage.title}</strong></div>
-        <button type="button" className="hcsPlayButton" onClick={() => setPlaying(!playing)} disabled={reducedMotion} aria-label={reducedMotion ? tr("Animation disabled by your motion preference", "已按系统偏好关闭动画") : playing ? tr("Pause product illustration", "暂停产品演示") : tr("Play product illustration", "播放产品演示")}>
-          <SceneIcon kind={playing && !reducedMotion ? "pause" : "play"} />
-          <span>{reducedMotion ? tr("Motion off", "动画已关闭") : playing ? tr("Pause", "暂停") : tr("Play", "播放")}</span>
-        </button>
-      </div>
-      <p className="hcsStageDetail">{currentStage.detail}</p>
-      <div className="hcsSteps" aria-label={tr("Choose a demonstration step", "选择演示步骤")}>
-        {stages.map((stage, index) => <button key={stage.title} type="button" aria-label={tr("Step " + (index + 1) + ": ", "步骤 " + (index + 1) + "：") + stage.title} aria-pressed={step === index} onClick={() => { setPlaying(false); setStep(index); }} className={step === index ? "hcsStepActive" : ""}><span key={step === index ? step : "idle"} /></button>)}
-      </div>
-      <div className="hcsFootnote"><SceneIcon kind="lock" /><span>{tr("Illustrative workflow. Tool access stays under your control.", "流程示例。工具访问权限始终由你掌控。")}</span></div>
+      <ul className="hcsFoundation" aria-label={tr("Shared platform capabilities", "统一的平台能力")}>
+        {[tr("Skills", "专业技能"), tr("Execution", "任务执行"), tr("Approvals", "操作审批"), tr("Verified Results", "结果验证")].map(label => <li key={label}>{label}</li>)}
+      </ul>
+      <footer className="hcsFooter">
+        <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
+        <a href={arc ? "/arc" : "/connect-ai"}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
+      </footer>
+      <p className="hcsPlatformScope">{tr("Apps ecosystem and cloud skills are in development.", "应用生态与云端技能正在建设中。")}</p>
     </div>
   );
 }

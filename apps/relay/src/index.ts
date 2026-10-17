@@ -52,6 +52,7 @@ import { limitMcpIngress } from "./mcp-edge-guard.js";
 import { getMonthlyUsage } from "./usage.js";
 import { getAccountEntitlements } from "./entitlements.js";
 import { getMonthlyPlusUsage } from "./plus-usage.js";
+import { handleMarketplaceWebhook } from "./github-marketplace.js";
 import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
@@ -125,6 +126,7 @@ type Env = TaskEventEnv & AppEnv & {
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  GITHUB_MARKETPLACE_WEBHOOK_SECRET?: string;
   EMAIL?: {
     send(message: {
       to?: string;
@@ -405,6 +407,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     const fileResource = url.pathname.match(/^\/file-resource\/([^/]+)$/);
     if (fileResource) {
       return handleFileResource(request, env, decodeURIComponent(fileResource[1]!));
+    }
+
+    if (url.pathname === "/webhooks/github/marketplace") {
+      return handleMarketplaceWebhook(request, env);
     }
 
     const automationHook = url.pathname.match(/^\/hooks\/automations\/([^/]+)\/([^/]+)$/);

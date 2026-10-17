@@ -94,3 +94,13 @@ try {
   rmSync(dir, { recursive: true, force: true });
 }
 console.log("PASS: D1 fail-closed gate: missing secret, failed apply, failed verify, success");
+
+const backupStart=yaml.indexOf("- name: Prepare verified encrypted production D1 backup");
+const backupUpload=yaml.indexOf("- name: Retain encrypted recovery artifact");
+assert(backupStart>0&&backupUpload>backupStart&&backupUpload<preflightStart,"verified recoverable backup must be retained before preflight/mutation");
+assert.match(yaml.slice(backupStart,backupUpload),/secrets\.D1_BACKUP_KEY/);
+assert.match(yaml.slice(backupUpload,preflightStart),/\*\.enc/);
+assert.doesNotMatch(yaml.slice(backupUpload,preflightStart),/\*\.sql|continue-on-error/);
+assert.match(preflight,/if \[ "\$\{\{ steps\.d1_backup\.outputs\.backup_verified \}\}" = "true" \]/);
+assert.match(preflight,/export BACKUP_CONFIRMATION=BACKUP_VERIFIED/);
+assert(yaml.indexOf("Provision Apps vault")>end&&yaml.indexOf("Provision Apps vault")<yaml.indexOf(deployName));

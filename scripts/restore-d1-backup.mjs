@@ -1,0 +1,4 @@
+import {readFileSync} from "node:fs";import path from "node:path";import {backupKey,decryptBackup} from "./d1-production-backup.mjs";
+const args=process.argv.slice(2);
+if(args.length!==6||args[0]!=="--artifact-dir"||args[2]!=="--key-file"||args[4]!=="--output"||!args.filter((_,index)=>index%2).every(value=>path.isAbsolute(value))){console.error("Usage: node scripts/restore-d1-backup.mjs --artifact-dir /absolute/artifact --key-file /absolute/private/key --output /absolute/new-file.sql");process.exitCode=1;}
+else decryptBackup(args[1],backupKey(readFileSync(args[3],"utf8")),args[5]).then(()=>console.log("Authenticated backup decrypted to the explicitly selected new file (0600). No database restore was performed.")).catch(()=>{console.error("Backup recovery failed. No existing output file was overwritten.");process.exitCode=1;});

@@ -43,3 +43,5 @@ Run `pnpm coverage:apps` to enforce 90% coverage per metric for each Apps core m
 Provider adapters should reuse the shared auth, vault, ownership, approvals, quotas and usage controls. Add versioned action definitions and contract tests rather than copying an entire backend for each app. The current discovery endpoint paginates/searches the catalog and loads action schemas on demand. The 29-app registry has not been load-tested as a hundreds-app catalog.
 
 Separate supported catalog size, actual enabled connections, operation depth, active-user counts and API call volume. Idle connectors should not require a dedicated process or polling loop. Provider review and maintenance remain per-integration work; upstream costs and limits must be tracked separately from hosted-model inference.
+
+Production rollout is explicitly enabled by the combined release configuration, after protected migration/backup and vault provisioning. Missing provider clients remain unconfigured. Per-provider real-account trials follow publication at the owner’s request.

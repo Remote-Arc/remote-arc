@@ -94,7 +94,8 @@
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
     "ALERT_EMAIL": "moviegoer24@gmail.com",
     "ALERT_FROM_EMAIL": "alerts@remotearc.app",
-    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "1"
+    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "1",
+    "ENABLE_APPS": "1"
   },
   "ratelimits": [
     {
@@ -132,7 +133,10 @@
     {
       "name": "ENGAGEMENT_RATE_LIMITER",
       "namespace_id": "41007",
-      "simple": { "limit": 5, "period": 60 }
+      "simple": {
+        "limit": 5,
+        "period": 60
+      }
     },
     {
       "name": "AUTH_RATE_LIMITER",

@@ -271,7 +271,7 @@
   :root[data-theme] .appFrame .deviceToolbar { flex-wrap: wrap; gap: 12px; }
   :root[data-theme] .appFrame .deviceFilters { max-width: 100%; gap: 4px; }
   :root[data-theme] .appFrame .mobileBottomNav button { font-size: 12px; min-height: 56px; }
-  :root[data-theme] .appFrame .mobileBottomNav { grid-template-columns: repeat(6,minmax(0,1fr)); }
+  :root[data-theme] .appFrame .mobileBottomNav { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(58px,1fr); overflow-x: auto; scrollbar-width: none; }
   :root[data-theme] .appFrame .mobileBottomNav button small { font-size: 12px !important; }
   :root[data-theme] .appFrame .automationCreatePanel { padding: 16px; }
   :root[data-theme] .appFrame .automationKindTabs { grid-template-columns: repeat(2,minmax(0,1fr)); }

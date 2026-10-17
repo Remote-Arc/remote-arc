@@ -32,7 +32,7 @@ const publicExactPaths = new Set([
 ]);
 
 const dashboardPaths = new Set([
-  "/overview", "/devices", "/automations", "/connect",
+  "/overview", "/devices", "/apps", "/automations", "/connect",
   "/security", "/settings", "/monitor",
 ]);
 

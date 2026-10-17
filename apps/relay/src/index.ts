@@ -1,4 +1,6 @@
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
+import { handleApps } from "./apps.js";
+import type { AppEnv } from "./app-catalog.js";
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
 import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { runScheduledTasks } from "./task-scheduler.js";
@@ -86,7 +88,7 @@ import {
 
 export { DeviceRegistry };
 
-type Env = TaskEventEnv & {
+type Env = TaskEventEnv & AppEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
@@ -245,6 +247,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       url.pathname === "/dashboard" ||
       url.pathname === "/overview" ||
       url.pathname === "/devices" ||
+      url.pathname === "/apps" ||
       url.pathname === "/automations" ||
       url.pathname === "/connect" ||
       url.pathname === "/security" ||
@@ -415,6 +418,11 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return user
         ? Response.json({ authenticated: true, user })
         : Response.json({ authenticated: false }, { status: 401 });
+    }
+
+    if (url.pathname === "/api/apps" || url.pathname.startsWith("/api/apps/")) {
+      if (url.origin !== new URL(appOrigin).origin) return Response.json({error:"app_host_required"},{status:404});
+      return handleApps(request, env);
     }
 
     if (url.pathname === "/api/status" && request.method === "GET") {

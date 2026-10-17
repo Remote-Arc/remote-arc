@@ -1,5 +1,6 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
 import { HomeConnectionScene } from "./home-connection-scene.js";
+import { AppsManager } from "./apps-manager.js";
 import { ArcComingSoonPageContent } from "./arc-future.js";
 import { ArcRoadmapPageContent } from "./arc-roadmap.js";
 import { ClientMcpGuide } from "./client-setup-guides.js";
@@ -322,7 +323,7 @@ type AutomationDraft = {
   github_merge_method: "merge" | "squash" | "rebase";
 };
 
-type DashboardTab = "overview" | "devices" | "automations" | "connect" | "security" | "monitor" | "settings";
+type DashboardTab = "overview" | "devices" | "automations" | "apps" | "connect" | "security" | "monitor" | "settings";
 
 const MARKETING_ORIGIN = "https://remotearc.app";
 const APP_ORIGIN = "https://mcp.remotearc.app";
@@ -341,6 +342,7 @@ const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   overview: "/overview",
   devices: "/devices",
   automations: "/automations",
+  apps: "/apps",
   connect: "/connect",
   security: "/security",
   monitor: "/monitor",
@@ -424,6 +426,7 @@ function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
   if (tab === "overview") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
   if (tab === "devices") return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
   if (tab === "automations") return <svg {...common}><path d="M4 12a8 8 0 0 1 14.6-4.5"/><path d="M18 3v5h-5"/><path d="M20 12a8 8 0 0 1-14.6 4.5"/><path d="M6 21v-5h5"/></svg>;
+  if (tab === "apps") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 17.5h7m-3.5-3.5v7"/></svg>;
   if (tab === "connect") return <svg {...common}><path d="M8.5 12.5 12 9l3.5 3.5"/><path d="M12 9v9"/><path d="M5 6.5A4.5 4.5 0 0 1 9.5 2h5A4.5 4.5 0 0 1 19 6.5"/></svg>;
   if (tab === "security") return <svg {...common}><path d="M12 3 5 6v5c0 4.7 2.7 7.8 7 10 4.3-2.2 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>;
   if (tab === "monitor") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
@@ -5064,6 +5067,7 @@ function Dashboard({
     ["overview", tr("Overview", "概览")],
     ["devices", tr("Devices", "设备")],
     ["automations", tr("Tasks", "任务")],
+    ["apps", tr("Apps", "应用")],
     ["connect", tr("Connect AI", "连接 AI")],
     ["security", tr("Security", "安全")],
     // Platform operations now live on admin.remotearc.app, not the customer dashboard.
@@ -5079,7 +5083,7 @@ function Dashboard({
         </a>
         <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
           {navItems.map(([id, label]) => (
-            <button key={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
+            <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
               <span className="sideNavIcon"><DashboardNavIcon tab={id} /></span>
               <span className="sideNavLabel">{label}</span>
             </button>
@@ -6466,6 +6470,8 @@ function Dashboard({
           </>
         )}
 
+        {active === "apps" && <AppsManager />}
+
         {active === "connect" && (
           <>
             <section className="overviewTopbar connectPageHeader">
@@ -6880,11 +6886,12 @@ function Dashboard({
           ["overview", tr("Home", "首页")],
           ["devices", tr("Devices", "设备")],
           ["automations", tr("Tasks", "任务")],
+          ["apps", tr("Apps", "应用")],
           ["connect", tr("Connect", "连接")],
           ["security", tr("Security", "安全")],
           ["settings", tr("Settings", "设置")],
         ] as Array<[DashboardTab, string]>).map(([id, label]) => (
-          <button key={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
+          <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
             <span aria-hidden="true"><DashboardNavIcon tab={id} /></span>
             <small>{label}</small>
           </button>

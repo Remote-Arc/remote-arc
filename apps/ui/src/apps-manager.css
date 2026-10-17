@@ -1,0 +1,128 @@
+.appsManager { color: var(--dash-text, var(--text)); min-width: 0; }
+.appsManagerHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--dash-line, var(--line)); }
+.appsManagerHeader h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -.04em; line-height: 1.2; margin: 8px 0 12px; }
+.appsManagerHeader p { margin: 0; max-width: 720px; font-size: 15px; color: var(--dash-muted, var(--muted)); line-height: 1.65; }
+.appsManager button { min-height: 42px; padding: 9px 13px; border: 1px solid var(--dash-line, var(--line)); border-radius: 8px; background: var(--dash-surface, var(--panel)); color: var(--dash-text, var(--text)); font-size: 13px; line-height: 1.4; font-weight: 600; }
+.appsManager button:hover:not(:disabled) { border-color: var(--dash-accent, var(--accent)); background: var(--dash-subtle, var(--panel-2)); }
+.appsManager button:disabled { opacity: .5; cursor: not-allowed; }
+.appsManager :is(button, a, input, summary):focus-visible { outline: 2px solid var(--dash-accent, var(--accent)); outline-offset: 3px; }
+.appsManagerHeader > button { flex: none; margin-top: 7px; }
+.appsManager .appsManagerPrimary { background: #087394; color: #fff; border-color: #087394; }
+.appsManager .appsManagerPrimary:hover:not(:disabled) { background: #075f7c; color: #fff; border-color: #075f7c; }
+.appsManagerSummary { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 20px 36px; padding: 22px 25px; margin-bottom: 25px; border: 1px solid var(--dash-line, var(--line)); border-radius: 14px; background: var(--dash-surface, var(--panel)); }
+.appsManagerSummary > span, .appsManagerSummary > a { display: grid; gap: 3px; font-size: 12px; color: var(--dash-muted, var(--muted)); }
+.appsManagerSummary strong { color: var(--dash-text, var(--text)); font-size: 28px; font-weight: 650; line-height: 1.25; }
+.appsManagerSummary > a:hover { color: var(--dash-accent, var(--accent)); }
+.appsManagerSummary > p { padding-left: 25px; border-left: 1px solid var(--dash-line, var(--line)); font-size: 13px; line-height: 1.65; margin: 0; color: var(--dash-muted, var(--muted)); }
+.appsManagerGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.appsManagerCard { min-width: 0; padding: 23px; border: 1px solid var(--dash-line, var(--line)); border-radius: 16px; background: var(--dash-surface, var(--panel)); }
+.appsManagerCard > header, .appsManagerApproval > header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.appsManagerCard header > div, .appsManagerApproval header > div { min-width: 0; }
+.appsManagerCard h2 { margin: 0 0 3px; font-size: 19px; letter-spacing: -.03em; line-height: 1.35; }
+.appsManagerCard header > div > span, .appsManagerApproval header > div > span { display: block; font-size: 12px; line-height: 1.5; color: var(--dash-muted, var(--muted)); overflow-wrap: anywhere; }
+.appsManagerBrand { display: grid; place-items: center; width: 43px; height: 43px; flex: none; border-radius: 11px; background: var(--dash-subtle, var(--panel-2)); color: var(--dash-accent, var(--accent)); }
+.appsManagerBrand img { width: 30px; height: 30px; object-fit: contain; filter: none; }
+.appsManagerBrand > svg { width: 25px; height: 25px; }
+.appsManagerBrand[data-brand="github"] { background: #fff; border: 1px solid #e2e7ec; }
+.appsManagerOperationCount { margin-left: auto; white-space: nowrap; font-size: 11px; color: var(--dash-muted, var(--muted)); }
+.appsManagerConsentNote { padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--dash-accent, var(--accent)) 25%, var(--dash-line, var(--line))); border-radius: 9px; background: var(--dash-subtle, var(--panel-2)); color: var(--dash-muted, var(--muted)); font-size: 12px; line-height: 1.65; margin: 0 0 18px; }
+.appsManager fieldset { border: 0; padding: 0; margin: 0; display: flex; gap: 10px 19px; flex-wrap: wrap; min-width: 0; }
+.appsManager legend { padding: 0; margin-bottom: 9px; color: var(--dash-muted, var(--muted)); font-size: 12px; font-weight: 600; }
+.appsManager fieldset label, .appsManagerReviewConfirmation { display: flex; align-items: center; gap: 7px; font-size: 12px; line-height: 1.6; color: var(--dash-text, var(--text)); }
+.appsManager input[type="checkbox"] { accent-color: var(--dash-accent, var(--accent)); width: 16px; height: 16px; margin: 0; flex: none; }
+.appsManagerAuthorize { display: flex; flex-direction: column; align-items: flex-start; gap: 15px; padding-top: 3px; }
+.appsManagerConnection { border: 1px solid var(--dash-line, var(--line)); border-radius: 11px; padding: 16px; margin-bottom: 17px; background: var(--dash-subtle, var(--panel-2)); }
+.appsManagerConnectionTop { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 14px; }
+.appsManagerConnectionTop > strong { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.appsManagerStatus { display: inline-flex; align-items: center; padding: 4px 8px; border: 1px solid var(--dash-line, var(--line)); border-radius: 100px; color: var(--dash-muted, var(--muted)); font-size: 10px; line-height: 1.4; font-weight: 600; white-space: nowrap; }
+.appsManagerConnectionTop .appsManagerStatus { margin-left: auto; }
+.appsManagerStatus[data-status="active"], .appsManagerStatus[data-status="approved"] { color: #16714f; border-color: #9acbb7; background: #eefaf4; }
+.appsManagerStatus[data-status="pending_approval"], .appsManagerStatus[data-status="reauthorization_required"], .appsManagerStatus[data-status="unknown"] { color: #8d5d0b; border-color: #dcc38d; background: #fff8e9; }
+.appsManagerConnectionHint { margin: -2px 0 14px; font-size: 12px; color: var(--dash-muted, var(--muted)); line-height: 1.65; }
+.appsManagerConnectionActions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 14px; }
+.appsManager .appsManagerTextAction { color: var(--dash-muted, var(--muted)); background: transparent; border-color: transparent; }
+.appsManagerScopes { margin-top: 15px; }
+.appsManager summary { font-size: 12px; font-weight: 600; color: var(--dash-muted, var(--muted)); cursor: pointer; line-height: 1.6; }
+.appsManagerScopes ul { margin: 10px 0 0; padding-left: 18px; color: var(--dash-muted, var(--muted)); }
+.appsManagerScopes li { margin: 5px 0; line-height: 1.5; }
+.appsManagerScopes code { font-size: 10px; overflow-wrap: anywhere; }
+.appsManagerDisconnect { margin-top: 13px; padding-top: 13px; border-top: 1px solid var(--dash-line, var(--line)); }
+.appsManagerDisconnect p { font-size: 12px; color: var(--dash-muted, var(--muted)); line-height: 1.65; margin: 0 0 10px; }
+.appsManagerDisconnect > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.appsManager .appsManagerDanger { color: #b13e50; border-color: #e2aeb8; background: transparent; }
+.appsManagerOperations { border-top: 1px solid var(--dash-line, var(--line)); margin-top: 20px; padding-top: 15px; }
+.appsManagerOperations summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; list-style: none; }
+.appsManagerOperations summary::after { content: "+"; color: var(--dash-accent, var(--accent)); font-size: 16px; margin-left: 3px; }
+.appsManagerOperations[open] summary::after { content: "−"; }
+.appsManagerOperations summary > span { font-size: 10px; margin-left: auto; }
+.appsManagerOperations > ul { margin: 13px 0 0; padding: 0; list-style: none; }
+.appsManagerOperations li { padding: 11px 0; border-top: 1px solid var(--dash-line, var(--line)); }
+.appsManagerOperations li > div { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 6px 10px; }
+.appsManagerOperations strong { font-size: 12px; font-weight: 600; }
+.appsManagerOperations code { display: block; margin-top: 5px; font-size: 10px; color: var(--dash-muted, var(--muted)); overflow-wrap: anywhere; }
+.appsManagerPermissionTag { display: inline-block; padding: 2px 6px; border-radius: 4px; background: var(--dash-subtle, var(--panel-2)); color: var(--dash-muted, var(--muted)); font-size: 9px; line-height: 1.5; }
+.appsManagerPermissionTag[data-permission="write"] { color: #8d5d0b; background: #fff4da; }
+.appsManagerSectionHeading { margin: 36px 0 19px; }
+.appsManagerSectionHeading h2 { font-size: 23px; line-height: 1.4; margin: 0 0 8px; letter-spacing: -.035em; }
+.appsManagerSectionHeading p { color: var(--dash-muted, var(--muted)); font-size: 14px; line-height: 1.6; margin: 0; }
+.appsManagerApprovals { scroll-margin-top: 24px; }
+.appsManagerApprovalGrid { display: grid; gap: 16px; }
+.appsManagerApproval { min-width: 0; border: 1px solid var(--dash-line, var(--line)); border-radius: 14px; padding: 22px; background: var(--dash-surface, var(--panel)); }
+.appsManagerApproval h3 { margin: 0 0 3px; font-size: 16px; line-height: 1.4; letter-spacing: -.02em; }
+.appsManagerApproval header > .appsManagerStatus { margin-left: auto; }
+.appsManagerApprovalOperation { display: flex; flex-wrap: wrap; gap: 6px 12px; color: var(--dash-muted, var(--muted)); margin: 0 0 14px; font-size: 12px; }
+.appsManagerApprovalOperation strong { font-weight: 600; }
+.appsManagerApprovalOperation code { color: var(--dash-text, var(--text)); font-size: 12px; overflow-wrap: anywhere; }
+.appsManager .appsManagerReviewToggle { background: var(--dash-subtle, var(--panel-2)); color: var(--dash-accent, var(--accent)); }
+.appsManagerApprovalPayload { margin-top: 16px; }
+.appsManagerApprovalPayload > p { margin: 0 0 10px; color: var(--dash-muted, var(--muted)); font-size: 12px; line-height: 1.6; }
+.appsManagerApprovalPayload pre { max-height: 360px; overflow: auto; margin: 0 0 12px; padding: 16px; border: 1px solid var(--dash-line, var(--line)); border-radius: 9px; background: var(--dash-subtle, var(--panel-2)); color: var(--dash-text, var(--text)); font: 12px/1.7 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.appsManagerReviewConfirmation { align-items: flex-start; margin: 14px 0; font-size: 13px; }
+.appsManagerReviewConfirmation input { margin-top: 3px !important; }
+.appsManagerApprovalActions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
+.appsManagerApprovalBoundary { padding-top: 15px; border-top: 1px solid var(--dash-line, var(--line)); margin: 17px 0 0; color: var(--dash-muted, var(--muted)); font-size: 12px; line-height: 1.7; }
+.appsManagerMessage { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 15px 18px; margin: 0 0 22px; border: 1px solid color-mix(in srgb, var(--dash-accent, var(--accent)) 35%, var(--dash-line, var(--line))); border-radius: 10px; background: var(--dash-subtle, var(--panel-2)); color: var(--dash-text, var(--text)); font-size: 13px; line-height: 1.65; }
+.appsManagerMessage p { flex: 1; margin: 0; }
+.appsManagerMessage a { color: var(--dash-accent, var(--accent)); text-decoration: underline; }
+.appsManagerMessage button { min-height: 32px; padding: 5px 9px; margin-left: auto; font-size: 11px; }
+.appsManagerError { border-color: #d7a6a9; }
+.appsManagerDisabled { padding: 35px; border: 1px solid var(--dash-line, var(--line)); border-radius: 16px; background: var(--dash-surface, var(--panel)); }
+.appsManagerDisabled h2 { font-size: 23px; line-height: 1.4; margin: 0 0 13px; letter-spacing: -.035em; }
+.appsManagerDisabled p { max-width: 700px; color: var(--dash-muted, var(--muted)); font-size: 15px; line-height: 1.75; margin: 0; }
+.appsManagerEmpty, .appsManagerLoading { padding: 26px; margin: 0; border: 1px dashed var(--dash-line, var(--line)); border-radius: 12px; color: var(--dash-muted, var(--muted)); font-size: 14px; line-height: 1.6; background: var(--dash-subtle, var(--panel-2)); }
+:root[data-theme="dark"] .appsManager .appsManagerPrimary { color: #08202d; background: #79d8f5; border-color: #79d8f5; }
+:root[data-theme="dark"] .appsManager .appsManagerPrimary:hover:not(:disabled) { background: #a7e8fb; border-color: #a7e8fb; }
+:root[data-theme="dark"] .appsManagerStatus[data-status="active"], :root[data-theme="dark"] .appsManagerStatus[data-status="approved"] { color: #9be3c4; border-color: #315e4e; background: #102b24; }
+:root[data-theme="dark"] .appsManagerStatus[data-status="pending_approval"], :root[data-theme="dark"] .appsManagerStatus[data-status="reauthorization_required"], :root[data-theme="dark"] .appsManagerStatus[data-status="unknown"] { color: #eac78e; border-color: #6a5536; background: #292319; }
+:root[data-theme="dark"] .appsManagerPermissionTag[data-permission="write"] { color: #eac78e; background: #292319; }
+:root[data-theme="dark"] .appsManager .appsManagerDanger { color: #f0a5b0; border-color: #70434b; }
+:root[data-theme="dark"] .appsManagerError { border-color: #70434b; }
+@media (max-width: 1100px) {
+  .appsManagerGrid { grid-template-columns: minmax(0, 1fr); }
+  .appsManagerSummary { gap: 18px 28px; }
+}
+@media (max-width: 620px) {
+  .appsManagerHeader { gap: 13px; margin-bottom: 18px; }
+  .appsManagerHeader h1 { font-size: 28px; }
+  .appsManagerHeader p { font-size: 14px; }
+  .appsManagerHeader > button { font-size: 11px; padding: 8px 10px; }
+  .appsManagerSummary { padding: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px; }
+  .appsManagerSummary > p { grid-column: 1 / -1; padding: 14px 0 0; border-left: 0; border-top: 1px solid var(--dash-line, var(--line)); font-size: 12px; }
+  .appsManagerCard { padding: 18px; }
+  .appsManagerCard > header { gap: 10px; flex-wrap: wrap; }
+  .appsManagerCard h2 { font-size: 18px; }
+  .appsManagerOperationCount { font-size: 10px; }
+  .appsManagerConnection { padding: 13px; }
+  .appsManagerConnectionTop { align-items: flex-start; }
+  .appsManagerConnectionTop > strong { flex-basis: 100%; }
+  .appsManagerConnectionTop .appsManagerStatus { margin-left: 0; }
+  .appsManagerApproval { padding: 18px; }
+  .appsManagerApproval > header { flex-wrap: wrap; gap: 10px; }
+  .appsManagerApproval header > .appsManagerStatus { margin-left: 0; }
+  .appsManagerApprovalPayload pre { padding: 12px; font-size: 11px; }
+  .appsManagerDisabled { padding: 25px 20px; }
+  .appsManagerDisabled p { font-size: 14px; }
+  .appFrame .mobileBottomNav:has([data-dashboard-tab="apps"]) { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .appFrame .mobileBottomNav:has([data-dashboard-tab="apps"]) button { min-width: 0; padding-inline: 1px; }
+  .appFrame .mobileBottomNav:has([data-dashboard-tab="apps"]) small { font-size: 9px; }
+}

@@ -14,6 +14,9 @@ const relay = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ts = createRequire(path.join(relay, "package.json"))("typescript");
 const compiled = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-goal-test-"));
 fs.writeFileSync(path.join(compiled, "package.json"), '{"type":"module"}');
+// Newly imported relay modules also use runtime dependencies (for example Zod).
+// Resolve the installed dependencies for the entire compiled module graph.
+fs.symlinkSync(path.join(relay, "node_modules"), path.join(compiled, "node_modules"), "junction");
 const protocolSource = fs.readFileSync(
   path.resolve(relay, "../../packages/protocol/src/index.ts"),
   "utf8",

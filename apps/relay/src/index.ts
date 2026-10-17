@@ -107,6 +107,8 @@ type Env = TaskEventEnv & AppEnv & {
   ENGAGEMENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{success: boolean}> };
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_NEXT_CLIENT_ID?: string;
+  GOOGLE_NEXT_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
   RESEND_API_KEY?: string;
@@ -479,7 +481,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       const plusUsage = await getMonthlyPlusUsage(env, user.id);
       const accountEntitlements = await getAccountEntitlements(env, user.id);
       return Response.json({
-        googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        googleConfigured: Boolean(
+          (env.GOOGLE_NEXT_CLIENT_ID && env.GOOGLE_NEXT_CLIENT_SECRET) ||
+          (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        ),
         mcpEndpoint: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
         devices,
         totalDevices: devices.length,

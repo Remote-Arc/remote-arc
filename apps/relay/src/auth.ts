@@ -8,6 +8,9 @@ type AuthEnv = {
   ADMIN_ORIGIN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  // During migration the old pair remains live as a fallback.
+  GOOGLE_NEXT_CLIENT_ID?: string;
+  GOOGLE_NEXT_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
   REVIEWER_EMAIL?: string;
@@ -171,8 +174,48 @@ export function sessionCookie(token: string) {
   ].join("; ");
 }
 
+type GoogleLoginClient = { clientId: string; clientSecret: string };
+
+// Switch new authorizations to the new Cloud project only after both new
+// secrets are provisioned. Keep the legacy pair for in-flight callbacks.
+export function googleLoginClients(env: AuthEnv): GoogleLoginClient[] {
+  const clients: GoogleLoginClient[] = [];
+  if (env.GOOGLE_NEXT_CLIENT_ID && env.GOOGLE_NEXT_CLIENT_SECRET) {
+    clients.push({ clientId: env.GOOGLE_NEXT_CLIENT_ID, clientSecret: env.GOOGLE_NEXT_CLIENT_SECRET });
+  }
+  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+    clients.push({ clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET });
+  }
+  return clients;
+}
+
+// A code issued before deployment can belong to the legacy Google client;
+// retry the exchange once with the old pair. Codes cannot be used twice.
+export async function exchangeGoogleLoginCode(
+  code: string, redirectUri: string, env: AuthEnv,
+): Promise<string | null> {
+  for (const client of googleLoginClients(env)) {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: client.clientId,
+        client_secret: client.clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+    if (!response.ok) continue;
+    const tokens = (await response.json()) as { access_token?: string };
+    if (tokens.access_token) return tokens.access_token;
+  }
+  return null;
+}
+
 export async function handleGoogleLogin(request: Request, env: AuthEnv) {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+  const [primaryClient] = googleLoginClients(env);
+  if (!primaryClient) {
     return Response.json(
       {
         error: "google_login_not_configured",
@@ -194,7 +237,7 @@ export async function handleGoogleLogin(request: Request, env: AuthEnv) {
     .run();
 
   const target = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-  target.searchParams.set("client_id", env.GOOGLE_CLIENT_ID);
+  target.searchParams.set("client_id", primaryClient.clientId);
   target.searchParams.set("redirect_uri", (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback");
   target.searchParams.set("response_type", "code");
   target.searchParams.set("scope", "openid email profile");
@@ -205,7 +248,7 @@ export async function handleGoogleLogin(request: Request, env: AuthEnv) {
 }
 
 export async function handleGoogleCallback(request: Request, env: AuthEnv) {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+  if (!googleLoginClients(env).length) {
     return new Response("Google OAuth is not configured", { status: 503 });
   }
 
@@ -233,32 +276,18 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     return new Response("Google login state expired or invalid", { status: 400 });
   }
 
-  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      code,
-      client_id: env.GOOGLE_CLIENT_ID,
-      client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback",
-      grant_type: "authorization_code",
-    }),
-  });
-
-  if (!tokenResponse.ok) {
+  const accessToken = await exchangeGoogleLoginCode(
+    code,
+    (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback",
+    env,
+  );
+  if (!accessToken) {
     return new Response("Google token exchange failed", { status: 502 });
-  }
-
-  const googleTokens = (await tokenResponse.json()) as {
-    access_token?: string;
-  };
-  if (!googleTokens.access_token) {
-    return new Response("Google returned no access token", { status: 502 });
   }
 
   const userInfoResponse = await fetch(
     "https://openidconnect.googleapis.com/v1/userinfo",
-    { headers: { Authorization: "Bearer " + googleTokens.access_token } },
+    { headers: { Authorization: "Bearer " + accessToken } },
   );
 
   if (!userInfoResponse.ok) {

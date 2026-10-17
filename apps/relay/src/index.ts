@@ -1,3 +1,5 @@
+import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.js";
+export { AdminApiService } from "./admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
 import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
@@ -94,6 +96,8 @@ type Env = TaskEventEnv & {
   APP_ORIGIN?: string;
   MARKETING_ORIGIN?: string;
   ADMIN_ORIGIN?: string;
+  ADMIN_SERVICE_MODE?: string;
+  ADMIN_UI?: Fetcher;
   ENGAGEMENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{success: boolean}> };
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -156,10 +160,13 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     // Explicit host partition. It can later be extracted into a dedicated Worker
     // without changing the public API contracts or frontend route boundaries.
     if (isAdminHost) {
+      const disabled = await publicAdminResponse(request, env);
+      if (disabled) return disabled;
       const staticAsset = url.pathname.startsWith("/assets/") ||
         /^\/(?:remote-arc(?:-app-icon)?[.]svg|favicon[.]ico|manifest[.]webmanifest)$/.test(url.pathname);
       const adminApi = url.pathname === "/api/me" || url.pathname === "/api/monitor" ||
         url.pathname.startsWith("/api/admin/");
+      if (adminApi) return handleAdminServiceRequest(request, env);
       const document = url.pathname === "/" || url.pathname === "/overview";
       if (!adminApi && !staticAsset && !document) {
         return request.method === "GET" || request.method === "HEAD"

@@ -83,6 +83,7 @@
     "APP_ORIGIN": "https://mcp.remotearc.app",
     "MARKETING_ORIGIN": "https://remotearc.app",
     "ADMIN_ORIGIN": "https://admin.remotearc.app",
+    "ADMIN_SERVICE_MODE": "legacy",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
     "MCP_METRICS_SAMPLE_RATE": "0.1",

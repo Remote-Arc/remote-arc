@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
+const ciWait = readFileSync(new URL("./wait-production-ci.mjs", import.meta.url), "utf8");
 const yaml = readFileSync(new URL("../.github/workflows/deploy-cloudflare.yml", import.meta.url), "utf8");
 assert.ok(yaml.includes("on:\n  workflow_dispatch:"), "production must require explicit promotion");
 assert.ok(!yaml.includes("workflow_run:"), "CI cannot deploy by itself");
@@ -13,9 +14,9 @@ assert.ok(yaml.includes("backup_confirmation:"), "retain optional D1 backup conf
 assert.match(yaml, /backup_confirmation:[\s\S]*?required: false/, "no migration release should not need confirmation");
 assert.match(yaml, /BACKUP_CONFIRMATION: \$\{\{ inputs\.backup_confirmation \}\}/, "preflight must receive confirmation");
 assert.ok(yaml.includes("actions: read"), "read-only CI verification scope");
-assert.ok(yaml.includes("git ls-remote origin refs/heads/master"), "reject stale release candidates");
-assert.ok(yaml.includes("actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA"), "exact-SHA CI check");
-assert.ok(yaml.includes('conclusion == "success"'), "CI must pass");
+assert.ok(ciWait.includes('["ls-remote", "origin", "refs/heads/master"]'), "reject stale release candidates");
+assert.ok(ciWait.includes("actions/workflows/ci.yml/runs?head_sha="), "exact-SHA CI check");
+assert.ok(ciWait.includes('run.conclusion !== "success"'), "CI must pass");
 assert.ok(yaml.includes("environment: production"), "production environment protection");
 const concurrency = yaml.slice(yaml.indexOf("concurrency:"), yaml.indexOf("jobs:"));
 assert.ok(concurrency.includes("group: remote-arc-production") && concurrency.includes("cancel-in-progress: false"), "do not cancel a running production migration");
@@ -104,3 +105,7 @@ assert.doesNotMatch(yaml.slice(backupUpload,preflightStart),/\*\.sql|continue-on
 assert.match(preflight,/if \[ "\$\{\{ steps\.d1_backup\.outputs\.backup_verified \}\}" = "true" \]/);
 assert.match(preflight,/export BACKUP_CONFIRMATION=BACKUP_VERIFIED/);
 assert(yaml.indexOf("Provision Apps vault")>end&&yaml.indexOf("Provision Apps vault")<yaml.indexOf(deployName));
+
+assert.match(yaml, /run: node scripts\/wait-production-ci\.mjs/);
+
+assert(yaml.indexOf("node scripts/production-smoke.mjs --sha") > yaml.indexOf(deployName), "verify the published exact SHA after deployment");

@@ -1,4 +1,5 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
+import { InstallCommands } from "./install-commands.js";
 import { HomeConnectionScene } from "./home-connection-scene.js";
 import { AppsManager } from "./apps-manager.js";
 import { ArcComingSoonPageContent } from "./arc-future.js";
@@ -2477,7 +2478,6 @@ function DashboardAccess() {
 
 function Landing({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const command = "npx remotelink";
   return (
     <PublicLayout user={user}>
       <section className="landingHero landingHero--constellation">
@@ -2492,15 +2492,7 @@ function Landing({ user }: { user?: User | null }) {
             <strong>{tr("No model API key to configure. No pay-per-token API bill to top up.", "不用配置模型 API Key，也不用额外充值按量计费的 API Token。")}</strong>
             <span>{tr("A compatible free chat can be enough—for example, Claude Free currently supports one custom MCP connector. Your AI provider’s tool permissions, chat limits and Remote Arc tool-call limits still apply.", "如果免费聊天套餐支持自定义 MCP，也可以直接使用，例如 Claude Free 目前支持一个自定义连接器。AI 服务商的工具权限、聊天额度和 Remote Arc 工具调用额度仍然适用。")}</span>
           </div>
-          <div className="heroPrimaryCommand">
-            <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
-            <div>
-              <code>{command}</code>
-              <CopyButton value={command} />
-            </div>
-            <small>{tr("Go Agent · npm, Homebrew or standalone download", "Go Agent · npm、Homebrew 或直接下载")}</small>
-            <a className="heroNativeInstall" href="/downloads#shell-install">{tr("No Node.js? Install with curl →", "没有 Node.js？使用 curl 安装 →")}</a>
-          </div>
+          <InstallCommands />
           <div className="landingActions">
             <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>
             <a className="ghostLink" href="/downloads">{tr("Download Agent", "下载 Agent")}</a>

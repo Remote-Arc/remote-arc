@@ -120,6 +120,7 @@ run(
     metadata.tag,
     "--message",
     metadata.message,
+    ...(/^[a-f0-9]{40}$/.test(sha) ? ["--var", "DEPLOYMENT_SHA:" + sha] : []),
   ],
   path.join(repoRoot, "apps", "relay"),
 );

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { useI18n } from "./i18n.js";
 import "./public-docs.css";
@@ -17,6 +17,25 @@ const targets = [
 
 export function NativeInstall() {
   const { tr } = useI18n();
+  useEffect(() => {
+    let frame: number | undefined;
+    const alignFragment = () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      // Lazy loading can miss native scrolling; always read the latest fragment.
+      frame = requestAnimationFrame(() => {
+        const hash = window.location.hash;
+        if (hash === "#homebrew" || hash === "#shell-install") {
+          document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+        }
+      });
+    };
+    alignFragment();
+    window.addEventListener("hashchange", alignFragment);
+    return () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", alignFragment);
+    };
+  }, []);
   return <section id="agent-downloads" className="nativeInstall">
     <span className="eyebrow">REMOTE ARC {version}</span>
     <h1>{tr("Install the device Agent", "安装设备 Agent")}</h1>
@@ -32,7 +51,7 @@ export function NativeInstall() {
       <p>{tr("Set REMOTEARC_INSTALL_DIR to an absolute path to choose another directory. Stop the Agent before rerunning this command to upgrade.", "可通过 REMOTEARC_INSTALL_DIR 指定其他绝对安装路径。升级时先停止 Agent，再重新运行此命令。")}</p>
       <a href="/install.sh">{tr("Read the installation script", "查看安装脚本")} →</a>
     </div>
-    <h2>Homebrew</h2>
+    <h2 id="homebrew">Homebrew</h2>
     <pre className="docsExample"><code>{"brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc\nif brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi\nbrew install yaohuangguan/remote-arc/remotelink\nremotelink"}</code></pre>
     <p>{tr("Available on macOS and Linux; Node.js is not required. Existing remotelink-go installations can use brew upgrade remotelink-go. Install one formula at a time because both provide the remotelink command.", "适用于 macOS 和 Linux，不需要 Node.js。已安装 remotelink-go 的用户可以执行 brew upgrade remotelink-go；两个配方都提供 remotelink 命令，请只安装其中一个。")}</p>
     <h2>{tr("Standalone downloads", "直接下载")}</h2>

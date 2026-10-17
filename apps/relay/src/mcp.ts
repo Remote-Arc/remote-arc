@@ -2,6 +2,8 @@ import { getGoalContext, submitGoalDecision } from "./source-goals.js";
 import { appDiscoverySchema, discoverApps } from "./app-discovery.js";
 import { callApp, listApps, appCallSchema } from "./apps.js";
 import { AppError, type AppEnv } from "./app-catalog.js";
+import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";
+import { routeSkillIntent } from "./skill-runtime.js";
 import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
@@ -212,7 +214,10 @@ export function createRemoteLinkMcp(
   return createMcpHandler(() => {
     const server = new McpServer(
       { name: "remotearc", version: "0.4.4" },
-      { capabilities: { tools: {} } },
+      {
+        capabilities: { tools: {}, resources: {} },
+        instructions: "Remote Arc offers nine curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed.",
+      },
     );
 
     if (env.ENABLE_APPS === "1") {
@@ -240,6 +245,26 @@ export function createRemoteLinkMcp(
           return { ...toolErrorResult(error instanceof AppError ? error.code : "Invalid or unavailable App request", error instanceof AppError ? error.code : "APP_REQUEST_FAILED"), isError: true };
         }
       });
+    }
+
+    // Read-only MCP Resources, not new tools or expanded device permissions.
+    // Resources let any resource-capable Connect client discover reusable skills.
+    const catalogUri = "remotearc://skills/catalog";
+    server.registerResource("remote-arc-skill-catalog", catalogUri,
+      { title: "Remote Arc Skill Library", description: "Built-in skill index; optional local engines are not installed automatically.", mimeType: "application/json" },
+      async (uri) => {
+        if (!identity) throw new Error("Sign in to Remote Arc to read Skills");
+        return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(BUILTIN_SKILLS.map(({id,name,description,priority,category}) => ({id,name,description,priority,category}))) }] };
+      },
+    );
+    for (const skill of BUILTIN_SKILLS) {
+      server.registerResource("remote-arc-skill-" + skill.id, "remotearc://skills/" + skill.id,
+        { title: skill.name, description: skill.description, mimeType: "text/markdown" },
+        async (uri) => {
+          if (!identity) throw new Error("Sign in to Remote Arc to read Skills");
+          return { contents: [{ uri: uri.href, mimeType: "text/markdown", text: skill.content }] };
+        },
+      );
     }
 
     registerMcpTool(server,
@@ -1299,7 +1324,17 @@ export function createRemoteLinkMcp(
       if (!identity || !hasScope(identity, "automation:read")) return authRequired(env, "automation:read", identity);
       const usageError = await consume(env, identity);
       if (usageError) return usageError;
-      return textResult(await getGoalContext(env.DB, identity.userId, automation_id, after_sequence));
+      const context = await getGoalContext(env.DB, identity.userId, automation_id, after_sequence);
+      // A source-controlled Agent Goal automatically receives relevant cloud
+      // Skill instructions as context, not new executable tools or permissions.
+      const objective = typeof context.goal?.objective === "string" ? context.goal.objective : "";
+      const matched = objective.trim() ? routeSkillIntent(objective.slice(0,2000)) : null;
+      const cloudSkills = matched?.steps.slice(0,2).map(step => {
+        const skill = BUILTIN_SKILLS.find(item => item.id === step.skill_id);
+        return skill ? {id:skill.id,execution_state:step.state,markdown:skill.content.slice(0,2500)} : null;
+      }).filter(Boolean) || [];
+      return textResult({...context,cloud_skills:cloudSkills,
+        cloud_skill_revision:matched?.revision ?? null});
     });
 
     if (env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0") {

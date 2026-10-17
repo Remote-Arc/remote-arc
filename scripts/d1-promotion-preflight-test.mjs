@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {pendingMigrations,parseRemote,validateBackup} from './d1-promotion-preflight.mjs';
+const local=['0001_a.sql','0002_b.sql','0003_c.sql'];
+assert.deepEqual(pendingMigrations(local,['0001_a.sql','0003_c.sql','0002_b.sql']),[]);
+assert.deepEqual(pendingMigrations(local,['0001_a.sql','0002_b.sql']),['0003_c.sql']);
+assert.throws(()=>pendingMigrations(local,['0001_a.sql','unknown.sql']),/drift/);
+assert.throws(()=>pendingMigrations(local,[]),/Missing/);
+assert.throws(()=>pendingMigrations([],['0001_a.sql']),/Missing/);
+assert.throws(()=>pendingMigrations(local,['0001_a.sql','0001_a.sql']),/drift/);
+assert.throws(()=>parseRemote('not json'),/not JSON/);
+assert.throws(()=>parseRemote('[{"success":false,"results":[]}]'),/failed/);
+assert.deepEqual(parseRemote('[{"success":true,"results":[{"name":"0001_a.sql"}]}]'),['0001_a.sql']);
+assert.doesNotThrow(()=>validateBackup([],''));
+assert.throws(()=>validateBackup(['0003_c.sql'],''),/BACKUP_VERIFIED/);
+assert.throws(()=>validateBackup(['0003_c.sql'],'no'),/BACKUP_VERIFIED/);
+assert.doesNotThrow(()=>validateBackup(['0003_c.sql'],'BACKUP_VERIFIED'));
+console.log('D1 preflight tests passed: no-migration skip, pending requires backup, drift/error fail-closed');

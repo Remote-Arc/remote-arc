@@ -47,6 +47,7 @@ try {
   const authModule = await importSource("auth");
   const entitlements = await importSource("entitlements");
   const planAdmin = await importSource("plan-admin");
+  const billing = await importSource("billing-ledger");
   const sqlite = new DatabaseSync(":memory:");
   for (const name of fs.readdirSync(path.join(relay, "migrations")).filter(n => n.endsWith(".sql")).sort()) {
     sqlite.exec(fs.readFileSync(path.join(relay, "migrations", name), "utf8"));
@@ -263,21 +264,34 @@ try {
 
   const hostedGoal = { controller: "hosted", objective: "Check the result", success_criteria: "Evidence available", allowed_tools: ["read_file"], max_iterations: 10 };
   let providerCalls = 0;
-  env.AI = { async run() { if (++providerCalls === 1) throw new Error("temporary upstream failure"); return { response: decision("complete", "none", {}, "Inspection evidence available") }; } };
+  sqlite.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'admin',?)").run("billing-admin","billing-admin","billing-admin@test.invalid",now);
+  for(const [scope_type,scope_id] of [["global","platform"],["organization","personal:owner"],["user","owner"]])
+    for(const [metric,limit] of [["credits",100],["neurons",9000]])
+      await billing.setBillingLimit(db,"billing-admin",{scope_type,scope_id,lane:"arc_hosted",metric,period_key:now.slice(0,10),limit});
+  await billing.configureFreeAiPool(db,"billing-admin",{id:"fixture-pool",period:now.slice(0,10),mode:"dedicated_account",managedPoolAssertion:true,freeNeurons:10000,outsideUsedNeurons:1000});
+  sqlite.exec(`CREATE TRIGGER fixture_hosted_task_budget AFTER INSERT ON automations BEGIN
+    INSERT INTO billing_budgets(scope_type,scope_id,lane,metric,period_key,limit_units,updated_at)
+    VALUES('task',NEW.id,'arc_hosted','credits',substr(NEW.created_at,1,10),50,NEW.created_at),
+    ('task',NEW.id,'arc_hosted','neurons',substr(NEW.created_at,1,10),9000,NEW.created_at); END;`);
+  env.MODEL_GATEWAY_ENABLED="1";env.MODEL_GATEWAY_FREE_POOL_ID="fixture-pool";
+  env.AI = { async run() { if (++providerCalls === 1) throw new Error("temporary upstream failure"); return { response: decision("complete", "none", {}, "Inspection evidence available"),usage:{prompt_tokens:20,completion_tokens:10} }; } };
   const retryId = await create("Provider retry", { agent_goal: hostedGoal });
   await tick(retryId);
-  assert.equal((await get(retryId)).status, "waiting");
-  assert.equal(JSON.parse((await get(retryId)).state_json).retry_count, 1);
+  assert.equal((await get(retryId)).status, "failed","Unknown inference must stop instead of silently spending again");
   await tick(retryId);
-  assert.equal((await get(retryId)).status, "completed");
+  assert.equal(providerCalls,1,"A transport failure keeps its reservation and cannot retry inference");
+  assert.equal(sqlite.prepare("SELECT status FROM billing_reservations WHERE task_id=?").get(retryId).status,"unknown");
+  const healthyId=await create("Authorized fresh hosted task",{agent_goal:hostedGoal});
+  await tick(healthyId);
+  assert.equal((await get(healthyId)).status,"completed");
   const pausedId = await create("Pause during planner", { agent_goal: hostedGoal });
-  env.AI = { async run() { await runtime.pauseAutomation(env, "owner", pausedId); return { response: decision("tool", "read_file", { path: "/workspace/app.ts" }) }; } };
+  env.AI = { async run() { await runtime.pauseAutomation(env, "owner", pausedId); return { response: decision("tool", "read_file", { path: "/workspace/app.ts" }),usage:{prompt_tokens:20,completion_tokens:10} }; } };
   const beforePause = calls.length;
   await tick(pausedId);
   assert.equal((await get(pausedId)).status, "paused");
   assert.equal(calls.length, beforePause);
   await runtime.cancelAutomation(env, "owner", pausedId);
-  delete env.AI;
+  delete env.AI;delete env.MODEL_GATEWAY_ENABLED;delete env.MODEL_GATEWAY_FREE_POOL_ID;
 
   // Account-authenticated device switches cancel only affected modes.
   const sessionToken = "test-only-session";

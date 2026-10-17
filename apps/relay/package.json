@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test:scheduling": "tsx scripts/schedule-clock-test.ts",
     "test:seo": "tsx scripts/seo-smoke.mjs",
-    "test:security": "tsx scripts/host-routing-test.ts && tsx scripts/oauth-security-test.ts && tsx scripts/email-auth-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/file-resource-chunk-test.ts && tsx scripts/device-revocation-test.ts && tsx scripts/device-pause-test.ts && tsx scripts/scalability-guardrails-test.ts && tsx scripts/admin-operations-test.ts && tsx scripts/engagement-smoke.mjs"
+    "test:model-billing": "tsx scripts/model-billing-test.ts",
+    "test:security": "tsx scripts/model-billing-test.ts && tsx scripts/host-routing-test.ts && tsx scripts/oauth-security-test.ts && tsx scripts/email-auth-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/file-resource-chunk-test.ts && tsx scripts/device-revocation-test.ts && tsx scripts/device-pause-test.ts && tsx scripts/scalability-guardrails-test.ts && tsx scripts/admin-operations-test.ts && tsx scripts/engagement-smoke.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.1.0",

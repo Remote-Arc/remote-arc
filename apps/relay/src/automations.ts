@@ -1634,6 +1634,8 @@ async function executeAgentGoal(
       allowedTools: goal.allowed_tools,
       memory: state.agent.memory,
       observation: state.agent.observation,
+      billing: {userId:automation.user_id,organizationId:"personal:"+automation.user_id,taskId:automation.id,
+        runId:state.run_id||"",operationId:"planner-"+(state.agent.iteration+1),lane:"arc_hosted"},
     });
     if (goal.controller !== "source" && decision) {
       await recordPlusUsage(env, automation.user_id, { planner_turns: 1 });

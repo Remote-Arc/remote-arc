@@ -43,6 +43,7 @@ function isOlderRelease(current: string | null | undefined, latest = LATEST_AGEN
   return false;
 }
 
+const IntegrationsPage = React.lazy(() => import("./integrations-page.js").then(module => ({ default: module.IntegrationsPage })));
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
 const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
 
@@ -7502,6 +7503,7 @@ function App() {
   if (routePath === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
   if (routePath === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
   if (routePath === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/integrations") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading integrations…", "正在加载应用目录…")}</main>}><IntegrationsPage /></React.Suspense></PublicLayout>;
   if (routePath === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
   if (routePath === "/early-access") return <PublicLayout user={user === undefined ? null : user}><EngagementPage category="early_access" /></PublicLayout>;
   if (routePath === "/feedback") return <PublicLayout user={user === undefined ? null : user}><EngagementPage category="feedback" /></PublicLayout>;

@@ -8,7 +8,7 @@ const route = (path: string, origin = app) => new URL(path, origin);
 for (const path of [
   "/blogs", "/blogs/why-i-built-remote-arc", "/docs", "/docs/mcp",
   "/install/chatgpt", "/install/claude", "/use-cases/remote-development",
-  "/pricing", "/downloads", "/releases", "/security-model",
+  "/integrations?category=docs_files", "/zh/integrations?provider=notion", "/pricing", "/downloads", "/releases", "/security-model",
   "/zh", "/zh/docs", "/zh/pricing", "/zh/install/chatgpt",
   "/zh/blogs", "/zh/blogs/how-remote-arc-works", "/zh/use-cases",
   "/zh/use-cases/remote-development", "/zh/security-model", "/zh/releases",
@@ -30,10 +30,11 @@ for (const path of [
 }
 // Overview is intentionally public for signed-out visitors: it serves as a product preview.
 assert.equal(dashboardSignInUrl(route("/overview"), "GET", app), null);
-for (const path of ["/devices", "/automations", "/connect", "/security", "/settings", "/monitor"]) {
+for (const path of ["/apps", "/devices", "/automations", "/connect", "/security", "/settings", "/monitor"]) {
   assert.equal(dashboardSignInUrl(route(path), "GET", app), app + "/auth/login?return_to=" + encodeURIComponent(path));
 }
 assert.equal(dashboardSignInUrl(route("/automations?task=abc%2F123"), "GET", app), app + "/auth/login?return_to=" + encodeURIComponent("/automations?task=abc%2F123"));
+assert.equal(dashboardSignInUrl(route("/apps?category=docs_files"), "GET", app), app + "/auth/login?return_to=" + encodeURIComponent("/apps?category=docs_files"));
 assert.equal(dashboardSignInUrl(route("/overview"), "POST", app), null);
 assert.equal(dashboardSignInUrl(route("/overview", marketing), "GET", app), null);
 assert.equal(dashboardSignInUrl(route("/oauth/consent?client_id=abc"), "GET", app), null, "OAuth consent must not be rewritten");

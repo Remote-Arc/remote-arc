@@ -3,6 +3,17 @@ type ChineseSeoContent = {
   sections: Array<{heading: string; text: string}>;
 };
 export const chineseSeo: Record<string, ChineseSeoContent> = {
+  "/integrations": {
+    title: "Remote Arc Apps 应用目录 — 查看原生集成与连接条件",
+    description: "按类别查看 Remote Arc Apps、实际支持的操作、授权方式和费用归属。Connect Apps 独立于 Arc Agent，需要完成平台配置后开放账号授权。",
+    h1: "探索 Remote Arc 应用连接",
+    intro: "找到应用，查看 AI 实际能做什么，以及连接前需要准备什么。Apps 通过 Remote Arc Connect 工作，独立于 Arc Agent 发布。",
+    sections: [
+      {heading:"实际支持的应用操作",text:"目录覆盖邮件与日历、文档与文件、开发与部署、团队沟通、社交媒体、创意 AI、营销分析及销售电商。每个集成都列出真实支持的读取与写入操作，不代表已经覆盖平台全部功能。"},
+      {heading:"授权你自己的账号",text:"OAuth 应用由 Remote Arc 配置，每个用户授权自己的账号；部分集成使用用户自己的 API 凭据。连接服务启用、平台配置完成后才开放账号授权。默认读取权限，每次写入仍需审核具体请求。"},
+      {heading:"了解用量与费用",text:"API 用量费用和额度取决于连接的账号或开发者项目，网页订阅不一定包含 API 积分。Remote Arc 的工具调用额度独立计算。请查看各应用详情及实际连接开放状态。"}
+    ]
+  },
   "/early-access": {
     title: "申请 Arc AI 助手抢先体验 — Remote Arc",
     description: "加入 Remote Arc 的 Arc AI 助手抢先体验名单，填写希望自动完成的工作，订阅和托管模型尚未上线。",

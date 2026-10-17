@@ -187,6 +187,14 @@ assert.equal((await api("/api/apps/connections","POST",{provider:"whatsapp",cred
 assert.equal((await api("/api/apps/connections","POST",{provider:"runway",credential:"spaces are forbidden",permissions:["read"],usageConsent:true})).status,400);
 
 const closedPulls=appOperation("github","pulls.list");assert.equal(new URL(closedPulls.request(closedPulls.schema.parse({repo:"team/product",state:"closed"})).url).searchParams.get("state"),"closed");
+
+const publicAppStatus=await handleApps(new Request(origin+"/api/apps/status"),{...env,DB:{prepare(){throw Error("Public status must not read private tables");}} as unknown as D1Database},fetcher);
+assert.equal(publicAppStatus.status,200);assert.equal(publicAppStatus.headers.get("access-control-allow-origin"),"*");
+const statusData=await publicAppStatus.json() as any;assert.equal(statusData.enabled,true);assert.equal(statusData.providers.length,29);assert(statusData.providers.some((p:any)=>p.provider==="runway"&&p.ready));assert(!JSON.stringify(statusData).includes("connection"));assert(!JSON.stringify(statusData).includes("secret"));
+const disabledStatus=await (await handleApps(new Request(origin+"/api/apps/status"),{...env,ENABLE_APPS:undefined},fetcher)).json() as any;assert.equal(disabledStatus.enabled,false);assert(disabledStatus.providers.every((p:any)=>p.ready===false));
+const missingVaultStatus=await (await handleApps(new Request(origin+"/api/apps/status"),{...env,APP_TOKEN_KEY:undefined},fetcher)).json() as any;assert(missingVaultStatus.providers.every((p:any)=>p.ready===false));
+assert.equal((await handleApps(new Request(origin+"/api/apps/status",{method:"POST"}),env,fetcher)).status,401);
+
 const upgrade=new DatabaseSync(":memory:");upgrade.exec("PRAGMA foreign_keys=ON");
 for(const file of fs.readdirSync(migrations).filter(v=>v.endsWith(".sql")&&v<"0031").sort())upgrade.exec(fs.readFileSync(path.join(migrations,file),"utf8"));
 upgrade.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES('old-user','old-user','old@example.invalid','user',?)").run(stamp);

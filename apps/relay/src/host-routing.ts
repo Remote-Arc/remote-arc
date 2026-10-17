@@ -12,6 +12,7 @@ const publicPrefixes = [
 ] as const;
 
 const publicExactPaths = new Set([
+  "/integrations",
   "/pricing",
   "/early-access",
   "/feedback",

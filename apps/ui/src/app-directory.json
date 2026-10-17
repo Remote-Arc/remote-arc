@@ -65,6 +65,38 @@
       "category": "development",
       "auth": "oauth",
       "operationCount": 6,
+      "operations": [
+        {
+          "name": "repositories.list",
+          "description": "List accessible repositories",
+          "permission": "read"
+        },
+        {
+          "name": "issues.list",
+          "description": "List repository issues",
+          "permission": "read"
+        },
+        {
+          "name": "actions.list",
+          "description": "List Actions runs",
+          "permission": "read"
+        },
+        {
+          "name": "pulls.list",
+          "description": "List pull requests",
+          "permission": "read"
+        },
+        {
+          "name": "contents.read",
+          "description": "Read repository content",
+          "permission": "read"
+        },
+        {
+          "name": "issues.create",
+          "description": "Create a repository issue",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -76,6 +108,33 @@
       "category": "communication",
       "auth": "oauth",
       "operationCount": 5,
+      "operations": [
+        {
+          "name": "channels.list",
+          "description": "List public channels",
+          "permission": "read"
+        },
+        {
+          "name": "channels.get",
+          "description": "Inspect a channel before approving a message",
+          "permission": "read"
+        },
+        {
+          "name": "messages.list",
+          "description": "Read channel messages",
+          "permission": "read"
+        },
+        {
+          "name": "search",
+          "description": "Search workspace messages",
+          "permission": "read"
+        },
+        {
+          "name": "messages.send",
+          "description": "Send a channel message",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -87,6 +146,33 @@
       "category": "email_calendar",
       "auth": "oauth",
       "operationCount": 5,
+      "operations": [
+        {
+          "name": "messages.list",
+          "description": "Search email messages",
+          "permission": "read"
+        },
+        {
+          "name": "messages.get",
+          "description": "Read one email message",
+          "permission": "read"
+        },
+        {
+          "name": "drafts.create",
+          "description": "Create an email draft",
+          "permission": "write"
+        },
+        {
+          "name": "messages.send",
+          "description": "Send the exact reviewed email",
+          "permission": "write"
+        },
+        {
+          "name": "messages.modify",
+          "description": "Add or remove message labels",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -98,6 +184,28 @@
       "category": "email_calendar",
       "auth": "oauth",
       "operationCount": 4,
+      "operations": [
+        {
+          "name": "messages.list",
+          "description": "Search Outlook email",
+          "permission": "read"
+        },
+        {
+          "name": "messages.get",
+          "description": "Read an Outlook message",
+          "permission": "read"
+        },
+        {
+          "name": "drafts.create",
+          "description": "Create an Outlook draft",
+          "permission": "write"
+        },
+        {
+          "name": "messages.send",
+          "description": "Send the exact reviewed Outlook email",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -109,6 +217,38 @@
       "category": "email_calendar",
       "auth": "oauth",
       "operationCount": 6,
+      "operations": [
+        {
+          "name": "calendars.list",
+          "description": "List calendars",
+          "permission": "read"
+        },
+        {
+          "name": "events.list",
+          "description": "List calendar events",
+          "permission": "read"
+        },
+        {
+          "name": "events.get",
+          "description": "Read an event and its current version",
+          "permission": "read"
+        },
+        {
+          "name": "events.create",
+          "description": "Create an event or meeting",
+          "permission": "write"
+        },
+        {
+          "name": "events.update",
+          "description": "Update an event or meeting",
+          "permission": "write"
+        },
+        {
+          "name": "events.delete",
+          "description": "Delete a calendar event",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -120,6 +260,38 @@
       "category": "email_calendar",
       "auth": "oauth",
       "operationCount": 6,
+      "operations": [
+        {
+          "name": "calendars.list",
+          "description": "List calendars",
+          "permission": "read"
+        },
+        {
+          "name": "events.list",
+          "description": "List calendar events",
+          "permission": "read"
+        },
+        {
+          "name": "events.get",
+          "description": "Read an event and its current version",
+          "permission": "read"
+        },
+        {
+          "name": "events.create",
+          "description": "Create an event or meeting",
+          "permission": "write"
+        },
+        {
+          "name": "events.update",
+          "description": "Update an event or meeting",
+          "permission": "write"
+        },
+        {
+          "name": "events.delete",
+          "description": "Delete a calendar event",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -131,6 +303,23 @@
       "category": "social",
       "auth": "oauth",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "channels.list",
+          "description": "Read your YouTube channel and statistics",
+          "permission": "read"
+        },
+        {
+          "name": "videos.list",
+          "description": "List videos from your uploads playlist",
+          "permission": "read"
+        },
+        {
+          "name": "videos.statistics",
+          "description": "Read video views, likes and comments",
+          "permission": "read"
+        }
+      ],
       "supportsWrite": false,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -142,6 +331,28 @@
       "category": "docs_files",
       "auth": "oauth",
       "operationCount": 4,
+      "operations": [
+        {
+          "name": "files.list",
+          "description": "Find Drive files and documents",
+          "permission": "read"
+        },
+        {
+          "name": "files.get",
+          "description": "Read file metadata and sharing capabilities",
+          "permission": "read"
+        },
+        {
+          "name": "files.exportText",
+          "description": "Read a Google document as text",
+          "permission": "read"
+        },
+        {
+          "name": "folders.create",
+          "description": "Create a Drive folder",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -153,6 +364,23 @@
       "category": "docs_files",
       "auth": "oauth",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "documents.get",
+          "description": "Read a Google document",
+          "permission": "read"
+        },
+        {
+          "name": "documents.create",
+          "description": "Create a Google document",
+          "permission": "write"
+        },
+        {
+          "name": "documents.insertText",
+          "description": "Insert text at a reviewed document revision",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -164,6 +392,23 @@
       "category": "docs_files",
       "auth": "oauth",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "spreadsheets.get",
+          "description": "Read spreadsheet structure",
+          "permission": "read"
+        },
+        {
+          "name": "values.get",
+          "description": "Read a cell range",
+          "permission": "read"
+        },
+        {
+          "name": "values.update",
+          "description": "Update the exact reviewed cells",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -175,6 +420,18 @@
       "category": "marketing",
       "auth": "oauth",
       "operationCount": 2,
+      "operations": [
+        {
+          "name": "sites.list",
+          "description": "List verified Search Console properties",
+          "permission": "read"
+        },
+        {
+          "name": "queries.report",
+          "description": "Read search queries and landing-page performance",
+          "permission": "read"
+        }
+      ],
       "supportsWrite": false,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -186,6 +443,18 @@
       "category": "marketing",
       "auth": "oauth",
       "operationCount": 2,
+      "operations": [
+        {
+          "name": "accounts.list",
+          "description": "List Analytics accounts and properties",
+          "permission": "read"
+        },
+        {
+          "name": "reports.run",
+          "description": "Read a bounded Analytics report",
+          "permission": "read"
+        }
+      ],
       "supportsWrite": false,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -197,6 +466,18 @@
       "category": "marketing",
       "auth": "oauth",
       "operationCount": 2,
+      "operations": [
+        {
+          "name": "accounts.list",
+          "description": "List accessible Google Ads customer accounts",
+          "permission": "read"
+        },
+        {
+          "name": "campaigns.report",
+          "description": "Read campaign cost and performance",
+          "permission": "read"
+        }
+      ],
       "supportsWrite": false,
       "billingNote": "Reads use API quota. Advertising spend belongs to the connected Google Ads account.",
       "payer": "provider_rules"
@@ -208,6 +489,23 @@
       "category": "social",
       "auth": "oauth",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "pages.list",
+          "description": "List Facebook Pages you can access",
+          "permission": "read"
+        },
+        {
+          "name": "posts.list",
+          "description": "Read posts on a Facebook Page",
+          "permission": "read"
+        },
+        {
+          "name": "posts.create",
+          "description": "Publish a reviewed Facebook Page update",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -219,6 +517,39 @@
       "category": "social",
       "auth": "oauth",
       "operationCount": 6,
+      "operations": [
+        {
+          "name": "accounts.list",
+          "description": "List eligible Instagram accounts linked to Pages",
+          "permission": "read"
+        },
+        {
+          "name": "media.list",
+          "description": "Read an Instagram account's media and metrics",
+          "permission": "read"
+        },
+        {
+          "name": "comments.list",
+          "description": "Read comments on an Instagram media item",
+          "permission": "read"
+        },
+        {
+          "name": "comments.reply",
+          "description": "Reply with the exact reviewed comment",
+          "permission": "write"
+        },
+        {
+          "name": "media.create",
+          "description": "Prepare an image publication container",
+          "permission": "write"
+        },
+        {
+          "name": "media.publish",
+          "description": "Publish an explicitly reviewed media container",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Requires an eligible professional Instagram account linked to a Facebook Page.",
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -230,6 +561,28 @@
       "category": "marketing",
       "auth": "oauth",
       "operationCount": 4,
+      "operations": [
+        {
+          "name": "accounts.list",
+          "description": "List accessible Meta advertising accounts",
+          "permission": "read"
+        },
+        {
+          "name": "campaigns.list",
+          "description": "Read campaigns in an advertising account",
+          "permission": "read"
+        },
+        {
+          "name": "insights.report",
+          "description": "Read campaign spend and performance",
+          "permission": "read"
+        },
+        {
+          "name": "campaigns.pause",
+          "description": "Pause a reviewed advertising campaign",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -241,6 +594,23 @@
       "category": "development",
       "auth": "api_key",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "projects.list",
+          "description": "List your Vercel projects",
+          "permission": "read"
+        },
+        {
+          "name": "deployments.list",
+          "description": "Read deployments and their status",
+          "permission": "read"
+        },
+        {
+          "name": "deployments.cancel",
+          "description": "Cancel one deployment",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Uses your Vercel access token and account; hosting and deployment charges follow your Vercel plan.",
       "payer": "connected_account"
@@ -252,6 +622,24 @@
       "category": "creative",
       "auth": "api_key",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "organization.get",
+          "description": "Read your Runway API credit balance",
+          "permission": "read"
+        },
+        {
+          "name": "tasks.get",
+          "description": "Check a generation task and its output",
+          "permission": "read"
+        },
+        {
+          "name": "videos.generate",
+          "description": "Generate a video using your own API credits",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Use a Runway API key from the developer portal. Video generation requires explicit approval and a credit estimate.",
       "supportsWrite": true,
       "billingNote": "Generation consumes your Runway API organization credits. Web subscription credits are separate unless Runway enables a transfer for your organization.",
       "payer": "connected_account"
@@ -263,6 +651,24 @@
       "category": "social",
       "auth": "api_key",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "profile.get",
+          "description": "Read the user authenticated by your X token",
+          "permission": "read"
+        },
+        {
+          "name": "posts.list",
+          "description": "Read posts for an X user",
+          "permission": "read"
+        },
+        {
+          "name": "posts.create",
+          "description": "Publish the exact reviewed post",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Use an OAuth 2.0 user access token from your own X developer project. App-only bearer tokens cannot post on your behalf. Reconnect when the token expires.",
       "supportsWrite": true,
       "billingNote": "API usage is billed to the developer project behind your user access token; X Premium is separate.",
       "payer": "connected_account"
@@ -274,6 +680,29 @@
       "category": "communication",
       "auth": "api_key",
       "operationCount": 4,
+      "operations": [
+        {
+          "name": "phones.list",
+          "description": "Read the phone numbers in your Business account",
+          "permission": "read"
+        },
+        {
+          "name": "templates.list",
+          "description": "Read your approved WhatsApp templates",
+          "permission": "read"
+        },
+        {
+          "name": "messages.send",
+          "description": "Send a reviewed WhatsApp text within an eligible conversation",
+          "permission": "write"
+        },
+        {
+          "name": "templates.send",
+          "description": "Send an approved WhatsApp template",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Requires a WhatsApp Business Cloud API token, a business account ID and an owned phone number ID.",
       "supportsWrite": true,
       "billingNote": "Messages can incur charges on your own WhatsApp Business account.",
       "payer": "connected_account"
@@ -285,6 +714,23 @@
       "category": "development",
       "auth": "oauth",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "sites.list",
+          "description": "List the Jira sites in this authorization",
+          "permission": "read"
+        },
+        {
+          "name": "issues.search",
+          "description": "Search issues in an authorized Jira site",
+          "permission": "read"
+        },
+        {
+          "name": "issues.create",
+          "description": "Create a reviewed Jira issue",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -296,6 +742,23 @@
       "category": "docs_files",
       "auth": "oauth",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "spaces.list",
+          "description": "List spaces in an authorized Confluence site",
+          "permission": "read"
+        },
+        {
+          "name": "pages.get",
+          "description": "Read a Confluence page",
+          "permission": "read"
+        },
+        {
+          "name": "pages.create",
+          "description": "Create a Confluence page with reviewed text",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -307,6 +770,28 @@
       "category": "docs_files",
       "auth": "oauth",
       "operationCount": 4,
+      "operations": [
+        {
+          "name": "search",
+          "description": "Search pages shared with this Notion connection",
+          "permission": "read"
+        },
+        {
+          "name": "pages.get",
+          "description": "Read a Notion page",
+          "permission": "read"
+        },
+        {
+          "name": "blocks.list",
+          "description": "Read the content blocks in a Notion page",
+          "permission": "read"
+        },
+        {
+          "name": "pages.create",
+          "description": "Create a Notion page with reviewed content",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -318,6 +803,29 @@
       "category": "sales_commerce",
       "auth": "oauth",
       "operationCount": 4,
+      "operations": [
+        {
+          "name": "shop.get",
+          "description": "Read your connected Shopify store",
+          "permission": "read"
+        },
+        {
+          "name": "products.list",
+          "description": "Read products from your Shopify store",
+          "permission": "read"
+        },
+        {
+          "name": "orders.list",
+          "description": "Read recent orders from your Shopify store",
+          "permission": "read"
+        },
+        {
+          "name": "products.createDraft",
+          "description": "Create a reviewed draft product",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Enter your store's myshopify.com domain. Only stores that approve this app can be accessed.",
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -329,6 +837,18 @@
       "category": "social",
       "auth": "oauth",
       "operationCount": 2,
+      "operations": [
+        {
+          "name": "profile.get",
+          "description": "Read your connected LinkedIn profile",
+          "permission": "read"
+        },
+        {
+          "name": "posts.create",
+          "description": "Publish a reviewed LinkedIn post",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -340,6 +860,23 @@
       "category": "development",
       "auth": "api_key",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "projects.list",
+          "description": "List your Supabase projects",
+          "permission": "read"
+        },
+        {
+          "name": "organizations.list",
+          "description": "List your Supabase organizations",
+          "permission": "read"
+        },
+        {
+          "name": "database.query",
+          "description": "Run an explicitly reviewed SQL statement",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Uses your Supabase Management API token and project. Database and hosting usage follow your own project plan.",
       "payer": "connected_account"
@@ -351,6 +888,23 @@
       "category": "development",
       "auth": "api_key",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "viewer.get",
+          "description": "Read the Linear account behind your API key",
+          "permission": "read"
+        },
+        {
+          "name": "issues.list",
+          "description": "Read Linear issues",
+          "permission": "read"
+        },
+        {
+          "name": "issues.create",
+          "description": "Create a reviewed Linear issue",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Uses your personal Linear API key and workspace permissions.",
       "payer": "connected_account"
@@ -362,6 +916,23 @@
       "category": "sales_commerce",
       "auth": "oauth",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "contacts.list",
+          "description": "Read HubSpot contacts",
+          "permission": "read"
+        },
+        {
+          "name": "deals.list",
+          "description": "Read HubSpot deals",
+          "permission": "read"
+        },
+        {
+          "name": "contacts.create",
+          "description": "Create a reviewed HubSpot contact",
+          "permission": "write"
+        }
+      ],
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
@@ -373,6 +944,24 @@
       "category": "sales_commerce",
       "auth": "oauth",
       "operationCount": 3,
+      "operations": [
+        {
+          "name": "contacts.list",
+          "description": "Read Salesforce contacts",
+          "permission": "read"
+        },
+        {
+          "name": "opportunities.list",
+          "description": "Read Salesforce pipeline opportunities",
+          "permission": "read"
+        },
+        {
+          "name": "contacts.create",
+          "description": "Create a reviewed Salesforce contact",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Requires a Salesforce organization with API access. Remote Arc enforces local read/write permissions on the upstream api scope.",
       "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"

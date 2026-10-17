@@ -204,8 +204,14 @@ async function approvals(request: Request, env: AppEnv, userId: string, id?: str
 }
 export async function handleApps(request: Request, env: AppEnv, fetcher: typeof fetch = fetch): Promise<Response> {
   try {
-    const user = await getSessionUser(request, env); if (!user) return response({ error: "unauthorized" }, 401);
     const path = new URL(request.url).pathname;
+    // Public capability metadata only: never reads sessions, connections or tokens.
+    if (path === "/api/apps/status" && request.method === "GET") {
+      const available = env.ENABLE_APPS === "1";
+      return Response.json({ enabled: available, providers: Object.keys(APP_CATALOG).map(provider => ({ provider, ready: available && appConfigured(env, provider as AppProvider) })) },
+        { headers: { "cache-control": "public, max-age=60", "access-control-allow-origin": "*", "x-content-type-options": "nosniff" } });
+    }
+    const user = await getSessionUser(request, env); if (!user) return response({ error: "unauthorized" }, 401);
     if (path === "/api/apps" && request.method === "GET") return response(await listApps(env, user.id));
     enabled(env);
     if (path === "/api/apps/connections" && request.method === "POST") return await connectApiKey(request, env, user.id, fetcher);

@@ -21,14 +21,17 @@ export function NativeInstall() {
     <span className="eyebrow">REMOTE ARC {version}</span>
     <h1>{tr("Install the device Agent", "安装设备 Agent")}</h1>
     <p>{tr("The Agent and Execution Core run natively in Go on Windows, macOS and Linux. Choose npm, Homebrew or a standalone download. Each path uses the same paired device and Dashboard permissions.", "Agent 和 Execution Core 在 Windows、macOS 和 Linux 上原生运行。选择 npm、Homebrew 或直接下载，使用同一套设备配对与 Dashboard 权限。")}</p>
-    <div className="nativeInstallQuickStart">
-      <strong>{tr("One-line Homebrew install · macOS / Linux", "Homebrew 一行安装 · macOS / Linux")}</strong>
-      <pre className="docsExample"><code>brew install yaohuangguan/remote-arc/remotelink</code></pre>
-      <p>{tr("No Node.js required. If Homebrew asks you to trust this third-party formula, use the verified trust and tap instructions below before retrying.", "无需 Node.js。如果 Homebrew 要求信任第三方配方，先按下方 Tap / Trust 步骤操作，再重新安装。")}</p>
-    </div>
+
     <h2>npm / npx</h2>
     <pre className="docsExample"><code>npx remotelink@latest</code></pre>
     <p>{tr("Only npm/npx installation requires Node.js 20+. The npm launcher downloads and verifies the native Agent; Go is the default. --go remains a compatible alias. Use --ts only for the retained TypeScript fallback.", "只有 npm/npx 安装方式需要 Node.js 20+。npm 启动器下载并校验原生 Agent，默认运行 Go；--go 保留为兼容别名。--ts 用于保留的 TypeScript 回退。")}</p>
+    <div id="shell-install" className="nativeInstallQuickStart">
+      <h2>{tr("Without Node.js · macOS / Linux", "无需 Node.js · macOS / Linux")}</h2>
+      <pre className="docsExample"><code>{"curl -fsSL https://remotearc.app/install.sh | sh\nremotelink"}</code></pre>
+      <p>{tr("Downloads the native Agent for x64 or ARM64, verifies SHA256 and installs to ~/.local/bin without sudo. WSL is supported. Pair your computer when you first run remotelink. If ~/.local/bin is outside PATH, use the full path printed by the installer.", "下载 x64 或 ARM64 原生 Agent，校验 SHA256，无需 sudo，安装到 ~/.local/bin，也支持 WSL。首次运行 remotelink 时配对电脑；若 ~/.local/bin 不在 PATH 中，使用安装脚本显示的完整路径。")}</p>
+      <p>{tr("Set REMOTEARC_INSTALL_DIR to an absolute path to choose another directory. Stop the Agent before rerunning this command to upgrade.", "可通过 REMOTEARC_INSTALL_DIR 指定其他绝对安装路径。升级时先停止 Agent，再重新运行此命令。")}</p>
+      <a href="/install.sh">{tr("Read the installation script", "查看安装脚本")} →</a>
+    </div>
     <h2>Homebrew</h2>
     <pre className="docsExample"><code>{"brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc\nif brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi\nbrew install yaohuangguan/remote-arc/remotelink\nremotelink"}</code></pre>
     <p>{tr("Available on macOS and Linux; Node.js is not required. Existing remotelink-go installations can use brew upgrade remotelink-go. Install one formula at a time because both provide the remotelink command.", "适用于 macOS 和 Linux，不需要 Node.js。已安装 remotelink-go 的用户可以执行 brew upgrade remotelink-go；两个配方都提供 remotelink 命令，请只安装其中一个。")}</p>

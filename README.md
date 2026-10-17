@@ -52,6 +52,15 @@ TS runtime. Stop the active Agent before switching versions or runtimes.
 
 Standalone 0.6.1 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
 
+On macOS or Linux (including WSL), install without Node.js:
+
+```sh
+curl -fsSL https://remotearc.app/install.sh | sh
+remotelink
+```
+
+The script verifies SHA256, installs to ~/.local/bin without sudo, and leaves pairing and permissions for the first launch. Set REMOTEARC_INSTALL_DIR to an absolute path to choose another directory. Rerun the installer to upgrade after stopping the Agent.
+
 | Platform | Download |
 | --- | --- |
 | macOS Apple Silicon | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.1/remotelink-v0.6.1-darwin-arm64) |

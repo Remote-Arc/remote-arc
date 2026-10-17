@@ -2274,6 +2274,11 @@ function ClientInstallPage({
               <CopyButton value="npx remotelink" />
             </div>
             <small>{tr("Pairs your computer through browser approval · requires Node.js for this npx entry", "通过浏览器确认完成配对 · 此 npx 安装方式需要 Node.js")}</small>
+            <details className="shellInstallAlternative">
+              <summary>{tr("macOS / Linux: install without Node.js", "macOS / Linux：无需 Node.js 安装")}</summary>
+              <div className="docsCodeLine"><code>curl -fsSL https://remotearc.app/install.sh | sh</code><CopyButton value="curl -fsSL https://remotearc.app/install.sh | sh" /></div>
+              <small>{tr("Then run remotelink to pair. Installs to ~/.local/bin and verifies SHA256.", "安装后运行 remotelink 配对。安装到 ~/.local/bin，并验证 SHA256。")}</small>
+            </details>
           </div>
           <div className="installQuickStartMcp">
             <span>{tr("NEXT · ADD THIS REMOTE MCP ADDRESS IN YOUR AI CLIENT", "接下来 · 在 AI 客户端添加这个远程 MCP 地址")}</span>
@@ -2494,6 +2499,7 @@ function Landing({ user }: { user?: User | null }) {
               <CopyButton value={command} />
             </div>
             <small>{tr("Go Agent · npm, Homebrew or standalone download", "Go Agent · npm、Homebrew 或直接下载")}</small>
+            <a className="heroNativeInstall" href="/downloads#shell-install">{tr("No Node.js? Install with curl →", "没有 Node.js？使用 curl 安装 →")}</a>
           </div>
           <div className="landingActions">
             <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>

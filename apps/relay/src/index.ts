@@ -851,6 +851,16 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       });
     }
 
+    if (url.pathname === "/install.sh" && (request.method === "GET" || request.method === "HEAD")) {
+      const response = await env.ASSETS.fetch(request);
+      const headers = new Headers(response.headers);
+      headers.set("content-type", "text/x-shellscript; charset=utf-8");
+      headers.set("x-content-type-options", "nosniff");
+      headers.set("x-robots-tag", "noindex");
+      headers.set("cache-control", "public, max-age=300");
+      return new Response(response.body, { status: response.status, headers });
+    }
+
     const marketingDocumentRequest =
       isMarketingHost &&
       request.method === "GET" &&

@@ -75,6 +75,10 @@ const rootReadme = readFileSync(rootReadmePath, "utf8").replaceAll("\r\n", "\n")
 const installStart = "<!-- native-install:start -->";
 const installEnd = "<!-- native-install:end -->";
 const nativeVersion = latest.version;
+const installerPath = new URL("apps/ui/public/install.sh", root);
+const installer = readFileSync(installerPath, "utf8");
+if (!/^  version='[0-9]+\.[0-9]+\.[0-9]+'$/m.test(installer)) throw new Error("Native installer version marker missing");
+const expectedInstaller = installer.replace(/^  version='[0-9]+\.[0-9]+\.[0-9]+'$/m, "  version='" + nativeVersion + "'");
 const nativeRelease = "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v" + nativeVersion + "/";
 const nativeTargets = [
   ["macOS Apple Silicon", "darwin", "arm64"], ["macOS Intel", "darwin", "amd64"],
@@ -83,6 +87,9 @@ const nativeTargets = [
 ];
 const nativeBlock = [installStart, "### Native downloads and Homebrew", "",
   "Standalone " + nativeVersion + " needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).", "",
+  "On macOS or Linux (including WSL), install without Node.js:", "",
+  "```sh", "curl -fsSL https://remotearc.app/install.sh | sh", "remotelink", "```", "",
+  "The script verifies SHA256, installs to ~/.local/bin without sudo, and leaves pairing and permissions for the first launch. Set REMOTEARC_INSTALL_DIR to an absolute path to choose another directory. Rerun the installer to upgrade after stopping the Agent.", "",
   "| Platform | Download |", "| --- | --- |",
   ...nativeTargets.map(([label, os, arch]) => "| " + label + " | [remotelink](" + nativeRelease + "remotelink-v" + nativeVersion + "-" + os + "-" + arch + (os === "windows" ? ".exe" : "") + ") |"),
   "", "[SHA256SUMS](" + nativeRelease + "SHA256SUMS) · [Release notes](https://github.com/yaohuangguan/remote-arc/releases/tag/remotelink-v" + nativeVersion + ")", "",
@@ -94,7 +101,7 @@ const rootStart = rootReadme.indexOf(installStart);
 const expectedRootReadme = rootReadme.slice(0, rootStart) + nativeBlock + rootReadme.slice(rootReadme.indexOf(installEnd, rootStart) + installEnd.length);
 
 if (mode === "--check") {
-  if (expected !== readme || expectedRootReadme !== rootReadme) {
+  if (expected !== readme || expectedRootReadme !== rootReadme || expectedInstaller !== installer) {
     console.error("Release or native download documentation is out of sync with CHANGELOG.md");
     process.exit(1);
   }
@@ -103,6 +110,7 @@ if (mode === "--check") {
 }
 
 if (mode !== "--write") throw new Error("Unknown mode: " + mode);
+if (expectedInstaller !== installer) writeFileSync(installerPath, expectedInstaller);
 if (expected !== readme) writeFileSync(cliReadmePath, expected);
 if (expectedRootReadme !== rootReadme) writeFileSync(rootReadmePath, expectedRootReadme);
 console.log("synced release docs for remotelink " + latest.version);

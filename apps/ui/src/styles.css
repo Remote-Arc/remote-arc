@@ -12796,3 +12796,8 @@ body{font-size:18px;line-height:1.6}
     display: none;
   }
 }
+
+.heroNativeInstall { display: inline-block; margin-top: 10px; font-size: 12px; color: var(--muted); text-underline-offset: 4px; }
+.shellInstallAlternative { margin-top: 14px; min-width: 0; }
+.shellInstallAlternative summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.shellInstallAlternative .docsCodeLine { margin-top: 10px; overflow-x: auto; }

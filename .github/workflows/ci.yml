@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.17.1
 
@@ -22,6 +22,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm device:contract --check
+      - name: Check Apps core coverage at 90% for every metric and file
+        run: pnpm coverage:apps
       - run: pnpm coverage:ts
       - run: pnpm build:ui
       - run: pnpm test:automations
@@ -37,7 +39,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: apps/agent/go.mod
           cache-dependency-path: |
@@ -53,7 +55,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.17.1
       - uses: actions/setup-node@v7
@@ -68,14 +70,14 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.17.1
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           package-manager-cache: false
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: apps/agent/go.mod
           cache-dependency-path: |
@@ -94,7 +96,7 @@ jobs:
           if [[ "$CLI_VERSION" != *-* ]]; then
             node scripts/verify-device-artifacts.mjs
           fi
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: go-device-binaries
           path: work/go-device/*
@@ -108,14 +110,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.17.1
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           package-manager-cache: false
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: apps/agent/go.mod
           cache-dependency-path: |
@@ -125,7 +127,7 @@ jobs:
       - run: pnpm test:device
       - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
       - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: agent-validation-${{ matrix.os }}
@@ -141,7 +143,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.17.1
 

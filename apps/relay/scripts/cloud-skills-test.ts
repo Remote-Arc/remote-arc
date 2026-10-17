@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import { handleCloudSkills } from "../src/cloud-skills.js";
+import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";
+const url="https://mcp.remotearc.app";
+const request=(path:string,method="GET",host=url)=>new Request(host+path,{method});
+const granted={id:"signed-in-user"};
+const unauth=handleCloudSkills(request("/api/skills"),null);
+assert.equal(unauth.status,401);
+assert.equal(unauth.headers.get("cache-control"),"private, no-store");
+assert.equal(handleCloudSkills(request("/api/skills","POST"),granted).status,405);
+assert.equal(handleCloudSkills(request("/api/skills","GET","https://admin.remotearc.app"),granted).status,404);
+assert.equal(handleCloudSkills(request("/api/skills","GET","https://remotearc.app"),granted).status,404);
+assert.equal(handleCloudSkills(request("/api/skills/something-unknown"),granted).status,404);
+assert.equal(handleCloudSkills(request("/api/skills/../mcp"),granted).status,404);
+const collection=handleCloudSkills(request("/api/skills"),granted);
+assert.equal(collection.status,200);
+assert.equal(collection.headers.get("x-robots-tag"),"noindex");
+const catalog=await collection.json() as {items:Array<{id:string;engineInstalled:boolean|null}>;revision:string;availability:string};
+assert.equal(catalog.items.length,9);
+assert.equal(catalog.availability,"instructions-only");
+assert.ok(catalog.items.every(x=>x.engineInstalled===null));
+assert.match(catalog.revision,/^[a-f0-9]{16}$/);
+for(const skill of BUILTIN_SKILLS){
+ const result=handleCloudSkills(request("/api/skills/"+skill.id),granted);
+ assert.equal(result.status,200,skill.id);
+ const body=await result.json() as {skill:{id:string;content:string};revision:string};
+ assert.equal(body.skill.id,skill.id);
+ assert.equal(body.revision,catalog.revision);
+ assert.match(body.skill.content,/## Device and permission gates/);
+}
+console.log("Cloud Skills test passed: 9 cloud-hosted Skills, auth, host partition and no-runtime promises");

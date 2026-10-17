@@ -25,6 +25,8 @@ const SUPPORTED_SCOPES = [
   "automation:read",
   "automation:write",
   "agent:write",
+  "apps:read",
+  "apps:write",
   "offline_access",
 ] as const;
 

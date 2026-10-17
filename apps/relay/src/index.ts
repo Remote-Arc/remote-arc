@@ -1,4 +1,8 @@
+import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.js";
+export { AdminApiService } from "./admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
+import { handleApps } from "./apps.js";
+import type { AppEnv } from "./app-catalog.js";
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
 import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { runScheduledTasks } from "./task-scheduler.js";
@@ -6,6 +10,9 @@ import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingHttpsRedirect, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { legacyLanguageRedirect } from "./marketing-locale.js";
 import { createRemoteLinkMcp } from "./mcp.js";
+import { handleCloudSkills, handleCloudSkillAction } from "./cloud-skills.js";
+import { callDevice } from "./device-call.js";
+import { consumeToolCall } from "./usage.js";
 import {
   authenticateDevice,
   authenticateMcp,
@@ -86,7 +93,7 @@ import {
 
 export { DeviceRegistry };
 
-type Env = TaskEventEnv & {
+type Env = TaskEventEnv & AppEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
@@ -94,6 +101,8 @@ type Env = TaskEventEnv & {
   APP_ORIGIN?: string;
   MARKETING_ORIGIN?: string;
   ADMIN_ORIGIN?: string;
+  ADMIN_SERVICE_MODE?: string;
+  ADMIN_UI?: Fetcher;
   ENGAGEMENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{success: boolean}> };
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -156,10 +165,13 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     // Explicit host partition. It can later be extracted into a dedicated Worker
     // without changing the public API contracts or frontend route boundaries.
     if (isAdminHost) {
+      const disabled = await publicAdminResponse(request, env);
+      if (disabled) return disabled;
       const staticAsset = url.pathname.startsWith("/assets/") ||
         /^\/(?:remote-arc(?:-app-icon)?[.]svg|favicon[.]ico|manifest[.]webmanifest)$/.test(url.pathname);
       const adminApi = url.pathname === "/api/me" || url.pathname === "/api/monitor" ||
         url.pathname.startsWith("/api/admin/");
+      if (adminApi) return handleAdminServiceRequest(request, env);
       const document = url.pathname === "/" || url.pathname === "/overview";
       if (!adminApi && !staticAsset && !document) {
         return request.method === "GET" || request.method === "HEAD"
@@ -245,6 +257,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       url.pathname === "/dashboard" ||
       url.pathname === "/overview" ||
       url.pathname === "/devices" ||
+      url.pathname === "/apps" ||
       url.pathname === "/automations" ||
       url.pathname === "/connect" ||
       url.pathname === "/security" ||
@@ -410,11 +423,49 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     const submissionMatch = url.pathname.match(/^\/api\/admin\/submissions\/([a-zA-Z0-9-]+)$/);
     if (submissionMatch) return updateWebsiteSubmission(request,env,submissionMatch[1]!);
 
+    // Cloud Skill Registry for Arc Connect and first-party Arc Agent.
+    // Never requires a device install; only reads versioned instructions.
+    if (url.pathname === "/api/skills/plan" || url.pathname === "/api/skills/run") {
+      const session = await getSessionUser(request, env);
+      const oauth = session ? null : await authenticateMcp(request, env);
+      const validOAuth = oauth && oauth.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp" ? oauth : null;
+      const principal = session ? {id:session.id,oauth:false,scopes:""}
+        : validOAuth ? {id:validOAuth.userId,oauth:true,scopes:validOAuth.scope} : null;
+      if(principal){
+        const {success}=await env.MCP_RATE_LIMITER.limit({key:principal.id+":skill-action"});
+        if(!success)return Response.json({error:"rate_limited"},{status:429});
+      }
+      const deviceIdentity=validOAuth|| (session ? {
+        userId:session.id,clientId:"arc-cloud-skills",grantId:null,
+        scope:"browser:read",resource:(env.APP_ORIGIN || env.PUBLIC_ORIGIN)+"/mcp",
+      } : null);
+      return handleCloudSkillAction(request,principal,{
+        consume:async()=>{ if(!principal)throw Error("unauthorized");await consumeToolCall(env,principal.id); },
+        paused:async()=>!principal||await isMcpPaused(env,principal.id),
+        selectDevices:async()=>getDevicesForUser(env,principal!.id),
+        read:async(deviceId,_tabId,tool,args)=>{
+          if(!deviceIdentity)throw Error("unauthorized");
+          return callDevice(env,deviceIdentity,deviceId,tool,args);
+        },
+      });
+    }
+    if (url.pathname === "/api/skills" || url.pathname.startsWith("/api/skills/")) {
+      const session = await getSessionUser(request, env);
+      const oauth = session ? null : await authenticateMcp(request, env);
+      const identity = oauth && oauth.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp" ? oauth : null;
+      return handleCloudSkills(request, session ? { id: session.id } : identity ? { id: identity.userId } : null);
+    }
+
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
       return user
         ? Response.json({ authenticated: true, user })
         : Response.json({ authenticated: false }, { status: 401 });
+    }
+
+    if (url.pathname === "/api/apps" || url.pathname.startsWith("/api/apps/")) {
+      if (url.origin !== new URL(appOrigin).origin) return Response.json({error:"app_host_required"},{status:404});
+      return handleApps(request, env);
     }
 
     if (url.pathname === "/api/status" && request.method === "GET") {
@@ -798,6 +849,16 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return new Response(llmsFullTxt(), {
         headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" },
       });
+    }
+
+    if (url.pathname === "/install.sh" && (request.method === "GET" || request.method === "HEAD")) {
+      const response = await env.ASSETS.fetch(request);
+      const headers = new Headers(response.headers);
+      headers.set("content-type", "text/x-shellscript; charset=utf-8");
+      headers.set("x-content-type-options", "nosniff");
+      headers.set("x-robots-tag", "noindex");
+      headers.set("cache-control", "public, max-age=300");
+      return new Response(response.body, { status: response.status, headers });
     }
 
     const marketingDocumentRequest =

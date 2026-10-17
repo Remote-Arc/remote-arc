@@ -1,3 +1,4 @@
+import { findAppWorkflow, translateCopy } from "./app-workflow-examples.js";
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./landing-interactive-demo.css";
@@ -49,7 +50,23 @@ function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) 
 }
 
 function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEvent[] {
+  const workflow = findAppWorkflow(id);
+  if (workflow) return workflow.traces.map(trace => ({tool: trace.tool + (trace.provider ? " · " + trace.provider : ""), arguments: JSON.stringify(trace.input), output: translateCopy(trace.output,tr),duration: "example"}));
   switch (id) {
+    case "mail":
+      return [
+        { tool: "list_apps", arguments: "{}", output: tr("Gmail / Outlook · connected email accounts", "Gmail / Outlook · 已连接的邮箱"), duration: "25ms" },
+        { tool: "call_app · Gmail", arguments: '{"operation":"messages.list","arguments":{"query":"is:unread subject:launch","limit":10}}', output: tr("3 matching threads · selected launch discussion", "3 个相关讨论 · 选中发布邮件"), duration: "129ms" },
+        { tool: "call_app · Gmail", arguments: '{"operation":"messages.get","arguments":{"id":"example-thread-message"}}', output: tr("Original message and participants read", "已读取原邮件与参与者"), duration: "93ms" },
+        { tool: "call_app · Gmail", arguments: '{"operation":"drafts.create","arguments":{"to":["team@example.com"],"subject":"Re: Launch","body":"Thanks — here is the update…"}}', output: tr("status: pending_approval · reply prepared for review", "状态：等待审批 · 回复内容已准备好"), duration: "21ms" },
+      ];
+    case "calendar":
+      return [
+        { tool: "list_apps", arguments: "{}", output: tr("Google Calendar + Outlook Calendar · read access", "Google Calendar + Outlook Calendar · 读取权限"), duration: "26ms" },
+        { tool: "call_app · Google Calendar", arguments: '{"operation":"events.list","arguments":{"calendar":"primary","limit":30}}', output: tr("Tomorrow’s events read · 10:00–10:30 is open", "已读取明日安排 · 10:00–10:30 空闲"), duration: "118ms" },
+        { tool: "call_app · Outlook Calendar", arguments: '{"operation":"events.list","arguments":{"calendar":"primary","limit":30}}', output: tr("Second calendar checked · no overlapping event", "已核对第二个日历 · 没有冲突"), duration: "104ms" },
+        { tool: "call_app · Google Calendar", arguments: '{"operation":"events.create","arguments":{"calendar":"primary","event":{"summary":"Project review","start":"2026-10-18T10:00:00+13:00","end":"2026-10-18T10:30:00+13:00"}}}', output: tr("status: pending_approval · invitation not sent", "状态：等待审批 · 尚未发送邀请"), duration: "23ms" },
+      ];
     case "job":
       return [
         { tool: "start_process", arguments: '{"command":"node export-report.js","background":true}', output: tr("process_id: proc_demo_01 · running", "process_id: proc_demo_01 · 运行中"), duration: "164ms" },
@@ -93,7 +110,23 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
 type DemoProgress = { working: string; done: string };
 
 function progressFor(id: string, tr: (en: string, zh: string) => string): DemoProgress[] {
+  const workflow = findAppWorkflow(id);
+  if (workflow) return workflow.traces.map(trace => ({working: translateCopy(trace.working,tr),done:translateCopy(trace.output,tr)}));
   switch (id) {
+    case "mail":
+      return [
+        { working: tr("Checking your connected email accounts…", "正在检查已连接的邮箱…"), done: tr("Your Gmail and Outlook connections are available.", "Gmail 与 Outlook 连接已就绪。") },
+        { working: tr("Finding the launch conversation…", "正在查找发布讨论邮件…"), done: tr("Found the thread that needs your response.", "已找到需要回复的邮件。") },
+        { working: tr("Reading the original message for context…", "正在读取原邮件上下文…"), done: tr("Reply grounded in the original conversation.", "回复依据原始邮件内容拟定。") },
+        { working: tr("Preparing the draft for your review…", "正在准备回复草稿，等待你审核…"), done: tr("Reply prepared. Approval is required to create the draft.", "回复已拟好，确认后才会创建草稿。") },
+      ];
+    case "calendar":
+      return [
+        { working: tr("Checking both calendar connections…", "正在检查两种日历连接…"), done: tr("Google Calendar and Outlook Calendar are connected.", "Google Calendar 与 Outlook Calendar 已连接。") },
+        { working: tr("Reading your Google Calendar…", "正在读取 Google Calendar…"), done: tr("Found a 30-minute opening in your Google calendar.", "已在 Google 日历中找到 30 分钟空档。") },
+        { working: tr("Cross-checking your Outlook Calendar…", "正在交叉核对 Outlook Calendar…"), done: tr("The proposed time is clear in both calendars.", "建议时间在两种日历中都没有冲突。") },
+        { working: tr("Preparing the invitation for your approval…", "正在准备会议邀请，等待你确认…"), done: tr("Invitation prepared. No event or invitation has been sent.", "邀请已准备好，尚未创建会议或发出邀请。") },
+      ];
     case "job":
       return [
         { working: tr("Starting the report export…", "正在启动报表导出…"), done: tr("Report export started in the background.", "报表已在后台开始导出。") },
@@ -173,7 +206,10 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
 
   if (!scenario) return null;
 
-  const finalReply = scenarios[selected]?.id === "code"
+  const isAppScenario = Boolean(findAppWorkflow(scenario.id)) || ["mail", "calendar"].includes(scenario.id);
+  const finalReply = isAppScenario
+    ? scenario.result
+    : scenarios[selected]?.id === "code"
     ? tr("I fixed the formatting edge case and reran the tests: 24 passed. The diff is ready for review.", "我修复了格式化的边界问题并重新运行测试：24 项全部通过。修改内容已准备好供你检查。")
     : scenarios[selected]?.id === "inspect"
       ? tr("The logs point to repeated connection timeouts. I haven't changed any files or restarted the service.", "日志显示反复发生连接超时。我没有修改任何文件，也没有重启服务。")
@@ -193,7 +229,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   const progress = progressFor(scenario.id, tr);
   const progressIndex = Math.min(progress.length - 1, Math.max(0, Math.floor(step / 2)));
   const progressTitle = finished
-    ? tr("Finished working on your request", "已完成本次任务")
+    ? isAppScenario ? tr("Ready for your approval", "等待你的确认") : tr("Finished working on your request", "已完成本次任务")
     : step < 1
       ? tr("Thinking through the next steps…", "正在规划执行步骤…")
       : step >= progress.length * 2
@@ -202,7 +238,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   const prompt = scenario.request.replace(/^“|”$/g, "");
 
   return (
-    <div className="homeDemo" ref={demoRef}>
+    <div className="homeDemo" ref={demoRef} data-scenario={scenario.id} data-state={finished ? isAppScenario ? "awaiting_approval" : "complete" : active ? "working" : "ready"}>
       <div className="homeDemoToolbar">
         <div className="homeDemoExamples" aria-label={tr("Try an example request", "选择示例任务")}>
           {scenarios.map((example, index) => (
@@ -251,7 +287,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 {client === "Claude" && <img className="homeDemoAssistantLogo" src={clientLogo.Claude} alt="" />}
                 {client === "Cursor" && <div className="homeDemoCursorAgent"><DemoGlyph name="sparkle" size={15} /><strong>Agent</strong><span>· Auto</span></div>}
                 {client !== "Cursor" && <p className="homeDemoAssistantIntro">
-                  {tr("I'll use Remote Arc to check this on your computer.", "我会通过 Remote Arc 在你的电脑上检查并处理。")}
+                  {isAppScenario ? tr("I’ll check your connected Apps and prepare this for your review.", "我会检查已连接的应用，准备好后交给你审核。") : tr("I'll use Remote Arc to check this on your computer.", "我会通过 Remote Arc 在你的电脑上检查并处理。")}
                 </p>}
                 <div className="homeDemoActivity" aria-live="polite" aria-atomic="false">
                   <header className="homeDemoActivityHeader">
@@ -316,21 +352,21 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
           </div>
         </section>
 
-        <section className="homeDemoTerminal" aria-label={tr("Example device execution log", "示例设备执行日志")}>
+        <section className="homeDemoTerminal" aria-label={isAppScenario ? tr("Example App activity", "示例应用活动") : tr("Example device execution log", "示例设备执行日志")}>
           <header className="homeDemoTerminalHeader">
             <div className="homeDemoTerminalDots" aria-hidden="true"><i /><i /><i /></div>
-            <span>Remote Arc <b>/</b> {tr("device activity", "设备活动")}</span>
-            <span className="homeDemoTerminalDevice"><i aria-hidden="true" />{tr("example-workstation", "示例工作站")}</span>
+            <span>Remote Arc <b>/</b> {isAppScenario ? tr("app activity", "应用活动") : tr("device activity", "设备活动")}</span>
+            <span className="homeDemoTerminalDevice"><i aria-hidden="true" />{isAppScenario ? tr("connected apps", "已连接的应用") : tr("example-workstation", "示例工作站")}</span>
           </header>
           <div className="homeDemoTerminalBody" ref={terminalRef} role="log" aria-label={tr("Simulated tool call sequence", "模拟工具调用序列")}>
             <div className="homeDemoTerminalBanner">
               <span className="homeDemoMonoAccent">remote-arc</span>
-              <span>{tr(" · local execution", " · 本地执行")}</span>
+              <span>{isAppScenario ? tr(" · cloud apps workflow", " · 云端应用工作流") : tr(" · local execution", " · 本地执行")}</span>
             </div>
             <div className="homeDemoTerminalInfo">✓ {tr("Secure MCP connection ready", "安全 MCP 连接已就绪")}</div>
             {step < 0 && <p className="homeDemoTerminalWaiting">{tr("Waiting for a request from your chat…", "等待来自 AI 对话的请求…")}</p>}
             {step >= 0 && (
-              <div className="homeDemoTraceLine"><span className="homeDemoTraceTime">00:00</span><span className="homeDemoTraceEvent">request</span><code>{tr("Device policy checked · approved tools", "已检查设备策略 · 已授权工具")}</code></div>
+              <div className="homeDemoTraceLine"><span className="homeDemoTraceTime">00:00</span><span className="homeDemoTraceEvent">request</span><code>{isAppScenario ? tr("App scopes checked · writes require your approval", "已核对应用权限 · 写操作须由你确认") : tr("Device policy checked · approved tools", "已检查设备策略 · 已授权工具")}</code></div>
             )}
             {events.map((event, index) => {
               const showCall = step >= index * 2 + 1;
@@ -338,21 +374,21 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               return showCall ? <React.Fragment key={event.tool + index}>
                 <div className="homeDemoTraceLine"><span className="homeDemoTraceTime">{`00:${String(index * 2 + 1).padStart(2, "0")}`}</span><span className="homeDemoTraceEvent">tool.call</span><code>{event.tool}</code></div>
                 <div className="homeDemoTraceArgs"><code>{event.arguments}</code></div>
-                {showResult && <div className="homeDemoTraceLine homeDemoTraceResult"><span className="homeDemoTraceTime">{`00:${String(index * 2 + 2).padStart(2, "0")}`}</span><span className="homeDemoTraceSuccess">tool.done</span><code>{event.output} <small>· {event.duration}</small></code></div>}
+                {showResult && <div className={"homeDemoTraceLine homeDemoTraceResult" + (event.output.includes("pending_approval") || event.output.includes("等待审批") ? " homeDemoTraceResult--approval" : "")}><span className="homeDemoTraceTime">{`00:${String(index * 2 + 2).padStart(2, "0")}`}</span><span className="homeDemoTraceSuccess">tool.done</span><code>{event.output} <small>· {event.duration}</small></code></div>}
               </React.Fragment> : null;
             })}
-            {finished && <div className="homeDemoTerminalFinished">✓ {tr("Execution complete · response delivered", "执行完成 · 已返回结果")}</div>}
+            {finished && <div className={"homeDemoTerminalFinished" + (isAppScenario ? " homeDemoTerminalFinished--approval" : "")}>{isAppScenario ? "◇ " : "✓ "}{isAppScenario ? tr("Prepared for review · waiting for your approval", "内容已准备好 · 等待你的确认") : tr("Execution complete · response delivered", "执行完成 · 已返回结果")}</div>}
             {active && <span className="homeDemoTerminalCursor" aria-hidden="true">▌</span>}
           </div>
           <footer className="homeDemoTerminalFooter">
             <span>{tr("Permission", "所需权限")}: {scenario.permission}</span>
-            <span>{finished ? tr("Complete", "已完成") : active ? tr("Executing", "执行中") : tr("Ready", "就绪")}</span>
+            <span>{finished ? isAppScenario ? tr("Awaiting approval", "等待审批") : tr("Complete", "已完成") : active ? tr("Executing", "执行中") : tr("Ready", "就绪")}</span>
           </footer>
         </section>
       </div>
 
       <div className="homeDemoUnder">
-        <p>{tr("Guided simulation with example data. No real device is connected and no commands are executed.", "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。")}</p>
+        <p>{isAppScenario ? tr("Interactive simulation with example accounts. Apps require provider setup and user authorization; this preview performs no live actions or paid generation.", "使用示例账号的交互模拟。Apps 需要平台配置与用户授权；本预览不会操作真实账户或付费生成。") : tr("Guided simulation with example data. No real device is connected and no commands are executed.", "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。")}</p>
         <a href={"/use-cases/" + scenario.link}>{tr("Explore this workflow", "了解这类工作流程")} ↗</a>
       </div>
     </div>

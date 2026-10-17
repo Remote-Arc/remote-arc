@@ -1,0 +1,83 @@
+[
+  {
+    "brand": "youtube",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/youtube.svg"
+  },
+  {
+    "brand": "facebook",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/facebook.svg"
+  },
+  {
+    "brand": "instagram",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/instagram.svg"
+  },
+  {
+    "brand": "vercel",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/vercel.svg"
+  },
+  {
+    "brand": "whatsapp",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/whatsapp.svg"
+  },
+  {
+    "brand": "shopify",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/shopify.svg"
+  },
+  {
+    "brand": "x",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/x.svg"
+  },
+  {
+    "brand": "supabase",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/supabase.svg"
+  },
+  {
+    "brand": "googlesearchconsole",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googlesearchconsole.svg"
+  },
+  {
+    "brand": "googleanalytics",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googleanalytics.svg"
+  },
+  {
+    "brand": "googleads",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googleads.svg"
+  },
+  {
+    "brand": "meta",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/meta.svg"
+  },
+  {
+    "brand": "linkedin",
+    "url": "https://raw.githubusercontent.com/gilbarbara/logos/main/logos/linkedin-icon.svg",
+    "status": 200
+  },
+  {
+    "brand": "salesforce",
+    "url": "https://raw.githubusercontent.com/gilbarbara/logos/main/logos/salesforce.svg",
+    "status": 200
+  },
+  {
+    "brand": "runwayattribution",
+    "url": "https://runway-static-assets.s3.amazonaws.com/site/images/api-page/powered-by-runway-black.svg",
+    "status": 200
+  },
+  {
+    "brand": "runway",
+    "url": "https://runway.com/assets/Runway-Brand-Guidelines.zip",
+    "asset": "Runway_Black_Symbol_SVG.svg",
+    "status": 200
+  }
+]

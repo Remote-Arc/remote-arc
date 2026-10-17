@@ -1,5 +1,6 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
 import { HomeConnectionScene } from "./home-connection-scene.js";
+import { AppsManager } from "./apps-manager.js";
 import { ArcComingSoonPageContent } from "./arc-future.js";
 import { ArcRoadmapPageContent } from "./arc-roadmap.js";
 import { ClientMcpGuide } from "./client-setup-guides.js";
@@ -42,6 +43,8 @@ function isOlderRelease(current: string | null | undefined, latest = LATEST_AGEN
   return false;
 }
 
+const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
+const IntegrationsPage = React.lazy(() => import("./integrations-page.js").then(module => ({ default: module.IntegrationsPage })));
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
 const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
 
@@ -322,7 +325,7 @@ type AutomationDraft = {
   github_merge_method: "merge" | "squash" | "rebase";
 };
 
-type DashboardTab = "overview" | "devices" | "automations" | "connect" | "security" | "monitor" | "settings";
+type DashboardTab = "overview" | "devices" | "automations" | "apps" | "connect" | "security" | "monitor" | "settings";
 
 const MARKETING_ORIGIN = "https://remotearc.app";
 const APP_ORIGIN = "https://mcp.remotearc.app";
@@ -341,6 +344,7 @@ const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   overview: "/overview",
   devices: "/devices",
   automations: "/automations",
+  apps: "/apps",
   connect: "/connect",
   security: "/security",
   monitor: "/monitor",
@@ -424,6 +428,7 @@ function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
   if (tab === "overview") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
   if (tab === "devices") return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
   if (tab === "automations") return <svg {...common}><path d="M4 12a8 8 0 0 1 14.6-4.5"/><path d="M18 3v5h-5"/><path d="M20 12a8 8 0 0 1-14.6 4.5"/><path d="M6 21v-5h5"/></svg>;
+  if (tab === "apps") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 17.5h7m-3.5-3.5v7"/></svg>;
   if (tab === "connect") return <svg {...common}><path d="M8.5 12.5 12 9l3.5 3.5"/><path d="M12 9v9"/><path d="M5 6.5A4.5 4.5 0 0 1 9.5 2h5A4.5 4.5 0 0 1 19 6.5"/></svg>;
   if (tab === "security") return <svg {...common}><path d="M12 3 5 6v5c0 4.7 2.7 7.8 7 10 4.3-2.2 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>;
   if (tab === "monitor") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
@@ -2269,6 +2274,11 @@ function ClientInstallPage({
               <CopyButton value="npx remotelink" />
             </div>
             <small>{tr("Pairs your computer through browser approval · requires Node.js for this npx entry", "通过浏览器确认完成配对 · 此 npx 安装方式需要 Node.js")}</small>
+            <details className="shellInstallAlternative">
+              <summary>{tr("macOS / Linux: install without Node.js", "macOS / Linux：无需 Node.js 安装")}</summary>
+              <div className="docsCodeLine"><code>curl -fsSL https://remotearc.app/install.sh | sh</code><CopyButton value="curl -fsSL https://remotearc.app/install.sh | sh" /></div>
+              <small>{tr("Then run remotelink to pair. Installs to ~/.local/bin and verifies SHA256.", "安装后运行 remotelink 配对。安装到 ~/.local/bin，并验证 SHA256。")}</small>
+            </details>
           </div>
           <div className="installQuickStartMcp">
             <span>{tr("NEXT · ADD THIS REMOTE MCP ADDRESS IN YOUR AI CLIENT", "接下来 · 在 AI 客户端添加这个远程 MCP 地址")}</span>
@@ -2470,7 +2480,7 @@ function Landing({ user }: { user?: User | null }) {
   const command = "npx remotelink";
   return (
     <PublicLayout user={user}>
-      <section className="landingHero">
+      <section className="landingHero landingHero--constellation">
         <div className="heroCopy">
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
@@ -2489,6 +2499,7 @@ function Landing({ user }: { user?: User | null }) {
               <CopyButton value={command} />
             </div>
             <small>{tr("Go Agent · npm, Homebrew or standalone download", "Go Agent · npm、Homebrew 或直接下载")}</small>
+            <a className="heroNativeInstall" href="/downloads#shell-install">{tr("No Node.js? Install with curl →", "没有 Node.js？使用 curl 安装 →")}</a>
           </div>
           <div className="landingActions">
             <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>
@@ -5064,6 +5075,7 @@ function Dashboard({
     ["overview", tr("Overview", "概览")],
     ["devices", tr("Devices", "设备")],
     ["automations", tr("Tasks", "任务")],
+    ["apps", tr("Apps", "应用")],
     ["connect", tr("Connect AI", "连接 AI")],
     ["security", tr("Security", "安全")],
     // Platform operations now live on admin.remotearc.app, not the customer dashboard.
@@ -5079,7 +5091,7 @@ function Dashboard({
         </a>
         <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
           {navItems.map(([id, label]) => (
-            <button key={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
+            <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
               <span className="sideNavIcon"><DashboardNavIcon tab={id} /></span>
               <span className="sideNavLabel">{label}</span>
             </button>
@@ -6466,6 +6478,8 @@ function Dashboard({
           </>
         )}
 
+        {active === "apps" && <AppsManager />}
+
         {active === "connect" && (
           <>
             <section className="overviewTopbar connectPageHeader">
@@ -6880,11 +6894,12 @@ function Dashboard({
           ["overview", tr("Home", "首页")],
           ["devices", tr("Devices", "设备")],
           ["automations", tr("Tasks", "任务")],
+          ["apps", tr("Apps", "应用")],
           ["connect", tr("Connect", "连接")],
           ["security", tr("Security", "安全")],
           ["settings", tr("Settings", "设置")],
         ] as Array<[DashboardTab, string]>).map(([id, label]) => (
-          <button key={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
+          <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
             <span aria-hidden="true"><DashboardNavIcon tab={id} /></span>
             <small>{label}</small>
           </button>
@@ -7485,7 +7500,8 @@ function App() {
   if (routePath === "/demo") return <DemoPage user={user === undefined ? null : user} />;
   if (routePath === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
   if (routePath === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
-  if (routePath === "/docs") return <DocsPage user={user === undefined ? null : user} />;
+  if (routePath === "/docs" && window.location.hash.startsWith("#docs-")) return <DocsPage user={user === undefined ? null : user} />;
+  if (routePath === "/docs" || (routePath.startsWith("/docs/") && routePath !== "/docs/mcp")) return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><DocsPortal path={routePath}/></React.Suspense></PublicLayout>;
   if (routePath === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
   if (routePath === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
   const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
@@ -7495,6 +7511,7 @@ function App() {
   if (routePath === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
   if (routePath === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
   if (routePath === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/integrations") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading integrations…", "正在加载应用目录…")}</main>}><IntegrationsPage /></React.Suspense></PublicLayout>;
   if (routePath === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
   if (routePath === "/early-access") return <PublicLayout user={user === undefined ? null : user}><EngagementPage category="early_access" /></PublicLayout>;
   if (routePath === "/feedback") return <PublicLayout user={user === undefined ? null : user}><EngagementPage category="feedback" /></PublicLayout>;

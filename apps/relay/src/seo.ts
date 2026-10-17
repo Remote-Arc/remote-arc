@@ -1,3 +1,4 @@
+import { DOC_TOPICS, DOC_PATHS } from "../../../packages/docs/src/catalog.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { localizedPages, isChineseMarketingPath, unprefixedMarketingPath } from "./marketing-locale.js";
 import { chineseSeo } from "./zh-seo.js";
@@ -123,6 +124,7 @@ const articles: Record<string, SeoPage> = {
 };
 
 const pages: Record<string, SeoPage> = {
+  "/integrations": { title: "Remote Arc Apps — Explore native integrations", description: "Browse App categories, supported operations, authorization requirements and usage costs. Connect Apps works independently of Arc Agent; account connections require provider setup.", canonical: SITE + "/integrations" },
   "/": { title: "Remote Arc — Let AI Chat Work on Your Computer, No API Key", description: "Turn compatible AI chats into real computer actions through secure Remote MCP. No separate model API key or pay-per-token API bill. Supported free chat plans can connect; provider tool limits apply.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude, Gemini and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
@@ -221,6 +223,16 @@ type CrawlPage = {
 };
 
 const crawlPages: Record<string, CrawlPage> = {
+  "/integrations": {
+    h1: "Explore Remote Arc App integrations",
+    intro: "Find the apps your AI can work with through Remote Arc Connect. Browse supported operations and account requirements before authorizing a connection. Connect Apps rolls out independently of Arc Agent.",
+    sections: [
+      { heading: "A catalog of actual operations", text: "Explore email and calendars, documents and files, development, team communication, social media, creative AI, marketing and analytics, and sales and commerce. Each App lists its supported read and write operations. The catalog does not imply full feature parity with the provider." },
+      { heading: "Connect your own account", text: "OAuth integrations use a platform application managed by Remote Arc and consent from each user. Selected providers use a user's own API credential instead. The connection service must be enabled and the provider configured before account authorization is offered. Read access is the default; writes require review of the exact request." },
+      { heading: "Provider usage has its own rules", text: "Runway generation spends API organization credits; web subscriptions may not include API credits. API quotas and fees can belong to a connected account or developer project. Remote Arc tool-call limits are separate. Check the selected provider's details and actual connection availability." }
+    ],
+    links: [["/#apps", "App categories"], ["/connect-ai", "Set up Remote Arc Connect"], ["/arc", "Explore Arc"], ["/security-model", "Permissions and security"]]
+  },
   "/": {
     h1: "Remote computer access for AI through MCP",
     intro: "Don’t let AI stop at chat. Remote Arc connects compatible ChatGPT, Claude, Cursor and other AI clients through MCP to computers you explicitly pair. Let your existing chat work on files, terminals and processes without needing a separate model API key or token purchase. Existing AI plan limits still apply; your paired devices enforce their own permissions.",
@@ -583,6 +595,24 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   };
 }
 
+
+// Documentation topics share their route registry and new guide copy with the UI.
+const legacyDocSections: Record<string, number[]> = { connect:[0,1], devices:[0,2], files:[2,3], processes:[2,3,4], browser:[1,2], tasks:[3,4], security:[2,3], architecture:[0,1,3,4], troubleshooting:[0,1,2,4], reference:[0,1,2,3,4] };
+for (const topic of DOC_TOPICS) {
+  const path = "/docs/" + topic.slug;
+  pages[path] = { title: topic.title.en + " — Remote Arc Docs", description: topic.description.en, canonical: SITE + path };
+  crawlPages[path] = {
+    h1: topic.title.en, intro: topic.description.en,
+    sections: topic.sections?.map(section => ({ heading: section.heading.en, text: section.text.en })) ?? (legacyDocSections[topic.slug] || []).map(index => crawlPages["/docs"]!.sections![index]!),
+    links: [["/docs", "Documentation"], ...(topic.links?.map(([url,en]) => [url!,en!] as [string,string]) || []), ["/docs/apps", "Apps"], ["/docs/usage-and-costs", "Usage and costs"]]
+  };
+  chineseSeo[path] = {
+    title: topic.title.zh + " — Remote Arc 文档", description: topic.description.zh, h1: topic.title.zh, intro: topic.description.zh,
+    sections: topic.sections?.map(section => ({ heading: section.heading.zh, text: section.text.zh })) ?? chineseSeo["/docs"]!.sections
+  };
+}
+crawlPages["/docs"]!.links = [...DOC_TOPICS.map(topic => ["/docs/" + topic.slug, topic.title.en] as [string,string]), ...(crawlPages["/docs"]!.links || [])];
+
 function pageFor(pathname: string): SeoPage | null {
   if (isChineseMarketingPath(pathname)) {
     const base = unprefixedMarketingPath(pathname);
@@ -875,7 +905,9 @@ export function renderMarketingHtml(html: string, pathname: string) {
 }
 
 const sitemapPaths = [
+  ...DOC_PATHS,
   "/",
+  "/integrations",
   "/downloads",
   "/install/chatgpt",
   "/install/claude",

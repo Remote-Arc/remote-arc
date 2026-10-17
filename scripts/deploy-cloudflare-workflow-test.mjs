@@ -9,9 +9,9 @@ assert.ok(yaml.includes("on:\n  workflow_dispatch:"), "production must require e
 assert.ok(!yaml.includes("workflow_run:"), "CI cannot deploy by itself");
 assert.ok(yaml.includes("github.ref == 'refs/heads/master'"), "reject feature branch releases");
 assert.ok(yaml.includes("github.actor == 'yaohuangguan'"), "only the repository owner can manually promote production");
-assert.ok(yaml.includes("backup_confirmation:"), "production release must require a D1 backup confirmation input");
-assert.ok(yaml.includes('BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}'), "read the confirmation provided for this release");
-assert.ok(yaml.includes('if [ "$BACKUP_CONFIRMATION" != "BACKUP_VERIFIED" ]'), "reject release without confirmation");
+assert.ok(yaml.includes("backup_confirmation:"), "retain optional D1 backup confirmation");
+assert.match(yaml, /backup_confirmation:[\s\S]*?required: false/, "no migration release should not need confirmation");
+assert.match(yaml, /BACKUP_CONFIRMATION: \$\{\{ inputs\.backup_confirmation \}\}/, "preflight must receive confirmation");
 assert.ok(yaml.includes("actions: read"), "read-only CI verification scope");
 assert.ok(yaml.includes("git ls-remote origin refs/heads/master"), "reject stale release candidates");
 assert.ok(yaml.includes("actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA"), "exact-SHA CI check");
@@ -19,33 +19,26 @@ assert.ok(yaml.includes('conclusion == "success"'), "CI must pass");
 assert.ok(yaml.includes("environment: production"), "production environment protection");
 const concurrency = yaml.slice(yaml.indexOf("concurrency:"), yaml.indexOf("jobs:"));
 assert.ok(concurrency.includes("group: remote-arc-production") && concurrency.includes("cancel-in-progress: false"), "do not cancel a running production migration");
-const backupStart = yaml.indexOf("- name: Require verified production database recovery point");
-const backupEnd = yaml.indexOf("- name: Verify latest master", backupStart);
-assert.ok(backupStart > 0 && backupEnd > backupStart, "recovery check precedes release verification");
-const backupBlock = yaml.slice(backupStart, backupEnd);
-const backupBody = backupBlock.split("        run: |\n")[1];
-assert.ok(backupBody, "backup confirmation must execute a shell check");
-const backupScript = backupBody.split("\n").filter(line => line.startsWith("          "))
-  .map(line => line.slice(10)).join("\n");
-for (const [confirmation, shouldPass] of [["", false], ["not yet", false], ["BACKUP_VERIFIED", true]]) {
-  const result = spawnSync("bash", ["-e", "-c", backupScript], {
-    env: { ...process.env, BACKUP_CONFIRMATION: confirmation }, encoding: "utf8",
-  });
-  assert.equal(result.status === 0, shouldPass, "backup gate must enforce exact confirmation");
-}
+const preflightStart=yaml.indexOf("- name: Check production D1 and conditionally require backup");
+const preflightEnd=yaml.indexOf("- name: Apply and verify production D1 migrations");
+assert.ok(preflightStart>0&&preflightEnd>preflightStart,"preflight must run before D1 mutation");
+const preflight=yaml.slice(preflightStart,preflightEnd);
+assert.match(preflight,/node scripts\/d1-promotion-preflight\.mjs/);
+assert.match(preflight,/CLOUDFLARE_D1_API_TOKEN/,"preflight uses read-only D1 access via dedicated token");
 const d1Name = "- name: Apply and verify production D1 migrations";
 const deployName = "- name: Deploy Remote Arc to Cloudflare";
 const start = yaml.indexOf(d1Name);
-const end = yaml.indexOf(deployName);
+const end = yaml.indexOf("- name: Verify all production migrations are applied");
 assert.ok(start > 0 && end > start, "D1 migration must precede worker deployment");
 const d1 = yaml.slice(start, end);
+assert.match(d1,/if: steps\.d1_preflight\.outputs\.needs_migration == 'true'/);
 assert.match(d1, /secrets\.CLOUDFLARE_D1_API_TOKEN/, "D1 must use a dedicated secret");
 assert.match(d1, /set -euo pipefail/, "fail closed independent of shell defaults");
 assert.match(d1, /migrations apply remote-link-auth --remote/);
 assert.match(d1, /migrations list remote-link-auth --remote/, "verify pending migrations after apply");
 assert.doesNotMatch(d1, /set \+e|code:\s*7403|::warning::|\|\| true/, "migration errors must never be ignored");
-assert.match(yaml.slice(end), /secrets\.CLOUDFLARE_API_TOKEN/, "retain existing Worker token");
-assert.doesNotMatch(yaml.slice(end), /secrets\.CLOUDFLARE_D1_API_TOKEN/, "D1-only token must not deploy Worker");
+assert.match(yaml.slice(yaml.indexOf(deployName)), /secrets\.CLOUDFLARE_API_TOKEN/, "retain existing Worker token");
+assert.doesNotMatch(yaml.slice(yaml.indexOf(deployName)), /secrets\.CLOUDFLARE_D1_API_TOKEN/, "D1-only token must not deploy Worker");
 
 const scriptBody = d1.split("\n        run: |\n")[1];
 assert.ok(scriptBody, "expected an inline migration shell script");
@@ -101,3 +94,13 @@ try {
   rmSync(dir, { recursive: true, force: true });
 }
 console.log("PASS: D1 fail-closed gate: missing secret, failed apply, failed verify, success");
+
+const backupStart=yaml.indexOf("- name: Prepare verified encrypted production D1 backup");
+const backupUpload=yaml.indexOf("- name: Retain encrypted recovery artifact");
+assert(backupStart>0&&backupUpload>backupStart&&backupUpload<preflightStart,"verified recoverable backup must be retained before preflight/mutation");
+assert.match(yaml.slice(backupStart,backupUpload),/secrets\.D1_BACKUP_KEY/);
+assert.match(yaml.slice(backupUpload,preflightStart),/\*\.enc/);
+assert.doesNotMatch(yaml.slice(backupUpload,preflightStart),/\*\.sql|continue-on-error/);
+assert.match(preflight,/if \[ "\$\{\{ steps\.d1_backup\.outputs\.backup_verified \}\}" = "true" \]/);
+assert.match(preflight,/export BACKUP_CONFIRMATION=BACKUP_VERIFIED/);
+assert(yaml.indexOf("Provision Apps vault")>end&&yaml.indexOf("Provision Apps vault")<yaml.indexOf(deployName));

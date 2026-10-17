@@ -1,3 +1,5 @@
+import {runModelGateway,resolveModelGateway,type ModelGatewayEnv} from "./model-gateway.js";
+import type {BillingContext} from "./billing-ledger.js";
 export type RawDecision = {
     decision?: unknown;
     tool?: unknown;
@@ -10,7 +12,7 @@ export type RawDecision = {
 
 export class PlannerTransientError extends Error {}
 
-export type AgentPlannerEnv = {
+export type AgentPlannerEnv = ModelGatewayEnv & {
   OPENAI_API_KEY?: string;
   AGENT_MODEL?: string;
   AGENT_MODEL_BASE_URL?: string;
@@ -39,6 +41,7 @@ export type AgentPlannerInput = {
   memory: string;
   observation: string;
   plannedContext?: unknown;
+  billing?: BillingContext;
 };
 
 export type AgentPlannerDecision = {
@@ -115,40 +118,21 @@ Critical rules:
 const clip = (value: string, max: number) =>
   value.length <= max ? value : value.slice(0, max) + "\n…[truncated]";
 
-function responseText(payload: unknown) {
-  const direct = (payload as { output_text?: unknown })?.output_text;
-  if (typeof direct === "string" && direct.trim()) return direct.trim();
-
-  const output = (payload as {
-    output?: Array<{
-      type?: string;
-      content?: Array<{ type?: string; text?: unknown }>;
-    }>;
-  })?.output;
-  if (!Array.isArray(output)) return "";
-
-  for (const item of output) {
-    if (item?.type !== "message" || !Array.isArray(item.content)) continue;
-    for (const content of item.content) {
-      if (content?.type === "output_text" && typeof content.text === "string") {
-        return content.text.trim();
-      }
-    }
-  }
-  return "";
-}
-
 export function agentPlannerConfigured(env: AgentPlannerEnv) {
-  return Boolean(env.OPENAI_API_KEY || env.AI);
+  const gateway=resolveModelGateway(env);
+  const model=gateway?.models.find(x=>x.id===(env.MODEL_GATEWAY_MODEL_ID||gateway.autoModelId));
+  return Boolean(gateway?.enabled && model && gateway.adapters[model.provider] &&
+    (model.provider==="workers_ai"?gateway.freePoolId:gateway.paidGrantId));
 }
 
 export async function planAgentTurn(
   env: AgentPlannerEnv,
   input: AgentPlannerInput,
 ): Promise<AgentPlannerDecision> {
-  if (!env.OPENAI_API_KEY && !env.AI) {
+  const gateway=resolveModelGateway(env);
+  if (!agentPlannerConfigured(env) || !gateway || !input.billing) {
     throw new Error(
-      "Agent planner is not configured. Configure Workers AI or OPENAI_API_KEY.",
+      "Agent planner requires an enabled Model Gateway, verified budget authorization and task billing context.",
     );
   }
 
@@ -168,112 +152,18 @@ export async function planAgentTurn(
     JSON.stringify(userPayload);
 
 
-  let raw: RawDecision;
-
-  if (env.OPENAI_API_KEY) {
-    const model = env.AGENT_MODEL || "gpt-5.6-luna";
-    const base = (env.AGENT_MODEL_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
-    const response = await fetch(base + "/responses", {
-      method: "POST",
-      signal: AbortSignal.timeout(90_000),
-      headers: {
-        authorization: "Bearer " + env.OPENAI_API_KEY,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        store: false,
-        reasoning: { effort: "medium" },
-        max_output_tokens: input.plannedContext ? 6000 : 2200,
-        input: [
-          {
-            role: "system",
-            content: [{ type: "input_text", text: SYSTEM_PROMPT }],
-          },
-          {
-            role: "user",
-            content: [{ type: "input_text", text: userText }],
-          },
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "remote_arc_agent_decision",
-            strict: true,
-            schema: DECISION_SCHEMA,
-          },
-        },
-      }),
-    }).catch((error) => { throw new PlannerTransientError("Planner transport failed: " + String(error)); });
-
-    const payload = (await response.json().catch(() => ({}))) as {
-      error?: { message?: string };
-      status?: string;
-    };
-    if (!response.ok) {
-      const ErrorType = response.status === 429 || response.status >= 500 ? PlannerTransientError : Error;
-      throw new ErrorType(
-        "Agent planner request failed: " +
-          (payload.error?.message || response.status + " " + response.statusText),
-      );
-    }
-
-    const text = responseText(payload);
-    if (!text) {
-      throw new Error("Agent planner returned no structured decision.");
-    }
-    try {
-      raw = JSON.parse(text) as RawDecision;
-    } catch {
-      throw new Error("Agent planner returned invalid JSON.");
-    }
-  } else {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    const result = (await Promise.race([env.AI!.run(
-      env.WORKERS_AI_MODEL || "@cf/openai/gpt-oss-120b",
-      {
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userText },
-        ],
-        max_tokens: input.plannedContext ? 6000 : 2200,
-        temperature: 0.2,
-        response_format: {
-          type: "json_schema",
-          json_schema: DECISION_SCHEMA,
-        },
-      },
-    ), new Promise((_, reject) => { timeout = setTimeout(() => reject(new PlannerTransientError("Workers AI planner timed out.")), 90_000); })]).catch((error) => { throw new PlannerTransientError("Workers AI transport failed: " + String(error)); }).finally(() => clearTimeout(timeout))) as {
-      response?: unknown;
-      errors?: Array<{ message?: string }>;
-    };
-
-    if (result.errors?.length) {
-      throw new Error(
-        "Workers AI planner request failed: " +
-          (result.errors[0]?.message || "unknown error"),
-      );
-    }
-
-    const workerResponse = result.response;
-    if (typeof workerResponse === "string") {
-      try {
-        raw = JSON.parse(workerResponse) as RawDecision;
-      } catch {
-        throw new Error("Workers AI planner returned invalid JSON.");
-      }
-    } else if (
-      workerResponse &&
-      typeof workerResponse === "object" &&
-      !Array.isArray(workerResponse)
-    ) {
-      raw = workerResponse as RawDecision;
-    } else {
-      throw new Error("Workers AI planner returned no structured decision.");
-    }
+  try {
+    const result=await runModelGateway(gateway,{
+      context:input.billing,modelId:env.MODEL_GATEWAY_MODEL_ID||"auto",
+      system:SYSTEM_PROMPT,user:userText,schema:DECISION_SCHEMA,
+      maxOutputTokens:input.plannedContext?4096:2200,
+    },value=>validateAgentDecision(value as RawDecision,input.allowedTools));
+    return result.value;
+  } catch(error) {
+    // No provider fallback. An uncertain request keeps its reservation and
+    // the same task operation cannot create another paid inference request.
+    throw error;
   }
-
-  return validateAgentDecision(raw, input.allowedTools);
 }
 
 export function validateAgentDecision(raw: RawDecision, allowedTools: AgentToolName[]): AgentPlannerDecision {

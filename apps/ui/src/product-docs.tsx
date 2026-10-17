@@ -1,10 +1,11 @@
+import { localizedWebsiteHref } from "./marketing-paths.js";
 import React from "react";
 import { useI18n } from "./i18n.js";
 import { ArchitectureDeepDive } from "./architecture-deep-dive.js";
 import "./public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
-const engineering = "https://github.com/yaohuangguan/remote-arc/blob/master/docs/";
+const engineering = "https://github.com/Remote-Arc/remote-arc/blob/master/docs/";
 
 export const publicToolGroups = [
   { en: "Device discovery", zh: "设备发现", scope: "devices:read", tools: ["list_devices", "device_tools"] },
@@ -41,8 +42,16 @@ function ToolReference() {
   </>;
 }
 
-export function Documentation() {
-  const { tr } = useI18n();
+function SelectedSections({ children, sectionIds }: { children: React.ReactNode; sectionIds?: readonly string[] }) {
+  return <>{React.Children.toArray(children).filter(child => {
+    if (!sectionIds) return true;
+    if (!React.isValidElement<{ id?: string }>(child)) return false;
+    return child.type === ArchitectureDeepDive ? sectionIds.includes("architecture-deep") : Boolean(child.props.id && sectionIds.includes(child.props.id.replace(/^docs-/, "")));
+  })}</>;
+}
+
+export function Documentation({ sectionIds, title, description }: { sectionIds?: readonly string[]; title?: string; description?: string } = {}) {
+  const { tr, locale } = useI18n();
   const contents = [
     ["start", tr("Set up once", "一次配置")], ["model", tr("Chat, tools and Tasks", "聊天、工具与 Task")],
     ["routing", tr("System architecture", "系统架构")],
@@ -62,24 +71,27 @@ export function Documentation() {
   return <main className="technicalDoc productDocs">
     <header className="articleHeader">
       <span className="eyebrow">{tr("DOCUMENTATION", "文档")}</span>
-      <h1>{tr("Your AI. Your computer. Work that can continue.", "你的 AI、你的电脑，可以持续推进的工作。")}</h1>
-      <p>{tr("Pair a computer, choose its permissions and connect your AI through Remote MCP. Use ordinary tools for immediate work, or a durable Task when work needs to continue, wait for an event or run later.", "配对电脑、选择设备权限，再通过 Remote MCP 连接 AI。即时操作直接使用工具；需要持续推进、等待事件或稍后执行的工作，则保存为持久 Task。")}</p>
-      <div className="articleMetaLinks"><a href="/docs/mcp">{tr("MCP reference", "MCP 接入参考")} →</a><a href="/docs/long-running-work">{tr("Long-running work", "持续工作指南")} →</a><a href="/use-cases">{tr("Use cases", "使用场景")} →</a></div>
-      <TaskAvailability />
+      <h1>{title || tr("Your AI. Your computer. Work that can continue.", "你的 AI、你的电脑，可以持续推进的工作。")}</h1>
+      <p>{description || tr("Pair a computer, choose its permissions and connect your AI through Remote MCP. Use ordinary tools for immediate work, or a durable Task when work needs to continue, wait for an event or run later.", "配对电脑、选择设备权限，再通过 Remote MCP 连接 AI。即时操作直接使用工具；需要持续推进、等待事件或稍后执行的工作，则保存为持久 Task。")}</p>
+      <div className="articleMetaLinks"><a href={localizedWebsiteHref("/docs/mcp", locale)}>{tr("MCP reference", "MCP 接入参考")} →</a><a href={localizedWebsiteHref("/docs/long-running-work", locale)}>{tr("Long-running work", "持续工作指南")} →</a><a href={localizedWebsiteHref("/use-cases", locale)}>{tr("Use cases", "使用场景")} →</a></div>
+      {(!sectionIds || sectionIds.includes("automations")) && <TaskAvailability />}
     </header>
     <div className="technicalDocLayout">
-      <aside className="articleToc"><strong>{tr("CONTENTS", "目录")}</strong>{contents.map(([id, title]) => <a key={id} href={"#docs-" + id}>{title}</a>)}</aside>
-      <article className="technicalArticle">
+      <aside className="articleToc"><strong>{tr("CONTENTS", "目录")}</strong>{contents.filter(([id]) => !sectionIds || sectionIds.includes(id!)).map(([id, title]) => <a key={id} href={"#docs-" + id}>{title}</a>)}</aside>
+      <article className="technicalArticle"><SelectedSections sectionIds={sectionIds}>
         <section id="docs-start">
           <h2>{tr("Set up the computer and the AI client once", "电脑和 AI 客户端各配置一次")}</h2>
           <p>{tr("On the Windows, macOS or Linux computer that owns the project, install the native Agent using a download, Homebrew or npm/npx. Only the npm/npx command below requires Node.js 20 or newer. The Agent opens a short-lived browser pairing flow. Sign in, compare the code and approve the correct machine.", "在保存项目的 Windows、macOS 或 Linux 电脑上，通过直接下载、Homebrew 或 npm/npx 安装原生 Agent。只有下面的 npm/npx 命令需要 Node.js 20 或更高版本。Agent 会打开短期浏览器配对流程；登录、核对配对码并确认正确的电脑。")}</p>
           <Code>npx remotelink@latest</Code>
+          <p>{tr("Without Node.js on macOS or Linux (including WSL), use the native shell installer, then run remotelink to pair:", "macOS 或 Linux（包括 WSL）没有 Node.js 时，使用原生安装脚本，然后运行 remotelink 配对：")}</p>
+          <Code>{"curl -fsSL https://remotearc.app/install.sh | sh\nremotelink"}</Code>
+          <p>{tr("The installer verifies SHA256 and installs to ~/.local/bin without sudo. If that directory is outside PATH, it prints the full command to run. Set REMOTEARC_INSTALL_DIR to an absolute directory to choose another location. Stop the Agent before rerunning the installer to upgrade.", "安装脚本验证 SHA256，无需 sudo，默认安装到 ~/.local/bin。如果该目录不在 PATH 中，会显示完整启动路径。可通过 REMOTEARC_INSTALL_DIR 指定其他绝对路径。升级时先停止 Agent，再重新运行安装脚本。")}</p>
           <p>{tr("Remote Arc 0.6 uses the native Go Agent and Execution Core by default. npm downloads a verified binary; Homebrew and standalone downloads run without Node.js. The TS compatibility runtime remains available with --ts.", "Remote Arc 0.6 默认使用原生 Go Agent 和 Execution Core。npm 下载经过校验的二进制；Homebrew 和直接下载不需要 Node.js。--ts 保留 TS 兼容运行时。")}</p>
-          <p><a href="/downloads">{tr("Native downloads, Homebrew, upgrades and stopping the Agent", "原生下载、Homebrew、升级与停止 Agent")} →</a></p>
+          <p><a href={localizedWebsiteHref("/downloads", locale)}>{tr("Native downloads, Homebrew, upgrades and stopping the Agent", "原生下载、Homebrew、升级与停止 Agent")} →</a></p>
           <p>{tr("New devices start with read-oriented tools. File editing, terminal execution, workspace roots and login background connection are separate choices. Finish setup before connecting your AI. The background switch installs an OS login service only after setup, and Dashboard reports its verified local state.", "新设备从读取类工具开始。文件编辑、终端执行、工作区目录和登录后台连接可以分别选择。完成设备设置后再连接 AI；后台开关会在完成设置后安装 OS 登录服务，Dashboard 显示的是本机确认后的状态。")}</p>
           <Code>{endpoint}</Code>
           <p>{tr("Connect the AI client to this endpoint and complete Remote Arc OAuth. Use the client-specific installation guide for ChatGPT, Claude or Cursor. Pairing a computer and authorizing an AI client are independent: you can revoke either relationship separately.", "将 AI 客户端连接到这个地址并完成 Remote Arc OAuth。ChatGPT、Claude 和 Cursor 各有安装指南。配对电脑与授权 AI 客户端是两条独立关系，可以分别撤销。")}</p>
-          <div className="articleMetaLinks"><a href="/remote-mcp">{tr("What is a remote MCP server?", "什么是 Remote MCP Server？")} →</a><a href="/install/chatgpt">ChatGPT →</a><a href="/install/claude">Claude →</a><a href="/install/cursor">Cursor →</a></div>
+          <div className="articleMetaLinks"><a href={localizedWebsiteHref("/remote-mcp", locale)}>{tr("What is a remote MCP server?", "什么是 Remote MCP Server？")} →</a><a href={localizedWebsiteHref("/install/chatgpt", locale)}>ChatGPT →</a><a href={localizedWebsiteHref("/install/claude", locale)}>Claude →</a><a href={localizedWebsiteHref("/install/cursor", locale)}>Cursor →</a></div>
         </section>
         <section id="docs-model">
           <h2>{tr("Keep using your AI chat", "继续从 AI 聊天入口使用")}</h2>
@@ -138,7 +150,7 @@ export function Documentation() {
           <h2>{tr("Fresh AI judgment has a hard boundary", "新的 AI 判断有明确边界")}</h2>
           <p>{tr("Remote Arc can keep deterministic commands and waits durable without a model thinking continuously. If a new result requires diagnosis, strategy selection or another genuinely new decision, an active supported AI host must resume the work.", "Remote Arc 可以在模型不持续推理时持久执行确定性命令与等待。如果新结果需要诊断、策略选择或其他真正的新判断，就必须由可用且受支持的 AI 宿主重新接手。")}</p>
           <p>{tr("Ordinary Chat currently has no supported code-level primitive that lets Remote Arc wake the same conversation and start a new turn. Experimental source-goal work remains in development and is not part of the production tool contract.", "普通 Chat 目前没有受支持的代码级能力，让 Remote Arc 主动唤醒同一对话并开始新一轮。Source Goal 等实验仍留在开发阶段，不属于生产工具契约。")}</p>
-          <a href="/docs/long-running-work">{tr("Durable-task boundaries", "持久任务边界")} →</a>
+          <a href={localizedWebsiteHref("/docs/long-running-work", locale)}>{tr("Durable-task boundaries", "持久任务边界")} →</a>
         </section>
         <section id="docs-schedule">
           <h2>{tr("Future starts, recurring work and keeping the computer awake", "未来启动、周期工作与电脑保持唤醒")}</h2>
@@ -149,7 +161,7 @@ export function Documentation() {
         <section id="docs-browser">
           <h2>{tr("Read the tabs you explicitly share", "读取你明确共享的标签页")}</h2>
           <p>{tr("The Chrome companion adds scoped page context to the same MCP connection. Share as many tabs as you need; Remote Arc has no fixed tab-count cap, and every tab starts read-only. You can separately enable Click & fill for one shared tab. Interaction requires a fresh page snapshot, rejects stale element refs, and blocks recognized password, one-time-code, payment-card and file-picker fields. Browser tools remain ordinary scoped MCP tools; durable deterministic Tasks do not gain extra browser authority.", "Chrome Companion 为同一 MCP 连接提供受控页面上下文。可以同时共享任意数量的标签页，Remote Arc 不设置固定数量上限，每个标签页默认只读；需要时再对某一个已共享标签页单独开启 Click & fill。交互必须基于最新页面快照，过期元素引用会被拒绝，并阻止能够通过标准字段类型或 autocomplete 元数据识别出的密码、一次性验证码、支付卡与文件选择字段。浏览器工具仍是普通的受控 MCP 工具；持久确定性 Task 不会因此获得额外浏览器权限。")}</p>
-          <a href="/docs/mcp#chrome-browser">{tr("Install the browser companion", "安装浏览器 Companion")} →</a>
+          <a href={localizedWebsiteHref("/docs/mcp#chrome-browser", locale)}>{tr("Install the browser companion", "安装浏览器 Companion")} →</a>
         </section>
         <section id="docs-sandbox">
           <h2>{tr("Native execution and sandbox isolation", "本机执行与沙箱隔离")}</h2>
@@ -164,7 +176,7 @@ export function Documentation() {
           <p>{tr("Active file contents, tool arguments and command output pass through the hosted relay and your chosen AI client. Transport uses HTTPS/WSS; this is not zero-knowledge end-to-end encryption. Operational audit records retain metadata such as tool, device, time and outcome rather than raw payloads.", "当前文件内容、工具参数和命令输出会经过托管 Relay 并返回所选 AI 客户端。传输使用 HTTPS/WSS，不属于 zero-knowledge 端到端加密。运行审计保留工具、设备、时间和结果等元数据，而非原始 Payload。")}</p>
           <p>{tr("Durable task storage is separate from audit storage. It saves approved commands/plans, objectives, verification, policy snapshots, run summaries, factual memory, bounded observations and completion evidence. Observations can contain file content or command output. Pending source decisions can contain edit content; their bodies are cleared after consumption, while idempotency hashes remain.", "持久任务存储独立于审计存储，会保存已批准的命令或计划、目标、验证、策略快照、运行摘要、事实记忆、受限观察和完成证据。观察可能包含文件内容或命令输出；待消费源决策可能包含编辑内容，消费后清除正文并保留幂等 Hash。")}</p>
           <p>{tr("Hosted goals send bounded context to the configured planner provider. Source goals return it to the authorized source client. Task event callbacks use an encrypted stored signing secret and carry short change metadata; readers obtain full context through authorized tools. Full local process capture and Undo snapshots have local retention limits.", "托管目标把受限上下文发送到配置的 Planner 服务，源目标则返回给已授权源客户端。任务事件回调使用加密保存的签名 Secret，仅携带简短变化元数据；完整上下文通过授权工具读取。本地完整进程捕获和 Undo 快照有各自的保留限制。")}</p>
-          <a href="/privacy">{tr("Privacy details", "隐私详情")} →</a>
+          <a href={localizedWebsiteHref("/privacy", locale)}>{tr("Privacy details", "隐私详情")} →</a>
         </section>
         <section id="docs-troubleshoot">
           <h2>{tr("When work is not progressing", "工作没有推进时")}</h2>
@@ -180,15 +192,15 @@ export function Documentation() {
           <h2>{tr("Availability and practical limits", "可用状态与实际边界")}</h2>
           <p>{tr("The production contract includes remote tools, durable deterministic task recovery, device task controls and bounded keep-awake helpers. Adaptive source-goal continuation and autonomous ordinary-Chat wakeup remain experimental and are not advertised as shipped capability.", "生产契约包含远程工具、持久确定性任务恢复、设备任务控制和有界保持唤醒 Helper。自适应 Source Goal 续接与普通 Chat 自主唤醒仍属实验，不作为已上线能力宣传。")}</p>
           <p>{tr("Remote Arc does not provide GUI desktop control, arbitrary shell containment, exactly-once external effects or guaranteed model reasoning duration. Set a deliverable, verification and reasonable limits; treat failed, expired, cancelled and blocked work as distinct outcomes.", "Remote Arc 当前不提供 GUI 桌面控制、任意 Shell 隔离、外部副作用 exactly-once 保证或固定模型推理时长。请设置交付物、验收和合理限制，区分失败、到期、取消与阻塞结果。")}</p>
-          <div className="articleEndLinks"><a href="/docs/long-running-work">{tr("Long-running work", "持续工作")} →</a><a href="/security-model">{tr("Security model", "安全模型")} →</a><a href="/use-cases">{tr("Use cases", "使用场景")} →</a></div>
+          <div className="articleEndLinks"><a href={localizedWebsiteHref("/docs/long-running-work", locale)}>{tr("Long-running work", "持续工作")} →</a><a href={localizedWebsiteHref("/security-model", locale)}>{tr("Security model", "安全模型")} →</a><a href={localizedWebsiteHref("/use-cases", locale)}>{tr("Use cases", "使用场景")} →</a></div>
         </section>
-      </article>
+      </SelectedSections></article>
     </div>
   </main>;
 }
 
 export function McpReference() {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   return <main className="technicalDoc productDocs">
     <header className="articleHeader"><span className="eyebrow">REMOTE MCP</span><h1>{tr("Connect an AI client. Use the same paired computers.", "连接 AI 客户端，复用已配对的电脑。")}</h1>
       <p>{tr("One Streamable HTTP endpoint, Remote Arc OAuth and explicit tools. This reference covers connection, scopes, device discovery, deterministic durable tasks and browser sharing.", "一个 Streamable HTTP 端点、Remote Arc OAuth 和明确的工具。本参考涵盖连接、Scope、设备发现、确定性持久任务与浏览器共享。")}</p>
@@ -202,7 +214,7 @@ export function McpReference() {
         <p>{tr("Pair your computer and separately add the MCP connection inside the AI app. For eligible ChatGPT accounts, open Plugins → + → Add custom MCP server, enter the Remote Arc HTTPS endpoint, complete OAuth and enable the resulting plugin. A public directory listing is not yet available. See the client-specific install guide for the complete UI steps.", "先配对电脑，再在 AI 客户端独立添加 MCP 连接。具备权限的 ChatGPT 账户可打开 Plugins → ＋ → Add custom MCP server，输入 Remote Arc HTTPS 地址、完成 OAuth 并启用插件。当前尚未公开上架。具体 UI 步骤见各客户端安装指南。")}</p>
         <p><a href="https://developers.openai.com/plugins/deploy/connect-chatgpt" target="_blank" rel="noreferrer">{tr("Official OpenAI connection guide", "OpenAI 官方连接指南")} ↗</a></p>
         <p>{tr("Claude uses a custom Remote MCP connector and OAuth. Cursor can use the generated MCP installation link or its remote server configuration. Other clients must support the endpoint transport and OAuth discovery; compatibility does not imply they can continue an agent overnight.", "Claude 使用自定义 Remote MCP Connector 和 OAuth；Cursor 可使用生成的 MCP 安装链接或远程服务器配置。其他客户端需要支持此端点的传输和 OAuth 发现。连接兼容不代表具备过夜 Agent 续接能力。")}</p>
-        <div className="articleMetaLinks"><a href="/install/chatgpt">ChatGPT →</a><a href="/install/claude">Claude →</a><a href="/install/cursor">Cursor →</a></div>
+        <div className="articleMetaLinks"><a href={localizedWebsiteHref("/install/chatgpt", locale)}>ChatGPT →</a><a href={localizedWebsiteHref("/install/claude", locale)}>Claude →</a><a href={localizedWebsiteHref("/install/cursor", locale)}>Cursor →</a></div>
       </section>
       <section id="mcp-auth"><h2>{tr("OAuth and device access are separate", "OAuth 与设备权限分离")}</h2>
         <p>{tr("The endpoint uses OAuth authorization code flow with PKCE and published discovery metadata. Sign in to Remote Arc and review the requested scopes. Device credentials stay with the local agent; you do not paste a computer credential into the AI client. Revoking a client grant, pausing account MCP access or revoking a device can stop access independently.", "端点使用带 PKCE 的 OAuth 授权码流程和公开发现元数据。登录 Remote Arc 并核对请求 Scope；设备凭证留在本地 Agent，不需要粘贴给 AI 客户端。客户端授权撤销、账户 MCP 暂停和设备撤销可分别切断访问。")}</p>
@@ -215,11 +227,11 @@ export function McpReference() {
       </section>
       <section id="mcp-tools"><h2>{tr("Tools and required scopes", "工具与所需 Scope")}</h2><ToolReference /></section>
       <section id="chrome-browser"><h2>{tr("Install the scoped Chrome companion", "安装受控 Chrome Companion")}</h2>
-        <p><a href="/chrome-extension">{tr("Open the Chrome Companion download and installation page", "打开 Chrome Companion 下载与安装页面")} →</a></p>
+        <p><a href={localizedWebsiteHref("/chrome-extension", locale)}>{tr("Open the Chrome Companion download and installation page", "打开 Chrome Companion 下载与安装页面")} →</a></p>
         <p>{tr("Download and unzip the companion. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted folder. Open its popup, select Connect to Remote Arc and approve browser pairing, then explicitly Share this tab. It is an unpacked beta, not a Chrome Web Store extension; downloaded versions must be reloaded manually.", "下载并解压 Companion，在 chrome://extensions 开启开发者模式，选择「加载已解压的扩展程序」并指定解压文件夹。打开扩展，点击 Connect to Remote Arc 并批准浏览器配对，再手动 Share this tab。此 Beta 尚未上架 Chrome Web Store；以后更新仍需重新下载并加载。")}</p>
         <p>{tr("Use browser_list_tabs to select tab_id when several tabs are shared. browser_read_page returns a snapshotId plus stable refs for that snapshot. browser_click and browser_fill require both that snapshot and an explicit per-tab Click & fill grant; a click invalidates the snapshot and the page must be read again.", "同时共享多个标签页时，用 browser_list_tabs 选择 tab_id。browser_read_page 会返回 snapshotId 和当前快照内的元素 ref；browser_click 与 browser_fill 只有在该标签页明确开启 Click & fill 后才能使用。每次点击都会使当前快照失效，下一次交互前必须重新读取页面。")}</p>
       </section>
-      <footer className="articleEndLinks"><a href="/docs">{tr("Product documentation", "产品文档")} →</a><a href="/security-model">{tr("Security model", "安全模型")} →</a></footer>
+      <footer className="articleEndLinks"><a href={localizedWebsiteHref("/docs", locale)}>{tr("Product documentation", "产品文档")} →</a><a href={localizedWebsiteHref("/security-model", locale)}>{tr("Security model", "安全模型")} →</a></footer>
     </article></div>
   </main>;
 }

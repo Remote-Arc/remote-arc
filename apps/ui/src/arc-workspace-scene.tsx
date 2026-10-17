@@ -42,7 +42,7 @@ export function ArcExecutionScene() {
     </header>
     <div className="arcDeskBrief">
       <span className="arcDeskAvatar">Y</span>
-      <div><span>{tr("YOU SET THE DIRECTION", "你来确定目标")}</span><strong>{tr("Prepare my weekly project update.", "帮我整理本周的项目进展。")}</strong><p>{tr("Use the project notes and merged PRs. Leave a draft for me.", "参考项目笔记和已合并的 PR，先生成草稿给我。")}</p></div>
+      <div><span>{tr("YOU SET THE DIRECTION", "你来确定目标")}</span><strong>{tr("Prepare my weekly project update.", "帮我整理本周的项目进展。")}</strong><p>{tr("Check merged GitHub PRs and Vercel deployment status. Leave a draft for me.", "核对 GitHub 已合并的 PR 与 Vercel 部署状态，先生成草稿给我。")}</p></div>
       <SceneIcon name="message" />
     </div>
     <div className="arcDeskBody">
@@ -61,8 +61,8 @@ export function ArcExecutionScene() {
             <div className="arcDeskSourceContent">{step >= 1 ? <><span className="arcDeskSourceTag">{tr("MERGED", "已合并")}</span><p>{tr("Improve device reconnection", "优化设备重新连接")}</p><small>{tr("Source 01 · Example project", "来源 01 · 示例项目")}</small></> : <><i /><i /><small>{tr("Waiting for the brief", "等待任务开始")}</small></>}</div>
           </article>
           <article className="arcDeskSource" data-ready={step >= 1}>
-            <div className="arcDeskSourceHead"><span className="arcDeskBrand" data-brand="notion"><img src="/app-brands/notion.svg" alt="" width="24" height="24" /></span><div><strong>Notion</strong><small>{tr("Project notes", "项目笔记")}</small></div><span className="arcDeskSourceState">{step >= 1 ? <SceneIcon name="check" /> : "02"}</span></div>
-            <div className="arcDeskSourceContent">{step >= 1 ? <><span className="arcDeskSourceTag arcDeskSourceTag--notes">{tr("PROJECT NOTE", "项目笔记")}</span><p>{tr("Next: test the reconnect flow", "下一步：验证重新连接流程")}</p><small>{tr("Source 02 · Example project", "来源 02 · 示例项目")}</small></> : <><i /><i /><small>{tr("Selected for this task", "已选为本次任务资料")}</small></>}</div>
+            <div className="arcDeskSourceHead"><span className="arcDeskBrand" data-brand="vercel"><img src="/app-brands/vercel.svg" alt="" width="24" height="24" /></span><div><strong>Vercel</strong><small>{tr("Deployment status", "部署状态")}</small></div><span className="arcDeskSourceState">{step >= 1 ? <SceneIcon name="check" /> : "02"}</span></div>
+            <div className="arcDeskSourceContent">{step >= 1 ? <><span className="arcDeskSourceTag arcDeskSourceTag--notes">{tr("PREVIEW · ERROR", "预览 · ERROR")}</span><p>{tr("One preview needs investigation", "一个预览部署需要排查")}</p><small>{tr("Source 02 · Example project", "来源 02 · 示例项目")}</small></> : <><i /><i /><small>{tr("Selected for this task", "已选为本次任务资料")}</small></>}</div>
           </article>
           <div className="arcDeskConductor"><span className="arcDeskConductorMark"><img src="/remote-arc.svg" alt="" width="25" height="25" /></span><div><strong>{step === 4 ? tr("Work, brought together.", "资料已整理为成果。") : tr("Arc is connecting the dots.", "Arc 正在串联资料。")}</strong><span>{tr("Context → draft → source check", "收集资料 → 生成草稿 → 核对依据")}</span></div><span className="arcDeskSignal" aria-hidden="true"><i /><i /><i /></span></div>
         </div>
@@ -78,8 +78,8 @@ export function ArcExecutionScene() {
               <p>{tr("Device reconnection was improved in the merged update.", "已合并的更新优化了设备重新连接体验。")}<sup className={step >= 3 ? "verified" : ""}>01</sup></p>
             </div>
             <div className="arcDeskDraftSection" aria-hidden={step < 2} data-revealed={step >= 2}>
-              <span>{tr("02 / UP NEXT", "02 / 下一步")}</span><h4>{tr("Put the reconnect flow to the test", "验证重新连接流程")}</h4>
-              <p>{tr("The project notes identify reconnect testing as the next action.", "项目笔记将重新连接测试列为下一项工作。")}<sup className={step >= 3 ? "verified" : ""}>02</sup></p>
+              <span>{tr("02 / UP NEXT", "02 / 下一步")}</span><h4>{tr("Investigate the failing preview", "排查失败的预览部署")}</h4>
+              <p>{tr("The Vercel deployment status flags one preview for investigation.", "Vercel 的部署状态显示，一个预览需要进一步排查。")}<sup className={step >= 3 ? "verified" : ""}>02</sup></p>
             </div>
             <div className="arcDeskDocumentEmpty" aria-hidden="true"><i /><i /><i /><i /><i /></div>
           </div>
@@ -88,6 +88,6 @@ export function ArcExecutionScene() {
       </div>
     </div>
     <footer className="arcDeskFooter"><span className="arcDeskActivityDot" /><span key={step} className="arcDeskActivityText">{status[step]}</span><span className="arcDeskCounter">0{step + 1} / 05</span></footer>
-    <p className="arcDeskDisclosure">{tr("Sample content · GitHub and Notion are planned integrations, not live connections.", "示例内容 · GitHub 与 Notion 均为规划中的集成，并非实时连接。")}</p>
+    <p className="arcDeskDisclosure">{tr("Sample content · this Arc workspace is a concept. GitHub and Vercel use the independent Connect Apps foundation; provider setup and account authorization are required.", "示例内容 · Arc 工作台为概念展示。GitHub 与 Vercel 使用独立的 Connect Apps 基础，需要平台配置与账号授权。")}</p>
   </div>;
 }

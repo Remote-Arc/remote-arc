@@ -5,8 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       backup_confirmation:
-        description: "Type BACKUP_VERIFIED after validating a recoverable production D1 backup"
-        required: true
+        description: "Optional external backup attestation; pending migrations also require the automatically verified encrypted backup"
+        required: false
+        default: ""
         type: string
 
 permissions:
@@ -30,15 +31,6 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Require verified production database recovery point
-        env:
-          BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}
-        run: |
-          if [ "$BACKUP_CONFIRMATION" != "BACKUP_VERIFIED" ]; then
-            echo "::error::Verify a recoverable D1 production backup before promotion."
-            exit 1
-          fi
-
       - name: Verify latest master and successful CI for exact SHA
         env:
           GH_TOKEN: ${{ github.token }}
@@ -58,7 +50,7 @@ jobs:
           echo "Verified production candidate: $GITHUB_SHA"
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10.17.1
 
@@ -89,12 +81,48 @@ jobs:
             console.log("Verified Remote Arc production Cloudflare account:", payload.result.id);
           '
 
+      # Read production D1 migration history BEFORE any mutation. If nothing
+      # is pending, neither backup confirmation nor D1 apply is needed.
+      # Unknown history, permission errors and JSON parsing errors fail closed.
+      - name: Prepare verified encrypted production D1 backup
+        id: d1_backup
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
+          D1_BACKUP_KEY: ${{ secrets.D1_BACKUP_KEY }}
+        run: node scripts/d1-production-backup.mjs --out "$RUNNER_TEMP/remote-arc-d1-backup"
+
+      - name: Retain encrypted recovery artifact
+        if: steps.d1_backup.outputs.backup_verified == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-d1-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            ${{ steps.d1_backup.outputs.backup_directory }}/*.enc
+            ${{ steps.d1_backup.outputs.backup_directory }}/manifest.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Check production D1 and conditionally require backup
+        id: d1_preflight
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+          BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          if [ "${{ steps.d1_backup.outputs.backup_verified }}" = "true" ]; then
+            # Attest only after export, isolated restore, authenticated encryption,
+            # decryption/re-restore and successful encrypted artifact retention.
+            export BACKUP_CONFIRMATION=BACKUP_VERIFIED
+          fi
+          node scripts/d1-promotion-preflight.mjs
+
       - name: Apply and verify production D1 migrations
+        if: steps.d1_preflight.outputs.needs_migration == 'true'
         working-directory: apps/relay
         env:
-          # Separate, account-scoped D1 Edit token; never reuse the Worker deploy token.
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
-          # Wrangler can skip account enumeration for least-privilege D1 tokens.
           CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
         run: |
           set -euo pipefail
@@ -102,9 +130,27 @@ jobs:
             echo "::error::Missing CLOUDFLARE_D1_API_TOKEN. Create an Account > D1 > Edit token for the Remote Arc Cloudflare account before deploying."
             exit 1
           fi
-          # Fail closed on 7403, missing token, SQL errors or pending migrations.
           pnpm exec wrangler d1 migrations apply remote-link-auth --remote
           pnpm exec wrangler d1 migrations list remote-link-auth --remote
+
+      - name: Verify all production migrations are applied
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+        run: |
+          set -euo pipefail
+          # A second read also fences concurrent migrations/partial apply.
+          BACKUP_CONFIRMATION=BACKUP_VERIFIED node scripts/d1-promotion-preflight.mjs --assert-clean
+          # The preflight above must report no pending migrations.
+          cd apps/relay
+          pnpm exec wrangler d1 migrations list remote-link-auth --remote
+
+      - name: Provision Apps vault without rotating existing keys
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+          APP_TOKEN_KEY: ${{ secrets.APP_TOKEN_KEY }}
+        run: node scripts/ensure-apps-vault.mjs
 
       - name: Deploy Remote Arc to Cloudflare
         env:

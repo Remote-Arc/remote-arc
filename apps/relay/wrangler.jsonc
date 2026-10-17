@@ -83,6 +83,7 @@
     "APP_ORIGIN": "https://mcp.remotearc.app",
     "MARKETING_ORIGIN": "https://remotearc.app",
     "ADMIN_ORIGIN": "https://admin.remotearc.app",
+    "ADMIN_SERVICE_MODE": "legacy",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
     "MCP_METRICS_SAMPLE_RATE": "0.1",
@@ -93,7 +94,8 @@
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
     "ALERT_EMAIL": "moviegoer24@gmail.com",
     "ALERT_FROM_EMAIL": "alerts@remotearc.app",
-    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "1"
+    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "1",
+    "ENABLE_APPS": "1"
   },
   "ratelimits": [
     {
@@ -131,7 +133,10 @@
     {
       "name": "ENGAGEMENT_RATE_LIMITER",
       "namespace_id": "41007",
-      "simple": { "limit": 5, "period": 60 }
+      "simple": {
+        "limit": 5,
+        "period": 60
+      }
     },
     {
       "name": "AUTH_RATE_LIMITER",

@@ -1,8 +1,10 @@
+import { DOC_PATHS } from "../../../packages/docs/src/catalog.js";
 /** Public pages with both English and Simplified Chinese content. */
 export const localizedPages = [
+ ...DOC_PATHS,
  "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work",
- "/pricing", "/downloads", "/arc", "/roadmap", "/feedback", "/early-access",
+ "/integrations", "/pricing", "/downloads", "/arc", "/roadmap", "/feedback", "/early-access",
  "/blogs",
  "/blogs/go-vs-typescript-agent-benchmarks",
  "/blogs/why-i-built-remote-arc",

@@ -18,11 +18,23 @@ const targets = [
 export function NativeInstall() {
   const { tr } = useI18n();
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash !== "#homebrew" && hash !== "#shell-install") return;
-    // The route is lazy-loaded, so native fragment scrolling can precede its DOM.
-    const frame = requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" }));
-    return () => cancelAnimationFrame(frame);
+    let frame: number | undefined;
+    const alignFragment = () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      // Lazy loading can miss native scrolling; always read the latest fragment.
+      frame = requestAnimationFrame(() => {
+        const hash = window.location.hash;
+        if (hash === "#homebrew" || hash === "#shell-install") {
+          document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+        }
+      });
+    };
+    alignFragment();
+    window.addEventListener("hashchange", alignFragment);
+    return () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", alignFragment);
+    };
   }, []);
   return <section id="agent-downloads" className="nativeInstall">
     <span className="eyebrow">REMOTE ARC {version}</span>

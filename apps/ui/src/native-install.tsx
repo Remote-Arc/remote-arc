@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { useI18n } from "./i18n.js";
 import "./public-docs.css";
@@ -17,6 +17,13 @@ const targets = [
 
 export function NativeInstall() {
   const { tr } = useI18n();
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash !== "#homebrew" && hash !== "#shell-install") return;
+    // The route is lazy-loaded, so native fragment scrolling can precede its DOM.
+    const frame = requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   return <section id="agent-downloads" className="nativeInstall">
     <span className="eyebrow">REMOTE ARC {version}</span>
     <h1>{tr("Install the device Agent", "安装设备 Agent")}</h1>

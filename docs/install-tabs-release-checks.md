@@ -1,6 +1,6 @@
 # Install command tabs and production verification
 
-The homepage defaults to npx. The same command card offers curl for native macOS/Linux/WSL installation and Homebrew, with the relevant requirements and matching copy action. Windows users can use npx or the native download link. The curl/Homebrew command blocks include remotelink for the first launch; installation does not authorize a device or grant tools by itself. The Homebrew tab links to the full tap/trust instructions.
+The homepage defaults to npx. The same command card offers curl for native macOS/Linux/WSL installation and Homebrew, with the relevant requirements and matching copy action. Windows users can use npx or the native download link. The curl/Homebrew command blocks include remotelink for the first launch; installation does not authorize a device or grant tools by itself. The Homebrew tab links to the full tap/trust instructions. Lazy-loaded download pages restore the requested Homebrew or shell-install fragment after mounting.
 
 The tabs support Left/Right, Home/End, roving focus, labeled panels and clipboard failure feedback. Changing methods clears old copy status, including a still-pending clipboard request. The card uses the existing theme tokens and respects reduced motion.
 

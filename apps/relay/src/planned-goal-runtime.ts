@@ -266,6 +266,8 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
       objective: p?.objective || goal.objective, successCriteria: p?.success_criteria || goal.success_criteria, workspace: s.workspace?.path || goal.workspace,
       iteration: agent.iteration + 1, maxIterations: goal.max_iterations, allowedTools: goal.allowed_tools,
       memory: s.phase_memory, observation: agent.observation, plannedContext: plannedContext(s, task),
+      billing:{userId:task.user_id,organizationId:"personal:"+task.user_id,taskId:task.id,
+        runId:state.run_id||"",operationId:"planner-"+(agent.iteration+1),lane:"arc_hosted"},
     });
     if (goal.controller !== "source" && decision) await recordPlusUsage(env, task.user_id, { planner_turns: 1 });
     if (!decision) { await wait(s.replan_reason || "Next action requires the source AI; saved deterministic work has settled."); return; }

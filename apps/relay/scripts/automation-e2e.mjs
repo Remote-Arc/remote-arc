@@ -42,7 +42,7 @@ const mockServer=http.createServer(async(req,res)=>{
     if(unifiedPlannerTurns!==null)unifiedPlannerTurns++;
     plannerCalls++;
     res.setHeader("content-type","application/json");
-    res.end(JSON.stringify({id:"resp_e2e_"+plannerCalls,status:"completed",output:[{type:"message",content:[{type:"output_text",text:JSON.stringify(decision)}]}]}));
+    res.end(JSON.stringify({id:"resp_e2e_"+plannerCalls,status:"completed",usage:{input_tokens:20,output_tokens:10},output:[{type:"message",content:[{type:"output_text",text:JSON.stringify(decision)}]}]}));
     return;
   }
   if(req.method==="POST"&&/^\/app\/installations\/\d+\/access_tokens$/.test(url.pathname)){
@@ -72,7 +72,7 @@ assert(baseConfig.triggers?.crons?.includes("* * * * *"),"Production must regist
 assert(baseConfig.triggers.crons.includes("*/5 * * * *"),"Keep the monitor Cron as a dispatch fallback");
 baseConfig.routes=[];
 delete baseConfig.ai;
-baseConfig.vars={...(baseConfig.vars||{}),ENABLE_EXPERIMENTAL_AGENT_GOALS:"1",OPENAI_API_KEY:"e2e-key",AGENT_MODEL_BASE_URL:mockBase,AGENT_MODEL:"gpt-5.6-luna",GITHUB_APP_ID:"12345",GITHUB_APP_PRIVATE_KEY:privateKey,GITHUB_APP_INSTALLATION_ID:"67890",GITHUB_API_BASE_URL:mockBase};
+baseConfig.vars={...(baseConfig.vars||{}),MODEL_GATEWAY_ENABLED:"1",MODEL_GATEWAY_MODEL_ID:"fixture-openai",MODEL_GATEWAY_PAID_GRANT_ID:"e2e-grant",MODEL_GATEWAY_LOCAL_TEST_ENDPOINT:mockBase,MODEL_GATEWAY_MODELS:JSON.stringify([{id:"fixture-openai",provider:"openai",model:"fixture-model",maxOutputTokens:4096,inputMicrosPerMillion:1000,outputMicrosPerMillion:1000}]),ENABLE_EXPERIMENTAL_AGENT_GOALS:"1",OPENAI_API_KEY:"e2e-key",AGENT_MODEL_BASE_URL:mockBase,AGENT_MODEL:"gpt-5.6-luna",GITHUB_APP_ID:"12345",GITHUB_APP_PRIVATE_KEY:privateKey,GITHUB_APP_INSTALLATION_ID:"67890",GITHUB_API_BASE_URL:mockBase};
 // "/*" already routes /__scheduled through the Worker. Newer Wrangler rejects
 // a redundant explicit /__scheduled entry when the wildcard is present.
 const e2eConfig=repo+"/apps/relay/wrangler.e2e.json";
@@ -267,6 +267,31 @@ try {
   await tick();
   for(let i=0;i<5;i++){await poke(goalId);await tick();}
   row=await get(goalId); assert(row.status==="completed"&&row.run_count===2,"goal completes on second attempt "+JSON.stringify(row));
+
+
+  // Explicit, local-only hosted budgets. The production code never auto-enrolls Connect users.
+  assert(/^[a-f0-9-]{36}$/.test(deviceId),"safe SQL fixture device ID");
+  const fixtureDay=new Date().toISOString().slice(0,10);
+  const billingSql=`
+    INSERT INTO billing_model_grants(id,user_id,organization_id,provider,max_cost_micros,expires_at,granted_by_user_id,created_at)
+    SELECT 'e2e-grant',user_id,'personal:'||user_id,'openai',1000000,'2099-01-01T00:00:00.000Z',user_id,datetime('now')
+    FROM devices WHERE id='${deviceId}';
+    INSERT INTO billing_budgets(scope_type,scope_id,lane,metric,period_key,limit_units,updated_at)
+    VALUES('global','platform','arc_hosted','credits','${fixtureDay}',1000,datetime('now')),
+      ('global','platform','arc_hosted','cost_micros','${fixtureDay}',1000000,datetime('now'));
+    INSERT INTO billing_budgets(scope_type,scope_id,lane,metric,period_key,limit_units,updated_at)
+    SELECT 'user',user_id,'arc_hosted',metric,'${fixtureDay}',1000000,datetime('now') FROM devices,
+      (SELECT 'credits' AS metric UNION ALL SELECT 'cost_micros') WHERE devices.id='${deviceId}';
+    INSERT INTO billing_budgets(scope_type,scope_id,lane,metric,period_key,limit_units,updated_at)
+    SELECT 'organization','personal:'||user_id,'arc_hosted',metric,'${fixtureDay}',1000000,datetime('now') FROM devices,
+      (SELECT 'credits' AS metric UNION ALL SELECT 'cost_micros') WHERE devices.id='${deviceId}';
+    CREATE TRIGGER fixture_task_budgets AFTER INSERT ON automations BEGIN
+      INSERT INTO billing_budgets(scope_type,scope_id,lane,metric,period_key,limit_units,updated_at)
+      VALUES('task',NEW.id,'arc_hosted','credits','${fixtureDay}',1000,NEW.created_at),
+        ('task',NEW.id,'arc_hosted','cost_micros','${fixtureDay}',1000000,NEW.created_at); END;
+  `;
+  const billingSeed=spawnSync(process.execPath,[wranglerCli,"d1","execute","remote-link-auth","--local","--persist-to",persist,"--command",billingSql],{cwd:relayDir,encoding:"utf8"});
+  assert(billingSeed.status===0,"explicit local model budgets "+billingSeed.stderr);
 
   // Agent Goal: inspect -> edit -> failed test -> rethink -> edit -> pass -> deterministic verify.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({

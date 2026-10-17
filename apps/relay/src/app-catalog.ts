@@ -1,26 +1,35 @@
 import { z } from "zod";
+import { EXTRA_PROVIDERS, EXTRA_OPERATIONS, EXTRA_PROVIDER_IDS, APP_CATEGORIES } from "./app-integrations.js";
+export { APP_CATEGORIES };
 
-export const APP_PROVIDERS = ["github", "slack", "gmail", "outlook", "google_calendar", "microsoft_calendar"] as const;
+export const CORE_APP_PROVIDERS = ["github", "slack", "gmail", "outlook", "google_calendar", "microsoft_calendar"] as const;
+export const APP_PROVIDERS = [...CORE_APP_PROVIDERS, ...EXTRA_PROVIDER_IDS] as const;
 export type AppProvider = typeof APP_PROVIDERS[number];
 export type AppPermission = "read" | "write";
-export type AppEnv = { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
+export type AppEnv = { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
 export class AppError extends Error {
   constructor(public code: string, public status = 400) { super(code); }
 }
 export const providerSchema = z.enum(APP_PROVIDERS);
 export const permissionSchema = z.array(z.enum(["read", "write"])).min(1).max(2).transform(v => [...new Set(["read" as const, ...v])]);
-export type ProviderDefinition = { name: string; brand: string; authorize: string; token: string; credential: string; scopes: Record<AppPermission, string[]>; pkce: boolean };
+export type AppContext = { shopDomain?: string; instanceOrigin?: string; cloudIds?: string[]; graphVersion?: string; businessAccountId?: string; phoneNumberId?: string; subjectId?: string };
+export type AppQuote = { payer: string; unit: string; estimatedUnits: number; maximumApprovedUnits: number; model?: string; pricingUrl: string };
+export type ProviderDefinition = { name: string; brand: string; authorize: string; token: string; credential: string; scopes: Record<AppPermission, string[]>; pkce: boolean; auth?: "oauth" | "api_key"; category?: string; requiredEnv?: string[]; payer?: string; billingNote?: string; connectionNote?: string };
 const googleRead = "https://www.googleapis.com/auth/";
 export const APP_CATALOG: Record<AppProvider, ProviderDefinition> = {
-  github: { name: "GitHub", brand: "github", authorize: "https://github.com/login/oauth/authorize", token: "https://github.com/login/oauth/access_token", credential: "GITHUB", scopes: { read: ["read:user", "repo", "offline_access"], write: [] }, pkce: true },
-  slack: { name: "Slack", brand: "slack", authorize: "https://slack.com/oauth/v2/authorize", token: "https://slack.com/api/oauth.v2.access", credential: "SLACK", scopes: { read: ["channels:read", "channels:history", "search:read"], write: ["chat:write"] }, pkce: false },
-  gmail: { name: "Gmail", brand: "gmail", authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", credential: "GOOGLE", scopes: { read: [googleRead + "gmail.readonly"], write: [googleRead + "gmail.modify"] }, pkce: true },
-  outlook: { name: "Outlook", brand: "microsoftoutlook", authorize: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", token: "https://login.microsoftonline.com/common/oauth2/v2.0/token", credential: "MICROSOFT", scopes: { read: ["offline_access", "User.Read", "Mail.Read"], write: ["Mail.ReadWrite", "Mail.Send"] }, pkce: true },
-  google_calendar: { name: "Google Calendar", brand: "googlecalendar", authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", credential: "GOOGLE", scopes: { read: [googleRead + "calendar.readonly"], write: [googleRead + "calendar.events"] }, pkce: true },
-  microsoft_calendar: { name: "Outlook Calendar", brand: "microsoftoutlook", authorize: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", token: "https://login.microsoftonline.com/common/oauth2/v2.0/token", credential: "MICROSOFT", scopes: { read: ["offline_access", "User.Read", "Calendars.Read"], write: ["Calendars.ReadWrite"] }, pkce: true },
+  github: { category: "development", name: "GitHub", brand: "github", authorize: "https://github.com/login/oauth/authorize", token: "https://github.com/login/oauth/access_token", credential: "GITHUB", scopes: { read: ["read:user", "repo", "offline_access"], write: [] }, pkce: true },
+  slack: { category: "communication", name: "Slack", brand: "slack", authorize: "https://slack.com/oauth/v2/authorize", token: "https://slack.com/api/oauth.v2.access", credential: "SLACK", scopes: { read: ["channels:read", "channels:history", "search:read"], write: ["chat:write"] }, pkce: false },
+  gmail: { category: "email_calendar", name: "Gmail", brand: "gmail", authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", credential: "GOOGLE", scopes: { read: [googleRead + "gmail.readonly"], write: [googleRead + "gmail.modify"] }, pkce: true },
+  outlook: { category: "email_calendar", name: "Outlook", brand: "microsoftoutlook", authorize: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", token: "https://login.microsoftonline.com/common/oauth2/v2.0/token", credential: "MICROSOFT", scopes: { read: ["offline_access", "User.Read", "Mail.Read"], write: ["Mail.ReadWrite", "Mail.Send"] }, pkce: true },
+  google_calendar: { category: "email_calendar", name: "Google Calendar", brand: "googlecalendar", authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", credential: "GOOGLE", scopes: { read: [googleRead + "calendar.readonly"], write: [googleRead + "calendar.events"] }, pkce: true },
+  microsoft_calendar: { category: "email_calendar", name: "Outlook Calendar", brand: "microsoftoutlook", authorize: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", token: "https://login.microsoftonline.com/common/oauth2/v2.0/token", credential: "MICROSOFT", scopes: { read: ["offline_access", "User.Read", "Calendars.Read"], write: ["Calendars.ReadWrite"] }, pkce: true },
+  ...EXTRA_PROVIDERS,
 };
 export function credentials(env: AppEnv, provider: AppProvider) {
-  const prefix = APP_CATALOG[provider].credential;
+  const definition = APP_CATALOG[provider];
+  if (definition.auth === "api_key") throw new AppError("app_uses_api_key");
+  if (definition.requiredEnv?.some(key => !(env as Record<string, unknown>)[key])) throw new AppError("app_not_configured", 503);
+  const prefix = definition.credential;
   const id = env[`APP_${prefix}_CLIENT_ID`];
   const secret = env[`APP_${prefix}_CLIENT_SECRET`];
   if (!id || !secret || !env.APP_TOKEN_KEY) throw new AppError("app_not_configured", 503);
@@ -38,8 +47,8 @@ const compose = z.object({ to: z.array(email).min(1).max(20), subject: header, b
 const calendarId = id.default("primary");
 const dateTime = z.string().datetime({ offset: true });
 const event = z.object({ summary: header, start: dateTime, end: dateTime, timeZone: z.string().max(100).default("UTC"), attendees: z.array(email).max(20).default([]) }).strict().refine(v => Date.parse(v.end) > Date.parse(v.start), "end must follow start");
-type RequestPlan = { url: string; method: "GET" | "POST" | "PATCH" | "DELETE"; body?: unknown };
-export type AppOperation = { provider: AppProvider; name: string; description: string; permission: AppPermission; schema: z.ZodType; request: (a: any) => RequestPlan };
+export type RequestPlan = { url: string; method: "GET" | "POST" | "PATCH" | "DELETE" | "PUT"; body?: unknown; headers?: Record<string,string>; responseKind?: "json" | "text" };
+export type AppOperation = { provider: AppProvider; name: string; description: string; permission: AppPermission; schema: z.ZodType; request: (a: any, context?: AppContext) => RequestPlan; quote?: (a: any) => AppQuote };
 const operations: AppOperation[] = [];
 function op(provider: AppProvider, name: string, description: string, schema: z.ZodType, request: (a: any) => RequestPlan, permission: AppPermission = "read") { operations.push({ provider, name, description, schema, request, permission }); }
 const encode = encodeURIComponent;
@@ -90,5 +99,5 @@ for (const provider of ["google_calendar", "microsoft_calendar"] as const) {
   op(provider, "events.update", "Update an event or meeting", z.object({ calendar: calendarId, id, event }).strict(), a => ({ url: `${path(a.calendar)}/${encode(a.id)}`, method: "PATCH", body: body(a.event) }), "write");
   op(provider, "events.delete", "Delete a calendar event", z.object({ calendar: calendarId, id }).strict(), a => ({ url: `${path(a.calendar)}/${encode(a.id)}`, method: "DELETE" }), "write");
 }
-export const APP_OPERATIONS = operations;
-export function appOperation(provider: AppProvider, name: string) { const value = operations.find(o => o.provider === provider && o.name === name); if (!value) throw new AppError("unsupported_app_operation"); return value; }
+export const APP_OPERATIONS = [...operations, ...EXTRA_OPERATIONS];
+export function appOperation(provider: AppProvider, name: string) { const value = APP_OPERATIONS.find(o => o.provider === provider && o.name === name); if (!value) throw new AppError("unsupported_app_operation"); return value; }

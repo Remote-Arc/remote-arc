@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./apps-manager.css";
+import directory from "./app-directory.json" with { type: "json" };
+import { AppCredentialForm, type AppCredentialInput } from "./apps-auth-form.js";
 
 type Permission = "read" | "write";
 export type AppDefinition = {
   provider: string; name: string; brand: string; configured: boolean;
+  category?: string; auth?: "oauth" | "api_key"; billingNote?: string; connectionNote?: string;
   operations: { name: string; description: string; permission: Permission; inputSchema?: unknown }[];
   permissions: { read: string[]; write: string[] }; consentNote?: string;
 };
 export type AppConnection = {
   id: string; provider: string; accountLabel: string; status: string;
+  settings?: Record<string, string>; dailyCallLimit?: number;
   permissions: Permission[]; scopes: string[]; expiresAt: string | null; lastError: string | null; updatedAt: string;
 };
 export type AppApproval = {
@@ -18,14 +22,10 @@ export type AppApproval = {
 export type AppsSnapshot = { enabled: boolean; apps: AppDefinition[]; connections: AppConnection[] };
 export type AppsRequest = (path: string, init?: RequestInit) => Promise<unknown>;
 
-const brandFiles: Record<string, string> = {
-  github: "github", slack: "slack", gmail: "gmail", outlook: "microsoftoutlook",
-  microsoftoutlook: "microsoftoutlook", googlecalendar: "googlecalendar",
-  google_calendar: "googlecalendar", microsoft_calendar: "microsoftoutlook",
-};
+const brandFiles: Record<string, string> = Object.fromEntries(directory.apps.map(app => [app.brand, app.brand]));
 const permissionsFor = (write: boolean): Permission[] => write ? ["read", "write"] : ["read"];
 
-function AppIcon({ brand }: { brand: string }) {
+export function AppIcon({ brand }: { brand: string }) {
   const file = brandFiles[brand];
   return <span className="appsManagerBrand" data-brand={file || "generic"}>
     {file ? <img src={"/app-brands/" + file + ".svg"} alt="" width={30} height={30} /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" /></svg>}
@@ -62,6 +62,11 @@ function errorLabel(code: string, tr: (en: string, zh: string) => string) {
     case "app_reauthorization_required": return tr("This account needs authorization again. Reconnect to continue.", "此账号需要重新授权，请重新连接后继续。");
     case "app_permission_required": return tr("This connection does not allow that permission.", "当前连接没有授予该项权限。");
     case "app_approval_unavailable": return tr("This approval expired or the connection changed. Refresh and ask your AI for a new request.", "审批已过期或连接已变更。请刷新，并让 AI 重新提交请求。");
+    case "app_daily_limit_reached": return tr("This connection or provider reached its daily operation limit. Try again tomorrow.", "此连接或服务已达到每日操作上限，请明天再试。");
+    case "app_cost_limit": return tr("The estimated usage exceeds the limit in this request. Review the estimate before requesting again.", "预计用量超出本次请求的上限，请核对估算后重新提出请求。");
+    case "app_user_token_required": return tr("X requires an OAuth user access token from your own developer project.", "X 需要你自己开发者项目的 OAuth 用户访问令牌。");
+    case "app_whatsapp_settings_required": return tr("Enter your WhatsApp Business account and phone number IDs.", "请填写 WhatsApp Business 账号与电话号码 ID。");
+    case "app_shop_domain_required": return tr("Enter the store's myshopify.com domain.", "请填写店铺的 myshopify.com 域名。");
     case "app_connection_not_found": return tr("This connection no longer exists. Refresh the page.", "该连接已不存在，请刷新页面。");
     default: return tr("Apps could not be updated. Check your connection and try again.", "应用状态暂时无法更新，请检查网络后重试。");
   }
@@ -69,7 +74,7 @@ function errorLabel(code: string, tr: (en: string, zh: string) => string) {
 
 function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnect }: {
   app: AppDefinition; connection: AppConnection; busy: boolean;
-  onAuthorize: (provider: string, permissions: Permission[]) => void;
+  onAuthorize: (provider: string, permissions: Permission[], settings?: Record<string, string>) => void;
   onSave: (connection: AppConnection, permissions: Permission[]) => void;
   onDisconnect: (connection: AppConnection) => void;
 }) {
@@ -87,12 +92,12 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnec
     <fieldset className="appsManagerPermissions" disabled={busy || !app.configured}>
       <legend>{tr("Remote Arc permissions", "Remote Arc 访问权限")}</legend>
       <label><input type="checkbox" checked disabled /><span>{tr("Read access", "读取权限")}</span></label>
-      <label><input type="checkbox" checked={write} onChange={event => setWrite(event.target.checked)} /><span>{tr("Allow write actions", "允许写入操作")}</span></label>
+      <label><input type="checkbox" checked={write} disabled={!app.operations.some(op => op.permission === "write")} onChange={event => setWrite(event.target.checked)} /><span>{tr("Allow write actions", "允许写入操作")}</span></label>
     </fieldset>
     <div className="appsManagerConnectionActions">
-      {active ? <button type="button" disabled={busy || !app.configured || !changed} onClick={() => needsScopes ? onAuthorize(app.provider, permissionsFor(write)) : onSave(connection, permissionsFor(write))}>
+      {active ? <button type="button" disabled={busy || !app.configured || !changed} onClick={() => needsScopes ? onAuthorize(app.provider, permissionsFor(write), connection.settings) : onSave(connection, permissionsFor(write))}>
         {needsScopes ? tr("Authorize write access", "授权写入权限") : tr("Save permissions", "保存权限")}
-      </button> : <button type="button" disabled={busy || !app.configured} onClick={() => onAuthorize(app.provider, permissionsFor(write))}>{tr("Reconnect", "重新连接")}</button>}
+      </button> : <button type="button" disabled={busy || !app.configured} onClick={() => onAuthorize(app.provider, permissionsFor(write), connection.settings)}>{tr("Reconnect", "重新连接")}</button>}
       {connection.status !== "disconnected" && <button type="button" className="appsManagerTextAction" disabled={busy} onClick={() => setConfirmDisconnect(true)}>{tr("Disconnect", "断开连接")}</button>}
     </div>
     {confirmDisconnect && <div className="appsManagerDisconnect" role="group" aria-label={tr("Confirm account disconnection", "确认断开账号")}>
@@ -103,29 +108,41 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnec
   </article>;
 }
 
-function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect }: {
+function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect, onCredential }: {
   app: AppDefinition; connections: AppConnection[]; busy: boolean;
-  onAuthorize: (provider: string, permissions: Permission[]) => void;
+  onCredential: (provider: string, input: AppCredentialInput) => Promise<boolean>;
+  onAuthorize: (provider: string, permissions: Permission[], settings?: Record<string, string>) => void;
   onSave: (connection: AppConnection, permissions: Permission[]) => void;
   onDisconnect: (connection: AppConnection) => void;
 }) {
   const { tr } = useI18n();
   const [write, setWrite] = useState(false);
+  const [credentialOpen, setCredentialOpen] = useState(false);
+  const [shopDomain, setShopDomain] = useState("");
+  function connect(provider: string, permissions: Permission[], settings?: Record<string, string>) {
+    if (app.auth === "api_key") { setWrite(permissions.includes("write")); setCredentialOpen(true); }
+    else onAuthorize(provider, permissions, settings || (provider === "shopify" ? {shopDomain} : undefined));
+  }
   const note = app.provider === "github" && app.consentNote
     ? tr("GitHub's repo scope includes write access at GitHub. Remote Arc still blocks write actions unless you explicitly enable them here.", "GitHub 的 repo 授权范围包含上游写入权限；只有你在这里明确允许写入，Remote Arc 才会放行写入操作。")
     : app.consentNote;
   return <article className="appsManagerCard" data-provider={app.provider}>
     <header><AppIcon brand={app.brand} /><div><h2>{app.name}</h2><span>{app.configured ? tr("Ready to connect", "可授权连接") : tr("Administrator setup needed", "等待管理员配置")}</span></div><span className="appsManagerOperationCount">{app.operations.length} {tr("operations", "项操作")}</span></header>
     {note && <p className="appsManagerConsentNote">{note}</p>}
-    {connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={onAuthorize} onSave={onSave} onDisconnect={onDisconnect} />)}
+    {app.connectionNote && <p className="appsManagerConnectionHint">{app.connectionNote}</p>}
+    {app.billingNote && <p className="appsManagerBilling">{app.billingNote}</p>}
+    {app.provider === "runway" && <a className="appsRunwayAttribution" href="https://runwayml.com" target="_blank" rel="noreferrer"><img src="/app-brands/runwayattribution.svg" alt="Powered by Runway" /></a>}
+    {connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onSave={onSave} onDisconnect={onDisconnect} />)}
     <div className="appsManagerAuthorize">
       <fieldset disabled={busy || !app.configured}>
         <legend>{connections.length ? tr("Connect another account", "连接其他账号") : tr("Choose access for this connection", "选择本次连接的权限")}</legend>
         <label><input type="checkbox" checked disabled /><span>{tr("Read", "读取")}</span></label>
-        <label><input type="checkbox" checked={write} onChange={event => setWrite(event.target.checked)} /><span>{tr("Write actions (optional)", "写入操作（可选）")}</span></label>
+        <label><input type="checkbox" checked={write} disabled={!app.operations.some(op => op.permission === "write")} onChange={event => setWrite(event.target.checked)} /><span>{tr("Write actions (optional)", "写入操作（可选）")}</span></label>
       </fieldset>
-      <button type="button" className="appsManagerPrimary" disabled={busy || !app.configured} onClick={() => onAuthorize(app.provider, permissionsFor(write))}>{app.configured ? connections.length ? tr("Connect another account", "连接其他账号") : tr("Connect account", "连接账号") : tr("Not configured", "尚未配置")}</button>
+      {app.provider === "shopify" && <label className="appsManagerStore">{tr("Store domain", "店铺域名")}<input value={shopDomain} onChange={e => setShopDomain(e.target.value)} placeholder="your-store.myshopify.com" autoComplete="off" maxLength={100} /></label>}
+      <button type="button" className="appsManagerPrimary" disabled={busy || !app.configured || (app.provider === "shopify" && !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopDomain))} onClick={() => connect(app.provider, permissionsFor(write))}>{app.configured ? connections.length ? tr("Connect another account", "连接其他账号") : tr("Connect account", "连接账号") : tr("Not configured", "尚未配置")}</button>
     </div>
+    {credentialOpen && <AppCredentialForm provider={app.provider} write={write} busy={busy} onConnect={input => onCredential(app.provider, input)} onCancel={() => setCredentialOpen(false)} />}
     <details className="appsManagerOperations"><summary>{tr("Available operations", "可用操作")} <span>{app.operations.length}</span></summary>
       <ul>{app.operations.map(operation => <li key={operation.name}><div><strong>{operation.description}</strong><span className="appsManagerPermissionTag" data-permission={operation.permission}>{operation.permission === "write" ? tr("Write · approval required", "写入 · 需审批") : tr("Read", "读取")}</span></div><code>{operation.name}</code></li>)}</ul>
     </details>
@@ -174,6 +191,8 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
   const [error, setError] = useState("");
   const [approvalError, setApprovalError] = useState(false);
   const [notice, setNotice] = useState("");
+  const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get("provider") || "");
+  const [category, setCategory] = useState(() => new URLSearchParams(window.location.search).get("category") || "all");
   const mounted = useRef(false);
   const revision = useRef(0);
   const mutationLock = useRef(false);
@@ -197,22 +216,26 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
   }, [request]);
   useEffect(() => { mounted.current = true; void refresh(); return () => { mounted.current = false; revision.current++; }; }, [refresh]);
   async function mutate(key: string, action: () => Promise<unknown>, success: string) {
-    if (mutationLock.current) return;
+    if (mutationLock.current) return false;
     mutationLock.current = true; setBusy(key); setError(""); setNotice("");
     try {
       await action();
-      if (!mounted.current) return;
+      if (!mounted.current) return false;
       setNotice(success);
       await refresh();
-    } catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "app_service_unavailable"); }
+      return true;
+    } catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "app_service_unavailable"); return false; }
     finally { mutationLock.current = false; if (mounted.current) setBusy(""); }
   }
-  function authorize(provider: string, permissions: Permission[]) {
+  function authorize(provider: string, permissions: Permission[], settings?: Record<string, string>) {
     void mutate("authorize:" + provider, async () => {
-      const result = await request("/api/apps/authorize", { method: "POST", body: JSON.stringify({ provider, permissions }) }) as { authorizationUrl?: string };
+      const result = await request("/api/apps/authorize", { method: "POST", body: JSON.stringify({ provider, permissions, settings }) }) as { authorizationUrl?: string };
       if (!result.authorizationUrl || !/^https:\/\//i.test(result.authorizationUrl)) throw new Error("app_service_unavailable");
       navigate(result.authorizationUrl);
     }, tr("Continue in the provider's authorization page.", "请在应用的授权页面继续。"));
+  }
+  function connectCredential(provider: string, input: AppCredentialInput) {
+    return mutate("connect:" + provider, () => request("/api/apps/connections", {method: "POST", body: JSON.stringify({provider, ...input})}), tr("Account validated and connected.", "账号已验证并连接。"));
   }
   function save(connection: AppConnection, permissions: Permission[]) {
     void mutate("permissions:" + connection.id, () => request("/api/apps/connections/" + encodeURIComponent(connection.id), { method: "PATCH", body: JSON.stringify({ permissions }) }), tr("Connection permissions updated.", "连接权限已更新。"));
@@ -224,17 +247,23 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
     if (approval.status !== "pending_approval" || Date.parse(approval.expiresAt) <= Date.now()) { setError("app_approval_unavailable"); return; }
     void mutate("approval:" + approval.id, () => request("/api/apps/approvals/" + encodeURIComponent(approval.id), { method: "POST", body: JSON.stringify({ approve }) }), approve ? tr("Request approved. Ask your AI to retry the original request. No app action was executed here.", "请求已批准。请让 AI 重试原请求；本页面没有执行应用操作。") : tr("Request rejected. No app action was executed.", "请求已拒绝，没有执行应用操作。"));
   }
+  const visibleApps = snapshot?.apps.filter(app => (category === "all" || (app.category || directory.apps.find(item => item.provider === app.provider)?.category) === category) && (app.name + " " + app.provider).toLowerCase().includes(query.trim().toLowerCase())) || [];
   const activeCount = snapshot?.connections.filter(connection => connection.status === "active").length || 0;
   const pendingCount = approvals.filter(approval => approval.status === "pending_approval" && Date.parse(approval.expiresAt) > Date.now()).length;
   return <div className="appsManager">
-    <header className="appsManagerHeader"><div><span className="eyebrow">APPS</span><h1>{tr("Your connected apps", "你的应用连接")}</h1><p>{tr("Choose the accounts and permissions your AI can use. Review write requests before they run.", "选择 AI 可以使用的账号与权限，并在写入操作执行前审核具体请求。")}</p></div><button type="button" disabled={loading || Boolean(busy)} onClick={() => { setNotice(""); void refresh(); }}>{loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}</button></header>
+    <header className="appsManagerHeader"><div><span className="eyebrow">APPS</span><h1>{tr("Your connected apps", "你的应用连接")}</h1><p>{tr("Connect your apps to the AI chat you already use. Remote Arc Connect works with Apps independently of Arc Agent. Review write requests before they run.", "把应用连接到你正在使用的 AI 聊天。Remote Arc Connect 的 Apps 无需等待 Arc Agent 上线；写入操作执行前由你审核。")}</p></div><button type="button" disabled={loading || Boolean(busy)} onClick={() => { setNotice(""); void refresh(); }}>{loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}</button></header>
     {error && <div className="appsManagerMessage appsManagerError" role="alert"><p>{errorLabel(error, tr)}</p>{error === "unauthorized" && <a href="/auth/login?return_to=%2Fapps">{tr("Sign in", "登录")}</a>}<button type="button" onClick={() => setError("")}>{tr("Dismiss", "关闭")}</button></div>}
     {notice && <p className="appsManagerMessage" role="status">{notice}</p>}
     {loading && !snapshot && <p className="appsManagerLoading" role="status">{tr("Loading app connections…", "正在加载应用连接…")}</p>}
     {snapshot && !snapshot.enabled && <section className="appsManagerDisabled"><h2>{tr("Apps are not enabled yet", "应用连接尚未启用")}</h2><p>{tr("An administrator needs to enable Apps and configure the providers before you can connect accounts. Your existing device and AI connections are unchanged.", "管理员启用 Apps 并配置应用授权后，你即可连接账号。现有设备和 AI 连接仍可继续使用。")}</p></section>}
     {snapshot?.enabled && <>
       <section className="appsManagerSummary" aria-label={tr("Connection overview", "连接概览")}><span><strong>{activeCount}</strong>{tr("connected accounts", "个已连接账号")}</span><a href="#approvals"><strong>{pendingCount}</strong>{tr("awaiting review", "项等待审核")}</a><p>{tr("Read access is the default. Write actions require both permission and approval for each request.", "默认仅授予读取权限。写入操作同时需要写入权限和逐次请求审批。")}</p></section>
-      <section className="appsManagerGrid" aria-label={tr("Available app connections", "可用的应用连接")}>{snapshot.apps.map(app => <CatalogCard key={app.provider} app={app} connections={snapshot.connections.filter(connection => connection.provider === app.provider)} busy={Boolean(busy)} onAuthorize={authorize} onSave={save} onDisconnect={disconnect} />)}</section>
+      <div className="appsManagerFilters"><label>{tr("Find an app", "查找应用")}<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={tr("Search apps…", "搜索应用…")} /></label><div role="group" aria-label={tr("App categories", "应用分类")}><button type="button" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{tr("All apps", "全部应用")} <span>{snapshot.apps.length}</span></button>{directory.categories.map(item => <button type="button" key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{tr(item.name, item.nameZh)}</button>)}</div></div>
+      {directory.categories.map(group => {
+        const apps = visibleApps.filter(app => (app.category || directory.apps.find(item => item.provider === app.provider)?.category) === group.id);
+        return apps.length ? <section className="appsManagerCategory" key={group.id} aria-label={tr(group.name, group.nameZh)}><header><h2>{tr(group.name, group.nameZh)}</h2><p>{tr(group.description, group.descriptionZh)}</p></header><div className="appsManagerGrid">{apps.map(app => <CatalogCard key={app.provider} app={app} connections={snapshot.connections.filter(connection => connection.provider === app.provider)} busy={Boolean(busy)} onAuthorize={authorize} onCredential={connectCredential} onSave={save} onDisconnect={disconnect} />)}</div></section> : null;
+      })}
+      {!!snapshot.apps.length && !visibleApps.length && <p className="appsManagerEmpty">{tr("No apps match your search.", "没有匹配的应用。")}</p>}
       {!snapshot.apps.length && <p className="appsManagerEmpty">{tr("No app providers are available yet.", "目前还没有可用的应用服务。")}</p>}
       <section className="appsManagerApprovals" id="approvals" aria-labelledby="apps-manager-approvals-heading"><div className="appsManagerSectionHeading"><h2 id="apps-manager-approvals-heading">{tr("Review app requests", "审核应用请求")}</h2><p>{tr("Approve or reject the exact operation requested by your AI.", "核对 AI 请求的具体操作，再决定批准或拒绝。")}</p></div>
         {approvalError ? <p className="appsManagerMessage appsManagerError" role="alert">{tr("Approval requests could not be loaded. Refresh to try again.", "暂时无法加载审批请求，请刷新后重试。")}</p> : approvals.length ? <div className="appsManagerApprovalGrid">{approvals.map(approval => {

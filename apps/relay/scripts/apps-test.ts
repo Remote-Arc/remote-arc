@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { APP_CATALOG, APP_OPERATIONS, APP_PROVIDERS, AppError, appOperation, appScopes, credentials, type AppEnv, type AppProvider } from "../src/app-catalog.js";
+import { APP_CATALOG, APP_OPERATIONS, CORE_APP_PROVIDERS as APP_PROVIDERS, AppError, appOperation, appScopes, credentials, type AppEnv, type AppProvider } from "../src/app-catalog.js";
 import { authorizationUrl, callbackUrl, exchangeTokens, providerIdentity, providerJson, revokeProvider, seal, unseal } from "../src/app-oauth.js";
 import { callApp, handleApps, listApps } from "../src/apps.js";
 import { loadAppReview, verifyAppReview, reviewRead } from "../src/app-review.js";
@@ -220,7 +220,7 @@ await deny(()=>providerJson("https://allowed.invalid",{},async()=>new Response("
 await deny(()=>providerJson("https://allowed.invalid",{},async()=>new Response(null,{status:302,headers:{location:"https://evil.invalid"}})),"app_provider_failed");
 assert.deepEqual(await providerJson("https://allowed.invalid",{},async(_,init)=>{assert.equal(init?.redirect,"manual");return new Response(null,{status:204});}),{});
 
-for(const operation of APP_OPERATIONS) {
+for(const operation of APP_OPERATIONS.filter(op=>APP_PROVIDERS.includes(op.provider as any))) {
   let args:Record<string,unknown>={};
   if(operation.provider==="github") args=operation.name==="repositories.list"?{}:operation.name==="contents.read"?{repo:"owner/repo",path:"src/a.ts",ref:"main"}:operation.name==="issues.create"?{repo:"owner/repo",title:"Review",body:"Issue"}:{repo:"owner/repo"};
   else if(operation.provider==="slack") args=operation.name==="channels.list"?{cursor:"next"}:operation.name==="search"?{query:"approved"}:operation.name==="messages.send"?{channel:"C1",text:"approved"}:{channel:"C1"};

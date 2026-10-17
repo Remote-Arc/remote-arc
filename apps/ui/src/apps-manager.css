@@ -126,3 +126,25 @@
   .appFrame .mobileBottomNav:has([data-dashboard-tab="apps"]) button { min-width: 0; padding-inline: 1px; }
   .appFrame .mobileBottomNav:has([data-dashboard-tab="apps"]) small { font-size: 9px; }
 }
+
+.appsManagerFilters { margin: 30px 0; display: grid; gap: 18px; }
+.appsManagerFilters > label, .appsManagerStore { display: grid; gap: 8px; font-size: 13px; font-weight: 600; width: min(100%, 420px); }
+.appsManager input:is([type="search"],[type="password"],[type="number"]), .appsManagerStore input, .appsCredentialForm input:not([type="checkbox"]) { width: 100%; min-height: 44px; box-sizing: border-box; border: 1px solid var(--dash-line,var(--line)); border-radius: 8px; padding: 10px 12px; background: var(--dash-surface,var(--panel)); color: var(--dash-text,var(--text)); font: inherit; }
+.appsManagerFilters > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.appsManagerFilters button { border-radius: 100px; font-size: 12px; }
+.appsManagerFilters button[aria-pressed="true"] { background: #087394; color: white; border-color: #087394; }
+.appsManagerFilters button span { opacity: .75; margin-left: 5px; }
+.appsManagerCategory { margin: 32px 0 42px; }
+.appsManagerCategory > header { margin: 0 0 18px; }
+.appsManagerCategory > header h2 { font-size: 23px; margin: 0 0 6px; letter-spacing: -.03em; }
+.appsManagerCategory > header p, .appsManagerBilling, .appsCredentialForm p { color: var(--dash-muted,var(--muted)); font-size: 12px; line-height: 1.7; }
+.appsManagerBilling { border-left: 2px solid var(--dash-accent,var(--accent)); padding-left: 12px; margin-bottom: 18px; }
+.appsManagerBrand:is([data-brand="notion"],[data-brand="x"],[data-brand="vercel"],[data-brand="runway"]) { background: white; border: 1px solid #e2e7ec; }
+.appsRunwayAttribution { display: inline-block; padding: 8px 12px; background: white; border: 1px solid #e2e7ec; border-radius: 8px; margin: 0 0 18px; }
+.appsRunwayAttribution img { width: 130px; max-height: 28px; display: block; }
+.appsCredentialForm { padding: 18px; margin: 18px 0 0; border: 1px solid var(--dash-line,var(--line)); border-radius: 10px; background: var(--dash-subtle,var(--panel-2)); }
+.appsManager .appsCredentialForm fieldset { display: grid; gap: 15px; }
+.appsManager .appsCredentialForm fieldset > label { display: grid; gap: 8px; font-size: 12px; }
+.appsManager .appsCredentialForm fieldset > .appsCredentialConsent { display: flex; align-items: flex-start; gap: 10px; }
+.appsCredentialConsent input { margin-top: 3px !important; }
+.appsCredentialForm > div { display: flex; flex-wrap: wrap; gap: 8px; }

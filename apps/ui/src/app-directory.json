@@ -1,0 +1,381 @@
+{
+  "categories": [
+    {
+      "id": "email_calendar",
+      "name": "Email & calendar",
+      "nameZh": "邮件与日历",
+      "description": "Catch up, prepare replies and find time to meet.",
+      "descriptionZh": "处理邮件、准备回复、安排会议。"
+    },
+    {
+      "id": "docs_files",
+      "name": "Docs & files",
+      "nameZh": "文档与文件",
+      "description": "Find knowledge and keep shared documents moving.",
+      "descriptionZh": "查找知识，协作整理文档与文件。"
+    },
+    {
+      "id": "development",
+      "name": "Development",
+      "nameZh": "开发与部署",
+      "description": "Inspect projects, track issues and manage deployments.",
+      "descriptionZh": "检查项目、跟进问题、管理部署。"
+    },
+    {
+      "id": "communication",
+      "name": "Team communication",
+      "nameZh": "团队沟通",
+      "description": "Bring approved updates to your channels and conversations.",
+      "descriptionZh": "将审核后的进展同步到团队与会话。"
+    },
+    {
+      "id": "social",
+      "name": "Social media",
+      "nameZh": "社交媒体",
+      "description": "Review channels and publish with your approval.",
+      "descriptionZh": "查看账号内容，审核后发布更新。"
+    },
+    {
+      "id": "creative",
+      "name": "Creative AI",
+      "nameZh": "创意 AI",
+      "description": "Create media using your own provider account.",
+      "descriptionZh": "使用你自己的服务账号创作媒体。"
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing & analytics",
+      "nameZh": "营销与分析",
+      "description": "Understand traffic, campaigns and performance.",
+      "descriptionZh": "了解流量、广告与营销表现。"
+    },
+    {
+      "id": "sales_commerce",
+      "name": "Sales & commerce",
+      "nameZh": "销售与电商",
+      "description": "Follow customer work and manage your storefront.",
+      "descriptionZh": "跟进客户工作，管理店铺。"
+    }
+  ],
+  "apps": [
+    {
+      "provider": "github",
+      "name": "GitHub",
+      "brand": "github",
+      "category": "development",
+      "auth": "oauth",
+      "operationCount": 6,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "slack",
+      "name": "Slack",
+      "brand": "slack",
+      "category": "communication",
+      "auth": "oauth",
+      "operationCount": 5,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "gmail",
+      "name": "Gmail",
+      "brand": "gmail",
+      "category": "email_calendar",
+      "auth": "oauth",
+      "operationCount": 5,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "outlook",
+      "name": "Outlook",
+      "brand": "microsoftoutlook",
+      "category": "email_calendar",
+      "auth": "oauth",
+      "operationCount": 4,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "google_calendar",
+      "name": "Google Calendar",
+      "brand": "googlecalendar",
+      "category": "email_calendar",
+      "auth": "oauth",
+      "operationCount": 6,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "microsoft_calendar",
+      "name": "Outlook Calendar",
+      "brand": "microsoftoutlook",
+      "category": "email_calendar",
+      "auth": "oauth",
+      "operationCount": 6,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "youtube",
+      "name": "YouTube",
+      "brand": "youtube",
+      "category": "social",
+      "auth": "oauth",
+      "operationCount": 3,
+      "supportsWrite": false,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "google_drive",
+      "name": "Google Drive",
+      "brand": "googledrive",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 4,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "google_docs",
+      "name": "Google Docs",
+      "brand": "googledocs",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "google_sheets",
+      "name": "Google Sheets",
+      "brand": "googlesheets",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "google_search_console",
+      "name": "Google Search Console",
+      "brand": "googlesearchconsole",
+      "category": "marketing",
+      "auth": "oauth",
+      "operationCount": 2,
+      "supportsWrite": false,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "google_analytics",
+      "name": "Google Analytics",
+      "brand": "googleanalytics",
+      "category": "marketing",
+      "auth": "oauth",
+      "operationCount": 2,
+      "supportsWrite": false,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "google_ads",
+      "name": "Google Ads",
+      "brand": "googleads",
+      "category": "marketing",
+      "auth": "oauth",
+      "operationCount": 2,
+      "supportsWrite": false,
+      "billingNote": "Reads use API quota. Advertising spend belongs to the connected Google Ads account.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "facebook",
+      "name": "Facebook",
+      "brand": "facebook",
+      "category": "social",
+      "auth": "oauth",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "instagram",
+      "name": "Instagram",
+      "brand": "instagram",
+      "category": "social",
+      "auth": "oauth",
+      "operationCount": 6,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "meta_ads",
+      "name": "Meta Ads",
+      "brand": "meta",
+      "category": "marketing",
+      "auth": "oauth",
+      "operationCount": 4,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "vercel",
+      "name": "Vercel",
+      "brand": "vercel",
+      "category": "development",
+      "auth": "api_key",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Uses your Vercel access token and account; hosting and deployment charges follow your Vercel plan.",
+      "payer": "connected_account"
+    },
+    {
+      "provider": "runway",
+      "name": "Runway",
+      "brand": "runway",
+      "category": "creative",
+      "auth": "api_key",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Generation consumes your Runway API organization credits. Web subscription credits are separate unless Runway enables a transfer for your organization.",
+      "payer": "connected_account"
+    },
+    {
+      "provider": "x",
+      "name": "X",
+      "brand": "x",
+      "category": "social",
+      "auth": "api_key",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "API usage is billed to the developer project behind your user access token; X Premium is separate.",
+      "payer": "connected_account"
+    },
+    {
+      "provider": "whatsapp",
+      "name": "WhatsApp Business",
+      "brand": "whatsapp",
+      "category": "communication",
+      "auth": "api_key",
+      "operationCount": 4,
+      "supportsWrite": true,
+      "billingNote": "Messages can incur charges on your own WhatsApp Business account.",
+      "payer": "connected_account"
+    },
+    {
+      "provider": "jira",
+      "name": "Atlassian Jira",
+      "brand": "jira",
+      "category": "development",
+      "auth": "oauth",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "confluence",
+      "name": "Atlassian Confluence",
+      "brand": "confluence",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "notion",
+      "name": "Notion",
+      "brand": "notion",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 4,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "shopify",
+      "name": "Shopify",
+      "brand": "shopify",
+      "category": "sales_commerce",
+      "auth": "oauth",
+      "operationCount": 4,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "linkedin",
+      "name": "LinkedIn",
+      "brand": "linkedin",
+      "category": "social",
+      "auth": "oauth",
+      "operationCount": 2,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "supabase",
+      "name": "Supabase",
+      "brand": "supabase",
+      "category": "development",
+      "auth": "api_key",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Uses your Supabase Management API token and project. Database and hosting usage follow your own project plan.",
+      "payer": "connected_account"
+    },
+    {
+      "provider": "linear",
+      "name": "Linear",
+      "brand": "linear",
+      "category": "development",
+      "auth": "api_key",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Uses your personal Linear API key and workspace permissions.",
+      "payer": "connected_account"
+    },
+    {
+      "provider": "hubspot",
+      "name": "HubSpot",
+      "brand": "hubspot",
+      "category": "sales_commerce",
+      "auth": "oauth",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "salesforce",
+      "name": "Salesforce",
+      "brand": "salesforce",
+      "category": "sales_commerce",
+      "auth": "oauth",
+      "operationCount": 3,
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    }
+  ]
+}

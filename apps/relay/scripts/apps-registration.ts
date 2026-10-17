@@ -8,8 +8,26 @@ export function registrationPack(value: string) {
     throw new Error("Use a public HTTPS origin without a path, credentials, query or fragment.");
   }
   const env = { APP_ORIGIN: origin.origin, PUBLIC_ORIGIN: origin.origin } as Parameters<typeof callbackUrl>[0];
-  const callbacks = Object.fromEntries(APP_PROVIDERS.map(provider => [provider, callbackUrl(env, provider)]));
+  const callbacks = Object.fromEntries(APP_PROVIDERS.filter(provider => APP_CATALOG[provider].auth !== "api_key").map(provider => [provider, callbackUrl(env, provider)]));
   const declaredScopes = (providers: typeof APP_PROVIDERS[number][]) => [...new Set(providers.flatMap(provider => appScopes(provider, ["read", "write"])))];
+  const googleProviders = APP_PROVIDERS.filter(provider => APP_CATALOG[provider].credential === "GOOGLE");
+  const additions = Object.fromEntries([
+    ["meta","META","https://developers.facebook.com/apps/"],
+    ["atlassian","ATLASSIAN","https://developer.atlassian.com/console/myapps/"],
+    ["notion","NOTION","https://www.notion.so/profile/integrations"],
+    ["shopify","SHOPIFY","https://dev.shopify.com/dashboard"],
+    ["linkedin","LINKEDIN","https://www.linkedin.com/developers/apps"],
+    ["hubspot","HUBSPOT","https://developers.hubspot.com/"],
+    ["salesforce","SALESFORCE","https://login.salesforce.com/"],
+  ].map(([name,credential,registrationUrl]) => {
+    const providers = APP_PROVIDERS.filter(provider => APP_CATALOG[provider].credential === credential);
+    return [name,{registrationUrl,applicationName:"Remote Arc Apps",providers,redirectUris:providers.map(provider=>callbacks[provider]),declaredScopes:declaredScopes(providers),clientIdSecretName:"APP_"+credential+"_CLIENT_ID",clientSecretSecretName:"APP_"+credential+"_CLIENT_SECRET",
+      review:"Register the platform application once. Validate provider distribution, requested permissions and eligible account types before public onboarding.",
+      ...(name==="meta"?{graphVersionEnv:"APP_META_GRAPH_VERSION",note:"Pin a currently supported Graph API version. Instagram requires an eligible professional account linked to a Facebook Page."}:{}),
+      ...(name==="shopify"?{note:"Use a public app with authorization-code flow; validate the shop domain and callback HMAC. Request protected customer data access before exposing order data."}:{}),
+      ...(name==="notion"?{note:"Enable the corresponding read/insert content capabilities. Users explicitly select pages shared with the public integration."}:{}),
+    }];
+  }));
   return {
     schemaVersion: 1,
     kind: "registration-template",
@@ -49,9 +67,9 @@ export function registrationPack(value: string) {
       registrationUrl: "https://console.cloud.google.com/auth/overview",
       applicationName: "Remote Arc Apps",
       applicationType: "Web application",
-      apiServices: ["gmail.googleapis.com", "calendar-json.googleapis.com"],
-      authorizedRedirectUris: [callbacks.gmail, callbacks.google_calendar],
-      declaredScopes: declaredScopes(["gmail", "google_calendar"]),
+      apiServices: ["gmail.googleapis.com", "calendar-json.googleapis.com", "youtube.googleapis.com", "drive.googleapis.com", "docs.googleapis.com", "sheets.googleapis.com", "searchconsole.googleapis.com", "analyticsadmin.googleapis.com", "analyticsdata.googleapis.com", "googleads.googleapis.com"],
+      authorizedRedirectUris: googleProviders.map(provider => callbacks[provider]),
+      declaredScopes: declaredScopes(googleProviders),
       audience: "External; start in Testing with explicit test users. Complete applicable verification before public launch.",
       clientIdSecretName: "APP_GOOGLE_CLIENT_ID",
       clientSecretSecretName: "APP_GOOGLE_CLIENT_SECRET",
@@ -71,9 +89,13 @@ export function registrationPack(value: string) {
       clientIdSecretName: "APP_MICROSOFT_CLIENT_ID",
       clientSecretSecretName: "APP_MICROSOFT_CLIENT_SECRET",
     },
+    ...additions,
+    googleAds: { developerTokenEnv:"APP_GOOGLE_ADS_DEVELOPER_TOKEN", note:"OAuth alone does not grant Google Ads API access; request a developer token and the applicable access level." },
+    apiKeyProviders: APP_PROVIDERS.filter(provider=>APP_CATALOG[provider].auth==="api_key").map(provider=>({provider,credentialOwner:"end_user",serverSecretRequired:false,connectionNote:APP_CATALOG[provider].connectionNote,billingNote:APP_CATALOG[provider].billingNote})),
     runtime: {
       enableFlag: "ENABLE_APPS",
       enableFlagValueAfterVerification: "1",
+      providerDailyLimitEnv: "APP_DAILY_PROVIDER_LIMIT",
       vaultSecretName: "APP_TOKEN_KEY",
       vaultFormat: "Base64 encoding of 32 cryptographically random bytes; keep the same key while existing encrypted connections remain.",
       requestedPermissions: "Default read-only. Users explicitly choose write access; each external write also requires approval of its exact payload.",

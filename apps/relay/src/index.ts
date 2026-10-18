@@ -52,9 +52,11 @@ import { limitMcpIngress } from "./mcp-edge-guard.js";
 import { getMonthlyUsage } from "./usage.js";
 import { getAccountEntitlements } from "./entitlements.js";
 import { getMonthlyPlusUsage } from "./plus-usage.js";
+import { handleMarketplaceWebhook } from "./github-marketplace.js";
 import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
+import { handleOrganizations } from "./organizations.js";
 import { submitWebsiteInterest, listWebsiteSubmissions, updateWebsiteSubmission } from "./domains/engagement.js";
 import {
   handleAutomationCollection,
@@ -107,6 +109,8 @@ type Env = TaskEventEnv & AppEnv & {
   ENGAGEMENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{success: boolean}> };
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_NEXT_CLIENT_ID?: string;
+  GOOGLE_NEXT_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
   RESEND_API_KEY?: string;
@@ -123,6 +127,7 @@ type Env = TaskEventEnv & AppEnv & {
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  GITHUB_MARKETPLACE_WEBHOOK_SECRET?: string;
   EMAIL?: {
     send(message: {
       to?: string;
@@ -405,6 +410,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return handleFileResource(request, env, decodeURIComponent(fileResource[1]!));
     }
 
+    if (url.pathname === "/webhooks/github/marketplace") {
+      return handleMarketplaceWebhook(request, env);
+    }
+
     const automationHook = url.pathname.match(/^\/hooks\/automations\/([^/]+)\/([^/]+)$/);
     if (automationHook) {
       return handleAutomationWebhook(
@@ -458,6 +467,13 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return handleCloudSkills(request, session ? { id: session.id } : identity ? { id: identity.userId } : null);
     }
 
+    if (url.pathname === "/api/organizations" || url.pathname.startsWith("/api/organizations/")) {
+      if (url.origin !== new URL(appOrigin).origin) return Response.json({ error: "app_host_required" }, { status: 404 });
+      const user = await getSessionUser(request, env);
+      if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+      return handleOrganizations(request, env, user.id);
+    }
+
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
       return user
@@ -479,7 +495,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       const plusUsage = await getMonthlyPlusUsage(env, user.id);
       const accountEntitlements = await getAccountEntitlements(env, user.id);
       return Response.json({
-        googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        googleConfigured: Boolean(
+          (env.GOOGLE_NEXT_CLIENT_ID && env.GOOGLE_NEXT_CLIENT_SECRET) ||
+          (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        ),
         mcpEndpoint: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
         devices,
         totalDevices: devices.length,

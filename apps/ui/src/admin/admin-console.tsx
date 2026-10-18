@@ -6,7 +6,7 @@ import "./admin-console.css";
 type Section="overview"|"leads"|"operations"|"health";
 type Submission={id:string;category:"early_access"|"feedback";email:string;name:string;message:string;source:string;status:string;consent_at:string;created_at:string;updated_at:string};
 type LeadsResponse={items:Submission[];total:number;page:number;pageSize:number;counts:Array<{category:string;count:number}>};
-type Operations={checkedAt?:string;totals:{users:number;devices:number;online:number;monthlyCalls:number;auditLast7d:number};activity?:Array<{hour:string;calls:number;users:number}>};
+type Operations={checkedAt?:string;totals:{users:number;devices:number;online:number;monthlyCalls:number;auditLast7d:number;teams?:number;teamMembers?:number};activity?:Array<{hour:string;calls:number;users:number}>};
 type Incident={id:string;created_at:string;severity:string;kind:string;method?:string|null;path?:string|null;message:string;status_code?:number|null;colo?:string|null;ray_id?:string|null};
 type Health={status:"operational"|"degraded";checkedAt:string;worker:{status:string;errors15m:number;errors1h:number;errors24h:number};dependencies:{d1:{status:string};durableObjects:{status:string}};alerts:{emailConfigured:boolean;destination:string|null;recent:Array<{alert_key:string;last_sent_at:string|null;last_status_code:number|null;last_path:string|null}>};account:{users:number;devices:number;activeTokens:number};incidents:Incident[]};
 
@@ -95,14 +95,25 @@ function AdminGlyph({name}:{name:Section|"arrow"|"refresh"|"shield"|"pulse"}){
 }
 function MiniActivity({ops}:{ops:Operations|null}){
  const {tr}=useI18n();
- const values=(ops?.activity||[]).slice(-48);
+ const [windowHours,setWindowHours]=useState<24|48>(48);
+ // Fill empty hours with zero rather than visually compressing the timeline.
+ const ending=ops?.checkedAt ? Math.floor(Date.parse(ops.checkedAt)/3600000)*3600000 : Date.now();
+ const hourly=new Map((ops?.activity||[]).map(entry=>[entry.hour.slice(0,13),entry]));
+ const values=Array.from({length:windowHours},(_,index)=>{
+   const hour=new Date(ending-(windowHours-1-index)*3600000).toISOString().slice(0,13);
+   return hourly.get(hour)||{hour,calls:0,users:0};
+ });
  const max=Math.max(1,...values.map(x=>x.calls));
+ const calls=values.reduce((total,entry)=>total+entry.calls,0);
  return <section className="adminActivityCard">
-  <div className="adminPanelTitle"><div><span className="adminSmallLabel">{tr("WORKLOAD · LAST 48 HOURS","工作量 · 最近 48 小时")}</span><h2>{tr("Tool execution activity","工具调用趋势")}</h2><p>{tr("Real hourly audit counts · UTC","来自真实审计记录 · UTC 小时")}</p></div><span className="adminPanelIndicator">{tr("Live source","真实数据")}</span></div>
+  <div className="adminPanelTitle"><div><span className="adminSmallLabel">{tr("WORKLOAD · LAST 48 HOURS","工作量 · 最近 48 小时")}</span><h2>{tr("Tool execution activity","工具调用趋势")}</h2><p>{tr("Real hourly audit counts · UTC","来自真实审计记录 · UTC 小时")} · {calls.toLocaleString()} {tr("calls", "次调用")}</p></div>
+    <div className="adminRangeControl" role="group" aria-label={tr("Chart time range","图表时间范围")}>
+      {([24,48] as const).map(hours=><button type="button" key={hours} onClick={()=>setWindowHours(hours)} aria-pressed={windowHours===hours}>{hours}h</button>)}
+    </div></div>
   <div className="adminActivityChart" role="img" aria-label={tr("Hourly tool call activity for the past 48 hours","最近48小时工具调用情况")}>
-   {values.length?values.map(x=><div key={x.hour} className="adminActivityBar" title={x.hour+" · "+x.calls} style={{height:Math.max(4,Math.round(100*x.calls/max))+"%"}} />):<div className="adminEmptyChart">{tr("No activity metrics loaded yet.","尚未加载活动数据。")}</div>}
+   {values.length?values.map(x=><div key={x.hour} className={"adminActivityBar"+(x.calls===0?" isQuiet":"")} title={x.hour+" UTC · "+x.calls+" calls · "+x.users+" users"} style={{height:(x.calls===0?3:Math.max(7,Math.round(100*x.calls/max)))+"%"}} />):<div className="adminEmptyChart">{tr("No activity metrics loaded yet.","尚未加载活动数据。")}</div>}
   </div>
-  <div className="adminChartFooter"><span>{tr("48h ago","48 小时前")}</span><span>{tr("Now","现在")}</span></div>
+  <div className="adminChartFooter"><span>{windowHours}h {tr("ago","前")}</span><span>{tr("Now","现在")} · UTC</span></div>
  </section>;
 }
 function AdminOverview({ops,health,leadOverview,setSection}:{ops:Operations|null;health:Health|null;leadOverview:LeadsResponse|null;setSection:(s:Section)=>void}){
@@ -114,18 +125,21 @@ function AdminOverview({ops,health,leadOverview,setSection}:{ops:Operations|null
  const metrics=[
   {label:tr("Registered users","注册用户"),value:userCount,caption:tr("All accounts","累计账户"),icon:"operations" as const},
   {label:tr("Online devices","在线设备"),value:activeCount,caption:ops?tr("of ","共 ") + ops.totals.devices + tr(" registered"," 台已注册") : tr("Verified live connections","验证过的实时连接"),icon:"pulse" as const},
-  {label:tr("Customer requests","用户申请与反馈"),value:leadsCount,caption:tr("Explicitly submitted","用户主动提交"),icon:"leads" as const},
-  {label:tr("Monthly MCP calls","本月 MCP 调用"),value:ops?.totals.monthlyCalls,caption:tr("Actual recorded usage","实际记录的调用量"),icon:"overview" as const}
+  {label:tr("Team organizations","团队组织"),value:ops?.totals.teams,caption:tr("Created team workspaces","已创建的团队工作空间"),icon:"operations" as const},
+  {label:tr("Team memberships","团队成员席位"),value:ops?.totals.teamMembers,caption:tr("Active memberships across teams","团队内活跃成员席位总数"),icon:"shield" as const},
+  {label:tr("Monthly MCP calls","本月 MCP 调用"),value:ops?.totals.monthlyCalls,caption:tr("Actual recorded usage","实际记录的调用量"),icon:"overview" as const},
+  {label:tr("Customer requests","用户申请与反馈"),value:leadsCount,caption:tr("Explicitly submitted","用户主动提交"),icon:"leads" as const}
  ];
  return <div className="adminOverview">
-  <div className="adminOverviewLead"><div><span className="adminSmallLabel">{tr("YOUR BUSINESS AT A GLANCE","业务概况")}</span><h2>{tr("The numbers that matter.","从重要数据开始。")}</h2></div><span className="adminDataOrigin"><span className="adminDataDot"/>{tr("Operational data","运营数据")}</span></div>
-  <div className="adminMetrics">{metrics.map(m=><article className="adminMetricCard" key={m.label}><div className="adminMetricHead"><span>{m.label}</span><AdminGlyph name={m.icon}/></div><strong>{m.value===undefined?"—":m.value.toLocaleString()}</strong><small>{m.caption}</small></article>)}</div>
+  <div className="adminOverviewLead"><div><span className="adminSmallLabel">{tr("YOUR BUSINESS AT A GLANCE","业务概况")}</span><h2>{tr("The numbers that matter.","从重要数据开始。")}</h2></div><span className="adminDataOrigin"><span className="adminDataDot"/>{ops?.checkedAt ? tr("Updated ","更新于 ")+time(ops.checkedAt) : tr("Awaiting data","等待数据")}</span></div>
+  <div className="adminMetrics adminMetrics--overview">{metrics.map(m=><article className="adminMetricCard" key={m.label}><div className="adminMetricHead"><span>{m.label}</span><AdminGlyph name={m.icon}/></div><strong>{m.value===undefined?"—":m.value.toLocaleString()}</strong><small>{m.caption}</small></article>)}</div>
   <div className="adminDashboardGrid">
    <MiniActivity ops={ops}/>
    <div className="adminSnapshot">
     <div className="adminPanelTitle"><span className="adminSmallLabel">{tr("REQUIRES ATTENTION","重点关注")}</span><h2>{tr("Today’s pulse","今日运营状态")}</h2></div>
     <div className="adminSnapshotRow"><span className={"adminHealthLight "+(health?.status==="operational"?"healthy":"")}><AdminGlyph name="pulse"/></span><div><strong>{tr("Infrastructure","基础设施")}</strong><small>{health?.status==="operational"?tr("All systems operational","服务运行正常"):health?.status==="degraded"?tr("Degraded — inspect incidents","服务异常，需要检查"):tr("Status unavailable","暂无健康状态")}</small></div><button onClick={()=>setSection("health")} aria-label={tr("Open service health","查看服务健康")}><AdminGlyph name="arrow"/></button></div>
     <div className="adminSnapshotRow"><span className="adminHealthLight"><AdminGlyph name="leads"/></span><div><strong>{tr("Early access & feedback","抢先体验与反馈")}</strong><small>{leadsCount===undefined?"—":leadsCount.toLocaleString()} {tr("total submissions","条用户提交")}</small></div><button onClick={()=>setSection("leads")} aria-label={tr("Open leads and feedback","查看线索和反馈")}><AdminGlyph name="arrow"/></button></div>
+    <div className="adminSnapshotRow"><span className="adminHealthLight"><AdminGlyph name="operations"/></span><div><strong>{tr("Device connection rate","设备在线比例")}</strong><small>{ops?.totals.devices ? Math.round((ops.totals.online/ops.totals.devices)*100)+"% · "+ops.totals.online+"/"+ops.totals.devices : tr("No registered devices yet","尚无已注册设备")}</small></div><button onClick={()=>setSection("operations")} aria-label={tr("Open devices","查看设备")}><AdminGlyph name="arrow"/></button></div>
     <div className="adminSnapshotRow"><span className="adminHealthLight"><AdminGlyph name="shield"/></span><div><strong>{tr("Worker errors · 24 hours","Worker 错误 · 24 小时")}</strong><small>{errors===undefined?"—":errors.toLocaleString()} {tr("recorded errors","次记录异常")}</small></div><button onClick={()=>setSection("health")} aria-label={tr("Open incidents","查看异常记录")}><AdminGlyph name="arrow"/></button></div>
    </div>
   </div>
@@ -156,6 +170,12 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
   }finally{setLoading(false);}
  }
  useEffect(()=>{void refresh();},[preview]);
+ // Refresh aggregate metrics while operators keep the console visible.
+ useEffect(()=>{
+   if(preview)return;
+   const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void refresh();},60000);
+   return ()=>window.clearInterval(timer);
+ },[preview]);
  const nav:Array<{key:Section;en:string;zh:string}>=[
   {key:"overview",en:"Overview",zh:"业务总览"},
   {key:"leads",en:"Leads & feedback",zh:"线索与反馈"},

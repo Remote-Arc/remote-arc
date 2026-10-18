@@ -30,13 +30,19 @@ const SUPPORTED_SCOPES = [
   "offline_access",
 ] as const;
 
-// First-time MCP clients ask for computer read/write/terminal together.
-// Per-device capability switches remain authoritative; a token is not permission to execute.
+// First-time MCP clients can discover and request connected Apps without
+// completing a separate MCP OAuth upgrade after the initial connection.
+// apps:write permits submitting a request, NOT executing it: the provider
+// connection must independently allow the operation and each write still
+// requires the existing per-operation approval in Dashboard Apps.
+// Per-device capabilities and user-owned provider authorization remain separate.
 export const DEFAULT_MCP_SCOPES = [
   "devices:read",
   "computer:read",
   "computer:write",
   "browser:read",
+  "apps:read",
+  "apps:write",
   "offline_access",
 ] as const;
 

@@ -153,7 +153,8 @@ function authUrl(extra = "") {
     throw new Error("legacy consent decision flags leaked into consent URL");
   }
   const scopes = (consent.searchParams.get("scope") || "").split(/\s+/);
-  const expected = ["devices:read", "computer:read", "computer:write", "browser:read", "offline_access"];
+  const { DEFAULT_MCP_SCOPES } = await import("../src/oauth.js");
+  const expected = [...DEFAULT_MCP_SCOPES];
   if (JSON.stringify(scopes) !== JSON.stringify(expected)) {
     throw new Error("new client should request the complete baseline scope bundle: " + scopes.join(" "));
   }
@@ -311,6 +312,9 @@ function authUrl(extra = "") {
 
 {
   const { mcpUnauthorized, DEFAULT_MCP_SCOPES } = await import("../src/oauth.js");
+  if (!DEFAULT_MCP_SCOPES.includes("apps:read") || !DEFAULT_MCP_SCOPES.includes("apps:write")) {
+    throw new Error("new MCP clients must have Apps discovery and approval-request scopes by default");
+  }
   const challenge = mcpUnauthorized({ ...envBase, DB: {} as D1Database }).headers.get("WWW-Authenticate") || "";
   if (!challenge.includes('scope="' + DEFAULT_MCP_SCOPES.join(" ") + '"')) {
     throw new Error("first unauthenticated MCP challenge did not request baseline scopes");

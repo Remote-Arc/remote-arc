@@ -20,6 +20,8 @@ function fakeDB(role = "admin") {
             if (sql.includes("SELECT id, role FROM users")) return {id:"target",role:"user"};
             if (sql.includes("SELECT COUNT(*) AS total FROM users")) return {total:2};
             if (sql.includes("SELECT COUNT(*) AS total FROM devices")) return {total:1};
+            if (sql.includes("SELECT COUNT(*) AS total FROM organizations")) return {total:2};
+            if (sql.includes("SELECT COUNT(*) AS total FROM organization_members")) return {total:4};
             if (sql.includes("FROM audit_events") && sql.includes("AS last7d")) return {count:200,last7d:50};
             if (sql.includes("FROM users u WHERE u.id") || sql.includes("FROM users u WHERE u.id=?1")) {
               return {role:"user",email:"target@unit.test",plan:"free",has_plus_grant:0,extra_calls:500};
@@ -75,6 +77,8 @@ const req = (path: string, token=true, init: RequestInit={}) => new Request(orig
   assert.equal(response.status,200);
   const data = await response.json() as any;
   assert.equal(data.totals.online,1);
+  assert.equal(data.totals.teams,2);
+  assert.equal(data.totals.teamMembers,4);
   assert.equal(data.devices[0].agent_version, "0.6.1-rc.5");
   assert.deepEqual(data.users[0].live_agent_versions, ["0.6.1-rc.5"]);
   assert.equal(data.users[0].linked_login, "email_only");

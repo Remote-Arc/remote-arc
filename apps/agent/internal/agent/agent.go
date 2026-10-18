@@ -47,6 +47,7 @@ type Agent struct {
 	connectionSequence uint64
 	workspace          workspace.Manager
 	settings           sync.Mutex
+	capacity           *capacityProbe
 }
 
 func New(cfg config.Config, version string, background bool, log *journal.Journal) *Agent {
@@ -54,7 +55,7 @@ func New(cfg config.Config, version string, background bool, log *journal.Journa
 	if cfg.Mode == "safe" {
 		mode = "safe"
 	}
-	return &Agent{Config: cfg, Version: version, BackgroundProcess: background, Client: NewClient(), Core: execution.New(mode), Journal: log, Background: service.New(version), Save: config.Save, Load: config.Load}
+	return &Agent{Config: cfg, Version: version, BackgroundProcess: background, Client: NewClient(), Core: execution.New(mode), Journal: log, Background: service.New(version), Save: config.Save, Load: config.Load, capacity: &capacityProbe{}}
 }
 
 // NewWake connects to the same authenticated Relay using a minimal control
@@ -62,7 +63,7 @@ func New(cfg config.Config, version string, background bool, log *journal.Journa
 func NewWake(cfg config.Config, version string, log *journal.Journal) *Agent {
 	return &Agent{Config: cfg, Version: version, BackgroundProcess: true,
 		WakeOnly: true, Client: NewClient(), Journal: log,
-		Background: service.New(version), Save: config.Save, Load: config.Load}
+		Background: service.New(version), Save: config.Save, Load: config.Load, capacity: &capacityProbe{}}
 }
 func (a *Agent) log(level, message string) {
 	if a.Journal != nil {
@@ -108,7 +109,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 	if !a.WakeOnly {
 		capabilities = append(capabilities, "native_core_v1", "undo_history_v1")
 	}
-	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version}, "tools": names, "capabilities": capabilities}
+	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.capacity.sample(ctx)}, "tools": names, "capabilities": capabilities}
 }
 func (a *Agent) heartbeat(ctx context.Context) error {
 	cfg := a.cfg()

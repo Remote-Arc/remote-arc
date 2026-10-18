@@ -16,3 +16,20 @@ Fleet scheduling is a **Remote Arc account capability**, not a separate device-l
 This is first-stage *placement*, not distributed shared storage. A path that exists only on a Mac cannot silently be used on Windows, even if Windows is idle. Automatic migration of a running job, workspace replication, battery/CPU/RAM telemetry, and atomic capacity reservations need separate protocols and rollout.
 
 The load signal deliberately uses existing D1 tables and a bounded audit window, with no continuously polling loops or per-device scheduling user settings.
+
+## Phase 2: resource-aware, stability-aware placement
+
+The Go and legacy TypeScript agents now sample **host-level CPU utilization and available memory** and publish bounded values on their existing 30-second WebSocket presence message. The Durable Object validates and timestamps observations server-side. This does not add a frequent D1 write or a separate polling service.
+
+- Freshness: resource measurements older than 2 minutes are ignored. Missing telemetry remains eligible for ordinary work, but cannot satisfy an explicit minimum-memory requirement.
+- Pressure: CPU and available-memory ratios penalize busy devices. Windows/WSL sharing a hostname share the more conservative pressure score rather than hiding a busy Windows host behind WSL.
+- Stability: sessions younger than 2 minutes incur a larger reconnect penalty; sessions younger than 10 minutes incur a smaller one. Authorization and platform requirements always override the score.
+- Device process state and Agent version remain visible; resource telemetry is best-effort and may be absent on unsupported OS versions or missing system utilities.
+
+## Reproducible Git workspace sync
+
+The account-level `fleet_sync_workspace` tool accepts only a validated GitHub `owner/repo` and immutable **40-character commit SHA**. Fleet Scheduler picks a capable online device and materializes the requested commit under a newly named directory inside one of its **Trusted Write Locations**. The operation runs as a managed background process and returns the `device_id`, `workspace` path and process handle.
+
+The Agent must use `process_status` on that same device, verify exit code 0, and only then start work from the returned path. Unknown acknowledgment is **never retried on a different device**. Existing directories are verified rather than overwritten; the checkout must have the expected origin, commit and clean working tree. Git credentials, when needed for private repositories, stay on the execution device. Remote Arc does not transmit them.
+
+This intentionally distributes **tracked Git content**, not arbitrary local files. It does **not** copy uncommitted changes, ignored files, private SSH keys, database files, or a running process. Bidirectional editing, merge-conflict resolution, changeset transfer and automatic state migration require a separate consistency and approval protocol. The source and destination must both have Git and network access to GitHub.

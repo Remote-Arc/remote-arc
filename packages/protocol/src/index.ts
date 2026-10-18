@@ -33,6 +33,7 @@ export type DeviceMetadata = {
   recoveryVersion?: string | null;
   connectedAt?: string;
   lastSeen?: string;
+  capacity?: { observedAt: string; memoryTotalMB: number; memoryAvailableMB: number; cpuPercent?: number } | null;
 };
 
 export type AgentHelloMessage = {

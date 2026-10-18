@@ -153,7 +153,8 @@ function authUrl(extra = "") {
     throw new Error("legacy consent decision flags leaked into consent URL");
   }
   const scopes = (consent.searchParams.get("scope") || "").split(/\s+/);
-  const expected = ["devices:read", "computer:read", "computer:write", "browser:read", "offline_access"];
+  const { DEFAULT_MCP_SCOPES } = await import("../src/oauth.js");
+  const expected = [...DEFAULT_MCP_SCOPES];
   if (JSON.stringify(scopes) !== JSON.stringify(expected)) {
     throw new Error("new client should request the complete baseline scope bundle: " + scopes.join(" "));
   }

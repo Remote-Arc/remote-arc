@@ -79,3 +79,30 @@ assert.deepEqual(choose([outdated],{}, {...terminal,minimumAvailableMemoryMB:100
 const winCapacity=device("win-cap","win32",{hostname:"same-box",connected_at:stableAt,capacity:capacity(99,300)});
 const wslCapacity=device("wsl-cap","linux",{hostname:"same-box",connected_at:stableAt,capacity:capacity(1,7900)});
 assert.deepEqual(choose([winCapacity,wslCapacity],{}, {...terminal,minimumAvailableMemoryMB:1000}),[],"shared host pressure cannot be hidden by WSL");
+
+// Reproduces an account-level placement bug observed with a busy legacy Mac/WSL:
+// absent capacity and absent managed-process reporting must not mean "idle".
+const observedNow=new Date().toISOString();
+const connectedLongAgo=new Date(Date.now()-15*60_000).toISOString();
+const freshWindows=device("fleet-canary","win32",{hostname:"PC",connected_at:connectedLongAgo,capacity:{
+ observedAt:observedNow,cpuPercent:15,memoryTotalMB:32768,memoryAvailableMB:14000,
+}});
+const legacyWsl=device("legacy-wsl","linux",{hostname:"PC",connected_at:connectedLongAgo});
+const legacyMac=device("legacy-mac","darwin",{hostname:"Mac",connected_at:connectedLongAgo});
+assert.equal(
+ choose([legacyMac,legacyWsl,freshWindows],{ "fleet-canary":{running:0,recent_calls:10} },terminal)[0].device.id,
+ "fleet-canary","live instrumented canary should outrank legacy agents with unknown long-running work"
+);
+// Once both nodes are instrumented, a low-CPU background process is still busy.
+const macRunning=device("mac-running","darwin",{hostname:"Mac",connected_at:connectedLongAgo,
+ capacity:{observedAt:observedNow,cpuPercent:1,memoryTotalMB:8192,memoryAvailableMB:6000,managedProcesses:3}});
+const winIdle=device("windows-idle","win32",{hostname:"PC",connected_at:connectedLongAgo,
+ capacity:{observedAt:observedNow,cpuPercent:25,memoryTotalMB:32768,memoryAvailableMB:18000,managedProcesses:0}});
+assert.equal(choose([macRunning,winIdle],{},terminal)[0].device.id,"windows-idle",
+  "long-running RA managed jobs count even at negligible CPU usage");
+const wslShared=device("wsl-active","linux",{hostname:"PC",connected_at:connectedLongAgo,
+ capacity:{observedAt:observedNow,cpuPercent:5,memoryTotalMB:8192,memoryAvailableMB:5000,managedProcesses:3}});
+const idleMac=device("idle-mac","darwin",{hostname:"Mac",connected_at:connectedLongAgo,
+ capacity:{observedAt:observedNow,cpuPercent:10,memoryTotalMB:8192,memoryAvailableMB:6000,managedProcesses:0}});
+assert.equal(choose([winIdle,wslShared,idleMac],{},terminal)[0].device.id,"idle-mac",
+  "Windows and WSL share managed-process pressure on their physical host");

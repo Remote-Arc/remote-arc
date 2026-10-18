@@ -22,7 +22,7 @@ The load signal deliberately uses existing D1 tables and a bounded audit window,
 The Go and legacy TypeScript agents now sample **host-level CPU utilization and available memory** and publish bounded values on their existing 30-second WebSocket presence message. The Durable Object validates and timestamps observations server-side. This does not add a frequent D1 write or a separate polling service.
 
 - Freshness: resource measurements older than 2 minutes are ignored. Missing telemetry remains eligible for ordinary work, but cannot satisfy an explicit minimum-memory requirement.
-- Pressure: CPU and available-memory ratios penalize busy devices. Windows/WSL sharing a hostname share the more conservative pressure score rather than hiding a busy Windows host behind WSL.
+- Pressure: CPU and available-memory ratios penalize busy devices. The Go agent also reports only the count of currently running Remote Arc-managed processes (never command lines or paths), including quiet long-running browser/build jobs. Windows/WSL sharing a hostname share conservative resource and managed-process pressure. Agents without fresh telemetry remain eligible but are ranked behind reasonably idle instrumented nodes: absence of a measurement does not imply idle capacity.
 - Stability: sessions younger than 2 minutes incur a larger reconnect penalty; sessions younger than 10 minutes incur a smaller one. Authorization and platform requirements always override the score.
 - Device process state and Agent version remain visible; resource telemetry is best-effort and may be absent on unsupported OS versions or missing system utilities.
 

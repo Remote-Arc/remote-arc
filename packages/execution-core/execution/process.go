@@ -247,6 +247,23 @@ func (p *Processes) Stop(id string) (map[string]any, error) {
 	s["already_exited"] = false
 	return s, nil
 }
+
+// ActiveCount exposes only the number of live managed jobs, not process names
+// or arguments. Finished jobs retained for inspection do not count as load.
+func (p *Processes) ActiveCount() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	active := 0
+	for _, job := range p.items {
+		select {
+		case <-job.done:
+		default:
+			active++
+		}
+	}
+	return active
+}
+
 func (p *Processes) List() []map[string]any {
 	p.mu.Lock()
 	p.cleanup()

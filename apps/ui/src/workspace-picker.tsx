@@ -15,6 +15,10 @@ type Position = {
   ink: string; muted: string; surface: string; subtle: string; line: string; accent: string;
 };
 
+function ProductIcon({workspace}:{workspace:Workspace}){
+  return workspace==="agent"?<img src="/remote-arc.svg" alt="" width={21} height={21}/>:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 .5l2-2a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7-.5l-2 2a5 5 0 0 0 7 7l1-1"/></svg>;
+}
+
 export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: Props) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<Position | null>(null);
@@ -27,7 +31,7 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: P
     if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
     const tokens = getComputedStyle(trigger);
-    const width = Math.min(310, Math.max(264, rect.width), window.innerWidth - 24);
+    const width = Math.min(320, Math.max(300, rect.width), window.innerWidth - 24);
     const left = Math.max(12, Math.min(mobile ? rect.right - width : rect.left, window.innerWidth - width - 12));
     const menuHeight = menuRef.current?.getBoundingClientRect().height || 160;
     const below = rect.bottom + 8;
@@ -107,11 +111,11 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: P
       <button ref={triggerRef} type="button" className="workspacePickerTrigger" aria-label={tr("Switch workspace", "切换工作空间")}
         aria-haspopup="menu" aria-controls={open ? menuId : undefined} aria-expanded={open}
         onClick={() => setOpen(value => !value)}>
-        <span className={"workspacePickerEmblem " + workspace} aria-hidden="true">{workspace === "connect" ? "⌘" : "✳"}</span>
+        <span className={"workspacePickerEmblem " + workspace} aria-hidden="true"><ProductIcon workspace={workspace}/></span>
         <span className="workspacePickerCopy">
-          <small>{tr("WORKSPACE", "工作空间")}</small><strong>{workspace === "connect" ? "Connect" : "Arc Agent"}</strong>
+          <small>{tr("WORKSPACE", "工作空间")}</small><strong>{workspace === "connect" ? "Connect" : "Arc"}</strong>
         </span>
-        <span className="workspacePickerChevron" aria-hidden="true">⌄</span>
+        <span className="workspacePickerChevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="m5 6 3 3 3-3"/></svg></span>
       </button>
     </div>
     {open && position && createPortal(
@@ -120,16 +124,17 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: P
         <div className="workspacePickerMenuCaption">{tr("SWITCH WORKSPACE", "切换工作空间")}</div>
         <button type="button" role="menuitemradio" aria-checked={workspace === "connect"}
           className={workspace === "connect" ? "selected" : ""} onClick={() => select("overview")}>
-          <span className="workspaceOptionIcon" aria-hidden="true">⌘</span>
-          <span className="workspaceOptionDescription"><strong>Connect</strong><small>{tr("Devices, apps and MCP", "设备、应用及 MCP")}</small></span>
+          <span className="workspaceOptionIcon" aria-hidden="true"><ProductIcon workspace="connect"/></span>
+          <span className="workspaceOptionDescription"><strong>Connect</strong><small>{tr("Bring tools to the AI you use", "为你常用的 AI 连接工具")}</small></span>
           <span className="workspaceOptionCheck" aria-hidden="true">{workspace === "connect" ? "✓" : "→"}</span>
         </button>
         <button type="button" role="menuitemradio" aria-checked={workspace === "agent"}
           className={workspace === "agent" ? "selected" : ""} onClick={() => select("agent-chat")}>
-          <span className="workspaceOptionIcon agent" aria-hidden="true">✳</span>
-          <span className="workspaceOptionDescription"><strong>Arc Agent</strong><small>{tr("Goals and ongoing work", "目标及持续工作")}</small></span>
+          <span className="workspaceOptionIcon agent" aria-hidden="true"><ProductIcon workspace="agent"/></span>
+          <span className="workspaceOptionDescription"><strong>Arc</strong><small>{tr("Your personal AI workspace", "你的个人 AI 工作空间")}</small></span>
           <span className="workspaceOptionCheck" aria-hidden="true">{workspace === "agent" ? "✓" : "→"}</span>
         </button>
+        <div className="workspacePickerMenuFoot">{tr("One account. Shared apps and devices.","同一个账号，共享已连接的应用与设备。")}</div>
       </div>,
       document.body,
     )}

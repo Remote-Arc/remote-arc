@@ -36,8 +36,7 @@ import { isOlderRelease, goUpdateCommands } from "./agent-update-guide.js";
 import "./styles.css";
 import "./dashboard.css";
 import "./laptop-hero.css";
-import "./dashboard-premium.css";
-import "./dashboard-night.css";
+import "./workspace-design.css";
 
 declare const __REMOTEARC_CLI_VERSION__: string;
 
@@ -417,9 +416,9 @@ function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
   if (tab === "agent-skills") return <svg {...common}><path d="M12 3v4m0 10v4M3 12h4m10 0h4M5.6 5.6l2.8 2.8m7.2 7.2 2.8 2.8m0-12.8-2.8 2.8m-7.2 7.2-2.8 2.8"/><circle cx="12" cy="12" r="3"/></svg>;
   if (tab === "agent-activity") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
   if (tab === "overview") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
-  if (tab === "devices") return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
+  if (tab === "devices" || tab === "agent-devices") return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
   if (tab === "automations") return <svg {...common}><path d="M4 12a8 8 0 0 1 14.6-4.5"/><path d="M18 3v5h-5"/><path d="M20 12a8 8 0 0 1-14.6 4.5"/><path d="M6 21v-5h5"/></svg>;
-  if (tab === "apps") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 17.5h7m-3.5-3.5v7"/></svg>;
+  if (tab === "apps" || tab === "agent-apps") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 17.5h7m-3.5-3.5v7"/></svg>;
   if (tab === "connect") return <svg {...common}><path d="M8.5 12.5 12 9l3.5 3.5"/><path d="M12 9v9"/><path d="M5 6.5A4.5 4.5 0 0 1 9.5 2h5A4.5 4.5 0 0 1 19 6.5"/></svg>;
   if (tab === "security") return <svg {...common}><path d="M12 3 5 6v5c0 4.7 2.7 7.8 7 10 4.3-2.2 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>;
   if (tab === "monitor") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
@@ -5079,21 +5078,24 @@ function Dashboard({
   const workspace = workspaceForTab(active);
   const navItems: Array<[DashboardTab, string]> = workspace === "agent" ? [
     ["agent-chat", tr("Chat", "对话")],
-    ["agent-goals", tr("Runs", "运行记录")],
+    ["agent-goals", tr("Tasks", "任务")],
     ["agent-activity", tr("Activity", "活动")],
+    ["agent-apps", tr("Apps", "应用")],
+    ["agent-devices", tr("Devices", "设备")],
+    ["agent-skills", tr("Skills", "技能")],
   ] : [
     ["overview", tr("Overview", "概览")],
     ["devices", tr("Devices", "设备")],
     ["apps", tr("Apps", "应用")],
     ["automations", tr("Tasks", "任务")],
-    ["connect", tr("MCP Clients", "MCP 客户端")],
+    ["connect", tr("AI clients", "AI 客户端")],
   ];
   const renderWorkspacePicker = (mobile = false) => (
     <WorkspacePicker workspace={workspace} mobile={mobile} tr={tr} onNavigate={navigateTab} />
   );
 
   return (
-    <div className="appFrame">
+    <div className="appFrame" data-workspace={workspace}>
       <aside className="sidebar">
         <div className="sidebarBrand"><Brand /></div>
         {renderWorkspacePicker()}
@@ -5101,7 +5103,7 @@ function Dashboard({
           <div id="arc-sidebar-nav-root" className="arcSidebarPortalRoot" />
         ) : (
           <>
-            <div className="workspaceNavHeading">{tr("NAVIGATION", "导航")}</div>
+            <div className="workspaceNavHeading">{workspace === "agent" ? tr("WORKSPACE", "工作空间") : tr("CONNECTIONS", "连接管理")}</div>
             <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
               {navItems.map(([id, label]) => (
                 <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
@@ -5114,10 +5116,9 @@ function Dashboard({
         )}
         <div className="sidebarGlobalNavigation">
           <div className="workspaceNavHeading">{tr("ACCOUNT", "账户")}</div>
-          <button type="button" className={active === "security" ? "active" : ""} onClick={() => navigateTab("security")}><span className="sideNavIcon"><DashboardNavIcon tab="security" /></span>{tr("Security", "安全")}</button>
-          <button type="button" className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab("settings")}><span className="sideNavIcon"><DashboardNavIcon tab="settings" /></span>{tr("Settings", "设置")}</button>
+          <button type="button" className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab(workspace === "agent" ? "agent-settings" : "settings")}><span className="sideNavIcon"><DashboardNavIcon tab="settings" /></span>{tr("Settings", "设置")}</button>
           {user.isAdmin && <a href="https://admin.remotearc.app/">{tr("Admin", "管理员后台")} <span aria-hidden="true">↗</span></a>}
-          <a href={MARKETING_ORIGIN}>{tr("Website", "官网")} <span aria-hidden="true">↗</span></a>
+          <a href={MARKETING_ORIGIN + "/docs"}>{tr("Help & documentation", "帮助与文档")} <span aria-hidden="true">↗</span></a>
         </div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
@@ -5149,8 +5150,9 @@ function Dashboard({
             onPrepareGoal={(objective, successCriteria) => openCreateInWorkspace("agent", false, objective, successCriteria)}
             onOpenGoals={() => navigateTab("agent-goals")}
             onCreateRoutine={() => openCreateInWorkspace("agent", true)}
-            onManageApps={() => navigateTab("apps")}
-            onManageDevices={() => navigateTab("devices")}
+            onManageApps={() => navigateTab("agent-apps")}
+            onManageDevices={() => navigateTab("agent-devices")}
+            onManageSkills={() => navigateTab("agent-skills")}
           />
         )}
 
@@ -5240,7 +5242,7 @@ function Dashboard({
           </>
         )}
 
-        {active === "devices" && (
+        {(active === "devices" || active === "agent-devices") && (
           <>
             <section className="overviewTopbar devicesPageHeader">
               <div>
@@ -6526,7 +6528,7 @@ function Dashboard({
           </>
         )}
 
-        {active === "apps" && <AppsManager />}
+        {(active === "apps" || active === "agent-apps") && <AppsManager />}
 
         {active === "connect" && (
           <>
@@ -6936,14 +6938,13 @@ function Dashboard({
               currentEmail={user.email}
               locale={locale}
               setLocale={setLocale}
-              themeSwitcher={<ThemeSwitcher />}
               hasPlus={hasPlus}
               usage={usage}
               usageLimitLabel={usageLimitLabel}
               mcpEndpoint={mcpEndpoint}
               marketingOrigin={MARKETING_ORIGIN}
               onSignOut={signOut}
-              onNavigate={navigateTab}
+              onNavigate={destination => navigateTab(workspace === "agent" && destination === "apps" ? "agent-apps" : workspace === "agent" && destination === "devices" ? "agent-devices" : destination)}
             />
           </>
         )}

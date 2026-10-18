@@ -29,8 +29,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     try {
       const saved = localStorage.getItem(preferenceKey());
-      return saved === "light" || saved === "dark" || saved === "system" ? saved : ("dark");
-    } catch { return "dark"; }
+      return saved === "light" || saved === "dark" || saved === "system" ? saved : (dashboardSurface() ? "light" : "dark");
+    } catch { return dashboardSurface() ? "light" : "dark"; }
   });
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(theme));
 

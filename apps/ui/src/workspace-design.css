@@ -1,0 +1,150 @@
+/* One visual language for the authenticated product. Marketing tokens stay outside this scope. */
+:root[data-theme] .appFrame[data-workspace]{
+ --dash-text:#202024;--dash-muted:#73737c;--dash-line:#e7e7eb;--dash-surface:#fff;--dash-subtle:#f5f5f7;
+ --dash-accent:#242428;--dash-accent-hover:#45454b;--dash-accent-soft:#eeeeF1;--dash-sidebar:#f8f8fa;--dash-canvas:#fff;--dash-inverse:#fff;--sidebar-width:232px;
+ --text:var(--dash-text);--muted:var(--dash-muted);--line:var(--dash-line);--panel:var(--dash-surface);--panel-2:var(--dash-subtle);--bg:var(--dash-canvas);--accent:var(--dash-accent);
+ color:var(--dash-text);background:var(--dash-canvas);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;min-height:100dvh;display:block;color-scheme:light;
+}
+:root[data-theme="dark"] .appFrame[data-workspace]{
+ --dash-text:#eeeef1;--dash-muted:#9999a4;--dash-line:#2a2a30;--dash-surface:#19191d;--dash-subtle:#222227;
+ --dash-accent:#eeeef1;--dash-accent-hover:#d6d6dc;--dash-accent-soft:#2b2b31;--dash-sidebar:#151518;--dash-canvas:#111114;--dash-inverse:#19191d;color-scheme:dark;
+}
+:root[data-theme] .appFrame[data-workspace] *{box-sizing:border-box}
+:root[data-theme] .appFrame[data-workspace] :is(button,input,select,textarea){font-family:inherit}
+:root[data-theme] .appFrame[data-workspace] :is(button,a,summary,input,select,textarea):focus-visible{outline:2px solid var(--dash-accent);outline-offset:3px}
+:root[data-theme] .appFrame[data-workspace] :is(button,a){-webkit-tap-highlight-color:transparent}
+:root[data-theme] .appFrame[data-workspace] .sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar-width)!important;height:100dvh;padding:24px 14px 14px;background:var(--dash-sidebar)!important;border-right:1px solid var(--dash-line)!important;backdrop-filter:none;display:flex;flex-direction:column;gap:0;overflow:auto;z-index:40}
+:root[data-theme] .appFrame[data-workspace] .sidebarBrand{padding:2px 12px 25px}
+:root[data-theme] .appFrame[data-workspace] .sidebarBrand .brand{gap:10px;font-size:17px;margin:0}
+:root[data-theme] .appFrame[data-workspace] .brandWords,:root[data-theme] .appFrame[data-workspace] .brandWords b{color:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] .dashboardWorkspacePicker{margin-bottom:24px}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerTrigger{min-height:57px;padding:10px;border-radius:9px;background:var(--dash-surface);border:1px solid var(--dash-line);box-shadow:0 1px 2px #00000003;gap:10px;transform:none}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerTrigger:hover,:root[data-theme] .appFrame[data-workspace] .workspacePickerTrigger[aria-expanded="true"]{border-color:color-mix(in srgb,var(--dash-text) 24%,var(--dash-line));background:var(--dash-surface);box-shadow:none;transform:none}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerEmblem{width:30px;height:30px;flex-basis:30px;border-radius:7px;background:var(--dash-subtle);border:1px solid var(--dash-line);color:var(--dash-text);font-size:19px;transform:none}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerEmblem.agent{background:var(--dash-subtle);color:var(--dash-text);border-color:var(--dash-line)}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerCopy{gap:2px}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerCopy small{font-size:9px;letter-spacing:.08em;font-weight:550}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerCopy strong{font-size:13px;font-weight:600}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerChevron{font-size:16px}
+:root[data-theme] .appFrame[data-workspace] .workspaceNavHeading{font-size:10px;font-weight:550;letter-spacing:.07em;color:var(--dash-muted);padding:2px 11px 10px}
+:root[data-theme] .appFrame[data-workspace] .sideNav{gap:3px}
+:root[data-theme] .appFrame[data-workspace] .sideNav button{min-height:39px!important;padding:9px 11px;font-size:13px!important;font-weight:450;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--dash-muted);box-shadow:none;transform:none}
+:root[data-theme] .appFrame[data-workspace] .sideNav button:hover:not(.active){background:var(--dash-subtle)!important;color:var(--dash-text)!important;border-color:transparent!important;transform:none}
+:root[data-theme] .appFrame[data-workspace] .sideNav button.active{background:var(--dash-accent-soft)!important;color:var(--dash-text)!important;border-color:transparent!important;box-shadow:none!important;font-weight:600}
+:root[data-theme] .appFrame[data-workspace] .sideNav button .sideNavIcon,:root[data-theme] .appFrame[data-workspace] .sideNav button.active .sideNavIcon{width:17px;color:inherit!important;background:transparent!important;box-shadow:none;transform:none}
+:root[data-theme] .appFrame[data-workspace] .sideNavIcon svg{width:17px;height:17px}
+:root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation{padding-top:14px;border-top:1px solid var(--dash-line);margin-top:auto;gap:2px}
+:root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation :is(button,a){min-height:35px;padding:8px 11px;font-size:12px;font-weight:450;color:var(--dash-muted);background:transparent;border-radius:7px;transform:none}
+:root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation :is(button,a):hover{background:var(--dash-subtle);color:var(--dash-text);transform:none}
+:root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation .sideNavIcon{color:inherit;width:17px}
+:root[data-theme] .appFrame[data-workspace] .sidebarAccount{padding:14px 6px 2px;margin-top:12px;border-top:1px solid var(--dash-line);background:transparent;grid-template-columns:30px minmax(0,1fr) 28px;gap:9px}
+:root[data-theme] .appFrame[data-workspace] .sidebarAccount strong{font-size:12px;font-weight:550;color:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] .sidebarAccount span{font-size:11px;color:var(--dash-muted)}
+:root[data-theme] .appFrame[data-workspace] .sidebarAccount :is(img,.avatarFallback){width:30px;height:30px;border-radius:8px;background:var(--dash-accent-soft);color:var(--dash-text);border:1px solid var(--dash-line);font-size:11px}
+:root[data-theme] .appFrame[data-workspace] .sidebarAccount button{min-width:28px;min-height:32px;font-size:15px;color:var(--dash-muted);background:transparent}
+:root[data-theme] .appFrame[data-workspace] .dashboardMain{width:calc(100% - var(--sidebar-width))!important;max-width:none!important;margin:0 0 0 var(--sidebar-width)!important;padding:30px clamp(24px,3.4vw,60px) 24px!important;min-width:0;background:var(--dash-canvas)}
+:root[data-theme] .appFrame[data-workspace] .dashboardMain>:not(.mobileTopbar):not(.arcChatShell){max-width:1420px;margin-left:auto;margin-right:auto}
+:root[data-theme] .appFrame[data-workspace] .previewModeBanner{min-height:29px;padding:6px 10px;margin-bottom:24px;color:var(--dash-muted);background:var(--dash-subtle);border:1px solid var(--dash-line);border-radius:6px;font-size:10px;gap:9px}
+:root[data-theme] .appFrame[data-workspace] .previewModeBanner strong{font-size:9px;font-weight:600;color:var(--dash-text);letter-spacing:.055em}
+:root[data-theme] .appFrame[data-workspace] :is(.eyebrow,.arcEyebrow){color:var(--dash-muted);font-size:10px;letter-spacing:.09em;font-weight:600}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar,.pageHeader,.securityTopbar){padding:8px 0 23px;margin-bottom:22px;border-bottom:1px solid var(--dash-line)}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar,.pageHeader,.securityTopbar) h1{font-size:30px!important;line-height:1.2;font-weight:600;letter-spacing:-.045em;color:var(--dash-text);margin:8px 0}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar,.pageHeader,.securityTopbar) p{font-size:14px;line-height:1.6;color:var(--dash-muted)}
+:root[data-theme] .appFrame[data-workspace] :is(.addButton,.primaryButton,.ghostButton,.copyButton,.dangerButton,.automationActions button){min-height:36px;padding:9px 13px;font-size:12px;line-height:1.3;border-radius:7px;box-shadow:none;text-shadow:none}
+:root[data-theme] .appFrame[data-workspace] .overviewActions .addButton{min-height:36px;padding:10px 14px;font-size:12px}
+:root[data-theme] .appFrame[data-workspace] :is(.addButton,.primaryButton,.goldButton,.appsManagerPrimary,.arcPrimaryAction){background:var(--dash-accent)!important;color:var(--dash-inverse)!important;border:1px solid var(--dash-accent)!important;box-shadow:none!important}
+:root[data-theme] .appFrame[data-workspace] :is(.ghostButton,.copyButton){background:var(--dash-surface);color:var(--dash-text);border:1px solid var(--dash-line)}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewStatusCard,.overviewQuickCard,.overviewAttentionCard,.panelBlock,.deviceCard,.automationStats article,.automationListPanel,.automationCreatePanel,.settingsCard){background:var(--dash-surface)!important;border:1px solid var(--dash-line);border-radius:10px;box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusGrid{gap:14px;margin-bottom:18px}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusCard{padding:19px 20px;min-height:145px}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusCard>strong{font-size:32px;letter-spacing:-.05em;font-weight:550;color:var(--dash-text);margin:13px 0 9px}
+:root[data-theme] .appFrame[data-workspace] .statusCardHead{font-size:10px;letter-spacing:.035em;color:var(--dash-muted);font-weight:550}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusCard>small,:root[data-theme] .appFrame[data-workspace] .overviewStatusCard>button{font-size:12px;color:var(--dash-muted)}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusCard.endpoint code{font-size:11px;color:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] .usageTrack{height:3px;background:var(--dash-line)}
+:root[data-theme] .appFrame[data-workspace] .usageTrack i{background:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewQuickCard,.overviewAttentionCard,.panelBlock){padding:22px}
+:root[data-theme] .appFrame[data-workspace] h2,:root[data-theme] .appFrame[data-workspace] .blockHeader h2{font-size:18px;letter-spacing:-.025em;font-weight:550;color:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] .quickActionList button,:root[data-theme] .appFrame[data-workspace] .overviewAttentionCard button{background:var(--dash-subtle);border:1px solid transparent;border-radius:8px;color:var(--dash-text);padding:14px;gap:12px;box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] .quickActionList button:hover{background:var(--dash-accent-soft);border-color:var(--dash-line);transform:none}
+:root[data-theme] .appFrame[data-workspace] .quickActionList button>span{background:var(--dash-surface);color:var(--dash-muted);border:1px solid var(--dash-line);border-radius:7px}
+:root[data-theme] .appFrame[data-workspace] .quickActionList strong,:root[data-theme] .appFrame[data-workspace] .overviewAttentionCard strong{font-size:13px;font-weight:550;color:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] .quickActionList small,:root[data-theme] .appFrame[data-workspace] .overviewAttentionCard small{font-size:12px;color:var(--dash-muted);line-height:1.5}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewDeviceRow,.activityItem){background:var(--dash-subtle);border-color:var(--dash-line);border-radius:8px;color:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] :is(.activityIcon,.deviceIcon){background:var(--dash-surface);border:1px solid var(--dash-line);color:var(--dash-muted);border-radius:7px}
+:root[data-theme] .appFrame[data-workspace] .activityItem strong{font-size:13px;font-weight:550}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewDeviceRow,.activityItem) small{font-size:12px;color:var(--dash-muted)}
+:root[data-theme] .appFrame[data-workspace] .dashboardFooter{padding-top:24px;margin-top:24px;border-top:1px solid var(--dash-line);color:var(--dash-muted);font-size:11px}
+:root[data-theme] .appFrame[data-workspace] .appsManagerCard{background:var(--dash-surface);border:1px solid var(--dash-line);border-radius:10px;box-shadow:none;animation:none;transition:border-color .15s}
+:root[data-theme] .appFrame[data-workspace] .appsManagerCard:hover{transform:none;border-color:color-mix(in srgb,var(--dash-text) 28%,var(--dash-line));box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] .appsManagerCard::before{display:none}
+:root[data-theme] .appFrame[data-workspace] .appsManagerBrand{background:var(--dash-subtle);border-color:var(--dash-line);transform:none;box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] .appsManagerSummary{background:var(--dash-surface);border-color:var(--dash-line);border-radius:10px;box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] .appsManagerCategories button{background:transparent;color:var(--dash-muted);border:1px solid var(--dash-line);border-radius:6px;transform:none}
+:root[data-theme] .appFrame[data-workspace] .appsManagerCategories button[aria-pressed="true"]{background:var(--dash-accent-soft)!important;border-color:var(--dash-line)!important;color:var(--dash-text)!important;box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] .appsManagerViewTabs{background:var(--dash-subtle);border-color:var(--dash-line)}
+:root[data-theme] .appFrame[data-workspace] .appsManagerViewTabs button[aria-pressed="true"]{background:var(--dash-surface);color:var(--dash-text);box-shadow:0 1px 3px #0000000d}
+:root[data-theme] .appFrame[data-workspace] .appsSearchField input{background:var(--dash-surface);border-color:var(--dash-line);color:var(--dash-text);box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] .appsToolsDialog{background:var(--dash-surface);border-color:var(--dash-line);color:var(--dash-text)}
+:root[data-theme] .workspacePickerMenuPortal{background:var(--picker-surface);border-color:var(--picker-line);border-radius:10px;box-shadow:0 14px 40px #00000020;animation:none}
+:root[data-theme] .workspacePickerMenuPortal button{border-radius:7px;transform:none;min-height:61px}
+:root[data-theme] .workspacePickerMenuPortal button.selected{background:var(--picker-subtle);border-color:transparent}
+:root[data-theme] .workspacePickerMenuPortal .workspaceOptionIcon.agent{background:var(--picker-subtle);border:1px solid var(--picker-line);color:var(--picker-text)}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .dashboardMain{height:100dvh;padding:0!important;display:flex;flex-direction:column;overflow:hidden}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .previewModeBanner{flex:none;max-width:none;margin:12px 24px 0;min-height:27px}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .dashboardFooter{display:none}
+:root[data-theme] .appFrame[data-workspace] .arcSidebarPortalRoot{display:flex;flex-direction:column;flex:1;min-height:0}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .sidebar{overflow:hidden}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .sidebarGlobalNavigation{margin-top:0}
+:root[data-theme] .appFrame[data-workspace] .mobileBottomNav{border-color:var(--dash-line);background:var(--dash-sidebar)}
+:root[data-theme] .appFrame[data-workspace] .mobileBottomNav button.active{background:var(--dash-accent-soft);color:var(--dash-text)}
+@media(min-width:780px){:root[data-theme] .appFrame[data-workspace] .appsManagerCategories{flex-wrap:wrap;overflow:visible;row-gap:8px}}
+@media(max-width:1100px){:root[data-theme] .appFrame[data-workspace] .overviewStatusGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:820px){
+ :root[data-theme] .appFrame[data-workspace]{--sidebar-width:0px}
+ :root[data-theme] .appFrame[data-workspace] .sidebar{display:none}
+ :root[data-theme] .appFrame[data-workspace] .dashboardMain{padding:16px 18px 90px!important}
+ :root[data-theme] .appFrame[data-workspace] .mobileTopbar{display:flex;min-height:52px;margin-bottom:16px;padding:0;border-color:var(--dash-line);background:var(--dash-canvas)}
+ :root[data-theme] .appFrame[data-workspace] .dashboardWorkspacePicker.mobilePicker{display:block;margin:0}
+ :root[data-theme] .appFrame[data-workspace] .mobilePicker .workspacePickerTrigger{min-height:39px;padding:6px 9px}
+ :root[data-theme] .appFrame[data-workspace] .mobilePicker .workspacePickerCopy small{display:none}
+ :root[data-theme] .appFrame[data-workspace] .mobilePicker .workspacePickerEmblem{width:23px;height:23px;flex-basis:23px}
+ :root[data-theme] .appFrame[data-workspace] .overviewStatusCard{min-height:132px;padding:16px}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .dashboardMain{padding:0!important}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .mobileTopbar{order:0;min-height:52px;margin:0;padding:8px 14px;border-bottom:1px solid var(--dash-line)}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .previewModeBanner{order:1;margin:8px 14px 0;padding:5px 8px}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .arcChatShell{order:2}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .mobileBottomNav{display:none!important}
+ :root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar,.pageHeader,.securityTopbar) h1{font-size:26px!important}
+ :root[data-theme] .appFrame[data-workspace] .overviewActions{gap:8px}
+ :root[data-theme] .appFrame[data-workspace] .overviewActions .addButton{font-size:11px;padding:9px 11px}
+}
+@media(prefers-reduced-motion:reduce){:root[data-theme] .appFrame[data-workspace] *{animation:none!important;scroll-behavior:auto!important}}
+
+:root[data-theme] .appFrame[data-workspace] :is(h1,h2,h3,h4){color:var(--dash-text)!important;font-family:inherit}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar,.pageHeader,.securityTopbar) p,
+:root[data-theme] .appFrame[data-workspace] :is(.eyebrow,.arcEyebrow,.statusCardHead,.overviewStatusCard>small,.quickActionList small,.attentionList small,.overviewDeviceRow small,.activityItem small,.dashboardFooter){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .sideNav button{color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .sideNav button.active{color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusCard>strong{color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.ghostButton,.copyButton,.privacyPill,.badge){background:var(--dash-subtle);border:1px solid var(--dash-line);color:var(--dash-muted)}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusCard.endpoint code{color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .miniUsageBar{height:3px;background:var(--dash-line)}
+:root[data-theme] .appFrame[data-workspace] .miniUsageBar i{background:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] .sideNav .sideNavIcon,
+:root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation .sideNavIcon{color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .sideNav button.active .sideNavIcon{color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] .workspacePickerEmblem svg,
+.workspacePickerMenuPortal .workspaceOptionIcon svg{width:19px;height:19px}
+.workspacePickerMenuFoot{padding:13px 10px 6px;border-top:1px solid var(--picker-line);margin-top:5px;color:var(--picker-muted);font-size:10px;line-height:1.6}
+:root[data-theme] .appFrame[data-workspace] .dashboardUtilityHeader{padding-top:8px}
+:root[data-theme] .appFrame[data-workspace] .attentionList :is(.attentionIcon,.warn){box-shadow:none}
+
+/* Neutral control colors also cover legacy controls that used fixed theme colors. */
+:root[data-theme] .appFrame[data-workspace] :is(.ghostButton,.copyBtn,.copyButton,.privacyPill,.languageSetting){background:var(--dash-subtle)!important;border-color:var(--dash-line)!important;color:var(--dash-muted)!important;box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] :is(button,a,input,textarea,select,summary):focus-visible{outline:2px solid var(--dash-text)!important;outline-offset:3px}
+:root[data-theme] .workspacePickerMenuPortal button:focus-visible{outline:2px solid var(--picker-text)!important;outline-offset:-2px}
+:root[data-theme] .appFrame[data-workspace] .sideNav button.active .sideNavLabel{color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] .sideNav button .sideNavLabel{color:inherit!important}
+:root[data-theme] .appFrame[data-workspace] .raSettings .languageSetting{background:var(--dash-subtle)!important}
+:root[data-theme] .appFrame[data-workspace] .statusCardActions button{background:var(--dash-subtle)!important;border-color:var(--dash-line)!important;color:var(--dash-muted)!important}

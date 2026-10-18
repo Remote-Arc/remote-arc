@@ -1,0 +1,48 @@
+.organizationSettings{display:grid;gap:18px;margin-bottom:26px;border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:clamp(20px,2.5vw,32px);min-width:0}
+.organizationSettingsIntro{display:flex;align-items:flex-start;justify-content:space-between;gap:22px}
+.organizationSettingsIntro h2{font-size:clamp(22px,2.5vw,27px);letter-spacing:-.035em;margin:8px 0}
+.organizationSettingsIntro p{margin:0;color:var(--muted);max-width:670px;font-size:13px;line-height:1.65}
+.organizationCount{font-size:12px;font-weight:650;border:1px solid var(--line);border-radius:100px;padding:7px 12px;white-space:nowrap}
+.organizationLayout{display:grid;grid-template-columns:minmax(210px,260px) minmax(0,1fr);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:300px}
+.organizationSidebar{border-right:1px solid var(--line);padding:18px;background:color-mix(in srgb,var(--bg) 55%,var(--panel))}
+.organizationOverline{font-size:10px;letter-spacing:.12em;font-weight:750;color:var(--muted)}
+.organizationChoices{display:grid;gap:7px;margin:14px 0}
+.organizationChoices button{display:flex;align-items:center;gap:10px;text-align:left;width:100%;border:1px solid transparent;border-radius:11px;background:transparent;padding:10px;color:var(--text);cursor:pointer}
+.organizationChoices button.selected{background:var(--panel);border-color:var(--line);box-shadow:0 2px 12px rgba(0,0,0,.025)}
+.organizationChoices button:hover{border-color:var(--line)}
+.organizationChoices button>span:last-child{display:grid;gap:3px;min-width:0}.organizationChoices strong{font-size:13px;overflow-wrap:anywhere}.organizationChoices small{font-size:11px;color:var(--muted)}
+.organizationAvatar,.organizationMemberAvatar{flex:none;width:35px;height:35px;display:grid;place-items:center;border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,var(--panel));font-size:15px;font-weight:730;color:var(--accent)}
+.organizationCreateForm,.organizationRename,.organizationInviteForm{display:grid;gap:9px}.organizationCreateForm label,.organizationRename label,.organizationInviteForm label{font-size:12px;font-weight:680}
+.organizationCreateForm>div,.organizationRename>div,.organizationInviteForm>div{display:flex;gap:8px;min-width:0}
+.organizationSettings input,.organizationSettings select{min-width:0;max-width:100%;border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--text);background:var(--bg);font:inherit;font-size:13px}
+.organizationSettings input{flex:1}
+.organizationSettings button:not(.organizationChoices button){border:1px solid var(--line);border-radius:9px;padding:9px 13px;background:var(--bg);color:var(--text);font:inherit;font-size:12px;font-weight:680;cursor:pointer}
+.organizationSettings button:disabled{opacity:.45;cursor:not-allowed}
+.organizationSettings button:hover:not(:disabled){border-color:var(--accent)}
+.organizationCreateForm button,.organizationInviteForm button,.organizationInbox button:not(.organizationSecondary){background:var(--accent)!important;color:var(--panel)!important;border-color:var(--accent)!important}
+.organizationMain{min-width:0;padding:22px}
+.organizationCurrentTop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.organizationCurrentTop h3{font-size:22px;letter-spacing:-.04em;margin:7px 0 3px}
+.organizationCurrentTop p{margin:0;color:var(--muted);font-size:12px}
+.organizationRole{font-size:10px;text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--line);padding:4px 8px;border-radius:100px;color:var(--muted);white-space:nowrap}
+.organizationRename{margin-top:20px;max-width:520px}
+.organizationSectionHeader{margin-top:28px;margin-bottom:11px}
+.organizationSectionHeader h4,.organizationPending h4{font-size:16px;margin:0 0 3px}.organizationSectionHeader p{margin:0;color:var(--muted);font-size:12px}
+.organizationMemberList{display:grid}
+.organizationMember{display:flex;align-items:center;gap:11px;border-top:1px solid var(--line);padding:13px 0;min-width:0}
+.organizationMember>div{display:grid;gap:3px;min-width:0;flex:1}.organizationMember strong{font-size:13px;overflow-wrap:anywhere}.organizationMember small{color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+.organizationMember select{width:104px;flex:none;padding:7px}
+.organizationSettings .organizationTextButton{color:#c15a53!important}
+.organizationInviteForm{max-width:720px}.organizationInviteForm select{width:120px}
+.organizationPending{border-top:1px solid var(--line);padding-top:18px;margin-top:20px}
+.organizationPendingRow,.organizationInboxRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.organizationPendingRow>span,.organizationInboxRow>div:first-child{display:grid;gap:3px;min-width:0}.organizationPendingRow strong,.organizationInboxRow strong{font-size:13px;overflow-wrap:anywhere}
+.organizationPendingRow small,.organizationInboxRow small{font-size:11px;color:var(--muted)}
+.organizationPrivacy{margin:24px 0 0;font-size:13px;line-height:1.7;color:var(--muted)}
+.organizationEmpty{display:grid;place-items:center;min-height:250px;font-size:13px;color:var(--muted)}
+.organizationInbox{border-top:1px solid var(--line);padding-top:18px}
+.organizationInbox h3{font-size:17px;margin:0 0 13px}.organizationInboxRow>div:last-child{display:flex;gap:8px}
+.organizationError{padding:11px 15px;margin:0;border:1px solid #c35d5d;border-radius:9px;color:#c35d5d;font-size:13px}
+.organizationNotice{padding:11px 15px;margin:0;border:1px solid var(--line);border-radius:9px;color:var(--text);font-size:13px}
+@media(max-width:780px){.organizationLayout{grid-template-columns:1fr}.organizationSidebar{border-right:0;border-bottom:1px solid var(--line)}.organizationMain{padding:18px}}
+@media(max-width:540px){.organizationSettingsIntro{display:block}.organizationCount{display:inline-block;margin-top:12px}.organizationMember{flex-wrap:wrap}.organizationMember>div{flex-basis:calc(100% - 52px)}.organizationInviteForm>div{flex-wrap:wrap}.organizationInviteForm input{flex-basis:100%}.organizationInboxRow{align-items:flex-start;flex-direction:column}}

@@ -148,3 +148,14 @@
 @media(max-width:700px){.adminShell{display:block}.adminSidebar{position:static;min-height:0;padding:15px 16px;gap:16px;border-right:0;border-bottom:1px solid var(--adminLine)}.adminBrand{padding:0}.adminSidebarKicker{display:none}.adminSidebar nav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}.adminSidebar nav button{width:auto;min-width:max-content;padding:12px 14px;gap:8px}.adminSidebar nav button>svg:last-child{display:none}.adminSidebarBottom{display:none}.adminContent{padding:22px 16px 70px}.adminHeading{margin:34px 0 25px}.adminHeading h1{font-size:clamp(31px,8.5vw,45px)}.adminHeading p{font-size:15px}.adminBreadcrumb{font-size:12px}.adminMetrics{gap:10px}.adminMetricCard{padding:18px;min-height:143px}.adminMetricCard>strong{font-size:29px}.adminMetricHead span{font-size:12px}.adminDashboardGrid{gap:12px}.adminActivityCard,.adminSnapshot,.adminCommerce{padding:21px}.adminCommerceKpis>div{padding:12px}.adminCommerceKpis strong{font-size:25px}.adminSectionHeader{flex-wrap:wrap}.adminDiagnostics{grid-template-columns:1fr}.adminShell .opsToolbar{flex-wrap:wrap}.adminShell .opsStats strong{font-size:29px}}
 @media(max-width:420px){.adminTopActions button{padding:9px 10px;font-size:12px}.adminBreadcrumb{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.adminMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}.adminMetricCard{min-height:145px;padding:14px}.adminMetricCard>strong{font-size:27px}.adminMetricHead svg{width:17px}.adminCommerceKpis{gap:0}.adminCommerceKpis>div{padding:7px}.adminCommerceKpis span{font-size:11px}.adminCommerceKpis small{font-size:10px}.adminLeadItem{padding:18px}.adminLeadActions{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.adminSidebar nav button{transition:none}}
+
+/* Dense operational view: six factual KPIs and a complete zero-filled timeline. */
+.adminMetrics--overview{grid-template-columns:repeat(3,minmax(0,1fr))}
+.adminRangeControl{display:inline-flex;align-items:center;border:1px solid var(--adminLine);border-radius:9px;overflow:hidden;flex:none}
+.adminRangeControl button{border:0;background:transparent;color:var(--adminMuted);padding:7px 12px;font:inherit;font-size:12px;cursor:pointer}
+.adminRangeControl button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--text);font-weight:720}
+.adminRangeControl button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.adminActivityBar.isQuiet{background:var(--adminLine);min-height:3px}
+.adminActivityBar:not(.isQuiet){min-height:4px}
+@media(max-width:1050px){.adminMetrics--overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:410px){.adminActivityCard>.adminPanelTitle{flex-wrap:wrap}.adminRangeControl{margin-top:7px}}

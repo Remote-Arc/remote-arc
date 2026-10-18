@@ -14,6 +14,7 @@ import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
 import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
 import { releaseChinese } from "./release-locales.js";
 import { AdminOperations } from "./admin-operations.js";
+import { OrganizationSettings } from "./organization-settings.js";
 import { AdminConsole } from "./admin/admin-console.js";
 import { EngagementPage } from "./public-engagement.js";
 import { ThemeProvider, useTheme } from "./theme.js";
@@ -6869,6 +6870,7 @@ function Dashboard({
         {active === "settings" && (
           <>
             <section className="pageHeader dashboardUtilityHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Settings", "设置")}</h1><p>{tr("Appearance, language, account, MCP and billing preferences.", "外观、语言、账号、MCP 与账单偏好。")}</p></div></section>
+            <OrganizationSettings currentEmail={user.email} />
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>

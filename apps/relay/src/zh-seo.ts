@@ -51,10 +51,10 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     ]
   },
   "/": {
-    title: "Remote Arc — 让 AI 聊天真正操作你的电脑",
-    description: "通过安全的 Remote MCP，把 ChatGPT、Claude 等兼容 AI 对话连接到自己已授权的 Windows、macOS 或 Linux。无需单独配置模型 API Key；AI 服务商的套餐和额度限制仍适用。",
+    title: "Remote Arc — 连接 AI、应用与电脑",
+    description: "Remote Arc Connect 通过安全的 MCP 连接，让 ChatGPT、Claude 等 AI 使用已授权的电脑和受支持的应用。支持跨设备工作与权限管理；Arc AI 助手即将推出。",
     h1: "别让 AI 只停留在聊天。让它在你的电脑上真正完成工作。",
-    intro: "Remote Arc 将你正在使用的 AI 对话连接到你自己的电脑。通过明确授权，AI 可以查看文件、编辑代码并调用已批准的工具；无需另购模型 API 额度。",
+    intro: "Remote Arc Connect 可连接受支持的应用和你已授权的 Windows、macOS、Linux 设备，让现有 AI 对话真正执行操作。每个应用与设备仍由独立权限控制；Arc Agent 目前尚未上线。",
     sections: [
       { heading: "你的电脑仍由你掌控", text: "设备主动连接云端中继，无需打开入站端口。按设备控制权限，必要时要求确认，并可随时撤销 AI 访问。" },
       { heading: "使用你已经熟悉的 AI", text: "在支持 Remote MCP 的 ChatGPT、Claude 或其他客户端中添加 Remote Arc，无需让 Remote Arc 接管模型、对话或 API 密钥。" },

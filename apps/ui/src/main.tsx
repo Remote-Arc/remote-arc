@@ -521,7 +521,6 @@ function PublicHeader({ user }: { user?: User | null }) {
               <div className="publicNavDropdownColumns">
                 <section className="publicNavGroup">
                   <span className="publicNavGroupLabel">{tr("Explore", "探索")}</span>
-                  <a href="/demo"><strong>{tr("Live demo", "真实演示")}</strong><small>{tr("See Remote Arc in action", "看看 Remote Arc 如何工作")}</small></a>
                   <a href={navHref("/blogs")}><strong>{tr("Blog", "博客")}</strong><small>{tr("Ideas and product updates", "产品思考与开发动态")}</small></a>
                   <a href={navHref("/use-cases")}><strong>{tr("Use cases", "使用场景")}</strong><small>{tr("Real workflows on your devices", "真实设备工作流")}</small></a>
                   <a href={navHref("/roadmap")}><strong>{tr("Roadmap", "路线图")}</strong><small>{tr("What's live and what's next", "已上线与未来计划")}</small></a>
@@ -1643,7 +1642,7 @@ function PublicLayout({
         </nav>
         <div className="publicFooterMeta">
           <span>© 2026 Remote Arc · {tr("Proprietary", "专有软件")}</span>
-          <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
+          <a href="https://github.com/Remote-Arc/remote-arc">GitHub</a>
         </div>
       </footer>
     </main>
@@ -2460,6 +2459,25 @@ function Landing({ user }: { user?: User | null }) {
         <div><span className="miniMcp">M</span><strong>Remote MCP</strong></div>
         <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
       </section>
+
+      <nav className="landingQuickLinks" aria-label={tr("Explore Remote Arc", "探索 Remote Arc")}>
+        <h2>{tr("Explore Remote Arc", "探索 Remote Arc")}</h2>
+        <div className="landingQuickLinksGrid">
+          {([
+            ["/connect-ai", tr("Connect AI", "连接 AI"), tr("Pair devices and authorize clients", "配对设备并授权 AI 客户端")],
+            ["/integrations", tr("Apps", "应用集成"), tr("Explore supported integrations", "浏览支持的应用与操作")],
+            ["/arc", tr("Arc Agent", "Arc Agent"), tr("Coming soon", "即将推出")],
+            ["/pricing", tr("Pricing", "价格方案"), tr("Understand plans and limits", "了解套餐与使用额度")],
+            ["/docs", tr("Documentation", "文档"), tr("Setup, tools and MCP reference", "安装、工具与 MCP 参考")],
+            ["/security-model", tr("Security", "安全"), tr("Permissions and trust boundaries", "权限与信任边界")]
+          ] as const).map(([href, name, detail]) => (
+            <a href={href} key={href}>
+              <strong>{name} <span aria-hidden="true">↗</span></strong>
+              <span>{detail}</span>
+            </a>
+          ))}
+        </div>
+      </nav>
 
       <LandingContent />
     </PublicLayout>

@@ -912,7 +912,15 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       headers.delete("etag");
 
       const html = await assetResponse.text();
-      const rendered = isMarketingHost ? renderMarketingHtml(html, url.pathname) : html;
+      let rendered = isMarketingHost ? renderMarketingHtml(html, url.pathname) : html;
+      if (isAdminHost) {
+        // Keep a readable recovery shell if a stale browser runtime blocks React.
+        // A successful React mount replaces this immediately.
+        rendered = rendered.replace('<div id="root"></div>',
+          '<div id="root"><main style="max-width:560px;margin:12vh auto;padding:24px;font:16px/1.6 system-ui,sans-serif">' +
+          '<h1>Remote Arc Admin</h1><p>Loading the secure admin console…</p>' +
+          '<p>If this page stays here, reload it once or open it in a private window.</p></main></div>');
+      }
 
       if (!isMarketingHost) {
         headers.set("x-robots-tag", "noindex, nofollow, noarchive");
@@ -920,7 +928,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
           headers.set("x-frame-options", "DENY");
           headers.set("referrer-policy", "no-referrer");
           headers.set("content-security-policy",
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+            "default-src 'self'; script-src 'self' 'sha256-QDTHmNbMmoL5pECKwid5HFHv4X8Ch/VFHWGLVIMquYU='; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data:; connect-src 'self'; font-src 'self'; " +
             "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
         }

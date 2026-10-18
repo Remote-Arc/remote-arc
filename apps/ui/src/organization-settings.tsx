@@ -2,178 +2,232 @@ import { useEffect, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./organization-settings.css";
 
-type Organization = { id: string; name: string; kind: "team"|"personal"; role: "owner"|"admin"|"member"; members: number; pending: number };
-type Invite = { id: string; email?: string; role: "admin"|"member"; organization_id: string; organization_name?: string; expires_at: string };
-type Member = { user_id: string; email: string; name: string | null; role: "owner"|"admin"|"member"; status: string };
-type Detail = { organization: Organization; members: Member[]; invitations: Invite[] };
-type Collection = { organizations: Organization[]; invitations: Invite[] };
+type Role = "owner" | "admin" | "member";
+type Organization = { id: string; name: string; kind: "team" | "personal"; role: Role; members: number; pending: number };
+type Invitation = { id: string; email?: string; role: "admin" | "member"; organization_id: string; organization_name?: string; expires_at: string };
+type Member = { user_id: string; email: string; name: string | null; role: Role };
+type Collection = { organizations: Organization[]; invitations: Invitation[] };
+type Detail = { organization: Organization; members: Member[]; invitations: Invitation[] };
 
-async function api<T>(path: string, method = "GET", value?: object): Promise<T> {
-  const result = await fetch("/api/organizations" + path, {
-    credentials: "same-origin",
-    method,
-    ...(value === undefined ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(value) }),
-    ...(value === undefined && method !== "GET" ? { headers: { "content-type": "application/json" }, body: "{}" } : {}),
+async function organizationApi<T>(path = "", method = "GET", data?: object): Promise<T> {
+  const response = await fetch("/api/organizations" + path, {
+    method, credentials: "same-origin",
+    ...(method !== "GET" ? { headers: { "content-type": "application/json" }, body: JSON.stringify(data ?? {}) } : {}),
   });
-  const payload = await result.json().catch(() => ({})) as T & { error?: string };
-  if (!result.ok) throw new Error(payload.error || "HTTP " + result.status);
+  const payload = await response.json().catch(() => ({})) as T & { error?: string };
+  if (!response.ok) throw new Error(payload.error || "HTTP " + response.status);
   return payload;
 }
 
 export function OrganizationSettings({ currentEmail }: { currentEmail: string }) {
   const { tr } = useI18n();
   const [collection, setCollection] = useState<Collection | null>(null);
-  const [selected, setSelected] = useState<string>("");
+  const [selected, setSelected] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
   const [newName, setNewName] = useState("");
-  const [renameValue, setRenameValue] = useState("");
+  const [renameName, setRenameName] = useState("");
   const [email, setEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"member"|"admin">("member");
+  const [role, setRole] = useState<"member" | "admin">("member");
+  const [editing, setEditing] = useState<"create" | "rename" | "invite" | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  async function refresh(prefer?: string) {
-    const next = await api<Collection>("");
-    setCollection(next);
-    const preferred = prefer || selected || next.organizations[0]?.id || "";
-    const id = next.organizations.some(org => org.id === preferred) ? preferred : (next.organizations[0]?.id || "");
+  async function refresh(preferred?: string) {
+    const list = await organizationApi<Collection>();
+    setCollection(list);
+    const candidate = preferred || selected || list.organizations[0]?.id;
+    const id = list.organizations.some(item => item.id === candidate) ? candidate! : list.organizations[0]?.id || "";
     setSelected(id);
-    if (id) {
-      const item = await api<Detail>("/" + encodeURIComponent(id));
-      setDetail(item);
-      setRenameValue(item.organization.name);
-    } else setDetail(null);
+    if (!id) { setDetail(null); return; }
+    const item = await organizationApi<Detail>("/" + encodeURIComponent(id));
+    setDetail(item);
+    setRenameName(item.organization.name);
   }
 
-  useEffect(() => { void refresh().catch(() => setError(tr("Organizations are unavailable.", "暂时无法加载组织信息。"))); }, []);
+  useEffect(() => {
+    let active = true;
+    void organizationApi<Collection>().then(async list => {
+      if (!active) return;
+      setCollection(list);
+      const id = list.organizations[0]?.id || "";
+      setSelected(id);
+      if (id) {
+        const item = await organizationApi<Detail>("/" + encodeURIComponent(id));
+        if (active) { setDetail(item); setRenameName(item.organization.name); }
+      }
+    }).catch(cause => {
+      if (active) setError(cause instanceof Error ? cause.message : String(cause));
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-  async function action(fn: () => Promise<void>) {
+  async function mutate(action: () => Promise<void>) {
     setBusy(true); setError(""); setNotice("");
-    try { await fn(); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
+    try { await action(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
     finally { setBusy(false); }
   }
 
-  function openOrganization(id: string) {
-    setSelected(id);
-    setError(""); setNotice(""); setDetail(null);
-    void api<Detail>("/" + encodeURIComponent(id)).then(value => {
-      setDetail(value);
-      setRenameValue(value.organization.name);
-    }).catch(err => setError(String(err)));
+  async function selectWorkspace(id: string) {
+    setSelected(id); setDetail(null); setEditing(null); setError(""); setNotice("");
+    try {
+      const data = await organizationApi<Detail>("/" + encodeURIComponent(id));
+      setDetail(data); setRenameName(data.organization.name);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   }
 
   const org = detail?.organization;
-  const manager = org?.role === "owner" || org?.role === "admin";
+  const canManage = org?.role === "owner" || org?.role === "admin";
+  const isTeam = org?.kind === "team";
 
-  return <section className="organizationSettings" aria-label={tr("Organizations and teammates", "组织与队友")}>
-    <header className="organizationSettingsIntro">
-      <div><span className="eyebrow">WORKSPACES & PEOPLE</span>
+  return <section className="orgHub" aria-label={tr("Organization settings", "组织管理")}>
+    <header className="orgHubHeader">
+      <div className="orgHubHeading">
+        <span className="orgHubEyebrow">{tr("WORKSPACES", "工作空间")}</span>
         <h2>{tr("Organizations & teammates", "组织与队友")}</h2>
-        <p>{tr("Manage your personal workspace and collaborate in teams. Membership does not automatically expose anyone's computers, credentials or private tasks.", "管理个人空间与团队成员。加入团队不会自动共享任何人的设备、凭证或私人任务。")}</p>
+        <p>{tr("Work with your team while keeping your personal devices private.", "协同管理团队，同时保持个人设备与凭证私有。")}</p>
       </div>
-      <span className="organizationCount">{collection?.organizations.filter(o => o.kind === "team").length ?? "—"} {tr("teams", "个团队")}</span>
+      <button className="orgHubPrimary" type="button" onClick={() => setEditing(editing === "create" ? null : "create")}>
+        <span aria-hidden="true">＋</span> {tr("Create team", "创建团队")}
+      </button>
     </header>
-    {error && <p className="organizationError" role="alert">{error}</p>}
-    {notice && <p className="organizationNotice" role="status">{notice}</p>}
 
-    <div className="organizationLayout">
-      <aside className="organizationSidebar">
-        <span className="organizationOverline">{tr("YOUR WORKSPACES", "你的工作空间")}</span>
-        <div className="organizationChoices">
-          {collection?.organizations.map(item => <button key={item.id} type="button"
-            className={item.id === selected ? "selected" : ""}
-            aria-pressed={item.id === selected}
-            onClick={() => openOrganization(item.id)}>
-            <span className="organizationAvatar">{item.kind === "personal" ? "◉" : item.name.slice(0,1).toUpperCase()}</span>
-            <span><strong>{item.name}</strong><small>{item.kind === "personal" ? tr("Personal · private", "个人 · 私有") : item.members + " " + tr("members", "位成员")}</small></span>
-          </button>)}
-          {!collection && <p>{tr("Loading workspaces…", "正在加载工作空间…")}</p>}
-        </div>
-        <form className="organizationCreateForm" onSubmit={event => { event.preventDefault(); void action(async () => {
-          const data = await api<{ organization: Organization }>("", "POST", { name: newName });
-          setNewName(""); await refresh(data.organization.id); setNotice(tr("Team created.", "团队已创建。"));
-        }); }}>
-          <label htmlFor="org-new-name">{tr("New team", "新建团队")}</label>
-          <div><input id="org-new-name" maxLength={80} value={newName} onChange={e => setNewName(e.target.value)}
-            placeholder={tr("Team name", "团队名称")} required />
-          <button type="submit" disabled={busy || !newName.trim()}>+</button></div>
-        </form>
-      </aside>
-      <div className="organizationMain">
-        {detail && <div className="organizationCurrent">
-          <div className="organizationCurrentTop"><div><span className="organizationOverline">{org?.kind === "team" ? tr("TEAM WORKSPACE", "团队空间") : tr("PRIVATE WORKSPACE", "私人空间")}</span><h3>{org?.name}</h3><p>{tr("Your role", "你的角色")} · {org?.role}</p></div>
-          <span className="organizationRole">{org?.role}</span></div>
-          {manager && <form className="organizationRename" onSubmit={event => { event.preventDefault(); void action(async () => {
-            await api("/" + encodeURIComponent(selected), "PATCH", { name: renameValue });
-            await refresh(); setNotice(tr("Organization renamed.", "组织名称已更新。"));
-          }); }}>
-            <label htmlFor="org-rename">{tr("Organization name", "组织名称")}</label>
-            <div><input id="org-rename" maxLength={80} value={renameValue} onChange={e => setRenameValue(e.target.value)} required />
-              <button disabled={busy || renameValue.trim() === org?.name} type="submit">{tr("Save", "保存")}</button></div>
-          </form>}
-          <div className="organizationSectionHeader"><div><h4>{tr("Teammates", "团队成员")}</h4><p>{detail.members.length} {tr("active members", "位活跃成员")}</p></div></div>
-          <div className="organizationMemberList">
-            {detail.members.map(member => <div className="organizationMember" key={member.user_id}>
-              <span className="organizationMemberAvatar">{(member.name || member.email).slice(0,1).toUpperCase()}</span>
-              <div><strong>{member.name || member.email}{member.email.toLowerCase() === currentEmail.toLowerCase() ? tr(" (you)", "（你）") : ""}</strong>
-                <small>{member.email}</small></div>
-              <span className="organizationRole">{member.role}</span>
-              {org?.kind === "team" && org.role === "owner" && member.role !== "owner" &&
-                <select aria-label={tr("Change role", "修改角色")} disabled={busy} value={member.role}
-                  onChange={e => void action(async () => {
-                    await api("/" + encodeURIComponent(selected) + "/members/" + encodeURIComponent(member.user_id), "PATCH", { role: e.target.value });
-                    await refresh();
-                  })}><option value="member">{tr("Member", "成员")}</option><option value="admin">{tr("Admin", "管理员")}</option></select>}
-              {org?.kind === "team" && member.role !== "owner" && (member.email.toLowerCase() === currentEmail.toLowerCase() || org.role === "owner" || (org.role === "admin" && member.role === "member")) &&
-                <button type="button" className="organizationTextButton" disabled={busy} onClick={() => {
-                  if (!window.confirm(tr("Remove this member from the organization?", "确认将该成员移出组织？"))) return;
-                  void action(async () => {
-                    await api("/" + encodeURIComponent(selected) + "/members/" + encodeURIComponent(member.user_id), "DELETE");
-                    await refresh(); setNotice(tr("Member removed.", "成员已移除。"));
-                  });
-                }}>{member.email.toLowerCase() === currentEmail.toLowerCase() ? tr("Leave", "退出") : tr("Remove", "移除")}</button>}
-            </div>)}
-          </div>
-          {org?.kind === "team" && manager && <>
-            <div className="organizationSectionHeader"><div><h4>{tr("Invite teammates", "邀请队友")}</h4><p>{tr("Invite by email. Teammates see the invitation in Settings after signing in.", "通过邮箱邀请。队友登录后可在设置页接受邀请。")}</p></div></div>
-            <form className="organizationInviteForm" onSubmit={event => { event.preventDefault(); void action(async () => {
-              await api("/" + encodeURIComponent(selected) + "/invitations", "POST", { email, role: inviteRole });
-              setEmail(""); await refresh(); setNotice(tr("Invitation created. Ask your teammate to sign in and accept it in Settings.", "邀请已创建，请让队友登录后在设置页接受。"));
-            }); }}>
-              <label htmlFor="org-invite-email">{tr("Email address", "邮箱地址")}</label>
-              <div><input id="org-invite-email" type="email" maxLength={254} required placeholder="teammate@example.com"
-                value={email} onChange={e => setEmail(e.target.value)} />
-                <select value={inviteRole} onChange={e => setInviteRole(e.target.value as "member"|"admin")} aria-label={tr("Invitation role", "邀请角色")}>
-                  <option value="member">{tr("Member", "成员")}</option>
-                  {org.role === "owner" && <option value="admin">{tr("Admin", "管理员")}</option>}
-                </select><button type="submit" disabled={busy || !email.trim()}>{tr("Invite", "邀请")}</button></div>
-            </form>
-            {!!detail.invitations.length && <div className="organizationPending"><h4>{tr("Pending invitations", "待接受的邀请")}</h4>
-              {detail.invitations.map(invite => <div className="organizationPendingRow" key={invite.id}>
-                <span><strong>{invite.email}</strong><small>{invite.role} · {tr("expires", "有效期至")} {new Date(invite.expires_at).toLocaleDateString()}</small></span>
-                <button disabled={busy} onClick={() => void action(async () => {
-                  await api("/" + encodeURIComponent(selected) + "/invitations/" + encodeURIComponent(invite.id), "DELETE");
-                  await refresh();
-                })}>{tr("Revoke", "撤销")}</button>
-              </div>)}</div>}
-          </>}
-          {org?.kind === "personal" && <p className="organizationPrivacy">{tr("Your personal workspace is private. Create a team to invite collaborators; existing device permissions stay yours.", "个人空间只属于你。创建团队后即可邀请队友，现有设备权限仍归你个人所有。")}</p>}
-        </div>}
-        {!detail && <div className="organizationEmpty">{tr("Select an organization to view teammates.", "选择工作空间以查看成员。")}</div>}
-      </div>
+    {editing === "create" && <form className="orgHubInlineForm" onSubmit={event => {
+      event.preventDefault(); void mutate(async () => {
+        const created = await organizationApi<{ organization: Organization }>("", "POST", { name: newName.trim() });
+        setNewName(""); setEditing(null); await refresh(created.organization.id);
+        setNotice(tr("Team created.", "团队创建成功。"));
+      });
+    }}>
+      <label htmlFor="org-create-name">{tr("Team name", "团队名称")}</label>
+      <input id="org-create-name" maxLength={80} required autoFocus value={newName} onChange={event => setNewName(event.target.value)}
+        placeholder={tr("e.g. Product engineering", "例如：产品研发团队")} />
+      <button className="orgHubPrimary" type="submit" disabled={busy || !newName.trim()}>{tr("Create", "创建")}</button>
+      <button type="button" onClick={() => setEditing(null)}>{tr("Cancel", "取消")}</button>
+    </form>}
+
+    {error && <div className="orgHubAlert" role="alert">
+      <span>{tr("Could not load organization", "组织操作失败")}: {error}</span>
+      <button type="button" onClick={() => { setError(""); void refresh().catch(cause => setError(String(cause))); }}>{tr("Retry", "重试")}</button>
+    </div>}
+    {notice && <p className="orgHubSuccess" role="status">{notice}</p>}
+
+    <div className="orgHubSwitcher" role="group" aria-label={tr("Your workspaces", "你的工作空间")}>
+      {(collection?.organizations || []).map(item =>
+        <button type="button" className={item.id === selected ? "active" : ""} aria-pressed={item.id === selected}
+          key={item.id} onClick={() => void selectWorkspace(item.id)}>
+          <span className="orgHubSymbol" aria-hidden="true">{item.kind === "personal" ? "⌂" : item.name.slice(0, 1).toUpperCase()}</span>
+          <span className="orgHubTabName">{item.kind === "personal" ? tr("Personal", "个人空间") : item.name}</span>
+          {item.kind === "team" && <small>{item.members}</small>}
+        </button>)}
+      {loading && <span className="orgHubLoading">{tr("Loading…", "正在加载…")}</span>}
     </div>
-    {!!collection?.invitations.length && <div className="organizationInbox">
-      <h3>{tr("Invitations to you", "邀请你加入的团队")}</h3>
-      {collection.invitations.map(item => <div key={item.id} className="organizationInboxRow">
-        <div><strong>{item.organization_name}</strong><small>{tr("Invited as", "邀请角色")} {item.role} · {tr("expires", "有效期至")} {new Date(item.expires_at).toLocaleDateString()}</small></div>
-        <div><button disabled={busy} onClick={() => void action(async () => {
-          await api("/invitations/" + encodeURIComponent(item.id) + "/accept", "POST");
-          await refresh(item.organization_id); setNotice(tr("You joined the team.", "你已加入团队。"));
-        })}>{tr("Accept", "接受")}</button><button className="organizationSecondary" disabled={busy} onClick={() => void action(async () => {
-          await api("/invitations/" + encodeURIComponent(item.id) + "/reject", "POST");
-          await refresh();
-        })}>{tr("Decline", "拒绝")}</button></div>
+
+    {org && <div className="orgHubBody">
+      <div className="orgHubSummary">
+        <div className="orgHubMark" aria-hidden="true">{isTeam ? "▦" : "⌂"}</div>
+        <div className="orgHubSummaryText">
+          <h3>{isTeam ? org.name : tr("Your personal workspace", "你的个人空间")}</h3>
+          <p>{isTeam
+            ? tr("A place for your team and its members. Your personal devices stay separate.", "与队友一起协作，个人设备仍保持独立。")
+            : tr("Only you can access your personal devices, credentials and tasks.", "你的设备、凭证和私人任务只有你自己可以访问。")}</p>
+        </div>
+        <span className="orgHubRole">{isTeam ? org.role : tr("Private", "私有")}</span>
+        {isTeam && canManage && <button className="orgHubSubtle" type="button"
+          onClick={() => setEditing(editing === "rename" ? null : "rename")}>{tr("Rename", "重命名")}</button>}
+      </div>
+
+      {editing === "rename" && isTeam && canManage && <form className="orgHubInlineForm" onSubmit={event => {
+        event.preventDefault(); void mutate(async () => {
+          await organizationApi("/" + encodeURIComponent(selected), "PATCH", { name: renameName.trim() });
+          await refresh(); setEditing(null); setNotice(tr("Name updated.", "团队名称已更新。"));
+        });
+      }}>
+        <label htmlFor="org-rename-name">{tr("Organization name", "组织名称")}</label>
+        <input id="org-rename-name" maxLength={80} required value={renameName} onChange={event => setRenameName(event.target.value)} />
+        <button className="orgHubPrimary" type="submit" disabled={busy || renameName.trim() === org.name}>{tr("Save", "保存")}</button>
+        <button type="button" onClick={() => setEditing(null)}>{tr("Cancel", "取消")}</button>
+      </form>}
+
+      {isTeam && <div className="orgHubPeople">
+        <header className="orgHubPeopleHeader">
+          <div><h4>{tr("Members", "团队成员")} <span>{detail.members.length}</span></h4>
+            <p>{tr("Manage who can access this organization.", "管理组织成员及其角色。")}</p></div>
+          {canManage && <button className="orgHubPrimary orgHubInviteButton" type="button"
+            onClick={() => setEditing(editing === "invite" ? null : "invite")}>
+            <span aria-hidden="true">＋</span> {tr("Invite member", "邀请成员")}
+          </button>}
+        </header>
+        {editing === "invite" && canManage && <form className="orgHubInlineForm" onSubmit={event => {
+          event.preventDefault(); void mutate(async () => {
+            await organizationApi("/" + encodeURIComponent(selected) + "/invitations", "POST", { email: email.trim(), role });
+            setEmail(""); setEditing(null); await refresh();
+            setNotice(tr("Invite created. Your teammate can accept it in Settings after signing in.", "邀请已创建。队友使用对应邮箱登录后可在设置中接受。"));
+          });
+        }}>
+          <label htmlFor="org-invite-email">{tr("Email", "邮箱")}</label>
+          <input id="org-invite-email" type="email" maxLength={254} required placeholder="teammate@example.com"
+            value={email} onChange={event => setEmail(event.target.value)} />
+          <select value={role} aria-label={tr("Role", "角色")} onChange={event => setRole(event.target.value as "member" | "admin")}>
+            <option value="member">{tr("Member", "成员")}</option>
+            {org.role === "owner" && <option value="admin">{tr("Admin", "管理员")}</option>}
+          </select>
+          <button className="orgHubPrimary" type="submit" disabled={busy || !email.trim()}>{tr("Invite", "邀请")}</button>
+          <button type="button" onClick={() => setEditing(null)}>{tr("Cancel", "取消")}</button>
+        </form>}
+
+        <div className="orgHubMemberList">
+          {detail.members.map(member => <div className="orgHubMember" key={member.user_id}>
+            <div className="orgHubMemberAvatar" aria-hidden="true">{(member.name || member.email).slice(0,1).toUpperCase()}</div>
+            <div className="orgHubMemberName"><strong>{member.name || member.email}</strong><small>{member.email}</small></div>
+            {org.role === "owner" && member.role !== "owner" ? <select aria-label={tr("Member role", "成员角色")}
+              value={member.role} disabled={busy} onChange={event => void mutate(async () => {
+                await organizationApi("/" + encodeURIComponent(selected) + "/members/" + encodeURIComponent(member.user_id), "PATCH", { role: event.target.value });
+                await refresh();
+              })}>
+              <option value="member">{tr("Member", "成员")}</option><option value="admin">{tr("Admin", "管理员")}</option>
+            </select> : <span className="orgHubMemberRole">{member.role}</span>}
+            {member.role !== "owner" && (member.email.toLowerCase() === currentEmail.toLowerCase() ||
+              org.role === "owner" || (org.role === "admin" && member.role === "member")) &&
+              <button type="button" className="orgHubRemove" disabled={busy} onClick={() => {
+                if (!window.confirm(tr("Remove this member from the team?", "确定移除这位队友吗？"))) return;
+                void mutate(async () => {
+                  await organizationApi("/" + encodeURIComponent(selected) + "/members/" + encodeURIComponent(member.user_id), "DELETE");
+                  await refresh(); setNotice(tr("Member removed.", "成员已移除。"));
+                });
+              }}>{member.email.toLowerCase() === currentEmail.toLowerCase() ? tr("Leave", "退出") : tr("Remove", "移除")}</button>}
+          </div>)}
+        </div>
+
+        {canManage && !!detail.invitations.length && <div className="orgHubPending">
+          <h4>{tr("Pending invitations", "待接受邀请")}</h4>
+          {detail.invitations.map(invite => <div className="orgHubMember" key={invite.id}>
+            <div className="orgHubMemberAvatar orgHubPendingIcon" aria-hidden="true">✉</div>
+            <div className="orgHubMemberName"><strong>{invite.email}</strong>
+              <small>{invite.role} · {tr("Expires", "有效期至")} {new Date(invite.expires_at).toLocaleDateString()}</small></div>
+            <button className="orgHubRemove" type="button" disabled={busy} onClick={() => void mutate(async () => {
+              await organizationApi("/" + encodeURIComponent(selected) + "/invitations/" + encodeURIComponent(invite.id), "DELETE");
+              await refresh();
+            })}>{tr("Revoke", "撤销")}</button>
+          </div>)}
+        </div>}
+      </div>}
+    </div>}
+
+    {!!collection?.invitations.length && <div className="orgHubInbox">
+      <h3>{tr("Team invitations", "收到的团队邀请")}</h3>
+      {collection.invitations.map(invite => <div className="orgHubMember" key={invite.id}>
+        <div className="orgHubMemberAvatar" aria-hidden="true">✉</div>
+        <div className="orgHubMemberName"><strong>{invite.organization_name}</strong><small>{invite.role} · {new Date(invite.expires_at).toLocaleDateString()}</small></div>
+        <button type="button" className="orgHubPrimary" disabled={busy} onClick={() => void mutate(async () => {
+          await organizationApi("/invitations/" + encodeURIComponent(invite.id) + "/accept", "POST");
+          await refresh(invite.organization_id); setNotice(tr("Joined team.", "已加入团队。"));
+        })}>{tr("Accept", "接受")}</button>
+        <button type="button" className="orgHubSubtle" disabled={busy} onClick={() => void mutate(async () => {
+          await organizationApi("/invitations/" + encodeURIComponent(invite.id) + "/reject", "POST"); await refresh();
+        })}>{tr("Decline", "拒绝")}</button>
       </div>)}
     </div>}
   </section>;

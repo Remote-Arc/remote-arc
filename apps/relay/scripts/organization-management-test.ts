@@ -68,6 +68,18 @@ function request(path:string, method="GET", payload?:object, origin=APP) {
   assert.equal(state.writes(),1);
 }
 {
+  // Browser requests encode the ':' in organization IDs as '%3A'.
+  // Details and member views must decode the segment before RBAC lookup.
+  const state=mockDatabase("owner","personal");
+  const env={DB:state.db,APP_ORIGIN:APP,PUBLIC_ORIGIN:APP};
+  const encodedPersonal=await handleOrganizations(request("/"+encodeURIComponent("personal:user-1")),env,"user-1");
+  assert.equal(encodedPersonal.status,200,"Encoded personal organization must load");
+  const encodedTeam=await handleOrganizations(request("/"+encodeURIComponent(TEAM)),env,"user-1");
+  assert.equal(encodedTeam.status,200,"Encoded team organization must load");
+  const malicious=await handleOrganizations(request("/org%3A%2Fnot-a-team"),env,"user-1");
+  assert.equal(malicious.status,404,"Encoded path separator must be rejected");
+}
+{
   const state=mockDatabase("owner","personal");
   const env={DB:state.db,APP_ORIGIN:APP,PUBLIC_ORIGIN:APP};
   assert.equal((await handleOrganizations(request("/personal:user-1/invitations","POST",{email:"foo@example.com",role:"member"}),env,"user-1")).status,403);

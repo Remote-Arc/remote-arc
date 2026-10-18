@@ -33,7 +33,16 @@ async function body(request: Request) {
 
 export async function handleOrganizations(request: Request, env: OrganizationEnv, userId: string): Promise<Response> {
   const url = new URL(request.url);
-  const path = url.pathname.split("/").filter(Boolean).slice(2);
+  // The dashboard uses encodeURIComponent for organization ids (e.g. personal%3A...),
+  // so decode each URL path segment before validating the organization identity.
+  // Invalid percent escapes and encoded path separators must fail closed.
+  let path: string[];
+  try {
+    path = url.pathname.split("/").filter(Boolean).slice(2).map(decodeURIComponent);
+  } catch {
+    return fail("not_found", 404);
+  }
+  if (path.some(part => part.includes("/"))) return fail("not_found", 404);
   const method = request.method;
   if (method !== "GET") {
     // Session cookies are not an API mutation credential for foreign origins.

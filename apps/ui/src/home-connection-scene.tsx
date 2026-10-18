@@ -110,12 +110,16 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
             {resources.map(node => <path key={node.name} d={connectionPath(node)} stroke={"url(#" + uid + "-trace)"} />)}
           </g>
           <g className="hcsOutboundFlow">
-            {resources.map((node, index) => <path key={node.name} pathLength="100" d={connectionPath(node)} style={{ animationDelay: (.8 + index * .14) + "s" }} />)}
+            {resources.map((node, index) => <g key={node.name} style={{'--current-delay': (index * .085) + 's'} as CSSProperties}>
+              <path className="hcsCurrentTrail" pathLength="100" d={connectionPath(node)}/>
+              <path className="hcsCurrentFilament" pathLength="100" d={connectionPath(node)}/>
+              <path className="hcsCurrentHead" pathLength="100" d={connectionPath(node)}/>
+            </g>)}
           </g>
           <g className="hcsInboundPaths">
             {(arc ? [{ x: 300, y: 76 }] : aiPositions).map((node, index) => {
               const d = `M${node.x} ${node.y + 20} C${node.x} 132,300 132,300 208`;
-              return <g key={index}><path d={d} /><path className="hcsInboundFlow" pathLength="100" d={d} style={{ animationDelay: index * -.8 + "s" }} /></g>;
+              return <g key={index}><path d={d} /><path className="hcsInboundFlow" pathLength="100" d={d} style={{ animationDelay: index * .08 + "s" }} /></g>;
             })}
           </g>
           <g className="hcsStars">
@@ -139,7 +143,7 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
         <span className="hcsGroupCaption hcsDevicesCaption">DEVICES</span>
         {resources.map((node, index) => (
           <div key={node.name} className={"hcsFloatingNode hcsResourceNode hcsResourceNode--" + node.kind} style={position(node.x, node.y, index * -.93)} data-resource={node.kind}>
-            <span className="hcsLogoTile" style={{'--power-delay': (3.6 + index * .14) + 's'} as CSSProperties}>
+            <span className="hcsLogoTile" style={{'--power-delay': (index * .085) + 's'} as CSSProperties}>
               <img src={node.icon} alt="" width={30} height={30} />
               {node.calendar && <svg className="hcsCalendarCue" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" /><path d="M5 2v3m6-3v3M3 7h10M6 10h4" /></svg>}
             </span>
@@ -154,6 +158,12 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
             <div className="hcsPowerCore">
               <img className="hcsBrandLogo" src="/remote-arc.svg" alt="Remote Arc" width={86} height={86}/>
               <span className="hcsLogoCurrent" aria-hidden="true"/>
+              <svg className="hcsArcElectricity" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <path className="hcsArcFilament hcsArcFilament--outer" pathLength="100" d="M10 42C15 20 27 12 44 17C50 19 54 24 56 30"/>
+                <path className="hcsArcFilament hcsArcFilament--inner" pathLength="100" d="M54 42C49 29 42 24 32 24C22 24 15 31 10 42"/>
+                <circle className="hcsArcContact" cx="10" cy="42" r="5"/>
+                <circle className="hcsArcContact hcsArcContact--right" cx="54" cy="42" r="5"/>
+              </svg>
             </div>
           </div>
           <strong>{arc ? "Arc Agent" : "Remote Arc"}</strong>

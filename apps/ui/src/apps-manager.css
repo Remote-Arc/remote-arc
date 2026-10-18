@@ -151,3 +151,64 @@
 
 .appsManagerToolSearch{display:grid;gap:6px;margin:14px 0;font-size:12px;color:var(--muted)}
 .appsManagerToolSearch input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--dash-line,var(--line));border-radius:9px;background:var(--dash-surface,var(--panel));color:var(--text)}
+
+/* Tool browsing uses a viewport-level dialog: never expands the app card/grid. */
+.appsManagerToolsAction { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; border-top:1px solid var(--dash-line,var(--line)); margin-top:20px; padding-top:17px; }
+.appsManagerToolsAction strong { font-size:14px; font-weight:650; }
+.appsManagerToolsAction p { margin:5px 0 0; max-width:350px; font-size:12px; line-height:1.6; color:var(--dash-muted,var(--muted)); }
+.appsManager .appsManagerExploreButton { flex-shrink:0; color:var(--dash-accent,var(--accent)); border-color:var(--dash-accent,var(--accent)); }
+.appsToolsOverlay { position:fixed; inset:0; z-index:30000; display:grid; place-items:center; padding:24px; box-sizing:border-box; background:rgba(10,20,31,.68); backdrop-filter:blur(6px); }
+.appsToolsDialog { display:flex; flex-direction:column; width:min(1020px,100%); max-height:min(820px,calc(100dvh - 48px)); min-height:min(610px,calc(100dvh - 48px)); background:var(--dash-surface,var(--panel)); color:var(--dash-text,var(--text)); border:1px solid var(--dash-line,var(--line)); border-radius:20px; box-shadow:0 24px 80px rgba(0,0,0,.3); overflow:hidden; }
+.appsToolsDialog button { min-height:42px; border:1px solid var(--dash-line,var(--line)); border-radius:9px; background:var(--dash-surface,var(--panel)); color:var(--dash-text,var(--text)); font-size:13px; font-weight:600; cursor:pointer; }
+.appsToolsDialog button:hover:not(:disabled) { border-color:var(--dash-accent,var(--accent)); }
+.appsToolsDialog button:focus-visible,.appsToolsDialog input:focus-visible { outline:2px solid var(--dash-accent,var(--accent)); outline-offset:2px; }
+.appsToolsDialog button:disabled { opacity:.55; cursor:not-allowed; }
+.appsToolsHead { display:flex; align-items:center; gap:14px; padding:22px 26px; border-bottom:1px solid var(--dash-line,var(--line)); }
+.appsToolsHead > div { min-width:0; }
+.appsToolsHead h2 { margin:0 0 4px; font-size:22px; line-height:1.25; }
+.appsToolsHead p { margin:0; font-size:13px; line-height:1.5; color:var(--dash-muted,var(--muted)); }
+.appsToolsDialog .appsToolsClose { margin-left:auto; min-width:42px; font-size:17px; flex-shrink:0; }
+.appsToolsBody { display:grid; grid-template-columns:minmax(260px,40%) minmax(0,1fr); flex:1; min-height:0; }
+.appsToolsList { display:flex; flex-direction:column; gap:11px; min-height:0; padding:22px; border-right:1px solid var(--dash-line,var(--line)); }
+.appsToolsList > label { font-size:14px; font-weight:650; }
+.appsToolsList input { width:100%; box-sizing:border-box; min-height:44px; border:1px solid var(--dash-line,var(--line)); border-radius:9px; background:var(--dash-subtle,var(--panel-2)); color:var(--dash-text,var(--text)); padding:10px 12px; font:inherit; font-size:14px; }
+.appsToolsItems { flex:1; min-height:0; overflow-y:auto; padding-right:4px; display:grid; gap:8px; align-content:start; }
+.appsToolsDialog .appsToolsItem { text-align:left; width:100%; height:auto; padding:12px; display:grid; gap:6px; background:var(--dash-subtle,var(--panel-2)); }
+.appsToolsDialog .appsToolsItem[aria-pressed="true"] { background:color-mix(in srgb,var(--dash-accent,var(--accent)) 9%,var(--dash-surface,var(--panel))); border-color:var(--dash-accent,var(--accent)); }
+.appsToolsItemTitle { font-size:14px; overflow-wrap:anywhere; font-weight:700; }
+.appsToolsItemMeta { font-size:12px; line-height:1.5; font-weight:400; color:var(--dash-muted,var(--muted)); }
+.appsToolsItemFooter { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+.appsToolsItemFooter small { font-size:11px; color:var(--dash-muted,var(--muted)); }
+.appsToolsItemFooter b { font-size:12px; color:var(--dash-accent,var(--accent)); }
+.appsToolsEmpty { font-size:13px; line-height:1.6; color:var(--dash-muted,var(--muted)); }
+.appsToolsDetail { min-width:0; min-height:0; overflow-y:auto; padding:26px 30px; }
+.appsToolsDetailTop { display:flex; align-items:center; flex-wrap:wrap; gap:12px; justify-content:space-between; margin-bottom:15px; }
+.appsToolsEyebrow { letter-spacing:.07em; font-size:11px; font-weight:750; color:var(--dash-muted,var(--muted)); }
+.appsToolsRisk { font-size:12px; font-weight:650; border:1px solid var(--dash-line,var(--line)); padding:5px 9px; border-radius:100px; }
+.appsToolsRisk[data-permission="write"] { color:#96631c; border-color:#ba9e70; }
+.appsToolsDetail h3 { font-size:clamp(18px,2.5vw,25px); margin:0 0 10px; overflow-wrap:anywhere; }
+.appsToolsDescription { font-size:15px; line-height:1.65; margin:0 0 25px; color:var(--dash-muted,var(--muted)); }
+.appsToolsParameterHeader { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px; justify-content:space-between; }
+.appsToolsParameterHeader h4 { font-size:15px; margin:0 0 14px; }
+.appsToolsParameterHeader span { color:var(--dash-muted,var(--muted)); font-size:12px; }
+.appsToolsParams { list-style:none; margin:0 0 18px; padding:0; border-top:1px solid var(--dash-line,var(--line)); }
+.appsToolsParams li { padding:10px 0; display:flex; align-items:center; gap:9px; flex-wrap:wrap; border-bottom:1px solid var(--dash-line,var(--line)); }
+.appsToolsParams code { font-size:13px; font-weight:650; overflow-wrap:anywhere; }
+.appsToolsParams li > span { font-size:11px; color:var(--dash-accent,var(--accent)); }
+.appsToolsParams small { flex-basis:100%; font-size:12px; color:var(--dash-muted,var(--muted)); line-height:1.4; }
+.appsToolsParamEmpty { border:1px dashed var(--dash-line,var(--line)); border-radius:9px; padding:15px; font-size:13px; line-height:1.6; color:var(--dash-muted,var(--muted)); }
+.appsToolsPolicy { padding:12px 0; font-size:13px; line-height:1.65; color:var(--dash-muted,var(--muted)); }
+.appsToolsActions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:18px; }
+.appsToolsDialog .appsToolsPrimary { background:#087394; border-color:#087394; color:#fff; padding:10px 16px; }
+.appsToolsDialog .appsToolsPrimary:hover:not(:disabled) { background:#075f7c; color:white; }
+.appsToolsDialog .appsToolsSecondary { padding:10px 14px; }
+.appsToolsCopied { font-size:13px; line-height:1.5; color:var(--dash-muted,var(--muted)); margin-top:15px; }
+@media (max-width:720px) {
+ .appsToolsOverlay { padding:0; }
+ .appsToolsDialog { width:100%; height:100dvh; max-height:100dvh; min-height:100dvh; border-radius:0; }
+ .appsToolsHead { padding:16px; }
+ .appsToolsHead h2 { font-size:19px; }
+ .appsToolsBody { grid-template-columns:1fr; grid-template-rows:minmax(170px,42%) minmax(0,1fr); }
+ .appsToolsList { border-right:0; border-bottom:1px solid var(--dash-line,var(--line)); padding:12px 16px; }
+ .appsToolsDetail { padding:20px 17px; }
+}

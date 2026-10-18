@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "./i18n.js";
 import {UI_PREVIEW} from "./preview.js";
 import "./apps-manager.css";
@@ -101,6 +102,88 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnec
   </article>;
 }
 
+type CatalogOperation = AppDefinition["operations"][number];
+
+function AppToolsDialog({ app, connections, onClose, onConnect, busy }: {
+  app: AppDefinition; connections: AppConnection[]; onClose: () => void; onConnect: () => void; busy: boolean;
+}) {
+  const { tr } = useI18n();
+  const [query, setQuery] = useState("");
+  const [selectedName, setSelectedName] = useState(app.operations[0]?.name || "");
+  const [copied, setCopied] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+  const active = connections.find(connection => connection.status === "active");
+  const selected = app.operations.find(item => item.name === selectedName);
+  const matching = app.operations.filter(item => (item.name + " " + item.description).toLowerCase().includes(query.trim().toLowerCase()));
+  useEffect(() => {
+    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeRef.current?.focus();
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); onClose(); }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const elements = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), a[href]')).filter(item => item.getClientRects().length);
+      if (!elements.length) return;
+      const first = elements[0]!, last = elements[elements.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = oldOverflow; document.removeEventListener("keydown", onKey); previousFocus.current?.focus(); };
+  }, [onClose]);
+  async function copyInstruction(operation: CatalogOperation) {
+    const prompt = `Use Remote Arc Connect (list_apps / call_app) to run ${app.provider}.${operation.name}${active ? ` with connectionId ${active.id}` : ""}. Ask me for any required arguments and obtain my approval before any write. Do not claim success without the provider result.`;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopied(true);
+    } catch { setCopied(false); }
+  }
+  const schema = selected?.inputSchema && typeof selected.inputSchema === "object" ? selected.inputSchema as { properties?: Record<string, { type?: string; description?: string; enum?: unknown[] }>; required?: string[] } : null;
+  const params = Object.entries(schema?.properties || {});
+  return createPortal(
+    <div className="appsToolsOverlay" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="appsToolsDialog" ref={dialogRef} role="dialog" aria-modal="true" aria-label={tr(app.name + " tools", app.name + " 工具")}>
+        <header className="appsToolsHead">
+          <AppIcon brand={app.brand} />
+          <div><h2>{app.name} · {tr("Tools", "工具")}</h2><p>{app.operations.length} {tr("available operations", "项可用操作")} · {active ? tr("Account connected", "账号已连接") : tr("Connect an account to use tools", "连接账号后即可使用工具")}</p></div>
+          <button ref={closeRef} type="button" className="appsToolsClose" aria-label={tr("Close tools", "关闭工具浮层")} onClick={onClose}>✕</button>
+        </header>
+        <div className="appsToolsBody">
+          <aside className="appsToolsList">
+            <label htmlFor={"apps-tool-search-" + app.provider}>{tr("Find a tool", "搜索工具")}</label>
+            <input id={"apps-tool-search-" + app.provider} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr("Search name or purpose…", "搜索名称或用途…")} />
+            <div className="appsToolsItems" role="list" aria-label={tr("Available tools", "可用工具")}>
+              {matching.map(item => <div role="listitem" key={item.name}><button type="button" className="appsToolsItem" aria-pressed={selectedName === item.name} onClick={() => { setSelectedName(item.name); setCopied(false); }}>
+                <span className="appsToolsItemTitle">{item.name}</span><span className="appsToolsItemMeta">{item.description}</span><span className="appsToolsItemFooter"><small>{item.permission === "write" ? tr("Write · approval", "写入 · 需审批") : tr("Read-only", "只读")}</small><b>{tr("View details →", "查看详情 →")}</b></span>
+              </button></div>)}
+              {!matching.length && <p className="appsToolsEmpty">{tr("No tools match. Try another keyword.", "没有匹配的工具，试试其他关键词。")}</p>}
+            </div>
+          </aside>
+          <section className="appsToolsDetail" aria-live="polite">
+            {selected ? <>
+              <div className="appsToolsDetailTop"><span className="appsToolsEyebrow">{tr("OPERATION DETAILS", "操作详情")}</span><span className="appsToolsRisk" data-permission={selected.permission}>{selected.permission === "write" ? tr("Write · human approval", "写入 · 人工审批") : tr("Read only", "只读操作")}</span></div>
+              <h3>{selected.name}</h3>
+              <p className="appsToolsDescription">{selected.description}</p>
+              <div className="appsToolsParameterHeader"><h4>{tr("Required inputs", "调用参数")}</h4><span>{tr("Validated by Remote Arc", "由 Remote Arc 校验")}</span></div>
+              {params.length ? <ul className="appsToolsParams">{params.map(([key, value]) => <li key={key}><code>{key}</code><span>{schema?.required?.includes(key) ? tr("Required", "必填") : tr("Optional", "选填")}</span><small>{value.type || "value"}{value.description ? " · " + value.description : ""}</small></li>)}</ul> : <p className="appsToolsParamEmpty">{tr("No parameter schema listed here. Your AI can discover the tool's current schema through list_apps.", "页面暂无参数定义。AI 可通过 list_apps 获取当前工具的完整参数结构。")}</p>}
+              <p className="appsToolsPolicy">{selected.permission === "write" ? tr("Your AI prepares the request; you review its exact target and payload before execution.", "AI 先准备操作请求，你核对目标与完整参数后才会执行。") : tr("Only accessible data from the connected account is returned.", "只能读取此连接账号有权限访问的数据。")}</p>
+              <div className="appsToolsActions">
+                {active ? <button type="button" className="appsToolsPrimary" onClick={() => void copyInstruction(selected)}>{copied ? tr("Copied ✓", "已复制 ✓") : tr("Copy instruction for AI →", "复制给 AI 使用 →")}</button>
+                : <button type="button" className="appsToolsPrimary" disabled={busy || !app.configured} onClick={() => { onClose(); onConnect(); }}>{app.configured ? tr("Connect account to use →", "连接账号后使用 →") : tr("Administrator setup needed", "需要管理员配置")}</button>}
+                <button type="button" className="appsToolsSecondary" onClick={onClose}>{tr("Back to apps", "返回应用列表")}</button>
+              </div>
+              {copied && <p className="appsToolsCopied" role="status">{tr("Paste the instruction into an AI chat connected to Remote Arc. Nothing was executed here.", "将指令粘贴到已连接 Remote Arc 的 AI 对话中。本页面没有执行任何操作。")}</p>}
+            </> : <p>{tr("Select a tool to inspect its inputs.", "选择一项工具查看参数。")}</p>}
+          </section>
+        </div>
+      </div>
+    </div>, document.body
+  );
+}
+
 function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect, onCredential }: {
   app: AppDefinition; connections: AppConnection[]; busy: boolean;
   onCredential: (provider: string, input: AppCredentialInput) => Promise<boolean>;
@@ -109,14 +192,13 @@ function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect
   onDisconnect: (connection: AppConnection) => void;
 }) {
   const { tr } = useI18n();
-  const [operationQuery, setOperationQuery] = useState("");
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [credentialOpen, setCredentialOpen] = useState(false);
   const [shopDomain, setShopDomain] = useState("");
   function connect(provider: string, permissions: Permission[], settings?: Record<string, string>) {
     if (app.auth === "api_key") { setCredentialOpen(true); }
     else onAuthorize(provider, permissions, settings || (provider === "shopify" ? {shopDomain} : undefined));
   }
-  const visibleOperations = app.operations.filter(op => (op.name + " " + op.description).toLowerCase().includes(operationQuery.toLowerCase()));
   return <article className="appsManagerCard" data-provider={app.provider}>
     <header><AppIcon brand={app.brand} /><div><h2>{app.name}</h2><span>{app.configured ? tr("Ready to connect", "可授权连接") : tr("Administrator setup needed", "等待管理员配置")}</span></div><span className="appsManagerOperationCount">{app.operations.length} {tr("operations", "项操作")}</span></header>
 
@@ -130,11 +212,12 @@ function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect
       <button type="button" className="appsManagerPrimary" disabled={busy || !app.configured || (app.provider === "shopify" && !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopDomain))} onClick={() => connect(app.provider, connectedPermissions)}>{app.configured ? connections.length ? tr("Connect another account", "连接其他账号") : tr("Connect account", "连接账号") : tr("Not configured", "尚未配置")}</button>
     </div>
     {credentialOpen && <AppCredentialForm provider={app.provider} write={true} busy={busy} onConnect={input => onCredential(app.provider, input)} onCancel={() => setCredentialOpen(false)} />}
-    <details className="appsManagerOperations"><summary>{tr("Available operations", "可用操作")} <span>{app.operations.length}</span></summary>
-      <label className="appsManagerToolSearch"><span>{tr("Search tools", "搜索工具")}</span><input type="search" value={operationQuery} onChange={event => setOperationQuery(event.target.value)} placeholder={tr("Search tools…", "搜索工具…")} /></label>
-      {!visibleOperations.length && <p>{tr("No matching tools.", "没有匹配的工具。")}</p>}
-      <ul>{visibleOperations.map(operation => <li key={operation.name}><div><strong>{operation.description}</strong><span className="appsManagerPermissionTag" data-permission={operation.permission}>{operation.permission === "write" ? tr("Write · approval required", "写入 · 需审批") : tr("Read", "读取")}</span></div><code>{operation.name}</code></li>)}</ul>
-    </details>
+    <div className="appsManagerToolsAction">
+      <div><strong>{tr("Explore tools", "探索工具")}</strong><p>{tr("Search the operations and view their inputs without expanding this card.", "在独立窗口中搜索工具、查看参数，不会撑开当前卡片。")}</p></div>
+      <button type="button" className="appsManagerExploreButton" aria-haspopup="dialog" onClick={() => setToolsOpen(true)}>{tr("Explore " + app.operations.length + " tools →", "查看 " + app.operations.length + " 项工具 →")}</button>
+    </div>
+    {toolsOpen && <AppToolsDialog app={app} connections={connections} busy={busy} onClose={() => setToolsOpen(false)} onConnect={() => connect(app.provider, connectedPermissions)} />}
+
   </article>;
 }
 

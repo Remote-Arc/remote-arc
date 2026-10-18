@@ -14,7 +14,7 @@ import { createRoot } from "react-dom/client";
 import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
 import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
 import { releaseChinese } from "./release-locales.js";
-import { OrganizationSettings } from "./organization-settings.js";
+import { DashboardSettings } from "./dashboard-settings.js";
 import { EngagementPage } from "./public-engagement.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
@@ -6731,14 +6731,27 @@ function Dashboard({
 
         {active === "settings" && (
           <>
-            <section className="pageHeader dashboardUtilityHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Settings", "设置")}</h1><p>{tr("Appearance, language, account, MCP and billing preferences.", "外观、语言、账号、MCP 与账单偏好。")}</p></div></section>
-            <OrganizationSettings currentEmail={user.email} />
-            <section className="settingsGrid">
-              <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
-              <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
-              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Plan & allowance", "套餐与额度")}</h2><p>{hasPlus ? tr("Remote Arc Plus enables binary reads, durable/overnight Tasks, schedules, planned Agent Goals and supported keep-awake.", "Remote Arc Plus 已启用二进制读取、持久/隔夜任务、定时任务、计划模式 Agent Goal 与受支持的保持唤醒。") : tr("Remote Arc Free includes core remote tools. Plus capabilities are enforced by the relay, not only hidden in the UI.", "Remote Arc Free 包含核心远程工具；Plus 能力由 Relay 强制执行，不只是界面隐藏。")}</p></div><div><div className="planValue">{hasPlus ? "Plus" : "Free"} · {usage?.unlimited ? tr("Unlimited", "无限") : `${usage?.used ?? 0} / ${usageLimitLabel}`}</div>{!hasPlus && <a className="pricingUsageLink" href={MARKETING_ORIGIN + "/pricing"}>{tr("Compare plans", "对比套餐")} →</a>}</div></article>
-              <article className="settingsCard"><div><h2>{tr("Plans & capacity", "方案与容量")}</h2><p>{tr("Review the current allowance, how calls are counted and the support path for capacity needs.", "了解当前额度、调用计数方式和更多容量的咨询渠道。")}</p></div><a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("View pricing", "查看价格")}</a></article>
+            <section className="pageHeader dashboardUtilityHeader">
+              <div>
+                <span className="eyebrow">{tr("ACCOUNT & WORKSPACE", "账号与工作空间")}</span>
+                <h1>{tr("Settings", "设置")}</h1>
+                <p>{tr("Manage your account, workspaces, connections and plan in one place.", "集中管理账号、工作空间、连接权限和订阅方案。")}</p>
+              </div>
             </section>
+            <DashboardSettings
+              currentName={user.name}
+              currentEmail={user.email}
+              locale={locale}
+              setLocale={setLocale}
+              themeSwitcher={<ThemeSwitcher />}
+              hasPlus={hasPlus}
+              usage={usage}
+              usageLimitLabel={usageLimitLabel}
+              mcpEndpoint={mcpEndpoint}
+              marketingOrigin={MARKETING_ORIGIN}
+              onSignOut={signOut}
+              onNavigate={navigateTab}
+            />
           </>
         )}
 

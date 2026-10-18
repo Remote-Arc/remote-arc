@@ -193,6 +193,34 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       );
     }
 
+    // Preview data for Settings > Workspaces. Writes remain blocked above.
+    if (url.pathname === "/api/organizations") {
+      return json({
+        organizations: [
+          { id: "preview-personal", name: "Personal", kind: "personal", role: "owner", members: 1, pending: 0 },
+          { id: "preview-team", name: "Remote Arc Team", kind: "team", role: "owner", members: 2, pending: 1 },
+        ],
+        invitations: [],
+      });
+    }
+    if (url.pathname === "/api/organizations/preview-personal") {
+      return json({
+        organization: { id: "preview-personal", name: "Personal", kind: "personal", role: "owner", members: 1, pending: 0 },
+        members: [{ user_id: "preview-user", email: "preview@remotearc.app", name: "Preview User", role: "owner" }],
+        invitations: [],
+      });
+    }
+    if (url.pathname === "/api/organizations/preview-team") {
+      return json({
+        organization: { id: "preview-team", name: "Remote Arc Team", kind: "team", role: "owner", members: 2, pending: 1 },
+        members: [
+          { user_id: "preview-user", email: "preview@remotearc.app", name: "Preview User", role: "owner" },
+          { user_id: "preview-teammate", email: "teammate@example.com", name: "Alex", role: "member" },
+        ],
+        invitations: [{ id: "preview-invite", email: "designer@example.com", role: "member", organization_id: "preview-team", expires_at: new Date(Date.now() + 604800000).toISOString() }],
+      });
+    }
+
     if (url.pathname === "/api/me") {
       return json({
         user: {

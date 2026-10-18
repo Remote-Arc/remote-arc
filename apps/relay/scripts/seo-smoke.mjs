@@ -69,6 +69,26 @@ for (const path of known) {
 assert.equal(marketingStatusCode("/definitely-not-a-real-page"), 404);
 assert.equal(canonicalForPath("/definitely-not-a-real-page"), null);
 
+// Homepage SEO must match the actual product position and expose distinct
+// destinations to search crawlers and users; Google decides whether to show sitelinks.
+const homepageTemplate = readFileSync(new URL("../../ui/index.html", import.meta.url), "utf8");
+const homepageTitle = "Remote Arc — Connect AI to Apps &amp; Computers";
+assert.ok(homepageTemplate.includes("<title>" + homepageTitle + "</title>"));
+const homeHtml = renderMarketingHtml(homepageTemplate, "/");
+assert.ok(homeHtml.includes("<title>" + homepageTitle + "</title>"));
+assert.ok(homeHtml.includes("per-device permissions and cross-device workflows"));
+for (const path of ["/connect-ai", "/integrations", "/arc", "/pricing", "/docs", "/security-model"]) {
+  assert.ok(homeHtml.includes('href="' + path + '"'), "homepage should link directly to " + path);
+  assert.ok(sitemapXml().includes("<loc>https://remotearc.app" + path + "</loc>"));
+}
+assert.ok(homeHtml.includes("Arc Agent (coming soon)"), "Arc must not be advertised as live");
+assert.ok(homeHtml.includes("https://github.com/Remote-Arc/remote-arc"));
+assert.ok(sitemapXml().includes("<lastmod>2026-10-18</lastmod>"), "homepage changed on Oct 18");
+const homepageSchema = homeHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1];
+assert.ok(homepageSchema, "homepage structured data should be published");
+const graph = JSON.parse(homepageSchema)["@graph"];
+assert.equal(graph.find(entry => entry["@type"] === "WebSite")?.hasPart?.length, 6);
+
 const blogPath = "/blogs/go-vs-typescript-agent-benchmarks";
 const blogHtml = renderMarketingHtml('<html><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', blogPath);
 assert.ok(blogHtml.includes("Windows: the regression and its correction"), "SSR article must contain test caveats");
@@ -145,7 +165,14 @@ assert.ok(zhBlogArticle.includes('"inLanguage":"zh-CN"'), "Chinese article schem
 const changelog = readFileSync(new URL("../../../CHANGELOG.md", import.meta.url), "utf8");
 const publishedVersions = [...changelog.matchAll(/^## (\d+\.\d+\.\d+) -/gm)].map(x => x[1]);
 const mainSource = readFileSync(new URL("../../ui/src/main.tsx", import.meta.url), "utf8");
-for (const page of ["/remote-mcp", "/demo", "/support", "/privacy", "/terms"]) {
+const resourceNavStart = mainSource.indexOf('id="public-nav-resources"');
+const resourceNavEnd = mainSource.indexOf('className="publicNavActions"', resourceNavStart);
+assert.ok(resourceNavStart > -1 && resourceNavEnd > resourceNavStart);
+assert.ok(!mainSource.slice(resourceNavStart, resourceNavEnd).includes('href="/demo"'),
+  "Live Demo should not appear in Resources navigation");
+assert.ok(mainSource.includes('if (routePath === "/demo")'), "Demo route must remain accessible");
+
+for (const page of ["/remote-mcp", "/support", "/privacy", "/terms"]) {
   assert.ok(mainSource.includes('href="' + page + '"'), "public navigation/footer must expose " + page);
 }
 const legacyBlock = mainSource.split("const LEGACY_PRODUCT_RELEASES: ProductRelease[] = [")[1]?.split("const PRODUCT_RELEASES")[0] || "";
@@ -207,8 +234,8 @@ for (const slug of ["desktop-automation", "remote-support", "browser-research", 
 const home = renderMarketingHtml(shell, "/");
 assert.ok(home.includes('"@type":"SoftwareApplication"'));
 assert.ok(home.includes('<noscript><main class="seo-blog-shell">'), "homepage should provide a no-JavaScript semantic fallback");
-assert.ok(home.includes('<h1>Remote computer access for AI through MCP</h1>'));
-assert.ok(home.includes('href="/demo"'), "homepage fallback must link to product demo");
+assert.ok(home.includes('<h1>Connect AI agents to your apps and computers</h1>'));
+assert.ok(home.includes('href="/integrations"'), "homepage fallback must link to app integrations");
 assert.ok(home.includes('href="/pricing"'), "homepage fallback must link to pricing");
 assert.ok(home.includes('Use the computer where the work already lives'));
 assert.ok(bodyWordCount(home) >= 350, "homepage fallback should contain substantive product copy");

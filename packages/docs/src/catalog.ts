@@ -34,6 +34,62 @@ export const DOC_TOPICS: DocTopic[] = [
     ]
   },
   {
+    "slug": "device-fleet",
+    "group": "work",
+    "title": {
+      "en": "Intelligent device fleet",
+      "zh": "智能设备调度"
+    },
+    "description": {
+      "en": "Match work to the right computer using permissions, capabilities and current load.",
+      "zh": "依据权限、能力和当前负载，为工作匹配合适的电脑。"
+    },
+    "sections": [
+      {
+        "heading": {
+          "en": "Filter before balancing",
+          "zh": "先核对条件，再平衡负载"
+        },
+        "text": {
+          "en": "Only online, unpaused devices in your account are eligible. Required tools, operating system, trusted workspace and any scheduled-task permissions are checked before ranking. Starting a process also needs status, output and stop tools. An offline or unauthorized computer is never used as a fallback.",
+          "zh": "只考虑当前账号中在线且未暂停的设备。先检查所需工具、操作系统、可信工作目录及定时任务权限，再进行排序。启动进程还需状态、输出和停止工具。不会回退到离线或无权使用的电脑。"
+        }
+      },
+      {
+        "heading": {
+          "en": "Account for real work",
+          "zh": "根据实际工作判断负载"
+        },
+        "text": {
+          "en": "Ranking considers active tasks, recent interactive activity, managed processes, CPU, memory and connection stability. Capacity samples older than two minutes are treated as unknown, not idle. Windows and WSL agents sharing a host are counted together so the same physical capacity is not counted twice.",
+          "zh": "排序考虑活动任务、近期交互、受管进程、CPU、内存和连接稳定性。超过两分钟的负载样本视为未知，而不是空闲。同一主机上的 Windows 与 WSL Agent 合并计入，避免重复计算物理资源。"
+        }
+      },
+      {
+        "heading": {
+          "en": "Use it from your AI",
+          "zh": "从 AI 中使用"
+        },
+        "text": {
+          "en": "Ask your compatible MCP client to choose a suitable computer, or ask Arc when its hosted workspace is enabled. State any required operating system, project location, tools or minimum available memory. Selection chooses an execution environment; it does not move existing projects or retry an uncertain external write on a second machine.",
+          "zh": "让兼容 MCP 客户端选择合适电脑，或在 Arc 托管工作空间开启后直接对 Arc 说。明确所需操作系统、项目位置、工具或最低可用内存。调度选择执行环境，不自动搬迁项目，也不会把结果不明的外部写入换台机器重试。"
+        }
+      }
+    ],
+    "links": [
+      [
+        "/docs/devices",
+        "Device setup",
+        "设备配置"
+      ],
+      [
+        "/docs/tasks",
+        "Tasks and routines",
+        "任务与 Routine"
+      ]
+    ]
+  },
+  {
     "slug": "apps",
     "group": "work",
     "title": {
@@ -41,8 +97,8 @@ export const DOC_TOPICS: DocTopic[] = [
       "zh": "Apps 与账号连接"
     },
     "description": {
-      "en": "Connect cloud accounts independently of Arc Agent and review each write request.",
-      "zh": "独立于 Arc Agent 连接云端账号，并审核每项写入请求。"
+      "en": "Connect once, then use the available tools from your AI.",
+      "zh": "连接一次，在 AI 中使用账号已授权的工具。"
     },
     "sections": [
       {
@@ -51,8 +107,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "连接自己的账号"
         },
         "text": {
-          "en": "Open the App catalog, choose a category or integration, and check its connection availability and supported operations. When configured, Connect your account opens the signed-in Apps page. Choose read access or explicitly add write access. OAuth Apps redirect to the provider's consent screen; API credential Apps instead accept a key or access token from your own provider account. No local computer or Arc Agent is required for cloud App operations.",
-          "zh": "打开应用目录，选择分类或应用，查看连接开放状态及支持的操作。配置完成的应用通过「连接你的账号」进入登录后的 Apps 页面。选择读取权限，或明确添加写入权限。OAuth 应用会跳转到平台授权页；API 凭证类应用使用你自己服务账号的密钥或访问令牌。云端 Apps 操作不需要本地电脑，也无需等待 Arc Agent。"
+          "en": "Choose an app and connect your account. Available read and write actions are enabled together; there is no additional write switch or per-action approval in Remote Arc. OAuth apps open the provider consent page. Some providers, including Runway, require an API credential from that service; this is separate from a model API key. Cloud app operations do not need a local computer or Arc Agent.",
+          "zh": "选择应用并连接账号。可用读取与写入操作一起启用，Remote Arc 不再增加写入开关或逐次审批。OAuth 应用打开服务商的授权页面；Runway 等部分应用需要该服务自己的 API 凭证，这与模型 API Key 不同。云端应用操作不要求本地电脑，也无需 Arc Agent。"
         }
       },
       {
@@ -67,12 +123,12 @@ export const DOC_TOPICS: DocTopic[] = [
       },
       {
         "heading": {
-          "en": "Review writes and inspect results",
-          "zh": "审核写入并检查结果"
+          "en": "Execute and inspect results",
+          "zh": "执行与检查结果"
         },
         "text": {
-          "en": "A write requires apps:write, write permission on the connection and approval of the exact destination and payload in Apps. Check what will be sent or created before approving. Reuse the same requestId to collect its state. An uncertain external write is not automatically repeated. Provider acknowledgement means the API accepted the request; verify delivery or the final artifact at the provider when needed.",
-          "zh": "写入需要 apps:write、连接的写入权限，以及你在 Apps 中对具体目标和内容的批准。批准前检查发送或创建的内容。使用同一个 requestId 查询状态；结果不明的外部写入不会自动重复。服务商确认表示 API 接受了请求，需要时仍应在平台检查最终内容或送达情况。"
+          "en": "The MCP client needs the relevant apps:read or apps:write scope and the provider must have granted the underlying permissions. Actions use a stable request ID so retries do not duplicate an external change. A changed or revoked connection blocks new execution. Unknown outcomes are retained for inspection and are not automatically repeated. The provider acknowledgement and any final artifact remain the evidence for completion.",
+          "zh": "MCP 客户端需要相应 apps:read 或 apps:write Scope，服务商也必须已授予底层权限。操作使用稳定请求 ID，重试不会重复外部修改。连接被更改或撤销后阻止新执行。结果不明时保留记录供核查，不自动重复。以服务商确认及最终产物作为完成依据。"
         }
       },
       {
@@ -152,20 +208,47 @@ export const DOC_TOPICS: DocTopic[] = [
       "zh": "任务与 Routines"
     },
     "description": {
-      "en": "Save ongoing work, schedules and condition watches with explicit execution limits.",
-      "zh": "保存持续工作、定时计划和条件监听，并设置执行边界。"
+      "en": "One-off tasks and repeating routines, created and managed through conversation.",
+      "zh": "通过对话创建和管理一次性任务与重复 Routine。"
     },
-    "legacyIds": [
-      "automations",
-      "continuation",
-      "schedule"
-    ],
     "links": [
       [
         "/docs/long-running-work",
         "Long-running work guide",
         "持续工作指南"
       ]
+    ],
+    "sections": [
+      {
+        "heading": {
+          "en": "Say what you need",
+          "zh": "说出你需要什么"
+        },
+        "text": {
+          "en": "A task is one piece of work. A routine repeats on a schedule. In Arc Chat, describe the result and timing; Arc asks for missing details and saves the work using a real tool. Tasks and Routines show status and results, without a configuration form. Connect remains your MCP connection layer for an external AI client.",
+          "zh": "Task 是一次工作，Routine 按计划重复执行。在 Arc Chat 里描述结果和时间，Arc 会确认缺少的信息，再通过真实工具保存。Tasks 和 Routines 展示状态与结果，不需要配置表单。Connect 继续作为外部 AI 客户端使用的 MCP 连接层。"
+        }
+      },
+      {
+        "heading": {
+          "en": "Timing and availability",
+          "zh": "时间与可用性"
+        },
+        "text": {
+          "en": "Routines support a daily local time, optional weekdays and an explicit IANA timezone, or an interval of at least 15 minutes. A nonexistent daylight-saving time is skipped; a repeated local time runs once. Each execution uses the same account permissions and fresh model budgets. Computer work requires a reachable, permitted device. Arc hosted execution requires platform configuration; availability is shown in Chat.",
+          "zh": "Routine 支持明确 IANA 时区的本地每日时间、可选星期，或至少 15 分钟的间隔。夏令时不存在的时间会跳过，重复出现的本地时间只运行一次。每轮重新检查账号权限和模型预算；电脑操作要求设备在线且具备权限。Arc 托管执行需要平台完成配置，Chat 会显示可用状态。"
+        }
+      },
+      {
+        "heading": {
+          "en": "Keep the result with the work",
+          "zh": "让结果随工作保留"
+        },
+        "text": {
+          "en": "Messages, tool results and run status are saved. You can stop a chat run and ask Arc to pause, resume or update saved work. Stopping prevents further dispatch; an external action already in flight may still complete. Failed or unconfirmed recurring work pauses for inspection rather than silently repeating a possible write.",
+          "zh": "消息、工具结果和运行状态会保存。可以停止当前运行，或让 Arc 暂停、恢复、修改已保存工作。停止会阻止新的派发，已经发出的外部请求仍可能完成。失败或结果未确认的重复工作暂停等待核查，避免悄悄重复可能已发生的写入。"
+        }
+      }
     ]
   },
   {
@@ -206,8 +289,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "组合 Skills、Apps 和设备"
         },
         "text": {
-          "en": "Ask the AI to consult a relevant Skill, then discover the specific App or device operation it needs. Paid upstream APIs keep their own billing rules, and writes still need their normal approval. Future Arc teammates can share this foundation; the current Skill catalog does not make Arc Agent generally available.",
-          "zh": "让 AI 先读取相关 Skill，再发现所需的具体 App 或设备操作。上游付费 API 仍按自己的规则计费，写入仍需要正常审批。未来 Arc 队友可复用这些基础，但当前技能库不代表 Arc Agent 已全面开放。"
+          "en": "Consult a relevant Skill, then discover the specific app or device operation required. A Skill is guidance, not a permission grant. Connected app operations are enabled within provider scopes; device execution follows its local policy.",
+          "zh": "先读取相关 Skill，再发现所需应用或设备操作。Skill 是指引，不授予权限。连接的应用在服务商授权范围内启用操作，设备执行遵循本地策略。"
         }
       }
     ]
@@ -226,32 +309,42 @@ export const DOC_TOPICS: DocTopic[] = [
     "sections": [
       {
         "heading": {
-          "en": "Connect and Arc",
-          "zh": "Connect 与 Arc"
+          "en": "One platform, two ways to work",
+          "zh": "一个平台，两种工作方式"
         },
         "text": {
-          "en": "Connect brings tools, Apps and your paired devices into a compatible AI chat. That chat supplies the reasoning. Arc is the separate planned agent experience for persistent teammates and coordinated work. Arc Agent remains in development; Apps can ship and work through Connect independently.",
-          "zh": "Connect 把工具、Apps 和已配对设备带入兼容的 AI 聊天，由该聊天提供推理。Arc 是独立推进的智能体体验，面向持久 AI 队友和协同工作。Arc Agent 仍在开发，Apps 可以独立发布并通过 Connect 工作。"
+          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the new hosted personal-agent workspace on the same connections: chat, tool execution, one-off tasks and routines. You do not supply a model API key. Arc availability depends on the platform completing its model configuration.",
+          "zh": "Connect 通过 MCP 把你自己的 AI 客户端连接到应用与电脑。Arc 是同一套连接之上的新托管个人 Agent 工作空间，包括对话、工具执行、一次性任务和 Routine。用户不需要提供模型 API Key；Arc 的开放取决于平台完成模型配置。"
         }
       },
       {
         "heading": {
-          "en": "Model provider foundation",
-          "zh": "模型接入基础"
+          "en": "Auto and premium models",
+          "zh": "Auto 与高级模型"
         },
         "text": {
-          "en": "The hosted model gateway has adapters for Cloudflare Workers AI, OpenAI Responses and Claude Messages. They produce bounded planning decisions and do not execute tools themselves. Hosted inference is disabled by default. Supplying an API key does not enable a paid model: explicit provider grants and global, organization, user and task budgets are also required. There is no automatic paid fallback.",
-          "zh": "托管模型网关已具备 Cloudflare Workers AI、OpenAI Responses 和 Claude Messages 适配器。它们输出有边界的规划决策，不直接执行工具。托管推理默认关闭；仅提供 API 密钥不会启用付费模型，还需要明确的服务商授权及全局、组织、用户和任务预算。系统不会自动回退到付费模型。"
+          "en": "Auto uses a platform-funded OpenAI model. Premium OpenAI and Claude models require a stored paid-model entitlement, a provider grant and available budget. Each request reserves its maximum estimated cost before inference and settles measured usage afterwards. Global, account, organization and conversation limits apply. Runs also have explicit step, time and token ceilings.",
+          "zh": "Auto 使用平台出资的 OpenAI 模型。高级 OpenAI 和 Claude 模型要求已保存的付费模型权益、服务商授权及剩余额度。每次推理前预留估算最大成本，之后按实际用量结算，受全局、账号、组织及对话预算限制；运行还具备明确的步骤、时间与 Token 上限。"
         }
       },
       {
         "heading": {
-          "en": "Persistent state and device control",
-          "zh": "持久状态与设备控制"
+          "en": "Own computers, intelligent placement",
+          "zh": "自己的电脑，智能调度"
         },
         "text": {
-          "en": "Saved tasks retain their progress so another compatible chat can inspect state later. Device ownership, trusted paths, execution permissions, leases and approvals still apply. Organization membership does not grant access to another person's computer. A saved task is not a promise that an ordinary chat continues reasoning after it closes.",
-          "zh": "保存的任务保留进度，之后可由另一个兼容聊天查看状态。设备归属、可信路径、执行权限、租约与审批仍然生效。加入组织不会获得其他人的电脑访问权。保存任务也不意味着普通聊天关闭后会继续推理。"
+          "en": "Arc can inspect your own fleet and select an eligible device for the task. Placement considers tools, platform, trusted workspace and fresh capacity signals. It does not assume a project exists on another computer or move files implicitly. A selected device enforces its current local execution policy.",
+          "zh": "Arc 可以查看自己的设备集群并为任务选择符合条件的电脑，考虑工具、平台、可信目录与实时负载。它不会假设另一台电脑上已有同一项目，也不会暗中搬迁文件。选中的设备仍执行当前本地权限策略。"
+        }
+      },
+      {
+        "heading": {
+          "en": "Your 14-day trial",
+          "zh": "你的 14 天试用"
+        },
+        "text": {
+          "en": "Activate the trial in Arc Chat after the platform is configured. It lasts fourteen consecutive days per account; refreshing, signing out or activating again does not extend it. Auto and capped premium inference, Tasks and Routines are included. Model spending is limited per day, provider allowance and run. At expiry, new hosted inference stops while conversations and account connections remain. Connect uses its own plan. No credit card is requested and there is no automatic charge.",
+          "zh": "平台配置完成后，在 Arc Chat 主动开启试用。每个账号连续十四天，刷新、退出或再次开启不会延长。包含 Auto、有上限的高级模型推理、Tasks 和 Routines。模型消费受每日额度、服务商授权总额及单次运行限制。到期后停止新的托管推理，对话和账号连接仍保留，Connect 按原套餐使用。不要求信用卡，也不会自动扣费。"
         }
       }
     ],
@@ -316,8 +409,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "检查产生费用的操作"
         },
         "text": {
-          "en": "A Runway generation shows its requested model, duration and estimated credits before approval. The estimate gate is not a provider-enforced financial cap. Ads APIs can expose spend on the connected advertising account; a report read and an ad purchase are different activities. Hosted Arc inference has a separate budget ledger and is not enabled by connecting Apps. Check current provider pricing and the account's billing controls.",
-          "zh": "Runway 生成在审批前显示模型、时长和预估积分；预估限制不等于服务商强制执行的财务上限。广告 API 可能涉及所连接广告账号的支出，读取报表和购买广告是不同操作。托管 Arc 推理使用独立预算账本，不会随 Apps 连接而启用。请检查服务商现行价格与账号的计费控制。"
+          "en": "Runway generation validates the requested model, duration and maximum estimated credits before dispatch. The estimate is not a provider-enforced financial cap. Third-party account charges remain separate from Remote Arc tool usage and hosted Arc inference. Check the provider billing controls for the connected account.",
+          "zh": "Runway 生成在派发前检查模型、时长和预估积分上限。预估不是服务商强制执行的财务上限。第三方账号费用、Remote Arc 工具用量与 Arc 托管模型推理分别计算，请检查所连接账号的服务商计费控制。"
         }
       }
     ],

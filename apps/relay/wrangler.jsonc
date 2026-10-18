@@ -26,6 +26,10 @@
       {
         "name": "REGISTRY",
         "class_name": "DeviceRegistry"
+      },
+      {
+        "name": "ARC_RUNTIME",
+        "class_name": "ArcChatRuntime"
       }
     ]
   },
@@ -35,7 +39,8 @@
       "new_sqlite_classes": [
         "DeviceRegistry"
       ]
-    }
+    },
+    { "tag": "v2-arc-chat", "new_sqlite_classes": ["ArcChatRuntime"] }
   ],
   "routes": [
     {
@@ -100,7 +105,13 @@
     "ALERT_EMAIL": "moviegoer24@gmail.com",
     "ALERT_FROM_EMAIL": "alerts@remotearc.app",
     "ENABLE_EXPERIMENTAL_AGENT_GOALS": "1",
-    "ENABLE_APPS": "1"
+    "ENABLE_APPS": "1",
+    "ARC_CHAT_ENABLED": "1",
+    "ARC_PLATFORM_DAILY_MICROS": "5000000",
+    "ARC_USER_DAILY_MICROS": "50000",
+    "ARC_PAID_USER_DAILY_MICROS": "1000000",
+    "ARC_TRIAL_DAILY_MICROS": "100000",
+    "ARC_TRIAL_PREMIUM_MICROS": "250000"
   },
   "ratelimits": [
     {

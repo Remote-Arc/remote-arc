@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import "./workspace-picker.css";
+import {ProductIcon as Icon} from './product-icon.js';
 
 type Workspace = "connect" | "agent";
 type Props = {
@@ -126,13 +127,13 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: P
           className={workspace === "connect" ? "selected" : ""} onClick={() => select("overview")}>
           <span className="workspaceOptionIcon" aria-hidden="true"><ProductIcon workspace="connect"/></span>
           <span className="workspaceOptionDescription"><strong>Connect</strong><small>{tr("Bring tools to the AI you use", "为你常用的 AI 连接工具")}</small></span>
-          <span className="workspaceOptionCheck" aria-hidden="true">{workspace === "connect" ? "✓" : "→"}</span>
+          <span className="workspaceOptionCheck"><Icon name={workspace === "connect" ? 'check' : 'arrowUpRight'} size={15}/></span>
         </button>
         <button type="button" role="menuitemradio" aria-checked={workspace === "agent"}
           className={workspace === "agent" ? "selected" : ""} onClick={() => select("agent-chat")}>
           <span className="workspaceOptionIcon agent" aria-hidden="true"><ProductIcon workspace="agent"/></span>
           <span className="workspaceOptionDescription"><strong>Arc</strong><small>{tr("Your personal AI workspace", "你的个人 AI 工作空间")}</small></span>
-          <span className="workspaceOptionCheck" aria-hidden="true">{workspace === "agent" ? "✓" : "→"}</span>
+          <span className="workspaceOptionCheck"><Icon name={workspace === "agent" ? 'check' : 'arrowUpRight'} size={15}/></span>
         </button>
         <div className="workspacePickerMenuFoot">{tr("One account. Shared apps and devices.","同一个账号，共享已连接的应用与设备。")}</div>
       </div>,

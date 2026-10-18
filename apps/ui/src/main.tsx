@@ -3,7 +3,12 @@ import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.
 import { InstallCommands } from "./install-commands.js";
 import { HomeConnectionScene } from "./home-connection-scene.js";
 import { AppsManager } from "./apps-manager.js";
-import { AgentChatWorkspace } from "./agent-chat-workspace.js";
+import { ProductFocus } from "./product-positioning.js";
+import {AgentUseCases} from "./agent-use-cases.js";
+import {DeviceFleetOverview,DeviceCapacity} from "./device-fleet-overview.js";
+import { ArcWorkWorkspace } from "./arc-workspace.js";
+import { ProductIcon, type ProductIconName } from "./product-icon.js";
+import "./arc-product-polish.css";
 import { WorkspacePicker } from "./workspace-picker.js";
 import {
   DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab,
@@ -37,11 +42,17 @@ import "./styles.css";
 import "./dashboard.css";
 import "./laptop-hero.css";
 import "./workspace-design.css";
+import "./marketing-design.css";
+import "./device-fleet-design.css";
+import "./product-typography.css";
+import "./arc-product-polish.css";
+import "./brand-wordmark.css";
 
 declare const __REMOTEARC_CLI_VERSION__: string;
 
 const LATEST_AGENT_VERSION = __REMOTEARC_CLI_VERSION__;
 
+const ArcNativeChat = React.lazy(() => import("./arc-native-chat.js").then(module => ({default:module.ArcNativeChat})));
 const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
 const IntegrationsPage = React.lazy(() => import("./integrations-page.js").then(module => ({ default: module.IntegrationsPage })));
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
@@ -71,6 +82,7 @@ type DeviceTaskPermissions = { background_tasks: boolean; scheduled_tasks: boole
 const legacyTaskPermissions: DeviceTaskPermissions = { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: false, keep_awake: false };
 
 type Device = {
+  capacity?: {observedAt:string;cpuPercent?:number;memoryAvailableMB:number;memoryTotalMB:number;managedProcesses?:number};
   id: string;
   name: string;
   platform: string;
@@ -399,30 +411,8 @@ const platformGlyph = (platform?: string | null) => {
 };
 
 function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
-  const common = {
-    width: 18,
-    height: 18,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
-  if (tab === "agent-chat") return <svg {...common}><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H4l2.2-3.3A7.5 7.5 0 1 1 20 11.5Z"/><path d="M9 11h7"/></svg>;
-  if (tab === "agent-goals") return <svg {...common}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>;
-  if (tab === "agent-routines") return <svg {...common}><path d="M4 8a8 8 0 0 1 14-3l2 2M20 3v4h-4M20 16a8 8 0 0 1-14 3l-2-2M4 21v-4h4"/></svg>;
-  if (tab === "agent-skills") return <svg {...common}><path d="M12 3v4m0 10v4M3 12h4m10 0h4M5.6 5.6l2.8 2.8m7.2 7.2 2.8 2.8m0-12.8-2.8 2.8m-7.2 7.2-2.8 2.8"/><circle cx="12" cy="12" r="3"/></svg>;
-  if (tab === "agent-activity") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
-  if (tab === "overview") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
-  if (tab === "devices" || tab === "agent-devices") return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
-  if (tab === "automations") return <svg {...common}><path d="M4 12a8 8 0 0 1 14.6-4.5"/><path d="M18 3v5h-5"/><path d="M20 12a8 8 0 0 1-14.6 4.5"/><path d="M6 21v-5h5"/></svg>;
-  if (tab === "apps" || tab === "agent-apps") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 17.5h7m-3.5-3.5v7"/></svg>;
-  if (tab === "connect") return <svg {...common}><path d="M8.5 12.5 12 9l3.5 3.5"/><path d="M12 9v9"/><path d="M5 6.5A4.5 4.5 0 0 1 9.5 2h5A4.5 4.5 0 0 1 19 6.5"/></svg>;
-  if (tab === "security") return <svg {...common}><path d="M12 3 5 6v5c0 4.7 2.7 7.8 7 10 4.3-2.2 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>;
-  if (tab === "monitor") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
-  return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-3v-.08a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.56-1.03H5v-3h.44A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.69 4.7V4h3v.7a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.78 8l-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.94 11H21v3h-.06A1.7 1.7 0 0 0 19.4 15Z"/></svg>;
+ const names: Partial<Record<DashboardTab,ProductIconName>> = {overview:'overview',devices:'device','agent-devices':'device',apps:'apps','agent-apps':'apps',connect:'link',security:'shield',monitor:'activity','agent-chat':'chat','agent-goals':'tasks','agent-routines':'routine','agent-skills':'spark','agent-activity':'activity',automations:'tasks'};
+ return <ProductIcon name={names[tab] || 'settings'}/>;
 }
 
 const timeAgo = (value?: string | null) => {
@@ -487,13 +477,14 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 function PublicHeader({ user }: { user?: User | null }) {
   const { tr, locale } = useI18n();
   const [openMenu, setOpenMenu] = useState<"mcp" | "resources" | null>(null);
+  const [mobileOpen,setMobileOpen] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const onOutsideClick = (event: PointerEvent) => {
       if (!navRef.current?.contains(event.target as Node)) setOpenMenu(null);
     };
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenMenu(null);
+      if (event.key === "Escape") { setOpenMenu(null); setMobileOpen(false); }
     };
     document.addEventListener("pointerdown", onOutsideClick);
     document.addEventListener("keydown", onEscape);
@@ -514,70 +505,39 @@ function PublicHeader({ user }: { user?: User | null }) {
     <>
       <header className="landingNav publicNav">
         <Brand />
-        <nav ref={navRef} className="publicNavLinks">
-          <a href={navHref("/#how-it-works")}>{tr("How it works", "如何使用")}</a>
-
-          <div className="publicNavMenu" data-open={openMenu === "mcp"}
-            onMouseEnter={() => setOpenMenu("mcp")} onMouseLeave={() => setOpenMenu(null)}>
-            <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu === "mcp"}
-              aria-controls="public-nav-mcp" aria-haspopup="true" onClick={() => setOpenMenu("mcp")}>
-              MCP {arrow}
-            </button>
-            <div id="public-nav-mcp" className="publicNavDropdown mcpDropdown">
-              <div className="publicNavDropdownColumns">
-                <section className="publicNavGroup">
-                  <span className="publicNavGroupLabel">{tr("Start here", "快速入门")}</span>
-                  <a href="/remote-mcp"><strong>{tr("Remote MCP guide", "Remote MCP 指南")}</strong><small>{tr("What it does and why it matters", "了解工作原理")}</small></a>
-                  <a href="/connect-ai"><strong>{tr("Connect Remote Arc", "连接 Remote Arc")}</strong><small>{tr("Pair a computer and authorize AI", "配对电脑并授权 AI")}</small></a>
-                  <a href="/chrome-extension"><strong>Chrome Browser <span className="navBeta">Beta</span></strong><small>{tr("Share selected browser tabs", "共享指定浏览器标签页")}</small></a>
-                </section>
-                <section className="publicNavGroup">
-                  <span className="publicNavGroupLabel">{tr("Install in your AI", "安装到 AI")}</span>
-                  <a href={navHref("/install/chatgpt")}><strong>ChatGPT</strong><small>{tr("Installation guide", "安装指南")}</small></a>
-                  <a href={navHref("/install/claude")}><strong>Claude</strong><small>{tr("Installation guide", "安装指南")}</small></a>
-                  <a href={navHref("/install/gemini")}><strong>Google Gemini</strong><small>{tr("Custom connector guide", "自定义连接器指南")}</small></a>
-                  <a href={navHref("/install/cursor")}><strong>Cursor</strong><small>{tr("Installation guide", "安装指南")}</small></a>
-                </section>
-              </div>
+        <button type="button" className="publicMobileMenu" aria-label={tr('Open navigation','打开导航')} aria-expanded={mobileOpen} aria-controls="public-navigation" onClick={()=>setMobileOpen(!mobileOpen)}><ProductIcon name={mobileOpen?'close':'menu'}/></button>
+        <nav ref={navRef} id="public-navigation" className="publicNavLinks" data-expanded={mobileOpen} aria-label={tr('Main navigation','主导航')}>
+          <div className="publicNavMenu" data-open={openMenu==='mcp'} onMouseEnter={()=>setOpenMenu('mcp')} onMouseLeave={()=>setOpenMenu(null)}>
+            <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu==='mcp'} aria-controls="public-nav-product" onClick={()=>setOpenMenu(openMenu==='mcp'?null:'mcp')}>{tr('Product','产品')} {arrow}</button>
+            <div id="public-nav-product" className="publicNavDropdown productDropdown">
+              <section className="publicNavGroup">
+                <span className="publicNavGroupLabel">{tr('ONE PLATFORM. YOUR WAY TO WORK.','一个平台，选择你的工作方式。')}</span>
+                <a href={navHref('/arc')}><span className="publicProductIcon"><ProductIcon name="spark"/></span><span><strong>Arc <em>{tr('New · Preview','新品 · 预览')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
+                <a href={navHref('/connect-ai')}><span className="publicProductIcon"><ProductIcon name="link"/></span><span><strong>Connect <em>{tr('Available today','现已可用')}</em></strong><small>{tr('Bring tools to the AI you already use','为你常用的 AI 连接电脑和应用')}</small></span></a>
+                <a href={navHref('/docs/device-fleet')}><span className="publicProductIcon"><ProductIcon name="device"/></span><span><strong>{tr('Intelligent fleet','智能设备调度')}</strong><small>{tr('Match work to the right computer','让合适的设备承担合适的工作')}</small></span></a>
+              </section>
+              <div className="publicNavProductFoot"><a href={navHref('/install/chatgpt')}>ChatGPT</a><a href={navHref('/install/claude')}>Claude</a><a href={navHref('/install/cursor')}>Cursor</a><a href={navHref('/remote-mcp')}>Remote MCP <ProductIcon name="arrowUpRight" size={12}/></a></div>
             </div>
           </div>
-
-          <a className="arcNavLink" href={navHref("/arc")}>Arc <span className="arcSoonLabel">{tr("Coming soon", "即将推出")}</span></a>
-
-          <a href={navHref("/pricing")}>{tr("Pricing", "价格")}</a>
-
-          <div className="publicNavMenu" data-open={openMenu === "resources"}
-            onMouseEnter={() => setOpenMenu("resources")} onMouseLeave={() => setOpenMenu(null)}>
-            <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu === "resources"}
-              aria-controls="public-nav-resources" aria-haspopup="true" onClick={() => setOpenMenu("resources")}>
-              {tr("Resources", "资源")} {arrow}
-            </button>
-            <div id="public-nav-resources" className="publicNavDropdown resourceDropdown">
-              <div className="publicNavDropdownColumns">
-                <section className="publicNavGroup">
-                  <span className="publicNavGroupLabel">{tr("Explore", "探索")}</span>
-                  <a href={navHref("/blogs")}><strong>{tr("Blog", "博客")}</strong><small>{tr("Ideas and product updates", "产品思考与开发动态")}</small></a>
-                  <a href={navHref("/use-cases")}><strong>{tr("Use cases", "使用场景")}</strong><small>{tr("Real workflows on your devices", "真实设备工作流")}</small></a>
-                  <a href={navHref("/roadmap")}><strong>{tr("Roadmap", "路线图")}</strong><small>{tr("What's live and what's next", "已上线与未来计划")}</small></a>
-                </section>
-                <section className="publicNavGroup">
-                  <span className="publicNavGroupLabel">{tr("Learn & trust", "文档与信任")}</span>
-                  <a href={navHref("/docs")}><strong>{tr("Docs", "文档")}</strong><small>{tr("Tools, setup and references", "工具、配置与参考")}</small></a>
-                  <a href={navHref("/security-model")}><strong>{tr("Security", "安全")}</strong><small>{tr("Permissions and trust boundaries", "权限与信任边界")}</small></a>
-                  <a href={navHref("/releases")}><strong>{tr("Releases", "版本发布")}</strong><small>{tr("What's new in Remote Arc", "查看 Remote Arc 更新")}</small></a>
-                </section>
-              </div>
-            </div>
+          <a href={navHref('/use-cases')}>{tr('Use cases','使用场景')}</a>
+          <a href={navHref('/integrations')}>{tr('Apps','应用')}</a>
+          <a href={navHref('/pricing')}>{tr('Pricing','价格')}</a>
+          <div className="publicNavMenu" data-open={openMenu==='resources'} onMouseEnter={()=>setOpenMenu('resources')} onMouseLeave={()=>setOpenMenu(null)}>
+            <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu==='resources'} aria-controls="public-nav-resources" onClick={()=>setOpenMenu(openMenu==='resources'?null:'resources')}>{tr('Resources','资源')} {arrow}</button>
+            <div id="public-nav-resources" className="publicNavDropdown resourceDropdown"><div className="publicNavDropdownColumns">
+              <section className="publicNavGroup"><span className="publicNavGroupLabel">{tr('GET STARTED','开始使用')}</span><a href={navHref('/docs')}><strong>{tr('Documentation','文档')}</strong><small>{tr('Connections, tools and product guides','连接、工具与产品指南')}</small></a><a href={navHref('/downloads')}><strong>{tr('Downloads','下载')}</strong><small>Windows · macOS · Linux</small></a><a href={navHref('/security-model')}><strong>{tr('Security','安全')}</strong><small>{tr('Your devices, your rules','自己的设备，自己的规则')}</small></a></section>
+              <section className="publicNavGroup"><span className="publicNavGroupLabel">{tr('FOLLOW ALONG','关注进展')}</span><a href={navHref('/blogs')}><strong>{tr('Blog','博客')}</strong><small>{tr('Ideas from the team','团队思考与分享')}</small></a><a href={navHref('/releases')}><strong>{tr('Changelog','更新日志')}</strong><small>{tr('What shipped recently','近期产品更新')}</small></a><a href={navHref('/roadmap')}><strong>{tr('Roadmap','路线图')}</strong><small>{tr('What we are building next','我们正在打造什么')}</small></a></section>
+            </div></div>
           </div>
         </nav>
         <div className="publicNavActions">
           <LanguageSwitcher compact syncUrl dropdown />
           <ThemeSwitcher compact />
           {user ? (
-            <a className="navDashboard" href={dashboardHref("/overview")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
+            <a className="navDashboard" href={dashboardHref("/dashboard/agent/chat")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
           ) : (
-            <a className="navLogin installNavCta" href={signInHref} title={tr("Sign in with Google or email", "使用 Google 或邮箱登录")}>
-              {tr("Sign in", "登录")} <span>→</span>
+            <a className="navLogin installNavCta" href={APP_ORIGIN+"/dashboard/agent/chat?trial=1"} title={tr("Sign in with Google or email", "使用 Google 或邮箱登录")}>
+              {tr("Start free trial", "免费试用")} <ProductIcon name="arrowUpRight" size={14}/>
             </a>
           )}
         </div>
@@ -2461,30 +2421,22 @@ function Landing({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <section className="landingHero landingHero--constellation">
         <div className="heroCopy">
-          <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
+          <span className="eyebrow heroProductLabel"><i/> {tr('YOUR PERSONAL AGENT. REAL WORK.','你的个人 AI 队友，真正动手工作。')}</span>
           <HeroHeadline />
-          <p>{tr(
-            "Your AI. Your apps. Your computers. Working together, without an API key.",
-            "你的 AI、应用与电脑，一起动手完成任务。无需 API Key。"
-          )}</p>
-          <InstallCommands />
+          <p>{tr('Tell Arc what you need. It works with your apps, chooses a suitable computer, and keeps tasks and routines moving — with results you can inspect.','告诉 Arc 你需要什么。它调用应用、选择合适的电脑，推进任务与 Routine，并交付可检查的结果。')}</p>
           <div className="landingActions">
-            <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>
-            <a className="ghostLink" href="/downloads">{tr("Download Agent", "下载 Agent")}</a>
-            <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
+            <a className="primaryButton marketingPrimary" href={APP_ORIGIN+"/dashboard/agent/chat?trial=1"}>{tr("Start 14-day free trial","开始 14 天免费试用")}<ProductIcon name="arrowUpRight" size={16}/></a>
+            <a className="marketingSecondary" href="#how-it-works">{tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>
           </div>
-          <div className="heroBadges">
-            <span>{tr("Chat → real actions", "聊天 → 真实执行")}</span>
-            <span>{tr("Free MCP chat options", "支持部分免费 AI 聊天")}</span>
-            <span>{tr("Your device. Your permissions.", "自己的电脑，权限自己定")}</span>
-          </div>
-          <a className="heroTaskAvailability" href="/docs/long-running-work">{tr("Long-running Tasks · staged preview · see requirements", "长任务准备发布中 · 查看运行条件")} →</a>
+          <div className="heroProofLine"><ProductIcon name="check" size={14}/>{tr('No model API key required','无需模型 API Key')}<span>·</span>Windows · Mac · Linux</div>
+
+          <a className="heroTaskAvailability" href="/connect-ai">{tr('Already use ChatGPT or Claude? Explore Connect','已经在用 ChatGPT 或 Claude？了解 Connect')}<ProductIcon name="arrowUpRight" size={13}/></a>
         </div>
         <HomeConnectionScene clients={topologyAiClients} />
       </section>
 
       <section className="trustRail" aria-label={tr("Supported AI clients", "支持的 AI 客户端")}>
-        <span>{tr("Install for your AI client", "选择你的 AI 客户端安装")}</span>
+        <span>{tr("Works with the AI you use", "和你常用的 AI 一起工作")}</span>
         {aiClients.filter((client) => client.slug !== "gemini").map((client) => (
           <a href={"/install/" + client.slug} key={client.name}>
             <img className={client.tone === "mono" ? "monoLogo" : "colorLogo"} src={client.icon} alt="" />
@@ -2495,26 +2447,11 @@ function Landing({ user }: { user?: User | null }) {
         <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
       </section>
 
-      <nav className="landingQuickLinks" aria-label={tr("Explore Remote Arc", "探索 Remote Arc")}>
-        <h2>{tr("Explore Remote Arc", "探索 Remote Arc")}</h2>
-        <div className="landingQuickLinksGrid">
-          {([
-            ["/connect-ai", tr("Connect AI", "连接 AI"), tr("Pair devices and authorize clients", "配对设备并授权 AI 客户端")],
-            ["/integrations", tr("Apps", "应用集成"), tr("Explore supported integrations", "浏览支持的应用与操作")],
-            ["/arc", tr("Arc Agent", "Arc Agent"), tr("Coming soon", "即将推出")],
-            ["/pricing", tr("Pricing", "价格方案"), tr("Understand plans and limits", "了解套餐与使用额度")],
-            ["/docs", tr("Documentation", "文档"), tr("Setup, tools and MCP reference", "安装、工具与 MCP 参考")],
-            ["/security-model", tr("Security", "安全"), tr("Permissions and trust boundaries", "权限与信任边界")]
-          ] as const).map(([href, name, detail]) => (
-            <a href={href} key={href}>
-              <strong>{name} <span aria-hidden="true">↗</span></strong>
-              <span>{detail}</span>
-            </a>
-          ))}
-        </div>
-      </nav>
+      <ProductFocus/>
+      <AgentUseCases/>
 
       <LandingContent />
+      <section className="homepageConnectSetup" id="connect-your-computer"><div><span className="eyebrow">REMOTE ARC CONNECT</span><h2>{tr("Keep your AI. Connect your computer.","沿用你的 AI，连接自己的电脑。")}</h2><p>{tr("Use ChatGPT, Claude or another compatible MCP client with the same apps and computers. Start with one command.","用 ChatGPT、Claude 等兼容 MCP 的客户端访问同一套应用与电脑。从一条命令开始。")}</p><a href="/connect-ai">{tr("Connect setup guide","Connect 安装指南")}<ProductIcon name="arrowUpRight" size={15}/></a></div><InstallCommands/></section>
     </PublicLayout>
   );
 }
@@ -3642,6 +3579,7 @@ function Dashboard({
   const { tr, locale, setLocale } = useI18n();
   const hasPlus = user.plan === "plus" || user.isAdmin;
   const [showAdd, setShowAdd] = useState(false);
+  const [arcEntry,setArcEntry] = useState<{prompt?:string;sessionId?:string;version:number}>(()=>({version:0,prompt:new URLSearchParams(location.search).get('prompt')?.slice(0,6000)||undefined}));
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [backgroundUpdatingId, setBackgroundUpdatingId] = useState<string | null>(null);
@@ -4945,20 +4883,14 @@ function Dashboard({
     setActive(tab);
   }
 
-  function openCreateInWorkspace(workspace: "connect" | "agent", routine = false, objective = "", successCriteria = "") {
-    setCreatedWebhook(null);
-    setAutomationQuery("");
-    setAutomationFilter("all");
-    setAutomationDraft((current) => ({
-      ...current,
-      kind: workspace === "agent" ? "agent_goal" : "long_task",
-      trigger_mode: routine ? "interval" : "now",
-      agent_objective: objective || current.agent_objective,
-      agent_success_criteria: objective ? successCriteria : current.agent_success_criteria,
-      command_confirmed: false,
-    }));
-    navigateTab(workspace === "connect" ? "automations" : routine ? "agent-routines" : "agent-goals");
-    setShowAutomationCreate(true);
+  function openArcChat(prompt?:string,sessionId?:string) {
+    setArcEntry(current=>({prompt,sessionId,version:current.version+1}));
+    navigateTab('agent-chat');
+  }
+  function openCreateInWorkspace(_workspace: "connect" | "agent", routine = false, objective = "", successCriteria = "") {
+    openArcChat(objective ? objective + (successCriteria ? '\n' + successCriteria : '') : routine
+      ? tr('Help me set up a routine. Ask what I need, the schedule and timezone.','帮我安排一项例行工作，先了解要做什么、执行时间和时区。')
+      : tr('Help me delegate a task. Ask what result I need.','帮我安排一项任务，先了解我需要的结果。'));
   }
 
   const eventLabel = (event: AuditEvent) => {
@@ -5079,6 +5011,7 @@ function Dashboard({
   const navItems: Array<[DashboardTab, string]> = workspace === "agent" ? [
     ["agent-chat", tr("Chat", "对话")],
     ["agent-goals", tr("Tasks", "任务")],
+    ["agent-routines", tr("Routines", "例行工作")],
     ["agent-activity", tr("Activity", "活动")],
     ["agent-apps", tr("Apps", "应用")],
     ["agent-devices", tr("Devices", "设备")],
@@ -5087,10 +5020,9 @@ function Dashboard({
     ["overview", tr("Overview", "概览")],
     ["devices", tr("Devices", "设备")],
     ["apps", tr("Apps", "应用")],
-    ["automations", tr("Tasks", "任务")],
     ["connect", tr("AI clients", "AI 客户端")],
   ];
-  const mobileNavItems = navItems.filter(([id]) => !["agent-activity", "agent-skills", "connect"].includes(id));
+  const mobileNavItems = navItems.filter(([id]) => !["agent-activity", "agent-skills", "agent-devices"].includes(id)).slice(0,4);
   const renderWorkspacePicker = (mobile = false) => (
     <WorkspacePicker workspace={workspace} mobile={mobile} tr={tr} onNavigate={navigateTab} />
   );
@@ -5118,13 +5050,13 @@ function Dashboard({
         <div className="sidebarGlobalNavigation">
           <div className="workspaceNavHeading">{tr("ACCOUNT", "账户")}</div>
           <button type="button" aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined} className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab(workspace === "agent" ? "agent-settings" : "settings")}><span className="sideNavIcon"><DashboardNavIcon tab="settings" /></span>{tr("Settings", "设置")}</button>
-          {user.isAdmin && <a href="https://admin.remotearc.app/">{tr("Admin", "管理员后台")} <span aria-hidden="true">↗</span></a>}
-          <a href={MARKETING_ORIGIN + "/docs"}>{tr("Help & documentation", "帮助与文档")} <span aria-hidden="true">↗</span></a>
+          {user.isAdmin && <a href="https://admin.remotearc.app/">{tr("Admin", "管理员后台")} <ProductIcon name="arrowUpRight" size={13}/></a>}
+          <a href={MARKETING_ORIGIN + "/docs"}>{tr("Help & documentation", "帮助与文档")} <ProductIcon name="arrowUpRight" size={13}/></a>
         </div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
           <div><strong>{user.name || "Owner"}</strong><span>{user.email}</span></div>
-          <button onClick={() => void signOut()} aria-label={tr("Sign out", "退出登录")}>↪</button>
+          <button onClick={() => void signOut()} aria-label={tr("Sign out", "退出登录")}><ProductIcon name="logout"/></button>
         </div>
       </aside>
 
@@ -5142,31 +5074,33 @@ function Dashboard({
         </header>
 
         {active === "agent-chat" && (
-          <AgentChatWorkspace
-            key={user.id}
+          <React.Suspense fallback={<div className="arcChatLoading" role="status">{tr("Opening Arc…","正在打开 Arc…")}</div>}><ArcNativeChat
+            key={user.id + ":" + arcEntry.version}
+            initialPrompt={arcEntry.prompt}
+            initialSessionId={arcEntry.sessionId}
             tr={tr}
             accountId={user.id}
             onlineDevices={devices.filter((device) => device.status === "online").length}
-            connectedDevices={devices.length}
-            onPrepareGoal={(objective, successCriteria) => openCreateInWorkspace("agent", false, objective, successCriteria)}
             onOpenGoals={() => navigateTab("agent-goals")}
             onOpenActivity={() => navigateTab("agent-activity")}
             onOpenSettings={() => navigateTab("agent-settings")}
-            onCreateRoutine={() => openCreateInWorkspace("agent", true)}
+            onOpenRoutines={() => navigateTab("agent-routines")}
             onManageApps={() => navigateTab("agent-apps")}
             onManageDevices={() => navigateTab("agent-devices")}
             onManageSkills={() => navigateTab("agent-skills")}
-          />
+          /></React.Suspense>
         )}
+
+        {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat}/>}
 
         {active === "agent-skills" && (
           <section className="agentWorkspacePanel">
             <span className="eyebrow">ARC AGENT / SKILLS</span>
             <h1>{tr("Agent capabilities", "Agent 可用能力")}</h1>
-            <p>{tr("Arc uses your approved device tools today. App connections are shared with Connect; direct Arc App actions require the upcoming Agent tool runtime.", "Arc 目前可使用已授权的设备工具，Apps 账号连接与 Connect 共用；Arc 直接调用 Apps 仍需接入后续 Agent 工具运行时。")}</p>
+            <p>{tr("Arc finds the right tools for your request: connected apps, computers and scheduled work.", "Arc 根据你的工作请求选择合适的工具：已连接应用、电脑和定时工作。")}</p>
             <div className="agentWorkspaceGrid">
               <article className="agentWorkspaceTile"><strong>{tr("Device fleet", "设备集群")}</strong><p>{tr("Execute on an available compatible device, subject to its local safety policy.", "使用可用的兼容设备执行，遵守设备本地安全策略。")}</p><button className="ghostButton" onClick={() => navigateTab("agent-devices")}>{tr("Manage devices", "管理设备")} →</button></article>
-              <article className="agentWorkspaceTile"><strong>{tr("Connected Apps", "已连接应用")}</strong><p>{tr("Manage account connections in Connect. Arc will use these approved integrations when its App executor is enabled.", "在 Connect 中统一管理账号连接。Arc 的 App 执行器接入后将复用这些已授权应用。")}</p><button className="ghostButton" onClick={() => navigateTab("agent-apps")}>{tr("Manage Apps", "管理应用")} →</button></article>
+              <article className="agentWorkspaceTile"><strong>{tr("Connected Apps", "已连接应用")}</strong><p>{tr("Account connections are shared with Connect. Arc can discover and use the available actions in your conversations.", "账号连接与 Connect 共用，Arc 可在对话中发现并调用可用操作。")}</p><button className="ghostButton" onClick={() => navigateTab("agent-apps")}>{tr("Manage Apps", "管理应用")} →</button></article>
             </div>
           </section>
         )}
@@ -5177,16 +5111,16 @@ function Dashboard({
               <div>
                 <span className="eyebrow">{tr("OVERVIEW", "概览")}</span>
                 <h1>{tr("Your workspace", "我的工作台")}</h1>
-                <p>{tr("See what is running, what needs attention, and which computers are ready.", "查看任务进展、待处理问题，以及电脑是否准备就绪。")}</p>
+                <p>{tr("Your computers and apps, ready for the AI you already use.", "把电脑和应用连接起来，交给你正在使用的 AI。")}</p>
               </div>
               <div className="overviewActions">
                 <button className="ghostButton" onClick={() => setShowAdd(true)}>+ {tr("Add device", "添加设备")}</button>
-                <button className="addButton goldButton" onClick={() => { if (!hasPlus) { location.href = MARKETING_ORIGIN + "/pricing"; return; } openCreateInWorkspace("connect"); }}>{hasPlus ? "+ " + tr("New task", "新建任务") : tr("Plus tasks", "Plus 任务")}</button>
+                <button className="addButton arcRadiantCta" onClick={() => navigateTab("connect")}><ProductIcon name="link"/>{tr("Connect your AI", "连接你的 AI")}</button>
               </div>
             </section>
             <section className="overviewStatusGrid">
               <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Devices online", "在线设备")}</span><i className={"healthDot " + ((status?.onlineDevices ?? 0) > 0 ? "good" : "idle")} /></div><strong>{status?.onlineDevices ?? 0} / {status?.totalDevices ?? devices.length}</strong><small>{tr("Ready for MCP calls", "可接受 MCP 调用")}</small></article>
-              <article className="overviewStatusCard taskStatusCard"><div className="statusCardHead"><span>{tr("Active tasks", "活动任务")}</span><i className={"healthDot " + (automationAttentionCount ? "idle" : "good")} /></div><strong>{automationLoadError ? "—" : automationActiveCount}</strong><button onClick={() => { setAutomationFilter(automationAttentionCount ? "attention" : "active"); navigateTab("automations"); }}>{automationLoadError ? tr("Retry loading tasks", "重新加载任务") : automationAttentionCount ? automationAttentionCount + " " + tr("need attention", "项需要处理") : tr("View progress", "查看进度")} →</button></article>
+                             <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr('Connected Apps','应用连接')}</span><ProductIcon name="apps"/></div><strong>{tr('Your tools','你的工具')}</strong><button className="ghostButton" onClick={()=>navigateTab('apps')}>{tr('Manage connections','管理连接')}<ProductIcon name="arrowUpRight" size={14}/></button></article>
               <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Monthly usage", "本月用量")}</span><span>{usage?.unlimited ? tr("Unlimited", "无限") : Math.round(usagePct) + "%"}</span></div><strong>{(usage?.used ?? 0).toLocaleString()}</strong><div className="miniUsageBar"><i style={{ width: (usage?.unlimited ? 0 : usagePct) + "%" }} /></div><small>{usage?.unlimited ? tr("Admin account · unlimited hosted calls", "管理员账户 · 托管调用无限额") : tr("of", "共") + " " + usageLimitLabel + " " + tr("hosted calls", "次托管调用")}</small></article>
               <article className="overviewStatusCard endpoint"><div className="statusCardHead"><span>Remote MCP</span><span className="privacyPill">{tr("Secure", "安全")}</span></div><code>{mcpEndpoint}</code><div className="statusCardActions"><CopyButton value={mcpEndpoint} label={tr("Copy", "复制")} /><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Manage", "管理")}</button></div></article>
             </section>
@@ -5195,16 +5129,16 @@ function Dashboard({
               <article className="overviewQuickCard">
                 <span className="eyebrow">{tr("QUICK ACTIONS", "快捷操作")}</span>
                 <div className="quickActionList">
-                  <button onClick={() => setShowAdd(true)}><span>＋</span><div><strong>{tr("Pair a computer", "配对电脑")}</strong><small>{tr("Add Windows, macOS or Linux", "添加 Windows、macOS 或 Linux")}</small></div></button>
-                  <button onClick={() => navigateTab("connect")}><span>↗</span><div><strong>{tr("Connect an AI client", "连接 AI 客户端")}</strong><small>ChatGPT · Claude · Remote MCP</small></div></button>
-                  <button onClick={() => navigateTab("security")}><span>◇</span><div><strong>{tr("Review security", "检查安全设置")}</strong><small>{tr("Sessions, scopes and device policies", "会话、Scope 与设备权限")}</small></div></button>
-                  <button onClick={() => navigateTab("automations")}><span>↻</span><div><strong>{tr("Long-running work", "持续工作")}</strong><small>{tr("Agent goals, schedules and results", "Agent 目标、定时任务与结果")}</small></div></button>
+                  <button onClick={() => setShowAdd(true)}><span><ProductIcon name="add"/></span><div><strong>{tr("Pair a computer", "配对电脑")}</strong><small>{tr("Add Windows, macOS or Linux", "添加 Windows、macOS 或 Linux")}</small></div></button>
+                  <button onClick={() => navigateTab("connect")}><span><ProductIcon name="link"/></span><div><strong>{tr("Connect an AI client", "连接 AI 客户端")}</strong><small>ChatGPT · Claude · Remote MCP</small></div></button>
+                  <button onClick={() => navigateTab("security")}><span><ProductIcon name="shield"/></span><div><strong>{tr("Review security", "检查安全设置")}</strong><small>{tr("Sessions, scopes and device policies", "会话、Scope 与设备权限")}</small></div></button>
+                  <button onClick={() => navigateTab("apps")}><span><ProductIcon name="apps"/></span><div><strong>{tr("Connect your apps", "连接应用")}</strong><small>{tr("One account connection, available to your AI", "连接账号，让 AI 可以使用你的应用")}</small></div></button>
                 </div>
               </article>
               <article className="overviewAttentionCard">
                 <span className="eyebrow">{tr("ATTENTION", "需要关注")}</span>
                 <div className="attentionList">
-                  {!!automationAttentionCount && <button onClick={() => { setAutomationFilter("attention"); navigateTab("automations"); }}><i className="attentionIcon warn">!</i><div><strong>{automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}</strong><small>{automationNeedsAgentCount ? tr("Some goals are waiting for the source AI to continue.", "部分目标正在等待来源 AI 继续决策。") : tr("Check disconnected devices or failed runs.", "检查离线设备或失败的执行。")}</small></div></button>}
+                  {!!automationAttentionCount && <button onClick={() => { setAutomationFilter("attention"); navigateTab("agent-goals"); }}><i className="attentionIcon warn">!</i><div><strong>{automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}</strong><small>{automationNeedsAgentCount ? tr("Some goals are waiting for the source AI to continue.", "部分目标正在等待来源 AI 继续决策。") : tr("Check disconnected devices or failed runs.", "检查离线设备或失败的执行。")}</small></div></button>}
                   {automationLoadError && <button onClick={() => void refreshAutomations()}><i className="attentionIcon warn">!</i><div><strong>{tr("Task status unavailable", "任务状态暂不可用")}</strong><small>{tr("Retry to see current progress.", "点击重试以查看当前进度。")}</small></div></button>}
                   {!devices.length && <button onClick={() => setShowAdd(true)}><i className="attentionIcon warn">!</i><div><strong>{tr("No computer paired", "还没有配对电脑")}</strong><small>{tr("Pair your first device to start using Remote Arc.", "先配对第一台设备即可开始使用 Remote Arc。")}</small></div></button>}
                   {!!devices.length && devices.some((device) => device.status === "offline") && <button onClick={() => navigateTab("devices")}><i className="attentionIcon idle">•</i><div><strong>{tr("Some devices are offline", "部分设备离线")}</strong><small>{devices.filter((device) => device.status === "offline").length} {tr("device(s) unavailable for MCP calls", "台设备当前无法接受 MCP 调用")}</small></div></button>}
@@ -5220,7 +5154,7 @@ function Dashboard({
                 <div className="overviewDeviceList">
                   {devices.slice().sort((a,b) => Number(b.status === "online") - Number(a.status === "online")).slice(0,5).map((device) => (
                     <button className="overviewDeviceRow" key={device.id} onClick={() => navigateTab("devices")}>
-                      <div className="deviceIcon">{platformGlyph(device.platform)}</div>
+                      <div className="deviceIcon"><ProductIcon name="device"/></div>
                       <div><strong>{device.name}</strong><span>{platformLabel(device.platform)} · {device.hostname || tr("No hostname", "无 Hostname")}</span></div>
                       <div className="overviewDeviceMeta"><span>{device.tools.length} tools</span><small>{timeAgo(device.last_seen)}</small></div>
                       <span className={"badge " + device.status}><i/>{device.status === "online" ? tr("Online", "在线") : tr("Offline", "离线")}</span>
@@ -5250,15 +5184,16 @@ function Dashboard({
             <section className="overviewTopbar devicesPageHeader">
               <div>
                 <span className="eyebrow">{tr("DEVICES", "设备")}</span>
-                <h1>{tr("Device management", "设备管理")}</h1>
-                <p>{tr("Manage paired computers and per-device access.", "管理已配对电脑和每台设备的访问权限。")}</p>
+                <h1>{tr("Your device fleet", "你的设备集群")}</h1>
+                <p>{tr("Your computers, their capabilities, and where the next task should run.", "查看电脑、可用能力，以及下一项任务适合在哪里执行。")}</p>
               </div>
-              <button className="addButton goldButton" onClick={() => setShowAdd(true)}>+ {tr("Add device", "添加设备")}</button>
+              <button className="addButton arcRadiantCta" onClick={() => setShowAdd(true)}><ProductIcon name="add"/>{tr("Add device", "添加设备")}</button>
             </section>
 
+            <DeviceFleetOverview devices={devices} tr={tr} onChat={()=>openArcChat(tr("Choose a suitable computer for my next task. Check my fleet capabilities and load, and ask what I need done.","为我的下一项任务选择合适电脑，先检查设备能力和负载，再确认我要做什么。"))}/>
             <section className="deviceToolbar">
               <div className="deviceSearch">
-                <span>⌕</span>
+                <ProductIcon name="search"/>
                 <input aria-label={tr("Search devices", "搜索设备")} value={deviceQuery} onChange={(event) => setDeviceQuery(event.target.value)} placeholder={tr("Search devices, hostname or ID", "搜索设备、Hostname 或 ID")} />
               </div>
               <div className="deviceFilters" role="group" aria-label={tr("Device status filter", "设备状态筛选")}>
@@ -5297,7 +5232,7 @@ function Dashboard({
                   <article className={"deviceCard managed " + device.status} key={device.id}>
                     <div className="deviceTop">
                       <div className="deviceIdentity">
-                        <div className="deviceIcon large">{platformGlyph(device.platform)}</div>
+                        <div className="deviceIcon large"><ProductIcon name="device"/></div>
                         <div><h3>{device.name}</h3><span>{platformLabel(device.platform)} · {device.hostname || tr("No hostname", "未提供主机名")}</span></div>
                       </div>
                       <div className="deviceOverviewActions">
@@ -5307,9 +5242,10 @@ function Dashboard({
                       </div>
                     </div>
 
+                    <DeviceCapacity device={device} tr={tr}/>
                     <div className="deviceOverviewFacts">
-                      <span><i aria-hidden="true">◇</i>{accessPreset === "safe" ? tr("Read only", "只读访问") : accessPreset === "developer" ? tr("Read & edit", "读取与编辑") : accessPreset === "full" ? tr("Terminal enabled", "已启用终端") : tr("Custom permissions", "自定义权限")}</span>
-                      <span className="deviceRuntimeVersion"><i aria-hidden="true">⌁</i>{device.platform === "browser" ? tr("Browser", "浏览器") : tr("Running", "运行中")} {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}{device.platform !== "browser" && recoveryVersion && recoveryVersion !== runtimeVersion ? " · " + tr("Recovery", "恢复包") + " v" + recoveryVersion : ""}{updateAvailable ? " · " + tr("Latest", "最新") + " v" + LATEST_AGENT_VERSION : ""}</span>
+                      <span><ProductIcon name="shield" size={13}/>{accessPreset === "safe" ? tr("Read only", "只读访问") : accessPreset === "developer" ? tr("Read & edit", "读取与编辑") : accessPreset === "full" ? tr("Terminal enabled", "已启用终端") : tr("Custom permissions", "自定义权限")}</span>
+                      <span className="deviceRuntimeVersion"><ProductIcon name="activity" size={13}/>{device.platform === "browser" ? tr("Browser", "浏览器") : tr("Running", "运行中")} {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}{device.platform !== "browser" && recoveryVersion && recoveryVersion !== runtimeVersion ? " · " + tr("Recovery", "恢复包") + " v" + recoveryVersion : ""}{updateAvailable ? " · " + tr("Latest", "最新") + " v" + LATEST_AGENT_VERSION : ""}</span>
                       <span>{(device.workspace_roots || []).length} {tr("trusted folders", "个可信目录")}</span>
                       <span>{device.background_guard_active ? tr("Recovery supervisor running", "恢复守护运行中") : device.background_enabled ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认") : tr("Automatic recovery off", "自动恢复关闭")}</span>
                       <span>{tr("Seen ", "最后在线：")}{timeAgo(device.last_seen)}</span>
@@ -5991,546 +5927,6 @@ function Dashboard({
           </>
         )}
 
-        {["automations", "agent-goals", "agent-routines", "agent-activity"].includes(active) && (
-          <>
-            <section className="overviewTopbar automationPageHeader">
-              <div>
-                <span className="eyebrow">{workspace === "connect" ? tr("CONNECT / TASKS", "CONNECT / 任务") : tr("ARC AGENT", "ARC AGENT")}</span>
-                <h1>{active === "agent-routines" ? tr("Routines", "例行任务") : active === "agent-activity" ? tr("Agent activity", "Agent 活动") : active === "agent-goals" ? tr("Agent goals", "Agent 目标") : tr("Tasks", "任务")}</h1>
-                <p>{workspace === "connect"
-                  ? tr("Deterministic commands, schedules and event watches. AI-powered work belongs in Arc Agent.", "固定命令、定时任务和事件监听；需要持续 AI 推理的工作在 Arc Agent 中管理。")
-                  : tr("Track the AI goals using your connected devices and Apps. They share the Connect execution engine and safety permissions.", "查看使用设备及 Apps 的 AI 目标；它们共用 Connect 的执行引擎和安全权限。")}</p>
-              </div>
-              <div className="automationHeaderActions">
-                <button className="ghostButton" disabled={automationLoading} onClick={() => void refreshAutomations()}>
-                  {automationLoading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}
-                </button>
-                {active !== "agent-activity" && <button
-                  className="ghostButton"
-                  onClick={() => {
-                    if (!hasPlus) { location.href = MARKETING_ORIGIN + "/pricing"; return; }
-                    if (showAutomationCreate) { setShowAutomationCreate(false); }
-                    else openCreateInWorkspace(workspace, active === "agent-routines");
-                  }}
-                >
-                  {showAutomationCreate ? tr("Close", "关闭") : hasPlus ? "+ " + tr("Create manually", "手动创建") : tr("Plus · create task", "Plus · 创建任务")}
-                </button>}
-              </div>
-            </section>
-
-            {(active === "agent-goals" || active === "agent-routines") && (
-              <nav className="arcWorkTabs" aria-label={tr("Agent work views", "Agent 工作视图")}>
-                <button type="button" aria-current={active === "agent-goals" ? "page" : undefined} onClick={() => { setShowAutomationCreate(false); setAutomationQuery(""); navigateTab("agent-goals"); }}>{tr("All goals", "全部目标")}</button>
-                <button type="button" aria-current={active === "agent-routines" ? "page" : undefined} onClick={() => { setShowAutomationCreate(false); setAutomationQuery(""); navigateTab("agent-routines"); }}>{tr("Routines", "例行任务")}</button>
-              </nav>
-            )}
-            {!hasPlus && (
-              <aside className="automationPlanNotice">
-                <div>
-                  <span className="eyebrow">REMOTE ARC PLUS</span>
-                  <strong>{tr("24/7-capable durable work lives in Plus.", "支持 24/7 持续编排的持久任务属于 Plus。")}</strong>
-                  <p>{tr(
-                    "Plus enables overnight and long Tasks, schedules, planned Agent Goals, keep-awake on supported devices, and binary-file reads. Your device permissions still remain the final execution boundary.",
-                    "Plus 提供隔夜与长任务、定时任务、计划模式 Agent Goal、受支持设备的保持唤醒，以及二进制文件读取；设备权限仍然是最终执行边界。",
-                  )}</p>
-                </div>
-                <a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("Compare Free & Plus", "对比 Free 与 Plus")} →</a>
-              </aside>
-            )}
-
-            {taskScheduler && taskScheduler.state !== "healthy" && <aside className="automationAttention" role="status"><div><strong>{tr("Task scheduling needs attention", "任务调度需要处理")}</strong><span>{tr("The scheduler has no recent successful heartbeat. Saved tasks may not start until the deployment is repaired.", "调度器没有近期成功心跳。部署修复前，已保存任务可能无法启动。")}{taskScheduler.overdue_count > 0 && ` ${taskScheduler.overdue_count} ${tr("overdue tasks", "条任务已延迟")}`}</span></div></aside>}
-            <details className="taskStartGuide"><summary>{tr("What happens if I create a task without an AI chat?", "不在 AI 聊天中交代，直接创建任务会发生什么？")}</summary>
-              <p>{tr("The instructions in this form are the task. Commands run on their own; timers and events wait for their trigger. A hosted AI goal needs a configured model. A goal using your chat's AI waits for that AI to submit a decision. Remote Arc does not read or start your chats.", "表单里的指令就是任务。命令可独立执行，定时和事件任务等待触发。托管 AI 目标需要配置好的模型；使用聊天 AI 的目标则等待它提交决策。Remote Arc 不会读取或自动开启你的聊天。")}</p>
-              <a href="/docs/long-running-work">{tr("Read the task guide", "阅读任务指南")} →</a>
-            </details>
-            {createdTask && isVisibleInWorkspace(createdTask, active) && <aside className="taskCreatedNotice" role="status"><div><strong>{tr("Task saved · execution status below", "任务已保存 · 执行状态见下方")} · {createdTask.name}</strong><p>{createdTaskOutcome?.title}</p><p>{createdTaskOutcome?.detail}</p></div><button className="ghostButton" onClick={() => { setCreatedTask(null); setAutomationQuery(""); }}>{tr("Show all tasks", "查看全部任务")}</button></aside>}
-
-            {createdWebhook && (
-              <section className="automationWebhookNotice">
-                <div>
-                  <span className="eyebrow">{tr("WEBHOOK CREATED", "WEBHOOK 已创建")}</span>
-                  <strong>{tr("Copy this URL now. It is shown only after creation.", "请现在复制这个 URL；它只会在创建后返回一次。")}</strong>
-                  <p>{tr(
-                    "Treat it like a secret bearer capability. For GitHub, add it as a repository webhook with JSON payloads and the workflow_run event.",
-                    "把它当作秘密 Bearer Capability。GitHub 中可将它添加为仓库 Webhook，Payload 使用 JSON，并监听 workflow_run 事件。",
-                  )}</p>
-                </div>
-                <div className="automationWebhookValue">
-                  <code>{createdWebhook}</code>
-                  <CopyButton value={createdWebhook} />
-                </div>
-                <button className="ghostButton small" onClick={() => setCreatedWebhook(null)}>{tr("Dismiss", "关闭")}</button>
-              </section>
-            )}
-
-            {showAutomationCreate && active !== "agent-activity" && (
-              <section className="automationCreatePanel">
-                <div className="automationCreateIntro">
-                  <div>
-                    <span className="eyebrow">{tr("OPTIONAL · MANUAL CREATION", "可选 · 手动创建")}</span>
-                    <h2>{workspace === "agent" ? tr("Define an AI goal", "定义 AI 目标") : tr("Create an execution task", "创建执行任务")}</h2>
-                  </div>
-                  <p>{tr(
-                    "One goal can include a plan and hours of work. Choose its executor and start condition; the Dashboard tracks the same task created from your AI chat.",
-                    "同一个目标可以包含计划和数小时工作。选择执行器及启动条件；Dashboard 也会跟踪 AI 聊天创建的同一条任务。",
-                  )}</p>
-                </div>
-
-                <div className="automationForm taskTriggerControls">
-                  <label className="automationField"><span>{tr("When should it start?", "何时启动？")}</span>
-                    <select value={automationDraft.trigger_mode} onChange={event => { const mode = event.target.value as AutomationDraft["trigger_mode"]; setAutomationDraft(current => ({ ...current, trigger_mode: mode, kind: current.kind === "agent_goal" ? "agent_goal" : mode === "event" ? "condition_watch" : ["at", "interval"].includes(mode) ? "schedule_watch" : "long_task" })); }}>
-                      <option value="now">{tr("Now", "现在")}</option><option value="at">{tr("At a time", "指定时间")}</option><option value="interval">{tr("Repeat at an interval", "按间隔重复")}</option><option value="event">{tr("After a matching event", "匹配事件后")}</option>
-                    </select>
-                  </label>
-                  {automationDraft.trigger_mode === "at" && <label className="automationField"><span>{tr("Start at · your local time", "启动时间 · 你的本地时间")}</span><input type="datetime-local" value={automationDraft.agent_start_at} onChange={event => setAutomationDraft(current => ({ ...current, agent_start_at: event.target.value }))} /></label>}
-                  {automationDraft.trigger_mode === "interval" && <label className="automationField"><span>{tr("Interval after the last run finishes (minutes)", "上次执行结束后的间隔（分钟）")}</span><input type="number" min="1" max="43200" value={automationDraft.schedule_minutes} onChange={event => setAutomationDraft(current => ({ ...current, schedule_minutes: event.target.value }))} /><small>{tr("The first run follows this interval. This is not a daily local-time schedule.", "首次执行在此间隔结束后启动；这不等于每天固定本地时间。")}</small></label>}
-                </div>
-
-                <div className="taskCreationOutcome"><span className="eyebrow">{tr("AFTER YOU CREATE", "创建之后")}</span><strong>{draftStartTitle}</strong><p>{draftStartDetail}</p>
-                  {!draftIsCloud && <small>{tr("Device offline? It waits for reconnection. Keep-awake prevents sleep only on a supported, online device.", "设备离线时等待重连。保持唤醒仅能阻止受支持的在线设备睡眠。")}</small>}
-                </div>
-                <div className="automationForm">
-                  {draftServiceBlocked && <div className="automationAttention automationFieldWide" role="status"><div><strong>{draftIsCloud ? tr("GitHub merging is not configured on this deployment.", "当前部署未配置 GitHub 合并。") : tr("Hosted AI planning is not configured on this deployment.", "当前部署未配置托管 AI 规划。")}</strong><span>{draftIsCloud ? tr("Choose a device command, or ask the deployment owner to configure the GitHub App.", "请选择设备命令，或请部署管理员配置 GitHub App。") : tr("Unattended goals require a configured executor. The connected-AI option saves context but cannot wake an idle chat.", "无人值守目标需要配置好的执行器。已连接 AI 选项可保存上下文，但不能唤起空闲聊天。")}</span></div></div>}
-                  {draftPermissionBlocked && <div className="automationAttention automationFieldWide" role="status"><div><strong>{draftToolBlocked ? tr("This computer has not enabled the tools this task needs.", "这台电脑尚未开启任务所需的工具。") : tr("This computer has not enabled the selected task capability.", "这台电脑尚未开启所选任务能力。")}</strong><span>{draftToolBlocked ? tr("For a command, enable terminal access. For an AI goal, approve its selected tools or narrow the tool set below.", "命令任务需要终端权限；AI 目标需要批准所选工具，或在下方缩小工具集合。") : tr("Review its task permissions before creating this task.", "创建前，请检查这台电脑的任务权限。")}</span><button className="ghostButton" onClick={() => { setManagedDeviceId(draftDevice?.id || null); setDevicePanel(draftToolBlocked ? "access" : "tasks"); setDeviceQuery(""); setDeviceFilter("all"); navigateTab("devices"); }}>{tr("Manage device permissions", "管理设备权限")}</button></div></div>}
-                  <label className="automationField">
-                    <span>{tr("Task name", "任务名称")} <small>{automationDraft.kind === "agent_goal" ? tr("optional · uses your objective", "可选 · 默认使用目标") : ""}</small></span>
-                    <input
-                      value={automationDraft.name}
-                      maxLength={120}
-                      placeholder={tr("A short name for this work", "便于识别的任务名称")}
-                      onChange={(event) => setAutomationDraft((current) => ({ ...current, name: event.target.value }))}
-                    />
-                  </label>
-
-                  {!(automationDraft.kind === "condition_watch" && automationDraft.condition_action === "github_merge") && (
-                    <label className="automationField">
-                      <span>{tr("Device", "设备")}</span>
-                      <select
-                        value={automationDraft.device_id}
-                        onChange={(event) => setAutomationDraft((current) => ({ ...current, device_id: event.target.value, keep_awake: false }))}
-                      >
-                        <option value="">{tr("Choose a device", "选择设备")}</option>
-                        {devices.map((device) => (
-                          <option value={device.id} key={device.id}>
-                            {device.name} · {device.status === "online" ? tr("Online", "在线") : tr("Offline · waits for reconnection", "离线 · 等待重连")}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-
-                  {automationDraft.kind !== "agent_goal" &&
-                    !(automationDraft.kind === "condition_watch" && automationDraft.condition_action === "github_merge") && (
-                    <>
-                      <label className="automationField automationFieldWide">
-                        <span>{tr("Shell command · executed verbatim", "Shell 命令 · 原样执行")}</span>
-                        <textarea
-                          rows={3}
-                          value={automationDraft.command}
-                          maxLength={4000}
-                          placeholder={tr("pnpm test", "pnpm test")}
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, command: event.target.value, command_confirmed: false }))}
-                        />
-                      </label>
-
-                      <label className="automationKeepAwake automationFieldWide"><input type="checkbox" checked={automationDraft.command_confirmed} onChange={event => setAutomationDraft(current => ({ ...current, command_confirmed: event.target.checked }))} />{tr("I entered executable shell code. Natural-language objectives belong in Complete a goal.", "我填写的是可执行 shell 代码。自然语言目标应使用完成一个目标。")}</label>
-                      {automationDraft.trigger_mode === "now" && <label className="automationField"><span>{tr("Command behavior", "命令行为")}</span><select value={automationDraft.kind} onChange={event => setAutomationDraft(current => ({ ...current, kind: event.target.value as AutomationCreateKind }))}><option value="long_task">{tr("Run once", "运行一次")}</option><option value="goal_loop">{tr("Repeat the same command until a check passes", "重复同一命令直到检查通过")}</option></select></label>}
-                      <label className="automationField">
-                        <span>{tr("Approved working directory", "已批准的工作目录")}</span>
-                        <input
-                          value={automationDraft.cwd}
-                          maxLength={500}
-                          placeholder="/Users/sam/work/project"
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, cwd: event.target.value }))}
-                        />
-                      </label>
-                    </>
-                  )}
-
-                  {(automationDraft.kind === "long_task" || automationDraft.kind === "goal_loop") && (
-                    <label className="automationField">
-                      <span>{tr("Check / retry interval", "检查 / 重试间隔")}</span>
-                      <div className="automationInlineInput">
-                        <input
-                          inputMode="numeric"
-                          value={automationDraft.interval_minutes}
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, interval_minutes: event.target.value.replace(/[^0-9]/g, "") }))}
-                        />
-                        <span>{tr("minutes", "分钟")}</span>
-                      </div>
-                    </label>
-                  )}
-
-                  {automationDraft.kind === "goal_loop" && (
-                    <>
-                      <label className="automationField automationFieldWide">
-                        <span>{tr("Goal verification command", "目标验证命令")}</span>
-                        <textarea
-                          rows={2}
-                          value={automationDraft.goal_command}
-                          maxLength={4000}
-                          placeholder={tr("pnpm test:e2e", "pnpm test:e2e")}
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, goal_command: event.target.value }))}
-                        />
-                        <small>{tr("Exit code 0 means the goal is reached. Otherwise Remote Arc waits and starts the next attempt.", "退出码 0 表示目标达成；否则 Remote Arc 等待后开始下一轮。")}</small>
-                      </label>
-                      <label className="automationField">
-                        <span>{tr("Maximum attempts", "最大轮数")} <small>{tr("blank = unlimited until expiry", "留空 = 到期前不限轮数")}</small></span>
-                        <input
-                          inputMode="numeric"
-                          value={automationDraft.max_runs}
-                          placeholder={tr("Unlimited", "不限")}
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, max_runs: event.target.value.replace(/[^0-9]/g, "") }))}
-                        />
-                      </label>
-                    </>
-                  )}
-
-                  {automationDraft.kind === "agent_goal" && (
-                    <>
-                      <label className="automationField automationFieldWide">
-                        <span>{tr("Objective", "目标")}</span>
-                        <textarea
-                          rows={4}
-                          value={automationDraft.agent_objective}
-                          maxLength={6000}
-                          placeholder={tr(
-                            "Make the integration suite pass without weakening tests or removing coverage.",
-                            "让 integration suite 全部通过，不允许削弱测试或删除覆盖。",
-                          )}
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_objective: event.target.value }))}
-                        />
-                      </label>
-                      <label className="automationField automationFieldWide">
-                        <span>{tr("Success criteria", "成功标准")}</span>
-                        <textarea
-                          rows={3}
-                          value={automationDraft.agent_success_criteria}
-                          maxLength={4000}
-                          placeholder={tr(
-                            "All tests pass, typecheck passes, and git diff contains only changes needed for this goal.",
-                            "全部测试通过、typecheck 通过，并且 git diff 只包含完成目标所需的修改。",
-                          )}
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_success_criteria: event.target.value }))}
-                        />
-                      </label>
-                      <label className="automationField">
-                        <span>{tr("Workspace", "工作区")} <small>{automationDraft.agent_allowed_tools.includes("start_process") ? tr("required for terminal access", "终端访问必填") : tr("optional for file reads", "文件读取时可选")}</small></span>
-                        <input
-                          value={automationDraft.agent_workspace}
-                          maxLength={500}
-                          placeholder="/Users/sam/work/project"
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_workspace: event.target.value }))}
-                        />
-                      </label>
-                      <label className="automationField">
-                        <span>{tr("Decision executor", "决策执行器")}</span>
-                        <select value={automationDraft.agent_controller} onChange={event => setAutomationDraft(current => ({ ...current, agent_controller: event.target.value as "hosted" | "source" }))}>
-                          <option value="hosted">{tr("Hosted AI · can continue while you are away", "托管 AI · 你离开后可继续执行")}</option>
-                          <option value="source">{tr("Connected AI · waits for decisions from that client", "已连接的 AI · 等待该客户端提交决策")}</option>
-                        </select>
-                        <small>{tr("Source mode saves context for the next chat turn. Saved command slices continue locally; new reasoning waits for the AI host. Automatic wakeup is not guaranteed. The controller never changes silently.", "源模式保存上下文供下一轮聊天续接。已保存的命令步骤继续执行，新判断等待 AI 宿主。自动唤醒不作保证，控制器不会悄悄替换。")}</small>
-                      </label>
-                      <label className="automationField"><span>{tr("Time budget per run", "每次执行的时间预算")}</span><select value={plannedDraft.maxMinutes} onChange={event => setPlannedDraft(current => ({ ...current, maxMinutes: event.target.value }))}><option value="60">{tr("1 hour", "1 小时")}</option><option value="480">{tr("8 hours", "8 小时")}</option><option value="1440">{tr("24 hours · overnight", "24 小时 · 可隔夜")}</option><option value="2880">{tr("48 hours", "48 小时")}</option>{!["60", "480", "1440", "2880"].includes(plannedDraft.maxMinutes) && <option value={plannedDraft.maxMinutes}>{plannedDraft.maxMinutes} {tr("minutes", "分钟")}</option>}</select><small>{tr("Can finish early. Stops at the earliest time or iteration limit and preserves partial results.", "可以提前完成。最早的时间或轮数限制生效，未完成成果会保留。")}</small></label>
-                      <label className="automationField">
-                        <span>{tr("Maximum planning turns", "最大规划轮数")}</span>
-                        <input
-                          inputMode="numeric"
-                          value={automationDraft.agent_max_iterations}
-                          onChange={(event) => setAutomationDraft((current) => ({
-                            ...current,
-                            agent_max_iterations: event.target.value.replace(/[^0-9]/g, ""),
-                          }))}
-                        />
-                      </label>
-                      <label className="automationField automationFieldWide">
-                        <span>{tr("Deterministic final verification", "最终确定性验证")} <small>{tr("optional but recommended", "可选，但建议填写")}</small></span>
-                        <textarea
-                          rows={2}
-                          value={automationDraft.agent_verify_command}
-                          maxLength={4000}
-                          placeholder="pnpm typecheck && pnpm test"
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_verify_command: event.target.value }))}
-                        />
-                        <small>{plannedDraft.enabled ? tr(
-                          "Each phase must pass this check before acceptance. Deadline finalization records failed or unavailable checks in the report.",
-                          "每个阶段通过此检查后才能接受。到期收尾时，报告会记录未通过或无法执行的检查。",
-                        ) : tr(
-                          "When provided, the AI cannot mark the goal complete until this command exits 0.",
-                          "填写后，AI 不能仅凭自己判断完成；必须等这条命令退出码为 0。",
-                        )}</small>
-                      </label>
-                      <label className="automationField">
-                        <span>{tr("Planner interval", "Planner 间隔")}</span>
-                        <div className="automationInlineInput">
-                          <input
-                            inputMode="numeric"
-                            value={automationDraft.interval_minutes}
-                            onChange={(event) => setAutomationDraft((current) => ({
-                              ...current,
-                              interval_minutes: event.target.value.replace(/[^0-9]/g, ""),
-                            }))}
-                          />
-                          <span>{tr("minutes", "分钟")}</span>
-                        </div>
-                      </label>
-                      <details className="taskAdvancedControls automationFieldWide"><summary>{tr("Tools & plan settings", "工具与计划设置")}<span>{automationDraft.agent_allowed_tools.length} {tr("approved tools", "个已批准工具")}</span></summary><div className="automationForm">
-                      <div className="automationAgentTools automationFieldWide">
-                        <span>{tr("Approved Agent Goal tools", "已批准的 Agent Goal 工具")}</span>
-                        <div>
-                          {([
-                            ["list_directory", tr("List folders", "列目录")],
-                            ["read_file", tr("Read text files", "读取文本文件")],
-                            ["read_binary_file", tr("Read binary chunks · Plus", "读取二进制分块 · Plus")],
-                            ["get_file_info", tr("File metadata", "文件信息")],
-                            ["edit_block", tr("Edit existing blocks", "编辑现有代码块")],
-                            ["write_file", tr("Write / create files", "写入 / 创建文件")],
-                            ["start_process", tr("Run commands", "运行命令")],
-                          ] as Array<[AgentGoalTool, string]>).map(([tool, label]) => {
-                            const checked = automationDraft.agent_allowed_tools.includes(tool);
-                            return (
-                              <label key={tool} className={checked ? "selected" : ""}>
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={(event) => setAutomationDraft((current) => ({
-                                    ...current,
-                                    agent_allowed_tools: event.target.checked
-                                      ? [...new Set([...current.agent_allowed_tools, tool])]
-                                      : current.agent_allowed_tools.filter((item) => item !== tool),
-                                  }))}
-                                />
-                                <span>{label}</span>
-                                <code>{tool}</code>
-                              </label>
-                            );
-                          })}
-                        </div>
-                        <small>{tr(
-                          "The approved tool set and device policy are saved with the goal. Changing device policy stops affected unattended work; create a new goal under the updated permissions.",
-                          "已批准的工具集合和设备策略会随目标保存。修改设备策略会停止相关无人值守任务；请在更新后的权限下创建新目标。",
-                        )}</small>
-                      </div>
-
-                      <React.Suspense fallback={<p role="status">{tr("Loading plan controls…", "正在加载计划控件…")}</p>}><PlannedGoalEditor value={plannedDraft} onChange={setPlannedDraft} /></React.Suspense>
-                      </div></details>
-                    </>
-                  )}
-
-                  {automationDraft.trigger_mode === "interval" && (
-                    <>
-                      <label className="automationField">
-                        <span>{tr("Maximum runs", "最大执行次数")} <small>{tr("blank = unlimited", "留空 = 不限")}</small></span>
-                        <input
-                          inputMode="numeric"
-                          value={automationDraft.max_runs}
-                          placeholder={tr("Unlimited", "不限")}
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, max_runs: event.target.value.replace(/[^0-9]/g, "") }))}
-                        />
-                      </label>
-                    </>
-                  )}
-
-                  {automationDraft.trigger_mode === "event" && (
-                    <>
-                      {automationDraft.kind !== "agent_goal" && <label className="automationField">
-                        <span>{tr("On match", "匹配后执行")}</span>
-                        <select
-                          value={automationDraft.condition_action}
-                          onChange={(event) => setAutomationDraft((current) => ({
-                            ...current,
-                            condition_action: event.target.value as "device_command" | "github_merge",
-                            condition_source: event.target.value === "github_merge" ? "github" : current.condition_source,
-                          }))}
-                        >
-                          <option value="device_command">{tr("Run command on device", "在设备上运行命令")}</option>
-                          <option value="github_merge">{tr("Merge GitHub pull request", "合并 GitHub Pull Request")}</option>
-                        </select>
-                      </label>}
-                      {automationDraft.kind === "agent_goal" || automationDraft.condition_action === "device_command" ? (
-                        <label className="automationField">
-                          <span>{tr("Webhook source", "Webhook 来源")}</span>
-                          <select
-                            value={automationDraft.condition_source}
-                            onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_source: event.target.value as "github" | "generic" }))}
-                          >
-                            <option value="github">GitHub</option>
-                            <option value="generic">{tr("Generic webhook", "通用 Webhook")}</option>
-                          </select>
-                        </label>
-                      ) : (
-                        <>
-                          <label className="automationField">
-                            <span>{tr("Repository owner", "仓库 Owner")}</span>
-                            <input
-                              value={automationDraft.github_owner}
-                              placeholder="yaohuangguan"
-                              onChange={(event) => setAutomationDraft((current) => ({ ...current, github_owner: event.target.value }))}
-                            />
-                          </label>
-                          <label className="automationField">
-                            <span>{tr("Repository", "仓库")}</span>
-                            <input
-                              value={automationDraft.github_repo}
-                              placeholder="remote-arc"
-                              onChange={(event) => setAutomationDraft((current) => ({ ...current, github_repo: event.target.value }))}
-                            />
-                          </label>
-                          <label className="automationField">
-                            <span>{tr("Pull request", "Pull Request")}</span>
-                            <input
-                              inputMode="numeric"
-                              value={automationDraft.github_pr}
-                              placeholder="43"
-                              onChange={(event) => setAutomationDraft((current) => ({ ...current, github_pr: event.target.value.replace(/[^0-9]/g, "") }))}
-                            />
-                          </label>
-                          <label className="automationField">
-                            <span>{tr("Merge method", "合并方式")}</span>
-                            <select
-                              value={automationDraft.github_merge_method}
-                              onChange={(event) => setAutomationDraft((current) => ({
-                                ...current,
-                                github_merge_method: event.target.value as "merge" | "squash" | "rebase",
-                              }))}
-                            >
-                              <option value="merge">merge</option>
-                              <option value="squash">squash</option>
-                              <option value="rebase">rebase</option>
-                            </select>
-                          </label>
-                          <div className="automationAgentNotice automationFieldWide">
-                            <strong>{tr("Cloud-side merge", "云端直接合并")}</strong>
-                            <span>{tr(
-                              "When the webhook matches, Remote Arc uses its GitHub App installation token to merge the PR directly. The computer does not need to be online.",
-                              "Webhook 匹配后，Remote Arc 使用 GitHub App Installation Token 直接合并 PR；电脑无需在线。",
-                            )}</span>
-                          </div>
-                        </>
-                      )}
-                      <label className="automationField">
-                        <span>{tr("Event", "事件")}</span>
-                        <input
-                          value={automationDraft.condition_event}
-                          placeholder="workflow_run"
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_event: event.target.value }))}
-                        />
-                      </label>
-                      <label className="automationField automationFieldWide">
-                        <span>{tr("Match conditions", "匹配条件")} <small>JSON</small></span>
-                        <textarea
-                          rows={4}
-                          value={automationDraft.condition_match}
-                          spellCheck={false}
-                          onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_match: event.target.value }))}
-                        />
-                        <small>{tr(
-                          'Use dotted payload paths, for example {"workflow_run.name":"CI","workflow_run.conclusion":"success"}.',
-                          '使用点号 Payload 路径，例如 {"workflow_run.name":"CI","workflow_run.conclusion":"success"}。',
-                        )}</small>
-                      </label>
-                    </>
-                  )}
-                  {!draftIsCloud && <div className="automationFieldWide">                    <label className="taskKeepAwake automationFieldWide">
-                      <input type="checkbox" checked={automationDraft.keep_awake}
-                        disabled={!devices.find(device => device.id === automationDraft.device_id)?.automation_permissions?.keep_awake || !devices.find(device => device.id === automationDraft.device_id)?.keep_awake_available}
-                        onChange={(event) => setAutomationDraft(current => ({ ...current, keep_awake: event.target.checked }))} />
-                      {tr("Keep this computer awake during the task", "任务期间保持这台电脑唤醒")}
-                    </label>
-
-<small className="taskAwakeHelp">{tr("Available when this device supports keep-awake and its permission is enabled. This cannot wake an offline computer.", "设备支持并开启保持唤醒权限时可用，无法唤起离线电脑。")}</small></div>}
-                </div>
-
-                <div className="automationCreateFooter">
-                  <div>
-                    <strong>{tr("Recovery policy", "恢复策略")}</strong>
-                    <span>{tr(
-                      "Fixed tasks use their saved restart/fail policy. Agent Goals preserve unknown outcomes for inspection; they do not blindly replay a lost action.",
-                      "固定任务遵循保存的 restart/fail 策略。Agent Goal 保存未知结果供检查，不会盲目重放丢失的动作。",
-                    )}</span>
-                  </div>
-                  <button
-                    className="primaryButton"
-                    disabled={automationBusy === "create" || UI_PREVIEW || draftPermissionBlocked || draftServiceBlocked || !hasPlus || (!draftIsCloud && automationDraft.kind !== "agent_goal" && !automationDraft.command_confirmed)}
-                    onClick={() => void createDashboardAutomation()}
-                  >
-                    {automationBusy === "create" ? tr("Creating…", "创建中…") : tr("Create task", "创建任务")}
-                  </button>
-                </div>
-              </section>
-            )}
-
-            <section className="automationListPanel">
-              <div className="automationListHeader">
-                <div>
-                  <span className="eyebrow">{tr("TASKS & WATCHES", "任务与监听")}</span>
-                  <h2>{tr("Your tasks", "你的任务")}</h2>
-                </div>
-                <span>{scopedAutomations.length} {tr("total", "条")}</span>
-              </div>
-
-              <div className="taskToolbar">
-                <div className="deviceSearch"><span aria-hidden="true">⌕</span><input aria-label={tr("Search tasks", "搜索任务")} placeholder={tr("Search tasks, devices or task ID", "搜索任务、设备或任务 ID")} value={automationQuery} onChange={(event) => setAutomationQuery(event.target.value)} /></div>
-                <div className="deviceFilters" role="group" aria-label={tr("Task status filter", "任务状态筛选")}>
-                  {(["all", "active", "attention", "finished"] as const).map((filter) => <button key={filter} aria-pressed={automationFilter === filter} className={automationFilter === filter ? "active" : ""} onClick={() => setAutomationFilter(filter)}>{filter === "all" ? tr("All", "全部") : filter === "active" ? tr("Active", "活动") : filter === "attention" ? tr("Needs attention", "待处理") : tr("Finished", "已结束")}<span>{scopedAutomations.filter((item) => matchesTaskFilter(item, filter)).length}</span></button>)}
-                </div>
-              </div>
-              {automationLoadError && <div className="taskLoadError" role="status">{tr("Tasks could not be refreshed. Showing the last available state.", "任务刷新失败，当前显示上次加载的状态。 ")}<button className="ghostButton" onClick={() => void refreshAutomations()}>{tr("Retry", "重试")}</button></div>}
-              <div className="automationList" aria-busy={automationLoading}>
-                {visibleAutomations.map((automation) => {
-                  const device = devices.find((item) => item.id === automation.device_id);
-                  const busy = automationBusy?.startsWith(automation.id + ":");
-                  return (
-                    <article className={"automationRow status-" + automation.status} key={automation.id}>
-                      <div className="automationIdentity">
-                        <span className={"automationStatusDot " + automation.status} />
-                        <div>
-                          <strong>{automation.name}</strong>
-                          <span>{automationKindLabel(automationDisplayKind(automation))} · {device?.name || automation.device_id || tr("Cloud", "云端")}</span>
-                          <p className="taskActivityLabel">{taskScheduler && taskScheduler.state !== "healthy" && automation.status === "waiting" && automation.next_run_at && Date.parse(automation.next_run_at) < Date.now() - 180000 ? tr("Overdue · task scheduling is unhealthy", "已延迟 · 任务调度异常") : taskActivity(automation, tr)}</p>
-                        </div>
-                      </div>
-
-                      <div className="taskRunSummary"><span>{automation.run_started_count === undefined ? tr("Execution count pending refresh", "执行次数待刷新") : `${automation.run_started_count} ${tr("runs started", "次执行已启动")}`}{automation.max_runs > 0 ? ` · ${tr("limit", "上限")} ${automation.max_runs}` : ""}</span>{automation.status === "waiting" && automation.next_run_at && <span>{tr("Next: ", "下次：")}{automationTime(automation.next_run_at)}</span>}</div>
-
-                      <span className={"automationStatusBadge " + automation.status}>{taskNeedsAgent(automation) ? tr("Waiting for AI", "等待 AI") : automationStatusLabel(automation.status)}</span>
-
-                      <div className="automationActions">
-                        {automation.status === "paused" && (
-                          <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "resume")}>{tr("Resume", "恢复")}</button>
-                        )}
-                        {!automationTerminal(automation.status) && automation.status !== "paused" && (
-                          <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "pause")}>{tr("Pause", "暂停")}</button>
-                        )}
-                        {!automationTerminal(automation.status) && (
-                          <button className="danger" disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "cancel")}>{tr("Cancel", "取消")}</button>
-                        )}
-                      </div>
-
-                      <TaskResults task={automation} reveal={createdTask?.id === automation.id} referenceControl={<CopyButton label={tr("Copy chat reference", "复制聊天引用")} value={taskNeedsAgent(automation)
-                        ? tr(`Continue Remote Arc task ${automation.id}. Read its saved context using get_goal_context (automation_id: ${automation.id}); use get_automation for status and recent runs. Check the saved objective, revision, permissions and evidence before submitting any next decision. If these Remote Arc tools are unavailable, explain the missing capability. This ID refers to a cloud task record, not a local checkpoint file or the full original chat.`, `请继续 Remote Arc 任务 ${automation.id}。先用 get_goal_context（automation_id: ${automation.id}）读取已保存的上下文，再用 get_automation 查看状态与近期执行。提交下一步决策前核对目标、版本、权限和证据。若当前客户端没有这些 Remote Arc 工具，请明确说明缺少能力。这个 ID 对应云端任务记录，不是本地检查点文件，也不包含原聊天全文。`)
-                        : tr(`Review Remote Arc task ${automation.id} using get_automation (automation_id: ${automation.id}). Summarize its saved status and recent runs without changing or executing the task. If that tool is unavailable, explain the missing capability. This ID refers to a cloud task record; do not infer a local checkpoint-file path.`, `请用 get_automation（automation_id: ${automation.id}）查看 Remote Arc 任务的已保存状态与近期执行，只汇报，不修改或执行任务。若当前客户端没有此工具，请明确说明缺少能力。这个 ID 对应云端任务记录，请勿据此猜测本地检查点文件路径。`)} />} />
-                    </article>
-                  );
-                })}
-
-                {!automationLoading && !automationLoadError && !scopedAutomations.length && (
-                  <div className="automationEmpty">
-                    <strong>{tr("No persistent work yet", "还没有持久任务")}</strong>
-                    <span>{tr(
-                      "Create a goal with a verified executor, or an explicit command automation. A connected AI can create the same task through MCP.",
-                      "创建有明确执行器的目标任务，或明确的命令自动化。已连接 AI 可以通过 MCP 创建同一条任务。",
-                    )}</span>
-                    <button onClick={() => { if (!hasPlus) { location.href = MARKETING_ORIGIN + "/pricing"; return; } openCreateInWorkspace(workspace, active === "agent-routines"); }}>{hasPlus ? "+ " + tr("New task", "新建任务") : tr("See Plus", "查看 Plus")}</button>
-                  </div>
-                )}
-                {!!scopedAutomations.length && !visibleAutomations.length && <div className="automationEmpty"><strong>{tr("No matching tasks", "没有匹配任务")}</strong><span>{tr("Try another search or clear the filters.", "尝试其他搜索词，或清除筛选。")}</span><button onClick={() => { setAutomationQuery(""); setAutomationFilter("all"); }}>{tr("Clear filters", "清除筛选")}</button></div>}
-                {automationLoading && !scopedAutomations.length && <div className="automationEmpty">{tr("Loading automations…", "正在加载自动化…")}</div>}
-              </div>
-            </section>
-          </>
-        )}
-
         {(active === "apps" || active === "agent-apps") && <AppsManager />}
 
         {active === "connect" && (
@@ -6786,7 +6182,7 @@ function Dashboard({
                   {devices.slice().sort((a,b) => Number(b.status === "online") - Number(a.status === "online")).map((device) => {
                     const enabledCount = device.allowed_tools?.length ?? device.tools.length;
                     return <button className="securityDeviceRow" key={device.id} onClick={() => navigateTab("devices")}>
-                      <div className="deviceIcon">{platformGlyph(device.platform)}</div>
+                      <div className="deviceIcon"><ProductIcon name="device"/></div>
                       <div><strong>{device.name}</strong><span>{platformLabel(device.platform)} · {device.hostname || tr("No hostname", "无 Hostname")}</span></div>
                       <div className="securityExposureMeta"><strong>{enabledCount}</strong><span>{tr("tools enabled", "个工具已启用")}</span></div>
                       <span className={"badge " + device.status}><i />{device.status}</span>

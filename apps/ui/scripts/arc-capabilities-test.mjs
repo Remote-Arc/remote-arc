@@ -19,7 +19,9 @@ assert.doesNotMatch(arc,/Phase\s+[234]\b|阶段\s*[234]/i,"Arc feature page must
 for(const token of ["Routines","Skills","Teach Arc","Workspace","billing","approvals"]){
   assert.ok(arc.toLowerCase().includes(token.toLowerCase())||landing.toLowerCase().includes(token.toLowerCase()),"missing product capability: "+token);
 }
-assert.match(landing,/not publicly available/,"Arc Hosted remains in development");
+assert.match(landing,/Hosted execution is available after platform setup/,"Arc preview must disclose the platform configuration gate");
+assert.match(landing,/trial starts only when you activate it/,"The trial must not start from a marketing page visit");
+assert.match(landing,/https:\/\/agent\.remotearc\.app\/dashboard\/agent\/chat\?trial=1/,"Arc trial CTA must open the actual workspace");
 assert.doesNotMatch(arc,/Not yet connectable|PLANNED INTEGRATION/,"Use the executable Apps directory and its explicit release gates");
 assert.match(scene,/arcV3ScenePlayback/,"hero scene must have a playback control");
 assert.match(arc,/arcRoutinePlayback/,"routine demo must have a playback control");

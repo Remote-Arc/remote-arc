@@ -11,26 +11,28 @@ const aiRoutine = { kind: "long_task", goal_json: '{"type":"agent_goal"}', trigg
 
 test("each canonical dashboard route resolves to its tab", () => {
   for (const [tab, path] of Object.entries(DASHBOARD_PATHS)) {
-    assert.equal(dashboardTabFromPath(path), tab);
-    assert.equal(dashboardTabFromPath(path + "/"), tab);
+    assert.equal(dashboardTabFromPath(path), tab === 'automations' ? 'agent-goals' : tab);
+    assert.equal(dashboardTabFromPath(path + "/"), tab === 'automations' ? 'agent-goals' : tab);
     assert.equal(workspaceForTab(tab), tab.startsWith("agent-") ? "agent" : "connect");
   }
 });
 
 test("existing deep links remain compatible", () => {
   for (const [path, tab] of Object.entries(LEGACY_DASHBOARD_PATHS)) {
-    assert.equal(dashboardTabFromPath(path), tab);
+    assert.equal(dashboardTabFromPath(path), tab === 'automations' ? 'agent-goals' : tab);
   }
   assert.equal(dashboardTabFromPath("/unknown"), "overview");
 });
 
-test("only AI-goals enter Arc Agent goals while plain tasks stay Connect", () => {
+test("Arc tasks include one-off work while routines have a separate view", () => {
   assert.equal(isAgentGoalAutomation(plainTask), false);
   assert.equal(isAgentGoalAutomation(aiGoal), true);
   assert.equal(isVisibleInWorkspace(plainTask, "automations"), true);
   assert.equal(isVisibleInWorkspace(aiGoal, "automations"), false);
   assert.equal(isVisibleInWorkspace(aiGoal, "agent-goals"), true);
-  assert.equal(isVisibleInWorkspace(plainTask, "agent-goals"), false);
+  assert.equal(isVisibleInWorkspace(plainTask, "agent-goals"), true);
+  assert.equal(isVisibleInWorkspace(aiRoutine, "agent-goals"), false);
+  assert.equal(isVisibleInWorkspace(aiRoutine, "agent-activity"), true);
 });
 
 test("routine classification requires an AI goal with an actual time trigger", () => {

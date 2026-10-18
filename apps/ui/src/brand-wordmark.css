@@ -1,0 +1,31 @@
+/* A continuous pearlescent finish across the name. Keep vendor marks intact. */
+:root { --brand-wordmark: linear-gradient(110deg, #232435 8%, #4c4675 37%, #51418c 58%, #315c77 79%, #232435 100%); }
+:root[data-theme="dark"] { --brand-wordmark: linear-gradient(110deg, #f5f3fa 8%, #ded8f3 37%, #bdb0ed 58%, #a9cee0 79%, #f5f3fa 100%); }
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  :root[data-theme] :is(.publicPage, .appFrame) .brand .brandWords {
+    display: inline-block;
+    background-image: var(--brand-wordmark);
+    background-size: 150% 100%;
+    background-position: 0% 50%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent;
+    transition: background-position 800ms ease;
+  }
+  :root[data-theme] :is(.publicPage, .appFrame) .brand .brandWords b {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent;
+  }
+  .brand .brandWords b:first-child { margin-right: 4px; }
+  :root[data-theme] :is(.publicPage, .appFrame) .brand:is(:hover, :focus-visible) .brandWords { background-position: 100% 50%; }
+}
+@media (prefers-reduced-motion: reduce) { .brand .brandWords { transition: none !important; } }
+@media (forced-colors: active) {
+  :root[data-theme] :is(.publicPage, .appFrame) .brand .brandWords,
+  :root[data-theme] :is(.publicPage, .appFrame) .brand .brandWords b {
+    background: none;
+    color: LinkText !important;
+    -webkit-text-fill-color: LinkText;
+  }
+}

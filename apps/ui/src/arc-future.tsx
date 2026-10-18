@@ -5,10 +5,11 @@ import { ArcCapabilities } from "./arc-capabilities.js";
 import { ArcExecutionScene } from "./arc-workspace-scene.js";
 import { ArcWhy } from "./arc-why.js";
 import "./arc-why.css";
+import {ProductIcon as Icon} from './product-icon.js';
 
 // Only the concept's visual explanation is interactive. No model is called and
 // no data is sent to an unimplemented waitlist or paid-hosted service.
-const earlyAccessHref = "/early-access?source=arc";
+const earlyAccessHref = "https://agent.remotearc.app/dashboard/agent/chat?trial=1";
 
 function ArcMark({ subtle = false }: { subtle?: boolean }) {
   return <span className={"arcV3Mark" + (subtle ? " arcV3Mark--small" : "")} aria-hidden="true"><img className="arcV3BrandImage" src="/remote-arc.svg" alt="" width="106" height="106" /></span>;
@@ -20,14 +21,14 @@ function ArcStatus({ children }: { children: React.ReactNode }) {
 
 export function ArcTeaser() {
   const {tr,locale}=useI18n();
-  return <section className="arcV3Teaser" aria-labelledby="arcV3TeaserHeading">
-    <div className="arcV3TeaserAmbient" aria-hidden="true" />
-    <div className="arcV3TeaserLine">{tr("THE NEXT CHAPTER OF REMOTE ARC", "REMOTE ARC 的下一篇章")} <span>·</span> {tr("IN DEVELOPMENT", "开发中")}</div>
-    <ArcMark subtle />
-    <h2 id="arcV3TeaserHeading">{tr("Meet Arc. Work beyond the conversation.", "认识 Arc。让工作不止于对话。")}</h2>
-    <p>{tr("Your future AI teammate. One place for conversations, connected apps and real work across your devices.", "即将到来的 AI 队友，让对话、云端应用和真实设备汇聚在一起，完成你的工作。")}</p>
-    <a className="arcV3TeaserAction" href={localizedWebsiteHref("/arc",locale)}>{tr("Discover Arc", "了解 Arc")} <span aria-hidden="true">↗</span></a>
-    <span className="arcV3TeaserEndnote">{tr("Coming soon · Connect is available today", "即将推出 · Connect 现已可用")}</span>
+  return <section className="arcProductTeaser" aria-labelledby="arcV3TeaserHeading">
+    <div className="arcProductTeaserCopy"><span className="marketingLabel">{tr('THE NEXT CHAPTER / ARC','下一篇章 / ARC')}<i>{tr('Preview','预览中')}</i></span>
+    <h2 id="arcV3TeaserHeading">{tr('Your next personal agent.','你的下一位个人 AI 队友。')}</h2>
+    <p>{tr('The same apps. The same computers. A new place to hand off the work — just tell Arc what you need.','沿用同一套应用与电脑连接，在新的工作空间里，把工作交出去。告诉 Arc 你想完成什么就好。')}</p>
+    <ul><li><Icon name="chat"/>{tr('Talk naturally. Get work done.','自然对话，完成工作。')}</li><li><Icon name="device"/>{tr('Coordinate apps and your own fleet.','协调应用与自己的设备集群。')}</li><li><Icon name="routine"/>{tr('One-off tasks. Everyday routines.','一次性任务，每日 Routine。')}</li></ul>
+    <a className="marketingSecondary" href={localizedWebsiteHref('/arc',locale)}>{tr('Meet Arc','认识 Arc')}<Icon name="arrowUpRight" size={16}/></a>
+    <small>{tr('Connect is available today. Arc is being prepared for release.','Connect 现已可用，Arc 正在准备发布。')}</small></div>
+    <div className="arcProductWindow" aria-label={tr('Illustrative Arc product preview, not a live run','Arc 产品示意，并非真实执行')}><header><img src="/remote-arc.svg" alt="" width={22} height={22}/><strong>Arc</strong><span>{tr('PRODUCT PREVIEW','产品预览')}</span></header><div className="arcProductWindowBody"><aside><span><Icon name="chat"/>{tr('Chat','对话')}</span><span><Icon name="tasks"/>{tr('Tasks','任务')}</span><span className="selected"><Icon name="routine"/>{tr('Routines','例行工作')}</span><small>{tr('YOUR TOOLS','你的工具')}</small><span><Icon name="apps"/>{tr('Apps','应用')}</span><span><Icon name="device"/>{tr('Devices','设备')}</span></aside><div className="arcProductConversation"><div className="arcProductPrompt">{tr('Every weekday at 9, prepare my morning brief.','每个工作日早上 9 点，整理我的晨间简报。')}</div><div className="arcProductResponse"><img src="/remote-arc.svg" alt="" width={22} height={22}/><p>{tr('A little less busywork. A clearer start to your day.','少一点琐事，清晰地开始每一天。')}</p></div><div className="arcProductRoutine"><div><span><Icon name="routine" size={15}/>{tr('Morning brief','晨间简报')}</span><small>{tr('Example','示例')}</small></div><p>{tr('Email priorities, today’s meetings and a plan for what comes next.','重点邮件、今天的会议，以及接下来的行动安排。')}</p><footer><span>09:00 · {tr('Weekdays','工作日')}</span><div>{['gmail','googlecalendar','notion'].map(brand=><img key={brand} src={'/app-brands/'+brand+'.svg'} alt="" width={17} height={17}/>)}</div></footer></div><div className="arcProductPreviewComposer">{tr('Tell Arc what’s next…','告诉 Arc 下一步…')}<span><Icon name="arrowUp" size={15}/></span></div></div></div></div>
   </section>;
 }
 
@@ -36,24 +37,24 @@ export function ArcComingSoonPageContent() {
   return <main className="arcV3">
     <section className="arcV3Hero" aria-labelledby="arcV3HeroTitle">
       <div className="arcV3HeroGlow" aria-hidden="true" />
-      <div className="arcV3HeroEyebrow"><ArcStatus>{tr("Introducing Arc · In development", "认识 Arc · 开发中")}</ArcStatus></div>
-      <h1 id="arcV3HeroTitle">{tr("Your AI team. Your device fleet.", "你的 AI 队友，你的设备集群。")}</h1>
-      <p>{tr("Bring your computers, tools and working rules together. We’re building Arc as a dedicated workspace for AI teammates that work across the environments you control.", "把你的电脑、工具和工作规则汇聚在一起。我们正在打造 Arc：让 AI 队友在你掌控的工作环境中协同执行的专门工作空间。")}</p>
-      <div className="arcV3HeroActions"><a className="arcV3Primary" href={localizedWebsiteHref(earlyAccessHref,locale)}>{tr("Get early access", "申请抢先体验")} <span>↗</span></a><a className="arcV3Secondary" href="#why-arc">{tr("Why use Arc?", "为什么选择 Arc？")} <span>↓</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
+      <div className="arcV3HeroEyebrow"><ArcStatus>{tr("Introducing Arc · Preview", "认识 Arc · 预览")}</ArcStatus></div>
+      <h1 id="arcV3HeroTitle">{tr("Your apps. Your computers. One personal agent.", "你的应用与电脑，一位个人 AI 队友。")}</h1>
+      <p>{tr("You already connect your AI with Remote Arc. Meet the next step: a personal agent that brings those connections together, coordinates your device fleet, and turns conversations into tasks and routines. No model API key required.", "你已经用 Remote Arc 为 AI 连接工具。接下来，让个人 AI 队友把这些连接串起来，协调设备集群，把一句话变成任务与 Routine。无需模型 API Key。")}</p>
+      <div className="arcV3HeroActions"><a className="arcV3Primary" href={earlyAccessHref}>{tr("Start 14-day free trial", "开始 14 天免费试用")} <span>↗</span></a><a className="arcV3Secondary" href="#why-arc">{tr("Why use Arc?", "为什么选择 Arc？")} <span>↓</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
       <div className="arcV3HeroCue"><span />{tr("A GLIMPSE OF WHAT'S NEXT", "下一阶段产品概念")}</div>
       <ArcExecutionScene />
-      <p className="arcV3Disclaimer">{tr("Concept only. Arc Hosted is not publicly available yet. The early-access form collects product interest only.", "此为概念展示。Arc 托管服务尚未公开开放，抢先体验表单仅用于收集使用意向。")}</p>
+      <p className="arcV3Disclaimer">{tr("Product preview. Hosted execution is available after platform setup. Your 14-day trial starts only when you activate it in Arc.", "产品预览。平台配置完成后可使用托管执行，14 天试用仅在你于 Arc 中主动开启后计时。")}</p>
     </section>
 
-    <ArcWhy tr={tr} connectHref={localizedWebsiteHref("/connect-ai",locale)} earlyAccessHref={localizedWebsiteHref(earlyAccessHref,locale)} />
+    <ArcWhy tr={tr} connectHref={localizedWebsiteHref("/connect-ai",locale)} earlyAccessHref={earlyAccessHref} />
 
     <ArcCapabilities />
     <section className="arcV3Final">
       <ArcMark subtle />
       <span className="arcV3Eyebrow">{tr("THIS IS JUST THE BEGINNING", "这只是开始")}</span>
-      <h2>{tr("Help us build what comes next.", "下一步，由真实需求决定。")}</h2>
+      <h2>{tr("Your work. A little more handled.", "你的工作，多一位队友。")}</h2>
       <p>{tr("Tell us what you'd delegate to Arc. We'll build it step by step, with transparent permissions, results and release status.", "告诉我们你最希望 Arc 帮你完成什么。我们将逐步交付，公开权限、执行结果与开发状态。")}</p>
-      <div className="arcV3HeroActions"><a href={localizedWebsiteHref(earlyAccessHref,locale)} className="arcV3Primary">{tr("Share your workflow", "分享你的需求")} ↗</a><a href={localizedWebsiteHref("/roadmap",locale)} className="arcV3Secondary">{tr("Explore the roadmap", "查看路线图")} →</a></div>
+      <div className="arcV3HeroActions"><a href={earlyAccessHref} className="arcV3Primary">{tr("Open Arc workspace", "打开 Arc 工作空间")} ↗</a><a href={localizedWebsiteHref("/roadmap",locale)} className="arcV3Secondary">{tr("Explore the roadmap", "查看路线图")} →</a></div>
     </section>
   </main>;
 }

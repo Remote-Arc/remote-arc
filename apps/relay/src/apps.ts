@@ -6,7 +6,7 @@ import { consumeToolCall } from "./usage.js";
 import { APP_CATALOG, APP_OPERATIONS, AppError, appOperation, appScopes, credentials, permissionSchema, providerSchema, type AppEnv, type AppPermission, type AppProvider, type AppOperation } from "./app-catalog.js";
 import { appConfigured, connectionContext, connectionSettingsSchema, checkShopifyCallback, normalizeScope } from "./app-auth-adapters.js";
 import { reserveAppDispatch, quoteAppOperation, reviewCreatedAction, dispatchHeaders, validateAppResult, redactProviderCredentials } from "./app-connection-policy.js";
-import { loadAppReview, reviewRead, verifyAppReview, type AppReview } from "./app-review.js";
+import { loadAppReview, reviewRead, type AppReview } from "./app-review.js";
 import { authorizationUrl, exchangeTokens, newVerifier, providerIdentity, providerJson, revokeProvider, seal, unseal, type AppTokens } from "./app-oauth.js";
 
 type Connection = { id: string; user_id: string; provider: AppProvider; account_id: string; account_label: string; status: string; permissions_json: string; scopes_json: string; token_ciphertext: string | null; expires_at: string | null; generation: number; last_error: string | null; updated_at: string; daily_call_limit: number; connection_metadata_json: string };
@@ -25,7 +25,8 @@ const cleanConnection = (row: Connection) => ({ id: row.id, provider: row.provid
 async function connection(env: AppEnv, userId: string, id: string) { const row = await env.DB.prepare("SELECT * FROM app_connections WHERE id=?1 AND user_id=?2").bind(id, userId).first<Connection>(); if (!row) throw new AppError("app_connection_not_found", 404); return row; }
 function requirePermission(row: Connection, permission: AppPermission, operation?: AppOperation) {
   if (row.status !== "active" || !row.token_ciphertext) throw new AppError("app_reauthorization_required", 409);
-  if (!(JSON.parse(row.permissions_json) as string[]).includes(permission)) throw new AppError("app_permission_required", 403);
+   // A connected account enables its tools. Provider OAuth scopes remain the
+   // authority; legacy local read/write switches do not add a second gate.
   const scopes = new Set<string>((JSON.parse(row.scopes_json) as string[]).map(s=>normalizeScope(s,row.provider)));
   const required = (operation?.requiredScopes ?? appScopes(row.provider, [permission])).map(s=>normalizeScope(s,row.provider)).filter(s => !["offline_access", "offline.access", "refresh_token"].includes(s));
   // Google may replace readonly with the broader modify scope in its response.
@@ -39,7 +40,7 @@ function requirePermission(row: Connection, permission: AppPermission, operation
 export async function listApps(env: AppEnv, userId: string) {
   if (env.ENABLE_APPS !== "1") return { enabled: false, apps: [], connections: [] };
   const rows = await env.DB.prepare("SELECT * FROM app_connections WHERE user_id=?1 ORDER BY created_at DESC").bind(userId).all<Connection>();
-  return { enabled: true, apps: Object.entries(APP_CATALOG).map(([key, def]) => { const configured = appConfigured(env, key as AppProvider); return { provider: key, name: def.name, brand: def.brand, category: def.category, auth: def.auth || "oauth", payer: def.payer || "provider_rules", billingNote: def.billingNote, connectionNote: def.connectionNote, configured, operations: APP_OPERATIONS.filter(o => o.provider === key).map(o => ({ name: o.name, description: o.description, permission: o.permission, inputSchema: z.toJSONSchema(o.schema) })), permissions: { read: def.scopes.read, write: def.scopes.write }, consentNote: key === "github" ? "Connecting enables the available read and write operations. Each write request still requires approval." : undefined }; }), connections: (rows.results || []).map(cleanConnection) };
+   return { enabled: true, apps: Object.entries(APP_CATALOG).map(([key, def]) => { const configured = appConfigured(env, key as AppProvider); return { provider: key, name: def.name, brand: def.brand, category: def.category, auth: def.auth || "oauth", payer: def.payer || "provider_rules", billingNote: def.billingNote, connectionNote: def.connectionNote, configured, operations: APP_OPERATIONS.filter(o => o.provider === key).map(o => ({ name: o.name, description: o.description, permission: o.permission, inputSchema: z.toJSONSchema(o.schema) })), permissions: { read: def.scopes.read, write: def.scopes.write }, consentNote: "Connecting enables available tools within the permissions granted by the provider." }; }), connections: (rows.results || []).map(cleanConnection) };
 }
 async function authorize(request: Request, env: AppEnv, userId: string) {
   sameOrigin(request, env);
@@ -144,24 +145,19 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
     const id = crypto.randomUUID(); const stamp = now();
     let review: AppReview | null = await reviewCreatedAction(env, identity.userId, row.id, row.provider, operation.name, args);
     const quote = quoteAppOperation(operation, args);
-    if (reviewRead(row.provider, operation.name, args as Record<string, unknown>)) {
-      await consumeToolCall(env, identity.userId);
-      await reserveAppDispatch(env, identity.userId, row);
-      const tokens = await accessToken(env, row, fetcher);
-      const current = await connection(env, identity.userId, row.id);
-      if (current.generation !== row.generation) throw new AppError("app_connection_changed", 409);
-      requirePermission(current, operation.permission, operation);
-      review = await loadAppReview(row.provider, operation.name, args as Record<string, unknown>, tokens, fetcher);
-    }
     if (quote) review = { target: { ...(review?.target || {}), estimatedUsage: quote }, hash: review?.hash || await sha256Hex(JSON.stringify(quote)) };
     await env.DB.prepare("INSERT INTO app_calls(id,user_id,connection_id,connection_generation,operation,permission,request_id,input_hash,arguments_ciphertext,review_ciphertext,status,expires_at,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?13) ON CONFLICT(user_id,request_id) DO NOTHING")
-      .bind(id, identity.userId, row.id, row.generation, operation.name, operation.permission, input.requestId, hash, await seal(env, args, callContext(identity.userId, id, "arguments")), review ? await seal(env, review, callContext(identity.userId, id, "review")) : null, operation.permission === "write" ? "pending_approval" : "approved", expires(600), stamp).run();
+      .bind(id, identity.userId, row.id, row.generation, operation.name, operation.permission, input.requestId, hash, await seal(env, args, callContext(identity.userId, id, "arguments")), review ? await seal(env, review, callContext(identity.userId, id, "review")) : null, "approved", expires(600), stamp).run();
     call = await env.DB.prepare("SELECT * FROM app_calls WHERE user_id=?1 AND request_id=?2").bind(identity.userId, input.requestId).first<Call>();
   }
   if (!call) throw new AppError("app_call_unavailable", 503);
   if (call.input_hash !== hash) throw new AppError("app_request_id_conflict", 409);
   if (call.status === "succeeded") return { status: "succeeded", callId: call.id, replayed: true, untrustedData: true, result: await unseal(env, call.result_ciphertext!, callContext(identity.userId, call.id, "result")) };
-  if (call.status !== "approved") return { status: call.status, callId: call.id, error: call.error_code, approvalUrl: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps#approvals", retryAutomatically: false };
+  if (call.status === "pending_approval") {
+    await env.DB.prepare("UPDATE app_calls SET status='cancelled',error_code='app_legacy_request_cancelled',updated_at=?1 WHERE id=?2 AND user_id=?3 AND status='pending_approval'").bind(now(),call.id,identity.userId).run();
+    return {status:'cancelled',callId:call.id,error:'app_legacy_request_cancelled',retryAutomatically:false};
+  }
+  if (call.status !== "approved") return { status: call.status, callId: call.id, error: call.error_code, retryAutomatically: false };
   if (call.connection_generation !== row.generation || call.expires_at <= now()) throw new AppError("app_approval_expired_or_connection_changed", 409);
   // A single CAS owns execution. Neither retries nor concurrent clients repeat a write.
   const claimed = await env.DB.prepare("UPDATE app_calls SET status='running',updated_at=?1 WHERE id=?2 AND user_id=?3 AND status='approved' AND expires_at>?1 AND EXISTS(SELECT 1 FROM app_connections WHERE id=?4 AND user_id=?3 AND generation=?5 AND status='active') RETURNING id").bind(now(), call.id, identity.userId, row.id, row.generation).first();
@@ -176,7 +172,11 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
     if (current.generation !== row.generation) throw new AppError("app_connection_changed", 409);
     requirePermission(current, operation.permission, operation);
     const review = call.review_ciphertext ? await unseal<AppReview>(env, call.review_ciphertext, callContext(identity.userId, call.id, "review")) : null;
-    const conditionalHeaders = await verifyAppReview(row.provider, operation.name, args as Record<string, unknown>, tokens, review, fetcher);
+    // Read the current target once immediately before dispatch, applying its
+    // entity tag where available. No wait for a separate human approval.
+    if (reviewRead(row.provider,operation.name,args as Record<string,unknown>)) await reserveAppDispatch(env,identity.userId,row);
+    const freshReview=await loadAppReview(row.provider,operation.name,args as Record<string,unknown>,tokens,fetcher);
+    const conditionalHeaders:Record<string,string>=typeof freshReview?.target.etag==='string'?{'if-match':freshReview.target.etag}:{};
     const quote = quoteAppOperation(operation, args);
     if (quote && JSON.stringify(review?.target.estimatedUsage) !== JSON.stringify(quote)) throw new AppError("app_cost_quote_changed", 409);
     const plan = operation.request(args, tokens.context);
@@ -225,7 +225,7 @@ export async function handleApps(request: Request, env: AppEnv, fetcher: typeof 
     if (path === "/api/apps/call" && request.method === "POST") { sameOrigin(request, env); return response(await callApp(env, { userId: user.id, scope: "apps:read apps:write" }, await request.json(), fetcher)); }
     if (path === "/api/apps/approvals" && request.method === "GET") return await approvals(request, env, user.id);
     const decision = path.match(/^\/api\/apps\/approvals\/([\w-]+)$/);
-    if (decision && request.method === "POST") return await approvals(request, env, user.id, decision[1]);
+    if (decision && request.method === "POST") { sameOrigin(request,env); return response({error:'app_manual_approval_removed'},410); }
     return response({ error: "not_found" }, 404);
   } catch (error) {
     if (error instanceof z.ZodError || error instanceof SyntaxError) return response({ error: "invalid_app_request" }, 400);

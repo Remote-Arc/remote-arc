@@ -8,7 +8,7 @@ import "./landing-content.css";
 
 export function HeroHeadline() {
   const { tr, locale } = useI18n();
-  return <TypewriterHeadline key={locale} phrases={[tr("Build apps.", "构建应用。"), tr("Run tasks.", "执行任务。"), tr("Fix bugs.", "修复问题。"), tr("Analyze data.", "分析数据。")]} />;
+  return <TypewriterHeadline key={locale} phrases={[tr("Put it to work.", "真正动手工作。"), tr("Let it coordinate.", "协同你的设备。"), tr("Keep work moving.", "持续推进工作。")]} />;
 }
 
 function TypewriterHeadline({ phrases }: { phrases: [string, ...string[]] }) {
@@ -35,7 +35,7 @@ function TypewriterHeadline({ phrases }: { phrases: [string, ...string[]] }) {
     return () => window.clearTimeout(timer);
   }, [frame.deleting, frame.length, phrase.length, phrases.length, reducedMotion, visible]);
   return <div className="heroHeadlineGroup">
-    <h1 className="heroHeadline"><span className="heroAccessible">{tr("Build apps, run tasks, fix bugs and analyze data on your own computer. Anywhere, anytime.", "让 AI 在自己的电脑上构建应用、执行任务、修复问题和分析数据。随时随地。")}</span><span aria-hidden="true"><span className="heroTypeLine">{reducedMotion ? phrase : phrase.slice(0, frame.length)}</span><span className="heroFixedLine"><span>{tr("Anywhere,", "随时，")}</span><span>{tr("Anytime.", "随地。")}</span></span></span></h1>
+    <h1 className="heroHeadline"><span className="heroAccessible">{tr("Your personal AI agent. Working across your apps and your own computers.", "你的个人 AI 队友，跨应用与自己的电脑，真正动手完成工作。")}</span><span aria-hidden="true"><span className="heroFixedLine">{tr("Your personal AI.", "你的个人 AI 队友。")}</span><span className="heroTypeLine">{reducedMotion ? phrase : phrase.slice(0, frame.length)}</span></span></h1>
   </div>;
 }
 
@@ -138,9 +138,9 @@ export function LandingContent() {
       <LandingInteractiveDemo />
     </section>
 
-    <AppsDirectory />
-
     <ArcTeaser />
+
+    <AppsDirectory />
 
     <section className="landingUnexpected sectionBlock" id="unexpected-workflows">
       <header className="modernSectionIntro">

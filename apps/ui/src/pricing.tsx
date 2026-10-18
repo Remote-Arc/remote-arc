@@ -94,14 +94,15 @@ export function PricingContent({
 
   return <main className="pricingContent">
     <header className="pricingIntro">
-      <span className="eyebrow">{tr("FREE + PLUS", "FREE + PLUS")}</span>
-      <h1>{tr("Remote control is Free. Durable task orchestration is Plus.", "远程控制用 Free，持久任务编排用 Plus。")}</h1>
+      <span className="eyebrow">{tr("ARC + CONNECT", "FREE + PLUS")}</span>
+      <h1>{tr("Start with Arc. Keep Connect for your own AI.", "从 Arc 开始，也可以沿用自己的 AI 使用 Connect。")}</h1>
       <p>{tr(
         "Start with the computer and AI client you already use. Upgrade the account capability boundary when you need binary files, durable long commands, schedules, condition watches or keep-awake support.",
         "继续使用你已有的电脑和 AI 客户端。需要二进制文件、持久长命令、定时任务、条件监听或保持唤醒时，再升级账户能力边界。",
       )}</p>
     </header>
 
+    <section className="arcPricingTrial"><div><span className="eyebrow">ARC / 14-DAY TRIAL</span><h2>{tr('Your personal agent. Try it for 14 days.','你的个人 AI 队友，免费试用 14 天。')}</h2><p>{tr('Chat, connected Apps, your own computers, intelligent placement, Tasks and Routines. No model API key or credit card. Auto and a limited premium-model allowance are included.','对话、已连接 Apps、自己的电脑、智能调度、Tasks 与 Routines。无需模型 API Key 或信用卡，包含 Auto 和有限高级模型额度。')}</p><small>{tr('Starts when you activate Arc in a configured workspace. Usage limits apply. No automatic charge. Third-party services keep their own billing.','在配置完成的工作空间主动开启后计时，受用量额度限制，不自动扣费，第三方服务按自身规则计费。')}</small></div><a className="primaryButton" href="https://agent.remotearc.app/dashboard/agent/chat?trial=1">{tr('Start free trial','开始免费试用')} ↗</a></section>
     <section className="pricingPlans" aria-label={tr("Remote Arc plans", "Remote Arc 套餐")}>
       <article className="planCard freePlan">
         <div className="planHeader">

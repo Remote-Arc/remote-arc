@@ -2,6 +2,8 @@ import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.
 export { AdminApiService } from "./admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { handleApps } from "./apps.js";
+import { handleArcChat, type ArcEnv } from "./arc-chat.js";
+export { ArcChatRuntime } from "./arc-chat-object.js";
 import type { AppEnv } from "./app-catalog.js";
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
 import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
@@ -95,7 +97,7 @@ import {
 
 export { DeviceRegistry };
 
-type Env = TaskEventEnv & AppEnv & {
+type Env = TaskEventEnv & AppEnv & ArcEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
@@ -487,6 +489,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
         : Response.json({ authenticated: false }, { status: 401 });
     }
 
+    if (url.pathname.startsWith("/api/arc/")) return handleArcChat(request, env);
     if (url.pathname === "/api/apps" || url.pathname.startsWith("/api/apps/")) {
       if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({error:"app_host_required"},{status:404});
       return handleApps(request, env);

@@ -1,0 +1,74 @@
+name: Bootstrap independent Admin Worker
+# Protected one-time promotion. Never copy the platform's Cloudflare secret
+# into another repo; the Admin Worker remains independently owned.
+on:
+  workflow_dispatch:
+    inputs:
+      admin_sha:
+        description: "Latest green admin-remote-arc master commit SHA (40 hex)"
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: remote-arc-admin-bootstrap
+  cancel-in-progress: false
+jobs:
+  bootstrap:
+    if: github.actor == 'yaohuangguan' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Require latest Admin master and its green push CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ADMIN_SHA: ${{ inputs.admin_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$ADMIN_SHA" =~ ^[0-9a-f]{40}$ ]]
+          LATEST="$(git ls-remote https://github.com/Remote-Arc/admin-remote-arc.git refs/heads/master | cut -f1)"
+          test "$ADMIN_SHA" = "$LATEST"
+          gh api "/repos/Remote-Arc/admin-remote-arc/actions/workflows/ci.yml/runs?head_sha=$ADMIN_SHA&per_page=30" \
+            --jq '.workflow_runs[] | select(.event == "push" and .conclusion == "success") | .head_sha' | grep -Fx "$ADMIN_SHA"
+      - uses: actions/checkout@v7
+        with:
+          repository: Remote-Arc/admin-remote-arc
+          ref: ${{ inputs.admin_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Test and build separately owned Admin
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm typecheck
+          pnpm test
+          pnpm test:policy
+          pnpm build
+      - name: Verify correct Cloudflare account and bootstrap without taking domain
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+          ADMIN_SHA: ${{ inputs.admin_sha }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID" \
+            | node --input-type=module -e '
+              let body="";for await(const part of process.stdin)body+=part;
+              const data=JSON.parse(body);
+              if(data.success!==true||data.result?.id!==process.env.CLOUDFLARE_ACCOUNT_ID)process.exit(1);
+            '
+          # No public routes are claimed: relay is still serving Admin until
+          # a separate reviewed and protected cutover.
+          pnpm exec wrangler deploy --config wrangler.jsonc --tag "bootstrap-${ADMIN_SHA:0:12}"
+          curl --fail-with-body --silent --show-error -o /dev/null \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/remote-arc-admin"

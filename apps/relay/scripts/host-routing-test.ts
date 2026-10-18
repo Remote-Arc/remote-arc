@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { dashboardSignInUrl, legacyDashboardRedirect, protocolOnlyPath, publicWebsiteRedirect } from "../src/host-routing.js";
+import { safeReturnTo, sessionCookie } from "../src/auth.js";
 
 const marketing = "https://remotearc.app";
 const app = "https://mcp.remotearc.app";
@@ -66,4 +67,11 @@ assert.equal(dashboardSignInUrl(route("/settings",dashboard), "POST", dashboard)
 assert.equal(dashboardSignInUrl(route("/oauth/consent",dashboard), "GET", dashboard), null);
 assert.equal(publicWebsiteRedirect(route("/docs",dashboard), "GET", marketing),
   marketing + "/docs");
-console.log("PASS: agent dashboard routing, legacy web redirects and unchanged MCP/OAuth/device boundary");
+const authEnv = { PUBLIC_ORIGIN: app, APP_ORIGIN: app, DASHBOARD_ORIGIN: dashboard,
+  MARKETING_ORIGIN: marketing } as Parameters<typeof safeReturnTo>[2];
+assert.equal(safeReturnTo(dashboard + "/settings", new Request(app + "/auth/login"), authEnv),
+  dashboard + "/settings", "MCP-side login may return to the new dashboard");
+assert.equal(safeReturnTo("https://attacker.invalid/", new Request(app + "/auth/login"), authEnv),
+  app + "/", "Cross-site redirects remain blocked");
+assert.match(sessionCookie("test-token"), /Domain=\.remotearc\.app/, "Sessions span first-party subdomains");
+console.log("PASS: agent dashboard routing, shared session, safe login return, legacy web redirects and unchanged MCP/OAuth/device boundary");

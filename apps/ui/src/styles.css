@@ -12801,3 +12801,21 @@ body{font-size:18px;line-height:1.6}
 .shellInstallAlternative { margin-top: 14px; min-width: 0; }
 .shellInstallAlternative summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .shellInstallAlternative .docsCodeLine { margin-top: 10px; overflow-x: auto; }
+
+/* User-first OAuth consent; exact scopes remain available under disclosure. */
+.consentGroupHeading { margin: 22px 0 12px; font-size: 15px; line-height: 1.4; font-weight: 650; }
+.consentCard > .consentAccount { margin-top: 13px; padding: 10px 12px; border-radius: 9px; background: var(--panel-2, #121519); font-size: 12px; overflow-wrap: anywhere; }
+.consentScopes > div { grid-template-columns: 32px minmax(0, 1fr); padding: 13px 14px; }
+.consentScopes i { width: 30px; height: 30px; font-size: 15px; background: rgba(56,189,248,.09); color: #38bdf8; }
+.consentScopes strong { font-size: 14px; line-height: 1.4; }
+.consentScopes small { font-size: 12px; line-height: 1.6; }
+.consentTechnical { margin-top: 17px; padding: 13px 15px; border: 1px solid var(--line, #28313a); border-radius: 10px; color: var(--dash-muted, #8595a5); font-size: 12px; }
+.consentTechnical summary { cursor: pointer; font-weight: 600; }
+.consentTechnical p { margin: 12px 0 6px; }
+.consentTechnical code { color: var(--text, #c8e7f1); font-size: 11px; overflow-wrap: anywhere; }
+.consentTechnical ul { margin: 8px 0; padding: 0; list-style: none; display: flex; gap: 6px; flex-wrap: wrap; }
+.consentTechnical li { padding: 4px 8px; border: 1px solid var(--line, #28313a); border-radius: 6px; }
+@media (max-width: 600px) {
+  .consentCard { margin-top: 25px; padding: 22px 18px; }
+  .consentCard h1 { font-size: 27px; }
+}

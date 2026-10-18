@@ -1,3 +1,4 @@
+import { summarizeConsentScopes } from "./oauth-consent-summary.js";
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
 import { InstallCommands } from "./install-commands.js";
 import { HomeConnectionScene } from "./home-connection-scene.js";
@@ -1568,6 +1569,7 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
   const params = new URLSearchParams(location.search);
   const scopes = (params.get("scope") || "").split(/\s+/).filter(Boolean);
   const clientId = params.get("client_id") || "MCP client";
+  const consentGroups = summarizeConsentScopes(scopes);
 
   async function continueAuthorization(mode: "allow" | "deny") {
     if (decisionBusy) return;
@@ -1623,43 +1625,33 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
     <main className="consentShell">
       <Brand compact />
       <section className="consentCard">
-        <div className="consentIcon">↗</div>
-        <span className="eyebrow">{tr("MCP AUTHORIZATION", "MCP 授权")}</span>
-        <h1>{tr("Allow this AI client to access Remote Arc?", "允许此 AI 客户端访问 Remote Arc？")}</h1>
-        <p>{tr("This client is requesting access to the computers linked to", "此客户端请求访问绑定到以下账户的设备：")} <strong>{user.email}</strong></p>
-        <div className="clientIdBox"><span>Client</span><code>{clientId}</code></div>
+        <div className="consentIcon" aria-hidden="true">↗</div>
+        <span className="eyebrow">{tr("SECURE CONNECTION", "安全连接")}</span>
+        <h1>{tr("Connect your AI assistant?", "连接你的 AI 助手？")}</h1>
+        <p>{tr("Your assistant can work with Remote Arc within the permissions shown below.", "连接后，AI 助手可以在以下授权范围内使用 Remote Arc。")}</p>
+        <p className="consentAccount">{tr("Your Remote Arc account", "你的 Remote Arc 账号")} · <strong>{user.email}</strong></p>
+        <h2 className="consentGroupHeading">{tr("What this enables", "连接后能做什么")}</h2>
         <div className="consentScopes">
-          {scopes.map((scope) => (
-            <div key={scope}>
-              <i>✓</i>
+          {consentGroups.map(group => (
+            <div key={group.key}>
+              <i aria-hidden="true">{group.icon}</i>
               <span>
-                <strong>{scope}</strong>
-                <small>
-                  {scope === "devices:read"
-                    ? tr("See linked computers and online state.", "查看已连接设备及在线状态。")
-                    : scope === "computer:read"
-                      ? tr("Read files, directories and process metadata.", "读取文件、目录与进程信息。")
-                      : scope === "computer:write"
-                        ? tr("Edit files and run commands on devices that allow it.", "在允许的设备上编辑文件并运行命令。")
-                        : scope === "offline_access"
-                          ? tr("Keep the connection signed in via refresh tokens. Device permissions remain in control.", "使用刷新令牌保持登录状态，设备权限仍独立生效。")
-                        : scope === "browser:read"
-                          ? tr("Read content from browser tabs you explicitly share.", "读取你明确共享的浏览器标签页内容。")
-                          : scope === "browser:interact"
-                            ? tr("Click or fill non-sensitive controls only on shared tabs where you separately enable interaction.", "仅在你对已共享标签页单独开启交互后，点击或填写非敏感控件。")
-                            : scope === "automation:read"
-                            ? tr("View persistent tasks, watches and their run state.", "查看持久任务、监听及其运行状态。")
-                            : scope === "automation:write"
-                              ? tr("Create and manage persistent tasks that can continue after this chat ends.", "创建和管理可在当前聊天结束后继续运行的持久任务。")
-                              : tr("Allow durable Agent Goals to inspect results, re-plan and choose new approved actions over time.", "允许 Durable Agent Goal 持续读取结果、重新规划，并在已授权范围内选择新的后续动作。")}
-                </small>
+                <strong>{tr(group.title, group.titleZh)}</strong>
+                <small>{tr(group.description, group.descriptionZh)}</small>
               </span>
             </div>
           ))}
         </div>
         <div className="consentNotice">
-          {tr("Local permission modes still apply. OAuth cannot enable a tool that the device did not advertise.", "本机权限模式始终生效。OAuth 无法启用设备未开放的工具。")}
+          {tr("Your device and connected-app permissions still apply. This connection does not automatically link new accounts or approve sensitive actions.", "设备及第三方应用的权限仍独立生效。连接 AI 不会自动授权新账号，也不会替你批准敏感操作。")}
         </div>
+        <details className="consentTechnical">
+          <summary>{tr("Technical permissions", "查看技术权限")}</summary>
+          <p>{tr("Client identifier (not a verified company identity)", "客户端标识（不代表已验证的企业身份）")}</p>
+          <code>{clientId}</code>
+          <p>{tr("Requested scopes", "请求的具体权限")}</p>
+          <ul>{scopes.map(scope => <li key={scope}><code>{scope}</code></li>)}</ul>
+        </details>
         {decisionError && <p className="errorText">{decisionError}</p>}
         <div className="consentActions">
           <button className="ghostButton" disabled={decisionBusy} onClick={() => void continueAuthorization("deny")}>{tr("Deny", "拒绝")}</button>

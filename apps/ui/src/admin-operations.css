@@ -1,0 +1,55 @@
+/* Admin-only operations console; intentionally shares Monitor palette and spacing. */
+.opsWrap{display:grid;gap:17px;margin:23px 0 28px;min-width:0}
+.opsHeadline{display:flex;align-items:end;justify-content:space-between;gap:20px}
+.opsHeadline h2{margin:5px 0 9px;font-size:clamp(23px,2vw,29px);letter-spacing:-.03em}
+.opsHeadline p,.opsToolbar p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
+.opsFresh{display:flex;align-items:center;gap:12px}
+.opsFresh small{color:var(--muted);font-size:12px}
+.opsStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.opsStats>div,.opsContent{background:var(--panel);border:1px solid var(--line);border-radius:15px}
+.opsStats>div{padding:16px 18px;display:flex;flex-direction:column;gap:7px}
+.opsStats span,.opsCostGrid span{font-size:12px;color:var(--muted)}
+.opsStats strong{font-size:27px;line-height:1.2;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.opsStats small{font-size:11px;color:var(--muted)}
+.opsTabs{display:flex;gap:5px;padding:5px;max-width:100%;overflow-x:auto;border-radius:12px;background:var(--surface,rgba(135,152,171,.07))}
+.opsTabs button{white-space:nowrap;border:0;border-radius:9px;padding:9px 16px;background:transparent;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer}
+.opsTabs button.active{color:var(--text);background:var(--panel);box-shadow:0 1px 6px rgba(0,0,0,.08)}
+.opsContent{padding:18px 0 12px;min-width:0}
+.opsToolbar{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:0 20px 17px}
+.opsToolbar h3,.opsUserDetail h3{margin:0 0 6px;font-size:19px}
+.opsToolbar input,.opsCreditForm input{min-height:40px;min-width:180px;width:min(310px,100%);padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);outline-offset:2px}
+.opsTableScroll{overflow:auto;max-width:100%}
+.opsTable{width:100%;min-width:670px;border-collapse:collapse;text-align:left;font-size:13px}
+.opsTable th{font-size:11px;letter-spacing:.02em;color:var(--muted);font-weight:700;background:rgba(137,151,170,.045);padding:11px 15px;white-space:nowrap}
+.opsTable td{padding:14px 15px;border-top:1px solid var(--line);vertical-align:middle}
+.opsTable td strong{display:block;font-weight:680}
+.opsTable td small{display:block;margin-top:3px;color:var(--muted);font-size:11px;word-break:break-word}
+.opsTable tr.selected{background:rgba(44,149,182,.08)}
+.opsTable button,.opsPages button{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 11px;cursor:pointer}
+.opsTable button:hover,.opsPages button:hover:not(:disabled){border-color:var(--sky-light)}
+.opsPages{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:15px 20px 5px;color:var(--muted);font-size:12px}
+.opsPages button:disabled{opacity:.35;cursor:default}
+.opsMeter{margin-top:7px;background:rgba(128,148,166,.16);height:5px;border-radius:6px;overflow:hidden;max-width:135px}
+.opsMeter i{display:block;height:100%;border-radius:6px;background:var(--sky-light);min-width:0}
+.opsOnline{color:#139e81;font-weight:750}
+.opsUserDetail{border-top:1px solid var(--line);margin:12px 20px 0;padding:20px 0 5px;display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,1fr);gap:20px}
+.opsUserDetail p{font-size:12px;color:var(--muted);margin:8px 0}
+.opsCreditForm{display:grid;gap:10px;align-items:start}
+.opsCreditForm label{display:grid;gap:6px;font-size:12px;font-weight:650}
+.opsCreditForm input{width:100%}
+.opsCreditForm button{max-width:225px;padding:11px 14px;border:0;border-radius:9px;background:#207fa6;color:white;font-size:13px;font-weight:700;cursor:pointer}
+.opsCreditForm button:disabled{opacity:.5;cursor:default}
+.opsCreditForm small,.opsHelp{font-size:12px;color:var(--muted);line-height:1.6}
+.opsHelp{padding:0 20px}
+.opsNotice{color:#b94d40;font-size:12px;border:1px solid rgba(197,79,53,.24);border-radius:10px;padding:10px 13px}
+.opsChart{height:195px;display:flex;align-items:flex-end;gap:3px;padding:15px 19px 32px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.opsChartBar{height:100%;min-width:0;flex:1;display:flex;justify-content:flex-end;flex-direction:column;position:relative}
+.opsChartBar>div{width:100%;min-height:2px;border-radius:3px 3px 0 0;background:linear-gradient(180deg,#36b5ca,#207da6)}
+.opsChartBar small{position:absolute;bottom:-24px;left:0;color:var(--muted);font-size:10px}
+.opsCostGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 20px 20px}
+.opsCostGrid>div{display:grid;gap:10px;padding:17px;border-radius:12px;border:1px solid var(--line)}
+.opsCostGrid strong{font-size:18px;line-height:1.35;overflow-wrap:anywhere}
+.opsCostGrid small{color:var(--muted);font-size:12px;line-height:1.5}
+.opsBillingLink{display:inline-flex;margin:0 20px 8px;color:var(--sky-light);font-weight:700;text-decoration:none;font-size:13px}
+@media(max-width:1000px){.opsStats{grid-template-columns:repeat(2,minmax(0,1fr))}.opsCostGrid{grid-template-columns:1fr}.opsUserDetail{grid-template-columns:1fr}}
+@media(max-width:600px){.opsHeadline,.opsToolbar{flex-direction:column;align-items:flex-start}.opsToolbar input{width:100%}.opsFresh{width:100%;justify-content:space-between}.opsStats{gap:8px}.opsStats>div{padding:13px}.opsStats strong{font-size:23px}.opsTabs button{padding:9px 12px}.opsTable td{padding:12px}.opsUserDetail{margin:10px 16px 0}}

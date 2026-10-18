@@ -412,7 +412,8 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 		workers.Add(1)
 		go func(call protocol.Call) {
 			defer workers.Done()
-			defer func() { <-slots }()
+			releaseSlot := sync.OnceFunc(func() { <-slots })
+			defer releaseSlot()
 			started := time.Now()
 			a.log("event", "tool.call "+call.Tool+" · "+call.ID)
 			result, err := a.dispatch(ctx, call, awake)
@@ -424,6 +425,10 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 				response["result"] = result
 				a.log("success", fmt.Sprintf("tool.done %s · %s · %dms", call.Tool, call.ID, time.Since(started).Milliseconds()))
 			}
+			// A completed call must free capacity BEFORE its result allows the
+			// client to submit the next full batch. Otherwise back-to-back batches
+			// of 32 calls can spuriously hit the 32-worker admission limit.
+			releaseSlot()
 			if send(response) != nil {
 				cancel()
 			}

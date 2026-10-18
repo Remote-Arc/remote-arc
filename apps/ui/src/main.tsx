@@ -506,7 +506,7 @@ function PublicHeader({ user }: { user?: User | null }) {
         <Brand />
         <button type="button" className="publicMobileMenu" aria-label={tr('Open navigation','打开导航')} aria-expanded={mobileOpen} aria-controls="public-navigation" onClick={()=>setMobileOpen(!mobileOpen)}><ProductIcon name={mobileOpen?'close':'menu'}/></button>
         <nav ref={navRef} id="public-navigation" className="publicNavLinks" data-expanded={mobileOpen} aria-label={tr('Main navigation','主导航')}>
-          <div className="publicNavMenu" data-open={openMenu==='mcp'} onMouseEnter={()=>setOpenMenu('mcp')} onMouseLeave={()=>setOpenMenu(null)}>
+          <div className="publicNavMenu" data-open={openMenu==='mcp'}>
             <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu==='mcp'} aria-controls="public-nav-product" onClick={()=>setOpenMenu(openMenu==='mcp'?null:'mcp')}>{tr('Product','产品')} {arrow}</button>
             <div id="public-nav-product" className="publicNavDropdown productDropdown">
               <section className="publicNavGroup">
@@ -521,10 +521,10 @@ function PublicHeader({ user }: { user?: User | null }) {
           <a href={navHref('/use-cases')}>{tr('Use cases','使用场景')}</a>
           <a href={navHref('/integrations')}>{tr('Apps','应用')}</a>
           <a href={navHref('/pricing')}>{tr('Pricing','价格')}</a>
-          <div className="publicNavMenu" data-open={openMenu==='resources'} onMouseEnter={()=>setOpenMenu('resources')} onMouseLeave={()=>setOpenMenu(null)}>
+          <div className="publicNavMenu" data-open={openMenu==='resources'}>
             <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu==='resources'} aria-controls="public-nav-resources" onClick={()=>setOpenMenu(openMenu==='resources'?null:'resources')}>{tr('Resources','资源')} {arrow}</button>
             <div id="public-nav-resources" className="publicNavDropdown resourceDropdown"><div className="publicNavDropdownColumns">
-              <section className="publicNavGroup"><span className="publicNavGroupLabel">{tr('GET STARTED','开始使用')}</span><a href={navHref('/docs')}><strong>{tr('Documentation','文档')}</strong><small>{tr('Connections, tools and product guides','连接、工具与产品指南')}</small></a><a href={navHref('/downloads')}><strong>{tr('Downloads','下载')}</strong><small>Windows · macOS · Linux</small></a><a href={navHref('/security-model')}><strong>{tr('Security','安全')}</strong><small>{tr('Your devices, your rules','自己的设备，自己的规则')}</small></a></section>
+              <section className="publicNavGroup"><span className="publicNavGroupLabel">{tr('GET STARTED','开始使用')}</span><a href={navHref('/docs')}><strong>{tr('Documentation','文档')}</strong><small>{tr('Connections, tools and product guides','连接、工具与产品指南')}</small></a><a href={navHref('/downloads')}><strong>{tr('Downloads','下载')}</strong><small>Windows · macOS · Linux</small></a><a href={navHref('/chrome-extension')}><strong>{tr('Browser extension','浏览器扩展')}</strong><small>{tr('Share selected browser context','共享选定的浏览器上下文')}</small></a><a href={navHref('/security-model')}><strong>{tr('Security','安全')}</strong><small>{tr('Your devices, your rules','自己的设备，自己的规则')}</small></a></section>
               <section className="publicNavGroup"><span className="publicNavGroupLabel">{tr('FOLLOW ALONG','关注进展')}</span><a href={navHref('/blogs')}><strong>{tr('Blog','博客')}</strong><small>{tr('Ideas from the team','团队思考与分享')}</small></a><a href={navHref('/releases')}><strong>{tr('Changelog','更新日志')}</strong><small>{tr('What shipped recently','近期产品更新')}</small></a><a href={navHref('/roadmap')}><strong>{tr('Roadmap','路线图')}</strong><small>{tr('What we are building next','我们正在打造什么')}</small></a></section>
             </div></div>
           </div>
@@ -5252,8 +5252,8 @@ function Dashboard({
                     {device.status === "offline" && <p className="deviceOfflineHint">{tr("Tasks wait until this computer reconnects. Remote Arc cannot power it on.", "任务会等待这台电脑重新连接，Remote Arc 无法远程开机。")}</p>}
                     <div id={"device-management-" + device.id} hidden={managedDeviceId !== device.id} className="deviceManagementPanel">
                       {managedDeviceId === device.id && <>
-                        <div className="deviceManagementTabs" role="group" aria-label={tr("Device settings", "设备设置")}>
-                          {([ ["access", tr("Access & files", "权限与文件")], ["tasks", tr("Background & tasks", "后台与任务")], ["activity", tr("Activity & details", "活动与详情")] ] as const).map(([panel, label]) => <button key={panel} aria-pressed={devicePanel === panel} className={devicePanel === panel ? "active" : ""} onClick={() => {
+                        <div className="deviceManagementTabs" role="tablist" aria-label={tr("Device settings", "设备设置")}>
+                          {([ ["access", tr("Access & files", "权限与文件")], ["tasks", tr("Background & tasks", "后台与任务")], ["activity", tr("Activity & details", "活动与详情")] ] as const).map(([panel, label]) => <button key={panel} type="button" role="tab" id={"device-tab-"+device.id+"-"+panel} aria-controls={"device-panel-"+device.id+"-"+panel} aria-selected={devicePanel === panel} tabIndex={devicePanel===panel?0:-1} className={devicePanel === panel ? "active" : ""} onKeyDown={event=>{const tabs=Array.from(event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('[role=tab]'));const index=tabs.indexOf(event.currentTarget);const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index+tabs.length-1)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:null;if(next!==null){event.preventDefault();tabs[next]?.focus();tabs[next]?.click();}}} onClick={() => {
                             setDevicePanel(panel);
                             if (
                               panel === "activity" &&
@@ -5265,7 +5265,7 @@ function Dashboard({
                             }
                           }}>{label}</button>)}
                         </div>
-                        <section aria-label={tr("Access and files", "权限与文件")} hidden={devicePanel !== "access"}>
+                        <section role="tabpanel" id={"device-panel-"+device.id+"-access"} aria-labelledby={"device-tab-"+device.id+"-access"} aria-label={tr("Access and files", "权限与文件")} hidden={devicePanel !== "access"}>
                     <div className="deviceAccessSummary">
                       <div>
                         <span className="eyebrow">{tr("MCP ACCESS", "MCP 权限")}</span>
@@ -5299,7 +5299,7 @@ function Dashboard({
                     </div>
 
                     <details className="deviceToolDetails">
-                      <summary>{tr("Manage individual skills", "逐项管理技能")}<span>{enabledTools.length} / {allTools.length}</span></summary>
+                      <summary><span className="deviceDisclosureTitle"><ProductIcon name="settings" size={16}/>{tr("Manage individual skills", "逐项管理技能")}</span><span>{enabledTools.length} / {allTools.length}<ProductIcon name="chevron" size={14}/></span></summary>
                       <div className="toolToggleGrid">
                         {allTools.map((tool) => {
                           const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
@@ -5335,7 +5335,7 @@ function Dashboard({
 
                     <details className="deviceSafetyDetails">
                       <summary>
-                        {tr("File boundaries & recovery", "文件边界与恢复")}
+                        <span className="deviceDisclosureTitle"><ProductIcon name="shield" size={16}/>{tr("File boundaries & recovery", "文件边界与恢复")}</span>
                         <span>
                           {(device.protect_sensitive_paths ?? true)
                             ? tr("Sensitive paths protected", "敏感路径已保护")
@@ -5343,7 +5343,7 @@ function Dashboard({
                           {" · "}
                           {(device.workspace_roots || []).length
                             ? (device.workspace_roots || []).length + " " + tr("workspaces", "个工作区")
-                            : tr("read-only until scoped", "未设范围时仅只读")}
+                            : tr("read-only until scoped", "未设范围时仅只读")}<ProductIcon name="chevron" size={14}/>
                         </span>
                       </summary>
 
@@ -5616,7 +5616,7 @@ function Dashboard({
                     </details>
 
                         </section>
-                        <section aria-label={tr("Background and tasks", "后台与任务")} hidden={devicePanel !== "tasks"}>
+                        <section role="tabpanel" id={"device-panel-"+device.id+"-tasks"} aria-labelledby={"device-tab-"+device.id+"-tasks"} aria-label={tr("Background and tasks", "后台与任务")} hidden={devicePanel !== "tasks"}>
                     {updateAvailable && (
                       <div className="deviceBackgroundRow deviceUpdateRow">
                         <div>
@@ -5728,7 +5728,7 @@ function Dashboard({
 
                     <details className="deviceTaskSettings" open>
                       <summary>{tr("Task permissions", "任务权限")}<span>{Object.values(device.automation_permissions || legacyTaskPermissions).filter(Boolean).length} / 5 {tr("enabled", "已开启")}</span></summary>
-                      <p>{tr("Choose which background capabilities this computer allows. Turning a permission off stops affected tasks. Choose a task mode when creating each task.", "选择这台电脑允许使用的后台能力。关闭权限会停止相关任务；每个任务的模式在创建任务时选择。")}</p>
+                      <p>{tr("Choose which background capabilities this computer allows. Describe tasks and routines in Arc Chat or your connected AI. Turning a permission off stops affected work.", "选择这台电脑允许使用的后台能力。在 Arc Chat 或已连接的 AI 中描述任务和例行工作即可；关闭权限会停止相关工作。")}</p>
                       {([
                         ["background_tasks", tr("Background tasks", "后台任务")],
                         ["scheduled_tasks", tr("Scheduled tasks", "定时任务")],
@@ -5752,7 +5752,7 @@ function Dashboard({
                     </details>
 
                         </section>
-                        <section aria-label={tr("Activity and details", "活动与详情")} hidden={devicePanel !== "activity"}>
+                        <section role="tabpanel" id={"device-panel-"+device.id+"-activity"} aria-labelledby={"device-tab-"+device.id+"-activity"} aria-label={tr("Activity and details", "活动与详情")} hidden={devicePanel !== "activity"}>
                           <div className="deviceTechnicalIdentity"><span>{tr("Device ID", "设备 ID")} <code>{device.id}</code></span><span>{tr("Architecture", "架构")} <code>{device.arch || "—"}</code></span></div>
 
                     <div className="deviceExecutionLogPanel">

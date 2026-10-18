@@ -28,7 +28,7 @@ assert.ok(!installGuide.includes("remote-arc-browser.zip"), "AI client setup gui
 const chromeSection = mcpDocs.slice(mcpDocs.indexOf('<section id="chrome-browser">'));
 assert.ok(chromeSection.includes("/chrome-extension"), "old MCP reference should link to dedicated download page");
 assert.ok(!chromeSection.includes("chromeCompanionDownload"), "download card must not be buried within MCP reference");
-assert.match(source, /href="\/chrome-extension"/, "Chrome Browser navigation must open a dedicated page, not scroll a guide");
+assert.match(source, /href=\{navHref\(['"]\/chrome-extension['"]\)\}/, "Chrome Browser navigation must open its localized dedicated page, not scroll a guide");
 const chromePage = readFileSync(new URL("../src/chrome-extension-page.tsx", import.meta.url), "utf8");
 assert.match(chromePage, /chromeDownloadHero/, "standalone Chrome extension page needs a top download card");
 assert.match(chromePage, /remote-arc-browser.zip\?v=/, "versioned download belongs in top hero card");

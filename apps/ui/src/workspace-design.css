@@ -158,3 +158,36 @@
 :root[data-theme] .appFrame[data-workspace] .sideNav button .sideNavLabel{color:inherit!important}
 :root[data-theme] .appFrame[data-workspace] .raSettings .languageSetting{background:var(--dash-subtle)!important}
 :root[data-theme] .appFrame[data-workspace] .statusCardActions button{background:var(--dash-subtle)!important;border-color:var(--dash-line)!important;color:var(--dash-muted)!important}
+
+/* Shared chrome and legacy connection views use the same graphite surfaces. */
+:root[data-theme] .appFrame[data-workspace] :is(.sidebarAccount span,.sidebarAccount button,.workspacePickerCopy small,.dashboardFooter a){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewDeviceRow,.securityDeviceRow) :is(.deviceIcon,strong){color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewDeviceRow,.securityDeviceRow) :is(span,small,.overviewDeviceMeta){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewDeviceRow,.securityDeviceRow) .badge{background:var(--dash-subtle)!important;border-color:var(--dash-line)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewDeviceRow,.securityDeviceRow) .badge.online i{background:#3c9d7c!important}
+:root[data-theme] .appFrame[data-workspace] .attentionIcon.idle{background:var(--dash-subtle)!important;color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.connectEndpointPanel,.connectHealthPanel,.connectClientCard,.connectClientCard.primary,.connectGuide,.connectTryPanel){background:var(--dash-surface)!important;border-color:var(--dash-line)!important;box-shadow:none!important;color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.connectEndpointBox,.connectSecurityBadge,.clientState,.timelineNumber,.protocolMark.large){background:var(--dash-subtle)!important;border-color:var(--dash-line)!important;color:var(--dash-text)!important;box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] :is(.connectEndpointPanel,.connectHealthPanel,.connectClientCard,.connectGuide,.connectTryPanel) :is(strong,code,.connectAgentAction,.connectAgentAction span,.connectAgentAction b){color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.connectEndpointPanel,.connectHealthPanel,.connectClientCard,.connectGuide,.connectTryPanel) :is(p,small,.connectClientIdentity span,.healthList span){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .connectAgentAction{border-color:var(--dash-line)!important}
+:root[data-theme] .appFrame[data-workspace] .connectTryPanel code{background:var(--dash-subtle)!important;border-color:var(--dash-line)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.securityStatusCard,.securityEmptyState,.aiAuthClient){background:var(--dash-surface)!important;border-color:var(--dash-line)!important;box-shadow:none!important;color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .securityStatusCard :is(div,span,small){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.securityStatusCard,.aiAuthClient) strong{color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.securityMiniState,.securityGrantIcon){background:var(--dash-subtle)!important;border-color:var(--dash-line)!important;color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.aiAuthExplain,.aiAuthActivity,.aiAuthExpand,.aiAuthClient small){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .aiAuthSummary span{color:var(--dash-muted)!important;border-color:var(--dash-line)!important}
+:root[data-theme] .appFrame[data-workspace] .helpTip{background:var(--dash-surface)!important;border-color:var(--dash-line)!important;color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .helpTipBubble{background:var(--dash-surface)!important;border-color:var(--dash-line)!important;color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.aiAuthStats span,.aiAuthStats i,.securityAuditRow span,.securityFlow small,.privacyBoundaryGrid small){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.aiAuthStats strong,.securityFlow strong,.privacyBoundaryGrid strong){color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.securityFlow>div,.privacyBoundaryGrid>div){border-color:var(--dash-line)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.securityFlow>div>span,.privacyBoundaryGrid .notKept>span){background:var(--dash-subtle)!important;color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .securityFlow>i{color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.activityItem strong,.securityEmptyState strong){color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] :is(.activityItem span,.arcWorkRun small,.securityEmptyState span,.connectHealthRow span,.connectHealthRow i,.connectSectionHeading p){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .connectTryPanel .connectPromptGrid code{color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-workspace] .aiAuthStats>span{border-color:var(--dash-line)!important}
+:root[data-theme] .appFrame[data-workspace] .connectTryPanel .connectPromptGrid code::before{color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-workspace] .securityAuditRow strong{color:var(--dash-text)!important}

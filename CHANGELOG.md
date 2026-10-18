@@ -2,6 +2,15 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.6.2 - Unreleased
+
+### Device Fleet resource-aware scheduling (release candidate)
+
+- Publish bounded CPU utilization and available-memory telemetry from the Go and TypeScript device runtimes over their existing authenticated connection. Ignore stale measurements and never transfer process lists or file content as telemetry.
+- Make account-level fleet placement aware of host pressure, Windows/WSL shared hardware, and device connection stability, while keeping tool permissions, Trusted Write Locations, and explicit OS requirements as hard constraints.
+- Introduce immutable GitHub-commit workspace materialization on a selected fleet node, isolated to an approved directory and verified through a managed process; do not silently copy uncommitted changes or migrate an active task.
+- Keep this release candidate separate from the already published 0.6.1 binaries and Homebrew checksums.
+
 ## 0.6.1 - 2026-10-11
 
 ### Native pause, resume and recovery fixes

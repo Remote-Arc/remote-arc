@@ -12819,3 +12819,16 @@ body{font-size:18px;line-height:1.6}
   .consentCard { margin-top: 25px; padding: 22px 18px; }
   .consentCard h1 { font-size: 27px; }
 }
+
+
+/* Direct, crawlable homepage links to canonical product sections. */
+.landingQuickLinks { margin: 24px 0 58px; }
+.landingQuickLinks h2 { margin: 0 0 18px; font-size: 22px; line-height: 1.3; letter-spacing: -.025em; color: var(--text); }
+.landingQuickLinksGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.landingQuickLinksGrid a { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; min-height: 90px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); transition: border-color .18s ease, transform .18s ease; }
+.landingQuickLinksGrid a:hover,.landingQuickLinksGrid a:focus-visible { border-color: var(--accent); transform: translateY(-2px); }
+.landingQuickLinksGrid strong { font-size: 16px; line-height: 1.35; color: var(--text); }
+.landingQuickLinksGrid strong span { font-weight: 400; opacity: .6; }
+.landingQuickLinksGrid a > span { font-size: 14px; line-height: 1.5; color: var(--muted); }
+@media (max-width: 850px) { .landingQuickLinksGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 540px) { .landingQuickLinksGrid { grid-template-columns: 1fr; } .landingQuickLinksGrid a { min-height: 76px; } }

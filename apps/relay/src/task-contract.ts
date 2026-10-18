@@ -5,6 +5,7 @@ export type TaskContract = {
   intent: "goal" | "command";
   name?: string;
   device_id?: string;
+  platform?: "win32" | "darwin" | "linux";
   trigger: { type: "now" | "at" | "interval" | "event"; at?: string; every_seconds?: number;
     source?: "github" | "generic"; event?: string; match?: Record<string, string | number | boolean | null> };
   goal?: NonNullable<CreateAutomationInput["agent_goal"]>;
@@ -57,7 +58,7 @@ export function normalizeTaskContract(task: TaskContract): CreateAutomationInput
     : ["at", "interval"].includes(task.trigger.type) ? "schedule_watch"
     : task.command?.verification ? "goal_loop" : "long_task";
   return {
-    name: task.name, kind, device_id: task.device_id,
+    name: task.name, kind, device_id: task.device_id, platform: task.platform,
     ...(task.intent === "goal" ? { agent_goal: goal } : {
       ...(task.command ? { command: task.command.text, cwd: task.command.cwd } : {}),
       ...(task.github_merge ? { github_merge: task.github_merge } : {}),

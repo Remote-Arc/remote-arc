@@ -1,7 +1,7 @@
 export type DashboardWorkspace = "connect" | "agent";
 
 export type DashboardTab =
-  | "overview" | "devices" | "automations" | "apps" | "connect" | "security" | "monitor" | "settings"
+  | "overview" | "devices" | "automations" | "apps" | "connect" | "security" | "settings"
   | "agent-chat" | "agent-goals" | "agent-routines" | "agent-skills" | "agent-activity" | "agent-settings";
 
 // Canonical dashboard URLs are namespaced. Legacy deep links remain usable.
@@ -12,7 +12,6 @@ export const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   apps: "/dashboard/connect/apps",
   connect: "/dashboard/connect/clients",
   security: "/dashboard/connect/security",
-  monitor: "/dashboard/connect/monitor",
   settings: "/dashboard/connect/settings",
   "agent-chat": "/dashboard/agent/chat",
   "agent-goals": "/dashboard/agent/goals",
@@ -32,7 +31,6 @@ export const LEGACY_DASHBOARD_PATHS: Record<string, DashboardTab> = {
   "/apps": "apps",
   "/connect": "connect",
   "/security": "security",
-  "/monitor": "monitor",
   "/settings": "settings",
 };
 

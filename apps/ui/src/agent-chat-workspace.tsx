@@ -89,7 +89,7 @@ export function AgentChatWorkspace({ tr, onlineDevices, goals = [], recentGoals 
               <textarea ref={editor} id="arc-request" value={prompt} onKeyDown={onComposerKeyDown} onChange={(e) => setPrompt(e.target.value)} maxLength={6000} rows={3} placeholder={tr("Ask Arc to work on something…", "告诉 Arc 你想完成的工作…")}/>
               <div className="arcComposerToolbar">
                 <div className="arcComposerContext">
-                  <button type="button" onClick={onManageDevices} title={tr("Manage devices in Connect", "前往 Connect 管理设备")}><span className={"arcPresence " + (onlineDevices ? "online" : "")}/>{onlineDevices} {tr("devices", "台设备")}</button>
+                  <button type="button" onClick={onManageDevices} title={tr("Manage devices in Connect", "前往 Connect 管理设备")}><span className={"arcPresence " + (onlineDevices ? "online" : "")}/>{onlineDevices} {onlineDevices === 1 ? tr("device", "台设备") : tr("devices", "台设备")}</button>
                   <span className="arcContextSeparator"/>
                   <button type="button" onClick={onManageApps}>{tr("Connected Apps", "已连接 Apps")} <span aria-hidden="true">↗</span></button>
                 </div>

@@ -197,10 +197,9 @@ function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect
     <header><AppIcon brand={app.brand} /><div><h2>{app.name}</h2><span>{appCategory ? tr(appCategory.name, appCategory.nameZh) : tr("Integration", "应用集成")}</span></div><span className={"appsManagerCardStatus" + (connections.some(connection => connection.status === "active") ? " connected" : "")}>{connections.some(connection => connection.status === "active") ? tr("Connected", "已连接") : app.configured ? tr("Available", "可连接") : tr("Coming soon", "即将支持")}</span></header>
 
 
-    {(app.connectionNote || app.billingNote) && <details className="appsManagerProviderNotes">
-      <summary>{tr("Before connecting", "连接前须知")}</summary>
-      {app.connectionNote && <p>{app.connectionNote}</p>}
-      {app.billingNote && <p>{app.billingNote}</p>}
+    {app.billingNote && <details className="appsManagerProviderNotes">
+      <summary>{tr("Billing details", "费用说明")}</summary>
+      <p>{app.billingNote}</p>
     </details>}
     {app.provider === "runway" && <a className="appsRunwayAttribution" href="https://runwayml.com" target="_blank" rel="noreferrer"><img src="/app-brands/runwayattribution.svg" alt="Powered by Runway" /></a>}
     {connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onSave={onSave} onDisconnect={onDisconnect} />)}

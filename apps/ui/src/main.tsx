@@ -4,6 +4,7 @@ import { InstallCommands } from "./install-commands.js";
 import { HomeConnectionScene } from "./home-connection-scene.js";
 import { AppsManager } from "./apps-manager.js";
 import { AgentChatWorkspace } from "./agent-chat-workspace.js";
+import { WorkspacePicker } from "./workspace-picker.js";
 import {
   DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab,
   isVisibleInWorkspace, isAgentGoalAutomation,
@@ -32,6 +33,7 @@ import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery
 import "./styles.css";
 import "./dashboard.css";
 import "./laptop-hero.css";
+import "./dashboard-premium.css";
 
 declare const __REMOTEARC_CLI_VERSION__: string;
 
@@ -3687,19 +3689,6 @@ function Dashboard({
   const [dialogValue, setDialogValue] = useState("");
   const dialogResolver = useRef<((value: boolean | string | null) => void) | null>(null);
   const [active, setActive] = useState<DashboardTab>(dashboardTabFromPath(location.pathname));
-  const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
-  useEffect(() => {
-    if (!workspacePickerOpen) return;
-    const closeOutside = (event: PointerEvent) => {
-      if (!(event.target as Element).closest(".dashboardWorkspacePicker")) setWorkspacePickerOpen(false);
-    };
-    const closeEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setWorkspacePickerOpen(false);
-    };
-    document.addEventListener("pointerdown", closeOutside);
-    document.addEventListener("keydown", closeEscape);
-    return () => { document.removeEventListener("pointerdown", closeOutside); document.removeEventListener("keydown", closeEscape); };
-  }, [workspacePickerOpen]);
   useEffect(() => {
     const syncRoute = () => setActive(dashboardTabFromPath(location.pathname));
     window.addEventListener("popstate", syncRoute);
@@ -4899,7 +4888,6 @@ function Dashboard({
   function navigateTab(tab: DashboardTab) {
     const path = DASHBOARD_PATHS[tab];
     if (location.pathname !== path) history.pushState({}, "", path);
-    setWorkspacePickerOpen(false);
     if (workspaceForTab(active) !== workspaceForTab(tab)) setShowAutomationCreate(false);
     setActive(tab);
   }
@@ -5047,21 +5035,7 @@ function Dashboard({
     ["connect", tr("MCP Clients", "MCP 客户端")],
   ];
   const renderWorkspacePicker = (mobile = false) => (
-    <div className={"dashboardWorkspacePicker" + (mobile ? " mobilePicker" : "")}>
-      <button type="button" className="workspacePickerTrigger" aria-label={tr("Switch workspace", "切换工作空间")} aria-expanded={workspacePickerOpen} aria-haspopup="true" onClick={() => setWorkspacePickerOpen((value) => !value)}>
-        <span className={"workspacePickerEmblem " + workspace} aria-hidden="true">{workspace === "connect" ? "⌘" : "✳"}</span>
-        <span className="workspacePickerCopy"><small>{tr("WORKSPACE", "工作空间")}</small><strong>{workspace === "connect" ? "Connect" : "Arc Agent"}</strong></span>
-        <span className="workspacePickerChevron" aria-hidden="true">⌄</span>
-      </button>
-      {workspacePickerOpen && <div className="workspacePickerMenu" role="group" aria-label={tr("Choose workspace", "选择工作空间")}>
-        <button type="button" className={workspace === "connect" ? "selected" : ""} onClick={() => navigateTab("overview")}>
-          <span className="workspaceOptionIcon" aria-hidden="true">⌘</span><span><strong>Connect</strong><small>{tr("Devices, Apps & MCP", "设备、Apps 和 MCP")}</small></span><span className="workspaceOptionCheck" aria-hidden="true">{workspace === "connect" ? "✓" : "↗"}</span>
-        </button>
-        <button type="button" className={workspace === "agent" ? "selected" : ""} onClick={() => navigateTab("agent-chat")}>
-          <span className="workspaceOptionIcon" aria-hidden="true">✳</span><span><strong>Arc Agent</strong><small>{tr("Goals & ongoing work", "目标与持续工作")}</small></span><span className="workspaceOptionCheck" aria-hidden="true">{workspace === "agent" ? "✓" : "↗"}</span>
-        </button>
-      </div>}
-    </div>
+    <WorkspacePicker workspace={workspace} mobile={mobile} tr={tr} onNavigate={navigateTab} />
   );
 
   return (

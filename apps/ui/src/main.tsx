@@ -6831,7 +6831,7 @@ function Dashboard({
         {navItems.map(([id, label]) => (
           <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
             <span aria-hidden="true"><DashboardNavIcon tab={id} /></span>
-            <small>{label}</small>
+            <small>{id === "overview" ? tr("Home", "首页") : id === "connect" ? tr("Clients", "客户端") : id === "agent-chat" ? tr("Home", "首页") : label}</small>
           </button>
         ))}
         <button data-dashboard-tab="settings" aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined} className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab("settings")}><span aria-hidden="true"><DashboardNavIcon tab="settings"/></span><small>{tr("Settings", "设置")}</small></button>

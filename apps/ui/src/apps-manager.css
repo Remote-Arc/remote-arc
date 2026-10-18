@@ -209,17 +209,163 @@
  .appsToolsList { border-right:0; border-bottom:1px solid var(--dash-line,var(--line)); padding:12px 16px; }
  .appsToolsDetail { padding:20px 17px; }
 }
-.appsManagerMcpTools { border: 1px solid var(--dash-line, var(--line)); border-radius: 14px; background: var(--dash-surface, var(--panel)); padding: 20px 24px; margin-bottom: 24px; }
-.appsManagerMcpTools h2 { margin: 0 0 8px; font-size: 17px; line-height: 1.4; }
-.appsManagerMcpTools p { margin: 0; color: var(--dash-muted, var(--muted)); font-size: 12px; line-height: 1.65; }
-.appsManagerMcpToolList { display: grid; gap: 8px; margin: 16px 0; }
-.appsManagerMcpToolList > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
-.appsManagerMcpToolList code { font-size: 12px; font-weight: 650; color: var(--dash-text, var(--text)); }
-.appsManagerMcpToolList span { font-size: 12px; line-height: 1.5; color: var(--dash-muted, var(--muted)); }
-.appsManagerMcpToolsHint { padding-top: 12px; border-top: 1px solid var(--dash-line, var(--line)); }
+/* Light-first app directory: clean catalog, quiet borders, primary connect actions. */
+:root[data-theme="light"] .appFrame {
+  --dash-text:#182234;
+  --dash-muted:#66758a;
+  --dash-line:#e1e7ee;
+  --dash-surface:#ffffff;
+  --dash-subtle:#f5f8fb;
+  --dash-accent:#1677ac;
+  background:#f8fafc;
+  color:var(--dash-text);
+}
+:root[data-theme="light"] .appFrame .sidebar {
+  background:#ffffff;
+  border-right:1px solid var(--dash-line);
+  backdrop-filter:none;
+}
+:root[data-theme="light"] .appFrame .sidebarAccount,
+:root[data-theme="light"] .appFrame .sideNav button {
+  color:var(--dash-muted);
+}
+:root[data-theme="light"] .appFrame .workspacePickerTrigger,
+:root[data-theme="light"] .appFrame .workspacePickerMenu,
+:root[data-theme="light"] .appFrame .appsManagerCard,
+:root[data-theme="light"] .appFrame .appsManagerSummary {
+  box-shadow:0 1px 3px rgba(30,54,78,.025);
+}
+:root[data-theme="light"] .appFrame .workspacePickerTrigger {
+  background:#f8fafc;
+}
+:root[data-theme="light"] .appFrame .sideNav button.active,
+:root[data-theme="light"] .appFrame .sidebarGlobalNavigation button.active {
+  color:#11618e;
+  background:#ebf5fc;
+}
+:root[data-theme="light"] .appFrame .previewModeBanner {
+  background:#eff7ff;
+  color:#345d78;
+  border-color:#d4e7fa;
+}
+:root[data-theme="light"] .appFrame .sidebarBrand .brandWords,
+:root[data-theme="light"] .appFrame .sidebarBrand .brandWords b {
+  color:#202e3d;
+}
 
-.appsManagerMcpTools .appsManagerSetupLink { display: inline-flex; align-items: center; margin-top: 15px; padding: 10px 14px; border-radius: 9px; background: #087394; color: #fff; text-decoration: none; font-size: 13px; font-weight: 650; }
-.appsManagerMcpTools .appsManagerSetupLink:hover { background: #075f7c; }
-.appsManagerMcpDetails { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--dash-line, var(--line)); font-size: 12px; }
-.appsManagerMcpDetails > summary { cursor: pointer; }
-.appsManagerMcpDetails .appsManagerMcpToolList { margin-bottom: 0; }
+/* Composio-style directory: simple control plane rather than a technical manual. */
+.appsManagerHeader { border:0; margin-bottom:15px; padding-bottom:8px; align-items:center; }
+.appsManagerHeader h1 { font-size:clamp(29px,3vw,36px); margin:7px 0 7px; font-weight:710; letter-spacing:-.035em; }
+.appsManagerHeader p { font-size:15px; max-width:650px; }
+.appsManagerHeader > button { margin-top:8px; min-height:40px; padding-inline:16px; }
+.appsManagerSummary {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0;
+  padding:0;
+  margin:22px 0 37px;
+  overflow:hidden;
+  border-radius:14px;
+  background:var(--dash-surface);
+}
+.appsManagerSummary > .appsManagerSummaryMetric,
+.appsManagerSummary > .appsManagerReviewMetric {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:6px;
+  text-decoration:none;
+  min-height:98px;
+  border-right:1px solid var(--dash-line);
+  padding:18px 25px;
+}
+.appsManagerSummary > :last-child {border-right:0;}
+.appsManagerSummary strong {font-size:27px;font-weight:720;letter-spacing:-.04em;line-height:1;}
+.appsManagerSummary .appsManagerSummaryMetric span,
+.appsManagerSummary .appsManagerReviewMetric span {font-size:13px;color:var(--dash-muted);font-weight:520;}
+.appsManagerSummary .appsManagerReviewMetric {position:relative;color:var(--dash-text);}
+.appsManagerSummary .appsManagerReviewMetric span:last-child {position:absolute;right:20px;top:22px;font-size:17px;color:var(--dash-accent);}
+.appsManagerSummary .appsManagerReviewMetric:hover {background:var(--dash-subtle);}
+.appsCatalogTop {display:flex;align-items:end;justify-content:space-between;gap:15px;margin:0 0 18px;}
+.appsCatalogTop h2 {font-size:22px;font-weight:720;letter-spacing:-.025em;margin:0 0 5px;}
+.appsCatalogTop p {font-size:14px;color:var(--dash-muted);margin:0;line-height:1.5;}
+.appsManagerFilters {
+  margin:0 0 22px;
+  display:grid;
+  grid-template-columns:minmax(240px,1fr) minmax(240px,360px);
+  align-items:center;
+  gap:18px 16px;
+}
+.appsManagerViewTabs {display:flex;align-items:center;gap:5px;max-width:360px;border-radius:11px;padding:4px;background:var(--dash-subtle);border:1px solid var(--dash-line);}
+.appsManager .appsManagerViewTabs button {min-height:39px;flex:1;border:0;background:transparent;color:var(--dash-muted);padding:8px 14px;border-radius:8px;white-space:nowrap;font-size:13px;font-weight:650;}
+.appsManager .appsManagerViewTabs button[aria-pressed="true"] {background:var(--dash-surface);color:var(--dash-text);box-shadow:0 1px 4px rgba(30,54,78,.10);}
+.appsManagerViewTabs button span {font-weight:550;opacity:.8;margin-left:5px;font-variant-numeric:tabular-nums;}
+.appsManager .appsSearchField {position:relative;width:100%;max-width:none;display:block;}
+.appsManager .appsSearchField input {width:100%;background:var(--dash-surface);border:1px solid var(--dash-line);border-radius:10px;min-height:46px;padding:10px 14px 10px 41px;font-size:14px;}
+.appsSearchIcon {position:absolute;top:50%;left:14px;transform:translateY(-50%);font-size:22px;line-height:1;color:var(--dash-muted);pointer-events:none;}
+.appsSrOnly {position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+.appsManagerCategories {display:flex!important;align-items:center;gap:8px!important;grid-column:1/-1;overflow-x:auto;scrollbar-width:thin;padding-bottom:5px;flex-wrap:nowrap!important;}
+.appsManager .appsManagerCategories button {flex:none;white-space:nowrap;border-radius:100px;font-size:13px;font-weight:550;padding:8px 15px;background:var(--dash-surface);color:var(--dash-muted);}
+.appsManager .appsManagerCategories button[aria-pressed="true"] {color:#fff;background:#176e9b;border-color:#176e9b;}
+.appsManagerGrid {grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;align-items:stretch;}
+.appsManagerCard {display:flex;flex-direction:column;padding:20px;min-height:230px;border-radius:13px;box-shadow:0 2px 8px rgba(33,51,76,.025);}
+.appsManagerCard:hover {border-color:#b4cddd;box-shadow:0 5px 20px rgba(24,55,87,.055);}
+.appsManagerCard > header {margin-bottom:15px;gap:11px;}
+.appsManagerCard h2 {font-size:17px;line-height:1.35;margin-bottom:3px;}
+.appsManagerBrand {width:42px;height:42px;background:var(--dash-subtle);border-radius:10px;border:1px solid var(--dash-line);}
+.appsManagerCard header > div > span {font-size:12px;max-width:155px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.appsManagerCardStatus {font-size:11px;font-weight:650;line-height:1.3;border:1px solid var(--dash-line);color:var(--dash-muted);background:var(--dash-subtle);border-radius:50px;padding:5px 9px;white-space:nowrap;margin-left:auto;}
+.appsManagerCardStatus.connected {color:#146e4c;border-color:#c7e7d8;background:#effaf4;}
+.appsManagerAuthorize {margin-top:auto;gap:8px;}
+.appsManager .appsManagerPrimary {background:#176e9b;color:#fff;border-color:#176e9b;border-radius:9px;min-height:43px;font-size:13px;}
+.appsManager .appsManagerPrimary:hover:not(:disabled) {background:#095a85;color:white;border-color:#095a85;}
+.appsManagerToolsAction {margin-top:14px;padding-top:12px;border-top:1px solid var(--dash-line);justify-content:flex-start;}
+.appsManager .appsManagerExploreButton {min-height:28px;padding:2px 0;border:0;background:transparent;color:#176e9b;font-size:13px;justify-content:flex-start;text-align:left;}
+.appsManager .appsManagerExploreButton:hover {background:transparent;text-decoration:underline;}
+.appsManagerConnection {padding:10px 12px;margin:2px 0 16px;background:var(--dash-subtle);border-radius:9px;}
+.appsManagerConnectionTop {margin-bottom:7px;gap:7px;}
+.appsManagerConnectionTop > strong {font-size:13px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.appsManagerStatus {font-size:11px;padding:4px 8px;}
+.appsManagerConnectionHint {font-size:12px;line-height:1.5;margin:0 0 8px;}
+.appsManagerConnectionActions {margin-top:8px;}
+.appsManagerConnectionActions button {font-size:12px;min-height:33px;padding:6px 9px;}
+.appsManager .appsManagerTextAction {font-size:12px;color:#6b7280;}
+.appsManagerSectionHeading {margin:45px 0 18px;}
+.appsManagerSectionHeading h2 {font-size:21px;}
+.appsManagerEmpty {font-size:14px;}
+.appsToolsOverlay .appsToolsDialog {background:#fff;color:#182234;border-color:#e1e7ee;}
+.appsToolsOverlay .appsToolsDetail h3 {font-size:21px;font-weight:650;line-height:1.4;}
+.appsToolsOverlay .appsToolsItemTitle {font-size:13px;line-height:1.4;}
+.appsToolsOverlay .appsToolsItemMeta {font-size:11px;opacity:.7;overflow-wrap:anywhere;}
+@media(max-width:1180px) {
+  .appsManagerGrid {grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:780px) {
+  .appsManagerSummary {margin-bottom:26px;}
+  .appsManagerSummary > .appsManagerSummaryMetric,
+  .appsManagerSummary > .appsManagerReviewMetric {padding:15px;min-height:80px;}
+  .appsManagerFilters {grid-template-columns:minmax(0,1fr);gap:12px;}
+  .appsManagerViewTabs {max-width:none;}
+  .appsManagerCategories {grid-column:1;}
+}
+@media(max-width:620px) {
+  .appsManagerHeader {align-items:flex-start;gap:12px;}
+  .appsManagerHeader h1 {font-size:29px;}
+  .appsManagerHeader > button {font-size:12px;padding:7px 10px;}
+  .appsManagerSummary {grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0;}
+  .appsManagerSummary > .appsManagerSummaryMetric,
+  .appsManagerSummary > .appsManagerReviewMetric {min-height:80px;padding:12px 9px;border-bottom:0;border-right:1px solid var(--dash-line);}
+  .appsManagerSummary > :last-child {border-right:0;}
+  .appsManagerSummary strong {font-size:23px;}
+  .appsManagerSummary .appsManagerSummaryMetric span,
+  .appsManagerSummary .appsManagerReviewMetric span {font-size:11px;line-height:1.25;}
+  .appsManagerGrid {grid-template-columns:minmax(0,1fr);gap:12px;}
+  .appsManagerCard {padding:18px;min-height:215px;}
+  .appsCatalogTop h2 {font-size:20px;}
+  .appsManagerCategories button {font-size:12px;}
+}
+
+.appsManagerProviderNotes {font-size:12px;color:var(--dash-muted);margin:0 0 12px;}
+.appsManagerProviderNotes summary {font-size:12px;font-weight:600;cursor:pointer;}
+.appsManagerProviderNotes p {margin:7px 0 0;line-height:1.55;}

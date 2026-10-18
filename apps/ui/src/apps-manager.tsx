@@ -89,7 +89,6 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnec
   return <article className="appsManagerConnection" data-status={connection.status}>
     <div className="appsManagerConnectionTop"><strong>{connection.accountLabel}</strong><span className="appsManagerStatus" data-status={connection.status}>{statusLabel(connection.status, tr)}</span></div>
     {connection.status === "reauthorization_required" && <p className="appsManagerConnectionHint">{tr("Provider access expired or was revoked. Reconnect this account to restore access.", "应用授权已过期或被撤销，请重新连接此账号以恢复访问。")}</p>}
-    <p className="appsManagerConnectionHint">{needsScopes || needsAccess ? tr("Reconnect once to authorize all available tools.", "重新授权一次，即可使用全部可用工具。") : tr("All authorized tools are ready to use.", "已授权的工具均可直接使用。")}</p>
     <div className="appsManagerConnectionActions">
       {(!active || needsScopes || needsAccess) && <button type="button" disabled={busy || !app.configured} onClick={() => needsAccess && !needsScopes && active ? onSave(connection, connectedPermissions) : onAuthorize(app.provider, connectedPermissions, connection.settings)}>{tr("Reconnect account", "重新授权账号")}</button>}
       {connection.status !== "disconnected" && <button type="button" className="appsManagerTextAction" disabled={busy} onClick={() => setConfirmDisconnect(true)}>{tr("Disconnect", "断开连接")}</button>}
@@ -98,7 +97,6 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnec
       <p>{tr("Disconnect this account and cancel its pending approvals? Earlier changes in the app will remain.", "断开此账号并取消待处理审批？应用中已经发生的改动仍会保留。")}</p>
       <div><button type="button" className="appsManagerDanger" disabled={busy} onClick={() => onDisconnect(connection)}>{tr("Confirm disconnect", "确认断开")}</button><button type="button" disabled={busy} onClick={() => setConfirmDisconnect(false)}>{tr("Keep connected", "保持连接")}</button></div>
     </div>}
-    <details className="appsManagerScopes"><summary>{tr("Provider scopes", "应用授权范围")}</summary><ul>{connection.scopes.map(scope => <li key={scope}><code>{scope}</code></li>)}</ul></details>
   </article>;
 }
 
@@ -141,8 +139,6 @@ function AppToolsDialog({ app, connections, onClose, onConnect, busy }: {
       setCopied(true);
     } catch { setCopied(false); }
   }
-  const schema = selected?.inputSchema && typeof selected.inputSchema === "object" ? selected.inputSchema as { properties?: Record<string, { type?: string; description?: string; enum?: unknown[] }>; required?: string[] } : null;
-  const params = Object.entries(schema?.properties || {});
   return createPortal(
     <div className="appsToolsOverlay" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="appsToolsDialog" ref={dialogRef} role="dialog" aria-modal="true" aria-label={tr(app.name + " tools", app.name + " 工具")}>
@@ -157,7 +153,7 @@ function AppToolsDialog({ app, connections, onClose, onConnect, busy }: {
             <input id={"apps-tool-search-" + app.provider} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr("Search name or purpose…", "搜索名称或用途…")} />
             <div className="appsToolsItems" role="list" aria-label={tr("Available tools", "可用工具")}>
               {matching.map(item => <div role="listitem" key={item.name}><button type="button" className="appsToolsItem" aria-pressed={selectedName === item.name} onClick={() => { setSelectedName(item.name); setCopied(false); }}>
-                <span className="appsToolsItemTitle">{item.name}</span><span className="appsToolsItemMeta">{item.description}</span><span className="appsToolsItemFooter"><small>{item.permission === "write" ? tr("Write · approval", "写入 · 需审批") : tr("Read-only", "只读")}</small><b>{tr("View details →", "查看详情 →")}</b></span>
+                <span className="appsToolsItemTitle">{item.description || item.name}</span><span className="appsToolsItemMeta">{item.name}</span><span className="appsToolsItemFooter"><small>{item.permission === "write" ? tr("Write · approval", "写入 · 需审批") : tr("Read-only", "只读")}</small><b>{tr("View details →", "查看详情 →")}</b></span>
               </button></div>)}
               {!matching.length && <p className="appsToolsEmpty">{tr("No tools match. Try another keyword.", "没有匹配的工具，试试其他关键词。")}</p>}
             </div>
@@ -165,10 +161,7 @@ function AppToolsDialog({ app, connections, onClose, onConnect, busy }: {
           <section className="appsToolsDetail" aria-live="polite">
             {selected ? <>
               <div className="appsToolsDetailTop"><span className="appsToolsEyebrow">{tr("OPERATION DETAILS", "操作详情")}</span><span className="appsToolsRisk" data-permission={selected.permission}>{selected.permission === "write" ? tr("Write · human approval", "写入 · 人工审批") : tr("Read only", "只读操作")}</span></div>
-              <h3>{selected.name}</h3>
-              <p className="appsToolsDescription">{selected.description}</p>
-              <div className="appsToolsParameterHeader"><h4>{tr("Required inputs", "调用参数")}</h4><span>{tr("Validated by Remote Arc", "由 Remote Arc 校验")}</span></div>
-              {params.length ? <ul className="appsToolsParams">{params.map(([key, value]) => <li key={key}><code>{key}</code><span>{schema?.required?.includes(key) ? tr("Required", "必填") : tr("Optional", "选填")}</span><small>{value.type || "value"}{value.description ? " · " + value.description : ""}</small></li>)}</ul> : <p className="appsToolsParamEmpty">{tr("No parameter schema listed here. Your AI can discover the tool's current schema through list_apps.", "页面暂无参数定义。AI 可通过 list_apps 获取当前工具的完整参数结构。")}</p>}
+              <h3>{selected.description || selected.name}</h3>
               <p className="appsToolsPolicy">{selected.permission === "write" ? tr("Your AI prepares the request; you review its exact target and payload before execution.", "AI 先准备操作请求，你核对目标与完整参数后才会执行。") : tr("Only accessible data from the connected account is returned.", "只能读取此连接账号有权限访问的数据。")}</p>
               <div className="appsToolsActions">
                 {active ? <button type="button" className="appsToolsPrimary" onClick={() => void copyInstruction(selected)}>{copied ? tr("Copied ✓", "已复制 ✓") : tr("Copy instruction for AI →", "复制给 AI 使用 →")}</button>
@@ -195,26 +188,29 @@ function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect
   const [toolsOpen, setToolsOpen] = useState(false);
   const [credentialOpen, setCredentialOpen] = useState(false);
   const [shopDomain, setShopDomain] = useState("");
+  const appCategory = directory.categories.find(item => item.id === (app.category || directory.apps.find(item => item.provider === app.provider)?.category));
   function connect(provider: string, permissions: Permission[], settings?: Record<string, string>) {
     if (app.auth === "api_key") { setCredentialOpen(true); }
     else onAuthorize(provider, permissions, settings || (provider === "shopify" ? {shopDomain} : undefined));
   }
   return <article className="appsManagerCard" data-provider={app.provider}>
-    <header><AppIcon brand={app.brand} /><div><h2>{app.name}</h2><span>{app.configured ? tr("Ready to connect", "可授权连接") : tr("Administrator setup needed", "等待管理员配置")}</span></div><span className="appsManagerOperationCount">{app.operations.length} {tr("operations", "项操作")}</span></header>
+    <header><AppIcon brand={app.brand} /><div><h2>{app.name}</h2><span>{appCategory ? tr(appCategory.name, appCategory.nameZh) : tr("Integration", "应用集成")}</span></div><span className={"appsManagerCardStatus" + (connections.some(connection => connection.status === "active") ? " connected" : "")}>{connections.some(connection => connection.status === "active") ? tr("Connected", "已连接") : app.configured ? tr("Available", "可连接") : tr("Coming soon", "即将支持")}</span></header>
 
-    {app.connectionNote && <p className="appsManagerConnectionHint">{app.connectionNote}</p>}
-    {app.billingNote && <p className="appsManagerBilling">{app.billingNote}</p>}
+
+    {(app.connectionNote || app.billingNote) && <details className="appsManagerProviderNotes">
+      <summary>{tr("Before connecting", "连接前须知")}</summary>
+      {app.connectionNote && <p>{app.connectionNote}</p>}
+      {app.billingNote && <p>{app.billingNote}</p>}
+    </details>}
     {app.provider === "runway" && <a className="appsRunwayAttribution" href="https://runwayml.com" target="_blank" rel="noreferrer"><img src="/app-brands/runwayattribution.svg" alt="Powered by Runway" /></a>}
     {connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onSave={onSave} onDisconnect={onDisconnect} />)}
     <div className="appsManagerAuthorize">
-      <p className="appsManagerConnectionHint">{tr("Connect once to use all available tools. Changes to app data are reviewed when requested.", "连接一次即可使用全部可用工具。修改应用数据时，再核对具体操作。")}</p>
       {app.provider === "shopify" && <label className="appsManagerStore">{tr("Store domain", "店铺域名")}<input value={shopDomain} onChange={e => setShopDomain(e.target.value)} placeholder="your-store.myshopify.com" autoComplete="off" maxLength={100} /></label>}
       <button type="button" className="appsManagerPrimary" disabled={busy || !app.configured || (app.provider === "shopify" && !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopDomain))} onClick={() => connect(app.provider, connectedPermissions)}>{app.configured ? connections.length ? tr("Connect another account", "连接其他账号") : tr("Connect account", "连接账号") : tr("Not configured", "尚未配置")}</button>
     </div>
     {credentialOpen && <AppCredentialForm provider={app.provider} write={true} busy={busy} onConnect={input => onCredential(app.provider, input)} onCancel={() => setCredentialOpen(false)} />}
     <div className="appsManagerToolsAction">
-      <div><strong>{tr("Explore tools", "探索工具")}</strong><p>{tr("Search the operations and view their inputs without expanding this card.", "在独立窗口中搜索工具、查看参数，不会撑开当前卡片。")}</p></div>
-      <button type="button" className="appsManagerExploreButton" aria-haspopup="dialog" onClick={() => setToolsOpen(true)}>{tr("Explore " + app.operations.length + " tools →", "查看 " + app.operations.length + " 项工具 →")}</button>
+      <button type="button" className="appsManagerExploreButton" aria-haspopup="dialog" onClick={() => setToolsOpen(true)}>{tr("What can this app do?", "这个应用能做什么？")} <span aria-hidden="true">↗</span></button>
     </div>
     {toolsOpen && <AppToolsDialog app={app} connections={connections} busy={busy} onClose={() => setToolsOpen(false)} onConnect={() => connect(app.provider, connectedPermissions)} />}
 
@@ -265,6 +261,7 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
   const [notice, setNotice] = useState("");
   const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get("provider") || "");
   const [category, setCategory] = useState(() => new URLSearchParams(window.location.search).get("category") || "all");
+  const [connectionView, setConnectionView] = useState<"all" | "connected">("all");
   const mounted = useRef(false);
   const revision = useRef(0);
   const mutationLock = useRef(false);
@@ -319,38 +316,49 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
     if (approval.status !== "pending_approval" || Date.parse(approval.expiresAt) <= Date.now()) { setError("app_approval_unavailable"); return; }
     void mutate("approval:" + approval.id, () => request("/api/apps/approvals/" + encodeURIComponent(approval.id), { method: "POST", body: JSON.stringify({ approve }) }), approve ? tr("Request approved. Ask your AI to retry the original request. No app action was executed here.", "请求已批准。请让 AI 重试原请求；本页面没有执行应用操作。") : tr("Request rejected. No app action was executed.", "请求已拒绝，没有执行应用操作。"));
   }
-  const visibleApps = snapshot?.apps.filter(app => (category === "all" || (app.category || directory.apps.find(item => item.provider === app.provider)?.category) === category) && (app.name + " " + app.provider).toLowerCase().includes(query.trim().toLowerCase())) || [];
+  const connectedProviders = new Set(snapshot?.connections.filter(connection => connection.status === "active").map(connection => connection.provider) ?? []);
+  const featuredProviders = ["github", "slack", "gmail", "google_calendar", "google_drive", "notion", "linear", "vercel"];
+  const featuredRank = (provider: string) => { const index = featuredProviders.indexOf(provider); return index < 0 ? featuredProviders.length : index; };
+  const visibleApps = snapshot?.apps.filter(app =>
+    (connectionView === "all" || connectedProviders.has(app.provider))
+    && (category === "all" || (app.category || directory.apps.find(item => item.provider === app.provider)?.category) === category)
+    && (app.name + " " + app.provider).toLowerCase().includes(query.trim().toLowerCase())
+  ).sort((a, b) => Number(connectedProviders.has(b.provider)) - Number(connectedProviders.has(a.provider)) || featuredRank(a.provider) - featuredRank(b.provider) || a.name.localeCompare(b.name)) || [];
   const activeCount = snapshot?.connections.filter(connection => connection.status === "active").length || 0;
   const pendingCount = approvals.filter(approval => approval.status === "pending_approval" && Date.parse(approval.expiresAt) > Date.now()).length;
   return <div className="appsManager">
-    <header className="appsManagerHeader"><div><span className="eyebrow">APPS</span><h1>{tr("Your connected apps", "你的应用连接")}</h1><p>{tr("Connect your apps to the AI chat you already use. Remote Arc Connect works with Apps independently of Arc Agent. Review write requests before they run.", "把应用连接到你正在使用的 AI 聊天。Remote Arc Connect 的 Apps 无需等待 Arc Agent 上线；写入操作执行前由你审核。")}</p></div><button type="button" disabled={loading || Boolean(busy)} onClick={() => { setNotice(""); void refresh(); }}>{loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}</button></header>
+    <header className="appsManagerHeader"><div><span className="eyebrow">{tr("CONNECT / INTEGRATIONS", "CONNECT / 应用集成")}</span><h1>{tr("Apps", "应用")}</h1><p>{tr("Connect and manage the accounts your AI can work with.", "连接和管理 AI 可以使用的应用账号。")}</p></div><button type="button" disabled={loading || Boolean(busy)} onClick={() => { setNotice(""); void refresh(); }}>{loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}</button></header>
     {error && <div className="appsManagerMessage appsManagerError" role="alert"><p>{errorLabel(error, tr)}</p>{error === "unauthorized" && <a href="/auth/login?return_to=%2Fapps">{tr("Sign in", "登录")}</a>}<button type="button" onClick={() => setError("")}>{tr("Dismiss", "关闭")}</button></div>}
     {notice && <p className="appsManagerMessage" role="status">{notice}</p>}
     {loading && !snapshot && <p className="appsManagerLoading" role="status">{tr("Loading app connections…", "正在加载应用连接…")}</p>}
     {snapshot && !snapshot.enabled && <section className="appsManagerDisabled"><h2>{tr("Apps are not enabled yet", "应用连接尚未启用")}</h2><p>{tr("An administrator needs to enable Apps and configure the providers before you can connect accounts. Your existing device and AI connections are unchanged.", "管理员启用 Apps 并配置应用授权后，你即可连接账号。现有设备和 AI 连接仍可继续使用。")}</p></section>}
     {snapshot?.enabled && <>
-      <section className="appsManagerSummary" aria-label={tr("Connection overview", "连接概览")}><span><strong>{activeCount}</strong>{tr("connected accounts", "个已连接账号")}</span><a href="#approvals"><strong>{pendingCount}</strong>{tr("awaiting review", "项等待审核")}</a><p>{tr("All available tools are enabled when you connect. Review each write request before it runs.", "连接后默认启用全部可用工具。写入执行前核对具体请求。")}</p></section>
-      <section className="appsManagerMcpTools" aria-labelledby="apps-mcp-tools-title">
-        <div>
-          <h2 id="apps-mcp-tools-title">{tr("Use your apps in ChatGPT", "在 ChatGPT 中使用你连接的应用")}</h2>
-          <p>{tr("Ask your AI to find information in Slack, check a project, or prepare an update. Your connected accounts stay private to you. Sending or changing anything still requires approval.", "你可以直接让 AI 查找 Slack 消息、检查项目，或准备更新。每个人使用自己连接的账号；发送消息或修改内容仍需审批。")}</p>
-        </div>
-        <a className="appsManagerSetupLink" href="/install/chatgpt">{tr("Connect an AI assistant", "连接 AI 助手")} →</a>
-        <p className="appsManagerMcpToolsHint">{tr("Already connected, but your AI asks to reconnect or cannot perform changes? Older permissions may need a fresh connection. In ChatGPT, open Plugins → Remote Arc and reconnect. If its reconnect link fails, remove the stale ChatGPT connection and add the Remote Arc MCP endpoint again. Your Remote Arc accounts and devices are not deleted.", "已经连接，却无法发送消息或提示重新登录？旧连接可能没有最新权限。请到 ChatGPT 的 Plugins → Remote Arc 重新授权；如果重连按钮本身报错，可以只重新添加 ChatGPT 侧的 Remote Arc 连接。Remote Arc 里的设备和已连接账号不会因此被删除。")}</p>
-        <details className="appsManagerMcpDetails">
-          <summary>{tr("For developers: MCP tools and scopes", "开发者详情：MCP 工具及权限")}</summary>
-          <div className="appsManagerMcpToolList">
-            <div><code>list_apps</code><span>{tr("Find linked services (apps:read)", "查找已连接服务（apps:read）")}</span></div>
-            <div><code>call_app</code><span>{tr("Read or request actions (apps:read + apps:write for new authorizations)", "读取或请求操作（新授权申请 apps:read + apps:write）")}</span></div>
-          </div>
-        </details>
+      <section className="appsManagerSummary" aria-label={tr("Connection overview", "连接概览")}>
+        <div className="appsManagerSummaryMetric"><strong>{activeCount}</strong><span>{tr("Connected accounts", "已连接账号")}</span></div>
+        <div className="appsManagerSummaryMetric"><strong>{snapshot.apps.length}</strong><span>{tr("Available apps", "可用应用")}</span></div>
+        <a className="appsManagerReviewMetric" href="#approvals"><strong>{pendingCount}</strong><span>{tr("Pending approvals", "待审批")}</span><span aria-hidden="true">↗</span></a>
       </section>
-
-      <div className="appsManagerFilters"><label>{tr("Find an app", "查找应用")}<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={tr("Search apps…", "搜索应用…")} /></label><div role="group" aria-label={tr("App categories", "应用分类")}><button type="button" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{tr("All apps", "全部应用")} <span>{snapshot.apps.length}</span></button>{directory.categories.map(item => <button type="button" key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{tr(item.name, item.nameZh)}</button>)}</div></div>
-      {directory.categories.map(group => {
-        const apps = visibleApps.filter(app => (app.category || directory.apps.find(item => item.provider === app.provider)?.category) === group.id);
-        return apps.length ? <section className="appsManagerCategory" key={group.id} aria-label={tr(group.name, group.nameZh)}><header><h2>{tr(group.name, group.nameZh)}</h2><p>{tr(group.description, group.descriptionZh)}</p></header><div className="appsManagerGrid">{apps.map(app => <CatalogCard key={app.provider} app={app} connections={snapshot.connections.filter(connection => connection.provider === app.provider)} busy={Boolean(busy) || UI_PREVIEW} onAuthorize={authorize} onCredential={connectCredential} onSave={save} onDisconnect={disconnect} />)}</div></section> : null;
-      })}
+      <div className="appsCatalogTop">
+        <div><h2>{tr("App directory", "应用目录")}</h2><p>{tr("Browse integrations and connect an account in one step.", "浏览可用应用，一步完成账号连接。")}</p></div>
+      </div>
+      <div className="appsManagerFilters">
+        <div className="appsManagerViewTabs" role="group" aria-label={tr("Connection filter", "连接筛选")}>
+          <button type="button" aria-pressed={connectionView === "all"} onClick={() => setConnectionView("all")}>{tr("All apps", "全部应用")} <span>{snapshot.apps.length}</span></button>
+          <button type="button" aria-pressed={connectionView === "connected"} onClick={() => setConnectionView("connected")}>{tr("Connected", "已连接")} <span>{connectedProviders.size}</span></button>
+        </div>
+        <label className="appsSearchField">
+          <span className="appsSrOnly">{tr("Search apps", "搜索应用")}</span>
+          <span className="appsSearchIcon" aria-hidden="true">⌕</span>
+          <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={tr("Search apps…", "搜索应用…")} />
+        </label>
+        <div className="appsManagerCategories" role="group" aria-label={tr("App categories", "应用分类")}>
+          <button type="button" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{tr("All categories", "全部分类")}</button>
+          {directory.categories.map(item => <button type="button" key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{tr(item.name, item.nameZh)}</button>)}
+        </div>
+      </div>
+      <section className="appsManagerGrid" aria-label={tr("Available apps", "可用应用")}>
+        {visibleApps.map(app => <CatalogCard key={app.provider} app={app} connections={snapshot.connections.filter(connection => connection.provider === app.provider)} busy={Boolean(busy) || UI_PREVIEW} onAuthorize={authorize} onCredential={connectCredential} onSave={save} onDisconnect={disconnect}/>)}
+      </section>
       {!!snapshot.apps.length && !visibleApps.length && <p className="appsManagerEmpty">{tr("No apps match your search.", "没有匹配的应用。")}</p>}
       {!snapshot.apps.length && <p className="appsManagerEmpty">{tr("No app providers are available yet.", "目前还没有可用的应用服务。")}</p>}
       <section className="appsManagerApprovals" id="approvals" aria-labelledby="apps-manager-approvals-heading"><div className="appsManagerSectionHeading"><h2 id="apps-manager-approvals-heading">{tr("Review app requests", "审核应用请求")}</h2><p>{tr("Approve or reject the exact operation requested by your AI.", "核对 AI 请求的具体操作，再决定批准或拒绝。")}</p></div>

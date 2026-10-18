@@ -15,12 +15,22 @@ function resolveTheme(theme: ThemePreference): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function dashboardSurface() {
+  const path = window.location.pathname;
+  return window.location.hostname === "mcp.remotearc.app"
+    || /^\/(dashboard(?:\/|$)|overview\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$)/.test(path);
+}
+
+function preferenceKey() {
+  return dashboardSurface() ? "remote-arc-dashboard-theme" : "remote-arc-theme";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     try {
-      const saved = localStorage.getItem("remote-arc-theme");
-      return saved === "light" || saved === "dark" || saved === "system" ? saved : "dark";
-    } catch { return "dark"; }
+      const saved = localStorage.getItem(preferenceKey());
+      return saved === "light" || saved === "dark" || saved === "system" ? saved : (dashboardSurface() ? "light" : "dark");
+    } catch { return dashboardSurface() ? "light" : "dark"; }
   });
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(theme));
 
@@ -45,7 +55,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     theme,
     resolvedTheme,
     setTheme(next) {
-      try { localStorage.setItem("remote-arc-theme", next); } catch { /* Keep the in-memory preference when storage is unavailable. */ }
+      try { localStorage.setItem(preferenceKey(), next); } catch { /* Keep the in-memory preference when storage is unavailable. */ }
       setThemeState(next);
     },
   }), [theme, resolvedTheme]);

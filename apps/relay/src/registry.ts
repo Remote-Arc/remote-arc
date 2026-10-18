@@ -286,8 +286,17 @@ export class DeviceRegistry {
         rawCapacity.memoryAvailableMB >= 0 && rawCapacity.memoryAvailableMB <= rawCapacity.memoryTotalMB &&
         (rawCapacity.cpuPercent === undefined ||
           (typeof rawCapacity.cpuPercent === "number" && Number.isFinite(rawCapacity.cpuPercent) &&
-           rawCapacity.cpuPercent >= 0 && rawCapacity.cpuPercent <= 100))
-          ? { ...rawCapacity, observedAt: new Date().toISOString() } : null;
+           rawCapacity.cpuPercent >= 0 && rawCapacity.cpuPercent <= 100)) &&
+        (rawCapacity.managedProcesses === undefined ||
+          (Number.isInteger(rawCapacity.managedProcesses) &&
+            rawCapacity.managedProcesses >= 0 && rawCapacity.managedProcesses <= 32))
+          ? {
+              observedAt: new Date().toISOString(),
+              memoryTotalMB: rawCapacity.memoryTotalMB,
+              memoryAvailableMB: rawCapacity.memoryAvailableMB,
+              ...(rawCapacity.cpuPercent !== undefined ? { cpuPercent: rawCapacity.cpuPercent } : {}),
+              ...(rawCapacity.managedProcesses !== undefined ? { managedProcesses: rawCapacity.managedProcesses } : {}),
+            } : null;
       socket.serializeAttachment({
         ...attachment,
         device: {

@@ -88,6 +88,23 @@ func (a *Agent) identityValid() bool {
 	}
 	return valid
 }
+
+// Fleet capacity does not reveal managed commands, paths or their outputs.
+func (a *Agent) fleetCapacity(ctx context.Context) map[string]any {
+	raw := a.capacity.sample(ctx)
+	if raw == nil {
+		return nil
+	}
+	result := make(map[string]any, len(raw)+1)
+	for key, value := range raw {
+		result[key] = value
+	}
+	if a.Core != nil && a.Core.Processes != nil {
+		result["managedProcesses"] = a.Core.Processes.ActiveCount()
+	}
+	return result
+}
+
 func (a *Agent) hello(ctx context.Context) map[string]any {
 	cfg := a.cfg()
 	a.mu.Lock()
@@ -109,7 +126,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 	if !a.WakeOnly {
 		capabilities = append(capabilities, "native_core_v1", "undo_history_v1")
 	}
-	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.capacity.sample(ctx)}, "tools": names, "capabilities": capabilities}
+	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.fleetCapacity(ctx)}, "tools": names, "capabilities": capabilities}
 }
 func (a *Agent) heartbeat(ctx context.Context) error {
 	cfg := a.cfg()

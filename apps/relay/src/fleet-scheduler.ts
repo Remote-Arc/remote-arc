@@ -69,6 +69,15 @@ export function rankFleetDevices(
       availableRatio: Math.min(prior.availableRatio, pressure.availableRatio),
       availableMB: Math.min(prior.availableMB, pressure.availableMB) } : pressure);
   }
+  const hostManaged = new Map<string, number>();
+  for (const device of devices) {
+    const sample = device.capacity;
+    if (!sample || !Number.isFinite(Date.parse(sample.observedAt)) ||
+        Math.abs(Date.now() - Date.parse(sample.observedAt)) > 120_000 ||
+        !Number.isInteger(sample.managedProcesses)) continue;
+    const key = hostKey(device);
+    hostManaged.set(key, (hostManaged.get(key) || 0) + Math.max(0, sample.managedProcesses || 0));
+  }
   const tools = new Set(requirements.requiredTools);
   if (tools.has("start_process")) {
     tools.add("process_status");
@@ -108,10 +117,20 @@ export function rankFleetDevices(
     const cpuPenalty = pressure ? Math.round(Math.pow(pressure.cpu / 100, 2) * 55) : 10;
     const memoryPenalty = pressure && pressure.availableRatio < 0.15
       ? 45 : pressure && pressure.availableRatio < 0.30 ? 18 : 0;
+    const ownSample = device.capacity;
+    const ownSampleFresh = !!ownSample && Number.isFinite(Date.parse(ownSample.observedAt)) &&
+      Math.abs(Date.now() - Date.parse(ownSample.observedAt)) <= 120_000;
+    // Older Agents provide no live process signal, so "not measured" is NOT
+    // "idle". Prefer an instrumented device when other constraints are equal.
+    const unknownLoadPenalty = !ownSampleFresh ? 160 :
+      ownSample?.managedProcesses === undefined ? 20 : 0;
+    // A long-running managed process can be near-idle in CPU terms while
+    // still owning a browser, dev server or build. Count running handles only.
+    const managedPenalty = Math.min(hostManaged.get(hostKey(device)) || 0, 12) * 90;
     // Recent account activity catches interactive agent work not represented by automations.
     // Reserve Mac capacity for Mac-only work if an equally idle PC is eligible.
     const score = running * 100 + Math.min(recent_calls, 10) * 10 +
-      stabilityPenalty + cpuPenalty + memoryPenalty +
+      stabilityPenalty + cpuPenalty + memoryPenalty + managedPenalty + unknownLoadPenalty +
       (device.platform === "darwin" && !requirements.platform ? 1 : 0);
     return [{ device, running, recent_calls, score }];
   }).sort((a, b) =>

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import {useTheme} from "./theme.js";
 import { useI18n } from "./i18n.js";
 import { OrganizationSettings } from "./organization-settings.js";
+import {ProductInstall} from './product-pwa.js';
 import "./dashboard-settings.css";
 
 type Section = "account" | "appearance" | "workspaces" | "connections" | "billing";
@@ -119,6 +120,7 @@ export function DashboardSettings({
             <button className="raSettingsButton" type="button" onClick={() => void onSignOut()}>{tr("Sign out", "退出登录")}</button>
           </div>
         </section>
+        <section className="raSettingsSurface"><div className="raSettingsRow raSettingsRowLast"><div className="raSettingsRowInfo"><h4>{tr('Remote Arc on your device','设备上的 Remote Arc')}</h4><p>{tr('Keep your workspace a click away with the installable app.','安装为独立应用，随时打开工作空间。')}</p></div><ProductInstall/></div></section>
       </div>}
 
       {section === "appearance" && <div className="raSettingsSections">

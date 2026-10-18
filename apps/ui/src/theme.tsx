@@ -17,7 +17,7 @@ function resolveTheme(theme: ThemePreference): "light" | "dark" {
 
 function dashboardSurface() {
   const path = window.location.pathname;
-  return window.location.hostname === "mcp.remotearc.app"
+  return ["mcp.remotearc.app","agent.remotearc.app","admin.remotearc.app"].includes(window.location.hostname) || path === '/admin-preview'
     || /^\/(dashboard(?:\/|$)|overview\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$)/.test(path);
 }
 
@@ -43,7 +43,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.style.colorScheme = resolved;
       document.querySelector('meta[name="theme-color"]')?.setAttribute(
         "content",
-        resolved === "light" ? "#f8fbff" : "#080b0e",
+        resolved === "light" ? "#fafafa" : "#111113",
       );
     };
     apply();

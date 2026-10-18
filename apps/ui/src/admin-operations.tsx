@@ -39,7 +39,7 @@ const relative = (value: string | null, locale: string) => {
 };
 const fmt = (v: number) => new Intl.NumberFormat("en").format(v);
 
-export function AdminOperations() {
+export function AdminOperations({readOnly=false}:{readOnly?:boolean}={}) {
   const { tr, locale } = useI18n();
   const [section, setSection] = useState<Section>("users");
   const [liveBilling, setLiveBilling] = useState<LiveBilling | null>(null);
@@ -117,7 +117,7 @@ export function AdminOperations() {
     } finally { setBillingLoading(false); }
   }
   async function grantCredits() {
-    if (!chosen || !data || saving) return;
+    if (readOnly || !chosen || !data || saving) return;
     const amount = Number(credit);
     if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000 || reason.trim().length < 5) {
       setNotice(tr("Enter 1–100,000 calls and a reason (at least five characters).", "请输入 1–100,000 次额度，并填写至少五个字的原因。"));
@@ -207,7 +207,7 @@ export function AdminOperations() {
         <div className="opsCreditForm">
           <label>{tr("Add calls this month", "本月追加调用次数")}<input type="number" min={1} max={100000} value={credit} onChange={e => setCredit(e.target.value)} /></label>
           <label>{tr("Reason (audited)", "原因（可审计）")}<input maxLength={300} placeholder={tr("e.g. Early access feedback", "例如：早期体验反馈奖励")} value={reason} onChange={e => setReason(e.target.value)} /></label>
-          <button className="primaryButton" disabled={saving || chosen.role === "admin" || !data?.creditsReady} onClick={() => void grantCredits()}>{saving ? tr("Saving…", "正在提交…") : tr("Grant monthly calls", "追加本月额度")}</button>
+          <button className="primaryButton" disabled={readOnly || saving || chosen.role === "admin" || !data?.creditsReady} onClick={() => void grantCredits()}>{saving ? tr("Saving…", "正在提交…") : tr("Grant monthly calls", "追加本月额度")}</button>
           {!data?.creditsReady && <small>{tr("Credit grants will be available after the database migration.", "额度追加将在数据库迁移完成后开放。")}</small>}
           {notice && <small role="status">{notice}</small>}
         </div>

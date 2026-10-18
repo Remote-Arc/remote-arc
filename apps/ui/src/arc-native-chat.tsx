@@ -31,8 +31,6 @@ export function ArcNativeChat({tr,accountId,onlineDevices,initialPrompt,initialS
  const filtered=chat.sessions.filter(s=>s.title.toLowerCase().includes(search.trim().toLowerCase()));
  const sidebar=(mobile:boolean)=><nav className={'arcChatNavigation'+(mobile?' arcChatNavigationMobile':'')} aria-label={tr('Arc navigation','Arc 导航')}>
   <button type="button" className="arcSidebarPrimary" onClick={beginNew}><Icon name="add"/><span>{tr('New chat','新对话')}</span></button>
-  <button type="button" className="arcSidebarAction" aria-expanded={searchOpen} onClick={()=>setSearchOpen(!searchOpen)}><Icon name="search"/><span>{tr('Search chats','搜索对话')}</span></button>
-  {searchOpen&&<label className="arcSidebarSearch"><span className="arcSrOnly">{tr('Search your chats','搜索你的对话')}</span><input type="search" placeholder={tr('Search chats…','搜索对话…')} value={search} onChange={e=>setSearch(e.target.value)}/></label>}
   <button type="button" className="arcSidebarAction" onClick={()=>navigate(onOpenGoals)}><Icon name="tasks"/><span>{tr('Tasks','任务')}</span></button>
   <button type="button" className="arcSidebarAction" onClick={()=>navigate(onOpenRoutines)}><Icon name="routine"/><span>{tr('Routines','例行工作')}</span></button>
   <button type="button" className="arcSidebarAction" onClick={()=>navigate(onOpenActivity)}><Icon name="activity"/><span>{tr('Activity','活动')}</span></button>
@@ -40,7 +38,8 @@ export function ArcNativeChat({tr,accountId,onlineDevices,initialPrompt,initialS
   <button type="button" className="arcSidebarAction" onClick={()=>navigate(onManageApps)}><Icon name="apps"/><span>{tr('Apps','应用')}</span></button>
   <button type="button" className="arcSidebarAction" onClick={()=>navigate(onManageDevices)}><Icon name="device"/><span>{tr('Devices','设备')}</span></button>
   {onManageSkills&&<button type="button" className="arcSidebarAction" onClick={()=>navigate(onManageSkills)}><Icon name="spark"/><span>{tr('Skills','技能')}</span></button>}
-  <div className="arcSidebarSectionTitle">{tr('RECENT CHATS','最近对话')}</div>
+  <div className="arcSidebarHistoryHeading"><span className="arcSidebarSectionTitle">{tr('RECENT CHATS','最近对话')}</span><button type="button" aria-label={tr('Search chat history','搜索对话历史')} aria-expanded={searchOpen} onClick={()=>setSearchOpen(!searchOpen)}><Icon name="search" size={14}/></button></div>
+  {searchOpen&&<label className="arcSidebarSearch"><Icon name="search" size={14}/><span className="arcSrOnly">{tr('Search your chats','搜索你的对话')}</span><input autoFocus type="search" placeholder={tr('Find a conversation…','查找对话…')} value={search} onChange={e=>setSearch(e.target.value)}/></label>}
   <div className="arcSessionList">{filtered.length?filtered.map(s=><div className={'arcSessionRow'+(chat.current?.session.id===s.id?' selected':'')} key={s.id}>
    <button type="button" className="arcSessionOpen" title={s.title} aria-current={chat.current?.session.id===s.id?'page':undefined} onClick={()=>{void chat.open(s.id);setMobileOpen(false);}}><Icon name="chat"/><span>{s.title}</span></button>
    <button type="button" className="arcSessionDelete" aria-label={tr('Delete chat','删除对话')+': '+s.title} onClick={()=>void chat.remove(s.id)}><Icon name="trash"/></button>
@@ -69,6 +68,11 @@ export function ArcNativeChat({tr,accountId,onlineDevices,initialPrompt,initialS
    <button type="button" onClick={onManageApps}><Icon name="apps" size={14}/>{tr('Apps','应用')}</button>
   </div>{chat.running?<button type="button" className="arcChatSend arcChatStop" onClick={()=>void chat.cancel()} aria-label={tr('Stop run','停止运行')}><Icon name="stop"/></button>:<button type="submit" className="arcChatSend" disabled={!draft.trim()||chat.busy||(!chat.service?.enabled||!chat.service.access.canUse)} aria-label={tr('Send message','发送消息')}><Icon name="arrowUp"/></button>}</div>
  </form><p className="arcChatDisclaimer">{chat.service?.preview?tr('PR preview · sample data · account actions are disabled.','PR 预览 · 示例数据 · 账号操作未连接。'):tr('Your tools. Your computers. One conversation.','你的工具，你的电脑，一次对话。')}</p></div>;
+  const access=chat.service?.access;
+  const trial=access&&<div className="arcTrialStatus" data-state={access.status}>
+    <div><Icon name={access.status==='active'?'spark':'shield'} size={17}/><span><strong>{access.status==='eligible'?tr('Your next 14 days, with Arc.','接下来的 14 天，与 Arc 一起。'):access.status==='active'?tr(`${access.daysRemaining} days left in your trial`, `试用剩余 ${access.daysRemaining} 天`):access.status==='paid'?tr('Arc workspace is active','Arc 工作空间已启用'):tr('Your trial has ended','试用已结束')}</strong>{access.status==='eligible'&&<small>{tr('No card. No model API key. Starts when you activate it.','无需银行卡或模型 API Key，主动开启后才计时。')}</small>}{access.status==='expired'&&<small>{tr('Your conversations, results and connections are saved.','对话、结果与连接仍然保留。')}</small>}</span></div>
+    {access.status==='eligible'?<button className="arcRadiantCta" type="button" disabled={!chat.service?.enabled||chat.busy} onClick={()=>void chat.startTrial()}>{tr('Start free trial','开启免费试用')}<Icon name="arrowUpRight" size={14}/></button>:access.canUse?<span>{tr('Daily usage','今日用量')} · {access.dailyUsedPercent}%</span>:<a href="https://remotearc.app/pricing">{tr('View plans','查看套餐')}<Icon name="arrowUpRight" size={14}/></a>}
+  </div>;
  const toolLabel=(message:ChatMessage)=>{const args=message.arguments as Record<string,unknown>|undefined;return String(args?.operation||args?.tool||message.tool||'Tool').replaceAll('_',' ');};
  return <section className="arcChatShell" data-state={chat.current?'conversation':'welcome'} aria-label={tr('Arc chat','Arc 对话')}>
   {sidebarMount&&createPortal(sidebar(false),sidebarMount)}
@@ -79,6 +83,7 @@ export function ArcNativeChat({tr,accountId,onlineDevices,initialPrompt,initialS
   </div>}</div>
   {(chat.error||chat.run?.error)&&<div className="arcChatError" role="alert">{errorText(chat.error||chat.run?.error||'')}{/PAID_MODEL/.test(chat.error)&&<a href="https://remotearc.app/pricing">{tr('View plans','查看套餐')} <Icon name="arrowUpRight" size={13}/></a>}</div>}
   {chat.service&&!chat.service.enabled&&!chat.service.preview&&!chat.error&&<div className="arcChatServiceNotice" role="status">{tr('Arc is being set up for this workspace. Your connected apps and computers are available in Connect.','此工作空间正在配置 Arc。已连接的应用和电脑仍可在 Connect 中使用。')}</div>}
+  {trial}
   {chat.current&&composer}
   {mobileOpen&&<div className="arcChatMobileBackdrop" role="presentation" onClick={()=>setMobileOpen(false)}><div ref={drawer} className="arcChatMobileDrawer" role="dialog" aria-modal="true" aria-label={tr('Chat history','对话历史')} onClick={e=>e.stopPropagation()}><div className="arcMobileDrawerHeader"><strong>Arc</strong><button type="button" aria-label={tr('Close','关闭')} onClick={()=>setMobileOpen(false)}><Icon name="close"/></button></div>{sidebar(true)}</div></div>}
  </section>;

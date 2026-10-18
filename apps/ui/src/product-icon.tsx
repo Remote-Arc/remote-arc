@@ -1,7 +1,8 @@
 import type {ReactNode} from 'react';
-export type ProductIconName='add'|'search'|'apps'|'arrowUp'|'arrowUpRight'|'chat'|'check'|'trash'|'menu'|'history'|'close'|'device'|'spark'|'activity'|'settings'|'stop'|'chevron'|'link'|'tasks'|'logout'|'shield'|'overview'|'routine';
+export type ProductIconName='add'|'search'|'apps'|'arrowUp'|'arrowUpRight'|'chat'|'check'|'trash'|'menu'|'history'|'close'|'device'|'spark'|'activity'|'settings'|'stop'|'chevron'|'link'|'tasks'|'logout'|'shield'|'overview'|'routine'|'users'|'inbox'|'refresh'|'chart';
 export function ProductIcon({name,size=18}:{name:ProductIconName;size?:number}){
  const paths:Record<ProductIconName,ReactNode>={
+ users:<><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 4v2"/></>,inbox:<><path d="M5 4h14l3 10v6H2v-6L5 4Z"/><path d="M2 14h6l2 3h4l2-3h6"/></>,refresh:<><path d="M20 7v5h-5M4 17v-5h5M5.5 8a7 7 0 0 1 11.9-2L20 9M4 15l2.6 3A7 7 0 0 0 18.5 16"/></>,chart:<path d="M4 3v17h17M8 15v-4m5 4V7m5 8V4"/>,
  add:<path d="M12 5v14M5 12h14"/>,search:<><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></>,
  apps:<><rect x="4" y="4" width="6" height="6" rx="1.3"/><rect x="14" y="4" width="6" height="6" rx="1.3"/><rect x="4" y="14" width="6" height="6" rx="1.3"/><rect x="14" y="14" width="6" height="6" rx="1.3"/></>,
  arrowUp:<path d="M12 19V5m-6 6 6-6 6 6"/>,arrowUpRight:<path d="M6 18 18 6M6 6h12v12"/>,chat:<path d="M20 11.5a8 8 0 0 1-8 8 8.5 8.5 0 0 1-4-.9L4 20l1.3-4a8 8 0 1 1 14.7-4.5Z"/>,

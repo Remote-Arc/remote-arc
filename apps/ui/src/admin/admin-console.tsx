@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "../i18n.js";
 import { AdminOperations } from "../admin-operations.js";
+import {ProductIcon as Icon,type ProductIconName} from '../product-icon.js';
+import {ProductInstall} from '../product-pwa.js';
+import {useTheme} from '../theme.js';
 import "./admin-console.css";
+import './admin-design.css';
 
 type Section="overview"|"leads"|"operations"|"health";
 type Submission={id:string;category:"early_access"|"feedback";email:string;name:string;message:string;source:string;status:string;consent_at:string;created_at:string;updated_at:string};
@@ -81,17 +85,8 @@ function HealthPanel({health,loading,reload}:{health:Health|null;loading:boolean
 }
 
 function AdminGlyph({name}:{name:Section|"arrow"|"refresh"|"shield"|"pulse"}){
- const paths:Record<Section|"arrow"|"refresh"|"shield"|"pulse",string>={
-  overview:"M3 3h8v8H3zM13 3h8v5h-8zM13 10h8v11h-8zM3 13h8v8H3z",
-  leads:"M3 6h18v13H3zM3 13h5l2 3h4l2-3h5",
-  operations:"M16 20v-2a4 4 0 0 0-4-4H4a4 4 0 0 0-4 4v2M8 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8h5M21.5 5.5v5M18 14h6m-3-3v6",
-  health:"M3 12h4l3-6 4 12 3-6h4",
-  arrow:"M5 12h14m-6-6 6 6-6 6",
-  refresh:"M20 7v5h-5M4 17v-5h5M5.8 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.2-3",
-  shield:"M12 2l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6zM8 12l3 3 5-6",
-  pulse:"M3 12h5l3-6 3 12 3-6h4",
- };
- return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><path d={paths[name]}/></svg>;
+  const names:Record<typeof name,ProductIconName>={overview:'overview',leads:'inbox',operations:'users',health:'activity',arrow:'arrowUpRight',refresh:'refresh',shield:'shield',pulse:'activity'};
+  return <Icon name={names[name]}/>;
 }
 function MiniActivity({ops}:{ops:Operations|null}){
  const {tr}=useI18n();
@@ -106,12 +101,12 @@ function MiniActivity({ops}:{ops:Operations|null}){
  const max=Math.max(1,...values.map(x=>x.calls));
  const calls=values.reduce((total,entry)=>total+entry.calls,0);
  return <section className="adminActivityCard">
-  <div className="adminPanelTitle"><div><span className="adminSmallLabel">{tr("WORKLOAD · LAST 48 HOURS","工作量 · 最近 48 小时")}</span><h2>{tr("Tool execution activity","工具调用趋势")}</h2><p>{tr("Real hourly audit counts · UTC","来自真实审计记录 · UTC 小时")} · {calls.toLocaleString()} {tr("calls", "次调用")}</p></div>
+  <div className="adminPanelTitle"><div><span className="adminSmallLabel">{tr("EXECUTION ACTIVITY","执行活动")}</span><h2>{tr("Tool calls over time","工具调用趋势")}</h2><p>{tr("Hourly audit counts · UTC","审计记录 · UTC 小时")} · {ops?calls.toLocaleString():'—'} {tr("calls", "次调用")}</p></div>
     <div className="adminRangeControl" role="group" aria-label={tr("Chart time range","图表时间范围")}>
       {([24,48] as const).map(hours=><button type="button" key={hours} onClick={()=>setWindowHours(hours)} aria-pressed={windowHours===hours}>{hours}h</button>)}
     </div></div>
-  <div className="adminActivityChart" role="img" aria-label={tr("Hourly tool call activity for the past 48 hours","最近48小时工具调用情况")}>
-   {values.length?values.map(x=><div key={x.hour} className={"adminActivityBar"+(x.calls===0?" isQuiet":"")} title={x.hour+" UTC · "+x.calls+" calls · "+x.users+" users"} style={{height:(x.calls===0?3:Math.max(7,Math.round(100*x.calls/max)))+"%"}} />):<div className="adminEmptyChart">{tr("No activity metrics loaded yet.","尚未加载活动数据。")}</div>}
+  <div className="adminActivityChart" role="img" aria-label={tr(`Hourly tool calls over the last ${windowHours} hours`, `最近 ${windowHours} 小时的工具调用`)}>
+   {ops?values.map(x=><div key={x.hour} className={"adminActivityBar"+(x.calls===0?" isQuiet":"")} title={x.hour+" UTC · "+x.calls+" calls · "+x.users+" users"} style={{height:(x.calls===0?3:Math.max(7,Math.round(100*x.calls/max)))+"%"}} />):<div className="adminEmptyChart">{tr("No activity metrics loaded yet.","尚未加载活动数据。")}</div>}
   </div>
   <div className="adminChartFooter"><span>{windowHours}h {tr("ago","前")}</span><span>{tr("Now","现在")} · UTC</span></div>
  </section>;
@@ -151,11 +146,15 @@ function AdminOverview({ops,health,leadOverview,setSection}:{ops:Operations|null
 }
 
 export function AdminConsole({preview=false}:{preview?:boolean}){
- const {tr,locale}=useI18n();
- const [section,setSection]=useState<Section>("overview");
- const [ops,setOps]=useState<Operations|null>(null);
- const [leadOverview,setLeadOverview]=useState<LeadsResponse|null>(null);
- const [health,setHealth]=useState<Health|null>(null);
+  const {tr,locale,setLocale}=useI18n();
+  const {theme,setTheme}=useTheme();
+  const readSection=()=>{const value=new URLSearchParams(location.search).get('section');return ['overview','leads','operations','health'].includes(value||'')?value as Section:'overview';};
+  const [section,updateSection]=useState<Section>(readSection);
+  const setSection=(value:Section)=>{updateSection(value);const url=new URL(location.href);url.searchParams.set('section',value);history.replaceState({},'',url);};
+  useEffect(()=>{const restore=()=>updateSection(readSection());window.addEventListener('popstate',restore);return()=>window.removeEventListener('popstate',restore);},[]);
+  const [ops,setOps]=useState<Operations|null>(()=>preview?{checkedAt:new Date().toISOString(),totals:{users:128,devices:46,online:19,monthlyCalls:18742,auditLast7d:4261,teams:8,teamMembers:24},activity:Array.from({length:48},(_,i)=>({hour:new Date(Date.now()-(47-i)*3600000).toISOString().slice(0,13),calls:[7,12,5,0,0,2,9,23,34,28,45,37][i%12]!,users:3+i%6}))}:null);
+  const [leadOverview,setLeadOverview]=useState<LeadsResponse|null>(()=>preview?{items:[],total:12,page:0,pageSize:20,counts:[]}:null);
+  const [health,setHealth]=useState<Health|null>(()=>preview?{status:'operational',checkedAt:new Date().toISOString(),worker:{status:'healthy',errors15m:0,errors1h:0,errors24h:2},dependencies:{d1:{status:'healthy'},durableObjects:{status:'healthy'}},alerts:{emailConfigured:false,destination:null,recent:[]},account:{users:128,devices:46,activeTokens:39},incidents:[]}:null);
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
  async function refresh(){
@@ -185,18 +184,19 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
  const current=nav.find(x=>x.key===section)!;
  return <div className="adminShell">
   <aside className="adminSidebar">
-   <a className="adminBrand" href="/"><span className="adminBrandSymbol"><img src="/remote-arc.svg" width="38" height="38" alt=""/></span><span>Remote Arc<small>ADMIN CONSOLE</small></span></a>
+   <a className="adminBrand brand" href="/"><span className="adminBrandSymbol"><img src="/remote-arc.svg" width="38" height="38" alt=""/></span><span><span className="brandWords"><b>Remote</b><b>Arc</b></span><small>ADMIN</small></span></a>
    <div className="adminSidebarGroup"><span className="adminSidebarKicker">{tr("WORKSPACE","工作空间")}</span><nav aria-label={tr("Admin sections","管理员菜单")}>{nav.map(n=><button type="button" key={n.key} aria-current={section===n.key?"page":undefined} onClick={()=>setSection(n.key)}><AdminGlyph name={n.key}/><span>{tr(n.en,n.zh)}</span><AdminGlyph name="arrow"/></button>)}</nav></div>
-   <div className="adminSidebarBottom"><div className="adminOwnerChip"><span><AdminGlyph name="shield"/></span><div><strong>{tr("Administrator","管理员工作区")}</strong><small>{tr("Protected access","受保护的访问")}</small></div></div><a className="adminBackToApp" href="https://agent.remotearc.app/overview">← {tr("Customer dashboard","用户控制台")}</a></div>
+   <div className="adminSidebarBottom"><div className="adminPreferenceRow"><label><span className="arcSrOnly">{tr('Theme','主题')}</span><select aria-label={tr('Admin theme','后台主题')} value={theme} onChange={e=>setTheme(e.target.value as 'light'|'dark'|'system')}><option value="light">{tr('Light','浅色')}</option><option value="dark">{tr('Dark','深色')}</option><option value="system">{tr('System','跟随系统')}</option></select></label><button type="button" onClick={()=>setLocale(locale==='en'?'zh':'en')}>{locale==='en'?'中文':'EN'}</button></div><ProductInstall admin/><a className="adminBackToApp" href="https://agent.remotearc.app/dashboard/agent/chat"><Icon name="arrowUpRight" size={15}/>{tr("Open Arc workspace","打开 Arc 工作空间")}</a><div className="adminOwnerChip"><span><AdminGlyph name="shield"/></span><div><strong>{tr("Administrator","管理员工作区")}</strong><small>{tr("Protected access","受保护的访问")}</small></div></div>
+   </div>
   </aside>
   <main className="adminContent">
    <div className="adminTopbar"><div className="adminBreadcrumb">Remote Arc <span>/</span> Admin <span>/</span> <strong>{tr(current.en,current.zh)}</strong></div><div className="adminTopActions"><span className="adminTopPrivate"><AdminGlyph name="shield"/>{tr("Private console","私有后台")}</span><button type="button" onClick={()=>void refresh()} disabled={loading||preview}><AdminGlyph name="refresh"/>{loading?tr("Refreshing","刷新中"):tr("Refresh","刷新数据")}</button></div></div>
-   <header className="adminHeading"><span className="adminSmallLabel">{tr("OPERATIONS CENTER","运营工作台")}</span><h1>{section==="overview"?tr("Good to see you. Here's the big picture.","运营数据，一目了然。"):tr(current.en,current.zh)}</h1><p>{section==="overview"?tr("A clear view of product adoption, real activity and infrastructure health.","集中查看产品增长、真实使用情况和基础设施健康状态。"):section==="leads"?tr("Follow up on the people who actually reached out.","了解并跟进每一条用户主动提交的申请与反馈。"):section==="operations"?tr("Manage accounts, connected devices, capacity and costs.","管理用户账户、连接设备、用量配额和成本。"):tr("Keep the service stable, with evidence rather than guesswork.","以真实基础设施指标及时识别服务问题。")}</p></header>
-   {preview&&<div className="adminPreviewNote" role="status">{tr("Design preview. No customer or billing data is connected here.","设计预览环境，不连接真实客户与账单数据。")}</div>}
+   <header className="adminHeading"><span className="adminSmallLabel">{tr("OPERATIONS CENTER","运营工作台")}</span><h1>{tr(current.en,current.zh)}</h1><p>{section==="overview"?tr("Product adoption, real activity and service health. One clear view.","产品增长、真实使用与服务状态，一目了然。"):section==="leads"?tr("Follow up on the people who actually reached out.","了解并跟进每一条用户主动提交的申请与反馈。"):section==="operations"?tr("Manage accounts, connected devices, capacity and costs.","管理用户账户、连接设备、用量配额和成本。"):tr("Keep the service stable, with evidence rather than guesswork.","以真实基础设施指标及时识别服务问题。")}</p></header>
+   {preview&&<div className="adminPreviewNote" role="status">{tr("Design preview · illustrative sample metrics. No customer or billing data is connected here.","设计预览 · 指标均为示例，不连接真实客户与账单数据。")}</div>}
    {error&&<div className="adminAlert" role="alert">{error}</div>}
    {section==="overview"&&<AdminOverview ops={ops} health={health} leadOverview={leadOverview} setSection={setSection}/>}
    {section==="leads"&&(preview?<div className="adminNoData">{tr("Preview mode: private submissions are not loaded.","预览环境不加载真实反馈记录。")}</div>:<LeadsPanel/>)}
-   {section==="operations"&&(preview?<div className="adminNoData">{tr("Preview mode: private account operations are not loaded.","预览环境不加载真实用户数据。")}</div>:<AdminOperations/>)}
+   {section==="operations"&&<AdminOperations readOnly={preview}/>}
    {section==="health"&&<HealthPanel health={health} loading={loading} reload={()=>void refresh()}/>}
   </main>
  </div>;

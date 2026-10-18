@@ -2,6 +2,16 @@ export type DocCopy = { en: string; zh: string };
 export type DocTopic = { slug: string; group: "start" | "work" | "understand"; title: DocCopy; description: DocCopy; legacyIds?: string[]; sections?: { heading: DocCopy; text: DocCopy }[]; links?: string[][] };
 export const DOC_TOPICS: DocTopic[] = [
   {
+    slug: 'install-app', group: 'start',
+    title: {en: 'Install the web app', zh: '安装网页应用'},
+    description: {en: 'Keep Agent or Admin in a dedicated window on your desktop or phone.', zh: '在电脑或手机上，将 Agent 或 Admin 安装为独立应用。'},
+    sections: [
+      {heading: {en: 'Agent and Admin', zh: 'Agent 与 Admin'}, text: {en: 'Open agent.remotearc.app for your personal workspace, or admin.remotearc.app with administrator access. Each has its own app name and launch destination. Agent opens Chat; Admin opens the operations overview. Install from Profile settings or the Admin sidebar, or use your browser’s install menu.', zh: '在 agent.remotearc.app 打开个人工作空间，管理员可使用 admin.remotearc.app。两者有独立的应用名称和启动位置：Agent 打开 Chat，Admin 打开运营总览。可从个人资料设置、Admin 侧栏或浏览器安装菜单进行安装。'}},
+      {heading: {en: 'On your device', zh: '在你的设备上'}, text: {en: 'Chrome and Edge offer Install app. On iPhone or iPad use Share → Add to Home Screen. In Mac Safari use File → Add to Dock. Browser support determines which installation option appears.', zh: 'Chrome、Edge 支持安装应用；iPhone、iPad 使用分享 → 添加到主屏幕；Mac Safari 使用文件 → 添加到程序坞。实际安装入口取决于浏览器支持。'}},
+      {heading: {en: 'Connected work', zh: '保持联网'}, text: {en: 'The installed app uses the same account and permissions as the website. Conversations, APIs and authenticated pages are never stored in the service worker cache. If offline, a neutral reconnect page appears; new model and tool calls need a connection. Hosted runs already accepted by the server can continue within their limits while the window is closed.', zh: '安装版沿用网页的账号和权限。Service Worker 不缓存对话、API 或已登录页面。断网时显示重新连接页面，新的模型和工具调用需要联网。服务端已经接受的托管执行可在窗口关闭后继续，仍受各项上限约束。'}}
+    ]
+  },
+  {
     "slug": "connect",
     "group": "start",
     "title": {

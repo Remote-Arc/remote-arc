@@ -177,8 +177,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     if (isAdminHost) {
       const disabled = await publicAdminResponse(request, env);
       if (disabled) return disabled;
-      const staticAsset = url.pathname.startsWith("/assets/") ||
-        /^\/(?:remote-arc(?:-app-icon)?[.]svg|favicon[.]ico|manifest[.]webmanifest)$/.test(url.pathname);
+      const staticAsset = /^\/(?:assets|fonts)\//.test(url.pathname) ||
+        /^\/(?:remote-arc(?:-app-icon)?[.]svg|remote-arc-(?:180|192|512)[.]png|favicon[.]ico|(?:admin|manifest)[.]webmanifest|sw[.]js|offline[.]html)$/.test(url.pathname);
       const adminApi = url.pathname === "/api/me" || url.pathname === "/api/monitor" ||
         url.pathname.startsWith("/api/admin/");
       if (adminApi) return handleAdminServiceRequest(request, env);
@@ -931,8 +931,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
           headers.set("x-frame-options", "DENY");
           headers.set("referrer-policy", "no-referrer");
           headers.set("content-security-policy",
-            "default-src 'self'; script-src 'self' 'sha256-QDTHmNbMmoL5pECKwid5HFHv4X8Ch/VFHWGLVIMquYU='; style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data:; connect-src 'self'; font-src 'self'; " +
+            "default-src 'self'; script-src 'self' 'sha256-baq64u54NVChCRt0RX+gcLcIq9PcOomeGrpazaISIEc='; style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data:; connect-src 'self'; font-src 'self'; worker-src 'self'; manifest-src 'self'; " +
             "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
         }
       } else {

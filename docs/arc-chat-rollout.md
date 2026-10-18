@@ -47,3 +47,8 @@ pnpm build:ui
 ```
 
 The Arc integration suite uses actual SQLite migrations and HTTP handlers, encrypted state, budget reservations, the existing scheduler and the real App dispatcher. Model/provider HTTP is mocked. Production credentials are still required for real-model acceptance testing.
+# Agent and Admin PWA
+
+Both hosts use an installable standalone app with distinct manifests and launch destinations. The versioned service worker caches only static assets and a generic offline page. It never persists API responses, chat content, OAuth or authenticated HTML. Admin recovery removes old registrations and caches, and preserves the new `arc-shell-v2` worker. CSP includes its worker/manifest permissions and the exact bootstrap-script hash.
+
+Verify with `pnpm --filter @remotearc/ui test:pwa`. Install entries are in Profile settings and the Admin sidebar. Preview deployments leave service-worker registration disabled; real installation is enabled on `agent.remotearc.app` and `admin.remotearc.app` after release.

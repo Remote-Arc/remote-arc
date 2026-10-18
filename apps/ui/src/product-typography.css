@@ -1,7 +1,8 @@
 @font-face{font-family:Inter;src:url('/fonts/InterVariable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
 :root{--font-product:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-:root[data-theme] :is(.appFrame,.workspaceSurface,.publicPage){font-family:var(--font-product)!important;font-optical-sizing:auto;font-feature-settings:"cv11","ss01","calt";-webkit-font-smoothing:antialiased}
-:root[data-theme] :is(.appFrame,.workspaceSurface,.publicPage) :is(button,input,select,textarea,summary,label,h1,h2,h3,h4){font-family:inherit!important}
+.arcSrOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+:root[data-theme] :is(.appFrame,.workspaceSurface,.publicPage,.adminShell){font-family:var(--font-product)!important;font-optical-sizing:auto;font-feature-settings:"cv11","ss01","calt";-webkit-font-smoothing:antialiased}
+:root[data-theme] :is(.appFrame,.workspaceSurface,.publicPage,.adminShell) :is(button,input,select,textarea,summary,label,h1,h2,h3,h4){font-family:inherit!important}
 :root[data-theme] .appFrame .brandWords b{color:var(--dash-text)!important}
 :root[data-theme] .appFrame{--sky:var(--dash-text);--sky-light:var(--dash-muted);--sky-deep:var(--dash-text);--sky-line:var(--dash-line)}
 .appsManagerSummary{grid-template-columns:repeat(2,minmax(0,1fr))!important;max-width:560px}

@@ -8,7 +8,6 @@ import {AgentUseCases} from "./agent-use-cases.js";
 import {DeviceFleetOverview,DeviceCapacity} from "./device-fleet-overview.js";
 import { ArcWorkWorkspace } from "./arc-workspace.js";
 import { ProductIcon, type ProductIconName } from "./product-icon.js";
-import "./arc-product-polish.css";
 import { WorkspacePicker } from "./workspace-picker.js";
 import {
   DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab,
@@ -30,7 +29,7 @@ import { releaseChinese } from "./release-locales.js";
 import { DashboardSettings } from "./dashboard-settings.js";
 import { AdminOperations } from "./admin-operations.js";
 import { AdminConsole } from "./admin/admin-console.js";
-import { recoverAdminBrowser } from "./admin/admin-client-recovery.js";
+import {registerProductPwa} from './product-pwa.js';
 import { EngagementPage } from "./public-engagement.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
@@ -57,7 +56,6 @@ const ArcNativeChat = React.lazy(() => import("./arc-native-chat.js").then(modul
 const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
 const IntegrationsPage = React.lazy(() => import("./integrations-page.js").then(module => ({ default: module.IntegrationsPage })));
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
-const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
 
 const NativeInstall = React.lazy(() => import("./native-install.js").then(module => ({ default: module.NativeInstall })));
 const Documentation = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.Documentation })));
@@ -6900,15 +6898,7 @@ function App() {
 
   useEffect(() => { void loadMe(); }, []);
   useEffect(() => {
-    if (UI_PREVIEW || location.protocol !== "https:") return;
-    if (location.hostname === "admin.remotearc.app") {
-      void recoverAdminBrowser();
-      return;
-    }
-    if (!("serviceWorker" in navigator)) return;
-    void navigator.serviceWorker.register("/sw.js").catch(() => {
-      // PWA support is progressive enhancement; dashboard functionality must not depend on it.
-    });
+    void registerProductPwa(UI_PREVIEW);
   }, []);
   useEffect(() => {
     if (!user || location.hostname === "admin.remotearc.app") return;

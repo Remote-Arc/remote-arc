@@ -85,15 +85,16 @@ jobs:
             packages/execution-core/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:device --release
-      - run: node scripts/verify-device-artifacts.mjs --candidate
-        if: github.ref != 'refs/heads/master'
-      - run: node scripts/verify-device-artifacts.mjs
-        if: github.ref == 'refs/heads/master'
-      - name: Verify committed stable Homebrew formula before merge
-        if: github.ref != 'refs/heads/master'
+      # A release candidate on master is still a candidate: published stable
+      # Homebrew checksums MUST remain unchanged until an explicit release.
+      # Stable versions on either PRs or master must match committed Formula.
+      - name: Verify candidate artifacts or stable committed formulas
+        shell: bash
         run: |
           CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
-          if [[ "$CLI_VERSION" != *-* ]]; then
+          if [[ "$CLI_VERSION" == *-* ]]; then
+            node scripts/verify-device-artifacts.mjs --candidate
+          else
             node scripts/verify-device-artifacts.mjs
           fi
       - uses: actions/upload-artifact@v7

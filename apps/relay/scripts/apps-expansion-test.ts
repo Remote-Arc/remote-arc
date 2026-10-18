@@ -95,13 +95,10 @@ for(const operation of APP_OPERATIONS.filter(o=>EXTRA_PROVIDER_IDS.includes(o.pr
  const input={connectionId:connections.get(active)!,operation:operation.name,arguments:arguments_,requestId:crypto.randomUUID()};
  const count=records.length;
  let result=await callApp(env,idIdentity,input,fetcher);
- if(operation.permission==="write"){
-  assert.equal(result.status,"pending_approval",active+" "+operation.name);assert.equal(records.length,count,"No writes before approval");
-  assert.equal((await api("/api/apps/approvals/"+result.callId,"POST",{approve:true},"two")).status,409);
-  assert.equal((await api("/api/apps/approvals/"+result.callId,"POST",{approve:true})).status,200);
+  assert.equal(result.status,"succeeded",active+" "+operation.name);
+  const afterDispatch=records.length;assert(afterDispatch>=count+1,"Direct provider dispatch may include an account preflight");
   const results=await Promise.all([callApp(env,idIdentity,input,fetcher),callApp(env,idIdentity,input,fetcher)]);
-  result=results.find(r=>r.status==="succeeded")!;assert(result,active+" "+operation.name);
- }else assert.equal(result.status,"succeeded",active+" "+operation.name);
+  assert(results.every(r=>r.status==='succeeded'));assert.equal(records.length,afterDispatch,"Concurrent retries never repeat the operation");
  if(active==="instagram"&&operation.name==="media.create")createdMediaCall=result.callId!;
  assert(!JSON.stringify(result).includes("must-never-return"));
  const beforeReplay=records.length;assert.equal((await callApp(env,idIdentity,input,fetcher)).status,"succeeded");assert.equal(records.length,beforeReplay,"Replay never dispatches");

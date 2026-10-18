@@ -4,8 +4,13 @@
  * Keep recovery confined to admin.remotearc.app: do not alter user devices,
  * browser sessions, or any other Remote Arc subdomain.
  */
+import {currentProductWorker, PRODUCT_CACHE} from '../pwa-config.js';
+
 type LegacyServiceWorker = {
   scope: string;
+  active?: {scriptURL: string} | null;
+  waiting?: {scriptURL: string} | null;
+  installing?: {scriptURL: string} | null;
   unregister(): Promise<boolean>;
 };
 export type AdminClientRecovery = {
@@ -27,6 +32,8 @@ export async function recoverLegacyAdminClient(input: AdminClientRecovery): Prom
     const registrations = await input.getRegistrations?.() ?? [];
     for (const registration of registrations) {
       if (new URL(registration.scope).origin !== input.origin) continue;
+      const workers = [registration.active, registration.waiting, registration.installing].filter(Boolean);
+      if (workers.length && workers.every(worker => currentProductWorker(worker!.scriptURL, input.origin))) continue;
       if (await registration.unregister()) unregistered++;
     }
   } catch {
@@ -36,7 +43,7 @@ export async function recoverLegacyAdminClient(input: AdminClientRecovery): Prom
   try {
     const keys = await input.cacheKeys?.() ?? [];
     for (const key of keys) {
-      if (key.startsWith("remote-arc-")) await input.deleteCache?.(key);
+      if (key.startsWith("remote-arc-") && key !== PRODUCT_CACHE) await input.deleteCache?.(key);
     }
   } catch {
     // Cache Storage may be disabled or unavailable; login still works.

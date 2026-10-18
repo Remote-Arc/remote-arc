@@ -5,7 +5,9 @@ import { parseSecurityState, parsePendingApprovals } from "../src/security-state
 
 // Exercise the real preview fixture, rather than duplicating its response here.
 const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "utf8"))
-  .replaceAll("import.meta.env.VITE_UI_PREVIEW", '"1"');
+  .replaceAll("import.meta.env.VITE_UI_PREVIEW", '"1"')
+  // A data URL has no directory for relative imports. Keep the real catalog import.
+  .replaceAll('"./app-directory.json"', JSON.stringify(new URL("../src/app-directory.json", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;
@@ -19,6 +21,12 @@ assert.equal(new Set(security.grants.map(g => g.grantId)).size, security.grants.
 assert.ok(security.grants.length > 0, "Exercise grant-row rendering identities");
 assert.deepEqual(parsePendingApprovals(await (await window.fetch("/api/approvals")).json()), []);
 assert.equal((await window.fetch("/api/security/mcp", { method: "POST" })).status, 403);
+const apps = await (await window.fetch("/api/apps")).json();
+assert.equal(apps.enabled, true);
+assert.ok(apps.apps.length > 0, "Preview must load the actual Apps catalog");
+assert.ok(apps.apps.every(app => app.configured && Array.isArray(app.operations)));
+assert.deepEqual(apps.connections, [], "Preview does not include real account connections");
+assert.equal((await window.fetch("/api/apps/authorize", { method: "POST" })).status, 403);
 
 const grant = security.grants[0];
 const invalidGrants = [

@@ -41,7 +41,10 @@ assert.equal(await recoverLegacyAdminClient({
 const document = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const inline = document.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 assert.ok(inline, "HTML theme bootstrap script must exist");
-const hash = "sha256-" + createHash("sha256").update(inline).digest("base64");
+// HTML parsing normalizes CRLF to LF before CSP hashes are checked in a browser.
+const normalizedInline = inline.replace(/\r\n?/g, "\n");
+const hash = "sha256-" + createHash("sha256").update(normalizedInline).digest("base64");
+assert.equal(createHash("sha256").update(normalizedInline.replace(/\n/g,"\r\n").replace(/\r\n?/g,"\n")).digest("base64"),hash.slice(7),"CSP must be stable on Windows and Linux");
 const relay = readFileSync(new URL("../../relay/src/index.ts", import.meta.url), "utf8");
 assert.ok(relay.includes("'" + hash + "'"), "Admin CSP must allow the exact HTML theme bootstrap");
 assert.ok(relay.includes("Remote Arc Admin"), "Admin document must include an accessible failure fallback");

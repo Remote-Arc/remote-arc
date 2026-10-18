@@ -14,13 +14,21 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/remote-arc-192.png" />
     <script>
       try {
-        const saved = localStorage.getItem("remote-arc-theme");
+        const admin = location.hostname === "admin.remotearc.app";
+        const product = admin || location.hostname === "agent.remotearc.app";
+        if (admin) document.querySelector('link[rel="manifest"]').setAttribute("href", "/admin.webmanifest");
+        if (product) {
+          const name = admin ? "Remote Arc Admin" : "Remote Arc Agent";
+          document.querySelector('meta[name="application-name"]').setAttribute("content", name);
+          document.querySelector('meta[name="apple-mobile-web-app-title"]').setAttribute("content", name);
+        }
+        const saved = localStorage.getItem(product ? "remote-arc-dashboard-theme-v3" : "remote-arc-theme");
         const resolved = saved === "system"
           ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
           : (saved === "light" || saved === "dark" ? saved : "dark");
         document.documentElement.dataset.theme = resolved;
         document.documentElement.style.colorScheme = resolved;
-        document.querySelector('meta[name="theme-color"]').setAttribute("content", resolved === "dark" ? "#080b0e" : "#f8fbff");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", resolved === "dark" ? "#111113" : "#fafafa");
       } catch {}
     </script>
     <link rel="icon" type="image/svg+xml" href="/remote-arc.svg" />

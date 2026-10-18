@@ -127,44 +127,23 @@ await deny(()=>callApp(env,identity,input("github","repositories.list",{}),fetch
 sql.prepare("UPDATE user_security_settings SET mcp_paused=0").run();
 const write=input("github","issues.create",{repo:"owner/repo",title:"Explicit title",body:"Explicit issue"});
 const writeStart=requests.length,pending=await callApp(env,identity,write,fetcher);
-assert.equal(pending.status,"pending_approval");assert.equal(requests.length,writeStart);
-const approvals=await (await api("/api/apps/approvals")).json() as any;
-assert.equal(approvals.approvals[0].arguments.title,"Explicit title");
-assert.equal((await api("/api/apps/approvals/"+pending.callId,"POST",{approve:true},"two")).status,409);
-assert.equal((await api("/api/apps/approvals/"+pending.callId,"POST",{approve:true})).status,200);
-assert.equal((await api("/api/apps/approvals/"+pending.callId,"POST",{approve:true})).status,409);
+assert.equal(pending.status,"succeeded");assert.equal(requests.length,writeStart+1);
+assert.equal((await api('/api/apps/approvals/'+pending.callId,'POST',{approve:true})).status,410);
 const writes=await Promise.all(Array.from({length:12},()=>callApp(env,identity,write,fetcher)));
-assert.equal(requests.length-writeStart,1);assert(writes.some(r=>r.status==="succeeded"));
+assert.equal(requests.length-writeStart,1);assert(writes.every(r=>r.status==='succeeded'));
 assert.equal((await callApp(env,identity,write,fetcher)).replayed,true);
-const rejectedInput=input("github","issues.create",{repo:"owner/repo",title:"Reject",body:"Rejected"});
-const rejected=await callApp(env,identity,rejectedInput,fetcher);
-assert.equal((await api("/api/apps/approvals/"+rejected.callId,"POST",{approve:false})).status,200);
-assert.equal((await callApp(env,identity,rejectedInput,fetcher)).status,"rejected");
-const expiredInput=input("github","issues.create",{repo:"owner/repo",title:"Expire",body:"Expired"});
-const expired=await callApp(env,identity,expiredInput,fetcher);
-sql.prepare("UPDATE app_calls SET expires_at=? WHERE id=?").run(old,expired.callId);
-assert.equal((await api("/api/apps/approvals/"+expired.callId,"POST",{approve:true})).status,409);
-const uncertainInput=input("github","issues.create",{repo:"owner/repo",title:"Timeout",body:"Unknown"});
-const uncertain=await callApp(env,identity,uncertainInput,fetcher);
-await api("/api/apps/approvals/"+uncertain.callId,"POST",{approve:true});failWrites=true;
-await deny(()=>callApp(env,identity,uncertainInput,fetcher),"app_provider_unavailable");
-const afterUnknown=requests.length;
-assert.equal((await callApp(env,identity,uncertainInput,fetcher)).status,"unknown");assert.equal(requests.length,afterUnknown);
-failWrites=false;
-
-const reviewed=input("slack","messages.send",{channel:"C1",text:"Reviewed message"});
-const reviewStart=requests.length,reviewPending=await callApp(env,identity,reviewed,fetcher);
-assert.equal(requests.length-reviewStart,1);assert.equal(requests.at(-1)?.method,"GET");
-const reviewList=await (await api("/api/apps/approvals")).json() as any;
-assert.equal(reviewList.approvals.find((a:any)=>a.id===reviewPending.callId).review.name,"approved-v1");
-await api("/api/apps/approvals/"+reviewPending.callId,"POST",{approve:true});version="v2";
-await deny(()=>callApp(env,identity,reviewed,fetcher),"app_review_changed");
-assert(!requests.slice(reviewStart).some(r=>r.method==="POST"));
-const deletion=input("google_calendar","events.delete",{id:"event-1"});
-const deletionPending=await callApp(env,identity,deletion,fetcher);
-await api("/api/apps/approvals/"+deletionPending.callId,"POST",{approve:true});
-await callApp(env,identity,deletion,fetcher);
-assert.equal(requests.at(-1)?.method,"DELETE");assert.equal(requests.at(-1)?.headers.get("if-match"),'"v2"');
+// A pre-upgrade pending operation is cancelled, never silently dispatched.
+sql.prepare("UPDATE app_calls SET status='pending_approval' WHERE id=?").run(pending.callId);
+assert.equal((await callApp(env,identity,write,fetcher)).status,'cancelled');assert.equal(requests.length-writeStart,1);
+const uncertainInput=input('github','issues.create',{repo:'owner/repo',title:'Timeout',body:'Unknown'});
+failWrites=true;await deny(()=>callApp(env,identity,uncertainInput,fetcher),'app_provider_unavailable');
+const afterUnknown=requests.length;assert.equal((await callApp(env,identity,uncertainInput,fetcher)).status,'unknown');assert.equal(requests.length,afterUnknown);failWrites=false;
+const reviewed=input('slack','messages.send',{channel:'C1',text:'Requested message'});
+const reviewStart=requests.length;assert.equal((await callApp(env,identity,reviewed,fetcher)).status,'succeeded');
+assert.equal(requests.length-reviewStart,2);assert.equal(requests[reviewStart].method,'GET');assert.equal(requests[reviewStart+1].method,'POST');
+version='v2';
+const deletion=input('google_calendar','events.delete',{id:'event-1'});
+await callApp(env,identity,deletion,fetcher);assert.equal(requests.at(-1)?.method,'DELETE');assert.equal(requests.at(-1)?.headers.get('if-match'),'"v2"');
 const reviewTokens={accessToken:"private",scopes:[],expiresAt:null};
 assert.equal(reviewRead("github","issues.create",{}),null);
 assert.equal(await loadAppReview("github","issues.create",{},reviewTokens,fetcher),null);
@@ -181,7 +160,7 @@ assert.equal(msReview?.target.title,"A");
 
 const ghId=connections.get("github")!;
 assert.equal((await api("/api/apps/connections/"+ghId,"PATCH",{permissions:["read"]})).status,200);
-await deny(()=>callApp(env,identity,input("github","issues.create",{repo:"owner/repo",title:"Forbidden",body:"No write"}),fetcher),"app_permission_required");
+assert.equal((await callApp(env,identity,input("github","issues.create",{repo:"owner/repo",title:"Enabled",body:"Provider scope allows this"}),fetcher)).status,"succeeded");
 assert.equal((await api("/api/apps/connections/"+ghId,"PATCH",{permissions:["read","write"]})).status,200);
 sql.prepare("UPDATE app_connections SET scopes_json='[]' WHERE id=?").run(ghId);
 await deny(()=>callApp(env,identity,input("github","repositories.list",{}),fetcher),"app_scope_required");
@@ -198,6 +177,7 @@ assert.equal(sql.prepare("SELECT status FROM app_connections WHERE id=?").get(gh
 await connect("github");
 const cancelledInput=input("github","issues.create",{repo:"owner/repo",title:"Disconnect",body:"No write"});
 const cancelled=await callApp(env,identity,cancelledInput,fetcher);
+sql.prepare("UPDATE app_calls SET status='approved' WHERE id=?").run(cancelled.callId);
 assert.equal((await api("/api/apps/connections/"+ghId,"DELETE")).status,200);
 assert.equal(sql.prepare("SELECT status FROM app_calls WHERE id=?").get(cancelled.callId)?.status,"cancelled");
 await deny(()=>callApp(env,identity,cancelledInput,fetcher),"app_reauthorization_required");
@@ -252,27 +232,19 @@ const slackArgs=(name:string):Record<string,unknown>=>{
 for(const operation of APP_OPERATIONS.filter(o=>o.provider==="slack")) {
  const request=input("slack",operation.name,slackArgs(operation.name)),before=requests.length;
  const first=await callApp(env,identity,request,fetcher);
- if(operation.permission==="write"){
-  assert.equal(first.status,"pending_approval",operation.name);
-  assert(requests.slice(before).every(r=>r.method==="GET"),"only target reads before approval");
-  await api("/api/apps/approvals/"+first.callId,"POST",{approve:true});
-  const prior=requests.length;
-  const results=await Promise.all(Array.from({length:4},()=>callApp(env,identity,request,fetcher)));
-  assert(results.some(r=>r.status==="succeeded"),operation.name);
-  const dispatched=requests.slice(prior).filter(r=>r.method==="POST");
-  assert.equal(dispatched.length,1,"one approved Slack mutation");
-  assert.equal(new URL(dispatched[0]!.url).origin,"https://slack.com");
- }else assert.equal(first.status,"succeeded",operation.name);
- const after=requests.length;
+   assert.equal(first.status,'succeeded',operation.name);
+  if(operation.permission==='write'){
+   const dispatched=requests.slice(before).filter(r=>r.method==='POST');assert.equal(dispatched.length,1,'One direct Slack mutation');assert.equal(new URL(dispatched[0].url).origin,'https://slack.com');
+   const results=await Promise.all(Array.from({length:4},()=>callApp(env,identity,request,fetcher)));assert(results.every(r=>r.status==='succeeded'));
+  }
+const after=requests.length;
  assert.equal((await callApp(env,identity,request,fetcher)).replayed,true);
  assert.equal(requests.length,after,"no replayed Slack request is sent twice");
 }
 assert.equal(APP_OPERATIONS.filter(o=>o.provider==="slack").length,32);
-const changedMessage=input("slack","messages.delete",{channel:"C1",ts:"1700000000.000001"});
-const changedPending=await callApp(env,identity,changedMessage,fetcher);
-await api("/api/apps/approvals/"+changedPending.callId,"POST",{approve:true});
-version="v3";
-await deny(()=>callApp(env,identity,changedMessage,fetcher),"app_review_changed");
+const changedArgs={channel:'C1',ts:'1700000000.000001'};
+const originalReview=await loadAppReview('slack','messages.delete',changedArgs,reviewTokens,fetcher);version='v3';
+await deny(()=>verifyAppReview('slack','messages.delete',changedArgs,reviewTokens,originalReview,fetcher),'app_review_changed');
 const dmReview=await loadAppReview("slack","messages.send",{channel:"D1"},reviewTokens,async()=>json({ok:true,channel:{id:"D1",user:"U2",is_im:true}}));
 assert.equal(dmReview?.target.name,"U2");
 await deny(()=>loadAppReview("slack","messages.delete",{channel:"C1",ts:"1700000000.000001"},reviewTokens,async()=>json({ok:true,messages:[]})),"app_review_unavailable");
@@ -322,12 +294,12 @@ for(const bad of ["http://example.com","https://example.com/path","https://user:
 await connect("github");activeProvider="github";
 const patchPendingInput=input("github","issues.create",{repo:"owner/repo",title:"Stale",body:"Stale approval"});
 const patchPending=await callApp(env,identity,patchPendingInput,fetcher);
-await api("/api/apps/approvals/"+patchPending.callId,"POST",{approve:true});
+sql.prepare("UPDATE app_calls SET status='approved' WHERE id=?").run(patchPending.callId);
 await api("/api/apps/connections/"+ghId,"PATCH",{permissions:["read","write"]});
 await deny(()=>callApp(env,identity,patchPendingInput,fetcher),"app_approval_expired_or_connection_changed");
 const timedInput=input("github","issues.create",{repo:"owner/repo",title:"Timed",body:"Timed approval"});
 const timed=await callApp(env,identity,timedInput,fetcher);
-await api("/api/apps/approvals/"+timed.callId,"POST",{approve:true});
+sql.prepare("UPDATE app_calls SET status='approved' WHERE id=?").run(timed.callId);
 sql.prepare("UPDATE app_calls SET expires_at=? WHERE id=?").run(old,timed.callId);
 await deny(()=>callApp(env,identity,timedInput,fetcher),"app_approval_expired_or_connection_changed");
 for(const [suffix,code] of [["&error=access_denied","app_authorization_denied"],["","missing_oauth_code"]]) {

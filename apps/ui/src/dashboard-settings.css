@@ -1,229 +1,97 @@
-/* Dashboard settings: a focused control center instead of a single stack of cards. */
-.raSettings {
-  --rs-bg: #0a151d;
-  --rs-surface: #0b1923;
-  --rs-subtle: #10212c;
-  --rs-border: #203743;
-  --rs-text: #e9f4f7;
-  --rs-secondary: #95afba;
-  --rs-accent: #67c8e8;
-  --rs-accent-bg: #133241;
-  --rs-hover: #122834;
-  display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
-  align-items: start;
-  gap: clamp(24px, 4vw, 54px);
-  width: 100%;
-  padding-bottom: 30px;
-  color: var(--rs-text);
+/* Settings is part of the same workspace, including shared product tokens. */
+.raSettings{
+ --rs-bg:var(--dash-canvas);--rs-surface:var(--dash-surface);--rs-subtle:var(--dash-subtle);--rs-border:var(--dash-line);--rs-text:var(--dash-text);--rs-secondary:var(--dash-muted);--rs-accent:var(--dash-accent);--rs-accent-bg:var(--dash-accent-soft);--rs-hover:var(--dash-subtle);
+ display:grid;grid-template-columns:190px minmax(0,1fr);gap:48px;width:100%;padding:8px 0 40px;color:var(--rs-text);align-items:start;
 }
-:root[data-theme="light"] .raSettings {
-  --rs-bg: #f8fbfc;
-  --rs-surface: #fff;
-  --rs-subtle: #f3f8fa;
-  --rs-border: #dce7eb;
-  --rs-text: #18313d;
-  --rs-secondary: #607985;
-  --rs-accent: #086c90;
-  --rs-accent-bg: #e9f5fa;
-  --rs-hover: #f1f8fa;
-}
-.raSettings * { box-sizing: border-box; }
-.raSettings button, .raSettings a { -webkit-tap-highlight-color: transparent; }
-.raSettings button:focus-visible, .raSettings a:focus-visible, .raSettings input:focus-visible,
-.raSettings select:focus-visible { outline: 2px solid var(--rs-accent); outline-offset: 3px; }
-.raSettingsAside { position: sticky; top: 24px; padding-top: 13px; min-width: 0; }
-.raSettingsAsideLabel, .raSettingsFieldLabel, .raSettingsEyebrow {
-  display: block; font-size: 11px; font-weight: 760; line-height: 1.45;
-  letter-spacing: .085em; color: var(--rs-secondary);
-}
-.raSettingsAsideLabel { padding: 0 14px 13px; }
-.raSettingsNav { display: flex; flex-direction: column; gap: 5px; }
-.raSettingsNavItem {
-  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px;
-  padding: 11px 13px; text-align: left; border: 1px solid transparent;
-  border-radius: 11px; background: transparent; color: var(--rs-secondary);
-  font: inherit; font-size: 14px; font-weight: 570; cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
-}
-.raSettingsNavItem svg { flex: none; opacity: .88; }
-.raSettingsNavItem:hover { color: var(--rs-text); background: var(--rs-hover); }
-.raSettingsNavItem.isActive {
-  color: var(--rs-text); background: var(--rs-accent-bg);
-  border-color: color-mix(in srgb, var(--rs-accent) 24%, var(--rs-border));
-  font-weight: 700;
-}
-.raSettingsNavItem.isActive svg { color: var(--rs-accent); opacity: 1; }
-.raSettingsAsideFoot {
-  display: flex; align-items: flex-start; gap: 10px; margin: 28px 7px 0;
-  padding: 17px 11px; border-top: 1px solid var(--rs-border);
-  color: var(--rs-secondary); font-size: 12px; line-height: 1.65;
-}
-.raSettingsAsideFoot svg { color: var(--rs-accent); flex: none; margin-top: 2px; }
-.raSettingsContent { min-width: 0; max-width: 940px; }
-.raSettingsHeading { margin: 3px 0 25px; }
-.raSettingsEyebrow { color: var(--rs-accent); margin-bottom: 8px; }
-.raSettingsHeading h2 { margin: 0; font-size: clamp(24px, 2.4vw, 29px); font-weight: 730; letter-spacing: -.037em; color: var(--rs-text); line-height: 1.22; }
-.raSettingsHeading p { margin: 9px 0 0; font-size: 14px; line-height: 1.6; color: var(--rs-secondary); }
-.raSettingsSections { display: grid; gap: 18px; }
-.raSettingsSurface {
-  min-width: 0; overflow: hidden; border: 1px solid var(--rs-border);
-  border-radius: 15px; background: var(--rs-surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .018);
-}
-.raSettingsIdentity { display: flex; align-items: center; gap: 18px; padding: 24px 26px; }
-.raSettingsIdentityAvatar {
-  display: grid; place-items: center; width: 54px; height: 54px; flex: none;
-  border: 1px solid color-mix(in srgb, var(--rs-accent) 26%, var(--rs-border));
-  border-radius: 16px; background: var(--rs-accent-bg); color: var(--rs-accent);
-  font-size: 22px; font-weight: 700; text-transform: uppercase;
-}
-.raSettingsIdentityText { min-width: 0; flex: 1; }
-.raSettingsIdentityText h3 { margin: 3px 0; font-size: 18px; line-height: 1.35; letter-spacing: -.02em; color: var(--rs-text); }
-.raSettingsIdentityText p { margin: 0; font-size: 13px; color: var(--rs-secondary); overflow-wrap: anywhere; }
-.raSettingsQuietPill {
-  flex: none; padding: 7px 12px; border: 1px solid var(--rs-border);
-  border-radius: 99px; color: var(--rs-secondary); font-size: 12px; font-weight: 600;
-}
-.raSettingsSurfaceHeader { padding: 24px 26px 19px; }
-.raSettingsSurfaceHeader h3 { margin: 0; font-size: 17px; font-weight: 730; letter-spacing: -.025em; color: var(--rs-text); }
-.raSettingsSurfaceHeader p { margin: 6px 0 0; font-size: 13px; color: var(--rs-secondary); line-height: 1.6; }
-.raSettingsRow {
-  display: flex; justify-content: space-between; align-items: center; gap: 22px;
-  min-height: 91px; padding: 20px 26px; border-top: 1px solid var(--rs-border);
-}
-.raSettingsRowLast { border-top: 0; }
-.raSettingsRowInfo { flex: 1; min-width: 0; }
-.raSettingsRowInfo h4 { margin: 0 0 5px; font-size: 15px; font-weight: 680; color: var(--rs-text); }
-.raSettingsRowInfo p { margin: 0; color: var(--rs-secondary); font-size: 13px; line-height: 1.6; }
-.raSettingsRowControl { flex: none; }
-.raSettings .languageSetting { display: inline-flex; gap: 3px; padding: 4px; border: 1px solid var(--rs-border); border-radius: 11px; background: var(--rs-subtle); }
-.raSettings .languageSetting button,
-:root[data-theme="light"] .raSettings .languageSetting button,
-:root[data-theme="dark"] .raSettings .languageSetting button {
-  min-width: 64px; border: none; border-radius: 7px; padding: 9px 12px;
-  color: var(--rs-secondary); background: transparent; font-size: 13px;
-  font-weight: 570; line-height: 1.3; box-shadow: none; cursor: pointer;
-}
-.raSettings .languageSetting button:hover,
-:root[data-theme="light"] .raSettings .languageSetting button:hover,
-:root[data-theme="dark"] .raSettings .languageSetting button:hover {
-  background: var(--rs-hover); color: var(--rs-text); border: none;
-}
-.raSettings .languageSetting button.active,
-:root[data-theme="light"] .raSettings .languageSetting button.active,
-:root[data-theme="dark"] .raSettings .languageSetting button.active {
-  background: var(--rs-surface)!important; color: var(--rs-text)!important;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, .11); border: none;
-  font-weight: 730;
-}
-.raSettingsButton {
-  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  flex: none; padding: 10px 15px; min-height: 39px; border: 1px solid var(--rs-border);
-  border-radius: 9px; background: var(--rs-surface); color: var(--rs-text);
-  font: inherit; font-size: 13px; font-weight: 660; text-decoration: none;
-  white-space: nowrap; cursor: pointer; transition: border-color .15s;
-}
-.raSettingsButton:hover { background: var(--rs-hover); border-color: var(--rs-accent); color: var(--rs-text); }
-.raSettingsButtonPrimary { border-color: var(--rs-accent); background: var(--rs-accent-bg); color: var(--rs-accent); }
-.raSettingsButtonPrimary:hover { color: var(--rs-accent); }
-.raSettingsEndpoint {
-  display: flex; align-items: center; gap: 14px; margin: 0 26px 24px;
-  padding: 9px 10px 9px 16px; background: var(--rs-subtle);
-  border: 1px solid var(--rs-border); border-radius: 11px;
-}
-.raSettingsEndpoint code {
-  flex: 1; min-width: 0; color: var(--rs-text); font-size: 13px;
-  overflow-wrap: anywhere; word-break: break-all;
-}
-.raSettingsCopy { background: var(--rs-surface); }
-.raSettingsInlineError { margin: -12px 26px 21px; color: #d67b7b; font-size: 13px; }
-.raSettingsAction {
-  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 79px;
-  text-align: left; padding: 16px 25px; border: 0; border-top: 1px solid var(--rs-border);
-  color: var(--rs-text); background: transparent; cursor: pointer; font: inherit;
-}
-.raSettingsAction:hover { background: var(--rs-hover); }
-.raSettingsAction > span:nth-child(2) { flex: 1; display: grid; gap: 5px; min-width: 0; }
-.raSettingsAction strong { font-size: 14px; font-weight: 690; }
-.raSettingsAction small { font-size: 12px; color: var(--rs-secondary); line-height: 1.4; }
-.raSettingsAction > svg:last-child { flex: none; color: var(--rs-secondary); }
-.raSettingsActionIcon {
-  display: grid; place-items: center; width: 39px; height: 39px; flex: none;
-  border-radius: 10px; background: var(--rs-subtle); border: 1px solid var(--rs-border);
-  color: var(--rs-accent);
-}
-.raSettingsPlanTop {
-  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
-  padding: 26px 28px 22px;
-}
-.raSettingsPlanTop h3 { margin: 9px 0 5px; font-size: 26px; letter-spacing: -.04em; color: var(--rs-text); }
-.raSettingsPlanTop p { font-size: 14px; color: var(--rs-secondary); margin: 0; }
-.raSettingsPlanTag {
-  display: inline-flex; padding: 7px 13px; border-radius: 99px; font-weight: 730;
-  border: 1px solid color-mix(in srgb, var(--rs-accent) 25%, var(--rs-border));
-  background: var(--rs-accent-bg); color: var(--rs-accent); font-size: 12px;
-}
-.raSettingsPlanUsage {
-  display: flex; justify-content: space-between; align-items: center; gap: 16px;
-  padding: 19px 28px; margin: 0 28px; border: 1px solid var(--rs-border);
-  border-radius: 11px; background: var(--rs-subtle);
-}
-.raSettingsPlanUsage span { font-size: 14px; color: var(--rs-secondary); }
-.raSettingsPlanUsage strong { font-size: 20px; color: var(--rs-text); font-variant-numeric: tabular-nums; }
-.raSettingsPlanCaption { margin: 10px 28px 25px; color: var(--rs-secondary); font-size: 12px; line-height: 1.5; }
-
-/* Existing organization management stays functional but adopts the new rhythm. */
-.raSettings .orgHub { margin: 0; border-color: var(--rs-border); background: var(--rs-surface); border-radius: 15px; }
-.raSettings .orgHubHeader { padding: 24px 26px; }
-.raSettings .orgHubHeading h2 { font-size: 18px; letter-spacing: -.025em; color: var(--rs-text); }
-.raSettings .orgHubEyebrow { font-size: 11px; color: var(--rs-accent); }
-.raSettings .orgHubHeading p, .raSettings .orgHubSummaryText p,
-.raSettings .orgHubPeopleHeader p { font-size: 13px; line-height: 1.6; color: var(--rs-secondary); }
-.raSettings .orgHubSwitcher { border-color: var(--rs-border); background: var(--rs-subtle); }
-.raSettings .orgHubSwitcher button, .raSettings .orgHubSwitcher small { font-size: 13px; }
-.raSettings .orgHubBody { border-color: var(--rs-border); }
-.raSettings .orgHubSummaryText h3 { font-size: 16px; color: var(--rs-text); }
-.raSettings .orgHubMemberName strong { font-size: 13px; }
-.raSettings .orgHubMemberName small, .raSettings .orgHubMember select,
-.raSettings .orgHubRemove, .raSettings .orgHubMemberRole { font-size: 12px; }
-.raSettings .orgHubRole, .raSettings .orgHubSubtle { font-size: 12px; }
-.raSettings .orgHubPrimary { color: #04131a; font-size: 13px!important; }
-.raSettings .orgHubMember, .raSettings .orgHubPeople, .raSettings .orgHubInlineForm,
-.raSettings .orgHubPending .orgHubMember:first-of-type { border-color: var(--rs-border); }
-.raSettings .orgHubInlineForm input, .raSettings .orgHubInlineForm select { font-size: 13px; }
-@media(max-width: 980px) {
-  .raSettings { grid-template-columns: 190px minmax(0, 1fr); gap: 24px; }
-  .raSettingsNavItem { padding-inline: 10px; }
-}
-@media(max-width: 760px) {
-  .raSettings { display: block; }
-  .raSettingsAside { position: static; padding: 0; margin-bottom: 27px; }
-  .raSettingsAsideLabel, .raSettingsAsideFoot { display: none; }
-  .raSettingsNav { flex-direction: row; flex-wrap: nowrap; gap: 6px; overflow-x: auto; padding: 0 0 7px; scrollbar-width: thin; }
-  .raSettingsNavItem { flex: none; width: auto; min-height: 41px; white-space: nowrap; padding: 9px 12px; font-size: 13px; }
-  .raSettingsNavItem svg { width: 16px; height: 16px; }
-  .raSettingsHeading { margin-bottom: 21px; }
-}
-@media(max-width: 560px) {
-  .raSettingsNav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; overflow: visible; padding: 0; }
-  .raSettingsNavItem { width: 100%; min-width: 0; white-space: normal; gap: 8px; padding: 9px 10px; }
-  .raSettingsSections { gap: 14px; }
-  .raSettingsSurfaceHeader, .raSettingsIdentity, .raSettingsRow { padding: 18px; }
-  .raSettingsIdentity { flex-wrap: wrap; gap: 12px; }
-  .raSettingsIdentityAvatar { width: 45px; height: 45px; border-radius: 12px; font-size: 18px; }
-  .raSettingsIdentityText { flex: 1 1 calc(100% - 58px); }
-  .raSettingsQuietPill { margin-left: 57px; }
-  .raSettingsRow { align-items: flex-start; flex-direction: column; gap: 14px; }
-  .raSettingsRowControl { max-width: 100%; }
-  .raSettings .languageSetting { max-width: 100%; }
-  .raSettings .languageSetting button { min-width: 0; padding: 9px 10px; }
-  .raSettingsEndpoint { margin: 0 18px 18px; flex-direction: column; align-items: stretch; }
-  .raSettingsEndpoint code { padding: 8px 3px; }
-  .raSettingsCopy { align-self: flex-start; }
-  .raSettingsAction { padding: 14px 18px; }
-  .raSettingsPlanTop { padding: 20px 18px; }
-  .raSettingsPlanUsage { margin: 0 18px; padding: 15px; }
-  .raSettingsPlanCaption { margin: 10px 18px 20px; }
-  .raSettings .orgHubHeader { padding: 18px; }
-}
+.raSettings *{box-sizing:border-box}
+.raSettingsAside{position:sticky;top:28px;min-width:0;padding-top:4px}
+.raSettingsAsideLabel,.raSettingsFieldLabel,.raSettingsEyebrow{font-size:10px;font-weight:500;letter-spacing:.06em;line-height:1.5;color:var(--rs-secondary)}
+.raSettingsAsideLabel{padding:0 10px 10px}
+.raSettingsGroupLabel{padding-top:26px}
+.raSettingsNav{display:flex;flex-direction:column;gap:3px}
+.raSettingsNavItem{display:flex;align-items:center;gap:10px;width:100%;min-height:38px;border:0;border-radius:7px;padding:10px;background:transparent;color:var(--rs-secondary);font:inherit;font-size:12px;text-align:left;cursor:pointer}
+.raSettingsNavItem:hover{background:var(--rs-subtle);color:var(--rs-text)}
+.raSettingsNavItem.isActive{background:var(--rs-accent-bg);color:var(--rs-text);font-weight:550}
+.raSettingsNavItem svg{width:16px;height:16px;flex:none}
+.raSettingsAsideFoot{display:flex;align-items:flex-start;gap:8px;margin:30px 8px 0;padding:16px 2px;border-top:1px solid var(--rs-border);color:var(--rs-secondary);font-size:10px;line-height:1.7}
+.raSettingsAsideFoot svg{width:14px;height:14px;flex:none;margin-top:2px}
+.raSettingsContent{min-width:0;max-width:870px}
+.raSettingsHeading{margin:0 0 26px}
+.raSettingsEyebrow{display:none}
+:root[data-theme] .appFrame .raSettingsHeading h2{font-size:24px;font-weight:550;letter-spacing:-.035em;line-height:1.25;margin:0;color:var(--rs-text)}
+.raSettingsHeading p{font-size:13px;color:var(--rs-secondary);line-height:1.7;margin:9px 0 0}
+.raSettingsSections{display:grid;gap:18px}
+.raSettingsSurface{min-width:0;overflow:hidden;border:1px solid var(--rs-border);border-radius:10px;background:var(--rs-surface);box-shadow:none}
+.raSettingsIdentity{display:flex;align-items:center;gap:15px;padding:23px}
+.raSettingsIdentityAvatar{display:grid;place-items:center;flex:none;width:48px;height:48px;border:1px solid var(--rs-border);border-radius:11px;background:var(--rs-subtle);color:var(--rs-text);font-size:19px;font-weight:550}
+.raSettingsIdentityText{min-width:0;flex:1}
+.raSettingsIdentityText h3{font-size:15px;font-weight:550;letter-spacing:-.015em;margin:4px 0;color:var(--rs-text)}
+.raSettingsIdentityText p{font-size:12px;color:var(--rs-secondary);margin:0;overflow-wrap:anywhere}
+.raSettingsQuietPill{border:1px solid var(--rs-border);border-radius:6px;padding:5px 8px;font-size:10px;color:var(--rs-secondary)}
+.raSettingsSurfaceHeader{padding:23px 24px 20px}
+.raSettingsSurfaceHeader h3{font-size:14px;font-weight:550;margin:0;letter-spacing:-.01em;color:var(--rs-text)}
+.raSettingsSurfaceHeader p{font-size:12px;color:var(--rs-secondary);line-height:1.7;margin:6px 0 0}
+.raSettingsRow{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:88px;padding:22px 24px;border-top:1px solid var(--rs-border)}
+.raSettingsRowLast{border-top:0}
+.raSettingsRowInfo{flex:1;min-width:0}
+.raSettingsRowInfo h4{font-size:13px;font-weight:550;color:var(--rs-text);margin:0 0 5px}
+.raSettingsRowInfo p{font-size:12px;color:var(--rs-secondary);line-height:1.7;margin:0}
+.raSettingsRowControl{flex:none}
+.raSettings .languageSetting{display:inline-flex;gap:2px;border:1px solid var(--rs-border);border-radius:7px;padding:3px;background:var(--rs-subtle)}
+:root[data-theme] .appFrame .raSettings .languageSetting button{min-width:65px;min-height:30px;padding:7px 12px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--rs-secondary);font-size:12px;font-weight:450;box-shadow:none;cursor:pointer}
+:root[data-theme] .appFrame .raSettings .languageSetting button.active{background:var(--rs-surface)!important;border-color:var(--rs-border)!important;color:var(--rs-text)!important;box-shadow:0 1px 2px #00000005}
+.raSettingsButton{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:8px 11px;border:1px solid var(--rs-border);border-radius:6px;background:var(--rs-surface);color:var(--rs-text);font:inherit;font-size:11px;font-weight:500;text-decoration:none;white-space:nowrap;cursor:pointer}
+.raSettingsButton:hover{background:var(--rs-subtle);border-color:color-mix(in srgb,var(--rs-text) 24%,var(--rs-border));color:var(--rs-text)}
+.raSettingsButtonPrimary{background:var(--rs-accent);border-color:var(--rs-accent);color:var(--dash-inverse)}
+.raSettingsButtonPrimary:hover{background:var(--dash-accent-hover);color:var(--dash-inverse)}
+.raSettingsEndpoint{display:flex;align-items:center;gap:12px;margin:0 24px 24px;padding:8px 10px 8px 14px;background:var(--rs-subtle);border:1px solid var(--rs-border);border-radius:7px}
+.raSettingsEndpoint code{flex:1;min-width:0;font-size:12px;color:var(--rs-text);overflow-wrap:anywhere}
+.raSettingsInlineError{margin:0 24px 20px;color:#be4848;font-size:12px}
+.raSettingsAction{display:flex;align-items:center;gap:13px;width:100%;min-height:74px;padding:16px 24px;border:0;border-top:1px solid var(--rs-border);background:transparent;color:var(--rs-text);font:inherit;text-align:left;cursor:pointer}
+.raSettingsAction:hover{background:var(--rs-subtle)}
+.raSettingsAction>span:nth-child(2){display:grid;gap:4px;flex:1;min-width:0}
+.raSettingsAction strong{font-size:12px;font-weight:500}
+.raSettingsAction small{font-size:11px;color:var(--rs-secondary);line-height:1.6}
+.raSettingsAction>svg:last-child{width:16px;height:16px;color:var(--rs-secondary);flex:none}
+.raSettingsActionIcon{display:grid;place-items:center;flex:none;width:33px;height:33px;border:1px solid var(--rs-border);border-radius:7px;background:var(--rs-subtle);color:var(--rs-secondary)}
+.raSettingsActionIcon svg{width:16px;height:16px}
+.raSettingsPlanTop{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:26px 24px}
+.raSettingsPlanTop h3{font-size:25px;font-weight:550;letter-spacing:-.04em;margin:9px 0 5px;color:var(--rs-text)}
+.raSettingsPlanTop p{font-size:12px;color:var(--rs-secondary);margin:0}
+.raSettingsPlanTag{padding:5px 9px;border:1px solid var(--rs-border);border-radius:6px;background:var(--rs-subtle);color:var(--rs-text);font-size:11px}
+.raSettingsPlanUsage{display:flex;justify-content:space-between;gap:18px;margin:0 24px;padding:17px;border:1px solid var(--rs-border);border-radius:7px;background:var(--rs-subtle)}
+.raSettingsPlanUsage span{font-size:12px;color:var(--rs-secondary)}
+.raSettingsPlanUsage strong{font-size:17px;font-weight:500;color:var(--rs-text);font-variant-numeric:tabular-nums}
+.raSettingsPlanCaption,.raSettingsFootnote{font-size:11px;color:var(--rs-secondary);line-height:1.7;margin:10px 24px 24px}
+.raSettingsFootnote{margin:0}
+.raThemeChoices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:0 24px 24px}
+.raThemeChoices>button{min-width:0;padding:0;border:0;background:transparent;color:var(--rs-secondary);font:inherit;text-align:left;cursor:pointer}
+.raThemeChoices>button>span:last-child{display:flex;align-items:center;justify-content:space-between;font-size:12px;margin-top:10px}
+.raThemeChoices>button>span:last-child i{font-style:normal;font-size:12px}
+.raThemeChoices>button[aria-pressed="true"]{color:var(--rs-text)}
+.raThemePreview{display:flex;overflow:hidden;aspect-ratio:1.7;border:1px solid var(--rs-border);border-radius:8px;padding:9px;gap:8px;background:#fafafa}
+.raThemeChoices>button[aria-pressed="true"] .raThemePreview{outline:2px solid var(--rs-text);outline-offset:3px}
+.raThemeSidebar{display:flex;flex-direction:column;gap:7px;width:26%;padding:7px 4px;background:#f0f0f2;border-radius:3px}
+.raThemeSidebar b{display:block;width:100%;height:3px;background:#d4d4d9;border-radius:2px}
+.raThemeContent{display:flex;flex-direction:column;gap:9px;flex:1;padding:12px 5px}
+.raThemeContent b{display:block;width:75%;height:4px;background:#d8d8dd;border-radius:2px}
+.raThemeContent b:nth-child(2){width:90%;height:3px}
+.raThemeContent b:nth-child(3){height:20px;width:100%;background:#f0f0f2;border:1px solid #e5e5e8;border-radius:3px}
+.raThemePreview.dark{background:#19191d;border-color:#34343b}
+.raThemePreview.dark .raThemeSidebar{background:#242429}
+.raThemePreview.dark b{background:#4a4a53}
+.raThemePreview.dark .raThemeContent b:nth-child(3){background:#242429;border-color:#34343b}
+.raThemePreview.system{background:linear-gradient(90deg,#fafafa 50%,#19191d 50%)}
+.raThemePreview.system .raThemeContent b{background:#909097}
+.raThemePreview.system .raThemeContent b:nth-child(3){background:#8a8a93;border-color:transparent}
+.raSettings .orgHub{margin:0;background:var(--rs-surface);border-color:var(--rs-border);border-radius:10px}
+.raSettings .orgHubHeader{padding:23px 24px}
+.raSettings .orgHubHeading h2{font-size:17px;letter-spacing:-.02em;color:var(--rs-text)}
+.raSettings .orgHubEyebrow{font-size:10px;color:var(--rs-secondary)}
+.raSettings .orgHubHeading p,.raSettings .orgHubSummaryText p,.raSettings .orgHubPeopleHeader p{font-size:12px;color:var(--rs-secondary)}
+.raSettings .orgHubSwitcher,.raSettings .orgHubBody{background:var(--rs-subtle);border-color:var(--rs-border)}
+.raSettings .orgHubPrimary{background:var(--rs-accent);border-color:var(--rs-accent);color:var(--dash-inverse);font-size:12px!important}
+.raSettings .orgHubMember,.raSettings .orgHubPeople{border-color:var(--rs-border)}
+@media(max-width:1050px){.raSettings{grid-template-columns:160px minmax(0,1fr);gap:28px}}
+@media(max-width:760px){.raSettings{display:block}.raSettingsAside{position:static;margin-bottom:26px;padding:0}.raSettingsAsideLabel,.raSettingsAsideFoot{display:none}.raSettingsNav{display:flex;flex-direction:row;overflow:auto;gap:5px;padding-bottom:8px;scrollbar-width:none}.raSettingsNav::-webkit-scrollbar{display:none}.raSettingsNavItem{width:auto;flex:none;white-space:nowrap;padding:9px 12px;border:1px solid var(--rs-border)}.raSettingsHeading{margin-bottom:20px}.raSettingsContent{max-width:none}}
+@media(max-width:520px){.raSettingsSurfaceHeader,.raSettingsIdentity,.raSettingsRow{padding:19px}.raSettingsIdentity{flex-wrap:wrap}.raSettingsQuietPill{margin-left:63px}.raSettingsRow{align-items:flex-start;flex-direction:column;gap:16px}.raThemeChoices{gap:11px;padding:0 19px 22px}.raThemePreview{padding:6px;gap:5px}.raThemeSidebar{gap:5px;padding-top:6px}.raThemeContent{gap:5px;padding:8px 2px}.raThemeContent b:nth-child(3){height:14px}.raSettingsEndpoint{margin:0 19px 19px;flex-wrap:wrap}.raSettingsEndpoint code{flex-basis:100%;padding:5px 0}.raSettingsAction{padding:16px 19px}.raSettingsPlanTop{padding:22px 19px}.raSettingsPlanUsage{margin:0 19px;padding:14px}.raSettingsPlanCaption{margin:10px 19px 20px}}

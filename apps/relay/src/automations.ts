@@ -20,6 +20,9 @@ import {
 } from "./agent-planner.js";
 import { takeSourceDecision } from "./source-goals.js";
 import { nextIntervalRun } from "./schedule-clock.js";
+import { nativeArcWork, tickNativeArcWork } from "./arc-work.js";
+import type { ArcEnv } from "./arc-chat.js";
+import {requireArcAccess} from './arc-trial.js';
 import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { taskSchedulerHealth } from "./task-scheduler.js";
 import { binaryBytesRead, finishAutomationRunWithUsage, recordPlusUsage } from "./plus-usage.js";
@@ -51,7 +54,7 @@ export type AutomationStatus =
   | "cancelled"
   | "expired";
 
-export type AutomationEnv = DeviceCallEnv &
+export type AutomationEnv = DeviceCallEnv & Partial<ArcEnv> &
   AgentPlannerEnv &
   GitHubAutomationEnv & {
     PUBLIC_ORIGIN: string;
@@ -287,6 +290,8 @@ async function requireAutomationEntitlements(
   userId: string,
   automation: AutomationRow,
 ) {
+  const native = nativeArcWork(automation.goal_json);
+  if (native) return requireArcAccess(env, userId);
   return requireFeatures(env, userId, requiredAutomationRowFeatures(automation));
 }
 
@@ -1875,6 +1880,15 @@ async function executeAutomation(
     phase: "idle",
     step_index: 0,
   });
+  if (nativeArcWork(automation.goal_json)) {
+    if (!env.ARC_RUNTIME || !env.APP_TOKEN_KEY) throw new Error('ARC_NOT_CONFIGURED');
+    if (!state.run_id) state = await startRun(env, automation, state);
+    await tickNativeArcWork(env as ArcEnv, automation, state,
+      (status, next, error, done = false) => persistRuntime(env, automation, state, status, next, error,
+        { incrementRun: done, event: done ? 'run_completed' : 'arc_working', summary: error || 'Arc task conversation updated.' }),
+      (status, error) => markRunFinished(env, automation, state, status, null, error));
+    return;
+  }
   const cloudOnly =
     action.steps.length > 0 &&
     action.steps.every((step) => step.type === "github_merge_pr");
@@ -2492,7 +2506,7 @@ export async function runAutomationTick(
       if (error instanceof LeaseLostError || error instanceof UncertainDeviceDispatchError) continue;
       const message = error instanceof Error ? error.message : String(error);
       const state = parseJson<RuntimeState>(automation.state_json, {});
-      if (isPlanUpgradeRequiredError(error)) {
+      if (isPlanUpgradeRequiredError(error) || /^ARC_TRIAL_/.test(message)) {
         await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
         await persistRuntime(
           env,

@@ -5,3 +5,5 @@ packages/execution-core/**/*.go text eol=lf
 packages/execution-core/go.mod text eol=lf
 packages/execution-core/go.sum text eol=lf
 packages/execution-core/execution/*.json text eol=lf
+# The inline bootstrap has a CSP hash; use browser-normalized newlines.
+/apps/ui/index.html text eol=lf

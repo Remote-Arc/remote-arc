@@ -1,16 +1,8 @@
 {
-  "name": "Remote Arc",
-  "short_name": "Remote Arc",
-  "description": "Manage Remote Arc devices, permissions and MCP access from your phone.",
-  "id": "/overview",
-  "start_url": "/devices",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
-  "orientation": "portrait-primary",
-  "background_color": "#f8fbff",
-  "theme_color": "#f8fbff",
-  "categories": ["utilities", "productivity", "developer"],
+  "background_color": "#fafafa",
+  "theme_color": "#fafafa",
   "icons": [
     {
       "src": "/remote-arc-192.png",
@@ -25,18 +17,31 @@
       "purpose": "any maskable"
     }
   ],
+  "name": "Remote Arc Connect",
+  "short_name": "Remote Arc",
+  "description": "Connect your AI to apps and your own computers.",
+  "id": "/overview",
+  "start_url": "/dashboard/connect/overview",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "shortcuts": [
     {
-      "name": "Devices",
-      "short_name": "Devices",
-      "description": "Manage paired computers",
-      "url": "/devices"
+      "name": "Overview",
+      "url": "/dashboard/connect/overview"
     },
     {
-      "name": "Security",
-      "short_name": "Security",
-      "description": "Review Remote Arc security",
-      "url": "/security"
+      "name": "Devices",
+      "url": "/dashboard/connect/devices"
+    },
+    {
+      "name": "Apps",
+      "url": "/dashboard/connect/apps"
+    },
+    {
+      "name": "AI clients",
+      "url": "/dashboard/connect/clients"
     }
   ]
 }

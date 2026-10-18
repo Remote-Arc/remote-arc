@@ -2,13 +2,14 @@ import { APP_WORKFLOW_EXAMPLES, translateCopy } from "./app-workflow-examples.js
 import { AppsDirectory } from "./apps-directory.js";
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
+import { ProductIcon } from "./product-icon.js";
 import { InteractiveWorkDemo } from "./landing-interactive-demo.js";
 import { ArcTeaser } from "./arc-future.js";
 import "./landing-content.css";
 
 export function HeroHeadline() {
   const { tr, locale } = useI18n();
-  return <TypewriterHeadline key={locale} phrases={[tr("Build apps.", "构建应用。"), tr("Run tasks.", "执行任务。"), tr("Fix bugs.", "修复问题。"), tr("Analyze data.", "分析数据。")]} />;
+  return <TypewriterHeadline key={locale} phrases={[tr("Put it to work.", "真正动手工作。"), tr("Let it coordinate.", "协同你的设备。"), tr("Keep work moving.", "持续推进工作。")]} />;
 }
 
 function TypewriterHeadline({ phrases }: { phrases: [string, ...string[]] }) {
@@ -35,7 +36,7 @@ function TypewriterHeadline({ phrases }: { phrases: [string, ...string[]] }) {
     return () => window.clearTimeout(timer);
   }, [frame.deleting, frame.length, phrase.length, phrases.length, reducedMotion, visible]);
   return <div className="heroHeadlineGroup">
-    <h1 className="heroHeadline"><span className="heroAccessible">{tr("Build apps, run tasks, fix bugs and analyze data on your own computer. Anywhere, anytime.", "让 AI 在自己的电脑上构建应用、执行任务、修复问题和分析数据。随时随地。")}</span><span aria-hidden="true"><span className="heroTypeLine">{reducedMotion ? phrase : phrase.slice(0, frame.length)}</span><span className="heroFixedLine"><span>{tr("Anywhere,", "随时，")}</span><span>{tr("Anytime.", "随地。")}</span></span></span></h1>
+    <h1 className="heroHeadline"><span className="heroAccessible">{tr("Your personal AI agent. Working across your apps and your own computers.", "你的个人 AI 队友，跨应用与自己的电脑，真正动手完成工作。")}</span><span aria-hidden="true"><span className="heroFixedLine">{tr("Your personal AI.", "你的个人 AI 队友。")}</span><span className="heroTypeLine">{reducedMotion ? phrase : phrase.slice(0, frame.length)}</span></span></h1>
   </div>;
 }
 
@@ -109,11 +110,11 @@ export function LandingContent() {
   const [faqCategory, setFaqCategory] = useState(0);
   const faqGroups: { id: string; title: string; entries: [string, React.ReactNode][] }[] = [
     { id: "product", title: tr("Product & setup", "产品与使用"), entries: [
-      [tr("What is Remote Arc? Is it a remote desktop?", "Remote Arc 是什么？是远程桌面吗？"), <>{tr("Remote Arc gives the AI client you already use controlled access to files, processes, terminals and explicitly shared browser tabs on computers you own. It can also persist deterministic Tasks such as long commands, schedules and condition watches. It does not stream your desktop or claim that ordinary Chat keeps reasoning after the chat ends.", "Remote Arc 让你正在使用的 AI 客户端以受控权限访问自己电脑上的文件、进程、终端和明确共享的浏览器标签页，也能保存长命令、定时任务和条件监听等确定性 Task。它不串流桌面，也不声称普通 Chat 结束后 AI 仍会自动持续推理。")} <a href="/use-cases">{tr("Explore workflows", "查看使用场景")} →</a></>],
-      [tr("Do I need a paid AI plan, API key or token credits?", "需要 AI 会员、模型 API Key 或充值 Token 吗？"), <>{tr("Remote Arc uses compatible AI chat clients through MCP, not a separately billed model API. No model API key or token top-up is needed for this integration. Some free chat plans already allow custom remote MCP connectors: for example, Claude Free currently allows one custom connector. ChatGPT and other clients have different restrictions on tool calls, especially write actions. Your AI provider's chat/message limits and Remote Arc's hosted tool-call limits still apply.", "Remote Arc 通过兼容 MCP 的 AI 聊天客户端工作，不要求你另买模型 API、配置 API Key 或充值按量计费的 Token。部分免费聊天套餐已经支持自定义远程 MCP，例如 Claude Free 目前允许添加一个自定义连接器；ChatGPT 等客户端对工具调用，尤其写入操作，有不同的套餐限制。AI 服务商原有的消息、上下文额度与 Remote Arc 的工具调用额度仍然适用。")} <a href="/install/claude">{tr("Try a supported free connector", "了解免费连接方式")} →</a></>],
+      [tr("What is Remote Arc? Is it a remote desktop?", "Remote Arc 是什么？是远程桌面吗？"), <>{tr("Remote Arc connects AI to your Apps and your own computers. Arc is our upcoming personal agent workspace: describe work in chat, use your connections, and save tasks or recurring routines. Connect brings the same tools to your existing compatible AI chat through MCP. Computer tools run through the local Agent, with intelligent device selection and your device permissions.", "Remote Arc 将 AI 连接到你的应用和自己的电脑。Arc 是我们即将推出的个人智能体工作空间：在聊天中描述工作、使用已连接的应用与设备，并保存任务或例行工作。Connect 则通过 MCP，把同一套工具接入你已有的兼容 AI 聊天。电脑操作由本机 Agent 执行，支持智能设备选择并遵守设备权限。")} <a href="/use-cases">{tr("Explore workflows", "查看使用场景")} →</a></>],
+      [tr("Do I need a paid AI plan, API key or token credits?", "需要 AI 会员、模型 API Key 或充值 Token 吗？"), <>{tr("You do not need to bring a model API key. Arc will provide hosted models with trial or plan usage limits after launch; Arc Chat is not open yet. Connect uses the AI chat you already have, so it needs no separate model API balance; your chat provider's plan and tool-call restrictions still apply. Remote Arc's hosted usage limits and any charges from services connected with your own accounts remain separate.", "你无需自带模型 API Key。Arc 上线后将提供平台模型，使用量遵循试用或套餐额度；目前 Arc Chat 尚未开放。Connect 使用你已有的 AI 聊天，无需单独充值模型 API；原 AI 服务商的套餐和工具调用限制仍然适用。Remote Arc 的托管使用额度，以及通过自有账号连接的其他服务费用，分别计算。")} <a href="/pricing">{tr("See plans", "查看套餐")} →</a></>],
       [tr("Which computers can I connect?", "哪些电脑可以连接？"), tr("Windows, macOS and Linux computers with the local Agent installed. Native downloads and Homebrew need no Node.js; only npm/npx installation requires Node.js 20+. Pair each computer to your account and choose its permissions separately. Actual available tools depend on the installed Agent and local environment.", "安装本地 Agent 的 Windows、macOS 与 Linux 电脑均可。直接下载和 Homebrew 安装不需要 Node.js；只有 npm/npx 安装方式需要 Node.js 20+。每台电脑分别配对到账户、选择权限，实际可用工具取决于已安装 Agent 和本机环境。")],
       [tr("Can I use it from my phone or outside my home network?", "能在手机上或外网使用吗？"), tr("Yes, through an AI client that supports the connection and tool calls on that device. Your paired computer connects outbound to the hosted relay, so your chat does not need to share its LAN. The computer, agent and internet connection still need to be available.", "可以，前提是该设备上的 AI 客户端支持连接与工具调用。已配对电脑向托管 Relay 建立出站连接，所以聊天端无需和电脑处于同一局域网。目标电脑、本地 Agent 与互联网连接仍需可用。")],
-      [tr("What does it cost?", "怎么收费？"), <>{tr("Free includes core remote-computer tools and the current 10,000-call monthly hosted allowance. Plus adds binary reads, durable long-command Tasks, schedules, condition watches and supported keep-awake. Plus is currently early access; self-service billing is not enabled in this release candidate. AI-client subscriptions remain separate.", "Free 包含核心远程电脑工具与当前每月 10,000 次托管调用额度。Plus 增加二进制读取、持久长命令 Task、定时任务、条件监听与受支持的保持唤醒。Plus 当前为抢先体验，本 release candidate 尚未开放自助付费；AI 客户端订阅仍独立计算。" )} <a href="/pricing">{tr("Compare Free & Plus", "对比 Free 与 Plus")} →</a></>],
+      [tr("What does it cost?", "怎么收费？"), <>{tr("Connect Free currently includes 10,000 hosted tool calls per month. Arc Chat is coming soon. A 14-day trial with bounded model usage is planned for launch. Trial activation is not open yet. Paid self-service checkout is not open yet; current availability is listed on our pricing page. Your existing AI-chat subscription and connected-service bills remain separate.", "Connect Free 当前包含每月 10,000 次托管工具调用。Arc Chat 即将上线，上线时计划提供有明确模型额度的 14 天试用，目前尚未开放试用。目前尚未开放自助付费，具体以价格页的当前说明为准。已有的 AI 聊天订阅和其他已连接服务的费用分别计算。" )} <a href="/pricing">{tr("See plans", "查看套餐")} →</a></>],
     ] },
     { id: "security", title: tr("Security & control", "安全与控制"), entries: [
       [tr("How much access am I giving the AI?", "AI 会获得多少电脑权限？"), <>{tr("You choose tools per device, while OAuth scopes constrain the client. Ordinary non-sensitive reads can remain broad; persistent file changes stay inside Trusted Write Locations. An out-of-scope write pauses for approval. Sensitive paths remain separately protected. Terminal is a separate high-risk capability and is not contained by an OS sandbox.", "你为每台设备选择工具，OAuth Scope 同时限制客户端。普通非敏感读取可以保持灵活；持续文件修改只发生在可信写入区域内，越界写入会暂停等待审批。敏感路径继续独立保护；终端是单独的高风险能力，并没有 OS 沙箱隔离。" )} <a href="/security-model">{tr("Read the security model", "了解安全模型")} →</a></>],
@@ -121,12 +122,12 @@ export function LandingContent() {
       [tr("Do my files stay private? What leaves the computer?", "文件是否私密？哪些内容会离开电脑？"), <>{tr("Requested file content, tool arguments and command output pass through the relay to your AI provider. Durable tasks also store their contract, bounded observations, memory and evidence. Undo snapshots stay local. HTTPS/WSS protects transport; this is not zero-knowledge end-to-end encryption.", "请求的文件内容、工具参数与命令输出会经过 Relay 返回 AI 服务。持久任务还保存合同、受限观察、工作记忆与证据，Undo 快照留在本机。HTTPS/WSS 保护传输，但不是 zero-knowledge 端到端加密。" )} <a href="/privacy">{tr("Read data handling", "查看数据处理说明")} →</a></>],
       [tr("Is Pause AI MCP the same as pausing a device?", "安全页的「暂停 AI MCP」等于暂停整个设备吗？"), <>{tr("No. Pause AI MCP is account-wide: it blocks authenticated calls from connected AI chat clients, but does not stop your paired computers or independently running local tasks. Device Pause is different: on a supported native Agent it blocks computer-tool execution while keeping a small authenticated wake channel for Resume. Disconnect completely stops both channels and requires starting the Agent locally again.", "不是。「暂停 AI MCP」是账户级开关：它会拦截 AI 聊天客户端的 MCP 调用，但不会停止已经配对的电脑，也不会自动终止本机独立任务。设备级「暂停 Agent」则禁止电脑工具执行，仅保留恢复所需的最小授权通道；「完全断开」会连唤醒通道也关闭，之后必须在电脑本机重新启动。")} <a href="/overview">{tr("Manage devices", "管理设备")} →</a></>],
       [tr("Are the credentials for AI clients or for my computers?", "安全页里的凭证属于 AI 客户端还是电脑？"), tr("Both, but they are separate. Each connected AI chat client receives its own revocable OAuth grant. Each paired computer stores a separate device credential locally; Remote Arc stores its hash in the hosted database. Revoking one AI client's grant does not unpair your machines.", "两者都有，但完全分离：每个已授权 AI 聊天客户端有独立、可撤销的 OAuth Grant；每台已配对电脑则在本机保存单独的 Device Credential，云端只保存其哈希。撤销某个 AI 客户端，不会让所有电脑重新配对。")],
-      [tr("Can I revoke access or stop ongoing work?", "能撤销访问或停止正在进行的工作吗？"), tr("Use Dashboard to revoke a device or AI-client grant, disable device tools, or pause/cancel saved Tasks. Account MCP pause blocks authenticated MCP calls. Removing access does not undo earlier effects or automatically terminate every process already started.", "可在 Dashboard 撤销设备或 AI 客户端授权、关闭设备工具，或暂停/取消已保存 Task。账户 MCP Pause 会阻止已认证 MCP 调用。撤销访问不会撤回此前副作用，也不等于自动终止所有已启动进程。")],
+      [tr("Can I revoke access or stop ongoing work?", "能撤销访问或停止正在进行的工作吗？"), tr("Use Dashboard to revoke a device or AI-client grant, disable device tools, or ask your connected AI to pause/cancel saved tasks. Account MCP pause blocks authenticated MCP calls. Removing access does not undo earlier effects or automatically terminate every process already started.", "可在 Dashboard 撤销设备或 AI 客户端授权、关闭设备工具，或让已连接的 AI 暂停/取消已保存 Task。账户 MCP Pause 会阻止已认证 MCP 调用。撤销访问不会撤回此前副作用，也不等于自动终止所有已启动进程。")],
       [tr("Can I undo everything the AI changes?", "AI 的所有修改都能撤销吗？"), tr("Local Undo can restore supported file-tool edits when enabled, using snapshots on that device. It does not roll back shell commands, Git operations, deleted files or external service actions. Review the requested work and its permissions before execution.", "开启 Local Undo 后，可用设备上的快照恢复受支持的文件工具修改。它不回滚 Shell 命令、Git 操作、文件删除或外部服务动作。执行前应核对请求的工作和权限。")],
     ] },
     { id: "tasks", title: tr("Tasks & availability", "任务与在线状态"), entries: [
-      [tr("Does every request become a Task?", "每次请求都是一个 Task 吗？"), tr("No. File reads and short commands are ordinary tool calls. A Task saves work that should continue, wait for a condition or run later. Your AI can create it under your authorization; Dashboard is optional for inspecting and managing it.", "不是。读取文件和短命令属于普通工具调用。Task 保存需要持续推进、等待条件或稍后执行的工作。AI 可以在授权范围内创建，Dashboard 用于按需查看与管理。")],
-      [tr("Can the AI keep working while I sleep?", "我睡觉后 AI 能继续工作吗？"), <>{tr("Saved deterministic Tasks can continue after the chat turn ends: long commands can be tracked, scheduled work can become due and condition watches can react to events. If the next step genuinely requires new AI judgment, ordinary Chat currently has no supported autonomous wake path through Remote Arc, so the task must wait for an active supported AI host.", "聊天轮次结束后，已保存的确定性 Task 仍可继续：长命令可以持续跟踪，定时任务可以到期执行，条件监听可以响应事件。如果下一步真正需要新的 AI 判断，普通 Chat 目前没有可由 Remote Arc 自主唤醒的受支持通道，因此任务必须等待可用的 AI 宿主。" )} <a href="/docs/long-running-work">{tr("See requirements", "查看运行条件")} →</a></>],
+      [tr("Does every request become a Task?", "每次请求都是一个 Task 吗？"), tr("No. File reads and short commands are ordinary tool calls. A Task saves work that should continue, wait for a condition or run later. Your AI can create it under your authorization; Ask your connected AI to inspect and manage it.", "不是。读取文件和短命令属于普通工具调用。Task 保存需要持续推进、等待条件或稍后执行的工作。AI 可以在授权范围内创建，可让已连接的 AI 按需查看与管理。")],
+      [tr("Can the AI keep working while I sleep?", "我睡觉后 AI 能继续工作吗？"), <>{tr("When it launches, Arc is designed to continue saved tasks and run recurring routines without keeping your browser open, while model access, usage budget and required connections remain available. Work that uses your computer needs that computer online. Connect can track long commands and saved schedules; further AI reasoning in an external chat depends on that AI client's support.", "Arc 上线后将支持在浏览器关闭后继续已保存的任务、执行例行工作，前提是模型访问、使用额度与所需连接可用。使用电脑的操作需要目标电脑保持在线。Connect 能跟踪长命令和已保存的调度；外部聊天中的后续 AI 推理取决于该 AI 客户端的支持。" )} <a href="/docs/long-running-work">{tr("See requirements", "查看运行条件")} →</a></>],
       [tr("What if the computer sleeps, disconnects or restarts?", "电脑睡眠、断网或重启后会怎样？"), tr("New local work waits while the device is unreachable. Durable progress remains, and recovery follows the saved policy after the OS session and agent reconnect. An old process handle is not restored. Optional task keep-awake can help an active computer stay awake; it cannot wake an offline device or start a powered-off computer.", "设备不可达时，新的本机操作等待。持久进度仍在，OS 用户会话与 Agent 重连后按保存策略恢复，不恢复旧进程句柄。可选任务保持唤醒能帮助运行中的电脑不休眠，但不能唤醒离线设备或启动已关机电脑。")],
     ] },
   ];
@@ -138,9 +139,9 @@ export function LandingContent() {
       <LandingInteractiveDemo />
     </section>
 
-    <AppsDirectory />
-
     <ArcTeaser />
+
+    <AppsDirectory />
 
     <section className="landingUnexpected sectionBlock" id="unexpected-workflows">
       <header className="modernSectionIntro">
@@ -166,23 +167,6 @@ export function LandingContent() {
         <article><span className="platformCapabilityIndex">02 · {tr("EXECUTE", "执行")}</span><h3>{tr("Saved work that keeps moving", "保存任务，持续推进")}</h3><p>{tr("Track long commands and run approved work on timers or events. Task state persists across chat disconnects; fresh AI judgment is deliberately outside this production guarantee.", "跟踪长命令，并按时间或事件执行已授权工作。任务状态可跨聊天断开持久保存；新的 AI 判断不属于当前生产能力保证。")}</p><div className="platformCapabilityTags"><span>{tr("Tasks · Plus", "任务 · Plus")}</span><span>{tr("Progress & results", "进度与结果")}</span></div><a href="/docs/long-running-work">{tr("Explore task execution", "了解任务执行")} →</a></article>
         <article><span className="platformCapabilityIndex">03 · {tr("CONTROL", "掌控")}</span><h3>{tr("Authority stays with you", "权限始终由你掌控")}</h3><p>{tr("Choose tools and trusted write locations per device. Review write approvals, inspect activity, restore supported file edits and revoke access.", "按设备选择工具和可信写入区域，审批写入请求、查看活动、恢复受支持的文件修改，并随时撤销访问。")}</p><div className="platformCapabilityTags"><span>{tr("Device policies", "设备策略")}</span><span>Local Undo</span></div><a href="/security-model">{tr("Understand the boundaries", "了解执行边界")} →</a></article>
       </div>
-    </section>
-
-    <section className="landingGoals sectionBlock" id="bring-your-ai">
-      <div className="goalIntro"><span className="eyebrow">{tr("YOUR CHAT. YOUR AI. YOUR COMPUTER.", "日常 AI 聊天，直接操作自己的电脑")}</span><h2>{tr("Your AI chat. No separate API bill. Real work.", "就在 AI 聊天里动手，不另买模型 API。")}</h2><p>{tr("Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects your tools and computers, so you can manage your device fleet, create your AI teammates, and keep work moving across chats. Connect requires no separate model API key or API token top-up. Free chat plans can work when they support custom MCP connectors; your AI provider’s permissions and chat limits, and Remote Arc’s tool-call limits, still apply.", "别让 AI 只停留在聊天。在兼容的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 连接你的工具与电脑，让你管理设备集群、创建 AI 队友，并让工作跨对话持续推进。Connect 无需额外模型 API Key 或充值 API Token；支持自定义 MCP 连接器的免费套餐也可以使用。AI 服务商的工具权限、聊天额度与 Remote Arc 的工具调用额度仍然适用。")}</p><div className="aiPowerBenefits"><span>{tr("No separate pay-per-token API bill", "不另付按 Token 计费的 API 账单")}</span><span>{tr("No extra AI subscription if your chat supports MCP", "聊天支持 MCP，就无需另买 AI 会员")}</span><span>{tr("Permissions stay with you", "权限始终由你掌控")}</span></div><a href="/connect-ai">{tr("Connect your AI", "连接你的 AI")} →</a>
-        <div className="goalDashboard">
-          <span className="eyebrow">{tr("AFTER THE CHAT · YOUR CONTROL CENTER", "不止聊天 · 你的设备控制台")}</span>
-          <h3>{tr("Your computers. One control center.", "每台电脑的控制权，都在一个 Dashboard。")}</h3>
-          <p>{tr("Sign in to see connected computers, pause or resume supported Agents, review execution history, manage device permissions and revoke AI-client access. Your device state remains visible even when you leave the chat.", "登录后随时查看设备在线状态、暂停或恢复受支持的 Agent、审阅执行记录、管理逐设备权限并撤销 AI 客户端授权。离开聊天，设备状态也依然看得见。")}</p>
-          <div className="goalDashboardFeatures">
-            <div><strong>{tr("Device lifecycle", "设备生命周期")}</strong><span>{tr("Running, Paused, Disconnected · on supported native Agents", "运行、暂停、完全断开 · 需支持该功能的原生 Agent")}</span></div>
-            <div><strong>{tr("Execution logs & approvals", "执行日志与权限审批")}</strong><span>{tr("Recent tool activity, approved actions, saved tasks and outcomes", "工具操作记录、授权审批、已保存任务及执行结果")}</span></div>
-            <div><strong>{tr("Installable PWA", "可安装的 PWA")}</strong><span>{tr("Open it like an app from your phone or desktop; no separate download required", "从手机主屏幕或电脑桌面像 App 一样打开，无需另装客户端")}</span></div>
-          </div>
-          <a className="goalDashboardLink" href="/overview">{tr("Open your Dashboard", "进入 Dashboard")} <span aria-hidden="true">↗</span></a>
-        </div>
-        <span className="stagedFeature">{tr("YOUR MODEL THINKS · REMOTE ARC CONNECTS & EXECUTES", "你的模型负责思考 · REMOTE ARC 负责连接与执行")}</span></div>
-      <LandingArchitectureDiagram />
     </section>
 
     <section className="landingControl sectionBlock" id="your-controls">
@@ -213,10 +197,10 @@ export function LandingContent() {
           const next = event.key === "ArrowRight" ? (index + 1) % faqGroups.length : event.key === "ArrowLeft" ? (index + faqGroups.length - 1) % faqGroups.length : event.key === "Home" ? 0 : event.key === "End" ? faqGroups.length - 1 : null;
           if (next === null) return; event.preventDefault(); setFaqCategory(next); document.getElementById("faq-tab-" + faqGroups[next]!.id)?.focus();
         }}>{group.title}</button>)}</div>
-        <div className="modernFaq" role="tabpanel" id={"faq-panel-" + currentFaq.id} aria-labelledby={"faq-tab-" + currentFaq.id}>{currentFaq.entries.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">＋</span></summary><p>{answer}</p></details>)}</div>
+        <div className="modernFaq" role="tabpanel" id={"faq-panel-" + currentFaq.id} aria-labelledby={"faq-tab-" + currentFaq.id}>{currentFaq.entries.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true"><ProductIcon name="add" size={17}/></span></summary><p>{answer}</p></details>)}</div>
       </div>
     </section>
 
-    <section className="landingFinish sectionBlock"><div><span className="eyebrow">{tr("START WITH YOUR OWN COMPUTER", "从自己的电脑开始")}</span><h2>{tr("Bring your AI to the work already there.", "让 AI 进入已有的工作环境。")}</h2><p>{tr("Pair one device, start with the permissions you need and try a concrete request.", "配对一台设备、授予必要权限，再尝试一个具体请求。")}</p><div><a className="primaryButton" href="/install/chatgpt">{tr("Get started", "开始使用")} →</a><a href="/use-cases">{tr("Explore use cases", "浏览使用场景")} ↗</a></div></div><div className="finishCommand"><span>{tr("RUN ON YOUR COMPUTER", "在你的电脑上运行")}</span><code>npx remotelink</code><a href="https://github.com/yaohuangguan/remote-arc" target="_blank" rel="noreferrer">{tr("View source · Review security", "查看源码 · 审查安全性")} ↗</a><small>{tr("Source available under a proprietary license.", "源码公开可查阅，采用专有许可证。")} <a href="https://github.com/yaohuangguan/remote-arc/blob/master/LICENSE" target="_blank" rel="noreferrer">{tr("License", "许可证")} ↗</a></small></div></section>
+
   </div>;
 }

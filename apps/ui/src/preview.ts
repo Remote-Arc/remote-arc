@@ -1,4 +1,5 @@
 import type { SecurityState } from "@remotearc/protocol";
+import appDirectory from "./app-directory.json" with { type: "json" };
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
@@ -193,6 +194,10 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       );
     }
 
+    if (url.pathname === '/api/arc/status') return json({enabled:false,preview:true,access:{status:'eligible',canUse:false,daysRemaining:0,dailyUsedPercent:0,expiresAt:null},models:[{id:'auto',label:'Auto',provider:'openai',premium:false,configured:true},{id:'gpt-5.4',label:'GPT-5.4',provider:'openai',premium:true,configured:true},{id:'claude-sonnet-4-6',label:'Claude Sonnet 4.6',provider:'anthropic',premium:true,configured:true}],limits:{maxSteps:8,maxTokens:24000,maxSeconds:180}});
+    if (url.pathname === '/api/arc/sessions') return json({sessions:[{id:'sample-conversation',title:'Review the release and share a summary',modelId:'auto',updatedAt:new Date().toISOString()}]});
+    if (url.pathname === '/api/arc/work') return json({work:[{id:'sample-task',name:'Prepare the next release summary',kind:'task',status:'waiting',schedule:{type:'once'},nextRunAt:new Date(Date.now()+1800000).toISOString(),runCount:0,error:null,conversationId:'sample-conversation'},{id:'sample-routine',name:'Morning inbox & calendar brief',kind:'routine',status:'waiting',schedule:{type:'daily',time:'09:00',timezone:'Pacific/Auckland',weekdays:[1,2,3,4,5]},nextRunAt:new Date(Date.now()+3600000).toISOString(),runCount:4,error:null,conversationId:'sample-conversation'}],runs:[{id:'sample-run',session_id:'sample-conversation',title:'Review the release and share a summary',status:'succeeded',step:5,tokens_used:1320,error_code:null,created_at:new Date().toISOString(),automation_id:null},{id:'sample-routine-run',session_id:'sample-conversation',title:'Morning inbox & calendar brief',status:'succeeded',step:4,tokens_used:1045,error_code:null,created_at:new Date(Date.now()-3600000).toISOString(),automation_id:'sample-routine'}]});
+    if (url.pathname === '/api/arc/sessions/sample-conversation') return json({session:{id:'sample-conversation',title:'Review the release and share a summary',modelId:'auto'},messages:[{id:'sample-user',role:'user',text:'Review the recent GitHub changes and summarize what is ready for release.'},{id:'sample-tool',role:'tool',text:'Reviewing the release changes.',tool:'call_app',arguments:{operation:'pull_requests.list',connectionId:'sample-github'},result:'Sample data: 3 merged pull requests inspected. No real account was accessed.',status:'completed'},{id:'sample-assistant',role:'assistant',text:'### Release summary\n\nThree changes are ready for review:\n\n- Apps connection improvements\n- Clearer device status\n- Arc conversation history\n\n**Preview only.** This is sample content; no tools were executed.'}],runs:[{id:'sample-run',status:'succeeded',step:5,tokensUsed:1320,maxTokens:24000,maxSteps:8,deadline:new Date().toISOString(),error:null}]});
     // Preview data for Settings > Workspaces. Writes remain blocked above.
     if (url.pathname === "/api/organizations") {
       return json({
@@ -282,11 +287,11 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     if (url.pathname === "/api/approvals") return json([]);
 
     // Preview-only Apps catalog: displays real operation metadata without credentials or writes.
-    if (url.pathname === "/api/apps") return import("./app-directory.json", { with: { type: "json" } }).then(({ default: appDirectory }) => json({
+    if (url.pathname === "/api/apps") return json({
       enabled: true,
       apps: appDirectory.apps.map((app) => ({ ...app, configured: true, permissions: { read: [], write: [] } })),
       connections: [],
-    }));
+    });
     if (url.pathname === "/api/apps/approvals") return json({ approvals: [] });
 
     if (url.pathname === "/api/security") {

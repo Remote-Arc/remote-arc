@@ -1,0 +1,59 @@
+/* One workspace picker, one primary nav and one account area. */
+:root[data-theme] .appFrame .sidebar { padding:21px 13px 14px; }
+:root[data-theme] .appFrame .sidebarBrand { padding:1px 12px 27px; }
+:root[data-theme] .appFrame .sidebarBrand .brand { margin:0; }
+:root[data-theme] .appFrame .dashboardWorkspacePicker {position:relative; margin:0 0 24px; z-index:25;}
+:root[data-theme] .appFrame .workspacePickerTrigger {display:flex;align-items:center;width:100%;min-height:70px;gap:11px;padding:12px 13px;border:1px solid var(--dash-line);background:var(--dash-subtle);color:var(--dash-text);text-align:left;border-radius:13px;font:inherit;cursor:pointer;}
+:root[data-theme] .appFrame .workspacePickerTrigger:hover {border-color:var(--dash-accent);}
+.workspacePickerEmblem {display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border-radius:10px;background:color-mix(in srgb,var(--dash-accent) 15%,var(--dash-surface));color:var(--dash-accent);font-size:23px;line-height:1;}
+.workspacePickerCopy{display:flex;flex:1;flex-direction:column;gap:4px;min-width:0;}
+.workspacePickerCopy small{font-size:10px;letter-spacing:.1em;color:var(--dash-muted);font-weight:700;}
+.workspacePickerCopy strong{font-size:15px;font-weight:720;white-space:nowrap;}
+.workspacePickerChevron{color:var(--dash-muted);font-size:20px;margin-left:auto;transform:translateY(-2px);}
+.workspacePickerTrigger[aria-expanded="true"] .workspacePickerChevron{transform:rotate(180deg) translateY(2px);}
+.workspacePickerMenu{position:absolute;top:calc(100% + 7px);left:0;width:max(100%,260px);background:var(--dash-surface);border:1px solid var(--dash-line);border-radius:13px;padding:7px;box-shadow:0 16px 42px #00000030;display:grid;gap:5px;z-index:50;}
+.workspacePickerMenu button{display:flex;align-items:center;gap:10px;padding:11px 9px;border:0;border-radius:9px;text-align:left;background:transparent;color:var(--dash-text);font:inherit;cursor:pointer;}
+.workspacePickerMenu button:hover,.workspacePickerMenu button.selected{background:var(--dash-subtle);}
+.workspaceOptionIcon{display:grid;place-items:center;flex:0 0 34px;height:34px;border:1px solid var(--dash-line);border-radius:9px;color:var(--dash-accent);font-size:19px;}
+.workspacePickerMenu button>span:nth-child(2){display:flex;flex-direction:column;gap:3px;flex:1;}
+.workspacePickerMenu strong{font-size:14px;}
+.workspacePickerMenu small{font-size:12px;color:var(--dash-muted);}
+.workspaceOptionCheck{color:var(--dash-accent);font-size:14px;}
+:root[data-theme] .appFrame .workspaceNavHeading{color:var(--dash-muted);letter-spacing:.12em;font-size:10px;font-weight:740;padding:4px 13px 8px;}
+:root[data-theme] .appFrame .sideNav{margin-top:0;display:flex;flex-direction:column;gap:4px;}
+:root[data-theme] .appFrame .sideNav button{min-height:45px!important;padding:11px 13px;border-radius:10px;color:var(--dash-muted);font:inherit;font-weight:550;font-size:14px!important;cursor:pointer;}
+:root[data-theme] .appFrame .sideNav button:hover{background:var(--dash-subtle);color:var(--dash-text);}
+:root[data-theme] .appFrame .sideNav button.active{background:color-mix(in srgb,var(--dash-accent) 14%,var(--dash-subtle));color:var(--dash-text);font-weight:700;}
+:root[data-theme] .appFrame .sideNav button.active .sideNavIcon{color:var(--dash-accent);}
+:root[data-theme] .appFrame .sideNav button .sideNavIcon{width:20px;color:var(--dash-muted);}
+:root[data-theme] .appFrame .sidebarGlobalNavigation{margin-top:auto;border-top:1px solid var(--dash-line);padding-top:14px;display:flex;flex-direction:column;gap:3px;}
+:root[data-theme] .appFrame .sidebarGlobalNavigation button,
+:root[data-theme] .appFrame .sidebarGlobalNavigation>a{box-sizing:border-box;display:flex;gap:13px;align-items:center;width:100%;min-height:41px;padding:8px 13px;border:0;border-radius:9px;background:transparent;color:var(--dash-muted);font:inherit;font-size:13px;font-weight:560;text-align:left;text-decoration:none;cursor:pointer;}
+:root[data-theme] .appFrame .sidebarGlobalNavigation>a>span{margin-left:auto;}
+:root[data-theme] .appFrame .sidebarGlobalNavigation button .sideNavIcon{display:grid;place-items:center;width:20px;}
+:root[data-theme] .appFrame .sidebarGlobalNavigation button:hover,
+:root[data-theme] .appFrame .sidebarGlobalNavigation>a:hover,
+:root[data-theme] .appFrame .sidebarGlobalNavigation button.active{color:var(--dash-text);background:var(--dash-subtle);}
+:root[data-theme] .appFrame .sidebarAccount{margin-top:13px;padding:11px 6px 4px;border-top:1px solid var(--dash-line);border-radius:0;}
+:root[data-theme] .appFrame .sidebarAccount strong{font-size:13px;}
+:root[data-theme] .appFrame .sidebarAccount span{font-size:12px;}
+:root[data-theme] .appFrame .sidebarAccount button{cursor:pointer;}
+.arcWorkTabs{display:flex;gap:5px;align-items:center;border-bottom:1px solid var(--dash-line);margin:-5px 0 23px;padding-bottom:0;}
+.arcWorkTabs button{padding:12px 19px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--dash-muted);font:inherit;font-size:14px;font-weight:650;cursor:pointer;}
+.arcWorkTabs button[aria-current="page"]{color:var(--dash-accent);border-bottom-color:var(--dash-accent);}
+.arcWorkTabs button:hover{color:var(--dash-text);}
+:root[data-theme] .appFrame .workspacePickerTrigger:focus-visible,
+:root[data-theme] .appFrame .workspacePickerMenu button:focus-visible,
+:root[data-theme] .appFrame .sidebarGlobalNavigation button:focus-visible{outline:2px solid var(--dash-accent);outline-offset:3px;}
+@media(max-width:820px){
+  :root[data-theme] .appFrame .sidebar{display:none;}
+  :root[data-theme] .appFrame .dashboardWorkspacePicker{display:none;}
+  :root[data-theme] .appFrame .dashboardWorkspacePicker.mobilePicker{display:block;margin:0;}
+  :root[data-theme] .appFrame .mobilePicker .workspacePickerTrigger{min-height:42px;padding:5px 9px;gap:7px;}
+  :root[data-theme] .appFrame .mobilePicker .workspacePickerEmblem{flex-basis:29px;width:29px;height:29px;font-size:18px;}
+  .mobilePicker .workspacePickerCopy small{font-size:8px;}
+  .mobilePicker .workspacePickerCopy strong{font-size:12px;}
+  .mobilePicker .workspacePickerChevron{font-size:14px;}
+  .mobilePicker .workspacePickerMenu{left:auto;right:0;}
+  :root[data-theme] .appFrame .mobileTopbar{position:relative;z-index:15;}
+}

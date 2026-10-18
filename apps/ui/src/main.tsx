@@ -5098,6 +5098,8 @@ function Dashboard({
             initialSessionId={arcEntry.sessionId}
             tr={tr}
             accountId={user.id}
+            accountName={user.name}
+            totalDevices={devices.length}
             onlineDevices={devices.filter((device) => device.status === "online").length}
             onOpenGoals={() => navigateTab("agent-goals")}
             onOpenActivity={() => navigateTab("agent-activity")}

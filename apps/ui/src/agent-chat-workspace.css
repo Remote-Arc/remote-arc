@@ -1,24 +1,107 @@
-.agentChatWorkspace { min-height: calc(100vh - 70px); display: flex; flex-direction: column; max-width: 1120px; margin: 0 auto; gap: 24px; padding: 24px clamp(20px, 4vw, 56px) 36px; }
-.agentChatHeader { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-.agentChatIdentity { display: flex; align-items: center; gap: 12px; }
-.agentChatIdentity strong { font-size: 18px; display:block; }
-.agentChatIdentity small { display:block; color: var(--dash-muted); font-size: 13px; margin-top: 3px; }
-.agentChatMark,.agentChatEmblem { display: grid; place-items: center; background: #eef3ff; color: #4962b5; border-radius: 16px; }
-.agentChatMark { width: 40px; height: 40px; font-size: 25px; }
-.agentChatCenter { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; max-width: 760px; margin: 30px auto 0; width: 100%; gap: 17px; }
-.agentChatEmblem { width: 64px; height: 64px; font-size: 36px; }
-.agentChatCenter h1 { font-size: clamp(27px, 3vw, 40px); font-weight: 650; line-height:1.2; margin: 4px 0 0; }
-.agentChatCenter p { color: var(--dash-muted); font-size: 15px; line-height: 1.7; max-width: 630px; margin:0; }
-.agentChatSuggestions { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); width:100%; gap:12px; margin-top: 14px; }
-.agentChatSuggestions button { font:inherit; background:var(--dash-surface); border:1px solid var(--dash-line); border-radius:15px; padding:16px; min-height:96px; text-align:left; display:flex; flex-direction:column; justify-content:space-between; gap:10px; color:inherit; font-size:14px; cursor:pointer; }
-.agentChatSuggestions button:hover { border-color:#8091bd; }
-.agentChatSuggestions button span { align-self:flex-end; opacity:.65; }
-.agentChatComposer { max-width:800px; width:100%; margin:0 auto; border:1px solid var(--dash-line); background:var(--dash-surface); box-shadow:0 8px 30px rgba(0,0,0,.035); border-radius:19px; padding:16px; }
-.agentChatComposer label { font-size:13px; font-weight:600; display:block; margin-bottom:8px; }
-.agentChatComposer textarea { display:block; width:100%; min-height:100px; box-sizing:border-box; resize:vertical; font:inherit; font-size:15px; border:0; background:transparent; outline:0; color:inherit; }
-.agentChatComposerFooter { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.agentChatComposerFooter > span { font-size:12px; color:var(--dash-muted); }
-.agentChatFooter { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--dash-muted); }
-.agentChatFooter button { color:inherit; background:none; border:0; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
-.agentChatReadiness { margin:0; font-size:12px; line-height:1.6; color:var(--dash-muted); text-align:center; }
-@media(max-width:740px){.agentChatWorkspace{min-height:calc(100vh - 90px);padding:20px 14px 30px}.agentChatSuggestions{grid-template-columns:1fr}.agentChatSuggestions button{min-height:64px;flex-direction:row}.agentChatCenter{margin:0 auto}.agentChatComposerFooter{align-items:flex-start}.agentChatCenter h1{font-size:27px}}
+/* Arc Agent — functional goal composer, not simulated chat. */
+:root[data-theme] .appFrame .arcSurface {
+  --arc-ink:var(--dash-text); --arc-muted:var(--dash-muted); --arc-border:var(--dash-line);
+  --arc-panel:var(--dash-surface); --arc-soft:var(--dash-subtle); --arc-accent:var(--dash-accent);
+  color:var(--arc-ink); min-height:calc(100vh - 86px); width:100%;
+  display:flex; flex-direction:column; padding:0;
+}
+:root[data-theme] .appFrame .arcSurface button {font:inherit;cursor:pointer;}
+:root[data-theme] .appFrame .arcSurface button:focus-visible,
+:root[data-theme] .appFrame .arcSurface textarea:focus-visible{outline:2px solid var(--arc-accent);outline-offset:3px}
+.arcSurface svg {width:18px;height:18px;flex-shrink:0;}
+.arcSrOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+:root[data-theme] .appFrame .arcTopbar {display:flex;justify-content:space-between;align-items:center;padding:4px 2px 23px;border-bottom:1px solid var(--arc-border);}
+.arcTopbarTitle{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:720;letter-spacing:-.025em}
+.arcGlyph{display:grid;place-items:center;color:var(--arc-accent)}
+.arcGlyph svg{width:23px;height:23px}
+.arcEarlyAccess{margin-left:7px;font-size:10px;letter-spacing:.09em;font-weight:800;color:var(--arc-muted);border:1px solid var(--arc-border);padding:5px 8px;border-radius:100px}
+:root[data-theme] .appFrame .arcQuietButton{border:1px solid var(--arc-border);background:var(--arc-panel);color:var(--arc-ink);font-size:13px!important;font-weight:650;display:flex;gap:7px;align-items:center;border-radius:10px;padding:10px 13px;min-height:40px}
+.arcQuietButton svg{width:15px;height:15px}
+.arcContent {display:grid;grid-template-columns:minmax(0,1fr) 254px;flex:1;min-height:0;}
+.arcThread {display:flex;flex-direction:column;min-width:0;padding:clamp(30px,6vh,72px) clamp(22px,4vw,72px) 50px;max-width:875px;margin:0 auto;width:100%;box-sizing:border-box;}
+.arcWelcome {display:flex;flex-direction:column;align-items:flex-start;margin:clamp(16px,7vh,92px) 0 34px;}
+.arcWelcomeMark{width:45px;height:45px;border:1px solid color-mix(in srgb,var(--arc-accent) 38%,var(--arc-border));border-radius:14px;color:var(--arc-accent);display:grid;place-items:center;background:color-mix(in srgb,var(--arc-accent) 8%,transparent);margin-bottom:24px}
+.arcWelcomeMark svg{width:23px;height:23px}
+.arcEyebrow{font-size:11px;font-weight:750;letter-spacing:.12em;color:var(--arc-accent);text-transform:uppercase}
+:root[data-theme] .appFrame .arcWelcome h1 {margin:10px 0 15px;font-size:clamp(29px,3.5vw,46px);font-weight:690;letter-spacing:-.045em;line-height:1.14}
+:root[data-theme] .appFrame .arcWelcomeText{font-size:15px;line-height:1.78;color:var(--arc-muted);max-width:510px;margin:0}
+.arcPromptArea{width:100%}
+:root[data-theme] .appFrame .arcComposer{border:1px solid color-mix(in srgb,var(--arc-accent) 34%,var(--arc-border));background:var(--arc-panel);border-radius:19px;padding:19px 19px 14px;box-shadow:0 14px 35px rgba(0,30,42,.07),0 1px 2px rgba(0,0,0,.03);transition:border-color .2s,box-shadow .2s}
+:root[data-theme] .appFrame .arcComposer:focus-within{border-color:var(--arc-accent);box-shadow:0 16px 40px rgba(0,32,46,.10)}
+:root[data-theme] .appFrame .arcComposer textarea{box-sizing:border-box;display:block;border:0!important;background:transparent!important;resize:vertical;width:100%;min-height:106px;font:inherit;color:var(--arc-ink);font-size:16px;line-height:1.6;outline:none!important;box-shadow:none!important;padding:0}
+.arcComposer textarea::placeholder{color:var(--arc-muted);opacity:.8}
+.arcComposerToolbar{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:9px}
+.arcComposerContext{display:flex;align-items:center;gap:7px;min-width:0}
+:root[data-theme] .appFrame .arcComposerContext button{border:1px solid var(--arc-border);border-radius:25px;background:var(--arc-soft);padding:7px 10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:7px;color:var(--arc-ink);min-height:30px}
+.arcComposerContext button:hover{border-color:var(--arc-accent)}
+.arcContextSeparator{width:1px;height:15px;background:var(--arc-border)}
+.arcPresence{width:7px;height:7px;border-radius:50%;background:#82939a;flex:none;display:inline-block}
+.arcPresence.online{background:#1fbd84;box-shadow:0 0 0 3px rgba(31,189,132,.12)}
+:root[data-theme] .appFrame .arcSendButton{border:0;border-radius:11px;width:40px;height:40px;display:grid;place-items:center;background:var(--arc-accent);color:var(--arc-panel);}
+:root[data-theme] .appFrame .arcSendButton:disabled{opacity:.34;cursor:not-allowed}
+.arcSendButton svg{width:19px;height:19px}
+.arcComposerHint{font-size:12px;color:var(--arc-muted);margin:10px 4px 0}
+.arcExamples{margin-top:36px}
+.arcExamplesLabel{font-size:12px;font-weight:700;color:var(--arc-muted);margin-bottom:12px}
+.arcExampleList{display:flex;flex-direction:column;gap:1px;border-top:1px solid var(--arc-border)}
+:root[data-theme] .appFrame .arcExample{display:flex;justify-content:space-between;align-items:center;gap:20px;width:100%;padding:13px 5px;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--arc-border);color:var(--arc-ink)}
+.arcExample strong{display:block;font-size:14px;font-weight:650;margin-bottom:2px}
+.arcExample small{display:block;font-size:12px;color:var(--arc-muted)}
+.arcExample svg{width:16px;height:16px;color:var(--arc-muted);transition:transform .15s}
+.arcExample:hover svg{transform:translateX(4px);color:var(--arc-accent)}
+.arcContextRail{border-left:1px solid var(--arc-border);padding:36px 0 24px 25px;display:flex;flex-direction:column;gap:24px;min-width:0}
+.arcRailSection{display:flex;flex-direction:column;gap:14px;}
+.arcRailHeader{font-weight:750;font-size:11px;letter-spacing:.095em;color:var(--arc-muted);display:flex;justify-content:space-between;align-items:center;gap:9px;}
+:root[data-theme] .appFrame .arcRailHeader button{border:0;padding:0;background:transparent;font-size:12px;color:var(--arc-accent);font-weight:650;letter-spacing:0}
+.arcRailMetric{display:flex;align-items:center;gap:9px;font-size:13px;margin-top:5px}
+.arcRailMetric strong{font-weight:650}
+:root[data-theme] .appFrame .arcRailSection p{font-size:12px;color:var(--arc-muted);line-height:1.75;margin:0}
+:root[data-theme] .appFrame .arcRailLink{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--arc-accent);font-weight:650;background:transparent;border:0;padding:0;align-self:flex-start}
+.arcRailLink svg{width:13px;height:13px}
+.arcRailDivider{height:1px;background:var(--arc-border)}
+.arcRecentRuns{display:flex;flex-direction:column;gap:5px}
+:root[data-theme] .appFrame .arcRecentRun{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;border:0;border-radius:8px;background:transparent;padding:8px 2px;color:var(--arc-ink)}
+.arcRecentRun>span:nth-child(2){min-width:0;flex:1}
+.arcRecentRun strong{display:block;font-size:12px;font-weight:650;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.arcRecentRun small{font-size:11px;color:var(--arc-muted);text-transform:capitalize}
+.arcRecentRun svg{width:13px;height:13px;color:var(--arc-muted)}
+.arcRunDot{height:7px;width:7px;border-radius:50%;background:#88979d;margin-top:5px;flex:none}
+.arcRunDot.status-running,.arcRunDot.status-completed{background:#1fbd84}
+.arcRunDot.status-failed{background:#e77c56}
+.arcRailFootnote{margin-top:auto;font-size:11px;line-height:1.6;color:var(--arc-muted);border-top:1px solid var(--arc-border);padding-top:16px}
+.arcUserMessage{display:flex;justify-content:flex-end;margin-bottom:28px}
+.arcUserMessage span{background:var(--arc-soft);border:1px solid var(--arc-border);border-radius:18px 18px 5px 18px;font-size:15px;line-height:1.7;max-width:83%;padding:14px 17px}
+.arcReviewCard{display:flex;gap:17px;align-items:flex-start}
+.arcReviewIcon{display:grid;place-items:center;width:34px;height:34px;background:var(--arc-soft);border:1px solid var(--arc-border);color:var(--arc-accent);border-radius:10px;flex:none}
+.arcReviewIcon svg{width:20px;height:20px}
+.arcReviewMain{flex:1;min-width:0}
+:root[data-theme] .appFrame .arcReviewMain h2{font-size:24px;letter-spacing:-.025em;margin:7px 0 10px}
+:root[data-theme] .appFrame .arcReviewMain p{margin:0 0 20px;font-size:14px;line-height:1.75;color:var(--arc-muted)}
+.arcReviewMain label{display:block;font-size:13px;font-weight:700;margin-bottom:9px}
+:root[data-theme] .appFrame .arcReviewMain textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:96px;background:var(--arc-panel);border:1px solid var(--arc-border);border-radius:12px;padding:12px 14px;color:var(--arc-ink);font:inherit;font-size:14px}
+.arcReviewActions{display:flex;gap:10px;justify-content:flex-end;margin-top:15px;flex-wrap:wrap}
+:root[data-theme] .appFrame .arcReviewActions button{font-size:13px;font-weight:650;border-radius:9px;padding:11px 15px;min-height:43px}
+:root[data-theme] .appFrame .arcSecondaryAction{border:1px solid var(--arc-border);background:var(--arc-panel);color:var(--arc-ink)}
+:root[data-theme] .appFrame .arcPrimaryAction{display:flex;align-items:center;gap:8px;border:0;background:var(--arc-accent);color:var(--arc-panel)}
+:root[data-theme] .appFrame .arcPrimaryAction:disabled{opacity:.5;cursor:not-allowed}
+.arcPrimaryAction svg{width:16px;height:16px}
+@media(max-width:1200px){.arcContent{grid-template-columns:minmax(0,1fr) 210px}.arcThread{padding:42px 32px 40px}.arcContextRail{padding:30px 0 24px 17px}}
+@media(max-width:1040px){.arcContent{grid-template-columns:minmax(0,1fr)}.arcContextRail{border-left:0;border-top:1px solid var(--arc-border);padding:22px 18px;margin-top:12px}.arcRailFootnote{margin-top:0}.arcThread{padding:44px 24px 36px;max-width:760px}.arcWelcome{margin:25px 0 30px}}
+@media(max-width:820px){:root[data-theme] .appFrame .arcSurface{min-height:calc(100vh - 145px)}.arcThread{padding:32px 12px 35px}.arcTopbar{padding:8px 4px 20px}.arcEarlyAccess{display:none}}
+@media(max-width:540px){.arcWelcome{margin:22px 0 26px}.arcWelcomeMark{margin-bottom:17px}.arcContent{display:block}.arcThread{padding:25px 3px 29px}.arcComposerContext{flex-wrap:wrap}.arcContextSeparator{display:none}.arcComposerHint{line-height:1.7}.arcContextRail{padding:22px 8px 20px}.arcQuietButton{font-size:12px!important}.arcReviewCard{gap:9px}.arcReviewIcon{width:28px;height:28px}.arcReviewMain h2{font-size:21px!important}}
+
+/* Review pass: restrained hierarchy and readable utility text. */
+:root[data-theme] .appFrame .arcWelcome h1{font-size:clamp(27px,2.9vw,36px);line-height:1.2;letter-spacing:-.032em;}
+:root[data-theme] .appFrame .arcThread{padding-top:clamp(26px,4vh,48px);}
+:root[data-theme] .appFrame .arcWelcome{margin:clamp(16px,4vh,45px) 0 27px;}
+:root[data-theme] .appFrame .arcRailHeader{font-size:12px;}
+:root[data-theme] .appFrame .arcRailMetric{font-size:14px;}
+:root[data-theme] .appFrame .arcRailSection p{font-size:13px;line-height:1.65;}
+:root[data-theme] .appFrame .arcRailLink{font-size:13px;}
+:root[data-theme] .appFrame .arcRecentRun strong{font-size:13px;}
+:root[data-theme] .appFrame .arcRecentRun small{font-size:12px;}
+:root[data-theme] .appFrame .arcRailFootnote{font-size:12px;}
+:root[data-theme] .appFrame .arcExample small{font-size:13px;}
+:root[data-theme] .appFrame .arcEarlyAccess{font-size:11px;}
+:root[data-theme] .appFrame .arcComposerHint{font-size:13px;}
+@media(max-width:640px){:root[data-theme] .appFrame .arcWelcome h1{font-size:28px;}}

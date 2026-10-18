@@ -3687,6 +3687,19 @@ function Dashboard({
   const [dialogValue, setDialogValue] = useState("");
   const dialogResolver = useRef<((value: boolean | string | null) => void) | null>(null);
   const [active, setActive] = useState<DashboardTab>(dashboardTabFromPath(location.pathname));
+  const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
+  useEffect(() => {
+    if (!workspacePickerOpen) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!(event.target as Element).closest(".dashboardWorkspacePicker")) setWorkspacePickerOpen(false);
+    };
+    const closeEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setWorkspacePickerOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeEscape);
+    return () => { document.removeEventListener("pointerdown", closeOutside); document.removeEventListener("keydown", closeEscape); };
+  }, [workspacePickerOpen]);
   useEffect(() => {
     const syncRoute = () => setActive(dashboardTabFromPath(location.pathname));
     window.addEventListener("popstate", syncRoute);
@@ -4886,11 +4899,12 @@ function Dashboard({
   function navigateTab(tab: DashboardTab) {
     const path = DASHBOARD_PATHS[tab];
     if (location.pathname !== path) history.pushState({}, "", path);
+    setWorkspacePickerOpen(false);
     if (workspaceForTab(active) !== workspaceForTab(tab)) setShowAutomationCreate(false);
     setActive(tab);
   }
 
-  function openCreateInWorkspace(workspace: "connect" | "agent", routine = false, objective = "") {
+  function openCreateInWorkspace(workspace: "connect" | "agent", routine = false, objective = "", successCriteria = "") {
     setCreatedWebhook(null);
     setAutomationQuery("");
     setAutomationFilter("all");
@@ -4899,7 +4913,7 @@ function Dashboard({
       kind: workspace === "agent" ? "agent_goal" : "long_task",
       trigger_mode: routine ? "interval" : "now",
       agent_objective: objective || current.agent_objective,
-      agent_success_criteria: objective ? "" : current.agent_success_criteria,
+      agent_success_criteria: objective ? successCriteria : current.agent_success_criteria,
       command_confirmed: false,
     }));
     navigateTab(workspace === "connect" ? "automations" : routine ? "agent-routines" : "agent-goals");
@@ -5022,34 +5036,40 @@ function Dashboard({
 
   const workspace = workspaceForTab(active);
   const navItems: Array<[DashboardTab, string]> = workspace === "agent" ? [
-    ["agent-chat", tr("Chat", "对话")],
-    ["agent-goals", tr("Goals", "目标")],
-    ["agent-routines", tr("Routines", "例行任务")],
-    ["agent-skills", tr("Skills", "技能")],
+    ["agent-chat", tr("Workspace", "工作台")],
+    ["agent-goals", tr("Runs", "运行记录")],
     ["agent-activity", tr("Activity", "活动")],
-    ["agent-settings", tr("Settings", "设置")],
   ] : [
     ["overview", tr("Overview", "概览")],
     ["devices", tr("Devices", "设备")],
     ["apps", tr("Apps", "应用")],
     ["automations", tr("Tasks", "任务")],
     ["connect", tr("MCP Clients", "MCP 客户端")],
-    ["security", tr("Security", "安全")],
-    ["settings", tr("Settings", "设置")],
   ];
+  const renderWorkspacePicker = (mobile = false) => (
+    <div className={"dashboardWorkspacePicker" + (mobile ? " mobilePicker" : "")}>
+      <button type="button" className="workspacePickerTrigger" aria-label={tr("Switch workspace", "切换工作空间")} aria-expanded={workspacePickerOpen} aria-haspopup="true" onClick={() => setWorkspacePickerOpen((value) => !value)}>
+        <span className={"workspacePickerEmblem " + workspace} aria-hidden="true">{workspace === "connect" ? "⌘" : "✳"}</span>
+        <span className="workspacePickerCopy"><small>{tr("WORKSPACE", "工作空间")}</small><strong>{workspace === "connect" ? "Connect" : "Arc Agent"}</strong></span>
+        <span className="workspacePickerChevron" aria-hidden="true">⌄</span>
+      </button>
+      {workspacePickerOpen && <div className="workspacePickerMenu" role="group" aria-label={tr("Choose workspace", "选择工作空间")}>
+        <button type="button" className={workspace === "connect" ? "selected" : ""} onClick={() => navigateTab("overview")}>
+          <span className="workspaceOptionIcon" aria-hidden="true">⌘</span><span><strong>Connect</strong><small>{tr("Devices, Apps & MCP", "设备、Apps 和 MCP")}</small></span><span className="workspaceOptionCheck" aria-hidden="true">{workspace === "connect" ? "✓" : "↗"}</span>
+        </button>
+        <button type="button" className={workspace === "agent" ? "selected" : ""} onClick={() => navigateTab("agent-chat")}>
+          <span className="workspaceOptionIcon" aria-hidden="true">✳</span><span><strong>Arc Agent</strong><small>{tr("Goals & ongoing work", "目标与持续工作")}</small></span><span className="workspaceOptionCheck" aria-hidden="true">{workspace === "agent" ? "✓" : "↗"}</span>
+        </button>
+      </div>}
+    </div>
+  );
 
   return (
     <div className="appFrame">
       <aside className="sidebar">
-        <Brand />
-        <a className="dashboardWebsiteLink" href={MARKETING_ORIGIN}>
-          <span aria-hidden="true">↗</span> {tr("Back to website", "返回官网")}
-        </a>
-        <div className="workspaceSwitcher" role="group" aria-label={tr("Remote Arc workspace", "Remote Arc 工作区")}>
-          <button type="button" className={workspace === "connect" ? "active" : ""} aria-pressed={workspace === "connect"} onClick={() => navigateTab("overview")}>⌘ Connect</button>
-          <button type="button" className={workspace === "agent" ? "active" : ""} aria-pressed={workspace === "agent"} onClick={() => navigateTab("agent-chat")}>✦ Arc Agent</button>
-        </div>
-        <div className="workspaceNavHeading">{workspace === "connect" ? tr("Connect infrastructure", "连接与基础设施") : tr("Arc Agent workspace", "Arc Agent 工作区")}</div>
+        <div className="sidebarBrand"><Brand /></div>
+        {renderWorkspacePicker()}
+        <div className="workspaceNavHeading">{tr("NAVIGATION", "导航")}</div>
         <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
           {navItems.map(([id, label]) => (
             <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
@@ -5058,8 +5078,13 @@ function Dashboard({
             </button>
           ))}
         </nav>
-        {user.isAdmin && <a className="dashboardWebsiteLink" href="https://admin.remotearc.app/">{tr("Admin control center", "管理员运营后台")} ↗</a>}
-        <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>mcp.remotearc.app</span></div></div>
+        <div className="sidebarGlobalNavigation">
+          <div className="workspaceNavHeading">{tr("ACCOUNT", "账户")}</div>
+          <button type="button" className={active === "security" ? "active" : ""} onClick={() => navigateTab("security")}><span className="sideNavIcon"><DashboardNavIcon tab="security" /></span>{tr("Security", "安全")}</button>
+          <button type="button" className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab("settings")}><span className="sideNavIcon"><DashboardNavIcon tab="settings" /></span>{tr("Settings", "设置")}</button>
+          {user.isAdmin && <a href="https://admin.remotearc.app/">{tr("Admin", "管理员后台")} <span aria-hidden="true">↗</span></a>}
+          <a href={MARKETING_ORIGIN}>{tr("Website", "官网")} <span aria-hidden="true">↗</span></a>
+        </div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
           <div><strong>{user.name || "Owner"}</strong><span>{user.email}</span></div>
@@ -5076,10 +5101,7 @@ function Dashboard({
         )}
         <header className="mobileTopbar">
           <Brand/>
-          <div className="mobileWorkspaceToggle" role="group" aria-label={tr("Choose workspace", "选择工作区")}>
-            <button type="button" aria-pressed={workspace === "connect"} onClick={() => navigateTab("overview")}>Connect</button>
-            <button type="button" aria-pressed={workspace === "agent"} onClick={() => navigateTab("agent-chat")}>Arc Agent</button>
-          </div>
+          {renderWorkspacePicker(true)}
           <div className="mobileActions"><ThemeSwitcher compact/></div>
         </header>
 
@@ -5087,10 +5109,14 @@ function Dashboard({
           <AgentChatWorkspace
             tr={tr}
             onlineDevices={devices.filter((device) => device.status === "online").length}
-            goalCount={automations.filter(isAgentGoalAutomation).length}
-            onPrepareGoal={(objective) => openCreateInWorkspace("agent", false, objective)}
+            connectedDevices={devices.length}
+            recentGoals={automations.filter(isAgentGoalAutomation).map(({ id, name, status, next_run_at }) => ({ id, name, status, next_run_at }))}
+            onPrepareGoal={(objective, successCriteria) => openCreateInWorkspace("agent", false, objective, successCriteria)}
             onOpenGoals={() => navigateTab("agent-goals")}
+            onOpenGoal={(id) => { setAutomationQuery(id); navigateTab("agent-goals"); }}
+            onCreateRoutine={() => openCreateInWorkspace("agent", true)}
             onManageApps={() => navigateTab("apps")}
+            onManageDevices={() => navigateTab("devices")}
           />
         )}
 
@@ -5953,6 +5979,12 @@ function Dashboard({
               </div>
             </section>
 
+            {(active === "agent-goals" || active === "agent-routines") && (
+              <nav className="arcWorkTabs" aria-label={tr("Agent work views", "Agent 工作视图")}>
+                <button type="button" aria-current={active === "agent-goals" ? "page" : undefined} onClick={() => { setShowAutomationCreate(false); setAutomationQuery(""); navigateTab("agent-goals"); }}>{tr("All goals", "全部目标")}</button>
+                <button type="button" aria-current={active === "agent-routines" ? "page" : undefined} onClick={() => { setShowAutomationCreate(false); setAutomationQuery(""); navigateTab("agent-routines"); }}>{tr("Routines", "例行任务")}</button>
+              </nav>
+            )}
             {!hasPlus && (
               <aside className="automationPlanNotice">
                 <div>
@@ -6802,6 +6834,7 @@ function Dashboard({
             <small>{label}</small>
           </button>
         ))}
+        <button data-dashboard-tab="settings" aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined} className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab("settings")}><span aria-hidden="true"><DashboardNavIcon tab="settings"/></span><small>{tr("Settings", "设置")}</small></button>
       </nav>
 
       {directoryPicker && (

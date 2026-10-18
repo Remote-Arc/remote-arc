@@ -6,7 +6,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const title='[Release Ready] Remote Arc production promotion';
-const workflowUrl='https://github.com/yaohuangguan/remote-arc/actions/workflows/deploy-cloudflare.yml';
 
 export function eligibleRun(run,repository,latestSha,deployments=[]){
   if(!run||run.conclusion!=='success'||run.event!=='push'||run.head_branch!=='master'||run.head_repository?.full_name!==repository||run.head_sha!==latestSha)return false;
@@ -15,6 +14,7 @@ export function eligibleRun(run,repository,latestSha,deployments=[]){
 }
 export function makeNotice(sha,repository,actor='yaohuangguan'){
   const short=sha.slice(0,9);
+  const workflowUrl=`https://github.com/${repository}/actions/workflows/deploy-cloudflare.yml`;
   return [
     `@${actor} — **Remote Arc master ${short}** has passed CI and is **ready for a controlled production release**.`,
     '',
@@ -28,7 +28,7 @@ export function makeNotice(sha,repository,actor='yaohuangguan'){
   ].join('\n');
 }
 
-async function main(){
+export async function main(){
   const token=process.env.GITHUB_TOKEN;
   const repo=process.env.GITHUB_REPOSITORY;
   const [owner,name]=repo?.split('/')||[];
@@ -51,13 +51,15 @@ async function main(){
   const issues=await api(`/repos/${repo}/issues?state=open&per_page=100`);
   const existing=issues.find(issue=>issue.title===title&&!issue.pull_request);
   if(existing?.body?.includes('Release candidate SHA: `'+sha+'`')){console.log('Skip: same release already announced');return;}
-  const notice=makeNotice(sha,repo,owner);
+  // The repository owner can be an organization, which cannot be assigned an issue.
+  // Mention the responsible user instead so GitHub sends a notification.
+  const notice=makeNotice(sha,repo,process.env.RELEASE_NOTIFY_LOGIN||'yaohuangguan');
   if(existing){
     await api(`/repos/${repo}/issues/${existing.number}`,'PATCH',{body:notice});
     await api(`/repos/${repo}/issues/${existing.number}/comments`,'POST',{body:notice});
     console.log('Updated release notification issue #'+existing.number+' for '+sha.slice(0,9));
   }else{
-    const created=await api(`/repos/${repo}/issues`,'POST',{title,body:notice,assignees:[owner]});
+    const created=await api(`/repos/${repo}/issues`,'POST',{title,body:notice});
     console.log('Created release notification issue #'+created.number+' for '+sha.slice(0,9));
   }
 }

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { getSessionUser, randomToken, sha256Hex, type OAuthIdentity } from "./auth.js";
 import { isMcpPaused } from "./security.js";
 import { consumeToolCall } from "./usage.js";
-import { APP_CATALOG, APP_OPERATIONS, AppError, appOperation, appScopes, credentials, permissionSchema, providerSchema, type AppEnv, type AppPermission, type AppProvider } from "./app-catalog.js";
+import { APP_CATALOG, APP_OPERATIONS, AppError, appOperation, appScopes, credentials, permissionSchema, providerSchema, type AppEnv, type AppPermission, type AppProvider, type AppOperation } from "./app-catalog.js";
 import { appConfigured, connectionContext, connectionSettingsSchema, checkShopifyCallback, normalizeScope } from "./app-auth-adapters.js";
 import { reserveAppDispatch, quoteAppOperation, reviewCreatedAction, dispatchHeaders, validateAppResult, redactProviderCredentials } from "./app-connection-policy.js";
 import { loadAppReview, reviewRead, verifyAppReview, type AppReview } from "./app-review.js";
@@ -22,27 +22,27 @@ function sameOrigin(request: Request, env: AppEnv) {
 }
 const cleanConnection = (row: Connection) => ({ id: row.id, provider: row.provider, accountLabel: row.account_label, status: row.status, permissions: JSON.parse(row.permissions_json), scopes: JSON.parse(row.scopes_json), expiresAt: row.expires_at, lastError: row.last_error, updatedAt: row.updated_at, dailyCallLimit: row.daily_call_limit, settings: JSON.parse(row.connection_metadata_json || "{}") });
 async function connection(env: AppEnv, userId: string, id: string) { const row = await env.DB.prepare("SELECT * FROM app_connections WHERE id=?1 AND user_id=?2").bind(id, userId).first<Connection>(); if (!row) throw new AppError("app_connection_not_found", 404); return row; }
-function requirePermission(row: Connection, permission: AppPermission) {
+function requirePermission(row: Connection, permission: AppPermission, operation?: AppOperation) {
   if (row.status !== "active" || !row.token_ciphertext) throw new AppError("app_reauthorization_required", 409);
   if (!(JSON.parse(row.permissions_json) as string[]).includes(permission)) throw new AppError("app_permission_required", 403);
   const scopes = new Set<string>((JSON.parse(row.scopes_json) as string[]).map(s=>normalizeScope(s,row.provider)));
-  const required = appScopes(row.provider, [permission]).map(s=>normalizeScope(s,row.provider)).filter(s => !["offline_access", "offline.access", "refresh_token"].includes(s));
+  const required = (operation?.requiredScopes ?? appScopes(row.provider, [permission])).map(s=>normalizeScope(s,row.provider)).filter(s => !["offline_access", "offline.access", "refresh_token"].includes(s));
   // Google may replace readonly with the broader modify scope in its response.
   const satisfies = (scope: string) => scopes.has(scope) ||
     (row.provider === "gmail" && scope.endsWith("/gmail.readonly") && scopes.has("https://www.googleapis.com/auth/gmail.modify")) ||
     (scope.endsWith(".readonly") && scopes.has(scope.slice(0, -9))) ||
     (row.provider === "outlook" && scope === "Mail.Read" && scopes.has("Mail.ReadWrite")) ||
     (row.provider === "microsoft_calendar" && scope === "Calendars.Read" && scopes.has("Calendars.ReadWrite"));
-  if (!required.every(satisfies)) throw new AppError("app_scope_required", 403);
+  if (!required.every(satisfies) || (operation?.anyScopes?.length && !operation.anyScopes.some(satisfies))) throw new AppError("app_scope_required", 403);
 }
 export async function listApps(env: AppEnv, userId: string) {
   if (env.ENABLE_APPS !== "1") return { enabled: false, apps: [], connections: [] };
   const rows = await env.DB.prepare("SELECT * FROM app_connections WHERE user_id=?1 ORDER BY created_at DESC").bind(userId).all<Connection>();
-  return { enabled: true, apps: Object.entries(APP_CATALOG).map(([key, def]) => { const configured = appConfigured(env, key as AppProvider); return { provider: key, name: def.name, brand: def.brand, category: def.category, auth: def.auth || "oauth", payer: def.payer || "provider_rules", billingNote: def.billingNote, connectionNote: def.connectionNote, configured, operations: APP_OPERATIONS.filter(o => o.provider === key).map(o => ({ name: o.name, description: o.description, permission: o.permission, inputSchema: z.toJSONSchema(o.schema) })), permissions: { read: def.scopes.read, write: def.scopes.write }, consentNote: key === "github" ? "GitHub OAuth repo scope includes upstream write access; Remote Arc read permission still denies all writes." : undefined }; }), connections: (rows.results || []).map(cleanConnection) };
+  return { enabled: true, apps: Object.entries(APP_CATALOG).map(([key, def]) => { const configured = appConfigured(env, key as AppProvider); return { provider: key, name: def.name, brand: def.brand, category: def.category, auth: def.auth || "oauth", payer: def.payer || "provider_rules", billingNote: def.billingNote, connectionNote: def.connectionNote, configured, operations: APP_OPERATIONS.filter(o => o.provider === key).map(o => ({ name: o.name, description: o.description, permission: o.permission, inputSchema: z.toJSONSchema(o.schema) })), permissions: { read: def.scopes.read, write: def.scopes.write }, consentNote: key === "github" ? "Connecting enables the available read and write operations. Each write request still requires approval." : undefined }; }), connections: (rows.results || []).map(cleanConnection) };
 }
 async function authorize(request: Request, env: AppEnv, userId: string) {
   sameOrigin(request, env);
-  const body = z.object({ provider: providerSchema, permissions: permissionSchema, settings: connectionSettingsSchema.optional() }).strict().parse(await request.json());
+  const body = z.object({ provider: providerSchema, permissions: permissionSchema.default(["read", "write"]), settings: connectionSettingsSchema.optional() }).strict().parse(await request.json());
   credentials(env, body.provider);
   const context = connectionContext(env, body.provider, body.settings);
   const state = randomToken(); const verifier = newVerifier(); const stateHash = await sha256Hex(state);
@@ -66,7 +66,7 @@ async function saveConnection(env: AppEnv, userId: string, provider: AppProvider
 }
 async function connectApiKey(request: Request, env: AppEnv, userId: string, fetcher: typeof fetch) {
   sameOrigin(request, env);
-  const body = z.object({ provider: providerSchema, credential: z.string().min(10).max(4096).regex(/^\S+$/), permissions: permissionSchema, settings: connectionSettingsSchema.optional(), dailyCallLimit: z.number().int().min(1).max(1000).default(25), usageConsent: z.literal(true) }).strict().parse(await request.json());
+  const body = z.object({ provider: providerSchema, credential: z.string().min(10).max(4096).regex(/^\S+$/), permissions: permissionSchema.default(["read", "write"]), settings: connectionSettingsSchema.optional(), dailyCallLimit: z.number().int().min(1).max(1000).default(25), usageConsent: z.literal(true) }).strict().parse(await request.json());
   if (APP_CATALOG[body.provider].auth !== "api_key") throw new AppError("app_oauth_required");
   if (!appConfigured(env, body.provider)) throw new AppError("app_not_configured", 503);
   const context = connectionContext(env, body.provider, body.settings);
@@ -135,7 +135,7 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
   const required = operation.permission === "write" ? "apps:write" : "apps:read";
   if (!identity.scope.split(/\s+/).includes(required)) throw new AppError("app_mcp_scope_required", 403);
   if (await isMcpPaused(env, identity.userId)) throw new AppError("mcp_paused", 403);
-  requirePermission(row, operation.permission);
+  requirePermission(row, operation.permission, operation);
   const args = operation.schema.parse(input.arguments);
   const hash = await sha256Hex(stableJson({ connection: row.id, operation: operation.name, arguments: args }));
   let call = await env.DB.prepare("SELECT * FROM app_calls WHERE user_id=?1 AND request_id=?2").bind(identity.userId, input.requestId).first<Call>();
@@ -149,7 +149,7 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
       const tokens = await accessToken(env, row, fetcher);
       const current = await connection(env, identity.userId, row.id);
       if (current.generation !== row.generation) throw new AppError("app_connection_changed", 409);
-      requirePermission(current, operation.permission);
+      requirePermission(current, operation.permission, operation);
       review = await loadAppReview(row.provider, operation.name, args as Record<string, unknown>, tokens, fetcher);
     }
     if (quote) review = { target: { ...(review?.target || {}), estimatedUsage: quote }, hash: review?.hash || await sha256Hex(JSON.stringify(quote)) };
@@ -173,7 +173,7 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
     // Token refresh can reduce provider scopes; re-check its persisted result.
     const current = await connection(env, identity.userId, row.id);
     if (current.generation !== row.generation) throw new AppError("app_connection_changed", 409);
-    requirePermission(current, operation.permission);
+    requirePermission(current, operation.permission, operation);
     const review = call.review_ciphertext ? await unseal<AppReview>(env, call.review_ciphertext, callContext(identity.userId, call.id, "review")) : null;
     const conditionalHeaders = await verifyAppReview(row.provider, operation.name, args as Record<string, unknown>, tokens, review, fetcher);
     const quote = quoteAppOperation(operation, args);

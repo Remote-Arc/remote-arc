@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SLACK_SCOPES, SLACK_OPERATIONS } from "./app-slack.js";
 import { EXTRA_PROVIDERS, EXTRA_OPERATIONS, EXTRA_PROVIDER_IDS, APP_CATEGORIES } from "./app-integrations.js";
 export { APP_CATEGORIES };
 
@@ -18,7 +19,7 @@ export type ProviderDefinition = { name: string; brand: string; authorize: strin
 const googleRead = "https://www.googleapis.com/auth/";
 export const APP_CATALOG: Record<AppProvider, ProviderDefinition> = {
   github: { category: "development", name: "GitHub", brand: "github", authorize: "https://github.com/login/oauth/authorize", token: "https://github.com/login/oauth/access_token", credential: "GITHUB", scopes: { read: ["read:user", "repo", "offline_access"], write: [] }, pkce: true },
-  slack: { category: "communication", name: "Slack", brand: "slack", authorize: "https://slack.com/oauth/v2/authorize", token: "https://slack.com/api/oauth.v2.access", credential: "SLACK", scopes: { read: ["channels:read", "channels:history", "search:read"], write: ["chat:write"] }, pkce: false },
+  slack: { category: "communication", name: "Slack", brand: "slack", authorize: "https://slack.com/oauth/v2/authorize", token: "https://slack.com/api/oauth.v2.access", credential: "SLACK", scopes: SLACK_SCOPES, pkce: false },
   gmail: { category: "email_calendar", name: "Gmail", brand: "gmail", authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", credential: "GOOGLE", scopes: { read: [googleRead + "gmail.readonly"], write: [googleRead + "gmail.modify"] }, pkce: true },
   outlook: { category: "email_calendar", name: "Outlook", brand: "microsoftoutlook", authorize: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", token: "https://login.microsoftonline.com/common/oauth2/v2.0/token", credential: "MICROSOFT", scopes: { read: ["offline_access", "User.Read", "Mail.Read"], write: ["Mail.ReadWrite", "Mail.Send"] }, pkce: true },
   google_calendar: { category: "email_calendar", name: "Google Calendar", brand: "googlecalendar", authorize: "https://accounts.google.com/o/oauth2/v2/auth", token: "https://oauth2.googleapis.com/token", credential: "GOOGLE", scopes: { read: [googleRead + "calendar.readonly"], write: [googleRead + "calendar.events"] }, pkce: true },
@@ -48,14 +49,13 @@ const calendarId = id.default("primary");
 const dateTime = z.string().datetime({ offset: true });
 const event = z.object({ summary: header, start: dateTime, end: dateTime, timeZone: z.string().max(100).default("UTC"), attendees: z.array(email).max(20).default([]) }).strict().refine(v => Date.parse(v.end) > Date.parse(v.start), "end must follow start");
 export type RequestPlan = { url: string; method: "GET" | "POST" | "PATCH" | "DELETE" | "PUT"; body?: unknown; headers?: Record<string,string>; responseKind?: "json" | "text" };
-export type AppOperation = { provider: AppProvider; name: string; description: string; permission: AppPermission; schema: z.ZodType; request: (a: any, context?: AppContext) => RequestPlan; quote?: (a: any) => AppQuote };
+export type AppOperation = { provider: AppProvider; name: string; description: string; permission: AppPermission; requiredScopes?: string[]; anyScopes?: string[]; schema: z.ZodType; request: (a: any, context?: AppContext) => RequestPlan; quote?: (a: any) => AppQuote };
 const operations: AppOperation[] = [];
 function op(provider: AppProvider, name: string, description: string, schema: z.ZodType, request: (a: any) => RequestPlan, permission: AppPermission = "read") { operations.push({ provider, name, description, schema, request, permission }); }
 const encode = encodeURIComponent;
 const ghRepo = (r: string) => r.split("/").map(encode).join("/");
 const url = (base: string, query: Record<string, unknown> = {}) => { const u = new URL(base); Object.entries(query).forEach(([k, v]) => { if (v !== undefined) u.searchParams.set(k, String(v)); }); return u.toString(); };
 const gh = "https://api.github.com";
-const slack = "https://slack.com/api/";
 const gmail = "https://gmail.googleapis.com/gmail/v1/users/me";
 const graph = "https://graph.microsoft.com/v1.0/me";
 op("github", "repositories.list", "List accessible repositories", z.object({ limit: page }).strict(), a => ({ url: url(gh + "/user/repos", { per_page: a.limit, sort: "updated" }), method: "GET" }));
@@ -65,11 +65,6 @@ for (const [name, path, description] of [["issues.list", "issues", "List reposit
 op("github", "pulls.list", "List pull requests", z.object({ repo, limit: page, state: z.enum(["open", "closed", "all"]).optional() }).strict(), a => ({ url: url(`${gh}/repos/${ghRepo(a.repo)}/pulls`, { per_page: a.limit, state: a.state }), method: "GET" }));
 op("github", "contents.read", "Read repository content", z.object({ repo, path: z.string().max(500).refine(v => !v.split("/").some(p => p === "..") && !v.startsWith("/")), ref: id.optional() }).strict(), a => ({ url: url(`${gh}/repos/${ghRepo(a.repo)}/contents/${a.path.split("/").map(encode).join("/")}`, { ref: a.ref }), method: "GET" }));
 op("github", "issues.create", "Create a repository issue", z.object({ repo, title: header, body: text }).strict(), a => ({ url: `${gh}/repos/${ghRepo(a.repo)}/issues`, method: "POST", body: { title: a.title, body: a.body } }), "write");
-op("slack", "channels.list", "List public channels", z.object({ limit: page, cursor: id.optional() }).strict(), a => ({ url: url(slack + "conversations.list", { limit: a.limit, cursor: a.cursor, types: "public_channel" }), method: "GET" }));
-op("slack", "channels.get", "Inspect a channel before approving a message", z.object({ channel: id }).strict(), a => ({ url: url(slack + "conversations.info", { channel: a.channel }), method: "GET" }));
-op("slack", "messages.list", "Read channel messages", z.object({ channel: id, limit: page, cursor: id.optional() }).strict(), a => ({ url: url(slack + "conversations.history", a), method: "GET" }));
-op("slack", "search", "Search workspace messages", z.object({ query: text, limit: page }).strict(), a => ({ url: url(slack + "search.messages", { query: a.query, count: a.limit }), method: "GET" }));
-op("slack", "messages.send", "Send a channel message", z.object({ channel: id, text: text }).strict(), a => ({ url: slack + "chat.postMessage", method: "POST", body: { ...a, unfurl_links: false, unfurl_media: false } }), "write");
 op("gmail", "messages.list", "Search email messages", z.object({ query: text.optional(), limit: page, pageToken: id.optional() }).strict(), a => ({ url: url(gmail + "/messages", { q: a.query, maxResults: a.limit, pageToken: a.pageToken }), method: "GET" }));
 op("gmail", "messages.get", "Read one email message", z.object({ id }).strict(), a => ({ url: `${gmail}/messages/${encode(a.id)}?format=full`, method: "GET" }));
 const base64Utf8 = (value: string) => {
@@ -100,5 +95,5 @@ for (const provider of ["google_calendar", "microsoft_calendar"] as const) {
   op(provider, "events.update", "Update an event or meeting", z.object({ calendar: calendarId, id, event }).strict(), a => ({ url: `${path(a.calendar)}/${encode(a.id)}`, method: "PATCH", body: body(a.event) }), "write");
   op(provider, "events.delete", "Delete a calendar event", z.object({ calendar: calendarId, id }).strict(), a => ({ url: `${path(a.calendar)}/${encode(a.id)}`, method: "DELETE" }), "write");
 }
-export const APP_OPERATIONS = [...operations, ...EXTRA_OPERATIONS];
+export const APP_OPERATIONS = [...operations, ...SLACK_OPERATIONS, ...EXTRA_OPERATIONS];
 export function appOperation(provider: AppProvider, name: string) { const value = APP_OPERATIONS.find(o => o.provider === provider && o.name === name); if (!value) throw new AppError("unsupported_app_operation"); return value; }

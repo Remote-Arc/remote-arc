@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "./i18n.js";
+import {UI_PREVIEW} from "./preview.js";
 import "./apps-manager.css";
 import directory from "./app-directory.json" with { type: "json" };
 import { AppCredentialForm, type AppCredentialInput } from "./apps-auth-form.js";
@@ -23,7 +25,7 @@ export type AppsSnapshot = { enabled: boolean; apps: AppDefinition[]; connection
 export type AppsRequest = (path: string, init?: RequestInit) => Promise<unknown>;
 
 const brandFiles: Record<string, string> = Object.fromEntries(directory.apps.map(app => [app.brand, app.brand]));
-const permissionsFor = (write: boolean): Permission[] => write ? ["read", "write"] : ["read"];
+const connectedPermissions: Permission[] = ["read", "write"];
 
 export function AppIcon({ brand }: { brand: string }) {
   const file = brandFiles[brand];
@@ -79,25 +81,17 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnec
   onDisconnect: (connection: AppConnection) => void;
 }) {
   const { tr } = useI18n();
-  const [write, setWrite] = useState(connection.permissions.includes("write"));
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
-  const savedWrite = connection.permissions.includes("write");
-  useEffect(() => { setWrite(savedWrite); setConfirmDisconnect(false); }, [connection.id, savedWrite, connection.status]);
+  useEffect(() => { setConfirmDisconnect(false); }, [connection.id, connection.status]);
   const active = connection.status === "active";
-  const needsScopes = write && app.permissions.write.some(scope => scope !== "offline_access" && !connection.scopes.includes(scope));
-  const changed = write !== savedWrite;
+  const needsScopes = [...app.permissions.read, ...app.permissions.write].some(scope => !["offline_access", "offline.access", "refresh_token"].includes(scope) && !connection.scopes.includes(scope));
+  const needsAccess = app.operations.some(op => op.permission === "write") && !connection.permissions.includes("write");
   return <article className="appsManagerConnection" data-status={connection.status}>
     <div className="appsManagerConnectionTop"><strong>{connection.accountLabel}</strong><span className="appsManagerStatus" data-status={connection.status}>{statusLabel(connection.status, tr)}</span></div>
     {connection.status === "reauthorization_required" && <p className="appsManagerConnectionHint">{tr("Provider access expired or was revoked. Reconnect this account to restore access.", "应用授权已过期或被撤销，请重新连接此账号以恢复访问。")}</p>}
-    <fieldset className="appsManagerPermissions" disabled={busy || !app.configured}>
-      <legend>{tr("Remote Arc permissions", "Remote Arc 访问权限")}</legend>
-      <label><input type="checkbox" checked disabled /><span>{tr("Read access", "读取权限")}</span></label>
-      <label><input type="checkbox" checked={write} disabled={!app.operations.some(op => op.permission === "write")} onChange={event => setWrite(event.target.checked)} /><span>{tr("Allow write actions", "允许写入操作")}</span></label>
-    </fieldset>
+    <p className="appsManagerConnectionHint">{needsScopes || needsAccess ? tr("Reconnect once to authorize all available tools.", "重新授权一次，即可使用全部可用工具。") : tr("All authorized tools are ready to use.", "已授权的工具均可直接使用。")}</p>
     <div className="appsManagerConnectionActions">
-      {active ? <button type="button" disabled={busy || !app.configured || !changed} onClick={() => needsScopes ? onAuthorize(app.provider, permissionsFor(write), connection.settings) : onSave(connection, permissionsFor(write))}>
-        {needsScopes ? tr("Authorize write access", "授权写入权限") : tr("Save permissions", "保存权限")}
-      </button> : <button type="button" disabled={busy || !app.configured} onClick={() => onAuthorize(app.provider, permissionsFor(write), connection.settings)}>{tr("Reconnect", "重新连接")}</button>}
+      {(!active || needsScopes || needsAccess) && <button type="button" disabled={busy || !app.configured} onClick={() => needsAccess && !needsScopes && active ? onSave(connection, connectedPermissions) : onAuthorize(app.provider, connectedPermissions, connection.settings)}>{tr("Reconnect account", "重新授权账号")}</button>}
       {connection.status !== "disconnected" && <button type="button" className="appsManagerTextAction" disabled={busy} onClick={() => setConfirmDisconnect(true)}>{tr("Disconnect", "断开连接")}</button>}
     </div>
     {confirmDisconnect && <div className="appsManagerDisconnect" role="group" aria-label={tr("Confirm account disconnection", "确认断开账号")}>
@@ -108,6 +102,88 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnec
   </article>;
 }
 
+type CatalogOperation = AppDefinition["operations"][number];
+
+function AppToolsDialog({ app, connections, onClose, onConnect, busy }: {
+  app: AppDefinition; connections: AppConnection[]; onClose: () => void; onConnect: () => void; busy: boolean;
+}) {
+  const { tr } = useI18n();
+  const [query, setQuery] = useState("");
+  const [selectedName, setSelectedName] = useState(app.operations[0]?.name || "");
+  const [copied, setCopied] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+  const active = connections.find(connection => connection.status === "active");
+  const selected = app.operations.find(item => item.name === selectedName);
+  const matching = app.operations.filter(item => (item.name + " " + item.description).toLowerCase().includes(query.trim().toLowerCase()));
+  useEffect(() => {
+    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeRef.current?.focus();
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); onClose(); }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const elements = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), a[href]')).filter(item => item.getClientRects().length);
+      if (!elements.length) return;
+      const first = elements[0]!, last = elements[elements.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = oldOverflow; document.removeEventListener("keydown", onKey); previousFocus.current?.focus(); };
+  }, [onClose]);
+  async function copyInstruction(operation: CatalogOperation) {
+    const prompt = `Use Remote Arc Connect (list_apps / call_app) to run ${app.provider}.${operation.name}${active ? ` with connectionId ${active.id}` : ""}. Ask me for any required arguments and obtain my approval before any write. Do not claim success without the provider result.`;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopied(true);
+    } catch { setCopied(false); }
+  }
+  const schema = selected?.inputSchema && typeof selected.inputSchema === "object" ? selected.inputSchema as { properties?: Record<string, { type?: string; description?: string; enum?: unknown[] }>; required?: string[] } : null;
+  const params = Object.entries(schema?.properties || {});
+  return createPortal(
+    <div className="appsToolsOverlay" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="appsToolsDialog" ref={dialogRef} role="dialog" aria-modal="true" aria-label={tr(app.name + " tools", app.name + " 工具")}>
+        <header className="appsToolsHead">
+          <AppIcon brand={app.brand} />
+          <div><h2>{app.name} · {tr("Tools", "工具")}</h2><p>{app.operations.length} {tr("available operations", "项可用操作")} · {active ? tr("Account connected", "账号已连接") : tr("Connect an account to use tools", "连接账号后即可使用工具")}</p></div>
+          <button ref={closeRef} type="button" className="appsToolsClose" aria-label={tr("Close tools", "关闭工具浮层")} onClick={onClose}>✕</button>
+        </header>
+        <div className="appsToolsBody">
+          <aside className="appsToolsList">
+            <label htmlFor={"apps-tool-search-" + app.provider}>{tr("Find a tool", "搜索工具")}</label>
+            <input id={"apps-tool-search-" + app.provider} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr("Search name or purpose…", "搜索名称或用途…")} />
+            <div className="appsToolsItems" role="list" aria-label={tr("Available tools", "可用工具")}>
+              {matching.map(item => <div role="listitem" key={item.name}><button type="button" className="appsToolsItem" aria-pressed={selectedName === item.name} onClick={() => { setSelectedName(item.name); setCopied(false); }}>
+                <span className="appsToolsItemTitle">{item.name}</span><span className="appsToolsItemMeta">{item.description}</span><span className="appsToolsItemFooter"><small>{item.permission === "write" ? tr("Write · approval", "写入 · 需审批") : tr("Read-only", "只读")}</small><b>{tr("View details →", "查看详情 →")}</b></span>
+              </button></div>)}
+              {!matching.length && <p className="appsToolsEmpty">{tr("No tools match. Try another keyword.", "没有匹配的工具，试试其他关键词。")}</p>}
+            </div>
+          </aside>
+          <section className="appsToolsDetail" aria-live="polite">
+            {selected ? <>
+              <div className="appsToolsDetailTop"><span className="appsToolsEyebrow">{tr("OPERATION DETAILS", "操作详情")}</span><span className="appsToolsRisk" data-permission={selected.permission}>{selected.permission === "write" ? tr("Write · human approval", "写入 · 人工审批") : tr("Read only", "只读操作")}</span></div>
+              <h3>{selected.name}</h3>
+              <p className="appsToolsDescription">{selected.description}</p>
+              <div className="appsToolsParameterHeader"><h4>{tr("Required inputs", "调用参数")}</h4><span>{tr("Validated by Remote Arc", "由 Remote Arc 校验")}</span></div>
+              {params.length ? <ul className="appsToolsParams">{params.map(([key, value]) => <li key={key}><code>{key}</code><span>{schema?.required?.includes(key) ? tr("Required", "必填") : tr("Optional", "选填")}</span><small>{value.type || "value"}{value.description ? " · " + value.description : ""}</small></li>)}</ul> : <p className="appsToolsParamEmpty">{tr("No parameter schema listed here. Your AI can discover the tool's current schema through list_apps.", "页面暂无参数定义。AI 可通过 list_apps 获取当前工具的完整参数结构。")}</p>}
+              <p className="appsToolsPolicy">{selected.permission === "write" ? tr("Your AI prepares the request; you review its exact target and payload before execution.", "AI 先准备操作请求，你核对目标与完整参数后才会执行。") : tr("Only accessible data from the connected account is returned.", "只能读取此连接账号有权限访问的数据。")}</p>
+              <div className="appsToolsActions">
+                {active ? <button type="button" className="appsToolsPrimary" onClick={() => void copyInstruction(selected)}>{copied ? tr("Copied ✓", "已复制 ✓") : tr("Copy instruction for AI →", "复制给 AI 使用 →")}</button>
+                : <button type="button" className="appsToolsPrimary" disabled={busy || !app.configured} onClick={() => { onClose(); onConnect(); }}>{app.configured ? tr("Connect account to use →", "连接账号后使用 →") : tr("Administrator setup needed", "需要管理员配置")}</button>}
+                <button type="button" className="appsToolsSecondary" onClick={onClose}>{tr("Back to apps", "返回应用列表")}</button>
+              </div>
+              {copied && <p className="appsToolsCopied" role="status">{tr("Paste the instruction into an AI chat connected to Remote Arc. Nothing was executed here.", "将指令粘贴到已连接 Remote Arc 的 AI 对话中。本页面没有执行任何操作。")}</p>}
+            </> : <p>{tr("Select a tool to inspect its inputs.", "选择一项工具查看参数。")}</p>}
+          </section>
+        </div>
+      </div>
+    </div>, document.body
+  );
+}
+
 function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect, onCredential }: {
   app: AppDefinition; connections: AppConnection[]; busy: boolean;
   onCredential: (provider: string, input: AppCredentialInput) => Promise<boolean>;
@@ -116,36 +192,32 @@ function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect
   onDisconnect: (connection: AppConnection) => void;
 }) {
   const { tr } = useI18n();
-  const [write, setWrite] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [credentialOpen, setCredentialOpen] = useState(false);
   const [shopDomain, setShopDomain] = useState("");
   function connect(provider: string, permissions: Permission[], settings?: Record<string, string>) {
-    if (app.auth === "api_key") { setWrite(permissions.includes("write")); setCredentialOpen(true); }
+    if (app.auth === "api_key") { setCredentialOpen(true); }
     else onAuthorize(provider, permissions, settings || (provider === "shopify" ? {shopDomain} : undefined));
   }
-  const note = app.provider === "github" && app.consentNote
-    ? tr("GitHub's repo scope includes write access at GitHub. Remote Arc still blocks write actions unless you explicitly enable them here.", "GitHub 的 repo 授权范围包含上游写入权限；只有你在这里明确允许写入，Remote Arc 才会放行写入操作。")
-    : app.consentNote;
   return <article className="appsManagerCard" data-provider={app.provider}>
     <header><AppIcon brand={app.brand} /><div><h2>{app.name}</h2><span>{app.configured ? tr("Ready to connect", "可授权连接") : tr("Administrator setup needed", "等待管理员配置")}</span></div><span className="appsManagerOperationCount">{app.operations.length} {tr("operations", "项操作")}</span></header>
-    {note && <p className="appsManagerConsentNote">{note}</p>}
+
     {app.connectionNote && <p className="appsManagerConnectionHint">{app.connectionNote}</p>}
     {app.billingNote && <p className="appsManagerBilling">{app.billingNote}</p>}
     {app.provider === "runway" && <a className="appsRunwayAttribution" href="https://runwayml.com" target="_blank" rel="noreferrer"><img src="/app-brands/runwayattribution.svg" alt="Powered by Runway" /></a>}
     {connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onSave={onSave} onDisconnect={onDisconnect} />)}
     <div className="appsManagerAuthorize">
-      <fieldset disabled={busy || !app.configured}>
-        <legend>{connections.length ? tr("Connect another account", "连接其他账号") : tr("Choose access for this connection", "选择本次连接的权限")}</legend>
-        <label><input type="checkbox" checked disabled /><span>{tr("Read", "读取")}</span></label>
-        <label><input type="checkbox" checked={write} disabled={!app.operations.some(op => op.permission === "write")} onChange={event => setWrite(event.target.checked)} /><span>{tr("Write actions (optional)", "写入操作（可选）")}</span></label>
-      </fieldset>
+      <p className="appsManagerConnectionHint">{tr("Connect once to use all available tools. Changes to app data are reviewed when requested.", "连接一次即可使用全部可用工具。修改应用数据时，再核对具体操作。")}</p>
       {app.provider === "shopify" && <label className="appsManagerStore">{tr("Store domain", "店铺域名")}<input value={shopDomain} onChange={e => setShopDomain(e.target.value)} placeholder="your-store.myshopify.com" autoComplete="off" maxLength={100} /></label>}
-      <button type="button" className="appsManagerPrimary" disabled={busy || !app.configured || (app.provider === "shopify" && !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopDomain))} onClick={() => connect(app.provider, permissionsFor(write))}>{app.configured ? connections.length ? tr("Connect another account", "连接其他账号") : tr("Connect account", "连接账号") : tr("Not configured", "尚未配置")}</button>
+      <button type="button" className="appsManagerPrimary" disabled={busy || !app.configured || (app.provider === "shopify" && !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopDomain))} onClick={() => connect(app.provider, connectedPermissions)}>{app.configured ? connections.length ? tr("Connect another account", "连接其他账号") : tr("Connect account", "连接账号") : tr("Not configured", "尚未配置")}</button>
     </div>
-    {credentialOpen && <AppCredentialForm provider={app.provider} write={write} busy={busy} onConnect={input => onCredential(app.provider, input)} onCancel={() => setCredentialOpen(false)} />}
-    <details className="appsManagerOperations"><summary>{tr("Available operations", "可用操作")} <span>{app.operations.length}</span></summary>
-      <ul>{app.operations.map(operation => <li key={operation.name}><div><strong>{operation.description}</strong><span className="appsManagerPermissionTag" data-permission={operation.permission}>{operation.permission === "write" ? tr("Write · approval required", "写入 · 需审批") : tr("Read", "读取")}</span></div><code>{operation.name}</code></li>)}</ul>
-    </details>
+    {credentialOpen && <AppCredentialForm provider={app.provider} write={true} busy={busy} onConnect={input => onCredential(app.provider, input)} onCancel={() => setCredentialOpen(false)} />}
+    <div className="appsManagerToolsAction">
+      <div><strong>{tr("Explore tools", "探索工具")}</strong><p>{tr("Search the operations and view their inputs without expanding this card.", "在独立窗口中搜索工具、查看参数，不会撑开当前卡片。")}</p></div>
+      <button type="button" className="appsManagerExploreButton" aria-haspopup="dialog" onClick={() => setToolsOpen(true)}>{tr("Explore " + app.operations.length + " tools →", "查看 " + app.operations.length + " 项工具 →")}</button>
+    </div>
+    {toolsOpen && <AppToolsDialog app={app} connections={connections} busy={busy} onClose={() => setToolsOpen(false)} onConnect={() => connect(app.provider, connectedPermissions)} />}
+
   </article>;
 }
 
@@ -257,7 +329,7 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
     {loading && !snapshot && <p className="appsManagerLoading" role="status">{tr("Loading app connections…", "正在加载应用连接…")}</p>}
     {snapshot && !snapshot.enabled && <section className="appsManagerDisabled"><h2>{tr("Apps are not enabled yet", "应用连接尚未启用")}</h2><p>{tr("An administrator needs to enable Apps and configure the providers before you can connect accounts. Your existing device and AI connections are unchanged.", "管理员启用 Apps 并配置应用授权后，你即可连接账号。现有设备和 AI 连接仍可继续使用。")}</p></section>}
     {snapshot?.enabled && <>
-      <section className="appsManagerSummary" aria-label={tr("Connection overview", "连接概览")}><span><strong>{activeCount}</strong>{tr("connected accounts", "个已连接账号")}</span><a href="#approvals"><strong>{pendingCount}</strong>{tr("awaiting review", "项等待审核")}</a><p>{tr("Read access is the default. Write actions require both permission and approval for each request.", "默认仅授予读取权限。写入操作同时需要写入权限和逐次请求审批。")}</p></section>
+      <section className="appsManagerSummary" aria-label={tr("Connection overview", "连接概览")}><span><strong>{activeCount}</strong>{tr("connected accounts", "个已连接账号")}</span><a href="#approvals"><strong>{pendingCount}</strong>{tr("awaiting review", "项等待审核")}</a><p>{tr("All available tools are enabled when you connect. Review each write request before it runs.", "连接后默认启用全部可用工具。写入执行前核对具体请求。")}</p></section>
       <section className="appsManagerMcpTools" aria-labelledby="apps-mcp-tools-title">
         <div>
           <h2 id="apps-mcp-tools-title">{tr("AI chat tools · enabled by default", "AI 对话工具 · 默认启用")}</h2>
@@ -269,17 +341,18 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
         </div>
         <p className="appsManagerMcpToolsHint">{tr("New AI connections request Apps scopes at sign-in. Existing AI connections may need to reauthorize to add apps:read and apps:write; refreshing tools alone cannot expand an existing OAuth token.", "新连接 AI 时默认申请 Apps 权限。已有 AI 连接可能需要重新 OAuth 授权以加入 apps:read、apps:write；只刷新工具不能扩大旧令牌的授权范围。")}</p>
       </section>
+
       <div className="appsManagerFilters"><label>{tr("Find an app", "查找应用")}<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={tr("Search apps…", "搜索应用…")} /></label><div role="group" aria-label={tr("App categories", "应用分类")}><button type="button" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{tr("All apps", "全部应用")} <span>{snapshot.apps.length}</span></button>{directory.categories.map(item => <button type="button" key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{tr(item.name, item.nameZh)}</button>)}</div></div>
       {directory.categories.map(group => {
         const apps = visibleApps.filter(app => (app.category || directory.apps.find(item => item.provider === app.provider)?.category) === group.id);
-        return apps.length ? <section className="appsManagerCategory" key={group.id} aria-label={tr(group.name, group.nameZh)}><header><h2>{tr(group.name, group.nameZh)}</h2><p>{tr(group.description, group.descriptionZh)}</p></header><div className="appsManagerGrid">{apps.map(app => <CatalogCard key={app.provider} app={app} connections={snapshot.connections.filter(connection => connection.provider === app.provider)} busy={Boolean(busy)} onAuthorize={authorize} onCredential={connectCredential} onSave={save} onDisconnect={disconnect} />)}</div></section> : null;
+        return apps.length ? <section className="appsManagerCategory" key={group.id} aria-label={tr(group.name, group.nameZh)}><header><h2>{tr(group.name, group.nameZh)}</h2><p>{tr(group.description, group.descriptionZh)}</p></header><div className="appsManagerGrid">{apps.map(app => <CatalogCard key={app.provider} app={app} connections={snapshot.connections.filter(connection => connection.provider === app.provider)} busy={Boolean(busy) || UI_PREVIEW} onAuthorize={authorize} onCredential={connectCredential} onSave={save} onDisconnect={disconnect} />)}</div></section> : null;
       })}
       {!!snapshot.apps.length && !visibleApps.length && <p className="appsManagerEmpty">{tr("No apps match your search.", "没有匹配的应用。")}</p>}
       {!snapshot.apps.length && <p className="appsManagerEmpty">{tr("No app providers are available yet.", "目前还没有可用的应用服务。")}</p>}
       <section className="appsManagerApprovals" id="approvals" aria-labelledby="apps-manager-approvals-heading"><div className="appsManagerSectionHeading"><h2 id="apps-manager-approvals-heading">{tr("Review app requests", "审核应用请求")}</h2><p>{tr("Approve or reject the exact operation requested by your AI.", "核对 AI 请求的具体操作，再决定批准或拒绝。")}</p></div>
         {approvalError ? <p className="appsManagerMessage appsManagerError" role="alert">{tr("Approval requests could not be loaded. Refresh to try again.", "暂时无法加载审批请求，请刷新后重试。")}</p> : approvals.length ? <div className="appsManagerApprovalGrid">{approvals.map(approval => {
           const connection = snapshot.connections.find(item => item.id === approval.connectionId);
-          return <ApprovalCard key={approval.id} approval={approval} connection={connection} app={snapshot.apps.find(item => item.provider === connection?.provider)} busy={Boolean(busy)} onDecide={decide} />;
+          return <ApprovalCard key={approval.id} approval={approval} connection={connection} app={snapshot.apps.find(item => item.provider === connection?.provider)} busy={Boolean(busy) || UI_PREVIEW} onDecide={decide} />;
         })}</div> : <p className="appsManagerEmpty">{tr("No app requests need review.", "目前没有需要审核的应用请求。")}</p>}
       </section>
     </>}

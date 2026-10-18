@@ -5,7 +5,10 @@ import { sha256Hex } from "./auth.js";
 export type AppReview = { target: Record<string, unknown>; hash: string };
 const stable = (value: unknown): string => value === null || typeof value !== "object" ? JSON.stringify(value) : Array.isArray(value) ? "[" + value.map(stable).join(",") + "]" : "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + stable((value as Record<string, unknown>)[key])).join(",") + "}";
 export function reviewRead(provider: AppProvider, operation: string, args: Record<string, unknown>) {
-  if (provider === "slack" && operation === "messages.send") return { operation: "channels.get", args: { channel: args.channel } };
+  if (provider === "slack") {
+    if (["messages.send", "messages.schedule", "bookmarks.add"].includes(operation)) return { operation: "channels.get", args: { channel: args.channel || args.channel_id } };
+    if (["messages.update", "messages.delete", "reactions.add", "reactions.remove", "pins.add", "pins.remove"].includes(operation)) return { operation: "messages.get", args: { channel: args.channel, ts: args.ts || args.timestamp } };
+  }
   if (provider === "gmail" && operation === "messages.modify") return { operation: "messages.get", args: { id: args.id } };
   if ((provider === "google_calendar" || provider === "microsoft_calendar") && ["events.update", "events.delete"].includes(operation)) return { operation: "events.get", args: { calendar: args.calendar, id: args.id } };
   return null;
@@ -18,9 +21,15 @@ export async function loadAppReview(provider: AppProvider, operation: string, ar
   const data = await providerJson(plan.url, { headers: { authorization: `Bearer ${tokens.accessToken}`, accept: "application/json", "user-agent": "Remote-Arc-Apps" } }, fetcher);
   let target: Record<string, unknown>;
   if (provider === "slack") {
-    const channel = data.channel;
-    if (!channel?.id || typeof channel.name !== "string") throw new AppError("app_review_unavailable", 502);
-    target = { id: channel.id, name: channel.name, private: channel.is_private, archived: channel.is_archived };
+    if (read.operation === "messages.get") {
+      const message = data.messages?.find((item: Record<string, unknown>) => item.ts === read.args.ts);
+      if (!message || typeof message.text !== "string") throw new AppError("app_review_unavailable", 502);
+      target = { channel: args.channel, ts: message.ts, text: message.text, author: message.user || message.bot_id, edited: message.edited, blocks: message.blocks, attachments: message.attachments };
+    } else {
+      const channel = data.channel;
+      if (!channel?.id || !(typeof channel.name === "string" || typeof channel.user === "string")) throw new AppError("app_review_unavailable", 502);
+      target = { id: channel.id, name: channel.name || channel.user, directMessage: Boolean(channel.is_im), private: channel.is_private, archived: channel.is_archived };
+    }
   } else if (provider === "gmail") {
     if (!data.id || !data.payload) throw new AppError("app_review_unavailable", 502);
     target = { id: data.id, threadId: data.threadId, message: data.payload };

@@ -314,3 +314,19 @@
 @media(prefers-reduced-motion:reduce) {
   :root[data-theme] .appFrame .arcWelcomeMark::after { animation: none !important; }
 }
+
+/* Category navigation should never show a raw browser scrollbar on desktop. */
+@media (min-width:780px) {
+  :root[data-theme] .appFrame .appsManagerCategories {
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    padding-bottom: 0;
+    row-gap: 8px !important;
+  }
+}
+@media (max-width:779px) {
+  :root[data-theme] .appFrame .appsManagerCategories { scrollbar-width: none !important; }
+  :root[data-theme] .appFrame .appsManagerCategories::-webkit-scrollbar { display: none; }
+}
+/* Review deploy disables external account actions but should retain visual contrast. */
+:root[data-theme] .appFrame:has(.previewModeBanner) .appsManager .appsManagerPrimary:disabled { opacity: .83; }

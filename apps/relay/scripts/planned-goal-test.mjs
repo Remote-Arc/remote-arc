@@ -11,6 +11,9 @@ const relay = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ts = createRequire(path.join(relay, "package.json"))("typescript");
 const compiled = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-plan-test-"));
 fs.writeFileSync(path.join(compiled, "package.json"), '{"type":"module"}');
+// The compiled scheduler imports native Arc work and its runtime schemas.
+// Keep the real installed dependency graph available inside this fixture.
+fs.symlinkSync(path.join(relay, "node_modules"), path.join(compiled, "node_modules"), "junction");
 const protocolSource = fs.readFileSync(
   path.resolve(relay, "../../packages/protocol/src/index.ts"),
   "utf8",

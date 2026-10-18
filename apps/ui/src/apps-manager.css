@@ -148,3 +148,12 @@
 .appsManager .appsCredentialForm fieldset > .appsCredentialConsent { display: flex; align-items: flex-start; gap: 10px; }
 .appsCredentialConsent input { margin-top: 3px !important; }
 .appsCredentialForm > div { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.appsManagerMcpTools { border: 1px solid var(--dash-line, var(--line)); border-radius: 14px; background: var(--dash-surface, var(--panel)); padding: 20px 24px; margin-bottom: 24px; }
+.appsManagerMcpTools h2 { margin: 0 0 8px; font-size: 17px; line-height: 1.4; }
+.appsManagerMcpTools p { margin: 0; color: var(--dash-muted, var(--muted)); font-size: 12px; line-height: 1.65; }
+.appsManagerMcpToolList { display: grid; gap: 8px; margin: 16px 0; }
+.appsManagerMcpToolList > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.appsManagerMcpToolList code { font-size: 12px; font-weight: 650; color: var(--dash-text, var(--text)); }
+.appsManagerMcpToolList span { font-size: 12px; line-height: 1.5; color: var(--dash-muted, var(--muted)); }
+.appsManagerMcpToolsHint { padding-top: 12px; border-top: 1px solid var(--dash-line, var(--line)); }

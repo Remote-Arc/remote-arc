@@ -311,6 +311,9 @@ function authUrl(extra = "") {
 
 {
   const { mcpUnauthorized, DEFAULT_MCP_SCOPES } = await import("../src/oauth.js");
+  if (!DEFAULT_MCP_SCOPES.includes("apps:read") || !DEFAULT_MCP_SCOPES.includes("apps:write")) {
+    throw new Error("new MCP clients must have Apps discovery and approval-request scopes by default");
+  }
   const challenge = mcpUnauthorized({ ...envBase, DB: {} as D1Database }).headers.get("WWW-Authenticate") || "";
   if (!challenge.includes('scope="' + DEFAULT_MCP_SCOPES.join(" ") + '"')) {
     throw new Error("first unauthenticated MCP challenge did not request baseline scopes");

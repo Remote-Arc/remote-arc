@@ -37,7 +37,7 @@ try {
     assert.match(html, /role="tabpanel"/);
     assert.match(html, /data-mode="connect"/, "Connect is the default; Arc is never publicly enabled");
     assert.match(body, locale === "zh" ? /Connect 现已可用/ : /Connect available now/);
-    assert.match(body, locale === "zh" ? /即将推出/ : /Coming soon/);
+    assert.match(body, locale === "zh" ? /即将上线/ : /Coming soon/);
     assert.match(body, locale === "zh" ? /Connect Apps 独立发布/ : /Connect Apps ships independently/);
     assert.doesNotMatch(html, /data-step=|data-routine-step=|hcsPlayButton|hcsSteps/);
     assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/);
@@ -48,7 +48,8 @@ try {
     for (const name of locale === "zh" ? ["修复项目", "GitHub + Vercel", "Runway 创作", "Drive + Notion", "制作 PPT", "生成 Excel"] : ["Fix a project", "GitHub + Vercel", "Create with Runway", "Drive + Notion", "Create a PPT", "Build an Excel report"]) assert.ok(lowerHome.includes(name.replaceAll(">", "&gt;")), "Preserve selected task: " + name);
     assert.match(lowerHome, locale === "zh" ? /别只和 AI 聊天，让它真正动手/ : /Don’t just chat. Watch AI do the work/);
     const images = [...html.matchAll(/<img\b[^>]*src="([^"]+)"/g)].map(match => match[1]);
-    assert.ok(images.includes("/remote-arc.svg"));
+    assert.match(html, /class="hcsPowerCore"/, "The Arc mark is a live SVG power core");
+    assert.match(html, /class="hcsPowerArcCurrent"/, "Visible current travels through the Arc mark");
     assert.ok(images.includes("/platform-brands/browser.svg"));
     for (const src of new Set(images)) {
       const asset = path.join(publicDir, src);

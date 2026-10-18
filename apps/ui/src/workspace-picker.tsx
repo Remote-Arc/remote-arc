@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, ty
 import { createPortal } from "react-dom";
 import "./workspace-picker.css";
 import {ProductIcon as Icon} from './product-icon.js';
+import { ARC_WORKSPACE_AVAILABLE } from './dashboard-workspaces.js';
 
 type Workspace = "connect" | "agent";
 type Props = {
@@ -88,7 +89,7 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: P
   };
 
   const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') || []);
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]:not(:disabled)') || []);
     const index = items.indexOf(document.activeElement as HTMLButtonElement);
     if (!items.length) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -129,11 +130,11 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: P
           <span className="workspaceOptionDescription"><strong>Connect</strong><small>{tr("Bring tools to the AI you use", "为你常用的 AI 连接工具")}</small></span>
           <span className="workspaceOptionCheck"><Icon name={workspace === "connect" ? 'check' : 'arrowUpRight'} size={15}/></span>
         </button>
-        <button type="button" role="menuitemradio" aria-checked={workspace === "agent"}
+        <button type="button" role="menuitemradio" aria-checked={workspace === "agent"} disabled={!ARC_WORKSPACE_AVAILABLE}
           className={workspace === "agent" ? "selected" : ""} onClick={() => select("agent-chat")}>
           <span className="workspaceOptionIcon agent" aria-hidden="true"><ProductIcon workspace="agent"/></span>
           <span className="workspaceOptionDescription"><strong>Arc</strong><small>{tr("Your personal AI workspace", "你的个人 AI 工作空间")}</small></span>
-          <span className="workspaceOptionCheck"><Icon name={workspace === "agent" ? 'check' : 'arrowUpRight'} size={15}/></span>
+          {ARC_WORKSPACE_AVAILABLE ? <span className="workspaceOptionCheck"><Icon name={workspace === "agent" ? 'check' : 'arrowUpRight'} size={15}/></span> : <span className="workspaceComingSoon">{tr("Coming soon", "即将上线")}</span>}
         </button>
         <div className="workspacePickerMenuFoot">{tr("One account. Shared apps and devices.","同一个账号，共享已连接的应用与设备。")}</div>
       </div>,

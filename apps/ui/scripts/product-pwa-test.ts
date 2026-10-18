@@ -5,7 +5,7 @@ import {recoverLegacyAdminClient} from '../src/admin/admin-client-recovery.js';
 import {PRODUCT_CACHE,PRODUCT_SW} from '../src/pwa-config.js';
 
 const publicRoot=new URL('../public/',import.meta.url), origin='https://admin.remotearc.app';
-for(const [name,start] of [['manifest.webmanifest','/dashboard/agent/chat'],['admin.webmanifest','/']]) {
+for(const [name,start] of [['manifest.webmanifest','/dashboard/connect/overview'],['admin.webmanifest','/']]) {
   const manifest=JSON.parse(fs.readFileSync(new URL(name!,publicRoot),'utf8'));
   assert.equal(manifest.start_url,start); assert.equal(manifest.display,'standalone'); assert.equal(manifest.scope,'/');
   for(const size of [192,512]) {

@@ -1,13 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab,
+  DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab, ARC_WORKSPACE_AVAILABLE,
   isAgentGoalAutomation, isAgentRoutineAutomation, isVisibleInWorkspace,
 } from "../src/dashboard-workspaces.ts";
 
 const plainTask = { kind: "schedule_watch", goal_json: null, trigger_json: '{"type":"interval"}' };
 const aiGoal = { kind: "goal_loop", goal_json: '{"type":"agent_goal"}', trigger_json: '{"type":"now"}' };
 const aiRoutine = { kind: "long_task", goal_json: '{"type":"agent_goal"}', trigger_json: '{"type":"interval"}' };
+
+test("Connect release redirects every Arc deep link and preserves shared connections", () => {
+  assert.equal(ARC_WORKSPACE_AVAILABLE, false);
+  for (const [tab, path] of Object.entries(DASHBOARD_PATHS)) {
+    assert.equal(workspaceForTab(availableDashboardTab(dashboardTabFromPath(path))), 'connect');
+    if (tab !== 'automations') assert.equal(availableDashboardTab(tab, true), tab);
+  }
+  assert.equal(availableDashboardTab('agent-apps'), 'apps');
+  assert.equal(availableDashboardTab('agent-devices'), 'devices');
+  assert.equal(availableDashboardTab('agent-settings'), 'settings');
+  assert.equal(availableDashboardTab(dashboardTabFromPath('/automations')), 'overview');
+});
 
 test("each canonical dashboard route resolves to its tab", () => {
   for (const [tab, path] of Object.entries(DASHBOARD_PATHS)) {

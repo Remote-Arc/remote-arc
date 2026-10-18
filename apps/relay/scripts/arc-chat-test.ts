@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
-import {handleArcChat,arcMessages,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
+import {handleArcChat,arcMessages,arcContext,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
 import {runArcStep,validateArcDecision,executeArcTool} from '../src/arc-chat-runtime.js';
 import {ARC_MODELS,prepareArcBudget} from '../src/arc-chat-model.js';
 import {nextArcOccurrence,arcScheduleSchema,createArcWork,manageArcWork} from '../src/arc-work.js';
@@ -65,6 +65,16 @@ const again=await send(id,'Continue the conversation');decisions.push(reply('You
 const cancelled=await send(id,'Stop this');await decode(await api('sessions/'+id+'/cancel','POST',{runId:cancelled.run.id}));const beforeCancel=models;assert.equal(await runArcStep(env,cancelled.run.id),false);assert.equal(models,beforeCancel);
 const timed=await send(id,'Expired work');sql.prepare("UPDATE arc_chat_runs SET deadline='2000-01-01' WHERE id=?").run(timed.run.id);await runArcStep(env,timed.run.id);assert.equal(row(timed.run.id).error_code,'ARC_TIME_LIMIT');
 const interrupted=await send(id,'Do not replay');sql.prepare("INSERT INTO arc_chat_steps(run_id,step,status,created_at,updated_at) VALUES(?,0,'dispatching',?,?)").run(interrupted.run.id,now,now);assert.equal(await runArcStep(env,interrupted.run.id),false);assert.equal(row(interrupted.run.id).status,'unknown');
+// Closing the release gate must also stop a decision saved before the switch.
+const gated=await send(id,'Previously planned external write');
+const savedDecision=await seal(env,tool('call_app',{connectionId:'saved',operation:'issues.create',arguments:{}}),arcContext('owner',`${gated.run.id}:0:decision`));
+sql.prepare("INSERT INTO arc_chat_steps(run_id,step,status,decision_ciphertext,created_at,updated_at) VALUES(?,0,'model_complete',?,?,?)").run(gated.run.id,savedDecision,now,now);
+let gatedDispatches=0;const beforeGate=models;
+await runArcStep({...env,ARC_CHAT_ENABLED:'0'},gated.run.id,{executeTool:async()=>{gatedDispatches++;return {};}});
+assert.equal(row(gated.run.id).error_code,'ARC_NOT_CONFIGURED');assert.equal(gatedDispatches,0);assert.equal(models,beforeGate);
+assert.equal((await handleArcChat(req('sessions','POST',{}),{...env,ARC_CHAT_ENABLED:'0'})).status,503);
+assert.equal((await handleArcChat(req('sessions/'+id+'/messages','POST',{text:'blocked',requestId:crypto.randomUUID()}),{...env,ARC_CHAT_ENABLED:'0'})).status,503);
+assert.equal((await handleArcChat(req('sessions/'+id),{...env,ARC_CHAT_ENABLED:'0'})).status,200,'Existing results remain readable');
 const steps=await send(id,'Bound steps');sql.prepare('UPDATE arc_chat_runs SET step=8 WHERE id=?').run(steps.run.id);await runArcStep(env,steps.run.id);assert.equal(row(steps.run.id).error_code,'ARC_STEP_LIMIT');
 const tokens=await send(id,'Bound tokens');sql.prepare('UPDATE arc_chat_runs SET max_tokens=100 WHERE id=?').run(tokens.run.id);await runArcStep(env,tokens.run.id);assert.equal(row(tokens.run.id).error_code,'ARC_TOKEN_LIMIT');
 assert.throws(()=>validateArcDecision({decision:'reply',tool:'call_app',arguments_json:'{}',message:'x'}));assert.throws(()=>validateArcDecision({...reply('x'),arguments_json:'[]'}));

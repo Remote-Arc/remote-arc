@@ -4,11 +4,11 @@ export const DOC_TOPICS: DocTopic[] = [
   {
     slug: 'install-app', group: 'start',
     title: {en: 'Install the web app', zh: '安装网页应用'},
-    description: {en: 'Keep Agent or Admin in a dedicated window on your desktop or phone.', zh: '在电脑或手机上，将 Agent 或 Admin 安装为独立应用。'},
+    description: {en: 'Keep your Remote Arc workspace in a dedicated window on your desktop or phone.', zh: '在电脑或手机上，将 Remote Arc 工作空间安装为独立应用。'},
     sections: [
-      {heading: {en: 'Agent and Admin', zh: 'Agent 与 Admin'}, text: {en: 'Open agent.remotearc.app for your personal workspace, or admin.remotearc.app with administrator access. Each has its own app name and launch destination. Agent opens Chat; Admin opens the operations overview. Install from Profile settings or the Admin sidebar, or use your browser’s install menu.', zh: '在 agent.remotearc.app 打开个人工作空间，管理员可使用 admin.remotearc.app。两者有独立的应用名称和启动位置：Agent 打开 Chat，Admin 打开运营总览。可从个人资料设置、Admin 侧栏或浏览器安装菜单进行安装。'}},
+      {heading: {en: 'Your workspace, one click away', zh: '一键打开你的工作空间'}, text: {en: 'Open agent.remotearc.app and sign in. Install Remote Arc from Profile settings or your browser’s install menu. The app opens your Connect overview, with your devices, app connections and recent activity. Arc Chat is coming soon.', zh: '打开 agent.remotearc.app 并登录，在个人资料设置或浏览器安装菜单中安装 Remote Arc。应用启动后进入 Connect 概览，可查看设备、应用连接和最近活动。Arc Chat 即将上线。'}},
       {heading: {en: 'On your device', zh: '在你的设备上'}, text: {en: 'Chrome and Edge offer Install app. On iPhone or iPad use Share → Add to Home Screen. In Mac Safari use File → Add to Dock. Browser support determines which installation option appears.', zh: 'Chrome、Edge 支持安装应用；iPhone、iPad 使用分享 → 添加到主屏幕；Mac Safari 使用文件 → 添加到程序坞。实际安装入口取决于浏览器支持。'}},
-      {heading: {en: 'Connected work', zh: '保持联网'}, text: {en: 'The installed app uses the same account and permissions as the website. Conversations, APIs and authenticated pages are never stored in the service worker cache. If offline, a neutral reconnect page appears; new model and tool calls need a connection. Hosted runs already accepted by the server can continue within their limits while the window is closed.', zh: '安装版沿用网页的账号和权限。Service Worker 不缓存对话、API 或已登录页面。断网时显示重新连接页面，新的模型和工具调用需要联网。服务端已经接受的托管执行可在窗口关闭后继续，仍受各项上限约束。'}}
+      {heading: {en: 'Connected work', zh: '保持联网'}, text: {en: 'The installed app uses the same account and permissions as the website. Conversations, APIs and authenticated pages are never stored in the service worker cache. If offline, a neutral reconnect page appears; new model and tool calls need a connection. Closing the app does not disconnect your paired computer; its local Agent manages the background connection.', zh: '安装版沿用网页的账号和权限。Service Worker 不缓存对话、API 或已登录页面。断网时显示重新连接页面，新的模型和工具调用需要联网。关闭应用不会断开已配对电脑，本机 Agent 会管理后台连接。'}}
     ]
   },
   {
@@ -235,8 +235,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "说出你需要什么"
         },
         "text": {
-          "en": "A task is one piece of work. A routine repeats on a schedule. In Arc Chat, describe the result and timing; Arc asks for missing details and saves the work using a real tool. Tasks and Routines show status and results, without a configuration form. Connect remains your MCP connection layer for an external AI client.",
-          "zh": "Task 是一次工作，Routine 按计划重复执行。在 Arc Chat 里描述结果和时间，Arc 会确认缺少的信息，再通过真实工具保存。Tasks 和 Routines 展示状态与结果，不需要配置表单。Connect 继续作为外部 AI 客户端使用的 MCP 连接层。"
+          "en": "Arc Chat is coming soon and is not open in this release. A task is one piece of work. A routine repeats on a schedule. In the upcoming Arc Chat, describe the result and timing; Arc asks for missing details and saves the work using a real tool. Tasks and Routines show status and results, without a configuration form. Connect remains your MCP connection layer for an external AI client.",
+          "zh": "Arc Chat 即将上线，本次发布尚未开放。Task 是一次工作，Routine 按计划重复执行。未来在 Arc Chat 里描述结果和时间，Arc 会确认缺少的信息，再通过真实工具保存。Tasks 和 Routines 展示状态与结果，不需要配置表单。Connect 继续作为外部 AI 客户端使用的 MCP 连接层。"
         }
       },
       {
@@ -323,8 +323,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "一个平台，两种工作方式"
         },
         "text": {
-          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the new hosted personal-agent workspace on the same connections: chat, tool execution, one-off tasks and routines. You do not supply a model API key. Arc availability depends on the platform completing its model configuration.",
-          "zh": "Connect 通过 MCP 把你自己的 AI 客户端连接到应用与电脑。Arc 是同一套连接之上的新托管个人 Agent 工作空间，包括对话、工具执行、一次性任务和 Routine。用户不需要提供模型 API Key；Arc 的开放取决于平台完成模型配置。"
+          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the upcoming hosted personal-agent workspace on the same connections: chat, tool execution, one-off tasks and routines. You do not supply a model API key. Arc Chat is coming soon. This release opens Connect only.",
+          "zh": "Connect 通过 MCP 把你自己的 AI 客户端连接到应用与电脑。Arc 是同一套连接之上即将推出的托管个人 Agent 工作空间，包括对话、工具执行、一次性任务和 Routine。用户不需要提供模型 API Key；Arc Chat 即将上线，本次仅开放 Connect。"
         }
       },
       {
@@ -353,8 +353,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "你的 14 天试用"
         },
         "text": {
-          "en": "Activate the trial in Arc Chat after the platform is configured. It lasts fourteen consecutive days per account; refreshing, signing out or activating again does not extend it. Auto and capped premium inference, Tasks and Routines are included. Model spending is limited per day, provider allowance and run. At expiry, new hosted inference stops while conversations and account connections remain. Connect uses its own plan. No credit card is requested and there is no automatic charge.",
-          "zh": "平台配置完成后，在 Arc Chat 主动开启试用。每个账号连续十四天，刷新、退出或再次开启不会延长。包含 Auto、有上限的高级模型推理、Tasks 和 Routines。模型消费受每日额度、服务商授权总额及单次运行限制。到期后停止新的托管推理，对话和账号连接仍保留，Connect 按原套餐使用。不要求信用卡，也不会自动扣费。"
+          "en": "A 14-day trial is planned for the Arc launch. Activation is not open yet. After launch, activate it in Arc Chat. It lasts fourteen consecutive days per account; refreshing, signing out or activating again does not extend it. Auto and capped premium inference, Tasks and Routines are included. Model spending is limited per day, provider allowance and run. At expiry, new hosted inference stops while conversations and account connections remain. Connect uses its own plan. No credit card is requested and there is no automatic charge.",
+          "zh": "Arc 上线时计划提供 14 天试用，目前尚未开放。上线后可在 Arc Chat 主动开启。每个账号连续十四天，刷新、退出或再次开启不会延长。包含 Auto、有上限的高级模型推理、Tasks 和 Routines。模型消费受每日额度、服务商授权总额及单次运行限制。到期后停止新的托管推理，对话和账号连接仍保留，Connect 按原套餐使用。不要求信用卡，也不会自动扣费。"
         }
       }
     ],
@@ -484,50 +484,6 @@ export const DOC_TOPICS: DocTopic[] = [
       "architecture-persistence",
       "architecture-data",
       "architecture-limits"
-    ]
-  },
-  {
-    "slug": "admin",
-    "group": "understand",
-    "title": {
-      "en": "Administration",
-      "zh": "管理功能"
-    },
-    "description": {
-      "en": "Learn about account roles, operational monitoring and the Admin service boundary.",
-      "zh": "了解账号角色、运行监控和 Admin 服务边界。"
-    },
-    "sections": [
-      {
-        "heading": {
-          "en": "Administrator access",
-          "zh": "管理员访问"
-        },
-        "text": {
-          "en": "Admin requires a signed-in account with the current administrator role. The platform checks that role for each operation rather than trusting the browser's claimed identity. Administrative writes require the configured Admin origin and appropriate request format. Ordinary users cannot use Admin endpoints to read another user's data.",
-          "zh": "Admin 要求已登录账号具备当前有效的管理员角色。平台逐次校验角色，不信任浏览器自称的身份。管理写入需要符合配置的 Admin 来源及请求格式。普通用户不能通过 Admin 接口读取其他用户的数据。"
-        }
-      },
-      {
-        "heading": {
-          "en": "Platform operations",
-          "zh": "平台运行管理"
-        },
-        "text": {
-          "en": "Admin provides account and device monitoring, plan and credit administration, service signals and website submissions. Existing Connect entitlements and hosted model budgets are separate. Model keys alone do not authorize paid inference. Administrative grants change only their defined scope; they do not silently expand device permissions.",
-          "zh": "Admin 提供账号与设备监控、套餐和额度管理、服务信号与官网提交信息。现有 Connect 权益与托管模型预算分别处理。模型密钥本身不授权付费推理；管理授权只改变定义的范围，不会悄悄扩展设备权限。"
-        }
-      },
-      {
-        "heading": {
-          "en": "Separate service rollout",
-          "zh": "独立服务发布"
-        },
-        "text": {
-          "en": "The independent Admin repository has a dedicated service boundary and release workflow. The initial main-platform release retains the existing Admin experience. A later verified configuration switch can route it through the separate service without moving account data or the device registry. Publishing the code does not itself perform that cutover.",
-          "zh": "独立 Admin 仓库具备专用服务边界与发布流程。主平台首批发布继续使用现有 Admin 体验；后续可通过经过验证的配置切换进入独立服务，无需迁移账号数据或设备注册表。发布代码不会自动执行这一切换。"
-        }
-      }
     ]
   },
   {

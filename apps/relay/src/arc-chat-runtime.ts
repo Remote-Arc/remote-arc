@@ -85,6 +85,8 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
   if(run.step>=run.max_steps)return finish('failed','ARC_STEP_LIMIT');
   let step=await env.DB.prepare('SELECT * FROM arc_chat_steps WHERE run_id=?1 AND step=?2').bind(runId,run.step).first<Step>();
   if(step&&['model_pending','dispatching','unknown'].includes(step.status))return finish('unknown','ARC_INTERRUPTED_CHECK_RESULTS');
+  // Also gate persisted model decisions: disabling Arc must stop new tool dispatch.
+  if(env.ARC_CHAT_ENABLED!=='1')return finish('failed','ARC_NOT_CONFIGURED');
   if(step?.status==='done'){
    await env.DB.prepare("UPDATE arc_chat_runs SET step=step+1,status='queued',updated_at=?1 WHERE id=?2 AND status IN ('queued','thinking','working')").bind(stamp(),runId).run();return true;
   }

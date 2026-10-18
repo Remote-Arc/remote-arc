@@ -6,11 +6,12 @@ import { AppsManager } from "./apps-manager.js";
 import { ProductFocus } from "./product-positioning.js";
 import {AgentUseCases} from "./agent-use-cases.js";
 import {DeviceFleetOverview,DeviceCapacity} from "./device-fleet-overview.js";
+import {OverviewGreeting} from "./overview-greeting.js";
 import { ArcWorkWorkspace } from "./arc-workspace.js";
 import { ProductIcon, type ProductIconName } from "./product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
 import {
-  DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab,
+  DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab, ARC_WORKSPACE_AVAILABLE,
   isVisibleInWorkspace, isAgentGoalAutomation,
   type DashboardTab,
 } from "./dashboard-workspaces.js";
@@ -511,7 +512,7 @@ function PublicHeader({ user }: { user?: User | null }) {
             <div id="public-nav-product" className="publicNavDropdown productDropdown">
               <section className="publicNavGroup">
                 <span className="publicNavGroupLabel">{tr('ONE PLATFORM. YOUR WAY TO WORK.','一个平台，选择你的工作方式。')}</span>
-                <a href={navHref('/arc')}><span className="publicProductIcon"><ProductIcon name="spark"/></span><span><strong>Arc <em>{tr('New · Preview','新品 · 预览')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
+                <a href={navHref('/arc')}><span className="publicProductIcon"><ProductIcon name="spark"/></span><span><strong>Arc <em>{tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
                 <a href={navHref('/connect-ai')}><span className="publicProductIcon"><ProductIcon name="link"/></span><span><strong>Connect <em>{tr('Available today','现已可用')}</em></strong><small>{tr('Bring tools to the AI you already use','为你常用的 AI 连接电脑和应用')}</small></span></a>
                 <a href={navHref('/docs/device-fleet')}><span className="publicProductIcon"><ProductIcon name="device"/></span><span><strong>{tr('Intelligent fleet','智能设备调度')}</strong><small>{tr('Match work to the right computer','让合适的设备承担合适的工作')}</small></span></a>
               </section>
@@ -533,10 +534,10 @@ function PublicHeader({ user }: { user?: User | null }) {
           <LanguageSwitcher compact syncUrl dropdown />
           <ThemeSwitcher compact />
           {user ? (
-            <a className="navDashboard" href={dashboardHref("/dashboard/agent/chat")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
+            <a className="navDashboard" href={dashboardHref("/dashboard/connect/overview")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
           ) : (
-            <a className="navLogin installNavCta" href={APP_ORIGIN+"/dashboard/agent/chat?trial=1"} title={tr("Sign in with Google or email", "使用 Google 或邮箱登录")}>
-              {tr("Start free trial", "免费试用")} <ProductIcon name="arrowUpRight" size={14}/>
+            <a className="navLogin installNavCta" href={APP_ORIGIN+"/dashboard/connect/overview"} title={tr("Sign in with Google or email", "使用 Google 或邮箱登录")}>
+              {tr("Get started", "开始使用")} <ProductIcon name="arrowUpRight" size={14}/>
             </a>
           )}
         </div>
@@ -2420,11 +2421,11 @@ function Landing({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <section className="landingHero landingHero--constellation">
         <div className="heroCopy">
-          <span className="eyebrow heroProductLabel"><i/> {tr('YOUR PERSONAL AGENT. REAL WORK.','你的个人 AI 队友，真正动手工作。')}</span>
+          <span className="eyebrow heroProductLabel"><i/> {tr('CONNECT AVAILABLE. ARC COMING SOON.','CONNECT 现已可用 · ARC 即将上线')}</span>
           <HeroHeadline />
-          <p>{tr('Tell Arc what you need. It works with your apps, chooses a suitable computer, and keeps tasks and routines moving — with results you can inspect.','告诉 Arc 你需要什么。它调用应用、选择合适的电脑，推进任务与 Routine，并交付可检查的结果。')}</p>
+          <p>{tr('Connect your AI to apps and your own computers today. Coming next: Arc, your personal agent to coordinate the work, from one-off tasks to everyday routines.','现在，让你的 AI 连接应用与自己的电脑。接下来，Arc 将成为你的个人 AI 队友，协调一次性任务与每日 Routine。')}</p>
           <div className="landingActions">
-            <a className="primaryButton marketingPrimary" href={APP_ORIGIN+"/dashboard/agent/chat?trial=1"}>{tr("Start 14-day free trial","开始 14 天免费试用")}<ProductIcon name="arrowUpRight" size={16}/></a>
+            <a className="primaryButton marketingPrimary" href={APP_ORIGIN+"/dashboard/connect/overview"}>{tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
             <a className="marketingSecondary" href="#how-it-works">{tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>
           </div>
           <div className="heroProofLine"><ProductIcon name="check" size={14}/>{tr('No model API key required','无需模型 API Key')}<span>·</span>Windows · Mac · Linux</div>
@@ -3661,9 +3662,18 @@ function Dashboard({
   const [dialog, setDialog] = useState<DashboardDialog | null>(null);
   const [dialogValue, setDialogValue] = useState("");
   const dialogResolver = useRef<((value: boolean | string | null) => void) | null>(null);
-  const [active, setActive] = useState<DashboardTab>(dashboardTabFromPath(location.pathname));
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('remotearc.sidebar.collapsed') === '1'; } catch { return false; }
+  });
+  const [active, setActive] = useState<DashboardTab>(() => availableDashboardTab(dashboardTabFromPath(location.pathname)));
   useEffect(() => {
-    const syncRoute = () => setActive(dashboardTabFromPath(location.pathname));
+    const syncRoute = () => {
+      const requested = dashboardTabFromPath(location.pathname);
+      const resolved = availableDashboardTab(requested);
+      if (requested !== resolved) history.replaceState({}, '', DASHBOARD_PATHS[resolved]);
+      setActive(resolved);
+    };
+    syncRoute();
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
   }, []);
@@ -4876,13 +4886,21 @@ function Dashboard({
   }
 
   function navigateTab(tab: DashboardTab) {
+    tab = availableDashboardTab(tab);
     const path = DASHBOARD_PATHS[tab];
     if (location.pathname !== path) history.pushState({}, "", path);
     if (workspaceForTab(active) !== workspaceForTab(tab)) setShowAutomationCreate(false);
     setActive(tab);
   }
 
+  function toggleSidebar() {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsed(next);
+    try { localStorage.setItem('remotearc.sidebar.collapsed', next ? '1' : '0'); } catch {}
+  }
+
   function openArcChat(prompt?:string,sessionId?:string) {
+    if (!ARC_WORKSPACE_AVAILABLE) { navigateTab('connect'); return; }
     setArcEntry(current=>({prompt,sessionId,version:current.version+1}));
     navigateTab('agent-chat');
   }
@@ -5027,18 +5045,19 @@ function Dashboard({
   );
 
   return (
-    <div className="appFrame" data-workspace={workspace}>
+    <div className="appFrame" data-workspace={workspace} data-sidebar-collapsed={sidebarCollapsed}>
       <aside className="sidebar">
-        <div className="sidebarBrand"><Brand /></div>
+        <div className="sidebarBrand"><Brand /><button type="button" className="sidebarCollapseToggle" aria-label={sidebarCollapsed ? tr('Expand sidebar','展开侧栏') : tr('Collapse sidebar','收起侧栏')} aria-expanded={!sidebarCollapsed} aria-controls={workspace === 'agent' && active === 'agent-chat' ? 'arc-sidebar-nav-root' : 'dashboard-sidebar-navigation'} title={sidebarCollapsed ? tr('Expand sidebar','展开侧栏') : tr('Collapse sidebar','收起侧栏')} onClick={toggleSidebar}><ProductIcon name="panel" size={17}/></button></div>
         {renderWorkspacePicker()}
+        <div id="arc-sidebar-nav-root" className="arcSidebarPortalRoot" hidden={workspace !== 'agent' || active !== 'agent-chat'} />
         {workspace === "agent" && active === "agent-chat" ? (
-          <div id="arc-sidebar-nav-root" className="arcSidebarPortalRoot" />
+          null
         ) : (
           <>
             <div className="workspaceNavHeading">{workspace === "agent" ? tr("WORKSPACE", "工作空间") : tr("CONNECTIONS", "连接管理")}</div>
-            <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
+            <nav id="dashboard-sidebar-navigation" className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
               {navItems.map(([id, label]) => (
-                <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
+                <button key={id} data-dashboard-tab={id} title={label} aria-label={label} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
                   <span className="sideNavIcon"><DashboardNavIcon tab={id} /></span>
                   <span className="sideNavLabel">{label}</span>
                 </button>
@@ -5048,9 +5067,9 @@ function Dashboard({
         )}
         <div className="sidebarGlobalNavigation">
           <div className="workspaceNavHeading">{tr("ACCOUNT", "账户")}</div>
-          <button type="button" aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined} className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab(workspace === "agent" ? "agent-settings" : "settings")}><span className="sideNavIcon"><DashboardNavIcon tab="settings" /></span>{tr("Settings", "设置")}</button>
-          {user.isAdmin && <a href="https://admin.remotearc.app/">{tr("Admin", "管理员后台")} <ProductIcon name="arrowUpRight" size={13}/></a>}
-          <a href={MARKETING_ORIGIN + "/docs"}>{tr("Help & documentation", "帮助与文档")} <ProductIcon name="arrowUpRight" size={13}/></a>
+          <button type="button" aria-label={tr("Settings", "设置")} title={tr("Settings", "设置")} aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined} className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab(workspace === "agent" ? "agent-settings" : "settings")}><span className="sideNavIcon"><DashboardNavIcon tab="settings" /></span><span className="sideNavLabel">{tr("Settings", "设置")}</span></button>
+          {user.isAdmin && <a href="https://admin.remotearc.app/" aria-label={tr("Admin", "管理员后台")} title={tr("Admin", "管理员后台")}><span className="sideNavIcon"><ProductIcon name="shield"/></span><span className="sideNavLabel">{tr("Admin", "管理员后台")}</span><ProductIcon name="arrowUpRight" size={13}/></a>}
+          <a href={MARKETING_ORIGIN + "/docs"} aria-label={tr("Help & documentation", "帮助与文档")} title={tr("Help & documentation", "帮助与文档")}><span className="sideNavIcon"><ProductIcon name="book"/></span><span className="sideNavLabel">{tr("Help & documentation", "帮助与文档")}</span><ProductIcon name="arrowUpRight" size={13}/></a>
         </div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
@@ -5109,8 +5128,8 @@ function Dashboard({
             <section className="overviewTopbar">
               <div>
                 <span className="eyebrow">{tr("OVERVIEW", "概览")}</span>
-                <h1>{tr("Your workspace", "我的工作台")}</h1>
-                <p>{tr("Your computers and apps, ready for the AI you already use.", "把电脑和应用连接起来，交给你正在使用的 AI。")}</p>
+                <OverviewGreeting name={user.name} tr={tr}/>
+                <p>{tr("Your connections, recent work and everything that needs your attention.", "连接状态、最近的工作，以及所有需要你关注的事。")}</p>
               </div>
               <div className="overviewActions">
                 <button className="ghostButton" onClick={() => setShowAdd(true)}>+ {tr("Add device", "添加设备")}</button>
@@ -5137,7 +5156,7 @@ function Dashboard({
               <article className="overviewAttentionCard">
                 <span className="eyebrow">{tr("ATTENTION", "需要关注")}</span>
                 <div className="attentionList">
-                  {!!automationAttentionCount && <button onClick={() => { setAutomationFilter("attention"); navigateTab("agent-goals"); }}><i className="attentionIcon warn">!</i><div><strong>{automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}</strong><small>{automationNeedsAgentCount ? tr("Some goals are waiting for the source AI to continue.", "部分目标正在等待来源 AI 继续决策。") : tr("Check disconnected devices or failed runs.", "检查离线设备或失败的执行。")}</small></div></button>}
+                  {!!automationAttentionCount && <button onClick={() => ARC_WORKSPACE_AVAILABLE ? navigateTab('agent-goals') : navigateTab('connect')}><i className="attentionIcon warn">!</i><div><strong>{automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}</strong><small>{tr("Ask your connected AI to review saved work and continue it.", "让已连接的 AI 检查保存的工作并继续处理。")}</small></div></button>}
                   {automationLoadError && <button onClick={() => void refreshAutomations()}><i className="attentionIcon warn">!</i><div><strong>{tr("Task status unavailable", "任务状态暂不可用")}</strong><small>{tr("Retry to see current progress.", "点击重试以查看当前进度。")}</small></div></button>}
                   {!devices.length && <button onClick={() => setShowAdd(true)}><i className="attentionIcon warn">!</i><div><strong>{tr("No computer paired", "还没有配对电脑")}</strong><small>{tr("Pair your first device to start using Remote Arc.", "先配对第一台设备即可开始使用 Remote Arc。")}</small></div></button>}
                   {!!devices.length && devices.some((device) => device.status === "offline") && <button onClick={() => navigateTab("devices")}><i className="attentionIcon idle">•</i><div><strong>{tr("Some devices are offline", "部分设备离线")}</strong><small>{devices.filter((device) => device.status === "offline").length} {tr("device(s) unavailable for MCP calls", "台设备当前无法接受 MCP 调用")}</small></div></button>}
@@ -5189,7 +5208,7 @@ function Dashboard({
               <button className="addButton arcRadiantCta" onClick={() => setShowAdd(true)}><ProductIcon name="add"/>{tr("Add device", "添加设备")}</button>
             </section>
 
-            <DeviceFleetOverview devices={devices} tr={tr} onChat={()=>openArcChat(tr("Choose a suitable computer for my next task. Check my fleet capabilities and load, and ask what I need done.","为我的下一项任务选择合适电脑，先检查设备能力和负载，再确认我要做什么。"))}/>
+            <DeviceFleetOverview devices={devices} tr={tr} onChat={ARC_WORKSPACE_AVAILABLE ? ()=>openArcChat(tr("Choose a suitable computer for my next task. Check my fleet capabilities and load, and ask what I need done.","为我的下一项任务选择合适电脑，先检查设备能力和负载，再确认我要做什么。")) : undefined}/>
             <section className="deviceToolbar">
               <div className="deviceSearch">
                 <ProductIcon name="search"/>

@@ -83,3 +83,6 @@
   .workspacePickerMenuPortal button { transition: none; }
   .workspacePickerMenuPortal button:hover { transform: none; }
 }
+.workspacePickerMenuPortal button:disabled { cursor: default; opacity: 1; }
+.workspacePickerMenuPortal button:disabled .workspaceOptionDescription small { color: var(--picker-muted); }
+.workspaceComingSoon { flex: none; padding: 4px 6px; border: 1px solid var(--picker-line); border-radius: 4px; color: var(--picker-muted); background: var(--picker-subtle); font-size: 9px; font-weight: 550; white-space: nowrap; }

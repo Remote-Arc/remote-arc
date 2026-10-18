@@ -2,6 +2,12 @@
 
 This change prepares the real hosted agent runtime, a 14-day account trial and the public UI. PR previews are read-only fixtures; they do not call models or production apps. Provider account OAuth setup continues independently.
 
+## Current release: Connect only
+
+Arc is not publicly open. Keep `ARC_CHAT_ENABLED=0` in the Worker and `ARC_WORKSPACE_AVAILABLE=false` in the UI until the platform models, budgets and real execution flows are ready. The workspace picker labels Arc **Coming soon**; old Arc links resolve to Connect, and the PWA launches Connect Overview. Marketing links do not activate a trial. The runtime also blocks previously persisted model decisions from dispatching new tools while disabled; uncertain actions retain their unknown status.
+
+For a later Arc release, verify actual platform-funded conversations, Apps execution, device selection, cancellation, task/routine scheduling, and usage settlement before changing both gates in a reviewed release. The UI fixtures and automated HTTP-provider tests do not certify live provider credentials. Connect Apps remains available independently.
+
 ## Platform configuration
 
 Users do not supply model API keys. An operator supplies the platform credentials interactively:

@@ -191,3 +191,24 @@
 :root[data-theme] .appFrame[data-workspace] .aiAuthStats>span{border-color:var(--dash-line)!important}
 :root[data-theme] .appFrame[data-workspace] .connectTryPanel .connectPromptGrid code::before{color:var(--dash-muted)!important}
 :root[data-theme] .appFrame[data-workspace] .securityAuditRow strong{color:var(--dash-text)!important}
+/* The compact rail keeps every connection and account destination accessible. */
+:root[data-theme] .appFrame[data-workspace] .sidebarBrand{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-inline:6px}
+:root[data-theme] .appFrame[data-workspace] .sidebarCollapseToggle{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--dash-muted);cursor:pointer}
+:root[data-theme] .appFrame[data-workspace] .sidebarCollapseToggle:hover{background:var(--dash-accent-soft);color:var(--dash-text)}
+:root[data-theme] .appFrame[data-workspace] .sidebarCollapseToggle:focus-visible{outline:2px solid var(--dash-accent);outline-offset:3px}
+.overviewGreeting{overflow-wrap:anywhere}.overviewGreeting>span{color:var(--dash-muted)}
+@media(min-width:901px){
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true]{--sidebar-width:76px}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .sidebar{padding-inline:10px}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .sidebarBrand{flex-direction:column;padding:0 0 16px;gap:16px}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .sidebarBrand .brand{padding:0}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] :is(.brandWords,.sideNavLabel,.workspaceNavHeading,.workspacePickerCopy,.workspacePickerChevron,.sidebarAccount>div:not(.avatarFallback),.sidebarGlobalNavigation a>svg){display:none}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .sidebarCollapseToggle svg{transform:rotate(180deg)}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .workspacePickerTrigger{padding:10px;justify-content:center;gap:0}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .dashboardWorkspacePicker{margin-bottom:16px}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] :is(.sideNav button,.sidebarGlobalNavigation button,.sidebarGlobalNavigation a){display:flex;justify-content:center;align-items:center;padding:12px;gap:0;min-height:42px}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .sidebarAccount{display:flex;flex-direction:column;padding-inline:0;gap:8px}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .arcChatNavigation :is(.arcSidebarAction,.arcSidebarPrimary){justify-content:center}
+ :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .arcChatNavigation :is(button>span,.arcSidebarSectionTitle,.arcSidebarHistoryHeading,.arcSessionList,.arcSidebarSearch){display:none}
+}
+:root[data-theme] .appFrame[data-workspace] .arcSidebarPortalRoot[hidden]{display:none!important}

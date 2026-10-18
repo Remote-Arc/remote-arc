@@ -133,3 +133,16 @@
 :root[data-theme] .publicPage .modernFaq details>p{padding:0 24px 23px;margin:0;color:var(--site-muted);font-size:13px;line-height:1.9;max-width:none}
 @media(max-width:820px){:root[data-theme] .publicPage .landingQuestions{grid-template-columns:1fr;gap:27px}:root[data-theme] .publicPage .modernFaq summary{padding:18px;font-size:13px;gap:16px}:root[data-theme] .publicPage .modernFaq details>p{padding:0 18px 18px;font-size:12px}:root[data-theme] .publicPage .faqCategories{width:100%;gap:2px}:root[data-theme] .publicPage .faqCategories button{padding:8px 9px;font-size:10px}:root[data-theme] .publicPage .publicNavDropdown{max-height:calc(100dvh - 220px)}}
 @media(max-width:380px){:root[data-theme] .publicPage .publicNav{gap:7px}:root[data-theme] .publicPage .publicNav .brand{font-size:15px;gap:6px}.publicPage .publicNav .brandLogo{width:24px;height:24px}:root[data-theme] .publicPage .publicNavActions{gap:4px}:root[data-theme] .publicPage :is(.navLogin,.navDashboard){font-size:10px;padding:8px;min-height:32px}.publicPage :is(.navLogin,.navDashboard)>svg{display:none}:root[data-theme] .publicPage .publicMobileMenu{flex:none;width:28px;min-width:28px;padding:3px}}
+/* Reading pages and secondary security notes use the same spacing as cards. */
+:root[data-theme] .publicPage .controlDetails{gap:24px}
+:root[data-theme] .publicPage .controlDetails>div{padding:24px 26px;border:1px solid var(--site-line);border-radius:14px}
+:root[data-theme] .publicPage .controlDetails strong{display:block;font-size:16px;line-height:1.5;color:var(--site-ink)}
+:root[data-theme] .publicPage .controlDetails p{font-size:14px;line-height:1.75;margin-top:10px}
+:root[data-theme] .publicPage .blogBack{display:table;margin:0 0 24px;line-height:1.5}
+:root[data-theme] .publicPage .blogArticleHeader>.eyebrow{display:block;position:static;margin:0 0 16px}
+:root[data-theme] .publicPage .blogArticleHeader{padding-bottom:32px;border-bottom:1px solid var(--site-line)}
+:root[data-theme] .publicPage .blogByline{margin-top:24px}
+:root[data-theme] .publicPage .blogArticleBody{padding-top:32px}
+@media(max-width:700px){:root[data-theme] .publicPage .controlDetails>div{padding:22px}}
+:root[data-theme] .publicPage .publicNavActions :is(.themeSwitch.compact,.languageDropdownTrigger){background:var(--site-surface);color:var(--site-ink);border:1px solid var(--site-line);box-shadow:none}
+:root[data-theme] .publicPage .publicNavActions :is(.themeSwitch.compact,.languageDropdownTrigger):hover{background:var(--site-soft)}

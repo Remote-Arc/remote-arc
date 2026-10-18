@@ -57,7 +57,7 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
   const utcMonth = month();
   const from = new Date(Date.now() - 7 * 86400_000).toISOString();
   let creditsReady = true;
-  const [userRows, deviceRows, chartRows, totalUsers, totalDevices, auditSummary, totalMonthlyCalls] = await Promise.all([
+  const [userRows, deviceRows, chartRows, totalUsers, totalDevices, auditSummary, totalMonthlyCalls, teamCount, teamMembers] = await Promise.all([
     env.DB.prepare(`SELECT u.id, u.email, u.name, u.created_at, u.role, u.plan,
       CASE WHEN u.google_sub LIKE 'email:%' THEN 'email_only' ELSE 'google' END AS linked_login,
       (SELECT COALESCE(NULLIF(c.client_name,''), 'MCP client')
@@ -102,6 +102,8 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
       FROM audit_events`).bind(from).first<{count:number;last7d:number}>(),
     env.DB.prepare("SELECT COALESCE(SUM(tool_calls),0) AS calls FROM user_monthly_usage WHERE month_key=?1")
       .bind(utcMonth).first<{calls:number}>(),
+    env.DB.prepare("SELECT COUNT(*) AS total FROM organizations WHERE kind='team'").first<{total:number}>(),
+    env.DB.prepare("SELECT COUNT(*) AS total FROM organization_members m JOIN organizations o ON o.id=m.organization_id WHERE o.kind='team' AND m.status='active'").first<{total:number}>(),
   ]);
   const users = userRows.results || [];
   const devices = deviceRows.results || [];
@@ -137,7 +139,8 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
     checkedAt: new Date().toISOString(), month: utcMonth, page, pageSize, creditsReady,
     totals: { users: totalUsers?.total || 0, devices: totalDevices?.total || 0,
       online: extended.filter(x => x.online).length, auditRows: auditSummary?.count || 0,
-      auditLast7d: auditSummary?.last7d || 0, monthlyCalls: totalMonthlyCalls?.calls || 0 },
+      auditLast7d: auditSummary?.last7d || 0, monthlyCalls: totalMonthlyCalls?.calls || 0,
+      teams: teamCount?.total || 0, teamMembers: teamMembers?.total || 0 },
     limits: { free: freeBase, plus: base },
     users: users.map(user => {
       const privileged = user.role === "admin";

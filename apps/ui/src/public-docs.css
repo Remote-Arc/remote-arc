@@ -44,3 +44,5 @@
 .nativeDownloads a{display:block;padding:18px 20px;background:var(--panel);border:1px solid var(--line);border-radius:10px;text-decoration:none;font-weight:600;color:var(--text)}
 .nativeDownloads a:hover,.nativeDownloads a:focus-visible{border-color:var(--accent)}
 @media(max-width:620px){.nativeInstall{padding:24px 0 48px}.nativeDownloads{grid-template-columns:1fr}.nativeInstall h1{font-size:32px}}
+
+.nativeInstall :is(#homebrew,#shell-install){scroll-margin-top:100px}

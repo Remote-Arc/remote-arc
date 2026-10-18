@@ -258,6 +258,17 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
     {snapshot && !snapshot.enabled && <section className="appsManagerDisabled"><h2>{tr("Apps are not enabled yet", "应用连接尚未启用")}</h2><p>{tr("An administrator needs to enable Apps and configure the providers before you can connect accounts. Your existing device and AI connections are unchanged.", "管理员启用 Apps 并配置应用授权后，你即可连接账号。现有设备和 AI 连接仍可继续使用。")}</p></section>}
     {snapshot?.enabled && <>
       <section className="appsManagerSummary" aria-label={tr("Connection overview", "连接概览")}><span><strong>{activeCount}</strong>{tr("connected accounts", "个已连接账号")}</span><a href="#approvals"><strong>{pendingCount}</strong>{tr("awaiting review", "项等待审核")}</a><p>{tr("Read access is the default. Write actions require both permission and approval for each request.", "默认仅授予读取权限。写入操作同时需要写入权限和逐次请求审批。")}</p></section>
+      <section className="appsManagerMcpTools" aria-labelledby="apps-mcp-tools-title">
+        <div>
+          <h2 id="apps-mcp-tools-title">{tr("AI chat tools · enabled by default", "AI 对话工具 · 默认启用")}</h2>
+          <p>{tr("These are cloud MCP tools, not individual device Skills. They appear in your AI client's Remote Arc connection, not in device tool settings.", "这两个是云端 MCP 工具，不是某台设备的 Skill。它们在 AI 客户端的 Remote Arc 连接中提供，不在设备工具设置里。")}</p>
+        </div>
+        <div className="appsManagerMcpToolList">
+          <div><code>list_apps</code><span>{tr("Discover your connected accounts and available operations", "发现已连接账号及其可用操作")}</span></div>
+          <div><code>call_app</code><span>{tr("Invoke an operation; write requests still need provider permission and approval", "调用应用操作；写入仍需账号权限与逐次审批")}</span></div>
+        </div>
+        <p className="appsManagerMcpToolsHint">{tr("New AI connections request Apps scopes at sign-in. Existing AI connections may need to reauthorize to add apps:read and apps:write; refreshing tools alone cannot expand an existing OAuth token.", "新连接 AI 时默认申请 Apps 权限。已有 AI 连接可能需要重新 OAuth 授权以加入 apps:read、apps:write；只刷新工具不能扩大旧令牌的授权范围。")}</p>
+      </section>
       <div className="appsManagerFilters"><label>{tr("Find an app", "查找应用")}<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={tr("Search apps…", "搜索应用…")} /></label><div role="group" aria-label={tr("App categories", "应用分类")}><button type="button" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{tr("All apps", "全部应用")} <span>{snapshot.apps.length}</span></button>{directory.categories.map(item => <button type="button" key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{tr(item.name, item.nameZh)}</button>)}</div></div>
       {directory.categories.map(group => {
         const apps = visibleApps.filter(app => (app.category || directory.apps.find(item => item.provider === app.provider)?.category) === group.id);

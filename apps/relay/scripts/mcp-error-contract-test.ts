@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { classifyExpectedMcpError, registerMcpTool } from "../src/mcp-errors.js";
 import { consumeToolCall, getMonthlyUsage } from "../src/usage.js";
 import { createRemoteLinkMcp } from "../src/mcp.js";
+import { DEFAULT_MCP_SCOPES } from "../src/oauth.js";
 import type { OAuthIdentity } from "../src/auth.js";
 
 const expectedCases: Array<[Error, string]> = [
@@ -174,7 +175,7 @@ async function challengedScopes(identity: OAuthIdentity | null, name: string, ar
   return new Set(scopes);
 }
 
-assert.deepEqual(await challengedScopes(null, "list_devices", {}), new Set(["devices:read", "computer:read", "computer:write", "browser:read", "offline_access"]));
+assert.deepEqual(await challengedScopes(null, "list_devices", {}), new Set(DEFAULT_MCP_SCOPES));
 assert.deepEqual(await challengedScopes(authIdentity("devices:read"), "read_file", {
   device_id: "scope-test-device", path: "/scope-test.txt",
 }), new Set(["devices:read", "computer:read", "offline_access"]));

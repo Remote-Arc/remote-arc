@@ -132,33 +132,11 @@ func darwinCapacity(ctx context.Context) (float64, uint64, uint64, bool) {
 	if err != nil {
 		return -1, 0, 0, false
 	}
-	pageSize := uint64(4096)
-	if match := regexp.MustCompile(`page size of ([0-9]+) bytes`).FindStringSubmatch(string(vm)); len(match) == 2 {
-		if parsed, e := strconv.ParseUint(match[1], 10, 64); e == nil {
-			pageSize = parsed
-		}
-	}
-	var pages uint64
-	for _, line := range strings.Split(string(vm), "\n") {
-		for _, key := range []string{"Pages free:", "Pages inactive:", "Pages speculative:", "Pages purgeable:"} {
-			if strings.HasPrefix(line, key) {
-				n, _ := strconv.ParseUint(strings.TrimRight(strings.TrimSpace(strings.TrimPrefix(line, key)), "."), 10, 64)
-				pages += n
-			}
-		}
-	}
-	available := pages * pageSize
-	if available > total {
-		available = total
-	}
+	available := parseDarwinAvailableMemory(string(vm), total)
 	cpu := -1.0
 	top, err := exec.CommandContext(ctx, "/usr/bin/top", "-l", "1", "-n", "0").Output()
 	if err == nil {
-		if matches := idlePattern.FindStringSubmatch(string(top)); len(matches) == 2 {
-			if idle, e := strconv.ParseFloat(matches[1], 64); e == nil {
-				cpu = 100 - idle
-			}
-		}
+		cpu = parseDarwinCPU(string(top))
 	}
 	return cpu, total, available, true
 }
@@ -169,12 +147,54 @@ func windowsCapacity(ctx context.Context) (float64, uint64, uint64, bool) {
 	if err != nil {
 		return -1, 0, 0, false
 	}
-	fields := strings.Split(strings.TrimSpace(string(output)), "|")
+	return parseWindowsCapacity(string(output))
+}
+
+func parseDarwinAvailableMemory(raw string, total uint64) uint64 {
+	pageSize := uint64(4096)
+	if match := regexp.MustCompile(`page size of ([0-9]+) bytes`).FindStringSubmatch(raw); len(match) == 2 {
+		if parsed, e := strconv.ParseUint(match[1], 10, 64); e == nil && parsed > 0 {
+			pageSize = parsed
+		}
+	}
+	var pages uint64
+	for _, line := range strings.Split(raw, "\n") {
+		for _, key := range []string{"Pages free:", "Pages inactive:", "Pages speculative:", "Pages purgeable:"} {
+			if strings.HasPrefix(line, key) {
+				n, _ := strconv.ParseUint(strings.TrimRight(strings.TrimSpace(strings.TrimPrefix(line, key)), "."), 10, 64)
+				pages += n
+			}
+		}
+	}
+	available := pages * pageSize
+	if available > total {
+		return total
+	}
+	return available
+}
+
+func parseDarwinCPU(raw string) float64 {
+	matches := idlePattern.FindStringSubmatch(raw)
+	if len(matches) != 2 {
+		return -1
+	}
+	idle, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil || idle < 0 || idle > 100 {
+		return -1
+	}
+	return 100 - idle
+}
+
+func parseWindowsCapacity(raw string) (float64, uint64, uint64, bool) {
+	fields := strings.Split(strings.TrimSpace(raw), "|")
 	if len(fields) != 3 {
 		return -1, 0, 0, false
 	}
-	cpu, _ := strconv.ParseFloat(strings.TrimSpace(fields[0]), 64)
-	total, e1 := strconv.ParseUint(strings.TrimSpace(fields[1]), 10, 64)
-	available, e2 := strconv.ParseUint(strings.TrimSpace(fields[2]), 10, 64)
-	return cpu, total * 1024, available * 1024, e1 == nil && e2 == nil
+	cpu, e1 := strconv.ParseFloat(strings.TrimSpace(fields[0]), 64)
+	total, e2 := strconv.ParseUint(strings.TrimSpace(fields[1]), 10, 64)
+	available, e3 := strconv.ParseUint(strings.TrimSpace(fields[2]), 10, 64)
+	if e1 != nil || e2 != nil || e3 != nil || cpu < 0 || cpu > 100 || available > total {
+		return -1, 0, 0, false
+	}
+	return cpu, total * 1024, available * 1024, true
 }

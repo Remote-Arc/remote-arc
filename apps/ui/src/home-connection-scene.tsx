@@ -150,16 +150,11 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
           <div className="hcsCoreEnergy" aria-hidden="true" />
           <div className="hcsCoreRing hcsCoreRing--one" aria-hidden="true" />
           <div className="hcsCoreRing hcsCoreRing--two" aria-hidden="true" />
-          <div className="hcsCoreMark" role="img" aria-label="Remote Arc energy core">
-            <svg className="hcsPowerCore" viewBox="0 0 100 100" aria-hidden="true">
-              <defs><linearGradient id={uid+'-power'} x1="15%" y1="80%" x2="85%" y2="10%"><stop stopColor="#8d86b8"/><stop offset=".5" stopColor="#d3c4f5"/><stop offset="1" stopColor="#faf7ff"/></linearGradient></defs>
-              <circle className="hcsPowerTrack" cx="50" cy="50" r="39"/>
-              <path className="hcsPowerArcBase" d="M21 66C24 27 76 27 79 66"/>
-              <path className="hcsPowerArc" pathLength="100" d="M21 66C24 27 76 27 79 66" stroke={'url(#'+uid+'-power)'}/>
-              <path className="hcsPowerArcCurrent" pathLength="100" d="M21 66C24 27 76 27 79 66"/>
-              <circle className="hcsPowerTerminal" cx="21" cy="66" r="4.5"/><circle className="hcsPowerTerminal" cx="79" cy="66" r="4.5"/>
-              <circle className="hcsPowerSpark" cx="50" cy="37" r="3"/>
-            </svg>
+          <div className="hcsCoreMark">
+            <div className="hcsPowerCore">
+              <img className="hcsBrandLogo" src="/remote-arc.svg" alt="Remote Arc" width={86} height={86}/>
+              <span className="hcsLogoCurrent" aria-hidden="true"/>
+            </div>
           </div>
           <strong>{arc ? "Arc Agent" : "Remote Arc"}</strong>
           <span>{arc ? tr("Your AI teammate.", "你的专属 AI 队友。") : tr("Your AI. Your rules.", "你的 AI，你的权限。")}</span>

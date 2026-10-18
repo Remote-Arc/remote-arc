@@ -209,50 +209,6 @@
  .appsToolsList { border-right:0; border-bottom:1px solid var(--dash-line,var(--line)); padding:12px 16px; }
  .appsToolsDetail { padding:20px 17px; }
 }
-/* Light-first app directory: clean catalog, quiet borders, primary connect actions. */
-:root[data-theme="light"] .appFrame {
-  --dash-text:#182234;
-  --dash-muted:#66758a;
-  --dash-line:#e1e7ee;
-  --dash-surface:#ffffff;
-  --dash-subtle:#f5f8fb;
-  --dash-accent:#1677ac;
-  background:#f8fafc;
-  color:var(--dash-text);
-}
-:root[data-theme="light"] .appFrame .sidebar {
-  background:#ffffff;
-  border-right:1px solid var(--dash-line);
-  backdrop-filter:none;
-}
-:root[data-theme="light"] .appFrame .sidebarAccount,
-:root[data-theme="light"] .appFrame .sideNav button {
-  color:var(--dash-muted);
-}
-:root[data-theme="light"] .appFrame .workspacePickerTrigger,
-:root[data-theme="light"] .appFrame .workspacePickerMenu,
-:root[data-theme="light"] .appFrame .appsManagerCard,
-:root[data-theme="light"] .appFrame .appsManagerSummary {
-  box-shadow:0 1px 3px rgba(30,54,78,.025);
-}
-:root[data-theme="light"] .appFrame .workspacePickerTrigger {
-  background:#f8fafc;
-}
-:root[data-theme="light"] .appFrame .sideNav button.active,
-:root[data-theme="light"] .appFrame .sidebarGlobalNavigation button.active {
-  color:#11618e;
-  background:#ebf5fc;
-}
-:root[data-theme="light"] .appFrame .previewModeBanner {
-  background:#eff7ff;
-  color:#345d78;
-  border-color:#d4e7fa;
-}
-:root[data-theme="light"] .appFrame .sidebarBrand .brandWords,
-:root[data-theme="light"] .appFrame .sidebarBrand .brandWords b {
-  color:#202e3d;
-}
-
 /* Composio-style directory: simple control plane rather than a technical manual. */
 .appsManagerHeader { border:0; margin-bottom:15px; padding-bottom:8px; align-items:center; }
 .appsManagerHeader h1 { font-size:clamp(29px,3vw,36px); margin:7px 0 7px; font-weight:710; letter-spacing:-.035em; }
@@ -334,7 +290,6 @@
 .appsManagerSectionHeading {margin:45px 0 18px;}
 .appsManagerSectionHeading h2 {font-size:21px;}
 .appsManagerEmpty {font-size:14px;}
-.appsToolsOverlay .appsToolsDialog {background:#fff;color:#182234;border-color:#e1e7ee;}
 .appsToolsOverlay .appsToolsDetail h3 {font-size:21px;font-weight:650;line-height:1.4;}
 .appsToolsOverlay .appsToolsItemTitle {font-size:13px;line-height:1.4;}
 .appsToolsOverlay .appsToolsItemMeta {font-size:11px;opacity:.7;overflow-wrap:anywhere;}

@@ -161,7 +161,7 @@ export function DashboardSettings({
         </section>
         <section className="raSettingsSurface">
           <div className="raSettingsSurfaceHeader"><div><h3>{tr("Access management", "访问权限管理")}</h3>
-            <p>{tr("Control what your AI can use. Permissions are enforced by the relay.", "明确控制 AI 能访问哪些资源，权限由 Relay 强制执行。")}</p></div></div>
+            <p>{tr("Manage the accounts and computers your AI can access.", "管理 AI 可访问的账号与电脑。")}</p></div></div>
           {([
             ["devices", "device", tr("Devices & tools", "设备与工具"), tr("Manage paired computers and tool permissions", "管理已配对电脑和工具权限")],
             ["apps", "apps", tr("Connected apps", "已连接应用"), tr("Review integrations and their available actions", "查看应用集成及其操作能力")],

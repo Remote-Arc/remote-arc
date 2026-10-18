@@ -140,7 +140,7 @@ function AppToolsDialog({ app, connections, onClose, onConnect, busy }: {
     } catch { setCopied(false); }
   }
   return createPortal(
-    <div className="appsToolsOverlay" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="appsToolsOverlay workspaceSurface" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="appsToolsDialog" ref={dialogRef} role="dialog" aria-modal="true" aria-label={tr(app.name + " tools", app.name + " 工具")}>
         <header className="appsToolsHead">
           <AppIcon brand={app.brand} />

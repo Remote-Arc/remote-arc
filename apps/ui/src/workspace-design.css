@@ -1,11 +1,12 @@
 /* One visual language for the authenticated product. Marketing tokens stay outside this scope. */
-:root[data-theme] .appFrame[data-workspace]{
+:root[data-theme] :is(.appFrame[data-workspace],.workspaceSurface){
  --dash-text:#202024;--dash-muted:#73737c;--dash-line:#e7e7eb;--dash-surface:#fff;--dash-subtle:#f5f5f7;
- --dash-accent:#242428;--dash-accent-hover:#45454b;--dash-accent-soft:#eeeeF1;--dash-sidebar:#f8f8fa;--dash-canvas:#fff;--dash-inverse:#fff;--sidebar-width:232px;
+ --dash-accent:#242428;--dash-accent-hover:#45454b;--dash-accent-soft:#eeeef1;--dash-sidebar:#f8f8fa;--dash-canvas:#fff;--dash-inverse:#fff;--sidebar-width:232px;
  --text:var(--dash-text);--muted:var(--dash-muted);--line:var(--dash-line);--panel:var(--dash-surface);--panel-2:var(--dash-subtle);--bg:var(--dash-canvas);--accent:var(--dash-accent);
- color:var(--dash-text);background:var(--dash-canvas);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;min-height:100dvh;display:block;color-scheme:light;
+ color:var(--dash-text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;color-scheme:light;
 }
-:root[data-theme="dark"] .appFrame[data-workspace]{
+:root[data-theme] .appFrame[data-workspace]{background:var(--dash-canvas);min-height:100dvh;display:block}
+:root[data-theme="dark"] :is(.appFrame[data-workspace],.workspaceSurface){
  --dash-text:#eeeef1;--dash-muted:#9999a4;--dash-line:#2a2a30;--dash-surface:#19191d;--dash-subtle:#222227;
  --dash-accent:#eeeef1;--dash-accent-hover:#d6d6dc;--dash-accent-soft:#2b2b31;--dash-sidebar:#151518;--dash-canvas:#111114;--dash-inverse:#19191d;color-scheme:dark;
 }
@@ -36,6 +37,7 @@
 :root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation{padding-top:14px;border-top:1px solid var(--dash-line);margin-top:auto;gap:2px}
 :root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation :is(button,a){min-height:35px;padding:8px 11px;font-size:12px;font-weight:450;color:var(--dash-muted);background:transparent;border-radius:7px;transform:none}
 :root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation :is(button,a):hover{background:var(--dash-subtle);color:var(--dash-text);transform:none}
+:root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation button.active{background:var(--dash-accent-soft)!important;color:var(--dash-text)!important;font-weight:600}
 :root[data-theme] .appFrame[data-workspace] .sidebarGlobalNavigation .sideNavIcon{color:inherit;width:17px}
 :root[data-theme] .appFrame[data-workspace] .sidebarAccount{padding:14px 6px 2px;margin-top:12px;border-top:1px solid var(--dash-line);background:transparent;grid-template-columns:30px minmax(0,1fr) 28px;gap:9px}
 :root[data-theme] .appFrame[data-workspace] .sidebarAccount strong{font-size:12px;font-weight:550;color:var(--dash-text)}
@@ -54,7 +56,7 @@
 :root[data-theme] .appFrame[data-workspace] .overviewActions .addButton{min-height:36px;padding:10px 14px;font-size:12px}
 :root[data-theme] .appFrame[data-workspace] :is(.addButton,.primaryButton,.goldButton,.appsManagerPrimary,.arcPrimaryAction){background:var(--dash-accent)!important;color:var(--dash-inverse)!important;border:1px solid var(--dash-accent)!important;box-shadow:none!important}
 :root[data-theme] .appFrame[data-workspace] :is(.ghostButton,.copyButton){background:var(--dash-surface);color:var(--dash-text);border:1px solid var(--dash-line)}
-:root[data-theme] .appFrame[data-workspace] :is(.overviewStatusCard,.overviewQuickCard,.overviewAttentionCard,.panelBlock,.deviceCard,.automationStats article,.automationListPanel,.automationCreatePanel,.settingsCard){background:var(--dash-surface)!important;border:1px solid var(--dash-line);border-radius:10px;box-shadow:none}
+:root[data-theme] .appFrame[data-workspace] :is(.overviewStatusCard,.overviewQuickCard,.overviewAttentionCard,.panelBlock,.deviceCard,.automationStats article,.automationListPanel,.automationCreatePanel,.settingsCard){background:var(--dash-surface)!important;border:1px solid var(--dash-line)!important;border-radius:10px;box-shadow:none;color:var(--dash-text)}
 :root[data-theme] .appFrame[data-workspace] .overviewStatusGrid{gap:14px;margin-bottom:18px}
 :root[data-theme] .appFrame[data-workspace] .overviewStatusCard{padding:19px 20px;min-height:145px}
 :root[data-theme] .appFrame[data-workspace] .overviewStatusCard>strong{font-size:32px;letter-spacing:-.05em;font-weight:550;color:var(--dash-text);margin:13px 0 9px}
@@ -84,8 +86,13 @@
 :root[data-theme] .appFrame[data-workspace] .appsManagerCategories button[aria-pressed="true"]{background:var(--dash-accent-soft)!important;border-color:var(--dash-line)!important;color:var(--dash-text)!important;box-shadow:none}
 :root[data-theme] .appFrame[data-workspace] .appsManagerViewTabs{background:var(--dash-subtle);border-color:var(--dash-line)}
 :root[data-theme] .appFrame[data-workspace] .appsManagerViewTabs button[aria-pressed="true"]{background:var(--dash-surface);color:var(--dash-text);box-shadow:0 1px 3px #0000000d}
+:root[data-theme] .appFrame[data-workspace] .appsManagerExploreButton{color:var(--dash-text)}
 :root[data-theme] .appFrame[data-workspace] .appsSearchField input{background:var(--dash-surface);border-color:var(--dash-line);color:var(--dash-text);box-shadow:none}
-:root[data-theme] .appFrame[data-workspace] .appsToolsDialog{background:var(--dash-surface);border-color:var(--dash-line);color:var(--dash-text)}
+:root[data-theme] .workspaceSurface.appsToolsOverlay{background:#0006;backdrop-filter:blur(4px)}
+:root[data-theme] .workspaceSurface .appsToolsDialog{background:var(--dash-surface);border-color:var(--dash-line);color:var(--dash-text);border-radius:12px}
+:root[data-theme] .workspaceSurface :is(button,input){font-family:inherit}
+:root[data-theme] .workspaceSurface .appsToolsPrimary{background:var(--dash-accent);border-color:var(--dash-accent);color:var(--dash-inverse)}
+:root[data-theme] .workspaceSurface .appsToolsPrimary:hover:not(:disabled){background:var(--dash-accent-hover);border-color:var(--dash-accent-hover);color:var(--dash-inverse)}
 :root[data-theme] .workspacePickerMenuPortal{background:var(--picker-surface);border-color:var(--picker-line);border-radius:10px;box-shadow:0 14px 40px #00000020;animation:none}
 :root[data-theme] .workspacePickerMenuPortal button{border-radius:7px;transform:none;min-height:61px}
 :root[data-theme] .workspacePickerMenuPortal button.selected{background:var(--picker-subtle);border-color:transparent}
@@ -96,9 +103,10 @@
 :root[data-theme] .appFrame[data-workspace] .arcSidebarPortalRoot{display:flex;flex-direction:column;flex:1;min-height:0}
 :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .sidebar{overflow:hidden}
 :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .sidebarGlobalNavigation{margin-top:0}
-:root[data-theme] .appFrame[data-workspace] .mobileBottomNav{border-color:var(--dash-line);background:var(--dash-sidebar)}
+:root[data-theme] .appFrame[data-workspace] .mobileBottomNav{border-color:var(--dash-line);background:var(--dash-sidebar);grid-template-columns:repeat(5,minmax(0,1fr))}
 :root[data-theme] .appFrame[data-workspace] .mobileBottomNav button.active{background:var(--dash-accent-soft);color:var(--dash-text)}
-@media(min-width:780px){:root[data-theme] .appFrame[data-workspace] .appsManagerCategories{flex-wrap:wrap;overflow:visible;row-gap:8px}}
+:root[data-theme] .appFrame[data-workspace] .mobileTopbar .themeSwitch{background:var(--dash-subtle)!important;color:var(--dash-muted)!important}
+@media(min-width:780px){:root[data-theme] .appFrame[data-workspace] .appsManagerCategories{flex-wrap:wrap!important;overflow:visible;row-gap:8px}}
 @media(max-width:1100px){:root[data-theme] .appFrame[data-workspace] .overviewStatusGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:820px){
  :root[data-theme] .appFrame[data-workspace]{--sidebar-width:0px}
@@ -118,6 +126,7 @@
  :root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar,.pageHeader,.securityTopbar) h1{font-size:26px!important}
  :root[data-theme] .appFrame[data-workspace] .overviewActions{gap:8px}
  :root[data-theme] .appFrame[data-workspace] .overviewActions .addButton{font-size:11px;padding:9px 11px}
+ :root[data-theme] .workspaceSurface .appsToolsDialog{border-radius:0}
 }
 @media(prefers-reduced-motion:reduce){:root[data-theme] .appFrame[data-workspace] *{animation:none!important;scroll-behavior:auto!important}}
 

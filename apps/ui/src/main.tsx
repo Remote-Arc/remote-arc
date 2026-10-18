@@ -5090,6 +5090,7 @@ function Dashboard({
     ["automations", tr("Tasks", "任务")],
     ["connect", tr("AI clients", "AI 客户端")],
   ];
+  const mobileNavItems = navItems.filter(([id]) => !["agent-activity", "agent-skills", "connect"].includes(id));
   const renderWorkspacePicker = (mobile = false) => (
     <WorkspacePicker workspace={workspace} mobile={mobile} tr={tr} onNavigate={navigateTab} />
   );
@@ -5116,7 +5117,7 @@ function Dashboard({
         )}
         <div className="sidebarGlobalNavigation">
           <div className="workspaceNavHeading">{tr("ACCOUNT", "账户")}</div>
-          <button type="button" className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab(workspace === "agent" ? "agent-settings" : "settings")}><span className="sideNavIcon"><DashboardNavIcon tab="settings" /></span>{tr("Settings", "设置")}</button>
+          <button type="button" aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined} className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab(workspace === "agent" ? "agent-settings" : "settings")}><span className="sideNavIcon"><DashboardNavIcon tab="settings" /></span>{tr("Settings", "设置")}</button>
           {user.isAdmin && <a href="https://admin.remotearc.app/">{tr("Admin", "管理员后台")} <span aria-hidden="true">↗</span></a>}
           <a href={MARKETING_ORIGIN + "/docs"}>{tr("Help & documentation", "帮助与文档")} <span aria-hidden="true">↗</span></a>
         </div>
@@ -5149,6 +5150,8 @@ function Dashboard({
             connectedDevices={devices.length}
             onPrepareGoal={(objective, successCriteria) => openCreateInWorkspace("agent", false, objective, successCriteria)}
             onOpenGoals={() => navigateTab("agent-goals")}
+            onOpenActivity={() => navigateTab("agent-activity")}
+            onOpenSettings={() => navigateTab("agent-settings")}
             onCreateRoutine={() => openCreateInWorkspace("agent", true)}
             onManageApps={() => navigateTab("agent-apps")}
             onManageDevices={() => navigateTab("agent-devices")}
@@ -5162,8 +5165,8 @@ function Dashboard({
             <h1>{tr("Agent capabilities", "Agent 可用能力")}</h1>
             <p>{tr("Arc uses your approved device tools today. App connections are shared with Connect; direct Arc App actions require the upcoming Agent tool runtime.", "Arc 目前可使用已授权的设备工具，Apps 账号连接与 Connect 共用；Arc 直接调用 Apps 仍需接入后续 Agent 工具运行时。")}</p>
             <div className="agentWorkspaceGrid">
-              <article className="agentWorkspaceTile"><strong>{tr("Device fleet", "设备集群")}</strong><p>{tr("Execute on an available compatible device, subject to its local safety policy.", "使用可用的兼容设备执行，遵守设备本地安全策略。")}</p><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")} →</button></article>
-              <article className="agentWorkspaceTile"><strong>{tr("Connected Apps", "已连接应用")}</strong><p>{tr("Manage account connections in Connect. Arc will use these approved integrations when its App executor is enabled.", "在 Connect 中统一管理账号连接。Arc 的 App 执行器接入后将复用这些已授权应用。")}</p><button className="ghostButton" onClick={() => navigateTab("apps")}>{tr("Manage Apps", "管理应用")} →</button></article>
+              <article className="agentWorkspaceTile"><strong>{tr("Device fleet", "设备集群")}</strong><p>{tr("Execute on an available compatible device, subject to its local safety policy.", "使用可用的兼容设备执行，遵守设备本地安全策略。")}</p><button className="ghostButton" onClick={() => navigateTab("agent-devices")}>{tr("Manage devices", "管理设备")} →</button></article>
+              <article className="agentWorkspaceTile"><strong>{tr("Connected Apps", "已连接应用")}</strong><p>{tr("Manage account connections in Connect. Arc will use these approved integrations when its App executor is enabled.", "在 Connect 中统一管理账号连接。Arc 的 App 执行器接入后将复用这些已授权应用。")}</p><button className="ghostButton" onClick={() => navigateTab("agent-apps")}>{tr("Manage Apps", "管理应用")} →</button></article>
             </div>
           </section>
         )}
@@ -6953,13 +6956,13 @@ function Dashboard({
       </main>
 
       <nav className="mobileBottomNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
-        {navItems.map(([id, label]) => (
+        {mobileNavItems.map(([id, label]) => (
           <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
             <span aria-hidden="true"><DashboardNavIcon tab={id} /></span>
             <small>{id === "overview" ? tr("Home", "首页") : id === "connect" ? tr("Clients", "客户端") : id === "agent-chat" ? tr("Home", "首页") : label}</small>
           </button>
         ))}
-        <button data-dashboard-tab="settings" aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined} className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab("settings")}><span aria-hidden="true"><DashboardNavIcon tab="settings"/></span><small>{tr("Settings", "设置")}</small></button>
+        <button data-dashboard-tab="settings" aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined} className={active === "settings" || active === "agent-settings" ? "active" : ""} onClick={() => navigateTab(workspace === "agent" ? "agent-settings" : "settings")}><span aria-hidden="true"><DashboardNavIcon tab="settings"/></span><small>{tr("Settings", "设置")}</small></button>
       </nav>
 
       {directoryPicker && (

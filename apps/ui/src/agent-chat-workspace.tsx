@@ -14,13 +14,15 @@ type Props = {
   connectedDevices?: number;
   onPrepareGoal: (objective: string, successCriteria: string) => void;
   onOpenGoals: () => void;
+  onOpenActivity: () => void;
+  onOpenSettings: () => void;
   onManageApps: () => void;
   onManageDevices: () => void;
   onManageSkills?: () => void;
   onCreateRoutine?: () => void;
 };
 
-const Icon = ({ name }: { name: "plus" | "search" | "apps" | "arrow" | "chat" | "check" | "trash" | "menu" | "history" | "close" | "device" | "spark" }) => {
+const Icon = ({ name }: { name: "plus" | "search" | "apps" | "arrow" | "chat" | "check" | "trash" | "menu" | "history" | "close" | "device" | "spark" | "activity" | "settings" }) => {
   const common = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true as const };
   const paths: Record<typeof name, React.ReactNode> = {
     plus: <path d="M12 5v14M5 12h14"/>,
@@ -35,6 +37,8 @@ const Icon = ({ name }: { name: "plus" | "search" | "apps" | "arrow" | "chat" | 
     close: <path d="m6 6 12 12M18 6 6 18"/>,
     device: <><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></>,
     spark: <path d="m12 2 2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2Z"/>,
+    activity: <path d="M2 12h4l3-8 6 16 3-8h4"/>,
+    settings: <><path d="m10 3-.5 2.3-2 .9-2-.9L3 9l1.6 1.7v2.6L3 15l2.5 3.7 2-.9 2 .9L10 21h4l.5-2.3 2-.9 2 .9L21 15l-1.6-1.7v-2.6L21 9l-2.5-3.7-2 .9-2-.9L14 3Z"/><circle cx="12" cy="12" r="3"/></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 };
@@ -45,7 +49,7 @@ const newMessage = (role: ArcChatMessage["role"], content: string): ArcChatMessa
 });
 
 export function AgentChatWorkspace({
-  tr, accountId, onlineDevices, onPrepareGoal, onOpenGoals, onManageApps, onManageDevices, onManageSkills,
+  tr, accountId, onlineDevices, onPrepareGoal, onOpenGoals, onOpenActivity, onOpenSettings, onManageApps, onManageDevices, onManageSkills,
 }: Props) {
   const [sessions, setSessions] = useState<ArcChatSession[]>(() => loadArcChatSessions(accountId));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -160,6 +164,7 @@ export function AgentChatWorkspace({
         <input autoFocus type="search" placeholder={tr("Search chats…", "搜索对话…")} value={search} onChange={e => setSearch(e.target.value)}/>
       </label>}
       <button type="button" className="arcSidebarAction" onClick={onOpenGoals}><Icon name="history"/><span>{tr("Tasks", "任务")}</span></button>
+      <button type="button" className="arcSidebarAction" onClick={onOpenActivity}><Icon name="activity"/><span>{tr("Activity", "活动")}</span></button>
       <div className="arcSidebarSectionTitle">{tr("TOOLS", "工具")}</div>
       <button type="button" className="arcSidebarAction" onClick={onManageApps}><Icon name="apps"/><span>{tr("Apps", "应用")}</span></button>
       <button type="button" className="arcSidebarAction" onClick={onManageDevices}><Icon name="device"/><span>{tr("Devices", "设备")}</span></button>
@@ -177,6 +182,7 @@ export function AgentChatWorkspace({
           : <div className="arcSidebarEmpty">{search ? tr("No matching chats", "没有匹配的对话") : tr("Your drafts will appear here", "你的对话草稿会出现在这里")}</div>}
       </div>
       <div className="arcSidebarLocalNotice">{tr("Drafts are saved in this browser tab.", "对话草稿仅保存在当前浏览器标签页。")}</div>
+      {mobile && <button type="button" className="arcSidebarAction" onClick={onOpenSettings}><Icon name="settings"/><span>{tr("Settings", "设置")}</span></button>}
     </div>
   );
 

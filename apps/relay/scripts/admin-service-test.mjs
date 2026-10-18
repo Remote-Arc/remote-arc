@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { adminApiMethods, handleAdminServiceRequest, publicAdminResponse } from "../src/admin-service.ts";
 const origin="https://admin.remotearc.app",id="00000000-0000-4000-8000-000000000001";
 let role="admin",writes=[],saved;
@@ -42,8 +41,4 @@ let forwarded;const external={...env,ADMIN_SERVICE_MODE:"external",ADMIN_UI:{asy
 assert.equal(await(await publicAdminResponse(request(),external)).text(),"independent admin");
 assert.equal(forwarded.headers.get("cookie"),"rl_session=test");
 external.ADMIN_UI.fetch=async()=>{throw Error("offline")};assert.equal((await publicAdminResponse(request(),external)).status,503);
-const deployConfig = readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8");
-assert.match(deployConfig, /"binding"\s*:\s*"ADMIN_UI"/, "Admin UI service binding is required");
-assert.match(deployConfig, /"service"\s*:\s*"remote-arc-admin"/, "Bind exactly the independently deployed Admin Worker");
-assert.match(deployConfig, /"ADMIN_SERVICE_MODE"\s*:\s*"external"/, "Admin must route to independently owned UI");
-console.log("PASS: admin service allowlist, real session/RBAC, all mutation origins, service binding, and reversible external routing");
+console.log("PASS: admin service allowlist, real session/RBAC, all mutation origins, existing handlers, private responses and reversible external routing");

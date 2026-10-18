@@ -168,16 +168,33 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     const adminOrigin = env.ADMIN_ORIGIN || "https://admin.remotearc.app";
     const isAdminHost = url.hostname === new URL(adminOrigin).hostname;
 
-    // Admin UI and static assets belong exclusively to admin-remote-arc.
-    // The relay is a narrow hosting bridge; its named AdminApiService remains
-    // the only authority for users, D1, roles and billing. No legacy UI fallback.
+    // Explicit host partition. It can later be extracted into a dedicated Worker
+    // without changing the public API contracts or frontend route boundaries.
     if (isAdminHost) {
-      const forwarded = await publicAdminResponse(request, env);
-      return forwarded ?? Response.json({error:"admin_worker_not_enabled"},{
-        status:503, headers:{"cache-control":"no-store"}
-      });
-    }
-    if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/monitor") {
+      const disabled = await publicAdminResponse(request, env);
+      if (disabled) return disabled;
+      const staticAsset = url.pathname.startsWith("/assets/") ||
+        /^\/(?:remote-arc(?:-app-icon)?[.]svg|favicon[.]ico|manifest[.]webmanifest)$/.test(url.pathname);
+      const adminApi = url.pathname === "/api/me" || url.pathname === "/api/monitor" ||
+        url.pathname.startsWith("/api/admin/");
+      if (adminApi) return handleAdminServiceRequest(request, env);
+      const document = url.pathname === "/" || url.pathname === "/overview";
+      if (!adminApi && !staticAsset && !document) {
+        return request.method === "GET" || request.method === "HEAD"
+          ? Response.redirect(adminOrigin + "/", 302)
+          : Response.json({error:"not_found"},{status:404});
+      }
+      if (document && (request.method === "GET" || request.method === "HEAD")) {
+        const session = await getSessionUser(request,env);
+        if (!session) {
+          const login = new URL("/auth/login", appOrigin);
+          login.searchParams.set("return_to",adminOrigin + "/");
+          return Response.redirect(login.toString(),302);
+        }
+        if (!session.isAdmin) return new Response("Forbidden", {status:403,headers:{"cache-control":"no-store","x-robots-tag":"noindex"}});
+      }
+    } else if (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/monitor") {
+      // Admin data and mutation endpoints never run on public/consumer hosts.
       return Response.json({error:"admin_host_required"},{status:404,headers:{"cache-control":"no-store"}});
     }
     if (!isAdminHost && url.pathname === "/monitor" && (request.method === "GET" || request.method === "HEAD")) {

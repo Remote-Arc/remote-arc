@@ -63,3 +63,19 @@ assert.equal(selection.running,0);
 assert.equal(selection.eligible_count,2);
 await assert.rejects(selectFleetDevice({DB:db,REGISTRY:registry,PUBLIC_ORIGIN:"https://example.test"},"owner",{...terminal,platform:"linux"}),/No online Fleet device/);
 console.log("Fleet scheduler tests passed: capability, owner scope, permissions, workspace, platform, online state, load");
+
+// Live capacity and stability influence placement, without weakening hard permissions.
+const observedAt=new Date().toISOString(), stableAt=new Date(Date.now()-15*60_000).toISOString();
+const capacity=(cpuPercent,memoryAvailableMB)=>({observedAt,cpuPercent,memoryTotalMB:8192,memoryAvailableMB});
+const busyNode=device("busy-node","linux",{hostname:"busy-host",connected_at:stableAt,capacity:capacity(98,400)});
+const fastNode=device("fast-node","linux",{hostname:"fast-host",connected_at:stableAt,capacity:capacity(10,6500)});
+assert.equal(choose([busyNode,fastNode],{},terminal)[0].device.id,"fast-node","low CPU and sufficient memory should win");
+assert.deepEqual(choose([busyNode,fastNode],{}, {...terminal,minimumAvailableMemoryMB:1000}).map(x=>x.device.id),["fast-node"],"minimum memory requirement is a hard filter");
+const freshNode=device("fresh-node","linux",{hostname:"fresh",connected_at:new Date().toISOString(),capacity:capacity(10,6500)});
+const persistentNode=device("persistent-node","linux",{hostname:"persistent",connected_at:stableAt,capacity:capacity(10,6500)});
+assert.equal(choose([freshNode,persistentNode],{},terminal)[0].device.id,"persistent-node","long-running stable session gets priority");
+const outdated=device("outdated","linux",{hostname:"old",connected_at:stableAt,capacity:{...capacity(0,8000),observedAt:new Date(Date.now()-5*60_000).toISOString()}});
+assert.deepEqual(choose([outdated],{}, {...terminal,minimumAvailableMemoryMB:1000}),[],"stale telemetry must not satisfy memory requirements");
+const winCapacity=device("win-cap","win32",{hostname:"same-box",connected_at:stableAt,capacity:capacity(99,300)});
+const wslCapacity=device("wsl-cap","linux",{hostname:"same-box",connected_at:stableAt,capacity:capacity(1,7900)});
+assert.deepEqual(choose([winCapacity,wslCapacity],{}, {...terminal,minimumAvailableMemoryMB:1000}),[],"shared host pressure cannot be hidden by WSL");

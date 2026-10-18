@@ -44,7 +44,7 @@
     "test:seo": "pnpm --filter @remotearc/relay test:seo",
     "package:browser": "node scripts/package-browser-extension.mjs",
     "test:release-notify": "node .github/scripts/release-ready-notify-test.mjs",
-    "test:fleet": "pnpm --filter @remotearc/relay exec tsx scripts/fleet-scheduler-test.mjs",
+    "test:fleet": "pnpm --filter @remotearc/relay exec tsx scripts/fleet-scheduler-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/fleet-workspace-test.mjs && pnpm --filter @remotearc/relay exec tsx ../../packages/cli/src/fleet-capacity-test.mjs",
     "test:skills": "node scripts/generate-builtin-skills.mjs --check && node scripts/builtin-skills-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/cloud-skills-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/skill-runtime-test.ts",
     "test:runtime-surface": "node scripts/runtime-surface-check.mjs",
     "release:sync": "node scripts/sync-release-docs.mjs --write",

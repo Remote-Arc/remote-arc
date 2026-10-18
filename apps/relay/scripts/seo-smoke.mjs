@@ -163,7 +163,9 @@ assert.ok(zhBlogArticle.includes("本地 Agent"));
 assert.ok(zhBlogArticle.includes("第五步"));
 assert.ok(zhBlogArticle.includes('"inLanguage":"zh-CN"'), "Chinese article schema must declare Chinese language");
 const changelog = readFileSync(new URL("../../../CHANGELOG.md", import.meta.url), "utf8");
-const publishedVersions = [...changelog.matchAll(/^## (\d+\.\d+\.\d+) -/gm)].map(x => x[1]);
+// Only dated, published releases require public translations. Unreleased RCs
+// must not appear in the published-release catalog or SEO assertions.
+const publishedVersions = [...changelog.matchAll(/^## (\d+\.\d+\.\d+) - \d{4}-\d{2}-\d{2}\s*$/gm)].map(x => x[1]);
 const mainSource = readFileSync(new URL("../../ui/src/main.tsx", import.meta.url), "utf8");
 const resourceNavStart = mainSource.indexOf('id="public-nav-resources"');
 const resourceNavEnd = mainSource.indexOf('className="publicNavActions"', resourceNavStart);

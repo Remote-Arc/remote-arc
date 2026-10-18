@@ -18,6 +18,7 @@ const plannedGoalSchema = z.object({ planning_mode: z.enum(["fixed", "guided", "
   continuation: z.object({ mode: z.enum(["none", "highest_value_safe_work"]) }).optional() });
 import { getDevicesForUser } from "./device.js";
 import { selectFleetDevice } from "./fleet-scheduler.js";
+import { planFleetGitWorkspace } from "./fleet-workspace.js";
 import { DEFAULT_MCP_SCOPES } from "./oauth.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
@@ -351,6 +352,51 @@ export function createRemoteLinkMcp(
         });
         const result = await callDevice(env, identity, selected.device_id, tool, args);
         return textResult({ selected_device: selected, result });
+      },
+    );
+
+    // Immutable Git revision materialization: a safe, reproducible workspace
+    // on an automatically chosen fleet node, not a general file-copy tunnel.
+    registerMcpTool(server,
+      "fleet_sync_workspace",
+      {
+        title: "Sync a Git workspace to the Fleet",
+        description:
+          "Automatically choose a capable, permitted device and prepare a new isolated GitHub checkout at an immutable commit. Requires no device_id. Does not copy uncommitted work, secrets, credentials, arbitrary directories, or overwrite existing files. Returns device_id and process_id for verification with process_status before using the workspace.",
+        inputSchema: z.object({
+          repository: z.string().min(3).max(145),
+          revision: z.string().regex(/^[a-fA-F0-9]{40}$/),
+          platform: z.enum(["win32", "darwin", "linux"]).optional(),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: false },
+        _meta: oauthToolMeta(["devices:read", "computer:write"]),
+      },
+      async (input) => {
+        if (!identity || !hasScope(identity, "devices:read") || !hasScope(identity, "computer:write")) {
+          return authRequired(env, ["devices:read", "computer:write"], identity);
+        }
+        const usageError = await consume(env, identity);
+        if (usageError) return usageError;
+        const device = await selectFleetDevice(env, identity.userId, {
+          requiredTools: ["start_process"],
+          ...(input.platform ? { platform: input.platform } : {}),
+        });
+        const devices = await getDevicesForUser(env, identity.userId);
+        const matched = devices.find(item => item.id === device.device_id);
+        if (!matched?.workspace_roots.length) throw Error("No trusted Fleet workspace root.");
+        const root = matched.workspace_roots.find(root =>
+          device.platform !== "win32" || /^[A-Za-z]:\\/.test(root));
+        if (!root) throw Error("No supported local Fleet workspace root.");
+        const planned = planFleetGitWorkspace(input, device, root);
+        // Background operations may outlive an MCP request. The reported
+        // process handle is the ONLY authorized continuation on that node.
+        const started = await callDevice(env, identity, device.device_id, "start_process", {
+          command: planned.command, cwd: planned.cwd, background: true,
+        });
+        return textResult({ status: "sync_started", device_id: device.device_id,
+          workspace: planned.path, revision: planned.revision,
+          process: started,
+          note: "Check process_status on this device and verify success before executing any task in the new checkout. Do not retry an unknown-result write on another device." });
       },
     );
 

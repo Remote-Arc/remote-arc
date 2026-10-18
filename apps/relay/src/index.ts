@@ -56,6 +56,7 @@ import { handleMarketplaceWebhook } from "./github-marketplace.js";
 import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
+import { handleOrganizations } from "./organizations.js";
 import { submitWebsiteInterest, listWebsiteSubmissions, updateWebsiteSubmission } from "./domains/engagement.js";
 import {
   handleAutomationCollection,
@@ -464,6 +465,13 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       const oauth = session ? null : await authenticateMcp(request, env);
       const identity = oauth && oauth.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp" ? oauth : null;
       return handleCloudSkills(request, session ? { id: session.id } : identity ? { id: identity.userId } : null);
+    }
+
+    if (url.pathname === "/api/organizations" || url.pathname.startsWith("/api/organizations/")) {
+      if (url.origin !== new URL(appOrigin).origin) return Response.json({ error: "app_host_required" }, { status: 404 });
+      const user = await getSessionUser(request, env);
+      if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+      return handleOrganizations(request, env, user.id);
     }
 
     if (url.pathname === "/api/me" && request.method === "GET") {

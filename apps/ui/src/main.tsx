@@ -24,6 +24,7 @@ import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import { parsePendingApprovals, parseSecurityState, type PendingApproval } from "./security-state.js";
 import { SecurityAuthorizations } from "./security-authorizations.js";
 import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery.js";
+import { isOlderRelease, goUpdateCommands } from "./agent-update-guide.js";
 import "./styles.css";
 import "./dashboard.css";
 import "./laptop-hero.css";
@@ -31,21 +32,6 @@ import "./laptop-hero.css";
 declare const __REMOTEARC_CLI_VERSION__: string;
 
 const LATEST_AGENT_VERSION = __REMOTEARC_CLI_VERSION__;
-
-function releaseTuple(value: string | null | undefined) {
-  const match = String(value || "").trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
-  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] as const : null;
-}
-
-function isOlderRelease(current: string | null | undefined, latest = LATEST_AGENT_VERSION) {
-  const left = releaseTuple(current);
-  const right = releaseTuple(latest);
-  if (!left || !right) return false;
-  if (left[0] !== right[0]) return left[0] < right[0];
-  if (left[1] !== right[1]) return left[1] < right[1];
-  if (left[2] !== right[2]) return left[2] < right[2];
-  return false;
-}
 
 const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
 const IntegrationsPage = React.lazy(() => import("./integrations-page.js").then(module => ({ default: module.IntegrationsPage })));
@@ -5232,11 +5218,11 @@ function Dashboard({
                 const updateAvailable =
                   device.platform !== "browser" &&
                   Boolean(runtimeVersion) &&
-                  isOlderRelease(runtimeVersion);
+                  isOlderRelease(runtimeVersion, LATEST_AGENT_VERSION);
                 const updateCommand =
                   device.background_enabled === true
-                    ? `npx -y remotelink@${LATEST_AGENT_VERSION} --background`
-                    : `npx -y remotelink@${LATEST_AGENT_VERSION}`;
+                    ? goUpdateCommands(LATEST_AGENT_VERSION, true).join("\n")
+                    : goUpdateCommands(LATEST_AGENT_VERSION, false).join("\n");
                 return (
                   <article className={"deviceCard managed " + device.status} key={device.id}>
                     <div className="deviceTop">
@@ -5633,20 +5619,20 @@ function Dashboard({
                           <span>{tr("Running: ", "运行版本：")}v{runtimeVersion} · {tr("Latest: ", "最新版本：")}v{LATEST_AGENT_VERSION}</span>
                           {recoveryVersion && <span>{tr("Installed recovery bundle: ", "已安装恢复包：")}v{recoveryVersion}</span>}
                           <span>{device.background_enabled === true
-                            ? tr("The update command performs a controlled handoff to the new background Agent without creating a second executor.", "更新命令会安全交接到新版后台 Agent，不会创建第二个执行器。")
-                            : tr("Automatic recovery is off. Stop the current Agent before starting the newer foreground version.", "自动恢复未开启。启动新版前台 Agent 前，请先停止当前 Agent。")}</span>
+                            ? tr("Run both commands in order on this computer: stop the old Go Agent, then start the new version. A brief disconnect is normal; pairing and permissions remain.", "请在这台电脑上按顺序执行两条命令：先停止旧版 Go Agent，再启动新版。短暂断线是正常的，配对与权限保持不变。")
+                            : tr("Run both commands in order: stop the old Go Agent, then start the new foreground version. Do not use --reset.", "依次执行两条命令：先停止旧版 Go Agent，再启动新版前台 Agent。不要使用 --reset。")}</span>
                         </div>
                         <button className="ghostButton small" onClick={async () => {
                           try {
                             if (navigator.clipboard) await navigator.clipboard.writeText(updateCommand);
                             await showNotice(
-                              tr("Update command", "更新命令"),
+                              tr("Go Agent upgrade: run both lines in order", "Go Agent 升级：依次执行两行命令"),
                               updateCommand + (navigator.clipboard ? "\n\n" + tr("Copied to clipboard.", "已复制到剪贴板。") : ""),
                             );
                           } catch {
-                            await showNotice(tr("Update command", "更新命令"), updateCommand);
+                            await showNotice(tr("Go Agent upgrade: run both lines in order", "Go Agent 升级：依次执行两行命令"), updateCommand);
                           }
-                        }}>{tr("Copy update command", "复制更新命令")}</button>
+                        }}>{tr("Copy two upgrade steps", "复制两步升级命令")}</button>
                       </div>
                     )}
                     <div className="deviceBackgroundRow" aria-busy={backgroundUpdatingId === device.id}>

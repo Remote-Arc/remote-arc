@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { verifyProduction, verifyWithRetry } from "./production-smoke.mjs";
 const sha = "a".repeat(40), installer = "#!/bin/sh\n# fixture\n", requests=[];
-function fetchFixture({deployment=sha,version="0.6.1",badShell=false,badBundle=false,badProviders=false,badLogin=false,pageStatus=200}={}) {
+function fetchFixture({deployment=sha,version="0.6.1",badShell=false,badBundle=false,badProviders=false,badLogin=false,badAdminLogin=false,pageStatus=200}={}) {
  return async (url,init)=>{
   assert.equal(init.method,"GET"); assert.equal(init.redirect,"manual");assert.equal(init.headers.authorization,undefined);requests.push(url);
-  const path=new URL(url).pathname;
+  const pathname = new URL(url);
+  const path=pathname.pathname;
+  if (pathname.hostname === "admin.remotearc.app" && path === "/")
+    return new Response(null, {status:302,headers:{location:badAdminLogin?"https://evil.example/":
+      "https://agent.remotearc.app/auth/login?return_to="+encodeURIComponent("https://admin.remotearc.app/")}});
+  if (pathname.hostname === "admin.remotearc.app" && path === "/api/me")
+    return Response.json({error:"unauthorized"},{status:401,headers:{"x-remote-arc-admin-contract":"1"}});
   if(path==="/health")return Response.json({ok:true,service:"remotearc-relay",version,deployment});
   if(path==="/.well-known/oauth-authorization-server")return Response.json({
     issuer:"https://mcp.remotearc.app",
@@ -34,6 +40,7 @@ for(const [input,pattern]of [
  [{deployment:"b".repeat(40)},/deployment SHA/],[{version:"0.5.0"},/health\/version/],
  [{badShell:true},/installer returned/],[{badBundle:true},/bundle returned/],
  [{badProviders:true},/catalog differs/],[{badLogin:true},/login destination/],
+ [{badAdminLogin:true},/Admin sign-in/],
  [{pageStatus:503},/HTTP 200/],
 ])await assert.rejects(verifyProduction({...options,fetcher:fetchFixture(input)}),pattern);
 let calls=0,waits=0;

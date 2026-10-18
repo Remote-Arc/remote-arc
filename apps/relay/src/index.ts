@@ -23,7 +23,7 @@ import {
 } from "./auth.js";
 import { handleLoginPage, handleReviewerLogin } from "./reviewer.js";
 import { handleEmailCodeRequest, handleEmailCodeVerify } from "./email-auth.js";
-import { dashboardSignInUrl, publicWebsiteRedirect } from "./host-routing.js";
+import { dashboardSignInUrl, legacyDashboardRedirect, protocolOnlyPath, publicWebsiteRedirect } from "./host-routing.js";
 import {
   getDevicesForUser,
   handleDeviceList,
@@ -102,6 +102,7 @@ type Env = TaskEventEnv & AppEnv & {
   PUBLIC_ORIGIN: string;
   DEPLOYMENT_SHA?: string;
   APP_ORIGIN?: string;
+  DASHBOARD_ORIGIN?: string;
   MARKETING_ORIGIN?: string;
   ADMIN_ORIGIN?: string;
   ADMIN_SERVICE_MODE?: string;
@@ -165,6 +166,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
     const appOrigin = env.APP_ORIGIN || env.PUBLIC_ORIGIN;
+    const dashboardOrigin = env.DASHBOARD_ORIGIN || appOrigin;
     const adminOrigin = env.ADMIN_ORIGIN || "https://admin.remotearc.app";
     const isAdminHost = url.hostname === new URL(adminOrigin).hostname;
 
@@ -187,7 +189,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       if (document && (request.method === "GET" || request.method === "HEAD")) {
         const session = await getSessionUser(request,env);
         if (!session) {
-          const login = new URL("/auth/login", appOrigin);
+          const login = new URL("/auth/login", dashboardOrigin);
           login.searchParams.set("return_to",adminOrigin + "/");
           return Response.redirect(login.toString(),302);
         }
@@ -268,16 +270,20 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       url.pathname === "/connect" ||
       url.pathname === "/security" ||
       url.pathname === "/settings" ||
-      url.pathname === "/device" ||
-      url.pathname === "/oauth/consent"
-    )) {
+      url.pathname === "/device"
+    ) && (request.method === "GET" || request.method === "HEAD")) {
       const nextPath = url.pathname === "/dashboard" ? "/overview" : url.pathname;
-      return Response.redirect(new URL(nextPath + url.search, appOrigin).toString(), 302);
+      return Response.redirect(new URL(nextPath + url.search, dashboardOrigin).toString(), 302);
     }
 
-    if (url.hostname === "mcp.remotearc.app" && (request.method === "GET" || request.method === "HEAD") &&
-      (url.pathname === "/" || url.pathname === "/dashboard")) {
-      return Response.redirect(new URL("/overview" + url.search, appOrigin).toString(), 302);
+    const oldDashboard = legacyDashboardRedirect(url, request.method, appOrigin, dashboardOrigin);
+    if (oldDashboard) return Response.redirect(oldDashboard, 302);
+
+    // OAuth issuer, device transport and MCP resource never move to agent.
+    if (new URL(dashboardOrigin).origin !== new URL(appOrigin).origin &&
+      url.origin === new URL(dashboardOrigin).origin && protocolOnlyPath(url.pathname)) {
+      return Response.json({ error: "protocol_host_required" },
+        { status: 404, headers: { "cache-control": "no-store" } });
     }
 
     // Only the main domain serves product pages. Leave OAuth, MCP and API routes untouched.
@@ -286,7 +292,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     // Keep /overview public as a real product preview, but sign in before
     // opening private dashboard tabs. Preserve the requested destination.
-    const loginDestination = dashboardSignInUrl(url, request.method, appOrigin);
+    const loginDestination = dashboardSignInUrl(url, request.method, dashboardOrigin);
     if (loginDestination && !(await getSessionUser(request, env))) {
       return Response.redirect(loginDestination, 302);
     }
@@ -468,7 +474,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
 
     if (url.pathname === "/api/organizations" || url.pathname.startsWith("/api/organizations/")) {
-      if (url.origin !== new URL(appOrigin).origin) return Response.json({ error: "app_host_required" }, { status: 404 });
+      if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({ error: "app_host_required" }, { status: 404 });
       const user = await getSessionUser(request, env);
       if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
       return handleOrganizations(request, env, user.id);
@@ -482,7 +488,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
 
     if (url.pathname === "/api/apps" || url.pathname.startsWith("/api/apps/")) {
-      if (url.origin !== new URL(appOrigin).origin) return Response.json({error:"app_host_required"},{status:404});
+      if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({error:"app_host_required"},{status:404});
       return handleApps(request, env);
     }
 

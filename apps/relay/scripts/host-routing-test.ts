@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { dashboardSignInUrl, publicWebsiteRedirect } from "../src/host-routing.js";
+import { dashboardSignInUrl, legacyDashboardRedirect, protocolOnlyPath, publicWebsiteRedirect } from "../src/host-routing.js";
 
 const marketing = "https://remotearc.app";
 const app = "https://mcp.remotearc.app";
+const dashboard = "https://agent.remotearc.app";
 const route = (path: string, origin = app) => new URL(path, origin);
 
 for (const path of [
@@ -28,14 +29,41 @@ for (const path of [
 ]) {
   assert.equal(publicWebsiteRedirect(route(path), "GET", marketing), null, "system route must stay on app: " + path);
 }
-// Overview is intentionally public for signed-out visitors: it serves as a product preview.
-assert.equal(dashboardSignInUrl(route("/overview"), "GET", app), null);
-for (const path of ["/apps", "/devices", "/automations", "/connect", "/security", "/settings", "/monitor"]) {
-  assert.equal(dashboardSignInUrl(route(path), "GET", app), app + "/auth/login?return_to=" + encodeURIComponent(path));
+// The old domain keeps its protocol and API identity; only webpage links migrate.
+for (const path of ["/", "/dashboard", "/overview", "/devices", "/apps",
+  "/automations", "/connect", "/security", "/settings", "/device"]) {
+  const destination = path === "/" || path === "/dashboard" ? "/overview" : path;
+  assert.equal(legacyDashboardRedirect(route(path), "GET", app, dashboard),
+    dashboard + destination, "old page " + path);
 }
-assert.equal(dashboardSignInUrl(route("/automations?task=abc%2F123"), "GET", app), app + "/auth/login?return_to=" + encodeURIComponent("/automations?task=abc%2F123"));
-assert.equal(dashboardSignInUrl(route("/apps?category=docs_files"), "GET", app), app + "/auth/login?return_to=" + encodeURIComponent("/apps?category=docs_files"));
-assert.equal(dashboardSignInUrl(route("/overview"), "POST", app), null);
-assert.equal(dashboardSignInUrl(route("/overview", marketing), "GET", app), null);
-assert.equal(dashboardSignInUrl(route("/oauth/consent?client_id=abc"), "GET", app), null, "OAuth consent must not be rewritten");
-console.log("PASS: website canonical redirects, signed-out dashboard routing, and OAuth/API isolation");
+assert.equal(legacyDashboardRedirect(route("/settings?tab=workspaces"), "GET", app, dashboard),
+  dashboard + "/settings?tab=workspaces");
+assert.equal(legacyDashboardRedirect(route("/devices"), "HEAD", app, dashboard), dashboard + "/devices");
+for (const path of ["/mcp", "/mcp/", "/agent", "/oauth/authorize", "/oauth/consent",
+  "/oauth/token", "/.well-known/oauth-authorization-server",
+  "/api/me", "/api/device/start", "/auth/google", "/auth/google/callback", "/api/apps"]) {
+  assert.equal(legacyDashboardRedirect(route(path), "GET", app, dashboard), null,
+    "protocol/API route untouched: " + path);
+}
+assert.equal(legacyDashboardRedirect(route("/settings"), "POST", app, dashboard), null);
+assert.equal(legacyDashboardRedirect(route("/settings",dashboard), "GET", app, dashboard), null);
+assert.equal(legacyDashboardRedirect(route("/settings"), "GET", app, app), null);
+for (const path of ["/mcp", "/mcp/", "/agent", "/oauth/authorize", "/oauth/consent",
+  "/.well-known/oauth-protected-resource/mcp"]) assert.equal(protocolOnlyPath(path), true, path);
+for (const path of ["/auth/login", "/auth/google", "/api/me", "/api/organizations",
+  "/settings", "/device"]) assert.equal(protocolOnlyPath(path), false, path);
+
+// The new UI is the only canonical dashboard login origin.
+assert.equal(dashboardSignInUrl(route("/overview", dashboard), "GET", dashboard), null);
+for (const path of ["/apps", "/devices", "/automations", "/connect", "/security", "/settings"]) {
+  assert.equal(dashboardSignInUrl(route(path,dashboard), "GET", dashboard),
+    dashboard + "/auth/login?return_to=" + encodeURIComponent(path));
+}
+assert.equal(dashboardSignInUrl(route("/apps?provider=notion",dashboard), "GET", dashboard),
+  dashboard + "/auth/login?return_to=" + encodeURIComponent("/apps?provider=notion"));
+assert.equal(dashboardSignInUrl(route("/settings",app), "GET", dashboard), null);
+assert.equal(dashboardSignInUrl(route("/settings",dashboard), "POST", dashboard), null);
+assert.equal(dashboardSignInUrl(route("/oauth/consent",dashboard), "GET", dashboard), null);
+assert.equal(publicWebsiteRedirect(route("/docs",dashboard), "GET", marketing),
+  marketing + "/docs");
+console.log("PASS: agent dashboard routing, legacy web redirects and unchanged MCP/OAuth/device boundary");

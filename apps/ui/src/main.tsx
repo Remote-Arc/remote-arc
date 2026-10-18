@@ -332,8 +332,8 @@ type AutomationDraft = {
 type DashboardTab = "overview" | "devices" | "automations" | "apps" | "connect" | "security" | "monitor" | "settings";
 
 const MARKETING_ORIGIN = "https://remotearc.app";
-const APP_ORIGIN = "https://mcp.remotearc.app";
-const MCP_ENDPOINT = APP_ORIGIN + "/mcp";
+const APP_ORIGIN = "https://agent.remotearc.app";
+const MCP_ENDPOINT = "https://mcp.remotearc.app/mcp";
 const dashboardHref = (path: string) => UI_PREVIEW ? path : APP_ORIGIN + path;
 installUiPreviewFetchMock(MCP_ENDPOINT);
 const CHATGPT_PLUGIN_DIRECTORY_URL = "https://chatgpt.com/plugins?q=Remote%20Arc";
@@ -520,7 +520,7 @@ function PublicHeader({ user }: { user?: User | null }) {
   const navHref = (path: string) => isWebsite() ? localizedWebsiteHref(path, locale) : path;
   // From the website, sign-in visits the product preview. On that preview,
   // the header sign-in control opens authentication rather than reloading itself.
-  const signInHref = location.hostname === "mcp.remotearc.app"
+  const signInHref = location.hostname === "agent.remotearc.app"
     ? APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent("/overview")
     : APP_ORIGIN + "/overview";
 
@@ -6900,7 +6900,7 @@ function Dashboard({
           </>
         )}
 
-        <footer className="dashboardFooter"><span>Remote Arc · mcp.remotearc.app</span><div><a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a><a href={MARKETING_ORIGIN + "/docs"}>{tr("Docs", "文档")}</a><a href={MARKETING_ORIGIN + "/docs/mcp"}>MCP</a><a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a><a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a><a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a></div></footer>
+        <footer className="dashboardFooter"><span>Remote Arc · agent.remotearc.app</span><div><a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a><a href={MARKETING_ORIGIN + "/docs"}>{tr("Docs", "文档")}</a><a href={MARKETING_ORIGIN + "/docs/mcp"}>MCP</a><a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a><a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a><a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a></div></footer>
       </main>
 
       <nav className="mobileBottomNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
@@ -7483,11 +7483,11 @@ function App() {
   if (isAdminHost || (UI_PREVIEW && routePath === "/admin-preview")) {
     if (UI_PREVIEW) return <AdminConsole preview />;
     if (user === undefined) return <CenteredCard title={tr("Loading admin workspace…","加载运营后台…")} body={tr("Checking permissions.","验证访问权限。")} />;
-    if (!user) return <CenteredCard title={tr("Admin sign-in required","请先登录管理员账号")} body={tr("Sign in on mcp.remotearc.app and return here.","请先在 mcp.remotearc.app 登录，再返回此页面。")} />;
+    if (!user) return <CenteredCard title={tr("Admin sign-in required","请先登录管理员账号")} body={tr("Sign in on agent.remotearc.app and return here.","请先在 agent.remotearc.app 登录，再返回此页面。")} />;
     if (!user.isAdmin) return <CenteredCard title={tr("Access restricted","访问受限")} body={tr("This area is for authorized Remote Arc administrators.","该页面仅对 Remote Arc 授权管理员开放。")} />;
     return <AdminConsole />;
   }
-  const isAppHost = location.hostname === "mcp.remotearc.app";
+  const isAppHost = location.hostname === "agent.remotearc.app";
   const isDashboardHost = isAppHost || UI_PREVIEW;
   if (isAppHost && routePath === "/") {
     history.replaceState({}, "", "/overview");

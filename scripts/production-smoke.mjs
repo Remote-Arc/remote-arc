@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 export async function verifyProduction({
   sha, version, installer, providers, fetcher = fetch,
-  marketing = "https://remotearc.app", app = "https://mcp.remotearc.app", dashboard = "https://agent.remotearc.app",
+  marketing = "https://remotearc.app", app = "https://mcp.remotearc.app", dashboard = "https://agent.remotearc.app", admin = "https://admin.remotearc.app",
 }) {
   const checks = [];
   const read = async (url, expected = 200) => {
@@ -59,6 +59,19 @@ export async function verifyProduction({
   const legacySettings = await read(app + "/settings", 302);
   if (legacySettings.headers.get("location") !== dashboard + "/settings")
     throw new Error("Legacy settings canonical redirect failed.");
+  // Admin has a separate host and RBAC gate. Its public, signed-out behavior
+  // and static UI delivery must work before declaring a production release healthy.
+  const adminRedirect = await read(admin + "/", 302);
+  const adminLogin = new URL(adminRedirect.headers.get("location") || "", admin);
+  if (adminLogin.origin !== dashboard || adminLogin.pathname !== "/auth/login" ||
+      adminLogin.searchParams.get("return_to") !== admin + "/")
+    throw new Error("Admin sign-in/return flow has regressed.");
+  const adminApi = await read(admin + "/api/me", 401);
+  if (adminApi.headers.get("x-remote-arc-admin-contract") !== "1")
+    throw new Error("Admin API service contract unavailable.");
+  const adminBundle = await read(new URL(asset.pathname, admin).toString());
+  if (!/(java|ecma)script/.test(adminBundle.headers.get("content-type") || ""))
+    throw new Error("Admin JavaScript bundle unavailable.");
   await read(marketing + "/docs/unknown-release-check", 404);
   return {checks,configuredProviders:status.providers.filter(item=>item.ready).length,providerCount:providers.length,deployment:health.deployment || null};
 }

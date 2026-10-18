@@ -277,11 +277,23 @@ export class DeviceRegistry {
         socket.deserializeAttachment() as SocketAttachment | null;
       if (!attachment) return;
 
+      // Treat telemetry as untrusted even from an enrolled device. Server timestamps
+      // prevent clock skew or spoofed timestamps from bypassing freshness checks.
+      const rawCapacity = parsed.device?.capacity;
+      const capacity = rawCapacity && typeof rawCapacity.memoryTotalMB === "number" &&
+        Number.isFinite(rawCapacity.memoryTotalMB) && rawCapacity.memoryTotalMB > 0 && rawCapacity.memoryTotalMB < 16_000_000 &&
+        typeof rawCapacity.memoryAvailableMB === "number" && Number.isFinite(rawCapacity.memoryAvailableMB) &&
+        rawCapacity.memoryAvailableMB >= 0 && rawCapacity.memoryAvailableMB <= rawCapacity.memoryTotalMB &&
+        (rawCapacity.cpuPercent === undefined ||
+          (typeof rawCapacity.cpuPercent === "number" && Number.isFinite(rawCapacity.cpuPercent) &&
+           rawCapacity.cpuPercent >= 0 && rawCapacity.cpuPercent <= 100))
+          ? { ...rawCapacity, observedAt: new Date().toISOString() } : null;
       socket.serializeAttachment({
         ...attachment,
         device: {
           ...parsed.device,
           id: attachment.deviceId,
+          capacity,
           connectedAt: attachment.device?.connectedAt || new Date().toISOString(),
           lastSeen: new Date().toISOString(),
         },

@@ -3,6 +3,8 @@ import { createTaskKeepAwakeManager } from "./keep-awake.js";
 import { goalWorkspace } from "./goal-workspace.js";
 import { appendAgentEvent, readAgentEvents, readAgentEventTail, startSupervisedAgent, superviseAgent, tryAgentLease } from "./agent-runtime.js";
 import os from "node:os";
+import { createFleetCapacitySampler } from "./fleet-capacity.js";
+const sampleFleetCapacity = createFleetCapacitySampler();
 import path from "node:path";
 import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
@@ -539,6 +541,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
               pid: process.pid,
               backgroundProcess: argFlag("--agent"),
               connectedAt,
+              capacity: sampleFleetCapacity(),
               recoveryEnabled: recovery?.enabled ?? false,
               supervisorActive: recovery?.active,
               supervisorPid: recovery?.pid,

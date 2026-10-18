@@ -396,6 +396,7 @@ export async function getDevicesForUser(
     background_pid?: number | null;
     background_agent_version?: string | null;
     background_connected_at?: string | null;
+    capacity?: { observedAt: string; memoryTotalMB: number; memoryAvailableMB: number; cpuPercent?: number } | null;
   };
 
   const registryRequest = () =>
@@ -524,6 +525,7 @@ export async function getDevicesForUser(
         typeof live?.pid === "number" ? live.pid : null,
       connected_at:
         typeof live?.connectedAt === "string" ? live.connectedAt : null,
+      capacity: live?.capacity ?? null,
       automation_permissions: parseTaskPermissions(device.automation_permissions),
       keep_awake_available: (live?.tools || []).includes("set_task_keep_awake"),
       status: live ? "online" : "offline",

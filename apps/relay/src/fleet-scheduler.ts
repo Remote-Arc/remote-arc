@@ -11,6 +11,7 @@ export type FleetRequirements = {
   controller?: "source" | "hosted";
   scheduled?: boolean;
   keepAwake?: boolean;
+  minimumAvailableMemoryMB?: number;
 };
 type Device = Awaited<ReturnType<typeof getDevicesForUser>>[number];
 export type FleetLoad = { running: number; recent_calls: number };
@@ -53,6 +54,21 @@ export function rankFleetDevices(
       recent_calls: previous.recent_calls + Math.max(0, typeof own === "number" ? 0 : own?.recent_calls ?? 0),
     });
   }
+  // Resolve host-level resource pressure without double-counting Windows/WSL.
+  const hostPressure = new Map<string, { cpu: number; availableRatio: number; availableMB: number }>();
+  for (const device of devices) {
+    const sample = device.capacity;
+    if (!sample || !Number.isFinite(Date.parse(sample.observedAt)) ||
+        Math.abs(Date.now() - Date.parse(sample.observedAt)) > 120_000) continue;
+    const key = hostKey(device);
+    const prior = hostPressure.get(key);
+    const pressure = { cpu: sample.cpuPercent ?? 0,
+      availableRatio: sample.memoryTotalMB > 0 ? sample.memoryAvailableMB / sample.memoryTotalMB : 1,
+      availableMB: sample.memoryAvailableMB };
+    hostPressure.set(key, prior ? { cpu: Math.max(prior.cpu, pressure.cpu),
+      availableRatio: Math.min(prior.availableRatio, pressure.availableRatio),
+      availableMB: Math.min(prior.availableMB, pressure.availableMB) } : pressure);
+  }
   const tools = new Set(requirements.requiredTools);
   if (tools.has("start_process")) {
     tools.add("process_status");
@@ -83,9 +99,19 @@ export function rankFleetDevices(
     const active = hostLoads.get(hostKey(device));
     const running = active?.running ?? 0;
     const recent_calls = active?.recent_calls ?? 0;
+    const pressure = hostPressure.get(hostKey(device));
+    if (requirements.minimumAvailableMemoryMB !== undefined &&
+        (!pressure || pressure.availableMB < requirements.minimumAvailableMemoryMB)) return [];
+    const connectedForMs = Date.now() - Date.parse(device.connected_at || "");
+    const stabilityPenalty = !Number.isFinite(connectedForMs) || connectedForMs < 120_000 ? 25
+      : connectedForMs < 600_000 ? 10 : 0;
+    const cpuPenalty = pressure ? Math.round(Math.pow(pressure.cpu / 100, 2) * 55) : 10;
+    const memoryPenalty = pressure && pressure.availableRatio < 0.15
+      ? 45 : pressure && pressure.availableRatio < 0.30 ? 18 : 0;
     // Recent account activity catches interactive agent work not represented by automations.
     // Reserve Mac capacity for Mac-only work if an equally idle PC is eligible.
     const score = running * 100 + Math.min(recent_calls, 10) * 10 +
+      stabilityPenalty + cpuPenalty + memoryPenalty +
       (device.platform === "darwin" && !requirements.platform ? 1 : 0);
     return [{ device, running, recent_calls, score }];
   }).sort((a, b) =>

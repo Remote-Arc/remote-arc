@@ -30,6 +30,7 @@ import { releaseChinese } from "./release-locales.js";
 import { DashboardSettings } from "./dashboard-settings.js";
 import { AdminOperations } from "./admin-operations.js";
 import { AdminConsole } from "./admin/admin-console.js";
+import { recoverAdminBrowser } from "./admin/admin-client-recovery.js";
 import { EngagementPage } from "./public-engagement.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
@@ -6899,7 +6900,12 @@ function App() {
 
   useEffect(() => { void loadMe(); }, []);
   useEffect(() => {
-    if (UI_PREVIEW || location.hostname === "admin.remotearc.app" || !("serviceWorker" in navigator) || location.protocol !== "https:") return;
+    if (UI_PREVIEW || location.protocol !== "https:") return;
+    if (location.hostname === "admin.remotearc.app") {
+      void recoverAdminBrowser();
+      return;
+    }
+    if (!("serviceWorker" in navigator)) return;
     void navigator.serviceWorker.register("/sw.js").catch(() => {
       // PWA support is progressive enhancement; dashboard functionality must not depend on it.
     });

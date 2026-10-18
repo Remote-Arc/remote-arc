@@ -16,6 +16,7 @@ export type ModelGatewayBinding={
   // IDs come from server-side stored grants, never browser model settings.
   paidGrantId?:string;
   enabled:boolean;
+  creditWallet?:boolean;
 };
 export type GatewayRequest={
   context:BillingContext;modelId?:"auto"|string;system:string;user:string;schema:Record<string,unknown>;
@@ -69,7 +70,7 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   const timeout=request.timeoutMs??90000;
   if(!Number.isSafeInteger(timeout)||timeout<1||timeout>90000)throw new ModelProviderError("MODEL_TIMEOUT_INVALID");
   const reservation=await reserveBilling(binding.DB,{...request.context,provider:definition.provider,
-    modelId:definition.id,authorizationId,maximum});
+    modelId:definition.id,authorizationId,maximum,creditWallet:binding.creditWallet});
   if(!reservation.dispatchAllowed)throw new ModelProviderError("MODEL_ALREADY_DISPATCHED");
   const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;
   let knownUsage:ModelUsage|undefined;

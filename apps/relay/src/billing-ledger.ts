@@ -1,3 +1,5 @@
+import {ARC_CREDIT_RATE} from '@remotearc/protocol';
+import {costCreditUnits,creditAuthoritySql,reserveCreditStatements,settleCreditStatements} from './arc-credits.js';
 export type BillingLane = "connect" | "arc_hosted";
 export type BillingContext = {
   userId: string; organizationId: string; taskId: string; runId: string; operationId: string;
@@ -7,6 +9,7 @@ export type BillingUnits = { credits: number; costMicros: number; neurons: numbe
 export type BillingReservationInput = BillingContext & {
   provider: "workers_ai" | "openai" | "anthropic";
   modelId: string; authorizationId: string; maximum: BillingUnits;
+  creditWallet?: boolean;
 };
 type Entry = { scope_type: string; scope_id: string; lane: BillingLane; metric: string; period_key: string; units: number };
 type Row = { id: string; request_json: string; entries_json: string; status: string; settlement_json: string | null };
@@ -43,12 +46,15 @@ function normalize(input: BillingReservationInput, at: string) {
     if (amount) entries.push({scope_type:scope_type!,scope_id:scope_id!,lane:input.lane,metric,period_key:period,units:amount});
   }
   const request = {userId:input.userId,organizationId:input.organizationId,taskId:input.taskId,runId:input.runId,
-    operationId:input.operationId,lane:input.lane,provider:input.provider,modelId:input.modelId,authorizationId:input.authorizationId,maximum,period};
+    operationId:input.operationId,lane:input.lane,provider:input.provider,modelId:input.modelId,authorizationId:input.authorizationId,maximum,period,
+    ...(input.creditWallet?{creditRate:ARC_CREDIT_RATE}:{})};
   return {requestJson:JSON.stringify(request), entriesJson:JSON.stringify(entries),entries,period};
 }
 /** All caps are checked in the INSERT's snapshot; D1 batch commits the reservation and counters atomically. */
 export async function reserveBilling(db: D1Database, input: BillingReservationInput, at = new Date().toISOString()) {
   const n = normalize(input,at), id = crypto.randomUUID(), operationKey = JSON.stringify([input.userId,input.runId,input.operationId]);
+  const walletMaximum=input.creditWallet?costCreditUnits(input.maximum.costMicros):0;
+  if(input.creditWallet&&(input.lane!=='arc_hosted'||input.provider==='workers_ai'))throw new BillingDeniedError('BILLING_INVALID_WALLET_LANE');
   const authority = input.provider === "workers_ai"
     ? `EXISTS(SELECT 1 FROM billing_free_ai_pools p WHERE p.id=?9 AND p.period_key=?10 AND p.enabled=1
        AND p.managed_pool_assertion=1 AND substr(p.verified_at,1,10)=?10
@@ -65,13 +71,14 @@ export async function reserveBilling(db: D1Database, input: BillingReservationIn
     db.prepare(`INSERT OR IGNORE INTO billing_reservations
       (id,user_id,organization_id,task_id,run_id,operation_key,lane,provider,authorization_id,model_id,request_json,entries_json,status,created_at)
       SELECT ?1,?2,?3,?4,?5,?6,?7,?8,?9,?11,?13,?15,'reserved',?12
-      WHERE ${userTaskAuth} AND ${authority}
+       WHERE ${userTaskAuth} AND ${authority} ${input.creditWallet?'AND '+creditAuthoritySql(walletMaximum):''}
       AND (SELECT COUNT(*) FROM json_each(?15) e JOIN billing_budgets b ON ${sameEntry}
         WHERE b.spent_units+b.reserved_units+json_extract(e.value,'$.units')<=b.limit_units)=?16`)
       .bind(id,input.userId,input.organizationId,input.taskId,input.runId,operationKey,input.lane,input.provider,
         input.authorizationId,n.period,input.modelId,at,n.requestJson,input.maximum.costMicros,n.entriesJson,n.entries.length),
     db.prepare(`INSERT INTO billing_events(id,reservation_id,event_type,details_json,created_at)
       SELECT ?1,id,'reserved',request_json,?2 FROM billing_reservations WHERE id=?3 AND accounted=0`).bind(crypto.randomUUID(),at,id),
+    ...(input.creditWallet?reserveCreditStatements(db,id,input.userId,walletMaximum,at):[]),
     db.prepare(`UPDATE billing_budgets AS b SET reserved_units=reserved_units+
       (SELECT json_extract(e.value,'$.units') FROM json_each(?1) e WHERE ${sameEntry}), updated_at=?2
       WHERE EXISTS(SELECT 1 FROM billing_reservations r WHERE r.id=?3 AND r.accounted=0)
@@ -113,9 +120,12 @@ export async function settleBilling(db:D1Database, context:Pick<BillingContext,"
   }
   const entries = (JSON.parse(row.entries_json) as Entry[]).map(e=>({...e,actual:unitValue(actual,e.metric)}));
   const entriesJson = JSON.stringify(entries);
+  const creditRate=(JSON.parse(row.request_json) as {creditRate?:typeof ARC_CREDIT_RATE}).creditRate;
+  if(creditRate&&(creditRate.version!=='arc-credits-v1'||creditRate.costMicrosPerUnit!==2))throw new BillingDeniedError('BILLING_CREDIT_RATE_UNSUPPORTED');
   const result = await db.batch([
     db.prepare("UPDATE billing_reservations SET status='settling',settlement_json=?1 WHERE id=?2 AND status IN ('reserved','unknown')")
       .bind(serialized,id),
+    ...(creditRate?settleCreditStatements(db,id,context.userId,Math.ceil(actual.costMicros/creditRate.costMicrosPerUnit),at):[]),
     db.prepare(`UPDATE billing_budgets AS b SET reserved_units=reserved_units-
       (SELECT json_extract(e.value,'$.units') FROM json_each(?1) e WHERE ${sameEntry}),
       spent_units=spent_units+(SELECT json_extract(e.value,'$.actual') FROM json_each(?1) e WHERE ${sameEntry}),updated_at=?2

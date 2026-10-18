@@ -22,15 +22,15 @@ function dashboardSurface() {
 }
 
 function preferenceKey() {
-  return dashboardSurface() ? "remote-arc-dashboard-theme" : "remote-arc-theme";
+  return dashboardSurface() ? "remote-arc-dashboard-theme-v3" : "remote-arc-theme";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     try {
       const saved = localStorage.getItem(preferenceKey());
-      return saved === "light" || saved === "dark" || saved === "system" ? saved : (dashboardSurface() ? "light" : "dark");
-    } catch { return dashboardSurface() ? "light" : "dark"; }
+      return saved === "light" || saved === "dark" || saved === "system" ? saved : ("dark");
+    } catch { return "dark"; }
   });
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(theme));
 

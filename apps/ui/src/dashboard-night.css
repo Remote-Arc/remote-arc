@@ -1,0 +1,231 @@
+/* Remote Arc Dashboard — dark-first graphite with subtle evergreen ambient light.
+   Scoped to the authenticated dashboard, never the public marketing site. */
+:root[data-theme="dark"] .appFrame {
+  --dash-text:#eef3f1;
+  --dash-muted:#a4afac;
+  --dash-line:#293330;
+  --dash-surface:#111615;
+  --dash-subtle:#1c2421;
+  --dash-accent:#72baff;
+  --dash-accent-hover:#9bcfff;
+  --dash-accent-soft:#1c3340;
+  background:#090d0c;
+  color:var(--dash-text);
+  color-scheme:dark;
+}
+:root[data-theme="light"] .appFrame {
+  --dash-text:#202b30;
+  --dash-muted:#607078;
+  --dash-line:#dce5e8;
+  --dash-surface:#fff;
+  --dash-subtle:#f2f7f8;
+  --dash-accent:#2374c8;
+  --dash-accent-hover:#165ca5;
+  --dash-accent-soft:#e9f2fb;
+  background:#f7fafb;
+  color:var(--dash-text);
+}
+:root[data-theme="dark"] .appFrame .sidebar {
+  background:#0e1312 !important;
+  border-right:1px solid #27312e !important;
+  backdrop-filter:none;
+}
+:root[data-theme="dark"] .appFrame .sidebarBrand .brandWords,
+:root[data-theme="dark"] .appFrame .sidebarBrand .brandWords b {color:#f3f7f4;}
+:root[data-theme="dark"] .appFrame .sidebarAccount {border-top-color:var(--dash-line);}
+:root[data-theme="dark"] .appFrame .sidebarAccount strong {color:var(--dash-text);}
+:root[data-theme="dark"] .appFrame .workspacePickerTrigger {
+  background:#171e1b;
+  border-color:#303a35;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .appFrame .workspacePickerEmblem.connect {color:#7cbdff;background:#203041;border-color:#2b4356;}
+:root[data-theme] .appFrame .workspacePickerEmblem.agent {
+  color:#92f1ba;
+  background:linear-gradient(140deg,#214a35,#123b2b);
+  border-color:#31664a;
+}
+:root[data-theme] .appFrame .workspacePickerTrigger:hover {box-shadow:none;border-color:var(--dash-accent);transform:none;}
+:root[data-theme] .appFrame .workspacePickerTrigger:hover .workspacePickerEmblem{transform:scale(1.02) rotate(-3deg);}
+:root[data-theme="dark"] .appFrame .workspaceNavHeading{color:#8c9a95;}
+:root[data-theme="dark"] .appFrame .sideNav button{color:#a8b7b3;}
+:root[data-theme="dark"] .appFrame .sideNav button:hover {color:#f3f6f4;background:#1d2823;border-color:#2a3730;}
+:root[data-theme="dark"] .appFrame .sideNav button.active {
+  color:#dcf7e7;
+  background:linear-gradient(90deg,#1b3929,#17251d);
+  border-color:#2d4e39;
+  box-shadow:inset 2px 0 0 #69d69d;
+}
+:root[data-theme="dark"] .appFrame .sideNav button.active .sideNavIcon,
+:root[data-theme="dark"] .appFrame .sideNav button:hover .sideNavIcon{
+  color:#77dda8 !important;
+  background:transparent;
+}
+:root[data-theme="dark"] .appFrame .sidebarGlobalNavigation button,
+:root[data-theme="dark"] .appFrame .sidebarGlobalNavigation>a{color:#a0ada8;}
+:root[data-theme="dark"] .appFrame .sidebarGlobalNavigation button:hover,
+:root[data-theme="dark"] .appFrame .sidebarGlobalNavigation>a:hover{color:#e4f5ed;background:#1d2823;}
+:root[data-theme="dark"] .appFrame .previewModeBanner {
+  color:#acc6b8;
+  background:#142119;
+  border-color:#253d2c;
+}
+:root[data-theme="dark"] .appFrame :is(.pageHeader h1,.overviewTopbar h1,.appsManagerHeader h1,.dashboardUtilityHeader h1) {color:#f0f6f2;}
+:root[data-theme="dark"] .appFrame :is(.eyebrow,.arcEyebrow){color:#76cfa3;}
+:root[data-theme="dark"] .appFrame .appsManagerCard {
+  background:#141b19;
+  border-color:#2c3933;
+  box-shadow:0 4px 20px rgba(0,0,0,.1);
+}
+:root[data-theme="dark"] .appFrame .appsManagerCard:hover {
+  border-color:#3f6852;
+  box-shadow:0 14px 30px rgba(0,0,0,.19);
+}
+:root[data-theme="dark"] .appFrame .appsManagerCard::before {
+  background:linear-gradient(90deg,#2e9568,#70cba5,#5aafed);
+}
+:root[data-theme="dark"] .appFrame .appsManagerBrand {background:#202a24;border-color:#304035;}
+:root[data-theme="dark"] .appFrame .appsManagerCardStatus:not(.connected){color:#b4c1bb;background:#1e2924;border-color:#324039;}
+:root[data-theme="dark"] .appFrame .appsManagerSummary{background:#141b19;border-color:#2b3832;box-shadow:none;}
+:root[data-theme="dark"] .appFrame .appsManagerSummary> :is(.appsManagerSummaryMetric,.appsManagerReviewMetric) {border-color:#2b3832;}
+:root[data-theme="dark"] .appFrame .appsManagerViewTabs{background:#121b17;border-color:#2b3832;}
+:root[data-theme="dark"] .appFrame .appsManagerViewTabs button[aria-pressed="true"]{background:#27332c;color:#eff5ef;}
+:root[data-theme="dark"] .appFrame .appsSearchField input{background:#151d19;color:#f0f4f0;border-color:#2f3d34;}
+:root[data-theme="dark"] .appFrame .appsManager .appsManagerCategories button{background:#17211b;border-color:#2d3a30;color:#bdc9c2;}
+:root[data-theme="dark"] .appFrame .appsManager .appsManagerCategories button[aria-pressed="true"]{
+  background:#235c43;
+  border-color:#367451;
+  color:#edfef3;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .appFrame .appsManager .appsManagerPrimary {
+  background:#295f4a;
+  border-color:#34765b;
+  box-shadow:none;
+  color:#f6fff8;
+}
+:root[data-theme="dark"] .appFrame .appsManager .appsManagerPrimary:hover:not(:disabled) {background:#337659;border-color:#448f6b;box-shadow:0 5px 16px rgba(27,101,64,.18);}
+:root[data-theme="dark"] .appFrame .appsManager .appsManagerExploreButton{color:#87c6ee;}
+:root[data-theme="dark"] .appFrame .appsManager .appsManagerExploreButton:hover{color:#b0def9;}
+:root[data-theme="dark"] .appFrame .appsToolsOverlay .appsToolsDialog{background:#18201c;color:#eef3f1;border-color:#314039;}
+:root[data-theme="light"] .appFrame .appsManager .appsManagerPrimary,
+:root[data-theme="light"] .appFrame .appsManager .appsManagerCategories button[aria-pressed="true"]{
+  background:#2676ba;
+  border-color:#2676ba;
+  color:#fff;
+  box-shadow:none;
+}
+:root[data-theme="light"] .appFrame .appsManager .appsManagerPrimary:hover:not(:disabled){background:#1b649f;border-color:#1b649f;}
+:root[data-theme="light"] .appFrame .appsManagerCard::before{background:linear-gradient(90deg,#2782ca,#40b69b,#65a3d4);}
+:root[data-theme="light"] .appFrame .appsManagerCard:hover{border-color:#8eb7c5;box-shadow:0 12px 26px rgba(30,69,86,.07);}
+:root[data-theme] .appFrame .mobileBottomNav button.active span{color:var(--dash-accent);}
+
+/* ChatGPT-like Agent canvas: occupy the available viewport, not a small Dashboard tile. */
+:root[data-theme] .appFrame:has(.arcChatShell) .dashboardMain{
+  box-sizing:border-box;
+  width:calc(100% - 30px) !important;
+  max-width:none !important;
+  margin:0 15px !important;
+  padding:13px 0 15px !important;
+  min-width:0;
+}
+:root[data-theme] .appFrame .dashboardMain:has(.arcChatShell)> .dashboardFooter{display:none!important;}
+:root[data-theme] .appFrame .dashboardMain:has(.arcChatShell) .previewModeBanner{margin-bottom:10px;}
+:root[data-theme="dark"] .appFrame .arcChatShell {
+  --chat-text:#edf3f0;
+  --chat-muted:#a4b4ac;
+  --chat-accent:#74dfa8;
+  background:#0b100e;
+  border-color:#22312a;
+}
+:root[data-theme="dark"] .appFrame .arcChatShell:has(.arcChatWelcome){
+  background:
+    radial-gradient(ellipse 760px 570px at 49% 26%,rgba(27,69,39,.3),transparent 76%),
+    repeating-linear-gradient(119deg,transparent 0 86px,rgba(25,69,40,.095) 86px 153px,transparent 153px 201px),
+    #080d0a;
+}
+:root[data-theme="dark"] .appFrame .arcChatStar {
+  color:#86e8ad;
+  border-color:#2c5339;
+  background:#172b1e;
+}
+:root[data-theme="dark"] .appFrame .arcChatIdea {
+  background:rgba(19,27,22,.76);
+  border-color:#2a382d;
+}
+:root[data-theme="dark"] .appFrame .arcChatIdea:hover{
+  background:#1b2c20;
+  border-color:#498b61;
+}
+:root[data-theme="dark"] .appFrame .arcChatComposer {
+  border-color:#344239;
+  background:#1b221e;
+  box-shadow:0 9px 36px rgba(0,0,0,.25);
+}
+:root[data-theme="dark"] .appFrame .arcChatComposer:focus-within{border-color:#53966c;box-shadow:0 8px 35px rgba(0,0,0,.3),0 0 0 2px rgba(83,150,108,.16);}
+:root[data-theme="dark"] .appFrame .arcChatSend,
+:root[data-theme="dark"] .appFrame .arcChatReviewButton{background:#70d6a0;color:#08140b;}
+:root[data-theme="dark"] .appFrame .arcChatMessage.user .arcMessageBody{
+  background:#202923;
+  border-color:#344339;
+}
+:root[data-theme="dark"] .appFrame .arcChatReviewPanel {background:#17231b;border-color:#31513b;}
+:root[data-theme="dark"] .appFrame .arcSidebarPrimary {background:#242e28 !important;}
+:root[data-theme="dark"] .appFrame .arcSidebarPrimary svg{color:#75e1a6;}
+:root[data-theme="dark"] .appFrame .arcSessionRow.selected {background:#263529;}
+:root[data-theme="dark"] .appFrame .arcChatBeta{background:#17261d;border-color:#2e4435;color:#9edab4;}
+
+/* Sidebar history fills the middle while account actions stay at the bottom. */
+:root[data-theme] .appFrame .arcSidebarPortalRoot{flex:1;min-height:0;display:flex;flex-direction:column;}
+:root[data-theme] .appFrame:has(.arcChatShell) .sidebarGlobalNavigation {margin-top:0;padding-top:7px;}
+:root[data-theme] .appFrame:has(.arcChatShell) .sidebarGlobalNavigation>a {display:none;}
+:root[data-theme] .appFrame:has(.arcChatShell) .sidebarAccount {margin-top:8px;}
+:root[data-theme] .appFrame:has(.arcChatShell) .sidebar .workspaceNavHeading {padding-bottom:6px;}
+:root[data-theme] .appFrame:has(.arcChatShell) .sidebar {overflow:hidden;}
+@media(max-width:820px) {
+  :root[data-theme] .appFrame:has(.arcChatShell) .dashboardMain{
+    width:calc(100% - 16px)!important;
+    margin:0 8px!important;
+    padding:8px 0 0!important;
+  }
+  :root[data-theme] .appFrame:has(.arcChatShell) .mobileBottomNav{display:none!important;}
+  :root[data-theme] .appFrame:has(.arcChatShell) .arcChatShell {height:calc(100dvh - 92px);}
+  :root[data-theme] .appFrame:has(.previewModeBanner) .arcChatShell {height:calc(100dvh - 165px);}
+}
+@media(prefers-reduced-motion:reduce){:root[data-theme] .appFrame .appsManagerCard {animation:none!important;}}
+
+/* Dashboard is a fixed-sidebar layout at desktop breakpoints.
+   Reserve its true width so chat content and preview banner never sit behind it. */
+@media(min-width:821px) {
+  :root[data-theme] .appFrame:has(.arcChatShell) .dashboardMain {
+    width:calc(100% - 278px) !important;
+    margin-left:263px !important;
+    margin-right:15px !important;
+  }
+}
+@media(min-width:2000px) {
+  :root[data-theme] .appFrame:has(.arcChatShell) .dashboardMain {
+    width:calc(100% - 282px) !important;
+    margin-left:267px !important;
+  }
+}
+@media(max-width:820px) {
+  :root[data-theme] .appFrame:has(.arcChatShell) .dashboardMain {
+    width:calc(100% - 16px) !important;
+    margin-left:8px !important;
+    margin-right:8px !important;
+  }
+}
+
+/* The workspace menu is portaled to document.body, so its Agent icon needs a
+   global (not .appFrame-scoped) theme override. */
+:root[data-theme] .workspacePickerMenuPortal .workspaceOptionIcon.agent {
+  background:linear-gradient(135deg,#1d533a,#30714e);
+  border-color:#397c56;
+  color:#ceffe1;
+}
+:root[data-theme="dark"] .workspacePickerMenuPortal {
+  background:#171f1b;
+  border-color:#314037;
+  box-shadow:0 16px 42px rgba(0,0,0,.52);
+}

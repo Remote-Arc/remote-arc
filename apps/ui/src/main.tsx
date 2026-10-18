@@ -36,6 +36,7 @@ import "./styles.css";
 import "./dashboard.css";
 import "./laptop-hero.css";
 import "./dashboard-premium.css";
+import "./dashboard-night.css";
 
 declare const __REMOTEARC_CLI_VERSION__: string;
 
@@ -5091,7 +5092,7 @@ function Dashboard({
 
   const workspace = workspaceForTab(active);
   const navItems: Array<[DashboardTab, string]> = workspace === "agent" ? [
-    ["agent-chat", tr("Workspace", "工作台")],
+    ["agent-chat", tr("Chat", "对话")],
     ["agent-goals", tr("Runs", "运行记录")],
     ["agent-activity", tr("Activity", "活动")],
   ] : [
@@ -5110,15 +5111,21 @@ function Dashboard({
       <aside className="sidebar">
         <div className="sidebarBrand"><Brand /></div>
         {renderWorkspacePicker()}
-        <div className="workspaceNavHeading">{tr("NAVIGATION", "导航")}</div>
-        <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
-          {navItems.map(([id, label]) => (
-            <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
-              <span className="sideNavIcon"><DashboardNavIcon tab={id} /></span>
-              <span className="sideNavLabel">{label}</span>
-            </button>
-          ))}
-        </nav>
+        {workspace === "agent" && active === "agent-chat" ? (
+          <div id="arc-sidebar-nav-root" className="arcSidebarPortalRoot" />
+        ) : (
+          <>
+            <div className="workspaceNavHeading">{tr("NAVIGATION", "导航")}</div>
+            <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
+              {navItems.map(([id, label]) => (
+                <button key={id} data-dashboard-tab={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
+                  <span className="sideNavIcon"><DashboardNavIcon tab={id} /></span>
+                  <span className="sideNavLabel">{label}</span>
+                </button>
+              ))}
+            </nav>
+          </>
+        )}
         <div className="sidebarGlobalNavigation">
           <div className="workspaceNavHeading">{tr("ACCOUNT", "账户")}</div>
           <button type="button" className={active === "security" ? "active" : ""} onClick={() => navigateTab("security")}><span className="sideNavIcon"><DashboardNavIcon tab="security" /></span>{tr("Security", "安全")}</button>
@@ -5148,13 +5155,13 @@ function Dashboard({
 
         {active === "agent-chat" && (
           <AgentChatWorkspace
+            key={user.id}
             tr={tr}
+            accountId={user.id}
             onlineDevices={devices.filter((device) => device.status === "online").length}
             connectedDevices={devices.length}
-            recentGoals={automations.filter(isAgentGoalAutomation).map(({ id, name, status, next_run_at }) => ({ id, name, status, next_run_at }))}
             onPrepareGoal={(objective, successCriteria) => openCreateInWorkspace("agent", false, objective, successCriteria)}
             onOpenGoals={() => navigateTab("agent-goals")}
-            onOpenGoal={(id) => { setAutomationQuery(id); navigateTab("agent-goals"); }}
             onCreateRoutine={() => openCreateInWorkspace("agent", true)}
             onManageApps={() => navigateTab("apps")}
             onManageDevices={() => navigateTab("devices")}

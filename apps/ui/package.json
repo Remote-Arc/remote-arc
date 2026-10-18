@@ -13,7 +13,8 @@
     "test:device-removal": "node scripts/device-removal-test.mjs",
     "test:device-execution-log": "node scripts/device-execution-log-test.mjs",
     "test:security": "node scripts/security-response-test.mjs && node --experimental-strip-types scripts/security-grant-groups-test.mjs",
-    "test:background-recovery": "node --experimental-strip-types scripts/background-recovery-test.mjs"
+    "test:background-recovery": "node --experimental-strip-types scripts/background-recovery-test.mjs",
+    "test:oauth-consent": "node --import tsx scripts/oauth-consent-summary-test.ts"
   },
   "dependencies": {
     "@remotearc/protocol": "workspace:*",

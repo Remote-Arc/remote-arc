@@ -217,3 +217,9 @@
 .appsManagerMcpToolList code { font-size: 12px; font-weight: 650; color: var(--dash-text, var(--text)); }
 .appsManagerMcpToolList span { font-size: 12px; line-height: 1.5; color: var(--dash-muted, var(--muted)); }
 .appsManagerMcpToolsHint { padding-top: 12px; border-top: 1px solid var(--dash-line, var(--line)); }
+
+.appsManagerMcpTools .appsManagerSetupLink { display: inline-flex; align-items: center; margin-top: 15px; padding: 10px 14px; border-radius: 9px; background: #087394; color: #fff; text-decoration: none; font-size: 13px; font-weight: 650; }
+.appsManagerMcpTools .appsManagerSetupLink:hover { background: #075f7c; }
+.appsManagerMcpDetails { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--dash-line, var(--line)); font-size: 12px; }
+.appsManagerMcpDetails > summary { cursor: pointer; }
+.appsManagerMcpDetails .appsManagerMcpToolList { margin-bottom: 0; }

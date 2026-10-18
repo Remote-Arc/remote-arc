@@ -206,4 +206,24 @@ assert(listedNames.has("get_goal_context"), "existing goal checkpoints remain re
 assert(!listedNames.has("create_agent_goal"), "experimental goal creation must stay disabled");
 assert(!listedNames.has("submit_goal_decision"), "experimental mutations must stay disabled");
 
+// Initial ChatGPT Apps permission discovery must request read + write up
+// front, instead of failing to reconnect when the first write is attempted.
+const appsMcp = createRemoteLinkMcp({ ...authEnv, ENABLE_APPS: "1" }, authIdentity("apps:read apps:write"));
+const appsList = await appsMcp.fetch(new Request(authEnv.PUBLIC_ORIGIN + "/mcp", {
+  method: "POST",
+  headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+  body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }),
+}));
+const appsText = await appsList.text();
+assert(appsList.ok, appsText);
+const appsJson = JSON.parse(appsText.trim().startsWith("{")
+  ? appsText : appsText.split(String.fromCharCode(10)).find(line => line.startsWith("data: "))!.slice(6));
+const appsTools = appsJson.result.tools as Array<{
+  name: string; securitySchemes?: Array<{ scopes: string[] }>;
+}>;
+const callApp = appsTools.find(tool => tool.name === "call_app");
+assert.deepEqual(callApp?.securitySchemes?.[0]?.scopes, ["apps:read", "apps:write"]);
+const listApps = appsTools.find(tool => tool.name === "list_apps");
+assert.deepEqual(listApps?.securitySchemes?.[0]?.scopes, ["apps:read"]);
+
 console.log("PASS: MCP error contract, incremental OAuth scopes, and admin/operator unlimited usage regressions");

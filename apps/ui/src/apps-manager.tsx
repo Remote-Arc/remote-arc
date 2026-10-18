@@ -332,14 +332,18 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
       <section className="appsManagerSummary" aria-label={tr("Connection overview", "连接概览")}><span><strong>{activeCount}</strong>{tr("connected accounts", "个已连接账号")}</span><a href="#approvals"><strong>{pendingCount}</strong>{tr("awaiting review", "项等待审核")}</a><p>{tr("All available tools are enabled when you connect. Review each write request before it runs.", "连接后默认启用全部可用工具。写入执行前核对具体请求。")}</p></section>
       <section className="appsManagerMcpTools" aria-labelledby="apps-mcp-tools-title">
         <div>
-          <h2 id="apps-mcp-tools-title">{tr("AI chat tools · enabled by default", "AI 对话工具 · 默认启用")}</h2>
-          <p>{tr("These are cloud MCP tools, not individual device Skills. They appear in your AI client's Remote Arc connection, not in device tool settings.", "这两个是云端 MCP 工具，不是某台设备的 Skill。它们在 AI 客户端的 Remote Arc 连接中提供，不在设备工具设置里。")}</p>
+          <h2 id="apps-mcp-tools-title">{tr("Use your apps in ChatGPT", "在 ChatGPT 中使用你连接的应用")}</h2>
+          <p>{tr("Ask your AI to find information in Slack, check a project, or prepare an update. Your connected accounts stay private to you. Sending or changing anything still requires approval.", "你可以直接让 AI 查找 Slack 消息、检查项目，或准备更新。每个人使用自己连接的账号；发送消息或修改内容仍需审批。")}</p>
         </div>
-        <div className="appsManagerMcpToolList">
-          <div><code>list_apps</code><span>{tr("Discover your connected accounts and available operations", "发现已连接账号及其可用操作")}</span></div>
-          <div><code>call_app</code><span>{tr("Invoke an operation; write requests still need provider permission and approval", "调用应用操作；写入仍需账号权限与逐次审批")}</span></div>
-        </div>
-        <p className="appsManagerMcpToolsHint">{tr("New AI connections request Apps scopes at sign-in. Existing AI connections may need to reauthorize to add apps:read and apps:write; refreshing tools alone cannot expand an existing OAuth token.", "新连接 AI 时默认申请 Apps 权限。已有 AI 连接可能需要重新 OAuth 授权以加入 apps:read、apps:write；只刷新工具不能扩大旧令牌的授权范围。")}</p>
+        <a className="appsManagerSetupLink" href="/install/chatgpt">{tr("Connect an AI assistant", "连接 AI 助手")} →</a>
+        <p className="appsManagerMcpToolsHint">{tr("Already connected, but your AI asks to reconnect or cannot perform changes? Older permissions may need a fresh connection. In ChatGPT, open Plugins → Remote Arc and reconnect. If its reconnect link fails, remove the stale ChatGPT connection and add the Remote Arc MCP endpoint again. Your Remote Arc accounts and devices are not deleted.", "已经连接，却无法发送消息或提示重新登录？旧连接可能没有最新权限。请到 ChatGPT 的 Plugins → Remote Arc 重新授权；如果重连按钮本身报错，可以只重新添加 ChatGPT 侧的 Remote Arc 连接。Remote Arc 里的设备和已连接账号不会因此被删除。")}</p>
+        <details className="appsManagerMcpDetails">
+          <summary>{tr("For developers: MCP tools and scopes", "开发者详情：MCP 工具及权限")}</summary>
+          <div className="appsManagerMcpToolList">
+            <div><code>list_apps</code><span>{tr("Find linked services (apps:read)", "查找已连接服务（apps:read）")}</span></div>
+            <div><code>call_app</code><span>{tr("Read or request actions (apps:read + apps:write for new authorizations)", "读取或请求操作（新授权申请 apps:read + apps:write）")}</span></div>
+          </div>
+        </details>
       </section>
 
       <div className="appsManagerFilters"><label>{tr("Find an app", "查找应用")}<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder={tr("Search apps…", "搜索应用…")} /></label><div role="group" aria-label={tr("App categories", "应用分类")}><button type="button" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{tr("All apps", "全部应用")} <span>{snapshot.apps.length}</span></button>{directory.categories.map(item => <button type="button" key={item.id} aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{tr(item.name, item.nameZh)}</button>)}</div></div>

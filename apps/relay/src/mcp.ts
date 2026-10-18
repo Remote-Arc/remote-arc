@@ -100,7 +100,7 @@ const consume = async (env: Env, identity: OAuthIdentity) => {
   }
 };
 const taskDashboardUrl = (env: Env, id: string) =>
-  `${(env.APP_ORIGIN || env.PUBLIC_ORIGIN).replace(/\/$/, "")}/automations?task=${encodeURIComponent(id)}`;
+  `${(env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN).replace(/\/$/, "")}/automations?task=${encodeURIComponent(id)}`;
 
 const AGENT_WRITE_SCOPES = ["automation:write", "agent:write"] as const;
 

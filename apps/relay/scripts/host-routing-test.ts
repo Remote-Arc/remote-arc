@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { dashboardSignInUrl, legacyDashboardRedirect, protocolOnlyPath, publicWebsiteRedirect } from "../src/host-routing.js";
 import { safeReturnTo, sessionCookie } from "../src/auth.js";
+import { isTrustedDashboardMutation } from "../src/dashboard-origin.js";
 
 const marketing = "https://remotearc.app";
 const app = "https://mcp.remotearc.app";
@@ -74,4 +75,15 @@ assert.equal(safeReturnTo(dashboard + "/settings", new Request(app + "/auth/logi
 assert.equal(safeReturnTo("https://attacker.invalid/", new Request(app + "/auth/login"), authEnv),
   app + "/", "Cross-site redirects remain blocked");
 assert.match(sessionCookie("test-token"), /Domain=\.remotearc\.app/, "Sessions span first-party subdomains");
-console.log("PASS: agent dashboard routing, shared session, safe login return, legacy web redirects and unchanged MCP/OAuth/device boundary");
+const mutationEnv = { PUBLIC_ORIGIN: app, APP_ORIGIN: app, DASHBOARD_ORIGIN: dashboard };
+const mutation = (host: string, origin?: string) => new Request(host + "/api/organizations", {
+  method: "POST", headers: origin ? { origin } : {}, body: "{}",
+});
+assert.equal(isTrustedDashboardMutation(mutation(app, app), mutationEnv), true, "Legacy web mutations still work");
+assert.equal(isTrustedDashboardMutation(mutation(dashboard, dashboard), mutationEnv), true, "New web mutations work");
+assert.equal(isTrustedDashboardMutation(mutation(dashboard, app), mutationEnv), false, "Cross-subdomain CSRF blocked");
+assert.equal(isTrustedDashboardMutation(mutation(app, dashboard), mutationEnv), false, "Reverse CSRF blocked");
+assert.equal(isTrustedDashboardMutation(mutation(dashboard, marketing), mutationEnv), false, "Marketing origin not a mutation source");
+assert.equal(isTrustedDashboardMutation(mutation(dashboard), mutationEnv), false, "Origin required");
+assert.equal(isTrustedDashboardMutation(mutation(marketing, marketing), mutationEnv), false, "Untrusted host blocked");
+console.log("PASS: agent dashboard routing, shared session, safe mutations, legacy web redirects and unchanged MCP/OAuth/device boundary");

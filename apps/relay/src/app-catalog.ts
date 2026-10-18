@@ -7,7 +7,7 @@ export const CORE_APP_PROVIDERS = ["github", "slack", "gmail", "outlook", "googl
 export const APP_PROVIDERS = [...CORE_APP_PROVIDERS, ...EXTRA_PROVIDER_IDS] as const;
 export type AppProvider = typeof APP_PROVIDERS[number];
 export type AppPermission = "read" | "write";
-export type AppEnv = { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string; APP_VERCEL_INTEGRATION_SLUG?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
+export type AppEnv = { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; DASHBOARD_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string; APP_VERCEL_INTEGRATION_SLUG?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
 export class AppError extends Error {
   constructor(public code: string, public status = 400) { super(code); }
 }

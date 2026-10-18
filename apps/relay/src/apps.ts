@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSessionUser, randomToken, sha256Hex, type OAuthIdentity } from "./auth.js";
 import { isMcpPaused } from "./security.js";
+import { isTrustedDashboardMutation } from "./dashboard-origin.js";
 import { consumeToolCall } from "./usage.js";
 import { APP_CATALOG, APP_OPERATIONS, AppError, appOperation, appScopes, credentials, permissionSchema, providerSchema, type AppEnv, type AppPermission, type AppProvider, type AppOperation } from "./app-catalog.js";
 import { appConfigured, connectionContext, connectionSettingsSchema, checkShopifyCallback, normalizeScope } from "./app-auth-adapters.js";
@@ -17,7 +18,7 @@ const tokenContext = (row: Pick<Connection, "id" | "user_id" | "provider">) => `
 const callContext = (userId: string, id: string, kind: string) => `app-call:${userId}:${id}:${kind}`;
 function enabled(env: AppEnv) { if (env.ENABLE_APPS !== "1") throw new AppError("apps_not_enabled", 503); }
 function sameOrigin(request: Request, env: AppEnv) {
-  if (request.headers.get("origin") !== new URL(env.APP_ORIGIN || env.PUBLIC_ORIGIN).origin || new URL(request.url).origin !== new URL(env.APP_ORIGIN || env.PUBLIC_ORIGIN).origin) throw new AppError("same_origin_required", 403);
+  if (!isTrustedDashboardMutation(request, env)) throw new AppError("same_origin_required", 403);
   if (["POST", "PATCH"].includes(request.method) && request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") throw new AppError("json_required", 415);
 }
 const cleanConnection = (row: Connection) => ({ id: row.id, provider: row.provider, accountLabel: row.account_label, status: row.status, permissions: JSON.parse(row.permissions_json), scopes: JSON.parse(row.scopes_json), expiresAt: row.expires_at, lastError: row.last_error, updatedAt: row.updated_at, dailyCallLimit: row.daily_call_limit, settings: JSON.parse(row.connection_metadata_json || "{}") });
@@ -93,7 +94,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   const tokens = await exchangeTokens(env, provider, { code, verifier, context }, fetcher);
   const account = await providerIdentity(provider, tokens, fetcher, env);
   await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);
-  return new Response(null, { status: 303, headers: { location: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps?connected=" + provider, "cache-control": "no-store" } });
+  return new Response(null, { status: 303, headers: { location: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps?connected=" + provider, "cache-control": "no-store" } });
 }
 async function accessToken(env: AppEnv, row: Connection, fetcher: typeof fetch): Promise<AppTokens> {
   const tokens = await unseal<AppTokens>(env, row.token_ciphertext!, tokenContext(row));
@@ -160,7 +161,7 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
   if (!call) throw new AppError("app_call_unavailable", 503);
   if (call.input_hash !== hash) throw new AppError("app_request_id_conflict", 409);
   if (call.status === "succeeded") return { status: "succeeded", callId: call.id, replayed: true, untrustedData: true, result: await unseal(env, call.result_ciphertext!, callContext(identity.userId, call.id, "result")) };
-  if (call.status !== "approved") return { status: call.status, callId: call.id, error: call.error_code, approvalUrl: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps#approvals", retryAutomatically: false };
+  if (call.status !== "approved") return { status: call.status, callId: call.id, error: call.error_code, approvalUrl: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps#approvals", retryAutomatically: false };
   if (call.connection_generation !== row.generation || call.expires_at <= now()) throw new AppError("app_approval_expired_or_connection_changed", 409);
   // A single CAS owns execution. Neither retries nor concurrent clients repeat a write.
   const claimed = await env.DB.prepare("UPDATE app_calls SET status='running',updated_at=?1 WHERE id=?2 AND user_id=?3 AND status='approved' AND expires_at>?1 AND EXISTS(SELECT 1 FROM app_connections WHERE id=?4 AND user_id=?3 AND generation=?5 AND status='active') RETURNING id").bind(now(), call.id, identity.userId, row.id, row.generation).first();

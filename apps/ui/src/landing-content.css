@@ -2,7 +2,7 @@
 .platformCapabilities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:38px}
 .platformCapabilities article{display:flex;flex-direction:column;min-width:0;padding:28px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
 .platformCapabilityIndex{font-size:12px;letter-spacing:.09em;color:var(--accent);font-weight:700}
-.platformCapabilities h3{font-size:23px;line-height:1.3;letter-spacing:-.025em;margin:24px 0 14px}
+.platformCapabilities h3{font-size:23px;font-weight:550;line-height:1.3;letter-spacing:-.025em;margin:24px 0 14px}
 .platformCapabilities p{font-size:16px;line-height:1.75;color:var(--landing-muted);margin:0 0 24px}
 .platformCapabilityTags{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:12px}
 .platformCapabilityTags span{font-size:12px;padding:6px 9px;border-radius:6px;border:1px solid var(--line);color:var(--landing-muted)}
@@ -118,11 +118,11 @@
 .permissionLevels code{font-size:12px;letter-spacing:.05em;color:var(--text);margin-top:auto}
 .securityFeatureIntro{margin-top:36px}
 .securityFeatureIntro .eyebrow{color:#168aa9;letter-spacing:.08em;font-size:11px;font-weight:800}
-.securityFeatureIntro h3{margin:8px 0 18px;font-size:clamp(19px,2vw,25px);color:var(--text);letter-spacing:-.025em}
+.securityFeatureIntro h3{font-weight:550;margin:8px 0 18px;font-size:clamp(19px,2vw,25px);color:var(--text);letter-spacing:-.025em}
 .securityFeatureGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .securityFeatureGrid article{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:21px;min-width:0}
 .securityFeatureIcon{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:9px;color:#168aa9;font-weight:800;margin-bottom:13px}
-.securityFeatureGrid h4{font-size:16px;line-height:1.4;margin:0 0 8px;color:var(--text)}
+.securityFeatureGrid h4{font-size:16px;font-weight:550;line-height:1.4;margin:0 0 8px;color:var(--text)}
 .securityFeatureGrid p{color:var(--landing-muted);font-size:14px;line-height:1.65;margin:0}
 .securityPrivacyNote{margin:23px 0 5px;border-left:2px solid var(--line);padding:5px 0 5px 15px;color:var(--landing-muted);font-size:13px;line-height:1.7}
 @media(max-width:700px){.securityFeatureGrid{grid-template-columns:1fr}.securityFeatureGrid article{padding:20px}}
@@ -131,7 +131,7 @@
 .controlDetails p{font-size:16px;line-height:1.7;color:var(--landing-muted);margin:10px 0 0}
 .sectionResourceLinks{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px;font-size:14px;font-weight:650}
 .safetyExample{display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:center;margin-top:48px;padding-top:40px;border-top:1px solid var(--line)}
-.safetyStory h3{font-size:clamp(26px,3vw,34px);letter-spacing:-.035em;line-height:1.2;margin:14px 0 18px;color:var(--text)}
+.safetyStory h3{font-weight:550;font-size:clamp(26px,3vw,34px);letter-spacing:-.035em;line-height:1.2;margin:14px 0 18px;color:var(--text)}
 .safetyStory p{font-size:17px;line-height:1.7;color:var(--landing-muted);margin:0 0 16px}
 .safetyStory p.safetyScope{font-size:14px;line-height:1.7;margin-bottom:0}
 .safetyTerminal{margin:0;border:1px solid #33444f;border-radius:14px;background:#101b24;color:#d7e4eb;overflow:hidden;box-shadow:0 20px 45px rgba(0,0,0,.12)}

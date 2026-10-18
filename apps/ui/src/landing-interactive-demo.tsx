@@ -183,6 +183,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   const [client, setClient] = useState<DemoClient>("ChatGPT");
   const demoRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const chatBodyRef = useRef<HTMLDivElement>(null);
   const events = eventsFor(scenarios[selected]?.id ?? "code", tr);
   const scenario = scenarios[selected] ?? scenarios[0];
   const finished = step >= events.length * 2 + 1;
@@ -212,6 +213,13 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   useEffect(() => {
     if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
   }, [step, selected]);
+
+  // Keep the prepared preview visible inside the mock chat when it completes.
+  useEffect(() => {
+    if (finished && scenario?.id === "video" && chatBodyRef.current) {
+      chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+    }
+  }, [finished, scenario?.id]);
 
   if (!scenario) return null;
 
@@ -291,7 +299,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               </>}
             </header>
 
-            <div className="homeDemoChatBody">
+            <div className="homeDemoChatBody" ref={chatBodyRef}>
               {client === "Cursor" && <div className="homeDemoCursorContext"><DemoGlyph name="sidebar" size={14} /><span>{tr("New chat", "新对话")}</span><span className="homeDemoCursorContextModel">Auto</span></div>}
               <div className="homeDemoUserBubble">{prompt}</div>
 

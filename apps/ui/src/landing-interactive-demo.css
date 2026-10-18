@@ -2,12 +2,12 @@
 .homeDemo{margin-top:32px}
 .homeDemoToolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
 .homeDemoExamples{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.homeDemoExamples button{min-height:39px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:transparent;color:var(--landing-muted);font-size:13px;font-weight:650;cursor:pointer;transition:background .15s,border-color .15s}
+.homeDemoExamples button{min-height:39px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:transparent;color:var(--landing-muted);font-size:13px;font-weight:550;cursor:pointer;transition:background .15s,border-color .15s}
 .homeDemoExamples button:hover{background:var(--panel);color:var(--text)}
 .homeDemoExamples button.active{background:var(--panel);color:var(--text);border-color:#299bb7;box-shadow:inset 0 0 0 1px rgba(41,155,183,.15)}
 .homeDemoClientSwitch{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .homeDemoClientSwitch>span{font-size:11px;letter-spacing:.085em;font-weight:800;color:var(--landing-muted);margin-right:7px}
-.homeDemoClientSwitch button{display:flex;align-items:center;gap:7px;padding:7px 10px;min-height:39px;border:1px solid transparent;background:transparent;border-radius:8px;cursor:pointer;font-weight:650;font-size:12px;color:var(--landing-muted)}
+.homeDemoClientSwitch button{display:flex;align-items:center;gap:7px;padding:7px 10px;min-height:39px;border:1px solid transparent;background:transparent;border-radius:8px;cursor:pointer;font-weight:550;font-size:12px;color:var(--landing-muted)}
 .homeDemoClientSwitch button:hover{background:var(--panel);color:var(--text)}
 .homeDemoClientSwitch button[aria-pressed=true]{border-color:var(--line);background:var(--panel);color:var(--text);box-shadow:0 2px 7px rgba(10,20,33,.055)}
 .homeDemoClientSwitch img{width:17px;height:17px;object-fit:contain}
@@ -130,7 +130,7 @@
 .homeDemoTerminalFooter>span:last-child{font-weight:700;color:#74c6a4}
 .homeDemoUnder{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 25px;margin-top:13px}
 .homeDemoUnder p{margin:0;max-width:730px;font-size:12px;line-height:1.6;color:var(--landing-muted)}
-.homeDemoUnder a{font-size:13px;font-weight:700;color:var(--text);text-decoration:none}
+.homeDemoUnder a{font-size:13px;font-weight:550;color:var(--text);text-decoration:none}
 .homeDemoUnder a:hover{text-decoration:underline}
 .homeDemo button:focus-visible{outline:3px solid #2596b7;outline-offset:3px}
 @keyframes homeDemoFade{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -173,8 +173,9 @@
 /* Provider logos clarify each example tab. */
 .homeDemoExamples button{display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap}
 .homeDemoExampleLogos{display:inline-flex;align-items:center;flex:none}
-.homeDemoExampleLogos img{width:17px;height:17px;object-fit:contain;border-radius:3px}
-.homeDemoExampleLogos img+img{margin-left:-5px;background:var(--panel);border:1px solid var(--line);padding:2px}
+/* White provider tiles maintain contrast for black SVG marks in both themes. */
+.homeDemoExampleLogos img{display:block;box-sizing:border-box;width:26px;height:26px;object-fit:contain;padding:4px;border-radius:7px;background:#fff;border:1px solid #e4e6eb;box-shadow:0 1px 2px #0000000a}
+.homeDemoExampleLogos img+img{margin-left:-5px}
 /* A distinctly labelled sample output card, without implying actual paid generation. */
 .homeDemoRunwayCard{width:min(100%,410px);border:1px solid #e5e5e8;border-radius:13px;overflow:hidden;background:#fff;color:#25252a;box-shadow:0 3px 14px #00000008}
 .homeDemoRunwayVisual{height:165px;position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse 70% 45% at 56% 77%,#75777c 0%,#34363b 40%,transparent 90%),linear-gradient(125deg,#111318,#373a42 55%,#0d0f14)}

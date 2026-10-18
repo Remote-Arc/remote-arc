@@ -81,6 +81,7 @@
 :root[data-theme] .appFrame[data-workspace] .appsManagerCard:hover{transform:none;border-color:color-mix(in srgb,var(--dash-text) 28%,var(--dash-line));box-shadow:none}
 :root[data-theme] .appFrame[data-workspace] .appsManagerCard::before{display:none}
 :root[data-theme] .appFrame[data-workspace] .appsManagerBrand{background:var(--dash-subtle);border-color:var(--dash-line);transform:none;box-shadow:none}
+:root[data-theme] :is(.appFrame[data-workspace],.workspaceSurface) .appsManagerBrand:is([data-brand="github"],[data-brand="notion"],[data-brand="x"],[data-brand="vercel"],[data-brand="runway"]){background:#fff;border-color:#e4e4e7}
 :root[data-theme] .appFrame[data-workspace] .appsManagerSummary{background:var(--dash-surface);border-color:var(--dash-line);border-radius:10px;box-shadow:none}
 :root[data-theme] .appFrame[data-workspace] .appsManagerCategories button{background:transparent;color:var(--dash-muted);border:1px solid var(--dash-line);border-radius:6px;transform:none}
 :root[data-theme] .appFrame[data-workspace] .appsManagerCategories button[aria-pressed="true"]{background:var(--dash-accent-soft)!important;border-color:var(--dash-line)!important;color:var(--dash-text)!important;box-shadow:none}

@@ -73,3 +73,28 @@
 @media(max-width:820px){.arcWorkGrid{grid-template-columns:1fr}.arcWorkPage>.overviewTopbar{align-items:flex-start;gap:17px}.arcToolEvent,.arcRunProgress{margin-left:0}.arcChatError,.arcChatServiceNotice{width:calc(100% - 28px)}.arcWorkSectionHeader>span{display:none}.arcWorkToolbar{gap:12px;margin-bottom:20px}.arcWorkToolbar>div{width:100%}.arcWorkToolbar>div>button{flex:1}.arcWorkCard{padding:18px}.arcWorkRun{gap:9px}.arcWorkRun>svg:last-child{display:none}.arcModelSelect{max-width:160px}.arcModelSelect select{max-width:100px}.appFrame .arcChatIdeas .arcChatIdea{min-height:96px}.appFrame .arcChatWelcome{padding-top:20px}.arcChatWelcomeEyebrow{margin-bottom:12px}}
 @media(max-width:380px){.arcChatTools{gap:4px}.arcModelSelect{padding:0 5px}.appFrame .arcChatTools button{padding:5px}.appFrame .arcChatIdeaArrow{display:none}.arcWorkStatus{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.appFrame .arcRadiantCta:after,.arcThinkingDots i{animation:none}.appFrame .arcRadiantCta,.appFrame .arcChatIdea,.arcChatIdeaArrow,.arcWorkCard{transition:none}.appFrame .arcRadiantCta:hover,.appFrame .arcChatIdea:hover{transform:none}}
+
+/* Account navigation: fixed icon/label/external-arrow columns. */
+:root[data-theme] .appFrame[data-workspace]:not([data-sidebar-collapsed=true]) .sidebarGlobalNavigation :is(button,a) {
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr) 16px;
+  align-items:center;
+  justify-content:initial;
+  gap:10px;
+}
+:root[data-theme] .appFrame[data-workspace]:not([data-sidebar-collapsed=true]) .sidebarGlobalNavigation :is(button,a) > .sideNavIcon {
+  width:30px!important;height:30px;margin-left:0;justify-self:center;
+}
+:root[data-theme] .appFrame[data-workspace]:not([data-sidebar-collapsed=true]) .sidebarGlobalNavigation :is(button,a) > .sideNavLabel {
+  margin-left:0;min-width:0;width:auto!important;line-height:1.45;overflow-wrap:break-word;
+}
+:root[data-theme] .appFrame[data-workspace]:not([data-sidebar-collapsed=true]) .sidebarGlobalNavigation a > svg {
+  grid-column:3;justify-self:end;
+}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusCard .overviewManageLink {
+  position:relative;display:flex;align-items:center;justify-content:center;width:100%;
+  min-height:46px;margin-top:auto;padding:10px 34px;text-align:center;font-weight:550;
+}
+:root[data-theme] .appFrame[data-workspace] .overviewStatusCard .overviewManageLink svg {
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+}

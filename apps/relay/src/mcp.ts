@@ -17,6 +17,7 @@ const plannedGoalSchema = z.object({ planning_mode: z.enum(["fixed", "guided", "
   recovery_policy: z.object({ same_failure_limit: z.number().int().min(1).max(20).optional(), no_progress_iteration_limit: z.number().int().min(1).max(100).optional(), max_strategy_retries: z.number().int().min(0).max(10).optional(), on_stuck: z.literal("replan").optional(), on_repeated_failure: z.literal("rollback_and_switch").optional(), on_blocked: z.literal("park_and_continue").optional() }).optional(),
   continuation: z.object({ mode: z.enum(["none", "highest_value_safe_work"]) }).optional() });
 import { getDevicesForUser } from "./device.js";
+import { selectFleetDevice } from "./fleet-scheduler.js";
 import { DEFAULT_MCP_SCOPES } from "./oauth.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
@@ -311,6 +312,45 @@ export function createRemoteLinkMcp(
         const device = devices.find((item) => item.id === device_id);
         if (!device) throw new Error("device not found");
         return textResult(device.tools || []);
+      },
+    );
+
+    // Account-level skill: route a one-off operation across authorized devices.
+    // The caller supplies task requirements, not a device. The chosen device is
+    // returned to keep follow-up process operations explicitly pinned.
+    registerMcpTool(server,
+      "fleet_dispatch",
+      {
+        title: "Smart Device Fleet dispatch",
+        description:
+          "Run a one-off operation on an eligible, least-busy device in this account. Automatically considers online status, tool permissions, platform, workspace and running tasks; no device selection needed. Use platform for OS-specific shell commands. Never moves an existing process or copies files between computers. Follow-up process operations use the returned device_id.",
+        inputSchema: z.discriminatedUnion("tool", [
+          z.object({ tool: z.literal("start_process"), command: z.string().min(1).max(4000), cwd: z.string().max(500).optional(), timeout_ms: z.number().int().min(1).max(120000).optional(), background: z.boolean().optional(), platform: z.enum(["win32", "darwin", "linux"]).optional() }),
+          z.object({ tool: z.literal("read_file"), path: z.string().min(1).max(1000), offset: z.number().int().min(0).optional(), length: z.number().int().min(1).max(200000).optional(), platform: z.enum(["win32", "darwin", "linux"]).optional() }),
+          z.object({ tool: z.literal("get_file_info"), path: z.string().min(1).max(1000), platform: z.enum(["win32", "darwin", "linux"]).optional() }),
+          z.object({ tool: z.literal("list_directory"), path: z.string().min(1).max(1000), depth: z.number().int().min(1).max(6).optional(), platform: z.enum(["win32", "darwin", "linux"]).optional() }),
+        ]),
+        annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
+        _meta: oauthToolMeta(["devices:read", "computer:read", "computer:write"]),
+      },
+      async (input) => {
+        if (!identity || !hasScope(identity, "devices:read") ||
+          !hasScope(identity, input.tool === "start_process" ? "computer:write" : "computer:read")) {
+          return authRequired(env, input.tool === "start_process"
+            ? ["devices:read", "computer:write"]
+            : ["devices:read", "computer:read"], identity);
+        }
+        const usageError = await consume(env, identity);
+        if (usageError) return usageError;
+        const { tool, platform, ...args } = input;
+        const target = "path" in input ? input.path : input.cwd;
+        const selected = await selectFleetDevice(env, identity.userId, {
+          requiredTools: [tool],
+          ...(target ? { workspace: target } : {}),
+          ...(platform ? { platform } : {}),
+        });
+        const result = await callDevice(env, identity, selected.device_id, tool, args);
+        return textResult({ selected_device: selected, result });
       },
     );
 
@@ -952,7 +992,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a persistent Remote Arc automation",
         description:
-          "Save user-requested ongoing or scheduled deterministic work as a durable task; the user can ask in chat and need not fill a Dashboard form. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval schedules and fixed verification loops. This tool does not keep an AI reasoning loop alive after the creating chat ends.",
+          "Save user-requested ongoing or scheduled deterministic work as a durable task. Omit device_id to let the account-level Fleet Scheduler select an authorized, eligible, less-busy device automatically; specify device_id only for explicit device pinning. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval schedules and fixed verification loops. This tool does not keep an AI reasoning loop alive after the creating chat ends.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           kind: z.enum([
@@ -963,6 +1003,7 @@ export function createRemoteLinkMcp(
           ]),
           keep_awake: z.boolean().default(false),
           device_id: z.string().optional(),
+          platform: z.enum(["win32", "darwin", "linux"]).optional(),
           command: z.string().max(4000).optional(),
           cwd: z.string().max(500).optional(),
           steps: z
@@ -1076,11 +1117,12 @@ export function createRemoteLinkMcp(
       {
         title: "Create a self-directed durable Agent Goal",
         description:
-          "Create user-requested ongoing work directly from the current AI chat; no Dashboard form is required. For reasoning in this conversation, explicitly select controller=source; hosted remains the legacy default, never a source fallback. Return the saved automation.id and dashboard_url to the chat and retain that ID for get_goal_context/submit_goal_decision on later turns. Use task_version=1 for the unified goal contract: select controller explicitly, use trigger now/at/interval/event, and receive a bounded plan (default 24 hours, 720 turns). Optional plan customizes phases/dependencies, time/reserve, green-only checks and recovery. Omit task_version to preserve legacy defaults (30 turns and optional plan). Saved deterministic slices continue without the chat stream; new reasoning waits for the selected controller or host wakeup. Green-only work uses owned Git worktrees and needs updated remotelink; review accepted work before applying it. Device policy, evidence and agent:write scope apply.",
+          "Create user-requested ongoing work directly from the current AI chat; no Dashboard form is required. Omit device_id for automatic account-level Fleet Scheduler placement, unless the task requires a particular device. For reasoning in this conversation, explicitly select controller=source; hosted remains the legacy default, never a source fallback. Return the saved automation.id and dashboard_url to the chat and retain that ID for get_goal_context/submit_goal_decision on later turns. Use task_version=1 for the unified goal contract: select controller explicitly, use trigger now/at/interval/event, and receive a bounded plan (default 24 hours, 720 turns). Optional plan customizes phases/dependencies, time/reserve, green-only checks and recovery. Omit task_version to preserve legacy defaults (30 turns and optional plan). Saved deterministic slices continue without the chat stream; new reasoning waits for the selected controller or host wakeup. Green-only work uses owned Git worktrees and needs updated remotelink; review accepted work before applying it. Device policy, evidence and agent:write scope apply.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           keep_awake: z.boolean().default(false),
-          device_id: z.string(),
+          device_id: z.string().optional(),
+          platform: z.enum(["win32", "darwin", "linux"]).optional(),
           objective: z.string().min(1).max(6000),
           task_version: z.literal(1).optional(),
           trigger: z.object({ type: z.enum(["now", "at", "interval", "event"]), at: z.string().optional(), every_seconds: z.number().int().min(60).max(2592000).optional(), source: z.enum(["github", "generic"]).optional(), event: z.string().optional(), match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional() }).optional(),
@@ -1138,6 +1180,7 @@ export function createRemoteLinkMcp(
           keep_awake: input.keep_awake,
           kind: "agent_goal" as const,
           device_id: input.device_id,
+          platform: input.platform,
           interval_seconds: input.interval_seconds,
           expires_at: input.expires_at,
           schedule: input.schedule,
@@ -1157,7 +1200,7 @@ export function createRemoteLinkMcp(
           },
         };
         const taskContract: TaskContract | undefined = input.task_version === 1 ? {
-          version: 1, intent: "goal", name: input.name, device_id: input.device_id,
+          version: 1, intent: "goal", name: input.name, device_id: input.device_id, platform: input.platform,
           trigger: input.trigger || { type: "now" }, goal: legacyInput.agent_goal,
           limits: { expires_at: input.expires_at, max_runs: input.max_runs, check_interval_seconds: input.interval_seconds },
           keep_awake: input.keep_awake,

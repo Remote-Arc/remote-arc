@@ -1,4 +1,5 @@
 import { requireTaskPermission } from "./device-task-policy.js";
+import { selectFleetDevice } from "./fleet-scheduler.js";
 import { isPlanUpgradeRequiredError, requireEntitledFeatures, requireFeatures, type AccountFeature, type PlanEntitlements } from "./entitlements.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import {
@@ -201,6 +202,7 @@ export type CreateAutomationInput = {
   name?: string;
   kind?: AutomationCreateKind;
   device_id?: string;
+  platform?: "win32" | "darwin" | "linux";
   command?: string;
   cwd?: string;
   steps?: Array<{ command?: string; cwd?: string }>;
@@ -711,7 +713,26 @@ export async function createAutomation(
   if (input.keep_awake) action.keep_awake = true;
   const cloudOnly = action.steps.length > 0 &&
     action.steps.every((step) => step.type === "github_merge_pr");
-  const deviceId = (input.device_id || "").trim();
+  let deviceId = (input.device_id || "").trim();
+  if (!deviceId && !cloudOnly) {
+    const paths = [input.cwd, input.goal?.cwd, input.agent_goal?.workspace,
+      input.agent_goal?.verify_cwd, ...(input.steps || []).map((step) => step.cwd)]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+    const requiredTools = requestedKind === "agent_goal"
+      ? input.agent_goal?.allowed_tools || []
+      : ["start_process", "process_status", "process_output", "stop_process"];
+    const selected = await selectFleetDevice(env, userId, {
+      requiredTools,
+      workspaces: paths,
+      ...(input.platform ? { platform: input.platform } : {}),
+      automation: true,
+      kind: requestedKind,
+      controller: input.agent_goal?.controller,
+      scheduled: Boolean(input.schedule),
+      keepAwake: Boolean(input.keep_awake),
+    });
+    deviceId = selected.device_id;
+  }
 
   let policy: DevicePolicySnapshot | null = null;
   if (!cloudOnly || requestedKind === "agent_goal") {

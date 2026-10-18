@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 export async function verifyProduction({
   sha, version, installer, providers, fetcher = fetch,
-  marketing = "https://remotearc.app", app = "https://mcp.remotearc.app",
+  marketing = "https://remotearc.app", app = "https://mcp.remotearc.app", dashboard = "https://agent.remotearc.app",
 }) {
   const checks = [];
   const read = async (url, expected = 200) => {
@@ -33,14 +33,32 @@ export async function verifyProduction({
   if (!(shell.headers.get("content-type") || "").includes("text/x-shellscript") || !shellText.startsWith("#!/bin/sh\n")) throw new Error("Native installer returned HTML or invalid shell content.");
   const digest = value => createHash("sha256").update(value).digest("hex");
   if (digest(shellText) !== digest(installer)) throw new Error("Published installer differs from this release.");
+  // Existing MCP/OAuth clients retain their issuer, resources and device host.
+  const oauth = await (await read(app + "/.well-known/oauth-authorization-server")).json();
+  if (oauth.issuer !== app || oauth.authorization_endpoint !== app + "/oauth/authorize" ||
+      oauth.token_endpoint !== app + "/oauth/token")
+    throw new Error("MCP OAuth issuer changed during dashboard migration.");
+  await read(dashboard + "/mcp", 404);
+  await read(dashboard + "/oauth/authorize", 404);
   const status = await (await read(app + "/api/apps/status")).json();
   if (typeof status.enabled !== "boolean" || !Array.isArray(status.providers)) throw new Error("Malformed Apps readiness response.");
   const ids = status.providers.map(item => item.provider).sort();
   if (JSON.stringify(ids) !== JSON.stringify([...providers].sort()) || status.providers.some(item => typeof item.ready !== "boolean")) throw new Error("Apps readiness catalog differs from this release.");
   // Configuration readiness is deliberately separate from a successful real-account OAuth session.
-  const signedOut = await read(app + "/apps?category=docs_files", 302);
-  const login = new URL(signedOut.headers.get("location") || "", app);
-  if (login.origin !== app || login.pathname !== "/auth/login" || login.searchParams.get("return_to") !== "/apps?category=docs_files") throw new Error("Signed-out Apps does not preserve its login destination.");
+  const legacy = await read(app + "/apps?category=docs_files", 302);
+  if (legacy.headers.get("location") !== dashboard + "/apps?category=docs_files")
+    throw new Error("Legacy dashboard did not redirect to the new host.");
+  const signedOut = await read(dashboard + "/apps?category=docs_files", 302);
+  const login = new URL(signedOut.headers.get("location") || "", dashboard);
+  if (login.origin !== dashboard || login.pathname !== "/auth/login" ||
+      login.searchParams.get("return_to") !== "/apps?category=docs_files")
+    throw new Error("Signed-out Apps does not preserve its login destination.");
+  const agentHome = await read(dashboard + "/overview");
+  if (!(agentHome.headers.get("content-type") || "").includes("text/html"))
+    throw new Error("Agent dashboard HTML unavailable.");
+  const legacySettings = await read(app + "/settings", 302);
+  if (legacySettings.headers.get("location") !== dashboard + "/settings")
+    throw new Error("Legacy settings canonical redirect failed.");
   await read(marketing + "/docs/unknown-release-check", 404);
   return {checks,configuredProviders:status.providers.filter(item=>item.ready).length,providerCount:providers.length,deployment:health.deployment || null};
 }

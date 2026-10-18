@@ -396,7 +396,7 @@ export async function getDevicesForUser(
     background_pid?: number | null;
     background_agent_version?: string | null;
     background_connected_at?: string | null;
-    capacity?: { observedAt: string; memoryTotalMB: number; memoryAvailableMB: number; cpuPercent?: number } | null;
+    capacity?: { observedAt: string; memoryTotalMB: number; memoryAvailableMB: number; cpuPercent?: number; managedProcesses?: number } | null;
   };
 
   const registryRequest = () =>

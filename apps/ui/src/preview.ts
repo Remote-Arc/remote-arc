@@ -1,4 +1,5 @@
 import type { SecurityState } from "@remotearc/protocol";
+import appDirectory from "./app-directory.json" with { type: "json" };
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
@@ -252,6 +253,14 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     }
 
     if (url.pathname === "/api/approvals") return json([]);
+
+    // Preview-only Apps catalog: displays real operation metadata without credentials or writes.
+    if (url.pathname === "/api/apps") return json({
+      enabled: true,
+      apps: appDirectory.apps.map((app) => ({ ...app, configured: true, permissions: { read: [], write: [] } })),
+      connections: [],
+    });
+    if (url.pathname === "/api/apps/approvals") return json({ approvals: [] });
 
     if (url.pathname === "/api/security") {
       return json({

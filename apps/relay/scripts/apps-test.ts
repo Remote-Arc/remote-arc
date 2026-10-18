@@ -51,6 +51,7 @@ const fetcher:typeof fetch=async(url,init={})=>{
   if(href.endsWith("/users/me/profile")) return json({emailAddress:"tester@example.invalid"});
   if(href.endsWith("/calendarList/primary")) return json({id:"tester@example.invalid"});
   if(href.includes("graph.microsoft.com/v1.0/me?$select")) return json({id:"ms-user",mail:"tester@example.invalid"});
+  if(href.includes("conversations.history")) return json({ok:true,messages:[{ts:"1700000000.000001",text:"Review "+version,user:"U1"}]});
   if(href.includes("conversations.info")) return json({ok:true,channel:{id:"C1",name:"approved-"+version,is_private:false,is_archived:false}});
   if(method==="GET"&&href.includes("/events/")) return json({id:"event-1",etag:'"'+version+'"',summary:"Review meeting",start:{dateTime:future},end:{dateTime:future},attendees:[]});
   if(failWrites&&method!=="GET") throw new Error("provider detail must not escape");
@@ -82,7 +83,7 @@ await deny(()=>unseal(env,'{"v":2}',"owner"),"app_vault_unavailable");
 await deny(()=>unseal({...env,APP_TOKEN_KEY:"wrong"},cipher,"owner"),"app_vault_unavailable");
 
 const connections=new Map<AppProvider,string>();
-async function connect(provider:AppProvider,permissions=["read","write"]) {
+async function connect(provider:AppProvider,permissions:string[]|undefined=undefined) {
   activeProvider=provider;
   const start=await api("/api/apps/authorize","POST",{provider,permissions});
   assert.equal(start.status,200);
@@ -90,7 +91,7 @@ async function connect(provider:AppProvider,permissions=["read","write"]) {
   assert.equal(location.searchParams.get("redirect_uri"),callbackUrl(env,provider));
   assert.equal(location.searchParams.get("code_challenge_method"),APP_CATALOG[provider].pkce?"S256":null);
   assert.equal(location.searchParams.get("client_secret"),null);
-  assert.equal(location.searchParams.get(provider==="slack"?"user_scope":"scope"),appScopes(provider,permissions as any).join(provider==="slack"?",":" "));
+  assert.equal(location.searchParams.get(provider==="slack"?"user_scope":"scope"),appScopes(provider,(permissions||["read","write"]) as any).join(provider==="slack"?",":" "));
   const state=location.searchParams.get("state")!;
   const callback="/api/apps/oauth/"+provider+"/callback?state="+state+"&code=test-code";
   assert.equal((await api(callback,"GET",undefined,"two")).status,400,"another user cannot consume this state");
@@ -98,6 +99,7 @@ async function connect(provider:AppProvider,permissions=["read","write"]) {
   assert.equal((await api(callback)).status,400,"state is single-use");
   const rows=(await listApps(env,"one")).connections;
   const row=rows.find(r=>r.provider===provider)!; assert(row);
+  assert.deepEqual(row.permissions,permissions||["read","write"]);
   connections.set(provider,row.id);
   return row.id;
 }
@@ -220,10 +222,72 @@ await deny(()=>providerJson("https://allowed.invalid",{},async()=>new Response("
 await deny(()=>providerJson("https://allowed.invalid",{},async()=>new Response(null,{status:302,headers:{location:"https://evil.invalid"}})),"app_provider_failed");
 assert.deepEqual(await providerJson("https://allowed.invalid",{},async(_,init)=>{assert.equal(init?.redirect,"manual");return new Response(null,{status:204});}),{});
 
+const slackArgs=(name:string):Record<string,unknown>=>{
+ const channel={channel:"C1"},ts="1700000000.000001",paged={cursor:"next"};
+ switch(name){
+  case "auth.test":case "team.info":case "emoji.list":return {};
+  case "channels.list":case "users.list":return paged;
+  case "channels.get":case "pins.list":return channel;
+  case "channels.members":case "messages.list":return {...channel,...paged};
+  case "messages.get":case "threads.replies":case "messages.delete":return {...channel,ts};
+  case "messages.permalink":return {...channel,message_ts:ts};
+  case "search":case "search.files":return {query:"approved"};
+  case "users.get":return {user:"U1"};
+  case "users.lookup":return {email:"member@example.invalid"};
+  case "reactions.get":case "pins.add":case "pins.remove":return {...channel,timestamp:ts};
+  case "reactions.list":return {...paged,user:"U1"};
+  case "bookmarks.list":return {channel_id:"C1"};
+  case "files.list":return {channel:"C1",user:"U1"};
+  case "files.get":return {file:"F1"};
+  case "scheduled.list":return {...channel,...paged};
+  case "messages.send":return {...channel,text:"approved",thread_ts:ts};
+  case "messages.update":return {...channel,ts,text:"approved"};
+  case "messages.schedule":return {...channel,text:"approved",post_at:Math.floor(Date.now()/1000)+3600};
+  case "scheduled.delete":return {...channel,scheduled_message_id:"Q1"};
+  case "reactions.add":case "reactions.remove":return {...channel,timestamp:ts,name:"thumbsup"};
+  case "bookmarks.add":return {channel_id:"C1",title:"Project",link:"https://example.invalid/project"};
+  default:throw Error("Missing Slack fixture: "+name);
+ }
+};
+for(const operation of APP_OPERATIONS.filter(o=>o.provider==="slack")) {
+ const request=input("slack",operation.name,slackArgs(operation.name)),before=requests.length;
+ const first=await callApp(env,identity,request,fetcher);
+ if(operation.permission==="write"){
+  assert.equal(first.status,"pending_approval",operation.name);
+  assert(requests.slice(before).every(r=>r.method==="GET"),"only target reads before approval");
+  await api("/api/apps/approvals/"+first.callId,"POST",{approve:true});
+  const prior=requests.length;
+  const results=await Promise.all(Array.from({length:4},()=>callApp(env,identity,request,fetcher)));
+  assert(results.some(r=>r.status==="succeeded"),operation.name);
+  const dispatched=requests.slice(prior).filter(r=>r.method==="POST");
+  assert.equal(dispatched.length,1,"one approved Slack mutation");
+  assert.equal(new URL(dispatched[0]!.url).origin,"https://slack.com");
+ }else assert.equal(first.status,"succeeded",operation.name);
+ const after=requests.length;
+ assert.equal((await callApp(env,identity,request,fetcher)).replayed,true);
+ assert.equal(requests.length,after,"no replayed Slack request is sent twice");
+}
+assert.equal(APP_OPERATIONS.filter(o=>o.provider==="slack").length,32);
+const changedMessage=input("slack","messages.delete",{channel:"C1",ts:"1700000000.000001"});
+const changedPending=await callApp(env,identity,changedMessage,fetcher);
+await api("/api/apps/approvals/"+changedPending.callId,"POST",{approve:true});
+version="v3";
+await deny(()=>callApp(env,identity,changedMessage,fetcher),"app_review_changed");
+const dmReview=await loadAppReview("slack","messages.send",{channel:"D1"},reviewTokens,async()=>json({ok:true,channel:{id:"D1",user:"U2",is_im:true}}));
+assert.equal(dmReview?.target.name,"U2");
+await deny(()=>loadAppReview("slack","messages.delete",{channel:"C1",ts:"1700000000.000001"},reviewTokens,async()=>json({ok:true,messages:[]})),"app_review_unavailable");
+assert.throws(()=>appOperation("slack","bookmarks.add").schema.parse({channel_id:"C1",title:"Bad",link:"https://user:password@example.invalid"}));
+assert.throws(()=>appOperation("slack","messages.delete").schema.parse({channel:"C1",ts:"invalid"}));
+// Newly added scopes must not disable older already-authorized operations.
+sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(JSON.stringify(["channels:read","channels:history","search:read","chat:write"]),connections.get("slack")!);
+assert.equal((await callApp(env,identity,input("slack","messages.list",{channel:"C1"}),fetcher)).status,"succeeded");
+await deny(()=>callApp(env,identity,input("slack","users.list",{}),fetcher),"app_scope_required");
+await connect("slack");
+
 for(const operation of APP_OPERATIONS.filter(op=>APP_PROVIDERS.includes(op.provider as any))) {
   let args:Record<string,unknown>={};
   if(operation.provider==="github") args=operation.name==="repositories.list"?{}:operation.name==="contents.read"?{repo:"owner/repo",path:"src/a.ts",ref:"main"}:operation.name==="issues.create"?{repo:"owner/repo",title:"Review",body:"Issue"}:{repo:"owner/repo"};
-  else if(operation.provider==="slack") args=operation.name==="channels.list"?{cursor:"next"}:operation.name==="search"?{query:"approved"}:operation.name==="messages.send"?{channel:"C1",text:"approved"}:{channel:"C1"};
+  else if(operation.provider==="slack") args=slackArgs(operation.name);
   else if(operation.provider==="gmail"||operation.provider==="outlook") args=["drafts.create","messages.send"].includes(operation.name)?payload:operation.name==="messages.list"?{query:"approved",...(operation.provider==="gmail"?{pageToken:"next"}:{})}:operation.name==="messages.modify"?{id:"m",addLabelIds:["STARRED"],removeLabelIds:[]}:{id:"m"};
   else args=operation.name==="calendars.list"?{}:operation.name==="events.list"?{calendar:"primary",after:event.start,before:event.end}:operation.name==="events.create"?{calendar:"primary",event}:operation.name==="events.update"?{calendar:"other",id:"e",event}:{calendar:"other",id:"e"};
   const plan=operation.request(operation.schema.parse(args));

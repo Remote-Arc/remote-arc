@@ -106,8 +106,8 @@ export function registrationPack(value: string) {
       providerDailyLimitEnv: "APP_DAILY_PROVIDER_LIMIT",
       vaultSecretName: "APP_TOKEN_KEY",
       vaultFormat: "Base64 encoding of 32 cryptographically random bytes; keep the same key while existing encrypted connections remain.",
-      requestedPermissions: "Default read-only. Users explicitly choose write access; each external write also requires approval of its exact payload.",
-      note: "Registration declares the available scopes. Per-user authorization only requests the permission set selected by that user.",
+      requestedPermissions: "Connecting authorizes all implemented read and write tools by default; each external write still requires approval of its exact payload.",
+      note: "Registration declares the available scopes. Per-user authorization requests the complete declared scope set. Existing connections need renewed provider consent for newly added scopes.",
     },
   };
 }

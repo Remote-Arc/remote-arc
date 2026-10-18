@@ -107,21 +107,41 @@
       "brand": "slack",
       "category": "communication",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 32,
       "operations": [
         {
           "name": "channels.list",
-          "description": "List public channels",
+          "description": "List accessible channels and direct messages",
           "permission": "read"
         },
         {
           "name": "channels.get",
-          "description": "Inspect a channel before approving a message",
+          "description": "Inspect a channel or direct message",
+          "permission": "read"
+        },
+        {
+          "name": "channels.members",
+          "description": "List members of a conversation",
           "permission": "read"
         },
         {
           "name": "messages.list",
-          "description": "Read channel messages",
+          "description": "Read conversation history (up to 15 messages)",
+          "permission": "read"
+        },
+        {
+          "name": "messages.get",
+          "description": "Read one exact message for review",
+          "permission": "read"
+        },
+        {
+          "name": "threads.replies",
+          "description": "Read a message thread (up to 15 messages)",
+          "permission": "read"
+        },
+        {
+          "name": "messages.permalink",
+          "description": "Get a permanent link to a message",
           "permission": "read"
         },
         {
@@ -130,8 +150,123 @@
           "permission": "read"
         },
         {
+          "name": "search.files",
+          "description": "Search workspace files",
+          "permission": "read"
+        },
+        {
+          "name": "auth.test",
+          "description": "Check the connected Slack account",
+          "permission": "read"
+        },
+        {
+          "name": "team.info",
+          "description": "Read workspace details",
+          "permission": "read"
+        },
+        {
+          "name": "users.list",
+          "description": "List workspace members",
+          "permission": "read"
+        },
+        {
+          "name": "users.get",
+          "description": "Read a workspace member profile",
+          "permission": "read"
+        },
+        {
+          "name": "users.lookup",
+          "description": "Find a workspace member by email",
+          "permission": "read"
+        },
+        {
+          "name": "emoji.list",
+          "description": "List workspace custom emoji",
+          "permission": "read"
+        },
+        {
+          "name": "reactions.get",
+          "description": "Read reactions on a message",
+          "permission": "read"
+        },
+        {
+          "name": "reactions.list",
+          "description": "List a member's reactions",
+          "permission": "read"
+        },
+        {
+          "name": "pins.list",
+          "description": "List pinned items in a conversation",
+          "permission": "read"
+        },
+        {
+          "name": "bookmarks.list",
+          "description": "List bookmarks in a conversation",
+          "permission": "read"
+        },
+        {
+          "name": "files.list",
+          "description": "List accessible workspace files",
+          "permission": "read"
+        },
+        {
+          "name": "files.get",
+          "description": "Read file details and sharing metadata",
+          "permission": "read"
+        },
+        {
+          "name": "scheduled.list",
+          "description": "List messages scheduled by this connection",
+          "permission": "read"
+        },
+        {
           "name": "messages.send",
-          "description": "Send a channel message",
+          "description": "Send a message or reply to a thread",
+          "permission": "write"
+        },
+        {
+          "name": "messages.update",
+          "description": "Edit your own message",
+          "permission": "write"
+        },
+        {
+          "name": "messages.delete",
+          "description": "Delete your own exact message",
+          "permission": "write"
+        },
+        {
+          "name": "messages.schedule",
+          "description": "Schedule a message for later delivery",
+          "permission": "write"
+        },
+        {
+          "name": "scheduled.delete",
+          "description": "Cancel a message scheduled by this connection",
+          "permission": "write"
+        },
+        {
+          "name": "reactions.add",
+          "description": "Add an emoji reaction to a message",
+          "permission": "write"
+        },
+        {
+          "name": "reactions.remove",
+          "description": "Remove your emoji reaction from a message",
+          "permission": "write"
+        },
+        {
+          "name": "pins.add",
+          "description": "Pin an exact message in a conversation",
+          "permission": "write"
+        },
+        {
+          "name": "pins.remove",
+          "description": "Unpin an exact message in a conversation",
+          "permission": "write"
+        },
+        {
+          "name": "bookmarks.add",
+          "description": "Add a link bookmark to a conversation",
           "permission": "write"
         }
       ],

@@ -324,3 +324,12 @@
 .appsManagerProviderNotes {font-size:12px;color:var(--dash-muted);margin:0 0 12px;}
 .appsManagerProviderNotes summary {font-size:12px;font-weight:600;cursor:pointer;}
 .appsManagerProviderNotes p {margin:7px 0 0;line-height:1.55;}
+
+/* Make not-yet-configured integrations useful instead of empty. */
+.appsManagerCard .appsManagerAvailability {
+  font-size:13px;line-height:1.55;color:var(--dash-muted,var(--muted));
+  padding:11px 13px;border:1px solid var(--dash-line,var(--line));
+  border-radius:9px;background:var(--dash-subtle,var(--panel));margin:0 0 16px;min-height:64px;
+}
+.appsManager .appsManagerExploreButton {display:inline-flex;align-items:center;gap:7px;min-height:36px}
+.appsManager .appsManagerExploreButton svg{flex:none}

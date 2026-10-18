@@ -146,3 +146,13 @@
 @media(max-width:700px){:root[data-theme] .publicPage .controlDetails>div{padding:22px}}
 :root[data-theme] .publicPage .publicNavActions :is(.themeSwitch.compact,.languageDropdownTrigger){background:var(--site-surface);color:var(--site-ink);border:1px solid var(--site-line);box-shadow:none}
 :root[data-theme] .publicPage .publicNavActions :is(.themeSwitch.compact,.languageDropdownTrigger):hover{background:var(--site-soft)}
+
+/* Harmonize content-card typography with the marketing heading system. */
+:root[data-theme] .publicPage :is(.unexpectedCard h3,.permissionLevels h3) {
+  font-family:var(--font-product)!important;
+  font-weight:550;
+  letter-spacing:-.035em;
+  line-height:1.35;
+}
+:root[data-theme] .publicPage .unexpectedCard h3 {font-size:clamp(20px,1.65vw,23px)}
+:root[data-theme] .publicPage .permissionLevels h3 {font-size:clamp(20px,1.7vw,23px)}

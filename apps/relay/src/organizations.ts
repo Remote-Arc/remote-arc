@@ -1,6 +1,7 @@
 // Server-authoritative team management. Joining a team never grants access to
 // personal devices, OAuth grants, local filesystem or task execution.
-export type OrganizationEnv = { DB: D1Database; APP_ORIGIN?: string; PUBLIC_ORIGIN: string };
+import { isTrustedDashboardMutation } from "./dashboard-origin.js";
+export type OrganizationEnv = { DB: D1Database; APP_ORIGIN?: string; DASHBOARD_ORIGIN?: string; PUBLIC_ORIGIN: string };
 type Role = "owner" | "admin" | "member";
 type Membership = { role: Role; kind: "team" | "personal"; name: string };
 const fail = (error: string, status = 400) => json({ error }, status);
@@ -46,7 +47,7 @@ export async function handleOrganizations(request: Request, env: OrganizationEnv
   const method = request.method;
   if (method !== "GET") {
     // Session cookies are not an API mutation credential for foreign origins.
-    if (request.headers.get("origin") !== new URL(env.APP_ORIGIN || env.PUBLIC_ORIGIN).origin)
+    if (!isTrustedDashboardMutation(request, env))
       return fail("invalid_origin", 403);
     if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
       return fail("json_required", 415);

@@ -6,8 +6,21 @@ function fetchFixture({deployment=sha,version="0.6.1",badShell=false,badBundle=f
   assert.equal(init.method,"GET"); assert.equal(init.redirect,"manual");assert.equal(init.headers.authorization,undefined);requests.push(url);
   const path=new URL(url).pathname;
   if(path==="/health")return Response.json({ok:true,service:"remotearc-relay",version,deployment});
+  if(path==="/.well-known/oauth-authorization-server")return Response.json({
+    issuer:"https://mcp.remotearc.app",
+    authorization_endpoint:"https://mcp.remotearc.app/oauth/authorize",
+    token_endpoint:"https://mcp.remotearc.app/oauth/token",
+  });
+  if((path==="/mcp" || path==="/oauth/authorize") && new URL(url).hostname==="agent.remotearc.app")
+    return Response.json({error:"protocol_host_required"},{status:404});
   if(path==="/api/apps/status")return Response.json({enabled:true,providers:[{provider:badProviders?"unknown":"runway",ready:true}]});
-  if(path==="/apps")return new Response(null,{status:302,headers:{location:badLogin?"https://evil.example":"https://mcp.remotearc.app/auth/login?return_to=%2Fapps%3Fcategory%3Ddocs_files"}});
+  if(path==="/apps"){
+    return new Response(null,{status:302,headers:{location:
+      new URL(url).hostname==="mcp.remotearc.app"?"https://agent.remotearc.app/apps?category=docs_files":
+      badLogin?"https://evil.example":"https://agent.remotearc.app/auth/login?return_to=%2Fapps%3Fcategory%3Ddocs_files"}});
+  }
+  if(path==="/settings" && new URL(url).hostname==="mcp.remotearc.app")
+    return new Response(null,{status:302,headers:{location:"https://agent.remotearc.app/settings"}});
   if(path==="/install.sh")return new Response(badShell?"<html>wrong</html>":installer,{headers:{"content-type":badShell?"text/html":"text/x-shellscript"}});
   if(path.startsWith("/assets/"))return new Response("console.log('loaded')",{headers:{"content-type":badBundle?"text/html":"application/javascript"}});
   if(path==="/docs/unknown-release-check")return new Response("not found",{status:404});
@@ -29,5 +42,5 @@ const retry=await verifyWithRetry({...options,fetcher:async(...args)=>{if(++call
  {attempts:2,wait:async()=>{waits++;},log:()=>{}});
 assert.equal(retry.deployment,sha);assert.equal(waits,1);
 await assert.rejects(verifyWithRetry({...options,fetcher:fetchFixture({deployment:"b".repeat(40)})},{attempts:2,wait:async()=>{},log:()=>{}}),/deployment SHA/);
-assert(requests.every(url=>!url.includes("/oauth/")&&!url.includes("/mcp?")),"No provider authorization or device execution");
+assert(requests.every(url=>!url.startsWith("https://mcp.remotearc.app/oauth/")&&!url.includes("/mcp?")),"No provider authorization or device execution");
 console.log("PASS: production SHA/HTML/bundle/installer/readiness/login checks, bounded retry and no external writes");

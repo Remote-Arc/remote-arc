@@ -444,7 +444,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
   const { locale } = useI18n();
   return (
     <a href={MARKETING_ORIGIN + (isWebsite() && locale === "zh" ? "/zh" : "")} title="Remote Arc website" aria-label="Remote Arc" className={"brand brandHasWordmark" + (compact ? " compactBrand" : "")}>
-      <span className="brandCompactMark" aria-hidden="true"><LogoMark className="brandLogo" /></span>
+      <span className="brandSymbol" aria-hidden="true"><LogoMark className="brandLogo" /></span>
       <BrandWordmark/>
     </a>
   );

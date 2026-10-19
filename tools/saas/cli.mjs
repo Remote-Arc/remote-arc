@@ -8,7 +8,7 @@ if(args.includes('--serve')){
  const html=fs.readFileSync(new URL('./index.html',import.meta.url));
  http.createServer((req,res)=>{
   if(req.url==='/api/economics'&&req.method==='POST'){
-   let raw='';req.on('data',c=>{raw+=c;if(raw.length>8192)req.destroy();});req.on('end',()=>{try{res.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(economics(JSON.parse(raw))));}catch{res.writeHead(400);res.end('Invalid assumptions');}});return;
+   let raw='';req.on('data',c=>{raw+=c;if(raw.length>8192)req.destroy();});req.on('end',()=>{try{const result=JSON.stringify(economics(JSON.parse(raw)));res.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});res.end(result);}catch{res.writeHead(400,{'content-type':'text/plain','cache-control':'no-store'});res.end('Invalid assumptions');}});return;
   }
   if(req.url==='/catalog'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify(report));return;}
   if(req.url!=='/'){res.writeHead(404);res.end();return;}res.writeHead(200,{'content-type':'text/html; charset=utf-8'});res.end(html);

@@ -16,7 +16,7 @@ export async function activateOpenAi(env,fetcher=fetch){
  if(!env.OPENAI_API_KEY||!env.CLOUDFLARE_API_TOKEN||!env.CLOUDFLARE_D1_API_TOKEN)throw Error('Missing production credentials');
  // Exercise the same strict JSON adapter used by Arc, with no user data or tools.
  const {openAiAdapter}=await import('../apps/relay/src/model-provider-adapters.ts');
- const accepted=await openAiAdapter(env.OPENAI_API_KEY)({definition:{id:'arc-auto',provider:'openai',model:'gpt-6-luna',maxOutputTokens:256,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000},system:'Return the requested JSON only.',user:'Set ready to true.',schema:{type:'object',properties:{ready:{type:'boolean'}},required:['ready'],additionalProperties:false},maxOutputTokens:256,signal:AbortSignal.timeout(30000)});
+ const accepted=await openAiAdapter(env.OPENAI_API_KEY,fetcher)({definition:{id:'arc-auto',provider:'openai',model:'gpt-6-luna',maxOutputTokens:256,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000},system:'Return the requested JSON only.',user:'Set ready to true.',schema:{type:'object',properties:{ready:{type:'boolean'}},required:['ready'],additionalProperties:false},maxOutputTokens:256,signal:AbortSignal.timeout(30000)});
  if(accepted.value?.ready!==true)throw Error('OpenAI structured-output acceptance failed');
  console.log('GPT-6 Luna strict JSON acceptance passed; bounded synthetic request only.');
  async function cf(suffix,token,body){

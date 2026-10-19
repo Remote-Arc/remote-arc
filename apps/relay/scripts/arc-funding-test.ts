@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {fundingActivationSql} from '../../../scripts/activate-openai.mjs';
+import {fundingActivationSql,activateOpenAi} from '../../../scripts/activate-openai.mjs';
 import {reserveBilling,settleBilling,type BillingReservationInput} from '../src/billing-ledger.js';
 import {fundingOverview,updateFunding} from '../src/arc-funding.js';
 import {activateArcTrial,publicArcAccess} from '../src/arc-trial.js';
@@ -68,4 +68,20 @@ assert.equal((await handleAdminPayments(request('one','POST'),adminEnv)).status,
 assert.equal((await handleAdminPayments(request('admin','POST','https://evil.invalid'),adminEnv)).status,403);
 const dashboard=await handleAdminPayments(request('admin'),adminEnv);assert.equal(dashboard.status,200);
 const overviewResponse=await dashboard.json() as any;assert.equal(overviewResponse.funding.trials.total,5);assert(overviewResponse.funding.usage.some((r:any)=>r.model_id==='arc-auto'));
+const launchEnv={GITHUB_ACTIONS:'true',GITHUB_REF:'refs/heads/master',GITHUB_ACTOR:'yaohuangguan',OPENAI_API_KEY:'test-model-key',CLOUDFLARE_API_TOKEN:'test-worker-token',CLOUDFLARE_D1_API_TOKEN:'test-database-token'};
+const trace:string[]=[];
+const activationFetch=async(url:string,init?:RequestInit)=>{
+ const auth=new Headers(init?.headers).get('authorization');
+ if(url==='https://api.openai.com/v1/responses'){
+  assert.equal(auth,'Bearer test-model-key');const body=JSON.parse(init!.body as string);assert.equal(body.model,'gpt-6-luna');assert.equal(body.store,false);assert.equal(body.max_output_tokens,256);assert.equal(body.text.format.strict,true);trace.push('model');
+  return Response.json({status:'completed',output_text:'{"ready":true}',usage:{input_tokens:20,output_tokens:10}});
+ }
+ if(url.includes('/d1/database/')){assert.equal(auth,'Bearer test-database-token');sql.exec(JSON.parse(init!.body as string).sql);trace.push('d1');return Response.json({success:true,result:[{success:true}]});}
+ if(url.endsWith('/secrets')){assert.equal(auth,'Bearer test-worker-token');assert.equal(sql.prepare('SELECT enabled FROM arc_funding_policy').get()!.enabled,0,'Keep inference paused during secret writes');trace.push('secret');return Response.json({success:true,result:{}});}
+ assert.equal(url,'https://agent.remotearc.app/api/runtime-config');assert.equal(auth,null,'Provider and Cloudflare tokens must not reach the application host');trace.push('runtime');return Response.json({arcAvailable:true});
+};
+await assert.rejects(()=>activateOpenAi({...launchEnv,GITHUB_REF:'refs/heads/feature'},activationFetch),/Protected/);assert.equal(trace.length,0);
+await activateOpenAi(launchEnv,activationFetch);assert.deepEqual(trace,['model','d1','secret','secret','runtime','d1']);
+await assert.rejects(()=>activateOpenAi(launchEnv,async(url:string,init?:RequestInit)=>url.includes('runtime-config')?Response.json({arcAvailable:false}):activationFetch(url,init)),/readiness/);
+assert.equal(sql.prepare('SELECT enabled FROM arc_funding_policy').get()!.enabled,0,'Failed readiness must leave funding paused');
 console.log('PASS: public 14-day Auto-only trial, pinned Credits, paid manual models, atomic daily/lifetime funding, unknown holds, idempotency, pause, CAS/audit and restart persistence');

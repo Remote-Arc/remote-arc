@@ -79,7 +79,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
                   document.getElementById(uid + "-" + next)?.focus();
                 }
               }}>
-              {value === "connect" ? "Connect" : <>Arc{!arcAvailable&&<span className="hcsSoonLabel">{tr("Coming soon", "即将上线")}</span>}</>}
+              {value === "connect" ? "Connect" : <>Arc{!arcAvailable&&<span className="hcsSoonLabel">{tr("Check availability", "查看状态")}</span>}</>}
             </button>
           ))}
         </div>
@@ -174,7 +174,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
         {[tr("Skills", "专业技能"), tr("Execution", "任务执行"), tr("Approvals", "操作审批"), tr("Verified Results", "结果验证")].map(label => <li key={label}>{label}</li>)}
       </ul>
       <footer className="hcsFooter">
-        <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? arcAvailable?tr('Arc Agent · Available now','Arc Agent · 现已可用'):tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
+        <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? arcAvailable?tr('Arc Agent · Available now','Arc Agent · 现已可用'):tr("Arc Agent · Check workspace access", "Arc Agent · 查看工作空间权限") : tr("Connect available now", "Connect 现已可用")}</span>
         <a href={arc ? "/arc" : "/connect-ai"}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
       </footer>
       <p className="hcsPlatformScope">{tr("Choose the accounts and computers your AI can use.", "由你选择 AI 可以使用的账号与电脑。")}</p>

@@ -1,6 +1,7 @@
 import {BrandWordmark} from '../brand-wordmark.js';
 import {lazy,Suspense,useEffect,useState} from "react";
 const AdminFollowups=lazy(()=>import('./admin-followups.js').then(module=>({default:module.AdminFollowups})));
+const AdminApiUsage=lazy(()=>import('./admin-api-usage.js').then(module=>({default:module.AdminApiUsage})));
 const AdminPayments=lazy(()=>import('./admin-payments.js').then(module=>({default:module.AdminPayments})));
 import { useI18n } from "../i18n.js";
 import { AdminOperations } from "../admin-operations.js";
@@ -52,7 +53,7 @@ function LeadsPanel(){
    finally{setBusy("");}
  }
  return <section className="adminSurface">
-   <div className="adminSectionHeader"><div><h2>{tr("Early access & feedback","抢先体验与用户反馈")}</h2><p>{tr("Explicitly submitted contact requests only. No private device content or conversations.","仅展示用户主动提交的联系信息，不采集设备文件或私人对话内容。")}</p></div><button type="button" className="adminOutlineBtn" onClick={()=>void refresh()}>{tr("Refresh","刷新")} ↻</button></div>
+   <div className="adminSectionHeader"><div><p>{tr("Explicitly submitted contact requests only. No private device content or conversations.","仅展示用户主动提交的联系信息，不采集设备文件或私人对话内容。")}</p></div><button type="button" className="adminOutlineBtn" onClick={()=>void refresh()}>{tr("Refresh","刷新")} ↻</button></div>
    <div className="adminFilterRow" role="group" aria-label={tr("Submission type","提交类型")}>
     {(["all","early_access","feedback"] as const).map(kind=><button key={kind} type="button" className={filter===kind?"isActive":""} aria-pressed={filter===kind} onClick={()=>{setFilter(kind);setPage(0);}}>{kind==="all"?tr("All","全部"):kind==="early_access"?tr("Early access","抢先体验"):tr("Feedback","反馈")}</button>)}
     <span>{data?.total??"—"} {tr("submissions","条记录")}</span>
@@ -60,7 +61,7 @@ function LeadsPanel(){
    {error&&<p className="adminAlert" role="alert">{error}</p>}
    <div className="adminLeadsList">
    {data?.items.map(item=><article className="adminLeadItem" key={item.id}>
-     <div className="adminLeadTop"><div><span className="adminLeadType">{item.category==="early_access"?"ARC EARLY ACCESS":"FEEDBACK"}</span><h3>{item.name||item.email}</h3><a href={"mailto:"+encodeURIComponent(item.email)}>{item.email}</a><small>{item.source} · {time(item.created_at)}</small></div><span className="adminLeadStatus">{item.status}</span></div>
+     <div className="adminLeadTop"><div><span className="adminLeadType">{item.source==="enterprise"?"ENTERPRISE":item.category==="early_access"?"ARC EARLY ACCESS":"FEEDBACK"}</span><h3>{item.name||item.email}</h3><a href={"mailto:"+encodeURIComponent(item.email)}>{item.email}</a><small>{item.source} · {time(item.created_at)}</small></div><span className="adminLeadStatus">{item.status}</span></div>
      <p>{item.message}</p>
      <div className="adminLeadActions"><label>{tr("Status","状态")} <select value={item.status} disabled={busy===item.id} onChange={e=>void change(item,e.target.value)}><option value="new">{tr("New","新提交")}</option><option value="reviewed">{tr("Reviewed","已查看")}</option><option value="contacted">{tr("Contacted","已联系")}</option><option value="archived">{tr("Archived","已归档")}</option></select></label><button type="button" disabled={busy===item.id} onClick={()=>void remove(item)}>{tr("Delete","删除")}</button></div>
    </article>)}
@@ -72,7 +73,7 @@ function LeadsPanel(){
 
 function HealthPanel({health,loading,reload}:{health:Health|null;loading:boolean;reload:()=>void}) {
  const {tr}=useI18n();
- return <section className="adminSurface"><div className="adminSectionHeader"><div><h2>{tr("Service health & incidents","服务健康与异常")}</h2><p>{tr("Infrastructure diagnostics, not surveillance of users.","仅用于基础设施排障，不监视用户行为内容。")}</p></div><button className="adminOutlineBtn" disabled={loading} onClick={reload}>{loading?tr("Refreshing…","刷新中…"):tr("Refresh","刷新")} ↻</button></div>
+ return <section className="adminSurface"><div className="adminSectionHeader"><div><p>{tr("Infrastructure diagnostics, not surveillance of users.","仅用于基础设施排障，不监视用户行为内容。")}</p></div><button className="adminOutlineBtn" disabled={loading} onClick={reload}>{loading?tr("Refreshing…","刷新中…"):tr("Refresh","刷新")} ↻</button></div>
  <div className="adminMetrics adminMetrics--health">
   <div><span>{tr("Overall","整体状态")}</span><strong>{health?health.status:"—"}</strong></div>
   <div><span>5xx · 15m</span><strong>{health?.worker.errors15m??"—"}</strong></div>
@@ -114,7 +115,7 @@ function MiniActivity({ops}:{ops:Operations|null}){
   <div className="adminChartFooter"><span>{windowHours}h {tr("ago","前")}</span><span>{tr("Now","现在")} · UTC</span></div>
  </section>;
 }
-function AdminOverview({ops,health,leadOverview,setSection}:{ops:Operations|null;health:Health|null;leadOverview:LeadsResponse|null;setSection:(s:Section)=>void}){
+function AdminOverview({ops,health,leadOverview,setSection,preview=false}:{ops:Operations|null;health:Health|null;leadOverview:LeadsResponse|null;setSection:(s:Section)=>void;preview?:boolean}){
  const {tr}=useI18n();
  const userCount=ops?.totals.users;
  const activeCount=ops?.totals.online;
@@ -141,6 +142,7 @@ function AdminOverview({ops,health,leadOverview,setSection}:{ops:Operations|null
     <div className="adminSnapshotRow"><span className="adminHealthLight"><AdminGlyph name="shield"/></span><div><strong>{tr("Worker errors · 24 hours","Worker 错误 · 24 小时")}</strong><small>{errors===undefined?"—":errors.toLocaleString()} {tr("recorded errors","次记录异常")}</small></div><button onClick={()=>setSection("health")} aria-label={tr("Open incidents","查看异常记录")}><AdminGlyph name="arrow"/></button></div>
    </div>
   </div>
+  <Suspense fallback={<p role="status">{tr("Loading model usage…","正在读取模型用量…")}</p>}><AdminApiUsage preview={preview}/></Suspense>
   <section className="adminCommerce"><div className="adminCommerceCopy"><span className="adminSmallLabel">{tr('REVENUE & BILLING','营收与计费')}</span><h2>{tr('Payments, pricing and customer offers.','支付、定价与客户优惠。')}</h2><p>{tr('Inspect verified receipts, failed payments, plan versions and promotions in your payment workspace.','在支付工作区查看已验证收据、失败付款、套餐版本和促销优惠。')}</p><button className="adminOutlineBtn" onClick={()=>setSection('payments')}>{tr('Open payments','打开支付看板')} →</button></div></section>
  </div>;
 }
@@ -198,9 +200,9 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
    {error&&<div className="adminAlert" role="alert">{error}</div>}
    {section==="followups"&&<Suspense fallback={<p role="status">{tr("Loading follow-ups…","正在加载跟进信息…")}</p>}><AdminFollowups/></Suspense>}
    {section==="payments"&&<Suspense fallback={<p role="status">{tr('Loading payments…','正在读取支付…')}</p>}><AdminPayments preview={preview}/></Suspense>}
-   {section==="overview"&&<AdminOverview ops={ops} health={health} leadOverview={leadOverview} setSection={setSection}/>}
+   {section==="overview"&&<AdminOverview preview={preview} ops={ops} health={health} leadOverview={leadOverview} setSection={setSection}/>}
    {section==="leads"&&(preview?<div className="adminNoData">{tr("Preview mode: private submissions are not loaded.","预览环境不加载真实反馈记录。")}</div>:<LeadsPanel/>)}
-   {section==="operations"&&<AdminOperations readOnly={preview}/>}
+   {section==="operations"&&<AdminOperations readOnly={preview} embedded/>}
    {section==="health"&&<HealthPanel health={health} loading={loading} reload={()=>void refresh()}/>}
   </main>
  </div>;

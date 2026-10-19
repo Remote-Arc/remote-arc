@@ -73,7 +73,7 @@ export function ArcRoadmapPageContent() {
     <footer className="arcTimelineFooter">
       <p>{tr("Follow the build. Shape the next milestone.", "关注开发进展，参与定义下一步。")}</p>
       <div><a href={localizedWebsiteHref("/arc",locale)}>{tr("Meet Arc", "认识 Arc")} ↗</a><a href={localizedWebsiteHref("/feedback?source=roadmap",locale)}>{tr("Tell us what to build", "告诉我们你的需求")} ↗</a></div>
-      <small>{tr("Start with Connect today. Join early access for Arc.", "现在开始使用 Connect，也可以申请 Arc 抢先体验。")}</small>
+      <small>{tr("Arc and Connect are available now. Share your ideas for what comes next.", "Arc 和 Connect 现已可用，欢迎提出下一阶段的需求。")}</small>
     </footer>
   </main>;
 }

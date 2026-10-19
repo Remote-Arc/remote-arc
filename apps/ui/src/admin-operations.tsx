@@ -39,7 +39,7 @@ const relative = (value: string | null, locale: string) => {
 };
 const fmt = (v: number) => new Intl.NumberFormat("en").format(v);
 
-export function AdminOperations({readOnly=false}:{readOnly?:boolean}={}) {
+export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boolean;embedded?:boolean}={}) {
   const { tr, locale } = useI18n();
   const [section, setSection] = useState<Section>("users");
   const [liveBilling, setLiveBilling] = useState<LiveBilling | null>(null);
@@ -165,8 +165,7 @@ export function AdminOperations({readOnly=false}:{readOnly?:boolean}={}) {
   return <section className="opsWrap">
     <div className="opsHeadline">
       <div>
-        <span className="eyebrow">{tr("OPERATIONS · ADMIN ONLY", "运营中心 · 仅管理员")}</span>
-        <h2>{tr("Users, devices & capacity", "用户、设备与容量")}</h2>
+        {!embedded&&<><span className="eyebrow">{tr("OPERATIONS · ADMIN ONLY", "运营中心 · 仅管理员")}</span><h2>{tr("Users, devices & capacity", "用户、设备与容量")}</h2></>}
         <p>{tr("Live sessions, usage, recent demand and account-wide cost visibility.",
           "在线会话、工具使用量、活跃时段与 Cloudflare 账户级成本。")}</p>
       </div>

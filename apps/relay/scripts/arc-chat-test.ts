@@ -16,6 +16,8 @@ import {activateArcTrial,arcAccountAccess} from '../src/arc-trial.js';
 import {reserveBilling,settleBilling} from '../src/billing-ledger.js';
 import {seal} from '../src/app-oauth.js';
 import {arcMemoryContext,rememberArcFact,saveArcWorkMemory,ARC_MEMORY_LIMITS} from '../src/arc-memory.js';
+import {fitArcContext} from '../src/arc-chat-context.js';
+import {handleArcAdminBilling} from '../src/arc-admin-billing.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -81,6 +83,33 @@ assert.equal((await handleArcChat(req('sessions/'+id+'/messages','POST',{text:'b
 assert.equal((await handleArcChat(req('sessions/'+id),{...env,ARC_CHAT_ENABLED:'0'})).status,200,'Existing results remain readable');
 const steps=await send(id,'Bound steps');sql.prepare('UPDATE arc_chat_runs SET step=8 WHERE id=?').run(steps.run.id);await runArcStep(env,steps.run.id);assert.equal(row(steps.run.id).error_code,'ARC_STEP_LIMIT');
 const tokens=await send(id,'Bound tokens');sql.prepare('UPDATE arc_chat_runs SET max_tokens=100 WHERE id=?').run(tokens.run.id);await runArcStep(env,tokens.run.id);assert.equal(row(tokens.run.id).error_code,'ARC_TOKEN_LIMIT');
+const largeContext=fitArcContext('Bounded system',{}, {objective:'Keep this exact user objective',messages:Array.from({length:8},()=>({role:'tool',text:'Observed data',result:'资料'.repeat(12000)})),memory:[],deviceIndex:[]},96000);
+assert(largeContext);assert(new TextEncoder().encode(JSON.stringify(['Bounded system',largeContext.user,{}])).length<=64000,'Large plan allowances cannot bypass the provider context ceiling');assert.equal(JSON.parse(largeContext.user).objective,'Keep this exact user objective');
+// A normal multi-step task must fit the 24k run allowance. Previously the
+// gateway's extra 8k financial reservation buffer exhausted this run after
+// only a few decisions, despite ample actual token allowance remaining.
+const emailSession=await create(),emailRun=await send(emailSession,'Check the important messages in my connected email account.');
+const defaultAdapter=env.MODEL_GATEWAY!.adapters.openai!;
+let emailReads=0,decisionsInEmail=0;
+env.MODEL_GATEWAY!.adapters.openai=async request=>{decisionsInEmail++;const result=await defaultAdapter(request);return{...result,usage:{...result.usage,inputTokens:2100,outputTokens:100}};};
+decisions.push(tool('manage_work',{action:'list'}),tool('list_apps',{category:'communication'}),tool('describe_app',{provider:'gmail',operation:'messages.list'}),tool('call_app',{connectionId:'email-fixture',operation:'messages.list',arguments:{maxResults:5}}),tool('call_app',{connectionId:'email-fixture',operation:'messages.get',arguments:{id:'message-fixture'}}),reply('One message needs attention: the release deadline is tomorrow.'));
+try{
+ let more=true;while(more)more=await runArcStep(env,emailRun.run.id,{executeTool:async(_env,run,decision)=>{
+  if(decision.tool==='manage_work'){const found=await manageArcWork(env,run,{action:'list'});assert(!found.runs.some(r=>r.id===run.id),'A run must never wait for itself');return found;}
+  if(decision.tool==='call_app')emailReads++;
+  return{connectionId:'email-fixture',id:'message-fixture',subject:'Release deadline tomorrow',operation:'messages.get',details:'An authorized read result. '.repeat(100)};
+ }});
+ assert.equal(row(emailRun.run.id).status,'succeeded');assert.equal(row(emailRun.run.id).tokens_used,13200);assert.equal(decisionsInEmail,6);assert.equal(emailReads,2);
+ sql.prepare("UPDATE users SET role='admin' WHERE id='owner'").run();
+ const usageResponse=await handleArcAdminBilling(new Request(origin+'/api/admin/arc-billing',{headers:{cookie:'rl_session=test-owner'}}),env);assert.equal(usageResponse.status,200);
+ const usage=await usageResponse.json() as any;assert.equal(usage.modelActivity.users,1);assert(usage.modelActivity.todayCalls>=6);assert(usage.modelCalls.some((item:any)=>item.provider==='openai'&&item.model_id==='arc-auto'&&item.inputTokens>=12600&&item.outputTokens>=600));
+ sql.prepare("UPDATE users SET role='user' WHERE id='owner'").run();
+ assert((await arcMessages(env,'owner',emailSession)).some(m=>m.role==='assistant'&&m.text.includes('deadline is tomorrow')));
+}finally{env.MODEL_GATEWAY!.adapters.openai=defaultAdapter;}
+const finalStepSession=await create(),finalStep=await send(finalStepSession,'Summarize completed work within the remaining step.');
+sql.prepare('UPDATE arc_chat_runs SET step=7 WHERE id=?').run(finalStep.run.id);
+let closingSchema:any;env.MODEL_GATEWAY!.adapters.openai=async request=>{closingSchema=request.schema;return defaultAdapter(request);};
+try{decisions.push(reply('The verified results are saved above.'));await runArcStep(env,finalStep.run.id);assert.equal(row(finalStep.run.id).status,'succeeded');assert.deepEqual(closingSchema.properties.tool.enum,['none']);}finally{env.MODEL_GATEWAY!.adapters.openai=defaultAdapter;}
 assert.throws(()=>validateArcDecision({decision:'reply',tool:'call_app',arguments_json:'{}',message:'x'}));assert.throws(()=>validateArcDecision({...reply('x'),arguments_json:'[]'}));
 
 // Real app dispatcher, encrypted connection and mocked provider HTTP, then an
@@ -167,7 +196,7 @@ await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
 // Existing administrator caps are never silently raised by a chat request.
 await assert.rejects(()=>prepareArcBudget(env,'owner','personal:owner',id,'gpt-6.1-sol'),/PAID_MODEL_REQUIRED/,'Trial users cannot obtain a premium grant');
 const premium=await prepareArcBudget(env,'owner','personal:owner',id,'auto');
-sql.prepare('UPDATE billing_model_grants SET max_cost_micros=10000 WHERE id=?').run(premium.gateway.paidGrantId!);
+sql.prepare(`UPDATE billing_model_grants SET max_cost_micros=10000+COALESCE((SELECT SUM(CASE WHEN status IN ('completed','failed','settling') THEN json_extract(settlement_json,'$.actual.costMicros') ELSE json_extract(request_json,'$.maximum.costMicros') END) FROM billing_reservations WHERE authorization_id=billing_model_grants.id),0) WHERE id=?`).run(premium.gateway.paidGrantId!);
 const reservations=await Promise.allSettled(Array.from({length:3},(_,i)=>reserveBilling(db,{userId:'owner',organizationId:'personal:owner',taskId:id,runId:'trial-budget-test',operationId:'op-'+i,lane:'arc_hosted',provider:'openai',modelId:'arc-auto',authorizationId:premium.gateway.paidGrantId!,maximum:{credits:1,costMicros:4000,neurons:0}})));
 assert.equal(reservations.filter(r=>r.status==='fulfilled').length,2,'Concurrent Auto calls cannot exceed the trial allowance');
 const reserved=(reservations.find(r=>r.status==='fulfilled') as PromiseFulfilledResult<{id:string}>).value;

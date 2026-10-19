@@ -6,7 +6,7 @@ export const DOC_TOPICS: DocTopic[] = [
     title: {en: 'Install the web app', zh: '安装网页应用'},
     description: {en: 'Keep your Remote Arc workspace in a dedicated window on your desktop or phone.', zh: '在电脑或手机上，将 Remote Arc 工作空间安装为独立应用。'},
     sections: [
-      {heading: {en: 'Your workspace, one click away', zh: '一键打开你的工作空间'}, text: {en: 'Open agent.remotearc.app and sign in. Install Remote Arc from Profile settings or your browser’s install menu. The app opens your Connect overview, with your devices, app connections and recent activity. Arc Chat is coming soon.', zh: '打开 agent.remotearc.app 并登录，在个人资料设置或浏览器安装菜单中安装 Remote Arc。应用启动后进入 Connect 概览，可查看设备、应用连接和最近活动。Arc Chat 即将上线。'}},
+      {heading: {en: 'Your workspace, one click away', zh: '一键打开你的工作空间'}, text: {en: 'Open agent.remotearc.app and sign in. Install Remote Arc from Profile settings or your browser’s install menu. Open Arc Chat for your personal agent, or switch to Connect for your devices, app connections and activity. Activate the Auto trial or choose Plus / Pro in Plan & usage.', zh: '打开 agent.remotearc.app 并登录，在个人资料设置或浏览器安装菜单中安装 Remote Arc。打开 Arc Chat 使用个人智能体，也可切换到 Connect 查看设备、应用连接和活动。在“套餐与用量”中开启 Auto 试用或选择 Plus / Pro。'}},
       {heading: {en: 'On your device', zh: '在你的设备上'}, text: {en: 'Chrome and Edge offer Install app. On iPhone or iPad use Share → Add to Home Screen. In Mac Safari use File → Add to Dock. Browser support determines which installation option appears.', zh: 'Chrome、Edge 支持安装应用；iPhone、iPad 使用分享 → 添加到主屏幕；Mac Safari 使用文件 → 添加到程序坞。实际安装入口取决于浏览器支持。'}},
       {heading: {en: 'Stay connected', zh: '保持联网'}, text: {en: 'Use the same account and settings as on the website. You need an internet connection to view current activity and use tools. If you go offline, reconnect to continue. Closing the web app does not stop the local Agent on your paired computer; manage its background connection in Devices.', zh: '安装后沿用网页的账号和设置。查看实时活动和使用工具需要联网，离线后重新连接即可继续。关闭网页应用不会停止已配对电脑上的本机 Agent；你可以在设备页面管理后台连接。'}}
     ]
@@ -235,8 +235,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "说出你需要什么"
         },
         "text": {
-          "en": "Arc Chat is coming soon and is not open in this release. A task is one piece of work. A routine repeats on a schedule. In the upcoming Arc Chat, describe the result and timing; Arc asks for missing details and saves the work using a real tool. Tasks and Routines show status and results, without a configuration form. Connect remains your MCP connection layer for an external AI client.",
-          "zh": "Arc Chat 即将上线，本次发布尚未开放。Task 是一次工作，Routine 按计划重复执行。未来在 Arc Chat 里描述结果和时间，Arc 会确认缺少的信息，再通过真实工具保存。Tasks 和 Routines 展示状态与结果，不需要配置表单。Connect 继续作为外部 AI 客户端使用的 MCP 连接层。"
+          "en": "Arc Chat is available. A task is one piece of work. A routine repeats on a schedule. In Arc Chat, describe the result and timing; Arc asks for missing details and saves the work using a real tool. Tasks shows both one-off and recurring work, including their status and results, without a configuration form. Connect remains your MCP connection layer for an external AI client.",
+          "zh": "Arc Chat 现已开放。Task 是一次工作，Routine 按计划重复执行。在 Arc Chat 里描述结果和时间，Arc 会确认缺少的信息，再通过真实工具保存。Tasks 统一展示单次与重复工作的状态和结果，不需要配置表单。Connect 继续作为外部 AI 客户端使用的 MCP 连接层。"
         }
       },
       {
@@ -323,8 +323,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "一个平台，两种工作方式"
         },
         "text": {
-          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the hosted personal-agent workspace on the same connections: chat, real tools, one-off tasks and routines. You do not supply a model API key. Check the workspace picker for availability: while Arc says Coming soon, Connect remains the available workspace.",
-          "zh": "Connect 通过 MCP 把已有 AI 客户端连接到应用与电脑。Arc 是同一套连接之上的托管个人 Agent 工作空间，支持聊天、真实工具、一次性任务和 Routine，无需模型 API Key。开放状态以工作空间切换菜单为准：Arc 显示 Coming soon 时，仍可使用 Connect。"
+          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the hosted personal-agent workspace on the same connections: chat, real tools, one-off tasks and routines. You do not supply a model API key. Start a 14-day Arc trial with Auto, or choose Plus or Pro for more Credits and configured premium models. Connect has a separate call allowance.",
+          "zh": "Connect 通过 MCP 把已有 AI 客户端连接到应用与电脑。Arc 是同一套连接之上的托管个人 Agent 工作空间，支持聊天、真实工具、一次性任务和 Routine，无需模型 API Key。可开启包含 Auto 的 14 天 Arc 试用，或选择 Plus、Pro 获得更多 Credits 与已配置的高级模型；Connect 调用使用独立额度。"
         }
       },
       {

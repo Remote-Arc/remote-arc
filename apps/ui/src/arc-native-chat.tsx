@@ -59,7 +59,9 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
    if(/ARC_TRIAL_REQUIRED/.test(code))return tr('Activate your trial to work with Arc.','开启试用，让 Arc 开始工作。');
    if(/PAID_MODEL/.test(code))return tr('This model needs a paid model allowance. Choose Auto to continue.','此模型需要付费模型额度，可以选择 Auto 继续。');
   if(/NOT_CONFIGURED|MODEL_AUTH|CHAT_UNAVAILABLE/.test(code))return tr('Arc is not ready in this workspace yet. Your administrator needs to finish platform setup.','此工作空间的 Arc 尚未就绪，需要管理员完成平台配置。');
-  if(/BUDGET|QUOTA|TOKEN_LIMIT/.test(code))return tr('The model allowance for this run or account has been reached.','本次运行或账号的模型额度已用完。');
+  if(code==='ARC_TOKEN_LIMIT')return tr('This run reached its context limit. Your results are saved; send a new message to continue.','本次工作达到单次上下文上限。结果已保留，可以发送新消息继续。');
+  if(code==='ARC_CREDITS_EXHAUSTED'||code==='BILLING_CREDITS_EXHAUSTED')return tr('Your available Credits have been used. Choose a plan or top up to continue.','可用 Credits 已用完，可选择套餐或补充额度后继续。');
+  if(/BUDGET|QUOTA/.test(code))return tr('A usage budget or provider limit was reached. Your results are saved. Check your allowance before continuing.','触发了用量预算或服务商限制。结果已保留，请核对额度后继续。');
   if(/TIME_LIMIT|STEP_LIMIT/.test(code))return tr('This run reached its work limit. The results above are saved; you can continue in a new message.','本次运行已达到工作上限。上方结果已保存，可以发送新消息继续。');
   if(/INTERRUPTED|UNKNOWN/.test(code))return tr('The last action could not be confirmed. Check its result before repeating it.','无法确认最后一次操作的结果，请核实后再决定是否重复。');
   if(/BUSY/.test(code))return tr('A run is already working in this chat. Let it finish or stop it before sending another message.','此对话已有工作正在执行，请等待完成或停止后再发送。');

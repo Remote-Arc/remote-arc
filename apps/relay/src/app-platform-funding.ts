@@ -10,7 +10,7 @@ export async function reservePlatformAppFunding(env:AppEnv,userId:string,connect
  try{settings=JSON.parse(env.APP_PLATFORM_FUNDED_COSTS||'{}');}catch{throw new AppError('app_platform_budget_not_configured',503);}
  const policy=settings?.[connection.provider];
  if(!policy||![policy.maxCostMicrosPerDispatch,policy.dailyPlatformMicros].every(n=>Number.isSafeInteger(n)&&n>0&&n<=100000000))throw new AppError('app_platform_budget_not_configured',503);
- const plan=await currentArcPlan(env.DB,userId),userMaximum=plan.id==='free'?ARC_PLATFORM_APP_BUDGETS_MICROS.free:ARC_PLATFORM_APP_BUDGETS_MICROS.paid,at=new Date().toISOString();
+ const plan=await currentArcPlan(env,userId),userMaximum=plan.id==='free'?ARC_PLATFORM_APP_BUDGETS_MICROS.free:ARC_PLATFORM_APP_BUDGETS_MICROS.paid,at=new Date().toISOString();
  const reserved=await env.DB.prepare(`INSERT INTO app_platform_funding_reservations(id,user_id,provider,month_key,day_key,maximum_cost_micros,created_at)
  SELECT ?1,?2,?3,?4,?5,?6,?7 WHERE EXISTS(SELECT 1 FROM app_connections WHERE id=?8 AND user_id=?2 AND generation=?9 AND status='active')
  AND COALESCE((SELECT SUM(maximum_cost_micros) FROM app_platform_funding_reservations WHERE user_id=?2 AND month_key=?4),0)+?6<=?10

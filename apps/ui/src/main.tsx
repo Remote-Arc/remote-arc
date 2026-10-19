@@ -2430,7 +2430,7 @@ function Landing({ user }: { user?: User | null }) {
           <HeroHeadline />
           <p>{arcAvailable?tr('Tell Arc what you need. It works with your apps, chooses a suitable computer, and keeps tasks and routines moving — with results you can inspect.','告诉 Arc 你需要什么。它调用应用、选择合适电脑，让任务与 Routine 持续推进，并提供可核验的结果。'):tr('Connect your AI to apps and your own computers today. Coming next: Arc, your personal agent to coordinate the work, from one-off tasks to everyday routines.','现在，让你的 AI 连接应用与自己的电脑。接下来，Arc 将成为你的个人 AI 队友，协调一次性任务与每日 Routine。')}</p>
           <div className="landingActions">
-            <a className="primaryButton marketingPrimary" href={dashboardHref(arcAvailable?DASHBOARD_PATHS['agent-chat']:'/dashboard/connect/overview')}>{arcAvailable?tr('Start 14-day free trial','开始 14 天免费试用'):tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
+            <a className="primaryButton marketingPrimary" href={dashboardHref(arcAvailable?DASHBOARD_PATHS['agent-chat']:'/dashboard/connect/overview')}>{arcAvailable?tr('Start your free trial','开始免费试用'):tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
             <a className="marketingSecondary" href="#how-it-works">{tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>
           </div>
           <div className="heroProofLine"><ProductIcon name="check" size={14}/>{tr('No model API key required','无需模型 API Key')}<span>·</span>Windows · Mac · Linux</div>
@@ -3581,7 +3581,7 @@ function Dashboard({
   const hasPlus = user.plan === "plus" || user.isAdmin;
   const [showAdd, setShowAdd] = useState(false);
   const [arcNavigationOpen,setArcNavigationOpen]=useState(false);
-  const [arcEntry,setArcEntry] = useState<{prompt?:string;sessionId?:string;version:number}>(()=>({version:0,prompt:new URLSearchParams(location.search).get('prompt')?.slice(0,6000)||undefined}));
+  const [arcEntry,setArcEntry] = useState<{prompt?:string;sessionId?:string;version:number}>(()=>({version:0,prompt:new URLSearchParams(location.search).get('prompt')?.slice(0,6000)||undefined,sessionId:new URLSearchParams(location.search).get('session')?.slice(0,160)||undefined}));
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [backgroundUpdatingId, setBackgroundUpdatingId] = useState<string | null>(null);

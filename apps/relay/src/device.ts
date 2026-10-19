@@ -253,7 +253,7 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
 
   const deviceId = crypto.randomUUID();
   const createdAt = nowIso();
-  const plan=billingEnabled(env)?await currentArcPlan(env.DB,user.id):null;
+  const plan=billingEnabled(env)?await currentArcPlan(env,user.id):null;
   const deviceLimit=!plan||user.isAdmin||plan.id==='free'&&user.plan==='plus'?100000:plan.deviceLimit;
 
   const pairingResult=await env.DB.batch([

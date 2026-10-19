@@ -71,7 +71,7 @@ async function saveConnection(env: AppEnv, userId: string, provider: AppProvider
   const stableId = `${identityHash.slice(0, 8)}-${identityHash.slice(8, 12)}-8${identityHash.slice(13, 16)}-${((parseInt(identityHash[16]!, 16) & 3) | 8).toString(16)}${identityHash.slice(17, 20)}-${identityHash.slice(20, 32)}`;
   const id = existing?.id || stableId;
   const cipher = await seal(env, tokens, tokenContext({ id, user_id: userId, provider }));
-  const plan=billingEnabled(env)?await currentArcPlan(env.DB,userId):null;
+  const plan=billingEnabled(env)?await currentArcPlan(env,userId):null;
   const saved=await env.DB.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,expires_at,created_at,updated_at,daily_call_limit,connection_metadata_json)
     SELECT ?1,?2,?3,?4,?5,'active',?6,?7,?8,?9,?10,?10,?11,?12 WHERE (?13=0 OR EXISTS(SELECT 1 FROM app_connections WHERE id=?1 AND user_id=?2 AND status!='disconnected') OR (SELECT COUNT(*) FROM app_connections WHERE user_id=?2 AND status!='disconnected')<?14)
     ON CONFLICT(user_id,provider,account_id) DO UPDATE SET account_label=excluded.account_label,status='active',permissions_json=excluded.permissions_json,scopes_json=excluded.scopes_json,token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,generation=app_connections.generation+1,refresh_lease=NULL,refresh_lease_until=NULL,last_error=NULL,updated_at=excluded.updated_at,daily_call_limit=excluded.daily_call_limit,connection_metadata_json=excluded.connection_metadata_json`)

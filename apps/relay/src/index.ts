@@ -8,7 +8,8 @@ import {handleBilling,type BillingEnv} from './stripe-billing.js';
 import {arcDeploymentReady} from './arc-chat-model.js';
 import {billingEnabled} from './platform-launch.js';
 import {stripeConfigured} from './stripe-client.js';
-import {ARC_PLANS} from '@remotearc/protocol';
+import {commercialCatalog} from './arc-commercial-config.js';
+import {purgeDeletedArcContent} from './arc-retention.js';
 export { ArcChatRuntime } from "./arc-chat-object.js";
 import type { AppEnv } from "./app-catalog.js";
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
@@ -499,7 +500,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     if (url.pathname.startsWith("/api/arc/")) return handleArcChat(request, env);
     if(url.pathname==='/api/runtime-config'&&request.method==='GET')return Response.json({version:1,environment:'production',arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),execution:arcDeploymentReady(env)?'live':'disabled'},{headers:{'cache-control':'no-store'}});
-    if(url.pathname==='/api/billing/catalog'&&request.method==='GET')return Response.json({arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),connectFreeCalls:billingEnabled(env)?ARC_PLANS[0].connectToolCalls:10000},{headers:{'cache-control':'no-store'}});
+    if(url.pathname==='/api/billing/catalog'&&request.method==='GET'){
+      const catalog=await commercialCatalog(env);
+      return Response.json({...catalog,arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),connectFreeCalls:billingEnabled(env)?catalog.plans.find(p=>p.id==='free')!.connectToolCalls:10000},{headers:{'cache-control':'no-store'}});
+    }
     if (url.pathname === '/api/billing' || url.pathname.startsWith('/api/billing/')) {
       if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({error:'billing_host_required'},{status:404});
       return handleBilling(request,env);
@@ -1035,6 +1039,7 @@ export default {
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));
       ctx.waitUntil(runApprovalMaintenance(env));
+      ctx.waitUntil(purgeDeletedArcContent(env));
       if (env.AUDIT_ARCHIVE_ENABLED === "1") {
         ctx.waitUntil(archiveOldAudit(env).then(({ archived, batches }) => {
           if (archived) console.info("audit_archive_completed", { archived, batches });

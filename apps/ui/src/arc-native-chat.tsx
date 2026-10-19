@@ -54,7 +54,7 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
  </nav>;
  const errorText=(code:string)=>{
   if(/ARC_TRIAL_EXPIRED/.test(code))return tr('Your trial has ended. Your conversations and connections are saved.','试用已结束，对话与连接仍保留。');
-   if(/ARC_TRIAL_REQUIRED/.test(code))return tr('Start your 14-day trial to work with Arc.','开启 14 天试用，让 Arc 开始工作。');
+   if(/ARC_TRIAL_REQUIRED/.test(code))return tr('Activate your trial to work with Arc.','开启试用，让 Arc 开始工作。');
    if(/PAID_MODEL/.test(code))return tr('This model needs a paid model allowance. Choose Auto to continue.','此模型需要付费模型额度，可以选择 Auto 继续。');
   if(/NOT_CONFIGURED|MODEL_AUTH|CHAT_UNAVAILABLE/.test(code))return tr('Arc is not ready in this workspace yet. Your administrator needs to finish platform setup.','此工作空间的 Arc 尚未就绪，需要管理员完成平台配置。');
   if(/BUDGET|QUOTA|TOKEN_LIMIT/.test(code))return tr('The model allowance for this run or account has been reached.','本次运行或账号的模型额度已用完。');
@@ -76,7 +76,7 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
   </form><p className="arcChatDisclaimer">{chat.service?.preview?tr('Interactive preview · simulated replies · no real tools or charges.','交互预览 · 模拟回复 · 不执行真实工具或产生费用。'):tr('Your tools. Your computers. One conversation.','你的工具，你的电脑，一次对话。')}</p></div>;
   const access=chat.service?.access;
   const trial=access&&<div className="arcTrialStatus" data-state={access.status}>
-    <div><Icon name={access.status==='active'?'spark':'shield'} size={17}/><span><strong>{access.status==='eligible'?tr('Your next 14 days, with Arc.','接下来的 14 天，与 Arc 一起。'):access.status==='active'?tr(`${access.daysRemaining} days left in your trial`, `试用剩余 ${access.daysRemaining} 天`):access.status==='paid'?tr('Arc workspace is active','Arc 工作空间已启用'):tr('Your trial has ended','试用已结束')}</strong>{access.status==='eligible'&&<small>{tr('No card. No model API key. Starts when you activate it.','无需银行卡或模型 API Key，主动开启后才计时。')}</small>}{access.status==='expired'&&<small>{tr('Your conversations, results and connections are saved.','对话、结果与连接仍然保留。')}</small>}</span></div>
+    <div><Icon name={access.status==='active'?'spark':'shield'} size={17}/><span><strong>{access.status==='eligible'?access.trialDays?tr(`Your next ${access.trialDays} days, with Arc.`,`接下来的 ${access.trialDays} 天，与 Arc 一起。`):tr('Your work, with Arc.','让 Arc 和你一起工作。'):access.status==='active'?tr(`${access.daysRemaining} days left in your trial`, `试用剩余 ${access.daysRemaining} 天`):access.status==='paid'?tr('Arc workspace is active','Arc 工作空间已启用'):tr('Your trial has ended','试用已结束')}</strong>{access.status==='eligible'&&<small>{tr('No card. No model API key. Starts when you activate it.','无需银行卡或模型 API Key，主动开启后才计时。')}</small>}{access.status==='expired'&&<small>{tr('Your conversations, results and connections are saved.','对话、结果与连接仍然保留。')}</small>}</span></div>
     {access.status==='eligible'?<button className="arcRadiantCta" type="button" disabled={!chat.service?.enabled||chat.busy} onClick={()=>void chat.startTrial()}>{tr('Start free trial','开启免费试用')}<Icon name="arrowUpRight" size={14}/></button>:access.canUse?<span>{tr('Daily usage','今日用量')} · {access.dailyUsedPercent}%</span>:<a href="https://remotearc.app/pricing">{tr('View plans','查看套餐')}<Icon name="arrowUpRight" size={14}/></a>}
   </div>;
  const toolLabel=(message:ChatMessage)=>{const args=message.arguments as Record<string,unknown>|undefined;return String(args?.operation||args?.tool||message.tool||'Tool').replaceAll('_',' ');};

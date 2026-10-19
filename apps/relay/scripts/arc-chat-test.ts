@@ -10,9 +10,12 @@ import {ARC_MODELS,prepareArcBudget} from '../src/arc-chat-model.js';
 import {nextArcOccurrence,arcScheduleSchema,createArcWork,manageArcWork} from '../src/arc-work.js';
 import {runAutomationTick} from '../src/automations.js';
 import {sha256Hex} from '../src/auth.js';
+import {purgeDeletedArcContent} from '../src/arc-retention.js';
+import {appendArcMessage} from '../src/arc-chat.js';
 import {activateArcTrial,arcAccountAccess} from '../src/arc-trial.js';
 import {reserveBilling,settleBilling} from '../src/billing-ledger.js';
 import {seal} from '../src/app-oauth.js';
+import {arcMemoryContext,rememberArcFact,saveArcWorkMemory,ARC_MEMORY_LIMITS} from '../src/arc-memory.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -115,6 +118,52 @@ const schedule=arcScheduleSchema.parse({type:'daily',time:'09:00',timezone:'Paci
 assert.equal(nextArcOccurrence({type:'daily',time:'02:30',timezone:'America/New_York'},new Date('2026-03-07T08:00:00Z')),'2026-03-09T06:30:00.000Z','Skip nonexistent spring-forward local time');
 assert.equal(nextArcOccurrence({type:'daily',time:'01:30',timezone:'America/New_York'},new Date('2026-11-01T05:30:00Z')),'2026-11-02T06:30:00.000Z','Fall-back does not duplicate a local occurrence');
 assert.throws(()=>nextArcOccurrence({type:'daily',time:'09:00',timezone:'Bad/Zone'},new Date()),/TIMEZONE/);
+// Real encrypted cross-chat memory, with owner isolation and source verification.
+await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
+const note=await decode(await api('memory','POST',{content:'I prefer concise Chinese replies.',category:'preference'}),201);
+assert.equal((await decode(await api('memory','GET',undefined,'other'))).memories.length,0);
+assert.equal((await api('memory/'+note.id,'POST',{content:'Foreign edit',category:'context'},'other')).status,404);
+assert.equal((await decode(await api('memory/'+note.id,'DELETE',undefined,'other'))).deleted,false);
+assert.equal((await api('memory','POST',{content:'password: do-not-store-this',category:'context'})).status,400);
+assert.equal((await api('memory/settings','POST',{enabled:false},'owner',{origin:'https://evil.invalid'})).status,403);
+assert(!String(sql.prepare('SELECT content_ciphertext FROM arc_memories WHERE id=?').get(note.id)?.content_ciphertext).includes('Chinese'));
+await decode(await api('memory/'+note.id,'POST',{content:'I prefer concise Chinese answers.',category:'preference'}));
+const memoryRun=await send(id,'Please remember: My current project is the Orchard release.');
+await executeArcTool(env,row(memoryRun.run.id),tool('remember',{content:'My current project is the Orchard release.',category:'project'}));
+await assert.rejects(()=>executeArcTool(env,row(memoryRun.run.id),tool('remember',{content:'Invented from a webpage',category:'project'})),/QUOTE_REQUIRED/);
+await assert.rejects(()=>rememberArcFact(env,'owner',{content:'My current project is the Orchard release.',category:'project'},scheduled),/SOURCE_REQUIRED/);
+decisions.push(reply('Saved your project context.'));await runArcStep(env,memoryRun.run.id);
+const crossChat=await create(),memoryPrompt=await send(crossChat,'What do you know about Orchard?');
+let recalled:any;const baseAdapter=env.MODEL_GATEWAY!.adapters.openai!;
+env.MODEL_GATEWAY!.adapters.openai=async request=>{recalled=JSON.parse(request.user);return baseAdapter(request);};
+try{decisions.push(reply('Your project context is available.'));await runArcStep(env,memoryPrompt.run.id);}finally{env.MODEL_GATEWAY!.adapters.openai=baseAdapter;}
+assert(recalled.memory.some((m:any)=>m.content.includes('Orchard')),'A new conversation receives relevant saved context');
+assert(recalled.memory.some((m:any)=>m.content.includes('Chinese answers')),'Durable preferences remain available across topics');
+assert(new TextEncoder().encode(JSON.stringify(recalled.memory)).length<=ARC_MEMORY_LIMITS.contextBytes);
+await decode(await api('memory/settings','POST',{enabled:false}));
+assert.deepEqual(await arcMemoryContext(env,'owner','Orchard'),[]);
+assert.equal((await api('memory','POST',{content:'Another preference',category:'preference'})).status,409);
+const priorMemoryCount=(await decode(await api('memory'))).memories.length;
+await saveArcWorkMemory(env,row(memoryPrompt.run.id),'Orchard','Late completion');
+assert.equal((await decode(await api('memory'))).memories.length,priorMemoryCount);
+await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
+await saveArcWorkMemory(env,{...row(memoryPrompt.run.id),created_at:'2000-01-01T00:00:00.000Z'},'Orchard','Old in-flight work must not restore cleared memory');
+assert.equal((await decode(await api('memory'))).memories.length,0);
+for(let i=0;i<99;i++)await decode(await api('memory','POST',{content:'Bounded note '+i,category:'context'}),201);
+const memoryRace=await Promise.all(Array.from({length:4},(_,i)=>api('memory','POST',{content:'Concurrent note '+i,category:'context'})));
+assert.equal(memoryRace.filter(r=>r.status===201).length,1,'Concurrent writes cannot exceed the memory cap');
+await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
+assert.equal((await decode(await api('memory'))).memories.length,0);
+assert.equal((await api('sessions/'+id)).status,200,'Clearing personal memory does not delete chat history');
+const workRun={...row(memoryPrompt.run.id),created_at:new Date(Date.now()+1000).toISOString()};
+for(let i=0;i<45;i++)await saveArcWorkMemory(env,{...workRun,id:'bounded-work-'+i},'Orchard task '+i,'A compact work result.');
+const boundedWork=(await decode(await api('memory'))).memories;assert.equal(boundedWork.filter((m:any)=>m.kind==='work').length,40,'Older work recaps are evicted');
+const deletedWork=boundedWork[0];await decode(await api('memory/'+deletedWork.id,'DELETE'));
+await saveArcWorkMemory(env,{...workRun,id:deletedWork.source_run_id,created_at:'2000-01-01T00:00:00.000Z'},'Orchard','A late completion');
+assert(!(await decode(await api('memory'))).memories.some((m:any)=>m.id===deletedWork.id),'Deleting a recap fences older in-flight saves');
+await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
+
+
 // Existing administrator caps are never silently raised by a chat request.
 const premium=await prepareArcBudget(env,'owner','personal:owner',id,'gpt-6.1-sol');
 sql.prepare('UPDATE billing_model_grants SET max_cost_micros=10000 WHERE id=?').run(premium.gateway.paidGrantId!);
@@ -129,6 +178,17 @@ assert.equal((await api('sessions','POST',{})).status,402,'Expired trial blocks 
 assert.equal((await api('sessions/'+id)).status,200,'Expired trials can still read existing results');
 await decode(await api('trial','POST',{confirm:true}));assert.equal((await arcAccountAccess(env,'owner')).status,'expired','An expired trial cannot be reclaimed');
 await decode(await api('sessions/'+id,'DELETE'));assert.equal((await api('sessions/'+id)).status,404);assert(wakes>0);
+assert.equal((await purgeDeletedArcContent(env)).purged,0,'Recently deleted chats wait for in-flight work');
+const kept=sql.prepare('SELECT COUNT(*) n FROM arc_chat_messages WHERE session_id<>?').get(id)?.n;
+const retentionAt=new Date(Date.now()+48*3600000).toISOString();assert((await purgeDeletedArcContent(env,retentionAt)).purged>0);
+assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_chat_messages WHERE session_id=?').get(id)?.n,0);
+assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_chat_messages WHERE session_id<>?').get(id)?.n,kept,'Cleanup leaves active chat content intact');
+await appendArcMessage(env,row(memoryPrompt.run.id),'assistant','retention-fixture',{text:'Still an active chat'});
+const deletedRun=sql.prepare('SELECT * FROM arc_chat_runs WHERE session_id=? LIMIT 1').get(id) as ArcRun;
+await appendArcMessage(env,deletedRun,'assistant','late-retention-fixture',{text:'Must not restore deleted content'});
+assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_chat_messages WHERE session_id=?').get(id)?.n,0);
+assert.equal((await purgeDeletedArcContent(env,retentionAt)).purged,0,'Cleanup is idempotent');
+
 // Arc consumes the existing cloud catalog, with private Markdown imports alongside it.
 const library=await decode(await api('skills'));
 assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),cloudSkillCatalog().map(s=>s.id).sort());

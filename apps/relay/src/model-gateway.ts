@@ -1,5 +1,5 @@
 import {reserveBilling,settleBilling,type BillingContext,type BillingUnits} from "./billing-ledger.js";
-import {ModelProviderError,openAiAdapter,anthropicAdapter,workersAiAdapter,type WorkersAiBinding,type ModelAdapter,type ModelDefinition,type ModelProvider,type ModelUsage} from "./model-provider-adapters.js";
+import {ModelProviderError,openAiAdapter,anthropicAdapter,openRouterAdapter,workersAiAdapter,type WorkersAiBinding,type ModelAdapter,type ModelDefinition,type ModelProvider,type ModelUsage} from "./model-provider-adapters.js";
 
 export const DEFAULT_AUTO_MODEL:ModelDefinition={
   id:"workers-auto",provider:"workers_ai",model:"@cf/qwen/qwen3-30b-a3b-fp8",maxOutputTokens:4096,
@@ -24,7 +24,7 @@ export type GatewayRequest={
 };
 const safe=(n:number)=>Number.isSafeInteger(n)&&n>=0;
 function validateDefinition(d:ModelDefinition) {
-  if(!["workers_ai","openai","anthropic"].includes(d.provider)||!d.id||!d.model||!safe(d.maxOutputTokens)||d.maxOutputTokens<1||
+  if(!["workers_ai","openai","anthropic","openrouter"].includes(d.provider)||!d.id||!d.model||!safe(d.maxOutputTokens)||d.maxOutputTokens<1||
     !safe(d.inputMicrosPerMillion)||!safe(d.outputMicrosPerMillion)||
     (d.cacheWriteMicrosPerMillion!==undefined&&!safe(d.cacheWriteMicrosPerMillion))||
     (d.cachedInputMicrosPerMillion!==undefined&&!safe(d.cachedInputMicrosPerMillion))||
@@ -104,7 +104,7 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
 export type ModelGatewayEnv={
   DB?:D1Database;MODEL_GATEWAY?:ModelGatewayBinding;MODEL_GATEWAY_ENABLED?:string;
   MODEL_GATEWAY_MODELS?:string;MODEL_GATEWAY_MODEL_ID?:string;MODEL_GATEWAY_FREE_POOL_ID?:string;MODEL_GATEWAY_PAID_GRANT_ID?:string;
-  OPENAI_API_KEY?:string;ANTHROPIC_API_KEY?:string;AI?:WorkersAiBinding;
+  OPENAI_API_KEY?:string;ANTHROPIC_API_KEY?:string;OPENROUTER_API_KEY?:string;AI?:WorkersAiBinding;
   MODEL_GATEWAY_LOCAL_TEST_ENDPOINT?:string;
 };
 /** Server configuration only. A stored user/org grant is still checked atomically on every reservation. */
@@ -124,5 +124,6 @@ export function resolveModelGateway(env:ModelGatewayEnv):ModelGatewayBinding|und
     paidGrantId:env.MODEL_GATEWAY_PAID_GRANT_ID,
     adapters:{...(env.AI?{workers_ai:workersAiAdapter(env.AI)}:{}),
       ...(env.OPENAI_API_KEY?{openai:openAiAdapter(env.OPENAI_API_KEY,fetcher)}:{}),
+      ...(env.OPENROUTER_API_KEY?{openrouter:openRouterAdapter(env.OPENROUTER_API_KEY,fetcher)}:{}),
       ...(env.ANTHROPIC_API_KEY?{anthropic:anthropicAdapter(env.ANTHROPIC_API_KEY,fetcher)}:{})}};
 }

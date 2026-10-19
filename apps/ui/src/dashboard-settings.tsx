@@ -1,4 +1,5 @@
 import {ArcBillingPanel} from './arc-billing-panel.js';
+import {ArcMemoryPanel} from './arc-memory-panel.js';
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import {useTheme} from "./theme.js";
 import { useI18n } from "./i18n.js";
@@ -6,7 +7,7 @@ import { OrganizationSettings } from "./organization-settings.js";
 import {ProductInstall} from './product-pwa.js';
 import "./dashboard-settings.css";
 
-type Section = "account" | "appearance" | "workspaces" | "connections" | "billing";
+type Section = "account" | "appearance" | "workspaces" | "connections" | "billing" | "memory";
 type Destination = "devices" | "connect" | "security" | "apps";
 type Props = {
   currentName?: string | null;
@@ -46,7 +47,7 @@ export function DashboardSettings({
   const { tr } = useI18n();
   const initialSection = () => {
     const value = new URLSearchParams(location.search).get("section");
-    return ["account","appearance","workspaces","connections","billing"].includes(value || "") ? value as Section : "account";
+    return ["account","appearance","workspaces","connections","billing","memory"].includes(value || "") ? value as Section : "account";
   };
   const [section, setSection] = useState<Section>(initialSection);
   const {theme,setTheme} = useTheme();
@@ -60,6 +61,7 @@ export function DashboardSettings({
   const nav: { id: Section; icon: "user" | "appearance" | "team" | "link" | "billing"; title: string }[] = [
     { id: "account", icon: "user", title: tr("Profile", "个人资料") },
     { id: "appearance", icon: "appearance", title: tr("Appearance", "外观与语言") },
+    { id: "memory", icon: "user", title: tr("Memory", "记忆") },
     { id: "workspaces", icon: "team", title: tr("Workspaces", "工作空间") },
     { id: "connections", icon: "link", title: tr("Connections & security", "连接与安全") },
     { id: "billing", icon: "billing", title: tr("Plan & usage", "套餐与用量") },
@@ -67,6 +69,7 @@ export function DashboardSettings({
   const titles = {
     account: { eyebrow: tr("PERSONAL SETTINGS", "个人设置"), title: tr("Your profile", "个人资料"), detail: tr("The account you use across Arc and Connect.", "在 Arc 与 Connect 中使用同一个账号。") },
     appearance: {eyebrow:tr("PERSONAL SETTINGS","个人设置"),title:tr("Make it yours","调整为你喜欢的样子"),detail:tr("Choose how your workspace looks and the language you use.","选择工作空间的外观与使用语言。")},
+    memory: {eyebrow:tr("PERSONAL CONTEXT","个人背景"),title:tr("Memory","记忆"),detail:tr("Useful context that follows you across conversations and models.","让有用的背景信息随你跨越对话与模型。")},
     workspaces: { eyebrow: tr("COLLABORATION", "协作空间"), title: tr("Workspaces", "工作空间"), detail: tr("Keep personal access private and organize your team.", "让个人设备保持私有，同时与团队安全协作。") },
     connections: { eyebrow: tr("ACCESS CONTROL", "访问控制"), title: tr("Connections & security", "连接与安全"), detail: tr("Manage the devices, apps and permissions available to your AI.", "管理 AI 可访问的设备、应用和权限边界。") },
     billing: { eyebrow: tr("SUBSCRIPTION", "订阅方案"), title: tr("Plan & usage", "套餐与用量"), detail: tr("Understand your plan and available capacity.", "查看当前套餐与可用调用额度。") },
@@ -179,6 +182,7 @@ export function DashboardSettings({
       </div>}
 
       {section === "billing" && <ArcBillingPanel />}
+      {section === "memory" && <ArcMemoryPanel />}
     </div>
   </div>;
 }

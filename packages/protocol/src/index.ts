@@ -1,7 +1,8 @@
 // Keep protocol runtime exports self-contained for native Node type stripping.
-/** Launch recommendation; checkout stays disabled until configured and reviewed. */
+/** Bootstrap defaults for migrations, previews and planning. Runtime commercial terms come from versioned D1 configuration. */
 export const ARC_CREDIT_RATE = {version:'arc-credits-v1',unitsPerCredit:1000,costMicrosPerUnit:2} as const;
 export const ARC_TRIAL_CREDITS = 200;
+export const ARC_MEMORY_LIMITS={facts:100,work:40,factBytes:768,workBytes:2048,contextBytes:4000} as const;
 export const ARC_PLATFORM_APP_BUDGETS_MICROS={free:10000,paid:500000} as const;
 export type ArcPlanId = 'free'|'arc-plus-v1'|'arc-pro-v1';
 export const ARC_PLANS = [
@@ -18,10 +19,18 @@ export const ARC_ENTERPRISE={id:'enterprise',label:'Enterprise',pricing:'contact
  * This is shared by the gateway, billing UI and SaaS economics tools. */
 export const ARC_HOSTED_MODELS = [
   {id:'arc-auto',label:'Auto · GPT-6 Luna',provider:'openai',model:'gpt-6-luna',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000,cachedInputMicrosPerMillion:10000,cacheWriteMicrosPerMillion:125000},
+  {id:'gpt-6-luna',label:'GPT-6 Luna',provider:'openai',model:'gpt-6-luna',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000,cachedInputMicrosPerMillion:10000,cacheWriteMicrosPerMillion:125000},
   {id:'gpt-6.1-sol',label:'GPT-6.1 Sol',provider:'openai',model:'gpt-6.1-sol',maxOutputTokens:4096,inputMicrosPerMillion:2000000,outputMicrosPerMillion:10000000,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:2500000},
   {id:'gpt-6-astra',label:'GPT-6 Astra',provider:'openai',model:'gpt-6-astra',maxOutputTokens:4096,inputMicrosPerMillion:10000000,outputMicrosPerMillion:50000000,cachedInputMicrosPerMillion:1000000,cacheWriteMicrosPerMillion:12500000},
   {id:'claude-sonnet-5-5',label:'Claude Sonnet 5.5',provider:'anthropic',model:'claude-sonnet-5-5',maxOutputTokens:4096,inputMicrosPerMillion:2000000,outputMicrosPerMillion:10000000,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:4000000,cacheWrite5mMicrosPerMillion:2500000,structuredOutput:true},
+  {id:'claude-haiku-5-5',label:'Claude Haiku 5.5',provider:'anthropic',model:'claude-haiku-5-5',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000,cachedInputMicrosPerMillion:10000,cacheWriteMicrosPerMillion:200000,cacheWrite5mMicrosPerMillion:125000,structuredOutput:true},
   {id:'claude-opus-5-5',label:'Claude Opus 5.5',provider:'anthropic',model:'claude-opus-5-5',maxOutputTokens:4096,inputMicrosPerMillion:4000000,outputMicrosPerMillion:20000000,cachedInputMicrosPerMillion:200000,cacheWriteMicrosPerMillion:8000000,cacheWrite5mMicrosPerMillion:5000000,structuredOutput:true},
+  // OpenRouter rates are explicit routing ceilings, not a promise of the cheapest endpoint.
+  // Uncached rates also apply to cache hits, conservatively covering every eligible route.
+  {id:'minimax-m3',label:'MiniMax M3',provider:'openrouter',model:'minimax/minimax-m3',maxOutputTokens:4096,inputMicrosPerMillion:300000,outputMicrosPerMillion:1200000},
+  {id:'deepseek-v4.1-flash',label:'DeepSeek V4.1 Flash',provider:'openrouter',model:'deepseek/deepseek-v4.1-flash-1017',maxOutputTokens:4096,inputMicrosPerMillion:300000,outputMicrosPerMillion:1200000},
+  {id:'glm-5.3-flash',label:'GLM 5.3 Flash',provider:'openrouter',model:'z-ai/glm-5.3-flash',maxOutputTokens:4096,inputMicrosPerMillion:150000,outputMicrosPerMillion:500000},
+  {id:'kimi-k3',label:'Kimi K3',provider:'openrouter',model:'moonshotai/kimi-k3',maxOutputTokens:4096,inputMicrosPerMillion:3000000,outputMicrosPerMillion:15000000},
 ] as const;
 
 

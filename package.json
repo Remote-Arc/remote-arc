@@ -54,6 +54,7 @@
     "saas:tools": "node tools/saas/cli.mjs --serve",
     "test:saas": "node tools/saas/economics-test.mjs && node tools/saas/cli.mjs --check",
     "arc:setup": "node scripts/arc-platform-setup.mjs",
+    "billing:setup": "pnpm --filter @remotearc/relay exec tsx ../../scripts/stripe-billing-setup.ts",
     "saas:apps": "node tools/saas/apps.mjs"
   },
   "devDependencies": {

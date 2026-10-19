@@ -1,4 +1,5 @@
 import {BUILTIN_SKILLS} from '../../../packages/skills/src/catalog.generated.js';
+import {ARC_MEMORY_LIMITS} from '@remotearc/protocol';
 import type {ChatMessage, ChatRun, ChatSession} from "./use-arc-chat.js";
 
 type PreviewSession = {session:ChatSession; messages:ChatMessage[]; runs:ChatRun[]; reads:number; requests:Map<string,{text:string;modelId:string;run:ChatRun}>};
@@ -7,6 +8,8 @@ const makeRun = ():ChatRun => ({id:crypto.randomUUID(),status:"queued",step:0,to
 
 /** Per-tab UI simulation. Never calls a model, Apps, devices, storage or production API. */
 export function createArcPreview() {
+  let memoryEnabled=true;
+  const memories=new Map<string,{id:string;kind:'fact'|'work';category:string;content:string;source_session_id:string|null;updated_at:string}>([['example-preference',{id:'example-preference',kind:'fact',category:'preference',content:'Keep release summaries concise and link the relevant pull requests.',source_session_id:'sample-conversation',updated_at:new Date().toISOString()}]]);
   const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string}>(BUILTIN_SKILLS.map(skill=>[skill.id,{id:skill.id,name:skill.name,description:skill.description,sourceUrl:skill.upstream,origin:'builtin',content:skill.content}]));
   const sessions = new Map<string,PreviewSession>();
   const example:PreviewSession = {
@@ -34,6 +37,23 @@ export function createArcPreview() {
     return {session:record.session,messages:record.messages,runs:record.runs};
   }
   return {handle(path:string,method:string,rawBody:unknown):Response|null {
+    if(path==='/api/arc/memory'||path.startsWith('/api/arc/memory/')){
+      if(path==='/api/arc/memory'&&method==='GET')return json({enabled:memoryEnabled,limits:ARC_MEMORY_LIMITS,bytes:[...memories.values()].reduce((n,m)=>n+new TextEncoder().encode(m.content).length,0),memories:[...memories.values()].reverse()});
+      const id=decodeURIComponent(path.slice('/api/arc/memory/'.length));
+      if(method==='DELETE')return json({deleted:memories.delete(id)});
+      let input;try{input=JSON.parse(String(rawBody));}catch{return json({error:'ARC_INVALID_MEMORY'},400);}
+      if(method!=='POST')return json({error:'method_not_allowed'},405);
+      if(id==='settings'){
+        if(typeof input.enabled!=='boolean')return json({error:'ARC_INVALID_MEMORY'},400);
+        memoryEnabled=input.enabled;if(input.clear===true)memories.clear();return json({enabled:memoryEnabled,cleared:input.clear===true});
+      }
+      if(!memoryEnabled)return json({error:'ARC_MEMORY_DISABLED'},409);
+      if(typeof input.content!=='string'||input.content.trim().length<2||input.content.length>600||new TextEncoder().encode(input.content).length>ARC_MEMORY_LIMITS.factBytes||!['preference','project','context'].includes(input.category))return json({error:'ARC_INVALID_MEMORY'},400);
+      if([...memories.values()].some(m=>m.id!==id&&m.category===input.category&&m.content===input.content))return json({error:'ARC_MEMORY_DUPLICATE'},409);
+      if(path!=='/api/arc/memory'&&!memories.has(id))return json({error:'ARC_MEMORY_NOT_FOUND'},404);
+      if(path==='/api/arc/memory'&&[...memories.values()].filter(m=>m.kind==='fact').length>=ARC_MEMORY_LIMITS.facts)return json({error:'ARC_MEMORY_LIMIT_OR_CHANGED'},409);
+      const memoryId=path==='/api/arc/memory'?crypto.randomUUID():id;memories.set(memoryId,{id:memoryId,kind:'fact',category:input.category,content:input.content.trim(),source_session_id:null,updated_at:new Date().toISOString()});return json({id:memoryId,saved:true},path==='/api/arc/memory'?201:200);
+    }
     if(path==='/api/arc/skills'||path.startsWith('/api/arc/skills/')){
       const id=decodeURIComponent(path.slice('/api/arc/skills/'.length));
       if(path==='/api/arc/skills'&&method==='GET')return json({skills:[...skills.values()].map(({content,...skill})=>skill)});

@@ -1,4 +1,5 @@
-import {ARC_CREDIT_RATE,ARC_PLANS,ARC_TOPUPS,ARC_TRIAL_CREDITS} from '@remotearc/protocol';
+import {ARC_CREDIT_RATE} from '@remotearc/protocol';
+import {commercialVersion,commercialOffer} from './arc-commercial-config.js';
 
 export type CreditSource='trial'|'subscription'|'topup'|'promotion';
 export type CreditRate=typeof ARC_CREDIT_RATE;
@@ -16,14 +17,20 @@ export async function grantArcCredits(db:D1Database,input:Grant,at=new Date().to
   if(!granted||spent>granted||!input.userId||!input.sourceRef||input.sourceRef.length>200||!input.reason.trim()||input.reason.length>500||!['trial','subscription','topup','promotion'].includes(input.source))throw new CreditError('ARC_CREDITS_INVALID_GRANT');
   const start=iso(input.startsAt||at),expiry=input.expiresAt?iso(input.expiresAt):null;
   if(expiry&&expiry<=start)throw new CreditError('ARC_CREDITS_INVALID_DATE');
-  if(input.source==='trial'&&(granted!==ARC_TRIAL_CREDITS*ARC_CREDIT_RATE.unitsPerCredit||input.sourceRef!=='trial:'+input.userId+':'+start))throw new CreditError('ARC_CREDITS_INVALID_TRIAL');
-  let receipt:{product_id:string;amount_cents:number;period_start:string|null;period_end:string|null}|null=null;
+  if(input.source==='trial'){
+    const trial=await db.prepare('SELECT commercial_version_id FROM arc_trials WHERE user_id=?1 AND started_at=?2').bind(input.userId,start).first<{commercial_version_id:string|null}>();
+    if(!trial)throw new CreditError('ARC_CREDITS_INVALID_TRIAL');
+    const config=(await commercialVersion(db,trial.commercial_version_id||'seed:live:arc-trial-v1')).config;
+    if(!('days' in config)||granted!==config.credits*ARC_CREDIT_RATE.unitsPerCredit||input.sourceRef!=='trial:'+input.userId+':'+start)throw new CreditError('ARC_CREDITS_INVALID_TRIAL');
+  }
+  let receipt:{product_id:string;amount_cents:number;period_start:string|null;period_end:string|null;commercial_version_id:string|null;discount_cents:number}|null=null;
   if(input.source==='subscription'||input.source==='topup'){
-    receipt=await db.prepare("SELECT product_id,amount_cents,period_start,period_end FROM arc_payment_receipts WHERE id=?1 AND user_id=?2 AND state='paid' AND currency='usd'").bind(input.sourceRef,input.userId).first();
+    receipt=await db.prepare("SELECT product_id,amount_cents,period_start,period_end,commercial_version_id,discount_cents FROM arc_payment_receipts WHERE id=?1 AND user_id=?2 AND state='paid' AND currency='usd'").bind(input.sourceRef,input.userId).first();
     if(!receipt)throw new CreditError('ARC_CREDITS_GRANT_NOT_AUTHORIZED');
-    const product=input.source==='subscription'?ARC_PLANS.find(p=>p.id===receipt!.product_id&&p.monthlyPriceCents>0):ARC_TOPUPS.find(p=>p.id===receipt!.product_id);
-    const credits=product&&('monthlyCredits' in product?product.monthlyCredits:product.credits),price=product&&('monthlyPriceCents' in product?product.monthlyPriceCents:product.priceCents);
-    if(!product||granted!==credits!*ARC_CREDIT_RATE.unitsPerCredit||receipt.amount_cents!==price||spent!==0)throw new CreditError('ARC_CREDITS_RECEIPT_MISMATCH');
+    const version=await commercialVersion(db,receipt.commercial_version_id||'seed:live:'+receipt.product_id),product=commercialOffer(version);
+    const credits=product.credits,price=product.cents;
+    if(version.product_id!==receipt.product_id||version.kind!==(input.source==='subscription'?'plan':'topup')||!credits||granted!==credits*ARC_CREDIT_RATE.unitsPerCredit||receipt.amount_cents+receipt.discount_cents!==price||spent!==0)throw new CreditError('ARC_CREDITS_RECEIPT_MISMATCH');
+    if(receipt.discount_cents>0&&!await db.prepare('SELECT 1 FROM arc_promotion_redemptions WHERE receipt_id=?1 AND user_id=?2 AND discount_cents=?3').bind(input.sourceRef,input.userId,receipt.discount_cents).first())throw new CreditError('ARC_CREDITS_RECEIPT_MISMATCH');
     if(input.source==='subscription'&&(receipt.period_start!==start||receipt.period_end!==expiry||!expiry))throw new CreditError('ARC_CREDITS_RECEIPT_MISMATCH');
     if(input.source==='topup'&&expiry!==null)throw new CreditError('ARC_CREDITS_RECEIPT_MISMATCH');
   }
@@ -33,8 +40,8 @@ export async function grantArcCredits(db:D1Database,input:Grant,at=new Date().to
       SELECT ?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11 WHERE
       (?3='trial' AND EXISTS(SELECT 1 FROM arc_trials t WHERE t.user_id=?2 AND t.started_at=?7 AND t.expires_at=?8))
       OR (?3='promotion' AND EXISTS(SELECT 1 FROM users WHERE id=?10 AND role='admin'))
-      OR (?3 IN ('subscription','topup') AND EXISTS(SELECT 1 FROM arc_payment_receipts r WHERE r.id=?4 AND r.user_id=?2 AND r.state='paid' AND r.product_id=?12 AND r.amount_cents=?13 AND r.period_start IS ?14 AND r.period_end IS ?15))`)
-      .bind(id,input.userId,input.source,input.sourceRef,granted,spent,start,expiry,input.reason,input.actorId??null,at,receipt?.product_id??null,receipt?.amount_cents??null,receipt?.period_start??null,receipt?.period_end??null),
+      OR (?3 IN ('subscription','topup') AND EXISTS(SELECT 1 FROM arc_payment_receipts r WHERE r.id=?4 AND r.user_id=?2 AND r.state='paid' AND r.product_id=?12 AND r.amount_cents=?13 AND r.period_start IS ?14 AND r.period_end IS ?15 AND r.commercial_version_id IS ?16 AND r.discount_cents=?17))`)
+      .bind(id,input.userId,input.source,input.sourceRef,granted,spent,start,expiry,input.reason,input.actorId??null,at,receipt?.product_id??null,receipt?.amount_cents??null,receipt?.period_start??null,receipt?.period_end??null,receipt?.commercial_version_id??null,receipt?.discount_cents??0),
     db.prepare(`INSERT OR IGNORE INTO arc_credit_events(id,user_id,event_type,lot_id,units,reason,created_at)
       SELECT 'grant:'||id,user_id,'granted',id,granted_units,reason,created_at FROM arc_credit_lots WHERE source_ref=?1`).bind(input.sourceRef),
   ]);

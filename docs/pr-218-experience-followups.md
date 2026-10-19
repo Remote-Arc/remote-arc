@@ -19,4 +19,12 @@ Admin adds manual user follow-ups with five English/Chinese templates, personali
 - Chat redesign checks across 2560px, 1440px, 1024px and 390px × light/dark × English/Chinese (16 combinations), covering welcome/conversation layouts, full-width background, model-picker keyboard use, mobile navigation, reduced motion and simulated completion.
 - Interactive browser checks for stable sidebar placement, combined task filters, cloud skills, Markdown import, chat handoff, model selection and simulated chat. Admin checks cover notes/permission, template personalization, saved drafts/history and the preview send lock.
 
-No production deployment, real model call, email, payment or customer-data mutation was performed. Apply migrations 0040 and 0041 through the normal release path. The PR preview remains isolated simulation; Admin writes and mail sending stay blocked there.
+No production deployment, real model call, email, live payment or production customer-data mutation was performed. The actual NZ Stripe sandbox additionally passed versioned pricing, a one-cycle promotion, hosted test-card Checkout, signed fulfillment and refund revocation. Apply migrations 0040–0045 through the normal release path. The PR preview remains isolated simulation; Admin writes and mail sending stay blocked there.
+
+
+Further billing, models and memory work:
+
+- Runtime commercial terms moved into versioned D1 configuration with Admin drafts, publication, history/restore, exact quote checks and retained subscription/trial terms. Public pricing, checkout, fulfillment and Credits use those versions. Admin Payments includes verified receipts, failed invoices, rated cost, public codes and private one-cycle offers; no real offer was published.
+- Model selection now has ten manual models plus Auto, including direct economy models and four optional OpenRouter routes with explicit price/privacy/structured-output constraints. Adapter tests use mocked HTTP; real model availability is not claimed without provider credentials and bounded acceptance.
+- Owner-scoped encrypted memory supports useful facts, bounded work recaps, relevant cross-chat retrieval and live device context. Settings provides inspect/edit/delete/disable/clear. Old in-flight saves cannot restore cleared data. Deleted chats also gain delayed content cleanup; payment/usage identifiers remain available for reconciliation.
+- See [commercial configuration](commercial-configuration.md) and [personal memory](arc-personal-memory.md) for scope, cost bounds, operational limits and validation.

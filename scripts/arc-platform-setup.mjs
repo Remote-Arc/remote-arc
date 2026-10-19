@@ -4,11 +4,12 @@ import {Writable} from 'node:stream';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const events=['invoice.paid','checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.expired','customer.subscription.updated','customer.subscription.deleted','charge.refunded','charge.dispute.created'];
+const events=['invoice.paid','invoice.payment_failed','checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.expired','customer.subscription.updated','customer.subscription.deleted','charge.refunded','charge.dispute.created'];
 const webhook='https://agent.remotearc.app/api/billing/webhook';
 const required=['APP_TOKEN_KEY','OPENAI_API_KEY','ANTHROPIC_API_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET'];
 if(!process.argv.includes('--configure')){
  console.log('Arc platform setup (dry run; no provider calls or secret writes).\nRequired Cloudflare Worker Secrets: '+required.join(', '));
+ console.log('Optional OPENROUTER_API_KEY enables the reviewed open-model routes.');
  console.log('Stripe webhook: '+webhook+'\nAPI version: 2026-09-30.endive\nEvents: '+events.join(', '));
  console.log('Run pnpm arc:setup --configure in your own terminal to validate provider credentials, register the webhook and save Secrets. Secret updates take effect on the deployed Worker; activation is saved last. This never publishes application code or bypasses its production approval.');
  process.exit(0);
@@ -28,9 +29,13 @@ async function request(url,headers,body){
 }
 await request('https://api.openai.com/v1/models/gpt-6-luna',{authorization:'Bearer '+values.OPENAI_API_KEY});
 await request('https://api.anthropic.com/v1/models/claude-sonnet-5-5',{'x-api-key':values.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'});
+if(process.env.OPENROUTER_API_KEY){
+ values.OPENROUTER_API_KEY=process.env.OPENROUTER_API_KEY;
+ await request('https://openrouter.ai/api/v1/key',{authorization:'Bearer '+values.OPENROUTER_API_KEY});
+}
 const stripeHeaders={authorization:'Bearer '+values.STRIPE_SECRET_KEY,'stripe-version':'2026-09-30.endive','content-type':'application/x-www-form-urlencoded'};
 const account=await request('https://api.stripe.com/v1/account',stripeHeaders);
-if(values.STRIPE_SECRET_KEY.startsWith('sk_live_')&&!account.charges_enabled)throw Error('Stripe live account is not enabled for charges. Complete Stripe account activation first.');
+if(!account.charges_enabled||!account.payouts_enabled||!account.details_submitted)throw Error('Stripe live account is not ready for charges and payouts. Complete identity, business and payout-account activation first.');
 const endpoints=await request('https://api.stripe.com/v1/webhook_endpoints?limit=100',stripeHeaders);
 const existing=endpoints.data?.find(e=>e.url===webhook&&e.status==='enabled');
 if(existing){

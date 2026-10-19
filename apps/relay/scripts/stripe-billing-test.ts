@@ -63,7 +63,7 @@ try{
  const mutationCount=mutations.length;assert.equal((await action('plan/change','arc-pro-v1')).status,200);assert.equal(mutations.length,mutationCount,'Repeated plan selection does not mutate twice');
  assert.equal((await action('plan/change','arc-plus-v1')).status,200);assert.equal(sql.prepare("SELECT pending_product_id FROM arc_billing_subscriptions WHERE id='sub_fixture'").get()?.pending_product_id,null);
  assert.equal((await action('plan/change','arc-pro-v1')).status,200);const changes=mutations.filter(m=>m.path.endsWith('/sub_sched_fixture'));assert.notEqual(changes[0].key,changes.at(-1)?.key,'Changing back and forth uses a new Stripe mutation key');
- await Promise.all([processStripeEvent(env,event('initial'),'initial'),processStripeEvent(env,event('duplicate'),'duplicate')]);assert.equal((await creditBalance(db,'one')).available,1500);assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM billing_model_grants').get()?.n,2);
+ await Promise.all([processStripeEvent(env,event('initial'),'initial'),processStripeEvent(env,event('duplicate'),'duplicate')]);assert.equal((await creditBalance(db,'one')).available,1500);assert.deepEqual(sql.prepare('SELECT provider FROM billing_model_grants ORDER BY provider').all().map(r=>r.provider),['anthropic','openai','openrouter']);
   // A delayed previous-period invoice must not roll the subscription's current SKU back.
   const futureEnd=new Date((end+30*86400)*1000).toISOString();
   sql.prepare("UPDATE arc_billing_subscriptions SET product_id='arc-pro-v1',period_end=? WHERE id='sub_fixture'").run(futureEnd);
@@ -72,11 +72,12 @@ try{
   sql.prepare("UPDATE arc_billing_subscriptions SET product_id='arc-plus-v1',period_end=?,pending_product_id='arc-plus-v1',pending_effective_at=? WHERE id='sub_fixture'").run(new Date(end*1000).toISOString(),new Date(start*1000).toISOString());
   await processStripeEvent(env,event('appliedplan'),'appliedplan');
   assert.equal(sql.prepare("SELECT pending_product_id FROM arc_billing_subscriptions WHERE id='sub_fixture'").get()?.pending_product_id,null,'The invoice for an applied plan clears the scheduled-change label');
- sql.prepare("INSERT INTO arc_billing_checkouts VALUES('topup','one','arc-topup-500-v1','payment','cs_test_fixture','open',?,?)").run(new Date(end*1000).toISOString(),stamp);
+ sql.prepare("INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,session_id,status,expires_at,created_at) VALUES('topup','one','arc-topup-500-v1','payment','cs_test_fixture','open',?,?)").run(new Date(end*1000).toISOString(),stamp);
  await processStripeEvent(env,event('topup','checkout.session.completed','cs_test_fixture'),'topup');await processStripeEvent(env,event('topup2','checkout.session.async_payment_succeeded','cs_test_fixture'),'topup2');assert.equal((await creditBalance(db,'one')).available,2000);
  assert.equal((await creditBalance(db,'two')).available,0);
  subscriptionStatus='canceled';await processStripeEvent(env,event('cancel','customer.subscription.deleted','sub_fixture'),'cancel');assert.equal((await currentArcPlan(db,'one')).id,'arc-plus-v1','Period-end cancellation preserves the paid period');
  refunded=true;await processStripeEvent(env,event('refund','charge.refunded','ch_fixture'),'refund');assert.equal((await creditBalance(db,'one')).available,500);assert.equal((await currentArcPlan(db,'one')).id,'free');
+ assert(sql.prepare("SELECT revoked_at FROM billing_model_grants WHERE provider='openrouter'").get()?.revoked_at,'Refunds revoke the newly added provider as well');
  assert.equal(await getAccountPlan(env,'one'),'free');assert.equal((await getMonthlyUsage(env,'one')).limit,500);
  await assert.rejects(()=>processStripeEvent(env,event('late'),'late'),/PAYMENT_NOT_FINAL/);assert.equal((await creditBalance(db,'one')).available,500);
  assert.equal(sql.prepare("SELECT status FROM arc_payment_events WHERE id='evt_late'").get()?.status,'failed');
@@ -84,6 +85,14 @@ try{
  invoiceOwner='cus_unknown';await processStripeEvent(env,event('unknown'),'unknown');assert.equal((await creditBalance(db,'two')).available,0);invoiceOwner='cus_fixture';
  invoicePrice=999;await assert.rejects(()=>processStripeEvent(env,event('wrongprice'),'wrongprice'),/INVOICE_MISMATCH/);invoicePrice=3900;
  assert.equal((await action('checkout','arc-plus-v1')).status,200);assert.equal((await action('checkout','arc-plus-v1')).status,200);assert.equal(mutations.filter(m=>m.path==='/v1/checkout/sessions').length,1,'A retry reopens the same checkout');assert.equal((await creditBalance(db,'one')).available,500,'Opening or returning from checkout never grants allowance');
+ assert(mutations.find(m=>m.path==='/v1/checkout/sessions')?.body.get('success_url')?.includes('session_id={CHECKOUT_SESSION_ID}'));
+ assert.equal(mutations.find(m=>m.path==='/v1/checkout/sessions')?.body.has('payment_method_types[0]'),false,'Current Stripe API uses Dashboard-managed payment methods');
+ const checkoutStatus=(session:string,token='fixture-session')=>handleBilling(new Request('https://agent.remotearc.app/api/billing/checkout-status?session='+session,{headers:{cookie:'rl_session='+token}}),env);
+ assert.equal((await(await checkoutStatus('cs_test_open')).json() as any).status,'open');
+ assert.equal((await(await checkoutStatus('cs_test_fixture')).json() as any).status,'complete');
+ assert.equal((await checkoutStatus('cs_test_missing')).status,404);
+ sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex('other-session'),'two',new Date(Date.now()+3600000).toISOString(),stamp);
+ assert.equal((await checkoutStatus('cs_test_open','other-session')).status,404,'Checkout status is private to its owner');
  assert.equal((await action('checkout','arc-topup-500-v1')).status,402,'An expired or refunded plan cannot purchase unusable top-ups');
  await assert.rejects(()=>processStripeEvent(env,{...event('live'),livemode:true},'live'),/ACCOUNT_MISMATCH/);
  const raw=JSON.stringify(event('signed')),t=Math.floor(Date.now()/1000),key=await crypto.subtle.importKey('raw',new TextEncoder().encode('whsec_fixture'),{name:'HMAC',hash:'SHA-256'},false,['sign']);

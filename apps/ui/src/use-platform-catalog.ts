@@ -1,9 +1,10 @@
 import {useEffect,useState} from 'react';
-export type PlatformCatalog={arcAvailable:boolean;billingAvailable:boolean;connectFreeCalls:number};
+export type CatalogPlan={id:string;label:string;monthlyPriceCents:number;monthlyCredits:number;connectToolCalls:number|null;concurrentRuns:number;maxSeconds:number;versionId:string};
+export type PlatformCatalog={arcAvailable:boolean;billingAvailable:boolean;connectFreeCalls:number|null;plans:CatalogPlan[];topups:Array<{id:string;priceCents:number;credits:number;versionId:string}>;trial:{days:number;credits:number}};
 let current:PlatformCatalog|null=null,pending:Promise<PlatformCatalog>|null=null,updatedAt=0;
 function load(){
   if(current&&Date.now()-updatedAt<30000)return Promise.resolve(current);
-  if(!pending)pending=fetch('/api/billing/catalog',{credentials:'omit',cache:'no-store'}).then(async response=>{if(!response.ok)throw Error();const value=await response.json();if(typeof value.arcAvailable!=='boolean'||typeof value.billingAvailable!=='boolean'||!Number.isSafeInteger(value.connectFreeCalls)||value.connectFreeCalls<1)throw Error();updatedAt=Date.now();return current=value as PlatformCatalog;}).finally(()=>{pending=null;});
+  if(!pending)pending=fetch('/api/billing/catalog',{credentials:'omit',cache:'no-store'}).then(async response=>{if(!response.ok)throw Error();const value=await response.json();if(typeof value.arcAvailable!=='boolean'||typeof value.billingAvailable!=='boolean'||value.connectFreeCalls!==null&&(!Number.isSafeInteger(value.connectFreeCalls)||value.connectFreeCalls<1)||!Array.isArray(value.plans)||!value.topups?.length||!value.trial?.days)throw Error();updatedAt=Date.now();return current=value as PlatformCatalog;}).finally(()=>{pending=null;});
  return pending;
 }
 export function usePlatformCatalog(){

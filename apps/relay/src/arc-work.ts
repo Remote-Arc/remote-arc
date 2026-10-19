@@ -41,7 +41,7 @@ export async function createArcWork(env:ArcEnv,run:ArcRun,args:unknown,routine:b
  if(routine===(input.schedule.type==='once'))throw new Error('ARC_INVALID_SCHEDULE');
  if(run.automation_id)throw new Error('ARC_RECURSIVE_WORK_NOT_ALLOWED');
  await requireArcAccess(env,run.user_id);
-  const plan=await currentArcPlan(env.DB,run.user_id);
+  const plan=await currentArcPlan(env,run.user_id);
  const id='arc-'+(await sha256Hex(`${run.id}:${run.step}`)).slice(0,32),now=stamp(),next=nextArcOccurrence(input.schedule,new Date(now));
  const native:NativeWork={version:1,instructions:await seal(env,input.instructions,`arc-work:${run.user_id}:${id}`),modelId:run.model_id,schedule:input.schedule,originSessionId:run.session_id};
  const goal={type:'agent_goal',controller:'source',controller_client_id:'arc-native',objective:input.name,success_criteria:'Report verified results in the task conversation.',allowed_tools:[],max_iterations:8,native_arc:native};
@@ -88,7 +88,7 @@ export async function tickNativeArcWork(env:ArcEnv,task:AutomationRow,state:Runt
  const work=nativeArcWork(task.goal_json)!;
  const runId=state.run_id!;let run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE id=?1 AND user_id=?2').bind(runId,task.user_id).first<ArcRun>();
  if(!run){
-   await requireArcAccess(env,task.user_id);const plan=await currentArcPlan(env.DB,task.user_id);
+   await requireArcAccess(env,task.user_id);const plan=await currentArcPlan(env,task.user_id);
   const now=stamp(),messageId=runId+':user',text=await unseal<string>(env,work.instructions,`arc-work:${task.user_id}:${task.id}`);
   const guard=`EXISTS(SELECT 1 FROM automations WHERE id=?9 AND user_id=?2 AND lease_token=?10 AND lease_until>?5 AND status IN ('waiting','running'))`;
   await env.DB.batch([

@@ -7,7 +7,7 @@ export type BillingContext = {
 };
 export type BillingUnits = { credits: number; costMicros: number; neurons: number };
 export type BillingReservationInput = BillingContext & {
-  provider: "workers_ai" | "openai" | "anthropic";
+  provider: "workers_ai" | "openai" | "anthropic" | "openrouter";
   modelId: string; authorizationId: string; maximum: BillingUnits;
   creditWallet?: boolean;
 };
@@ -36,7 +36,7 @@ const userTaskAuth = `EXISTS(SELECT 1 FROM organization_members m WHERE m.organi
  OR EXISTS(SELECT 1 FROM arc_chat_sessions c WHERE c.id=?4 AND c.user_id=?2 AND c.organization_id=?3 AND c.deleted_at IS NULL))`;
 function normalize(input: BillingReservationInput, at: string) {
   for (const id of [input.userId,input.organizationId,input.taskId,input.runId,input.operationId,input.modelId,input.authorizationId]) textId(id);
-  if (!["connect","arc_hosted"].includes(input.lane) || !["workers_ai","openai","anthropic"].includes(input.provider)) throw new BillingDeniedError("BILLING_INVALID_CONTEXT");
+  if (!["connect","arc_hosted"].includes(input.lane) || !["workers_ai","openai","anthropic","openrouter"].includes(input.provider)) throw new BillingDeniedError("BILLING_INVALID_CONTEXT");
   const maximum = units(input.maximum);
   if (maximum.credits < 1) throw new BillingDeniedError("BILLING_INVALID_UNITS");
   const period = at.slice(0,10), entries: Entry[] = [];
@@ -170,11 +170,11 @@ export async function getBillingUsage(db:D1Database,context:Pick<BillingContext,
     .bind(context.userId,context.organizationId,period).all()).results;
 }
 
-export async function grantPaidModel(db:D1Database,actorId:string,input:{id:string;userId:string;organizationId:string;taskId?:string;provider:"openai"|"anthropic";maxCostMicros:number;expiresAt:string},at=new Date().toISOString()) {
+export async function grantPaidModel(db:D1Database,actorId:string,input:{id:string;userId:string;organizationId:string;taskId?:string;provider:"openai"|"anthropic"|"openrouter";maxCostMicros:number;expiresAt:string},at=new Date().toISOString()) {
   await requireBillingAdmin(db,actorId);
   for(const id of [input.id,input.userId,input.organizationId])textId(id);
   integer(input.maxCostMicros);
-  if(input.maxCostMicros<1||!["openai","anthropic"].includes(input.provider)||!Number.isFinite(Date.parse(input.expiresAt))||new Date(input.expiresAt).toISOString()<=at)
+  if(input.maxCostMicros<1||!["openai","anthropic","openrouter"].includes(input.provider)||!Number.isFinite(Date.parse(input.expiresAt))||new Date(input.expiresAt).toISOString()<=at)
     throw new BillingDeniedError("BILLING_INVALID_GRANT");
   const result=await db.prepare(`INSERT INTO billing_model_grants(id,user_id,organization_id,task_id,provider,max_cost_micros,expires_at,granted_by_user_id,created_at)
     SELECT ?1,?2,?3,?4,?5,?6,?7,?8,?9 WHERE EXISTS

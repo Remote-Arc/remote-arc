@@ -137,7 +137,7 @@ export async function getSessionUser(
     }>());
 
   if (!row) return null;
-  const hostedPaid=billingEnabled(env)&&(await currentArcPlan(env.DB,row.id)).id!=='free';
+  const hostedPaid=billingEnabled(env)&&(await currentArcPlan(env,row.id)).id!=='free';
 
   return {
     id: row.id,

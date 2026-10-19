@@ -33,7 +33,7 @@ export function registrationPack(value: string) {
       ...(name==="x"?{applicationType:"confidential_web",pkce:"S256",payer:"platform_project",note:"Remote Arc developer project owns API charges. Keep spending controls and funding explicit; no automatic top-ups."}:{}),
       ...(name==="meta"?{graphVersionEnv:"APP_META_GRAPH_VERSION",note:"Pin a currently supported Graph API version. Instagram requires an eligible professional account linked to a Facebook Page."}:{}),
       ...(name==="shopify"?{note:"Use a public app with authorization-code flow; validate the shop domain and callback HMAC. Request protected customer data access before exposing order data."}:{}),
-      ...(name==="notion"?{note:"Enable the corresponding read/insert content capabilities. Users explicitly select pages shared with the public integration."}:{}),
+      ...(name==="notion"?{note:"Enable Read content, Insert content and Update content for the implemented page/block tools, plus user information access for users.list. Users explicitly select pages shared with the public integration; only those resources are available."}:{}),
     }];
   }));
   return {

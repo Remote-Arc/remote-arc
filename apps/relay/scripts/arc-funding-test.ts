@@ -11,7 +11,9 @@ import {handleAdminPayments} from '../src/admin-payments.js';
 import {sha256Hex} from '../src/auth.js';
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const name of fs.readdirSync('migrations').filter(n=>n.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+name,'utf8'));
-const db={prepare(query:string){const statement=sql.prepare(query);const bound=(args:unknown[])=>({async first(){return statement.get(...args)||null;},async all(){return{results:statement.all(...args)};},async run(){return this.runSync();},runSync(){const result=statement.run(...args);return{success:true,meta:{changes:Number(result.changes)}};}});return{...bound([]),bind(...args:unknown[]){return bound(args);}};},async batch(statements:Array<{runSync:()=>unknown}>){sql.exec('BEGIN IMMEDIATE');try{const results=statements.map(s=>s.runSync());sql.exec('COMMIT');return results;}catch(e){sql.exec('ROLLBACK');throw e;}}} as unknown as D1Database;
+let largestChangeCount=0;
+// Match D1 metadata, which includes trigger writes rather than only direct rows.
+const db={prepare(query:string){const statement=sql.prepare(query);const bound=(args:unknown[])=>({async first(){return statement.get(...args)||null;},async all(){return{results:statement.all(...args)};},async run(){return this.runSync();},runSync(){const before=Number(sql.prepare('SELECT total_changes() n').get()!.n);statement.run(...args);const changes=Number(sql.prepare('SELECT total_changes() n').get()!.n)-before;largestChangeCount=Math.max(largestChangeCount,changes);return{success:true,meta:{changes}};}});return{...bound([]),bind(...args:unknown[]){return bound(args);}};},async batch(statements:Array<{runSync:()=>unknown}>){sql.exec('BEGIN IMMEDIATE');try{const results=statements.map(s=>s.runSync());sql.exec('COMMIT');return results;}catch(e){sql.exec('ROLLBACK');throw e;}}} as unknown as D1Database;
 const now=new Date().toISOString(),day=now.slice(0,10),env={DB:db,ARC_PLATFORM_ENABLED:'1',OPENAI_API_KEY:'fixture',ANTHROPIC_API_KEY:'fixture',OPENROUTER_API_KEY:'fixture'};
 for(const id of ['admin','one','two','three','four','five']){
  sql.prepare('INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,?,?)').run(id,id,id+'@example.invalid',id==='admin'?'admin':'user',now);
@@ -32,6 +34,8 @@ for(const id of ['one','two','three','four','five']){
 const contenders=await Promise.allSettled(inputs.map(input=>reserveBilling(db,input)));
 assert.equal(contenders.filter(r=>r.status==='fulfilled').length,2,'Atomic shared daily cap must hold under parallel reservations');
 const winners=contenders.flatMap((r,i)=>r.status==='fulfilled'?[{...r.value,input:inputs[i]!}]:[]);
+assert(largestChangeCount>1,'Fixture must exercise D1 trigger-inclusive change counts');
+assert(winners.every(winner=>winner.dispatchAllowed),'Fresh reservations with funding-trigger writes must dispatch exactly once');
 await settleBilling(db,winners[0]!.input,winners[0]!.id,{status:'completed',actual:{credits:1,costMicros:10000,neurons:0}});
 await settleBilling(db,winners[1]!.input,winners[1]!.id,{status:'unknown'});
 const third={...inputs[2]!,operationId:'smaller',maximum:{credits:1,costMicros:20000,neurons:0}};

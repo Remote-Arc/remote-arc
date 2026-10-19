@@ -1,5 +1,5 @@
 import {creditsEnabled,type PlatformLaunchEnv} from './platform-launch.js';
-import {getBillingEntitlements} from './billing-ledger.js';
+import {getBillingEntitlements,reconcileArcDispatchRejects} from './billing-ledger.js';
 import {ARC_CREDIT_RATE} from '@remotearc/protocol';
 import {activeCommercial,commercialVersion} from './arc-commercial-config.js';
 import type {StripeEnv} from './stripe-client.js';
@@ -36,6 +36,7 @@ export async function ensureTrialCredits(env:TrialEnv,userId:string,trial:Trial)
  await grantArcCredits(env.DB,{userId,source:'trial',sourceRef:'trial:'+userId+':'+trial.started_at,units,alreadySpentUnits:Math.min(units,costCreditUnits(previous?.cost||0)),startsAt:trial.started_at,expiresAt:trial.expires_at,reason:terms.days+'-day Arc trial'});
 }
 export async function publicArcAccess(env:TrialEnv,userId:string){
+ await reconcileArcDispatchRejects(env.DB,userId);
  const access=await arcAccountAccess(env,userId),day=new Date().toISOString().slice(0,10);
   if(access.active&&!access.paid)await ensureTrialCredits(env,userId,access.trial!);
   const wallet=creditsEnabled(env)?await creditBalance(env.DB,userId):null;

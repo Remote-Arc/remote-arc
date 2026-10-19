@@ -53,6 +53,7 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
   {mobile&&<button type="button" className="arcSidebarAction" onClick={()=>navigate(onOpenSettings)}><Icon name="settings"/><span>{tr('Settings','设置')}</span></button>}
  </nav>;
  const errorText=(code:string)=>{
+  if(/ARC_FUNDING/.test(code))return tr('Arc’s shared model allowance is temporarily unavailable. Your conversation is saved.','Arc 的共享模型额度暂不可用，对话已保存。');
   if(/ARC_TRIAL_EXPIRED/.test(code))return tr('Your trial has ended. Your conversations and connections are saved.','试用已结束，对话与连接仍保留。');
    if(/ARC_TRIAL_REQUIRED/.test(code))return tr('Activate your trial to work with Arc.','开启试用，让 Arc 开始工作。');
    if(/PAID_MODEL/.test(code))return tr('This model needs a paid model allowance. Choose Auto to continue.','此模型需要付费模型额度，可以选择 Auto 继续。');

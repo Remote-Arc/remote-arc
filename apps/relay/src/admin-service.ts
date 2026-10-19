@@ -19,6 +19,7 @@ const methods: Record<string, readonly string[]> = {
 
 export function adminApiMethods(path: string): readonly string[] | null {
   if(path==='/api/admin/payments')return ['GET'];
+  if(path==='/api/admin/payments/funding')return ['POST'];
   if(/^\/api\/admin\/payments\/(config|promotions)\/drafts$/.test(path)||/^\/api\/admin\/payments\/(config|promotions)\/[a-f0-9-]{36}\/(publish|disable)$/.test(path))return ['POST'];
   if(path==='/api/admin/followups')return ['GET'];
   if(path==='/api/admin/followups/drafts')return ['POST'];

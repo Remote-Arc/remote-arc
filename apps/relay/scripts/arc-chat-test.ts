@@ -165,13 +165,14 @@ await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
 
 
 // Existing administrator caps are never silently raised by a chat request.
-const premium=await prepareArcBudget(env,'owner','personal:owner',id,'gpt-6.1-sol');
+await assert.rejects(()=>prepareArcBudget(env,'owner','personal:owner',id,'gpt-6.1-sol'),/PAID_MODEL_REQUIRED/,'Trial users cannot obtain a premium grant');
+const premium=await prepareArcBudget(env,'owner','personal:owner',id,'auto');
 sql.prepare('UPDATE billing_model_grants SET max_cost_micros=10000 WHERE id=?').run(premium.gateway.paidGrantId!);
-const reservations=await Promise.allSettled(Array.from({length:3},(_,i)=>reserveBilling(db,{userId:'owner',organizationId:'personal:owner',taskId:id,runId:'trial-budget-test',operationId:'op-'+i,lane:'arc_hosted',provider:'openai',modelId:'gpt-6.1-sol',authorizationId:premium.gateway.paidGrantId!,maximum:{credits:1,costMicros:4000,neurons:0}})));
-assert.equal(reservations.filter(r=>r.status==='fulfilled').length,2,'Concurrent calls cannot exceed the lifetime premium trial allowance');
+const reservations=await Promise.allSettled(Array.from({length:3},(_,i)=>reserveBilling(db,{userId:'owner',organizationId:'personal:owner',taskId:id,runId:'trial-budget-test',operationId:'op-'+i,lane:'arc_hosted',provider:'openai',modelId:'arc-auto',authorizationId:premium.gateway.paidGrantId!,maximum:{credits:1,costMicros:4000,neurons:0}})));
+assert.equal(reservations.filter(r=>r.status==='fulfilled').length,2,'Concurrent Auto calls cannot exceed the trial allowance');
 const reserved=(reservations.find(r=>r.status==='fulfilled') as PromiseFulfilledResult<{id:string}>).value;
 await settleBilling(db,{userId:'owner',organizationId:'personal:owner'},reserved.id,{status:'unknown'});
-await assert.rejects(()=>reserveBilling(db,{userId:'owner',organizationId:'personal:owner',taskId:id,runId:'trial-budget-test',operationId:'unknown-retry',lane:'arc_hosted',provider:'openai',modelId:'gpt-6.1-sol',authorizationId:premium.gateway.paidGrantId!,maximum:{credits:1,costMicros:4000,neurons:0}}),/BILLING_QUOTA/);
+await assert.rejects(()=>reserveBilling(db,{userId:'owner',organizationId:'personal:owner',taskId:id,runId:'trial-budget-test',operationId:'unknown-retry',lane:'arc_hosted',provider:'openai',modelId:'arc-auto',authorizationId:premium.gateway.paidGrantId!,maximum:{credits:1,costMicros:4000,neurons:0}}),/BILLING_QUOTA/);
 sql.prepare("UPDATE billing_budgets SET limit_units=spent_units+reserved_units+1 WHERE scope_type='user' AND scope_id='owner' AND metric='cost_micros'").run();const lowered=sql.prepare("SELECT limit_units FROM billing_budgets WHERE scope_type='user' AND scope_id='owner' AND metric='cost_micros'").get()?.limit_units;await prepareArcBudget(env,'owner','personal:owner',id,'auto');assert.equal(sql.prepare("SELECT limit_units FROM billing_budgets WHERE scope_type='user' AND scope_id='owner' AND metric='cost_micros'").get()?.limit_units,lowered);
 sql.prepare("UPDATE arc_trials SET started_at='2000-01-01',expires_at='2000-01-15' WHERE user_id='owner'").run();
 assert.equal((await api('sessions','POST',{})).status,402,'Expired trial blocks new paid inference');

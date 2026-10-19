@@ -3,6 +3,7 @@ import {getSessionUser} from './auth.js';
 import {activeCommercial,commercialCatalog,commercialMode,saveCommercialDraft,publishCommercialDraft,type CommercialEnv} from './arc-commercial-config.js';
 import {savePromotionDraft,publishPromotion,disablePromotion} from './arc-promotions.js';
 import {StripeError,stripeConfigured} from './stripe-client.js';
+import {fundingOverview,updateFunding} from './arc-funding.js';
 
 export type AdminPaymentsEnv=CommercialEnv&{PUBLIC_ORIGIN:string;ADMIN_ORIGIN?:string};
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
@@ -39,9 +40,10 @@ export async function handleAdminPayments(request:Request,env:AdminPaymentsEnv){
     env.DB.prepare(`SELECT p.*,u.email target_email,(SELECT COUNT(*) FROM arc_promotion_redemptions r WHERE r.promotion_id=p.id) redemptions,(SELECT status FROM arc_promotion_assignments a WHERE a.promotion_id=p.id AND a.user_id=p.target_user_id) assignment_status FROM arc_billing_promotions p LEFT JOIN users u ON u.id=p.target_user_id WHERE p.mode=?1 ORDER BY p.created_at DESC LIMIT 100`).bind(mode).all(),
    ]);
    const trial=await activeCommercial(env,'arc-trial-v1');
-   return json({...overview,catalog:{...catalog,trial:{...catalog.trial,versionId:trial.id,revision:trial.revision}},versions:versions.results,audit:audit.results,promotions:promotions.results});
+   return json({...overview,funding:await fundingOverview(env.DB),catalog:{...catalog,trial:{...catalog.trial,versionId:trial.id,revision:trial.revision}},versions:versions.results,audit:audit.results,promotions:promotions.results});
   }
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
+  if(path==='/api/admin/payments/funding')return json(await updateFunding(env.DB,user.id,await body(request)));
   if(path==='/api/admin/payments/config/drafts'){
    const input=z.object({id:z.uuid(),kind:z.enum(['plan','topup','trial']),revision:z.number().int().positive(),config:z.unknown()}).strict().parse(await body(request));
    return json(await saveCommercialDraft(env,user.id,input));

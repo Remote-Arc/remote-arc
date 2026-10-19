@@ -1,0 +1,38 @@
+name: Verify Arc inbox behavior
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: arc-inbox-live-acceptance
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/master' && github.actor == 'yaohuangguan'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify exact master CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/wait-production-ci.mjs
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: Real Auto model against synthetic inbox, at most USD 0.05
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: pnpm --filter @remotearc/relay exec tsx scripts/arc-inbox-live-eval.ts
+      - uses: actions/upload-artifact@v6
+        with:
+          name: arc-inbox-behavior-report
+          path: work/arc-inbox-eval/report.json
+          if-no-files-found: error

@@ -285,6 +285,9 @@
 .appsManagerStatus {font-size:13px;padding:4px 8px;}
 .appsManagerConnectionHint {font-size:14px;line-height:1.5;margin:0 0 8px;}
 .appsManagerConnectionActions {margin-top:8px;}
+.appsManagerStatus[data-status="limited"]{color:var(--dash-text,var(--text));background:var(--dash-panel,var(--panel));border-style:dashed;}
+.appsManagerConnectionCheck{display:flex;align-items:flex-start;gap:7px;margin:8px 0;color:var(--dash-text,var(--text));font-size:14px;line-height:1.5;}
+.appsManagerConnectionCheck svg{flex:none;margin-top:3px;}
 .appsManagerConnectionActions button {font-size:14px;min-height:33px;padding:6px 9px;}
 .appsManager .appsManagerTextAction {font-size:14px;color:#6b7280;}
 .appsManagerSectionHeading {margin:45px 0 18px;}

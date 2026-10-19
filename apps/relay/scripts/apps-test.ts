@@ -104,6 +104,61 @@ async function connect(provider:AppProvider,permissions:string[]|undefined=undef
   return row.id;
 }
 for(const provider of APP_PROVIDERS) await connect(provider);
+// Check actual account identity without executing a content operation. Capability
+// counts use the same grant rules as dispatch, including broader replacement scopes.
+{
+const checkPath=(provider:AppProvider)=>"/api/apps/connections/"+connections.get(provider)+"/check";
+for(const provider of APP_PROVIDERS){
+  const before=requests.length,checked=await api(checkPath(provider),"POST",{});
+  assert.equal(checked.status,200);const body=await checked.json() as any;
+  assert.equal(body.verification,"provider_identity_checked");assert.equal(body.connectionId,connections.get(provider));
+  assert.equal(body.toolAccess.available,body.toolAccess.total);assert.equal(body.toolAccess.needsReconnect,false);
+  assert.equal(requests.length,before+1);assert.equal(requests.at(-1)?.method,"GET");
+  assert(!JSON.stringify(body).includes("private-token"));
+}
+assert.equal((await api(checkPath("github"),"POST",{},"two")).status,404);
+assert.equal((await handleApps(new Request(origin+checkPath("github"),{method:"POST",body:"{}",headers:{"content-type":"application/json",origin}}),env,fetcher)).status,401);
+assert.equal((await api(checkPath("github"),"POST",{},"one",{origin:"https://evil.invalid"})).status,403);
+assert.equal((await api(checkPath("github"),"POST",{},"one",{"content-type":"text/plain"})).status,415);
+assert.equal((await api(checkPath("github"),"POST",{operation:"issues.create"})).status,400);
+assert.equal((await handleApps(req(checkPath("github"),"POST",{}),{...env,APP_GITHUB_CLIENT_ID:undefined},fetcher)).status,503);
+sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(JSON.stringify(["channels:read","channels:history","chat:write"]),connections.get("slack")!);
+const limited=await (await api(checkPath("slack"),"POST",{})).json() as any;
+assert.equal(limited.toolAccess.needsReconnect,true);assert(limited.toolAccess.available>0&&limited.toolAccess.available<limited.toolAccess.total);
+assert.equal((await listApps(env,"one")).connections.find(row=>row.id===connections.get("slack"))?.toolAccess.needsReconnect,true);
+await connect("slack");
+for(const [provider,scopes] of [["gmail",["https://www.googleapis.com/auth/gmail.modify"]],["outlook",["User.Read","Mail.ReadWrite","Mail.Send"]],["microsoft_calendar",["User.Read","Calendars.ReadWrite"]]] as const){
+  sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(JSON.stringify(scopes),connections.get(provider)!);
+  const checked=await (await api(checkPath(provider),"POST",{})).json() as any;
+  assert.equal(checked.toolAccess.needsReconnect,false,"Broader grants must not cause an endless reconnect loop");
+  await connect(provider);
+}
+const checkGh=connections.get("github")!;
+const revoked=await handleApps(req(checkPath("github"),"POST",{}),env,async()=>json({detail:"never expose token"},401));
+assert.equal(revoked.status,401);assert.equal(sql.prepare("SELECT status FROM app_connections WHERE id=?").get(checkGh)?.status,"reauthorization_required");
+assert.equal((await api(checkPath("github"),"POST",{})).status,409);await connect("github");
+const transient=await handleApps(req(checkPath("github"),"POST",{}),env,async()=>json({detail:"private-token"},500));
+assert.equal(transient.status,503);assert(!JSON.stringify(await transient.json()).includes("private-token"));
+assert.equal(sql.prepare("SELECT status FROM app_connections WHERE id=?").get(checkGh)?.status,"active","A transient identity failure must not disconnect the user");
+githubAccount=18;const wrongAccount=await api(checkPath("github"),"POST",{});assert.equal(wrongAccount.status,409);
+assert.equal((await wrongAccount.json() as any).error,"app_account_changed");githubAccount=17;await connect("github");
+const changed=await handleApps(req(checkPath("github"),"POST",{}),env,async()=>{
+  sql.prepare("UPDATE app_connections SET generation=generation+1 WHERE id=?").run(checkGh);
+  return json({id:17,login:"test-user"});
+});
+assert.equal(changed.status,409);assert.equal((await changed.json() as any).error,"app_connection_changed");await connect("github");
+activeProvider="github";
+sql.prepare("UPDATE app_connections SET token_ciphertext=? WHERE id=?").run(await seal(env,{accessToken:"expired-check",refreshToken:"old-check-refresh",expiresAt:old,scopes:appScopes("github",["read","write"])},"app-token:one:github:"+checkGh),checkGh);
+const refreshBefore=requests.length,refreshCheck=await api(checkPath("github"),"POST",{});
+assert.equal(refreshCheck.status,200);assert(requests.slice(refreshBefore).some(request=>request.url===APP_CATALOG.github.token));
+assert.equal((await unseal<any>(env,sql.prepare("SELECT token_ciphertext FROM app_connections WHERE id=?").get(checkGh)!.token_ciphertext as string,"app-token:one:github:"+checkGh)).refreshToken,"rotated-github");
+const priorDailyLimit=sql.prepare("SELECT daily_call_limit FROM app_connections WHERE id=?").get(checkGh)!.daily_call_limit;
+sql.prepare("UPDATE app_connections SET daily_call_limit=1 WHERE id=?").run(checkGh);
+const quotaBefore=requests.length;assert.equal((await api(checkPath("github"),"POST",{})).status,429);assert.equal(requests.length,quotaBefore);
+sql.prepare("UPDATE app_connections SET daily_call_limit=? WHERE id=?").run(priorDailyLimit,checkGh);
+sql.prepare("INSERT INTO user_security_settings(user_id,mcp_paused,updated_at) VALUES('one',1,?)").run(stamp);
+assert.equal((await api(checkPath("github"),"POST",{})).status,403);sql.prepare("DELETE FROM user_security_settings WHERE user_id='one'").run();
+}
 assert.equal((await listApps(env,"two")).connections.length,0);
 assert(!JSON.stringify(await listApps(env,"one")).includes("private-token"));
 const prior=connections.get("github");

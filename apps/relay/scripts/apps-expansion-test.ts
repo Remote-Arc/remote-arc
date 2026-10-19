@@ -79,9 +79,23 @@ for(const provider of EXTRA_PROVIDER_IDS){
  const list=await listApps(env,"one"),conn=list.connections.find(c=>c.provider===provider)!;assert(conn,provider);connections.set(provider,conn.id);
  assert.equal((await listApps(env,"two")).connections.length,0);
  const stored=sql.prepare("SELECT token_ciphertext FROM app_connections WHERE id=?").get(conn.id)!;assert(!String(stored.token_ciphertext).includes("private"));
+  if(["google_drive","google_docs","google_sheets","notion"].includes(provider)){
+    const checked=await api("/api/apps/connections/"+conn.id+"/check","POST",{});assert.equal(checked.status,200,provider);
+    const result=await checked.json() as any;assert.equal(result.verification,"provider_identity_checked");
+    assert.equal(result.toolAccess.available,result.toolAccess.total);assert.equal(result.toolAccess.needsReconnect,false);
+  }
  assert(!JSON.stringify(list).includes("private-access"));assert(!JSON.stringify(list).includes("own-private-key"));
 }
 assert.equal(APP_PROVIDERS.length,29);assert.equal(APP_CATEGORIES.length,8);assert.equal(connections.size,23);
+// An already-granted broader token can satisfy narrower operation requirements;
+// the authorization request itself keeps its existing drive.file scope.
+assert(appScopes("google_drive",["write"]).includes("https://www.googleapis.com/auth/drive.file"));
+assert(!appScopes("google_drive",["write"]).includes("https://www.googleapis.com/auth/drive"));
+const driveConnection=connections.get("google_drive")!,storedDriveScopes=sql.prepare("SELECT scopes_json FROM app_connections WHERE id=?").get(driveConnection)!.scopes_json;
+sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(JSON.stringify(["openid","https://www.googleapis.com/auth/userinfo.email","https://www.googleapis.com/auth/drive"]),driveConnection);
+active="google_drive";
+const broadDrive=await (await api("/api/apps/connections/"+driveConnection+"/check","POST",{})).json() as any;
+assert.equal(broadDrive.toolAccess.needsReconnect,false);sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(storedDriveScopes,driveConnection);
 const argsByField:Record<string,any>={limit:20,index:1,dimensions:["query"],id:"123",documentId:"doc-1",revisionId:"rev-1",spreadsheetId:"sheet-1",range:"Sheet1!A1:B2",values:[["Verified",12]],playlistId:"playlist-1",ids:["video-1"],siteUrl:"https://example.invalid/",startDate:"2026-10-01",endDate:"2026-10-07",metrics:["sessions"],propertyId:"123",customerId:"123",deploymentId:"deployment-1",taskId:uuid,promptText:"A calm ocean",ratio:"1280:720",duration:5,maxCredits:60,userId:"123",text:"Reviewed content",message:"Reviewed content",pageId:"123",accountId:"123",mediaId:"123",commentId:"123",imageUrl:"https://example.invalid/image.png",caption:"Reviewed caption",creationId:"7123",sourceCallId:uuid,to:"15550001234",name:"approved_template",language:"en_US",cloudId:uuid,jql:"project = TEST",projectKey:"TEST",issueTypeId:"123",summary:"Reviewed summary",description:"Reviewed description",spaceId:"123",title:"Reviewed title",blockId:uuid,parentPageId:uuid,commentary:"Reviewed post",projectRef:"abcdefghijklmnopqrst",query:"SELECT 1",teamId:uuid,email:"person@example.invalid",firstName:"Example",lastName:"Person",campaignId:"123"};
 Object.assign(argsByField,{videoId:'video-1',findText:'Verified',startIndex:1,endIndex:2,postId:'123',projectId:'project-1',issueId:'TEST-123',productId:'gid://shopify/Product/123',orderId:'gid://shopify/Order/123',postUrn:'urn:li:share:123',contactId:'123',dealId:'123'});
 const idIdentity={userId:"one",scope:"apps:read apps:write"};let createdMediaCall="";

@@ -18,7 +18,9 @@ export type AppConnection = {
   id: string; provider: string; accountLabel: string; status: string;
   settings?: Record<string, string>; dailyCallLimit?: number;
   permissions: Permission[]; scopes: string[]; expiresAt: string | null; lastError: string | null; updatedAt: string;
+  toolAccess?: { available: number; total: number; needsReconnect: boolean };
 };
+export type AppConnectionCheck = { connectionId: string; provider: string; accountLabel: string; checkedAt: string; verification: "provider_identity_checked"; toolAccess: { available: number; total: number; needsReconnect: boolean } };
 export type AppApproval = {
   id: string; connectionId: string; operation: string; status: string; expiresAt: string; arguments: Record<string, unknown>; review?: Record<string, unknown>;
 };
@@ -63,6 +65,12 @@ function errorLabel(code: string, tr: (en: string, zh: string) => string) {
     case "app_not_configured": return tr("This provider has not been configured by your administrator.", "管理员尚未配置此应用的授权信息。");
     case "app_scope_required": return tr("The provider needs additional permissions. Reconnect the account with the access you want.", "应用需要额外授权，请选择所需权限后重新连接账号。");
     case "app_reauthorization_required": return tr("This account needs authorization again. Reconnect to continue.", "此账号需要重新授权，请重新连接后继续。");
+    case "app_account_changed": return tr("The provider returned a different account. Reconnect the intended account.", "服务商返回了不同的账号，请重新授权你要使用的账号。");
+    case "app_connection_changed": return tr("This connection changed during the check. Refresh and try again.", "检查期间连接已发生变更，请刷新后重试。");
+    case "app_rate_limited": return tr("The provider is temporarily limiting requests. Try again later.", "服务商暂时限制了请求频率，请稍后重试。");
+    case "app_refresh_in_progress": return tr("The account is refreshing its authorization. Try again shortly.", "账号正在刷新授权，请稍后重试。");
+    case "app_provider_unavailable": case "app_provider_failed": return tr("The provider is temporarily unavailable. Try the check again later.", "服务商暂时不可用，请稍后重新检查。");
+    case "mcp_paused": return tr("Tool access is paused. Resume it in Security before checking this account.", "工具访问已暂停，请先在安全设置中恢复，再检查账号。");
     case "app_permission_required": return tr("This connection does not allow that permission.", "当前连接没有授予该项权限。");
     case "app_approval_unavailable": return tr("This approval expired or the connection changed. Refresh and ask your AI for a new request.", "审批已过期或连接已变更。请刷新，并让 AI 重新提交请求。");
     case "app_daily_limit_reached": return tr("This connection or provider reached its daily operation limit. Try again tomorrow.", "此连接或服务已达到每日操作上限，请明天再试。");
@@ -75,23 +83,27 @@ function errorLabel(code: string, tr: (en: string, zh: string) => string) {
   }
 }
 
-function ConnectionRow({ app, connection, busy, onAuthorize, onSave, onDisconnect }: {
+function ConnectionRow({ app, connection, busy, onAuthorize, onDisconnect, onCheck }: {
   app: AppDefinition; connection: AppConnection; busy: boolean;
   onAuthorize: (provider: string, permissions: Permission[], settings?: Record<string, string>) => void;
-  onSave: (connection: AppConnection, permissions: Permission[]) => void;
   onDisconnect: (connection: AppConnection) => void;
+  onCheck: (connection: AppConnection) => Promise<AppConnectionCheck | undefined>;
 }) {
   const { tr } = useI18n();
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [verification, setVerification] = useState<AppConnectionCheck>();
   useEffect(() => { setConfirmDisconnect(false); }, [connection.id, connection.status]);
+  useEffect(() => { setVerification(undefined); }, [connection.id, connection.status, connection.updatedAt]);
   const active = connection.status === "active";
-  const needsScopes = [...app.permissions.read, ...app.permissions.write].some(scope => !["offline_access", "offline.access", "refresh_token"].includes(scope) && !connection.scopes.includes(scope));
-  const needsAccess = false;
+  const needsScopes = connection.toolAccess?.needsReconnect === true;
   return <article className="appsManagerConnection" data-status={connection.status}>
-    <div className="appsManagerConnectionTop"><strong>{connection.accountLabel}</strong><span className="appsManagerStatus" data-status={connection.status}>{statusLabel(connection.status, tr)}</span></div>
+    <div className="appsManagerConnectionTop"><strong>{connection.accountLabel}</strong><span className="appsManagerStatus" data-status={needsScopes ? "limited" : connection.status}>{needsScopes ? tr("Update access", "需要补充授权") : statusLabel(connection.status, tr)}</span></div>
     {connection.status === "reauthorization_required" && <p className="appsManagerConnectionHint">{tr("Provider access expired or was revoked. Reconnect this account to restore access.", "应用授权已过期或被撤销，请重新连接此账号以恢复访问。")}</p>}
+    {needsScopes && <p className="appsManagerConnectionHint">{tr("Some tools need additional provider permissions. Reconnect to enable them; existing authorized tools remain available.", "部分工具需要补充服务商权限，重新授权即可启用，已有权限的工具仍可使用。")}</p>}
+    {verification && <p className="appsManagerConnectionCheck" role="status"><ProductIcon name="check" size={15}/><span>{tr("Account access verified", "账号访问已验证")} · {verification.toolAccess.available}/{verification.toolAccess.total} {tr("tools authorized", "项工具已授权")}</span></p>}
     <div className="appsManagerConnectionActions">
-      {(!active || needsScopes || needsAccess) && <button type="button" disabled={busy || !app.configured} onClick={() => needsAccess && !needsScopes && active ? onSave(connection, connectedPermissions) : onAuthorize(app.provider, connectedPermissions, connection.settings)}>{tr("Reconnect account", "重新授权账号")}</button>}
+      {active && <button type="button" disabled={busy || !app.configured} onClick={async () => { setVerification(undefined); setVerification(await onCheck(connection)); }}>{tr("Check connection", "检查连接")}</button>}
+      {(!active || needsScopes) && <button type="button" disabled={busy || !app.configured} onClick={() => onAuthorize(app.provider, connectedPermissions, connection.settings)}>{tr("Reconnect account", "重新授权账号")}</button>}
       {connection.status !== "disconnected" && <button type="button" className="appsManagerTextAction" disabled={busy} onClick={() => setConfirmDisconnect(true)}>{tr("Disconnect", "断开连接")}</button>}
     </div>
     {confirmDisconnect && <div className="appsManagerDisconnect" role="group" aria-label={tr("Confirm account disconnection", "确认断开账号")}>
@@ -178,12 +190,12 @@ function AppToolsDialog({ app, connections, onClose, onConnect, busy }: {
   );
 }
 
-function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect, onCredential }: {
+function CatalogCard({ app, connections, busy, onAuthorize, onDisconnect, onCredential, onCheck }: {
   app: AppDefinition; connections: AppConnection[]; busy: boolean;
   onCredential: (provider: string, input: AppCredentialInput) => Promise<boolean>;
   onAuthorize: (provider: string, permissions: Permission[], settings?: Record<string, string>) => void;
-  onSave: (connection: AppConnection, permissions: Permission[]) => void;
   onDisconnect: (connection: AppConnection) => void;
+  onCheck: (connection: AppConnection) => Promise<AppConnectionCheck | undefined>;
 }) {
   const { tr } = useI18n();
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -204,7 +216,7 @@ function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect
       <p>{app.billingNote}</p>
     </details>}
     {app.provider === "runway" && <a className="appsRunwayAttribution" href="https://runwayml.com" target="_blank" rel="noreferrer"><img src="/app-brands/runwayattribution.svg" alt="Powered by Runway" /></a>}
-    {connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onSave={onSave} onDisconnect={onDisconnect} />)}
+    {connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onDisconnect={onDisconnect} onCheck={onCheck} />)}
     <div className="appsManagerAuthorize">
       {app.provider === "shopify" && <label className="appsManagerStore">{tr("Store domain", "店铺域名")}<input value={shopDomain} onChange={e => setShopDomain(e.target.value)} placeholder="your-store.myshopify.com" autoComplete="off" maxLength={100} /></label>}
       <button type="button" className="appsManagerPrimary" disabled={busy || !app.configured || (app.provider === "shopify" && !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopDomain))} onClick={() => connect(app.provider, connectedPermissions)}>{app.configured ? connections.length ? tr("Connect another account", "连接其他账号") : tr("Connect account", "连接账号") : tr("Not configured", "尚未配置")}</button>
@@ -246,7 +258,7 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
     finally { if (mounted.current && version === revision.current) setLoading(false); }
   }, [request]);
   useEffect(() => { mounted.current = true; void refresh(); return () => { mounted.current = false; revision.current++; }; }, [refresh]);
-  async function mutate(key: string, action: () => Promise<unknown>, success: string) {
+  async function mutate(key: string, action: () => Promise<unknown>, success: string, refreshOnFailure = false) {
     if (mutationLock.current) return false;
     mutationLock.current = true; setBusy(key); setError(""); setNotice("");
     try {
@@ -255,7 +267,7 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
       setNotice(success);
       await refresh();
       return true;
-    } catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "app_service_unavailable"); return false; }
+    } catch (cause) { if (refreshOnFailure && mounted.current) await refresh(); if (mounted.current) setError(cause instanceof Error ? cause.message : "app_service_unavailable"); return false; }
     finally { mutationLock.current = false; if (mounted.current) setBusy(""); }
   }
   function authorize(provider: string, permissions: Permission[], settings?: Record<string, string>) {
@@ -268,11 +280,17 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
   function connectCredential(provider: string, input: AppCredentialInput) {
     return mutate("connect:" + provider, () => request("/api/apps/connections", {method: "POST", body: JSON.stringify({provider, ...input})}), tr("Account validated and connected.", "账号已验证并连接。"));
   }
-  function save(connection: AppConnection, permissions: Permission[]) {
-    void mutate("permissions:" + connection.id, () => request("/api/apps/connections/" + encodeURIComponent(connection.id), { method: "PATCH", body: JSON.stringify({ permissions }) }), tr("Connection permissions updated.", "连接权限已更新。"));
-  }
   function disconnect(connection: AppConnection) {
     void mutate("disconnect:" + connection.id, () => request("/api/apps/connections/" + encodeURIComponent(connection.id), { method: "DELETE" }), tr("The account was disconnected.", "账号已断开。"));
+  }
+  async function check(connection: AppConnection) {
+    let result: AppConnectionCheck | undefined;
+    const success = await mutate("check:" + connection.id, async () => {
+      const checked = await request("/api/apps/connections/" + encodeURIComponent(connection.id) + "/check", { method: "POST", body: "{}" }) as AppConnectionCheck;
+      if (checked.connectionId !== connection.id || checked.verification !== "provider_identity_checked") throw new Error("app_service_unavailable");
+      result = checked;
+    }, tr("Account access verified. Actual tool results still need to be checked in your workflow.", "账号访问已验证，具体工具结果仍需在实际工作中核对。"), true);
+    return success ? result : undefined;
   }
   const connectedProviders = new Set(snapshot?.connections.filter(connection => connection.status === "active").map(connection => connection.provider) ?? []);
   const featuredProviders = ["github", "slack", "gmail", "google_calendar", "google_drive", "notion", "linear", "vercel"];
@@ -313,7 +331,7 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
         </div>
       </div>
       <section className="appsManagerGrid" aria-label={tr("Available apps", "可用应用")}>
-        {visibleApps.map(app => <CatalogCard key={app.provider} app={app} connections={snapshot.connections.filter(connection => connection.provider === app.provider)} busy={Boolean(busy) || UI_PREVIEW} onAuthorize={authorize} onCredential={connectCredential} onSave={save} onDisconnect={disconnect}/>)}
+        {visibleApps.map(app => <CatalogCard key={app.provider} app={app} connections={snapshot.connections.filter(connection => connection.provider === app.provider)} busy={Boolean(busy) || UI_PREVIEW} onAuthorize={authorize} onCredential={connectCredential} onDisconnect={disconnect} onCheck={check}/>)}
       </section>
       {!!snapshot.apps.length && !visibleApps.length && <p className="appsManagerEmpty">{tr("No apps match your search.", "没有匹配的应用。")}</p>}
       {!snapshot.apps.length && <p className="appsManagerEmpty">{tr("No app providers are available yet.", "目前还没有可用的应用服务。")}</p>}

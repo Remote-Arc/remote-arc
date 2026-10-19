@@ -1,5 +1,7 @@
 # Remote Arc / Arc — SaaS launch and monetization roadmap
 
+**2026-10-19 update:** this is the historical planning record, not the current activation guide. The implemented [PR 218 delivery](./pr-218-delivery.md) and [platform launch instructions](./arc-platform-launch.md) supersede its proposed dollar amounts, model tiers and read-only pilot defaults. Current provisional plans are Plus $39 / 1,500 Credits and Pro $79 / 5,000 Credits; both support every configured premium model. The explicit trial is 14 days / 200 Credits. Connected Apps execute within the user's granted scopes without a separate default write-approval gate. Production Arc remains closed.
+
 **Status:** planning specification; not deployed, not current pricing or a payment promise.
 **Product:** Remote Arc is the platform; **Arc** is the optional hosted AI assistant. Existing Connect / MCP remains an independent offering, with its existing free allowance and user-owned AI model relationship.
 

@@ -82,6 +82,6 @@ const activationFetch=async(url:string,init?:RequestInit)=>{
 };
 await assert.rejects(()=>activateOpenAi({...launchEnv,GITHUB_REF:'refs/heads/feature'},activationFetch),/Protected/);assert.equal(trace.length,0);
 await activateOpenAi(launchEnv,activationFetch);assert.deepEqual(trace,['model','d1','secret','secret','runtime','d1']);
-await assert.rejects(()=>activateOpenAi(launchEnv,async(url:string,init?:RequestInit)=>url.includes('runtime-config')?Response.json({arcAvailable:false}):activationFetch(url,init)),/readiness/);
+await assert.rejects(()=>activateOpenAi(launchEnv,async(url:string,init?:RequestInit)=>url.includes('runtime-config')?Response.json({arcAvailable:false}):activationFetch(url,init),async()=>{}),/readiness/);
 assert.equal(sql.prepare('SELECT enabled FROM arc_funding_policy').get()!.enabled,0,'Failed readiness must leave funding paused');
 console.log('PASS: public 14-day Auto-only trial, pinned Credits, paid manual models, atomic daily/lifetime funding, unknown holds, idempotency, pause, CAS/audit and restart persistence');

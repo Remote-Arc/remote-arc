@@ -16,7 +16,7 @@
     "test:followups": "tsx scripts/user-followups-test.ts",
     "test:arc": "tsx scripts/arc-chat-test.ts && pnpm test:followups",
     "test:credits": "tsx scripts/arc-credits-test.ts && tsx scripts/arc-credit-integration-test.ts && tsx scripts/arc-funding-test.ts",
-    "test:stripe": "tsx scripts/stripe-billing-test.ts && tsx scripts/commercial-config-test.ts"
+    "test:stripe": "tsx scripts/stripe-billing-test.ts && tsx scripts/commercial-config-test.ts && tsx scripts/stripe-activation-test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.1.0",

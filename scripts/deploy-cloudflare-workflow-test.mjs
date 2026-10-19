@@ -46,6 +46,10 @@ assert.doesNotMatch(deploy, /secrets\.CLOUDFLARE_D1_API_TOKEN/, "D1-only token m
 const activation=yaml.indexOf('- name: Activate OpenAI after successful production smoke');
 assert.ok(activation>yaml.indexOf('run: node scripts/production-smoke.mjs'),'model activation must follow production smoke');
 assert.match(yaml.slice(activation),/if: inputs\.enable_openai/,'funded model activation must be explicitly requested');
+const stripeActivation=yaml.indexOf('- name: Activate live Stripe after successful production smoke');
+assert.ok(stripeActivation>yaml.indexOf('run: node scripts/production-smoke.mjs'),'live payments require completed production smoke');
+assert.match(yaml.slice(stripeActivation),/if: inputs\.enable_stripe/,'live Stripe provisioning must be explicitly requested');
+assert.doesNotMatch(yaml.slice(stripeActivation),/secrets\.CLOUDFLARE_D1_API_TOKEN/,'live Stripe provisioning does not receive a D1 token');
 
 const scriptBody = d1.split("\n        run: |\n")[1];
 assert.ok(scriptBody, "expected an inline migration shell script");

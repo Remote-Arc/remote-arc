@@ -9,6 +9,7 @@ import {STRIPE_API_VERSION,stripeConfigured,stripeId,stripeLive,stripeRequest,ve
 import {activeCommercial,commercialVersion,commercialOffer,commercialCatalog,commercialMode,approvedCommercialPrice,ensureCommercialPrice} from './arc-commercial-config.js';
 import {ensureStripeCustomer as customer} from './stripe-customer.js';
 import {checkoutPromotion,invoicePromotion,type Promotion} from './arc-promotions.js';
+import {publicArcAccess} from './arc-trial.js';
 export type BillingEnv=StripeEnv&{DB:D1Database;PUBLIC_ORIGIN:string;APP_ORIGIN?:string;DASHBOARD_ORIGIN?:string;ARC_CHAT_ENABLED?:string;ARC_CREDITS_ENABLED?:string};
 const json=(v:unknown,status=200)=>Response.json(v,{status,headers:{'cache-control':'no-store'}});
 const now=()=>new Date().toISOString();
@@ -186,8 +187,9 @@ export async function handleBilling(request:Request,env:BillingEnv){
    return json({status:checkout.status,productId:checkout.product_id});
   }
   if(request.method==='GET'&&path==='/api/billing'){
+   const access=await publicArcAccess(env,user.id);
    const [plan,credits,usage,subscriptions,customer,catalog]=await Promise.all([currentArcPlan(env,user.id),creditBalance(env.DB,user.id),getMonthlyUsage(env,user.id),env.DB.prepare('SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10').bind(user.id).all(),env.DB.prepare('SELECT 1 AS present FROM arc_billing_customers WHERE user_id=?1').bind(user.id).first(),commercialCatalog(env)]);
-    return json({enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,credits,usage,plans:catalog.plans,topups:catalog.topups,models:ARC_HOSTED_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
+    return json({enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,access,credits,usage,plans:catalog.plans,topups:catalog.topups,models:ARC_HOSTED_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
   }
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   if(!isTrustedDashboardMutation(request,env))throw new StripeError('same_origin_required',403);

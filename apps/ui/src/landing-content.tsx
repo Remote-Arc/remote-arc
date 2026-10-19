@@ -12,6 +12,18 @@ export function HeroHeadline() {
   return <TypewriterHeadline key={locale} phrases={[tr("Put it to work.", "真正动手工作。"), tr("Let it coordinate.", "协同你的设备。"), tr("Keep work moving.", "持续推进工作。")]} />;
 }
 
+export function HomeSecurityIntro(){
+ const {tr}=useI18n();
+ return <section className="homeSecurityIntro" aria-label={tr('Control and security','权限与安全')}>
+  <header><div><span className="eyebrow">{tr('YOUR DEVICES. YOUR RULES.','你的设备，你来设定边界。')}</span><h2>{tr('Let AI work. Keep control.','让 AI 动手，让权限有界。')}</h2></div><a href="/security-model">{tr('Explore the security model','了解安全模型')} <span aria-hidden="true">↗</span></a></header>
+  <div className="homeSecurityCapabilities">
+   <article><ProductIcon name="shield" size={19}/><h3>{tr('Access you define','你定义的访问范围')}</h3><p>{tr('Choose tools and trusted directories for each computer. Pause or revoke access when you need to.','为每台电脑选择工具与可信目录，并可随时暂停或撤销访问。')}</p></article>
+   <article><ProductIcon name="device" size={19}/><h3>{tr('Work runs on your computers','工作在你的电脑上执行')}</h3><p>{tr('Use the projects and software already there. Devices connect outward over encrypted connections.','沿用本机已有的项目与软件，设备通过加密的出站连接接入。')}</p></article>
+   <article><ProductIcon name="history" size={19}/><h3>{tr('Activity you can inspect','可追踪，也可核对')}</h3><p>{tr('Inspect tool activity and results. Restore supported file edits from Undo snapshots kept on the device.','查看工具活动与结果，通过保留在本机的 Undo 快照恢复受支持的文件修改。')}</p></article>
+  </div>
+ </section>;
+}
+
 function TypewriterHeadline({ phrases }: { phrases: [string, ...string[]] }) {
   const { tr } = useI18n();
   const [frame, setFrame] = useState({ index: 0, length: phrases[0].length, deleting: false });
@@ -114,7 +126,7 @@ export function LandingContent() {
       [tr("Do I need a paid AI plan, API key or token credits?", "需要 AI 会员、模型 API Key 或充值 Token 吗？"), <>{tr("You do not need to bring a model API key. Arc will provide hosted models with trial or plan usage limits after launch; Arc Chat is not open yet. Connect uses the AI chat you already have, so it needs no separate model API balance; your chat provider's plan and tool-call restrictions still apply. Remote Arc's hosted usage limits and any charges from services connected with your own accounts remain separate.", "你无需自带模型 API Key。Arc 上线后将提供平台模型，使用量遵循试用或套餐额度；目前 Arc Chat 尚未开放。Connect 使用你已有的 AI 聊天，无需单独充值模型 API；原 AI 服务商的套餐和工具调用限制仍然适用。Remote Arc 的托管使用额度，以及通过自有账号连接的其他服务费用，分别计算。")} <a href="/pricing">{tr("See plans", "查看套餐")} →</a></>],
       [tr("Which computers can I connect?", "哪些电脑可以连接？"), tr("Windows, macOS and Linux computers with the local Agent installed. Native downloads and Homebrew need no Node.js; only npm/npx installation requires Node.js 20+. Pair each computer to your account and choose its permissions separately. Actual available tools depend on the installed Agent and local environment.", "安装本地 Agent 的 Windows、macOS 与 Linux 电脑均可。直接下载和 Homebrew 安装不需要 Node.js；只有 npm/npx 安装方式需要 Node.js 20+。每台电脑分别配对到账户、选择权限，实际可用工具取决于已安装 Agent 和本机环境。")],
       [tr("Can I use it from my phone or outside my home network?", "能在手机上或外网使用吗？"), tr("Yes, through an AI client that supports the connection and tool calls on that device. Your paired computer connects outbound to the hosted relay, so your chat does not need to share its LAN. The computer, agent and internet connection still need to be available.", "可以，前提是该设备上的 AI 客户端支持连接与工具调用。已配对电脑向托管 Relay 建立出站连接，所以聊天端无需和电脑处于同一局域网。目标电脑、本地 Agent 与互联网连接仍需可用。")],
-      [tr("What does it cost?", "怎么收费？"), <>{tr("Connect Free currently includes 10,000 hosted tool calls per month. Arc Chat is coming soon. A 14-day trial with bounded model usage is planned for launch. Trial activation is not open yet. Paid self-service checkout is not open yet; current availability is listed on our pricing page. Your existing AI-chat subscription and connected-service bills remain separate.", "Connect Free 当前包含每月 10,000 次托管工具调用。Arc Chat 即将上线，上线时计划提供有明确模型额度的 14 天试用，目前尚未开放试用。目前尚未开放自助付费，具体以价格页的当前说明为准。已有的 AI 聊天订阅和其他已连接服务的费用分别计算。" )} <a href="/pricing">{tr("See plans", "查看套餐")} →</a></>],
+      [tr("What does it cost?", "怎么收费？"), <>{tr("Connect has a monthly tool-call allowance. Arc uses Credits for model work, with a time-limited Auto trial and paid Plus / Pro plans. Current trial terms, prices and payment availability are shown on the pricing page; your account’s allowance is in Settings. Your existing AI-chat subscription and connected-service bills remain separate.", "Connect 提供月度工具调用额度。Arc 使用 Credits 计量模型工作，提供限时 Auto 试用与 Plus / Pro 付费套餐。当前试用条款、价格及付费开放状态见价格页，账号实际额度可在设置中查看。已有的 AI 聊天订阅与已连接服务的费用分别计算。" )} <a href="/pricing">{tr("See plans", "查看套餐")} →</a></>],
     ] },
     { id: "security", title: tr("Security & control", "安全与控制"), entries: [
       [tr("How much access am I giving the AI?", "AI 会获得多少电脑权限？"), <>{tr("You choose tools per device, while OAuth scopes constrain the client. Ordinary non-sensitive reads can remain broad; persistent file changes stay inside Trusted Write Locations. An out-of-scope write pauses for approval. Sensitive paths remain separately protected. Terminal is a separate high-risk capability and is not contained by an OS sandbox.", "你为每台设备选择工具，OAuth Scope 同时限制客户端。普通非敏感读取可以保持灵活；持续文件修改只发生在可信写入区域内，越界写入会暂停等待审批。敏感路径继续独立保护；终端是单独的高风险能力，并没有 OS 沙箱隔离。" )} <a href="/security-model">{tr("Read the security model", "了解安全模型")} →</a></>],

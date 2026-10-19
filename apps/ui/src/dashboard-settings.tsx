@@ -1,4 +1,4 @@
-import {ArcBillingPanel} from './arc-billing-panel.js';
+import {ArcBillingPanel,ArcAccountPlan} from './arc-billing-panel.js';
 import {ArcMemoryPanel} from './arc-memory-panel.js';
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import {useTheme} from "./theme.js";
@@ -109,6 +109,7 @@ export function DashboardSettings({
       </header>
 
       {section === "account" && <div className="raSettingsSections">
+        <ArcAccountPlan onManage={()=>selectSection('billing')}/>
         <section className="raSettingsSurface raSettingsIdentity">
           <div className="raSettingsIdentityAvatar" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</div>
           <div className="raSettingsIdentityText">

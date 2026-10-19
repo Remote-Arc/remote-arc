@@ -1,4 +1,5 @@
 /* Full-width conversation canvas. Keep the atmosphere separate from reading surfaces. */
+.arcChatShell .arcChatErrorInline{box-sizing:border-box;width:100%;margin:16px 0 0;padding:16px 18px;border-radius:12px}.arcChatError>p{margin:0;line-height:1.7}.arcChatErrorDetails{margin-top:12px;color:var(--dash-muted);font-size:11px}.arcChatErrorDetails summary{cursor:pointer;width:fit-content}.arcChatErrorDetails code{display:block;margin-top:9px;overflow-wrap:anywhere;user-select:all}.arcChatErrorDetails small{display:block;margin-top:6px;overflow-wrap:anywhere;user-select:all}
 :root[data-theme] .appFrame .arcChatShell {
   --arc-canvas: #fafbfc;
   --arc-composer: #ffffffeb;

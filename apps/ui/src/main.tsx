@@ -1,5 +1,5 @@
 import { summarizeConsentScopes } from "./oauth-consent-summary.js";
-import { HeroHeadline, LandingContent } from "./landing-content.js";
+import { HeroHeadline, LandingContent, HomeSecurityIntro } from "./landing-content.js";
 import { InstallCommands } from "./install-commands.js";
 import { HomeConnectionScene } from "./home-connection-scene.js";
 import { AppsManager } from "./apps-manager.js";
@@ -517,8 +517,8 @@ function PublicHeader({ user }: { user?: User | null }) {
             <div id="public-nav-product" className="publicNavDropdown productDropdown">
               <section className="publicNavGroup">
                 <span className="publicNavGroupLabel">{tr('ONE PLATFORM. YOUR WAY TO WORK.','一个平台，选择你的工作方式。')}</span>
-                <a href={navHref('/arc')}><span className="publicProductIcon publicProductLogo"><img src="/remote-arc.svg" alt=""/></span><span><strong>Arc <em>{arcAvailable?tr('Available now','现已可用'):tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
-                <a href={navHref('/connect-ai')}><span className="publicProductIcon publicProductLogo"><img src="/connect-logo.svg" alt=""/></span><span><strong>Connect <em>{tr('Available today','现已可用')}</em></strong><small>{tr('Bring tools to the AI you already use','为你常用的 AI 连接电脑和应用')}</small></span></a>
+                <a className="publicProductEntry" href={navHref('/arc')}><span className="publicProductIcon publicProductLogo"><img src="/remote-arc.svg" alt=""/></span><span className="publicProductCopy"><strong>Arc <em>{arcAvailable?tr('Live','已上线'):tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, working with your apps and computers','你的个人 AI 队友，协同应用与电脑工作')}</small></span><ProductIcon name="arrowUpRight" size={15}/></a>
+                <a className="publicProductEntry" href={navHref('/connect-ai')}><span className="publicProductIcon publicProductLogo"><img src="/connect-logo.svg" alt=""/></span><span className="publicProductCopy"><strong>Connect <em>{tr('Live','已上线')}</em></strong><small>{tr('Your tools, in the AI you already use','把你的工具，带入你常用的 AI')}</small></span><ProductIcon name="arrowUpRight" size={15}/></a>
               </section>
               <div className="publicNavProductFoot"><a href={navHref('/install/chatgpt')}><img className="monoLogo" src="/ai-openai.svg" alt=""/>ChatGPT</a><a href={navHref('/install/claude')}><img src="/ai-claude.svg" alt=""/>Claude</a><a href={navHref('/install/cursor')}><img className="monoLogo" src="/ai-cursor.svg" alt=""/>Cursor</a><a href={navHref('/remote-mcp')}><ProductIcon name="link" size={15}/>Remote MCP<ProductIcon name="arrowUpRight" size={12}/></a></div>
             </div>
@@ -2434,6 +2434,7 @@ function Landing({ user }: { user?: User | null }) {
             <a className="marketingSecondary" href="#how-it-works">{tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>
           </div>
           <div className="heroProofLine"><ProductIcon name="check" size={14}/>{tr('No model API key required','无需模型 API Key')}<span>·</span>Windows · Mac · Linux</div>
+          <a className="heroSecurityLink" href="/security-model"><ProductIcon name="shield" size={13}/>{tr('Scoped access · device policies · local Undo','限定访问范围 · 设备策略 · 本地 Undo')}<ProductIcon name="arrowUpRight" size={12}/></a>
 
           <a className="heroTaskAvailability" href="/connect-ai">{tr('Already use ChatGPT or Claude? Explore Connect','已经在用 ChatGPT 或 Claude？了解 Connect')}<ProductIcon name="arrowUpRight" size={13}/></a>
         </div>
@@ -2452,6 +2453,7 @@ function Landing({ user }: { user?: User | null }) {
         <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
       </section>
 
+      <HomeSecurityIntro/>
       <ProductFocus/>
       <AgentUseCases/>
 

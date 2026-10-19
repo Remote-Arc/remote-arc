@@ -457,5 +457,9 @@ try {
     ) + "\n",
   );
 } finally {
-  await fs.rm(root, { recursive: true, force: true });
+  if (path.dirname(root) !== os.tmpdir() || !path.basename(root).startsWith("remotearc-core-")) {
+    throw new Error("Refusing to remove an unowned test directory");
+  }
+  // Windows may briefly retain a directory handle after the process tree exits.
+  await fs.rm(root, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
 }

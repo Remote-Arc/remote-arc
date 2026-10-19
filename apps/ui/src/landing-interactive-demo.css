@@ -2,12 +2,12 @@
 .homeDemo{margin-top:32px}
 .homeDemoToolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
 .homeDemoExamples{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.homeDemoExamples button{min-height:39px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:transparent;color:var(--landing-muted);font-size:13px;font-weight:650;cursor:pointer;transition:background .15s,border-color .15s}
+.homeDemoExamples button{min-height:39px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:transparent;color:var(--landing-muted);font-size:13px;font-weight:550;cursor:pointer;transition:background .15s,border-color .15s}
 .homeDemoExamples button:hover{background:var(--panel);color:var(--text)}
 .homeDemoExamples button.active{background:var(--panel);color:var(--text);border-color:#299bb7;box-shadow:inset 0 0 0 1px rgba(41,155,183,.15)}
 .homeDemoClientSwitch{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .homeDemoClientSwitch>span{font-size:11px;letter-spacing:.085em;font-weight:800;color:var(--landing-muted);margin-right:7px}
-.homeDemoClientSwitch button{display:flex;align-items:center;gap:7px;padding:7px 10px;min-height:39px;border:1px solid transparent;background:transparent;border-radius:8px;cursor:pointer;font-weight:650;font-size:12px;color:var(--landing-muted)}
+.homeDemoClientSwitch button{display:flex;align-items:center;gap:7px;padding:7px 10px;min-height:39px;border:1px solid transparent;background:transparent;border-radius:8px;cursor:pointer;font-weight:550;font-size:12px;color:var(--landing-muted)}
 .homeDemoClientSwitch button:hover{background:var(--panel);color:var(--text)}
 .homeDemoClientSwitch button[aria-pressed=true]{border-color:var(--line);background:var(--panel);color:var(--text);box-shadow:0 2px 7px rgba(10,20,33,.055)}
 .homeDemoClientSwitch img{width:17px;height:17px;object-fit:contain}
@@ -130,7 +130,7 @@
 .homeDemoTerminalFooter>span:last-child{font-weight:700;color:#74c6a4}
 .homeDemoUnder{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 25px;margin-top:13px}
 .homeDemoUnder p{margin:0;max-width:730px;font-size:12px;line-height:1.6;color:var(--landing-muted)}
-.homeDemoUnder a{font-size:13px;font-weight:700;color:var(--text);text-decoration:none}
+.homeDemoUnder a{font-size:13px;font-weight:550;color:var(--text);text-decoration:none}
 .homeDemoUnder a:hover{text-decoration:underline}
 .homeDemo button:focus-visible{outline:3px solid #2596b7;outline-offset:3px}
 @keyframes homeDemoFade{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -169,3 +169,32 @@
   .homeDemoClientSwitch button{padding:7px 8px}
 }
 @media(prefers-reduced-motion:reduce){.homeDemoMiniSpinner{animation:none}}
+
+/* Provider logos clarify each example tab. */
+.homeDemoExamples button{display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap}
+.homeDemoExampleLogos{display:inline-flex;align-items:center;flex:none}
+/* White provider tiles maintain contrast for black SVG marks in both themes. */
+.homeDemoExampleLogos img{display:block;box-sizing:border-box;width:26px;height:26px;object-fit:contain;padding:4px;border-radius:7px;background:#fff;border:1px solid #e4e6eb;box-shadow:0 1px 2px #0000000a}
+.homeDemoExampleLogos img+img{margin-left:-5px}
+/* A distinctly labelled sample output card, without implying actual paid generation. */
+.homeDemoRunwayCard{width:min(100%,410px);border:1px solid #e5e5e8;border-radius:13px;overflow:hidden;background:#fff;color:#25252a;box-shadow:0 3px 14px #00000008}
+.homeDemoRunwayVisual{height:165px;position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse 70% 45% at 56% 77%,#75777c 0%,#34363b 40%,transparent 90%),linear-gradient(125deg,#111318,#373a42 55%,#0d0f14)}
+.homeDemoRunwayVisual::after{content:"";position:absolute;inset:-60% auto -60% 30%;width:38%;transform:rotate(19deg);background:linear-gradient(90deg,transparent,#ffffff27,transparent);animation:runwayLight 5s ease-in-out infinite alternate}
+.homeDemoRunwayObject{position:absolute;top:27%;left:35%;width:36%;height:49%;border-radius:10px 10px 5px 5px;transform:perspective(200px) rotateX(11deg) rotateY(-18deg);background:linear-gradient(112deg,#202124,#a2a6af 37%,#363840 54%,#c0c4cc 71%,#3a3a3f);box-shadow:20px 24px 30px #000a,inset -9px -3px 20px #0006}
+.homeDemoRunwayPlay{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#ffffffda;color:#1d1d20;font-size:14px;padding-left:2px}
+.homeDemoRunwayVisual small,.homeDemoRunwayDuration{position:absolute;z-index:2;bottom:10px;color:#fff;font-weight:650;background:#0008;border:1px solid #fff3;border-radius:5px;padding:4px 7px;font-size:10px}
+.homeDemoRunwayVisual small{left:11px}.homeDemoRunwayDuration{right:11px}
+.homeDemoRunwayInfo{display:flex;align-items:center;gap:9px;padding:12px}
+.homeDemoRunwayInfo>img{flex:none;object-fit:contain}
+.homeDemoRunwayInfo>div{min-width:0;display:grid;gap:2px;flex:1}
+.homeDemoRunwayInfo strong{font-size:12px;font-weight:650}
+.homeDemoRunwayInfo span{font-size:11px;color:#696974}
+.homeDemoRunwayInfo a{flex:none;color:#25252a;font-size:11px;font-weight:650;text-decoration:none;padding:8px;border-radius:6px;background:#f3f3f5}
+.homeDemoRunwayInfo a:hover{text-decoration:underline;background:#e8e8ed}
+@keyframes runwayLight{from{left:0;opacity:.25}to{left:82%;opacity:.8}}
+@media(prefers-reduced-motion:reduce){.homeDemoRunwayVisual::after{animation:none}}
+@media(max-width:440px){.homeDemoRunwayInfo{flex-wrap:wrap}.homeDemoRunwayInfo a{margin-left:30px}}
+
+.homeDemoRunwayVisual{display:block;text-decoration:none}
+.homeDemoRunwayVisual:focus-visible{outline:3px solid #387a9d;outline-offset:-3px}
+.homeDemoRunwayVisual:hover .homeDemoRunwayPlay{background:#fff;transform:translate(-50%,-50%) scale(1.07)}

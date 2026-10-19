@@ -22,6 +22,15 @@ type DemoEvent = {
 
 type DemoClient = "ChatGPT" | "Claude" | "Cursor";
 
+const scenarioBrands: Record<string, string[]> = {
+  code: ["/remote-arc-app-icon.svg"],
+  release: ["/app-brands/github.svg", "/app-brands/vercel.svg"],
+  video: ["/app-brands/runway.svg"],
+  knowledge: ["/app-brands/googledrive.svg", "/app-brands/notion.svg"],
+  slides: ["/remote-arc-app-icon.svg"],
+  excel: ["/remote-arc-app-icon.svg"],
+};
+
 const clientLogo: Record<DemoClient, string> = {
   ChatGPT: "/demo-brands/chatgpt.svg",
   Claude: "/demo-brands/claude.svg",
@@ -174,6 +183,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   const [client, setClient] = useState<DemoClient>("ChatGPT");
   const demoRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const chatBodyRef = useRef<HTMLDivElement>(null);
   const events = eventsFor(scenarios[selected]?.id ?? "code", tr);
   const scenario = scenarios[selected] ?? scenarios[0];
   const finished = step >= events.length * 2 + 1;
@@ -203,6 +213,13 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   useEffect(() => {
     if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
   }, [step, selected]);
+
+  // Keep the prepared preview visible inside the mock chat when it completes.
+  useEffect(() => {
+    if (finished && scenario?.id === "video" && chatBodyRef.current) {
+      chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+    }
+  }, [finished, scenario?.id]);
 
   if (!scenario) return null;
 
@@ -243,7 +260,10 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
         <div className="homeDemoExamples" aria-label={tr("Try an example request", "选择示例任务")}>
           {scenarios.map((example, index) => (
             <button key={example.id} type="button" className={index === selected ? "active" : ""}
-              aria-pressed={index === selected} onClick={() => pickScenario(index)}>{example.label}</button>
+              aria-pressed={index === selected} onClick={() => pickScenario(index)}>
+              <span className="homeDemoExampleLogos" aria-hidden="true">{(scenarioBrands[example.id] ?? ["/remote-arc-app-icon.svg"]).map(src => <img src={src} key={src} alt="" loading="lazy" />)}</span>
+              <span>{example.label}</span>
+            </button>
           ))}
         </div>
         <div className="homeDemoClientSwitch" aria-label={tr("Preview the conversation in an AI client", "切换 AI 客户端界面")}>
@@ -279,7 +299,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               </>}
             </header>
 
-            <div className="homeDemoChatBody">
+            <div className="homeDemoChatBody" ref={chatBodyRef}>
               {client === "Cursor" && <div className="homeDemoCursorContext"><DemoGlyph name="sidebar" size={14} /><span>{tr("New chat", "新对话")}</span><span className="homeDemoCursorContextModel">Auto</span></div>}
               <div className="homeDemoUserBubble">{prompt}</div>
 
@@ -312,6 +332,19 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 </div>
                 {finished ? <>
                   <p className="homeDemoAssistantAnswer">{finalReply}</p>
+                  {scenario.id === "video" && <div className="homeDemoRunwayCard">
+                    <a className="homeDemoRunwayVisual" href="https://runwayml.com" target="_blank" rel="noopener noreferrer" aria-label={tr("Open Runway (illustrative preview only; no real generation)","打开 Runway（仅模拟预览，未真实生成视频）")}>
+                      <span className="homeDemoRunwayObject" aria-hidden="true" />
+                      <span className="homeDemoRunwayPlay" aria-hidden="true">▶</span>
+                      <small>{tr("ILLUSTRATIVE PREVIEW","模拟预览")}</small>
+                      <span className="homeDemoRunwayDuration">0:05</span>
+                    </a>
+                    <div className="homeDemoRunwayInfo">
+                      <img src="/app-brands/runway.svg" alt="" width="22" height="22"/>
+                      <div><strong>{tr("Cinematic product film","电影感产品短片")}</strong><span>Gen-4.5 · 1280 × 720 · 5s</span></div>
+                      <a href="https://runwayml.com" target="_blank" rel="noopener noreferrer" aria-label={tr("Open Runway website (sample card, no video was generated)","打开 Runway 官网（示例卡片，未真实生成视频）")}>{tr("Open Runway","打开 Runway")} ↗</a>
+                    </div>
+                  </div>}
                   <div className="homeDemoMessageTools" aria-hidden="true"><DemoGlyph name="paperclip" size={14} /><DemoGlyph name="share" size={14} /><DemoGlyph name="dots" size={16} /></div>
                 </> : null}
               </div>}

@@ -198,6 +198,7 @@ function CatalogCard({ app, connections, busy, onAuthorize, onSave, onDisconnect
     <header><AppIcon brand={app.brand} /><div><h2>{app.name}</h2><span>{appCategory ? tr(appCategory.name, appCategory.nameZh) : tr("Integration", "应用集成")}</span></div><span className={"appsManagerCardStatus" + (connections.some(connection => connection.status === "active") ? " connected" : "")}>{connections.some(connection => connection.status === "active") ? tr("Connected", "已连接") : app.configured ? tr("Available", "可连接") : tr("Coming soon", "即将支持")}</span></header>
 
 
+    {!app.configured && <p className="appsManagerAvailability">{tr("This integration is being prepared. Account connection will become available after provider setup.", "该集成正在准备中，完成服务商配置后即可连接账号。")}</p>}
     {app.billingNote && <details className="appsManagerProviderNotes">
       <summary>{tr("Billing details", "费用说明")}</summary>
       <p>{app.billingNote}</p>

@@ -23,12 +23,18 @@ const fetcher=async(url:string,init?:RequestInit)=>{
 await assert.rejects(()=>activateStripe({...env,GITHUB_REF:'refs/heads/not-master'},fetcher,noWait),/Protected/);assert.equal(calls.length,0);
 await assert.rejects(()=>activateStripe({...env,STRIPE_SECRET_KEY:'sk_test_fixture'},fetcher,noWait),/Live/);assert.equal(calls.length,0);
 account.charges_enabled=false;await assert.rejects(()=>activateStripe(env,fetcher,noWait),/incomplete/);assert.equal(secrets.length,0);account.charges_enabled=true;
+account.details_submitted=false;await assert.rejects(()=>activateStripe(env,fetcher,noWait),/incomplete/);assert.equal(secrets.length,0);account.details_submitted=true;
 account.country='US';await assert.rejects(()=>activateStripe(env,fetcher,noWait),/incomplete/);assert.equal(secrets.length,0);account.country='NZ';
 endpoint.enabled_events=['invoice.paid'];await assert.rejects(()=>activateStripe(env,fetcher,noWait),/webhook/);assert.equal(secrets.length,0);endpoint.enabled_events=[...stripeBillingEvents];
+// Receiving payments does not require bank payouts to be enabled. Stripe still
+// controls charges_enabled; missing payouts never authorizes bypassing it.
+account.payouts_enabled=false;
 calls=[];readyReads=0;fullyReadyAfter=4;await activateStripe(env,fetcher,noWait);
 assert.deepEqual(secrets,['STRIPE_WEBHOOK_SECRET','STRIPE_SECRET_KEY']);assert.equal(readyReads,4,'Wait for secret propagation without retrying monetary operations');
 assert.equal(calls.filter(call=>call.url.startsWith('https://api.stripe.com/')).length,2);
 assert.equal(calls.filter(call=>call.method!=='GET').length,2,'Only the two Worker Secret writes mutate external state');
+calls=[];secrets=[];readyReads=0;fullyReadyAfter=1;account.payouts_enabled=true;
+await activateStripe(env,fetcher,noWait);assert.deepEqual(secrets,['STRIPE_WEBHOOK_SECRET','STRIPE_SECRET_KEY']);
 let tries=0,waits=0;
 const delayed=await waitRuntimeReady(async()=>{tries++;return tries===1?new Response('old deployment'):Response.json({arcAvailable:tries>2});},state=>state.arcAvailable===true,async()=>{waits++;});
 assert.equal(delayed.arcAvailable,true);assert.equal(tries,3);assert.equal(waits,2);

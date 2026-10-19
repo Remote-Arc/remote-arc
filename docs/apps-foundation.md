@@ -21,6 +21,12 @@ Writes require the App origin; POST/PATCH requests also require JSON. Every rout
 
 The optional MCP tools are `list_apps` and `call_app`. They require incremental `apps:read` and `apps:write` scopes; the existing core tool set and default OAuth scopes are unchanged. The runtime can also be reused by the future Agent, with the same user identity and policy checks.
 
+## Workspace experience
+
+The Apps directory separates discovery from account management. Compact cards show an App's purpose, native tool count and connection state. All, Available and Connected filters distinguish the catalog from providers currently configured for account connection; a configured provider is not proof that every tool has passed a real-account test. Connections needing reauthorization stay in the Connected view.
+
+OAuth Apps connect directly from their card. Manage opens a side panel for account checks, reconnection, disconnection and adding another account. Tools in the same panel can be searched and expanded; copying an instruction does not execute it. API credentials and Shopify store details are entered inside the panel, with billing notes and Runway attribution retained. Closing the panel clears unsubmitted credentials. Preview mutations are disabled, including form submissions.
+
 ## Writes and uncertainty
 
 Connecting enables all implemented tools covered by the provider grant. The normalized request is encrypted and recorded with its owner, connection generation and stable request ID. There is no second local write switch or per-action approval queue. Reconnecting or disconnecting fences older requests. A pre-upgrade pending write is cancelled rather than silently dispatched.

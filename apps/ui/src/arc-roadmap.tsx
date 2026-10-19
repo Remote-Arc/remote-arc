@@ -65,7 +65,7 @@ export function ArcRoadmapPageContent() {
         </div>
         <div className="arcTimelinePanelBottom">
           <span>{tr("Long-term directions are exploratory, without a committed release date.", "长期方向仍在探索中，不代表已承诺的功能或上线日期。")}</span>
-          <a href={active===0?localizedWebsiteHref("/connect-ai",locale):localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
+          <a href={active===0?localizedWebsiteHref("/connect-ai",locale):active===1?"https://agent.remotearc.app/dashboard/agent/chat":localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):active===1?tr("Open Arc", "打开 Arc"):tr("Express interest", "登记体验意向")} <span aria-hidden="true">↗</span></a>
         </div>
       </article>
     </section>
@@ -73,7 +73,7 @@ export function ArcRoadmapPageContent() {
     <footer className="arcTimelineFooter">
       <p>{tr("Follow the build. Shape the next milestone.", "关注开发进展，参与定义下一步。")}</p>
       <div><a href={localizedWebsiteHref("/arc",locale)}>{tr("Meet Arc", "认识 Arc")} ↗</a><a href={localizedWebsiteHref("/feedback?source=roadmap",locale)}>{tr("Tell us what to build", "告诉我们你的需求")} ↗</a></div>
-      <small>{tr("Start with Connect today. Join early access for Arc.", "现在开始使用 Connect，也可以申请 Arc 抢先体验。")}</small>
+      <small>{tr("Arc and Connect are available now. Share your ideas for what comes next.", "Arc 和 Connect 现已可用，欢迎提出下一阶段的需求。")}</small>
     </footer>
   </main>;
 }

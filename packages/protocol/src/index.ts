@@ -17,8 +17,7 @@ export const ARC_ENTERPRISE={id:'enterprise',label:'Enterprise',pricing:'contact
 
 /** Standard tier, USD microdollars per million tokens. Reviewed 2026-10-19.
  * This is shared by the gateway, billing UI and SaaS economics tools. */
-export const ARC_HOSTED_MODELS = [
-  {id:'arc-auto',label:'Auto · GPT-6 Luna',provider:'openai',model:'gpt-6-luna',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000,cachedInputMicrosPerMillion:10000,cacheWriteMicrosPerMillion:125000},
+export const ARC_PREMIUM_MODELS = [
   {id:'gpt-6-luna',label:'GPT-6 Luna',provider:'openai',model:'gpt-6-luna',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000,cachedInputMicrosPerMillion:10000,cacheWriteMicrosPerMillion:125000},
   {id:'gpt-6.1-sol',label:'GPT-6.1 Sol',provider:'openai',model:'gpt-6.1-sol',maxOutputTokens:4096,inputMicrosPerMillion:2000000,outputMicrosPerMillion:10000000,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:2500000},
   {id:'gpt-6-astra',label:'GPT-6 Astra',provider:'openai',model:'gpt-6-astra',maxOutputTokens:4096,inputMicrosPerMillion:10000000,outputMicrosPerMillion:50000000,cachedInputMicrosPerMillion:1000000,cacheWriteMicrosPerMillion:12500000},
@@ -31,6 +30,12 @@ export const ARC_HOSTED_MODELS = [
   {id:'deepseek-v4.1-flash',label:'DeepSeek V4.1 Flash',provider:'openrouter',model:'deepseek/deepseek-v4.1-flash-1017',maxOutputTokens:4096,inputMicrosPerMillion:300000,outputMicrosPerMillion:1200000},
   {id:'glm-5.3-flash',label:'GLM 5.3 Flash',provider:'openrouter',model:'z-ai/glm-5.3-flash',maxOutputTokens:4096,inputMicrosPerMillion:150000,outputMicrosPerMillion:500000},
   {id:'kimi-k3',label:'Kimi K3',provider:'openrouter',model:'moonshotai/kimi-k3',maxOutputTokens:4096,inputMicrosPerMillion:3000000,outputMicrosPerMillion:15000000},
+] as const;
+
+/** Internal gateway defaults. Customer UI imports the named-model list above. */
+export const ARC_HOSTED_MODELS = [
+  {id:'arc-auto',label:'Auto',provider:'openai',model:'gpt-6-luna',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000,cachedInputMicrosPerMillion:10000,cacheWriteMicrosPerMillion:125000},
+  ...ARC_PREMIUM_MODELS,
 ] as const;
 
 

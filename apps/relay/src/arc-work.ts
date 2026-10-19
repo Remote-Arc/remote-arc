@@ -53,7 +53,7 @@ export async function createArcWork(env:ArcEnv,run:ArcRun,args:unknown,routine:b
 }
 export async function manageArcWork(env:ArcEnv,run:ArcRun,args:unknown){
  const input=z.object({action:z.enum(['list','pause','resume','cancel','update']),id:z.string().max(160).optional(),instructions:z.string().trim().min(1).max(6000).optional(),schedule:arcScheduleSchema.optional()}).strict().parse(args);
- if(input.action==='list')return listArcWork(env,run.user_id);
+ if(input.action==='list'){const result=await listArcWork(env,run.user_id);return{work:result.work,runs:result.runs.filter(item=>item.id!==run.id).slice(0,10),currentRunExcluded:true};}
  if(run.automation_id)throw new Error('ARC_RECURSIVE_WORK_NOT_ALLOWED');
  const row=await env.DB.prepare('SELECT * FROM automations WHERE id=?1 AND user_id=?2').bind(input.id||'',run.user_id).first<AutomationRow>(),work=row&&nativeArcWork(row.goal_json);
  if(!row||!work)throw new Error('ARC_WORK_NOT_FOUND');

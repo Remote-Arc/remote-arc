@@ -4,6 +4,7 @@ import {activeCommercial,commercialCatalog,commercialMode,saveCommercialDraft,pu
 import {savePromotionDraft,publishPromotion,disablePromotion} from './arc-promotions.js';
 import {StripeError,stripeConfigured} from './stripe-client.js';
 import {fundingOverview,updateFunding} from './arc-funding.js';
+import {listAdminTrials} from './arc-trial-admin.js';
 
 export type AdminPaymentsEnv=CommercialEnv&{PUBLIC_ORIGIN:string;ADMIN_ORIGIN?:string};
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
@@ -33,6 +34,7 @@ export async function handleAdminPayments(request:Request,env:AdminPaymentsEnv){
  if(request.method!=='GET'&&(request.headers.get('origin')!==origin||request.headers.get('content-type')?.split(';')[0]!=='application/json'))return json({error:'invalid_origin_or_type'},403);
  try{
   const path=new URL(request.url).pathname;
+  if(request.method==='GET'&&path==='/api/admin/payments/trials')return json(await listAdminTrials(env.DB,new URL(request.url)));
   if(request.method==='GET'&&path==='/api/admin/payments'){
    const mode=commercialMode(env),[overview,catalog,versions,audit,promotions]=await Promise.all([
     paymentOverview(env),commercialCatalog(env),env.DB.prepare('SELECT * FROM arc_commercial_versions WHERE mode=?1 ORDER BY created_at DESC LIMIT 100').bind(mode).all(),

@@ -58,6 +58,7 @@ try{
  await activateArcTrial(env,'trial');
  const trialRequest=()=>new Request('https://agent.remotearc.app/api/billing',{headers:{cookie:'rl_session=trial-session'}});
  const trialResponse=await handleBilling(trialRequest(),env);assert.equal(trialResponse.status,200);
+ const publicRates=(await trialResponse.clone().json() as any).models;assert(publicRates.length>0);assert(!publicRates.some((model:any)=>model.id==='arc-auto'||model.id==='auto'),'Public named-model rates do not identify Auto routing');
  const trialBilling=await trialResponse.json() as any;assert.equal(trialBilling.plan.id,'free');assert.equal(trialBilling.access.status,'active');assert.equal(trialBilling.access.daysRemaining,14);assert(trialBilling.credits.available>0);assert.equal(trialBilling.subscriptions.length,0);assert.equal(trialBilling.hasCustomer,false);assert.equal(mutations.length,0,'Viewing an active trial does not bind a card or create a subscription');
  sql.prepare("UPDATE arc_trials SET started_at='2000-01-01',expires_at='2000-01-15' WHERE user_id='trial'").run();
  const expiredBilling=await (await handleBilling(trialRequest(),env)).json() as any;assert.equal(expiredBilling.access.status,'expired');assert.equal(expiredBilling.access.canUse,false);assert.equal(expiredBilling.plan.id,'free');

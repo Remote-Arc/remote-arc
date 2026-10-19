@@ -2426,9 +2426,9 @@ function Landing({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <section className="landingHero landingHero--constellation">
         <div className="heroCopy">
-          <span className="eyebrow heroProductLabel"><i/> {arcAvailable?tr('YOUR PERSONAL AGENT. REAL WORK.','你的个人 AI 队友，处理真实工作。'):tr('CONNECT AVAILABLE. ARC COMING SOON.','CONNECT 现已可用 · ARC 即将上线')}</span>
+          <span className="eyebrow heroProductLabel"><i/> {arcAvailable?tr('YOUR PERSONAL AGENT. REAL WORK.','你的个人 AI 队友，处理真实工作。'):tr('YOUR AI. YOUR APPS. YOUR COMPUTERS.','你的 AI，你的应用，你的电脑')}</span>
           <HeroHeadline />
-          <p>{arcAvailable?tr('Tell Arc what you need. It works with your apps, chooses a suitable computer, and keeps tasks and routines moving — with results you can inspect.','告诉 Arc 你需要什么。它调用应用、选择合适电脑，让任务与 Routine 持续推进，并提供可核验的结果。'):tr('Connect your AI to apps and your own computers today. Coming next: Arc, your personal agent to coordinate the work, from one-off tasks to everyday routines.','现在，让你的 AI 连接应用与自己的电脑。接下来，Arc 将成为你的个人 AI 队友，协调一次性任务与每日 Routine。')}</p>
+          <p>{arcAvailable?tr('Tell Arc what you need. It works with your apps, chooses a suitable computer, and keeps tasks and routines moving — with results you can inspect.','告诉 Arc 你需要什么。它调用应用、选择合适电脑，让任务与 Routine 持续推进，并提供可核验的结果。'):tr('Connect your AI to approved apps and your own computers. Explore Arc for conversations, tasks and routines in one workspace, with access and allowance shown in your account.','让你的 AI 连接已授权的应用与自己的电脑。也可以探索 Arc，在一个工作空间中处理对话、任务与 Routine，使用权限和额度以账号展示为准。')}</p>
           <div className="landingActions">
             <a className="primaryButton marketingPrimary" href={dashboardHref(arcAvailable?DASHBOARD_PATHS['agent-chat']:'/dashboard/connect/overview')}>{arcAvailable?tr('Start your free trial','开始免费试用'):tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
             <a className="marketingSecondary" href="#how-it-works">{tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>

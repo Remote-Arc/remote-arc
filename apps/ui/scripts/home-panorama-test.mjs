@@ -35,9 +35,13 @@ try {
     for (const name of locale === "zh" ? ["专业技能", "任务执行", "操作审批", "结果验证"] : ["Skills", "Execution", "Approvals", "Verified Results"]) assert.ok(body.includes(name));
     assert.equal((html.match(/role="tab"/g) || []).length, 2, "Only manual product-mode controls");
     assert.match(html, /role="tabpanel"/);
-    assert.match(html, /data-mode="connect"/, "Connect is the default; Arc is never publicly enabled");
+    assert.match(html, /data-mode="connect"/, "Without runtime availability, default to Connect");
     assert.match(body, locale === "zh" ? /Connect 现已可用/ : /Connect available now/);
-    assert.match(body, locale === "zh" ? /即将上线/ : /Coming soon/);
+    assert.match(body, locale === "zh" ? /查看状态/ : /Check availability/);
+    const available = renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(HomeConnectionScene, { clients, arcAvailable: true, initialMode: "arc" })));
+    assert.match(available, /data-mode="arc"/, "Honor the available Arc mode");
+    assert.match(available, locale === "zh" ? /Arc Agent · 现已可用/ : /Arc Agent · Available now/);
+    assert.doesNotMatch(available, /hcsSoonLabel/, "Available Arc must not display obsolete launch badges");
     assert.match(body, locale === "zh" ? /AI 可以使用的账号与电脑/ : /Choose the accounts and computers your AI can use/);
     assert.doesNotMatch(html, /data-step=|data-routine-step=|hcsPlayButton|hcsSteps/);
     assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/);

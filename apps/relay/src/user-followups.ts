@@ -3,7 +3,7 @@ import {getSessionUser} from './auth.js';
 import {FOLLOWUP_TEMPLATES} from '../../../packages/protocol/src/followup-templates.js';
 import {escapeAuthHtml} from './auth-page.js';
 import {renderFollowupEmail} from '../../../packages/protocol/src/followup-email.js';
-import {feedbackRewardPolicy} from './connect-rewards.js';
+import {feedbackRewardAvailable} from './connect-rewards.js';
 
 export type FollowupEnv={DB:D1Database;PUBLIC_ORIGIN:string;APP_ORIGIN?:string;MARKETING_ORIGIN?:string;RESEND_API_KEY?:string;EMAIL_FROM?:string;FOLLOWUP_REPLY_TO?:string};
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
@@ -62,7 +62,7 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
    if(!env.RESEND_API_KEY||!env.EMAIL_FROM)return json({error:'email_not_configured'},503);
    const contact=await ensureContact(env,message.user_id);if(!contact||contact.suppressed_at)return json({error:'recipient_suppressed'},409);if(!contact.consent_at)return json({error:'contact_permission_required'},409);if(message.recipient_email!==contact.email)return json({error:'recipient_changed'},409);
    const unsubscribe=new URL(env.MARKETING_ORIGIN||'https://remotearc.app').origin+'/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;
-   const {html,text}=renderFollowupEmail({...message,templateId:message.template_id,...followupLinks(env,id,message.locale),unsubscribeUrl:unsubscribe,replyTo:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',rewardAvailable:Boolean((await feedbackRewardPolicy(env.DB))?.enabled)});
+   const {html,text}=renderFollowupEmail({...message,templateId:message.template_id,...followupLinks(env,id,message.locale),unsubscribeUrl:unsubscribe,replyTo:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',rewardAvailable:await feedbackRewardAvailable(env.DB)});
    const cutoff=new Date(Date.now()-72*3600000).toISOString(),now=stamp();
    const claimed=await env.DB.prepare(`UPDATE user_followup_messages SET status='sending' WHERE id=?1 AND status='draft' AND EXISTS(SELECT 1 FROM user_followup_contacts c WHERE c.user_id=?2 AND c.suppressed_at IS NULL AND c.consent_at IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM user_followup_messages m WHERE m.user_id=?2 AND m.id<>?1 AND (m.status IN ('sending','unknown') OR m.sent_at>?3)) RETURNING id`).bind(id,message.user_id,cutoff).first();
    if(!claimed)return json({error:'contact_cooldown_or_in_progress'},409);
@@ -78,7 +78,7 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
   }
   if(request.method==='GET'){
    const [contact,messages]=await Promise.all([ensureContact(env,id),env.DB.prepare('SELECT id,template_id,locale,subject,body,status,provider_id,created_at,sent_at,error_code FROM user_followup_messages WHERE user_id=?1 ORDER BY created_at DESC LIMIT 50').bind(id).all()]);
-   return contact?json({contact,messages:messages.results,rewardAvailable:Boolean((await feedbackRewardPolicy(env.DB))?.enabled)}):json({error:'user_not_found'},404);
+   return contact?json({contact,messages:messages.results,rewardAvailable:await feedbackRewardAvailable(env.DB)}):json({error:'user_not_found'},404);
   }
   if(request.method==='PATCH'){
    const value=z.object({status:z.enum(['new','contacted','waiting','resolved']),note:z.string().max(2000),nextFollowupAt:z.iso.datetime({offset:true}).nullable(),consentNote:z.string().trim().max(500),permission:z.boolean(),suppress:z.boolean()}).strict().parse(await input(request));

@@ -31,8 +31,8 @@ CREATE TABLE connect_feedback_rewards(
 CREATE INDEX connect_feedback_rewards_user ON connect_feedback_rewards(user_id,expires_at);
 -- Account deletion removes private reward records without replenishing the
 -- lifetime campaign allowance or concealing the amount already issued.
-CREATE TABLE feedback_reward_campaign_usage(id INTEGER PRIMARY KEY CHECK(id=1),grants INTEGER NOT NULL DEFAULT 0,granted_calls INTEGER NOT NULL DEFAULT 0);
-INSERT INTO feedback_reward_campaign_usage VALUES(1,0,0);
+CREATE TABLE feedback_reward_campaign_usage(id INTEGER PRIMARY KEY CHECK(id=1),grants INTEGER NOT NULL DEFAULT 0,granted_calls INTEGER NOT NULL DEFAULT 0,spent_calls INTEGER NOT NULL DEFAULT 0);
+INSERT INTO feedback_reward_campaign_usage VALUES(1,0,0,0);
 CREATE TRIGGER feedback_reward_campaign_grant AFTER INSERT ON connect_feedback_rewards
  BEGIN UPDATE feedback_reward_campaign_usage SET grants=grants+1,granted_calls=granted_calls+NEW.granted_calls WHERE id=1; END;
 CREATE TABLE connect_reward_consumptions(
@@ -50,6 +50,7 @@ CREATE TRIGGER connect_reward_consumption_guard BEFORE INSERT ON connect_reward_
 CREATE TRIGGER connect_reward_consumption_apply AFTER INSERT ON connect_reward_consumptions
  BEGIN
   UPDATE connect_feedback_rewards SET spent_calls=spent_calls+1 WHERE id=NEW.reward_id;
+  UPDATE feedback_reward_campaign_usage SET spent_calls=spent_calls+1 WHERE id=1 AND NEW.reward_id IS NOT NULL;
   INSERT INTO user_monthly_usage(user_id,month_key,tool_calls,updated_at) VALUES(NEW.user_id,NEW.month_key,1,NEW.created_at)
    ON CONFLICT(user_id,month_key) DO UPDATE SET tool_calls=tool_calls+1,updated_at=excluded.updated_at;
  END;

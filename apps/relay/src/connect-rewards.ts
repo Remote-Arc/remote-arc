@@ -4,6 +4,10 @@ type Env={DB:D1Database;PUBLIC_ORIGIN:string};
 type Policy={id:string;revision:number;enabled:number;calls:number;valid_days:number;per_user_limit:number;total_calls_cap:number;published_at:string};
 const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'cache-control':'private, no-store'}});
 export const feedbackRewardPolicy=(db:D1Database)=>db.prepare('SELECT v.* FROM feedback_reward_policy p JOIN feedback_reward_versions v ON v.id=p.version_id WHERE p.id=1').first<Policy>();
+export async function feedbackRewardAvailable(db:D1Database){
+ const row=await db.prepare('SELECT v.enabled=1 AND c.granted_calls+v.calls<=v.total_calls_cap available FROM feedback_reward_policy p JOIN feedback_reward_versions v ON v.id=p.version_id JOIN feedback_reward_campaign_usage c ON c.id=1 WHERE p.id=1').first<{available:number}>();
+ return Boolean(row?.available);
+}
 export async function rewardAllowance(db:D1Database,userId:string,at=new Date().toISOString()){
  try{return await db.prepare(`SELECT COALESCE((SELECT SUM(granted_calls-spent_calls) FROM connect_feedback_rewards WHERE user_id=?1 AND starts_at<=?2 AND expires_at>?2),0) available,
   (SELECT COUNT(*) FROM connect_reward_consumptions WHERE user_id=?1 AND month_key=?3 AND reward_id IS NOT NULL) spentThisMonth`).bind(userId,at,at.slice(0,7)).first<{available:number;spentThisMonth:number}>();}
@@ -41,7 +45,7 @@ export async function handleFeedbackRewardAdmin(request:Request,env:Env){
  const actor=await getSessionUser(request,env);if(!actor?.isAdmin)return json({error:actor?'forbidden':'unauthorized'},actor?403:401);
  const path=new URL(request.url).pathname;
  if(request.method==='GET'&&path==='/api/admin/feedback-rewards'){
-  const [policy,claims,totals]=await Promise.all([feedbackRewardPolicy(env.DB),env.DB.prepare(`SELECT c.*,u.email,u.name,v.calls,v.valid_days,s.message,r.id reward_id,r.expires_at FROM feedback_reward_claims c JOIN users u ON u.id=c.user_id JOIN feedback_reward_versions v ON v.id=c.version_id LEFT JOIN website_submissions s ON s.id=c.submission_id LEFT JOIN connect_feedback_rewards r ON r.claim_id=c.id ORDER BY CASE c.status WHEN 'pending' THEN 0 ELSE 1 END,c.created_at DESC LIMIT 50`).all(),env.DB.prepare('SELECT grants,granted_calls grantedCalls,(SELECT COALESCE(SUM(spent_calls),0) FROM connect_feedback_rewards) spentCalls FROM feedback_reward_campaign_usage WHERE id=1').first()]);
+  const [policy,claims,totals]=await Promise.all([feedbackRewardPolicy(env.DB),env.DB.prepare(`SELECT c.*,u.email,u.name,v.calls,v.valid_days,s.message,r.id reward_id,r.expires_at FROM feedback_reward_claims c JOIN users u ON u.id=c.user_id JOIN feedback_reward_versions v ON v.id=c.version_id LEFT JOIN website_submissions s ON s.id=c.submission_id LEFT JOIN connect_feedback_rewards r ON r.claim_id=c.id ORDER BY CASE c.status WHEN 'pending' THEN 0 ELSE 1 END,c.created_at DESC LIMIT 50`).all(),env.DB.prepare('SELECT grants,granted_calls grantedCalls,spent_calls spentCalls FROM feedback_reward_campaign_usage WHERE id=1').first()]);
   return json({policy,claims:claims.results,totals});
  }
  if(request.method!=='POST')return json({error:'method_not_allowed'},405);

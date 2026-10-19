@@ -35,7 +35,7 @@ for(const credential of ["GITHUB","SLACK","GOOGLE","MICROSOFT"]) {
 }
 const identity={userId:"one",scope:"apps:read apps:write"};
 const requests:Array<{url:string;method:string;headers:Headers;body:unknown}>=[];
-let activeProvider:AppProvider="github", version="v1", failWrites=false;
+let activeProvider:AppProvider="github", version="v1", failWrites=false,githubAccount=17;
 const json=(value:unknown,status=200)=>Response.json(value,{status});
 const fetcher:typeof fetch=async(url,init={})=>{
   const href=String(url),method=init.method || "GET",headers=new Headers(init.headers);
@@ -46,7 +46,7 @@ const fetcher:typeof fetch=async(url,init={})=>{
     const token={access_token:"private-token-"+activeProvider,refresh_token:"rotated-"+activeProvider,expires_in:3600,scope:appScopes(activeProvider,["read","write"]).join(" ")};
     return json(activeProvider==="slack"&&form.get("grant_type")!=="refresh_token"?{ok:true,authed_user:token}:token);
   }
-  if(href==="https://api.github.com/user") return json({id:17,login:"test-user"});
+  if(href==="https://api.github.com/user") return json({id:githubAccount,login:"test-user"});
   if(href==="https://slack.com/api/auth.test") return json({ok:true,user_id:"U1",team_id:"T1",team:"Test",user:"test-user"});
   if(href.endsWith("/users/me/profile")) return json({emailAddress:"tester@example.invalid"});
   if(href.endsWith("/calendarList/primary")) return json({id:"tester@example.invalid"});
@@ -108,6 +108,15 @@ assert.equal((await listApps(env,"two")).connections.length,0);
 assert(!JSON.stringify(await listApps(env,"one")).includes("private-token"));
 const prior=connections.get("github");
 assert.equal(await connect("github"),prior,"reconnecting the same account retains its identity");
+env.ARC_BILLING_ENABLED='1';
+assert.equal(await connect('github'),prior,'Existing connections can be reauthorized above a new plan limit');
+const limitStart=await api('/api/apps/authorize','POST',{provider:'github'});
+const limitState=new URL((await limitStart.json() as any).authorizationUrl).searchParams.get('state');
+githubAccount=18;const connectedBefore=(await listApps(env,'one')).connections.length;
+const overLimit=await api('/api/apps/oauth/github/callback?state='+limitState+'&code=limit-test');
+assert.equal(overLimit.status,402);assert.equal((await overLimit.json() as any).error,'app_connection_limit');
+assert.equal((await listApps(env,'one')).connections.length,connectedBefore,'An OAuth callback cannot exceed the connection cap');
+githubAccount=17;env.ARC_BILLING_ENABLED='0';
 await deny(()=>callApp(env,{...identity,userId:"two"},{connectionId:prior,operation:"repositories.list",arguments:{},requestId:"foreign-1"},fetcher),"app_connection_not_found");
 await deny(()=>callApp({...env,ENABLE_APPS:undefined},identity,{}),"apps_not_enabled");
 await deny(()=>callApp(env,{...identity,scope:"mcp:tools"},{connectionId:prior,operation:"repositories.list",arguments:{},requestId:"no-scope"},fetcher),"app_mcp_scope_required");

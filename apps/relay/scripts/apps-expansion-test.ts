@@ -205,9 +205,16 @@ upgrade.exec("BEGIN");upgrade.exec(fs.readFileSync(path.join(migrations,"0031_ap
 assert.equal(upgrade.prepare("SELECT account_label,daily_call_limit FROM app_connections WHERE id='old-connection'").get()?.daily_call_limit,100);assert.equal(upgrade.prepare("SELECT connection_id FROM app_calls WHERE id='old-call'").get()?.connection_id,"old-connection");assert.equal(upgrade.prepare("PRAGMA foreign_key_check").all().length,0);upgrade.close();
 const funded=sql.prepare('SELECT id,generation,provider FROM app_connections WHERE id=?').get(connections.get('x')!) as {id:string;generation:number;provider:AppProvider};
 await deny(()=>reserveAppDispatch({...env,APP_PLATFORM_FUNDED_COSTS:undefined},'one',funded),'app_platform_budget_not_configured');
+await deny(()=>reserveAppDispatch({...env,APP_PLATFORM_FUNDED_COSTS:'{'},'one',funded),'app_platform_budget_not_configured');
+await deny(()=>reserveAppDispatch({...env,APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:-1,dailyPlatformMicros:10}})},'one',funded),'app_platform_budget_not_configured');
 sql.prepare('DELETE FROM app_platform_funding_reservations').run();
 const fundedEnv={...env,APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:6000,dailyPlatformMicros:1000000}})};
 const fundedCalls=await Promise.allSettled(Array.from({length:6},()=>reserveAppDispatch(fundedEnv,'one',funded)));assert.equal(fundedCalls.filter(r=>r.status==='fulfilled').length,1,'Free platform-funded cost allowance cannot be spent twice');
+sql.prepare("INSERT INTO billing_plan_assignments(id,plan_id,subject_type,subject_id,expires_at,created_at) VALUES('funded-paid','arc-plus-v1','user','one',?,?)").run(future,stamp);
+sql.prepare('DELETE FROM app_platform_funding_reservations').run();
+await reserveAppDispatch(fundedEnv,'one',funded);await reserveAppDispatch(fundedEnv,'one',funded);
+assert.equal(sql.prepare('SELECT SUM(maximum_cost_micros) AS n FROM app_platform_funding_reservations').get()?.n,12000,'An active paid plan has its separate platform-funded allowance');
+await deny(()=>reserveAppDispatch({...fundedEnv,APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:6000,dailyPlatformMicros:12000}})},'one',funded),'app_platform_funded_allowance_reached');
 console.log("Apps expansion: 23 new provider auth flows, every operation, reviewed writes, concurrent replay, platform-funded cost caps, billing limits, discovery and existing-data migration passed. Provider HTTP is mocked; no real account acceptance is claimed.");
 sql.close();
 

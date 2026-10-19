@@ -180,11 +180,11 @@ export async function handleBilling(request:Request,env:BillingEnv){
   const user=await getSessionUser(request,env);if(!user)return json({error:'unauthorized'},401);
   if(request.method==='GET'&&path==='/api/billing'){
    const [plan,credits,usage,subscriptions,customer]=await Promise.all([currentArcPlan(env.DB,user.id),creditBalance(env.DB,user.id),getMonthlyUsage(env,user.id),env.DB.prepare('SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10').bind(user.id).all(),env.DB.prepare('SELECT 1 AS present FROM arc_billing_customers WHERE user_id=?1').bind(user.id).first()]);
-   return json({enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),hasCustomer:Boolean(customer),plan,credits,usage,plans:ARC_PLANS,topups:ARC_TOPUPS,models:ARC_HOSTED_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
+    return json({enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,credits,usage,plans:ARC_PLANS,topups:ARC_TOPUPS,models:ARC_HOSTED_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
   }
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   if(!isTrustedDashboardMutation(request,env))throw new StripeError('same_origin_required',403);
-  if(!stripeConfigured(env)||!arcEnabled(env)||!creditsEnabled(env))throw new StripeError('BILLING_NOT_CONFIGURED');
+   if(!stripeConfigured(env)||(path!=='/api/billing/portal'&&(!arcEnabled(env)||!creditsEnabled(env))))throw new StripeError('BILLING_NOT_CONFIGURED');
   if(request.headers.get('content-type')?.split(';')[0]!=='application/json')throw new StripeError('BILLING_JSON_REQUIRED',415);
   let input:Record<string,unknown>;try{input=JSON.parse(await boundedBody(request,2048));if(!input||typeof input!=='object'||Array.isArray(input))throw 0;}catch(e){if(e instanceof StripeError)throw e;throw new StripeError('BILLING_INVALID_REQUEST',400);}
   if(!['/api/billing/portal','/api/billing/plan/change','/api/billing/checkout'].includes(path))return json({error:'not_found'},404);

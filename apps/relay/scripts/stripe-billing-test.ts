@@ -30,11 +30,13 @@ const fixtures:Record<string,any>={
  '/v1/charges/ch_topup':{id:'ch_topup',payment_intent:'pi_topup',paid:true,amount_refunded:0,disputed:false},
  '/v1/checkout/sessions/cs_test_fixture':{id:'cs_test_fixture',customer:'cus_fixture',mode:'payment',livemode:false,payment_status:'paid',status:'complete',currency:'usd',amount_subtotal:1000,amount_total:1000,total_details:{amount_discount:0},payment_intent:'pi_topup'},
  '/v1/checkout/sessions/cs_test_fixture/line_items?limit=2':{has_more:false,data:[{quantity:1,price:'price_topup'}]},
+  '/v1/billing_portal/configurations?active=true&limit=100':{has_more:false,data:[{id:'bpc_fixture',metadata:{remote_arc:'billing-v1'},features:{subscription_update:{enabled:false},subscription_cancel:{mode:'at_period_end'}}}]},
 };
 const original=globalThis.fetch,requests:string[]=[];
 globalThis.fetch=async(input,init)=>{const u=new URL(String(input));assert.equal(u.origin,'https://api.stripe.com');assert.equal(new Headers(init?.headers).get('stripe-version'),STRIPE_API_VERSION);requests.push(u.pathname+u.search);
  if(init?.method==='POST'){
   const body=new URLSearchParams(String(init.body));mutations.push({path:u.pathname,body,key:new Headers(init.headers).get('idempotency-key')});
+   if(u.pathname==='/v1/billing_portal/sessions'){assert.equal(body.get('customer'),'cus_fixture');return Response.json({url:'https://billing.stripe.com/p/session/fixture'});}
   if(u.pathname==='/v1/subscription_schedules'){assert.equal(body.get('from_subscription'),'sub_fixture');hasSchedule=true;return Response.json({id:'sub_sched_fixture',current_phase:{start_date:start,end_date:end}});}
   if(u.pathname==='/v1/subscription_schedules/sub_sched_fixture'){assert.equal(body.get('proration_behavior'),'none');assert.equal(body.get('phases[0][end_date]'),String(end));assert.equal(body.get('phases[1][start_date]'),String(end));assert.equal(body.get('phases[1][duration][interval]'),'month');return Response.json({id:'sub_sched_fixture'});}
   if(u.pathname==='/v1/checkout/sessions'){assert.equal(body.get('line_items[0][price]'),'price_plus');assert.equal(body.get('line_items[0][quantity]'),'1');assert.equal(body.get('customer'),'cus_fixture');return Response.json({id:'cs_test_open',url:'https://checkout.stripe.com/c/pay/fixture'});}
@@ -94,6 +96,11 @@ try{
  assert.equal((await handleBilling(request('/api/billing/checkout','POST','https://evil.invalid'),env)).status,403);
  assert.equal((await handleBilling(request('/api/billing/checkout','POST'),{...env,ARC_CHAT_ENABLED:'0'})).status,503);
  const response=await handleBilling(request('/api/billing'),env);assert.equal(response.status,200);const data=await response.json() as any;assert.equal(data.plan.id,'free');assert.equal(data.usage.limit,500);assert(!JSON.stringify(data).includes('sk_test_fixture'));
+  const pausedEnv={...env,ARC_EMERGENCY_PAUSE:'1'};
+  const pausedData=await (await handleBilling(request('/api/billing'),pausedEnv)).json() as any;
+  assert.equal(pausedData.enabled,false);assert.equal(pausedData.portalEnabled,true,'Emergency Arc pause must not prevent existing customers from managing payment/cancellation');
+  assert.equal((await handleBilling(request('/api/billing/portal','POST'),pausedEnv)).status,200);
+  assert.equal((await handleBilling(request('/api/billing/checkout','POST'),pausedEnv)).status,503);
   assert.equal((await handleArcAdminBilling(request('/api/admin/arc-billing','GET',undefined,''),env)).status,401);
   assert.equal((await handleArcAdminBilling(request('/api/admin/arc-billing'),env)).status,403);
   sql.prepare("UPDATE users SET role='admin' WHERE id='one'").run();

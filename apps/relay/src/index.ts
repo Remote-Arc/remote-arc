@@ -495,7 +495,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
 
     if (url.pathname.startsWith("/api/arc/")) return handleArcChat(request, env);
-    if(url.pathname==='/api/billing/catalog'&&request.method==='GET')return Response.json({arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),connectFreeCalls:billingEnabled(env)?ARC_PLANS[0].connectToolCalls:10000},{headers:{'cache-control':'public, max-age=60'}});
+    if(url.pathname==='/api/runtime-config'&&request.method==='GET')return Response.json({version:1,environment:'production',arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),execution:arcDeploymentReady(env)?'live':'disabled'},{headers:{'cache-control':'no-store'}});
+    if(url.pathname==='/api/billing/catalog'&&request.method==='GET')return Response.json({arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),connectFreeCalls:billingEnabled(env)?ARC_PLANS[0].connectToolCalls:10000},{headers:{'cache-control':'no-store'}});
     if (url.pathname === '/api/billing' || url.pathname.startsWith('/api/billing/')) {
       if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({error:'billing_host_required'},{status:404});
       return handleBilling(request,env);

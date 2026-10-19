@@ -75,6 +75,7 @@ export function registrationPack(value: string) {
       registrationUrl: "https://console.cloud.google.com/auth/overview",
       applicationName: "Remote Arc Apps",
       applicationType: "Web application",
+      agenticClient: true,
       apiServices: ["gmail.googleapis.com", "calendar-json.googleapis.com", "youtube.googleapis.com", "drive.googleapis.com", "docs.googleapis.com", "sheets.googleapis.com", "searchconsole.googleapis.com", "analyticsadmin.googleapis.com", "analyticsdata.googleapis.com", "googleads.googleapis.com"],
       authorizedRedirectUris: googleProviders.map(provider => callbacks[provider]),
       declaredScopes: declaredScopes(googleProviders),
@@ -82,6 +83,7 @@ export function registrationPack(value: string) {
       clientIdSecretName: "APP_GOOGLE_CLIENT_ID",
       clientSecretSecretName: "APP_GOOGLE_CLIENT_SECRET",
       credentialIsolation: "Use a dedicated Apps OAuth client, separate from the existing Google sign-in client.",
+      agenticClientNote: "Select Use this client for an AI-powered agent for this dedicated client. This is required when using Google's Workspace MCP servers; the current native REST adapters do not depend on those preview servers.",
     },
     microsoft: {
       registrationUrl: "https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",

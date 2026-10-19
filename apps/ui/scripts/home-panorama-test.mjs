@@ -38,7 +38,7 @@ try {
     assert.match(html, /data-mode="connect"/, "Connect is the default; Arc is never publicly enabled");
     assert.match(body, locale === "zh" ? /Connect 现已可用/ : /Connect available now/);
     assert.match(body, locale === "zh" ? /即将上线/ : /Coming soon/);
-    assert.match(body, locale === "zh" ? /Connect Apps 独立发布/ : /Connect Apps ships independently/);
+    assert.match(body, locale === "zh" ? /AI 可以使用的账号与电脑/ : /Choose the accounts and computers your AI can use/);
     assert.doesNotMatch(html, /data-step=|data-routine-step=|hcsPlayButton|hcsSteps/);
     assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/);
     for (const client of clients) assert.ok(html.includes('href="/install/' + client.slug + '"'));

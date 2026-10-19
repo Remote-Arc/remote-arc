@@ -1,8 +1,5 @@
 export type DashboardWorkspace = "connect" | "agent";
 
-// Arc is prepared in the codebase but is not part of the public Connect release.
-export const ARC_WORKSPACE_AVAILABLE = false;
-
 export type DashboardTab =
   | "overview" | "devices" | "automations" | "apps" | "connect" | "security" | "monitor" | "settings"
   | "agent-apps" | "agent-devices" | "agent-chat" | "agent-goals" | "agent-routines" | "agent-skills" | "agent-activity" | "agent-settings";
@@ -53,7 +50,8 @@ export function workspaceForTab(tab: DashboardTab): DashboardWorkspace {
   return tab.startsWith("agent-") ? "agent" : "connect";
 }
 
-export function availableDashboardTab(tab: DashboardTab, arcAvailable = ARC_WORKSPACE_AVAILABLE): DashboardTab {
+// Availability comes from the server. Missing configuration fails closed.
+export function availableDashboardTab(tab: DashboardTab, arcAvailable = false): DashboardTab {
   if (arcAvailable || workspaceForTab(tab) === "connect") return tab;
   if (tab === "agent-apps") return "apps";
   if (tab === "agent-devices") return "devices";

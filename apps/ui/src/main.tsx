@@ -13,7 +13,7 @@ import { WorkspacePicker } from "./workspace-picker.js";
 import {usePlatformCatalog} from './use-platform-catalog.js';
 import {ArcReadyPage} from './arc-ready-page.js';
 import {
-  DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab, ARC_WORKSPACE_AVAILABLE,
+  DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab,
   isVisibleInWorkspace, isAgentGoalAutomation,
   type DashboardTab,
 } from "./dashboard-workspaces.js";
@@ -1971,8 +1971,8 @@ function ClientInstallPage({
           "电脑只需配对一次，再在支持 Remote MCP App 的 ChatGPT 账户中添加 Remote Arc，之后即可直接在聊天里操作这台电脑。",
         ),
         availability: tr(
-          "Remote Arc is preparing its public ChatGPT Plugin listing. Until it is live, eligible accounts can use the developer-mode MCP connection in Plugins.",
-          "Remote Arc 正在准备公开 ChatGPT Plugin 上架。在正式上线前，符合条件的账户仍可通过Plugins 中的开发模式 MCP 连接接入。",
+          "Use a ChatGPT account that supports custom MCP connections. If Remote Arc is not listed in Plugins, add the endpoint manually using the steps below.",
+          "请使用支持自定义 MCP 连接的 ChatGPT 账号。如果 Plugins 中没有列出 Remote Arc，按下面的步骤手动添加地址。",
         ),
         externalHref: CHATGPT_PLUGIN_DIRECTORY_URL,
         externalLabel: tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins"),
@@ -2429,7 +2429,7 @@ function Landing({ user }: { user?: User | null }) {
           <HeroHeadline />
           <p>{arcAvailable?tr('Tell Arc what you need. It works with your apps, chooses a suitable computer, and keeps tasks and routines moving — with results you can inspect.','告诉 Arc 你需要什么。它调用应用、选择合适电脑，让任务与 Routine 持续推进，并提供可核验的结果。'):tr('Connect your AI to apps and your own computers today. Coming next: Arc, your personal agent to coordinate the work, from one-off tasks to everyday routines.','现在，让你的 AI 连接应用与自己的电脑。接下来，Arc 将成为你的个人 AI 队友，协调一次性任务与每日 Routine。')}</p>
           <div className="landingActions">
-            <a className="primaryButton marketingPrimary" href={APP_ORIGIN+(arcAvailable?'/dashboard/arc/chat':'/dashboard/connect/overview')}>{arcAvailable?tr('Start 14-day free trial','开始 14 天免费试用'):tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
+            <a className="primaryButton marketingPrimary" href={dashboardHref(arcAvailable?DASHBOARD_PATHS['agent-chat']:'/dashboard/connect/overview')}>{arcAvailable?tr('Start 14-day free trial','开始 14 天免费试用'):tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
             <a className="marketingSecondary" href="#how-it-works">{tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>
           </div>
           <div className="heroProofLine"><ProductIcon name="check" size={14}/>{tr('No model API key required','无需模型 API Key')}<span>·</span>Windows · Mac · Linux</div>
@@ -2467,7 +2467,7 @@ const PLUGIN_DEMO_VIDEO_URL =
 
 function ArcPage({ user }: { user?: User | null }) {
   const available=usePlatformCatalog()?.arcAvailable===true;
-  return <PublicLayout user={user}>{available?<ArcReadyPage/>:<ArcComingSoonPageContent />}</PublicLayout>;
+  return <PublicLayout user={user}>{available?<ArcReadyPage startHref={dashboardHref(DASHBOARD_PATHS['agent-chat'])}/>:<ArcComingSoonPageContent />}</PublicLayout>;
 }
 
 function RoadmapPage({ user }: { user?: User | null }) {
@@ -3575,7 +3575,7 @@ function Dashboard({
   signOut: () => Promise<void>;
 }) {
   const { tr, locale, setLocale } = useI18n();
-  const arcAvailable = ARC_WORKSPACE_AVAILABLE || user.arcAvailable===true;
+  const arcAvailable = user.arcAvailable===true;
   const hasPlus = user.plan === "plus" || user.isAdmin;
   const [showAdd, setShowAdd] = useState(false);
   const [arcEntry,setArcEntry] = useState<{prompt?:string;sessionId?:string;version:number}>(()=>({version:0,prompt:new URLSearchParams(location.search).get('prompt')?.slice(0,6000)||undefined}));
@@ -5081,7 +5081,7 @@ function Dashboard({
         {UI_PREVIEW && (
           <div className="previewModeBanner" role="status">
             <strong>PR PREVIEW</strong>
-            <span>{tr("Mock data · read-only · no production OAuth, D1, MCP or device state", "模拟数据 · 只读 · 不连接生产 OAuth、D1、MCP 或设备状态")}</span>
+            <span>{tr("Interactive Arc demo · simulated data · no real accounts, tools, models or payments", "Arc 交互演示 · 模拟数据 · 不连接真实账号、工具、模型或支付")}</span>
           </div>
         )}
         <header className="mobileTopbar">
@@ -5996,7 +5996,7 @@ function Dashboard({
                     <div className="connectClientIdentity"><img className="monoLogo" src={aiClients[0].icon} alt="" /><div><span className="eyebrow">CHATGPT</span><h3>ChatGPT</h3></div></div>
                     <span className="clientState recommended">{tr("Plugins", "Plugins")}</span>
                   </div>
-                  <p>{tr("Open ChatGPT Plugins and install Remote Arc when available. Before publication, eligible accounts can use developer-mode MCP setup and Remote Arc OAuth.", "打开 ChatGPT Plugins，账户可见时安装 Remote Arc。发布前符合条件的账户可以通过开发模式 MCP 接入并完成 Remote Arc OAuth。")}</p>
+                  <p>{tr("Open ChatGPT Plugins and look for Remote Arc. If it is not listed, use the custom MCP setup supported by your account and complete Remote Arc sign-in.", "打开 ChatGPT Plugins 查找 Remote Arc。如果没有列出，可通过账号支持的自定义 MCP 入口添加，并完成 Remote Arc 登录。")}</p>
                   <div className="connectAgentAction"><span>{tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins")}</span><b>↗</b></div>
                 </a>
 
@@ -6046,7 +6046,7 @@ function Dashboard({
                 <div><span className="eyebrow">{tr("SETUP", "配置")}</span><h2>{tr("Connection flow", "连接流程")}</h2></div>
               </div>
               <div className="connectTimeline">
-                <article><span className="timelineNumber">01</span><div><strong>{tr("Add Remote Arc", "添加 Remote Arc")}</strong><p>{tr("Install the public plugin when available, or add the Remote MCP endpoint manually during early access.", "公开插件上线后直接安装；Early Access 阶段则手动添加 Remote MCP 地址。")}</p></div></article>
+                <article><span className="timelineNumber">01</span><div><strong>{tr("Add Remote Arc", "添加 Remote Arc")}</strong><p>{tr("Choose your AI client above, follow its setup instructions and add the Remote MCP endpoint if needed.", "选择上方的 AI 客户端，按对应指南配置，必要时添加 Remote MCP 地址。")}</p></div></article>
                 <article><span className="timelineNumber">02</span><div><strong>{tr("Authorize your account", "授权你的账户")}</strong><p>{tr("Remote Arc opens OAuth once. Your AI receives scoped access to the account you approve.", "Remote Arc 会打开一次 OAuth 授权；AI 只获得你批准账户范围内的权限。")}</p></div></article>
                 <article><span className="timelineNumber">03</span><div><strong>{tr("Talk to a device by name", "直接说设备名称")}</strong><p>{tr("Remote Arc discovers your paired devices and enforces each device's tool policy before routing a request.", "Remote Arc 会发现已配对设备，并在路由请求前执行每台设备自己的工具权限策略。")}</p></div></article>
               </div>
@@ -6804,17 +6804,17 @@ function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [status, setStatus] = useState<ProductStatus | null>(null);
 
-  async function loadMe() {
+  async function loadMe(background = false) {
     try {
       const response = await fetch("/api/me", { headers: { accept: "application/json" } });
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
-        setUser(null);
+        if (!background || response.status === 401) setUser(null);
         return;
       }
       const payload = (await response.json()) as { user: User };
-      setUser(payload.user);
+      setUser(previous => background && previous?.id !== payload.user?.id ? null : payload.user);
     } catch {
-      setUser(null);
+      if (!background) setUser(null);
     }
   }
 
@@ -6842,7 +6842,7 @@ function App() {
   useEffect(() => {
     if (!user || location.hostname === "admin.remotearc.app") return;
     const refreshIfVisible = () => {
-      if (document.visibilityState === "visible") void loadAll();
+      if (document.visibilityState === "visible") { void loadAll(); void loadMe(true); }
     };
     void loadAll();
     const timer = window.setInterval(refreshIfVisible, 60_000);

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, ty
 import { createPortal } from "react-dom";
 import "./workspace-picker.css";
 import {ProductIcon as Icon} from './product-icon.js';
-import { ARC_WORKSPACE_AVAILABLE } from './dashboard-workspaces.js';
 
 type Workspace = "connect" | "agent";
 type Props = {
@@ -22,7 +21,7 @@ function ProductIcon({workspace}:{workspace:Workspace}){
   return workspace==="agent"?<img src="/remote-arc.svg" alt="" width={21} height={21}/>:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 .5l2-2a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7-.5l-2 2a5 5 0 0 0 7 7l1-1"/></svg>;
 }
 
-export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate, arcAvailable = ARC_WORKSPACE_AVAILABLE }: Props) {
+export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate, arcAvailable = false }: Props) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<Position | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);

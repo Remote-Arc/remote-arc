@@ -6,11 +6,11 @@ import "./arc-roadmap.css";
 const requestAccess = "/early-access?source=roadmap";
 
 const phases = [
-  {id:"00",name:"Foundation",zhName:"连接基础",status:"available",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",subtitle:"CONNECT / RELIABILITY",zhSubtitle:"连接与可靠性",description:"Remote MCP, device permissions and durable task foundations already power Remote Arc. Organization boundaries and controlled production releases are being hardened.",zhDescription:"Remote MCP、设备权限和持久任务基础已支持 Remote Arc。组织隔离与受控生产发布正在加强。",bullets:["Remote MCP · connected devices","Permissioned execution · durable tasks","Organization and release safeguards"],zhBullets:["远程 MCP 与设备连接","受控执行与持久任务","组织隔离与发布保护"],state:"live"},
-  {id:"01",name:"Arc Chat",zhName:"Arc Chat",status:"building",enStatus:"IN DEVELOPMENT",zhStatus:"开发中",subtitle:"HOSTED CHAT / AUTO",zhSubtitle:"托管对话与 Auto",description:"First-party AI chat, audited model routing and bounded execution. Auto must be reliably useful before we invite public users.",zhDescription:"第一方 AI 对话、可审计的模型路由与受限任务执行。Auto 必须经过可靠性验证，才能开放给用户。",bullets:["Chat and task history","Auto model routing","Provider-cost hard limits"],zhBullets:["聊天与任务记录","Auto 模型路由","模型费用硬上限"],state:"active"},
-  {id:"02",name:"Billing",zhName:"收费系统",status:"planned",enStatus:"PUBLIC BETA GATE",zhStatus:"公开测试前完成",subtitle:"PAYMENTS / SAFETY",zhSubtitle:"支付与预算保护",description:"Subscription checkout, trusted payment webhooks, customer usage transparency and strictly capped trials must ship before anyone can spend our hosted-model budget publicly.",zhDescription:"正式开放 Arc 前必须先完成订阅支付、可信支付通知、用量展示和有硬限额的试用，确保用户不会无限消耗托管模型成本。",bullets:["Subscriptions and checkout","Usage ledger and spending caps","Bounded, abuse-resistant free trials"],zhBullets:["订阅与收款","用量账本和硬预算限制","防滥用的限量免费试用"],state:"planned"},
-  {id:"03",name:"Apps + Routines",zhName:"应用与自动任务",status:"building",enStatus:"FOUNDATION / ACCEPTANCE",zhStatus:"基础与接入验收",subtitle:"CONNECT / AUTOMATE",zhSubtitle:"连接与自动化",description:"Connect Apps rolls out independently of Arc Agent and hosted-model billing. The 29-app foundation supports provider setup, user authorization and reviewed writes; real-account acceptance comes before activation. Arc Routines remain a separate development track.",zhDescription:"Connect Apps 独立于 Arc Agent 和托管模型收费发布。29 个应用的基础支持平台配置、用户授权和写入审批，真实账号验收完成后启用。Arc Routines 属于另一条开发工作。",bullets:["29 native integrations · eight categories","Provider registration and account acceptance","Reviewed writes · user-owned API credentials"],zhBullets:["29 个原生集成、八个类别","平台注册与真实账号验收","逐次写入审批与用户 API 凭据"],state:"active"},
-  {id:"04",name:"Teach Arc",zhName:"教会 Arc",status:"exploring",enStatus:"EXPLORING",zhStatus:"探索中",subtitle:"SKILLS / ECOSYSTEM",zhSubtitle:"技能与生态",description:"Reusable skills learned from approved demonstrations, a growing app ecosystem and more capable AI teammates — only once the core proves its value.",zhDescription:"从已授权的操作演示中生成可复用技能，再逐步扩展应用生态和 AI 队友协作，前提是核心能力已经验证其价值。",bullets:["Teach from approved examples","Reusable skills","An extensible connector ecosystem"],zhBullets:["从授权示例中学习","可复用技能","可扩展的连接器生态"],state:"planned"}
+  {id:"00",name:"Connect",zhName:"Connect",status:"available",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",subtitle:"YOUR AI / YOUR TOOLS",zhSubtitle:"你的 AI，你的工具",description:"Use your preferred AI chat with connected apps and your own computers. Manage account access and device permissions in one workspace.",zhDescription:"在熟悉的 AI 对话中使用已连接的应用与自己的电脑，在同一个工作空间管理账号访问与设备权限。",bullets:["Compatible MCP chats","Windows, Mac and Linux","Apps and account connections"],zhBullets:["兼容 MCP 的 AI 对话","Windows、Mac 与 Linux","应用与账号连接"],state:"live"},
+  {id:"01",name:"Arc",zhName:"Arc",status:"building",enStatus:"COMING SOON",zhStatus:"即将推出",subtitle:"YOUR PERSONAL AGENT",zhSubtitle:"你的个人 AI 队友",description:"Give Arc a goal in your own words. Your personal agent will bring apps, computers and ongoing work into one conversation, with no model API key to set up.",zhDescription:"用自然语言告诉 Arc 你的目标，让个人 AI 队友把应用、电脑与持续工作汇聚到一次对话中，无需配置模型 API Key。",bullets:["One conversation for your work","Apps and computer tools","Saved conversations and results"],zhBullets:["用一次对话推进工作","调用应用与电脑工具","保存对话与执行结果"],state:"active"},
+  {id:"02",name:"Tasks & Routines",zhName:"任务与例行工作",status:"building",enStatus:"COMING SOON",zhStatus:"即将推出",subtitle:"LESS REPEATING YOURSELF",zhSubtitle:"让重复工作少一点",description:"Ask for a one-off task or describe work you want repeated. Follow its progress and pick up from the saved state when it needs your attention.",zhDescription:"说出一次性任务，或描述想定期完成的工作。跟踪进度，在需要关注时从保存的状态继续。",bullets:["Create work through conversation","Set schedules in your own words","Follow progress and results"],zhBullets:["通过对话创建工作","用自然语言说明时间安排","查看进度与结果"],state:"active"},
+  {id:"03",name:"Shared work",zhName:"协作空间",status:"planned",enStatus:"EXPLORING",zhStatus:"探索中",subtitle:"WORK BETTER TOGETHER",zhSubtitle:"与团队一起推进",description:"Bring shared work and the people responsible for it closer together, with clear access and a shared view of progress.",zhDescription:"让协作工作与负责的人联系得更紧密，明确访问范围，共同查看工作进展。",bullets:["Shared work context","Clear account access","Team progress"],zhBullets:["共享工作上下文","清晰的账号访问范围","团队工作进展"],state:"planned"},
+  {id:"04",name:"Skills",zhName:"技能",status:"exploring",enStatus:"EXPLORING",zhStatus:"探索中",subtitle:"YOUR WAY OF WORKING",zhSubtitle:"按你的方式工作",description:"Save useful ways of working so your agent can repeat them with the right context and tools.",zhDescription:"保存有用的工作方法，让 AI 队友结合合适的上下文与工具重复使用。",bullets:["Reusable instructions","Your preferred tools","Repeatable work"],zhBullets:["可复用的指令","你偏好的工具","可以重复完成的工作"],state:"planned"}
 ] as const;
 
 export function ArcRoadmapPageContent() {
@@ -23,7 +23,7 @@ export function ArcRoadmapPageContent() {
       <img className="arcTimelineLogo" src="/remote-arc.svg" alt="" width="56" height="56" />
       <div className="arcTimelineEyebrow">REMOTE ARC / {tr("WHAT WE'RE BUILDING", "我们的开发方向")}</div>
       <h1>{tr("What's next for Remote Arc.", "Remote Arc，下一步。")}</h1>
-      <p>{tr("A clear look at what works today, what we're building and what comes later. No invented release dates.", "清楚展示已经可用的、正在建设的和未来规划的能力，不承诺未经确认的发布日期。")}</p>
+      <p>{tr("More ways to connect your tools, delegate work and make room for what matters.", "连接更多工具，交给 AI 更多工作，为重要的事留出时间。")}</p>
     </header>
 
     <section className="arcTimelineMain" aria-label={tr("Explore our five development stages", "查看五个开发阶段")}>
@@ -64,7 +64,7 @@ export function ArcRoadmapPageContent() {
           {(isZh?selected.zhBullets:selected.bullets).map((item,index)=><span key={item}><i aria-hidden="true">{index+1}</i>{item}</span>)}
         </div>
         <div className="arcTimelinePanelBottom">
-          <span>{tr("Progress is directional, not a delivery-date promise.", "开发状态代表方向，不是上线日期承诺。")}</span>
+          <span>{tr("Planned features may change as we learn from your feedback.", "规划中的功能会根据你的反馈持续调整。")}</span>
           <a href={active===0?"/connect-ai":localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
         </div>
       </article>
@@ -73,7 +73,7 @@ export function ArcRoadmapPageContent() {
     <footer className="arcTimelineFooter">
       <p>{tr("Follow the build. Shape the next milestone.", "关注开发进展，参与定义下一步。")}</p>
       <div><a href={localizedWebsiteHref("/arc",locale)}>{tr("Meet Arc", "认识 Arc")} ↗</a><a href={localizedWebsiteHref("/feedback?source=roadmap",locale)}>{tr("Tell us what to build", "告诉我们你的需求")} ↗</a></div>
-      <small>{tr("Connect is available today; Arc Hosted and its model credits are not yet public.", "Connect 现已可用；Arc Hosted 与托管模型额度尚未公开开放。")}</small>
+      <small>{tr("Start with Connect today. Join early access for Arc.", "现在开始使用 Connect，也可以申请 Arc 抢先体验。")}</small>
     </footer>
   </main>;
 }

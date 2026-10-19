@@ -177,7 +177,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
         <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? arcAvailable?tr('Arc Agent · Available now','Arc Agent · 现已可用'):tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
         <a href={arc ? "/arc" : "/connect-ai"}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
       </footer>
-      <p className="hcsPlatformScope">{tr("Connect Apps ships independently. Provider setup and account authorization required.", "Connect Apps 独立发布，需要平台配置与账号授权。")}</p>
+      <p className="hcsPlatformScope">{tr("Choose the accounts and computers your AI can use.", "由你选择 AI 可以使用的账号与电脑。")}</p>
     </div>
   );
 }

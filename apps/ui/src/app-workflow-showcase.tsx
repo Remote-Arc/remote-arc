@@ -18,6 +18,6 @@ export function AppWorkflowShowcase(){
   <footer><span>{tr("SIMULATED WORKFLOW · CONNECTED ACCOUNTS","模拟工作流 · 已授权的账号")}</span><button type="button" onClick={()=>setPlaying(value=>!value)} disabled={reducedMotion} aria-label={playing?tr("Pause workflow animation","暂停工作流动画"):tr("Play workflow animation","播放工作流动画")}>{reducedMotion?tr("Manual preview","手动预览"):playing?tr("Pause","暂停"):tr("Play","播放")}</button></footer>
   {example.id==="video"&&<a className="appWorkflowRunway" href="https://runwayml.com" target="_blank" rel="noreferrer">Powered by Runway ↗</a>}
   </div>
- </article><p className="appWorkflowDisclosure">{tr("Example data. No accounts are connected and no actions or paid generation run in this demonstration. Apps need provider configuration and user authorization. Arc Agent remains in development; Connect Apps ships independently.","示例数据。本演示不会连接账号、执行操作或付费生成。Apps 需要平台配置与用户授权。Arc Agent 仍在开发，Connect Apps 独立发布。")}</p>
+ </article><p className="appWorkflowDisclosure">{tr("Illustrative examples. This demo does not connect accounts, run actions or generate paid media. Connect your own accounts to use available apps.","示例演示，不连接账号、执行操作或进行付费生成。连接你自己的账号，即可使用已开放的应用。")}</p>
  </section>;
 }

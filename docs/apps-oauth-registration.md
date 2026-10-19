@@ -71,7 +71,11 @@ In [Google Cloud](https://console.cloud.google.com/auth/overview), select a proj
 
 Use a dedicated Apps client. Do not silently reuse the existing Google login client: login and mailbox/calendar grants have separate purposes and revocation behavior.
 
+For the dedicated Apps client, select **Use this client for an AI-powered agent** when creating it. Google's official Workspace MCP servers require this setting; the current Remote Arc adapters call native REST APIs and do not depend on those preview servers. Keep the normal Google sign-in client separate. See [Google's Workspace MCP client configuration](https://developers.google.com/workspace/guides/configure-mcp-servers).
+
 The audience must support external users for a public product. Start in Testing with explicitly listed testers. Declare the generated scopes under Data Access. Gmail `gmail.readonly` and `gmail.modify` are restricted scopes; public launch needs the applicable verification and, depending on data handling and exceptions, a security assessment. Testing-mode refresh tokens for these scopes normally expire after seven days. Calendar verification requirements also depend on the selected scopes. Do not present testing-mode access as production-ready for arbitrary users.
+
+In Audience → Add users, commit each tester email, save, then reload the page and confirm the account appears in the persisted test-user table. An email chip in the unsaved editor is not sufficient. A `403 access_denied` saying the app is being tested can result when this list does not contain the authorizing Google account; retry with a new authorization request after saving. This is separate from `redirect_uri_mismatch`. Never publish an unreviewed restricted-scope app as a workaround.
 
 Store the new client's credentials as `APP_GOOGLE_CLIENT_ID` and `APP_GOOGLE_CLIENT_SECRET`. Each connector has a separate per-user connection and provider grant, even though they share the developer client. Drive requests metadata/content read access and retains `drive.file` for writes. Do not promise write access to every pre-existing Drive file: write operations apply to files available to that integration. This change does not request the full-Drive `drive` scope.
 
@@ -96,6 +100,26 @@ All configured platform client ID/secret pairs and the token vault key are serve
 `ENABLE_APPS=1` enables the Apps runtime, which is already deployed. A provider still reports `ready: false` and cannot authorize until its required credentials and platform settings exist. Registering an OAuth client alone does not verify or activate a usable connection. Apply credentials through the protected deployment workflow without modifying or rotating `APP_TOKEN_KEY`.
 
 ## Real-account acceptance
+
+### Owner test snapshot — 2026-10-19
+
+This is a dated configuration/acceptance record, not a claim that all 29 integrations or 221 tools are publicly verified. Tests used the signed-in owner's production Apps connections from a local browser. No model inference, payment, outbound mail, team messages or paid media generation was triggered.
+
+| Provider | Configuration / connection | Actual check completed |
+| --- | --- | --- |
+| GitHub | Organization-owned OAuth client configured; owner connected | `repositories.list` succeeded with a one-item bound. No repository changes. |
+| Google Calendar | Separate Apps OAuth client; API enabled; owner added as an explicit tester | `calendars.list` succeeded with a one-item bound. No calendar changes. |
+| Google Drive | API enabled; owner connected with existing `drive.readonly` / `drive.file` request | `files.list` succeeded with a one-item bound. No full-Drive write scope was requested. |
+| Google Docs | API enabled; owner connected | Created a dedicated private test document, inserted test text using its current revision, then read it back and matched the text. |
+| Google Sheets | API enabled; owner connected | Created a dedicated private blank spreadsheet in the owner's browser, wrote only `A1:B2` through the connector, then read back and matched all four cells. |
+| Notion | Public OAuth client configured with content capabilities; owner connected | Created a dedicated private test page and explicitly added the connection to that page. `pages.get` matched its title. Created/read a test child page; replaying the same write request returned the same page. No workspace search. |
+| Gmail | API enabled; owner OAuth and provider identity check succeeded | No mailbox-content or message-write acceptance. The extra `labels.list` tool is in the pending code release and was not available in the older production runtime. |
+| Slack | Existing owner connection retained | No message reads/sends in this round; expanded scopes and tools need acceptance after the code release. |
+| Outlook / Outlook Calendar | Not configured | Owner has no Remote Arc-controlled Entra tenant; Microsoft setup is explicitly deferred. |
+
+Google remains **External / Testing**, with the existing basic sign-in client preserved and a separate agent-marked Apps client. The ten declared API scopes cover the five priority Google integrations. Scope declaration, API enablement and a Client ID/Secret pair do not make an unverified app available to arbitrary users; finish applicable branding/data-access verification before public onboarding. Other Google catalog providers still need their own API enablement and acceptance. Do not rotate the existing token vault key to configure these clients.
+
+The test documents/pages are deliberately named `Remote Arc integration QA — 2026-10-19` and remain private for inspection. They are not product data. Production was running the older, smaller operation set during these checks; validate newly expanded operations only after the exact code revision is released.
 
 1. Prioritize GitHub, Slack, Gmail, Google Calendar, Drive, Docs, Sheets, Notion, Outlook and Outlook Calendar. Connect a test user's own account, then connect a second Remote Arc user and confirm each can see only their own connections and results. Use “Check connection” to verify identity and grant coverage; this is not a substitute for checking actual tool results.
 2. Test consent denial, missing permissions, provider/admin restrictions, expired/revoked tokens, refresh-token rotation, disconnect, and reconnection. Verify the UI shows the actual connection state and no token appears in the browser, logs, MCP responses, or model context.

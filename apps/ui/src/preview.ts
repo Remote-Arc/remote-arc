@@ -1,6 +1,7 @@
 import type { SecurityState } from "@remotearc/protocol";
 import {ARC_PLANS,ARC_TOPUPS,ARC_HOSTED_MODELS} from '@remotearc/protocol';
 import appDirectory from "./app-directory.json" with { type: "json" };
+import {createArcPreview} from "./arc-preview.js";
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
@@ -11,6 +12,19 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
   if (!UI_PREVIEW || typeof window === "undefined") return;
 
   const nativeFetch = window.fetch.bind(window);
+  const arcPreview = createArcPreview();
+  let config:Promise<{arcAvailable:boolean}>|undefined, configTime=0;
+  function runtimeConfig() {
+    if(!config||Date.now()-configTime>5000) {
+      configTime=Date.now();
+      config=nativeFetch('/api/runtime-config',{credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(3000)}).then(async response=>{
+        if(!response.ok)throw Error('preview_config_unavailable');const value=await response.json();
+        if(value.version!==1||value.execution!=='simulation'||typeof value.arcAvailable!=='boolean')throw Error('invalid_preview_config');
+        return {arcAvailable:value.arcAvailable};
+      }).catch(()=>({arcAvailable:false}));
+    }
+    return config;
+  }
   const tools = [
     "list_directory",
     "read_file",
@@ -167,7 +181,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       }),
     );
 
-  window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const raw =
       typeof input === "string"
         ? input
@@ -188,6 +202,11 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
 
+    if(url.pathname.startsWith('/api/arc/sessions')) {
+      if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);
+      const result=arcPreview.handle(url.pathname,method,init?.body??(input instanceof Request?await input.clone().text():undefined));
+      if(result)return result;
+    }
     if (method !== "GET") {
       return json(
         { error: "PR Preview is read-only. This action is not connected to production." },
@@ -195,12 +214,11 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       );
     }
 
-    if(url.pathname==='/api/billing/catalog')return json({arcAvailable:false,billingAvailable:false,connectFreeCalls:10000});
+    if(url.pathname==='/api/runtime-config')return nativeFetch(input,init);
+    if(url.pathname==='/api/billing/catalog')return json({arcAvailable:(await runtimeConfig()).arcAvailable,billingAvailable:false,connectFreeCalls:10000});
     if (url.pathname === '/api/billing') return json({enabled:false,plan:ARC_PLANS[1],credits:{available:1280,pending:12.5,buckets:[]},usage:{used:1732,limit:20000},plans:ARC_PLANS,topups:ARC_TOPUPS,models:ARC_HOSTED_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:[]});
-    if (url.pathname === '/api/arc/status') return json({enabled:false,preview:true,access:{status:'eligible',canUse:false,daysRemaining:0,dailyUsedPercent:0,expiresAt:null},models:ARC_HOSTED_MODELS.map(m=>({id:m.id==='arc-auto'?'auto':m.id,label:m.label,provider:m.provider,premium:m.id!=='arc-auto',configured:true})),limits:{maxSteps:8,maxTokens:24000,maxSeconds:180}});
-    if (url.pathname === '/api/arc/sessions') return json({sessions:[{id:'sample-conversation',title:'Review the release and share a summary',modelId:'auto',updatedAt:new Date().toISOString()}]});
+    if (url.pathname === '/api/arc/status') {const enabled=(await runtimeConfig()).arcAvailable;return json({enabled,preview:true,access:{status:'active',canUse:enabled,daysRemaining:14,dailyUsedPercent:0,expiresAt:null},models:ARC_HOSTED_MODELS.map(m=>({id:m.id==='arc-auto'?'auto':m.id,label:m.label,provider:m.provider,premium:m.id!=='arc-auto',configured:true})),limits:{maxSteps:8,maxTokens:24000,maxSeconds:180}});}
     if (url.pathname === '/api/arc/work') return json({work:[{id:'sample-task',name:'Prepare the next release summary',kind:'task',status:'waiting',schedule:{type:'once'},nextRunAt:new Date(Date.now()+1800000).toISOString(),runCount:0,error:null,conversationId:'sample-conversation'},{id:'sample-routine',name:'Morning inbox & calendar brief',kind:'routine',status:'waiting',schedule:{type:'daily',time:'09:00',timezone:'Pacific/Auckland',weekdays:[1,2,3,4,5]},nextRunAt:new Date(Date.now()+3600000).toISOString(),runCount:4,error:null,conversationId:'sample-conversation'}],runs:[{id:'sample-run',session_id:'sample-conversation',title:'Review the release and share a summary',status:'succeeded',step:5,tokens_used:1320,error_code:null,created_at:new Date().toISOString(),automation_id:null},{id:'sample-routine-run',session_id:'sample-conversation',title:'Morning inbox & calendar brief',status:'succeeded',step:4,tokens_used:1045,error_code:null,created_at:new Date(Date.now()-3600000).toISOString(),automation_id:'sample-routine'}]});
-    if (url.pathname === '/api/arc/sessions/sample-conversation') return json({session:{id:'sample-conversation',title:'Review the release and share a summary',modelId:'auto'},messages:[{id:'sample-user',role:'user',text:'Review the recent GitHub changes and summarize what is ready for release.'},{id:'sample-tool',role:'tool',text:'Reviewing the release changes.',tool:'call_app',arguments:{operation:'pull_requests.list',connectionId:'sample-github'},result:'Sample data: 3 merged pull requests inspected. No real account was accessed.',status:'completed'},{id:'sample-assistant',role:'assistant',text:'### Release summary\n\nThree changes are ready for review:\n\n- Apps connection improvements\n- Clearer device status\n- Arc conversation history\n\n**Preview only.** This is sample content; no tools were executed.'}],runs:[{id:'sample-run',status:'succeeded',step:5,tokensUsed:1320,maxTokens:24000,maxSteps:8,deadline:new Date().toISOString(),error:null}]});
     // Preview data for Settings > Workspaces. Writes remain blocked above.
     if (url.pathname === "/api/organizations") {
       return json({
@@ -233,6 +251,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       return json({
         user: {
           id: "preview-user",
+          arcAvailable: (await runtimeConfig()).arcAvailable,
           email: "preview@remotearc.app",
           name: "Preview User",
           avatarUrl: null,
@@ -289,11 +308,15 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
     if (url.pathname === "/api/approvals") return json([]);
 
-    // Preview-only Apps catalog: displays real operation metadata without credentials or writes.
+    // Isolated mock accounts make management/reconnect UX reviewable. No credentials or writes.
     if (url.pathname === "/api/apps") return json({
       enabled: true,
-      apps: appDirectory.apps.map((app) => ({ ...app, configured: true, permissions: { read: [], write: [] } })),
-      connections: [],
+      apps: appDirectory.apps.map((app) => ({ ...app, configured: ["github", "slack", "gmail", "google_calendar", "google_drive", "google_docs", "google_sheets", "notion", "runway"].includes(app.provider), permissions: { read: [], write: [] } })),
+      connections: [
+        {id:"11111111-1111-4111-8111-111111111111",provider:"github",accountLabel:"Example developer",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:15,total:15,needsReconnect:false}},
+        {id:"22222222-2222-4222-8222-222222222222",provider:"slack",accountLabel:"Example workspace / personal",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:35,total:35,needsReconnect:false}},
+        {id:"33333333-3333-4333-8333-333333333333",provider:"slack",accountLabel:"Example workspace / project",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:5,total:35,needsReconnect:true}},
+      ],
     });
     if (url.pathname === "/api/apps/approvals") return json({ approvals: [] });
 

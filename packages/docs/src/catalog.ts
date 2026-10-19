@@ -8,7 +8,7 @@ export const DOC_TOPICS: DocTopic[] = [
     sections: [
       {heading: {en: 'Your workspace, one click away', zh: '一键打开你的工作空间'}, text: {en: 'Open agent.remotearc.app and sign in. Install Remote Arc from Profile settings or your browser’s install menu. The app opens your Connect overview, with your devices, app connections and recent activity. Arc Chat is coming soon.', zh: '打开 agent.remotearc.app 并登录，在个人资料设置或浏览器安装菜单中安装 Remote Arc。应用启动后进入 Connect 概览，可查看设备、应用连接和最近活动。Arc Chat 即将上线。'}},
       {heading: {en: 'On your device', zh: '在你的设备上'}, text: {en: 'Chrome and Edge offer Install app. On iPhone or iPad use Share → Add to Home Screen. In Mac Safari use File → Add to Dock. Browser support determines which installation option appears.', zh: 'Chrome、Edge 支持安装应用；iPhone、iPad 使用分享 → 添加到主屏幕；Mac Safari 使用文件 → 添加到程序坞。实际安装入口取决于浏览器支持。'}},
-      {heading: {en: 'Connected work', zh: '保持联网'}, text: {en: 'The installed app uses the same account and permissions as the website. Conversations, APIs and authenticated pages are never stored in the service worker cache. If offline, a neutral reconnect page appears; new model and tool calls need a connection. Closing the app does not disconnect your paired computer; its local Agent manages the background connection.', zh: '安装版沿用网页的账号和权限。Service Worker 不缓存对话、API 或已登录页面。断网时显示重新连接页面，新的模型和工具调用需要联网。关闭应用不会断开已配对电脑，本机 Agent 会管理后台连接。'}}
+      {heading: {en: 'Stay connected', zh: '保持联网'}, text: {en: 'Use the same account and settings as on the website. You need an internet connection to view current activity and use tools. If you go offline, reconnect to continue. Closing the web app does not stop the local Agent on your paired computer; manage its background connection in Devices.', zh: '安装后沿用网页的账号和设置。查看实时活动和使用工具需要联网，离线后重新连接即可继续。关闭网页应用不会停止已配对电脑上的本机 Agent；你可以在设备页面管理后台连接。'}}
     ]
   },
   {
@@ -118,17 +118,17 @@ export const DOC_TOPICS: DocTopic[] = [
         },
         "text": {
           "en": "Choose an app and connect your account. Available read and write actions are enabled together; there is no additional write switch or per-action approval in Remote Arc. OAuth apps open the provider consent page. Some providers, including Runway, require an API credential from that service; this is separate from a model API key. Cloud app operations do not need a local computer or Arc Agent.",
-          "zh": "选择应用并连接账号。可用读取与写入操作一起启用，Remote Arc 不再增加写入开关或逐次审批。OAuth 应用打开服务商的授权页面；Runway 等部分应用需要该服务自己的 API 凭证，这与模型 API Key 不同。云端应用操作不要求本地电脑，也无需 Arc Agent。"
+          "zh": "选择应用并连接账号。可用读取与写入操作一起启用，Remote Arc 无需额外写入开关或逐次审批。OAuth 应用打开服务商的授权页面；Runway 等部分应用需要该服务自己的 API 凭证，这与模型 API Key 不同。云端应用操作不要求本地电脑，也无需 Arc Agent。"
         }
       },
       {
         "heading": {
-          "en": "Discover and use operations",
-          "zh": "发现与使用操作"
+          "en": "Ask your AI to use an app",
+          "zh": "让 AI 使用应用"
         },
         "text": {
-          "en": "Authorize apps:read for a compatible MCP client. Ask the AI to use list_apps to find a provider, then request that provider's operation schemas. call_app takes the connection ID, operation, arguments and a stable requestId. Discovery is paginated so hundreds of integration schemas do not fill every chat. Remote Arc implements bounded native API actions; a catalog entry does not promise all features of the upstream service.",
-          "zh": "为兼容的 MCP 客户端授权 apps:read。让 AI 使用 list_apps 查找应用，再按需读取该应用的操作结构。call_app 接收连接 ID、操作、参数及稳定的 requestId。发现接口支持分页，避免把大量应用的操作定义塞进每次聊天。Remote Arc 提供有边界的原生 API 操作，目录收录不代表覆盖服务商的全部功能。"
+          "en": "In your connected AI chat, describe the result and name the app or account to use. For example: find a GitHub pull request and summarize its changes. In Apps, open an app's Tools tab to see supported actions and copy an instruction for your AI. Your AI client needs the matching Apps permissions. Only the listed actions are supported; availability also depends on your provider account.",
+          "zh": "在已连接的 AI 聊天里说明结果，以及要使用的应用或账号。例如：查找一个 GitHub Pull Request 并总结变更。在 Apps 中打开应用的「工具」标签，查看支持的操作并复制给 AI 的指令。AI 客户端需要相应 Apps 权限；支持范围以工具列表为准，也取决于服务商账号。"
         }
       },
       {
@@ -143,12 +143,12 @@ export const DOC_TOPICS: DocTopic[] = [
       },
       {
         "heading": {
-          "en": "Connection states and rollout",
-          "zh": "连接状态与开放进度"
+          "en": "Manage your connections",
+          "zh": "管理账号连接"
         },
         "text": {
-          "en": "Waiting for configuration means Remote Arc has not supplied this provider's platform credentials or enabled the service. It is different from a disconnected user account. After connecting, revoked or expired credentials may require reconnection. Disconnecting removes the saved credential and blocks pending actions. The initial production release relies on automated protocol checks; real-account workflows are being tried by the owner and are not certified across all providers.",
-          "zh": "「等待配置」表示 Remote Arc 尚未配置该平台凭证或开启服务，与用户账号未连接不同。连接后，已撤销或过期的凭证可能需要重新授权。断开连接会移除保存的凭证，并阻止待执行操作。首批生产发布基于自动协议检查，由负责人在上线后试用真实账号；不代表全部平台均已通过真实账号验收。"
+          "en": "Choose Available to find apps you can connect now, or Connected to manage existing accounts. An app marked Coming soon cannot be connected yet. Open Manage to check an account, reconnect when permissions are missing or access has expired, add another account, or disconnect. A successful connection check confirms account access; each action still needs its own provider permissions. Disconnecting removes the saved credential and prevents new actions through that connection.",
+          "zh": "选择「可连接」查看现在可以接入的应用，或选择「已连接」管理已有账号。标注「即将推出」的应用暂不能连接。打开「管理」，可检查连接、在权限不足或授权过期时重新连接、添加其他账号或断开连接。连接检查成功表示账号可访问，具体操作仍需相应服务商权限。断开连接会移除保存的凭证，阻止通过此连接发起新操作。"
         }
       }
     ],
@@ -289,8 +289,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "指引与可执行能力"
         },
         "text": {
-          "en": "A Skill supplies a workflow; it does not grant device permissions, install model weights or create a provider account. Existing approved tools still execute the work. The initial Skill runtime supports two bounded read-only browser executors. Other paths report missing engines or approval requirements instead of pretending to execute. Inspect the actual result and available tools for each task.",
-          "zh": "Skill 提供工作方法，不会授予设备权限、安装模型或创建服务商账号。工作仍由现有且已授权的工具执行。初始技能运行时支持两项有边界的只读浏览器执行器；其他路径会说明所缺引擎或审批要求，不会假装已执行。请按任务检查实际结果与可用工具。"
+          "en": "A Skill guides your AI through a workflow using the tools you have connected. It does not install software, create provider accounts or change device permissions. Check that the required app, device and tools are available before starting. If a required capability is unavailable, complete that setup first; a Skill alone cannot execute the action.",
+          "zh": "Skill 指引 AI 使用已连接的工具完成工作，不会安装软件、创建服务商账号或改变设备权限。开始前请确认所需应用、设备和工具均可使用。缺少能力时先完成相应配置；仅有 Skill 指引无法执行操作。"
         }
       },
       {
@@ -313,8 +313,8 @@ export const DOC_TOPICS: DocTopic[] = [
       "zh": "Arc 与 AI 队友"
     },
     "description": {
-      "en": "Understand what Connect provides today and what the Arc Agent foundation supports.",
-      "zh": "了解 Connect 当前能力和 Arc Agent 的基础建设。"
+      "en": "Meet Arc, the upcoming personal agent for your apps and computers.",
+      "zh": "了解即将推出的 Arc：连接应用与电脑的个人 Agent。"
     },
     "sections": [
       {
@@ -333,8 +333,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "Auto 与高级模型"
         },
         "text": {
-          "en": "Auto prioritizes a low-cost platform-funded OpenAI model. Plus and Pro include every configured premium OpenAI and Claude model; Pro provides more Credits and capacity. Different models consume Credits at their rated token prices, including reasoning and cache usage. Every agent step counts. Each call reserves a bounded maximum and settles measured usage; unused reservations return. Account, platform, step, time and token limits apply.",
-          "zh": "Auto 优先使用平台提供的低成本 OpenAI 模型。Plus 与 Pro 均包含全部已配置的高级 OpenAI 与 Claude 模型，Pro 提供更多 Credits 和容量。不同模型按各自 token 价格消耗 Credits，包含推理与缓存用量；每个智能体步骤都会计量。调用前预留有界最大额度，之后按实际用量结算并退回未使用部分，同时受账号、平台、步骤、时间与 token 上限约束。"
+          "en": "When Arc opens, Auto will choose a model for your work without asking you for a model API key. Paid plans will offer additional models, with availability and rates shown in Chat. Usage is measured in Credits: longer conversations, more agent steps and higher-priced models use more allowance. Check your remaining Credits and run limits before starting larger tasks.",
+          "zh": "Arc 开放后，Auto 会为工作选择模型，无需你提供模型 API Key。付费套餐将提供更多模型，开放范围和费率会显示在 Chat 中。用量以 Credits 计量：更长的对话、更多执行步骤和更高价格的模型会消耗更多额度。开始较大任务前，可查看剩余额度和单次运行限制。"
         }
       },
       {
@@ -383,8 +383,8 @@ export const DOC_TOPICS: DocTopic[] = [
       "zh": "用量与费用"
     },
     "description": {
-      "en": "Separate Remote Arc limits, user API charges and developer-project costs.",
-      "zh": "区分 Remote Arc 额度、用户 API 费用和开发者项目成本。"
+      "en": "Understand your Remote Arc allowance and any separate app charges.",
+      "zh": "了解 Remote Arc 额度，以及应用可能产生的独立费用。"
     },
     "sections": [
       {
@@ -409,12 +409,12 @@ export const DOC_TOPICS: DocTopic[] = [
       },
       {
         "heading": {
-          "en": "Managed OAuth and platform costs",
-          "zh": "托管 OAuth 与平台成本"
+          "en": "Check the app's billing details",
+          "zh": "查看应用的费用说明"
         },
         "text": {
-          "en": "Remote Arc manages the developer OAuth application for supported providers. Some quotas and fees attach to that developer project even when every user authorizes their own account. X managed OAuth uses Remote Arc's X API project rather than the user's X Premium subscription. Google Workspace has announced project quota and scaled-usage billing changes. Remote Arc also bears hosting, database, credential-management and maintenance costs.",
-          "zh": "对于支持的平台，Remote Arc 管理开发者 OAuth 应用。即使每个用户授权自己的账号，部分额度和费用仍归属于开发者项目。X 托管 OAuth 使用 Remote Arc 的 X API 项目，与用户 X Premium 订阅不同。Google Workspace 已公布项目额度和规模化用量计费调整。Remote Arc 还承担托管、数据库、凭证管理及维护成本。"
+          "en": "Each app's detail page explains whether an API account or separate paid plan is needed. Signing in with OAuth does not itself buy a provider subscription or add API credits. Some integrations also have shared service limits, so an action may be unavailable even when your personal account has allowance. Review the app's requirements and any usage limit shown before starting paid work.",
+          "zh": "每个应用的详情页会说明是否需要 API 账号或单独付费套餐。OAuth 登录本身不会购买服务商订阅，也不会增加 API 积分。部分集成还受共享服务额度限制，即使个人账号尚有用量，操作也可能暂不可用。开始付费工作前，请查看应用要求和显示的用量限制。"
         }
       },
       {

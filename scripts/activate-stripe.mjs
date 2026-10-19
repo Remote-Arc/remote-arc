@@ -8,7 +8,10 @@ export async function activateStripe(env,fetcher=fetch,wait){
  const {STRIPE_API_VERSION}=await import('../apps/relay/src/stripe-client.ts');
  async function stripe(suffix){const response=await fetcher('https://api.stripe.com/v1/'+suffix,{headers:{authorization:'Bearer '+env.STRIPE_SECRET_KEY,'stripe-version':STRIPE_API_VERSION},redirect:'error',signal:AbortSignal.timeout(20000)});if(!response.ok)throw Error('Stripe account validation failed');return response.json();}
  const account=await stripe('account');
- if(account.country!=='NZ'||!account.charges_enabled||!account.payouts_enabled||!account.details_submitted)throw Error('NZ Stripe account activation incomplete');
+ // Stripe exposes payment processing and bank payouts independently. The owner
+ // may launch checkout while bank verification is pending; never override a
+ // Stripe-disabled charges capability or manufacture a successful payment.
+ if(account.country!=='NZ'||account.charges_enabled!==true||account.details_submitted!==true)throw Error('NZ Stripe payment activation incomplete');
  const endpoints=await stripe('webhook_endpoints?limit=100'),matching=endpoints.data?.filter(endpoint=>endpoint.url==='https://agent.remotearc.app/api/billing/webhook'&&endpoint.status==='enabled');
  if(endpoints.has_more||matching?.length!==1||matching[0].api_version!==STRIPE_API_VERSION||!stripeBillingEvents.every(event=>matching[0].enabled_events?.includes(event)||matching[0].enabled_events?.includes('*')))throw Error('Production webhook configuration requires review');
  await waitRuntimeReady(fetcher,state=>state.arcAvailable===true,wait);
@@ -19,6 +22,6 @@ export async function activateStripe(env,fetcher=fetch,wait){
   const value=await response.json();if(!response.ok||value.success!==true)throw Error('Stripe secret provisioning failed');
  }
  await waitRuntimeReady(fetcher,state=>state.arcAvailable===true&&state.billingAvailable===true,wait);
- console.log('NZ live Stripe account and webhook checked; billing credentials provisioned. No payment, refund or customer message was created. A live customer transaction has not been claimed.');
+ console.log('NZ live Stripe payment capability and webhook checked; billing credentials provisioned. Bank payouts: '+(account.payouts_enabled===true?'enabled':'not enabled; complete verification in Stripe')+'. No payment, refund or customer message was created. A live customer transaction has not been claimed.');
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1]))activateStripe(process.env).catch(()=>{console.error('Stripe activation failed. Review account activation, endpoint configuration and production credential provisioning. No secret or API response was logged.');process.exitCode=1;});

@@ -1,4 +1,5 @@
 import {handleFollowupUnsubscribe} from './user-followups.js';
+import {publicFeedbackReward} from './connect-rewards.js';
 import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.js";
 export { AdminApiService } from "./admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
@@ -441,6 +442,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       );
     }
 
+    if (url.pathname === "/api/public/feedback-reward") {
+      if(!['remotearc.app','www.remotearc.app','localhost'].includes(url.hostname))return Response.json({error:'not_found'},{status:404});
+      return publicFeedbackReward(request,env);
+    }
     if (url.pathname === "/api/public/engagement") {
       if (url.hostname !== "remotearc.app" && url.hostname !== "www.remotearc.app" &&
           url.hostname !== "localhost") return Response.json({error:"not_found"},{status:404});

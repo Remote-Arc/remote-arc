@@ -1,5 +1,6 @@
 import {handleUserFollowups,type FollowupEnv} from './user-followups.js';
 import {handleAdminPayments,type AdminPaymentsEnv} from './admin-payments.js';
+import {handleFeedbackRewardAdmin} from './connect-rewards.js';
 import { getSessionUser } from "./auth.js";
 import {handleArcAdminBilling} from './arc-admin-billing.js';
 import { handleAdminBilling, handleAdminCallCredits, handleAdminOperations, type OpsEnv } from "./admin-operations.js";
@@ -18,6 +19,8 @@ const methods: Record<string, readonly string[]> = {
 };
 
 export function adminApiMethods(path: string): readonly string[] | null {
+  if(path==='/api/admin/feedback-rewards')return ['GET'];
+  if(path==='/api/admin/feedback-rewards/config'||/^\/api\/admin\/feedback-rewards\/claims\/[a-f0-9-]{36}\/(approve|reject)$/.test(path))return ['POST'];
   if(path==='/api/admin/payments')return ['GET'];
   if(path==='/api/admin/payments/trials')return ['GET'];
   if(path==='/api/admin/payments/funding')return ['POST'];
@@ -61,6 +64,7 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
 
   if(url.pathname.startsWith('/api/admin/followups'))return finish(await handleUserFollowups(request,env));
   if(url.pathname.startsWith('/api/admin/payments'))return finish(await handleAdminPayments(request,env));
+  if(url.pathname.startsWith('/api/admin/feedback-rewards'))return finish(await handleFeedbackRewardAdmin(request,env));
   let response: Response;
   switch (url.pathname) {
     case "/api/me": response = Response.json({ authenticated: true, user }); break;

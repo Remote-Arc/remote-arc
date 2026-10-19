@@ -1,6 +1,21 @@
 type Message={role:string;text:string;tool?:string;result?:unknown;[key:string]:unknown};
 export type ArcPromptContext={objective:string;messages:Message[];memory:unknown[];deviceIndex:unknown[];[key:string]:unknown};
 const bytes=(value:unknown)=>new TextEncoder().encode(JSON.stringify(value)).byteLength;
+export function arcObservation(tool:string|undefined,value:unknown):unknown{
+ let data=value;if(typeof data==='string'){try{data=JSON.parse(data);}catch{return data;}}
+ if(!data||typeof data!=='object'||Array.isArray(data))return data;
+ const result=data as Record<string,any>;
+ if(result.code==='ARC_DISCOVERY_REUSED')return data;
+ if(tool==='list_apps')return{
+  // Put the executable connection IDs before optional catalog metadata. The
+  // old JSON prefix truncation discarded this final field on large catalogs.
+  connections:Array.isArray(result.connections)?result.connections.slice(0,25).map(({id,provider,status,accountLabel,permissions}:any)=>({id,provider,status,accountLabel,permissions})):[],
+  apps:Array.isArray(result.apps)?result.apps.map(({provider,name,configured,operationCount,operations}:any)=>({provider,name,configured,operationCount,...(operations?{operations:operations.map(({name,description}:any)=>({name,description}))}:{})})):[],
+  enabled:result.enabled,total:result.total,nextCursor:result.nextCursor,
+  guidance:'Use a connected account ID directly. For Gmail/Outlook summaries, read_inbox reads recent message content. describe_app loads a specific schema; messages.list returns identifiers, not full email bodies.'
+ };
+ return data;
+}
 /** Fit task context to the remaining run allowance. Financial reservations keep
  * their independent, larger safety ceiling in model-gateway; that ceiling is
  * not a measure of tokens already consumed by the task. */

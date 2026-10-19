@@ -14,7 +14,7 @@ export async function arcAccountAccess(env:TrialEnv,userId:string,at=new Date().
   getBillingEntitlements(env.DB,{userId,organizationId:'personal:'+userId},'arc_hosted',at),
   env.DB.prepare('SELECT * FROM arc_trials WHERE user_id=?1').bind(userId).first<Trial>(),
  ]);
- const paid=entitlements.features.includes('hosted_inference'),active=Boolean(trial&&trial.started_at<=at&&trial.expires_at>at),funded=await fundingAvailable(env.DB);
+ const paid=entitlements.features.includes('hosted_inference'),active=Boolean(trial&&trial.started_at<=at&&trial.expires_at>at),funded=await fundingAvailable(env.DB,userId);
  return{paid,premium:entitlements.features.includes('paid_models'),trial,active,funded,allowed:(paid||active)&&funded,status:paid?'paid':active?'active':trial?'expired':'eligible'};
 }
 export async function requireArcAccess(env:TrialEnv,userId:string){const access=await arcAccountAccess(env,userId);if(!access.funded)throw new ArcAccessError('ARC_FUNDING_PAUSED_OR_LIMIT');if(!access.allowed)throw new ArcAccessError(access.trial?'ARC_TRIAL_EXPIRED':'ARC_TRIAL_REQUIRED');return access;}

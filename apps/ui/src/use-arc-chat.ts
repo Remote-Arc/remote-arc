@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type ChatSession={id:string;title:string;modelId:string;updatedAt:string};
-export type ChatMessage={id:string;role:'user'|'assistant'|'tool';text:string;tool?:string;arguments?:unknown;result?:unknown;status?:string};
+export type ChatMessage={id:string;run_id?:string|null;role:'user'|'assistant'|'tool';text:string;tool?:string;arguments?:unknown;result?:unknown;status?:string};
 export type ChatRun={id:string;status:string;step:number;tokensUsed:number;maxTokens:number;maxSteps:number;deadline:string;error:string|null};
 export type ArcAccess={status:'eligible'|'active'|'expired'|'paid';canUse:boolean;funded?:boolean;trialDays?:number;trialCredits?:number;creditsAvailable?:number|null;creditsPending?:number|null;daysRemaining:number;dailyUsedPercent:number;expiresAt:string|null};
 export type ChatService={enabled:boolean;access:ArcAccess;models:{id:string;label:string;provider:string;premium:boolean;configured:boolean;requiresPaid?:boolean;inputCreditsPer1000?:number;outputCreditsPer1000?:number}[];limits:{maxSteps:number;maxTokens:number;maxSeconds:number};preview?:boolean};

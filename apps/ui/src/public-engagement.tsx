@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect,useState, type FormEvent } from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./public-engagement.css";
@@ -31,6 +31,10 @@ export function EngagementForm({category="feedback",context="feedback"}: {catego
   const [busy,setBusy]=useState(false);
   const [done,setDone]=useState(false);
   const [error,setError]=useState("");
+  const [requestId]=useState(()=>crypto.randomUUID());
+  const [rewardInfo,setRewardInfo]=useState<{enabled:boolean;policy:{versionId:string;calls:number;validDays:number;perUserLimit:number}|null;account:{email:string;availableCalls:number}|null}|null>(null);
+  const [rewardStatus,setRewardStatus]=useState('');
+  useEffect(()=>{if(isLead||context!=='feedback'||IS_PREVIEW)return;const controller=new AbortController();void fetch('/api/public/feedback-reward',{credentials:'same-origin',signal:controller.signal}).then(async response=>{if(response.ok){const value=await response.json();if(!controller.signal.aborted){setRewardInfo(value);if(value.enabled&&value.account?.email)setEmail(current=>current||value.account.email);}}}).catch(()=>{});return()=>controller.abort();},[isLead,context]);
   const source=context==="enterprise"?"enterprise":context==="support"?"support":new URLSearchParams(location.search).get("source")?.slice(0,64)||"website";
   async function submit(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,13 +42,14 @@ export function EngagementForm({category="feedback",context="feedback"}: {catego
     if(!consent){setError(tr("Please confirm the contact/privacy agreement.", "请先同意联系与隐私说明。"));return;}
     setBusy(true);setError("");
     try{
-      const response=await fetch("/api/public/engagement",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({category,email,name,message,source,consent,website})});
+      const response=await fetch("/api/public/engagement",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({category,email,name,message,source,consent,website,requestId,...(rewardInfo?.enabled&&rewardInfo.account&&rewardInfo.policy?{rewardVersionId:rewardInfo.policy.versionId}:{})})});
       if(!response.ok){const detail=await response.json().catch(()=>({})) as {error?:string};throw new Error(detail.error==="rate_limited"?tr("Too many submissions. Try again in a minute.","提交过于频繁，请稍后再试。"):tr("Submission unavailable. Please retry later.","暂时无法提交，请稍后重试。"));}
-      setDone(true);
+      const result=await response.json();setRewardStatus(result.reward?.status||'');setDone(true);
     }catch(cause){setError(cause instanceof Error?cause.message:tr("Network error. Please retry.","网络错误，请重试。"));}
     finally{setBusy(false);}
   }
-  return done?<div className="engagementSuccess" role="status"><span aria-hidden="true">✓</span><h2>{tr("Thanks. We received your submission.","感谢！我们已经收到。")}</h2><p>{tr("Your information was saved. We'll only contact you about your request.","信息已保存。我们只会就本次请求与你联系。")}</p><a href={localizedWebsiteHref("/",locale)}>{tr("Return home","返回首页")} ↗</a></div>:<form className="engagementForm" onSubmit={event=>void submit(event)}>
+  return done?<div className="engagementSuccess" role="status"><span aria-hidden="true">✓</span><h2>{tr("Thanks. We received your submission.","感谢！我们已经收到。")}</h2><p>{tr("Your information was saved. We'll only contact you about your request.","信息已保存。我们只会就本次请求与你联系。")}</p>{rewardStatus&&<p>{rewardStatus==='pending'?tr('Your reward application is awaiting review. Approved calls will appear in your account.','奖励申请已进入审核，通过后调用次数会发放到你的账号。'):rewardStatus==='granted'?tr('Your feedback reward has been granted.','反馈奖励已发放。'):tr('Your feedback was saved. This submission did not qualify for a reward; check sign-in, current terms and the per-person limit.','反馈已保存，本次未取得奖励资格，请核对登录账号、当前规则和每人领取上限。')}</p>}{rewardStatus&&<a href="https://agent.remotearc.app/settings?section=billing">{tr('View account allowance','查看账号额度')} ↗</a>}<a href={localizedWebsiteHref("/",locale)}>{tr("Return home","返回首页")} ↗</a></div>:<form className="engagementForm" onSubmit={event=>void submit(event)}>
+      {rewardInfo?.enabled&&rewardInfo.policy&&<aside className="engagementReward"><strong>{tr('Feedback reward','反馈奖励')} · {rewardInfo.policy.calls.toLocaleString()} Connect {tr('calls','次调用')}</strong><p>{tr('Approved feedback earns '+rewardInfo.policy.calls+' calls, valid for '+rewardInfo.policy.validDays+' days after approval. Up to '+rewardInfo.policy.perUserLimit+' reward(s) per account, subject to the published campaign cap.','有效反馈经审核后可获得 '+rewardInfo.policy.calls+' 次调用，发放后 '+rewardInfo.policy.validDays+' 天内有效；每个账号最多领取 '+rewardInfo.policy.perUserLimit+' 次，受活动总额度限制。')}</p>{rewardInfo.account?<small>{tr('Use the signed-in account’s email: ','请使用已登录账号的邮箱：')+rewardInfo.account.email}</small>:<a href={'https://agent.remotearc.app/auth/login?return_to='+encodeURIComponent('https://remotearc.app'+location.pathname+location.search)}>{tr('Sign in to apply for a reward','登录后申请奖励')} ↗</a>}</aside>}
       <label htmlFor="lead-name">{tr("Your name (optional)","你的称呼（选填）")}</label><input id="lead-name" autoComplete="name" maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder={tr("How should we address you?","我们该怎么称呼你？")}/>
       <label htmlFor="lead-email">{tr("Email address","电子邮箱")} <span>*</span></label><input id="lead-email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/>
       <label htmlFor="lead-message">{isLead?tr("What would you delegate to Arc?","你想让 Arc 完成什么？"):context==="enterprise"?tr("Your team and requirements","团队与需求"):context==="support"?tr("How can we help?","需要我们帮助你解决什么？"):tr("What would you like us to know?","你有什么体验或建议？")} <span>*</span></label>

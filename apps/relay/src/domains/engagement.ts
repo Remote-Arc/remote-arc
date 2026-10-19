@@ -1,4 +1,5 @@
 import { getSessionUser } from "../auth.js";
+import {createFeedbackRewardClaim} from '../connect-rewards.js';
 
 export type EngagementEnv = {
   DB: D1Database;
@@ -52,18 +53,29 @@ export async function submitWebsiteInterest(request: Request, env: EngagementEnv
   try { parsed=JSON.parse(raw); } catch { return error("invalid_json",400); }
   const value=validateSubmission(parsed);
   if (!value) return error("invalid_submission",400);
+  const metadata=parsed as Record<string,unknown>,requestId=metadata.requestId===undefined?crypto.randomUUID():String(metadata.requestId),rewardVersionId=typeof metadata.rewardVersionId==='string'?metadata.rewardVersionId:'';
+  if(!/^[a-f0-9-]{36}$/i.test(requestId)||rewardVersionId.length>160)return error('invalid_request_id',400);
+  const account=rewardVersionId&&value.category==='feedback'?await getSessionUser(request,env):null;
+  const rewardUser=account&&account.email.toLowerCase()===value.email?account:null;
   const now = new Date().toISOString();
   try {
     await env.DB.prepare(`INSERT INTO website_submissions
-      (id, category, email, name, message, source, consent_at, status, created_at, updated_at)
-      VALUES (?1,?2,?3,?4,?5,?6,?7,'new',?7,?7) ON CONFLICT DO NOTHING`)
-      .bind(crypto.randomUUID(),value.category,value.email,value.name,value.message,value.source,now).run();
+      (id, category, email, name, message, source, consent_at, status, created_at, updated_at,user_id)
+      VALUES (?1,?2,?3,?4,?5,?6,?7,'new',?7,?7,?8) ON CONFLICT DO NOTHING`)
+      .bind(requestId,value.category,value.email,value.name,value.message,value.source,now,rewardUser?.id??null).run();
   } catch(e) {
     if (/no such table/i.test(String(e))) return error("service_not_ready",503);
     throw e;
   }
   // Same response for first-time and duplicate early access addresses.
-  return Response.json({ok:true}, {status:201,headers:noStore});
+  let reward:unknown=null;
+  if(rewardVersionId){
+    const saved=await env.DB.prepare('SELECT user_id,email,message,source FROM website_submissions WHERE id=?1').bind(requestId).first<{user_id:string|null;email:string;message:string;source:string}>();
+    if(!rewardUser)reward={status:'sign_in_required'};
+    else if(!saved||saved.user_id!==rewardUser.id||saved.email!==value.email||saved.message!==value.message||saved.source!==value.source)return error('submission_id_conflict',409);
+    else reward=await createFeedbackRewardClaim(env.DB,requestId,rewardUser.id,rewardVersionId,now)||{status:'terms_changed_or_limit_reached'};
+  }
+  return Response.json({ok:true,...(reward?{reward}:{})}, {status:201,headers:noStore});
 }
 
 async function admin(request:Request,env:EngagementEnv) {

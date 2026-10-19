@@ -202,7 +202,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
 
-    if(url.pathname.startsWith('/api/arc/sessions')) {
+    if((url.pathname.startsWith('/api/arc/sessions')||url.pathname.startsWith('/api/arc/skills'))) {
       if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);
       const result=arcPreview.handle(url.pathname,method,init?.body??(input instanceof Request?await input.clone().text():undefined));
       if(result)return result;
@@ -216,7 +216,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
     if(url.pathname==='/api/runtime-config')return nativeFetch(input,init);
     if(url.pathname==='/api/billing/catalog')return json({arcAvailable:(await runtimeConfig()).arcAvailable,billingAvailable:false,connectFreeCalls:10000});
-    if (url.pathname === '/api/billing') return json({enabled:false,plan:ARC_PLANS[1],credits:{available:1280,pending:12.5,buckets:[]},usage:{used:1732,limit:20000},plans:ARC_PLANS,topups:ARC_TOPUPS,models:ARC_HOSTED_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:[]});
+    if (url.pathname === '/api/billing') return json({enabled:false,plan:ARC_PLANS[1],credits:{available:1280,pending:12.5,buckets:[]},usage:{used:1732,limit:null},plans:ARC_PLANS,topups:ARC_TOPUPS,models:ARC_HOSTED_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:[]});
     if (url.pathname === '/api/arc/status') {const enabled=(await runtimeConfig()).arcAvailable;return json({enabled,preview:true,access:{status:'active',canUse:enabled,daysRemaining:14,dailyUsedPercent:0,expiresAt:null},models:ARC_HOSTED_MODELS.map(m=>({id:m.id==='arc-auto'?'auto':m.id,label:m.label,provider:m.provider,premium:m.id!=='arc-auto',configured:true})),limits:{maxSteps:8,maxTokens:24000,maxSeconds:180}});}
     if (url.pathname === '/api/arc/work') return json({work:[{id:'sample-task',name:'Prepare the next release summary',kind:'task',status:'waiting',schedule:{type:'once'},nextRunAt:new Date(Date.now()+1800000).toISOString(),runCount:0,error:null,conversationId:'sample-conversation'},{id:'sample-routine',name:'Morning inbox & calendar brief',kind:'routine',status:'waiting',schedule:{type:'daily',time:'09:00',timezone:'Pacific/Auckland',weekdays:[1,2,3,4,5]},nextRunAt:new Date(Date.now()+3600000).toISOString(),runCount:4,error:null,conversationId:'sample-conversation'}],runs:[{id:'sample-run',session_id:'sample-conversation',title:'Review the release and share a summary',status:'succeeded',step:5,tokens_used:1320,error_code:null,created_at:new Date().toISOString(),automation_id:null},{id:'sample-routine-run',session_id:'sample-conversation',title:'Morning inbox & calendar brief',status:'succeeded',step:4,tokens_used:1045,error_code:null,created_at:new Date(Date.now()-3600000).toISOString(),automation_id:'sample-routine'}]});
     // Preview data for Settings > Workspaces. Writes remain blocked above.
@@ -352,6 +352,8 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       } satisfies SecurityState);
     }
 
+    if(url.pathname==='/api/admin/followups')return json({items:[{id:'preview-followup-user',name:'Alex Chen',email:'alex@example.invalid',devices:0,apps:0,calls:0,arc_runs:0,status:'new',next_followup_at:null,consent_at:null,suppressed_at:null,last_contact_at:null,feedback_count:0},{id:'preview-followup-active',name:'Taylor',email:'taylor@example.invalid',devices:2,apps:3,calls:128,arc_runs:4,status:'waiting',next_followup_at:new Date().toISOString(),consent_at:null,suppressed_at:null,last_contact_at:new Date().toISOString(),feedback_count:1}],total:2,emailConfigured:false});
+    if(url.pathname.startsWith('/api/admin/followups/'))return json({contact:{status:'new',note:'',next_followup_at:null,consent_at:null,consent_note:'',suppressed_at:null},messages:[]});
     if (url.pathname === "/api/admin/operations") {
       const day = new Date();
       const sampleUsers = [

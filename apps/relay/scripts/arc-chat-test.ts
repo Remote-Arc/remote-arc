@@ -1,3 +1,4 @@
+import {cloudSkillCatalog} from '../src/cloud-skills.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -128,4 +129,22 @@ assert.equal((await api('sessions','POST',{})).status,402,'Expired trial blocks 
 assert.equal((await api('sessions/'+id)).status,200,'Expired trials can still read existing results');
 await decode(await api('trial','POST',{confirm:true}));assert.equal((await arcAccountAccess(env,'owner')).status,'expired','An expired trial cannot be reclaimed');
 await decode(await api('sessions/'+id,'DELETE'));assert.equal((await api('sessions/'+id)).status,404);assert(wakes>0);
+// Arc consumes the existing cloud catalog, with private Markdown imports alongside it.
+const library=await decode(await api('skills'));
+assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),cloudSkillCatalog().map(s=>s.id).sort());
+const skillInput={name:'Private workflow',description:'Owner-only instructions',content:'# Private workflow\nUse scripts/check.py and verify its result.',sourceUrl:'https://github.com/example/workflow'};
+const imported=await decode(await api('skills','POST',skillInput),201);
+assert.equal((await decode(await api('skills','POST',skillInput),201)).id,imported.id,'Duplicate imports are idempotent');
+assert.equal((await decode(await api('skills/'+imported.id))).content,skillInput.content);
+assert.equal((await api('skills/'+imported.id,'GET',undefined,'other')).status,404);
+assert.equal((await decode(await api('skills/'+imported.id,'DELETE',undefined,'other'))).deleted,false);
+assert(!String(sql.prepare('SELECT content_ciphertext FROM arc_skills WHERE id=?').get(imported.id)?.content_ciphertext).includes('scripts/check.py'));
+assert.equal((await api('skills','POST',skillInput,'owner',{origin:'https://untrusted.invalid'})).status,403);
+assert.equal((await api('skills','POST',{...skillInput,sourceUrl:'javascript:alert(1)'})).status,400);
+const skillRun={user_id:'owner'} as ArcRun;
+const readSkill=await executeArcTool(env,skillRun,tool('read_skill',{id:imported.id}));assert.equal((readSkill as any).content,skillInput.content);
+const plan=await executeArcTool(env,skillRun,tool('plan_skill',{objective:'Read this webpage',skill_id:'browser-operator'}));assert.equal((plan as any).skillsSource,'cloud');assert.equal((plan as any).executed,false);
+const blockedSkill=await executeArcTool(env,skillRun,tool('run_skill',{objective:'Create a video',skill_id:'video-creator'}));assert.equal((blockedSkill as any).httpStatus,409);assert.equal((blockedSkill as any).verified,false);
+assert.equal((await decode(await api('skills/'+imported.id,'DELETE'))).deleted,true);
+assert.equal((await api('skills/'+imported.id)).status,404);
 console.log('Arc Chat: authenticated encrypted conversations, funded inference, direct Apps execution, quotas, idempotency, cancellation, durable tasks and DST schedules passed.');

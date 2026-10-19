@@ -43,7 +43,7 @@ export function dashboardTabFromPath(pathname: string): DashboardTab {
   const clean = pathname.replace(/\/+$/, "") || "/";
   const tab = (Object.entries(DASHBOARD_PATHS).find(([, path]) => path === clean)?.[0] as DashboardTab | undefined)
     ?? LEGACY_DASHBOARD_PATHS[clean] ?? "overview";
-  return tab === "automations" ? "agent-goals" : tab;
+  return tab === "automations" || tab === "agent-routines" ? "agent-goals" : tab;
 }
 
 export function workspaceForTab(tab: DashboardTab): DashboardWorkspace {
@@ -86,7 +86,7 @@ export function isAgentRoutineAutomation(task: WorkspaceAutomation): boolean {
 
 export function isVisibleInWorkspace(task: WorkspaceAutomation, tab: DashboardTab): boolean {
   if (tab === "automations") return !isAgentGoalAutomation(task);
-  if (tab === "agent-goals") return !isAgentRoutineAutomation(task);
+  if (tab === "agent-goals") return true;
   if (tab === "agent-activity") return true;
   if (tab === "agent-routines") return isAgentRoutineAutomation(task);
   return true;

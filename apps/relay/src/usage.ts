@@ -65,7 +65,7 @@ async function monthlyLimitForUser(env: UsageEnv, userId: string) {
   }
   if(billingEnabled(env)){
     const plan=await currentArcPlan(env.DB,userId);
-    if(plan.id!=='free')return plan.connectToolCalls+(user?.extra_calls??0);
+    if(plan.id!=='free')return null;
     if(user?.plan!=='plus'&&!user?.has_plus_grant){
       const legacy=await env.DB.prepare('SELECT monthly_calls FROM arc_connect_legacy_allowances WHERE user_id=?1').bind(userId).first<{monthly_calls:number}>();
       return (legacy?.monthly_calls??plan.connectToolCalls)+(user?.extra_calls??0);

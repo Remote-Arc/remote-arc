@@ -3,7 +3,7 @@ export type SiteLocale = "en" | "zh";
 /** Synced with the public SEO route allowlist. */
 export const chinesePages = new Set([
  ...DOC_PATHS,
- "/privacy", "/terms", "/support",
+ "/privacy", "/terms", "/support", "/remote-mcp", "/connect-ai",
  "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work", "/integrations", "/pricing", "/downloads", "/arc", "/roadmap", "/feedback", "/early-access",
  "/blogs",

@@ -55,15 +55,19 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     ]
   },
   "/roadmap": {
-    title: "Remote Arc 产品路线图 — Arc Chat、Apps 与 Routines",
-    description: "了解 Remote Arc 已可用的 Connect MCP 能力，以及 Arc Chat、Auto、订阅收费、云应用集成和自动化任务的开发计划。",
-    h1: "Remote Arc 产品路线图",
-    intro: "清晰区分已经可用、正在开发和探索中的功能。计划可能随着技术验证、安全测试及真实成本数据而调整。",
-    sections: [
-      { heading: "已可用", text: "Remote MCP 连接已授权设备，支持设备级权限与持久任务基础。" },
-      { heading: "开发中", text: "Arc Chat、Auto 模型路由、费用记录和可靠的工具执行。" },
-      { heading: "规划中", text: "公开试用前完成 Billing 和预算保护，随后扩展应用集成、Routines 和 Teach Arc。" }
-    ]
+    title:"Remote Arc 路线图 — 下一代 AI 基础设施",description:"从开放连接基础设施与个人智能体，探索垂类 SaaS Agent、智能设备管家及下一代 AI 基础设施。长期愿景不代表已承诺的上线日期。",
+    h1:"Remote Arc，下一步。",intro:"从连接工具出发，走向让智能体可靠行动的共同基础。",
+    sections:[{heading:"连接与个人智能体",text:"以 Connect 的应用、电脑与 AI 客户端连接为基础，构建能理解意图、协调工具并交付可核验结果的个人智能体。"},{heading:"长期探索",text:"探索为垂类 SaaS Agent 提供基础能力，以及协调兼容智能设备的通用 AI 管家。目标是建立开放互通、可靠执行的下一代 AI 基础设施，不承诺具体发布时间。"}]
+  },
+  "/remote-mcp": {
+    title:"Remote MCP 入门指南 — Remote Arc",description:"了解 Remote MCP 与本地 MCP 的区别，连接 ChatGPT、Claude 或 Cursor，通过授权使用应用与电脑。",
+    h1:"Remote MCP Server，从概念到真正连接。",intro:"一个端点，连接你的 AI、应用与电脑。了解连接方式，选择客户端，再拿到第一个可核验的结果。",
+    sections:[{heading:"先连接，再验证",text:"配对自己的电脑，在 AI 客户端添加远程 MCP 地址并完成授权。先用只读工具验证目标设备与结果，再按需开启写入与终端工具。"}]
+  },
+  "/connect-ai": {
+    title:"连接 AI 客户端 — Remote Arc",description:"配对电脑、选择设备权限，再通过 OAuth 连接 ChatGPT、Claude、Cursor 或其他兼容 MCP 的 AI 客户端。",
+    h1:"连接 AI 客户端",intro:"电脑配对与 AI 授权彼此独立，按指南完成两端设置即可开始。",
+    sections:[{heading:"选择你的客户端",text:"查看 ChatGPT、Claude 或 Cursor 的安装指南，添加 https://mcp.remotearc.app/mcp 并完成账号授权。"}]
   },
   "/": {
     title: "Remote Arc — 连接 AI、应用与电脑",

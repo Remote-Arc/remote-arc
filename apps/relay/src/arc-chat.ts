@@ -1,3 +1,4 @@
+import {listArcSkills,saveArcSkill,readArcSkill,removeArcSkill,arcSkillInput} from './arc-skills.js';
 import { getSessionUser, sha256Hex } from './auth.js';
 import { isTrustedDashboardMutation } from './dashboard-origin.js';
 import { seal, unseal } from './app-oauth.js';
@@ -65,6 +66,18 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
   }
   if(request.method==='POST'&&(path==='/api/arc/sessions'||path.endsWith('/messages'))&&!ready)throw new ArcError('ARC_NOT_CONFIGURED',503);
    if(path==='/api/arc/work'&&request.method==='GET')return json(await listArcWork(env,user.id));
+  if(path==='/api/arc/skills'){
+   if(request.method==='GET')return json(await listArcSkills(env,user.id));
+   if(request.method==='POST'){
+    const input=arcSkillInput.safeParse(await body(request));if(!input.success)throw new ArcError('ARC_INVALID_SKILL');
+    try{return json(await saveArcSkill(env,user.id,input.data),201);}catch(error){if(error instanceof Error&&error.message==='ARC_SKILL_LIMIT')throw new ArcError('ARC_SKILL_LIMIT',429);throw error;}
+   }
+  }
+  const skillPath=path.match(/^\/api\/arc\/skills\/([\w:-]{1,100})$/);
+  if(skillPath){
+   if(request.method==='DELETE')return json(await removeArcSkill(env,user.id,skillPath[1]!));
+   if(request.method==='GET'){try{return json(await readArcSkill(env,user.id,skillPath[1]!));}catch(error){if(error instanceof Error&&error.message==='ARC_SKILL_NOT_FOUND')throw new ArcError('ARC_SKILL_NOT_FOUND',404);throw error;}}
+  }
   if(path==='/api/arc/sessions'){
    if(request.method==='GET'){
      const rows=(await env.DB.prepare('SELECT * FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL AND automation_id IS NULL ORDER BY updated_at DESC LIMIT 100').bind(user.id).all<ArcSession>()).results;

@@ -11,7 +11,6 @@ import { ArcWorkWorkspace } from "./arc-workspace.js";
 import { ProductIcon, type ProductIconName } from "./product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
 import {usePlatformCatalog} from './use-platform-catalog.js';
-import {ArcReadyPage} from './arc-ready-page.js';
 import {
   DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab,
   isVisibleInWorkspace, isAgentGoalAutomation,
@@ -52,12 +51,14 @@ import "./device-fleet-design.css";
 import "./product-typography.css";
 import "./arc-product-polish.css";
 import "./brand-wordmark.css";
+import "./experience-refresh.css";
 
 declare const __REMOTEARC_CLI_VERSION__: string;
 
 const LATEST_AGENT_VERSION = __REMOTEARC_CLI_VERSION__;
 
 const ArcNativeChat = React.lazy(() => import("./arc-native-chat.js").then(module => ({default:module.ArcNativeChat})));
+const ArcSkills = React.lazy(() => import("./arc-skills.js").then(module => ({default:module.ArcSkills})));
 const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
 const IntegrationsPage = React.lazy(() => import("./integrations-page.js").then(module => ({ default: module.IntegrationsPage })));
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
@@ -516,8 +517,8 @@ function PublicHeader({ user }: { user?: User | null }) {
             <div id="public-nav-product" className="publicNavDropdown productDropdown">
               <section className="publicNavGroup">
                 <span className="publicNavGroupLabel">{tr('ONE PLATFORM. YOUR WAY TO WORK.','一个平台，选择你的工作方式。')}</span>
-                <a href={navHref('/arc')}><span className="publicProductIcon"><ProductIcon name="spark"/></span><span><strong>Arc <em>{arcAvailable?tr('Available now','现已可用'):tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
-                <a href={navHref('/connect-ai')}><span className="publicProductIcon"><ProductIcon name="link"/></span><span><strong>Connect <em>{tr('Available today','现已可用')}</em></strong><small>{tr('Bring tools to the AI you already use','为你常用的 AI 连接电脑和应用')}</small></span></a>
+                <a href={navHref('/arc')}><span className="publicProductIcon publicProductLogo"><img src="/remote-arc.svg" alt=""/></span><span><strong>Arc <em>{arcAvailable?tr('Available now','现已可用'):tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
+                <a href={navHref('/connect-ai')}><span className="publicProductIcon publicProductLogo"><img src="/connect-logo.svg" alt=""/></span><span><strong>Connect <em>{tr('Available today','现已可用')}</em></strong><small>{tr('Bring tools to the AI you already use','为你常用的 AI 连接电脑和应用')}</small></span></a>
               </section>
               <div className="publicNavProductFoot"><a href={navHref('/install/chatgpt')}><img className="monoLogo" src="/ai-openai.svg" alt=""/>ChatGPT</a><a href={navHref('/install/claude')}><img src="/ai-claude.svg" alt=""/>Claude</a><a href={navHref('/install/cursor')}><img className="monoLogo" src="/ai-cursor.svg" alt=""/>Cursor</a><a href={navHref('/remote-mcp')}><ProductIcon name="link" size={15}/>Remote MCP<ProductIcon name="arrowUpRight" size={12}/></a></div>
             </div>
@@ -2467,7 +2468,7 @@ const PLUGIN_DEMO_VIDEO_URL =
 
 function ArcPage({ user }: { user?: User | null }) {
   const available=usePlatformCatalog()?.arcAvailable===true;
-  return <PublicLayout user={user}>{available?<ArcReadyPage startHref={dashboardHref(DASHBOARD_PATHS['agent-chat'])}/>:<ArcComingSoonPageContent />}</PublicLayout>;
+  return <PublicLayout user={user}><ArcComingSoonPageContent available={available} startHref={dashboardHref(DASHBOARD_PATHS['agent-chat'])}/></PublicLayout>;
 }
 
 function RoadmapPage({ user }: { user?: User | null }) {
@@ -2519,7 +2520,7 @@ function DemoPage({ user }: { user?: User | null }) {
 
 
 function ConnectPage({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr,locale } = useI18n();
   const scopes = [
     ["devices:read", tr("List paired computers and their online state.", "列出已配对电脑及在线状态。")],
     ["computer:read", tr("Read files, directories and process metadata when the selected device allows it.", "在目标设备允许时读取文件、目录和进程元数据。")],
@@ -2543,6 +2544,7 @@ function ConnectPage({ user }: { user?: User | null }) {
           )}</p>
         </header>
 
+        <section className="connectClientCards" aria-label={tr("Choose your AI client","选择你的 AI 客户端")}>{[{id:'chatgpt',name:'ChatGPT',logo:'/ai-openai.svg',detail:tr('Connect through a supported MCP app','通过受支持的 MCP 应用连接')},{id:'claude',name:'Claude',logo:'/ai-claude.svg',detail:tr('Add a custom remote connector','添加自定义远程连接器')},{id:'cursor',name:'Cursor',logo:'/ai-cursor.svg',detail:tr('Use your coding workspace','连接你的开发工作空间')}].map(client=><a href={localizedWebsiteHref('/install/'+client.id,locale)} key={client.id}><img src={client.logo} alt=""/><strong>{client.name}</strong><small>{client.detail}</small><ProductIcon name="arrowUpRight" size={15}/></a>)}</section>
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("CONNECTION", "连接")}</strong>
@@ -3578,6 +3580,7 @@ function Dashboard({
   const arcAvailable = user.arcAvailable===true;
   const hasPlus = user.plan === "plus" || user.isAdmin;
   const [showAdd, setShowAdd] = useState(false);
+  const [arcNavigationOpen,setArcNavigationOpen]=useState(false);
   const [arcEntry,setArcEntry] = useState<{prompt?:string;sessionId?:string;version:number}>(()=>({version:0,prompt:new URLSearchParams(location.search).get('prompt')?.slice(0,6000)||undefined}));
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
@@ -5027,7 +5030,6 @@ function Dashboard({
   const navItems: Array<[DashboardTab, string]> = workspace === "agent" ? [
     ["agent-chat", tr("Chat", "对话")],
     ["agent-goals", tr("Tasks", "任务")],
-    ["agent-routines", tr("Routines", "例行工作")],
     ["agent-activity", tr("Activity", "活动")],
     ["agent-apps", tr("Apps", "应用")],
     ["agent-devices", tr("Devices", "设备")],
@@ -5046,14 +5048,14 @@ function Dashboard({
   return (
     <div className="appFrame" data-workspace={workspace} data-sidebar-collapsed={sidebarCollapsed}>
       <aside className="sidebar">
-        <div className="sidebarBrand"><Brand /><button type="button" className="sidebarCollapseToggle" aria-label={sidebarCollapsed ? tr('Expand sidebar','展开侧栏') : tr('Collapse sidebar','收起侧栏')} aria-expanded={!sidebarCollapsed} aria-controls={workspace === 'agent' && active === 'agent-chat' ? 'arc-sidebar-nav-root' : 'dashboard-sidebar-navigation'} title={sidebarCollapsed ? tr('Expand sidebar','展开侧栏') : tr('Collapse sidebar','收起侧栏')} onClick={toggleSidebar}><ProductIcon name="panel" size={17}/></button></div>
+        <div className="sidebarBrand"><Brand /><button type="button" className="sidebarCollapseToggle" aria-label={sidebarCollapsed ? tr('Expand sidebar','展开侧栏') : tr('Collapse sidebar','收起侧栏')} aria-expanded={!sidebarCollapsed} aria-controls={workspace === 'agent' ? 'arc-sidebar-nav-root' : 'dashboard-sidebar-navigation'} title={sidebarCollapsed ? tr('Expand sidebar','展开侧栏') : tr('Collapse sidebar','收起侧栏')} onClick={toggleSidebar}><ProductIcon name="panel" size={17}/></button></div>
         {renderWorkspacePicker()}
-        <div id="arc-sidebar-nav-root" className="arcSidebarPortalRoot" hidden={workspace !== 'agent' || active !== 'agent-chat'} />
-        {workspace === "agent" && active === "agent-chat" ? (
+        <div id="arc-sidebar-nav-root" className="arcSidebarPortalRoot" hidden={workspace !== 'agent'} />
+        {workspace === "agent" ? (
           null
         ) : (
           <>
-            <div className="workspaceNavHeading">{workspace === "agent" ? tr("WORKSPACE", "工作空间") : tr("CONNECTIONS", "连接管理")}</div>
+            <div className="workspaceNavHeading">{tr("CONNECTIONS", "连接管理")}</div>
             <nav id="dashboard-sidebar-navigation" className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
               {navItems.map(([id, label]) => (
                 <button key={id} data-dashboard-tab={id} title={label} aria-label={label} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
@@ -5085,17 +5087,21 @@ function Dashboard({
           </div>
         )}
         <header className="mobileTopbar">
-          <Brand/>
+          {workspace === "agent" && <button className="arcWorkspaceMobileMenu" type="button" aria-label={tr("Open workspace navigation","打开工作空间导航")} onClick={()=>setArcNavigationOpen(true)}><ProductIcon name="menu"/></button>}<Brand/>
           {renderWorkspacePicker(true)}
           <div className="mobileActions"><ThemeSwitcher compact/></div>
         </header>
 
-        {active === "agent-chat" && (
+        {workspace === "agent" && <div className="arcChatMount" hidden={active !== "agent-chat"}>
           <React.Suspense fallback={<div className="arcChatLoading" role="status">{tr("Opening Arc…","正在打开 Arc…")}</div>}><ArcNativeChat
             key={user.id + ":" + arcEntry.version}
             initialPrompt={arcEntry.prompt}
             initialSessionId={arcEntry.sessionId}
             tr={tr}
+            activeTab={active}
+            navigationOpen={arcNavigationOpen}
+            onNavigationChange={setArcNavigationOpen}
+            onOpenChat={() => navigateTab("agent-chat")}
             accountId={user.id}
             accountName={user.name}
             totalDevices={devices.length}
@@ -5103,26 +5109,16 @@ function Dashboard({
             onOpenGoals={() => navigateTab("agent-goals")}
             onOpenActivity={() => navigateTab("agent-activity")}
             onOpenSettings={() => navigateTab("agent-settings")}
-            onOpenRoutines={() => navigateTab("agent-routines")}
+            onOpenRoutines={() => navigateTab("agent-goals")}
             onManageApps={() => navigateTab("agent-apps")}
             onManageDevices={() => navigateTab("agent-devices")}
             onManageSkills={() => navigateTab("agent-skills")}
           /></React.Suspense>
-        )}
+        </div>}
 
         {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat}/>}
 
-        {active === "agent-skills" && (
-          <section className="agentWorkspacePanel">
-            <span className="eyebrow">ARC AGENT / SKILLS</span>
-            <h1>{tr("Agent capabilities", "Agent 可用能力")}</h1>
-            <p>{tr("Arc finds the right tools for your request: connected apps, computers and scheduled work.", "Arc 根据你的工作请求选择合适的工具：已连接应用、电脑和定时工作。")}</p>
-            <div className="agentWorkspaceGrid">
-              <article className="agentWorkspaceTile"><strong>{tr("Device fleet", "设备集群")}</strong><p>{tr("Execute on an available compatible device, subject to its local safety policy.", "使用可用的兼容设备执行，遵守设备本地安全策略。")}</p><button className="ghostButton" onClick={() => navigateTab("agent-devices")}>{tr("Manage devices", "管理设备")} →</button></article>
-              <article className="agentWorkspaceTile"><strong>{tr("Connected Apps", "已连接应用")}</strong><p>{tr("Account connections are shared with Connect. Arc can discover and use the available actions in your conversations.", "账号连接与 Connect 共用，Arc 可在对话中发现并调用可用操作。")}</p><button className="ghostButton" onClick={() => navigateTab("agent-apps")}>{tr("Manage Apps", "管理应用")} →</button></article>
-            </div>
-          </section>
-        )}
+        {active === "agent-skills" && <React.Suspense fallback={<p role="status">{tr('Loading skills…','正在加载技能…')}</p>}><ArcSkills tr={tr} onChat={openArcChat}/></React.Suspense>}
 
         {active === "overview" && (
           <>
@@ -5140,7 +5136,7 @@ function Dashboard({
             <section className="overviewStatusGrid">
               <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Devices online", "在线设备")}</span><i className={"healthDot " + ((status?.onlineDevices ?? 0) > 0 ? "good" : "idle")} /></div><strong>{status?.onlineDevices ?? 0} / {status?.totalDevices ?? devices.length}</strong><small>{tr("Ready for MCP calls", "可接受 MCP 调用")}</small></article>
                              <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr('Connected Apps','应用连接')}</span><ProductIcon name="apps"/></div><strong>{tr('Your tools','你的工具')}</strong><button className="ghostButton overviewManageLink" onClick={()=>navigateTab('apps')}>{tr('Manage connections','管理连接')}<ProductIcon name="arrowUpRight" size={14}/></button></article>
-              <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Monthly usage", "本月用量")}</span><span>{usage?.unlimited ? tr("Unlimited", "无限") : Math.round(usagePct) + "%"}</span></div><strong>{(usage?.used ?? 0).toLocaleString()}</strong><div className="miniUsageBar"><i style={{ width: (usage?.unlimited ? 0 : usagePct) + "%" }} /></div><small>{usage?.unlimited ? tr("Admin account · unlimited hosted calls", "管理员账户 · 托管调用无限额") : tr("of", "共") + " " + usageLimitLabel + " " + tr("hosted calls", "次托管调用")}</small></article>
+              <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Monthly usage", "本月用量")}</span><span>{usage?.unlimited ? tr("Unlimited", "无限") : Math.round(usagePct) + "%"}</span></div><strong>{(usage?.used ?? 0).toLocaleString()}</strong><div className="miniUsageBar"><i style={{ width: (usage?.unlimited ? 0 : usagePct) + "%" }} /></div><small>{usage?.unlimited ? tr("Unlimited Connect calls", "无限 Connect 调用") : tr("of", "共") + " " + usageLimitLabel + " " + tr("hosted calls", "次托管调用")}</small></article>
               <article className="overviewStatusCard endpoint"><div className="statusCardHead"><span>Remote MCP</span><span className="privacyPill">{tr("Secure", "安全")}</span></div><code>{mcpEndpoint}</code><div className="statusCardActions"><CopyButton value={mcpEndpoint} label={tr("Copy", "复制")} /><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Manage", "管理")}</button></div></article>
             </section>
 

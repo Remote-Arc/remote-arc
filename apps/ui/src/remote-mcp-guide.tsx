@@ -61,7 +61,7 @@ export function RemoteMcpGuide() {
       <div className="rmgHeroCopy">
         <div className="rmgEyebrow"><span className="rmgDot" /> {tr("THE REMOTE MCP GUIDE", "REMOTE MCP 入门指南")}</div>
         <h1 id="rmg-title">{tr("Remote MCP servers,", "Remote MCP Server，")}<span>{tr("explained and connected.", "从概念到真正连接。")}</span></h1>
-        <p>{tr("Learn how remote MCP works, how it differs from a local MCP server, and how to connect ChatGPT, Claude or Cursor. Then see how Remote Arc makes your own computer accessible through a permissioned remote MCP connection.", "了解远程 MCP 如何工作、与本地 MCP 有何不同，以及如何连接 ChatGPT、Claude 或 Cursor。再看看 Remote Arc 如何通过有权限控制的远程 MCP 连接，让 AI 使用你自己的电脑。")}</p>
+        <p>{tr("One endpoint for your AI, apps and computers. Understand the connection, choose your client and get your first verified result.", "一个端点，连接你的 AI、应用与电脑。了解连接方式，选择客户端，再拿到第一个可核验的结果。")}</p>
         <div className="rmgHeroActions">
           <a className="primaryButton" href="#rmg-start">{tr("Connect a remote MCP server", "连接远程 MCP Server")} <span aria-hidden="true">↗</span></a>
           <a className="rmgTextLink" href="#rmg-basics">{tr("Start with the basics", "先了解基础概念")} ↓</a>

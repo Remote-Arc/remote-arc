@@ -32,18 +32,18 @@ export function ArcTeaser() {
   </section>;
 }
 
-export function ArcComingSoonPageContent() {
+export function ArcComingSoonPageContent({available=false,startHref=connectWorkspaceHref}:{available?:boolean;startHref?:string}) {
   const {tr,locale}=useI18n();
   return <main className="arcV3">
     <section className="arcV3Hero" aria-labelledby="arcV3HeroTitle">
       <div className="arcV3HeroGlow" aria-hidden="true" />
-      <div className="arcV3HeroEyebrow"><ArcStatus>{tr("Arc · Coming soon", "Arc · 即将上线")}</ArcStatus></div>
+      <div className="arcV3HeroEyebrow"><ArcStatus>{available?tr("Arc · Personal agent", "Arc · 个人智能体"):tr("Arc · Coming soon", "Arc · 即将上线")}</ArcStatus></div>
       <h1 id="arcV3HeroTitle">{tr("Your apps. Your computers. One personal agent.", "你的应用与电脑，一位个人 AI 队友。")}</h1>
       <p>{tr("You already connect your AI with Remote Arc. Meet the next step: a personal agent that brings those connections together, coordinates your device fleet, and turns conversations into tasks and routines. No model API key required.", "你已经用 Remote Arc 为 AI 连接工具。接下来，让个人 AI 队友把这些连接串起来，协调设备集群，把一句话变成任务与 Routine。无需模型 API Key。")}</p>
-      <div className="arcV3HeroActions"><a className="arcV3Primary" href={connectWorkspaceHref}>{tr("Use Connect now", "先使用 Connect")} <span>↗</span></a><a className="arcV3Secondary" href="#why-arc">{tr("Why use Arc?", "为什么选择 Arc？")} <span>↓</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
+      <div className="arcV3HeroActions"><a className="arcV3Primary" href={available?startHref:connectWorkspaceHref}>{available?tr("Open Arc", "打开 Arc"):tr("Use Connect now", "先使用 Connect")} <span>↗</span></a><a className="arcV3Secondary" href="#why-arc">{tr("Why use Arc?", "为什么选择 Arc？")} <span>↓</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
       <div className="arcV3HeroCue"><span />{tr("A GLIMPSE OF WHAT'S NEXT", "下一阶段产品概念")}</div>
       <ArcExecutionScene />
-      <p className="arcV3Disclaimer">{tr("Product preview. Arc Chat is not open yet. Connect is available today; a 14-day Arc trial is planned for launch.", "产品预览。Arc Chat 尚未开放，Connect 现已可用；Arc 上线时计划提供 14 天试用。")}</p>
+      <p className="arcV3Disclaimer">{available?tr("Illustrative product demo. Open Arc to explore the workspace.","产品示意演示。打开 Arc，体验完整工作空间。"):tr("Product preview. Arc Chat is not open yet. Connect is available today; a 14-day Arc trial is planned for launch.", "产品预览。Arc Chat 尚未开放，Connect 现已可用；Arc 上线时计划提供 14 天试用。")}</p>
     </section>
 
     <ArcWhy tr={tr} connectHref={localizedWebsiteHref("/connect-ai",locale)} earlyAccessHref={localizedWebsiteHref("/roadmap",locale)} />
@@ -54,7 +54,7 @@ export function ArcComingSoonPageContent() {
       <span className="arcV3Eyebrow">{tr("THIS IS JUST THE BEGINNING", "这只是开始")}</span>
       <h2>{tr("Your work. A little more handled.", "你的工作，多一位队友。")}</h2>
       <p>{tr("Tell us what you'd delegate to Arc. We'll build it step by step, with transparent permissions, results and release status.", "告诉我们你最希望 Arc 帮你完成什么。我们将逐步交付，公开权限、执行结果与开发状态。")}</p>
-      <div className="arcV3HeroActions"><a href={connectWorkspaceHref} className="arcV3Primary">{tr("Use Connect now", "先使用 Connect")} ↗</a><a href={localizedWebsiteHref("/roadmap",locale)} className="arcV3Secondary">{tr("Explore the roadmap", "查看路线图")} →</a></div>
+      <div className="arcV3HeroActions"><a href={available?startHref:connectWorkspaceHref} className="arcV3Primary">{available?tr("Open Arc", "打开 Arc"):tr("Use Connect now", "先使用 Connect")} ↗</a><a href={localizedWebsiteHref("/roadmap",locale)} className="arcV3Secondary">{tr("Explore the roadmap", "查看路线图")} →</a></div>
     </section>
   </main>;
 }

@@ -35,8 +35,8 @@ Remote Arc creates its USD monthly prices and top-up price idempotently using st
 | Plan | Monthly price | Arc Credits | Connect calls | Parallel runs | Run time |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Free | $0 | One explicit 14-day trial with 200 Credits | 500 | 1 | 3 minutes |
-| Plus | $39 | 1,500 / billing period | 20,000 | 2 | 10 minutes |
-| Pro | $79 | 5,000 / billing period | 100,000 | 5 | 30 minutes |
+| Plus | $39 | 1,500 / billing period | Unlimited | 2 | 10 minutes |
+| Pro | $79 | 5,000 / billing period | Unlimited | 5 | 30 minutes |
 | Enterprise | Contract | Negotiated | Negotiated | Negotiated | Negotiated |
 
 Plus and Pro allow every configured premium model. Pro buys more capacity, not exclusive model access. Monthly Credits expire at the paid period end. A $10 top-up adds 500 non-expiring Credits; an active paid subscription is required to use them. Credits do not provide an unlimited run: token, step, time, concurrency, routine, account and platform spending caps apply. There are no automatic overage charges. Existing Free accounts retain their snapshotted 10,000-call allowance. Existing manually granted Plus access is preserved.
@@ -69,3 +69,5 @@ Production retains the existing exact-master CI, encrypted D1 backup, migrations
 Use Stripe’s event delivery Dashboard to resend failed events after correcting configuration. The database `arc_payment_events.error_code` contains only safe error codes. Refunds and disputes revoke unused purchased Credits and related authorization, while spent amounts and pending holds remain auditable. The payment-intent block prevents a late invoice event from recreating refunded allowance.
 
 Emergency Arc pause blocks new purchases and inference while preserving existing customers’ access to the Stripe portal for payment details and cancellation. It must not trap a customer in a renewing subscription. Keep billing credentials available for verified payment events and subscription management during an inference outage.
+
+Paid Connect calls have no monthly cap. Existing per-request, concurrency, rate and provider limits remain independent. Arc model usage still consumes finite Credits. The economics calculator uses an editable expected Connect volume; unlimited calls have no finite worst-case cost.

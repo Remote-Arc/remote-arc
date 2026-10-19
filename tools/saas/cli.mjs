@@ -17,7 +17,7 @@ if(args.includes('--serve')){
  if(args.includes('--json'))console.log(JSON.stringify(report,null,2));else{
   console.table(report.plans.map(p=>({plan:p.label,price:p.revenue,credits:p.monthlyCredits,fullUsageCost:p.total.toFixed(2),grossMargin:(100*p.margin).toFixed(1)+'%',firstMonthAfterTrials:(100*p.firstMonthContributionMargin).toFixed(1)+'%',headroom:p.firstMonthHeadroom.toFixed(2),customersForMillionARR:p.customersForMillionARR})));
   console.table(report.models.map(m=>({model:m.label,creditsPer1000Input:m.creditsPer1000Input,creditsPer1000Output:m.creditsPer1000Output,example8kIn1kOut:m.exampleCredits})));
-  console.log('Full model and Connect allowance utilization. Hosting, Apps, support and payment costs are editable assumptions, not vendor quotes. Taxes are excluded from revenue. Trial acquisition cost is reported separately.');
+  console.log('Full model allowance and assumed Connect utilization; unlimited Connect has no finite worst-case cost. Hosting, Apps, support and payment costs are editable assumptions, not vendor quotes. Taxes are excluded from revenue. Trial acquisition cost is reported separately.');
  }
  if(args.includes('--check')&&!report.plans.every(p=>p.meetsTarget))process.exitCode=1;
 }

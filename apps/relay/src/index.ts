@@ -1,3 +1,4 @@
+import {handleFollowupUnsubscribe} from './user-followups.js';
 import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.js";
 export { AdminApiService } from "./admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
@@ -214,6 +215,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     // Serve one canonical public URL; do not alter HTTPS MCP or dashboard calls.
     const httpsCanonical = marketingHttpsRedirect(url);
     if (httpsCanonical) return Response.redirect(httpsCanonical, 301);
+
+    if(url.pathname==='/email/follow-up/unsubscribe'&&url.origin===new URL(marketingOrigin).origin)return handleFollowupUnsubscribe(request,env);
 
     const authSensitive =
       url.pathname === "/oauth/register" ||

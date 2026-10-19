@@ -1,3 +1,4 @@
+import {BUILTIN_SKILLS} from '../../../packages/skills/src/catalog.generated.js';
 import type {ChatMessage, ChatRun, ChatSession} from "./use-arc-chat.js";
 
 type PreviewSession = {session:ChatSession; messages:ChatMessage[]; runs:ChatRun[]; reads:number; requests:Map<string,{text:string;modelId:string;run:ChatRun}>};
@@ -6,6 +7,7 @@ const makeRun = ():ChatRun => ({id:crypto.randomUUID(),status:"queued",step:0,to
 
 /** Per-tab UI simulation. Never calls a model, Apps, devices, storage or production API. */
 export function createArcPreview() {
+  const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string}>(BUILTIN_SKILLS.map(skill=>[skill.id,{id:skill.id,name:skill.name,description:skill.description,sourceUrl:skill.upstream,origin:'builtin',content:skill.content}]));
   const sessions = new Map<string,PreviewSession>();
   const example:PreviewSession = {
     session:{id:"sample-conversation",title:"Review the release and share a summary",modelId:"auto",updatedAt:new Date().toISOString()},
@@ -26,12 +28,26 @@ export function createArcPreview() {
         const text=record.messages.filter(m=>m.role==="user").at(-1)?.text||"";
         const zh=/[\u3400-\u9fff]/.test(text);
         record.messages.push({id:run.id+":tool",role:"tool",text:zh?"示例工具记录":"Example tool record",tool:"preview_example",arguments:{example:true},result:zh?"模拟结果。没有访问应用、电脑或真实账号。":"Simulated result. No apps, computers or real accounts were accessed.",status:"completed"});
-        record.messages.push({id:run.id+":assistant",role:"assistant",text:zh?"**这是交互预览，回复和工具结果均为模拟。**\n\n真实 Arc 会根据你的目标选择应用与电脑，保存任务状态，并返回可以核对的执行结果。你可以继续查看任务、例行工作和活动页面。\n\n本次没有调用大模型、执行工具或产生费用。":"**This is an interactive preview. Responses and tool results are simulated.**\n\nIn live Arc, your goal guides app and computer selection, saved work and verifiable results. You can explore Tasks, Routines and Activity from the sidebar.\n\nNo model was called, no tools were run and no charges were made."});
+        record.messages.push({id:run.id+":assistant",role:"assistant",text:zh?"**这是交互预览，回复和工具结果均为模拟。**\n\n真实 Arc 会根据你的目标选择应用与电脑，保存任务状态，并返回可以核对的执行结果。你可以继续查看任务和活动页面。\n\n本次没有调用大模型、执行工具或产生费用。":"**This is an interactive preview. Responses and tool results are simulated.**\n\nIn live Arc, your goal guides app and computer selection, saved work and verifiable results. You can explore Tasks and Activity from the sidebar.\n\nNo model was called, no tools were run and no charges were made."});
       }
     }
     return {session:record.session,messages:record.messages,runs:record.runs};
   }
   return {handle(path:string,method:string,rawBody:unknown):Response|null {
+    if(path==='/api/arc/skills'||path.startsWith('/api/arc/skills/')){
+      const id=decodeURIComponent(path.slice('/api/arc/skills/'.length));
+      if(path==='/api/arc/skills'&&method==='GET')return json({skills:[...skills.values()].map(({content,...skill})=>skill)});
+      if(method==='POST'&&path==='/api/arc/skills'){
+        let input;try{input=JSON.parse(String(rawBody));}catch{return json({error:'INVALID_REQUEST'},400);}
+        if(typeof input.name!=='string'||!input.name.trim()||input.name.length>100||typeof input.content!=='string'||input.content.trim().length<20||input.content.length>12000||new TextEncoder().encode(input.content).length>16000)return json({error:'ARC_INVALID_SKILL'},400);
+        const duplicate=[...skills.values()].find(s=>s.origin==='imported'&&s.content===input.content);if(duplicate)return json(duplicate,201);
+        if([...skills.values()].filter(s=>s.origin==='imported').length>=50)return json({error:'ARC_SKILL_LIMIT'},429);
+        const skill={id:crypto.randomUUID(),name:input.name,description:String(input.description||''),content:input.content,sourceUrl:input.sourceUrl||null,origin:'imported'};skills.set(skill.id,skill);return json(skill,201);
+      }
+      const skill=skills.get(id);if(!skill)return json({error:'ARC_SKILL_NOT_FOUND'},404);
+      if(method==='DELETE'){if(skill.origin==='imported')skills.delete(id);return json({deleted:skill.origin==='imported'});}
+      if(method==='GET')return json(skill);return json({error:'method_not_allowed'},405);
+    }
     const match=path.match(/^\/api\/arc\/sessions(?:\/([\w-]+)(?:\/(messages|cancel))?)?$/);
     if(!match)return null;
     let input:Record<string,unknown>={};

@@ -98,12 +98,12 @@
 :root[data-theme] .workspacePickerMenuPortal button{border-radius:7px;transform:none;min-height:61px}
 :root[data-theme] .workspacePickerMenuPortal button.selected{background:var(--picker-subtle);border-color:transparent}
 :root[data-theme] .workspacePickerMenuPortal .workspaceOptionIcon.agent{background:var(--picker-subtle);border:1px solid var(--picker-line);color:var(--picker-text)}
-:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .dashboardMain{height:100dvh;padding:0!important;display:flex;flex-direction:column;overflow:hidden}
-:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .previewModeBanner{flex:none;max-width:none;margin:12px 24px 0;min-height:27px}
-:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .dashboardFooter{display:none}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .dashboardMain{height:100dvh;padding:0!important;display:flex;flex-direction:column;overflow:hidden}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .previewModeBanner{flex:none;max-width:none;margin:12px 24px 0;min-height:27px}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .dashboardFooter{display:none}
 :root[data-theme] .appFrame[data-workspace] .arcSidebarPortalRoot{display:flex;flex-direction:column;flex:1;min-height:0}
-:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .sidebar{overflow:hidden}
-:root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .sidebarGlobalNavigation{margin-top:0}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .sidebar{overflow:hidden}
+:root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .sidebarGlobalNavigation{margin-top:0}
 :root[data-theme] .appFrame[data-workspace] .mobileBottomNav{border-color:var(--dash-line);background:var(--dash-sidebar);grid-template-columns:repeat(5,minmax(0,1fr))}
 :root[data-theme] .appFrame[data-workspace] .mobileBottomNav button.active{background:var(--dash-accent-soft);color:var(--dash-text)}
 :root[data-theme] .appFrame[data-workspace] .mobileTopbar .themeSwitch{background:var(--dash-subtle)!important;color:var(--dash-muted)!important}
@@ -119,11 +119,11 @@
  :root[data-theme] .appFrame[data-workspace] .mobilePicker .workspacePickerCopy small{display:none}
  :root[data-theme] .appFrame[data-workspace] .mobilePicker .workspacePickerEmblem{width:23px;height:23px;flex-basis:23px}
  :root[data-theme] .appFrame[data-workspace] .overviewStatusCard{min-height:132px;padding:16px}
- :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .dashboardMain{padding:0!important}
- :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .mobileTopbar{order:0;min-height:52px;margin:0;padding:8px 14px;border-bottom:1px solid var(--dash-line)}
- :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .previewModeBanner{order:1;margin:8px 14px 0;padding:5px 8px}
- :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .arcChatShell{order:2}
- :root[data-theme] .appFrame[data-workspace]:has(.arcChatShell) .mobileBottomNav{display:none!important}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .dashboardMain{padding:0!important}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .mobileTopbar{order:0;min-height:52px;margin:0;padding:8px 14px;border-bottom:1px solid var(--dash-line)}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .previewModeBanner{order:1;margin:8px 14px 0;padding:5px 8px}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .arcChatShell{order:2}
+ :root[data-theme] .appFrame[data-workspace]:has(.arcChatMount:not([hidden])) .mobileBottomNav{display:none!important}
  :root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar,.pageHeader,.securityTopbar) h1{font-size:26px!important}
  :root[data-theme] .appFrame[data-workspace] .overviewActions{gap:8px}
  :root[data-theme] .appFrame[data-workspace] .overviewActions .addButton{font-size:13px;padding:9px 11px}

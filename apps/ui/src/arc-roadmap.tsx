@@ -6,11 +6,11 @@ import "./arc-roadmap.css";
 const requestAccess = "/early-access?source=roadmap";
 
 const phases = [
-  {id:"00",name:"Connect",zhName:"Connect",status:"available",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",subtitle:"YOUR AI / YOUR TOOLS",zhSubtitle:"你的 AI，你的工具",description:"Use your preferred AI chat with connected apps and your own computers. Manage account access and device permissions in one workspace.",zhDescription:"在熟悉的 AI 对话中使用已连接的应用与自己的电脑，在同一个工作空间管理账号访问与设备权限。",bullets:["Compatible MCP chats","Windows, Mac and Linux","Apps and account connections"],zhBullets:["兼容 MCP 的 AI 对话","Windows、Mac 与 Linux","应用与账号连接"],state:"live"},
-  {id:"01",name:"Arc",zhName:"Arc",status:"building",enStatus:"COMING SOON",zhStatus:"即将推出",subtitle:"YOUR PERSONAL AGENT",zhSubtitle:"你的个人 AI 队友",description:"Give Arc a goal in your own words. Your personal agent will bring apps, computers and ongoing work into one conversation, with no model API key to set up.",zhDescription:"用自然语言告诉 Arc 你的目标，让个人 AI 队友把应用、电脑与持续工作汇聚到一次对话中，无需配置模型 API Key。",bullets:["One conversation for your work","Apps and computer tools","Saved conversations and results"],zhBullets:["用一次对话推进工作","调用应用与电脑工具","保存对话与执行结果"],state:"active"},
-  {id:"02",name:"Tasks & Routines",zhName:"任务与例行工作",status:"building",enStatus:"COMING SOON",zhStatus:"即将推出",subtitle:"LESS REPEATING YOURSELF",zhSubtitle:"让重复工作少一点",description:"Ask for a one-off task or describe work you want repeated. Follow its progress and pick up from the saved state when it needs your attention.",zhDescription:"说出一次性任务，或描述想定期完成的工作。跟踪进度，在需要关注时从保存的状态继续。",bullets:["Create work through conversation","Set schedules in your own words","Follow progress and results"],zhBullets:["通过对话创建工作","用自然语言说明时间安排","查看进度与结果"],state:"active"},
-  {id:"03",name:"Shared work",zhName:"协作空间",status:"planned",enStatus:"EXPLORING",zhStatus:"探索中",subtitle:"WORK BETTER TOGETHER",zhSubtitle:"与团队一起推进",description:"Bring shared work and the people responsible for it closer together, with clear access and a shared view of progress.",zhDescription:"让协作工作与负责的人联系得更紧密，明确访问范围，共同查看工作进展。",bullets:["Shared work context","Clear account access","Team progress"],zhBullets:["共享工作上下文","清晰的账号访问范围","团队工作进展"],state:"planned"},
-  {id:"04",name:"Skills",zhName:"技能",status:"exploring",enStatus:"EXPLORING",zhStatus:"探索中",subtitle:"YOUR WAY OF WORKING",zhSubtitle:"按你的方式工作",description:"Save useful ways of working so your agent can repeat them with the right context and tools.",zhDescription:"保存有用的工作方法，让 AI 队友结合合适的上下文与工具重复使用。",bullets:["Reusable instructions","Your preferred tools","Repeatable work"],zhBullets:["可复用的指令","你偏好的工具","可以重复完成的工作"],state:"planned"}
+ {id:"00",name:"Connected foundation",zhName:"连接基础设施",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",subtitle:"AN OPEN BRIDGE TO THE REAL WORLD",zhSubtitle:"连接 AI 与真实世界",description:"Give AI a common way to reach apps, computers and the work already happening across them. Connect is our starting point: an open connection layer that stays under your control.",zhDescription:"让 AI 通过统一的连接层触达应用、电脑与正在发生的工作。以 Connect 为起点，构建由用户掌控、面向开放生态的连接基础设施。",bullets:["Apps, computers and AI clients","Interoperable connections","User-owned access and control"],zhBullets:["连接应用、电脑与 AI 客户端","开放互通的连接能力","由用户掌控访问与权限"],state:"live"},
+ {id:"01",name:"A personal agent",zhName:"通用个人智能体",enStatus:"BUILDING",zhStatus:"正在构建",subtitle:"FROM REQUEST TO REAL OUTCOME",zhSubtitle:"从理解意图，到交付结果",description:"Build an agent that understands what you want, coordinates tools across your digital world and follows work through to a result you can inspect. Arc is the next step toward that ambition.",zhDescription:"构建理解意图、协调数字世界中的工具，并持续推进到可核验结果的个人智能体。Arc 是走向这一目标的下一步。",bullets:["Natural-language delegation","Work across apps and devices","Continuity, evidence and recovery"],zhBullets:["用自然语言交代工作","跨应用与设备协同","持续执行、核验与恢复"],state:"active"},
+ {id:"02",name:"Agents for every industry",zhName:"垂类 SaaS Agent",enStatus:"LONG-TERM EXPLORATION",zhStatus:"长期探索",subtitle:"A FOUNDATION FOR SPECIALIZED WORK",zhSubtitle:"为专业场景提供智能体能力",description:"Explore the infrastructure businesses need to build agents for their own industries: domain knowledge, connected tools and dependable execution. Help teams turn specialized expertise into services people can use.",zhDescription:"探索为企业提供构建垂类 SaaS Agent 所需的基础能力，将行业知识、应用连接与可靠执行结合，让专业经验成为可交付的服务。",bullets:["Domain-specific knowledge and workflows","Reusable agent infrastructure","Business-owned context and controls"],zhBullets:["行业知识与专业工作流程","可复用的智能体基础设施","企业掌控上下文与权限"],state:"planned"},
+ {id:"03",name:"Your device steward",zhName:"智能设备 AI 管家",enStatus:"LONG-TERM EXPLORATION",zhStatus:"长期探索",subtitle:"ONE AGENT, BEYOND THE SCREEN",zhSubtitle:"从电脑，走向更多智能设备",description:"Explore a general agent that helps coordinate personal computers and, over time, compatible smart devices. Understand their state, look after ongoing work and act within boundaries set by the people who own them.",zhDescription:"探索能够协调个人电脑，并逐步触达兼容智能设备的通用 Agent。理解设备状态、照看持续工作，始终在设备主人设定的范围内行动。",bullets:["Awareness across personal devices","Help with everyday digital operations","Owner-defined boundaries"],zhBullets:["跨个人设备的状态感知","照看日常数字事务","由设备主人定义行动边界"],state:"planned"},
+ {id:"04",name:"An agent infrastructure layer",zhName:"下一代 AI 基础设施",enStatus:"OUR NORTH STAR",zhStatus:"长期愿景",subtitle:"A COMMON FOUNDATION FOR AGENTS THAT ACT",zhSubtitle:"让智能体拥有可靠的行动基础",description:"Our long-term ambition is an open infrastructure layer for agents that act in the real world. Bring connections, context and execution together so personal agents, industry services and device intelligence can grow on a shared foundation.",zhDescription:"我们的长期目标，是成为面向真实世界行动的下一代 AI 基础设施。汇聚连接、上下文与执行能力，让个人智能体、行业服务与设备智能建立在共同基础之上。",bullets:["Open ecosystem and interoperability","Personal and industry agents","Reliable execution in the real world"],zhBullets:["开放生态与互操作","个人与行业智能体","面向真实世界的可靠执行"],state:"planned"}
 ] as const;
 
 export function ArcRoadmapPageContent() {
@@ -23,11 +23,11 @@ export function ArcRoadmapPageContent() {
       <img className="arcTimelineLogo" src="/remote-arc.svg" alt="" width="56" height="56" />
       <div className="arcTimelineEyebrow">REMOTE ARC / {tr("WHAT WE'RE BUILDING", "我们的开发方向")}</div>
       <h1>{tr("What's next for Remote Arc.", "Remote Arc，下一步。")}</h1>
-      <p>{tr("More ways to connect your tools, delegate work and make room for what matters.", "连接更多工具，交给 AI 更多工作，为重要的事留出时间。")}</p>
+      <p>{tr("From connecting your tools to a shared foundation for agents that act.", "从连接工具出发，走向让智能体可靠行动的共同基础。")}</p>
     </header>
 
-    <section className="arcTimelineMain" aria-label={tr("Explore our five development stages", "查看五个开发阶段")}>
-      <div className="arcTimelineTop"><span>{tr("PRODUCT EVOLUTION", "产品进化")}</span><span>{tr("SELECT A PHASE TO EXPLORE", "点击阶段查看详情")} <span aria-hidden="true">→</span></span></div>
+    <section className="arcTimelineMain" aria-label={tr("Explore our product direction", "查看我们的产品方向")}>
+      <div className="arcTimelineTop"><span>{tr("OUR DIRECTION", "发展方向")}</span><span>{tr("EXPLORE THE VISION", "点击查看愿景")} <span aria-hidden="true">→</span></span></div>
       <div className="arcTimelineTabs" role="tablist" aria-label={tr("Remote Arc roadmap phases", "Remote Arc 路线图阶段")}>
         {phases.map((phase,index)=><button
           key={phase.id}
@@ -56,7 +56,7 @@ export function ArcRoadmapPageContent() {
 
       <article className="arcTimelinePanel" id="arc-timeline-panel" role="tabpanel" aria-labelledby={"arc-timeline-tab-"+selected.id}>
         <div className="arcTimelinePanelGlow" aria-hidden="true" />
-        <div className="arcTimelinePanelMeta"><span>{tr("PHASE", "阶段")} / {selected.id}</span><span className={"arcTimelinePanelState arcTimelinePanelState--"+selected.state}>{isZh?selected.zhStatus:selected.enStatus}</span></div>
+        <div className="arcTimelinePanelMeta"><span>{tr("DIRECTION", "方向")} / {selected.id}</span><span className={"arcTimelinePanelState arcTimelinePanelState--"+selected.state}>{isZh?selected.zhStatus:selected.enStatus}</span></div>
         <h2>{isZh?selected.zhName:selected.name}</h2>
         <p className="arcTimelinePanelSub">{isZh?selected.zhSubtitle:selected.subtitle}</p>
         <p className="arcTimelinePanelDesc">{isZh?selected.zhDescription:selected.description}</p>
@@ -64,8 +64,8 @@ export function ArcRoadmapPageContent() {
           {(isZh?selected.zhBullets:selected.bullets).map((item,index)=><span key={item}><i aria-hidden="true">{index+1}</i>{item}</span>)}
         </div>
         <div className="arcTimelinePanelBottom">
-          <span>{tr("Planned features may change as we learn from your feedback.", "规划中的功能会根据你的反馈持续调整。")}</span>
-          <a href={active===0?"/connect-ai":localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
+          <span>{tr("Long-term directions are exploratory, without a committed release date.", "长期方向仍在探索中，不代表已承诺的功能或上线日期。")}</span>
+          <a href={active===0?localizedWebsiteHref("/connect-ai",locale):localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
         </div>
       </article>
     </section>

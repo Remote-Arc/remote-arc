@@ -1,3 +1,4 @@
+import {handleUserFollowups,type FollowupEnv} from './user-followups.js';
 import { getSessionUser } from "./auth.js";
 import {handleArcAdminBilling} from './arc-admin-billing.js';
 import { handleAdminBilling, handleAdminCallCredits, handleAdminOperations, type OpsEnv } from "./admin-operations.js";
@@ -5,7 +6,7 @@ import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.
 import { listWebsiteSubmissions, updateWebsiteSubmission, type EngagementEnv } from "./domains/engagement.js";
 import { handleMonitorState, type MonitorEnv } from "./monitor.js";
 
-export type AdminServiceEnv = OpsEnv & EngagementEnv & MonitorEnv & { ADMIN_ORIGIN?: string; ADMIN_SERVICE_MODE?: string; ADMIN_UI?: { fetch(request: Request): Promise<Response> } };
+export type AdminServiceEnv = OpsEnv & EngagementEnv & MonitorEnv & FollowupEnv & { ADMIN_ORIGIN?: string; ADMIN_SERVICE_MODE?: string; ADMIN_UI?: { fetch(request: Request): Promise<Response> } };
 export const ADMIN_CONTRACT_VERSION = "1";
 const methods: Record<string, readonly string[]> = {
   "/api/me": ["GET"], "/api/monitor": ["GET"],
@@ -16,6 +17,10 @@ const methods: Record<string, readonly string[]> = {
 };
 
 export function adminApiMethods(path: string): readonly string[] | null {
+  if(path==='/api/admin/followups')return ['GET'];
+  if(path==='/api/admin/followups/drafts')return ['POST'];
+  if(/^\/api\/admin\/followups\/[^/]+\/send$/.test(path))return ['POST'];
+  if(/^\/api\/admin\/followups\/[^/]+$/.test(path))return ['GET','PATCH'];
   if (Object.hasOwn(methods, path)) return methods[path]!;
   if (/^\/api\/admin\/plan-grants\/[a-zA-Z0-9-]+\/revoke$/.test(path)) return ["POST"];
   if (/^\/api\/admin\/submissions\/[a-zA-Z0-9-]+$/.test(path)) return ["PATCH", "DELETE"];
@@ -49,6 +54,7 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
   if (!user) return failure("unauthorized", 401);
   if (!user.isAdmin) return failure("forbidden", 403);
 
+  if(url.pathname.startsWith('/api/admin/followups'))return finish(await handleUserFollowups(request,env));
   let response: Response;
   switch (url.pathname) {
     case "/api/me": response = Response.json({ authenticated: true, user }); break;

@@ -45,7 +45,7 @@
 :root[data-theme] .appFrame[data-workspace] .sidebarAccount :is(img,.avatarFallback){width:30px;height:30px;border-radius:8px;background:var(--dash-accent-soft);color:var(--dash-text);border:1px solid var(--dash-line);font-size:13px}
 :root[data-theme] .appFrame[data-workspace] .sidebarAccount button{min-width:28px;min-height:32px;font-size:17px;color:var(--dash-muted);background:transparent}
 :root[data-theme] .appFrame[data-workspace] .dashboardMain{width:calc(100% - var(--sidebar-width))!important;max-width:none!important;margin:0 0 0 var(--sidebar-width)!important;padding:30px clamp(24px,3.4vw,60px) 24px!important;min-width:0;background:var(--dash-canvas)}
-:root[data-theme] .appFrame[data-workspace] .dashboardMain>:not(.mobileTopbar):not(.arcChatShell){max-width:1420px;margin-left:auto;margin-right:auto}
+:root[data-theme] .appFrame[data-workspace] .dashboardMain>:not(.mobileTopbar):not(.arcChatShell):not(.arcChatMount){max-width:1420px;margin-left:auto;margin-right:auto}
 :root[data-theme] .appFrame[data-workspace] .previewModeBanner{min-height:29px;padding:6px 10px;margin-bottom:24px;color:var(--dash-muted);background:var(--dash-subtle);border:1px solid var(--dash-line);border-radius:6px;font-size:12px;gap:9px}
 :root[data-theme] .appFrame[data-workspace] .previewModeBanner strong{font-size:11px;font-weight:600;color:var(--dash-text);letter-spacing:.055em}
 :root[data-theme] .appFrame[data-workspace] :is(.eyebrow,.arcEyebrow){color:var(--dash-muted);font-size:12px;letter-spacing:.09em;font-weight:600}

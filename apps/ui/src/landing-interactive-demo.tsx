@@ -1,6 +1,7 @@
 import { findAppWorkflow, translateCopy } from "./app-workflow-examples.js";
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
+import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./landing-interactive-demo.css";
 
 type DemoScenario = {
@@ -22,22 +23,13 @@ type DemoEvent = {
 
 type DemoClient = "ChatGPT" | "Claude" | "Cursor";
 
-const scenarioBrands: Record<string, string[]> = {
-  code: ["/remote-arc-app-icon.svg"],
-  release: ["/app-brands/github.svg", "/app-brands/vercel.svg"],
-  video: ["/app-brands/runway.svg"],
-  knowledge: ["/app-brands/googledrive.svg", "/app-brands/notion.svg"],
-  slides: ["/remote-arc-app-icon.svg"],
-  excel: ["/remote-arc-app-icon.svg"],
-};
-
 const clientLogo: Record<DemoClient, string> = {
   ChatGPT: "/demo-brands/chatgpt.svg",
   Claude: "/demo-brands/claude.svg",
   Cursor: "/demo-brands/cursor.svg",
 };
 
-type DemoGlyphName = "menu" | "new" | "share" | "dots" | "plus" | "mic" | "send" | "chevron" | "terminal" | "check" | "sidebar" | "paperclip" | "sparkle" | "search";
+type DemoGlyphName = "menu" | "new" | "share" | "dots" | "plus" | "mic" | "send" | "chevron" | "terminal" | "check" | "sidebar" | "paperclip" | "sparkle" | "search" | "code" | "slides" | "table";
 
 function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) {
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -55,7 +47,16 @@ function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) 
     {name === "paperclip" && <path d="m20 11-8 8a5 5 0 0 1-7-7l9-9a3 3 0 0 1 4 4l-9 9a1 1 0 0 1-2-2l8-8" />}
     {name === "sparkle" && <><path d="m12 3 1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8L12 3Z" /><path d="m19 18 .5 1.5L21 20l-1.5.5L19 22l-.5-1.5L17 20l1.5-.5L19 18Z" /></>}
     {name === "search" && <><circle cx="10" cy="10" r="6" /><path d="m14.5 14.5 6 6" /></>}
+    {name === "code" && <><path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-14-2 18" /></>}
+    {name === "slides" && <><path d="M3 3h18M4 3v13h16V3M12 16v5m-4 0 4-3 4 3" /><path d="m8 11 3-3 3 2 2-3" /></>}
+    {name === "table" && <><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 9h18M3 15h18M9 3v18" /></>}
   </svg>;
+}
+
+function ScenarioIcon({ id }: { id: string }) {
+  const workflow = findAppWorkflow(id);
+  if (workflow) return <span className="homeDemoExampleLogos" aria-hidden="true">{workflow.brands.slice(0, 2).map(brand => <img src={"/app-brands/" + brand.brand + ".svg"} key={brand.brand} alt="" />)}</span>;
+  return <span className="homeDemoScenarioGlyph" aria-hidden="true"><DemoGlyph name={id === "slides" ? "slides" : id === "excel" ? "table" : "code"} size={18} /></span>;
 }
 
 function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEvent[] {
@@ -67,14 +68,14 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         { tool: "list_apps", arguments: "{}", output: tr("Gmail / Outlook · connected email accounts", "Gmail / Outlook · 已连接的邮箱"), duration: "25ms" },
         { tool: "call_app · Gmail", arguments: '{"operation":"messages.list","arguments":{"query":"is:unread subject:launch","limit":10}}', output: tr("3 matching threads · selected launch discussion", "3 个相关讨论 · 选中发布邮件"), duration: "129ms" },
         { tool: "call_app · Gmail", arguments: '{"operation":"messages.get","arguments":{"id":"example-thread-message"}}', output: tr("Original message and participants read", "已读取原邮件与参与者"), duration: "93ms" },
-        { tool: "call_app · Gmail", arguments: '{"operation":"drafts.create","arguments":{"to":["team@example.com"],"subject":"Re: Launch","body":"Thanks — here is the update…"}}', output: tr("status: pending_approval · reply prepared for review", "状态：等待审批 · 回复内容已准备好"), duration: "21ms" },
+        { tool: "call_app · Gmail", arguments: '{"operation":"drafts.create","arguments":{"to":["team@example.com"],"subject":"Re: Launch","body":"Thanks — here is the update…"}}', output: tr("Reply draft created · message not sent", "回复草稿已创建 · 未发送邮件"), duration: "21ms" },
       ];
     case "calendar":
       return [
         { tool: "list_apps", arguments: "{}", output: tr("Google Calendar + Outlook Calendar · read access", "Google Calendar + Outlook Calendar · 读取权限"), duration: "26ms" },
         { tool: "call_app · Google Calendar", arguments: '{"operation":"events.list","arguments":{"calendar":"primary","limit":30}}', output: tr("Tomorrow’s events read · 10:00–10:30 is open", "已读取明日安排 · 10:00–10:30 空闲"), duration: "118ms" },
         { tool: "call_app · Outlook Calendar", arguments: '{"operation":"events.list","arguments":{"calendar":"primary","limit":30}}', output: tr("Second calendar checked · no overlapping event", "已核对第二个日历 · 没有冲突"), duration: "104ms" },
-        { tool: "call_app · Google Calendar", arguments: '{"operation":"events.create","arguments":{"calendar":"primary","event":{"summary":"Project review","start":"2026-10-18T10:00:00+13:00","end":"2026-10-18T10:30:00+13:00"}}}', output: tr("status: pending_approval · invitation not sent", "状态：等待审批 · 尚未发送邀请"), duration: "23ms" },
+        { tool: "call_app · Google Calendar", arguments: '{"operation":"events.create","arguments":{"calendar":"primary","event":{"summary":"Project review","start":"2026-10-20T10:00:00+13:00","end":"2026-10-20T10:30:00+13:00"}}}', output: tr("Project review event created · 10:00–10:30", "项目评审会议已创建 · 10:00–10:30"), duration: "23ms" },
       ];
     case "job":
       return [
@@ -127,14 +128,14 @@ function progressFor(id: string, tr: (en: string, zh: string) => string): DemoPr
         { working: tr("Checking your connected email accounts…", "正在检查已连接的邮箱…"), done: tr("Your Gmail and Outlook connections are available.", "Gmail 与 Outlook 连接已就绪。") },
         { working: tr("Finding the launch conversation…", "正在查找发布讨论邮件…"), done: tr("Found the thread that needs your response.", "已找到需要回复的邮件。") },
         { working: tr("Reading the original message for context…", "正在读取原邮件上下文…"), done: tr("Reply grounded in the original conversation.", "回复依据原始邮件内容拟定。") },
-        { working: tr("Preparing the draft for your review…", "正在准备回复草稿，等待你审核…"), done: tr("Reply prepared. Approval is required to create the draft.", "回复已拟好，确认后才会创建草稿。") },
+        { working: tr("Saving the reply as a draft…", "正在保存回复草稿…"), done: tr("Reply draft saved to your mailbox.", "回复草稿已保存到邮箱。") },
       ];
     case "calendar":
       return [
         { working: tr("Checking both calendar connections…", "正在检查两种日历连接…"), done: tr("Google Calendar and Outlook Calendar are connected.", "Google Calendar 与 Outlook Calendar 已连接。") },
         { working: tr("Reading your Google Calendar…", "正在读取 Google Calendar…"), done: tr("Found a 30-minute opening in your Google calendar.", "已在 Google 日历中找到 30 分钟空档。") },
         { working: tr("Cross-checking your Outlook Calendar…", "正在交叉核对 Outlook Calendar…"), done: tr("The proposed time is clear in both calendars.", "建议时间在两种日历中都没有冲突。") },
-        { working: tr("Preparing the invitation for your approval…", "正在准备会议邀请，等待你确认…"), done: tr("Invitation prepared. No event or invitation has been sent.", "邀请已准备好，尚未创建会议或发出邀请。") },
+        { working: tr("Creating the project review event…", "正在创建项目评审会议…"), done: tr("Meeting created in the available time slot.", "已在空闲时段创建会议。") },
       ];
     case "job":
       return [
@@ -177,7 +178,7 @@ function progressFor(id: string, tr: (en: string, zh: string) => string): DemoPr
 }
 
 export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoScenario[] }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const [selected, setSelected] = useState(0);
   const [step, setStep] = useState(-1);
   const [client, setClient] = useState<DemoClient>("ChatGPT");
@@ -197,6 +198,14 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   }, [step, selected, finished]);
 
   useEffect(() => {
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const showResult = () => { if (motion.matches) setStep(events.length * 2 + 1); };
+    showResult();
+    motion.addEventListener("change", showResult);
+    return () => motion.removeEventListener("change", showResult);
+  }, [events.length]);
+
+  useEffect(() => {
     const container = demoRef.current;
     if (!container || !("IntersectionObserver" in window)) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -214,12 +223,12 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
     if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
   }, [step, selected]);
 
-  // Keep the prepared preview visible inside the mock chat when it completes.
+  // Reveal the sample result without moving the surrounding page.
   useEffect(() => {
     if (finished && scenario?.id === "video" && chatBodyRef.current) {
       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
     }
-  }, [finished, scenario?.id]);
+  }, [finished, scenario?.id, client]);
 
   if (!scenario) return null;
 
@@ -240,28 +249,32 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
 
   const pickScenario = (index: number) => {
     setSelected(index);
-    setStep(0);
+    setStep(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? eventsFor(scenarios[index]?.id ?? "code", tr).length * 2 + 1 : 0);
+    if (chatBodyRef.current) chatBodyRef.current.scrollTop = 0;
+    if (terminalRef.current) terminalRef.current.scrollTop = 0;
   };
 
   const progress = progressFor(scenario.id, tr);
   const progressIndex = Math.min(progress.length - 1, Math.max(0, Math.floor(step / 2)));
   const progressTitle = finished
-    ? isAppScenario ? tr("Ready for your approval", "等待你的确认") : tr("Finished working on your request", "已完成本次任务")
+    ? tr("Finished working on your request", "已完成本次任务")
     : step < 1
       ? tr("Thinking through the next steps…", "正在规划执行步骤…")
       : step >= progress.length * 2
         ? tr("Preparing the result…", "正在整理执行结果…")
         : progress[progressIndex]?.working ?? tr("Working on your request…", "正在执行任务…");
   const prompt = scenario.request.replace(/^“|”$/g, "");
+  const workflow = findAppWorkflow(scenario.id);
+  const workflowHref = workflow ? "/integrations?provider=" + workflow.connectionProvider : "/use-cases/" + scenario.link;
 
   return (
-    <div className="homeDemo" ref={demoRef} data-scenario={scenario.id} data-state={finished ? isAppScenario ? "awaiting_approval" : "complete" : active ? "working" : "ready"}>
+    <div className="homeDemo" ref={demoRef} data-scenario={scenario.id} data-state={finished ? "complete" : active ? "working" : "ready"}>
       <div className="homeDemoToolbar">
         <div className="homeDemoExamples" aria-label={tr("Try an example request", "选择示例任务")}>
           {scenarios.map((example, index) => (
             <button key={example.id} type="button" className={index === selected ? "active" : ""}
               aria-pressed={index === selected} onClick={() => pickScenario(index)}>
-              <span className="homeDemoExampleLogos" aria-hidden="true">{(scenarioBrands[example.id] ?? ["/remote-arc-app-icon.svg"]).map(src => <img src={src} key={src} alt="" loading="lazy" />)}</span>
+              <ScenarioIcon id={example.id} />
               <span>{example.label}</span>
             </button>
           ))}
@@ -307,11 +320,11 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 {client === "Claude" && <img className="homeDemoAssistantLogo" src={clientLogo.Claude} alt="" />}
                 {client === "Cursor" && <div className="homeDemoCursorAgent"><DemoGlyph name="sparkle" size={15} /><strong>Agent</strong><span>· Auto</span></div>}
                 {client !== "Cursor" && <p className="homeDemoAssistantIntro">
-                  {isAppScenario ? tr("I’ll check your connected Apps and prepare this for your review.", "我会检查已连接的应用，准备好后交给你审核。") : tr("I'll use Remote Arc to check this on your computer.", "我会通过 Remote Arc 在你的电脑上检查并处理。")}
+                  {isAppScenario ? tr("I’ll use your connected Apps to carry this out and check the result.", "我会通过你已连接的应用执行任务，并检查结果。") : tr("I'll use Remote Arc to check this on your computer.", "我会通过 Remote Arc 在你的电脑上检查并处理。")}
                 </p>}
                 <div className="homeDemoActivity" aria-live="polite" aria-atomic="false">
                   <header className="homeDemoActivityHeader">
-                    <img src="/remote-arc-app-icon.svg" alt="" className="homeDemoActivityLogo" />
+                    <span className="homeDemoActivityIcon"><ScenarioIcon id={scenario.id} /></span>
                     <div className="homeDemoActivityHeading">
                       <span>Remote Arc</span>
                       <strong>{progressTitle}</strong>
@@ -335,7 +348,6 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                   {scenario.id === "video" && <div className="homeDemoRunwayCard">
                     <a className="homeDemoRunwayVisual" href="https://runwayml.com" target="_blank" rel="noopener noreferrer" aria-label={tr("Open Runway (illustrative preview only; no real generation)","打开 Runway（仅模拟预览，未真实生成视频）")}>
                       <span className="homeDemoRunwayObject" aria-hidden="true" />
-                      <span className="homeDemoRunwayPlay" aria-hidden="true">▶</span>
                       <small>{tr("ILLUSTRATIVE PREVIEW","模拟预览")}</small>
                       <span className="homeDemoRunwayDuration">0:05</span>
                     </a>
@@ -399,7 +411,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
             <div className="homeDemoTerminalInfo">✓ {tr("Secure MCP connection ready", "安全 MCP 连接已就绪")}</div>
             {step < 0 && <p className="homeDemoTerminalWaiting">{tr("Waiting for a request from your chat…", "等待来自 AI 对话的请求…")}</p>}
             {step >= 0 && (
-              <div className="homeDemoTraceLine"><span className="homeDemoTraceTime">00:00</span><span className="homeDemoTraceEvent">request</span><code>{isAppScenario ? tr("App scopes checked · writes require your approval", "已核对应用权限 · 写操作须由你确认") : tr("Device policy checked · approved tools", "已检查设备策略 · 已授权工具")}</code></div>
+              <div className="homeDemoTraceLine"><span className="homeDemoTraceTime">00:00</span><span className="homeDemoTraceEvent">request</span><code>{isAppScenario ? tr("Connected account scopes checked · executing your request", "已核对账号授权范围 · 开始执行你的请求") : tr("Device policy checked · approved tools", "已检查设备策略 · 已授权工具")}</code></div>
             )}
             {events.map((event, index) => {
               const showCall = step >= index * 2 + 1;
@@ -407,22 +419,22 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               return showCall ? <React.Fragment key={event.tool + index}>
                 <div className="homeDemoTraceLine"><span className="homeDemoTraceTime">{`00:${String(index * 2 + 1).padStart(2, "0")}`}</span><span className="homeDemoTraceEvent">tool.call</span><code>{event.tool}</code></div>
                 <div className="homeDemoTraceArgs"><code>{event.arguments}</code></div>
-                {showResult && <div className={"homeDemoTraceLine homeDemoTraceResult" + (event.output.includes("pending_approval") || event.output.includes("等待审批") ? " homeDemoTraceResult--approval" : "")}><span className="homeDemoTraceTime">{`00:${String(index * 2 + 2).padStart(2, "0")}`}</span><span className="homeDemoTraceSuccess">tool.done</span><code>{event.output} <small>· {event.duration}</small></code></div>}
+                {showResult && <div className="homeDemoTraceLine homeDemoTraceResult"><span className="homeDemoTraceTime">{`00:${String(index * 2 + 2).padStart(2, "0")}`}</span><span className="homeDemoTraceSuccess">tool.done</span><code>{event.output} <small>· {event.duration}</small></code></div>}
               </React.Fragment> : null;
             })}
-            {finished && <div className={"homeDemoTerminalFinished" + (isAppScenario ? " homeDemoTerminalFinished--approval" : "")}>{isAppScenario ? "◇ " : "✓ "}{isAppScenario ? tr("Prepared for review · waiting for your approval", "内容已准备好 · 等待你的确认") : tr("Execution complete · response delivered", "执行完成 · 已返回结果")}</div>}
+            {finished && <div className="homeDemoTerminalFinished">✓ {tr("Execution complete · response delivered", "执行完成 · 已返回结果")}</div>}
             {active && <span className="homeDemoTerminalCursor" aria-hidden="true">▌</span>}
           </div>
           <footer className="homeDemoTerminalFooter">
             <span>{tr("Permission", "所需权限")}: {scenario.permission}</span>
-            <span>{finished ? isAppScenario ? tr("Awaiting approval", "等待审批") : tr("Complete", "已完成") : active ? tr("Executing", "执行中") : tr("Ready", "就绪")}</span>
+            <span>{finished ? tr("Complete", "已完成") : active ? tr("Executing", "执行中") : tr("Ready", "就绪")}</span>
           </footer>
         </section>
       </div>
 
       <div className="homeDemoUnder">
         <p>{isAppScenario ? tr("Interactive simulation with example accounts. Apps require provider setup and user authorization; this preview performs no live actions or paid generation.", "使用示例账号的交互模拟。Apps 需要平台配置与用户授权；本预览不会操作真实账户或付费生成。") : tr("Guided simulation with example data. No real device is connected and no commands are executed.", "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。")}</p>
-        <a href={"/use-cases/" + scenario.link}>{tr("Explore this workflow", "了解这类工作流程")} ↗</a>
+        <a href={localizedWebsiteHref(workflowHref, locale)}>{tr("Explore this workflow", "了解这类工作流程")} ↗</a>
       </div>
     </div>
   );

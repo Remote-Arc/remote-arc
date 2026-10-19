@@ -11,11 +11,12 @@ import {getSessionUser} from '../src/auth.js';
 import {getMonthlyUsage} from '../src/usage.js';
 import {handlePairingApprove} from '../src/device.js';
 import {handleArcAdminBilling} from '../src/arc-admin-billing.js';
+import {activateArcTrial} from '../src/arc-trial.js';
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const name of fs.readdirSync(new URL('../migrations/',import.meta.url)).filter(n=>n.endsWith('.sql')).sort())sql.exec(fs.readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));
 const db={prepare(query:string){const stmt=sql.prepare(query);const bound=(args:any[])=>({async first(){return stmt.get(...args)||null;},async all(){return{results:stmt.all(...args)};},async run(){return this.runSync();},runSync(){const r=stmt.run(...args);return{success:true,meta:{changes:Number(r.changes)}};}});return{...bound([]),bind(...args:any[]){assert(!args.includes(undefined),query);return bound(args);}};},async batch(items:Array<{runSync:()=>unknown}>){sql.exec('BEGIN IMMEDIATE');try{const r=items.map(s=>s.runSync());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}}} as unknown as D1Database;
 const stamp=new Date().toISOString(),start=Math.floor(Date.now()/1000)-60,end=start+30*86400;
-for(const user of ['one','two'])sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(user,user,user+'@example.invalid',stamp);
+for(const user of ['one','two','trial'])sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(user,user,user+'@example.invalid',stamp);
 sql.prepare('INSERT INTO arc_billing_customers VALUES(?,?,?)').run('one','cus_fixture',stamp);
 sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex('fixture-session'),'one',new Date(Date.now()+3600000).toISOString(),stamp);
 const env:BillingEnv={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',DASHBOARD_ORIGIN:'https://agent.remotearc.app',ARC_BILLING_ENABLED:'1',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_BILLING_ALLOW_TEST_MODE:'1',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_WEBHOOK_SECRET:'whsec_fixture'};
@@ -53,6 +54,13 @@ globalThis.fetch=async(input,init)=>{const u=new URL(String(input));assert.equal
 const event=(eventId:string,type='invoice.paid',object='in_fixture')=>({id:'evt_'+eventId,type,livemode:false,data:{object:{id:object}}});
 const action=(route:string,productId:string)=>handleBilling(new Request('https://agent.remotearc.app/api/billing/'+route,{method:'POST',headers:{origin:'https://agent.remotearc.app',cookie:'rl_session=fixture-session','content-type':'application/json'},body:JSON.stringify({productId})}),env);
 try{
+ sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex('trial-session'),'trial',new Date(Date.now()+3600000).toISOString(),stamp);
+ await activateArcTrial(env,'trial');
+ const trialRequest=()=>new Request('https://agent.remotearc.app/api/billing',{headers:{cookie:'rl_session=trial-session'}});
+ const trialResponse=await handleBilling(trialRequest(),env);assert.equal(trialResponse.status,200);
+ const trialBilling=await trialResponse.json() as any;assert.equal(trialBilling.plan.id,'free');assert.equal(trialBilling.access.status,'active');assert.equal(trialBilling.access.daysRemaining,14);assert(trialBilling.credits.available>0);assert.equal(trialBilling.subscriptions.length,0);assert.equal(trialBilling.hasCustomer,false);assert.equal(mutations.length,0,'Viewing an active trial does not bind a card or create a subscription');
+ sql.prepare("UPDATE arc_trials SET started_at='2000-01-01',expires_at='2000-01-15' WHERE user_id='trial'").run();
+ const expiredBilling=await (await handleBilling(trialRequest(),env)).json() as any;assert.equal(expiredBilling.access.status,'expired');assert.equal(expiredBilling.access.canUse,false);assert.equal(expiredBilling.plan.id,'free');
  await processStripeEvent(env,event('initial'),'initial');assert.equal((await creditBalance(db,'one')).available,1500);assert.equal((await currentArcPlan(db,'one')).id,'arc-plus-v1');
  assert.equal(await getAccountPlan(env,'one'),'plus');assert.equal((await getMonthlyUsage(env,'one')).limit,null);assert.equal((await getSessionUser(new Request('https://agent.remotearc.app/api/me',{headers:{cookie:'rl_session=fixture-session'}}),env))?.plan,'plus');
  for(let i=0;i<4;i++)sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)').run('existing-'+i,'one','Computer','linux','existing-secret-'+i,stamp);

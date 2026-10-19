@@ -1,4 +1,5 @@
 import { findAppWorkflow, translateCopy } from "./app-workflow-examples.js";
+import {DemoResultCard} from './landing-demo-result.js';
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
@@ -225,7 +226,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
 
   // Reveal the sample result without moving the surrounding page.
   useEffect(() => {
-    if (finished && scenario?.id === "video" && chatBodyRef.current) {
+    if (finished && chatBodyRef.current) {
       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
     }
   }, [finished, scenario?.id, client]);
@@ -324,7 +325,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 </p>}
                 <div className="homeDemoActivity" aria-live="polite" aria-atomic="false">
                   <header className="homeDemoActivityHeader">
-                    <span className="homeDemoActivityIcon"><ScenarioIcon id={scenario.id} /></span>
+                    <span className="homeDemoActivityIcon"><img src="/remote-arc.svg" alt="" width="30" height="30"/></span>
                     <div className="homeDemoActivityHeading">
                       <span>Remote Arc</span>
                       <strong>{progressTitle}</strong>
@@ -345,6 +346,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 </div>
                 {finished ? <>
                   <p className="homeDemoAssistantAnswer">{finalReply}</p>
+                  <DemoResultCard key={scenario.id} id={scenario.id}/>
                   {scenario.id === "video" && <div className="homeDemoRunwayCard">
                     <a className="homeDemoRunwayVisual" href="https://runwayml.com" target="_blank" rel="noopener noreferrer" aria-label={tr("Open Runway (illustrative preview only; no real generation)","打开 Runway（仅模拟预览，未真实生成视频）")}>
                       <span className="homeDemoRunwayObject" aria-hidden="true" />

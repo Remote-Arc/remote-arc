@@ -1,4 +1,5 @@
 import { getSessionUser } from "./auth.js";
+import {handleArcAdminBilling} from './arc-admin-billing.js';
 import { handleAdminBilling, handleAdminCallCredits, handleAdminOperations, type OpsEnv } from "./admin-operations.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import { listWebsiteSubmissions, updateWebsiteSubmission, type EngagementEnv } from "./domains/engagement.js";
@@ -9,6 +10,7 @@ export const ADMIN_CONTRACT_VERSION = "1";
 const methods: Record<string, readonly string[]> = {
   "/api/me": ["GET"], "/api/monitor": ["GET"],
   "/api/admin/operations": ["GET"], "/api/admin/billing": ["GET"],
+  '/api/admin/arc-billing':['GET'],
   "/api/admin/call-credits": ["POST"], "/api/admin/plan-grants": ["GET", "POST"],
   "/api/admin/submissions": ["GET"],
 };
@@ -53,6 +55,7 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
     case "/api/monitor": response = await handleMonitorState(request, env); break;
     case "/api/admin/operations": response = await handleAdminOperations(request, env); break;
     case "/api/admin/billing": response = await handleAdminBilling(request, env); break;
+    case '/api/admin/arc-billing': response = await handleArcAdminBilling(request,env);break;
     case "/api/admin/call-credits": response = await handleAdminCallCredits(request, env); break;
     case "/api/admin/plan-grants": response = await handleAdminPlanGrants(request, env); break;
     case "/api/admin/submissions": response = await listWebsiteSubmissions(request, env); break;

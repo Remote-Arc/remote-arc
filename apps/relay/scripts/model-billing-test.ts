@@ -142,6 +142,9 @@ const open=openAiAdapter("test-only-key",async(url,init)=>{target=String(url);bo
 const opened=await open(providerReq);assert.equal(target,"https://api.openai.com/v1/responses");assert.equal(body.store,false);assert.equal(opened.usage.cachedInputTokens,2);assert.deepEqual(opened.value,raw);
 const claude=anthropicAdapter("test-only-key",async(url,init)=>{target=String(url);body=JSON.parse(String(init?.body));assert.equal((init?.headers as Record<string,string>)["anthropic-version"],"2023-06-01");return response({id:"claude-1",stop_reason:"tool_use",usage:{input_tokens:20,output_tokens:10,cache_read_input_tokens:2,cache_creation_input_tokens:1},content:[{type:"tool_use",name:"submit_agent_decision",input:raw}]});});
 assert.deepEqual((await claude({...providerReq,definition:{...paidDefinition,provider:"anthropic"}})).value,raw);assert.equal(target,"https://api.anthropic.com/v1/messages");assert.equal((body.tool_choice as {name:string}).name,"submit_agent_decision");
+const modernClaude=anthropicAdapter('test-only-key',async(_url,init)=>{const sent=JSON.parse(String(init?.body));assert.equal(sent.tool_choice,undefined);assert.equal(sent.tools,undefined);assert.equal(sent.output_config.format.type,'json_schema');assert.deepEqual(sent.output_config.format.schema,providerReq.schema);return response({id:'modern-claude',stop_reason:'end_turn',usage:{input_tokens:20,output_tokens:10,cache_read_input_tokens:2,cache_creation_input_tokens:1},content:[{type:'thinking',thinking:'internal'},{type:'text',text:JSON.stringify(raw)}]});});
+const modern=await modernClaude({...providerReq,definition:{...paidDefinition,provider:'anthropic',model:'claude-sonnet-5-5',structuredOutput:true}});assert.deepEqual(modern.value,raw);assert.equal(modern.usage.reasoningTokens,0);
+await assert.rejects(()=>anthropicAdapter('key',async()=>response({stop_reason:'max_tokens',usage:{input_tokens:20,output_tokens:10},content:[]}))({...providerReq,definition:{...paidDefinition,provider:'anthropic',structuredOutput:true}}),/INCOMPLETE/);
 assert.deepEqual((await workersAiAdapter({run:async()=>({response:JSON.stringify(raw),usage:{prompt_tokens:20,completion_tokens:10}})})({...providerReq,definition:DEFAULT_AUTO_MODEL})).value,raw);
 assert.deepEqual((await workersAiAdapter({run:async()=>({choices:[{finish_reason:"stop",message:{content:JSON.stringify(raw)}}],usage:{prompt_tokens:20,completion_tokens:10}})})({...providerReq,definition:DEFAULT_AUTO_MODEL})).value,raw);
 for(const [payload,expected] of [
@@ -184,5 +187,14 @@ assert.deepEqual((await getBillingEntitlements(db,context,"arc_hosted")).feature
 await deny(()=>runModelGateway({...gateway,models:[{...DEFAULT_AUTO_MODEL,inputMicrosPerMillion:Number.MAX_SAFE_INTEGER}]},req(),validate),/BUDGET_INVALID/);
 assert(resolveModelGateway({DB:db,MODEL_GATEWAY_ENABLED:"1",OPENAI_API_KEY:"test-key",ANTHROPIC_API_KEY:"test-key",MODEL_GATEWAY_LOCAL_TEST_ENDPOINT:"http://127.0.0.1:9999"})?.adapters.anthropic);
 
-console.log("Model/Billing foundation: real SQLite atomic caps, concurrency, grants, tenant isolation, unknown reservation retention, three mocked provider contracts passed.");
+await reset();
+for(const provider of ['openai','anthropic'] as const){
+ await grantPaidModel(db,'admin',{id:'cache-'+provider,userId:'owner',organizationId:'personal:owner',provider,maxCostMicros:1000000,expiresAt:future});
+ const definition:ModelDefinition={...paidDefinition,provider,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:2000000,cacheWrite5mMicrosPerMillion:1250000};
+ const observed:ModelUsage={inputTokens:provider==='openai'?100:70,outputTokens:5,cachedInputTokens:20,cacheWriteTokens:10,reasoningTokens:2,...(provider==='anthropic'?{cacheWrite5mTokens:6,cacheWrite1hTokens:4}:{})};
+ const settled=await runModelGateway({...gateway,models:[definition],paidGrantId:'cache-'+provider,adapters:{[provider]:async()=>({value:raw,usage:observed,providerRequestId:'cache-fixture'})}},req({modelId:definition.id}),validate);
+ const actual=JSON.parse(sql.prepare('SELECT settlement_json FROM billing_reservations WHERE id=?').get(settled.reservationId)!.settlement_json as string).actual;
+ assert.equal(actual.costMicros,provider==='openai'?102:98,'Cache reads, cache write TTLs and reasoning must be rated exactly once');
+}
+console.log("Model/Billing foundation: real SQLite atomic caps, concurrency, grants, tenant isolation, unknown reservation retention, three mocked provider contracts and exact cache accounting passed.");
 sql.close();

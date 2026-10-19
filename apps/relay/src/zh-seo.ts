@@ -3,6 +3,21 @@ type ChineseSeoContent = {
   sections: Array<{heading: string; text: string}>;
 };
 export const chineseSeo: Record<string, ChineseSeoContent> = {
+  "/privacy": {
+    title: "隐私政策 — Remote Arc", description: "了解 Remote Arc 如何处理账户、Apps 授权、设备工具结果、Arc 对话、计费与支持信息。",
+    h1: "你的工作，你的信息。", intro: "Remote Arc 隐私政策，更新于 2026 年 10 月 19 日。了解信息如何经过服务、保存哪些数据以及如何撤销访问和申请删除。",
+    sections: [{heading:"连接与工作数据",text:"Connect 将授权工具请求和结果传递到你的应用、电脑与 AI 客户端。Apps 调用会加密保存参数和结果，用于状态查询与避免重复执行。开放 Arc 时，相关对话和工具观察会交给所配置的模型服务商处理。"},{heading:"你的控制权",text:"在工作空间断开应用、撤销 AI 客户端授权或移除设备。数据访问、更正和删除请求可通过支持表单或 support@remotearc.app 提交。"}]
+  },
+  "/terms": {
+    title: "服务条款 — Remote Arc", description: "Remote Arc 的授权使用、工具操作、订阅续费、试用、Credits 和第三方费用说明。",
+    h1: "让工作有据可依。", intro: "Remote Arc 服务条款，更新于 2026 年 10 月 19 日。连接工具、委托任务及选择付费方案时适用的服务约定。",
+    sections: [{heading:"授权使用",text:"仅连接和操作你有权控制的账户、文件与系统。可用读写工具在第三方授权范围内启用；设备遵守本机权限。断开连接不会撤销已完成操作。"},{heading:"订阅与用量",text:"可用付费方案的价格和用量在购买前展示。月订阅持续续费至取消；试用不自动转付费。不同模型的 Credits 消耗不同，第三方账户费用另计。"}]
+  },
+  "/support": {
+    title: "支持中心 — Remote Arc", description: "安装配对、应用授权、账户、隐私和计费帮助。使用现有反馈通道直接联系 Remote Arc。",
+    h1: "帮你把工作继续下去。", intro: "查看文档，或使用支持表单告诉我们遇到的问题。支持与产品反馈进入相同的私密处理入口。",
+    sections: [{heading:"提交支持请求",text:"提供联系邮箱、已尝试的步骤与不含敏感信息的错误提示。不要提交密码、API Key、访问 Token 或私人文件内容。也可联系 support@remotearc.app。"}]
+  },
   "/integrations": {
     title: "Remote Arc Apps 应用目录 — 查看原生集成与连接条件",
     description: "按类别查看 Remote Arc Apps、实际支持的操作、授权方式和费用归属。Connect Apps 独立于 Arc Agent，需要完成平台配置后开放账号授权。",
@@ -10,7 +25,7 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     intro: "找到应用，查看 AI 实际能做什么，以及连接前需要准备什么。Apps 通过 Remote Arc Connect 工作，独立于 Arc Agent 发布。",
     sections: [
       {heading:"实际支持的应用操作",text:"目录覆盖邮件与日历、文档与文件、开发与部署、团队沟通、社交媒体、创意 AI、营销分析及销售电商。每个集成都列出真实支持的读取与写入操作，不代表已经覆盖平台全部功能。"},
-      {heading:"授权你自己的账号",text:"OAuth 应用由 Remote Arc 配置，每个用户授权自己的账号；部分集成使用用户自己的 API 凭据。连接服务启用、平台配置完成后才开放账号授权。默认读取权限，每次写入仍需审核具体请求。"},
+      {heading:"授权你自己的账号",text:"OAuth 应用由 Remote Arc 配置，每个用户授权自己的账号；部分集成使用用户自己的 API 凭据。连接服务启用、平台配置完成后才开放账号授权。连接后，可用读写工具默认在所授权限范围内启用。"},
       {heading:"了解用量与费用",text:"API 用量费用和额度取决于连接的账号或开发者项目，网页订阅不一定包含 API 积分。Remote Arc 的工具调用额度独立计算。请查看各应用详情及实际连接开放状态。"}
     ]
   },

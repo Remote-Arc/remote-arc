@@ -3,6 +3,11 @@ export { AdminApiService } from "./admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { handleApps } from "./apps.js";
 import { handleArcChat, type ArcEnv } from "./arc-chat.js";
+import {handleBilling,type BillingEnv} from './stripe-billing.js';
+import {arcDeploymentReady} from './arc-chat-model.js';
+import {billingEnabled} from './platform-launch.js';
+import {stripeConfigured} from './stripe-client.js';
+import {ARC_PLANS} from '@remotearc/protocol';
 export { ArcChatRuntime } from "./arc-chat-object.js";
 import type { AppEnv } from "./app-catalog.js";
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
@@ -97,7 +102,7 @@ import {
 
 export { DeviceRegistry };
 
-type Env = TaskEventEnv & AppEnv & ArcEnv & {
+type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
@@ -485,11 +490,16 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
       return user
-        ? Response.json({ authenticated: true, user })
+        ? Response.json({ authenticated: true, user:{...user,arcAvailable:arcDeploymentReady(env)} },{headers:{'cache-control':'no-store'}})
         : Response.json({ authenticated: false }, { status: 401 });
     }
 
     if (url.pathname.startsWith("/api/arc/")) return handleArcChat(request, env);
+    if(url.pathname==='/api/billing/catalog'&&request.method==='GET')return Response.json({arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),connectFreeCalls:billingEnabled(env)?ARC_PLANS[0].connectToolCalls:10000},{headers:{'cache-control':'public, max-age=60'}});
+    if (url.pathname === '/api/billing' || url.pathname.startsWith('/api/billing/')) {
+      if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({error:'billing_host_required'},{status:404});
+      return handleBilling(request,env);
+    }
     if (url.pathname === "/api/apps" || url.pathname.startsWith("/api/apps/")) {
       if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({error:"app_host_required"},{status:404});
       return handleApps(request, env);

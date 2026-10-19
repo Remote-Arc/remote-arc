@@ -3,7 +3,9 @@ import { providerHeaders } from "./app-auth-adapters.js";
 import { providerJson, unseal, type AppTokens } from "./app-oauth.js";
 import { sha256Hex } from "./auth.js";
 import type { AppReview } from "./app-review.js";
+import {reservePlatformAppFunding} from './app-platform-funding.js';
 export async function reserveAppDispatch(env:AppEnv,userId:string,connection:{id:string;generation:number;provider:AppProvider}) {
+  await reservePlatformAppFunding(env,userId,connection);
   const day=new Date().toISOString().slice(0,10),max=Number(env.APP_DAILY_PROVIDER_LIMIT||1000);
   if(!Number.isSafeInteger(max)||max<1||max>100000)throw new AppError("app_budget_not_configured",503);
   const result=await env.DB.prepare(`INSERT INTO app_dispatch_usage(connection_id,provider,day,dispatches)

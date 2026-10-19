@@ -64,7 +64,7 @@
       "brand": "github",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 15,
       "operations": [
         {
           "name": "repositories.list",
@@ -95,6 +95,51 @@
           "name": "issues.create",
           "description": "Create a repository issue",
           "permission": "write"
+        },
+        {
+          "name": "issues.get",
+          "description": "Read one issue",
+          "permission": "read"
+        },
+        {
+          "name": "issues.update",
+          "description": "Update an issue title, body or state",
+          "permission": "write"
+        },
+        {
+          "name": "comments.list",
+          "description": "Read issue or pull request comments",
+          "permission": "read"
+        },
+        {
+          "name": "comments.create",
+          "description": "Comment on an issue or pull request",
+          "permission": "write"
+        },
+        {
+          "name": "pulls.get",
+          "description": "Read a pull request and merge status",
+          "permission": "read"
+        },
+        {
+          "name": "pulls.files",
+          "description": "Read changed files and patches in a pull request",
+          "permission": "read"
+        },
+        {
+          "name": "branches.list",
+          "description": "List repository branches",
+          "permission": "read"
+        },
+        {
+          "name": "actions.get",
+          "description": "Read one Actions run",
+          "permission": "read"
+        },
+        {
+          "name": "actions.rerun",
+          "description": "Rerun an Actions workflow",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -107,7 +152,7 @@
       "brand": "slack",
       "category": "communication",
       "auth": "oauth",
-      "operationCount": 32,
+      "operationCount": 35,
       "operations": [
         {
           "name": "channels.list",
@@ -268,6 +313,21 @@
           "name": "bookmarks.add",
           "description": "Add a link bookmark to a conversation",
           "permission": "write"
+        },
+        {
+          "name": "users.presence",
+          "description": "Read a member’s availability",
+          "permission": "read"
+        },
+        {
+          "name": "bookmarks.edit",
+          "description": "Edit a conversation bookmark",
+          "permission": "write"
+        },
+        {
+          "name": "bookmarks.remove",
+          "description": "Remove a conversation bookmark",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -280,7 +340,7 @@
       "brand": "gmail",
       "category": "email_calendar",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 15,
       "operations": [
         {
           "name": "messages.list",
@@ -306,6 +366,56 @@
           "name": "messages.modify",
           "description": "Add or remove message labels",
           "permission": "write"
+        },
+        {
+          "name": "labels.list",
+          "description": "List Gmail labels",
+          "permission": "read"
+        },
+        {
+          "name": "drafts.list",
+          "description": "List Gmail drafts",
+          "permission": "read"
+        },
+        {
+          "name": "threads.list",
+          "description": "List Gmail threads",
+          "permission": "read"
+        },
+        {
+          "name": "threads.get",
+          "description": "Read all messages in a Gmail thread",
+          "permission": "read"
+        },
+        {
+          "name": "drafts.get",
+          "description": "Read an email draft",
+          "permission": "read"
+        },
+        {
+          "name": "drafts.send",
+          "description": "Send an existing email draft",
+          "permission": "write"
+        },
+        {
+          "name": "drafts.delete",
+          "description": "Delete an email draft",
+          "permission": "write"
+        },
+        {
+          "name": "messages.trash",
+          "description": "Move an email to Trash",
+          "permission": "write"
+        },
+        {
+          "name": "messages.untrash",
+          "description": "Restore an email from Trash",
+          "permission": "write"
+        },
+        {
+          "name": "labels.create",
+          "description": "Create an email label",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -318,7 +428,7 @@
       "brand": "microsoftoutlook",
       "category": "email_calendar",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 10,
       "operations": [
         {
           "name": "messages.list",
@@ -339,6 +449,36 @@
           "name": "messages.send",
           "description": "Send the exact reviewed Outlook email",
           "permission": "write"
+        },
+        {
+          "name": "folders.list",
+          "description": "List Outlook mail folders",
+          "permission": "read"
+        },
+        {
+          "name": "attachments.list",
+          "description": "List message attachments",
+          "permission": "read"
+        },
+        {
+          "name": "messages.reply",
+          "description": "Reply to an Outlook message",
+          "permission": "write"
+        },
+        {
+          "name": "messages.move",
+          "description": "Move a message to an existing folder",
+          "permission": "write"
+        },
+        {
+          "name": "messages.markRead",
+          "description": "Set the read state of a message",
+          "permission": "write"
+        },
+        {
+          "name": "drafts.send",
+          "description": "Send an existing Outlook draft",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -351,7 +491,7 @@
       "brand": "googlecalendar",
       "category": "email_calendar",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 8,
       "operations": [
         {
           "name": "calendars.list",
@@ -382,6 +522,16 @@
           "name": "events.delete",
           "description": "Delete a calendar event",
           "permission": "write"
+        },
+        {
+          "name": "calendars.get",
+          "description": "Read calendar details and time zone",
+          "permission": "read"
+        },
+        {
+          "name": "availability.query",
+          "description": "Find busy intervals across calendars",
+          "permission": "read"
         }
       ],
       "supportsWrite": true,
@@ -394,7 +544,7 @@
       "brand": "microsoftoutlook",
       "category": "email_calendar",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 9,
       "operations": [
         {
           "name": "calendars.list",
@@ -424,6 +574,21 @@
         {
           "name": "events.delete",
           "description": "Delete a calendar event",
+          "permission": "write"
+        },
+        {
+          "name": "calendars.get",
+          "description": "Read calendar details",
+          "permission": "read"
+        },
+        {
+          "name": "events.accept",
+          "description": "Accept a meeting invitation",
+          "permission": "write"
+        },
+        {
+          "name": "events.decline",
+          "description": "Decline a meeting invitation",
           "permission": "write"
         }
       ],
@@ -437,7 +602,7 @@
       "brand": "youtube",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 6,
       "operations": [
         {
           "name": "channels.list",
@@ -453,6 +618,21 @@
           "name": "videos.statistics",
           "description": "Read video views, likes and comments",
           "permission": "read"
+        },
+        {
+          "name": "comments.list",
+          "description": "Read comments and replies on a video",
+          "permission": "read"
+        },
+        {
+          "name": "playlists.list",
+          "description": "List your YouTube playlists",
+          "permission": "read"
+        },
+        {
+          "name": "subscriptions.list",
+          "description": "List the channels you subscribe to",
+          "permission": "read"
         }
       ],
       "supportsWrite": false,
@@ -465,7 +645,7 @@
       "brand": "googledrive",
       "category": "docs_files",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 8,
       "operations": [
         {
           "name": "files.list",
@@ -486,6 +666,26 @@
           "name": "folders.create",
           "description": "Create a Drive folder",
           "permission": "write"
+        },
+        {
+          "name": "files.copy",
+          "description": "Copy an accessible file into a new file",
+          "permission": "write"
+        },
+        {
+          "name": "files.rename",
+          "description": "Rename a file accessible to this app",
+          "permission": "write"
+        },
+        {
+          "name": "files.trash",
+          "description": "Move an app-accessible file to Trash",
+          "permission": "write"
+        },
+        {
+          "name": "comments.list",
+          "description": "Read comments on a Drive file",
+          "permission": "read"
         }
       ],
       "supportsWrite": true,
@@ -498,7 +698,7 @@
       "brand": "googledocs",
       "category": "docs_files",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 5,
       "operations": [
         {
           "name": "documents.get",
@@ -514,6 +714,16 @@
           "name": "documents.insertText",
           "description": "Insert text at a reviewed document revision",
           "permission": "write"
+        },
+        {
+          "name": "documents.replaceText",
+          "description": "Replace exact matching text at a document revision",
+          "permission": "write"
+        },
+        {
+          "name": "documents.deleteText",
+          "description": "Delete a bounded text range at a document revision",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -526,7 +736,7 @@
       "brand": "googlesheets",
       "category": "docs_files",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 6,
       "operations": [
         {
           "name": "spreadsheets.get",
@@ -542,6 +752,21 @@
           "name": "values.update",
           "description": "Update the exact reviewed cells",
           "permission": "write"
+        },
+        {
+          "name": "spreadsheets.create",
+          "description": "Create a spreadsheet",
+          "permission": "write"
+        },
+        {
+          "name": "values.append",
+          "description": "Append rows after the existing table",
+          "permission": "write"
+        },
+        {
+          "name": "values.clear",
+          "description": "Clear values in an exact range, keeping formatting",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -554,7 +779,7 @@
       "brand": "googlesearchconsole",
       "category": "marketing",
       "auth": "oauth",
-      "operationCount": 2,
+      "operationCount": 4,
       "operations": [
         {
           "name": "sites.list",
@@ -564,6 +789,16 @@
         {
           "name": "queries.report",
           "description": "Read search queries and landing-page performance",
+          "permission": "read"
+        },
+        {
+          "name": "sites.get",
+          "description": "Read a property and its permission level",
+          "permission": "read"
+        },
+        {
+          "name": "sitemaps.list",
+          "description": "List submitted sitemaps for a property",
           "permission": "read"
         }
       ],
@@ -577,7 +812,7 @@
       "brand": "googleanalytics",
       "category": "marketing",
       "auth": "oauth",
-      "operationCount": 2,
+      "operationCount": 4,
       "operations": [
         {
           "name": "accounts.list",
@@ -587,6 +822,16 @@
         {
           "name": "reports.run",
           "description": "Read a bounded Analytics report",
+          "permission": "read"
+        },
+        {
+          "name": "metadata.get",
+          "description": "Read available Analytics metrics and dimensions",
+          "permission": "read"
+        },
+        {
+          "name": "reports.realtime",
+          "description": "Read realtime active users by country",
           "permission": "read"
         }
       ],
@@ -600,7 +845,7 @@
       "brand": "googleads",
       "category": "marketing",
       "auth": "oauth",
-      "operationCount": 2,
+      "operationCount": 4,
       "operations": [
         {
           "name": "accounts.list",
@@ -610,6 +855,16 @@
         {
           "name": "campaigns.report",
           "description": "Read campaign cost and performance",
+          "permission": "read"
+        },
+        {
+          "name": "adGroups.report",
+          "description": "Read recent advertising performance",
+          "permission": "read"
+        },
+        {
+          "name": "ads.report",
+          "description": "Read recent advertising performance",
           "permission": "read"
         }
       ],
@@ -623,7 +878,7 @@
       "brand": "facebook",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 5,
       "operations": [
         {
           "name": "pages.list",
@@ -639,6 +894,16 @@
           "name": "posts.create",
           "description": "Publish a reviewed Facebook Page update",
           "permission": "write"
+        },
+        {
+          "name": "posts.get",
+          "description": "Read a Page post and engagement summary",
+          "permission": "read"
+        },
+        {
+          "name": "comments.list",
+          "description": "Read comments on a Page post",
+          "permission": "read"
         }
       ],
       "supportsWrite": true,
@@ -651,7 +916,7 @@
       "brand": "instagram",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 8,
       "operations": [
         {
           "name": "accounts.list",
@@ -682,6 +947,16 @@
           "name": "media.publish",
           "description": "Publish an explicitly reviewed media container",
           "permission": "write"
+        },
+        {
+          "name": "media.get",
+          "description": "Read an Instagram media item",
+          "permission": "read"
+        },
+        {
+          "name": "comments.delete",
+          "description": "Delete a comment on your Instagram media",
+          "permission": "write"
         }
       ],
       "connectionNote": "Requires an eligible professional Instagram account linked to a Facebook Page.",
@@ -695,7 +970,7 @@
       "brand": "meta",
       "category": "marketing",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 6,
       "operations": [
         {
           "name": "accounts.list",
@@ -716,6 +991,16 @@
           "name": "campaigns.pause",
           "description": "Pause a reviewed advertising campaign",
           "permission": "write"
+        },
+        {
+          "name": "adSets.list",
+          "description": "List ad sets and budget settings",
+          "permission": "read"
+        },
+        {
+          "name": "ads.list",
+          "description": "List advertisements and delivery status",
+          "permission": "read"
         }
       ],
       "supportsWrite": true,
@@ -728,7 +1013,7 @@
       "brand": "vercel",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 6,
       "operations": [
         {
           "name": "projects.list",
@@ -744,6 +1029,21 @@
           "name": "deployments.cancel",
           "description": "Cancel one deployment",
           "permission": "write"
+        },
+        {
+          "name": "projects.get",
+          "description": "Read a project’s configuration",
+          "permission": "read"
+        },
+        {
+          "name": "deployments.get",
+          "description": "Read deployment readiness and build state",
+          "permission": "read"
+        },
+        {
+          "name": "domains.list",
+          "description": "List a project’s domains",
+          "permission": "read"
         }
       ],
       "connectionNote": "Install the Remote Arc integration and choose the projects it can access. Integration permissions are configured by Remote Arc; local read permission still denies writes.",
@@ -757,7 +1057,7 @@
       "brand": "runway",
       "category": "creative",
       "auth": "api_key",
-      "operationCount": 3,
+      "operationCount": 5,
       "operations": [
         {
           "name": "organization.get",
@@ -773,6 +1073,16 @@
           "name": "videos.generate",
           "description": "Generate a video using your own API credits",
           "permission": "write"
+        },
+        {
+          "name": "tasks.cancel",
+          "description": "Cancel or delete one Runway generation task",
+          "permission": "write"
+        },
+        {
+          "name": "avatars.list",
+          "description": "List avatars available to your Runway organization",
+          "permission": "read"
         }
       ],
       "connectionNote": "Use a Runway API key from the developer portal. Video generation requires explicit approval and a credit estimate.",
@@ -786,7 +1096,7 @@
       "brand": "x",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 5,
       "operations": [
         {
           "name": "profile.get",
@@ -802,6 +1112,16 @@
           "name": "posts.create",
           "description": "Publish the exact reviewed post",
           "permission": "write"
+        },
+        {
+          "name": "posts.get",
+          "description": "Read a post and its engagement metrics",
+          "permission": "read"
+        },
+        {
+          "name": "posts.delete",
+          "description": "Delete one of your own posts",
+          "permission": "write"
         }
       ],
       "connectionNote": "Sign in to X and authorize your own user account. Remote Arc manages the confidential OAuth client and token refresh.",
@@ -815,7 +1135,7 @@
       "brand": "whatsapp",
       "category": "communication",
       "auth": "api_key",
-      "operationCount": 4,
+      "operationCount": 6,
       "operations": [
         {
           "name": "phones.list",
@@ -836,6 +1156,16 @@
           "name": "templates.send",
           "description": "Send an approved WhatsApp template",
           "permission": "write"
+        },
+        {
+          "name": "profile.get",
+          "description": "Read your WhatsApp Business profile",
+          "permission": "read"
+        },
+        {
+          "name": "phone.get",
+          "description": "Read the connected business phone number",
+          "permission": "read"
         }
       ],
       "connectionNote": "Requires a WhatsApp Business Cloud API token, a business account ID and an owned phone number ID.",
@@ -849,7 +1179,7 @@
       "brand": "jira",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 7,
       "operations": [
         {
           "name": "sites.list",
@@ -865,6 +1195,26 @@
           "name": "issues.create",
           "description": "Create a reviewed Jira issue",
           "permission": "write"
+        },
+        {
+          "name": "issues.get",
+          "description": "Read an issue and its current fields",
+          "permission": "read"
+        },
+        {
+          "name": "comments.list",
+          "description": "Read Jira issue comments",
+          "permission": "read"
+        },
+        {
+          "name": "comments.create",
+          "description": "Add a Jira issue comment",
+          "permission": "write"
+        },
+        {
+          "name": "transitions.list",
+          "description": "Read available issue status transitions",
+          "permission": "read"
         }
       ],
       "supportsWrite": true,
@@ -877,7 +1227,7 @@
       "brand": "confluence",
       "category": "docs_files",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 5,
       "operations": [
         {
           "name": "spaces.list",
@@ -893,6 +1243,16 @@
           "name": "pages.create",
           "description": "Create a Confluence page with reviewed text",
           "permission": "write"
+        },
+        {
+          "name": "pages.get",
+          "description": "Read a page and its storage content",
+          "permission": "read"
+        },
+        {
+          "name": "spaces.get",
+          "description": "Read a Confluence space",
+          "permission": "read"
         }
       ],
       "supportsWrite": true,
@@ -905,7 +1265,7 @@
       "brand": "notion",
       "category": "docs_files",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 8,
       "operations": [
         {
           "name": "search",
@@ -926,6 +1286,26 @@
           "name": "pages.create",
           "description": "Create a Notion page with reviewed content",
           "permission": "write"
+        },
+        {
+          "name": "users.list",
+          "description": "List users visible to the Notion integration",
+          "permission": "read"
+        },
+        {
+          "name": "blocks.get",
+          "description": "Read one Notion content block",
+          "permission": "read"
+        },
+        {
+          "name": "blocks.appendText",
+          "description": "Append a paragraph to a Notion page or block",
+          "permission": "write"
+        },
+        {
+          "name": "pages.archive",
+          "description": "Move a page to the trash",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -938,7 +1318,7 @@
       "brand": "shopify",
       "category": "sales_commerce",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 6,
       "operations": [
         {
           "name": "shop.get",
@@ -959,6 +1339,16 @@
           "name": "products.createDraft",
           "description": "Create a reviewed draft product",
           "permission": "write"
+        },
+        {
+          "name": "products.get",
+          "description": "Read one product and its variants",
+          "permission": "read"
+        },
+        {
+          "name": "orders.get",
+          "description": "Read one order and its line items",
+          "permission": "read"
         }
       ],
       "connectionNote": "Enter your store's myshopify.com domain. Only stores that approve this app can be accessed.",
@@ -972,7 +1362,7 @@
       "brand": "linkedin",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 2,
+      "operationCount": 4,
       "operations": [
         {
           "name": "profile.get",
@@ -982,6 +1372,16 @@
         {
           "name": "posts.create",
           "description": "Publish a reviewed LinkedIn post",
+          "permission": "write"
+        },
+        {
+          "name": "posts.update",
+          "description": "Update commentary on your own LinkedIn post",
+          "permission": "write"
+        },
+        {
+          "name": "posts.delete",
+          "description": "Delete one of your own LinkedIn posts",
           "permission": "write"
         }
       ],
@@ -995,7 +1395,7 @@
       "brand": "supabase",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 5,
       "operations": [
         {
           "name": "projects.list",
@@ -1011,6 +1411,16 @@
           "name": "database.query",
           "description": "Run an explicitly reviewed SQL statement",
           "permission": "write"
+        },
+        {
+          "name": "projects.get",
+          "description": "Read one authorized Supabase project",
+          "permission": "read"
+        },
+        {
+          "name": "functions.list",
+          "description": "List Edge Functions in an authorized project",
+          "permission": "read"
         }
       ],
       "connectionNote": "Choose the organization to authorize. Provider scopes are fixed in the OAuth app configuration; Remote Arc read permission separately denies all SQL writes.",
@@ -1024,7 +1434,7 @@
       "brand": "linear",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 5,
       "operations": [
         {
           "name": "viewer.get",
@@ -1040,6 +1450,16 @@
           "name": "issues.create",
           "description": "Create a reviewed Linear issue",
           "permission": "write"
+        },
+        {
+          "name": "teams.list",
+          "description": "List teams in your Linear workspace",
+          "permission": "read"
+        },
+        {
+          "name": "issues.get",
+          "description": "Read one issue and its status",
+          "permission": "read"
         }
       ],
       "connectionNote": "Sign in to Linear and choose a workspace. Changes act as the user who authorized the connection.",
@@ -1053,7 +1473,7 @@
       "brand": "hubspot",
       "category": "sales_commerce",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 6,
       "operations": [
         {
           "name": "contacts.list",
@@ -1069,6 +1489,21 @@
           "name": "contacts.create",
           "description": "Create a reviewed HubSpot contact",
           "permission": "write"
+        },
+        {
+          "name": "contacts.get",
+          "description": "Read one CRM contact",
+          "permission": "read"
+        },
+        {
+          "name": "deals.get",
+          "description": "Read one CRM deal",
+          "permission": "read"
+        },
+        {
+          "name": "contacts.update",
+          "description": "Update contact details",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -1081,7 +1516,7 @@
       "brand": "salesforce",
       "category": "sales_commerce",
       "auth": "oauth",
-      "operationCount": 3,
+      "operationCount": 5,
       "operations": [
         {
           "name": "contacts.list",
@@ -1096,6 +1531,16 @@
         {
           "name": "contacts.create",
           "description": "Create a reviewed Salesforce contact",
+          "permission": "write"
+        },
+        {
+          "name": "contacts.get",
+          "description": "Read one Salesforce contact",
+          "permission": "read"
+        },
+        {
+          "name": "contacts.update",
+          "description": "Update Salesforce contact details",
           "permission": "write"
         }
       ],

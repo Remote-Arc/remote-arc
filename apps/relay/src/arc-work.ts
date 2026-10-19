@@ -2,6 +2,7 @@ import {z} from 'zod';
 import {seal,unseal} from './app-oauth.js';
 import {sha256Hex} from './auth.js';
 import {requireArcAccess} from './arc-trial.js';
+import {currentArcPlan} from './arc-plan.js';
 import {arcContext,arcMessages,stamp,wakeArcRun,type ArcEnv,type ArcRun} from './arc-chat.js';
 import type {AutomationRow,RuntimeState,AutomationStatus} from './automations.js';
 
@@ -40,11 +41,12 @@ export async function createArcWork(env:ArcEnv,run:ArcRun,args:unknown,routine:b
  if(routine===(input.schedule.type==='once'))throw new Error('ARC_INVALID_SCHEDULE');
  if(run.automation_id)throw new Error('ARC_RECURSIVE_WORK_NOT_ALLOWED');
  await requireArcAccess(env,run.user_id);
+  const plan=await currentArcPlan(env.DB,run.user_id);
  const id='arc-'+(await sha256Hex(`${run.id}:${run.step}`)).slice(0,32),now=stamp(),next=nextArcOccurrence(input.schedule,new Date(now));
  const native:NativeWork={version:1,instructions:await seal(env,input.instructions,`arc-work:${run.user_id}:${id}`),modelId:run.model_id,schedule:input.schedule,originSessionId:run.session_id};
  const goal={type:'agent_goal',controller:'source',controller_client_id:'arc-native',objective:input.name,success_criteria:'Report verified results in the task conversation.',allowed_tools:[],max_iterations:8,native_arc:native};
  const trigger=routine?{type:'interval',every_seconds:input.schedule.type==='interval'?input.schedule.everyMinutes*60:86400}:{type:'at',at:next};
- await env.DB.prepare(`INSERT OR IGNORE INTO automations(id,user_id,name,kind,status,device_id,trigger_json,action_json,goal_json,state_json,interval_seconds,next_run_at,max_runs,run_count,created_at,updated_at) SELECT ?1,?2,?3,'goal_loop','waiting',NULL,?4,'{"steps":[]}',?5,'{}',60,?6,?7,0,?8,?8 WHERE (SELECT COUNT(*) FROM automations WHERE user_id=?2 AND status NOT IN ('completed','cancelled','failed','expired'))<50`).bind(id,run.user_id,input.name,JSON.stringify(trigger),JSON.stringify(goal),next,routine?10000:1,now).run();
+  await env.DB.prepare(`INSERT OR IGNORE INTO automations(id,user_id,name,kind,status,device_id,trigger_json,action_json,goal_json,state_json,interval_seconds,next_run_at,max_runs,run_count,created_at,updated_at) SELECT ?1,?2,?3,'goal_loop','waiting',NULL,?4,'{"steps":[]}',?5,'{}',60,?6,?7,0,?8,?8 WHERE (SELECT COUNT(*) FROM automations WHERE user_id=?2 AND status NOT IN ('completed','cancelled','failed','expired'))<50 AND (?9=0 OR (SELECT COUNT(*) FROM automations WHERE user_id=?2 AND status NOT IN ('completed','cancelled','failed','expired') AND json_extract(goal_json,'$.native_arc.schedule.type') IN ('interval','daily'))<?10)`).bind(id,run.user_id,input.name,JSON.stringify(trigger),JSON.stringify(goal),next,routine?10000:1,now,Number(routine),plan.routines).run();
  const row=await env.DB.prepare('SELECT id FROM automations WHERE id=?1 AND user_id=?2').bind(id,run.user_id).first();
  if(!row)throw new Error('ARC_WORK_LIMIT_REACHED');
  return{id,name:input.name,kind:routine?'routine':'task',nextRunAt:next,schedule:input.schedule,status:'waiting',conversationId:id};
@@ -86,11 +88,12 @@ export async function tickNativeArcWork(env:ArcEnv,task:AutomationRow,state:Runt
  const work=nativeArcWork(task.goal_json)!;
  const runId=state.run_id!;let run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE id=?1 AND user_id=?2').bind(runId,task.user_id).first<ArcRun>();
  if(!run){
+   await requireArcAccess(env,task.user_id);const plan=await currentArcPlan(env.DB,task.user_id);
   const now=stamp(),messageId=runId+':user',text=await unseal<string>(env,work.instructions,`arc-work:${task.user_id}:${task.id}`);
   const guard=`EXISTS(SELECT 1 FROM automations WHERE id=?9 AND user_id=?2 AND lease_token=?10 AND lease_until>?5 AND status IN ('waiting','running'))`;
   await env.DB.batch([
    env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at,automation_id) SELECT ?1,?2,?3,?4,?6,?5,?5,?9 WHERE ${guard}`).bind(task.id,task.user_id,'personal:'+task.user_id,await seal(env,task.name,arcContext(task.user_id,task.id)),now,work.modelId,null,null,task.id,task.lease_token),
-   env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at,automation_id) SELECT ?1,?3,?2,?4,?6,?7,'queued',24000,8,?8,?5,?5,?9 WHERE ${guard} AND (SELECT COUNT(*) FROM arc_chat_runs WHERE user_id=?2 AND status IN ('queued','thinking','working'))<3`).bind(runId,task.user_id,task.id,'work-'+runId,now,await sha256Hex(text),work.modelId,new Date(Date.now()+180000).toISOString(),task.id,task.lease_token),
+    env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at,automation_id) SELECT ?1,?3,?2,?4,?6,?7,'queued',?11,?12,?8,?5,?5,?9 WHERE ${guard} AND (SELECT COUNT(*) FROM arc_chat_runs WHERE user_id=?2 AND status IN ('queued','thinking','working'))<?13`).bind(runId,task.user_id,task.id,'work-'+runId,now,await sha256Hex(text),work.modelId,new Date(Date.now()+plan.maxSeconds*1000).toISOString(),task.id,task.lease_token,plan.maxTokens,plan.maxSteps,plan.concurrentRuns),
    env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,'user',?5,?6 WHERE EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?4)`).bind(messageId,task.id,task.user_id,runId,await seal(env,{text},arcContext(task.user_id,messageId)),now),
   ]);
   run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE id=?1 AND user_id=?2').bind(runId,task.user_id).first<ArcRun>();

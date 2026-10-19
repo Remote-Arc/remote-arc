@@ -458,16 +458,19 @@ const crawlPages: Record<string, CrawlPage> = {
   },
   "/privacy": {
     h1: "Remote Arc privacy policy",
-    intro: "How Remote Arc handles account, device, usage and operational data across the hosted control plane and paired-device workflows."
+    intro: "How Remote Arc handles account information, app authorization, tool results, Arc conversations, payments and support requests. Updated October 19, 2026.",
+    sections: [{heading:"Connections and work data",text:"Connect relays authorized requests and results between your apps, computers and AI client. App call arguments and results are stored encrypted for status and replay protection. Where Arc is enabled, relevant messages and observations are processed by the configured model provider."},{heading:"Your controls",text:"Disconnect apps, revoke AI-client access and remove devices from your workspace. Contact support@remotearc.app for access, correction or hosted-data deletion requests."}]
   },
   "/terms": {
     h1: "Remote Arc terms of service",
-    intro: "Terms governing access to and use of Remote Arc."
+    intro: "Terms for authorized connections, agent work, subscriptions, Credits and third-party costs. Updated October 19, 2026.",
+    sections: [{heading:"Authorized use",text:"Only connect accounts and computers you are authorized to control. Available app read and write tools operate within the provider permissions you grant. Stopping work does not undo completed actions."},{heading:"Plans and usage",text:"Available paid plans show their price and limits before checkout. Subscriptions renew until canceled. Trials do not automatically convert to paid subscriptions. Model selection affects Credit usage; connected-provider charges may be separate."}]
   },
   "/support": {
     h1: "Remote Arc support",
-    intro: "Help with installation, device pairing, Remote MCP connections, account access and security reporting.",
-    links: [["/docs", "Documentation"], ["/install/chatgpt", "ChatGPT setup"], ["/security-model", "Security"]]
+    intro: "Get setup, app-connection, account, privacy and billing help. Support uses the same private submission inbox as product feedback.",
+    sections: [{heading:"Contact support",text:"Use the Support form or email support@remotearc.app. Include your contact email, the steps you tried and a safe error message. Leave out passwords, access tokens and private file contents."}],
+    links: [["/docs", "Documentation"], ["/docs/apps", "Apps and accounts"], ["/feedback", "Product feedback"], ["/security-model", "Security"]]
   }
 };
 

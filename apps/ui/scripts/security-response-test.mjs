@@ -6,6 +6,7 @@ import { parseSecurityState, parsePendingApprovals } from "../src/security-state
 // Exercise the real preview fixture, rather than duplicating its response here.
 const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "utf8"))
   .replaceAll("import.meta.env.VITE_UI_PREVIEW", '"1"')
+  .replaceAll("'@remotearc/protocol'", JSON.stringify(new URL("../../../packages/protocol/src/index.ts", import.meta.url).href))
   // A data URL has no directory for relative imports. Keep the real catalog import.
   .replaceAll('"./app-directory.json"', JSON.stringify(new URL("../src/app-directory.json", import.meta.url).href));
 const compiled = ts.transpileModule(source, {

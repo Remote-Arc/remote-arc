@@ -9,8 +9,10 @@ import {
 } from "./auth.js";
 import { writeAudit } from "./audit.js";
 import { REVIEWER_DEMO_TOOLS } from "./reviewer-fixture.js";
+import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
+import {currentArcPlan} from './arc-plan.js';
 
-type DeviceEnv = {
+type DeviceEnv = PlatformLaunchEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   PUBLIC_ORIGIN: string;
@@ -251,13 +253,17 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
 
   const deviceId = crypto.randomUUID();
   const createdAt = nowIso();
+  const plan=billingEnabled(env)?await currentArcPlan(env.DB,user.id):null;
+  const deviceLimit=!plan||user.isAdmin||plan.id==='free'&&user.plan==='plus'?100000:plan.deviceLimit;
 
-  await env.DB.batch([
+  const pairingResult=await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO devices (
         id, user_id, name, platform, arch, hostname,
         credential_hash, created_at, last_seen, revoked_at, allowed_tools
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL, ?9)`,
+      ) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL, ?9
+      WHERE (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL)<?10
+      AND EXISTS(SELECT 1 FROM device_pairings WHERE user_code=?11 AND status='pending' AND expires_at>?8)`,
     ).bind(
       deviceId,
       user.id,
@@ -272,14 +278,16 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
           ? BROWSER_DEFAULT_ALLOWED_TOOLS
           : DEFAULT_ALLOWED_TOOLS,
       ),
+      deviceLimit,userCode,
     ),
     env.DB.prepare(
       `UPDATE device_pairings
        SET status = 'approved', approved_user_id = ?1,
            approved_device_id = ?2, approved_at = ?3
-       WHERE user_code = ?4`,
+        WHERE user_code = ?4 AND status='pending' AND EXISTS(SELECT 1 FROM devices WHERE id=?2 AND user_id=?1)`,
     ).bind(user.id, deviceId, createdAt, userCode),
   ]);
+  if(!pairingResult[0]?.meta.changes)return Response.json({error:'device_limit_or_pairing_changed'},{status:402});
 
   await writeAudit(env, {
     userId: user.id,

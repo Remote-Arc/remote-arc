@@ -1,4 +1,6 @@
 import { z } from "zod";
+import {billingEnabled} from './platform-launch.js';
+import {currentArcPlan} from './arc-plan.js';
 import { getSessionUser, randomToken, sha256Hex, type OAuthIdentity } from "./auth.js";
 import { isMcpPaused } from "./security.js";
 import { isTrustedDashboardMutation } from "./dashboard-origin.js";
@@ -60,10 +62,12 @@ async function saveConnection(env: AppEnv, userId: string, provider: AppProvider
   const stableId = `${identityHash.slice(0, 8)}-${identityHash.slice(8, 12)}-8${identityHash.slice(13, 16)}-${((parseInt(identityHash[16]!, 16) & 3) | 8).toString(16)}${identityHash.slice(17, 20)}-${identityHash.slice(20, 32)}`;
   const id = existing?.id || stableId;
   const cipher = await seal(env, tokens, tokenContext({ id, user_id: userId, provider }));
-  await env.DB.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,expires_at,created_at,updated_at,daily_call_limit,connection_metadata_json)
-    VALUES(?1,?2,?3,?4,?5,'active',?6,?7,?8,?9,?10,?10,?11,?12)
+  const plan=billingEnabled(env)?await currentArcPlan(env.DB,userId):null;
+  const saved=await env.DB.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,expires_at,created_at,updated_at,daily_call_limit,connection_metadata_json)
+    SELECT ?1,?2,?3,?4,?5,'active',?6,?7,?8,?9,?10,?10,?11,?12 WHERE (?13=0 OR EXISTS(SELECT 1 FROM app_connections WHERE id=?1 AND user_id=?2 AND status!='disconnected') OR (SELECT COUNT(*) FROM app_connections WHERE user_id=?2 AND status!='disconnected')<?14)
     ON CONFLICT(user_id,provider,account_id) DO UPDATE SET account_label=excluded.account_label,status='active',permissions_json=excluded.permissions_json,scopes_json=excluded.scopes_json,token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,generation=app_connections.generation+1,refresh_lease=NULL,refresh_lease_until=NULL,last_error=NULL,updated_at=excluded.updated_at,daily_call_limit=excluded.daily_call_limit,connection_metadata_json=excluded.connection_metadata_json`)
-    .bind(id, userId, provider, account.id, account.label, JSON.stringify(permissions), JSON.stringify(tokens.scopes), cipher, tokens.expiresAt, now(), dailyLimit, JSON.stringify({ shopDomain: tokens.context?.shopDomain, businessAccountId: tokens.context?.businessAccountId, phoneNumberId: tokens.context?.phoneNumberId })).run();
+    .bind(id, userId, provider, account.id, account.label, JSON.stringify(permissions), JSON.stringify(tokens.scopes), cipher, tokens.expiresAt, now(), dailyLimit, JSON.stringify({ shopDomain: tokens.context?.shopDomain, businessAccountId: tokens.context?.businessAccountId, phoneNumberId: tokens.context?.phoneNumberId }),Number(Boolean(plan)),plan?.connectionLimit??100000).run();
+  if(!saved.meta.changes)throw new AppError('app_connection_limit',402);
   return id;
 }
 async function connectApiKey(request: Request, env: AppEnv, userId: string, fetcher: typeof fetch) {
@@ -94,7 +98,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   if (provider === "shopify") await checkShopifyCallback(request, env, context);
   const tokens = await exchangeTokens(env, provider, { code, verifier, context }, fetcher);
   const account = await providerIdentity(provider, tokens, fetcher, env);
-  await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);
+  try{await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);}catch(error){if(error instanceof AppError&&error.code==='app_connection_limit')await revokeProvider(env,provider,tokens,fetcher).catch(()=>undefined);throw error;}
   return new Response(null, { status: 303, headers: { location: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps?connected=" + provider, "cache-control": "no-store" } });
 }
 async function accessToken(env: AppEnv, row: Connection, fetcher: typeof fetch): Promise<AppTokens> {

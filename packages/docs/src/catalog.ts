@@ -323,8 +323,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "一个平台，两种工作方式"
         },
         "text": {
-          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the upcoming hosted personal-agent workspace on the same connections: chat, tool execution, one-off tasks and routines. You do not supply a model API key. Arc Chat is coming soon. This release opens Connect only.",
-          "zh": "Connect 通过 MCP 把你自己的 AI 客户端连接到应用与电脑。Arc 是同一套连接之上即将推出的托管个人 Agent 工作空间，包括对话、工具执行、一次性任务和 Routine。用户不需要提供模型 API Key；Arc Chat 即将上线，本次仅开放 Connect。"
+          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the hosted personal-agent workspace on the same connections: chat, real tools, one-off tasks and routines. You do not supply a model API key. Check the workspace picker for availability: while Arc says Coming soon, Connect remains the available workspace.",
+          "zh": "Connect 通过 MCP 把已有 AI 客户端连接到应用与电脑。Arc 是同一套连接之上的托管个人 Agent 工作空间，支持聊天、真实工具、一次性任务和 Routine，无需模型 API Key。开放状态以工作空间切换菜单为准：Arc 显示 Coming soon 时，仍可使用 Connect。"
         }
       },
       {
@@ -333,8 +333,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "Auto 与高级模型"
         },
         "text": {
-          "en": "Auto uses a platform-funded OpenAI model. Premium OpenAI and Claude models require a stored paid-model entitlement, a provider grant and available budget. Each request reserves its maximum estimated cost before inference and settles measured usage afterwards. Global, account, organization and conversation limits apply. Runs also have explicit step, time and token ceilings.",
-          "zh": "Auto 使用平台出资的 OpenAI 模型。高级 OpenAI 和 Claude 模型要求已保存的付费模型权益、服务商授权及剩余额度。每次推理前预留估算最大成本，之后按实际用量结算，受全局、账号、组织及对话预算限制；运行还具备明确的步骤、时间与 Token 上限。"
+          "en": "Auto prioritizes a low-cost platform-funded OpenAI model. Plus and Pro include every configured premium OpenAI and Claude model; Pro provides more Credits and capacity. Different models consume Credits at their rated token prices, including reasoning and cache usage. Every agent step counts. Each call reserves a bounded maximum and settles measured usage; unused reservations return. Account, platform, step, time and token limits apply.",
+          "zh": "Auto 优先使用平台提供的低成本 OpenAI 模型。Plus 与 Pro 均包含全部已配置的高级 OpenAI 与 Claude 模型，Pro 提供更多 Credits 和容量。不同模型按各自 token 价格消耗 Credits，包含推理与缓存用量；每个智能体步骤都会计量。调用前预留有界最大额度，之后按实际用量结算并退回未使用部分，同时受账号、平台、步骤、时间与 token 上限约束。"
         }
       },
       {
@@ -353,9 +353,13 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "你的 14 天试用"
         },
         "text": {
-          "en": "A 14-day trial is planned for the Arc launch. Activation is not open yet. After launch, activate it in Arc Chat. It lasts fourteen consecutive days per account; refreshing, signing out or activating again does not extend it. Auto and capped premium inference, Tasks and Routines are included. Model spending is limited per day, provider allowance and run. At expiry, new hosted inference stops while conversations and account connections remain. Connect uses its own plan. No credit card is requested and there is no automatic charge.",
-          "zh": "Arc 上线时计划提供 14 天试用，目前尚未开放。上线后可在 Arc Chat 主动开启。每个账号连续十四天，刷新、退出或再次开启不会延长。包含 Auto、有上限的高级模型推理、Tasks 和 Routines。模型消费受每日额度、服务商授权总额及单次运行限制。到期后停止新的托管推理，对话和账号连接仍保留，Connect 按原套餐使用。不要求信用卡，也不会自动扣费。"
+          "en": "When Arc is available, activate the 14-day trial in Arc Chat. It includes 200 Credits and starts only when you confirm. Refreshing or activating again does not extend it. Daily, model and run caps still apply. At expiry, new hosted inference stops while existing results and connections remain. Connect uses its own allowance. No card is required and there is no automatic charge.",
+          "zh": "Arc 开放后，可在 Arc Chat 主动确认开启 14 天试用，包含 200 Credits。刷新或再次开启不会延长试用；每日、模型和单次工作上限仍适用。到期后停止新的托管推理，已有结果和连接仍保留。Connect 使用独立额度，无需信用卡，也不会自动扣费。"
         }
+      },
+      {
+        "heading":{"en":"Billing and allowance","zh":"账单与额度"},
+        "text":{"en":"Settings → Billing shows your plan, available/reserved Credits, Connect calls and model rates. Monthly Credits expire at the paid period end; top-ups do not expire but require an active paid Arc subscription. Stripe handles checkout, payment methods, invoices and cancellation. Plan changes take effect at the next billing cycle. A checkout return page does not grant Credits until payment is verified. Refunds revoke unused purchased allowance; there are no automatic overage charges.","zh":"设置 → 账单显示套餐、可用与预留 Credits、Connect 调用和模型费率。套餐 Credits 在已付账期结束时到期；充值额度不设到期日，但使用时需有有效 Arc 付费订阅。Stripe 处理结账、付款方式、发票与取消订阅；套餐变更从下个账期生效。支付结果经核验后才发放额度，退款会撤销未使用的购买额度，不会自动收取超额费用。"}
       }
     ],
     "links": [

@@ -26,7 +26,9 @@ const safe=(n:number)=>Number.isSafeInteger(n)&&n>=0;
 function validateDefinition(d:ModelDefinition) {
   if(!["workers_ai","openai","anthropic"].includes(d.provider)||!d.id||!d.model||!safe(d.maxOutputTokens)||d.maxOutputTokens<1||
     !safe(d.inputMicrosPerMillion)||!safe(d.outputMicrosPerMillion)||
-    (d.cacheWriteMicrosPerMillion!==undefined&&!safe(d.cacheWriteMicrosPerMillion)))
+    (d.cacheWriteMicrosPerMillion!==undefined&&!safe(d.cacheWriteMicrosPerMillion))||
+    (d.cachedInputMicrosPerMillion!==undefined&&!safe(d.cachedInputMicrosPerMillion))||
+    (d.cacheWrite5mMicrosPerMillion!==undefined&&!safe(d.cacheWrite5mMicrosPerMillion)))
     throw new ModelProviderError("MODEL_CONFIGURATION_INVALID");
   if(d.provider==="workers_ai") {
     const approved=WORKERS_FREE_MODELS.find(p=>p.model===d.model);
@@ -35,9 +37,9 @@ function validateDefinition(d:ModelDefinition) {
       d.maxOutputTokens>approved.maxOutputTokens)throw new ModelProviderError("MODEL_NOT_FREE_ELIGIBLE");
   }
 }
-function charges(d:ModelDefinition,input:number,output:number,cacheWrite=0):BillingUnits {
+function charges(d:ModelDefinition,input:number,output:number,cacheWrite=0,cached=0,cache5m=0,cache1h=0):BillingUnits {
   const rawCost=input*d.inputMicrosPerMillion+output*d.outputMicrosPerMillion+
-    cacheWrite*(d.cacheWriteMicrosPerMillion??d.inputMicrosPerMillion*2);
+    cacheWrite*(d.cacheWriteMicrosPerMillion??d.inputMicrosPerMillion*2)+cached*(d.cachedInputMicrosPerMillion??d.inputMicrosPerMillion)+cache5m*(d.cacheWrite5mMicrosPerMillion??d.cacheWriteMicrosPerMillion??d.inputMicrosPerMillion*2)+cache1h*(d.cacheWriteMicrosPerMillion??d.inputMicrosPerMillion*2);
   if(!safe(rawCost))throw new ModelProviderError("MODEL_BUDGET_INVALID");
   const cost=Math.ceil(rawCost/1000000);
   const neurons=d.provider==="workers_ai"?Math.ceil((input*d.inputNeuronsPerMillion!+output*d.outputNeuronsPerMillion!)/1000000):0;
@@ -45,8 +47,11 @@ function charges(d:ModelDefinition,input:number,output:number,cacheWrite=0):Bill
   return {credits:1,costMicros:d.provider==="workers_ai"?0:cost,neurons};
 }
 function observedCharges(d:ModelDefinition,u:ModelUsage):BillingUnits {
-  // Cached inputs are conservatively billed at full price; reasoning is included in output_tokens.
-  return charges(d,u.inputTokens+u.cachedInputTokens*(d.provider==="anthropic"?1:0),u.outputTokens,u.cacheWriteTokens);
+  // OpenAI input includes cached tokens; Anthropic reports them separately.
+  // Reasoning is already included in output_tokens and is never charged twice.
+  const uncached=d.provider==='anthropic'?u.inputTokens:Math.max(0,u.inputTokens-u.cachedInputTokens-u.cacheWriteTokens);
+  const split=u.cacheWrite5mTokens!==undefined;
+  return charges(d,uncached,u.outputTokens,split?0:u.cacheWriteTokens,u.cachedInputTokens,u.cacheWrite5mTokens??0,u.cacheWrite1hTokens??0);
 }
 /** One provider attempt only. No automatic paid fallback or invisible retry. */
 export async function runModelGateway<T>(binding:ModelGatewayBinding,request:GatewayRequest,validate:(value:unknown)=>T):Promise<{value:T;usage:ModelUsage;provider:ModelProvider;modelId:string;reservationId:string}> {
@@ -64,7 +69,9 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   const encoded=new TextEncoder().encode(JSON.stringify([request.system,request.user,request.schema]));
   if(encoded.byteLength>64000)throw new ModelProviderError("MODEL_CONTEXT_TOO_LARGE");
   // Byte-bound input estimate plus template overhead; reserve all permitted output before dispatch.
-  const inputBound=encoded.byteLength+8192,maximum=charges(definition,inputBound,request.maxOutputTokens);
+  const inputBound=encoded.byteLength+8192;
+  const ceiling={...definition,inputMicrosPerMillion:Math.max(definition.inputMicrosPerMillion,definition.cacheWriteMicrosPerMillion??definition.inputMicrosPerMillion*2,definition.cacheWrite5mMicrosPerMillion??0,definition.cachedInputMicrosPerMillion??0)};
+  const maximum=charges(ceiling,inputBound,request.maxOutputTokens);
   const authorizationId=definition.provider==="workers_ai"?binding.freePoolId:binding.paidGrantId;
   if(!authorizationId)throw new ModelProviderError(definition.provider==="workers_ai"?"FREE_POOL_NOT_VERIFIED":"PAID_MODEL_NOT_AUTHORIZED");
   const timeout=request.timeoutMs??90000;

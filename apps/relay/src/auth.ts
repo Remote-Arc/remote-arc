@@ -1,6 +1,8 @@
 import { retryTransientD1Read } from "./d1-read-retry.js";
+import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
+import {currentArcPlan} from './arc-plan.js';
 
-type AuthEnv = {
+type AuthEnv = PlatformLaunchEnv & {
   DB: D1Database;
   PUBLIC_ORIGIN: string;
   APP_ORIGIN?: string;
@@ -135,6 +137,7 @@ export async function getSessionUser(
     }>());
 
   if (!row) return null;
+  const hostedPaid=billingEnabled(env)&&(await currentArcPlan(env.DB,row.id)).id!=='free';
 
   return {
     id: row.id,
@@ -142,7 +145,7 @@ export async function getSessionUser(
     name: row.name,
     avatarUrl: row.avatar_url,
     role: row.role || "user",
-    plan: row.role === "admin" || row.plan === "plus" || row.has_plus_grant ? "plus" : "free",
+    plan: row.role === "admin" || row.plan === "plus" || row.has_plus_grant || hostedPaid ? "plus" : "free",
     isAdmin: row.role === "admin",
   };
 }

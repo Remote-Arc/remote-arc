@@ -1,8 +1,11 @@
-type UsageEnv = {
+import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
+import {currentArcPlan} from './arc-plan.js';
+type UsageEnv = PlatformLaunchEnv & {
   DB: D1Database;
   MONTHLY_TOOL_CALL_LIMIT?: string;
   FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
   OPERATOR_EMAIL?: string;
+  ARC_BILLING_ENABLED?:string;
 };
 
 export type MonthlyUsage = {
@@ -59,6 +62,14 @@ async function monthlyLimitForUser(env: UsageEnv, userId: string) {
     (operatorEmail && user?.email?.trim().toLowerCase() === operatorEmail)
   ) {
     return null;
+  }
+  if(billingEnabled(env)){
+    const plan=await currentArcPlan(env.DB,userId);
+    if(plan.id!=='free')return plan.connectToolCalls+(user?.extra_calls??0);
+    if(user?.plan!=='plus'&&!user?.has_plus_grant){
+      const legacy=await env.DB.prepare('SELECT monthly_calls FROM arc_connect_legacy_allowances WHERE user_id=?1').bind(userId).first<{monthly_calls:number}>();
+      return (legacy?.monthly_calls??plan.connectToolCalls)+(user?.extra_calls??0);
+    }
   }
   // Keep existing Plus entitlements. A separate Free budget is explicitly
   // opt-in: absent FREE_MONTHLY_TOOL_CALL_LIMIT means no policy change.

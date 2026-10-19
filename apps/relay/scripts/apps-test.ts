@@ -226,6 +226,9 @@ const slackArgs=(name:string):Record<string,unknown>=>{
   case "scheduled.delete":return {...channel,scheduled_message_id:"Q1"};
   case "reactions.add":case "reactions.remove":return {...channel,timestamp:ts,name:"thumbsup"};
   case "bookmarks.add":return {channel_id:"C1",title:"Project",link:"https://example.invalid/project"};
+  case 'users.presence':return {user:'U1'};
+  case 'bookmarks.edit':return {channel_id:'C1',bookmark_id:'Bk1',title:'Project'};
+  case 'bookmarks.remove':return {channel_id:'C1',bookmark_id:'Bk1'};
   default:throw Error("Missing Slack fixture: "+name);
  }
 };
@@ -241,7 +244,7 @@ const after=requests.length;
  assert.equal((await callApp(env,identity,request,fetcher)).replayed,true);
  assert.equal(requests.length,after,"no replayed Slack request is sent twice");
 }
-assert.equal(APP_OPERATIONS.filter(o=>o.provider==="slack").length,32);
+assert.equal(APP_OPERATIONS.filter(o=>o.provider==="slack").length,35);
 const changedArgs={channel:'C1',ts:'1700000000.000001'};
 const originalReview=await loadAppReview('slack','messages.delete',changedArgs,reviewTokens,fetcher);version='v3';
 await deny(()=>verifyAppReview('slack','messages.delete',changedArgs,reviewTokens,originalReview,fetcher),'app_review_changed');
@@ -262,7 +265,22 @@ for(const operation of APP_OPERATIONS.filter(op=>APP_PROVIDERS.includes(op.provi
   else if(operation.provider==="slack") args=slackArgs(operation.name);
   else if(operation.provider==="gmail"||operation.provider==="outlook") args=["drafts.create","messages.send"].includes(operation.name)?payload:operation.name==="messages.list"?{query:"approved",...(operation.provider==="gmail"?{pageToken:"next"}:{})}:operation.name==="messages.modify"?{id:"m",addLabelIds:["STARRED"],removeLabelIds:[]}:{id:"m"};
   else args=operation.name==="calendars.list"?{}:operation.name==="events.list"?{calendar:"primary",after:event.start,before:event.end}:operation.name==="events.create"?{calendar:"primary",event}:operation.name==="events.update"?{calendar:"other",id:"e",event}:{calendar:"other",id:"e"};
-  const plan=operation.request(operation.schema.parse(args));
+  if(operation.provider==='github'){
+    if(['issues.get','issues.update','comments.list','comments.create','pulls.get','pulls.files'].includes(operation.name))Object.assign(args,{number:1});
+    if(operation.name==='issues.update')args.title='Updated';if(operation.name==='comments.create')args.body='An update';if(['actions.get','actions.rerun'].includes(operation.name))args.id='123';
+  }
+  if(operation.provider==='gmail'){
+    if(['labels.list','drafts.list','threads.list'].includes(operation.name))args={};if(operation.name==='labels.create')args={name:'Work'};
+  }
+  if(operation.provider==='outlook'){
+    if(operation.name==='folders.list')args={};if(operation.name==='messages.reply')args={id:'m',comment:'Reply'};
+    if(operation.name==='messages.move')args={id:'m',destinationId:'inbox'};if(operation.name==='messages.markRead')args={id:'m',isRead:true};
+  }
+  if(operation.provider==='google_calendar'&&operation.name==='calendars.get')args={calendar:'primary'};
+  if(operation.provider==='google_calendar'&&operation.name==='availability.query')args={calendars:['primary'],start:event.start,end:event.end};
+  if(operation.provider==='microsoft_calendar'&&['calendars.get','events.accept','events.decline'].includes(operation.name))args={id:'e'};
+  const parsed=operation.schema.safeParse(args);assert(parsed.success,operation.provider+' '+operation.name+': '+JSON.stringify(parsed.error));
+  const plan=operation.request(parsed.data);
   assert(["api.github.com","slack.com","gmail.googleapis.com","graph.microsoft.com","www.googleapis.com"].includes(new URL(plan.url).hostname));
   assert(["GET","POST","PATCH","DELETE"].includes(plan.method));
   assert(!plan.url.includes("server-secret"));

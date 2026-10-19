@@ -2,16 +2,27 @@
 /** Launch recommendation; checkout stays disabled until configured and reviewed. */
 export const ARC_CREDIT_RATE = {version:'arc-credits-v1',unitsPerCredit:1000,costMicrosPerUnit:2} as const;
 export const ARC_TRIAL_CREDITS = 200;
+export const ARC_PLATFORM_APP_BUDGETS_MICROS={free:10000,paid:500000} as const;
 export type ArcPlanId = 'free'|'arc-plus-v1'|'arc-pro-v1';
 export const ARC_PLANS = [
   {id:'free',label:'Free',monthlyPriceCents:0,monthlyCredits:0,connectToolCalls:500,deviceLimit:2,connectionLimit:5,allHostedModels:false,concurrentRuns:1,routines:3,maxSteps:8,maxTokens:24000,maxSeconds:180},
-  {id:'arc-plus-v1',label:'Plus',monthlyPriceCents:2900,monthlyCredits:1500,connectToolCalls:20000,deviceLimit:5,connectionLimit:50,allHostedModels:true,concurrentRuns:2,routines:20,maxSteps:16,maxTokens:48000,maxSeconds:600},
+  {id:'arc-plus-v1',label:'Plus',monthlyPriceCents:3900,monthlyCredits:1500,connectToolCalls:20000,deviceLimit:5,connectionLimit:50,allHostedModels:true,concurrentRuns:2,routines:20,maxSteps:16,maxTokens:48000,maxSeconds:600},
   {id:'arc-pro-v1',label:'Pro',monthlyPriceCents:7900,monthlyCredits:5000,connectToolCalls:100000,deviceLimit:20,connectionLimit:200,allHostedModels:true,concurrentRuns:5,routines:100,maxSteps:32,maxTokens:96000,maxSeconds:1800}
 ] as const;
 export const arcPlan=(id:string)=>ARC_PLANS.find(plan=>plan.id===id)??ARC_PLANS[0];
 export const ARC_TOPUPS=[{id:'arc-topup-500-v1',credits:500,priceCents:1000}] as const;
 /** Enterprise is negotiated; no automatic entitlement or unlimited usage grant. */
 export const ARC_ENTERPRISE={id:'enterprise',label:'Enterprise',pricing:'contact_sales',allHostedModels:true} as const;
+
+/** Standard tier, USD microdollars per million tokens. Reviewed 2026-10-19.
+ * This is shared by the gateway, billing UI and SaaS economics tools. */
+export const ARC_HOSTED_MODELS = [
+  {id:'arc-auto',label:'Auto · GPT-6 Luna',provider:'openai',model:'gpt-6-luna',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000,cachedInputMicrosPerMillion:10000,cacheWriteMicrosPerMillion:125000},
+  {id:'gpt-6.1-sol',label:'GPT-6.1 Sol',provider:'openai',model:'gpt-6.1-sol',maxOutputTokens:4096,inputMicrosPerMillion:2000000,outputMicrosPerMillion:10000000,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:2500000},
+  {id:'gpt-6-astra',label:'GPT-6 Astra',provider:'openai',model:'gpt-6-astra',maxOutputTokens:4096,inputMicrosPerMillion:10000000,outputMicrosPerMillion:50000000,cachedInputMicrosPerMillion:1000000,cacheWriteMicrosPerMillion:12500000},
+  {id:'claude-sonnet-5-5',label:'Claude Sonnet 5.5',provider:'anthropic',model:'claude-sonnet-5-5',maxOutputTokens:4096,inputMicrosPerMillion:2000000,outputMicrosPerMillion:10000000,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:4000000,cacheWrite5mMicrosPerMillion:2500000,structuredOutput:true},
+  {id:'claude-opus-5-5',label:'Claude Opus 5.5',provider:'anthropic',model:'claude-opus-5-5',maxOutputTokens:4096,inputMicrosPerMillion:4000000,outputMicrosPerMillion:20000000,cachedInputMicrosPerMillion:200000,cacheWriteMicrosPerMillion:8000000,cacheWrite5mMicrosPerMillion:5000000,structuredOutput:true},
+] as const;
 
 
 export type SecurityGrant = {

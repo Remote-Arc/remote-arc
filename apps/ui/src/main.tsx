@@ -10,6 +10,8 @@ import {OverviewGreeting} from "./overview-greeting.js";
 import { ArcWorkWorkspace } from "./arc-workspace.js";
 import { ProductIcon, type ProductIconName } from "./product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
+import {usePlatformCatalog} from './use-platform-catalog.js';
+import {ArcReadyPage} from './arc-ready-page.js';
 import {
   DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab, ARC_WORKSPACE_AVAILABLE,
   isVisibleInWorkspace, isAgentGoalAutomation,
@@ -32,6 +34,7 @@ import { AdminOperations } from "./admin-operations.js";
 import { AdminConsole } from "./admin/admin-console.js";
 import {registerProductPwa} from './product-pwa.js';
 import { EngagementPage } from "./public-engagement.js";
+import {TrustPage} from "./trust-pages.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
@@ -69,6 +72,7 @@ const UseCaseDetail = React.lazy(() => import("./use-cases.js").then(module => (
 const LongRunningWorkDocs = React.lazy(() => import("./long-running-docs.js").then((module) => ({ default: module.LongRunningWorkDocs })));
 
 type User = {
+  arcAvailable?:boolean;
   id: string;
   email: string;
   name: string | null;
@@ -476,6 +480,7 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 }
 function PublicHeader({ user }: { user?: User | null }) {
   const { tr, locale } = useI18n();
+  const arcAvailable=usePlatformCatalog()?.arcAvailable===true;
   const [openMenu, setOpenMenu] = useState<"mcp" | "resources" | null>(null);
   const [mobileOpen,setMobileOpen] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
@@ -512,7 +517,7 @@ function PublicHeader({ user }: { user?: User | null }) {
             <div id="public-nav-product" className="publicNavDropdown productDropdown">
               <section className="publicNavGroup">
                 <span className="publicNavGroupLabel">{tr('ONE PLATFORM. YOUR WAY TO WORK.','一个平台，选择你的工作方式。')}</span>
-                <a href={navHref('/arc')}><span className="publicProductIcon"><ProductIcon name="spark"/></span><span><strong>Arc <em>{tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
+                <a href={navHref('/arc')}><span className="publicProductIcon"><ProductIcon name="spark"/></span><span><strong>Arc <em>{arcAvailable?tr('Available now','现已可用'):tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
                 <a href={navHref('/connect-ai')}><span className="publicProductIcon"><ProductIcon name="link"/></span><span><strong>Connect <em>{tr('Available today','现已可用')}</em></strong><small>{tr('Bring tools to the AI you already use','为你常用的 AI 连接电脑和应用')}</small></span></a>
                 <a href={navHref('/docs/device-fleet')}><span className="publicProductIcon"><ProductIcon name="device"/></span><span><strong>{tr('Intelligent fleet','智能设备调度')}</strong><small>{tr('Match work to the right computer','让合适的设备承担合适的工作')}</small></span></a>
               </section>
@@ -1631,9 +1636,9 @@ function PublicLayout({
           <a href={tr("/arc", "/zh/arc")}>{tr("Arc", "Arc 助手")}</a>
           <a href={tr("/roadmap", "/zh/roadmap")}>{tr("Roadmap", "路线图")}</a>
           <a href={tr("/feedback","/zh/feedback")}>{tr("Feedback", "用户反馈")}</a>
-          <a href="/support">{tr("Support", "支持")}</a>
-          <a href="/privacy">{tr("Privacy", "隐私")}</a>
-          <a href="/terms">{tr("Terms", "条款")}</a>
+          <a href={tr("/support", "/zh/support")}>{tr("Support", "支持")}</a>
+          <a href={tr("/privacy", "/zh/privacy")}>{tr("Privacy", "隐私")}</a>
+          <a href={tr("/terms", "/zh/terms")}>{tr("Terms", "条款")}</a>
         </nav>
         <div className="publicFooterMeta">
           <span>© 2026 Remote Arc · {tr("Proprietary", "专有软件")}</span>
@@ -2417,22 +2422,23 @@ function DashboardAccess() {
 
 function Landing({ user }: { user?: User | null }) {
   const { tr } = useI18n();
+  const arcAvailable=usePlatformCatalog()?.arcAvailable===true;
   return (
     <PublicLayout user={user}>
       <section className="landingHero landingHero--constellation">
         <div className="heroCopy">
-          <span className="eyebrow heroProductLabel"><i/> {tr('CONNECT AVAILABLE. ARC COMING SOON.','CONNECT 现已可用 · ARC 即将上线')}</span>
+          <span className="eyebrow heroProductLabel"><i/> {arcAvailable?tr('YOUR PERSONAL AGENT. REAL WORK.','你的个人 AI 队友，处理真实工作。'):tr('CONNECT AVAILABLE. ARC COMING SOON.','CONNECT 现已可用 · ARC 即将上线')}</span>
           <HeroHeadline />
-          <p>{tr('Connect your AI to apps and your own computers today. Coming next: Arc, your personal agent to coordinate the work, from one-off tasks to everyday routines.','现在，让你的 AI 连接应用与自己的电脑。接下来，Arc 将成为你的个人 AI 队友，协调一次性任务与每日 Routine。')}</p>
+          <p>{arcAvailable?tr('Tell Arc what you need. It works with your apps, chooses a suitable computer, and keeps tasks and routines moving — with results you can inspect.','告诉 Arc 你需要什么。它调用应用、选择合适电脑，让任务与 Routine 持续推进，并提供可核验的结果。'):tr('Connect your AI to apps and your own computers today. Coming next: Arc, your personal agent to coordinate the work, from one-off tasks to everyday routines.','现在，让你的 AI 连接应用与自己的电脑。接下来，Arc 将成为你的个人 AI 队友，协调一次性任务与每日 Routine。')}</p>
           <div className="landingActions">
-            <a className="primaryButton marketingPrimary" href={APP_ORIGIN+"/dashboard/connect/overview"}>{tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
+            <a className="primaryButton marketingPrimary" href={APP_ORIGIN+(arcAvailable?'/dashboard/arc/chat':'/dashboard/connect/overview')}>{arcAvailable?tr('Start 14-day free trial','开始 14 天免费试用'):tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
             <a className="marketingSecondary" href="#how-it-works">{tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>
           </div>
           <div className="heroProofLine"><ProductIcon name="check" size={14}/>{tr('No model API key required','无需模型 API Key')}<span>·</span>Windows · Mac · Linux</div>
 
           <a className="heroTaskAvailability" href="/connect-ai">{tr('Already use ChatGPT or Claude? Explore Connect','已经在用 ChatGPT 或 Claude？了解 Connect')}<ProductIcon name="arrowUpRight" size={13}/></a>
         </div>
-        <HomeConnectionScene clients={topologyAiClients} />
+        <HomeConnectionScene clients={topologyAiClients} arcAvailable={arcAvailable} />
       </section>
 
       <section className="trustRail" aria-label={tr("Supported AI clients", "支持的 AI 客户端")}>
@@ -2462,7 +2468,8 @@ const PLUGIN_DEMO_VIDEO_URL =
   "https://assets.ps6.space/remote-arc/openai-plugin-demo/remote-arc-plugin-demo.mp4";
 
 function ArcPage({ user }: { user?: User | null }) {
-  return <PublicLayout user={user}><ArcComingSoonPageContent /></PublicLayout>;
+  const available=usePlatformCatalog()?.arcAvailable===true;
+  return <PublicLayout user={user}>{available?<ArcReadyPage/>:<ArcComingSoonPageContent />}</PublicLayout>;
 }
 
 function RoadmapPage({ user }: { user?: User | null }) {
@@ -3577,6 +3584,7 @@ function Dashboard({
   signOut: () => Promise<void>;
 }) {
   const { tr, locale, setLocale } = useI18n();
+  const arcAvailable = ARC_WORKSPACE_AVAILABLE || user.arcAvailable===true;
   const hasPlus = user.plan === "plus" || user.isAdmin;
   const [showAdd, setShowAdd] = useState(false);
   const [arcEntry,setArcEntry] = useState<{prompt?:string;sessionId?:string;version:number}>(()=>({version:0,prompt:new URLSearchParams(location.search).get('prompt')?.slice(0,6000)||undefined}));
@@ -3665,18 +3673,18 @@ function Dashboard({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem('remotearc.sidebar.collapsed') === '1'; } catch { return false; }
   });
-  const [active, setActive] = useState<DashboardTab>(() => availableDashboardTab(dashboardTabFromPath(location.pathname)));
+  const [active, setActive] = useState<DashboardTab>(() => availableDashboardTab(dashboardTabFromPath(location.pathname),arcAvailable));
   useEffect(() => {
     const syncRoute = () => {
       const requested = dashboardTabFromPath(location.pathname);
-      const resolved = availableDashboardTab(requested);
+      const resolved = availableDashboardTab(requested,arcAvailable);
       if (requested !== resolved) history.replaceState({}, '', DASHBOARD_PATHS[resolved]);
       setActive(resolved);
     };
     syncRoute();
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
-  }, []);
+  }, [arcAvailable]);
   const command = "npx remotelink";
   const safeCommand = command + " --safe";
   const mcpEndpoint = MCP_ENDPOINT;
@@ -4886,7 +4894,7 @@ function Dashboard({
   }
 
   function navigateTab(tab: DashboardTab) {
-    tab = availableDashboardTab(tab);
+    tab = availableDashboardTab(tab,arcAvailable);
     const path = DASHBOARD_PATHS[tab];
     if (location.pathname !== path) history.pushState({}, "", path);
     if (workspaceForTab(active) !== workspaceForTab(tab)) setShowAutomationCreate(false);
@@ -4900,7 +4908,7 @@ function Dashboard({
   }
 
   function openArcChat(prompt?:string,sessionId?:string) {
-    if (!ARC_WORKSPACE_AVAILABLE) { navigateTab('connect'); return; }
+    if (!arcAvailable) { navigateTab('connect'); return; }
     setArcEntry(current=>({prompt,sessionId,version:current.version+1}));
     navigateTab('agent-chat');
   }
@@ -5041,7 +5049,7 @@ function Dashboard({
   ];
   const mobileNavItems = navItems.filter(([id]) => !["agent-activity", "agent-skills", "agent-devices"].includes(id)).slice(0,4);
   const renderWorkspacePicker = (mobile = false) => (
-    <WorkspacePicker workspace={workspace} mobile={mobile} tr={tr} onNavigate={navigateTab} />
+    <WorkspacePicker workspace={workspace} arcAvailable={arcAvailable} mobile={mobile} tr={tr} onNavigate={navigateTab} />
   );
 
   return (
@@ -5158,7 +5166,7 @@ function Dashboard({
               <article className="overviewAttentionCard">
                 <span className="eyebrow">{tr("ATTENTION", "需要关注")}</span>
                 <div className="attentionList">
-                  {!!automationAttentionCount && <button onClick={() => ARC_WORKSPACE_AVAILABLE ? navigateTab('agent-goals') : navigateTab('connect')}><i className="attentionIcon warn">!</i><div><strong>{automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}</strong><small>{tr("Ask your connected AI to review saved work and continue it.", "让已连接的 AI 检查保存的工作并继续处理。")}</small></div></button>}
+                  {!!automationAttentionCount && <button onClick={() => arcAvailable ? navigateTab('agent-goals') : navigateTab('connect')}><i className="attentionIcon warn">!</i><div><strong>{automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}</strong><small>{tr("Ask your connected AI to review saved work and continue it.", "让已连接的 AI 检查保存的工作并继续处理。")}</small></div></button>}
                   {automationLoadError && <button onClick={() => void refreshAutomations()}><i className="attentionIcon warn">!</i><div><strong>{tr("Task status unavailable", "任务状态暂不可用")}</strong><small>{tr("Retry to see current progress.", "点击重试以查看当前进度。")}</small></div></button>}
                   {!devices.length && <button onClick={() => setShowAdd(true)}><i className="attentionIcon warn">!</i><div><strong>{tr("No computer paired", "还没有配对电脑")}</strong><small>{tr("Pair your first device to start using Remote Arc.", "先配对第一台设备即可开始使用 Remote Arc。")}</small></div></button>}
                   {!!devices.length && devices.some((device) => device.status === "offline") && <button onClick={() => navigateTab("devices")}><i className="attentionIcon idle">•</i><div><strong>{tr("Some devices are offline", "部分设备离线")}</strong><small>{devices.filter((device) => device.status === "offline").length} {tr("device(s) unavailable for MCP calls", "台设备当前无法接受 MCP 调用")}</small></div></button>}
@@ -5210,7 +5218,7 @@ function Dashboard({
               <button className="addButton arcRadiantCta" onClick={() => setShowAdd(true)}><ProductIcon name="add"/>{tr("Add device", "添加设备")}</button>
             </section>
 
-            <DeviceFleetOverview devices={devices} tr={tr} onChat={ARC_WORKSPACE_AVAILABLE ? ()=>openArcChat(tr("Choose a suitable computer for my next task. Check my fleet capabilities and load, and ask what I need done.","为我的下一项任务选择合适电脑，先检查设备能力和负载，再确认我要做什么。")) : undefined}/>
+            <DeviceFleetOverview devices={devices} tr={tr} onChat={arcAvailable ? ()=>openArcChat(tr("Choose a suitable computer for my next task. Check my fleet capabilities and load, and ask what I need done.","为我的下一项任务选择合适电脑，先检查设备能力和负载，再确认我要做什么。")) : undefined}/>
             <section className="deviceToolbar">
               <div className="deviceSearch">
                 <ProductIcon name="search"/>
@@ -6794,89 +6802,8 @@ function ReleasesPage({ user }: { user?: User | null }) {
   );
 }
 
-function LegalPage({
-  kind,
-  user,
-}: {
-  kind: "privacy" | "terms" | "support";
-  user?: User | null;
-}) {
-  const { tr } = useI18n();
-  const content = {
-    privacy: {
-      eyebrow: "PRIVACY",
-      title: tr("Privacy Policy", "隐私政策"),
-      intro: tr(
-        "Remote Arc is designed to route authorized requests to computers you explicitly connect. This page explains the data used to operate the hosted service.",
-        "Remote Arc 只把已授权请求路由到你明确连接的电脑。这里说明托管服务运行过程中会处理哪些数据。",
-      ),
-      sections: [
-        [tr("Account data", "账户数据"), tr("We use your Google account identity to create and secure your Remote Arc account. We store identifiers, display name, email address, session records and authorization metadata needed to operate the service.", "我们使用你的 Google 账户身份来创建并保护 Remote Arc 账户，并保存服务运行所需的标识符、显示名称、邮箱、会话记录和授权元数据。")],
-        [tr("Feedback and early-access requests", "反馈与抢先体验"), tr("When you explicitly submit feedback or request early access, we store the email, optional name, message, source page, consent time, submission status and timestamps in a separate website-submissions table. Authorized administrators can review, contact you about the request and delete the submission. This is not permission to send unrelated marketing. Contact support@remotearc.app to request access, correction or deletion.", "当你主动提交反馈或申请抢先体验时，我们在独立网站表单数据表中保存邮箱、可选称呼、留言、来源页面、同意时间、处理状态和时间戳。授权管理员可以查看、针对本次请求联系你并删除记录。此同意不代表允许发送无关营销邮件。如需查阅、更正或删除，可发送邮件至 support@remotearc.app。")],
-        [tr("Device data", "设备数据"), tr("For paired computers we store device identifiers, device names, platform metadata, credential hashes and connection timestamps. Raw device credentials are not stored in the hosted database.", "对于已配对电脑，我们保存设备标识、设备名称、平台信息、凭证哈希和连接时间。托管数据库不会保存原始设备凭证。")],
-        [tr("Remote actions and tool results", "远程操作与工具结果"), tr("Remote Arc relays authorized MCP tool requests between your selected AI client and your connected device. Requested file contents, directory listings, process output and command results may pass through the hosted relay and be returned to the AI client to fulfill your request. Remote Arc audit records are designed to retain only operational metadata such as tool name, device, success state and time, not file contents, command arguments, OAuth tokens or device credentials.", "Remote Arc 会在你选择的 AI 客户端与已连接设备之间转发已授权的 MCP 工具请求。为完成你的请求，被读取的文件内容、目录列表、进程输出和命令结果可能经过托管 Relay 并返回给 AI 客户端。Remote Arc 的审计记录仅设计为保存工具名称、设备、成功状态和时间等运行元数据，不保存文件内容、命令参数、OAuth Token 或设备凭证。")],
-        [tr("Durable automation and Agent Goal data", "持久自动化与 Agent Goal 数据"), tr("Durable tasks store their approved commands/plans, trigger, objective, success criteria, tool set, verification, limits, permission snapshot and progress. They also retain bounded tool/process observations, factual working memory, journal and decision summaries, run output summaries and completion evidence in the control plane. Observations can include file contents or command output. Pending source decisions may contain editing content; their bodies are cleared after consumption while idempotency hashes remain. This task storage is separate from metadata-only operational audit and is not a full archive of local stdout/stderr.", "持久任务保存已批准命令或计划、触发方式、目标、成功标准、工具集合、验证、限制、权限快照与进度。控制面还保存受限工具或进程观察、事实工作记忆、日志与决策摘要、运行输出摘要和完成证据。观察可能包含文件内容或命令输出；待消费源决策可能包含编辑内容，消费后清除正文并保留幂等 Hash。任务存储独立于仅保留元数据的运行审计，不属于本地 stdout/stderr 完整存档。")],
-        [tr("Reasoning controller processing", "推理控制器处理"), tr("Hosted Agent Goals send the objective, criteria, factual memory and bounded observations to the configured planner provider, such as Cloudflare Workers AI or a configured OpenAI Responses API integration. Source Agent Goals return saved context to the authorized source AI client, which decides the next action. Source mode does not silently switch to a hosted model. Decisions in both modes are validated against the frozen tool and device-policy boundary. Signed task events additionally store subscription metadata and encrypted callback signing secrets when configured.", "托管 Agent Goal 会把目标、标准、事实记忆和受限观察发给配置的 Planner 服务，例如 Cloudflare Workers AI 或已配置的 OpenAI Responses API 集成。源 Agent Goal 把保存上下文返回给已授权源 AI 客户端，由它决定下一步。源模式不会静默切换托管模型；两种模式的决策都受冻结工具与设备策略边界校验。配置签名任务事件时，还会保存订阅元数据和加密的回调签名 Secret。")],
-        [tr("AI platforms", "AI 平台"), tr("When you connect Remote Arc to ChatGPT, Codex or another compatible MCP client, tool requests and results are also processed by that provider under the account, product settings, terms and privacy policy you use with that provider.", "当你将 Remote Arc 连接到 ChatGPT、Codex 或其他兼容 MCP 客户端时，工具请求与结果也会由该服务商按照你所使用账户和产品的设置、条款及隐私政策进行处理。")],
-        [tr("Infrastructure", "基础设施"), tr("The hosted service uses Cloudflare infrastructure and Google OAuth. Their processing is governed by their respective terms and privacy policies.", "托管服务使用 Cloudflare 基础设施和 Google OAuth；相关处理同时受这些服务各自的条款和隐私政策约束。")],
-        [tr("Control and deletion", "控制与删除"), tr("You can revoke individual devices from the Remote Arc dashboard. For account or hosted-data deletion requests, use the support contact below.", "你可以在 Remote Arc 控制台撤销单台设备。如需删除账户或托管数据，请通过下方支持渠道联系。")],
-      ],
-    },
-    terms: {
-      eyebrow: "TERMS",
-      title: tr("Terms of Service", "服务条款"),
-      intro: tr(
-        "Remote Arc provides remote computer access tooling. By using the hosted service, you agree to use it only with computers and accounts you are authorized to control.",
-        "Remote Arc 提供远程电脑访问工具。使用托管服务即表示你同意只操作你有权控制的电脑和账户。",
-      ),
-      sections: [
-        [tr("Authorized use", "授权使用"), tr("You must have permission to access every computer, file, account and service you control through Remote Arc. Do not use Remote Arc to bypass access controls or interfere with systems you do not own or administer.", "你必须有权访问通过 Remote Arc 控制的每台电脑、文件、账户和服务。不得使用 Remote Arc 绕过访问控制或干扰你无权管理的系统。")],
-        [tr("Your responsibility", "你的责任"), tr("Remote computer control can read or modify files, execute commands, affect running software and, when commands access network services, cause changes outside the local computer. Durable Automations may continue after the chat that created them has ended. You are responsible for reviewing device permissions, persistent task plans, expiry and run limits, AI prompts and consequential actions before approving or enabling high-impact access.", "远程电脑控制可能读取或修改文件、执行命令、影响运行中的软件；当命令访问网络服务时，也可能对本机之外的系统产生影响。Durable Automations 可能在创建它的聊天结束后继续运行。你有责任在批准或启用高影响访问前检查设备权限、持久任务计划、到期与次数限制、AI 提示与相关操作。")],
-        [tr("Service availability", "服务可用性"), tr("The hosted service is provided without a guarantee of uninterrupted availability. Features, quotas and supported integrations may change as Remote Arc develops.", "托管服务不保证持续无中断可用。随着 Remote Arc 的发展，功能、额度和支持的集成可能发生变化。")],
-        [tr("Third-party software", "第三方软件"), tr("Third-party components used by Remote Arc are governed by their respective licenses and terms. The Remote Arc product is provided as a managed hosted service.", "Remote Arc 使用的第三方组件受各自许可证与条款约束；Remote Arc 产品以托管服务方式提供。")],
-        [tr("Suspension", "暂停服务"), tr("Access may be limited or suspended for abuse, security risks, legal requirements or material violations of these terms.", "如存在滥用、安全风险、法律要求或重大违反本条款的情况，访问可能会被限制或暂停。")],
-      ],
-    },
-    support: {
-      eyebrow: "SUPPORT",
-      title: tr("Remote Arc Support", "Remote Arc 支持"),
-      intro: tr(
-        "For setup help, bug reports, security issues or account and data requests, use the channels below.",
-        "如需安装帮助、Bug 反馈、安全问题或账户与数据请求，可使用以下渠道。",
-      ),
-      sections: [
-        [tr("Documentation", "文档"), tr("Start with the MCP setup guide and product documentation for pairing, permissions and AI-client connection instructions.", "可先查看 MCP 接入指南和产品文档，了解配对、权限与 AI 客户端连接说明。")],
-        [tr("Bug reports", "Bug 反馈"), tr("Use the GitHub repository for reproducible product and developer issues. Do not include device credentials, OAuth tokens or private file contents.", "可通过 GitHub 仓库提交可复现的产品与开发问题。请勿附带设备凭证、OAuth Token 或私人文件内容。")],
-        [tr("Security", "安全问题"), tr("Review SECURITY.md before reporting a vulnerability and avoid publishing sensitive exploit details in a public issue.", "报告漏洞前请阅读 SECURITY.md，不要在公开 Issue 中发布敏感漏洞利用细节。")],
-        [tr("Account and data requests", "账户与数据请求"), tr("For account deletion or hosted-data requests, contact the project maintainer through the support channel published on the Remote Arc website or repository.", "如需删除账户或请求托管数据，请通过 Remote Arc 官网或仓库公开的支持渠道联系项目维护者。")],
-      ],
-    },
-  }[kind];
-
-  return (
-    <div className="publicPageShell">
-      <PublicHeader user={user} />
-      <main className="legalPage">
-        <span className="eyebrow">{content.eyebrow}</span>
-        <h1>{content.title}</h1>
-        <p className="legalIntro">{content.intro}</p>
-        <div className="legalGrid">
-          {content.sections.map(([title, body]) => (
-            <section className="legalCard" key={title}>
-              <h2>{title}</h2>
-              <p>{body}</p>
-            </section>
-          ))}
-        </div>
-        <div className="legalLinks">
-          <a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a>
-          <a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a>
-          <a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a>
-          <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
-        </div>
-      </main>
-    </div>
-  );
+function LegalPage({kind,user}:{kind:"privacy"|"terms"|"support";user?:User|null}) {
+  return <PublicLayout user={user}><TrustPage kind={kind}/></PublicLayout>;
 }
 
 function App() {

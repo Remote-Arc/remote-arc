@@ -1,3 +1,4 @@
+import {ArcBillingPanel} from './arc-billing-panel.js';
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import {useTheme} from "./theme.js";
 import { useI18n } from "./i18n.js";
@@ -177,33 +178,7 @@ export function DashboardSettings({
         </section>
       </div>}
 
-      {section === "billing" && <div className="raSettingsSections">
-        <section className="raSettingsSurface raSettingsPlan">
-          <div className="raSettingsPlanTop">
-            <div><span className="raSettingsFieldLabel">{tr("CURRENT PLAN", "当前套餐")}</span>
-              <h3>Remote Arc {hasPlus ? "Plus" : "Free"}</h3>
-              <p>{hasPlus ? tr("Your account has Plus features enabled.", "当前账号已开通 Plus 功能。") : tr("Core remote tools are available on your plan.", "当前套餐已包含核心远程工具。")}</p>
-            </div>
-            <span className="raSettingsPlanTag">{hasPlus ? "Plus" : "Free"}</span>
-          </div>
-          <div className="raSettingsPlanUsage">
-            <span>{tr("Tool call allowance", "工具调用额度")}</span>
-            <strong>{usage ? (usage.unlimited ? tr("Unlimited", "无限") : String(usage.used ?? 0) + " / " + usageLimitLabel) : "—"}</strong>
-          </div>
-          <p className="raSettingsPlanCaption">{usage
-            ? tr("This reflects the allowance reported for your account.", "以上额度来自当前账号的实际套餐数据。")
-            : tr("Usage data is not available yet.", "当前暂时无法获取用量数据。")}</p>
-        </section>
-        <section className="raSettingsSurface">
-          <div className="raSettingsRow raSettingsRowLast">
-            <div className="raSettingsRowInfo"><h4>{tr("Plans & capacity", "套餐与容量")}</h4>
-              <p>{tr("Compare available plans and learn how capacity works.", "对比可用套餐，了解用量与容量规则。")}</p></div>
-            <a className="raSettingsButton raSettingsButtonPrimary" href={marketingOrigin + "/pricing"}>
-              {hasPlus ? tr("View plan details", "查看套餐详情") : tr("Explore plans", "查看套餐")} <Icon name="arrow" size={16} />
-            </a>
-          </div>
-        </section>
-      </div>}
+      {section === "billing" && <ArcBillingPanel />}
     </div>
   </div>;
 }

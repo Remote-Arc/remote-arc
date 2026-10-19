@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const ciWait = readFileSync(new URL("./wait-production-ci.mjs", import.meta.url), "utf8");
-const yaml = readFileSync(new URL("../.github/workflows/deploy-cloudflare.yml", import.meta.url), "utf8");
+const yaml = readFileSync(new URL("../.github/workflows/deploy-cloudflare.yml", import.meta.url), "utf8").replace(/\r\n/g,"\n");
 assert.ok(yaml.includes("on:\n  workflow_dispatch:"), "production must require explicit promotion");
 assert.ok(!yaml.includes("workflow_run:"), "CI cannot deploy by itself");
 assert.ok(yaml.includes("github.ref == 'refs/heads/master'"), "reject feature branch releases");

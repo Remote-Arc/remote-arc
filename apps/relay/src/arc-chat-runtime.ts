@@ -1,3 +1,4 @@
+import {arcEnabled} from './platform-launch.js';
 import { z } from 'zod';
 import { runModelGateway } from './model-gateway.js';
 import { prepareArcBudget } from './arc-chat-model.js';
@@ -86,7 +87,7 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
   let step=await env.DB.prepare('SELECT * FROM arc_chat_steps WHERE run_id=?1 AND step=?2').bind(runId,run.step).first<Step>();
   if(step&&['model_pending','dispatching','unknown'].includes(step.status))return finish('unknown','ARC_INTERRUPTED_CHECK_RESULTS');
   // Also gate persisted model decisions: disabling Arc must stop new tool dispatch.
-  if(env.ARC_CHAT_ENABLED!=='1')return finish('failed','ARC_NOT_CONFIGURED');
+  if(!arcEnabled(env))return finish('failed','ARC_NOT_CONFIGURED');
   if(step?.status==='done'){
    await env.DB.prepare("UPDATE arc_chat_runs SET step=step+1,status='queued',updated_at=?1 WHERE id=?2 AND status IN ('queued','thinking','working')").bind(stamp(),runId).run();return true;
   }
@@ -104,11 +105,11 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
    const now=stamp();const claimed=await env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_steps(run_id,step,status,created_at,updated_at) VALUES(?1,?2,'model_pending',?3,?3) RETURNING run_id`).bind(runId,run.step,now).first();
    if(!claimed)return false;
    await env.DB.prepare("UPDATE arc_chat_runs SET status='thinking',updated_at=?1 WHERE id=?2 AND status='queued'").bind(now,runId).run();
-   const result=await runModelGateway(access.gateway,{context:{userId:run.user_id,organizationId:session.organization_id,taskId:session.id,runId,operationId:`chat:${run.step}`,lane:'arc_hosted'},modelId:access.definition.id,system:SYSTEM,user,schema:decisionSchema,maxOutputTokens:output,timeoutMs:Math.min(30000,Math.max(1,Date.parse(run.deadline)-Date.now()))},validateArcDecision);
+   const result=await runModelGateway(access.gateway,{context:{userId:run.user_id,organizationId:session.organization_id,taskId:session.id,runId,operationId:`chat:${run.step}`,lane:'arc_hosted'},modelId:access.definition.id,system:SYSTEM,user,schema:decisionSchema,maxOutputTokens:output,timeoutMs:Math.min(90000,Math.max(1,Date.parse(run.deadline)-Date.now()))},validateArcDecision);
    decision=result.value;
    await env.DB.batch([
     env.DB.prepare("UPDATE arc_chat_steps SET status='model_complete',decision_ciphertext=?1,updated_at=?2 WHERE run_id=?3 AND step=?4 AND status='model_pending'").bind(await seal(env,decision,arcContext(run.user_id,`${runId}:${run.step}:decision`)),stamp(),runId,run.step),
-    env.DB.prepare('UPDATE arc_chat_runs SET tokens_used=tokens_used+?1,updated_at=?2 WHERE id=?3').bind(result.usage.inputTokens+result.usage.outputTokens+result.usage.cacheWriteTokens+(result.provider==='anthropic'?result.usage.cachedInputTokens:0),stamp(),runId),
+    env.DB.prepare('UPDATE arc_chat_runs SET tokens_used=tokens_used+?1,updated_at=?2 WHERE id=?3').bind(result.usage.inputTokens+result.usage.outputTokens+(result.provider==='anthropic'?result.usage.cachedInputTokens+result.usage.cacheWriteTokens:0),stamp(),runId),
    ]);
   }
   run=(await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE id=?1').bind(runId).first<ArcRun>())!;

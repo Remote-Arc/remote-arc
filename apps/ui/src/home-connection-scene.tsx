@@ -52,10 +52,10 @@ function connectionPath(node: OrbitNode) {
 const position = (x: number, y: number, delay = 0): CSSProperties =>
   ({ left: x / 6 + "%", top: y / 5 + "%", "--float-delay": delay + "s" } as CSSProperties);
 
-export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] }) {
+export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='connect' }: { clients: readonly AiClient[];arcAvailable?:boolean;initialMode?:Mode }) {
   const { tr } = useI18n();
   const { ref, running } = useAmbientMotion();
-  const [mode, setMode] = useState<Mode>("connect");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const uid = useId();
   const arc = mode === "arc";
   const headlineId = uid + "-heading";
@@ -79,7 +79,7 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
                   document.getElementById(uid + "-" + next)?.focus();
                 }
               }}>
-              {value === "connect" ? "Connect" : <>Arc<span className="hcsSoonLabel">{tr("Coming soon", "即将上线")}</span></>}
+              {value === "connect" ? "Connect" : <>Arc{!arcAvailable&&<span className="hcsSoonLabel">{tr("Coming soon", "即将上线")}</span>}</>}
             </button>
           ))}
         </div>
@@ -174,7 +174,7 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
         {[tr("Skills", "专业技能"), tr("Execution", "任务执行"), tr("Approvals", "操作审批"), tr("Verified Results", "结果验证")].map(label => <li key={label}>{label}</li>)}
       </ul>
       <footer className="hcsFooter">
-        <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
+        <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? arcAvailable?tr('Arc Agent · Available now','Arc Agent · 现已可用'):tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
         <a href={arc ? "/arc" : "/connect-ai"}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
       </footer>
       <p className="hcsPlatformScope">{tr("Connect Apps ships independently. Provider setup and account authorization required.", "Connect Apps 独立发布，需要平台配置与账号授权。")}</p>

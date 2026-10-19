@@ -6,6 +6,7 @@ import { ARC_WORKSPACE_AVAILABLE } from './dashboard-workspaces.js';
 
 type Workspace = "connect" | "agent";
 type Props = {
+  arcAvailable?:boolean;
   workspace: Workspace;
   mobile?: boolean;
   tr: (english: string, chinese: string) => string;
@@ -21,7 +22,7 @@ function ProductIcon({workspace}:{workspace:Workspace}){
   return workspace==="agent"?<img src="/remote-arc.svg" alt="" width={21} height={21}/>:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 .5l2-2a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7-.5l-2 2a5 5 0 0 0 7 7l1-1"/></svg>;
 }
 
-export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: Props) {
+export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate, arcAvailable = ARC_WORKSPACE_AVAILABLE }: Props) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<Position | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -130,11 +131,11 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate }: P
           <span className="workspaceOptionDescription"><strong>Connect</strong><small>{tr("Bring tools to the AI you use", "为你常用的 AI 连接工具")}</small></span>
           <span className="workspaceOptionCheck"><Icon name={workspace === "connect" ? 'check' : 'arrowUpRight'} size={15}/></span>
         </button>
-        <button type="button" role="menuitemradio" aria-checked={workspace === "agent"} disabled={!ARC_WORKSPACE_AVAILABLE}
+        <button type="button" role="menuitemradio" aria-checked={workspace === "agent"} disabled={!arcAvailable}
           className={workspace === "agent" ? "selected" : ""} onClick={() => select("agent-chat")}>
           <span className="workspaceOptionIcon agent" aria-hidden="true"><ProductIcon workspace="agent"/></span>
           <span className="workspaceOptionDescription"><strong>Arc</strong><small>{tr("Your personal AI workspace", "你的个人 AI 工作空间")}</small></span>
-          {ARC_WORKSPACE_AVAILABLE ? <span className="workspaceOptionCheck"><Icon name={workspace === "agent" ? 'check' : 'arrowUpRight'} size={15}/></span> : <span className="workspaceComingSoon">{tr("Coming soon", "即将上线")}</span>}
+          {arcAvailable ? <span className="workspaceOptionCheck"><Icon name={workspace === "agent" ? 'check' : 'arrowUpRight'} size={15}/></span> : <span className="workspaceComingSoon">{tr("Coming soon", "即将上线")}</span>}
         </button>
         <div className="workspacePickerMenuFoot">{tr("One account. Shared apps and devices.","同一个账号，共享已连接的应用与设备。")}</div>
       </div>,

@@ -19,7 +19,7 @@
     "test:recovery": "pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/background-recovery-test.ts && node packages/cli/scripts/revoked-pairing-test.mjs && pnpm build:cli && pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/attached-terminal-test.ts",
     "test:agent-log": "pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/agent-log-test.ts",
     "test:goals": "node apps/relay/scripts/goal-continuation-test.mjs && node apps/relay/scripts/planned-goal-test.mjs && pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/goal-workspace-test.ts",
-    "ci": "pnpm release:check && pnpm test:installer && pnpm test:skills && pnpm test:release-notify && pnpm test:fleet && pnpm test:deploy-policy && pnpm test:organization && pnpm typecheck && pnpm --filter @remotearc/ui test:workspaces && pnpm --filter @remotearc/ui test:security && pnpm --filter @remotearc/ui test:onboarding && pnpm --filter @remotearc/ui test:arc-experience && pnpm --filter @remotearc/ui test:onboarding-readability && pnpm --filter @remotearc/ui test:device-removal && pnpm --filter @remotearc/ui test:device-execution-log && pnpm --filter @remotearc/ui test:background-recovery && pnpm test:agent-log && pnpm test && pnpm test:goals && pnpm test:runtime-surface && pnpm test:seo && pnpm --filter @remotearc/relay test:security",
+    "ci": "pnpm release:check && pnpm test:installer && pnpm test:skills && pnpm test:release-notify && pnpm test:fleet && pnpm test:deploy-policy && pnpm test:organization && pnpm typecheck && pnpm --filter @remotearc/ui test:workspaces && pnpm --filter @remotearc/ui test:security && pnpm --filter @remotearc/ui test:onboarding && pnpm --filter @remotearc/ui test:arc-experience && pnpm --filter @remotearc/ui test:onboarding-readability && pnpm --filter @remotearc/ui test:device-removal && pnpm --filter @remotearc/ui test:device-execution-log && pnpm --filter @remotearc/ui test:background-recovery && pnpm test:agent-log && pnpm test && pnpm test:goals && pnpm test:runtime-surface && pnpm test:seo && pnpm --filter @remotearc/relay test:security && pnpm test:saas",
     "build:ui": "pnpm package:browser && pnpm --filter @remotearc/ui build",
     "deploy:relay": "node scripts/deploy-relay.mjs",
     "test:installer": "node scripts/native-installer-test.mjs",
@@ -49,7 +49,12 @@
     "test:runtime-surface": "node scripts/runtime-surface-check.mjs",
     "release:sync": "node scripts/sync-release-docs.mjs --write",
     "release:check": "node scripts/sync-release-docs.mjs --check",
-    "release:notes": "node scripts/sync-release-docs.mjs --notes"
+    "release:notes": "node scripts/sync-release-docs.mjs --notes",
+    "saas:economics": "node tools/saas/cli.mjs",
+    "saas:tools": "node tools/saas/cli.mjs --serve",
+    "test:saas": "node tools/saas/economics-test.mjs && node tools/saas/cli.mjs --check",
+    "arc:setup": "node scripts/arc-platform-setup.mjs",
+    "saas:apps": "node tools/saas/apps.mjs"
   },
   "devDependencies": {
     "c8": "12.0.0"

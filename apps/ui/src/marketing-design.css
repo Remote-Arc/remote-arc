@@ -162,3 +162,5 @@
 .publicPage .publicNavProductFoot a{display:flex!important;align-items:center;justify-content:flex-start;gap:9px!important;min-height:36px;padding:8px;border-radius:6px;font-size:12px!important;color:var(--site-muted)}
 .publicPage .publicNavProductFoot a:hover{background:var(--site-subtle);color:var(--site-ink)}
 .publicPage .publicNavProductFoot img{width:17px;height:17px;object-fit:contain;flex:none}
+:root[data-theme=dark] .publicPage .publicNavProductFoot img[src="/ai-openai.svg"]{filter:brightness(0) invert(1)}
+:root[data-theme=light] .publicPage .publicNavProductFoot img[src="/ai-openai.svg"]{filter:brightness(0)}

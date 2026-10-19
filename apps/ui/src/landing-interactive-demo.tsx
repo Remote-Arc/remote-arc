@@ -92,8 +92,8 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
     case "slides":
       return [
         { tool: "read_file", arguments: '{"path":"~/slides/outline.md"}', output: tr("Outline and references read", "已读取大纲与引用素材"), duration: "31ms" },
-        { tool: "start_process", arguments: '{"command":"node scripts/build-deck.js","cwd":"~/slides"}', output: tr("PPTX generator · exit_code: 0", "PPTX 生成脚本 · 退出码 0"), duration: "2.3s" },
-        { tool: "get_file_info", arguments: '{"path":"~/slides/review.pptx"}', output: tr("review.pptx · slide count: 12", "review.pptx · 12 页"), duration: "18ms" },
+        { tool: "start_process", arguments: '{"command":"node scripts/build-deck.js --verify","cwd":"~/slides"}', output: tr("PPTX generated · 12 slides verified · exit_code: 0", "PPTX 已生成 · 已核验 12 页 · 退出码 0"), duration: "2.3s" },
+        { tool: "get_file_info", arguments: '{"path":"~/slides/review.pptx"}', output: tr("review.pptx · output file exists", "review.pptx · 输出文件已确认存在"), duration: "18ms" },
       ];
     case "excel":
       return [
@@ -111,7 +111,7 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
       return [
         { tool: "list_directory", arguments: '{"path":"~/projects/app"}', output: tr("14 entries · source and tests located", "14 项 · 已定位源代码与测试"), duration: "32ms" },
         { tool: "read_file", arguments: '{"path":"~/projects/app/src/format.ts"}', output: tr("84 lines read · failing edge case located", "已读取 84 行 · 定位边界条件"), duration: "21ms" },
-        { tool: "edit_block", arguments: '{"path":"~/projects/app/src/format.ts"}', output: tr("1 replacement · local undo available", "完成 1 处替换 · 可本地撤销"), duration: "55ms" },
+        { tool: "edit_block", arguments: JSON.stringify({file_path:"~/projects/app/src/format.ts",old_string:'return value || "—";',new_string:'return value == null ? "—" : String(value);',expected_replacements:1}), output: tr("1 replacement · local undo available", "完成 1 处替换 · 可本地撤销"), duration: "55ms" },
         { tool: "start_process", arguments: '{"command":"npm test","cwd":"~/projects/app"}', output: tr("PASS · 24 tests · exit_code: 0", "通过 · 24 项测试 · 退出码：0"), duration: "2.4s" },
       ];
   }
@@ -152,8 +152,8 @@ function progressFor(id: string, tr: (en: string, zh: string) => string): DemoPr
     case "slides":
       return [
         { working: tr("Reading the presentation materials…", "正在读取演示素材…"), done: tr("Found the outline and local charts.", "已读取本机大纲与图表。") },
-        { working: tr("Generating the editable presentation…", "正在生成可编辑 PPT…"), done: tr("The local PPTX generation script finished.", "本机 PPTX 生成脚本已执行完毕。") },
-        { working: tr("Checking the document structure…", "正在检查文档结构…"), done: tr("Verified that the presentation has 12 slides.", "已确认演示文稿包含 12 页。") },
+        { working: tr("Generating and verifying the editable presentation…", "正在生成并验证可编辑 PPT…"), done: tr("The local script generated and verified all 12 slides.", "本机脚本已生成并核验全部 12 页。") },
+        { working: tr("Checking the saved output file…", "正在检查已保存的输出文件…"), done: tr("Confirmed that review.pptx is saved on your computer.", "已确认 review.pptx 保存在你的电脑上。") },
       ];
     case "excel":
       return [

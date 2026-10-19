@@ -35,7 +35,7 @@ export function ArcExecutionScene() {
   return <div ref={ref} className="arcDesk" data-step={step} data-running={running} aria-label={tr("Illustrated Arc workspace. A weekly project update, from request to a reviewable draft.", "Arc 工作台示意：从一句需求，到可审核的项目周报。")}>
     <header className="arcDeskChrome">
       <div className="arcDeskIdentity"><img src="/remote-arc.svg" alt="" width="25" height="25" /><strong>arc</strong><span>/</span><span>{tr("Project studio", "项目工作台")}</span></div>
-      <span className="arcDeskConcept">{tr("PRODUCT CONCEPT · NOT LIVE", "产品概念 · 尚未上线")}</span>
+      <span className="arcDeskConcept">{tr("PRODUCT DEMO · EXAMPLE DATA", "产品示意 · 示例数据")}</span>
       <button className="arcV3ScenePlayback" type="button" disabled={reducedMotion} onClick={() => setPlaying(value => !value)} aria-label={playing ? tr("Pause demo animation", "暂停示意动画") : tr("Play demo animation", "播放示意动画")}>
         <SceneIcon name={playing ? "pause" : "play"} />{reducedMotion ? tr("Manual preview", "手动预览") : playing ? tr("Pause", "暂停") : tr("Play", "播放")}
       </button>

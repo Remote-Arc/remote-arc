@@ -11,9 +11,10 @@ export function EngagementPage({category}: {category:Category}) {
   const isLead=category==="early_access";
   return <main className="engagementPage">
     <a className="engagementBack" href={localizedWebsiteHref(isLead?"/arc":"/",locale)}>← {tr("Back to Remote Arc", "返回 Remote Arc")}</a>
-    <span className="engagementEyebrow">{isLead?tr("ARC · EARLY ACCESS","ARC · 抢先体验"):tr("REMOTE ARC · PRODUCT FEEDBACK","REMOTE ARC · 产品反馈")}</span>
-    <h1>{isLead?tr("Be among the first to work with Arc.","成为第一批体验 Arc 的人。"):tr("Help shape what comes next.","一起把 Remote Arc 做得更好。")}</h1>
+    <span className="engagementEyebrow">{isLead?tr("ARC · FUTURE CAPABILITIES","ARC · 未来能力"):tr("REMOTE ARC · PRODUCT FEEDBACK","REMOTE ARC · 产品反馈")}</span>
+    <h1>{isLead?tr("Help shape Arc’s next capabilities.","一起定义 Arc 接下来的能力。"):tr("Help shape what comes next.","一起把 Remote Arc 做得更好。")}</h1>
     <p className="engagementIntro">{isLead?tr("What work would you trust Arc to handle? Tell us about your workflow. Submitting this form does not start a trial or provide model credits.","你希望把什么工作交给 Arc？告诉我们你的工作场景。提交表单不会启动试用或发放模型额度。"):tr("Share an idea, report an issue, or tell us what would make your work easier.","分享想法、反馈问题，或告诉我们怎样才能让你的工作更轻松。")}</p>
+    {isLead&&<p className="engagementIntro"><a href="https://agent.remotearc.app/dashboard/agent/chat">{tr("Arc is available now. Open the workspace to start your trial.","Arc 现已可用，打开工作空间即可开启试用。")} ↗</a></p>}
     <EngagementForm category={category}/>
   </main>;
 }

@@ -65,7 +65,7 @@ export function ArcRoadmapPageContent() {
         </div>
         <div className="arcTimelinePanelBottom">
           <span>{tr("Long-term directions are exploratory, without a committed release date.", "长期方向仍在探索中，不代表已承诺的功能或上线日期。")}</span>
-          <a href={active===0?localizedWebsiteHref("/connect-ai",locale):localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
+          <a href={active===0?localizedWebsiteHref("/connect-ai",locale):active===1?"https://agent.remotearc.app/dashboard/agent/chat":localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):active===1?tr("Open Arc", "打开 Arc"):tr("Express interest", "登记体验意向")} <span aria-hidden="true">↗</span></a>
         </div>
       </article>
     </section>

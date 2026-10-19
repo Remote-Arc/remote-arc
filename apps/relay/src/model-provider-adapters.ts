@@ -1,8 +1,8 @@
-export type ModelProvider = "workers_ai" | "openai" | "anthropic";
-export type ModelUsage = {inputTokens:number;outputTokens:number;cachedInputTokens:number;cacheWriteTokens:number;reasoningTokens:number};
+export type ModelProvider = "workers_ai" | "openai" | "anthropic" | "openrouter";
+export type ModelUsage = {inputTokens:number;outputTokens:number;cachedInputTokens:number;cacheWriteTokens:number;reasoningTokens:number;cacheWrite5mTokens?:number;cacheWrite1hTokens?:number};
 export type ModelDefinition = {
-  id:string;provider:ModelProvider;model:string;maxOutputTokens:number;
-  inputMicrosPerMillion:number;outputMicrosPerMillion:number;cacheWriteMicrosPerMillion?:number;
+  id:string;label?:string;provider:ModelProvider;model:string;maxOutputTokens:number;
+  inputMicrosPerMillion:number;outputMicrosPerMillion:number;cacheWriteMicrosPerMillion?:number;cacheWrite5mMicrosPerMillion?:number;cachedInputMicrosPerMillion?:number;structuredOutput?:boolean;
   inputNeuronsPerMillion?:number;outputNeuronsPerMillion?:number;freeEligible?:boolean;
 };
 export type ModelRequest = {definition:ModelDefinition;system:string;user:string;schema:Record<string,unknown>;maxOutputTokens:number;signal:AbortSignal};
@@ -18,10 +18,12 @@ const token=(v:unknown) => {
 };
 function usage(payload:Record<string,unknown>):ModelUsage {
   const u=object(payload.usage),input=token(u.input_tokens ?? u.prompt_tokens),output=token(u.output_tokens ?? u.completion_tokens);
+  const writes=token(u.cache_creation_input_tokens??object(u.input_tokens_details).cache_write_tokens??0),breakdown=u.cache_creation?{cacheWrite5mTokens:token(object(u.cache_creation).ephemeral_5m_input_tokens??0),cacheWrite1hTokens:token(object(u.cache_creation).ephemeral_1h_input_tokens??0)}:{};
+  if(breakdown.cacheWrite5mTokens!==undefined&&breakdown.cacheWrite5mTokens+(breakdown.cacheWrite1hTokens??0)!==writes)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');
   return {inputTokens:input,outputTokens:output,
-    cachedInputTokens:token(object(u.input_tokens_details).cached_tokens??u.cache_read_input_tokens??0),
-    cacheWriteTokens:token(u.cache_creation_input_tokens??0),
-    reasoningTokens:token(object(u.output_tokens_details).reasoning_tokens??0)};
+    cachedInputTokens:token(object(u.input_tokens_details).cached_tokens??object(u.prompt_tokens_details).cached_tokens??u.cache_read_input_tokens??0),
+    cacheWriteTokens:writes,...breakdown,
+    reasoningTokens:token(object(u.output_tokens_details).reasoning_tokens??object(u.completion_tokens_details).reasoning_tokens??0)};
 }
 function parseJson(v:unknown,u:ModelUsage):unknown {
   if(typeof v==="string"){try{return JSON.parse(v);}catch{throw new ModelProviderError("MODEL_INVALID_JSON",false,u);}}
@@ -55,7 +57,7 @@ export function openAiAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAda
       input:[{role:"system",content:r.system},{role:"user",content:r.user}],
       text:{format:{type:"json_schema",name:"remote_arc_agent_decision",strict:true,schema:r.schema}},
     },r.signal);
-    const u=usage(p);return {value:textResponse(p,u),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
+    const u=usage(p);if(u.cachedInputTokens+u.cacheWriteTokens>u.inputTokens||u.reasoningTokens>u.outputTokens)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');return {value:textResponse(p,u),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
   };
 }
 export function anthropicAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAdapter {
@@ -64,16 +66,44 @@ export function anthropicAdapter(apiKey:string,fetcher:typeof fetch=fetch):Model
     const p=await post(fetcher,"https://api.anthropic.com/v1/messages",{"x-api-key":apiKey,"anthropic-version":"2023-06-01"},{
       model:r.definition.model,max_tokens:r.maxOutputTokens,system:r.system,
       messages:[{role:"user",content:r.user}],
-      tools:[{name:"submit_agent_decision",description:"Submit one bounded next decision. This returns data and never executes a tool.",input_schema:r.schema}],
-      tool_choice:{type:"tool",name:"submit_agent_decision",disable_parallel_tool_use:true},
+      ...(r.definition.structuredOutput?{output_config:{format:{type:'json_schema',schema:r.schema}}}:{
+        tools:[{name:"submit_agent_decision",description:"Submit one bounded next decision. This returns data and never executes a tool.",input_schema:r.schema}],
+        tool_choice:{type:"tool",name:"submit_agent_decision",disable_parallel_tool_use:true},
+      }),
     },r.signal);
     const u=usage(p);
+    if(r.definition.structuredOutput){
+      if(p.stop_reason!=="end_turn")throw new ModelProviderError("MODEL_INCOMPLETE_RESPONSE",false,u);
+      const content=Array.isArray(p.content)?p.content as Array<Record<string,unknown>>:[];
+      if(content.some(x=>x.type==='refusal'))throw new ModelProviderError('MODEL_REFUSED',false,u);
+      return {value:parseJson(content.filter(x=>x.type==='text').map(x=>x.text).join(''),u),usage:u,providerRequestId:typeof p.id==='string'?p.id:null};
+    }
     if(p.stop_reason!=="tool_use")throw new ModelProviderError("MODEL_INCOMPLETE_RESPONSE",false,u);
     const content=Array.isArray(p.content)?p.content as Array<Record<string,unknown>>:[];
     const selected=content.filter(x=>x.type==="tool_use"&&x.name==="submit_agent_decision");
     if(selected.length!==1||content.some(x=>x.type==="tool_use"&&x.name!=="submit_agent_decision"))
       throw new ModelProviderError("MODEL_INVALID_TOOL_RESPONSE",false,u);
     return {value:parseJson(selected[0]!.input,u),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
+  };
+}
+/** One rated request. Router retries, training routes and parameter downgrades are disabled. */
+export function openRouterAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAdapter {
+  return async r=>{
+    if(!apiKey.trim())throw new ModelProviderError('MODEL_NOT_CONFIGURED');
+    const p=await post(fetcher,'https://openrouter.ai/api/v1/chat/completions',{
+      authorization:'Bearer '+apiKey,'HTTP-Referer':'https://remotearc.app','X-OpenRouter-Title':'Remote Arc',
+    },{
+      model:r.definition.model,stream:false,max_tokens:r.maxOutputTokens,
+      messages:[{role:'system',content:r.system},{role:'user',content:r.user}],
+      response_format:{type:'json_schema',json_schema:{name:'remote_arc_agent_decision',strict:true,schema:r.schema}},
+      provider:{require_parameters:true,allow_fallbacks:false,data_collection:'deny',max_price:{prompt:r.definition.inputMicrosPerMillion/1000000,completion:r.definition.outputMicrosPerMillion/1000000}},
+    },r.signal);
+    const u=usage(p);
+    if(u.cachedInputTokens+u.cacheWriteTokens>u.inputTokens||u.reasoningTokens>u.outputTokens)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');
+    const choices=Array.isArray(p.choices)?p.choices as Array<Record<string,unknown>>:[];
+    if(choices.length!==1||choices[0]?.finish_reason!=='stop')throw new ModelProviderError('MODEL_INCOMPLETE_RESPONSE',false,u);
+    const message=object(choices[0].message);if(message.refusal)throw new ModelProviderError('MODEL_REFUSED',false,u);
+    return{value:parseJson(message.content,u),usage:u,providerRequestId:typeof p.id==='string'?p.id:null};
   };
 }
 export type WorkersAiBinding = {run(model:string,input:Record<string,unknown>):Promise<unknown>};

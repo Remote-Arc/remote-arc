@@ -1,0 +1,21 @@
+.arcHomeBrief{width:100%;margin:20px auto 0;text-align:left}
+.arcHomeMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.arcChatWelcome .arcHomeMetrics>button{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:9px;padding:14px;border:1px solid var(--dash-line);border-radius:10px;background:var(--dash-surface);color:var(--dash-muted);text-align:left;cursor:pointer}
+.arcHomeMetrics>button>span{font-size:13px;line-height:1.5}
+.arcHomeMetrics strong{grid-column:2;color:var(--dash-text);font-size:20px;font-weight:550;line-height:1}
+.arcHomeMetrics strong small{color:var(--dash-muted);font-size:14px;font-weight:400}
+.arcHomeAttention{margin-top:18px;border:1px solid var(--dash-line);border-radius:12px;overflow:hidden;background:var(--dash-surface)}
+.arcHomeAttention>header{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--dash-line);color:var(--dash-muted);font-size:13px}
+.arcHomeAttention>header strong{font-weight:550;color:var(--dash-text)}
+.arcHomeAttention>header>span{margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums}
+.arcChatWelcome .arcHomeAttention>button{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:transparent;border:0;border-bottom:1px solid var(--dash-line);color:var(--dash-muted);text-align:left;cursor:pointer}
+.arcHomeAttention>button:last-child{border-bottom:0}
+.arcHomeAttention>button>span{display:grid;gap:4px;flex:1;min-width:0}
+.arcHomeAttention>button strong{color:var(--dash-text);font-size:14px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arcHomeAttention>button small{font-size:13px;line-height:1.5}
+.arcChatWelcome :is(.arcHomeMetrics,.arcHomeAttention)>button:hover{background:var(--dash-subtle);border-color:var(--dash-line)}
+.arcChatWelcome :is(.arcHomeMetrics,.arcHomeAttention)>button:focus-visible{outline:2px solid var(--dash-accent);outline-offset:-3px}
+.arcHomeBriefStatus{margin-top:20px;display:flex;justify-content:center;flex-wrap:wrap;gap:10px;color:var(--dash-muted);font-size:13px}
+.arcHomeBriefStatus button{padding:0;border:0;background:none;color:var(--dash-text);text-decoration:underline;cursor:pointer}
+@media(max-width:540px){.arcHomeMetrics{gap:6px}.arcChatWelcome .arcHomeMetrics>button{grid-template-columns:1fr;gap:8px;padding:12px 10px}.arcHomeMetrics strong{grid-column:1}.arcHomeMetrics>button>span{font-size:12px}.arcHomeMetrics strong{font-size:19px}}
+.arcChatWelcome .arcTrialStatus{width:100%;margin:0 0 18px;text-align:left}

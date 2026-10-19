@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab, ARC_WORKSPACE_AVAILABLE,
+  DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab,
   isAgentGoalAutomation, isAgentRoutineAutomation, isVisibleInWorkspace,
 } from "../src/dashboard-workspaces.ts";
 
@@ -10,7 +10,6 @@ const aiGoal = { kind: "goal_loop", goal_json: '{"type":"agent_goal"}', trigger_
 const aiRoutine = { kind: "long_task", goal_json: '{"type":"agent_goal"}', trigger_json: '{"type":"interval"}' };
 
 test("Connect release redirects every Arc deep link and preserves shared connections", () => {
-  assert.equal(ARC_WORKSPACE_AVAILABLE, false);
   for (const [tab, path] of Object.entries(DASHBOARD_PATHS)) {
     assert.equal(workspaceForTab(availableDashboardTab(dashboardTabFromPath(path))), 'connect');
     if (tab !== 'automations') assert.equal(availableDashboardTab(tab, true), tab);
@@ -23,27 +22,27 @@ test("Connect release redirects every Arc deep link and preserves shared connect
 
 test("each canonical dashboard route resolves to its tab", () => {
   for (const [tab, path] of Object.entries(DASHBOARD_PATHS)) {
-    assert.equal(dashboardTabFromPath(path), tab === 'automations' ? 'agent-goals' : tab);
-    assert.equal(dashboardTabFromPath(path + "/"), tab === 'automations' ? 'agent-goals' : tab);
+    assert.equal(dashboardTabFromPath(path), ['automations','agent-routines'].includes(tab) ? 'agent-goals' : tab);
+    assert.equal(dashboardTabFromPath(path + "/"), ['automations','agent-routines'].includes(tab) ? 'agent-goals' : tab);
     assert.equal(workspaceForTab(tab), tab.startsWith("agent-") ? "agent" : "connect");
   }
 });
 
 test("existing deep links remain compatible", () => {
   for (const [path, tab] of Object.entries(LEGACY_DASHBOARD_PATHS)) {
-    assert.equal(dashboardTabFromPath(path), tab === 'automations' ? 'agent-goals' : tab);
+    assert.equal(dashboardTabFromPath(path), ['automations','agent-routines'].includes(tab) ? 'agent-goals' : tab);
   }
   assert.equal(dashboardTabFromPath("/unknown"), "overview");
 });
 
-test("Arc tasks include one-off work while routines have a separate view", () => {
+test("Arc tasks include one-off and recurring work", () => {
   assert.equal(isAgentGoalAutomation(plainTask), false);
   assert.equal(isAgentGoalAutomation(aiGoal), true);
   assert.equal(isVisibleInWorkspace(plainTask, "automations"), true);
   assert.equal(isVisibleInWorkspace(aiGoal, "automations"), false);
   assert.equal(isVisibleInWorkspace(aiGoal, "agent-goals"), true);
   assert.equal(isVisibleInWorkspace(plainTask, "agent-goals"), true);
-  assert.equal(isVisibleInWorkspace(aiRoutine, "agent-goals"), false);
+  assert.equal(isVisibleInWorkspace(aiRoutine, "agent-goals"), true);
   assert.equal(isVisibleInWorkspace(aiRoutine, "agent-activity"), true);
 });
 

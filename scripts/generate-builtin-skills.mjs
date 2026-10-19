@@ -9,7 +9,7 @@ const seen=new Set();
 const skills=registry.skills.map((item)=>{
  if(!/^[a-z][a-z0-9-]{2,55}$/.test(item.id)||seen.has(item.id))throw Error('Invalid/duplicate skill '+item.id);
  seen.add(item.id);
- const text=fs.readFileSync(path.join(root,'skills',item.id,'SKILL.md'),'utf8');
+ const text=fs.readFileSync(path.join(root,'skills',item.id,'SKILL.md'),'utf8').replace(/\r\n/g,'\n');
  if(!text.startsWith('---\n')||!text.includes(`name: ${item.id}`)||!text.includes('## Device and permission gates'))throw Error('Incomplete skill '+item.id);
  if(text.length>12000)throw Error('Oversized skill '+item.id);
  if(!['P0','P1'].includes(item.priority) || !Array.isArray(item.scopes))throw Error('Bad manifest '+item.id);
@@ -22,6 +22,6 @@ const revision=createHash('sha256').update(JSON.stringify(skills)).digest('hex')
 const generated=`/* GENERATED. Run node scripts/generate-builtin-skills.mjs */\nexport const BUILTIN_SKILLS_REVISION = ${JSON.stringify(revision)};\nexport type BuiltinSkill = { readonly id:string; readonly name:string; readonly priority:"P0"|"P1"; readonly category:string; readonly description:string; readonly engine:string; readonly requires:readonly string[]; readonly scopes:readonly string[]; readonly upstream:string; readonly license:string; readonly optIn:boolean; readonly content:string };\nexport const BUILTIN_SKILLS:readonly BuiltinSkill[] = JSON.parse(${JSON.stringify(JSON.stringify(skills))});\n`;
 const dest=path.join(root,'packages/skills/src/catalog.generated.ts');
 if(process.argv.includes('--check')){
- if(!fs.existsSync(dest)||fs.readFileSync(dest,'utf8')!==generated){console.error('Builtin Skill catalog drift. Run node scripts/generate-builtin-skills.mjs');process.exit(1)}
+  if(!fs.existsSync(dest)||fs.readFileSync(dest,'utf8').replace(/\r\n/g,'\n')!==generated){console.error('Builtin Skill catalog drift. Run node scripts/generate-builtin-skills.mjs');process.exit(1)}
  console.log(`Builtin Skill Pack catalog OK: ${skills.length} skills`);
 }else{fs.writeFileSync(dest,generated);console.log(`Generated ${skills.length} Skill Packs`)}

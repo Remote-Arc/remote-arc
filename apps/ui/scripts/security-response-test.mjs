@@ -6,8 +6,10 @@ import { parseSecurityState, parsePendingApprovals } from "../src/security-state
 // Exercise the real preview fixture, rather than duplicating its response here.
 const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "utf8"))
   .replaceAll("import.meta.env.VITE_UI_PREVIEW", '"1"')
+  .replaceAll("'@remotearc/protocol'", JSON.stringify(new URL("../../../packages/protocol/src/index.ts", import.meta.url).href))
   // A data URL has no directory for relative imports. Keep the real catalog import.
-  .replaceAll('"./app-directory.json"', JSON.stringify(new URL("../src/app-directory.json", import.meta.url).href));
+  .replaceAll('"./app-directory.json"', JSON.stringify(new URL("../src/app-directory.json", import.meta.url).href))
+  .replaceAll('"./arc-preview.js"', JSON.stringify(new URL("../src/arc-preview.ts", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;
@@ -24,8 +26,9 @@ assert.equal((await window.fetch("/api/security/mcp", { method: "POST" })).statu
 const apps = await (await window.fetch("/api/apps")).json();
 assert.equal(apps.enabled, true);
 assert.ok(apps.apps.length > 0, "Preview must load the actual Apps catalog");
-assert.ok(apps.apps.every(app => app.configured && Array.isArray(app.operations)));
-assert.deepEqual(apps.connections, [], "Preview does not include real account connections");
+assert.ok(apps.apps.every(app => Array.isArray(app.operations)));
+assert.ok(apps.apps.some(app => app.configured) && apps.apps.some(app => !app.configured), "Exercise both available and coming-soon catalog states");
+assert.ok(apps.connections.length > 0 && apps.connections.every(connection => connection.accountLabel.startsWith("Example ")), "Preview connections are explicitly named examples");
 assert.equal((await window.fetch("/api/apps/authorize", { method: "POST" })).status, 403);
 
 const grant = security.grants[0];

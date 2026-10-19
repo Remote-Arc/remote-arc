@@ -1,11 +1,12 @@
 import React, { useEffect } from "react";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { useI18n } from "./i18n.js";
+import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./public-docs.css";
 
 const version = cliPackage.version;
-const release = `https://github.com/yaohuangguan/remote-arc/releases/tag/remotelink-v${version}`;
-const download = `https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v${version}/`;
+const release = `https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v${version}`;
+const download = `https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v${version}/`;
 const targets = [
   { os: "macOS", cpu: "Apple Silicon", platform: "darwin", arch: "arm64" },
   { os: "macOS", cpu: "Intel", platform: "darwin", arch: "amd64" },
@@ -16,7 +17,7 @@ const targets = [
 ] as const;
 
 export function NativeInstall() {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   useEffect(() => {
     let frame: number | undefined;
     const alignFragment = () => {
@@ -39,11 +40,11 @@ export function NativeInstall() {
   return <section id="agent-downloads" className="nativeInstall">
     <span className="eyebrow">REMOTE ARC {version}</span>
     <h1>{tr("Install the device Agent", "安装设备 Agent")}</h1>
-    <p>{tr("The Agent and Execution Core run natively in Go on Windows, macOS and Linux. Choose npm, Homebrew or a standalone download. Each path uses the same paired device and Dashboard permissions.", "Agent 和 Execution Core 在 Windows、macOS 和 Linux 上原生运行。选择 npm、Homebrew 或直接下载，使用同一套设备配对与 Dashboard 权限。")}</p>
+    <p>{tr("Connect a Windows, macOS or Linux computer to your AI. Choose an installation method, run remotelink, then sign in to pair the computer and choose its permissions.", "将 Windows、macOS 或 Linux 电脑连接到 AI。选择安装方式并运行 remotelink，再登录配对电脑、选择设备权限。")}</p>
 
     <h2>npm / npx</h2>
     <pre className="docsExample"><code>npx remotelink@latest</code></pre>
-    <p>{tr("Only npm/npx installation requires Node.js 20+. The npm launcher downloads and verifies the native Agent; Go is the default. --go remains a compatible alias. Use --ts only for the retained TypeScript fallback.", "只有 npm/npx 安装方式需要 Node.js 20+。npm 启动器下载并校验原生 Agent，默认运行 Go；--go 保留为兼容别名。--ts 用于保留的 TypeScript 回退。")}</p>
+    <p>{tr("Requires Node.js 20 or later. Run this command on the computer you want to connect, then follow the browser pairing steps. If Node.js is not installed, use one of the options below.", "需要 Node.js 20 或更高版本。在希望连接的电脑上运行此命令，按浏览器提示完成配对。没有安装 Node.js 时，使用下面的安装方式即可。")}</p>
     <div id="shell-install" className="nativeInstallQuickStart">
       <h2>{tr("Without Node.js · macOS / Linux", "无需 Node.js · macOS / Linux")}</h2>
       <pre className="docsExample"><code>{"curl -fsSL https://remotearc.app/install.sh | sh\nremotelink"}</code></pre>
@@ -61,12 +62,12 @@ export function NativeInstall() {
       return <li key={asset}><a href={download + asset}>{target.os} · {target.cpu}</a></li>;
     })}</ul>
     <p><a href={download + "SHA256SUMS"}>SHA256SUMS</a>{" · "}<a href={release}>{tr("Release notes and all files", "发布说明与全部文件")}</a></p>
-    <p>{tr("On Windows, run the downloaded .exe in PowerShell. On macOS/Linux, make the downloaded file executable with chmod +x, then run it from Terminal. For example, on an Apple Silicon Mac:", "Windows 在 PowerShell 中运行下载的 .exe；macOS/Linux 先用 chmod +x 添加执行权限，再从终端运行。例如 Apple Silicon Mac：")}</p>
+    <p>{tr("On Windows, run the downloaded .exe from your terminal. On macOS/Linux, make the downloaded file executable with chmod +x, then run it from Terminal. For example, on an Apple Silicon Mac:", "Windows 从终端运行下载的 .exe；macOS/Linux 先用 chmod +x 添加执行权限，再从终端运行。例如 Apple Silicon Mac：")}</p>
     <pre className="docsExample"><code>{`chmod +x ./remotelink-v${version}-darwin-arm64\n./remotelink-v${version}-darwin-arm64 --foreground`}</code></pre>
-    <h2>{tr("Upgrade, stop and switch runtimes", "升级、停止与切换运行时")}</h2>
-    <p>{tr("Stop the current Agent before starting a newer version. Ctrl+C stops a foreground Agent; remotelink --stop disables Go recovery and stops its Agent. Pairing and Undo records are preserved. A second launcher follows the current owner instead of creating a second executor.", "启动新版前先停止当前 Agent。Ctrl+C 停止前台运行；remotelink --stop 会关闭 Go 后台恢复并停止 Agent。配对和 Undo 记录保留。第二个启动器会跟随当前执行者，避免重复执行。")}</p>
+    <h2>{tr("Upgrade or stop the Agent", "升级或停止 Agent")}</h2>
+    <p>{tr("Stop the current Agent before upgrading through your chosen installation method. Ctrl+C stops a foreground session. remotelink --stop also stops background recovery. Your computer pairing and Local Undo records are preserved.", "先停止当前 Agent，再使用原来的安装方式升级。Ctrl+C 停止前台运行；remotelink --stop 同时停止后台恢复。电脑配对和 Local Undo 记录会保留。")}</p>
     <pre className="docsExample"><code>{"npx remotelink@latest --stop\nnpx remotelink@latest --foreground"}</code></pre>
-    <p>{tr("To leave an older TS Agent, run npx remotelink@latest --ts --no-background and stop its original terminal before starting Go. To return to TS, stop Go first, then use npx remotelink@latest --ts. Runtime switches do not replay commands.", "从旧 TS Agent 迁移时，先运行 npx remotelink@latest --ts --no-background，再停止原终端并启动 Go。回退到 TS 时先停止 Go，再运行 npx remotelink@latest --ts。切换运行时不会重放命令。")}</p>
-    <p><a href="/docs#docs-routing">{tr("Architecture and permission model", "架构与权限模型")}</a></p>
+    <details><summary>{tr("Advanced: compatibility runtime", "高级：兼容运行时")}</summary><p>{tr("The native Go Agent is the default; --go remains a compatible alias. To leave an older TS Agent, run npx remotelink@latest --ts --no-background and stop its original terminal before starting Go. To return to TS, stop Go first, then use npx remotelink@latest --ts. Runtime switches do not replay commands.", "默认使用原生 Go Agent，--go 保留为兼容别名。从旧 TS Agent 迁移时，先运行 npx remotelink@latest --ts --no-background，再停止原终端并启动 Go。回退到 TS 时先停止 Go，再运行 npx remotelink@latest --ts。切换运行时不会重放命令。")}</p></details>
+    <p><a href="https://agent.remotearc.app/devices">{tr("Manage your devices", "管理你的设备")} →</a>{" · "}<a href={localizedWebsiteHref("/docs/connect",locale)}>{tr("Connect your AI", "连接你的 AI")} →</a></p>
   </section>;
 }

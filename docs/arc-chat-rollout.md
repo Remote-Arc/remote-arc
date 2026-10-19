@@ -1,12 +1,27 @@
 # Arc Chat and trial rollout
 
-This change prepares the real hosted agent runtime, a 14-day account trial and the public UI. PR previews are read-only fixtures; they do not call models or production apps. Provider account OAuth setup continues independently.
+This change prepares the hosted agent runtime, a 14-day account trial and the public UI. Independent PR previews provide interactive, per-tab simulated chats; they never call models, production Apps, devices or payments. Other preview account mutations remain disabled. Provider OAuth setup continues independently.
 
 ## Current release: Connect only
 
-Arc is not publicly open. Keep `ARC_CHAT_ENABLED=0` in the Worker and `ARC_WORKSPACE_AVAILABLE=false` in the UI until the platform models, budgets and real execution flows are ready. The workspace picker labels Arc **Coming soon**; old Arc links resolve to Connect, and the PWA launches Connect Overview. Marketing links do not activate a trial. The runtime also blocks previously persisted model decisions from dispatching new tools while disabled; uncertain actions retain their unknown status.
+Arc is not publicly open. Keep `ARC_PLATFORM_ENABLED=0` and `ARC_CHAT_ENABLED=0` in the production Worker until models, budgets and real execution flows are ready. The UI uses the authenticated server response, not a hardcoded availability constant. In production the picker labels Arc **Coming soon**, old Arc links resolve to Connect, and the PWA launches Connect Overview. Marketing links do not activate a trial. The runtime also blocks previously persisted model decisions from dispatching new tools while disabled; uncertain actions retain their unknown status.
 
-For a later Arc release, verify actual platform-funded conversations, Apps execution, device selection, cancellation, task/routine scheduling, and usage settlement before changing both gates in a reviewed release. The UI fixtures and automated HTTP-provider tests do not certify live provider credentials. Connect Apps remains available independently.
+For a later Arc release, verify platform-funded conversations, Apps execution, device selection, cancellation, task/routine scheduling and usage settlement before enabling the server flags. UI fixtures and automated HTTP-provider tests do not certify live credentials. Connect remains independently available.
+
+## Remote availability configuration
+
+`GET /api/runtime-config` returns a versioned, uncached availability response with `execution: simulation | live | disabled`. It never includes credentials. Production availability requires the existing server feature flags and deployment readiness; Billing additionally requires its configured enablement. Missing or invalid configuration fails closed. Signed-in UI availability refreshes while visible and after returning to the tab; server execution checks apply immediately on every request.
+
+Local UI development (`VITE_UI_PREVIEW=1`) and the isolated Cloudflare PR preview default to Arc enabled **in simulation only**. Open `/dashboard/agent/chat` or use the workspace picker. Preview chat history lives only in the current tab's memory and resets on reload; messages, tool results and usage are explicitly examples.
+
+To close a deployed PR preview without changing source or rebuilding assets:
+
+```sh
+pnpm --filter @remotearc/relay exec wrangler preview secret put ARC_PREVIEW_ENABLED --config ../../apps/ui/wrangler.preview.jsonc --name pr-218
+# Enter 0 at the secret prompt to close, or 1 to reopen this PR's simulation.
+```
+
+This publishes a Cloudflare preview configuration deployment. It does not enable production Arc or configure a model. Use the authorized Cloudflare account and confirm the preview name before running it. Local development reads `ARC_PREVIEW_ENABLED=0|1` from its environment / `.env.local`; refresh the page after a local environment change. No query-string or browser-storage value can enable production execution.
 
 ## Platform configuration
 
@@ -30,7 +45,7 @@ Defaults are platform USD 5/day, trial USD 0.10/day, Auto USD 0.05/day and premi
 
 Each run is limited to 8 decisions, 24,000 model tokens and 180 seconds. Provider calls have bounded timeouts. A run survives closing the tab; cancellation prevents new tool dispatch. In-flight actions may finish. A durable dispatch marker prevents automatically repeating an uncertain effect after a restart.
 
-Paid hosted use requires a stored `arc_hosted` billing plan with `hosted_inference`. Premium models additionally require `paid_models` and an unexpired provider grant. Use the existing Admin model/billing APIs to provision these; the Connect Plus tier alone is not a hosted-model entitlement. Self-service paid checkout is not introduced by this change, and the website must not claim automatic billing.
+Paid hosted use requires an active hosted billing entitlement and sufficient Credits. Premium selection additionally checks the account's model access. The prepared Stripe checkout and billing portal remain closed until configured and tested; a return URL never grants paid access on its own. See [platform launch](arc-platform-launch.md) and [Credits rollout](arc-credits-rollout.md) for the current self-service billing foundation.
 
 ## Tasks, routines and tools
 

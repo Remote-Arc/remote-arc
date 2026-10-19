@@ -1,4 +1,6 @@
 import { z } from "zod";
+import {billingEnabled} from './platform-launch.js';
+import {currentArcPlan} from './arc-plan.js';
 import { getSessionUser, randomToken, sha256Hex, type OAuthIdentity } from "./auth.js";
 import { isMcpPaused } from "./security.js";
 import { isTrustedDashboardMutation } from "./dashboard-origin.js";
@@ -21,7 +23,7 @@ function sameOrigin(request: Request, env: AppEnv) {
   if (!isTrustedDashboardMutation(request, env)) throw new AppError("same_origin_required", 403);
   if (["POST", "PATCH"].includes(request.method) && request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") throw new AppError("json_required", 415);
 }
-const cleanConnection = (row: Connection) => ({ id: row.id, provider: row.provider, accountLabel: row.account_label, status: row.status, permissions: JSON.parse(row.permissions_json), scopes: JSON.parse(row.scopes_json), expiresAt: row.expires_at, lastError: row.last_error, updatedAt: row.updated_at, dailyCallLimit: row.daily_call_limit, settings: JSON.parse(row.connection_metadata_json || "{}") });
+const cleanConnection = (row: Connection) => ({ id: row.id, provider: row.provider, accountLabel: row.account_label, status: row.status, permissions: JSON.parse(row.permissions_json), scopes: JSON.parse(row.scopes_json), expiresAt: row.expires_at, lastError: row.last_error, updatedAt: row.updated_at, dailyCallLimit: row.daily_call_limit, settings: JSON.parse(row.connection_metadata_json || "{}"), toolAccess: connectionToolAccess(row) });
 async function connection(env: AppEnv, userId: string, id: string) { const row = await env.DB.prepare("SELECT * FROM app_connections WHERE id=?1 AND user_id=?2").bind(id, userId).first<Connection>(); if (!row) throw new AppError("app_connection_not_found", 404); return row; }
 function requirePermission(row: Connection, permission: AppPermission, operation?: AppOperation) {
   if (row.status !== "active" || !row.token_ciphertext) throw new AppError("app_reauthorization_required", 409);
@@ -32,10 +34,19 @@ function requirePermission(row: Connection, permission: AppPermission, operation
   // Google may replace readonly with the broader modify scope in its response.
   const satisfies = (scope: string) => scopes.has(scope) ||
     (row.provider === "gmail" && scope.endsWith("/gmail.readonly") && scopes.has("https://www.googleapis.com/auth/gmail.modify")) ||
+    (row.provider === "google_drive" && scope === "https://www.googleapis.com/auth/drive.file" && scopes.has("https://www.googleapis.com/auth/drive")) ||
     (scope.endsWith(".readonly") && scopes.has(scope.slice(0, -9))) ||
     (row.provider === "outlook" && scope === "Mail.Read" && scopes.has("Mail.ReadWrite")) ||
     (row.provider === "microsoft_calendar" && scope === "Calendars.Read" && scopes.has("Calendars.ReadWrite"));
   if (!required.every(satisfies) || (operation?.anyScopes?.length && !operation.anyScopes.some(satisfies))) throw new AppError("app_scope_required", 403);
+}
+function connectionToolAccess(row: Connection) {
+  const operations = APP_OPERATIONS.filter(operation => operation.provider === row.provider);
+  const available = operations.filter(operation => {
+    try { requirePermission(row, operation.permission, operation); return true; }
+    catch { return false; }
+  }).length;
+  return { available, total: operations.length, needsReconnect: row.status === "active" && available < operations.length };
 }
 export async function listApps(env: AppEnv, userId: string) {
   if (env.ENABLE_APPS !== "1") return { enabled: false, apps: [], connections: [] };
@@ -60,10 +71,12 @@ async function saveConnection(env: AppEnv, userId: string, provider: AppProvider
   const stableId = `${identityHash.slice(0, 8)}-${identityHash.slice(8, 12)}-8${identityHash.slice(13, 16)}-${((parseInt(identityHash[16]!, 16) & 3) | 8).toString(16)}${identityHash.slice(17, 20)}-${identityHash.slice(20, 32)}`;
   const id = existing?.id || stableId;
   const cipher = await seal(env, tokens, tokenContext({ id, user_id: userId, provider }));
-  await env.DB.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,expires_at,created_at,updated_at,daily_call_limit,connection_metadata_json)
-    VALUES(?1,?2,?3,?4,?5,'active',?6,?7,?8,?9,?10,?10,?11,?12)
+  const plan=billingEnabled(env)?await currentArcPlan(env,userId):null;
+  const saved=await env.DB.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,expires_at,created_at,updated_at,daily_call_limit,connection_metadata_json)
+    SELECT ?1,?2,?3,?4,?5,'active',?6,?7,?8,?9,?10,?10,?11,?12 WHERE (?13=0 OR EXISTS(SELECT 1 FROM app_connections WHERE id=?1 AND user_id=?2 AND status!='disconnected') OR (SELECT COUNT(*) FROM app_connections WHERE user_id=?2 AND status!='disconnected')<?14)
     ON CONFLICT(user_id,provider,account_id) DO UPDATE SET account_label=excluded.account_label,status='active',permissions_json=excluded.permissions_json,scopes_json=excluded.scopes_json,token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,generation=app_connections.generation+1,refresh_lease=NULL,refresh_lease_until=NULL,last_error=NULL,updated_at=excluded.updated_at,daily_call_limit=excluded.daily_call_limit,connection_metadata_json=excluded.connection_metadata_json`)
-    .bind(id, userId, provider, account.id, account.label, JSON.stringify(permissions), JSON.stringify(tokens.scopes), cipher, tokens.expiresAt, now(), dailyLimit, JSON.stringify({ shopDomain: tokens.context?.shopDomain, businessAccountId: tokens.context?.businessAccountId, phoneNumberId: tokens.context?.phoneNumberId })).run();
+    .bind(id, userId, provider, account.id, account.label, JSON.stringify(permissions), JSON.stringify(tokens.scopes), cipher, tokens.expiresAt, now(), dailyLimit, JSON.stringify({ shopDomain: tokens.context?.shopDomain, businessAccountId: tokens.context?.businessAccountId, phoneNumberId: tokens.context?.phoneNumberId }),Number(Boolean(plan)),plan?.connectionLimit??100000).run();
+  if(!saved.meta.changes)throw new AppError('app_connection_limit',402);
   return id;
 }
 async function connectApiKey(request: Request, env: AppEnv, userId: string, fetcher: typeof fetch) {
@@ -94,7 +107,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   if (provider === "shopify") await checkShopifyCallback(request, env, context);
   const tokens = await exchangeTokens(env, provider, { code, verifier, context }, fetcher);
   const account = await providerIdentity(provider, tokens, fetcher, env);
-  await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);
+  try{await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);}catch(error){if(error instanceof AppError&&error.code==='app_connection_limit')await revokeProvider(env,provider,tokens,fetcher).catch(()=>undefined);throw error;}
   return new Response(null, { status: 303, headers: { location: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps?connected=" + provider, "cache-control": "no-store" } });
 }
 async function accessToken(env: AppEnv, row: Connection, fetcher: typeof fetch): Promise<AppTokens> {
@@ -113,6 +126,30 @@ async function accessToken(env: AppEnv, row: Connection, fetcher: typeof fetch):
   } catch (error) { await markReauthorization(env, row, error instanceof AppError ? error.code : "app_refresh_failed"); throw error; }
 }
 async function markReauthorization(env: AppEnv, row: Connection, code: string) { await env.DB.prepare("UPDATE app_connections SET status='reauthorization_required',refresh_lease=NULL,refresh_lease_until=NULL,last_error=?1,updated_at=?2 WHERE id=?3 AND user_id=?4 AND generation=?5 AND status='active'").bind(code, now(), row.id, row.user_id, row.generation).run(); }
+async function checkConnection(request: Request, env: AppEnv, userId: string, id: string, fetcher: typeof fetch) {
+  sameOrigin(request, env);
+  z.object({}).strict().parse(await request.json());
+  const row = await connection(env, userId, id);
+  if (row.status !== "active" || !row.token_ciphertext) throw new AppError("app_reauthorization_required", 409);
+  if (!appConfigured(env, row.provider)) throw new AppError("app_not_configured", 503);
+  if (await isMcpPaused(env, userId)) throw new AppError("mcp_paused", 403);
+  await consumeToolCall(env, userId);
+  await reserveAppDispatch(env, userId, row);
+  try {
+    const tokens = await accessToken(env, row, fetcher);
+    const account = await providerIdentity(row.provider, tokens, fetcher, env);
+    const current = await connection(env, userId, id);
+    if (current.generation !== row.generation || current.status !== "active") throw new AppError("app_connection_changed", 409);
+    if (account.id !== current.account_id) {
+      await markReauthorization(env, row, "app_account_changed");
+      throw new AppError("app_account_changed", 409);
+    }
+    return response({ connectionId: id, provider: row.provider, accountLabel: account.label, checkedAt: now(), verification: "provider_identity_checked", toolAccess: connectionToolAccess(current) });
+  } catch (error) {
+    if (error instanceof AppError && error.code === "app_reauthorization_required") await markReauthorization(env, row, error.code);
+    throw error;
+  }
+}
 async function updateConnection(request: Request, env: AppEnv, userId: string, id: string, fetcher: typeof fetch) {
   sameOrigin(request, env); const row = await connection(env, userId, id);
   if (request.method === "PATCH") {
@@ -220,6 +257,8 @@ export async function handleApps(request: Request, env: AppEnv, fetcher: typeof 
     if (path === "/api/apps/authorize" && request.method === "POST") return await authorize(request, env, user.id);
     const oauth = path.match(/^\/api\/apps\/oauth\/([^/]+)\/callback$/);
     if (oauth && request.method === "GET") return await callback(request, env, user.id, providerSchema.parse(oauth[1]), fetcher);
+    const check = path.match(/^\/api\/apps\/connections\/([\w-]+)\/check$/);
+    if (check && request.method === "POST") return await checkConnection(request, env, user.id, check[1]!, fetcher);
     const item = path.match(/^\/api\/apps\/connections\/([\w-]+)$/);
     if (item && ["PATCH", "DELETE"].includes(request.method)) return await updateConnection(request, env, user.id, item[1]!, fetcher);
     if (path === "/api/apps/call" && request.method === "POST") { sameOrigin(request, env); return response(await callApp(env, { userId: user.id, scope: "apps:read apps:write" }, await request.json(), fetcher)); }

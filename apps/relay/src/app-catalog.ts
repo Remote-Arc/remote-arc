@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type {PlatformLaunchEnv} from './platform-launch.js';
 import { SLACK_SCOPES, SLACK_OPERATIONS } from "./app-slack.js";
 import { EXTRA_PROVIDERS, EXTRA_OPERATIONS, EXTRA_PROVIDER_IDS, APP_CATEGORIES } from "./app-integrations.js";
 export { APP_CATEGORIES };
@@ -7,7 +8,7 @@ export const CORE_APP_PROVIDERS = ["github", "slack", "gmail", "outlook", "googl
 export const APP_PROVIDERS = [...CORE_APP_PROVIDERS, ...EXTRA_PROVIDER_IDS] as const;
 export type AppProvider = typeof APP_PROVIDERS[number];
 export type AppPermission = "read" | "write";
-export type AppEnv = { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; DASHBOARD_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string; APP_VERCEL_INTEGRATION_SLUG?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
+export type AppEnv = PlatformLaunchEnv & { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; DASHBOARD_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string; APP_VERCEL_INTEGRATION_SLUG?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string; APP_PLATFORM_FUNDED_COSTS?:string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
 export class AppError extends Error {
   constructor(public code: string, public status = 400) { super(code); }
 }
@@ -95,5 +96,34 @@ for (const provider of ["google_calendar", "microsoft_calendar"] as const) {
   op(provider, "events.update", "Update an event or meeting", z.object({ calendar: calendarId, id, event }).strict(), a => ({ url: `${path(a.calendar)}/${encode(a.id)}`, method: "PATCH", body: body(a.event) }), "write");
   op(provider, "events.delete", "Delete a calendar event", z.object({ calendar: calendarId, id }).strict(), a => ({ url: `${path(a.calendar)}/${encode(a.id)}`, method: "DELETE" }), "write");
 }
+// Common follow-through actions, using the same encrypted connection and dispatch ledger.
+op('github','issues.get','Read one issue',z.object({repo,number:z.number().int().positive()}).strict(),a=>({url:`${gh}/repos/${ghRepo(a.repo)}/issues/${a.number}`,method:'GET'}));
+op('github','issues.update','Update an issue title, body or state',z.object({repo,number:z.number().int().positive(),title:header.optional(),body:text.optional(),state:z.enum(['open','closed']).optional()}).strict().refine(a=>a.title!==undefined||a.body!==undefined||a.state!==undefined),a=>({url:`${gh}/repos/${ghRepo(a.repo)}/issues/${a.number}`,method:'PATCH',body:{title:a.title,body:a.body,state:a.state}}),'write');
+op('github','comments.list','Read issue or pull request comments',z.object({repo,number:z.number().int().positive(),limit:page}).strict(),a=>({url:url(`${gh}/repos/${ghRepo(a.repo)}/issues/${a.number}/comments`,{per_page:a.limit}),method:'GET'}));
+op('github','comments.create','Comment on an issue or pull request',z.object({repo,number:z.number().int().positive(),body:text}).strict(),a=>({url:`${gh}/repos/${ghRepo(a.repo)}/issues/${a.number}/comments`,method:'POST',body:{body:a.body}}),'write');
+op('github','pulls.get','Read a pull request and merge status',z.object({repo,number:z.number().int().positive()}).strict(),a=>({url:`${gh}/repos/${ghRepo(a.repo)}/pulls/${a.number}`,method:'GET'}));
+op('github','pulls.files','Read changed files and patches in a pull request',z.object({repo,number:z.number().int().positive(),limit:page}).strict(),a=>({url:url(`${gh}/repos/${ghRepo(a.repo)}/pulls/${a.number}/files`,{per_page:a.limit}),method:'GET'}));
+op('github','branches.list','List repository branches',z.object({repo,limit:page}).strict(),a=>({url:url(`${gh}/repos/${ghRepo(a.repo)}/branches`,{per_page:a.limit}),method:'GET'}));
+op('github','actions.get','Read one Actions run',z.object({repo,id}).strict(),a=>({url:`${gh}/repos/${ghRepo(a.repo)}/actions/runs/${encode(a.id)}`,method:'GET'}));
+op('github','actions.rerun','Rerun an Actions workflow',z.object({repo,id}).strict(),a=>({url:`${gh}/repos/${ghRepo(a.repo)}/actions/runs/${encode(a.id)}/rerun`,method:'POST'}),'write');
+for(const [name,path]of [['labels.list','labels'],['drafts.list','drafts'],['threads.list','threads']] as const)op('gmail',name,'List Gmail '+path,z.object({limit:page,pageToken:id.optional()}).strict(),a=>({url:url(gmail+'/'+path,path==='labels'?{}:{maxResults:a.limit,pageToken:a.pageToken}),method:'GET'}));
+op('gmail','threads.get','Read all messages in a Gmail thread',z.object({id}).strict(),a=>({url:`${gmail}/threads/${encode(a.id)}?format=full`,method:'GET'}));
+op('gmail','drafts.get','Read an email draft',z.object({id}).strict(),a=>({url:`${gmail}/drafts/${encode(a.id)}`,method:'GET'}));
+op('gmail','drafts.send','Send an existing email draft',z.object({id}).strict(),a=>({url:gmail+'/drafts/send',method:'POST',body:{id:a.id}}),'write');
+op('gmail','drafts.delete','Delete an email draft',z.object({id}).strict(),a=>({url:`${gmail}/drafts/${encode(a.id)}`,method:'DELETE'}),'write');
+op('gmail','messages.trash','Move an email to Trash',z.object({id}).strict(),a=>({url:`${gmail}/messages/${encode(a.id)}/trash`,method:'POST'}),'write');
+op('gmail','messages.untrash','Restore an email from Trash',z.object({id}).strict(),a=>({url:`${gmail}/messages/${encode(a.id)}/untrash`,method:'POST'}),'write');
+op('gmail','labels.create','Create an email label',z.object({name:header}).strict(),a=>({url:gmail+'/labels',method:'POST',body:{name:a.name,labelListVisibility:'labelShow',messageListVisibility:'show'}}),'write');
+op('outlook','folders.list','List Outlook mail folders',z.object({limit:page}).strict(),a=>({url:url(graph+'/mailFolders',{'$top':a.limit}),method:'GET'}));
+op('outlook','attachments.list','List message attachments',z.object({id}).strict(),a=>({url:`${graph}/messages/${encode(a.id)}/attachments`,method:'GET'}));
+op('outlook','messages.reply','Reply to an Outlook message',z.object({id,comment:text}).strict(),a=>({url:`${graph}/messages/${encode(a.id)}/reply`,method:'POST',body:{comment:a.comment}}),'write');
+op('outlook','messages.move','Move a message to an existing folder',z.object({id,destinationId:id}).strict(),a=>({url:`${graph}/messages/${encode(a.id)}/move`,method:'POST',body:{destinationId:a.destinationId}}),'write');
+op('outlook','messages.markRead','Set the read state of a message',z.object({id,isRead:z.boolean()}).strict(),a=>({url:`${graph}/messages/${encode(a.id)}`,method:'PATCH',body:{isRead:a.isRead}}),'write');
+op('outlook','drafts.send','Send an existing Outlook draft',z.object({id}).strict(),a=>({url:`${graph}/messages/${encode(a.id)}/send`,method:'POST'}),'write');
+op('google_calendar','calendars.get','Read calendar details and time zone',z.object({calendar:calendarId}).strict(),a=>({url:'https://www.googleapis.com/calendar/v3/calendars/'+encode(a.calendar),method:'GET'}));
+op('google_calendar','availability.query','Find busy intervals across calendars',z.object({calendars:z.array(id).min(1).max(20),start:dateTime,end:dateTime}).strict().refine(a=>Date.parse(a.end)>Date.parse(a.start)),a=>({url:'https://www.googleapis.com/calendar/v3/freeBusy',method:'POST',body:{timeMin:a.start,timeMax:a.end,items:a.calendars.map((id:string)=>({id}))}}));
+op('microsoft_calendar','calendars.get','Read calendar details',z.object({id}).strict(),a=>({url:graph+'/calendars/'+encode(a.id),method:'GET'}));
+op('microsoft_calendar','events.accept','Accept a meeting invitation',z.object({id,comment:text.optional(),sendResponse:z.boolean().default(true)}).strict(),a=>({url:graph+'/events/'+encode(a.id)+'/accept',method:'POST',body:{comment:a.comment,sendResponse:a.sendResponse}}),'write');
+op('microsoft_calendar','events.decline','Decline a meeting invitation',z.object({id,comment:text.optional(),sendResponse:z.boolean().default(true)}).strict(),a=>({url:graph+'/events/'+encode(a.id)+'/decline',method:'POST',body:{comment:a.comment,sendResponse:a.sendResponse}}),'write');
 export const APP_OPERATIONS = [...operations, ...SLACK_OPERATIONS, ...EXTRA_OPERATIONS];
 export function appOperation(provider: AppProvider, name: string) { const value = APP_OPERATIONS.find(o => o.provider === provider && o.name === name); if (!value) throw new AppError("unsupported_app_operation"); return value; }

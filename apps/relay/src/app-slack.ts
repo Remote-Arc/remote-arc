@@ -61,4 +61,7 @@ write("reactions.remove", "Remove your emoji reaction from a message", "reaction
 write("pins.add", "Pin an exact message in a conversation", "pins.add", z.object(message).strict(), ["pins:write"]);
 write("pins.remove", "Unpin an exact message in a conversation", "pins.remove", z.object(message).strict(), ["pins:write"]);
 write("bookmarks.add", "Add a link bookmark to a conversation", "bookmarks.add", z.object({channel_id:id,title:z.string().min(1).max(100),link:z.string().url().max(2000).refine(v=>{const u=new URL(v);return u.protocol==="https:"&&!u.username&&!u.password;})}).strict(), ["bookmarks:write"], a=>({...a,type:"link"}));
+read('users.presence','Read a member’s availability','users.getPresence',z.object({user:id}).strict(),['users:read']);
+write('bookmarks.edit','Edit a conversation bookmark','bookmarks.edit',z.object({channel_id:id,bookmark_id:id,title:z.string().min(1).max(100)}).strict(),['bookmarks:write']);
+write('bookmarks.remove','Remove a conversation bookmark','bookmarks.remove',z.object({channel_id:id,bookmark_id:id}).strict(),['bookmarks:write']);
 export const SLACK_OPERATIONS = operations;

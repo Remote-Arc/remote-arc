@@ -1,3 +1,4 @@
+import {listArcSkills,saveArcSkill,readArcSkill,removeArcSkill,arcSkillInput} from './arc-skills.js';
 import { getSessionUser, sha256Hex } from './auth.js';
 import { isTrustedDashboardMutation } from './dashboard-origin.js';
 import { seal, unseal } from './app-oauth.js';
@@ -6,6 +7,8 @@ import type { DeviceCallEnv } from './device-call.js';
 import { arcGateway, arcAutoId, arcModelAccess, type ArcModelEnv } from './arc-chat-model.js';
 import {listArcWork} from './arc-work.js';
 import {activateArcTrial,publicArcAccess} from './arc-trial.js';
+import {currentArcPlan} from './arc-plan.js';
+import {arcMemoryInput,listArcMemory,rememberArcFact,removeArcMemory,configureArcMemory,editArcMemory} from './arc-memory.js';
 
 export type ArcEnv = AppEnv & DeviceCallEnv & ArcModelEnv & { ARC_RUNTIME?:DurableObjectNamespace };
 export type ArcSession = {id:string;user_id:string;organization_id:string;title_ciphertext:string;model_id:string;created_at:string;updated_at:string;deleted_at:string|null};
@@ -22,7 +25,7 @@ export async function arcSession(env:ArcEnv,userId:string,id:string){
 }
 export async function appendArcMessage(env:ArcEnv,run:ArcRun,role:'assistant'|'tool',suffix:string,body:ArcMessageBody){
  const id=run.id+':'+suffix;
- await env.DB.prepare(`INSERT INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7) ON CONFLICT(id) DO UPDATE SET body_ciphertext=excluded.body_ciphertext`).bind(id,run.session_id,run.user_id,run.id,role,await seal(env,body,arcContext(run.user_id,id)),stamp()).run();
+ await env.DB.prepare(`INSERT INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,?5,?6,?7 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) ON CONFLICT(id) DO UPDATE SET body_ciphertext=excluded.body_ciphertext`).bind(id,run.session_id,run.user_id,run.id,role,await seal(env,body,arcContext(run.user_id,id)),stamp()).run();
 }
 export async function arcMessages(env:ArcEnv,userId:string,sessionId:string){
  const rows=(await env.DB.prepare(`SELECT id,role,body_ciphertext,created_at,run_id FROM (SELECT * FROM arc_chat_messages WHERE session_id=?1 AND user_id=?2 ORDER BY created_at DESC,id DESC LIMIT 100) ORDER BY created_at,id`).bind(sessionId,userId).all<{id:string;role:string;body_ciphertext:string;created_at:string;run_id:string|null}>()).results;
@@ -54,8 +57,12 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
   if(request.method!=='GET'&&!isTrustedDashboardMutation(request,env))throw new ArcError('same_origin_required',403);
   const path=new URL(request.url).pathname,organizationId='personal:'+user.id,gateway=arcGateway(env);
   let vaultReady=false;try{vaultReady=atob(env.APP_TOKEN_KEY||'').length===32;}catch{/* Missing or invalid platform vault key. */}
-  const auto=gateway?.models.find(m=>m.id===arcAutoId(env)),ready=Boolean(gateway&&env.ARC_RUNTIME&&vaultReady&&auto&&gateway.adapters[auto.provider]);
-  if(path==='/api/arc/status'&&request.method==='GET')return json({enabled:ready,access:await publicArcAccess(env,user.id),defaultModel:'auto',models:gateway?.models.filter(m=>m.provider!=='workers_ai').map(m=>({id:m.id===arcAutoId(env)?'auto':m.id,label:m.id===arcAutoId(env)?'Auto':m.model,provider:m.provider,premium:m.id!==arcAutoId(env),configured:Boolean(gateway.adapters[m.provider])}))||[],limits:{maxSteps:8,maxTokens:24000,maxSeconds:180}});
+   const auto=gateway?.models.find(m=>m.id===arcAutoId(env)),ready=Boolean(gateway&&env.ARC_RUNTIME&&vaultReady&&auto&&gateway.adapters[auto.provider]);
+   const plan=await currentArcPlan(env,user.id),limits={maxSteps:plan.maxSteps,maxTokens:plan.maxTokens,maxSeconds:plan.maxSeconds,concurrentRuns:plan.concurrentRuns};
+  if(path==='/api/arc/status'&&request.method==='GET'){
+   const access=await publicArcAccess(env,user.id);
+   return json({enabled:ready,access,defaultModel:'auto',models:gateway?.models.filter(m=>m.provider!=='workers_ai').map(m=>({id:m.id===arcAutoId(env)?'auto':m.id,label:m.id===arcAutoId(env)?'Auto':m.label||m.model,provider:m.provider,premium:m.id!==arcAutoId(env),sourceModel:m.model,configured:Boolean(gateway.adapters[m.provider]),requiresPaid:m.id!==arcAutoId(env)&&access.status!=='paid',inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000}))||[],limits});
+  }
   if(path==='/api/arc/trial'&&request.method==='POST'){
    if(!ready)throw new ArcError('ARC_NOT_CONFIGURED',503);
    const input=await body(request);if(input.confirm!==true||Object.keys(input).length!==1)throw new ArcError('TRIAL_CONFIRMATION_REQUIRED');
@@ -63,6 +70,35 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
   }
   if(request.method==='POST'&&(path==='/api/arc/sessions'||path.endsWith('/messages'))&&!ready)throw new ArcError('ARC_NOT_CONFIGURED',503);
    if(path==='/api/arc/work'&&request.method==='GET')return json(await listArcWork(env,user.id));
+  if(path==='/api/arc/memory'){
+   if(request.method==='GET')return json(await listArcMemory(env,user.id));
+   if(request.method==='POST'){
+    const input=arcMemoryInput.safeParse(await body(request));if(!input.success)throw new ArcError('ARC_INVALID_MEMORY');
+    try{return json(await rememberArcFact(env,user.id,input.data),201);}catch(error){if(error instanceof Error&&/^(ARC_MEMORY_DISABLED|ARC_MEMORY_LIMIT_OR_CHANGED)$/.test(error.message))throw new ArcError(error.message,409);throw error;}
+   }
+  }
+  if(path==='/api/arc/memory/settings'&&request.method==='POST'){
+   const input=await body(request);if(typeof input.enabled!=='boolean'||input.clear!==undefined&&typeof input.clear!=='boolean'||Object.keys(input).some(k=>!['enabled','clear'].includes(k)))throw new ArcError('ARC_INVALID_MEMORY');
+   return json(await configureArcMemory(env,user.id,input.enabled,input.clear===true));
+  }
+  const memoryPath=path.match(/^\/api\/arc\/memory\/([\w:-]{1,160})$/);
+  if(memoryPath&&request.method==='DELETE')return json(await removeArcMemory(env,user.id,memoryPath[1]!));
+  if(memoryPath&&request.method==='POST'){
+   const input=arcMemoryInput.safeParse(await body(request));if(!input.success)throw new ArcError('ARC_INVALID_MEMORY');
+   try{return json(await editArcMemory(env,user.id,memoryPath[1]!,input.data));}catch(error){if(error instanceof Error&&/^(ARC_MEMORY_DUPLICATE|ARC_MEMORY_NOT_FOUND)$/.test(error.message))throw new ArcError(error.message,error.message==='ARC_MEMORY_NOT_FOUND'?404:409);throw error;}
+  }
+  if(path==='/api/arc/skills'){
+   if(request.method==='GET')return json(await listArcSkills(env,user.id));
+   if(request.method==='POST'){
+    const input=arcSkillInput.safeParse(await body(request));if(!input.success)throw new ArcError('ARC_INVALID_SKILL');
+    try{return json(await saveArcSkill(env,user.id,input.data),201);}catch(error){if(error instanceof Error&&error.message==='ARC_SKILL_LIMIT')throw new ArcError('ARC_SKILL_LIMIT',429);throw error;}
+   }
+  }
+  const skillPath=path.match(/^\/api\/arc\/skills\/([\w:-]{1,100})$/);
+  if(skillPath){
+   if(request.method==='DELETE')return json(await removeArcSkill(env,user.id,skillPath[1]!));
+   if(request.method==='GET'){try{return json(await readArcSkill(env,user.id,skillPath[1]!));}catch(error){if(error instanceof Error&&error.message==='ARC_SKILL_NOT_FOUND')throw new ArcError('ARC_SKILL_NOT_FOUND',404);throw error;}}
+  }
   if(path==='/api/arc/sessions'){
    if(request.method==='GET'){
      const rows=(await env.DB.prepare('SELECT * FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL AND automation_id IS NULL ORDER BY updated_at DESC LIMIT 100').bind(user.id).all<ArcSession>()).results;
@@ -92,7 +128,7 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
    if(!run){
     const id=crypto.randomUUID(),now=stamp();
     await env.DB.batch([
-      env.DB.prepare(`INSERT INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,'queued',24000,8,?7,?8,?8 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM arc_chat_runs WHERE session_id=?2 AND status IN ('queued','thinking','working')) AND (SELECT COUNT(*) FROM arc_chat_runs WHERE user_id=?3 AND status IN ('queued','thinking','working'))<3 AND (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?2)<200 ON CONFLICT(user_id,request_id) DO NOTHING`).bind(id,sessionId,user.id,requestId,hash,model,new Date(Date.now()+180000).toISOString(),now),
+       env.DB.prepare(`INSERT INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,'queued',?9,?10,?7,?8,?8 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM arc_chat_runs WHERE session_id=?2 AND status IN ('queued','thinking','working')) AND (SELECT COUNT(*) FROM arc_chat_runs WHERE user_id=?3 AND status IN ('queued','thinking','working'))<?11 AND (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?2)<200 ON CONFLICT(user_id,request_id) DO NOTHING`).bind(id,sessionId,user.id,requestId,hash,model,new Date(Date.now()+limits.maxSeconds*1000).toISOString(),now,limits.maxTokens,limits.maxSteps,limits.concurrentRuns),
      env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,'user',?5,?6 WHERE EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?4)`).bind(id+':user',sessionId,user.id,id,await seal(env,{text},arcContext(user.id,id+':user')),now),
      env.DB.prepare(`UPDATE arc_chat_sessions SET title_ciphertext=CASE WHEN (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?1 AND role='user')=1 THEN ?2 ELSE title_ciphertext END,model_id=?3,updated_at=?4 WHERE id=?1 AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?5)`).bind(sessionId,await seal(env,text.slice(0,64),arcContext(user.id,sessionId)),model,now,id),
     ]);

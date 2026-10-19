@@ -5,7 +5,7 @@ import {fileURLToPath} from "node:url";
 import {DatabaseSync} from "node:sqlite";
 import {reserveBilling,settleBilling,setBillingLimit,grantPaidModel,configureFreeAiPool,getBillingUsage,getAdminBillingUsage,defineBillingPlan,assignBillingPlan,getBillingEntitlements,type BillingReservationInput} from "../src/billing-ledger.js";
 import {runModelGateway,DEFAULT_AUTO_MODEL,resolveModelGateway,type ModelGatewayBinding} from "../src/model-gateway.js";
-import {openAiAdapter,anthropicAdapter,workersAiAdapter,ModelProviderError,type ModelDefinition,type ModelUsage} from "../src/model-provider-adapters.js";
+import {openAiAdapter,anthropicAdapter,openRouterAdapter,workersAiAdapter,ModelProviderError,type ModelDefinition,type ModelUsage} from "../src/model-provider-adapters.js";
 import {planAgentTurn,agentPlannerConfigured} from "../src/agent-planner.js";
 
 const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),".."),sql=new DatabaseSync(":memory:");
@@ -142,6 +142,18 @@ const open=openAiAdapter("test-only-key",async(url,init)=>{target=String(url);bo
 const opened=await open(providerReq);assert.equal(target,"https://api.openai.com/v1/responses");assert.equal(body.store,false);assert.equal(opened.usage.cachedInputTokens,2);assert.deepEqual(opened.value,raw);
 const claude=anthropicAdapter("test-only-key",async(url,init)=>{target=String(url);body=JSON.parse(String(init?.body));assert.equal((init?.headers as Record<string,string>)["anthropic-version"],"2023-06-01");return response({id:"claude-1",stop_reason:"tool_use",usage:{input_tokens:20,output_tokens:10,cache_read_input_tokens:2,cache_creation_input_tokens:1},content:[{type:"tool_use",name:"submit_agent_decision",input:raw}]});});
 assert.deepEqual((await claude({...providerReq,definition:{...paidDefinition,provider:"anthropic"}})).value,raw);assert.equal(target,"https://api.anthropic.com/v1/messages");assert.equal((body.tool_choice as {name:string}).name,"submit_agent_decision");
+let routerAttempts=0;
+const routerRequest={...providerReq,definition:{...paidDefinition,provider:'openrouter' as const,model:'minimax/minimax-m3'}};
+const routerPayload={id:'router-fixture',usage:{prompt_tokens:20,completion_tokens:10,prompt_tokens_details:{cached_tokens:2},completion_tokens_details:{reasoning_tokens:3}},choices:[{finish_reason:'stop',message:{content:JSON.stringify(raw)}}]};
+const routed=await openRouterAdapter('test-router-key',async(url,init)=>{routerAttempts++;assert.equal(String(url),'https://openrouter.ai/api/v1/chat/completions');const sent=JSON.parse(String(init?.body));assert.equal(sent.model,'minimax/minimax-m3');assert.equal(sent.provider.allow_fallbacks,false);assert.equal(sent.provider.require_parameters,true);assert.equal(sent.provider.data_collection,'deny');assert.deepEqual(sent.provider.max_price,{prompt:paidDefinition.inputMicrosPerMillion/1000000,completion:paidDefinition.outputMicrosPerMillion/1000000});assert.equal(sent.response_format.json_schema.strict,true);return response(routerPayload);})(routerRequest);
+assert.equal(routerAttempts,1);assert.deepEqual(routed.value,raw);assert.equal(routed.usage.cachedInputTokens,2);assert.equal(routed.usage.reasoningTokens,3);
+await assert.rejects(()=>openRouterAdapter('key',async()=>response({...routerPayload,choices:[{finish_reason:'length',message:{content:'{}'}}]}))(routerRequest),/INCOMPLETE/);
+await assert.rejects(()=>openRouterAdapter('key',async()=>response({...routerPayload,usage:undefined}))(routerRequest),/USAGE/);
+await assert.rejects(()=>openRouterAdapter('key',async()=>response({...routerPayload,choices:[{finish_reason:'stop',message:{refusal:'declined',content:'{}'}}]}))(routerRequest),/REFUSED/);
+assert(resolveModelGateway({DB:db,MODEL_GATEWAY_ENABLED:'1',OPENROUTER_API_KEY:'fixture'})?.adapters.openrouter);
+const modernClaude=anthropicAdapter('test-only-key',async(_url,init)=>{const sent=JSON.parse(String(init?.body));assert.equal(sent.tool_choice,undefined);assert.equal(sent.tools,undefined);assert.equal(sent.output_config.format.type,'json_schema');assert.deepEqual(sent.output_config.format.schema,providerReq.schema);return response({id:'modern-claude',stop_reason:'end_turn',usage:{input_tokens:20,output_tokens:10,cache_read_input_tokens:2,cache_creation_input_tokens:1},content:[{type:'thinking',thinking:'internal'},{type:'text',text:JSON.stringify(raw)}]});});
+const modern=await modernClaude({...providerReq,definition:{...paidDefinition,provider:'anthropic',model:'claude-sonnet-5-5',structuredOutput:true}});assert.deepEqual(modern.value,raw);assert.equal(modern.usage.reasoningTokens,0);
+await assert.rejects(()=>anthropicAdapter('key',async()=>response({stop_reason:'max_tokens',usage:{input_tokens:20,output_tokens:10},content:[]}))({...providerReq,definition:{...paidDefinition,provider:'anthropic',structuredOutput:true}}),/INCOMPLETE/);
 assert.deepEqual((await workersAiAdapter({run:async()=>({response:JSON.stringify(raw),usage:{prompt_tokens:20,completion_tokens:10}})})({...providerReq,definition:DEFAULT_AUTO_MODEL})).value,raw);
 assert.deepEqual((await workersAiAdapter({run:async()=>({choices:[{finish_reason:"stop",message:{content:JSON.stringify(raw)}}],usage:{prompt_tokens:20,completion_tokens:10}})})({...providerReq,definition:DEFAULT_AUTO_MODEL})).value,raw);
 for(const [payload,expected] of [
@@ -184,5 +196,14 @@ assert.deepEqual((await getBillingEntitlements(db,context,"arc_hosted")).feature
 await deny(()=>runModelGateway({...gateway,models:[{...DEFAULT_AUTO_MODEL,inputMicrosPerMillion:Number.MAX_SAFE_INTEGER}]},req(),validate),/BUDGET_INVALID/);
 assert(resolveModelGateway({DB:db,MODEL_GATEWAY_ENABLED:"1",OPENAI_API_KEY:"test-key",ANTHROPIC_API_KEY:"test-key",MODEL_GATEWAY_LOCAL_TEST_ENDPOINT:"http://127.0.0.1:9999"})?.adapters.anthropic);
 
-console.log("Model/Billing foundation: real SQLite atomic caps, concurrency, grants, tenant isolation, unknown reservation retention, three mocked provider contracts passed.");
+await reset();
+for(const provider of ['openai','anthropic','openrouter'] as const){
+ await grantPaidModel(db,'admin',{id:'cache-'+provider,userId:'owner',organizationId:'personal:owner',provider,maxCostMicros:1000000,expiresAt:future});
+ const definition:ModelDefinition={...paidDefinition,provider,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:2000000,cacheWrite5mMicrosPerMillion:1250000};
+ const observed:ModelUsage={inputTokens:provider==='anthropic'?70:100,outputTokens:5,cachedInputTokens:20,cacheWriteTokens:10,reasoningTokens:2,...(provider==='anthropic'?{cacheWrite5mTokens:6,cacheWrite1hTokens:4}:{})};
+ const settled=await runModelGateway({...gateway,models:[definition],paidGrantId:'cache-'+provider,adapters:{[provider]:async()=>({value:raw,usage:observed,providerRequestId:'cache-fixture'})}},req({modelId:definition.id}),validate);
+ const actual=JSON.parse(sql.prepare('SELECT settlement_json FROM billing_reservations WHERE id=?').get(settled.reservationId)!.settlement_json as string).actual;
+ assert.equal(actual.costMicros,provider==='anthropic'?98:102,'Cache reads, cache write TTLs and reasoning must be rated exactly once');
+}
+console.log("Model/Billing foundation: real SQLite atomic caps, concurrency, grants, tenant isolation, unknown reservation retention, four mocked provider contracts and exact cache accounting passed.");
 sql.close();

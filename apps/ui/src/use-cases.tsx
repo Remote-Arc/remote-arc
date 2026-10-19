@@ -49,7 +49,7 @@ function cases(tr: Tr) {
     },
     {
       slug: "overnight-goals", category: tr("DURABLE LOOP", "持久循环"), title: tr("Leave a bounded fixed plan running", "离开前运行一个有界固定计划"),
-      intro: tr("When the actions and verification command are already known, Remote Arc can persist a bounded goal loop without pretending an AI keeps thinking after chat ends.", "当操作步骤和验收命令已经明确时，Remote Arc 可以持久执行有界目标循环，而不会声称聊天结束后 AI 仍在持续思考。"),
+      intro: tr("Save a known work plan and its verification command, then let Remote Arc repeat it within your chosen limits. The saved work can continue after you close the chat; a change of strategy still needs your AI.", "保存明确的工作步骤与验证命令，让 Remote Arc 在设定限制内重复执行。关闭聊天后，已保存工作仍可继续；需要改变策略时，再交给 AI 判断。"),
       prompt: tr("On build-pc, run the existing repair script, then pnpm test. Retry the same approved plan up to three times if verification fails, stop at the deadline, and record the final exit status. Do not invent a new strategy after an unexpected failure.", "在 build-pc 上运行现有修复脚本，然后执行 pnpm test。若验收失败，最多按同一个已批准计划重试三次，到期限停止并记录最终退出状态。遇到意外失败时不要自行发明新策略。"),
       tools: "create_automation(kind=goal_loop) · get_automation · manage_automation", permission: tr("Terminal + background tasks", "终端 + 后台任务"),
       steps: [tr("Save the exact work command, verification command, cwd, run limit and expiry.", "保存明确的工作命令、验收命令、cwd、运行次数上限与到期时间。"), tr("Run the same authorized plan and verification until it passes or the bound is reached.", "重复执行同一已授权计划与验收，直到通过或达到边界。"), tr("If the result requires a genuinely new strategy, stop and surface that blocker for a later AI/user decision.", "如果结果需要真正的新策略，则停止并把阻塞留给之后的 AI/用户判断。")],

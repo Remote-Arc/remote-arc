@@ -8,7 +8,7 @@ Remote Arc registers one developer application per identity platform, configures
 
 Each end user signs in to Remote Arc, chooses an App, and authorizes their **own account** on the provider's site. The resulting connection belongs to that Remote Arc user. For Remote Arc-managed OAuth integrations, users do not register developer applications, enter client credentials, or share passwords with Remote Arc. Two API-credential connectors instead use credentials from the user’s own API account/project; X now uses Remote Arc-managed OAuth and platform-project API billing. See [the expanded catalog and release gates](apps-expansion.md).
 
-The product flow is: Apps → choose an integration → choose permissions → provider consent → return to Apps with the connected account and status. Write permission is an explicit choice; approval of an individual action remains separate from granting OAuth permissions. Reconnection is required when a provider revokes or expires the grant.
+The product flow is: Apps → choose an integration → provider consent → return with the connected account and status. Implemented read/write tools are enabled within the provider's granted scopes; Remote Arc does not add a separate per-action approval. Reconnect when access is revoked or new tools need additional scopes. “Check connection” verifies identity, token refresh and grant coverage; it does not certify every tool or execute a content write.
 
 ## Product model and scaling
 
@@ -16,7 +16,7 @@ Remote Arc owns and operates the connector platform. Lindy and Composio are prod
 
 The default model is **Remote Arc-managed developer applications**: Remote Arc registers its own platform clients once and each user authorizes their own account. Enterprise-owned OAuth clients are a separate future option, not the current end-user setup flow and not implemented by this global-client configuration.
 
-For a larger catalog, reuse authentication, encrypted credential storage, refresh, user isolation, approvals, rate limiting, and usage accounting. Give each integration its own versioned definition and bounded actions. Discover actions on demand instead of exposing hundreds of schemas to the model at once. Keep unused integrations idle rather than running a polling service per listed app.
+For a larger catalog, reuse authentication, encrypted credential storage, refresh, user isolation, request journals, rate limiting, and usage accounting. Give each integration its own versioned definition and bounded actions. Discover actions on demand instead of exposing hundreds of schemas to the model at once. Keep unused integrations idle rather than running a polling service per listed app.
 
 Publishing an integration requires real executable actions and acceptance checks. An icon or catalog entry alone does not establish support. Provider review, API changes, credential rotation, troubleshooting, and paid upstream services remain costs even when OAuth registration itself has no fee. An enterprise-owned client does not automatically move token storage out of Remote Arc or eliminate provider approval requirements.
 
@@ -43,13 +43,13 @@ Use the actual HTTPS App origin of the environment being registered. Production 
 | Google | `https://mcp.remotearc.app/api/apps/oauth/gmail/callback`, `https://mcp.remotearc.app/api/apps/oauth/google_calendar/callback` |
 | Microsoft | `https://mcp.remotearc.app/api/apps/oauth/outlook/callback`, `https://mcp.remotearc.app/api/apps/oauth/microsoft_calendar/callback` |
 
-The original four platform registrations cover six initial connectors. The current generated pack covers fifteen identity-platform registrations for 27 OAuth connectors, plus two user-owned API credential connectors. The table above documents the original callbacks; the generated pack is the complete current callback list. The pack declares the full supported scope set so it can support both read and write users. The actual authorization URL requests only the user's selected permissions.
+The original four platform registrations cover six initial connectors. The generated pack covers fifteen identity platforms for 27 OAuth connectors plus two user-owned API credential connectors. The table lists original callbacks; the pack is authoritative for all callbacks and scopes. Standard connection requests the supported read/write scope set. Each user still grants consent on the provider site.
 
 ## GitHub
 
 Create an organization-owned OAuth App in [Remote-Arc organization application settings](https://github.com/organizations/Remote-Arc/settings/applications). Use the generated name, homepage, and exact callback. Keep expiring user access tokens enabled and device flow disabled. Store its client ID and secret as `APP_GITHUB_CLIENT_ID` and `APP_GITHUB_CLIENT_SECRET`.
 
-The current direct adapter uses authorization-code OAuth with S256 PKCE, `read:user`, `repo`, and `offline_access`. GitHub's OAuth `repo` scope is broad and includes upstream write access; a Remote Arc read-only connection still rejects all write operations locally. Display this distinction at consent rather than claiming the provider token is read-only. A future GitHub App adapter can provide repository selection and finer provider permissions; it must have its own implementation and acceptance tests.
+The current direct adapter uses authorization-code OAuth with S256 PKCE, `read:user`, `repo`, and `offline_access`. GitHub's OAuth `repo` scope is broad and includes upstream write access; tools remain bounded by the account's provider grants and the AI client's MCP scope. A future GitHub App adapter can provide repository selection and finer provider permissions; it must have its own implementation and acceptance tests.
 
 Organization policy or SSO can require approval from the user's organization administrator even after personal consent. Report that state to the user; do not ask them for another account's token.
 
@@ -59,21 +59,25 @@ Reference: [creating an OAuth App](https://docs.github.com/en/apps/oauth-apps/bu
 
 At [Slack's app dashboard](https://api.slack.com/apps), choose Create New App → From a manifest and import the generated `slack.manifest` object. Choose the development workspace as the app owner; it is not a shared workspace connection for all Remote Arc users.
 
-The adapter acts using a **user token**. Configure User Token Scopes, not Bot Token Scopes: `channels:read`, `channels:history`, `search:read`, with `chat:write` available for users who enable writes. The initial scope set covers public channels and message search; it does not claim private-channel or DM support. Enable token rotation. Add the exact generated redirect URL, and configure distribution for external workspaces before public onboarding.
+The adapter uses a **user token**, so configure the generated User Token Scopes rather than Bot Token Scopes. The expanded tools include public/private conversations, DMs, search, profiles, files, messages, reactions, pins and bookmarks within the user's actual workspace access. The generated manifest lists the required scopes for all 35 tools. Enable token rotation, register the exact redirect URL, and configure distribution for external workspaces before public onboarding. Reinstall or reauthorize older connections after adding scopes.
 
 Store Basic Information → App Credentials as `APP_SLACK_CLIENT_ID` and `APP_SLACK_CLIENT_SECRET`. Do not put a developer's `xoxp-` or `xoxb-` token into these fields. Workspace administrators may need to approve installation.
 
 Reference: [manifest schema](https://docs.slack.dev/reference/app-manifest/), [OAuth installation](https://docs.slack.dev/authentication/installing-with-oauth/), [token rotation](https://docs.slack.dev/authentication/using-token-rotation/).
 
-## Google: Gmail and Google Calendar
+## Google: Gmail, Calendar, Drive, Docs and Sheets
 
-In [Google Cloud](https://console.cloud.google.com/auth/overview), select a project for Remote Arc Apps and enable the Gmail API and Google Calendar API. Configure the brand, authorized domain, support contact, homepage, privacy policy, and terms using the real public product details. Create a Web application OAuth client and register both exact Google callbacks from the pack.
+In [Google Cloud](https://console.cloud.google.com/auth/overview), select a project for Remote Arc Apps and enable the Gmail, Google Calendar, Drive, Docs and Sheets APIs for the priority connectors. Configure the brand, authorized domain, support contact, homepage, privacy policy, and terms using the real public product details. Create a Web application OAuth client and register each enabled connector's exact callback from the pack. The pack also includes other Google catalog providers; configure their required APIs and eligibility separately.
 
 Use a dedicated Apps client. Do not silently reuse the existing Google login client: login and mailbox/calendar grants have separate purposes and revocation behavior.
 
+For the dedicated Apps client, select **Use this client for an AI-powered agent** when creating it. Google's official Workspace MCP servers require this setting; the current Remote Arc adapters call native REST APIs and do not depend on those preview servers. Keep the normal Google sign-in client separate. See [Google's Workspace MCP client configuration](https://developers.google.com/workspace/guides/configure-mcp-servers).
+
 The audience must support external users for a public product. Start in Testing with explicitly listed testers. Declare the generated scopes under Data Access. Gmail `gmail.readonly` and `gmail.modify` are restricted scopes; public launch needs the applicable verification and, depending on data handling and exceptions, a security assessment. Testing-mode refresh tokens for these scopes normally expire after seven days. Calendar verification requirements also depend on the selected scopes. Do not present testing-mode access as production-ready for arbitrary users.
 
-Store the new client's credentials as `APP_GOOGLE_CLIENT_ID` and `APP_GOOGLE_CLIENT_SECRET`. The two connectors still get separate per-user connections and selected permissions, even though they share the developer client.
+In Audience → Add users, commit each tester email, save, then reload the page and confirm the account appears in the persisted test-user table. An email chip in the unsaved editor is not sufficient. A `403 access_denied` saying the app is being tested can result when this list does not contain the authorizing Google account; retry with a new authorization request after saving. This is separate from `redirect_uri_mismatch`. Never publish an unreviewed restricted-scope app as a workaround.
+
+Store the new client's credentials as `APP_GOOGLE_CLIENT_ID` and `APP_GOOGLE_CLIENT_SECRET`. Each connector has a separate per-user connection and provider grant, even though they share the developer client. Drive requests metadata/content read access and retains `drive.file` for writes. Do not promise write access to every pre-existing Drive file: write operations apply to files available to that integration. This change does not request the full-Drive `drive` scope.
 
 Reference: [web-server OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes), [restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification), [refresh-token lifetime](https://developers.google.com/identity/protocols/oauth2).
 
@@ -97,11 +101,31 @@ All configured platform client ID/secret pairs and the token vault key are serve
 
 ## Real-account acceptance
 
-1. Connect a test user's own account for each of the six connectors, then connect a second Remote Arc user and confirm each can see only their own connections and results.
+### Owner test snapshot — 2026-10-19
+
+This is a dated configuration/acceptance record, not a claim that all 29 integrations or 221 tools are publicly verified. Tests used the signed-in owner's production Apps connections from a local browser. No model inference, payment, outbound mail, team messages or paid media generation was triggered.
+
+| Provider | Configuration / connection | Actual check completed |
+| --- | --- | --- |
+| GitHub | Organization-owned OAuth client configured; owner connected | `repositories.list` succeeded with a one-item bound. No repository changes. |
+| Google Calendar | Separate Apps OAuth client; API enabled; owner added as an explicit tester | `calendars.list` succeeded with a one-item bound. No calendar changes. |
+| Google Drive | API enabled; owner connected with existing `drive.readonly` / `drive.file` request | `files.list` succeeded with a one-item bound. No full-Drive write scope was requested. |
+| Google Docs | API enabled; owner connected | Created a dedicated private test document, inserted test text using its current revision, then read it back and matched the text. |
+| Google Sheets | API enabled; owner connected | Created a dedicated private blank spreadsheet in the owner's browser, wrote only `A1:B2` through the connector, then read back and matched all four cells. |
+| Notion | Public OAuth client configured with content capabilities; owner connected | Created a dedicated private test page and explicitly added the connection to that page. `pages.get` matched its title. Created/read a test child page; replaying the same write request returned the same page. No workspace search. |
+| Gmail | API enabled; owner OAuth and provider identity check succeeded | No mailbox-content or message-write acceptance. The extra `labels.list` tool is in the pending code release and was not available in the older production runtime. |
+| Slack | Existing owner connection retained | No message reads/sends in this round; expanded scopes and tools need acceptance after the code release. |
+| Outlook / Outlook Calendar | Not configured | Owner has no Remote Arc-controlled Entra tenant; Microsoft setup is explicitly deferred. |
+
+Google remains **External / Testing**, with the existing basic sign-in client preserved and a separate agent-marked Apps client. The ten declared API scopes cover the five priority Google integrations. Scope declaration, API enablement and a Client ID/Secret pair do not make an unverified app available to arbitrary users; finish applicable branding/data-access verification before public onboarding. Other Google catalog providers still need their own API enablement and acceptance. Do not rotate the existing token vault key to configure these clients.
+
+The test documents/pages are deliberately named `Remote Arc integration QA — 2026-10-19` and remain private for inspection. They are not product data. Production was running the older, smaller operation set during these checks; validate newly expanded operations only after the exact code revision is released.
+
+1. Prioritize GitHub, Slack, Gmail, Google Calendar, Drive, Docs, Sheets, Notion, Outlook and Outlook Calendar. Connect a test user's own account, then connect a second Remote Arc user and confirm each can see only their own connections and results. Use “Check connection” to verify identity and grant coverage; this is not a substitute for checking actual tool results.
 2. Test consent denial, missing permissions, provider/admin restrictions, expired/revoked tokens, refresh-token rotation, disconnect, and reconnection. Verify the UI shows the actual connection state and no token appears in the browser, logs, MCP responses, or model context.
 3. Perform a read against a dedicated test repository/channel/mailbox/calendar and compare the result with the provider UI.
-4. Prepare a write, confirm no write occurred before approval, inspect the exact destination and payload, approve, and verify the provider result. Use an explicitly approved test channel and email recipient. Repeat the same request ID and confirm no duplicate action.
-5. Revoke or change the connection before approving a pending action, test concurrent submissions, and confirm stale approvals cannot execute. Simulate a write timeout and confirm it is not automatically repeated.
+4. Run an explicitly requested write against a dedicated test resource and verify it at the provider. Use a specifically authorized test channel or email recipient. There is no separate Remote Arc approval step. Repeat the request ID and confirm no duplicate action.
+5. Revoke or change a connection during an operation, test concurrent submissions, and confirm older generations cannot dispatch. Simulate a write timeout and confirm it is not automatically repeated. Pre-upgrade pending writes must stay cancelled.
 6. Verify both themes and mobile layouts, reconnect links, API/MCP scope upgrades, and regression of existing devices, MCP tools, and Routines.
 
 Protocol mocks and SQLite tests provide development coverage. They do not replace these real-account checks.
@@ -110,7 +134,7 @@ Protocol mocks and SQLite tests provide development coverage. They do not replac
 
 [Composio managed auth](https://docs.composio.dev/docs/authentication/custom-app-vs-managed-app) supplies developer OAuth applications for supported integrations. Its customers can skip those registrations, while every end user still grants consent for their own account. Composio stores and refreshes those connected-account credentials. Using a customer's own OAuth client is also supported for branding, scopes, and quotas.
 
-This implementation uses Remote Arc's own direct adapters and credentials. The product follows a comparable user-authorization experience while retaining its own authentication, execution, approvals, and cost controls across Connect and Arc Agent. Neither Lindy nor Composio is part of the runtime or deployment architecture.
+This implementation uses Remote Arc's own direct adapters and credentials. The product follows a comparable user-authorization experience while retaining its own authentication, execution, request journals, and cost controls across Connect and Arc Agent. Neither Lindy nor Composio is part of the runtime or deployment architecture.
 
 
 ## Read-only production readiness preflight

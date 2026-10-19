@@ -26,4 +26,4 @@ Before choosing a price or credit allowance, measure typical Auto tasks, premium
 
 ## Implementation status
 
-The billing wallet foundation is being prepared in a separate branch. Earlier proposed Remote Arc dollar amounts and credit bundles are **unapproved drafts**. This research does not enable payments, publish a new price list, or change existing customer entitlements.
+The billing wallet, Stripe integration, model-weighted Credits and SaaS economics calculator are implemented in the consolidated [PR 218](https://github.com/Remote-Arc/remote-arc/pull/218). See [platform launch and current provisional plans](./arc-platform-launch.md) and [delivery status](./pr-218-delivery.md). Arc and new purchases remain closed until owner configuration and account acceptance. Earlier dollar amounts and credit bundles are **unapproved drafts**; this competitor research does not publish prices or change customer entitlements.

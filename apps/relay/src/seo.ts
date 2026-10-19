@@ -132,7 +132,7 @@ const pages: Record<string, SeoPage> = {
   "/install/gemini": { title: "Connect Google Gemini to Your Computer | Remote Arc", description: "Step-by-step Gemini MCP Connector setup using real screenshots. Connect your Google account to Remote Arc, pair a computer and use secure remote MCP tools.", canonical: SITE + "/install/gemini" },
   "/install/cursor": { title: "Install Remote Arc for Cursor", description: "Use Remote Arc to give Cursor controlled access to paired Windows, macOS and Linux computers through MCP.", canonical: SITE + "/install/cursor" },
   "/arc": { title: "Arc — Your AI Teammate | Coming Soon | Remote Arc", description: "Meet Arc, the AI teammate we're building for Remote Arc. Hosted chat, connected apps and permissioned recurring work are planned, not yet available. Request early access.", canonical: SITE + "/arc" },
-  "/roadmap": { title: "Remote Arc Roadmap — Arc Chat, Apps and Routines", description: "See what's available now in Remote Arc Connect and what's next: Arc Chat, Auto models, billing, connected apps and recurring routines.", canonical: SITE + "/roadmap" },
+  "/roadmap": { title: "Remote Arc Roadmap — Infrastructure for Agents That Act", description: "From connected infrastructure and personal agents to long-term exploration of industry agents and intelligent device stewardship. Explore Remote Arc’s direction.", canonical: SITE + "/roadmap" },
   "/early-access": { title: "Arc Early Access — Remote Arc", description: "Request early access to Arc, the forthcoming Remote Arc hosted AI teammate. Share the work you want Arc to handle.", canonical: SITE + "/early-access" },
   "/feedback": { title: "Remote Arc Feedback — Share Your Experience", description: "Tell Remote Arc what works, what needs fixing, and what you'd like us to build next. Submit feedback directly to the team.", canonical: SITE + "/feedback" },
   "/pricing": { title: "Remote Arc Pricing — Hosted remote MCP for AI", description: "Start free with 10,000 monthly hosted MCP tool calls. Understand account usage, separate AI subscriptions and current capacity availability.", canonical: SITE + "/pricing" },
@@ -458,16 +458,19 @@ const crawlPages: Record<string, CrawlPage> = {
   },
   "/privacy": {
     h1: "Remote Arc privacy policy",
-    intro: "How Remote Arc handles account, device, usage and operational data across the hosted control plane and paired-device workflows."
+    intro: "How Remote Arc handles account information, app authorization, tool results, Arc conversations, payments and support requests. Updated October 19, 2026.",
+    sections: [{heading:"Connections and work data",text:"Connect relays authorized requests and results between your apps, computers and AI client. App call arguments and results are stored encrypted for status and replay protection. Where Arc is enabled, relevant messages and observations are processed by the configured model provider."},{heading:"Your controls",text:"Disconnect apps, revoke AI-client access and remove devices from your workspace. Contact support@remotearc.app for access, correction or hosted-data deletion requests."}]
   },
   "/terms": {
     h1: "Remote Arc terms of service",
-    intro: "Terms governing access to and use of Remote Arc."
+    intro: "Terms for authorized connections, agent work, subscriptions, Credits and third-party costs. Updated October 19, 2026.",
+    sections: [{heading:"Authorized use",text:"Only connect accounts and computers you are authorized to control. Available app read and write tools operate within the provider permissions you grant. Stopping work does not undo completed actions."},{heading:"Plans and usage",text:"Available paid plans show their price and limits before checkout. Subscriptions renew until canceled. Trials do not automatically convert to paid subscriptions. Model selection affects Credit usage; connected-provider charges may be separate."}]
   },
   "/support": {
     h1: "Remote Arc support",
-    intro: "Help with installation, device pairing, Remote MCP connections, account access and security reporting.",
-    links: [["/docs", "Documentation"], ["/install/chatgpt", "ChatGPT setup"], ["/security-model", "Security"]]
+    intro: "Get setup, app-connection, account, privacy and billing help. Support uses the same private submission inbox as product feedback.",
+    sections: [{heading:"Contact support",text:"Use the Support form or email support@remotearc.app. Include your contact email, the steps you tried and a safe error message. Leave out passwords, access tokens and private file contents."}],
+    links: [["/docs", "Documentation"], ["/docs/apps", "Apps and accounts"], ["/feedback", "Product feedback"], ["/security-model", "Security"]]
   }
 };
 

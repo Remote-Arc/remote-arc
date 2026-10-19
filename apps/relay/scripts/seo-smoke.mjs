@@ -1,5 +1,6 @@
 import { DOC_TOPICS } from "../../../packages/docs/src/catalog.ts";
 import assert from "node:assert/strict";
+import {chineseSeo} from '../src/zh-seo.ts';
 import { legacyLanguageRedirect, localizedPages } from "../src/marketing-locale.ts";
 import { chinesePages, pageForLanguage } from "../../ui/src/marketing-paths.ts";
 import { chineseResourceSeo } from "../src/zh-resources.ts";
@@ -175,7 +176,15 @@ assert.ok(!mainSource.slice(resourceNavStart, resourceNavEnd).includes('href="/d
 assert.ok(mainSource.includes('if (routePath === "/demo")'), "Demo route must remain accessible");
 
 for (const page of ["/remote-mcp", "/support", "/privacy", "/terms"]) {
-  assert.ok(mainSource.includes('href="' + page + '"'), "public navigation/footer must expose " + page);
+  assert.ok(mainSource.includes('href="' + page + '"') || mainSource.includes('href={tr("' + page + '", "/zh' + page + '")}'), "public navigation/footer must expose " + page);
+}
+for (const page of ["/privacy", "/terms", "/support"]) {
+  assert.ok(localizedPages.includes(page), "legal/support route must support Chinese");
+  assert.equal(pageForLanguage(page,"zh"),"/zh"+page);
+  assert.equal(marketingStatusCode("/zh"+page),200);
+  assert.ok(sitemap.includes("<loc>https://remotearc.app/zh"+page+"</loc>"));
+  const html=renderMarketingHtml('<html lang="en"><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>',"/zh"+page);
+  assert.ok(html.includes(chineseSeo[page].h1));
 }
 const legacyBlock = mainSource.split("const LEGACY_PRODUCT_RELEASES: ProductRelease[] = [")[1]?.split("const PRODUCT_RELEASES")[0] || "";
 const legacyVersions = [...legacyBlock.matchAll(/version: "(\d+\.\d+\.\d+)"/g)].map(x => x[1]);

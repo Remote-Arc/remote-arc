@@ -52,10 +52,10 @@ function connectionPath(node: OrbitNode) {
 const position = (x: number, y: number, delay = 0): CSSProperties =>
   ({ left: x / 6 + "%", top: y / 5 + "%", "--float-delay": delay + "s" } as CSSProperties);
 
-export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] }) {
+export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='connect' }: { clients: readonly AiClient[];arcAvailable?:boolean;initialMode?:Mode }) {
   const { tr } = useI18n();
   const { ref, running } = useAmbientMotion();
-  const [mode, setMode] = useState<Mode>("connect");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const uid = useId();
   const arc = mode === "arc";
   const headlineId = uid + "-heading";
@@ -79,7 +79,7 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
                   document.getElementById(uid + "-" + next)?.focus();
                 }
               }}>
-              {value === "connect" ? "Connect" : <>Arc<span className="hcsSoonLabel">{tr("Coming soon", "即将上线")}</span></>}
+              {value === "connect" ? "Connect" : <>Arc{!arcAvailable&&<span className="hcsSoonLabel">{tr("Coming soon", "即将上线")}</span>}</>}
             </button>
           ))}
         </div>
@@ -110,12 +110,16 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
             {resources.map(node => <path key={node.name} d={connectionPath(node)} stroke={"url(#" + uid + "-trace)"} />)}
           </g>
           <g className="hcsOutboundFlow">
-            {resources.map((node, index) => <path key={node.name} pathLength="100" d={connectionPath(node)} style={{ animationDelay: (.8 + index * .14) + "s" }} />)}
+            {resources.map((node, index) => <g key={node.name} style={{'--current-delay': (index * .085) + 's'} as CSSProperties}>
+              <path className="hcsCurrentTrail" pathLength="100" d={connectionPath(node)}/>
+              <path className="hcsCurrentFilament" pathLength="100" d={connectionPath(node)}/>
+              <path className="hcsCurrentHead" pathLength="100" d={connectionPath(node)}/>
+            </g>)}
           </g>
           <g className="hcsInboundPaths">
             {(arc ? [{ x: 300, y: 76 }] : aiPositions).map((node, index) => {
               const d = `M${node.x} ${node.y + 20} C${node.x} 132,300 132,300 208`;
-              return <g key={index}><path d={d} /><path className="hcsInboundFlow" pathLength="100" d={d} style={{ animationDelay: index * -.8 + "s" }} /></g>;
+              return <g key={index}><path d={d} /><path className="hcsInboundFlow" pathLength="100" d={d} style={{ animationDelay: index * .08 + "s" }} /></g>;
             })}
           </g>
           <g className="hcsStars">
@@ -139,7 +143,7 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
         <span className="hcsGroupCaption hcsDevicesCaption">DEVICES</span>
         {resources.map((node, index) => (
           <div key={node.name} className={"hcsFloatingNode hcsResourceNode hcsResourceNode--" + node.kind} style={position(node.x, node.y, index * -.93)} data-resource={node.kind}>
-            <span className="hcsLogoTile" style={{'--power-delay': (3.6 + index * .14) + 's'} as CSSProperties}>
+            <span className="hcsLogoTile" style={{'--power-delay': (index * .085) + 's'} as CSSProperties}>
               <img src={node.icon} alt="" width={30} height={30} />
               {node.calendar && <svg className="hcsCalendarCue" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" /><path d="M5 2v3m6-3v3M3 7h10M6 10h4" /></svg>}
             </span>
@@ -150,16 +154,17 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
           <div className="hcsCoreEnergy" aria-hidden="true" />
           <div className="hcsCoreRing hcsCoreRing--one" aria-hidden="true" />
           <div className="hcsCoreRing hcsCoreRing--two" aria-hidden="true" />
-          <div className="hcsCoreMark" role="img" aria-label="Remote Arc energy core">
-            <svg className="hcsPowerCore" viewBox="0 0 100 100" aria-hidden="true">
-              <defs><linearGradient id={uid+'-power'} x1="15%" y1="80%" x2="85%" y2="10%"><stop stopColor="#8d86b8"/><stop offset=".5" stopColor="#d3c4f5"/><stop offset="1" stopColor="#faf7ff"/></linearGradient></defs>
-              <circle className="hcsPowerTrack" cx="50" cy="50" r="39"/>
-              <path className="hcsPowerArcBase" d="M21 66C24 27 76 27 79 66"/>
-              <path className="hcsPowerArc" pathLength="100" d="M21 66C24 27 76 27 79 66" stroke={'url(#'+uid+'-power)'}/>
-              <path className="hcsPowerArcCurrent" pathLength="100" d="M21 66C24 27 76 27 79 66"/>
-              <circle className="hcsPowerTerminal" cx="21" cy="66" r="4.5"/><circle className="hcsPowerTerminal" cx="79" cy="66" r="4.5"/>
-              <circle className="hcsPowerSpark" cx="50" cy="37" r="3"/>
-            </svg>
+          <div className="hcsCoreMark">
+            <div className="hcsPowerCore">
+              <img className="hcsBrandLogo" src="/remote-arc.svg" alt="Remote Arc" width={86} height={86}/>
+              <span className="hcsLogoCurrent" aria-hidden="true"/>
+              <svg className="hcsArcElectricity" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <path className="hcsArcFilament hcsArcFilament--outer" pathLength="100" d="M10 42C15 20 27 12 44 17C50 19 54 24 56 30"/>
+                <path className="hcsArcFilament hcsArcFilament--inner" pathLength="100" d="M54 42C49 29 42 24 32 24C22 24 15 31 10 42"/>
+                <circle className="hcsArcContact" cx="10" cy="42" r="5"/>
+                <circle className="hcsArcContact hcsArcContact--right" cx="54" cy="42" r="5"/>
+              </svg>
+            </div>
           </div>
           <strong>{arc ? "Arc Agent" : "Remote Arc"}</strong>
           <span>{arc ? tr("Your AI teammate.", "你的专属 AI 队友。") : tr("Your AI. Your rules.", "你的 AI，你的权限。")}</span>
@@ -169,10 +174,10 @@ export function HomeConnectionScene({ clients }: { clients: readonly AiClient[] 
         {[tr("Skills", "专业技能"), tr("Execution", "任务执行"), tr("Approvals", "操作审批"), tr("Verified Results", "结果验证")].map(label => <li key={label}>{label}</li>)}
       </ul>
       <footer className="hcsFooter">
-        <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
+        <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? arcAvailable?tr('Arc Agent · Available now','Arc Agent · 现已可用'):tr("Arc Agent · Coming soon", "Arc Agent · 即将推出") : tr("Connect available now", "Connect 现已可用")}</span>
         <a href={arc ? "/arc" : "/connect-ai"}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
       </footer>
-      <p className="hcsPlatformScope">{tr("Connect Apps ships independently. Provider setup and account authorization required.", "Connect Apps 独立发布，需要平台配置与账号授权。")}</p>
+      <p className="hcsPlatformScope">{tr("Choose the accounts and computers your AI can use.", "由你选择 AI 可以使用的账号与电脑。")}</p>
     </div>
   );
 }

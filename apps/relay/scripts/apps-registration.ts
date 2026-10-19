@@ -27,13 +27,13 @@ export function registrationPack(value: string) {
     const providers = APP_PROVIDERS.filter(provider => APP_CATALOG[provider].credential === credential);
     return [name,{registrationUrl,applicationName:"Remote Arc Apps",providers,redirectUris:providers.map(provider=>callbacks[provider]),declaredScopes:declaredScopes(providers),clientIdSecretName:"APP_"+credential+"_CLIENT_ID",clientSecretSecretName:"APP_"+credential+"_CLIENT_SECRET",
       review:"Register the platform application once. Validate provider distribution, requested permissions and eligible account types before public onboarding.",
-      ...(name==="vercel"?{integrationSlugEnv:"APP_VERCEL_INTEGRATION_SLUG",configuredPermissions:["integration-configuration:read","project:read","deployment:read-write"],note:"External integration installation; register the exact callback, preserve state and configure project access. Provider permissions are fixed; Remote Arc enforces the user's local read/write choice."}:{}),
-      ...(name==="supabase"?{configuredPermissions:["organizations:read","projects:read","database:write"],note:"Management API OAuth app, not a Supabase Auth OAuth server. Scopes are configured on the app rather than in the authorization URL; local write approval remains required."}:{}),
+      ...(name==="vercel"?{integrationSlugEnv:"APP_VERCEL_INTEGRATION_SLUG",configuredPermissions:["integration-configuration:read","project:read","deployment:read-write"],note:"External integration installation; register the exact callback, preserve state and configure project access. Operations follow the installation's provider permissions and project access."}:{}),
+      ...(name==="supabase"?{configuredPermissions:["organizations:read","projects:read","database:write"],note:"Management API OAuth app, not a Supabase Auth OAuth server. Scopes are configured on the app rather than in the authorization URL; operations follow the connected organization's grants and limits."}:{}),
       ...(name==="linear"?{actor:"user",pkce:"S256",note:"User-actor OAuth with read and issues:create scopes, rotating refresh tokens."}:{}),
       ...(name==="x"?{applicationType:"confidential_web",pkce:"S256",payer:"platform_project",note:"Remote Arc developer project owns API charges. Keep spending controls and funding explicit; no automatic top-ups."}:{}),
       ...(name==="meta"?{graphVersionEnv:"APP_META_GRAPH_VERSION",note:"Pin a currently supported Graph API version. Instagram requires an eligible professional account linked to a Facebook Page."}:{}),
       ...(name==="shopify"?{note:"Use a public app with authorization-code flow; validate the shop domain and callback HMAC. Request protected customer data access before exposing order data."}:{}),
-      ...(name==="notion"?{note:"Enable the corresponding read/insert content capabilities. Users explicitly select pages shared with the public integration."}:{}),
+      ...(name==="notion"?{note:"Enable Read content, Insert content and Update content for the implemented page/block tools, plus user information access for users.list. Users explicitly select pages shared with the public integration; only those resources are available."}:{}),
     }];
   }));
   return {
@@ -75,6 +75,7 @@ export function registrationPack(value: string) {
       registrationUrl: "https://console.cloud.google.com/auth/overview",
       applicationName: "Remote Arc Apps",
       applicationType: "Web application",
+      agenticClient: true,
       apiServices: ["gmail.googleapis.com", "calendar-json.googleapis.com", "youtube.googleapis.com", "drive.googleapis.com", "docs.googleapis.com", "sheets.googleapis.com", "searchconsole.googleapis.com", "analyticsadmin.googleapis.com", "analyticsdata.googleapis.com", "googleads.googleapis.com"],
       authorizedRedirectUris: googleProviders.map(provider => callbacks[provider]),
       declaredScopes: declaredScopes(googleProviders),
@@ -82,6 +83,7 @@ export function registrationPack(value: string) {
       clientIdSecretName: "APP_GOOGLE_CLIENT_ID",
       clientSecretSecretName: "APP_GOOGLE_CLIENT_SECRET",
       credentialIsolation: "Use a dedicated Apps OAuth client, separate from the existing Google sign-in client.",
+      agenticClientNote: "Select Use this client for an AI-powered agent for this dedicated client. This is required when using Google's Workspace MCP servers; the current native REST adapters do not depend on those preview servers.",
     },
     microsoft: {
       registrationUrl: "https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
@@ -106,7 +108,7 @@ export function registrationPack(value: string) {
       providerDailyLimitEnv: "APP_DAILY_PROVIDER_LIMIT",
       vaultSecretName: "APP_TOKEN_KEY",
       vaultFormat: "Base64 encoding of 32 cryptographically random bytes; keep the same key while existing encrypted connections remain.",
-      requestedPermissions: "Connecting authorizes all implemented read and write tools by default; each external write still requires approval of its exact payload.",
+      requestedPermissions: "Connecting enables implemented read and write tools within the granted provider scopes. Remote Arc does not add a separate per-action approval; writes require apps:write in the AI client's MCP grant.",
       note: "Registration declares the available scopes. Per-user authorization requests the complete declared scope set. Existing connections need renewed provider consent for newly added scopes.",
     },
   };

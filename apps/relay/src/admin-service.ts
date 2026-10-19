@@ -1,19 +1,30 @@
+import {handleUserFollowups,type FollowupEnv} from './user-followups.js';
+import {handleAdminPayments,type AdminPaymentsEnv} from './admin-payments.js';
 import { getSessionUser } from "./auth.js";
+import {handleArcAdminBilling} from './arc-admin-billing.js';
 import { handleAdminBilling, handleAdminCallCredits, handleAdminOperations, type OpsEnv } from "./admin-operations.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import { listWebsiteSubmissions, updateWebsiteSubmission, type EngagementEnv } from "./domains/engagement.js";
 import { handleMonitorState, type MonitorEnv } from "./monitor.js";
 
-export type AdminServiceEnv = OpsEnv & EngagementEnv & MonitorEnv & { ADMIN_ORIGIN?: string; ADMIN_SERVICE_MODE?: string; ADMIN_UI?: { fetch(request: Request): Promise<Response> } };
+export type AdminServiceEnv = OpsEnv & EngagementEnv & MonitorEnv & FollowupEnv & AdminPaymentsEnv & { ADMIN_ORIGIN?: string; ADMIN_SERVICE_MODE?: string; ADMIN_UI?: { fetch(request: Request): Promise<Response> } };
 export const ADMIN_CONTRACT_VERSION = "1";
 const methods: Record<string, readonly string[]> = {
   "/api/me": ["GET"], "/api/monitor": ["GET"],
   "/api/admin/operations": ["GET"], "/api/admin/billing": ["GET"],
+  '/api/admin/arc-billing':['GET'],
   "/api/admin/call-credits": ["POST"], "/api/admin/plan-grants": ["GET", "POST"],
   "/api/admin/submissions": ["GET"],
 };
 
 export function adminApiMethods(path: string): readonly string[] | null {
+  if(path==='/api/admin/payments')return ['GET'];
+  if(path==='/api/admin/payments/funding')return ['POST'];
+  if(/^\/api\/admin\/payments\/(config|promotions)\/drafts$/.test(path)||/^\/api\/admin\/payments\/(config|promotions)\/[a-f0-9-]{36}\/(publish|disable)$/.test(path))return ['POST'];
+  if(path==='/api/admin/followups')return ['GET'];
+  if(path==='/api/admin/followups/drafts')return ['POST'];
+  if(/^\/api\/admin\/followups\/[^/]+\/send$/.test(path))return ['POST'];
+  if(/^\/api\/admin\/followups\/[^/]+$/.test(path))return ['GET','PATCH'];
   if (Object.hasOwn(methods, path)) return methods[path]!;
   if (/^\/api\/admin\/plan-grants\/[a-zA-Z0-9-]+\/revoke$/.test(path)) return ["POST"];
   if (/^\/api\/admin\/submissions\/[a-zA-Z0-9-]+$/.test(path)) return ["PATCH", "DELETE"];
@@ -47,12 +58,15 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
   if (!user) return failure("unauthorized", 401);
   if (!user.isAdmin) return failure("forbidden", 403);
 
+  if(url.pathname.startsWith('/api/admin/followups'))return finish(await handleUserFollowups(request,env));
+  if(url.pathname.startsWith('/api/admin/payments'))return finish(await handleAdminPayments(request,env));
   let response: Response;
   switch (url.pathname) {
     case "/api/me": response = Response.json({ authenticated: true, user }); break;
     case "/api/monitor": response = await handleMonitorState(request, env); break;
     case "/api/admin/operations": response = await handleAdminOperations(request, env); break;
     case "/api/admin/billing": response = await handleAdminBilling(request, env); break;
+    case '/api/admin/arc-billing': response = await handleArcAdminBilling(request,env);break;
     case "/api/admin/call-credits": response = await handleAdminCallCredits(request, env); break;
     case "/api/admin/plan-grants": response = await handleAdminPlanGrants(request, env); break;
     case "/api/admin/submissions": response = await listWebsiteSubmissions(request, env); break;

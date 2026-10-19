@@ -2,6 +2,8 @@ import React from "react";
 import { accountPlanHasFeature, type AccountFeature } from "@remotearc/protocol";
 import { useI18n } from "./i18n.js";
 import "./pricing.css";
+import {usePlatformCatalog} from './use-platform-catalog.js';
+import {ArcPublicPricing} from './arc-public-pricing.js';
 
 type AccountPlan = "free" | "plus";
 
@@ -17,6 +19,8 @@ export function PricingContent({
   currentPlan: AccountPlan | null;
 }) {
   const { tr } = useI18n();
+  const catalog=usePlatformCatalog();
+  if(catalog?.arcAvailable)return <ArcPublicPricing catalog={catalog} startHref={startHref} usageHref={usageHref}/>;
 
   const freeFeatures = [
     tr("10,000 hosted MCP tool calls per account / month", "每个账户每月 10,000 次托管 MCP 工具调用"),

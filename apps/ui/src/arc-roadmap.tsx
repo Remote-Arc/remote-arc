@@ -6,11 +6,11 @@ import "./arc-roadmap.css";
 const requestAccess = "/early-access?source=roadmap";
 
 const phases = [
-  {id:"00",name:"Foundation",zhName:"连接基础",status:"available",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",subtitle:"CONNECT / RELIABILITY",zhSubtitle:"连接与可靠性",description:"Remote MCP, device permissions and durable task foundations already power Remote Arc. Organization boundaries and controlled production releases are being hardened.",zhDescription:"Remote MCP、设备权限和持久任务基础已支持 Remote Arc。组织隔离与受控生产发布正在加强。",bullets:["Remote MCP · connected devices","Permissioned execution · durable tasks","Organization and release safeguards"],zhBullets:["远程 MCP 与设备连接","受控执行与持久任务","组织隔离与发布保护"],state:"live"},
-  {id:"01",name:"Arc Chat",zhName:"Arc Chat",status:"building",enStatus:"IN DEVELOPMENT",zhStatus:"开发中",subtitle:"HOSTED CHAT / AUTO",zhSubtitle:"托管对话与 Auto",description:"First-party AI chat, audited model routing and bounded execution. Auto must be reliably useful before we invite public users.",zhDescription:"第一方 AI 对话、可审计的模型路由与受限任务执行。Auto 必须经过可靠性验证，才能开放给用户。",bullets:["Chat and task history","Auto model routing","Provider-cost hard limits"],zhBullets:["聊天与任务记录","Auto 模型路由","模型费用硬上限"],state:"active"},
-  {id:"02",name:"Billing",zhName:"收费系统",status:"planned",enStatus:"PUBLIC BETA GATE",zhStatus:"公开测试前完成",subtitle:"PAYMENTS / SAFETY",zhSubtitle:"支付与预算保护",description:"Subscription checkout, trusted payment webhooks, customer usage transparency and strictly capped trials must ship before anyone can spend our hosted-model budget publicly.",zhDescription:"正式开放 Arc 前必须先完成订阅支付、可信支付通知、用量展示和有硬限额的试用，确保用户不会无限消耗托管模型成本。",bullets:["Subscriptions and checkout","Usage ledger and spending caps","Bounded, abuse-resistant free trials"],zhBullets:["订阅与收款","用量账本和硬预算限制","防滥用的限量免费试用"],state:"planned"},
-  {id:"03",name:"Apps + Routines",zhName:"应用与自动任务",status:"building",enStatus:"FOUNDATION / ACCEPTANCE",zhStatus:"基础与接入验收",subtitle:"CONNECT / AUTOMATE",zhSubtitle:"连接与自动化",description:"Connect Apps rolls out independently of Arc Agent and hosted-model billing. The 29-app foundation supports provider setup, user authorization and reviewed writes; real-account acceptance comes before activation. Arc Routines remain a separate development track.",zhDescription:"Connect Apps 独立于 Arc Agent 和托管模型收费发布。29 个应用的基础支持平台配置、用户授权和写入审批，真实账号验收完成后启用。Arc Routines 属于另一条开发工作。",bullets:["29 native integrations · eight categories","Provider registration and account acceptance","Reviewed writes · user-owned API credentials"],zhBullets:["29 个原生集成、八个类别","平台注册与真实账号验收","逐次写入审批与用户 API 凭据"],state:"active"},
-  {id:"04",name:"Teach Arc",zhName:"教会 Arc",status:"exploring",enStatus:"EXPLORING",zhStatus:"探索中",subtitle:"SKILLS / ECOSYSTEM",zhSubtitle:"技能与生态",description:"Reusable skills learned from approved demonstrations, a growing app ecosystem and more capable AI teammates — only once the core proves its value.",zhDescription:"从已授权的操作演示中生成可复用技能，再逐步扩展应用生态和 AI 队友协作，前提是核心能力已经验证其价值。",bullets:["Teach from approved examples","Reusable skills","An extensible connector ecosystem"],zhBullets:["从授权示例中学习","可复用技能","可扩展的连接器生态"],state:"planned"}
+ {id:"00",name:"Connected foundation",zhName:"连接基础设施",enStatus:"AVAILABLE TODAY",zhStatus:"现已可用",subtitle:"AN OPEN BRIDGE TO THE REAL WORLD",zhSubtitle:"连接 AI 与真实世界",description:"Give AI a common way to reach apps, computers and the work already happening across them. Connect is our starting point: an open connection layer that stays under your control.",zhDescription:"让 AI 通过统一的连接层触达应用、电脑与正在发生的工作。以 Connect 为起点，构建由用户掌控、面向开放生态的连接基础设施。",bullets:["Apps, computers and AI clients","Interoperable connections","User-owned access and control"],zhBullets:["连接应用、电脑与 AI 客户端","开放互通的连接能力","由用户掌控访问与权限"],state:"live"},
+ {id:"01",name:"A personal agent",zhName:"通用个人智能体",enStatus:"BUILDING",zhStatus:"正在构建",subtitle:"FROM REQUEST TO REAL OUTCOME",zhSubtitle:"从理解意图，到交付结果",description:"Build an agent that understands what you want, coordinates tools across your digital world and follows work through to a result you can inspect. Arc is the next step toward that ambition.",zhDescription:"构建理解意图、协调数字世界中的工具，并持续推进到可核验结果的个人智能体。Arc 是走向这一目标的下一步。",bullets:["Natural-language delegation","Work across apps and devices","Continuity, evidence and recovery"],zhBullets:["用自然语言交代工作","跨应用与设备协同","持续执行、核验与恢复"],state:"active"},
+ {id:"02",name:"Agents for every industry",zhName:"垂类 SaaS Agent",enStatus:"LONG-TERM EXPLORATION",zhStatus:"长期探索",subtitle:"A FOUNDATION FOR SPECIALIZED WORK",zhSubtitle:"为专业场景提供智能体能力",description:"Explore the infrastructure businesses need to build agents for their own industries: domain knowledge, connected tools and dependable execution. Help teams turn specialized expertise into services people can use.",zhDescription:"探索为企业提供构建垂类 SaaS Agent 所需的基础能力，将行业知识、应用连接与可靠执行结合，让专业经验成为可交付的服务。",bullets:["Domain-specific knowledge and workflows","Reusable agent infrastructure","Business-owned context and controls"],zhBullets:["行业知识与专业工作流程","可复用的智能体基础设施","企业掌控上下文与权限"],state:"planned"},
+ {id:"03",name:"Your device steward",zhName:"智能设备 AI 管家",enStatus:"LONG-TERM EXPLORATION",zhStatus:"长期探索",subtitle:"ONE AGENT, BEYOND THE SCREEN",zhSubtitle:"从电脑，走向更多智能设备",description:"Explore a general agent that helps coordinate personal computers and, over time, compatible smart devices. Understand their state, look after ongoing work and act within boundaries set by the people who own them.",zhDescription:"探索能够协调个人电脑，并逐步触达兼容智能设备的通用 Agent。理解设备状态、照看持续工作，始终在设备主人设定的范围内行动。",bullets:["Awareness across personal devices","Help with everyday digital operations","Owner-defined boundaries"],zhBullets:["跨个人设备的状态感知","照看日常数字事务","由设备主人定义行动边界"],state:"planned"},
+ {id:"04",name:"An agent infrastructure layer",zhName:"下一代 AI 基础设施",enStatus:"OUR NORTH STAR",zhStatus:"长期愿景",subtitle:"A COMMON FOUNDATION FOR AGENTS THAT ACT",zhSubtitle:"让智能体拥有可靠的行动基础",description:"Our long-term ambition is an open infrastructure layer for agents that act in the real world. Bring connections, context and execution together so personal agents, industry services and device intelligence can grow on a shared foundation.",zhDescription:"我们的长期目标，是成为面向真实世界行动的下一代 AI 基础设施。汇聚连接、上下文与执行能力，让个人智能体、行业服务与设备智能建立在共同基础之上。",bullets:["Open ecosystem and interoperability","Personal and industry agents","Reliable execution in the real world"],zhBullets:["开放生态与互操作","个人与行业智能体","面向真实世界的可靠执行"],state:"planned"}
 ] as const;
 
 export function ArcRoadmapPageContent() {
@@ -23,11 +23,11 @@ export function ArcRoadmapPageContent() {
       <img className="arcTimelineLogo" src="/remote-arc.svg" alt="" width="56" height="56" />
       <div className="arcTimelineEyebrow">REMOTE ARC / {tr("WHAT WE'RE BUILDING", "我们的开发方向")}</div>
       <h1>{tr("What's next for Remote Arc.", "Remote Arc，下一步。")}</h1>
-      <p>{tr("A clear look at what works today, what we're building and what comes later. No invented release dates.", "清楚展示已经可用的、正在建设的和未来规划的能力，不承诺未经确认的发布日期。")}</p>
+      <p>{tr("From connecting your tools to a shared foundation for agents that act.", "从连接工具出发，走向让智能体可靠行动的共同基础。")}</p>
     </header>
 
-    <section className="arcTimelineMain" aria-label={tr("Explore our five development stages", "查看五个开发阶段")}>
-      <div className="arcTimelineTop"><span>{tr("PRODUCT EVOLUTION", "产品进化")}</span><span>{tr("SELECT A PHASE TO EXPLORE", "点击阶段查看详情")} <span aria-hidden="true">→</span></span></div>
+    <section className="arcTimelineMain" aria-label={tr("Explore our product direction", "查看我们的产品方向")}>
+      <div className="arcTimelineTop"><span>{tr("OUR DIRECTION", "发展方向")}</span><span>{tr("EXPLORE THE VISION", "点击查看愿景")} <span aria-hidden="true">→</span></span></div>
       <div className="arcTimelineTabs" role="tablist" aria-label={tr("Remote Arc roadmap phases", "Remote Arc 路线图阶段")}>
         {phases.map((phase,index)=><button
           key={phase.id}
@@ -56,7 +56,7 @@ export function ArcRoadmapPageContent() {
 
       <article className="arcTimelinePanel" id="arc-timeline-panel" role="tabpanel" aria-labelledby={"arc-timeline-tab-"+selected.id}>
         <div className="arcTimelinePanelGlow" aria-hidden="true" />
-        <div className="arcTimelinePanelMeta"><span>{tr("PHASE", "阶段")} / {selected.id}</span><span className={"arcTimelinePanelState arcTimelinePanelState--"+selected.state}>{isZh?selected.zhStatus:selected.enStatus}</span></div>
+        <div className="arcTimelinePanelMeta"><span>{tr("DIRECTION", "方向")} / {selected.id}</span><span className={"arcTimelinePanelState arcTimelinePanelState--"+selected.state}>{isZh?selected.zhStatus:selected.enStatus}</span></div>
         <h2>{isZh?selected.zhName:selected.name}</h2>
         <p className="arcTimelinePanelSub">{isZh?selected.zhSubtitle:selected.subtitle}</p>
         <p className="arcTimelinePanelDesc">{isZh?selected.zhDescription:selected.description}</p>
@@ -64,8 +64,8 @@ export function ArcRoadmapPageContent() {
           {(isZh?selected.zhBullets:selected.bullets).map((item,index)=><span key={item}><i aria-hidden="true">{index+1}</i>{item}</span>)}
         </div>
         <div className="arcTimelinePanelBottom">
-          <span>{tr("Progress is directional, not a delivery-date promise.", "开发状态代表方向，不是上线日期承诺。")}</span>
-          <a href={active===0?"/connect-ai":localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
+          <span>{tr("Long-term directions are exploratory, without a committed release date.", "长期方向仍在探索中，不代表已承诺的功能或上线日期。")}</span>
+          <a href={active===0?localizedWebsiteHref("/connect-ai",locale):localizedWebsiteHref(requestAccess,locale)}>{active===0?tr("Use Connect today", "现在使用 Connect"):tr("Request early access", "申请抢先体验")} <span aria-hidden="true">↗</span></a>
         </div>
       </article>
     </section>
@@ -73,7 +73,7 @@ export function ArcRoadmapPageContent() {
     <footer className="arcTimelineFooter">
       <p>{tr("Follow the build. Shape the next milestone.", "关注开发进展，参与定义下一步。")}</p>
       <div><a href={localizedWebsiteHref("/arc",locale)}>{tr("Meet Arc", "认识 Arc")} ↗</a><a href={localizedWebsiteHref("/feedback?source=roadmap",locale)}>{tr("Tell us what to build", "告诉我们你的需求")} ↗</a></div>
-      <small>{tr("Connect is available today; Arc Hosted and its model credits are not yet public.", "Connect 现已可用；Arc Hosted 与托管模型额度尚未公开开放。")}</small>
+      <small>{tr("Start with Connect today. Join early access for Arc.", "现在开始使用 Connect，也可以申请 Arc 抢先体验。")}</small>
     </footer>
   </main>;
 }

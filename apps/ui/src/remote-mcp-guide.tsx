@@ -1,6 +1,6 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
-import { LandingArchitectureDiagram, LandingInteractiveDemo, ConnectionFilm } from "./landing-content.js";
+import { LandingArchitectureDiagram, LandingInteractiveDemo } from "./landing-content.js";
 import "./remote-mcp-guide.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
@@ -61,7 +61,7 @@ export function RemoteMcpGuide() {
       <div className="rmgHeroCopy">
         <div className="rmgEyebrow"><span className="rmgDot" /> {tr("THE REMOTE MCP GUIDE", "REMOTE MCP 入门指南")}</div>
         <h1 id="rmg-title">{tr("Remote MCP servers,", "Remote MCP Server，")}<span>{tr("explained and connected.", "从概念到真正连接。")}</span></h1>
-        <p>{tr("Learn how remote MCP works, how it differs from a local MCP server, and how to connect ChatGPT, Claude or Cursor. Then see how Remote Arc makes your own computer accessible through a permissioned remote MCP connection.", "了解远程 MCP 如何工作、与本地 MCP 有何不同，以及如何连接 ChatGPT、Claude 或 Cursor。再看看 Remote Arc 如何通过有权限控制的远程 MCP 连接，让 AI 使用你自己的电脑。")}</p>
+        <p>{tr("One endpoint for your AI, apps and computers. Understand the connection, choose your client and get your first verified result.", "一个端点，连接你的 AI、应用与电脑。了解连接方式，选择客户端，再拿到第一个可核验的结果。")}</p>
         <div className="rmgHeroActions">
           <a className="primaryButton" href="#rmg-start">{tr("Connect a remote MCP server", "连接远程 MCP Server")} <span aria-hidden="true">↗</span></a>
           <a className="rmgTextLink" href="#rmg-basics">{tr("Start with the basics", "先了解基础概念")} ↓</a>
@@ -129,9 +129,8 @@ export function RemoteMcpGuide() {
     </section>
 
     <section className="rmgSection rmgDemoSection" id="rmg-demo">
-      <div className="rmgSectionHeading"><span className="rmgEyebrow">{tr("04 / SEE THE FLOW", "04 / 看看运行过程")}</span><h2>{tr("Watch an AI request travel to a real computer.", "看看 AI 请求如何抵达真实电脑。")}</h2><p>{tr("Switch between ChatGPT, Claude and Cursor and select a task. This is the same interactive illustration as on our homepage — it simulates the experience and does not execute real commands.", "在 ChatGPT、Claude、Cursor 之间切换并选择任务。这与首页使用同一套交互演示，模拟执行体验，不会执行真实命令。")}</p></div>
+      <div className="rmgSectionHeading"><span className="rmgEyebrow">{tr("04 / SEE THE FLOW", "04 / 看看运行过程")}</span><h2>{tr("See a request move from chat to tools.", "看看请求如何从聊天走向工具。")}</h2><p>{tr("Choose a task and switch between ChatGPT, Claude and Cursor to explore the conversation, tool calls and results. This guided simulation uses example data and does not run commands or access accounts.", "选择任务，在 ChatGPT、Claude 和 Cursor 之间切换，查看对话、工具调用与结果。此交互演示使用示例数据，不会运行命令或访问账号。")}</p></div>
       <LandingInteractiveDemo />
-      <div className="rmgRecorded"><div><strong>{tr("Prefer a recorded interface walkthrough?", "想看录制的产品界面？")}</strong><p>{tr("The walkthrough uses example data and explains the authorization flow; it does not perform live third-party OAuth.", "录制使用示例数据并讲解授权流程，不会现场执行第三方 OAuth。")}</p></div><ConnectionFilm /></div>
     </section>
 
     <section className="rmgSection rmgSecurity" id="rmg-security">

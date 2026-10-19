@@ -35,7 +35,7 @@ for(const credential of ["GITHUB","SLACK","GOOGLE","MICROSOFT"]) {
 }
 const identity={userId:"one",scope:"apps:read apps:write"};
 const requests:Array<{url:string;method:string;headers:Headers;body:unknown}>=[];
-let activeProvider:AppProvider="github", version="v1", failWrites=false;
+let activeProvider:AppProvider="github", version="v1", failWrites=false,githubAccount=17;
 const json=(value:unknown,status=200)=>Response.json(value,{status});
 const fetcher:typeof fetch=async(url,init={})=>{
   const href=String(url),method=init.method || "GET",headers=new Headers(init.headers);
@@ -46,7 +46,7 @@ const fetcher:typeof fetch=async(url,init={})=>{
     const token={access_token:"private-token-"+activeProvider,refresh_token:"rotated-"+activeProvider,expires_in:3600,scope:appScopes(activeProvider,["read","write"]).join(" ")};
     return json(activeProvider==="slack"&&form.get("grant_type")!=="refresh_token"?{ok:true,authed_user:token}:token);
   }
-  if(href==="https://api.github.com/user") return json({id:17,login:"test-user"});
+  if(href==="https://api.github.com/user") return json({id:githubAccount,login:"test-user"});
   if(href==="https://slack.com/api/auth.test") return json({ok:true,user_id:"U1",team_id:"T1",team:"Test",user:"test-user"});
   if(href.endsWith("/users/me/profile")) return json({emailAddress:"tester@example.invalid"});
   if(href.endsWith("/calendarList/primary")) return json({id:"tester@example.invalid"});
@@ -104,10 +104,74 @@ async function connect(provider:AppProvider,permissions:string[]|undefined=undef
   return row.id;
 }
 for(const provider of APP_PROVIDERS) await connect(provider);
+// Check actual account identity without executing a content operation. Capability
+// counts use the same grant rules as dispatch, including broader replacement scopes.
+{
+const checkPath=(provider:AppProvider)=>"/api/apps/connections/"+connections.get(provider)+"/check";
+for(const provider of APP_PROVIDERS){
+  const before=requests.length,checked=await api(checkPath(provider),"POST",{});
+  assert.equal(checked.status,200);const body=await checked.json() as any;
+  assert.equal(body.verification,"provider_identity_checked");assert.equal(body.connectionId,connections.get(provider));
+  assert.equal(body.toolAccess.available,body.toolAccess.total);assert.equal(body.toolAccess.needsReconnect,false);
+  assert.equal(requests.length,before+1);assert.equal(requests.at(-1)?.method,"GET");
+  assert(!JSON.stringify(body).includes("private-token"));
+}
+assert.equal((await api(checkPath("github"),"POST",{},"two")).status,404);
+assert.equal((await handleApps(new Request(origin+checkPath("github"),{method:"POST",body:"{}",headers:{"content-type":"application/json",origin}}),env,fetcher)).status,401);
+assert.equal((await api(checkPath("github"),"POST",{},"one",{origin:"https://evil.invalid"})).status,403);
+assert.equal((await api(checkPath("github"),"POST",{},"one",{"content-type":"text/plain"})).status,415);
+assert.equal((await api(checkPath("github"),"POST",{operation:"issues.create"})).status,400);
+assert.equal((await handleApps(req(checkPath("github"),"POST",{}),{...env,APP_GITHUB_CLIENT_ID:undefined},fetcher)).status,503);
+sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(JSON.stringify(["channels:read","channels:history","chat:write"]),connections.get("slack")!);
+const limited=await (await api(checkPath("slack"),"POST",{})).json() as any;
+assert.equal(limited.toolAccess.needsReconnect,true);assert(limited.toolAccess.available>0&&limited.toolAccess.available<limited.toolAccess.total);
+assert.equal((await listApps(env,"one")).connections.find(row=>row.id===connections.get("slack"))?.toolAccess.needsReconnect,true);
+await connect("slack");
+for(const [provider,scopes] of [["gmail",["https://www.googleapis.com/auth/gmail.modify"]],["outlook",["User.Read","Mail.ReadWrite","Mail.Send"]],["microsoft_calendar",["User.Read","Calendars.ReadWrite"]]] as const){
+  sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(JSON.stringify(scopes),connections.get(provider)!);
+  const checked=await (await api(checkPath(provider),"POST",{})).json() as any;
+  assert.equal(checked.toolAccess.needsReconnect,false,"Broader grants must not cause an endless reconnect loop");
+  await connect(provider);
+}
+const checkGh=connections.get("github")!;
+const revoked=await handleApps(req(checkPath("github"),"POST",{}),env,async()=>json({detail:"never expose token"},401));
+assert.equal(revoked.status,401);assert.equal(sql.prepare("SELECT status FROM app_connections WHERE id=?").get(checkGh)?.status,"reauthorization_required");
+assert.equal((await api(checkPath("github"),"POST",{})).status,409);await connect("github");
+const transient=await handleApps(req(checkPath("github"),"POST",{}),env,async()=>json({detail:"private-token"},500));
+assert.equal(transient.status,503);assert(!JSON.stringify(await transient.json()).includes("private-token"));
+assert.equal(sql.prepare("SELECT status FROM app_connections WHERE id=?").get(checkGh)?.status,"active","A transient identity failure must not disconnect the user");
+githubAccount=18;const wrongAccount=await api(checkPath("github"),"POST",{});assert.equal(wrongAccount.status,409);
+assert.equal((await wrongAccount.json() as any).error,"app_account_changed");githubAccount=17;await connect("github");
+const changed=await handleApps(req(checkPath("github"),"POST",{}),env,async()=>{
+  sql.prepare("UPDATE app_connections SET generation=generation+1 WHERE id=?").run(checkGh);
+  return json({id:17,login:"test-user"});
+});
+assert.equal(changed.status,409);assert.equal((await changed.json() as any).error,"app_connection_changed");await connect("github");
+activeProvider="github";
+sql.prepare("UPDATE app_connections SET token_ciphertext=? WHERE id=?").run(await seal(env,{accessToken:"expired-check",refreshToken:"old-check-refresh",expiresAt:old,scopes:appScopes("github",["read","write"])},"app-token:one:github:"+checkGh),checkGh);
+const refreshBefore=requests.length,refreshCheck=await api(checkPath("github"),"POST",{});
+assert.equal(refreshCheck.status,200);assert(requests.slice(refreshBefore).some(request=>request.url===APP_CATALOG.github.token));
+assert.equal((await unseal<any>(env,sql.prepare("SELECT token_ciphertext FROM app_connections WHERE id=?").get(checkGh)!.token_ciphertext as string,"app-token:one:github:"+checkGh)).refreshToken,"rotated-github");
+const priorDailyLimit=sql.prepare("SELECT daily_call_limit FROM app_connections WHERE id=?").get(checkGh)!.daily_call_limit;
+sql.prepare("UPDATE app_connections SET daily_call_limit=1 WHERE id=?").run(checkGh);
+const quotaBefore=requests.length;assert.equal((await api(checkPath("github"),"POST",{})).status,429);assert.equal(requests.length,quotaBefore);
+sql.prepare("UPDATE app_connections SET daily_call_limit=? WHERE id=?").run(priorDailyLimit,checkGh);
+sql.prepare("INSERT INTO user_security_settings(user_id,mcp_paused,updated_at) VALUES('one',1,?)").run(stamp);
+assert.equal((await api(checkPath("github"),"POST",{})).status,403);sql.prepare("DELETE FROM user_security_settings WHERE user_id='one'").run();
+}
 assert.equal((await listApps(env,"two")).connections.length,0);
 assert(!JSON.stringify(await listApps(env,"one")).includes("private-token"));
 const prior=connections.get("github");
 assert.equal(await connect("github"),prior,"reconnecting the same account retains its identity");
+env.ARC_BILLING_ENABLED='1';
+assert.equal(await connect('github'),prior,'Existing connections can be reauthorized above a new plan limit');
+const limitStart=await api('/api/apps/authorize','POST',{provider:'github'});
+const limitState=new URL((await limitStart.json() as any).authorizationUrl).searchParams.get('state');
+githubAccount=18;const connectedBefore=(await listApps(env,'one')).connections.length;
+const overLimit=await api('/api/apps/oauth/github/callback?state='+limitState+'&code=limit-test');
+assert.equal(overLimit.status,402);assert.equal((await overLimit.json() as any).error,'app_connection_limit');
+assert.equal((await listApps(env,'one')).connections.length,connectedBefore,'An OAuth callback cannot exceed the connection cap');
+githubAccount=17;env.ARC_BILLING_ENABLED='0';
 await deny(()=>callApp(env,{...identity,userId:"two"},{connectionId:prior,operation:"repositories.list",arguments:{},requestId:"foreign-1"},fetcher),"app_connection_not_found");
 await deny(()=>callApp({...env,ENABLE_APPS:undefined},identity,{}),"apps_not_enabled");
 await deny(()=>callApp(env,{...identity,scope:"mcp:tools"},{connectionId:prior,operation:"repositories.list",arguments:{},requestId:"no-scope"},fetcher),"app_mcp_scope_required");
@@ -226,6 +290,9 @@ const slackArgs=(name:string):Record<string,unknown>=>{
   case "scheduled.delete":return {...channel,scheduled_message_id:"Q1"};
   case "reactions.add":case "reactions.remove":return {...channel,timestamp:ts,name:"thumbsup"};
   case "bookmarks.add":return {channel_id:"C1",title:"Project",link:"https://example.invalid/project"};
+  case 'users.presence':return {user:'U1'};
+  case 'bookmarks.edit':return {channel_id:'C1',bookmark_id:'Bk1',title:'Project'};
+  case 'bookmarks.remove':return {channel_id:'C1',bookmark_id:'Bk1'};
   default:throw Error("Missing Slack fixture: "+name);
  }
 };
@@ -241,7 +308,7 @@ const after=requests.length;
  assert.equal((await callApp(env,identity,request,fetcher)).replayed,true);
  assert.equal(requests.length,after,"no replayed Slack request is sent twice");
 }
-assert.equal(APP_OPERATIONS.filter(o=>o.provider==="slack").length,32);
+assert.equal(APP_OPERATIONS.filter(o=>o.provider==="slack").length,35);
 const changedArgs={channel:'C1',ts:'1700000000.000001'};
 const originalReview=await loadAppReview('slack','messages.delete',changedArgs,reviewTokens,fetcher);version='v3';
 await deny(()=>verifyAppReview('slack','messages.delete',changedArgs,reviewTokens,originalReview,fetcher),'app_review_changed');
@@ -262,7 +329,22 @@ for(const operation of APP_OPERATIONS.filter(op=>APP_PROVIDERS.includes(op.provi
   else if(operation.provider==="slack") args=slackArgs(operation.name);
   else if(operation.provider==="gmail"||operation.provider==="outlook") args=["drafts.create","messages.send"].includes(operation.name)?payload:operation.name==="messages.list"?{query:"approved",...(operation.provider==="gmail"?{pageToken:"next"}:{})}:operation.name==="messages.modify"?{id:"m",addLabelIds:["STARRED"],removeLabelIds:[]}:{id:"m"};
   else args=operation.name==="calendars.list"?{}:operation.name==="events.list"?{calendar:"primary",after:event.start,before:event.end}:operation.name==="events.create"?{calendar:"primary",event}:operation.name==="events.update"?{calendar:"other",id:"e",event}:{calendar:"other",id:"e"};
-  const plan=operation.request(operation.schema.parse(args));
+  if(operation.provider==='github'){
+    if(['issues.get','issues.update','comments.list','comments.create','pulls.get','pulls.files'].includes(operation.name))Object.assign(args,{number:1});
+    if(operation.name==='issues.update')args.title='Updated';if(operation.name==='comments.create')args.body='An update';if(['actions.get','actions.rerun'].includes(operation.name))args.id='123';
+  }
+  if(operation.provider==='gmail'){
+    if(['labels.list','drafts.list','threads.list'].includes(operation.name))args={};if(operation.name==='labels.create')args={name:'Work'};
+  }
+  if(operation.provider==='outlook'){
+    if(operation.name==='folders.list')args={};if(operation.name==='messages.reply')args={id:'m',comment:'Reply'};
+    if(operation.name==='messages.move')args={id:'m',destinationId:'inbox'};if(operation.name==='messages.markRead')args={id:'m',isRead:true};
+  }
+  if(operation.provider==='google_calendar'&&operation.name==='calendars.get')args={calendar:'primary'};
+  if(operation.provider==='google_calendar'&&operation.name==='availability.query')args={calendars:['primary'],start:event.start,end:event.end};
+  if(operation.provider==='microsoft_calendar'&&['calendars.get','events.accept','events.decline'].includes(operation.name))args={id:'e'};
+  const parsed=operation.schema.safeParse(args);assert(parsed.success,operation.provider+' '+operation.name+': '+JSON.stringify(parsed.error));
+  const plan=operation.request(parsed.data);
   assert(["api.github.com","slack.com","gmail.googleapis.com","graph.microsoft.com","www.googleapis.com"].includes(new URL(plan.url).hostname));
   assert(["GET","POST","PATCH","DELETE"].includes(plan.method));
   assert(!plan.url.includes("server-secret"));

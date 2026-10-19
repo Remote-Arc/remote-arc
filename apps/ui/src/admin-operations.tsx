@@ -45,6 +45,8 @@ export function AdminOperations({readOnly=false}:{readOnly?:boolean}={}) {
   const [liveBilling, setLiveBilling] = useState<LiveBilling | null>(null);
   const [billingError, setBillingError] = useState("");
   const [billingLoading, setBillingLoading] = useState(false);
+  const [arcBilling,setArcBilling]=useState<{month:string;paidRevenueUsd:number;modelRatedCostUsd:number;heldModelMaximumUsd:number;creditsPending:number;unresolvedPayments:Array<{id:string;error_code:string|null}>}|null>(null);
+  const [arcBillingError,setArcBillingError]=useState(''),[arcBillingLoading,setArcBillingLoading]=useState(false);
   const [data, setData] = useState<OperationsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -115,6 +117,11 @@ export function AdminOperations({readOnly=false}:{readOnly?:boolean}={}) {
       setBillingError(error instanceof Error ? error.message : String(error));
       setLiveBilling(null);
     } finally { setBillingLoading(false); }
+  }
+  async function loadArcBilling(){
+    if(readOnly||arcBillingLoading)return;setArcBillingLoading(true);setArcBillingError('');
+    try{const response=await fetch('/api/admin/arc-billing',{credentials:'same-origin'});if(!response.ok)throw Error();setArcBilling(await response.json());}
+    catch{setArcBillingError(tr('Arc billing data is temporarily unavailable.','暂时无法获取 Arc 计费数据。'));}finally{setArcBillingLoading(false);}
   }
   async function grantCredits() {
     if (readOnly || !chosen || !data || saving) return;
@@ -245,6 +252,9 @@ export function AdminOperations({readOnly=false}:{readOnly?:boolean}={}) {
     </div>}
 
     {section === "costs" && <div className="opsContent">
+      <div className="opsToolbar"><div><h3>{tr('Arc subscriptions & model usage','Arc 订阅与模型用量')}</h3><p>{tr('Verified receipts, rated model costs and unresolved payment events.','已核验收款、模型计量成本与待处理支付事件。')}</p></div><button className="ghostButton" disabled={readOnly||arcBillingLoading} onClick={()=>void loadArcBilling()}>{arcBillingLoading?tr('Loading…','读取中…'):tr('Fetch Arc billing','读取 Arc 计费')}</button></div>
+      {arcBillingError&&<p role="alert">{arcBillingError}</p>}
+      {arcBilling&&<><div className="opsCostGrid"><div><span>{tr('Paid receipt value · ','已付收款金额 · ')+arcBilling.month}</span><strong>${arcBilling.paidRevenueUsd.toFixed(2)}</strong><small>{tr('Excludes tax and refunded receipts.','不含税和已退款收据。')}</small></div><div><span>{tr('Rated model usage','模型计量成本')}</span><strong>${arcBilling.modelRatedCostUsd.toFixed(2)}</strong><small>{tr('Provider invoices can differ.','供应商实际账单可能有差异。')}</small></div><div><span>{tr('Pending model maximum','待确认模型费用上限')}</span><strong>${arcBilling.heldModelMaximumUsd.toFixed(2)}</strong><small>{arcBilling.creditsPending.toLocaleString()} Credits</small></div></div><p className="opsHelp">{tr('These figures are not gross margin. Include payment, hosting, Apps, support and Free-user costs in the repository SaaS economics tool.','以上不等于毛利；请在仓库 SaaS 测算工具中计入支付、托管、Apps、支持及免费用户成本。')}</p>{arcBilling.unresolvedPayments.length>0&&<div><h4>{tr('Payments needing review','待核查支付')}</h4>{arcBilling.unresolvedPayments.map(event=><p key={event.id}><code>{event.id}</code> · {event.error_code||tr('Processing','处理中')}</p>)}</div>}</>}
       <div className="opsToolbar"><div><h3>{tr("Cloudflare account cost visibility", "Cloudflare 账户成本")}</h3>
         <p>{tr("Billing covers the entire moviegoer Cloudflare account. Any other resources on that account share the same quotas.", "账单以 moviegoer Cloudflare 账户为单位；如果该账户还部署其他资源，额度与费用会合并计算。")}</p></div></div>
       <div className="opsCostGrid">

@@ -1,32 +1,19 @@
-/* A continuous pearlescent finish across the name. Keep vendor marks intact. */
-:root { --brand-wordmark: linear-gradient(110deg, #27272c 8%, #4a4a52 52%, #27272c 100%); }
-:root[data-theme="dark"] { --brand-wordmark: linear-gradient(110deg, #f0f0f3 8%, #bfc0c8 52%, #ededf1 100%); }
-.brand .brandWords b{font-weight:600;letter-spacing:-.035em}
-@supports ((background-clip: text) or (-webkit-background-clip: text)) {
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand .brandWords {
-    display: inline-block;
-    background-image: var(--brand-wordmark);
-    background-size: 150% 100%;
-    background-position: 0% 50%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent !important;
-    -webkit-text-fill-color: transparent;
-    transition: background-position 800ms ease;
-  }
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand .brandWords b {
-    color: transparent !important;
-    -webkit-text-fill-color: transparent;
-  }
-  .brand .brandWords b:first-child { margin-right: 4px; }
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand:is(:hover, :focus-visible) .brandWords { background-position: 100% 50%; }
-}
-@media (prefers-reduced-motion: reduce) { .brand .brandWords { transition: none !important; } }
-@media (forced-colors: active) {
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand .brandWords,
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand .brandWords b {
-    background: none;
-    color: LinkText !important;
-    -webkit-text-fill-color: LinkText;
-  }
-}
+/* Original blue mark and complete lettering, aligned by visible geometry. */
+@font-face{font-family:"Arc Wordmark";src:url('/fonts/SpaceGroteskVariable.woff2') format('woff2');font-weight:300 700;font-style:normal;font-display:swap}
+:root{--brand-ink:#222226}
+:root[data-theme=dark]{--brand-ink:#f4f4f5}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand.brandHasWordmark{display:inline-flex;align-items:center;gap:7px;text-decoration:none;min-height:30px;flex:none}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand .brandLockup{display:inline-flex;align-items:baseline;gap:.18em;background:none;color:var(--brand-ink)!important;-webkit-text-fill-color:currentColor;font-family:"Arc Wordmark",var(--font-product,Inter,sans-serif);font-size:23px;font-weight:600;font-style:normal;letter-spacing:-.045em;line-height:1;white-space:nowrap;font-feature-settings:"ss01","cv11","calt"}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand .brandLockup b{color:inherit!important;-webkit-text-fill-color:currentColor;font:inherit;letter-spacing:inherit;margin:0;padding:0}
+.brandSymbol{display:block;position:relative;overflow:hidden;width:28px;height:22px;flex:none}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand .brandSymbol img{display:block;position:absolute;width:32px;height:32px;max-width:none;left:-2px;top:-4px;object-fit:contain;filter:none}
+:root[data-theme] .appFrame[data-workspace] .sidebarBrand{padding-inline:6px}
+:root[data-theme] .appFrame .brand .brandLockup{font-size:21px;letter-spacing:-.04em}
+:root[data-theme] .appFrame[data-sidebar-collapsed=true] .brandSymbol{width:34px;height:34px}
+:root[data-theme] .appFrame[data-sidebar-collapsed=true] .brand .brandSymbol img{width:34px;height:34px;left:0;top:0}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .compactBrand .brandLockup{font-size:20px}
+:root[data-theme] .adminBrand.brandHasWordmark{gap:9px}
+.adminBrand.brandHasWordmark .adminBrandSymbol{display:block;align-self:flex-start;margin-top:1px;width:28px;height:22px;overflow:hidden;position:relative;flex:none;background:transparent;border:0;box-shadow:none}
+.adminBrand.brandHasWordmark .adminBrandSymbol img{position:absolute;width:32px;height:32px;left:-2px;top:-4px;max-width:none}
+.adminBrand.brandHasWordmark small{margin-top:10px;letter-spacing:.14em}
+@media(forced-colors:active){:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand .brandLockup{color:LinkText!important}}

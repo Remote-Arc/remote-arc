@@ -4,6 +4,8 @@ import {
   type AccountFeature,
   type AccountPlan,
 } from "@remotearc/protocol";
+import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
+import {currentArcPlan} from './arc-plan.js';
 
 export type { AccountFeature, AccountPlan };
 
@@ -12,7 +14,7 @@ export type PlanEntitlements = {
   features: ReadonlySet<AccountFeature>;
 };
 
-type EntitlementEnv = {
+type EntitlementEnv = PlatformLaunchEnv & {
   DB: D1Database;
 };
 
@@ -76,6 +78,7 @@ export async function getAccountPlan(
   // Admin is an operational override; base plan and active grants share one
   // effective-plan calculation so billing/promo/workspace sources can coexist.
   if (row.role === "admin" || row.has_plus_grant) return "plus";
+  if(billingEnabled(env)&&(await currentArcPlan(env,userId)).id!=='free')return 'plus';
   return normalizeAccountPlan(row.plan);
 }
 

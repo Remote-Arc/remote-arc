@@ -1,6 +1,8 @@
 # Phase 1 Model Gateway and Billing foundation
 
-Status: implemented foundation; OFF by default. Arc Agent remains Coming Soon. No production deployment, paid-provider request, payment checkout, subscription or user auto-enrollment is part of this change.
+**Scope update, 2026-10-19:** the details below describe the original goal-planner gateway and its legacy defaults. They are not the setup instructions for the new native Arc Chat. See [current platform launch](./arc-platform-launch.md), [Credits implementation](./arc-credits-rollout.md) and [consolidated delivery](./pr-218-delivery.md). Native Arc has a platform-funded OpenAI Auto route, configured OpenAI/Claude premium models, a Stripe-backed wallet, and exact cache-read/write rating; users do not configure API keys. Current Claude profiles use structured JSON output. The Workers AI pool and manual grant examples below apply to the legacy planner path, not the native Chat subscription flow.
+
+Status: implemented foundation; OFF by default. Arc Agent remains Coming Soon. Current code includes payment checkout and subscription handling behind closed launch flags; no production deployment, paid-provider request, real payment or user auto-enrollment is claimed.
 
 ## What is reusable
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { isWebsite, localizedWebsiteHref, pageForLanguage } from "./marketing-paths.js";
+import { DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS } from "./dashboard-workspaces.js";
 
 export type Locale = "en" | "zh";
 
@@ -11,9 +12,13 @@ type I18n = {
 
 const I18nContext = createContext<I18n | null>(null);
 const LOCALE_KEY = "remotearc-locale-v2";
+const dashboardPaths = new Set([...Object.values(DASHBOARD_PATHS), ...Object.keys(LEGACY_DASHBOARD_PATHS),"/admin-preview"]);
 
 function urlLocale(): Locale | null {
-  if (isWebsite()) return location.pathname === "/zh" || location.pathname.startsWith("/zh/") ? "zh" : "en";
+  // PR previews host the website and workspace together. Website URL prefixes
+  // choose its language; workspace routes retain the user's saved preference.
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (isWebsite() && !dashboardPaths.has(path)) return path === "/zh" || path.startsWith("/zh/") ? "zh" : "en";
   const requested = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
   if (requested === "zh" || requested === "zh-cn" || requested === "zh-hans") return "zh";
   if (requested === "en") return "en";

@@ -15,6 +15,8 @@ export const publicToolGroups = [
   { en: "Per-tab browser interaction", zh: "按标签页授权浏览器交互", scope: "browser:interact", tools: ["browser_click", "browser_fill"] },
   { en: "Read durable tasks", zh: "读取持久任务", scope: "automation:read", tools: ["list_automations", "get_automation"] },
   { en: "Create and manage durable tasks", zh: "创建与管理持久任务", scope: "automation:write", tools: ["create_automation", "manage_automation"] },
+  { en: "Connected app discovery", zh: "发现已连接的应用", scope: "apps:read", tools: ["list_apps"] },
+  { en: "Connected app actions", zh: "使用已连接的应用", scope: "apps:read; apps:write for write actions", tools: ["call_app"] },
 ] as const;
 const toolCount = publicToolGroups.reduce((count, group) => count + group.tools.length, 0);
 
@@ -33,8 +35,8 @@ function Code({ children }: { children: string }) {
 function ToolReference() {
   const { tr } = useI18n();
   return <>
-    <p>{tr(`The current hosted MCP implementation defines ${toolCount} public tools. Availability on a selected computer is further filtered by its permissions and installed agent capabilities. OAuth scope names describe authorization, not every tool's side effects: process_status and process_output currently require computer:write.`, `当前托管 MCP 实现定义了 ${toolCount} 个公开工具。目标电脑实际可用的能力还取决于设备权限和已安装 Agent。OAuth Scope 名称表达授权范围，不能直接当成工具副作用分类；例如 process_status 和 process_output 当前也要求 computer:write。`)}</p>
-    <p>{tr("Plan entitlement is an account-level ceiling in addition to OAuth and device policy. Free can use the core remote-computer tools. Plus additionally authorizes binary reads, temporary revision-pinned file resources, durable long-command Tasks, schedules, condition watches and supported keep-awake. UI visibility never substitutes for this relay-side gate.", "套餐 entitlement 是 OAuth 与设备策略之外的账户级上限。Free 可以使用核心远程电脑工具；Plus 额外授权二进制读取、绑定文件版本的临时文件资源、持久长命令 Task、定时任务、条件监听和受支持的 keep-awake。界面可见性不能替代 Relay 侧的套餐校验。")}</p>
+    <p>{tr(`The groups below cover ${toolCount} MCP tools for devices, saved work and connected apps. Your client shows the tools enabled for your account. Computer tools also depend on the selected device's permissions and installed Agent. process_status and process_output require computer:write. Apps use list_apps to discover account-specific actions, then call_app to execute them; they do not require a paired computer.`, `下列分组包含 ${toolCount} 个 MCP 工具，覆盖设备、已保存工作和连接的应用。客户端显示当前账号已开放的工具。电脑工具还取决于目标设备权限与已安装 Agent；process_status 和 process_output 需要 computer:write。Apps 通过 list_apps 发现账号可用操作，再通过 call_app 执行，无需配对电脑。`)}</p>
+    <p>{tr("Available tools depend on your plan as well as your authorization and device settings. Free includes core remote-computer tools with a finite call allowance. Plus also includes binary reads, temporary file links tied to a file version, durable Tasks, schedules, condition watches and supported keep-awake. Check Settings → Billing for your current allowance.", "可用工具取决于套餐、账号授权和设备设置。Free 包含有调用额度上限的核心远程电脑工具；Plus 还支持二进制读取、绑定文件版本的临时文件链接、持久 Task、定时任务、条件监听和受支持的保持唤醒。在设置 → 账单查看当前额度。")}</p>
     <div className="toolReferenceList">{publicToolGroups.map(group => <div key={group.en}>
       <h3>{tr(group.en, group.zh)}</h3><code>{group.tools.join(" · ")}</code><p>{tr("Required OAuth scope: ", "所需 OAuth Scope：")}{group.scope}</p>
     </div>)}</div>
@@ -86,7 +88,6 @@ export function Documentation({ sectionIds, title, description }: { sectionIds?:
           <p>{tr("Without Node.js on macOS or Linux (including WSL), use the native shell installer, then run remotelink to pair:", "macOS 或 Linux（包括 WSL）没有 Node.js 时，使用原生安装脚本，然后运行 remotelink 配对：")}</p>
           <Code>{"curl -fsSL https://remotearc.app/install.sh | sh\nremotelink"}</Code>
           <p>{tr("The installer verifies SHA256 and installs to ~/.local/bin without sudo. If that directory is outside PATH, it prints the full command to run. Set REMOTEARC_INSTALL_DIR to an absolute directory to choose another location. Stop the Agent before rerunning the installer to upgrade.", "安装脚本验证 SHA256，无需 sudo，默认安装到 ~/.local/bin。如果该目录不在 PATH 中，会显示完整启动路径。可通过 REMOTEARC_INSTALL_DIR 指定其他绝对路径。升级时先停止 Agent，再重新运行安装脚本。")}</p>
-          <p>{tr("Remote Arc 0.6 uses the native Go Agent and Execution Core by default. npm downloads a verified binary; Homebrew and standalone downloads run without Node.js. The TS compatibility runtime remains available with --ts.", "Remote Arc 0.6 默认使用原生 Go Agent 和 Execution Core。npm 下载经过校验的二进制；Homebrew 和直接下载不需要 Node.js。--ts 保留 TS 兼容运行时。")}</p>
           <p><a href={localizedWebsiteHref("/downloads", locale)}>{tr("Native downloads, Homebrew, upgrades and stopping the Agent", "原生下载、Homebrew、升级与停止 Agent")} →</a></p>
           <p>{tr("New devices start with read-oriented tools. File editing, terminal execution, workspace roots and login background connection are separate choices. Finish setup before connecting your AI. The background switch installs an OS login service only after setup, and Dashboard reports its verified local state.", "新设备从读取类工具开始。文件编辑、终端执行、工作区目录和登录后台连接可以分别选择。完成设备设置后再连接 AI；后台开关会在完成设置后安装 OS 登录服务，Dashboard 显示的是本机确认后的状态。")}</p>
           <Code>{endpoint}</Code>
@@ -202,16 +203,16 @@ export function Documentation({ sectionIds, title, description }: { sectionIds?:
 export function McpReference() {
   const { tr, locale } = useI18n();
   return <main className="technicalDoc productDocs">
-    <header className="articleHeader"><span className="eyebrow">REMOTE MCP</span><h1>{tr("Connect an AI client. Use the same paired computers.", "连接 AI 客户端，复用已配对的电脑。")}</h1>
-      <p>{tr("One Streamable HTTP endpoint, Remote Arc OAuth and explicit tools. This reference covers connection, scopes, device discovery, deterministic durable tasks and browser sharing.", "一个 Streamable HTTP 端点、Remote Arc OAuth 和明确的工具。本参考涵盖连接、Scope、设备发现、确定性持久任务与浏览器共享。")}</p>
-      <Code>{endpoint}</Code><TaskAvailability />
+    <header className="articleHeader"><span className="eyebrow">REMOTE MCP</span><h1>{tr("One connection for your apps and computers.", "一次连接，使用你的应用与电脑。")}</h1>
+      <p>{tr("Add Remote Arc to a compatible AI client, sign in and choose what it can access. This reference covers authorization, app actions, device tools and browser sharing.", "在兼容 AI 客户端中添加 Remote Arc，登录并选择可访问的能力。本参考介绍账号授权、应用操作、设备工具与浏览器共享。")}</p>
+      <Code>{endpoint}</Code>
     </header>
     <div className="technicalDocLayout"><aside className="articleToc"><strong>{tr("CONTENTS", "目录")}</strong>{[
       ["mcp-connect", tr("Connect your client", "连接客户端")], ["mcp-auth", tr("Authorization", "授权")], ["mcp-device", tr("Select a device", "选择设备")],
-      ["mcp-tools", tr("Tools and scopes", "工具与 Scope")], ["chrome-browser", tr("Browser companion", "浏览器 Companion")],
+      ["mcp-apps", tr("Use connected apps", "使用连接的应用")], ["mcp-tools", tr("Tools and scopes", "工具与 Scope")], ["chrome-browser", tr("Browser companion", "浏览器 Companion")],
     ].map(([id, label]) => <a key={id} href={"#" + id}>{label}</a>)}</aside><article className="technicalArticle">
       <section id="mcp-connect"><h2>{tr("Connect using the client installation path", "通过客户端安装入口连接")}</h2>
-        <p>{tr("Pair your computer and separately add the MCP connection inside the AI app. For eligible ChatGPT accounts, open Plugins → + → Add custom MCP server, enter the Remote Arc HTTPS endpoint, complete OAuth and enable the resulting plugin. A public directory listing is not yet available. See the client-specific install guide for the complete UI steps.", "先配对电脑，再在 AI 客户端独立添加 MCP 连接。具备权限的 ChatGPT 账户可打开 Plugins → ＋ → Add custom MCP server，输入 Remote Arc HTTPS 地址、完成 OAuth 并启用插件。当前尚未公开上架。具体 UI 步骤见各客户端安装指南。")}</p>
+        <p>{tr("Add the HTTPS endpoint in your AI client's remote MCP settings and complete Remote Arc sign-in. Choose the guide below for your client's setup screens. To use computer tools, also install the device Agent and pair that computer. Cloud Apps only need their account connection.", "在 AI 客户端的 Remote MCP 设置中添加 HTTPS 地址，并完成 Remote Arc 登录。各客户端的具体配置步骤见下方指南。使用电脑工具时，另需安装设备 Agent 并配对电脑；云端 Apps 只需要相应账号连接。")}</p>
         <p><a href="https://developers.openai.com/plugins/deploy/connect-chatgpt" target="_blank" rel="noreferrer">{tr("Official OpenAI connection guide", "OpenAI 官方连接指南")} ↗</a></p>
         <p>{tr("Claude uses a custom Remote MCP connector and OAuth. Cursor can use the generated MCP installation link or its remote server configuration. Other clients must support the endpoint transport and OAuth discovery; compatibility does not imply they can continue an agent overnight.", "Claude 使用自定义 Remote MCP Connector 和 OAuth；Cursor 可使用生成的 MCP 安装链接或远程服务器配置。其他客户端需要支持此端点的传输和 OAuth 发现。连接兼容不代表具备过夜 Agent 续接能力。")}</p>
         <div className="articleMetaLinks"><a href={localizedWebsiteHref("/install/chatgpt", locale)}>ChatGPT →</a><a href={localizedWebsiteHref("/install/claude", locale)}>Claude →</a><a href={localizedWebsiteHref("/install/cursor", locale)}>Cursor →</a></div>
@@ -224,6 +225,13 @@ export function McpReference() {
         <ol><li>{tr("Call list_devices and resolve the user-named computer to device_id.", "调用 list_devices，把用户指定的电脑解析为 device_id。")}</li><li>{tr("Call device_tools for the tools available on that computer.", "调用 device_tools，查看目标电脑实际开放的工具。")}</li><li>{tr("Pass device_id with device tool calls; check the workspace and action's permission before a write or command.", "设备工具调用传入 device_id，写入或执行命令前检查工作区与动作权限。")}</li></ol>
         <Code>{'{ "device_id": "<id returned by list_devices>", "path": "/your/workspace/README.md" }'}</Code>
         <p>{tr("Path syntax is the target computer's syntax. Ordinary calls need an online device. A saved Task can wait for reconnection; that does not make a direct call durable.", "路径采用目标电脑的语法。普通调用要求设备在线；保存的 Task 可以等待重连，但不代表直接调用也具备持久化能力。")}</p>
+      </section>
+      <section id="mcp-apps"><h2>{tr("Discover and use connected apps", "发现与使用连接的应用")}</h2>
+        <p>{tr("Connect an available app in your workspace's Apps page. In your AI chat, ask to use that account for a specific result. For direct MCP use, list_apps can search providers and categories; pass provider to load that app's operation schemas and connection IDs. Follow nextCursor when there are more results.", "在工作空间的 Apps 页面连接已开放应用，再在 AI 聊天中说明要通过该账号完成什么。直接使用 MCP 时，list_apps 可以搜索应用和分类；传入 provider 可读取该应用的操作结构及连接 ID。结果较多时使用 nextCursor 继续读取。")}</p>
+        <Code>{'{ "provider": "github" }'}</Code>
+        <p>{tr("Use call_app with a returned connectionId, a supported operation, its arguments and a stable requestId. The AI client needs apps:read, plus apps:write for changes. Connected read and write tools are available within the provider permissions you granted; Remote Arc adds no separate write approval. Your AI client's own confirmation settings may still apply.", "调用 call_app 时，传入返回的 connectionId、支持的 operation、对应 arguments，以及稳定的 requestId。AI 客户端需要 apps:read，修改还需 apps:write。连接后，服务商已授权的读取与写入工具均可使用，Remote Arc 不增加单独写入审批；AI 客户端自身的确认设置仍可能适用。")}</p>
+        <p>{tr("Reuse the same requestId when checking a request after a timeout. If the result is unknown, inspect it before starting another write. Reconnect an account if permissions are missing or authorization has expired. Some app operations use a separately billed provider API account.", "超时后核查同一请求时，请复用原 requestId。结果不明时先检查结果，再决定是否发起新写入。权限不足或授权过期时重新连接账号。部分应用操作会消耗单独计费的服务商 API 用量。")}</p>
+        <a href={localizedWebsiteHref("/docs/apps",locale)}>{tr("Apps connection guide", "Apps 连接指南")} →</a>
       </section>
       <section id="mcp-tools"><h2>{tr("Tools and required scopes", "工具与所需 Scope")}</h2><ToolReference /></section>
       <section id="chrome-browser"><h2>{tr("Install the scoped Chrome companion", "安装受控 Chrome Companion")}</h2>

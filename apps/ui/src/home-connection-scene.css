@@ -4,6 +4,7 @@
   --hcs-muted: #8ca7b4;
   --hcs-subtle: #547381;
   --hcs-rgb: 48, 195, 246;
+  --hcs-power: #38bdf8;
   --hcs-accent: #57d2ff;
   --hcs-tile: rgba(17, 34, 45, .88);
   --hcs-edge: rgba(153, 216, 240, .17);
@@ -16,7 +17,7 @@
   margin-inline: auto;
   color: var(--hcs-ink);
 }
-.homeConnectionScene[data-mode="arc"] { --hcs-rgb: 146, 132, 255; --hcs-accent: #b4a9ff; }
+.homeConnectionScene[data-mode="arc"] { --hcs-rgb: 56, 189, 248; }
 .hcsHeader { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .hcsHeader h2 { margin: 0; color: var(--hcs-accent); font-size: 11px; line-height: 1.5; font-weight: 550; letter-spacing: .16em; }
 .hcsModeSwitch { display: flex; padding: 3px; gap: 3px; border: 1px solid var(--hcs-edge); border-radius: 100px; background: rgba(18, 35, 46, .46); }
@@ -29,7 +30,7 @@
 .hcsUniverse { position: relative; width: 100%; aspect-ratio: 6 / 5; outline: none; }
 .hcsUniverse:focus-visible { border-radius: 30px; outline: 1px solid var(--hcs-accent); outline-offset: 4px; }
 .hcsAtmosphere { position: absolute; inset: 7% -5% 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, rgba(var(--hcs-rgb), .085), transparent 57%); transition: background .5s; }
-.hcsOrbitGeometry { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; color: var(--hcs-accent); pointer-events: none; }
+.hcsOrbitGeometry { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; color: var(--hcs-power); pointer-events: none; }
 .hcsOrbitalRing { fill: none; stroke: currentColor; stroke-width: .65; opacity: .09; stroke-dasharray: 1 7; }
 .hcsOrbitalRingInner { opacity: .075; stroke-dasharray: none; }
 .hcsOutboundPaths path { fill: none; stroke-width: .9; }
@@ -89,7 +90,7 @@
 .hcsCoreEnergy { position: absolute; top: 8.7cqw; left: 50%; width: 37cqw; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(var(--hcs-rgb), .14), transparent 65%); animation: hcs-core-energy 4.8s ease-in-out infinite; }
 .hcsCoreRing { position: absolute; top: 8.7cqw; left: 50%; width: 27cqw; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; border: 1px solid rgba(var(--hcs-rgb), .13); pointer-events: none; }
 .hcsCoreRing--two { width: 33cqw; border-color: rgba(var(--hcs-rgb), .055); }
-.hcsCoreRing--one::after { content: ""; position: absolute; top: 13%; right: 13%; width: 3px; height: 3px; border-radius: 50%; background: var(--hcs-accent); box-shadow: 0 0 10px currentColor; }
+.hcsCoreRing--one::after { content: ""; position: absolute; top: 13%; right: 13%; width: 3px; height: 3px; border-radius: 50%; background: var(--hcs-power); box-shadow: 0 0 10px var(--hcs-power); }
 .hcsCore > strong { margin-top: 18px; font-size: clamp(17px, 3.8cqw, 25px); line-height: 1.2; letter-spacing: -.055em; color: var(--hcs-ink); font-weight: 650; }
 .hcsCore > span { margin-top: 7px; color: var(--hcs-muted); font-size: clamp(8px, 1.75cqw, 11px); line-height: 1.5; }
 .hcsFoundation { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin: 10px 0 25px; padding: 0; list-style: none; color: var(--hcs-muted); font-size: 11px; font-weight: 500; }
@@ -113,7 +114,7 @@
   --hcs-ink: #123343; --hcs-muted: #557481; --hcs-subtle: #738d99;
   --hcs-rgb: 4, 145, 207; --hcs-accent: #047cac; --hcs-tile: rgba(255, 255, 255, .92); --hcs-edge: rgba(42, 111, 145, .16);
 }
-:root[data-theme="light"] .homeConnectionScene[data-mode="arc"] { --hcs-rgb: 106, 86, 222; --hcs-accent: #7660ce; }
+:root[data-theme="light"] .homeConnectionScene[data-mode="arc"] { --hcs-rgb: 56, 189, 248; }
 :root[data-theme="light"] .hcsModeSwitch { background: rgba(215, 231, 239, .42); }
 :root[data-theme="light"] .hcsLogoTile { box-shadow: 0 12px 25px rgba(41, 92, 115, .09), inset 0 1px #fff; }
 :root[data-theme="light"] .hcsResourceNode[data-resource="app"] .hcsLogoTile,
@@ -150,20 +151,46 @@
 }
 @media(max-width:620px) { .landingHero.landingHero--constellation { gap: 44px !important; } }
 /* A visible power cycle: the core charges, sends current, then lights endpoints. */
-.homeConnectionScene .hcsPowerCore{width:88%;height:88%;overflow:visible;fill:none}
-.hcsPowerTrack{stroke:var(--hcs-accent);stroke-width:.5;stroke-dasharray:1 7;opacity:.3;transform-origin:50px 50px;animation:hcs-power-orbit 40s linear infinite}
-.hcsPowerArcBase{stroke:var(--hcs-accent);stroke-width:9;stroke-linecap:round;opacity:.12}
-.hcsPowerArc{stroke-width:8;stroke-linecap:round;filter:drop-shadow(0 0 4px rgba(var(--hcs-rgb),.55));animation:hcs-power-charge 6.4s ease-in-out infinite}
-.hcsPowerArcCurrent{stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-dasharray:12 88;filter:drop-shadow(0 0 3px #fff);animation:hcs-power-current 3.2s ease-in-out infinite}
-.hcsPowerTerminal{fill:var(--hcs-accent);filter:drop-shadow(0 0 4px rgba(var(--hcs-rgb),.65))}
-.hcsPowerSpark{fill:#fff;animation:hcs-power-charge 6.4s ease-in-out infinite}
-.hcsPowerWaves circle{fill:none;stroke:var(--hcs-accent);stroke-width:1;opacity:0;animation:hcs-power-wave 6.4s ease-out infinite}
+.homeConnectionScene .hcsPowerCore{position:relative;width:82%;height:82%;display:grid;place-items:center}
+.homeConnectionScene .hcsCoreMark .hcsPowerCore .hcsBrandLogo{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 5px #38bdf880);animation:hcs-brand-charge 6.4s ease-in-out infinite}
+.hcsLogoCurrent{position:absolute;inset:0;pointer-events:none;mask:url('/remote-arc.svg') center/contain no-repeat;background:linear-gradient(110deg,transparent 43%,#bae6fd99 48%,#f0f9ffcc 50%,#7dd3fc99 52%,transparent 57%);background-size:280% 100%;animation:hcs-logo-current 6.4s ease-in-out infinite}
+.hcsPowerWaves circle{fill:none;stroke:var(--hcs-power);stroke-width:1;opacity:0;animation:hcs-power-wave 6.4s ease-out infinite}
 .hcsPowerWaves circle+circle{animation-delay:.5s}
 .homeConnectionScene .hcsOutboundFlow path{stroke-dasharray:7 93;stroke-width:1.8;animation-duration:6.4s}
-.homeConnectionScene .hcsResourceNode .hcsLogoTile::after{content:"";position:absolute;inset:-3px;border:1px solid var(--hcs-accent);border-radius:inherit;box-shadow:0 0 16px rgba(var(--hcs-rgb),.28);pointer-events:none;opacity:0;animation:hcs-endpoint-power 6.4s ease-out infinite;animation-delay:var(--power-delay)}
+.homeConnectionScene .hcsResourceNode .hcsLogoTile::after{content:"";position:absolute;inset:-3px;border:1px solid var(--hcs-power);border-radius:inherit;box-shadow:0 0 16px rgba(var(--hcs-rgb),.28);pointer-events:none;opacity:0;animation:hcs-endpoint-power 6.4s ease-out infinite;animation-delay:var(--power-delay)}
 .hcsSoonLabel{font-size:8px;font-weight:500;opacity:.7}
-@keyframes hcs-power-orbit{to{transform:rotate(360deg)}}
-@keyframes hcs-power-charge{0%,100%{opacity:.6}20%,38%{opacity:1;filter:drop-shadow(0 0 9px rgba(var(--hcs-rgb),.9))}65%{opacity:.8}}
-@keyframes hcs-power-current{0%{stroke-dashoffset:100;opacity:0}15%,75%{opacity:.9}100%{stroke-dashoffset:-100;opacity:0}}
+@keyframes hcs-brand-charge{0%,100%{filter:drop-shadow(0 0 5px #38bdf866)}20%,38%{filter:drop-shadow(0 0 12px #38bdf8aa)}65%{filter:drop-shadow(0 0 7px #38bdf880)}}
+@keyframes hcs-logo-current{0%,8%{background-position:140% 0;opacity:0}16%,40%{opacity:1}52%,100%{background-position:-100% 0;opacity:0}}
 @keyframes hcs-power-wave{0%,16%{r:54;opacity:0}22%{opacity:.28}60%,100%{r:124;opacity:0}}
 @keyframes hcs-endpoint-power{0%,32%,100%{opacity:0}8%,17%{opacity:.7}}
+
+/* One readable five-second sequence: receive → charge → transmit → activate. */
+.homeConnectionScene{--hcs-cycle:5s}
+.homeConnectionScene .hcsCoreEnergy{width:43cqw;background:radial-gradient(circle,rgba(56,189,248,.3),rgba(56,189,248,.09) 36%,transparent 65%);animation:hcs-visible-charge var(--hcs-cycle) ease-in-out infinite}
+.homeConnectionScene .hcsCoreMark{animation:hcs-core-discharge var(--hcs-cycle) ease-in-out infinite}
+.homeConnectionScene .hcsCoreMark .hcsPowerCore .hcsBrandLogo{animation:hcs-logo-voltage var(--hcs-cycle) ease-in-out infinite}
+.homeConnectionScene .hcsLogoCurrent{background:linear-gradient(110deg,transparent 35%,#7dd3fc 46%,#f0f9ff 50%,#38bdf8 54%,transparent 65%);background-size:250% 100%;animation:hcs-logo-surge var(--hcs-cycle) linear infinite}
+.hcsArcElectricity{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 3px #7dd3fc) drop-shadow(0 0 7px #38bdf8);pointer-events:none}
+.hcsArcFilament{stroke:#e0f2fe;stroke-width:1.8;stroke-linecap:round;stroke-dasharray:18 82;opacity:0;animation:hcs-arc-discharge var(--hcs-cycle) linear infinite}
+.hcsArcFilament--inner{animation-delay:.11s;stroke-width:1.4}
+.hcsArcContact{fill:#f0f9ff;opacity:0;animation:hcs-contact-flash var(--hcs-cycle) ease-out infinite}
+.hcsArcContact--right{animation-delay:.14s}
+.homeConnectionScene .hcsPowerWaves circle{stroke-width:1.5;animation:hcs-visible-wave var(--hcs-cycle) ease-out infinite}
+.homeConnectionScene .hcsPowerWaves circle+circle{animation-delay:.22s;stroke-width:.8}
+.homeConnectionScene .hcsInboundPaths .hcsInboundFlow{stroke:#7dd3fc;stroke-width:2;stroke-dasharray:16 84;animation:hcs-receive var(--hcs-cycle) ease-in infinite;filter:drop-shadow(0 0 4px #38bdf8)}
+.homeConnectionScene .hcsOutboundFlow path{animation:hcs-transmit var(--hcs-cycle) cubic-bezier(.24,.66,.44,1) infinite;animation-delay:var(--current-delay);stroke-linecap:round}
+.homeConnectionScene .hcsOutboundFlow .hcsCurrentTrail{stroke:#38bdf8;stroke-width:5;stroke-dasharray:19 81;filter:blur(2px);opacity:.4}
+.homeConnectionScene .hcsOutboundFlow .hcsCurrentFilament{stroke:#38bdf8;stroke-width:2;stroke-dasharray:14 86;filter:drop-shadow(0 0 4px #38bdf8)}
+.homeConnectionScene .hcsOutboundFlow .hcsCurrentHead{stroke:#e0f2fe;stroke-width:2.4;stroke-dasharray:2 98;filter:drop-shadow(0 0 3px #7dd3fc)}
+.homeConnectionScene .hcsResourceNode .hcsLogoTile::after{inset:-4px;border-width:1.5px;box-shadow:0 0 0 3px #38bdf814,0 0 24px #38bdf86b,inset 0 0 10px #38bdf82b;animation:hcs-endpoint-arrival var(--hcs-cycle) ease-out infinite;animation-delay:var(--power-delay)}
+:root[data-theme="light"] .homeConnectionScene .hcsCurrentHead{stroke:#0284c7}
+@keyframes hcs-visible-charge{0%,8%,82%,100%{opacity:.4;transform:translate(-50%,-50%) scale(.85)}22%,29%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}44%{opacity:.65;transform:translate(-50%,-50%) scale(1.3)}}
+@keyframes hcs-core-discharge{0%,12%,80%,100%{transform:scale(1)}24%{transform:scale(1.055)}32%{transform:scale(.98)}42%{transform:scale(1)}}
+@keyframes hcs-logo-voltage{0%,12%,85%,100%{filter:drop-shadow(0 0 5px #38bdf899)}22%,30%{filter:drop-shadow(0 0 14px #38bdf8) drop-shadow(0 0 22px #38bdf8aa);opacity:1}31%,33%{opacity:.7}32%,35%,55%{opacity:1;filter:drop-shadow(0 0 9px #38bdf8)}}
+@keyframes hcs-logo-surge{0%,10%{background-position:150% 0;opacity:0}16%,30%{opacity:1}42%,100%{background-position:-100% 0;opacity:0}}
+@keyframes hcs-arc-discharge{0%,16%{stroke-dashoffset:110;opacity:0}20%{opacity:1}38%{stroke-dashoffset:-100;opacity:1}42%,100%{stroke-dashoffset:-100;opacity:0}}
+@keyframes hcs-contact-flash{0%,20%,44%,100%{opacity:0}26%,32%{opacity:.9}}
+@keyframes hcs-visible-wave{0%,24%{r:52;opacity:0}29%{opacity:.55}68%,100%{r:156;opacity:0}}
+@keyframes hcs-receive{0%{stroke-dashoffset:110;opacity:0}3%,18%{opacity:.95}22%{stroke-dashoffset:-16;opacity:0}100%{stroke-dashoffset:-16;opacity:0}}
+@keyframes hcs-transmit{0%,23%{stroke-dashoffset:20;opacity:0}27%{stroke-dashoffset:0;opacity:.95}61%{stroke-dashoffset:-100;opacity:.95}65%,100%{stroke-dashoffset:-100;opacity:0}}
+@keyframes hcs-endpoint-arrival{0%,55%,85%,100%{opacity:0;transform:scale(.98)}60%,68%{opacity:1;transform:scale(1.035)}76%{opacity:.25;transform:scale(1.08)}}

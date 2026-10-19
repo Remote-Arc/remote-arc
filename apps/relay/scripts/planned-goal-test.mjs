@@ -24,9 +24,24 @@ fs.writeFileSync(
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
   }).outputText,
 );
+// Keep real shared cloud definitions and follow-up templates inside the
+// fixture root; their repository-relative paths are invalid after transpiling.
+const sharedModules = [
+  ["skills/src/catalog.generated", "cloud-skill-catalog"],
+  ["protocol/src/followup-templates", "followup-templates"],
+];
+for (const [source, target] of sharedModules) {
+  fs.writeFileSync(path.join(compiled, target + ".js"), ts.transpileModule(
+    fs.readFileSync(path.resolve(relay, "../../packages/" + source + ".ts"), "utf8"),
+    { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } },
+  ).outputText);
+}
 for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWith(".ts") && n !== "mcp.ts")) {
   let input = fs.readFileSync(path.join(relay, "src", name), "utf8");
   input = input.replaceAll('from "@remotearc/protocol"', 'from "./protocol.js"');
+  for (const [source, target] of sharedModules) {
+    input = input.replaceAll("../../../packages/" + source + ".js", "./" + target + ".js");
+  }
   fs.writeFileSync(path.join(compiled, name.replace(/\.ts$/, ".js")), ts.transpileModule(input, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
 }
 try {

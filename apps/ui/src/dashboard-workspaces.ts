@@ -1,8 +1,5 @@
 export type DashboardWorkspace = "connect" | "agent";
 
-// Arc is prepared in the codebase but is not part of the public Connect release.
-export const ARC_WORKSPACE_AVAILABLE = false;
-
 export type DashboardTab =
   | "overview" | "devices" | "automations" | "apps" | "connect" | "security" | "monitor" | "settings"
   | "agent-apps" | "agent-devices" | "agent-chat" | "agent-goals" | "agent-routines" | "agent-skills" | "agent-activity" | "agent-settings";
@@ -46,14 +43,15 @@ export function dashboardTabFromPath(pathname: string): DashboardTab {
   const clean = pathname.replace(/\/+$/, "") || "/";
   const tab = (Object.entries(DASHBOARD_PATHS).find(([, path]) => path === clean)?.[0] as DashboardTab | undefined)
     ?? LEGACY_DASHBOARD_PATHS[clean] ?? "overview";
-  return tab === "automations" ? "agent-goals" : tab;
+  return tab === "automations" || tab === "agent-routines" ? "agent-goals" : tab;
 }
 
 export function workspaceForTab(tab: DashboardTab): DashboardWorkspace {
   return tab.startsWith("agent-") ? "agent" : "connect";
 }
 
-export function availableDashboardTab(tab: DashboardTab, arcAvailable = ARC_WORKSPACE_AVAILABLE): DashboardTab {
+// Availability comes from the server. Missing configuration fails closed.
+export function availableDashboardTab(tab: DashboardTab, arcAvailable = false): DashboardTab {
   if (arcAvailable || workspaceForTab(tab) === "connect") return tab;
   if (tab === "agent-apps") return "apps";
   if (tab === "agent-devices") return "devices";
@@ -88,7 +86,7 @@ export function isAgentRoutineAutomation(task: WorkspaceAutomation): boolean {
 
 export function isVisibleInWorkspace(task: WorkspaceAutomation, tab: DashboardTab): boolean {
   if (tab === "automations") return !isAgentGoalAutomation(task);
-  if (tab === "agent-goals") return !isAgentRoutineAutomation(task);
+  if (tab === "agent-goals") return true;
   if (tab === "agent-activity") return true;
   if (tab === "agent-routines") return isAgentRoutineAutomation(task);
   return true;

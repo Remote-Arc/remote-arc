@@ -1,80 +1,96 @@
-# Remote Arc / Arc — SaaS launch and monetization roadmap
+# Remote Arc 产品与商业化路线图
 
-**Status:** planning specification; not deployed, not current pricing or a payment promise.
-**Product:** Remote Arc is the platform; **Arc** is the optional hosted AI assistant. Existing Connect / MCP remains an independent offering, with its existing free allowance and user-owned AI model relationship.
+更新：2026-10-19。内部决策文档，不能直接复制到官网。状态以对应 PR、生产配置和验收记录为准。
 
-## Launch gates: commercial readiness comes *before* public Arc access
+## 方向：先做有结果的 AI 队友，再开放执行基础设施
 
-| Stage | Work | Customer-facing release gate |
-|---|---|---|
-| **P0 — Security & tenancy** | Personal organizations, compatibility migration, explicit production release, verified point-in-time recovery and protected CI. | Existing Connect stable; no Arc model costs or team sharing turned on. |
-| **P1a — Internal Arc** | Hosted chat, audited tool execution, an Auto router tested across providers, durable turn/run journal. Instrument raw provider tokens and actual spend from day one. | Internal allowlist only, server-side organization/run/global hard-dollar limits, read-only initial tools. **No unmetered trial.** |
-| **P1b — Billing & free-trial guardrails (MUST SHIP BEFORE PUBLIC BETA)** | Hosted pricing/plan entitlements, Checkout, verified webhook, customer billing portal, invoice/subscription state, usage reservation/settlement, budget exhaustion UX, abuse protection and support process. | Test real payment → webhook → entitlement → AI usage → exhaustion → renewal/cancel/refund; no payment or model charges on legacy Connect by default. |
-| **P2 — Apps / early public Beta** | Five robust native integrations, own Connector SDK and OAuth lifecycle, MCP imports, safe permissions. | Signed-in verified accounts may try a *very small* subsidized Auto experience; paid users can buy allowance. Confirm model cost per verified completed task. |
-| **P3 — Paid Routines / AI workers** | Triggers, jobs, resume, approvals, failure evidence, templates, team quotas. | Paid recurring value and retention validation; no uncontrolled autonomous loops. |
-| **P4 — Ecosystem / Teach Arc** | Teach-from-demo Skills, partner connectors, agency workspace, external developer tools and multi-agent teams. | Expand only after task reliability and gross margin targets hold. |
+产品入口是 **Arc 个人 AI 队友**：用户用自然语言交代工作，Arc 使用连接的 Apps 和自己的电脑，保存任务状态，交付可核查的结果。Connect 服务已有 MCP 用户，继续独立可用，也为 Arc 提供同一套账号连接和设备执行能力。
 
-**Important:** P1a may proceed internally without public billing, but it still needs metering and strict hard ceilings. P1b cannot be deferred until after the public launch. P2/P3 work may develop in parallel but must remain unreleased until the gates pass.
+近期用一个垂直工作流验证产品，而不是同时经营三个产品线。推荐首个场景是**小型软件团队的交付工作**：读取 GitHub 变更、在合适设备运行检查、整理发布说明到 Docs / Notion，按用户指令向指定协作目标更新进展。选择理由是与已有 MCP 用户、设备能力和正在打通的 Apps 重合；它仍是待访谈验证的假设，不代表已经确定市场需求。
 
-## Usage accounting and inference ownership
+AI 基础设施是长期可形成的产品层。先让自己的 Arc 使用稳定接口完成真实工作，再以 SDK 向外部开发者开放。通用队友是交互方式，垂类场景是获客与验收范围，基础设施是经过验证后可抽象的能力；不需要现在同时对外宣传三种定位。
 
-- In **Connect** mode, ChatGPT/Claude or another client owns the reasoning subscription; Arc does not secretly call our paid model APIs. Existing remote MCP usage/plan boundaries remain independent.
-- In **Arc Hosted** mode, our model-provider account pays every OpenAI / Anthropic / Workers AI inference charge (including free-trial calls). We **cannot** use customers' ChatGPT Plus or Claude consumer subscription as free API credits.
-- The paying customer pays **Remote Arc**, not our API provider; we bear third-party spend unless the user explicitly configures a separate BYOK mode later.
-- Free trials and abuse are acquisition costs paid by us, not zero-cost promotion. Model prices vary; routings and quotas need tests before publication.
+## 当前状态
 
-## Pilot / trial safety policy — proposed limits, not live settings
+| 能力 | 已有基础 | 下一项必要验证 |
+| --- | --- | --- |
+| Connect | 生产 MCP、设备配对、本地权限与后台连接 | 保持现有用户路径可用；发布新版的回归验收 |
+| Apps | PR 中 29 个应用、221 项原生操作、8 个分类；账号管理与工具发现 | OAuth 按平台逐项开放；目录数量不等于全部真实账号验收 |
+| Arc Chat | PR 中会话、模型适配、工具执行、任务与 Routine、用量控制 | 配置平台服务端模型凭证，完成有限预算的真实模型到工具验收 |
+| 开放控制 | 开发与独立 PR 预览可打开 Arc；生产由服务端 readiness 和关闭开关控制 | 验证远程关闭立即阻止执行；预览明确标注模拟数据 |
+| Billing / Credits | PR 中 Stripe、账本、预留 / 结算 / 退款、套餐限制 | 测试模式支付和 webhook 重复 / 乱序 / 失败验收，之后单独批准收费上线 |
+| SDK | 尚未发布；复用现有 MCP / HTTP 合约的设计方向 | 先由 Arc 使用，再以真实开发者集成验证最小接口 |
 
-- Initially invite **up to 20 verified organizations**, each with a **USD $0.50 hard underlying provider-cost allowance** (not "$0.50 worth of retail credits"). Require verified email; throttle registration and new-account resets.
-- Pilot-wide stop switch at **USD $20/day** and **USD $100/month** of hosted AI/premium-tool spending, including retries. These are maximum ceilings, not target spend. Finance-provider budgets are alerts, not our circuit breaker.
-- Trial defaults to Auto, a tiny number of bounded read-only workflows and no unattended high-frequency execution. Require real user consent and additional permissions for irreversible tools.
-- Before **every** paid inference/tool action, atomically reserve estimated worst-case USD spend at both org and platform level; reconcile actual costs and release unused reserve. Reject further paid work if reservation cannot be guaranteed.
-- Bound **max output tokens, tool turns, recursion depth, search calls, parallel runs, wall-clock duration** per task and tenant. Retries and fallback models must stay inside a single reserved task budget; stop on budget exhaustion with a comprehensible UI.
-- Once the global limit is reached, Arc Hosted pauses / new trials stop. Existing Connect MCP must not be affected by that kill switch.
-- Add strong per-account and per-device/IP abuse resistance; no passwordless mass signup loops, welcome-credit resetting, unverified email use, or direct unapproved external side effects.
-- Track provider invoiced cost separately from what our preliminary token estimator predicts; alert on discrepancies. Do not promise "unlimited" at launch.
+生产 Arc 保持关闭，不能用交互预览通过替代模型、支付、真实工具执行验收。平台模型 Key 与 Stripe 凭证由运营者放入 Cloudflare Secret；用户无需提供模型 API Key。Microsoft 暂待自有组织租户配置，其余 OAuth 与真实账号进展见 [Apps 注册记录](apps-oauth-registration.md)。
 
-## Initial pricing hypotheses — USD / month, NOT public commitments
+## 阶段一：完成当前 Connect 发布与 Arc 开发入口
 
-At 100% allowance usage, target **at least 70% gross margin**, ideally 75–80%, with honest direct costs: inference, retries, third-party paid tools, cloud execution/storage, payments and variable direct support.
+- 修复 Apps 账号管理、安装指南、MCP 与客户文档，避免旧审批表述、内部发布说明和失效入口。
+- 开发 / PR 预览打开 Arc，模拟会话可发送、停止和查看历史；不访问生产账号，不调用收费模型。
+- 生产关闭 Arc；远程配置与后端执行检查一致，不能用 URL 或浏览器存储绕过。
+- CI、独立预览和必要回归通过后，交付可审查版本；生产部署遵循已有审批。
 
-| Hosted tier | Candidate monthly price | Proposed maximum included model+premium-tool COGS | Other direct-cost allowance | Illustrative fully-used gross margin |
-|---|---:|---:|---:|---:|
-| Solo | $39 | $7 | $3 | 74.4% |
-| Pro | $99 | $18 | $7 | 74.7% |
-| Team | $249 | $48 | $15 | 74.7% |
+完成标准：新用户能理解并完成 Connect 安装、授权和一次实际工具调用；Apps 状态真实；开发者能预览 Arc，生产用户不会误入未开放功能。
 
-Assumptions are *budgets*, not task-count guarantees. Formula: `(price - model/tool cost - other direct cost) / price`. Some enterprise work may need separate charges. No unlimited runs or unlimited Sonnet/frontier access. Test larger prices/quotas only against real trial telemetry. Do not silently consume above the org budget even when API providers keep accepting requests.
+## 阶段二：让 Arc 交付一个完整、可收费的工作流
 
-- **Auto is default on every hosted tier** and routes to models tested to finish tasks reliably within budget. It is not permanently pinned to the cheapest model.
-- **Pro+ model selection** exposes tested supported providers/models; premium selections consume more allowance or have explicit per-call additional charges. Exact model names and entitlements must be verified before publishing them.
-- **Connect Free** must remain clearly differentiated from the hosted trial. Existing free MCP calls are not free model inference; marketing and pricing must explain the distinction.
-- Paid users receive a customer-facing allowance/execution-balance UI, transparent throttling and usage history; retail credits map consistently to true provider cost with an auditable multiplier.
+1. 运营者配置模型凭证，先以小额预算完成聊天 → 工具 → 产物 → 用量结算。错误、取消和超时也必须正确结算。
+2. 自动模型路由以**完成一个可核查任务的总成本**为目标：同时看成功率、延迟、重试和 token 用量。先使用评测通过的低成本模型；升级与重试必须在同一个任务预算内。
+3. 通过对话创建一次性 Task 和重复 Routine。Tasks 展示工作结果，Routines 展示重复安排，Activity 展示实际执行记录；不恢复手填任务表单。
+4. 邀请 5–10 个实际用户或团队验证一个明确工作流。人数是实验规模，不是市场需求证据。先观察使用，再决定该工作流是否值得垂直产品化。
+5. 验证试用、额度耗尽、取消、订阅和充值全流程，之后再开启生产 Arc 和付费入口。
 
-## Billing implementation acceptance checklist (P1b)
+完成标准：用户能复述获得了什么结果，并在第二周主动重复使用；至少有实际付费意愿或支付行为。不能以聊天消息量、连接数或宣传视频代替价值验证。
 
-1. Provider choice: evaluate **Stripe Billing + Checkout + Customer Portal** versus a Merchant-of-Record alternative for tax handling. Verify merchant eligibility, legal entity, payout/KYC and applicable GST/VAT before making prices public.
-2. Database ownership: `organization_id` for plans, provider customer/subscription IDs, entitlements, immutable credit ledger, reservation, settlement, refund and invoice events. Existing `plan_grants` / Plus entitlements are preserved; do not retro-charge existing Connect users.
-3. Checkout is initiated server-side; subscription access is granted **only after verified paid state**, not after client-side success redirect.
-4. Verify provider webhook signatures using the raw payload, deduplicate event IDs, handle out-of-order transitions, trial changes, invoice failure/cancellation and idempotent retries. Avoid storing card numbers.
-5. Enforce accounting/authorization **on the server** independent of UI. Atomic reserve/commit/release for model usage and safety cap under concurrent tasks.
-6. Support self-service billing history, cancellation, upgrade/downgrade, invoice state, usage and exhaustion; specify account deletion/retention policy.
-7. Separate dev/test and production provider keys and webhook endpoints; end-to-end tests for duplicate webhook and disabled payment flow; operational metrics and audit with no PII in logs.
-8. Owner/operator kill switch can disable Arc Hosted and premium tools without interrupting Connect.
-9. Security review before production: API-key leak protection, OAuth tenant isolation, ledger race conditions, SSRF and cost amplification defenses, refund-abuse limits.
-10. Controlled paid pilot validates cost per verified task, 30-day retention and failed payment UX before a general public release.
+## 阶段三：提高重复工作的可靠性和单位经济性
 
-## Current Phase 0 verification (2026-10-16)
+- 完成同一目标跨聊天恢复、设备断连恢复、Routine 执行与外部结果不确定时的处理。
+- 外部修改结果不明时先查询和核对；不能把未确认的写入换台机器盲目重试。
+- 将用户反复成功的工作固化为带版本、输入、产物和验证规则的 Skill。扩充 Apps 优先依据实际失败和付费需求，不以数量作为主要进度指标。
+- 记录每个工作流的完成率、人工介入率、耗时 P50 / P95、真实模型与工具成本、第二周复用和退款原因。
 
-- GitHub production environment **Required Reviewers** is verified via GitHub API: reviewer `yaohuangguan`, with `prevent_self_review=false`. Self-approval is currently permitted, so the owner must still consciously review each production run.
-- D1 `remote-link-auth` read-only info returned 33 tables and ~35MB. D1 `time-travel info --json` returned a **valid bookmark** with exit code 0. No restore, export, schema changes or data writes performed.
-- **Before deployment:** record a *fresh* pre-migration Time Travel bookmark (not in git); plan a restricted-access independent SQL export after checking maintenance impact. Cloudflare warns export can temporarily interrupt D1 queries, so do NOT run an unplanned production export during normal traffic.
-- For any schema change, coordinate Time Travel recovery; restoring the whole DB destroys post-bookmark legitimate writes and is never an automatic rollback. Prefer additive backwards-compatible migrations and immediate issue resolution.
-- Mac free space was < 0.5GiB at last check: do not export the customer database to the Mac or run large local dependency installs. Use separate isolated/secured storage, and keep customer database contents out of PRs/CI build artifacts.
+完成标准：可解释失败、可追踪结果，在预算上限内稳定交付。Routine 每天触发不是留存证据，用户持续查看或使用产物才是。
 
-## Owners' assistance needed at the right time
+## 阶段四：提取开发者 SDK，验证基础设施需求
 
-- **Now:** no API keys or card information needed for this roadmap. GitHub reviewer is confirmed; Time Travel has been verified.
-- **Before public paid pilot:** create/verify a payment provider merchant account; provide production/test keys through secret managers only; confirm USD pricing, refund/TOS/privacy and tax obligations.
-- **Before hosted model testing:** establish dedicated OpenAI / Anthropic developer API billing projects with deliberately low spend limits; provide credentials directly to secret management, never messages/PRs.
-- **Before production D1 migration:** explicitly authorize the narrow release window and safe backup process after reviewing the plan.
+先发布 TypeScript 私有 Alpha，只覆盖 2–3 个真实外部开发者需要的接口；有需求后再扩展 Python。SDK 包装已有服务器合约，不复制第二套运行引擎。MCP 保留给兼容 AI 客户端，HTTP / 事件接口服务程序化调用。
+
+| 抽象 | 最小职责 | 明确边界 |
+| --- | --- | --- |
+| Connections | 发起授权、获取连接状态、撤销、按账号选择 | 只返回连接句柄与授权状态，不返回平台或用户 Secret |
+| Tools | 分页发现 schema、按连接调用操作、稳定 request ID | 验证租户、最终用户授权和服务商 Scope；不提供任意 URL 代理 |
+| Devices | 发现能力、筛选合适设备、在指定工作目录执行 | 不隐式复制项目，不扩大本机权限；明确设备不可用原因 |
+| Runs | 创建、查询、流式事件、恢复、停止 | 持久状态与执行结果分开；停止不声称能撤销已发出的外部动作 |
+| Evidence | 工具确认、产物引用、验证状态 | 区分已派发、服务商已接受与已核查完成 |
+| Usage | 预算、预估、预留、实际结算、剩余额度 | 并发原子记账，未能预留即不执行收费动作 |
+| Events | 事件 ID、重放游标、签名 webhook、重试 | 对至少一次投递设计去重，不承诺跨服务端到端恰好一次 |
+| Skills | 版本、输入输出、所需工具、验证规则 | 指引不等于权限，不能从不可信内容中扩大授权 |
+
+开发者认证需限定项目与最终用户，隔离租户；服务端凭证不能放浏览器或移动端。连接、运行、事件和用量都使用同一条可追踪的执行 ID。认证、撤销、预算、幂等和恢复必须在服务器执行，SDK 只是便捷客户端。
+
+进入公开 SDK 的条件：外部开发者能独立完成集成，愿意持续使用或付费；Arc 自身也依赖这些接口。若没有外部需求，继续作为内部架构，不急于宣传基础设施平台。
+
+## 商业化约束
+
+当前待发布候选为 Plus **$39 / 月、1,500 Credits**，Pro **$79 / 月、5,000 Credits**，Enterprise 单独商议；14 天试用含 200 Credits。正式开放前仍需用真实成本验证，不沿用旧版 Solo / Team 或 Pro $99 草案。
+
+- Plus 可用所有已开放的高级模型，Pro 提供更多额度与容量；不同模型按费率消耗 Credits，不能无限使用最高成本模型。
+- Connect Free 有工具调用上限；Arc 免费试用是平台承担的获客成本，不能假设模型免费。
+- 托管模型由 Remote Arc 的 API 账号结算，不使用消费者 ChatGPT / Claude 订阅抵扣 API 成本。第三方 Apps 按实际成本归属计费，不能一概视为用户承担。
+- 毛利目标 **至少 70%**，计算模型 / 推理 / 缓存、失败重试、平台付费 Apps、云执行与存储、支付手续费、变动支持成本，以及分摊的试用成本。独立记录毛利与获客 / 销售 / 固定研发费用，避免把贡献毛利误称净利润。
+- 工具 [tools/saas](../tools/saas) 保留可审查假设和敏感性分析；模型价格、充值、退款和满额度使用变化后重新计算，不能把候选价格的测算当作利润保证。
+- 年化 $1M 订阅收入约需 1,055 个持续按月支付 $79 的账号。这只是无折扣、无流失的算术；不含税、充值或一次性收入。真正需要验证的是可持续获客、留存和交付成本。
+
+## 可形成的差异化：待验证，不作空泛承诺
+
+1. **工作可跨聊天与模型继续**：状态、工具连接、产物和预算不随一次聊天丢失。
+2. **Apps 与自己的电脑协同**：不只发送 SaaS API 请求，也在有合适软件、数据与权限的设备上完成工作。
+3. **完成有证据、消耗有边界**：用同一个执行 ID 回答做了什么、结果在哪里、是否验证、花了多少。
+
+连接数量、模型选择器和一句“24/7”本身不构成壁垒。先用用户愿意重复付费的交付证明这三点，再考虑企业治理、多团队协同与生态扩张。
+
+## 对外表达与内部资料
+
+官网展示用户能做什么、当前开放状态、真实限制和下一步操作。SDK、企业能力未开放时不能写成已可用。客户文档保留安装、权限、费用和排错说明；内部模型成本、配置验收清单、市场假设和本路线图留在代码库中。
+
+相关执行资料：[Arc 上线说明](arc-platform-launch.md)、[Chat 配置](arc-chat-rollout.md)、[Credits 发布](arc-credits-rollout.md)、[Apps 验收](apps-oauth-registration.md)、[产品方向分析](product-direction-review-2026-10-19.md)。

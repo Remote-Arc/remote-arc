@@ -13,7 +13,7 @@ for(const file of fs.readdirSync(migrations).filter(v=>v.endsWith(".sql")).sort(
 const db={prepare(query:string){const stmt=sql.prepare(query);const b=(values:any[])=>({async first(){return stmt.get(...values)||null;},async all(){return{results:stmt.all(...values)};},async run(){const r=stmt.run(...values);return{success:true,meta:{changes:Number(r.changes)}};}});return{...b([]),bind(...values:any[]){assert(!values.includes(undefined),query);return b(values);}};}} as unknown as D1Database;
 const origin="https://mcp.remotearc.app",uuid="11111111-1111-4111-8111-111111111111",stamp=new Date().toISOString(),future=new Date(Date.now()+3600000).toISOString();
 for(const user of ["one","two"]){sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(user,user,user+"@example.invalid",stamp);sql.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)").run(await sha256Hex("session-"+user),user,future,stamp);}
-const env:AppEnv={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,ENABLE_APPS:"1",APP_TOKEN_KEY:Buffer.alloc(32,7).toString("base64"),APP_VERCEL_INTEGRATION_SLUG:"remote-arc-test",APP_META_GRAPH_VERSION:"v26.0",APP_GOOGLE_ADS_DEVELOPER_TOKEN:"operator-ads-token"};
+const env:AppEnv={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,ENABLE_APPS:"1",APP_TOKEN_KEY:Buffer.alloc(32,7).toString("base64"),APP_VERCEL_INTEGRATION_SLUG:"remote-arc-test",APP_META_GRAPH_VERSION:"v26.0",APP_GOOGLE_ADS_DEVELOPER_TOKEN:"operator-ads-token",APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:1,dailyPlatformMicros:1000}})};
 for(const def of Object.values(APP_CATALOG)){if(def.credential){env["APP_"+def.credential+"_CLIENT_ID"]="client-"+def.credential;env["APP_"+def.credential+"_CLIENT_SECRET"]="secret-"+def.credential;}}
 const deny=(fn:()=>unknown,code:string)=>assert.rejects(async()=>fn(),(e:any)=>e instanceof AppError&&e.code===code);
 const records:{url:string;method:string;headers:Headers;body:any}[]=[];let active:AppProvider="youtube";
@@ -79,17 +79,33 @@ for(const provider of EXTRA_PROVIDER_IDS){
  const list=await listApps(env,"one"),conn=list.connections.find(c=>c.provider===provider)!;assert(conn,provider);connections.set(provider,conn.id);
  assert.equal((await listApps(env,"two")).connections.length,0);
  const stored=sql.prepare("SELECT token_ciphertext FROM app_connections WHERE id=?").get(conn.id)!;assert(!String(stored.token_ciphertext).includes("private"));
+  if(["google_drive","google_docs","google_sheets","notion"].includes(provider)){
+    const checked=await api("/api/apps/connections/"+conn.id+"/check","POST",{});assert.equal(checked.status,200,provider);
+    const result=await checked.json() as any;assert.equal(result.verification,"provider_identity_checked");
+    assert.equal(result.toolAccess.available,result.toolAccess.total);assert.equal(result.toolAccess.needsReconnect,false);
+  }
  assert(!JSON.stringify(list).includes("private-access"));assert(!JSON.stringify(list).includes("own-private-key"));
 }
 assert.equal(APP_PROVIDERS.length,29);assert.equal(APP_CATEGORIES.length,8);assert.equal(connections.size,23);
+// An already-granted broader token can satisfy narrower operation requirements;
+// the authorization request itself keeps its existing drive.file scope.
+assert(appScopes("google_drive",["write"]).includes("https://www.googleapis.com/auth/drive.file"));
+assert(!appScopes("google_drive",["write"]).includes("https://www.googleapis.com/auth/drive"));
+const driveConnection=connections.get("google_drive")!,storedDriveScopes=sql.prepare("SELECT scopes_json FROM app_connections WHERE id=?").get(driveConnection)!.scopes_json;
+sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(JSON.stringify(["openid","https://www.googleapis.com/auth/userinfo.email","https://www.googleapis.com/auth/drive"]),driveConnection);
+active="google_drive";
+const broadDrive=await (await api("/api/apps/connections/"+driveConnection+"/check","POST",{})).json() as any;
+assert.equal(broadDrive.toolAccess.needsReconnect,false);sql.prepare("UPDATE app_connections SET scopes_json=? WHERE id=?").run(storedDriveScopes,driveConnection);
 const argsByField:Record<string,any>={limit:20,index:1,dimensions:["query"],id:"123",documentId:"doc-1",revisionId:"rev-1",spreadsheetId:"sheet-1",range:"Sheet1!A1:B2",values:[["Verified",12]],playlistId:"playlist-1",ids:["video-1"],siteUrl:"https://example.invalid/",startDate:"2026-10-01",endDate:"2026-10-07",metrics:["sessions"],propertyId:"123",customerId:"123",deploymentId:"deployment-1",taskId:uuid,promptText:"A calm ocean",ratio:"1280:720",duration:5,maxCredits:60,userId:"123",text:"Reviewed content",message:"Reviewed content",pageId:"123",accountId:"123",mediaId:"123",commentId:"123",imageUrl:"https://example.invalid/image.png",caption:"Reviewed caption",creationId:"7123",sourceCallId:uuid,to:"15550001234",name:"approved_template",language:"en_US",cloudId:uuid,jql:"project = TEST",projectKey:"TEST",issueTypeId:"123",summary:"Reviewed summary",description:"Reviewed description",spaceId:"123",title:"Reviewed title",blockId:uuid,parentPageId:uuid,commentary:"Reviewed post",projectRef:"abcdefghijklmnopqrst",query:"SELECT 1",teamId:uuid,email:"person@example.invalid",firstName:"Example",lastName:"Person",campaignId:"123"};
+Object.assign(argsByField,{videoId:'video-1',findText:'Verified',startIndex:1,endIndex:2,postId:'123',projectId:'project-1',issueId:'TEST-123',productId:'gid://shopify/Product/123',orderId:'gid://shopify/Order/123',postUrn:'urn:li:share:123',contactId:'123',dealId:'123'});
 const idIdentity={userId:"one",scope:"apps:read apps:write"};let createdMediaCall="";
 for(const operation of APP_OPERATIONS.filter(o=>EXTRA_PROVIDER_IDS.includes(o.provider as any))){
  active=operation.provider;
  const required=(z.toJSONSchema(operation.schema) as any).required||[];
  const arguments_:Record<string,any>=Object.fromEntries(required.map((key:string)=>{assert(key in argsByField,"Missing fixture "+key);return[key,argsByField[key]];}));
- if(active==="notion"&&operation.name==="pages.get")arguments_.pageId=uuid;
- if(active==="google_analytics"&&arguments_.dimensions)arguments_.dimensions=["date"];
+  if(active==="notion"&&arguments_.pageId)arguments_.pageId=uuid;
+ if(active==='salesforce'&&arguments_.contactId)arguments_.contactId='003000000000001';
+  if(active==="google_analytics"&&arguments_.dimensions)arguments_.dimensions=["date"];
  if(active==="meta_ads"&&arguments_.accountId)arguments_.accountId="act_123";
  if(active==="instagram"&&operation.name==="media.publish")arguments_.sourceCallId=createdMediaCall;
  const input={connectionId:connections.get(active)!,operation:operation.name,arguments:arguments_,requestId:crypto.randomUUID()};
@@ -113,7 +129,7 @@ for(const operation of APP_OPERATIONS.filter(o=>EXTRA_PROVIDER_IDS.includes(o.pr
  if(active==="runway"&&operation.name==="videos.generate"){assert.equal(request.body.model,"gen4.5");assert.equal(request.body.maxCredits,undefined);}
 }
 const all=await discoverApps(env,"one");assert.equal(all.total,29);assert.equal(all.apps.length,12);assert.equal(all.nextCursor,12);assert(!("operations" in all.apps[0]!));
-const selected=await discoverApps(env,"one",{provider:"runway"});assert.equal(selected.apps.length,1);assert((selected.apps[0] as any).operations.length===3);assert(selected.connections.every(c=>c.provider==="runway"));
+const selected=await discoverApps(env,"one",{provider:"runway"});assert.equal(selected.apps.length,1);assert((selected.apps[0] as any).operations.length===5);assert(selected.connections.every(c=>c.provider==="runway"));
 assert.equal((await discoverApps(env,"one",{category:"creative",query:"runway",cursor:20})).apps.length,0);
 assert.equal((await discoverApps({...env,ENABLE_APPS:undefined},"one",{})).total,0);
 assert.throws(()=>appDiscoverySchema.parse({limit:26}));assert.throws(()=>appDiscoverySchema.parse({provider:"wrong"}));
@@ -201,7 +217,19 @@ upgrade.prepare("INSERT INTO app_connections(id,user_id,provider,account_id,acco
 upgrade.prepare("INSERT INTO app_calls(id,user_id,connection_id,connection_generation,operation,permission,request_id,input_hash,arguments_ciphertext,status,expires_at,created_at,updated_at) VALUES('old-call','old-user','old-connection',1,'repositories.list','read','old-request','hash','encrypted','succeeded',?,?,?)").run(future,stamp,stamp);
 upgrade.exec("BEGIN");upgrade.exec(fs.readFileSync(path.join(migrations,"0031_apps_registry_and_usage.sql"),"utf8"));upgrade.exec("COMMIT");
 assert.equal(upgrade.prepare("SELECT account_label,daily_call_limit FROM app_connections WHERE id='old-connection'").get()?.daily_call_limit,100);assert.equal(upgrade.prepare("SELECT connection_id FROM app_calls WHERE id='old-call'").get()?.connection_id,"old-connection");assert.equal(upgrade.prepare("PRAGMA foreign_key_check").all().length,0);upgrade.close();
-console.log("Apps expansion: 23 new provider auth flows, every operation, reviewed writes, concurrent replay, billing limits, discovery and existing-data migration passed. Provider HTTP is mocked; no real account acceptance is claimed.");
+const funded=sql.prepare('SELECT id,generation,provider FROM app_connections WHERE id=?').get(connections.get('x')!) as {id:string;generation:number;provider:AppProvider};
+await deny(()=>reserveAppDispatch({...env,APP_PLATFORM_FUNDED_COSTS:undefined},'one',funded),'app_platform_budget_not_configured');
+await deny(()=>reserveAppDispatch({...env,APP_PLATFORM_FUNDED_COSTS:'{'},'one',funded),'app_platform_budget_not_configured');
+await deny(()=>reserveAppDispatch({...env,APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:-1,dailyPlatformMicros:10}})},'one',funded),'app_platform_budget_not_configured');
+sql.prepare('DELETE FROM app_platform_funding_reservations').run();
+const fundedEnv={...env,APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:6000,dailyPlatformMicros:1000000}})};
+const fundedCalls=await Promise.allSettled(Array.from({length:6},()=>reserveAppDispatch(fundedEnv,'one',funded)));assert.equal(fundedCalls.filter(r=>r.status==='fulfilled').length,1,'Free platform-funded cost allowance cannot be spent twice');
+sql.prepare("INSERT INTO billing_plan_assignments(id,plan_id,subject_type,subject_id,expires_at,created_at) VALUES('funded-paid','arc-plus-v1','user','one',?,?)").run(future,stamp);
+sql.prepare('DELETE FROM app_platform_funding_reservations').run();
+await reserveAppDispatch(fundedEnv,'one',funded);await reserveAppDispatch(fundedEnv,'one',funded);
+assert.equal(sql.prepare('SELECT SUM(maximum_cost_micros) AS n FROM app_platform_funding_reservations').get()?.n,12000,'An active paid plan has its separate platform-funded allowance');
+await deny(()=>reserveAppDispatch({...fundedEnv,APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:6000,dailyPlatformMicros:12000}})},'one',funded),'app_platform_funded_allowance_reached');
+console.log("Apps expansion: 23 new provider auth flows, every operation, reviewed writes, concurrent replay, platform-funded cost caps, billing limits, discovery and existing-data migration passed. Provider HTTP is mocked; no real account acceptance is claimed.");
 sql.close();
 
 for(const provider of ["linear","supabase","x"] as const){

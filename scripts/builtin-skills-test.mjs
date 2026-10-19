@@ -12,7 +12,7 @@ for(const skill of registry.skills){
  assert.ok(['P0','P1'].includes(skill.priority),skill.id);
  assert.ok(/^https:\/\//.test(skill.upstream),skill.id);
  assert.ok(skill.scopes.length>0,skill.id);
- const doc=fs.readFileSync(path.join(root,'skills',skill.id,'SKILL.md'),'utf8');
+  const doc=fs.readFileSync(path.join(root,'skills',skill.id,'SKILL.md'),'utf8').replace(/\r\n/g,'\n');
  assert.ok(doc.startsWith('---\n'),skill.id);
  assert.ok(doc.includes(`name: ${skill.id}`),skill.id);
  assert.match(doc,/permission|授权/i,skill.id);

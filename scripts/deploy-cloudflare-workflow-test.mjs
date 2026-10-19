@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const ciWait = readFileSync(new URL("./wait-production-ci.mjs", import.meta.url), "utf8");
-const yaml = readFileSync(new URL("../.github/workflows/deploy-cloudflare.yml", import.meta.url), "utf8");
+const yaml = readFileSync(new URL("../.github/workflows/deploy-cloudflare.yml", import.meta.url), "utf8").replace(/\r\n/g,"\n");
 assert.ok(yaml.includes("on:\n  workflow_dispatch:"), "production must require explicit promotion");
 assert.ok(!yaml.includes("workflow_run:"), "CI cannot deploy by itself");
 assert.ok(yaml.includes("github.ref == 'refs/heads/master'"), "reject feature branch releases");
@@ -38,8 +38,14 @@ assert.match(d1, /set -euo pipefail/, "fail closed independent of shell defaults
 assert.match(d1, /migrations apply remote-link-auth --remote/);
 assert.match(d1, /migrations list remote-link-auth --remote/, "verify pending migrations after apply");
 assert.doesNotMatch(d1, /set \+e|code:\s*7403|::warning::|\|\| true/, "migration errors must never be ignored");
-assert.match(yaml.slice(yaml.indexOf(deployName)), /secrets\.CLOUDFLARE_API_TOKEN/, "retain existing Worker token");
-assert.doesNotMatch(yaml.slice(yaml.indexOf(deployName)), /secrets\.CLOUDFLARE_D1_API_TOKEN/, "D1-only token must not deploy Worker");
+const deployStart=yaml.indexOf(deployName),deployEnd=yaml.indexOf('\n      - name:',deployStart);
+assert.ok(deployStart>0&&deployEnd>deployStart,'inspect the Worker deployment step independently of later operations');
+const deploy=yaml.slice(deployStart,deployEnd);
+assert.match(deploy, /secrets\.CLOUDFLARE_API_TOKEN/, "retain existing Worker token");
+assert.doesNotMatch(deploy, /secrets\.CLOUDFLARE_D1_API_TOKEN/, "D1-only token must not deploy Worker");
+const activation=yaml.indexOf('- name: Activate OpenAI after successful production smoke');
+assert.ok(activation>yaml.indexOf('run: node scripts/production-smoke.mjs'),'model activation must follow production smoke');
+assert.match(yaml.slice(activation),/if: inputs\.enable_openai/,'funded model activation must be explicitly requested');
 
 const scriptBody = d1.split("\n        run: |\n")[1];
 assert.ok(scriptBody, "expected an inline migration shell script");

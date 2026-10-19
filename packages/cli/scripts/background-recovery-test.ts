@@ -294,7 +294,7 @@ try {
       "remotelink.mjs",
     );
     await fs.mkdir(path.dirname(bundle), { recursive: true });
-    await fs.writeFile(bundle, "setTimeout(()=>process.exit(0),60000);");
+    await fs.writeFile(bundle, "setTimeout(()=>process.exit(0),120000);");
     const logs = path.join(nativeHome, ".remotearc", "logs");
     await fs.mkdir(logs, { recursive: true });
     const launcher = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
@@ -305,7 +305,13 @@ try {
     const controller = createBackgroundController({ platform: "win32", home: nativeHome });
     let pid: number | null | undefined;
     try {
-      pid = (await controller.backgroundAgentStatus()).pid;
+      // The detached child and CIM process inventory become visible asynchronously.
+      // Keep the real process/argument checks and give readiness a bounded window.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        pid = (await controller.backgroundAgentStatus()).pid;
+        if (pid) break;
+        if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 200));
+      }
       assert(pid, "Hidden Start-Process must survive its launcher and match the real Node argument vector with spaces");
       process.kill(pid, 0);
     } finally { if (pid) process.kill(pid, "SIGKILL"); }
@@ -411,5 +417,5 @@ try {
 } finally {
   assert.equal(path.dirname(temp), os.tmpdir());
   assert(path.basename(temp).startsWith("remotearc-recovery-"));
-  await fs.rm(temp, { recursive: true, force: true });
+  await fs.rm(temp, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
 }

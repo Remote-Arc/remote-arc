@@ -414,7 +414,7 @@ WantedBy=default.target
 
   async function windowsAgentPid(role = "--supervise") {
     const script =
-      "$p = Get-CimInstance Win32_Process | Where-Object { " +
+      "$p = Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | Where-Object { " +
       "$_.Name -ieq 'node.exe' -and $_.ExecutablePath -ieq " +
       psQuote(nodePath) +
       " -and $_.CommandLine -match ('^\"?' + [regex]::Escape(" +

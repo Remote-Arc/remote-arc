@@ -67,7 +67,7 @@ export async function reserveBilling(db: D1Database, input: BillingReservationIn
           CASE WHEN r.status IN ('completed','failed','settling') THEN json_extract(r.settlement_json,'$.actual.costMicros')
           ELSE json_extract(r.request_json,'$.maximum.costMicros') END)
           FROM billing_reservations r WHERE r.authorization_id=g.id),0)) AND ?7='arc_hosted' AND ?14>0`;
-  const result = await db.batch([
+  await db.batch([
     db.prepare(`INSERT OR IGNORE INTO billing_reservations
       (id,user_id,organization_id,task_id,run_id,operation_key,lane,provider,authorization_id,model_id,request_json,entries_json,status,created_at)
       SELECT ?1,?2,?3,?4,?5,?6,?7,?8,?9,?11,?13,?15,'reserved',?12
@@ -89,9 +89,35 @@ export async function reserveBilling(db: D1Database, input: BillingReservationIn
     .bind(operationKey).first<Row>();
   if (!row) throw new BillingDeniedError("BILLING_QUOTA_OR_AUTHORITY_UNAVAILABLE");
   if (row.request_json !== n.requestJson) throw new BillingDeniedError("BILLING_IDEMPOTENCY_CONFLICT");
-  return {id:row.id,dispatchAllowed:Number(result[0]?.meta.changes)===1,status:row.status};
+  // D1 reports sqlite3_total_changes(), including trigger writes. The freshly
+  // generated ID proves ownership of this insert; an idempotent replay has a
+  // different stored ID and must never dispatch the provider again.
+  return {id:row.id,dispatchAllowed:row.id===id,status:row.status};
 }
 export type BillingSettlement = {status:"completed"|"failed"|"unknown"; actual?:BillingUnits; usage?:unknown};
+/** Repair the pre-provider rejection caused by D1's trigger-inclusive change count.
+ * The unique Arc step claim prevents another owner reaching the gateway. Only a
+ * failed first step still at model_pending, with no decision/output and an entirely
+ * unsettled reservation, proves this specific rejection never sent a provider call.
+ * Unknown, settled, active and externally dispatched work is never released here. */
+export async function reconcileArcDispatchRejects(db:D1Database,userId:string){
+  const rejected=(await db.prepare(`SELECT b.id,b.organization_id FROM billing_reservations b
+    JOIN arc_chat_runs r ON r.id=b.run_id AND r.user_id=b.user_id AND r.session_id=b.task_id
+    JOIN arc_chat_steps s ON s.run_id=r.id AND s.step=0
+    WHERE b.user_id=?1 AND b.lane='arc_hosted' AND b.provider='openai' AND b.model_id='arc-auto'
+      AND b.status='reserved' AND b.accounted=1 AND b.settlement_json IS NULL
+      AND json_extract(b.request_json,'$.operationId')='chat:0'
+      AND r.status='failed' AND r.error_code='MODEL_ALREADY_DISPATCHED' AND r.step=0 AND r.tokens_used=0
+      AND s.status='model_pending' AND s.decision_ciphertext IS NULL AND s.result_ciphertext IS NULL
+      AND EXISTS(SELECT 1 FROM arc_funding_policy WHERE managed=1 AND b.created_at>=started_at)
+      AND NOT EXISTS(SELECT 1 FROM arc_chat_messages m WHERE m.run_id=r.id AND m.role IN ('assistant','tool'))
+    ORDER BY r.created_at DESC LIMIT 20`).bind(userId).all<{id:string;organization_id:string}>()).results;
+  for(const row of rejected)await settleBilling(db,{userId,organizationId:row.organization_id},row.id,{
+    status:'failed',actual:{credits:0,costMicros:0,neurons:0},
+    usage:{reconciliation:'arc-d1-dispatch-reject-v1',providerAttempted:false},
+  });
+  return rejected.length;
+}
 /** Unknown effects keep the full reservation. A later verified settlement can reconcile it, never replay the provider. */
 export async function settleBilling(db:D1Database, context:Pick<BillingContext,"userId"|"organizationId">, id:string, settlement:BillingSettlement, at=new Date().toISOString()) {
   const row = await db.prepare("SELECT id,request_json,entries_json,status,settlement_json FROM billing_reservations WHERE id=?1 AND user_id=?2 AND organization_id=?3")

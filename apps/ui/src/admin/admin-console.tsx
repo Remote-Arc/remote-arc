@@ -1,3 +1,4 @@
+import {BrandWordmark} from '../brand-wordmark.js';
 import { useEffect, useState } from "react";
 import { useI18n } from "../i18n.js";
 import { AdminOperations } from "../admin-operations.js";
@@ -184,7 +185,7 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
  const current=nav.find(x=>x.key===section)!;
  return <div className="adminShell">
   <aside className="adminSidebar">
-   <a className="adminBrand brand" href="/"><span className="adminBrandSymbol"><img src="/remote-arc.svg" width="38" height="38" alt=""/></span><span><span className="brandWords"><b>Remote</b><b>Arc</b></span><small>ADMIN</small></span></a>
+   <a className="adminBrand brand brandHasWordmark" aria-label="Remote Arc Admin" href="/"><span className="adminBrandSymbol"><img src="/remote-arc.svg" width="38" height="38" alt=""/></span><span><BrandWordmark/><small>ADMIN</small></span></a>
    <div className="adminSidebarGroup"><span className="adminSidebarKicker">{tr("WORKSPACE","工作空间")}</span><nav aria-label={tr("Admin sections","管理员菜单")}>{nav.map(n=><button type="button" key={n.key} aria-current={section===n.key?"page":undefined} onClick={()=>setSection(n.key)}><AdminGlyph name={n.key}/><span>{tr(n.en,n.zh)}</span><AdminGlyph name="arrow"/></button>)}</nav></div>
    <div className="adminSidebarBottom"><div className="adminPreferenceRow"><label><span className="arcSrOnly">{tr('Theme','主题')}</span><select aria-label={tr('Admin theme','后台主题')} value={theme} onChange={e=>setTheme(e.target.value as 'light'|'dark'|'system')}><option value="light">{tr('Light','浅色')}</option><option value="dark">{tr('Dark','深色')}</option><option value="system">{tr('System','跟随系统')}</option></select></label><button type="button" onClick={()=>setLocale(locale==='en'?'zh':'en')}>{locale==='en'?'中文':'EN'}</button></div><ProductInstall admin/><a className="adminBackToApp" href="https://agent.remotearc.app/dashboard/connect/overview"><Icon name="arrowUpRight" size={15}/>{tr("Open workspace","打开工作空间")}</a><div className="adminOwnerChip"><span><AdminGlyph name="shield"/></span><div><strong>{tr("Administrator","管理员工作区")}</strong><small>{tr("Protected access","受保护的访问")}</small></div></div>
    </div>

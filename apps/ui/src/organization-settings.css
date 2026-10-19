@@ -2,63 +2,63 @@
 .orgHub{margin:0 0 20px;min-width:0;border:1px solid var(--line);border-radius:15px;background:var(--panel);overflow:hidden}
 .orgHub *{box-sizing:border-box}
 .orgHubHeader{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:22px 25px}
-.orgHubEyebrow{font-size:10px;letter-spacing:.12em;font-weight:750;color:var(--accent)}
+.orgHubEyebrow{font-size:12px;letter-spacing:.12em;font-weight:750;color:var(--accent)}
 .orgHubHeading h2{font-size:21px;font-weight:740;letter-spacing:-.037em;margin:4px 0 5px}
-.orgHubHeading p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+.orgHubHeading p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
 .orgHub button{cursor:pointer;font:inherit}
 .orgHub button:focus-visible,.orgHub input:focus-visible,.orgHub select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .orgHub button:disabled{opacity:.48;cursor:not-allowed}
-.orgHubPrimary{display:inline-flex;gap:7px;align-items:center;justify-content:center;white-space:nowrap;background:var(--accent);border:1px solid var(--accent);color:var(--bg);border-radius:9px;padding:10px 14px;font-size:12px!important;font-weight:730!important}
+.orgHubPrimary{display:inline-flex;gap:7px;align-items:center;justify-content:center;white-space:nowrap;background:var(--accent);border:1px solid var(--accent);color:var(--bg);border-radius:9px;padding:10px 14px;font-size:14px!important;font-weight:730!important}
 .orgHubPrimary:hover:not(:disabled){filter:brightness(1.08)}
-.orgHubSubtle{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12px}
+.orgHubSubtle{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:14px}
 .orgHubSubtle:hover{color:var(--text);border-color:var(--accent)}
 .orgHubSwitcher{display:flex;align-items:center;gap:7px;flex-wrap:wrap;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 30%,var(--panel));padding:10px 24px}
-.orgHubSwitcher button{display:inline-flex;align-items:center;gap:8px;max-width:260px;min-width:0;padding:7px 11px 7px 7px;background:transparent;border:1px solid transparent;border-radius:9px;color:var(--muted);font-size:12px;font-weight:680}
+.orgHubSwitcher button{display:inline-flex;align-items:center;gap:8px;max-width:260px;min-width:0;padding:7px 11px 7px 7px;background:transparent;border:1px solid transparent;border-radius:9px;color:var(--muted);font-size:14px;font-weight:680}
 .orgHubSwitcher button.active{border-color:var(--line);background:var(--panel);color:var(--text);box-shadow:0 1px 5px rgba(0,0,0,.06)}
 .orgHubSwitcher button:hover:not(.active){color:var(--text)}
-.orgHubSymbol{display:grid;place-items:center;flex:none;width:25px;height:25px;border:1px solid var(--line);background:color-mix(in srgb,var(--accent) 7%,var(--panel));border-radius:7px;color:var(--accent);font-size:14px}
+.orgHubSymbol{display:grid;place-items:center;flex:none;width:25px;height:25px;border:1px solid var(--line);background:color-mix(in srgb,var(--accent) 7%,var(--panel));border-radius:7px;color:var(--accent);font-size:16px}
 .orgHubTabName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.orgHubSwitcher small{font-size:10px;color:var(--muted);padding-left:2px}
-.orgHubLoading{font-size:12px;color:var(--muted)}
+.orgHubSwitcher small{font-size:12px;color:var(--muted);padding-left:2px}
+.orgHubLoading{font-size:14px;color:var(--muted)}
 .orgHubBody{padding:20px 25px 23px;border-top:1px solid var(--line)}
 .orgHubSummary{display:flex;align-items:center;gap:14px;min-width:0}
 .orgHubMark{display:grid;place-items:center;flex:none;width:43px;height:43px;border-radius:11px;background:color-mix(in srgb,var(--accent) 9%,var(--bg));border:1px solid color-mix(in srgb,var(--accent) 15%,var(--line));color:var(--accent);font-size:21px}
 .orgHubSummaryText{flex:1;min-width:0}
-.orgHubSummaryText h3{font-size:15px;font-weight:730;letter-spacing:-.015em;margin:0 0 4px}
-.orgHubSummaryText p{font-size:12px;line-height:1.55;color:var(--muted);margin:0}
-.orgHubRole,.orgHubMemberRole{font-size:11px;color:var(--muted);background:color-mix(in srgb,var(--bg) 55%,var(--panel));border:1px solid var(--line);border-radius:100px;padding:6px 11px;white-space:nowrap}
+.orgHubSummaryText h3{font-size:17px;font-weight:730;letter-spacing:-.015em;margin:0 0 4px}
+.orgHubSummaryText p{font-size:14px;line-height:1.55;color:var(--muted);margin:0}
+.orgHubRole,.orgHubMemberRole{font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--bg) 55%,var(--panel));border:1px solid var(--line);border-radius:100px;padding:6px 11px;white-space:nowrap}
 .orgHubPeople{margin:23px 0 0;padding-top:18px;border-top:1px solid var(--line)}
 .orgHubPeopleHeader{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px}
-.orgHubPeopleHeader h4{font-size:14px;font-weight:750;margin:0 0 3px}
-.orgHubPeopleHeader h4 span{font-size:11px;margin-left:6px;color:var(--muted);font-weight:600}
-.orgHubPeopleHeader p{font-size:12px;color:var(--muted);margin:0}
+.orgHubPeopleHeader h4{font-size:16px;font-weight:750;margin:0 0 3px}
+.orgHubPeopleHeader h4 span{font-size:13px;margin-left:6px;color:var(--muted);font-weight:600}
+.orgHubPeopleHeader p{font-size:14px;color:var(--muted);margin:0}
 .orgHubInviteButton{padding:8px 11px}
 .orgHubMemberList{display:grid}
 .orgHubMember{display:flex;align-items:center;gap:11px;padding:12px 0;border-top:1px solid var(--line)}
 .orgHubMember:first-child{border-top:0}
-.orgHubMemberAvatar{flex:none;display:grid;place-items:center;height:33px;width:33px;border-radius:50%;background:color-mix(in srgb,var(--accent) 10%,var(--bg));color:var(--accent);font-size:12px;font-weight:750}
+.orgHubMemberAvatar{flex:none;display:grid;place-items:center;height:33px;width:33px;border-radius:50%;background:color-mix(in srgb,var(--accent) 10%,var(--bg));color:var(--accent);font-size:14px;font-weight:750}
 .orgHubMemberName{display:grid;gap:3px;min-width:0;flex:1}
-.orgHubMemberName strong{font-size:12px;color:var(--text);overflow-wrap:anywhere}
-.orgHubMemberName small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
-.orgHubMember select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:11px;width:92px}
-.orgHubRemove{border:0;background:transparent;color:var(--muted);font-size:11px;padding:7px 6px}
+.orgHubMemberName strong{font-size:14px;color:var(--text);overflow-wrap:anywhere}
+.orgHubMemberName small{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.orgHubMember select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px;width:92px}
+.orgHubRemove{border:0;background:transparent;color:var(--muted);font-size:13px;padding:7px 6px}
 .orgHubRemove:hover{color:#d65e5e}
 .orgHubPending{padding-top:16px}
-.orgHubPending h4{font-size:12px;color:var(--muted);margin:0 0 8px}
+.orgHubPending h4{font-size:14px;color:var(--muted);margin:0 0 8px}
 .orgHubPending .orgHubMember:first-of-type{border-top:1px solid var(--line)}
-.orgHubPendingIcon{font-size:15px}
+.orgHubPendingIcon{font-size:17px}
 .orgHubInlineForm{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0;padding:16px 24px;background:color-mix(in srgb,var(--accent) 3%,var(--bg));border-top:1px solid var(--line)}
 .orgHubBody .orgHubInlineForm{margin:16px 0 4px;padding:14px;border:1px solid var(--line);border-radius:10px}
-.orgHubInlineForm label{font-size:12px;font-weight:650;white-space:nowrap}
+.orgHubInlineForm label{font-size:14px;font-weight:650;white-space:nowrap}
 .orgHubInlineForm input{flex:1;min-width:140px;max-width:410px}
-.orgHubInlineForm input,.orgHubInlineForm select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;font-size:12px;padding:9px 11px}
-.orgHubInlineForm>button:not(.orgHubPrimary){font-size:12px;padding:9px 11px;border:0;background:transparent;color:var(--muted)}
+.orgHubInlineForm input,.orgHubInlineForm select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;font-size:14px;padding:9px 11px}
+.orgHubInlineForm>button:not(.orgHubPrimary){font-size:14px;padding:9px 11px;border:0;background:transparent;color:var(--muted)}
 .orgHubInlineForm>button:not(.orgHubPrimary):hover{color:var(--text)}
-.orgHubAlert{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 24px;background:color-mix(in srgb,#d65e5e 6%,var(--panel));color:#d65e5e;border-top:1px solid color-mix(in srgb,#d65e5e 35%,var(--line));font-size:12px}
+.orgHubAlert{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 24px;background:color-mix(in srgb,#d65e5e 6%,var(--panel));color:#d65e5e;border-top:1px solid color-mix(in srgb,#d65e5e 35%,var(--line));font-size:14px}
 .orgHubAlert button{border:1px solid currentColor;color:inherit;background:transparent;border-radius:7px;padding:6px 11px}
-.orgHubSuccess{padding:10px 24px;margin:0;border-top:1px solid var(--line);font-size:12px;color:var(--text)}
+.orgHubSuccess{padding:10px 24px;margin:0;border-top:1px solid var(--line);font-size:14px;color:var(--text)}
 .orgHubInbox{padding:18px 25px;border-top:1px solid var(--line)}
-.orgHubInbox h3{font-size:14px;margin:0 0 10px}
+.orgHubInbox h3{font-size:16px;margin:0 0 10px}
 .orgHubInbox .orgHubMember{border-top:1px solid var(--line)}
 .orgHubInbox .orgHubPrimary{padding:8px 11px}
 @media(max-width:700px){.orgHubHeader,.orgHubBody,.orgHubInbox{padding:18px}.orgHubSwitcher{padding:10px 16px}.orgHubHeader{align-items:flex-start}.orgHubInlineForm{padding:14px 16px}.orgHubSummary{flex-wrap:wrap}.orgHubSummaryText{flex-basis:calc(100% - 57px)}.orgHubMember{flex-wrap:wrap}.orgHubMemberName{flex-basis:calc(100% - 44px)}}

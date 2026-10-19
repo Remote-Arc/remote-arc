@@ -17,7 +17,7 @@
 .workspacePickerMenuCaption {
   padding: 9px 12px 7px;
   color: var(--picker-muted);
-  font-size: 10px;
+  font-size:12px;
   font-weight: 760;
   letter-spacing: .105em;
 }
@@ -56,7 +56,7 @@
   border: 1px solid color-mix(in srgb, var(--picker-accent) 15%, var(--picker-line));
   background: color-mix(in srgb, var(--picker-accent) 8%, var(--picker-surface));
   color: var(--picker-accent);
-  font-size: 19px;
+  font-size:20px;
 }
 .workspacePickerMenuPortal .workspaceOptionIcon.agent {
   background: linear-gradient(140deg, #555cf1, #7959d9);
@@ -70,8 +70,8 @@
   gap: 3px;
   min-width: 0;
 }
-.workspacePickerMenuPortal strong { font-size: 14px; font-weight: 720; }
-.workspacePickerMenuPortal small { font-size: 12px; color: var(--picker-muted); }
+.workspacePickerMenuPortal strong { font-size:16px; font-weight: 720; }
+.workspacePickerMenuPortal small { font-size:14px; color: var(--picker-muted); }
 .workspacePickerMenuPortal .workspaceOptionCheck { color: var(--picker-accent); font-weight: 760; margin-left: auto; }
 .workspacePickerMenuPortal button:focus-visible { outline: 2px solid var(--picker-accent); outline-offset: -1px; }
 @keyframes workspaceMenuEnter {
@@ -85,4 +85,4 @@
 }
 .workspacePickerMenuPortal button:disabled { cursor: default; opacity: 1; }
 .workspacePickerMenuPortal button:disabled .workspaceOptionDescription small { color: var(--picker-muted); }
-.workspaceComingSoon { flex: none; padding: 4px 6px; border: 1px solid var(--picker-line); border-radius: 4px; color: var(--picker-muted); background: var(--picker-subtle); font-size: 9px; font-weight: 550; white-space: nowrap; }
+.workspaceComingSoon { flex: none; padding: 4px 6px; border: 1px solid var(--picker-line); border-radius: 4px; color: var(--picker-muted); background: var(--picker-subtle); font-size:11px; font-weight: 550; white-space: nowrap; }

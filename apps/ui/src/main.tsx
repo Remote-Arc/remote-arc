@@ -1,5 +1,5 @@
 import { summarizeConsentScopes } from "./oauth-consent-summary.js";
-import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
+import { HeroHeadline, LandingContent } from "./landing-content.js";
 import { InstallCommands } from "./install-commands.js";
 import { HomeConnectionScene } from "./home-connection-scene.js";
 import { AppsManager } from "./apps-manager.js";
@@ -35,6 +35,7 @@ import { AdminConsole } from "./admin/admin-console.js";
 import {registerProductPwa} from './product-pwa.js';
 import { EngagementPage } from "./public-engagement.js";
 import {TrustPage} from "./trust-pages.js";
+import {BrandWordmark} from './brand-wordmark.js';
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
@@ -442,11 +443,9 @@ function LogoMark({ className = "" }: { className?: string }) {
 function Brand({ compact = false }: { compact?: boolean }) {
   const { locale } = useI18n();
   return (
-    <a href={MARKETING_ORIGIN + (isWebsite() && locale === "zh" ? "/zh" : "")} title="Remote Arc website" className={"brand" + (compact ? " compactBrand" : "")}>
-      <LogoMark className="brandLogo" />
-      <span className="brandWords">
-        <b>Remote</b><b>Arc</b>
-      </span>
+    <a href={MARKETING_ORIGIN + (isWebsite() && locale === "zh" ? "/zh" : "")} title="Remote Arc website" aria-label="Remote Arc" className={"brand brandHasWordmark" + (compact ? " compactBrand" : "")}>
+      <span className="brandCompactMark" aria-hidden="true"><LogoMark className="brandLogo" /></span>
+      <BrandWordmark/>
     </a>
   );
 }
@@ -519,9 +518,8 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <span className="publicNavGroupLabel">{tr('ONE PLATFORM. YOUR WAY TO WORK.','一个平台，选择你的工作方式。')}</span>
                 <a href={navHref('/arc')}><span className="publicProductIcon"><ProductIcon name="spark"/></span><span><strong>Arc <em>{arcAvailable?tr('Available now','现已可用'):tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, built on the same connections','同一套连接之上的个人 AI 队友')}</small></span></a>
                 <a href={navHref('/connect-ai')}><span className="publicProductIcon"><ProductIcon name="link"/></span><span><strong>Connect <em>{tr('Available today','现已可用')}</em></strong><small>{tr('Bring tools to the AI you already use','为你常用的 AI 连接电脑和应用')}</small></span></a>
-                <a href={navHref('/docs/device-fleet')}><span className="publicProductIcon"><ProductIcon name="device"/></span><span><strong>{tr('Intelligent fleet','智能设备调度')}</strong><small>{tr('Match work to the right computer','让合适的设备承担合适的工作')}</small></span></a>
               </section>
-              <div className="publicNavProductFoot"><a href={navHref('/install/chatgpt')}>ChatGPT</a><a href={navHref('/install/claude')}>Claude</a><a href={navHref('/install/cursor')}>Cursor</a><a href={navHref('/remote-mcp')}>Remote MCP <ProductIcon name="arrowUpRight" size={12}/></a></div>
+              <div className="publicNavProductFoot"><a href={navHref('/install/chatgpt')}><img className="monoLogo" src="/ai-openai.svg" alt=""/>ChatGPT</a><a href={navHref('/install/claude')}><img src="/ai-claude.svg" alt=""/>Claude</a><a href={navHref('/install/cursor')}><img className="monoLogo" src="/ai-cursor.svg" alt=""/>Cursor</a><a href={navHref('/remote-mcp')}><ProductIcon name="link" size={15}/>Remote MCP<ProductIcon name="arrowUpRight" size={12}/></a></div>
             </div>
           </div>
           <a href={navHref('/use-cases')}>{tr('Use cases','使用场景')}</a>
@@ -2551,7 +2549,6 @@ function ConnectPage({ user }: { user?: User | null }) {
             <a href="#connect-computer">{tr("Pair computer", "配对电脑")}</a>
             <a href="#connect-policy">{tr("Device policy", "设备策略")}</a>
             <a href="#connect-client">{tr("AI client", "AI 客户端")}</a>
-            <a href="#connect-walkthrough">{tr("Video walkthrough", "视频教程")}</a>
             <a href="#connect-scopes">{tr("OAuth scopes", "OAuth Scope")}</a>
           </aside>
 
@@ -2597,12 +2594,6 @@ function ConnectPage({ user }: { user?: User | null }) {
                   <b>→</b>
                 </a>
               </div>
-            </section>
-
-            <section id="connect-walkthrough">
-              <h2>{tr("See the connection flow", "观看连接流程")}</h2>
-              <p>{tr("Follow the recorded product walkthrough, then use your client's setup guide above to complete authorization.", "先观看产品流程演示，再按上方客户端指南完成实际授权。")}</p>
-              <ConnectionFilm />
             </section>
 
             <section id="connect-scopes">

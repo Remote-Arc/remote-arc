@@ -156,3 +156,9 @@
 }
 :root[data-theme] .publicPage .unexpectedCard h3 {font-size:clamp(20px,1.65vw,23px)}
 :root[data-theme] .publicPage .permissionLevels h3 {font-size:clamp(20px,1.7vw,23px)}
+
+/* Branded client choices belong to Connect, separate from the two product paths. */
+.publicPage .publicNavProductFoot{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px!important;padding-top:12px!important}
+.publicPage .publicNavProductFoot a{display:flex!important;align-items:center;justify-content:flex-start;gap:9px!important;min-height:36px;padding:8px;border-radius:6px;font-size:12px!important;color:var(--site-muted)}
+.publicPage .publicNavProductFoot a:hover{background:var(--site-subtle);color:var(--site-ink)}
+.publicPage .publicNavProductFoot img{width:17px;height:17px;object-fit:contain;flex:none}

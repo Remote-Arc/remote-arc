@@ -5,14 +5,14 @@
   display:inline-flex;align-items:center;gap:5px;
   padding:6px 10px;border:1px solid rgba(148,163,184,.14);
   border-radius:999px;background:rgba(4,16,24,.38);
-  color:#9ab6bf;font-size:12px;line-height:1.35;
+  color:#9ab6bf;font-size:14px;line-height:1.35;
 }
-.aiAuthStats strong { color:#ebf6f8;font-size:13px;font-variant-numeric:tabular-nums; }
+.aiAuthStats strong { color:#ebf6f8;font-size:15px;font-variant-numeric:tabular-nums; }
 .aiAuthDot {width:7px;height:7px;border-radius:50%;background:#94a3b8;flex:none}
 .aiAuthDot.active {background:#4ade80}
 .aiAuthDot.refreshable {background:#38bdf8}
 .aiAuthExplain {
-  margin:0!important;color:#88a6af;font-size:12px;
+  margin:0!important;color:#88a6af;font-size:14px;
   line-height:1.55;max-width:850px;
 }
 .aiAuthClients {display:grid;gap:8px;min-width:0}
@@ -41,10 +41,10 @@
   background:#0c293a;border:1px solid rgba(56,189,248,.17);
 }
 .aiAuthNameBlock,.aiAuthGrantId {display:grid;gap:3px;min-width:0}
-.aiAuthNameBlock strong {font-size:15px;font-weight:750;color:#e6f4f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.aiAuthNameBlock small,.aiAuthGrantId small {font-size:11px;color:#83a0aa}
+.aiAuthNameBlock strong {font-size:17px;font-weight:750;color:#e6f4f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aiAuthNameBlock small,.aiAuthGrantId small {font-size:13px;color:#83a0aa}
 .aiAuthClientSummary .grantState,.aiAuthGrantSummary .grantState {justify-self:start;white-space:nowrap}
-.aiAuthActivity {color:#789aa5;font-size:12px;text-align:right;white-space:nowrap}
+.aiAuthActivity {color:#789aa5;font-size:14px;text-align:right;white-space:nowrap}
 .aiAuthExpand {
   display:grid;place-items:center;color:#85aab7;font-size:22px;
   line-height:1;transition:transform .18s ease;
@@ -65,28 +65,28 @@
   min-height:55px;gap:14px;padding:10px 13px;
 }
 .aiAuthGrantId strong {
-  color:#cfe5e9;font-size:12px;font-weight:650;
+  color:#cfe5e9;font-size:14px;font-weight:650;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
-.aiAuthScopeCount {font-size:12px;color:#87a5af;white-space:nowrap}
+.aiAuthScopeCount {font-size:14px;color:#87a5af;white-space:nowrap}
 .aiAuthGrantBody {border-top:1px solid rgba(122,160,178,.13);padding:14px 16px 16px;display:grid;gap:15px}
 .aiAuthGrantMeta {
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;margin:0;
 }
 .aiAuthGrantMeta>div{display:grid;gap:3px;min-width:0}
-.aiAuthGrantMeta dt{font-size:11px;color:#7f9eaa}
+.aiAuthGrantMeta dt{font-size:13px;color:#7f9eaa}
 .aiAuthGrantMeta dd{
-  margin:0;font-size:12px;color:#d7edf1;overflow:hidden;text-overflow:ellipsis;
+  margin:0;font-size:14px;color:#d7edf1;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap;font-variant-numeric:tabular-nums;
 }
 .aiAuthPermissions{display:grid;gap:8px}
-.aiAuthPermissions>strong {font-size:11px;letter-spacing:.02em;color:#a6c5cd}
-.aiAuthPermissions .securityGrantScopes code {font-size:11px}
+.aiAuthPermissions>strong {font-size:13px;letter-spacing:.02em;color:#a6c5cd}
+.aiAuthPermissions .securityGrantScopes code {font-size:13px}
 .aiAuthRevokeActions {
   border-top:1px solid rgba(128,160,180,.14);
   display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:13px;
 }
-.aiAuthRevokeActions small {font-size:11px;color:#7b99a4;line-height:1.5;max-width:620px}
+.aiAuthRevokeActions small {font-size:13px;color:#7b99a4;line-height:1.5;max-width:620px}
 .aiAuthRevokeActions button {flex:none;white-space:nowrap}
 :root[data-theme="light"] .aiAuthStats>span {
   background:#f1f7f9;border-color:#d4e6ec;color:#567581
@@ -120,11 +120,11 @@
   .aiAuthClientSummary {padding:11px 12px;min-height:66px;gap:9px}
   .aiAuthIdentity {gap:8px}
   .aiAuthIdentity .securityGrantIcon {width:33px;height:33px}
-  .aiAuthNameBlock strong {font-size:13px}
-  .aiAuthClientSummary .grantState,.aiAuthGrantSummary .grantState {font-size:10px;padding:3px 6px}
+  .aiAuthNameBlock strong {font-size:15px}
+  .aiAuthClientSummary .grantState,.aiAuthGrantSummary .grantState {font-size:12px;padding:3px 6px}
   .aiAuthClientBody {padding:7px}
   .aiAuthGrantSummary {grid-template-columns:minmax(100px,1fr) auto 18px;gap:8px;padding:9px}
-  .aiAuthGrantId strong {font-size:11px}
+  .aiAuthGrantId strong {font-size:13px}
   .aiAuthScopeCount {display:none}
   .aiAuthGrantBody {padding:11px}
   .aiAuthGrantMeta {grid-template-columns:1fr;gap:9px}

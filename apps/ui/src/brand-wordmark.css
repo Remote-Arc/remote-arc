@@ -1,32 +1,16 @@
-/* A continuous pearlescent finish across the name. Keep vendor marks intact. */
-:root { --brand-wordmark: linear-gradient(110deg, #27272c 8%, #4a4a52 52%, #27272c 100%); }
-:root[data-theme="dark"] { --brand-wordmark: linear-gradient(110deg, #f0f0f3 8%, #bfc0c8 52%, #ededf1 100%); }
-.brand .brandWords b{font-weight:600;letter-spacing:-.035em}
-@supports ((background-clip: text) or (-webkit-background-clip: text)) {
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand .brandWords {
-    display: inline-block;
-    background-image: var(--brand-wordmark);
-    background-size: 150% 100%;
-    background-position: 0% 50%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent !important;
-    -webkit-text-fill-color: transparent;
-    transition: background-position 800ms ease;
-  }
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand .brandWords b {
-    color: transparent !important;
-    -webkit-text-fill-color: transparent;
-  }
-  .brand .brandWords b:first-child { margin-right: 4px; }
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand:is(:hover, :focus-visible) .brandWords { background-position: 100% 50%; }
-}
-@media (prefers-reduced-motion: reduce) { .brand .brandWords { transition: none !important; } }
-@media (forced-colors: active) {
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand .brandWords,
-  :root[data-theme] :is(.publicPage, .appFrame, .adminShell) .brand .brandWords b {
-    background: none;
-    color: LinkText !important;
-    -webkit-text-fill-color: LinkText;
-  }
-}
+/* A complete name in a single typographic voice. Brand blue is one connection point. */
+@font-face{font-family:"Arc Wordmark";src:url('/fonts/SpaceGroteskVariable.woff2') format('woff2');font-weight:300 700;font-style:normal;font-display:swap}
+:root{--brand-ink:#222226}
+:root[data-theme=dark]{--brand-ink:#f4f4f5}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand.brandHasWordmark{display:inline-flex;align-items:center;gap:0;text-decoration:none;min-height:30px;flex:none}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand .brandLockup{display:inline-flex;align-items:baseline;gap:.18em;background:none;color:var(--brand-ink)!important;-webkit-text-fill-color:currentColor;font-family:"Arc Wordmark",var(--font-product,Inter,sans-serif);font-size:23px;font-weight:600;font-style:normal;letter-spacing:-.045em;line-height:1;white-space:nowrap;font-feature-settings:"ss01","cv11","calt"}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand .brandLockup b{color:inherit!important;-webkit-text-fill-color:currentColor;font:inherit;letter-spacing:inherit;margin:0;padding:0}
+.brandConnectionPoint{display:block;width:5px;height:5px;border-radius:50%;background:#38bdf8;flex:none;align-self:baseline;margin-left:-.05em}
+.brandCompactMark{display:none}
+:root[data-theme] .appFrame[data-sidebar-collapsed=true] .brandCompactMark{display:grid;place-items:center;width:34px;height:34px}
+:root[data-theme] .appFrame[data-sidebar-collapsed=true] .brandCompactMark .brandLogo{display:block;width:32px;height:32px}
+:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .compactBrand .brandLockup{font-size:20px}
+:root[data-theme] .adminBrand.brandHasWordmark{gap:0}
+.adminBrand.brandHasWordmark .adminBrandSymbol{display:none}
+.adminBrand.brandHasWordmark small{margin-top:10px;letter-spacing:.14em}
+@media(forced-colors:active){:root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand .brandLockup{color:LinkText!important}.brandConnectionPoint{background:LinkText}}

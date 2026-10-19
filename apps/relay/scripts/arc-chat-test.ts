@@ -39,6 +39,8 @@ const row=(id:string)=>sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get
 assert.equal((await handleArcChat(new Request(origin+'/api/arc/status'),env)).status,401);
 assert.equal((await decode(await handleArcChat(req('status'),{...env,ARC_CHAT_ENABLED:undefined}))).enabled,false);
 assert.equal((await decode(await api('status'))).enabled,true);
+const autoOption=(await decode(await api('status'))).models.find((model:any)=>model.id==='auto');
+assert.deepEqual(autoOption,{id:'auto',label:'Auto',provider:'arc',premium:false,configured:true,requiresPaid:false},'Auto public metadata contains no routing model or provider rates');
 assert.equal((await api('sessions','POST',{},'owner',{origin:'https://evil.invalid'})).status,403);
 assert.equal((await api('sessions','POST',{},'owner',{'content-type':'text/plain'})).status,415);
 assert.equal((await api('sessions','POST',{})).status,402,'An account must activate its trial or have paid access');

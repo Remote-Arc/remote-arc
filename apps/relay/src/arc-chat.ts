@@ -61,7 +61,7 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
    const plan=await currentArcPlan(env,user.id),limits={maxSteps:plan.maxSteps,maxTokens:plan.maxTokens,maxSeconds:plan.maxSeconds,concurrentRuns:plan.concurrentRuns};
   if(path==='/api/arc/status'&&request.method==='GET'){
    const access=await publicArcAccess(env,user.id);
-   return json({enabled:ready,access,defaultModel:'auto',models:gateway?.models.filter(m=>m.provider!=='workers_ai').map(m=>({id:m.id===arcAutoId(env)?'auto':m.id,label:m.id===arcAutoId(env)?'Auto':m.label||m.model,provider:m.provider,premium:m.id!==arcAutoId(env),sourceModel:m.model,configured:Boolean(gateway.adapters[m.provider]),requiresPaid:m.id!==arcAutoId(env)&&access.status!=='paid',inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000}))||[],limits});
+   return json({enabled:ready,access,defaultModel:'auto',models:gateway?.models.filter(m=>m.provider!=='workers_ai').map(m=>m.id===arcAutoId(env)?{id:'auto',label:'Auto',provider:'arc',premium:false,configured:Boolean(gateway.adapters[m.provider]),requiresPaid:false}:{id:m.id,label:m.label||m.model,provider:m.provider,premium:true,configured:Boolean(gateway.adapters[m.provider]),requiresPaid:access.status!=='paid',inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})||[],limits});
   }
   if(path==='/api/arc/trial'&&request.method==='POST'){
    if(!ready)throw new ArcError('ARC_NOT_CONFIGURED',503);

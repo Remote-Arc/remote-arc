@@ -1,4 +1,5 @@
 import {testArcOutcomes} from './arc-outcomes-test.js';
+import {testArcCompactContinuation} from './arc-compact-continuation-test.js';
 import {ARC_OUTCOME_SKILLS} from '../src/arc-outcome-skills.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -370,6 +371,7 @@ assert.equal((rejected.result as any).dispatched,false);
 assert.equal((await decode(await api('skills/'+imported.id,'DELETE'))).deleted,true);
 assert.equal((await api('skills/'+imported.id)).status,404);
 await testArcVerification({sql,env,api,create,decode,decisions,tool,reply,row});
+await testArcCompactContinuation({sql,env,api,create,decode,decisions,tool,reply,row});
 await testArcOutcomes({sql,env,api,create,decode,decisions,tool,reply,row});
 const appMentionSession=await create(),appMentionId=crypto.randomUUID(),appMentionInput={text:'Inspect the selected account.',requestId:appMentionId,appIds:[connectionId]};
 const appMentionRun=await decode(await api('sessions/'+appMentionSession+'/messages','POST',appMentionInput),202);

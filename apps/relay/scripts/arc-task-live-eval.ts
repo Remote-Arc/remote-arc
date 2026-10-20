@@ -24,7 +24,8 @@ const db={prepare(query:string){const s=sql.prepare(query),bound=(args:any[])=>(
 const at=new Date().toISOString(),origin='https://agent.remotearc.app',nativeFetch=globalThis.fetch;
 const scriptedFixture=process.argv.includes('--scripted-fixture');
 if(scriptedFixture&&process.env.OPENAI_API_KEY!=='synthetic-eval-fixture-not-a-secret')throw Error('Scripted fixtures require the nonfunctional fixture key');
-const resume=scriptedFixture&&!process.argv.includes('--resume-fixture')?null:loadPriorAcceptance('../..');
+// Historical proof may be reused only by an explicit matching-code resume.
+const resume=process.argv.includes('--resume-accepted-cases')||process.argv.includes('--resume-fixture')?loadPriorAcceptance('../..'):null;
 const maximumUsd=resume?.maximumResumeUsd??0.013,maximumMicros=Math.round(maximumUsd*1e6);
 // Fleet placement requires the full managed-process lifecycle, including stop.
 const processTools=['start_process','process_status','process_output','stop_process'];

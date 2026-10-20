@@ -148,4 +148,5 @@ export function accountPlanHasFeature(
 export type {ArcVerification,ArcReceipt} from './arc-verification.js';
 
 export type {ArcEmployeeDraft,ArcEmployeeAvatar,ArcEmployeeScope,ArcEmployeeProfile,ArcEmployee,ArcTeamProfile,ArcTeam,ArcTeamRoom,ArcTeamEvent} from './arc-teams.js';
-export * from './arc-inputs.js';
+export type {ArcAttachment,ArcLocation} from './arc-inputs.js';
+export const ARC_INPUT_LIMITS={filesPerMessage:3,fileBytes:2*1024*1024,userBytes:32*1024*1024,imageEdge:2048,textChars:16000} as const;

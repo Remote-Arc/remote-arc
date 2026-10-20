@@ -38,8 +38,8 @@ try {
   completed=false;await act(async()=>{await current.send('Continue');});assert.equal(current.running,true);await act(async()=>{await current.cancel();});assert.equal(current.run?.status,'cancelled');
   const baseFetch=globalThis.fetch;globalThis.fetch=(async(input,init)=>{if(String(input).endsWith('/messages')&&init?.method==='POST')submitted.push(JSON.parse(String(init.body)));return baseFetch(input,init);}) as typeof fetch;
   firstLost=true;const extras={attachmentIds:['owned-file-1'],location:{label:'Auckland',latitude:-36.8485,longitude:174.7633}};
-  await act(async()=>{sent=await current.send('Read my file',undefined,[],[],[],extras);});assert.equal(sent,false);
-  await act(async()=>{sent=await current.send('Read my file',undefined,[],[],[],extras);});assert.equal(sent,true);assert.equal(submitted[0].requestId,submitted[1].requestId);assert.deepEqual(submitted[1].attachmentIds,extras.attachmentIds);assert.deepEqual(submitted[1].location,extras.location);assert(!('files' in submitted[1]),'The message sends owned attachment IDs, not raw files');await act(async()=>{await current.cancel();});
+  await act(async()=>{sent=await current.send('Read my file',[],undefined,[],[],extras);});assert.equal(sent,false);
+  await act(async()=>{sent=await current.send('Read my file',[],undefined,[],[],extras);});assert.equal(sent,true);assert.equal(submitted[0].requestId,submitted[1].requestId);assert.deepEqual(submitted[1].attachmentIds,extras.attachmentIds);assert.deepEqual(submitted[1].location,extras.location);assert(!('files' in submitted[1]),'The message sends owned attachment IDs, not raw files');await act(async()=>{await current.cancel();});
   await act(async()=>{await current.remove(session.id);});assert.equal(current.current,null);assert.equal(current.sessions.length,0);
   assert.ok(methods.includes('POST trial'));
   console.log('PASS: native Chat activation, send, lost-response retry, completion polling, usage refresh, cancellation and history deletion');

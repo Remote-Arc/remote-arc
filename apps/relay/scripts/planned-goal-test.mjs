@@ -27,6 +27,7 @@ fs.writeFileSync(
 // Keep real shared cloud definitions and follow-up templates inside the
 // fixture root; their repository-relative paths are invalid after transpiling.
 const sharedModules = [
+  ["skills/src/community.generated", "community-skills"],
   ["skills/src/catalog.generated", "cloud-skill-catalog"],
   ["protocol/src/followup-templates", "followup-templates"],
 ];

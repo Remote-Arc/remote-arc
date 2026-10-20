@@ -104,7 +104,7 @@ Stripe Checkout collects payment; verified webhook/payment state grants the subs
 | User experience | One working indicator and final answer in chat; execution details fetched on demand in Activity |
 | Operations | Model usage and funding pools, trials, payment records, reviewed rewards and service health in Admin |
 | Tests | Shared provider contracts, argument correction, duplicate prevention, context reuse, task scheduling, memory isolation, funding and billing lifecycle |
-| Protected acceptance | Real model calls against synthetic mail, GitHub creation and Vercel deployment fixtures under a USD 0.05 cap |
+| Protected acceptance | Real model calls against synthetic mail, GitHub creation, successful/failed deployments, a scheduled Task through completion, and a selected imported Skill that creates its specified result; each suite is capped at USD 0.04 |
 
 Fixtures test actual adapters/controller paths with controlled provider responses; they do not certify every real customer account, provider outage or all possible task categories. A production release must pass exact-commit CI and the applicable acceptance checks. Real customer actions require their authorization. Full two-way multi-agent collaboration, arbitrary engine installation and unconditional exactly-once third-party writes are not claimed.
 

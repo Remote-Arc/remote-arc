@@ -2448,8 +2448,8 @@ function Landing({ user }: { user?: User | null }) {
         <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
       </section>
 
-      <HomeSecurityIntro/>
       <ProductFocus/>
+      <HomeSecurityIntro/>
       <AgentUseCases/>
 
       <LandingContent />

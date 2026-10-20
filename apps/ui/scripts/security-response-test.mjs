@@ -9,12 +9,13 @@ const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "u
   .replaceAll("'@remotearc/protocol'", JSON.stringify(new URL("../../../packages/protocol/src/index.ts", import.meta.url).href))
   // A data URL has no directory for relative imports. Keep the real catalog import.
   .replaceAll('"./app-directory.json"', JSON.stringify(new URL("../src/app-directory.json", import.meta.url).href))
-  .replaceAll('"./arc-preview.js"', JSON.stringify(new URL("../src/arc-preview.ts", import.meta.url).href));
+  .replaceAll('"./arc-preview.js"', JSON.stringify(new URL("../src/arc-preview.ts", import.meta.url).href))
+  .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/billing-preview.ts", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;
 globalThis.window = { fetch: async () => { throw new Error("Unexpected native request"); } };
-globalThis.location = { origin: "https://preview.test" };
+globalThis.location = { origin: "https://preview.test", href: "https://preview.test/overview" };
 const preview = await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
 preview.installUiPreviewFetchMock("https://mcp.preview.test");
 const security = await (await window.fetch("/api/security")).json();

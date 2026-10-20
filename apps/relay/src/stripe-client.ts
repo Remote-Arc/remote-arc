@@ -12,8 +12,10 @@ export async function stripeRequest(env:StripeEnv,path:string,method:'GET'|'POST
  stripeLive(env);
  if(!/^\/v1\/[a-z_]+(?:[/?][\w\[\]%=&+.,:-]*)*$/.test(path))throw new StripeError('BILLING_INVALID_API_PATH');
  let response:Response;
- try{response=await fetch('https://api.stripe.com'+path,{method,redirect:'error',signal:AbortSignal.timeout(15000),headers:{authorization:'Bearer '+env.STRIPE_SECRET_KEY,'stripe-version':STRIPE_API_VERSION,...(method==='POST'?{'content-type':'application/x-www-form-urlencoded'}:{}),...(idempotencyKey?{'idempotency-key':idempotencyKey}:{})},...(method==='POST'?{body:params?.toString()||''}:{})});}
+ try{response=await fetch('https://api.stripe.com'+path,{method,redirect:'manual',signal:AbortSignal.timeout(15000),headers:{authorization:'Bearer '+env.STRIPE_SECRET_KEY,'stripe-version':STRIPE_API_VERSION,...(method==='POST'?{'content-type':'application/x-www-form-urlencoded'}:{}),...(idempotencyKey?{'idempotency-key':idempotencyKey}:{})},...(method==='POST'?{body:params?.toString()||''}:{})});}
  catch{throw new StripeError('BILLING_PROVIDER_UNAVAILABLE');}
+ // Workers does not implement redirect:error. Never follow a provider redirect with credentials.
+ if(response.status>=300&&response.status<400)throw new StripeError('BILLING_PROVIDER_ERROR');
  if(!response.ok){
   const requestId=response.headers.get('request-id'),reference=requestId&&/^req_[A-Za-z0-9_]{1,160}$/.test(requestId)?requestId:undefined;
   const failure=await response.json().catch(()=>null) as {error?:{type?:string;param?:string}}|null;

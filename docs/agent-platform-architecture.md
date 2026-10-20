@@ -94,11 +94,11 @@ Placement first filters account ownership, online/unpaused state, tools, platfor
 
 ## Skills and @ reuse
 
-The cloud library exposes built-in workflow instructions. Users may also import a bounded SKILL.md; imported content is encrypted per account. A source URL records attribution and does not download a repository, scripts or dependencies.
+Arc’s default library exposes five result-focused workflows: a real website preview, a saved source-based report, and the three scoped App verification handbooks. Engine-only guidance such as Image Studio/ComfyUI is not advertised as ready hosted execution; Connect retains its separate cloud handbook catalog. Users may also import a bounded SKILL.md; imported content is encrypted per account. A source URL records attribution and does not download a repository, scripts or dependencies.
 
-In Arc Chat, type `@` or use the Skills button to select up to three references. The client submits IDs separately from the goal. The server resolves each ID against that user's imported library or the built-in catalog, stores the canonical name with the message, and includes the references in subsequent context. The runtime reads selected instructions through the existing permission-checked skill tool and reuses observations. Same display names cannot change which skill was selected. References are not extra permissions.
+In Arc Chat, type `@` or use Apps & Skills to select up to three Skills and five active App connections. They appear as badges in the composer and saved messages; using a skill from its library opens a structured draft without pasting internal instructions. The client submits IDs separately from the goal. The server resolves each ID against that user's imported library or the built-in catalog, stores the canonical name with the message, and includes the references in subsequent context. The runtime reads selected instructions through the existing permission-checked skill tool and reuses observations. Same display names cannot change which skill was selected. References are not extra permissions.
 
-Some built-in cloud workflows execute supported read-only tools. Other skills describe methods requiring an App, software, a connected computer, referenced files or a generation engine. Missing capabilities are a blocked outcome, not a generated image or completed task. Adding Markdown alone does not install them. Custom groups of autonomous developer/designer teammates are a future product direction, not a current execution guarantee.
+The default Arc workflows use existing authorized Apps or file/process tools. Imports may require extra software, referenced files or a generation engine. Missing capabilities are a blocked outcome, not a generated image or completed task. Adding Markdown alone does not install them. Custom groups of autonomous developer/designer teammates are a future product direction, not a current execution guarantee.
 
 Slack is currently a user-authorized App tool connection, not a DM/mention conversation entrance. The proposed Bot should map each linked initiating user and thread into the same Arc runtime, without inheriting the installer's private account permissions. See the [Slack entrance design and acceptance requirements](slack-agent-entrypoint.md).
 
@@ -153,3 +153,9 @@ pnpm --filter @remotearc/ui test:workspaces
 ```
 
 The protected `verify-arc-tasks.yml` workflow runs real inference with synthetic provider fixtures; it needs operator authorization and a protected provider secret. Do not put credentials into shell history, docs, test artifacts or issues. The older [system reference](system-architecture.en.md) remains useful for native execution details; use this document for the current platform topology and hosted-runtime contract.
+
+## Operational recovery and user follow-ups
+
+A no-match Fleet selection returns a structured dispatched:false observation containing only the account’s own device capabilities. Arc can adapt inferred platform requirements to available Windows/macOS/Linux devices without relaxing explicit user constraints or permissions. File/process arguments are validated before dispatch. The website journey and its exact acceptance limits are documented in [the feature map](feature-map/website-delivery.md).
+
+Admin follow-ups have editable HTML layouts, brand color, heading, intro, CTA label and up to three content cards, with a sandboxed live preview. The server validates the design, escapes content and restricts action links to the official site. Migration 0049 stores the reviewed HTML/text snapshot with each draft; dispatch uses that exact saved content. Existing consent, suppression, cooldown, unknown-delivery and idempotency checks still apply. No email is sent by editing or previewing a design.

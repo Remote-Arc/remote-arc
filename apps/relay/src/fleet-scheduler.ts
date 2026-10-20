@@ -18,6 +18,9 @@ export type FleetLoad = { running: number; recent_calls: number };
 export type FleetCandidate = { device: Device; running: number; recent_calls: number; score: number };
 export type FleetSelection = { device_id: string; device_name: string; platform: string; running: number; eligible_count: number };
 
+export class FleetRequirementsError extends Error {
+ constructor(readonly requirements:FleetRequirements,readonly availableDevices:Array<{id:string;name:string;platform:string;status:string;tools:string[];workspace_roots:string[];execution_paused?:boolean}>){super('ARC_DEVICE_REQUIREMENTS_UNMET');}
+}
 function insideRoot(path: string, root: string, platform: string): boolean {
   // Never normalize a traversal into a different trust root during routing.
   if (path.split(/[\\/]/).includes("..")) return false;
@@ -162,7 +165,7 @@ export async function selectFleetDevice(
     { running: row.running, recent_calls: row.recent_calls }]));
   const candidates = rankFleetDevices(devices, usage, requirements);
   if (!candidates.length) {
-    throw new Error("No online Fleet device satisfies the required tools, device permissions, platform, and workspace. No fallback to an unauthorized device.");
+    throw new FleetRequirementsError(requirements,devices.slice(0,20).map(({id,name,platform,status,tools,workspace_roots,execution_paused})=>({id,name,platform,status,tools,workspace_roots,execution_paused})));
   }
   const best = candidates[0]!;
   return {

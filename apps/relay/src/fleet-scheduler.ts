@@ -19,7 +19,8 @@ export type FleetCandidate = { device: Device; running: number; recent_calls: nu
 export type FleetSelection = { device_id: string; device_name: string; platform: string; running: number; eligible_count: number };
 
 export class FleetRequirementsError extends Error {
- constructor(readonly requirements:FleetRequirements,readonly availableDevices:Array<{id:string;name:string;platform:string;status:string;tools:string[];workspace_roots:string[];execution_paused?:boolean}>){super('ARC_DEVICE_REQUIREMENTS_UNMET');}
+ readonly code='ARC_DEVICE_REQUIREMENTS_UNMET';
+ constructor(readonly requirements:FleetRequirements,readonly availableDevices:Array<{id:string;name:string;platform:string;status:string;tools:string[];workspace_roots:string[];execution_paused?:boolean}>){super("No online Fleet device satisfies the required tools, device permissions, platform, and workspace. No fallback to an unauthorized device.");}
 }
 function insideRoot(path: string, root: string, platform: string): boolean {
   // Never normalize a traversal into a different trust root during routing.

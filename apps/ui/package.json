@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test:workspaces": "node --experimental-strip-types --test scripts/dashboard-workspaces-test.mjs scripts/arc-chat-sessions-test.mjs && node --import tsx scripts/arc-native-client-test.ts && node --import tsx scripts/arc-home-brief-test.mjs && node --import tsx scripts/runtime-config-test.ts",
+    "test:workspaces": "node --experimental-strip-types --test scripts/dashboard-workspaces-test.mjs scripts/arc-chat-sessions-test.mjs scripts/arc-transcript-test.mjs && node --import tsx scripts/arc-native-client-test.ts && node --import tsx scripts/arc-home-brief-test.mjs && node --import tsx scripts/runtime-config-test.ts",
     "test:onboarding": "node scripts/onboarding-flow-test.mjs",
     "test:arc-experience": "node scripts/arc-capabilities-test.mjs && node --experimental-strip-types scripts/marketing-playback-test.mjs && node --import tsx scripts/arc-positioning-test.mjs && node --import tsx scripts/home-panorama-test.mjs && node --import tsx scripts/apps-demo-contract-test.mjs",
     "test:onboarding-readability": "node scripts/onboarding-readability-test.mjs",

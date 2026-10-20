@@ -61,7 +61,15 @@ jobs:
           }
 
       - name: Verify
-        run: pnpm --filter remotelink typecheck
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const pkg=JSON.parse(fs.readFileSync("packages/cli/package.json","utf8"));
+            const actual=pkg.repository.url.replace(/^git\+/,"").replace(/\.git$/,"");
+            const expected="https://github.com/"+process.env.GITHUB_REPOSITORY;
+            if(actual!==expected)throw new Error("Package repository must match the publishing workflow for npm provenance");
+          '
+          pnpm --filter remotelink typecheck
 
       - name: Build CLI and native Go distribution
         run: pnpm build:device --release

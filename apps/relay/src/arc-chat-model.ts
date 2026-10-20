@@ -3,6 +3,7 @@ import { resolveModelGateway, type ModelGatewayEnv } from './model-gateway.js';
 import { ModelProviderError, type ModelDefinition } from './model-provider-adapters.js';
 import {requireArcAccess,arcLimit,ensureTrialCredits} from './arc-trial.js';
 import {ARC_HOSTED_MODELS} from '@remotearc/protocol';
+import {fundingPolicy,automaticFunding} from './arc-funding.js';
 
 // Published provider pricing, USD microdollars per million tokens. Server overrides
 // must include their prices; browser requests can only select an allowlisted ID.
@@ -36,10 +37,20 @@ const limit=(value:string|undefined,fallback:number)=>{const n=Number(value??fal
 /** Bootstrap only missing limits. Existing administrator caps are never raised. */
 export async function prepareArcBudget(env:ArcModelEnv,userId:string,organizationId:string,sessionId:string,selected:string) {
  const access=await arcModelAccess(env,userId,organizationId,selected),day=new Date().toISOString().slice(0,10),now=new Date().toISOString();
+ const funding=await fundingPolicy(env.DB),automatic=funding.managed===1&&funding.mode==='automatic';
  if(access.access.active&&!access.access.paid)await ensureTrialCredits(env,userId,access.access.trial!);
- const userLimit=access.access.paid?limit(env.ARC_PAID_USER_DAILY_MICROS,1000000):access.access.trial!.daily_allowance_micros;
+ const userLimit=access.access.paid?automatic?funding.paid_user_daily_micros:limit(env.ARC_PAID_USER_DAILY_MICROS,1000000):access.access.trial!.daily_allowance_micros;
  const scopes=[['global','platform',limit(env.ARC_PLATFORM_DAILY_MICROS,5000000)],['organization',organizationId,userLimit],['user',userId,userLimit],['task',sessionId,userLimit]] as const;
  await env.DB.batch(scopes.flatMap(([type,id,cost])=>[['cost_micros',cost],['credits',1000]].map(([metric,cap])=>env.DB.prepare(`INSERT OR IGNORE INTO billing_budgets(scope_type,scope_id,lane,metric,period_key,limit_units,updated_at) VALUES(?1,?2,'arc_hosted',?3,?4,?5,?6)`).bind(type,id,metric,day,cap,now))));
+ if(automatic){
+  const pools=await automaticFunding(env.DB),daily=Math.max(pools.sponsored.dailyLimit,pools.sponsored.dailyUsed)+Math.max(pools.paid.dailyLimit,pools.paid.dailyUsed);
+  // Pool guards remain authoritative. Retain committed cost after refunds,
+  // while letting the other independently funded pool keep working.
+  await env.DB.batch([
+   env.DB.prepare("UPDATE billing_budgets SET limit_units=?2 WHERE scope_type='global' AND scope_id='platform' AND lane='arc_hosted' AND period_key=?1 AND metric='cost_micros'").bind(day,daily),
+   env.DB.prepare("UPDATE billing_budgets SET limit_units=1000000000 WHERE scope_type='global' AND scope_id='platform' AND lane='arc_hosted' AND period_key=?1 AND metric='credits'").bind(day),
+  ]);
+ }
  let grantId:string;
  if(access.premium){
    const grant=await env.DB.prepare(`SELECT id FROM billing_model_grants WHERE user_id=?1 AND organization_id=?2 AND provider=?3 AND task_id IS NULL AND revoked_at IS NULL AND expires_at>?4 AND id NOT LIKE 'arc-auto:%' AND id NOT LIKE 'arc-trial:%' ORDER BY expires_at DESC LIMIT 1`).bind(userId,organizationId,access.definition.provider,now).first<{id:string}>();

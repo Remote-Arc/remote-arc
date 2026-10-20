@@ -1,5 +1,6 @@
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
+import {rewardAllowance,consumeRewardCall} from './connect-rewards.js';
 type UsageEnv = PlatformLaunchEnv & {
   DB: D1Database;
   MONTHLY_TOOL_CALL_LIMIT?: string;
@@ -105,7 +106,8 @@ export async function getMonthlyUsage(
   userId: string,
 ): Promise<MonthlyUsage> {
   const month = monthKey();
-  const limit = await monthlyLimitForUser(env, userId);
+  const base = await monthlyLimitForUser(env, userId),reward=base===null?null:await rewardAllowance(env.DB,userId);
+  const limit=base===null?null:base+(reward?.available||0)+(reward?.spentThisMonth||0);
   try {
     const row = await env.DB.prepare(
       "SELECT tool_calls FROM user_monthly_usage WHERE user_id = ?1 AND month_key = ?2",
@@ -124,6 +126,13 @@ export async function consumeToolCall(env: UsageEnv, userId: string) {
   const month = monthKey();
   const limit = await monthlyLimitForUser(env, userId);
   const now = new Date().toISOString();
+  if(limit!==null){
+    const reward=await rewardAllowance(env.DB,userId,now);
+    if((reward?.available||0)>0||(reward?.spentThisMonth||0)>0){
+      if(await consumeRewardCall(env.DB,userId,limit,now))return getMonthlyUsage(env,userId);
+      const error=new Error('Connect call allowance reached.');(error as Error&{code:string}).code='MONTHLY_LIMIT_REACHED';throw error;
+    }
+  }
 
   if (limit === null) {
     try {

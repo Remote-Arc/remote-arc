@@ -31,7 +31,7 @@ let sends=0;const native=globalThis.fetch;
 globalThis.fetch=async(input,options)=>{
  assert.equal(String(input),'https://api.resend.com/emails');sends++;
  assert.equal(new Headers(options?.headers).get('idempotency-key'),'followup/'+id);
- const body=JSON.parse(String(options?.body));assert.deepEqual(body.to,['person@example.invalid']);assert(body.text.includes('/email/follow-up/unsubscribe?token='));assert(body.headers['List-Unsubscribe-Post']);assert(!body.html,'Plain text has no tracking pixels');
+ const body=JSON.parse(String(options?.body));assert.deepEqual(body.to,['person@example.invalid']);assert(body.text.includes('/email/follow-up/unsubscribe?token='));assert(body.headers['List-Unsubscribe-Post']);assert(body.html.includes('role="presentation"'));assert(body.html.includes('Share your feedback'));assert(!/<img[^>]+(?:token=|person%40|person@)/i.test(body.html),'Brand image is static, with no recipient tracking');
  return Response.json({id:'provider-fixture'});
 };
 try{

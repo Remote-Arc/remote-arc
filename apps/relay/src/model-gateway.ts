@@ -80,14 +80,16 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
     modelId:definition.id,authorizationId,maximum,creditWallet:binding.creditWallet});
   if(!reservation.dispatchAllowed)throw new ModelProviderError("MODEL_ALREADY_DISPATCHED");
   const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;
-  let knownUsage:ModelUsage|undefined;
+  let knownUsage:ModelUsage|undefined,phase:'provider'|'decision'|'settlement'='provider';
   try{
     const result=await Promise.race([
       adapter({definition,system:request.system,user:request.user,schema:request.schema,maxOutputTokens:request.maxOutputTokens,signal:controller.signal}),
       new Promise<never>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new ModelProviderError("MODEL_TIMEOUT",true));},timeout);}),
     ]);
     knownUsage=result.usage;
+    phase='decision';
     const value=validate(result.value);
+    phase='settlement';
     await settleBilling(binding.DB,request.context,reservation.id,{status:"completed",actual:observedCharges(definition,result.usage),
       usage:{...result.usage,providerRequestId:result.providerRequestId}});
     return {value,usage:result.usage,provider:definition.provider,modelId:definition.id,reservationId:reservation.id};
@@ -97,7 +99,7 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
       {status:"failed",actual:observedCharges(definition,knownUsage),usage:knownUsage}:
       {status:"unknown"}).catch(()=>{ /* Durable reservation stays committed if reconciliation fails. */ });
     if(error instanceof ModelProviderError)throw error;
-    throw new ModelProviderError("MODEL_DECISION_OR_SETTLEMENT_FAILED");
+    throw new ModelProviderError(phase==='decision'?'MODEL_DECISION_INVALID':phase==='settlement'?'MODEL_SETTLEMENT_FAILED':'MODEL_PROVIDER_FAILED',false,knownUsage);
   }finally{clearTimeout(timer);}
 }
 

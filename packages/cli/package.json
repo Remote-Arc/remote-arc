@@ -37,11 +37,11 @@
   "homepage": "https://remotearc.app",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yaohuangguan/remote-arc.git",
+    "url": "git+https://github.com/Remote-Arc/remote-arc.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/yaohuangguan/remote-arc/issues"
+    "url": "https://github.com/Remote-Arc/remote-arc/issues"
   },
   "keywords": [
     "mcp",

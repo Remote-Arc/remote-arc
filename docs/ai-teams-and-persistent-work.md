@@ -1,6 +1,16 @@
 # AI employees, Team conversations and persistent goals
 
-Status: product/runtime design, not a shipped capability. Updated 20 October 2026. [Chinese design](ai-teams-and-persistent-work.zh.md).
+Status: development implementation, not production deployed. Remaining scope is listed below. Updated 20 October 2026. [Chinese design](ai-teams-and-persistent-work.zh.md).
+
+## Development implementation and remaining work
+
+The branch implements account-owned versioned employee/Team profiles, a dedicated Teams page, direct chats, Team rooms and ad hoc groups. A searchable conversation/teammate sidebar, explicit @ badges, Auto first-responder routing and Everyone selection support normal discussions without a Task, deadline or budget form. In-page room switches retain unsent drafts and logical retry identity. Creating a group or profile makes no model call.
+
+Durable room queues retain immutable speaker identities, actual recipients, messages, colleague handoffs, tool observations and paginated history. Auto initially wakes the team coordinator or one member, who can bring in colleagues. One active employee run per room and the account concurrency limit are enforced. Idle rooms make no model calls.
+
+Background dispatch is infrastructure: the current reasoning turn proposes an owned employee/team; the server binds the authentic user goal, target version, stable assignment identity and inherited/current authority. There is no always-on scheduler employee or extra scheduler-model call. Cross-Team access must be explicitly allowed. Actual child replies and failure/unknown states are reported once to the originating chat with a record link; this does not certify the root outcome.
+
+Still incomplete: chat-created editable employee/team confirmation drafts, cross-run persistent goal continuation, root-outcome acceptance, advanced activity/usage filters and export. Optional root-task caps are not yet bound to every room run; ordinary account Credits are enforced. Production migrations, live model acceptance and protected rollout remain pending. See the [AI Teams feature map](feature-map/ai-teams.md).
 
 ## Independent product concepts
 

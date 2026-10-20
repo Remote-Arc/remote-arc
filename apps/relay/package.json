@@ -11,12 +11,13 @@
     "test:seo": "tsx scripts/seo-smoke.mjs",
     "test:apps": "tsx scripts/apps-test.ts && tsx scripts/apps-expansion-test.ts && tsx scripts/apps-connect-preflight-test.ts && tsx scripts/apps-directory.ts --check",
     "apps:preflight": "tsx scripts/apps-connect-preflight.ts",
-    "test:security": "tsx scripts/organization-management-test.ts && pnpm test:apps && tsx scripts/google-oauth-cutover-test.ts && tsx scripts/host-routing-test.ts && tsx scripts/oauth-security-test.ts && tsx scripts/email-auth-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/file-resource-chunk-test.ts && tsx scripts/device-revocation-test.ts && tsx scripts/github-marketplace-test.ts && tsx scripts/device-pause-test.ts && tsx scripts/scalability-guardrails-test.ts && tsx scripts/admin-operations-test.ts && tsx scripts/engagement-smoke.mjs && tsx scripts/model-billing-test.ts && tsx scripts/admin-service-test.mjs && pnpm test:arc && pnpm test:credits && pnpm test:stripe",
-    "test:model-billing": "tsx scripts/model-billing-test.ts",
+    "test:security": "tsx scripts/organization-management-test.ts && pnpm test:apps && tsx scripts/google-oauth-cutover-test.ts && tsx scripts/host-routing-test.ts && tsx scripts/oauth-security-test.ts && tsx scripts/email-auth-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/file-resource-chunk-test.ts && tsx scripts/device-revocation-test.ts && tsx scripts/github-marketplace-test.ts && tsx scripts/device-pause-test.ts && tsx scripts/scalability-guardrails-test.ts && tsx scripts/admin-operations-test.ts && tsx scripts/engagement-smoke.mjs && tsx scripts/model-billing-test.ts && tsx scripts/arc-execution-budget-test.ts && tsx scripts/admin-service-test.mjs && pnpm test:teams && pnpm test:arc && pnpm test:credits && pnpm test:stripe",
+    "test:model-billing": "tsx scripts/model-billing-test.ts && tsx scripts/arc-execution-budget-test.ts",
     "test:followups": "tsx scripts/user-followups-test.ts && tsx scripts/followup-email-test.ts && tsx scripts/feedback-rewards-test.ts",
     "test:arc": "tsx scripts/arc-chat-test.ts && tsx scripts/arc-task-eval-fixture-test.ts && tsx scripts/arc-task-eval-fixture-test.ts --expanded-paths && tsx scripts/arc-task-eval-fixture-test.ts --invalid-decision && pnpm test:followups && tsx scripts/arc-acceptance-resume-test.ts",
     "test:credits": "tsx scripts/arc-credits-test.ts && tsx scripts/arc-credit-integration-test.ts && tsx scripts/arc-funding-test.ts && tsx scripts/arc-dispatch-recovery-test.ts && tsx scripts/arc-automatic-funding-test.ts",
-    "test:stripe": "node scripts/stripe-worker-test.mjs && tsx scripts/stripe-billing-test.ts && tsx scripts/commercial-config-test.ts && tsx scripts/stripe-activation-test.ts && tsx scripts/arc-trial-admin-test.ts"
+    "test:stripe": "node scripts/stripe-worker-test.mjs && tsx scripts/stripe-billing-test.ts && tsx scripts/commercial-config-test.ts && tsx scripts/stripe-activation-test.ts && tsx scripts/arc-trial-admin-test.ts",
+    "test:teams": "tsx scripts/arc-team-profiles-test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.1.0",

@@ -60,6 +60,7 @@ declare const __REMOTEARC_CLI_VERSION__: string;
 const LATEST_AGENT_VERSION = __REMOTEARC_CLI_VERSION__;
 
 const ArcNativeChat = React.lazy(() => import("./arc-native-chat.js").then(module => ({default:module.ArcNativeChat})));
+const ArcTeamsPage = React.lazy(() => import('./arc-teams-page.js').then(module=>({default:module.ArcTeamsPage})));
 const ArcSkills = React.lazy(() => import("./arc-skills.js").then(module => ({default:module.ArcSkills})));
 const ArcCheckout = React.lazy(() => import('./arc-checkout.js').then(module=>({default:module.ArcCheckout})));
 const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
@@ -5111,11 +5112,13 @@ function Dashboard({
             onManageApps={() => navigateTab("agent-apps")}
             onManageDevices={() => navigateTab("agent-devices")}
             onManageSkills={() => navigateTab("agent-skills")}
+            onManageTeams={() => navigateTab("agent-teams")}
           /></React.Suspense>
         </div>}
 
-        {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat}/>}
+        {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat} onOpenTeams={()=>navigateTab("agent-teams")}/>}
 
+        {active === "agent-teams" && <React.Suspense fallback={<WorkspaceLoading label={tr('Loading your teams…','正在加载团队…')} variant="cards"/>}><ArcTeamsPage accountId={user.id} tr={tr}/></React.Suspense>}
         {active === "agent-skills" && <React.Suspense fallback={<WorkspaceLoading label={tr('Loading skills…','正在加载技能…')} variant="rows"/>}><ArcSkills tr={tr} onChat={openArcChat}/></React.Suspense>}
 
         {active === "overview" && (

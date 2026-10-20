@@ -110,12 +110,12 @@ const trust:DocTopic={
 };
 architecture.sections?.push({
   "heading": {
-    "en": "AI teams and persistent goals: planned",
-    "zh": "AI 团队与持久目标：设计中"
+    "en": "AI teams Beta and persistent goals",
+    "zh": "AI 团队 Beta 与持久目标"
   },
   "text": {
-    "en": "Configurable employees, direct and Team group chats, visible inter-agent communication and a dedicated AI Teams page are planned independent of overnight tasks. Persistent goals will share task budgets and evidence across bounded runs, with optional deadlines. Current native Tasks run once per occurrence; this is not yet unlimited cross-run goal continuation or a working employee team.",
-    "zh": "可配置员工、单聊、团队群聊、可见的员工间通信及独立 AI 团队页面正在设计，与隔夜任务相互独立。持久目标将跨有界运行共用任务预算和证据，截止时间可选。当前原生 Tasks 每次计划执行一轮，尚不等于跨轮持续推进目标，也尚未交付员工团队。"
+    "en": "AI teams Beta has its own page under Tasks: create employees with a name, avatar, model, role and scoped access, then use direct or group conversations. In Arc Chat, ask to create an employee, review the editable profile card and confirm; creating a profile does not start work. Teammate messages and authorized handoffs remain visible. Teams do not require overnight tasks, a deadline or a separate budget. Shared account Credits and plan limits apply. Cross-run goal continuation and chat-created teams remain in development.",
+    "zh": "AI 团队 Beta 在 Tasks 下有独立页面：为员工设定名字、头像、模型、职责与访问范围，再进入单聊或群聊。在 Arc Chat 说出创建员工的需求，编辑资料卡后确认即可；创建资料不会自动开工。员工消息和授权内的交接都可查看。团队使用无需隔夜任务、截止时间或单独预算，统一使用账户 Credits 并遵循套餐限制。跨轮目标续跑和聊天创建团队仍在开发。"
   }
 });
 

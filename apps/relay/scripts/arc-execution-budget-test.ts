@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+import {reserveBilling,settleBilling,setBillingLimit,grantPaidModel,type BillingReservationInput} from '../src/billing-ledger.js';
+import {createExecutionBudget,executionBudget,closeExecutionBudget} from '../src/arc-execution-budget.js';
+
+const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
+for(const file of fs.readdirSync('migrations').filter(name=>name.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+file,'utf8'));
+const db={prepare(query:string){const statement=sql.prepare(query);const bound=(args:unknown[])=>({async first(){return statement.get(...args)||null;},async all(){return{results:statement.all(...args)};},async run(){return this.runSync();},runSync(){const result=statement.run(...args);return{success:true,meta:{changes:Number(result.changes)}};}});return{...bound([]),bind(...args:unknown[]){assert(!args.includes(undefined),query);return bound(args);}};},async batch(statements:{runSync:()=>unknown}[]){sql.exec('BEGIN IMMEDIATE');try{const result=statements.map(statement=>statement.runSync());sql.exec('COMMIT');return result;}catch(error){sql.exec('ROLLBACK');throw error;}}} as unknown as D1Database;
+const at=new Date().toISOString(),tomorrow=new Date(Date.now()+86400000).toISOString(),future=new Date(Date.now()+7*86400000).toISOString();
+for(const id of ['admin','owner','other'])sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,?,?)").run(id,id,id+'@example.invalid',id==='admin'?'admin':'user',at);
+for(const [id,user] of [['task','owner'],['foreign-task','other']])sql.prepare("INSERT INTO automations(id,user_id,name,kind,action_json,created_at,updated_at) VALUES(?,?,?,'goal_loop','{}',?,?)").run(id,user,id,at,at);
+const context={userId:'owner',organizationId:'personal:owner',taskId:'task',lane:'arc_hosted' as const};
+async function daily(date:string){for(const [scope_type,scope_id] of [['global','platform'],['organization','personal:owner'],['user','owner'],['task','task']])for(const metric of ['credits','cost_micros'] as const)await setBillingLimit(db,'admin',{scope_type,scope_id,lane:'arc_hosted',metric,period_key:date.slice(0,10),limit:1000000});}
+await daily(at);await daily(tomorrow);
+await grantPaidModel(db,'admin',{id:'grant',userId:'owner',organizationId:'personal:owner',provider:'openai',maxCostMicros:1000000,expiresAt:future});
+const budget=(id:string,limitUnits:number)=>createExecutionBudget(db,{...context,id,limitUnits});
+let sequence=0;
+const call=(rootBudgetId:string,costMicros:number,extra:Partial<BillingReservationInput>={}):BillingReservationInput=>({...context,rootBudgetId,runId:'employee-run-'+(++sequence),operationId:'decision',provider:'openai',modelId:'fixture',authorizationId:'grant',maximum:{credits:1,costMicros,neurons:0},...extra});
+
+await budget('shared',3);
+assert.equal(sql.prepare('SELECT COUNT(*) n FROM billing_reservations').get()!.n,0,'Saving a budget never calls a model or reserves money');
+assert.equal((await budget('shared',3)).limitUnits,3,'Creation replay does not increase the cap');
+await assert.rejects(()=>budget('shared',4),/IDEMPOTENCY_CONFLICT/);
+await assert.rejects(()=>createExecutionBudget(db,{...context,id:'bad',taskId:'foreign-task',limitUnits:10}),/NOT_AUTHORIZED/);
+await assert.rejects(()=>createExecutionBudget(db,{...context,id:'bad',limitUnits:0}),/INVALID/);
+await assert.rejects(()=>executionBudget(db,'other','shared'),/NOT_FOUND/);
+const inputs=Array.from({length:8},()=>call('shared',3)),results=await Promise.allSettled(inputs.map(input=>reserveBilling(db,input)));
+assert.equal(results.filter(result=>result.status==='fulfilled').length,1,'Different employees compete for the same atomic root allowance');
+const winnerIndex=results.findIndex(result=>result.status==='fulfilled'),winner=(results[winnerIndex] as PromiseFulfilledResult<{id:string}>).value;
+assert.equal((await executionBudget(db,'owner','shared')).reservedUnits,2);
+await settleBilling(db,context,winner.id,{status:'completed',actual:{credits:1,costMicros:1,neurons:0}});
+assert.equal((await executionBudget(db,'owner','shared')).spentUnits,1);
+const second=await reserveBilling(db,call('shared',3));
+await settleBilling(db,context,second.id,{status:'completed',actual:{credits:1,costMicros:3,neurons:0}});
+assert.equal((await executionBudget(db,'owner','shared')).spentUnits,3);
+await assert.rejects(()=>reserveBilling(db,call('shared',1)),/UNAVAILABLE/);
+assert.equal((await reserveBilling(db,inputs[winnerIndex]!)).dispatchAllowed,false,'A repeat cannot create a second dispatch even after spending the cap');
+
+await budget('unknown',5);const uncertain=await reserveBilling(db,call('unknown',3));
+await settleBilling(db,context,uncertain.id,{status:'unknown'});
+assert.equal((await executionBudget(db,'owner','unknown')).reservedUnits,2);
+await closeExecutionBudget(db,'owner','unknown','cancelled');
+assert.equal((await executionBudget(db,'owner','unknown')).reservedUnits,2,'Cancel cannot erase an unknown charge');
+await assert.rejects(()=>reserveBilling(db,call('unknown',1)),/UNAVAILABLE/);
+await settleBilling(db,context,uncertain.id,{status:'completed',actual:{credits:1,costMicros:1,neurons:0}});
+assert.equal((await executionBudget(db,'owner','unknown')).spentUnits,1,'In-flight settlement remains valid after cancellation');
+assert.equal((await budget('unknown',5)).status,'cancelled','A create replay cannot reactivate a cancelled budget');
+
+await budget('lifetime',5);
+const today=await reserveBilling(db,call('lifetime',5),at);await settleBilling(db,context,today.id,{status:'completed',actual:{credits:1,costMicros:3,neurons:0}},at);
+const nextDay=await reserveBilling(db,call('lifetime',5),tomorrow);
+assert.equal((await executionBudget(db,'owner','lifetime')).spentUnits,2);
+assert.equal((await executionBudget(db,'owner','lifetime')).reservedUnits,3,'Cross-midnight continuation does not reset the shared cap');
+await settleBilling(db,context,nextDay.id,{status:'completed',actual:{credits:1,costMicros:3,neurons:0}},tomorrow);
+assert.equal((await executionBudget(db,'owner','lifetime')).spentUnits,4,'Each call rounds credit units separately, like the wallet');
+await assert.rejects(()=>reserveBilling(db,call('lifetime',3),tomorrow),/UNAVAILABLE/,'A cost-only check would allow nine micros but exceed five wallet units');
+await assert.rejects(()=>reserveBilling(db,call('lifetime',1,{lane:'connect'})),/INVALID_ROOT_BUDGET/);
+await assert.rejects(()=>reserveBilling(db,call('does-not-exist',1)),/UNAVAILABLE/);
+await closeExecutionBudget(db,'owner','lifetime','closed');
+assert.equal((await executionBudget(db,'owner','lifetime')).remainingUnits,1);
+await assert.rejects(()=>reserveBilling(db,call('lifetime',1),tomorrow),/UNAVAILABLE/);
+console.log('PASS: shared lifetime budgets, concurrent employees, idempotency, account isolation, unknown charges, cancellation, per-call credit rounding and midnight continuation. No model calls.');
+sql.close();

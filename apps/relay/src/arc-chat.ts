@@ -46,7 +46,9 @@ async function snapshot(env:ArcEnv,userId:string,sessionId:string){
   const journal=messages.some(message=>message.run_id===run.id&&message.role==='user')?messages:await arcMessages(env,userId,sessionId,run.id);
   return {...publicRun(run),receipt:arcReceipt(run,journal)};
  }));
- return{session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
+ const pendingDelegations=Boolean(await env.DB.prepare("SELECT d.id FROM arc_dispatches d JOIN arc_chat_runs r ON r.id=d.source_run_id WHERE r.session_id=?1 AND d.user_id=?2 AND d.status IN ('prepared','queued') LIMIT 1").bind(sessionId,userId).first());
+ const employeeDrafts=await (await import('./arc-team-drafts.js')).listArcEmployeeDrafts(env,userId,sessionId);
+ return{employeeDrafts,pendingDelegations,session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
 }
 async function body(request:Request){
  if(request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json')throw new ArcError('JSON_REQUIRED',415);
@@ -131,6 +133,7 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
    const input=await body(request);await env.DB.prepare("UPDATE arc_chat_runs SET cancel_requested=1,status='cancelled',updated_at=?1 WHERE id=?2 AND session_id=?3 AND user_id=?4 AND status IN ('queued','thinking','working')").bind(stamp(),idValue(input.runId),sessionId,user.id).run();return json(await snapshot(env,user.id,sessionId));
   }
   if(match[2]==='messages'&&request.method==='POST'){
+   if(await env.DB.prepare('SELECT session_id FROM arc_team_rooms WHERE session_id=?1 AND user_id=?2').bind(sessionId,user.id).first())throw new ArcError('ARC_ROOM_QUEUE_REQUIRED',409);
    const input=await body(request),requestId=idValue(input.requestId),text=typeof input.text==='string'?input.text.trim():'';
    if(input.skillIds!==undefined&&(!Array.isArray(input.skillIds)||input.skillIds.length>3||input.skillIds.some((id:unknown)=>typeof id!=='string'||!/^[\w:-]{1,100}$/.test(id))))throw new ArcError('INVALID_SKILL_REFERENCES');
    const skillIds=[...new Set((input.skillIds||[]) as string[])];

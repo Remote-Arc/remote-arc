@@ -14,4 +14,6 @@ This map describes the user entrance, scope, expected result, verification and r
 
 Feature files teach operation and verification. Source remains the implementation reference. Handbook versions/owners/regression links are returned by the Arc Skills API; imported skills are versioned by content hash. Changes to a completion rule require the corresponding handbook and fixture to change together.
 
-AI employees, Team conversations and cross-run persistent goals are a separate [product/runtime design](../ai-teams-and-persistent-work.md), not completed features represented by this map.
+AI Teams has a development implementation mapped below; full cross-run persistent goal continuation remains incomplete. See the [implementation and product/runtime design](../ai-teams-and-persistent-work.md) for the current boundary.
+
+- [AI Teams: direct chats, groups and scoped handoffs](ai-teams.md) — development implementation, not production deployed.

@@ -84,7 +84,7 @@ flowchart TB
 
 The model is the reasoning component; Remote Arc owns the execution and continuity layer. Provider data, skill text, files and memory remain untrusted observations. Unknown external effects are retained for inspection and are not blindly repeated. A completed run is not a universal semantic proof of success; inspect the returned evidence.
 
-Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. Configurable employees, dedicated Team conversations and cross-run goal continuation are separate planned capabilities; see the [product/runtime design](./docs/ai-teams-and-persistent-work.md). Ordinary Connect cannot wake an arbitrary external chat.
+Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. Configurable employees, dedicated direct/group conversations and scoped teammate handoffs are implemented in the AI Teams development branch and remain unreleased; see the [feature map](./docs/feature-map/ai-teams.md). Cross-run persistent goal continuation and full root-outcome acceptance remain incomplete; see the [implementation/design status](./docs/ai-teams-and-persistent-work.md). Ordinary Connect cannot wake an arbitrary external chat.
 
 ## Quick start
 

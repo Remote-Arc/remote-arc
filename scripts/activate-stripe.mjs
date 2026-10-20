@@ -1,6 +1,7 @@
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {waitRuntimeReady} from './wait-runtime-ready.mjs';
+import {ensureStripePaymentDomain} from './stripe-payment-domain.mjs';
 export const stripeBillingEvents=['invoice.paid','invoice.payment_failed','checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.expired','customer.subscription.updated','customer.subscription.deleted','charge.refunded','charge.dispute.created'];
 export async function activateStripe(env,fetcher=fetch,wait){
  if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_REF!=='refs/heads/master'||env.GITHUB_ACTOR!=='yaohuangguan')throw Error('Protected master promotion required');
@@ -15,6 +16,7 @@ export async function activateStripe(env,fetcher=fetch,wait){
  const endpoints=await stripe('webhook_endpoints?limit=100'),matching=endpoints.data?.filter(endpoint=>endpoint.url==='https://agent.remotearc.app/api/billing/webhook'&&endpoint.status==='enabled');
  if(endpoints.has_more||matching?.length!==1||matching[0].api_version!==STRIPE_API_VERSION||!stripeBillingEvents.every(event=>matching[0].enabled_events?.includes(event)||matching[0].enabled_events?.includes('*')))throw Error('Production webhook configuration requires review');
  await waitRuntimeReady(fetcher,state=>state.arcAvailable===true,wait);
+ await ensureStripePaymentDomain(env,STRIPE_API_VERSION,fetcher);
  // The local owner setup registered the webhook and captured its signing secret.
  // This step provisions only Worker Secrets; no charges or customer mutations.
  for(const name of ['STRIPE_WEBHOOK_SECRET','STRIPE_SECRET_KEY']){

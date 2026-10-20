@@ -70,6 +70,7 @@ export async function nativeBillingDetails(env:BillingEnv,userId:string){
  const [account,invoices]=await Promise.all([stripeRequest(env,'/v1/customers/'+row.customer_id+'?expand[]=invoice_settings.default_payment_method'),stripeRequest(env,'/v1/invoices?'+form({customer:row.customer_id,limit:'10'}))]);
  if(account.id!==row.customer_id||account.livemode!==stripeLive(env)||account.deleted)throw new StripeError('BILLING_CUSTOMER_MISMATCH',403);
  const method=account.invoice_settings?.default_payment_method,card=method?.card;
- const paymentMethod=method&&typeof method==='object'&&stripeId(method.customer)===row.customer_id&&card?{type:'card',brand:String(card.brand),last4:String(card.last4),expMonth:Number(card.exp_month),expYear:Number(card.exp_year)}:null;
+ const wallet=card?.wallet?.type;
+ const paymentMethod=method&&typeof method==='object'&&stripeId(method.customer)===row.customer_id?(card?{type:'card',brand:String(card.brand),last4:String(card.last4),expMonth:Number(card.exp_month),expYear:Number(card.exp_year),...(['apple_pay','google_pay'].includes(wallet)?{wallet}:{})}:{type:method.type==='link'?'link':'other'}):null;
  return{paymentMethod,invoices:(invoices.data||[]).map((invoice:Record<string,any>)=>{owned(env,invoice,row.customer_id);return{id:objectId(invoice,'in'),number:invoice.number||null,status:invoice.status,currency:invoice.currency,amountPaid:invoice.amount_paid,amountDue:invoice.amount_due,createdAt:new Date(invoice.created*1000).toISOString(),pdfUrl:pdfUrl(invoice.invoice_pdf)};}),hasMore:Boolean(invoices.has_more)};
 }

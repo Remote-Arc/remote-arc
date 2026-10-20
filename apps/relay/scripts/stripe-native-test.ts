@@ -13,6 +13,7 @@ const env={DB,PUBLIC_ORIGIN:origin,DASHBOARD_ORIGIN:origin,ARC_CHAT_ENABLED:'1',
 const api=(path:string,body?:unknown,user='owner',requestOrigin=origin,overrides={})=>handleBilling(new Request(origin+'/api/billing'+(path?'/'+path:''),{method:body===undefined?'GET':'POST',headers:{cookie:'rl_session='+user+'-session',origin:requestOrigin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})}),{...env,...overrides});
 const decode=async(response:Response,status=200)=>{const value=await response.json() as any;assert.equal(response.status,status,JSON.stringify(value));return value;};
 let cancelled=false,schedule=false,loseRenewalAck=true,setupReady=false,foreignSetup=false,foreignInvoice=false,checkoutStatus='open',checkouts=0;
+let savedMethod:any={id:'pm_old',type:'card',customer:'cus_owner',card:{brand:'visa',last4:'4242',exp_month:12,exp_year:2030}};
 const mutations:{path:string;body:URLSearchParams;key:string|null}[]=[],original=globalThis.fetch;
 const subscription=()=>({id:'sub_owner',customer:'cus_owner',livemode:false,status:'active',cancel_at_period_end:cancelled,schedule:schedule?'sub_sched_owner':null});
 const checkout=()=>({id:'cs_test_native',customer:'cus_other',livemode:false,status:checkoutStatus,ui_mode:'embedded_page',url:null,client_secret:'cs_test_native_secret_fixture'});
@@ -36,7 +37,7 @@ globalThis.fetch=async(input,init)=>{
  if(url.pathname==='/v1/subscriptions/sub_owner')return Response.json(subscription());
  if(url.pathname==='/v1/subscription_schedules/sub_sched_owner')return Response.json({id:'sub_sched_owner',subscription:'sub_owner',current_phase:{end_date:Math.floor(Date.parse(end)/1000)}});
  if(url.pathname==='/v1/setup_intents/seti_native')return Response.json({id:'seti_native',customer:foreignSetup?'cus_other':'cus_owner',livemode:false,status:setupReady?'succeeded':'requires_payment_method',payment_method:'pm_new',metadata:{remote_arc_user:'owner',remote_arc_purpose:'billing-default'}});
- if(url.pathname==='/v1/customers/cus_owner')return Response.json({id:'cus_owner',livemode:false,invoice_settings:{default_payment_method:{id:'pm_old',customer:'cus_owner',card:{brand:'visa',last4:'4242',exp_month:12,exp_year:2030}}}});
+ if(url.pathname==='/v1/customers/cus_owner')return Response.json({id:'cus_owner',livemode:false,invoice_settings:{default_payment_method:savedMethod}});
  if(url.pathname==='/v1/invoices')return Response.json({has_more:false,data:[{id:'in_native',customer:foreignInvoice?'cus_other':'cus_owner',livemode:false,created:Math.floor(Date.now()/1000),status:'paid',currency:'usd',amount_paid:3900,amount_due:0,invoice_pdf:'https://pay.stripe.com/invoice/fixture/pdf'}]});
  if(url.pathname==='/v1/subscriptions')return Response.json({has_more:false,data:[]});
  if(url.pathname==='/v1/prices')return Response.json({data:[{id:'price_plus',lookup_key:'remote-arc:arc-plus-v1',currency:'usd',unit_amount:3900,tax_behavior:'exclusive',active:true,recurring:{interval:'month',interval_count:1}}]});
@@ -45,6 +46,9 @@ globalThis.fetch=async(input,init)=>{
 };
 try{
  const details=await decode(await api('details'));assert.equal(details.paymentMethod.last4,'4242');assert.equal(details.invoices[0].id,'in_native');assert(!JSON.stringify(details).includes('secret'));assert.equal(mutations.length,0,'Reading billing never creates a customer or payment');foreignInvoice=true;await decode(await api('details'),403);foreignInvoice=false;
+ savedMethod.card.wallet={type:'apple_pay'};assert.equal((await decode(await api('details'))).paymentMethod.wallet,'apple_pay');
+ savedMethod={id:'pm_link',type:'link',customer:'cus_owner',link:{email:'private@example.invalid'}};const linked=await decode(await api('details'));assert.deepEqual(linked.paymentMethod,{type:'link'});assert(!JSON.stringify(linked).includes('private@example.invalid'),'Wallet display does not expose Link identity');
+ savedMethod.customer='cus_other';assert.equal((await decode(await api('details'))).paymentMethod,null,'Foreign payment methods are never displayed');savedMethod=null;
  await decode(await api('subscription/renewal',{action:'cancel',revision:0},'owner','https://untrusted.invalid'),403);await decode(await api('subscription/renewal',{action:'cancel',revision:0,extra:true}),400);
  await decode(await api('subscription/renewal',{action:'cancel',revision:0}),503);assert(cancelled);assert.equal(sql.prepare("SELECT cancel_at_period_end FROM arc_billing_subscriptions WHERE id='sub_owner'").get()!.cancel_at_period_end,0);
  await decode(await api('subscription/renewal',{action:'cancel',revision:0}));assert.equal(mutations.filter(item=>item.body.has('cancel_at_period_end')).length,1,'Lost acknowledgement reconciles current provider state without a second cancellation');

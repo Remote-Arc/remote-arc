@@ -1,7 +1,7 @@
 import type {ArcAccess} from './use-arc-chat.js';
 export type BillingPlan={versionId?:string;id:string;label:string;monthlyPriceCents:number;monthlyCredits:number;connectToolCalls:number|null;concurrentRuns:number;maxSeconds:number};
 export type NativePaymentSession={clientSecret:string;publishableKey:string;sessionId?:string;id?:string};
-export type BillingDetails={paymentMethod:null|{type:string;brand:string;last4:string;expMonth:number;expYear:number};invoices:{id:string;number:string|null;status:string;currency:string;amountPaid:number;amountDue:number;createdAt:string;pdfUrl:string|null}[];hasMore:boolean};
+export type BillingDetails={paymentMethod:null|{type:'card';brand:string;last4:string;expMonth:number;expYear:number;wallet?:'apple_pay'|'google_pay'}|{type:'link'|'other'};invoices:{id:string;number:string|null;status:string;currency:string;amountPaid:number;amountDue:number;createdAt:string;pdfUrl:string|null}[];hasMore:boolean};
 export type ArcBilling={embeddedCheckoutEnabled?:boolean;subscriptionManagementEnabled?:boolean;enabled:boolean;portalEnabled?:boolean;hasCustomer?:boolean;plan:BillingPlan;access?:ArcAccess;credits:{available:number;pending:number};usage:{used:number;limit:number|null};plans:BillingPlan[];topups:{versionId?:string;id:string;credits:number;priceCents:number}[];models:{id:string;label:string;inputCreditsPer1000:number;outputCreditsPer1000:number}[];subscriptions:{revision?:number;status:string;period_end:string;cancel_at_period_end:number;pending_product_id?:string|null;pending_effective_at?:string|null}[]};
 export class BillingFailure extends Error{constructor(code:string,readonly reference?:string){super(code);}}
 export async function billingRequest<T>(path='',body?:unknown,signal?:AbortSignal):Promise<T>{

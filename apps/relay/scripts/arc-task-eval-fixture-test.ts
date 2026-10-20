@@ -22,7 +22,7 @@ globalThis.fetch=(async(url,init)=>{
   else if(!observations.some(o=>o.tool==='device_tool'&&o.arguments.tool==='start_process'))value=tool('device_tool',{deviceId,tool:'start_process',arguments:{command:'node verify.js',cwd:'/fixture/project',background:true}});
   else if(!observations.some(o=>o.tool==='device_tool'&&o.arguments.tool==='process_output'))value=tool('device_tool',{deviceId,tool:'process_output',arguments:{process_id:'eval-managed-process'}});
   else if(checks<2)value=tool('device_tool',{deviceId,tool:'process_status',arguments:{process_id:'eval-managed-process'}});
-  else value=reply('Process eval-managed-process exited 0 with verified-build-ok.');
+  else {assert.match(JSON.stringify(context),/verified-build-ok/,'Final process summary must retain its observed output');value=reply('Process eval-managed-process exited 0 with verified-build-ok.');}
  }
  else if(context.objective.startsWith('Save a one-off task'))value=observations.some(o=>o.tool==='create_task')?reply('Task saved.'):tool('create_task',{name:'Verify web deployment',instructions:"Check the latest deployment of my 'web' project and report actual readiness and URL.",schedule:{type:'once'}});
  else if(context.skillReferences?.length){

@@ -1,6 +1,6 @@
 # One conversation for coordinated work
 
-Arc Chat is the sole entry for starting and continuing work. A user gives a goal, Arc chooses or creates appropriate teammates, organizes the requested team, delegates the work and returns actual outputs to the originating conversation. A clear creation or execution request does not require a second review card or a separate team messenger.
+Arc Chat is the sole entry for starting and continuing work. Natural-language goals are sufficient; @ references and the workflow library are optional ways to specify context, never prerequisites or onboarding steps. A user gives a goal, Arc chooses or creates appropriate teammates, organizes the requested team, delegates the work and returns actual outputs to the originating conversation. A clear creation or execution request does not require a second review card or a separate team messenger.
 
 This release adds owner-chat `create_team` using actual owned teammate IDs, with deterministic retry identity, active-source checks and no resource grants. Explicit previews and negative requests remain previews. Existing delegated execution, live scope checks, concurrency limits and the no-idle-inference model are reused. A team creation never by itself starts inference. A request that also asks for discussion/work continues through `delegate_work`. Actual replies are preserved in the originating chat rather than truncated and linked to another messenger. Internal team rooms stay out of the user's recent-chat and Activity lists.
 

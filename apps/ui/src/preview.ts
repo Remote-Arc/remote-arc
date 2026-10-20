@@ -1,3 +1,4 @@
+import {createArcInputPreview} from './arc-input-preview.js';
 import type { SecurityState } from "@remotearc/protocol";
 import {ARC_PLANS,ARC_TOPUPS,ARC_PREMIUM_MODELS} from '@remotearc/protocol';
 import appDirectory from "./app-directory.json" with { type: "json" };
@@ -19,7 +20,8 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
         {id:"22222222-2222-4222-8222-222222222222",provider:"slack",accountLabel:"Example workspace / personal",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:35,total:35,needsReconnect:false}},
         {id:"33333333-3333-4333-8333-333333333333",provider:"slack",accountLabel:"Example workspace / project",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:5,total:35,needsReconnect:true}},
   ];
-  const arcPreview = createArcPreview({employees:previewEmployees.map(({id,name,responsibility,avatar})=>({id,name,responsibility,avatar:avatar as {kind:'initials';color:string}})),apps:previewConnections.map(connection=>({id:connection.id,provider:connection.provider,name:appDirectory.apps.find(app=>app.provider===connection.provider)?.name||connection.provider}))});
+  const inputPreview=createArcInputPreview();
+  const arcPreview = createArcPreview({attachments:inputPreview.metadata,employees:previewEmployees.map(({id,name,responsibility,avatar})=>({id,name,responsibility,avatar:avatar as {kind:'initials';color:string}})),apps:previewConnections.map(connection=>({id:connection.id,provider:connection.provider,name:appDirectory.apps.find(app=>app.provider===connection.provider)?.name||connection.provider}))});
   const billingPreview = createBillingPreview({getItem:key=>window.sessionStorage.getItem(key),setItem:(key,value)=>window.sessionStorage.setItem(key,value)},new URL(location.href));
   let config:Promise<{arcAvailable:boolean}>|undefined, configTime=0;
   function runtimeConfig() {
@@ -210,6 +212,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
 
+    if(url.pathname.startsWith('/api/arc/attachments')){if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);const response=await inputPreview.handle(url,method,init?.body??(input instanceof Request?await input.blob():undefined),init?.headers);if(response)return response;}
     if((url.pathname.startsWith('/api/arc/sessions')||url.pathname.startsWith('/api/arc/skills')||url.pathname.startsWith('/api/arc/memory'))) {
       if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);
       const result=arcPreview.handle(url.pathname,method,init?.body??(input instanceof Request?await input.clone().text():undefined));

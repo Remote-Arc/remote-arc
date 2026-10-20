@@ -1,3 +1,4 @@
+import {communityExperience} from './arc-community-experience.js';
 import {ArcReferenceIcon} from './arc-reference-icon.js';
 import type {ArcMention} from './arc-skill-mentions.js';
 import {workflowExperience} from './arc-skill-experience.js';
@@ -7,7 +8,7 @@ export function ArcMessageReferences({message,tr}:{message:ChatMessage;tr:(en:st
  const items:ArcMention[]=[
   ...(message.teammates||[]).map(person=>({kind:'employee' as const,...person,description:person.responsibility})),
   ...(message.apps||[]).map(app=>({kind:'app' as const,...app})),
-  ...(message.skills||[]).map(skill=>({kind:'skill' as const,...skill,name:workflowExperience(skill.id,tr)?.title||skill.name})),
+  ...(message.skills||[]).map(skill=>({kind:'skill' as const,...skill,name:communityExperience(skill.id,tr)?.title||workflowExperience(skill.id,tr)?.title||skill.name})),
  ];
  return items.length?<div className="arcMessageSkills arcMessageReferences">{items.map(item=><span className="arcContextChip" key={item.kind+':'+item.id} title={item.description||item.name}><ArcReferenceIcon item={item}/><span className="arcReferenceName">{item.name}</span></span>)}</div>:null;
 }

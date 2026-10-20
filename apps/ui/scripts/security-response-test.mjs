@@ -10,6 +10,7 @@ const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "u
   // A data URL has no directory for relative imports. Keep the real catalog import.
   .replaceAll('"./app-directory.json"', JSON.stringify(new URL("../src/app-directory.json", import.meta.url).href))
   .replaceAll('"./arc-preview.js"', JSON.stringify(new URL("../src/arc-preview.ts", import.meta.url).href))
+  .replaceAll("'./arc-input-preview.js'", JSON.stringify(new URL("../src/arc-input-preview.ts", import.meta.url).href))
   .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/billing-preview.ts", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },

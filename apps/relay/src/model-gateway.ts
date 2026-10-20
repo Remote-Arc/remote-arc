@@ -19,7 +19,7 @@ export type ModelGatewayBinding={
   creditWallet?:boolean;
 };
 export type GatewayRequest={
-  context:BillingContext;modelId?:"auto"|string;system:string;user:string;schema:Record<string,unknown>;
+  images?:{dataUrl:string}[];context:BillingContext;modelId?:"auto"|string;system:string;user:string;schema:Record<string,unknown>;
   maxOutputTokens:number;timeoutMs?:number;
 };
 const safe=(n:number)=>Number.isSafeInteger(n)&&n>=0;
@@ -66,10 +66,12 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   if(!adapter)throw new ModelProviderError("MODEL_NOT_CONFIGURED");
   if(!safe(request.maxOutputTokens)||request.maxOutputTokens<1||request.maxOutputTokens>definition.maxOutputTokens||
     !request.system.trim()||!request.user.trim())throw new ModelProviderError("MODEL_REQUEST_INVALID");
+  if(request.images!==undefined&&(!Array.isArray(request.images)||request.images.length>3||request.images.some(image=>!/^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(image.dataUrl)||image.dataUrl.length>3000000)))throw new ModelProviderError('MODEL_IMAGE_INPUT_INVALID');
+  if(request.images?.length&&definition.provider==='workers_ai')throw new ModelProviderError('MODEL_IMAGE_INPUT_UNSUPPORTED');
   const encoded=new TextEncoder().encode(JSON.stringify([request.system,request.user,request.schema]));
   if(encoded.byteLength>64000)throw new ModelProviderError("MODEL_CONTEXT_TOO_LARGE");
   // Byte-bound input estimate plus template overhead; reserve all permitted output before dispatch.
-  const inputBound=encoded.byteLength+8192;
+  const inputBound=encoded.byteLength+8192+(request.images?.length||0)*32768;
   const ceiling={...definition,inputMicrosPerMillion:Math.max(definition.inputMicrosPerMillion,definition.cacheWriteMicrosPerMillion??definition.inputMicrosPerMillion*2,definition.cacheWrite5mMicrosPerMillion??0,definition.cachedInputMicrosPerMillion??0)};
   const maximum=charges(ceiling,inputBound,request.maxOutputTokens);
   const authorizationId=definition.provider==="workers_ai"?binding.freePoolId:binding.paidGrantId;
@@ -83,7 +85,7 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   let knownUsage:ModelUsage|undefined,phase:'provider'|'decision'|'settlement'='provider';
   try{
     const result=await Promise.race([
-      adapter({definition,system:request.system,user:request.user,schema:request.schema,maxOutputTokens:request.maxOutputTokens,signal:controller.signal}),
+      adapter({definition,system:request.system,user:request.user,...(request.images?.length?{images:request.images}:{}),schema:request.schema,maxOutputTokens:request.maxOutputTokens,signal:controller.signal}),
       new Promise<never>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new ModelProviderError("MODEL_TIMEOUT",true));},timeout);}),
     ]);
     knownUsage=result.usage;

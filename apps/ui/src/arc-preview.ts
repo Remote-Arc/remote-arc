@@ -1,7 +1,7 @@
-import {ARC_OUTCOME_SKILLS} from '../../relay/src/arc-outcome-skills.js';
-import {ARC_VERIFICATION_SKILLS} from '../../relay/src/arc-verification-skills.js';
-const PREVIEW_SKILLS=[...ARC_VERIFICATION_SKILLS,...ARC_OUTCOME_SKILLS];
+import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
+const PREVIEW_SKILLS=COMMUNITY_SKILLS;
 import {ARC_MEMORY_LIMITS} from '@remotearc/protocol';
+import type {ArcAttachment} from '@remotearc/protocol';
 import type {ChatMessage, ChatRun, ChatSession} from "./use-arc-chat.js";
 
 type PreviewSession = {session:ChatSession; messages:ChatMessage[]; runs:ChatRun[]; reads:number; requests:Map<string,{text:string;modelId:string;run:ChatRun}>};
@@ -9,10 +9,10 @@ const json = (value:unknown,status=200) => Response.json(value,{status,headers:{
 const makeRun = ():ChatRun => ({id:crypto.randomUUID(),status:"queued",step:0,tokensUsed:0,maxTokens:24000,maxSteps:8,deadline:new Date(Date.now()+180000).toISOString(),error:null});
 
 /** Per-tab UI simulation. Never calls a model, Apps, devices, storage or production API. */
-export function createArcPreview(references:{apps?:NonNullable<ChatMessage['apps']>;employees?:NonNullable<ChatMessage['teammates']>}={}) {
+export function createArcPreview(references:{attachments?:Map<string,{meta:ArcAttachment}>;apps?:NonNullable<ChatMessage['apps']>;employees?:NonNullable<ChatMessage['teammates']>}={}) {
   let memoryEnabled=true;
   const memories=new Map<string,{id:string;kind:'fact'|'work';category:string;content:string;source_session_id:string|null;updated_at:string}>([['example-preference',{id:'example-preference',kind:'fact',category:'preference',content:'Keep release summaries concise and link the relevant pull requests.',source_session_id:'sample-conversation',updated_at:new Date().toISOString()}]]);
-  const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string}>(PREVIEW_SKILLS.map(skill=>[skill.id,{id:skill.id,name:skill.name,description:skill.description,sourceUrl:skill.sourceUrl,origin:'builtin',content:skill.content}]));
+  const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string;owner?:string;requires?:string[];revision?:string;license?:string;resourceCount?:number}>(PREVIEW_SKILLS.map(skill=>[skill.id,{id:skill.id,name:skill.name,description:skill.description,sourceUrl:skill.sourceUrl,origin:'community',content:skill.content,owner:skill.owner,requires:skill.requires,revision:skill.revision,license:skill.license,resourceCount:skill.resources.length}]));
   const sessions = new Map<string,PreviewSession>();
   const example:PreviewSession = {
     session:{id:"sample-conversation",title:"Review the release and share a summary",modelId:"auto",updatedAt:new Date().toISOString()},
@@ -93,7 +93,7 @@ export function createArcPreview(references:{apps?:NonNullable<ChatMessage['apps
     const previous=record.requests.get(requestId);if(previous)return previous.text===text&&previous.modelId===modelId?json({run:previous.run},202):json({error:"REQUEST_ID_CONFLICT"},409);
     if(record.runs.some(run=>["queued","thinking","working"].includes(run.status)))return json({error:"CHAT_BUSY_OR_LIMIT_REACHED"},409);
     if(record.messages.length>=50)return json({error:"CHAT_LIMIT_REACHED"},429);
-    const run=makeRun();record.reads=0;record.runs.unshift(run);record.requests.set(requestId,{text,modelId,run});record.messages.push({id:run.id+":user",role:"user",text,...(Array.isArray(input.skillIds)?{skills:input.skillIds.flatMap(id=>{const skill=skills.get(String(id));return skill?[{id:skill.id,name:skill.name}]:[];})}:{}),...(Array.isArray(input.appIds)?{apps:input.appIds.flatMap(id=>references.apps?.filter(app=>app.id===id)||[])}:{}),...(Array.isArray(input.employeeIds)?{teammates:input.employeeIds.flatMap(id=>references.employees?.filter(employee=>employee.id===id)||[])}:{})});
+    const run=makeRun();record.reads=0;record.runs.unshift(run);record.requests.set(requestId,{text,modelId,run});record.messages.push({id:run.id+":user",role:"user",text,...(Array.isArray(input.attachmentIds)?{attachments:input.attachmentIds.flatMap(id=>{const file=references.attachments?.get(String(id));return file?[file.meta]:[];})}:{}),...(input.location?{location:input.location as ChatMessage["location"]}:{}),...(Array.isArray(input.skillIds)?{skills:input.skillIds.flatMap(id=>{const skill=skills.get(String(id));return skill?[{id:skill.id,name:skill.name}]:[];})}:{}),...(Array.isArray(input.appIds)?{apps:input.appIds.flatMap(id=>references.apps?.filter(app=>app.id===id)||[])}:{}),...(Array.isArray(input.employeeIds)?{teammates:input.employeeIds.flatMap(id=>references.employees?.filter(employee=>employee.id===id)||[])}:{})});
     record.session={...record.session,title:text.slice(0,64),modelId,updatedAt:new Date().toISOString()};return json({run},202);
   }};
 }

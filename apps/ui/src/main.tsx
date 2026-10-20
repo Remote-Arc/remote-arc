@@ -1,3 +1,4 @@
+import './arc-composer.css';
 import './arc-references.css';
 import './scrollbars.css';
 import type {ArcMention} from './arc-skill-mentions.js';

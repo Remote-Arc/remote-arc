@@ -60,6 +60,8 @@ A managed device process that returns a real `process_id` and `status: running` 
 
 `arc-task-state.ts` reconstructs goals, discoveries, learned schemas and completed/failed actions from persisted conversation history. `arc-chat-context.ts` fits a bounded prompt, retaining useful current observations before optional material. Large results are shortened structurally so resource identifiers survive; excerpts do not authorize inventing omitted data.
 
+Run-context fitting counts decoded message content rather than the extra JSON escaping used to transport it. Optional catalogs, old schemas and prose are shortened before the action ledger and device handles needed to continue. Financial reservations retain their independent conservative ceiling; this does not raise a plan's run allowance or funding cap.
+
 Discovery reuse currently covers connected Apps for 120 seconds, device discovery for 20 seconds, and App schemas / skill instructions / skill catalog for 30 minutes. Repeated identical discovery within the same run reuses its observation. Actual actions still run live authorization checks. Discovery reuse is an optimization, not a lease on access to a revoked account.
 
 Cross-chat memory is Arc-owned, not the consumer memory of ChatGPT or Claude. Current limits in `packages/protocol/src/index.ts` are 100 short facts, 40 work summaries, 768 bytes per fact, 2,048 bytes per work summary, and 4,000 bytes of retrieved memory context. Personal memory is encrypted with account-bound associated data. Users can inspect/edit/delete facts, remove work entries and disable retrieval. Device registry status is separate from remembered facts. Do not store passwords or API keys in memory.

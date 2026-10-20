@@ -222,3 +222,5 @@
 :root[data-surface="product"][data-theme] .centerCard :is(h1,h2){color:var(--text)}
 :root[data-surface="product"][data-theme] .centerCard p{color:var(--muted)}
 :root[data-surface="product"][data-theme] .centerShell :is(.brandWords b,.eyebrow){color:var(--text)}
+
+.arcWorkTeamEntry{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;border:1px solid var(--dash-line);border-radius:12px;margin:24px 0}.arcWorkTeamEntry strong{display:block;font-size:15px}.arcWorkTeamEntry span{display:block;color:var(--dash-muted);font-size:13px;margin-top:6px}@media(max-width:640px){.arcWorkTeamEntry{align-items:flex-start;flex-direction:column}}

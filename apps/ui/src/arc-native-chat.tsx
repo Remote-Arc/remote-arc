@@ -15,9 +15,9 @@ import type {ArcReceipt} from '@remotearc/protocol';
 import './arc-chat-surface.css';
 import './arc-verification.css';
 
-type Props={navigationOpen:boolean;onNavigationChange:(open:boolean)=>void;activeTab:string;onOpenChat:()=>void;tr:(en:string,zh:string)=>string;accountId:string;accountName?:string|null;onlineDevices:number;totalDevices?:number;initialPrompt?:string;initialReferences?:ArcMention[];initialSessionId?:string;onOpenGoals:()=>void;onOpenRoutines:()=>void;onOpenActivity:()=>void;onOpenSettings:()=>void;onManageApps:()=>void;onManageDevices:()=>void;onManageSkills?:()=>void};
+type Props={navigationOpen:boolean;onNavigationChange:(open:boolean)=>void;activeTab:string;onOpenChat:()=>void;tr:(en:string,zh:string)=>string;accountId:string;accountName?:string|null;onlineDevices:number;totalDevices?:number;initialPrompt?:string;initialReferences?:ArcMention[];initialSessionId?:string;onOpenGoals:()=>void;onOpenRoutines:()=>void;onOpenActivity:()=>void;onOpenSettings:()=>void;onManageApps:()=>void;onManageDevices:()=>void;onManageTeams?:()=>void;onManageSkills?:()=>void};
 const plugins=[remarkGfm];
-export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpenChat,tr,accountId,accountName,onlineDevices,totalDevices=onlineDevices,initialPrompt,initialReferences,initialSessionId,onOpenGoals,onOpenRoutines,onOpenActivity,onOpenSettings,onManageApps,onManageDevices,onManageSkills}:Props){
+export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpenChat,tr,accountId,accountName,onlineDevices,totalDevices=onlineDevices,initialPrompt,initialReferences,initialSessionId,onOpenGoals,onOpenRoutines,onOpenActivity,onOpenSettings,onManageApps,onManageDevices,onManageSkills,onManageTeams}:Props){
  const atmosphereId=useId();
  const chat=useArcChat(accountId),[draft,setDraft]=useState(initialPrompt||''),[searchOpen,setSearchOpen]=useState(false),[search,setSearch]=useState(''),[sidebarMount,setSidebarMount]=useState<Element|null>(null);
  const mobileOpen=navigationOpen,setMobileOpen=onNavigationChange;
@@ -46,6 +46,7 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
   <div className="arcSidebarSectionTitle">{tr('WORKSPACE','工作空间')}</div><button type="button" className="arcSidebarPrimary" aria-label={tr('New chat','新对话')} title={tr('New chat','新对话')} onClick={beginNew}><Icon name="add"/><span>{tr('New chat','新对话')}</span></button>
   <button type="button" className="arcSidebarAction" aria-label={tr('Tasks','任务')} title={tr('Tasks','任务')} aria-current={activeTab==='agent-goals'?'page':undefined} onClick={()=>navigate(onOpenGoals)}><Icon name="tasks"/><span>{tr('Tasks','任务')}</span></button>
 
+  {onManageTeams&&<button type="button" className="arcSidebarAction" aria-label={tr('AI teams','AI 团队')} title={tr('AI teams','AI 团队')} aria-current={activeTab==='agent-teams'?'page':undefined} onClick={()=>navigate(onManageTeams)}><Icon name="users"/><span>{tr('AI teams','AI 团队')}</span></button>}
   <button type="button" className="arcSidebarAction" aria-label={tr('Activity','活动')} title={tr('Activity','活动')} aria-current={activeTab==='agent-activity'?'page':undefined} onClick={()=>navigate(onOpenActivity)}><Icon name="activity"/><span>{tr('Activity','活动')}</span></button>
   <div className="arcSidebarSectionTitle">{tr('TOOLS','工具')}</div>
   <button type="button" className="arcSidebarAction" aria-label={tr('Apps','应用')} title={tr('Apps','应用')} aria-current={activeTab==='agent-apps'?'page':undefined} onClick={()=>navigate(onManageApps)}><Icon name="apps"/><span>{tr('Apps','应用')}</span></button>

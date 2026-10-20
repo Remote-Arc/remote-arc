@@ -56,6 +56,7 @@ The run status records whether execution ended. Verify the answer and its eviden
 
 - **Connected Apps:** account-owned, typed provider operations with live scope checks, stable request identities and recorded outcomes.
 - **Tasks and routines:** saved goals, schedules, leases, bounded hosted runs and result history. Connect also supports deterministic background commands and checks.
+- **Verified results:** optional exact account/resource contracts, independent result checks and source-derived execution receipts. See the [user guide](https://remotearc.app/docs/trust) and [feature map](./docs/feature-map/README.md).
 - **Skills:** reusable cloud instructions and imported SKILL.md references. A skill does not install its required engine, scripts or dependencies.
 - **Context and memory:** relevant prior observations and learned IDs within a chat, plus bounded encrypted personal notes and work summaries users can inspect and delete.
 - **Device fleet:** filter by ownership, tools, workspace and availability before balancing fresh capacity. Projects are not moved implicitly.
@@ -83,7 +84,7 @@ flowchart TB
 
 The model is the reasoning component; Remote Arc owns the execution and continuity layer. Provider data, skill text, files and memory remain untrusted observations. Unknown external effects are retained for inspection and are not blindly repeated. A completed run is not a universal semantic proof of success; inspect the returned evidence.
 
-Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. Custom groups of autonomous AI teammates and arbitrary external-chat wakeup are future integrations, not current guarantees.
+Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. Configurable employees, dedicated Team conversations and cross-run goal continuation are separate planned capabilities; see the [product/runtime design](./docs/ai-teams-and-persistent-work.md). Ordinary Connect cannot wake an arbitrary external chat.
 
 ## Quick start
 

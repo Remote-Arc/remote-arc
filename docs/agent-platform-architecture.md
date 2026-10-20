@@ -58,6 +58,14 @@ A malformed JSON model response can receive one bounded correction per run only 
 
 A managed device process that returns a real `process_id` and `status: running` is acknowledged ongoing work. Arc retains the handle and can inspect status/output rather than treating the acknowledgement as an unknown dispatch. An identical start while that process is still running reuses its handle; a confirmed exit permits a new authorized run. A missing acknowledgement remains uncertain and is not blindly replayed. A process may outlive the bounded hosted run, so the answer must distinguish ongoing work from a verified completed artifact.
 
+## Explicit checks and source-derived receipts
+
+Arc Chat's **Verified task** entrance freezes an encrypted, strict account/resource/action contract for one run. Initial contracts are bounded Gmail/Outlook excerpt retrieval, exact GitHub issue creation plus independent full-field read-back, and exact Vercel deployment readiness. The server checks all required read/write operations before creation and enforces the scope again before every dispatch, including restored decisions. Skill or provider content cannot extend it.
+
+Typed proof is extracted from the original provider result before context shortening and sealed in the execution journal. A terminal receipt derives check status, acknowledged App changes, original evidence IDs/times/URLs and recovery action from that account-owned journal. Historical receipts restore their own run if its user scope has left the recent chat window. Assistant prose is never evidence. A selected contract with missing/failed checks cannot enter runtime success; unknown effects remain pending inspection.
+
+The receipt certifies only its declared checks. Inbox retrieval does not grade summary quality; provider READY does not verify application functionality. An uncontracted runtime success remains pending goal verification. Creation acknowledgement alone yields partial completion. An uncertain write cannot be replayed, and an issue is not automatically closed as compensation. See the [feature map](feature-map/README.md), versioned skill handbooks and their linked regressions. These contracts are currently native Arc features; Connect retains the shared authorization/dispatch layer without a fabricated promise of this native receipt contract.
+
 ## Context reuse and memory
 
 `arc-task-state.ts` reconstructs goals, discoveries, learned schemas and completed/failed actions from persisted conversation history. `arc-chat-context.ts` fits a bounded prompt, retaining useful current observations before optional material. Large results are shortened structurally so resource identifiers survive; excerpts do not authorize inventing omitted data.
@@ -94,6 +102,12 @@ Some built-in cloud workflows execute supported read-only tools. Other skills de
 
 Slack is currently a user-authorized App tool connection, not a DM/mention conversation entrance. The proposed Bot should map each linked initiating user and thread into the same Arc runtime, without inheriting the installer's private account permissions. See the [Slack entrance design and acceptance requirements](slack-agent-entrypoint.md).
 
+## Persistent goals and conversational AI teams
+
+These are separate planned product capabilities. Employees have names, avatars, models, responsibilities and permission ceilings; they can talk directly with users and communicate in Team or authorized cross-Team rooms. A dedicated AI Teams page must expose configuration, conversations, related outcomes and complete traceable message/action/usage history. Tasks provides an entrance and shared outcomes, not a mandatory overnight mode or the whole product UI.
+
+Persistent execution concerns the outcome, aggregate Credits cap, checkpoints and acceptance across multiple bounded runs. A deadline is optional. Idle employees do not reason, and every coordinator/worker/verifier shares the root task budget and intersected authority. Current native arc-work.ts still creates one bounded run per occurrence. Reuse the existing automation registry, leases, billing ledger and planned-goal primitives when implementing continuation rather than building another execution engine. [Detailed product/runtime design](ai-teams-and-persistent-work.md).
+
 ## Billing, configuration and operating limits
 
 Hosted model use reserves and settles Credits and rated cost. Unknown outcomes retain reservations instead of being counted as free. Account plan versions and commercial catalog configuration live in D1; secrets live in protected environment/Worker secrets. Environment variables remain bootstrap/feature switches, not the operator pricing database.
@@ -112,7 +126,7 @@ Stripe Checkout collects payment; verified webhook/payment state grants the subs
 | User experience | One working indicator and final answer in chat; execution details fetched on demand in Activity |
 | Operations | Model usage and funding pools, trials, payment records, reviewed rewards and service health in Admin |
 | Tests | Shared provider contracts, argument correction, duplicate prevention, context reuse, task scheduling, memory isolation, funding and billing lifecycle |
-| Protected acceptance | Real model calls against synthetic mail, GitHub creation, successful/failed deployments, a scheduled Task through completion, and a selected imported Skill that creates its specified result; each suite is capped at USD 0.04 |
+| Protected acceptance | Real model calls against synthetic mail, GitHub creation, successful/failed deployments, a scheduled Task through completion, and a selected imported Skill that creates its specified result; the evaluation enforces its explicit operator-approved ledger cap |
 
 Fixtures test actual adapters/controller paths with controlled provider responses; they do not certify every real customer account, provider outage or all possible task categories. A production release must pass exact-commit CI and the applicable acceptance checks. Real customer actions require their authorization. Full two-way multi-agent collaboration, arbitrary engine installation and unconditional exactly-once third-party writes are not claimed.
 

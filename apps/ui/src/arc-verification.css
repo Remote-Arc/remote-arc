@@ -1,7 +1,7 @@
 .arcVerifiedTaskLauncher { margin:8px 4px 0; }
 .arcVerifiedTaskLauncher>button { border:0;background:none;color:var(--dash-muted);font-size:12px;cursor:pointer;padding:5px 8px; }
 .arcVerifiedTaskLauncher button:disabled { opacity:.5;cursor:default; }
-.arcVerifiedDialog { width:min(540px,calc(100vw - 32px));max-height:85dvh;box-sizing:border-box;padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--dash-surface);color:var(--text);box-shadow:0 24px 80px #0005; }
+.arcVerifiedDialog { text-align:left;width:min(540px,calc(100vw - 32px));max-height:85dvh;box-sizing:border-box;padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--dash-surface);color:var(--text);box-shadow:0 24px 80px #0005; }
 .arcVerifiedDialog::backdrop { background:#0007; }
 .arcVerifiedDialogHeader { display:flex;align-items:center;justify-content:space-between;gap:16px; }
 .arcVerifiedDialogHeader h2 { font-size:20px;margin:0; }

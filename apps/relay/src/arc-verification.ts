@@ -38,7 +38,7 @@ export function arcVerificationToolError(scope:ArcVerification|undefined,tool:st
  if(tool==='call_app'&&input.connectionId===scope.connectionId){
   if(scope.kind==='github_issue'){
    if(input.operation==='issues.create')allowed=same(call,{repo:scope.repo,title:scope.title,body:scope.body})||Object.keys(call).length===3&&call.repo===scope.repo&&call.title===scope.title&&call.body===scope.body;
-   if(input.operation==='issues.get')allowed=Object.keys(call).length===2&&call.repo===scope.repo&&history.some(m=>m.tool==='call_app'&&object(m.arguments).operation==='issues.create'&&m.proof?.checks.some(c=>c.code==='issue_acknowledged'&&c.status==='passed')&&m.proof.resource===String(call.number));
+   if(input.operation==='issues.get')allowed=Object.keys(call).length===2&&call.repo===scope.repo&&history.some(m=>m.role==='tool'&&m.status==='completed'&&m.tool==='call_app'&&object(m.arguments).connectionId===scope.connectionId&&object(m.arguments).operation==='issues.create'&&object(object(m.arguments).arguments).repo===scope.repo&&m.proof?.checks.some(c=>c.code==='issue_acknowledged'&&c.status==='passed')&&m.proof.resource===String(call.number));
   }
   if(scope.kind==='deployment'&&input.operation==='deployments.get')allowed=Object.keys(call).every(key=>['deploymentId','teamId'].includes(key))&&call.deploymentId===scope.deploymentId&&(call.teamId??'')===(scope.teamId??'');
  }

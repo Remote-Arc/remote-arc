@@ -6,6 +6,7 @@ let modelCalls=0;
 const expandedPaths=process.argv.includes('--expanded-paths');
 const injectInvalidDecision=process.argv.includes('--invalid-decision');let invalidSent=false,awaitingRepair=false;
 process.env.OPENAI_API_KEY='synthetic-eval-fixture-not-a-secret';
+process.argv.push('--scripted-fixture');
 globalThis.fetch=(async(url,init)=>{
  assert.equal(String(url),'https://api.openai.com/v1/responses');modelCalls++;
  const request=JSON.parse(String(init?.body)),context=JSON.parse(request.input[1].content),connectionId=context.connectionIndex[0].id;
@@ -18,7 +19,17 @@ globalThis.fetch=(async(url,init)=>{
  const reply=(message:string)=>({decision:'reply',tool:'none',arguments_json:'{}',message});
  const tool=(name:string,args:unknown)=>({decision:'tool',tool:name,arguments_json:JSON.stringify(args),message:'Working'});
  let value;
- if(context.objective.includes('邮件')){
+ if(context.verificationScope){
+  const scope=context.verificationScope;
+  if(!observations.some(o=>o.tool==='read_skill'))value=tool('read_skill',{id:context.skillReferences[0].id});
+  else if(scope.kind==='inbox')value=observations.some(o=>o.tool==='read_inbox')?reply('Friday 10:00 project review; invoice INV-42 due Tuesday.'):tool('read_inbox',{connectionId:scope.connectionId,limit:scope.limit});
+  else if(scope.kind==='github_issue'){
+   if(!observations.some(o=>o.arguments.operation==='issues.create'))value=tool('call_app',{connectionId:scope.connectionId,operation:'issues.create',arguments:{repo:scope.repo,title:scope.title,body:scope.body}});
+   else if(!observations.some(o=>o.arguments.operation==='issues.get'))value=tool('call_app',{connectionId:scope.connectionId,operation:'issues.get',arguments:{repo:scope.repo,number:42}});
+   else value=reply('Created and read back https://github.com/example/project/issues/42');
+  }else value=observations.some(o=>o.arguments.operation==='deployments.get')?reply('Exact deployment is READY: https://web-example.vercel.app'):tool('call_app',{connectionId:scope.connectionId,operation:'deployments.get',arguments:{deploymentId:scope.deploymentId}});
+ }
+ else if(context.objective.includes('邮件')){
   if(expandedPaths&&!observations.some(o=>o.tool==='list_apps'))value=tool('list_apps',{provider:'gmail'});
   else if(expandedPaths&&!observations.some(o=>o.tool==='describe_app'))value=tool('describe_app',{provider:'gmail',operation:'messages.list'});
   else if(expandedPaths&&!observations.some(o=>o.tool==='call_app'))value=tool('call_app',{connectionId,operation:'messages.list',arguments:{limit:5}});
@@ -49,7 +60,7 @@ globalThis.fetch=(async(url,init)=>{
   if(!request.text.format.schema.properties.decision.enum.includes('tool'))console.error('PREMATURE_CLOSING',JSON.stringify({objective:context.objective,remainingSteps:context.remainingSteps,systemBytes:Buffer.byteLength(request.input[0].content),userBytes:Buffer.byteLength(request.input[1].content),actions:observations,deviceIndex:context.deviceIndex}));
   assert(request.text.format.schema.properties.decision.enum.includes('tool'),'Incomplete work must still have a continuation decision');
  }
- return Response.json({id:'synthetic-response',status:'completed',output_text:JSON.stringify(value),usage:{input_tokens:expandedPaths?2700:2000,output_tokens:200}});
+ return Response.json({id:'synthetic-response',status:'completed',output_text:JSON.stringify(value),usage:{input_tokens:expandedPaths?2700:2000,output_tokens:200,input_tokens_details:{cached_tokens:expandedPaths?1500:1000}}});
 }) as typeof fetch;
 try{await import('./arc-task-live-eval.js');assert(modelCalls>=18);if(injectInvalidDecision){assert(invalidSent);assert.equal(awaitingRepair,false);}console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
-finally{globalThis.fetch=previousFetch;if(previousKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=previousKey;}
+finally{process.argv.splice(process.argv.lastIndexOf('--scripted-fixture'),1);globalThis.fetch=previousFetch;if(previousKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=previousKey;}

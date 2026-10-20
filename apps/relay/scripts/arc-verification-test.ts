@@ -3,6 +3,7 @@ import {arcVerificationSchema,arcVerificationToolError,arcObservationProof,arcRe
 import {ARC_VERIFICATION_SKILLS} from '../src/arc-verification-skills.js';
 import {runArcStep} from '../src/arc-chat-runtime.js';
 import {seal} from '../src/app-oauth.js';
+import {arcContext} from '../src/arc-chat.js';
 import type {ArcVerification} from '@remotearc/protocol';
 
 // Called by arc-chat-test against its real authenticated API, SQLite journal,
@@ -20,6 +21,11 @@ export async function testArcVerification({sql,env,api,create,decode,decisions,t
  assert.equal((await api('sessions/'+session+'/messages','POST',{text:'Verify',requestId,verification:{...issue,connectionId:other}})).status,403,'Account ownership is checked before run creation');
  assert.equal((await api('sessions/'+session+'/messages','POST',{text:'Verify',requestId,verification:{...issue,connectionId:gmail}})).status,403,'Provider must match the selected workflow');
  assert.equal((await api('sessions/'+session+'/messages','POST',{text:'Verify',requestId,verification:{...inbox,limit:100}})).status,400);
+ // Both permissions must be present before the write is even scheduled.
+ sql.prepare('UPDATE app_connections SET scopes_json=? WHERE id=?').run(JSON.stringify(['repo']),github);
+ assert.equal((await api('sessions/'+session+'/messages','POST',{text:'Verify',requestId,verification:issue})).status,403,'Missing read-back scope blocks creation before a run exists');
+ assert.equal(sql.prepare('SELECT COUNT(*) AS count FROM arc_chat_runs WHERE session_id=?').get(session).count,0);
+ sql.prepare('UPDATE app_connections SET scopes_json=? WHERE id=?').run(JSON.stringify(['repo','read:user']),github);
  let writes=0,reads=0,state='READY',readbackBody=issue.body,unknownWrite=false;
  const fetchBefore=globalThis.fetch;
  globalThis.fetch=(async(input,init)=>{
@@ -48,6 +54,23 @@ export async function testArcVerification({sql,env,api,create,decode,decisions,t
   assert(receipt.evidence.some((e:any)=>e.status==='failed'),'Scope rejection is retained');
   await runArcStep(env,first.run.id);assert.equal(writes,1,'Restoring a finished run never repeats the write');
   assert(!JSON.stringify(sql.prepare('SELECT body_ciphertext FROM arc_chat_messages WHERE id=?').get(first.run.id+':user')).includes(issue.body),'Scope stays encrypted');
+  // The UI's recent-chat window is not the durable evidence window.
+  for(let index=0;index<110;index++){
+   const messageId=crypto.randomUUID(),createdAt=new Date(Date.now()+1000+index).toISOString();
+   sql.prepare("INSERT INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) VALUES(?,?,?,NULL,'assistant',?,?)").run(messageId,session,'owner',await seal(env,{text:'Later conversation'},arcContext('owner',messageId)),createdAt);
+  }
+  const retained=await decode(await api('sessions/'+session));
+  assert(!retained.messages.some((message:any)=>message.run_id===first.run.id));
+  assert.equal(retained.runs.find((run:any)=>run.id===first.run.id).receipt.status,'completed','Old receipts restore their own journal after newer conversation');
+  assert.equal((await api('sessions/'+session,'GET',undefined,'other')).status,404,'Another account cannot retrieve historical evidence');
+  // A decision persisted before a Worker restart still crosses the scope gate.
+  const restoredSession=await create(),restored=await send(issue,restoredSession);
+  const savedDecision=await seal(env,tool('call_app',{connectionId:github,operation:'issues.create',arguments:{repo:'other/repo',title:issue.title,body:issue.body}}),arcContext('owner',restored.run.id+':0:decision'));
+  sql.prepare("INSERT INTO arc_chat_steps(run_id,step,status,decision_ciphertext,created_at,updated_at) VALUES(?,0,'model_complete',?,?,?)").run(restored.run.id,savedDecision,at,at);
+  const writesBeforeRestore=writes;
+  await runArcStep(env,restored.run.id);assert.equal(writes,writesBeforeRestore,'Restored out-of-scope decisions never dispatch');
+  decisions.push(reply('The requested scope prevents that action.'));await finish(restored.run.id);
+  assert.equal((await getReceipt(restoredSession)).status,'pending_verification');
   readbackBody='Provider content differs';const mismatchSession=await create(),mismatch=await send(issue,mismatchSession);
   decisions.push(tool('call_app',{connectionId:github,operation:'issues.create',arguments:{repo:issue.repo,title:issue.title,body:issue.body}}),tool('call_app',{connectionId:github,operation:'issues.get',arguments:{repo:issue.repo,number:72}}),reply('Everything succeeded.'));
   assert.equal((await finish(mismatch.run.id)).error_code,'ARC_VERIFICATION_FAILED');assert.equal((await getReceipt(mismatchSession)).status,'partial','Assistant prose cannot override an actual read-back mismatch');

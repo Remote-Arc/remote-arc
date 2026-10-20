@@ -29,8 +29,8 @@ export async function appendArcMessage(env:ArcEnv,run:ArcRun,role:'assistant'|'t
  const id=run.id+':'+suffix;
  await env.DB.prepare(`INSERT INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,?5,?6,?7 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) ON CONFLICT(id) DO UPDATE SET body_ciphertext=excluded.body_ciphertext`).bind(id,run.session_id,run.user_id,run.id,role,await seal(env,body,arcContext(run.user_id,id)),stamp()).run();
 }
-export async function arcMessages(env:ArcEnv,userId:string,sessionId:string){
- const rows=(await env.DB.prepare(`SELECT id,role,body_ciphertext,created_at,run_id FROM (SELECT * FROM arc_chat_messages WHERE session_id=?1 AND user_id=?2 ORDER BY created_at DESC,id DESC LIMIT 100) ORDER BY created_at,id`).bind(sessionId,userId).all<{id:string;role:string;body_ciphertext:string;created_at:string;run_id:string|null}>()).results;
+export async function arcMessages(env:ArcEnv,userId:string,sessionId:string,runId?:string){
+ const rows=(await env.DB.prepare(`SELECT id,role,body_ciphertext,created_at,run_id FROM (SELECT * FROM arc_chat_messages WHERE session_id=?1 AND user_id=?2 AND (?3 IS NULL OR run_id=?3) ORDER BY created_at DESC,id DESC LIMIT ?4) ORDER BY created_at,id`).bind(sessionId,userId,runId??null,runId?512:100).all<{id:string;role:string;body_ciphertext:string;created_at:string;run_id:string|null}>()).results;
  return Promise.all(rows.map(async({body_ciphertext,...row})=>({...row,...await unseal<ArcMessageBody>(env,body_ciphertext,arcContext(userId,row.id))})));
 }
 export const publicRun=(run:ArcRun)=>({id:run.id,status:run.status,step:run.step,tokensUsed:run.tokens_used,maxTokens:run.max_tokens,maxSteps:run.max_steps,deadline:run.deadline,error:run.error_code,createdAt:run.created_at});
@@ -38,7 +38,15 @@ async function snapshot(env:ArcEnv,userId:string,sessionId:string){
  const session=await arcSession(env,userId,sessionId);
  const runs=(await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE session_id=?1 AND user_id=?2 ORDER BY created_at DESC LIMIT 20').bind(sessionId,userId).all<ArcRun>()).results;
  const messages=await arcMessages(env,userId,sessionId);
- return{session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:runs.map(run=>({...publicRun(run),...(!arcActive(run.status)?{receipt:arcReceipt(run,messages)}:{})}))};
+ // A receipt must not disappear when later turns move its original scope out
+ // of the 100-message chat window. Restore that run's own encrypted journal;
+ // 512 exceeds the current maximum of 32 tool steps plus user/final messages.
+ const publicRuns=await Promise.all(runs.map(async run=>{
+  if(arcActive(run.status))return publicRun(run);
+  const journal=messages.some(message=>message.run_id===run.id&&message.role==='user')?messages:await arcMessages(env,userId,sessionId,run.id);
+  return {...publicRun(run),receipt:arcReceipt(run,journal)};
+ }));
+ return{session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
 }
 async function body(request:Request){
  if(request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json')throw new ArcError('JSON_REQUIRED',415);

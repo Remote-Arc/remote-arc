@@ -6,7 +6,7 @@ export type ChatMessage={id:string;run_id?:string|null;role:'user'|'assistant'|'
 export type ChatRun={id:string;status:string;step:number;tokensUsed:number;maxTokens:number;maxSteps:number;deadline:string;error:string|null;receipt?:ArcReceipt};
 export type ArcAccess={status:'eligible'|'active'|'expired'|'paid';canUse:boolean;funded?:boolean;trialDays?:number;trialCredits?:number;creditsAvailable?:number|null;creditsPending?:number|null;daysRemaining:number;dailyUsedPercent:number;expiresAt:string|null};
 export type ChatService={enabled:boolean;access:ArcAccess;models:{id:string;label:string;provider:string;premium:boolean;configured:boolean;requiresPaid?:boolean;inputCreditsPer1000?:number;outputCreditsPer1000?:number}[];limits:{maxSteps:number;maxTokens:number;maxSeconds:number};preview?:boolean};
-type Snapshot={session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
+type Snapshot={pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
 const active=(run:ChatRun|undefined)=>Boolean(run&&['queued','thinking','working'].includes(run.status));
 export async function arcRequest<T>(path:string,init?:RequestInit,signal?:AbortSignal):Promise<T>{
  const response=await fetch('/api/arc/'+path,{credentials:'same-origin',...init,signal,headers:{accept:'application/json',...(init?.body?{'content-type':'application/json'}:{}),...init?.headers}});
@@ -30,16 +30,16 @@ export function useArcChat(accountId:string){
   catch(e){if(mounted.current&&generation.current===version)setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}
   finally{if(mounted.current&&generation.current===version)setBusy(false);}
  },[]);
- const run=current?.runs[0],running=active(run),sessionId=current?.session.id;
+ const run=current?.runs[0],running=active(run),sessionId=current?.session.id,watching=running||Boolean(current?.pendingDelegations);
  useEffect(()=>{
-  if(!sessionId||!running)return;const controller=new AbortController();poll.current=controller;const version=generation.current;let timer:ReturnType<typeof setTimeout>;
+  if(!sessionId||!watching)return;const controller=new AbortController();poll.current=controller;const version=generation.current;let timer:ReturnType<typeof setTimeout>;
   const tick=async()=>{
-   try{const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(sessionId),undefined,controller.signal);if(controller.signal.aborted||generation.current!==version)return;setCurrent(value);if(!active(value.runs[0])){void refreshSessions().catch(()=>{});void refreshService().catch(()=>{});return;}}
+   try{const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(sessionId),undefined,controller.signal);if(controller.signal.aborted||generation.current!==version)return;setCurrent(value);if(!active(value.runs[0])&&!value.pendingDelegations){void refreshSessions().catch(()=>{});void refreshService().catch(()=>{});return;}}
    catch(e){if(controller.signal.aborted)return;setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}
-   if(!controller.signal.aborted)timer=setTimeout(tick,1200);
+   if(!controller.signal.aborted)timer=setTimeout(tick,running?1200:5000);
   };
   timer=setTimeout(tick,500);return()=>{controller.abort();clearTimeout(timer);};
- },[sessionId,running,refreshSessions,refreshService]);
+ },[sessionId,running,watching,refreshSessions,refreshService]);
  const newChat=()=>{generation.current++;selected.current=null;poll.current?.abort();setCurrent(null);setBusy(false);setError('');pending.current=null;};
  async function send(text:string,skillIds:string[]=[],verification?:ArcVerification,appIds:string[]=[]){
    if(requestLock.current||running||!service?.enabled||!service.access.canUse)return false;requestLock.current=true;setBusy(true);setError('');const version=generation.current;

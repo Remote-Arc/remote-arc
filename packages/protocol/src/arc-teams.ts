@@ -1,5 +1,5 @@
 export type ArcEmployeeAvatar={kind:'initials';color:string}|{kind:'emoji';value:string;color:string}|{kind:'image';dataUrl:string};
-export type ArcEmployeeScope={appMode:'none'|'read'|'write';connectionIds:string[];deviceIds:string[];deviceTools:string[];skillIds:string[]};
+export type ArcEmployeeScope={appMode:'none'|'read'|'write';connectionIds:string[];deviceIds:string[];deviceTools:string[];skillIds:string[];delegationTeamIds?:string[]};
 export type ArcEmployeeProfile={name:string;responsibility:string;instructions:string;modelId:string;avatar:ArcEmployeeAvatar;scope:ArcEmployeeScope};
 export type ArcEmployee=ArcEmployeeProfile&{id:string;version:number;status:'active'|'archived';createdAt:string;updatedAt:string};
 export type ArcTeamProfile={name:string;purpose:string;employeeIds:string[];coordinatorId:string|null};

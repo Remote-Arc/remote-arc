@@ -1,4 +1,6 @@
 import {z} from 'zod';
+import {syncArcDispatchReports} from './arc-dispatch-reports.js';
+import {arcDispatchContext,type ArcDispatchData} from './arc-dispatch-context.js';
 import {getSessionUser,sha256Hex} from './auth.js';
 import {isTrustedDashboardMutation} from './dashboard-origin.js';
 import {seal,unseal} from './app-oauth.js';
@@ -36,17 +38,20 @@ export async function createArcRoom(env:ArcEnv,userId:string,raw:unknown){
  const row=await arcRoom(env,userId,input.id);if(row.creation_hash!==hash)throw new ArcError('REQUEST_ID_CONFLICT',409);return publicRoom(env,row);
 }
 export async function wakeArcRoom(env:ArcEnv,roomId:string){if(!env.ARC_RUNTIME)throw new ArcError('ARC_NOT_CONFIGURED',503);const response=await env.ARC_RUNTIME.getByName('room-'+roomId).fetch('https://arc/room',{method:'POST',body:JSON.stringify({roomId})});if(!response.ok)throw new ArcError('ARC_ROOM_START_UNAVAILABLE',503);}
-export async function enqueueArcRoomMessage(env:ArcEnv,userId:string,roomId:string,raw:unknown){
+export async function enqueueArcRoomMessage(env:ArcEnv,userId:string,roomId:string,raw:unknown,sourceDispatchId?:string){
+ let delegation:ArcDispatchData|null=null;
+ if(sourceDispatchId){const record=await env.DB.prepare('SELECT input_ciphertext FROM arc_dispatches WHERE id=?1 AND user_id=?2 AND room_id=?3').bind(sourceDispatchId,userId,roomId).first<{input_ciphertext:string}>();if(!record)throw new ArcError('ARC_DISPATCH_AUTHORITY_REQUIRED',403);delegation=await unseal<ArcDispatchData>(env,record.input_ciphertext,arcDispatchContext(userId,sourceDispatchId));}
  const input=z.object({requestId:id,text:z.string().trim().min(1).max(6000),employeeIds:z.array(id).min(1).max(20).optional()}).strict().parse(raw),room=await arcRoom(env,userId,roomId),members=await roomEmployees(env,room),recipients=input.employeeIds||members.map(member=>member.id);
+ if(delegation&&input.text!==delegation.goal)throw new ArcError('ARC_DISPATCH_AUTHORITY_MISMATCH',403);
  if(!recipients.length||new Set(recipients).size!==recipients.length||recipients.some(id=>!members.some(member=>member.id===id)))throw new ArcError('ARC_ROOM_MEMBERS_INVALID');
  for(const member of members.filter(member=>recipients.includes(member.id)))await arcModelAccess(env,userId,room.organization_id,member.modelId);
  const hash=await sha256Hex(JSON.stringify([roomId,input.text,[...recipients].sort()])),previous=await env.DB.prepare('SELECT id,input_hash,room_id FROM arc_room_turns WHERE user_id=?1 AND request_id=?2').bind(userId,input.requestId).first<{id:string;input_hash:string;room_id:string}>();
  if(previous){if(previous.input_hash!==hash||previous.room_id!==roomId)throw new ArcError('REQUEST_ID_CONFLICT',409);await wakeArcRoom(env,roomId);return{turnId:previous.id,queued:true};}
  const turnId=crypto.randomUUID(),messageId='room-'+turnId+':user',at=stamp();
  await env.DB.batch([
-  env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,NULL,'user',?4,?5 WHERE NOT EXISTS(SELECT 1 FROM arc_room_turns WHERE user_id=?3 AND request_id=?6) AND (SELECT COUNT(*) FROM arc_room_turns WHERE room_id=?2 AND status IN ('queued','working'))<100`).bind(messageId,roomId,userId,await seal(env,{text:input.text},arcContext(userId,messageId)),at,input.requestId),
-  env.DB.prepare(`INSERT OR IGNORE INTO arc_room_turns(id,user_id,room_id,request_id,input_hash,user_message_id,status,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,'queued',?7,?7 WHERE EXISTS(SELECT 1 FROM arc_chat_messages WHERE id=?6 AND user_id=?2)`).bind(turnId,userId,roomId,input.requestId,hash,messageId,at),
-  ...recipients.map(employeeId=>env.DB.prepare(`INSERT OR IGNORE INTO arc_room_deliveries(id,user_id,turn_id,room_id,source_message_id,employee_id,depth,status,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,0,'queued',?7,?7 WHERE EXISTS(SELECT 1 FROM arc_room_turns WHERE id=?3 AND user_id=?2)`).bind(crypto.randomUUID(),userId,turnId,roomId,messageId,employeeId,at)),
+  env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,NULL,'user',?4,?5 WHERE NOT EXISTS(SELECT 1 FROM arc_room_turns WHERE user_id=?3 AND request_id=?6) AND (SELECT COUNT(*) FROM arc_room_turns WHERE room_id=?2 AND status IN ('queued','working'))<100`).bind(messageId,roomId,userId,await seal(env,{text:input.text,...(sourceDispatchId?{delegatedFrom:{dispatchId:sourceDispatchId,sourceRunId:delegation!.sourceRunId}}:{})},arcContext(userId,messageId)),at,input.requestId),
+  env.DB.prepare(`INSERT OR IGNORE INTO arc_room_turns(id,user_id,room_id,request_id,input_hash,user_message_id,status,created_at,updated_at,source_dispatch_id) SELECT ?1,?2,?3,?4,?5,?6,'queued',?7,?7,?8 WHERE EXISTS(SELECT 1 FROM arc_chat_messages WHERE id=?6 AND user_id=?2)`).bind(turnId,userId,roomId,input.requestId,hash,messageId,at,sourceDispatchId||null),
+  ...recipients.map(employeeId=>env.DB.prepare(`INSERT OR IGNORE INTO arc_room_deliveries(id,user_id,turn_id,room_id,source_message_id,employee_id,depth,status,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,?8,'queued',?7,?7 WHERE EXISTS(SELECT 1 FROM arc_room_turns WHERE id=?3 AND user_id=?2)`).bind(crypto.randomUUID(),userId,turnId,roomId,messageId,employeeId,at,delegation?.depth||0)),
   env.DB.prepare('UPDATE arc_team_rooms SET updated_at=?1 WHERE session_id=?2 AND user_id=?3 AND EXISTS(SELECT 1 FROM arc_room_turns WHERE id=?4)').bind(at,roomId,userId,turnId),
  ]);
  const saved=await env.DB.prepare('SELECT id,input_hash FROM arc_room_turns WHERE user_id=?1 AND request_id=?2').bind(userId,input.requestId).first<{id:string;input_hash:string}>();if(!saved)throw new ArcError('ARC_ROOM_QUEUE_FULL',429);if(saved.input_hash!==hash)throw new ArcError('REQUEST_ID_CONFLICT',409);
@@ -60,8 +65,9 @@ export async function advanceArcRoom(env:ArcEnv,roomId:string):Promise<boolean>{
   env.DB.prepare(`UPDATE arc_room_deliveries SET status=CASE WHEN (SELECT status FROM arc_chat_runs WHERE id=run_id)='succeeded' THEN 'completed' WHEN (SELECT status FROM arc_chat_runs WHERE id=run_id)='cancelled' THEN 'cancelled' ELSE 'failed' END,updated_at=?1 WHERE room_id=?2 AND status='claimed' AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=run_id AND status NOT IN ${active})`).bind(at,roomId),
   env.DB.prepare(`UPDATE arc_room_turns SET status='completed',updated_at=?1 WHERE room_id=?2 AND status IN ('queued','working') AND NOT EXISTS(SELECT 1 FROM arc_room_deliveries WHERE turn_id=arc_room_turns.id AND status IN ('queued','claimed'))`).bind(at,roomId),
  ]);
+ const pendingAssignments=await syncArcDispatchReports(env,roomId);
  const running=await env.DB.prepare(`SELECT id,status FROM arc_chat_runs WHERE session_id=?1 AND status IN ${active}`).bind(roomId).first<{id:string;status:string}>();if(running){if(running.status==='queued')await wakeArcRun(env,running.id);return true;}
- const delivery=await env.DB.prepare(`SELECT d.* FROM arc_room_deliveries d JOIN arc_room_turns t ON t.id=d.turn_id WHERE d.room_id=?1 AND d.status='queued' AND t.status IN ('queued','working') ORDER BY t.rowid,d.rowid LIMIT 1`).bind(roomId).first<Delivery>();if(!delivery)return false;
+ const delivery=await env.DB.prepare(`SELECT d.* FROM arc_room_deliveries d JOIN arc_room_turns t ON t.id=d.turn_id WHERE d.room_id=?1 AND d.status='queued' AND t.status IN ('queued','working') ORDER BY t.rowid,d.rowid LIMIT 1`).bind(roomId).first<Delivery>();if(!delivery)return pendingAssignments;
  const members=await roomEmployees(env,room),employee=members.find(member=>member.id===delivery.employee_id);
  if(!employee){await env.DB.prepare("UPDATE arc_room_deliveries SET status='cancelled',updated_at=?1 WHERE id=?2 AND status='queued'").bind(at,delivery.id).run();return true;}
  try{await arcModelAccess(env,room.user_id,room.organization_id,employee.modelId);}catch{await env.DB.prepare("UPDATE arc_room_turns SET status='paused',updated_at=?1 WHERE id=?2 AND status IN ('queued','working')").bind(at,delivery.turn_id).run();return true;}

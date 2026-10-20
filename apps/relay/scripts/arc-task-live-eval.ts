@@ -21,6 +21,8 @@ for(const file of fs.readdirSync('migrations').filter(name=>name.endsWith('.sql'
 const db={prepare(query:string){const s=sql.prepare(query),bound=(args:any[])=>({async first(){return s.get(...args)||null;},async all(){return{results:s.all(...args)};},async run(){return this.runSync();},runSync(){const r=s.run(...args);return{success:true,meta:{changes:Number(r.changes)}};}});return{...bound([]),bind(...args:any[]){return bound(args);}};},async batch(statements:any[]){sql.exec('BEGIN IMMEDIATE');try{const rows=statements.map(statement=>statement.runSync());sql.exec('COMMIT');return rows;}catch(error){sql.exec('ROLLBACK');throw error;}}} as unknown as D1Database;
 const at=new Date().toISOString(),origin='https://agent.remotearc.app',nativeFetch=globalThis.fetch;
 const maximumUsd=0.04;
+// Fleet placement requires the full managed-process lifecycle, including stop.
+const processTools=['start_process','process_status','process_output','stop_process'];
 const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,APP_TOKEN_KEY:Buffer.alloc(32,8).toString('base64'),ENABLE_APPS:'1',GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_TRIAL_DAILY_MICROS:'10000',ARC_USER_DAILY_MICROS:'10000',ARC_PLATFORM_DAILY_MICROS:'40000',ARC_RUNTIME:{getByName:()=>({fetch:async()=>Response.json({started:true})})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:openAiAdapter(process.env.OPENAI_API_KEY,nativeFetch)}}} as unknown as ArcEnv;
 sql.prepare("UPDATE arc_funding_policy SET managed=1,enabled=1,mode='automatic',started_at=?,total_micros=40000,daily_micros=40000").run(at);
 const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
@@ -35,7 +37,7 @@ const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
 let currentCase='',reads=0,lists=0,unexpected=0,issueWrites=0,deploymentReads=0,processStarts=0,processChecks=0,processOutputs=0;
 env.REGISTRY={getByName:()=>({fetch:async(request:Request)=>{
  const route=new URL(request.url).pathname;
- if(route==='/devices')return Response.json(currentCase==='managed-process'?[{id:'eval-build-device',tools:['start_process','process_status','process_output'],status:'online'}]:[]);
+ if(route==='/devices')return Response.json(currentCase==='managed-process'?[{id:'eval-build-device',tools:processTools,status:'online'}]:[]);
  const input=await request.json() as any;
  if(currentCase!=='managed-process'||route!=='/call'||input.deviceId!=='eval-build-device'){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_DEVICE_ACTION');}
  const args=input.arguments;
@@ -75,7 +77,7 @@ try{
   const id='eval-'+item.id,connectionId=crypto.randomUUID(),token='eval-session-'+item.id,future=new Date(Date.now()+3600e3).toISOString();
   sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(id,id,id+'@example.invalid',at);
   sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex(token),id,future,at);
-  if(item.id==='managed-process')sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,last_seen,allowed_tools,workspace_roots) VALUES(?,?,?,\'linux\',?,?,?,?,?)').run('eval-build-device',id,'Synthetic build computer','synthetic-device-credential',at,at,JSON.stringify(['start_process','process_status','process_output']),JSON.stringify(['/fixture/project']));
+  if(item.id==='managed-process')sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,last_seen,allowed_tools,workspace_roots) VALUES(?,?,?,\'linux\',?,?,?,?,?)').run('eval-build-device',id,'Synthetic build computer','synthetic-device-credential',at,at,JSON.stringify(processTools),JSON.stringify(['/fixture/project']));
   sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at) VALUES(?,?,?,'fixture','Synthetic account','active',?,?,?,?,?)`).run(connectionId,id,item.provider,JSON.stringify(item.provider==='github'?['read','write']:['read']),JSON.stringify(item.scopes),await seal(env,{accessToken:'fixture-oauth',scopes:item.scopes,expiresAt:null},`app-token:${id}:${item.provider}:${connectionId}`),at,at);
   await activateArcTrial(env,id);
   const skill=item.id==='skill'?await saveArcSkill(env,id,{name:'Release verification',description:'Create the release evidence issue.',content:'# Release verification\nFor the requested issue in example/project, use exactly the title "Skill release verification" and include verified-smoke-7A in the body. Return the acknowledged issue link. Never claim a created issue without a provider response.'}):null;

@@ -34,14 +34,14 @@ export function arcObservation(tool:string|undefined,value:unknown):unknown{
 /** Fit task context to the remaining run allowance. Financial reservations keep
  * their independent, larger safety ceiling in model-gateway; that ceiling is
  * not a measure of tokens already consumed by the task. */
-export function fitArcContext(system:string,schema:Record<string,unknown>,context:ArcPromptContext,remaining:number){
+export function fitArcContext(system:string,schema:Record<string,unknown>,context:ArcPromptContext,remaining:number,outputLimit=2048){
  const value:ArcPromptContext={...context,messages:context.messages.map(m=>({...m})),memory:[...context.memory],deviceIndex:[...context.deviceIndex]};
  let resultLimit=3000;
  for(;;){
   // Models consume decoded message text, not the extra JSON escaping used to
   // transport it. UTF-8 bytes still give a conservative content token bound.
   const user=JSON.stringify(value),inputBound=new TextEncoder().encode(system).length+new TextEncoder().encode(user).length+bytes(schema)+1024;
-  const maxOutputTokens=Math.min(4096,remaining-inputBound);
+  const maxOutputTokens=Math.min(outputLimit,remaining-inputBound);
   if(maxOutputTokens>=1024&&bytes([system,user,schema])<=64000)return{user,maxOutputTokens,inputBound};
   // Drop optional and older material first. Keep the current objective and the
   // newest observations together, never turn truncated data into instructions.

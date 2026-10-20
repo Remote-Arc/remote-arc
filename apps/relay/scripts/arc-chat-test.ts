@@ -7,7 +7,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
 import {handleArcChat,arcMessages,arcContext,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
-import {runArcStep,validateArcDecision,executeArcTool,arcToolInputError} from '../src/arc-chat-runtime.js';
+import {runArcStep,validateArcDecision,executeArcTool,arcToolInputError,arcExecutionPrompt} from '../src/arc-chat-runtime.js';
 import {ARC_MODELS,prepareArcBudget} from '../src/arc-chat-model.js';
 import {nextArcOccurrence,arcScheduleSchema,createArcWork,manageArcWork} from '../src/arc-work.js';
 import {runAutomationTick} from '../src/automations.js';
@@ -128,6 +128,10 @@ try{
  assert.equal(row(truncated.run.id).status,'succeeded');assert.equal(truncatedEffects,2,'The completed write is not replayed');assert.equal(truncatedAttempts,4);assert.equal(row(truncated.run.id).tokens_used,660,'Truncated inference usage remains charged to the same run');
  let incompleteAttempts=0;env.MODEL_GATEWAY!.adapters.openai=async()=>{incompleteAttempts++;throw new ModelProviderError('MODEL_INCOMPLETE_RESPONSE',false,badUsage);};const boundedIncomplete=await send(await create(),'Stop after one incomplete-response repair.');assert.equal(await runArcStep(env,boundedIncomplete.run.id),true);assert.equal(await runArcStep(env,boundedIncomplete.run.id),false);assert.equal(row(boundedIncomplete.run.id).error_code,'MODEL_INCOMPLETE_RESPONSE');assert.equal(incompleteAttempts,2);assert.equal(row(boundedIncomplete.run.id).tokens_used,120);
 }finally{env.MODEL_GATEWAY!.adapters.openai=beforeRepairAdapter;}
+const discussionPrompt=arcExecutionPrompt({objective:'讨论 Remote Arc 的未来方向，详细比较方案与具体建议',messages:[],memory:[],deviceIndex:[]},24000,true)!;
+assert.equal(discussionPrompt.maxOutputTokens,4096,'Substantive discussion has room for a developed answer');
+const routinePrompt=arcExecutionPrompt({objective:'Check deployment readiness',messages:[],memory:[],deviceIndex:[]},24000,true)!;
+assert.equal(routinePrompt.maxOutputTokens,2048,'Routine decisions retain smaller financial reservations');
 const largeContext=fitArcContext('Bounded system',{}, {objective:'Keep this exact user objective',messages:Array.from({length:8},()=>({role:'tool',text:'Observed data',result:'资料'.repeat(12000)})),memory:[],deviceIndex:[]},96000);
 assert(largeContext);assert(new TextEncoder().encode('Bounded system'+largeContext.user+'{}').length<=64000,'Large plan allowances cannot bypass the decoded provider context ceiling');assert.equal(JSON.parse(largeContext.user).objective,'Keep this exact user objective');
 assert(new TextEncoder().encode(JSON.stringify(['Bounded system',largeContext.user,{}])).length<=64000,'The separate provider transport ceiling is also enforced');

@@ -64,8 +64,11 @@ create_task {name,instructions,schedule:{type:"once",at?:ISO8601_with_offset}}: 
 manage_work {action:"list"|"pause"|"resume"|"cancel"|"update",id?,instructions?,schedule?}: discover ID before changes; list excludes this run.
 list_memory {query?}: relevant fallible history, not current proof/authority. remember {content,category:"preference"|"project"|"context"}: exact quote from CURRENT user only; no secrets/speculation/files/tool content. Check success. forget_memory {id}: remove discovered fact on request. Scheduled runs cannot save/erase personal memory. Users control memory in Settings.`;
 export function arcExecutionPrompt(context:ArcPromptContext,remaining:number,canAct:boolean){
- if(canAct)for(const system of [SYSTEM,ARC_COMPACT_SYSTEM]){const prompt=fitArcContext(system,decisionSchema,context,remaining);if(prompt)return{...prompt,system,schema:decisionSchema as Record<string,unknown>};}
- const schema={...decisionSchema,properties:{...decisionSchema.properties,decision:{type:'string',enum:['reply']},tool:{type:'string',enum:['none']}}},prompt=fitArcContext(ARC_CLOSING_SYSTEM,schema,context,remaining);return prompt?{...prompt,system:ARC_CLOSING_SYSTEM,schema}:null;
+ // Reserve a longer answer for substantive requests, keeping routine tool
+ // decisions economical under the account's existing financial ceiling.
+ const outputLimit=/(?:\b(?:discuss|discussion|strategy|strategic|detailed|in.depth|comprehensive|compare|explain)\b|\bwrite\b.{0,30}\breport\b|讨论|分析|策略|规划|方案|研究报告|详细|深入|对比|解释)/i.test(context.objective)?4096:2048;
+ if(canAct)for(const system of [SYSTEM,ARC_COMPACT_SYSTEM]){const prompt=fitArcContext(system,decisionSchema,context,remaining,outputLimit);if(prompt)return{...prompt,system,schema:decisionSchema as Record<string,unknown>};}
+ const schema={...decisionSchema,properties:{...decisionSchema.properties,decision:{type:'string',enum:['reply']},tool:{type:'string',enum:['none']}}},prompt=fitArcContext(ARC_CLOSING_SYSTEM,schema,context,remaining,outputLimit);return prompt?{...prompt,system:ARC_CLOSING_SYSTEM,schema}:null;
 }
 const record=z.record(z.string(),z.unknown());
 const argsSchema={

@@ -6,7 +6,7 @@ Status: product/runtime design, not a shipped capability. Updated 20 October 202
 
 An employee is a durable conversational identity with a user-defined name, avatar, configured model, responsibility, instructions, skills and permission ceiling. An employee can answer normal questions in a direct chat, participate in a Team room and work on an outcome. A Team defines members, coordinator and handoff rules. Teams can discuss and collaborate immediately; they do not require overnight work or even a Task.
 
-A Task defines the outcome, assignments, authority, acceptance and budget. Persistent execution allows that same Task to continue across bounded runs until its checks pass or a real blocker needs resolution. A deadline is optional. An execution segment's technical limit must checkpoint rather than invent overall completion. A recurring routine starts distinct occurrences and is not an unlimited continuation of yesterday's goal.
+A Task defines the outcome, assignments, authority and acceptance. Default usage draws from the account’s plan and shared Credits without a mandatory budget form. An additional task cap is an optional advanced control. Persistent execution allows that same Task to continue across bounded runs until its checks pass or a real blocker needs resolution. A deadline is optional. An execution segment's technical limit must checkpoint rather than invent overall completion. A recurring routine starts distinct occurrences and is not an unlimited continuation of yesterday's goal.
 
 ## Dedicated product page and chat entrance
 
@@ -28,7 +28,7 @@ Extend the current Worker/Durable Object runtime, automation registry, scheduler
 
 One root Task ID relates assignments, child runs, tools, artifacts and acceptance. Effective authority is the intersection of task approval, employee ceiling, current account/provider scope and device local policy. Team membership is not a grant to the owner's unrelated private accounts. A changed role or model does not enlarge an existing task's frozen authority.
 
-Every coordinator, worker, verifier, retry and continuation consumes the root Task's shared Credits cap. Child allocations cannot add extra quota. Reserve atomically before model dispatch, settle actual usage, and retain unknown reservations. Account/plan/platform funding limits remain additional bounds. Model availability is rechecked; a fallback that changes cost must be explicitly authorized. User-uploaded avatars need constrained, re-encoded managed storage.
+Every coordinator, worker, verifier, retry and continuation consumes the same account Credits. If the user opts into an extra task cap, all of them share it. Child allocations cannot add extra quota. The normal flow is to start work, show usage and remaining Credits, then pause and offer an upgrade or top-up when allowance runs out. Reserve atomically before model dispatch, settle actual usage, and retain unknown reservations. Account/plan/platform funding limits remain additional bounds. Model availability is rechecked; a fallback that changes cost must be explicitly authorized. User-uploaded avatars need constrained, re-encoded managed storage.
 
 Wait for events or bounded deterministic status checks instead of repeatedly reasoning while nothing changes. Pause on missing authority, exhausted allowance, repeated no progress or an unresolved external effect; retain evidence and report the concrete next action. An unknown order/write cannot be repeated by switching employee. Stop on verified goal completion, not an employee's unsupported claim.
 

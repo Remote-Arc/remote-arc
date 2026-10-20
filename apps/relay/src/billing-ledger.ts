@@ -3,7 +3,7 @@ import {costCreditUnits,creditAuthoritySql,reserveCreditStatements,settleCreditS
 export type BillingLane = "connect" | "arc_hosted";
 export type BillingContext = {
   userId: string; organizationId: string; taskId: string; runId: string; operationId: string;
-  lane: BillingLane;
+  lane: BillingLane; rootBudgetId?: string;
 };
 export type BillingUnits = { credits: number; costMicros: number; neurons: number };
 export type BillingReservationInput = BillingContext & {
@@ -37,6 +37,7 @@ const userTaskAuth = `EXISTS(SELECT 1 FROM organization_members m WHERE m.organi
 function normalize(input: BillingReservationInput, at: string) {
   for (const id of [input.userId,input.organizationId,input.taskId,input.runId,input.operationId,input.modelId,input.authorizationId]) textId(id);
   if (!["connect","arc_hosted"].includes(input.lane) || !["workers_ai","openai","anthropic","openrouter"].includes(input.provider)) throw new BillingDeniedError("BILLING_INVALID_CONTEXT");
+  if(input.rootBudgetId!==undefined){textId(input.rootBudgetId);if(input.lane!=='arc_hosted')throw new BillingDeniedError('BILLING_INVALID_ROOT_BUDGET');}
   const maximum = units(input.maximum);
   if (maximum.credits < 1) throw new BillingDeniedError("BILLING_INVALID_UNITS");
   const period = at.slice(0,10), entries: Entry[] = [];
@@ -45,9 +46,13 @@ function normalize(input: BillingReservationInput, at: string) {
     const amount = unitValue(maximum,metric);
     if (amount) entries.push({scope_type:scope_type!,scope_id:scope_id!,lane:input.lane,metric,period_key:period,units:amount});
   }
+  if(input.rootBudgetId){
+    entries.push({scope_type:'task',scope_id:input.rootBudgetId,lane:input.lane,metric:'credits',period_key:'lifetime',units:costCreditUnits(maximum.costMicros)});
+    entries.push({scope_type:'task',scope_id:input.rootBudgetId,lane:input.lane,metric:'cost_micros',period_key:'lifetime',units:maximum.costMicros});
+  }
   const request = {userId:input.userId,organizationId:input.organizationId,taskId:input.taskId,runId:input.runId,
     operationId:input.operationId,lane:input.lane,provider:input.provider,modelId:input.modelId,authorizationId:input.authorizationId,maximum,period,
-    ...(input.creditWallet?{creditRate:ARC_CREDIT_RATE}:{})};
+    ...(input.creditWallet?{creditRate:ARC_CREDIT_RATE}:{}),...(input.rootBudgetId?{rootBudgetId:input.rootBudgetId}:{})};
   return {requestJson:JSON.stringify(request), entriesJson:JSON.stringify(entries),entries,period};
 }
 /** All caps are checked in the INSERT's snapshot; D1 batch commits the reservation and counters atomically. */
@@ -72,10 +77,11 @@ export async function reserveBilling(db: D1Database, input: BillingReservationIn
       (id,user_id,organization_id,task_id,run_id,operation_key,lane,provider,authorization_id,model_id,request_json,entries_json,status,created_at)
       SELECT ?1,?2,?3,?4,?5,?6,?7,?8,?9,?11,?13,?15,'reserved',?12
        WHERE ${userTaskAuth} AND ${authority} ${input.creditWallet?'AND '+creditAuthoritySql(walletMaximum):''}
+       ${input.rootBudgetId?"AND EXISTS(SELECT 1 FROM arc_execution_budgets r WHERE r.id=?17 AND r.user_id=?2 AND r.organization_id=?3 AND r.task_id=?4 AND r.status='active')":''}
       AND (SELECT COUNT(*) FROM json_each(?15) e JOIN billing_budgets b ON ${sameEntry}
         WHERE b.spent_units+b.reserved_units+json_extract(e.value,'$.units')<=b.limit_units)=?16`)
       .bind(id,input.userId,input.organizationId,input.taskId,input.runId,operationKey,input.lane,input.provider,
-        input.authorizationId,n.period,input.modelId,at,n.requestJson,input.maximum.costMicros,n.entriesJson,n.entries.length),
+        input.authorizationId,n.period,input.modelId,at,n.requestJson,input.maximum.costMicros,n.entriesJson,n.entries.length,...(input.rootBudgetId?[input.rootBudgetId]:[])),
     db.prepare(`INSERT INTO billing_events(id,reservation_id,event_type,details_json,created_at)
       SELECT ?1,id,'reserved',request_json,?2 FROM billing_reservations WHERE id=?3 AND accounted=0`).bind(crypto.randomUUID(),at,id),
     ...(input.creditWallet?reserveCreditStatements(db,id,input.userId,walletMaximum,at):[]),
@@ -144,7 +150,8 @@ export async function settleBilling(db:D1Database, context:Pick<BillingContext,"
     await settleBilling(db,context,id,{status:"unknown",usage:settlement.usage},at);
     throw new BillingDeniedError("BILLING_USAGE_EXCEEDED_RESERVATION");
   }
-  const entries = (JSON.parse(row.entries_json) as Entry[]).map(e=>({...e,actual:unitValue(actual,e.metric)}));
+  const rootBudgetId=(JSON.parse(row.request_json) as {rootBudgetId?:string}).rootBudgetId;
+  const entries = (JSON.parse(row.entries_json) as Entry[]).map(e=>({...e,actual:rootBudgetId&&e.scope_id===rootBudgetId&&e.period_key==='lifetime'&&e.metric==='credits'?costCreditUnits(actual.costMicros):unitValue(actual,e.metric)}));
   const entriesJson = JSON.stringify(entries);
   const creditRate=(JSON.parse(row.request_json) as {creditRate?:typeof ARC_CREDIT_RATE}).creditRate;
   if(creditRate&&(creditRate.version!=='arc-credits-v1'||creditRate.costMicrosPerUnit!==2))throw new BillingDeniedError('BILLING_CREDIT_RATE_UNSUPPORTED');

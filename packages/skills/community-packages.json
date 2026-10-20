@@ -1,0 +1,87 @@
+[
+  {
+    "id": "community-frontend-design",
+    "name": "Frontend design",
+    "description": "Production interface design with typography, layout and visual direction.",
+    "owner": "Anthropic",
+    "requires": [
+      "Connected computer",
+      "Project files"
+    ]
+  },
+  {
+    "id": "community-webapp-testing",
+    "name": "Web app testing",
+    "description": "Real Playwright tests, screenshots, browser logs and a server lifecycle helper.",
+    "owner": "Anthropic",
+    "requires": [
+      "Connected computer",
+      "Python",
+      "Playwright"
+    ]
+  },
+  {
+    "id": "community-playwright",
+    "name": "Browser automation",
+    "description": "Inspect and operate real web pages, capture evidence and generate browser tests.",
+    "owner": "Microsoft",
+    "requires": [
+      "Connected computer",
+      "Node.js",
+      "@playwright/cli@0.1.22",
+      "Browser"
+    ]
+  },
+  {
+    "id": "community-react-best-practices",
+    "name": "React performance",
+    "description": "Vercel engineering guidance and concrete rules for React and Next.js code.",
+    "owner": "Vercel",
+    "requires": [
+      "Connected computer",
+      "React project files"
+    ]
+  },
+  {
+    "id": "community-web-design-guidelines",
+    "name": "Web interface review",
+    "description": "Audit accessibility, keyboard behavior, forms, interaction and interface quality.",
+    "owner": "Vercel",
+    "requires": [
+      "Connected computer",
+      "Interface source files"
+    ]
+  },
+  {
+    "id": "community-mcp-builder",
+    "name": "MCP server builder",
+    "description": "Build and evaluate an MCP integration with bundled examples and evaluation helpers.",
+    "owner": "Anthropic",
+    "requires": [
+      "Connected computer",
+      "Python or Node.js"
+    ]
+  },
+  {
+    "id": "community-polars",
+    "name": "Data analysis with Polars",
+    "description": "Read, transform and analyze data with lazy queries, aggregation and real data frames.",
+    "owner": "K-Dense",
+    "requires": [
+      "Connected computer",
+      "Python",
+      "polars"
+    ]
+  },
+  {
+    "id": "community-matplotlib",
+    "name": "Charts with Matplotlib",
+    "description": "Create and export charts, dashboards and publication figures.",
+    "owner": "K-Dense",
+    "requires": [
+      "Connected computer",
+      "Python",
+      "matplotlib"
+    ]
+  }
+]

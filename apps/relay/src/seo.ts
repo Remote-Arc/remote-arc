@@ -994,10 +994,14 @@ export function llmsTxt() {
   return [
     "# Remote Arc",
     "",
-    "> Remote Arc is a hosted Remote MCP bridge that connects compatible AI clients to explicitly paired Windows, macOS and Linux computers.",
+    "> Remote Arc provides agent infrastructure for authorized Apps and computers. Arc retains delegated goals, context and results with bounded hosted reasoning; Connect exposes the same execution layer to compatible external AI clients over MCP.",
     "",
     "## Core pages",
     "- [Home](" + SITE + "/): product overview and setup path",
+    "- [Arc](" + SITE + "/arc): hosted personal-agent workspace, delegated work and verified results",
+    "- [Start here](" + SITE + "/docs/start-here): choose Arc or Connect and reach a first verified result",
+    "- [Platform architecture](" + SITE + "/docs/architecture): model decisions, context, authorization, execution, scheduling, memory and cost",
+    "- [Skills](" + SITE + "/docs/skills): reusable instructions and account-owned references",
     "- [Remote MCP guide](" + SITE + "/remote-mcp): remote vs local MCP, how to connect ChatGPT, Claude and Cursor, OAuth and troubleshooting",
     "- [Remote MCP computer access](" + SITE + "/mcp-computer-access): vendor-neutral architecture and capability overview",
     "- [ChatGPT computer access](" + SITE + "/chatgpt-computer-access): ChatGPT-specific setup and trust model",
@@ -1013,7 +1017,7 @@ export function llmsTxt() {
     "- [Cursor](" + SITE + "/install/cursor)",
     "",
     "## Source",
-    "- [GitHub](https://github.com/yaohuangguan/remote-arc)",
+    "- [GitHub](https://github.com/Remote-Arc/remote-arc)",
     ""
   ].join("\n");
 }
@@ -1022,16 +1026,16 @@ export function llmsFullTxt() {
   return llmsTxt() + [
     "",
     "## Architecture summary",
-    "AI clients connect to the hosted Remote Arc MCP endpoint over OAuth. The hosted control plane handles identity, policy and routing. Each paired computer keeps an outbound connection to Remote Arc, receives only routed tool calls for that device, and executes them through the local agent.",
+    "Arc provides hosted conversations and bounded model decisions. The platform validates tool arguments, checks current authorization, dispatches supported App or device operations and persists observations, task schedules and cost reservations. Connect serves external AI clients through OAuth-protected MCP. Cloud Apps do not need a local computer. Paired computers keep an outbound connection and execute approved tools locally through the native Agent and Execution Core.",
     "",
     "## Security summary",
     "AI-client authorization and device authorization are separate. Device policies can limit tools, Trusted Write Locations, sensitive paths, browser interaction and long-running task capabilities. Ordinary non-sensitive reads can remain broad; supported writes outside trusted locations pause for approval. Terminal access, when enabled, inherits the permissions of the local operating-system user and is not presented as an OS sandbox.",
     "",
     "## Data-flow summary",
-    "Requested tool arguments, selected file content and tool output can pass through the hosted relay to the connected AI provider. Local Undo snapshots for supported file edits stay on the device. See the privacy policy and security model for current details.",
+    "Relevant messages, instructions and tool observations enter model context. Arc-owned conversations, personal memory and saved work have bounded storage and retrieval; they are separate from an external client's conversation. Requested file content and tool output can pass through the hosted relay. Local Undo snapshots for supported file edits stay on the device. See the privacy policy and security model for current details.",
     "",
     "## Product positioning",
-    "Remote Arc is not a replacement AI assistant and does not own the user's model or conversation. It is a bridge between an AI client the user already chose and computers the user explicitly paired."
+    "Use Arc to keep a delegated responsibility, available context, scheduled fresh judgment and result checks together. Use Connect when your existing AI client should drive the execution layer. Models interpret, plan and summarize; Remote Arc owns authorization, dispatch, continuity and usage controls. A saved task or successful tool call is not proof of goal completion. Runs have time, step and token limits, and answers must report actual evidence, incomplete work and concrete blockers. Skill text does not grant permissions or install missing engines."
   ].join("\n");
 }
 

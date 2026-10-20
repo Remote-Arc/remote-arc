@@ -10,6 +10,7 @@ import {
   canonicalForPath,
   feedXml,
   llmsTxt,
+  llmsFullTxt,
   marketingHttpsRedirect,
   marketingStatusCode,
   renderMarketingHtml,
@@ -232,6 +233,9 @@ assert.ok(remoteMcp.includes("https://mcp.remotearc.app/mcp"), "guide includes a
 assert.ok(remoteMcp.includes('href="/install/claude"'), "guide links to practical client setup");
 assert.ok(bodyWordCount(remoteMcp) >= 650, "guide should provide useful standalone search-engine-readable content");
 assert.ok(llmsTxt().includes("/remote-mcp"), "LLM index should link guide");
+assert.ok(llmsTxt().includes('/docs/architecture') && llmsTxt().includes('/docs/skills'));
+assert.ok(llmsFullTxt().includes('scheduled fresh judgment') && llmsFullTxt().includes('result checks'));
+assert.ok(!llmsFullTxt().includes('does not own the user\'s model or conversation'),'LLM summary must distinguish hosted Arc from external Connect');
 
 const mcp = renderMarketingHtml(shell, "/mcp-computer-access");
 assert.ok(mcp.includes("<h1>Remote MCP computer access for AI agents</h1>"));

@@ -4,12 +4,17 @@ import assert from 'node:assert/strict';
 const previousFetch=globalThis.fetch,previousKey=process.env.OPENAI_API_KEY;
 let modelCalls=0;
 const expandedPaths=process.argv.includes('--expanded-paths');
+const injectInvalidDecision=process.argv.includes('--invalid-decision');let invalidSent=false,awaitingRepair=false;
 process.env.OPENAI_API_KEY='synthetic-eval-fixture-not-a-secret';
 globalThis.fetch=(async(url,init)=>{
  assert.equal(String(url),'https://api.openai.com/v1/responses');modelCalls++;
  const request=JSON.parse(String(init?.body)),context=JSON.parse(request.input[1].content),connectionId=context.connectionIndex[0].id;
  assert.match(connectionId,/^[\da-f]{8}-[\da-f-]{27}$/i);
  const observations=context.taskState.completedActions as {tool:string;arguments:any}[];
+ if(injectInvalidDecision&&!invalidSent&&context.objective==="Check the latest deployment of my 'web' project and report actual readiness and URL."){
+  invalidSent=true;awaitingRepair=true;return Response.json({id:'synthetic-invalid-response',status:'completed',output_text:'{',usage:{input_tokens:1000,output_tokens:100}});
+ }
+ if(awaitingRepair){assert.equal(context.modelRepair?.code,'MODEL_INVALID_JSON');awaitingRepair=false;}
  const reply=(message:string)=>({decision:'reply',tool:'none',arguments_json:'{}',message});
  const tool=(name:string,args:unknown)=>({decision:'tool',tool:name,arguments_json:JSON.stringify(args),message:'Working'});
  let value;
@@ -46,5 +51,5 @@ globalThis.fetch=(async(url,init)=>{
  }
  return Response.json({id:'synthetic-response',status:'completed',output_text:JSON.stringify(value),usage:{input_tokens:expandedPaths?2700:2000,output_tokens:200}});
 }) as typeof fetch;
-try{await import('./arc-task-live-eval.js');assert(modelCalls>=18);console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
+try{await import('./arc-task-live-eval.js');assert(modelCalls>=18);if(injectInvalidDecision){assert(invalidSent);assert.equal(awaitingRepair,false);}console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
 finally{globalThis.fetch=previousFetch;if(previousKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=previousKey;}

@@ -3,6 +3,7 @@ import {handleCloudSkillAction} from './cloud-skills.js';
 import {arcEnabled} from './platform-launch.js';
 import { z } from 'zod';
 import { runModelGateway } from './model-gateway.js';
+import {ModelProviderError,type ModelUsage,type ModelProvider} from './model-provider-adapters.js';
 import { prepareArcBudget } from './arc-chat-model.js';
 import { arcActive, arcSession, arcMessages, appendArcMessage, arcContext, stamp, type ArcEnv, type ArcRun } from './arc-chat.js';
 import { seal, unseal } from './app-oauth.js';
@@ -137,6 +138,7 @@ export async function executeArcTool(env:ArcEnv,run:ArcRun,decision:Decision){
  throw new Error('ARC_TOOL_NOT_ALLOWED');
 }
 type Step={status:string;decision_ciphertext:string|null};
+const consumedModelTokens=(provider:ModelProvider,usage:ModelUsage)=>usage.inputTokens+usage.outputTokens+(provider==='anthropic'?usage.cachedInputTokens+usage.cacheWriteTokens:0);
 export type ArcRuntimeDeps={executeTool?:typeof executeArcTool};
 /** One alarm owns one bounded decision. Durable dispatch markers prevent replay
  * after a Worker restart, timeout, or a lost provider/device response. */
@@ -168,9 +170,9 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
     const objective=[...history].reverse().find(m=>m.role==='user')?.text??'';
     const skillReferences=[...new Map(history.filter(m=>m.role==='user').flatMap(m=>m.skills||[]).reverse().map(skill=>[skill.id,skill] as const)).values()].slice(0,3);
     const messages=history.slice(-8).map(m=>({role:m.role,text:boundedArcText(m.text,m.role==='user'?4000:1500),...(m.tool?{tool:m.tool,status:m.status,arguments:m.arguments}:{}),...(m.result!==undefined?{result:boundedArcText(arcObservation(m.tool,m.result),m.tool==='read_skill'?16000:m.tool==='read_inbox'?10000:3500)}:{})}));
-    const [memory,deviceIndex,connections]=await Promise.all([arcMemoryContext(env,run.user_id,objective),arcDeviceContext(env,run.user_id),env.DB.prepare("SELECT id,provider,account_label accountLabel,status FROM app_connections WHERE user_id=?1 AND status='active' ORDER BY updated_at DESC LIMIT 12").bind(run.user_id).all()]);
+    const [memory,deviceIndex,connections,rejectedDecision]=await Promise.all([arcMemoryContext(env,run.user_id,objective),arcDeviceContext(env,run.user_id),env.DB.prepare("SELECT id,provider,account_label accountLabel,status FROM app_connections WHERE user_id=?1 AND status='active' ORDER BY updated_at DESC LIMIT 12").bind(run.user_id).all(),env.DB.prepare("SELECT step FROM arc_chat_steps WHERE run_id=?1 AND status='done' AND decision_ciphertext IS NULL AND result_ciphertext IS NOT NULL ORDER BY step DESC LIMIT 1").bind(runId).first<{step:number}>()]);
     const recentRuns=(await env.DB.prepare('SELECT id,status,error_code,step FROM arc_chat_runs WHERE user_id=?1 AND session_id=?2 AND id<>?3 ORDER BY created_at DESC LIMIT 3').bind(run.user_id,run.session_id,run.id).all()).results;
-    const context={objective:boundedArcText(objective,6000),skillReferences,recentUserRequests:history.filter(m=>m.role==='user').slice(-4).map(m=>boundedArcText(m.text,1000)),taskState:arcTaskState(history,run.id,connections.results as Array<{provider:string}>),messages,memory,deviceIndex,connectionIndex:connections.results,currentRun:{id:run.id,status:run.status,step:run.step},recentRuns,contextNotice:'Connection metadata is not email content or authorization. Memory and last-seen metadata can be stale. Tool results may be shortened; do not invent omitted facts.',remainingSteps:run.max_steps-run.step,remainingSeconds:Math.floor((Date.parse(run.deadline)-Date.now())/1000)};
+    const context={objective:boundedArcText(objective,6000),skillReferences,recentUserRequests:history.filter(m=>m.role==='user').slice(-4).map(m=>boundedArcText(m.text,1000)),taskState:arcTaskState(history,run.id,connections.results as Array<{provider:string}>),messages,memory,deviceIndex,connectionIndex:connections.results,currentRun:{id:run.id,status:run.status,step:run.step},recentRuns,...(rejectedDecision?.step===run.step-1?{modelRepair:{step:rejectedDecision.step,code:'MODEL_INVALID_JSON',guidance:'The previous model response was not valid JSON; no tool was dispatched for that step. Return one complete JSON decision matching the schema, with no Markdown fences. Continue the same user goal and reuse completed effects; do not repeat them.'}}:{}),contextNotice:'Connection metadata is not email content or authorization. Memory and last-seen metadata can be stale. Tool results may be shortened; do not invent omitted facts.',remainingSteps:run.max_steps-run.step,remainingSeconds:Math.floor((Date.parse(run.deadline)-Date.now())/1000)};
     const closingSchema={...decisionSchema,properties:{...decisionSchema.properties,decision:{type:'string',enum:['reply']},tool:{type:'string',enum:['none']}}};
     const remaining=run.max_tokens-run.tokens_used;
     const readOnlySummary=history.some(m=>m.run_id===run!.id&&m.tool==='read_inbox'&&m.status==='completed');
@@ -181,11 +183,28 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
    const now=stamp();const claimed=await env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_steps(run_id,step,status,created_at,updated_at) VALUES(?1,?2,'model_pending',?3,?3) RETURNING run_id`).bind(runId,run.step,now).first();
    if(!claimed)return false;
    await env.DB.prepare("UPDATE arc_chat_runs SET status='thinking',updated_at=?1 WHERE id=?2 AND status='queued'").bind(now,runId).run();
-   const result=await runModelGateway(access.gateway,{context:{userId:run.user_id,organizationId:session.organization_id,taskId:session.id,runId,operationId:`chat:${run.step}`,lane:'arc_hosted'},modelId:access.definition.id,system,user:prompt.user,schema,maxOutputTokens:prompt.maxOutputTokens,timeoutMs:Math.min(90000,Math.max(1,Date.parse(run.deadline)-Date.now()))},value=>{const parsed=validateArcDecision(value);if(system===ARC_CLOSING_SYSTEM&&parsed.decision!=='reply')throw new Error('ARC_INVALID_DECISION');return parsed;});
+   let result:Awaited<ReturnType<typeof runModelGateway<Decision>>>;
+   try{result=await runModelGateway(access.gateway,{context:{userId:run.user_id,organizationId:session.organization_id,taskId:session.id,runId,operationId:`chat:${run.step}`,lane:'arc_hosted'},modelId:access.definition.id,system,user:prompt.user,schema,maxOutputTokens:prompt.maxOutputTokens,timeoutMs:Math.min(90000,Math.max(1,Date.parse(run.deadline)-Date.now()))},value=>{const parsed=validateArcDecision(value);if(system===ARC_CLOSING_SYSTEM&&parsed.decision!=='reply')throw new Error('ARC_INVALID_DECISION');return parsed;});}
+   catch(error){
+    // A completed, settled malformed decision has no tool effect to replay.
+    // Consume one ordinary step and request identity for at most one repair.
+    if(!(error instanceof ModelProviderError)||error.code!=='MODEL_INVALID_JSON'||error.retryable||!error.usage)throw error;
+    const settled=await env.DB.prepare("SELECT status FROM billing_reservations WHERE operation_key=?1 AND user_id=?2 AND run_id=?3").bind(JSON.stringify([run.user_id,runId,`chat:${run.step}`]),run.user_id,runId).first<{status:string}>();
+    if(settled?.status!=='failed')throw error;
+    const consumed=consumedModelTokens(access.definition.provider,error.usage);
+    if(rejectedDecision||run.step+1>=run.max_steps||run.tokens_used+consumed>=run.max_tokens||Date.parse(run.deadline)<=Date.now()){
+     await env.DB.prepare('UPDATE arc_chat_runs SET tokens_used=tokens_used+?1,updated_at=?2 WHERE id=?3').bind(consumed,stamp(),runId).run();throw error;
+    }
+    await env.DB.batch([
+     env.DB.prepare("UPDATE arc_chat_steps SET status='done',result_ciphertext=?1,updated_at=?2 WHERE run_id=?3 AND step=?4 AND status='model_pending'").bind(await seal(env,{code:error.code,dispatched:false,modelRepair:true},arcContext(run.user_id,`${runId}:${run.step}:result`)),stamp(),runId,run.step),
+     env.DB.prepare('UPDATE arc_chat_runs SET tokens_used=tokens_used+?1,updated_at=?2 WHERE id=?3').bind(consumed,stamp(),runId),
+     env.DB.prepare("UPDATE arc_chat_runs SET step=step+1,status='queued',updated_at=?1 WHERE id=?2 AND step=?3 AND status='thinking' AND cancel_requested=0").bind(stamp(),runId,run.step),
+    ]);return true;
+   }
    decision=result.value;
    await env.DB.batch([
     env.DB.prepare("UPDATE arc_chat_steps SET status='model_complete',decision_ciphertext=?1,updated_at=?2 WHERE run_id=?3 AND step=?4 AND status='model_pending'").bind(await seal(env,decision,arcContext(run.user_id,`${runId}:${run.step}:decision`)),stamp(),runId,run.step),
-    env.DB.prepare('UPDATE arc_chat_runs SET tokens_used=tokens_used+?1,updated_at=?2 WHERE id=?3').bind(result.usage.inputTokens+result.usage.outputTokens+(result.provider==='anthropic'?result.usage.cachedInputTokens+result.usage.cacheWriteTokens:0),stamp(),runId),
+    env.DB.prepare('UPDATE arc_chat_runs SET tokens_used=tokens_used+?1,updated_at=?2 WHERE id=?3').bind(consumedModelTokens(result.provider,result.usage),stamp(),runId),
    ]);
   }
   run=(await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE id=?1').bind(runId).first<ArcRun>())!;

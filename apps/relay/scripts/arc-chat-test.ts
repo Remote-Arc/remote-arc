@@ -17,6 +17,7 @@ import {reserveBilling,settleBilling} from '../src/billing-ledger.js';
 import {seal} from '../src/app-oauth.js';
 import {arcMemoryContext,rememberArcFact,saveArcWorkMemory,ARC_MEMORY_LIMITS} from '../src/arc-memory.js';
 import {fitArcContext,arcObservation} from '../src/arc-chat-context.js';
+import {ModelProviderError} from '../src/model-provider-adapters.js';
 import {readableEmail} from '../src/arc-inbox.js';
 import {handleArcAdminBilling} from '../src/arc-admin-billing.js';
 
@@ -86,8 +87,38 @@ assert.equal((await handleArcChat(req('sessions/'+id+'/messages','POST',{text:'b
 assert.equal((await handleArcChat(req('sessions/'+id),{...env,ARC_CHAT_ENABLED:'0'})).status,200,'Existing results remain readable');
 const steps=await send(id,'Bound steps');sql.prepare('UPDATE arc_chat_runs SET step=8 WHERE id=?').run(steps.run.id);await runArcStep(env,steps.run.id);assert.equal(row(steps.run.id).error_code,'ARC_STEP_LIMIT');
 const tokens=await send(id,'Bound tokens');sql.prepare('UPDATE arc_chat_runs SET max_tokens=100 WHERE id=?').run(tokens.run.id);await runArcStep(env,tokens.run.id);assert.equal(row(tokens.run.id).error_code,'ARC_TOKEN_LIMIT');
+// One settled malformed model decision can consume an ordinary step to ask
+// for a corrected decision. It cannot replay tools or hide paid usage.
+const beforeRepairAdapter=env.MODEL_GATEWAY!.adapters.openai!,badUsage={inputTokens:40,outputTokens:20,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0};
+try{
+ let attempts=0,dispatched=0,sawCorrection=false;
+ env.MODEL_GATEWAY!.adapters.openai=async request=>{if(attempts++===0)throw new ModelProviderError('MODEL_INVALID_JSON',false,badUsage);sawCorrection||=Boolean(JSON.parse(request.user).modelRepair);return beforeRepairAdapter(request);};
+ const repairRun=await send(await create(),'Inspect my devices and report what you find.');decisions.push(tool('list_devices',{}),reply('The authorized device check is complete.'));
+ const repairDeps={executeTool:async()=>{dispatched++;return[];}};
+ assert.equal(await runArcStep(env,repairRun.run.id,repairDeps),true);assert.equal(dispatched,0);assert.equal(row(repairRun.run.id).step,1);assert.equal(row(repairRun.run.id).tokens_used,60);
+ // A fresh invocation reads the persisted rejection, as after a worker restart.
+ await runArcStep(env,repairRun.run.id,repairDeps);await runArcStep(env,repairRun.run.id,repairDeps);
+ assert(sawCorrection);assert.equal(dispatched,1);assert.equal(attempts,3);assert.equal(row(repairRun.run.id).status,'succeeded');assert.equal(row(repairRun.run.id).tokens_used,460);
+ const repairCharges=sql.prepare('SELECT status,request_json FROM billing_reservations WHERE run_id=?').all(repairRun.run.id) as {status:string;request_json:string}[];
+ assert.equal(repairCharges.length,3);assert.equal(repairCharges.filter(item=>item.status==='failed').length,1);assert.equal(new Set(repairCharges.map(item=>JSON.parse(item.request_json).operationId)).size,3,'Each model attempt has its own reservation');
+ attempts=0;env.MODEL_GATEWAY!.adapters.openai=async()=>{attempts++;throw new ModelProviderError('MODEL_INVALID_JSON',false,badUsage);};
+ const boundedRepair=await send(await create(),'Stop after one malformed-decision repair.');assert.equal(await runArcStep(env,boundedRepair.run.id),true);assert.equal(await runArcStep(env,boundedRepair.run.id),false);assert.equal(row(boundedRepair.run.id).error_code,'MODEL_INVALID_JSON');assert.equal(row(boundedRepair.run.id).tokens_used,120);await runArcStep(env,boundedRepair.run.id);assert.equal(attempts,2);
+ attempts=0;const lastStep=await send(await create(),'Respect the remaining step allowance.');sql.prepare('UPDATE arc_chat_runs SET max_steps=1 WHERE id=?').run(lastStep.run.id);assert.equal(await runArcStep(env,lastStep.run.id),false);assert.equal(attempts,1);assert.equal(row(lastStep.run.id).tokens_used,60);
+ for(const uncertain of [new ModelProviderError('MODEL_INVALID_JSON'),new ModelProviderError('MODEL_INVALID_JSON',true,badUsage)]){
+  attempts=0;env.MODEL_GATEWAY!.adapters.openai=async()=>{attempts++;throw uncertain;};const uncertainModel=await send(await create(),'Do not repeat an unconfirmed provider outcome.');assert.equal(await runArcStep(env,uncertainModel.run.id),false);await runArcStep(env,uncertainModel.run.id);assert.equal(attempts,1);
+  if(!uncertain.usage)assert.equal(sql.prepare('SELECT status FROM billing_reservations WHERE run_id=?').get(uncertainModel.run.id)?.status,'unknown');
+ }
+ env.MODEL_GATEWAY!.adapters.openai=async()=>{throw new ModelProviderError('MODEL_INVALID_JSON',false,badUsage);};
+ const unsettled=await send(await create(),'Do not repair without confirmed settlement.');
+ const unconfirmedDb={...db,prepare(query:string){if(query.startsWith('SELECT status FROM billing_reservations WHERE operation_key='))return{bind:()=>({first:async()=>({status:'unknown'})})};return db.prepare(query);}} as D1Database;
+ assert.equal(await runArcStep({...env,DB:unconfirmedDb},unsettled.run.id),false);assert.equal(row(unsettled.run.id).step,0);
+ const cancelRepair=await send(await create(),'Cancel before a repair can start.');attempts=0;env.MODEL_GATEWAY!.adapters.openai=async()=>{attempts++;sql.prepare('UPDATE arc_chat_runs SET cancel_requested=1 WHERE id=?').run(cancelRepair.run.id);throw new ModelProviderError('MODEL_INVALID_JSON',false,badUsage);};await runArcStep(env,cancelRepair.run.id);await runArcStep(env,cancelRepair.run.id);assert.equal(row(cancelRepair.run.id).status,'cancelled');assert.equal(attempts,1);
+ env.MODEL_GATEWAY!.adapters.openai=beforeRepairAdapter;const uncertainTool=await send(await create(),'Do not repeat a dispatched effect.');decisions.push(tool('list_devices',{}));let toolEffects=0;
+ await runArcStep(env,uncertainTool.run.id,{executeTool:async()=>{toolEffects++;throw new ModelProviderError('MODEL_INVALID_JSON',false,badUsage);}});await runArcStep(env,uncertainTool.run.id);assert.equal(row(uncertainTool.run.id).status,'unknown');assert.equal(toolEffects,1);
+}finally{env.MODEL_GATEWAY!.adapters.openai=beforeRepairAdapter;}
 const largeContext=fitArcContext('Bounded system',{}, {objective:'Keep this exact user objective',messages:Array.from({length:8},()=>({role:'tool',text:'Observed data',result:'资料'.repeat(12000)})),memory:[],deviceIndex:[]},96000);
 assert(largeContext);assert(new TextEncoder().encode('Bounded system'+largeContext.user+'{}').length<=64000,'Large plan allowances cannot bypass the decoded provider context ceiling');assert.equal(JSON.parse(largeContext.user).objective,'Keep this exact user objective');
+assert(new TextEncoder().encode(JSON.stringify(['Bounded system',largeContext.user,{}])).length<=64000,'The separate provider transport ceiling is also enforced');
 const processLedger=['select_device','start_process','process_status','process_output'].map(tool=>({tool:tool==='select_device'?tool:'device_tool',arguments:{deviceId:'retained-device',tool,arguments:{process_id:'retained-process'}}}));
 const compactWork=fitArcContext('Continue the authorized verification.',{}, {objective:'Verify the managed process',memory:[],deviceIndex:[{id:'retained-device',tools:['start_process','process_status','process_output','stop_process']}],taskState:{completedActions:processLedger,availableActions:[{description:'Unused catalog '.repeat(4000)}],schemas:[{description:'Old schema '.repeat(4000)}]},messages:[{role:'tool',text:'Current process state',result:{process_id:'retained-process',status:'running'}},{role:'tool',text:'Observed output',result:{process_id:'retained-process',stdout:'verification-marker'}}]},5000);
 assert(compactWork);const retainedWork=JSON.parse(compactWork.user);assert.equal(retainedWork.taskState.completedActions.length,4,'Keep the action ledger before optional catalogs');assert.equal(retainedWork.deviceIndex[0].id,'retained-device','Keep the device needed to continue');assert.match(compactWork.user,/verification-marker/);

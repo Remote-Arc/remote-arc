@@ -2,6 +2,7 @@ import type { SecurityState } from "@remotearc/protocol";
 import {ARC_PLANS,ARC_TOPUPS,ARC_PREMIUM_MODELS} from '@remotearc/protocol';
 import appDirectory from "./app-directory.json" with { type: "json" };
 import {createArcPreview} from "./arc-preview.js";
+import {createBillingPreview} from "./billing-preview.js";
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
@@ -13,6 +14,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
   const nativeFetch = window.fetch.bind(window);
   const arcPreview = createArcPreview();
+  const billingPreview = createBillingPreview({getItem:key=>window.sessionStorage.getItem(key),setItem:(key,value)=>window.sessionStorage.setItem(key,value)},new URL(location.href));
   let config:Promise<{arcAvailable:boolean}>|undefined, configTime=0;
   function runtimeConfig() {
     if(!config||Date.now()-configTime>5000) {
@@ -207,6 +209,9 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       const result=arcPreview.handle(url.pathname,method,init?.body??(input instanceof Request?await input.clone().text():undefined));
       if(result)return result;
     }
+    if(url.pathname.startsWith('/api/billing')&&url.pathname!=='/api/billing/catalog'){
+      const result=billingPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined));if(result)return result;
+    }
     if (method !== "GET") {
       return json(
         { error: "PR Preview is read-only. This action is not connected to production." },
@@ -216,7 +221,6 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
     if(url.pathname==='/api/runtime-config')return nativeFetch(input,init);
     if(url.pathname==='/api/billing/catalog')return json({arcAvailable:(await runtimeConfig()).arcAvailable,billingAvailable:false,connectFreeCalls:10000,plans:ARC_PLANS.map(p=>({...p,versionId:'preview:'+p.id})),topups:ARC_TOPUPS.map(p=>({...p,versionId:'preview:'+p.id})),trial:{days:14,credits:200}});
-    if (url.pathname === '/api/billing') return json({enabled:false,plan:ARC_PLANS[1],credits:{available:1280,pending:12.5,buckets:[]},usage:{used:1732,limit:null},plans:ARC_PLANS,topups:ARC_TOPUPS,models:ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:[]});
     if (url.pathname === '/api/arc/status') {const enabled=(await runtimeConfig()).arcAvailable;return json({enabled,preview:true,access:{status:'active',canUse:enabled,daysRemaining:14,dailyUsedPercent:0,expiresAt:null},models:[{id:'auto',label:'Auto',provider:'arc',premium:false,configured:true},...ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,provider:m.provider,premium:true,configured:true,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000}))],limits:{maxSteps:8,maxTokens:24000,maxSeconds:180}});}
     if (url.pathname === '/api/arc/work') return json({work:[{id:'sample-task',name:'Prepare the next release summary',kind:'task',status:'waiting',schedule:{type:'once'},nextRunAt:new Date(Date.now()+1800000).toISOString(),runCount:0,error:null,conversationId:'sample-conversation'},{id:'sample-routine',name:'Morning inbox & calendar brief',kind:'routine',status:'waiting',schedule:{type:'daily',time:'09:00',timezone:'Pacific/Auckland',weekdays:[1,2,3,4,5]},nextRunAt:new Date(Date.now()+3600000).toISOString(),runCount:4,error:null,conversationId:'sample-conversation'}],runs:[{id:'sample-run',session_id:'sample-conversation',title:'Review the release and share a summary',status:'succeeded',step:5,tokens_used:1320,error_code:null,created_at:new Date().toISOString(),automation_id:null},{id:'sample-routine-run',session_id:'sample-conversation',title:'Morning inbox & calendar brief',status:'succeeded',step:4,tokens_used:1045,error_code:null,created_at:new Date(Date.now()-3600000).toISOString(),automation_id:'sample-routine'}]});
     // Preview data for Settings > Workspaces. Writes remain blocked above.

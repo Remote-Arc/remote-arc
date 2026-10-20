@@ -12,7 +12,7 @@ type I18n = {
 
 const I18nContext = createContext<I18n | null>(null);
 const LOCALE_KEY = "remotearc-locale-v2";
-const dashboardPaths = new Set([...Object.values(DASHBOARD_PATHS), ...Object.keys(LEGACY_DASHBOARD_PATHS),"/admin-preview"]);
+const dashboardPaths = new Set([...Object.values(DASHBOARD_PATHS), ...Object.keys(LEGACY_DASHBOARD_PATHS),"/admin-preview","/checkout"]);
 
 function urlLocale(): Locale | null {
   // PR previews host the website and workspace together. Website URL prefixes

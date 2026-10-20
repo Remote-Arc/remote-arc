@@ -1,11 +1,16 @@
-import {useEffect,useRef,useState,type FormEvent} from 'react';
+import {lazy,Suspense,useEffect,useRef,useState,type FormEvent} from 'react';
 import {loadStripe} from '@stripe/stripe-js/pure/index.js';
 import type {Stripe,StripeElements,StripeEmbeddedCheckout,StripeElementLocale} from '@stripe/stripe-js';
 import {billingRequest,billingFailureMessage,type NativePaymentSession} from './arc-billing-client.js';
 import {WorkspaceLoading} from './workspace-loading.js';
 
 type Tr=(en:string,zh:string)=>string;
-export function StripeEmbeddedCheckout({session,locale,tr,onComplete}:{session:NativePaymentSession;locale:StripeElementLocale;tr:Tr;onComplete:()=>void}){
+type CheckoutProps={session:NativePaymentSession;locale:StripeElementLocale;tr:Tr;onComplete:()=>void};
+type MethodProps={session:NativePaymentSession;locale:StripeElementLocale;tr:Tr;onSaved:()=>void;onClose:()=>void};
+const PreviewCheckout=import.meta.env.VITE_UI_PREVIEW==='1'?lazy(()=>import('./stripe-payment-preview.js').then(module=>({default:module.PaymentPreview}))):null;
+const PreviewMethod=import.meta.env.VITE_UI_PREVIEW==='1'?lazy(()=>import('./stripe-payment-preview.js').then(module=>({default:module.MethodPreview}))):null;
+export function StripeEmbeddedCheckout(props:CheckoutProps){return PreviewCheckout?<Suspense fallback={null}><PreviewCheckout {...props}/></Suspense>:<LiveEmbeddedCheckout {...props}/>;}
+function LiveEmbeddedCheckout({session,locale,tr,onComplete}:CheckoutProps){
  const host=useRef<HTMLDivElement>(null),completed=useRef(onComplete),[ready,setReady]=useState(false),[failed,setFailed]=useState(false),[retry,setRetry]=useState(0);completed.current=onComplete;
  useEffect(()=>{
   let disposed=false,checkout:StripeEmbeddedCheckout|undefined;setReady(false);setFailed(false);
@@ -18,7 +23,8 @@ export function StripeEmbeddedCheckout({session,locale,tr,onComplete}:{session:N
  },[session.clientSecret,session.publishableKey,locale,retry]);
  return <section className="arcEmbeddedPayment" aria-label={tr('Secure payment','安全付款')} aria-busy={!ready&&!failed}>{!ready&&!failed&&<WorkspaceLoading label={tr('Loading secure payment…','正在加载安全付款表单…')} variant="compact"/>}{failed&&<div role="alert"><p>{tr('The payment form could not load. Your order is saved.','付款表单未能加载，订单已保留。')}</p><button className="raSettingsButton" onClick={()=>setRetry(value=>value+1)}>{tr('Reload payment form','重新加载付款表单')}</button></div>}<div ref={host}/></section>;
 }
-export function StripePaymentMethod({session,locale,tr,onSaved,onClose}:{session:NativePaymentSession;locale:StripeElementLocale;tr:Tr;onSaved:()=>void;onClose:()=>void}){
+export function StripePaymentMethod(props:MethodProps){return PreviewMethod?<Suspense fallback={null}><PreviewMethod {...props}/></Suspense>:<LivePaymentMethod {...props}/>;}
+function LivePaymentMethod({session,locale,tr,onSaved,onClose}:MethodProps){
  const host=useRef<HTMLDivElement>(null),stripeRef=useRef<Stripe|null>(null),elementsRef=useRef<StripeElements|null>(null),confirmedIntent=useRef<string|null>(null),live=useRef(true),lock=useRef(false),[ready,setReady]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
  useEffect(()=>{
   let disposed=false,destroy:undefined|(()=>void);live.current=true;

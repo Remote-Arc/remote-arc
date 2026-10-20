@@ -7,9 +7,10 @@ import {feedbackRewardAvailable} from './connect-rewards.js';
 
 export type FollowupEnv={DB:D1Database;PUBLIC_ORIGIN:string;APP_ORIGIN?:string;MARKETING_ORIGIN?:string;RESEND_API_KEY?:string;EMAIL_FROM?:string;FOLLOWUP_REPLY_TO?:string};
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
+const designSchema=z.object({layout:z.enum(['letter','spotlight','digest']),accent:z.string().regex(/^#[\da-f]{6}$/i),eyebrow:z.string().max(100),headline:z.string().max(200),intro:z.string().max(500),buttonLabel:z.string().max(80),highlights:z.array(z.object({title:z.string().max(100),body:z.string().max(600)}).strict()).max(3)}).strict();
 const stamp=()=>new Date().toISOString();
 type Contact={user_id:string;email:string;name:string|null;consent_at:string|null;suppressed_at:string|null;unsubscribe_token:string};
-type Message={id:string;user_id:string;subject:string;body:string;template_id:string;locale:'en'|'zh';recipient_email:string;status:string;created_at:string;provider_id:string|null};
+type Message={id:string;user_id:string;subject:string;body:string;template_id:string;locale:'en'|'zh';recipient_email:string;status:string;created_at:string;provider_id:string|null;design_json:string|null;html_body:string|null;text_body:string|null};
 async function ensureContact(env:FollowupEnv,userId:string){
  await env.DB.prepare(`INSERT OR IGNORE INTO user_followup_contacts(user_id,unsubscribe_token,updated_at) SELECT id,?2,?3 FROM users WHERE id=?1`).bind(userId,crypto.randomUUID(),stamp()).run();
  return env.DB.prepare('SELECT c.*,u.email,u.name FROM user_followup_contacts c JOIN users u ON u.id=c.user_id WHERE c.user_id=?1').bind(userId).first<Contact>();
@@ -47,11 +48,13 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
    return json({items:rows.results,total:total?.count||0,page,pageSize:30,emailConfigured:Boolean(env.RESEND_API_KEY&&env.EMAIL_FROM),templates:FOLLOWUP_TEMPLATES});
   }
   if(path==='/api/admin/followups/drafts'&&request.method==='POST'){
-   const value=z.object({id:z.uuid(),userId:z.string().min(1).max(160),templateId:z.enum(FOLLOWUP_TEMPLATES.map(t=>t.id)),locale:z.enum(['en','zh']),subject:z.string().trim().min(1).max(200).refine(s=>!/[\r\n]/.test(s)),body:z.string().trim().min(20).max(6000)}).strict().parse(await input(request));
+   const value=z.object({id:z.uuid(),userId:z.string().min(1).max(160),templateId:z.enum(FOLLOWUP_TEMPLATES.map(t=>t.id)),locale:z.enum(['en','zh']),subject:z.string().trim().min(1).max(200).refine(s=>!/[\r\n]/.test(s)),body:z.string().trim().min(20).max(6000),design:designSchema.optional()}).strict().parse(await input(request));
    const contact=await ensureContact(env,value.userId);if(!contact)return json({error:'user_not_found'},404);
    const existing=await env.DB.prepare('SELECT * FROM user_followup_messages WHERE id=?1').bind(value.id).first<Message>();
-   if(existing){if(existing.user_id!==value.userId||existing.subject!==value.subject||existing.body!==value.body)return json({error:'draft_conflict'},409);return json({id:existing.id,status:existing.status,...followupLinks(env,existing.id,value.locale)});}
-   await env.DB.prepare(`INSERT INTO user_followup_messages(id,user_id,actor_id,template_id,locale,subject,body,status,created_at,recipient_email) VALUES(?1,?2,?3,?4,?5,?6,?7,'draft',?8,?9)`).bind(value.id,value.userId,user.id,value.templateId,value.locale,value.subject,value.body,stamp(),contact.email).run();
+   if(existing){if(existing.user_id!==value.userId||existing.subject!==value.subject||existing.body!==value.body||existing.template_id!==value.templateId||existing.locale!==value.locale||(existing.design_json||null)!==(value.design?JSON.stringify(value.design):null))return json({error:'draft_conflict'},409);return json({id:existing.id,status:existing.status,...followupLinks(env,existing.id,value.locale)});}
+   const unsubscribeUrl=new URL(env.MARKETING_ORIGIN||'https://remotearc.app').origin+'/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;
+   const rendered=renderFollowupEmail({...value,...followupLinks(env,value.id,value.locale),unsubscribeUrl,replyTo:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',rewardAvailable:await feedbackRewardAvailable(env.DB)});
+   await env.DB.prepare(`INSERT INTO user_followup_messages(id,user_id,actor_id,template_id,locale,subject,body,status,created_at,recipient_email,design_json,html_body,text_body) VALUES(?1,?2,?3,?4,?5,?6,?7,'draft',?8,?9,?10,?11,?12)`).bind(value.id,value.userId,user.id,value.templateId,value.locale,value.subject,value.body,stamp(),contact.email,value.design?JSON.stringify(value.design):null,rendered.html,rendered.text).run();
    return json({id:value.id,status:'draft',...followupLinks(env,value.id,value.locale)},201);
   }
   const match=path.match(/^\/api\/admin\/followups\/([^/]+)(?:\/(send))?$/);if(!match)return json({error:'not_found'},404);
@@ -62,7 +65,8 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
    if(!env.RESEND_API_KEY||!env.EMAIL_FROM)return json({error:'email_not_configured'},503);
    const contact=await ensureContact(env,message.user_id);if(!contact||contact.suppressed_at)return json({error:'recipient_suppressed'},409);if(!contact.consent_at)return json({error:'contact_permission_required'},409);if(message.recipient_email!==contact.email)return json({error:'recipient_changed'},409);
    const unsubscribe=new URL(env.MARKETING_ORIGIN||'https://remotearc.app').origin+'/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;
-   const {html,text}=renderFollowupEmail({...message,templateId:message.template_id,...followupLinks(env,id,message.locale),unsubscribeUrl:unsubscribe,replyTo:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',rewardAvailable:await feedbackRewardAvailable(env.DB)});
+   const fallback=renderFollowupEmail({...message,templateId:message.template_id,...followupLinks(env,id,message.locale),unsubscribeUrl:unsubscribe,replyTo:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',rewardAvailable:await feedbackRewardAvailable(env.DB),...(message.design_json?{design:JSON.parse(message.design_json)}:{})});
+   const {html,text}=message.html_body&&message.text_body?{html:message.html_body,text:message.text_body}:fallback;
    const cutoff=new Date(Date.now()-72*3600000).toISOString(),now=stamp();
    const claimed=await env.DB.prepare(`UPDATE user_followup_messages SET status='sending' WHERE id=?1 AND status='draft' AND EXISTS(SELECT 1 FROM user_followup_contacts c WHERE c.user_id=?2 AND c.suppressed_at IS NULL AND c.consent_at IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM user_followup_messages m WHERE m.user_id=?2 AND m.id<>?1 AND (m.status IN ('sending','unknown') OR m.sent_at>?3)) RETURNING id`).bind(id,message.user_id,cutoff).first();
    if(!claimed)return json({error:'contact_cooldown_or_in_progress'},409);
@@ -77,7 +81,7 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
    return json({id,status,providerId,errorCode},status==='sent'?200:502);
   }
   if(request.method==='GET'){
-   const [contact,messages]=await Promise.all([ensureContact(env,id),env.DB.prepare('SELECT id,template_id,locale,subject,body,status,provider_id,created_at,sent_at,error_code FROM user_followup_messages WHERE user_id=?1 ORDER BY created_at DESC LIMIT 50').bind(id).all()]);
+   const [contact,messages]=await Promise.all([ensureContact(env,id),env.DB.prepare('SELECT id,template_id,locale,subject,body,status,provider_id,created_at,sent_at,error_code,design_json,html_body FROM user_followup_messages WHERE user_id=?1 ORDER BY created_at DESC LIMIT 50').bind(id).all()]);
    return contact?json({contact,messages:messages.results,rewardAvailable:await feedbackRewardAvailable(env.DB)}):json({error:'user_not_found'},404);
   }
   if(request.method==='PATCH'){

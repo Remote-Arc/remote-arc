@@ -1,4 +1,5 @@
-import {cloudSkillCatalog} from '../src/cloud-skills.js';
+import {testArcOutcomes} from './arc-outcomes-test.js';
+import {ARC_OUTCOME_SKILLS} from '../src/arc-outcome-skills.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -325,7 +326,7 @@ await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
 
 // Arc consumes the existing cloud catalog, with private Markdown imports alongside it.
 const library=await decode(await api('skills'));
-assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),[...cloudSkillCatalog(),...ARC_VERIFICATION_SKILLS].map(s=>s.id).sort());
+assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),[...ARC_OUTCOME_SKILLS,...ARC_VERIFICATION_SKILLS].map(s=>s.id).sort());
 const skillInput={name:'Private workflow',description:'Owner-only instructions',content:'# Private workflow\nUse scripts/check.py and verify its result.',sourceUrl:'https://github.com/example/workflow'};
 const imported=await decode(await api('skills','POST',skillInput),201);
 assert.equal((await decode(await api('skills','POST',skillInput),201)).id,imported.id,'Duplicate imports are idempotent');
@@ -369,6 +370,15 @@ assert.equal((rejected.result as any).dispatched,false);
 assert.equal((await decode(await api('skills/'+imported.id,'DELETE'))).deleted,true);
 assert.equal((await api('skills/'+imported.id)).status,404);
 await testArcVerification({sql,env,api,create,decode,decisions,tool,reply,row});
+await testArcOutcomes({sql,env,api,create,decode,decisions,tool,reply,row});
+const appMentionSession=await create(),appMentionId=crypto.randomUUID(),appMentionInput={text:'Inspect the selected account.',requestId:appMentionId,appIds:[connectionId]};
+const appMentionRun=await decode(await api('sessions/'+appMentionSession+'/messages','POST',appMentionInput),202);
+assert.equal((await decode(await api('sessions/'+appMentionSession+'/messages','POST',appMentionInput),202)).run.id,appMentionRun.run.id);
+assert.equal((await api('sessions/'+appMentionSession+'/messages','POST',{...appMentionInput,appIds:[vercelConnection]})).status,409);
+assert.equal((await arcMessages(env,'owner',appMentionSession))[0].apps?.[0]?.id,connectionId);
+decisions.push(reply('The selected account is available.'));await runArcStep(env,appMentionRun.run.id);
+assert.equal((await api('sessions/'+appMentionSession+'/messages','POST',{text:'Inspect',requestId:crypto.randomUUID(),appIds:['foreign-or-missing']})).status,404);
+assert.equal((await api('sessions/'+appMentionSession+'/messages','POST',{text:'Inspect',requestId:crypto.randomUUID(),appIds:Array(6).fill(connectionId)})).status,400);
 console.log('Arc Chat: authenticated encrypted conversations, funded inference, direct Apps execution, quotas, idempotency, cancellation, durable tasks and DST schedules passed.');
 
 // Existing administrator caps are never silently raised by a chat request.

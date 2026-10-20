@@ -9,6 +9,7 @@ This map describes the user entrance, scope, expected result, verification and r
 | [Inbox excerpts](verified-inbox.md) | Choose an account and bounded query, read source excerpts, inspect receipt | arc-verification-test.ts |
 | [GitHub issue](verified-issue.md) | Review exact fields, create one issue, independently read it back | arc-verification-test.ts |
 | [Deployment readiness](verified-deployment.md) | Select an exact deployment, inspect provider state and URL | arc-verification-test.ts |
+| [Website delivery](website-delivery.md) | Select an available authorized computer, save actual files, verify a live preview | arc-outcomes-test.ts |
 | [Cross-cutting flows](cross-cutting-flows.md) | Consent, account isolation, retries, restart, evidence and limits | arc-chat-test.ts; arc-verification-ui-test.tsx |
 
 Feature files teach operation and verification. Source remains the implementation reference. Handbook versions/owners/regression links are returned by the Arc Skills API; imported skills are versioned by content hash. Changes to a completion rule require the corresponding handbook and fixture to change together.

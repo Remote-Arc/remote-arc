@@ -280,8 +280,8 @@ export const DOC_TOPICS: DocTopic[] = platformDocTopics([
           "zh": "发现技能库"
         },
         "text": {
-          "en": "Open Skills in Arc to browse the cloud library or import a SKILL.md. Type @ in Chat or choose Skills to attach up to three explicit references, then describe the goal. Arc reads the selected instructions and reuses them in the conversation. The MCP resource remotearc://skills/catalog also lists built-in Skills. Read remotearc://skills/<id> for a selected Skill when your AI client supports MCP resources. The catalog includes browser operation, autonomous browser work, desktop operation, image creation, video creation, transcription, research, UI inspection and scheduled work. Resource access requires signing in.",
-          "zh": "在 Arc 的 Skills 页面浏览云端库或导入 SKILL.md。聊天时输入 @ 或点击“技能”，可选择最多三个明确引用，再描述目标；Arc 会读取并在对话中复用这些指令。MCP 资源 remotearc://skills/catalog 也提供内置 Skills。AI 客户端支持 MCP 资源时，可读取 remotearc://skills/<id> 获取所选技能。目录包含浏览器操作、自主浏览器工作、桌面操作、图片创作、视频创作、转写、研究、界面检查与定时工作。读取资源需要登录。"
+          "en": "Arc offers workflows to create a real website preview, save a source-based report, read inbox excerpts, create and read back a GitHub issue, or check a deployment. Connect the required Apps or computer first. Type @ to add up to three Skills and five active App accounts as badges; IDs are saved separately from your goal. Library actions open a draft without pasting internal prompts. Connect retains its separate MCP skill handbook resources; an engine handbook does not mean a generation service is installed.",
+          "zh": "Arc 提供实际网站预览、源文件报告、邮件摘录、创建并回读 GitHub Issue、核对部署状态等工作流。先连接所需应用或电脑。聊天时输入 @，最多用 badge 引用三个技能和五个已连接应用账号；引用 ID 与目标分开保存。从技能库使用时不会粘贴内部提示词。Connect 保留独立的 MCP 技能手册资源；有引擎手册不代表已经安装生成服务。"
         }
       },
       {

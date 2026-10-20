@@ -212,3 +212,13 @@
  :root[data-theme] .appFrame[data-workspace][data-sidebar-collapsed=true] .arcChatNavigation :is(button>span,.arcSidebarSectionTitle,.arcSidebarHistoryHeading,.arcSessionList,.arcSidebarSearch){display:none}
 }
 :root[data-theme] .appFrame[data-workspace] .arcSidebarPortalRoot[hidden]{display:none!important}
+
+/* Product tokens exist before auth and lazy routes mount, including checkout. */
+:root[data-surface="product"][data-theme]{--bg:#fff;--panel:#fff;--panel-2:#f5f5f7;--line:#e7e7eb;--muted:#73737c;--muted-2:#73737c;--text:#202024;--accent:#242428;--gold:#242428;--gold-2:#45454b;--green:#242428}
+:root[data-surface="product"][data-theme="dark"]{--bg:#111114;--panel:#19191d;--panel-2:#222227;--line:#2a2a30;--muted:#9999a4;--muted-2:#9999a4;--text:#eeeef1;--accent:#eeeef1;--gold:#eeeef1;--gold-2:#d6d6dc;--green:#eeeef1}
+:root[data-surface="product"][data-theme] body{background:var(--bg);color:var(--text)}
+:root[data-surface="product"][data-theme] .centerShell{background:var(--bg);color:var(--text)}
+:root[data-surface="product"][data-theme] .centerCard{background:var(--panel);border:1px solid var(--line);color:var(--text);box-shadow:none;border-radius:16px}
+:root[data-surface="product"][data-theme] .centerCard :is(h1,h2){color:var(--text)}
+:root[data-surface="product"][data-theme] .centerCard p{color:var(--muted)}
+:root[data-surface="product"][data-theme] .centerShell :is(.brandWords b,.eyebrow){color:var(--text)}

@@ -30,17 +30,17 @@ const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DAS
 sql.prepare("UPDATE arc_funding_policy SET managed=1,enabled=1,mode='automatic',started_at=?,total_micros=?,daily_micros=?").run(at,maximumMicros,maximumMicros);
 const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
  {id:'mail',provider:'gmail',scopes:[scope],prompt:'帮我看看最近邮件中需要注意的事情，整理重点和待办。'},
- {id:'github',provider:'github',scopes:['repo'],prompt:"Create an issue in example/project titled 'Release checklist' asking us to verify smoke tests, then return the issue link."},
+ {id:'github',provider:'github',scopes:['repo','read:user'],prompt:"Create an issue in example/project titled 'Release checklist' asking us to verify smoke tests, then return the issue link."},
  {id:'vercel',provider:'vercel',scopes:[],prompt:"Check the latest deployment of my 'web' project and return its actual readiness and deployment URL."},
  {id:'task',provider:'vercel',scopes:[],prompt:"Save a one-off task named 'Verify web deployment' to run now: check the latest deployment of my 'web' project and report its actual readiness and URL. Create a persisted task with schedule type once, not a recurring routine or just a reply in this chat."},
- {id:'skill',provider:'github',scopes:['repo'],prompt:'Use the selected skill to create the release verification issue in example/project. Follow its title and body requirements and return the acknowledged issue link.'},
+ {id:'skill',provider:'github',scopes:['repo','read:user'],prompt:'Use the selected skill to create the release verification issue in example/project. Follow its title and body requirements and return the acknowledged issue link.'},
  {id:'vercel-error',provider:'vercel',scopes:[],prompt:"Check the latest deployment of my 'broken' project and tell me its actual state. Report a failed deployment accurately."},
  {id:'managed-process',provider:'github',scopes:['repo'],prompt:"On my connected build computer, run node verify.js in /fixture/project once as a managed background process. Inspect its output and completion status, keep the acknowledged process ID, and return the actual check result. Do not start a duplicate or claim completion while it is still running."},
  {id:'verified-mail',provider:'gmail',scopes:[scope],prompt:'Read the exact inbox verification scope and summarize the excerpts with their actual actions.'},
  {id:'verified-issue',provider:'github',scopes:['repo','read:user'],prompt:'Create the exact issue from verificationScope, independently read it back and return the actual issue URL.'},
  {id:'verified-deployment',provider:'vercel',scopes:[],prompt:'Verify the exact deployment from verificationScope and report its observed readiness and URL.'},
 ],report:any[]=[];
-let issueBody='',currentCase='',reads=0,lists=0,unexpected=0,issueWrites=0,deploymentReads=0,processStarts=0,processChecks=0,processOutputs=0;
+let issueTitle='',issueBody='',currentCase='',reads=0,lists=0,unexpected=0,issueWrites=0,deploymentReads=0,processStarts=0,processChecks=0,processOutputs=0;
 env.REGISTRY={getByName:()=>({fetch:async(request:Request)=>{
  const route=new URL(request.url).pathname;
  if(route==='/devices')return Response.json(currentCase==='managed-process'?[{id:'eval-build-device',tools:processTools,status:'online'}]:[]);
@@ -60,11 +60,11 @@ globalThis.fetch=(async(url,init)=>{
  const target=new URL(String(url));
  if(['github','skill','verified-issue'].includes(currentCase)&&target.hostname==='api.github.com'&&target.pathname==='/repos/example/project/issues'&&init?.method==='POST'){
   const body=JSON.parse(String(init.body));issueWrites++;reads++;
-  issueBody=String(body.body);const correct=currentCase==='verified-issue'?body.title==='Verified release checklist'&&body.body==='Verify smoke tests and attach the actual result.':currentCase==='skill'?body.title==='Skill release verification'&&String(body.body).includes('verified-smoke-7A'):body.title==='Release checklist'&&/smoke/i.test(String(body.body));
+  issueTitle=String(body.title);issueBody=String(body.body);const correct=currentCase==='verified-issue'?body.title==='Verified release checklist'&&body.body==='Verify smoke tests and attach the actual result.':currentCase==='skill'?body.title==='Skill release verification'&&String(body.body).includes('verified-smoke-7A'):body.title==='Release checklist'&&/smoke/i.test(String(body.body));
   if(!correct||issueWrites>1){unexpected++;throw Error('ARC_EVAL_ISSUE_GOAL_MISMATCH');}
-  const number=currentCase==='skill'?43:42;return Response.json({id:number,number,title:body.title,html_url:'https://github.com/example/project/issues/'+number});
+  const number=currentCase==='skill'?43:42;return Response.json({id:number,number,title:body.title,body:body.body,html_url:'https://github.com/example/project/issues/'+number});
  }
- if(currentCase==='verified-issue'&&target.hostname==='api.github.com'&&target.pathname==='/repos/example/project/issues/42'&&init?.method==='GET'){reads++;return Response.json({number:42,title:'Verified release checklist',body:issueBody,html_url:'https://github.com/example/project/issues/42'});}
+ if(['github','skill','verified-issue'].includes(currentCase)&&target.hostname==='api.github.com'&&target.pathname==='/repos/example/project/issues/'+(currentCase==='skill'?43:42)&&init?.method==='GET'&&issueWrites===1){reads++;const number=currentCase==='skill'?43:42;return Response.json({number,title:issueTitle,body:issueBody,html_url:'https://github.com/example/project/issues/'+number});}
  if(['vercel','task','vercel-error','verified-deployment'].includes(currentCase)&&target.hostname==='api.vercel.com'&&init?.method==='GET'){
   reads++;const failed=currentCase==='vercel-error',name=failed?'broken':'web',projectId=failed?'prj_broken':'prj_web',readyState=failed?'ERROR':'READY',deploymentId=failed?'dpl_broken':'dpl_fixture',url=name+'-example.vercel.app';
   if(target.pathname.endsWith('/projects'))return Response.json({projects:[{id:projectId,name}]});
@@ -96,7 +96,7 @@ try{
   const drive=async(runId:string)=>{let more=true,ticks=0;while(more&&ticks++<9)more=await runArcStep(env,runId,{executeTool:async(e,run,decision)=>{
    trace.push({phase:run.automation_id?'scheduled':'chat',tool:decision.tool,arguments:JSON.parse(decision.arguments_json)});
    if(!['read_inbox','list_apps','describe_app','call_app',...(item.id==='task'?['create_task','manage_work']:[]),...(skill||verification?['read_skill','list_skills']:[]),...(item.id==='managed-process'?['list_devices','select_device','device_tool']:[])].includes(decision.tool)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_TOOL');}
-   if(decision.tool==='call_app'&&!['messages.list','messages.get','projects.list','deployments.list','deployments.get','issues.create',...(verification?.kind==='github_issue'?['issues.get']:[])].includes(JSON.parse(decision.arguments_json).operation)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_WRITE');}
+   if(decision.tool==='call_app'&&!['messages.list','messages.get','projects.list','deployments.list','deployments.get','issues.create',...(['github','skill','verified-issue'].includes(item.id)?['issues.get']:[])].includes(JSON.parse(decision.arguments_json).operation)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_WRITE');}
    try{return await executeArcTool(e,run,decision);}catch(error){
     // Synthetic inputs only; never serialize provider responses or credentials.
     trace.at(-1).failure={name:error instanceof Error?error.name:'Unknown',code:error instanceof Error&&/^(ARC_|MODEL_|app_)/.test(error.message)?error.message:'LOCAL_EXECUTION_REJECTED'};throw error;

@@ -18,7 +18,7 @@ function resolveTheme(theme: ThemePreference): "light" | "dark" {
 function dashboardSurface() {
   const path = window.location.pathname;
   return ["mcp.remotearc.app","agent.remotearc.app","admin.remotearc.app"].includes(window.location.hostname) || path === '/admin-preview'
-    || /^\/(dashboard(?:\/|$)|overview\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$)/.test(path);
+    || /^\/(dashboard(?:\/|$)|overview\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$|checkout\/?$|chat(?:\/|$)|tasks\/?$|routines\/?$|activity\/?$|skills\/?$)/.test(path);
 }
 
 function preferenceKey() {

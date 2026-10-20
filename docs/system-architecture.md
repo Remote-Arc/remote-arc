@@ -1,5 +1,8 @@
 # Remote Arc 系统技术参考
 
+> 当前整体平台架构请阅读 [Agent platform architecture](agent-platform-architecture.md) 或 [官网中文技术文档](https://remotearc.app/zh/docs/architecture)。本文保留本地执行与 Connect 的工程细节；旧版“托管 Planner 实验”描述不代表当前 Arc Chat 运行时。
+
+
 **适用版本：Remote Arc 0.6.0 系列（2026-10-09 更新）。** 本文是工程架构参考，
 不代表历史设计或实验功能均已正式上线。实际生产能力以
 [官网 Docs](https://remotearc.app/docs)、[发行记录](https://remotearc.app/releases)

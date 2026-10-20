@@ -4,48 +4,84 @@
 
 # Remote Arc
 
-**Controlled remote computer access for AI — across the computers you already own.**
+**Agent infrastructure for real work across your apps and computers.**
 
-Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients to Windows, macOS, and Linux computers you explicitly pair — without exposing a public port or requiring a VPN. It focuses on permissioned file, process, terminal, and explicitly shared browser access. Deterministic background tasks can persist independently of a chat; continuous AI reasoning is not currently claimed as a production capability.
+Arc is your hosted AI teammate. Connect brings the same authorized Apps and device execution to the AI client you already use. Remote Arc manages the context, permissions, persistent work, device placement and usage around model decisions so work can proceed from a request to an inspectable result.
 
-[Website](https://remotearc.app) · [Dashboard](https://mcp.remotearc.app) · [Remote MCP](https://mcp.remotearc.app/mcp) · [Security](./SECURITY.md)
+[Website](https://remotearc.app) · [Open Arc](https://agent.remotearc.app/dashboard/agent/chat) · [User guide](https://remotearc.app/docs/start-here) · [Architecture](./docs/agent-platform-architecture.md) · [Security](./SECURITY.md)
 
 <sub>Source available for transparency and security review under a [proprietary license](./LICENSE). Not open-source licensed.</sub>
 
-[![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
-
 </div>
 
-<p align="center">
-  <a href="https://remotearc.app/#how-it-works">
-    <img src="./docs/assets/interactive-workflow.webp" alt="High-resolution animated Remote Arc workflow: ChatGPT on the left, device tool activity on the right, captured from PR #101" width="100%" />
-  </a>
-  <br />
-  <sub>Chat → Remote Arc → your computer. Animated preview from the interactive demo in PR #101 (example data, no real device commands). Click to explore the workflow.</sub>
-</p>
+## Two ways to work
 
-## Why Remote Arc
+| Product | Start here | What it does |
+| --- | --- | --- |
+| **Arc** | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines. |
+| **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts and paired devices from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
 
-- **Durable deterministic tasks** — approved commands, schedules, and condition watches can continue beyond one chat turn and be inspected later; new AI judgment still requires an active reasoning host.
-- **Read-only by default** — newly paired devices start with safe inspection capabilities.
-- **Per-device skill controls** — independently enable file edits, terminal execution, process controls, and recovery.
-- **Outbound-only connectivity** — no public IP, VPN, router port forwarding, or inbound listener on your computer.
-- **Local safety boundaries** — Trusted Write Locations, boundary approvals, protected sensitive paths, local undo, and a terminal Safety Guard.
-- **Open MCP interoperability** — one OAuth-protected Remote MCP endpoint for supported AI clients.
-- **Native execution core** — Remote Arc owns its filesystem, process, and terminal execution path rather than proxying another computer-control MCP server.
+Arc offers an explicitly activated 14-day Auto trial and Plus / Pro subscriptions. Users do not supply a model API key. Hosted model use has Credits and run limits; available models and plan details are shown in the workspace. Connect calls and third-party App charges have their own allowances. Preview environments use simulated data.
+
+## From a goal to a result
+
+1. **Connect what the work needs.** Authorize a cloud account in Apps, or pair a computer for local files, commands and installed software. Cloud Apps do not require a local computer.
+2. **Describe the outcome.** Ask for an inbox summary, an issue with a returned link, or a deployment check. Type `@` in Arc Chat to reuse a selected cloud/imported skill, then describe the desired result.
+3. **Execute within current permissions.** Models interpret, plan, choose tools and summarize. Arc supplies bounded context, typed operation contracts, authorization, dispatch, persisted observations and cost accounting.
+4. **Inspect the result.** A connection check or successful individual tool call is not the whole goal. Chat presents the final answer; Activity provides execution details. Missing permissions, engines, devices or budgets must be reported as blockers.
+5. **Keep ongoing work.** Ask Arc to save a one-off Task or a routine with accounts, timing and timezone. Runs are persisted and scheduled; failed or uncertain recurring work pauses for inspection.
+
+## Earn trust through execution
+
+- **Evidence:** return observed content, an acknowledged resource or a concrete blocker; a tool call alone is not task completion.
+- **Boundaries:** current account permissions and local policy apply to each action; skill text and messages cannot grant more authority.
+- **Continuity:** retain useful context and results; stop rather than blindly repeat an uncertain external write.
+- **Control:** users can stop work, revoke connections, inspect Activity and manage memory; budgets bound hosted execution.
+
+The run status records whether execution ended. Verify the answer and its evidence to assess the goal. The technical reference describes current tests and limits instead of promising that an agent can complete any possible task.
+
+## Platform capabilities
+
+- **Connected Apps:** account-owned, typed provider operations with live scope checks, stable request identities and recorded outcomes.
+- **Tasks and routines:** saved goals, schedules, leases, bounded hosted runs and result history. Connect also supports deterministic background commands and checks.
+- **Skills:** reusable cloud instructions and imported SKILL.md references. A skill does not install its required engine, scripts or dependencies.
+- **Context and memory:** relevant prior observations and learned IDs within a chat, plus bounded encrypted personal notes and work summaries users can inspect and delete.
+- **Device fleet:** filter by ownership, tools, workspace and availability before balancing fresh capacity. Projects are not moved implicitly.
+- **Local control:** read-oriented initial setup, explicit file/terminal/browser permissions, trusted roots, sensitive-path checks and supported Local Undo.
+- **Outbound connectivity:** paired Windows, macOS and Linux computers connect outward; no public inbound port or VPN is required.
+- **Operating controls:** Credits, funding reservations, separate paid/sponsored budgets, billing records and admin usage visibility.
+
+## Architecture
+
+```mermaid
+flowchart TB
+  User[User] --> Arc[Arc hosted workspace]
+  User --> External[External AI client]
+  External --> Connect[Connect / OAuth MCP]
+  Arc --> Runtime[Arc runtime and bounded context]
+  Runtime <--> Model[Configured model API]
+  Runtime --> Gate[Authorization and dispatch]
+  Connect --> Gate
+  Runtime <--> State[(Encrypted content / tasks / usage)]
+  Scheduler[Leased scheduler] --> Runtime
+  Gate --> Apps[Cloud App adapters]
+  Gate --> Route[Device selection and routing]
+  Route <-->|Outbound authenticated WSS| Agent[Native Go Agent and Execution Core]
+```
+
+The model is the reasoning component; Remote Arc owns the execution and continuity layer. Provider data, skill text, files and memory remain untrusted observations. Unknown external effects are retained for inspection and are not blindly repeated. A completed run is not a universal semantic proof of success; inspect the returned evidence.
+
+Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. Custom groups of autonomous AI teammates and arbitrary external-chat wakeup are future integrations, not current guarantees.
 
 ## Quick start
 
-Connect a Windows, macOS, or Linux computer:
+For hosted Arc, [sign in](https://agent.remotearc.app), activate the trial or choose a plan, connect an App and describe your goal. Install a device Agent only for work that needs your computer:
 
 ```bash
 npx remotelink@latest
 ```
 
-The default device Agent and Execution Core are native Go. npm installs and
-launches the checksum-verified binary; standalone and Homebrew installations
-need no Node.js. `--go` remains a compatible alias and `--ts` selects the retained
-TS runtime. Stop the active Agent before switching versions or runtimes.
+The npm launcher installs and checksums the native Go Agent and Execution Core. Standalone and Homebrew installations need no Node.js. Stop the active Agent before changing versions or runtimes; `--ts` explicitly selects the retained TypeScript fallback.
 
 <!-- native-install:start -->
 ### Native downloads and Homebrew
@@ -82,47 +118,13 @@ remotelink
 The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.
 <!-- native-install:end -->
 
-Then connect your MCP client to:
+For Connect, authorize your compatible AI client against:
 
 ```text
 https://mcp.remotearc.app/mcp
 ```
 
-The browser pairing flow binds that computer to your Remote Arc account. From there, your AI client can only use capabilities currently allowed for that specific device.
-
-## User flow
-
-```mermaid
-flowchart LR
-    A["Sign in at remotearc.app"] --> B["Add device"]
-    B --> C["Run npx remotelink"]
-    C --> D["Approve matching pairing code"]
-    D --> E["Device appears in Remote Arc"]
-    E --> F["Connect your AI client via OAuth"]
-    F --> G["Use permitted tools on the paired computer"]
-```
-
-## Architecture
-
-```mermaid
-flowchart TD
-    AI["ChatGPT · Claude · Codex · Cursor<br/>or another MCP client"]
-    MCP["Remote Arc MCP<br/>mcp.remotearc.app/mcp"]
-    CF["Cloudflare Worker<br/>OAuth · pairing · routing · usage"]
-    DO["Per-user Durable Object"]
-    AGENT["Native Go Agent · apps/agent"]
-    CORE["Go Execution Core · packages/execution-core<br/>filesystem · processes · terminal · undo"]
-    DEVICE["Windows · macOS · Linux"]
-
-    AI -->|"MCP + OAuth 2.1 / PKCE"| MCP
-    MCP --> CF
-    CF --> DO
-    DO -->|"encrypted outbound WebSocket"| AGENT
-    AGENT --> CORE
-    CORE --> DEVICE
-```
-
-The hosted relay authenticates and routes requests. OS-level operations execute on the paired device, subject to the device's saved tool policy and local safety controls.
+Pairing a computer and authorizing an AI client are separate, revocable relationships. See [installation](https://remotearc.app/downloads), [Apps](https://remotearc.app/docs/apps), [Tasks](https://remotearc.app/docs/tasks), [Skills](https://remotearc.app/docs/skills) and [memory](https://remotearc.app/docs/memory).
 
 ## Monorepo
 
@@ -131,8 +133,8 @@ remote-arc/
 ├── apps/
 │   ├── agent/            Native Go device Agent: pairing, relay, recovery, journals
 │   ├── agent-ts/         Explicit TypeScript runtime fallback
-│   ├── ui/               React website, downloads and Dashboard
-│   ├── relay/            Cloudflare Worker, OAuth, D1, Durable Objects and MCP
+│   ├── ui/               React Arc / Connect / Admin, website and documentation
+│   ├── relay/            Cloudflare Worker, Arc runtime, Apps, tasks, billing, OAuth and MCP
 │   └── mcp/              TS compatibility adapter and native MCP integration tests
 └── packages/
     ├── execution-core/   Independent Go module: files, processes, policy and Undo
@@ -256,7 +258,7 @@ Automation state lives in D1 and is advanced by the Worker scheduler or webhook 
 
 Creating an automation snapshots the current device permission policy. Routine disconnects and local agent restarts do not introduce an approval step: unattended work waits for the device and automatically recovers. If you later change the device security policy itself, Remote Arc stops that automation rather than silently inheriting a different trust boundary.
 
-A device going offline moves eligible work to `waiting_for_device`; it does not automatically fail the automation. Deterministic long-running work defaults to automatic attempt restart if the local agent reconnects without its previous managed-process handle. If a task needs fresh AI judgment after a result changes, that reasoning must come from a currently available AI host; Remote Arc does not currently claim an autonomous ordinary-Chat wake loop.
+A device going offline moves eligible work to `waiting_for_device`; it does not automatically fail the automation. Deterministic long-running work defaults to automatic attempt restart if the local agent reconnects without its previous managed-process handle. For fresh AI judgment, Arc hosted tasks invoke their configured model within current limits. Deterministic Connect tasks need an available supported reasoning host for new decisions; this does not imply an autonomous wake loop into arbitrary external chats.
 
 The background agent and automation engine solve different problems:
 
@@ -540,7 +542,7 @@ Requirements:
 Install:
 
 ```bash
-git clone https://github.com/yaohuangguan/remote-arc.git
+git clone https://github.com/Remote-Arc/remote-arc.git
 cd remote-arc
 pnpm install
 pnpm run ci

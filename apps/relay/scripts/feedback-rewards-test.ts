@@ -46,15 +46,18 @@ await decode(await submit(body(secondId,policy.id,{email:'two@example.invalid'})
 await decode(await submit(body(thirdId,policy.id,{email:'three@example.invalid'}),'three'),201);
 const claims=sql.prepare('SELECT id,user_id FROM feedback_reward_claims').all() as {id:string;user_id:string}[];
 const firstClaim=claims.find(c=>c.user_id==='one')!.id;
-const approvals=await Promise.all(claims.map(c=>api('/claims/'+c.id+'/approve','POST',{})));
-assert.equal(approvals.filter(r=>r.status===200).length,2,'Campaign cap applies atomically across parallel approvals');
+// Give the account used by the later quota tests a deterministic grant, then
+// race the remaining claims for one remaining slot. Either contender may win.
+await decode(await api('/claims/'+firstClaim+'/approve','POST',{}));
+const approvals=await Promise.all(claims.filter(c=>c.id!==firstClaim).map(c=>api('/claims/'+c.id+'/approve','POST',{})));
+assert.equal(approvals.filter(r=>r.status===200).length,1,'Campaign cap applies atomically across parallel approvals');
 assert.equal(sql.prepare('SELECT SUM(granted_calls) n FROM connect_feedback_rewards').get()!.n,6);
 await decode(await api('/claims/'+firstClaim+'/approve','POST',{}));
 assert.equal(sql.prepare('SELECT COUNT(*) n FROM connect_feedback_rewards WHERE user_id=\'one\'').get()!.n,1,'Grant replay is idempotent');
 assert.equal((await api('/claims/'+firstClaim+'/reject','POST',{})).status,409);
 assert.equal((await decode(await publicFeedbackReward(new Request('https://remotearc.app/api/public/feedback-reward'),env))).enabled,false,'Fully allocated campaign is no longer advertised');
 const repeatId=crypto.randomUUID();assert.equal((await decode(await submit(body(repeatId,policy.id)),201)).reward.status,'terms_changed_or_limit_reached');
-const unpaidClaim=claims.find(c=>c.user_id==='three')!.id;
+const unpaidClaim=sql.prepare("SELECT id FROM feedback_reward_claims WHERE status='pending'").get()!.id as string;
 await publish({enabled:false,totalCallsCap:100});
 assert.equal((await api('/claims/'+unpaidClaim+'/approve','POST',{})).status,409);
 await decode(await api('/claims/'+unpaidClaim+'/reject','POST',{}));
@@ -82,10 +85,11 @@ await consumeToolCall(env,'one');await consumeToolCall(env,'one');
 await assert.rejects(()=>consumeToolCall(env,'one'),/allowance reached/);
 await assert.rejects(()=>consumeRewardCall(db,'one',0),/Invalid Connect/);
 // Unlimited paid/admin requests count usage but do not consume a reward.
-const paidBefore=(await rewardAllowance(db,'two'))!.available;
-sql.prepare("UPDATE users SET plan='plus' WHERE id='two'").run();
-assert.equal((await consumeToolCall(env,'two')).unlimited,true);
-assert.equal((await rewardAllowance(db,'two'))!.available,paidBefore);
+const paidWinner=sql.prepare("SELECT user_id FROM connect_feedback_rewards WHERE user_id<>'one' AND user_id<>'expired'").get()!.user_id as string;
+const paidBefore=(await rewardAllowance(db,paidWinner))!.available;assert(paidBefore>0);
+sql.prepare("UPDATE users SET plan='plus' WHERE id=?").run(paidWinner);
+assert.equal((await consumeToolCall(env,paidWinner)).unlimited,true);
+assert.equal((await rewardAllowance(db,paidWinner))!.available,paidBefore);
 assert.equal((await consumeToolCall(env,'admin')).unlimited,true);
 // Crossing a month refreshes only the base; an award never regenerates.
 const rolloverId=crypto.randomUUID(),terms=(await decode(await api())).policy;

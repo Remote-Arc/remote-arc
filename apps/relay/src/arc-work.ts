@@ -39,7 +39,7 @@ export function nextArcOccurrence(schedule:Schedule,after:Date):string|null{
 export async function createArcWork(env:ArcEnv,run:ArcRun,args:unknown,routine:boolean){
  const input=z.object({name:z.string().trim().min(1).max(100),instructions:z.string().trim().min(1).max(6000),schedule:arcScheduleSchema}).strict().parse(args);
  if(routine===(input.schedule.type==='once'))throw new Error('ARC_INVALID_SCHEDULE');
- if(run.automation_id)throw new Error('ARC_RECURSIVE_WORK_NOT_ALLOWED');
+ if(run.automation_id)return{code:'ARC_SCHEDULE_ALREADY_RUNNING',dispatched:false,automationId:run.automation_id,guidance:'This is an occurrence of an already saved task. Execute its instructions now using the connected tools, then deliver the actual result. Do not create another task or schedule.'};
  await requireArcAccess(env,run.user_id);
   const plan=await currentArcPlan(env,run.user_id);
  const id='arc-'+(await sha256Hex(`${run.id}:${run.step}`)).slice(0,32),now=stamp(),next=nextArcOccurrence(input.schedule,new Date(now));
@@ -54,7 +54,7 @@ export async function createArcWork(env:ArcEnv,run:ArcRun,args:unknown,routine:b
 export async function manageArcWork(env:ArcEnv,run:ArcRun,args:unknown){
  const input=z.object({action:z.enum(['list','pause','resume','cancel','update']),id:z.string().max(160).optional(),instructions:z.string().trim().min(1).max(6000).optional(),schedule:arcScheduleSchema.optional()}).strict().parse(args);
  if(input.action==='list'){const result=await listArcWork(env,run.user_id);return{work:result.work,runs:result.runs.filter(item=>item.id!==run.id).slice(0,10),currentRunExcluded:true};}
- if(run.automation_id)throw new Error('ARC_RECURSIVE_WORK_NOT_ALLOWED');
+ if(run.automation_id)return{code:'ARC_SCHEDULE_MANAGEMENT_USER_CHAT_REQUIRED',dispatched:false,guidance:'Execute this occurrence now. Schedule changes belong in the owner conversation; do not change or recreate a schedule during its execution.'};
  const row=await env.DB.prepare('SELECT * FROM automations WHERE id=?1 AND user_id=?2').bind(input.id||'',run.user_id).first<AutomationRow>(),work=row&&nativeArcWork(row.goal_json);
  if(!row||!work)throw new Error('ARC_WORK_NOT_FOUND');
  if(['completed','cancelled','expired'].includes(row.status))throw new Error('ARC_WORK_FINISHED');

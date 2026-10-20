@@ -12,7 +12,7 @@ export async function testArcEmployeeDrafts({sql,env}:any){
  env.ARC_RUNTIME={getByName:()=>({fetch:async()=>Response.json({queued:true})})};
  try{
   sql.exec("UPDATE arc_chat_runs SET status='cancelled' WHERE status IN ('queued','thinking','working')");
-  const session=(await decode(await chat('sessions','POST',{}),201)).id,source=(await decode(await chat('sessions/'+session+'/messages','POST',{text:'Create an AI designer called Alice for our team.',requestId:crypto.randomUUID()}),202)).run;
+  const session=(await decode(await chat('sessions','POST',{}),201)).id,source=(await decode(await chat('sessions/'+session+'/messages','POST',{text:'Draft an AI designer profile called Alice for our team. Do not create it yet.',requestId:crypto.randomUUID()}),202)).run;
   const run=()=>sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(source.id) as ArcRun;
   const count=()=>sql.prepare("SELECT COUNT(*) n FROM arc_employees WHERE user_id='owner'").get().n,before=count();
   env.MODEL_GATEWAY.adapters.openai=async(request:any)=>{modelCalls++;const user=JSON.parse(request.user),observed=user.messages.some((message:any)=>message.tool==='prepare_employee');return{value:observed?{decision:'reply',tool:'none',arguments_json:'{}',message:'Your designer profile is ready to review and create.'}:{decision:'tool',tool:'prepare_employee',arguments_json:JSON.stringify({name:'Alice',responsibility:'Product designer',emoji:'🎨'}),message:'Preparing an employee profile'},usage:{inputTokens:100,outputTokens:50,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'draft-fixture-'+modelCalls};};
@@ -31,6 +31,17 @@ export async function testArcEmployeeDrafts({sql,env}:any){
   const expired=await make('Expired');sql.prepare('UPDATE arc_team_drafts SET expires_at=? WHERE id=?').run('2000-01-01T00:00:00.000Z',expired.id);assert.equal((await decode(await api(expired.id))).draft.status,'expired');assert.equal((await api(expired.id,{action:'confirm',profile:expired.profile})).status,409);
   const racing=await make('Cancel race');await Promise.all([api(racing.id,{action:'confirm',profile:racing.profile}),api(racing.id,{action:'cancel'})]);const result=(await decode(await api(racing.id))).draft,exists=sql.prepare("SELECT COUNT(*) n FROM arc_employees WHERE user_id='owner' AND id=?").get(result.employeeId||'missing').n;assert.equal(exists,result.status==='confirmed'?1:0,'Confirm/cancel cannot create an employee behind a cancelled card');
   sql.prepare("UPDATE arc_chat_sessions SET deleted_at=? WHERE id=?").run(new Date().toISOString(),session);assert.equal((await api(draft.id)).status,404);assert.equal((await draftArcEmployee(env,fixtureRun,{name:'Hidden',responsibility:'Hidden'})).dispatched,false);
+  sql.prepare("UPDATE arc_chat_runs SET status='cancelled' WHERE status IN ('queued','thinking','working')").run();
+  const directSession=(await decode(await chat('sessions','POST',{}),201)).id,direct=(await decode(await chat('sessions/'+directSession+'/messages','POST',{text:'帮我建四个队友：开发、设计、商务和领域专家。',requestId:crypto.randomUUID()}),202)).run;
+  const directRun=()=>sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(direct.id) as ArcRun;
+  const base=count();
+  for(const name of ['开发队友','设计队友','商务队友','领域专家']){
+   const result=await draftArcEmployee(env,directRun(),{name,responsibility:name});assert.equal(result.created,true);assert.equal(result.requiresUserConfirmation,false);assert.equal(result.draft?.status,'confirmed');
+   const retry=await draftArcEmployee(env,directRun(),{name,responsibility:name});assert.equal(retry.draft?.employeeId,result.draft?.employeeId);
+  }
+  assert.equal(count(),base+4,'An explicit request creates all four teammates without another review or duplicate on retry');
+  assert((await listArcEmployeeDrafts(env,'owner',directSession)).every(draft=>draft.status==='confirmed'&&draft.profile.scope.connectionIds.length===0&&draft.profile.scope.deviceIds.length===0));
+  assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_employee_runs WHERE run_id=?').get(direct.id).n,0,'Creating identities never starts employee work');
   assert.equal(modelCalls,2);console.log('PASS: chat employee draft via scripted runtime, durable editable card, explicit model-free confirmation, owned current access, CSRF, atomic confirm/cancel/CAS, lost-ack replay, cancellation/expiry/deleted-source fences and zero paid calls');
  }finally{env.ARC_RUNTIME=runtime;env.MODEL_GATEWAY.adapters.openai=adapter;}
 }

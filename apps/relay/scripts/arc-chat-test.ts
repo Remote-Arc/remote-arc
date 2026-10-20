@@ -281,7 +281,10 @@ decisions.push(reply('All connected apps were inspected.'));
 await runArcStep(env,scheduled.id,{executeTool:async()=>({status:'completed'})});
 sql.prepare("UPDATE automations SET next_run_at=?,lease_until=NULL,lease_token=NULL WHERE id=?").run(now,saved.id);
 await runAutomationTick(env,new Date(Date.now()+1000),saved.id);assert.equal(sql.prepare('SELECT status FROM automations WHERE id=?').get(saved.id)?.status,'completed');assert.equal(sql.prepare('SELECT COUNT(*) AS count FROM arc_chat_runs WHERE automation_id=?').get(saved.id)?.count,beforeSchedule);
-await assert.rejects(()=>createArcWork(env,{...scheduled,step:2},{name:'Recursive',instructions:'loop',schedule:{type:'once'}},false),/RECURSIVE/);
+const scheduleGuard=await createArcWork(env,{...scheduled,step:2},{name:'Recursive',instructions:'loop',schedule:{type:'once'}},false);assert.equal(scheduleGuard.dispatched,false);assert.equal(scheduleGuard.code,'ARC_SCHEDULE_ALREADY_RUNNING');
+const accidental=await send(await create(),'Execute the saved morning briefing.');sql.prepare('UPDATE arc_chat_runs SET automation_id=? WHERE id=?').run(saved.id,accidental.run.id);sql.prepare("UPDATE automations SET status='running',state_json=? WHERE id=?").run(JSON.stringify({run_id:accidental.run.id}),saved.id);
+decisions.push(tool('create_routine',{name:'Duplicate briefing',instructions:'Create a briefing every morning',schedule:{type:'daily',time:'08:00',timezone:'Pacific/Auckland'}}),reply('The saved briefing occurrence is complete.'));
+await runArcStep(env,accidental.run.id);assert.equal(row(accidental.run.id).status,'queued','A blocked duplicate schedule is a correctable tool result, not a crashed occurrence');await runArcStep(env,accidental.run.id);assert.equal(row(accidental.run.id).status,'succeeded');assert.equal(sql.prepare('SELECT COUNT(*) n FROM automations').get().n,1,'A scheduled occurrence cannot spawn another schedule');
 
 const schedule=arcScheduleSchema.parse({type:'daily',time:'09:00',timezone:'Pacific/Auckland',weekdays:[1,2,3,4,5]});assert.equal(nextArcOccurrence(schedule,new Date('2026-10-16T21:00:00Z')),'2026-10-18T20:00:00.000Z');
 assert.equal(nextArcOccurrence({type:'daily',time:'02:30',timezone:'America/New_York'},new Date('2026-03-07T08:00:00Z')),'2026-03-09T06:30:00.000Z','Skip nonexistent spring-forward local time');

@@ -13,7 +13,13 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
   if (!UI_PREVIEW || typeof window === "undefined") return;
 
   const nativeFetch = window.fetch.bind(window);
-  const arcPreview = createArcPreview();
+  const previewEmployees=[{id:'preview-developer',name:'开发队友',responsibility:'技术架构与产品实现'},{id:'preview-designer',name:'设计队友',responsibility:'产品体验与交互设计'},{id:'preview-business',name:'商务队友',responsibility:'商业模式与市场验证'},{id:'preview-researcher',name:'领域专家',responsibility:'行业调研与事实核对'}].map(person=>({...person,version:1,status:'active',instructions:'',modelId:'auto',avatar:{kind:'initials',color:'#446655'},scope:{appMode:'none',connectionIds:[],deviceIds:[],deviceTools:[],skillIds:[]},createdAt:previewNow(),updatedAt:previewNow()}));
+  const previewConnections=[
+        {id:"11111111-1111-4111-8111-111111111111",provider:"github",accountLabel:"Example developer",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:15,total:15,needsReconnect:false}},
+        {id:"22222222-2222-4222-8222-222222222222",provider:"slack",accountLabel:"Example workspace / personal",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:35,total:35,needsReconnect:false}},
+        {id:"33333333-3333-4333-8333-333333333333",provider:"slack",accountLabel:"Example workspace / project",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:5,total:35,needsReconnect:true}},
+  ];
+  const arcPreview = createArcPreview({employees:previewEmployees.map(({id,name,responsibility,avatar})=>({id,name,responsibility,avatar:avatar as {kind:'initials';color:string}})),apps:previewConnections.map(connection=>({id:connection.id,provider:connection.provider,name:appDirectory.apps.find(app=>app.provider===connection.provider)?.name||connection.provider}))});
   const billingPreview = createBillingPreview({getItem:key=>window.sessionStorage.getItem(key),setItem:(key,value)=>window.sessionStorage.setItem(key,value)},new URL(location.href));
   let config:Promise<{arcAvailable:boolean}>|undefined, configTime=0;
   function runtimeConfig() {
@@ -221,7 +227,8 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
     if(url.pathname==='/api/runtime-config')return nativeFetch(input,init);
     if(url.pathname==='/api/billing/catalog')return json({arcAvailable:(await runtimeConfig()).arcAvailable,billingAvailable:false,connectFreeCalls:10000,plans:ARC_PLANS.map(p=>({...p,versionId:'preview:'+p.id})),topups:ARC_TOPUPS.map(p=>({...p,versionId:'preview:'+p.id})),trial:{days:14,credits:200}});
-    if(url.pathname==='/api/arc/employees')return json({employees:[{id:'preview-developer',name:'开发队友',responsibility:'技术架构与产品实现'},{id:'preview-designer',name:'设计队友',responsibility:'产品体验与交互设计'},{id:'preview-business',name:'商务队友',responsibility:'商业模式与市场验证'},{id:'preview-researcher',name:'领域专家',responsibility:'行业调研与事实核对'}].map(person=>({...person,version:1,status:'active',instructions:'',modelId:'auto',avatar:{kind:'initials',color:'#446655'},scope:{appMode:'none',connectionIds:[],deviceIds:[],deviceTools:[],skillIds:[]},createdAt:previewNow(),updatedAt:previewNow()}))});
+    if(url.pathname==='/api/arc/employees')return json({employees:previewEmployees});
+    if(url.pathname.startsWith('/api/arc/employees/')){const employee=previewEmployees.find(person=>person.id===url.pathname.split('/').pop());return employee?json({employee}):json({error:'ARC_TEAM_OBJECT_NOT_FOUND'},404);}
     if(url.pathname==='/api/arc/teams')return json({teams:[{id:'preview-product-team',name:'产品方向队伍',purpose:'围绕产品目标协作，结果回到 Arc Chat。',employeeIds:['preview-developer','preview-designer','preview-business','preview-researcher'],coordinatorId:'preview-developer',version:1,status:'active',createdAt:previewNow(),updatedAt:previewNow()}]});
     if(url.pathname==='/api/arc/team-events')return json({events:[{id:'preview-team-created',type:'team.created',teamId:'preview-product-team',employeeId:null,roomId:null,referenceId:null,details:{profile:{name:'产品方向队伍'}},createdAt:previewNow()}]});
     if (url.pathname === '/api/arc/status') {const enabled=(await runtimeConfig()).arcAvailable;return json({enabled,preview:true,access:{status:'active',canUse:enabled,daysRemaining:14,dailyUsedPercent:0,expiresAt:null},models:[{id:'auto',label:'Auto',provider:'arc',premium:false,configured:true},...ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,provider:m.provider,premium:true,configured:true,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000}))],limits:{maxSteps:8,maxTokens:24000,maxSeconds:180}});}
@@ -319,11 +326,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     if (url.pathname === "/api/apps") return json({
       enabled: true,
       apps: appDirectory.apps.map((app) => ({ ...app, configured: ["github", "slack", "gmail", "google_calendar", "google_drive", "google_docs", "google_sheets", "notion", "runway"].includes(app.provider), permissions: { read: [], write: [] } })),
-      connections: [
-        {id:"11111111-1111-4111-8111-111111111111",provider:"github",accountLabel:"Example developer",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:15,total:15,needsReconnect:false}},
-        {id:"22222222-2222-4222-8222-222222222222",provider:"slack",accountLabel:"Example workspace / personal",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:35,total:35,needsReconnect:false}},
-        {id:"33333333-3333-4333-8333-333333333333",provider:"slack",accountLabel:"Example workspace / project",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:5,total:35,needsReconnect:true}},
-      ],
+      connections: previewConnections,
     });
     if (url.pathname === "/api/apps/approvals") return json({ approvals: [] });
 

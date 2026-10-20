@@ -6,6 +6,7 @@ import {runArcStep} from '../src/arc-chat-runtime.js';
 import {createArcOwnerTeam} from '../src/arc-owner-team.js';
 import {seal} from '../src/app-oauth.js';
 import {arcContext} from '../src/arc-chat.js';
+import {delegateArcWork} from '../src/arc-dispatcher.js';
 export async function testArcEmployeeDrafts({sql,env}:any){
  const origin='https://agent.remotearc.app',runtime=env.ARC_RUNTIME,adapter=env.MODEL_GATEWAY.adapters.openai;let modelCalls=0;
  const headers=(user='owner',requestOrigin=origin)=>({cookie:'rl_session='+user+'-session',origin:requestOrigin,'content-type':'application/json'});
@@ -55,6 +56,13 @@ export async function testArcEmployeeDrafts({sql,env}:any){
   sql.prepare('UPDATE arc_chat_messages SET body_ciphertext=? WHERE id=?').run(await seal(env,{text:'帮我组建这四个队友的团队，并一起讨论产品未来方向。'},arcContext('owner',ownerMessage.id)),ownerMessage.id);
   env.MODEL_GATEWAY.adapters.openai=async(request:any)=>{modelCalls++;const context=JSON.parse(request.user),created=context.messages.some((m:any)=>m.tool==='create_team'),assigned=context.messages.some((m:any)=>m.tool==='delegate_work');return{value:!created?{decision:'tool',tool:'create_team',arguments_json:JSON.stringify(teamInput),message:'组织队伍'}:!assigned?{decision:'tool',tool:'delegate_work',arguments_json:JSON.stringify({targetKind:'team',targetId:organized.team!.id,instructions:'请各自从开发、设计、商务和领域研究角度讨论产品方向，并把实际结果回报原对话。'}),message:'分派讨论'}:{decision:'reply',tool:'none',arguments_json:'{}',message:'队伍已组织，讨论已排入执行，结果会回到这里。'},usage:{inputTokens:100,outputTokens:50,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'team-fixture-'+modelCalls};};
   await runArcStep(env,direct.id);await runArcStep(env,direct.id);await runArcStep(env,direct.id);const dispatch=sql.prepare('SELECT room_id FROM arc_dispatches WHERE source_run_id=?').get(direct.id);assert(dispatch,'The same owner chat creates the team and queues its requested work');
-  assert.equal(modelCalls,5);console.log('PASS: direct teammate/team creation, owned membership, replay and cancellation fences, negative preview request, chat-to-team work dispatch, editable legacy cards and zero paid calls');
+  const recipient=teamInput.employeeIds[0],referenceRequest=crypto.randomUUID(),referenceInput={text:'请这位队友分析我们的产品方向。',employeeIds:[recipient],requestId:referenceRequest};
+  const referenced=await decode(await chat('sessions/'+directSession+'/messages','POST',referenceInput),202),referenceRun=sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(referenced.run.id) as ArcRun;
+  const savedReference=(await decode(await chat('sessions/'+directSession))).messages.find((message:any)=>message.run_id===referenceRun.id&&message.role==='user');assert.equal(savedReference.teammates[0].id,recipient);assert(savedReference.teammates[0].avatar);assert(!('scope' in savedReference.teammates[0]),'References display identity without granting access');
+  assert.equal((await chat('sessions/'+directSession+'/messages','POST',{...referenceInput,employeeIds:[teamInput.employeeIds[1]]})).status,409,'A changed recipient cannot replay the same request identity');
+  const foreign=sql.prepare("SELECT id FROM arc_employees WHERE user_id='other' LIMIT 1").get()!.id;assert.equal((await chat('sessions/'+directSession+'/messages','POST',{...referenceInput,requestId:crypto.randomUUID(),employeeIds:[foreign]})).status,404);
+  await assert.rejects(()=>delegateArcWork(env,referenceRun,{targetKind:'employee',targetId:teamInput.employeeIds[1],instructions:'Wrong addressee'}),/ARC_DISPATCH_RECIPIENT_MISMATCH/);
+  const addressed=await delegateArcWork(env,referenceRun,{targetKind:'employee',targetId:recipient,instructions:referenceInput.text});assert.equal(addressed.url,'/dashboard/agent/chat?session='+directSession);assert.equal(addressed.target.id,recipient);
+  assert.equal(modelCalls,5);console.log('PASS: direct teammate/team creation, owned membership and @ references, replay/recipient/cancellation fences, chat-to-team work dispatch, editable legacy cards and zero paid calls');
  }finally{env.ARC_RUNTIME=runtime;env.MODEL_GATEWAY.adapters.openai=adapter;}
 }

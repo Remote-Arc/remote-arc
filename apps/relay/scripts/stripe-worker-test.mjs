@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import path from 'node:path';
+const require=createRequire(import.meta.url),runtimeRequire=createRequire(require.resolve('wrangler/package.json'));
+const {Miniflare,convertV4MiniflareOptions}=runtimeRequire('miniflare'),{build}=runtimeRequire('esbuild');
+const bundle=await build({stdin:{contents: `import {stripeRequest} from './src/stripe-client.ts';export default {async fetch(request){try{return Response.json(await stripeRequest({STRIPE_SECRET_KEY:'sk_test_isolated_fixture'},'/v1/customers','POST',new URLSearchParams({name:'Synthetic checkout'}),'fixture-same-key'));}catch(e){return Response.json({error:e.code});}}}`,resolveDir:path.resolve(import.meta.dirname,'..')},bundle:true,format:'esm',platform:'browser',write:false});
+let status=200,calls=0;
+const worker=new Miniflare(convertV4MiniflareOptions({workers:[{name:"stripe-regression",modules:true,compatibilityDate:'2026-10-01',script:bundle.outputFiles[0].text,outboundService:async request=>{calls++;assert.equal(new URL(request.url).origin,'https://api.stripe.com');assert.equal(request.headers.get('idempotency-key'),'fixture-same-key');assert.equal(new URLSearchParams(await request.text()).get('name'),'Synthetic checkout');return status===302?new Response(null,{status,headers:{location:'https://untrusted.invalid/credential-trap'}}):Response.json({id:'cus_fixture'},{status});}}]}));
+try{assert.deepEqual(await (await worker.dispatchFetch('https://test.invalid/')).json(),{id:'cus_fixture'},'Stripe must work in the deployed Workers runtime');assert.equal(calls,1);status=302;assert.deepEqual(await (await worker.dispatchFetch('https://test.invalid/')).json(),{error:'BILLING_PROVIDER_ERROR'});assert.equal(calls,2,'A provider redirect must never be followed or replay the write');console.log('PASS Stripe requests in Workers runtime; no redirect, retry, network or real charge');}finally{await worker.dispose();}

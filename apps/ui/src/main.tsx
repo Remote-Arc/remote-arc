@@ -1,3 +1,4 @@
+import type {ArcMention} from './arc-skill-mentions.js';
 import {WorkspaceLoading} from './workspace-loading.js';
 import { summarizeConsentScopes } from "./oauth-consent-summary.js";
 import { HeroHeadline, LandingContent, HomeSecurityIntro } from "./landing-content.js";
@@ -3585,7 +3586,7 @@ function Dashboard({
   const hasPlus = user.plan === "plus" || user.isAdmin;
   const [showAdd, setShowAdd] = useState(false);
   const [arcNavigationOpen,setArcNavigationOpen]=useState(false);
-  const [arcEntry,setArcEntry] = useState<{prompt?:string;sessionId?:string;version:number}>(()=>({version:0,prompt:new URLSearchParams(location.search).get('prompt')?.slice(0,6000)||undefined,sessionId:new URLSearchParams(location.search).get('session')?.slice(0,160)||undefined}));
+  const [arcEntry,setArcEntry] = useState<{prompt?:string;sessionId?:string;references?:ArcMention[];version:number}>(()=>({version:0,prompt:new URLSearchParams(location.search).get('prompt')?.slice(0,6000)||undefined,sessionId:new URLSearchParams(location.search).get('session')?.slice(0,160)||undefined}));
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [backgroundUpdatingId, setBackgroundUpdatingId] = useState<string | null>(null);
@@ -4905,9 +4906,9 @@ function Dashboard({
     try { localStorage.setItem('remotearc.sidebar.collapsed', next ? '1' : '0'); } catch {}
   }
 
-  function openArcChat(prompt?:string,sessionId?:string) {
+  function openArcChat(prompt?:string,sessionId?:string,references?:ArcMention[]) {
     if (!arcAvailable) { navigateTab('connect'); return; }
-    setArcEntry(current=>({prompt,sessionId,version:current.version+1}));
+    setArcEntry(current=>({prompt,sessionId,references,version:current.version+1}));
     navigateTab('agent-chat');
   }
   function openCreateInWorkspace(_workspace: "connect" | "agent", routine = false, objective = "", successCriteria = "") {
@@ -5097,9 +5098,10 @@ function Dashboard({
         </header>
 
         {workspace === "agent" && <div className="arcChatMount" hidden={active !== "agent-chat"}>
-          <React.Suspense fallback={<div className="arcChatLoading" role="status">{tr("Opening Arc…","正在打开 Arc…")}</div>}><ArcNativeChat
+          <React.Suspense fallback={<WorkspaceLoading label={tr("Opening Arc…","正在打开 Arc…")} variant="rows"/>}><ArcNativeChat
             key={user.id + ":" + arcEntry.version}
             initialPrompt={arcEntry.prompt}
+            initialReferences={arcEntry.references}
             initialSessionId={arcEntry.sessionId}
             tr={tr}
             activeTab={active}

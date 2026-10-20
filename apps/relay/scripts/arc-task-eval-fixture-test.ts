@@ -50,9 +50,13 @@ globalThis.fetch=(async(url,init)=>{
  else if(context.objective.startsWith('Save a one-off task'))value=observations.some(o=>o.tool==='create_task')?reply('Task saved.'):tool('create_task',{name:'Verify web deployment',instructions:"Check the latest deployment of my 'web' project and report actual readiness and URL.",schedule:{type:'once'}});
  else if(context.skillReferences?.length){
   if(!observations.some(o=>o.tool==='read_skill'))value=tool('read_skill',{id:context.skillReferences[0].id});
-  else value=observations.some(o=>o.tool==='call_app')?reply('Created https://github.com/example/project/issues/43'):tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/project',title:'Skill release verification',body:'Include verified-smoke-7A in the release evidence.'}});
+  else if(!observations.some(o=>o.arguments.operation==='issues.create'))value=tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/project',title:'Skill release verification',body:'Include verified-smoke-7A in the release evidence.'}});
+  else value=observations.some(o=>o.arguments.operation==='issues.get')?reply('Created https://github.com/example/project/issues/43'):tool('call_app',{connectionId,operation:'issues.get',arguments:{repo:'example/project',number:43}});
  }
- else if(context.objective.includes('issue'))value=observations.some(o=>o.tool==='call_app')?reply('Created https://github.com/example/project/issues/42'):tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/project',title:'Release checklist',body:'Verify smoke tests'}});
+ else if(context.objective.includes('issue')){
+  if(!observations.some(o=>o.arguments.operation==='issues.create'))value=tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/project',title:'Release checklist',body:'Verify smoke tests'}});
+  else value=observations.some(o=>o.arguments.operation==='issues.get')?reply('Created https://github.com/example/project/issues/42'):tool('call_app',{connectionId,operation:'issues.get',arguments:{repo:'example/project',number:42}});
+ }
  else if(!observations.some(o=>o.tool==='call_app'))value=tool('call_app',{connectionId,operation:'projects.list',arguments:{limit:5}});
  else if(!observations.some(o=>o.arguments.operation==='deployments.list'))value=tool('call_app',{connectionId,operation:'deployments.list',arguments:{projectId:context.objective.includes('broken')?'prj_broken':'prj_web',limit:1}});
  else value=reply(context.objective.includes('broken')?'Latest deployment is ERROR: https://broken-example.vercel.app':'Latest deployment is READY: https://web-example.vercel.app');

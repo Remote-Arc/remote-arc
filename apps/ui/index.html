@@ -15,7 +15,8 @@
     <script>
       try {
         const admin = location.hostname === "admin.remotearc.app";
-        const product = admin || location.hostname === "agent.remotearc.app";
+        const product = admin || ["agent.remotearc.app","mcp.remotearc.app"].includes(location.hostname) || /^\/(dashboard|overview|devices|apps|automations|connect|security|settings|checkout|chat|tasks|routines|activity|skills)(?:\/|$)/.test(location.pathname);
+        if (product) document.documentElement.dataset.surface = "product";
         if (admin) document.querySelector('link[rel="manifest"]').setAttribute("href", "/admin.webmanifest");
         if (product) {
           const name = admin ? "Remote Arc Admin" : "Remote Arc Agent";
@@ -25,12 +26,13 @@
         const saved = localStorage.getItem(product ? "remote-arc-dashboard-theme-v3" : "remote-arc-theme");
         const resolved = saved === "system"
           ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-          : (saved === "light" || saved === "dark" ? saved : "dark");
+          : (saved === "light" || saved === "dark" ? saved : product ? "light" : "dark");
         document.documentElement.dataset.theme = resolved;
         document.documentElement.style.colorScheme = resolved;
         document.querySelector('meta[name="theme-color"]').setAttribute("content", resolved === "dark" ? "#111113" : "#fafafa");
       } catch {}
     </script>
+    <style>html[data-surface="product"]{background:#fff;color:#202024}html[data-surface="product"][data-theme="dark"]{background:#111114;color:#eeeef1}html[data-surface="product"] body{margin:0;background:inherit}</style>
     <link rel="icon" type="image/svg+xml" href="/remote-arc.svg" />
     <link rel="canonical" href="https://remotearc.app/" />
     <meta property="og:site_name" content="Remote Arc" />

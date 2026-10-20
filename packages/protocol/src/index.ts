@@ -146,3 +146,5 @@ export function accountPlanHasFeature(
   return ACCOUNT_PLAN_FEATURES[plan].includes(feature);
 }
 export type {ArcVerification,ArcReceipt} from './arc-verification.js';
+
+export type {ArcEmployeeAvatar,ArcEmployeeScope,ArcEmployeeProfile,ArcEmployee,ArcTeamProfile,ArcTeam,ArcTeamRoom,ArcTeamEvent} from './arc-teams.js';

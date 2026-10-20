@@ -1,6 +1,6 @@
 // Explicit operator-only acceptance. Real model inference, synthetic local
 // accounts and provider responses. The SQLite funding ledger caps total cost at
-// US$0.04; no customer session, mailbox, real provider write or recharge.
+// US$0.02; no customer session, mailbox, real provider write or recharge.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
@@ -20,15 +20,15 @@ const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const file of fs.readdirSync('migrations').filter(name=>name.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+file,'utf8'));
 const db={prepare(query:string){const s=sql.prepare(query),bound=(args:any[])=>({async first(){return s.get(...args)||null;},async all(){return{results:s.all(...args)};},async run(){return this.runSync();},runSync(){const r=s.run(...args);return{success:true,meta:{changes:Number(r.changes)}};}});return{...bound([]),bind(...args:any[]){return bound(args);}};},async batch(statements:any[]){sql.exec('BEGIN IMMEDIATE');try{const rows=statements.map(statement=>statement.runSync());sql.exec('COMMIT');return rows;}catch(error){sql.exec('ROLLBACK');throw error;}}} as unknown as D1Database;
 const at=new Date().toISOString(),origin='https://agent.remotearc.app',nativeFetch=globalThis.fetch;
-const maximumUsd=0.04;
+const maximumUsd=0.02,maximumMicros=Math.round(maximumUsd*1e6);
 // Fleet placement requires the full managed-process lifecycle, including stop.
 const processTools=['start_process','process_status','process_output','stop_process'];
-const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,APP_TOKEN_KEY:Buffer.alloc(32,8).toString('base64'),ENABLE_APPS:'1',GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_TRIAL_DAILY_MICROS:'10000',ARC_USER_DAILY_MICROS:'10000',ARC_PLATFORM_DAILY_MICROS:'40000',ARC_RUNTIME:{getByName:()=>({fetch:async()=>Response.json({started:true})})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:openAiAdapter(process.env.OPENAI_API_KEY,nativeFetch)}}} as unknown as ArcEnv;
-sql.prepare("UPDATE arc_funding_policy SET managed=1,enabled=1,mode='automatic',started_at=?,total_micros=40000,daily_micros=40000").run(at);
+const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,APP_TOKEN_KEY:Buffer.alloc(32,8).toString('base64'),ENABLE_APPS:'1',GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_TRIAL_DAILY_MICROS:'10000',ARC_USER_DAILY_MICROS:'10000',ARC_PLATFORM_DAILY_MICROS:String(maximumMicros),ARC_RUNTIME:{getByName:()=>({fetch:async()=>Response.json({started:true})})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:openAiAdapter(process.env.OPENAI_API_KEY,nativeFetch)}}} as unknown as ArcEnv;
+sql.prepare("UPDATE arc_funding_policy SET managed=1,enabled=1,mode='automatic',started_at=?,total_micros=?,daily_micros=?").run(at,maximumMicros,maximumMicros);
 const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
  {id:'mail',provider:'gmail',scopes:[scope],prompt:'帮我看看最近邮件中需要注意的事情，整理重点和待办。'},
  {id:'github',provider:'github',scopes:['repo'],prompt:"Create an issue in example/project titled 'Release checklist' asking us to verify smoke tests, then return the issue link."},
- {id:'vercel',provider:'vercel',scopes:[],prompt:"Check the latest deployment of my 'web' project and tell me whether it is ready."},
+ {id:'vercel',provider:'vercel',scopes:[],prompt:"Check the latest deployment of my 'web' project and return its actual readiness and deployment URL."},
  {id:'task',provider:'vercel',scopes:[],prompt:"Save a one-off task named 'Verify web deployment' to run now: check the latest deployment of my 'web' project and report its actual readiness and URL. Create a persisted task with schedule type once, not a recurring routine or just a reply in this chat."},
  {id:'skill',provider:'github',scopes:['repo'],prompt:'Use the selected skill to create the release verification issue in example/project. Follow its title and body requirements and return the acknowledged issue link.'},
  {id:'vercel-error',provider:'vercel',scopes:[],prompt:"Check the latest deployment of my 'broken' project and tell me its actual state. Report a failed deployment accurately."},

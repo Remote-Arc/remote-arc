@@ -42,7 +42,7 @@ export function fitArcContext(system:string,schema:Record<string,unknown>,contex
   // transport it. UTF-8 bytes still give a conservative content token bound.
   const user=JSON.stringify(value),inputBound=new TextEncoder().encode(system).length+new TextEncoder().encode(user).length+bytes(schema)+1024;
   const maxOutputTokens=Math.min(2048,remaining-inputBound);
-  if(maxOutputTokens>=1024&&inputBound<=64000+1024)return{user,maxOutputTokens,inputBound};
+  if(maxOutputTokens>=1024&&bytes([system,user,schema])<=64000)return{user,maxOutputTokens,inputBound};
   // Drop optional and older material first. Keep the current objective and the
   // newest observations together, never turn truncated data into instructions.
   if(value.memory.length){value.memory.pop();continue;}

@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {callApp} from './apps.js';
 import type {ArcEnv,ArcRun} from './arc-chat.js';
 
-const inputSchema=z.object({connectionId:z.string().min(1).max(160),query:z.string().max(500).optional(),limit:z.number().int().min(1).max(5).default(5)}).strict();
+export const arcInboxInputSchema=z.object({connectionId:z.string().uuid(),query:z.string().max(500).optional(),limit:z.number().int().min(1).max(5).default(5)}).strict();
 const object=(value:unknown):Record<string,any>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,any>:{};
 const text=(value:unknown,max=2000)=>typeof value==='string'?value.slice(0,max):'';
 const plain=(value:string)=>value.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]*>/g,' ').replace(/&nbsp;/gi,' ').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&amp;/gi,'&').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim();
@@ -28,7 +28,7 @@ export function readableEmail(provider:string,raw:unknown){
  * Each provider request has a distinct durable idempotency key. No email writes,
  * attachments, retries or instructions obtained from email are executed here. */
 export async function readArcInbox(env:ArcEnv,run:ArcRun,raw:unknown){
- const input=inputSchema.parse(raw);
+ const input=arcInboxInputSchema.parse(raw);
  const connection=await env.DB.prepare("SELECT provider FROM app_connections WHERE id=?1 AND user_id=?2 AND status='active'").bind(input.connectionId,run.user_id).first<{provider:string}>();
  if(!connection||!['gmail','outlook'].includes(connection.provider))throw Error('app_email_connection_required');
  const provider=connection.provider,query=input.query??(provider==='gmail'?'in:inbox':undefined);

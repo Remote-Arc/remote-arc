@@ -1,6 +1,7 @@
+import {platformDocTopics} from './platform-docs.js';
 export type DocCopy = { en: string; zh: string };
 export type DocTopic = { slug: string; group: "start" | "work" | "understand"; title: DocCopy; description: DocCopy; legacyIds?: string[]; sections?: { heading: DocCopy; text: DocCopy }[]; links?: string[][] };
-export const DOC_TOPICS: DocTopic[] = [
+export const DOC_TOPICS: DocTopic[] = platformDocTopics([
   {
     slug: 'install-app', group: 'start',
     title: {en: 'Install the web app', zh: '安装网页应用'},
@@ -279,8 +280,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "发现技能库"
         },
         "text": {
-          "en": "The MCP resource remotearc://skills/catalog lists nine built-in Skills. Read remotearc://skills/<id> for a selected Skill when your AI client supports MCP resources. The catalog includes browser operation, autonomous browser work, desktop operation, image creation, video creation, transcription, research, UI inspection and scheduled work. Resource access requires signing in.",
-          "zh": "MCP 资源 remotearc://skills/catalog 列出九项内置 Skills。AI 客户端支持 MCP 资源时，可读取 remotearc://skills/<id> 获取所选技能。目录包含浏览器操作、自主浏览器工作、桌面操作、图片创作、视频创作、转写、研究、界面检查与定时工作。读取资源需要登录。"
+          "en": "Open Skills in Arc to browse the cloud library or import a SKILL.md. Type @ in Chat or choose Skills to attach up to three explicit references, then describe the goal. Arc reads the selected instructions and reuses them in the conversation. The MCP resource remotearc://skills/catalog also lists built-in Skills. Read remotearc://skills/<id> for a selected Skill when your AI client supports MCP resources. The catalog includes browser operation, autonomous browser work, desktop operation, image creation, video creation, transcription, research, UI inspection and scheduled work. Resource access requires signing in.",
+          "zh": "在 Arc 的 Skills 页面浏览云端库或导入 SKILL.md。聊天时输入 @ 或点击“技能”，可选择最多三个明确引用，再描述目标；Arc 会读取并在对话中复用这些指令。MCP 资源 remotearc://skills/catalog 也提供内置 Skills。AI 客户端支持 MCP 资源时，可读取 remotearc://skills/<id> 获取所选技能。目录包含浏览器操作、自主浏览器工作、桌面操作、图片创作、视频创作、转写、研究、界面检查与定时工作。读取资源需要登录。"
         }
       },
       {
@@ -299,8 +300,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "组合 Skills、Apps 和设备"
         },
         "text": {
-          "en": "Consult a relevant Skill, then discover the specific app or device operation required. A Skill is guidance, not a permission grant. Connected app operations are enabled within provider scopes; device execution follows its local policy.",
-          "zh": "先读取相关 Skill，再发现所需应用或设备操作。Skill 是指引，不授予权限。连接的应用在服务商授权范围内启用操作，设备执行遵循本地策略。"
+          "en": "An imported source link records attribution; referenced repository files are not downloaded automatically. Consult a relevant Skill, then discover the specific app or device operation required. A Skill is guidance, not a permission grant. Connected app operations are enabled within provider scopes; device execution follows its local policy.",
+          "zh": "导入来源链接用于记录出处，不会自动下载仓库引用文件。先读取相关 Skill，再发现所需应用或设备操作。Skill 是指引，不授予权限。连接的应用在服务商授权范围内启用操作，设备执行遵循本地策略。"
         }
       }
     ]
@@ -313,8 +314,8 @@ export const DOC_TOPICS: DocTopic[] = [
       "zh": "Arc 与 AI 队友"
     },
     "description": {
-      "en": "Meet Arc, the upcoming personal agent for your apps and computers.",
-      "zh": "了解即将推出的 Arc：连接应用与电脑的个人 Agent。"
+      "en": "Use Arc, your hosted personal agent for apps, computers and persistent work.",
+      "zh": "使用 Arc：连接应用、电脑和持续工作的托管个人 Agent。"
     },
     "sections": [
       {
@@ -333,8 +334,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "Auto 与高级模型"
         },
         "text": {
-          "en": "When Arc opens, Auto will choose a model for your work without asking you for a model API key. Paid plans will offer additional models, with availability and rates shown in Chat. Usage is measured in Credits: longer conversations, more agent steps and higher-priced models use more allowance. Check your remaining Credits and run limits before starting larger tasks.",
-          "zh": "Arc 开放后，Auto 会为工作选择模型，无需你提供模型 API Key。付费套餐将提供更多模型，开放范围和费率会显示在 Chat 中。用量以 Credits 计量：更长的对话、更多执行步骤和更高价格的模型会消耗更多额度。开始较大任务前，可查看剩余额度和单次运行限制。"
+          "en": "Auto handles model selection without asking for a model API key. Plus / Pro offer additional configured models, with availability and rates shown in Chat. Usage is measured in Credits: longer conversations, more agent steps and higher-priced models use more allowance. Check your remaining Credits and run limits before starting larger tasks.",
+          "zh": "Auto 为工作处理模型选择，无需模型 API Key。Plus / Pro 提供更多已配置的模型，开放范围和费率显示在 Chat 中。用量以 Credits 计量：更长的对话、更多执行步骤和更高价格的模型会消耗更多额度。开始较大任务前，可查看剩余额度和单次运行限制。"
         }
       },
       {
@@ -353,8 +354,8 @@ export const DOC_TOPICS: DocTopic[] = [
           "zh": "你的 14 天试用"
         },
         "text": {
-          "en": "When Arc is available, activate the 14-day trial in Arc Chat. It includes 200 Credits and starts only when you confirm. Refreshing or activating again does not extend it. Daily, model and run caps still apply. At expiry, new hosted inference stops while existing results and connections remain. Connect uses its own allowance. No card is required and there is no automatic charge.",
-          "zh": "Arc 开放后，可在 Arc Chat 主动确认开启 14 天试用，包含 200 Credits。刷新或再次开启不会延长试用；每日、模型和单次工作上限仍适用。到期后停止新的托管推理，已有结果和连接仍保留。Connect 使用独立额度，无需信用卡，也不会自动扣费。"
+          "en": "Activate the 14-day trial in Arc Chat. It includes 200 Credits and starts only when you confirm. Refreshing or activating again does not extend it. Daily, model and run caps still apply. At expiry, new hosted inference stops while existing results and connections remain. Connect uses its own allowance. No card is required and there is no automatic charge.",
+          "zh": "可在 Arc Chat 主动确认开启 14 天试用，包含 200 Credits。刷新或再次开启不会延长试用；每日、模型和单次工作上限仍适用。到期后停止新的托管推理，已有结果和连接仍保留。Connect 使用独立额度，无需信用卡，也不会自动扣费。"
         }
       },
       {
@@ -518,6 +519,6 @@ export const DOC_TOPICS: DocTopic[] = [
       "zh": "在同一页面查看完整的产品操作参考。"
     }
   }
-];
+]);
 export const DOC_PATHS = DOC_TOPICS.map(topic => "/docs/" + topic.slug);
 export const docTopic = (path: string) => DOC_TOPICS.find(topic => "/docs/" + topic.slug === path);

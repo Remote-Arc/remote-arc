@@ -2,11 +2,11 @@
 
 This change prepares the hosted agent runtime, a 14-day account trial and the public UI. Independent PR previews provide interactive, per-tab simulated chats; they never call models, production Apps, devices or payments. Other preview account mutations remain disabled. Provider OAuth setup continues independently.
 
-## Current release: Connect only
+## Current release: Arc and Connect
 
-Arc is not publicly open. Keep `ARC_PLATFORM_ENABLED=0` and `ARC_CHAT_ENABLED=0` in the production Worker until models, budgets and real execution flows are ready. The UI uses the authenticated server response, not a hardcoded availability constant. In production the picker labels Arc **Coming soon**, old Arc links resolve to Connect, and the PWA launches Connect Overview. Marketing links do not activate a trial. The runtime also blocks previously persisted model decisions from dispatching new tools while disabled; uncertain actions retain their unknown status.
+Arc Chat and the 14-day Auto trial are open alongside Connect. Plus / Pro checkout is configured through the production billing catalog; activation follows verified payment state. The public UI reads authenticated availability and access, not a hardcoded launch label. Consult the [current platform architecture](agent-platform-architecture.md) for runtime, Apps, Skills, memory, task scheduling and budget contracts.
 
-For a later Arc release, verify platform-funded conversations, Apps execution, device selection, cancellation, task/routine scheduling and usage settlement before enabling the server flags. UI fixtures and automated HTTP-provider tests do not certify live credentials. Connect remains independently available.
+Production has `ARC_PLATFORM_ENABLED=1` and `ARC_CHAT_ENABLED=1` when deployment readiness and model funding allow execution. Operational pause can close new inference without deleting results. Preview chats remain simulated and cannot prove customer-provider credentials work. Exact-commit CI and protected real-model/synthetic-provider acceptance are release checks, not certification of every possible goal.
 
 ## Remote availability configuration
 
@@ -41,11 +41,11 @@ The protected production release must apply D1 migrations 0035–0037 and deploy
 
 ## Limits and paid access
 
-Defaults are platform USD 5/day, trial USD 0.10/day, Auto USD 0.05/day and premium USD 0.25 per provider for the complete trial. These are internal cost ceilings, not advertised currency credits. They are configurable through the `ARC_*_MICROS` variables. Trial limits are frozen at activation; existing administrator budget caps are never silently raised. Unknown model requests retain their reservation.
+The D1 funding policy manages sponsored and paid operating pools in automatic or fixed mode. Account trials freeze their allowance at activation; plan, model and run caps still apply. Environment values bootstrap availability and initial limits; current commercial terms and operator policy are versioned in D1. These rated-cost ceilings are not a provider balance or an automatic recharge. Unknown model requests retain their reservation.
 
 Each run is limited to 8 decisions, 24,000 model tokens and 180 seconds. Provider calls have bounded timeouts. A run survives closing the tab; cancellation prevents new tool dispatch. In-flight actions may finish. A durable dispatch marker prevents automatically repeating an uncertain effect after a restart.
 
-Paid hosted use requires an active hosted billing entitlement and sufficient Credits. Premium selection additionally checks the account's model access. The prepared Stripe checkout and billing portal remain closed until configured and tested; a return URL never grants paid access on its own. See [platform launch](arc-platform-launch.md) and [Credits rollout](arc-credits-rollout.md) for the current self-service billing foundation.
+Paid hosted use requires an active hosted billing entitlement and sufficient Credits. Premium selection additionally checks the account's model access. Stripe checkout and the billing portal are enabled only when production configuration is ready; a return URL never grants paid access on its own. See [platform launch](arc-platform-launch.md) and [Credits rollout](arc-credits-rollout.md) for the current self-service billing foundation.
 
 ## Tasks, routines and tools
 

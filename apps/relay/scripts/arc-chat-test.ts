@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
 import {handleArcChat,arcMessages,arcContext,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
-import {runArcStep,validateArcDecision,executeArcTool} from '../src/arc-chat-runtime.js';
+import {runArcStep,validateArcDecision,executeArcTool,arcToolInputError} from '../src/arc-chat-runtime.js';
 import {ARC_MODELS,prepareArcBudget} from '../src/arc-chat-model.js';
 import {nextArcOccurrence,arcScheduleSchema,createArcWork,manageArcWork} from '../src/arc-work.js';
 import {runAutomationTick} from '../src/automations.js';
@@ -95,12 +95,12 @@ const emailSession=await create(),emailRun=await send(emailSession,'Check the im
 const defaultAdapter=env.MODEL_GATEWAY!.adapters.openai!;
 let emailReads=0,decisionsInEmail=0;
 env.MODEL_GATEWAY!.adapters.openai=async request=>{decisionsInEmail++;const result=await defaultAdapter(request);return{...result,usage:{...result.usage,inputTokens:2100,outputTokens:100}};};
-decisions.push(tool('manage_work',{action:'list'}),tool('list_apps',{category:'communication'}),tool('describe_app',{provider:'gmail',operation:'messages.list'}),tool('call_app',{connectionId:'email-fixture',operation:'messages.list',arguments:{maxResults:5}}),tool('call_app',{connectionId:'email-fixture',operation:'messages.get',arguments:{id:'message-fixture'}}),reply('One message needs attention: the release deadline is tomorrow.'));
+decisions.push(tool('manage_work',{action:'list'}),tool('list_apps',{category:'communication'}),tool('describe_app',{provider:'gmail',operation:'messages.list'}),tool('call_app',{connectionId:'8da501ff-c691-42db-9be6-13c5a260a339',operation:'messages.list',arguments:{maxResults:5}}),tool('call_app',{connectionId:'8da501ff-c691-42db-9be6-13c5a260a339',operation:'messages.get',arguments:{id:'message-fixture'}}),reply('One message needs attention: the release deadline is tomorrow.'));
 try{
  let more=true;while(more)more=await runArcStep(env,emailRun.run.id,{executeTool:async(_env,run,decision)=>{
   if(decision.tool==='manage_work'){const found=await manageArcWork(env,run,{action:'list'});assert(!found.runs.some(r=>r.id===run.id),'A run must never wait for itself');return found;}
   if(decision.tool==='call_app')emailReads++;
-  return{connectionId:'email-fixture',id:'message-fixture',subject:'Release deadline tomorrow',operation:'messages.get',details:'An authorized read result. '.repeat(100)};
+  return{connectionId:'8da501ff-c691-42db-9be6-13c5a260a339',id:'message-fixture',subject:'Release deadline tomorrow',operation:'messages.get',details:'An authorized read result. '.repeat(100)};
  }});
  assert.equal(row(emailRun.run.id).status,'succeeded');assert.equal(row(emailRun.run.id).tokens_used,13200);assert.equal(decisionsInEmail,6);assert.equal(emailReads,2);
  sql.prepare("UPDATE users SET role='admin' WHERE id='owner'").run();
@@ -267,6 +267,53 @@ assert(!(await decode(await api('memory'))).memories.some((m:any)=>m.id===delete
 await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
 
 
+// Arc consumes the existing cloud catalog, with private Markdown imports alongside it.
+const library=await decode(await api('skills'));
+assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),cloudSkillCatalog().map(s=>s.id).sort());
+const skillInput={name:'Private workflow',description:'Owner-only instructions',content:'# Private workflow\nUse scripts/check.py and verify its result.',sourceUrl:'https://github.com/example/workflow'};
+const imported=await decode(await api('skills','POST',skillInput),201);
+assert.equal((await decode(await api('skills','POST',skillInput),201)).id,imported.id,'Duplicate imports are idempotent');
+assert.equal((await decode(await api('skills/'+imported.id))).content,skillInput.content);
+assert.equal((await api('skills/'+imported.id,'GET',undefined,'other')).status,404);
+assert.equal((await decode(await api('skills/'+imported.id,'DELETE',undefined,'other'))).deleted,false);
+assert(!String(sql.prepare('SELECT content_ciphertext FROM arc_skills WHERE id=?').get(imported.id)?.content_ciphertext).includes('scripts/check.py'));
+assert.equal((await api('skills','POST',skillInput,'owner',{origin:'https://untrusted.invalid'})).status,403);
+assert.equal((await api('skills','POST',{...skillInput,sourceUrl:'javascript:alert(1)'})).status,400);
+const skillRun={user_id:'owner'} as ArcRun;
+const readSkill=await executeArcTool(env,skillRun,tool('read_skill',{id:imported.id}));assert.equal((readSkill as any).content,skillInput.content);
+const plan=await executeArcTool(env,skillRun,tool('plan_skill',{objective:'Read this webpage',skill_id:'browser-operator'}));assert.equal((plan as any).skillsSource,'cloud');assert.equal((plan as any).executed,false);
+const blockedSkill=await executeArcTool(env,skillRun,tool('run_skill',{objective:'Create a video',skill_id:'video-creator'}));assert.equal((blockedSkill as any).httpStatus,409);assert.equal((blockedSkill as any).verified,false);
+// Explicit skill references survive a turn and remain tenant-bound. The ID,
+// rather than a model-resolved display name, defines the chosen instructions.
+const mentionSession=await create(),mentionRequest=crypto.randomUUID();
+const mentionBody={text:'Use this workflow to inspect the project.',requestId:mentionRequest,skillIds:[imported.id]};
+const mention=await decode(await api('sessions/'+mentionSession+'/messages','POST',mentionBody),202);
+assert.equal((await decode(await api('sessions/'+mentionSession+'/messages','POST',mentionBody),202)).run.id,mention.run.id);
+assert.equal((await api('sessions/'+mentionSession+'/messages','POST',{...mentionBody,skillIds:['browser-operator']})).status,409,'Changing a reference changes request identity');
+const savedMention=(await arcMessages(env,'owner',mentionSession)).find(m=>m.role==='user')!;
+assert.deepEqual(savedMention.skills,[{id:imported.id,name:skillInput.name}]);
+let mentionContext:any;env.MODEL_GATEWAY!.adapters.openai=async request=>{mentionContext=JSON.parse(request.user);return defaultAdapter(request);};
+try{decisions.push(tool('read_skill',{id:imported.id}),reply('The workflow needs scripts/check.py on a connected computer; no script was executed.'));while(await runArcStep(env,mention.run.id)){}assert.equal(row(mention.run.id).status,'succeeded');assert.equal(mentionContext.skillReferences[0].id,imported.id);
+ const nextMention=await send(mentionSession,'What script does it require?');decisions.push(reply('scripts/check.py'));await runArcStep(env,nextMention.run.id);assert.equal(mentionContext.skillReferences[0].id,imported.id);assert(mentionContext.taskState.knownDiscoveries.some((item:any)=>item.tool==='read_skill'),'Read instructions survive the next turn');
+}finally{env.MODEL_GATEWAY!.adapters.openai=defaultAdapter;}
+const foreign=await decode(await api('skills','POST',{...skillInput,name:'Same name, foreign account'},'other'),201);
+assert.equal((await api('sessions/'+mentionSession+'/messages','POST',{text:'Use this',requestId:crypto.randomUUID(),skillIds:[foreign.id]})).status,404);
+assert.equal((await api('sessions/'+mentionSession+'/messages','POST',{text:'Use this',requestId:crypto.randomUUID(),skillIds:Array(4).fill(imported.id)})).status,400);
+assert.equal((await api('sessions/'+mentionSession+'/messages','POST',{text:'Use this',requestId:crypto.randomUUID(),skillIds:['https://untrusted.invalid']})).status,400);
+// Invalid tools are corrected before the dispatch marker, regardless of App.
+assert(arcToolInputError('read_inbox',{connectionId,limit:25}));
+assert(arcToolInputError('create_task',{name:'Check',instructions:'Read',schedule:{type:'daily',time:'29:00',timezone:'UTC'}}));
+assert(arcToolInputError('list_apps',{category:'nonexistent'}));
+const correction=await send(mentionSession,'Inspect available devices.');let deviceInspections=0;
+decisions.push(tool('list_devices',{unsupported:true}),tool('list_devices',{}),reply('No connected computers are available.'));
+while(await runArcStep(env,correction.run.id,{executeTool:async()=>{deviceInspections++;return[];}})){}
+assert.equal(deviceInspections,1);assert.equal(row(correction.run.id).status,'succeeded');
+const correctedHistory=await arcMessages(env,'owner',mentionSession);const rejected=correctedHistory.find(m=>m.run_id===correction.run.id&&m.status==='failed')!;
+assert.equal((rejected.result as any).dispatched,false);
+assert.equal((await decode(await api('skills/'+imported.id,'DELETE'))).deleted,true);
+assert.equal((await api('skills/'+imported.id)).status,404);
+console.log('Arc Chat: authenticated encrypted conversations, funded inference, direct Apps execution, quotas, idempotency, cancellation, durable tasks and DST schedules passed.');
+
 // Existing administrator caps are never silently raised by a chat request.
 await assert.rejects(()=>prepareArcBudget(env,'owner','personal:owner',id,'gpt-6.1-sol'),/PAID_MODEL_REQUIRED/,'Trial users cannot obtain a premium grant');
 const premium=await prepareArcBudget(env,'owner','personal:owner',id,'auto');
@@ -292,23 +339,3 @@ const deletedRun=sql.prepare('SELECT * FROM arc_chat_runs WHERE session_id=? LIM
 await appendArcMessage(env,deletedRun,'assistant','late-retention-fixture',{text:'Must not restore deleted content'});
 assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_chat_messages WHERE session_id=?').get(id)?.n,0);
 assert.equal((await purgeDeletedArcContent(env,retentionAt)).purged,0,'Cleanup is idempotent');
-
-// Arc consumes the existing cloud catalog, with private Markdown imports alongside it.
-const library=await decode(await api('skills'));
-assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),cloudSkillCatalog().map(s=>s.id).sort());
-const skillInput={name:'Private workflow',description:'Owner-only instructions',content:'# Private workflow\nUse scripts/check.py and verify its result.',sourceUrl:'https://github.com/example/workflow'};
-const imported=await decode(await api('skills','POST',skillInput),201);
-assert.equal((await decode(await api('skills','POST',skillInput),201)).id,imported.id,'Duplicate imports are idempotent');
-assert.equal((await decode(await api('skills/'+imported.id))).content,skillInput.content);
-assert.equal((await api('skills/'+imported.id,'GET',undefined,'other')).status,404);
-assert.equal((await decode(await api('skills/'+imported.id,'DELETE',undefined,'other'))).deleted,false);
-assert(!String(sql.prepare('SELECT content_ciphertext FROM arc_skills WHERE id=?').get(imported.id)?.content_ciphertext).includes('scripts/check.py'));
-assert.equal((await api('skills','POST',skillInput,'owner',{origin:'https://untrusted.invalid'})).status,403);
-assert.equal((await api('skills','POST',{...skillInput,sourceUrl:'javascript:alert(1)'})).status,400);
-const skillRun={user_id:'owner'} as ArcRun;
-const readSkill=await executeArcTool(env,skillRun,tool('read_skill',{id:imported.id}));assert.equal((readSkill as any).content,skillInput.content);
-const plan=await executeArcTool(env,skillRun,tool('plan_skill',{objective:'Read this webpage',skill_id:'browser-operator'}));assert.equal((plan as any).skillsSource,'cloud');assert.equal((plan as any).executed,false);
-const blockedSkill=await executeArcTool(env,skillRun,tool('run_skill',{objective:'Create a video',skill_id:'video-creator'}));assert.equal((blockedSkill as any).httpStatus,409);assert.equal((blockedSkill as any).verified,false);
-assert.equal((await decode(await api('skills/'+imported.id,'DELETE'))).deleted,true);
-assert.equal((await api('skills/'+imported.id)).status,404);
-console.log('Arc Chat: authenticated encrypted conversations, funded inference, direct Apps execution, quotas, idempotency, cancellation, durable tasks and DST schedules passed.');

@@ -1,5 +1,8 @@
 # Remote Arc System Architecture & Technical Reference
 
+> Current platform topology: [Agent platform architecture](agent-platform-architecture.md). This older reference describes the native execution and Connect design. Its experimental hosted-planner language does not describe the current Arc Chat runtime.
+
+
 **Status:** Architecture reference for the Remote Arc 0.6.0 product line, updated 9 October 2026. This is an architectural description, **not a statement that every prototype described below is available in production**. See [product documentation](https://remotearc.app/docs), [releases](https://remotearc.app/releases), and [the Chinese reference](system-architecture.md).
 
 Some Source Agent goals, MCP event-driven wakeup, hosted planning, adaptive continuation and isolation features are experimental or conditional on host integrations. A saved Task is not an immortal AI session. The current shipping contract is best understood through the [long-running work guide](https://remotearc.app/docs/long-running-work) and the actual installed Agent version. For implementation checkpoints see [PLAN.md](../PLAN.md) and the [engineering progress log](long-running-work-progress.md).

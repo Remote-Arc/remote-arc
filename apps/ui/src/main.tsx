@@ -1,3 +1,4 @@
+import {WorkspaceLoading} from './workspace-loading.js';
 import { summarizeConsentScopes } from "./oauth-consent-summary.js";
 import { HeroHeadline, LandingContent, HomeSecurityIntro } from "./landing-content.js";
 import { InstallCommands } from "./install-commands.js";
@@ -59,6 +60,7 @@ const LATEST_AGENT_VERSION = __REMOTEARC_CLI_VERSION__;
 
 const ArcNativeChat = React.lazy(() => import("./arc-native-chat.js").then(module => ({default:module.ArcNativeChat})));
 const ArcSkills = React.lazy(() => import("./arc-skills.js").then(module => ({default:module.ArcSkills})));
+const ArcCheckout = React.lazy(() => import('./arc-checkout.js').then(module=>({default:module.ArcCheckout})));
 const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
 const IntegrationsPage = React.lazy(() => import("./integrations-page.js").then(module => ({ default: module.IntegrationsPage })));
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
@@ -2619,7 +2621,7 @@ function ConnectPage({ user }: { user?: User | null }) {
 
 function DocsPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><Documentation /></React.Suspense></PublicLayout>;
+  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading…", "加载中…")}/></main>}><Documentation /></React.Suspense></PublicLayout>;
 }
 
 function SecurityModelPage({ user }: { user?: User | null }) {
@@ -2806,12 +2808,12 @@ function SecurityModelPage({ user }: { user?: User | null }) {
 
 function UseCasesPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><UseCaseCatalog /></React.Suspense></PublicLayout>;
+  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading…", "加载中…")}/></main>}><UseCaseCatalog /></React.Suspense></PublicLayout>;
 }
 
 function UseCaseDetailPage({ slug, user }: { slug: UseCaseSlug; user?: User | null }) {
   const { tr } = useI18n();
-  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><UseCaseDetail slug={slug} /></React.Suspense></PublicLayout>;
+  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading…", "加载中…")}/></main>}><UseCaseDetail slug={slug} /></React.Suspense></PublicLayout>;
 }
 
 function ChatGptComputerAccessPage({ user }: { user?: User | null }) {
@@ -2906,7 +2908,7 @@ function PricingPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/login?return_to=/overview";
   const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/login?return_to=/settings";
-  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} currentPlan={user?.plan || null} /></React.Suspense></PublicLayout>;
+  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading…", "加载中…")}/></main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} currentPlan={user?.plan || null} /></React.Suspense></PublicLayout>;
 }
 
 const blogPosts = [
@@ -3553,7 +3555,7 @@ function ResourcesRedirect() {
 
 function McpPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><McpReference /></React.Suspense></PublicLayout>;
+  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading…", "加载中…")}/></main>}><McpReference /></React.Suspense></PublicLayout>;
 }
 
 function Metric({ label, value, detail, good = false }: { label: string; value: React.ReactNode; detail: string; good?: boolean }) {
@@ -5120,7 +5122,7 @@ function Dashboard({
 
         {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat}/>}
 
-        {active === "agent-skills" && <React.Suspense fallback={<p role="status">{tr('Loading skills…','正在加载技能…')}</p>}><ArcSkills tr={tr} onChat={openArcChat}/></React.Suspense>}
+        {active === "agent-skills" && <React.Suspense fallback={<WorkspaceLoading label={tr('Loading skills…','正在加载技能…')} variant="rows"/>}><ArcSkills tr={tr} onChat={openArcChat}/></React.Suspense>}
 
         {active === "overview" && (
           <>
@@ -6863,6 +6865,11 @@ function App() {
   }
   const isAppHost = location.hostname === "agent.remotearc.app";
   const isDashboardHost = isAppHost || UI_PREVIEW;
+  if(routePath==='/checkout'&&isDashboardHost){
+    if(user===undefined)return <CenteredCard title={tr('Secure checkout','安全支付')} body={tr('Checking your account.','正在核对账户。')}><WorkspaceLoading label={tr('Loading your account…','正在加载账户…')} variant="compact"/></CenteredCard>;
+    if(!user)return <DashboardAccess/>;
+    return <React.Suspense fallback={<CenteredCard title={tr('Secure checkout','安全支付')} body={tr('Preparing your offers.','正在准备可用套餐。')}><WorkspaceLoading label={tr('Loading your offers…','正在读取可用套餐…')} variant="cards"/></CenteredCard>}><ArcCheckout email={user.email}/></React.Suspense>;
+  }
   if (isAppHost && routePath === "/") {
     history.replaceState({}, "", "/overview");
   }
@@ -6887,9 +6894,9 @@ function App() {
 
   if (routePath === "/demo") return <DemoPage user={user === undefined ? null : user} />;
   if (routePath === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
-  if (routePath === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
+  if (routePath === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading documentation…", "正在加载文档…")}/></main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
   if (routePath === "/docs" && window.location.hash.startsWith("#docs-")) return <DocsPage user={user === undefined ? null : user} />;
-  if (routePath === "/docs" || (routePath.startsWith("/docs/") && routePath !== "/docs/mcp")) return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><DocsPortal path={routePath}/></React.Suspense></PublicLayout>;
+  if (routePath === "/docs" || (routePath.startsWith("/docs/") && routePath !== "/docs/mcp")) return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading documentation…", "正在加载文档…")}/></main>}><DocsPortal path={routePath}/></React.Suspense></PublicLayout>;
   if (routePath === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
   if (routePath === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
   const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
@@ -6899,13 +6906,13 @@ function App() {
   if (routePath === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
   if (routePath === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
   if (routePath === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
-  if (routePath === "/integrations") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading integrations…", "正在加载应用目录…")}</main>}><IntegrationsPage /></React.Suspense></PublicLayout>;
+  if (routePath === "/integrations") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading integrations…", "正在加载应用目录…")}/></main>}><IntegrationsPage /></React.Suspense></PublicLayout>;
   if (routePath === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
   if (routePath === "/early-access") return <PublicLayout user={user === undefined ? null : user}><EngagementPage category="early_access" /></PublicLayout>;
   if (routePath === "/feedback") return <PublicLayout user={user === undefined ? null : user}><EngagementPage category="feedback" /></PublicLayout>;
   if (routePath === "/arc") return <ArcPage user={user === undefined ? null : user} />;
   if (routePath === "/roadmap") return <RoadmapPage user={user === undefined ? null : user} />;
-  if (routePath === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
+  if (routePath === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<WorkspaceLoading label={tr("Loading downloads…", "正在加载下载页面…")} variant="rows"/>}><NativeInstall /></React.Suspense></main></PublicLayout>;
   if (routePath === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
   if (routePath === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
   if (routePath === "/blogs/go-vs-typescript-agent-benchmarks") return <GoVsTypescriptBenchmarkArticlePage user={user === undefined ? null : user} />;
@@ -6914,8 +6921,8 @@ function App() {
   if (routePath === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
   if (routePath === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
   if (routePath === "/resources") return <ResourcesRedirect />;
-  if (routePath === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading guide…", "正在加载指南…")}</main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
-  if (routePath === "/chrome-extension") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="chromeExtensionPage" role="status">{tr("Loading Chrome extension…", "正在加载 Chrome 扩展页面…")}</main>}><ChromeExtensionPage /></React.Suspense></PublicLayout>;
+  if (routePath === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading guide…", "正在加载指南…")}/></main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
+  if (routePath === "/chrome-extension") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="chromeExtensionPage"><WorkspaceLoading label={tr("Loading Chrome extension…", "正在加载 Chrome 扩展页面…")}/></main>}><ChromeExtensionPage /></React.Suspense></PublicLayout>;
   if (routePath === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
   if (routePath === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
   if (routePath === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;

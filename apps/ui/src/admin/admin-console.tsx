@@ -1,3 +1,4 @@
+import {WorkspaceLoading} from '../workspace-loading.js';
 import {BrandWordmark} from '../brand-wordmark.js';
 import {lazy,Suspense,useEffect,useState} from "react";
 const AdminFollowups=lazy(()=>import('./admin-followups.js').then(module=>({default:module.AdminFollowups})));
@@ -142,7 +143,7 @@ function AdminOverview({ops,health,leadOverview,setSection,preview=false}:{ops:O
     <div className="adminSnapshotRow"><span className="adminHealthLight"><AdminGlyph name="shield"/></span><div><strong>{tr("Worker errors · 24 hours","Worker 错误 · 24 小时")}</strong><small>{errors===undefined?"—":errors.toLocaleString()} {tr("recorded errors","次记录异常")}</small></div><button onClick={()=>setSection("health")} aria-label={tr("Open incidents","查看异常记录")}><AdminGlyph name="arrow"/></button></div>
    </div>
   </div>
-  <Suspense fallback={<p role="status">{tr("Loading model usage…","正在读取模型用量…")}</p>}><AdminApiUsage preview={preview}/></Suspense>
+  <Suspense fallback={<WorkspaceLoading label={tr("Loading model usage…","正在读取模型用量…")} variant="rows"/>}><AdminApiUsage preview={preview}/></Suspense>
   <section className="adminCommerce"><div className="adminCommerceCopy"><span className="adminSmallLabel">{tr('REVENUE & BILLING','营收与计费')}</span><h2>{tr('Payments, pricing and customer offers.','支付、定价与客户优惠。')}</h2><p>{tr('Inspect verified receipts, failed payments, plan versions and promotions in your payment workspace.','在支付工作区查看已验证收据、失败付款、套餐版本和促销优惠。')}</p><button className="adminOutlineBtn" onClick={()=>setSection('payments')}>{tr('Open payments','打开支付看板')} →</button></div></section>
  </div>;
 }
@@ -198,8 +199,8 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
    <header className="adminHeading"><span className="adminSmallLabel">{tr("OPERATIONS CENTER","运营工作台")}</span><h1>{tr(current.en,current.zh)}</h1><p>{section==="overview"?tr("Product adoption, real activity and service health. One clear view.","产品增长、真实使用与服务状态，一目了然。"):section==="leads"?tr("Follow up on the people who actually reached out.","了解并跟进每一条用户主动提交的申请与反馈。"):section==="followups"?tr("Help people get started, learn from feedback and keep track of each follow-up.","帮助用户上手、收集真实反馈，并跟进每一次联系。"):section==="payments"?tr("Verified payments, versioned plans and offers with clear limits.","核实支付、管理套餐版本，并发布规则清晰的优惠。"):section==="operations"?tr("Manage accounts, connected devices, capacity and costs.","管理用户账户、连接设备、用量配额和成本。"):tr("Keep the service stable, with evidence rather than guesswork.","以真实基础设施指标及时识别服务问题。")}</p></header>
    {preview&&<div className="adminPreviewNote" role="status">{tr("Design preview · illustrative sample metrics. No customer or billing data is connected here.","设计预览 · 指标均为示例，不连接真实客户与账单数据。")}</div>}
    {error&&<div className="adminAlert" role="alert">{error}</div>}
-   {section==="followups"&&<Suspense fallback={<p role="status">{tr("Loading follow-ups…","正在加载跟进信息…")}</p>}><AdminFollowups/></Suspense>}
-   {section==="payments"&&<Suspense fallback={<p role="status">{tr('Loading payments…','正在读取支付…')}</p>}><AdminPayments preview={preview}/></Suspense>}
+   {section==="followups"&&<Suspense fallback={<WorkspaceLoading label={tr("Loading follow-ups…","正在加载跟进信息…")} variant="rows"/>}><AdminFollowups/></Suspense>}
+   {section==="payments"&&<Suspense fallback={<WorkspaceLoading label={tr('Loading payments…','正在读取支付…')} variant="rows"/>}><AdminPayments preview={preview}/></Suspense>}
    {section==="overview"&&<AdminOverview preview={preview} ops={ops} health={health} leadOverview={leadOverview} setSection={setSection}/>}
    {section==="leads"&&(preview?<div className="adminNoData">{tr("Preview mode: private submissions are not loaded.","预览环境不加载真实反馈记录。")}</div>:<LeadsPanel/>)}
    {section==="operations"&&<AdminOperations readOnly={preview} embedded/>}

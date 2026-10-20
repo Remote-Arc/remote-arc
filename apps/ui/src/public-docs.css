@@ -48,3 +48,6 @@
 @media(max-width:620px){.nativeInstall{padding:24px 0 48px}.nativeDownloads{grid-template-columns:1fr}.nativeInstall h1{font-size:32px}}
 
 .nativeInstall :is(#homebrew,#shell-install){scroll-margin-top:100px}
+.revisedUseCases .technicalArticle>section.caseArcRequirements{box-sizing:border-box;max-width:100%;padding:24px;border:1px solid var(--line);overflow-wrap:anywhere}
+.revisedUseCases .technicalArticle>section.caseArcRequirements h2{margin-top:0}
+@media(max-width:620px){.revisedUseCases .technicalArticle>section.caseArcRequirements{padding:20px}}

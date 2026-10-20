@@ -38,21 +38,25 @@ export function fitArcContext(system:string,schema:Record<string,unknown>,contex
  const value:ArcPromptContext={...context,messages:context.messages.map(m=>({...m})),memory:[...context.memory],deviceIndex:[...context.deviceIndex]};
  let resultLimit=3000;
  for(;;){
-  const user=JSON.stringify(value),inputBound=bytes([system,user,schema])+1024;
+  // Models consume decoded message text, not the extra JSON escaping used to
+  // transport it. UTF-8 bytes still give a conservative content token bound.
+  const user=JSON.stringify(value),inputBound=new TextEncoder().encode(system).length+new TextEncoder().encode(user).length+bytes(schema)+1024;
   const maxOutputTokens=Math.min(2048,remaining-inputBound);
   if(maxOutputTokens>=1024&&inputBound<=64000+1024)return{user,maxOutputTokens,inputBound};
   // Drop optional and older material first. Keep the current objective and the
   // newest observations together, never turn truncated data into instructions.
   if(value.memory.length){value.memory.pop();continue;}
-  if(value.deviceIndex.length){value.deviceIndex.pop();continue;}
   const task=value.taskState as {availableActions?:unknown[];schemas?:unknown[];completedActions?:unknown[];knownDiscoveries?:unknown[]}|undefined;
   if(task?.availableActions?.length){value.taskState={...task,availableActions:[]};continue;}
-  if(task?.completedActions&&task.completedActions.length>2){value.taskState={...task,completedActions:task.completedActions.slice(-2)};continue;}
   if(task?.schemas?.length){value.taskState={...task,schemas:[]};continue;}
   if(task?.knownDiscoveries&&task.knownDiscoveries.length>1){value.taskState={...task,knownDiscoveries:task.knownDiscoveries.slice(-1)};continue;}
   if(task?.knownDiscoveries?.length&&system===ARC_CLOSING_SYSTEM){value.taskState={...task,knownDiscoveries:[]};continue;}
   if(value.messages.length>2){value.messages.shift();continue;}
   if(resultLimit>300){resultLimit=Math.floor(resultLimit/2);for(const m of value.messages){if(m.result!==undefined){const text=typeof m.result==='string'?m.result:JSON.stringify(m.result);if(new TextEncoder().encode(text).length>resultLimit)m.result=new TextDecoder().decode(new TextEncoder().encode(text).slice(0,resultLimit))+' [Observation shortened; do not infer omitted facts.]';}}continue;}
+  // Completed actions and device handles prevent rediscovery/restarts. Keep
+  // them until optional catalogs, old schemas and prose have been shortened.
+  if(value.deviceIndex.length){value.deviceIndex.pop();continue;}
+  if(task?.completedActions&&task.completedActions.length>2){value.taskState={...task,completedActions:task.completedActions.slice(-2)};continue;}
   return null;
  }
 }

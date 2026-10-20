@@ -1,6 +1,6 @@
 // Explicit operator-only acceptance. Real model inference, synthetic local
-// accounts and Gmail responses. The SQLite funding ledger caps total cost at
-// US$0.05; no customer session, mailbox, write action or provider recharge.
+// accounts and provider responses. The SQLite funding ledger caps total cost at
+// US$0.05; no customer session, mailbox, real provider write or recharge.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
@@ -37,7 +37,9 @@ globalThis.fetch=(async(url,init)=>{
 }) as typeof fetch;
 try{
  for(const item of cases){
-  currentCase=item.id;reads=0;lists=0;const id='eval-'+item.id,connectionId='connection-'+item.id,token='eval-session-'+item.id,future=new Date(Date.now()+3600e3).toISOString();
+  currentCase=item.id;reads=0;lists=0;unexpected=0;const trace:any[]=[];
+  // App connection IDs follow the production UUID contract even in fixtures.
+  const id='eval-'+item.id,connectionId=crypto.randomUUID(),token='eval-session-'+item.id,future=new Date(Date.now()+3600e3).toISOString();
   sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(id,id,id+'@example.invalid',at);
   sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex(token),id,future,at);
   sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at) VALUES(?,?,?,'fixture','Synthetic account','active',?,?,?,?,?)`).run(connectionId,id,item.provider,JSON.stringify(item.provider==='github'?['read','write']:['read']),JSON.stringify(item.scopes),await seal(env,{accessToken:'fixture-oauth',scopes:item.scopes,expiresAt:null},`app-token:${id}:${item.provider}:${connectionId}`),at,at);
@@ -46,18 +48,23 @@ try{
   const created=await handleArcChat(request('sessions',{}),env);assert.equal(created.status,201);const session=await created.json() as {id:string};
   const started=await handleArcChat(request('sessions/'+session.id+'/messages',{text:item.prompt,requestId:crypto.randomUUID()}),env);assert.equal(started.status,202);const value=await started.json() as {run:{id:string}};
   let more=true,ticks=0;while(more&&ticks++<9)more=await runArcStep(env,value.run.id,{executeTool:async(e,run,decision)=>{
+   trace.push({tool:decision.tool,arguments:JSON.parse(decision.arguments_json)});
    if(!['read_inbox','list_apps','describe_app','call_app'].includes(decision.tool))throw Error('ARC_EVAL_UNEXPECTED_TOOL');
    if(decision.tool==='call_app'&&!['messages.list','messages.get','projects.list','deployments.list','deployments.get','issues.create'].includes(JSON.parse(decision.arguments_json).operation)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_WRITE');}
-   return executeArcTool(e,run,decision);
+   try{return await executeArcTool(e,run,decision);}catch(error){
+    // Synthetic inputs only; never serialize provider responses or credentials.
+    trace.at(-1).failure={name:error instanceof Error?error.name:'Unknown',code:error instanceof Error&&/^(ARC_|MODEL_|app_)/.test(error.message)?error.message:'LOCAL_EXECUTION_REJECTED'};throw error;
+   }
   }});
   const run=sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(value.run.id) as ArcRun,messages=await arcMessages(env,id,session.id),answer=messages.filter(m=>m.role==='assistant').at(-1)?.text||'';
   const evidence=item.id==='mail'?reads>=2&&/10(?::00|：00|\s*(?:点|时|am|a\.m))|十[点时]/i.test(answer)&&/(?:INV.?42|发票|invoice)/i.test(answer):item.id==='github'?reads===1&&answer.includes('https://github.com/example/project/issues/42'):reads>=1&&/ready|就绪|成功|完成|可用/i.test(answer);
   const passed=run.status==='succeeded'&&evidence&&unexpected===0;
-  report.push({case:item.id,passed,status:run.status,error:run.error_code,steps:run.step,modelTokens:run.tokens_used,providerRequests:reads,listCalls:lists,answer});
+  report.push({case:item.id,passed,status:run.status,error:run.error_code,steps:run.step,modelTokens:run.tokens_used,providerRequests:reads,listCalls:lists,answer,trace});
   fs.mkdirSync('../../work/arc-task-eval',{recursive:true});fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({passed:report.length===cases.length&&report.every(value=>value.passed),maximumUsd:0.05,cases:report},null,2));
-  if(!passed)throw Error('ARC_TASK_LIVE_EVAL_CASE_FAILED');
  }
  const funding=sql.prepare('SELECT spent_micros,reserved_micros FROM arc_funding_policy WHERE id=1').get()!;
- fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({checkedAt:new Date().toISOString(),passed:true,mode:'real-model-synthetic-providers',maximumUsd:0.05,ratedUsd:Number(funding.spent_micros)/1e6,reservedUsd:Number(funding.reserved_micros)/1e6,cases:report},null,2));
- console.log(JSON.stringify({passed:true,cases:report.map(({answer,...result})=>result),ratedUsd:Number(funding.spent_micros)/1e6,maximumUsd:0.05}));
+ const passed=report.every(value=>value.passed);
+ fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({checkedAt:new Date().toISOString(),passed,mode:'real-model-synthetic-providers',maximumUsd:0.05,ratedUsd:Number(funding.spent_micros)/1e6,reservedUsd:Number(funding.reserved_micros)/1e6,cases:report},null,2));
+ console.log(JSON.stringify({passed,cases:report.map(({answer,trace,...result})=>result),ratedUsd:Number(funding.spent_micros)/1e6,maximumUsd:0.05}));
+ if(!passed)throw Error('ARC_TASK_LIVE_EVAL_CASE_FAILED');
 }finally{globalThis.fetch=nativeFetch;sql.close();}

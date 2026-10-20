@@ -1,0 +1,117 @@
+// Pure public workflow data shared by the UI and crawlable server rendering.
+export const useCaseSlugs = ["remote-development", "file-organization", "disk-space-cleanup", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff"] as const;
+export type UseCaseSlug = typeof useCaseSlugs[number];
+type Copy={en:string;zh:string};
+type ArcCase={intro:Copy;prompt:Copy;requires:Copy;boundary:Copy;kind:'direct'|'task'|'routine'};
+const copy=(en:string,zh:string):Copy=>({en,zh});
+export const ARC_DELEGATED_WORK=[
+ {id:'morning-brief',title:copy('Your daily work brief','每日工作简报'),
+  detail:copy('Keep priorities, meetings and commitments together in a recurring brief that uses the sources you choose.','把你选择的信息源整理为持续的重点、会议与承诺简报。'),
+  retains:copy('Source accounts, priorities, schedule and recent briefs.','信息源账号、关注重点、时间安排与近期简报。'),
+  checks:copy('Actual messages and events, dates, source links and concrete next actions.','实际邮件与日程、日期、来源链接和具体下一步。'),
+  prompt:copy('Help me set up a daily morning-brief Arc routine. Confirm the connected email/calendar sources, my priorities, time and timezone. Save self-contained instructions. Each run should read actual updates, use available previous briefs to identify changes, and return priorities, dated commitments and concrete next actions with sources and read scope. Keep results in the task conversation; do not send mail or change events. Return the routine ID and next run only after it is saved.','帮我设置每日晨间简报 Arc Routine。确认已连接邮件/日历信息源、关注重点、时间与时区，保存自包含指令。每轮读取实际更新，结合可用的上轮简报识别变化，附来源与读取范围汇总优先事项、带日期的承诺和具体下一步。结果保存在任务对话，不发送邮件、不改日程。保存后再返回 Routine ID 与下次运行时间。')},
+ {id:'project-steward',title:copy('A project check-in','项目持续巡检'),
+  detail:copy('Let Arc revisit a project, assess fresh CI and issue evidence, and bring the most useful next decision back to you.','让 Arc 定期重访项目，根据最新 CI 和 Issue 证据，将重要的下一步决定交给你。'),
+  retains:copy('Repository, current objective, approved workspace, schedule and run history.','仓库、当前目标、已批准工作目录、时间安排和执行历史。'),
+  checks:copy('Commit and workflow state, observed blockers and a reasoned next step.','提交与工作流状态、实际阻碍和有依据的下一步。'),
+  prompt:copy('Help me create a daily Arc project check-in routine. Confirm one repository, its connected account, current objective, time/timezone and any authorized local checkout. Each run should inspect current issues and CI for the actual revision, compare available prior observations, and report concrete blockers, evidence links and the most useful next action. Keep a record in the task conversation. Do not merge, deploy or edit files without a separate explicit request.','帮我创建每日 Arc 项目巡检 Routine。确认一个仓库、已连接账号、当前目标、时间/时区，以及获授权的本地仓库。每轮检查实际版本的 Issue 和 CI，对照可用历史观察，报告具体阻碍、证据链接和最有用的下一步，并保存在任务对话。没有另行明确请求时，不合并、不部署、不改文件。')},
+ {id:'delivery-verifier',title:copy('An independent delivery check','交付结果核验'),
+  detail:copy('Delegate the acceptance check: Arc inspects the real output against criteria you agree before calling it ready.','把验收交给 Arc：按事先约定标准检查真实产物，再判断是否可交付。'),
+  retains:copy('The artifact or checkout, acceptance criteria, device and execution time.','产物或仓库、验收标准、执行设备与时间。'),
+  checks:copy('Actual files, tests, structure or reconciled totals, plus anything still unverified.','实际文件、测试、结构或核对合计，以及仍未验证的部分。'),
+  prompt:copy('Help me save a one-off Arc Task to verify a delivery. Confirm the artifact or repository path, connected computer, acceptance criteria, required software and execution time. Save the agreed checks in the task instructions. When due, inspect the actual files and run the relevant supported checks; report ready, needs review or blocked with concrete evidence and unverified items. File existence or a zero exit code alone is insufficient.','帮我保存一次性交付核验 Arc Task。确认产物或仓库路径、已连接电脑、验收标准、所需软件与执行时间，把约定检查保存为任务指令。到期检查真实文件并运行相关受支持验证；附具体证据和未验证项目，报告可交付、需要复核或受阻。仅有文件存在或退出码为零并不足够。')},
+ {id:'change-follow-up',title:copy('Follow changes that matter','跟进重要变化'),
+  detail:copy('Ask Arc to revisit a deployment or work queue and assess what changed, rather than sending the same fixed command each time.','让 Arc 重访部署或工作队列，判断发生了什么变化，而非每轮只重复同一条固定命令。'),
+  retains:copy('Resource, read scope, interval and available prior observations.','目标资源、读取范围、检查间隔与可用历史观察。'),
+  checks:copy('Observed changes, current state, source evidence and decisions needing your input.','实际变化、当前状态、来源证据与需要你决定的事项。'),
+  prompt:copy('Help me create a read-only Arc routine to follow changes in a connected deployment or project queue. Confirm the account, resource, changes I care about and interval of at least 15 minutes. Save self-contained instructions. Each run should read the actual state, compare available previous observations and record meaningful changes, current evidence and anything requiring my decision in the task conversation. Do not silently publish changes or send messages. Explain how I can inspect or pause the routine.','帮我创建只读 Arc Routine，跟进已连接部署或项目队列的变化。确认账号、资源、关注变化和至少 15 分钟的间隔，保存自包含指令。每轮读取实际状态，对照可用历史观察，在任务对话记录重要变化、当前证据和需要我决定的事项。不擅自发布修改或发送消息，并说明如何查看或暂停 Routine。')},
+];
+export const ARC_USE_CASES:Record<UseCaseSlug,ArcCase>={
+ 'remote-development':{kind:'direct',
+  intro:copy('Let Arc inspect, fix and test the project on the computer where your checkout already lives.','让 Arc 在已有项目的电脑上检查、修复并测试。'),
+  prompt:copy('Help me fix a project on my connected computer. Confirm the device, checkout path and failing behavior, inspect the existing work, reproduce the failure, make the authorized change and run focused tests. Return the diff and actual check results; ask before committing or deploying.','帮我修复已连接电脑上的项目。确认设备、仓库路径和失败现象，检查已有工作、复现失败、完成获授权修改并运行相关测试。返回 diff 和实际检查结果；提交或部署前先确认。'),
+  requires:copy('An online paired computer with the project, its toolchain, file editing and terminal access.','在线且已配对的电脑、现有项目与工具链，以及文件编辑和终端权限。'),
+  boundary:copy('Arc works in the existing checkout. Missing dependencies, permissions or an unavailable computer are reported before claiming a fix.','Arc 在现有仓库工作。缺少依赖、权限或设备不可用时，会先报告阻碍，不能宣称已修复。')},
+ 'file-organization':{kind:'direct',
+  intro:copy('Ask Arc to inspect a folder, propose the moves and verify the organization you approve.','让 Arc 检查文件夹、提出移动计划，并验证你批准的整理结果。'),
+  prompt:copy('Help me organize a folder on my connected computer. Ask for the device and folder, inspect names and metadata, and show an exact move plan with collision handling. Wait for my approval before moving files. Preserve originals on conflicts, delete nothing and verify a before/after manifest.','帮我整理已连接电脑中的文件夹。确认设备与目录，检查名称和元数据，列出具体移动计划和重名处理方式。移动前等待我批准；重名时保留原件，不删除，核对整理前后清单。'),
+  requires:copy('Folder reads for the plan; authorized local terminal access for approved moves.','规划需要目录读取；批准后的移动需要本机终端权限。'),
+  boundary:copy('Shell moves do not have transactional Local Undo. Arc must verify destinations and preserve the agreed manifest.','Shell 移动没有事务式 Local Undo，Arc 需核对目标文件并保存约定清单。')},
+ 'disk-space-cleanup':{kind:'direct',
+  intro:copy('Have Arc explain disk usage first, then verify only the cleanup actions you explicitly approve.','先让 Arc 解释磁盘占用，再验证你明确批准的清理操作。'),
+  prompt:copy('Investigate disk space on my connected Windows PC or Mac. Confirm the device and volume, use read-only size checks, and list large review candidates with estimated reclaimable space. Do not delete, uninstall or change services without approval of each exact path and action. After approved cleanup, measure free space again.','排查已连接 Windows 或 Mac 的磁盘空间。确认设备与磁盘，先只读检查大小，列出大文件候选和预计可回收空间。未经逐项批准具体路径与动作，不删除、不卸载、不改服务；获批清理后重新测量可用空间。'),
+  requires:copy('An online device and permitted disk-inspection commands; separate approval for destructive actions.','在线设备与允许的磁盘检查命令；破坏性操作另需批准。'),
+  boundary:copy('An estimate is not reclaimed space. Local OS permissions and the exact approved paths apply.','预估空间不等于已释放空间；操作受本机权限和已批准具体路径约束。')},
+ 'overnight-goals':{kind:'task',
+  intro:copy('Delegate a bounded task for later and keep its conversation, checks and result in Arc Tasks.','委派稍后执行的有界任务，在 Arc Tasks 保存对话、检查与结果。'),
+  prompt:copy('Save a one-off Arc Task to inspect and improve a project later. Confirm the device, existing checkout, exact objective, verification command and execution time. Save self-contained instructions that respect the run allowance and my approved edit scope. Report the saved task ID and next run after creation; future results must distinguish checked work, unfinished work and blockers.','保存一项稍后执行的 Arc 一次性任务。确认设备、现有仓库、具体目标、验证命令和执行时间。任务指令须自包含，并遵守单次运行额度和获批修改范围。创建成功后返回任务 ID 与下次运行时间；执行结果要区分已验证工作、未完成工作和阻碍。'),
+  requires:copy('Active Arc access, an available device at execution time and the required project tools.','有效 Arc 使用权限、执行时可用的设备及项目工具。'),
+  boundary:copy('Each hosted run has time, step and token limits. Saving a task does not promise unlimited overnight reasoning or prove that its future work succeeded.','每轮托管运行有时间、步数和 token 上限；保存任务不代表可以无限整夜推理，也不证明未来工作已经完成。')},
+ 'long-running-jobs':{kind:'direct',
+  intro:copy('Start an approved managed process with Arc and inspect its real handle, output and eventual result.','用 Arc 启动已批准的受管进程，检查真实句柄、输出与最终结果。'),
+  prompt:copy('Help me run an existing long build or export on my connected computer. Confirm the device, command, project directory and output path. Start it once as a managed background process, retain its process ID and inspect status/output. Verify the artifact when it finishes. If this Arc run ends first, report the actual running state and process ID; offer a separately timed follow-up Task instead of claiming completion or restarting the command.','帮我在已连接电脑运行现有的长时间构建或导出。确认设备、命令、项目目录与输出路径，只启动一次受管后台进程，保存进程 ID 并读取状态和输出。完成后核对产物。若本轮 Arc 先结束，报告真实运行状态与进程 ID，并安排另行确认时间的跟进 Task，不能宣称完成或重新启动命令。'),
+  requires:copy('Managed-process tools and terminal access on the original computer.','原设备上的受管进程工具与终端权限。'),
+  boundary:copy('The process may outlive one Arc run. Loss of an acknowledgement requires inspection before another start.','进程可能超过单轮 Arc 时长；丢失确认时必须先核对，不能再次启动。')},
+ 'scheduled-checks':{kind:'routine',
+  intro:copy('Create an Arc routine for a daily check or an interval of at least 15 minutes.','创建每天执行或至少每 15 分钟执行一次的 Arc Routine。'),
+  prompt:copy('Create a read-only Arc routine to check a connected computer or App. Confirm the target, exact checks, daily time and IANA timezone or an interval of at least 15 minutes. Save self-contained instructions to record observed results without restarting services or changing data. Return the routine ID and next run only after saving, and explain where I can inspect or pause it.','创建只读 Arc Routine 检查已连接电脑或 App。确认目标、具体检查项目、每天执行时间与 IANA 时区，或至少 15 分钟的间隔。保存自包含指令，记录实际结果，不重启服务或修改数据。保存后返回 Routine ID 和下次运行时间，并说明在哪里查看或暂停。'),
+  requires:copy('Active Arc access, schedule details, and authorized accounts or device tools available when due.','有效 Arc 使用权限、明确时间安排，以及到期时可用的授权账号或设备工具。'),
+  boundary:copy('Arc daily routines use a timezone; interval runs have a 15-minute minimum. Failed or uncertain runs pause for inspection. Offline computers are not powered on by Arc.','Arc 每日 Routine 使用明确时区，间隔最短 15 分钟。失败或结果不明时暂停检查；Arc 不会启动已关机电脑。')},
+ 'ci-follow-up':{kind:'direct',
+  intro:copy('Have Arc check actual CI results, verify the commit and prepare the next authorized action.','让 Arc 检查真实 CI 结果、核对提交，并准备下一项获授权操作。'),
+  prompt:copy('Check CI for my GitHub project. Confirm the connected account, repository, commit and expected workflow, then inspect actual run status and failed-job evidence. Summarize the verified result and propose the next step. If periodic follow-up is useful, ask before saving a read-only Arc routine with an interval of at least 15 minutes. A passing workflow is not permission to merge or deploy.','检查我的 GitHub 项目 CI。确认已连接账号、仓库、提交与目标工作流，读取真实运行状态和失败作业证据，汇总核验结果并提出下一步。需要持续跟进时，先确认再保存至少 15 分钟间隔的只读 Arc Routine。工作流通过不等于获得合并或部署许可。'),
+  requires:copy('A GitHub connection with the required repository operations, or an authorized device with an existing GitHub CLI login.','具备仓库所需操作的 GitHub 连接，或有现成 GitHub CLI 登录的授权电脑。'),
+  boundary:copy('Arc checks now or through an interval routine. Provider event callbacks and deterministic condition watches are configured through Connect; do not promise an unconfigured real-time trigger.','Arc 可立即检查或通过间隔 Routine 复查。服务商事件回调和确定性 Condition Watch 通过 Connect 配置，不能声称未配置的实时触发已经生效。')},
+ 'data-work':{kind:'direct',
+  intro:copy('Let Arc run analysis in your existing environment and reconcile the saved result against its sources.','让 Arc 在现有环境执行分析，核对保存结果与源数据。'),
+  prompt:copy('Help me analyze files on my connected computer. Confirm the device, source paths, schema and desired report. Inspect the installed runtime, perform the authorized analysis, save the result in the agreed project folder and reconcile row counts and totals. Return actual output paths, checks and discrepancies. Report missing libraries before claiming an output.','帮我分析已连接电脑上的文件。确认设备、源路径、数据结构和报告要求，检查已安装运行时，执行获授权分析，将结果保存在约定项目目录，核对行数与合计。返回真实输出路径、检查和差异；缺少文档库时先报告，不能宣称已生成。'),
+  requires:copy('Readable source files, the installed analysis runtime and an authorized output folder.','可读取源文件、已安装分析运行时及获授权输出目录。'),
+  boundary:copy('Only relevant excerpts should enter model context. A zero exit code alone does not establish correct totals.','仅将必要片段交给模型；退出码为零本身不证明数据合计正确。')},
+ 'presentation-deck':{kind:'direct',
+  intro:copy('Ask Arc to prepare an editable deck from your files using the libraries installed on a paired computer.','让 Arc 使用已配对电脑上的文档库，将现有资料整理为可编辑演示文稿。'),
+  prompt:copy('Help me create an editable PowerPoint from my existing notes and charts. Confirm the connected computer, sources, audience, slide count and output path. Read a relevant skill if available, check that a PPTX library is installed, create the actual file, validate slide count and structure, and render a preview if the computer supports it. Return the file path and checks; report any missing generation or rendering dependency.','用现有笔记与图表帮我制作可编辑 PowerPoint。确认已连接电脑、素材、受众、页数与输出路径。有相关技能时先读取，检查本机 PPTX 文档库，生成真实文件并核对页数和结构；电脑支持时渲染预览。返回文件路径与核验结果，明确报告缺少的生成或渲染依赖。'),
+  requires:copy('Source assets and an authorized computer with a PPTX authoring library; rendering needs a compatible renderer.','源素材、获授权电脑与 PPTX 生成库；预览另需兼容渲染软件。'),
+  boundary:copy('A skill is reusable guidance, not a built-in cloud PowerPoint engine. An absent library or renderer is a concrete blocker.','技能是可复用指导，不是内置云端 PowerPoint 引擎；缺少文档库或渲染器属于具体阻碍。')},
+ 'spreadsheet-report':{kind:'direct',
+  intro:copy('Ask Arc to combine your files into a real workbook and verify formulas, counts and totals.','让 Arc 将文件合并为真实工作簿，并核对公式、行数与合计。'),
+  prompt:copy('Help me create a checked Excel report from files on my connected computer. Confirm source folders, deduplication keys, required sheets/charts and output path. Use an installed workbook library, produce a real .xlsx, reopen it to inspect sheets and formulas, reconcile input/output counts and totals, and list any discrepancies. Report missing calculation or rendering support.','用已连接电脑中的文件帮我生成可核验 Excel 报告。确认源目录、去重字段、工作表/图表要求与输出路径。使用已安装工作簿库生成真实 .xlsx，重新读取检查工作表和公式，核对输入输出行数、合计并列出差异；缺少重算或渲染能力时明确说明。'),
+  requires:copy('Accessible inputs, an installed workbook library and authorized file/terminal tools.','可访问输入文件、已安装工作簿库及获授权文件/终端工具。'),
+  boundary:copy('Workbook creation, formula recalculation and visual rendering are separate capabilities. Arc must state which checks actually ran.','工作簿生成、公式重算和视觉渲染是不同能力；Arc 要说明实际完成了哪些检查。')},
+ 'desktop-automation':{kind:'direct',
+  intro:copy('Let Arc use approved local scripts or explicitly shared browser tools for a repeatable workflow.','让 Arc 通过已批准本机脚本或明确共享的浏览器工具完成重复工作。'),
+  prompt:copy('Help me automate a repeatable workflow on my connected computer. Confirm the exact app, installed script/API or shared browser tab and desired result. Inspect available tools and permissions before acting, execute only the agreed operations, and verify their output. Ask before data submission or destructive changes; if GUI control is unavailable, explain the supported scripted path or exact missing capability.','帮我自动完成已连接电脑上的重复工作。确认具体应用、已安装脚本/API 或共享浏览器标签页及预期结果，操作前检查工具与权限，只执行约定步骤并核验输出。提交数据或破坏性修改前先确认；没有 GUI 控制时，说明可用脚本方式或缺少的具体能力。'),
+  requires:copy('A supported installed script/API or explicitly shared browser tab and its separate interaction grant.','受支持的已安装脚本/API，或明确共享的浏览器标签页及单独交互授权。'),
+  boundary:copy('Arc does not provide arbitrary mouse/keyboard control of every desktop app. A prompt does not install a missing automation driver.','Arc 不提供对所有桌面应用的任意鼠标/键盘控制；提示词不会安装缺少的自动化驱动。')},
+ 'cross-device-handoff':{kind:'direct',
+  intro:copy('Ask Arc to coordinate existing Windows, Mac or Linux checkouts and compare verified results.','让 Arc 协调 Windows、Mac 或 Linux 上已有仓库，对照核验结果。'),
+  prompt:copy('Help me verify a project across my connected computers. Confirm both devices, their existing checkout paths and the source revision. Inspect permitted tools and live availability, make only authorized edits, and run platform-appropriate tests on each. Return results tied to each device and revision. Do not silently move projects, assume file synchronization or repeat an uncertain write on another computer.','帮我在多台已连接电脑验证项目。确认两台设备、各自现有仓库路径与代码版本，检查工具权限和实时可用性，只做获授权修改并分别运行平台测试。按设备与版本返回结果；不擅自搬迁项目、不假定文件已同步，也不在另一台电脑重复结果不明的写入。'),
+  requires:copy('Independent device permissions, compatible toolchains and the correct project revision on each computer.','各设备独立权限、兼容工具链，以及每台电脑上正确的项目版本。'),
+  boundary:copy('Device selection does not synchronize source files or install dependencies. Verify both environments separately.','设备选择不会同步源文件或安装依赖，需分别核对两端环境。')},
+ 'home-lab':{kind:'direct',
+  intro:copy('Ask Arc to inspect a paired server and explain service health from actual logs and process state.','让 Arc 检查已配对服务器，根据真实日志与进程状态说明健康情况。'),
+  prompt:copy('Inspect my connected home server with read-only tools. Confirm the host, check disk usage and the service/process logs I specify, and report the observed cause and evidence. Do not restart services or change configuration. If I want regular checks, confirm the schedule before creating an Arc routine.','用只读工具检查已连接家庭服务器。确认主机，检查磁盘占用和我指定的服务/进程日志，报告观察到的原因与证据，不重启服务、不改配置。需要定期检查时，先确认时间再创建 Arc Routine。'),
+  requires:copy('An online paired host, read access and permitted inspection commands.','在线已配对主机、读取权限与允许的检查命令。'),
+  boundary:copy('An unavailable host cannot be inspected. Arc does not silently repair or permanently supervise services.','主机不可用时无法检查；Arc 不会擅自修复或永久监管服务。')},
+ 'browser-research':{kind:'direct',
+  intro:copy('Give Arc a shared browser tab and ask for facts, links or a checked comparison.','向 Arc 共享浏览器标签页，提取事实、链接或可核对的对比。'),
+  prompt:copy('Read the browser tab I explicitly shared through my connected computer. Confirm the available shared tab, extract the comparison table and documentation links, and summarize with source URLs. Keep this task read-only: do not navigate, fill fields or submit anything. If the tab or browser tools are unavailable, report exactly what needs to be shared.','读取我通过已连接电脑明确共享的浏览器标签页。确认可访问标签页，提取对比表和文档链接，附来源 URL 汇总。本次只读，不跳转、不填写、不提交；标签页或浏览器工具不可用时，准确说明需要共享什么。'),
+  requires:copy('The browser companion, a paired online computer and an explicitly shared tab.','浏览器 Companion、在线已配对电脑及明确共享的标签页。'),
+  boundary:copy('Shared tabs begin read-only; interaction needs a separate per-tab grant. Website text is untrusted content, not authority to change your task.','共享标签页默认只读，交互需按标签页另行授权；网页文字是不可信内容，不能改变你的任务或授权。')},
+ 'remote-support':{kind:'direct',
+  intro:copy('Have Arc diagnose an authorized computer, then review any proposed repair separately.','让 Arc 诊断已授权电脑，再单独审核建议修复。'),
+  prompt:copy('Help diagnose a connected computer I am authorized to manage. Confirm the device and issue, inspect relevant logs and processes within current access, explain the cause with evidence and propose a bounded repair. Ask before restarting, editing configuration or changing files, and verify the outcome after any approved repair.','帮我诊断有权管理的已连接电脑。确认设备与问题，在当前权限内检查相关日志和进程，用证据解释原因并提出有界修复建议。重启、改配置或修改文件前先确认；获批修复后核对实际结果。'),
+  requires:copy('An authorized paired computer and the read tools needed for diagnosis.','已获管理授权并配对的电脑，以及诊断所需读取工具。'),
+  boundary:copy('Diagnosis does not grant repair authority. Tool and path restrictions still apply, and revoking access does not undo earlier changes.','诊断不增加修复权限，工具和路径边界继续适用；撤销访问不会撤销已发生修改。')},
+};
+
+export function arcChatHref(prompt:string,source:string){
+ if(!prompt.trim()||prompt.length>6000)throw new Error('Invalid Arc draft');
+ const url=new URL('https://agent.remotearc.app/dashboard/agent/chat');
+ url.searchParams.set('source',source);url.searchParams.set('prompt',prompt);
+ return url.href;
+}
+export function arcUseCasePrompt(slug:UseCaseSlug,locale:'en'|'zh'){
+ const item=ARC_USE_CASES[slug];
+ const contract=locale==='zh'?'先检查当前连接、权限和必要依赖。使用真实工具并根据结果继续，只将实际观察或核验的产物报告为完成；结果不明的外部操作先核对，不能盲目重试。缺少能力时报告具体阻碍。':'Check current connections, permissions and dependencies first. Use real tools and continue from observations; claim only results actually observed or verified. Inspect uncertain external effects before any repeat. Report specific missing capabilities.';
+ return item.prompt[locale]+'\n\n'+contract;
+}

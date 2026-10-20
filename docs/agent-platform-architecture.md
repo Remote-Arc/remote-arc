@@ -17,6 +17,8 @@ Remote Arc is infrastructure for agents to act on authorized cloud accounts and 
 
 OpenAI or Anthropic APIs supply reasoning. They do not independently connect a user's Gmail, operate the user's computer, persist Arc routines or manage Arc's account memory. Arc's runtime organizes those capabilities around model decisions. Model output remains fallible: a completed run is a terminal runtime state, **not a formal proof that the user goal is satisfied**. Answers must cite real observations or artifacts and distinguish partial work and blockers.
 
+The shared tools can serve the same concrete action through either entry. Arc's product responsibility is continuity: retain the delegated goal, source accounts, instructions and available run history; invoke fresh bounded reasoning when scheduled; verify actual outputs and leave a reviewable result. Daily briefs, project check-ins, delivery verification and change follow-up illustrate that responsibility. They are configured work over existing tools and schedules, not separate autonomous engines or a guarantee of uninterrupted reasoning. The bilingual use-case catalog provides all 15 Arc and Connect paths from shared public workflow data.
+
 ## Execution topology
 
 ```mermaid
@@ -51,6 +53,8 @@ The Agent and Core compile into one executable, not two network services. Apps e
 6. Continue to a final answer, a concrete blocker, cancellation or a bounded limit. Recent inbox summarization uses a read-only content path and a reply-only closing decision. Other workflows use individual validated operations as needed.
 
 Discovery is not completion. Listing a connected Gmail account does not read its messages. A deployment list is not necessarily evidence of readiness; inspect the appropriate deployment state. A successful issue creation should return its acknowledged issue ID/link. When evidence is absent, the answer must say so. These are task-specific completion criteria enforced through contracts, observations, model instructions and acceptance tests; there is no universal semantic verifier for arbitrary goals.
+
+A managed device process that returns a real `process_id` and `status: running` is acknowledged ongoing work. Arc retains the handle and can inspect status/output rather than treating the acknowledgement as an unknown dispatch. An identical start while that process is still running reuses its handle; a confirmed exit permits a new authorized run. A missing acknowledgement remains uncertain and is not blindly replayed. A process may outlive the bounded hosted run, so the answer must distinguish ongoing work from a verified completed artifact.
 
 ## Context reuse and memory
 

@@ -82,7 +82,8 @@ for (const path of ["/connect-ai", "/integrations", "/arc", "/pricing", "/docs",
   assert.ok(homeHtml.includes('href="' + path + '"'), "homepage should link directly to " + path);
   assert.ok(sitemapXml().includes("<loc>https://remotearc.app" + path + "</loc>"));
 }
-assert.ok(homeHtml.includes("Arc Agent (coming soon)"), "Arc must not be advertised as live");
+assert.ok(homeHtml.includes("Arc Agent"));
+assert.ok(!homeHtml.includes("coming soon"), "homepage must reflect the current Arc release");
 assert.ok(homeHtml.includes("https://github.com/Remote-Arc/remote-arc"));
 assert.ok(sitemapXml().includes("<lastmod>2026-10-18</lastmod>"), "homepage changed on Oct 18");
 const homepageSchema = homeHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1];
@@ -239,6 +240,15 @@ assert.ok(mcp.includes('"@type":"TechArticle"'));
 assert.ok(mcp.includes('rel="canonical" href="https://remotearc.app/mcp-computer-access"'));
 
 const useCasesCatalog = renderMarketingHtml(shell, "/use-cases");
+assert.ok(useCasesCatalog.includes('retained context') && useCasesCatalog.includes('scheduled fresh judgment'));
+for(const workflow of ['Your daily work brief','A project check-in','An independent delivery check','Follow changes that matter'])assert.ok(useCasesCatalog.includes(workflow));
+for(const slug of [...chinesePages].filter(path=>path.startsWith('/use-cases/'))){
+ for(const prefix of ['', '/zh']){
+  const html=renderMarketingHtml(shell,prefix+slug);
+  assert.ok(html.includes(prefix?'使用 Arc':'With Arc'),slug+' Arc path must be crawlable');
+  assert.ok(html.includes(prefix?'使用 Connect':'With Connect'),slug+' Connect path must remain crawlable');
+ }
+}
 for (const slug of ["desktop-automation", "remote-support", "browser-research", "data-work"]) {
   assert.ok(useCasesCatalog.includes('href="/use-cases/' + slug + '"'), "server-rendered use-case catalog must link to " + slug);
 }

@@ -150,15 +150,19 @@ try{
 // Repeated discovery reuses observed data, then forces an honest closing
 // answer instead of spending the whole run rediscovering the same account.
 const loopSession=await create(),loopRun=await send(loopSession,'Summarize my connected inbox.');let discoveryCalls=0;
-decisions.push(tool('list_apps',{}),tool('list_apps',{}),tool('list_apps',{}),reply('I found the account but did not read its messages.'));
+decisions.push(tool('list_apps',{query:'gmail'}),tool('list_apps',{query:'gmail'}),tool('list_apps',{query:'gmail'}),reply('I found the account but did not read its messages.'));
 for(let step=0;step<4;step++)await runArcStep(env,loopRun.run.id,{executeTool:async()=>{discoveryCalls++;return {connections:[{id:inboxConnection,provider:'gmail',status:'active'}],apps:[]};}});
 assert.equal(discoveryCalls,1);assert.equal(row(loopRun.run.id).status,'succeeded');
+const followup=await send(loopSession,'Use that account and continue.');
+let sawRetainedDiscovery=false;env.MODEL_GATEWAY!.adapters.openai=async request=>{sawRetainedDiscovery=JSON.parse(request.user).taskState.knownDiscoveries.some((item:any)=>item.tool==='list_apps');return defaultAdapter(request);};
+try{decisions.push(tool('list_apps',{query:'gmail'}),reply('The previously discovered account is available.'));await runArcStep(env,followup.run.id,{executeTool:async()=>{discoveryCalls++;return {};}});await runArcStep(env,followup.run.id);assert(sawRetainedDiscovery);assert.equal(discoveryCalls,1,'A fresh discovery is reused across turns in the same chat');}finally{env.MODEL_GATEWAY!.adapters.openai=defaultAdapter;}
 assert.equal((await arcMessages(env,'owner',loopSession)).filter(message=>message.id.endsWith(':intent')).length,0,'New runs do not add a redundant assistant paragraph for every tool call');
 const finalStepSession=await create(),finalStep=await send(finalStepSession,'Summarize completed work within the remaining step.');
 sql.prepare('UPDATE arc_chat_runs SET step=7 WHERE id=?').run(finalStep.run.id);
 let closingSchema:any;env.MODEL_GATEWAY!.adapters.openai=async request=>{closingSchema=request.schema;return defaultAdapter(request);};
 try{decisions.push(reply('The verified results are saved above.'));await runArcStep(env,finalStep.run.id);assert.equal(row(finalStep.run.id).status,'succeeded');assert.deepEqual(closingSchema.properties.tool.enum,['none']);}finally{env.MODEL_GATEWAY!.adapters.openai=defaultAdapter;}
 assert.throws(()=>validateArcDecision({decision:'reply',tool:'call_app',arguments_json:'{}',message:'x'}));assert.throws(()=>validateArcDecision({...reply('x'),arguments_json:'[]'}));
+assert.equal(validateArcDecision({...reply('Which repository should I review?'),arguments_json:''}).arguments_json,'{}');
 
 // Real app dispatcher, encrypted connection and mocked provider HTTP, then an
 // evidence-based assistant reply through the same paid-reservation gateway.
@@ -166,11 +170,33 @@ const connectionId=crypto.randomUUID();sql.prepare(`INSERT INTO app_connections(
 const nativeFetch=globalThis.fetch;let appDispatches=0;
 globalThis.fetch=(async(url,init)=>{assert.equal(new URL(String(url)).hostname,'api.github.com');assert.equal(init?.method,'POST');appDispatches++;return Response.json({id:42,title:'Created task',html_url:'https://github.com/example/repo/issues/42'});}) as typeof fetch;
 try{
- const task=await send(id,'Create an issue for the release');decisions.push(tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/repo',title:'Created task',body:'Requested by the user'}}),reply('Created issue #42.'));
- assert.equal(await runArcStep(env,task.run.id),true);assert.equal(appDispatches,1);assert.equal(await runArcStep(env,task.run.id),false);assert.equal(row(task.run.id).status,'succeeded');
- assert.equal((await arcMessages(env,'owner',id)).filter(m=>m.run_id===task.run.id&&m.role==='tool')[0]?.status,'completed');
+ const task=await send(id,'Create an issue for the release'),write=tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/repo',title:'Created task',body:'Requested by the user'}});
+ decisions.push(tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/repo'}}),write,write,reply('Created issue #42.'));
+ assert.equal(await runArcStep(env,task.run.id),true);assert.equal(appDispatches,0,'Invalid arguments are observed before any provider dispatch');
+ const rejected=(await arcMessages(env,'owner',id)).find(m=>m.run_id===task.run.id&&m.status==='failed')!;assert((rejected.result as any).inputSchema);assert.equal((rejected.result as any).dispatched,false);
+ assert.equal(await runArcStep(env,task.run.id),true);assert.equal(appDispatches,1);
+ assert.equal(await runArcStep(env,task.run.id),true);assert.equal(appDispatches,1,'A completed write cannot be duplicated by a repeated model decision');
+ assert.equal(await runArcStep(env,task.run.id),false);assert.equal(row(task.run.id).status,'succeeded');
  assert.equal(sql.prepare("SELECT COUNT(*) AS count FROM app_calls WHERE status='pending_approval'").get()?.count,0);
  await runArcStep(env,task.run.id);assert.equal(appDispatches,1);
+}finally{globalThis.fetch=nativeFetch;}
+
+// A different provider uses the same objective, action catalog, observations,
+// durable dispatcher and completion loop; there is no Vercel-specific agent.
+const vercelConnection=crypto.randomUUID();sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at) VALUES(?,'owner','vercel','fixture-vercel','Vercel','active','["read"]','[]',?,?,?)`).run(vercelConnection,await seal(env,{accessToken:'fixture-vercel-token',scopes:[],expiresAt:null},`app-token:owner:vercel:${vercelConnection}`),now,now);
+const deploymentSession=await create(),deploymentRun=await send(deploymentSession,'Check the latest deployment of my web project.');let deploymentReads=0;
+globalThis.fetch=(async(url,init)=>{
+ const target=new URL(String(url));assert.equal(target.hostname,'api.vercel.com');assert.equal(init?.method,'GET');deploymentReads++;
+ if(target.pathname.endsWith('/projects'))return Response.json({projects:[{id:'prj_web',name:'web'}]});
+ if(target.pathname.endsWith('/deployments')){assert.equal(target.searchParams.get('projectId'),'prj_web');return Response.json({deployments:[{uid:'dpl_fixture',name:'web',readyState:'READY',url:'web.example.invalid'}]});}
+ assert(target.pathname.endsWith('/dpl_fixture'));return Response.json({id:'dpl_fixture',readyState:'READY',url:'web.example.invalid'});
+}) as typeof fetch;
+try{
+ decisions.push(tool('call_app',{connectionId:vercelConnection,operation:'projects.list',arguments:{limit:5}}),tool('call_app',{connectionId:vercelConnection,operation:'deployments.list',arguments:{projectId:'prj_web',limit:5}}),tool('call_app',{connectionId:vercelConnection,operation:'deployments.get',arguments:{deploymentId:'dpl_fixture'}}),reply('The web deployment dpl_fixture is READY.'));
+ while(await runArcStep(env,deploymentRun.run.id)){}
+ assert.equal(row(deploymentRun.run.id).status,'succeeded');assert.equal(deploymentReads,3);
+ const compact=arcObservation('call_app',{status:'succeeded',result:{projects:Array.from({length:5},(_,index)=>({id:'project-'+index,name:'Project '+index,irrelevantMetadata:'x'.repeat(6000)}))}});
+ for(let index=0;index<5;index++)assert(JSON.stringify(compact).includes('project-'+index),'Structural compaction preserves each listed resource ID');
 }finally{globalThis.fetch=nativeFetch;}
 
 const unknown=await send(id,'Uncertain external write');decisions.push(tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/repo',title:'unknown',body:'unknown'}}));

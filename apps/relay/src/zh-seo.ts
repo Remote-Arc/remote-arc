@@ -31,7 +31,7 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
   },
   "/early-access": {
     title: "申请 Arc AI 助手抢先体验 — Remote Arc",
-    description: "加入 Remote Arc 的 Arc AI 助手抢先体验名单，填写希望自动完成的工作，订阅和托管模型尚未上线。",
+    description: "告诉我们希望交给 Arc 的工作，并选择是否接收产品体验联系。具体功能与计划使用资格以工作空间显示为准。",
     h1: "申请 Arc 抢先体验",
     intro: "告诉我们你想交给 Arc 的工作。仅在你明确同意后保存联系信息，用于联系和后续产品体验。",
     sections: [{heading:"抢先体验申请",text:"提供邮箱和至少十个字符的使用场景。我们不会把联系同意视为无关营销的许可。"}]
@@ -44,14 +44,14 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     sections: [{heading:"反馈与隐私",text:"你主动提交的邮箱、建议及联系同意仅供内部授权管理员跟进，并支持通过客服申请删除。"}]
   },
   "/arc": {
-    title: "Arc AI 助手即将推出 — Remote Arc",
-    description: "认识正在开发的 Arc AI 队友：内置聊天、连接云端应用、执行可授权的定期任务。现有 Remote Arc Connect 已可用。",
+    title: "Arc — 保留上下文、跟进并核验结果的 AI 队友 | Remote Arc",
+    description: "将目标交给 Arc，使用已授权应用与电脑，复用 Skills，保存有界 Tasks 和 Routine，并在工作空间查看真实结果与阻碍。",
     h1: "认识 Arc，你的 AI 工作队友",
-    intro: "Arc 正在开发中，计划提供独立 AI 对话、云应用连接和长期任务。现阶段 Connect MCP 已可使用；Arc 的托管模型和自动任务尚未公开开放。",
+    intro: "Arc 将目标、对话上下文、工具执行与结果核验保存在一起。委托工作后，可按计划进行新的有界判断；应用和设备继续遵守各自授权。",
     sections: [
       { heading: "Arc Chat", text: "直接在 Remote Arc 与托管 AI 对话，Auto 计划按任务质量与使用预算选择模型。" },
-      { heading: "Connected Apps", text: "规划将已授权的云端应用与个人设备工具连接起来，并保留独立权限和审计。" },
-      { heading: "Routines", text: "规划让用户设置可暂停、可审批、可查看证据的重复工作流程，目前仍在验证。" }
+      { heading: "Connected Apps 与 Skills", text: "使用已授权云端应用和设备工具，按 @ 引用复用技能。技能提供指导，不增加应用、工具或设备权限。" },
+      { heading: "Tasks 与 Routines", text: "保存一次性任务和可暂停的定期工作。调度到期后重新判断并留下观察与结果；每轮有时间、步数和用量上限。" }
     ]
   },
   "/roadmap": {
@@ -71,13 +71,13 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
   },
   "/": {
     title: "Remote Arc — 连接 AI、应用与电脑",
-    description: "Remote Arc Connect 通过安全的 MCP 连接，让 ChatGPT、Claude 等 AI 使用已授权的电脑和受支持的应用。支持跨设备工作与权限管理；Arc AI 助手即将推出。",
+    description: "Connect 让现有 AI 使用已授权应用与电脑；Arc 保留目标和上下文、按计划重新判断并核验结果。两者共用权限与执行基础设施。",
     h1: "别让 AI 只停留在聊天。让它在你的电脑上真正完成工作。",
-    intro: "Remote Arc Connect 可连接受支持的应用和你已授权的 Windows、macOS、Linux 设备，让现有 AI 对话真正执行操作。每个应用与设备仍由独立权限控制；Arc Agent 目前尚未上线。",
+    intro: "Connect 将现有 AI 连接到受支持应用与已授权 Windows、macOS、Linux 设备。Arc 在同一执行基础设施上保留目标与上下文，按计划判断并核验结果；每个应用与设备仍由独立权限控制。",
     sections: [
       { heading: "你的电脑仍由你掌控", text: "设备主动连接云端中继，无需打开入站端口。按设备控制权限，必要时要求确认，并可随时撤销 AI 访问。" },
       { heading: "使用你已经熟悉的 AI", text: "在支持 Remote MCP 的 ChatGPT、Claude 或其他客户端中添加 Remote Arc，无需让 Remote Arc 接管模型、对话或 API 密钥。" },
-      { heading: "任务与聊天可以分开", text: "可保存设备端长任务与执行状态，再次进入控制台继续查看。需要新 AI 判断的步骤，仍须由已连接的大模型执行。" }
+      { heading: "把持续工作交给 Arc", text: "Arc 保存对话、Skills 引用、任务指令与执行记录，在约定时间重新读取信息和判断。Connect 继续支持设备端确定性长任务；Arc 提供有界托管推理，不能保证无限整夜运行。" }
     ]
   },
   "/install/chatgpt": {

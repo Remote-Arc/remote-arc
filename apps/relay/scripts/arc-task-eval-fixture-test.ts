@@ -13,6 +13,13 @@ globalThis.fetch=(async(url,init)=>{
  const tool=(name:string,args:unknown)=>({decision:'tool',tool:name,arguments_json:JSON.stringify(args),message:'Working'});
  let value;
  if(context.objective.includes('邮件'))value=observations.some(o=>o.tool==='read_inbox')?reply('已查看两封邮件：周五 10:00 项目评审，提前准备演示；发票 INV-42 周二到期，请在账单门户核对。'):tool('read_inbox',{connectionId,limit:2});
+ else if(context.objective.includes('node verify.js')){
+  const deviceId=context.deviceIndex[0].id,checks=observations.filter(o=>o.tool==='device_tool'&&o.arguments.tool==='process_status').length;
+  if(!observations.some(o=>o.tool==='device_tool'&&o.arguments.tool==='start_process'))value=tool('device_tool',{deviceId,tool:'start_process',arguments:{command:'node verify.js',cwd:'/fixture/project',background:true}});
+  else if(!observations.some(o=>o.tool==='device_tool'&&o.arguments.tool==='process_output'))value=tool('device_tool',{deviceId,tool:'process_output',arguments:{process_id:'eval-managed-process'}});
+  else if(checks<2)value=tool('device_tool',{deviceId,tool:'process_status',arguments:{process_id:'eval-managed-process'}});
+  else value=reply('Process eval-managed-process exited 0 with verified-build-ok.');
+ }
  else if(context.objective.startsWith('Save a one-off task'))value=observations.some(o=>o.tool==='create_task')?reply('Task saved.'):tool('create_task',{name:'Verify web deployment',instructions:"Check the latest deployment of my 'web' project and report actual readiness and URL.",schedule:{type:'once'}});
  else if(context.skillReferences?.length){
   if(!observations.some(o=>o.tool==='read_skill'))value=tool('read_skill',{id:context.skillReferences[0].id});
@@ -24,5 +31,5 @@ globalThis.fetch=(async(url,init)=>{
  else value=reply(context.objective.includes('broken')?'Latest deployment is ERROR: https://broken-example.vercel.app':'Latest deployment is READY: https://web-example.vercel.app');
  return Response.json({id:'synthetic-response',status:'completed',output_text:JSON.stringify(value),usage:{input_tokens:2000,output_tokens:200}});
 }) as typeof fetch;
-try{await import('./arc-task-live-eval.js');assert(modelCalls>=18);console.log('PASS: Apps, scheduled Tasks, referenced Skills and failed deployments execute through production schemas and dispatcher');}
+try{await import('./arc-task-live-eval.js');assert(modelCalls>=18);console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
 finally{globalThis.fetch=previousFetch;if(previousKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=previousKey;}

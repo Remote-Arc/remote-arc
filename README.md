@@ -12,7 +12,17 @@ Arc is your hosted AI teammate. Connect brings the same authorized Apps and devi
 
 <sub>Source available for transparency and security review under a [proprietary license](./LICENSE). Not open-source licensed.</sub>
 
+[![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
+
 </div>
+
+<p align="center">
+  <a href="https://remotearc.app/#how-it-works">
+    <img src="./docs/assets/interactive-workflow.webp" alt="High-resolution animated Remote Arc workflow: ChatGPT on the left, device tool activity on the right, captured from PR #101" width="100%" />
+  </a>
+  <br />
+  <sub>Chat → Remote Arc → your computer. Animated preview from the interactive demo in PR #101 (example data, no real device commands). Click to explore the workflow.</sub>
+</p>
 
 ## Two ways to work
 
@@ -20,6 +30,8 @@ Arc is your hosted AI teammate. Connect brings the same authorized Apps and devi
 | --- | --- | --- |
 | **Arc** | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines. |
 | **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts and paired devices from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
+
+Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
 
 Arc offers an explicitly activated 14-day Auto trial and Plus / Pro subscriptions. Users do not supply a model API key. Hosted model use has Credits and run limits; available models and plan details are shown in the workspace. Connect calls and third-party App charges have their own allowances. Preview environments use simulated data.
 

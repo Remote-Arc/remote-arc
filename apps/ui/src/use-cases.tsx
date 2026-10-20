@@ -1,11 +1,13 @@
-import React from "react";
+import React,{useState} from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import { TaskAvailability } from "./product-docs.js";
+import {ARC_DELEGATED_WORK,ARC_USE_CASES,arcChatHref,arcUseCasePrompt} from '../../../packages/docs/src/arc-use-cases.js';
 import "./public-docs.css";
 
-export const useCaseSlugs = ["remote-development", "file-organization", "disk-space-cleanup", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff"] as const;
-export type UseCaseSlug = typeof useCaseSlugs[number];
+export {useCaseSlugs} from '../../../packages/docs/src/arc-use-cases.js';
+import type {UseCaseSlug} from '../../../packages/docs/src/arc-use-cases.js';
+export type {UseCaseSlug} from '../../../packages/docs/src/arc-use-cases.js';
 type Tr = (en: string, zh: string) => string;
 
 function cases(tr: Tr) {
@@ -162,34 +164,60 @@ function cases(tr: Tr) {
   ];
 }
 
+type RunMode='arc'|'connect';
+function useRunMode(){
+ const[mode,setMode]=useState<RunMode>(()=>typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('mode')==='connect'?'connect':'arc');
+ return[mode,(next:RunMode)=>{setMode(next);const url=new URL(window.location.href);url.searchParams.set('mode',next);window.history.replaceState(null,'',url.pathname+url.search+url.hash);}] as const;
+}
+function RunModeChoice({mode,onChange,tr}:{mode:RunMode;onChange:(value:RunMode)=>void;tr:Tr}){
+ return <div className="caseRunModes" role="group" aria-label={tr('Choose how to work','选择工作方式')}><button type="button" aria-pressed={mode==='arc'} onClick={()=>onChange('arc')}>{tr('With Arc','使用 Arc')}</button><button type="button" aria-pressed={mode==='connect'} onClick={()=>onChange('connect')}>{tr('With Connect','使用 Connect')}</button></div>;
+}
+function caseTitle(slug:string,fallback:string,tr:Tr){return slug==='overnight-goals'?tr('Delegate a bounded task for later','委派稍后执行的有界任务'):slug==='ci-follow-up'?tr('Check CI and prepare the next step','检查 CI，准备下一步'):slug==='scheduled-checks'?tr('Keep a check on a daily or interval routine','按每日或间隔 Routine 持续检查'):fallback;}
+
 export function UseCaseCatalog() {
   const { tr, locale } = useI18n();
-  const items = cases(tr);
+  const items = cases(tr),[mode,setMode]=useRunMode();
   return <main className="useCaseCatalog revisedUseCases">
-    <header className="toolPageHeader"><span className="eyebrow">{tr("USE CASES", "使用场景")}</span><h1>{tr("What would you like done on your computer?", "你想让电脑上的哪项工作完成？")}</h1>
-      <p>{tr("Start in your AI chat. Name the computer, describe the result and say how to check it. These examples show the tools, permissions and evidence each workflow needs.", "从 AI 聊天开始，说明目标电脑、想要的结果和检查方式。以下场景说明每种工作需要的工具、权限与证据。")}</p>
+    <header className="toolPageHeader"><span className="eyebrow">{tr("USE CASES", "使用场景")}</span><h1>{mode==='arc'?tr('What would you like Arc to get done?','你想让 Arc 完成什么？'):tr("What would you like done on your computer?", "你想让电脑上的哪项工作完成？")}</h1>
+      <p>{tr('Delegate a goal to Arc with retained context, scheduled judgment and result checks. Or use Connect to drive the execution layer from your existing AI. The shared tools support both; Arc keeps the work and its follow-through together.','将目标交给 Arc，保留上下文、按计划判断并核验结果；也可以通过 Connect，让已有 AI 驱动执行层。两者共用工具，Arc 把工作和后续跟进持续保存在一起。')}</p>
+      <RunModeChoice mode={mode} onChange={setMode} tr={tr}/>
+      {mode==='arc'?<div className="useCaseEntry"><strong>{tr('Start with the result. Arc checks what the work needs.','从结果开始，由 Arc 检查所需能力。')}</strong><p>{tr('Open a workflow to prepare its request in Arc. Review the draft before sending. Arc uses your authorized Apps and computer tools, or saves a bounded Task or routine when requested.','打开具体场景，将请求带进 Arc，检查草稿后再发送。Arc 使用已授权应用与电脑工具；需要时保存有界 Task 或 Routine。')}</p><a href={arcChatHref(tr('Help me choose a useful task using my connected Apps and computers. Inspect available capabilities and ask only for missing details before acting.','根据我已连接的 Apps 和电脑，帮我选择一项有用任务。先检查可用能力，执行前只补齐缺失信息。'),'use-cases')}>{tr('Open Arc','打开 Arc')} →</a></div>:<>
       <div className="useCaseEntry"><strong>{tr("Quick work uses tools. Ongoing work uses a saved Task.", "即时工作使用工具，持续工作保存为 Task。")}</strong><p>{tr("You do not need to configure every operation manually. Your AI can create an authorized long-running or scheduled task; Dashboard provides progress and stop controls.", "无需手动配置每次操作。AI 可以创建已授权长任务或定时任务，Dashboard 提供进度与停止控制。")}</p><a href="/docs/long-running-work">{tr("Understand durable work", "了解持久工作")} →</a></div>
+      </>}
     </header>
-    <section className="useCaseGrid" aria-label={tr("Workflows", "工作流程")}>{items.map(item => <a className="useCaseCard" key={item.slug} href={localizedWebsiteHref("/use-cases/" + item.slug, locale)}>
-      <span className="eyebrow">{item.category}</span><h2>{item.title}</h2><p>{item.intro}</p><span className="caseMode">{item.durable ? tr("Saved Task · staged release", "持久 Task · 准备发布") : tr("Direct tools", "直接工具调用")}</span><b aria-hidden="true">↗</b>
+    {mode==='arc'&&<section className="arcDelegatedWork"><header><span className="eyebrow">{tr('DELEGATE · FOLLOW THROUGH · VERIFY','委派 · 跟进 · 核验')}</span><h2>{tr('Give Arc a responsibility.','把一项职责交给 Arc。')}</h2><p>{tr('Agree on the sources, boundaries and evidence once. Arc retains the instructions and run history, makes a fresh bounded assessment when scheduled, and leaves the outcome ready for review.','先约定信息源、边界与证据，Arc 保存指令和执行历史，在安排的时间做新的有界判断，并留下可复核的结果。')}</p></header><div>{ARC_DELEGATED_WORK.map(work=><a className="arcDelegatedCard" key={work.id} href={arcChatHref(work.prompt[locale],'delegated-work:'+work.id)}><h3>{work.title[locale]}</h3><p>{work.detail[locale]}</p><dl><dt>{tr('Arc retains','Arc 保留')}</dt><dd>{work.retains[locale]}</dd><dt>{tr('Arc checks','Arc 核验')}</dt><dd>{work.checks[locale]}</dd></dl><strong>{tr('Delegate in Arc','交给 Arc')} ↗</strong></a>)}</div></section>}
+    <h2 className="useCaseSectionTitle">{mode==='arc'?tr('The practical work behind a goal','目标背后的具体工作'):tr('Work with your existing AI','使用已有 AI 推进工作')}</h2>
+    <section className="useCaseGrid" aria-label={tr("Workflows", "工作流程")}>{items.map(item => <a className="useCaseCard" key={item.slug} href={localizedWebsiteHref("/use-cases/" + item.slug+'?mode='+mode, locale)}>
+      <span className="eyebrow">{item.category}</span><h2>{mode==='arc'?caseTitle(item.slug,item.title,tr):item.title}</h2><p>{mode==='arc'?ARC_USE_CASES[item.slug as UseCaseSlug].intro[locale]:item.intro}</p><span className="caseMode">{mode==='arc'?tr('Arc · Apps, devices & Tasks','Arc · 应用、设备与 Tasks'):item.durable?tr('Connect · saved Task','Connect · 持久 Task'):tr('Connect · direct tools','Connect · 直接工具')}</span><b aria-hidden="true">↗</b>
     </a>)}</section>
-    <TaskAvailability />
+    {mode==='connect'&&<TaskAvailability />}
     <footer className="catalogFooter"><p>{tr("Use your own projects and installed tools. Terminal access remains local-user access; browser interaction is separately scoped per shared tab. Review the exact boundaries before granting capabilities.", "使用自己的项目和现有工具。终端仍是本机用户权限；浏览器交互对每个已共享标签页单独授权。授予能力前请了解具体边界。")}</p><a href="/docs">{tr("Exact capabilities", "准确能力")} →</a></footer>
   </main>;
 }
 
 export function UseCaseDetail({ slug }: { slug: UseCaseSlug }) {
   const { tr, locale } = useI18n();
-  const item = cases(tr).find(entry => entry.slug === slug)!;
+  const item = cases(tr).find(entry => entry.slug === slug)!,[mode,setMode]=useRunMode(),arc=ARC_USE_CASES[slug];
+  const arcHref=arcChatHref(arcUseCasePrompt(slug,locale),'use-case:'+slug);
+  const arcProof=slug==='ci-follow-up'?tr('The actual commit, workflow status, inspected failure evidence and source links, with any proposed next action kept within your authorization.','实际提交、工作流状态、已检查的失败证据和来源链接；建议下一步须保持在你的授权范围内。'):slug==='scheduled-checks'?tr('Per-run timestamps, actual resource observations, source links and result summaries; include exit status when a command was executed.','每轮时间、实际资源观察、来源链接与结果摘要；执行了命令时另附退出状态。'):item.proof;
   return <main className="technicalDoc revisedUseCases">
-    <header className="articleHeader"><a className="caseBack" href={localizedWebsiteHref("/use-cases", locale)}>← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{item.title}</h1><p>{item.intro}</p>{item.durable && <TaskAvailability />}</header>
+    <header className="articleHeader"><a className="caseBack" href={localizedWebsiteHref("/use-cases?mode="+mode, locale)}>← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{mode==='arc'?caseTitle(slug,item.title,tr):item.title}</h1><p>{mode==='arc'?arc.intro[locale]:item.intro}</p><RunModeChoice mode={mode} onChange={setMode} tr={tr}/>{mode==='arc'?<div className="caseStartActions"><a className="primaryButton" href={arcHref}>{tr('Start in Arc','在 Arc 中开始')} ↗</a><span>{tr('Review the prepared request before sending.','检查预填请求后，再发送执行。')}</span></div>:item.durable&&<TaskAvailability />}</header>
     <article className="technicalArticle useCaseDetailBody">
+      {mode==='arc'?<>
+       <section><h2>{tr('Ask Arc','向 Arc 提出请求')}</h2><blockquote className="casePrompt">{arc.prompt[locale]}</blockquote><p>{tr('The button opens a draft in Arc, then you send it when ready. Arc checks current access and dependencies before acting; missing details or capabilities are concrete blockers.','按钮会在 Arc 中打开草稿，由你检查后发送。Arc 执行前检查当前权限与依赖；缺少信息或能力时会说明具体阻碍。')}</p></section>
+       <section className="caseArcRequirements"><h2>{tr('What to connect','需要连接什么')}</h2><p>{arc.requires[locale]}</p><a href={localizedWebsiteHref('/docs/apps',locale)}>{tr('Apps guide','Apps 指南')} →</a><a href={localizedWebsiteHref('/docs/devices',locale)}>{tr('Device guide','设备指南')} →</a></section>
+       <section><h2>{tr('How Arc handles the work','Arc 如何推进工作')}</h2><ol><li>{tr('Resolve the actual account, computer, files and tools. Check ownership, permissions and installed dependencies.','确认实际账号、电脑、文件和工具，检查归属、权限与已安装依赖。')}</li><li>{arc.kind==='task'?tr('Confirm timing, then save self-contained Task instructions. The scheduler starts a bounded Arc run and retains its conversation.','确认时间后保存自包含 Task 指令，由调度器启动有界 Arc 运行并保留任务对话。'):arc.kind==='routine'?tr('Confirm the schedule and timezone, save a routine and check the acknowledged next run. Each run rechecks permissions and budgets.','确认时间与时区，保存 Routine 并核对返回的下次运行时间；每轮重新检查权限和预算。'):tr('Use the authorized tools to perform the request, observe their results and continue from those observations.','使用获授权工具执行请求，读取结果，再依据实际观察继续。')}</li><li>{tr('Verify the requested output and return its evidence. Distinguish completed work, ongoing processes, unfinished work and exact blockers; do not repeat an uncertain external write.','核验目标产物并返回证据，区分已完成工作、仍运行的进程、未完成工作与具体阻碍；不重复结果不明的外部写入。')}</li></ol></section>
+       <section><h2>{tr('What a useful result contains','有用的结果应该包含什么')}</h2><p>{arcProof}</p>{arc.kind!=='direct'&&<p>{tr('A saved Task or routine returns an acknowledged ID and next run. Inspect its execution result separately in Tasks and Activity; scheduling alone is not completion.','保存 Task 或 Routine 后应返回确认的 ID 与下次运行时间。实际执行结果需在 Tasks 和 Activity 单独核对，保存计划本身不代表目标已完成。')}</p>}</section>
+       <section><h2>{tr('Know the boundary','了解边界')}</h2><p>{arc.boundary[locale]}</p><p>{tr('Arc model use has run and account limits. Relevant observations are sent to the model API; account permissions and local computer policy remain authoritative. You can inspect execution in Activity and stop future dispatch.','Arc 模型使用受单轮和账号额度限制，相关观察会发送给模型 API；账号权限和本机策略继续决定可执行范围。可在 Activity 检查执行，也可停止后续派发。')}</p></section>
+       <footer className="articleEndLinks"><a href={arcHref}>{tr('Start in Arc','在 Arc 中开始')} ↗</a><a href={localizedWebsiteHref('/docs/arc',locale)}>{tr('Arc guide','Arc 指南')} →</a><a href={localizedWebsiteHref('/docs/skills',locale)}>{tr('Reuse a skill','复用技能')} →</a></footer>
+      </>:<>
       <section><h2>{tr("Ask in your AI chat", "在 AI 聊天中提出请求")}</h2><blockquote className="casePrompt">{item.prompt}</blockquote><p>{tr("This is a sample request, not an automatically started task. The AI resolves the device and checks your existing authorization before using tools or saving ongoing work.", "这是示例请求，不会自动启动任务。AI 会先确认设备和已有授权，再使用工具或保存持续工作。")}</p></section>
       <section><h2>{tr("How the work proceeds", "工作如何推进")}</h2><ol>{item.steps.map(step => <li key={step}>{step}</li>)}</ol></section>
       <section><h2>{tr("Tools and permissions", "工具与权限")}</h2><div className="caseTools"><code>{item.tools}</code></div><p>{item.permission}</p><p>{tr("Permissions belong to the device. Task permissions add lifecycle capabilities; they do not override tool access, workspace roots or sensitive-path checks.", "权限属于每台设备。任务权限增加生命周期能力，不会覆盖工具授权、工作区范围或敏感路径检查。")}</p></section>
       <section><h2>{tr("What a useful result contains", "有用的结果应该包含什么")}</h2><p>{item.proof}</p>{item.durable && <p>{tr("Get the saved status and recent runs with get_automation or open Dashboard → Tasks. Failed, expired, cancelled and paused are distinct outcomes; they should not be described as completed work.", "通过 get_automation 或 Dashboard → Tasks 查看保存状态和近期运行。失败、到期、取消和暂停是不同结果，不能当成工作已完成。")}</p>}</section>
       <section><h2>{tr("Know the boundary", "了解边界")}</h2><p>{item.limit}</p><p>{tr("Active tool results pass through the hosted relay and your selected AI. Durable goals additionally save their contract, bounded observations, factual memory and evidence. Choose the content and access you grant accordingly.", "当前工具结果经过托管 Relay 和所选 AI；持久目标还会保存合同、受限观察、事实记忆和证据，请据此选择任务内容与访问授权。")}</p></section>
       <footer className="articleEndLinks"><a href="/connect-ai">{tr("Connect your AI", "连接 AI")} →</a><a href="/docs/long-running-work">{tr("Long-running work", "持续工作")} →</a><a href="/docs#docs-sandbox">{tr("Execution boundaries", "执行边界")} →</a></footer>
+      </>}
     </article>
   </main>;
 }

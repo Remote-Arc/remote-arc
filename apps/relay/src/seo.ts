@@ -1,4 +1,5 @@
 import { DOC_TOPICS, DOC_PATHS } from "../../../packages/docs/src/catalog.js";
+import { ARC_DELEGATED_WORK, ARC_USE_CASES, arcChatHref, arcUseCasePrompt, type UseCaseSlug } from "../../../packages/docs/src/arc-use-cases.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { localizedPages, isChineseMarketingPath, unprefixedMarketingPath } from "./marketing-locale.js";
 import { chineseSeo } from "./zh-seo.js";
@@ -125,15 +126,15 @@ const articles: Record<string, SeoPage> = {
 
 const pages: Record<string, SeoPage> = {
   "/integrations": { title: "Remote Arc Apps — Explore native integrations", description: "Browse App categories, supported operations, authorization requirements and usage costs. Connect Apps works independently of Arc Agent; account connections require provider setup.", canonical: SITE + "/integrations" },
-  "/": { title: "Remote Arc — Connect AI to Apps & Computers", description: "Connect AI assistants to your apps and computers with Remote Arc. One secure MCP connection, per-device permissions and cross-device workflows. Arc Agent coming soon.", canonical: SITE + "/" },
+  "/": { title: "Remote Arc — Connect AI to Apps & Computers", description: "Connect AI to your apps and computers with per-device permissions and cross-device workflows. Delegate goals to Arc with retained context, scheduled judgment and result checks.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude, Gemini and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
   "/install/gemini": { title: "Connect Google Gemini to Your Computer | Remote Arc", description: "Step-by-step Gemini MCP Connector setup using real screenshots. Connect your Google account to Remote Arc, pair a computer and use secure remote MCP tools.", canonical: SITE + "/install/gemini" },
   "/install/cursor": { title: "Install Remote Arc for Cursor", description: "Use Remote Arc to give Cursor controlled access to paired Windows, macOS and Linux computers through MCP.", canonical: SITE + "/install/cursor" },
-  "/arc": { title: "Arc — Your AI Teammate | Coming Soon | Remote Arc", description: "Meet Arc, the AI teammate we're building for Remote Arc. Hosted chat, connected apps and permissioned recurring work are planned, not yet available. Request early access.", canonical: SITE + "/arc" },
+  "/arc": { title: "Arc — Delegate work with context and evidence | Remote Arc", description: "Give Arc a goal, connect authorized Apps and computers, reuse Skills and save bounded Tasks or routines. Review actual observations, results and blockers in your workspace.", canonical: SITE + "/arc" },
   "/roadmap": { title: "Remote Arc Roadmap — Infrastructure for Agents That Act", description: "From connected infrastructure and personal agents to long-term exploration of industry agents and intelligent device stewardship. Explore Remote Arc’s direction.", canonical: SITE + "/roadmap" },
-  "/early-access": { title: "Arc Early Access — Remote Arc", description: "Request early access to Arc, the forthcoming Remote Arc hosted AI teammate. Share the work you want Arc to handle.", canonical: SITE + "/early-access" },
+  "/early-access": { title: "Arc Early Access — Remote Arc", description: "Share the work you want Arc to handle and request contact about product access. Available features and plan eligibility are shown in your workspace.", canonical: SITE + "/early-access" },
   "/feedback": { title: "Remote Arc Feedback — Share Your Experience", description: "Tell Remote Arc what works, what needs fixing, and what you'd like us to build next. Submit feedback directly to the team.", canonical: SITE + "/feedback" },
   "/pricing": { title: "Remote Arc Pricing — Hosted remote MCP for AI", description: "Start free with 10,000 monthly hosted MCP tool calls. Understand account usage, separate AI subscriptions and current capacity availability.", canonical: SITE + "/pricing" },
   "/downloads": { title: "Remote Arc Downloads — Native Go Agent for Windows, macOS and Linux", description: "Download the native Remote Arc Agent or install with npm and Homebrew. Go Agent and Execution Core by default; standalone installs need no Node.js.", canonical: SITE + "/downloads" },
@@ -151,7 +152,7 @@ const pages: Record<string, SeoPage> = {
   "/connect-ai": { title: "Connect an AI client to Remote Arc", description: "Pair a computer, choose its device permissions, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.", canonical: SITE + "/connect-ai" },
   "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
   "/blogs": { title: "Remote Arc Blog — MCP, Security & Remote AI Engineering", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
-  "/use-cases": { title: "Remote Arc Use Cases — Let AI work on your real computer", description: "Explore workflows for coding, file organization, long jobs, scheduled checks, CI follow-up, data, diagnostics and explicitly shared browser context.", canonical: SITE + "/use-cases" },
+  "/use-cases": { title: "Remote Arc Use Cases — Delegate to Arc or use Connect", description: "Delegate daily briefs, project follow-up and delivery checks to Arc. Explore 15 workflows with Arc and Connect paths, actual requirements and verifiable results.", canonical: SITE + "/use-cases" },
   "/chatgpt-computer-access": { title: "ChatGPT Computer Access via Remote MCP — Remote Arc", description: "Connect ChatGPT to a real Windows, macOS or Linux computer through Remote MCP, OAuth and explicit per-device permissions.", canonical: SITE + "/chatgpt-computer-access" },
   "/claude-computer-access": { title: "Claude Computer Access via Remote MCP — Remote Arc", description: "Connect Claude to explicitly paired Windows, macOS and Linux computers through Remote MCP, OAuth and per-device permissions.", canonical: SITE + "/claude-computer-access" },
   "/mcp-computer-access": { title: "MCP Computer Access for AI Agents — Remote Arc", description: "Use a hosted Remote MCP bridge to give compatible AI clients controlled access to files, processes, browser tabs and approved commands on paired computers.", canonical: SITE + "/mcp-computer-access" },
@@ -164,10 +165,10 @@ const useCaseSeo: Record<string, [string, string]> = {
   "disk-space-cleanup": ["Clean up Windows C: or Mac disk space safely", "Read-only disk usage audit, reviewed large-file candidates and explicit path-by-path confirmation before destructive cleanup."],
   "file-organization": ["Organize files with a reviewed move plan", "Inspect a folder, review destinations and collisions, then execute an authorized move plan with a before/after manifest."],
   "remote-development": ["Fix a project on your own computer", "Inspect, edit and test the existing checkout using Remote Arc device tools and explicit permissions."],
-  "overnight-goals": ["Run durable work without pretending the AI stays awake", "Save deterministic commands and checks for later execution; fresh AI judgment still requires a live supported reasoning host."],
+  "overnight-goals": ["Save bounded work for later", "Delegate an Arc Task with explicit limits, or use Connect for approved deterministic commands and checks."],
   "long-running-jobs": ["Track a long build, export or script", "Save a Long Task, follow its outcome after chat ends and understand process-handle recovery."],
   "scheduled-checks": ["Schedule a check or recurring goal", "Understand future starts, completion-based intervals, per-run results and device availability."],
-  "ci-follow-up": ["Run an authorized CI follow-up", "Use a Condition Watch with explicit event matching, authorized actions and recorded outcomes."],
+  "ci-follow-up": ["Check CI and plan an authorized follow-up", "Use Arc for fresh checks and scheduled judgment, or Connect for explicit event matching and approved deterministic actions."],
   "data-work": ["Process data in your local environment", "Use installed runtimes to analyze local files, validate results and understand task-data handling."],
   "home-lab": ["Inspect a headless host", "Inspect logs and services through an outbound device connection without opening an inbound Remote Arc port."],
   "browser-research": ["Work with explicitly shared browser tabs", "Read text, selections, links and tables, then optionally enable scoped click and fill on individual shared Chrome tabs."],
@@ -223,6 +224,15 @@ type CrawlPage = {
 };
 
 const crawlPages: Record<string, CrawlPage> = {
+  "/arc": {
+    h1:"Arc — delegate work with context and evidence",
+    intro:"Give Arc a responsibility, agree on its sources and boundaries, and review the actual outcome in your workspace. Arc uses the same permissioned Apps and computer execution infrastructure as Connect, while retaining the conversation and providing fresh bounded reasoning when scheduled.",
+    sections:[
+      ...ARC_DELEGATED_WORK.map(item=>({heading:item.title.en,text:item.detail.en+' Arc retains: '+item.retains.en+' Arc checks: '+item.checks.en})),
+      {heading:"Trust the evidence",text:"Skill references are reusable guidance and do not grant tools or permissions. Saved Tasks are checked against their actual outputs. Missing connections, dependencies, uncertain external effects and incomplete checks are reported explicitly. Hosted runs have time, step and token limits; a saved task is not proof of future completion."}
+    ],
+    links:[["https://agent.remotearc.app/dashboard/agent/chat","Open Arc"],["/use-cases","Arc and Connect use cases"],["/docs/architecture","Architecture and responsibilities"],["/security-model","Security and trust"]]
+  },
   "/integrations": {
     h1: "Explore Remote Arc App integrations",
     intro: "Find the apps your AI can work with through Remote Arc Connect. Browse supported operations and account requirements before authorizing a connection. Connect Apps rolls out independently of Arc Agent.",
@@ -235,16 +245,16 @@ const crawlPages: Record<string, CrawlPage> = {
   },
   "/": {
     h1: "Connect AI agents to your apps and computers",
-    intro: "Remote Arc Connect links compatible AI assistants such as ChatGPT, Claude and Cursor to supported apps and explicitly paired Windows, macOS and Linux computers through a secure MCP connection. Connect supports existing AI clients; Arc, the hosted AI teammate, is coming soon. Your connected services and devices retain their own authorization and permissions.",
+    intro: "Remote Arc Connect links compatible AI assistants such as ChatGPT, Claude and Cursor to supported apps and explicitly paired Windows, macOS and Linux computers through a secure MCP connection. Arc provides hosted conversations, retained context and scheduled fresh judgment over the same authorized execution infrastructure. Your connected services and devices retain their own authorization and permissions.",
     sections: [
       { heading: "Use the computer where the work already lives", text: "Your repositories, files, runtimes, credentials and command-line tools can stay on your own machine. Remote Arc exposes named MCP capabilities for inspecting directories, reading files, making supported edits, checking processes and running approved commands. The AI asks for a specific tool operation and the paired device executes it locally, so you do not need to move an entire development environment into a hosted VM just to let an AI help with real work." },
       { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client to your Remote Arc account, while each paired computer keeps its own policy. A development workstation can allow file edits and managed terminal commands while another machine remains read-only. Trusted Write Locations, protected paths, per-tool permissions and explicit approvals let you narrow ordinary file workflows without pretending that powerful terminal access is risk free." },
       { heading: "No inbound Remote Arc port", text: "The local agent establishes an outbound connection to the hosted control plane. Normal setup does not require port forwarding, a public IP address, a VPN into the machine or a publicly reachable local MCP server. The hosted side handles identity, discovery and routing; operating-system execution still terminates on the paired computer under the local user account." },
       { heading: "Keep the AI client replaceable", text: "Remote Arc uses MCP as the product boundary exposed to compatible AI clients. That means the client can change without rebuilding the device connection model. You can connect ChatGPT, Claude, Cursor or another supported MCP client to the same account while keeping paired computers, device policy and revocation controls independent from the conversation interface." },
       { heading: "Connect supported apps through one account", text: "Connect Apps and computer devices under the same Remote Arc account, then use the operations actually supported by each integration. Authorization and tool availability depend on the selected app and provider; the catalog does not claim every action is supported." },
-      { heading: "Support short actions and durable work", text: "For immediate work, an AI can inspect state and call device tools during the conversation. Supported deterministic tasks can persist bounded commands, schedules and condition watches after a chat turn; fresh AI reasoning still requires an active compatible host. Arc Agent chat and routines are planned, not available yet." }
+      { heading: "Support short actions and durable work", text: "For immediate work, an AI can inspect state and call device tools during the conversation. Connect can persist supported deterministic commands, schedules and condition watches. Arc adds bounded hosted reasoning, conversations, reusable Skills and Tasks with fresh judgment when scheduled. Each run records actual observations and results; missing permissions, dependencies and uncertain effects remain explicit blockers." }
     ],
-    links: [["/connect-ai", "Connect your AI"], ["/integrations", "App integrations"], ["/arc", "Arc Agent (coming soon)"], ["/pricing", "Pricing"], ["/docs", "Documentation"], ["/security-model", "Security and permissions"], ["/remote-mcp", "Remote MCP guide"], ["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/use-cases", "Use cases"]]
+    links: [["/connect-ai", "Connect your AI"], ["/integrations", "App integrations"], ["/arc", "Arc Agent"], ["/pricing", "Pricing"], ["/docs", "Documentation"], ["/security-model", "Security and permissions"], ["/remote-mcp", "Remote MCP guide"], ["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/use-cases", "Use cases"]]
   },
   "/install/chatgpt": {
     h1: "Install Remote Arc for ChatGPT",
@@ -399,8 +409,9 @@ const crawlPages: Record<string, CrawlPage> = {
   },
   "/use-cases": {
     h1: "Remote Arc use cases",
-    intro: "Practical workflows for remote development, file organization, long-running jobs, scheduled checks, CI follow-up, data work, home-lab diagnostics, browser context and remote support.",
+    intro: "Delegate a responsibility to Arc with retained context, scheduled fresh judgment and result checks, or use Connect from your existing AI client. All 15 concrete workflows offer both paths. Arc keeps the work, its observations and follow-through together.",
     sections: [
+      ...ARC_DELEGATED_WORK.map(item => ({heading:item.title.en,text:item.detail.en+' Arc retains: '+item.retains.en+' Arc checks: '+item.checks.en})),
       { heading: "Remote development on the machine that owns the checkout", text: "An AI can inspect an existing repository, read configuration, edit selected files and run the project's own tests without first copying the project into another hosted environment. Device policy determines whether the session stays read-only or can use targeted edits and managed commands." },
       { heading: "Durable jobs without keeping a chat stream open", text: "Builds, exports, scripts and scheduled checks can be stored as bounded tasks so the device can keep working after the immediate conversation ends. Remote Arc records task state and results, while new reasoning is requested only when a later step actually requires judgment." },
       { heading: "Authorized diagnostics and support", text: "A paired machine can expose logs, file metadata and running processes for diagnosis before repair permissions are enabled. This separates observing a problem from changing the system and is useful for home-lab maintenance, remote support and incident investigation on computers you control." },
@@ -585,17 +596,22 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
 for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   const path = "/use-cases/" + slug;
   const detail = useCaseCrawlDetails[slug]!;
+  const arc = ARC_USE_CASES[slug as UseCaseSlug];
+  pages[path]!.description = arc.intro.en + " Also available through Connect from your existing AI client.";
   crawlPages[path] = {
     h1: title,
-    intro: description,
+    intro: arc.intro.en,
     sections: [
-      { heading: "Example request", text: detail.prompt },
-      { heading: "How the work proceeds", text: detail.flow },
-      { heading: "Tools and permissions", text: detail.tools },
+      { heading: "With Arc", text: arcUseCasePrompt(slug as UseCaseSlug,'en') },
+      { heading: "Arc requirements", text: arc.requires.en },
+      { heading: "Arc boundaries", text: arc.boundary.en },
+      { heading: "With Connect: example request", text: detail.prompt },
+      { heading: "With Connect: how the work proceeds", text: detail.flow },
+      { heading: "Connect tools and permissions", text: detail.tools },
       { heading: "What useful evidence looks like", text: detail.proof },
       { heading: "Know the boundary", text: detail.boundary }
     ],
-    links: [["/use-cases", "All use cases"], ["/docs", "Documentation"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"]]
+    links: [[arcChatHref(arcUseCasePrompt(slug as UseCaseSlug,'en'),'use-case:'+slug), "Prepare this request in Arc"], [path+'?mode=connect', "Use this workflow with Connect"], ["/use-cases", "All use cases"], ["/docs", "Documentation"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"]]
   };
 }
 
@@ -703,7 +719,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       publisher: { "@id": SITE + "/#organization" },
       inLanguage: schemaLanguage,
       hasPart: [
-        ["Connect AI", "/connect-ai"], ["Apps", "/integrations"], ["Arc Agent (coming soon)", "/arc"],
+        ["Connect AI", "/connect-ai"], ["Apps", "/integrations"], ["Arc Agent", "/arc"],
         ["Pricing", "/pricing"], ["Documentation", "/docs"], ["Security", "/security-model"]
       ].map(([name, path]) => ({ "@type": "WebPage", name, url: SITE + path }))
     }
@@ -816,7 +832,7 @@ function crawlablePageHtml(pathname: string, page: SeoPage) {
     h1: translated.h1,
     intro: translated.intro,
     sections: translated.sections,
-    links: [["/zh/connect-ai", "连接 AI"], ["/zh/integrations", "应用集成"], ["/zh/arc", "Arc Agent（即将推出）"], ["/zh/pricing", "价格方案"], ["/zh/docs", "中文文档"], ["/zh/security-model", "安全与权限"], ["/zh/install/chatgpt", "ChatGPT 安装教程"]] as Array<[string, string]>
+    links: [["/zh/connect-ai", "连接 AI"], ["/zh/integrations", "应用集成"], ["/zh/arc", "Arc Agent"], ["/zh/pricing", "价格方案"], ["/zh/docs", "中文文档"], ["/zh/security-model", "安全与权限"], ["/zh/install/chatgpt", "ChatGPT 安装教程"]] as Array<[string, string]>
   } : crawlPages[pathname] ?? {
     h1: page.title.replace(/ — Remote Arc$/, ""),
     intro: page.description,
@@ -978,10 +994,14 @@ export function llmsTxt() {
   return [
     "# Remote Arc",
     "",
-    "> Remote Arc is a hosted Remote MCP bridge that connects compatible AI clients to explicitly paired Windows, macOS and Linux computers.",
+    "> Remote Arc provides agent infrastructure for authorized Apps and computers. Arc retains delegated goals, context and results with bounded hosted reasoning; Connect exposes the same execution layer to compatible external AI clients over MCP.",
     "",
     "## Core pages",
     "- [Home](" + SITE + "/): product overview and setup path",
+    "- [Arc](" + SITE + "/arc): hosted personal-agent workspace, delegated work and verified results",
+    "- [Start here](" + SITE + "/docs/start-here): choose Arc or Connect and reach a first verified result",
+    "- [Platform architecture](" + SITE + "/docs/architecture): model decisions, context, authorization, execution, scheduling, memory and cost",
+    "- [Skills](" + SITE + "/docs/skills): reusable instructions and account-owned references",
     "- [Remote MCP guide](" + SITE + "/remote-mcp): remote vs local MCP, how to connect ChatGPT, Claude and Cursor, OAuth and troubleshooting",
     "- [Remote MCP computer access](" + SITE + "/mcp-computer-access): vendor-neutral architecture and capability overview",
     "- [ChatGPT computer access](" + SITE + "/chatgpt-computer-access): ChatGPT-specific setup and trust model",
@@ -997,7 +1017,7 @@ export function llmsTxt() {
     "- [Cursor](" + SITE + "/install/cursor)",
     "",
     "## Source",
-    "- [GitHub](https://github.com/yaohuangguan/remote-arc)",
+    "- [GitHub](https://github.com/Remote-Arc/remote-arc)",
     ""
   ].join("\n");
 }
@@ -1006,16 +1026,16 @@ export function llmsFullTxt() {
   return llmsTxt() + [
     "",
     "## Architecture summary",
-    "AI clients connect to the hosted Remote Arc MCP endpoint over OAuth. The hosted control plane handles identity, policy and routing. Each paired computer keeps an outbound connection to Remote Arc, receives only routed tool calls for that device, and executes them through the local agent.",
+    "Arc provides hosted conversations and bounded model decisions. The platform validates tool arguments, checks current authorization, dispatches supported App or device operations and persists observations, task schedules and cost reservations. Connect serves external AI clients through OAuth-protected MCP. Cloud Apps do not need a local computer. Paired computers keep an outbound connection and execute approved tools locally through the native Agent and Execution Core.",
     "",
     "## Security summary",
     "AI-client authorization and device authorization are separate. Device policies can limit tools, Trusted Write Locations, sensitive paths, browser interaction and long-running task capabilities. Ordinary non-sensitive reads can remain broad; supported writes outside trusted locations pause for approval. Terminal access, when enabled, inherits the permissions of the local operating-system user and is not presented as an OS sandbox.",
     "",
     "## Data-flow summary",
-    "Requested tool arguments, selected file content and tool output can pass through the hosted relay to the connected AI provider. Local Undo snapshots for supported file edits stay on the device. See the privacy policy and security model for current details.",
+    "Relevant messages, instructions and tool observations enter model context. Arc-owned conversations, personal memory and saved work have bounded storage and retrieval; they are separate from an external client's conversation. Requested file content and tool output can pass through the hosted relay. Local Undo snapshots for supported file edits stay on the device. See the privacy policy and security model for current details.",
     "",
     "## Product positioning",
-    "Remote Arc is not a replacement AI assistant and does not own the user's model or conversation. It is a bridge between an AI client the user already chose and computers the user explicitly paired."
+    "Use Arc to keep a delegated responsibility, available context, scheduled fresh judgment and result checks together. Use Connect when your existing AI client should drive the execution layer. Models interpret, plan and summarize; Remote Arc owns authorization, dispatch, continuity and usage controls. A saved task or successful tool call is not proof of goal completion. Runs have time, step and token limits, and answers must report actual evidence, incomplete work and concrete blockers. Skill text does not grant permissions or install missing engines."
   ].join("\n");
 }
 

@@ -30,8 +30,24 @@ const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
  {id:'task',provider:'vercel',scopes:[],prompt:"Save a one-off task named 'Verify web deployment' to run now: check the latest deployment of my 'web' project and report its actual readiness and URL. Create a persisted task with schedule type once, not a recurring routine or just a reply in this chat."},
  {id:'skill',provider:'github',scopes:['repo'],prompt:'Use the selected skill to create the release verification issue in example/project. Follow its title and body requirements and return the acknowledged issue link.'},
  {id:'vercel-error',provider:'vercel',scopes:[],prompt:"Check the latest deployment of my 'broken' project and tell me its actual state. Report a failed deployment accurately."},
+ {id:'managed-process',provider:'github',scopes:['repo'],prompt:"On my connected build computer, run node verify.js in /fixture/project once as a managed background process. Inspect its output and completion status, keep the acknowledged process ID, and return the actual check result. Do not start a duplicate or claim completion while it is still running."},
 ],report:any[]=[];
-let currentCase='',reads=0,lists=0,unexpected=0,issueWrites=0,deploymentReads=0;
+let currentCase='',reads=0,lists=0,unexpected=0,issueWrites=0,deploymentReads=0,processStarts=0,processChecks=0,processOutputs=0;
+env.REGISTRY={getByName:()=>({fetch:async(request:Request)=>{
+ const route=new URL(request.url).pathname;
+ if(route==='/devices')return Response.json(currentCase==='managed-process'?[{id:'eval-build-device',tools:['start_process','process_status','process_output'],status:'online'}]:[]);
+ const input=await request.json() as any;
+ if(currentCase!=='managed-process'||route!=='/call'||input.deviceId!=='eval-build-device'){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_DEVICE_ACTION');}
+ const args=input.arguments;
+ if(input.tool==='start_process'){
+  if(args.command!=='node verify.js'||args.cwd!=='/fixture/project'||args.background!==true||++processStarts!==1){unexpected++;throw Error('ARC_EVAL_PROCESS_GOAL_MISMATCH');}
+  return Response.json({result:{process_id:'eval-managed-process',pid:123,status:'running'}});
+ }
+ if(args.process_id!=='eval-managed-process'){unexpected++;throw Error('ARC_EVAL_PROCESS_HANDLE_MISMATCH');}
+ if(input.tool==='process_status'){processChecks++;return Response.json({result:{process_id:args.process_id,status:processChecks===1?'running':'exited',exit_code:processChecks===1?null:0}});}
+ if(input.tool==='process_output'){processOutputs++;return Response.json({result:{process_id:args.process_id,stdout:'verified-build-ok',stderr:''}});}
+ unexpected++;throw Error('ARC_EVAL_UNEXPECTED_DEVICE_TOOL');
+}})} as unknown as DurableObjectNamespace;
 globalThis.fetch=(async(url,init)=>{
  const target=new URL(String(url));
  if(['github','skill'].includes(currentCase)&&target.hostname==='api.github.com'&&target.pathname==='/repos/example/project/issues'&&init?.method==='POST'){
@@ -54,11 +70,12 @@ globalThis.fetch=(async(url,init)=>{
 }) as typeof fetch;
 try{
  for(const item of cases){
-  currentCase=item.id;reads=0;lists=0;unexpected=0;issueWrites=0;deploymentReads=0;const trace:any[]=[];
+  currentCase=item.id;reads=0;lists=0;unexpected=0;issueWrites=0;deploymentReads=0;processStarts=0;processChecks=0;processOutputs=0;const trace:any[]=[];
   // App connection IDs follow the production UUID contract even in fixtures.
   const id='eval-'+item.id,connectionId=crypto.randomUUID(),token='eval-session-'+item.id,future=new Date(Date.now()+3600e3).toISOString();
   sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(id,id,id+'@example.invalid',at);
   sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex(token),id,future,at);
+  if(item.id==='managed-process')sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,last_seen,allowed_tools,workspace_roots) VALUES(?,?,?,\'linux\',?,?,?,?,?)').run('eval-build-device',id,'Synthetic build computer','synthetic-device-credential',at,at,JSON.stringify(['start_process','process_status','process_output']),JSON.stringify(['/fixture/project']));
   sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at) VALUES(?,?,?,'fixture','Synthetic account','active',?,?,?,?,?)`).run(connectionId,id,item.provider,JSON.stringify(item.provider==='github'?['read','write']:['read']),JSON.stringify(item.scopes),await seal(env,{accessToken:'fixture-oauth',scopes:item.scopes,expiresAt:null},`app-token:${id}:${item.provider}:${connectionId}`),at,at);
   await activateArcTrial(env,id);
   const skill=item.id==='skill'?await saveArcSkill(env,id,{name:'Release verification',description:'Create the release evidence issue.',content:'# Release verification\nFor the requested issue in example/project, use exactly the title "Skill release verification" and include verified-smoke-7A in the body. Return the acknowledged issue link. Never claim a created issue without a provider response.'}):null;
@@ -67,7 +84,7 @@ try{
   const started=await handleArcChat(request('sessions/'+session.id+'/messages',{text:item.prompt,requestId:crypto.randomUUID(),...(skill?{skillIds:[skill.id]}:{})}),env);assert.equal(started.status,202);const value=await started.json() as {run:{id:string}};
   const drive=async(runId:string)=>{let more=true,ticks=0;while(more&&ticks++<9)more=await runArcStep(env,runId,{executeTool:async(e,run,decision)=>{
    trace.push({phase:run.automation_id?'scheduled':'chat',tool:decision.tool,arguments:JSON.parse(decision.arguments_json)});
-   if(!['read_inbox','list_apps','describe_app','call_app',...(item.id==='task'?['create_task','manage_work']:[]),...(skill?['read_skill','list_skills']:[])].includes(decision.tool)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_TOOL');}
+   if(!['read_inbox','list_apps','describe_app','call_app',...(item.id==='task'?['create_task','manage_work']:[]),...(skill?['read_skill','list_skills']:[]),...(item.id==='managed-process'?['list_devices','select_device','device_tool']:[])].includes(decision.tool)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_TOOL');}
    if(decision.tool==='call_app'&&!['messages.list','messages.get','projects.list','deployments.list','deployments.get','issues.create'].includes(JSON.parse(decision.arguments_json).operation)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_WRITE');}
    try{return await executeArcTool(e,run,decision);}catch(error){
     // Synthetic inputs only; never serialize provider responses or credentials.
@@ -95,8 +112,9 @@ try{
   }
   const messages=await arcMessages(env,id,goalSession),answer=messages.filter(m=>m.role==='assistant').at(-1)?.text||'';
   const evidence=item.id==='mail'?reads>=2&&/10(?::00|：00|\s*(?:点|时|am|a\.m))|十[点时]/i.test(answer)&&/(?:INV.?42|发票|invoice)/i.test(answer):['github','skill'].includes(item.id)?issueWrites===1&&answer.includes('https://github.com/example/project/issues/'+(skill?43:42))&&(!skill||trace.some(t=>t.tool==='read_skill'&&t.arguments.id===skill.id)):deploymentReads>=1&&answer.includes((item.id==='vercel-error'?'broken':'web')+'-example.vercel.app')&&(item.id==='vercel-error'?/error|failed|失败|错误|未就绪/i.test(answer):/\bready\b|已就绪|已成功|可用/i.test(answer));
-  const passed=run.status==='succeeded'&&goalRun.status==='succeeded'&&evidence&&taskEvidence&&unexpected===0;
-  report.push({case:item.id,passed,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step),modelTokens:run.tokens_used+(goalRun.id===run.id?0:goalRun.tokens_used),providerRequests:reads,listCalls:lists,...(taskId?{taskId,scheduledGoalVerified:taskEvidence}:{}),answer,trace});
+  const goalEvidence=item.id==='managed-process'?processStarts===1&&processChecks>=2&&processOutputs>=1&&answer.includes('verified-build-ok')&&answer.includes('eval-managed-process'):evidence;
+  const passed=run.status==='succeeded'&&goalRun.status==='succeeded'&&goalEvidence&&taskEvidence&&unexpected===0;
+  report.push({case:item.id,passed,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step),modelTokens:run.tokens_used+(goalRun.id===run.id?0:goalRun.tokens_used),providerRequests:reads,listCalls:lists,...(taskId?{taskId,scheduledGoalVerified:taskEvidence}:{}),...(item.id==='managed-process'?{processStarts,processChecks,processOutputs}:{}),answer,trace});
   fs.mkdirSync('../../work/arc-task-eval',{recursive:true});fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({passed:report.length===cases.length&&report.every(value=>value.passed),maximumUsd,cases:report},null,2));
  }
  const funding=sql.prepare('SELECT spent_micros,reserved_micros FROM arc_funding_policy WHERE id=1').get()!;

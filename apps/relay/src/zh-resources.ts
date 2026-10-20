@@ -1,3 +1,4 @@
+import { ARC_DELEGATED_WORK, ARC_USE_CASES, arcUseCasePrompt, type UseCaseSlug } from '../../../packages/docs/src/arc-use-cases.js';
 type Section = { heading: string; text: string };
 type ResourceSeo = {
  title: string; description: string; h1: string; intro: string; sections: Section[];
@@ -78,10 +79,10 @@ const useCases: Record<string, Brief> = {
  "remote-development": ["在自己电脑上修复代码项目", "通过 Remote MCP 让 AI 检查已有仓库、编辑代码并运行有针对性的测试。", "使用现有工作区和工具链，在受控权限下复现问题、修改并验证。", "确认目标电脑和仓库范围，先读取实现与测试，再审阅修改 diff 并运行相关检查。"],
  "file-organization": ["按审查过的计划整理文件", "先分析指定目录、生成清晰的移动计划，经过确认后再使用已授权的本机操作。", "从只读检查开始，不允许未经确认的覆盖或删除。", "列出目标目录、重名冲突与移动清单，再检查前后文件状态；Shell 移动不在文件工具 Undo 范围内。"],
  "disk-space-cleanup": ["安全查找 Windows 或 Mac 磁盘占用", "检查大目录、缓存和重复构建产物，先预览可回收空间，确认具体路径后再清理。", "提供高风险和可清理项的清单，避免误删个人及系统文件。", "未经逐项批准不要删除 Windows 系统目录、用户资料、Time Machine 快照、备份或未知程序数据。"],
- "overnight-goals": ["运行有限次数的持续工作计划", "当步骤和验收命令已明确时，保存可追踪的固定工作循环。", "重复已批准命令，直到验证通过、达到次数上限或到期。", "这是确定性调度，不代表 AI 模型在聊天关闭后仍持续独立推理。"],
+ "overnight-goals": ["保存稍后执行的有界工作", "当步骤和验收命令已明确时，保存可追踪的固定工作循环。", "重复已批准命令，直到验证通过、达到次数上限或到期。", "这是确定性调度，不代表 AI 模型在聊天关闭后仍持续独立推理。"],
  "long-running-jobs": ["聊天结束后继续跟踪构建或导出任务", "把已经确定的长命令保存为 Task，并记录执行状态和结果。", "让设备执行长任务，控制台可以查看状态、结果并取消。", "持久保存的是任务记录，不是同一个进程 PID；未知执行结果不能盲目重放。"],
  "scheduled-checks": ["在未来运行或周期执行检查", "在授权设备上定时运行固定命令并保存每次执行结果。", "明确触发时间、允许动作、停止边界和设备可用条件。", "周期间隔从每轮完成时开始，当前不承诺精确 Cron 或自动唤醒已关机电脑。"],
- "ci-follow-up": ["CI 或 Webhook 事件发生后执行下一步", "在匹配的事件到达后触发事先批准的动作，并保留执行证据。", "保存明确的条件与操作，再核对实际执行结果。", "收到 CI 成功事件不等于自动获得合并代码或任意终端执行的权限。"],
+ "ci-follow-up": ["检查 CI 并准备获授权的下一步", "在匹配的事件到达后触发事先批准的动作，并保留执行证据。", "保存明确的条件与操作，再核对实际执行结果。", "收到 CI 成功事件不等于自动获得合并代码或任意终端执行的权限。"],
  "data-work": ["使用本机开发环境分析数据", "通过已有 Python、Node 或其他运行时处理本地数据文件并核对结果。", "数据保持在指定项目目录，脚本和输出由用户管理。", "读取与结果输出会通过所选 AI 和托管中继，需确认哪些数据可以分享。"],
  "home-lab": ["检查无头服务器与家庭实验室", "在无需公网入站端口的前提下查看远程服务器的服务、日志和进程。", "先以只读方式获取状态，确认问题后再申请额外修改权限。", "命令执行继承目标系统账户权限，不是独立沙箱。"],
  "browser-research": ["研究明确共享的浏览器标签页", "让 AI 读取已共享标签页的文本、链接和表格，必要时增加单标签页交互权限。", "每个标签页默认只读，点击和输入需要单独授权。", "浏览器共享不等于读取整个浏览器资料；交互能力必须符合当前标签页权限。"],
@@ -100,11 +101,12 @@ export const chineseResourceSeo: Record<string, ResourceSeo> = {
   sections: [{heading:"工程与产品实践",text:"阅读真实的基准测试、OAuth 和设备身份设计、云端 Worker 与本地执行面的分工，以及为什么 AI 需要明确、可撤销的电脑访问权限。"}]
  },
  "/use-cases": {
-  title: "Remote Arc 中文使用场景 — 让 AI 在你的电脑上工作",
-  description: "了解 Remote Arc 如何用于远程开发、文件整理、CI 跟进、长期任务、数据工作、浏览器研究与跨设备协作。",
+  title: "Remote Arc 使用场景 — 委托 Arc 或使用 Connect",
+  description: "将每日简报、项目跟进和交付核验交给 Arc。15 个具体场景均提供 Arc 与 Connect 路径，列明依赖、权限和核验要求。",
   h1: "Remote Arc 使用场景",
-  intro: "从开发、文件管理到定时检查与跨电脑协作，Remote Arc 提供受权限约束的本机工具与可保存的确定性任务。",
+  intro: "将职责交给 Arc，保留上下文、按计划重新判断并核验结果；也可以让现有 AI 通过 Connect 使用同一执行层。15 个具体场景均保留两种入口，Arc 将工作和后续跟进保存在一起。",
   sections: [
+   ...ARC_DELEGATED_WORK.map(item=>({heading:item.title.zh,text:item.detail.zh+' Arc 保留：'+item.retains.zh+' Arc 核验：'+item.checks.zh})),
    {heading:"即时工作",text:"让兼容 AI 客户端读取指定设备上的项目、检查进程，并按批准的工具权限编辑文件或执行命令。"},
    {heading:"持续执行",text:"长命令、固定的周期检查和条件触发任务可以保存状态、期限与结果；新策略仍需要模型参与。"},
    {heading:"权限边界",text:"每台电脑都有独立的权限与路径规则。终端继承本机用户权限；文件 Undo 不能保证撤回 Shell 或外部 API 操作。"}
@@ -136,13 +138,17 @@ export const chineseResourceSeo: Record<string, ResourceSeo> = {
  ...blogArticles
 };
 for (const [slug, [title, description, intro, boundary]] of Object.entries(useCases)) {
+ const arc=ARC_USE_CASES[slug as UseCaseSlug];
  chineseResourceSeo["/use-cases/" + slug] = {
   title: title + " — Remote Arc 使用场景",
-  description,
+  description:arc.intro.zh+' 同时保留现有 AI 客户端通过 Connect 执行的路径。',
   h1: title,
-  intro,
+  intro:arc.intro.zh,
   sections: [
-   {heading:"如何进行",text:intro},
+   {heading:"使用 Arc",text:arcUseCasePrompt(slug as UseCaseSlug,'zh')},
+   {heading:"Arc 所需条件",text:arc.requires.zh},
+   {heading:"Arc 能力边界",text:arc.boundary.zh},
+   {heading:"使用 Connect",text:intro},
    {heading:"先验证结果",text:"在选定的已授权设备上执行前，先查看输入、权限与工作区。完成后核对实际文件、命令状态或运行记录，而不只是相信成功提示。"},
    {heading:"需要知道的限制",text:boundary}
   ]

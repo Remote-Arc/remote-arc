@@ -202,6 +202,26 @@ try{
 const unknown=await send(id,'Uncertain external write');decisions.push(tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/repo',title:'unknown',body:'unknown'}}));
 let dispatches=0;await runArcStep(env,unknown.run.id,{executeTool:async()=>{dispatches++;throw new Error('ARC_TOOL_OUTCOME_UNKNOWN');}});assert.equal(row(unknown.run.id).status,'unknown');await runArcStep(env,unknown.run.id);assert.equal(dispatches,1);assert.equal((await arcMessages(env,'owner',id)).filter(m=>m.run_id===unknown.run.id&&m.role==='tool')[0]?.status,'unknown');
 
+// A native managed-process acknowledgement is known running work, not an
+// uncertain dispatch. Reuse a live handle; a verified exit permits a new run.
+const processSession=await create(),processTask=await send(processSession,'Run two approved checks sequentially, retaining and verifying their process handles.');
+const startCheck=tool('device_tool',{deviceId:'process-device',tool:'start_process',arguments:{command:'node verify.js',cwd:'/fixture/project',background:true}});
+const processStatus=(process_id:string)=>tool('device_tool',{deviceId:'process-device',tool:'process_status',arguments:{process_id}});
+decisions.push(startCheck,startCheck,processStatus('process-one'),tool('device_tool',{deviceId:'process-device',tool:'process_output',arguments:{process_id:'process-one'}}),processStatus('process-one'),startCheck,processStatus('process-two'),reply('Both checks exited with code 0; the first output was PASS.'));
+let processStarts=0,processChecks=0,processOutputs=0;
+while(await runArcStep(env,processTask.run.id,{executeTool:async(_env,_run,decision)=>{
+ const args=JSON.parse(decision.arguments_json);assert.equal(decision.tool,'device_tool');
+ if(args.tool==='start_process')return{process_id:++processStarts===1?'process-one':'process-two',pid:123,status:'running'};
+ if(args.tool==='process_output'){processOutputs++;return{stdout:'PASS',stderr:''};}
+ processChecks++;return{process_id:args.arguments.process_id,status:processChecks===1?'running':'exited',exit_code:processChecks===1?null:0};
+}})){}
+assert.equal(row(processTask.run.id).status,'succeeded');assert.equal(processStarts,2,'Do not start a second copy while running; permit an intentional start after a verified exit');assert.equal(processChecks,3);assert.equal(processOutputs,1);
+assert((await arcMessages(env,'owner',processSession)).some(m=>m.run_id===processTask.run.id&&String(m.result).includes('ARC_ACTION_ALREADY_COMPLETED')));
+const processProjection=JSON.stringify(arcObservation('device_tool',{process_id:'retained-process',status:'exited',exit_code:0,command:'large command '.repeat(1000),stdout:'output '.repeat(1000)}));
+assert(processProjection.includes('retained-process'));assert(processProjection.includes('"exit_code":0'));
+const missingHandle=await send(processSession,'Start the separate approved uncertain check.');decisions.push(tool('device_tool',{deviceId:'process-device',tool:'start_process',arguments:{command:'node uncertain.js',cwd:'/fixture/project',background:true}}));
+let missingHandleCalls=0;await runArcStep(env,missingHandle.run.id,{executeTool:async()=>{missingHandleCalls++;return{status:'running'};}});assert.equal(row(missingHandle.run.id).status,'unknown');await runArcStep(env,missingHandle.run.id);assert.equal(missingHandleCalls,1,'A running response without a handle remains uncertain and is not replayed');
+
 // Conversational delegation uses the existing leased scheduler, no forms.
 const delegation=await send(id,'Save one task to inspect my apps');decisions.push(tool('create_task',{name:'Inspect connected apps',instructions:'Inspect connected apps and report actual status.',schedule:{type:'once'}}),reply('Task saved.'));
 await runArcStep(env,delegation.run.id);await runArcStep(env,delegation.run.id);

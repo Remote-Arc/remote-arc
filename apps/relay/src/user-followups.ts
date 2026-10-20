@@ -51,11 +51,11 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
    const value=z.object({id:z.uuid(),userId:z.string().min(1).max(160),templateId:z.enum(FOLLOWUP_TEMPLATES.map(t=>t.id)),locale:z.enum(['en','zh']),subject:z.string().trim().min(1).max(200).refine(s=>!/[\r\n]/.test(s)),body:z.string().trim().min(20).max(6000),design:designSchema.optional()}).strict().parse(await input(request));
    const contact=await ensureContact(env,value.userId);if(!contact)return json({error:'user_not_found'},404);
    const existing=await env.DB.prepare('SELECT * FROM user_followup_messages WHERE id=?1').bind(value.id).first<Message>();
-   if(existing){if(existing.user_id!==value.userId||existing.subject!==value.subject||existing.body!==value.body||existing.template_id!==value.templateId||existing.locale!==value.locale||(existing.design_json||null)!==(value.design?JSON.stringify(value.design):null))return json({error:'draft_conflict'},409);return json({id:existing.id,status:existing.status,...followupLinks(env,existing.id,value.locale)});}
+   if(existing){if(existing.user_id!==value.userId||existing.subject!==value.subject||existing.body!==value.body||existing.template_id!==value.templateId||existing.locale!==value.locale||(existing.design_json||null)!==(value.design?JSON.stringify(value.design):null))return json({error:'draft_conflict'},409);return json({id:existing.id,status:existing.status,htmlBody:existing.html_body,...followupLinks(env,existing.id,value.locale)});}
    const unsubscribeUrl=new URL(env.MARKETING_ORIGIN||'https://remotearc.app').origin+'/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;
    const rendered=renderFollowupEmail({...value,...followupLinks(env,value.id,value.locale),unsubscribeUrl,replyTo:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',rewardAvailable:await feedbackRewardAvailable(env.DB)});
    await env.DB.prepare(`INSERT INTO user_followup_messages(id,user_id,actor_id,template_id,locale,subject,body,status,created_at,recipient_email,design_json,html_body,text_body) VALUES(?1,?2,?3,?4,?5,?6,?7,'draft',?8,?9,?10,?11,?12)`).bind(value.id,value.userId,user.id,value.templateId,value.locale,value.subject,value.body,stamp(),contact.email,value.design?JSON.stringify(value.design):null,rendered.html,rendered.text).run();
-   return json({id:value.id,status:'draft',...followupLinks(env,value.id,value.locale)},201);
+   return json({id:value.id,status:'draft',htmlBody:rendered.html,...followupLinks(env,value.id,value.locale)},201);
   }
   const match=path.match(/^\/api\/admin\/followups\/([^/]+)(?:\/(send))?$/);if(!match)return json({error:'not_found'},404);
   const id=decodeURIComponent(match[1]!);if(id.length>160)return json({error:'invalid_id'},400);

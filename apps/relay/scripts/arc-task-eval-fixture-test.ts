@@ -14,11 +14,15 @@ globalThis.fetch=(async(url,init)=>{
  let value;
  if(context.objective.includes('邮件'))value=observations.some(o=>o.tool==='read_inbox')?reply('已查看两封邮件：周五 10:00 项目评审，提前准备演示；发票 INV-42 周二到期，请在账单门户核对。'):tool('read_inbox',{connectionId,limit:2});
  else if(context.objective.includes('node verify.js')){
-  const deviceId=context.deviceIndex[0].id,checks=observations.filter(o=>o.tool==='device_tool'&&o.arguments.tool==='process_status').length;
-  if(!observations.some(o=>o.tool==='device_tool'&&o.arguments.tool==='start_process'))value=tool('device_tool',{deviceId,tool:'start_process',arguments:{command:'node verify.js',cwd:'/fixture/project',background:true}});
+  const checks=observations.filter(o=>o.tool==='device_tool'&&o.arguments.tool==='process_status').length;
+  // Closing context can discard the optional device index after the final
+  // process observations. A reply uses that evidence, not fresh discovery.
+  const deviceId=context.deviceIndex[0]?.id;
+  if(!observations.some(o=>o.tool==='select_device'))value=tool('select_device',{requiredTools:['start_process','process_status','process_output'],workspace:'/fixture/project',platform:'linux'});
+  else if(!observations.some(o=>o.tool==='device_tool'&&o.arguments.tool==='start_process'))value=tool('device_tool',{deviceId,tool:'start_process',arguments:{command:'node verify.js',cwd:'/fixture/project',background:true}});
   else if(!observations.some(o=>o.tool==='device_tool'&&o.arguments.tool==='process_output'))value=tool('device_tool',{deviceId,tool:'process_output',arguments:{process_id:'eval-managed-process'}});
   else if(checks<2)value=tool('device_tool',{deviceId,tool:'process_status',arguments:{process_id:'eval-managed-process'}});
-  else value=reply('Process eval-managed-process exited 0 with verified-build-ok.');
+  else {assert.match(JSON.stringify(context),/verified-build-ok/,'Final process summary must retain its observed output');value=reply('Process eval-managed-process exited 0 with verified-build-ok.');}
  }
  else if(context.objective.startsWith('Save a one-off task'))value=observations.some(o=>o.tool==='create_task')?reply('Task saved.'):tool('create_task',{name:'Verify web deployment',instructions:"Check the latest deployment of my 'web' project and report actual readiness and URL.",schedule:{type:'once'}});
  else if(context.skillReferences?.length){

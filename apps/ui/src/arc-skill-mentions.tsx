@@ -25,7 +25,7 @@ export function useArcSkillMentions(accountId:string,draft:string,setDraft:(valu
   }).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();
  },[open,accountId,retry]);
  const key=(item:ArcMention)=>item.kind+':'+item.id;
- const atLimit=(item:ArcMention)=>selected.filter(value=>value.kind===item.kind).length>=(item.kind==='app'?5:3);
+ const atLimit=(item:ArcMention)=>selected.length>=8||selected.filter(value=>value.kind===item.kind).length>=(item.kind==='app'?5:item.kind==='employee'?8:3);
  const visible=items.filter(item=>(kind==='all'||kind===item.kind)&&!selected.some(value=>key(value)===key(item))&&!atLimit(item)&&[item.name,item.description,item.provider].join(' ').toLowerCase().includes(query.toLowerCase())).slice(0,30);
  const choose=(item:ArcMention)=>{if(atLimit(item))return;setSelected(values=>values.some(value=>key(value)===key(item))?values:[...values,item]);setOpen(false);const token=range.current;setDraft(token?draft.slice(0,token.start)+draft.slice(token.end):draft);range.current=null;requestAnimationFrame(()=>{editor.current?.focus();if(token)editor.current?.setSelectionRange(token.start,token.start);});};
  const onKeyDown=(event:KeyboardEvent<HTMLElement>)=>{if(!open||event.nativeEvent.isComposing)return false;if(event.key==='Escape'){event.preventDefault();setOpen(false);return true;}if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();setIndex(value=>Math.max(0,Math.min(visible.length-1,value+(event.key==='ArrowDown'?1:-1))));return true;}if(event.key==='Enter'){event.preventDefault();if(visible[index])choose(visible[index]!);return true;}return false;};

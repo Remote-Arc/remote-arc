@@ -139,7 +139,7 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
    const skillIds=[...new Set((input.skillIds||[]) as string[])];
    if(input.appIds!==undefined&&(!Array.isArray(input.appIds)||input.appIds.length>5||input.appIds.some((id:unknown)=>typeof id!=='string'||!/^[-\w:]{1,160}$/.test(id))))throw new ArcError('INVALID_APP_REFERENCES');
    const appIds=[...new Set((input.appIds||[]) as string[])];
-   if(input.employeeIds!==undefined&&(!Array.isArray(input.employeeIds)||input.employeeIds.length>3||input.employeeIds.some((id:unknown)=>typeof id!=='string'||!/^[-\w]{1,100}$/.test(id))))throw new ArcError('INVALID_TEAMMATE_REFERENCES');
+   if(input.employeeIds!==undefined&&(!Array.isArray(input.employeeIds)||input.employeeIds.length>8||input.employeeIds.some((id:unknown)=>typeof id!=='string'||!/^[-\w]{1,100}$/.test(id))))throw new ArcError('INVALID_TEAMMATE_REFERENCES');
    const employeeIds=[...new Set((input.employeeIds||[]) as string[])];
    const verificationInput=input.verification===undefined?undefined:arcVerificationSchema.safeParse(input.verification);
    if(verificationInput&&!verificationInput.success)throw new ArcError('ARC_INVALID_VERIFICATION');

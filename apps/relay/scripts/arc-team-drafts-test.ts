@@ -63,6 +63,9 @@ export async function testArcEmployeeDrafts({sql,env}:any){
   const foreign=sql.prepare("SELECT id FROM arc_employees WHERE user_id='other' LIMIT 1").get()!.id;assert.equal((await chat('sessions/'+directSession+'/messages','POST',{...referenceInput,requestId:crypto.randomUUID(),employeeIds:[foreign]})).status,404);
   await assert.rejects(()=>delegateArcWork(env,referenceRun,{targetKind:'employee',targetId:teamInput.employeeIds[1],instructions:'Wrong addressee'}),/ARC_DISPATCH_RECIPIENT_MISMATCH/);
   const addressed=await delegateArcWork(env,referenceRun,{targetKind:'employee',targetId:recipient,instructions:referenceInput.text});assert.equal(addressed.url,'/dashboard/agent/chat?session='+directSession);assert.equal(addressed.target.id,recipient);
+  sql.prepare("UPDATE arc_chat_runs SET status='succeeded' WHERE id=?").run(referenceRun.id);
+  const four=await decode(await chat('sessions/'+directSession+'/messages','POST',{text:'请这四位队友一起讨论产品方向。',employeeIds:teamInput.employeeIds,requestId:crypto.randomUUID()}),202),fourRun=sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(four.run.id) as ArcRun;
+  const fourMessage=(await decode(await chat('sessions/'+directSession))).messages.find((message:any)=>message.run_id===fourRun.id&&message.role==='user');assert.equal(fourMessage.teammates.length,4,'The four-role team can be addressed together');assert.equal((await delegateArcWork(env,fourRun,{targetKind:'team',targetId:organized.team!.id,instructions:'四位一起讨论'})).target.id,organized.team!.id);
   assert.equal(modelCalls,5);console.log('PASS: direct teammate/team creation, owned membership and @ references, replay/recipient/cancellation fences, chat-to-team work dispatch, editable legacy cards and zero paid calls');
  }finally{env.ARC_RUNTIME=runtime;env.MODEL_GATEWAY.adapters.openai=adapter;}
 }

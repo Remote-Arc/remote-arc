@@ -114,7 +114,7 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
   }
   if(path==='/api/arc/sessions'){
    if(request.method==='GET'){
-     const rows=(await env.DB.prepare('SELECT * FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL AND automation_id IS NULL ORDER BY updated_at DESC LIMIT 100').bind(user.id).all<ArcSession>()).results;
+     const rows=(await env.DB.prepare('SELECT * FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL AND automation_id IS NULL AND NOT EXISTS(SELECT 1 FROM arc_team_rooms WHERE session_id=arc_chat_sessions.id) ORDER BY updated_at DESC LIMIT 100').bind(user.id).all<ArcSession>()).results;
     return json({sessions:await Promise.all(rows.map(async row=>({id:row.id,title:await unseal<string>(env,row.title_ciphertext,arcContext(user.id,row.id)),modelId:row.model_id,updatedAt:row.updated_at})))});
    }
    if(request.method==='POST'){

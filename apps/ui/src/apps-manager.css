@@ -76,7 +76,7 @@
 .appsPanel .appsPanelTabs button[aria-selected="true"] { color:var(--dash-text); }
 .appsPanelTabs button[aria-selected="true"]::after { content:""; position:absolute; inset:auto 0 -1px; height:2px; background:var(--dash-text); }
 .appsPanelTabs button span { padding:1px 5px; border-radius:4px; background:var(--dash-subtle); color:var(--dash-muted); font-size:11px; font-variant-numeric:tabular-nums; }
-.appsPanelScroll { flex:1; overflow-y:auto; min-height:0; padding:24px 26px; scrollbar-gutter:stable; overscroll-behavior:contain; }
+.appsPanelScroll { flex:1; overflow-y:auto; min-height:0; padding:24px 26px; scrollbar-gutter:auto; overscroll-behavior:contain; }
 .appsPanelIntro { margin:0 0 23px; font-size:14px; color:var(--dash-muted); line-height:1.75; }
 .appsPanelEmpty { display:flex; align-items:center; flex-direction:column; padding:30px 12px 22px; text-align:center; color:var(--dash-muted); }
 .appsPanelEmpty > svg { color:var(--dash-text); margin-bottom:14px; }

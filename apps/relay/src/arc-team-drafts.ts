@@ -35,7 +35,7 @@ export async function draftArcEmployee(env:ArcEnv,run:ArcRun,raw:unknown){
  if(requested&&!preview&&row.status!=='cancelled'){
   const employee=row.status==='confirmed'&&row.created_object_id?await readArcEmployee(env,run.user_id,row.created_object_id):await saveArcEmployee(env,run.user_id,objectId(id),profile,undefined,{draftId:id});
   const updated=await rowFor(env,run.user_id,id);
-  return{draft:await publicDraft(env,updated),employee,created:true,requiresUserConfirmation:false,guidance:'The requested teammate is created. Report their name and responsibility. Do not propose or create the same teammate again. The user can edit the profile and assign access in AI teams. No work or extra access was started.'};
+  return{draft:await publicDraft(env,updated),employee,created:true,requiresUserConfirmation:false,guidance:'The requested teammate is created. Report their name and responsibility. Do not propose or create the same teammate again. Keep working on the rest of the owner’s goal in this chat. If requested, organize the team and assign its work now. Saved profile/access settings are optional; no resource access was added by this creation.'};
  }
  return{draft:await publicDraft(env,row),created:false,requiresUserConfirmation:true,guidance:'An editable profile card is attached to this chat. Ask the user to review name, model, avatar and access and press Create employee. No employee or work exists until confirmation. Do not ask for a separate budget or deadline. Do not call this tool repeatedly for the same profile.'};
 }

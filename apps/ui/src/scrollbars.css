@@ -1,0 +1,3 @@
+/* Keep native scrolling and keyboard navigation without visible scrollbar UI. */
+*,*::before,*::after{scrollbar-width:none!important;scrollbar-gutter:auto!important;-ms-overflow-style:none!important}
+*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}

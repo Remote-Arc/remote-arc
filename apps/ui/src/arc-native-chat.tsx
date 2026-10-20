@@ -41,14 +41,13 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
   {icon:'tasks',title:tr('Move a project forward','推进项目工作'),detail:tr('Code, tests & a clear result','代码、测试与清晰结果'),text:tr('Inspect my project, identify a useful next step, do the work and verify the result.','检查我的项目，找到下一步最有用的工作，完成后验证结果。')},
   {icon:'routine',title:tr('Start a morning routine','安排晨间例行工作'),detail:tr('A daily head start','每天早上先行一步'),text:tr('Every morning at 9, summarize my email and calendar. Ask which timezone and accounts to use before scheduling it.','每天早上 9 点汇总我的邮件和日程。安排前先确认时区和使用哪些账号。')},
   {icon:'apps',title:tr('Bring my apps together','串联应用工作'),detail:tr('GitHub, Slack & more','GitHub、Slack 等应用'),text:tr('Look at my connected apps and turn recent project updates into a useful summary.','查看已连接的应用，将项目最近的进展整理成有用的摘要。')},
-  {icon:'device',title:tr('Check my computers','检查电脑状态'),detail:tr('Devices & ongoing work','设备与持续工作'),text:tr('Check my connected computers and summarize what needs attention.','检查已连接的电脑，整理需要处理的问题。')},
+  {icon:'users',title:tr('Bring a team to the goal','让队友协作'),detail:tr('One goal, coordinated work','一个目标，协作完成'),text:tr('Create a developer, designer, business teammate and domain researcher. Organize them into a team, discuss Remote Arc’s product direction, and return their actual findings in this chat.','创建开发、设计、商务和领域专家四位队友，组队讨论 Remote Arc 的产品方向，把各自的实际分析和建议带回这个对话。')},
  ];
  const filtered=chat.sessions.filter(s=>s.title.toLowerCase().includes(search.trim().toLowerCase()));
  const sidebar=(mobile:boolean)=><nav className={'arcChatNavigation'+(mobile?' arcChatNavigationMobile':'')} aria-label={tr('Arc navigation','Arc 导航')}>
   <div className="arcSidebarSectionTitle">{tr('WORKSPACE','工作空间')}</div><button type="button" className="arcSidebarPrimary" aria-label={tr('New chat','新对话')} title={tr('New chat','新对话')} onClick={beginNew}><Icon name="add"/><span>{tr('New chat','新对话')}</span></button>
   <button type="button" className="arcSidebarAction" aria-label={tr('Tasks','任务')} title={tr('Tasks','任务')} aria-current={activeTab==='agent-goals'?'page':undefined} onClick={()=>navigate(onOpenGoals)}><Icon name="tasks"/><span>{tr('Tasks','任务')}</span></button>
 
-  {onManageTeams&&<button type="button" className="arcSidebarAction" aria-label={tr('AI teams','AI 团队')} title={tr('AI teams','AI 团队')} aria-current={activeTab==='agent-teams'?'page':undefined} onClick={()=>navigate(onManageTeams)}><Icon name="users"/><span>{tr('AI teams','AI 团队')}</span></button>}
   <button type="button" className="arcSidebarAction" aria-label={tr('Activity','活动')} title={tr('Activity','活动')} aria-current={activeTab==='agent-activity'?'page':undefined} onClick={()=>navigate(onOpenActivity)}><Icon name="activity"/><span>{tr('Activity','活动')}</span></button>
   <div className="arcSidebarSectionTitle">{tr('TOOLS','工具')}</div>
   <button type="button" className="arcSidebarAction" aria-label={tr('Apps','应用')} title={tr('Apps','应用')} aria-current={activeTab==='agent-apps'?'page':undefined} onClick={()=>navigate(onManageApps)}><Icon name="apps"/><span>{tr('Apps','应用')}</span></button>

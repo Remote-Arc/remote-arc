@@ -199,7 +199,7 @@ export async function handleBilling(request:Request,env:BillingEnv){
   if(!['/api/billing/portal','/api/billing/plan/change','/api/billing/checkout'].includes(path))return json({error:'not_found'},404);
   if(Object.keys(input).some(key=>!['productId','versionId','promoCode'].includes(key))||path==='/api/billing/portal'&&Object.keys(input).length)throw new StripeError('BILLING_INVALID_REQUEST',400);
   if(path!=='/api/billing/portal')product(input.productId);
-  const returnUrl=new URL('/settings?section=billing',env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN).toString(),customerId=await customer(env,user.id,user.email);
+  const returnUrl=new URL(path==='/api/billing/portal'?'/settings?section=billing':'/checkout?product='+encodeURIComponent(String(input.productId)),env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN).toString(),customerId=await customer(env,user.id,user.email);
   if(path==='/api/billing/portal')return json({url:await portal(env,customerId,returnUrl)});
   if(path==='/api/billing/plan/change')return json(await changePlan(env,user.id,customerId,input.productId,input.versionId));
   if(path!=='/api/billing/checkout')return json({error:'not_found'},404);
@@ -217,10 +217,20 @@ export async function handleBilling(request:Request,env:BillingEnv){
    if(input.promoCode!==undefined&&(!promo||typeof input.promoCode!=='string'||input.promoCode.trim().toUpperCase()!==promo.code))throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);
   }else if(p.subscription)promo=await checkoutPromotion(env,user.id,customerId,p.id,input.promoCode);
   if(pending?.session_id){const session=await stripeRequest(env,'/v1/checkout/sessions/'+id(pending.session_id,'cs'));if(session.status==='open'&&typeof session.url==='string'&&session.url.startsWith('https://checkout.stripe.com/'))return json({url:session.url});throw new StripeError('BILLING_CHECKOUT_AWAITING_CONFIRMATION',409);}
-  const checkoutId=pending?.id||crypto.randomUUID(),expires=pending?.expires_at||new Date(Date.now()+1800000).toISOString();
+  const checkoutId=pending?.id||crypto.randomUUID();let expires=pending?.expires_at||new Date(Date.now()+3600000).toISOString();
+  // Stripe's 30-minute minimum starts when the Session is created, not when
+  // our request began. Reserve a one-hour lifetime for provider/preflight delay.
+  // A legacy invalid-expiry intent keeps its SAME key. Validation failures are
+  // not cached by Stripe; an already-executed key rejects changed parameters
+  // instead of creating a second Session. Unknown outcomes never get a new ID.
+  if(pending&&!pending.session_id&&Date.parse(expires)<Date.now()+2100000){
+   const extended=new Date(Date.now()+3600000).toISOString();
+   await env.DB.prepare("UPDATE arc_billing_checkouts SET expires_at=?1 WHERE id=?2 AND user_id=?3 AND status='creating' AND session_id IS NULL AND expires_at=?4").bind(extended,checkoutId,user.id,expires).run();
+   expires=(await env.DB.prepare('SELECT expires_at FROM arc_billing_checkouts WHERE id=?1 AND user_id=?2').bind(checkoutId,user.id).first<{expires_at:string}>())!.expires_at;
+  }
   if(!pending)try{const inserted=await env.DB.prepare(`INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,expires_at,created_at,commercial_version_id,promotion_id) SELECT ?1,?2,?3,?4,'creating',?5,?6,?7,?8 WHERE (SELECT COUNT(*) FROM arc_billing_checkouts WHERE user_id=?2 AND status IN ('creating','open'))<3`).bind(checkoutId,user.id,p.id,p.subscription?'subscription':'payment',expires,at,p.versionId,promo?.id??null).run();if(!inserted.meta.changes)throw 0;}catch{throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);}
   const price=await ensureStripePrice(env,p.id,p.versionId),session=await stripeRequest(env,'/v1/checkout/sessions','POST',form({customer:customerId,mode:p.subscription?'subscription':'payment','line_items[0][price]':price,'line_items[0][quantity]':1,...(promo?{'discounts[0][promotion_code]':promo.promotion_code_id!}:{}),success_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:returnUrl+'&checkout=cancelled',expires_at:Math.floor(Date.parse(expires)/1000),'automatic_tax[enabled]':env.STRIPE_AUTOMATIC_TAX==='1',...(env.STRIPE_AUTOMATIC_TAX==='1'?{billing_address_collection:'required','customer_update[address]':'auto','tax_id_collection[enabled]':true}:{}),'metadata[remote_arc_checkout]':checkoutId,...(p.subscription?{'subscription_data[metadata][remote_arc_user]':user.id}:{'payment_intent_data[metadata][remote_arc_user]':user.id})}),'arc-checkout:'+checkoutId);
   const sessionId=id(session,'cs');if(typeof session.url!=='string'||!session.url.startsWith('https://checkout.stripe.com/'))throw new StripeError('BILLING_PROVIDER_ERROR');
   await env.DB.prepare("UPDATE arc_billing_checkouts SET session_id=?1,status='open' WHERE id=?2").bind(sessionId,checkoutId).run();return json({url:session.url});
- }catch(error){return json({error:error instanceof StripeError?error.code:'BILLING_UNAVAILABLE'},error instanceof StripeError?error.status:503);}
+ }catch(error){return json({error:error instanceof StripeError?error.code:'BILLING_UNAVAILABLE',...(error instanceof StripeError&&error.reference?{reference:error.reference}:{})},error instanceof StripeError?error.status:503);}
 }

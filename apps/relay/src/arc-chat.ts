@@ -9,11 +9,13 @@ import {listArcWork} from './arc-work.js';
 import {activateArcTrial,publicArcAccess} from './arc-trial.js';
 import {currentArcPlan} from './arc-plan.js';
 import {arcMemoryInput,listArcMemory,rememberArcFact,removeArcMemory,configureArcMemory,editArcMemory} from './arc-memory.js';
+import type {ArcVerification} from '@remotearc/protocol';
+import {arcVerificationSchema,validateArcVerification,arcReceipt,type ArcProof} from './arc-verification.js';
 
 export type ArcEnv = AppEnv & DeviceCallEnv & ArcModelEnv & { ARC_RUNTIME?:DurableObjectNamespace };
 export type ArcSession = {id:string;user_id:string;organization_id:string;title_ciphertext:string;model_id:string;created_at:string;updated_at:string;deleted_at:string|null};
 export type ArcRun = {id:string;session_id:string;user_id:string;request_id:string;input_hash:string;model_id:string;automation_id:string|null;status:string;step:number;tokens_used:number;max_tokens:number;max_steps:number;deadline:string;cancel_requested:number;error_code:string|null;created_at:string;updated_at:string};
-export type ArcMessageBody = {text:string;skills?:{id:string;name:string}[];tool?:string;arguments?:unknown;result?:unknown;status?:string};
+export type ArcMessageBody = {text:string;skills?:{id:string;name:string}[];tool?:string;arguments?:unknown;result?:unknown;status?:string;verification?:ArcVerification;proof?:ArcProof};
 export const arcContext=(userId:string,id:string)=>`arc-chat:${userId}:${id}`;
 export const stamp=()=>new Date().toISOString();
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'no-store'}});
@@ -35,7 +37,8 @@ export const publicRun=(run:ArcRun)=>({id:run.id,status:run.status,step:run.step
 async function snapshot(env:ArcEnv,userId:string,sessionId:string){
  const session=await arcSession(env,userId,sessionId);
  const runs=(await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE session_id=?1 AND user_id=?2 ORDER BY created_at DESC LIMIT 20').bind(sessionId,userId).all<ArcRun>()).results;
- return{session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages:await arcMessages(env,userId,sessionId),runs:runs.map(publicRun)};
+ const messages=await arcMessages(env,userId,sessionId);
+ return{session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:runs.map(run=>({...publicRun(run),...(!arcActive(run.status)?{receipt:arcReceipt(run,messages)}:{})}))};
 }
 async function body(request:Request){
  if(request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json')throw new ArcError('JSON_REQUIRED',415);
@@ -123,16 +126,20 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
    const input=await body(request),requestId=idValue(input.requestId),text=typeof input.text==='string'?input.text.trim():'';
    if(input.skillIds!==undefined&&(!Array.isArray(input.skillIds)||input.skillIds.length>3||input.skillIds.some((id:unknown)=>typeof id!=='string'||!/^[\w:-]{1,100}$/.test(id))))throw new ArcError('INVALID_SKILL_REFERENCES');
    const skillIds=[...new Set((input.skillIds||[]) as string[])];
+   const verificationInput=input.verification===undefined?undefined:arcVerificationSchema.safeParse(input.verification);
+   if(verificationInput&&!verificationInput.success)throw new ArcError('ARC_INVALID_VERIFICATION');
+   const verification=verificationInput?.success?verificationInput.data:undefined;
    if(!text||text.length>6000)throw new ArcError('INVALID_MESSAGE');const model=typeof input.modelId==='string'?input.modelId:session.model_id;
    await arcModelAccess(env,user.id,organizationId,model);
-   const hash=await sha256Hex(JSON.stringify(skillIds.length?[sessionId,text,model,skillIds]:[sessionId,text,model]));let run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE user_id=?1 AND request_id=?2').bind(user.id,requestId).first<ArcRun>();
+   const hash=await sha256Hex(JSON.stringify(verification?[sessionId,text,model,skillIds,verification]:skillIds.length?[sessionId,text,model,skillIds]:[sessionId,text,model]));let run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE user_id=?1 AND request_id=?2').bind(user.id,requestId).first<ArcRun>();
    if(run&&run.input_hash!==hash)throw new ArcError('REQUEST_ID_CONFLICT',409);
    if(!run){
+    if(verification)try{await validateArcVerification(env,user.id,verification);}catch{throw new ArcError('ARC_VERIFICATION_CONNECTION_REQUIRED',403);}
     const skills=await Promise.all(skillIds.map(async id=>{try{const skill=await readArcSkill(env,user.id,id);return{id:skill.id,name:skill.name};}catch{throw new ArcError('ARC_SKILL_NOT_FOUND',404);}}));
     const id=crypto.randomUUID(),now=stamp();
     await env.DB.batch([
        env.DB.prepare(`INSERT INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,'queued',?9,?10,?7,?8,?8 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM arc_chat_runs WHERE session_id=?2 AND status IN ('queued','thinking','working')) AND (SELECT COUNT(*) FROM arc_chat_runs WHERE user_id=?3 AND status IN ('queued','thinking','working'))<?11 AND (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?2)<200 ON CONFLICT(user_id,request_id) DO NOTHING`).bind(id,sessionId,user.id,requestId,hash,model,new Date(Date.now()+limits.maxSeconds*1000).toISOString(),now,limits.maxTokens,limits.maxSteps,limits.concurrentRuns),
-     env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,'user',?5,?6 WHERE EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?4)`).bind(id+':user',sessionId,user.id,id,await seal(env,{text,...(skills.length?{skills}:{})},arcContext(user.id,id+':user')),now),
+     env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,'user',?5,?6 WHERE EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?4)`).bind(id+':user',sessionId,user.id,id,await seal(env,{text,...(skills.length?{skills}:{}),...(verification?{verification}:{})},arcContext(user.id,id+':user')),now),
      env.DB.prepare(`UPDATE arc_chat_sessions SET title_ciphertext=CASE WHEN (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?1 AND role='user')=1 THEN ?2 ELSE title_ciphertext END,model_id=?3,updated_at=?4 WHERE id=?1 AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?5)`).bind(sessionId,await seal(env,text.slice(0,64),arcContext(user.id,sessionId)),model,now,id),
     ]);
     run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE user_id=?1 AND request_id=?2').bind(user.id,requestId).first<ArcRun>();

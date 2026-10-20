@@ -40,6 +40,11 @@ function requirePermission(row: Connection, permission: AppPermission, operation
     (row.provider === "microsoft_calendar" && scope === "Calendars.Read" && scopes.has("Calendars.ReadWrite"));
   if (!required.every(satisfies) || (operation?.anyScopes?.length && !operation.anyScopes.some(satisfies))) throw new AppError("app_scope_required", 403);
 }
+/** Local preflight only. No token disclosure, network call or permission grant. */
+export async function validateAppAccess(env:AppEnv,userId:string,connectionId:string,operationName:string){
+ enabled(env);const row=await connection(env,userId,connectionId),operation=appOperation(row.provider,operationName);
+ requirePermission(row,operation.permission,operation);
+}
 function connectionToolAccess(row: Connection) {
   const operations = APP_OPERATIONS.filter(operation => operation.provider === row.provider);
   const available = operations.filter(operation => {

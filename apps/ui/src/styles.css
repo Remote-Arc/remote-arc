@@ -12832,3 +12832,17 @@ body{font-size:18px;line-height:1.6}
 .landingQuickLinksGrid a > span { font-size: 14px; line-height: 1.5; color: var(--muted); }
 @media (max-width: 850px) { .landingQuickLinksGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 540px) { .landingQuickLinksGrid { grid-template-columns: 1fr; } .landingQuickLinksGrid a { min-height: 76px; } }
+.workspaceLoading{box-sizing:border-box;width:100%;max-width:100%;padding:22px 0;color:var(--text);text-align:left;overflow:hidden}
+.workspaceLoadingLabel{display:block;font-size:12px;line-height:1.5;color:var(--muted,var(--dash-muted));margin-bottom:18px}
+.workspaceLoadingShapes{display:grid;gap:14px}
+.workspaceLoadingShape{display:flex;flex-direction:column;gap:10px;padding:17px 18px;border:1px solid color-mix(in srgb,currentColor 9%,transparent);border-radius:12px;overflow:hidden}
+.workspaceLoadingShape i{display:block;height:9px;width:82%;border-radius:6px;background:color-mix(in srgb,currentColor 8%,transparent);animation:workspaceLoadingPulse 2.2s ease-in-out infinite}
+.workspaceLoadingShape i:first-child{width:35%;height:11px}.workspaceLoadingShape i:last-child{width:61%}
+.workspaceLoading--cards .workspaceLoadingShapes{grid-template-columns:repeat(3,minmax(0,1fr))}
+.workspaceLoading--cards .workspaceLoadingShape{min-height:116px;justify-content:center;gap:16px}
+.workspaceLoading--cards .workspaceLoadingShape i:nth-child(2){height:24px;width:46%}
+.workspaceLoading--compact{padding:8px 0}.workspaceLoading--compact .workspaceLoadingLabel{margin-bottom:10px}.workspaceLoading--compact .workspaceLoadingShapes{gap:8px}.workspaceLoading--compact .workspaceLoadingShape{border:0;padding:3px 0}.workspaceLoading--compact .workspaceLoadingShape i:not(:first-child){display:none}.workspaceLoading--compact .workspaceLoadingShape i:first-child{height:7px;width:70%}.workspaceLoading--compact .workspaceLoadingShape:last-child i{width:45%}
+.raSettingsSurface>.workspaceLoading{padding:20px}
+@keyframes workspaceLoadingPulse{0%,100%{opacity:.45}50%{opacity:1}}
+@media(max-width:620px){.workspaceLoading--cards .workspaceLoadingShapes{grid-template-columns:1fr}.workspaceLoading--cards .workspaceLoadingShape{min-height:78px;padding:15px;gap:10px}.workspaceLoading--cards .workspaceLoadingShape i:nth-child(2){height:17px}.workspaceLoading{padding-top:16px}}
+@media(prefers-reduced-motion:reduce){.workspaceLoadingShape i{animation:none;opacity:.7}}

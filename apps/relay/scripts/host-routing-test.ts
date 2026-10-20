@@ -57,7 +57,7 @@ for (const path of ["/auth/login", "/auth/google", "/api/me", "/api/organization
 
 // The new UI is the only canonical dashboard login origin.
 assert.equal(dashboardSignInUrl(route("/overview", dashboard), "GET", dashboard), null);
-for (const path of ["/apps", "/devices", "/automations", "/connect", "/security", "/settings"]) {
+for (const path of ["/apps", "/devices", "/automations", "/connect", "/security", "/settings", "/checkout"]) {
   assert.equal(dashboardSignInUrl(route(path,dashboard), "GET", dashboard),
     dashboard + "/auth/login?return_to=" + encodeURIComponent(path));
 }

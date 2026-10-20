@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { APP_CATALOG, APP_OPERATIONS, CORE_APP_PROVIDERS as APP_PROVIDERS, AppError, appOperation, appScopes, credentials, type AppEnv, type AppProvider } from "../src/app-catalog.js";
 import { authorizationUrl, callbackUrl, exchangeTokens, providerIdentity, providerJson, revokeProvider, seal, unseal } from "../src/app-oauth.js";
-import { callApp, handleApps, listApps } from "../src/apps.js";
+import { callApp, handleApps, listApps, validateAppAccess } from "../src/apps.js";
 import { loadAppReview, verifyAppReview, reviewRead } from "../src/app-review.js";
 import { sha256Hex } from "../src/auth.js";
 import { registrationPack } from "./apps-registration.js";
@@ -104,6 +104,25 @@ async function connect(provider:AppProvider,permissions:string[]|undefined=undef
   return row.id;
 }
 for(const provider of APP_PROVIDERS) await connect(provider);
+// Goal preflight must check the same ownership and read/write authority as
+// dispatch, without creating a call or asking a provider to execute anything.
+{
+  const github=connections.get("github")!,saved=sql.prepare("SELECT permissions_json,scopes_json FROM app_connections WHERE id=?").get(github) as {permissions_json:string;scopes_json:string};
+  const callsBefore=sql.prepare("SELECT COUNT(*) count FROM app_calls").get()!.count,requestsBefore=requests.length;
+  try{
+    await validateAppAccess(env,"one",github,"issues.create");
+    await validateAppAccess(env,"one",github,"issues.get");
+    await assert.rejects(()=>validateAppAccess(env,"two",github,"issues.get"),AppError);
+    await assert.rejects(()=>validateAppAccess({...env,ENABLE_APPS:undefined},"one",github,"issues.get"),AppError);
+    sql.prepare("UPDATE app_connections SET permissions_json=? WHERE id=?").run(JSON.stringify(["read"]),github);
+    await validateAppAccess(env,"one",github,"issues.get");
+    await validateAppAccess(env,"one",github,"issues.create"); // OAuth scopes, not legacy local flags, remain authoritative.
+    sql.prepare("UPDATE app_connections SET permissions_json=?,scopes_json=? WHERE id=?").run(saved.permissions_json,JSON.stringify(["repo"]),github);
+    await assert.rejects(()=>validateAppAccess(env,"one",github,"issues.get"),AppError);
+    assert.equal(sql.prepare("SELECT COUNT(*) count FROM app_calls").get()!.count,callsBefore);
+    assert.equal(requests.length,requestsBefore);
+  }finally{sql.prepare("UPDATE app_connections SET permissions_json=?,scopes_json=? WHERE id=?").run(saved.permissions_json,saved.scopes_json,github);}
+}
 // Check actual account identity without executing a content operation. Capability
 // counts use the same grant rules as dispatch, including broader replacement scopes.
 {

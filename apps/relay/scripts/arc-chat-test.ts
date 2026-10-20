@@ -20,6 +20,8 @@ import {fitArcContext,arcObservation} from '../src/arc-chat-context.js';
 import {ModelProviderError} from '../src/model-provider-adapters.js';
 import {readableEmail} from '../src/arc-inbox.js';
 import {handleArcAdminBilling} from '../src/arc-admin-billing.js';
+import {testArcVerification} from './arc-verification-test.js';
+import {ARC_VERIFICATION_SKILLS} from '../src/arc-verification-skills.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -323,7 +325,7 @@ await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
 
 // Arc consumes the existing cloud catalog, with private Markdown imports alongside it.
 const library=await decode(await api('skills'));
-assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),cloudSkillCatalog().map(s=>s.id).sort());
+assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),[...cloudSkillCatalog(),...ARC_VERIFICATION_SKILLS].map(s=>s.id).sort());
 const skillInput={name:'Private workflow',description:'Owner-only instructions',content:'# Private workflow\nUse scripts/check.py and verify its result.',sourceUrl:'https://github.com/example/workflow'};
 const imported=await decode(await api('skills','POST',skillInput),201);
 assert.equal((await decode(await api('skills','POST',skillInput),201)).id,imported.id,'Duplicate imports are idempotent');
@@ -366,6 +368,7 @@ const correctedHistory=await arcMessages(env,'owner',mentionSession);const rejec
 assert.equal((rejected.result as any).dispatched,false);
 assert.equal((await decode(await api('skills/'+imported.id,'DELETE'))).deleted,true);
 assert.equal((await api('skills/'+imported.id)).status,404);
+await testArcVerification({sql,env,api,create,decode,decisions,tool,reply,row});
 console.log('Arc Chat: authenticated encrypted conversations, funded inference, direct Apps execution, quotas, idempotency, cancellation, durable tasks and DST schedules passed.');
 
 // Existing administrator caps are never silently raised by a chat request.

@@ -1,0 +1,32 @@
+.arcVerifiedTaskLauncher { margin:8px 4px 0; }
+.arcVerifiedTaskLauncher>button { border:0;background:none;color:var(--dash-muted);font-size:12px;cursor:pointer;padding:5px 8px; }
+.arcVerifiedTaskLauncher button:disabled { opacity:.5;cursor:default; }
+.arcVerifiedDialog { text-align:left;width:min(540px,calc(100vw - 32px));max-height:85dvh;box-sizing:border-box;padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--dash-surface);color:var(--text);box-shadow:0 24px 80px #0005; }
+.arcVerifiedDialog::backdrop { background:#0007; }
+.arcVerifiedDialogHeader { display:flex;align-items:center;justify-content:space-between;gap:16px; }
+.arcVerifiedDialogHeader h2 { font-size:20px;margin:0; }
+.arcVerifiedDialog p,.arcVerifiedTaskForm p { color:var(--dash-muted);font-size:13px;line-height:1.65; }
+.arcVerifiedDialog button { cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--dash-bg);color:var(--text);font:inherit; }
+.arcVerifiedDialogHeader button { font-size:22px;padding:2px 10px; }
+.arcVerifiedTaskForm fieldset { border:0;padding:0;margin:20px 0;display:flex;flex-direction:column;gap:8px;min-width:0; }
+.arcVerifiedTaskForm label { font-size:13px;margin-top:7px; }
+.arcVerifiedTaskForm input,.arcVerifiedTaskForm textarea,.arcVerifiedTaskForm select { box-sizing:border-box;max-width:100%;min-width:0;width:100%;border:1px solid var(--line);border-radius:8px;background:var(--dash-bg);color:var(--text);padding:10px;font:inherit;font-size:14px; }
+.arcVerifiedTaskForm textarea { resize:vertical; }
+.arcVerifiedTaskForm button[type=submit] { background:var(--text);color:var(--dash-surface);padding:11px; }
+.arcVerifiedDialog :focus-visible { outline:2px solid #38bdf8;outline-offset:3px; }
+.arcRunReceipt { border:1px solid var(--line);border-radius:12px;background:var(--dash-surface);color:var(--text);padding:14px 16px;margin-top:14px;font-size:13px;line-height:1.6;overflow-wrap:anywhere;text-align:left; }
+.arcRunReceipt[data-state=completed] { border-color:color-mix(in srgb,#22c55e 40%,var(--line)); }
+.arcRunReceipt>strong { font-size:13px; }
+.arcRunReceipt p { margin:7px 0;color:var(--dash-muted);font-size:12px; }
+.arcRunReceipt ul { list-style:none;padding:0;margin:10px 0; }
+.arcRunReceipt li { display:flex;gap:14px;justify-content:space-between;align-items:baseline; }
+.arcRunReceipt small { color:var(--dash-muted);font-size:11px; }
+.arcRunReceipt details,.arcVerificationScope { font-size:12px;color:var(--dash-muted);margin-top:10px; }
+.arcRunReceipt summary,.arcVerificationScope summary { cursor:pointer; }
+.arcReceiptEvidence { padding:8px 0;border-bottom:1px solid var(--line); }
+.arcReceiptEvidence small { display:block; }
+.arcReceiptEvidence a { margin-left:8px; }
+.arcVerificationScope dl { display:grid;grid-template-columns:auto 1fr;gap:6px 12px;overflow-wrap:anywhere; }
+.arcVerificationScope dd { margin:0;min-width:0; }
+.arcVerificationBody { white-space:pre-wrap; }
+@media(max-width:520px) { .arcVerifiedDialog { padding:18px; }.arcRunReceipt { padding:12px; }.arcRunReceipt li { display:block;margin:6px 0; }.arcRunReceipt li small { margin-left:8px; }.arcVerificationScope dl { display:block; }.arcVerificationScope dd { margin-bottom:8px; } }

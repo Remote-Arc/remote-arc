@@ -1,7 +1,7 @@
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 export const STRIPE_API_VERSION='2026-09-30.endive';
 export type StripeEnv=PlatformLaunchEnv&{STRIPE_SECRET_KEY?:string;STRIPE_WEBHOOK_SECRET?:string;ARC_BILLING_ENABLED?:string;STRIPE_AUTOMATIC_TAX?:string;ARC_BILLING_ALLOW_TEST_MODE?:string};
-export class StripeError extends Error {constructor(readonly code:string,readonly status=503){super(code);}}
+export class StripeError extends Error {constructor(readonly code:string,readonly status=503,readonly reference?:string){super(code);}}
 export const stripeId=(v:unknown):string=>typeof v==='string'?v:typeof v==='object'&&v!==null&&'id' in v?stripeId(v.id):'';
 export function stripeLive(env:StripeEnv){
  if(!/^(sk|rk)_(test|live)_/.test(env.STRIPE_SECRET_KEY||''))throw new StripeError('BILLING_NOT_CONFIGURED');
@@ -14,7 +14,12 @@ export async function stripeRequest(env:StripeEnv,path:string,method:'GET'|'POST
  let response:Response;
  try{response=await fetch('https://api.stripe.com'+path,{method,redirect:'error',signal:AbortSignal.timeout(15000),headers:{authorization:'Bearer '+env.STRIPE_SECRET_KEY,'stripe-version':STRIPE_API_VERSION,...(method==='POST'?{'content-type':'application/x-www-form-urlencoded'}:{}),...(idempotencyKey?{'idempotency-key':idempotencyKey}:{})},...(method==='POST'?{body:params?.toString()||''}:{})});}
  catch{throw new StripeError('BILLING_PROVIDER_UNAVAILABLE');}
- if(!response.ok)throw new StripeError(response.status===429?'BILLING_RATE_LIMIT':'BILLING_PROVIDER_ERROR',response.status===404?404:503);
+ if(!response.ok){
+  const requestId=response.headers.get('request-id'),reference=requestId&&/^req_[A-Za-z0-9_]{1,160}$/.test(requestId)?requestId:undefined;
+  const failure=await response.json().catch(()=>null) as {error?:{type?:string;param?:string}}|null;
+  const code=response.status===429?'BILLING_RATE_LIMIT':response.status===400&&failure?.error?.type==='invalid_request_error'&&failure.error.param==='expires_at'?'BILLING_CHECKOUT_EXPIRY_INVALID':failure?.error?.type==='idempotency_error'?'BILLING_CHECKOUT_AWAITING_CONFIRMATION':'BILLING_PROVIDER_ERROR';
+  throw new StripeError(code,response.status===404?404:503,reference);
+ }
  const result=await response.json() as Record<string,any>;
  if(typeof result!=='object'||!result)throw new StripeError('BILLING_PROVIDER_ERROR');
  return result;

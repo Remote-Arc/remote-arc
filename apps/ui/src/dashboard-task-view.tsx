@@ -1,3 +1,4 @@
+import {WorkspaceLoading} from './workspace-loading.js';
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import type { PlannedProgress } from "./planned-goal-view.js";
@@ -131,12 +132,12 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
         )}
         {taskNeedsAgent(task) && chatReference}
         {progress.agent?.completion_evidence && <div className="taskEvidence"><strong>{tr("Completion evidence", "完成证据")}</strong><p>{progress.agent.completion_evidence}</p></div>}
-        {progress.planned && <React.Suspense fallback={<p role="status">{tr("Loading saved plan…", "正在加载保存的计划…")}</p>}><PlannedGoalProgress value={progress.planned} expiresAt={task.expires_at} /></React.Suspense>}
+        {progress.planned && <React.Suspense fallback={<WorkspaceLoading label={tr("Loading saved plan…", "正在加载保存的计划…")} variant="rows"/>}><PlannedGoalProgress value={progress.planned} expiresAt={task.expires_at} /></React.Suspense>}
         {task.last_error && <p className="automationLastError">{task.last_error}</p>}
         <div className="taskRunHistory" aria-busy={open && runs === null && !error}>
           <h3>{tr("Recent runs", "最近执行")}</h3>
           {error && <p role="status">{tr("Run history could not be loaded.", "执行记录加载失败。 ")} <button className="ghostButton" onClick={() => setRetry((value) => value + 1)}>{tr("Retry", "重试")}</button></p>}
-          {open && runs === null && !error && <p role="status">{tr("Loading results…", "正在加载结果…")}</p>}
+          {open && runs === null && !error && <WorkspaceLoading label={tr("Loading results…", "正在加载结果…")} variant="rows"/>}
           {runs?.length === 0 && <p>{tr("No run has started. Saving a task is not execution. Check its executor, trigger and scheduling status above.", "尚未开始任何执行。保存任务不等于执行，请检查上方的执行器、启动条件与调度状态。")}</p>}
           {runs?.map((run) => (
             <details className="taskRun" key={run.id}>

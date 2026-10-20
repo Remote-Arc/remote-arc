@@ -36,7 +36,7 @@ const publicExactPaths = new Set([
 
 const dashboardPaths = new Set([
   "/overview", "/devices", "/apps", "/automations", "/connect",
-  "/security", "/settings", "/monitor",
+  "/security", "/settings", "/checkout", "/monitor",
 ]);
 
 export function publicWebsiteRedirect(

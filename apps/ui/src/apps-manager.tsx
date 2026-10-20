@@ -1,3 +1,4 @@
+import {WorkspaceLoading} from './workspace-loading.js';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "./i18n.js";
@@ -366,7 +367,7 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
     <header className="appsManagerHeader"><div><span className="eyebrow">{tr("YOUR AI'S TOOLKIT", "让 AI 开始工作")}</span><h1>{tr("Apps", "应用")}</h1><p>{tr("Your everyday apps. Ready to work with your AI.", "连接你每天使用的应用，让 AI 帮你完成工作。")}</p></div><button type="button" className="appsManagerRefresh" disabled={loading || Boolean(busy)} onClick={() => { setNotice(""); void refresh(); }}><ProductIcon name="refresh" size={16}/>{loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}</button></header>
     {error && <div className="appsManagerMessage appsManagerError" role="alert"><p>{errorLabel(error, tr)}</p>{error === "unauthorized" && <a href="/auth/login?return_to=%2Fapps">{tr("Sign in", "登录")}</a>}<button type="button" onClick={() => setError("")}>{tr("Dismiss", "关闭")}</button></div>}
     {notice && <p className="appsManagerMessage" role="status">{notice}</p>}
-    {loading && !snapshot && <p className="appsManagerLoading" role="status">{tr("Loading app connections…", "正在加载应用连接…")}</p>}
+    {loading && !snapshot && <WorkspaceLoading label={tr("Loading app connections…", "正在加载应用连接…")} variant="rows"/>}
     {snapshot && !snapshot.enabled && <section className="appsManagerDisabled"><h2>{tr("Apps are not enabled yet", "应用连接尚未启用")}</h2><p>{tr("An administrator needs to enable Apps and configure the providers before you can connect accounts. Your existing device and AI connections are unchanged.", "管理员启用 Apps 并配置应用授权后，你即可连接账号。现有设备和 AI 连接仍可继续使用。")}</p></section>}
     {snapshot?.enabled && <>
       <div className="appsManagerFilters">

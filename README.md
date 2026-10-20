@@ -12,7 +12,17 @@ Arc is your hosted AI teammate. Connect brings the same authorized Apps and devi
 
 <sub>Source available for transparency and security review under a [proprietary license](./LICENSE). Not open-source licensed.</sub>
 
+[![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
+
 </div>
+
+<p align="center">
+  <a href="https://remotearc.app/#how-it-works">
+    <img src="./docs/assets/interactive-workflow.webp" alt="High-resolution animated Remote Arc workflow: ChatGPT on the left, device tool activity on the right, captured from PR #101" width="100%" />
+  </a>
+  <br />
+  <sub>Chat → Remote Arc → your computer. Animated preview from the interactive demo in PR #101 (example data, no real device commands). Click to explore the workflow.</sub>
+</p>
 
 ## Two ways to work
 

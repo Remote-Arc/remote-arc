@@ -1,9 +1,9 @@
 import type {ArcMention} from './arc-skill-mentions.js';
 import {WorkspaceLoading} from './workspace-loading.js';
 import { summarizeConsentScopes } from "./oauth-consent-summary.js";
-import { HeroHeadline, LandingContent, HomeSecurityIntro } from "./landing-content.js";
+import { HomeHeroCopy, LandingContent, HomeSecurityIntro } from "./landing-content.js";
 import { InstallCommands } from "./install-commands.js";
-import { HomeConnectionScene } from "./home-connection-scene.js";
+import { HomeConnectionScene,type HomeConnectionMode } from "./home-connection-scene.js";
 import { AppsManager } from "./apps-manager.js";
 import { ProductFocus } from "./product-positioning.js";
 import {AgentUseCases} from "./agent-use-cases.js";
@@ -2183,6 +2183,7 @@ function ClientInstallPage({
             {aiClients.map((client) => (
               <a
                 className={client.slug === slug ? "active" : ""}
+                aria-current={client.slug === slug ? "page" : undefined}
                 href={"/install/" + client.slug}
                 key={client.slug}
               >
@@ -2230,8 +2231,10 @@ function ClientInstallPage({
           </div>
           <div className="installQuickStartMcp">
             <span>{tr("NEXT · ADD THIS REMOTE MCP ADDRESS IN YOUR AI CLIENT", "接下来 · 在 AI 客户端添加这个远程 MCP 地址")}</span>
-            <code>{MCP_ENDPOINT}</code>
-            <CopyButton value={MCP_ENDPOINT} />
+            <div className="installQuickStartEndpoint docsCodeLine">
+              <code>{MCP_ENDPOINT}</code>
+              <CopyButton value={MCP_ENDPOINT} />
+            </div>
           </div>
         </section>
 
@@ -2426,23 +2429,12 @@ function DashboardAccess() {
 function Landing({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const arcAvailable=usePlatformCatalog()?.arcAvailable===true;
+  const [heroMode,setHeroMode]=useState<HomeConnectionMode>('connect');
   return (
     <PublicLayout user={user}>
-      <section className="landingHero landingHero--constellation">
-        <div className="heroCopy">
-          <span className="eyebrow heroProductLabel"><i/> {arcAvailable?tr('YOUR PERSONAL AGENT. REAL WORK.','你的个人 AI 队友，处理真实工作。'):tr('YOUR AI. YOUR APPS. YOUR COMPUTERS.','你的 AI，你的应用，你的电脑')}</span>
-          <HeroHeadline />
-          <p>{arcAvailable?tr('Tell Arc what you need. It works with your apps, chooses a suitable computer, and keeps tasks and routines moving — with results you can inspect.','告诉 Arc 你需要什么。它调用应用、选择合适电脑，让任务与 Routine 持续推进，并提供可核验的结果。'):tr('Connect your AI to approved apps and your own computers. Explore Arc for conversations, tasks and routines in one workspace, with access and allowance shown in your account.','让你的 AI 连接已授权的应用与自己的电脑。也可以探索 Arc，在一个工作空间中处理对话、任务与 Routine，使用权限和额度以账号展示为准。')}</p>
-          <div className="landingActions">
-            <a className="primaryButton marketingPrimary" href={dashboardHref(arcAvailable?DASHBOARD_PATHS['agent-chat']:'/dashboard/connect/overview')}>{arcAvailable?tr('Start your free trial','开始免费试用'):tr("Get started with Connect","开始使用 Connect")}<ProductIcon name="arrowUpRight" size={16}/></a>
-            <a className="marketingSecondary" href="#how-it-works">{tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>
-          </div>
-          <div className="heroProofLine"><ProductIcon name="check" size={14}/>{tr('No model API key required','无需模型 API Key')}<span>·</span>Windows · Mac · Linux</div>
-          <a className="heroSecurityLink" href="/security-model"><ProductIcon name="shield" size={13}/>{tr('Scoped access · device policies · local Undo','限定访问范围 · 设备策略 · 本地 Undo')}<ProductIcon name="arrowUpRight" size={12}/></a>
-
-          <a className="heroTaskAvailability" href="/connect-ai">{tr('Already use ChatGPT or Claude? Explore Connect','已经在用 ChatGPT 或 Claude？了解 Connect')}<ProductIcon name="arrowUpRight" size={13}/></a>
-        </div>
-        <HomeConnectionScene clients={topologyAiClients} arcAvailable={arcAvailable} />
+      <section className="landingHero landingHero--constellation" data-product={heroMode}>
+        <HomeHeroCopy mode={heroMode} arcAvailable={arcAvailable} arcHref={arcAvailable?dashboardHref(DASHBOARD_PATHS['agent-chat']):'/arc'} connectHref={dashboardHref('/dashboard/connect/overview')}/>
+        <HomeConnectionScene clients={topologyAiClients} arcAvailable={arcAvailable} mode={heroMode} onModeChange={setHeroMode} />
       </section>
 
       <section className="trustRail" aria-label={tr("Supported AI clients", "支持的 AI 客户端")}>

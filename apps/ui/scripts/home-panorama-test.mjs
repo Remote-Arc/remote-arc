@@ -9,7 +9,7 @@ registerHooks({ load(url, context, nextLoad) {
   return url.endsWith(".css") ? { format: "module", source: "", shortCircuit: true } : nextLoad(url, context);
 } });
 const { HomeConnectionScene } = await import("../src/home-connection-scene.tsx");
-const { LandingContent } = await import("../src/landing-content.tsx");
+const { LandingContent,HomeHeroCopy } = await import("../src/landing-content.tsx");
 const { I18nProvider } = await import("../src/i18n.tsx");
 const publicDir = fileURLToPath(new URL("../public/", import.meta.url));
 const clients = [
@@ -22,7 +22,7 @@ const originalWindow = globalThis.window;
 try {
   for (const locale of ["en", "zh"]) {
     globalThis.location = { origin: "https://remotearc.app", hostname: "remotearc.app", pathname: locale === "zh" ? "/zh" : "/", search: "" };
-    globalThis.window = { location: globalThis.location };
+    globalThis.window = { location: globalThis.location,matchMedia:()=>({matches:true}) };
     const html = renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(HomeConnectionScene, { clients })));
     const lowerHome = renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(LandingContent)));
     const body = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
@@ -46,6 +46,13 @@ try {
     assert.doesNotMatch(html, /data-step=|data-routine-step=|hcsPlayButton|hcsSteps/);
     assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/);
     for (const client of clients) assert.ok(html.includes('href="/install/' + client.slug + '"'));
+    for(const mode of ['connect','arc']){
+      const hero=renderToStaticMarkup(React.createElement(I18nProvider,null,React.createElement(HomeHeroCopy,{mode,arcAvailable:true,arcHref:'https://agent.remotearc.app/chat',connectHref:'https://mcp.remotearc.app/dashboard/connect/overview'})));
+      assert.match(hero,new RegExp('data-product="'+mode+'"'));assert.equal((hero.match(/<h1\b/g)||[]).length,1);
+      const copy=hero.replace(/<[^>]*>/g,' ');assert.match(copy,mode==='connect'?(locale==='zh'?/AI 基础设施/:/AI INFRASTRUCTURE/):(locale==='zh'?/新一代 AI AGENT/:/NEXT-GENERATION AI AGENT/));
+      assert.match(copy,mode==='connect'?(locale==='zh'?/转眼接入真实工作/:/Connected in seconds/):(locale==='zh'?/随时接手工作/:/Ready around the clock/));
+      assert.match(hero,mode==='connect'?/href="https:\/\/mcp.remotearc.app\/dashboard\/connect\/overview"/:/href="https:\/\/agent.remotearc.app\/chat"/);
+    }
     assert.match(lowerHome, /class="homeDemo"/, "Preserve the lower interactive conversation and execution demo");
     assert.match(lowerHome, /id="how-it-works"/);
     assert.match(lowerHome, /arcV3Teaser/);

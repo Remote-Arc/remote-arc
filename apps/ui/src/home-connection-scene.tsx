@@ -3,7 +3,8 @@ import { useI18n } from "./i18n.js";
 import "./home-connection-scene.css";
 
 type AiClient = { name: string; slug: string; icon: string; tone: string };
-type Mode = "connect" | "arc";
+export type HomeConnectionMode = "connect" | "arc";
+type Mode=HomeConnectionMode;
 type OrbitNode = { name: string; icon: string; x: number; y: number; kind: "app" | "device"; calendar?: boolean };
 
 const resources: readonly OrbitNode[] = [
@@ -52,16 +53,17 @@ function connectionPath(node: OrbitNode) {
 const position = (x: number, y: number, delay = 0): CSSProperties =>
   ({ left: x / 6 + "%", top: y / 5 + "%", "--float-delay": delay + "s" } as CSSProperties);
 
-export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='connect' }: { clients: readonly AiClient[];arcAvailable?:boolean;initialMode?:Mode }) {
+export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='connect',mode:controlledMode,onModeChange }: { clients: readonly AiClient[];arcAvailable?:boolean;initialMode?:Mode;mode?:Mode;onModeChange?:(mode:Mode)=>void }) {
   const { tr } = useI18n();
   const { ref, running } = useAmbientMotion();
-  const [mode, setMode] = useState<Mode>(initialMode);
+  const [localMode,setLocalMode]=useState<Mode>(initialMode);
+  const mode=controlledMode??localMode;
   const uid = useId();
   const arc = mode === "arc";
   const headlineId = uid + "-heading";
   const descriptionId = uid + "-description";
   const panelId = uid + "-panel";
-  const switchMode = (value: Mode) => setMode(value);
+  const switchMode=(value:Mode)=>{if(controlledMode===undefined)setLocalMode(value);onModeChange?.(value);};
   return (
     <div ref={ref} className="homeConnectionScene" data-layout="constellation" data-mode={mode} data-running={running} role="region" aria-labelledby={headlineId}>
       <header className="hcsHeader">
@@ -86,7 +88,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
       </header>
       <div className="hcsModeIntroduction" id={descriptionId} aria-live="polite">
         <strong>{arc ? tr("An AI teammate of your own.", "创建属于你的 AI 队友。") : tr("Your favorite AI. Connected to your world.", "熟悉的 AI，连接你的整个世界。")}</strong>
-        <span>{arc ? tr("Natural language. One agent. Your apps and devices.", "用自然语言，让 Arc 协调你的应用与设备。") : tr("Bring ChatGPT, Claude or Cursor. Arc connects the tools.", "接入 ChatGPT、Claude 或 Cursor，Arc 连接工具与设备。")}</span>
+        <span>{arc ? tr("Natural language. One agent. Your apps and devices.", "用自然语言，让 Arc 协调你的应用与设备。") : tr("Bring ChatGPT, Claude or Cursor. Connect links your tools.", "接入 ChatGPT、Claude 或 Cursor，让 Connect 连通工具与设备。")}</span>
       </div>
       <div id={panelId} role="tabpanel" aria-labelledby={uid + "-" + mode} aria-describedby={descriptionId} className="hcsUniverse" tabIndex={0}>
         <div className="hcsAtmosphere" aria-hidden="true" />

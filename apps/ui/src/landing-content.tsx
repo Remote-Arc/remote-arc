@@ -7,9 +7,25 @@ import { InteractiveWorkDemo } from "./landing-interactive-demo.js";
 import { ArcTeaser } from "./arc-future.js";
 import "./landing-content.css";
 
-export function HeroHeadline() {
-  const { tr, locale } = useI18n();
-  return <TypewriterHeadline key={locale} phrases={[tr("Put it to work.", "真正动手工作。"), tr("Let it coordinate.", "协同你的设备。"), tr("Keep work moving.", "持续推进工作。")]} />;
+export function HeroHeadline({mode='arc'}:{mode?:'connect'|'arc'}) {
+  const {tr,locale}=useI18n();const arc=mode==='arc';
+  return <TypewriterHeadline key={locale+mode} fixedLine={arc?tr('Your AI teammate.','你的 AI 队友。'):tr('Your AI.','你常用的 AI。')} accessible={arc?tr('Your AI teammate. Ready around the clock.','你的 AI 队友，随时接手工作。'):tr('Your AI. Connected in seconds.','你常用的 AI，转眼接入真实工作。')} phrases={arc?[tr('Ready around the clock.','随时接手工作。'),tr('Real work, real results.','认真做事，交付结果。'),tr('Keep work moving.','让工作持续推进。')]:[tr('Connected in seconds.','转眼接入真实工作。'),tr('Your tools. Your rules.','你的工具，你定规则。'),tr('Ready for real work.','从对话到真正动手。')]} />;
+}
+
+export function HomeHeroCopy({mode,arcAvailable,arcHref,connectHref}:{mode:'connect'|'arc';arcAvailable:boolean;arcHref:string;connectHref:string}){
+ const {tr}=useI18n(),arc=mode==='arc';
+ return <div className="heroCopy" data-product={mode}>
+  <span className="eyebrow heroProductLabel"><i/>{arc?tr('NEXT-GENERATION AI AGENT','新一代 AI AGENT'):tr('AI INFRASTRUCTURE','AI 基础设施')}</span>
+  <HeroHeadline mode={mode}/>
+  <p>{arc?tr('Give Arc an outcome. Your AI teammate works across your apps and computers, follows up with tasks and routines, and brings back results you can inspect.','把目标交给 Arc。你的 AI 队友调用应用与电脑，通过任务和例行工作持续跟进，交付可核查的结果。'):tr('Connect ChatGPT, Claude or Cursor to your apps and computers in seconds. Bring leading AI into your real workflow, with access you control.','把 ChatGPT、Claude 或 Cursor 快速接入你的应用与电脑。让顶尖 AI 融入真实工作流，访问范围由你掌控。')}</p>
+  <div className="landingActions">
+   <a className="primaryButton marketingPrimary" href={arc?arcHref:connectHref}>{arc?(arcAvailable?tr('Start your free trial','开始免费试用'):tr('Explore Arc','了解 Arc')):tr('Connect your AI','连接你的 AI')}<ProductIcon name="arrowUpRight" size={16}/></a>
+   <a className="marketingSecondary" href="#how-it-works">{tr('See it in action','看看如何工作')}<ProductIcon name="arrowUpRight" size={15}/></a>
+  </div>
+  <div className="heroProofLine"><ProductIcon name="check" size={14}/>{arc?tr('No model API key required','无需模型 API Key'):tr('Works with your existing AI account','沿用你现有的 AI 账户')}<span>·</span>Windows · Mac · Linux</div>
+  <a className="heroSecurityLink" href="/security-model"><ProductIcon name="shield" size={13}/>{tr('Scoped access · device policies · local Undo','限定访问范围 · 设备策略 · 本地 Undo')}<ProductIcon name="arrowUpRight" size={12}/></a>
+  <a className="heroTaskAvailability" href={arc?'/connect-ai':'/arc'}>{arc?tr('Already use ChatGPT or Claude? Explore Connect','已经在用 ChatGPT 或 Claude？了解 Connect'):tr('Want an AI teammate? Meet Arc','想把目标直接交给 AI 队友？认识 Arc')}<ProductIcon name="arrowUpRight" size={13}/></a>
+ </div>;
 }
 
 export function HomeSecurityIntro(){
@@ -24,11 +40,10 @@ export function HomeSecurityIntro(){
  </section>;
 }
 
-function TypewriterHeadline({ phrases }: { phrases: [string, ...string[]] }) {
-  const { tr } = useI18n();
+function TypewriterHeadline({phrases,fixedLine,accessible}:{phrases:[string,...string[]];fixedLine:string;accessible:string}) {
   const [frame, setFrame] = useState({ index: 0, length: phrases[0].length, deleting: false });
-  const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const [visible, setVisible] = useState(() => !document.hidden);
+  const [reducedMotion, setReducedMotion] = useState(() => typeof window==='undefined'||window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [visible, setVisible] = useState(() => typeof document==='undefined'||!document.hidden);
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const onMotion = () => setReducedMotion(motion.matches);
@@ -48,7 +63,7 @@ function TypewriterHeadline({ phrases }: { phrases: [string, ...string[]] }) {
     return () => window.clearTimeout(timer);
   }, [frame.deleting, frame.length, phrase.length, phrases.length, reducedMotion, visible]);
   return <div className="heroHeadlineGroup">
-    <h1 className="heroHeadline"><span className="heroAccessible">{tr("Your personal AI agent. Working across your apps and your own computers.", "你的个人 AI 队友，跨应用与自己的电脑，真正动手完成工作。")}</span><span aria-hidden="true"><span className="heroFixedLine">{tr("Your personal AI.", "你的个人 AI 队友。")}</span><span className="heroTypeLine">{reducedMotion ? phrase : phrase.slice(0, frame.length)}</span></span></h1>
+    <h1 className="heroHeadline"><span className="heroAccessible">{accessible}</span><span aria-hidden="true"><span className="heroFixedLine">{fixedLine}</span><span className="heroTypeLine">{phrases.map(value=><span className="heroTypeMeasure" key={value}>{value}</span>)}<span className="heroTypeVisible">{reducedMotion ? phrase : phrase.slice(0, frame.length)}</span></span></span></h1>
   </div>;
 }
 

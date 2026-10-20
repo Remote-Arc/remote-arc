@@ -1,6 +1,6 @@
 # AI employees, Team conversations and persistent goals
 
-Status: development implementation, not production deployed. Remaining scope is listed below. Updated 20 October 2026. [Chinese design](ai-teams-and-persistent-work.zh.md).
+Status: Beta release candidate; remaining scope and validation limits are listed below. Updated 20 October 2026. [Chinese design](ai-teams-and-persistent-work.zh.md).
 
 ## Development implementation and remaining work
 
@@ -10,7 +10,9 @@ Durable room queues retain immutable speaker identities, actual recipients, mess
 
 Background dispatch is infrastructure: the current reasoning turn proposes an owned employee/team; the server binds the authentic user goal, target version, stable assignment identity and inherited/current authority. There is no always-on scheduler employee or extra scheduler-model call. Cross-Team access must be explicitly allowed. Actual child replies and failure/unknown states are reported once to the originating chat with a record link; this does not certify the root outcome.
 
-Still incomplete: chat-created editable employee/team confirmation drafts, cross-run persistent goal continuation, root-outcome acceptance, advanced activity/usage filters and export. Optional root-task caps are not yet bound to every room run; ordinary account Credits are enforced. Production migrations, live model acceptance and protected rollout remain pending. See the [AI Teams feature map](feature-map/ai-teams.md).
+Arc Chat can prepare an employee draft with name, responsibility, model and avatar. The user can edit the profile and choose resource access before explicitly confirming Create employee. Confirmation creates one owned employee atomically, without inference or starting work; retries are idempotent. The card survives reloads, can be cancelled, expires after seven days and links to a direct conversation after creation.
+
+Still incomplete: chat-created team confirmation drafts, cross-run persistent goal continuation, root-outcome acceptance, advanced activity/usage filters and export. Optional root-task caps are not yet bound to every room run; ordinary account Credits are enforced. Production migrations, live model acceptance and protected rollout remain pending. See the [AI Teams feature map](feature-map/ai-teams.md).
 
 ## Independent product concepts
 

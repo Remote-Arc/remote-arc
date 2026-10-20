@@ -47,7 +47,8 @@ async function snapshot(env:ArcEnv,userId:string,sessionId:string){
   return {...publicRun(run),receipt:arcReceipt(run,journal)};
  }));
  const pendingDelegations=Boolean(await env.DB.prepare("SELECT d.id FROM arc_dispatches d JOIN arc_chat_runs r ON r.id=d.source_run_id WHERE r.session_id=?1 AND d.user_id=?2 AND d.status IN ('prepared','queued') LIMIT 1").bind(sessionId,userId).first());
- return{pendingDelegations,session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
+ const employeeDrafts=await (await import('./arc-team-drafts.js')).listArcEmployeeDrafts(env,userId,sessionId);
+ return{employeeDrafts,pendingDelegations,session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
 }
 async function body(request:Request){
  if(request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json')throw new ArcError('JSON_REQUIRED',415);

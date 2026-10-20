@@ -506,7 +506,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
 
     if (/^\/api\/arc\/rooms(?:\/|$)/.test(url.pathname)) return handleArcRooms(request,env);
-    if (/^\/api\/arc\/(employees|teams|team-events)(?:\/|$)/.test(url.pathname)) return handleArcTeams(request,env);
+    if (/^\/api\/arc\/(employees|teams|team-events|employee-drafts)(?:\/|$)/.test(url.pathname)) return handleArcTeams(request,env);
     if (url.pathname.startsWith("/api/arc/")) return handleArcChat(request, env);
     if(url.pathname==='/api/runtime-config'&&request.method==='GET')return Response.json({version:1,environment:'production',arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),execution:arcDeploymentReady(env)?'live':'disabled'},{headers:{'cache-control':'no-store'}});
     if(url.pathname==='/api/billing/catalog'&&request.method==='GET'){

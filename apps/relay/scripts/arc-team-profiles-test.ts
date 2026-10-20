@@ -1,3 +1,4 @@
+import {testArcEmployeeDrafts} from './arc-team-drafts-test.js';
 import {testArcDispatcher} from './arc-dispatcher-test.js';
 import {testArcTeamRooms} from './arc-team-rooms-test.js';
 import assert from 'node:assert/strict';import fs from 'node:fs';import {DatabaseSync} from 'node:sqlite';
@@ -18,5 +19,6 @@ await decode(await api('teams/'+teamId,'PATCH',{expectedVersion:1,profile:{...te
 await decode(await api('employees/'+employeeId,'DELETE'));await decode(await api('employees/'+employeeId,'DELETE'));assert.equal((await api('teams','POST',{id:crypto.randomUUID(),profile:team})).status,409);const events=(await decode(await api('team-events'))).events;assert.equal(events.filter((event:any)=>event.type==='employee.archived').length,1);assert(events.some((event:any)=>event.details.profile?.name==='Alice'));assert((await decode(await api('team-events','GET',undefined,'other'))).events.every((event:any)=>event.employeeId===foreignId));assert.equal(modelCalls,0);
 await testArcTeamRooms({sql,env});
 await testArcDispatcher({sql,env});
+await testArcEmployeeDrafts({sql,env});
 sql.exec("DELETE FROM arc_chat_steps WHERE run_id IN (SELECT id FROM arc_chat_runs WHERE user_id='owner'); DELETE FROM arc_chat_messages WHERE user_id='owner'; DELETE FROM arc_chat_runs WHERE user_id='owner'; DELETE FROM arc_chat_sessions WHERE user_id='owner';");
 sql.prepare('DELETE FROM users WHERE id=?').run('owner');assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_employees WHERE user_id=?').get('owner')?.n,0);sql.close();console.log('PASS: employee/team CRUD, encrypted profiles and version history, atomic audit, CAS membership, ownership, scope/model/avatar validation, archive replay and zero idle/creation model calls');

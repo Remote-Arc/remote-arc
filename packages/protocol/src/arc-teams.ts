@@ -6,3 +6,5 @@ export type ArcTeamProfile={name:string;purpose:string;employeeIds:string[];coor
 export type ArcTeam=ArcTeamProfile&{id:string;version:number;status:'active'|'archived';createdAt:string;updatedAt:string};
 export type ArcTeamRoom={id:string;kind:'direct'|'team'|'group';name:string;teamId:string|null;employeeIds:string[];createdAt:string;updatedAt:string};
 export type ArcTeamEvent={id:string;type:string;employeeId:string|null;teamId:string|null;roomId:string|null;referenceId:string|null;details:Record<string,unknown>;createdAt:string};
+
+export type ArcEmployeeDraft={id:string;sourceRunId:string;profile:ArcEmployeeProfile;status:'pending'|'confirmed'|'cancelled'|'expired';expiresAt:string;employeeId:string|null};

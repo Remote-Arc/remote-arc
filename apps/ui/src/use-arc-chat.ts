@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type {ArcVerification,ArcReceipt} from '@remotearc/protocol';
+import type {ArcVerification,ArcReceipt,ArcEmployeeDraft} from '@remotearc/protocol';
 
 export type ChatSession={id:string;title:string;modelId:string;updatedAt:string};
 export type ChatMessage={id:string;run_id?:string|null;role:'user'|'assistant'|'tool';text:string;skills?:{id:string;name:string}[];apps?:{id:string;name:string;provider:string}[];tool?:string;arguments?:unknown;result?:unknown;status?:string;verification?:ArcVerification};
 export type ChatRun={id:string;status:string;step:number;tokensUsed:number;maxTokens:number;maxSteps:number;deadline:string;error:string|null;receipt?:ArcReceipt};
 export type ArcAccess={status:'eligible'|'active'|'expired'|'paid';canUse:boolean;funded?:boolean;trialDays?:number;trialCredits?:number;creditsAvailable?:number|null;creditsPending?:number|null;daysRemaining:number;dailyUsedPercent:number;expiresAt:string|null};
 export type ChatService={enabled:boolean;access:ArcAccess;models:{id:string;label:string;provider:string;premium:boolean;configured:boolean;requiresPaid?:boolean;inputCreditsPer1000?:number;outputCreditsPer1000?:number}[];limits:{maxSteps:number;maxTokens:number;maxSeconds:number};preview?:boolean};
-type Snapshot={pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
+type Snapshot={employeeDrafts?:ArcEmployeeDraft[];pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
 const active=(run:ChatRun|undefined)=>Boolean(run&&['queued','thinking','working'].includes(run.status));
 export async function arcRequest<T>(path:string,init?:RequestInit,signal?:AbortSignal):Promise<T>{
  const response=await fetch('/api/arc/'+path,{credentials:'same-origin',...init,signal,headers:{accept:'application/json',...(init?.body?{'content-type':'application/json'}:{}),...init?.headers}});

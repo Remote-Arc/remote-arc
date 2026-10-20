@@ -131,6 +131,7 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
    const input=await body(request);await env.DB.prepare("UPDATE arc_chat_runs SET cancel_requested=1,status='cancelled',updated_at=?1 WHERE id=?2 AND session_id=?3 AND user_id=?4 AND status IN ('queued','thinking','working')").bind(stamp(),idValue(input.runId),sessionId,user.id).run();return json(await snapshot(env,user.id,sessionId));
   }
   if(match[2]==='messages'&&request.method==='POST'){
+   if(await env.DB.prepare('SELECT session_id FROM arc_team_rooms WHERE session_id=?1 AND user_id=?2').bind(sessionId,user.id).first())throw new ArcError('ARC_ROOM_QUEUE_REQUIRED',409);
    const input=await body(request),requestId=idValue(input.requestId),text=typeof input.text==='string'?input.text.trim():'';
    if(input.skillIds!==undefined&&(!Array.isArray(input.skillIds)||input.skillIds.length>3||input.skillIds.some((id:unknown)=>typeof id!=='string'||!/^[\w:-]{1,100}$/.test(id))))throw new ArcError('INVALID_SKILL_REFERENCES');
    const skillIds=[...new Set((input.skillIds||[]) as string[])];

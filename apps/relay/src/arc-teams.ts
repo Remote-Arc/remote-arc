@@ -4,7 +4,7 @@ import {isTrustedDashboardMutation} from './dashboard-origin.js';
 import {seal,unseal} from './app-oauth.js';
 import {arcGateway,arcAutoId} from './arc-chat-model.js';
 import {readArcSkill} from './arc-skills.js';
-import type {ArcEnv} from './arc-chat.js';
+import {ArcError,type ArcEnv} from './arc-chat.js';
 import type {ArcEmployee,ArcEmployeeProfile,ArcTeam,ArcTeamProfile} from '@remotearc/protocol';
 const id=z.string().regex(/^[\w:.-]{1,160}$/),color=z.string().regex(/^#[\da-f]{6}$/i);
 const avatar=z.discriminatedUnion('kind',[
@@ -14,7 +14,7 @@ const avatar=z.discriminatedUnion('kind',[
 const scope=z.object({appMode:z.enum(['none','read','write']),connectionIds:z.array(id).max(50),deviceIds:z.array(id).max(20),deviceTools:z.array(z.string().regex(/^[a-z][a-z0-9_]{0,99}$/)).max(50),skillIds:z.array(id).max(20)}).strict();
 export const employeeProfileSchema=z.object({name:z.string().trim().min(1).max(80),responsibility:z.string().trim().min(1).max(500),instructions:z.string().trim().max(6000),modelId:z.string().min(1).max(100),avatar,scope}).strict();
 export const teamProfileSchema=z.object({name:z.string().trim().min(1).max(80),purpose:z.string().trim().max(1000),employeeIds:z.array(id).min(1).max(20),coordinatorId:id.nullable()}).strict();
-class TeamError extends Error{constructor(readonly code:string,readonly status=400){super(code);}}
+class TeamError extends ArcError{}
 const now=()=>new Date().toISOString(),json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'cache-control':'private, no-store'}});
 const aad=(userId:string,kind:string,objectId:string,version:number)=>'arc-team:'+userId+':'+kind+':'+objectId+':'+version;
 type ProfileRow={id:string;user_id:string;profile_ciphertext:string;model_id?:string;version:number;creation_hash:string;status:'active'|'archived';created_at:string;updated_at:string};
@@ -58,3 +58,6 @@ export async function handleArcTeams(request:Request,env:ArcEnv){try{
  const value=await input(request),envelope=request.method==='POST'&&!objectId?z.object({id:z.uuid(),profile:kind==='employee'?employeeProfileSchema:teamProfileSchema}).strict().parse(value):request.method==='PATCH'&&objectId?z.object({expectedVersion:z.number().int().min(1),profile:kind==='employee'?employeeProfileSchema:teamProfileSchema}).strict().parse(value):null;if(!envelope)return json({error:'method_not_allowed'},405);
  const targetId=objectId||('id' in envelope?envelope.id:'');return json({[kind]:await (kind==='employee'?saveArcEmployee:saveArcTeam)(env,user.id,targetId,envelope.profile,'expectedVersion' in envelope?envelope.expectedVersion:undefined)},request.method==='POST'?201:200);
  }catch(error){const code=error instanceof TeamError?error.code:error instanceof z.ZodError||error instanceof SyntaxError?'ARC_TEAM_INPUT_INVALID':'ARC_TEAMS_UNAVAILABLE';return json({error:code},error instanceof TeamError?error.status:code==='ARC_TEAM_INPUT_INVALID'?400:503);}}
+
+export async function readArcEmployee(env:ArcEnv,userId:string,id:string){return profile<ArcEmployee>(env,userId,'employee',await rowFor(env,userId,'employee',id));}
+export async function readArcTeam(env:ArcEnv,userId:string,id:string){return profile<ArcTeam>(env,userId,'team',await rowFor(env,userId,'team',id));}

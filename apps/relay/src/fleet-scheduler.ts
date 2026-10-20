@@ -148,8 +148,9 @@ export async function selectFleetDevice(
   env: Parameters<typeof getDevicesForUser>[0],
   userId: string,
   requirements: FleetRequirements,
+  allowedDeviceIds?: readonly string[],
 ): Promise<FleetSelection> {
-  const devices = await getDevicesForUser(env, userId);
+  const devices = (await getDevicesForUser(env, userId)).filter(device=>!allowedDeviceIds||allowedDeviceIds.includes(device.id));
   const recentCutoff = new Date(Date.now() - 180_000).toISOString();
   const active = await env.DB.prepare(`SELECT device_id, SUM(running) AS running,
       SUM(recent_calls) AS recent_calls FROM (

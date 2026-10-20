@@ -5,6 +5,7 @@ export { AdminApiService } from "./admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { handleApps } from "./apps.js";
 import {handleArcTeams} from './arc-teams.js';
+import {handleArcRooms} from './arc-team-rooms.js';
 import { handleArcChat, type ArcEnv } from "./arc-chat.js";
 import {handleBilling,type BillingEnv} from './stripe-billing.js';
 import {arcDeploymentReady} from './arc-chat-model.js';
@@ -504,6 +505,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
         : Response.json({ authenticated: false }, { status: 401 });
     }
 
+    if (/^\/api\/arc\/rooms(?:\/|$)/.test(url.pathname)) return handleArcRooms(request,env);
     if (/^\/api\/arc\/(employees|teams|team-events)(?:\/|$)/.test(url.pathname)) return handleArcTeams(request,env);
     if (url.pathname.startsWith("/api/arc/")) return handleArcChat(request, env);
     if(url.pathname==='/api/runtime-config'&&request.method==='GET')return Response.json({version:1,environment:'production',arcAvailable:arcDeploymentReady(env),billingAvailable:arcDeploymentReady(env)&&stripeConfigured(env),execution:arcDeploymentReady(env)?'live':'disabled'},{headers:{'cache-control':'no-store'}});

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {arcVerificationSchema,arcVerificationToolError,arcObservationProof,arcReceipt} from '../src/arc-verification.js';
 import {ARC_VERIFICATION_SKILLS} from '../src/arc-verification-skills.js';
 import {runArcStep} from '../src/arc-chat-runtime.js';
+import {ARC_COMPACT_SYSTEM} from '../src/arc-chat-context.js';
 import {seal} from '../src/app-oauth.js';
 import {arcContext} from '../src/arc-chat.js';
 import type {ArcVerification} from '@remotearc/protocol';
@@ -54,6 +55,18 @@ export async function testArcVerification({sql,env,api,create,decode,decisions,t
   assert(receipt.evidence.some((e:any)=>e.status==='failed'),'Scope rejection is retained');
   await runArcStep(env,first.run.id);assert.equal(writes,1,'Restoring a finished run never repeats the write');
   assert(!JSON.stringify(sql.prepare('SELECT body_ciphertext FROM arc_chat_messages WHERE id=?').get(first.run.id+':user')).includes(issue.body),'Scope stays encrypted');
+  // A long exact body must survive context pressure without losing read-back.
+  const compactSession=await create(),compactRun=await send(issue,compactSession),oldAdapter=env.MODEL_GATEWAY.adapters.openai;
+  decisions.push(tool('call_app',{connectionId:github,operation:'issues.create',arguments:{repo:issue.repo,title:issue.title,body:issue.body}}));
+  await runArcStep(env,compactRun.run.id);sql.prepare('UPDATE arc_chat_runs SET max_tokens=12000 WHERE id=?').run(compactRun.run.id);
+  let compactDecisions=0;const compactWrites=writes,compactReads=reads;
+  env.MODEL_GATEWAY.adapters.openai=async(request:any)=>{const context=JSON.parse(request.user);assert.deepEqual(context.verificationScope,issue);compactDecisions++;let value;
+   if(compactDecisions===1){assert.equal(request.system,ARC_COMPACT_SYSTEM);assert(request.schema.properties.decision.enum.includes('tool'));assert.deepEqual(context.nextRequiredRead,{tool:'call_app',arguments:{connectionId:github,operation:'issues.get',arguments:{repo:issue.repo,number:72}}});value=tool(context.nextRequiredRead.tool,context.nextRequiredRead.arguments);}
+   else{assert.equal(context.nextRequiredRead,undefined);value=reply('Created and independently verified https://github.com/example/project/issues/72');}
+   return {value,usage:{inputTokens:100,outputTokens:100,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'compact-issue-fixture'};
+  };
+  try{const final=await finish(compactRun.run.id);assert.equal(final.status,'succeeded',JSON.stringify({code:final.error_code,step:final.step,compactDecisions}));assert.equal((await getReceipt(compactSession)).status,'completed');assert.equal(compactDecisions,2);assert.equal(writes,compactWrites);assert.equal(reads,compactReads+1);}
+  finally{env.MODEL_GATEWAY.adapters.openai=oldAdapter;}
   // The UI's recent-chat window is not the durable evidence window.
   for(let index=0;index<110;index++){
    const messageId=crypto.randomUUID(),createdAt=new Date(Date.now()+1000+index).toISOString();

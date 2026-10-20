@@ -100,3 +100,14 @@ export function arcReceipt(run:Pick<ArcRun,'id'|'status'|'error_code'>,history:A
  const status:ArcReceipt['status']=uncertain?'pending_verification':scope&&run.status==='succeeded'&&checks.every(c=>c.status==='passed')?'completed':failed?(changes.length||checks.some(c=>c.status==='passed')?'partial':'failed'):scope&&(changes.length||checks.some(c=>c.status==='passed'))?'partial':'pending_verification';
  return {version:1,status,scope,checks,evidence,changes,next:uncertain?'inspect_before_retry':status==='completed'?'none':status==='partial'?'review_remaining':'verify_result',error:run.error_code};
 }
+
+/** The proposed read uses only this run's server-generated acknowledged proof. */
+export function arcVerificationNextRead(scope:ArcVerification|undefined,history:ArcEvidenceMessage[],runId:string){
+ if(scope?.kind!=='github_issue')return undefined;
+ const current=history.filter(message=>message.run_id===runId&&message.role==='tool'&&message.status==='completed'&&message.tool==='call_app'&&object(message.arguments).connectionId===scope.connectionId&&object(object(message.arguments).arguments).repo===scope.repo);
+ if(current.some(message=>object(message.arguments).operation==='issues.get'&&message.proof?.checks.some(check=>check.code==='issue_readback_matches')))return undefined;
+ const acknowledged=[...current].reverse().find(message=>object(message.arguments).operation==='issues.create'&&object(object(message.arguments).arguments).title===scope.title&&object(object(message.arguments).arguments).body===scope.body&&message.proof?.checks.some(check=>check.code==='issue_acknowledged'&&check.status==='passed'));
+ const resource=acknowledged?.proof?.resource;if(!resource||! /^[1-9]\d*$/.test(resource))return undefined;
+ const number=Number(resource);if(!Number.isSafeInteger(number))return undefined;
+ return {tool:'call_app',arguments:{connectionId:scope.connectionId,operation:'issues.get',arguments:{repo:scope.repo,number}}};
+}

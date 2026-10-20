@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {arcExecutionPrompt,runArcStep} from '../src/arc-chat-runtime.js';
+import {ARC_CLOSING_SYSTEM,ARC_COMPACT_SYSTEM} from '../src/arc-chat-context.js';
+import {arcVerificationNextRead,type ArcEvidenceMessage} from '../src/arc-verification.js';
+import type {ArcVerification} from '@remotearc/protocol';
+
+/** Scripted inference through the real runtime and device boundary; no model fees. */
+export async function testArcCompactContinuation({sql,env,api,create,decode,tool,reply,row}:any){
+ const scope:ArcVerification={kind:'github_issue',connectionId:'1a22491a-a342-4bb9-9ac5-a68ba1061aa1',repo:'example/project',title:'Exact task',body:'Exact body'},runId='compact-current';
+ const ack:ArcEvidenceMessage={id:'ack',run_id:runId,role:'tool',created_at:new Date().toISOString(),tool:'call_app',status:'completed',arguments:{connectionId:scope.connectionId,operation:'issues.create',arguments:{repo:scope.repo,title:scope.title,body:scope.body}},proof:{resource:'42',url:'https://github.com/example/project/issues/42',checks:[{code:'issue_acknowledged',status:'passed'}]}};
+ const expected={tool:'call_app',arguments:{connectionId:scope.connectionId,operation:'issues.get',arguments:{repo:scope.repo,number:42}}};
+ assert.deepEqual(arcVerificationNextRead(scope,[ack],runId),expected);
+ for(const altered of [{...ack,run_id:'previous-run'},{...ack,role:'assistant'},{...ack,status:'unknown'},{...ack,proof:undefined},{...ack,arguments:{...ack.arguments as any,connectionId:'foreign'}},{...ack,arguments:{...ack.arguments as any,arguments:{repo:'other/project'}}},{...ack,proof:{...ack.proof!,resource:'9007199254740992'}},{...ack,proof:{...ack.proof!,resource:'0x2a'}}])assert.equal(arcVerificationNextRead(scope,[altered],runId),undefined);
+ const checked={...ack,id:'read',arguments:expected.arguments,proof:{resource:'42',checks:[{code:'issue_readback_matches',status:'failed' as const}]}};
+ assert.equal(arcVerificationNextRead(scope,[ack,checked],runId),undefined,'A failed actual check cannot be silently converted into a missing check');
+ assert.deepEqual(arcVerificationNextRead(scope,[ack,{...checked,run_id:'previous-run'}],runId),expected);
+ const context={objective:'Verify the same process on the owned device',memory:[],deviceIndex:[{id:'compact-device'}],messages:[{role:'tool',text:'Still running',result:{process_id:'compact-process',status:'running'}}],taskState:{completedActions:[{tool:'device_tool',arguments:{deviceId:'compact-device',tool:'start_process',arguments:{command:'node verify.js'}}}]},verificationScope:scope,nextRequiredRead:expected,remainingSteps:4};
+ let compact;
+ for(let remaining=4000;remaining<16000;remaining+=100){const prompt=arcExecutionPrompt(context,remaining,true);if(prompt?.system===ARC_COMPACT_SYSTEM){compact={prompt,remaining};break;}}
+ assert(compact,'A smaller executable context exists before final-only fallback');
+ const preserved=JSON.parse(compact.prompt.user);assert.deepEqual(preserved.nextRequiredRead,expected);assert.deepEqual(preserved.verificationScope,scope);assert.match(compact.prompt.user,/compact-process/);assert.match(compact.prompt.user,/compact-device/);assert.equal(preserved.objective,context.objective);assert((compact.prompt.schema.properties as any).decision.enum.includes('tool'));assert(compact.prompt.inputBound+compact.prompt.maxOutputTokens<=compact.remaining);
+ const closed=arcExecutionPrompt(context,16000,false)!;assert.equal(closed.system,ARC_CLOSING_SYSTEM);assert.deepEqual((closed.schema.properties as any).tool.enum,['none']);assert.equal(arcExecutionPrompt(context,100,true),null);
+ const previousRegistry=env.REGISTRY,adapter=env.MODEL_GATEWAY.adapters.openai,at=new Date().toISOString(),deviceId='compact-device',tools=['start_process','process_status','process_output','stop_process'];let starts=0,checks=0,outputs=0,modelCalls=0,compactCalls=0;
+ sql.prepare('INSERT INTO devices(id,user_id,name,platform,workspace_roots,allowed_tools,credential_hash,created_at,last_seen) VALUES(?,?,?,?,?,?,?,?,?)').run(deviceId,'owner','Compact continuation fixture','linux',JSON.stringify(['/fixture/project']),JSON.stringify(tools),'compact-fixture-hash',at,at);
+ env.REGISTRY={getByName:(key:string)=>({fetch:async(input:Request|string,init?:RequestInit)=>{assert.equal(key,'user:owner');const request=input instanceof Request?input:new Request(input,init);if(new URL(request.url).pathname==='/devices')return Response.json([{id:deviceId,status:'online',tools,capabilities:['device_policy_v1']}]);const call=await request.json() as any;assert.equal(call.deviceId,deviceId);let result;if(call.tool==='start_process'){starts++;assert.equal(starts,1);result={process_id:'compact-process',status:'running'};}else{assert.equal(call.arguments.process_id,'compact-process');if(call.tool==='process_status'){checks++;result={process_id:'compact-process',status:checks===1?'running':'exited',exit_code:checks===1?null:0};}else{assert.equal(call.tool,'process_output');outputs++;result={process_id:'compact-process',stdout:'verified-build-ok',stderr:''};}}return Response.json({result});}})};
+ env.MODEL_GATEWAY.adapters.openai=async(request:any)=>{modelCalls++;const context=JSON.parse(request.user),actions=context.taskState.completedActions as any[];assert((request.schema.properties.decision.enum as string[]).includes('tool'),'The runtime must keep execution enabled until the final reserved step');if(request.system===ARC_COMPACT_SYSTEM)compactCalls++;let value;
+ if(!actions.some(action=>action.arguments.tool==='start_process'))value=tool('device_tool',{deviceId,tool:'start_process',arguments:{command:'node verify.js',cwd:'/fixture/project',background:true}});
+ else if(checks===0)value=tool('device_tool',{deviceId,tool:'process_status',arguments:{process_id:'compact-process'}});
+ else if(outputs===0)value=tool('device_tool',{deviceId,tool:'process_output',arguments:{process_id:'compact-process'}});
+ else if(checks<2)value=tool('device_tool',{deviceId,tool:'process_status',arguments:{process_id:'compact-process'}});
+ else{assert.match(request.user,/verified-build-ok/);assert.match(request.user,/exited/);value=reply('compact-process exited 0 with verified-build-ok.');}
+ return {value,usage:{inputTokens:100,outputTokens:100,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'compact-fixture'};};
+ try{const session=await create(),response=await decode(await api('sessions/'+session+'/messages','POST',{text:'Run node verify.js on compact-device once, inspect the output and wait for its actual completion.',requestId:crypto.randomUUID()}),202);sql.prepare('UPDATE arc_chat_runs SET max_tokens=9000 WHERE id=?').run(response.run.id);while(await runArcStep(env,response.run.id)){}assert.equal(row(response.run.id).status,'succeeded',JSON.stringify(row(response.run.id)));assert.equal(starts,1);assert.equal(checks,2);assert.equal(outputs,1);assert.equal(modelCalls,5);assert(compactCalls>0,'The runtime exercised the compact executable prompt');}
+ finally{env.REGISTRY=previousRegistry;env.MODEL_GATEWAY.adapters.openai=adapter;sql.prepare('DELETE FROM devices WHERE id=?').run(deviceId);}
+ console.log('PASS: constrained context keeps actual process checks enabled, preserves scope and handles, and derives issue readback only from current-run server evidence');
+}

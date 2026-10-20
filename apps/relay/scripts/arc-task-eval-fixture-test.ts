@@ -66,5 +66,5 @@ globalThis.fetch=(async(url,init)=>{
  }
  return Response.json({id:'synthetic-response',status:'completed',output_text:JSON.stringify(value),usage:{input_tokens:expandedPaths?2700:2000,output_tokens:200,input_tokens_details:{cached_tokens:expandedPaths?1500:1000}}});
 }) as typeof fetch;
-try{await import('./arc-task-live-eval.js');assert(modelCalls>=18);if(injectInvalidDecision){assert(invalidSent);assert.equal(awaitingRepair,false);}console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
+try{await import('./arc-task-live-eval.js');assert(modelCalls>=(process.argv.includes('--resume-fixture')?8:18));if(injectInvalidDecision){assert(invalidSent);assert.equal(awaitingRepair,false);}console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
 finally{process.argv.splice(process.argv.lastIndexOf('--scripted-fixture'),1);globalThis.fetch=previousFetch;if(previousKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=previousKey;}

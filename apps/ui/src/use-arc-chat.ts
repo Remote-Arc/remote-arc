@@ -1,8 +1,10 @@
+import type {ArcAttachment,ArcLocation} from '@remotearc/protocol';
+import type {ArcEmployeeAvatar} from '@remotearc/protocol';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {ArcVerification,ArcReceipt,ArcEmployeeDraft} from '@remotearc/protocol';
 
 export type ChatSession={id:string;title:string;modelId:string;updatedAt:string};
-export type ChatMessage={id:string;run_id?:string|null;role:'user'|'assistant'|'tool';text:string;skills?:{id:string;name:string}[];apps?:{id:string;name:string;provider:string}[];tool?:string;arguments?:unknown;result?:unknown;status?:string;verification?:ArcVerification};
+export type ChatMessage={id:string;attachments?:ArcAttachment[];location?:ArcLocation;teammates?:{id:string;name:string;responsibility:string;avatar:ArcEmployeeAvatar}[];run_id?:string|null;role:'user'|'assistant'|'tool';text:string;skills?:{id:string;name:string}[];apps?:{id:string;name:string;provider:string}[];tool?:string;arguments?:unknown;result?:unknown;status?:string;verification?:ArcVerification};
 export type ChatRun={id:string;status:string;step:number;tokensUsed:number;maxTokens:number;maxSteps:number;deadline:string;error:string|null;receipt?:ArcReceipt};
 export type ArcAccess={status:'eligible'|'active'|'expired'|'paid';canUse:boolean;funded?:boolean;trialDays?:number;trialCredits?:number;creditsAvailable?:number|null;creditsPending?:number|null;daysRemaining:number;dailyUsedPercent:number;expiresAt:string|null};
 export type ChatService={enabled:boolean;access:ArcAccess;models:{id:string;label:string;provider:string;premium:boolean;configured:boolean;requiresPaid?:boolean;inputCreditsPer1000?:number;outputCreditsPer1000?:number}[];limits:{maxSteps:number;maxTokens:number;maxSeconds:number};preview?:boolean};
@@ -42,14 +44,14 @@ export function useArcChat(accountId:string,initialSessionId?:string){
   timer=setTimeout(tick,500);return()=>{controller.abort();clearTimeout(timer);};
  },[sessionId,running,watching,refreshSessions,refreshService]);
  const newChat=()=>{generation.current++;selected.current=null;setSelectedSessionId(null);setOpening(false);poll.current?.abort();setCurrent(null);setBusy(false);setError('');pending.current=null;};
- async function send(text:string,skillIds:string[]=[],verification?:ArcVerification,appIds:string[]=[]){
+ async function send(text:string,skillIds:string[]=[],verification?:ArcVerification,appIds:string[]=[],employeeIds:string[]=[],inputs:{attachmentIds?:string[];location?:ArcLocation}={}){
    if(requestLock.current||opening||running||!service?.enabled||!service.access.canUse)return false;requestLock.current=true;setBusy(true);setError('');const version=generation.current;
   try{
    let id=selected.current;
    if(!id){const created=await arcRequest<{id:string}>('sessions',{method:'POST',body:JSON.stringify({modelId})});id=created.id;if(!mounted.current||generation.current!==version)return false;selected.current=id;}
-   const signature=JSON.stringify([text,skillIds,verification,appIds]);
+   const signature=JSON.stringify([text,skillIds,verification,appIds,employeeIds,inputs]);
    if(!pending.current||pending.current.text!==signature||pending.current.sessionId!==id||pending.current.modelId!==modelId)pending.current={id:crypto.randomUUID(),text:signature,sessionId:id,modelId};
-   const response=await arcRequest<{run:ChatRun}>('sessions/'+encodeURIComponent(id)+'/messages',{method:'POST',body:JSON.stringify({text,modelId,requestId:pending.current.id,...(skillIds.length?{skillIds}:{}),...(appIds.length?{appIds}:{}),...(verification?{verification}:{})})});
+   const response=await arcRequest<{run:ChatRun}>('sessions/'+encodeURIComponent(id)+'/messages',{method:'POST',body:JSON.stringify({text,modelId,requestId:pending.current.id,...(skillIds.length?{skillIds}:{}),...(appIds.length?{appIds}:{}),...(employeeIds.length?{employeeIds}:{}),...(inputs.attachmentIds?.length?{attachmentIds:inputs.attachmentIds}:{}),...(inputs.location?{location:inputs.location}:{}),...(verification?{verification}:{})})});
    const snapshot=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(id));
     if(mounted.current&&generation.current===version){setCurrent(snapshot.runs.some(r=>r.id===response.run.id)?snapshot:{...snapshot,runs:[response.run,...snapshot.runs]});void refreshSessions();}
    pending.current=null;return true;

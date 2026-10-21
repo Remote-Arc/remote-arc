@@ -97,7 +97,7 @@ export async function testArcVerification({sql,env,api,create,decode,decisions,t
   assert(arcVerificationToolError(deployment,'call_app',{connectionId:vercel,operation:'deployments.get',arguments:{deploymentId:'dpl_other'}},[]));
   assert.equal(arcReceipt({id:'r',status:'succeeded',error_code:null},[{id:'a',run_id:'r',role:'assistant',created_at:at,result:'All done!',proof:{checks:[{code:'deployment_ready',status:'passed'}]}}]).status,'pending_verification','A model cannot manufacture receipt evidence');
   const bad=arcObservationProof(deployment,'call_app',{connectionId:vercel,operation:'deployments.get'},{status:'succeeded',result:{id:'dpl_other',readyState:'READY',url:'javascript:alert(1)'}});assert(!bad?.checks.some(c=>c.status==='passed'));assert(!bad?.url);
-  assert(ARC_VERIFICATION_SKILLS.every(skill=>skill.version==='1.0.0'&&skill.owner&&skill.regressions.length));
+  assert(ARC_VERIFICATION_SKILLS.every(skill=>skill.version==='1.1.0'&&skill.owner&&skill.regressions.length));
   console.log('PASS: three scoped workflows, ownership/idempotency, exact read-back before compaction, false completion, pending/failed deployment, email injection, unknown-write stop, receipts and versioned skills');
  }finally{globalThis.fetch=fetchBefore;}
 }

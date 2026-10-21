@@ -10,6 +10,9 @@ import {activeCommercial,commercialVersion,commercialOffer,commercialCatalog,com
 import {ensureStripeCustomer as customer} from './stripe-customer.js';
 import {checkoutPromotion,invoicePromotion,type Promotion} from './arc-promotions.js';
 import {publicArcAccess} from './arc-trial.js';
+import {z} from 'zod';
+import {stripePublishableKey} from './stripe-client.js';
+import {nativeBillingAction,nativeBillingDetails} from './stripe-native.js';
 export type BillingEnv=StripeEnv&{DB:D1Database;PUBLIC_ORIGIN:string;APP_ORIGIN?:string;DASHBOARD_ORIGIN?:string;ARC_CHAT_ENABLED?:string;ARC_CREDITS_ENABLED?:string};
 const json=(v:unknown,status=200)=>Response.json(v,{status,headers:{'cache-control':'no-store'}});
 const now=()=>new Date().toISOString();
@@ -18,6 +21,15 @@ const id=(v:unknown,prefix:string)=>{const s=stripeId(v);if(!new RegExp('^'+pref
 const products=[...ARC_PLANS.filter(p=>p.id!=='free'),...ARC_TOPUPS].map(p=>({id:p.id}));
 const product=(sku:unknown)=>{const p=products.find(p=>p.id===sku);if(!p)throw new StripeError('BILLING_INVALID_PRODUCT',400);return p;};
 const form=(values:Record<string,string|number|boolean>)=>new URLSearchParams(Object.entries(values).map(([k,v])=>[k,String(v)]));
+function checkoutResponse(env:BillingEnv,session:Record<string,any>,mode:string){
+ if(mode==='embedded_page'){
+  const publishableKey=stripePublishableKey(env),sessionId=id(session,'cs');
+  if(!publishableKey||session.ui_mode!=='embedded_page'||typeof session.client_secret!=='string'||!session.client_secret.startsWith(sessionId+'_secret_'))throw new StripeError('BILLING_PROVIDER_ERROR');
+  return{mode,sessionId,clientSecret:session.client_secret,publishableKey};
+ }
+ if(typeof session.url!=='string')throw new StripeError('BILLING_PROVIDER_ERROR');
+ const url=new URL(session.url);if(url.origin!=='https://checkout.stripe.com'||url.username||url.password)throw new StripeError('BILLING_PROVIDER_ERROR');return{mode:'hosted_page',url:url.href};
+}
 async function boundedBody(request:Request,maximum:number){
  const reader=request.body?.getReader();if(!reader)throw new StripeError('BILLING_INVALID_REQUEST',400);
  let size=0;const chunks:Uint8Array[]=[];
@@ -130,7 +142,7 @@ export async function processStripeEvent(env:BillingEnv,event:Record<string,any>
    const dispute=await stripeRequest(env,'/v1/disputes/'+id(event.data?.object,'dp'));const charge=await stripeRequest(env,'/v1/charges/'+id(dispute.charge,'ch'));await blockPayment(env,charge,'dispute');
   }else if(['customer.subscription.updated','customer.subscription.deleted'].includes(event.type)){
    const s=await stripeRequest(env,'/v1/subscriptions/'+id(event.data?.object,'sub'));
-   await env.DB.prepare('UPDATE arc_billing_subscriptions SET status=?1,cancel_at_period_end=?2,updated_at=?3 WHERE id=?4').bind(s.status,Number(Boolean(s.cancel_at_period_end)),now(),id(s,'sub')).run();
+   await env.DB.prepare('UPDATE arc_billing_subscriptions SET status=?1,cancel_at_period_end=?2,updated_at=?3,revision=revision+1 WHERE id=?4').bind(s.status,Number(Boolean(s.cancel_at_period_end)),now(),id(s,'sub')).run();
    // Cancellation retains the paid period. No renewal event means no next-period credits.
   }else if(event.type==='checkout.session.expired')await env.DB.prepare("UPDATE arc_billing_checkouts SET status='expired' WHERE session_id=?1 AND status IN ('creating','open')").bind(id(event.data?.object,'cs')).run();
   await env.DB.prepare("UPDATE arc_payment_events SET status='processed',completed_at=?1,lease_until=NULL WHERE id=?2 AND lease_token=?3").bind(now(),eventId,token).run();
@@ -158,7 +170,7 @@ async function changePlan(env:BillingEnv,userId:string,customerId:string,sku:unk
  const subscription=await stripeRequest(env,'/v1/subscriptions/'+id(paid.id,'sub'));
  if(id(subscription.customer,'cus')!==customerId||subscription.status!=='active'||subscription.cancel_at_period_end||subscription.items?.data?.length!==1)throw new StripeError('BILLING_INVALID_PLAN_CHANGE',409);
  const current=subscription.items.data[0];if(current.quantity!==1||(await canonicalProduct(env,current.price)).id!==paid.product_id)throw new StripeError('BILLING_CATALOG_CONFLICT');
- const price=target.id===paid.product_id?id(current.price,'price'):await ensureStripePrice(env,target.id,target.versionId),schedule=subscription.schedule?await stripeRequest(env,'/v1/subscription_schedules/'+id(subscription.schedule,'sub_sched')):await stripeRequest(env,'/v1/subscription_schedules','POST',form({from_subscription:paid.id}),'arc-schedule:'+paid.id+':'+paid.period_end);
+ const price=target.id===paid.product_id?id(current.price,'price'):await ensureStripePrice(env,target.id,target.versionId),schedule=subscription.schedule?await stripeRequest(env,'/v1/subscription_schedules/'+id(subscription.schedule,'sub_sched')):await stripeRequest(env,'/v1/subscription_schedules','POST',form({from_subscription:paid.id,'metadata[remote_arc_user]':userId}),'arc-schedule:'+paid.id+':'+paid.period_end);
  const boundary=Math.floor(Date.parse(paid.period_end)/1000);if(schedule.current_phase?.end_date!==boundary||schedule.current_phase?.start_date>=boundary)throw new StripeError('BILLING_INVALID_PERIOD');
  await stripeRequest(env,'/v1/subscription_schedules/'+id(schedule,'sub_sched'),'POST',form({end_behavior:'release',proration_behavior:'none','phases[0][start_date]':schedule.current_phase.start_date,'phases[0][end_date]':boundary,'phases[0][items][0][price]':id(current.price,'price'),'phases[0][items][0][quantity]':1,'phases[0][proration_behavior]':'none','phases[1][start_date]':boundary,'phases[1][duration][interval]':'month','phases[1][duration][interval_count]':1,'phases[1][items][0][price]':price,'phases[1][items][0][quantity]':1,'phases[1][proration_behavior]':'none'}),'arc-change:'+await sha256Hex(paid.id+':'+paid.revision+':'+target.id));
  await env.DB.prepare('UPDATE arc_billing_subscriptions SET pending_product_id=?1,pending_effective_at=?2,updated_at=?3,revision=revision+1 WHERE id=?4 AND user_id=?5 AND change_lease_token=?6').bind(target.id===paid.product_id?null:target.id,target.id===paid.product_id?null:paid.period_end,now(),paid.id,userId,lease).run();
@@ -179,6 +191,7 @@ export async function handleBilling(request:Request,env:BillingEnv){
    await processStripeEvent(env,canonical,await sha256Hex(raw));return json({received:true});
   }
   const user=await getSessionUser(request,env);if(!user)return json({error:'unauthorized'},401);
+  if(request.method==='GET'&&path==='/api/billing/details')return json(await nativeBillingDetails(env,user.id));
   if(request.method==='GET'&&path==='/api/billing/checkout-status'){
    const sessionId=new URL(request.url).searchParams.get('session');
    if(!sessionId||!/^cs_(?:test_|live_)?[A-Za-z0-9_]{1,180}$/.test(sessionId))throw new StripeError('BILLING_INVALID_REQUEST',400);
@@ -188,35 +201,38 @@ export async function handleBilling(request:Request,env:BillingEnv){
   }
   if(request.method==='GET'&&path==='/api/billing'){
    const access=await publicArcAccess(env,user.id);
-   const [plan,credits,usage,subscriptions,customer,catalog]=await Promise.all([currentArcPlan(env,user.id),creditBalance(env.DB,user.id),getMonthlyUsage(env,user.id),env.DB.prepare('SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10').bind(user.id).all(),env.DB.prepare('SELECT 1 AS present FROM arc_billing_customers WHERE user_id=?1').bind(user.id).first(),commercialCatalog(env)]);
-    return json({enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,access,credits,usage,plans:catalog.plans,topups:catalog.topups,models:ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
+   const [plan,credits,usage,subscriptions,customer,catalog]=await Promise.all([currentArcPlan(env,user.id),creditBalance(env.DB,user.id),getMonthlyUsage(env,user.id),env.DB.prepare('SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at,revision FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10').bind(user.id).all(),env.DB.prepare('SELECT 1 AS present FROM arc_billing_customers WHERE user_id=?1').bind(user.id).first(),commercialCatalog(env)]);
+    return json({embeddedCheckoutEnabled:Boolean(stripeConfigured(env)&&stripePublishableKey(env)),subscriptionManagementEnabled:stripeConfigured(env)&&Boolean(customer),enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,access,credits,usage,plans:catalog.plans,topups:catalog.topups,models:ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
   }
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   if(!isTrustedDashboardMutation(request,env))throw new StripeError('same_origin_required',403);
-   if(!stripeConfigured(env)||(path!=='/api/billing/portal'&&(!arcEnabled(env)||!creditsEnabled(env))))throw new StripeError('BILLING_NOT_CONFIGURED');
+   if(!stripeConfigured(env)||(!path.startsWith('/api/billing/subscription/')&&!path.startsWith('/api/billing/payment-method/')&&path!=='/api/billing/portal'&&(!arcEnabled(env)||!creditsEnabled(env))))throw new StripeError('BILLING_NOT_CONFIGURED');
   if(request.headers.get('content-type')?.split(';')[0]!=='application/json')throw new StripeError('BILLING_JSON_REQUIRED',415);
   let input:Record<string,unknown>;try{input=JSON.parse(await boundedBody(request,2048));if(!input||typeof input!=='object'||Array.isArray(input))throw 0;}catch(e){if(e instanceof StripeError)throw e;throw new StripeError('BILLING_INVALID_REQUEST',400);}
+  if(['/api/billing/subscription/renewal','/api/billing/payment-method/setup','/api/billing/payment-method/confirm','/api/billing/checkout/abandon'].includes(path))return json(await nativeBillingAction(env,user.id,path,input));
   if(!['/api/billing/portal','/api/billing/plan/change','/api/billing/checkout'].includes(path))return json({error:'not_found'},404);
-  if(Object.keys(input).some(key=>!['productId','versionId','promoCode'].includes(key))||path==='/api/billing/portal'&&Object.keys(input).length)throw new StripeError('BILLING_INVALID_REQUEST',400);
+  if(Object.keys(input).some(key=>!['productId','versionId','promoCode','uiMode'].includes(key))||path==='/api/billing/portal'&&Object.keys(input).length)throw new StripeError('BILLING_INVALID_REQUEST',400);
   if(path!=='/api/billing/portal')product(input.productId);
   const returnUrl=new URL(path==='/api/billing/portal'?'/settings?section=billing':'/checkout?product='+encodeURIComponent(String(input.productId)),env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN).toString(),customerId=await customer(env,user.id,user.email);
   if(path==='/api/billing/portal')return json({url:await portal(env,customerId,returnUrl)});
   if(path==='/api/billing/plan/change')return json(await changePlan(env,user.id,customerId,input.productId,input.versionId));
   if(path!=='/api/billing/checkout')return json({error:'not_found'},404);
+  const uiMode=input.uiMode??'hosted_page';if(!['hosted_page','embedded_page'].includes(String(uiMode)))throw new StripeError('BILLING_INVALID_REQUEST',400);if(uiMode==='embedded_page'&&!stripePublishableKey(env))throw new StripeError('BILLING_EMBEDDED_NOT_CONFIGURED');
   let p=commercialOffer(await activeCommercial(env,product(input.productId).id));const at=now(),plan=await currentArcPlan(env,user.id);
   if(input.versionId!==undefined?input.versionId!==p.versionId:!p.versionId.startsWith('seed:'))throw new StripeError('BILLING_PRICE_CHANGED',409);
   if(!p.subscription&&input.promoCode!==undefined)throw new StripeError('BILLING_INVALID_PROMOTION',400);
   if(p.subscription){const active=await stripeRequest(env,'/v1/subscriptions?'+form({customer:customerId,status:'all',limit:100}));if(active.has_more||active.data?.some((s:any)=>!['canceled','incomplete_expired'].includes(s.status)))throw new StripeError('BILLING_USE_EXISTING_SUBSCRIPTION',409);}
   else if(!plan.allHostedModels)throw new StripeError('BILLING_SUBSCRIPTION_REQUIRED',402);
   await env.DB.prepare("UPDATE arc_billing_checkouts SET status='expired' WHERE user_id=?1 AND expires_at<=?2 AND status IN ('creating','open')").bind(user.id,at).run();
-  const pending=await env.DB.prepare("SELECT id,session_id,expires_at,commercial_version_id,promotion_id FROM arc_billing_checkouts WHERE user_id=?1 AND product_id=?2 AND status IN ('creating','open') AND expires_at>?3 ORDER BY created_at DESC LIMIT 1").bind(user.id,p.id,at).first<{id:string;session_id:string|null;expires_at:string;commercial_version_id:string|null;promotion_id:string|null}>();
+  const pending=await env.DB.prepare("SELECT id,session_id,expires_at,commercial_version_id,promotion_id,ui_mode FROM arc_billing_checkouts WHERE user_id=?1 AND product_id=?2 AND status IN ('creating','open') AND expires_at>?3 ORDER BY created_at DESC LIMIT 1").bind(user.id,p.id,at).first<{id:string;session_id:string|null;expires_at:string;commercial_version_id:string|null;promotion_id:string|null;ui_mode:string}>();
   let promo:Promotion|null=null;
+  if(pending&&pending.ui_mode!==uiMode)throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);
   if(pending){
    p=commercialOffer(await commercialVersion(env.DB,pending.commercial_version_id||`seed:${commercialMode(env)}:${p.id}`));
    if(pending.promotion_id)promo=await env.DB.prepare('SELECT * FROM arc_billing_promotions WHERE id=?1').bind(pending.promotion_id).first<Promotion>();
    if(input.promoCode!==undefined&&(!promo||typeof input.promoCode!=='string'||input.promoCode.trim().toUpperCase()!==promo.code))throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);
   }else if(p.subscription)promo=await checkoutPromotion(env,user.id,customerId,p.id,input.promoCode);
-  if(pending?.session_id){const session=await stripeRequest(env,'/v1/checkout/sessions/'+id(pending.session_id,'cs'));if(session.status==='open'&&typeof session.url==='string'&&session.url.startsWith('https://checkout.stripe.com/'))return json({url:session.url});throw new StripeError('BILLING_CHECKOUT_AWAITING_CONFIRMATION',409);}
+  if(pending?.session_id){const session=await stripeRequest(env,'/v1/checkout/sessions/'+id(pending.session_id,'cs'));if(session.status==='open')return json(checkoutResponse(env,session,pending.ui_mode));throw new StripeError('BILLING_CHECKOUT_AWAITING_CONFIRMATION',409);}
   const checkoutId=pending?.id||crypto.randomUUID();let expires=pending?.expires_at||new Date(Date.now()+3600000).toISOString();
   // Stripe's 30-minute minimum starts when the Session is created, not when
   // our request began. Reserve a one-hour lifetime for provider/preflight delay.
@@ -228,9 +244,9 @@ export async function handleBilling(request:Request,env:BillingEnv){
    await env.DB.prepare("UPDATE arc_billing_checkouts SET expires_at=?1 WHERE id=?2 AND user_id=?3 AND status='creating' AND session_id IS NULL AND expires_at=?4").bind(extended,checkoutId,user.id,expires).run();
    expires=(await env.DB.prepare('SELECT expires_at FROM arc_billing_checkouts WHERE id=?1 AND user_id=?2').bind(checkoutId,user.id).first<{expires_at:string}>())!.expires_at;
   }
-  if(!pending)try{const inserted=await env.DB.prepare(`INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,expires_at,created_at,commercial_version_id,promotion_id) SELECT ?1,?2,?3,?4,'creating',?5,?6,?7,?8 WHERE (SELECT COUNT(*) FROM arc_billing_checkouts WHERE user_id=?2 AND status IN ('creating','open'))<3`).bind(checkoutId,user.id,p.id,p.subscription?'subscription':'payment',expires,at,p.versionId,promo?.id??null).run();if(!inserted.meta.changes)throw 0;}catch{throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);}
-  const price=await ensureStripePrice(env,p.id,p.versionId),session=await stripeRequest(env,'/v1/checkout/sessions','POST',form({customer:customerId,mode:p.subscription?'subscription':'payment','line_items[0][price]':price,'line_items[0][quantity]':1,...(promo?{'discounts[0][promotion_code]':promo.promotion_code_id!}:{}),success_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:returnUrl+'&checkout=cancelled',expires_at:Math.floor(Date.parse(expires)/1000),'automatic_tax[enabled]':env.STRIPE_AUTOMATIC_TAX==='1',...(env.STRIPE_AUTOMATIC_TAX==='1'?{billing_address_collection:'required','customer_update[address]':'auto','tax_id_collection[enabled]':true}:{}),'metadata[remote_arc_checkout]':checkoutId,...(p.subscription?{'subscription_data[metadata][remote_arc_user]':user.id}:{'payment_intent_data[metadata][remote_arc_user]':user.id})}),'arc-checkout:'+checkoutId);
-  const sessionId=id(session,'cs');if(typeof session.url!=='string'||!session.url.startsWith('https://checkout.stripe.com/'))throw new StripeError('BILLING_PROVIDER_ERROR');
-  await env.DB.prepare("UPDATE arc_billing_checkouts SET session_id=?1,status='open' WHERE id=?2").bind(sessionId,checkoutId).run();return json({url:session.url});
- }catch(error){return json({error:error instanceof StripeError?error.code:'BILLING_UNAVAILABLE',...(error instanceof StripeError&&error.reference?{reference:error.reference}:{})},error instanceof StripeError?error.status:503);}
+  if(!pending)try{const inserted=await env.DB.prepare(`INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,expires_at,created_at,commercial_version_id,promotion_id,ui_mode) SELECT ?1,?2,?3,?4,'creating',?5,?6,?7,?8,?9 WHERE (SELECT COUNT(*) FROM arc_billing_checkouts WHERE user_id=?2 AND status IN ('creating','open'))<3`).bind(checkoutId,user.id,p.id,p.subscription?'subscription':'payment',expires,at,p.versionId,promo?.id??null,uiMode).run();if(!inserted.meta.changes)throw 0;}catch{throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);}
+  const price=await ensureStripePrice(env,p.id,p.versionId),session=await stripeRequest(env,'/v1/checkout/sessions','POST',form({customer:customerId,mode:p.subscription?'subscription':'payment','line_items[0][price]':price,'line_items[0][quantity]':1,...(promo?{'discounts[0][promotion_code]':promo.promotion_code_id!}:{}),...(uiMode==='embedded_page'?{ui_mode:'embedded_page',return_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',redirect_on_completion:'if_required'}:{success_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:returnUrl+'&checkout=cancelled'}),expires_at:Math.floor(Date.parse(expires)/1000),'automatic_tax[enabled]':env.STRIPE_AUTOMATIC_TAX==='1',...(env.STRIPE_AUTOMATIC_TAX==='1'?{billing_address_collection:'required','customer_update[address]':'auto','tax_id_collection[enabled]':true}:{}),'metadata[remote_arc_checkout]':checkoutId,...(p.subscription?{'subscription_data[metadata][remote_arc_user]':user.id}:{'payment_intent_data[metadata][remote_arc_user]':user.id})}),'arc-checkout:'+checkoutId);
+  const sessionId=id(session,'cs'),result=checkoutResponse(env,session,String(uiMode));
+  await env.DB.prepare("UPDATE arc_billing_checkouts SET session_id=?1,status='open' WHERE id=?2").bind(sessionId,checkoutId).run();return json(result);
+ }catch(error){return json({error:error instanceof StripeError?error.code:error instanceof z.ZodError?'BILLING_INVALID_REQUEST':'BILLING_UNAVAILABLE',...(error instanceof StripeError&&error.reference?{reference:error.reference}:{})},error instanceof StripeError?error.status:error instanceof z.ZodError?400:503);}
 }

@@ -1,0 +1,7 @@
+{
+  "repository": "microsoft/playwright-cli",
+  "directory": "skills/playwright-cli",
+  "revision": "b1a5903c5b633b8c9f843ad7b629c2a78437040c",
+  "license": "Apache-2.0",
+  "sourceUrl": "https://github.com/microsoft/playwright-cli/tree/b1a5903c5b633b8c9f843ad7b629c2a78437040c/skills/playwright-cli"
+}

@@ -1,7 +1,9 @@
+import {createArcInputPreview} from './arc-input-preview.js';
 import type { SecurityState } from "@remotearc/protocol";
 import {ARC_PLANS,ARC_TOPUPS,ARC_PREMIUM_MODELS} from '@remotearc/protocol';
 import appDirectory from "./app-directory.json" with { type: "json" };
 import {createArcPreview} from "./arc-preview.js";
+import {createBillingPreview} from "./billing-preview.js";
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
@@ -12,7 +14,15 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
   if (!UI_PREVIEW || typeof window === "undefined") return;
 
   const nativeFetch = window.fetch.bind(window);
-  const arcPreview = createArcPreview();
+  const previewEmployees=[{id:'preview-developer',name:'开发队友',responsibility:'技术架构与产品实现'},{id:'preview-designer',name:'设计队友',responsibility:'产品体验与交互设计'},{id:'preview-business',name:'商务队友',responsibility:'商业模式与市场验证'},{id:'preview-researcher',name:'领域专家',responsibility:'行业调研与事实核对'}].map(person=>({...person,version:1,status:'active',instructions:'',modelId:'auto',avatar:{kind:'initials',color:'#446655'},scope:{appMode:'none',connectionIds:[],deviceIds:[],deviceTools:[],skillIds:[]},createdAt:previewNow(),updatedAt:previewNow()}));
+  const previewConnections=[
+        {id:"11111111-1111-4111-8111-111111111111",provider:"github",accountLabel:"Example developer",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:15,total:15,needsReconnect:false}},
+        {id:"22222222-2222-4222-8222-222222222222",provider:"slack",accountLabel:"Example workspace / personal",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:35,total:35,needsReconnect:false}},
+        {id:"33333333-3333-4333-8333-333333333333",provider:"slack",accountLabel:"Example workspace / project",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:5,total:35,needsReconnect:true}},
+  ];
+  const inputPreview=createArcInputPreview();
+  const arcPreview = createArcPreview({attachments:inputPreview.metadata,employees:previewEmployees.map(({id,name,responsibility,avatar})=>({id,name,responsibility,avatar:avatar as {kind:'initials';color:string}})),apps:previewConnections.map(connection=>({id:connection.id,provider:connection.provider,name:appDirectory.apps.find(app=>app.provider===connection.provider)?.name||connection.provider}))});
+  const billingPreview = createBillingPreview({getItem:key=>window.sessionStorage.getItem(key),setItem:(key,value)=>window.sessionStorage.setItem(key,value)},new URL(location.href));
   let config:Promise<{arcAvailable:boolean}>|undefined, configTime=0;
   function runtimeConfig() {
     if(!config||Date.now()-configTime>5000) {
@@ -202,10 +212,14 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
 
+    if(url.pathname.startsWith('/api/arc/attachments')){if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);const response=await inputPreview.handle(url,method,init?.body??(input instanceof Request?await input.blob():undefined),init?.headers);if(response)return response;}
     if((url.pathname.startsWith('/api/arc/sessions')||url.pathname.startsWith('/api/arc/skills')||url.pathname.startsWith('/api/arc/memory'))) {
       if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);
       const result=arcPreview.handle(url.pathname,method,init?.body??(input instanceof Request?await input.clone().text():undefined));
       if(result)return result;
+    }
+    if(url.pathname.startsWith('/api/billing')&&url.pathname!=='/api/billing/catalog'){
+      const result=billingPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined));if(result)return result;
     }
     if (method !== "GET") {
       return json(
@@ -216,7 +230,10 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
     if(url.pathname==='/api/runtime-config')return nativeFetch(input,init);
     if(url.pathname==='/api/billing/catalog')return json({arcAvailable:(await runtimeConfig()).arcAvailable,billingAvailable:false,connectFreeCalls:10000,plans:ARC_PLANS.map(p=>({...p,versionId:'preview:'+p.id})),topups:ARC_TOPUPS.map(p=>({...p,versionId:'preview:'+p.id})),trial:{days:14,credits:200}});
-    if (url.pathname === '/api/billing') return json({enabled:false,plan:ARC_PLANS[1],credits:{available:1280,pending:12.5,buckets:[]},usage:{used:1732,limit:null},plans:ARC_PLANS,topups:ARC_TOPUPS,models:ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:[]});
+    if(url.pathname==='/api/arc/employees')return json({employees:previewEmployees});
+    if(url.pathname.startsWith('/api/arc/employees/')){const employee=previewEmployees.find(person=>person.id===url.pathname.split('/').pop());return employee?json({employee}):json({error:'ARC_TEAM_OBJECT_NOT_FOUND'},404);}
+    if(url.pathname==='/api/arc/teams')return json({teams:[{id:'preview-product-team',name:'产品方向队伍',purpose:'围绕产品目标协作，结果回到 Arc Chat。',employeeIds:['preview-developer','preview-designer','preview-business','preview-researcher'],coordinatorId:'preview-developer',version:1,status:'active',createdAt:previewNow(),updatedAt:previewNow()}]});
+    if(url.pathname==='/api/arc/team-events')return json({events:[{id:'preview-team-created',type:'team.created',teamId:'preview-product-team',employeeId:null,roomId:null,referenceId:null,details:{profile:{name:'产品方向队伍'}},createdAt:previewNow()}]});
     if (url.pathname === '/api/arc/status') {const enabled=(await runtimeConfig()).arcAvailable;return json({enabled,preview:true,access:{status:'active',canUse:enabled,daysRemaining:14,dailyUsedPercent:0,expiresAt:null},models:[{id:'auto',label:'Auto',provider:'arc',premium:false,configured:true},...ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,provider:m.provider,premium:true,configured:true,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000}))],limits:{maxSteps:8,maxTokens:24000,maxSeconds:180}});}
     if (url.pathname === '/api/arc/work') return json({work:[{id:'sample-task',name:'Prepare the next release summary',kind:'task',status:'waiting',schedule:{type:'once'},nextRunAt:new Date(Date.now()+1800000).toISOString(),runCount:0,error:null,conversationId:'sample-conversation'},{id:'sample-routine',name:'Morning inbox & calendar brief',kind:'routine',status:'waiting',schedule:{type:'daily',time:'09:00',timezone:'Pacific/Auckland',weekdays:[1,2,3,4,5]},nextRunAt:new Date(Date.now()+3600000).toISOString(),runCount:4,error:null,conversationId:'sample-conversation'}],runs:[{id:'sample-run',session_id:'sample-conversation',title:'Review the release and share a summary',status:'succeeded',step:5,tokens_used:1320,error_code:null,created_at:new Date().toISOString(),automation_id:null},{id:'sample-routine-run',session_id:'sample-conversation',title:'Morning inbox & calendar brief',status:'succeeded',step:4,tokens_used:1045,error_code:null,created_at:new Date(Date.now()-3600000).toISOString(),automation_id:'sample-routine'}]});
     // Preview data for Settings > Workspaces. Writes remain blocked above.
@@ -312,11 +329,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     if (url.pathname === "/api/apps") return json({
       enabled: true,
       apps: appDirectory.apps.map((app) => ({ ...app, configured: ["github", "slack", "gmail", "google_calendar", "google_drive", "google_docs", "google_sheets", "notion", "runway"].includes(app.provider), permissions: { read: [], write: [] } })),
-      connections: [
-        {id:"11111111-1111-4111-8111-111111111111",provider:"github",accountLabel:"Example developer",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:15,total:15,needsReconnect:false}},
-        {id:"22222222-2222-4222-8222-222222222222",provider:"slack",accountLabel:"Example workspace / personal",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:35,total:35,needsReconnect:false}},
-        {id:"33333333-3333-4333-8333-333333333333",provider:"slack",accountLabel:"Example workspace / project",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:5,total:35,needsReconnect:true}},
-      ],
+      connections: previewConnections,
     });
     if (url.pathname === "/api/apps/approvals") return json({ approvals: [] });
 

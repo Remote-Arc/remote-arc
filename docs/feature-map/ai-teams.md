@@ -11,7 +11,7 @@ Open Tasks → AI teams, or /dashboard/agent/teams. The independent page has Con
 3. Choose an employee/group in the searchable sidebar and ask a question or give an outcome. Auto starts one coordinator/member; Everyone intentionally addresses all members. Type @ and select an employee to add a stable-ID badge without inserting instructions into the message.
 4. Inspect actual employee replies, visible colleague handoffs and expandable tool inputs/observations. Failure/unknown states are not verified completion.
 5. Switch rooms with a draft or failed send. Text, mentions and logical retry identity survive within this page. Reloading clears unsent in-memory drafts; server messages remain durable.
-6. In ordinary Arc Chat ask to create an employee. The model prepares a durable editable profile card only. Review name, model, avatar and resource access, then explicitly Create employee; use Start conversation to open the saved direct room. Confirmation is atomic and model-free, retries return the same employee, and cancelled/expired drafts cannot create profiles. Drafts expire after seven days.
+6. In ordinary Arc Chat ask to create an employee. Explicit creation requests create teammates immediately with no resource access. Use Start conversation to open the saved room. Optional previews and legacy drafts can be edited or created directly; retries return the same employee, and cancelled/expired drafts cannot create profiles.
 7. Load earlier history. Speaker identity is the version at send time, even after a profile rename.
 
 ## Hidden delegation

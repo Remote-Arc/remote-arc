@@ -8,7 +8,7 @@ import {arcRoom,arcRoomMessages,roomEmployees} from './arc-team-rooms.js';
 import type {ArcEmployeeProfile,ArcEmployeeScope} from '@remotearc/protocol';
 
 type Assignment={employee_id:string;profile_version:number;turn_id:string;delivery_id:string;room_id:string;source_message_id:string;user_message_id:string;depth:number;turn_created_at:string};
-export type EmployeeExecution={assignment:Assignment;identity:Pick<ArcEmployeeProfile,'name'|'responsibility'|'instructions'> & {id:string;version:number};scope:ArcEmployeeScope;objective:string;sourceMessage:string;peers:{id:string;name:string;responsibility:string}[];history:Awaited<ReturnType<typeof arcMessages>>};
+export type EmployeeExecution={inputAttachments?:ArcMessageBody['attachments'];inputLocation?:ArcMessageBody['location'];assignment:Assignment;identity:Pick<ArcEmployeeProfile,'name'|'responsibility'|'instructions'> & {id:string;version:number};scope:ArcEmployeeScope;objective:string;sourceMessage:string;peers:{id:string;name:string;responsibility:string}[];history:Awaited<ReturnType<typeof arcMessages>>};
 const intersection=(left:string[],right:string[])=>left.filter(value=>right.includes(value));
 async function message(env:ArcEnv,userId:string,messageId:string){const row=await env.DB.prepare('SELECT body_ciphertext FROM arc_chat_messages WHERE id=?1 AND user_id=?2').bind(messageId,userId).first<{body_ciphertext:string}>();if(!row)throw new ArcError('ARC_EMPLOYEE_SOURCE_UNAVAILABLE',409);return unseal<ArcMessageBody>(env,row.body_ciphertext,arcContext(userId,messageId));}
 export async function arcEmployeeExecution(env:ArcEnv,run:ArcRun):Promise<EmployeeExecution|undefined>{
@@ -27,17 +27,19 @@ export async function arcEmployeeExecution(env:ArcEnv,run:ArcRun):Promise<Employ
   if(authority.sourceEmployeeId){const sourceEmployee=await readArcEmployee(env,run.user_id,authority.sourceEmployeeId);if(sourceEmployee.status!=='active'||ancestor.target_kind==='team'&&!sourceEmployee.scope.delegationTeamIds?.includes(ancestor.target_id))throw new ArcError('ARC_DISPATCH_AUTHORITY_REVOKED',403);clamp(sourceEmployee.scope);}
   if(authority.parentId){const parent=await env.DB.prepare('SELECT id,target_kind,target_id,input_ciphertext FROM arc_dispatches WHERE id=?1 AND user_id=?2').bind(authority.parentId,run.user_id).first<NonNullable<typeof ancestor>>();if(!parent)throw new ArcError('ARC_DISPATCH_AUTHORITY_INVALID',403);ancestor=parent;}else ancestor=null;
  }
+ let inputSource:ArcMessageBody|undefined;if(delegated){const original=await env.DB.prepare('SELECT source_message_id FROM arc_dispatches WHERE id=?1 AND user_id=?2').bind(delegated.rootId,run.user_id).first<{source_message_id:string}>();if(!original)throw new ArcError('ARC_EMPLOYEE_SOURCE_UNAVAILABLE',409);inputSource=await message(env,run.user_id,original.source_message_id);}
  const [root,source,history]=await Promise.all([message(env,run.user_id,assignment.user_message_id),message(env,run.user_id,assignment.source_message_id),arcRoomMessages(env,run.user_id,run.session_id).then(page=>page.messages)]);
  // New user turns are queued separately and must not replace an active goal.
  const allowedUsers=new Set((await env.DB.prepare('SELECT user_message_id FROM arc_room_turns WHERE room_id=?1 AND rowid<=(SELECT rowid FROM arc_room_turns WHERE id=?2)').bind(run.session_id,assignment.turn_id).all<{user_message_id:string}>()).results.map(row=>row.user_message_id));
  const visible=history.filter(item=>item.role!=='user'||allowedUsers.has(item.id));
- return{assignment,identity:{id:current.id,version:assignment.profile_version,name:frozen.name,responsibility:frozen.responsibility,instructions:frozen.instructions},scope,objective:root.text,sourceMessage:source.tool==='message_employee'?String((source.arguments as {message?:string})?.message||source.text):delegated?.instructions||source.text,peers:members.filter(member=>member.id!==current.id).map(member=>({id:member.id,name:member.name,responsibility:member.responsibility})),history:visible};
+ return{inputAttachments:inputSource?.attachments,inputLocation:inputSource?.location,assignment,identity:{id:current.id,version:assignment.profile_version,name:frozen.name,responsibility:frozen.responsibility,instructions:frozen.instructions},scope,objective:root.text,sourceMessage:source.tool==='message_employee'?String((source.arguments as {message?:string})?.message||source.text):delegated?.instructions||source.text,peers:members.filter(member=>member.id!==current.id).map(member=>({id:member.id,name:member.name,responsibility:member.responsibility})),history:visible};
 }
 export function employeeToolError(execution:EmployeeExecution|undefined,tool:string,args:Record<string,any>){
  if(!execution)return tool==='message_employee'?{code:'ARC_EMPLOYEE_CONVERSATION_REQUIRED',dispatched:false}:null;
  const scope=execution.scope;
  let allowed=['list_teammates','list_apps','list_devices','list_skills','describe_app','select_device'].includes(tool);
- if(tool==='read_skill')allowed=scope.skillIds.includes(args.id);
+ if(tool==='read_skill'||tool==='read_skill_resource')allowed=scope.skillIds.includes(args.id);
+ if(tool==='prepare_skill')allowed=scope.skillIds.includes(args.id)&&scope.deviceIds.includes(args.deviceId)&&scope.deviceTools.includes('write_file');
  if(tool==='read_inbox')allowed=scope.appMode!=='none'&&scope.connectionIds.includes(args.connectionId);
  if(tool==='call_app'){const action=APP_OPERATIONS.find(action=>action.name===args.operation);allowed=scope.appMode!=='none'&&scope.connectionIds.includes(args.connectionId)&&Boolean(action)&&(action?.permission!=='write'||scope.appMode==='write');}
  if(tool==='device_tool')allowed=scope.deviceIds.includes(args.deviceId)&&scope.deviceTools.includes(args.tool);

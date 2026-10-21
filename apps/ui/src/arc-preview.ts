@@ -1,5 +1,7 @@
-import {BUILTIN_SKILLS} from '../../../packages/skills/src/catalog.generated.js';
+import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
+const PREVIEW_SKILLS=COMMUNITY_SKILLS;
 import {ARC_MEMORY_LIMITS} from '@remotearc/protocol';
+import type {ArcAttachment} from '@remotearc/protocol';
 import type {ChatMessage, ChatRun, ChatSession} from "./use-arc-chat.js";
 
 type PreviewSession = {session:ChatSession; messages:ChatMessage[]; runs:ChatRun[]; reads:number; requests:Map<string,{text:string;modelId:string;run:ChatRun}>};
@@ -7,10 +9,10 @@ const json = (value:unknown,status=200) => Response.json(value,{status,headers:{
 const makeRun = ():ChatRun => ({id:crypto.randomUUID(),status:"queued",step:0,tokensUsed:0,maxTokens:24000,maxSteps:8,deadline:new Date(Date.now()+180000).toISOString(),error:null});
 
 /** Per-tab UI simulation. Never calls a model, Apps, devices, storage or production API. */
-export function createArcPreview() {
+export function createArcPreview(references:{attachments?:Map<string,{meta:ArcAttachment}>;apps?:NonNullable<ChatMessage['apps']>;employees?:NonNullable<ChatMessage['teammates']>}={}) {
   let memoryEnabled=true;
   const memories=new Map<string,{id:string;kind:'fact'|'work';category:string;content:string;source_session_id:string|null;updated_at:string}>([['example-preference',{id:'example-preference',kind:'fact',category:'preference',content:'Keep release summaries concise and link the relevant pull requests.',source_session_id:'sample-conversation',updated_at:new Date().toISOString()}]]);
-  const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string}>(BUILTIN_SKILLS.map(skill=>[skill.id,{id:skill.id,name:skill.name,description:skill.description,sourceUrl:skill.upstream,origin:'builtin',content:skill.content}]));
+  const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string;owner?:string;requires?:string[];revision?:string;license?:string;resourceCount?:number}>(PREVIEW_SKILLS.map(skill=>[skill.id,{id:skill.id,name:skill.name,description:skill.description,sourceUrl:skill.sourceUrl,origin:'community',content:skill.content,owner:skill.owner,requires:skill.requires,revision:skill.revision,license:skill.license,resourceCount:skill.resources.length}]));
   const sessions = new Map<string,PreviewSession>();
   const example:PreviewSession = {
     session:{id:"sample-conversation",title:"Review the release and share a summary",modelId:"auto",updatedAt:new Date().toISOString()},
@@ -31,7 +33,8 @@ export function createArcPreview() {
         const text=record.messages.filter(m=>m.role==="user").at(-1)?.text||"";
         const zh=/[\u3400-\u9fff]/.test(text);
         record.messages.push({id:run.id+":tool",role:"tool",text:zh?"示例工具记录":"Example tool record",tool:"preview_example",arguments:{example:true},result:zh?"模拟结果。没有访问应用、电脑或真实账号。":"Simulated result. No apps, computers or real accounts were accessed.",status:"completed"});
-        record.messages.push({id:run.id+":assistant",role:"assistant",text:zh?"**这是交互预览，回复和工具结果均为模拟。**\n\n真实 Arc 会根据你的目标选择应用与电脑，保存任务状态，并返回可以核对的执行结果。你可以继续查看任务和活动页面。\n\n本次没有调用大模型、执行工具或产生费用。":"**This is an interactive preview. Responses and tool results are simulated.**\n\nIn live Arc, your goal guides app and computer selection, saved work and verifiable results. You can explore Tasks and Activity from the sidebar.\n\nNo model was called, no tools were run and no charges were made."});
+        if(/(?:四|four|4).*(?:队友|teammate)|(?:开发|developer).*(?:设计|designer).*(?:商务|business)/i.test(text))record.messages.push({id:run.id+":assistant",role:"assistant",text:zh?"**协作流程预览：以下分工与结果均为模拟。**\n\n本次演示由开发、设计、商务和领域研究四个角色围绕产品方向分别分析，再在这个对话汇总。\n\n- **开发**：先打通目标、执行和结果回执，保留失败恢复能力。\n- **设计**：Arc Chat 作为唯一入口，默认展示进度和产出，资料放入设置。\n- **商务**：先验证一个高频场景的完成率与付费意愿。\n- **领域研究**：用真实用户任务核对需求，区分事实与假设。\n\n**建议下一步**：选择一个真实目标，完成一次从需求到交付的验证。你可以在这里补充要求，无需切换群聊或逐个配置角色。\n\n本次没有调用大模型、执行工具或产生费用。":"**Collaboration preview: these assignments and results are simulated.**\n\nDevelopment, design, business and domain research work around one goal and return their findings here.\n\n- **Development**: complete recoverable goal-to-delivery execution.\n- **Design**: make Arc Chat the single entry; show progress and deliverables.\n- **Business**: validate a frequent use case and willingness to pay.\n- **Research**: distinguish observed needs from assumptions.\n\nContinue the goal in this chat without configuring a group messenger.\n\nNo model was called, no tools were run and no charges were made."});
+        else record.messages.push({id:run.id+":assistant",role:"assistant",text:zh?"**这是交互预览，回复和工具结果均为模拟。**\n\n真实 Arc 会根据你的目标选择应用与电脑，保存任务状态，并返回可以核对的执行结果。你可以继续查看任务和活动页面。\n\n本次没有调用大模型、执行工具或产生费用。":"**This is an interactive preview. Responses and tool results are simulated.**\n\nIn live Arc, your goal guides app and computer selection, saved work and verifiable results. You can explore Tasks and Activity from the sidebar.\n\nNo model was called, no tools were run and no charges were made."});
       }
     }
     return {session:record.session,messages:record.messages,runs:record.runs};
@@ -90,7 +93,7 @@ export function createArcPreview() {
     const previous=record.requests.get(requestId);if(previous)return previous.text===text&&previous.modelId===modelId?json({run:previous.run},202):json({error:"REQUEST_ID_CONFLICT"},409);
     if(record.runs.some(run=>["queued","thinking","working"].includes(run.status)))return json({error:"CHAT_BUSY_OR_LIMIT_REACHED"},409);
     if(record.messages.length>=50)return json({error:"CHAT_LIMIT_REACHED"},429);
-    const run=makeRun();record.reads=0;record.runs.unshift(run);record.requests.set(requestId,{text,modelId,run});record.messages.push({id:run.id+":user",role:"user",text});
+    const run=makeRun();record.reads=0;record.runs.unshift(run);record.requests.set(requestId,{text,modelId,run});record.messages.push({id:run.id+":user",role:"user",text,...(Array.isArray(input.attachmentIds)?{attachments:input.attachmentIds.flatMap(id=>{const file=references.attachments?.get(String(id));return file?[file.meta]:[];})}:{}),...(input.location?{location:input.location as ChatMessage["location"]}:{}),...(Array.isArray(input.skillIds)?{skills:input.skillIds.flatMap(id=>{const skill=skills.get(String(id));return skill?[{id:skill.id,name:skill.name}]:[];})}:{}),...(Array.isArray(input.appIds)?{apps:input.appIds.flatMap(id=>references.apps?.filter(app=>app.id===id)||[])}:{}),...(Array.isArray(input.employeeIds)?{teammates:input.employeeIds.flatMap(id=>references.employees?.filter(employee=>employee.id===id)||[])}:{})});
     record.session={...record.session,title:text.slice(0,64),modelId,updatedAt:new Date().toISOString()};return json({run},202);
   }};
 }

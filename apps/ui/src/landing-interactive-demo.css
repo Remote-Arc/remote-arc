@@ -24,7 +24,7 @@
 .homeDemoBrandTitle img{width:23px;height:23px;object-fit:contain;margin-right:5px}
 .homeDemoBrandTitle>svg{color:var(--chat-muted)}
 .homeDemoChromeActions{display:flex;align-items:center;gap:15px;color:var(--chat-fg);opacity:.8}
-.homeDemoChatBody{display:flex;flex:1;flex-direction:column;gap:21px;align-items:flex-start;min-height:0;max-height:455px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#c2c2c2 transparent;padding:30px 23px 16px}
+.homeDemoChatBody{display:flex;flex:1;flex-direction:column;gap:21px;align-items:flex-start;min-height:0;max-height:455px;overflow-y:auto;scrollbar-width:none;scrollbar-color:#c2c2c2 transparent;padding:30px 23px 16px}
 .homeDemoUserBubble{align-self:flex-end;max-width:97%;border:0;border-radius:21px;padding:12px 16px;background:var(--chat-user);color:var(--chat-fg);font-size:14px;line-height:1.65;font-weight:450;overflow-wrap:anywhere}
 .homeDemoAssistant{display:flex;flex-direction:column;gap:13px;align-items:flex-start;max-width:100%;width:100%;animation:homeDemoFade .25s ease-out;font-size:14px;line-height:1.65}
 .homeDemoAssistantIntro,.homeDemoAssistantAnswer{font-size:14px!important;font-weight:440;line-height:1.7!important;color:var(--chat-fg)!important;margin:0!important}
@@ -108,7 +108,7 @@
 .homeDemoTerminalDots i:nth-child(2){background:#dfb265}
 .homeDemoTerminalDots i:last-child{background:#65c39b}
 .homeDemoTerminalDevice{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;color:#97afbf}
-.homeDemoTerminalBody{flex:1;min-height:0;max-height:458px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#32485b transparent;padding:22px 23px 27px;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,Monaco,monospace}
+.homeDemoTerminalBody{flex:1;min-height:0;max-height:458px;overflow-y:auto;scrollbar-width:none;scrollbar-color:#32485b transparent;padding:22px 23px 27px;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,Monaco,monospace}
 .homeDemoTerminalBanner{font-size:13px;margin-bottom:7px;color:#c6d7e2}
 .homeDemoMonoAccent{font-weight:750;color:#4bc1df}
 .homeDemoTerminalInfo{font-size:12px;color:#78bd9f;margin-bottom:17px}

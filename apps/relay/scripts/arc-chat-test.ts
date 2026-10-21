@@ -1,3 +1,4 @@
+import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
 import {testArcOutcomes} from './arc-outcomes-test.js';
 import {testArcCompactContinuation} from './arc-compact-continuation-test.js';
 import {ARC_OUTCOME_SKILLS} from '../src/arc-outcome-skills.js';
@@ -7,7 +8,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
 import {handleArcChat,arcMessages,arcContext,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
-import {runArcStep,validateArcDecision,executeArcTool,arcToolInputError} from '../src/arc-chat-runtime.js';
+import {runArcStep,validateArcDecision,executeArcTool,arcToolInputError,arcExecutionPrompt} from '../src/arc-chat-runtime.js';
 import {ARC_MODELS,prepareArcBudget} from '../src/arc-chat-model.js';
 import {nextArcOccurrence,arcScheduleSchema,createArcWork,manageArcWork} from '../src/arc-work.js';
 import {runAutomationTick} from '../src/automations.js';
@@ -128,6 +129,10 @@ try{
  assert.equal(row(truncated.run.id).status,'succeeded');assert.equal(truncatedEffects,2,'The completed write is not replayed');assert.equal(truncatedAttempts,4);assert.equal(row(truncated.run.id).tokens_used,660,'Truncated inference usage remains charged to the same run');
  let incompleteAttempts=0;env.MODEL_GATEWAY!.adapters.openai=async()=>{incompleteAttempts++;throw new ModelProviderError('MODEL_INCOMPLETE_RESPONSE',false,badUsage);};const boundedIncomplete=await send(await create(),'Stop after one incomplete-response repair.');assert.equal(await runArcStep(env,boundedIncomplete.run.id),true);assert.equal(await runArcStep(env,boundedIncomplete.run.id),false);assert.equal(row(boundedIncomplete.run.id).error_code,'MODEL_INCOMPLETE_RESPONSE');assert.equal(incompleteAttempts,2);assert.equal(row(boundedIncomplete.run.id).tokens_used,120);
 }finally{env.MODEL_GATEWAY!.adapters.openai=beforeRepairAdapter;}
+const discussionPrompt=arcExecutionPrompt({objective:'讨论 Remote Arc 的未来方向，详细比较方案与具体建议',messages:[],memory:[],deviceIndex:[]},24000,true)!;
+assert.equal(discussionPrompt.maxOutputTokens,4096,'Substantive discussion has room for a developed answer');
+const routinePrompt=arcExecutionPrompt({objective:'Check deployment readiness',messages:[],memory:[],deviceIndex:[]},24000,true)!;
+assert.equal(routinePrompt.maxOutputTokens,2048,'Routine decisions retain smaller financial reservations');
 const largeContext=fitArcContext('Bounded system',{}, {objective:'Keep this exact user objective',messages:Array.from({length:8},()=>({role:'tool',text:'Observed data',result:'资料'.repeat(12000)})),memory:[],deviceIndex:[]},96000);
 assert(largeContext);assert(new TextEncoder().encode('Bounded system'+largeContext.user+'{}').length<=64000,'Large plan allowances cannot bypass the decoded provider context ceiling');assert.equal(JSON.parse(largeContext.user).objective,'Keep this exact user objective');
 assert(new TextEncoder().encode(JSON.stringify(['Bounded system',largeContext.user,{}])).length<=64000,'The separate provider transport ceiling is also enforced');
@@ -281,7 +286,10 @@ decisions.push(reply('All connected apps were inspected.'));
 await runArcStep(env,scheduled.id,{executeTool:async()=>({status:'completed'})});
 sql.prepare("UPDATE automations SET next_run_at=?,lease_until=NULL,lease_token=NULL WHERE id=?").run(now,saved.id);
 await runAutomationTick(env,new Date(Date.now()+1000),saved.id);assert.equal(sql.prepare('SELECT status FROM automations WHERE id=?').get(saved.id)?.status,'completed');assert.equal(sql.prepare('SELECT COUNT(*) AS count FROM arc_chat_runs WHERE automation_id=?').get(saved.id)?.count,beforeSchedule);
-await assert.rejects(()=>createArcWork(env,{...scheduled,step:2},{name:'Recursive',instructions:'loop',schedule:{type:'once'}},false),/RECURSIVE/);
+const scheduleGuard=await createArcWork(env,{...scheduled,step:2},{name:'Recursive',instructions:'loop',schedule:{type:'once'}},false);assert.equal(scheduleGuard.dispatched,false);assert.equal(scheduleGuard.code,'ARC_SCHEDULE_ALREADY_RUNNING');
+const accidental=await send(await create(),'Execute the saved morning briefing.');sql.prepare('UPDATE arc_chat_runs SET automation_id=? WHERE id=?').run(saved.id,accidental.run.id);sql.prepare("UPDATE automations SET status='running',state_json=? WHERE id=?").run(JSON.stringify({run_id:accidental.run.id}),saved.id);
+decisions.push(tool('create_routine',{name:'Duplicate briefing',instructions:'Create a briefing every morning',schedule:{type:'daily',time:'08:00',timezone:'Pacific/Auckland'}}),reply('The saved briefing occurrence is complete.'));
+await runArcStep(env,accidental.run.id);assert.equal(row(accidental.run.id).status,'queued','A blocked duplicate schedule is a correctable tool result, not a crashed occurrence');await runArcStep(env,accidental.run.id);assert.equal(row(accidental.run.id).status,'succeeded');assert.equal(sql.prepare('SELECT COUNT(*) n FROM automations').get().n,1,'A scheduled occurrence cannot spawn another schedule');
 
 const schedule=arcScheduleSchema.parse({type:'daily',time:'09:00',timezone:'Pacific/Auckland',weekdays:[1,2,3,4,5]});assert.equal(nextArcOccurrence(schedule,new Date('2026-10-16T21:00:00Z')),'2026-10-18T20:00:00.000Z');
 assert.equal(nextArcOccurrence({type:'daily',time:'02:30',timezone:'America/New_York'},new Date('2026-03-07T08:00:00Z')),'2026-03-09T06:30:00.000Z','Skip nonexistent spring-forward local time');
@@ -335,7 +343,7 @@ await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
 
 // Arc consumes the existing cloud catalog, with private Markdown imports alongside it.
 const library=await decode(await api('skills'));
-assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),[...ARC_OUTCOME_SKILLS,...ARC_VERIFICATION_SKILLS].map(s=>s.id).sort());
+assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),COMMUNITY_SKILLS.map(s=>s.id).sort());
 const skillInput={name:'Private workflow',description:'Owner-only instructions',content:'# Private workflow\nUse scripts/check.py and verify its result.',sourceUrl:'https://github.com/example/workflow'};
 const imported=await decode(await api('skills','POST',skillInput),201);
 assert.equal((await decode(await api('skills','POST',skillInput),201)).id,imported.id,'Duplicate imports are idempotent');

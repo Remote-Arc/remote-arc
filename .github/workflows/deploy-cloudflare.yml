@@ -158,6 +158,12 @@ jobs:
           REMOTEARC_DEPLOY_REF: master
         run: pnpm deploy:relay
 
+      - name: Configure embedded Stripe public key
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+        run: node scripts/configure-stripe-public-key.mjs
+
       - name: Verify deployed SHA and public Connect experience
         timeout-minutes: 5
         run: node scripts/production-smoke.mjs --sha "$GITHUB_SHA"

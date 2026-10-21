@@ -73,13 +73,18 @@ jobs:
               '',
               `**Public site:** ${preview}`,
               `**Dashboard:** ${preview}/overview`,
+              `**Arc Chat:** ${preview}/dashboard/agent/chat`,
+              `**Workflows:** ${preview}/dashboard/agent/skills`,
+              `**Teammate profiles:** ${preview}/dashboard/agent/settings?section=teammates`,
               `**Automations:** ${preview}/automations`,
               `**Releases:** ${preview}/releases`,
               `**Connect AI:** ${preview}/connect`,
               `**Settings:** ${preview}/settings`,
+              `**Checkout demo:** ${preview}/checkout?demo=new`,
+              `**Subscription management:** ${preview}/settings?section=billing`,
               unique ? `**This deployment:** ${unique}` : '',
               '',
-              'Dashboard routes use read-only mock data. Production OAuth, D1, MCP and device state are not connected.',
+              'Dashboard routes use simulated data. Arc and billing interactions are local demos; production OAuth, D1, MCP, Stripe and devices are not connected. No real payment is made.',
             ].filter(Boolean).join('\n');
 
             const { owner, repo } = context.repo;

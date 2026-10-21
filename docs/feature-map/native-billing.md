@@ -1,0 +1,27 @@
+# On-site checkout and subscription management
+
+Updated 21 October 2026. Implementation and isolated tests are complete; production deployment and live-account acceptance are separate.
+
+`/checkout` displays the server's versioned offer, then mounts Stripe's official embedded Checkout page after the user continues. Card details go directly to Stripe. A bank or wallet may require its own authentication screen. Payment return and the SDK completion callback only open the saved status view; canonical payment processing remains the sole source of receipts and Credits.
+
+The page keeps a clear offer/payment step, USD pricing, order identity, monthly allowance and renewal terms around the official component. It never renders imitation wallet buttons. Dashboard-managed dynamic payment methods are preserved, allowing Stripe to offer cards, Link, Apple Pay or other eligible methods. Embedded Apple Pay requires a registered payment origin and supported Safari/iOS (currently 17+). The protected `enable_stripe` activation checks/registers only `agent.remotearc.app`, validates inactive wallet registrations and reports each wallet's actual status; it does not alter account-wide payment preferences. Domain status alone does not establish device eligibility or a successful payment.
+
+Local CLI inspection on 21 October found only the existing isolated sandbox connected, with no registered `agent.remotearc.app` domain in that sandbox. The live account was not available through that CLI session. Live wallet activation and real-device acceptance therefore remain unverified. The activation tests use simulated Stripe responses, including their printed wallet statuses.
+
+PR previews include an explicitly labelled local billing demo. `/checkout?demo=new` resets the demo to a new purchase; its simulated completion survives the same-tab return/refresh. Settings then demonstrates cancellation/resumption, a simulated card update and invoice history. Card fields are disabled and no Stripe script, model or provider is contacted. Production builds exclude the preview payment component and billing simulation logic; the live component always uses the official Stripe SDK. Both the separate billing-preview test and desktop/mobile browser checks cover this boundary.
+
+Settings → Plan & usage → Manage subscription opens details on Remote Arc. Users can cancel renewal at period end, resume renewal before cancellation, update their payment method with Stripe Elements, inspect the ten latest invoices and download an invoice PDF. Change plan uses the existing next-period schedule without charging immediately. Cancelling renewal removes a pending plan change before scheduling cancellation; existing paid access and Credits retain their original terms.
+
+Saved Apple Pay/Google Pay cards retain their wallet label and masked card details. A saved Link method displays Link without returning its email or other wallet identity. A method attached to another customer is never exposed.
+
+Migration `0052_embedded_checkout.sql` freezes the provider UI mode with each checkout identity. Retries reuse the same session, expiry, price version, promotion and provider idempotency key. The Back to offers action expires an acknowledged open session; an unknown outcome cannot become a replacement order. Legacy hosted sessions keep their original mode rather than receiving changed creation parameters.
+
+`STRIPE_PUBLISHABLE_KEY` must match the secret key's live/test mode. The existing production environment already holds the public key; the protected deployment now copies it into the Worker alongside normal deployment. No key is placed in the repository. Stripe.js 10 uses `createEmbeddedCheckoutPage` and server `ui_mode: embedded_page`, matching the pinned Endive API. The SDK is loaded only when a secure payment form opens.
+
+Native renewal changes share the plan-change lease and revision check. Lost acknowledgements reconcile the provider's current state. Payment-method setup uses a stable request identity and a user-owned, purpose-bound successful SetupIntent; repeated completion retains the same provider keys. A verified setup can recover without asking Stripe to verify it again. Billing reads create no customers or purchases. Arc emergency pause still permits subscription and payment-method management.
+
+Validation: `test:stripe` includes real SQLite native-route tests for CSRF, owner/mode isolation, stale versions, concurrent cancellation, lost acknowledgements, scheduled-change release, invoice reads, payment-method confirmation, embedded replay and zero receipt/credit side effects. Browser fixtures cover desktop/mobile × English/Chinese × light/dark, all on-site flows, safe checkout retry, completion status polling, abandoned orders, payment-method retry and absence of Portal requests. Provider HTTP and Stripe.js are simulated; these checks make no real payment, customer mutation or model call.
+
+Primary references: [Stripe embedded Checkout](https://docs.stripe.com/checkout/embedded/quickstart), [Checkout Sessions](https://docs.stripe.com/api/checkout/sessions/create), [cancellation](https://docs.stripe.com/billing/subscriptions/cancel).
+
+Wallet references: [payment domains](https://docs.stripe.com/payments/payment-methods/pmd-registration?dashboard-or-api=api), [dynamic payment methods](https://docs.stripe.com/payments/checkout/payment-methods?payment-ui=embedded-page), [Apple Pay eligibility](https://docs.stripe.com/apple-pay?platform=web).

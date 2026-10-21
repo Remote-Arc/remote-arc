@@ -5,7 +5,7 @@ export type ModelDefinition = {
   inputMicrosPerMillion:number;outputMicrosPerMillion:number;cacheWriteMicrosPerMillion?:number;cacheWrite5mMicrosPerMillion?:number;cachedInputMicrosPerMillion?:number;structuredOutput?:boolean;
   inputNeuronsPerMillion?:number;outputNeuronsPerMillion?:number;freeEligible?:boolean;
 };
-export type ModelRequest = {definition:ModelDefinition;system:string;user:string;schema:Record<string,unknown>;maxOutputTokens:number;signal:AbortSignal};
+export type ModelRequest = {images?:{dataUrl:string}[];definition:ModelDefinition;system:string;user:string;schema:Record<string,unknown>;maxOutputTokens:number;signal:AbortSignal};
 export type ModelResult = {value:unknown;usage:ModelUsage;providerRequestId:string|null};
 export class ModelProviderError extends Error {
   constructor(readonly code:string,readonly retryable=false,readonly usage?:ModelUsage) {super(code);this.name="ModelProviderError";}
@@ -54,7 +54,7 @@ export function openAiAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAda
     if(!apiKey.trim())throw new ModelProviderError("MODEL_NOT_CONFIGURED");
     const p=await post(fetcher,"https://api.openai.com/v1/responses",{authorization:"Bearer "+apiKey},{
       model:r.definition.model,store:false,max_output_tokens:r.maxOutputTokens,
-      input:[{role:"system",content:r.system},{role:"user",content:r.user}],
+      input:[{role:"system",content:r.system},{role:"user",content:r.images?.length?[{type:'input_text',text:r.user},...r.images.map(image=>({type:'input_image',image_url:image.dataUrl,detail:'auto'}))]:r.user}],
       text:{format:{type:"json_schema",name:"remote_arc_agent_decision",strict:true,schema:r.schema}},
     },r.signal);
     const u=usage(p);if(u.cachedInputTokens+u.cacheWriteTokens>u.inputTokens||u.reasoningTokens>u.outputTokens)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');return {value:textResponse(p,u),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
@@ -65,7 +65,7 @@ export function anthropicAdapter(apiKey:string,fetcher:typeof fetch=fetch):Model
     if(!apiKey.trim())throw new ModelProviderError("MODEL_NOT_CONFIGURED");
     const p=await post(fetcher,"https://api.anthropic.com/v1/messages",{"x-api-key":apiKey,"anthropic-version":"2023-06-01"},{
       model:r.definition.model,max_tokens:r.maxOutputTokens,system:r.system,
-      messages:[{role:"user",content:r.user}],
+      messages:[{role:"user",content:r.images?.length?[{type:'text',text:r.user},...r.images.map(image=>({type:'image',source:{type:'base64',media_type:image.dataUrl.slice(5,image.dataUrl.indexOf(';')),data:image.dataUrl.slice(image.dataUrl.indexOf(',')+1)}}))]:r.user}],
       ...(r.definition.structuredOutput?{output_config:{format:{type:'json_schema',schema:r.schema}}}:{
         tools:[{name:"submit_agent_decision",description:"Submit one bounded next decision. This returns data and never executes a tool.",input_schema:r.schema}],
         tool_choice:{type:"tool",name:"submit_agent_decision",disable_parallel_tool_use:true},
@@ -94,7 +94,7 @@ export function openRouterAdapter(apiKey:string,fetcher:typeof fetch=fetch):Mode
       authorization:'Bearer '+apiKey,'HTTP-Referer':'https://remotearc.app','X-OpenRouter-Title':'Remote Arc',
     },{
       model:r.definition.model,stream:false,max_tokens:r.maxOutputTokens,
-      messages:[{role:'system',content:r.system},{role:'user',content:r.user}],
+      messages:[{role:'system',content:r.system},{role:'user',content:r.images?.length?[{type:'text',text:r.user},...r.images.map(image=>({type:'image_url',image_url:{url:image.dataUrl,detail:'auto'}}))]:r.user}],
       response_format:{type:'json_schema',json_schema:{name:'remote_arc_agent_decision',strict:true,schema:r.schema}},
       provider:{require_parameters:true,allow_fallbacks:false,data_collection:'deny',max_price:{prompt:r.definition.inputMicrosPerMillion/1000000,completion:r.definition.outputMicrosPerMillion/1000000}},
     },r.signal);
@@ -109,6 +109,7 @@ export function openRouterAdapter(apiKey:string,fetcher:typeof fetch=fetch):Mode
 export type WorkersAiBinding = {run(model:string,input:Record<string,unknown>):Promise<unknown>};
 export function workersAiAdapter(binding:WorkersAiBinding):ModelAdapter {
   return async r=>{
+    if(r.images?.length)throw new ModelProviderError("MODEL_IMAGE_INPUT_UNSUPPORTED");
     if(r.signal.aborted)throw new ModelProviderError("MODEL_TIMEOUT",true);
     let p:Record<string,unknown>;
     try{p=object(await binding.run(r.definition.model,{

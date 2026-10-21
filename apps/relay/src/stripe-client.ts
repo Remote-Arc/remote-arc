@@ -1,8 +1,9 @@
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 export const STRIPE_API_VERSION='2026-09-30.endive';
-export type StripeEnv=PlatformLaunchEnv&{STRIPE_SECRET_KEY?:string;STRIPE_WEBHOOK_SECRET?:string;ARC_BILLING_ENABLED?:string;STRIPE_AUTOMATIC_TAX?:string;ARC_BILLING_ALLOW_TEST_MODE?:string};
+export type StripeEnv=PlatformLaunchEnv&{STRIPE_SECRET_KEY?:string;STRIPE_WEBHOOK_SECRET?:string;STRIPE_PUBLISHABLE_KEY?:string;ARC_BILLING_ENABLED?:string;STRIPE_AUTOMATIC_TAX?:string;ARC_BILLING_ALLOW_TEST_MODE?:string};
 export class StripeError extends Error {constructor(readonly code:string,readonly status=503,readonly reference?:string){super(code);}}
 export const stripeId=(v:unknown):string=>typeof v==='string'?v:typeof v==='object'&&v!==null&&'id' in v?stripeId(v.id):'';
+export function stripePublishableKey(env:StripeEnv){const key=env.STRIPE_PUBLISHABLE_KEY||'';return new RegExp('^pk_'+(stripeLive(env)?'live':'test')+'_[A-Za-z0-9]+$').test(key)?key:null;}
 export function stripeLive(env:StripeEnv){
  if(!/^(sk|rk)_(test|live)_/.test(env.STRIPE_SECRET_KEY||''))throw new StripeError('BILLING_NOT_CONFIGURED');
  return /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY!);

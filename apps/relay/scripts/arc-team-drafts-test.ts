@@ -3,6 +3,10 @@ import {handleArcTeams} from '../src/arc-teams.js';
 import {handleArcChat,type ArcRun} from '../src/arc-chat.js';
 import {draftArcEmployee,listArcEmployeeDrafts} from '../src/arc-team-drafts.js';
 import {runArcStep} from '../src/arc-chat-runtime.js';
+import {createArcOwnerTeam} from '../src/arc-owner-team.js';
+import {seal} from '../src/app-oauth.js';
+import {arcContext} from '../src/arc-chat.js';
+import {delegateArcWork} from '../src/arc-dispatcher.js';
 export async function testArcEmployeeDrafts({sql,env}:any){
  const origin='https://agent.remotearc.app',runtime=env.ARC_RUNTIME,adapter=env.MODEL_GATEWAY.adapters.openai;let modelCalls=0;
  const headers=(user='owner',requestOrigin=origin)=>({cookie:'rl_session='+user+'-session',origin:requestOrigin,'content-type':'application/json'});
@@ -12,7 +16,7 @@ export async function testArcEmployeeDrafts({sql,env}:any){
  env.ARC_RUNTIME={getByName:()=>({fetch:async()=>Response.json({queued:true})})};
  try{
   sql.exec("UPDATE arc_chat_runs SET status='cancelled' WHERE status IN ('queued','thinking','working')");
-  const session=(await decode(await chat('sessions','POST',{}),201)).id,source=(await decode(await chat('sessions/'+session+'/messages','POST',{text:'Create an AI designer called Alice for our team.',requestId:crypto.randomUUID()}),202)).run;
+  const session=(await decode(await chat('sessions','POST',{}),201)).id,source=(await decode(await chat('sessions/'+session+'/messages','POST',{text:'Draft an AI designer profile called Alice for our team. Do not create it yet.',requestId:crypto.randomUUID()}),202)).run;
   const run=()=>sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(source.id) as ArcRun;
   const count=()=>sql.prepare("SELECT COUNT(*) n FROM arc_employees WHERE user_id='owner'").get().n,before=count();
   env.MODEL_GATEWAY.adapters.openai=async(request:any)=>{modelCalls++;const user=JSON.parse(request.user),observed=user.messages.some((message:any)=>message.tool==='prepare_employee');return{value:observed?{decision:'reply',tool:'none',arguments_json:'{}',message:'Your designer profile is ready to review and create.'}:{decision:'tool',tool:'prepare_employee',arguments_json:JSON.stringify({name:'Alice',responsibility:'Product designer',emoji:'🎨'}),message:'Preparing an employee profile'},usage:{inputTokens:100,outputTokens:50,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'draft-fixture-'+modelCalls};};
@@ -31,6 +35,37 @@ export async function testArcEmployeeDrafts({sql,env}:any){
   const expired=await make('Expired');sql.prepare('UPDATE arc_team_drafts SET expires_at=? WHERE id=?').run('2000-01-01T00:00:00.000Z',expired.id);assert.equal((await decode(await api(expired.id))).draft.status,'expired');assert.equal((await api(expired.id,{action:'confirm',profile:expired.profile})).status,409);
   const racing=await make('Cancel race');await Promise.all([api(racing.id,{action:'confirm',profile:racing.profile}),api(racing.id,{action:'cancel'})]);const result=(await decode(await api(racing.id))).draft,exists=sql.prepare("SELECT COUNT(*) n FROM arc_employees WHERE user_id='owner' AND id=?").get(result.employeeId||'missing').n;assert.equal(exists,result.status==='confirmed'?1:0,'Confirm/cancel cannot create an employee behind a cancelled card');
   sql.prepare("UPDATE arc_chat_sessions SET deleted_at=? WHERE id=?").run(new Date().toISOString(),session);assert.equal((await api(draft.id)).status,404);assert.equal((await draftArcEmployee(env,fixtureRun,{name:'Hidden',responsibility:'Hidden'})).dispatched,false);
-  assert.equal(modelCalls,2);console.log('PASS: chat employee draft via scripted runtime, durable editable card, explicit model-free confirmation, owned current access, CSRF, atomic confirm/cancel/CAS, lost-ack replay, cancellation/expiry/deleted-source fences and zero paid calls');
+  sql.prepare("UPDATE arc_chat_runs SET status='cancelled' WHERE status IN ('queued','thinking','working')").run();
+  const directSession=(await decode(await chat('sessions','POST',{}),201)).id,direct=(await decode(await chat('sessions/'+directSession+'/messages','POST',{text:'帮我建四个队友：开发、设计、商务和领域专家。',requestId:crypto.randomUUID()}),202)).run;
+  const directRun=()=>sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(direct.id) as ArcRun;
+  const base=count();
+  for(const name of ['开发队友','设计队友','商务队友','领域专家']){
+   const result=await draftArcEmployee(env,directRun(),{name,responsibility:name});assert.equal(result.created,true);assert.equal(result.requiresUserConfirmation,false);assert.equal(result.draft?.status,'confirmed');
+   const retry=await draftArcEmployee(env,directRun(),{name,responsibility:name});assert.equal(retry.draft?.employeeId,result.draft?.employeeId);
+  }
+  assert.equal(count(),base+4,'An explicit request creates all four teammates without another review or duplicate on retry');
+  assert((await listArcEmployeeDrafts(env,'owner',directSession)).every(draft=>draft.status==='confirmed'&&draft.profile.scope.connectionIds.length===0&&draft.profile.scope.deviceIds.length===0));
+  assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_employee_runs WHERE run_id=?').get(direct.id).n,0,'Creating identities never starts employee work');
+  const teamInput={name:'产品方向队伍',purpose:'讨论产品未来方向',employeeIds:(await listArcEmployeeDrafts(env,'owner',directSession)).map(item=>item.employeeId!)};
+  const organized=await createArcOwnerTeam(env,directRun(),teamInput);assert.equal(organized.created,true);assert.equal(organized.requiresUserConfirmation,false);const replayTeam=await createArcOwnerTeam(env,directRun(),teamInput);assert.equal(replayTeam.team?.id,organized.team?.id);
+  assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_team_events WHERE team_id=? AND event_type=?').get(organized.team!.id,'team.created').n,1,'Team creation is immediate and idempotent without another review');
+  await assert.rejects(()=>createArcOwnerTeam(env,directRun(),{...teamInput,employeeIds:[crypto.randomUUID()]}));
+  sql.prepare('UPDATE arc_chat_runs SET cancel_requested=1 WHERE id=?').run(direct.id);assert.equal((await createArcOwnerTeam(env,directRun(),teamInput)).dispatched,false);sql.prepare('UPDATE arc_chat_runs SET cancel_requested=0 WHERE id=?').run(direct.id);
+  const ownerMessage=sql.prepare("SELECT id FROM arc_chat_messages WHERE run_id=? AND role='user'").get(direct.id)!;
+  sql.prepare('UPDATE arc_chat_messages SET body_ciphertext=? WHERE id=?').run(await seal(env,{text:'不要创建团队，先给我看看方案。'},arcContext('owner',ownerMessage.id)),ownerMessage.id);assert.equal((await createArcOwnerTeam(env,directRun(),teamInput)).dispatched,false);
+  sql.prepare('UPDATE arc_chat_messages SET body_ciphertext=? WHERE id=?').run(await seal(env,{text:'帮我组建这四个队友的团队，并一起讨论产品未来方向。'},arcContext('owner',ownerMessage.id)),ownerMessage.id);
+  env.MODEL_GATEWAY.adapters.openai=async(request:any)=>{modelCalls++;const context=JSON.parse(request.user),created=context.messages.some((m:any)=>m.tool==='create_team'),assigned=context.messages.some((m:any)=>m.tool==='delegate_work');return{value:!created?{decision:'tool',tool:'create_team',arguments_json:JSON.stringify(teamInput),message:'组织队伍'}:!assigned?{decision:'tool',tool:'delegate_work',arguments_json:JSON.stringify({targetKind:'team',targetId:organized.team!.id,instructions:'请各自从开发、设计、商务和领域研究角度讨论产品方向，并把实际结果回报原对话。'}),message:'分派讨论'}:{decision:'reply',tool:'none',arguments_json:'{}',message:'队伍已组织，讨论已排入执行，结果会回到这里。'},usage:{inputTokens:100,outputTokens:50,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'team-fixture-'+modelCalls};};
+  await runArcStep(env,direct.id);await runArcStep(env,direct.id);await runArcStep(env,direct.id);const dispatch=sql.prepare('SELECT room_id FROM arc_dispatches WHERE source_run_id=?').get(direct.id);assert(dispatch,'The same owner chat creates the team and queues its requested work');
+  const recipient=teamInput.employeeIds[0],referenceRequest=crypto.randomUUID(),referenceInput={text:'请这位队友分析我们的产品方向。',employeeIds:[recipient],requestId:referenceRequest};
+  const referenced=await decode(await chat('sessions/'+directSession+'/messages','POST',referenceInput),202),referenceRun=sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(referenced.run.id) as ArcRun;
+  const savedReference=(await decode(await chat('sessions/'+directSession))).messages.find((message:any)=>message.run_id===referenceRun.id&&message.role==='user');assert.equal(savedReference.teammates[0].id,recipient);assert(savedReference.teammates[0].avatar);assert(!('scope' in savedReference.teammates[0]),'References display identity without granting access');
+  assert.equal((await chat('sessions/'+directSession+'/messages','POST',{...referenceInput,employeeIds:[teamInput.employeeIds[1]]})).status,409,'A changed recipient cannot replay the same request identity');
+  const foreign=sql.prepare("SELECT id FROM arc_employees WHERE user_id='other' LIMIT 1").get()!.id;assert.equal((await chat('sessions/'+directSession+'/messages','POST',{...referenceInput,requestId:crypto.randomUUID(),employeeIds:[foreign]})).status,404);
+  await assert.rejects(()=>delegateArcWork(env,referenceRun,{targetKind:'employee',targetId:teamInput.employeeIds[1],instructions:'Wrong addressee'}),/ARC_DISPATCH_RECIPIENT_MISMATCH/);
+  const addressed=await delegateArcWork(env,referenceRun,{targetKind:'employee',targetId:recipient,instructions:referenceInput.text});assert.equal(addressed.url,'/dashboard/agent/chat?session='+directSession);assert.equal(addressed.target.id,recipient);
+  sql.prepare("UPDATE arc_chat_runs SET status='succeeded' WHERE id=?").run(referenceRun.id);
+  const four=await decode(await chat('sessions/'+directSession+'/messages','POST',{text:'请这四位队友一起讨论产品方向。',employeeIds:teamInput.employeeIds,requestId:crypto.randomUUID()}),202),fourRun=sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(four.run.id) as ArcRun;
+  const fourMessage=(await decode(await chat('sessions/'+directSession))).messages.find((message:any)=>message.run_id===fourRun.id&&message.role==='user');assert.equal(fourMessage.teammates.length,4,'The four-role team can be addressed together');assert.equal((await delegateArcWork(env,fourRun,{targetKind:'team',targetId:organized.team!.id,instructions:'四位一起讨论'})).target.id,organized.team!.id);
+  assert.equal(modelCalls,5);console.log('PASS: direct teammate/team creation, owned membership and @ references, replay/recipient/cancellation fences, chat-to-team work dispatch, editable legacy cards and zero paid calls');
  }finally{env.ARC_RUNTIME=runtime;env.MODEL_GATEWAY.adapters.openai=adapter;}
 }

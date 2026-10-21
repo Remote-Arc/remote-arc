@@ -1,3 +1,4 @@
+import {communitySkillSummaries,readCommunitySkill} from './arc-community-skills.js';
 import {z} from 'zod';
 import {seal,unseal} from './app-oauth.js';
 import {sha256Hex} from './auth.js';
@@ -11,7 +12,7 @@ export const arcSkillInput=z.object({name:z.string().trim().min(1).max(100),desc
 const summary=(row:SkillRow)=>({id:row.id,name:row.name,description:row.description,sourceUrl:row.source_url,createdAt:row.created_at,origin:'imported' as const,version:row.content_hash,owner:'account'});
 export async function listArcSkills(env:ArcEnv,userId:string){
  const rows=(await env.DB.prepare('SELECT id,name,description,source_url,content_hash,created_at FROM arc_skills WHERE user_id=?1 ORDER BY created_at DESC LIMIT 50').bind(userId).all<SkillRow>()).results;
- return {skills:[...rows.map(summary),...ARC_VERIFICATION_SKILLS.map(({content,...skill})=>({...skill,createdAt:null})),...ARC_OUTCOME_SKILLS.map(({content,...skill})=>({...skill,createdAt:null}))]};
+ return {skills:[...rows.map(summary),...communitySkillSummaries()]};
 }
 export async function saveArcSkill(env:ArcEnv,userId:string,value:unknown){
  const input=arcSkillInput.parse(value),hash=await sha256Hex(input.content),id=crypto.randomUUID();
@@ -21,6 +22,7 @@ export async function saveArcSkill(env:ArcEnv,userId:string,value:unknown){
  return summary(row);
 }
 export async function readArcSkill(env:ArcEnv,userId:string,id:string){
+ const community=readCommunitySkill(id);if(community)return community;
  const guide=arcVerificationSkill(id)||arcOutcomeSkill(id);if(guide)return guide;
  const row=await env.DB.prepare('SELECT * FROM arc_skills WHERE id=?1 AND user_id=?2').bind(id,userId).first<SkillRow>();
  if(!row)throw new Error('ARC_SKILL_NOT_FOUND');

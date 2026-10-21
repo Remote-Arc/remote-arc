@@ -11,7 +11,7 @@ import { seal, unseal } from './app-oauth.js';
 import type { AppEnv } from './app-catalog.js';
 import type { DeviceCallEnv } from './device-call.js';
 import { arcGateway, arcAutoId, arcModelAccess, type ArcModelEnv } from './arc-chat-model.js';
-import {listArcWork} from './arc-work.js';
+import {listArcWork,arcSessionWork} from './arc-work.js';
 import {activateArcTrial,publicArcAccess} from './arc-trial.js';
 import {currentArcPlan} from './arc-plan.js';
 import {arcMemoryInput,listArcMemory,rememberArcFact,removeArcMemory,configureArcMemory,editArcMemory} from './arc-memory.js';
@@ -19,7 +19,7 @@ import type {ArcEmployeeAvatar,ArcVerification} from '@remotearc/protocol';
 import {arcVerificationSchema,validateArcVerification,arcReceipt,type ArcProof} from './arc-verification.js';
 
 export type ArcEnv = AppEnv & DeviceCallEnv & ArcModelEnv & { ARC_RUNTIME?:DurableObjectNamespace };
-export type ArcSession = {id:string;user_id:string;organization_id:string;title_ciphertext:string;model_id:string;created_at:string;updated_at:string;deleted_at:string|null};
+export type ArcSession = {id:string;user_id:string;organization_id:string;title_ciphertext:string;model_id:string;created_at:string;updated_at:string;deleted_at:string|null;automation_id?:string|null};
 export type ArcRun = {id:string;session_id:string;user_id:string;request_id:string;input_hash:string;model_id:string;automation_id:string|null;status:string;step:number;tokens_used:number;max_tokens:number;max_steps:number;deadline:string;cancel_requested:number;error_code:string|null;created_at:string;updated_at:string};
 export type ArcMessageBody = {text:string;attachments?:ArcAttachment[];location?:ArcLocation;teammates?:{id:string;name:string;responsibility:string;avatar:ArcEmployeeAvatar}[];skills?:{id:string;name:string}[];apps?:{id:string;name:string;provider:string}[];tool?:string;arguments?:unknown;result?:unknown;status?:string;verification?:ArcVerification;proof?:ArcProof};
 export const arcContext=(userId:string,id:string)=>`arc-chat:${userId}:${id}`;
@@ -56,7 +56,8 @@ async function snapshot(env:ArcEnv,userId:string,sessionId:string){
  const pendingDelegations=Boolean(await env.DB.prepare("SELECT d.id FROM arc_dispatches d JOIN arc_chat_runs r ON r.id=d.source_run_id WHERE r.session_id=?1 AND d.user_id=?2 AND d.status IN ('prepared','queued') LIMIT 1").bind(sessionId,userId).first());
  const employeeDrafts=await (await import('./arc-team-drafts.js')).listArcEmployeeDrafts(env,userId,sessionId);
  const delegations=await arcDispatchProgress(env,userId,sessionId);
- return{hasMore:page.hasMore,before:page.before,appConnections,employeeDrafts,pendingDelegations,delegations,session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
+ const work=await arcSessionWork(env,userId,sessionId);
+ return{hasMore:page.hasMore,before:page.before,appConnections,employeeDrafts,pendingDelegations,delegations,work,session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
 }
 async function body(request:Request){
  if(request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json')throw new ArcError('JSON_REQUIRED',415);
@@ -125,8 +126,8 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
   }
   if(path==='/api/arc/sessions'){
    if(request.method==='GET'){
-     const rows=(await env.DB.prepare('SELECT * FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL AND automation_id IS NULL AND NOT EXISTS(SELECT 1 FROM arc_team_rooms WHERE session_id=arc_chat_sessions.id) ORDER BY updated_at DESC LIMIT 100').bind(user.id).all<ArcSession>()).results;
-    return json({sessions:await Promise.all(rows.map(async row=>({id:row.id,title:await unseal<string>(env,row.title_ciphertext,arcContext(user.id,row.id)),modelId:row.model_id,updatedAt:row.updated_at})))});
+     const rows=(await env.DB.prepare('SELECT * FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM arc_team_rooms WHERE session_id=arc_chat_sessions.id) ORDER BY updated_at DESC LIMIT 100').bind(user.id).all<ArcSession&{automation_id:string|null}>()).results;
+    return json({sessions:await Promise.all(rows.map(async row=>({id:row.id,title:await unseal<string>(env,row.title_ciphertext,arcContext(user.id,row.id)),modelId:row.model_id,updatedAt:row.updated_at,...(row.automation_id?{automationId:row.automation_id}:{})})))});
    }
    if(request.method==='POST'){
     const input=await body(request),id=crypto.randomUUID(),now=stamp(),model=typeof input.modelId==='string'?input.modelId:'auto';await arcModelAccess(env,user.id,organizationId,model);
@@ -139,6 +140,7 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
   if(!match[2]&&request.method==='GET')return json(await snapshot(env,user.id,sessionId));
   if(match[2]==='history'&&request.method==='GET'){const before=new URL(request.url).searchParams.get('before');if(!before||before.length>200)throw new ArcError('INVALID_HISTORY_CURSOR');return json(await arcChatHistory(env,user.id,sessionId,before));}
   if(!match[2]&&request.method==='DELETE'){
+   if(session.automation_id)throw new ArcError('CHAT_TASK_MANAGEMENT_REQUIRED',409);
    const now=stamp();await env.DB.batch([env.DB.prepare('DELETE FROM arc_attachments WHERE session_id=?1 AND user_id=?2').bind(sessionId,user.id),env.DB.prepare('UPDATE arc_chat_sessions SET deleted_at=?1 WHERE id=?2 AND user_id=?3').bind(now,sessionId,user.id),env.DB.prepare("UPDATE arc_chat_runs SET cancel_requested=1,status='cancelled',updated_at=?1 WHERE session_id=?2 AND user_id=?3 AND status IN ('queued','thinking','working')").bind(now,sessionId,user.id)]);return json({deleted:true});
   }
   if(match[2]==='cancel'&&request.method==='POST'){

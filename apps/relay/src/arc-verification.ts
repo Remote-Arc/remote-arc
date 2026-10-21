@@ -34,7 +34,7 @@ export function arcVerificationToolError(scope:ArcVerification|undefined,tool:st
  const input=object(args),call=object(input.arguments);
  let allowed=['read_skill','list_skills'].includes(tool);
  if(tool==='describe_app')allowed=(scope.kind==='inbox'?['gmail','outlook']:scope.kind==='github_issue'?['github']:['vercel']).includes(String(input.provider));
- if(scope.kind==='inbox'&&tool==='read_inbox')allowed=input.connectionId===scope.connectionId&&(input.limit??5)===scope.limit&&(input.query??'')===(scope.query??'');
+ if(scope.kind==='inbox'&&tool==='read_inbox')allowed=input.connectionId===scope.connectionId&&(input.limit??5)===scope.limit&&(input.query??'')===(scope.query??'')&&input.pageToken===undefined;
  if(tool==='call_app'&&input.connectionId===scope.connectionId){
   if(scope.kind==='github_issue'){
    if(input.operation==='issues.create')allowed=same(call,{repo:scope.repo,title:scope.title,body:scope.body})||Object.keys(call).length===3&&call.repo===scope.repo&&call.title===scope.title&&call.body===scope.body;

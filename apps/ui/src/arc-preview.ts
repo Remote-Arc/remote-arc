@@ -1,3 +1,4 @@
+import type {ArcWork} from './arc-task-card.js';
 import type {ArcAppConnectionRequest} from '@remotearc/protocol';
 import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
 const PREVIEW_SKILLS=COMMUNITY_SKILLS;
@@ -10,7 +11,7 @@ const json = (value:unknown,status=200) => Response.json(value,{status,headers:{
 const makeRun = ():ChatRun => ({id:crypto.randomUUID(),status:"queued",step:0,tokensUsed:0,maxTokens:24000,maxSteps:8,deadline:new Date(Date.now()+180000).toISOString(),error:null});
 
 /** Per-tab UI simulation. Never calls a model, Apps, devices, storage or production API. */
-export function createArcPreview(references:{attachments?:Map<string,{meta:ArcAttachment}>;apps?:NonNullable<ChatMessage['apps']>;employees?:NonNullable<ChatMessage['teammates']>}={}) {
+export function createArcPreview(references:{work?:ArcWork[];attachments?:Map<string,{meta:ArcAttachment}>;apps?:NonNullable<ChatMessage['apps']>;employees?:NonNullable<ChatMessage['teammates']>}={}) {
   let memoryEnabled=true;const connectedApps=new Set(references.apps?.map(app=>app.provider)||[]);
   const memories=new Map<string,{id:string;kind:'fact'|'work';category:string;content:string;source_session_id:string|null;updated_at:string}>([['example-preference',{id:'example-preference',kind:'fact',category:'preference',content:'Keep release summaries concise and link the relevant pull requests.',source_session_id:'sample-conversation',updated_at:new Date().toISOString()}]]);
   const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string;owner?:string;requires?:string[];revision?:string;license?:string;resourceCount?:number;version?:string;category?:string;keywords?:string[]}>(PREVIEW_SKILLS.map(({resources,...skill})=>[skill.id,{...skill,resourceCount:resources.length}]));
@@ -24,6 +25,7 @@ export function createArcPreview(references:{attachments?:Map<string,{meta:ArcAt
     ],runs:[{...makeRun(),status:"succeeded",step:3}],reads:0,requests:new Map(),
   };
   sessions.set(example.session.id, example);
+  for(const work of references.work||[])if(work.conversationId)sessions.set(work.conversationId,{session:{id:work.conversationId,title:work.name,modelId:'auto',updatedAt:new Date().toISOString(),automationId:work.id},messages:work.latestRun?[{id:work.id+':user',run_id:work.latestRun.id,role:'user',text:'Run the saved briefing using connected sources.'},{id:work.id+':answer',run_id:work.latestRun.id,role:'assistant',text:'**Simulated partial result.** Email excerpts were read; calendar coverage is incomplete. Review the sources before resuming. No real account was accessed.'}]:[],runs:work.latestRun?[{...makeRun(),id:work.latestRun.id,status:work.latestRun.status,error:work.latestRun.error}]:[],reads:0,requests:new Map()});
   function snapshot(record:PreviewSession) {
     const run=record.runs[0];
     if(run&&["queued","thinking","working"].includes(run.status)) {
@@ -39,7 +41,7 @@ export function createArcPreview(references:{attachments?:Map<string,{meta:ArcAt
         else record.messages.push({id:run.id+":assistant",run_id:run.id,role:"assistant",text:zh?"**这是交互预览，回复和工具结果均为模拟。**\n\n真实 Arc 会根据你的目标选择应用与电脑，保存任务状态，并返回可以核对的执行结果。你可以继续查看任务和活动页面。\n\n本次没有调用大模型、执行工具或产生费用。":"**This is an interactive preview. Responses and tool results are simulated.**\n\nIn live Arc, your goal guides app and computer selection, saved work and verifiable results. You can explore Tasks and Activity from the sidebar.\n\nNo model was called, no tools were run and no charges were made."});
       }
     }
-    return {appConnections:record.appConnections||[],session:record.session,messages:record.messages,runs:record.runs};
+    return {work:references.work?.filter(work=>work.originSessionId===record.session.id||work.conversationId===record.session.id)||[],appConnections:record.appConnections||[],session:record.session,messages:record.messages,runs:record.runs};
   }
   return {handle(path:string,method:string,rawBody:unknown):Response|null {
     if(path.startsWith('/api/arc/app-connections/')){

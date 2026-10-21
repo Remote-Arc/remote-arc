@@ -4,13 +4,14 @@ import type {ArcAppConnectionRequest} from '@remotearc/protocol';
 import type {ArcDelegationProgress} from '@remotearc/protocol';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {ArcVerification,ArcReceipt,ArcEmployeeDraft} from '@remotearc/protocol';
+import type {ArcWork} from './arc-task-card.js';
 
-export type ChatSession={id:string;title:string;modelId:string;updatedAt:string};
+export type ChatSession={id:string;title:string;modelId:string;updatedAt:string;automationId?:string};
 export type ChatMessage={id:string;attachments?:ArcAttachment[];location?:ArcLocation;teammates?:{id:string;name:string;responsibility:string;avatar:ArcEmployeeAvatar}[];run_id?:string|null;role:'user'|'assistant'|'tool';text:string;skills?:{id:string;name:string}[];apps?:{id:string;name:string;provider:string}[];tool?:string;arguments?:unknown;result?:unknown;status?:string;verification?:ArcVerification};
 export type ChatRun={id:string;status:string;step:number;tokensUsed:number;maxTokens:number;maxSteps:number;deadline:string;error:string|null;receipt?:ArcReceipt};
 export type ArcAccess={status:'eligible'|'active'|'expired'|'paid';canUse:boolean;funded?:boolean;trialDays?:number;trialCredits?:number;creditsAvailable?:number|null;creditsPending?:number|null;daysRemaining:number;dailyUsedPercent:number;expiresAt:string|null};
 export type ChatService={enabled:boolean;access:ArcAccess;models:{id:string;label:string;provider:string;premium:boolean;configured:boolean;requiresPaid?:boolean;inputCreditsPer1000?:number;outputCreditsPer1000?:number}[];limits:{maxSteps:number;maxTokens:number;maxSeconds:number};preview?:boolean};
-type Snapshot={hasMore?:boolean;before?:string|null;historyLoaded?:boolean;delegations?:ArcDelegationProgress[];appConnections?:ArcAppConnectionRequest[];employeeDrafts?:ArcEmployeeDraft[];pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
+type Snapshot={work?:ArcWork[];hasMore?:boolean;before?:string|null;historyLoaded?:boolean;delegations?:ArcDelegationProgress[];appConnections?:ArcAppConnectionRequest[];employeeDrafts?:ArcEmployeeDraft[];pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
 export function mergeArcSnapshot(previous:Snapshot|null,incoming:Snapshot):Snapshot{
  if(previous?.session.id!==incoming.session.id||!previous.historyLoaded)return incoming;
  return{...incoming,messages:[...new Map([...previous.messages,...incoming.messages].map(message=>[message.id,message])).values()],runs:[...incoming.runs,...previous.runs.filter(run=>!incoming.runs.some(latest=>latest.id===run.id))],hasMore:previous.hasMore,before:previous.before,historyLoaded:true};

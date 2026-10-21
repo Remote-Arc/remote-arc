@@ -3,7 +3,7 @@ import { arcRequest } from './use-arc-chat.js';
 import { ProductIcon as Icon } from './product-icon.js';
 import './arc-home-brief.css';
 
-type Work = { id: string; name: string; kind: 'task' | 'routine'; status: string };
+type Work = { id: string; name: string; kind: 'task' | 'routine'; status: string;conversationId?:string|null };
 type Run = { id: string; title?: string; status: string; session_id: string; automation_id: string | null };
 type Brief = { work: Work[]; runs: Run[] };
 type Props = {
@@ -48,7 +48,7 @@ export function ArcHomeBrief({ enabled, onlineDevices, totalDevices, tr, onTasks
     </div>
     {(attentionCount > 0 || offline > 0) && <div className="arcHomeAttention">
       <header><Icon name="inbox" size={15}/><strong>{tr('Pick up where you left off', '接着处理这些事')}</strong><span>{attentionCount + (offline ? 1 : 0)}</span></header>
-      {workAttention.slice(0, 3).map(item => <button type="button" key={item.id} onClick={() => onReview(tr(`Review my ${item.kind} "${item.name}" (ID ${item.id}). Read its current status and results before proposing the next step.`, `检查“${item.name}”（ID ${item.id}）的当前状态与结果，再建议下一步。`))}><Icon name={item.kind === 'routine' ? 'routine' : 'tasks'} size={16}/><span><strong>{item.name}</strong><small>{item.status === 'unknown' ? tr('Check the result before repeating this work', '先核实结果，再决定是否重试') : item.status === 'paused' ? tr('Paused · review before continuing', '已暂停 · 检查后再继续') : tr('Needs your attention', '需要关注')}</small></span><Icon name="arrowUpRight" size={14}/></button>)}
+      {workAttention.slice(0, 3).map(item => <button type="button" key={item.id} onClick={() => onReview(tr(`Review my ${item.kind} "${item.name}" (ID ${item.id}). Read its current status and results before proposing the next step.`, `检查“${item.name}”（ID ${item.id}）的当前状态与结果，再建议下一步。`),item.conversationId||undefined)}><Icon name={item.kind === 'routine' ? 'routine' : 'tasks'} size={16}/><span><strong>{item.name}</strong><small>{item.status === 'unknown' ? tr('Check the result before repeating this work', '先核实结果，再决定是否重试') : item.status === 'paused' ? tr('Paused · review before continuing', '已暂停 · 检查后再继续') : tr('Needs your attention', '需要关注')}</small></span><Icon name="arrowUpRight" size={14}/></button>)}
       {runAttention.slice(0, Math.max(0, 3 - workAttention.length)).map(run => <button type="button" key={run.id} onClick={() => onReview(tr('Review the last run and its actual results before continuing.', '先检查上次执行及实际结果，再继续处理。'), run.session_id)}><Icon name="history" size={16}/><span><strong>{run.title || tr('A conversation to revisit', '待继续的对话')}</strong><small>{run.status === 'unknown' ? tr('The last action needs verification', '上次操作的结果需要核实') : tr('Review the last run', '检查上次执行')}</small></span><Icon name="arrowUpRight" size={14}/></button>)}
       {offline > 0 && <button type="button" onClick={onDevices}><Icon name="device" size={16}/><span><strong>{tr(`${offline} computer${offline === 1 ? '' : 's'} offline`, `${offline} 台电脑离线`)}</strong><small>{tr('Computer work needs an available device', '电脑上的工作需要设备在线')}</small></span><Icon name="arrowUpRight" size={14}/></button>}
     </div>}

@@ -49,6 +49,8 @@ export async function createArcWork(env:ArcEnv,run:ArcRun,args:unknown,routine:b
   await env.DB.prepare(`INSERT OR IGNORE INTO automations(id,user_id,name,kind,status,device_id,trigger_json,action_json,goal_json,state_json,interval_seconds,next_run_at,max_runs,run_count,created_at,updated_at) SELECT ?1,?2,?3,'goal_loop','waiting',NULL,?4,'{"steps":[]}',?5,'{}',60,?6,?7,0,?8,?8 WHERE (SELECT COUNT(*) FROM automations WHERE user_id=?2 AND status NOT IN ('completed','cancelled','failed','expired'))<50 AND (?9=0 OR (SELECT COUNT(*) FROM automations WHERE user_id=?2 AND status NOT IN ('completed','cancelled','failed','expired') AND json_extract(goal_json,'$.native_arc.schedule.type') IN ('interval','daily'))<?10)`).bind(id,run.user_id,input.name,JSON.stringify(trigger),JSON.stringify(goal),next,routine?10000:1,now,Number(routine),plan.routines).run();
  const row=await env.DB.prepare('SELECT id FROM automations WHERE id=?1 AND user_id=?2').bind(id,run.user_id).first();
  if(!row)throw new Error('ARC_WORK_LIMIT_REACHED');
+ // A saved task has a conversation immediately, before its first scheduled occurrence.
+ await env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at,automation_id) VALUES(?1,?2,?3,?4,?5,?6,?6,?1)`).bind(id,run.user_id,'personal:'+run.user_id,await seal(env,input.name,arcContext(run.user_id,id)),run.model_id,now).run();
  return{id,name:input.name,kind:routine?'routine':'task',nextRunAt:next,schedule:input.schedule,status:'waiting',conversationId:id};
 }
 export async function manageArcWork(env:ArcEnv,run:ArcRun,args:unknown){
@@ -76,10 +78,14 @@ export async function manageArcWork(env:ArcEnv,run:ArcRun,args:unknown){
  if(!result[0]?.meta.changes)throw new Error('ARC_WORK_CHANGED');
  return{id:row.id,status,nextRunAt:next};
 }
+export async function arcSessionWork(env:ArcEnv,userId:string,sessionId?:string){
+ const rows=(await env.DB.prepare(`SELECT a.*,s.id conversation_id,r.id latest_run_id,r.status latest_run_status,r.error_code latest_run_error,r.created_at latest_run_at FROM automations a LEFT JOIN arc_chat_sessions s ON s.id=a.id AND s.user_id=a.user_id AND s.deleted_at IS NULL LEFT JOIN arc_chat_runs r ON r.id=(SELECT id FROM arc_chat_runs WHERE automation_id=a.id AND user_id=a.user_id ORDER BY created_at DESC,id DESC LIMIT 1) WHERE a.user_id=?1 AND json_extract(a.goal_json,'$.native_arc.version')=1 AND (?2 IS NULL OR a.id=?2 OR json_extract(a.goal_json,'$.native_arc.originSessionId')=?2) ORDER BY a.updated_at DESC LIMIT 100`).bind(userId,sessionId??null).all<AutomationRow&{conversation_id:string|null;latest_run_id:string|null;latest_run_status:string|null;latest_run_error:string|null;latest_run_at:string|null}>()).results;
+ return rows.map(row=>{const native=nativeArcWork(row.goal_json)!;return{id:row.id,name:row.name,status:row.status,kind:native.schedule.type==='once'?'task':'routine',schedule:native.schedule,nextRunAt:row.next_run_at,runCount:row.run_count,error:row.last_error,conversationId:row.conversation_id,originSessionId:native.originSessionId,updatedAt:row.updated_at,latestRun:row.latest_run_id?{id:row.latest_run_id,status:row.latest_run_status,error:row.latest_run_error,createdAt:row.latest_run_at}:null};});
+}
 export async function listArcWork(env:ArcEnv,userId:string){
- const rows=(await env.DB.prepare(`SELECT * FROM automations WHERE user_id=?1 AND json_extract(goal_json,'$.native_arc.version')=1 ORDER BY updated_at DESC LIMIT 100`).bind(userId).all<AutomationRow>()).results;
+ const work=await arcSessionWork(env,userId);
  const runs=(await env.DB.prepare(`SELECT r.id,r.session_id,r.status,r.step,r.tokens_used,r.error_code,r.created_at,r.automation_id,s.title_ciphertext FROM arc_chat_runs r JOIN arc_chat_sessions s ON s.id=r.session_id AND s.user_id=r.user_id AND s.deleted_at IS NULL WHERE r.user_id=?1 AND NOT EXISTS(SELECT 1 FROM arc_team_rooms WHERE session_id=r.session_id) ORDER BY r.created_at DESC LIMIT 100`).bind(userId).all<{id:string;session_id:string;title_ciphertext:string}>()).results;
- return{work:rows.map(row=>({id:row.id,name:row.name,status:row.status,kind:nativeArcWork(row.goal_json)!.schedule.type==='once'?'task':'routine',schedule:nativeArcWork(row.goal_json)!.schedule,nextRunAt:row.next_run_at,runCount:row.run_count,error:row.last_error,conversationId:row.id,updatedAt:row.updated_at})),runs:await Promise.all(runs.map(async({title_ciphertext,...run})=>({...run,title:await unseal<string>(env,title_ciphertext,arcContext(userId,run.session_id))})))};
+ return{work,runs:await Promise.all(runs.map(async({title_ciphertext,...run})=>({...run,title:await unseal<string>(env,title_ciphertext,arcContext(userId,run.session_id))})))};
 }
 type Save=(status:AutomationStatus,next:string|null,error:string|null,done?:boolean)=>Promise<void>;
 /** Uses the existing scheduler lease and run journal. Each cycle has exactly one

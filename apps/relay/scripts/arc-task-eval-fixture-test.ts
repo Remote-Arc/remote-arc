@@ -10,11 +10,11 @@ process.argv.push('--scripted-fixture');
 globalThis.fetch=(async(url,init)=>{
  assert.equal(String(url),'https://api.openai.com/v1/responses');modelCalls++;
  const request=JSON.parse(String(init?.body)),context=JSON.parse(request.input[1].content),connectionId=context.connectionIndex[0].id;
- assert.equal(request.tool_choice.name,'submit_agent_decision');assert.equal(request.parallel_tool_calls,false);assert.equal(request.tools[0].strict,true);
+ assert.equal(request.tool_choice,'required');assert.equal(request.parallel_tool_calls,false);assert(request.tools.every((tool:any)=>tool.strict));assert(request.tools.some((tool:any)=>tool.name==='arc_deliver_answer'));
  assert.match(connectionId,/^[\da-f]{8}-[\da-f-]{27}$/i);
  const observations=context.taskState.completedActions as {tool:string;arguments:any}[];
  if(injectInvalidDecision&&!invalidSent&&context.objective==="Check the latest deployment of my 'web' project and report actual readiness and URL."){
-  invalidSent=true;awaitingRepair=true;return Response.json({id:'synthetic-invalid-response',status:'completed',output:[{type:'function_call',name:'submit_agent_decision',arguments:'{'}],usage:{input_tokens:1000,output_tokens:100}});
+  invalidSent=true;awaitingRepair=true;return Response.json({id:'synthetic-invalid-response',status:'completed',output:[{type:'function_call',name:'arc_call_tool',arguments:'{'}],usage:{input_tokens:1000,output_tokens:100}});
  }
  if(awaitingRepair){assert.equal(context.modelRepair?.code,'MODEL_INVALID_JSON');awaitingRepair=false;}
  const reply=(message:string)=>({decision:'reply',tool:'none',arguments_json:'{}',message});
@@ -86,10 +86,10 @@ globalThis.fetch=(async(url,init)=>{
  else if(!observations.some(o=>o.arguments.operation==='deployments.list'))value=tool('call_app',{connectionId,operation:'deployments.list',arguments:{projectId:context.objective.includes('broken')?'prj_broken':'prj_web',limit:1}});
  else value=reply(context.objective.includes('broken')?'Latest deployment is ERROR: https://broken-example.vercel.app':'Latest deployment is READY: https://web-example.vercel.app');
  if(value.decision==='tool'){
-  if(!request.tools[0].parameters.properties.decision.enum.includes('tool'))console.error('PREMATURE_CLOSING',JSON.stringify({objective:context.objective,remainingSteps:context.remainingSteps,systemBytes:Buffer.byteLength(request.input[0].content),userBytes:Buffer.byteLength(request.input[1].content),actions:observations,deviceIndex:context.deviceIndex}));
-  assert(request.tools[0].parameters.properties.decision.enum.includes('tool'),'Incomplete work must still have a continuation decision');
+  if(!request.tools.some((tool:any)=>tool.name==='arc_call_tool'))console.error('PREMATURE_CLOSING',JSON.stringify({objective:context.objective,remainingSteps:context.remainingSteps,systemBytes:Buffer.byteLength(request.input[0].content),userBytes:Buffer.byteLength(request.input[1].content),actions:observations,deviceIndex:context.deviceIndex}));
+  assert(request.tools.some((tool:any)=>tool.name==='arc_call_tool'),'Incomplete work must still have a continuation decision');
  }
- return Response.json({id:'synthetic-response',status:'completed',output:[{type:'message',phase:'commentary',content:[{type:'output_text',text:'I am checking the requested work.'}]},{type:'function_call',name:'submit_agent_decision',arguments:JSON.stringify(value)}],usage:{input_tokens:expandedPaths?2700:2000,output_tokens:200,input_tokens_details:{cached_tokens:expandedPaths?1500:1000}}});
+ return Response.json({id:'synthetic-response',status:'completed',output:[{type:'message',phase:'commentary',content:[{type:'output_text',text:'I am checking the requested work.'}]},{type:'function_call',name:value.decision==='reply'?'arc_deliver_answer':'arc_call_tool',arguments:JSON.stringify(value.decision==='reply'?{answer:value.message}:value)}],usage:{input_tokens:expandedPaths?2700:2000,output_tokens:200,input_tokens_details:{cached_tokens:expandedPaths?1500:1000}}});
 }) as typeof fetch;
 try{await import('./arc-task-live-eval.js');assert(modelCalls>=(process.argv.includes('--resume-fixture')?8:18));if(injectInvalidDecision){assert(invalidSent);assert.equal(awaitingRepair,false);}console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
 finally{process.argv.splice(process.argv.lastIndexOf('--scripted-fixture'),1);globalThis.fetch=previousFetch;if(previousKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=previousKey;}

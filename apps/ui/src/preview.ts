@@ -213,7 +213,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     ).toUpperCase();
 
     if(url.pathname.startsWith('/api/arc/attachments')){if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);const response=await inputPreview.handle(url,method,init?.body??(input instanceof Request?await input.blob():undefined),init?.headers);if(response)return response;}
-    if((url.pathname.startsWith('/api/arc/sessions')||url.pathname.startsWith('/api/arc/skills')||url.pathname.startsWith('/api/arc/memory'))) {
+    if((url.pathname.startsWith('/api/arc/sessions')||url.pathname.startsWith('/api/arc/skills')||url.pathname.startsWith('/api/arc/memory')||url.pathname.startsWith('/api/arc/app-connections/'))) {
       if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);
       const result=arcPreview.handle(url.pathname,method,init?.body??(input instanceof Request?await input.clone().text():undefined));
       if(result)return result;

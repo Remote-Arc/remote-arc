@@ -114,7 +114,6 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onDisconnect, onChe
   </article>;
 }
 
-type CatalogOperation = AppDefinition["operations"][number];
 type AppPanelTab = "accounts" | "tools";
 
 const appSummaries: Record<string, [string, string]> = {
@@ -168,30 +167,20 @@ function AppTools({ app, connections, busy, onConnect }: {
   const [query, setQuery] = useState("");
   const [selectedName, setSelectedName] = useState("");
   const [permissionFilter,setPermissionFilter]=useState('all');
-  const [copied, setCopied] = useState("");
-  const [copyFailed, setCopyFailed] = useState(false);
   const active = connections.find(connection => connection.status === "active");
   const matching = app.operations.filter(item => (permissionFilter==='all'||item.permission===permissionFilter)&&(item.name + " " + item.description).toLowerCase().includes(query.trim().toLowerCase()));
-  async function copyInstruction(operation: CatalogOperation) {
-    const prompt = `Use Remote Arc Connect (list_apps / call_app) to run ${app.provider}.${operation.name}${active ? ` with connectionId ${active.id}` : ""}. Ask me for any required arguments. Use the connected account permissions to carry out my request. Do not claim success without the provider result.`;
-    try { await navigator.clipboard.writeText(prompt); setCopied(operation.name); setCopyFailed(false); }
-    catch { setCopyFailed(true); }
-  }
   return <div className="appsToolsContent">
-    <p className="appsPanelIntro">{tr("Use these tools in any AI chat connected to Remote Arc.", "在已连接 Remote Arc 的 AI 对话中使用这些工具。")}</p>
+    <p className="appsPanelIntro">{active ? tr("Connected. Just tell Arc or your connected AI what you want to get done.", "已连接。直接告诉 Arc 或已连接的 AI 你想做什么即可。") : tr("Connect your account, then describe what you need in chat.", "连接账号后，直接在对话里说出你的需求即可。")}</p>
     <label className="appsSearchField appsToolsSearch"><ProductIcon name="search" size={17}/><span className="appsSrOnly">{tr("Find a tool", "搜索工具")}</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr("Search tools…", "搜索工具…")} /></label>
     <div className="appsToolFilters" role="group" aria-label={tr('Tool access type','工具读写类型')}>{[['all',tr('All tools','全部工具')],['read',tr('Read','读取')],['write',tr('Write','写入')]].map(([kind,label])=><button type="button" key={kind} aria-pressed={permissionFilter===kind} onClick={()=>setPermissionFilter(kind!)}>{label} · {app.operations.filter(item=>kind==='all'||item.permission===kind).length}</button>)}</div><div className="appsToolsItems">
       {matching.map(item => <section className="appsTool" key={item.name}>
-        <h3><button type="button" className="appsToolTrigger" aria-expanded={selectedName === item.name} aria-controls={"app-operation-" + app.provider + "-" + item.name} onClick={() => { setSelectedName(selectedName === item.name ? "" : item.name); setCopyFailed(false); }}>
-          <span><strong>{item.description || item.name}</strong><code>{item.name}</code><small className="appsToolAccessBadge" data-permission={item.permission}>{item.permission==='write'?tr('Write','写入'):tr('Read','读取')}</small></span><ProductIcon name="chevron" size={17}/>
+        <h3><button type="button" className="appsToolTrigger" aria-expanded={selectedName === item.name} aria-controls={"app-operation-" + app.provider + "-" + item.name} onClick={() => setSelectedName(selectedName === item.name ? "" : item.name)}>
+          <span><strong>{item.description || item.name}</strong><small className="appsToolAccessBadge" data-permission={item.permission}>{item.permission==='write'?tr('Write','写入'):tr('Read','读取')}</small></span><ProductIcon name="chevron" size={17}/>
         </button></h3>
         {selectedName === item.name && <div className="appsToolDetail" id={"app-operation-" + app.provider + "-" + item.name}>
           <span className="appsToolPermission">{item.permission === "write" ? tr("Makes changes", "可进行更改") : tr("Reads data", "读取数据")}</span>
           <p>{item.permission === "write" ? tr("Uses the permissions granted by your connected account.", "使用连接账号已授予的权限。") : tr("Returns data this account has access to.", "返回该账号有权访问的数据。")}</p>
-          {active ? <button type="button" className="appsToolsPrimary" onClick={() => void copyInstruction(item)}><ProductIcon name={copied === item.name ? "check" : "chat"} size={16}/>{copied === item.name ? tr("Instruction copied", "指令已复制") : tr("Copy instruction for AI", "复制给 AI 使用")}</button>
-            : <button type="button" className="appsToolsPrimary" disabled={busy || !app.configured} onClick={onConnect}>{app.configured ? tr("Connect account", "连接账号") : tr("Connection coming soon", "账号连接即将开放")}</button>}
-          {copied === item.name && <p role="status">{tr("Paste it into your connected AI chat. No tool was run here.", "粘贴到已连接的 AI 对话中即可。本页没有执行工具。")}</p>}
-          {copyFailed && <p role="alert">{tr("Could not copy. Allow clipboard access and try again.", "复制失败，请允许剪贴板访问后重试。")}</p>}
+          {!active && <button type="button" className="appsToolsPrimary" disabled={busy || !app.configured} onClick={onConnect}>{app.configured ? tr("Connect account", "连接账号") : tr("Connection coming soon", "账号连接即将开放")}</button>}
         </div>}
       </section>)}
       {!matching.length && <p className="appsToolsEmpty">{tr("No matching tools. Try another keyword.", "没有匹配的工具，试试其他关键词。")}</p>}

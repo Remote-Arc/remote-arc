@@ -19,7 +19,7 @@ async function publicRequest(env:ArcEnv,row:Row):Promise<ArcAppConnectionRequest
  return{id:row.id,sourceRunId:row.source_run_id,provider:row.provider,name:app.name,brand:app.brand,auth:app.auth||'oauth',configured:env.ENABLE_APPS==='1'&&appConfigured(env,row.provider),status:row.status==='pending'&&Date.parse(row.expires_at)<=Date.now()?'expired':row.status,expiresAt:row.expires_at};
 }
 export async function listArcAppConnections(env:ArcEnv,owner:string,sessionId:string){
- const rows=(await env.DB.prepare(`SELECT q.*,r.session_id FROM arc_app_connection_requests q JOIN arc_chat_runs r ON r.id=q.source_run_id WHERE r.session_id=?1 AND q.user_id=?2 ORDER BY q.created_at,q.id LIMIT 50`).bind(sessionId,owner).all<Row>()).results;
+ const rows=(await env.DB.prepare(`SELECT q.*,r.session_id FROM arc_app_connection_requests q JOIN arc_chat_runs r ON r.id=q.source_run_id WHERE r.session_id=?1 AND q.user_id=?2 ORDER BY q.created_at DESC,q.id DESC LIMIT 50`).bind(sessionId,owner).all<Row>()).results;
  return Promise.all(rows.map(row=>publicRequest(env,row)));
 }
 export async function requestArcAppConnection(env:ArcEnv,run:ArcRun,raw:unknown){

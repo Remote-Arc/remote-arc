@@ -85,6 +85,11 @@ https://remotearc.app
 
 ## Commands
 
+Development candidate: [workspace read-only MCP](../../docs/workspace-local-mcp.md)
+adds `remotelink --mcp --safe --mcp-workspace=<absolute-dir>` for selected-directory
+file reads. It requires no pairing and exposes no process or mutation tools.
+This option is not yet in a published package.
+
 Development candidate: [local setup inspection](../../docs/local-setup-inspection.md)
 adds `remotelink setup inspect` to find coding-agent executable candidates without
 running them or reading private sessions/configuration. Versions and integrations

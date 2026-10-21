@@ -61,12 +61,13 @@ export async function listApps(env: AppEnv, userId: string) {
 }
 async function authorize(request: Request, env: AppEnv, userId: string) {
   sameOrigin(request, env);
-  const body = z.object({ provider: providerSchema, permissions: permissionSchema.default(["read", "write"]), settings: connectionSettingsSchema.optional() }).strict().parse(await request.json());
+  const body = z.object({ provider: providerSchema, permissions: permissionSchema.default(["read", "write"]), settings: connectionSettingsSchema.optional(), chatRequestId:z.string().regex(/^app-connect-[a-f0-9]{64}$/).optional() }).strict().parse(await request.json());
+  if(body.chatRequestId)await (await import('./arc-app-connections.js')).chatConnectionReturn(env as import('./arc-chat.js').ArcEnv,userId,body.chatRequestId,body.provider);
   credentials(env, body.provider);
   const context = connectionContext(env, body.provider, body.settings);
   const state = randomToken(); const verifier = newVerifier(); const stateHash = await sha256Hex(state);
   await env.DB.prepare("DELETE FROM app_oauth_states WHERE expires_at<=?1").bind(now()).run();
-  await env.DB.prepare("INSERT INTO app_oauth_states(state_hash,user_id,provider,permissions_json,verifier_ciphertext,expires_at,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7)").bind(stateHash, userId, body.provider, JSON.stringify(body.permissions), await seal(env, { verifier, context }, `app-oauth:${userId}:${stateHash}`), expires(600), now()).run();
+  await env.DB.prepare("INSERT INTO app_oauth_states(state_hash,user_id,provider,permissions_json,verifier_ciphertext,expires_at,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7)").bind(stateHash, userId, body.provider, JSON.stringify(body.permissions), await seal(env, { verifier, context,...(body.chatRequestId?{chatRequestId:body.chatRequestId}:{}) }, `app-oauth:${userId}:${stateHash}`), expires(600), now()).run();
   return response({ authorizationUrl: await authorizationUrl(env, body.provider, body.permissions, state, verifier, context) });
 }
 async function saveConnection(env: AppEnv, userId: string, provider: AppProvider, permissions: AppPermission[], tokens: AppTokens, account: { id: string; label: string }, dailyLimit = 100) {
@@ -104,17 +105,26 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   const stateHash = await sha256Hex(state);
   const row = await env.DB.prepare("DELETE FROM app_oauth_states WHERE state_hash=?1 AND user_id=?2 AND provider=?3 AND expires_at>?4 RETURNING *").bind(stateHash, userId, provider, now()).first<{ permissions_json: string; verifier_ciphertext: string }>();
   if (!row) throw new AppError("invalid_oauth_state");
-  if (query.has("error")) throw new AppError("app_authorization_denied");
+  const payload = await unseal<string | { verifier: string; context: import("./app-catalog.js").AppContext;chatRequestId?:string }>(env, row.verifier_ciphertext, `app-oauth:${userId}:${stateHash}`);
+  const chatRequestId=typeof payload==='string'?undefined:payload.chatRequestId;
+  const chat=chatRequestId?await import('./arc-app-connections.js'):undefined;
+  const destination=chatRequestId?await chat!.arcAppConnectionDestination(env as import('./arc-chat.js').ArcEnv,userId,chatRequestId).catch(()=>((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/dashboard/agent/chat')):undefined;
+  const redirect=(target:string)=>new Response(null,{status:303,headers:{location:target,'cache-control':'no-store'}});
+  const retry=()=>{const target=new URL(destination!);target.searchParams.set('connection','retry');return redirect(target.href);};
+  if(query.has('error')){if(destination)return retry();throw new AppError('app_authorization_denied');}
+  try{
   const code = query.get("code"); if (!code || code.length > 4096) throw new AppError("missing_oauth_code");
-  const payload = await unseal<string | { verifier: string; context: import("./app-catalog.js").AppContext }>(env, row.verifier_ciphertext, `app-oauth:${userId}:${stateHash}`);
   const verifier = typeof payload === "string" ? payload : payload.verifier;
   const context = typeof payload === "string" ? connectionContext(env, provider) : payload.context;
   if(provider==="vercel"){const configuration=query.get("configurationId");if(!configuration||!/^icfg_[A-Za-z0-9_]{1,100}$/.test(configuration))throw new AppError("invalid_vercel_callback");context.vercelConfigurationId=configuration;}
   if (provider === "shopify") await checkShopifyCallback(request, env, context);
   const tokens = await exchangeTokens(env, provider, { code, verifier, context }, fetcher);
   const account = await providerIdentity(provider, tokens, fetcher, env);
-  try{await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);}catch(error){if(error instanceof AppError&&error.code==='app_connection_limit')await revokeProvider(env,provider,tokens,fetcher).catch(()=>undefined);throw error;}
+  let connectionId:string;
+  try{connectionId=await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);}catch(error){if(error instanceof AppError&&error.code==='app_connection_limit')await revokeProvider(env,provider,tokens,fetcher).catch(()=>undefined);throw error;}
+  if(chatRequestId&&destination){await chat!.resumeArcAppConnection(env as import('./arc-chat.js').ArcEnv,userId,chatRequestId,connectionId);return redirect(destination);}
   return new Response(null, { status: 303, headers: { location: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps?connected=" + provider, "cache-control": "no-store" } });
+  }catch(error){if(destination)return retry();throw error;}
 }
 async function accessToken(env: AppEnv, row: Connection, fetcher: typeof fetch): Promise<AppTokens> {
   const tokens = await unseal<AppTokens>(env, row.token_ciphertext!, tokenContext(row));

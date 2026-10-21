@@ -1,5 +1,6 @@
 import type {ArcAttachment,ArcLocation} from '@remotearc/protocol';
 import type {ArcEmployeeAvatar} from '@remotearc/protocol';
+import type {ArcAppConnectionRequest} from '@remotearc/protocol';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {ArcVerification,ArcReceipt,ArcEmployeeDraft} from '@remotearc/protocol';
 
@@ -8,7 +9,7 @@ export type ChatMessage={id:string;attachments?:ArcAttachment[];location?:ArcLoc
 export type ChatRun={id:string;status:string;step:number;tokensUsed:number;maxTokens:number;maxSteps:number;deadline:string;error:string|null;receipt?:ArcReceipt};
 export type ArcAccess={status:'eligible'|'active'|'expired'|'paid';canUse:boolean;funded?:boolean;trialDays?:number;trialCredits?:number;creditsAvailable?:number|null;creditsPending?:number|null;daysRemaining:number;dailyUsedPercent:number;expiresAt:string|null};
 export type ChatService={enabled:boolean;access:ArcAccess;models:{id:string;label:string;provider:string;premium:boolean;configured:boolean;requiresPaid?:boolean;inputCreditsPer1000?:number;outputCreditsPer1000?:number}[];limits:{maxSteps:number;maxTokens:number;maxSeconds:number};preview?:boolean};
-type Snapshot={employeeDrafts?:ArcEmployeeDraft[];pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
+type Snapshot={appConnections?:ArcAppConnectionRequest[];employeeDrafts?:ArcEmployeeDraft[];pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
 const active=(run:ChatRun|undefined)=>Boolean(run&&['queued','thinking','working'].includes(run.status));
 export async function arcRequest<T>(path:string,init?:RequestInit,signal?:AbortSignal):Promise<T>{
  const response=await fetch('/api/arc/'+path,{credentials:'same-origin',...init,signal,headers:{accept:'application/json',...(init?.body?{'content-type':'application/json'}:{}),...init?.headers}});
@@ -34,6 +35,7 @@ export function useArcChat(accountId:string,initialSessionId?:string){
   finally{if(mounted.current&&generation.current===version){setBusy(false);setOpening(false);}}
  },[]);
  const run=current?.runs[0],running=active(run),sessionId=current?.session.id,watching=running||Boolean(current?.pendingDelegations);
+ const refreshCurrent=useCallback(async()=>{const id=selected.current,version=generation.current;if(!id)return;const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(id));if(mounted.current&&generation.current===version&&selected.current===id)setCurrent(value);},[]);
  useEffect(()=>{
   if(!sessionId||!watching)return;const controller=new AbortController();poll.current=controller;const version=generation.current;let timer:ReturnType<typeof setTimeout>;
   const tick=async()=>{
@@ -61,5 +63,5 @@ export function useArcChat(accountId:string,initialSessionId?:string){
  async function cancel(){if(!current||!run||requestLock.current)return;setError('');try{const value=await arcRequest<Snapshot>('sessions/'+current.session.id+'/cancel',{method:'POST',body:JSON.stringify({runId:run.id})});if(selected.current===current.session.id)setCurrent(value);}catch(e){setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}}
  async function remove(id:string){try{await arcRequest('sessions/'+encodeURIComponent(id),{method:'DELETE'});if(selected.current===id)newChat();await refreshSessions();}catch(e){setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}}
   async function startTrial(){if(requestLock.current||!service?.enabled)return;requestLock.current=true;setBusy(true);setError('');const version=generation.current;try{await arcRequest('trial',{method:'POST',body:JSON.stringify({confirm:true})});const value=await arcRequest<ChatService>('status');if(mounted.current&&version===generation.current)setService(value);}catch(e){if(mounted.current&&version===generation.current)setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}finally{requestLock.current=false;if(mounted.current&&version===generation.current)setBusy(false);}}
-  return{service,sessions,current,selectedSessionId,opening,busy,running,run,error,modelId,setModelId,send,open,newChat,cancel,remove,startTrial};
+  return{service,sessions,current,selectedSessionId,opening,busy,running,run,error,modelId,setModelId,send,open,newChat,cancel,remove,startTrial,refreshCurrent};
 }

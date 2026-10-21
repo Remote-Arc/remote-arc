@@ -1,0 +1,34 @@
+{
+  "contract": "remotearc.takeover-research-evidence/v1",
+  "checked_date": "2026-10-22",
+  "source_model_calls": 0,
+  "private_text_persisted": false,
+  "windows": {
+    "installed_codex": "0.163.0-alpha.11",
+    "metadata_files_scanned": 196,
+    "metadata_observable": 196,
+    "skipped_files": 0,
+    "recorded_cli_versions": {"0.162.0-alpha.17.2": 28, "0.163.0-alpha.10.2": 162, "0.163.0-alpha.11": 6},
+    "generated_schema_files": 318,
+    "schema_advertised_methods": ["thread/list", "thread/read", "thread/turns/list", "thread/items/list", "thread/resume"],
+    "method_execution_verified": false
+  },
+  "macos": {
+    "installed_codex": "0.155.0-alpha.16.4",
+    "metadata_files_scanned": 4,
+    "metadata_observable": 4,
+    "skipped_files": 0,
+    "recorded_cli_versions": {"0.147.0-alpha.1.2": 1, "0.147.0-alpha.6.5": 1, "0.148.0-alpha.9": 2},
+    "schema_generation": "passed after owner-authorized cache cleanup",
+    "generated_schema_files": 310,
+    "schema_advertised_methods": ["thread/list", "thread/read", "thread/turns/list", "thread/items/list", "thread/resume"],
+    "native_discovery_and_cli_tests": "passed at source commit 330efdbee08657e7e07db769858b60fa0fc4fd9b",
+    "native_real_smoke": "passed",
+    "native_matched_sessions": 1,
+    "native_binary_sha256": "d4650c6f447e120a88e77ee7d81da5a86d298bf9efd78dbeadc42e6c5d92366d",
+    "method_execution_verified": false
+  },
+  "claude": {"synthetic_fixture_count": 2, "real_installation_qualified": false},
+  "codex": {"synthetic_fixture_count": 2},
+  "unverified": ["complete history reconstruction", "actual worktree association", "target continuation", "external side effects", "WSL path mappings", "cloud task runtime export"]
+}

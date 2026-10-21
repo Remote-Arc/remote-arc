@@ -11,3 +11,4 @@ packages/execution-core/execution/*.json text eol=lf
 /packages/skills/vendor/** text eol=lf
 /packages/skills/builtin/** text eol=lf
 /packages/skills/src/community.generated.ts text eol=lf
+/tests/fixtures/agent-sessions/**/*.jsonl text eol=lf

@@ -30,15 +30,26 @@ function parseJson(v:unknown,u:ModelUsage):unknown {
   if(v&&typeof v==="object"&&!Array.isArray(v))return v;
   throw new ModelProviderError("MODEL_EMPTY_DECISION",false,u);
 }
-function textResponse(p:Record<string,unknown>,u:ModelUsage,decisionTool=false) {
+function arcDecisionTools(schema:Record<string,unknown>){
+  const properties=object(schema.properties),decisions=object(properties.decision).enum,tools=object(properties.tool).enum;
+  const action=Array.isArray(decisions)&&decisions.includes('tool')?[{type:'function',name:'arc_call_tool',description:'Continue the current task by calling one authorized tool. message is only a short public progress label.',strict:true,parameters:{...schema,properties:{...properties,decision:{type:'string',enum:['tool']},tool:{type:'string',enum:Array.isArray(tools)?tools.filter(tool=>tool!=='none'):[]},message:{type:'string',description:'A short public progress label for this tool call.'}}}}]:[];
+  return [...action,{type:'function',name:'arc_deliver_answer',description:'Deliver the complete finished answer directly to the user. There is no later writer. Include actual findings, requested analysis and observed result/source links. Never return a plan or instructions to another writer.',strict:true,parameters:{type:'object',additionalProperties:false,properties:{answer:{type:'string',description:'The entire final answer shown verbatim to the user, in their language and normal Markdown. Write the actual analysis or actual execution result, including requested evidence, URLs and process output. Do not write a short label, a future plan, instructions to summarize, or a JSON decision envelope.'}},required:['answer']}}];
+}
+function textResponse(p:Record<string,unknown>,u:ModelUsage,decisionTools?:string[]) {
   if(p.status!==undefined&&p.status!=="completed")throw new ModelProviderError("MODEL_INCOMPLETE_RESPONSE",false,u);
   const messages=Array.isArray(p.output)?p.output as Array<Record<string,unknown>>:[];
   const content=messages.filter(x=>x.type==="message").flatMap(x=>Array.isArray(x.content)?x.content as Array<Record<string,unknown>>:[]);
   if(content.some(x=>x.type==="refusal"))throw new ModelProviderError("MODEL_REFUSED",false,u);
-  if(decisionTool){
+  if(decisionTools){
     const calls=messages.filter(item=>item.type==='function_call');
-    if(calls.length!==1||calls[0]!.name!=='submit_agent_decision')throw new ModelProviderError('MODEL_INVALID_TOOL_RESPONSE',false,u);
-    return parseJson(calls[0]!.arguments,u);
+    if(calls.length!==1||!decisionTools.includes(String(calls[0]!.name)))throw new ModelProviderError('MODEL_INVALID_TOOL_RESPONSE',false,u);
+    const value=object(parseJson(calls[0]!.arguments,u));
+    if(calls[0]!.name==='arc_deliver_answer'){
+      if(typeof value.answer!=='string'||Object.keys(value).some(key=>key!=='answer'))throw new ModelProviderError('MODEL_INVALID_TOOL_RESPONSE',false,u);
+      return {decision:'reply',tool:'none',arguments_json:'{}',message:value.answer};
+    }
+    if(value.decision!=='tool'||value.tool==='none')throw new ModelProviderError('MODEL_INVALID_TOOL_RESPONSE',false,u);
+    return value;
   }
   const text=typeof p.output_text==="string"?p.output_text:content.filter(x=>x.type==="output_text").map(x=>x.text).join("");
   return parseJson(text,u);
@@ -57,12 +68,13 @@ async function post(fetcher:typeof fetch,url:string,headers:Record<string,string
 export function openAiAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAdapter {
   return async r=>{
     if(!apiKey.trim())throw new ModelProviderError("MODEL_NOT_CONFIGURED");
+    const decisionTools=r.decisionTool?arcDecisionTools(r.schema):undefined;
     const p=await post(fetcher,"https://api.openai.com/v1/responses",{authorization:"Bearer "+apiKey},{
       model:r.definition.model,store:false,max_output_tokens:r.maxOutputTokens,
-      input:[{role:"system",content:r.system+(r.decisionTool?'\nSubmit the next decision through submit_agent_decision exactly once. The function only returns a typed decision; backend authorization and dispatch happen afterward. Do not put the decision in ordinary message text.':'')},{role:"user",content:r.images?.length?[{type:'input_text',text:r.user},...r.images.map(image=>({type:'input_image',image_url:image.dataUrl,detail:'auto'}))]:r.user}],
-      ...(r.decisionTool?{tools:[{type:'function',name:'submit_agent_decision',description:'Submit one next agent decision. This returns data and never executes a tool.',strict:true,parameters:r.schema}],tool_choice:{type:'function',name:'submit_agent_decision'},parallel_tool_calls:false}:{text:{format:{type:"json_schema",name:"remote_arc_agent_decision",strict:true,schema:r.schema}}}),
+      input:[{role:"system",content:r.system+(decisionTools?'\nUse exactly one native function: arc_call_tool continues execution; arc_deliver_answer sends your COMPLETE final answer verbatim to the user. These functions replace manual JSON-envelope output. For arc_deliver_answer, write the actual finished findings/analysis and requested observed links or outputs in answer. Never send a plan, a progress label, instructions for another writer or a JSON envelope. No later model writes the answer. Tool authorization and durable dispatch remain enforced by the backend.':'')},{role:"user",content:r.images?.length?[{type:'input_text',text:r.user},...r.images.map(image=>({type:'input_image',image_url:image.dataUrl,detail:'auto'}))]:r.user}],
+      ...(decisionTools?{tools:decisionTools,tool_choice:'required',parallel_tool_calls:false}:{text:{format:{type:"json_schema",name:"remote_arc_agent_decision",strict:true,schema:r.schema}}}),
     },r.signal);
-    const u=usage(p);if(u.cachedInputTokens+u.cacheWriteTokens>u.inputTokens||u.reasoningTokens>u.outputTokens)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');return {value:textResponse(p,u,Boolean(r.decisionTool)),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
+    const u=usage(p);if(u.cachedInputTokens+u.cacheWriteTokens>u.inputTokens||u.reasoningTokens>u.outputTokens)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');return {value:textResponse(p,u,decisionTools?.map(tool=>tool.name)),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
   };
 }
 export function anthropicAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAdapter {

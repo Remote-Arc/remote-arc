@@ -5,7 +5,7 @@ export type ModelDefinition = {
   inputMicrosPerMillion:number;outputMicrosPerMillion:number;cacheWriteMicrosPerMillion?:number;cacheWrite5mMicrosPerMillion?:number;cachedInputMicrosPerMillion?:number;structuredOutput?:boolean;
   inputNeuronsPerMillion?:number;outputNeuronsPerMillion?:number;freeEligible?:boolean;
 };
-export type ModelRequest = {images?:{dataUrl:string}[];definition:ModelDefinition;system:string;user:string;schema:Record<string,unknown>;maxOutputTokens:number;signal:AbortSignal};
+export type ModelRequest = {decisionTool?:boolean;images?:{dataUrl:string}[];definition:ModelDefinition;system:string;user:string;schema:Record<string,unknown>;maxOutputTokens:number;signal:AbortSignal};
 export type ModelResult = {value:unknown;usage:ModelUsage;providerRequestId:string|null};
 export class ModelProviderError extends Error {
   constructor(readonly code:string,readonly retryable=false,readonly usage?:ModelUsage) {super(code);this.name="ModelProviderError";}
@@ -30,11 +30,16 @@ function parseJson(v:unknown,u:ModelUsage):unknown {
   if(v&&typeof v==="object"&&!Array.isArray(v))return v;
   throw new ModelProviderError("MODEL_EMPTY_DECISION",false,u);
 }
-function textResponse(p:Record<string,unknown>,u:ModelUsage) {
+function textResponse(p:Record<string,unknown>,u:ModelUsage,decisionTool=false) {
   if(p.status!==undefined&&p.status!=="completed")throw new ModelProviderError("MODEL_INCOMPLETE_RESPONSE",false,u);
   const messages=Array.isArray(p.output)?p.output as Array<Record<string,unknown>>:[];
   const content=messages.filter(x=>x.type==="message").flatMap(x=>Array.isArray(x.content)?x.content as Array<Record<string,unknown>>:[]);
   if(content.some(x=>x.type==="refusal"))throw new ModelProviderError("MODEL_REFUSED",false,u);
+  if(decisionTool){
+    const calls=messages.filter(item=>item.type==='function_call');
+    if(calls.length!==1||calls[0]!.name!=='submit_agent_decision')throw new ModelProviderError('MODEL_INVALID_TOOL_RESPONSE',false,u);
+    return parseJson(calls[0]!.arguments,u);
+  }
   const text=typeof p.output_text==="string"?p.output_text:content.filter(x=>x.type==="output_text").map(x=>x.text).join("");
   return parseJson(text,u);
 }
@@ -54,10 +59,10 @@ export function openAiAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAda
     if(!apiKey.trim())throw new ModelProviderError("MODEL_NOT_CONFIGURED");
     const p=await post(fetcher,"https://api.openai.com/v1/responses",{authorization:"Bearer "+apiKey},{
       model:r.definition.model,store:false,max_output_tokens:r.maxOutputTokens,
-      input:[{role:"system",content:r.system},{role:"user",content:r.images?.length?[{type:'input_text',text:r.user},...r.images.map(image=>({type:'input_image',image_url:image.dataUrl,detail:'auto'}))]:r.user}],
-      text:{format:{type:"json_schema",name:"remote_arc_agent_decision",strict:true,schema:r.schema}},
+      input:[{role:"system",content:r.system+(r.decisionTool?'\nSubmit the next decision through submit_agent_decision exactly once. The function only returns a typed decision; backend authorization and dispatch happen afterward. Do not put the decision in ordinary message text.':'')},{role:"user",content:r.images?.length?[{type:'input_text',text:r.user},...r.images.map(image=>({type:'input_image',image_url:image.dataUrl,detail:'auto'}))]:r.user}],
+      ...(r.decisionTool?{tools:[{type:'function',name:'submit_agent_decision',description:'Submit one next agent decision. This returns data and never executes a tool.',strict:true,parameters:r.schema}],tool_choice:{type:'function',name:'submit_agent_decision'},parallel_tool_calls:false}:{text:{format:{type:"json_schema",name:"remote_arc_agent_decision",strict:true,schema:r.schema}}}),
     },r.signal);
-    const u=usage(p);if(u.cachedInputTokens+u.cacheWriteTokens>u.inputTokens||u.reasoningTokens>u.outputTokens)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');return {value:textResponse(p,u),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
+    const u=usage(p);if(u.cachedInputTokens+u.cacheWriteTokens>u.inputTokens||u.reasoningTokens>u.outputTokens)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');return {value:textResponse(p,u,Boolean(r.decisionTool)),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
   };
 }
 export function anthropicAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAdapter {

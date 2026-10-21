@@ -20,6 +20,7 @@ export type ModelGatewayBinding={
   creditWallet?:boolean;
 };
 export type GatewayRequest={
+  decisionTool?:boolean;
   images?:{dataUrl:string}[];context:BillingContext;modelId?:"auto"|string;system:string;user:string;schema:Record<string,unknown>;
   maxOutputTokens:number;timeoutMs?:number;
 };
@@ -86,7 +87,7 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   let knownUsage:ModelUsage|undefined,phase:'provider'|'decision'|'settlement'='provider';
   try{
     const result=await Promise.race([
-      adapter({definition,system:request.system,user:request.user,...(request.images?.length?{images:request.images}:{}),schema:request.schema,maxOutputTokens:request.maxOutputTokens,signal:controller.signal}),
+      adapter({definition,system:request.system,user:request.user,...(request.decisionTool?{decisionTool:true}:{}),...(request.images?.length?{images:request.images}:{}),schema:request.schema,maxOutputTokens:request.maxOutputTokens,signal:controller.signal}),
       new Promise<never>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new ModelProviderError("MODEL_TIMEOUT",true));},timeout);}),
     ]);
     knownUsage=result.usage;

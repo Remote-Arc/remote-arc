@@ -1,5 +1,6 @@
 import {arcConnectAppInput,requestArcAppConnection} from './arc-app-connections.js';
 import {ARC_DIRECT_SYSTEM,ARC_WORKING_CONTEXT_SYSTEM} from './arc-direct-instructions.js';
+import {readableArcAppContent} from './arc-app-content.js';
 import {arcWorkingContext,arcTeammateIndex,readArcContext,arcReadContextInput} from './arc-working-context.js';
 import {prepareCommunitySkillInput,prepareCommunitySkill,readCommunityResource} from './arc-community-skills.js';
 import {arcInputContext} from './arc-attachments.js';
@@ -160,7 +161,12 @@ export async function executeArcTool(env:ArcEnv,run:ArcRun,decision:Decision){
    return{provider:input.provider,operations:ops.map(o=>({name:o.name,description:o.description,permission:o.permission,...(input.operation?{inputSchema:z.toJSONSchema(o.schema),requiredScopes:o.requiredScopes??appScopes(o.provider,[o.permission]),...(o.anyScopes?{anyScopes:o.anyScopes}:{})}:{})}))};
  }
  if(decision.tool==='call_app'){
-   const input=argsSchema.call_app.parse(args),result=await callApp(env,{userId:run.user_id,scope:'apps:read apps:write'},{...input,requestId:`arc-${run.id}-${run.step}`});
+   const input=argsSchema.call_app.parse(args);
+   const connected=await env.DB.prepare("SELECT provider FROM app_connections WHERE id=?1 AND user_id=?2 AND status='active'").bind(input.connectionId,run.user_id).first<{provider:string}>();
+   const operation=APP_OPERATIONS.find(operation=>operation.provider===connected?.provider&&operation.name===input.operation);
+   if(!operation)throw Error('app_operation_not_found');
+   const result=await callApp(env,{userId:run.user_id,scope:operation.permission==='write'?'apps:write':'apps:read'},{...input,requestId:`arc-${run.id}-${run.step}`});
+   if(input.operation==='contents.read'&&result.status==='succeeded')return{...result,result:readableArcAppContent(input.operation,result.result)};
    if(input.operation==='messages.get'&&result.status==='succeeded'&&'result' in result){
     const connection=await env.DB.prepare('SELECT provider FROM app_connections WHERE id=?1 AND user_id=?2').bind(input.connectionId,run.user_id).first<{provider:string}>();
     if(connection&&['gmail','outlook'].includes(connection.provider))return {...result,result:readableEmail(connection.provider,result.result)};
@@ -264,14 +270,15 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
   await arcEmployeeExecution(env,run);
   if(decision.decision==='reply'){
    await appendArcMessage(env,run,'assistant',`${run.step}:reply`,{text:decision.message});
-   const history=await arcMessages(env,run.user_id,run.session_id);
+   const history=await arcMessages(env,run.user_id,run.session_id,run.id);
    const scope=arcRunVerification(history,run.id),receipt=arcReceipt({...run,status:'succeeded'},history);
    if(scope&&receipt.status!=='completed')return finish('failed',receipt.checks.some(c=>c.status==='failed')?'ARC_VERIFICATION_FAILED':'ARC_VERIFICATION_PENDING');
    const objective=history.filter(m=>m.role==='user').at(-1)?.text??'';
    try{if(!await arcEmployeeExecution(env,run))await saveArcWorkMemory(env,run,objective,decision.message);}catch{/* Memory availability must not turn a completed answer into a failed run. */}
    return finish('succeeded');
   }
-  const toolHistory=await arcMessages(env,run.user_id,run.session_id);
+  const recentTools=await arcMessages(env,run.user_id,run.session_id),runTools=await arcMessages(env,run.user_id,run.session_id,run.id);
+  const toolHistory=[...new Map([...recentTools,...runTools].map(message=>[message.id,message])).values()];
   // Enforce this even for an encrypted decision restored after a restart;
   // provider structured output is an extra boundary, not the only boundary.
   if(toolHistory.some(m=>m.run_id===run!.id&&m.tool==='read_inbox'&&['completed','failed'].includes(m.status||''))&&!await arcInboxReadToolAllowed(env,run,decision.tool,JSON.parse(decision.arguments_json)))return finish('failed','ARC_READ_ONLY_SUMMARY');

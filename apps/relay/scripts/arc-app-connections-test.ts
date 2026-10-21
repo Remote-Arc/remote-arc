@@ -52,6 +52,8 @@ try{
  const deniedOrigin=await handleArcChat(request('/api/arc/app-connections/'+card.id,'POST',{action:'cancel'},'owner','https://evil.invalid'),env);assert.equal(deniedOrigin.status,403);
  await json(await api('app-connections/'+card.id,'POST',{action:'resume',connectionId:'foreign'}),409);
  const correction=arcTaskState([],goal.run,APP_PROVIDERS.map(provider=>({provider})));assert.equal(correction.availableActions.length,70);assert(correction.availableActions.some(action=>action.provider==='notion'&&action.operation==='search'));assert.equal(arcTaskState([],goal.run,[]).availableActions.length,0);
+ const executable=arcTaskState([],goal.run,[{provider:'github'}]).availableActions.find(action=>action.operation==='issues.create');
+ assert(executable?.inputSchema);assert((executable.inputSchema as any).required.includes('repo'));assert((executable.inputSchema as any).properties.body,'The connected operation exposes actual executable parameters without another discovery call');
  const completed=await callback({...goal,card},'notion');assert.equal(completed.status,303);assert.equal(new URL(completed.headers.get('location')!).searchParams.get('session'),goal.session);
  assert.equal(wakes,pausedWakes+1,'OAuth completion automatically wakes the same run');assert.equal(row(goal.run).step,pausedStep);assert.equal(row(goal.run).tokens_used,pausedTokens);
  const notionConnection=sql.prepare("SELECT id FROM app_connections WHERE provider='notion' AND user_id='owner'").get()!.id as string;

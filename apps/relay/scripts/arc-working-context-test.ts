@@ -5,6 +5,7 @@ import {seal} from '../src/app-oauth.js';
 import {appScopes} from '../src/app-catalog.js';
 import {employeeToolError} from '../src/arc-team-execution.js';
 import {arcExecutionPrompt} from '../src/arc-chat-runtime.js';
+import {executeArcTool} from '../src/arc-chat-runtime.js';
 
 /** Real encrypted storage, authorization, App gateway and HTTP fixture reads.
  * No assertion here pretends that scripted inference proves model quality. */
@@ -60,6 +61,8 @@ export async function testArcWorkingContext({sql,env}:any){
    assert(result.sources?.some(source=>source.connectionId===vercel&&source.status==='unavailable'),'One unavailable App cannot discard another source');
    assert(!result.sources?.some(source=>source.connectionId===foreign),'Do not scan another owner’s account');
    assert.equal(sql.prepare("SELECT COUNT(*) n FROM app_calls WHERE connection_id=? AND permission='read' AND status='succeeded'").get(github).n,3,'All content reads use the ordinary authorized App gateway');
+   const originalFetch=globalThis.fetch;globalThis.fetch=fetcher;
+   try{const direct=await executeArcTool(fixtureEnv,run,{decision:'tool',tool:'call_app',arguments_json:JSON.stringify({connectionId:github,operation:'contents.read',arguments:{repo:'owner/RemoteArc',path:'README.md'}}),message:'Read actual project text'}) as any;assert.equal(direct.result.encoding,'utf-8');assert(direct.result.content.includes('RA is our shared workspace for agents.'));assert(direct.untrustedData);}finally{globalThis.fetch=originalFetch;}
    assert(!requests.some(request=>request.url.endsWith('/user')),'Use connected credentials directly, without an identity-only detour');
    const count=requests.length;await readArcContext(fixtureEnv,run,{query:'CM',includeApps:false},fetcher);assert.equal(requests.length,count);
    const denied=employeeToolError({scope:{appMode:'none',connectionIds:[],deviceIds:[],deviceTools:[],skillIds:[]}} as any,'read_context',{query:'RA'});assert(denied,'A child cannot use the owner’s project discovery tool');

@@ -7,6 +7,7 @@ export function arcObservation(tool:string|undefined,value:unknown):unknown{
  if(tool==='list_devices'&&Array.isArray(data))return data.slice(0,20).map(({id,name,platform,status,tools,workspace_roots,execution_paused})=>({id,name,platform,status,tools,workspace_roots,execution_paused}));
  if(!data||typeof data!=='object'||Array.isArray(data))return data;
  const result=data as Record<string,any>;
+ if(tool==='call_app'&&result.result?.sourceEncoding==='base64')return{...result,result:{...result.result,content:String(result.result.content).slice(0,12000),excerpted:String(result.result.content).length>12000}};
  if(['ARC_DISCOVERY_REUSED','ARC_ACTION_ALREADY_COMPLETED'].includes(result.code)){
   let observation=result.observation;for(let depth=0;depth<16&&observation&&typeof observation==='object'&&['ARC_DISCOVERY_REUSED','ARC_ACTION_ALREADY_COMPLETED'].includes(observation.code);depth++)observation=observation.observation;
   return {...result,observation};

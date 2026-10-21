@@ -19,6 +19,7 @@ import (
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/journal"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/lease"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/localmcp"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/onboarding"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/takeover"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
@@ -27,6 +28,7 @@ import (
 
 const Help = `Remote Arc Go device agent
 Usage: remotelink [options]
+  setup inspect     Inspect local coding-agent executable locations
   takeover          Discover local Codex/Claude sessions for a project directory
   --go              Select the complete Go runtime (also accepted natively)
   --safe            Hard local read-only cap
@@ -121,12 +123,15 @@ func enabled() bool {
 	return e == nil && c.BackgroundEnabled != nil && *c.BackgroundEnabled
 }
 func Main(ctx context.Context, args []string, version string, input *os.File, output, errorOutput io.Writer) error {
-	// Discovery never pairs, changes policy, acquires execution or calls a model.
-	if len(args) > 1 && args[0] == "--go" && args[1] == "takeover" {
+	// Local inspection never pairs, changes policy or acquires execution.
+	if len(args) > 1 && args[0] == "--go" && (args[1] == "takeover" || args[1] == "setup") {
 		args = args[1:]
 	}
 	if len(args) > 0 && args[0] == "takeover" {
 		return takeover.Run(ctx, args, output)
+	}
+	if len(args) > 0 && args[0] == "setup" {
+		return onboarding.Run(ctx, args, version, output)
 	}
 	o, e := Parse(args)
 	if e != nil {

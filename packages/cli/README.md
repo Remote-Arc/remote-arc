@@ -85,6 +85,11 @@ https://remotearc.app
 
 ## Commands
 
+Development candidate: [local setup inspection](../../docs/local-setup-inspection.md)
+adds `remotelink setup inspect` to find coding-agent executable candidates without
+running them or reading private sessions/configuration. Versions and integrations
+remain unchecked; this command is not yet in a published package.
+
 Development candidate: [local coding-session discovery](../../docs/local-session-discovery.md)
 adds `remotelink takeover --workspace <directory>` to the native Go runtime. It lists
 project-scoped Codex / Claude Code metadata for review. This command is not yet

@@ -1,0 +1,36 @@
+# Agent continuity roadmap alignment
+
+Updated 22 October 2026. The authoritative roadmap is
+[Epic #252](https://github.com/Remote-Arc/remote-arc/issues/252), including its
+ordered child Issues #253–#263. This document does not define a second roadmap.
+AI Teams acceptance is excluded from this work.
+
+[Research #253](https://github.com/Remote-Arc/remote-arc/issues/253) completed in
+[PR #265](https://github.com/Remote-Arc/remote-arc/pull/265). Its
+[compatibility matrix](agent-takeover-compatibility-v1.md) and
+[consent ADR](agent-takeover-consent-adr.md) establish supported interfaces,
+observed versions, platform gaps and separate
+consent for installed-client discovery, session metadata, transcript/workspace
+reads and cloud sync. Agent installation detection must not silently invoke the
+metadata reader. Explicitly invoking `takeover --workspace <directory>` opts
+into this bounded local metadata read; it is not consent to transcript import,
+hooks, configuration edits, inference or cloud upload.
+
+The [local discovery candidate](local-session-discovery.md) is a narrow
+read-only validation example for #253 and partial groundwork for
+[Codex #255](https://github.com/Remote-Arc/remote-arc/issues/255) and
+[Claude #256](https://github.com/Remote-Arc/remote-arc/issues/256). It does not
+complete either adapter Issue or the Local Takeover Beta milestone. It lists
+recorded cwd metadata; actual worktree reconciliation remains separate.
+
+Current evidence: synthetic metadata fixtures for both sources, native Go tests,
+and Windows/macOS real Codex metadata smoke scans (21 and 1 matched sessions
+respectively). The Mac native discovery and CLI tests pass. These are bounded
+metadata checks; complete history, actual worktree association, target
+continuation, WSL mappings and real Claude acceptance remain unqualified.
+
+Use the accepted compatibility/consent contract before widening session access
+or promising agent continuation. Onboarding,
+handoff, checkpoints, Observe, Guard/Isolate, Fleet and cloud feasibility retain
+their separate child Issues and release gates in #252. This candidate does not
+authorize deployment, package publication or paid provider activation.

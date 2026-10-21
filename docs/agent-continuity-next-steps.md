@@ -5,8 +5,11 @@ Updated 22 October 2026. The authoritative roadmap is
 ordered child Issues #253–#263. This document does not define a second roadmap.
 AI Teams acceptance is excluded from this work.
 
-[Research #253](https://github.com/Remote-Arc/remote-arc/issues/253) is the first
-gate: establish supported interfaces, versions, platform gaps and separate
+[Research #253](https://github.com/Remote-Arc/remote-arc/issues/253) completed in
+[PR #265](https://github.com/Remote-Arc/remote-arc/pull/265). Its
+[compatibility matrix](agent-takeover-compatibility-v1.md) and
+[consent ADR](agent-takeover-consent-adr.md) establish supported interfaces,
+observed versions, platform gaps and separate
 consent for installed-client discovery, session metadata, transcript/workspace
 reads and cloud sync. Agent installation detection must not silently invoke the
 metadata reader. Explicitly invoking `takeover --workspace <directory>` opts
@@ -17,17 +20,17 @@ The [local discovery candidate](local-session-discovery.md) is a narrow
 read-only validation example for #253 and partial groundwork for
 [Codex #255](https://github.com/Remote-Arc/remote-arc/issues/255) and
 [Claude #256](https://github.com/Remote-Arc/remote-arc/issues/256). It does not
-complete any of those Issues or the Local Takeover Beta milestone. It lists
+complete either adapter Issue or the Local Takeover Beta milestone. It lists
 recorded cwd metadata; actual worktree reconciliation remains separate.
 
 Current evidence: synthetic metadata fixtures for both sources, native Go tests,
-and a Windows smoke scan finding 21 Codex sessions in the outer project
-directory. The Windows host has no Claude session directory. Provider version
-qualification and real macOS/WSL/Claude acceptance remain open under #253.
+and Windows/macOS real Codex metadata smoke scans (21 and 1 matched sessions
+respectively). The Mac native discovery and CLI tests pass. These are bounded
+metadata checks; complete history, actual worktree association, target
+continuation, WSL mappings and real Claude acceptance remain unqualified.
 
-Review this bounded example and finish #253's compatibility/consent matrix
-before widening session access or promising agent continuation. Onboarding,
+Use the accepted compatibility/consent contract before widening session access
+or promising agent continuation. Onboarding,
 handoff, checkpoints, Observe, Guard/Isolate, Fleet and cloud feasibility retain
-their separate child Issues and release gates in #252. No automatic Issue
-closure, merge, deployment, package publication or paid provider activation is
-part of this candidate.
+their separate child Issues and release gates in #252. This candidate does not
+authorize deployment, package publication or paid provider activation.

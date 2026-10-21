@@ -10,23 +10,23 @@ export type ArcMention={kind:'skill'|'app'|'employee';avatar?:ArcEmployeeAvatar;
 type Tr=(en:string,zh:string)=>string;
 export function skillMentionAt(text:string,caret:number){const match=/(?:^|\s)@([^\s@]{0,60})$/.exec(text.slice(0,caret));return match?{start:caret-match[1]!.length-1,end:caret,query:match[1]!}:null;}
 /** References stay structured. Labels are display data, never pasted instructions or authorization. */
-export function useArcSkillMentions(accountId:string,draft:string,setDraft:(value:string)=>void,editor:RefObject<HTMLTextAreaElement|null>,tr:Tr,initial:ArcMention[]=[]){
+export function useArcSkillMentions(accountId:string,draft:string,setDraft:(value:string)=>void,editor:RefObject<HTMLTextAreaElement|null>,tr:Tr,initial:ArcMention[]=[],resourceRevision=''){
  const [kind,setKind]=useState<'all'|'employee'|'app'|'skill'>('all');
  const id=useId(),[open,setOpen]=useState(false),[items,setItems]=useState<ArcMention[]>([]),[selected,setSelected]=useState<ArcMention[]>(initial),[query,setQuery]=useState(''),[index,setIndex]=useState(0),[loading,setLoading]=useState(false),[error,setError]=useState(false),[retry,setRetry]=useState(0);
  const searchField=useRef<HTMLInputElement>(null);
- const range=useRef<ReturnType<typeof skillMentionAt>>(null),loaded=useRef(false);
+ const range=useRef<ReturnType<typeof skillMentionAt>>(null);
  useEffect(()=>{if(!open)return;const composer=editor.current?.closest<HTMLElement>('.arcChatComposer');if(!composer)return;const position=()=>{const boundary=composer.closest('.arcChatShell')?.querySelector('.arcChatScroll')?.getBoundingClientRect().top||0,space=Math.floor(composer.getBoundingClientRect().top-boundary-10);composer.style.setProperty('--arc-reference-space',Math.max(180,space)+'px');composer.toggleAttribute('data-inline-references',space<180);};position();window.addEventListener('resize',position);window.addEventListener('scroll',position,true);return()=>{window.removeEventListener('resize',position);window.removeEventListener('scroll',position,true);composer.style.removeProperty('--arc-reference-space');composer.removeAttribute('data-inline-references');};},[open,editor]);
- useEffect(()=>{loaded.current=false;setItems([]);setSelected(initial);setOpen(false);},[accountId]);
+ useEffect(()=>{setItems([]);setSelected(initial);setOpen(false);},[accountId]);
  useEffect(()=>{
-  if(!open||loaded.current)return;const controller=new AbortController();setLoading(true);setError(false);
+  if(!open)return;const controller=new AbortController();setLoading(true);setError(false);
   void Promise.allSettled([arcRequest<{skills:Omit<ArcMention,'kind'>[]}>('skills',undefined,controller.signal),fetch('/api/apps',{credentials:'same-origin',signal:controller.signal,headers:{accept:'application/json'}}).then(async response=>{if(!response.ok)throw Error('APPS_UNAVAILABLE');return response.json() as Promise<{apps:{provider:string;name:string}[];connections:{id:string;provider:string;status:string;accountLabel?:string}[]}>;}),arcRequest<{employees:{id:string;name:string;responsibility:string;avatar:ArcEmployeeAvatar;status:string}[]}>('employees',undefined,controller.signal)]).then(([skills,apps,employees])=>{
    if(controller.signal.aborted)return;const next:ArcMention[]=[];
    if(skills.status==='fulfilled')next.push(...skills.value.skills.map(skill=>{const community=communityExperience(skill.id,tr),experience=workflowExperience(skill.id,tr);return{...skill,name:community?.title||experience?.title||skill.name,description:community?.description||experience?.result||skill.description,kind:'skill' as const};}));
    if(apps.status==='fulfilled'){const names=new Map(apps.value.apps.map(app=>[app.provider,app.name]));next.push(...apps.value.connections.filter(connection=>connection.status==='active').map(connection=>({kind:'app' as const,id:connection.id,name:names.get(connection.provider)||connection.provider,description:connection.accountLabel||'',provider:connection.provider})));}
    if(employees.status==='fulfilled')next.push(...employees.value.employees.filter(employee=>employee.status==='active').map(employee=>({kind:'employee' as const,id:employee.id,name:employee.name,description:employee.responsibility,avatar:employee.avatar})));
-   setItems(next);loaded.current=employees.status==='fulfilled'&&skills.status==='fulfilled'&&apps.status==='fulfilled';setError(!loaded.current);
+   setItems(next);setError([employees,skills,apps].some(result=>result.status==='rejected'));
   }).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();
- },[open,accountId,retry]);
+ },[open,accountId,retry,resourceRevision]);
  const key=(item:ArcMention)=>item.kind+':'+item.id;
  const atLimit=(item:ArcMention)=>selected.length>=8||selected.filter(value=>value.kind===item.kind).length>=(item.kind==='app'?5:item.kind==='employee'?8:3);
  const visible=items.filter(item=>(kind==='all'||kind===item.kind)&&!selected.some(value=>key(value)===key(item))&&!atLimit(item)&&[item.name,item.description,item.provider].join(' ').toLowerCase().includes(query.toLowerCase())).slice(0,30);

@@ -1,4 +1,5 @@
 import {reserveBilling,settleBilling,type BillingContext,type BillingUnits} from "./billing-ledger.js";
+import {MODEL_CONTEXT_BYTES} from './model-context.js';
 import {ModelProviderError,openAiAdapter,anthropicAdapter,openRouterAdapter,workersAiAdapter,type WorkersAiBinding,type ModelAdapter,type ModelDefinition,type ModelProvider,type ModelUsage} from "./model-provider-adapters.js";
 
 export const DEFAULT_AUTO_MODEL:ModelDefinition={
@@ -69,7 +70,7 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   if(request.images!==undefined&&(!Array.isArray(request.images)||request.images.length>3||request.images.some(image=>!/^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(image.dataUrl)||image.dataUrl.length>3000000)))throw new ModelProviderError('MODEL_IMAGE_INPUT_INVALID');
   if(request.images?.length&&definition.provider==='workers_ai')throw new ModelProviderError('MODEL_IMAGE_INPUT_UNSUPPORTED');
   const encoded=new TextEncoder().encode(JSON.stringify([request.system,request.user,request.schema]));
-  if(encoded.byteLength>64000)throw new ModelProviderError("MODEL_CONTEXT_TOO_LARGE");
+  if(encoded.byteLength>MODEL_CONTEXT_BYTES)throw new ModelProviderError("MODEL_CONTEXT_TOO_LARGE");
   // Byte-bound input estimate plus template overhead; reserve all permitted output before dispatch.
   const inputBound=encoded.byteLength+8192+(request.images?.length||0)*32768;
   const ceiling={...definition,inputMicrosPerMillion:Math.max(definition.inputMicrosPerMillion,definition.cacheWriteMicrosPerMillion??definition.inputMicrosPerMillion*2,definition.cacheWrite5mMicrosPerMillion??0,definition.cachedInputMicrosPerMillion??0)};

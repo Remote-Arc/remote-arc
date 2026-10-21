@@ -1,5 +1,13 @@
 import {arcPlan,ARC_PLANS} from '@remotearc/protocol';
 import {commercialVersion,activeCommercial,type ArcPlanConfig} from './arc-commercial-config.js';
+/** Replace only untouched bootstrap execution windows. Published administrator
+ * configurations, prices, credits and financial budgets remain authoritative. */
+export function arcExecutionCapacity(plan:ArcPlanConfig,versionId:string):ArcPlanConfig{
+ const legacy={free:[8,24000,180],'arc-plus-v1':[16,48000,600],'arc-pro-v1':[32,96000,1800]}[plan.id]!;
+ if(!['seed:live:'+plan.id,'seed:test:'+plan.id].includes(versionId)||plan.maxSteps!==legacy[0]||plan.maxTokens!==legacy[1]||plan.maxSeconds!==legacy[2])return plan;
+ const capacity={free:[32,128000,900],'arc-plus-v1':[48,192000,1800],'arc-pro-v1':[64,256000,3600]}[plan.id]!;
+ return{...plan,maxSteps:capacity[0]!,maxTokens:capacity[1]!,maxSeconds:capacity[2]!};
+}
 export async function currentArcPlan(binding:D1Database|{DB:D1Database;STRIPE_SECRET_KEY?:string},userId:string,at=new Date().toISOString()){
  const env='DB' in binding?binding:{DB:binding},db=env.DB;
  const rows=(await db.prepare(`SELECT a.plan_id,a.commercial_version_id FROM billing_plan_assignments a JOIN billing_plans p ON p.id=a.plan_id
@@ -7,5 +15,5 @@ export async function currentArcPlan(binding:D1Database|{DB:D1Database;STRIPE_SE
  const selected=[...ARC_PLANS].reverse().find(p=>rows.some(r=>r.plan_id===p.id))??arcPlan('free'),assignment=rows.find(r=>r.plan_id===selected.id);
  const version=selected.id==='free'?await activeCommercial(env,'free'):await commercialVersion(db,assignment?.commercial_version_id||'seed:live:'+selected.id);
  if(version.kind!=='plan')throw new Error('BILLING_CONFIGURATION_INVALID');
- return{...version.config as ArcPlanConfig,commercialVersionId:version.id};
+ return{...arcExecutionCapacity(version.config as ArcPlanConfig,version.id),commercialVersionId:version.id};
 }

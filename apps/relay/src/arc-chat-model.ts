@@ -30,7 +30,9 @@ export async function arcModelAccess(env:ArcModelEnv,userId:string,organizationI
  const access=await requireArcAccess(env,userId);
  const premium=id!==arcAutoId(env);
  if(premium&&!(access.paid&&access.premium))throw new ModelProviderError('PAID_MODEL_REQUIRED');
- if(!premium&&(definition.provider!=='openai'||definition.model!=='gpt-6-luna'))throw new ModelProviderError('ARC_AUTO_CONFIGURATION_INVALID');
+ // Auto is a server-selected, priced allowlist entry. Do not force every
+ // configured workload back onto Luna when a stronger model is selected.
+ if(!premium&&definition.provider!=='openai')throw new ModelProviderError('ARC_AUTO_CONFIGURATION_INVALID');
  return{gateway,definition,premium,access};
 }
 const limit=(value:string|undefined,fallback:number)=>{const n=Number(value??fallback);if(!Number.isSafeInteger(n)||n<1||n>1000000000)throw new ModelProviderError('ARC_BUDGET_CONFIGURATION_INVALID');return n;};

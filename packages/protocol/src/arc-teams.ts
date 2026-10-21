@@ -8,3 +8,4 @@ export type ArcTeamRoom={id:string;kind:'direct'|'team'|'group';name:string;team
 export type ArcTeamEvent={id:string;type:string;employeeId:string|null;teamId:string|null;roomId:string|null;referenceId:string|null;details:Record<string,unknown>;createdAt:string};
 
 export type ArcEmployeeDraft={id:string;sourceRunId:string;profile:ArcEmployeeProfile;status:'pending'|'confirmed'|'cancelled'|'expired';expiresAt:string;employeeId:string|null};
+export type ArcDelegationProgress={id:string;sourceRunId:string;status:'queued'|'working'|'completed'|'failed'|'cancelled'|'paused'|'unknown';updatedAt:string;members:{id:string;employeeId:string;name:string;avatar:ArcEmployeeAvatar;status:'queued'|'working'|'completed'|'failed'|'cancelled'|'unknown';step:number;activity:string;updatedAt:string}[]};

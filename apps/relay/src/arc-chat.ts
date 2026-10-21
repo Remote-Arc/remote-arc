@@ -1,4 +1,6 @@
 import {readCommunityResource} from './arc-community-skills.js';
+import {arcDispatchProgress} from './arc-dispatch-progress.js';
+import {arcChatHistory} from './arc-chat-history.js';
 import {listArcAppConnections,handleArcAppConnection,cancelArcAppConnections} from './arc-app-connections.js';
 import {handleArcAttachments,readArcAttachment,arcLocationSchema} from './arc-attachments.js';
 import type {ArcAttachment,ArcLocation} from '@remotearc/protocol';
@@ -41,7 +43,7 @@ export const publicRun=(run:ArcRun)=>({id:run.id,status:run.status,step:run.step
 async function snapshot(env:ArcEnv,userId:string,sessionId:string){
  const session=await arcSession(env,userId,sessionId);
  const runs=(await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE session_id=?1 AND user_id=?2 ORDER BY created_at DESC LIMIT 20').bind(sessionId,userId).all<ArcRun>()).results;
- const messages=await arcMessages(env,userId,sessionId);
+ const page=await arcChatHistory(env,userId,sessionId),messages=page.messages;
  const appConnections=await listArcAppConnections(env,userId,sessionId);
  // A receipt must not disappear when later turns move its original scope out
  // of the 100-message chat window. Restore that run's own encrypted journal;
@@ -53,7 +55,8 @@ async function snapshot(env:ArcEnv,userId:string,sessionId:string){
  }));
  const pendingDelegations=Boolean(await env.DB.prepare("SELECT d.id FROM arc_dispatches d JOIN arc_chat_runs r ON r.id=d.source_run_id WHERE r.session_id=?1 AND d.user_id=?2 AND d.status IN ('prepared','queued') LIMIT 1").bind(sessionId,userId).first());
  const employeeDrafts=await (await import('./arc-team-drafts.js')).listArcEmployeeDrafts(env,userId,sessionId);
- return{appConnections,employeeDrafts,pendingDelegations,session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
+ const delegations=await arcDispatchProgress(env,userId,sessionId);
+ return{hasMore:page.hasMore,before:page.before,appConnections,employeeDrafts,pendingDelegations,delegations,session:{id:session.id,title:await unseal<string>(env,session.title_ciphertext,arcContext(userId,session.id)),modelId:session.model_id},messages,runs:publicRuns};
 }
 async function body(request:Request){
  if(request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json')throw new ArcError('JSON_REQUIRED',415);
@@ -131,9 +134,10 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
     if(!inserted)throw new ArcError('CHAT_LIMIT_REACHED',429);return json({id},201);
    }
   }
-  const match=path.match(/^\/api\/arc\/sessions\/([\w-]+)(?:\/(messages|cancel))?$/);
+  const match=path.match(/^\/api\/arc\/sessions\/([\w-]+)(?:\/(messages|cancel|history))?$/);
   if(!match)throw new ArcError('not_found',404);const sessionId=match[1]!,session=await arcSession(env,user.id,sessionId);
   if(!match[2]&&request.method==='GET')return json(await snapshot(env,user.id,sessionId));
+  if(match[2]==='history'&&request.method==='GET'){const before=new URL(request.url).searchParams.get('before');if(!before||before.length>200)throw new ArcError('INVALID_HISTORY_CURSOR');return json(await arcChatHistory(env,user.id,sessionId,before));}
   if(!match[2]&&request.method==='DELETE'){
    const now=stamp();await env.DB.batch([env.DB.prepare('DELETE FROM arc_attachments WHERE session_id=?1 AND user_id=?2').bind(sessionId,user.id),env.DB.prepare('UPDATE arc_chat_sessions SET deleted_at=?1 WHERE id=?2 AND user_id=?3').bind(now,sessionId,user.id),env.DB.prepare("UPDATE arc_chat_runs SET cancel_requested=1,status='cancelled',updated_at=?1 WHERE session_id=?2 AND user_id=?3 AND status IN ('queued','thinking','working')").bind(now,sessionId,user.id)]);return json({deleted:true});
   }
@@ -167,7 +171,7 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
     await cancelArcAppConnections(env,user.id,sessionId);
     const id=crypto.randomUUID(),now=stamp();
     await env.DB.batch([
-       env.DB.prepare(`INSERT INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,'queued',?9,?10,?7,?8,?8 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM arc_chat_runs WHERE session_id=?2 AND status IN ('queued','thinking','working')) AND (SELECT COUNT(*) FROM arc_chat_runs r WHERE user_id=?3 AND status IN ('queued','thinking','working') AND NOT EXISTS(SELECT 1 FROM arc_app_connection_requests q WHERE q.source_run_id=r.id AND q.status='pending'))<?11 AND (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?2)<200 AND NOT EXISTS(SELECT 1 FROM json_each(?12) a LEFT JOIN arc_attachments f ON f.id=a.value AND f.user_id=?3 WHERE f.id IS NULL OR f.expires_at<=?8 OR (f.session_id IS NOT NULL AND f.session_id<>?2)) ON CONFLICT(user_id,request_id) DO NOTHING`).bind(id,sessionId,user.id,requestId,hash,model,new Date(Date.now()+limits.maxSeconds*1000).toISOString(),now,limits.maxTokens,limits.maxSteps,limits.concurrentRuns,JSON.stringify(attachmentIds)),
+       env.DB.prepare(`INSERT INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,'queued',?9,?10,?7,?8,?8 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM arc_chat_runs WHERE session_id=?2 AND status IN ('queued','thinking','working')) AND (SELECT COUNT(*) FROM arc_chat_runs r WHERE user_id=?3 AND status IN ('queued','thinking','working') AND NOT EXISTS(SELECT 1 FROM arc_app_connection_requests q WHERE q.source_run_id=r.id AND q.status='pending'))<?11 AND NOT EXISTS(SELECT 1 FROM json_each(?12) a LEFT JOIN arc_attachments f ON f.id=a.value AND f.user_id=?3 WHERE f.id IS NULL OR f.expires_at<=?8 OR (f.session_id IS NOT NULL AND f.session_id<>?2)) ON CONFLICT(user_id,request_id) DO NOTHING`).bind(id,sessionId,user.id,requestId,hash,model,new Date(Date.now()+limits.maxSeconds*1000).toISOString(),now,limits.maxTokens,limits.maxSteps,limits.concurrentRuns,JSON.stringify(attachmentIds)),
      env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,'user',?5,?6 WHERE EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?4)`).bind(id+':user',sessionId,user.id,id,await seal(env,{text,...(attachments.length?{attachments}:{}),...(location?{location}:{}),...(teammates.length?{teammates}:{}),...(apps.length?{apps}:{}),...(skills.length?{skills}:{}),...(verification?{verification}:{})},arcContext(user.id,id+':user')),now),
      env.DB.prepare(`UPDATE arc_chat_sessions SET title_ciphertext=CASE WHEN (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?1 AND role='user')=1 THEN ?2 ELSE title_ciphertext END,model_id=?3,updated_at=?4 WHERE id=?1 AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?5)`).bind(sessionId,await seal(env,text.slice(0,64),arcContext(user.id,sessionId)),model,now,id),
      ...attachmentIds.map(attachmentId=>env.DB.prepare("UPDATE arc_attachments SET session_id=?1,expires_at=?2 WHERE id=?3 AND user_id=?4 AND (session_id IS NULL OR session_id=?1) AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?5)").bind(sessionId,new Date(Date.now()+30*86400000).toISOString(),attachmentId,user.id,id)),

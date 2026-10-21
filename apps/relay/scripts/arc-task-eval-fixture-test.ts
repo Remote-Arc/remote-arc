@@ -19,7 +19,15 @@ globalThis.fetch=(async(url,init)=>{
  const reply=(message:string)=>({decision:'reply',tool:'none',arguments_json:'{}',message});
  const tool=(name:string,args:unknown)=>({decision:'tool',tool:name,arguments_json:JSON.stringify(args),message:'Working'});
  let value;
- if(context.verificationScope){
+ if(context.connectionIndex.some((connection:any)=>connection.provider==='gmail')&&context.connectionIndex.some((connection:any)=>connection.provider==='google_calendar')){
+  if(!observations.some(o=>o.tool==='read_inbox')&&!context.taskState.failedActions.some((o:any)=>o.tool==='read_inbox'))value=tool('read_inbox',context.appReadCapabilities.find((item:any)=>item.tool==='read_inbox').arguments);
+  else if(!observations.some(o=>o.tool==='call_app'&&o.arguments.operation==='events.list'))value=tool('call_app',context.appReadCapabilities.find((item:any)=>item.tool==='call_app').arguments);
+  else{const inbox=context.messages.find((item:any)=>item.tool==='read_inbox'),result=typeof inbox?.result==='string'?JSON.parse(inbox.result):inbox?.result;value=reply(context.taskState.failedActions.some((o:any)=>o.tool==='read_inbox')?'Gmail 暂时无法读取；已核查日历：Atlas launch review，请准备清单：https://calendar.google.com/calendar/event?eid=agenda-review 。':result?.readCount===0?'当前邮件查询没有结果。日历里有 Atlas launch review，请准备清单：https://calendar.google.com/calendar/event?eid=agenda-review 。':'发票 INV-42 到期需核对：https://mail.google.com/mail/#all/invoice-due 。明天有 Atlas launch review，请准备上线清单：https://calendar.google.com/calendar/event?eid=agenda-review 。');}
+ }
+ else if(context.connectionIndex.length===1&&context.connectionIndex[0].provider==='google_calendar'){
+  value=observations.some(o=>o.arguments.operation==='events.list')?reply('Atlas launch review，请准备上线清单：https://calendar.google.com/calendar/event?eid=agenda-review 。'):tool('call_app',context.appReadCapabilities.find((item:any)=>item.tool==='call_app').arguments);
+ }
+ else if(context.verificationScope){
   const scope=context.verificationScope;
   if(!observations.some(o=>o.tool==='read_skill'))value=tool('read_skill',{id:context.skillReferences[0].id});
   else if(scope.kind==='inbox')value=observations.some(o=>o.tool==='read_inbox')?reply('Friday 10:00 project review; invoice INV-42 due Tuesday.'):tool('read_inbox',{connectionId:scope.connectionId,limit:scope.limit});
@@ -28,6 +36,10 @@ globalThis.fetch=(async(url,init)=>{
    else if(!observations.some(o=>o.arguments.operation==='issues.get'))value=tool('call_app',{connectionId:scope.connectionId,operation:'issues.get',arguments:{repo:scope.repo,number:42}});
    else value=reply('Created and read back https://github.com/example/project/issues/42');
   }else value=observations.some(o=>o.arguments.operation==='deployments.get')?reply('Exact deployment is READY: https://web-example.vercel.app'):tool('call_app',{connectionId:scope.connectionId,operation:'deployments.get',arguments:{deploymentId:scope.deploymentId}});
+ }
+ else if(context.connectionIndex[0]?.provider==='github'&&!/create|issue|创建|node verify/i.test(context.objective)){
+  if(!observations.some(o=>o.tool==='read_context'))value=tool('read_context',{query:context.workingContext.userRequests.map((item:any)=>item.text).join(' ').slice(0,500)});
+  else{const observed=context.messages.find((item:any)=>item.tool==='read_context'),result=typeof observed.result==='string'?JSON.parse(observed.result):observed.result,doc=result.sources.flatMap((source:any)=>source.documents||[])[0];assert(doc?.repo&&doc.url&&doc.text);value=reply(doc.repo.split('/').at(-1)+' 的方向应建立在本地执行与共享团队状态上。资料来源：'+doc.url);}
  }
  else if(context.objective.includes('邮件')){
   if(expandedPaths&&!observations.some(o=>o.tool==='list_apps'))value=tool('list_apps',{provider:'gmail'});
@@ -53,7 +65,7 @@ globalThis.fetch=(async(url,init)=>{
   else if(!observations.some(o=>o.arguments.operation==='issues.create'))value=tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/project',title:'Skill release verification',body:'Include verified-smoke-7A in the release evidence.'}});
   else value=observations.some(o=>o.arguments.operation==='issues.get')?reply('Created https://github.com/example/project/issues/43'):tool('call_app',{connectionId,operation:'issues.get',arguments:{repo:'example/project',number:43}});
  }
- else if(context.objective.includes('issue')){
+ else if(context.connectionIndex.some((connection:any)=>connection.provider==='github')){
   if(!observations.some(o=>o.arguments.operation==='issues.create'))value=tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/project',title:'Release checklist',body:'Verify smoke tests'}});
   else value=observations.some(o=>o.arguments.operation==='issues.get')?reply('Created https://github.com/example/project/issues/42'):tool('call_app',{connectionId,operation:'issues.get',arguments:{repo:'example/project',number:42}});
  }

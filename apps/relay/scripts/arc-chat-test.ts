@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
-import {handleArcChat,arcMessages,arcContext,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
+import {handleArcChat,arcMessages,appendArcMessage,arcContext,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
 import {runArcStep,validateArcDecision,executeArcTool,arcToolInputError,arcExecutionPrompt} from '../src/arc-chat-runtime.js';
 import {ARC_MODELS,prepareArcBudget} from '../src/arc-chat-model.js';
 import {nextArcOccurrence,arcScheduleSchema,createArcWork,manageArcWork} from '../src/arc-work.js';
@@ -22,6 +22,8 @@ import {arcMemoryContext,rememberArcFact,saveArcWorkMemory,ARC_MEMORY_LIMITS} fr
 import {fitArcContext,arcObservation} from '../src/arc-chat-context.js';
 import {ModelProviderError} from '../src/model-provider-adapters.js';
 import {readableEmail} from '../src/arc-inbox.js';
+import {arcExecutionCapacity} from '../src/arc-plan.js';
+import {arcPlan} from '@remotearc/protocol';
 import {handleArcAdminBilling} from '../src/arc-admin-billing.js';
 import {testArcVerification} from './arc-verification-test.js';
 import {ARC_VERIFICATION_SKILLS} from '../src/arc-verification-skills.js';
@@ -42,6 +44,11 @@ const tool=(name:string,args:unknown)=>({decision:'tool',tool:name,arguments_jso
 const create=async()=> (await decode(await api('sessions','POST',{}),201)).id as string;
 const send=async(id:string,text:string,requestId=crypto.randomUUID())=>decode(await api('sessions/'+id+'/messages','POST',{text,requestId}),202);
 const row=(id:string)=>sql.prepare('SELECT * FROM arc_chat_runs WHERE id=?').get(id) as ArcRun;
+const bootstrap=arcPlan('free'),capacity=arcExecutionCapacity(bootstrap,'seed:live:free');
+assert(capacity.maxSteps>=32&&capacity.maxTokens>=96000&&capacity.maxSeconds>=600,'Ordinary tasks need room for discovery, execution and verification');
+assert.equal(capacity.monthlyPriceCents,bootstrap.monthlyPriceCents);assert.equal(capacity.monthlyCredits,bootstrap.monthlyCredits);assert.equal(capacity.connectToolCalls,bootstrap.connectToolCalls);
+assert.equal(arcExecutionCapacity(bootstrap,'published-admin-version'),bootstrap,'Explicit administrator execution caps remain authoritative');
+const customized={...bootstrap,maxTokens:10000};assert.equal(arcExecutionCapacity(customized,'seed:live:free'),customized,'Do not overwrite a changed execution policy');
 
 assert.equal((await handleArcChat(new Request(origin+'/api/arc/status'),env)).status,401);
 assert.equal((await decode(await handleArcChat(req('status'),{...env,ARC_CHAT_ENABLED:undefined}))).enabled,false);
@@ -90,7 +97,7 @@ assert.equal(row(gated.run.id).error_code,'ARC_NOT_CONFIGURED');assert.equal(gat
 assert.equal((await handleArcChat(req('sessions','POST',{}),{...env,ARC_CHAT_ENABLED:'0'})).status,503);
 assert.equal((await handleArcChat(req('sessions/'+id+'/messages','POST',{text:'blocked',requestId:crypto.randomUUID()}),{...env,ARC_CHAT_ENABLED:'0'})).status,503);
 assert.equal((await handleArcChat(req('sessions/'+id),{...env,ARC_CHAT_ENABLED:'0'})).status,200,'Existing results remain readable');
-const steps=await send(id,'Bound steps');sql.prepare('UPDATE arc_chat_runs SET step=8 WHERE id=?').run(steps.run.id);await runArcStep(env,steps.run.id);assert.equal(row(steps.run.id).error_code,'ARC_STEP_LIMIT');
+const steps=await send(id,'Bound steps');sql.prepare('UPDATE arc_chat_runs SET step=max_steps WHERE id=?').run(steps.run.id);await runArcStep(env,steps.run.id);assert.equal(row(steps.run.id).error_code,'ARC_STEP_LIMIT');
 const tokens=await send(id,'Bound tokens');sql.prepare('UPDATE arc_chat_runs SET max_tokens=100 WHERE id=?').run(tokens.run.id);await runArcStep(env,tokens.run.id);assert.equal(row(tokens.run.id).error_code,'ARC_TOKEN_LIMIT');
 // One settled malformed model decision can consume an ordinary step to ask
 // for a corrected decision. It cannot replay tools or hide paid usage.
@@ -134,14 +141,23 @@ assert.equal(discussionPrompt.maxOutputTokens,4096,'Substantive discussion has r
 const routinePrompt=arcExecutionPrompt({objective:'Check deployment readiness',messages:[],memory:[],deviceIndex:[]},24000,true)!;
 assert.equal(routinePrompt.maxOutputTokens,2048,'Routine decisions retain smaller financial reservations');
 const largeContext=fitArcContext('Bounded system',{}, {objective:'Keep this exact user objective',messages:Array.from({length:8},()=>({role:'tool',text:'Observed data',result:'资料'.repeat(12000)})),memory:[],deviceIndex:[]},96000);
-assert(largeContext);assert(new TextEncoder().encode('Bounded system'+largeContext.user+'{}').length<=64000,'Large plan allowances cannot bypass the decoded provider context ceiling');assert.equal(JSON.parse(largeContext.user).objective,'Keep this exact user objective');
-assert(new TextEncoder().encode(JSON.stringify(['Bounded system',largeContext.user,{}])).length<=64000,'The separate provider transport ceiling is also enforced');
+assert(largeContext);assert(new TextEncoder().encode('Bounded system'+largeContext.user+'{}').length<=256000,'Large plan allowances cannot bypass the decoded provider context ceiling');assert.equal(JSON.parse(largeContext.user).objective,'Keep this exact user objective');
+const agendaProjection=JSON.stringify(arcObservation('call_app',{status:'succeeded',result:{items:Array.from({length:10},(_,index)=>({id:'event-'+index,summary:'Atlas review '+index,start:{dateTime:'2026-10-22T10:00:00+13:00',timeZone:'Pacific/Auckland'},end:{dateTime:'2026-10-22T11:00:00+13:00'},htmlLink:'https://calendar.google.com/calendar/event?eid='+index,unrelatedMetadata:'x'.repeat(2000)}))}}));
+assert(agendaProjection.includes('Atlas review 9')&&agendaProjection.includes('2026-10-22T10:00:00+13:00')&&agendaProjection.includes('Pacific/Auckland')&&agendaProjection.includes('https://calendar.google.com/'),'Large calendar observations retain event names, times, time zones and source links');
+assert(new TextEncoder().encode(JSON.stringify(['Bounded system',largeContext.user,{}])).length<=256000,'The separate provider transport ceiling is also enforced');
 const processLedger=['select_device','start_process','process_status','process_output'].map(tool=>({tool:tool==='select_device'?tool:'device_tool',arguments:{deviceId:'retained-device',tool,arguments:{process_id:'retained-process'}}}));
 const compactWork=fitArcContext('Continue the authorized verification.',{}, {objective:'Verify the managed process',memory:[],deviceIndex:[{id:'retained-device',tools:['start_process','process_status','process_output','stop_process']}],taskState:{completedActions:processLedger,availableActions:[{description:'Unused catalog '.repeat(4000)}],schemas:[{description:'Old schema '.repeat(4000)}]},messages:[{role:'tool',text:'Current process state',result:{process_id:'retained-process',status:'running'}},{role:'tool',text:'Observed output',result:{process_id:'retained-process',stdout:'verification-marker'}}]},5000);
 assert(compactWork);const retainedWork=JSON.parse(compactWork.user);assert.equal(retainedWork.taskState.completedActions.length,4,'Keep the action ledger before optional catalogs');assert.equal(retainedWork.deviceIndex[0].id,'retained-device','Keep the device needed to continue');assert.match(compactWork.user,/verification-marker/);
 // A normal multi-step task must fit the 24k run allowance. Previously the
 // gateway's extra 8k financial reservation buffer exhausted this run after
 // only a few decisions, despite ample actual token allowance remaining.
+const journalGoal='Keep this exact current goal after its first actions leave the recent chat window.',journalSession=await create(),journalRun=await send(journalSession,journalGoal);
+for(let index=0;index<52;index++){
+ await appendArcMessage(env,row(journalRun.run.id),'tool','journal-'+index,{text:'Observed process check '+index,tool:'device_tool',status:'completed',arguments:{deviceId:'journal-device',tool:index===0?'start_process':'process_status',arguments:{process_id:'journal-process'}},result:{process_id:'journal-process',status:'running'}});
+ await appendArcMessage(env,row(journalRun.run.id),'assistant','journal-intent-'+index,{text:'Checking the existing process.'});
+}
+const journalAdapter=env.MODEL_GATEWAY!.adapters.openai!;env.MODEL_GATEWAY!.adapters.openai=async request=>{const context=JSON.parse(request.user);assert.equal(context.objective,journalGoal);assert.equal(context.taskState.completedActions.length,52);assert(context.taskState.completedActions.some((action:any)=>action.arguments?.tool==='start_process'),'The first completed action survives the recent 100-message window');return journalAdapter(request);};
+try{decisions.push(reply('The original goal and existing process remain in the saved journal.'));await runArcStep(env,journalRun.run.id);assert.equal(row(journalRun.run.id).status,'succeeded');}finally{env.MODEL_GATEWAY!.adapters.openai=journalAdapter;}
 const emailSession=await create(),emailRun=await send(emailSession,'Check the important messages in my connected email account.');
 const defaultAdapter=env.MODEL_GATEWAY!.adapters.openai!;
 let emailReads=0,decisionsInEmail=0;
@@ -175,7 +191,7 @@ globalThis.fetch=(async(url,init)=>{
 }) as typeof fetch;
 let inboxDecisions=0;
 env.MODEL_GATEWAY!.adapters.openai=async request=>{
- const context=JSON.parse(request.user);assert(/untrusted data/.test(request.system));if(inboxDecisions>0)assert.deepEqual((request.schema as any).properties.tool.enum,['none'],'Untrusted inbox content is processed with no executable tool choices');
+ const context=JSON.parse(request.user);assert(/untrusted data/.test(request.system));if(inboxDecisions>0){const choices=(request.schema as any).properties.tool.enum;assert(choices.includes('call_app'),'A mail review can continue with calendar reads');assert(!choices.includes('device_tool'),'Untrusted mail cannot authorize computer execution');assert(context.readOnlyApps);}
  assert(context.connectionIndex.some((connection:any)=>connection.id===inboxConnection),'Exact owned connection ID is available before any discovery');
  inboxDecisions++;
  if(inboxDecisions===1)return {value:tool('read_inbox',{connectionId:inboxConnection,limit:2}),usage:{inputTokens:1000,outputTokens:100,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'fixture-inbox'};
@@ -201,18 +217,18 @@ try{
  await runArcStep(env,inboxRun.run.id);assert.equal(row(inboxRun.run.id).error_code,'ARC_READ_ONLY_SUMMARY');assert.equal(mailGets,2,'A restored unsafe decision cannot escape the inbox read-only workflow');
  assert.equal(readableEmail('gmail',{id:'html',payload:{mimeType:'text/html',body:{data:Buffer.from('<script>doBad()</script><p>Safe text</p>').toString('base64url')}}}).text,'Safe text');
 }finally{globalThis.fetch=inboxFetch;env.MODEL_GATEWAY!.adapters.openai=defaultAdapter;}
-// Repeated discovery reuses observed data, then forces an honest closing
-// answer instead of spending the whole run rediscovering the same account.
-const loopSession=await create(),loopRun=await send(loopSession,'Summarize my connected inbox.');let discoveryCalls=0;
-decisions.push(tool('list_apps',{query:'gmail'}),tool('list_apps',{query:'gmail'}),tool('list_apps',{query:'gmail'}),reply('I found the account but did not read its messages.'));
-for(let step=0;step<4;step++)await runArcStep(env,loopRun.run.id,{executeTool:async()=>{discoveryCalls++;return {connections:[{id:inboxConnection,provider:'gmail',status:'active'}],apps:[]};}});
-assert.equal(discoveryCalls,1);assert.equal(row(loopRun.run.id).status,'succeeded');
+// Repeated discovery reuses observed data; it does not silently switch the
+// entire run to a final-only answer before the task has read its content.
+const loopSession=await create(),loopRun=await send(loopSession,'Summarize my connected inbox.');let discoveryCalls=0,contentReads=0;
+decisions.push(tool('list_apps',{query:'gmail'}),tool('list_apps',{query:'gmail'}),tool('list_apps',{query:'gmail'}),tool('read_inbox',{connectionId:inboxConnection,limit:1}),reply('The project review needs your demo.'));
+for(let step=0;step<5;step++)await runArcStep(env,loopRun.run.id,{executeTool:async(_env,_run,decision)=>{if(decision.tool==='read_inbox'){contentReads++;return{untrustedData:true,readCount:1,messages:[{subject:'Project review',text:'Prepare your demo.'}]};}discoveryCalls++;return {connections:[{id:inboxConnection,provider:'gmail',status:'active'}],apps:[]};}});
+assert.equal(discoveryCalls,1);assert.equal(contentReads,1,'Two cached discovery results cannot force a reply before the content read');assert.equal(row(loopRun.run.id).status,'succeeded');
 const followup=await send(loopSession,'Use that account and continue.');
 let sawRetainedDiscovery=false;env.MODEL_GATEWAY!.adapters.openai=async request=>{sawRetainedDiscovery=JSON.parse(request.user).taskState.knownDiscoveries.some((item:any)=>item.tool==='list_apps');return defaultAdapter(request);};
 try{decisions.push(tool('list_apps',{query:'gmail'}),reply('The previously discovered account is available.'));await runArcStep(env,followup.run.id,{executeTool:async()=>{discoveryCalls++;return {};}});await runArcStep(env,followup.run.id);assert(sawRetainedDiscovery);assert.equal(discoveryCalls,1,'A fresh discovery is reused across turns in the same chat');}finally{env.MODEL_GATEWAY!.adapters.openai=defaultAdapter;}
 assert.equal((await arcMessages(env,'owner',loopSession)).filter(message=>message.id.endsWith(':intent')).length,0,'New runs do not add a redundant assistant paragraph for every tool call');
 const finalStepSession=await create(),finalStep=await send(finalStepSession,'Summarize completed work within the remaining step.');
-sql.prepare('UPDATE arc_chat_runs SET step=7 WHERE id=?').run(finalStep.run.id);
+sql.prepare('UPDATE arc_chat_runs SET step=max_steps-1 WHERE id=?').run(finalStep.run.id);
 let closingSchema:any;env.MODEL_GATEWAY!.adapters.openai=async request=>{closingSchema=request.schema;return defaultAdapter(request);};
 try{decisions.push(reply('The verified results are saved above.'));await runArcStep(env,finalStep.run.id);assert.equal(row(finalStep.run.id).status,'succeeded');assert.deepEqual(closingSchema.properties.tool.enum,['none']);}finally{env.MODEL_GATEWAY!.adapters.openai=defaultAdapter;}
 assert.throws(()=>validateArcDecision({decision:'reply',tool:'call_app',arguments_json:'{}',message:'x'}));assert.throws(()=>validateArcDecision({...reply('x'),arguments_json:'[]'}));
@@ -403,6 +419,8 @@ assert.equal((await api('sessions/'+appMentionSession+'/messages','POST',{text:'
 console.log('Arc Chat: authenticated encrypted conversations, funded inference, direct Apps execution, quotas, idempotency, cancellation, durable tasks and DST schedules passed.');
 
 // Existing administrator caps are never silently raised by a chat request.
+const qualityAuto=await prepareArcBudget({...env,ARC_AUTO_MODEL_ID:'gpt-6.1-sol'},'owner','personal:owner',id,'auto');
+assert.equal(qualityAuto.definition.model,'gpt-6.1-sol');assert.equal(qualityAuto.premium,false,'A stronger server-selected Auto model is usable without a client-supplied key');
 await assert.rejects(()=>prepareArcBudget(env,'owner','personal:owner',id,'gpt-6.1-sol'),/PAID_MODEL_REQUIRED/,'Trial users cannot obtain a premium grant');
 const premium=await prepareArcBudget(env,'owner','personal:owner',id,'auto');
 sql.prepare(`UPDATE billing_model_grants SET max_cost_micros=10000+COALESCE((SELECT SUM(CASE WHEN status IN ('completed','failed','settling') THEN json_extract(settlement_json,'$.actual.costMicros') ELSE json_extract(request_json,'$.maximum.costMicros') END) FROM billing_reservations WHERE authorization_id=billing_model_grants.id),0) WHERE id=?`).run(premium.gateway.paidGrantId!);

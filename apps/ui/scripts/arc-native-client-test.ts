@@ -7,7 +7,7 @@ import {useArcChat} from '../src/use-arc-chat.js';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;
 const originalFetch=globalThis.fetch;
-let active=false,completed=false,firstLost=true,deleted=false,runCount=0;
+let active=false,completed=false,firstLost=true,deleted=false,runCount=0,historyEnabled=false;
 const ids:string[]=[], methods:string[]=[], messages:any[]=[], submitted:any[]=[];
 const session={id:'conversation-1',title:'Inspect my apps',modelId:'auto',updatedAt:new Date().toISOString()};
 let run:any;
@@ -22,8 +22,9 @@ globalThis.fetch=(async(input,init)=>{
   if(path==='sessions'&&method==='POST')return Response.json({id:session.id},{status:201});
   if(path===`sessions/${session.id}/messages`){const body=JSON.parse(String(init?.body));assert.equal(body.modelId,'auto');assert.equal('apiKey' in body,false);ids.push(body.requestId);if(!run||run.requestId!==body.requestId){run={id:'run-'+(++runCount),requestId:body.requestId,status:'queued',step:0,tokensUsed:0,maxTokens:24000,maxSteps:8,deadline:new Date(Date.now()+180000).toISOString(),error:null};messages.push({id:'user-'+runCount,role:'user',text:body.text});}if(firstLost){firstLost=false;return Response.json({error:'TEMPORARY_NETWORK_FAILURE'},{status:503});}return Response.json({run},{status:202});}
   if(path===`sessions/${session.id}/cancel`){assert.equal(JSON.parse(String(init?.body)).runId,run.id);run={...run,status:'cancelled'};return Response.json({session,messages,runs:[run]});}
+  if(path===`sessions/${session.id}/history?before=`+encodeURIComponent(messages[0]?.id))return Response.json({messages:[{id:'older-project-context',role:'user',text:'Our original project is Cedar Mesh.'}],hasMore:false,before:'older-project-context'});
   if(path===`sessions/${session.id}`&&method==='DELETE'){deleted=true;return Response.json({ok:true});}
-  if(path===`sessions/${session.id}`){if(completed&&run?.status==='queued'){run={...run,status:'succeeded',step:2,tokensUsed:640};messages.push({id:'reply-'+runCount,role:'assistant',text:'Connected apps inspected.'});}return Response.json({session,messages,runs:run?[run]:[]});}
+  if(path===`sessions/${session.id}`){if(completed&&run?.status==='queued'){run={...run,status:'succeeded',step:2,tokensUsed:640};messages.push({id:'reply-'+runCount,role:'assistant',text:'Connected apps inspected.'});}return Response.json({session,messages,runs:run?[run]:[],hasMore:historyEnabled,before:messages[0]?.id});}
   throw Error('Unexpected request '+method+' '+path);
 }) as typeof fetch;
 let root:any;
@@ -40,6 +41,9 @@ try {
   firstLost=true;const extras={attachmentIds:['owned-file-1'],location:{label:'Auckland',latitude:-36.8485,longitude:174.7633}};
   await act(async()=>{sent=await current.send('Read my file',[],undefined,[],[],extras);});assert.equal(sent,false);
   await act(async()=>{sent=await current.send('Read my file',[],undefined,[],[],extras);});assert.equal(sent,true);assert.equal(submitted[0].requestId,submitted[1].requestId);assert.deepEqual(submitted[1].attachmentIds,extras.attachmentIds);assert.deepEqual(submitted[1].location,extras.location);assert(!('files' in submitted[1]),'The message sends owned attachment IDs, not raw files');await act(async()=>{await current.cancel();});
+  historyEnabled=true;await act(async()=>{await current.refreshCurrent();});assert.equal(current.current?.hasMore,true);
+  await act(async()=>{assert(await current.loadEarlier());});assert.equal(current.current?.messages[0]?.text,'Our original project is Cedar Mesh.');assert.equal(current.current?.hasMore,false);
+  run={...run,status:'succeeded',step:8};await act(async()=>{await current.refreshCurrent();});assert.equal(current.run?.status,'succeeded','A history merge must not restore a stale run state');assert.equal(current.current?.messages[0]?.id,'older-project-context','Polling preserves loaded history');assert.equal(current.current?.hasMore,false);
   await act(async()=>{await current.remove(session.id);});assert.equal(current.current,null);assert.equal(current.sessions.length,0);
   assert.ok(methods.includes('POST trial'));
   console.log('PASS: native Chat activation, send, lost-response retry, completion polling, usage refresh, cancellation and history deletion');

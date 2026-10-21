@@ -33,7 +33,7 @@ export async function reviewCreatedAction(env:AppEnv,userId:string,connectionId:
 }
 export async function dispatchHeaders(env:AppEnv,provider:AppProvider,operation:string,args:any,tokens:AppTokens,fetcher:typeof fetch){
  const headers=providerHeaders(provider,tokens,env);
- if(provider==="facebook"&&operation==="posts.create"){
+ if(provider==="facebook"&&['posts.create','posts.update','posts.delete','comments.create'].includes(operation)){
   const root="https://graph.facebook.com/"+tokens.context?.graphVersion;
   const page=await providerJson(root+"/"+args.pageId+"?fields=id,name,access_token",{headers},fetcher);
   if(page.id!==args.pageId||typeof page.access_token!=="string")throw new AppError("app_resource_not_authorized",403);
@@ -43,11 +43,12 @@ export async function dispatchHeaders(env:AppEnv,provider:AppProvider,operation:
 }
 export function validateAppResult(provider:AppProvider,operation:string,result:any){
  if(provider==="shopify"&&Object.values(result.data||{}).some((r:any)=>r?.userErrors?.length))throw new AppError("app_provider_rejected",400);
- if(provider==="linear"&&operation==="issues.create"&&result.data?.issueCreate?.success===false)throw new AppError("app_provider_rejected",400);
- if(provider==="runway"&&operation==="videos.generate"&&typeof result.id!=="string")throw new AppError("app_invalid_provider_response",502);
+ if(provider==='linear'&&Object.values(result.data||{}).some((value:any)=>value?.success===false))throw new AppError('app_provider_rejected',400);
+ if(provider==='google_ads'&&result.partialFailureError?.code)throw new AppError('app_provider_rejected',400);
+ if(provider==="runway"&&['videos.generate','images.generate','videos.fromImage'].includes(operation)&&typeof result.id!=="string")throw new AppError("app_invalid_provider_response",502);
 }
-export function redactProviderCredentials(value:unknown):unknown{
- if(Array.isArray(value))return value.map(redactProviderCredentials);
- if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value).filter(([key])=>!["access_token","refresh_token","client_secret","api_key","authorization"].includes(key.toLowerCase())).map(([key,item])=>[key,redactProviderCredentials(item)]));
+export function redactProviderCredentials(value:unknown,extraKeys:readonly string[]=[]):unknown{
+ if(Array.isArray(value))return value.map(item=>redactProviderCredentials(item,extraKeys));
+ if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value).filter(([key])=>!["access_token","refresh_token","client_secret","api_key","authorization",...extraKeys].includes(key.toLowerCase())).map(([key,item])=>[key,redactProviderCredentials(item,extraKeys)]));
  return value;
 }

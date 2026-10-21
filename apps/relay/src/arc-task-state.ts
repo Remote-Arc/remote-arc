@@ -13,7 +13,9 @@ export function arcTaskState(history:Observation[],runId:string,connections:Arra
  const known=new Map<string,Observation>();for(const message of history)if(message.status==='completed'&&['list_apps','list_devices','list_skills','read_skill'].includes(message.tool||''))known.set(actionKey(message.tool!,message.arguments),message);
  return {
   knownDiscoveries:[...known.values()].slice(-6).map(message=>({tool:message.tool,arguments:message.arguments,observedAt:message.created_at,observation:arcObservation(message.tool,message.result)})),
-  availableActions:APP_OPERATIONS.filter(operation=>providers.has(operation.provider)).slice(0,70).map(({provider,name,description,permission})=>({provider,operation:name,description,permission})),
+  // Keep the per-turn index compact as Apps grow. Descriptions and exact
+  // schemas are available through list_apps / describe_app when selected.
+  availableActions:APP_OPERATIONS.filter(operation=>providers.has(operation.provider)).slice(0,70).map(({provider,name,permission})=>({provider,operation:name,permission})),
   // Schema discovery and execution outcomes outlive the rolling prose window.
   schemas:history.filter(message=>message.tool==='describe_app'&&message.status==='completed').slice(-3).map(message=>({request:message.arguments,observation:decode(message.result)})),
   completedActions:current.filter(message=>message.status==='completed').slice(-12).map(message=>({tool:message.tool,arguments:message.arguments})),

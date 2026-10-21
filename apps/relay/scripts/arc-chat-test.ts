@@ -189,6 +189,9 @@ try{
  assert.equal(row(inboxRun.run.id).status,'succeeded');assert.equal(mailLists,1);assert.equal(mailGets,2);assert.equal(inboxDecisions,2);
  const compact=arcObservation('list_apps',await executeArcTool(env,row(inboxRun.run.id),tool('list_apps',{}))) as any;
  assert(JSON.stringify(compact).slice(0,3500).includes(inboxConnection),'Real large catalog cannot hide its connection IDs behind schemas');
+ assert(compact.apps.every((app:any)=>app.readOperationCount+app.writeOperationCount===app.operationCount),'Compact discovery retains read/write counts');
+ const youtubeTools=arcObservation('list_apps',await executeArcTool(env,row(inboxRun.run.id),tool('list_apps',{provider:'youtube'}))) as any;
+ assert(youtubeTools.apps[0].operations.some((operation:any)=>operation.name==='playlists.create'&&operation.permission==='write'),'Selected-App projection retains write permissions');
  const wrongRun={...row(inboxRun.run.id),user_id:'other'};
  await assert.rejects(()=>executeArcTool(env,wrongRun,tool('read_inbox',{connectionId:inboxConnection})),/app_email_connection_required/);
  assert.equal(mailGets,2,'Cross-account IDs cannot cause a provider request');

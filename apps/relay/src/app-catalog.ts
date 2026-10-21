@@ -1,4 +1,5 @@
 import { z } from "zod";
+import {FOLLOWTHROUGH_OPERATIONS,WRITE_SCOPE_ADDITIONS} from './app-followthrough.js';
 import type {PlatformLaunchEnv} from './platform-launch.js';
 import { SLACK_SCOPES, SLACK_OPERATIONS } from "./app-slack.js";
 import { EXTRA_PROVIDERS, EXTRA_OPERATIONS, EXTRA_PROVIDER_IDS, APP_CATEGORIES } from "./app-integrations.js";
@@ -38,6 +39,7 @@ export function credentials(env: AppEnv, provider: AppProvider) {
   return { id, secret };
 }
 export const appScopes = (provider: AppProvider, permissions: AppPermission[]) => [...new Set(permissions.flatMap(p => APP_CATALOG[provider].scopes[p]))];
+for(const [provider,scopes] of Object.entries(WRITE_SCOPE_ADDITIONS))APP_CATALOG[provider as AppProvider].scopes.write=[...new Set([...APP_CATALOG[provider as AppProvider].scopes.write,...scopes])];
 
 const text = z.string().min(1).max(4000);
 const id = z.string().min(1).max(512).refine(v => !/[\r\n]/.test(v));
@@ -125,5 +127,11 @@ op('google_calendar','availability.query','Find busy intervals across calendars'
 op('microsoft_calendar','calendars.get','Read calendar details',z.object({id}).strict(),a=>({url:graph+'/calendars/'+encode(a.id),method:'GET'}));
 op('microsoft_calendar','events.accept','Accept a meeting invitation',z.object({id,comment:text.optional(),sendResponse:z.boolean().default(true)}).strict(),a=>({url:graph+'/events/'+encode(a.id)+'/accept',method:'POST',body:{comment:a.comment,sendResponse:a.sendResponse}}),'write');
 op('microsoft_calendar','events.decline','Decline a meeting invitation',z.object({id,comment:text.optional(),sendResponse:z.boolean().default(true)}).strict(),a=>({url:graph+'/events/'+encode(a.id)+'/decline',method:'POST',body:{comment:a.comment,sendResponse:a.sendResponse}}),'write');
-export const APP_OPERATIONS = [...operations, ...SLACK_OPERATIONS, ...EXTRA_OPERATIONS];
+export const APP_OPERATIONS = [...operations, ...SLACK_OPERATIONS, ...EXTRA_OPERATIONS,...FOLLOWTHROUGH_OPERATIONS];
+for(const operation of APP_OPERATIONS){
+ if(operation.provider==='x'&&['posts.create','posts.delete'].includes(operation.name))operation.requiredScopes=['tweet.write'];
+ if(operation.provider==='facebook'&&operation.name==='posts.create')operation.requiredScopes=['pages_manage_posts'];
+ if(operation.provider==='linear'&&operation.name==='issues.create')operation.requiredScopes=['issues:create'];
+ if(operation.provider==='hubspot'&&['contacts.create','contacts.update'].includes(operation.name))operation.requiredScopes=['crm.objects.contacts.write'];
+}
 export function appOperation(provider: AppProvider, name: string) { const value = APP_OPERATIONS.find(o => o.provider === provider && o.name === name); if (!value) throw new AppError("unsupported_app_operation"); return value; }

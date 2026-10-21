@@ -1,4 +1,12 @@
 export function communityExperience(id:string,tr:(en:string,zh:string)=>string){const names:Record<string,[string,string,string,string]>={
+ 'arc-docx':['Word documents','Word 文档制作','Create editable DOCX files and inspect headings, tables and saved content.','制作可编辑的 Word 文档，检查标题、表格及保存内容，并按条件进行视觉验收。'],
+ 'arc-xlsx':['Excel spreadsheets','Excel 表格与公式','Build XLSX workbooks, check source data and formulas, and distinguish cached results from actual recalculation.','制作 Excel 表格，核对数据与公式，明确区分缓存值和实际重算结果。'],
+ 'arc-pptx':['PowerPoint presentations','PowerPoint 演示文稿','Create editable decks from real templates and inspect slide text, geometry and layout.','沿用真实模板制作可编辑演示文稿，检查页面文字、边界及版式。'],
+ 'arc-pdf':['PDF workflows','PDF 提取与整理','Inspect, merge, split and rotate PDFs while checking page order and scan limitations.','提取、合并、拆分与旋转 PDF，核对页序、方向与扫描文档限制。'],
+ 'community-statistical-analysis':['Statistical analysis','统计检验与分析','Choose tests, inspect assumptions and report effect sizes and uncertainty.','选择统计检验、检查前提，并报告效应量与不确定性。'],
+ 'community-scikit-learn':['Machine learning','机器学习建模','Build preprocessing and evaluation pipelines with reproducible data splits.','建立预处理与模型评估流程，使用可复现的数据划分并防止数据泄漏。'],
+ 'community-seaborn':['Statistical visualization','统计图表与探索','Explore distributions, categories and relationships using real data.','基于真实数据探索分布、类别与变量关系，输出可用图表。'],
+ 'community-networkx':['Graph and network analysis','图网络与关系分析','Analyze paths, centrality and communities in actual relationship data.','分析关系数据中的路径、中心性与社群，并核对真实图数据。'],
  'community-frontend-design':['Frontend design','专业界面设计','Anthropic’s interface design skill: visual direction, typography, layout and production code.','Anthropic 的界面设计技能：视觉方向、字体排版、布局与可用代码。'],
  'community-webapp-testing':['Web app testing','网页应用测试','Real Playwright tests with screenshots, browser logs and the bundled server helper.','使用真实 Playwright 测试、截图、浏览器日志和随包服务启动脚本。'],
  'community-playwright':['Browser automation','浏览器操作与自动化','Microsoft’s Playwright CLI skill for navigating pages, interacting with elements and capturing evidence.','Microsoft Playwright CLI 技能：浏览网页、操作元素、截图并保留证据。'],

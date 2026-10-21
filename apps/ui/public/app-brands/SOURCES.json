@@ -79,5 +79,45 @@
     "url": "https://runway.com/assets/Runway-Brand-Guidelines.zip",
     "asset": "Runway_Black_Symbol_SVG.svg",
     "status": 200
+  },
+  {
+    "brand": "dropbox",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/dropbox.svg"
+  },
+  {
+    "brand": "airtable",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/airtable.svg"
+  },
+  {
+    "brand": "googleslides",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googleslides.svg"
+  },
+  {
+    "brand": "asana",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/asana.svg"
+  },
+  {
+    "brand": "onedrive",
+    "status": 200,
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/onedrive_48x1.svg"
+  },
+  {
+    "brand": "microsoftteams",
+    "status": 200,
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/teams_48x1.svg"
+  },
+  {
+    "brand": "microsoftexcel",
+    "status": 200,
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/excel_48x1.svg"
+  },
+  {
+    "brand": "microsofttodo",
+    "status": 200,
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/todo_48x1.svg"
   }
 ]

@@ -11,7 +11,7 @@ const landingCss=readFileSync(path.join(root,"src/arc-future.css"),"utf8");
 const appCss=readFileSync(path.join(root,"src/arc-capabilities.css"),"utf8");
 const directory=JSON.parse(readFileSync(path.join(root,"src/app-directory.json"),"utf8"));
 const expected=[...new Set(directory.apps.map(app=>app.brand))];
-assert.equal(directory.apps.length,29);assert.equal(directory.categories.length,8);
+assert.equal(directory.apps.length,37);assert.equal(directory.categories.length,8);
 for(const key of expected){const p=path.join(root,"public/app-brands",key+".svg");assert.ok(existsSync(p),"missing logo "+key);assert.match(readFileSync(p,"utf8"),/<svg\b[^>]*viewBox=/);}
 assert.match(arc,/<AppsDirectory id="arc-apps"/);
 assert.match(arc,/<AppWorkflowShowcase/);

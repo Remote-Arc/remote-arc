@@ -250,7 +250,7 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
    catch(error){
     // A confirmed, settled malformed or incomplete decision has no tool effect to replay.
     // Consume ordinary steps/request identities for at most two repairs per run.
-    if(!(error instanceof ModelProviderError)||!['MODEL_INVALID_JSON','MODEL_INCOMPLETE_RESPONSE'].includes(error.code)||error.retryable||!error.usage)throw error;
+    if(!(error instanceof ModelProviderError)||!['MODEL_INVALID_JSON','MODEL_INCOMPLETE_RESPONSE','MODEL_DECISION_INVALID','MODEL_INVALID_TOOL_RESPONSE','MODEL_EMPTY_DECISION'].includes(error.code)||error.retryable||!error.usage)throw error;
     const settled=await env.DB.prepare("SELECT status FROM billing_reservations WHERE operation_key=?1 AND user_id=?2 AND run_id=?3").bind(JSON.stringify([run.user_id,runId,`chat:${run.step}`]),run.user_id,runId).first<{status:string}>();
     if(settled?.status!=='failed')throw error;
     const consumed=consumedModelTokens(access.definition.provider,error.usage);

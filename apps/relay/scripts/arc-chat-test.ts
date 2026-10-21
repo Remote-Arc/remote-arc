@@ -139,6 +139,38 @@ try{
  const truncatedCharges=sql.prepare('SELECT status,request_json FROM billing_reservations WHERE run_id=?').all(truncated.run.id) as {status:string;request_json:string}[];assert.equal(truncatedCharges.filter(item=>item.status==='failed').length,2);assert.equal(new Set(truncatedCharges.map(item=>JSON.parse(item.request_json).operationId)).size,5);
  let incompleteAttempts=0;env.MODEL_GATEWAY!.adapters.openai=async()=>{incompleteAttempts++;throw new ModelProviderError('MODEL_INCOMPLETE_RESPONSE',false,badUsage);};const boundedIncomplete=await send(await create(),'Stop after two incomplete-response repairs.');assert.equal(await runArcStep(env,boundedIncomplete.run.id),true);assert.equal(await runArcStep(env,boundedIncomplete.run.id),true);assert.equal(await runArcStep(env,boundedIncomplete.run.id),false);assert.equal(row(boundedIncomplete.run.id).error_code,'MODEL_INCOMPLETE_RESPONSE');assert.equal(incompleteAttempts,3);assert.equal(row(boundedIncomplete.run.id).tokens_used,180);
 }finally{env.MODEL_GATEWAY!.adapters.openai=beforeRepairAdapter;}
+// Exercise the actual native-function decoder and gateway settlement, rather
+// than only throwing synthetic errors from the injected adapter.
+const {openAiAdapter}=await import('../src/model-provider-adapters.js');
+const invalidNativeCalls=[
+ {code:'MODEL_DECISION_INVALID',call:{name:'arc_deliver_answer',arguments:JSON.stringify({answer:'   '})}},
+ {code:'MODEL_DECISION_INVALID',call:{name:'arc_call_tool',arguments:JSON.stringify({...tool('list_devices',{}),arguments_json:'{'})}},
+ {code:'MODEL_INVALID_TOOL_RESPONSE',call:{name:'unrecognized_function',arguments:'{}'}},
+ {code:'MODEL_EMPTY_DECISION',call:{name:'arc_call_tool',arguments:null}},
+];
+try{
+ for(const fixture of invalidNativeCalls){
+  let calls=0,effects=0;
+  env.MODEL_GATEWAY!.adapters.openai=async request=>{
+   calls++;
+   if(calls===2)return openAiAdapter('fixture',async()=>Response.json({status:'completed',usage:{input_tokens:40,output_tokens:20},output:[{type:'function_call',...fixture.call}]}))(request);
+   if(calls===3){const context=JSON.parse(request.user);assert.equal(context.modelRepair.code,fixture.code);assert(context.taskState.completedActions.some((action:any)=>action.arguments?.tool==='write_file'),'Repairs retain completed external effects');}
+   return beforeRepairAdapter(request);
+  };
+  const recovered=await send(await create(),'Save my report, verify the file and give me the result.');
+  decisions.push(tool('device_tool',{deviceId:'fixture-device',tool:'write_file',arguments:{path:'/workspace/report.txt',content:'report'}}),tool('device_tool',{deviceId:'fixture-device',tool:'read_file',arguments:{path:'/workspace/report.txt'}}),reply('The report was saved and verified.'));
+  const dependencies={executeTool:async()=>{effects++;return 'report';}};
+  assert.equal(await runArcStep(env,recovered.run.id,dependencies),true);
+  assert.equal(await runArcStep(env,recovered.run.id,dependencies),true,fixture.code+' is repaired without tool dispatch');assert.equal(effects,1);
+  await runArcStep(env,recovered.run.id,dependencies);await runArcStep(env,recovered.run.id,dependencies);
+  assert.equal(row(recovered.run.id).status,'succeeded');assert.equal(effects,2,'The write is not replayed');assert.equal(row(recovered.run.id).tokens_used,660);
+  assert.equal(sql.prepare("SELECT COUNT(*) n FROM billing_reservations WHERE run_id=? AND status='failed'").get(recovered.run.id)?.n,1,'Invalid decisions still charge their observed usage');
+ }
+ let calls=0;
+ env.MODEL_GATEWAY!.adapters.openai=async request=>{const fixture=invalidNativeCalls[calls++]!;return openAiAdapter('fixture',async()=>Response.json({status:'completed',usage:{input_tokens:40,output_tokens:20},output:[{type:'function_call',...fixture.call}]}))(request);};
+ const bounded=await send(await create(),'Keep malformed native decisions within the existing repair budget.');
+ assert.equal(await runArcStep(env,bounded.run.id),true);assert.equal(await runArcStep(env,bounded.run.id),true);assert.equal(await runArcStep(env,bounded.run.id),false);assert.equal(calls,3,'Different malformed-decision kinds share the same two-repair ceiling');assert.equal(row(bounded.run.id).tokens_used,180);
+}finally{env.MODEL_GATEWAY!.adapters.openai=beforeRepairAdapter;}
 const discussionPrompt=arcExecutionPrompt({objective:'讨论 Remote Arc 的未来方向，详细比较方案与具体建议',messages:[],memory:[],deviceIndex:[]},24000,true)!;
 assert.equal(discussionPrompt.maxOutputTokens,4096,'Substantive discussion has room for a developed answer');
 const routinePrompt=arcExecutionPrompt({objective:'Check deployment readiness',messages:[],memory:[],deviceIndex:[]},24000,true)!;

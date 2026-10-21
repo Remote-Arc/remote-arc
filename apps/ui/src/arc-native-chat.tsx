@@ -29,6 +29,8 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
  const mobileOpen=navigationOpen,setMobileOpen=onNavigationChange;
  const editor=useRef<HTMLTextAreaElement>(null),scrollArea=useRef<HTMLDivElement>(null),drawer=useRef<HTMLDivElement>(null);
  const historyScroll=useRef<{top:number;height:number}|null>(null),followLatest=useRef(true);
+ const draftRevision=useRef(0);
+ useLayoutEffect(()=>{draftRevision.current++;},[draft]);
  const inputs=useArcComposerInputs(accountId,setDraft,tr);
  const [dragging,setDragging]=useState(false);
  const resourceRevision=JSON.stringify([chat.current?.employeeDrafts?.map(item=>[item.employeeId,item.status]),chat.current?.appConnections?.map(item=>[item.id,item.status])]);
@@ -93,7 +95,15 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
   if(/BUSY/.test(code))return tr('A run is already working in this chat. Let it finish or stop it before sending another message.','此对话已有工作正在执行，请等待完成或停止后再发送。');
   return tr('Arc could not complete this request. Your conversation is saved.','Arc 暂时无法完成这次请求，对话已保存。');
  };
- async function submit(event:FormEvent){event.preventDefault();const value=draft.trim()||(inputs.attachmentIds.length?tr('Please review the attached files.','请查看所附文件。'):inputs.location?tr('Please use the attached place for this request.','请结合所附地点处理这次请求。'):'');if(value&&!inputs.blocked&&await chat.send(value,mentions.selected.filter(item=>item.kind==='skill').map(skill=>skill.id),undefined,mentions.selected.filter(item=>item.kind==='app').map(item=>item.id),mentions.selected.filter(item=>item.kind==='employee').map(item=>item.id),{attachmentIds:inputs.attachmentIds,...(inputs.location?{location:inputs.location}:{})})){setDraft(previous=>previous.trim()===value?'':previous);mentions.clear();inputs.clear();}}
+ async function submit(event:FormEvent){
+  event.preventDefault();
+  const value=draft.trim()||(inputs.attachmentIds.length?tr('Please review the attached files.','请查看所附文件。'):inputs.location?tr('Please use the attached place for this request.','请结合所附地点处理这次请求。'):'');
+  const revision=draftRevision.current,references=mentions.selected,attachmentIds=inputs.attachmentIds,place=inputs.location;
+  if(value&&!inputs.blocked&&await chat.send(value,references.filter(item=>item.kind==='skill').map(item=>item.id),undefined,references.filter(item=>item.kind==='app').map(item=>item.id),references.filter(item=>item.kind==='employee').map(item=>item.id),{attachmentIds,...(place?{location:place}:{})})){
+   if(draftRevision.current===revision)setDraft('');
+   mentions.consume(references);inputs.consume(attachmentIds,place);
+  }
+ }
  const onKeyDown=(event:KeyboardEvent<HTMLTextAreaElement>)=>{if(mentions.onKeyDown(event))return;if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();if(!chat.busy&&!chat.running)event.currentTarget.form?.requestSubmit();}};
  const composer=<div className="arcChatBottom"><form className={'arcChatComposer'+(chat.running?' isWorking':'')+(dragging?' isDragging':'')} onDragOver={e=>{if(Array.from(e.dataTransfer.types).includes('Files')){e.preventDefault();setDragging(true);}}} onDragLeave={e=>{if(!(e.relatedTarget instanceof Node)||!e.currentTarget.contains(e.relatedTarget))setDragging(false);}} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();setDragging(false);inputs.addFiles(e.dataTransfer.files);}}} onSubmit={event=>{followLatest.current=true;void submit(event);}}>
   <label className="arcSrOnly" htmlFor="arc-chat-input">{tr('Message Arc','发送消息给 Arc')}</label>

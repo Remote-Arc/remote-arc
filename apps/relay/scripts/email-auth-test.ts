@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { handleEmailCodeRequest, handleEmailCodeVerify } from "../src/email-auth.js";
+import { handleEmailCodeRequest, handleEmailCodeVerify, emailLoginEnabled } from "../src/email-auth.js";
 import { handleLoginPage } from "../src/reviewer.js";
 
 const ORIGIN = "https://mcp.remotearc.app";
@@ -87,6 +87,7 @@ globalThis.fetch = async (_input, init) => {
   return Response.json({ id: "email-sent" });
 };
 try {
+  assert.equal(emailLoginEnabled({...env,RESEND_API_KEY:'   '}),false);
   // Login page still provides Google and reviewer options, but email is feature-gated.
   const login = handleLoginPage(new Request(ORIGIN + "/auth/login"), env);
   const html = await login.text();

@@ -1,5 +1,9 @@
 # Task completion before optimization
 
+## Bounded decision repair
+
+Malformed JSON, truncated output, invalid decision envelopes, incorrect native-function responses and empty decisions share the existing two-repair allowance. A repair requires confirmed model usage and a failed billing settlement before any tool dispatch; it consumes an ordinary step and records all observed tokens. Restarted steps retain the rejection and completed-effect ledger. Cancellation, deadlines and execution/funding caps remain authoritative; uncertain model billing, dispatched tools and unknown external writes cannot enter this repair path. Local integration tests pass native-function fixtures through the actual OpenAI adapter, gateway, durable run and ledger, including a rejected answer or malformed nested arguments after a completed write. These synthetic tests verify recovery contracts, not real-model quality.
+
 The previous runtime could end a normal task after inspecting account metadata. Three mechanisms caused premature final answers: reading an inbox prohibited every subsequent tool, two cached observations anywhere in the run forced final-only inference, and the bootstrap Free window allowed only eight decisions and 24,000 total tokens. The system prompt also included employee and scheduling manuals on every ordinary owner turn. Passing scripted decisions through these paths did not establish that the actual model could choose useful actions.
 
 Owner tasks now receive direct execution instructions; employee and scheduled contexts retain their specific instructions. Connected mail and calendar accounts expose ready-to-use content reads, server time and bounded calendar dates. Account metadata is sufficient to start reading. These capabilities come from the owned connection registry, not from a phrase-matching router.

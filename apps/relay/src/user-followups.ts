@@ -4,6 +4,7 @@ import {FOLLOWUP_TEMPLATES} from '../../../packages/protocol/src/followup-templa
 import {escapeAuthHtml} from './auth-page.js';
 import {renderFollowupEmail} from '../../../packages/protocol/src/followup-email.js';
 import {feedbackRewardAvailable} from './connect-rewards.js';
+import {emailSender} from './email-sender.js';
 
 export type FollowupEnv={DB:D1Database;PUBLIC_ORIGIN:string;APP_ORIGIN?:string;MARKETING_ORIGIN?:string;RESEND_API_KEY?:string;EMAIL_FROM?:string;FOLLOWUP_REPLY_TO?:string};
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
@@ -45,7 +46,7 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
     FROM users u LEFT JOIN user_followup_contacts c ON c.user_id=u.id)`;
    const args=['%'+query+'%',segment,stamp()];
    const [rows,total]=await Promise.all([env.DB.prepare(cte+` SELECT * FROM people WHERE ${where} ORDER BY CASE WHEN next_followup_at<=?3 THEN 0 ELSE 1 END,created_at DESC LIMIT 30 OFFSET ?4`).bind(...args,page*30).all(),env.DB.prepare(cte+` SELECT COUNT(*) count FROM people WHERE ${where}`).bind(...args).first<{count:number}>()]);
-   return json({items:rows.results,total:total?.count||0,page,pageSize:30,emailConfigured:Boolean(env.RESEND_API_KEY&&env.EMAIL_FROM),templates:FOLLOWUP_TEMPLATES});
+   return json({items:rows.results,total:total?.count||0,page,pageSize:30,emailConfigured:Boolean(emailSender(env)),templates:FOLLOWUP_TEMPLATES});
   }
   if(path==='/api/admin/followups/drafts'&&request.method==='POST'){
    const value=z.object({id:z.uuid(),userId:z.string().min(1).max(160),templateId:z.enum(FOLLOWUP_TEMPLATES.map(t=>t.id)),locale:z.enum(['en','zh']),subject:z.string().trim().min(1).max(200).refine(s=>!/[\r\n]/.test(s)),body:z.string().trim().min(20).max(6000),design:designSchema.optional()}).strict().parse(await input(request));
@@ -62,7 +63,7 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
   if(match[2]==='send'&&request.method==='POST'){
    const message=await env.DB.prepare('SELECT * FROM user_followup_messages WHERE id=?1').bind(id).first<Message>();if(!message)return json({error:'draft_not_found'},404);
    if(message.status!=='draft')return json({id,status:message.status,providerId:message.provider_id});
-   if(!env.RESEND_API_KEY||!env.EMAIL_FROM)return json({error:'email_not_configured'},503);
+   const sender=emailSender(env);if(!sender)return json({error:'email_not_configured'},503);
    const contact=await ensureContact(env,message.user_id);if(!contact||contact.suppressed_at)return json({error:'recipient_suppressed'},409);if(!contact.consent_at)return json({error:'contact_permission_required'},409);if(message.recipient_email!==contact.email)return json({error:'recipient_changed'},409);
    const unsubscribe=new URL(env.MARKETING_ORIGIN||'https://remotearc.app').origin+'/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;
    const fallback=renderFollowupEmail({...message,templateId:message.template_id,...followupLinks(env,id,message.locale),unsubscribeUrl:unsubscribe,replyTo:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',rewardAvailable:await feedbackRewardAvailable(env.DB),...(message.design_json?{design:JSON.parse(message.design_json)}:{})});
@@ -72,7 +73,7 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
    if(!claimed)return json({error:'contact_cooldown_or_in_progress'},409);
    let status='unknown',providerId:string|null=null,errorCode:string|null=null;
    try{
-    const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:'Bearer '+env.RESEND_API_KEY,'content-type':'application/json','Idempotency-Key':'followup/'+id},body:JSON.stringify({from:env.EMAIL_FROM,to:[contact.email],reply_to:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',subject:message.subject,html,text,headers:{'List-Unsubscribe':'<'+unsubscribe+'>','List-Unsubscribe-Post':'List-Unsubscribe=One-Click'}}),signal:AbortSignal.timeout(20000)});
+    const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:'Bearer '+sender.apiKey,'content-type':'application/json','Idempotency-Key':'followup/'+id},body:JSON.stringify({from:sender.from,to:[contact.email],reply_to:env.FOLLOWUP_REPLY_TO||'support@remotearc.app',subject:message.subject,html,text,headers:{'List-Unsubscribe':'<'+unsubscribe+'>','List-Unsubscribe-Post':'List-Unsubscribe=One-Click'}}),signal:AbortSignal.timeout(20000)});
     const result=await response.json().catch(()=>null) as {id?:string}|null;
     if(response.ok&&result?.id){status='sent';providerId=result.id;}else{status=response.status>=500?'unknown':'failed';errorCode='provider_'+response.status;}
    }catch{errorCode='delivery_unconfirmed';}

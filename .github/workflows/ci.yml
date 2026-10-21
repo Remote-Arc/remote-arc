@@ -5,6 +5,33 @@ on:
   pull_request:
 
 jobs:
+  website:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Website behavior and browser regression matrix
+        run: pnpm test:site
+      - name: Verify the production website build
+        run: pnpm build:ui
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: website-browser-report
+          path: |
+            work/site-test-report/
+            work/site-test-results/
+          retention-days: 7
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20

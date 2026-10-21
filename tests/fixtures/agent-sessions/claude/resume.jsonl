@@ -1,0 +1,3 @@
+{"type":"file-history-snapshot","snapshot":{"messageId":"synthetic-history","trackedFileBackups":{}}}
+{"type":"user","sessionId":"synthetic-claude-resume","cwd":"__WORKSPACE__","uuid":"synthetic-user-2","parentUuid":"synthetic-parent-not-in-excerpt","message":{"role":"user","content":[{"type":"text","text":"Continue the synthetic task using only retained facts."}]}}
+{"type":"system","subtype":"compact_boundary","sessionId":"synthetic-claude-resume","cwd":"__WORKSPACE__"}

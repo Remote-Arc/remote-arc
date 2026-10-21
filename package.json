@@ -8,6 +8,9 @@
     "node": ">=24"
   },
   "scripts": {
+    "test:site": "pnpm --filter @remotearc/ui test:site && pnpm test:site:types && pnpm exec playwright test",
+    "test:site:types": "pnpm --filter @remotearc/ui exec tsc -p ../../tests/site/tsconfig.json",
+    "test:site:browser": "pnpm exec playwright test",
     "dev:mcp": "pnpm --filter @remotearc/mcp dev",
     "dev:agent": "go -C apps/agent run ./cmd/remotelink --foreground",
     "dev:agent:ts": "pnpm --filter @remotearc/agent-ts dev",
@@ -59,6 +62,8 @@
     "saas:apps": "node tools/saas/apps.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.13.6",
     "c8": "12.0.0"
   }
 }

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:site": "pnpm typecheck && pnpm test:workspaces && pnpm test:onboarding && pnpm test:arc-experience && pnpm test:onboarding-readability && pnpm test:device-removal && pnpm test:device-execution-log && pnpm test:security && pnpm test:background-recovery && pnpm test:oauth-consent",
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",

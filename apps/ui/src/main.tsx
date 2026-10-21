@@ -2523,6 +2523,8 @@ function DemoPage({ user }: { user?: User | null }) {
 function ConnectPage({ user }: { user?: User | null }) {
   const { tr,locale } = useI18n();
   const scopes = [
+    ["apps:read", tr("Discover connected apps and read data within each account's granted access.", "发现已连接的应用，并在各账号授权范围内读取数据。")],
+    ["apps:write", tr("Use supported app actions within the connected account's permissions.", "在连接账号的授权范围内执行受支持的应用操作。")],
     ["devices:read", tr("List paired computers and their online state.", "列出已配对电脑及在线状态。")],
     ["computer:read", tr("Read files, directories and process metadata when the selected device allows it.", "在目标设备允许时读取文件、目录和进程元数据。")],
     ["computer:write", tr("Request edit and terminal tools; the selected device policy still decides whether they are available.", "请求编辑和终端工具；最终是否可用仍由目标设备策略决定。")],
@@ -2540,8 +2542,8 @@ function ConnectPage({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span>
           <h1>{tr("Connect an AI client", "连接 AI 客户端")}</h1>
           <p>{tr(
-            "Pair the computer once, then authorize ChatGPT, Claude, Cursor or another compatible Remote MCP client. Device pairing and AI authorization are independent.",
-            "电脑只需配对一次，之后再授权 ChatGPT、Claude、Cursor 或其他兼容 Remote MCP 的客户端。设备配对与 AI 授权彼此独立。",
+            "Connect the apps you need, then authorize your compatible AI client. Install the local Agent only for work on your computer. App authorization, device pairing and AI access are independent.",
+            "连接需要的应用，再授权兼容的 AI 客户端。只有需要操作自己电脑时才安装本机 Agent。应用授权、设备配对和 AI 访问彼此独立。",
           )}</p>
         </header>
 
@@ -2549,6 +2551,7 @@ function ConnectPage({ user }: { user?: User | null }) {
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("CONNECTION", "连接")}</strong>
+            <a href="#connect-apps">{tr("Apps without an Agent", "无需 Agent 的应用连接")}</a>
             <a href="#connect-computer">{tr("Pair computer", "配对电脑")}</a>
             <a href="#connect-policy">{tr("Device policy", "设备策略")}</a>
             <a href="#connect-client">{tr("AI client", "AI 客户端")}</a>
@@ -2556,8 +2559,14 @@ function ConnectPage({ user }: { user?: User | null }) {
           </aside>
 
           <article className="manualArticle">
+            <section id="connect-apps">
+              <h2>{tr("Connect your apps", "连接你的应用")}</h2>
+              <p>{tr("Open Apps in your Connect workspace, choose an available app and authorize your account. Cloud app workflows do not require a paired computer or a local Agent.", "在 Connect 工作空间打开应用，选择已开放的应用并授权自己的账号。云应用工作无需配对电脑或安装本机 Agent。")}</p>
+              <p><a href="https://agent.remotearc.app/dashboard/connect/apps">{tr("Open Apps", "打开应用")} →</a></p>
+              <p>{tr("Then add Remote Arc inside your AI client using the connection guide below. Try a small read request with the account you just connected.", "然后按下方连接指南，在 AI 客户端中添加 Remote Arc。先用刚连接的账号尝试一个简单的读取请求。")}</p>
+            </section>
             <section id="connect-computer">
-              <h2>{tr("1. Pair the computer", "1. 配对电脑")}</h2>
+              <h2>{tr("Optional: pair your computer", "可选：配对自己的电脑")}</h2>
               <p>{tr(
                 "Run the CLI on the computer you want the AI to reach. It creates a short-lived pairing request, opens the browser, and stores a revocable device credential locally after approval.",
                 "在希望 AI 访问的电脑上运行 CLI。它会创建短期配对请求、自动打开浏览器，并在确认后把可撤销的设备凭证保存在本机。",
@@ -2567,7 +2576,7 @@ function ConnectPage({ user }: { user?: User | null }) {
             </section>
 
             <section id="connect-policy">
-              <h2>{tr("2. Choose the device policy", "2. 选择设备策略")}</h2>
+              <h2>{tr("Choose the device policy", "选择设备策略")}</h2>
               <p>{tr(
                 "Safe, Developer and Full are shortcuts over an editable per-device skill list. Reading files does not imply editing; listing processes does not imply shell execution.",
                 "Safe、Developer、Full 只是逐设备 Skill 列表的快捷预设。能读文件不代表能编辑，能列进程也不代表能执行 Shell。",
@@ -2580,7 +2589,7 @@ function ConnectPage({ user }: { user?: User | null }) {
             </section>
 
             <section id="connect-client">
-              <h2>{tr("3. Add Remote Arc to the AI client", "3. 在 AI 客户端中添加 Remote Arc")}</h2>
+              <h2>{tr("Add Remote Arc to your AI client", "在 AI 客户端中添加 Remote Arc")}</h2>
               <p>{tr("All compatible clients use the same OAuth-protected Remote MCP endpoint.", "所有兼容客户端都使用同一个受 OAuth 保护的 Remote MCP Endpoint。")}</p>
               <div className="docsCodeLine"><code>{MCP_ENDPOINT}</code><CopyButton value={MCP_ENDPOINT} /></div>
               <div className="clientGuideRows compactClientRows">
@@ -3665,6 +3674,23 @@ function Dashboard({
   const [dialog, setDialog] = useState<DashboardDialog | null>(null);
   const [dialogValue, setDialogValue] = useState("");
   const dialogResolver = useRef<((value: boolean | string | null) => void) | null>(null);
+  const dialogElement = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!dialog || !dialogElement.current) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const host = dialogElement.current;
+    const controls = () => Array.from(host.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]')).filter(item => item.getClientRects().length);
+    (dialog.kind === 'prompt' ? host.querySelector<HTMLInputElement>('input') : controls()[0])?.focus();
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); settleDialog(dialog.kind === 'notice' ? true : null); }
+      if (event.key !== 'Tab') return;
+      const items = controls(), first = items[0], last = items.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); if (previous?.isConnected) previous.focus(); };
+  }, [dialog]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem('remotearc.sidebar.collapsed') === '1'; } catch { return false; }
   });
@@ -3716,6 +3742,11 @@ function Dashboard({
         confirmLabel: tr("Got it", "知道了"),
       });
     });
+  }
+
+  async function signOutSafely() {
+    try { await signOut(); }
+    catch { await showNotice(tr("Could not sign out", "暂时无法退出登录"), tr("Your sign-out could not be confirmed. Check your connection and try again.", "尚未确认退出登录，请检查网络连接后重试。")); }
   }
 
   function askConfirm(
@@ -5076,7 +5107,7 @@ function Dashboard({
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
           <div><strong>{user.name || "Owner"}</strong><span>{user.email}</span></div>
-          <button onClick={() => void signOut()} aria-label={tr("Sign out", "退出登录")}><ProductIcon name="logout"/></button>
+          <button onClick={() => void signOutSafely()} aria-label={tr("Sign out", "退出登录")}><ProductIcon name="logout"/></button>
         </div>
       </aside>
 
@@ -6258,7 +6289,7 @@ function Dashboard({
               <div className="securityActionButtons">
                 <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Review device tools", "检查设备工具")}</button>
                 <button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Review MCP connection", "检查 MCP 连接")}</button>
-                <button className="dangerButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button>
+                <button className="dangerButton" onClick={() => void signOutSafely()}>{tr("Sign out", "退出登录")}</button>
               </div>
             </section>
           </>
@@ -6361,7 +6392,7 @@ function Dashboard({
               usageLimitLabel={usageLimitLabel}
               mcpEndpoint={mcpEndpoint}
               marketingOrigin={MARKETING_ORIGIN}
-              onSignOut={signOut}
+              onSignOut={signOutSafely}
               onNavigate={destination => navigateTab(workspace === "agent" && destination === "apps" ? "agent-apps" : workspace === "agent" && destination === "devices" ? "agent-devices" : destination)}
             />
           </>
@@ -6442,8 +6473,8 @@ function Dashboard({
 
       {dialog && (
         <div className="modalBackdrop" onMouseDown={() => settleDialog(dialog.kind === "notice" ? true : null)}>
-          <section className={"modal appDialog " + (dialog.tone === "danger" ? "danger" : "")} onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modalClose" onClick={() => settleDialog(dialog.kind === "notice" ? true : null)}>×</button>
+          <section ref={dialogElement} role="dialog" aria-modal="true" aria-labelledby="dashboard-dialog-title" className={"modal appDialog " + (dialog.tone === "danger" ? "danger" : "")} onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modalClose" aria-label={tr("Close", "关闭")} onClick={() => settleDialog(dialog.kind === "notice" ? true : null)}>×</button>
             <span className="eyebrow">
               {dialog.kind === "prompt"
                 ? tr("INPUT REQUIRED", "需要输入")
@@ -6451,7 +6482,7 @@ function Dashboard({
                   ? tr("CONFIRM ACTION", "确认操作")
                   : tr("REMOTE ARC", "REMOTE ARC")}
             </span>
-            <h2>{dialog.title}</h2>
+            <h2 id="dashboard-dialog-title">{dialog.title}</h2>
             <p>{dialog.message}</p>
             {dialog.kind === "prompt" && (
               <input
@@ -6799,7 +6830,8 @@ function LegalPage({kind,user}:{kind:"privacy"|"terms"|"support";user?:User|null
 
 function App() {
   const { tr } = useI18n();
-  const routePath = isWebsite() && chinesePages.has(baseMarketingPath(location.pathname)) ? baseMarketingPath(location.pathname) : location.pathname;
+  const pathname = location.pathname.replace(/\/+$/, "") || "/";
+  const routePath = isWebsite() && chinesePages.has(baseMarketingPath(pathname)) ? baseMarketingPath(pathname) : pathname;
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [devices, setDevices] = useState<Device[]>([]);
   const [status, setStatus] = useState<ProductStatus | null>(null);
@@ -6831,7 +6863,8 @@ function App() {
   }
 
   async function signOut() {
-    await fetch("/auth/logout", { method: "POST" });
+    const response = await fetch("/auth/logout", { method: "POST" });
+    if (!response.ok && response.status !== 401) throw new Error('sign_out_unconfirmed');
     setUser(null); setDevices([]); setStatus(null);
   }
 
@@ -6939,7 +6972,7 @@ function App() {
     return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
   }
 
-  if (!isDashboardHost && routePath !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
+  if (routePath !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
   return <Landing user={user === undefined ? null : user} />;
 }
 

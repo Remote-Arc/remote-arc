@@ -25,7 +25,8 @@ globalThis.fetch=(async(url,init)=>{
   else{const inbox=context.messages.find((item:any)=>item.tool==='read_inbox'),result=typeof inbox?.result==='string'?JSON.parse(inbox.result):inbox?.result;value=reply(context.taskState.failedActions.some((o:any)=>o.tool==='read_inbox')?'Gmail 暂时无法读取；已核查日历：Atlas launch review，请准备清单：https://calendar.google.com/calendar/event?eid=agenda-review 。':result?.readCount===0?'当前邮件查询没有结果。日历里有 Atlas launch review，请准备清单：https://calendar.google.com/calendar/event?eid=agenda-review 。':'发票 INV-42 到期需核对：https://mail.google.com/mail/#all/invoice-due 。明天有 Atlas launch review，请准备上线清单：https://calendar.google.com/calendar/event?eid=agenda-review 。');}
  }
  else if(context.connectionIndex.length===1&&context.connectionIndex[0].provider==='google_calendar'){
-  value=observations.some(o=>o.arguments.operation==='events.list')?reply('Atlas launch review，请准备上线清单：https://calendar.google.com/calendar/event?eid=agenda-review 。'):tool('call_app',context.appReadCapabilities.find((item:any)=>item.tool==='call_app').arguments);
+  if(expandedPaths&&observations.some(o=>o.arguments.operation==='events.list')&&!observations.some(o=>o.arguments.operation==='events.get'))value=tool('call_app',{connectionId,operation:'events.get',arguments:{calendar:'primary',id:'agenda-review'}});
+  else value=observations.some(o=>o.arguments.operation==='events.list')?reply('Atlas launch review，请准备上线清单：https://calendar.google.com/calendar/event?eid=agenda-review 。'):tool('call_app',context.appReadCapabilities.find((item:any)=>item.tool==='call_app').arguments);
  }
  else if(context.verificationScope){
   const scope=context.verificationScope;

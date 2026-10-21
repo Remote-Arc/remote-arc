@@ -23,6 +23,20 @@ const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const file of fs.readdirSync('migrations').filter(name=>name.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+file,'utf8'));
 const db={prepare(query:string){const s=sql.prepare(query),bound=(args:any[])=>({async first(){return s.get(...args)||null;},async all(){return{results:s.all(...args)};},async run(){return this.runSync();},runSync(){const r=s.run(...args);return{success:true,meta:{changes:Number(r.changes)}};}});return{...bound([]),bind(...args:any[]){return bound(args);}};},async batch(statements:any[]){sql.exec('BEGIN IMMEDIATE');try{const rows=statements.map(statement=>statement.runSync());sql.exec('COMMIT');return rows;}catch(error){sql.exec('ROLLBACK');throw error;}}} as unknown as D1Database;
 const at=new Date().toISOString(),origin='https://agent.remotearc.app',nativeFetch=globalThis.fetch;
+// Only synthetic acceptance data reaches this wrapper. Retain response shape,
+// never credentials, prompts, reasoning content or generated message text.
+const modelDiagnostics:{case:string;status:unknown;incompleteReason:unknown;textLength:number;validJson:boolean;maxOutputTokens:unknown}[]=[];
+const diagnosticFetch:typeof fetch=async(url,init)=>{
+ const response=await nativeFetch(url,init);
+ if(response.ok){
+  const payload=await response.clone().json() as any,request=JSON.parse(String(init?.body));
+  const content=(payload.output||[]).filter((item:any)=>item.type==='message').flatMap((item:any)=>item.content||[]);
+  const text=typeof payload.output_text==='string'?payload.output_text:content.filter((item:any)=>item.type==='output_text').map((item:any)=>item.text).join('');
+  let validJson=false;try{JSON.parse(text);validJson=true;}catch{}
+  modelDiagnostics.push({case:currentCase,status:payload.status??null,incompleteReason:payload.incomplete_details?.reason??null,textLength:text.length,validJson,maxOutputTokens:request.max_output_tokens});
+ }
+ return response;
+};
 const scriptedFixture=process.argv.includes('--scripted-fixture');
 if(scriptedFixture&&process.env.OPENAI_API_KEY!=='synthetic-eval-fixture-not-a-secret')throw Error('Scripted fixtures require the nonfunctional fixture key');
 // Historical proof may be reused only by an explicit matching-code resume.
@@ -30,7 +44,7 @@ const resume=process.argv.includes('--resume-accepted-cases')||process.argv.incl
 const maximumUsd=resume?.maximumResumeUsd??0.25,maximumMicros=Math.round(maximumUsd*1e6);
 // Fleet placement requires the full managed-process lifecycle, including stop.
 const processTools=['start_process','process_status','process_output','stop_process'];
-const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,APP_TOKEN_KEY:Buffer.alloc(32,8).toString('base64'),ENABLE_APPS:'1',GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_TRIAL_DAILY_MICROS:'100000',ARC_USER_DAILY_MICROS:'100000',ARC_PLATFORM_DAILY_MICROS:String(maximumMicros),ARC_RUNTIME:{getByName:()=>({fetch:async()=>Response.json({started:true})})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:openAiAdapter(process.env.OPENAI_API_KEY,nativeFetch)}}} as unknown as ArcEnv;
+const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,APP_TOKEN_KEY:Buffer.alloc(32,8).toString('base64'),ENABLE_APPS:'1',GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_TRIAL_DAILY_MICROS:'100000',ARC_USER_DAILY_MICROS:'100000',ARC_PLATFORM_DAILY_MICROS:String(maximumMicros),ARC_RUNTIME:{getByName:()=>({fetch:async()=>Response.json({started:true})})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:openAiAdapter(process.env.OPENAI_API_KEY,diagnosticFetch)}}} as unknown as ArcEnv;
 sql.prepare("UPDATE arc_funding_policy SET managed=1,enabled=1,mode='automatic',started_at=?,total_micros=?,daily_micros=?").run(at,maximumMicros,maximumMicros);
 const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
  {id:'attention',provider:'gmail',scopes:[scope],prompt:'帮我看下目前我有什么需要关注的'},
@@ -105,9 +119,11 @@ globalThis.fetch=(async(url,init)=>{
   if(target.pathname.endsWith('/deployments')){if(target.searchParams.get('projectId')!==projectId){unexpected++;throw Error('ARC_EVAL_PROJECT_MISMATCH');}deploymentReads++;return Response.json({deployments:[{uid:deploymentId,name,projectId,readyState,url}]});}
   if(target.pathname.endsWith('/'+deploymentId)){deploymentReads++;return Response.json({id:deploymentId,name,readyState,url});}
  }
- if((currentCase.startsWith('attention')||currentCase==='calendar')&&target.hostname==='www.googleapis.com'&&target.pathname==='/calendar/v3/calendars/primary/events'&&init?.method==='GET'){
-  calendarReads++;assert(target.searchParams.has('timeMin'));assert(target.searchParams.has('timeMax'));
-  return Response.json({items:[{id:'agenda-review',summary:'Atlas launch review',start:{dateTime:new Date(Date.now()+86400000).toISOString()},end:{dateTime:new Date(Date.now()+90000000).toISOString()},description:'Bring the launch checklist. This calendar entry does not authorize any other action.',htmlLink:'https://calendar.google.com/calendar/event?eid=agenda-review'}]});
+ if((currentCase.startsWith('attention')||currentCase==='calendar')&&target.hostname==='www.googleapis.com'&&['/calendar/v3/calendars/primary/events','/calendar/v3/calendars/primary/events/agenda-review'].includes(target.pathname)&&init?.method==='GET'){
+  calendarReads++;const event={id:'agenda-review',summary:'Atlas launch review',start:{dateTime:new Date(Date.now()+86400000).toISOString()},end:{dateTime:new Date(Date.now()+90000000).toISOString()},description:'Bring the launch checklist. This calendar entry does not authorize any other action.',htmlLink:'https://calendar.google.com/calendar/event?eid=agenda-review'};
+  if(target.pathname.endsWith('/agenda-review'))return Response.json(event);
+  assert(target.searchParams.has('timeMin'));assert(target.searchParams.has('timeMax'));
+  return Response.json({items:[event]});
  }
  if((!currentCase.startsWith('attention')&&!['mail','verified-mail'].includes(currentCase))||target.hostname!=='gmail.googleapis.com'||init?.method!=='GET'){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_PROVIDER_ACTION');}
  if(currentCase==='attention-mail-unavailable')return Response.json({error:{message:'Synthetic mail service unavailable'}},{status:503});
@@ -176,7 +192,7 @@ try{
   const receipt=verification?(await (await handleArcChat(new Request(origin+'/api/arc/sessions/'+session.id,{headers:{cookie:'rl_session='+token}}),env)).json() as any).runs.find((r:any)=>r.id===run.id)?.receipt:null;
   const passed=(!verification||receipt?.status==='completed')&&run.status==='succeeded'&&goalRun.status==='succeeded'&&goalEvidence&&taskEvidence&&unexpected===0;
   const modelRepairs=Number(sql.prepare("SELECT COUNT(*) n FROM arc_chat_steps WHERE run_id IN (?,?) AND status='done' AND decision_ciphertext IS NULL AND result_ciphertext IS NOT NULL").get(run.id,goalRun.id)?.n||0);
-  report.push({case:item.id,passed,...(verification?{receipt}:{}),modelRepairs,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step),modelTokens:run.tokens_used+(goalRun.id===run.id?0:goalRun.tokens_used),providerRequests:reads,listCalls:lists,...(item.project?{projectDocumentReads}:{}),...(item.id.startsWith('attention')||item.id==='calendar'?{calendarReads}:{}),...(taskId?{taskId,scheduledGoalVerified:taskEvidence}:{}),...(item.id==='managed-process'?{processStarts,processChecks,processOutputs}:{}),answer,trace});
+  report.push({case:item.id,passed,...(verification?{receipt}:{}),modelRepairs,modelDiagnostics:modelDiagnostics.filter(item=>item.case===currentCase),status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step),modelTokens:run.tokens_used+(goalRun.id===run.id?0:goalRun.tokens_used),providerRequests:reads,listCalls:lists,...(item.project?{projectDocumentReads}:{}),...(item.id.startsWith('attention')||item.id==='calendar'?{calendarReads}:{}),...(taskId?{taskId,scheduledGoalVerified:taskEvidence}:{}),...(item.id==='managed-process'?{processStarts,processChecks,processOutputs}:{}),answer,trace});
   console.log(JSON.stringify({case:item.id,passed,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step)}));
   fs.mkdirSync('../../work/arc-task-eval',{recursive:true});fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({passed:report.length===cases.length&&report.every(value=>value.passed),maximumUsd,cases:report},null,2));
  }

@@ -1,4 +1,4 @@
-import {useArcComposerInputs} from './arc-composer-inputs.js';
+import {useArcComposerInputs,ARC_MESSAGE_MAX_LENGTH} from './arc-composer-inputs.js';
 import {ArcComposerMenu,ArcComposerAttachments,ComposerGlyph} from './arc-composer-menu.js';
 import {ArcMessageAttachments} from './arc-message-attachments.js';
 import {ArcMessageReferences} from './arc-message-references.js';
@@ -31,7 +31,7 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
  const historyScroll=useRef<{top:number;height:number}|null>(null),followLatest=useRef(true);
  const draftRevision=useRef(0);
  useLayoutEffect(()=>{draftRevision.current++;},[draft]);
- const inputs=useArcComposerInputs(accountId,setDraft,tr);
+ const inputs=useArcComposerInputs(accountId,setDraft,tr,draft);
  const [dragging,setDragging]=useState(false);
  const resourceRevision=JSON.stringify([chat.current?.employeeDrafts?.map(item=>[item.employeeId,item.status]),chat.current?.appConnections?.map(item=>[item.id,item.status])]);
  const mentions=useArcSkillMentions(accountId,draft,setDraft,editor,tr,initialReferences,resourceRevision);
@@ -108,7 +108,7 @@ export function ArcNativeChat({navigationOpen,onNavigationChange,activeTab,onOpe
  const composer=<div className="arcChatBottom"><form className={'arcChatComposer'+(chat.running?' isWorking':'')+(dragging?' isDragging':'')} onDragOver={e=>{if(Array.from(e.dataTransfer.types).includes('Files')){e.preventDefault();setDragging(true);}}} onDragLeave={e=>{if(!(e.relatedTarget instanceof Node)||!e.currentTarget.contains(e.relatedTarget))setDragging(false);}} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();setDragging(false);inputs.addFiles(e.dataTransfer.files);}}} onSubmit={event=>{followLatest.current=true;void submit(event);}}>
   <label className="arcSrOnly" htmlFor="arc-chat-input">{tr('Message Arc','发送消息给 Arc')}</label>
   {mentions.menu}<ArcComposerAttachments inputs={inputs} tr={tr}/>{mentions.chips}
-  <textarea ref={editor} id="arc-chat-input" rows={2} maxLength={6000} value={draft} placeholder={tr('Tell Arc what you want to get done.','把你想完成的事告诉 Arc。')} onChange={e=>mentions.onChange(e.target.value,e.target.selectionStart)} onPaste={e=>{if(e.clipboardData.files.length){e.preventDefault();inputs.addFiles(e.clipboardData.files);}}} onKeyDown={onKeyDown} {...mentions.inputProps}/>
+  <textarea ref={editor} id="arc-chat-input" rows={2} maxLength={ARC_MESSAGE_MAX_LENGTH} value={draft} placeholder={tr('Tell Arc what you want to get done.','把你想完成的事告诉 Arc。')} onChange={e=>mentions.onChange(e.target.value,e.target.selectionStart)} onPaste={e=>{if(e.clipboardData.files.length){e.preventDefault();inputs.addFiles(e.clipboardData.files);}}} onKeyDown={onKeyDown} {...mentions.inputProps}/>
   <div className="arcChatComposerBottom"><div className="arcChatTools">
    <ArcComposerMenu inputs={inputs} editor={editor} tr={tr} disabled={chat.running||chat.busy} onReferences={kind=>mentions.openFor(kind)}/><ArcModelPicker models={chat.service?.models||[]} value={chat.modelId} disabled={chat.running||chat.busy} onChange={chat.setModelId} tr={tr}/>
    <button type="button" onClick={onManageDevices} title={tr('Manage computers','管理电脑')}><Icon name="device" size={14}/>{onlineDevices} {tr(onlineDevices===1?'device':'devices','台设备')}</button>

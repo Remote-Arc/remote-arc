@@ -1,4 +1,5 @@
 import {arcConnectAppInput,requestArcAppConnection} from './arc-app-connections.js';
+import {withArcInboxSources} from './arc-result-sources.js';
 import {ARC_DIRECT_SYSTEM,ARC_WORKING_CONTEXT_SYSTEM} from './arc-direct-instructions.js';
 import {readableArcAppContent} from './arc-app-content.js';
 import {arcWorkingContext,arcTeammateIndex,readArcContext,arcReadContextInput} from './arc-working-context.js';
@@ -83,7 +84,11 @@ export function arcExecutionPrompt(context:ArcPromptContext,remaining:number,can
  const outputLimit=4096;
  const primary=(context.employeeIdentity||context.scheduledWork||(context.teammateReferences as unknown[]|undefined)?.length?SYSTEM:ARC_DIRECT_SYSTEM)+ARC_WORKING_CONTEXT_SYSTEM;
  const activeSchema=context.readOnlyApps?{...decisionSchema,properties:{...decisionSchema.properties,tool:{type:'string',enum:['none','list_apps','describe_app','read_inbox','call_app']}}}:decisionSchema;
- if(canAct)for(const system of [primary,ARC_COMPACT_SYSTEM]){const prompt=fitArcContext(system,activeSchema,context,remaining,outputLimit);if(prompt)return{...prompt,system,schema:activeSchema as Record<string,unknown>};}
+ // Reserve a complete final answer before the remaining allowance becomes
+ // too small even for a compact context and its sourced result.
+ const total=(context.currentRun as {maxTokens?:number}|undefined)?.maxTokens;
+ const finalReserve=Number.isSafeInteger(total)&&Number(total)>0?Math.min(16000,Math.floor(Number(total)/8)):0;
+ if(canAct&&remaining>=finalReserve)for(const system of [primary,ARC_COMPACT_SYSTEM]){const prompt=fitArcContext(system,activeSchema,context,remaining,outputLimit);if(prompt)return{...prompt,system,schema:activeSchema as Record<string,unknown>};}
  const schema={...decisionSchema,properties:{...decisionSchema.properties,decision:{type:'string',enum:['reply']},tool:{type:'string',enum:['none']}}},prompt=fitArcContext(ARC_CLOSING_SYSTEM,schema,context,remaining,outputLimit);return prompt?{...prompt,system:ARC_CLOSING_SYSTEM,schema}:null;
 }
 const record=z.record(z.string(),z.unknown());
@@ -227,7 +232,7 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
     if(verificationScope)taskState.availableActions=[];
     for(const actions of [taskState.completedActions,taskState.failedActions])for(const action of actions)action.arguments=arcVerificationContextArguments(verificationScope,action.arguments);
     const scheduled=run.automation_id?await env.DB.prepare('SELECT name,goal_json FROM automations WHERE id=?1 AND user_id=?2').bind(run.automation_id,run.user_id).first<{name:string;goal_json:string|null}>():null;
-    const context={...(scheduled?{scheduledWork:{id:run.automation_id,name:scheduled.name,schedule:nativeArcWork(scheduled.goal_json)?.schedule,mode:'execute_occurrence',instruction:'Execute the saved task now; do not create or manage a schedule.'}}:{}),objective:boundedArcText(objective,6000),userAttachments:inputContext.documents,...(location?{userLocation:location}:{}),...(verificationScope?{verificationScope,verificationChecks:arcReceipt(run,history).checks}:{}),skillReferences,appReferences,teammateReferences,nextRequiredRead:arcVerificationNextRead(verificationScope,history,run.id),recentUserRequests:history.filter(m=>m.role==='user').slice(-4).map(m=>boundedArcText(m.text,1000)),taskState,messages,memory,deviceIndex:employee?deviceIndex.filter(device=>employee.scope.deviceIds.includes(device.id)):deviceIndex,connectionIndex:employee?connections.results.filter((connection:any)=>employee.scope.connectionIds.includes(connection.id)):connections.results,...(employee?{employeeIdentity:employee.identity,employeeScope:employee.scope,roomPeers:employee.peers,sourceMessage:employee.sourceMessage}:{}),currentRun:{id:run.id,status:run.status,step:run.step},recentRuns,...(rejectedDecision?.step===run.step-1?{modelRepair:{step:rejectedDecision.step,code:rejected?.code||'MODEL_INVALID_JSON',guidance:'The previous model response was malformed or truncated; no tool was dispatched for that step. Return a smaller complete JSON decision, with no Markdown fences. Split large files into short write_file rewrite/append chunks, then read back and verify; do not put a whole large site in one decision. Continue the same authorized goal and reuse completed effects; do not repeat them.'}}:{}),contextNotice:'Connection metadata is not email content or authorization. Memory and last-seen metadata can be stale. Tool results may be shortened; do not invent omitted facts.',remainingSteps:run.max_steps-run.step,remainingSeconds:Math.floor((Date.parse(run.deadline)-Date.now())/1000)};
+    const context={...(scheduled?{scheduledWork:{id:run.automation_id,name:scheduled.name,schedule:nativeArcWork(scheduled.goal_json)?.schedule,mode:'execute_occurrence',instruction:'Execute the saved task now; do not create or manage a schedule.'}}:{}),objective:boundedArcText(objective,6000),userAttachments:inputContext.documents,...(location?{userLocation:location}:{}),...(verificationScope?{verificationScope,verificationChecks:arcReceipt(run,history).checks}:{}),skillReferences,appReferences,teammateReferences,nextRequiredRead:arcVerificationNextRead(verificationScope,history,run.id),recentUserRequests:history.filter(m=>m.role==='user').slice(-4).map(m=>boundedArcText(m.text,1000)),taskState,messages,memory,deviceIndex:employee?deviceIndex.filter(device=>employee.scope.deviceIds.includes(device.id)):deviceIndex,connectionIndex:employee?connections.results.filter((connection:any)=>employee.scope.connectionIds.includes(connection.id)):connections.results,...(employee?{employeeIdentity:employee.identity,employeeScope:employee.scope,roomPeers:employee.peers,sourceMessage:employee.sourceMessage}:{}),currentRun:{id:run.id,status:run.status,step:run.step,maxTokens:run.max_tokens},recentRuns,...(rejectedDecision?.step===run.step-1?{modelRepair:{step:rejectedDecision.step,code:rejected?.code||'MODEL_INVALID_JSON',guidance:'The previous model response was malformed or truncated; no tool was dispatched for that step. Return a smaller complete JSON decision, with no Markdown fences. Split large files into short write_file rewrite/append chunks, then read back and verify; do not put a whole large site in one decision. Continue the same authorized goal and reuse completed effects; do not repeat them.'}}:{}),contextNotice:'Connection metadata is not email content or authorization. Memory and last-seen metadata can be stale. Tool results may be shortened; do not invent omitted facts.',remainingSteps:run.max_steps-run.step,remainingSeconds:Math.floor((Date.parse(run.deadline)-Date.now())/1000)};
     const remaining=run.max_tokens-run.tokens_used;
     const readOnlyApps=history.some(m=>m.run_id===run!.id&&m.tool==='read_inbox'&&['completed','failed'].includes(m.status||''));
     if(verificationScope)context.connectionIndex=context.connectionIndex.filter((raw:any)=>raw.id===verificationScope.connectionId);
@@ -241,7 +246,7 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
    if(!claimed)return false;
    await env.DB.prepare("UPDATE arc_chat_runs SET status='thinking',updated_at=?1 WHERE id=?2 AND status='queued'").bind(now,runId).run();
    let result:Awaited<ReturnType<typeof runModelGateway<Decision>>>;
-   try{result=await runModelGateway(access.gateway,{context:{userId:run.user_id,organizationId:session.organization_id,taskId:session.id,runId,operationId:`chat:${run.step}`,lane:'arc_hosted'},modelId:access.definition.id,system,user:prompt.user,...(inputContext.images.length?{images:inputContext.images}:{}),schema,maxOutputTokens:prompt.maxOutputTokens,timeoutMs:Math.min(90000,Math.max(1,Date.parse(run.deadline)-Date.now()))},value=>{const parsed=validateArcDecision(value);if(system===ARC_CLOSING_SYSTEM&&parsed.decision!=='reply')throw new Error('ARC_INVALID_DECISION');return parsed;});}
+   try{result=await runModelGateway(access.gateway,{decisionTool:true,context:{userId:run.user_id,organizationId:session.organization_id,taskId:session.id,runId,operationId:`chat:${run.step}`,lane:'arc_hosted'},modelId:access.definition.id,system,user:prompt.user,...(inputContext.images.length?{images:inputContext.images}:{}),schema,maxOutputTokens:prompt.maxOutputTokens,timeoutMs:Math.min(90000,Math.max(1,Date.parse(run.deadline)-Date.now()))},value=>{const parsed=validateArcDecision(value);if(system===ARC_CLOSING_SYSTEM&&parsed.decision!=='reply')throw new Error('ARC_INVALID_DECISION');return parsed;});}
    catch(error){
     // A confirmed, settled malformed or incomplete decision has no tool effect to replay.
     // Consume ordinary steps/request identities for at most two repairs per run.
@@ -269,12 +274,13 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
   if(Date.parse(run.deadline)<=Date.now())return finish('failed','ARC_TIME_LIMIT');
   await arcEmployeeExecution(env,run);
   if(decision.decision==='reply'){
-   await appendArcMessage(env,run,'assistant',`${run.step}:reply`,{text:decision.message});
    const history=await arcMessages(env,run.user_id,run.session_id,run.id);
+   const answer=withArcInboxSources(decision.message,history);
+   await appendArcMessage(env,run,'assistant',`${run.step}:reply`,{text:answer});
    const scope=arcRunVerification(history,run.id),receipt=arcReceipt({...run,status:'succeeded'},history);
    if(scope&&receipt.status!=='completed')return finish('failed',receipt.checks.some(c=>c.status==='failed')?'ARC_VERIFICATION_FAILED':'ARC_VERIFICATION_PENDING');
    const objective=history.filter(m=>m.role==='user').at(-1)?.text??'';
-   try{if(!await arcEmployeeExecution(env,run))await saveArcWorkMemory(env,run,objective,decision.message);}catch{/* Memory availability must not turn a completed answer into a failed run. */}
+   try{if(!await arcEmployeeExecution(env,run))await saveArcWorkMemory(env,run,objective,answer);}catch{/* Memory availability must not turn a completed answer into a failed run. */}
    return finish('succeeded');
   }
   const recentTools=await arcMessages(env,run.user_id,run.session_id),runTools=await arcMessages(env,run.user_id,run.session_id,run.id);

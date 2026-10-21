@@ -25,15 +25,16 @@ const db={prepare(query:string){const s=sql.prepare(query),bound=(args:any[])=>(
 const at=new Date().toISOString(),origin='https://agent.remotearc.app',nativeFetch=globalThis.fetch;
 // Only synthetic acceptance data reaches this wrapper. Retain response shape,
 // never credentials, prompts, reasoning content or generated message text.
-const modelDiagnostics:{case:string;status:unknown;incompleteReason:unknown;textLength:number;validJson:boolean;maxOutputTokens:unknown}[]=[];
+const modelDiagnostics:{case:string;status:unknown;incompleteReason:unknown;textLength:number;validJson:boolean;maxOutputTokens:unknown;outputTypes:string[];functionCalls:number}[]=[];
 const diagnosticFetch:typeof fetch=async(url,init)=>{
  const response=await nativeFetch(url,init);
  if(response.ok){
   const payload=await response.clone().json() as any,request=JSON.parse(String(init?.body));
   const content=(payload.output||[]).filter((item:any)=>item.type==='message').flatMap((item:any)=>item.content||[]);
-  const text=typeof payload.output_text==='string'?payload.output_text:content.filter((item:any)=>item.type==='output_text').map((item:any)=>item.text).join('');
+  const calls=(payload.output||[]).filter((item:any)=>item.type==='function_call');
+  const text=request.tools?calls[0]?.arguments||'':typeof payload.output_text==='string'?payload.output_text:content.filter((item:any)=>item.type==='output_text').map((item:any)=>item.text).join('');
   let validJson=false;try{JSON.parse(text);validJson=true;}catch{}
-  modelDiagnostics.push({case:currentCase,status:payload.status??null,incompleteReason:payload.incomplete_details?.reason??null,textLength:text.length,validJson,maxOutputTokens:request.max_output_tokens});
+  modelDiagnostics.push({case:currentCase,status:payload.status??null,incompleteReason:payload.incomplete_details?.reason??null,textLength:text.length,validJson,maxOutputTokens:request.max_output_tokens,outputTypes:(payload.output||[]).map((item:any)=>String(item.type)),functionCalls:calls.length});
  }
  return response;
 };
@@ -97,6 +98,7 @@ globalThis.fetch=(async(url,init)=>{
   if(target.pathname==='/repos/'+repo+'/contents/README.md'){projectDocumentReads++;return Response.json({encoding:'base64',content:Buffer.from('# '+project.name+'\n'+project.alias+' is this project: a shared workspace for agents with local execution and shared team state. This is a software product, not a research-assistant acronym.').toString('base64'),html_url:link+'/blob/main/README.md'});}
   if(target.pathname==='/repos/'+repo+'/issues')return Response.json([{id:7,number:7,title:'Preserve the shared project context',body:'User feedback: maintain the original project goal across delegated work.',state:'open',html_url:link+'/issues/7'}]);
   if(target.pathname==='/repos/'+repo+'/issues/7')return Response.json({id:7,number:7,title:'Preserve the shared project context',body:'User feedback: maintain the original project goal across delegated work.',state:'open',html_url:link+'/issues/7'});
+  if(target.pathname==='/repos/'+repo+'/issues/7/comments')return Response.json([]);
   if(target.pathname==='/repos/'+repo+'/pulls')return Response.json([]);
   if(target.pathname==='/repos/'+repo+'/actions/runs')return Response.json({total_count:0,workflow_runs:[]});
   if(target.pathname==='/repos/'+repo+'/branches')return Response.json([{name:'main',commit:{sha:'a'.repeat(40)}}]);
@@ -192,7 +194,8 @@ try{
   const receipt=verification?(await (await handleArcChat(new Request(origin+'/api/arc/sessions/'+session.id,{headers:{cookie:'rl_session='+token}}),env)).json() as any).runs.find((r:any)=>r.id===run.id)?.receipt:null;
   const passed=(!verification||receipt?.status==='completed')&&run.status==='succeeded'&&goalRun.status==='succeeded'&&goalEvidence&&taskEvidence&&unexpected===0;
   const modelRepairs=Number(sql.prepare("SELECT COUNT(*) n FROM arc_chat_steps WHERE run_id IN (?,?) AND status='done' AND decision_ciphertext IS NULL AND result_ciphertext IS NOT NULL").get(run.id,goalRun.id)?.n||0);
-  report.push({case:item.id,passed,...(verification?{receipt}:{}),modelRepairs,modelDiagnostics:modelDiagnostics.filter(item=>item.case===currentCase),status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step),modelTokens:run.tokens_used+(goalRun.id===run.id?0:goalRun.tokens_used),providerRequests:reads,listCalls:lists,...(item.project?{projectDocumentReads}:{}),...(item.id.startsWith('attention')||item.id==='calendar'?{calendarReads}:{}),...(taskId?{taskId,scheduledGoalVerified:taskEvidence}:{}),...(item.id==='managed-process'?{processStarts,processChecks,processOutputs}:{}),answer,trace});
+  const corrections=messages.filter(message=>message.role==='tool'&&message.status==='failed').map(message=>({tool:message.tool,arguments:message.arguments,result:message.result}));
+  report.push({case:item.id,passed,...(verification?{receipt}:{}),modelRepairs,modelDiagnostics:modelDiagnostics.filter(item=>item.case===currentCase),corrections,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step),modelTokens:run.tokens_used+(goalRun.id===run.id?0:goalRun.tokens_used),providerRequests:reads,listCalls:lists,...(item.project?{projectDocumentReads}:{}),...(item.id.startsWith('attention')||item.id==='calendar'?{calendarReads}:{}),...(taskId?{taskId,scheduledGoalVerified:taskEvidence}:{}),...(item.id==='managed-process'?{processStarts,processChecks,processOutputs}:{}),answer,trace});
   console.log(JSON.stringify({case:item.id,passed,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step)}));
   fs.mkdirSync('../../work/arc-task-eval',{recursive:true});fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({passed:report.length===cases.length&&report.every(value=>value.passed),maximumUsd,cases:report},null,2));
  }

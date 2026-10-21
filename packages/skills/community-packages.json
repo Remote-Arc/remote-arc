@@ -7,7 +7,8 @@
     "requires": [
       "Connected computer",
       "Project files"
-    ]
+    ],
+    "category": "design"
   },
   {
     "id": "community-webapp-testing",
@@ -18,7 +19,8 @@
       "Connected computer",
       "Python",
       "Playwright"
-    ]
+    ],
+    "category": "automation"
   },
   {
     "id": "community-playwright",
@@ -30,7 +32,8 @@
       "Node.js",
       "@playwright/cli@0.1.22",
       "Browser"
-    ]
+    ],
+    "category": "automation"
   },
   {
     "id": "community-react-best-practices",
@@ -40,7 +43,8 @@
     "requires": [
       "Connected computer",
       "React project files"
-    ]
+    ],
+    "category": "development"
   },
   {
     "id": "community-web-design-guidelines",
@@ -50,7 +54,8 @@
     "requires": [
       "Connected computer",
       "Interface source files"
-    ]
+    ],
+    "category": "design"
   },
   {
     "id": "community-mcp-builder",
@@ -60,7 +65,8 @@
     "requires": [
       "Connected computer",
       "Python or Node.js"
-    ]
+    ],
+    "category": "development"
   },
   {
     "id": "community-polars",
@@ -71,7 +77,8 @@
       "Connected computer",
       "Python",
       "polars"
-    ]
+    ],
+    "category": "data"
   },
   {
     "id": "community-matplotlib",
@@ -82,6 +89,165 @@
       "Connected computer",
       "Python",
       "matplotlib"
+    ],
+    "category": "data"
+  },
+  {
+    "id": "arc-docx",
+    "name": "Word documents",
+    "description": "Create and edit real DOCX files, preserve styles and inspect saved content before visual review.",
+    "origin": "builtin",
+    "owner": "Remote Arc",
+    "version": "1.0.0",
+    "category": "office",
+    "keywords": [
+      "Word",
+      "DOCX",
+      "文档",
+      "报告",
+      "合同"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python",
+      "python-docx"
+    ]
+  },
+  {
+    "id": "arc-xlsx",
+    "name": "Excel spreadsheets",
+    "description": "Create and edit XLSX workbooks with source-backed formulas, error checks and explicit cache/recalculation verification.",
+    "origin": "builtin",
+    "owner": "Remote Arc",
+    "version": "1.0.0",
+    "category": "office",
+    "keywords": [
+      "Excel",
+      "XLSX",
+      "表格",
+      "公式",
+      "预算"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python",
+      "openpyxl"
+    ]
+  },
+  {
+    "id": "arc-pptx",
+    "name": "PowerPoint presentations",
+    "description": "Build editable PPTX decks from real templates, then check text, slide geometry and visual layout.",
+    "origin": "builtin",
+    "owner": "Remote Arc",
+    "version": "1.0.0",
+    "category": "office",
+    "keywords": [
+      "PowerPoint",
+      "PPTX",
+      "PPT",
+      "幻灯片",
+      "演示文稿"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python",
+      "python-pptx"
+    ]
+  },
+  {
+    "id": "arc-pdf",
+    "name": "PDF workflows",
+    "description": "Inspect, extract, merge, split and rotate actual PDFs with page-order checks and honest scan/OCR limits.",
+    "origin": "builtin",
+    "owner": "Remote Arc",
+    "version": "1.0.0",
+    "category": "office",
+    "keywords": [
+      "PDF",
+      "合并",
+      "拆分",
+      "提取",
+      "扫描"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python",
+      "pypdf"
+    ]
+  },
+  {
+    "id": "community-statistical-analysis",
+    "name": "Statistical analysis",
+    "description": "Choose statistical tests, check assumptions, estimate effect sizes and report uncertainty with runnable helpers.",
+    "owner": "K-Dense",
+    "category": "data",
+    "keywords": [
+      "statistics",
+      "统计",
+      "假设检验",
+      "置信区间"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python",
+      "scipy",
+      "statsmodels"
+    ]
+  },
+  {
+    "id": "community-scikit-learn",
+    "name": "Machine learning with scikit-learn",
+    "description": "Build reproducible preprocessing and model evaluation pipelines without train/test leakage.",
+    "owner": "K-Dense",
+    "category": "data",
+    "keywords": [
+      "machine learning",
+      "机器学习",
+      "分类",
+      "回归"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python",
+      "scikit-learn"
+    ]
+  },
+  {
+    "id": "community-seaborn",
+    "name": "Statistical visualization",
+    "description": "Explore actual data distributions, relationships and categories with Seaborn and complete technical references.",
+    "owner": "K-Dense",
+    "category": "data",
+    "keywords": [
+      "seaborn",
+      "可视化",
+      "统计图",
+      "分布"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python",
+      "seaborn"
+    ]
+  },
+  {
+    "id": "community-networkx",
+    "name": "Graph and network analysis",
+    "description": "Analyze relationships, shortest paths, communities and centrality with real NetworkX graphs.",
+    "owner": "K-Dense",
+    "category": "data",
+    "keywords": [
+      "graph",
+      "network",
+      "图网络",
+      "关系分析",
+      "路径"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python",
+      "networkx"
     ]
   }
 ]

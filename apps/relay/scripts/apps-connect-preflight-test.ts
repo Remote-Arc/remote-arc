@@ -8,10 +8,10 @@ const status = {
   providers: APP_PROVIDERS.map(provider => ({ provider, ready: provider === "runway" })),
 };
 const report = summarizeConnections(status, origin);
-assert.equal(report.providerCount, 29);
+assert.equal(report.providerCount, 37);
 assert.equal(report.readyCount, 1);
-assert.equal(report.unreadyCount, 28);
-assert.equal(report.groups.filter(g => g.category === "oauth").length, 15);
+assert.equal(report.unreadyCount, 36);
+assert.equal(report.groups.filter(g => g.category === "oauth").length, 18);
 assert.equal(report.groups.filter(g => g.category === "user_credential").length, 2);
 assert.deepEqual(report.groups.filter(g => g.priority === "P0").map(g => g.platform), [
   "GITHUB", "GOOGLE", "SLACK", "MICROSOFT", "NOTION",
@@ -30,14 +30,14 @@ assert(partial.groups.every(g => g.p0UnreadyProviders.length === 0));
 const runway = report.groups.find(g => g.platform === "RUNWAY")!;
 assert.equal(runway.readyProviders.length, 1);
 assert.equal(runway.requiredServerSettings.length, 0);
-assert.match(formatConnections(report), /Configured \(not live-verified\): 1\/29/);
+assert.match(formatConnections(report), /Configured \(not live-verified\): 1\/37/);
 assert(!formatConnections(report).includes("APP_TOKEN_KEY="));
 assert.throws(() => summarizeConnections({ ...status, providers: status.providers.slice(1) }, origin), /differ/);
 assert.throws(() => summarizeConnections({ ...status, providers: [...status.providers, status.providers[0]!] }, origin), /duplicate/);
 assert.throws(() => summarizeConnections({ ...status, providers: [{ provider: "rogue", ready: true }] }, origin), /Unexpected/);
 const disabled = summarizeConnections({ enabled: false, providers: status.providers }, origin);
 assert.equal(disabled.readyCount, 0);
-assert.equal(disabled.unreadyCount, 29);
+assert.equal(disabled.unreadyCount, 37);
 let hit = "";
 const fetched = await fetchPublicStatus(origin, (async (input: RequestInfo | URL) => {
   hit = String(input);

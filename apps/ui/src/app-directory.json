@@ -597,12 +597,444 @@
       "payer": "provider_rules"
     },
     {
+      "provider": "google_slides",
+      "name": "Google Slides",
+      "brand": "googleslides",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 8,
+      "operations": [
+        {
+          "name": "presentations.get",
+          "description": "Read a presentation, slide IDs, text and revision",
+          "permission": "read"
+        },
+        {
+          "name": "pages.get",
+          "description": "Read one slide and its page elements",
+          "permission": "read"
+        },
+        {
+          "name": "pages.thumbnail",
+          "description": "Get the provider-generated thumbnail URL for one slide",
+          "permission": "read"
+        },
+        {
+          "name": "presentations.create",
+          "description": "Create an empty Google Slides presentation",
+          "permission": "write"
+        },
+        {
+          "name": "slides.create",
+          "description": "Add a blank slide to an existing presentation",
+          "permission": "write"
+        },
+        {
+          "name": "text.replaceAll",
+          "description": "Replace matching presentation text with optional revision fencing",
+          "permission": "write"
+        },
+        {
+          "name": "text.insert",
+          "description": "Insert text into an existing editable page element",
+          "permission": "write"
+        },
+        {
+          "name": "shapes.createTextbox",
+          "description": "Create a named editable text box on an identified slide",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Requires the Google Slides API and this connector callback on the dedicated Apps OAuth client. Existing Google connections are not silently upgraded.",
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "onedrive",
+      "name": "OneDrive",
+      "brand": "onedrive",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 8,
+      "operations": [
+        {
+          "name": "drive.get",
+          "description": "Read the signed-in account drive and quota",
+          "permission": "read"
+        },
+        {
+          "name": "files.list",
+          "description": "List one folder or the root folder",
+          "permission": "read"
+        },
+        {
+          "name": "files.get",
+          "description": "Read file metadata and its web link",
+          "permission": "read"
+        },
+        {
+          "name": "files.search",
+          "description": "Search files available in your drive",
+          "permission": "read"
+        },
+        {
+          "name": "folders.create",
+          "description": "Create a named folder and fail if that name already exists",
+          "permission": "write"
+        },
+        {
+          "name": "files.rename",
+          "description": "Rename one file or folder with an optional current ETag",
+          "permission": "write"
+        },
+        {
+          "name": "files.delete",
+          "description": "Move an identified file or folder to the provider recycle bin",
+          "permission": "write"
+        },
+        {
+          "name": "files.move",
+          "description": "Move an existing item to an identified parent folder in the same drive",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Access files granted to your Microsoft account. Sharing and external publication are not included.",
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "microsoft_excel",
+      "name": "Microsoft Excel",
+      "brand": "microsoftexcel",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 8,
+      "operations": [
+        {
+          "name": "worksheets.list",
+          "description": "List worksheets in an existing .xlsx workbook",
+          "permission": "read"
+        },
+        {
+          "name": "worksheets.get",
+          "description": "Read one worksheet and its visibility",
+          "permission": "read"
+        },
+        {
+          "name": "ranges.get",
+          "description": "Read a bounded A1 range with values, formulas and formats",
+          "permission": "read"
+        },
+        {
+          "name": "worksheets.create",
+          "description": "Add a named worksheet to an existing workbook",
+          "permission": "write"
+        },
+        {
+          "name": "ranges.update",
+          "description": "Write a bounded rectangular array of cell values matching the selected range",
+          "permission": "write"
+        },
+        {
+          "name": "tables.list",
+          "description": "List workbook tables with their names and IDs",
+          "permission": "read"
+        },
+        {
+          "name": "tables.create",
+          "description": "Create a table over an explicit existing worksheet range",
+          "permission": "write"
+        },
+        {
+          "name": "rows.append",
+          "description": "Append a bounded rectangular batch to an existing workbook table",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Excel Graph tools need delegated Files.ReadWrite even to read worksheets. Use .xlsx workbooks in OneDrive for Business or SharePoint; personal OneDrive workbooks are not supported.",
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "microsoft_teams",
+      "name": "Microsoft Teams",
+      "brand": "microsoftteams",
+      "category": "communication",
+      "auth": "oauth",
+      "operationCount": 8,
+      "operations": [
+        {
+          "name": "chats.list",
+          "description": "List existing chats for the signed-in work or school account",
+          "permission": "read"
+        },
+        {
+          "name": "chats.get",
+          "description": "Read an existing chat and its topic",
+          "permission": "read"
+        },
+        {
+          "name": "members.list",
+          "description": "List members of a chat you can access",
+          "permission": "read"
+        },
+        {
+          "name": "messages.list",
+          "description": "Read recent messages in one existing chat",
+          "permission": "read"
+        },
+        {
+          "name": "messages.get",
+          "description": "Read a specific chat message and its web URL",
+          "permission": "read"
+        },
+        {
+          "name": "messages.send",
+          "description": "Send the requested plain text to an existing chat",
+          "permission": "write"
+        },
+        {
+          "name": "messages.update",
+          "description": "Edit a message owned by the signed-in user in an existing chat",
+          "permission": "write"
+        },
+        {
+          "name": "messages.softDelete",
+          "description": "Soft-delete a message owned by the signed-in user",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Requires a work or school account and tenant consent. Tools access your existing chats; they do not create teams or add members.",
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "microsoft_todo",
+      "name": "Microsoft To Do",
+      "brand": "microsofttodo",
+      "category": "email_calendar",
+      "auth": "oauth",
+      "operationCount": 8,
+      "operations": [
+        {
+          "name": "lists.list",
+          "description": "List your Microsoft To Do task lists",
+          "permission": "read"
+        },
+        {
+          "name": "lists.get",
+          "description": "Read one task list",
+          "permission": "read"
+        },
+        {
+          "name": "tasks.list",
+          "description": "List tasks within one task list",
+          "permission": "read"
+        },
+        {
+          "name": "tasks.get",
+          "description": "Read a task including notes and completion state",
+          "permission": "read"
+        },
+        {
+          "name": "lists.create",
+          "description": "Create a task list",
+          "permission": "write"
+        },
+        {
+          "name": "tasks.create",
+          "description": "Create a task in an existing list",
+          "permission": "write"
+        },
+        {
+          "name": "tasks.update",
+          "description": "Update task text or completion state",
+          "permission": "write"
+        },
+        {
+          "name": "tasks.delete",
+          "description": "Delete an identified task from the selected list",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Read lists and tasks, create tasks and update their completion state using your own Microsoft account.",
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "dropbox",
+      "name": "Dropbox",
+      "brand": "dropbox",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 8,
+      "operations": [
+        {
+          "name": "files.list",
+          "description": "List folder entries with an opaque continuation cursor",
+          "permission": "read"
+        },
+        {
+          "name": "files.continue",
+          "description": "Continue a previous folder listing with its exact returned cursor",
+          "permission": "read"
+        },
+        {
+          "name": "files.get",
+          "description": "Read file or folder metadata without downloading content",
+          "permission": "read"
+        },
+        {
+          "name": "files.search",
+          "description": "Search names of files in the authorized Dropbox scope",
+          "permission": "read"
+        },
+        {
+          "name": "folders.create",
+          "description": "Create a folder without automatically renaming conflicts",
+          "permission": "write"
+        },
+        {
+          "name": "files.move",
+          "description": "Move or rename an existing Dropbox item without overwriting conflicts",
+          "permission": "write"
+        },
+        {
+          "name": "files.copy",
+          "description": "Copy an existing item without overwriting or automatically renaming conflicts",
+          "permission": "write"
+        },
+        {
+          "name": "files.delete",
+          "description": "Delete an identified item within the authorized Dropbox namespace",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Authorize the Remote Arc Dropbox app. Its app-folder or full-Dropbox setting bounds every file operation; tools do not publish shared links.",
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "asana",
+      "name": "Asana",
+      "brand": "asana",
+      "category": "development",
+      "auth": "oauth",
+      "operationCount": 8,
+      "operations": [
+        {
+          "name": "workspaces.list",
+          "description": "List Asana workspaces available to your account",
+          "permission": "read"
+        },
+        {
+          "name": "projects.list",
+          "description": "List projects in an authorized workspace",
+          "permission": "read"
+        },
+        {
+          "name": "tasks.list",
+          "description": "List tasks in an existing Asana project",
+          "permission": "read"
+        },
+        {
+          "name": "tasks.get",
+          "description": "Read one task with notes, status and permalink",
+          "permission": "read"
+        },
+        {
+          "name": "tasks.create",
+          "description": "Create a task in an authorized project",
+          "permission": "write"
+        },
+        {
+          "name": "tasks.update",
+          "description": "Update an existing task name, notes or completion state",
+          "permission": "write"
+        },
+        {
+          "name": "stories.list",
+          "description": "Read comments and activity for one task",
+          "permission": "read"
+        },
+        {
+          "name": "comments.create",
+          "description": "Add the requested comment to an existing Asana task",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Authorize your Asana workspace. The OAuth app must enable these granular scopes and permit distribution to that workspace.",
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
+      "provider": "airtable",
+      "name": "Airtable",
+      "brand": "airtable",
+      "category": "docs_files",
+      "auth": "oauth",
+      "operationCount": 8,
+      "operations": [
+        {
+          "name": "bases.list",
+          "description": "List only bases granted to this OAuth integration",
+          "permission": "read"
+        },
+        {
+          "name": "tables.list",
+          "description": "Read table and field schemas for an authorized base",
+          "permission": "read"
+        },
+        {
+          "name": "records.list",
+          "description": "Read a page of table records, optionally filtered by an Airtable formula",
+          "permission": "read"
+        },
+        {
+          "name": "records.get",
+          "description": "Read one record and its field values",
+          "permission": "read"
+        },
+        {
+          "name": "records.create",
+          "description": "Create up to ten records without enabling field type coercion",
+          "permission": "write"
+        },
+        {
+          "name": "records.update",
+          "description": "Update up to ten identified records without replacing other fields",
+          "permission": "write"
+        },
+        {
+          "name": "records.delete",
+          "description": "Delete one identified record without changing the table schema",
+          "permission": "write"
+        },
+        {
+          "name": "records.deleteBatch",
+          "description": "Delete an explicit bounded set of up to ten record IDs",
+          "permission": "write"
+        }
+      ],
+      "connectionNote": "Choose the bases shared with the OAuth integration. Tools read and edit records only in those granted bases; they do not alter schemas.",
+      "supportsWrite": true,
+      "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
+      "payer": "provider_rules"
+    },
+    {
       "provider": "youtube",
       "name": "YouTube",
       "brand": "youtube",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 11,
       "operations": [
         {
           "name": "channels.list",
@@ -633,9 +1065,34 @@
           "name": "subscriptions.list",
           "description": "List the channels you subscribe to",
           "permission": "read"
+        },
+        {
+          "name": "playlists.create",
+          "description": "Create a playlist with an explicit privacy setting",
+          "permission": "write"
+        },
+        {
+          "name": "playlists.update",
+          "description": "Update the title and description of an owned playlist",
+          "permission": "write"
+        },
+        {
+          "name": "playlists.delete",
+          "description": "Delete an owned playlist without deleting its videos",
+          "permission": "write"
+        },
+        {
+          "name": "playlistItems.insert",
+          "description": "Add an identified video to an editable playlist",
+          "permission": "write"
+        },
+        {
+          "name": "playlistItems.delete",
+          "description": "Remove a playlist item using its actual playlist-item ID",
+          "permission": "write"
         }
       ],
-      "supportsWrite": false,
+      "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
     },
@@ -698,7 +1155,7 @@
       "brand": "googledocs",
       "category": "docs_files",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 8,
       "operations": [
         {
           "name": "documents.get",
@@ -724,6 +1181,21 @@
           "name": "documents.deleteText",
           "description": "Delete a bounded text range at a document revision",
           "permission": "write"
+        },
+        {
+          "name": "documents.insertTable",
+          "description": "Insert an empty table at a specified document revision and position",
+          "permission": "write"
+        },
+        {
+          "name": "documents.setHeading",
+          "description": "Apply a semantic paragraph heading to an exact range and revision",
+          "permission": "write"
+        },
+        {
+          "name": "documents.setBold",
+          "description": "Apply or remove bold formatting on a specified range and revision",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -736,7 +1208,7 @@
       "brand": "googlesheets",
       "category": "docs_files",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 8,
       "operations": [
         {
           "name": "spreadsheets.get",
@@ -767,6 +1239,16 @@
           "name": "values.clear",
           "description": "Clear values in an exact range, keeping formatting",
           "permission": "write"
+        },
+        {
+          "name": "sheets.rename",
+          "description": "Rename an existing worksheet using its numeric sheet ID",
+          "permission": "write"
+        },
+        {
+          "name": "rows.insert",
+          "description": "Insert a bounded number of rows at an explicit zero-based index",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -779,7 +1261,7 @@
       "brand": "googlesearchconsole",
       "category": "marketing",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 8,
       "operations": [
         {
           "name": "sites.list",
@@ -800,9 +1282,29 @@
           "name": "sitemaps.list",
           "description": "List submitted sitemaps for a property",
           "permission": "read"
+        },
+        {
+          "name": "sitemaps.submit",
+          "description": "Submit a sitemap for an authorized Search Console property",
+          "permission": "write"
+        },
+        {
+          "name": "sitemaps.delete",
+          "description": "Remove a sitemap for an authorized Search Console property",
+          "permission": "write"
+        },
+        {
+          "name": "sites.add",
+          "description": "Add a property to your Search Console account; this does not verify site ownership",
+          "permission": "write"
+        },
+        {
+          "name": "sites.delete",
+          "description": "Remove a property from your Search Console account; this does not verify site ownership",
+          "permission": "write"
         }
       ],
-      "supportsWrite": false,
+      "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
     },
@@ -812,7 +1314,7 @@
       "brand": "googleanalytics",
       "category": "marketing",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 8,
       "operations": [
         {
           "name": "accounts.list",
@@ -833,9 +1335,29 @@
           "name": "reports.realtime",
           "description": "Read realtime active users by country",
           "permission": "read"
+        },
+        {
+          "name": "customDimensions.list",
+          "description": "List configured GA4 custom dimensions",
+          "permission": "read"
+        },
+        {
+          "name": "customDimensions.create",
+          "description": "Create a GA4 custom dimension with an explicit event parameter and scope",
+          "permission": "write"
+        },
+        {
+          "name": "customDimensions.update",
+          "description": "Rename a custom dimension using an exact update mask",
+          "permission": "write"
+        },
+        {
+          "name": "customDimensions.archive",
+          "description": "Archive an existing custom dimension without deleting collected event data",
+          "permission": "write"
         }
       ],
-      "supportsWrite": false,
+      "supportsWrite": true,
       "billingNote": "Provider usage and API-project quotas follow that provider's rules.",
       "payer": "provider_rules"
     },
@@ -845,7 +1367,7 @@
       "brand": "googleads",
       "category": "marketing",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 8,
       "operations": [
         {
           "name": "accounts.list",
@@ -866,9 +1388,29 @@
           "name": "ads.report",
           "description": "Read recent advertising performance",
           "permission": "read"
+        },
+        {
+          "name": "campaigns.pause",
+          "description": "Pause an existing campaigns resource; never enables ads or changes budget",
+          "permission": "write"
+        },
+        {
+          "name": "adGroups.pause",
+          "description": "Pause an existing adGroups resource; never enables ads or changes budget",
+          "permission": "write"
+        },
+        {
+          "name": "ads.pause",
+          "description": "Pause one existing ad using its ad-group and ad IDs",
+          "permission": "write"
+        },
+        {
+          "name": "labels.create",
+          "description": "Create an account label without creating a campaign or advertising spend",
+          "permission": "write"
         }
       ],
-      "supportsWrite": false,
+      "supportsWrite": true,
       "billingNote": "Reads use API quota. Advertising spend belongs to the connected Google Ads account.",
       "payer": "provider_rules"
     },
@@ -878,7 +1420,7 @@
       "brand": "facebook",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 8,
       "operations": [
         {
           "name": "pages.list",
@@ -904,6 +1446,21 @@
           "name": "comments.list",
           "description": "Read comments on a Page post",
           "permission": "read"
+        },
+        {
+          "name": "posts.update",
+          "description": "Update the requested text on a post owned by the selected Page",
+          "permission": "write"
+        },
+        {
+          "name": "posts.delete",
+          "description": "Delete a post belonging to the selected Page",
+          "permission": "write"
+        },
+        {
+          "name": "comments.create",
+          "description": "Comment as the selected Page on its own post",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -970,7 +1527,7 @@
       "brand": "meta",
       "category": "marketing",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 8,
       "operations": [
         {
           "name": "accounts.list",
@@ -1001,6 +1558,16 @@
           "name": "ads.list",
           "description": "List advertisements and delivery status",
           "permission": "read"
+        },
+        {
+          "name": "adSets.pause",
+          "description": "Pause an existing adSetId without enabling delivery or changing budget",
+          "permission": "write"
+        },
+        {
+          "name": "ads.pause",
+          "description": "Pause an existing adId without enabling delivery or changing budget",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -1013,7 +1580,7 @@
       "brand": "vercel",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 9,
       "operations": [
         {
           "name": "projects.list",
@@ -1044,6 +1611,21 @@
           "name": "domains.list",
           "description": "List a project’s domains",
           "permission": "read"
+        },
+        {
+          "name": "env.create",
+          "description": "Create an encrypted integration-owned project environment variable",
+          "permission": "write"
+        },
+        {
+          "name": "env.update",
+          "description": "Update an identified integration-owned environment variable",
+          "permission": "write"
+        },
+        {
+          "name": "env.delete",
+          "description": "Remove an identified integration-owned environment variable",
+          "permission": "write"
         }
       ],
       "connectionNote": "Install the Remote Arc integration and choose the projects it can access. Integration permissions are configured by Remote Arc; local read permission still denies writes.",
@@ -1057,7 +1639,7 @@
       "brand": "runway",
       "category": "creative",
       "auth": "api_key",
-      "operationCount": 5,
+      "operationCount": 8,
       "operations": [
         {
           "name": "organization.get",
@@ -1083,6 +1665,21 @@
           "name": "avatars.list",
           "description": "List avatars available to your Runway organization",
           "permission": "read"
+        },
+        {
+          "name": "images.generate",
+          "description": "Generate one Gen-4 720p image within the requested API-credit estimate",
+          "permission": "write"
+        },
+        {
+          "name": "videos.fromImage",
+          "description": "Generate a Gen-4 Turbo video from a supplied HTTPS image within the credit estimate",
+          "permission": "write"
+        },
+        {
+          "name": "voices.list",
+          "description": "List existing custom voices in the connected Runway organization",
+          "permission": "read"
         }
       ],
       "connectionNote": "Use a Runway API key from the developer portal. Video generation requires explicit approval and a credit estimate.",
@@ -1096,7 +1693,7 @@
       "brand": "x",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 8,
       "operations": [
         {
           "name": "profile.get",
@@ -1122,6 +1719,21 @@
           "name": "posts.delete",
           "description": "Delete one of your own posts",
           "permission": "write"
+        },
+        {
+          "name": "likes.create",
+          "description": "Like an identified post as the connected account",
+          "permission": "write"
+        },
+        {
+          "name": "likes.delete",
+          "description": "Unlike an identified post as the connected account",
+          "permission": "write"
+        },
+        {
+          "name": "bookmarks.create",
+          "description": "Bookmark an identified post for the connected account",
+          "permission": "write"
         }
       ],
       "connectionNote": "Sign in to X and authorize your own user account. Remote Arc manages the confidential OAuth client and token refresh.",
@@ -1135,7 +1747,7 @@
       "brand": "whatsapp",
       "category": "communication",
       "auth": "api_key",
-      "operationCount": 6,
+      "operationCount": 8,
       "operations": [
         {
           "name": "phones.list",
@@ -1166,6 +1778,16 @@
           "name": "phone.get",
           "description": "Read the connected business phone number",
           "permission": "read"
+        },
+        {
+          "name": "templates.create",
+          "description": "Submit a text template for provider review; does not send a message",
+          "permission": "write"
+        },
+        {
+          "name": "templates.delete",
+          "description": "Delete an identified template from the connected Business account",
+          "permission": "write"
         }
       ],
       "connectionNote": "Requires a WhatsApp Business Cloud API token, a business account ID and an owned phone number ID.",
@@ -1179,7 +1801,7 @@
       "brand": "jira",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 7,
+      "operationCount": 8,
       "operations": [
         {
           "name": "sites.list",
@@ -1215,6 +1837,11 @@
           "name": "transitions.list",
           "description": "Read available issue status transitions",
           "permission": "read"
+        },
+        {
+          "name": "issues.update",
+          "description": "Update an existing issue summary and description in an authorized Jira site",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -1227,16 +1854,11 @@
       "brand": "confluence",
       "category": "docs_files",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 8,
       "operations": [
         {
           "name": "spaces.list",
           "description": "List spaces in an authorized Confluence site",
-          "permission": "read"
-        },
-        {
-          "name": "pages.get",
-          "description": "Read a Confluence page",
           "permission": "read"
         },
         {
@@ -1253,6 +1875,26 @@
           "name": "spaces.get",
           "description": "Read a Confluence space",
           "permission": "read"
+        },
+        {
+          "name": "pages.update",
+          "description": "Update a page using the next version number derived from a fresh page read",
+          "permission": "write"
+        },
+        {
+          "name": "pages.delete",
+          "description": "Delete an identified Confluence page in the authorized site",
+          "permission": "write"
+        },
+        {
+          "name": "comments.list",
+          "description": "Read footer comments on a Confluence page",
+          "permission": "read"
+        },
+        {
+          "name": "comments.create",
+          "description": "Add a footer comment to an existing page",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -1318,7 +1960,7 @@
       "brand": "shopify",
       "category": "sales_commerce",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 8,
       "operations": [
         {
           "name": "shop.get",
@@ -1349,6 +1991,16 @@
           "name": "orders.get",
           "description": "Read one order and its line items",
           "permission": "read"
+        },
+        {
+          "name": "products.update",
+          "description": "Update a product title and description without changing publication status",
+          "permission": "write"
+        },
+        {
+          "name": "products.archive",
+          "description": "Archive an identified product without deleting its historical orders",
+          "permission": "write"
         }
       ],
       "connectionNote": "Enter your store's myshopify.com domain. Only stores that approve this app can be accessed.",
@@ -1362,7 +2014,7 @@
       "brand": "linkedin",
       "category": "social",
       "auth": "oauth",
-      "operationCount": 4,
+      "operationCount": 8,
       "operations": [
         {
           "name": "profile.get",
@@ -1383,6 +2035,26 @@
           "name": "posts.delete",
           "description": "Delete one of your own LinkedIn posts",
           "permission": "write"
+        },
+        {
+          "name": "images.initializeUpload",
+          "description": "Initialize an image upload for the connected member; return its actual upload URL and image URN",
+          "permission": "write"
+        },
+        {
+          "name": "images.get",
+          "description": "Read the processing status of an image accessible to the connected account",
+          "permission": "read"
+        },
+        {
+          "name": "videos.initializeUpload",
+          "description": "Initialize an owned video upload for an explicitly sized file",
+          "permission": "write"
+        },
+        {
+          "name": "videos.finalizeUpload",
+          "description": "Finalize uploaded video parts using the provider-returned upload token and part IDs",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -1395,7 +2067,7 @@
       "brand": "supabase",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 8,
       "operations": [
         {
           "name": "projects.list",
@@ -1421,6 +2093,21 @@
           "name": "functions.list",
           "description": "List Edge Functions in an authorized project",
           "permission": "read"
+        },
+        {
+          "name": "secrets.upsert",
+          "description": "Create or update explicitly supplied project Edge Function secrets",
+          "permission": "write"
+        },
+        {
+          "name": "functions.delete",
+          "description": "Delete one named Edge Function from an authorized project",
+          "permission": "write"
+        },
+        {
+          "name": "config.get",
+          "description": "Read project PostgREST configuration",
+          "permission": "read"
         }
       ],
       "connectionNote": "Choose the organization to authorize. Provider scopes are fixed in the OAuth app configuration; Remote Arc read permission separately denies all SQL writes.",
@@ -1434,7 +2121,7 @@
       "brand": "linear",
       "category": "development",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 8,
       "operations": [
         {
           "name": "viewer.get",
@@ -1460,6 +2147,21 @@
           "name": "issues.get",
           "description": "Read one issue and its status",
           "permission": "read"
+        },
+        {
+          "name": "issues.update",
+          "description": "Update issue title and description",
+          "permission": "write"
+        },
+        {
+          "name": "comments.create",
+          "description": "Add a comment to an existing issue",
+          "permission": "write"
+        },
+        {
+          "name": "comments.delete",
+          "description": "Delete an identified comment",
+          "permission": "write"
         }
       ],
       "connectionNote": "Sign in to Linear and choose a workspace. Changes act as the user who authorized the connection.",
@@ -1473,7 +2175,7 @@
       "brand": "hubspot",
       "category": "sales_commerce",
       "auth": "oauth",
-      "operationCount": 6,
+      "operationCount": 8,
       "operations": [
         {
           "name": "contacts.list",
@@ -1504,6 +2206,16 @@
           "name": "contacts.update",
           "description": "Update contact details",
           "permission": "write"
+        },
+        {
+          "name": "contacts.archive",
+          "description": "Archive an existing HubSpot contact",
+          "permission": "write"
+        },
+        {
+          "name": "deals.update",
+          "description": "Update an existing deal name and stage without changing its amount",
+          "permission": "write"
         }
       ],
       "supportsWrite": true,
@@ -1516,7 +2228,7 @@
       "brand": "salesforce",
       "category": "sales_commerce",
       "auth": "oauth",
-      "operationCount": 5,
+      "operationCount": 8,
       "operations": [
         {
           "name": "contacts.list",
@@ -1541,6 +2253,21 @@
         {
           "name": "contacts.update",
           "description": "Update Salesforce contact details",
+          "permission": "write"
+        },
+        {
+          "name": "contacts.delete",
+          "description": "Delete an identified contact in the connected Salesforce organization",
+          "permission": "write"
+        },
+        {
+          "name": "opportunities.get",
+          "description": "Read one opportunity and its current stage",
+          "permission": "read"
+        },
+        {
+          "name": "opportunities.update",
+          "description": "Update an identified opportunity name and stage",
           "permission": "write"
         }
       ],

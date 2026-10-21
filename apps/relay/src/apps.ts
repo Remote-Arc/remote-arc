@@ -37,7 +37,8 @@ function requirePermission(row: Connection, permission: AppPermission, operation
     (row.provider === "google_drive" && scope === "https://www.googleapis.com/auth/drive.file" && scopes.has("https://www.googleapis.com/auth/drive")) ||
     (scope.endsWith(".readonly") && scopes.has(scope.slice(0, -9))) ||
     (row.provider === "outlook" && scope === "Mail.Read" && scopes.has("Mail.ReadWrite")) ||
-    (row.provider === "microsoft_calendar" && scope === "Calendars.Read" && scopes.has("Calendars.ReadWrite"));
+    (row.provider === "microsoft_calendar" && scope === "Calendars.Read" && scopes.has("Calendars.ReadWrite")) ||
+    (APP_CATALOG[row.provider].credential==='MICROSOFT'&&['Files.Read','Tasks.Read','Chat.Read'].includes(scope)&&scopes.has(scope+'Write'));
   if (!required.every(satisfies) || (operation?.anyScopes?.length && !operation.anyScopes.some(satisfies))) throw new AppError("app_scope_required", 403);
 }
 /** Local preflight only. No token disclosure, network call or permission grant. */
@@ -227,7 +228,7 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
     dispatched = true;
     const rawResult = await providerJson(plan.url, { method: plan.method, headers: { ...headers, ...plan.headers, ...conditionalHeaders }, body: plan.body === undefined ? undefined : headers["content-type"] === "application/x-www-form-urlencoded" ? new URLSearchParams(Object.entries(plan.body as Record<string,unknown>).map(([k,v]) => [k, String(v)])) : JSON.stringify(plan.body) }, fetcher, plan.responseKind);
     validateAppResult(row.provider, operation.name, rawResult);
-    const result = redactProviderCredentials(rawResult);
+    const result = redactProviderCredentials(rawResult,(row.provider==='vercel'&&operation.name.startsWith('env.')||row.provider==='supabase'&&operation.name.startsWith('secrets.'))?['value','decrypted']:[]);
     await env.DB.prepare("UPDATE app_calls SET status='succeeded',result_ciphertext=?1,updated_at=?2 WHERE id=?3 AND user_id=?4 AND status='running'").bind(await seal(env, result, callContext(identity.userId, call.id, "result")), now(), call.id, identity.userId).run();
     return { status: "succeeded", callId: call.id, untrustedData: true, verification: "provider_acknowledged", result };
   } catch (error) {

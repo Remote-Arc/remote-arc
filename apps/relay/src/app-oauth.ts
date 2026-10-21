@@ -57,6 +57,7 @@ export async function authorizationUrl(env: AppEnv, provider: AppProvider, permi
   if(provider==="linear"){url.searchParams.set("actor","user");url.searchParams.set("prompt","consent");}
   if (def.credential === "ATLASSIAN") { url.searchParams.set("audience", "api.atlassian.com"); url.searchParams.set("prompt", "consent"); }
   if (provider === "notion") url.searchParams.set("owner", "user");
+  if(provider==='dropbox')url.searchParams.set('token_access_type','offline');
   url.searchParams.set("client_id", id); url.searchParams.set("redirect_uri", callbackUrl(env, provider));
   url.searchParams.set("response_type", "code"); url.searchParams.set("state", state);
   url.searchParams.set(provider === "slack" ? "user_scope" : "scope", appScopes(provider, permissions).join(["slack", "shopify", "linear"].includes(provider) ? "," : " "));
@@ -74,7 +75,7 @@ export async function exchangeTokens(env: AppEnv, provider: AppProvider, input: 
   const context = { ...(input.context || ("previous" in input ? input.previous.context : undefined) || connectionContext(env, provider)) };
   const headers: Record<string,string> = { "content-type": "application/x-www-form-urlencoded", accept: "application/json" };
   let body: BodyInit = form;
-  if (["notion","supabase","x"].includes(provider)) { headers.authorization = "Basic " + btoa(id + ":" + secret); form.delete("client_id"); form.delete("client_secret"); }
+  if (["notion","supabase","x","airtable"].includes(provider)) { headers.authorization = "Basic " + btoa(id + ":" + secret); form.delete("client_id"); form.delete("client_secret"); }
   if(provider==="vercel"){if(!("code" in input))throw new AppError("app_reauthorization_required",409);form.delete("grant_type");}
   if (["notion", "shopify"].includes(provider) || def.credential === "ATLASSIAN") { headers["content-type"] = "application/json"; const payload = Object.fromEntries(form); if (provider === "shopify" && "code" in input) delete payload.grant_type; body = JSON.stringify(payload); }
   const result = await providerJson(endpoint(def.token, context), { method: "POST", headers, body }, fetcher);
@@ -103,6 +104,9 @@ export async function providerIdentity(provider: AppProvider, tokens: AppTokens,
 export async function revokeProvider(env: AppEnv, provider: AppProvider, tokens: AppTokens, fetcher: typeof fetch = fetch) {
   if (APP_CATALOG[provider].auth === "api_key") return { localOnly: true };
   const { id, secret } = credentials(env, provider);
+  if(provider==='dropbox')return providerJson('https://api.dropboxapi.com/2/auth/token/revoke',{method:'POST',headers:{authorization:'Bearer '+tokens.accessToken,'content-type':'application/json'},body:'null'},fetcher);
+  if(provider==='asana')return providerJson('https://app.asana.com/-/oauth_revoke',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:id,client_secret:secret,token:tokens.refreshToken||tokens.accessToken})},fetcher);
+  if(provider==='airtable')return providerJson('https://airtable.com/oauth2/v1/revoke',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',authorization:'Basic '+btoa(id+':'+secret)},body:new URLSearchParams({token:tokens.refreshToken||tokens.accessToken,token_type_hint:tokens.refreshToken?'refresh_token':'access_token'})},fetcher);
   if (provider === "github") return providerJson(`https://api.github.com/applications/${encodeURIComponent(id)}/token`, { method: "DELETE", headers: { authorization: "Basic " + btoa(`${id}:${secret}`), "content-type": "application/json", "user-agent": "Remote-Arc-Apps" }, body: JSON.stringify({ access_token: tokens.accessToken }) }, fetcher);
   if(provider==="linear"||provider==="x")return providerJson(provider==="linear"?"https://api.linear.app/oauth/revoke":"https://api.x.com/2/oauth2/revoke",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded",authorization:"Basic "+btoa(id+":"+secret)},body:new URLSearchParams({token:tokens.refreshToken||tokens.accessToken,token_type_hint:tokens.refreshToken?"refresh_token":"access_token"})},fetcher);
   if (provider === "slack") return providerJson("https://slack.com/api/auth.revoke", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token: tokens.accessToken }) }, fetcher);

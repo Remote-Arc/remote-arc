@@ -12,6 +12,9 @@ export function registrationPack(value: string) {
   const declaredScopes = (providers: typeof APP_PROVIDERS[number][]) => [...new Set(providers.flatMap(provider => appScopes(provider, ["read", "write"])))];
   const googleProviders = APP_PROVIDERS.filter(provider => APP_CATALOG[provider].credential === "GOOGLE");
   const additions = Object.fromEntries([
+    ["dropbox","DROPBOX","https://www.dropbox.com/developers/apps"],
+    ["asana","ASANA","https://app.asana.com/0/my-apps"],
+    ["airtable","AIRTABLE","https://airtable.com/create/oauth"],
     ["vercel","VERCEL","https://vercel.com/dashboard/integrations/console"],
     ["linear","LINEAR","https://linear.app/settings/api/applications"],
     ["supabase","SUPABASE","https://supabase.com/dashboard"],
@@ -27,9 +30,9 @@ export function registrationPack(value: string) {
     const providers = APP_PROVIDERS.filter(provider => APP_CATALOG[provider].credential === credential);
     return [name,{registrationUrl,applicationName:"Remote Arc Apps",providers,redirectUris:providers.map(provider=>callbacks[provider]),declaredScopes:declaredScopes(providers),clientIdSecretName:"APP_"+credential+"_CLIENT_ID",clientSecretSecretName:"APP_"+credential+"_CLIENT_SECRET",
       review:"Register the platform application once. Validate provider distribution, requested permissions and eligible account types before public onboarding.",
-      ...(name==="vercel"?{integrationSlugEnv:"APP_VERCEL_INTEGRATION_SLUG",configuredPermissions:["integration-configuration:read","project:read","deployment:read-write"],note:"External integration installation; register the exact callback, preserve state and configure project access. Operations follow the installation's provider permissions and project access."}:{}),
-      ...(name==="supabase"?{configuredPermissions:["organizations:read","projects:read","database:write"],note:"Management API OAuth app, not a Supabase Auth OAuth server. Scopes are configured on the app rather than in the authorization URL; operations follow the connected organization's grants and limits."}:{}),
-      ...(name==="linear"?{actor:"user",pkce:"S256",note:"User-actor OAuth with read and issues:create scopes, rotating refresh tokens."}:{}),
+      ...(name==="vercel"?{integrationSlugEnv:"APP_VERCEL_INTEGRATION_SLUG",configuredPermissions:["integration-configuration:read","project:read","deployment:read-write","project-env-vars:read-write"],note:"External integration installation; register the exact callback, preserve state and configure project access. Environment variable tools require project environment variable read/write permission. Operations follow installation grants."}:{}),
+      ...(name==="supabase"?{configuredPermissions:["organizations:read","projects:read","database:write","secrets:read","secrets:write","edge_functions:read","edge_functions:write"],note:"Management API OAuth app, not a Supabase Auth OAuth server. Configure matching Management API permissions on the platform app, including Edge Functions and secrets for the new writes. Validate exact permission identifiers in the current provider console; execution follows connected organization grants."}:{}),
+      ...(name==="linear"?{actor:"user",pkce:"S256",note:"User-actor OAuth with read, issues:create and write scopes, rotating refresh tokens. Existing accounts need explicit reauthorization for comment and issue updates."}:{}),
       ...(name==="x"?{applicationType:"confidential_web",pkce:"S256",payer:"platform_project",note:"Remote Arc developer project owns API charges. Keep spending controls and funding explicit; no automatic top-ups."}:{}),
       ...(name==="meta"?{graphVersionEnv:"APP_META_GRAPH_VERSION",note:"Pin a currently supported Graph API version. Instagram requires an eligible professional account linked to a Facebook Page."}:{}),
       ...(name==="shopify"?{note:"Use a public app with authorization-code flow; validate the shop domain and callback HMAC. Request protected customer data access before exposing order data."}:{}),
@@ -76,7 +79,7 @@ export function registrationPack(value: string) {
       applicationName: "Remote Arc Apps",
       applicationType: "Web application",
       agenticClient: true,
-      apiServices: ["gmail.googleapis.com", "calendar-json.googleapis.com", "youtube.googleapis.com", "drive.googleapis.com", "docs.googleapis.com", "sheets.googleapis.com", "searchconsole.googleapis.com", "analyticsadmin.googleapis.com", "analyticsdata.googleapis.com", "googleads.googleapis.com"],
+      apiServices: ["gmail.googleapis.com", "calendar-json.googleapis.com", "youtube.googleapis.com", "drive.googleapis.com", "docs.googleapis.com", "sheets.googleapis.com", "slides.googleapis.com", "searchconsole.googleapis.com", "analyticsadmin.googleapis.com", "analyticsdata.googleapis.com", "googleads.googleapis.com"],
       authorizedRedirectUris: googleProviders.map(provider => callbacks[provider]),
       declaredScopes: declaredScopes(googleProviders),
       audience: "External; start in Testing with explicit test users. Complete applicable verification before public launch.",
@@ -91,8 +94,8 @@ export function registrationPack(value: string) {
       platform: "Web",
       supportedAccountTypes: "Accounts in any organizational directory and personal Microsoft accounts",
       authority: "https://login.microsoftonline.com/common",
-      redirectUris: [callbacks.outlook, callbacks.microsoft_calendar],
-      delegatedPermissions: declaredScopes(["outlook", "microsoft_calendar"]),
+      redirectUris: APP_PROVIDERS.filter(provider=>APP_CATALOG[provider].credential==='MICROSOFT').map(provider=>callbacks[provider]),
+      delegatedPermissions: declaredScopes(APP_PROVIDERS.filter(provider=>APP_CATALOG[provider].credential==='MICROSOFT')),
       applicationPermissions: [],
       implicitGrant: false,
       publicClientFlows: false,
@@ -100,7 +103,7 @@ export function registrationPack(value: string) {
       clientSecretSecretName: "APP_MICROSOFT_CLIENT_SECRET",
     },
     ...additions,
-    googleAds: { developerTokenEnv:"APP_GOOGLE_ADS_DEVELOPER_TOKEN", note:"OAuth alone does not grant Google Ads API access; request a developer token and the applicable access level." },
+    googleAds: { apiVersion:"v26", legacyOptionalDeveloperTokenEnv:"APP_GOOGLE_ADS_DEVELOPER_TOKEN", note:"Access levels belong to the Google Cloud project owning the OAuth client. Developer tokens were sunset on September 9, 2026 and are no longer required. Confirm project access level and approved use case." },
     apiKeyProviders: APP_PROVIDERS.filter(provider=>APP_CATALOG[provider].auth==="api_key").map(provider=>({provider,credentialOwner:"end_user",serverSecretRequired:false,connectionNote:APP_CATALOG[provider].connectionNote,billingNote:APP_CATALOG[provider].billingNote})),
     runtime: {
       enableFlag: "ENABLE_APPS",

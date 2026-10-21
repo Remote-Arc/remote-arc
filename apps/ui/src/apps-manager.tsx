@@ -76,7 +76,7 @@ function errorLabel(code: string, tr: (en: string, zh: string) => string) {
     case "app_approval_unavailable": return tr("This approval expired or the connection changed. Refresh and ask your AI for a new request.", "审批已过期或连接已变更。请刷新，并让 AI 重新提交请求。");
     case "app_daily_limit_reached": return tr("This connection or provider reached its daily operation limit. Try again tomorrow.", "此连接或服务已达到每日操作上限，请明天再试。");
     case "app_cost_limit": return tr("The estimated usage exceeds the limit in this request. Review the estimate before requesting again.", "预计用量超出本次请求的上限，请核对估算后重新提出请求。");
-    case "app_user_token_required": return tr("X requires an OAuth user access token from your own developer project.", "X 需要你自己开发者项目的 OAuth 用户访问令牌。");
+    case "app_user_token_required": return tr("Reconnect X to authorize your user account.", "请重新连接 X，完成用户账号授权。");
     case "app_whatsapp_settings_required": return tr("Enter your WhatsApp Business account and phone number IDs.", "请填写 WhatsApp Business 账号与电话号码 ID。");
     case "app_shop_domain_required": return tr("Enter the store's myshopify.com domain.", "请填写店铺的 myshopify.com 域名。");
     case "app_connection_not_found": return tr("This connection no longer exists. Refresh the page.", "该连接已不存在，请刷新页面。");
@@ -132,21 +132,29 @@ const appSummaries: Record<string, [string, string]> = {
   vercel: ["Inspect projects, check deployments and review domains.", "检查项目、查看部署状态，管理域名信息。"],
   jira: ["Find issues, add context and track project work.", "查找 Issue、补充讨论，跟踪项目工作。"],
   confluence: ["Find team spaces, read pages and publish documentation.", "查找团队空间、阅读页面，创建项目文档。"],
-  runway: ["Generate videos and follow creative jobs to completion.", "生成视频，跟踪创作任务的运行结果。"],
-  youtube: ["Review videos, channel performance and audience comments.", "查看视频、频道表现与观众评论。"],
+  runway: ["Generate images and videos, then follow their actual results.", "生成图片与视频，跟踪创作任务的实际结果。"],
+  youtube: ["Explore videos and create, edit or organize playlists.", "查看视频，创建、编辑和整理播放列表。"],
   facebook: ["Follow your Pages and publish updates to your audience.", "查看主页动态，向你的受众发布更新。"],
   instagram: ["Manage media, publish content and respond to comments.", "管理媒体内容、发布动态，回复用户评论。"],
   x: ["Read your posts and create or manage new updates.", "查看账号帖子，创建和管理发布内容。"],
   whatsapp: ["Send business messages and work with approved templates.", "发送商务消息，使用已获服务商批准的消息模板。"],
   linkedin: ["Publish professional updates and manage your posts.", "发布职业动态，管理你的帖子内容。"],
-  google_search_console: ["Understand search queries and review your sitemaps.", "分析搜索查询，查看站点与 Sitemap 信息。"],
-  google_analytics: ["Explore traffic, audience activity and live reports.", "分析网站流量、用户活动与实时报告。"],
-  google_ads: ["Review campaigns, ad groups and advertising performance.", "查看广告活动、广告组与投放表现。"],
+  google_search_console: ["Analyze search traffic and submit or remove sitemaps.", "分析搜索流量，提交或移除 Sitemap。"],
+  google_analytics: ["Explore traffic and create or maintain GA4 custom dimensions.", "分析网站流量，创建和维护 GA4 自定义维度。"],
+  google_ads: ["Review ad performance, pause delivery and organize labels.", "查看投放表现，暂停广告并整理标签。"],
   meta_ads: ["Review campaign results and pause underperforming campaigns.", "查看广告活动表现，暂停需要调整的活动。"],
   shopify: ["Review orders, browse products and prepare new listings.", "查看订单、浏览商品，创建商品草稿。"],
   supabase: ["Inspect projects, query data and review deployed functions.", "检查项目、查询数据，查看已部署的函数。"],
   hubspot: ["Follow deals and keep customer contacts up to date.", "跟进销售机会，更新客户联系人信息。"],
   salesforce: ["Review opportunities and manage customer contacts.", "查看销售机会，管理客户联系人。"],
+  google_slides: ["Read presentations, create slides and edit their text.", "阅读演示文稿，创建幻灯片并编辑文字。"],
+  onedrive: ["Find files, create folders and organize your drive.", "查找文件、创建文件夹，移动和整理云盘资料。"],
+  microsoft_excel: ["Read workbook data, update cells and build tables.", "读取工作簿，更新单元格并创建表格。"],
+  microsoft_teams: ["Read chats and send, edit or remove your messages.", "查看聊天，发送、编辑或删除自己的消息。"],
+  microsoft_todo: ["Read task lists, create tasks and track completion.", "查看任务列表，创建任务并更新完成状态。"],
+  dropbox: ["Find files, create folders and copy or move your work.", "查找文件、创建文件夹，复制和移动工作资料。"],
+  asana: ["Find project tasks, update progress and add comments.", "查看项目任务，更新进度并添加评论。"],
+  airtable: ["Read base records and create, update or remove entries.", "读取数据表记录，创建、更新和删除条目。"],
 };
 
 function appCategory(app: AppDefinition) {
@@ -159,10 +167,11 @@ function AppTools({ app, connections, busy, onConnect }: {
   const { tr } = useI18n();
   const [query, setQuery] = useState("");
   const [selectedName, setSelectedName] = useState("");
+  const [permissionFilter,setPermissionFilter]=useState('all');
   const [copied, setCopied] = useState("");
   const [copyFailed, setCopyFailed] = useState(false);
   const active = connections.find(connection => connection.status === "active");
-  const matching = app.operations.filter(item => (item.name + " " + item.description).toLowerCase().includes(query.trim().toLowerCase()));
+  const matching = app.operations.filter(item => (permissionFilter==='all'||item.permission===permissionFilter)&&(item.name + " " + item.description).toLowerCase().includes(query.trim().toLowerCase()));
   async function copyInstruction(operation: CatalogOperation) {
     const prompt = `Use Remote Arc Connect (list_apps / call_app) to run ${app.provider}.${operation.name}${active ? ` with connectionId ${active.id}` : ""}. Ask me for any required arguments. Use the connected account permissions to carry out my request. Do not claim success without the provider result.`;
     try { await navigator.clipboard.writeText(prompt); setCopied(operation.name); setCopyFailed(false); }
@@ -171,10 +180,10 @@ function AppTools({ app, connections, busy, onConnect }: {
   return <div className="appsToolsContent">
     <p className="appsPanelIntro">{tr("Use these tools in any AI chat connected to Remote Arc.", "在已连接 Remote Arc 的 AI 对话中使用这些工具。")}</p>
     <label className="appsSearchField appsToolsSearch"><ProductIcon name="search" size={17}/><span className="appsSrOnly">{tr("Find a tool", "搜索工具")}</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={tr("Search tools…", "搜索工具…")} /></label>
-    <div className="appsToolsItems">
+    <div className="appsToolFilters" role="group" aria-label={tr('Tool access type','工具读写类型')}>{[['all',tr('All tools','全部工具')],['read',tr('Read','读取')],['write',tr('Write','写入')]].map(([kind,label])=><button type="button" key={kind} aria-pressed={permissionFilter===kind} onClick={()=>setPermissionFilter(kind!)}>{label} · {app.operations.filter(item=>kind==='all'||item.permission===kind).length}</button>)}</div><div className="appsToolsItems">
       {matching.map(item => <section className="appsTool" key={item.name}>
         <h3><button type="button" className="appsToolTrigger" aria-expanded={selectedName === item.name} aria-controls={"app-operation-" + app.provider + "-" + item.name} onClick={() => { setSelectedName(selectedName === item.name ? "" : item.name); setCopyFailed(false); }}>
-          <span><strong>{item.description || item.name}</strong><code>{item.name}</code></span><ProductIcon name="chevron" size={17}/>
+          <span><strong>{item.description || item.name}</strong><code>{item.name}</code><small className="appsToolAccessBadge" data-permission={item.permission}>{item.permission==='write'?tr('Write','写入'):tr('Read','读取')}</small></span><ProductIcon name="chevron" size={17}/>
         </button></h3>
         {selectedName === item.name && <div className="appsToolDetail" id={"app-operation-" + app.provider + "-" + item.name}>
           <span className="appsToolPermission">{item.permission === "write" ? tr("Makes changes", "可进行更改") : tr("Reads data", "读取数据")}</span>
@@ -281,7 +290,7 @@ function CatalogCard({ app, connections, busy, onConnect, onOpen }: {
     <p className="appsCardDescription">{summary ? tr(...summary) : tr("Use this app from your connected AI chat.", "通过已连接的 AI 对话使用此应用。")}</p>
     <div className="appsCardState" data-state={state}>{state === "connected" ? <><ProductIcon name="check" size={14}/>{tr("Connected", "已连接")}{connections.length > 1 && <span>· {connections.length} {tr("accounts", "个账号")}</span>}</> : state === "attention" ? <><span className="appsCardStateDot"/>{tr("Needs attention", "需要关注")}</> : state === "soon" ? tr("Coming soon", "即将开放") : tr("Ready to connect", "可连接账号")}</div>
     <footer className="appsCardFooter">
-      <button type="button" className="appsCardTools" aria-haspopup="dialog" onClick={() => onOpen("tools")}>{app.operations.length} {tr("tools", "项工具")}<ProductIcon name="chevron" size={14}/></button>
+      <button type="button" className="appsCardTools" aria-haspopup="dialog" onClick={() => onOpen("tools")}>{app.operations.length} {tr("tools", "项工具")} · {app.operations.filter(item=>item.permission==='write').length} {tr('write','写入')}<ProductIcon name="chevron" size={14}/></button>
       {connections.length ? <button type="button" className="appsCardManage" aria-haspopup="dialog" onClick={() => onOpen("accounts")}>{tr("Manage", "管理连接")}<ProductIcon name="chevron" size={14}/></button> : app.configured ? <button type="button" className="appsManagerPrimary" disabled={busy} onClick={onConnect}><ProductIcon name="add" size={15}/>{tr("Connect", "连接账号")}</button> : <button type="button" className="appsCardManage" aria-haspopup="dialog" onClick={() => onOpen("tools")}>{tr("Explore", "查看详情")}<ProductIcon name="chevron" size={14}/></button>}
     </footer>
   </article>;
@@ -359,7 +368,7 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
   const visibleApps = snapshot?.apps.filter(app =>
     (connectionView === "all" || (connectionView === "available" ? app.configured : connectedProviders.has(app.provider)))
     && (category === "all" || (app.category || directory.apps.find(item => item.provider === app.provider)?.category) === category)
-    && (app.name + " " + app.provider).toLowerCase().includes(query.trim().toLowerCase())
+    && (app.name + " " + app.provider + " " + app.operations.map(item=>item.name+" "+item.description).join(" ")).toLowerCase().includes(query.trim().toLowerCase())
   ).sort((a, b) => Number(connectedProviders.has(b.provider)) - Number(connectedProviders.has(a.provider)) || Number(b.configured) - Number(a.configured) || featuredRank(a.provider) - featuredRank(b.provider) || a.name.localeCompare(b.name)) || [];
   const selectedApp = snapshot?.enabled ? snapshot.apps.find(app => app.provider === details?.provider) : undefined;
   const availableCount = snapshot?.apps.filter(app => app.configured).length || 0;

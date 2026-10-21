@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import {productivityFixtures} from './apps-productivity-fixtures.js';
+import {followthroughArguments} from './apps-followthrough-fixtures.js';
 import fs from "node:fs"; import path from "node:path"; import {fileURLToPath} from "node:url"; import {DatabaseSync} from "node:sqlite"; import {z} from "zod";
 import {APP_CATALOG,APP_OPERATIONS,APP_CATEGORIES,APP_PROVIDERS,AppError,appScopes,appOperation,type AppEnv,type AppProvider} from "../src/app-catalog.js";
 import {EXTRA_PROVIDER_IDS} from "../src/app-integrations.js";
@@ -6,7 +8,7 @@ import {authorizationUrl,exchangeTokens,providerIdentity,providerJson,revokeProv
 import {connectionContext,appConfigured,providerHeaders,endpoint,checkShopifyCallback,extraIdentity,normalizeScope} from "../src/app-auth-adapters.js";
 import {reserveAppDispatch,quoteAppOperation,reviewCreatedAction,dispatchHeaders,validateAppResult,redactProviderCredentials} from "../src/app-connection-policy.js";
 import {discoverApps,appDiscoverySchema} from "../src/app-discovery.js";
-import {callApp,handleApps,listApps} from "../src/apps.js";import {sha256Hex} from "../src/auth.js";import {registrationPack} from "./apps-registration.js";
+import {callApp,handleApps,listApps,validateAppAccess} from "../src/apps.js";import {sha256Hex} from "../src/auth.js";import {registrationPack} from "./apps-registration.js";
 const sql=new DatabaseSync(":memory:");sql.exec("PRAGMA foreign_keys=ON");
 const migrations=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../migrations");
 for(const file of fs.readdirSync(migrations).filter(v=>v.endsWith(".sql")).sort())sql.exec(fs.readFileSync(path.join(migrations,file),"utf8"));
@@ -25,6 +27,9 @@ const fetcher:typeof fetch=async(input,init={})=>{
  let body:any=init.body;if(typeof body==="string"){try{body=JSON.parse(body);}catch{body=new URLSearchParams(body);}}
  records.push({url:href,method,headers,body});
  const def=APP_CATALOG[active];
+ if(href==='https://api.dropboxapi.com/2/users/get_current_account')return json({account_id:'dbid:fixture',email:'person@example.invalid'});
+ if(href==='https://app.asana.com/api/1.0/users/me')return json({data:{gid:'123',email:'person@example.invalid'}});
+ if(href==='https://api.airtable.com/v0/meta/whoami')return json({id:'usr00000000000001',scopes:scopes(active)});
  if(def.token&&href===endpoint(def.token,context(active))){
   if(active==="notion"){assert(headers.get("authorization")?.startsWith("Basic "));assert(!body.client_secret);}
   if(active==="shopify")assert.equal(body.grant_type,undefined);
@@ -86,7 +91,9 @@ for(const provider of EXTRA_PROVIDER_IDS){
   }
  assert(!JSON.stringify(list).includes("private-access"));assert(!JSON.stringify(list).includes("own-private-key"));
 }
-assert.equal(APP_PROVIDERS.length,29);assert.equal(APP_CATEGORIES.length,8);assert.equal(connections.size,23);
+assert.equal(APP_PROVIDERS.length,37);assert.equal(APP_CATEGORIES.length,8);assert.equal(connections.size,31);
+assert.equal(new Set(APP_OPERATIONS.map(operation=>operation.provider+':'+operation.name)).size,APP_OPERATIONS.length,'Tool counts must not include duplicate operation names');
+for(const provider of APP_PROVIDERS){const tools=APP_OPERATIONS.filter(operation=>operation.provider===provider);assert(tools.length>=8,provider+' needs at least eight distinct tools');assert(tools.filter(tool=>tool.permission==='write').length>=3,provider+' needs useful write coverage');}
 // An already-granted broader token can satisfy narrower operation requirements;
 // the authorization request itself keeps its existing drive.file scope.
 assert(appScopes("google_drive",["write"]).includes("https://www.googleapis.com/auth/drive.file"));
@@ -102,13 +109,17 @@ const idIdentity={userId:"one",scope:"apps:read apps:write"};let createdMediaCal
 for(const operation of APP_OPERATIONS.filter(o=>EXTRA_PROVIDER_IDS.includes(o.provider as any))){
  active=operation.provider;
  const required=(z.toJSONSchema(operation.schema) as any).required||[];
- const arguments_:Record<string,any>=Object.fromEntries(required.map((key:string)=>{assert(key in argsByField,"Missing fixture "+key);return[key,argsByField[key]];}));
+ const fixture=productivityFixtures[active]?.[operation.name];
+ const followthrough=followthroughArguments[active+':'+operation.name];
+ if(productivityFixtures[active])assert(fixture||followthrough,'New productivity operations require independent request fixtures');
+ const arguments_:Record<string,any>=followthrough?{...followthrough}:fixture?{...fixture.args}:Object.fromEntries(required.map((key:string)=>{assert(key in argsByField,"Missing fixture "+key);return[key,argsByField[key]];}));
   if(active==="notion"&&arguments_.pageId)arguments_.pageId=uuid;
  if(active==='salesforce'&&arguments_.contactId)arguments_.contactId='003000000000001';
   if(active==="google_analytics"&&arguments_.dimensions)arguments_.dimensions=["date"];
  if(active==="meta_ads"&&arguments_.accountId)arguments_.accountId="act_123";
  if(active==="instagram"&&operation.name==="media.publish")arguments_.sourceCallId=createdMediaCall;
  const input={connectionId:connections.get(active)!,operation:operation.name,arguments:arguments_,requestId:crypto.randomUUID()};
+ if(operation.permission==='write'){const before=records.length;await deny(()=>callApp(env,{userId:'one',scope:'apps:read'},{...input,requestId:crypto.randomUUID()},fetcher),'app_mcp_scope_required');assert.equal(records.length,before,'Read-only MCP grants never dispatch writes');}
  const count=records.length;
  let result=await callApp(env,idIdentity,input,fetcher);
   assert.equal(result.status,"succeeded",active+" "+operation.name);
@@ -119,6 +130,7 @@ for(const operation of APP_OPERATIONS.filter(o=>EXTRA_PROVIDER_IDS.includes(o.pr
  assert(!JSON.stringify(result).includes("must-never-return"));
  const beforeReplay=records.length;assert.equal((await callApp(env,idIdentity,input,fetcher)).status,"succeeded");assert.equal(records.length,beforeReplay,"Replay never dispatches");
  const request=records.at(-1)!;assert(new URL(request.url).protocol==="https:");assert(!request.url.includes("private"));
+ if(fixture){assert.equal(new URL(request.url).pathname,fixture.path,active+' '+operation.name);assert.equal(request.method,fixture.method);if(fixture.body!==undefined)assert.deepEqual(request.body,fixture.body);}
  if(active==="linear")assert.equal(request.headers.get("authorization"),"Bearer private-access-linear");
  if(active==="runway")assert.equal(request.headers.get("x-runway-version"),"2024-11-06");
  if(active==="shopify"){assert.equal(request.headers.get("authorization"),null);assert.equal(request.headers.get("x-shopify-access-token"),"private-access-shopify");}
@@ -128,8 +140,10 @@ for(const operation of APP_OPERATIONS.filter(o=>EXTRA_PROVIDER_IDS.includes(o.pr
  if(active==="facebook"&&operation.name==="posts.create"){assert.equal(request.headers.get("authorization"),"Bearer private-page-token");assert.equal(new URLSearchParams(String(request.body)).get("message"),"Reviewed content");}
  if(active==="runway"&&operation.name==="videos.generate"){assert.equal(request.body.model,"gen4.5");assert.equal(request.body.maxCredits,undefined);}
 }
-const all=await discoverApps(env,"one");assert.equal(all.total,29);assert.equal(all.apps.length,12);assert.equal(all.nextCursor,12);assert(!("operations" in all.apps[0]!));
-const selected=await discoverApps(env,"one",{provider:"runway"});assert.equal(selected.apps.length,1);assert((selected.apps[0] as any).operations.length===5);assert(selected.connections.every(c=>c.provider==="runway"));
+const all=await discoverApps(env,"one");assert.equal(all.total,37);assert.equal(all.apps.length,12);assert.equal(all.nextCursor,12);assert(!("operations" in all.apps[0]!));
+const selected=await discoverApps(env,"one",{provider:"runway"});assert.equal(selected.apps.length,1);assert((selected.apps[0] as any).operations.length===8);assert(selected.connections.every(c=>c.provider==="runway"));
+assert(selected.apps[0]!.writeOperationCount>=3);
+assert((await discoverApps(env,'one',{query:'playlists.create'})).apps.some(app=>app.provider==='youtube'));
 assert.equal((await discoverApps(env,"one",{category:"creative",query:"runway",cursor:20})).apps.length,0);
 assert.equal((await discoverApps({...env,ENABLE_APPS:undefined},"one",{})).total,0);
 assert.throws(()=>appDiscoverySchema.parse({limit:26}));assert.throws(()=>appDiscoverySchema.parse({provider:"wrong"}));
@@ -167,10 +181,10 @@ await deny(()=>extraIdentity("shopify",{...tokens,context:{shopDomain:"evil.inva
 await deny(()=>extraIdentity("whatsapp",{...tokens,context:{}},fetcher,env),"app_whatsapp_settings_required");
 active="jira";await deny(()=>providerIdentity("jira",{...tokens,context:{}},async(url)=>json(String(url).endsWith("/me")?{account_id:"one"}:[]),env),"app_resource_not_authorized");
 assert.equal(await extraIdentity("github",tokens,fetcher,env),null);
-assert.throws(()=>providerHeaders("google_ads",tokens,{} as AppEnv),/app_not_configured/);assert.equal(normalizeScope("profile"),"https://www.googleapis.com/auth/userinfo.profile");assert.equal(normalizeScope("email"),"https://www.googleapis.com/auth/userinfo.email");
+assert.equal(providerHeaders("google_ads",tokens,{} as AppEnv)["developer-token"],undefined);assert.equal(normalizeScope("profile"),"https://www.googleapis.com/auth/userinfo.profile");assert.equal(normalizeScope("email"),"https://www.googleapis.com/auth/userinfo.email");
 await deny(()=>dispatchHeaders(env,"facebook","posts.create",{pageId:"123"},{...tokens,context:context("facebook")},async()=>json({id:"other"})),"app_resource_not_authorized");
-for(const p of EXTRA_PROVIDER_IDS){active=p;const r=await revokeProvider(env,p,{...tokens,context:context(p)},async()=>json({}));if(APP_CATALOG[p].auth==="api_key")assert.deepEqual(r,{localOnly:true});else if(APP_CATALOG[p].credential!=="GOOGLE"&&!["linear","x"].includes(p))assert(r.providerConsentUrl&&!r.providerConsentUrl.includes("undefined"));}
-const pack=registrationPack(origin);assert.equal(Object.keys(pack.callbacks).length,27);assert.equal(pack.apiKeyProviders.length,2);assert(pack.google.authorizedRedirectUris.length===9);assert.equal(pack.authBackend,"remote_arc_native");assert(!JSON.stringify(pack).includes("secret-GOOGLE"));
+for(const p of EXTRA_PROVIDER_IDS){active=p;const r=await revokeProvider(env,p,{...tokens,context:context(p)},async()=>json({}));if(APP_CATALOG[p].auth==="api_key")assert.deepEqual(r,{localOnly:true});else if(APP_CATALOG[p].credential!=="GOOGLE"&&!["linear","x","dropbox","asana","airtable"].includes(p))assert(r.providerConsentUrl&&!r.providerConsentUrl.includes("undefined"));}
+const pack=registrationPack(origin);assert.equal(Object.keys(pack.callbacks).length,35);assert.equal(pack.apiKeyProviders.length,2);assert(pack.google.authorizedRedirectUris.length===10);assert.equal(pack.authBackend,"remote_arc_native");assert(!JSON.stringify(pack).includes("secret-GOOGLE"));
 assert.equal((await api("/api/apps/connections","POST",{provider:"youtube",credential:"own-secret-key",permissions:["read"],usageConsent:true})).status,400);
 assert.equal((await api("/api/apps/connections","POST",{provider:"runway",credential:"own-secret-key",permissions:["read"]})).status,400);
 await deny(()=>providerJson("https://example.invalid",{},async()=>json({errors:[{message:"secret"}]})),"app_provider_failed");
@@ -205,7 +219,7 @@ const closedPulls=appOperation("github","pulls.list");assert.equal(new URL(close
 
 const publicAppStatus=await handleApps(new Request(origin+"/api/apps/status"),{...env,DB:{prepare(){throw Error("Public status must not read private tables");}} as unknown as D1Database},fetcher);
 assert.equal(publicAppStatus.status,200);assert.equal(publicAppStatus.headers.get("access-control-allow-origin"),"*");
-const statusData=await publicAppStatus.json() as any;assert.equal(statusData.enabled,true);assert.equal(statusData.providers.length,29);assert(statusData.providers.some((p:any)=>p.provider==="runway"&&p.ready));assert(!JSON.stringify(statusData).includes("connection"));assert(!JSON.stringify(statusData).includes("secret"));
+const statusData=await publicAppStatus.json() as any;assert.equal(statusData.enabled,true);assert.equal(statusData.providers.length,37);assert(statusData.providers.some((p:any)=>p.provider==="runway"&&p.ready));assert(!JSON.stringify(statusData).includes("connection"));assert(!JSON.stringify(statusData).includes("secret"));
 const disabledStatus=await (await handleApps(new Request(origin+"/api/apps/status"),{...env,ENABLE_APPS:undefined},fetcher)).json() as any;assert.equal(disabledStatus.enabled,false);assert(disabledStatus.providers.every((p:any)=>p.ready===false));
 const missingVaultStatus=await (await handleApps(new Request(origin+"/api/apps/status"),{...env,APP_TOKEN_KEY:undefined},fetcher)).json() as any;assert(missingVaultStatus.providers.every((p:any)=>p.ready===false));
 assert.equal((await handleApps(new Request(origin+"/api/apps/status",{method:"POST"}),env,fetcher)).status,401);
@@ -229,13 +243,24 @@ sql.prepare('DELETE FROM app_platform_funding_reservations').run();
 await reserveAppDispatch(fundedEnv,'one',funded);await reserveAppDispatch(fundedEnv,'one',funded);
 assert.equal(sql.prepare('SELECT SUM(maximum_cost_micros) AS n FROM app_platform_funding_reservations').get()?.n,12000,'An active paid plan has its separate platform-funded allowance');
 await deny(()=>reserveAppDispatch({...fundedEnv,APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:6000,dailyPlatformMicros:12000}})},'one',funded),'app_platform_funded_allowance_reached');
-console.log("Apps expansion: 23 new provider auth flows, every operation, reviewed writes, concurrent replay, platform-funded cost caps, billing limits, discovery and existing-data migration passed. Provider HTTP is mocked; no real account acceptance is claimed.");
+for(const [provider,operation] of [['youtube','playlists.create'],['google_search_console','sitemaps.submit'],['google_analytics','customDimensions.create'],['facebook','comments.create'],['x','likes.create'],['hubspot','deals.update']] as const){
+ const connectionId=connections.get(provider)!;
+ sql.prepare('UPDATE app_connections SET scopes_json=? WHERE id=?').run(JSON.stringify(appScopes(provider,['read'])),connectionId);
+ await deny(()=>validateAppAccess(env,'one',connectionId,operation),'app_scope_required');
+ sql.prepare('UPDATE app_connections SET scopes_json=? WHERE id=?').run(JSON.stringify(scopes(provider)),connectionId);
+}
+const linearConnection=connections.get('linear')!;
+sql.prepare('UPDATE app_connections SET scopes_json=? WHERE id=?').run(JSON.stringify(['read','issues:create']),linearConnection);
+await validateAppAccess(env,'one',linearConnection,'issues.create');
+await deny(()=>validateAppAccess(env,'one',linearConnection,'issues.update'),'app_scope_required');
+sql.prepare('UPDATE app_connections SET scopes_json=? WHERE id=?').run(JSON.stringify(scopes('linear')),linearConnection);
+console.log('Apps expansion: 31 additional-provider OAuth/API-key flows, all operation dispatch/replay, per-App write coverage, read-only grant rejection and no silent scope upgrade passed. Provider HTTP is mocked; no live acceptance is claimed.');
 sql.close();
 
 for(const provider of ["linear","supabase","x"] as const){
  const url=new URL(await authorizationUrl(env,provider,["read","write"],"stable-state","verifier"));
  assert.equal(url.searchParams.get("code_challenge_method"),"S256");
- if(provider==="linear"){assert.equal(url.searchParams.get("scope"),"read,issues:create");assert.equal(url.searchParams.get("actor"),"user");}
+ if(provider==="linear"){assert.equal(url.searchParams.get("scope"),"read,issues:create,write");assert.equal(url.searchParams.get("actor"),"user");}
  if(provider==="supabase")assert.equal(url.searchParams.get("scope"),null,"Supabase scopes are configured on the platform app");
  let dispatched=0;
  const inspect:typeof fetch=async(url,init)=>{
@@ -243,7 +268,7 @@ for(const provider of ["linear","supabase","x"] as const){
   if(provider!=="linear"){assert(headers.get("authorization")?.startsWith("Basic "));assert.equal(form.get("client_secret"),null);assert.equal(form.get("client_id"),null);}
   if(form.get("grant_type")==="authorization_code")assert.equal(form.get("code_verifier"),"verifier");
   else{assert.equal(form.get("grant_type"),"refresh_token");assert.equal(form.get("refresh_token"),"refresh-before");}
-  return json({access_token:"new-access",refresh_token:"refresh-after",expires_in:3600,...(provider==="linear"?{scope:["read","issues:create"]}:{})});
+  return json({access_token:"new-access",refresh_token:"refresh-after",expires_in:3600,...(provider==="linear"?{scope:scopes(provider)}:{})});
  };
  const token=await exchangeTokens(env,provider,{code:"code",verifier:"verifier"},inspect);
  assert.equal(token.refreshToken,"refresh-after");

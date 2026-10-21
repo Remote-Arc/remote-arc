@@ -1,0 +1,11 @@
+# Skills quality and runtime verification
+
+The library contains 16 packages: 12 attributed community snapshots and four Remote Arc originals. DOCX, XLSX, PPTX and PDF originals complement the existing design, browser, development and data packages. Statistical analysis, scikit-learn, Seaborn and NetworkX add substantial upstream references and helpers, rather than placeholder cards.
+
+Each package has precise triggers, complete instructions, dependency requirements, a license, resource manifests and content hashes. Community source links include the exact Git revision. Original packages carry version 1.0.0 and a SHA-256 content revision. The generator rejects duplicate IDs and symlinks and checks canonical resource bytes. `pnpm test:skills` checks generated snapshots; Arc input tests validate retrieval and device preparation, including actual helper bytes, chunk outcomes and revoked source checks before writes.
+
+Categories, source filters and keyword search cover discovery. Selecting a Skill passes its actual ID to Chat. Read instructions loads the selected package; dependencies and the connected-computer requirement stay visible. Neither listing nor preparing a package claims that dependencies have already been installed or that a deliverable has been verified.
+
+The four original read-only inspectors run against real DOCX, XLSX, PPTX and PDF artifacts in `scripts/skill-artifacts-test.py`. Tests check document headings and tables, missing spreadsheet formula caches and stored errors, slide geometry overflow, and PDF page order, rotation and encryption. Hash checks ensure inspectors do not modify inputs. The same job runs a leakage-free scikit-learn holdout, Seaborn PNG rendering, NetworkX path analysis and the upstream statistical normality checker. Install the pinned `scripts/skill-artifacts-requirements.txt` in a task-local environment, then run the Python test.
+
+Structural inspectors do not render documents or slides, calculate spreadsheet formulas, OCR scanned PDFs or prove visual layout. The Skill instructions require the relevant rendering, recalculation and visual checks before making those claims. External service writes still require the connected App's permissions.

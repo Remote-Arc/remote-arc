@@ -33,13 +33,29 @@ export function providerHeaders(provider:AppProvider,tokens:AppTokens,env?:AppEn
   if(provider==="runway")headers["x-runway-version"]="2024-11-06";
   if(provider==="linkedin"){headers["linkedin-version"]="202609";headers["x-restli-protocol-version"]="2.0.0";}
   if(provider==="shopify"){delete headers.authorization;headers["x-shopify-access-token"]=tokens.accessToken;}
-  if(provider==="google_ads"){if(!env?.APP_GOOGLE_ADS_DEVELOPER_TOKEN)throw new AppError("app_not_configured",503);headers["developer-token"]=env.APP_GOOGLE_ADS_DEVELOPER_TOKEN;}
+  if(provider==="google_ads"&&env?.APP_GOOGLE_ADS_DEVELOPER_TOKEN)headers["developer-token"]=env.APP_GOOGLE_ADS_DEVELOPER_TOKEN;
   return headers;
 }
 export function normalizeScope(scope:string,provider?:AppProvider) { if(provider&&APP_CATALOG[provider].credential!=="GOOGLE")return scope; return scope==="email"?"https://www.googleapis.com/auth/userinfo.email":scope==="profile"?"https://www.googleapis.com/auth/userinfo.profile":scope; }
 export async function extraIdentity(provider:AppProvider,tokens:AppTokens,fetcher:typeof fetch,env?:AppEnv):Promise<{id:string;label:string}|null>{
   const def=APP_CATALOG[provider],headers=providerHeaders(provider,tokens,env);
   const get=(url:string)=>providerJson(url,{headers},fetcher);
+  if(provider==='dropbox'){
+    const result=await providerJson('https://api.dropboxapi.com/2/users/get_current_account',{method:'POST',headers,body:'null'},fetcher);
+    if(typeof result.account_id!=='string'||!result.account_id)throw new AppError('app_identity_unavailable',502);
+    return{id:result.account_id,label:result.email||result.name?.display_name||result.account_id};
+  }
+  if(provider==='asana'){
+    const result=await get('https://app.asana.com/api/1.0/users/me');
+    if(typeof result.data?.gid!=='string'||!result.data.gid)throw new AppError('app_identity_unavailable',502);
+    return{id:result.data.gid,label:result.data.email||result.data.name||result.data.gid};
+  }
+  if(provider==='airtable'){
+    const result=await get('https://api.airtable.com/v0/meta/whoami');
+    if(typeof result.id!=='string'||!result.id.startsWith('usr')||!Array.isArray(result.scopes)||result.scopes.some((scope:unknown)=>typeof scope!=='string'))throw new AppError('app_identity_unavailable',502);
+    tokens.scopes=result.scopes;
+    return{id:result.id,label:result.email||'Airtable '+result.id};
+  }
   if(!["github","slack","gmail","outlook","google_calendar","microsoft_calendar"].includes(provider)&&def.credential==="GOOGLE"){
     const r=await get("https://www.googleapis.com/oauth2/v3/userinfo");if(!r.sub||!r.email)throw new AppError("app_identity_unavailable",502);
     return{id:r.sub,label:r.email};
@@ -96,7 +112,7 @@ export async function extraIdentity(provider:AppProvider,tokens:AppTokens,fetche
   }
   if(provider==="vercel"){const r=await get("https://api.vercel.com/v2/user");if(!r.user?.id)throw new AppError("app_identity_unavailable",502);return{id:r.user.id,label:r.user.email||r.user.username||r.user.id};}
   if(provider==="linear"){const r=await providerJson("https://api.linear.app/graphql",{method:"POST",headers,body:JSON.stringify({query:"query { viewer { id name email } }"})},fetcher);if(!r.data?.viewer?.id)throw new AppError("app_identity_unavailable",502);return{id:r.data.viewer.id,label:r.data.viewer.email||r.data.viewer.name||r.data.viewer.id};}
-  if(provider==="x"){const r=await get("https://api.x.com/2/users/me");if(!r.data?.id)throw new AppError("app_user_token_required",403);return{id:r.data.id,label:r.data.username||r.data.name||r.data.id};}
+  if(provider==="x"){const r=await get("https://api.x.com/2/users/me");if(!r.data?.id)throw new AppError("app_user_token_required",403);tokens.context={...tokens.context,subjectId:r.data.id};return{id:r.data.id,label:r.data.username||r.data.name||r.data.id};}
   if(provider==="runway"){const r=await get("https://api.dev.runwayml.com/v1/organization");if(typeof r.creditBalance!=="number"||!Number.isFinite(r.creditBalance))throw new AppError("app_identity_unavailable",502);return{id:"api-key:"+(await sha256Hex(tokens.accessToken)).slice(0,24),label:"Runway API organization"};}
   if(provider==="supabase"){const r=await get("https://api.supabase.com/v1/organizations");if(!Array.isArray(r)||!r.length||r.some(org=>typeof org.id!=="string"||!org.id))throw new AppError("app_identity_unavailable",502);const ids=[...new Set<string>(r.map(org=>org.id))].sort();tokens.context={...tokens.context,supabaseOrganizationIds:ids};return{id:"oauth:"+(await sha256Hex(JSON.stringify(ids))).slice(0,24),label:r.length===1?(r[0].name||"Supabase organization"):"Supabase · "+ids.length+" organizations"};}
   if(provider==="whatsapp"){

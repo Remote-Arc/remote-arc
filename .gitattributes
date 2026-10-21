@@ -9,4 +9,5 @@ packages/execution-core/execution/*.json text eol=lf
 /apps/ui/index.html text eol=lf
 # Pinned skill snapshots and generated hashes must agree across Windows/Linux.
 /packages/skills/vendor/** text eol=lf
+/packages/skills/builtin/** text eol=lf
 /packages/skills/src/community.generated.ts text eol=lf

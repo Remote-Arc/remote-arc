@@ -10,3 +10,11 @@ These snapshots retain their upstream entry points, helper scripts and reference
 - MCP server builder: Anthropic, Apache-2.0, https://github.com/anthropics/skills/tree/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/mcp-builder
 - Data analysis with Polars: K-Dense, MIT, https://github.com/K-Dense-AI/claude-scientific-skills/tree/593377bb048752abb0152deab9fbb1083a6087df/skills/polars
 - Charts with Matplotlib: K-Dense, MIT, https://github.com/K-Dense-AI/claude-scientific-skills/tree/593377bb048752abb0152deab9fbb1083a6087df/skills/matplotlib
+- Statistical analysis: K-Dense, MIT, https://github.com/K-Dense-AI/claude-scientific-skills/tree/593377bb048752abb0152deab9fbb1083a6087df/skills/statistical-analysis
+- Machine learning with scikit-learn: K-Dense, MIT, https://github.com/K-Dense-AI/claude-scientific-skills/tree/593377bb048752abb0152deab9fbb1083a6087df/skills/scikit-learn
+- Statistical charts with Seaborn: K-Dense, MIT, https://github.com/K-Dense-AI/claude-scientific-skills/tree/593377bb048752abb0152deab9fbb1083a6087df/skills/seaborn
+- Graph analysis with NetworkX: K-Dense, MIT, https://github.com/K-Dense-AI/claude-scientific-skills/tree/593377bb048752abb0152deab9fbb1083a6087df/skills/networkx
+
+## Remote Arc original skills
+
+The DOCX, XLSX, PPTX and PDF packages in `builtin/` are original Remote Arc work, versioned at 1.0.0 under the repository's Remote Arc Proprietary Source License. They are not copies of Anthropic's office skills. Their revisions are SHA-256 content manifests rather than upstream Git revisions. Each includes a real, read-only Python inspector and precise dependency and verification instructions. Structural inspection does not substitute for rendering, spreadsheet recalculation, OCR or independent semantic verification.

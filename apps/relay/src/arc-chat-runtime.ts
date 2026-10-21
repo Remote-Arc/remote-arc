@@ -15,7 +15,7 @@ import { prepareArcBudget } from './arc-chat-model.js';
 import { arcActive, arcSession, arcMessages, appendArcMessage, arcContext, stamp, type ArcEnv, type ArcRun } from './arc-chat.js';
 import { seal, unseal } from './app-oauth.js';
 import { discoverApps,appDiscoverySchema } from './app-discovery.js';
-import { APP_OPERATIONS, providerSchema } from './app-catalog.js';
+import { APP_OPERATIONS, appScopes, providerSchema } from './app-catalog.js';
 import { callApp,appCallSchema } from './apps.js';
 import { getDevicesForUser } from './device.js';
 import { callDevice } from './device-call.js';
@@ -148,7 +148,7 @@ export async function executeArcTool(env:ArcEnv,run:ArcRun,decision:Decision){
  if(decision.tool==='read_inbox')return readArcInbox(env,run,args);
  if(decision.tool==='describe_app'){
   const input=argsSchema.describe_app.parse(args);const ops=APP_OPERATIONS.filter(o=>o.provider===input.provider&&(!input.operation||o.name===input.operation));
-   return{operations:ops.map(o=>({name:o.name,description:o.description,...(input.operation?{inputSchema:z.toJSONSchema(o.schema)}:{})}))};
+   return{provider:input.provider,operations:ops.map(o=>({name:o.name,description:o.description,permission:o.permission,...(input.operation?{inputSchema:z.toJSONSchema(o.schema),requiredScopes:o.requiredScopes??appScopes(o.provider,[o.permission]),...(o.anyScopes?{anyScopes:o.anyScopes}:{})}:{})}))};
  }
  if(decision.tool==='call_app'){
    const input=argsSchema.call_app.parse(args),result=await callApp(env,{userId:run.user_id,scope:'apps:read apps:write'},{...input,requestId:`arc-${run.id}-${run.step}`});

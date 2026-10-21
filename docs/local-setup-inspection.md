@@ -31,7 +31,9 @@ paths; treat it as local information when sharing diagnostics. It is not saved
 automatically.
 
 The next separately reviewed slices of #254 must provide explicit version and
-capability diagnostics, an exact integration/configuration preview, conditional
-updates with backups, repair/rollback/uninstall, managed-config checks and real
+capability diagnostics, automatic supported integration, conditional updates with
+backups, repair/rollback/uninstall, managed-config checks and real
 Windows/macOS/WSL acceptance. Hook trust and cloud pairing remain separate
-consent decisions. No production or package promotion is implied by this PR.
+provider/account requirements. Routine local setup must not add preview or
+approval gates; dry-run remains optional. No production or package promotion is
+implied by this PR.

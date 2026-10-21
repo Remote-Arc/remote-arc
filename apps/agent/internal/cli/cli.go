@@ -41,6 +41,7 @@ Usage: remotelink [options]
   --stop            Disable recovery and gracefully stop this Go agent
   --logs            Print the last 100 local operation log entries
   --mcp             Serve local MCP over stdio (default mode: safe)
+  --mcp-workspace=<absolute-dir>  Restrict MCP to selected workspace file reads
   --origin=<url>    Relay origin used for a new pairing
   --version, -v     Print version
   --help, -h        Show help
@@ -48,7 +49,7 @@ Usage: remotelink [options]
 
 type Options struct {
 	Safe, Developer, Foreground, Background, NoBackground, Reset, Status, Stop, Logs, MCP, Agent, Supervise, Help, Version bool
-	Origin                                                                                                                 string
+	Origin, MCPWorkspace                                                                                                   string
 }
 
 func Parse(args []string) (Options, error) {
@@ -85,7 +86,12 @@ func Parse(args []string) (Options, error) {
 		case "--version", "-v":
 			o.Version = true
 		default:
-			if strings.HasPrefix(s, "--origin=") {
+			if strings.HasPrefix(s, "--mcp-workspace=") {
+				o.MCPWorkspace = strings.TrimPrefix(s, "--mcp-workspace=")
+				if strings.TrimSpace(o.MCPWorkspace) == "" {
+					return o, errors.New("--mcp-workspace requires an absolute directory.")
+				}
+			} else if strings.HasPrefix(s, "--origin=") {
 				o.Origin = strings.TrimPrefix(s, "--origin=")
 			} else {
 				return o, fmt.Errorf("Unknown Go agent option: %s", s)
@@ -94,6 +100,9 @@ func Parse(args []string) (Options, error) {
 	}
 	if (o.Safe && o.Developer) || (o.Background && o.NoBackground) || (o.Agent && o.Supervise) || (o.Foreground && o.Background) {
 		return o, errors.New("Conflicting Go agent options.")
+	}
+	if o.MCPWorkspace != "" && (!o.MCP || o.Developer || o.Foreground || o.Background || o.NoBackground || o.Reset || o.Status || o.Stop || o.Logs || o.Agent || o.Supervise || o.Origin != "") {
+		return o, errors.New("--mcp-workspace requires --mcp and cannot be combined with device or developer options.")
 	}
 	if o.Origin != "" {
 		var e error
@@ -146,6 +155,10 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 		return e
 	}
 	if o.MCP {
+		if o.MCPWorkspace != "" {
+			fmt.Fprintln(errorOutput, "Remote Arc Local MCP uses read-only workspace file tools.")
+			return localmcp.RunWorkspace(ctx, execution.New("safe"), version, o.MCPWorkspace)
+		}
 		mode := os.Getenv("REMOTEARC_MODE")
 		if mode == "" {
 			mode = os.Getenv("REMOTE_LINK_MODE")

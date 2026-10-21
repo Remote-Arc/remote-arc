@@ -9,12 +9,12 @@ AI Teams acceptance is excluded from this work.
 [PR #265](https://github.com/Remote-Arc/remote-arc/pull/265). Its
 [compatibility matrix](agent-takeover-compatibility-v1.md) and
 [consent ADR](agent-takeover-consent-adr.md) establish supported interfaces,
-observed versions, platform gaps and separate
-consent for installed-client discovery, session metadata, transcript/workspace
-reads and cloud sync. Agent installation detection must not silently invoke the
-metadata reader. Explicitly invoking `takeover --workspace <directory>` opts
-into this bounded local metadata read; it is not consent to transcript import,
-hooks, configuration edits, inference or cloud upload.
+observed versions and platform gaps. The owner subsequently requested automatic
+local setup and recovery without additional previews or per-step approvals;
+ADR v1.1 records that UX correction. A project/task request supplies the scope
+for related local reads and setup. The current `takeover --workspace` command
+only implements bounded metadata discovery, not history capture or continuation.
+Install inspection remains independent of session parsing.
 
 The [local discovery candidate](local-session-discovery.md) is a narrow
 read-only validation example for #253 and partial groundwork for
@@ -29,7 +29,7 @@ respectively). The Mac native discovery and CLI tests pass. These are bounded
 metadata checks; complete history, actual worktree association, target
 continuation, WSL mappings and real Claude acceptance remain unqualified.
 
-Use the accepted compatibility/consent contract before widening session access
+Use the accepted compatibility and automatic-workflow contract before widening session access
 or promising agent continuation. Onboarding,
 handoff, checkpoints, Observe, Guard/Isolate, Fleet and cloud feasibility retain
 their separate child Issues and release gates in #252. This candidate does not

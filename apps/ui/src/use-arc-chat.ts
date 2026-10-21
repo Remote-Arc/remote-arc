@@ -1,6 +1,7 @@
 import type {ArcAttachment,ArcLocation} from '@remotearc/protocol';
 import type {ArcEmployeeAvatar} from '@remotearc/protocol';
 import type {ArcAppConnectionRequest} from '@remotearc/protocol';
+import type {ArcDelegationProgress} from '@remotearc/protocol';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {ArcVerification,ArcReceipt,ArcEmployeeDraft} from '@remotearc/protocol';
 
@@ -9,7 +10,11 @@ export type ChatMessage={id:string;attachments?:ArcAttachment[];location?:ArcLoc
 export type ChatRun={id:string;status:string;step:number;tokensUsed:number;maxTokens:number;maxSteps:number;deadline:string;error:string|null;receipt?:ArcReceipt};
 export type ArcAccess={status:'eligible'|'active'|'expired'|'paid';canUse:boolean;funded?:boolean;trialDays?:number;trialCredits?:number;creditsAvailable?:number|null;creditsPending?:number|null;daysRemaining:number;dailyUsedPercent:number;expiresAt:string|null};
 export type ChatService={enabled:boolean;access:ArcAccess;models:{id:string;label:string;provider:string;premium:boolean;configured:boolean;requiresPaid?:boolean;inputCreditsPer1000?:number;outputCreditsPer1000?:number}[];limits:{maxSteps:number;maxTokens:number;maxSeconds:number};preview?:boolean};
-type Snapshot={appConnections?:ArcAppConnectionRequest[];employeeDrafts?:ArcEmployeeDraft[];pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
+type Snapshot={hasMore?:boolean;before?:string|null;historyLoaded?:boolean;delegations?:ArcDelegationProgress[];appConnections?:ArcAppConnectionRequest[];employeeDrafts?:ArcEmployeeDraft[];pendingDelegations?:boolean;session:ChatSession;messages:ChatMessage[];runs:ChatRun[]};
+export function mergeArcSnapshot(previous:Snapshot|null,incoming:Snapshot):Snapshot{
+ if(previous?.session.id!==incoming.session.id||!previous.historyLoaded)return incoming;
+ return{...incoming,messages:[...new Map([...previous.messages,...incoming.messages].map(message=>[message.id,message])).values()],runs:[...incoming.runs,...previous.runs.filter(run=>!incoming.runs.some(latest=>latest.id===run.id))],hasMore:previous.hasMore,before:previous.before,historyLoaded:true};
+}
 const active=(run:ChatRun|undefined)=>Boolean(run&&['queued','thinking','working'].includes(run.status));
 export async function arcRequest<T>(path:string,init?:RequestInit,signal?:AbortSignal):Promise<T>{
  const response=await fetch('/api/arc/'+path,{credentials:'same-origin',...init,signal,headers:{accept:'application/json',...(init?.body?{'content-type':'application/json'}:{}),...init?.headers}});
@@ -18,6 +23,7 @@ export async function arcRequest<T>(path:string,init?:RequestInit,signal?:AbortS
 export function useArcChat(accountId:string,initialSessionId?:string){
  const [service,setService]=useState<ChatService|null>(null),[sessions,setSessions]=useState<ChatSession[]>([]),[current,setCurrent]=useState<Snapshot|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [selectedSessionId,setSelectedSessionId]=useState<string|null>(initialSessionId||null),[opening,setOpening]=useState(false);
+ const [loadingHistory,setLoadingHistory]=useState(false);
  const [modelId,setModelId]=useState('auto');const generation=useRef(0),mounted=useRef(true),requestLock=useRef(false),pending=useRef<{id:string;text:string;sessionId:string;modelId:string}|null>(null);
  const selected=useRef<string|null>(null),poll=useRef<AbortController|null>(null);
  const refreshSessions=useCallback(async()=>{const version=generation.current;const data=await arcRequest<{sessions:ChatSession[]}>('sessions');if(mounted.current&&generation.current===version)setSessions(data.sessions);},[]);
@@ -29,23 +35,23 @@ export function useArcChat(accountId:string,initialSessionId?:string){
   return()=>{live=false;mounted.current=false;controller.abort();poll.current?.abort();generation.current++;};
  },[accountId,refreshSessions]);
  const open=useCallback(async(id:string)=>{
-  const version=++generation.current;poll.current?.abort();selected.current=id;setSelectedSessionId(id);setOpening(true);setError('');setCurrent(null);setBusy(true);
-  try{const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(id));if(mounted.current&&generation.current===version){setCurrent(value);setModelId(value.session.modelId);}}
+  const version=++generation.current;poll.current?.abort();selected.current=id;setSelectedSessionId(id);setOpening(true);setLoadingHistory(false);setError('');setCurrent(null);setBusy(true);
+  try{const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(id));if(mounted.current&&generation.current===version){setCurrent(previous=>mergeArcSnapshot(previous,value));setModelId(value.session.modelId);}}
   catch(e){if(mounted.current&&generation.current===version)setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}
   finally{if(mounted.current&&generation.current===version){setBusy(false);setOpening(false);}}
  },[]);
  const run=current?.runs[0],running=active(run),sessionId=current?.session.id,watching=running||Boolean(current?.pendingDelegations);
- const refreshCurrent=useCallback(async()=>{const id=selected.current,version=generation.current;if(!id)return;const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(id));if(mounted.current&&generation.current===version&&selected.current===id)setCurrent(value);},[]);
+ const refreshCurrent=useCallback(async()=>{const id=selected.current,version=generation.current;if(!id)return;const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(id));if(mounted.current&&generation.current===version&&selected.current===id)setCurrent(previous=>mergeArcSnapshot(previous,value));},[]);
  useEffect(()=>{
   if(!sessionId||!watching)return;const controller=new AbortController();poll.current=controller;const version=generation.current;let timer:ReturnType<typeof setTimeout>;
   const tick=async()=>{
-   try{const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(sessionId),undefined,controller.signal);if(controller.signal.aborted||generation.current!==version)return;setCurrent(value);if(!active(value.runs[0])&&!value.pendingDelegations){void refreshSessions().catch(()=>{});void refreshService().catch(()=>{});return;}}
+   try{const value=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(sessionId),undefined,controller.signal);if(controller.signal.aborted||generation.current!==version)return;setCurrent(previous=>mergeArcSnapshot(previous,value));if(!active(value.runs[0])&&!value.pendingDelegations){void refreshSessions().catch(()=>{});void refreshService().catch(()=>{});return;}}
    catch(e){if(controller.signal.aborted)return;setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}
    if(!controller.signal.aborted)timer=setTimeout(tick,running?1200:5000);
   };
   timer=setTimeout(tick,500);return()=>{controller.abort();clearTimeout(timer);};
  },[sessionId,running,watching,refreshSessions,refreshService]);
- const newChat=()=>{generation.current++;selected.current=null;setSelectedSessionId(null);setOpening(false);poll.current?.abort();setCurrent(null);setBusy(false);setError('');pending.current=null;};
+ const newChat=()=>{setLoadingHistory(false);generation.current++;selected.current=null;setSelectedSessionId(null);setOpening(false);poll.current?.abort();setCurrent(null);setBusy(false);setError('');pending.current=null;};
  async function send(text:string,skillIds:string[]=[],verification?:ArcVerification,appIds:string[]=[],employeeIds:string[]=[],inputs:{attachmentIds?:string[];location?:ArcLocation}={}){
    if(requestLock.current||opening||running||!service?.enabled||!service.access.canUse)return false;requestLock.current=true;setBusy(true);setError('');const version=generation.current;
   try{
@@ -55,13 +61,20 @@ export function useArcChat(accountId:string,initialSessionId?:string){
    if(!pending.current||pending.current.text!==signature||pending.current.sessionId!==id||pending.current.modelId!==modelId)pending.current={id:crypto.randomUUID(),text:signature,sessionId:id,modelId};
    const response=await arcRequest<{run:ChatRun}>('sessions/'+encodeURIComponent(id)+'/messages',{method:'POST',body:JSON.stringify({text,modelId,requestId:pending.current.id,...(skillIds.length?{skillIds}:{}),...(appIds.length?{appIds}:{}),...(employeeIds.length?{employeeIds}:{}),...(inputs.attachmentIds?.length?{attachmentIds:inputs.attachmentIds}:{}),...(inputs.location?{location:inputs.location}:{}),...(verification?{verification}:{})})});
    const snapshot=await arcRequest<Snapshot>('sessions/'+encodeURIComponent(id));
-    if(mounted.current&&generation.current===version){setCurrent(snapshot.runs.some(r=>r.id===response.run.id)?snapshot:{...snapshot,runs:[response.run,...snapshot.runs]});void refreshSessions();}
+    if(mounted.current&&generation.current===version){setCurrent(previous=>mergeArcSnapshot(previous,snapshot.runs.some(r=>r.id===response.run.id)?snapshot:{...snapshot,runs:[response.run,...snapshot.runs]}));void refreshSessions();}
    pending.current=null;return true;
   }catch(e){if(mounted.current&&generation.current===version)setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');return false;}
   finally{requestLock.current=false;if(mounted.current&&generation.current===version)setBusy(false);}
  }
- async function cancel(){if(!current||!run||requestLock.current)return;setError('');try{const value=await arcRequest<Snapshot>('sessions/'+current.session.id+'/cancel',{method:'POST',body:JSON.stringify({runId:run.id})});if(selected.current===current.session.id)setCurrent(value);}catch(e){setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}}
+ async function cancel(){if(!current||!run||requestLock.current)return;setError('');try{const value=await arcRequest<Snapshot>('sessions/'+current.session.id+'/cancel',{method:'POST',body:JSON.stringify({runId:run.id})});if(selected.current===current.session.id)setCurrent(previous=>mergeArcSnapshot(previous,value));}catch(e){setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}}
+ async function loadEarlier(){
+  if(!current?.hasMore||!current.before||loadingHistory)return false;
+  const id=current.session.id,version=generation.current;setLoadingHistory(true);
+  try{const page=await arcRequest<{messages:ChatMessage[];hasMore:boolean;before:string|null}>('sessions/'+encodeURIComponent(id)+'/history?before='+encodeURIComponent(current.before));if(!mounted.current||generation.current!==version)return false;setCurrent(previous=>previous?.session.id===id?{...previous,messages:[...new Map([...page.messages,...previous.messages].map(message=>[message.id,message])).values()],hasMore:page.hasMore,before:page.before,historyLoaded:true}:previous);return true;}
+  catch(e){if(generation.current===version)setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');return false;}
+  finally{if(mounted.current&&generation.current===version)setLoadingHistory(false);}
+ }
  async function remove(id:string){try{await arcRequest('sessions/'+encodeURIComponent(id),{method:'DELETE'});if(selected.current===id)newChat();await refreshSessions();}catch(e){setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}}
   async function startTrial(){if(requestLock.current||!service?.enabled)return;requestLock.current=true;setBusy(true);setError('');const version=generation.current;try{await arcRequest('trial',{method:'POST',body:JSON.stringify({confirm:true})});const value=await arcRequest<ChatService>('status');if(mounted.current&&version===generation.current)setService(value);}catch(e){if(mounted.current&&version===generation.current)setError(e instanceof Error?e.message:'CHAT_UNAVAILABLE');}finally{requestLock.current=false;if(mounted.current&&version===generation.current)setBusy(false);}}
-  return{service,sessions,current,selectedSessionId,opening,busy,running,run,error,modelId,setModelId,send,open,newChat,cancel,remove,startTrial,refreshCurrent};
+  return{service,sessions,current,selectedSessionId,opening,loadingHistory,loadEarlier,busy,running,run,error,modelId,setModelId,send,open,newChat,cancel,remove,startTrial,refreshCurrent};
 }

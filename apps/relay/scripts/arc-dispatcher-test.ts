@@ -7,6 +7,8 @@ import {advanceArcRoom,createArcRoom,enqueueArcRoomMessage,arcRoomMessages} from
 import {arcEmployeeExecution,employeeToolError} from '../src/arc-team-execution.js';
 import {seal} from '../src/app-oauth.js';
 import {arcContext} from '../src/arc-chat.js';
+import {appendArcMessage} from '../src/arc-chat.js';
+import {arcDispatchProgress} from '../src/arc-dispatch-progress.js';
 
 export async function testArcDispatcher({sql,env}:any){
  const adapter=env.MODEL_GATEWAY.adapters.openai,runtime=env.ARC_RUNTIME,origin='https://agent.remotearc.app';let calls=0,wakes=0;
@@ -21,6 +23,9 @@ export async function testArcDispatcher({sql,env}:any){
  const directory=await arcTeammateDirectory(env,row(source.id));assert(directory.teams.some(team=>team.id===target.id));assert.equal(calls,0);assert(!JSON.stringify(directory).includes(base.instructions));
  const decisions=[{decision:'tool',tool:'delegate_work',arguments_json:JSON.stringify({targetKind:'team',targetId:target.id,instructions:'Review the current user’s product plan and return concrete findings.'}),message:'Assigning the product review'},{decision:'reply',tool:'none',arguments_json:'{}',message:'The review is queued with the delivery team.'}];
  env.MODEL_GATEWAY.adapters.openai=async()=>{calls++;assert(decisions.length);return{value:decisions.shift(),usage:{inputTokens:100,outputTokens:100,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'dispatcher-fixture'};};
+ const anchorId='dispatch-project-anchor',evidenceId='dispatch-project-evidence',earlier=new Date(Date.now()-1000).toISOString();
+ sql.prepare("INSERT INTO arc_chat_messages(id,session_id,user_id,role,body_ciphertext,created_at) VALUES(?,?,'owner','user',?,?)").run(anchorId,session,await seal(env,{text:'Our project is Cedar Mesh (CM), a shared workspace for agents. Discuss the product direction after reviewing its plan.'},arcContext('owner',anchorId)),earlier);
+ sql.prepare("INSERT INTO arc_chat_messages(id,session_id,user_id,role,body_ciphertext,created_at) VALUES(?,?,'owner','tool',?,?)").run(evidenceId,session,await seal(env,{text:'Project source',tool:'call_app',status:'completed',arguments:{operation:'contents.read',repo:'owner/cedar-mesh',path:'README.md'},result:{name:'Cedar Mesh',html_url:'https://github.com/owner/cedar-mesh',text:'Verified project background, not a research assistant.'}},arcContext('owner',evidenceId)),earlier);
  let dispatch:any;
  try{
   const deps={executeTool:async(_env:any,run:ArcRun,decision:any)=>{const args=JSON.parse(decision.arguments_json);dispatch=await delegateArcWork(env,run,args);const replay=await delegateArcWork(env,run,args);assert.equal(replay.roomId,dispatch.roomId);assert.equal(replay.turnId,dispatch.turnId);return dispatch;}};
@@ -29,9 +34,20 @@ export async function testArcDispatcher({sql,env}:any){
   const handoff=await arcRoomMessages(env,'owner',dispatch.roomId);assert.equal(handoff.messages[0].text,'Have the delivery reviewers review my product plan.','Only the original authenticated user text becomes the new room goal');assert(!handoff.messages[0].text.includes('current user’s'));
   await advanceArcRoom(env,dispatch.roomId);const child=sql.prepare("SELECT * FROM arc_chat_runs WHERE session_id=? AND status='queued'").get(dispatch.roomId) as ArcRun;const assigned=await arcEmployeeExecution(env,child);assert(assigned);assert.equal(assigned.sourceMessage,'Review the current user’s product plan and return concrete findings.');assert.equal(assigned.scope.appMode,'none');assert.equal(assigned.objective,handoff.messages[0].text);
   assert.equal(assigned.inputAttachments?.[0]?.id,uploaded.id);assert.equal(assigned.inputLocation?.label,'Auckland');assert.deepEqual(assigned.scope.deviceIds,[],'A user-provided file does not grant device access');
+  assert(assigned.workingContext?.userRequests.some(item=>item.text.includes('Cedar Mesh')),'Delegates receive the earlier authenticated project goal');
+  assert(assigned.workingContext?.evidence.some(item=>item.result.includes('Verified project background')),'Delegates receive sourced background, with no new App access');
+  const queuedProgress=await arcDispatchProgress(env,'owner',session);assert.equal(queuedProgress[0]?.members[0]?.status,'queued');
+  assert.deepEqual(await arcDispatchProgress(env,'other',session),[]);
+  await appendArcMessage(env,child,'tool','progress',{text:'Reviewing the observed Cedar Mesh plan',tool:'read_skill',status:'running'});
+  sql.prepare("UPDATE arc_chat_runs SET status='working' WHERE id=?").run(child.id);
   const pendingSnapshot=await decode(await chat('sessions/'+session));assert.equal(pendingSnapshot.pendingDelegations,true);
+  assert.equal(pendingSnapshot.delegations[0].members[0].name,receiver.name);assert.equal(pendingSnapshot.delegations[0].members[0].status,'working');assert.equal(pendingSnapshot.delegations[0].members[0].activity,'Reviewing the observed Cedar Mesh plan');
+  sql.prepare("UPDATE arc_chat_runs SET status='queued' WHERE id=?").run(child.id);
   env.MODEL_GATEWAY.adapters.openai=async(request:any)=>{calls++;const context=JSON.parse(request.user);assert.equal(context.employeeIdentity.id,receiver.id);assert(context.userAttachments.some((file:any)=>file.text==='ACTUAL_SHARED_PRODUCT_PLAN_739'));assert.equal(context.userLocation.label,'Auckland');return{value:{decision:'reply',tool:'none',arguments_json:'{}',message:'Reviewed the launch plan: add an accessibility check and a verifiable preview URL.'},usage:{inputTokens:100,outputTokens:100,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'dispatcher-review-result'};};
   assert.equal(await runArcStep(env,child.id),false);await advanceArcRoom(env,dispatch.roomId);const returned=await arcMessages(env,'owner',session);const reports=returned.filter(message=>message.id.includes(':report:'));assert.equal(reports.length,1);assert.match(reports[0].text,/accessibility check/);assert.match(reports[0].text,/actual outputs/);assert(!reports[0].text.includes('/dashboard/agent/teams'),'Team output stays in the original Arc Chat without a second messenger');assert.equal(dispatch.url,'/dashboard/agent/chat?session='+session);assert.equal((await decode(await chat('sessions/'+session))).pendingDelegations,false);await advanceArcRoom(env,dispatch.roomId);assert.equal((await arcMessages(env,'owner',session)).filter(message=>message.id.includes(':report:')).length,1,'A repeated completion tick must not duplicate the report');
+  const doneProgress=await arcDispatchProgress(env,'owner',session);assert.equal(doneProgress[0]?.status,'completed');assert.equal(doneProgress[0]?.members[0]?.status,'completed');
+  for(const status of ['failed','unknown','cancelled']){sql.prepare('UPDATE arc_chat_runs SET status=? WHERE id=?').run(status,child.id);const progress=await arcDispatchProgress(env,'owner',session);assert.equal(progress[0]?.status,status);assert.equal(progress[0]?.members[0]?.status,status);}
+  sql.prepare("UPDATE arc_chat_runs SET status='succeeded' WHERE id=?").run(child.id);
   // Explicit cross-team permission is separate from connected App permissions.
   const connection=sql.prepare("SELECT id FROM app_connections WHERE user_id='owner' AND provider='github' LIMIT 1").get().id as string,resourceScope={...scope,appMode:'write',connectionIds:[connection],delegationTeamIds:[target.id]};
   const sender=await saveArcEmployee(env,'owner',crypto.randomUUID(),{...base,name:'Engineering lead',scope:resourceScope});

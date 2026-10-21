@@ -1,4 +1,5 @@
 import {arcDispatchContext,type ArcDispatchData} from './arc-dispatch-context.js';
+import type {ArcWorkingContext} from './arc-working-context.js';
 import {unseal} from './app-oauth.js';
 import {arcContext,arcMessages,ArcError,type ArcEnv,type ArcRun,type ArcMessageBody} from './arc-chat.js';
 import {APP_OPERATIONS} from './app-catalog.js';
@@ -8,7 +9,7 @@ import {arcRoom,arcRoomMessages,roomEmployees} from './arc-team-rooms.js';
 import type {ArcEmployeeProfile,ArcEmployeeScope} from '@remotearc/protocol';
 
 type Assignment={employee_id:string;profile_version:number;turn_id:string;delivery_id:string;room_id:string;source_message_id:string;user_message_id:string;depth:number;turn_created_at:string};
-export type EmployeeExecution={inputAttachments?:ArcMessageBody['attachments'];inputLocation?:ArcMessageBody['location'];assignment:Assignment;identity:Pick<ArcEmployeeProfile,'name'|'responsibility'|'instructions'> & {id:string;version:number};scope:ArcEmployeeScope;objective:string;sourceMessage:string;peers:{id:string;name:string;responsibility:string}[];history:Awaited<ReturnType<typeof arcMessages>>};
+export type EmployeeExecution={workingContext?:ArcWorkingContext;inputAttachments?:ArcMessageBody['attachments'];inputLocation?:ArcMessageBody['location'];assignment:Assignment;identity:Pick<ArcEmployeeProfile,'name'|'responsibility'|'instructions'> & {id:string;version:number};scope:ArcEmployeeScope;objective:string;sourceMessage:string;peers:{id:string;name:string;responsibility:string}[];history:Awaited<ReturnType<typeof arcMessages>>};
 const intersection=(left:string[],right:string[])=>left.filter(value=>right.includes(value));
 async function message(env:ArcEnv,userId:string,messageId:string){const row=await env.DB.prepare('SELECT body_ciphertext FROM arc_chat_messages WHERE id=?1 AND user_id=?2').bind(messageId,userId).first<{body_ciphertext:string}>();if(!row)throw new ArcError('ARC_EMPLOYEE_SOURCE_UNAVAILABLE',409);return unseal<ArcMessageBody>(env,row.body_ciphertext,arcContext(userId,messageId));}
 export async function arcEmployeeExecution(env:ArcEnv,run:ArcRun):Promise<EmployeeExecution|undefined>{
@@ -32,7 +33,7 @@ export async function arcEmployeeExecution(env:ArcEnv,run:ArcRun):Promise<Employ
  // New user turns are queued separately and must not replace an active goal.
  const allowedUsers=new Set((await env.DB.prepare('SELECT user_message_id FROM arc_room_turns WHERE room_id=?1 AND rowid<=(SELECT rowid FROM arc_room_turns WHERE id=?2)').bind(run.session_id,assignment.turn_id).all<{user_message_id:string}>()).results.map(row=>row.user_message_id));
  const visible=history.filter(item=>item.role!=='user'||allowedUsers.has(item.id));
- return{inputAttachments:inputSource?.attachments,inputLocation:inputSource?.location,assignment,identity:{id:current.id,version:assignment.profile_version,name:frozen.name,responsibility:frozen.responsibility,instructions:frozen.instructions},scope,objective:root.text,sourceMessage:source.tool==='message_employee'?String((source.arguments as {message?:string})?.message||source.text):delegated?.instructions||source.text,peers:members.filter(member=>member.id!==current.id).map(member=>({id:member.id,name:member.name,responsibility:member.responsibility})),history:visible};
+ return{workingContext:delegated?.workingContext,inputAttachments:inputSource?.attachments,inputLocation:inputSource?.location,assignment,identity:{id:current.id,version:assignment.profile_version,name:frozen.name,responsibility:frozen.responsibility,instructions:frozen.instructions},scope,objective:root.text,sourceMessage:source.tool==='message_employee'?String((source.arguments as {message?:string})?.message||source.text):delegated?.instructions||source.text,peers:members.filter(member=>member.id!==current.id).map(member=>({id:member.id,name:member.name,responsibility:member.responsibility})),history:visible};
 }
 export function employeeToolError(execution:EmployeeExecution|undefined,tool:string,args:Record<string,any>){
  if(!execution)return tool==='message_employee'?{code:'ARC_EMPLOYEE_CONVERSATION_REQUIRED',dispatched:false}:null;

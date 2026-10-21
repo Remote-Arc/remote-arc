@@ -125,9 +125,12 @@
 .appsToolsItems { border-top:1px solid var(--dash-line); }
 .appsTool { border-bottom:1px solid var(--dash-line); }
 .appsTool h3 { margin:0; font-size:14px; }
-.appsPanel .appsToolTrigger { display:flex; align-items:center; justify-content:space-between; gap:15px; text-align:left; border:0; border-radius:0; width:100%; padding:17px 0; background:transparent; }
-.appsToolTrigger > span { display:grid; gap:5px; min-width:0; }
-.appsToolTrigger strong { font-size:14px; font-weight:550; line-height:1.55; }
+.appsPanel .appsToolTrigger { display:flex; align-items:center; justify-content:space-between; gap:20px; text-align:left; border:0; border-radius:8px; width:100%; min-height:64px; padding:15px 10px; background:transparent; }
+.appsToolTitle { flex:1; min-width:0; }
+.appsToolTrigger strong { font-size:13px; font-weight:500; line-height:1.6; }
+.appsToolMeta { display:flex; align-items:center; gap:12px; flex:none; color:var(--dash-muted); }
+.appsToolMeta>svg { transition:transform .15s; }
+.appsToolTrigger[aria-expanded="true"] .appsToolMeta>svg { transform:rotate(180deg); }
 .appsToolTrigger code { color:var(--dash-muted); font-size:11px; font-weight:400; overflow-wrap:anywhere; }
 .appsToolTrigger > svg { flex:none; color:var(--dash-muted); transition:transform .15s; }
 .appsToolTrigger[aria-expanded="true"] > svg { transform:rotate(180deg); }
@@ -141,4 +144,4 @@
 @media(prefers-reduced-motion:reduce) { .appsPanel { animation:none; } .appsManagerCard,.appsToolTrigger > svg { transition:none; } }
 @media(max-width:1180px) { .appsManagerGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } .appsManagerFilters { grid-template-columns:1fr; gap:16px; } .appsManagerFilters .appsSearchField { grid-row:2; } }
 @media(max-width:700px) { .appsManagerGrid { grid-template-columns:1fr; gap:13px; } .appsManagerHeader { gap:14px; align-items:flex-start; margin-bottom:23px; } .appsManager .appsManagerRefresh { padding:8px; font-size:12px; } .appsManagerHeader p { font-size:14px; } .appsManagerCard { padding:20px; } .appsCardDescription { margin:14px 0 10px; } .appsManagerCategories { flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; } .appsManager .appsManagerCategories button { flex:none; white-space:nowrap; } .appsManagerViewTabs { justify-self:stretch; } .appsManager .appsManagerViewTabs button { flex:1; justify-content:center; padding:7px; font-size:12px; gap:5px; } .appsPanelHead { padding:20px; } .appsPanelTabs { padding-inline:20px; } .appsPanelScroll { padding:20px; } .appsPanelAttribution { padding:12px 20px; } }
-.appsToolFilters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.appsToolFilters button{font:inherit;font-size:12px;color:var(--dash-muted);background:transparent;border:1px solid var(--dash-line);border-radius:7px;padding:7px 10px;cursor:pointer}.appsToolFilters button[aria-pressed=true]{color:var(--dash-text);background:var(--dash-subtle)}.appsToolAccessBadge{display:inline-flex;align-items:center;align-self:flex-start;padding:3px 7px;border-radius:5px;font-size:10px;line-height:1.4;background:var(--dash-subtle);color:var(--dash-muted);border:1px solid var(--dash-line);margin-top:5px}.appsToolAccessBadge[data-permission=write]{color:var(--dash-text);border-color:color-mix(in srgb,var(--dash-text) 25%,var(--dash-line))}
+.appsToolFilters{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:14px 0 12px;padding:3px;background:var(--dash-subtle);border-radius:9px;width:fit-content}.appsPanel .appsToolFilters button{min-height:32px;font-size:12px;font-weight:500;color:var(--dash-muted);background:transparent;border:0;border-radius:6px;padding:6px 11px;cursor:pointer}.appsPanel .appsToolFilters button[aria-pressed=true]{color:var(--dash-text);background:var(--dash-surface);box-shadow:0 1px 3px #00000012}.appsToolAccessBadge{display:inline-flex;align-items:center;justify-content:center;flex:none;width:auto;min-width:42px;padding:3px 7px;border-radius:5px;font-size:10px;font-weight:500;line-height:1.4;background:var(--dash-subtle);color:var(--dash-muted);border:1px solid transparent;white-space:nowrap}.appsToolAccessBadge[data-permission=write]{color:var(--dash-text);border-color:var(--dash-line);background:transparent}

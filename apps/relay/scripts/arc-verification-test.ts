@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {arcVerificationSchema,arcVerificationToolError,arcObservationProof,arcReceipt} from '../src/arc-verification.js';
 import {ARC_VERIFICATION_SKILLS} from '../src/arc-verification-skills.js';
 import {runArcStep} from '../src/arc-chat-runtime.js';
-import {ARC_COMPACT_SYSTEM} from '../src/arc-chat-context.js';
+import {ARC_CLOSING_SYSTEM} from '../src/arc-chat-context.js';
 import {seal} from '../src/app-oauth.js';
 import {arcContext} from '../src/arc-chat.js';
 import type {ArcVerification} from '@remotearc/protocol';
@@ -61,7 +61,7 @@ export async function testArcVerification({sql,env,api,create,decode,decisions,t
   await runArcStep(env,compactRun.run.id);sql.prepare('UPDATE arc_chat_runs SET max_tokens=12000 WHERE id=?').run(compactRun.run.id);
   let compactDecisions=0;const compactWrites=writes,compactReads=reads;
   env.MODEL_GATEWAY.adapters.openai=async(request:any)=>{const context=JSON.parse(request.user);assert.deepEqual(context.verificationScope,issue);compactDecisions++;let value;
-   if(compactDecisions===1){assert.equal(request.system,ARC_COMPACT_SYSTEM);assert(request.schema.properties.decision.enum.includes('tool'));assert.deepEqual(context.nextRequiredRead,{tool:'call_app',arguments:{connectionId:github,operation:'issues.get',arguments:{repo:issue.repo,number:72}}});value=tool(context.nextRequiredRead.tool,context.nextRequiredRead.arguments);}
+   if(compactDecisions===1){assert.notEqual(request.system,ARC_CLOSING_SYSTEM);assert(request.schema.properties.decision.enum.includes('tool'));assert.deepEqual(context.nextRequiredRead,{tool:'call_app',arguments:{connectionId:github,operation:'issues.get',arguments:{repo:issue.repo,number:72}}});value=tool(context.nextRequiredRead.tool,context.nextRequiredRead.arguments);}
    else{assert.equal(context.nextRequiredRead,undefined);value=reply('Created and independently verified https://github.com/example/project/issues/72');}
    return {value,usage:{inputTokens:100,outputTokens:100,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'compact-issue-fixture'};
   };

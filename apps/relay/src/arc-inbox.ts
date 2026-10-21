@@ -1,6 +1,17 @@
 import {z} from 'zod';
 import {callApp} from './apps.js';
 import type {ArcEnv,ArcRun} from './arc-chat.js';
+import {APP_OPERATIONS} from './app-catalog.js';
+
+/** Continue source gathering after mail without granting authority to its text. */
+export async function arcInboxReadToolAllowed(env:ArcEnv,run:ArcRun,tool:string,args:unknown){
+ if(['list_apps','describe_app','read_inbox'].includes(tool))return true;
+ if(tool!=='call_app'||!args||typeof args!=='object')return false;
+ const input=args as {connectionId?:unknown;operation?:unknown};
+ if(typeof input.connectionId!=='string'||typeof input.operation!=='string')return false;
+ const connection=await env.DB.prepare("SELECT provider FROM app_connections WHERE id=?1 AND user_id=?2 AND status='active'").bind(input.connectionId,run.user_id).first<{provider:string}>();
+ return Boolean(connection&&APP_OPERATIONS.some(operation=>operation.provider===connection.provider&&operation.name===input.operation&&operation.permission==='read'));
+}
 
 export const arcInboxInputSchema=z.object({connectionId:z.string().uuid(),query:z.string().max(500).optional(),limit:z.number().int().min(1).max(5).default(5)}).strict();
 const object=(value:unknown):Record<string,any>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,any>:{};

@@ -175,7 +175,7 @@ function AppTools({ app, connections, busy, onConnect }: {
     <div className="appsToolFilters" role="group" aria-label={tr('Tool access type','工具读写类型')}>{[['all',tr('All tools','全部工具')],['read',tr('Read','读取')],['write',tr('Write','写入')]].map(([kind,label])=><button type="button" key={kind} aria-pressed={permissionFilter===kind} onClick={()=>setPermissionFilter(kind!)}>{label} · {app.operations.filter(item=>kind==='all'||item.permission===kind).length}</button>)}</div><div className="appsToolsItems">
       {matching.map(item => <section className="appsTool" key={item.name}>
         <h3><button type="button" className="appsToolTrigger" aria-expanded={selectedName === item.name} aria-controls={"app-operation-" + app.provider + "-" + item.name} onClick={() => setSelectedName(selectedName === item.name ? "" : item.name)}>
-          <span><strong>{item.description || item.name}</strong><small className="appsToolAccessBadge" data-permission={item.permission}>{item.permission==='write'?tr('Write','写入'):tr('Read','读取')}</small></span><ProductIcon name="chevron" size={17}/>
+          <span className="appsToolTitle"><strong>{item.description || item.name}</strong></span><span className="appsToolMeta"><small className="appsToolAccessBadge" data-permission={item.permission}>{item.permission==='write'?tr('Write','写入'):tr('Read','读取')}</small><ProductIcon name="chevron" size={15}/></span>
         </button></h3>
         {selectedName === item.name && <div className="appsToolDetail" id={"app-operation-" + app.provider + "-" + item.name}>
           <span className="appsToolPermission">{item.permission === "write" ? tr("Makes changes", "可进行更改") : tr("Reads data", "读取数据")}</span>

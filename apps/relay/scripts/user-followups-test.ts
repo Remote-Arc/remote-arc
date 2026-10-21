@@ -23,6 +23,14 @@ assert.equal((await api('','GET',undefined,'nobody')).status,401);
 assert.equal((await api('/person','PATCH',{},'admin','https://evil.invalid')).status,403);
 assert.equal((await handleAdminServiceRequest(new Request('https://mcp.remotearc.app/api/admin/followups'),env)).status,404);
 const listing=await decode(await api('?segment=unconnected'));assert.equal(listing.total,3);assert(listing.emailConfigured);
+for(const from of [undefined,'','   ']){
+ const status=await decode(await handleAdminServiceRequest(request(),{...env,EMAIL_FROM:from}));
+ assert.equal(status.emailConfigured,true,'An optional sender override must not disable the existing email channel');
+}
+for(const key of [undefined,'','   ']){
+ const status=await decode(await handleAdminServiceRequest(request(),{...env,RESEND_API_KEY:key}));
+ assert.equal(status.emailConfigured,false,'A missing or blank Resend key must keep sending disabled');
+}
 const profile={status:'waiting',note:'Help requested through support',nextFollowupAt:now,permission:true,consentNote:'Support request on 2026-10-19',suppress:false};
 await decode(await api('/person','PATCH',profile));assert.equal((await decode(await api('?segment=due'))).total,1);
 const createDraft=async(userId='person')=>{const id=crypto.randomUUID(),text=followupTemplate('experience','en',{name:'Person',setupUrl:'https://remotearc.app/connect-ai',feedbackUrl:'https://remotearc.app/feedback?source=followup:'+id});const input={id,userId,templateId:'experience',locale:'en',...text,design:{layout:'spotlight',accent:'#244b46',eyebrow:'From the team',headline:'Your next result',intro:'A personal follow-up.',buttonLabel:'Share your feedback',highlights:[{title:'Arc',body:'Your AI teammate'}]}};const draft=await decode(await api('/drafts','POST',input),201);assert.equal(draft.htmlBody,sql.prepare('SELECT html_body FROM user_followup_messages WHERE id=?').get(id)?.html_body,'Review receives the exact saved HTML');assert.equal((await decode(await api('/drafts','POST',input))).htmlBody,draft.htmlBody,'Draft replay returns the same reviewed snapshot');assert.equal((await api('/drafts','POST',{...input,design:{...input.design,accent:'#ffffff'}})).status,409,'Reviewed design is immutable for this draft ID');return draft.id as string;};
@@ -31,17 +39,24 @@ let sends=0;const native=globalThis.fetch;
 globalThis.fetch=async(input,options)=>{
  assert.equal(String(input),'https://api.resend.com/emails');sends++;
  assert.equal(new Headers(options?.headers).get('idempotency-key'),'followup/'+id);
- const body=JSON.parse(String(options?.body));assert.deepEqual(body.to,['person@example.invalid']);assert(body.text.includes('/email/follow-up/unsubscribe?token='));assert(body.headers['List-Unsubscribe-Post']);assert(body.html.includes('role="presentation"'));assert(body.html.includes('Share your feedback'));assert(body.html.includes('Your next result'));assert.equal(body.html,sql.prepare('SELECT html_body FROM user_followup_messages WHERE id=?').get(id)?.html_body,'Sending uses the exact saved HTML snapshot');assert(!/<img[^>]+(?:token=|person%40|person@)/i.test(body.html),'Brand image is static, with no recipient tracking');
+ const body=JSON.parse(String(options?.body));assert.equal(body.from,'Remote Arc <login@remotearc.app>');assert.deepEqual(body.to,['person@example.invalid']);assert(body.text.includes('/email/follow-up/unsubscribe?token='));assert(body.headers['List-Unsubscribe-Post']);assert(body.html.includes('role="presentation"'));assert(body.html.includes('Share your feedback'));assert(body.html.includes('Your next result'));assert.equal(body.html,sql.prepare('SELECT html_body FROM user_followup_messages WHERE id=?').get(id)?.html_body,'Sending uses the exact saved HTML snapshot');assert(!/<img[^>]+(?:token=|person%40|person@)/i.test(body.html),'Brand image is static, with no recipient tracking');
  return Response.json({id:'provider-fixture'});
 };
 try{
+ for(const key of [undefined,'','   ']){
+  await decode(await handleAdminServiceRequest(request('/'+id+'/send','POST',{}),{...env,RESEND_API_KEY:key}),503);
+  assert.equal(sql.prepare('SELECT status FROM user_followup_messages WHERE id=?').get(id)?.status,'draft');
+ }
+ assert.equal(sends,0,'Disabled channels never dispatch or claim a reviewed draft');
+ env.EMAIL_FROM=undefined;
  const [first,second]=await Promise.all([api('/'+id+'/send','POST',{}),api('/'+id+'/send','POST',{})]);
  assert([200,409].includes(first.status));assert([200,409].includes(second.status));assert.equal(sends,1);
  assert.equal((await decode(await api('/'+id+'/send','POST',{}))).status,'sent');assert.equal(sends,1);
  const later=await createDraft();assert.equal((await api('/'+later+'/send','POST',{})).status,409);assert.equal(sends,1,'72 hour cooldown blocks another draft');
  const other=await createDraft('other');assert.equal((await decode(await api('/'+other+'/send','POST',{}),409)).error,'contact_permission_required');
  await decode(await api('/other','PATCH',{...profile,nextFollowupAt:null}));
- globalThis.fetch=async()=>{sends++;throw Error('simulated ambiguous timeout');};
+ env.EMAIL_FROM='Remote Arc <hello@example.invalid>';
+ globalThis.fetch=async(_input,options)=>{assert.equal(JSON.parse(String(options?.body)).from,env.EMAIL_FROM,'Explicit sender overrides remain authoritative');sends++;throw Error('simulated ambiguous timeout');};
  assert.equal((await api('/'+other+'/send','POST',{})).status,502);assert.equal((await decode(await api('/'+other+'/send','POST',{}))).status,'unknown');assert.equal(sends,2,'Unknown deliveries never trigger a blind resend');
  const contact=sql.prepare('SELECT * FROM user_followup_contacts WHERE user_id=?').get('person')!;
  const unsubscribe='https://remotearc.app/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;

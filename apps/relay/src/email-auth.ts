@@ -8,6 +8,7 @@ import {
 import { authPage, escapeAuthHtml } from "./auth-page.js";
 import { renderOtpEmail } from "./email-template.js";
 import { emailFormToken, validEmailFormToken } from "./email-form-csrf.js";
+import { emailSender } from './email-sender.js';
 
 type EmailEnv = {
   DB: D1Database;
@@ -29,7 +30,7 @@ const CODE_TTL_SECONDS = 600;
 const encoder = new TextEncoder();
 
 export function emailLoginEnabled(env: EmailEnv) {
-  return Boolean(env.RESEND_API_KEY && env.EMAIL_AUTH_SECRET);
+  return Boolean(emailSender(env) && env.EMAIL_AUTH_SECRET);
 }
 
 function formPage(email: string, returnTo: string, message = "", request?: Request) {
@@ -158,15 +159,16 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
 
   let sent = false;
   try {
+    const sender = emailSender(env)!;
     const emailMessage = renderOtpEmail(code);
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": "Bearer " + env.RESEND_API_KEY,
+        "Authorization": "Bearer " + sender.apiKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: env.EMAIL_FROM || "Remote Arc <login@remotearc.app>",
+        from: sender.from,
         to: [email],
         ...emailMessage,
       }),

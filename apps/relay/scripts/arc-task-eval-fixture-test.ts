@@ -38,7 +38,17 @@ globalThis.fetch=(async(url,init)=>{
   }else value=observations.some(o=>o.arguments.operation==='deployments.get')?reply('Exact deployment is READY: https://web-example.vercel.app'):tool('call_app',{connectionId:scope.connectionId,operation:'deployments.get',arguments:{deploymentId:scope.deploymentId}});
  }
  else if(context.connectionIndex[0]?.provider==='github'&&!/create|issue|创建|node verify/i.test(context.objective)){
-  if(!observations.some(o=>o.tool==='read_context'))value=tool('read_context',{query:context.workingContext.userRequests.map((item:any)=>item.text).join(' ').slice(0,500)});
+  if(expandedPaths){
+   const decode=(message:any)=>typeof message?.result==='string'?JSON.parse(message.result):message?.result;
+   const repository=decode(context.messages.find((item:any)=>item.tool==='call_app'&&item.arguments?.operation==='repositories.list'))?.result?.[0];
+   const document=context.messages.find((item:any)=>item.tool==='call_app'&&item.arguments?.operation==='contents.read'&&item.arguments.arguments.path==='README.md');
+   if(!repository)value=tool('call_app',{connectionId,operation:'repositories.list',arguments:{limit:100}});
+   else if(!observations.some(o=>o.arguments?.operation==='contents.read'&&o.arguments.arguments.path===''))value=tool('call_app',{connectionId,operation:'contents.read',arguments:{repo:repository.full_name,path:''}});
+   else if(!document)value=tool('call_app',{connectionId,operation:'contents.read',arguments:{repo:repository.full_name,path:'README.md'}});
+   else if(!observations.some(o=>o.arguments?.operation==='issues.list'))value=tool('call_app',{connectionId,operation:'issues.list',arguments:{repo:repository.full_name,limit:30}});
+   else{const result=decode(document);assert.equal(result.result.encoding,'utf-8');assert(result.result.content.includes('shared workspace'));value=reply(repository.name+' should build on local execution and shared team state. Source: '+result.result.html_url);}
+  }
+  else if(!observations.some(o=>o.tool==='read_context'))value=tool('read_context',{query:context.workingContext.userRequests.map((item:any)=>item.text).join(' ').slice(0,500)});
   else{const observed=context.messages.find((item:any)=>item.tool==='read_context'),result=typeof observed.result==='string'?JSON.parse(observed.result):observed.result,doc=result.sources.flatMap((source:any)=>source.documents||[])[0];assert(doc?.repo&&doc.url&&doc.text);value=reply(doc.repo.split('/').at(-1)+' 的方向应建立在本地执行与共享团队状态上。资料来源：'+doc.url);}
  }
  else if(context.objective.includes('邮件')){
@@ -66,7 +76,8 @@ globalThis.fetch=(async(url,init)=>{
   else value=observations.some(o=>o.arguments.operation==='issues.get')?reply('Created https://github.com/example/project/issues/43'):tool('call_app',{connectionId,operation:'issues.get',arguments:{repo:'example/project',number:43}});
  }
  else if(context.connectionIndex.some((connection:any)=>connection.provider==='github')){
-  if(!observations.some(o=>o.arguments.operation==='issues.create'))value=tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/project',title:'Release checklist',body:'Verify smoke tests'}});
+  if(expandedPaths&&!observations.some(o=>o.arguments.operation==='repositories.list'))value=tool('call_app',{connectionId,operation:'repositories.list',arguments:{limit:100}});
+  else if(!observations.some(o=>o.arguments.operation==='issues.create'))value=tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/project',title:'Release checklist',body:'Verify smoke tests'}});
   else value=observations.some(o=>o.arguments.operation==='issues.get')?reply('Created https://github.com/example/project/issues/42'):tool('call_app',{connectionId,operation:'issues.get',arguments:{repo:'example/project',number:42}});
  }
  else if(!observations.some(o=>o.tool==='call_app'))value=tool('call_app',{connectionId,operation:'projects.list',arguments:{limit:5}});

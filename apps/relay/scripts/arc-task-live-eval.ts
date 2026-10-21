@@ -1,7 +1,7 @@
 import {loadPriorAcceptance,arcCaseDigest} from './arc-acceptance-resume.js';
 // Explicit operator-only acceptance. Real model inference, synthetic local
 // accounts and provider responses. The SQLite funding ledger caps total cost at
-// US$0.05; no customer session, mailbox, real provider write or recharge.
+// US$0.25; no customer session, mailbox, real provider write or recharge.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
@@ -10,6 +10,7 @@ import {activateArcTrial} from '../src/arc-trial.js';
 import {handleArcChat,arcMessages,arcContext,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
 import {executeArcTool,runArcStep} from '../src/arc-chat-runtime.js';
 import {ARC_MODELS} from '../src/arc-chat-model.js';
+import {APP_OPERATIONS} from '../src/app-catalog.js';
 import {openAiAdapter} from '../src/model-provider-adapters.js';
 import {sha256Hex} from '../src/auth.js';
 import {saveArcSkill} from '../src/arc-skills.js';
@@ -26,10 +27,10 @@ const scriptedFixture=process.argv.includes('--scripted-fixture');
 if(scriptedFixture&&process.env.OPENAI_API_KEY!=='synthetic-eval-fixture-not-a-secret')throw Error('Scripted fixtures require the nonfunctional fixture key');
 // Historical proof may be reused only by an explicit matching-code resume.
 const resume=process.argv.includes('--resume-accepted-cases')||process.argv.includes('--resume-fixture')?loadPriorAcceptance('../..'):null;
-const maximumUsd=resume?.maximumResumeUsd??0.05,maximumMicros=Math.round(maximumUsd*1e6);
+const maximumUsd=resume?.maximumResumeUsd??0.25,maximumMicros=Math.round(maximumUsd*1e6);
 // Fleet placement requires the full managed-process lifecycle, including stop.
 const processTools=['start_process','process_status','process_output','stop_process'];
-const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,APP_TOKEN_KEY:Buffer.alloc(32,8).toString('base64'),ENABLE_APPS:'1',GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_TRIAL_DAILY_MICROS:'10000',ARC_USER_DAILY_MICROS:'10000',ARC_PLATFORM_DAILY_MICROS:String(maximumMicros),ARC_RUNTIME:{getByName:()=>({fetch:async()=>Response.json({started:true})})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:openAiAdapter(process.env.OPENAI_API_KEY,nativeFetch)}}} as unknown as ArcEnv;
+const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,APP_TOKEN_KEY:Buffer.alloc(32,8).toString('base64'),ENABLE_APPS:'1',GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_TRIAL_DAILY_MICROS:'100000',ARC_USER_DAILY_MICROS:'100000',ARC_PLATFORM_DAILY_MICROS:String(maximumMicros),ARC_RUNTIME:{getByName:()=>({fetch:async()=>Response.json({started:true})})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:openAiAdapter(process.env.OPENAI_API_KEY,nativeFetch)}}} as unknown as ArcEnv;
 sql.prepare("UPDATE arc_funding_policy SET managed=1,enabled=1,mode='automatic',started_at=?,total_micros=?,daily_micros=?").run(at,maximumMicros,maximumMicros);
 const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
  {id:'attention',provider:'gmail',scopes:[scope],prompt:'帮我看下目前我有什么需要关注的'},
@@ -80,7 +81,16 @@ globalThis.fetch=(async(url,init)=>{
   if(target.pathname==='/user/repos')return Response.json([{id:1,name:project.name,full_name:repo,description:'Shared agent workspace with local execution',html_url:link}]);
   if(target.pathname==='/repos/'+repo+'/contents/')return Response.json([{name:'README.md',path:'README.md',type:'file',html_url:link+'/blob/main/README.md'}]);
   if(target.pathname==='/repos/'+repo+'/contents/README.md'){projectDocumentReads++;return Response.json({encoding:'base64',content:Buffer.from('# '+project.name+'\n'+project.alias+' is this project: a shared workspace for agents with local execution and shared team state. This is a software product, not a research-assistant acronym.').toString('base64'),html_url:link+'/blob/main/README.md'});}
+  if(target.pathname==='/repos/'+repo+'/issues')return Response.json([{id:7,number:7,title:'Preserve the shared project context',body:'User feedback: maintain the original project goal across delegated work.',state:'open',html_url:link+'/issues/7'}]);
+  if(target.pathname==='/repos/'+repo+'/issues/7')return Response.json({id:7,number:7,title:'Preserve the shared project context',body:'User feedback: maintain the original project goal across delegated work.',state:'open',html_url:link+'/issues/7'});
+  if(target.pathname==='/repos/'+repo+'/pulls')return Response.json([]);
+  if(target.pathname==='/repos/'+repo+'/actions/runs')return Response.json({total_count:0,workflow_runs:[]});
+  if(target.pathname==='/repos/'+repo+'/branches')return Response.json([{name:'main',commit:{sha:'a'.repeat(40)}}]);
   unexpected++;throw Error('ARC_EVAL_PROJECT_READ_MISMATCH');
+ }
+ if(['github','github-zh','skill','verified-issue'].includes(currentCase)&&target.hostname==='api.github.com'&&init?.method==='GET'){
+  if(target.pathname==='/user/repos'){lists++;return Response.json([{id:42,name:'project',full_name:'example/project',html_url:'https://github.com/example/project'}]);}
+  if(target.pathname==='/repos/example/project/issues'){reads++;const number=currentCase==='skill'?43:42;return Response.json(issueWrites?[{number,title:issueTitle,body:issueBody,html_url:'https://github.com/example/project/issues/'+number}]:[]);}
  }
  if(['github','github-zh','skill','verified-issue'].includes(currentCase)&&target.hostname==='api.github.com'&&target.pathname==='/repos/example/project/issues'&&init?.method==='POST'){
   const body=JSON.parse(String(init.body));issueWrites++;reads++;
@@ -129,8 +139,12 @@ try{
   const started=await handleArcChat(request('sessions/'+session.id+'/messages',{text:item.prompt,requestId:crypto.randomUUID(),...(verification?{verification,skillIds:[guide!]}:skill?{skillIds:[skill.id]}:{})}),env);assert.equal(started.status,202);const value=await started.json() as {run:{id:string}};
   const drive=async(runId:string)=>{const maximumSteps=Number(sql.prepare('SELECT max_steps FROM arc_chat_runs WHERE id=?').get(runId)!.max_steps);let more=true,ticks=0;while(more&&ticks++<=maximumSteps)more=await runArcStep(env,runId,{executeTool:async(e,run,decision)=>{
    trace.push({phase:run.automation_id?'scheduled':'chat',tool:decision.tool,arguments:JSON.parse(decision.arguments_json)});
-   if(!['read_inbox','list_apps','describe_app','call_app',...(item.project?['read_context','list_memory']:[]),...(item.id==='task'?['create_task','manage_work']:[]),...(skill||verification?['read_skill','list_skills']:[]),...(item.id==='managed-process'?['list_devices','select_device','device_tool']:[])].includes(decision.tool)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_TOOL');}
-   if(decision.tool==='call_app'&&!['repositories.list','contents.read','messages.list','messages.get','projects.list','deployments.list','deployments.get','issues.create',...(item.id.startsWith('attention')||item.id==='calendar'?['events.list']:[]),...(['github','github-zh','skill','verified-issue'].includes(item.id)?['issues.get']:[])].includes(JSON.parse(decision.arguments_json).operation)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_WRITE');}
+   if(!['read_inbox','list_apps','describe_app','call_app','list_skills','read_skill',...(item.project?['read_context','list_memory']:[]),...(item.id==='task'?['create_task','manage_work']:[]),...(item.id==='managed-process'?['list_devices','select_device','device_tool']:[])].includes(decision.tool)){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_TOOL');}
+   if(decision.tool==='call_app'){
+    const args=JSON.parse(decision.arguments_json),provider=sql.prepare('SELECT provider FROM app_connections WHERE id=? AND user_id=?').get(args.connectionId,run.user_id)?.provider,operation=APP_OPERATIONS.find(operation=>operation.provider===provider&&operation.name===args.operation);
+    const expectedWrite=['github','github-zh','skill','verified-issue'].includes(item.id)&&args.operation==='issues.create';
+    if(!operation||operation.permission==='write'&&!expectedWrite){unexpected++;throw Error('ARC_EVAL_UNEXPECTED_WRITE');}
+   }
    try{return await executeArcTool(e,run,decision);}catch(error){
     // Synthetic inputs only; never serialize provider responses or credentials.
     trace.at(-1).failure={name:error instanceof Error?error.name:'Unknown',code:error instanceof Error&&/^(ARC_|MODEL_|app_)/.test(error.message)?error.message:'LOCAL_EXECUTION_REJECTED'};throw error;
@@ -158,11 +172,12 @@ try{
   const messages=await arcMessages(env,id,goalSession),answer=messages.filter(m=>m.role==='assistant').at(-1)?.text||'';
   const evidence=['mail','verified-mail'].includes(item.id)?reads>=2&&/10(?::00|：00|\s*(?:点|时|am|a\.m))|十[点时]/i.test(answer)&&/(?:INV.?42|发票|invoice)/i.test(answer):['github','github-zh','skill','verified-issue'].includes(item.id)?issueWrites===1&&answer.includes('https://github.com/example/project/issues/'+(skill?43:42))&&(!skill||trace.some(t=>t.tool==='read_skill'&&t.arguments.id===skill.id)):deploymentReads>=1&&answer.includes((item.id==='vercel-error'?'broken':'web')+'-example.vercel.app')&&(item.id==='vercel-error'?/error|failed|失败|错误|未就绪/i.test(answer):/\bready\b|已就绪|已成功|可用/i.test(answer));
   const calendarEvidence=calendarReads>=1&&answer.includes('Atlas')&&answer.includes('https://calendar.google.com/');
-  const goalEvidence=item.project?projectDocumentReads>=1&&answer.includes(item.project.name)&&answer.includes('https://github.com/example/'+item.project.name)&&/本地|local|共享|shared/i.test(answer)&&!/RA\\s*=\\s*Research Assistant/i.test(answer):item.id==='attention-mail-unavailable'?calendarEvidence&&reads===0&&/(无法|未能|暂时|失败|不可用|could not|unable|unavailable|failed)/i.test(answer):item.id==='attention-empty-mail'?calendarEvidence&&reads===0&&!/INV.?42/.test(answer):item.id.startsWith('attention')?reads>=2&&calendarEvidence&&/INV.?42|发票|invoice/i.test(answer)&&answer.includes('https://mail.google.com/'):item.id==='calendar'?calendarEvidence:item.id==='managed-process'?processStarts===1&&processChecks>=2&&processOutputs>=1&&answer.includes('verified-build-ok')&&answer.includes('eval-managed-process'):evidence;
+  const goalEvidence=item.project?projectDocumentReads>=1&&answer.includes(item.project.name)&&answer.includes('https://github.com/example/'+item.project.name)&&/本地|local|共享|shared/i.test(answer)&&!/RA\s*=\s*Research Assistant/i.test(answer):item.id==='attention-mail-unavailable'?calendarEvidence&&reads===0&&/(无法|未能|暂时|失败|不可用|could not|unable|unavailable|failed)/i.test(answer):item.id==='attention-empty-mail'?calendarEvidence&&reads===0&&!/INV.?42/.test(answer):item.id.startsWith('attention')?reads>=2&&calendarEvidence&&/INV.?42|发票|invoice/i.test(answer)&&answer.includes('https://mail.google.com/'):item.id==='calendar'?calendarEvidence:item.id==='managed-process'?processStarts===1&&processChecks>=2&&processOutputs>=1&&answer.includes('verified-build-ok')&&answer.includes('eval-managed-process'):evidence;
   const receipt=verification?(await (await handleArcChat(new Request(origin+'/api/arc/sessions/'+session.id,{headers:{cookie:'rl_session='+token}}),env)).json() as any).runs.find((r:any)=>r.id===run.id)?.receipt:null;
   const passed=(!verification||receipt?.status==='completed')&&run.status==='succeeded'&&goalRun.status==='succeeded'&&goalEvidence&&taskEvidence&&unexpected===0;
   const modelRepairs=Number(sql.prepare("SELECT COUNT(*) n FROM arc_chat_steps WHERE run_id IN (?,?) AND status='done' AND decision_ciphertext IS NULL AND result_ciphertext IS NOT NULL").get(run.id,goalRun.id)?.n||0);
   report.push({case:item.id,passed,...(verification?{receipt}:{}),modelRepairs,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step),modelTokens:run.tokens_used+(goalRun.id===run.id?0:goalRun.tokens_used),providerRequests:reads,listCalls:lists,...(item.project?{projectDocumentReads}:{}),...(item.id.startsWith('attention')||item.id==='calendar'?{calendarReads}:{}),...(taskId?{taskId,scheduledGoalVerified:taskEvidence}:{}),...(item.id==='managed-process'?{processStarts,processChecks,processOutputs}:{}),answer,trace});
+  console.log(JSON.stringify({case:item.id,passed,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step)}));
   fs.mkdirSync('../../work/arc-task-eval',{recursive:true});fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({passed:report.length===cases.length&&report.every(value=>value.passed),maximumUsd,cases:report},null,2));
  }
  const funding=sql.prepare('SELECT spent_micros,reserved_micros FROM arc_funding_policy WHERE id=1').get()!;

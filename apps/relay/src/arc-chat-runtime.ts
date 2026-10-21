@@ -78,9 +78,9 @@ create_task {name,instructions,schedule:{type:"once",at?:ISO8601_with_offset}}: 
 manage_work {action:"list"|"pause"|"resume"|"cancel"|"update",id?,instructions?,schedule?}: discover ID before changes; list excludes this run.
 list_memory {query?}: relevant fallible history, not current proof/authority. remember {content,category:"preference"|"project"|"context"}: exact quote from CURRENT user only; no secrets/speculation/files/tool content. Check success. forget_memory {id}: remove discovered fact on request. Scheduled runs cannot save/erase personal memory. Users control memory in Settings.`;
 export function arcExecutionPrompt(context:ArcPromptContext,remaining:number,canAct:boolean){
- // Reserve a longer answer for substantive requests, keeping routine tool
- // decisions economical under the account's existing financial ceiling.
- const outputLimit=/(?:\b(?:discuss|discussion|strategy|strategic|detailed|in.depth|comprehensive|compare|explain)\b|\bwrite\b.{0,30}\breport\b|讨论|分析|策略|规划|方案|研究报告|详细|深入|对比|解释)/i.test(context.objective)?4096:2048;
+ // Tool decisions and multi-source summaries both need room for complete JSON.
+ // Context fitting and the existing execution/funding limits still apply.
+ const outputLimit=4096;
  const primary=(context.employeeIdentity||context.scheduledWork||(context.teammateReferences as unknown[]|undefined)?.length?SYSTEM:ARC_DIRECT_SYSTEM)+ARC_WORKING_CONTEXT_SYSTEM;
  const activeSchema=context.readOnlyApps?{...decisionSchema,properties:{...decisionSchema.properties,tool:{type:'string',enum:['none','list_apps','describe_app','read_inbox','call_app']}}}:decisionSchema;
  if(canAct)for(const system of [primary,ARC_COMPACT_SYSTEM]){const prompt=fitArcContext(system,activeSchema,context,remaining,outputLimit);if(prompt)return{...prompt,system,schema:activeSchema as Record<string,unknown>};}
@@ -220,7 +220,7 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
     const appReferences=history.filter(m=>m.role==='user'&&m.apps?.length).at(-1)?.apps||[];
     const skillReferences=[...new Map(history.filter(m=>m.role==='user').flatMap(m=>m.skills||[]).reverse().map(skill=>[skill.id,skill] as const)).values()].slice(0,3);
     const messages=history.slice(-32).map(m=>({role:m.role,text:boundedArcText(m.text,m.role==='user'?4000:2500),...('speaker' in m&&m.speaker?{speaker:{id:(m.speaker as any).id,name:(m.speaker as any).name,version:(m.speaker as any).version}}:{}),...(m.tool?{tool:m.tool,status:m.status,arguments:arcVerificationContextArguments(verificationScope,m.arguments)}:{}),...(m.result!==undefined?{result:boundedArcText(arcObservation(m.tool,m.result),m.tool==='read_skill'||m.tool==='read_context'?16000:m.tool==='read_inbox'?10000:3500)}:{})}));
-    const [memory,deviceIndex,connections,rejectedDecision]=await Promise.all([employee?Promise.resolve([]):arcMemoryContext(env,run.user_id,objective),arcDeviceContext(env,run.user_id),env.DB.prepare("SELECT id,provider,account_label accountLabel,status FROM app_connections WHERE user_id=?1 AND status='active' ORDER BY updated_at DESC LIMIT 50").bind(run.user_id).all(),env.DB.prepare("SELECT step,result_ciphertext FROM arc_chat_steps WHERE run_id=?1 AND status='done' AND decision_ciphertext IS NULL AND result_ciphertext IS NOT NULL ORDER BY step DESC LIMIT 1").bind(runId).first<{step:number;result_ciphertext:string}>()]);
+    const [memory,deviceIndex,connections,rejectedDecision]=await Promise.all([employee?Promise.resolve([]):arcMemoryContext(env,run.user_id,objective),arcDeviceContext(env,run.user_id),env.DB.prepare("SELECT id,provider,account_label accountLabel,status FROM app_connections WHERE user_id=?1 AND status='active' ORDER BY updated_at DESC LIMIT 50").bind(run.user_id).all(),env.DB.prepare("SELECT step,result_ciphertext,COUNT(*) OVER() repair_count FROM arc_chat_steps WHERE run_id=?1 AND status='done' AND decision_ciphertext IS NULL AND result_ciphertext IS NOT NULL ORDER BY step DESC LIMIT 1").bind(runId).first<{step:number;result_ciphertext:string;repair_count:number}>()]);
     const rejected=rejectedDecision?await unseal<{code:string}>(env,rejectedDecision.result_ciphertext,arcContext(run.user_id,`${runId}:${rejectedDecision.step}:result`)):null;
     const recentRuns=(await env.DB.prepare('SELECT id,status,error_code,step FROM arc_chat_runs WHERE user_id=?1 AND session_id=?2 AND id<>?3 ORDER BY created_at DESC LIMIT 3').bind(run.user_id,run.session_id,run.id).all()).results;
     const taskState=arcTaskState(history,run.id,(employee?connections.results.filter((connection:any)=>employee.scope.connectionIds.includes(connection.id)):connections.results) as Array<{provider:string}>);
@@ -244,12 +244,12 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
    try{result=await runModelGateway(access.gateway,{context:{userId:run.user_id,organizationId:session.organization_id,taskId:session.id,runId,operationId:`chat:${run.step}`,lane:'arc_hosted'},modelId:access.definition.id,system,user:prompt.user,...(inputContext.images.length?{images:inputContext.images}:{}),schema,maxOutputTokens:prompt.maxOutputTokens,timeoutMs:Math.min(90000,Math.max(1,Date.parse(run.deadline)-Date.now()))},value=>{const parsed=validateArcDecision(value);if(system===ARC_CLOSING_SYSTEM&&parsed.decision!=='reply')throw new Error('ARC_INVALID_DECISION');return parsed;});}
    catch(error){
     // A confirmed, settled malformed or incomplete decision has no tool effect to replay.
-    // Consume one ordinary step and request identity for at most one repair.
+    // Consume ordinary steps/request identities for at most two repairs per run.
     if(!(error instanceof ModelProviderError)||!['MODEL_INVALID_JSON','MODEL_INCOMPLETE_RESPONSE'].includes(error.code)||error.retryable||!error.usage)throw error;
     const settled=await env.DB.prepare("SELECT status FROM billing_reservations WHERE operation_key=?1 AND user_id=?2 AND run_id=?3").bind(JSON.stringify([run.user_id,runId,`chat:${run.step}`]),run.user_id,runId).first<{status:string}>();
     if(settled?.status!=='failed')throw error;
     const consumed=consumedModelTokens(access.definition.provider,error.usage);
-    if(rejectedDecision||run.step+1>=run.max_steps||run.tokens_used+consumed>=run.max_tokens||Date.parse(run.deadline)<=Date.now()){
+    if((rejectedDecision?.repair_count||0)>=2||run.step+1>=run.max_steps||run.tokens_used+consumed>=run.max_tokens||Date.parse(run.deadline)<=Date.now()){
      await env.DB.prepare('UPDATE arc_chat_runs SET tokens_used=tokens_used+?1,updated_at=?2 WHERE id=?3').bind(consumed,stamp(),runId).run();throw error;
     }
     await env.DB.batch([

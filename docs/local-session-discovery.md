@@ -77,7 +77,7 @@ already runs Go tests on Windows, Linux and macOS in CI. These fixtures do not
 certify every installed client version or prove a cross-agent continuation.
 
 Review this step before adding transcript previews or a handoff package. See
-[the incremental implementation sequence](agent-continuity-next-steps.md).
+[the alignment with roadmap #252 and research gate #253](agent-continuity-next-steps.md).
 
 ## Interface references
 

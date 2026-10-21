@@ -1,32 +1,33 @@
-# Incremental agent continuity plan
+# Agent continuity roadmap alignment
 
-Baseline: master `d95a58e`, 22 October 2026. AI Teams acceptance is excluded.
-Each row is a separate implementation and acceptance boundary. Only step 1 is
-implemented in this change; complete its review before implementing step 2.
+Updated 22 October 2026. The authoritative roadmap is
+[Epic #252](https://github.com/Remote-Arc/remote-arc/issues/252), including its
+ordered child Issues #253–#263. This document does not define a second roadmap.
+AI Teams acceptance is excluded from this work.
 
-| Step | Deliverable | Acceptance boundary |
-| --- | --- | --- |
-| 1 — Local discovery | List Codex / Claude Code session metadata for one chosen project directory | Correct directory scope, useful empty/error states, no conversation text returned, no workspace changes |
-| 2 — Selected-session preview | User selects one discovered session; preview bounded visible messages and current Git changes | Correct source/provenance; private reasoning excluded; historical claims separated from observed file facts; all local |
-| 3 — Handoff package | Versioned goal, constraints, progress, workspace identity, evidence and unknowns | Detect changed HEAD/index/files and corrupt packages; do not replay uncertain writes; no task-success claim from assistant prose |
-| 4 — Continue with one target | User reviews a handoff and continues the same local project in Codex or Claude Code | Finish one real interrupted task with no repeated completed work; preserve current permissions and require current authorization |
-| 5 — Simple integration | Installer detects existing coding clients and offers narrowly scoped integration | No hand-edited JSON required; conflicts explained; reversible configuration; respect native hook trust approval |
-| 6 — Protection and verification | Build Arc Shield and recovery UX from existing policy, approvals, Undo and receipts | Test one named risky operation at a time; distinguish blocked, unknown and verified results; prove recovery for the supported scope |
-| 7 — Durable continuity | Opt-in lifecycle recording, local checkpoints, then one cross-device transfer | Recover from a missing end event; inventory dependencies and unsaved files; report unavailable state explicitly; no silent cloud upload |
+[Research #253](https://github.com/Remote-Arc/remote-arc/issues/253) is the first
+gate: establish supported interfaces, versions, platform gaps and separate
+consent for installed-client discovery, session metadata, transcript/workspace
+reads and cloud sync. Agent installation detection must not silently invoke the
+metadata reader. Explicitly invoking `takeover --workspace <directory>` opts
+into this bounded local metadata read; it is not consent to transcript import,
+hooks, configuration edits, inference or cloud upload.
 
-The screenshots also propose a unified Verified Work Engine, source/version/
-permission-aware personal knowledge, Fleet scheduling, workflow reuse and user
-value/cost measurement. These stay as later, independent workstreams after the
-single-project continuity flow has evidence of value. Avoid expanding Apps or
-AI employee counts as a substitute for that validation.
+The [local discovery candidate](local-session-discovery.md) is a narrow
+read-only validation example for #253 and partial groundwork for
+[Codex #255](https://github.com/Remote-Arc/remote-arc/issues/255) and
+[Claude #256](https://github.com/Remote-Arc/remote-arc/issues/256). It does not
+complete any of those Issues or the Local Takeover Beta milestone. It lists
+recorded cwd metadata; actual worktree reconciliation remains separate.
 
-Existing release reliability remains a separate operational gate: validate the
-exact candidate SHA, CI, actual deployment, Windows recovery and scoped provider
-flows before calling anything production-ready. This development change does
-not merge, deploy, migrate data, publish packages or activate paid integrations.
+Current evidence: synthetic metadata fixtures for both sources, native Go tests,
+and a Windows smoke scan finding 21 Codex sessions in the outer project
+directory. The Windows host has no Claude session directory. Provider version
+qualification and real macOS/WSL/Claude acceptance remain open under #253.
 
-Repository evidence behind this sequence: native policy and execution in
-`packages/execution-core`; pause/recovery/lease handling in `apps/agent/internal`;
-source-derived receipts in `apps/relay/src/arc-verification*`; feature contracts
-in `docs/feature-map`. These existing parts should be extended, with a fresh
-acceptance boundary, rather than presented as a complete new Shield product.
+Review this bounded example and finish #253's compatibility/consent matrix
+before widening session access or promising agent continuation. Onboarding,
+handoff, checkpoints, Observe, Guard/Isolate, Fleet and cloud feasibility retain
+their separate child Issues and release gates in #252. No automatic Issue
+closure, merge, deployment, package publication or paid provider activation is
+part of this candidate.

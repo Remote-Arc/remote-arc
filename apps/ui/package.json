@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test:workspaces": "node --experimental-strip-types --test scripts/dashboard-workspaces-test.mjs scripts/arc-chat-sessions-test.mjs scripts/arc-transcript-test.mjs && node --import tsx scripts/arc-native-client-test.ts && node --import tsx scripts/arc-verification-ui-test.tsx && node --import tsx scripts/arc-billing-client-test.ts && node --import tsx scripts/arc-skill-mentions-test.tsx && node --import tsx scripts/arc-home-brief-test.mjs && node --import tsx scripts/runtime-config-test.ts && pnpm test:billing-preview",
+    "test:workspaces": "node --experimental-strip-types --test scripts/dashboard-workspaces-test.mjs scripts/arc-chat-sessions-test.mjs scripts/arc-transcript-test.mjs && node --import tsx scripts/arc-native-client-test.ts && node --import tsx scripts/arc-chat-races-test.ts && node --import tsx scripts/arc-verification-ui-test.tsx && node --import tsx scripts/arc-billing-client-test.ts && node --import tsx scripts/arc-skill-mentions-test.tsx && node --import tsx scripts/arc-home-brief-test.mjs && node --import tsx scripts/runtime-config-test.ts && pnpm test:billing-preview",
     "test:billing-preview": "node --import tsx scripts/billing-preview-test.ts",
     "test:onboarding": "node scripts/onboarding-flow-test.mjs",
     "test:arc-experience": "node scripts/arc-capabilities-test.mjs && node --experimental-strip-types scripts/marketing-playback-test.mjs && node --import tsx scripts/arc-positioning-test.mjs && node --import tsx scripts/home-panorama-test.mjs && node --import tsx scripts/apps-demo-contract-test.mjs && node --import tsx scripts/arc-use-cases-test.ts",
@@ -19,7 +19,7 @@
     "test:background-recovery": "node --experimental-strip-types scripts/background-recovery-test.mjs && node --experimental-strip-types scripts/agent-update-guide-test.ts",
     "test:oauth-consent": "node --import tsx scripts/oauth-consent-summary-test.ts",
     "test:pwa": "node --import tsx scripts/product-pwa-test.ts",
-    "test:arc-client": "node --import tsx scripts/arc-native-client-test.ts && node --import tsx scripts/arc-verification-ui-test.tsx && node --import tsx scripts/arc-billing-client-test.ts && node --import tsx scripts/arc-skill-mentions-test.tsx"
+    "test:arc-client": "node --import tsx scripts/arc-native-client-test.ts && node --import tsx scripts/arc-chat-races-test.ts && node --import tsx scripts/arc-verification-ui-test.tsx && node --import tsx scripts/arc-billing-client-test.ts && node --import tsx scripts/arc-skill-mentions-test.tsx"
   },
   "dependencies": {
     "@remotearc/protocol": "workspace:*",

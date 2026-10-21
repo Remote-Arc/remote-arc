@@ -85,6 +85,11 @@ https://remotearc.app
 
 ## Commands
 
+Development candidate: [local coding-session discovery](../../docs/local-session-discovery.md)
+adds `remotelink takeover --workspace <directory>` to the native Go runtime. It lists
+project-scoped Codex / Claude Code metadata for review. This command is not yet
+part of a published package and does not resume an agent.
+
 ```text
 npx remotelink                 Pair/reconnect and keep the terminal and logs open
 npx remotelink --safe          Hard local read-only cap

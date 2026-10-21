@@ -74,6 +74,8 @@ jobs:
             packages/execution-core/go.sum
       - name: Check Go coverage floors and protected packages
         run: node scripts/go-coverage.mjs
+      - name: Check synthetic takeover source fixtures
+        run: python3 scripts/takeover-session-probe-test.py
 
   relay-coverage:
     # Instrument actual source files (not just passing test scripts).

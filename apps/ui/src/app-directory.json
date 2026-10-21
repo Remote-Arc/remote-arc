@@ -500,7 +500,7 @@
         },
         {
           "name": "events.list",
-          "description": "List calendar events",
+          "description": "List calendar events and recurring occurrences in a time range",
           "permission": "read"
         },
         {
@@ -553,7 +553,7 @@
         },
         {
           "name": "events.list",
-          "description": "List calendar events",
+          "description": "List calendar events and recurring occurrences in a time range",
           "permission": "read"
         },
         {

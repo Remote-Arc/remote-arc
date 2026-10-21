@@ -2,6 +2,24 @@ import {MODEL_CONTEXT_BYTES} from './model-context.js';
 type Message={role:string;text:string;tool?:string;result?:unknown;[key:string]:unknown};
 export type ArcPromptContext={objective:string;messages:Message[];memory:unknown[];deviceIndex:unknown[];[key:string]:unknown};
 const bytes=(value:unknown)=>new TextEncoder().encode(JSON.stringify(value)).byteLength;
+/** Bound observations as valid JSON, with explicit omissions instead of a broken JSON prefix. */
+export function arcObservationText(value:unknown,max=16000):string{
+ let data=value;
+ if(typeof data==='string'){const original=data;try{data=JSON.parse(original);}catch{const encoded=new TextEncoder().encode(original);return encoded.length<=max?original:new TextDecoder().decode(encoded.slice(0,Math.max(0,max-90)))+' [Observation shortened; do not infer omitted facts.]';}}
+ const full=JSON.stringify(data??null);if(new TextEncoder().encode(full).length<=max)return full;
+ for(const [textLimit,arrayLimit] of [[1200,20],[500,10],[180,10],[100,5],[50,2]] as const){
+  const compact=(item:any,depth=0):any=>{
+   if(typeof item==='string'){const encoded=new TextEncoder().encode(item);return encoded.length<=textLimit?item:new TextDecoder().decode(encoded.slice(0,textLimit))+' [excerpt]';}
+   if(!item||typeof item!=='object')return item;
+   if(depth>8)return '[Nested details omitted]';
+   if(Array.isArray(item))return item.slice(0,arrayLimit).map(entry=>compact(entry,depth+1));
+   return Object.fromEntries(Object.entries(item).slice(0,40).map(([key,entry])=>[key,compact(entry,depth+1)]));
+  };
+  const result=JSON.stringify({shortened:true,observation:compact(data),guidance:'Lists and text may be excerpts. Use returned pagination or a narrower read for remaining details; omitted results are not empty results.'});
+  if(new TextEncoder().encode(result).length<=max)return result;
+ }
+ return JSON.stringify({shortened:true,guidance:'Observation exceeds this context budget. Read a narrower result; no empty-result claim is supported.'});
+}
 export function arcObservation(tool:string|undefined,value:unknown):unknown{
  let data=value;if(typeof data==='string'){try{data=JSON.parse(data);}catch{return data;}}
  if(tool==='list_devices'&&Array.isArray(data))return data.slice(0,20).map(({id,name,platform,status,tools,workspace_roots,execution_paused})=>({id,name,platform,status,tools,workspace_roots,execution_paused}));
@@ -65,7 +83,7 @@ export function fitArcContext(system:string,schema:Record<string,unknown>,contex
   if(Array.isArray(value.teammateIndex)&&value.teammateIndex.length){value.teammateIndex=[];value.teammateIndexShortened=true;continue;}
   if(Array.isArray(value.connectionIndex)&&value.connectionIndex.length){value.connectionIndex=[];continue;}
   if(value.messages.length>2){value.messages.shift();continue;}
-  if(resultLimit>300){resultLimit=Math.floor(resultLimit/2);for(const m of value.messages){if(m.result!==undefined){const text=typeof m.result==='string'?m.result:JSON.stringify(m.result);if(new TextEncoder().encode(text).length>resultLimit)m.result=new TextDecoder().decode(new TextEncoder().encode(text).slice(0,resultLimit))+' [Observation shortened; do not infer omitted facts.]';}}continue;}
+  if(resultLimit>300){resultLimit=Math.floor(resultLimit/2);for(const m of value.messages){if(m.result!==undefined)m.result=arcObservationText(m.result,resultLimit);}continue;}
   // Completed actions and device handles prevent rediscovery/restarts. Keep
   // them until optional catalogs, old schemas and prose have been shortened.
   if(value.deviceIndex.length){value.deviceIndex.pop();continue;}
@@ -83,4 +101,4 @@ employeeIdentity/employeeScope define identity/access; message_employee {employe
 workingContext preserves the earlier user goals and sourced project background; use it for follow-ups. teammateIndex is the live roster. Never guess an unfamiliar project abbreviation: use context/memory and read_context {query,includeApps?:true}, then read relevant connected sources; clarify only unresolved ambiguity. Queued work is not completed findings.
 Missing App access: connect_app {provider,operation?,reconnect?} shows a connection card and waits for consent. Resolve IDs via search/read from names or links; ask only about ambiguous human-readable targets, never for commands or UUIDs.
 scheduledWork means execute this occurrence, never create schedules.
-Tools: read_inbox {connectionId,query?,limit?:1..5} reads mail; then continue other needed App reads. call_app {connectionId,operation,arguments}; describe_app {provider,operation?}. Use appReadCapabilities directly; connectionIndex needs no identity recheck. readOnlyApps forbids writes, not further App reads. device_tool {deviceId,tool,arguments}: process_status/process_output {process_id}, read_file {path}, write_file {path,content}, start_process {command,cwd,background:true}. Match observed OS/workspace. read_skill {id} reads a selected skill once. Other tools follow learned schemas.`;
+Tools: read_inbox {connectionId,query?,limit?:1..5,pageToken?} reads one mail page; follow returned nextPageToken for broader Gmail coverage or narrow by date/topic, then continue other needed App reads. call_app {connectionId,operation,arguments}; describe_app {provider,operation?}. Use appReadCapabilities directly; connectionIndex needs no identity recheck. readOnlyApps forbids writes, not further App reads. device_tool {deviceId,tool,arguments}: process_status/process_output {process_id}, read_file {path}, write_file {path,content}, start_process {command,cwd,background:true}. Match observed OS/workspace. read_skill {id} reads a selected skill once. Other tools follow learned schemas.`;

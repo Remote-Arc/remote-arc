@@ -64,6 +64,7 @@ const LATEST_AGENT_VERSION = __REMOTEARC_CLI_VERSION__;
 
 const ArcNativeChat = React.lazy(() => import("./arc-native-chat.js").then(module => ({default:module.ArcNativeChat})));
 
+const ArcTeammates = React.lazy(() => import('./arc-teams-page.js').then(module=>({default:module.ArcTeamsPage})));
 const ArcSkills = React.lazy(() => import("./arc-skills.js").then(module => ({default:module.ArcSkills})));
 const ArcCheckout = React.lazy(() => import('./arc-checkout.js').then(module=>({default:module.ArcCheckout})));
 const DocsPortal = React.lazy(() => import("./docs-portal.js").then(module => ({ default: module.DocsPortal })));
@@ -4937,6 +4938,7 @@ function Dashboard({
     if (!arcAvailable) { navigateTab('connect'); return; }
     setArcEntry(current=>({prompt,sessionId,references,version:current.version+1}));
     navigateTab('agent-chat');
+    const url=new URL(location.href);if(sessionId)url.searchParams.set('session',sessionId);else url.searchParams.delete('session');history.replaceState(history.state,'',url);
   }
   function openCreateInWorkspace(_workspace: "connect" | "agent", routine = false, objective = "", successCriteria = "") {
     openArcChat(objective ? objective + (successCriteria ? '\n' + successCriteria : '') : routine
@@ -5146,12 +5148,13 @@ function Dashboard({
             onManageApps={() => navigateTab("agent-apps")}
             onManageDevices={() => navigateTab("agent-devices")}
             onManageSkills={() => navigateTab("agent-skills")}
+            onManageTeams={() => navigateTab("agent-teams")}
           /></React.Suspense>
         </div>}
 
         {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat}/>}
 
-        {active === "agent-teams" && <LegacyTeammateRoute/>}
+        {active === "agent-teams" && <section className="arcTeammatesPage"><header className="overviewTopbar"><div><span className="eyebrow">ARC / {tr('TEAMMATES','队友')}</span><h1>{tr('Teammates','队友')}</h1><p>{tr('Choose who helps with your next goal. Review roles and access, then continue in Chat.','选择协助下一个目标的队友，查看分工与权限，然后在 Chat 中推进工作。')}</p></div></header><React.Suspense fallback={<WorkspaceLoading label={tr('Loading teammates…','正在读取队友…')} variant="cards"/>}><ArcTeammates accountId={user.id} tr={tr} onWork={(prompt,reference)=>openArcChat(prompt,undefined,reference?[reference]:undefined)}/></React.Suspense></section>}
         {active === "agent-skills" && <React.Suspense fallback={<WorkspaceLoading label={tr('Loading skills…','正在加载技能…')} variant="rows"/>}><ArcSkills tr={tr} onChat={openArcChat}/></React.Suspense>}
 
         {active === "overview" && (
@@ -6983,5 +6986,3 @@ createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </React.StrictMode>,
 );
-
-function LegacyTeammateRoute(){React.useEffect(()=>{const url=new URL(location.href);url.pathname="/dashboard/agent/settings";url.searchParams.set("section","teammates");location.replace(url.href);},[]);return null;}

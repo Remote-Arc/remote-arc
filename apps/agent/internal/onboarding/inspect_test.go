@@ -140,6 +140,94 @@ func TestKnownLocationsDoNotEnumerateSessionDirectories(t *testing.T) {
 	}
 }
 
+func TestWindowsNpmShimsResolveNativeClientsWithoutExecutingWrapper(t *testing.T) {
+	for _, local := range []bool{false, true} {
+		for _, agent := range []string{"codex", "claude"} {
+			t.Run(fmt.Sprintf("local=%t/%s", local, agent), func(t *testing.T) {
+				d := fakeDetector(t, "windows")
+				prefix := filepath.Join(d.home, "npm prefix with spaces")
+				modules := filepath.Join(prefix, "node_modules")
+				shimDir := prefix
+				if local {
+					shimDir = filepath.Join(modules, ".bin")
+				}
+				shim := filepath.Join(shimDir, agent+".cmd")
+				executable(t, shim)
+				d.lookup = func(string) (string, error) { return shim, nil }
+				// Without the optional native package, retain only the unqualified
+				// shim. Inspection cannot claim it is runnable or supported.
+				r, err := d.inspect(context.Background(), agent, "test")
+				if err != nil || len(r.Clients[0].Candidates) != 1 {
+					t.Fatal("missing native package should not be invented", r, err)
+				}
+				cpu, triple := "x64", "x86_64-pc-windows-msvc"
+				if runtime.GOARCH == "arm64" {
+					cpu, triple = "arm64", "aarch64-pc-windows-msvc"
+				}
+				native := filepath.Join(modules, "@openai", "codex-win32-"+cpu, "vendor", triple, "bin", "codex.exe")
+				if agent == "claude" {
+					native = filepath.Join(modules, "@anthropic-ai", "claude-code-win32-"+cpu, "claude.exe")
+				}
+				executable(t, native)
+				r, err = d.inspect(context.Background(), agent, "test")
+				if err != nil || len(r.Clients[0].Candidates) != 2 || r.Clients[0].Compatibility != "unqualified" || r.Clients[0].Version != "not_checked" {
+					t.Fatal("native package discovery should not execute or qualify it", r, err)
+				}
+				if got := nativeCandidate(r.Clients[0]); runtime.GOOS == "windows" && got != native {
+					t.Fatal("npm native executable was not selected", got, native)
+				}
+			})
+		}
+	}
+}
+
+func TestWindowsNpmDiscoveryRequiresNamedShimAndSupportedArchitecture(t *testing.T) {
+	for _, shim := range []string{"codex.cmd", "other.cmd", "codex.exe"} {
+		path := filepath.Join(t.TempDir(), shim)
+		if got := npmNativeCandidates("codex", path, "386"); len(got) != 0 {
+			t.Fatal("unsupported architecture was accepted", got)
+		}
+		if shim != "codex.cmd" && len(npmNativeCandidates("codex", path, "amd64")) != 0 {
+			t.Fatal("non-client shim triggered package discovery")
+		}
+	}
+	if len(npmNativeCandidates("codex", "codex.cmd", "amd64")) != 0 {
+		t.Fatal("relative shim triggered package discovery")
+	}
+}
+
+func TestWindowsNestedNpmPackagesPrecedeBundledWrapperStubs(t *testing.T) {
+	for _, agent := range []string{"codex", "claude"} {
+		t.Run(agent, func(t *testing.T) {
+			d := fakeDetector(t, "windows")
+			shim := filepath.Join(d.home, agent+".cmd")
+			executable(t, shim)
+			d.lookup = func(string) (string, error) { return shim, nil }
+			cpu, triple := "x64", "x86_64-pc-windows-msvc"
+			if runtime.GOARCH == "arm64" {
+				cpu, triple = "arm64", "aarch64-pc-windows-msvc"
+			}
+			pkg := filepath.Join(d.home, "node_modules", "@openai", "codex")
+			native := filepath.Join(pkg, "node_modules", "@openai", "codex-win32-"+cpu, "vendor", triple, "bin", "codex.exe")
+			bundled := filepath.Join(pkg, "vendor", triple, "bin", "codex.exe")
+			if agent == "claude" {
+				pkg = filepath.Join(d.home, "node_modules", "@anthropic-ai", "claude-code")
+				native = filepath.Join(pkg, "node_modules", "@anthropic-ai", "claude-code-win32-"+cpu, "claude.exe")
+				bundled = filepath.Join(pkg, "bin", "claude.exe")
+			}
+			executable(t, native)
+			executable(t, bundled) // Current Claude npm packages ship a wrapper stub here.
+			r, err := d.inspect(context.Background(), agent, "test")
+			if err != nil || len(r.Clients[0].Candidates) != 3 {
+				t.Fatal("nested npm package not discovered", r, err)
+			}
+			if got := nativeCandidate(r.Clients[0]); runtime.GOOS == "windows" && got != native {
+				t.Fatal("bundled wrapper stub displaced the actual native package", got, native)
+			}
+		})
+	}
+}
+
 func TestInvalidSelectionAndCancellationDoNotInspectPaths(t *testing.T) {
 	d := fakeDetector(t, "linux")
 	d.lookup = func(string) (string, error) { t.Fatal("unexpected path scan"); return "", nil }

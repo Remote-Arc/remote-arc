@@ -1,0 +1,36 @@
+{
+  "native_sha256": "f7cf10a772873d9779876529a5bb5a2b0dea7e55a53bf1ec2577b6e8ec63ee12",
+  "native_version": "0.6.2-rc.4-dev.npm-254",
+  "platform": "win32",
+  "entry_point": "native",
+  "client_discovery": "npm_shims_only",
+  "codex_version": "codex-cli 0.163.0-alpha.11",
+  "claude_version": "2.1.118 (Claude Code)",
+  "normal_start_connected_seconds": 0.125,
+  "broken_clients_connected_seconds": 0.109,
+  "safe_mcp_tools": 8,
+  "doctor": {
+    "codex": {
+      "agent": "codex",
+      "status": "healthy",
+      "client_tools_verified": true,
+      "client_connection_verified": true
+    },
+    "claude": {
+      "agent": "claude",
+      "status": "healthy",
+      "client_tools_verified": false,
+      "client_connection_verified": true
+    }
+  },
+  "model_turns": 0,
+  "passed": [
+    "ordinary startup registers both real native clients in the background",
+    "device connects and executes a read alongside optional setup",
+    "shared durable native MCP command responds without a model",
+    "repeat setup preserves both config file hashes",
+    "custom names and disabled existing Remote Arc entries preserved",
+    "owned uninstall succeeds for both clients",
+    "both invalid client configs leave normal device execution available"
+  ]
+}

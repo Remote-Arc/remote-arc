@@ -23,7 +23,7 @@ type AutomaticResult struct {
 }
 
 func nativeCandidate(client Client) string {
-	for _, source := range []string{"path", "known_location", "desktop_bin"} {
+	for _, source := range []string{"path", "known_location", "npm_native", "npm_bundled", "desktop_bin"} {
 		for _, candidate := range client.Candidates {
 			if candidate.Source == source && (runtime.GOOS != "windows" || strings.EqualFold(filepath.Ext(candidate.Path), ".exe")) {
 				return candidate.Path

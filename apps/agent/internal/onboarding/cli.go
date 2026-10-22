@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"runtime"
-	"strings"
 
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/codexsetup"
 )
@@ -116,18 +114,7 @@ func Run(ctx context.Context, args []string, version string, output io.Writer) e
 		if err != nil {
 			return err
 		}
-		for _, source := range []string{"path", "known_location", "desktop_bin"} {
-			for _, candidate := range r.Clients[0].Candidates {
-				if candidate.Source != source || (runtime.GOOS == "windows" && !strings.EqualFold(filepath.Ext(candidate.Path), ".exe")) {
-					continue
-				}
-				*binary = candidate.Path
-				break
-			}
-			if *binary != "" {
-				break
-			}
-		}
+		*binary = nativeCandidate(r.Clients[0])
 	}
 	r, err := codexsetup.Run(ctx, codexsetup.Request{Action: action, Workspace: *workspace, CodexBinary: *binary, Version: version})
 	if encodeErr := encoder.Encode(r); encodeErr != nil {

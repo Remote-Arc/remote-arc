@@ -69,7 +69,7 @@ async function monthlyLimitForUser(env: UsageEnv, userId: string) {
     if(plan.id!=='free')return plan.connectToolCalls===null?null:plan.connectToolCalls+(user?.extra_calls??0);
     if(user?.plan!=='plus'&&!user?.has_plus_grant){
       const legacy=await env.DB.prepare('SELECT monthly_calls FROM arc_connect_legacy_allowances WHERE user_id=?1').bind(userId).first<{monthly_calls:number}>();
-      const allowance=legacy?.monthly_calls??plan.connectToolCalls;return allowance===null?null:allowance+(user?.extra_calls??0);
+      const allowance=plan.connectToolCalls===null?null:Math.max(legacy?.monthly_calls??0,plan.connectToolCalls);return allowance===null?null:allowance+(user?.extra_calls??0);
     }
   }
   // Keep existing Plus entitlements. A separate Free budget is explicitly

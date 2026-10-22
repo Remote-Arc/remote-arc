@@ -27,7 +27,7 @@ or automatic deployments will intentionally stop at the D1 step.
 ## Verification
 
 1. Set the new GitHub secret and merge this PR.
-2. Observe CI and Deploy Cloudflare. D1 apply plus list must both succeed.
+2. Observe CI and the Production Release - D1 + Relay + Website workflow. D1 apply plus list must both succeed.
 3. Confirm Worker deploy starts only after D1 succeeds, then check /health.
 4. A D1 7403, SQL failure or missing token should fail the workflow, not deploy.
 

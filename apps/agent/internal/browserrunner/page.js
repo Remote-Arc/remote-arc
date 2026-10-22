@@ -1,0 +1,283 @@
+(function (op, a) {
+  "use strict";
+  // Remote Arc Browser Runner page helper. Evaluated in the page's main world
+  // by the local Agent only. It never reads cookies, storage or credentials and
+  // never returns values of sensitive fields.
+  const SENSITIVE_AUTOCOMPLETE = ["current-password", "new-password", "one-time-code", "cc-name", "cc-number", "cc-exp", "cc-exp-month", "cc-exp-year", "cc-csc", "cc-type"];
+  const SENSITIVE_NAME = /(passw|passwd|pwd|otp|one[-_ ]?time|verification[-_ ]?code|cvv|cvc|csc|card[-_ ]?num|ccnum|cc[-_]?number|security[-_ ]?code)/i;
+  const CAPTCHA = /(recaptcha|hcaptcha|turnstile|challenges\.cloudflare\.com|arkoselabs|funcaptcha|geetest|captcha)/i;
+  const clip = (s, n) => {
+    s = String(s == null ? "" : s).replace(/\s+/g, " ").trim();
+    return s.length > n ? s.slice(0, n - 1) + "…" : s;
+  };
+  const sensitive = (el) => {
+    if (!el || !el.tagName) return false;
+    const type = String(el.type || "").toLowerCase();
+    if (type === "password") return true;
+    const ac = String(el.getAttribute("autocomplete") || "").toLowerCase().split(/\s+/);
+    if (ac.some((t) => SENSITIVE_AUTOCOMPLETE.includes(t))) return true;
+    const hint = [el.name, el.id, el.getAttribute("aria-label"), el.getAttribute("placeholder")].join(" ");
+    return SENSITIVE_NAME.test(hint);
+  };
+  const visible = (el) => {
+    if (!el.isConnected) return false;
+    if (el.type === "file") return true; // often visually hidden behind a styled button
+    const style = getComputedStyle(el);
+    if (style.visibility === "hidden" || style.display === "none") return false;
+    return el.getClientRects().length > 0;
+  };
+  const labelText = (el) => {
+    const by = el.getAttribute("aria-labelledby");
+    if (by) {
+      const t = by.split(/\s+/).map((id) => document.getElementById(id)).filter(Boolean).map((n) => n.innerText || n.textContent).join(" ");
+      if (t.trim()) return t;
+    }
+    const aria = el.getAttribute("aria-label");
+    if (aria && aria.trim()) return aria;
+    if (el.labels && el.labels.length) {
+      const t = Array.from(el.labels).map((l) => l.innerText || l.textContent).join(" ");
+      if (t.trim()) return t;
+    }
+    const tag = el.tagName.toLowerCase();
+    if (tag === "input" && ["submit", "button", "reset"].includes(String(el.type).toLowerCase())) return el.value || el.type;
+    if (tag === "input" || tag === "textarea" || tag === "select") {
+      return el.getAttribute("placeholder") || el.getAttribute("title") || el.name || el.id || "";
+    }
+    if (tag === "img") return el.alt || el.title || "";
+    return el.innerText || el.textContent || el.getAttribute("title") || "";
+  };
+  const roleOf = (el) => {
+    const explicit = el.getAttribute("role");
+    if (explicit) return explicit.split(/\s+/)[0];
+    const tag = el.tagName.toLowerCase();
+    const type = String(el.type || "").toLowerCase();
+    if (tag === "a") return "link";
+    if (tag === "button") return "button";
+    if (tag === "select") return "combobox";
+    if (tag === "textarea") return "textbox";
+    if (el.isContentEditable) return "textbox";
+    if (tag === "input") {
+      if (["submit", "button", "reset", "image"].includes(type)) return "button";
+      if (type === "checkbox") return "checkbox";
+      if (type === "radio") return "radio";
+      if (type === "file") return "file";
+      return "textbox";
+    }
+    return tag;
+  };
+  const state = () => window.__remotearcRunner;
+  const lookup = () => {
+    const s = state();
+    if (!s || s.sid !== a.snapshot_id) throw new Error("STALE_REF: the page changed since snapshot " + a.snapshot_id + ". Take a new browser_snapshot.");
+    const el = s.els[a.ref];
+    if (!el || !el.isConnected) throw new Error("STALE_REF: " + a.ref + " is no longer on the page. Take a new browser_snapshot.");
+    return el;
+  };
+  const describe = (el) => clip(labelText(el), 120);
+  const nativeSet = (el, value) => {
+    const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : el.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+    const desc = Object.getOwnPropertyDescriptor(proto, "value");
+    if (desc && desc.set) desc.set.call(el, value);
+    else el.value = value;
+  };
+  const fire = (el, names) => names.forEach((n) => el.dispatchEvent(new Event(n, { bubbles: true })));
+
+  if (op === "install") {
+    // Keep navigation inside the one scoped tab: popups and target=_blank
+    // would otherwise escape request interception.
+    if (!window.__remotearcGuard) {
+      window.__remotearcGuard = true;
+      document.addEventListener("click", (e) => {
+        const link = e.target && e.target.closest && e.target.closest("a[target]");
+        if (link && link.target !== "_self") link.target = "_self";
+      }, true);
+      const open = window.open;
+      window.open = function (url) {
+        if (url) location.assign(String(url));
+        return null;
+      };
+      window.open.__original = open;
+    }
+    return true;
+  }
+
+  if (op === "snapshot") {
+    const maxElements = Math.max(10, Math.min(400, a.max_elements || 150));
+    const selector = "a[href],button,input,select,textarea,[role=button],[role=link],[role=checkbox],[role=radio],[role=combobox],[role=option],[role=tab],[role=menuitem],[role=switch],[contenteditable=true],[contenteditable='']";
+    const all = Array.from(document.querySelectorAll(selector)).filter((el) => {
+      const type = String(el.type || "").toLowerCase();
+      return type !== "hidden" && visible(el);
+    });
+    const els = {};
+    const elements = [];
+    let n = 0;
+    for (const el of all) {
+      if (elements.length >= maxElements) break;
+      const ref = "e" + ++n;
+      els[ref] = el;
+      const tag = el.tagName.toLowerCase();
+      const type = String(el.type || "").toLowerCase();
+      const isSensitive = sensitive(el);
+      const item = { ref, role: roleOf(el), name: describe(el) };
+      if (tag === "input" || tag === "textarea" || tag === "select") {
+        if (type && tag === "input") item.type = type;
+        if (el.required || el.getAttribute("aria-required") === "true") item.required = true;
+        if (el.disabled) item.disabled = true;
+        if (type === "checkbox" || type === "radio") item.checked = !!el.checked;
+        else if (type === "file") {
+          item.files = el.files ? el.files.length : 0;
+          if (el.accept) item.accept = clip(el.accept, 120);
+        } else if (tag === "select") {
+          item.value = clip(el.value, 120);
+          item.options = Array.from(el.options).slice(0, 60).map((o) => ({ value: clip(o.value, 80), label: clip(o.label || o.text, 80), selected: o.selected }));
+        } else if (isSensitive) {
+          item.value = el.value ? "[redacted]" : "";
+        } else {
+          item.value = clip(el.value, 200);
+        }
+        const invalid = el.validationMessage || (el.getAttribute("aria-invalid") === "true" ? "invalid" : "");
+        if (invalid) item.error = clip(invalid, 160);
+      } else if (el.isContentEditable) {
+        item.value = isSensitive ? "[redacted]" : clip(el.innerText, 200);
+      }
+      if (tag === "a" && el.href) item.href = clip(el.href, 300);
+      if (isSensitive) item.sensitive = true;
+      if (el.disabled || el.getAttribute("aria-disabled") === "true") item.disabled = true;
+      elements.push(item);
+    }
+    window.__remotearcRunner = { sid: a.snapshot_id, els };
+    const blockers = [];
+    const frames = [];
+    for (const f of Array.from(document.querySelectorAll("iframe"))) {
+      const src = f.src || "";
+      if (CAPTCHA.test(src)) blockers.push({ kind: "captcha", detail: clip(src.split("?")[0], 160) });
+      else if (src && frames.length < 10) {
+        try {
+          if (new URL(src).origin !== location.origin) frames.push(clip(src.split("#")[0], 300));
+        } catch (_) {}
+      }
+    }
+    if (document.querySelector(".g-recaptcha,.h-captcha,.cf-turnstile,[data-sitekey]") && !blockers.some((b) => b.kind === "captcha")) blockers.push({ kind: "captcha", detail: "challenge widget on page" });
+    const secret = Array.from(document.querySelectorAll("input")).filter((el) => visible(el) && sensitive(el));
+    if (secret.some((el) => String(el.type).toLowerCase() === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
+    if (secret.some((el) => /one-time-code|otp|verification/i.test([el.autocomplete, el.name, el.id].join(" ")))) blockers.push({ kind: "verification_code", detail: "one-time code requested; the user must enter it" });
+    const body = document.body ? document.body.innerText || "" : "";
+    const maxText = Math.max(500, Math.min(20000, a.max_text || 6000));
+    const headings = Array.from(document.querySelectorAll("h1,h2,h3")).filter(visible).slice(0, 20).map((h) => clip(h.innerText, 120));
+    return {
+      url: location.href,
+      title: clip(document.title, 200),
+      headings,
+      text: body.length > maxText ? body.slice(0, maxText) : body,
+      text_truncated: body.length > maxText,
+      elements,
+      elements_truncated: all.length > elements.length,
+      element_total: all.length,
+      forms: document.forms.length,
+      cross_origin_frames: frames,
+      blockers,
+    };
+  }
+
+  if (op === "locate") {
+    const el = lookup();
+    if (a.action === "fill" && sensitive(el)) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords, one-time codes or payment details. Ask the user to enter this field themselves.");
+    if (el.disabled || el.getAttribute("aria-disabled") === "true") throw new Error("DISABLED: " + describe(el) + " is disabled.");
+    el.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    const reachable = !!hit && (hit === el || el.contains(hit) || hit.contains(el) || (el.labels && Array.from(el.labels).some((l) => l.contains(hit))));
+    return { x, y, width: r.width, height: r.height, reachable, label: describe(el), tag: el.tagName.toLowerCase(), type: String(el.type || "").toLowerCase(), sensitive: sensitive(el) };
+  }
+
+  if (op === "jsclick") {
+    lookup().click();
+    return true;
+  }
+
+  if (op === "prepare_fill") {
+    const el = lookup();
+    if (sensitive(el)) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords, one-time codes or payment details. Ask the user to enter this field themselves.");
+    const type = String(el.type || "").toLowerCase();
+    if (["checkbox", "radio", "file", "submit", "button", "image", "reset"].includes(type) || el.tagName === "SELECT") throw new Error("WRONG_ACTION: use " + (el.tagName === "SELECT" ? "select" : type === "file" ? "browser_upload" : "click/check") + " for " + describe(el) + ".");
+    el.focus();
+    if (el.isContentEditable) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else if (typeof el.select === "function") {
+      el.select();
+    }
+    return true;
+  }
+
+  if (op === "finish_fill") {
+    const el = lookup();
+    const want = String(a.value);
+    const got = el.isContentEditable ? el.innerText : el.value;
+    if (got !== want && !el.isContentEditable) {
+      nativeSet(el, want);
+      fire(el, ["input"]);
+    }
+    fire(el, ["change"]);
+    const now = el.isContentEditable ? el.innerText : el.value;
+    // Report only whether the field holds the requested value, never the value.
+    return { matched: now === want || (el.isContentEditable && now.trim() === want.trim()), length: String(now).length, maxlength: el.maxLength > 0 ? el.maxLength : null };
+  }
+
+  if (op === "select") {
+    const el = lookup();
+    if (el.tagName !== "SELECT") throw new Error("WRONG_ACTION: " + describe(el) + " is not a native select. Click it, take a new snapshot and click the option.");
+    const want = String(a.value).trim().toLowerCase();
+    const opts = Array.from(el.options);
+    const pick = opts.find((o) => o.value.toLowerCase() === want) || opts.find((o) => (o.label || o.text).trim().toLowerCase() === want) || opts.find((o) => (o.label || o.text).toLowerCase().includes(want));
+    if (!pick) throw new Error("NO_OPTION: no option matches " + JSON.stringify(a.value) + ". Available: " + opts.slice(0, 20).map((o) => clip(o.label || o.text, 40)).join(" | "));
+    nativeSet(el, pick.value);
+    fire(el, ["input", "change"]);
+    return { selected: clip(pick.label || pick.text, 120) };
+  }
+
+  if (op === "check") {
+    const el = lookup();
+    const want = !!a.checked;
+    if (el.type === "checkbox" || el.type === "radio") {
+      if (el.checked !== want) el.click();
+      return { checked: el.checked };
+    }
+    const aria = el.getAttribute("aria-checked");
+    if (aria !== null) {
+      if ((aria === "true") !== want) el.click();
+      return { checked: el.getAttribute("aria-checked") === "true" };
+    }
+    throw new Error("WRONG_ACTION: " + describe(el) + " is not a checkbox, radio or switch.");
+  }
+
+  if (op === "focus") {
+    lookup().focus();
+    return true;
+  }
+
+  if (op === "file_input") {
+    const el = lookup();
+    if (el.tagName !== "INPUT" || String(el.type).toLowerCase() !== "file") throw new Error("WRONG_ACTION: " + describe(el) + " is not a file input. Look for the input with role \"file\" in the snapshot.");
+    if (el.disabled) throw new Error("DISABLED: " + describe(el) + " is disabled.");
+    return el;
+  }
+
+  if (op === "file_state") {
+    const el = lookup();
+    return { files: el.files ? Array.from(el.files).map((f) => ({ name: f.name, size: f.size })) : [], label: describe(el), accept: el.accept || "" };
+  }
+
+  if (op === "probe") {
+    const body = document.body ? document.body.innerText || "" : "";
+    const needle = a.text ? String(a.text).toLowerCase() : "";
+    return { url: location.href, ready: document.readyState, title: clip(document.title, 200), text_found: needle ? body.toLowerCase().includes(needle) : null };
+  }
+
+  throw new Error("unknown helper op " + op);
+})

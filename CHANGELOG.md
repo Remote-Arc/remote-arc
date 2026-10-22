@@ -4,6 +4,11 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.2 - Unreleased
 
+### Upgrade and client compatibility fixes (next release candidate)
+
+- A newer `npx remotelink` now replaces an older running Go Agent instead of only following its log. Recovery is paused while the old Agent drains and releases execution, then this release starts and installs itself as the recovery service. Pairing, permissions, mode and pause state are kept; a busy old Agent that does not stop within 15 seconds is left running. Release candidates are ordered correctly (`0.6.2-rc.4` < `0.6.2-rc.5` < `0.6.2`).
+- AI clients with a cached tool list from before 0.6.2-rc.4 can still call the old shared-tab names (`browser_read_page`, `browser_click`, …). The calls run as before and tell the user to refresh or reconnect the connector; fresh tool lists show only `shared_tab_*` and `browser_runner_*`.
+
 ### Browser Runner Beta (release candidate 0.6.2-rc.4)
 
 - Add Browser Runner to the native Go Agent: a separate, task-scoped background browser that drives the installed Chrome, Edge or Chromium over CDP (no Node or Playwright). Each task has its own profile and never reads the everyday browser's cookies or passwords.

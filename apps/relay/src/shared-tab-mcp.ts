@@ -16,6 +16,7 @@ type Scope = "browser:read" | "browser:interact";
 type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
 type DeviceTool =
   | "browser_list_tabs"
+  | "browser_get_current_tab"
   | "browser_read_page"
   | "browser_get_selected_text"
   | "browser_extract_links"
@@ -141,4 +142,92 @@ export function registerSharedTabTools(server: McpServer, deps: SharedTabDeps) {
     if (!g.identity) return g.denied;
     return deps.textResult(await deps.callDevice(g.identity, device_id, "browser_fill", { ...tab(tab_id), snapshot_id, ref, value }));
   });
+}
+
+/**
+ * Names the shared-tab tools had before 0.6.2-rc.4. MCP hosts cache a
+ * connector's tool list (ChatGPT until the connector is refreshed, Claude
+ * until it reconnects), and this stateless server cannot push
+ * notifications/tools/list_changed, so a host that connected earlier keeps
+ * calling these names. They stay callable with the same scopes, arguments and
+ * device protocol, are hidden from tools/list, and every result tells the
+ * model to have the user refresh the connector to see the current tools,
+ * including browser_runner_*.
+ */
+export const LEGACY_SHARED_TAB_ALIASES = {
+  browser_list_tabs: "shared_tab_list",
+  browser_get_current_tab: "shared_tab_list",
+  browser_read_page: "shared_tab_read",
+  browser_get_selected_text: "shared_tab_read",
+  browser_extract_links: "shared_tab_read",
+  browser_extract_table: "shared_tab_read",
+  browser_click: "shared_tab_click",
+  browser_fill: "shared_tab_fill",
+} as const;
+export type LegacySharedTabTool = keyof typeof LEGACY_SHARED_TAB_ALIASES;
+export const LEGACY_ALIAS_META_KEY = "remotearc/legacyAliasOf";
+
+export function legacyRefreshNotice(name: LegacySharedTabTool) {
+  return (
+    `${name} was renamed to ${LEGACY_SHARED_TAB_ALIASES[name]}. This AI client is using a cached Remote Arc tool list. ` +
+    "Ask the user to refresh or reconnect the Remote Arc connector in this client to load the current tools " +
+    "(shared_tab_* for shared tabs and browser_runner_* for task browsers on a computer). This call still ran normally."
+  );
+}
+
+export function registerLegacySharedTabAliases(server: McpServer, deps: SharedTabDeps) {
+  const guard = async (scope: Scope) => {
+    const { identity } = deps;
+    if (!identity || !deps.hasScope(identity, scope)) return { denied: deps.authRequired(scope, identity) };
+    const usageError = await deps.consume(identity);
+    if (usageError) return { denied: usageError };
+    return { identity };
+  };
+  const tab = (tab_id: number | undefined) => (tab_id !== undefined ? { tab_id } : {});
+  const read = { readOnlyHint: true, openWorldHint: false, destructiveHint: false };
+  const define = (
+    name: LegacySharedTabTool,
+    scope: Scope,
+    inputSchema: z.ZodTypeAny,
+    annotations: Record<string, boolean>,
+    args: (input: Record<string, any>) => Record<string, unknown>,
+  ) => {
+    const meta = deps.oauthToolMeta(scope) as Record<string, unknown> | undefined;
+    registerMcpTool(server, name, {
+      title: `${name} (renamed to ${LEGACY_SHARED_TAB_ALIASES[name]})`,
+      description: `Deprecated alias of ${LEGACY_SHARED_TAB_ALIASES[name]}, kept for AI clients with a cached tool list.` + scopeNote,
+      inputSchema,
+      annotations,
+      _meta: { ...(meta ?? {}), [LEGACY_ALIAS_META_KEY]: LEGACY_SHARED_TAB_ALIASES[name] },
+    }, async (input: Record<string, any>) => {
+      const g = await guard(scope);
+      if (!g.identity) return g.denied;
+      const result = await deps.callDevice(g.identity, input.device_id, name, args(input));
+      return deps.textResult({ notice: legacyRefreshNotice(name), result });
+    });
+  };
+  const tabOnly = z.object({ device_id: deviceId, tab_id: tabId });
+  const ref = z.string().regex(/^e[1-9]\d*$/);
+  define("browser_list_tabs", "browser:read", z.object({ device_id: deviceId }), read, () => ({}));
+  define("browser_get_current_tab", "browser:read", tabOnly, read, ({ tab_id }) => tab(tab_id));
+  define("browser_read_page", "browser:read", tabOnly, read, ({ tab_id }) => tab(tab_id));
+  define("browser_get_selected_text", "browser:read", tabOnly, read, ({ tab_id }) => tab(tab_id));
+  define("browser_extract_links", "browser:read", tabOnly, read, ({ tab_id }) => tab(tab_id));
+  define(
+    "browser_extract_table", "browser:read",
+    z.object({ device_id: deviceId, tab_id: tabId, table_index: z.number().int().min(0).default(0) }), read,
+    ({ tab_id, table_index }) => ({ ...tab(tab_id), table_index }),
+  );
+  define(
+    "browser_click", "browser:interact",
+    z.object({ device_id: deviceId, tab_id: tabId, snapshot_id: z.string().min(1).max(120), ref }),
+    { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
+    ({ tab_id, snapshot_id, ref }) => ({ ...tab(tab_id), snapshot_id, ref }),
+  );
+  define(
+    "browser_fill", "browser:interact",
+    z.object({ device_id: deviceId, tab_id: tabId, snapshot_id: z.string().min(1).max(120), ref, value: z.string().max(20000) }),
+    { readOnlyHint: false, openWorldHint: true, destructiveHint: false },
+    ({ tab_id, snapshot_id, ref, value }) => ({ ...tab(tab_id), snapshot_id, ref, value }),
+  );
 }

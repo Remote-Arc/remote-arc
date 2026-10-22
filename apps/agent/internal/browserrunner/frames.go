@@ -329,9 +329,12 @@ func (s *session) snapshotFrames(ctx context.Context, page map[string]any, id st
 		if t, _ := sub["text"].(string); strings.TrimSpace(t) != "" {
 			text += "\n\n[" + prefix + " " + originOf(f.url) + "]\n" + t
 		}
-		if b, _ := sub["blockers"].([]any); len(b) > 0 {
-			blockers, _ := page["blockers"].([]any)
-			page["blockers"] = append(blockers, b...)
+		// Hosted application forms carry their own sign-in walls and CAPTCHAs.
+		for _, key := range []string{"blockers", "attention", "captcha"} {
+			if b, _ := sub[key].([]any); len(b) > 0 {
+				have, _ := page[key].([]any)
+				page[key] = append(have, b...)
+			}
 		}
 	}
 	page["elements"] = elements

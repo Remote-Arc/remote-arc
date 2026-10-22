@@ -73,7 +73,7 @@ func TestGlobalCustomDisabledAndNameConflictsPreserveConfig(t *testing.T) {
 }
 
 func TestAccountConnectorEnumerationPaginationAndUnknowns(t *testing.T) {
-	for _, scenario := range []string{"fresh", "api-key", "named", "renamed-url", "other", "unknown-custom", "incomplete", "cycle", "failure"} {
+	for _, scenario := range []string{"fresh", "api-key", "named", "renamed-url", "other", "unknown-custom", "missing-account", "unknown-account", "incomplete", "cycle", "failure"} {
 		t.Run(scenario, func(t *testing.T) {
 			t.Setenv("REMOTEARC_CODEX_TEST_MODE", "")
 			identity := any(map[string]any{"type": "chatgpt"})
@@ -84,6 +84,12 @@ func TestAccountConnectorEnumerationPaginationAndUnknowns(t *testing.T) {
 				identity = map[string]any{"type": "apiKey"}
 			}
 			replies := map[string][]map[string]any{"account/read": {ok(map[string]any{"account": identity})}}
+			if scenario == "missing-account" {
+				replies["account/read"] = []map[string]any{ok(map[string]any{})}
+			}
+			if scenario == "unknown-account" {
+				replies["account/read"] = []map[string]any{ok(map[string]any{"account": map[string]any{}})}
+			}
 			app := map[string]any{"name": "Other app", "installUrl": "https://example.test/install", "isAccessible": true}
 			if scenario == "named" {
 				app["name"] = "Remote Arc"
@@ -109,7 +115,7 @@ func TestAccountConnectorEnumerationPaginationAndUnknowns(t *testing.T) {
 			p := &codexProvider{rpc: rpc, profile: profile}
 			found, e := p.remoteArcApp()
 			want := scenario == "named" || scenario == "renamed-url"
-			wantErr := scenario == "incomplete" || scenario == "cycle" || scenario == "failure" || scenario == "unknown-custom"
+			wantErr := scenario == "incomplete" || scenario == "cycle" || scenario == "failure" || scenario == "unknown-custom" || scenario == "missing-account" || scenario == "unknown-account"
 			if found != want || (e != nil) != wantErr {
 				b, _ := json.Marshal(replies)
 				t.Fatal(scenario, found, e, string(b))

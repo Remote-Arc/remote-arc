@@ -1,11 +1,11 @@
 {
-  "native_sha256": "c986b53d7d8645d90884c6ed1546778a65aec0a6ebb7c6a7dc52a5dd0a340d78",
+  "native_sha256": "dc154ccae292f73fd8e336161090f41c065f5608ad2492883b96a928f10e5f44",
   "native_version": "0.6.2-rc.3-dev.auto-mcp",
   "platform": "nt",
   "codex_version": "codex-cli 0.163.0-alpha.11",
   "claude_version": "2.1.118 (Claude Code)",
-  "normal_start_connected_seconds": 2.219,
-  "broken_clients_connected_seconds": 1.594,
+  "normal_start_connected_seconds": 2.047,
+  "broken_clients_connected_seconds": 1.578,
   "safe_mcp_tools": 8,
   "doctor": {
     "codex": {

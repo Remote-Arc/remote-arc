@@ -223,16 +223,26 @@ func (p *codexProvider) verify(name, workspace string, binding json.RawMessage) 
 
 func (p *codexProvider) remoteArcApp() (bool, error) {
 	var identity struct {
-		Account *struct {
-			Type string `json:"type"`
-		} `json:"account"`
+		Account json.RawMessage `json:"account"`
 	}
 	if err := p.rpc.call("account/read", map[string]any{"refreshToken": false}, &identity); err != nil {
 		return false, fail("connector_inspection_failed", "Could not determine Codex connector availability; automatic setup was skipped.")
 	}
+	if len(identity.Account) == 0 {
+		return false, fail("connector_inspection_failed", "Codex returned incomplete account information; automatic setup was skipped.")
+	}
 	// Fresh/API-key profiles do not inherit ChatGPT account connectors. Avoid
 	// querying an unauthenticated cloud directory just to install local tools.
-	if identity.Account == nil || identity.Account.Type == "apiKey" {
+	if string(identity.Account) == "null" {
+		return false, nil
+	}
+	var account struct {
+		Type string `json:"type"`
+	}
+	if json.Unmarshal(identity.Account, &account) != nil || account.Type == "" {
+		return false, fail("connector_inspection_failed", "Codex account information is unsupported; automatic setup was skipped.")
+	}
+	if account.Type == "apiKey" {
 		return false, nil
 	}
 	cursor := ""

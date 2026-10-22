@@ -9,7 +9,7 @@ All notable changes to Remote Arc are documented here.
 - Only an open CAPTCHA challenge puts a Browser Runner task in `needs_user`. Invisible badges, challenges parked off the page and frames that stay mounted after the user has solved one no longer hold the task, and the next snapshot continues once the challenge closes. A visible CAPTCHA checkbox is reported as a non-blocking `attention` note to complete before submitting. Challenges inside open shadow roots are now detected.
 - CAPTCHA response fields are treated as secrets: their values are redacted and Browser Runner refuses to fill them. Remote Arc does not solve CAPTCHAs or read their responses, and blocker details no longer include frame URL parameters.
 - On a headless page that carries a CAPTCHA, the snapshot says to switch to a visible window before typing, because switching later reopens the page.
-- When a restarted browser reopens a page, `reentry_needed` in snapshots and `browser_runner_status` lists the fields, choices and uploads entered there before (labels only, never values) until they hold values again or the task leaves the page.
+- When a restarted browser reopens a page, `reentry_needed` in snapshots and `browser_runner_status` lists the fields, choices and uploads entered there before (labels only, never values) until they hold values again or the task leaves the page. A field the page now labels differently stays listed as `unverified` rather than being assumed filled; a file field relabelled after an upload still matches.
 - Receipts for `select`, `check` and `uncheck` record the control's label.
 
 ### Native client onboarding and browser_runner consistency (release candidate 0.6.2-rc.6)

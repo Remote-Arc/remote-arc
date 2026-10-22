@@ -11,6 +11,7 @@ import { writeAudit } from "./audit.js";
 import { REVIEWER_DEMO_TOOLS } from "./reviewer-fixture.js";
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
+import {activeDeviceCapacityBonus} from './device-capacity-admin.js';
 
 type DeviceEnv = PlatformLaunchEnv & {
   DB: D1Database;
@@ -266,7 +267,7 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
         credential_hash, created_at, last_seen, revoked_at, allowed_tools
       ) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL, ?9
       WHERE ((?4 = 'browser' AND (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform='browser') < 20)
-        OR (?4 <> 'browser' AND (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform<>'browser') < ?10))
+        OR (?4 <> 'browser' AND (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform<>'browser') < (?10 + (SELECT COALESCE(SUM(extra_devices),0) FROM device_capacity_grants WHERE user_id=?2 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at>?8)))))
       AND EXISTS(SELECT 1 FROM device_pairings WHERE user_code=?11 AND status='pending' AND expires_at>?8)`,
     ).bind(
       deviceId,
@@ -300,7 +301,7 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
       "SELECT COUNT(*) AS total FROM devices WHERE user_id=?1 AND revoked_at IS NULL AND platform='browser'"
     ).bind(user.id).first<{total:number}>() : null;
     const count = pairing.platform === 'browser' ? browsers?.total ?? 0 : computers;
-    const limit = pairing.platform === 'browser' ? 20 : deviceLimit;
+    const limit = pairing.platform === 'browser' ? 20 : deviceLimit + await activeDeviceCapacityBonus(env.DB,user.id);
     return count >= limit
       ? Response.json({ error: 'device_limit_reached', count, limit, device_type: pairing.platform === 'browser' ? 'browser' : 'computer' }, { status: 403 })
       : Response.json({ error: 'pairing_changed', message: 'Start a new pairing from your computer.' }, { status: 409 });

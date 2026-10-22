@@ -61,3 +61,8 @@
 .opsPlusGrant input,.opsPlusGrant select{width:100%;min-height:41px;padding:8px 10px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:7px}
 .opsPlusGrantActions{display:flex;gap:10px;flex-wrap:wrap}
 .opsPlusGrantActions button{min-height:42px}
+
+.opsCapacityHistory{display:grid;gap:8px}
+.opsCapacityHistory>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+.opsCapacityHistory span{min-width:0;overflow-wrap:anywhere}
+.opsCapacityHistory button{flex-shrink:0}

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import {DatabaseSync} from "node:sqlite";
 import {handlePairingApprove} from "../src/device.js";
 import {handleAdminPlanGrants,handleAdminPlanGrantRevoke} from "../src/plan-admin.js";
+import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from "../src/device-capacity-admin.js";
 import {sha256Hex} from "../src/auth.js";
 
 const sql=new DatabaseSync(":memory:");
@@ -29,7 +30,7 @@ const db={
 } as unknown as D1Database;
 const now=new Date().toISOString(),future=new Date(Date.now()+86400_000).toISOString();
 const env={DB:db,PUBLIC_ORIGIN:"https://mcp.remotearc.app",APP_ORIGIN:"https://mcp.remotearc.app",ARC_BILLING_ENABLED:"0"} as const;
-for(const [id,role] of [["freeuser","user"],["admin","admin"]] as const){
+for(const [id,role] of [["freeuser","user"],["capuser","user"],["admin","admin"]] as const){
   sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,?,?)").run(id,id,id+"@example.test",role,now);
   sql.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)").run(await sha256Hex(id+"-session"),id,future,now);
 }
@@ -65,7 +66,7 @@ assert.equal((await approve("browser")).response.status,200,"browser extension h
 const grantBody={email:"freeuser@example.test",plan:"plus",reason:"Time-limited Plus upgrade QA",expires_at:future};
 function adminRequest(path:string,body?:unknown,user="admin"){
   return new Request("https://mcp.remotearc.app"+path,{method:body===undefined?"GET":"POST",
-    headers:{cookie:"rl_session="+user+"-session","content-type":"application/json"},
+    headers:{cookie:"rl_session="+user+"-session","content-type":"application/json",origin:"https://admin.remotearc.app"},
     ...(body===undefined?{}:{body:JSON.stringify(body)})});
 }
 assert.equal((await handleAdminPlanGrants(adminRequest("/api/admin/plan-grants",grantBody,"freeuser"),env)).status,403);
@@ -90,4 +91,34 @@ const afterRevoke=await approve("win32");
 assert.equal(afterRevoke.response.status,403);
 assert.equal(afterRevoke.payload.limit,2,"expired/revoked Plus must revert to Free 2-computer limit");
 assert.equal(counts().find(x=>x.platform==="browser")?.n,2);
-console.log("Device pairing: Free 2, Plus 10, browsers separate, quota errors, duration and revoke passed.");
+const cappedUser="capuser";
+assert.equal((await approve("win32",cappedUser)).response.status,200);
+assert.equal((await approve("darwin",cappedUser)).response.status,200);
+assert.equal((await approve("linux",cappedUser)).response.status,403);
+const capacityBody={email:"capuser@example.test",extra_devices:3,reason:"Temporary test device expansion",expires_at:future};
+assert.equal((await handleAdminDeviceCapacity(adminRequest("/api/admin/device-capacity",capacityBody,"capuser"),env)).status,403,"Non-admin cannot grant slots");
+assert.equal((await handleAdminDeviceCapacity(adminRequest("/api/admin/device-capacity",{...capacityBody,extra_devices:21}),env)).status,400);
+assert.equal((await handleAdminDeviceCapacity(adminRequest("/api/admin/device-capacity",{...capacityBody,expires_at:"2000-01-01"}),env)).status,400);
+const capacityGranted=await handleAdminDeviceCapacity(adminRequest("/api/admin/device-capacity",capacityBody),env);
+assert.equal(capacityGranted.status,201);
+const capacityGrant=(await capacityGranted.json() as any).grant;
+assert.equal(capacityGrant.extra_devices,3);
+const capacityList=await handleAdminDeviceCapacity(adminRequest("/api/admin/device-capacity?email=capuser%40example.test"),env);
+const listed=await capacityList.json() as any;
+assert.equal(listed.active_extra,3);
+assert.equal(listed.grants[0].id,capacityGrant.id);
+for(let n=3;n<=5;n++)assert.equal((await approve("win32",cappedUser)).response.status,200);
+const capacityFull=await approve("win32",cappedUser);
+assert.equal(capacityFull.response.status,403);
+assert.equal(capacityFull.payload.limit,5);
+assert.equal(capacityFull.payload.count,5);
+const expiredAt="2000-01-01T00:00:00.000Z";
+sql.prepare("UPDATE device_capacity_grants SET expires_at=? WHERE id=?").run(expiredAt,capacityGrant.id);
+const afterExpiry=await approve("win32",cappedUser);
+assert.equal(afterExpiry.response.status,403);
+assert.equal(afterExpiry.payload.limit,2,"Expired bonus drops immediately");
+const capacityRevoked=await handleAdminDeviceCapacityRevoke(adminRequest("/api/admin/device-capacity/"+capacityGrant.id+"/revoke",{}),env,capacityGrant.id);
+assert.equal(capacityRevoked.status,200);
+assert.equal((await handleAdminDeviceCapacity(adminRequest("/api/admin/device-capacity?email=capuser%40example.test"),env).then(x=>x.json()) as any).active_extra,0);
+assert.equal(sql.prepare("SELECT COUNT(*) n FROM audit_events WHERE event_type LIKE 'account.device_capacity_%'").get()?.n,2);
+console.log("Device pairing: Free 2, Plus 10, browser quota separate, bonus slots +3, expiry, revoke, RBAC and audit passed.");

@@ -5,6 +5,7 @@ import { getSessionUser } from "./auth.js";
 import {handleArcAdminBilling} from './arc-admin-billing.js';
 import { handleAdminBilling, handleAdminCallCredits, handleAdminOperations, type OpsEnv } from "./admin-operations.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
+import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './device-capacity-admin.js';
 import { listWebsiteSubmissions, updateWebsiteSubmission, type EngagementEnv } from "./domains/engagement.js";
 import { handleMonitorState, type MonitorEnv } from "./monitor.js";
 
@@ -15,6 +16,7 @@ const methods: Record<string, readonly string[]> = {
   "/api/admin/operations": ["GET"], "/api/admin/billing": ["GET"],
   '/api/admin/arc-billing':['GET'],
   "/api/admin/call-credits": ["POST"], "/api/admin/plan-grants": ["GET", "POST"],
+  "/api/admin/device-capacity": ["GET","POST"],
   "/api/admin/submissions": ["GET"],
 };
 
@@ -31,6 +33,7 @@ export function adminApiMethods(path: string): readonly string[] | null {
   if(/^\/api\/admin\/followups\/[^/]+$/.test(path))return ['GET','PATCH'];
   if (Object.hasOwn(methods, path)) return methods[path]!;
   if (/^\/api\/admin\/plan-grants\/[a-zA-Z0-9-]+\/revoke$/.test(path)) return ["POST"];
+  if (/^\/api\/admin\/device-capacity\/[a-zA-Z0-9-]+\/revoke$/.test(path)) return ["POST"];
   if (/^\/api\/admin\/submissions\/[a-zA-Z0-9-]+$/.test(path)) return ["PATCH", "DELETE"];
   return null;
 }
@@ -74,10 +77,13 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
     case '/api/admin/arc-billing': response = await handleArcAdminBilling(request,env);break;
     case "/api/admin/call-credits": response = await handleAdminCallCredits(request, env); break;
     case "/api/admin/plan-grants": response = await handleAdminPlanGrants(request, env); break;
+    case "/api/admin/device-capacity": response = await handleAdminDeviceCapacity(request, env); break;
     case "/api/admin/submissions": response = await listWebsiteSubmissions(request, env); break;
     default: {
       const revoke = url.pathname.match(/^\/api\/admin\/plan-grants\/([a-zA-Z0-9-]+)\/revoke$/);
-      response = revoke ? await handleAdminPlanGrantRevoke(request, env, revoke[1]!)
+      const capacityRevoke=url.pathname.match(/^\/api\/admin\/device-capacity\/([a-zA-Z0-9-]+)\/revoke$/);
+      response = capacityRevoke ? await handleAdminDeviceCapacityRevoke(request,env,capacityRevoke[1]!)
+        : revoke ? await handleAdminPlanGrantRevoke(request, env, revoke[1]!)
         : await updateWebsiteSubmission(request, env, url.pathname.split("/").at(-1)!);
     }
   }

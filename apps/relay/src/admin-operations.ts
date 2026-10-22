@@ -23,6 +23,7 @@ type OpsUser = {
   used: number;
   extra: number;
   device_count: number;
+  computer_count: number;
   last_activity: string | null;
   has_plus_grant: number;
   linked_login: "google" | "email_only";
@@ -67,6 +68,7 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
       COALESCE((SELECT SUM(extra_calls) FROM user_call_credit_grants c
         WHERE c.user_id=u.id AND c.month_key=?1), 0) AS extra,
       (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL) AS device_count,
+      (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL AND d.platform<>'browser') AS computer_count,
       (SELECT MAX(created_at) FROM audit_events a WHERE a.user_id=u.id) AS last_activity,
       EXISTS(SELECT 1 FROM plan_grants g WHERE g.user_id=u.id AND g.plan='plus'
         AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at > ?2)) AS has_plus_grant
@@ -81,6 +83,7 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
             WHERE t.user_id=u.id ORDER BY t.created_at ASC LIMIT 1) AS first_mcp_client,
           COALESCE(um.tool_calls,0) AS used, 0 AS extra,
           (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL) AS device_count,
+      (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL AND d.platform<>'browser') AS computer_count,
           (SELECT MAX(created_at) FROM audit_events a WHERE a.user_id=u.id) AS last_activity,
           EXISTS(SELECT 1 FROM plan_grants g WHERE g.user_id=u.id AND g.plan='plus'
             AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at > ?2)) AS has_plus_grant

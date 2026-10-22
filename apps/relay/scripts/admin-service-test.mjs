@@ -12,12 +12,14 @@ function request(path="/api/me",{method="GET",cookie=true,requestOrigin=origin,b
 for(const path of ["/mcp","/api/devices","/auth/logout","/api/admin/unknown","/api/admin/plan-grants/a/revoke/more"])assert.equal(adminApiMethods(path),null);
 assert.deepEqual(adminApiMethods("/api/admin/submissions/"+id),["PATCH","DELETE"]);
 assert.deepEqual(adminApiMethods("/api/admin/plan-grants/"+id+"/revoke"),["POST"]);
+assert.deepEqual(adminApiMethods("/api/admin/device-capacity"),["GET","POST"]);
+assert.deepEqual(adminApiMethods("/api/admin/device-capacity/"+id+"/revoke"),["POST"]);
 assert.equal((await handleAdminServiceRequest(request("/api/me",{host:"https://mcp.remotearc.app"}),env)).status,404);
 assert.equal((await handleAdminServiceRequest(request("/api/admin/unknown"),env)).status,404);
 assert.equal((await handleAdminServiceRequest(request("/api/me",{method:"POST"}),env)).status,405);
 assert.equal((await handleAdminServiceRequest(request("/api/me",{cookie:false}),env)).status,401);
 role="user";assert.equal((await handleAdminServiceRequest(request(),env)).status,403);role="admin";
-for(const path of ["/api/admin/plan-grants","/api/admin/call-credits","/api/admin/plan-grants/"+id+"/revoke"]){
+for(const path of ["/api/admin/plan-grants","/api/admin/call-credits","/api/admin/plan-grants/"+id+"/revoke","/api/admin/device-capacity","/api/admin/device-capacity/"+id+"/revoke"]){
  assert.equal((await handleAdminServiceRequest(request(path,{method:"POST",requestOrigin:"https://remotearc.app",body:{}}),env)).status,403);
  assert.equal((await handleAdminServiceRequest(request(path,{method:"POST",contentType:"text/plain",body:{}}),env)).status,415);
 }

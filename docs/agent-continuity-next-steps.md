@@ -23,12 +23,14 @@ read-only validation example for #253 and partial groundwork for
 complete either adapter Issue or the Local Takeover Beta milestone. It lists
 recorded cwd metadata. The separate [worktree inspection](local-worktree-inspection.md)
 source-build command now reports actual Git state and a bounded fingerprint;
-session-to-worktree association and complete task reconstruction remain separate.
+[selected-source binding](local-session-binding.md) now checks a qualified local
+Codex metadata record against that worktree. Full task reconstruction remains
+separate; a matching recorded cwd is not proof of task ownership or completion.
 
 Current evidence: synthetic metadata fixtures for both sources, native Go tests,
 and Windows/macOS real Codex metadata smoke scans (21 and 1 matched sessions
 respectively). The Mac native discovery and CLI tests pass. These are bounded
-metadata checks; complete history, session-to-worktree association, target
+metadata checks; complete history, source/task ownership evidence, target
 continuation, WSL mappings and real Claude acceptance remain unqualified.
 
 Use the accepted compatibility and automatic-workflow contract before widening session access

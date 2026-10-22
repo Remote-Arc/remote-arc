@@ -12,6 +12,7 @@ import (
 const Help = `Local session discovery
 Usage: remotelink takeover --workspace <directory> [--source codex|claude|all]
        remotelink takeover workspace --workspace <directory>
+       remotelink takeover session --workspace <directory> --session-file <jsonl> --session-id <id>
   --workspace <dir>      Required: select one local project directory
   --source <agent>       codex, claude or all (default: all)
   --sessions-root <dir>  Optional session directory; requires one explicit source
@@ -25,9 +26,14 @@ skipped. No results does not prove that a client has no sessions.
 
 The workspace subcommand inspects actual Git/worktree state without reading
 sessions. Run takeover workspace --help for its scope and completeness rules.
+The session subcommand checks one explicitly selected Codex metadata source
+against the actual worktree. Run takeover session --help for limits.
 `
 
 func Run(ctx context.Context, args []string, output io.Writer) error {
+	if len(args) > 1 && args[0] == "takeover" && args[1] == "session" {
+		return runSession(ctx, args[2:], output)
+	}
 	if len(args) > 1 && args[0] == "takeover" && args[1] == "workspace" {
 		return runWorkspace(ctx, args[2:], output)
 	}

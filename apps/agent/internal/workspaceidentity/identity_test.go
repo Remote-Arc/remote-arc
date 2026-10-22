@@ -44,3 +44,45 @@ func TestIdentitySurvivesContentsButDetectsReplacement(t *testing.T) {
 		t.Fatal("file accepted as workspace")
 	}
 }
+
+func TestRegularFileIdentityDetectsReplacement(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "source.jsonl")
+	if err := os.WriteFile(path, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	id, err := ReadFile(path)
+	if err != nil || id == "" {
+		t.Fatal(id, err)
+	}
+	if err := os.WriteFile(path, []byte("edited"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	current, err := ReadFile(path)
+	if err != nil || current != id {
+		t.Fatal("edit changed file identity", err)
+	}
+	if err := os.Rename(path, path+".old"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadFile(path); err == nil {
+		t.Fatal("missing file had identity")
+	}
+	if err := os.WriteFile(path, []byte("edited"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	current, err = ReadFile(path)
+	if err != nil || current == id {
+		t.Fatal("replacement retained file identity", err)
+	}
+	if _, err := ReadFile(root); err == nil {
+		t.Fatal("directory accepted")
+	}
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(path, link); err != nil {
+		t.Skip("symlink unavailable", err)
+	}
+	if _, err := ReadFile(link); err == nil {
+		t.Fatal("symlink accepted")
+	}
+}

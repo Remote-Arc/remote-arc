@@ -25,6 +25,9 @@ func TestTakeoverHelpDoesNotStartOrPairAgent(t *testing.T) {
 	if err := Main(context.Background(), []string{"takeover", "workspace", "--help"}, "test", os.Stdin, &out, &out); err != nil || !strings.Contains(out.String(), "Read-only Git/worktree inspection") {
 		t.Fatal("workspace inspection routing", err)
 	}
+	if err := Main(context.Background(), []string{"takeover", "session", "--help"}, "test", os.Stdin, &out, &out); err != nil || !strings.Contains(out.String(), "Verify one selected Codex") {
+		t.Fatal("session binding routing", err)
+	}
 	if _, err := os.Stat(filepath.Join(home, ".remotearc")); !os.IsNotExist(err) {
 		t.Fatal("discovery created pairing or execution state")
 	}

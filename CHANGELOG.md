@@ -13,7 +13,7 @@ All notable changes to Remote Arc are documented here.
 - Publish bounded CPU utilization and available-memory telemetry from the Go and TypeScript device runtimes over their existing authenticated connection. Ignore stale measurements and never transfer process lists or file content as telemetry.
 - Make account-level fleet placement aware of host pressure, Windows/WSL shared hardware, the number of active RA-managed processes, and device connection stability, while keeping tool permissions, Trusted Write Locations, and explicit OS requirements as hard constraints. Uninstrumented agents remain usable but are ranked conservatively behind idle instrumented agents.
 - Introduce immutable GitHub-commit workspace materialization on a selected fleet node, isolated to an approved directory and verified through a managed process; do not silently copy uncommitted changes or migrate an active task.
-- Include integrated hosted Arc task/conversation discovery, input/refresh recovery and configured email-sender fixes in the source snapshot. Those changes require a separate Relay/UI deployment; installing this device RC does not deploy them or qualify AI Teams acceptance.
+- Include integrated hosted Arc task/conversation discovery, input/refresh recovery, configured email-sender fixes and localized official installation-guide links on every AI connection card in the source snapshot. Those changes require a separate Relay/UI deployment; installing this device RC does not deploy them or qualify AI Teams acceptance.
 - Keep this release candidate separate from the already published 0.6.1 binaries and Homebrew checksums.
 
 ## 0.6.1 - 2026-10-11

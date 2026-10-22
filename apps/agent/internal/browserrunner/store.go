@@ -216,7 +216,8 @@ func (c *Checkpoint) lostInput(page string, now time.Time) *Reentry {
 			}
 		}
 	}
-	// Receipts were walked newest first; report in the order they were entered.
+	// Receipts were walked newest first; report in the order each field was
+	// last entered.
 	for i, j := 0, len(fields)-1; i < j; i, j = i+1, j-1 {
 		fields[i], fields[j] = fields[j], fields[i]
 	}

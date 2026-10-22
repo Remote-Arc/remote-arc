@@ -671,50 +671,61 @@ func (s *session) reentryStatus(page map[string]any) map[string]any {
 		s.cp.Reentry = nil
 		return nil
 	}
-	byName := map[string][]map[string]any{}
 	els, _ := page["elements"].([]any)
-	for _, raw := range els {
-		if m, ok := raw.(map[string]any); ok {
-			n := fmt.Sprint(m["name"])
-			byName[n] = append(byName[n], m)
-		}
-	}
-	found, empty := 0, []string{}
+	var empty, unverified []string
 	for _, f := range r.Fields {
-		ms := byName[f.Label]
-		if len(ms) == 0 {
-			continue
+		label := f.Label
+		if f.File != "" {
+			label += " (" + f.File + ")"
 		}
-		found++
-		for _, m := range ms {
-			if emptyNow(m, f.Action) {
-				label := f.Label
-				if f.File != "" {
-					label += " (" + f.File + ")"
-				}
-				empty = append(empty, label)
+		matched, filled := false, false
+		for _, raw := range els {
+			m, ok := raw.(map[string]any)
+			if !ok || !sameField(m, f) {
+				continue
+			}
+			matched = true
+			if !emptyNow(m, f.Action) {
+				filled = true
 				break
 			}
 		}
-	}
-	if found > 0 && len(empty) == 0 {
-		s.cp.Reentry = nil
-		return nil
-	}
-	if found == 0 {
-		// Nothing recognizable on screen; list everything rather than guess.
-		for _, f := range r.Fields {
-			label := f.Label
-			if f.File != "" {
-				label += " (" + f.File + ")"
-			}
+		switch {
+		case !matched:
+			unverified = append(unverified, label)
+		case !filled:
 			empty = append(empty, label)
 		}
 	}
-	return map[string]any{
-		"fields": empty,
+	if len(empty) == 0 && len(unverified) == 0 {
+		s.cp.Reentry = nil
+		return nil
+	}
+	out := map[string]any{
 		"detail": "The task browser was restarted and reopened this page, so input from before the restart is gone. Fill or upload these again, then check the values in a new snapshot. Earlier receipts are history, not the current page.",
 	}
+	if len(empty) > 0 {
+		out["fields"] = empty
+	}
+	// A field the page now labels differently cannot be checked here; it
+	// stays listed until the task leaves the page rather than being assumed
+	// filled.
+	if len(unverified) > 0 {
+		out["unverified"] = unverified
+	}
+	return out
+}
+
+// sameField matches a snapshot element to input recorded before a restart.
+// Some forms relabel a file field after an upload (for example adding the
+// file name), so an upload also matches a file input whose current label
+// begins its recorded one.
+func sameField(el map[string]any, f ReentryField) bool {
+	name, _ := el["name"].(string)
+	if name == f.Label {
+		return true
+	}
+	return f.Action == "upload" && el["role"] == "file" && name != "" && strings.HasPrefix(f.Label, name)
 }
 
 // emptyNow reports whether a snapshot element lost what the action had set.

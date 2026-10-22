@@ -150,6 +150,7 @@ func launchBrowser(ctx context.Context, exe, profile string, headless bool) (*br
 	if p, ok := attachExisting(ctx, profile); ok {
 		return p, nil
 	}
+	wait := startupWait(profile)
 	if e := os.MkdirAll(profile, 0700); e != nil {
 		return nil, e
 	}
@@ -190,7 +191,7 @@ func launchBrowser(ctx context.Context, exe, profile string, headless bool) (*br
 	}
 	exited := make(chan struct{})
 	go func() { _ = cmd.Wait(); close(exited) }()
-	deadline := time.Now().Add(20 * time.Second)
+	deadline := time.Now().Add(wait)
 	for time.Now().Before(deadline) {
 		select {
 		case <-exited:
@@ -212,7 +213,18 @@ func launchBrowser(ctx context.Context, exe, profile string, headless bool) (*br
 		}
 	}
 	_ = cmd.Process.Kill()
-	return nil, errors.New("The browser did not open its local automation endpoint in time.")
+	return nil, fmt.Errorf("The browser did not open its local automation endpoint within %s.", wait)
+}
+
+// startupWait is how long a launched browser gets to open its automation
+// endpoint. The first start of a task profile does first-run setup and, on
+// Windows, is often held by antivirus scanning, so it gets longer than a
+// relaunch of a profile that has started before.
+func startupWait(profile string) time.Duration {
+	if _, e := os.Stat(filepath.Join(profile, "Local State")); e != nil {
+		return 60 * time.Second
+	}
+	return 30 * time.Second
 }
 
 // pageTarget returns the websocket URL of a page target, creating one if the

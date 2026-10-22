@@ -11,6 +11,7 @@ All notable changes to Remote Arc are documented here.
 - On a headless page that carries a CAPTCHA, the snapshot says to switch to a visible window before typing, because switching later reopens the page.
 - When a restarted browser reopens a page, `reentry_needed` in snapshots and `browser_runner_status` lists the fields, choices and uploads entered there before (labels only, never values) until they hold values again or the task leaves the page. A field the page now labels differently stays listed as `unverified` rather than being assumed filled; a file field relabelled after an upload still matches.
 - Receipts for `select`, `check` and `uncheck` record the control's label.
+- The first start of a task's browser profile waits up to 60 seconds for the browser (30 seconds for later starts) instead of 20, so first-run setup or antivirus scanning on Windows no longer fails the start.
 
 ### Native client onboarding and browser_runner consistency (release candidate 0.6.2-rc.6)
 

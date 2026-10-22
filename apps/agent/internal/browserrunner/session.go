@@ -46,18 +46,27 @@ type session struct {
 	dialogs      []string
 	blocked      []Blocked
 
+	frames   map[string]*frameInfo // child frames, guarded by ev
+	frameSeq int
+
 	snapshotID    string
 	snapshotEpoch int
 	snapshotSeq   int
+	snapFrames    map[string]string // ref prefix (f1, f2...) -> frame id for the latest snapshot
 }
 
 func (s *session) live() bool { return s.conn != nil && s.conn.Alive() }
 
-func (s *session) onEvent(method string, raw json.RawMessage) {
+func (s *session) onEvent(cdpSession, method string, raw json.RawMessage) {
+	if cdpSession != "" {
+		s.onChildEvent(cdpSession, method, raw)
+		return
+	}
 	switch method {
 	case "Fetch.requestPaused":
 		var p struct {
 			RequestID string `json:"requestId"`
+			FrameID   string `json:"frameId"`
 			Request   struct {
 				URL string `json:"url"`
 			} `json:"request"`
@@ -66,7 +75,10 @@ func (s *session) onEvent(method string, raw json.RawMessage) {
 			return
 		}
 		s.ev.Lock()
-		allowed := s.scope.Allows(p.Request.URL)
+		// Scope governs where the task goes (the top-level page). Embedded
+		// frames from other sites may load, but are never read or acted on.
+		subframe := s.mainFrame != "" && p.FrameID != "" && p.FrameID != s.mainFrame
+		allowed := subframe || s.scope.Allows(p.Request.URL)
 		if !allowed {
 			s.blocked = append(s.blocked, Blocked{At: stamp(s.m.now()), Origin: originOf(p.Request.URL), Reason: "outside allowed_origins"})
 		}
@@ -91,7 +103,35 @@ func (s *session) onEvent(method string, raw json.RawMessage) {
 			s.epoch++
 			s.worldCtx = 0
 			s.ev.Unlock()
+		} else if p.Frame.ParentID != "" {
+			s.ev.Lock()
+			s.frameNavigated("", p.Frame.ID, p.Frame.ParentID, p.Frame.URL)
+			s.ev.Unlock()
 		}
+	case "Page.frameAttached":
+		var p struct {
+			FrameID       string `json:"frameId"`
+			ParentFrameID string `json:"parentFrameId"`
+		}
+		if json.Unmarshal(raw, &p) == nil {
+			s.ev.Lock()
+			s.frameAttached("", p.FrameID, p.ParentFrameID)
+			s.ev.Unlock()
+		}
+	case "Page.frameDetached":
+		var p struct {
+			FrameID string `json:"frameId"`
+			Reason  string `json:"reason"`
+		}
+		if json.Unmarshal(raw, &p) == nil {
+			s.ev.Lock()
+			s.frameDetached(p.FrameID, p.Reason)
+			s.ev.Unlock()
+		}
+	case "Target.attachedToTarget":
+		s.childAttached("", raw)
+	case "Target.detachedFromTarget":
+		s.childDetached(raw)
 	case "Page.frameStartedLoading", "Page.frameStoppedLoading":
 		var p struct {
 			FrameID string `json:"frameId"`
@@ -134,31 +174,38 @@ func (s *session) onEvent(method string, raw json.RawMessage) {
 			s.ev.Lock()
 			if p.Context.AuxData.FrameID == s.mainFrame {
 				s.worldCtx = p.Context.ID
+			} else if f := s.frames[p.Context.AuxData.FrameID]; f != nil && f.session == "" {
+				f.world = p.Context.ID
 			}
 			s.ev.Unlock()
 		}
 	case "Runtime.executionContextsCleared":
 		s.ev.Lock()
 		s.worldCtx = 0
+		s.clearWorlds("")
 		s.ev.Unlock()
 	case "Page.javascriptDialogOpening":
-		var p struct {
-			Type    string `json:"type"`
-			Message string `json:"message"`
-		}
-		if json.Unmarshal(raw, &p) != nil {
-			return
-		}
-		s.ev.Lock()
-		accept := p.Type == "alert" || p.Type == "beforeunload" || (p.Type == "confirm" && s.submitting)
-		verb := "dismissed"
-		if accept {
-			verb = "accepted"
-		}
-		s.dialogs = append(s.dialogs, fmt.Sprintf("%s %s: %s", verb, p.Type, clip(p.Message, 160)))
-		s.ev.Unlock()
-		s.conn.Fire("Page.handleJavaScriptDialog", map[string]any{"accept": accept})
+		s.onDialog("", raw)
 	}
+}
+
+func (s *session) onDialog(cdpSession string, raw json.RawMessage) {
+	var p struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	}
+	if json.Unmarshal(raw, &p) != nil {
+		return
+	}
+	s.ev.Lock()
+	accept := p.Type == "alert" || p.Type == "beforeunload" || (p.Type == "confirm" && s.submitting)
+	verb := "dismissed"
+	if accept {
+		verb = "accepted"
+	}
+	s.dialogs = append(s.dialogs, fmt.Sprintf("%s %s: %s", verb, p.Type, clip(p.Message, 160)))
+	s.ev.Unlock()
+	s.conn.FireIn(cdpSession, "Page.handleJavaScriptDialog", map[string]any{"accept": accept})
 }
 
 func clip(s string, n int) string {
@@ -196,7 +243,9 @@ func (s *session) ensureLive(ctx context.Context) error {
 	s.proc, s.conn = proc, conn
 	s.ev.Lock()
 	s.worldCtx, s.mainFrame, s.href = 0, "", ""
+	s.frames = map[string]*frameInfo{}
 	s.ev.Unlock()
+	s.snapFrames = nil
 	if e := s.setup(ctx); e != nil {
 		s.shutdownBrowser(false)
 		return e
@@ -226,6 +275,10 @@ func (s *session) setup(ctx context.Context) error {
 		{"Fetch.enable", map[string]any{"patterns": []map[string]any{{"urlPattern": "*", "resourceType": "Document", "requestStage": "Request"}}}},
 		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": pageJS + `("install", {})`}},
 		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": "void 0", "worldName": worldName}},
+		{"DOM.enable", nil},
+		// Cross-site iframes run in their own process; attach to them so
+		// embedded forms can be read and filled.
+		{"Target.setAutoAttach", map[string]any{"autoAttach": true, "waitForDebuggerOnStart": true, "flatten": true}},
 	}
 	for _, c := range calls {
 		if e := s.conn.Call(ctx, c.method, c.params, nil); e != nil {
@@ -342,9 +395,31 @@ func (s *session) world(ctx context.Context) (int, error) {
 
 var errStale = errors.New("STALE_REF: the page navigated or reloaded. Take a new browser_runner_snapshot.")
 
-// helper runs one page.js operation in the isolated world.
+// helper runs one page.js operation in the main frame's isolated world.
 func (s *session) helper(ctx context.Context, op string, args map[string]any, byValue bool) (*evalResult, error) {
-	id, e := s.world(ctx)
+	return s.helperIn(ctx, "", op, args, byValue)
+}
+
+// frameSession is the CDP session that owns a frame ("" for the page).
+func (s *session) frameSession(frameID string) string {
+	if frameID == "" {
+		return ""
+	}
+	f, _ := s.frameByID(frameID)
+	return f.session
+}
+
+// helperIn runs one page.js operation in a frame's isolated world; an empty
+// frame id is the top-level page.
+func (s *session) helperIn(ctx context.Context, frameID, op string, args map[string]any, byValue bool) (*evalResult, error) {
+	var id int
+	var e error
+	cdpSession := ""
+	if frameID == "" {
+		id, e = s.world(ctx)
+	} else {
+		cdpSession, id, e = s.worldIn(ctx, frameID)
+	}
 	if e != nil {
 		return nil, e
 	}
@@ -354,11 +429,15 @@ func (s *session) helper(ctx context.Context, op string, args map[string]any, by
 	b, _ := json.Marshal(args)
 	expr := pageJS + "(" + quoteJS(op) + ", " + string(b) + ")"
 	var r evalResult
-	e = s.conn.Call(ctx, "Runtime.evaluate", map[string]any{"expression": expr, "contextId": id, "returnByValue": byValue}, &r)
+	e = s.conn.CallIn(ctx, cdpSession, "Runtime.evaluate", map[string]any{"expression": expr, "contextId": id, "returnByValue": byValue}, &r)
 	if e != nil {
 		if strings.Contains(e.Error(), "context") {
 			s.ev.Lock()
-			s.worldCtx = 0
+			if frameID == "" {
+				s.worldCtx = 0
+			} else if f := s.frames[frameID]; f != nil {
+				f.world = 0
+			}
 			s.ev.Unlock()
 			return nil, errStale
 		}
@@ -516,6 +595,8 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 		return nil, e
 	}
 	s.snapshotID, s.snapshotEpoch = id, epoch
+	elements, _ := page["elements"].([]any)
+	s.snapshotFrames(ctx, page, id, maxElements-len(elements), maxText)
 	if t, ok := page["title"].(string); ok {
 		s.cp.Title = t
 	}
@@ -589,12 +670,19 @@ type actRequest struct {
 func (s *session) act(ctx context.Context, a actRequest) (result map[string]any, dispatched bool, err error) {
 	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action}
 	result = map[string]any{"action": a.Action}
+	frameID, e := s.refFrame(a.Ref)
+	if e != nil {
+		return nil, false, e
+	}
+	if frameID != "" {
+		result["frame"] = a.Ref[:strings.IndexByte(a.Ref, 'e')]
+	}
 	switch a.Action {
 	case "click":
 		s.ev.Lock()
 		startLoads, startEpoch := s.loads, s.epoch
 		s.ev.Unlock()
-		r, e := s.helper(ctx, "locate", ref, true)
+		r, e := s.helperIn(ctx, frameID, "locate", ref, true)
 		if e != nil {
 			return nil, false, e
 		}
@@ -605,8 +693,17 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		}
 		_ = json.Unmarshal(r.Result.Value, &loc)
 		result["label"] = loc.Label
+		if frameID != "" {
+			// Aim at the element through the frame's position in the page;
+			// if that cannot be measured, click the element directly.
+			if ox, oy, ok := s.frameOffset(ctx, frameID); ok {
+				loc.X, loc.Y = loc.X+ox, loc.Y+oy
+			} else {
+				loc.Reachable = false
+			}
+		}
 		if loc.Reachable {
-			_, _ = s.helper(ctx, "arm_click", ref, true)
+			_, _ = s.helperIn(ctx, frameID, "arm_click", ref, true)
 			for i, t := range []string{"mouseMoved", "mousePressed", "mouseReleased"} {
 				p := map[string]any{"type": t, "x": loc.X, "y": loc.Y, "button": "left", "clickCount": 1}
 				if t == "mouseMoved" {
@@ -626,13 +723,13 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 			moved := s.loads != startLoads || s.epoch != startEpoch
 			s.ev.Unlock()
 			if !moved {
-				if r, e := s.helper(ctx, "click_seen", ref, true); e == nil && string(r.Result.Value) == "false" {
+				if r, e := s.helperIn(ctx, frameID, "click_seen", ref, true); e == nil && string(r.Result.Value) == "false" {
 					if a.Effect == "submit" {
 						// Never risk a second submit: report and let the
 						// caller inspect the page first.
 						result["note"] = "the click may not have reached the element; take a snapshot before deciding anything"
 					} else {
-						if _, e := s.helper(ctx, "jsclick", ref, true); e != nil {
+						if _, e := s.helperIn(ctx, frameID, "jsclick", ref, true); e != nil {
 							return nil, true, e
 						}
 						result["note"] = "the mouse click did not reach the element; a direct element click was used"
@@ -643,7 +740,7 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 			// Covered by an overlay (cookie banner, sticky header): fall back
 			// to a DOM click on the exact element the model chose.
 			dispatched = true
-			if _, e := s.helper(ctx, "jsclick", ref, true); e != nil {
+			if _, e := s.helperIn(ctx, frameID, "jsclick", ref, true); e != nil {
 				return nil, true, e
 			}
 			result["note"] = "element was covered; a direct element click was used"
@@ -652,14 +749,14 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		if !a.HasValue {
 			return nil, false, errors.New("fill requires value.")
 		}
-		r, e := s.helper(ctx, "locate", ref, true)
+		r, e := s.helperIn(ctx, frameID, "locate", ref, true)
 		if e != nil {
 			return nil, false, e
 		}
 		var loc struct{ Label string }
 		_ = json.Unmarshal(r.Result.Value, &loc)
 		result["label"] = loc.Label
-		if _, e := s.helper(ctx, "prepare_fill", ref, true); e != nil {
+		if _, e := s.helperIn(ctx, frameID, "prepare_fill", ref, true); e != nil {
 			return nil, false, e
 		}
 		dispatched = true
@@ -671,7 +768,7 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 			return nil, true, e
 		}
 		fin := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "value": a.Value}
-		r, e = s.helper(ctx, "finish_fill", fin, true)
+		r, e = s.helperIn(ctx, frameID, "finish_fill", fin, true)
 		if e != nil {
 			return nil, true, e
 		}
@@ -694,7 +791,7 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 			return nil, false, errors.New("select requires value (option value or visible label).")
 		}
 		dispatched = true
-		r, e := s.helper(ctx, "select", map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "value": a.Value}, true)
+		r, e := s.helperIn(ctx, frameID, "select", map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "value": a.Value}, true)
 		if e != nil {
 			return nil, !strings.HasPrefix(e.Error(), "STALE_REF") && !strings.HasPrefix(e.Error(), "NO_OPTION") && !strings.HasPrefix(e.Error(), "WRONG_ACTION"), e
 		}
@@ -703,7 +800,7 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		result["selected"] = sel["selected"]
 	case "check", "uncheck":
 		dispatched = true
-		r, e := s.helper(ctx, "check", map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "checked": a.Action == "check"}, true)
+		r, e := s.helperIn(ctx, frameID, "check", map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "checked": a.Action == "check"}, true)
 		if e != nil {
 			return nil, !strings.HasPrefix(e.Error(), "STALE_REF") && !strings.HasPrefix(e.Error(), "WRONG_ACTION"), e
 		}
@@ -716,7 +813,7 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 			return nil, false, errors.New("press key must be one of Enter, Tab, Escape, ArrowDown, ArrowUp, Space.")
 		}
 		if a.Ref != "" {
-			if _, e := s.helper(ctx, "focus", ref, true); e != nil {
+			if _, e := s.helperIn(ctx, frameID, "focus", ref, true); e != nil {
 				return nil, false, e
 			}
 		}
@@ -776,18 +873,23 @@ func (s *session) upload(ctx context.Context, snapshotID, ref, path string) (map
 	if e != nil {
 		return nil, e
 	}
-	r, e := s.helper(ctx, "file_input", map[string]any{"snapshot_id": snapshotID, "ref": ref}, false)
+	frameID, e := s.refFrame(ref)
+	if e != nil {
+		return nil, e
+	}
+	cdpSession := s.frameSession(frameID)
+	r, e := s.helperIn(ctx, frameID, "file_input", map[string]any{"snapshot_id": snapshotID, "ref": ref}, false)
 	if e != nil {
 		return nil, e
 	}
 	if r.Result.ObjectID == "" {
 		return nil, errors.New("Browser Runner could not resolve the file input.")
 	}
-	defer s.conn.Fire("Runtime.releaseObject", map[string]any{"objectId": r.Result.ObjectID})
-	if e := s.conn.Call(ctx, "DOM.setFileInputFiles", map[string]any{"files": []string{path}, "objectId": r.Result.ObjectID}, nil); e != nil {
+	defer s.conn.FireIn(cdpSession, "Runtime.releaseObject", map[string]any{"objectId": r.Result.ObjectID})
+	if e := s.conn.CallIn(ctx, cdpSession, "DOM.setFileInputFiles", map[string]any{"files": []string{path}, "objectId": r.Result.ObjectID}, nil); e != nil {
 		return nil, e
 	}
-	r, e = s.helper(ctx, "file_state", map[string]any{"snapshot_id": snapshotID, "ref": ref}, true)
+	r, e = s.helperIn(ctx, frameID, "file_state", map[string]any{"snapshot_id": snapshotID, "ref": ref}, true)
 	if e != nil {
 		return nil, e
 	}

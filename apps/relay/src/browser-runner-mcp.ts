@@ -43,7 +43,8 @@ export type BrowserRunnerDeps = {
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
 const deviceId = z.string().min(1).max(200);
 const snapshotId = z.string().min(1).max(60);
-const ref = z.string().regex(/^e[1-9]\d{0,3}$/);
+// e12 on the page, f1e3 inside the first embedded frame of the snapshot.
+const ref = z.string().regex(/^(f[1-9]\d?)?e[1-9]\d{0,3}$/);
 const idempotencyKey = z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/);
 
 const what =
@@ -79,7 +80,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:read",
     title: "Read the task browser's page",
     description:
-      "Return a bounded view of the current page: url, title, headings, visible text and interactive elements with refs (e1, e2, ...), roles, labels, non-sensitive values, options and validation errors. Refs are valid only for the returned snapshot_id; take a new snapshot after the page changes. Sensitive fields are marked and never show values. blockers report a sign-in, verification code or CAPTCHA that only the user can complete.",
+      "Return a bounded view of the current page: url, title, headings, visible text and interactive elements with refs (e1, e2, ...; f1e1 for elements inside embedded frames such as hosted application forms), roles, labels, non-sensitive values, options and validation errors. Refs are valid only for the returned snapshot_id; take a new snapshot after the page changes. frames lists embedded frames; frames outside allowed_origins are named but never read. Sensitive fields are marked and never show values. blockers report a sign-in, verification code or CAPTCHA that only the user can complete.",
     input: z.object({
       device_id: deviceId,
       session_id: id,

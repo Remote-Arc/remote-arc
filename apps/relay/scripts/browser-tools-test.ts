@@ -105,3 +105,9 @@ assert.equal(classifyExpectedMcpError(wrongRunner)?.code, "WRONG_BROWSER_TOOL");
 assert.equal(classifyExpectedMcpError(new Error("STALE_REF: take a new snapshot"))?.code, "STALE_REF");
 assert.equal(classifyExpectedMcpError(new Error("browser protocol error. The submit k may have been sent; its effect is unknown. Do not submit again"))?.code, "UNKNOWN_EFFECT");
 console.log("PASS: Browser Runner explicit opt-in, wrong-family hints and error codes");
+
+// Frame refs (f1e3) from embedded application forms are accepted; junk is not.
+const refSchema = browserRunnerDefinitionsForTest.browser_runner_act.input.shape.ref;
+for (const ok of ["e1", "e400", "f1e3", "f12e9"]) assert.ok(refSchema.safeParse(ok).success, ok);
+for (const bad of ["f0e1", "fe1", "e0", "f1", "x1"]) assert.ok(!refSchema.safeParse(bad).success, bad);
+console.log("PASS: Browser Runner frame refs");

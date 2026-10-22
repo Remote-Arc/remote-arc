@@ -30,7 +30,8 @@
   const labelText = (el) => {
     const by = el.getAttribute("aria-labelledby");
     if (by) {
-      const t = by.split(/\s+/).map((id) => document.getElementById(id)).filter(Boolean).map((n) => n.innerText || n.textContent).join(" ");
+      const root = el.getRootNode && el.getRootNode().getElementById ? el.getRootNode() : document;
+      const t = by.split(/\s+/).map((id) => root.getElementById(id)).filter(Boolean).map((n) => n.innerText || n.textContent).join(" ");
       if (t.trim()) return t;
     }
     const aria = el.getAttribute("aria-label");
@@ -75,6 +76,35 @@
     return el;
   };
   const describe = (el) => clip(labelText(el), 120);
+  // Open shadow roots are part of what the user sees; walk them in document
+  // order. Closed roots stay private to the page.
+  const walk = (root, visit, budget) => {
+    for (const child of root.children || []) {
+      if (budget.left-- <= 0) return;
+      visit(child);
+      if (child.shadowRoot) walk(child.shadowRoot, visit, budget);
+      walk(child, visit, budget);
+    }
+  };
+  const shadowRoots = () => {
+    const roots = [];
+    walk(document.documentElement || document, (el) => { if (el.shadowRoot) roots.push(el.shadowRoot); }, { left: 20000 });
+    return roots;
+  };
+  // elementFromPoint stops at a shadow host; follow it into open roots.
+  const deepHit = (x, y) => {
+    let hit = document.elementFromPoint(x, y);
+    while (hit && hit.shadowRoot) {
+      const inner = hit.shadowRoot.elementFromPoint(x, y);
+      if (!inner || inner === hit) break;
+      hit = inner;
+    }
+    return hit;
+  };
+  const composedContains = (outer, inner) => {
+    for (let n = inner; n; n = n.parentNode || (n instanceof ShadowRoot ? n.host : null)) if (n === outer) return true;
+    return false;
+  };
   const nativeSet = (el, value) => {
     const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : el.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
     const desc = Object.getOwnPropertyDescriptor(proto, "value");
@@ -105,16 +135,19 @@
   if (op === "snapshot") {
     const maxElements = Math.max(10, Math.min(400, a.max_elements || 150));
     const selector = "a[href],button,input,select,textarea,[role=button],[role=link],[role=checkbox],[role=radio],[role=combobox],[role=option],[role=tab],[role=menuitem],[role=switch],[contenteditable=true],[contenteditable='']";
-    const all = Array.from(document.querySelectorAll(selector)).filter((el) => {
+    const all = [];
+    walk(document.documentElement || document, (el) => {
+      if (!el.matches(selector)) return;
       const type = String(el.type || "").toLowerCase();
-      return type !== "hidden" && visible(el);
-    });
+      if (type !== "hidden" && visible(el)) all.push(el);
+    }, { left: 20000 });
+    const prefix = a.ref_prefix || "";
     const els = {};
     const elements = [];
     let n = 0;
     for (const el of all) {
       if (elements.length >= maxElements) break;
-      const ref = "e" + ++n;
+      const ref = prefix + "e" + ++n;
       els[ref] = el;
       const tag = el.tagName.toLowerCase();
       const type = String(el.type || "").toLowerCase();
@@ -162,8 +195,12 @@
     const secret = Array.from(document.querySelectorAll("input")).filter((el) => visible(el) && sensitive(el));
     if (secret.some((el) => String(el.type).toLowerCase() === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
     if (secret.some((el) => /one-time-code|otp|verification/i.test([el.autocomplete, el.name, el.id].join(" ")))) blockers.push({ kind: "verification_code", detail: "one-time code requested; the user must enter it" });
-    const body = document.body ? document.body.innerText || "" : "";
-    const maxText = Math.max(500, Math.min(20000, a.max_text || 6000));
+    let body = document.body ? document.body.innerText || "" : "";
+    for (const sr of shadowRoots()) {
+      const t = Array.from(sr.children).filter((c) => !/^(STYLE|SCRIPT|TEMPLATE|LINK)$/.test(c.tagName)).map((c) => c.innerText || "").join("\n").trim();
+      if (t) body += "\n" + t;
+    }
+    const maxText = Math.max(200, Math.min(20000, a.max_text || 6000));
     const headings = Array.from(document.querySelectorAll("h1,h2,h3")).filter(visible).slice(0, 20).map((h) => clip(h.innerText, 120));
     return {
       url: location.href,
@@ -188,8 +225,8 @@
     const r = el.getBoundingClientRect();
     const x = r.left + r.width / 2;
     const y = r.top + r.height / 2;
-    const hit = document.elementFromPoint(x, y);
-    const reachable = !!hit && (hit === el || el.contains(hit) || hit.contains(el) || (el.labels && Array.from(el.labels).some((l) => l.contains(hit))));
+    const hit = deepHit(x, y);
+    const reachable = !!hit && (hit === el || composedContains(el, hit) || composedContains(hit, el) || (el.labels && Array.from(el.labels).some((l) => composedContains(l, hit))));
     return { x, y, width: r.width, height: r.height, reachable, label: describe(el), tag: el.tagName.toLowerCase(), type: String(el.type || "").toLowerCase(), sensitive: sensitive(el) };
   }
 
@@ -199,7 +236,9 @@
     const s = state();
     s.clickSeen = false;
     window.addEventListener("click", (e) => {
-      if (e.isTrusted && (e.target === el || el.contains(e.target) || (el.labels && Array.from(el.labels).some((l) => l.contains(e.target))))) s.clickSeen = true;
+      // composedPath sees through shadow roots; e.target is retargeted.
+      const path = e.composedPath();
+      if (e.isTrusted && (path.includes(el) || (el.labels && Array.from(el.labels).some((l) => path.includes(l))))) s.clickSeen = true;
     }, { capture: true, once: true });
     return true;
   }
@@ -291,7 +330,8 @@
   }
 
   if (op === "probe") {
-    const body = document.body ? document.body.innerText || "" : "";
+    let body = document.body ? document.body.innerText || "" : "";
+    if (a.text) for (const sr of shadowRoots()) body += "\n" + Array.from(sr.children).map((c) => c.innerText || "").join("\n");
     const needle = a.text ? String(a.text).toLowerCase() : "";
     return { url: location.href, ready: document.readyState, title: clip(document.title, 200), text_found: needle ? body.toLowerCase().includes(needle) : null };
   }

@@ -465,6 +465,10 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 	navigated := false
 	if dispatched && s.live() {
 		navigated = s.waitSettled(ctx, before, effect != "none" || req.Action == "click" || req.Action == "press")
+		// An action inside an embedded form changes that frame, not the page.
+		if frameID, _ := s.refFrame(req.Ref); frameID != "" && !navigated && effect != "none" {
+			s.settleFrame(ctx, frameID)
+		}
 	}
 	if eff != nil {
 		eff = s.cp.effect(eff.Key)
@@ -565,7 +569,7 @@ func (m *Manager) wait(ctx context.Context, s *session, args map[string]any) (ma
 	}
 	deadline := m.now().Add(time.Duration(ms) * time.Millisecond)
 	for {
-		found, page := s.probeText(ctx, text)
+		found, page := s.probeAll(ctx, text)
 		href := s.currentHref()
 		ok := (text == "" || found) && (urlPart == "" || strings.Contains(href, urlPart))
 		if text == "" && urlPart == "" {
@@ -596,7 +600,7 @@ func (m *Manager) resolve(ctx context.Context, s *session, args map[string]any) 
 	if len([]rune(evidence)) < 4 || len(evidence) > 300 {
 		return nil, errors.New("evidence must be 4-300 characters copied exactly from the current page.")
 	}
-	found, _ := s.probeText(ctx, evidence)
+	found, _ := s.probeAll(ctx, evidence)
 	switch outcome {
 	case "confirmed":
 		if !found {

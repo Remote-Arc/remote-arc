@@ -22,7 +22,7 @@ type cdpConn struct {
 	write   sync.Mutex
 	mu      sync.Mutex
 	pending map[int64]chan cdpReply
-	onEvent func(method string, params json.RawMessage)
+	onEvent func(session, method string, params json.RawMessage)
 	closed  chan struct{}
 	once    sync.Once
 	err     error
@@ -34,11 +34,12 @@ type cdpReply struct {
 }
 
 type cdpMessage struct {
-	ID     int64           `json:"id,omitempty"`
-	Method string          `json:"method,omitempty"`
-	Params json.RawMessage `json:"params,omitempty"`
-	Result json.RawMessage `json:"result,omitempty"`
-	Error  *struct {
+	ID        int64           `json:"id,omitempty"`
+	SessionID string          `json:"sessionId,omitempty"`
+	Method    string          `json:"method,omitempty"`
+	Params    json.RawMessage `json:"params,omitempty"`
+	Result    json.RawMessage `json:"result,omitempty"`
+	Error     *struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	} `json:"error,omitempty"`
@@ -46,7 +47,7 @@ type cdpMessage struct {
 
 var errBrowserGone = errors.New("Browser Runner lost its browser connection; the session checkpoint was kept.")
 
-func dialCDP(ctx context.Context, url string, onEvent func(string, json.RawMessage)) (*cdpConn, error) {
+func dialCDP(ctx context.Context, url string, onEvent func(string, string, json.RawMessage)) (*cdpConn, error) {
 	// Loopback only: never proxy a DevTools connection.
 	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second, Proxy: nil}
 	ws, resp, err := dialer.DialContext(ctx, url, nil)
@@ -84,7 +85,7 @@ func (c *cdpConn) readLoop() {
 			continue
 		}
 		if m.Method != "" && c.onEvent != nil {
-			c.onEvent(m.Method, m.Params)
+			c.onEvent(m.SessionID, m.Method, m.Params)
 		}
 	}
 }
@@ -114,8 +115,14 @@ func (c *cdpConn) Alive() bool {
 	}
 }
 
-// Call sends one command and decodes its result into out (which may be nil).
+// Call sends one command to the page target and decodes its result.
 func (c *cdpConn) Call(ctx context.Context, method string, params any, out any) error {
+	return c.CallIn(ctx, "", method, params, out)
+}
+
+// CallIn sends one command to a flattened child session (an out-of-process
+// iframe); an empty session is the page target itself.
+func (c *cdpConn) CallIn(ctx context.Context, session, method string, params any, out any) error {
 	id := c.next.Add(1)
 	ch := make(chan cdpReply, 1)
 	c.mu.Lock()
@@ -135,7 +142,7 @@ func (c *cdpConn) Call(ctx context.Context, method string, params any, out any) 
 	}
 	c.write.Lock()
 	_ = c.ws.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	err = c.ws.WriteJSON(cdpMessage{ID: id, Method: method, Params: raw})
+	err = c.ws.WriteJSON(cdpMessage{ID: id, SessionID: session, Method: method, Params: raw})
 	c.write.Unlock()
 	if err != nil {
 		c.mu.Lock()
@@ -162,11 +169,13 @@ func (c *cdpConn) Call(ctx context.Context, method string, params any, out any) 
 
 // Fire sends a command without waiting. It is only used from the event
 // goroutine, where blocking on a reply would deadlock the read loop.
-func (c *cdpConn) Fire(method string, params any) {
+func (c *cdpConn) Fire(method string, params any) { c.FireIn("", method, params) }
+
+func (c *cdpConn) FireIn(session, method string, params any) {
 	raw, _ := json.Marshal(params)
 	id := c.next.Add(1)
 	c.write.Lock()
 	defer c.write.Unlock()
 	_ = c.ws.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	_ = c.ws.WriteJSON(cdpMessage{ID: id, Method: method, Params: raw})
+	_ = c.ws.WriteJSON(cdpMessage{ID: id, SessionID: session, Method: method, Params: raw})
 }

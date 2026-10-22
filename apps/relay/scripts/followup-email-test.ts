@@ -6,6 +6,10 @@ for(const template of FOLLOWUP_TEMPLATES)for(const locale of ['en','zh'] as cons
  const content=followupTemplate(template.id,locale,{name:'Example <img src=x onerror=alert(1)>',...urls});
  const mail=renderFollowupEmail({...content,...urls,locale,templateId:template.id,replyTo:'support@remotearc.app'});
  assert(mail.html.includes('lang="'+(locale==='zh'?'zh-CN':'en')+'" dir="ltr"'));assert.equal((mail.html.match(/<h1\b/g)||[]).length,1);assert(!/<table(?![^>]*role="presentation")/g.test(mail.html));assert(!mail.html.includes('<img src=x'));assert(mail.html.includes('&lt;img'));assert(mail.text.includes(urls.unsubscribeUrl));assert(mail.html.includes('href="'+mail.action.href.replaceAll('&','&amp;')+'"'));assert(mail.html.includes('alt=""'));assert(!/<script\b|<form\b|<iframe\b/.test(mail.html));
+ if(template.id==='finish-mcp'){
+  for(const client of ['chatgpt','claude','cursor']){const link='https://remotearc.app'+(locale==='zh'?'/zh':'')+'/install/'+client;assert(content.body.includes(link));assert(mail.text.includes(link));assert(mail.html.includes('href="'+link+'"'));}
+  assert.equal(mail.action.href,'https://remotearc.app'+(locale==='zh'?'/zh':'')+'/install/chatgpt');
+ }
 }
 assert.throws(()=>renderFollowupEmail({subject:'Test',body:'Test',templateId:'experience',locale:'en',...urls,feedbackUrl:'https://remotearc.app.evil.test/feedback',replyTo:'support@remotearc.app'}),/invalid_followup_link/);
 const custom=renderFollowupEmail({subject:'Follow up',body:'Hello, please share feedback. https://suspicious.invalid/raw-link',templateId:'experience',locale:'en',...urls,replyTo:'support@remotearc.app',design:{layout:'spotlight',accent:'#ffffff',headline:'<img src=x onerror=alert(1)>',buttonLabel:'Continue <script>',highlights:[{title:'First result',body:'A real report'}]}});

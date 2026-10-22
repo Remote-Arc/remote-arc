@@ -4,6 +4,7 @@ import {ARC_PLANS,ARC_TOPUPS,ARC_PREMIUM_MODELS} from '@remotearc/protocol';
 import appDirectory from "./app-directory.json" with { type: "json" };
 import {createArcPreview} from "./arc-preview.js";
 import {createBillingPreview} from "./billing-preview.js";
+import {createFollowupPreview} from './followup-preview.js';
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
@@ -14,6 +15,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
   if (!UI_PREVIEW || typeof window === "undefined") return;
 
   const nativeFetch = window.fetch.bind(window);
+  const followupPreview=createFollowupPreview(window.sessionStorage);
   const previewEmployees=[{id:'preview-developer',name:'开发队友',responsibility:'技术架构与产品实现'},{id:'preview-designer',name:'设计队友',responsibility:'产品体验与交互设计'},{id:'preview-business',name:'商务队友',responsibility:'商业模式与市场验证'},{id:'preview-researcher',name:'领域专家',responsibility:'行业调研与事实核对'}].map(person=>({...person,version:1,status:'active',instructions:'',modelId:'auto',avatar:{kind:'initials',color:'#446655'},scope:{appMode:'none',connectionIds:[],deviceIds:[],deviceTools:[],skillIds:[]},createdAt:previewNow(),updatedAt:previewNow()}));
   const previewConnections=[
         {id:"11111111-1111-4111-8111-111111111111",provider:"github",accountLabel:"Example developer",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:15,total:15,needsReconnect:false}},
@@ -225,6 +227,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     if(url.pathname.startsWith('/api/billing')&&url.pathname!=='/api/billing/catalog'){
       const result=billingPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined));if(result)return result;
     }
+    if(url.pathname.startsWith('/api/admin/followups'))return followupPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined))!;
     if (method !== "GET") {
       return json(
         { error: "PR Preview is read-only. This action is not connected to production." },
@@ -369,8 +372,6 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       } satisfies SecurityState);
     }
 
-    if(url.pathname==='/api/admin/followups')return json({items:[{id:'preview-followup-user',name:'Alex Chen',email:'alex@example.invalid',devices:0,apps:0,calls:0,arc_runs:0,status:'new',next_followup_at:null,consent_at:null,suppressed_at:null,last_contact_at:null,feedback_count:0},{id:'preview-followup-active',name:'Taylor',email:'taylor@example.invalid',devices:2,apps:3,calls:128,arc_runs:4,status:'waiting',next_followup_at:new Date().toISOString(),consent_at:null,suppressed_at:null,last_contact_at:new Date().toISOString(),feedback_count:1}],total:2,emailConfigured:false});
-    if(url.pathname.startsWith('/api/admin/followups/'))return json({contact:{status:'new',note:'',next_followup_at:null,consent_at:null,consent_note:'',suppressed_at:null},messages:[]});
     if (url.pathname === "/api/admin/operations") {
       const day = new Date();
       const sampleUsers = [

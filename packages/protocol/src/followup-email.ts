@@ -7,10 +7,15 @@ export function renderFollowupEmail(value:FollowupEmail){
  const zh=value.locale==='zh',tr=(en:string,cn:string)=>zh?cn:en;
  const links=[value.setupUrl,value.feedbackUrl,value.unsubscribeUrl].map(link=>{const url=new URL(link);if(url.protocol!=='https:'||url.hostname!=='remotearc.app'||url.username||url.password)throw Error('invalid_followup_link');return url.href;});
  const design={...DEFAULT_FOLLOWUP_DESIGN,...value.design},accent=/^#[\da-f]{6}$/i.test(design.accent)?design.accent:'#242428',ink=contrastInk(accent);
- const setup=['first-connection','first-result'].includes(value.templateId),href=links[setup?0:1]!,label=design.buttonLabel|| (setup?tr('Open the setup guide','查看开始指南'):tr('Share your feedback','填写体验反馈'));
- const prose=value.body.replace(/https?:\/\/[^\s<>]+/g,'').split(/\n\s*\n/).map(part=>part.trim()).filter(Boolean).filter(part=>!/^(?:Here is the guide|操作指南)[：:]\s*$/i.test(part));
+ const installation=value.templateId==='finish-mcp';
+ const setup=installation||['first-connection','first-result'].includes(value.templateId),href=installation?new URL((zh?'/zh':'')+'/install/chatgpt',links[0]!).href:links[setup?0:1]!,label=design.buttonLabel|| (installation?tr('Open installation instructions','查看安装指南'):setup?tr('Open the setup guide','查看开始指南'):tr('Share your feedback','填写体验反馈'));
+ const prose=value.body.split(/\n\s*\n/).map(part=>part.trim()).filter(Boolean);
+ const linkify=(text:string)=>text.split(/(https?:\/\/[^\s<>]+)/g).map(part=>{
+  if(/^https?:\/\//.test(part)){try{const url=new URL(part);if(url.protocol==='https:'&&url.hostname==='remotearc.app'&&!url.username&&!url.password)return '<a href="'+escape(url.href)+'" style="color:#245b8f;text-decoration:underline;overflow-wrap:anywhere">'+escape(part)+'</a>';}catch{/* Leave invalid URLs as readable text. */}}
+  return /^https?:\/\//.test(part)?'':escape(part).replaceAll('\n','<br>');
+ }).join('');
  const rewardNote=!setup&&value.rewardAvailable?tr('Feedback rewards are available. Sign in on the feedback page to see the current offer and eligibility. Approved feedback can earn extra Connect calls.','反馈奖励现已开放。登录反馈页面查看当前奖励规则与资格，有效反馈经审核后可获得额外 Connect 调用次数。'):'';
- const paragraphs=prose.map(part=>'<p style="margin:0 0 20px;font-size:16px;line-height:1.8;color:#42424a">'+escape(part).replaceAll('\n','<br>')+'</p>').join('');
+ const paragraphs=prose.map(part=>'<p style="margin:0 0 20px;font-size:16px;line-height:1.8;color:#42424a">'+linkify(part)+'</p>').join('');
  const highlights=(design.highlights||[]).slice(0,3).map((card,index)=>'<tr><td style="padding:18px 20px;border:1px solid #e7e7eb;border-bottom:3px solid '+accent+';border-radius:8px"><p style="margin:0 0 8px;font-size:11px;color:#73737e">0'+(index+1)+'</p><h2 style="margin:0 0 8px;color:#222228;font-size:17px;line-height:1.5">'+escape(card.title)+'</h2><p style="margin:0;color:#52525b;font-size:14px;line-height:1.8">'+escape(card.body)+'</p></td></tr><tr><td height="12"></td></tr>').join('');
  const unsubscribe=links[2]!,title=escape(design.headline||value.subject),reply=escape(value.replyTo),lang=zh?'zh-CN':'en',eyebrow=escape(design.eyebrow||tr('A NOTE FROM YOUR PRODUCT TEAM','来自 Remote Arc 团队'));
  const text=[design.headline,design.intro,value.body,...design.highlights.flatMap(card=>[card.title,card.body]),rewardNote,label+': '+href,'—','Remote Arc · '+value.replyTo,tr('Stop follow-up emails:','停止接收回访邮件：'),unsubscribe].filter(Boolean).join('\n\n');

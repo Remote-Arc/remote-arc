@@ -45,7 +45,7 @@ type cdpMessage struct {
 	} `json:"error,omitempty"`
 }
 
-var errBrowserGone = errors.New("Browser Runner lost its browser connection; the session checkpoint was kept.")
+var errBrowserGone = errors.New("browser_runner lost its browser connection; the session checkpoint was kept.")
 
 func dialCDP(ctx context.Context, url string, onEvent func(string, string, json.RawMessage)) (*cdpConn, error) {
 	// Loopback only: never proxy a DevTools connection.

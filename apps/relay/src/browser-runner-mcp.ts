@@ -4,7 +4,7 @@ import type { OAuthIdentity } from "./auth.js";
 import { registerMcpTool } from "./mcp-errors.js";
 
 /**
- * Browser Runner: a task-scoped browser that the user's own Go Agent runs on
+ * browser_runner: a task-scoped browser that the user's own Go Agent runs on
  * their computer (installed Chrome/Edge/Chromium over CDP). The contract is
  * host-neutral: everything a caller needs to continue lives in the tool
  * results (session state, snapshot ids, next_action), so ChatGPT, Claude,
@@ -48,7 +48,7 @@ const ref = z.string().regex(/^(f[1-9]\d?)?e[1-9]\d{0,3}$/);
 const idempotencyKey = z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/);
 
 const what =
-  " Browser Runner is a separate background browser that the Remote Arc Agent runs on the user's computer for multi-step web tasks (applications, bookings, forms). It never uses the user's everyday browser, cookies or passwords. To read or act on a tab the user is looking at in their own browser, use shared_tab_* instead.";
+  " browser_runner is a separate background browser that the Remote Arc Agent runs on the user's computer for multi-step web tasks (applications, bookings, forms). It never uses the user's everyday browser, cookies or passwords. To read or act on a tab the user is looking at in their own browser, use shared_tab_* instead.";
 
 type Definition = {
   scope: Scope;

@@ -55,7 +55,7 @@ func TestAgentStatusReportsOwnRuntimeWithoutSecrets(t *testing.T) {
 	if status["engine"] != "go" || status["deviceId"] != "fixture-id" || status["connected"] != true || status["connectionSequence"] != uint64(5) || strings.Contains(string(encoded), "never-log-this") {
 		t.Fatalf("invalid status: %s", encoded)
 	}
-	if work, ok := status["activeWork"].(map[string]any); !ok || work["managedProcesses"] != 0 || work["browserRunnerSessions"] != 0 {
+	if work, ok := status["activeWork"].(map[string]any); !ok || work["managedProcesses"] != 0 || work["browser_runner_sessions"] != 0 || work["browserRunnerSessions"] != work["browser_runner_sessions"] {
 		t.Fatalf("idle Agent must report zero active work for upgrades: %v", status["activeWork"])
 	}
 	pause := NewWake(cfg, "test", nil)

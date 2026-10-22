@@ -100,7 +100,7 @@ func TestCallValidation(t *testing.T) {
 		{"browser_runner_start", map[string]any{"task_id": "../x", "allowed_origins": []any{"a.com"}}, "task_id"},
 		{"browser_runner_start", map[string]any{"task_id": "ok"}, "allowed_origins"},
 		{"browser_runner_start", map[string]any{"task_id": "ok", "allowed_origins": []any{"a.com"}, "start_url": "https://b.com/"}, "OUT_OF_SCOPE"},
-		{"browser_runner_snapshot", map[string]any{"session_id": "nope"}, "No Browser Runner session"},
+		{"browser_runner_snapshot", map[string]any{"session_id": "nope"}, "No browser_runner session"},
 		{"browser_runner_act", map[string]any{}, "session_id"},
 	} {
 		_, e := m.Call(t.Context(), tc.tool, tc.args, policyNone)

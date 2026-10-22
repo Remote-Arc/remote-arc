@@ -4,6 +4,13 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.2 - Unreleased
 
+### Native client onboarding and browser_runner consistency (release candidate 0.6.2-rc.6)
+
+- Attempt Codex and Claude Code MCP setup independently in the background during normal Agent startup. Existing registrations, disabled entries and uncertain connector inventories are preserved; missing clients, incompatible settings, failures and timeouts cannot block device pairing, connection or execution.
+- Resolve official Windows npm clients from both local `.bin` and global prefixes, including nested optional native packages. Prefer the actual native executable over wrapper stubs, qualify its supported capabilities, and never evaluate `.cmd` wrapper contents.
+- Use `browser_runner` / `browser_runner_*` consistently in the Dashboard, tool descriptions and API messages. Count its visible permission switch alongside the other skills. Publish `browser_runner_sessions` in Agent status while retaining the rc.5 compatibility alias and accepting old/new error labels during rolling upgrades.
+- Add reproducible real-client qualification across Windows, Linux and macOS, plus actual WSL2 receipts. Verify native/public npm entry points, simultaneous device reads, repeated config hashes, custom entries, clean uninstall and failure isolation with temporary profiles and no model turns.
+
 ### Upgrade and client compatibility fixes (release candidate 0.6.2-rc.5)
 
 - A newer `npx remotelink` now replaces an older, idle Go Agent instead of only following its log. Recovery is paused while the old Agent finishes its current operation and releases execution; the new release then starts and installs itself as the recovery service. Pairing, permissions, mode and pause state are kept. Release candidates are ordered correctly (`0.6.2-rc.4` < `0.6.2-rc.5` < `0.6.2`).

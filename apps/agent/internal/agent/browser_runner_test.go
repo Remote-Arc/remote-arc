@@ -9,7 +9,7 @@ import (
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 )
 
-// Browser Runner is part of the Go Agent: it shares the device mode gate and
+// browser_runner is part of the Go Agent: it shares the device mode gate and
 // the pause gate with every other execution tool.
 func TestBrowserRunnerFollowsDeviceModeAndPause(t *testing.T) {
 	for _, tc := range []struct {
@@ -17,7 +17,7 @@ func TestBrowserRunnerFollowsDeviceModeAndPause(t *testing.T) {
 	}{
 		{"safe", "terminal mode"},
 		{"developer", "terminal mode"},
-		{"managed", "No Browser Runner session"},
+		{"managed", "No browser_runner session"},
 	} {
 		t.Run(tc.mode, func(t *testing.T) {
 			t.Setenv("REMOTEARC_HOME", t.TempDir())

@@ -64,7 +64,7 @@ export function approvalTargetPath(
   if (tool === "browser_runner_start" && typeof args.scope_change_reason === "string" && args.scope_change_reason.trim()) {
     // The user sees the exact requested origins, not an unqualified folder path.
     const origins = Array.isArray(args.allowed_origins) ? args.allowed_origins.filter((o): o is string => typeof o === "string").sort() : [];
-    return "Browser Runner task " + String(args.task_id ?? "") + " → " + origins.join(", ");
+    return "browser_runner task " + String(args.task_id ?? "") + " → " + origins.join(", ");
   }
   const candidate =
     tool === "write_file"
@@ -372,7 +372,7 @@ export async function decideApproval(
 
   if (!approval) return { status: 404, payload: { error: "approval not found" } };
   if (approval.tool_name === "browser_runner_start" && input.decision !== "allow_once" && input.decision !== "deny") {
-    return { status: 400, payload: { error: "Browser Runner site expansion requires exact, one-time approval" } };
+    return { status: 400, payload: { error: "browser_runner site expansion requires exact, one-time approval" } };
   }
   if (approval.status !== "pending") {
     return {

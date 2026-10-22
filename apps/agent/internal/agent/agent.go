@@ -76,13 +76,16 @@ func (a *Agent) cfg() config.Config { a.mu.Lock(); defer a.mu.Unlock(); return a
 func (a *Agent) Status() map[string]any {
 	// Work that stopping this Agent would interrupt, reported as counts only so
 	// a newer CLI can decide whether an automatic upgrade is safe.
-	work := map[string]any{"managedProcesses": 0, "browserRunnerSessions": 0}
+	work := map[string]any{"managedProcesses": 0, "browser_runner_sessions": 0}
 	if a.Core != nil && a.Core.Processes != nil {
 		work["managedProcesses"] = a.Core.Processes.ActiveCount()
 	}
 	if a.Browser != nil {
-		work["browserRunnerSessions"] = a.Browser.ActiveSessions()
+		work["browser_runner_sessions"] = a.Browser.ActiveSessions()
 	}
+	// rc.5 launchers still read this field before deciding whether work is idle.
+	// Keep the deprecated alias so mixed-version upgrades cannot lose sessions.
+	work["browserRunnerSessions"] = work["browser_runner_sessions"]
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return map[string]any{"activeWork": work, "executionPaused": a.WakeOnly || a.Config.ExecutionPaused, "engine": "go", "version": a.Version, "pid": os.Getpid(), "deviceId": a.Config.DeviceID, "mode": a.Config.Mode, "connected": a.connected, "connectedAt": a.connectedAt, "connectionSequence": a.connectionSequence, "fileDurability": config.FileDurability(), "undoDurability": config.UndoDurability(), "backgroundProcess": a.BackgroundProcess}
@@ -146,7 +149,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.fleetCapacity(ctx)}, "tools": names, "capabilities": capabilities}
 }
 
-// browserRunnerReady advertises the Browser Runner only where it can run:
+// browserRunnerReady advertises the browser_runner only where it can run:
 // an execution (not wake-only) Agent in terminal mode with a Chromium-family
 // browser installed. The Relay still requires the user to enable the tools.
 func (a *Agent) browserRunnerReady() bool {
@@ -235,7 +238,7 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 	case "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
 		"browser_runner_status", "browser_runner_confirm", "browser_runner_close":
 		if a.Browser == nil || a.Core == nil || a.Core.Mode == "safe" || a.Core.Mode == "developer" {
-			return nil, errors.New("Browser Runner requires terminal mode on this device.")
+			return nil, errors.New("browser_runner requires terminal mode on this device.")
 		}
 		return a.Browser.Call(ctx, call.Tool, args, call.Policy)
 	case "goal_workspace":

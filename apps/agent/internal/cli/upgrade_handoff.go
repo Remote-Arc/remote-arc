@@ -180,7 +180,7 @@ func handOffOlderGoAgent(ctx context.Context, dir string, bg *service.Controller
 }
 
 // activeWork reads the work a running Agent would lose if it stopped:
-// managed processes are terminated and Browser Runner browsers are closed
+// managed processes are terminated and browser_runner browsers are closed
 // (their checkpoints survive). Agents before 0.6.2-rc.5 do not report it.
 func activeWork(status map[string]any) (summary string, busy, known bool) {
 	work, ok := status["activeWork"].(map[string]any)
@@ -191,13 +191,16 @@ func activeWork(status map[string]any) (summary string, busy, known bool) {
 		n, _ := work[key].(float64)
 		return int(n)
 	}
-	processes, sessions := count("managedProcesses"), count("browserRunnerSessions")
+	processes, sessions := count("managedProcesses"), count("browser_runner_sessions")
+	if _, canonical := work["browser_runner_sessions"]; !canonical {
+		sessions = count("browserRunnerSessions") // Compatibility with rc.5 Agents.
+	}
 	parts := []string{}
 	if processes > 0 {
 		parts = append(parts, plural(processes, "managed process", "managed processes"))
 	}
 	if sessions > 0 {
-		parts = append(parts, plural(sessions, "Browser Runner session", "Browser Runner sessions"))
+		parts = append(parts, plural(sessions, "browser_runner session", "browser_runner sessions"))
 	}
 	return strings.Join(parts, ", "), len(parts) > 0, true
 }
@@ -233,9 +236,9 @@ func replaceRunningAgent(ctx context.Context, o Options, dir string, bg *service
 	var risk string
 	switch {
 	case busy:
-		risk = fmt.Sprintf("The running Agent v%s has active work (%s). Replacing it stops managed processes and closes Browser Runner browsers; their tasks can resume but running commands cannot.", running, summary)
+		risk = fmt.Sprintf("The running Agent v%s has active work (%s). Replacing it stops managed processes and closes browser_runner browsers; their tasks can resume but running commands cannot.", running, summary)
 	case !known:
-		risk = fmt.Sprintf("The running Agent v%s cannot report whether it has active work. Replacing it stops any managed processes and Browser Runner browsers it has.", running)
+		risk = fmt.Sprintf("The running Agent v%s cannot report whether it has active work. Replacing it stops any managed processes and browser_runner browsers it has.", running)
 	}
 	if o.ForceUpdate {
 		if risk != "" {

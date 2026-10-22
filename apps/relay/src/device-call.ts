@@ -81,7 +81,7 @@ export async function callDevice(
   // the call reaches a device that cannot serve it.
   if (isBrowserRunnerTool(tool) && ownedDevice.platform === "browser") {
     throw new Error(
-      'tool "' + tool + '" is not available on a browser extension device. Browser Runner runs on a linked computer; for this shared tab use shared_tab_read, shared_tab_click or shared_tab_fill.',
+      'tool "' + tool + '" is not available on a browser extension device. browser_runner runs on a linked computer; for this shared tab use shared_tab_read, shared_tab_click or shared_tab_fill.',
     );
   }
   if (/^browser_(?!runner_)/.test(tool) && ownedDevice.platform && ownedDevice.platform !== "browser") {
@@ -135,12 +135,12 @@ export async function callDevice(
     }
   }
 
-  // Browser Runner acts on websites for the user. It is never implied by a
+  // browser_runner acts on websites for the user. It is never implied by a
   // legacy device with no stored tool list: each tool must be enabled
   // explicitly for this computer.
   if (isBrowserRunnerTool(tool) && !parseStoredStringArray(ownedDevice.allowed_tools).includes(tool)) {
     throw new Error(
-      'tool "' + tool + '" is disabled for this device. Enable Browser Runner for this computer in the Remote Arc dashboard.',
+      'tool "' + tool + '" is disabled for this device. Enable browser_runner for this computer in the Remote Arc dashboard.',
     );
   }
 

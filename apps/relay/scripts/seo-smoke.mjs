@@ -58,6 +58,7 @@ const known = [
   "/security-model",
   "/use-cases/disk-space-cleanup",
   "/use-cases/browser-research",
+  "/use-cases/job-applications",
   "/use-cases/presentation-deck",
   "/use-cases/spreadsheet-report",
   "/use-cases/desktop-automation",
@@ -144,7 +145,7 @@ assert.ok(sitemap.includes('hreflang="zh-CN"'));
 // All Resources links and detail pages must have real Chinese URL, metadata,
 // server-visible Chinese content, and reciprocal English/Chinese alternates.
 const resourcePaths = Object.keys(chineseResourceSeo);
-assert.equal(resourcePaths.length, 24, "Resources needs blog index, five articles, use-case index, fifteen details, security and releases");
+assert.equal(resourcePaths.length, 25, "Resources needs blog index, five articles, use-case index, sixteen details, security and releases");
 for (const base of resourcePaths) {
   const path = "/zh" + base;
   assert.ok(localizedPages.includes(base), "missing localized route: " + base);
@@ -247,13 +248,16 @@ const useCasesCatalog = renderMarketingHtml(shell, "/use-cases");
 assert.ok(useCasesCatalog.includes('retained context') && useCasesCatalog.includes('scheduled fresh judgment'));
 for(const workflow of ['Your daily work brief','A project check-in','An independent delivery check','Follow changes that matter'])assert.ok(useCasesCatalog.includes(workflow));
 for(const slug of [...chinesePages].filter(path=>path.startsWith('/use-cases/'))){
+ // Browser Runner is Connect-only today; its page must not offer an Arc path.
+ const connectOnly=slug==='/use-cases/job-applications';
  for(const prefix of ['', '/zh']){
   const html=renderMarketingHtml(shell,prefix+slug);
-  assert.ok(html.includes(prefix?'使用 Arc':'With Arc'),slug+' Arc path must be crawlable');
+  assert.equal(html.includes(prefix?'使用 Arc':'With Arc'),!connectOnly,slug+(connectOnly?' must not offer an Arc path':' Arc path must be crawlable'));
   assert.ok(html.includes(prefix?'使用 Connect':'With Connect'),slug+' Connect path must remain crawlable');
+  if(connectOnly)assert.ok(html.includes('Browser Runner'),slug+' must name Browser Runner');
  }
 }
-for (const slug of ["desktop-automation", "remote-support", "browser-research", "data-work"]) {
+for (const slug of ["desktop-automation", "remote-support", "browser-research", "data-work", "job-applications"]) {
   assert.ok(useCasesCatalog.includes('href="/use-cases/' + slug + '"'), "server-rendered use-case catalog must link to " + slug);
 }
 const home = renderMarketingHtml(shell, "/");

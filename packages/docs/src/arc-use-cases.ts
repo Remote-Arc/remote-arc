@@ -1,8 +1,10 @@
 // Pure public workflow data shared by the UI and crawlable server rendering.
-export const useCaseSlugs = ["remote-development", "file-organization", "disk-space-cleanup", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff"] as const;
+export const useCaseSlugs = ["remote-development", "file-organization", "disk-space-cleanup", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff", "job-applications"] as const;
 export type UseCaseSlug = typeof useCaseSlugs[number];
 type Copy={en:string;zh:string};
-type ArcCase={intro:Copy;prompt:Copy;requires:Copy;boundary:Copy;kind:'direct'|'task'|'routine'};
+// connectOnly: the workflow needs a capability Arc cannot drive yet, so the
+// public pages offer only the Connect path and say so.
+type ArcCase={intro:Copy;prompt:Copy;requires:Copy;boundary:Copy;kind:'direct'|'task'|'routine';connectOnly?:true};
 const copy=(en:string,zh:string):Copy=>({en,zh});
 export const ARC_DELEGATED_WORK=[
  {id:'morning-brief',title:copy('Your daily work brief','每日工作简报'),
@@ -102,6 +104,11 @@ export const ARC_USE_CASES:Record<UseCaseSlug,ArcCase>={
   prompt:copy('Help diagnose a connected computer I am authorized to manage. Confirm the device and issue, inspect relevant logs and processes within current access, explain the cause with evidence and propose a bounded repair. Ask before restarting, editing configuration or changing files, and verify the outcome after any approved repair.','帮我诊断有权管理的已连接电脑。确认设备与问题，在当前权限内检查相关日志和进程，用证据解释原因并提出有界修复建议。重启、改配置或修改文件前先确认；获批修复后核对实际结果。'),
   requires:copy('An authorized paired computer and the read tools needed for diagnosis.','已获管理授权并配对的电脑，以及诊断所需读取工具。'),
   boundary:copy('Diagnosis does not grant repair authority. Tool and path restrictions still apply, and revoking access does not undo earlier changes.','诊断不增加修复权限，工具和路径边界继续适用；撤销访问不会撤销已发生修改。')},
+ 'job-applications':{kind:'direct',connectOnly:true,
+  intro:copy('Browser Runner is available through Connect: your own AI drives the task browser on your computer. Arc will reuse the same runner later.','Browser Runner 目前通过 Connect 使用：由你自己的 AI 驱动你电脑上的任务浏览器。Arc 之后会复用同一个 Runner。'),
+  prompt:copy('Arc does not drive Browser Runner yet. Use this workflow from ChatGPT, Claude, Cursor or another MCP client connected through Remote Arc Connect.','Arc 暂不支持驱动 Browser Runner。请在通过 Remote Arc Connect 连接的 ChatGPT、Claude、Cursor 或其他 MCP 客户端中使用此场景。'),
+  requires:copy('Remote Arc Connect in your AI client and Browser Runner enabled for the computer in Dashboard.','在 AI 客户端中接入 Remote Arc Connect，并在 Dashboard 为该电脑开启 Browser Runner。'),
+  boundary:copy('Browser tools are not part of the current Arc action set.','浏览器工具目前不属于 Arc 的动作集合。')},
 };
 
 export function arcChatHref(prompt:string,source:string){

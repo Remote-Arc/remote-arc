@@ -51,3 +51,5 @@
 .revisedUseCases .technicalArticle>section.caseArcRequirements{box-sizing:border-box;max-width:100%;padding:24px;border:1px solid var(--line);overflow-wrap:anywhere}
 .revisedUseCases .technicalArticle>section.caseArcRequirements h2{margin-top:0}
 @media(max-width:620px){.revisedUseCases .technicalArticle>section.caseArcRequirements{padding:20px}}
+.connectCapabilities{margin-top:36px}.connectCapabilities .arcDelegatedCard p{margin-bottom:20px}.caseConnectOnly{margin-top:18px;padding:14px 18px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:15px;line-height:1.7;color:var(--muted)}.caseConnectOnly a{color:var(--text);white-space:nowrap}
+.useCaseEntry a+a{margin-left:18px}

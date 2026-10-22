@@ -76,6 +76,7 @@ const blogArticles: Record<string, ResourceSeo> = {
  }
 };
 const useCases: Record<string, Brief> = {
+ "job-applications": ["用自己的 AI 在雇主官网准备职位申请", "Browser Runner（Beta）让 ChatGPT、Claude 等 MCP 客户端在你电脑上的任务浏览器里填写雇主的申请表；登录、CAPTCHA 和最终提交由你完成。", "任务浏览器只访问你指定的网站，使用独立的浏览器资料；AI 读取页面、填写字段、从可信位置上传文件，经你确认后只提交一次，并以页面上的确认信息为证。", "Beta 阶段。不替你登录、不解 CAPTCHA、不填写支付信息，也不用于批量海投；有些网站不允许自动提交。结果未知的提交不会自动重试。Arc 暂不支持驱动 Browser Runner。"],
  "remote-development": ["在自己电脑上修复代码项目", "通过 Remote MCP 让 AI 检查已有仓库、编辑代码并运行有针对性的测试。", "使用现有工作区和工具链，在受控权限下复现问题、修改并验证。", "确认目标电脑和仓库范围，先读取实现与测试，再审阅修改 diff 并运行相关检查。"],
  "file-organization": ["按审查过的计划整理文件", "先分析指定目录、生成清晰的移动计划，经过确认后再使用已授权的本机操作。", "从只读检查开始，不允许未经确认的覆盖或删除。", "列出目标目录、重名冲突与移动清单，再检查前后文件状态；Shell 移动不在文件工具 Undo 范围内。"],
  "disk-space-cleanup": ["安全查找 Windows 或 Mac 磁盘占用", "检查大目录、缓存和重复构建产物，先预览可回收空间，确认具体路径后再清理。", "提供高风险和可清理项的清单，避免误删个人及系统文件。", "未经逐项批准不要删除 Windows 系统目录、用户资料、Time Machine 快照、备份或未知程序数据。"],
@@ -101,10 +102,10 @@ export const chineseResourceSeo: Record<string, ResourceSeo> = {
   sections: [{heading:"工程与产品实践",text:"阅读真实的基准测试、OAuth 和设备身份设计、云端 Worker 与本地执行面的分工，以及为什么 AI 需要明确、可撤销的电脑访问权限。"}]
  },
  "/use-cases": {
-  title: "Remote Arc 使用场景 — 委托 Arc 或使用 Connect",
-  description: "将每日简报、项目跟进和交付核验交给 Arc。15 个具体场景均提供 Arc 与 Connect 路径，列明依赖、权限和核验要求。",
+  title: "Remote Arc 使用场景 — 用 Connect 把你的 AI 连到电脑、浏览器和应用",
+  description: "通过 Remote Arc Connect，让 ChatGPT、Claude、Cursor 或 Codex 在你自己的电脑上工作、用 Browser Runner（Beta）完成网页表单、使用你的应用。16 个具体场景，列明依赖、权限和核验要求；大多数也可交给 Arc。",
   h1: "Remote Arc 使用场景",
-  intro: "将职责交给 Arc，保留上下文、按计划重新判断并核验结果；也可以让现有 AI 通过 Connect 使用同一执行层。15 个具体场景均保留两种入口，Arc 将工作和后续跟进保存在一起。",
+  intro: "把你已经在用的 AI（ChatGPT、Claude、Cursor 或 Codex）通过 Connect 连接到你自己的电脑、任务浏览器和应用；也可以把职责交给 Arc，保留上下文、按计划重新判断并核验结果。16 个具体场景都可通过 Connect 使用，除 Browser Runner 场景外也都可交给 Arc。",
   sections: [
    ...ARC_DELEGATED_WORK.map(item=>({heading:item.title.zh,text:item.detail.zh+' Arc 保留：'+item.retains.zh+' Arc 核验：'+item.checks.zh})),
    {heading:"即时工作",text:"让兼容 AI 客户端读取指定设备上的项目、检查进程，并按批准的工具权限编辑文件或执行命令。"},
@@ -139,6 +140,21 @@ export const chineseResourceSeo: Record<string, ResourceSeo> = {
 };
 for (const [slug, [title, description, intro, boundary]] of Object.entries(useCases)) {
  const arc=ARC_USE_CASES[slug as UseCaseSlug];
+ if (arc.connectOnly) {
+  // Arc cannot drive this capability yet: publish only the Connect path.
+  chineseResourceSeo["/use-cases/" + slug] = {
+   title: title + " — Remote Arc 使用场景",
+   description,
+   h1: title,
+   intro: description,
+   sections: [
+    {heading:"使用 Connect",text:intro},
+    {heading:"先验证结果",text:"提交前核对每个答案和上传的文件；提交后以页面上的确认文字或申请编号为准，而不只是相信成功提示。"},
+    {heading:"需要知道的限制",text:boundary}
+   ]
+  };
+  continue;
+ }
  chineseResourceSeo["/use-cases/" + slug] = {
   title: title + " — Remote Arc 使用场景",
   description:arc.intro.zh+' 同时保留现有 AI 客户端通过 Connect 执行的路径。',

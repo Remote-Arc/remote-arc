@@ -102,7 +102,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       # Read production D1 migration history BEFORE any mutation. If nothing
-      # is pending, neither backup confirmation nor D1 apply is needed.
+      # is pending, neither backup/export nor D1 apply is needed.
       # Unknown history, permission errors and JSON parsing errors fail closed.
       - name: "D1: Create encrypted, restore-tested backup if needed"
         id: d1_backup

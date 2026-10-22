@@ -15,7 +15,7 @@ Receiving push alerts on iPhone depends on your GitHub Mobile notification setti
 ## Manually launch from phone
 
 1. In mobile Safari/Chrome, open <https://github.com/Remote-Arc/remote-arc/actions/workflows/deploy-cloudflare.yml>. GitHub Mobile app may not show the workflow dispatch control; use a browser and request desktop site if necessary.
-2. Select **Run workflow** and branch `master`. Leave `backup_confirmation` empty for a release without pending production D1 migrations. For pending migrations, the workflow creates, restores, encrypts and verifies a recoverable backup and retains its encrypted artifact before attesting BACKUP_VERIFIED automatically. The backup key must already be provisioned; no plaintext data is uploaded. See phase1-production-release.md.
+2. Select **Run workflow** and branch `master`. For an ordinary D1/Relay/Website release, leave `enable_stripe = false` and `enable_openai = false`. These switches optionally activate providers only after successful deployment checks; leaving them off does not disable existing providers. No `backup_confirmation` input is needed: pending D1 migrations trigger a verified encrypted backup automatically. The backup key must already be provisioned; no plaintext data is uploaded. See [Production release quick guide](production-release-guide.md).
 3. Open the newly created Actions run. Once it requests approval, select **Review deployments** → **production** → **Approve and deploy**.
 4. The protected production environment must approve before migration/deploy steps run. Verify the post-deploy health and runtime after the run finishes.
 

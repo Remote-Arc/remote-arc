@@ -1,24 +1,23 @@
-name: Deploy Cloudflare
+# Production release: exact master CI -> verified D1 backup -> pending migrations
+# -> Relay Worker and website assets -> smoke checks -> optional activation.
+# No npm/Go device-agent publishing here. Merging does NOT deploy production.
+name: "Production Release - D1 + Relay + Website"
+run-name: "Release master @ ${{ github.sha }} | Stripe: ${{ inputs.enable_stripe }} | OpenAI: ${{ inputs.enable_openai }}"
 
 # Production is an explicit promotion, never an automatic consequence of a merge.
 on:
   workflow_dispatch:
     inputs:
       enable_stripe:
-        description: "Provision verified NZ live Stripe credentials and enable paid checkout after production smoke"
+        description: "OPTIONAL: Activate LIVE Stripe after deploy. OFF skips activation, never disables existing payments."
         required: false
         default: false
         type: boolean
       enable_openai:
-        description: "Activate public Auto trial (Luna), Plus/Pro manual models and D1 funding limits"
+        description: "OPTIONAL: Activate hosted OpenAI models/trial after deploy. OFF keeps existing model settings unchanged."
         required: false
         default: false
         type: boolean
-      backup_confirmation:
-        description: "Optional external backup attestation; pending migrations also require the automatically verified encrypted backup"
-        required: false
-        default: ""
-        type: string
 
 permissions:
   contents: read
@@ -31,6 +30,7 @@ concurrency:
 
 jobs:
   deploy:
+    name: "Production: CI -> D1 -> Relay + Web -> smoke test"
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && github.actor == 'yaohuangguan'
     runs-on: ubuntu-latest
     environment: production
@@ -41,7 +41,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Verify latest master and wait for successful CI for exact SHA
+      - name: "Gate: Verify latest master SHA and successful CI"
         timeout-minutes: 20
         env:
           GH_TOKEN: ${{ github.token }}
@@ -61,7 +61,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify Cloudflare production account access
+      - name: "Gate: Verify Cloudflare production account"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
@@ -79,17 +79,39 @@ jobs:
             console.log("Verified Remote Arc production Cloudflare account:", payload.result.id);
           '
 
+      - name: "Explain this release (scope and optional switches)"
+        env:
+          ENABLE_STRIPE: ${{ inputs.enable_stripe }}
+          ENABLE_OPENAI: ${{ inputs.enable_openai }}
+        run: |
+          {
+            echo "## Remote Arc production release"
+            echo ""
+            echo "### Always included"
+            echo "1. Exact-master CI and Cloudflare account checks"
+            echo "2. D1 remote-link-auth: check migration ledger, verified encrypted backup if pending, apply and verify migrations"
+            echo "3. Deploy Relay Worker with website + Agent/Admin Dashboard static assets"
+            echo "4. Production smoke checks"
+            echo ""
+            echo "### Optional provider activation after successful smoke"
+            echo "- Stripe live activation: $ENABLE_STRIPE (false = skip only; does not deactivate existing payments)"
+            echo "- Hosted OpenAI activation: $ENABLE_OPENAI (false = skip only; does not deactivate existing models)"
+            echo ""
+            echo "D1 backup is mandatory and automatic when migrations are pending. No manual confirmation."
+            echo "Not included: remotelink npm package or local Windows/Mac/Linux Agents."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # Read production D1 migration history BEFORE any mutation. If nothing
       # is pending, neither backup confirmation nor D1 apply is needed.
       # Unknown history, permission errors and JSON parsing errors fail closed.
-      - name: Prepare verified encrypted production D1 backup
+      - name: "D1: Create encrypted, restore-tested backup if needed"
         id: d1_backup
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
           D1_BACKUP_KEY: ${{ secrets.D1_BACKUP_KEY }}
         run: node scripts/d1-production-backup.mjs --out "$RUNNER_TEMP/remote-arc-d1-backup"
 
-      - name: Retain encrypted recovery artifact
+      - name: "D1: Retain verified encrypted backup (7 days)"
         if: steps.d1_backup.outputs.backup_verified == 'true'
         uses: actions/upload-artifact@v7
         with:
@@ -100,12 +122,11 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Check production D1 and conditionally require backup
+      - name: "D1: Check migration ledger and enforce backup gate"
         id: d1_preflight
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
-          BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -116,7 +137,7 @@ jobs:
           fi
           node scripts/d1-promotion-preflight.mjs
 
-      - name: Apply and verify production D1 migrations
+      - name: "D1: Apply pending remote-link-auth migrations"
         if: steps.d1_preflight.outputs.needs_migration == 'true'
         working-directory: apps/relay
         env:
@@ -131,7 +152,7 @@ jobs:
           pnpm exec wrangler d1 migrations apply remote-link-auth --remote
           pnpm exec wrangler d1 migrations list remote-link-auth --remote
 
-      - name: Verify all production migrations are applied
+      - name: "D1: Verify migration ledger is clean"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
@@ -143,14 +164,14 @@ jobs:
           cd apps/relay
           pnpm exec wrangler d1 migrations list remote-link-auth --remote
 
-      - name: Provision Apps vault without rotating existing keys
+      - name: "Secrets: Ensure Apps vault without rotating keys"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
           APP_TOKEN_KEY: ${{ secrets.APP_TOKEN_KEY }}
         run: node scripts/ensure-apps-vault.mjs
 
-      - name: Deploy Remote Arc to Cloudflare
+      - name: "Deploy: Relay Worker + Website + Agent/Admin dashboards"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           REMOTEARC_PRODUCTION_DEPLOY: github-actions
@@ -158,17 +179,17 @@ jobs:
           REMOTEARC_DEPLOY_REF: master
         run: pnpm deploy:relay
 
-      - name: Configure embedded Stripe public key
+      - name: "Assets: Configure Stripe public key (NOT live activation)"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
         run: node scripts/configure-stripe-public-key.mjs
 
-      - name: Verify deployed SHA and public Connect experience
+      - name: "Smoke: Verify deployed SHA, URLs, MCP and OAuth"
         timeout-minutes: 5
         run: node scripts/production-smoke.mjs --sha "$GITHUB_SHA"
 
-      - name: Activate OpenAI after successful production smoke
+      - name: "Optional: Activate hosted OpenAI models (explicit opt-in)"
         if: inputs.enable_openai
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -176,10 +197,33 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: pnpm --filter @remotearc/relay exec tsx ../../scripts/activate-openai.mjs
 
-      - name: Activate live Stripe after successful production smoke
+      - name: "Optional: Activate live Stripe payments (explicit opt-in)"
         if: inputs.enable_stripe
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         run: pnpm --filter @remotearc/relay exec tsx ../../scripts/activate-stripe.mjs
+
+      - name: "Summary: Record successful release and D1 outcome"
+        if: success()
+        env:
+          D1_MIGRATED: ${{ steps.d1_preflight.outputs.needs_migration }}
+          ENABLE_STRIPE: ${{ inputs.enable_stripe }}
+          ENABLE_OPENAI: ${{ inputs.enable_openai }}
+        run: |
+          {
+            echo ""
+            echo "## Release completed"
+            echo "- Commit: $GITHUB_SHA"
+            if [ "$D1_MIGRATED" = "true" ]; then
+              echo "- D1 remote-link-auth: pending migrations applied and verified"
+            else
+              echo "- D1 remote-link-auth: no pending migrations"
+            fi
+            echo "- Cloudflare: Relay + Website + Agent/Admin dashboards deployed"
+            echo "- Production smoke: passed"
+            echo "- Hosted OpenAI activation: $ENABLE_OPENAI (false = skipped, not deactivated)"
+            echo "- Live Stripe activation: $ENABLE_STRIPE (false = skipped, not deactivated)"
+            echo "- NPM/Go local Agents: not updated"
+          } >> "$GITHUB_STEP_SUMMARY"

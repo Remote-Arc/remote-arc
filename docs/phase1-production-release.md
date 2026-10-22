@@ -13,10 +13,10 @@ Public /integrations and /zh/integrations handle category/provider links on the 
 ## Production sequence
 
 1. Merge the checked combined candidate and wait for successful **push CI on the exact current master SHA**.
-2. Dispatch Deploy Cloudflare on master. Keep the production environment's owner review; this workflow never deploys on merge alone.
+2. Dispatch **Production Release - D1 + Relay + Website** on `master`. For ordinary releases, leave both Stripe/OpenAI activation switches off. Keep the production environment's owner review; this workflow never deploys on merge alone.
 3. After approval, read the production D1 migration ledger. Unknown names, missing access and malformed history stop the release.
 4. If migrations are pending, export production D1, restore the SQL into isolated SQLite and verify integrity and the exact migration ledger. Encrypt it with AES-256-GCM, decrypt and restore it again, then retain only the encrypted artifact and manifest in GitHub Actions for seven days. The plaintext files are removed from the runner; plaintext D1 is never uploaded to this public repository.
-5. Only the successfully verified and retained backup can supply the automatic BACKUP_VERIFIED attestation. An empty external backup confirmation is valid for this path; it is not an instruction to invent an attestation.
+5. Only the successfully verified and retained backup can supply the automatic BACKUP_VERIFIED attestation. There is no manual backup confirmation input; a failed backup blocks migration.
 6. Apply pending migrations, then read history again and require an empty pending set.
 7. Provision APP_TOKEN_KEY only if the Worker has no existing vault secret. Existing keys are never rotated automatically. Deploy the exact checked SHA with ENABLE_APPS=1.
 8. Verify marketing Home/Arc, Docs subpages, integrations navigation, login, private Apps ownership, MCP/device discovery, existing Tasks and Admin. The public status must distinguish configured providers from those awaiting setup.

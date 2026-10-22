@@ -7,6 +7,10 @@ The separate [actual Git/worktree inspection](local-worktree-inspection.md)
 command is available in source builds after this RC. Session-reported `cwd`
 is not proof of the repository, branch or current file state.
 
+After selecting a record, the source-build [session binding command](local-session-binding.md)
+checks its ID, header version, file identity and current Git association without
+returning message text. Discovery itself still returns only broad candidates.
+
 ## Try it
 
 From the repository:

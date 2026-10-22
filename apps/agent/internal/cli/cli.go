@@ -253,6 +253,12 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 			if e := waitForPriorOwnerRelease(ctx, dir); e != nil {
 				return e
 			}
+		} else if running, _ := status["version"].(string); !o.Foreground && !o.Safe && !o.Developer && !o.NoBackground && olderRelease(running, version) {
+			// A plain launch (or --background) of a newer release replaces
+			// an older Go Agent instead of only following its log.
+			if e := handOffOlderGoAgent(ctx, dir, bg, log, running, version); e != nil {
+				return e
+			}
 		} else {
 			if o.NoBackground {
 				cfg, err := config.Load()

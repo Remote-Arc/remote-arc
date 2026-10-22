@@ -9,18 +9,40 @@ export class LegacyBackgroundAgentError extends Error {}
 
 function parseReleaseVersion(value: string | null | undefined) {
   if (!value) return null;
-  const match = value.trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
+  const match = value
+    .trim()
+    .replace(/^v/, "")
+    .match(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z.-]+)?$/);
   if (!match) return null;
-  return [Number(match[1]), Number(match[2]), Number(match[3])] as const;
+  return {
+    core: [Number(match[1]), Number(match[2]), Number(match[3])] as const,
+    pre: match[4] ? match[4].split(".") : [],
+  };
 }
 
-function isOlderRelease(current: string | null | undefined, target: string | null | undefined) {
+// Semantic-version precedence, including pre-releases:
+// 0.6.1 < 0.6.2-rc.3 < 0.6.2-rc.4 < 0.6.2. Unparseable versions are never older.
+export function isOlderRelease(current: string | null | undefined, target: string | null | undefined) {
   const a = parseReleaseVersion(current);
   const b = parseReleaseVersion(target);
   if (!a || !b) return false;
-  if (a[0] !== b[0]) return a[0] < b[0];
-  if (a[1] !== b[1]) return a[1] < b[1];
-  return a[2] < b[2];
+  for (let i = 0; i < 3; i++) {
+    const x = a.core[i] ?? 0;
+    const y = b.core[i] ?? 0;
+    if (x !== y) return x < y;
+  }
+  if (!a.pre.length || !b.pre.length) return a.pre.length > 0 && b.pre.length === 0;
+  for (let i = 0; i < Math.min(a.pre.length, b.pre.length); i++) {
+    const x = a.pre[i] ?? "";
+    const y = b.pre[i] ?? "";
+    if (x === y) continue;
+    const nx = /^\d+$/.test(x);
+    const ny = /^\d+$/.test(y);
+    if (nx && ny) return Number(x) < Number(y);
+    if (nx !== ny) return nx;
+    return x < y;
+  }
+  return a.pre.length < b.pre.length;
 }
 
 export function windowsSupervisorLaunchScript(node: string, bundle: string) {

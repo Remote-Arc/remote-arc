@@ -551,13 +551,13 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 			eff.Status = EffectUnverified
 			eff.URLAfter = safeURL(s.currentHref())
 		}
-		if out != nil {
-			eff.Label = clip(fmt.Sprint(out["label"]), 120)
+		if l, ok := out["label"].(string); ok {
+			eff.Label = clip(l, 120)
 		}
 	}
 	rc := Receipt{Tool: "browser_runner_act", Action: req.Action, URL: safeURL(s.currentHref()), Outcome: "ok"}
-	if out != nil {
-		rc.Label = clip(fmt.Sprint(out["label"]), 120)
+	if l, ok := out["label"].(string); ok {
+		rc.Label = clip(l, 120)
 	}
 	if err != nil {
 		rc.Outcome, rc.Detail = "error", clip(err.Error(), 200)

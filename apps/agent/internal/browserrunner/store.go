@@ -69,6 +69,21 @@ type Blocked struct {
 	Reason string `json:"reason"`
 }
 
+// Reentry records input that a browser restart wiped: the page was reopened,
+// so values the task entered before are gone even though their receipts
+// remain. Labels only; the values themselves are never stored.
+type Reentry struct {
+	URL    string         `json:"url"` // query/fragment removed
+	At     string         `json:"at"`
+	Fields []ReentryField `json:"fields"`
+}
+
+type ReentryField struct {
+	Label  string `json:"label"`
+	Action string `json:"action"`         // fill, select, check, uncheck or upload
+	File   string `json:"file,omitempty"` // base name, for uploads
+}
+
 type Checkpoint struct {
 	Version        int       `json:"version"`
 	SessionID      string    `json:"session_id"`
@@ -86,6 +101,7 @@ type Checkpoint struct {
 	Uploads        []Upload  `json:"uploads"`
 	Effects        []Effect  `json:"effects"`
 	Blocked        []Blocked `json:"blocked_navigations"`
+	Reentry        *Reentry  `json:"reentry_needed,omitempty"`
 	CreatedAt      string    `json:"created_at"`
 	UpdatedAt      string    `json:"updated_at"`
 }
@@ -173,6 +189,53 @@ func (c *Checkpoint) unresolved() *Effect {
 	return nil
 }
 
+// lostInput lists what the task entered on page (a safeURL) since it last
+// arrived there. Called when a restarted browser reopens that page, which
+// clears live form state.
+func (c *Checkpoint) lostInput(page string, now time.Time) *Reentry {
+	if page == "" {
+		return nil
+	}
+	var fields []ReentryField
+	seen := map[string]bool{}
+	since := "" // the last receipt from an earlier page; input on this page came after it
+	for i := len(c.Receipts) - 1; i >= 0; i-- {
+		r := c.Receipts[i]
+		if r.URL != "" && r.URL != page {
+			since = r.At
+			break
+		}
+		if r.Tool != "browser_runner_act" || r.Outcome != "ok" {
+			continue
+		}
+		switch r.Action {
+		case "fill", "select", "check", "uncheck":
+			if r.Label != "" && !seen[r.Action+"\x00"+r.Label] {
+				seen[r.Action+"\x00"+r.Label] = true
+				fields = append(fields, ReentryField{Label: r.Label, Action: r.Action})
+			}
+		}
+	}
+	// Receipts were walked newest first; report in the order they were entered.
+	for i, j := 0, len(fields)-1; i < j; i, j = i+1, j-1 {
+		fields[i], fields[j] = fields[j], fields[i]
+	}
+	// Upload receipts name the ref; the upload record keeps the field label.
+	for _, u := range c.Uploads {
+		if u.Status == "attached" && u.At > since && !seen["upload\x00"+u.Field] {
+			seen["upload\x00"+u.Field] = true
+			fields = append(fields, ReentryField{Label: u.Field, Action: "upload", File: u.File})
+		}
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	if len(fields) > 30 {
+		fields = fields[:30]
+	}
+	return &Reentry{URL: page, At: stamp(now), Fields: fields}
+}
+
 // recover marks writes interrupted by a crash or browser loss as unknown.
 func (c *Checkpoint) recover(now time.Time) bool {
 	changed := false
@@ -214,6 +277,9 @@ func (c *Checkpoint) Summary(live bool) map[string]any {
 	if c.NeedsUser != "" {
 		out["needs_user"] = c.NeedsUser
 	}
+	if c.Reentry != nil {
+		out["reentry_needed"] = c.Reentry
+	}
 	out["next_action"] = c.nextAction()
 	return out
 }
@@ -229,6 +295,9 @@ func (c *Checkpoint) nextAction() string {
 		return "Call browser_runner_start with the same task_id to reopen the browser at the last page, then take a new browser_runner_snapshot."
 	case StateClosed:
 		return "Session is closed."
+	}
+	if c.Reentry != nil {
+		return "The task browser was restarted and reopened " + c.Reentry.URL + ", which cleared what was entered there. Take browser_runner_snapshot; reentry_needed lists the fields to fill or upload again. Earlier receipts are history, not the current page."
 	}
 	return "Take browser_runner_snapshot and continue from the current page."
 }

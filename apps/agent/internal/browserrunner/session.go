@@ -257,6 +257,12 @@ func (s *session) ensureLive(ctx context.Context) error {
 		_ = s.conn.Call(ctx, "Page.bringToFront", nil, nil)
 	}
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
+		// Reopening loads the page fresh: whatever was typed, chosen or
+		// attached there before the restart is gone. Say so instead of
+		// letting receipts suggest the form is still filled.
+		if r := s.cp.lostInput(safeURL(s.cp.ResumeURL), s.m.now()); r != nil {
+			s.cp.Reentry = r
+		}
 		_, _ = s.navigate(ctx, s.cp.ResumeURL)
 	}
 	if s.cp.State == StatePaused || s.cp.State == StateClosed {
@@ -603,19 +609,40 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	blockers, _ := page["blockers"].([]any)
 	if len(blockers) > 0 {
 		kinds := []string{}
+		captcha := false
 		for _, b := range blockers {
 			if m, ok := b.(map[string]any); ok {
 				kinds = append(kinds, fmt.Sprint(m["kind"]))
+				captcha = captcha || m["kind"] == "captcha"
 			}
 		}
 		s.cp.State = StateNeedsUser
 		s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Sign-in, verification codes and CAPTCHAs are completed by the user in the Runner browser window"
 		if s.cp.Headless {
-			s.cp.NeedsUser += "; call browser_runner_start with headless=false to show it"
+			s.cp.NeedsUser += "; call browser_runner_start with headless=false to show it (that reopens the page, so values entered on it may have to be entered again)"
 		}
 		s.cp.NeedsUser += "."
+		if captcha {
+			s.cp.NeedsUser += " Remote Arc does not solve CAPTCHAs and never reads their responses. When the challenge has closed, the next snapshot continues the task."
+		}
 	} else if s.cp.State == StateNeedsUser {
 		s.cp.State, s.cp.NeedsUser = StateActive, ""
+	}
+	attention, _ := page["attention"].([]any)
+	// A hidden browser cannot show the user a challenge later without
+	// reopening the page, which clears the form. Say it before any typing.
+	if s.cp.Headless && len(blockers) == 0 {
+		if parts, _ := page["captcha"].([]any); len(parts) > 0 {
+			attention = append(attention, map[string]any{"kind": "captcha_headless", "detail": "This page carries a CAPTCHA and the task browser is hidden. If the user may have to solve it, call browser_runner_start with headless=false now, before entering anything: switching later reopens the page and clears what was entered."})
+		}
+	}
+	if len(attention) > 0 {
+		page["attention"] = attention
+	} else {
+		delete(page, "attention")
+	}
+	if r := s.reentryStatus(page); r != nil {
+		page["reentry_needed"] = r
 	}
 	page["snapshot_id"] = id
 	page["session_state"] = s.cp.State
@@ -630,6 +657,82 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	}
 	page["guidance"] = "Refs are valid only for this snapshot_id. After any navigation, take a new snapshot. Use effect=submit with an idempotency_key for any action that sends the form."
 	return page, nil
+}
+
+// reentryStatus compares input lost to a restart with what the page shows now.
+// It clears itself once the task has left the page or every field it can
+// find holds a value again, so it never outlives the problem.
+func (s *session) reentryStatus(page map[string]any) map[string]any {
+	r := s.cp.Reentry
+	if r == nil {
+		return nil
+	}
+	if safeURL(s.currentHref()) != r.URL {
+		s.cp.Reentry = nil
+		return nil
+	}
+	byName := map[string][]map[string]any{}
+	els, _ := page["elements"].([]any)
+	for _, raw := range els {
+		if m, ok := raw.(map[string]any); ok {
+			n := fmt.Sprint(m["name"])
+			byName[n] = append(byName[n], m)
+		}
+	}
+	found, empty := 0, []string{}
+	for _, f := range r.Fields {
+		ms := byName[f.Label]
+		if len(ms) == 0 {
+			continue
+		}
+		found++
+		for _, m := range ms {
+			if emptyNow(m, f.Action) {
+				label := f.Label
+				if f.File != "" {
+					label += " (" + f.File + ")"
+				}
+				empty = append(empty, label)
+				break
+			}
+		}
+	}
+	if found > 0 && len(empty) == 0 {
+		s.cp.Reentry = nil
+		return nil
+	}
+	if found == 0 {
+		// Nothing recognizable on screen; list everything rather than guess.
+		for _, f := range r.Fields {
+			label := f.Label
+			if f.File != "" {
+				label += " (" + f.File + ")"
+			}
+			empty = append(empty, label)
+		}
+	}
+	return map[string]any{
+		"fields": empty,
+		"detail": "The task browser was restarted and reopened this page, so input from before the restart is gone. Fill or upload these again, then check the values in a new snapshot. Earlier receipts are history, not the current page.",
+	}
+}
+
+// emptyNow reports whether a snapshot element lost what the action had set.
+func emptyNow(el map[string]any, action string) bool {
+	switch action {
+	case "upload":
+		n, _ := el["files"].(float64)
+		return n == 0
+	case "check":
+		c, ok := el["checked"].(bool)
+		return ok && !c
+	case "uncheck":
+		c, ok := el["checked"].(bool)
+		return ok && c
+	default:
+		v, ok := el["value"].(string)
+		return ok && v == ""
+	}
 }
 
 func (s *session) checkSnapshot(id string) error {
@@ -798,6 +901,9 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		var sel map[string]any
 		_ = json.Unmarshal(r.Result.Value, &sel)
 		result["selected"] = sel["selected"]
+		if l, ok := sel["label"].(string); ok {
+			result["label"] = l
+		}
 	case "check", "uncheck":
 		dispatched = true
 		r, e := s.helperIn(ctx, frameID, "check", map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "checked": a.Action == "check"}, true)
@@ -807,6 +913,9 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		var c map[string]any
 		_ = json.Unmarshal(r.Result.Value, &c)
 		result["checked"] = c["checked"]
+		if l, ok := c["label"].(string); ok {
+			result["label"] = l
+		}
 	case "press":
 		k, ok := keys[a.Key]
 		if !ok {

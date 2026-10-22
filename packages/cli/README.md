@@ -91,6 +91,13 @@ Clients that still show the older shared-tab names (`browser_read_page`, `browse
 
 ## Commands
 
+In **0.6.2-rc.7**, Browser Runner hands a CAPTCHA to you only while its challenge is
+actually open, and the task continues by itself once it closes; a visible CAPTCHA
+checkbox is reported as a note to complete before submitting. Remote Arc never fills
+or reads CAPTCHA responses. After a browser restart reopens a page, the snapshot lists
+the fields and uploads to enter again. Select `npx remotelink@0.6.2-rc.7` or the
+matching native RC.
+
 In **0.6.2-rc.6**, Windows npm-installed Codex/Claude clients are discovered through
 their official native packages, including global nested dependencies. Normal
 startup attempts client setup in independent background tasks. Existing MCP

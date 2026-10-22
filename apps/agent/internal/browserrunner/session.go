@@ -202,7 +202,7 @@ func (s *session) ensureLive(ctx context.Context) error {
 		return e
 	}
 	if s.cp.recover(s.m.now()) {
-		s.cp.receipt(s.m.now(), Receipt{Tool: "browser_start", Outcome: "recovered", Detail: "an in-flight submit was interrupted; its effect is now unknown"})
+		s.cp.receipt(s.m.now(), Receipt{Tool: "browser_runner_start", Outcome: "recovered", Detail: "an in-flight submit was interrupted; its effect is now unknown"})
 	}
 	if !s.cp.Headless {
 		_ = s.conn.Call(ctx, "Page.bringToFront", nil, nil)
@@ -340,7 +340,7 @@ func (s *session) world(ctx context.Context) (int, error) {
 	return r.ID, nil
 }
 
-var errStale = errors.New("STALE_REF: the page navigated or reloaded. Take a new browser_snapshot.")
+var errStale = errors.New("STALE_REF: the page navigated or reloaded. Take a new browser_runner_snapshot.")
 
 // helper runs one page.js operation in the isolated world.
 func (s *session) helper(ctx context.Context, op string, args map[string]any, byValue bool) (*evalResult, error) {
@@ -530,7 +530,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 		s.cp.State = StateNeedsUser
 		s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Sign-in, verification codes and CAPTCHAs are completed by the user in the Runner browser window"
 		if s.cp.Headless {
-			s.cp.NeedsUser += "; call browser_start with headless=false to show it"
+			s.cp.NeedsUser += "; call browser_runner_start with headless=false to show it"
 		}
 		s.cp.NeedsUser += "."
 	} else if s.cp.State == StateNeedsUser {
@@ -556,7 +556,7 @@ func (s *session) checkSnapshot(id string) error {
 	epoch := s.epoch
 	s.ev.Unlock()
 	if id == "" || id != s.snapshotID || epoch != s.snapshotEpoch {
-		return errors.New("STALE_REF: snapshot " + id + " is not the latest snapshot of the current page. Take a new browser_snapshot.")
+		return errors.New("STALE_REF: snapshot " + id + " is not the latest snapshot of the current page. Take a new browser_runner_snapshot.")
 	}
 	return nil
 }
@@ -733,7 +733,7 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		}
 		result["key"] = a.Key
 	default:
-		return nil, false, errors.New("action must be click, fill, select, check, uncheck or press.")
+		return nil, false, errors.New("action must be click, fill, select, check, uncheck, press, navigate, upload or wait.")
 	}
 	return result, dispatched, nil
 }

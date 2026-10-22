@@ -79,7 +79,7 @@ func TestRecoverMarksInFlightUnknown(t *testing.T) {
 		t.Fatalf("round trip: %v %+v", e, back)
 	}
 	for i := 0; i < 130; i++ {
-		c.receipt(now, Receipt{Tool: "browser_act", Outcome: "ok"})
+		c.receipt(now, Receipt{Tool: "browser_runner_act", Outcome: "ok"})
 	}
 	_ = c.save(now)
 	if len(c.Receipts) != 100 || c.Receipts[99].Seq != 130 {
@@ -97,18 +97,18 @@ func TestCallValidation(t *testing.T) {
 		args map[string]any
 		want string
 	}{
-		{"browser_start", map[string]any{"task_id": "../x", "allowed_origins": []any{"a.com"}}, "task_id"},
-		{"browser_start", map[string]any{"task_id": "ok"}, "allowed_origins"},
-		{"browser_start", map[string]any{"task_id": "ok", "allowed_origins": []any{"a.com"}, "start_url": "https://b.com/"}, "OUT_OF_SCOPE"},
-		{"browser_snapshot", map[string]any{"session_id": "nope"}, "No Browser Runner session"},
-		{"browser_act", map[string]any{}, "session_id"},
+		{"browser_runner_start", map[string]any{"task_id": "../x", "allowed_origins": []any{"a.com"}}, "task_id"},
+		{"browser_runner_start", map[string]any{"task_id": "ok"}, "allowed_origins"},
+		{"browser_runner_start", map[string]any{"task_id": "ok", "allowed_origins": []any{"a.com"}, "start_url": "https://b.com/"}, "OUT_OF_SCOPE"},
+		{"browser_runner_snapshot", map[string]any{"session_id": "nope"}, "No Browser Runner session"},
+		{"browser_runner_act", map[string]any{}, "session_id"},
 	} {
 		_, e := m.Call(t.Context(), tc.tool, tc.args, policyNone)
 		if e == nil || !strings.Contains(e.Error(), tc.want) {
 			t.Errorf("%s %v: want %q, got %v", tc.tool, tc.args, tc.want, e)
 		}
 	}
-	if !IsTool("browser_resolve_effect") || IsTool("browser_read_page") {
+	if !IsTool("browser_runner_confirm") || IsTool("browser_read_page") {
 		t.Error("tool set is wrong")
 	}
 }

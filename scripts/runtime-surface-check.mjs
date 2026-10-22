@@ -1,6 +1,8 @@
 import fs from "node:fs";
 
-const relaySource = fs.readFileSync(new URL("../apps/relay/src/mcp.ts", import.meta.url), "utf8");
+const relaySource = ["mcp.ts", "shared-tab-mcp.ts"]
+  .map((file) => fs.readFileSync(new URL("../apps/relay/src/" + file, import.meta.url), "utf8"))
+  .join("\n");
 const submission = JSON.parse(fs.readFileSync(new URL("../chatgpt-app-submission.json", import.meta.url), "utf8"));
 const plugin = JSON.parse(fs.readFileSync(new URL("../plugin.json", import.meta.url), "utf8"));
 
@@ -10,9 +12,7 @@ const registered = new Set(
 
 const expected = [
   "list_devices", "device_tools",
-  "browser_list_tabs", "browser_get_current_tab", "browser_read_page",
-  "browser_get_selected_text", "browser_extract_links", "browser_extract_table",
-  "browser_click", "browser_fill",
+  "shared_tab_list", "shared_tab_read", "shared_tab_click", "shared_tab_fill",
   "list_directory", "read_file", "read_binary_file", "create_file_resource",
   "revoke_file_resource", "get_file_info", "list_processes", "start_process",
   "process_status", "process_output", "stop_process", "write_file", "edit_block",
@@ -33,7 +33,7 @@ if (missingRelay.length || missingSubmission.length || extraSubmission.length) {
   process.exit(1);
 }
 
-if (expected.length !== 28) {
+if (expected.length !== 24) {
   console.error(`Expected runtime surface count changed: ${expected.length}`);
   process.exit(1);
 }

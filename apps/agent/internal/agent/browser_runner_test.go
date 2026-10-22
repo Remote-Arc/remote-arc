@@ -30,7 +30,7 @@ func TestBrowserRunnerFollowsDeviceModeAndPause(t *testing.T) {
 			if tc.mode == "developer" {
 				a.Core.Mode = "developer"
 			}
-			_, e := a.dispatch(context.Background(), protocol.Call{Tool: "browser_snapshot", Arguments: map[string]any{"session_id": "missing"}}, nil)
+			_, e := a.dispatch(context.Background(), protocol.Call{Tool: "browser_runner_snapshot", Arguments: map[string]any{"session_id": "missing"}}, nil)
 			if e == nil || !strings.Contains(e.Error(), tc.want) {
 				t.Fatalf("want %q, got %v", tc.want, e)
 			}
@@ -52,7 +52,7 @@ func TestBrowserRunnerFollowsDeviceModeAndPause(t *testing.T) {
 	if wake.Browser != nil {
 		t.Fatal("wake-only Agent must not own a browser")
 	}
-	if _, e := wake.dispatch(context.Background(), protocol.Call{Tool: "browser_start", Arguments: map[string]any{"task_id": "x"}}, nil); e == nil || !strings.Contains(e.Error(), "paused") {
+	if _, e := wake.dispatch(context.Background(), protocol.Call{Tool: "browser_runner_start", Arguments: map[string]any{"task_id": "x"}}, nil); e == nil || !strings.Contains(e.Error(), "paused") {
 		t.Fatalf("paused Agent ran a browser tool: %v", e)
 	}
 }

@@ -46,8 +46,8 @@ let socket: WebSocket | undefined;
 let nextID = 0;
 let hello: any;
 const goBrowserRunnerTools = [
-  "browser_start", "browser_navigate", "browser_snapshot", "browser_act", "browser_upload",
-  "browser_wait", "browser_session_status", "browser_resolve_effect", "browser_close",
+  "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
+  "browser_runner_status", "browser_runner_confirm", "browser_runner_close",
 ];
 let stderr = "";
 const server = http.createServer((_req, res) => {

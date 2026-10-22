@@ -69,9 +69,9 @@
   const state = () => window.__remotearcRunner;
   const lookup = () => {
     const s = state();
-    if (!s || s.sid !== a.snapshot_id) throw new Error("STALE_REF: the page changed since snapshot " + a.snapshot_id + ". Take a new browser_snapshot.");
+    if (!s || s.sid !== a.snapshot_id) throw new Error("STALE_REF: the page changed since snapshot " + a.snapshot_id + ". Take a new browser_runner_snapshot.");
     const el = s.els[a.ref];
-    if (!el || !el.isConnected) throw new Error("STALE_REF: " + a.ref + " is no longer on the page. Take a new browser_snapshot.");
+    if (!el || !el.isConnected) throw new Error("STALE_REF: " + a.ref + " is no longer on the page. Take a new browser_runner_snapshot.");
     return el;
   };
   const describe = (el) => clip(labelText(el), 120);
@@ -218,7 +218,7 @@
     const el = lookup();
     if (sensitive(el)) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords, one-time codes or payment details. Ask the user to enter this field themselves.");
     const type = String(el.type || "").toLowerCase();
-    if (["checkbox", "radio", "file", "submit", "button", "image", "reset"].includes(type) || el.tagName === "SELECT") throw new Error("WRONG_ACTION: use " + (el.tagName === "SELECT" ? "select" : type === "file" ? "browser_upload" : "click/check") + " for " + describe(el) + ".");
+    if (["checkbox", "radio", "file", "submit", "button", "image", "reset"].includes(type) || el.tagName === "SELECT") throw new Error("WRONG_ACTION: use " + (el.tagName === "SELECT" ? "select" : type === "file" ? "action=upload" : "click/check") + " for " + describe(el) + ".");
     el.focus();
     if (el.isContentEditable) {
       const range = document.createRange();

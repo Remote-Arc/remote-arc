@@ -174,7 +174,7 @@ func (c *Checkpoint) recover(now time.Time) bool {
 
 func stamp(t time.Time) string { return t.UTC().Format("2006-01-02T15:04:05.000Z") }
 
-// Summary is what browser_session_status returns: everything a later turn (or
+// Summary is what browser_runner_status returns: everything a later turn (or
 // another agent) needs to continue, and nothing that is device-local only.
 func (c *Checkpoint) Summary(live bool) map[string]any {
 	receipts := c.Receipts
@@ -206,15 +206,15 @@ func (c *Checkpoint) Summary(live bool) map[string]any {
 
 func (c *Checkpoint) nextAction() string {
 	if e := c.unresolved(); e != nil {
-		return "Verify submit " + e.Key + " (" + e.Label + ") before any new submit: take browser_snapshot, and if the page proves the result call browser_resolve_effect with confirmed and the exact evidence text. Do not submit again."
+		return "Verify submit " + e.Key + " (" + e.Label + ") before any new submit: take browser_runner_snapshot, and if the page proves the result call browser_runner_confirm with confirmed and the exact evidence text. Do not submit again."
 	}
 	switch c.State {
 	case StateNeedsUser:
-		return "Wait for the user: " + c.NeedsUser + " Then take a new browser_snapshot."
+		return "Wait for the user: " + c.NeedsUser + " Then take a new browser_runner_snapshot."
 	case StatePaused:
-		return "Call browser_start with the same task_id to reopen the browser at the last page, then take a new browser_snapshot."
+		return "Call browser_runner_start with the same task_id to reopen the browser at the last page, then take a new browser_runner_snapshot."
 	case StateClosed:
 		return "Session is closed."
 	}
-	return "Take browser_snapshot and continue from the current page."
+	return "Take browser_runner_snapshot and continue from the current page."
 }

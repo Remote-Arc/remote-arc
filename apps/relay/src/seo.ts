@@ -552,7 +552,7 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
   "browser-research": {
     prompt: "Explicitly share a Chrome tab, then ask the AI to read the page, extract selected text, links or a table without navigating or submitting anything unless interaction was separately enabled.",
     flow: "Install the browser companion, share the intended tab, select its tab identifier, request only the needed context and revoke sharing when the work is finished.",
-    tools: "Read capabilities include browser_read_page, selected text, link extraction and table extraction. Click and fill require a separate per-tab opt-in and fresh snapshot references.",
+    tools: "shared_tab_read returns the page, selected text, links or a table from a tab the user shared. shared_tab_click and shared_tab_fill require a separate per-tab opt-in and fresh snapshot references.",
     proof: "The returned facts should be tied to the explicitly shared page, such as extracted rows, visible links or selected text.",
     boundary: "Tabs begin read-only. Recognized password, one-time-code, payment-card and file-upload fields are blocked from the ordinary fill path, and browser tools are not the same thing as unrestricted profile-wide browser control."
   },

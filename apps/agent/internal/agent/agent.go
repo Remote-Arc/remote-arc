@@ -223,8 +223,8 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 			return nil, e
 		}
 		return awake.Set(id, seconds)
-	case "browser_start", "browser_navigate", "browser_snapshot", "browser_act", "browser_upload",
-		"browser_wait", "browser_session_status", "browser_resolve_effect", "browser_close":
+	case "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
+		"browser_runner_status", "browser_runner_confirm", "browser_runner_close":
 		if a.Browser == nil || a.Core == nil || a.Core.Mode == "safe" || a.Core.Mode == "developer" {
 			return nil, errors.New("Browser Runner requires terminal mode on this device.")
 		}

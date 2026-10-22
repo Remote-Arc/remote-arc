@@ -10,7 +10,7 @@ import (
 )
 
 // originRule is one delegated site. Rules come only from an explicit
-// browser_start call; page content, redirects and popups never widen them.
+// browser_runner_start call; page content, redirects and popups never widen them.
 type originRule struct {
 	Scheme   string // https, or http for loopback test servers only
 	Host     string // lower-case host without port

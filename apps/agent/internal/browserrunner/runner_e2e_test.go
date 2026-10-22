@@ -111,7 +111,7 @@ func demoMode() (bool, time.Duration) {
 func (h *harness) call(tool string, args map[string]any) map[string]any {
 	h.t.Helper()
 	if headed, pause := demoMode(); headed {
-		if tool == "browser_start" {
+		if tool == "browser_runner_start" {
 			args = merge(args, map[string]any{"headless": false})
 		}
 		defer time.Sleep(pause)
@@ -184,52 +184,52 @@ func TestE2EApplicationSubmitsOnceWithEvidence(t *testing.T) {
 	docs := h.policy.WorkspaceRoots[0]
 	resume := writePDF(t, docs, "Sam-Resume.pdf")
 
-	h.call("browser_start", map[string]any{"task_id": "acme-se", "allowed_origins": []any{base}, "start_url": base + "/"})
-	snap := h.call("browser_snapshot", map[string]any{"session_id": "acme-se"})
+	h.call("browser_runner_start", map[string]any{"task_id": "acme-se", "allowed_origins": []any{base}, "start_url": base + "/"})
+	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "acme-se"})
 	if !strings.Contains(fmt.Sprint(snap["text"]), "Software Engineer") {
 		t.Fatalf("job page text missing: %v", snap["text"])
 	}
 
 	// A hostile page cannot widen scope: the redirect to another origin is blocked.
-	leave := h.call("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": snap["snapshot_id"], "ref": ref(t, snap, "link", "partner"), "action": "click"})
+	leave := h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": snap["snapshot_id"], "ref": ref(t, snap, "link", "partner"), "action": "click"})
 	if leave["blocked_navigations"] == nil {
 		t.Fatalf("redirect outside scope was not reported: %v", leave)
 	}
-	h.fail("browser_navigate", map[string]any{"session_id": "acme-se", "url": outside + "/x"}, "OUT_OF_SCOPE")
+	h.fail("browser_runner_act", map[string]any{"session_id": "acme-se", "action": "navigate", "url": outside + "/x"}, "OUT_OF_SCOPE")
 
-	snap = h.call("browser_snapshot", map[string]any{"session_id": "acme-se"})
+	snap = h.call("browser_runner_snapshot", map[string]any{"session_id": "acme-se"})
 	old := snap["snapshot_id"]
-	h.call("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": old, "ref": ref(t, snap, "link", "apply now"), "action": "click", "effect": "navigation"})
+	h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": old, "ref": ref(t, snap, "link", "apply now"), "action": "click", "effect": "navigation"})
 	// Refs from the previous page are now stale.
-	h.fail("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": old, "ref": "e1", "action": "click"}, "STALE_REF")
+	h.fail("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": old, "ref": "e1", "action": "click"}, "STALE_REF")
 
-	snap = h.call("browser_snapshot", map[string]any{"session_id": "acme-se"})
+	snap = h.call("browser_runner_snapshot", map[string]any{"session_id": "acme-se"})
 	sid := snap["snapshot_id"]
 	for name, v := range map[string]string{"full name": "Sam Example", "email": "sam@example.test", "phone": "+64 21 000 0000"} {
-		h.call("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "textbox", name), "action": "fill", "value": v})
+		h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "textbox", name), "action": "fill", "value": v})
 	}
-	sel := h.call("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "combobox", "country"), "action": "select", "value": "New Zealand"})
+	sel := h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "combobox", "country"), "action": "select", "value": "New Zealand"})
 	if sel["selected"] != "New Zealand" {
 		t.Fatalf("select: %v", sel)
 	}
-	h.call("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "button", "next"), "action": "click", "effect": "navigation"})
+	h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "button", "next"), "action": "click", "effect": "navigation"})
 
-	snap = h.call("browser_snapshot", map[string]any{"session_id": "acme-se"})
+	snap = h.call("browser_runner_snapshot", map[string]any{"session_id": "acme-se"})
 	sid = snap["snapshot_id"]
 	fileRef := ref(t, snap, "file", "resume")
-	h.fail("browser_upload", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": fileRef, "path": filepath.Join(docs, "missing.pdf")}, "FILE_NOT_FOUND")
-	h.fail("browser_upload", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": fileRef, "path": writePDF(t, t.TempDir(), "outside.pdf")}, "Trusted Write Locations")
-	up := h.call("browser_upload", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": fileRef, "path": resume})
+	h.fail("browser_runner_act", map[string]any{"session_id": "acme-se", "action": "upload", "snapshot_id": sid, "ref": fileRef, "path": filepath.Join(docs, "missing.pdf")}, "FILE_NOT_FOUND")
+	h.fail("browser_runner_act", map[string]any{"session_id": "acme-se", "action": "upload", "snapshot_id": sid, "ref": fileRef, "path": writePDF(t, t.TempDir(), "outside.pdf")}, "Trusted Write Locations")
+	up := h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "action": "upload", "snapshot_id": sid, "ref": fileRef, "path": resume})
 	if up["upload"].(map[string]any)["status"] != "attached" {
 		t.Fatalf("upload: %v", up)
 	}
-	h.call("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "textbox", "cover"), "action": "fill", "value": "I build reliable full-stack systems."})
-	h.call("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "radio", "right to work"), "action": "check"})
-	h.call("browser_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "checkbox", "privacy"), "action": "check"})
+	h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "textbox", "cover"), "action": "fill", "value": "I build reliable full-stack systems."})
+	h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "radio", "right to work"), "action": "check"})
+	h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "checkbox", "privacy"), "action": "check"})
 
 	submit := map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "button", "submit application"), "action": "click"}
-	h.fail("browser_act", merge(submit, map[string]any{"effect": "submit"}), "idempotency_key")
-	res := h.call("browser_act", merge(submit, map[string]any{"effect": "submit", "idempotency_key": "acme-se-apply"}))
+	h.fail("browser_runner_act", merge(submit, map[string]any{"effect": "submit"}), "idempotency_key")
+	res := h.call("browser_runner_act", merge(submit, map[string]any{"effect": "submit", "idempotency_key": "acme-se-apply"}))
 	eff := res["effect"].(map[string]any)
 	if eff["status"] != EffectUnverified || ats.count() != 1 {
 		t.Fatalf("submit: status=%v submits=%d dialogs=%v", eff["status"], ats.count(), res["dialogs"])
@@ -237,13 +237,16 @@ func TestE2EApplicationSubmitsOnceWithEvidence(t *testing.T) {
 	if !strings.Contains(fmt.Sprint(res["dialogs"]), "accepted confirm") {
 		t.Fatalf("confirm dialog was not accepted for the submit: %v", res["dialogs"])
 	}
+	if w := h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "action": "wait", "text": "Application received", "timeout_ms": 5000}); w["matched"] != true {
+		t.Fatalf("wait for confirmation: %v", w)
+	}
 	// Same key again: replayed from the checkpoint, never re-sent.
-	again := h.call("browser_act", merge(submit, map[string]any{"effect": "submit", "idempotency_key": "acme-se-apply"}))
+	again := h.call("browser_runner_act", merge(submit, map[string]any{"effect": "submit", "idempotency_key": "acme-se-apply"}))
 	if again["replayed"] != true || ats.count() != 1 {
 		t.Fatalf("duplicate submit: %v count=%d", again, ats.count())
 	}
-	h.fail("browser_resolve_effect", map[string]any{"session_id": "acme-se", "idempotency_key": "acme-se-apply", "outcome": "confirmed", "evidence": "Offer accepted"}, "EVIDENCE_NOT_FOUND")
-	conf := h.call("browser_resolve_effect", map[string]any{"session_id": "acme-se", "idempotency_key": "acme-se-apply", "outcome": "confirmed", "evidence": "Your reference is ACME-0001"})
+	h.fail("browser_runner_confirm", map[string]any{"session_id": "acme-se", "idempotency_key": "acme-se-apply", "outcome": "confirmed", "evidence": "Offer accepted"}, "EVIDENCE_NOT_FOUND")
+	conf := h.call("browser_runner_confirm", map[string]any{"session_id": "acme-se", "idempotency_key": "acme-se-apply", "outcome": "confirmed", "evidence": "Your reference is ACME-0001"})
 	if conf["effect"].(map[string]any)["status"] != EffectConfirmed {
 		t.Fatalf("resolve: %v", conf)
 	}
@@ -269,7 +272,7 @@ func TestE2EApplicationSubmitsOnceWithEvidence(t *testing.T) {
 			t.Fatalf("checkpoint leaked %q", secret)
 		}
 	}
-	status := h.call("browser_session_status", map[string]any{"session_id": "acme-se"})
+	status := h.call("browser_runner_status", map[string]any{"session_id": "acme-se"})
 	if !strings.Contains(fmt.Sprint(status["submit_effects"]), "ACME-0001") {
 		t.Fatalf("status lacks evidence: %v", status["submit_effects"])
 	}
@@ -277,13 +280,13 @@ func TestE2EApplicationSubmitsOnceWithEvidence(t *testing.T) {
 
 func TestE2ESignInIsHandedToUserAndPasswordsAreNeverTyped(t *testing.T) {
 	h, _, base, _ := newHarness(t)
-	h.call("browser_start", map[string]any{"task_id": "login", "allowed_origins": []any{base}, "start_url": base + "/login"})
-	snap := h.call("browser_snapshot", map[string]any{"session_id": "login"})
+	h.call("browser_runner_start", map[string]any{"task_id": "login", "allowed_origins": []any{base}, "start_url": base + "/login"})
+	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "login"})
 	if snap["session_state"] != StateNeedsUser || !strings.Contains(fmt.Sprint(snap["needs_user"]), "headless=false") {
 		t.Fatalf("login wall not handed to user: %v %v", snap["session_state"], snap["needs_user"])
 	}
 	pw := ref(t, snap, "textbox", "password")
-	h.fail("browser_act", map[string]any{"session_id": "login", "snapshot_id": snap["snapshot_id"], "ref": pw, "action": "fill", "value": "hunter2"}, "BLOCKED_SENSITIVE")
+	h.fail("browser_runner_act", map[string]any{"session_id": "login", "snapshot_id": snap["snapshot_id"], "ref": pw, "action": "fill", "value": "hunter2"}, "BLOCKED_SENSITIVE")
 	for _, raw := range snap["elements"].([]any) {
 		if el := raw.(map[string]any); el["ref"] == pw && el["sensitive"] != true {
 			t.Fatalf("password field not marked sensitive: %v", el)
@@ -293,8 +296,8 @@ func TestE2ESignInIsHandedToUserAndPasswordsAreNeverTyped(t *testing.T) {
 
 func TestE2ECrashLeavesUnknownEffectAndBlocksResubmit(t *testing.T) {
 	h, ats, base, _ := newHarness(t)
-	h.call("browser_start", map[string]any{"task_id": "crash", "allowed_origins": []any{base}, "start_url": base + "/apply/2?name=A&email=a%40example.test&country=nz"})
-	snap := h.call("browser_snapshot", map[string]any{"session_id": "crash"})
+	h.call("browser_runner_start", map[string]any{"task_id": "crash", "allowed_origins": []any{base}, "start_url": base + "/apply/2?name=A&email=a%40example.test&country=nz"})
+	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "crash"})
 
 	// Simulate an Agent crash right after the submit marker became durable
 	// and before the result was observed.
@@ -311,26 +314,26 @@ func TestE2ECrashLeavesUnknownEffectAndBlocksResubmit(t *testing.T) {
 	// A new Agent process: the session resumes at the last page.
 	h.m = New()
 	t.Cleanup(h.m.Close)
-	st := h.call("browser_session_status", map[string]any{"session_id": "crash"})
+	st := h.call("browser_runner_status", map[string]any{"session_id": "crash"})
 	if !strings.Contains(fmt.Sprint(st["submit_effects"]), EffectUnknown) || !strings.Contains(fmt.Sprint(st["next_action"]), "Do not submit again") {
 		t.Fatalf("recovered status: %v / %v", st["submit_effects"], st["next_action"])
 	}
-	start := h.call("browser_start", map[string]any{"task_id": "crash", "allowed_origins": []any{base}})
+	start := h.call("browser_runner_start", map[string]any{"task_id": "crash", "allowed_origins": []any{base}})
 	if !strings.Contains(fmt.Sprint(start["url"]), "/apply/2") || start["resumed"] != true {
 		t.Fatalf("did not resume at the last page: %v", start)
 	}
-	snap = h.call("browser_snapshot", map[string]any{"session_id": "crash"})
+	snap = h.call("browser_runner_snapshot", map[string]any{"session_id": "crash"})
 	submit := map[string]any{"session_id": "crash", "snapshot_id": snap["snapshot_id"], "ref": ref(t, snap, "button", "submit application"), "action": "click", "effect": "submit"}
-	h.fail("browser_act", merge(submit, map[string]any{"idempotency_key": "crash-apply-2"}), "UNRESOLVED_EFFECT")
-	replay := h.call("browser_act", merge(submit, map[string]any{"idempotency_key": "crash-apply"}))
+	h.fail("browser_runner_act", merge(submit, map[string]any{"idempotency_key": "crash-apply-2"}), "UNRESOLVED_EFFECT")
+	replay := h.call("browser_runner_act", merge(submit, map[string]any{"idempotency_key": "crash-apply"}))
 	if replay["replayed"] != true || ats.count() != 0 {
 		t.Fatalf("unknown effect was retried: %v count=%d", replay, ats.count())
 	}
 	// Only the user may rule out an unknown submit.
 	resolve := map[string]any{"session_id": "crash", "idempotency_key": "crash-apply", "outcome": "not_submitted", "evidence": "Submit application"}
-	h.fail("browser_resolve_effect", resolve, "user_confirmed")
-	h.call("browser_resolve_effect", merge(resolve, map[string]any{"user_confirmed": true}))
-	res := h.call("browser_act", merge(submit, map[string]any{"idempotency_key": "crash-apply"}))
+	h.fail("browser_runner_confirm", resolve, "user_confirmed")
+	h.call("browser_runner_confirm", merge(resolve, map[string]any{"user_confirmed": true}))
+	res := h.call("browser_runner_act", merge(submit, map[string]any{"idempotency_key": "crash-apply"}))
 	if res["effect"].(map[string]any)["status"] != EffectUnverified || ats.count() != 1 {
 		t.Fatalf("submit after user check: %v count=%d", res["effect"], ats.count())
 	}
@@ -338,13 +341,13 @@ func TestE2ECrashLeavesUnknownEffectAndBlocksResubmit(t *testing.T) {
 
 func TestE2EScopeChangeNeedsReasonAndCloseForgets(t *testing.T) {
 	h, _, base, outside := newHarness(t)
-	h.call("browser_start", map[string]any{"task_id": "scope", "allowed_origins": []any{base}})
-	h.fail("browser_start", map[string]any{"task_id": "scope", "allowed_origins": []any{base, outside}}, "SCOPE_CHANGE")
-	out := h.call("browser_start", map[string]any{"task_id": "scope", "allowed_origins": []any{outside}, "scope_change_reason": "user asked to include the partner site"})
+	h.call("browser_runner_start", map[string]any{"task_id": "scope", "allowed_origins": []any{base}})
+	h.fail("browser_runner_start", map[string]any{"task_id": "scope", "allowed_origins": []any{base, outside}}, "SCOPE_CHANGE")
+	out := h.call("browser_runner_start", map[string]any{"task_id": "scope", "allowed_origins": []any{outside}, "scope_change_reason": "user asked to include the partner site"})
 	if origins := fmt.Sprint(out["status"].(map[string]any)["allowed_origins"]); !strings.Contains(origins, strings.TrimPrefix(outside, "http://")) {
 		t.Fatalf("scope not widened: %v", origins)
 	}
-	h.call("browser_close", map[string]any{"session_id": "scope", "forget": true})
+	h.call("browser_runner_close", map[string]any{"session_id": "scope", "forget": true})
 	if _, e := os.Stat(checkpointPath("scope")); !os.IsNotExist(e) {
 		t.Fatalf("checkpoint not removed: %v", e)
 	}

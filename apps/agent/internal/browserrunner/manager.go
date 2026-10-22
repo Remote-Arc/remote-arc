@@ -22,9 +22,8 @@ import (
 
 // Tools is the device tool contract. Names are stable across AI hosts.
 var Tools = []string{
-	"browser_start", "browser_navigate", "browser_snapshot", "browser_act",
-	"browser_upload", "browser_wait", "browser_session_status",
-	"browser_resolve_effect", "browser_close",
+	"browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
+	"browser_runner_status", "browser_runner_confirm", "browser_runner_close",
 }
 
 func IsTool(name string) bool {
@@ -37,6 +36,9 @@ func IsTool(name string) bool {
 }
 
 const maxLiveSessions = 4
+
+// CallBudget bounds one tool call end to end.
+var CallBudget = 40 * time.Second
 
 type Manager struct {
 	mu          sync.Mutex
@@ -108,7 +110,7 @@ func (m *Manager) reapIdle() {
 		}
 		if s.live() && m.now().Sub(s.lastUsed) > m.IdleTimeout {
 			s.shutdownBrowser(true)
-			s.cp.receipt(m.now(), Receipt{Tool: "browser_session_status", Outcome: "paused", Detail: "idle timeout; browser closed, checkpoint kept"})
+			s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_status", Outcome: "paused", Detail: "idle timeout; browser closed, checkpoint kept"})
 			_ = s.flush()
 		}
 		s.mu.Unlock()
@@ -152,11 +154,15 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	if args == nil {
 		args = map[string]any{}
 	}
+	// Answer before the Relay's 45s device-call deadline. An interrupted
+	// submit is recorded as unknown, never retried.
+	ctx, cancel := context.WithTimeout(ctx, CallBudget)
+	defer cancel()
 	m.startReaper()
-	if tool == "browser_start" {
+	if tool == "browser_runner_start" {
 		return m.start(ctx, args)
 	}
-	if tool == "browser_session_status" && protocol.OptionalString(args, "session_id") == "" {
+	if tool == "browser_runner_status" && protocol.OptionalString(args, "session_id") == "" {
 		return m.list(), nil
 	}
 	id, e := sessionID(args, "session_id")
@@ -170,14 +176,14 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastUsed = m.now()
-	if tool == "browser_session_status" {
+	if tool == "browser_runner_status" {
 		return s.cp.Summary(s.live()), nil
 	}
-	if tool == "browser_close" {
+	if tool == "browser_runner_close" {
 		return m.close(s, protocol.Bool(args, "forget"))
 	}
 	if s.cp.State == StateClosed {
-		return nil, errors.New("Session is closed. Call browser_start with the same task_id to reopen it.")
+		return nil, errors.New("Session is closed. Call browser_runner_start with the same task_id to reopen it.")
 	}
 	if e := s.ensureLive(ctx); e != nil {
 		return nil, e
@@ -185,24 +191,29 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	blockedBefore := len(s.cp.Blocked)
 	var out map[string]any
 	switch tool {
-	case "browser_navigate":
-		out, e = s.navigate(ctx, protocol.OptionalString(args, "url"))
-		if e == nil {
-			s.cp.receipt(m.now(), Receipt{Tool: tool, URL: safeURL(fmt.Sprint(out["url"])), Outcome: "ok"})
-		}
-	case "browser_snapshot":
+	case "browser_runner_snapshot":
 		maxEl, e1 := protocol.Integer(args, "max_elements", 150, 10, 400)
 		maxText, e2 := protocol.Integer(args, "max_text", 6000, 500, 20000)
 		if e = errors.Join(e1, e2); e == nil {
 			out, e = s.snapshot(ctx, maxEl, maxText)
 		}
-	case "browser_act":
-		out, e = m.act(ctx, s, args)
-	case "browser_upload":
-		out, e = m.upload(ctx, s, args, p)
-	case "browser_wait":
-		out, e = m.wait(ctx, s, args)
-	case "browser_resolve_effect":
+	case "browser_runner_act":
+		// One action tool keeps the surface small for every AI host:
+		// page actions on snapshot refs, plus navigate, upload and wait.
+		switch protocol.OptionalString(args, "action") {
+		case "navigate":
+			out, e = s.navigate(ctx, protocol.OptionalString(args, "url"))
+			if e == nil {
+				s.cp.receipt(m.now(), Receipt{Tool: tool, Action: "navigate", URL: safeURL(fmt.Sprint(out["url"])), Outcome: "ok"})
+			}
+		case "upload":
+			out, e = m.upload(ctx, s, args, p)
+		case "wait":
+			out, e = m.wait(ctx, s, args)
+		default:
+			out, e = m.act(ctx, s, args)
+		}
+	case "browser_runner_confirm":
 		out, e = m.resolve(ctx, s, args)
 	default:
 		return nil, fmt.Errorf("Unknown Browser Runner tool: %s", tool)
@@ -242,7 +253,7 @@ func (m *Manager) get(id string) (*session, error) {
 	cp, e := loadCheckpoint(id)
 	if e != nil {
 		if errors.Is(e, os.ErrNotExist) {
-			return nil, fmt.Errorf("No Browser Runner session %q on this device. Call browser_start first.", id)
+			return nil, fmt.Errorf("No Browser Runner session %q on this device. Call browser_runner_start first.", id)
 		}
 		return nil, e
 	}
@@ -356,7 +367,7 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 				return nil, fmt.Errorf("SCOPE_CHANGE: this task is limited to %v. Adding sites needs scope_change_reason, and should only follow an explicit request from the user.", s.scope.Strings())
 			}
 			merged, _ := newScope(append(s.scope.Strings(), sc.Strings()...))
-			s.cp.receipt(m.now(), Receipt{Tool: "browser_start", Outcome: "scope_widened", Detail: clip(reason, 200) + " → " + strings.Join(merged.Strings(), ", ")})
+			s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_start", Outcome: "scope_widened", Detail: clip(reason, 200) + " → " + strings.Join(merged.Strings(), ", ")})
 			s.ev.Lock()
 			s.scope = merged
 			s.ev.Unlock()
@@ -384,7 +395,7 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	} else {
 		out = s.pageState(ctx)
 	}
-	s.cp.receipt(m.now(), Receipt{Tool: "browser_start", URL: safeURL(fmt.Sprint(out["url"])), Outcome: map[bool]string{true: "resumed", false: "started"}[resumed]})
+	s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_start", URL: safeURL(fmt.Sprint(out["url"])), Outcome: map[bool]string{true: "resumed", false: "started"}[resumed]})
 	if e := s.flush(); e != nil {
 		return nil, e
 	}
@@ -429,7 +440,7 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 			return nil, errors.New("A submit needs idempotency_key (1-120 letters, digits, '.', '_', ':' or '-'), stable for this one external action.")
 		}
 		if u := s.cp.unresolved(); u != nil {
-			return nil, fmt.Errorf("UNRESOLVED_EFFECT: submit %s (%s) is %s. Confirm its result with browser_resolve_effect before any new submit.", u.Key, u.Label, u.Status)
+			return nil, fmt.Errorf("UNRESOLVED_EFFECT: submit %s (%s) is %s. Confirm its result with browser_runner_confirm before any new submit.", u.Key, u.Label, u.Status)
 		}
 		now := stamp(m.now())
 		if prev := s.cp.effect(key); prev != nil {
@@ -471,7 +482,7 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 			eff.Label = clip(fmt.Sprint(out["label"]), 120)
 		}
 	}
-	rc := Receipt{Tool: "browser_act", Action: req.Action, URL: safeURL(s.currentHref()), Outcome: "ok"}
+	rc := Receipt{Tool: "browser_runner_act", Action: req.Action, URL: safeURL(s.currentHref()), Outcome: "ok"}
 	if out != nil {
 		rc.Label = clip(fmt.Sprint(out["label"]), 120)
 	}
@@ -481,7 +492,7 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 	s.cp.receipt(m.now(), rc)
 	if err != nil {
 		if eff != nil && eff.Status == EffectUnknown {
-			return nil, fmt.Errorf("%v. The submit %s may have been sent; its effect is unknown. Do not submit again: inspect the page and use browser_resolve_effect.", err, eff.Key)
+			return nil, fmt.Errorf("%v. The submit %s may have been sent; its effect is unknown. Do not submit again: inspect the page and use browser_runner_confirm.", err, eff.Key)
 		}
 		return nil, err
 	}
@@ -490,11 +501,11 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 		out[k] = v
 	}
 	if navigated {
-		out["note"] = "The page changed; earlier refs are stale. Take a new browser_snapshot."
+		out["note"] = "The page changed; earlier refs are stale. Take a new browser_runner_snapshot."
 	}
 	if eff != nil {
 		out["effect"] = *eff
-		out["next_action"] = "Read the page to confirm the result (for example a confirmation number), then call browser_resolve_effect with outcome=confirmed and that exact evidence text."
+		out["next_action"] = "Read the page to confirm the result (for example a confirmation number), then call browser_runner_confirm with outcome=confirmed and that exact evidence text."
 	}
 	if d := s.takeDialogs(); len(d) > 0 {
 		out["dialogs"] = d
@@ -534,7 +545,7 @@ func (m *Manager) upload(ctx context.Context, s *session, args map[string]any, p
 	}
 	ref := protocol.OptionalString(args, "ref")
 	out, e := s.upload(ctx, snap, ref, original)
-	rc := Receipt{Tool: "browser_upload", Label: ref, URL: safeURL(s.currentHref()), Outcome: "ok"}
+	rc := Receipt{Tool: "browser_runner_act", Action: "upload", Label: ref, URL: safeURL(s.currentHref()), Outcome: "ok"}
 	if e != nil {
 		rc.Outcome, rc.Detail = "error", clip(e.Error(), 200)
 	}
@@ -606,14 +617,14 @@ func (m *Manager) resolve(ctx context.Context, s *session, args map[string]any) 
 		return nil, errors.New("outcome must be confirmed or not_submitted.")
 	}
 	eff.UpdatedAt = stamp(m.now())
-	s.cp.receipt(m.now(), Receipt{Tool: "browser_resolve_effect", Label: eff.Key, URL: safeURL(s.currentHref()), Outcome: eff.Status})
+	s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_confirm", Label: eff.Key, URL: safeURL(s.currentHref()), Outcome: eff.Status})
 	return map[string]any{"effect": *eff}, nil
 }
 
 func (m *Manager) close(s *session, forget bool) (any, error) {
 	s.shutdownBrowser(false)
 	s.cp.State = StateClosed
-	s.cp.receipt(m.now(), Receipt{Tool: "browser_close", Outcome: "closed"})
+	s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_close", Outcome: "closed"})
 	if !forget {
 		if e := s.flush(); e != nil {
 			return nil, e

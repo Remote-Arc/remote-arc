@@ -4504,6 +4504,18 @@ function Dashboard({
       );
       if (!confirmed) return;
     }
+    if (enabled && tool === "browser_runner_act") {
+      const confirmed = await askConfirm(
+        tr("Let AI act on websites from " + device.name + "?", "允许 AI 在 " + device.name + " 上操作网站？"),
+        tr(
+          "Connected AI clients will be able to click, fill, upload files from Trusted Locations and submit forms in a separate background browser, only on the sites each task names. Passwords, verification codes and payment details are never entered, and a submit is never sent twice.",
+          "已连接的 AI 将可以在独立的后台浏览器里点击、填写、从可信目录上传文件并提交表单，且只能访问每个任务指定的网站。密码、验证码和支付信息一律不会填写，提交也不会重复发送。",
+        ),
+        tr("Enable Browser Runner", "开启 Browser Runner"),
+        "danger",
+      );
+      if (!confirmed) return;
+    }
     const advertised = device.available_tools || device.tools;
     const baseline = device.status === "online"
       ? advertised
@@ -5362,6 +5374,10 @@ function Dashboard({
                               ? tr("Plus capability: read bounded binary byte ranges. This device switch is still required in addition to the account plan.", "Plus 能力：读取有界的二进制字节区间。除账户套餐外，这个设备开关仍必须开启。")
                               : tool === "undo_last_change"
                               ? tr("AI permission: lets the connected AI invoke the newest Local Undo snapshot. Snapshot creation is controlled separately under Recovery below.", "AI 权限：允许已连接的 AI 调用最新一条 Local Undo 快照。是否创建快照由下方 Recovery 中的 Local Undo 单独控制。")
+                              : tool === "browser_runner_act"
+                                ? tr("Browser Runner: click, fill, upload and submit on websites in a separate background browser on this computer. Passwords, codes and payment fields are always refused; submits are never sent twice.", "Browser Runner：在这台电脑的独立后台浏览器里点击、填写、上传和提交。密码、验证码和支付字段一律拒绝；提交不会重复发送。")
+                              : tool.startsWith("browser_runner_")
+                                ? tr("Browser Runner: a separate background browser on this computer for multi-step web tasks, limited to the sites each task names. It does not use your everyday browser or its sign-ins.", "Browser Runner：这台电脑上用于多步网页任务的独立后台浏览器，只能访问每个任务指定的网站，不使用你日常的浏览器和登录状态。")
                               : tool === "start_process"
                                 ? tr("Run shell commands on this computer.", "在这台电脑上执行 Shell 命令。")
                                 : tool === "process_status" || tool === "process_output"

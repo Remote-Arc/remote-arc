@@ -68,6 +68,20 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     [/^The target file changed or disappeared after the Remote Arc edit/i, "UNDO_CONFLICT"],
     [/^The target file changed again after the Remote Arc edit/i, "UNDO_CONFLICT"],
 
+    // Browser Runner errors carry their own stable code and guidance.
+    [/^STALE_REF:/, "STALE_REF"],
+    [/^OUT_OF_SCOPE:/, "OUT_OF_SCOPE"],
+    [/^SCOPE_CHANGE:/, "SCOPE_CHANGE_REQUIRED"],
+    [/^UNRESOLVED_EFFECT:/, "UNRESOLVED_EFFECT"],
+    [/^BLOCKED_SENSITIVE:/, "SENSITIVE_FIELD_BLOCKED"],
+    [/^EVIDENCE_NOT_FOUND:/, "EVIDENCE_NOT_FOUND"],
+    [/^(?:FILE_NOT_FOUND|UPLOAD_NOT_ATTACHED):/, "UPLOAD_FAILED"],
+    [/^(?:WRONG_ACTION|NO_OPTION|DISABLED|FILL_MISMATCH):/, "BROWSER_ACTION_FAILED"],
+    [/^No Browser Runner session /, "BROWSER_SESSION_NOT_FOUND"],
+    [/is not available on (?:a browser extension device|this computer)\./, "WRONG_BROWSER_TOOL"],
+    [/^Browser Runner (?:needs|requires|uploads only|could not|lost)/, "BROWSER_RUNNER_UNAVAILABLE"],
+    [/may have been sent; its effect is unknown/, "UNKNOWN_EFFECT"],
+
     [/^Account not found\.?$/i, "ACCOUNT_NOT_FOUND"],
     [/^automation not found\.?$/i, "AUTOMATION_NOT_FOUND"],
     [/cannot be (?:paused|resumed)/i, "AUTOMATION_STATE_CONFLICT"],

@@ -2,10 +2,16 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./admin-operations.css";
 
+type DeviceCapacityGrant = {
+  id:string;user_id:string;email:string;extra_devices:number;reason:string;
+  expires_at:string|null;revoked_at:string|null;created_at:string;
+};
+type PlusGrant = { id:string;email:string;expires_at:string|null;revoked_at:string|null;reason:string;created_at:string;plan:string };
+
 type Account = {
   id: string; email: string; name: string | null; role: string; plan: string;
   created_at: string; used: number; extra: number; allowance: number | null;
-  device_count: number; online_devices: number; last_activity: string | null;
+  device_count: number; computer_count: number; online_devices: number; last_activity: string | null;
   has_plus_grant: number;
   linked_login: "google" | "email_only";
   first_mcp_client: string | null;
@@ -57,6 +63,19 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [deviceGrants,setDeviceGrants] = useState<DeviceCapacityGrant[]>([]);
+  const [deviceExtra,setDeviceExtra] = useState("2");
+  const [deviceDuration,setDeviceDuration] = useState("30");
+  const [deviceUntil,setDeviceUntil] = useState("");
+  const [deviceReason,setDeviceReason] = useState("Additional computers for customer support");
+  const [deviceBusy,setDeviceBusy] = useState(false);
+  const [deviceNotice,setDeviceNotice] = useState("");
+  const [plusGrants, setPlusGrants] = useState<PlusGrant[]>([]);
+  const [plusDuration, setPlusDuration] = useState("30");
+  const [plusCustomUntil, setPlusCustomUntil] = useState("");
+  const [plusReason, setPlusReason] = useState("Admin-issued Plus access");
+  const [plusBusy, setPlusBusy] = useState(false);
+  const [plusNotice, setPlusNotice] = useState("");
   const pendingCreditRequest = useRef<{ key:string; requestId:string } | null>(null);
 
   async function refresh(pageToLoad = page) {
@@ -79,6 +98,36 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
     return u.email.toLowerCase().includes(text) || (u.name || "").toLowerCase().includes(text);
   }) || [], [data, query]);
   const chosen = data?.users.find(u => u.id === selectedUser) || null;
+  const activeDeviceGrants = deviceGrants.filter(g => !g.revoked_at && (!g.expires_at || Date.parse(g.expires_at)>Date.now()));
+  const activeDeviceExtra = activeDeviceGrants.reduce((total,g)=>total+g.extra_devices,0);
+  const activePlusGrant = plusGrants.find(g => !g.revoked_at && (!g.expires_at || Date.parse(g.expires_at) > Date.now())) || null;
+  useEffect(() => {
+    let cancelled=false;
+    setDeviceGrants([]);setDeviceNotice("");
+    if(!chosen?.email || readOnly)return;
+    void fetch("/api/admin/device-capacity?email="+encodeURIComponent(chosen.email),{credentials:"same-origin"})
+      .then(async response=>{
+        if(!response.ok)throw new Error("Could not load device capacity grants");
+        return response.json() as Promise<{grants:DeviceCapacityGrant[]}>;
+      })
+      .then(payload=>{if(!cancelled)setDeviceGrants(payload.grants||[]);})
+      .catch(error=>{if(!cancelled)setDeviceNotice(String(error));});
+    return()=>{cancelled=true;};
+  },[chosen?.email,readOnly]);
+  useEffect(() => {
+    let cancelled = false;
+    setPlusGrants([]);
+    setPlusNotice("");
+    if (!chosen?.email || readOnly) return;
+    void fetch("/api/admin/plan-grants?email=" + encodeURIComponent(chosen.email), {credentials:"same-origin"})
+      .then(async response => {
+        if (!response.ok) throw new Error("Could not load Plus grant history");
+        return response.json() as Promise<{grants:PlusGrant[]}>;
+      })
+      .then(payload => { if (!cancelled) setPlusGrants(payload.grants || []); })
+      .catch(error => { if (!cancelled) setPlusNotice(String(error)); });
+    return () => { cancelled = true; };
+  }, [chosen?.email, readOnly]);
   const userNames = new Map((data?.users || []).map(u => [u.id, u.email]));
   const hours = useMemo(() => {
     if (!data) return [];
@@ -156,6 +205,119 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
     } finally { setSaving(false); }
   }
 
+  async function refreshDeviceGrants(email:string) {
+    const response=await fetch("/api/admin/device-capacity?email="+encodeURIComponent(email),{credentials:"same-origin"});
+    if(!response.ok)throw new Error("Failed to refresh extra device capacity");
+    const payload=await response.json() as {grants:DeviceCapacityGrant[]};
+    setDeviceGrants(payload.grants||[]);
+  }
+  async function addDeviceCapacity() {
+    if(!chosen||readOnly||deviceBusy||chosen.role==="admin")return;
+    const amount=Number(deviceExtra),reason=deviceReason.trim();
+    if(!Number.isSafeInteger(amount)||amount<1||amount>20){
+      setDeviceNotice(tr("Choose 1–20 additional computers.","请选择追加 1–20 台电脑。"));return;
+    }
+    if(reason.length<3||reason.length>500){
+      setDeviceNotice(tr("Enter a reason (3–500 characters).","请填写 3–500 字的原因。"));return;
+    }
+    let expiresAt:string|null=null;
+    if(deviceDuration==="custom"){
+      const timestamp=Date.parse(deviceUntil);
+      if(!Number.isFinite(timestamp)||timestamp<=Date.now()){
+        setDeviceNotice(tr("Choose a future expiry.","请选择未来的到期时间。"));return;
+      }
+      expiresAt=new Date(timestamp).toISOString();
+    }else if(deviceDuration!=="never"){
+      expiresAt=new Date(Date.now()+Number(deviceDuration)*86400000).toISOString();
+    }
+    if(!window.confirm(tr("Add "+amount+" computers for "+chosen.email+" until "+(expiresAt||"revoked")+"?",
+      "确认给 "+chosen.email+" 追加 "+amount+" 台电脑，有效期至 "+(expiresAt||"手动撤销")+"？")))return;
+    setDeviceBusy(true);setDeviceNotice("");
+    try{
+      const response=await fetch("/api/admin/device-capacity",{method:"POST",credentials:"same-origin",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({email:chosen.email,extra_devices:amount,expires_at:expiresAt,reason})});
+      const payload=await response.json() as {error?:string};
+      if(!response.ok)throw new Error(payload.error||"Could not add devices");
+      await Promise.all([refreshDeviceGrants(chosen.email),refresh()]);
+      setDeviceNotice(tr("Extra computers granted and audited.","已追加电脑名额并记录管理员操作。"));
+    }catch(error){setDeviceNotice(error instanceof Error?error.message:String(error));}
+    finally{setDeviceBusy(false);}
+  }
+  async function revokeDeviceCapacity(id:string) {
+    if(!chosen||readOnly||deviceBusy)return;
+    if(!window.confirm(tr("Revoke this extra computer allocation?","确认撤销此项额外电脑名额？")))return;
+    setDeviceBusy(true);setDeviceNotice("");
+    try{
+      const response=await fetch("/api/admin/device-capacity/"+encodeURIComponent(id)+"/revoke",
+        {method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:"{}"});
+      const payload=await response.json() as {error?:string};
+      if(!response.ok)throw new Error(payload.error||"Could not revoke devices");
+      await Promise.all([refreshDeviceGrants(chosen.email),refresh()]);
+      setDeviceNotice(tr("Extra computer capacity revoked.","已撤销额外电脑名额。"));
+    }catch(error){setDeviceNotice(error instanceof Error?error.message:String(error));}
+    finally{setDeviceBusy(false);}
+  }
+  async function refreshPlusGrants(email: string) {
+    const response = await fetch("/api/admin/plan-grants?email=" + encodeURIComponent(email), {credentials:"same-origin"});
+    if (!response.ok) throw new Error("Failed to refresh Plus grants");
+    const payload = await response.json() as {grants:PlusGrant[]};
+    setPlusGrants(payload.grants || []);
+  }
+  async function grantPlus() {
+    if (!chosen || readOnly || plusBusy || activePlusGrant) return;
+    const reason = plusReason.trim();
+    if (reason.length < 3 || reason.length > 500) {
+      setPlusNotice(tr("Enter a reason (3–500 characters).", "请输入 3–500 字的开通原因。"));
+      return;
+    }
+    let expiresAt: string | null = null;
+    if (plusDuration === "custom") {
+      const timestamp = Date.parse(plusCustomUntil);
+      if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
+        setPlusNotice(tr("Choose a future expiry.", "请选择未来的到期时间。"));
+        return;
+      }
+      expiresAt = new Date(timestamp).toISOString();
+    } else if (plusDuration !== "never") {
+      expiresAt = new Date(Date.now() + Number(plusDuration) * 86400000).toISOString();
+    }
+    if (!window.confirm(tr("Grant Plus to " + chosen.email + " until " + (expiresAt || "revoked") + "?",
+      "确认给 " + chosen.email + " 开通 Plus，有效期至 " + (expiresAt || "手动撤销") + "？"))) return;
+    setPlusBusy(true);
+    setPlusNotice("");
+    try {
+      const response = await fetch("/api/admin/plan-grants", {
+        method:"POST", credentials:"same-origin", headers:{"content-type":"application/json"},
+        body:JSON.stringify({email:chosen.email,plan:"plus",reason,expires_at:expiresAt}),
+      });
+      const payload = await response.json() as {error?:string};
+      if (!response.ok) throw new Error(payload.error || "Plus grant failed");
+      await Promise.all([refreshPlusGrants(chosen.email),refresh()]);
+      setPlusNotice(tr("Plus granted. The expiry and administrator are audited.", "Plus 已开通，期限与管理员操作已记录。"));
+    } catch (err) {
+      setPlusNotice(err instanceof Error ? err.message : String(err));
+    } finally { setPlusBusy(false); }
+  }
+  async function revokePlus() {
+    if (!chosen || !activePlusGrant || readOnly || plusBusy) return;
+    if (!window.confirm(tr("Revoke this Plus grant for " + chosen.email + "?",
+      "确认撤销 " + chosen.email + " 的此项 Plus 授权吗？"))) return;
+    setPlusBusy(true);
+    setPlusNotice("");
+    try {
+      const response = await fetch("/api/admin/plan-grants/" + encodeURIComponent(activePlusGrant.id) + "/revoke", {
+        method:"POST", credentials:"same-origin", headers:{"content-type":"application/json"}, body:"{}",
+      });
+      const payload = await response.json() as {error?:string};
+      if (!response.ok) throw new Error(payload.error || "Revoke failed");
+      await Promise.all([refreshPlusGrants(chosen.email),refresh()]);
+      setPlusNotice(tr("Plus grant revoked.", "Plus 授权已撤销。"));
+    } catch (err) {
+      setPlusNotice(err instanceof Error ? err.message : String(err));
+    } finally { setPlusBusy(false); }
+  }
+
   const tabs: Array<[Section, string, string]> = [
     ["users", "Users", "用户"],
     ["devices", "Devices", "设备"],
@@ -210,6 +372,89 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
       </div>
       {chosen && <div className="opsUserDetail">
         <div><h3>{chosen.name || chosen.email}</h3><p>{chosen.email} · {tr("Joined", "注册于")} {new Date(chosen.created_at).toLocaleDateString()}</p><p>{tr("Monthly plan quota", "本月基础额度")}: {chosen.allowance === null ? "∞" : fmt(chosen.allowance - chosen.extra)} · {tr("Extra granted", "额外赠送")}: {fmt(chosen.extra)}</p></div>
+        <div className="opsPlusGrant">
+          <div>
+            <h4>{tr("Additional computer slots","追加电脑名额")}</h4>
+            <p>{tr("Extra slots add to the plan's computer limit. Browser companions are counted separately. Expiry prevents new pairings but does not disconnect already-paired computers.",
+              "额外名额叠加到套餐电脑上限，不占用浏览器扩展名额。")}</p>
+            <p><strong>{tr("Active extra slots","当前额外名额")}: +{activeDeviceExtra}</strong>
+              {" · "}{tr("Computers currently registered","已注册电脑")}: {chosen.computer_count ?? chosen.device_count}</p>
+          </div>
+          <label>{tr("Add computers","追加数量")}
+            <input type="number" min={1} max={20} value={deviceExtra}
+              disabled={deviceBusy||readOnly||chosen.role==="admin"}
+              onChange={e=>setDeviceExtra(e.target.value)}/>
+          </label>
+          <label>{tr("Duration","生效时长")}
+            <select value={deviceDuration} disabled={deviceBusy||readOnly} onChange={e=>setDeviceDuration(e.target.value)}>
+              <option value="7">{tr("7 days","7 天")}</option>
+              <option value="30">{tr("30 days","30 天")}</option>
+              <option value="90">{tr("90 days","90 天")}</option>
+              <option value="365">{tr("365 days","365 天")}</option>
+              <option value="never">{tr("Until revoked","永久（直到撤销）")}</option>
+              <option value="custom">{tr("Custom expiry","自定义到期时间")}</option>
+            </select>
+          </label>
+          {deviceDuration==="custom"&&<label>{tr("Expires at (local time)","到期时间（本地时区）")}
+            <input type="datetime-local" value={deviceUntil} onChange={e=>setDeviceUntil(e.target.value)}
+              disabled={deviceBusy||readOnly}/>
+          </label>}
+          <label>{tr("Reason (audited)","追加原因（审计记录）")}
+            <input value={deviceReason} maxLength={500} onChange={e=>setDeviceReason(e.target.value)}
+              disabled={deviceBusy||readOnly}/>
+          </label>
+          <div className="opsPlusGrantActions">
+            <button type="button" className="primaryButton" disabled={deviceBusy||readOnly||chosen.role==="admin"}
+              onClick={()=>void addDeviceCapacity()}>
+              {deviceBusy?tr("Saving…","处理中…"):tr("Grant extra slots","追加设备名额")}
+            </button>
+          </div>
+          {activeDeviceGrants.length>0&&<div className="opsCapacityHistory">
+            {activeDeviceGrants.map(g=><div key={g.id}>
+              <span>+{g.extra_devices} · {g.expires_at?new Date(g.expires_at).toLocaleDateString():
+                tr("Until revoked","直到撤销")} · {g.reason}</span>
+              <button type="button" className="ghostButton" disabled={deviceBusy||readOnly}
+                onClick={()=>void revokeDeviceCapacity(g.id)}>{tr("Revoke","撤销")}</button>
+            </div>)}
+          </div>}
+          {deviceNotice&&<p role="status">{deviceNotice}</p>}
+        </div>
+        <div className="opsPlusGrant">
+          <div>
+            <h4>{tr("Plus membership", "Plus 会员管理")}</h4>
+            <p>{tr("Grant Connect Plus with a chosen expiry. Hosted Arc model Credits are managed separately under Payments.", "为用户开通指定有效期的 Connect Plus；Arc 托管模型 Credits 在支付管理中独立管理。")}</p>
+            {activePlusGrant
+              ? <p><strong>{tr("Active Plus grant", "当前有效的 Plus 授权")}</strong> · {activePlusGrant.expires_at
+                  ? new Date(activePlusGrant.expires_at).toLocaleString()
+                  : tr("Until revoked", "手动撤销前有效")}</p>
+              : <p>{tr("No active administrator Plus grant", "暂无有效的管理员 Plus 授权")}</p>}
+          </div>
+          <label>{tr("Duration", "开通时长")}
+            <select aria-label={tr("Plus duration","Plus 开通时长")} value={plusDuration} disabled={plusBusy||!!activePlusGrant} onChange={e=>setPlusDuration(e.target.value)}>
+              <option value="7">{tr("7 days","7 天")}</option>
+              <option value="30">{tr("30 days","30 天")}</option>
+              <option value="90">{tr("90 days","90 天")}</option>
+              <option value="365">{tr("365 days","365 天")}</option>
+              <option value="never">{tr("Until revoked","永久（直到撤销）")}</option>
+              <option value="custom">{tr("Custom expiry","自定义到期时间")}</option>
+            </select>
+          </label>
+          {plusDuration==="custom" && <label>{tr("Expires at (local time)","到期时间（本地时区）")}
+            <input type="datetime-local" value={plusCustomUntil} onChange={e=>setPlusCustomUntil(e.target.value)} disabled={plusBusy||!!activePlusGrant}/>
+          </label>}
+          <label>{tr("Reason (audited)", "开通原因（审计记录）")}
+            <input value={plusReason} onChange={e=>setPlusReason(e.target.value)} maxLength={500} disabled={plusBusy||!!activePlusGrant}/>
+          </label>
+          <div className="opsPlusGrantActions">
+            <button className="primaryButton" type="button" onClick={()=>void grantPlus()} disabled={readOnly||plusBusy||!!activePlusGrant||chosen.role==="admin"}>
+              {plusBusy?tr("Saving…","处理中…"):tr("Grant Plus","开通 Plus")}
+            </button>
+            {activePlusGrant && <button type="button" className="ghostButton" onClick={()=>void revokePlus()} disabled={readOnly||plusBusy}>
+              {tr("Revoke grant","撤销授权")}
+            </button>}
+          </div>
+          {plusNotice && <p role="status">{plusNotice}</p>}
+        </div>
         <div className="opsCreditForm">
           <label>{tr("Add calls this month", "本月追加调用次数")}<input type="number" min={1} max={100000} value={credit} onChange={e => setCredit(e.target.value)} /></label>
           <label>{tr("Reason (audited)", "原因（可审计）")}<input maxLength={300} placeholder={tr("e.g. Early access feedback", "例如：早期体验反馈奖励")} value={reason} onChange={e => setReason(e.target.value)} /></label>

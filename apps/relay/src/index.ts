@@ -67,6 +67,7 @@ import { getMonthlyPlusUsage } from "./plus-usage.js";
 import { handleMarketplaceWebhook } from "./github-marketplace.js";
 import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
+import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './device-capacity-admin.js';
 import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
 import { handleOrganizations } from "./organizations.js";
 import { submitWebsiteInterest, listWebsiteSubmissions, updateWebsiteSubmission } from "./domains/engagement.js";
@@ -562,6 +563,11 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return handleAdminCallCredits(request, env);
     }
 
+    if (url.pathname === "/api/admin/device-capacity") {
+      return handleAdminDeviceCapacity(request,env);
+    }
+    const capacityRevoke = url.pathname.match(/^\/api\/admin\/device-capacity\/([a-zA-Z0-9-]+)\/revoke$/);
+    if (capacityRevoke) return handleAdminDeviceCapacityRevoke(request,env,capacityRevoke[1]!);
     if (url.pathname === "/api/admin/plan-grants") {
       return handleAdminPlanGrants(request, env);
     }

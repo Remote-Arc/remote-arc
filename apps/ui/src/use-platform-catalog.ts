@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-export type CatalogPlan={id:string;label:string;monthlyPriceCents:number;monthlyCredits:number;connectToolCalls:number|null;concurrentRuns:number;maxSeconds:number;versionId:string};
+export type CatalogPlan={id:string;label:string;monthlyPriceCents:number;monthlyCredits:number;connectToolCalls:number|null;concurrentRuns:number;maxSeconds:number;deviceLimit:number;versionId:string};
 export type PlatformCatalog={arcAvailable:boolean;billingAvailable:boolean;connectFreeCalls:number|null;plans:CatalogPlan[];topups:Array<{id:string;priceCents:number;credits:number;versionId:string}>;trial:{days:number;credits:number}};
 let current:PlatformCatalog|null=null,pending:Promise<PlatformCatalog>|null=null,updatedAt=0;
 function load(){

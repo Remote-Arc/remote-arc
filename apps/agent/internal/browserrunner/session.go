@@ -38,6 +38,8 @@ type session struct {
 	mainFrame    string
 	worldCtx     int
 	epoch        int
+	loads        int  // main-frame loads started; moves before a navigation commits
+	loading      bool // main frame is loading (including blocked attempts)
 	flushedEpoch int
 	href         string
 	submitting   bool
@@ -88,6 +90,22 @@ func (s *session) onEvent(method string, raw json.RawMessage) {
 			s.href = p.Frame.URL
 			s.epoch++
 			s.worldCtx = 0
+			s.ev.Unlock()
+		}
+	case "Page.frameStartedLoading", "Page.frameStoppedLoading":
+		var p struct {
+			FrameID string `json:"frameId"`
+		}
+		if json.Unmarshal(raw, &p) == nil {
+			s.ev.Lock()
+			if p.FrameID == s.mainFrame {
+				if method == "Page.frameStartedLoading" {
+					s.loads++
+					s.loading = true
+				} else {
+					s.loading = false
+				}
+			}
 			s.ev.Unlock()
 		}
 	case "Page.navigatedWithinDocument":
@@ -185,6 +203,9 @@ func (s *session) ensureLive(ctx context.Context) error {
 	}
 	if s.cp.recover(s.m.now()) {
 		s.cp.receipt(s.m.now(), Receipt{Tool: "browser_start", Outcome: "recovered", Detail: "an in-flight submit was interrupted; its effect is now unknown"})
+	}
+	if !s.cp.Headless {
+		_ = s.conn.Call(ctx, "Page.bringToFront", nil, nil)
 	}
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
 		_, _ = s.navigate(ctx, s.cp.ResumeURL)
@@ -362,10 +383,18 @@ func randomHex(n int) string {
 	return hex.EncodeToString(b)
 }
 
+type navMark struct{ epoch, loads int }
+
+func (s *session) mark() navMark {
+	s.ev.Lock()
+	defer s.ev.Unlock()
+	return navMark{s.epoch, s.loads}
+}
+
 // waitSettled waits for a navigation that may follow an action, then for the
 // document to finish loading. expectNav widens the window in which a
 // navigation is allowed to start.
-func (s *session) waitSettled(ctx context.Context, startEpoch int, expectNav bool) bool {
+func (s *session) waitSettled(ctx context.Context, mark navMark, expectNav bool) bool {
 	start := time.Now()
 	navWindow := 400 * time.Millisecond
 	if expectNav {
@@ -377,12 +406,19 @@ func (s *session) waitSettled(ctx context.Context, startEpoch int, expectNav boo
 			return navigated
 		}
 		s.ev.Lock()
-		navigated = s.epoch != startEpoch
+		navigated = s.epoch != mark.epoch
+		started := navigated || s.loads != mark.loads
+		loading := s.loading
 		s.ev.Unlock()
-		if !navigated && time.Since(start) > navWindow {
+		// A load that started (even one later blocked by scope) is followed
+		// to the end; only a page that never began loading times out early.
+		if !started && time.Since(start) > navWindow {
 			return false
 		}
-		if navigated {
+		if started && !navigated && !loading && time.Since(start) > navWindow {
+			return false
+		}
+		if navigated && !loading {
 			r, e := s.helper(ctx, "probe", nil, true)
 			if e == nil {
 				var p struct {
@@ -404,9 +440,7 @@ func (s *session) navigate(ctx context.Context, target string) (map[string]any, 
 	if !s.scope.Allows(target) {
 		return nil, fmt.Errorf("OUT_OF_SCOPE: %s is not in allowed_origins %v. Ask the user to start a task that includes this site.", originOf(target), s.scope.Strings())
 	}
-	s.ev.Lock()
-	before := s.epoch
-	s.ev.Unlock()
+	before := s.mark()
 	var r struct {
 		ErrorText string `json:"errorText"`
 	}
@@ -436,9 +470,7 @@ func (s *session) restoreAfterBlock(ctx context.Context) {
 			URL string `json:"url"`
 		} `json:"entries"`
 	}
-	s.ev.Lock()
-	before := s.epoch
-	s.ev.Unlock()
+	before := s.mark()
 	if s.conn.Call(ctx, "Page.getNavigationHistory", nil, &h) == nil {
 		for i := h.CurrentIndex - 1; i >= 0 && i < len(h.Entries); i-- {
 			if s.scope.Allows(h.Entries[i].URL) {
@@ -559,6 +591,9 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 	result = map[string]any{"action": a.Action}
 	switch a.Action {
 	case "click":
+		s.ev.Lock()
+		startLoads, startEpoch := s.loads, s.epoch
+		s.ev.Unlock()
 		r, e := s.helper(ctx, "locate", ref, true)
 		if e != nil {
 			return nil, false, e
@@ -571,6 +606,7 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		_ = json.Unmarshal(r.Result.Value, &loc)
 		result["label"] = loc.Label
 		if loc.Reachable {
+			_, _ = s.helper(ctx, "arm_click", ref, true)
 			for i, t := range []string{"mouseMoved", "mousePressed", "mouseReleased"} {
 				p := map[string]any{"type": t, "x": loc.X, "y": loc.Y, "button": "left", "clickCount": 1}
 				if t == "mouseMoved" {
@@ -581,6 +617,26 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 				}
 				if e := s.conn.Call(ctx, "Input.dispatchMouseEvent", p, nil); e != nil {
 					return nil, dispatched, e
+				}
+			}
+			// If the page navigated, the click clearly landed. Otherwise make
+			// sure the trusted click reached the element; a throttled or
+			// covered window can swallow synthetic mouse input.
+			s.ev.Lock()
+			moved := s.loads != startLoads || s.epoch != startEpoch
+			s.ev.Unlock()
+			if !moved {
+				if r, e := s.helper(ctx, "click_seen", ref, true); e == nil && string(r.Result.Value) == "false" {
+					if a.Effect == "submit" {
+						// Never risk a second submit: report and let the
+						// caller inspect the page first.
+						result["note"] = "the click may not have reached the element; take a snapshot before deciding anything"
+					} else {
+						if _, e := s.helper(ctx, "jsclick", ref, true); e != nil {
+							return nil, true, e
+						}
+						result["note"] = "the mouse click did not reach the element; a direct element click was used"
+					}
 				}
 			}
 		} else {

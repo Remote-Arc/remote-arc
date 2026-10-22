@@ -421,6 +421,7 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 	if effect != "none" && effect != "navigation" && effect != "submit" {
 		return nil, errors.New("effect must be none, navigation or submit.")
 	}
+	req.Effect = effect
 	var eff *Effect
 	if effect == "submit" {
 		key := protocol.OptionalString(args, "idempotency_key")
@@ -448,9 +449,7 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 		s.ev.Unlock()
 		defer func() { s.ev.Lock(); s.submitting = false; s.ev.Unlock() }()
 	}
-	s.ev.Lock()
-	before := s.epoch
-	s.ev.Unlock()
+	before := s.mark()
 	out, dispatched, err := s.act(ctx, req)
 	navigated := false
 	if dispatched && s.live() {

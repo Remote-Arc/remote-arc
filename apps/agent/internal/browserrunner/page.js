@@ -193,6 +193,22 @@
     return { x, y, width: r.width, height: r.height, reachable, label: describe(el), tag: el.tagName.toLowerCase(), type: String(el.type || "").toLowerCase(), sensitive: sensitive(el) };
   }
 
+  if (op === "arm_click") {
+    // Records whether the next trusted click actually reaches this element.
+    const el = lookup();
+    const s = state();
+    s.clickSeen = false;
+    window.addEventListener("click", (e) => {
+      if (e.isTrusted && (e.target === el || el.contains(e.target) || (el.labels && Array.from(el.labels).some((l) => l.contains(e.target))))) s.clickSeen = true;
+    }, { capture: true, once: true });
+    return true;
+  }
+
+  if (op === "click_seen") {
+    const s = state();
+    return !!(s && s.clickSeen);
+  }
+
   if (op === "jsclick") {
     lookup().click();
     return true;

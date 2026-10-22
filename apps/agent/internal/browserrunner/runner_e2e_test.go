@@ -39,6 +39,9 @@ func (f *fakeATS) handler(outside string) http.Handler {
 <a href="/apply/1">Apply now</a> <a href="/leave">Partner site</a> <a href="/login">Sign in</a>`)
 	})
 	mux.HandleFunc("/leave", func(w http.ResponseWriter, r *http.Request) {
+		// Slower than the Runner's navigation-start window: the load must
+		// still be followed to the blocked redirect, as on a slow real site.
+		time.Sleep(3 * time.Second)
 		http.Redirect(w, r, outside+"/phish", http.StatusFound)
 	})
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {

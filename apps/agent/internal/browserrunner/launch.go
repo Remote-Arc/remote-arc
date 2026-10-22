@@ -164,7 +164,12 @@ func launchBrowser(ctx context.Context, exe, profile string, headless bool) (*br
 		"--disable-background-networking",
 		"--disable-component-update",
 		"--disable-default-apps",
-		"--disable-features=Translate,MediaRouter,OptimizationHints,AutofillServerCommunication",
+		// A headed task window is often behind other windows; Chromium would
+		// otherwise throttle it and drop synthetic input (Windows occlusion).
+		"--disable-features=Translate,MediaRouter,OptimizationHints,AutofillServerCommunication,CalculateNativeWinOcclusion",
+		"--disable-backgrounding-occluded-windows",
+		"--disable-renderer-backgrounding",
+		"--disable-background-timer-throttling",
 		"--password-store=basic",
 		"--use-mock-keychain",
 		"--window-size=1280,900",

@@ -131,7 +131,9 @@ def ordinary_start(binary, env, fixture, should_skip=False, launcher=None):
                 assert process.poll() is None, "optional client setup stopped the core agent"
                 time.sleep(0.05)
             else:
-                raise AssertionError("automatic integration notices missing")
+                notices = [line for line in log.read_text(encoding="utf-8", errors="replace").splitlines()
+                           if "Codex:" in line or "Claude Code:" in line]
+                raise AssertionError("automatic integration notices missing: " + " | ".join(notices))
             assert process.poll() is None, "device agent stopped after optional setup"
             # Stop only this fixture's authenticated loopback server. Never
             # modify global startup/launchd/registry registrations during smoke.

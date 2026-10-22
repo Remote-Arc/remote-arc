@@ -16,6 +16,11 @@ on:
       - 'apps/agent/internal/claudesetup/**'
       - 'scripts/automatic-client-mcp-*.py'
   workflow_dispatch:
+    inputs:
+      public_version:
+        description: Published remotelink candidate to qualify
+        type: string
+        default: '0.6.2-rc.4'
 
 permissions:
   contents: read
@@ -45,12 +50,18 @@ jobs:
             packages/execution-core/go.sum
       - name: Install pinned official clients without lifecycle scripts
         run: npm install --prefix work/client-npm --ignore-scripts --no-audit --no-fund --package-lock=false @openai/codex@0.163.0-alpha.11 @anthropic-ai/claude-code@2.1.118
+      - name: Install the real Windows global npm layout, including nested optional dependencies
+        if: runner.os == 'Windows'
+        run: npm install --global --prefix work/client-global --ignore-scripts --no-audit --no-fund @openai/codex@0.163.0-alpha.11 @anthropic-ai/claude-code@2.1.118
       - name: Install the public Remote Link candidate
-        run: npm install --prefix work/public-cli --ignore-scripts --no-audit --no-fund --package-lock=false remotelink@0.6.2-rc.4
+        shell: bash
+        env:
+          REMOTEARC_QUALIFICATION_VERSION: ${{ inputs.public_version || '0.6.2-rc.4' }}
+        run: npm install --prefix work/public-cli --ignore-scripts --no-audit --no-fund --package-lock=false "remotelink@$REMOTEARC_QUALIFICATION_VERSION"
       - name: Build source under qualification
         run: go -C apps/agent build -ldflags "-X main.version=0.6.2-rc.4-dev.npm-254" -o ../../work/remotelink-source${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/remotelink
       - name: Verify source discovery, published native and published npm entry points
-        run: python scripts/automatic-client-mcp-qualification.py --client-prefix work/client-npm --source-binary work/remotelink-source${{ runner.os == 'Windows' && '.exe' || '' }} --npm-prefix work/public-cli --report-dir work/client-mcp
+        run: python scripts/automatic-client-mcp-qualification.py --client-prefix work/client-npm --source-binary work/remotelink-source${{ runner.os == 'Windows' && '.exe' || '' }} --npm-prefix work/public-cli --report-dir work/client-mcp ${{ runner.os == 'Windows' && '--global-client-prefix work/client-global' || '' }}
       - uses: actions/upload-artifact@v7
         if: always()
         with:

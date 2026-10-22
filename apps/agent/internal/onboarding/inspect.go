@@ -125,8 +125,8 @@ func (d detector) inspect(ctx context.Context, agent, version string) (Inspectio
 			// Resolve only fixed native package locations beside a discovered
 			// npm shim. Never read/evaluate the shell wrapper or run Node.
 			for _, candidate := range append([]Candidate(nil), c.Candidates...) {
-				for _, path := range npmNativePaths(name, candidate.Path, runtime.GOARCH) {
-					add(path, "npm_native")
+				for _, native := range npmNativeCandidates(name, candidate.Path, runtime.GOARCH) {
+					add(native.Path, native.Source)
 				}
 			}
 		}
@@ -137,7 +137,7 @@ func (d detector) inspect(ctx context.Context, agent, version string) (Inspectio
 	return r, ctx.Err()
 }
 
-func npmNativePaths(agent, shim, arch string) []string {
+func npmNativeCandidates(agent, shim, arch string) []Candidate {
 	if !filepath.IsAbs(shim) || !strings.EqualFold(filepath.Base(shim), agent+".cmd") {
 		return nil
 	}
@@ -156,17 +156,21 @@ func npmNativePaths(agent, shim, arch string) []string {
 	}
 	switch agent {
 	case "codex":
-		paths := []string{}
-		for _, pkg := range []string{"codex-win32-" + cpu, "codex"} {
+		paths := []Candidate{}
+		for _, root := range []string{modules, filepath.Join(modules, "@openai", "codex", "node_modules")} {
 			for _, binDir := range []string{"bin", "codex"} {
-				paths = append(paths, filepath.Join(modules, "@openai", pkg, "vendor", triple, binDir, "codex.exe"))
+				paths = append(paths, Candidate{filepath.Join(root, "@openai", "codex-win32-"+cpu, "vendor", triple, binDir, "codex.exe"), "npm_native"})
 			}
+		}
+		for _, binDir := range []string{"bin", "codex"} {
+			paths = append(paths, Candidate{filepath.Join(modules, "@openai", "codex", "vendor", triple, binDir, "codex.exe"), "npm_bundled"})
 		}
 		return paths
 	case "claude":
-		return []string{
-			filepath.Join(modules, "@anthropic-ai", "claude-code-win32-"+cpu, "claude.exe"),
-			filepath.Join(modules, "@anthropic-ai", "claude-code", "bin", "claude.exe"),
+		return []Candidate{
+			{filepath.Join(modules, "@anthropic-ai", "claude-code-win32-"+cpu, "claude.exe"), "npm_native"},
+			{filepath.Join(modules, "@anthropic-ai", "claude-code", "node_modules", "@anthropic-ai", "claude-code-win32-"+cpu, "claude.exe"), "npm_native"},
+			{filepath.Join(modules, "@anthropic-ai", "claude-code", "bin", "claude.exe"), "npm_bundled"},
 		}
 	}
 	return nil

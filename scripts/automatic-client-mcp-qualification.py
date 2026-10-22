@@ -21,6 +21,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("client-prefix", "source-binary", "npm-prefix", "report-dir"):
         parser.add_argument("--" + name, type=pathlib.Path, required=True)
+    parser.add_argument("--global-client-prefix", type=pathlib.Path)
     args = parser.parse_args()
     output = args.report_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -55,13 +56,21 @@ def main():
     node = shutil.which("node")
     assert node, "Node is required to test the public npm entry point"
     cases = [
-        ("source-npm-clients", args.source_binary.resolve(), modules / ".bin" if os.name == "nt" else None, None),
-        ("public-native", public, None, None),
-        ("public-npm", public, None, [node, str(npm / "index.js")]),
+        ("source-npm-clients", args.source_binary.resolve(), modules / ".bin" if os.name == "nt" else None, None, codex, claude),
+        ("public-native", public, None, None, codex, claude),
+        ("public-npm", public, None, [node, str(npm / "index.js")], codex, claude),
     ]
-    for name, binary, discovery, launcher in cases:
+    if args.global_client_prefix:
+        assert os.name == "nt", "global shim qualification is Windows-specific"
+        prefix = args.global_client_prefix.resolve()
+        global_modules = prefix / "node_modules"
+        global_codex = global_modules / "@openai" / "codex" / "node_modules" / "@openai" / f"codex-win32-{cpu}" / "vendor" / target / "bin" / "codex.exe"
+        global_claude = global_modules / "@anthropic-ai" / "claude-code" / "node_modules" / "@anthropic-ai" / f"claude-code-win32-{cpu}" / "claude.exe"
+        assert global_codex.is_file() and global_claude.is_file(), "nested global native packages are missing"
+        cases.append(("source-global-npm-clients", args.source_binary.resolve(), prefix, None, global_codex, global_claude))
+    for name, binary, discovery, launcher, actual_codex, actual_claude in cases:
         with tempfile.TemporaryDirectory(prefix="remotearc-client-qualification-") as directory:
-            result = smoke.run(binary, codex, claude, pathlib.Path(directory).resolve(), discovery, launcher)
+            result = smoke.run(binary, actual_codex, actual_claude, pathlib.Path(directory).resolve(), discovery, launcher)
         result["qualification_case"] = name
         result["published_version"] = version
         (output / f"{name}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

@@ -78,7 +78,8 @@ Native executables from PATH and known locations are supported. The Windows
 npm-client fix resolves native executables from fixed official npm package
 locations beside PATH/global `.cmd` shims, including local `node_modules/.bin`
 prefixes, on x64 and ARM64. It never evaluates wrapper contents or invokes a
-shell. The resolved client still must pass the usual version and capability
+shell. Hoisted and nested optional dependencies are checked; actual native
+packages take precedence over bundled wrapper stubs. The resolved client still must pass the usual version and capability
 checks. Missing optional native packages and unsupported JS-only layouts skip
 without changing client configuration. Claude Code on Windows also requires
 its normal Git Bash installation. Package-manager-specific layouts beyond these

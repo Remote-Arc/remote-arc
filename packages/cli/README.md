@@ -91,6 +91,11 @@ Clients that still show the older shared-tab names (`browser_read_page`, `browse
 
 ## Commands
 
+In **0.6.2-rc.5**, running a newer release replaces an older, idle Agent automatically, and
+`--force-update` replaces one that is busy, too old to report its work, or not older. AI clients
+with a cached tool list keep working with the previous shared-tab tool names. Select
+`npx remotelink@0.6.2-rc.5` or the matching native RC.
+
 In **0.6.2-rc.4**, **Browser Runner (beta)** lets a connected AI open, read and act on
 websites in a separate background Chrome, Edge or Chromium on this computer, only on
 the sites each task names. Turn it on per device with the **Browser Runner** switch in the

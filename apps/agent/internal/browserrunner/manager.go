@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -521,8 +522,19 @@ func (m *Manager) upload(ctx context.Context, s *session, args map[string]any, p
 	if e != nil {
 		return nil, e
 	}
+	// Policy paths are case-folded on Windows. Upload the caller's own path so
+	// the site receives the real file name, after proving it is the same file.
+	original, e := filepath.Abs(policy.Expand(raw))
+	if e != nil {
+		return nil, e
+	}
+	if a, e1 := os.Stat(original); e1 == nil {
+		if b, e2 := os.Stat(target); e2 != nil || !os.SameFile(a, b) {
+			return nil, errors.New("Upload path could not be verified against the Trusted Location.")
+		}
+	}
 	ref := protocol.OptionalString(args, "ref")
-	out, e := s.upload(ctx, snap, ref, target)
+	out, e := s.upload(ctx, snap, ref, original)
 	rc := Receipt{Tool: "browser_upload", Label: ref, URL: safeURL(s.currentHref()), Outcome: "ok"}
 	if e != nil {
 		rc.Outcome, rc.Detail = "error", clip(e.Error(), 200)

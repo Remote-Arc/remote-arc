@@ -1,8 +1,9 @@
 (function (op, a) {
   "use strict";
-  // Remote Arc Browser Runner page helper. Evaluated in the page's main world
-  // by the local Agent only. It never reads cookies, storage or credentials and
-  // never returns values of sensitive fields.
+  // Remote Arc Browser Runner page helper. The local Agent evaluates it in an
+  // isolated world (only "install" runs in the page's main world). It never
+  // reads cookies, storage or credentials and never returns values of
+  // sensitive fields.
   const SENSITIVE_AUTOCOMPLETE = ["current-password", "new-password", "one-time-code", "cc-name", "cc-number", "cc-exp", "cc-exp-month", "cc-exp-year", "cc-csc", "cc-type"];
   const SENSITIVE_NAME = /(passw|passwd|pwd|otp|one[-_ ]?time|verification[-_ ]?code|cvv|cvc|csc|card[-_ ]?num|ccnum|cc[-_]?number|security[-_ ]?code)/i;
   const CAPTCHA = /(recaptcha|hcaptcha|turnstile|challenges\.cloudflare\.com|arkoselabs|funcaptcha|geetest|captcha)/i;

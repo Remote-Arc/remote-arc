@@ -4,6 +4,16 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.2 - Unreleased
 
+### Browser Runner Beta (release candidate 0.6.2-rc.4)
+
+- Add Browser Runner to the native Go Agent: a separate, task-scoped background browser that drives the installed Chrome, Edge or Chromium over CDP (no Node or Playwright). Each task has its own profile and never reads the everyday browser's cookies or passwords.
+- Expose six host-neutral MCP tools: `browser_runner_start`, `browser_runner_snapshot`, `browser_runner_act`, `browser_runner_status`, `browser_runner_confirm` and `browser_runner_close`. They work with any MCP client and report continuation state in the tool result.
+- Restrict each task to the sites it declares. Redirects, links and popups outside them are blocked, and adding sites to a running task needs a one-time Dashboard approval for the exact origins.
+- Record each submit durably before it is sent, never send it twice, and confirm its result from evidence on the page. The Agent refuses POST and submit-like controls without `effect=submit`, and a crash leaves the submit `unknown` instead of retrying it. Passwords, one-time codes and payment fields are never typed; sign-in, verification codes and CAPTCHA are handed to the user in a visible window.
+- Support embedded cross-site application forms (out-of-process iframes) and open Shadow DOM.
+- Rename the Chrome Companion tools to `shared_tab_list`, `shared_tab_read`, `shared_tab_click` and `shared_tab_fill`. The device protocol and stored permissions are unchanged.
+- Browser Runner is off by default. Each device needs the explicit Dashboard switch, and the Relay registers the tools only with `ENABLE_BROWSER_RUNNER=1`. Generic JavaScript side effects are not fully detectable yet (#279).
+
 ### Local coding-agent tools and resource-aware Fleet (release candidate)
 
 - Add native project-scoped Codex/Claude session metadata discovery with `takeover --workspace`, plus non-executing local installation detection with `setup inspect`. These commands do not reconstruct full history or resume an agent.

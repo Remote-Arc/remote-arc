@@ -85,6 +85,12 @@ https://remotearc.app
 
 ## Commands
 
+In **0.6.2-rc.4**, **Browser Runner (beta)** lets a connected AI open, read and act on
+websites in a separate background Chrome, Edge or Chromium on this computer, only on
+the sites each task names. Turn it on per device with the **Browser Runner** switch in the
+Dashboard. Passwords, verification codes and payment details are always left to you, and a
+submit is never sent twice. Select `npx remotelink@0.6.2-rc.4` or the matching native RC.
+
 In **0.6.2-rc.3**, [automatic local Codex integration](../../docs/codex-local-integration.md)
 adds native `setup install`, `status`, `doctor`, `repair` and `uninstall` commands
 for a selected project, with automatic configuration and actual client tool

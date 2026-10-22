@@ -106,6 +106,7 @@
     "ALERT_FROM_EMAIL": "alerts@remotearc.app",
     "ENABLE_EXPERIMENTAL_AGENT_GOALS": "1",
     "ENABLE_APPS": "1",
+    "ENABLE_BROWSER_RUNNER": "1",
     "ARC_CHAT_ENABLED": "0",
     "ARC_CREDITS_ENABLED": "0",
     "ARC_BILLING_ENABLED": "0",

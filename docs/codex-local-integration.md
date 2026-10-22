@@ -1,5 +1,9 @@
 # Automatic local Codex integration (0.6.2-rc.3)
 
+For the **unreleased** ordinary-startup background integration for both clients,
+see [Automatic coding-client MCP setup](automatic-client-mcp.md). The commands
+below describe the project-scoped behavior already published in rc.3.
+
 This slice of [#254](https://github.com/Remote-Arc/remote-arc/issues/254) registers
 project read-only tools inside a supported **local Codex** client. Users do not
 create a ChatGPT custom app, paste a URL or edit MCP/TOML themselves. The native

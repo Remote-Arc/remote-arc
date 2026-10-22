@@ -57,6 +57,16 @@ func TestOptionsVersionAndForeignLeasePreservesPairing(t *testing.T) {
 	}
 }
 func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
+	// A stuck optional client integration must not delay hello, tool calls,
+	// local status, or graceful device shutdown.
+	previousHook := startClientIntegrations
+	started, stopped := make(chan struct{}), make(chan struct{})
+	startClientIntegrations = func(ctx context.Context, _ string, _ func(string, string)) context.CancelFunc {
+		hookCtx, cancel := context.WithCancel(ctx)
+		go func() { close(started); <-hookCtx.Done(); close(stopped) }()
+		return cancel
+	}
+	t.Cleanup(func() { startClientIntegrations = previousHook })
 	home := t.TempDir()
 	t.Setenv("REMOTEARC_HOME", home)
 	file := filepath.Join(home, "fixture.txt")
@@ -116,6 +126,16 @@ func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("native CLI did not execute")
 	}
+	select {
+	case <-started:
+	default:
+		t.Fatal("ordinary startup did not launch optional setup")
+	}
+	select {
+	case <-stopped:
+		t.Fatal("hook did not remain blocked during real execution")
+	default:
+	}
 	var status bytes.Buffer
 	if e := Main(ctx, []string{"--status"}, "test", os.Stdin, &status, &status); e != nil {
 		t.Fatal(e)
@@ -136,6 +156,11 @@ func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("native CLI did not stop")
+	}
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatal("shutdown did not cancel optional setup")
 	}
 	if lease.Active(filepath.Join(config.Dir(), "agent"), "execution") {
 		t.Fatal("CLI leaked execution lease")

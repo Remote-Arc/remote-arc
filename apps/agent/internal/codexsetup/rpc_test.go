@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/mcpregistration"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
 )
 
 // The installed-client substitute is this test executable, not a shell script.
@@ -124,6 +127,8 @@ func integrationReply(method string, params map[string]json.RawMessage, threadRo
 		state.Servers = map[string]json.RawMessage{}
 	}
 	switch method {
+	case "account/read":
+		return map[string]any{"account": nil}, 0
 	case "configRequirements/read":
 		if state.Managed {
 			return map[string]any{"requirements": map[string]any{"allowedSandboxModes": []string{"readOnly"}}}, 0
@@ -164,9 +169,22 @@ func integrationReply(method string, params map[string]json.RawMessage, threadRo
 		for _, tool := range []string{"remote_arc_status", "list_directory", "read_file", "read_binary_file", "get_file_info"} {
 			tools[tool] = map[string]any{"name": tool}
 		}
+		if name == mcpregistration.Name {
+			tools = map[string]any{"remote_arc_status": map[string]any{"name": "remote_arc_status"}}
+			core := execution.New("safe")
+			for _, tool := range core.ListTools() {
+				tools[tool.Name] = map[string]any{"name": tool.Name}
+			}
+			core.Close()
+		}
 		return map[string]any{"data": []any{map[string]any{"name": name, "tools": tools}}}, 0
 	case "mcpServer/tool/call":
 		status, _ := json.Marshal(map[string]any{"mode": "safe", "scope": "workspace-read-only", "workspace": *threadRoot, "root_available": true})
+		var name string
+		_ = json.Unmarshal(params["server"], &name)
+		if name == mcpregistration.Name {
+			status = []byte(`{"mode":"safe","engine":"go"}`)
+		}
 		return map[string]any{"content": []any{map[string]any{"type": "text", "text": string(status)}}}, 0
 	}
 	return nil, -32601

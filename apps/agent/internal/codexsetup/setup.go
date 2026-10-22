@@ -12,13 +12,17 @@ import (
 
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/lease"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/localmcp"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/mcpregistration"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/workspaceidentity"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/policy"
 )
 
-type Request struct{ Action, Workspace, CodexBinary, RemoteArcBinary, Version string }
+type Request struct {
+	Action, Workspace, CodexBinary, RemoteArcBinary, Version string
+	Global                                                   bool
+}
 type Result struct {
 	Contract      string `json:"contract"`
 	Action        string `json:"action"`
@@ -39,6 +43,7 @@ type transaction struct {
 	store                                             store
 	provider                                          provider
 	held                                              func() bool
+	global                                            bool
 }
 
 func Run(ctx context.Context, request Request) (result Result, err error) {
@@ -60,11 +65,11 @@ func Run(ctx context.Context, request Request) (result Result, err error) {
 	default:
 		return result, fail("action_invalid", "Use install, status, doctor, repair or uninstall.")
 	}
-	if !filepath.IsAbs(request.Workspace) {
+	if !request.Global && !filepath.IsAbs(request.Workspace) {
 		return result, fail("workspace_invalid", "Select an absolute project directory with --workspace.")
 	}
 	root, err := policy.Canonical(request.Workspace)
-	if err != nil {
+	if !request.Global && err != nil {
 		return result, fail("workspace_unavailable", "Could not resolve the selected project directory.")
 	}
 	result.Workspace = root
@@ -83,9 +88,15 @@ func Run(ctx context.Context, request Request) (result Result, err error) {
 	if err != nil {
 		return result, fail("profile_unavailable", "Could not resolve the selected Codex profile.")
 	}
+	if request.Global {
+		root, result.Workspace = profile, ""
+	}
 	sum := sha256.Sum256([]byte(profile + "\x00" + root))
 	key := hex.EncodeToString(sum[:])
 	name := "remote_arc_" + key[:16]
+	if request.Global {
+		name = mcpregistration.Name
+	}
 	result.Registration = name
 	stateDir := filepath.Join(config.Dir(), "integrations", "codex")
 	state := fileStore{filepath.Join(stateDir, key+".json")}
@@ -107,7 +118,7 @@ func Run(ctx context.Context, request Request) (result Result, err error) {
 		return result, fail("binary_unavailable", "Remote Arc requires its absolute native binary path.")
 	}
 	identity, idErr := workspaceidentity.Read(root)
-	if request.Action == "install" || request.Action == "repair" {
+	if !request.Global && (request.Action == "install" || request.Action == "repair") {
 		core := execution.New("safe")
 		_, scopeErr := localmcp.WorkspaceServer(core, request.Version, root)
 		core.Close()
@@ -117,6 +128,12 @@ func Run(ctx context.Context, request Request) (result Result, err error) {
 	}
 	if err = os.MkdirAll(profile, 0700); err != nil {
 		return result, fail("profile_unavailable", "Codex profile is not writable or available.")
+	}
+	if request.Global {
+		identity, idErr = workspaceidentity.Read(profile)
+		if idErr != nil {
+			return result, idErr
+		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
@@ -154,7 +171,51 @@ func Run(ctx context.Context, request Request) (result Result, err error) {
 			return result, fail("binary_unavailable", "Could not fingerprint the running Go binary.")
 		}
 	}
-	t := transaction{profile: profile, root: root, name: name, binary: request.RemoteArcBinary, identity: identity, binaryHash: binaryHash, store: state, provider: &codexProvider{rpc, profile}, held: held}
+	provider := &codexProvider{rpc, profile}
+	if request.Global && request.Action == "install" {
+		before, e := provider.read(name, root)
+		if e != nil {
+			return result, e
+		}
+		if existing, found := mcpregistration.Existing(before.Servers); found {
+			if existing != name || old == nil || old.Stage == "installed" {
+				result.Status, result.Registration = "already_registered", existing
+				return result, nil
+			}
+		}
+		if !emptyJSON(before.Entry) && (old == nil || !sameJSON(before.Entry, old.Desired)) {
+			return result, fail("config_conflict", "The remote_arc name is already used; existing settings were preserved.")
+		}
+		if emptyJSON(before.Entry) {
+			if cwd, e := os.Getwd(); e == nil {
+				active, e := provider.read(name, cwd)
+				if e != nil {
+					return result, e
+				}
+				if existing, found := mcpregistration.Existing(active.Servers); found {
+					result.Status, result.Registration = "already_registered", existing
+					return result, nil
+				}
+			}
+			if found, e := provider.remoteArcApp(); e != nil {
+				return result, e
+			} else if found {
+				result.Status = "connector_present"
+				return result, nil
+			}
+		}
+	}
+	if request.Global && (request.Action == "install" || request.Action == "repair") {
+		request.RemoteArcBinary, err = mcpregistration.PinBinary(ctx, request.RemoteArcBinary)
+		if err != nil {
+			return result, err
+		}
+		binaryHash, err = hashFile(request.RemoteArcBinary)
+		if err != nil {
+			return result, err
+		}
+	}
+	t := transaction{profile: profile, root: root, name: name, binary: request.RemoteArcBinary, identity: identity, binaryHash: binaryHash, store: state, provider: provider, held: held, global: request.Global}
 	err = t.run(request.Action, &result)
 	return result, err
 }
@@ -242,6 +303,9 @@ func (t transaction) run(action string, result *Result) error {
 		return nil
 	}
 	desired, _ := json.Marshal(map[string]any{"command": t.binary, "args": []string{"--mcp", "--safe", "--mcp-workspace=" + t.root, "--mcp-workspace-id=" + t.identity}, "cwd": t.root, "enabled": true})
+	if t.global {
+		desired = mcpregistration.Desired(t.binary, false)
+	}
 	if r == nil {
 		r = &record{Contract: recordContract, Profile: t.profile, Workspace: t.root, Identity: t.identity, Name: t.name, Original: json.RawMessage("null")}
 	}

@@ -2,11 +2,14 @@ package codexsetup
 
 import (
 	"encoding/json"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/mcpregistration"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/policy"
 )
 
@@ -159,6 +162,15 @@ func (p *codexProvider) verify(name, workspace string, binding json.RawMessage) 
 		return err
 	}
 	expected := []string{"remote_arc_status", "list_directory", "read_file", "read_binary_file", "get_file_info"}
+	global := name == mcpregistration.Name
+	if global {
+		core := execution.New("safe")
+		expected = []string{"remote_arc_status"}
+		for _, tool := range core.ListTools() {
+			expected = append(expected, tool.Name)
+		}
+		core.Close()
+	}
 	found := false
 	for _, server := range catalog.Data {
 		if server.Name == name {
@@ -194,11 +206,87 @@ func (p *codexProvider) verify(name, workspace string, binding json.RawMessage) 
 		Scope     string `json:"scope"`
 		Workspace string `json:"workspace"`
 		Available bool   `json:"root_available"`
+		Engine    string `json:"engine"`
 	}
-	if json.Unmarshal([]byte(response.Content[0].Text), &status) != nil || status.Mode != "safe" || status.Scope != "workspace-read-only" || status.Workspace != workspace || !status.Available {
+	if json.Unmarshal([]byte(response.Content[0].Text), &status) != nil || status.Mode != "safe" {
+		return fail("client_verification_failed", "The local integration did not report safe mode.")
+	}
+	if global {
+		if status.Scope != "" || status.Engine != "go" {
+			return fail("client_verification_failed", "The local integration did not report the native safe transport.")
+		}
+	} else if status.Scope != "workspace-read-only" || status.Workspace != workspace || !status.Available {
 		return fail("client_verification_failed", "The connected tools do not match the requested read-only project scope.")
 	}
 	return nil
+}
+
+func (p *codexProvider) remoteArcApp() (bool, error) {
+	var identity struct {
+		Account json.RawMessage `json:"account"`
+	}
+	if err := p.rpc.call("account/read", map[string]any{"refreshToken": false}, &identity); err != nil {
+		return false, fail("connector_inspection_failed", "Could not determine Codex connector availability; automatic setup was skipped.")
+	}
+	if len(identity.Account) == 0 {
+		return false, fail("connector_inspection_failed", "Codex returned incomplete account information; automatic setup was skipped.")
+	}
+	// Fresh/API-key profiles do not inherit ChatGPT account connectors. Avoid
+	// querying an unauthenticated cloud directory just to install local tools.
+	if string(identity.Account) == "null" {
+		return false, nil
+	}
+	var account struct {
+		Type string `json:"type"`
+	}
+	if json.Unmarshal(identity.Account, &account) != nil || account.Type == "" {
+		return false, fail("connector_inspection_failed", "Codex account information is unsupported; automatic setup was skipped.")
+	}
+	if account.Type == "apiKey" {
+		return false, nil
+	}
+	cursor := ""
+	uncertain := false
+	for page := 0; page < 20; page++ {
+		var response struct {
+			Data []struct {
+				Name, InstallURL string
+				IsAccessible     bool
+			} `json:"data"`
+			NextCursor *string `json:"nextCursor"`
+		}
+		if err := p.rpc.call("app/list", map[string]any{"cursor": cursor, "limit": 100, "forceRefetch": false}, &response); err != nil {
+			return false, fail("connector_inspection_failed", "Could not check existing Codex connectors; registration was skipped to avoid duplicates.")
+		}
+		if response.Data == nil {
+			return false, fail("connector_inspection_failed", "Codex returned an incomplete connector list; registration was skipped.")
+		}
+		for _, app := range response.Data {
+			name := strings.NewReplacer(" ", "", "-", "", "_", "").Replace(strings.ToLower(app.Name))
+			if app.IsAccessible && (name == "remotearc" || mcpregistration.Endpoint(app.InstallURL)) {
+				return true, nil
+			}
+			if app.IsAccessible {
+				u, err := url.Parse(app.InstallURL)
+				// A catalogue link (or missing link) does not identify the
+				// endpoint of a renamed custom connector.
+				if err != nil || u.Hostname() == "" || strings.EqualFold(u.Hostname(), "chatgpt.com") {
+					uncertain = true
+				}
+			}
+		}
+		if response.NextCursor == nil || *response.NextCursor == "" {
+			if uncertain {
+				return false, fail("connector_identity_unavailable", "An existing Codex connector cannot be identified safely; registration was skipped to avoid duplicates.")
+			}
+			return false, nil
+		}
+		if cursor == *response.NextCursor {
+			break
+		}
+		cursor = *response.NextCursor
+	}
+	return false, fail("connector_inspection_failed", "Codex connector enumeration exceeded its limit; registration was skipped.")
 }
 
 func emptyJSON(raw json.RawMessage) bool { return len(raw) == 0 || string(raw) == "null" }

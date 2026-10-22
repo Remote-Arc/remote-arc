@@ -2,7 +2,22 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 const root = fileURLToPath(new URL("../", import.meta.url));
+// Distribution tests start the ordinary Agent entry point, whose optional
+// integrations must never register into the developer's real client profiles.
+const clientTempRoot = realpathSync(tmpdir());
+const clientProfiles = realpathSync(mkdtempSync(path.join(clientTempRoot, "remotearc-device-clients-")));
+process.env.CODEX_HOME = path.join(clientProfiles, "codex");
+process.env.CLAUDE_CONFIG_DIR = path.join(clientProfiles, "claude");
+for (const key of ["OPENAI_API_KEY", "CODEX_API_KEY", "CHATGPT_AUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDECODE"])
+  delete process.env[key];
+process.on("exit", () => {
+  if (path.dirname(clientProfiles) !== clientTempRoot || !path.basename(clientProfiles).startsWith("remotearc-device-clients-"))
+    throw new Error("Refusing to clean a client fixture outside its temporary root.");
+  rmSync(clientProfiles, { recursive: true, force: true });
+});
 function run(command, args, options = {}) {
   const r = spawnSync(command, args, {
     cwd: root,

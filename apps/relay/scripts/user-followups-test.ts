@@ -23,6 +23,18 @@ assert.equal((await api('','GET',undefined,'nobody')).status,401);
 assert.equal((await api('/person','PATCH',{},'admin','https://evil.invalid')).status,403);
 assert.equal((await handleAdminServiceRequest(new Request('https://mcp.remotearc.app/api/admin/followups'),env)).status,404);
 const listing=await decode(await api('?segment=unconnected'));assert.equal(listing.total,3);assert(listing.emailConfigured);
+sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)').run('paired','person','Computer','windows','fixture-device',now);
+assert.deepEqual((await decode(await api('?segment=device-only'))).items.map((person:any)=>person.id),['person']);
+const expired=new Date(Date.now()-86400000).toISOString();
+sql.prepare('INSERT INTO oauth_tokens(access_token_hash,client_id,user_id,resource,scope,expires_at,refresh_expires_at,created_at,grant_id) VALUES(?,?,?,?,?,?,?,?,?)').run('mcp-fixture','fixture-client','person','https://mcp.remotearc.app','devices:read',expired,future,now,'fixture-grant');
+assert.equal((await decode(await api('?segment=device-only'))).total,0,'A refreshable MCP authorization counts as connected');
+sql.prepare('UPDATE oauth_tokens SET refresh_expires_at=?').run(expired);
+assert.equal((await decode(await api('?segment=device-only'))).total,1,'An expired authorization does not count as connected');
+sql.prepare('UPDATE oauth_tokens SET expires_at=?,revoked_at=?').run(future,now);
+assert.equal((await decode(await api('?segment=device-only'))).total,1,'Revoked authorizations do not hide unfinished MCP setup');
+sql.prepare('UPDATE oauth_tokens SET revoked_at=NULL').run();
+assert.equal((await decode(await api('?segment=device-only'))).total,0,'A valid MCP access token counts as connected');
+sql.prepare('DELETE FROM oauth_tokens').run();
 for(const from of [undefined,'','   ']){
  const status=await decode(await handleAdminServiceRequest(request(),{...env,EMAIL_FROM:from}));
  assert.equal(status.emailConfigured,true,'An optional sender override must not disable the existing email channel');
@@ -35,6 +47,14 @@ const profile={status:'waiting',note:'Help requested through support',nextFollow
 await decode(await api('/person','PATCH',profile));assert.equal((await decode(await api('?segment=due'))).total,1);
 const createDraft=async(userId='person')=>{const id=crypto.randomUUID(),text=followupTemplate('experience','en',{name:'Person',setupUrl:'https://remotearc.app/connect-ai',feedbackUrl:'https://remotearc.app/feedback?source=followup:'+id});const input={id,userId,templateId:'experience',locale:'en',...text,design:{layout:'spotlight',accent:'#244b46',eyebrow:'From the team',headline:'Your next result',intro:'A personal follow-up.',buttonLabel:'Share your feedback',highlights:[{title:'Arc',body:'Your AI teammate'}]}};const draft=await decode(await api('/drafts','POST',input),201);assert.equal(draft.htmlBody,sql.prepare('SELECT html_body FROM user_followup_messages WHERE id=?').get(id)?.html_body,'Review receives the exact saved HTML');assert.equal((await decode(await api('/drafts','POST',input))).htmlBody,draft.htmlBody,'Draft replay returns the same reviewed snapshot');assert.equal((await api('/drafts','POST',{...input,design:{...input.design,accent:'#ffffff'}})).status,409,'Reviewed design is immutable for this draft ID');return draft.id as string;};
 const id=await createDraft();
+const original=sql.prepare('SELECT * FROM user_followup_messages WHERE id=?').get(id)!;
+const changed={id,userId:'person',templateId:'experience',locale:'en',subject:'Updated support follow-up',body:String(original.body)+'\n\nA saved draft can still be edited.',design:JSON.parse(String(original.design_json)),expectedRevision:1};
+const edited=await decode(await api('/drafts','POST',changed));assert.equal(edited.revision,2);assert(edited.htmlBody.includes('Updated support follow-up'));
+assert.equal((await decode(await api('/drafts','POST',changed))).revision,2,'Retried saves return the same revision');
+assert.equal((await decode(await api('/drafts','POST',{...changed,body:changed.body+' Stale edit.'}),409)).error,'draft_conflict');
+assert.equal((await decode(await api('/drafts','POST',{...changed,userId:'other',expectedRevision:2}),409)).error,'draft_conflict','Draft ownership cannot be changed');
+assert.equal((await decode(await api('/'+id+'/send','POST',{expectedRevision:1}),409)).error,'draft_conflict','An outdated reviewed snapshot is never sent');
+const detail=await decode(await api('/person'));assert.equal(detail.messages[0].draft_revision,2);assert(detail.sender.from);assert(detail.emailConfigured);assert(!JSON.stringify(detail).includes('fixture-key'));
 let sends=0;const native=globalThis.fetch;
 globalThis.fetch=async(input,options)=>{
  assert.equal(String(input),'https://api.resend.com/emails');sends++;
@@ -52,6 +72,7 @@ try{
  const [first,second]=await Promise.all([api('/'+id+'/send','POST',{}),api('/'+id+'/send','POST',{})]);
  assert([200,409].includes(first.status));assert([200,409].includes(second.status));assert.equal(sends,1);
  assert.equal((await decode(await api('/'+id+'/send','POST',{}))).status,'sent');assert.equal(sends,1);
+ assert.equal((await decode(await api('/drafts','POST',{...changed,subject:'Cannot edit a sent email',expectedRevision:2}),409)).error,'draft_not_editable');
  const later=await createDraft();assert.equal((await api('/'+later+'/send','POST',{})).status,409);assert.equal(sends,1,'72 hour cooldown blocks another draft');
  const other=await createDraft('other');assert.equal((await decode(await api('/'+other+'/send','POST',{}),409)).error,'contact_permission_required');
  await decode(await api('/other','PATCH',{...profile,nextFollowupAt:null}));
@@ -69,5 +90,5 @@ try{
  sql.prepare(`INSERT INTO website_submissions(id,category,email,name,message,source,status,consent_at,created_at,updated_at) VALUES('feedback-fixture','feedback','person@example.invalid','Person','Useful feedback',?,'new',?,?,?)`).run('followup:'+id,now,now,now);
  assert.equal((await decode(await api('?query=person'))).items[0].feedback_count,1);
  for(const template of FOLLOWUP_TEMPLATES)for(const locale of ['en','zh'] as const){const rendered=followupTemplate(template.id,locale,{name:'Example',setupUrl:'https://example.invalid/setup',feedbackUrl:'https://example.invalid/form'});assert(!rendered.body.includes('{{'));assert(!/[\r\n]/.test(rendered.subject));}
- console.log('User follow-ups: admin host/RBAC/CSRF, segmentation, contact consent, draft replay, concurrent dispatch, cooldown, ambiguous delivery, unsubscribe and feedback attribution passed. No real emails sent.');
+ console.log('User follow-ups: admin host/RBAC/CSRF, active MCP segmentation, editable versioned drafts, stale review protection, contact consent, draft replay, concurrent dispatch, cooldown, ambiguous delivery, unsubscribe and feedback attribution passed. No real emails sent.');
 }finally{globalThis.fetch=native;sql.close();}

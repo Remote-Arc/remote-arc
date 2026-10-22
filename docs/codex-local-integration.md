@@ -1,4 +1,4 @@
-# Automatic local Codex integration (development candidate)
+# Automatic local Codex integration (0.6.2-rc.3)
 
 This slice of [#254](https://github.com/Remote-Arc/remote-arc/issues/254) registers
 project read-only tools inside a supported **local Codex** client. Users do not
@@ -8,9 +8,10 @@ This does not complete #254 or qualify cross-agent continuation.
 
 ## Use a stable native candidate binary
 
-These commands are not in the published **0.6.2-rc.2** artifacts. Build a native
-candidate in a location that will remain available to Codex, or use a future
-release containing this feature. Do not use a temporary `go run` executable as
+These commands require **0.6.2-rc.3** or later; **0.6.2-rc.2** does not contain
+them. Use `npx remotelink@0.6.2-rc.3 setup install --agent codex --workspace <absolute-project>`,
+or download the matching native RC into a location that will remain available to
+Codex. Do not use a temporary `go run` executable as
 the installed tool command. Moving/deleting the registered binary requires repair.
 
 ```sh
@@ -97,7 +98,7 @@ The npm launcher forwards the same commands to its verified Go binary;
 standalone and Homebrew invoke that binary directly. A script-installed native
 binary uses the same implementation and does not require Node.
 
-This development slice adds explicit setup commands. Plain `npx remotelink`
+This RC adds explicit setup commands. Plain `npx remotelink`
 still follows existing device pairing, and the published install script still
 installs its pinned stable binary without running local integration. Automatic
 first-run selection/dispatch across those bootstraps and its full distribution

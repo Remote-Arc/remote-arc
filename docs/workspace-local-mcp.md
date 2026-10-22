@@ -1,9 +1,9 @@
-# Workspace read-only local MCP (development candidate)
+# Workspace read-only local MCP (0.6.2-rc.3)
 
 A prerequisite for opt-in integrations in
 [#254](https://github.com/Remote-Arc/remote-arc/issues/254). This does not install
-an integration or change client configuration. Use a binary built from this PR;
-this option is not in a published package yet.
+an integration or change client configuration. Use native **0.6.2-rc.3** or
+later, or the corresponding explicitly versioned npm RC.
 
 ```sh
 remotelink --mcp --safe --mcp-workspace=/absolute/project

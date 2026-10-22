@@ -98,6 +98,7 @@ const registry = {
           policy?: { workspaceRoots?: string[] };
         };
         registryBodies.push(body as unknown as Record<string, unknown>);
+        if (body.tool === "browser_runner_start") return Response.json({ result: { ok: true } });
         const roots = body.policy?.workspaceRoots || [];
         if (!roots.includes("/Users/test/Desktop/report.txt")) {
           return Response.json(
@@ -224,6 +225,53 @@ const device = sqlite
   .get() as { workspace_roots: string };
 const roots = JSON.parse(device.workspace_roots) as string[];
 assert(roots.includes("/Users/test/Desktop/notes"));
+
+// Browser Runner scope expansions are NOT delegated by model-provided reasons.
+sqlite.prepare("UPDATE devices SET allowed_tools=? WHERE id='device-1'")
+  .run(JSON.stringify(["write_file", "edit_block", "browser_runner_start"]));
+const initialScope = { task_id: "browser-test", allowed_origins: ["https://jobs.example.test"] };
+await callDevice(env as never, identity, "device-1", "browser_runner_start",
+  { ...initialScope, scope_change_approved: true });
+assert.equal((registryBodies.at(-1)?.arguments as Record<string, unknown>).scope_change_approved, false,
+  "caller must not forge the relay approval bit");
+
+const widerScope = { ...initialScope,
+  allowed_origins: ["https://jobs.example.test", "https://ats.example.test"],
+  scope_change_reason: "user asked to apply at ATS" };
+const callsBeforeApproval = registryBodies.length;
+await assert.rejects(
+  callDevice(env as never, identity, "device-1", "browser_runner_start", widerScope),
+  /SCOPE_CHANGE_REQUIRED/,
+);
+assert.equal(registryBodies.length, callsBeforeApproval, "unapproved scope must not reach device");
+const scopeRequest = sqlite.prepare(
+  "SELECT id,target_path FROM approval_requests WHERE tool_name='browser_runner_start' AND status='pending' ORDER BY requested_at DESC LIMIT 1"
+).get() as { id: string; target_path: string };
+assert.match(scopeRequest.target_path, /ats\.example\.test/);
+for (const forbidden of ["allow_10m", "always_folder"] as const) {
+  const rejected = await decideApproval(env, { userId: "owner", approvalId: scopeRequest.id,
+    decision: forbidden, source: "dashboard" });
+  assert.equal(rejected.status, 400, forbidden + " must not be valid for scope expansion");
+}
+const grantedScope = await decideApproval(env, { userId: "owner", approvalId: scopeRequest.id,
+  decision: "allow_once", source: "dashboard" });
+assert.equal(grantedScope.status, 200);
+await callDevice(env as never, identity, "device-1", "browser_runner_start", widerScope);
+assert.equal((registryBodies.at(-1)?.arguments as Record<string, unknown>).scope_change_approved, true,
+  "approval bit must originate from an exact allow-once grant");
+assert.equal((sqlite.prepare("SELECT status FROM approval_requests WHERE id=?").get(scopeRequest.id) as { status: string }).status, "consumed");
+await assert.rejects(
+  callDevice(env as never, identity, "device-1", "browser_runner_start", widerScope),
+  /SCOPE_CHANGE_REQUIRED/, "one-time scope approval must not replay");
+await assert.rejects(
+  callDevice(env as never, identity, "device-1", "browser_runner_start",
+    { ...widerScope, allowed_origins: ["https://jobs.example.test", "https://evil.example.test"] }),
+  /SCOPE_CHANGE_REQUIRED/, "different origins must require a new exact approval");
+
+// Clean up pending requests intentionally created by the negative cases; the
+// existing polling assertion below expects no active requests.
+sqlite.prepare("UPDATE approval_requests SET status='denied', decided_at=? WHERE tool_name='browser_runner_start' AND status='pending'")
+  .run(new Date().toISOString());
 
 // A polled approval list must not write to D1 and must never show expired grants.
 const pollingToken = "poll-only-credential";

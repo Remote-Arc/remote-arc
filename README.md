@@ -489,20 +489,16 @@ without deploying.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes 31 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
+Hosted MCP currently exposes 27 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
 
 ```text
 list_devices
 device_tools
 
-browser_list_tabs
-browser_get_current_tab
-browser_read_page
-browser_get_selected_text
-browser_extract_links
-browser_extract_table
-browser_click
-browser_fill
+shared_tab_list
+shared_tab_read
+shared_tab_click
+shared_tab_fill
 
 list_directory
 read_file

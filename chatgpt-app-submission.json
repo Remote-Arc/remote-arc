@@ -32,7 +32,7 @@
         "destructive_justification": "Does not change the device policy or invoke any device capability."
       }
     },
-    "browser_list_tabs": {
+    "shared_tab_list": {
       "annotations": {
         "readOnlyHint": true,
         "openWorldHint": false,
@@ -44,64 +44,16 @@
         "destructive_justification": "Only returns shared-tab metadata and does not navigate, submit forms, close tabs, or alter browser state."
       }
     },
-    "browser_get_current_tab": {
+    "shared_tab_read": {
       "annotations": {
         "readOnlyHint": true,
         "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
-        "read_only_justification": "Reads metadata for an explicitly shared browser tab without changing the tab or page.",
-        "open_world_justification": "Reads existing state from the user's shared browser context and performs no external action itself.",
-        "destructive_justification": "Does not navigate, click, submit, close, or otherwise modify the browser tab."
-      }
-    },
-    "browser_read_page": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
-      "justifications": {
-        "read_only_justification": "Reads a simplified snapshot of the explicitly shared page, including visible text and labels, without modifying the page.",
+        "read_only_justification": "Reads a simplified snapshot of the explicitly shared tab, and optionally the user's selected text, its links or one table, without modifying the page.",
         "open_world_justification": "Observes content already loaded in the user's shared tab and does not navigate to or modify an external service.",
         "destructive_justification": "Does not click, type, submit forms, navigate, or change page state."
-      }
-    },
-    "browser_get_selected_text": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
-      "justifications": {
-        "read_only_justification": "Returns text currently selected by the user in an explicitly shared tab without changing the selection or page.",
-        "open_world_justification": "Reads only the user's existing shared browser state and performs no external action.",
-        "destructive_justification": "Does not navigate, click, type, submit, or mutate the page."
-      }
-    },
-    "browser_extract_links": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
-      "justifications": {
-        "read_only_justification": "Extracts visible links from an explicitly shared page without opening or modifying them.",
-        "open_world_justification": "Reads link data already present in the user's shared tab and does not follow links or contact their destinations.",
-        "destructive_justification": "Does not navigate, click links, submit forms, or alter browser state."
-      }
-    },
-    "browser_extract_table": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
-      "justifications": {
-        "read_only_justification": "Extracts rows from a visible table in an explicitly shared page without changing the table or page.",
-        "open_world_justification": "Reads table data already loaded in the user's shared tab and performs no external action.",
-        "destructive_justification": "Does not edit page content, navigate, click, or submit anything."
       }
     },
     "list_directory": {
@@ -236,7 +188,7 @@
         "destructive_justification": "The operation is specifically a recovery action that restores a prior Remote Arc-created file state and refuses unsafe restoration when the file has changed again, so it is not classified as destructive."
       }
     },
-    "browser_click": {
+    "shared_tab_click": {
       "annotations": {
         "readOnlyHint": false,
         "openWorldHint": true,
@@ -248,7 +200,7 @@
         "destructive_justification": "A clicked control can trigger consequential or irreversible website actions; Remote Arc therefore requires an explicit per-tab interaction grant and treats the tool as destructive."
       }
     },
-    "browser_fill": {
+    "shared_tab_fill": {
       "annotations": {
         "readOnlyHint": false,
         "openWorldHint": true,

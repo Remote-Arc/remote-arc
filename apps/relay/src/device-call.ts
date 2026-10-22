@@ -8,6 +8,7 @@ import {
   requestWriteApproval,
 } from "./approvals.js";
 import { REVIEWER_DEMO_TOOLS, reviewerDemoResult } from "./reviewer-fixture.js";
+import { isBrowserRunnerTool } from "./browser-runner-mcp.js";
 
 // A timeout proves only that the Relay did not observe the reply, not that
 // the device failed to execute the request.
@@ -55,7 +56,7 @@ export async function callDevice(
 ) {
   const started = Date.now();
   const ownedDevice = await env.DB.prepare(
-    `SELECT id, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
+    `SELECT id, platform, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
             protect_sensitive_paths, undo_enabled
      FROM devices
      WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
@@ -63,6 +64,7 @@ export async function callDevice(
     .bind(deviceId, identity.userId)
     .first<{
       id: string;
+      platform: string | null;
       allowed_tools: string | null;
       workspace_roots: string | null;
       sensitive_paths: string | null;
@@ -73,6 +75,19 @@ export async function callDevice(
 
   if (!ownedDevice) {
     throw new Error("device not found or revoked");
+  }
+
+  // Point an AI that picked the wrong browser family at the right one before
+  // the call reaches a device that cannot serve it.
+  if (isBrowserRunnerTool(tool) && ownedDevice.platform === "browser") {
+    throw new Error(
+      'tool "' + tool + '" is not available on a browser extension device. Browser Runner runs on a linked computer; for this shared tab use shared_tab_read, shared_tab_click or shared_tab_fill.',
+    );
+  }
+  if (/^browser_(?!runner_)/.test(tool) && ownedDevice.platform && ownedDevice.platform !== "browser") {
+    throw new Error(
+      'tool "' + tool + '" is not available on this computer. Shared-tab tools need the browser extension device; for a background browser task on this computer use browser_runner_start.',
+    );
   }
 
   if (env.REVIEWER_DEMO_DEVICE_ID && deviceId === env.REVIEWER_DEMO_DEVICE_ID) {
@@ -120,6 +135,15 @@ export async function callDevice(
     }
   }
 
+  // Browser Runner acts on websites for the user. It is never implied by a
+  // legacy device with no stored tool list: each tool must be enabled
+  // explicitly for this computer.
+  if (isBrowserRunnerTool(tool) && !parseStoredStringArray(ownedDevice.allowed_tools).includes(tool)) {
+    throw new Error(
+      'tool "' + tool + '" is disabled for this device. Enable Browser Runner for this computer in the Remote Arc dashboard.',
+    );
+  }
+
   const workspaceRoots = parseStoredStringArray(ownedDevice.workspace_roots);
   const workspaceRequiredTools = new Set([
     "undo_last_change",
@@ -137,10 +161,18 @@ export async function callDevice(
   }
 
   const requestId = crypto.randomUUID();
+  const scopeChange = tool === "browser_runner_start" && typeof args.scope_change_reason === "string" && args.scope_change_reason.trim().length > 0;
   const mutationTarget = approvalTargetPath(tool, args);
   const approvedWrite = mutationTarget
     ? await findApprovedWriteApproval(env, identity, deviceId, tool, args)
     : null;
+
+  // The model's reason is not authorization. An exact user-approved scope
+  // change is needed before any new site reaches the Go Agent.
+  if (scopeChange && !approvedWrite) {
+    const approval = await requestWriteApproval(env, { identity, deviceId, requestId, tool, args });
+    throw new Error("SCOPE_CHANGE_REQUIRED: approve the exact sites in Dashboard Security / Boundary requests (" + (approval?.id ?? "pending") + ") and retry the same request.");
+  }
 
   if (
     mutationTarget &&
@@ -176,10 +208,12 @@ export async function callDevice(
     ? []
     : [
         ...workspaceRoots,
-        ...(approvedWrite ? [approvedWrite.target_path] : []),
+        ...(approvedWrite && !scopeChange ? [approvedWrite.target_path] : []),
       ];
 
-  let effectiveArgs = args;
+  let effectiveArgs = tool === "browser_runner_start"
+    ? { ...args, scope_change_approved: scopeChange && !!approvedWrite }
+    : args;
   if (tool === "start_process") {
     const explicitCwd =
       typeof args.cwd === "string" && args.cwd.trim() ? args.cwd : undefined;

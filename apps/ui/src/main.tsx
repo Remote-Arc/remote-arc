@@ -1,5 +1,6 @@
 import './arc-composer.css';
 import './arc-references.css';
+import { BROWSER_RUNNER_TOOLS, browserRunnerEnabled, isBrowserRunnerTool, toggledDeviceTools } from "./device-tools.js";
 import './scrollbars.css';
 import type {ArcMention} from './arc-skill-mentions.js';
 import {WorkspaceLoading} from './workspace-loading.js';
@@ -396,6 +397,7 @@ const DEVELOPER_DEVICE_TOOLS = [
 
 type DeviceAccessPreset = "safe" | "developer" | "full" | "custom";
 
+
 const sameToolSet = (left: readonly string[], right: readonly string[]) =>
   left.length === right.length && left.every((tool) => right.includes(tool));
 
@@ -405,6 +407,8 @@ const deviceAccessPreset = (
 ): DeviceAccessPreset => {
   const supported = (preset: readonly string[]) =>
     preset.filter((tool) => availableTools.includes(tool));
+  // Browser Runner is switched separately and does not change the preset.
+  tools = tools.filter((tool) => !isBrowserRunnerTool(tool));
   if (sameToolSet(tools, supported(SAFE_DEVICE_TOOLS))) return "safe";
   if (sameToolSet(tools, supported(DEVELOPER_DEVICE_TOOLS))) return "developer";
   if (sameToolSet(tools, supported(DEVICE_TOOL_CATALOG))) return "full";
@@ -4504,13 +4508,23 @@ function Dashboard({
       );
       if (!confirmed) return;
     }
+    if (enabled && isBrowserRunnerTool(tool)) {
+      const confirmed = await askConfirm(
+        tr("Let AI act on websites from " + device.name + "?", "允许 AI 在 " + device.name + " 上操作网站？"),
+        tr(
+          "Connected AI clients will be able to click, fill, upload files from Trusted Locations and submit forms in a separate background browser, only on the sites each task names. Passwords, verification codes and payment details are never entered, and a submit is never sent twice.",
+          "已连接的 AI 将可以在独立的后台浏览器里点击、填写、从可信目录上传文件并提交表单，且只能访问每个任务指定的网站。密码、验证码和支付信息一律不会填写，提交也不会重复发送。",
+        ),
+        tr("Enable Browser Runner", "开启 Browser Runner"),
+        "danger",
+      );
+      if (!confirmed) return;
+    }
     const advertised = device.available_tools || device.tools;
     const baseline = device.status === "online"
       ? advertised
       : Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertised]));
-    const current = device.allowed_tools == null ? baseline : device.allowed_tools;
-    const next = enabled ? Array.from(new Set([...current, tool])) : current.filter((item) => item !== tool);
-    await saveDeviceTools(device, next);
+    await saveDeviceTools(device, toggledDeviceTools(device.allowed_tools, baseline, tool, enabled));
   }
 
   async function applyDevicePreset(device: Device, preset: Exclude<DeviceAccessPreset, "custom">) {
@@ -4536,13 +4550,15 @@ function Dashboard({
       );
       if (!confirmed) return;
     }
-    const next =
+    const presetTools =
       preset === "safe"
         ? SAFE_DEVICE_TOOLS
         : preset === "developer"
           ? DEVELOPER_DEVICE_TOOLS
           : DEVICE_TOOL_CATALOG;
-    await saveDeviceTools(device, next);
+    // Changing the file/terminal preset keeps the separate Browser Runner switch.
+    const keepRunner = (device.allowed_tools || []).filter(isBrowserRunnerTool);
+    await saveDeviceTools(device, [...presetTools, ...keepRunner]);
   }
 
   async function saveDeviceTaskPermission(device: Device, key: keyof DeviceTaskPermissions, enabled: boolean) {
@@ -5262,7 +5278,10 @@ function Dashboard({
               {filteredDevices.map((device) => {
                 const advertisedTools = device.available_tools || device.tools;
                 const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
-                const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools]));
+                const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools])).filter((tool) => !isBrowserRunnerTool(tool));
+                const runnerAdvertised = device.status !== "online" || BROWSER_RUNNER_TOOLS.every((tool) => advertisedTools.includes(tool));
+                const runnerEnabled = browserRunnerEnabled(device.allowed_tools);
+                const runnerVisible = device.platform !== "browser" && (runnerEnabled || BROWSER_RUNNER_TOOLS.some((tool) => advertisedTools.includes(tool)) || device.status === "online");
                 const accessPreset = deviceAccessPreset(enabledTools, advertisedTools);
                 const executionLog = executionLogsByDevice[device.id];
                 const executionLogError = executionLogErrors[device.id];
@@ -5352,8 +5371,22 @@ function Dashboard({
                     </div>
 
                     <details className="deviceToolDetails">
-                      <summary><span className="deviceDisclosureTitle"><ProductIcon name="settings" size={16}/>{tr("Manage individual skills", "逐项管理技能")}</span><span>{enabledTools.length} / {allTools.length}<ProductIcon name="chevron" size={14}/></span></summary>
+                      <summary><span className="deviceDisclosureTitle"><ProductIcon name="settings" size={16}/>{tr("Manage individual skills", "逐项管理技能")}</span><span>{enabledTools.filter((tool) => !isBrowserRunnerTool(tool)).length} / {allTools.length}<ProductIcon name="chevron" size={14}/></span></summary>
                       <div className="toolToggleGrid">
+                        {runnerVisible && (
+                          <label className={"toolToggle" + (!runnerAdvertised ? " unavailable" : "")} key="browser_runner">
+                            <input type="checkbox" checked={runnerEnabled} disabled={!runnerAdvertised && !runnerEnabled} onChange={(event) => void updateDeviceTools(device, "browser_runner_act", event.target.checked)} />
+                            <span className="skillLabel">
+                              <strong>{tr("Browser Runner", "Browser Runner")}</strong>
+                              <HelpTip
+                                label={tr("About Browser Runner", "了解 Browser Runner")}
+                                text={runnerAdvertised
+                                  ? tr("Lets your AI open, read and act on websites in a separate background browser on this computer (installed Chrome, Edge or Chromium), only on the sites each task names. It never uses your everyday browser or its sign-ins. Passwords, verification codes and payment details are always left to you; a submit is never sent twice.", "允许你的 AI 在这台电脑的独立后台浏览器（已安装的 Chrome、Edge 或 Chromium）里打开、读取和操作网站，只能访问每个任务指定的网站，不使用你日常的浏览器和登录状态。密码、验证码和支付信息一律由你自己填写；提交不会重复发送。")
+                                  : tr("Needs Remote Arc Agent 0.6.2-rc.4 or newer and Chrome, Edge or Chromium installed on this computer.", "需要 Remote Arc Agent 0.6.2-rc.4 或更新版本，并且这台电脑装有 Chrome、Edge 或 Chromium。")}
+                              />
+                            </span>
+                          </label>
+                        )}
                         {allTools.map((tool) => {
                           const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
                           const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
@@ -6184,8 +6217,8 @@ function Dashboard({
                     </div>
                     <div className="securityGrantScopes">
                       <button className="goldButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
-                      <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_10m")}>{tr("Allow 10 min", "允许 10 分钟")}</button>
-                      <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "always_folder")}>{tr("Trust this folder", "信任此文件夹")}</button>
+                      {approval.tool_name !== "browser_runner_start" && <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_10m")}>{tr("Allow 10 min", "允许 10 分钟")}</button>}
+                      {approval.tool_name !== "browser_runner_start" && <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "always_folder")}>{tr("Trust this folder", "信任此文件夹")}</button>}
                       <button className="dangerButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "deny")}>{tr("Deny", "拒绝")}</button>
                     </div>
                   </div>

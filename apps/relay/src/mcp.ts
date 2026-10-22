@@ -24,6 +24,8 @@ import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
 import { registerMcpTool } from "./mcp-errors.js";
+import { registerBrowserRunnerTools } from "./browser-runner-mcp.js";
+import { registerSharedTabTools } from "./shared-tab-mcp.js";
 import { requireFeature, requireFeatures } from "./entitlements.js";
 import { binaryBytesRead, recordPlusUsage } from "./plus-usage.js";
 import { createFileResource, revokeFileResource } from "./file-resources.js";
@@ -47,6 +49,7 @@ type Env = AppEnv & {
   OPERATOR_EMAIL?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
   ENABLE_EXPERIMENTAL_AGENT_GOALS?: string;
+  ENABLE_BROWSER_RUNNER?: string;
 };
 
 type Scope =
@@ -400,230 +403,31 @@ export function createRemoteLinkMcp(
       },
     );
 
-    registerMcpTool(server,
-      "browser_list_tabs",
-      {
-        title: "List explicitly shared browser tabs",
-        description:
-          "List the browser tabs the user explicitly shared with Remote Arc. Use the returned tabId when more than one tab is shared.",
-        inputSchema: z.object({
-          device_id: z.string(),
-        }),
-        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
-        _meta: oauthToolMeta("browser:read"),
-      },
-      async ({ device_id }) => {
-        if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read", identity);
-        }
-        const usageError = await consume(env, identity);
-        if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "browser_list_tabs", {}),
-        );
-      },
-    );
+    // Task-scoped Browser Runner on the user's own Go Agent. Off by default so
+    // the published client tool surface is unchanged until it is released.
+    if (env.ENABLE_BROWSER_RUNNER === "1") {
+      registerBrowserRunnerTools(server, {
+        identity,
+        hasScope,
+        authRequired: (scope, current) => authRequired(env, scope, current),
+        consume: (current) => consume(env, current),
+        oauthToolMeta,
+        textResult,
+        callDevice: (current, device, tool, args) => callDevice(env, current, device, tool, args),
+      });
+    }
 
-    registerMcpTool(server,
-      "browser_get_current_tab",
-      {
-        title: "Get the currently shared browser tab",
-        description:
-          "Return metadata for one explicitly shared browser tab. Pass tab_id when multiple tabs are shared.",
-        inputSchema: z.object({
-          device_id: z.string(),
-          tab_id: z.number().int().optional(),
-        }),
-        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
-        _meta: oauthToolMeta("browser:read"),
-      },
-      async ({ device_id, tab_id }) => {
-        if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read", identity);
-        }
-        const usageError = await consume(env, identity);
-        if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "browser_get_current_tab", {
-            ...(tab_id !== undefined ? { tab_id } : {}),
-          }),
-        );
-      },
-    );
-
-    registerMcpTool(server,
-      "browser_read_page",
-      {
-        title: "Read the shared browser page",
-        description:
-          "Read a simplified, read-only snapshot of the explicitly shared tab, including text, headings, and interactive element labels. Does not return raw HTML or form values.",
-        inputSchema: z.object({
-          device_id: z.string(),
-          tab_id: z.number().int().optional(),
-        }),
-        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
-        _meta: oauthToolMeta("browser:read"),
-      },
-      async ({ device_id, tab_id }) => {
-        if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read", identity);
-        }
-        const usageError = await consume(env, identity);
-        if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "browser_read_page", {
-            ...(tab_id !== undefined ? { tab_id } : {}),
-          }),
-        );
-      },
-    );
-
-    registerMcpTool(server,
-      "browser_get_selected_text",
-      {
-        title: "Read selected text in the shared browser tab",
-        description:
-          "Return only the text currently selected by the user in the explicitly shared tab.",
-        inputSchema: z.object({
-          device_id: z.string(),
-          tab_id: z.number().int().optional(),
-        }),
-        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
-        _meta: oauthToolMeta("browser:read"),
-      },
-      async ({ device_id, tab_id }) => {
-        if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read", identity);
-        }
-        const usageError = await consume(env, identity);
-        if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "browser_get_selected_text", {
-            ...(tab_id !== undefined ? { tab_id } : {}),
-          }),
-        );
-      },
-    );
-
-    registerMcpTool(server,
-      "browser_extract_links",
-      {
-        title: "Extract links from the shared browser tab",
-        description:
-          "Return visible links from the explicitly shared tab without navigating or clicking them.",
-        inputSchema: z.object({
-          device_id: z.string(),
-          tab_id: z.number().int().optional(),
-        }),
-        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
-        _meta: oauthToolMeta("browser:read"),
-      },
-      async ({ device_id, tab_id }) => {
-        if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read", identity);
-        }
-        const usageError = await consume(env, identity);
-        if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "browser_extract_links", {
-            ...(tab_id !== undefined ? { tab_id } : {}),
-          }),
-        );
-      },
-    );
-
-    registerMcpTool(server,
-      "browser_extract_table",
-      {
-        title: "Extract a table from the shared browser tab",
-        description:
-          "Return rows from one visible table in the explicitly shared tab without modifying the page.",
-        inputSchema: z.object({
-          device_id: z.string(),
-          tab_id: z.number().int().optional(),
-          table_index: z.number().int().min(0).default(0),
-        }),
-        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
-        _meta: oauthToolMeta("browser:read"),
-      },
-      async ({ device_id, tab_id, table_index }) => {
-        if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read", identity);
-        }
-        const usageError = await consume(env, identity);
-        if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "browser_extract_table", {
-            ...(tab_id !== undefined ? { tab_id } : {}),
-            table_index,
-          }),
-        );
-      },
-    );
-
-    registerMcpTool(server,
-      "browser_click",
-      {
-        title: "Click an element in a shared browser tab",
-        description:
-          "Click one element from the most recent browser_read_page snapshot. Requires the user to enable Click & fill for that specific tab. Clicks can navigate, submit forms, or trigger other page actions, so read the page again after each click.",
-        inputSchema: z.object({
-          device_id: z.string(),
-          tab_id: z.number().int().optional(),
-          snapshot_id: z.string().min(1).max(120),
-          ref: z.string().regex(/^e[1-9]\d*$/),
-        }),
-        annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
-        _meta: oauthToolMeta("browser:interact"),
-      },
-      async ({ device_id, tab_id, snapshot_id, ref }) => {
-        if (!identity || !hasScope(identity, "browser:interact")) {
-          return authRequired(env, "browser:interact", identity);
-        }
-        const usageError = await consume(env, identity);
-        if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "browser_click", {
-            ...(tab_id !== undefined ? { tab_id } : {}),
-            snapshot_id,
-            ref,
-          }),
-        );
-      },
-    );
-
-    registerMcpTool(server,
-      "browser_fill",
-      {
-        title: "Fill a field in a shared browser tab",
-        description:
-          "Fill a non-sensitive field from the most recent browser_read_page snapshot. Requires the user to enable Click & fill for that specific tab. Recognized password, one-time-code, payment-card, and file fields remain blocked by the browser companion.",
-        inputSchema: z.object({
-          device_id: z.string(),
-          tab_id: z.number().int().optional(),
-          snapshot_id: z.string().min(1).max(120),
-          ref: z.string().regex(/^e[1-9]\d*$/),
-          value: z.string().max(20000),
-        }),
-        annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: false },
-        _meta: oauthToolMeta("browser:interact"),
-      },
-      async ({ device_id, tab_id, snapshot_id, ref, value }) => {
-        if (!identity || !hasScope(identity, "browser:interact")) {
-          return authRequired(env, "browser:interact", identity);
-        }
-        const usageError = await consume(env, identity);
-        if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "browser_fill", {
-            ...(tab_id !== undefined ? { tab_id } : {}),
-            snapshot_id,
-            ref,
-            value,
-          }),
-        );
-      },
-    );
+    // The user's own shared tabs (Companion extension). Public names are
+    // shared_tab_*; the device protocol and stored permissions are unchanged.
+    registerSharedTabTools(server, {
+      identity,
+      hasScope,
+      authRequired: (scope, current) => authRequired(env, scope, current),
+      consume: (current) => consume(env, current),
+      oauthToolMeta,
+      textResult,
+      callDevice: (current, device, tool, args) => callDevice(env, current, device, tool, args),
+    });
 
     registerMcpTool(server,
       "list_directory",

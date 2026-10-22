@@ -11,8 +11,8 @@ export const publicToolGroups = [
   { en: "Device discovery", zh: "设备发现", scope: "devices:read", tools: ["list_devices", "device_tools"] },
   { en: "Read files and processes", zh: "文件与进程读取", scope: "computer:read", tools: ["list_directory", "read_file", "read_binary_file", "create_file_resource", "revoke_file_resource", "get_file_info", "list_processes"] },
   { en: "Edit files and run commands", zh: "编辑文件与执行命令", scope: "computer:write", tools: ["write_file", "edit_block", "undo_last_change", "start_process", "process_status", "process_output", "stop_process"] },
-  { en: "Explicitly shared browser tabs", zh: "明确共享的浏览器标签页", scope: "browser:read", tools: ["browser_list_tabs", "browser_get_current_tab", "browser_read_page", "browser_get_selected_text", "browser_extract_links", "browser_extract_table"] },
-  { en: "Per-tab browser interaction", zh: "按标签页授权浏览器交互", scope: "browser:interact", tools: ["browser_click", "browser_fill"] },
+  { en: "Explicitly shared browser tabs", zh: "明确共享的浏览器标签页", scope: "browser:read", tools: ["shared_tab_list", "shared_tab_read"] },
+  { en: "Per-tab browser interaction", zh: "按标签页授权浏览器交互", scope: "browser:interact", tools: ["shared_tab_click", "shared_tab_fill"] },
   { en: "Read durable tasks", zh: "读取持久任务", scope: "automation:read", tools: ["list_automations", "get_automation"] },
   { en: "Create and manage durable tasks", zh: "创建与管理持久任务", scope: "automation:write", tools: ["create_automation", "manage_automation"] },
   { en: "Connected app discovery", zh: "发现已连接的应用", scope: "apps:read", tools: ["list_apps"] },
@@ -237,7 +237,7 @@ export function McpReference() {
       <section id="chrome-browser"><h2>{tr("Install the scoped Chrome companion", "安装受控 Chrome Companion")}</h2>
         <p><a href={localizedWebsiteHref("/chrome-extension", locale)}>{tr("Open the Chrome Companion download and installation page", "打开 Chrome Companion 下载与安装页面")} →</a></p>
         <p>{tr("Download and unzip the companion. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted folder. Open its popup, select Connect to Remote Arc and approve browser pairing, then explicitly Share this tab. It is an unpacked beta, not a Chrome Web Store extension; downloaded versions must be reloaded manually.", "下载并解压 Companion，在 chrome://extensions 开启开发者模式，选择「加载已解压的扩展程序」并指定解压文件夹。打开扩展，点击 Connect to Remote Arc 并批准浏览器配对，再手动 Share this tab。此 Beta 尚未上架 Chrome Web Store；以后更新仍需重新下载并加载。")}</p>
-        <p>{tr("Use browser_list_tabs to select tab_id when several tabs are shared. browser_read_page returns a snapshotId plus stable refs for that snapshot. browser_click and browser_fill require both that snapshot and an explicit per-tab Click & fill grant; a click invalidates the snapshot and the page must be read again.", "同时共享多个标签页时，用 browser_list_tabs 选择 tab_id。browser_read_page 会返回 snapshotId 和当前快照内的元素 ref；browser_click 与 browser_fill 只有在该标签页明确开启 Click & fill 后才能使用。每次点击都会使当前快照失效，下一次交互前必须重新读取页面。")}</p>
+        <p>{tr("Use shared_tab_list to select tab_id when several tabs are shared. shared_tab_read returns the page with a snapshotId plus stable refs for that snapshot, and can also return the selected text, links or one table. shared_tab_click and shared_tab_fill require both that snapshot and an explicit per-tab Click & fill grant; a click invalidates the snapshot and the page must be read again.", "同时共享多个标签页时，用 shared_tab_list 选择 tab_id。shared_tab_read 会返回页面内容、snapshotId 和当前快照内的元素 ref，也可以一并返回选中文字、链接或某个表格；shared_tab_click 与 shared_tab_fill 只有在该标签页明确开启 Click & fill 后才能使用。每次点击都会使当前快照失效，下一次交互前必须重新读取页面。")}</p>
       </section>
       <footer className="articleEndLinks"><a href={localizedWebsiteHref("/docs", locale)}>{tr("Product documentation", "产品文档")} →</a><a href={localizedWebsiteHref("/security-model", locale)}>{tr("Security model", "安全模型")} →</a></footer>
     </article></div>

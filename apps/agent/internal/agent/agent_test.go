@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/browserrunner"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/journal"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
@@ -187,8 +188,17 @@ func TestAuthenticatedWebsocketToolCallsReconnectAndPrivateJournal(t *testing.T)
 				if reply["device"].(map[string]any)["id"] != cfg.DeviceID {
 					t.Fatal("device identity changed")
 				}
-				if len(reply["tools"].([]any)) != 22 {
-					t.Fatal("tool surface incomplete")
+				core, runner := 0, 0
+				for _, name := range reply["tools"].([]any) {
+					if browserrunner.IsTool(name.(string)) {
+						runner++
+					} else {
+						core++
+					}
+				}
+				// Browser Runner tools are advertised only where a browser exists.
+				if core != 22 || (runner != 0 && runner != len(browserrunner.Tools)) {
+					t.Fatalf("tool surface incomplete: core=%d runner=%d", core, runner)
 				}
 			} else if reply["error"] != nil {
 				t.Fatal("remote tool failed", reply["error"])

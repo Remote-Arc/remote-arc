@@ -48,14 +48,10 @@ Use Remote Arc only with computers, files, accounts, and services you own or are
 | --- | --- | --- | --- | --- |
 | `list_devices` | true | false | false | Reads account-scoped paired-device metadata and online state. It does not alter a device or public internet state. |
 | `device_tools` | true | false | false | Reads the enabled/available tool list for one device owned by the authenticated user. |
-| `browser_list_tabs` | true | false | false | Lists metadata for explicitly shared browser tabs without navigating or modifying them. |
-| `browser_get_current_tab` | true | false | false | Reads metadata for an explicitly shared browser tab without changing it. |
-| `browser_read_page` | true | false | false | Reads a simplified snapshot of an explicitly shared page without page interaction. |
-| `browser_get_selected_text` | true | false | false | Reads only the text currently selected in an explicitly shared tab. |
-| `browser_extract_links` | true | false | false | Extracts visible links from an explicitly shared page without following them. |
-| `browser_extract_table` | true | false | false | Extracts rows from a visible table in an explicitly shared page without changing it. |
-| `browser_click` | false | true | true | Clicks one element from a fresh shared-tab snapshot only after the user enables interaction for that tab; the click may navigate, submit, or trigger an external action. |
-| `browser_fill` | false | true | false | Fills a non-sensitive control from a fresh shared-tab snapshot only after per-tab interaction opt-in; recognized password, OTP, payment-card, and file fields stay blocked. |
+| `shared_tab_list` | true | false | false | Lists metadata for explicitly shared browser tabs without navigating or modifying them. |
+| `shared_tab_read` | true | false | false | Reads a simplified snapshot of an explicitly shared page, and optionally the selected text, visible links or one table, without page interaction. |
+| `shared_tab_click` | false | true | true | Clicks one element from a fresh shared-tab snapshot only after the user enables interaction for that tab; the click may navigate, submit, or trigger an external action. |
+| `shared_tab_fill` | false | true | false | Fills a non-sensitive control from a fresh shared-tab snapshot only after per-tab interaction opt-in; recognized password, OTP, payment-card, and file fields stay blocked. |
 | `list_directory` | true | false | false | Retrieves a directory listing from a private paired computer without modifying filesystem state. |
 | `read_file` | true | false | false | Retrieves file content from a private paired computer without modifying the file. |
 | `read_binary_file` | true | false | false | Reads a bounded binary chunk from an authorized paired device without modifying it. |

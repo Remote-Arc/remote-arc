@@ -45,6 +45,10 @@ const pending = new Map<
 let socket: WebSocket | undefined;
 let nextID = 0;
 let hello: any;
+const goBrowserRunnerTools = [
+  "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
+  "browser_runner_status", "browser_runner_confirm", "browser_runner_close",
+];
 let stderr = "";
 const server = http.createServer((_req, res) => {
   res.writeHead(204);
@@ -164,9 +168,10 @@ try {
   await waitFor(() => Boolean(hello), "Go connection");
   assert.equal(hello.device.id, "compat-device");
   assert.deepEqual(
-    // The native Go-only device wake control is intentionally not exposed by
-    // the TS compatibility runtime; ordinary execution tools must still match.
-    new Set(hello.tools.filter((tool: string) => tool !== "set_device_runtime")),
+    // The native Go-only device wake control and Browser Runner are
+    // intentionally not exposed by the TS compatibility runtime; ordinary
+    // execution tools must still match.
+    new Set(hello.tools.filter((tool: string) => tool !== "set_device_runtime" && !goBrowserRunnerTools.includes(tool))),
     new Set([
       ...ts.listTools().map((t) => t.name),
       "background_agent_status",
@@ -179,6 +184,10 @@ try {
   assert(hello.capabilities.includes("go_agent_v1"));
   assert(hello.capabilities.includes("device_pause_v1"));
   assert(hello.tools.includes("set_device_runtime"));
+  // Advertised only where a Chromium-family browser is installed: all or none.
+  const runnerAdvertised = goBrowserRunnerTools.filter((tool) => hello.tools.includes(tool));
+  assert(runnerAdvertised.length === 0 || runnerAdvertised.length === goBrowserRunnerTools.length);
+  assert.equal(hello.capabilities.includes("browser_runner_v1"), runnerAdvertised.length > 0);
   const tsRoot = path.join(temp, "ts-fixtures"),
     goRoot = path.join(temp, "go-fixtures");
   const normalize = (value: any, root: string): any => {

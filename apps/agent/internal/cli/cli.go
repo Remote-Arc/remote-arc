@@ -140,6 +140,9 @@ func enabled() bool {
 	c, e := config.Load()
 	return e == nil && c.BackgroundEnabled != nil && *c.BackgroundEnabled
 }
+
+var startClientIntegrations = onboarding.StartAutomatic
+
 func Main(ctx context.Context, args []string, version string, input *os.File, output, errorOutput io.Writer) error {
 	// Local inspection never pairs, changes policy or acquires execution.
 	if len(args) > 1 && args[0] == "--go" && (args[1] == "takeover" || args[1] == "setup") {
@@ -272,6 +275,10 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 	}
 	if o.Supervise {
 		return supervise(ctx, version, log)
+	}
+	if !o.Agent {
+		stopClientSetup := startClientIntegrations(ctx, version, log.Log)
+		defer stopClientSetup()
 	}
 	if log.Color && !o.Agent {
 		fmt.Fprintf(out, "\n\x1b[1mRemote Arc\x1b[0m  \x1b[2mv%s\x1b[0m\n\x1b[2mControlled remote access for AI\x1b[0m\n\x1b[36m●\x1b[0m  Native Go runtime  ·  Dashboard-managed permissions\n\n", version)

@@ -1,5 +1,9 @@
 # Local setup inspection (0.6.2-rc.3)
 
+The next, unreleased [background setup](automatic-client-mcp.md) invokes client
+configuration independently of pairing/device execution. `setup inspect`
+retains the read-only behavior documented here.
+
 First implementation slice for [#254](https://github.com/Remote-Arc/remote-arc/issues/254),
 following the accepted [compatibility matrix](agent-takeover-compatibility-v1.md)
 and [consent ADR](agent-takeover-consent-adr.md). This does not complete #254 or

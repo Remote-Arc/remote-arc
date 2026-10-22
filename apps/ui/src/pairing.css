@@ -1,0 +1,93 @@
+/* Device onboarding shares the authenticated product's neutral design tokens. */
+:root[data-theme] .pairingShell {
+  min-height: 100dvh;
+  background: var(--dash-canvas);
+  padding: 0 28px;
+}
+.pairingShell *, .pairingShell *::before, .pairingShell *::after { box-sizing: border-box; }
+.pairingShell :is(button, input) { font: inherit; }
+.pairingShell :is(a, button, input):focus-visible { outline: 2px solid var(--dash-accent); outline-offset: 4px; }
+.pairingHeader { max-width: 1120px; margin: auto; min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--dash-line); }
+.pairingHeader > div { display: flex; align-items: center; gap: 10px; }
+.pairingShell .brand.brandHasWordmark { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+.pairingShell .brand .brandLockup { display: inline-flex; gap: .18em; font: 600 22px/1 "Arc Wordmark", Inter, sans-serif; letter-spacing: -.045em; color: var(--dash-text); }
+:root[data-theme] .pairingShell .brand .brandLockup b { font: inherit; color: var(--dash-text) !important; background: none !important; -webkit-text-fill-color: currentColor !important; }
+.pairingShell .brandSymbol img { display: block; position: absolute; width: 32px; height: 32px; left: -2px; top: -4px; }
+:root[data-theme] .pairingShell :is(.themeSwitch, .languageSwitch) { min-height: 38px; background: transparent !important; color: var(--dash-muted) !important; border: 1px solid var(--dash-line); border-radius: 7px; box-shadow: none; }
+:root[data-theme] .pairingShell .languageSwitch button { color: var(--dash-muted); background: transparent; box-shadow: none; }
+:root[data-theme] .pairingShell .languageSwitch button.active { color: var(--dash-inverse) !important; background: var(--dash-accent) !important; box-shadow: none; }
+.pairingFlow { width: 100%; max-width: 740px; margin: 40px auto 0; }
+.pairingSteps { display: flex; justify-content: space-between; gap: 12px; list-style: none; padding: 0 12px; margin: 0 0 26px; }
+.pairingSteps li { display: flex; align-items: center; gap: 9px; color: var(--dash-muted); font-size: 13px; }
+.pairingSteps li > span { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--dash-line); border-radius: 50%; font-size: 12px; flex: none; }
+.pairingSteps li[aria-current] { color: var(--dash-text); }
+.pairingSteps li[aria-current] > span { background: var(--dash-accent); color: var(--dash-inverse); border-color: var(--dash-accent); }
+.pairingSteps li[data-complete="true"] > span { color: var(--dash-text); background: var(--dash-subtle); }
+.pairingCard { padding: 32px; border: 1px solid var(--dash-line); border-radius: 14px; background: var(--dash-surface); }
+.pairingTitle { margin-bottom: 26px; }
+.pairingTitleIcon { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--dash-line); border-radius: 12px; background: var(--dash-subtle); margin-bottom: 20px; }
+.pairingTitleIcon.complete { color: #50b88a; }
+.pairingTitle h1 { margin: 0 0 10px; font-size: 30px; line-height: 1.25; font-weight: 550; letter-spacing: -.04em; color: var(--dash-text); }
+.pairingTitle p { margin: 0; color: var(--dash-muted); font-size: 15px; line-height: 1.75; }
+:root[data-theme] .pairingShell :is(.primaryButton, .approveButton, .pairLookup button, .pairDonePrimary) { display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 44px; padding: 11px 16px; border: 1px solid var(--dash-accent); border-radius: 8px; background: var(--dash-accent) !important; color: var(--dash-inverse) !important; font-size: 14px; font-weight: 550; text-decoration: none; box-shadow: none; }
+:root[data-theme] .pairingShell .ghostButton { min-height: 44px; padding: 10px 14px; border: 1px solid var(--dash-line); border-radius: 8px; background: var(--dash-subtle) !important; color: var(--dash-text) !important; font-size: 14px; box-shadow: none; }
+.pairingShell button:disabled { opacity: .45; cursor: not-allowed; }
+:root[data-theme] .pairingShell :is(.pairSetupSummary, .pairPermissionCard, .pairPermissionCard.enabled, .pairWorkspaceList, .pairTerminalConfirm, .permissionBox) { background: var(--dash-subtle); border: 1px solid var(--dash-line); border-radius: 10px; color: var(--dash-text); box-shadow: none; }
+.pairingShell .pairSetupSummary { margin: 0 0 26px; }
+:root[data-theme] .pairingShell .pairSetupSummary > div { padding: 12px 16px; border-color: var(--dash-line); font-size: 14px; }
+:root[data-theme] .pairingShell :is(.pairSetupSummary strong, .pairPermissionHead strong, .pairMeta strong, .pairConnectedDevice strong, .pairWorkspaceManual label) { color: var(--dash-text); font-weight: 550; }
+:root[data-theme] .pairingShell :is(.pairSetupSummary span, .pairPermissionCard p, .pairPermissionCard ul, .pairPermissionHead small, .pairConnectedDevice span, .pairSetupFooter > span, .pairWorkspaceManual small, .pairSetupNote, .signedInAs, .pairMeta span) { color: var(--dash-muted); font-size: 14px; line-height: 1.65; }
+.pairingShell .pairPermissionCard { padding: 20px; }
+.pairingShell .pairPermissionHead strong { font-size: 16px; }
+:root[data-theme] .pairingShell :is(.pairPermissionIcon, .pairPermissionState, .permissionBadge, .pairWorkspaceEnabled) { color: var(--dash-text); background: var(--dash-surface); border-color: var(--dash-line); }
+.pairingShell .pairConnectedDevice { border-color: var(--dash-line); padding-bottom: 20px; margin-bottom: 20px; }
+.pairingShell .pairConnectedDevice strong { font-size: 16px; }
+:root[data-theme] .pairingShell :is(.pairCode, .codeInput, .pairWorkspaceManual input) { background: var(--dash-subtle); border: 1px solid var(--dash-line); border-radius: 8px; color: var(--dash-text); box-shadow: none; }
+.pairingShell .pairCode { font-size: 28px; padding: 18px; letter-spacing: .12em; }
+.pairingShell .codeInput { min-width: 0; width: 100%; font-size: 20px; padding: 12px; }
+.pairingShell .pairWorkspaceManual input { min-height: 44px; font-size: 14px; }
+:root[data-theme] .pairingShell :is(.pairWorkspacePath code, .pairWorkspaceControl code, .pairWorkspaceList > button, .pairWorkspaceList > button strong, .pairWorkspaceList > button span) { color: var(--dash-text); }
+.pairingShell .pairWorkspaceList > button { min-height: 44px; font-size: 14px; }
+.pairingShell .pairWorkspaceList > button:hover { background: var(--dash-surface); }
+.pairingShell .pairSetupFooter { border-color: var(--dash-line); gap: 20px; }
+:root[data-theme] .pairingShell .pairAgentConnect { margin: 0; padding: 26px 0 0; border-color: var(--dash-line); gap: 20px; }
+:root[data-theme] .pairingShell .pairAgentConnectIntro .eyebrow { color: var(--dash-muted) !important; font-size: 11px; font-weight: 550; letter-spacing: .09em; }
+:root[data-theme] .pairingShell .pairAgentConnectIntro h3 { color: var(--dash-text); font-size: 21px; font-weight: 550; line-height: 1.4; letter-spacing: -.025em; margin: 4px 0; }
+:root[data-theme] .pairingShell .pairAgentConnectIntro p { color: var(--dash-muted); font-size: 14px; line-height: 1.7; }
+.pairingShell .pairAgentGrid { gap: 12px; }
+:root[data-theme] .pairingShell .pairAgentOption { display: flex; flex-direction: column; align-items: stretch; gap: 18px; padding: 18px; border: 1px solid var(--dash-line); border-radius: 10px; background: var(--dash-surface); color: var(--dash-text); transform: none; }
+:root[data-theme] .pairingShell .pairAgentOption:hover { border-color: var(--dash-muted); background: var(--dash-surface); transform: none; }
+.pairingShell .pairAgentOption .pairAgentIdentity { display: flex; gap: 12px; align-items: flex-start; }
+.pairingShell .pairAgentIdentity > div { display: grid; gap: 6px; min-width: 0; }
+.pairingShell .pairAgentIdentity > img { width: 28px; height: 28px; flex: none; margin-top: 2px; }
+:root[data-theme="dark"] .pairingShell .pairAgentIdentity img[src="/ai-cursor.svg"] { filter: invert(1); }
+:root[data-theme] .pairingShell .pairAgentOption strong { color: var(--dash-text); font-size: 16px; font-weight: 550; }
+:root[data-theme] .pairingShell .pairAgentOption small { color: var(--dash-muted); font-size: 13px; line-height: 1.6; }
+:root[data-theme] .pairingShell .pairMcpIcon { color: var(--dash-text); border-color: var(--dash-line); font-size: 9px; flex: none; }
+.pairingShell .pairAgentOption .pairAgentActions { display: grid; gap: 6px; margin-top: auto; }
+.pairingShell .pairAgentActions a { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 9px 10px; border: 1px solid var(--dash-line); border-radius: 7px; color: var(--dash-text); font-size: 13px; font-weight: 500; text-decoration: none; }
+.pairingShell .pairAgentActions .pairAgentGuide { background: var(--dash-subtle); }
+.pairingShell .pairAgentActions .pairAgentLaunch { color: var(--dash-muted); border-color: transparent; }
+.pairingShell .pairAgentActions a:hover { background: var(--dash-accent-soft); color: var(--dash-text); }
+:root[data-theme] .pairingShell .pairAgentEndpoint { background: var(--dash-subtle); border-color: var(--dash-line); border-radius: 10px; padding: 14px; gap: 10px; }
+:root[data-theme] .pairingShell .pairAgentEndpoint > span { color: var(--dash-muted); font-size: 12px; }
+:root[data-theme] .pairingShell .pairAgentEndpoint code { color: var(--dash-text); font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+:root[data-theme] .pairingShell .pairDoneSecondary { border-color: var(--dash-line); margin-top: 26px; padding-top: 24px; align-items: center; flex-wrap: wrap; gap: 16px; }
+:root[data-theme] .pairingShell .pairDoneSecondary > a:not(.pairDonePrimary) { color: var(--dash-muted); font-size: 14px; font-weight: 450; }
+.pairingFooter { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; max-width: 740px; margin: 24px auto 0; padding: 0 4px 32px; color: var(--dash-muted); font-size: 12px; }
+.pairingFooter :is(span, a) { display: inline-flex; align-items: center; gap: 7px; color: inherit; text-decoration: none; }
+@media (max-width: 620px) {
+  :root[data-theme] .pairingShell { padding: 0 16px; }
+  .pairingHeader { min-height: 72px; }
+  .pairingFlow { margin-top: 26px; }
+  .pairingSteps { padding: 0; gap: 8px; }
+  .pairingSteps li { font-size: 11px; gap: 6px; }
+  .pairingSteps li > span { width: 22px; height: 22px; font-size: 11px; }
+  .pairingCard { padding: 22px 18px; border-radius: 12px; }
+  .pairingTitle h1 { font-size: 26px; }
+  .pairingShell .pairAgentGrid { grid-template-columns: 1fr; }
+  .pairingShell .pairPermissionCard { padding: 16px; }
+  .pairingShell :is(.pairSetupFooter, .pairSetupActions, .pairWorkspaceManual > div) { flex-wrap: wrap; }
+  .pairingShell .pairSetupFooter > button { width: 100%; }
+  .pairingFooter { font-size: 11px; }
+}

@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Qualify real, pinned clients against source/native and public npm entry points.
+
+Install clients with npm --ignore-scripts in an isolated prefix first. Never uses
+account credentials or a model turn. Published npm tests have no Go override.
+"""
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+import pathlib
+import platform
+import shutil
+import sys
+import tempfile
+from urllib.request import urlopen
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    for name in ("client-prefix", "source-binary", "npm-prefix", "report-dir"):
+        parser.add_argument("--" + name, type=pathlib.Path, required=True)
+    args = parser.parse_args()
+    output = args.report_dir.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    modules = args.client_prefix.resolve() / "node_modules"
+    cpu = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
+    target_os = {"win32": "win32", "darwin": "darwin", "linux": "linux"}[sys.platform]
+    target = {("win32", "x64"): "x86_64-pc-windows-msvc", ("win32", "arm64"): "aarch64-pc-windows-msvc",
+              ("darwin", "x64"): "x86_64-apple-darwin", ("darwin", "arm64"): "aarch64-apple-darwin",
+              ("linux", "x64"): "x86_64-unknown-linux-musl", ("linux", "arm64"): "aarch64-unknown-linux-musl"}[(target_os, cpu)]
+    suffix = ".exe" if os.name == "nt" else ""
+    codex = modules / "@openai" / f"codex-{target_os}-{cpu}" / "vendor" / target / "bin" / ("codex" + suffix)
+    claude = modules / "@anthropic-ai" / f"claude-code-{target_os}-{cpu}" / ("claude" + suffix)
+    assert codex.is_file() and claude.is_file(), "pinned native client packages are missing"
+    npm = args.npm_prefix.resolve() / "node_modules" / "remotelink" / "dist"
+    manifest = json.loads((npm / "go-binaries.json").read_text("utf-8"))
+    version = manifest["version"]
+    asset_os = {"win32": "windows", "darwin": "darwin", "linux": "linux"}[sys.platform]
+    arch = "arm64" if cpu == "arm64" else "amd64"
+    asset = f"remotelink-v{version}-{asset_os}-{arch}{suffix}"
+    public = output / asset
+    url = f"https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v{version}/{asset}"
+    with urlopen(url, timeout=120) as response:
+        data = response.read(100 * 1024 * 1024 + 1)
+    assert len(data) <= 100 * 1024 * 1024, "release binary exceeds limit"
+    assert hashlib.sha256(data).hexdigest() == manifest["checksums"][asset], "published npm/release SHA256 mismatch"
+    public.write_bytes(data)
+    public.chmod(0o700)
+    spec = importlib.util.spec_from_file_location("client_mcp_smoke", pathlib.Path(__file__).with_name("automatic-client-mcp-smoke.py"))
+    smoke = importlib.util.module_from_spec(spec)
+    sys.dont_write_bytecode = True
+    spec.loader.exec_module(smoke)
+    node = shutil.which("node")
+    assert node, "Node is required to test the public npm entry point"
+    cases = [
+        ("source-npm-clients", args.source_binary.resolve(), modules / ".bin" if os.name == "nt" else None, None),
+        ("public-native", public, None, None),
+        ("public-npm", public, None, [node, str(npm / "index.js")]),
+    ]
+    for name, binary, discovery, launcher in cases:
+        with tempfile.TemporaryDirectory(prefix="remotearc-client-qualification-") as directory:
+            result = smoke.run(binary, codex, claude, pathlib.Path(directory).resolve(), discovery, launcher)
+        result["qualification_case"] = name
+        result["published_version"] = version
+        (output / f"{name}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        print(f"PASS {name}: {sys.platform}/{cpu}, real Codex and Claude, no model turns", flush=True)
+
+
+if __name__ == "__main__":
+    main()

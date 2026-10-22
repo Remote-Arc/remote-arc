@@ -1,9 +1,10 @@
-# Automatic coding-client MCP setup (unreleased)
+# Automatic coding-client MCP setup
 
-This next slice of [#254](https://github.com/Remote-Arc/remote-arc/issues/254)
-adds optional **background** setup when the Go device agent starts normally.
-It is not in the published 0.6.2-rc.3 or stable 0.6.1 packages. Use a build
-containing this change to verify it; installing an older package does not enable it.
+The Go device agent attempts optional **background** client setup on ordinary
+startup. This is included in 0.6.2-rc.4; rc.3 and stable 0.6.1 predate it.
+The Windows npm-client discovery fix described below requires a later build.
+Delivery and platform qualification remain tracked in
+[#254](https://github.com/Remote-Arc/remote-arc/issues/254).
 
 ## User flow
 
@@ -73,10 +74,29 @@ restricted profiles are skipped; their policies are never broadened. Claude
 connector discovery uses its own `mcp list` in an empty temporary project, which
 can healthcheck existing user MCPs but does not approve project MCPs.
 
-Native executables from PATH and known locations are supported. Windows npm
-`.cmd` wrappers alone, unknown client contracts and full real macOS/WSL
-distribution acceptance remain open in #254. Windows native qualification:
-Codex `0.163.0-alpha.11`, Claude Code `2.1.118`.
+Native executables from PATH and known locations are supported. The Windows
+npm-client fix resolves native executables from fixed official npm package
+locations beside PATH/global `.cmd` shims, including local `node_modules/.bin`
+prefixes, on x64 and ARM64. It never evaluates wrapper contents or invokes a
+shell. The resolved client still must pass the usual version and capability
+checks. Missing optional native packages and unsupported JS-only layouts skip
+without changing client configuration. Claude Code on Windows also requires
+its normal Git Bash installation. Package-manager-specific layouts beyond these
+locations remain unqualified.
+
+Qualified versions: Codex `0.163.0-alpha.11`, Claude Code `2.1.118`. The
+[distribution report](automatic-client-mcp-distribution.md) distinguishes
+published rc.4 behavior from the source-only Windows fix and records WSL evidence.
+
+## Troubleshooting
+
+| Result | Next step |
+| --- | --- |
+| No supported executable found with npm-only clients on rc.4 | Use a later candidate containing the Windows npm discovery fix, or install the provider's native executable. |
+| Claude connection inspection fails on Windows | Check the provider's Git Bash prerequisite; use `CLAUDE_CODE_GIT_BASH_PATH` if Git Bash is installed outside its normal location. |
+| Existing MCP/Connector kept | Restart the client if needed. Automatic setup preserves its name, scope and enabled state. |
+| Managed settings, unknown connector inventory or config conflict | Follow the provider's account/managed settings. Remote Link continues to connect; automatic setup can retry on a later start. |
+| Registration changed but an open client has no tools | Restart that client, then optionally run `setup doctor --global --agent all`. |
 
 ## Reproduce checks
 
@@ -99,6 +119,14 @@ while the device connects/executes, inject panics/timeouts, simulate account
 connectors, managed settings and interrupted writes. No source-model turn runs.
 The [Windows report](validation/automatic-client-mcp-windows.json) records
 what was actually verified; CI platform coverage is separate from real clients.
+
+`scripts/automatic-client-mcp-qualification.py` drives pinned real clients
+against the source build, a checksum-verified public binary and the published
+npm launcher without a Go override. The `Real client MCP qualification` workflow
+runs these checks on Windows, macOS and Linux and uploads JSON receipts. Its
+source Windows case hides other client installations, exposing only npm shims
+and the OS/Git prerequisites. It runs no model turn. A passing source test does
+not establish that the currently published candidate contains the source fix.
 
 Provider references: [Codex MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli),
 [Codex app-server](https://learn.chatgpt.com/docs/app-server),

@@ -12,8 +12,10 @@ import json
 import os
 import pathlib
 import queue
+import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -103,7 +105,7 @@ class RelayHandler(http.server.BaseHTTPRequestHandler):
             return
 
 
-def ordinary_start(binary, env, fixture, should_skip=False):
+def ordinary_start(binary, env, fixture, should_skip=False, launcher=None):
     relay = Relay(fixture)
     threading.Thread(target=relay.serve_forever, daemon=True).start()
     state = pathlib.Path(env["REMOTEARC_HOME"]) / ".remotearc"
@@ -113,7 +115,7 @@ def ordinary_start(binary, env, fixture, should_skip=False):
     log = fixture / ("failure-start.log" if should_skip else "normal-start.log")
     started = time.monotonic()
     with log.open("wb") as output:
-        process = subprocess.Popen([str(binary), "--foreground", "--safe"], cwd=fixture, env=env,
+        process = subprocess.Popen([*(launcher or [str(binary)]), "--foreground", "--safe"], cwd=fixture, env=env,
                                    stdin=subprocess.DEVNULL, stdout=output, stderr=output, **options())
         try:
             kind, connected, hello = relay.messages.get(timeout=5)
@@ -134,7 +136,8 @@ def ordinary_start(binary, env, fixture, should_skip=False):
             # Stop only this fixture's authenticated loopback server. Never
             # modify global startup/launchd/registry registrations during smoke.
             endpoint = json.loads((state / "agent" / "control.json").read_text(encoding="utf-8"))
-            assert endpoint["url"].startswith("http://127.0.0.1:") and endpoint["pid"] == process.pid
+            assert endpoint["url"].startswith("http://127.0.0.1:")
+            assert endpoint["pid"] > 0 and (launcher is not None or endpoint["pid"] == process.pid)
             with urlopen(Request(endpoint["url"] + "/stop", data=b"", headers={"Authorization": "Bearer " + endpoint["token"]}), timeout=5):
                 pass
             assert process.wait(timeout=5) == 0
@@ -189,22 +192,35 @@ def mcp_status(binary, env, cwd):
         p.stdout.close()
 
 
-def run(binary, codex, claude, base):
+def run(binary, codex, claude, base, client_path=None, launcher=None):
     def fixture(name):
         root = base / name
-        for child in ("codex", "claude", "arc"):
+        for child in ("codex", "claude", "arc", "user", "appdata", "localappdata"):
             (root / child).mkdir(parents=True)
         (root / "visible.txt").write_text("synthetic-file-ok", encoding="utf-8")
         env = dict(os.environ)
-        for key in ("OPENAI_API_KEY", "CODEX_API_KEY", "CHATGPT_AUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDECODE"):
+        for key in ("OPENAI_API_KEY", "CODEX_API_KEY", "CHATGPT_AUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDECODE", "REMOTEARC_GO_BINARY"):
             env.pop(key, None)
         env.update(CODEX_HOME=str(root / "codex"), CLAUDE_CONFIG_DIR=str(root / "claude"), REMOTEARC_HOME=str(root / "arc"),
                    PATH=os.pathsep.join((str(codex.parent), str(claude.parent), env.get("PATH", ""))),
                    DISABLE_AUTOUPDATER="1", CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1")
+        env.update(USERPROFILE=str(root / "user"), HOME=str(root / "user"),
+                   APPDATA=str(root / "appdata"), LOCALAPPDATA=str(root / "localappdata"))
+        if client_path:
+            system_root = os.environ.get("SystemRoot", r"C:\Windows")
+            system = [str(pathlib.Path(system_root) / "System32"), system_root] if os.name == "nt" else ["/usr/bin", "/bin"]
+            if os.name == "nt" and shutil.which("git"):
+                # Claude requires Git Bash on Windows. Retain that prerequisite,
+                # while keeping the real Codex/Claude install locations hidden.
+                system.append(str(pathlib.Path(shutil.which("git")).parent))
+            env["PATH"] = os.pathsep.join([str(client_path), *system])
         return root, env
 
+    def remote(args, env, cwd):
+        return execute([*(launcher or [binary]), *args], env, cwd)
+
     fresh, env = fixture("fresh")
-    connected = ordinary_start(binary, env, fresh)
+    connected = ordinary_start(binary, env, fresh, launcher=launcher)
     codex_config = fresh / "codex" / "config.toml"
     claude_config = fresh / "claude" / ".claude.json"
     bindings = json.loads(claude_config.read_text(encoding="utf-8"))["mcpServers"]
@@ -213,17 +229,17 @@ def run(binary, codex, claude, base):
     assert pinned.is_file() and digest(pinned) == digest(binary) and str(pinned) in codex_config.read_text(encoding="utf-8").replace("\\\\", "\\")
     tools = mcp_status(pinned, env, fresh)
     hashes = (digest(codex_config), digest(claude_config))
-    repeated = json.loads(execute([binary, "setup", "auto"], env, fresh))["clients"]
+    repeated = json.loads(remote(["setup", "auto"], env, fresh))["clients"]
     assert len(repeated) == 2 and all(r["status"] == "already_registered" for r in repeated)
     assert hashes == (digest(codex_config), digest(claude_config)), "repeat setup changed existing config"
     doctors = {}
     for client in ("codex", "claude"):
-        r = json.loads(execute([binary, "setup", "doctor", "--global", "--agent", client], env, fresh))["clients"][0]
+        r = json.loads(remote(["setup", "doctor", "--global", "--agent", client], env, fresh))["clients"][0]
         assert r["status"] == "healthy" and r["client_connection_verified"]
         assert r["client_tools_verified"] == (client == "codex")
         doctors[client] = r
     for client in ("codex", "claude"):
-        r = json.loads(execute([binary, "setup", "uninstall", "--global", "--agent", client], env, fresh))["clients"][0]
+        r = json.loads(remote(["setup", "uninstall", "--global", "--agent", client], env, fresh))["clients"][0]
         assert r["status"] == "uninstalled"
 
     custom, env = fixture("custom")
@@ -231,15 +247,17 @@ def run(binary, codex, claude, base):
     codex_config.write_text('# existing custom MCP\n[mcp_servers.my_ra]\nurl = "https://mcp.remotearc.app/mcp"\nenabled = false\n', encoding="utf-8")
     claude_config.write_text(json.dumps({"mcpServers": {"my RA": {"type": "http", "url": "https://mcp.remotearc.app/mcp"}}, "theme": "dark"}), encoding="utf-8")
     hashes = digest(codex_config), digest(claude_config)
-    repeated = json.loads(execute([binary, "setup", "auto"], env, custom))["clients"]
+    repeated = json.loads(remote(["setup", "auto"], env, custom))["clients"]
     assert all(r["status"] == "already_registered" for r in repeated)
     assert hashes == (digest(codex_config), digest(claude_config)), "custom registration was modified"
 
     failed, env = fixture("invalid-clients")
     (failed / "codex" / "config.toml").write_text("invalid = [", encoding="utf-8")
     (failed / "claude" / ".claude.json").write_text("{", encoding="utf-8")
-    failure_connected = ordinary_start(binary, env, failed, should_skip=True)
-    return {"native_sha256": digest(binary), "native_version": execute([binary,"--version"],env,failed).strip(), "platform": os.name,
+    failure_connected = ordinary_start(binary, env, failed, should_skip=True, launcher=launcher)
+    return {"native_sha256": digest(binary), "native_version": execute([binary,"--version"],env,failed).strip(), "platform": sys.platform,
+            "entry_point": "published_npm" if launcher else "native",
+            "client_discovery": "npm_shims_only" if client_path and os.name == "nt" else "native_path",
             "codex_version": execute([codex, "--version"], env, failed).strip(),
             "claude_version": execute([claude, "--version"], {**env, "CLAUDE_CONFIG_DIR": str(custom / "claude")}, custom).strip(),
             "normal_start_connected_seconds": connected, "broken_clients_connected_seconds": failure_connected,
@@ -257,12 +275,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("binary", "codex", "claude"):
         parser.add_argument("--" + name, type=pathlib.Path, required=True)
+    parser.add_argument("--client-path", type=pathlib.Path, help="Restrict discovery to this directory plus OS tools; hides real installed clients.")
+    parser.add_argument("--npm-launcher", type=pathlib.Path, help="Published npm dist/index.js; no Go override is injected.")
+    parser.add_argument("--node", type=pathlib.Path, help="Absolute Node executable when testing the npm launcher.")
     parser.add_argument("--report", type=pathlib.Path)
     args = parser.parse_args()
+    if args.npm_launcher and not args.node:
+        parser.error("--npm-launcher requires --node")
+    launcher = [str(args.node.resolve()), str(args.npm_launcher.resolve())] if args.npm_launcher else None
     with tempfile.TemporaryDirectory(prefix="remotearc-auto-mcp-smoke-") as directory:
         base = pathlib.Path(directory).resolve()
         assert base.parent == pathlib.Path(tempfile.gettempdir()).resolve() and base.name.startswith("remotearc-auto-mcp-smoke-")
-        report = run(args.binary.resolve(), args.codex.resolve(), args.claude.resolve(), base)
+        report = run(args.binary.resolve(), args.codex.resolve(), args.claude.resolve(), base,
+                     args.client_path.resolve() if args.client_path else None, launcher)
     text = json.dumps(report, indent=2, ensure_ascii=False) + "\n"
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)

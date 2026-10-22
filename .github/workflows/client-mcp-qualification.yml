@@ -1,0 +1,59 @@
+name: Real client MCP qualification
+
+on:
+  push:
+    paths:
+      - '.github/workflows/client-mcp-qualification.yml'
+      - 'apps/agent/internal/onboarding/**'
+      - 'apps/agent/internal/codexsetup/**'
+      - 'apps/agent/internal/claudesetup/**'
+      - 'scripts/automatic-client-mcp-*.py'
+  pull_request:
+    paths:
+      - '.github/workflows/client-mcp-qualification.yml'
+      - 'apps/agent/internal/onboarding/**'
+      - 'apps/agent/internal/codexsetup/**'
+      - 'apps/agent/internal/claudesetup/**'
+      - 'scripts/automatic-client-mcp-*.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-clients:
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - name: Install pinned official clients without lifecycle scripts
+        run: npm install --prefix work/client-npm --ignore-scripts --no-audit --no-fund --package-lock=false @openai/codex@0.163.0-alpha.11 @anthropic-ai/claude-code@2.1.118
+      - name: Install the public Remote Link candidate
+        run: npm install --prefix work/public-cli --ignore-scripts --no-audit --no-fund --package-lock=false remotelink@0.6.2-rc.4
+      - name: Build source under qualification
+        run: go -C apps/agent build -ldflags "-X main.version=0.6.2-rc.4-dev.npm-254" -o ../../work/remotelink-source${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/remotelink
+      - name: Verify source discovery, published native and published npm entry points
+        run: python scripts/automatic-client-mcp-qualification.py --client-prefix work/client-npm --source-binary work/remotelink-source${{ runner.os == 'Windows' && '.exe' || '' }} --npm-prefix work/public-cli --report-dir work/client-mcp
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: real-client-mcp-${{ matrix.os }}
+          path: work/client-mcp/*.json
+          retention-days: 14

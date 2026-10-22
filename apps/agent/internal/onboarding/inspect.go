@@ -121,11 +121,55 @@ func (d detector) inspect(ctx context.Context, agent, version string) (Inspectio
 				}
 			}
 		}
+		if d.platform == "windows" {
+			// Resolve only fixed native package locations beside a discovered
+			// npm shim. Never read/evaluate the shell wrapper or run Node.
+			for _, candidate := range append([]Candidate(nil), c.Candidates...) {
+				for _, path := range npmNativePaths(name, candidate.Path, runtime.GOARCH) {
+					add(path, "npm_native")
+				}
+			}
+		}
 		// Keep output stable across filesystem enumeration order.
 		sort.Slice(c.Candidates, func(i, j int) bool { return c.Candidates[i].Path < c.Candidates[j].Path })
 		r.Clients = append(r.Clients, c)
 	}
 	return r, ctx.Err()
+}
+
+func npmNativePaths(agent, shim, arch string) []string {
+	if !filepath.IsAbs(shim) || !strings.EqualFold(filepath.Base(shim), agent+".cmd") {
+		return nil
+	}
+	cpu, triple := "", ""
+	switch arch {
+	case "amd64":
+		cpu, triple = "x64", "x86_64-pc-windows-msvc"
+	case "arm64":
+		cpu, triple = "arm64", "aarch64-pc-windows-msvc"
+	default:
+		return nil
+	}
+	modules := filepath.Join(filepath.Dir(shim), "node_modules")
+	if strings.EqualFold(filepath.Base(filepath.Dir(shim)), ".bin") {
+		modules = filepath.Dir(filepath.Dir(shim))
+	}
+	switch agent {
+	case "codex":
+		paths := []string{}
+		for _, pkg := range []string{"codex-win32-" + cpu, "codex"} {
+			for _, binDir := range []string{"bin", "codex"} {
+				paths = append(paths, filepath.Join(modules, "@openai", pkg, "vendor", triple, binDir, "codex.exe"))
+			}
+		}
+		return paths
+	case "claude":
+		return []string{
+			filepath.Join(modules, "@anthropic-ai", "claude-code-win32-"+cpu, "claude.exe"),
+			filepath.Join(modules, "@anthropic-ai", "claude-code", "bin", "claude.exe"),
+		}
+	}
+	return nil
 }
 
 func (d detector) knownPaths(name string) []string {

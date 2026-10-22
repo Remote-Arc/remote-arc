@@ -28,7 +28,7 @@ import (
 
 const Help = `Remote Arc Go device agent
 Usage: remotelink [options]
-  setup inspect     Inspect local coding-agent executable locations
+  setup             Inspect/install/check/repair/remove local coding-agent tools
   takeover          Discover local Codex/Claude sessions for a project directory
   --go              Select the complete Go runtime (also accepted natively)
   --safe            Hard local read-only cap
@@ -50,6 +50,7 @@ Usage: remotelink [options]
 type Options struct {
 	Safe, Developer, Foreground, Background, NoBackground, Reset, Status, Stop, Logs, MCP, Agent, Supervise, Help, Version bool
 	Origin, MCPWorkspace                                                                                                   string
+	MCPWorkspaceID                                                                                                         string
 }
 
 func Parse(args []string) (Options, error) {
@@ -86,7 +87,12 @@ func Parse(args []string) (Options, error) {
 		case "--version", "-v":
 			o.Version = true
 		default:
-			if strings.HasPrefix(s, "--mcp-workspace=") {
+			if strings.HasPrefix(s, "--mcp-workspace-id=") {
+				o.MCPWorkspaceID = strings.TrimPrefix(s, "--mcp-workspace-id=")
+				if o.MCPWorkspaceID == "" {
+					return o, errors.New("--mcp-workspace-id requires a directory identity.")
+				}
+			} else if strings.HasPrefix(s, "--mcp-workspace=") {
 				o.MCPWorkspace = strings.TrimPrefix(s, "--mcp-workspace=")
 				if strings.TrimSpace(o.MCPWorkspace) == "" {
 					return o, errors.New("--mcp-workspace requires an absolute directory.")
@@ -103,6 +109,9 @@ func Parse(args []string) (Options, error) {
 	}
 	if o.MCPWorkspace != "" && (!o.MCP || o.Developer || o.Foreground || o.Background || o.NoBackground || o.Reset || o.Status || o.Stop || o.Logs || o.Agent || o.Supervise || o.Origin != "") {
 		return o, errors.New("--mcp-workspace requires --mcp and cannot be combined with device or developer options.")
+	}
+	if o.MCPWorkspaceID != "" && o.MCPWorkspace == "" {
+		return o, errors.New("--mcp-workspace-id requires --mcp-workspace.")
 	}
 	if o.Origin != "" {
 		var e error
@@ -157,7 +166,7 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 	if o.MCP {
 		if o.MCPWorkspace != "" {
 			fmt.Fprintln(errorOutput, "Remote Arc Local MCP uses read-only workspace file tools.")
-			return localmcp.RunWorkspace(ctx, execution.New("safe"), version, o.MCPWorkspace)
+			return localmcp.RunWorkspaceWithIdentity(ctx, execution.New("safe"), version, o.MCPWorkspace, o.MCPWorkspaceID)
 		}
 		mode := os.Getenv("REMOTEARC_MODE")
 		if mode == "" {

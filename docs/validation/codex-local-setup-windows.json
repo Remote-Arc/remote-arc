@@ -1,0 +1,24 @@
+{
+  "state": "passed",
+  "platform": "win32",
+  "codex_version": "0.163.0-alpha.11",
+  "native_binary_sha256": "7839391c4190dc3f2def3124842a01f510783cb084b9c163696df48ad6a7fbfc",
+  "scenarios": [
+    "fresh profile, repeated install and repeated uninstall",
+    "custom settings/comments retained; actual client catalog and status; unrelated MCP disabled",
+    "interrupted before/after config dispatch; missing entry repair",
+    "config drift never overwritten or deleted",
+    "real Codex conditional config conflict, scoped file call and outside denial; no model turn",
+    "replaced project refused; interrupted uninstall keeps unrelated/concurrent settings"
+  ],
+  "source_model_calls": 0,
+  "target_model_turns": 0,
+  "real_user_config_changed": false,
+  "unverified": [
+    "real macOS host",
+    "WSL",
+    "Claude",
+    "ChatGPT web activation",
+    "cross-agent continuation"
+  ]
+}

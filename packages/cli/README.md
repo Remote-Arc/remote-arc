@@ -85,6 +85,12 @@ https://remotearc.app
 
 ## Commands
 
+Development candidate: [automatic local Codex integration](../../docs/codex-local-integration.md)
+adds native `setup install`, `status`, `doctor`, `repair` and `uninstall` commands
+for a selected project, with automatic configuration and actual client tool
+verification. It is not yet in published 0.6.2-rc.2 artifacts; the existing default
+pairing flow is unchanged and first-run bootstrap automation remains pending.
+
 Development candidate: [workspace read-only MCP](../../docs/workspace-local-mcp.md)
 adds `remotelink --mcp --safe --mcp-workspace=<absolute-dir>` for selected-directory
 file reads. It requires no pairing and exposes no process or mutation tools.

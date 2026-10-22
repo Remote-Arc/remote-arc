@@ -87,7 +87,7 @@ try{
  subscriptionStatus='canceled';await processStripeEvent(env,event('cancel','customer.subscription.deleted','sub_fixture'),'cancel');assert.equal((await currentArcPlan(db,'one')).id,'arc-plus-v1','Period-end cancellation preserves the paid period');
  refunded=true;await processStripeEvent(env,event('refund','charge.refunded','ch_fixture'),'refund');assert.equal((await creditBalance(db,'one')).available,500);assert.equal((await currentArcPlan(db,'one')).id,'free');
  assert(sql.prepare("SELECT revoked_at FROM billing_model_grants WHERE provider='openrouter'").get()?.revoked_at,'Refunds revoke the newly added provider as well');
- assert.equal(await getAccountPlan(env,'one'),'free');assert.equal((await getMonthlyUsage(env,'one')).limit,500);
+ assert.equal(await getAccountPlan(env,'one'),'free');assert.equal((await getMonthlyUsage(env,'one')).limit,10000);
  await assert.rejects(()=>processStripeEvent(env,event('late'),'late'),/PAYMENT_NOT_FINAL/);assert.equal((await creditBalance(db,'one')).available,500);
  assert.equal(sql.prepare("SELECT status FROM arc_payment_events WHERE id='evt_late'").get()?.status,'failed');
  refunded=false;await processStripeEvent(env,event('late'),'late');assert.equal((await creditBalance(db,'one')).available,500,'Refund tombstone prevents resurrection even if a subsequent provider fixture appears paid');
@@ -114,7 +114,7 @@ try{
  assert.equal((await handleBilling(request('/api/billing','GET',undefined,''),env)).status,401);
  assert.equal((await handleBilling(request('/api/billing/checkout','POST','https://evil.invalid'),env)).status,403);
  assert.equal((await handleBilling(request('/api/billing/checkout','POST'),{...env,ARC_CHAT_ENABLED:'0'})).status,503);
- const response=await handleBilling(request('/api/billing'),env);assert.equal(response.status,200);const data=await response.json() as any;assert.equal(data.plan.id,'free');assert.equal(data.usage.limit,500);assert(!JSON.stringify(data).includes('sk_test_fixture'));
+ const response=await handleBilling(request('/api/billing'),env);assert.equal(response.status,200);const data=await response.json() as any;assert.equal(data.plan.id,'free');assert.equal(data.usage.limit,10000);assert(!JSON.stringify(data).includes('sk_test_fixture'));
   const pausedEnv={...env,ARC_EMERGENCY_PAUSE:'1'};
   const pausedData=await (await handleBilling(request('/api/billing'),pausedEnv)).json() as any;
   assert.equal(pausedData.enabled,false);assert.equal(pausedData.portalEnabled,true,'Emergency Arc pause must not prevent existing customers from managing payment/cancellation');

@@ -6,7 +6,7 @@ export const ARC_MEMORY_LIMITS={facts:100,work:40,factBytes:768,workBytes:2048,c
 export const ARC_PLATFORM_APP_BUDGETS_MICROS={free:10000,paid:500000} as const;
 export type ArcPlanId = 'free'|'arc-plus-v1'|'arc-pro-v1';
 export const ARC_PLANS = [
-  {id:'free',label:'Free',monthlyPriceCents:0,monthlyCredits:0,connectToolCalls:500,deviceLimit:2,connectionLimit:5,allHostedModels:false,concurrentRuns:1,routines:3,maxSteps:8,maxTokens:24000,maxSeconds:180},
+  {id:'free',label:'Free',monthlyPriceCents:0,monthlyCredits:0,connectToolCalls:10000,deviceLimit:2,connectionLimit:5,allHostedModels:false,concurrentRuns:1,routines:3,maxSteps:8,maxTokens:24000,maxSeconds:180},
   {id:'arc-plus-v1',label:'Plus',monthlyPriceCents:3900,monthlyCredits:1500,connectToolCalls:null,deviceLimit:10,connectionLimit:50,allHostedModels:true,concurrentRuns:2,routines:20,maxSteps:16,maxTokens:48000,maxSeconds:600},
   {id:'arc-pro-v1',label:'Pro',monthlyPriceCents:7900,monthlyCredits:5000,connectToolCalls:null,deviceLimit:20,connectionLimit:200,allHostedModels:true,concurrentRuns:5,routines:100,maxSteps:32,maxTokens:96000,maxSeconds:1800}
 ] as const;

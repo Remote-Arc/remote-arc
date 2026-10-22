@@ -46,12 +46,12 @@ Migration 0046 stores a cumulative $3 rated-cost budget and $0.50 shared daily l
 
 | Plan | Monthly price | Arc Credits | Connect calls | Parallel runs | Run time |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Free | $0 | One explicit 14-day trial with 200 Credits | 500 | 1 | 3 minutes |
+| Free | $0 | One explicit 14-day trial with 200 Credits | 10,000 | 1 | 3 minutes |
 | Plus | $39 | 1,500 / billing period | Unlimited | 2 | 10 minutes |
 | Pro | $79 | 5,000 / billing period | Unlimited | 5 | 30 minutes |
 | Enterprise | Contract | Negotiated | Negotiated | Negotiated | Negotiated |
 
-Plus and Pro allow every configured premium model. Pro buys more capacity, not exclusive model access. Monthly Credits expire at the paid period end. A $10 top-up adds 500 non-expiring Credits; an active paid subscription is required to use them. Credits do not provide an unlimited run: token, step, time, concurrency, routine, account and platform spending caps apply. There are no automatic overage charges. Existing Free accounts retain their snapshotted 10,000-call allowance. Existing manually granted Plus access is preserved.
+Plus and Pro allow every configured premium model. Pro buys more capacity, not exclusive model access. Monthly Credits expire at the paid period end. A $10 top-up adds 500 non-expiring Credits; an active paid subscription is required to use them. Credits do not provide an unlimited run: token, step, time, concurrency, routine, account and platform spending caps apply. There are no automatic overage charges. Every Free account receives 10,000 Connect calls per calendar month; account creation date does not reduce this allowance. Historical higher allowances and additional grants are preserved. Existing manually granted Plus access is preserved.
 
 One Credit funds up to $0.002 of rated model cost. The wallet uses integer milli-Credits and microdollars, reserves a bounded maximum before inference, settles measured usage, and releases unused reservations. Unknown provider outcomes retain the reservation until verified; the system never repeats a paid attempt automatically. Reasoning output is counted once; cache reads/writes use catalog rates. A new model or price must be allowlisted and rated on the server before users can select it.
 

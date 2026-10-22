@@ -25,7 +25,7 @@ import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
 import { registerMcpTool } from "./mcp-errors.js";
 import { registerBrowserRunnerTools } from "./browser-runner-mcp.js";
-import { registerSharedTabTools } from "./shared-tab-mcp.js";
+import { LEGACY_ALIAS_META_KEY, registerLegacySharedTabAliases, registerSharedTabTools } from "./shared-tab-mcp.js";
 import { requireFeature, requireFeatures } from "./entitlements.js";
 import { binaryBytesRead, recordPlusUsage } from "./plus-usage.js";
 import { createFileResource, revokeFileResource } from "./file-resources.js";
@@ -180,7 +180,9 @@ function installOpenAiToolListAuthMetadata(server: McpServer) {
 
   internal.server.setRequestHandler("tools/list", () => ({
     tools: Object.entries(internal._registeredTools)
-      .filter(([, tool]) => tool.enabled)
+      // Renamed tools stay callable for hosts with a cached list, but a
+      // fresh list only advertises the current names.
+      .filter(([, tool]) => tool.enabled && !tool._meta?.[LEGACY_ALIAS_META_KEY])
       .map(([name, tool]) => {
         const definition: Record<string, unknown> = {
           name,
@@ -221,7 +223,7 @@ export function createRemoteLinkMcp(
       { name: "remotearc", version: "0.4.4" },
       {
         capabilities: { tools: {}, resources: {} },
-        instructions: "Remote Arc offers nine curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed.",
+        instructions: "Remote Arc offers nine curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed. If your tool list shows browser_list_tabs or browser_read_page but no shared_tab_* or browser_runner_* tools, it is a cached list from an older Remote Arc release: ask the user to refresh or reconnect the Remote Arc connector.",
       },
     );
 
@@ -419,15 +421,18 @@ export function createRemoteLinkMcp(
 
     // The user's own shared tabs (Companion extension). Public names are
     // shared_tab_*; the device protocol and stored permissions are unchanged.
-    registerSharedTabTools(server, {
+    const sharedTabDeps = {
       identity,
       hasScope,
-      authRequired: (scope, current) => authRequired(env, scope, current),
-      consume: (current) => consume(env, current),
+      authRequired: (scope: "browser:read" | "browser:interact", current: OAuthIdentity | null) => authRequired(env, scope, current),
+      consume: (current: OAuthIdentity) => consume(env, current),
       oauthToolMeta,
       textResult,
-      callDevice: (current, device, tool, args) => callDevice(env, current, device, tool, args),
-    });
+      callDevice: (current: OAuthIdentity, device: string, tool: Parameters<typeof callDevice>[3], args: Record<string, unknown>) =>
+        callDevice(env, current, device, tool, args),
+    };
+    registerSharedTabTools(server, sharedTabDeps);
+    registerLegacySharedTabAliases(server, sharedTabDeps);
 
     registerMcpTool(server,
       "list_directory",

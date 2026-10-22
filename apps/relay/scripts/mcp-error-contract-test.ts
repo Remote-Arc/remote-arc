@@ -206,6 +206,17 @@ assert(listedNames.has("get_goal_context"), "existing goal checkpoints remain re
 assert(!listedNames.has("create_agent_goal"), "experimental goal creation must stay disabled");
 assert(!listedNames.has("submit_goal_decision"), "experimental mutations must stay disabled");
 
+// A fresh tool list advertises only current names, but hosts that cached the
+// pre-rc.4 list can still call the old shared-tab names (routed, scope-checked).
+for (const name of ["shared_tab_list", "shared_tab_read", "shared_tab_click", "shared_tab_fill"]) {
+  assert(listedNames.has(name), name + " must be listed");
+}
+for (const name of ["browser_list_tabs", "browser_get_current_tab", "browser_read_page", "browser_get_selected_text", "browser_extract_links", "browser_extract_table", "browser_click", "browser_fill"]) {
+  assert(!listedNames.has(name), name + " must not be advertised to fresh clients");
+}
+assert.deepEqual(await challengedScopes(authIdentity("devices:read"), "browser_read_page", { device_id: "ext" }),
+  new Set(["devices:read", "browser:read", "offline_access"]));
+
 // Initial ChatGPT Apps permission discovery must request read + write up
 // front, instead of failing to reconnect when the first write is attempted.
 const appsMcp = createRemoteLinkMcp({ ...authEnv, ENABLE_APPS: "1" }, authIdentity("apps:read apps:write"));

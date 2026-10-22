@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/shared-tab-mcp.js";
+import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/shared-tab-mcp.js";
 import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest } from "../src/browser-runner-mcp.js";
 import { callDevice } from "../src/device-call.js";
 import { classifyExpectedMcpError } from "../src/mcp-errors.js";
@@ -70,6 +70,32 @@ assert.equal(JSON.parse(only.content[0].text).error.code, "TOOL_DISABLED");
 failing = new Set();
 calls.length = 0;
 console.log("PASS: browser tool surface, scopes and shared-tab fan-out");
+
+// Hosts with a cached pre-rc.4 tool list keep calling the old shared-tab
+// names. They must still work, with the same scopes and device protocol, and
+// tell the model to have the user refresh the connector.
+const legacy = new Map<string, Registered & { def: { _meta?: Record<string, unknown> } }>();
+registerLegacySharedTabAliases({ registerTool(name: string, def: never, handler: never) { legacy.set(name, { def, handler }); } } as never, deps as never);
+assert.deepEqual([...legacy.keys()].sort(), Object.keys(LEGACY_SHARED_TAB_ALIASES).sort());
+assert.equal(legacy.size, 8);
+for (const [name, alias] of legacy) {
+  assert.equal(alias.def._meta?.[LEGACY_ALIAS_META_KEY], LEGACY_SHARED_TAB_ALIASES[name as keyof typeof LEGACY_SHARED_TAB_ALIASES]);
+  assert.ok(!tools.has(name), "legacy names are not part of the current surface");
+}
+assert.equal(legacy.get("browser_click")!.def.annotations.destructiveHint, true);
+const legacyRead = JSON.parse((await legacy.get("browser_read_page")!.handler({ device_id: "ext", tab_id: 3 }) as { content: { text: string }[] }).content[0].text);
+assert.deepEqual(calls.pop(), { tool: "browser_read_page", args: { tab_id: 3 } });
+assert.deepEqual(legacyRead.result, { tool: "browser_read_page" });
+assert.match(legacyRead.notice, /renamed to shared_tab_read.*refresh or reconnect the Remote Arc connector.*browser_runner_\*/s);
+await legacy.get("browser_extract_table")!.handler({ device_id: "ext", table_index: 1 });
+assert.deepEqual(calls.pop(), { tool: "browser_extract_table", args: { table_index: 1 } });
+await legacy.get("browser_fill")!.handler({ device_id: "ext", tab_id: 2, snapshot_id: "s", ref: "e4", value: "x" });
+assert.deepEqual(calls.pop(), { tool: "browser_fill", args: { tab_id: 2, snapshot_id: "s", ref: "e4", value: "x" } });
+current = identity("browser:read");
+assert.deepEqual(await legacy.get("browser_click")!.handler({ device_id: "ext", snapshot_id: "s", ref: "e1" }), { auth: "browser:interact" });
+assert.equal(calls.length, 0, "legacy aliases keep the interaction scope");
+current = identity("browser:read browser:interact");
+console.log("PASS: legacy shared-tab names stay callable for cached hosts");
 
 // Device-call guards.
 const row = (platform: string, allowed: string[] | null) => ({

@@ -83,6 +83,12 @@ Website and device dashboard:
 https://remotearc.app
 ```
 
+### After a Remote Arc update
+
+AI clients cache a connector's tool list when it connects. If new tools (for example `browser_runner_*`) are missing after an update, refresh or reconnect the Remote Arc connector in your AI client; in Claude, disconnect and reconnect it. A device's Browser Runner also needs the **Browser Runner** switch on that device in Dashboard → Devices.
+
+Clients that still show the older shared-tab names (`browser_read_page`, `browser_click`, …) keep working: those calls are routed to the current `shared_tab_*` tools and the result asks the user to refresh the connector.
+
 ## Commands
 
 In **0.6.2-rc.4**, **Browser Runner (beta)** lets a connected AI open, read and act on

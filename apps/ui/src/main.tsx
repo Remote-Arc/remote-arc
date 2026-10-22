@@ -7016,7 +7016,7 @@ function App() {
   if (routePath === "/docs" || (routePath.startsWith("/docs/") && routePath !== "/docs/mcp")) return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading documentation…", "正在加载文档…")}/></main>}><DocsPortal path={routePath}/></React.Suspense></PublicLayout>;
   if (routePath === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
   if (routePath === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
-  const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
+  const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff|job-applications)$/);
   if (useCaseMatch) {
     return <UseCaseDetailPage slug={useCaseMatch[1] as UseCaseSlug} user={user === undefined ? null : user} />;
   }

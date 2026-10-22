@@ -20,7 +20,7 @@ export const chinesePages = new Set([
  "/use-cases/home-lab", "/use-cases/browser-research",
  "/use-cases/remote-support", "/use-cases/presentation-deck",
  "/use-cases/spreadsheet-report", "/use-cases/desktop-automation",
- "/use-cases/cross-device-handoff"
+ "/use-cases/cross-device-handoff", "/use-cases/job-applications"
 ]);
 // Public PR previews serve the same marketing pages as the production website.
 const isMarketingPreview = (hostname: string) => /^pr-[0-9]+-remote-arc-ui-preview[.]nzp[.]workers[.]dev$/.test(hostname);

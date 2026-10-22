@@ -17,7 +17,7 @@ export const localizedPages = [
  "/use-cases/disk-space-cleanup", "/use-cases/overnight-goals",
  "/use-cases/long-running-jobs", "/use-cases/scheduled-checks",
  "/use-cases/ci-follow-up", "/use-cases/data-work",
- "/use-cases/home-lab", "/use-cases/browser-research",
+ "/use-cases/home-lab", "/use-cases/browser-research", "/use-cases/job-applications",
  "/use-cases/remote-support", "/use-cases/presentation-deck",
  "/use-cases/spreadsheet-report", "/use-cases/desktop-automation",
  "/use-cases/cross-device-handoff"

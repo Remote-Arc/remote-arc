@@ -13,7 +13,15 @@ for(const item of ARC_DELEGATED_WORK)for(const locale of ['en','zh'] as const){
  assert.deepEqual([...url.searchParams.keys()].sort(),['prompt','source']);
  assert.match(item.prompt[locale],locale==='en'?/Confirm/:/确认/,'A workflow gathers its sources and scope before being saved');
 }
+const connectOnly=(published as UseCaseSlug[]).filter(slug=>ARC_USE_CASES[slug].connectOnly);
+assert.deepEqual(connectOnly,['job-applications'],'Only Browser Runner work is Connect-only today');
+for(const slug of connectOnly){
+ // These pages offer no Arc draft; their Arc copy must say so plainly.
+ assert.match(ARC_USE_CASES[slug].intro.en,/through Connect/);assert.match(ARC_USE_CASES[slug].prompt.en,/does not drive/);
+ assert.match(ARC_USE_CASES[slug].intro.zh,/Connect/);assert.match(ARC_USE_CASES[slug].prompt.zh,/暂不支持/);
+}
 for(const slug of published as UseCaseSlug[])for(const locale of ['en','zh'] as const){
+ if(ARC_USE_CASES[slug].connectOnly)continue;
  const item=ARC_USE_CASES[slug],prompt=arcUseCasePrompt(slug,locale),url=new URL(arcChatHref(prompt,'use-case:'+slug));
  for(const field of ['intro','prompt','requires','boundary'] as const){assert(item[field][locale].trim().length>0,slug+' '+field);if(locale==='zh')assert(/[\u3400-\u9fff]/u.test(item[field][locale]),slug+' must be localized');}
  assert(prompt.length<=6000,'Fits the actual Arc message contract');
@@ -29,4 +37,4 @@ assert.match(ARC_USE_CASES['desktop-automation'].boundary.en,/does not provide a
 const hostile='A draft & not a query flag #?<script>alert(1)</script> 中文';
 const encoded=new URL(arcChatHref(hostile,'test'));assert.equal(encoded.searchParams.get('prompt'),hostile);assert.equal(encoded.hash,'');
 assert.throws(()=>arcChatHref(' ','test'));assert.throws(()=>arcChatHref('x'.repeat(6001),'test'));
-console.log('PASS: all 15 bilingual use cases enter Arc as bounded reviewable drafts, with explicit requirements and current execution boundaries');
+console.log('PASS: 16 bilingual use cases; the 15 Arc-capable ones enter Arc as bounded reviewable drafts, and Browser Runner work is offered through Connect only');

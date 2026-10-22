@@ -58,6 +58,7 @@ import "./product-typography.css";
 import "./arc-product-polish.css";
 import "./brand-wordmark.css";
 import "./experience-refresh.css";
+import "./pairing.css";
 
 declare const __REMOTEARC_CLI_VERSION__: string;
 
@@ -604,6 +605,45 @@ function CenteredCard({
   );
 }
 
+function PairingCard({ title, body, children, step = 1 }: {
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+  step?: 1 | 2 | 3;
+}) {
+  const { tr, locale } = useI18n();
+  const steps = [tr("Pair computer", "配对电脑"), tr("Permissions", "设置权限"), tr("Ready to use", "开始使用")];
+  return (
+    <main className="pairingShell workspaceSurface">
+      <header className="pairingHeader">
+        <Brand compact />
+        <div><LanguageSwitcher compact /><ThemeSwitcher compact /></div>
+      </header>
+      <div className="pairingFlow">
+        <ol className="pairingSteps" aria-label={tr("Computer setup", "电脑设置")}>
+          {steps.map((label, index) => (
+            <li key={index} data-complete={index + 1 < step} aria-current={index + 1 === step ? "step" : undefined}>
+              <span>{index + 1 < step ? <ProductIcon name="check" size={14} /> : index + 1}</span>{label}
+            </li>
+          ))}
+        </ol>
+        <section className="pairingCard" aria-labelledby="pairing-title">
+          <header className="pairingTitle">
+            <span className={"pairingTitleIcon" + (step === 3 ? " complete" : "")}><ProductIcon name={step === 3 ? "check" : step === 2 ? "shield" : "device"} size={24} /></span>
+            <h1 id="pairing-title">{title}</h1>
+            <p>{body}</p>
+          </header>
+          {children}
+        </section>
+      </div>
+      <footer className="pairingFooter">
+        <span><ProductIcon name="shield" size={14} />{tr("Your computer. Your permissions.", "你的电脑，由你掌控权限。")}</span>
+        <a href={MARKETING_ORIGIN + localizedWebsiteHref("/docs", locale)} target="_blank" rel="noreferrer">{tr("Help & guides", "帮助与指南")}<ProductIcon name="arrowUpRight" size={14} /></a>
+      </footer>
+    </main>
+  );
+}
+
 function PairDevice({
   user,
   onSignedIn,
@@ -611,7 +651,7 @@ function PairDevice({
   user: User | null | undefined;
   onSignedIn: () => Promise<void>;
 }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const initialCode =
     new URLSearchParams(location.search).get("code")?.toUpperCase() || "";
   const [code, setCode] = useState(initialCode);
@@ -1040,13 +1080,13 @@ function PairDevice({
   const backgroundActuallyEnabled = pairedDevice?.background_enabled === true;
 
   if (user === undefined) {
-    return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")} />;
+    return <PairingCard title={tr("Loading…", "加载中…")} body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")} />;
   }
 
   if (!user) {
     return (
       <>
-        <CenteredCard
+        <PairingCard
           title={tr("Sign in to pair this computer", "登录以配对这台电脑")}
           body={initialCode
             ? tr("Choose a Remote Arc account, then confirm the code shown in your terminal.", "选择一个 Remote Arc 账户，然后确认终端中显示的配对码。")
@@ -1055,7 +1095,7 @@ function PairDevice({
           <button className="primaryButton" type="button" onClick={() => setShowSignIn(true)}>
             {tr("Sign in to Remote Arc", "登录 Remote Arc")} <span>→</span>
           </button>
-        </CenteredCard>
+        </PairingCard>
         {showSignIn && (
           <AuthProviderModal
             returnTo={location.pathname + location.search}
@@ -1078,6 +1118,7 @@ function PairDevice({
         name: "ChatGPT",
         icon: "/ai-openai.svg",
         href: CHATGPT_PLUGIN_DIRECTORY_URL,
+        guidePath: "/install/chatgpt",
         detail: tr("Find Remote Arc in the Plugin Directory", "在 Plugin Directory 中找到 Remote Arc"),
         action: tr("Open Plugins", "打开 Plugins"),
         copyEndpoint: false,
@@ -1087,6 +1128,7 @@ function PairDevice({
         name: "Claude",
         icon: "/ai-claude.svg",
         href: CLAUDE_CONNECTORS_URL,
+        guidePath: "/install/claude",
         detail: tr("Remote MCP endpoint will be copied for you", "会自动复制 Remote MCP 地址"),
         action: tr("Open Connectors", "打开 Connectors"),
         copyEndpoint: true,
@@ -1096,6 +1138,7 @@ function PairDevice({
         name: "Cursor",
         icon: "/ai-cursor.svg",
         href: cursorMcpInstallUrl(),
+        guidePath: "/install/cursor",
         detail: tr("One-click MCP install, then complete OAuth", "一键添加 MCP，然后完成 OAuth"),
         action: tr("Add to Cursor", "添加到 Cursor"),
         copyEndpoint: false,
@@ -1104,7 +1147,8 @@ function PairDevice({
         id: "other",
         name: tr("Other MCP", "其他 MCP"),
         icon: "",
-        href: MARKETING_ORIGIN + "/docs/mcp",
+        href: MARKETING_ORIGIN + localizedWebsiteHref("/docs/mcp", locale),
+        guidePath: "/remote-mcp",
         detail: tr("Copy the endpoint and use your client's MCP setup", "复制 Endpoint，并在客户端的 MCP 设置中添加"),
         action: tr("Copy & open docs", "复制并打开文档"),
         copyEndpoint: true,
@@ -1112,14 +1156,14 @@ function PairDevice({
     ];
 
     return (
-      <CenteredCard
+      <PairingCard
+        step={3}
         title={tr("Computer ready", "电脑已就绪")}
         body={tr(
           "Setup is complete and this computer is ready to use. Connecting an AI is optional here; if you already connected one, you can go straight to Dashboard.",
           "设置已经完成，这台电脑现在可以使用。这里连接 AI 是可选的；如果你已经连接过 AI，可以直接进入 Dashboard。",
         )}
       >
-        <div className="successMark">✓</div>
         <div className="pairSetupSummary">
           <div>
             <span>{tr("Background connection", "后台连接")}</span>
@@ -1139,36 +1183,38 @@ function PairDevice({
             <span className="eyebrow">{tr("OPTIONAL NEXT STEP · CONNECT AN AI", "可选下一步 · 连接 AI")}</span>
             <h3>{tr("Use this computer from the AI you already work with.", "从你正在使用的 AI 里操作这台电脑。")}</h3>
             <p>{tr(
-              "Device setup is already finished. Choose a connector only if you still need to connect an AI client; you can also do this later from Dashboard → Connect AI.",
-              "设备设置已经完成。只有在你还需要连接 AI 客户端时才选择下面的连接方式；之后也可以随时从 Dashboard → Connect AI 完成。",
+              "Device setup is already finished. Follow your client’s installation guide, or open it directly if you already know the steps. You can also connect later from Dashboard → Connect AI.",
+              "设备设置已经完成。按照客户端的安装指南完成连接；熟悉步骤后也可直接打开客户端。之后可以随时从 Dashboard → Connect AI 继续。",
             )}</p>
           </div>
 
           <div className="pairAgentGrid">
             {agentTargets.map((agent) => (
-              <a
-                className="pairAgentOption"
-                href={agent.href}
-                key={agent.id}
-                target="_blank"
-                rel="noreferrer"
-                onClick={agent.copyEndpoint ? copyEndpoint : undefined}
-              >
-                {agent.icon ? (
-                  <img
-                    src={agent.icon}
-                    alt=""
-                    className={agent.id === "chatgpt" ? "pairChatGptLogo" : undefined}
-                  />
-                ) : (
-                  <span className="pairMcpIcon">MCP</span>
-                )}
-                <div>
-                  <strong>{agent.name}</strong>
-                  <small>{agent.detail}</small>
+              <article className="pairAgentOption" key={agent.id}>
+                <div className="pairAgentIdentity">
+                  {agent.icon ? (
+                    <img
+                      src={agent.icon}
+                      alt=""
+                      className={agent.id === "chatgpt" ? "pairChatGptLogo" : undefined}
+                    />
+                  ) : (
+                    <span className="pairMcpIcon">MCP</span>
+                  )}
+                  <div>
+                    <strong>{agent.name}</strong>
+                    <small>{agent.detail}</small>
+                  </div>
                 </div>
-                <b>{agent.action} →</b>
-              </a>
+                <div className="pairAgentActions">
+                  <a className="pairAgentGuide" href={MARKETING_ORIGIN + localizedWebsiteHref(agent.guidePath, locale)} target="_blank" rel="noreferrer" aria-label={agent.name + " · " + tr("Installation guide", "安装指南")}>
+                    <ProductIcon name="book" size={15} /><span>{tr("Installation guide", "安装指南")}</span><ProductIcon name="arrowUpRight" size={14} />
+                  </a>
+                  <a className="pairAgentLaunch" href={agent.href} target="_blank" rel="noreferrer" onClick={agent.copyEndpoint ? copyEndpoint : undefined}>
+                    {agent.action}<ProductIcon name="arrowUpRight" size={14} />
+                  </a>
+                </div>
+              </article>
             ))}
           </div>
 
@@ -1183,13 +1229,14 @@ function PairDevice({
           <a href="/devices" className="pairDonePrimary">{tr("Open Dashboard", "进入 Dashboard")} →</a>
           <a href="/connect">{tr("Connect an AI later", "之后再连接 AI")} →</a>
         </div>
-      </CenteredCard>
+      </PairingCard>
     );
   }
 
   if (approvedDeviceId && setupStep === "workspace") {
     return (
-      <CenteredCard
+      <PairingCard
+        step={2}
         title={tr("Choose where AI may work", "选择 AI 可以工作的目录")}
         body={pendingWorkspaceAction === "terminal"
           ? tr(
@@ -1277,13 +1324,14 @@ function PairDevice({
                 : tr("Use this folder", "使用此目录")}
           </button>
         </div>
-      </CenteredCard>
+      </PairingCard>
     );
   }
 
   if (approvedDeviceId) {
     return (
-      <CenteredCard
+      <PairingCard
+        step={2}
         title={tr("Choose what AI can do", "选择 AI 可以做什么")}
         body={tr(
           "Your computer is paired. Start with the safe default, then opt in to file editing or terminal execution when you need them.",
@@ -1471,12 +1519,12 @@ function PairDevice({
               : tr("Finish setup", "完成设置")}
           </button>
         </div>
-      </CenteredCard>
+      </PairingCard>
     );
   }
 
   return (
-    <CenteredCard
+    <PairingCard
       title={tr("Pair a computer", "配对电脑")}
       body={tr("Confirm that the code and computer match what is shown in your terminal.", "确认下面的配对码和设备与终端显示一致。")}
     >
@@ -1518,7 +1566,7 @@ function PairDevice({
       )}
       {message && <p className="errorText">{message}</p>}
       <p className="signedInAs">{tr("Signed in as", "当前登录")} {user.email}</p>
-    </CenteredCard>
+    </PairingCard>
   );
 }
 

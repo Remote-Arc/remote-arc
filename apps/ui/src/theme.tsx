@@ -18,7 +18,7 @@ function resolveTheme(theme: ThemePreference): "light" | "dark" {
 function dashboardSurface() {
   const path = window.location.pathname;
   return ["mcp.remotearc.app","agent.remotearc.app","admin.remotearc.app"].includes(window.location.hostname) || path === '/admin-preview'
-    || /^\/(dashboard(?:\/|$)|overview\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$|checkout\/?$|chat(?:\/|$)|tasks\/?$|routines\/?$|activity\/?$|skills\/?$)/.test(path);
+    || /^\/(dashboard(?:\/|$)|overview\/?$|device\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$|checkout\/?$|chat(?:\/|$)|tasks\/?$|routines\/?$|activity\/?$|skills\/?$)/.test(path);
 }
 
 function preferenceKey() {
@@ -29,8 +29,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     try {
       const saved = localStorage.getItem(preferenceKey());
-      return saved === "light" || saved === "dark" || saved === "system" ? saved : (dashboardSurface() ? "light" : "dark");
-    } catch { return dashboardSurface() ? "light" : "dark"; }
+      return saved === "light" || saved === "dark" || saved === "system" ? saved : "dark";
+    } catch { return "dark"; }
   });
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(theme));
 

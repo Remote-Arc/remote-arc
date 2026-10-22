@@ -958,7 +958,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
           headers.set("x-frame-options", "DENY");
           headers.set("referrer-policy", "no-referrer");
           headers.set("content-security-policy",
-            "default-src 'self'; script-src 'self' 'sha256-i/VOhrcJ22M2NoHBWNPXFqwq/unRvJI5UvQ4P4jMEKA='; style-src 'self' 'unsafe-inline'; " +
+            "default-src 'self'; script-src 'self' 'sha256-+g2J2TalgNUFkUea+jpAd6tLsG/QRnmvNufGwRci22E='; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data:; connect-src 'self'; font-src 'self'; worker-src 'self'; manifest-src 'self'; " +
             "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
         }

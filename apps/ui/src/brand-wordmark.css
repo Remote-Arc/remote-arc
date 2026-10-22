@@ -1,5 +1,5 @@
 /* Original blue mark and complete lettering, aligned by visible geometry. */
-@font-face{font-family:"Arc Wordmark";src:url('/fonts/SpaceGroteskVariable.woff2') format('woff2');font-weight:300 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Arc Wordmark";src:url('/fonts/SpaceGroteskVariable.woff2') format('woff2');font-weight:300 700;font-style:normal;font-display:block}
 :root{--brand-ink:#222226}
 :root[data-theme=dark]{--brand-ink:#f4f4f5}
 :root[data-theme] :is(.publicPage,.appFrame,.adminShell) .brand.brandHasWordmark{display:inline-flex;align-items:center;gap:7px;text-decoration:none;min-height:30px;flex:none}

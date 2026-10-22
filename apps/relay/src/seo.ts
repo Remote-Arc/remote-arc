@@ -905,27 +905,17 @@ export function renderMarketingHtml(html: string, pathname: string) {
     .replace(/<meta property="og:image"[^>]*>/, "")
     .replace("</head>", extra + "</head>");
 
-  // Keep the interactive homepage client-rendered, but provide a truthful
-  // no-JavaScript fallback with the same product facts. This avoids a pre-mount
-  // text flash for normal visitors while still giving non-JS clients a useful,
-  // semantic document instead of an empty application root.
-  if (pathname === "/" || pathname === "/zh") {
-    return html.replace(
-      '<div id="root"></div>',
-      '<div id="root"><noscript>' + crawlablePageHtml(pathname, resolved) + '</noscript></div>',
-    );
-  }
-
-  if (!page) {
-    return html.replace('<div id="root"></div>', '<div id="root">' + notFoundHtml(pathname) + '</div>');
-  }
-  if (basePath === "/blogs") {
-    return html.replace('<div id="root"></div>', '<div id="root">' + blogIndexHtml(chinese) + '</div>');
-  }
-  if (articles[basePath]) {
-    return html.replace('<div id="root"></div>', '<div id="root">' + articleHtml(page) + '</div>');
-  }
-  return html.replace('<div id="root"></div>', '<div id="root">' + crawlablePageHtml(pathname, page) + '</div>');
+  // All public routes use the same client-rendered design. The semantic fallback
+  // remains available without JavaScript; it must not paint the legacy shell
+  // while the current application loads during navigation or language changes.
+  const fallback = !page ? notFoundHtml(pathname)
+    : basePath === "/blogs" ? blogIndexHtml(chinese)
+    : articles[basePath] ? articleHtml(page)
+    : crawlablePageHtml(pathname, page);
+  return html.replace(
+    '<div id="root"></div>',
+    '<div id="root"><noscript>' + fallback + '</noscript></div>',
+  );
 }
 
 const sitemapPaths = [

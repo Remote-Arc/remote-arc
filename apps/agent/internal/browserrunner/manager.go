@@ -7,6 +7,8 @@ package browserrunner
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -414,16 +416,6 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 		if prev := s.cp.effect(key); prev != nil && prev.Status != EffectNotDispatched {
 			return map[string]any{"replayed": true, "effect": *prev, "note": "This submit was already sent; it was not repeated."}, nil
 		}
-		// P0 is one final external submit per task. A model choosing a new key
-		// after a confirmed result must not send the same application twice.
-		for _, previous := range s.cp.Effects {
-			if previous.Key != key && previous.Status != EffectNotDispatched {
-				if previous.Status == EffectUnknown || previous.Status == EffectUnverified || previous.Status == EffectInFlight {
-					return nil, fmt.Errorf("UNRESOLVED_EFFECT: submit %s is %s; inspect and confirm before any other submit.", previous.Key, previous.Status)
-				}
-				return nil, fmt.Errorf("SUBMIT_ALREADY_RECORDED: this task already has submit %s (%s). Start a separately authorized task for another external submit.", previous.Key, previous.Status)
-			}
-		}
 	}
 	snap := protocol.OptionalString(args, "snapshot_id")
 	if e := s.checkSnapshot(snap); e != nil {
@@ -450,7 +442,10 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 	if req.Action == "press" && req.Key == "Enter" && effect != "submit" {
 		return nil, errors.New("SUBMIT_EFFECT_REQUIRED: Enter can submit a form; use effect=submit and a stable idempotency_key, or a non-submitting action.")
 	}
-	if req.Action == "click" {
+	// target identifies what a submit acts on (form, control, fields), so
+	// one action is never sent twice under different idempotency keys.
+	target, targetLabel := "", ""
+	if (req.Action == "click" || req.Action == "press") && req.Ref != "" {
 		frameID, e := s.refFrame(req.Ref)
 		if e != nil {
 			return nil, e
@@ -460,14 +455,23 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 			return nil, e
 		}
 		var classification struct {
-			RequiresSubmit bool `json:"requires_submit"`
+			RequiresSubmit bool            `json:"requires_submit"`
+			Target         json.RawMessage `json:"target"`
 		}
-		if e := json.Unmarshal(risk.Result.Value, &classification); e != nil {
-			return nil, fmt.Errorf("effect classification failed closed: %w", e)
+		if e := json.Unmarshal(risk.Result.Value, &classification); e != nil || len(classification.Target) == 0 {
+			return nil, errors.New("Browser Runner could not classify this control, so it was not clicked. Take a new snapshot and try again.")
 		}
-		if classification.RequiresSubmit && effect != "submit" {
+		if req.Action == "click" && classification.RequiresSubmit && effect != "submit" {
 			return nil, errors.New("SUBMIT_EFFECT_REQUIRED: this control may submit data. Use effect=submit and a stable idempotency_key; navigation/none cannot bypass the submit ledger.")
 		}
+		target = submitTarget(req.Action, classification.Target)
+		var described struct {
+			Label string `json:"label"`
+		}
+		_ = json.Unmarshal(classification.Target, &described)
+		targetLabel = described.Label
+	} else if effect == "submit" {
+		target = submitTarget(req.Action, []byte(strconvQuote(safeURL(s.currentHref())+" "+req.Key)))
 	}
 	req.Effect = effect
 	var eff *Effect
@@ -479,12 +483,17 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 		if u := s.cp.unresolved(); u != nil {
 			return nil, fmt.Errorf("UNRESOLVED_EFFECT: submit %s (%s) is %s. Confirm its result with browser_runner_confirm before any new submit.", u.Key, u.Label, u.Status)
 		}
+		// A new key must not resend something this task already sent. Other
+		// steps of a multi-page flow (Next, then Submit) have other targets.
+		if prev := s.cp.sentTo(target, key); prev != nil {
+			return nil, fmt.Errorf("SUBMIT_ALREADY_RECORDED: this task already sent the same submit as %s (%s). It is not sent again under a new key; start a separately authorized task to send it again.", prev.Key, prev.Status)
+		}
 		now := stamp(m.now())
 		if prev := s.cp.effect(key); prev != nil {
-			prev.Status, prev.UpdatedAt, prev.URLBefore = EffectInFlight, now, safeURL(s.currentHref())
+			prev.Status, prev.UpdatedAt, prev.URLBefore, prev.Target = EffectInFlight, now, safeURL(s.currentHref()), target
 			eff = prev
 		} else {
-			s.cp.Effects = append(s.cp.Effects, Effect{Key: key, Action: req.Action, Status: EffectInFlight, URLBefore: safeURL(s.currentHref()), StartedAt: now, UpdatedAt: now})
+			s.cp.Effects = append(s.cp.Effects, Effect{Key: key, Action: req.Action, Label: clip(targetLabel, 120), Target: target, Status: EffectInFlight, URLBefore: safeURL(s.currentHref()), StartedAt: now, UpdatedAt: now})
 			eff = &s.cp.Effects[len(s.cp.Effects)-1]
 		}
 		// Durable before the click: a crash now leaves an unknown effect,
@@ -687,3 +696,13 @@ func (m *Manager) close(s *session, forget bool) (any, error) {
 	}
 	return map[string]any{"session_id": s.cp.SessionID, "state": StateClosed, "forgotten": true, "profile_removed": !shared && s.cp.Profile == s.cp.SessionID}, nil
 }
+
+// submitTarget hashes what a submit acts on: the action plus the page helper's
+// description of the form (method, action URL without query, control label,
+// field names). Values are never part of it.
+func submitTarget(action string, desc []byte) string {
+	sum := sha256.Sum256(append([]byte(action+"\x00"), desc...))
+	return hex.EncodeToString(sum[:12])
+}
+
+func strconvQuote(s string) string { b, _ := json.Marshal(s); return string(b) }

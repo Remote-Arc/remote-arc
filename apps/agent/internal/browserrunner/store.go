@@ -34,6 +34,7 @@ type Effect struct {
 	Key       string `json:"idempotency_key"`
 	Action    string `json:"action"`
 	Label     string `json:"label"`
+	Target    string `json:"target,omitempty"` // fingerprint of the form/control the submit acted on
 	Status    string `json:"status"`
 	URLBefore string `json:"url_before"`
 	URLAfter  string `json:"url_after,omitempty"`
@@ -137,6 +138,19 @@ func (c *Checkpoint) receipt(now time.Time, r Receipt) {
 	r.Seq = c.NextSeq
 	r.At = stamp(now)
 	c.Receipts = append(c.Receipts, r)
+}
+
+// sentTo returns an earlier submit under another key that may have reached
+// the same target. Effects recorded without a target count as a match, so
+// checkpoints from older builds fail closed.
+func (c *Checkpoint) sentTo(target, key string) *Effect {
+	for i := range c.Effects {
+		e := &c.Effects[i]
+		if e.Key != key && e.Status != EffectNotDispatched && (e.Target == "" || e.Target == target) {
+			return e
+		}
+	}
+	return nil
 }
 
 func (c *Checkpoint) effect(key string) *Effect {

@@ -29,3 +29,18 @@ Two P0 safety gaps appeared in a read-only CTO review:
 ## Claude / reviewer resumption
 
 Read the PR diff and GitHub #270 comment first. Confirm commit SHAs against CI, then prioritize #276 real Windows background-agent visible-browser handoff and macOS real device checks. Only after that, stage a Relay test environment and obtain owner approval to enable the new MCP tools. Keep the original Claude branch for comparison; do not overwrite other Codex worktrees.
+
+## Review follow-up (Claude, 2026-10-22)
+
+PR #285 review found that "one external submit per task" made real multi-page flows impossible. A Greenhouse-style "Apply" button, which only reveals the form, or a POST "Next" button both need `effect=submit`. Once confirmed, that first submit made the final "Submit application" fail with `SUBMIT_ALREADY_RECORDED`. The fake ATS did not show this because its Next step is a GET form.
+
+The rule is now one submit per target:
+
+- `effect_risk` also describes what a control acts on: form method, action URL without query, normalized control label, and names (never values) of the fields in its form or section. Go hashes this into `Effect.Target`, which is stored durably with the effect.
+- A new idempotency key is refused with `SUBMIT_ALREADY_RECORDED` if an earlier, non-`not_dispatched` submit in the task has the same target. Effects from older checkpoints without a target fail closed.
+- Different steps (Apply → Next → Submit) are allowed, but strictly one at a time: each must be settled with `browser_runner_confirm` before the next (`UNRESOLVED_EFFECT`).
+- A re-key with the old refs after the page changed fails as `STALE_REF`. A re-key from a fresh snapshot of the same form fails as `SUBMIT_ALREADY_RECORDED`. Both are covered in the E2E tests.
+- New E2E `TestE2EMultiStepPostWizardSubmitsEachStepOnce` covers Apply-reveal button → POST Next → final POST submit → re-key refusal. It fails on `0c62120` and passes with this change.
+- Relay: `mcp-errors.ts` maps `SCOPE_CHANGE_REQUIRED`, which previously matched only `SCOPE_CHANGE:`, plus `SUBMIT_EFFECT_REQUIRED` and `SUBMIT_ALREADY_RECORDED` to stable codes. The `browser_runner_act` description explains per-step keys.
+
+Same limitation as above: the target fingerprint is a heuristic. A site could send the same data from two differently labelled controls. #279 is still required before claiming universal exactly-once.

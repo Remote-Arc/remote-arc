@@ -222,12 +222,28 @@
     const label = describe(el);
     const form = el.form || (el.closest && el.closest("form"));
     const type = String(el.type || "").toLowerCase();
+    // What this control acts on, so a new idempotency key cannot send the same
+    // thing twice while other steps of a multi-page flow stay possible.
+    // Field names (never values) tell apart steps that share a URL and label.
+    const scope = form || (el.closest && el.closest("fieldset, [role=form], dialog, section, main")) || document.body;
+    const names = new Set();
+    for (const f of scope.querySelectorAll("input, select, textarea")) {
+      const n = f.name || f.id;
+      if (n && String(f.type || "").toLowerCase() !== "hidden") names.add(n);
+    }
+    const strip = (u) => { try { const x = new URL(u, location.href); return x.origin + x.pathname; } catch (e) { return ""; } };
+    const target = {
+      method: form ? String(form.method || "get").toLowerCase() : "",
+      action: strip(form ? form.action : location.href),
+      label: label.toLowerCase().replace(/\s+/g, " ").trim(),
+      fields: [...names].sort().slice(0, 50),
+    };
     // A regular href is navigation even when the label says "Apply now".
-    if (el.tagName === "A" && el.href && !form) return { requires_submit: false };
+    if (el.tagName === "A" && el.href && !form) return { requires_submit: false, target };
     const danger = /\b(submit|send|apply|finish|confirm|place order|book now|purchase|pay now|delete|publish|post|save changes|complete application)\b/i.test(label);
     // GET-form Next means navigation; a POST native submit is an external effect.
     const formSubmits = !!form && (type === "submit" || type === "image") && (form.method.toLowerCase() !== "get" || danger);
-    return { requires_submit: formSubmits || danger };
+    return { requires_submit: formSubmits || danger, target };
   }
 
   if (op === "locate") {

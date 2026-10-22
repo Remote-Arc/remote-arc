@@ -71,7 +71,9 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     // Browser Runner errors carry their own stable code and guidance.
     [/^STALE_REF:/, "STALE_REF"],
     [/^OUT_OF_SCOPE:/, "OUT_OF_SCOPE"],
-    [/^SCOPE_CHANGE:/, "SCOPE_CHANGE_REQUIRED"],
+    [/^SCOPE_CHANGE(?:_REQUIRED)?:/, "SCOPE_CHANGE_REQUIRED"],
+    [/^SUBMIT_EFFECT_REQUIRED:/, "SUBMIT_EFFECT_REQUIRED"],
+    [/^SUBMIT_ALREADY_RECORDED:/, "SUBMIT_ALREADY_RECORDED"],
     [/^UNRESOLVED_EFFECT:/, "UNRESOLVED_EFFECT"],
     [/^BLOCKED_SENSITIVE:/, "SENSITIVE_FIELD_BLOCKED"],
     [/^EVIDENCE_NOT_FOUND:/, "EVIDENCE_NOT_FOUND"],

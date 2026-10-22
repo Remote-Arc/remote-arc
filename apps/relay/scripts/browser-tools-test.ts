@@ -103,6 +103,12 @@ assert.match(String(wrongTab), /not available on this computer.*browser_runner_s
 assert.deepEqual(dispatched, [], "wrong-family calls never reach a device");
 assert.equal(classifyExpectedMcpError(wrongRunner)?.code, "WRONG_BROWSER_TOOL");
 assert.equal(classifyExpectedMcpError(new Error("STALE_REF: take a new snapshot"))?.code, "STALE_REF");
+for (const [message, code] of [
+  ["SCOPE_CHANGE_REQUIRED: this task is limited to [https://a.test]", "SCOPE_CHANGE_REQUIRED"],
+  ["SCOPE_CHANGE_REQUIRED: approve the exact sites in Dashboard Security / Boundary requests (x) and retry", "SCOPE_CHANGE_REQUIRED"],
+  ["SUBMIT_EFFECT_REQUIRED: this control may submit data.", "SUBMIT_EFFECT_REQUIRED"],
+  ["SUBMIT_ALREADY_RECORDED: this task already sent the same submit as k (confirmed).", "SUBMIT_ALREADY_RECORDED"],
+] as const) assert.equal(classifyExpectedMcpError(new Error(message))?.code, code, message);
 assert.equal(classifyExpectedMcpError(new Error("browser protocol error. The submit k may have been sent; its effect is unknown. Do not submit again"))?.code, "UNKNOWN_EFFECT");
 console.log("PASS: Browser Runner explicit opt-in, wrong-family hints and error codes");
 

@@ -257,8 +257,12 @@ func TestE2EApplicationSubmitsOnceWithEvidence(t *testing.T) {
 	if conf["effect"].(map[string]any)["status"] != EffectConfirmed {
 		t.Fatalf("resolve: %v", conf)
 	}
-	// Re-keying the same task must not evade the submit-once gate.
-	h.fail("browser_runner_act", merge(submit, map[string]any{"effect": "submit", "idempotency_key": "acme-se-apply-new-key"}), "SUBMIT_ALREADY_RECORDED")
+	// Re-keying must not evade the submit-once gate: neither with the old
+	// refs, nor after going back to the same form and taking a new snapshot.
+	h.fail("browser_runner_act", merge(submit, map[string]any{"effect": "submit", "idempotency_key": "acme-se-apply-new-key"}), "STALE_REF")
+	h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "action": "navigate", "url": base + "/apply/2?name=Sam+Example&email=sam%40example.test&country=nz"})
+	back := h.call("browser_runner_snapshot", map[string]any{"session_id": "acme-se"})
+	h.fail("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": back["snapshot_id"], "ref": ref(t, back, "button", "submit application"), "action": "click", "effect": "submit", "idempotency_key": "acme-se-apply-new-key"}, "SUBMIT_ALREADY_RECORDED")
 	if ats.count() != 1 {
 		t.Fatalf("submit replay via new key: %d", ats.count())
 	}

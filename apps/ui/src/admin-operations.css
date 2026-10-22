@@ -53,3 +53,11 @@
 .opsBillingLink{display:inline-flex;margin:0 20px 8px;color:var(--sky-light);font-weight:700;text-decoration:none;font-size:13px}
 @media(max-width:1000px){.opsStats{grid-template-columns:repeat(2,minmax(0,1fr))}.opsCostGrid{grid-template-columns:1fr}.opsUserDetail{grid-template-columns:1fr}}
 @media(max-width:600px){.opsHeadline,.opsToolbar{flex-direction:column;align-items:flex-start}.opsToolbar input{width:100%}.opsFresh{width:100%;justify-content:space-between}.opsStats{gap:8px}.opsStats>div{padding:13px}.opsStats strong{font-size:23px}.opsTabs button{padding:9px 12px}.opsTable td{padding:12px}.opsUserDetail{margin:10px 16px 0}}
+
+.opsPlusGrant{display:grid;gap:13px;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.opsPlusGrant h4{margin:0 0 6px;font-size:17px}
+.opsPlusGrant p{margin:0;color:var(--muted);line-height:1.6}
+.opsPlusGrant label{display:grid;gap:6px;font-size:13px;font-weight:550}
+.opsPlusGrant input,.opsPlusGrant select{width:100%;min-height:41px;padding:8px 10px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:7px}
+.opsPlusGrantActions{display:flex;gap:10px;flex-wrap:wrap}
+.opsPlusGrantActions button{min-height:42px}

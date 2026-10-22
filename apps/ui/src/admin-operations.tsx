@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./admin-operations.css";
 
+type PlusGrant = { id:string;email:string;expires_at:string|null;revoked_at:string|null;reason:string;created_at:string;plan:string };
+
 type Account = {
   id: string; email: string; name: string | null; role: string; plan: string;
   created_at: string; used: number; extra: number; allowance: number | null;
@@ -57,6 +59,12 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [plusGrants, setPlusGrants] = useState<PlusGrant[]>([]);
+  const [plusDuration, setPlusDuration] = useState("30");
+  const [plusCustomUntil, setPlusCustomUntil] = useState("");
+  const [plusReason, setPlusReason] = useState("Admin-issued Plus access");
+  const [plusBusy, setPlusBusy] = useState(false);
+  const [plusNotice, setPlusNotice] = useState("");
   const pendingCreditRequest = useRef<{ key:string; requestId:string } | null>(null);
 
   async function refresh(pageToLoad = page) {
@@ -79,6 +87,21 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
     return u.email.toLowerCase().includes(text) || (u.name || "").toLowerCase().includes(text);
   }) || [], [data, query]);
   const chosen = data?.users.find(u => u.id === selectedUser) || null;
+  const activePlusGrant = plusGrants.find(g => !g.revoked_at && (!g.expires_at || Date.parse(g.expires_at) > Date.now())) || null;
+  useEffect(() => {
+    let cancelled = false;
+    setPlusGrants([]);
+    setPlusNotice("");
+    if (!chosen?.email || readOnly) return;
+    void fetch("/api/admin/plan-grants?email=" + encodeURIComponent(chosen.email), {credentials:"same-origin"})
+      .then(async response => {
+        if (!response.ok) throw new Error("Could not load Plus grant history");
+        return response.json() as Promise<{grants:PlusGrant[]}>;
+      })
+      .then(payload => { if (!cancelled) setPlusGrants(payload.grants || []); })
+      .catch(error => { if (!cancelled) setPlusNotice(String(error)); });
+    return () => { cancelled = true; };
+  }, [chosen?.email, readOnly]);
   const userNames = new Map((data?.users || []).map(u => [u.id, u.email]));
   const hours = useMemo(() => {
     if (!data) return [];
@@ -156,6 +179,66 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
     } finally { setSaving(false); }
   }
 
+  async function refreshPlusGrants(email: string) {
+    const response = await fetch("/api/admin/plan-grants?email=" + encodeURIComponent(email), {credentials:"same-origin"});
+    if (!response.ok) throw new Error("Failed to refresh Plus grants");
+    const payload = await response.json() as {grants:PlusGrant[]};
+    setPlusGrants(payload.grants || []);
+  }
+  async function grantPlus() {
+    if (!chosen || readOnly || plusBusy || activePlusGrant) return;
+    const reason = plusReason.trim();
+    if (reason.length < 3 || reason.length > 500) {
+      setPlusNotice(tr("Enter a reason (3–500 characters).", "请输入 3–500 字的开通原因。"));
+      return;
+    }
+    let expiresAt: string | null = null;
+    if (plusDuration === "custom") {
+      const timestamp = Date.parse(plusCustomUntil);
+      if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
+        setPlusNotice(tr("Choose a future expiry.", "请选择未来的到期时间。"));
+        return;
+      }
+      expiresAt = new Date(timestamp).toISOString();
+    } else if (plusDuration !== "never") {
+      expiresAt = new Date(Date.now() + Number(plusDuration) * 86400000).toISOString();
+    }
+    if (!window.confirm(tr("Grant Plus to " + chosen.email + " until " + (expiresAt || "revoked") + "?",
+      "确认给 " + chosen.email + " 开通 Plus，有效期至 " + (expiresAt || "手动撤销") + "？"))) return;
+    setPlusBusy(true);
+    setPlusNotice("");
+    try {
+      const response = await fetch("/api/admin/plan-grants", {
+        method:"POST", credentials:"same-origin", headers:{"content-type":"application/json"},
+        body:JSON.stringify({email:chosen.email,plan:"plus",reason,expires_at:expiresAt}),
+      });
+      const payload = await response.json() as {error?:string};
+      if (!response.ok) throw new Error(payload.error || "Plus grant failed");
+      await Promise.all([refreshPlusGrants(chosen.email),refresh()]);
+      setPlusNotice(tr("Plus granted. The expiry and administrator are audited.", "Plus 已开通，期限与管理员操作已记录。"));
+    } catch (err) {
+      setPlusNotice(err instanceof Error ? err.message : String(err));
+    } finally { setPlusBusy(false); }
+  }
+  async function revokePlus() {
+    if (!chosen || !activePlusGrant || readOnly || plusBusy) return;
+    if (!window.confirm(tr("Revoke this Plus grant for " + chosen.email + "?",
+      "确认撤销 " + chosen.email + " 的此项 Plus 授权吗？"))) return;
+    setPlusBusy(true);
+    setPlusNotice("");
+    try {
+      const response = await fetch("/api/admin/plan-grants/" + encodeURIComponent(activePlusGrant.id) + "/revoke", {
+        method:"POST", credentials:"same-origin", headers:{"content-type":"application/json"}, body:"{}",
+      });
+      const payload = await response.json() as {error?:string};
+      if (!response.ok) throw new Error(payload.error || "Revoke failed");
+      await Promise.all([refreshPlusGrants(chosen.email),refresh()]);
+      setPlusNotice(tr("Plus grant revoked.", "Plus 授权已撤销。"));
+    } catch (err) {
+      setPlusNotice(err instanceof Error ? err.message : String(err));
+    } finally { setPlusBusy(false); }
+  }
+
   const tabs: Array<[Section, string, string]> = [
     ["users", "Users", "用户"],
     ["devices", "Devices", "设备"],
@@ -210,6 +293,42 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
       </div>
       {chosen && <div className="opsUserDetail">
         <div><h3>{chosen.name || chosen.email}</h3><p>{chosen.email} · {tr("Joined", "注册于")} {new Date(chosen.created_at).toLocaleDateString()}</p><p>{tr("Monthly plan quota", "本月基础额度")}: {chosen.allowance === null ? "∞" : fmt(chosen.allowance - chosen.extra)} · {tr("Extra granted", "额外赠送")}: {fmt(chosen.extra)}</p></div>
+        <div className="opsPlusGrant">
+          <div>
+            <h4>{tr("Plus membership", "Plus 会员管理")}</h4>
+            <p>{tr("Grant Connect Plus with a chosen expiry. Hosted Arc model Credits are managed separately under Payments.", "为用户开通指定有效期的 Connect Plus；Arc 托管模型 Credits 在支付管理中独立管理。")}</p>
+            {activePlusGrant
+              ? <p><strong>{tr("Active Plus grant", "当前有效的 Plus 授权")}</strong> · {activePlusGrant.expires_at
+                  ? new Date(activePlusGrant.expires_at).toLocaleString()
+                  : tr("Until revoked", "手动撤销前有效")}</p>
+              : <p>{tr("No active administrator Plus grant", "暂无有效的管理员 Plus 授权")}</p>}
+          </div>
+          <label>{tr("Duration", "开通时长")}
+            <select aria-label={tr("Plus duration","Plus 开通时长")} value={plusDuration} disabled={plusBusy||!!activePlusGrant} onChange={e=>setPlusDuration(e.target.value)}>
+              <option value="7">{tr("7 days","7 天")}</option>
+              <option value="30">{tr("30 days","30 天")}</option>
+              <option value="90">{tr("90 days","90 天")}</option>
+              <option value="365">{tr("365 days","365 天")}</option>
+              <option value="never">{tr("Until revoked","永久（直到撤销）")}</option>
+              <option value="custom">{tr("Custom expiry","自定义到期时间")}</option>
+            </select>
+          </label>
+          {plusDuration==="custom" && <label>{tr("Expires at (local time)","到期时间（本地时区）")}
+            <input type="datetime-local" value={plusCustomUntil} onChange={e=>setPlusCustomUntil(e.target.value)} disabled={plusBusy||!!activePlusGrant}/>
+          </label>}
+          <label>{tr("Reason (audited)", "开通原因（审计记录）")}
+            <input value={plusReason} onChange={e=>setPlusReason(e.target.value)} maxLength={500} disabled={plusBusy||!!activePlusGrant}/>
+          </label>
+          <div className="opsPlusGrantActions">
+            <button className="primaryButton" type="button" onClick={()=>void grantPlus()} disabled={readOnly||plusBusy||!!activePlusGrant||chosen.role==="admin"}>
+              {plusBusy?tr("Saving…","处理中…"):tr("Grant Plus","开通 Plus")}
+            </button>
+            {activePlusGrant && <button type="button" className="ghostButton" onClick={()=>void revokePlus()} disabled={readOnly||plusBusy}>
+              {tr("Revoke grant","撤销授权")}
+            </button>}
+          </div>
+          {plusNotice && <p role="status">{plusNotice}</p>}
+        </div>
         <div className="opsCreditForm">
           <label>{tr("Add calls this month", "本月追加调用次数")}<input type="number" min={1} max={100000} value={credit} onChange={e => setCredit(e.target.value)} /></label>
           <label>{tr("Reason (audited)", "原因（可审计）")}<input maxLength={300} placeholder={tr("e.g. Early access feedback", "例如：早期体验反馈奖励")} value={reason} onChange={e => setReason(e.target.value)} /></label>

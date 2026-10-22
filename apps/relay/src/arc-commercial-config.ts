@@ -25,7 +25,7 @@ export async function activeCommercial(env:CommercialEnv,productId:string){
 }
 export async function commercialCatalog(env:CommercialEnv){
  const versions=await Promise.all([...ARC_PLANS.map(p=>p.id),...ARC_TOPUPS.map(p=>p.id),'arc-trial-v1'].map(id=>activeCommercial(env,id)));
- return{plans:versions.filter(v=>v.kind==='plan').map(v=>({...v.config as ArcPlanConfig,versionId:v.id,revision:v.revision})),topups:versions.filter(v=>v.kind==='topup').map(v=>({...v.config as z.infer<typeof topupConfigSchema>,versionId:v.id,revision:v.revision})),trial:versions.find(v=>v.kind==='trial')!.config as z.infer<typeof trialConfigSchema>};
+ return{plans:versions.filter(v=>v.kind==='plan').map(v=>({...v.config as ArcPlanConfig,deviceLimit:v.product_id==='arc-plus-v1'?10:v.product_id==='free'?2:(v.config as ArcPlanConfig).deviceLimit,versionId:v.id,revision:v.revision})),topups:versions.filter(v=>v.kind==='topup').map(v=>({...v.config as z.infer<typeof topupConfigSchema>,versionId:v.id,revision:v.revision})),trial:versions.find(v=>v.kind==='trial')!.config as z.infer<typeof trialConfigSchema>};
 }
 export function commercialOffer(version:ReturnType<typeof decodeCommercial>){
  const p=version.config;if('days' in p||'monthlyPriceCents' in p&&p.id==='free')throw new StripeError('BILLING_INVALID_PRODUCT',400);

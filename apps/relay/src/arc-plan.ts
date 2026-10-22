@@ -15,5 +15,5 @@ export async function currentArcPlan(binding:D1Database|{DB:D1Database;STRIPE_SE
  const selected=[...ARC_PLANS].reverse().find(p=>rows.some(r=>r.plan_id===p.id))??arcPlan('free'),assignment=rows.find(r=>r.plan_id===selected.id);
  const version=selected.id==='free'?await activeCommercial(env,'free'):await commercialVersion(db,assignment?.commercial_version_id||'seed:live:'+selected.id);
  if(version.kind!=='plan')throw new Error('BILLING_CONFIGURATION_INVALID');
- return{...arcExecutionCapacity(version.config as ArcPlanConfig,version.id),commercialVersionId:version.id};
+ return{...arcExecutionCapacity(version.config as ArcPlanConfig,version.id),deviceLimit:selected.id==='arc-plus-v1'?10:selected.id==='free'?2:(version.config as ArcPlanConfig).deviceLimit,commercialVersionId:version.id};
 }

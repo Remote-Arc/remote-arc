@@ -49,13 +49,16 @@ export async function handleAdminPlanGrants(request: Request, env: PlanAdminEnv)
   const admin = auth.user;
 
   if (request.method === "GET") {
+    const email = (new URL(request.url).searchParams.get('email') || '').trim().toLowerCase();
+    if (email.length > 320) return Response.json({error:'invalid_email'}, {status:400});
     const rows = await env.DB.prepare(
       `SELECT g.*, u.email
        FROM plan_grants g
        JOIN users u ON u.id = g.user_id
+       WHERE (?1 = '' OR lower(u.email) = ?1)
        ORDER BY g.created_at DESC
        LIMIT 200`,
-    ).all<PlanGrantRow & { email: string }>();
+    ).bind(email).all<PlanGrantRow & { email: string }>();
     return Response.json({ grants: rows.results });
   }
 

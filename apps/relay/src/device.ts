@@ -254,7 +254,10 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
   const deviceId = crypto.randomUUID();
   const createdAt = nowIso();
   const plan=billingEnabled(env)?await currentArcPlan(env,user.id):null;
-  const deviceLimit=!plan||user.isAdmin||plan.id==='free'&&user.plan==='plus'?100000:plan.deviceLimit;
+  // Enforce computer limits even when hosted Arc billing is off. Time-limited Plus grants count.
+  const deviceLimit = user.isAdmin ? 100000
+    : plan?.id === 'arc-pro-v1' ? Math.max(20, plan.deviceLimit)
+    : user.plan === 'plus' || plan?.id === 'arc-plus-v1' ? 10 : 2;
 
   const pairingResult=await env.DB.batch([
     env.DB.prepare(
@@ -262,7 +265,8 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
         id, user_id, name, platform, arch, hostname,
         credential_hash, created_at, last_seen, revoked_at, allowed_tools
       ) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL, ?9
-      WHERE (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL)<?10
+      WHERE ((?4 = 'browser' AND (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform='browser') < 20)
+        OR (?4 <> 'browser' AND (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform<>'browser') < ?10))
       AND EXISTS(SELECT 1 FROM device_pairings WHERE user_code=?11 AND status='pending' AND expires_at>?8)`,
     ).bind(
       deviceId,
@@ -287,7 +291,21 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
         WHERE user_code = ?4 AND status='pending' AND EXISTS(SELECT 1 FROM devices WHERE id=?2 AND user_id=?1)`,
     ).bind(user.id, deviceId, createdAt, userCode),
   ]);
-  if(!pairingResult[0]?.meta.changes)return Response.json({error:'device_limit_or_pairing_changed'},{status:402});
+  if (!pairingResult[0]?.meta.changes) {
+    const counts = await env.DB.prepare(
+      "SELECT COUNT(*) AS computers FROM devices WHERE user_id=?1 AND revoked_at IS NULL AND platform<>'browser'"
+    ).bind(user.id).first<{computers:number}>();
+    const computers = counts?.computers ?? 0;
+    const browsers = pairing.platform === 'browser' ? await env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM devices WHERE user_id=?1 AND revoked_at IS NULL AND platform='browser'"
+    ).bind(user.id).first<{total:number}>() : null;
+    const count = pairing.platform === 'browser' ? browsers?.total ?? 0 : computers;
+    const limit = pairing.platform === 'browser' ? 20 : deviceLimit;
+    return count >= limit
+      ? Response.json({ error: 'device_limit_reached', count, limit, device_type: pairing.platform === 'browser' ? 'browser' : 'computer' }, { status: 403 })
+      : Response.json({ error: 'pairing_changed', message: 'Start a new pairing from your computer.' }, { status: 409 });
+  }
+  if (!pairingResult[1]?.meta.changes) return Response.json({ error: 'pairing_changed' }, { status: 409 });
 
   await writeAudit(env, {
     userId: user.id,

@@ -11,11 +11,13 @@ const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "u
   .replaceAll('"./app-directory.json"', JSON.stringify(new URL("../src/app-directory.json", import.meta.url).href))
   .replaceAll('"./arc-preview.js"', JSON.stringify(new URL("../src/arc-preview.ts", import.meta.url).href))
   .replaceAll("'./arc-input-preview.js'", JSON.stringify(new URL("../src/arc-input-preview.ts", import.meta.url).href))
-  .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/billing-preview.ts", import.meta.url).href));
+  .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/billing-preview.ts", import.meta.url).href))
+  .replaceAll("'./followup-preview.js'", JSON.stringify(new URL("../src/followup-preview.ts", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;
-globalThis.window = { fetch: async () => { throw new Error("Unexpected native request"); } };
+const storage=new Map();
+globalThis.window = { sessionStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},fetch: async () => { throw new Error("Unexpected native request"); } };
 globalThis.location = { origin: "https://preview.test", href: "https://preview.test/overview" };
 const preview = await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
 preview.installUiPreviewFetchMock("https://mcp.preview.test");

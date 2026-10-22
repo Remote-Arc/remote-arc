@@ -6200,8 +6200,8 @@ function Dashboard({
                     </div>
                     <div className="securityGrantScopes">
                       <button className="goldButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
-                      <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_10m")}>{tr("Allow 10 min", "允许 10 分钟")}</button>
-                      <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "always_folder")}>{tr("Trust this folder", "信任此文件夹")}</button>
+                      {approval.tool_name !== "browser_runner_start" && <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_10m")}>{tr("Allow 10 min", "允许 10 分钟")}</button>}
+                      {approval.tool_name !== "browser_runner_start" && <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "always_folder")}>{tr("Trust this folder", "信任此文件夹")}</button>}
                       <button className="dangerButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "deny")}>{tr("Deny", "拒绝")}</button>
                     </div>
                   </div>

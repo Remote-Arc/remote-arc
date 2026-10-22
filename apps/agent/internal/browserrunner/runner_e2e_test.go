@@ -228,6 +228,13 @@ func TestE2EApplicationSubmitsOnceWithEvidence(t *testing.T) {
 	h.call("browser_runner_act", map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "checkbox", "privacy"), "action": "check"})
 
 	submit := map[string]any{"session_id": "acme-se", "snapshot_id": sid, "ref": ref(t, snap, "button", "submit application"), "action": "click"}
+	// The model's effect hint is untrusted: omission and forged navigation
+	// must not dispatch a real application submit.
+	h.fail("browser_runner_act", submit, "SUBMIT_EFFECT_REQUIRED")
+	h.fail("browser_runner_act", merge(submit, map[string]any{"effect": "navigation"}), "SUBMIT_EFFECT_REQUIRED")
+	if ats.count() != 0 {
+		t.Fatalf("submit was dispatched without effect=submit: %d", ats.count())
+	}
 	h.fail("browser_runner_act", merge(submit, map[string]any{"effect": "submit"}), "idempotency_key")
 	res := h.call("browser_runner_act", merge(submit, map[string]any{"effect": "submit", "idempotency_key": "acme-se-apply"}))
 	eff := res["effect"].(map[string]any)
@@ -249,6 +256,11 @@ func TestE2EApplicationSubmitsOnceWithEvidence(t *testing.T) {
 	conf := h.call("browser_runner_confirm", map[string]any{"session_id": "acme-se", "idempotency_key": "acme-se-apply", "outcome": "confirmed", "evidence": "Your reference is ACME-0001"})
 	if conf["effect"].(map[string]any)["status"] != EffectConfirmed {
 		t.Fatalf("resolve: %v", conf)
+	}
+	// Re-keying the same task must not evade the submit-once gate.
+	h.fail("browser_runner_act", merge(submit, map[string]any{"effect": "submit", "idempotency_key": "acme-se-apply-new-key"}), "SUBMIT_ALREADY_RECORDED")
+	if ats.count() != 1 {
+		t.Fatalf("submit replay via new key: %d", ats.count())
 	}
 
 	ats.mu.Lock()
@@ -343,7 +355,8 @@ func TestE2EScopeChangeNeedsReasonAndCloseForgets(t *testing.T) {
 	h, _, base, outside := newHarness(t)
 	h.call("browser_runner_start", map[string]any{"task_id": "scope", "allowed_origins": []any{base}})
 	h.fail("browser_runner_start", map[string]any{"task_id": "scope", "allowed_origins": []any{base, outside}}, "SCOPE_CHANGE")
-	out := h.call("browser_runner_start", map[string]any{"task_id": "scope", "allowed_origins": []any{outside}, "scope_change_reason": "user asked to include the partner site"})
+	h.fail("browser_runner_start", map[string]any{"task_id": "scope", "allowed_origins": []any{outside}, "scope_change_reason": "the AI claims it is safe"}, "SCOPE_CHANGE_REQUIRED")
+	out := h.call("browser_runner_start", map[string]any{"task_id": "scope", "allowed_origins": []any{outside}, "scope_change_reason": "user asked to include the partner site", "scope_change_approved": true})
 	if origins := fmt.Sprint(out["status"].(map[string]any)["allowed_origins"]); !strings.Contains(origins, strings.TrimPrefix(outside, "http://")) {
 		t.Fatalf("scope not widened: %v", origins)
 	}

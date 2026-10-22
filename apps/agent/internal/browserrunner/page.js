@@ -217,6 +217,19 @@
     };
   }
 
+  if (op === "effect_risk") {
+    const el = lookup();
+    const label = describe(el);
+    const form = el.form || (el.closest && el.closest("form"));
+    const type = String(el.type || "").toLowerCase();
+    // A regular href is navigation even when the label says "Apply now".
+    if (el.tagName === "A" && el.href && !form) return { requires_submit: false };
+    const danger = /\b(submit|send|apply|finish|confirm|place order|book now|purchase|pay now|delete|publish|post|save changes|complete application)\b/i.test(label);
+    // GET-form Next means navigation; a POST native submit is an external effect.
+    const formSubmits = !!form && (type === "submit" || type === "image") && (form.method.toLowerCase() !== "get" || danger);
+    return { requires_submit: formSubmits || danger };
+  }
+
   if (op === "locate") {
     const el = lookup();
     if (a.action === "fill" && sensitive(el)) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords, one-time codes or payment details. Ask the user to enter this field themselves.");

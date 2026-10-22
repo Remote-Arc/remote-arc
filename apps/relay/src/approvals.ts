@@ -61,6 +61,11 @@ export function approvalTargetPath(
   tool: string,
   args: Record<string, unknown>,
 ) {
+  if (tool === "browser_runner_start" && typeof args.scope_change_reason === "string" && args.scope_change_reason.trim()) {
+    // The user sees the exact requested origins, not an unqualified folder path.
+    const origins = Array.isArray(args.allowed_origins) ? args.allowed_origins.filter((o): o is string => typeof o === "string").sort() : [];
+    return "Browser Runner task " + String(args.task_id ?? "") + " → " + origins.join(", ");
+  }
   const candidate =
     tool === "write_file"
       ? args.path
@@ -171,8 +176,8 @@ export async function findApprovedWriteApproval(
        AND status = 'approved'
        AND approved_until > ?8
        AND (
-         decision_scope = 'allow_10m'
-         OR decision_scope = 'always_folder'
+         (tool_name <> 'browser_runner_start' AND decision_scope = 'allow_10m')
+         OR (tool_name <> 'browser_runner_start' AND decision_scope = 'always_folder')
          OR args_hash = ?6
        )
        AND (decision_scope <> 'allow_once' OR consumed_at IS NULL)
@@ -366,6 +371,9 @@ export async function decideApproval(
     : await select.bind(input.approvalId, input.userId).first<ApprovalRow>();
 
   if (!approval) return { status: 404, payload: { error: "approval not found" } };
+  if (approval.tool_name === "browser_runner_start" && input.decision !== "allow_once" && input.decision !== "deny") {
+    return { status: 400, payload: { error: "Browser Runner site expansion requires exact, one-time approval" } };
+  }
   if (approval.status !== "pending") {
     return {
       status: 409,

@@ -63,7 +63,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Start or resume a background browser task",
     description:
-      "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason and should follow an explicit user request. Runs headless by default; pass headless=false when the user must sign in, enter a code or solve a CAPTCHA in the window. Resuming reopens the last page and reports unconfirmed submits." +
+      "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. Runs headless by default; pass headless=false when the user must sign in, enter a code or solve a CAPTCHA in the window. Resuming reopens the last page and reports unconfirmed submits." +
       what,
     input: z.object({
       device_id: deviceId,
@@ -93,7 +93,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Act in the task browser",
     description:
-      "Do one thing in the task browser. On an element from the latest snapshot (snapshot_id + ref): click, fill (value), select (option value or label), check, uncheck, press (key), or upload (path of a pdf/doc/docx/txt/rtf/odt/png/jpg up to 25 MB in a Trusted Location on the computer). Without a ref: navigate (url inside allowed_origins) or wait (text and/or url_contains, timeout_ms up to 30000). Passwords, one-time codes and payment fields are always refused. Mark anything that sends or saves externally (submit, apply, book, pay, post) with effect=submit and a stable idempotency_key: that key is never sent twice, other submits wait until it is confirmed, and after a crash or timeout it is reported as unknown rather than retried. Use effect=navigation for steps such as Next.",
+      "Do one thing in the task browser. On an element from the latest snapshot (snapshot_id + ref): click, fill (value), select (option value or label), check, uncheck, press (key), or upload (path of a pdf/doc/docx/txt/rtf/odt/png/jpg up to 25 MB in a Trusted Location on the computer). Without a ref: navigate (url inside allowed_origins) or wait (text and/or url_contains, timeout_ms up to 30000). Passwords, one-time codes and payment fields are always refused. The Agent rejects native POST submit buttons and obvious submission controls unless effect=submit; never use a generic button/Enter as a way around this. Mark anything that sends or saves externally (submit, apply, book, pay, post) with effect=submit and a stable idempotency_key: that key is never sent twice, other submits wait until it is confirmed, and after a crash or timeout it is reported as unknown rather than retried. Use effect=navigation for steps such as Next.",
     input: z.object({
       device_id: deviceId,
       session_id: id,

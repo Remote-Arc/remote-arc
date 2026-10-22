@@ -161,10 +161,18 @@ export async function callDevice(
   }
 
   const requestId = crypto.randomUUID();
+  const scopeChange = tool === "browser_runner_start" && typeof args.scope_change_reason === "string" && args.scope_change_reason.trim().length > 0;
   const mutationTarget = approvalTargetPath(tool, args);
   const approvedWrite = mutationTarget
     ? await findApprovedWriteApproval(env, identity, deviceId, tool, args)
     : null;
+
+  // The model's reason is not authorization. An exact user-approved scope
+  // change is needed before any new site reaches the Go Agent.
+  if (scopeChange && !approvedWrite) {
+    const approval = await requestWriteApproval(env, { identity, deviceId, requestId, tool, args });
+    throw new Error("SCOPE_CHANGE_REQUIRED: approve the exact sites in Dashboard Security / Boundary requests (" + (approval?.id ?? "pending") + ") and retry the same request.");
+  }
 
   if (
     mutationTarget &&
@@ -200,10 +208,12 @@ export async function callDevice(
     ? []
     : [
         ...workspaceRoots,
-        ...(approvedWrite ? [approvedWrite.target_path] : []),
+        ...(approvedWrite && !scopeChange ? [approvedWrite.target_path] : []),
       ];
 
-  let effectiveArgs = args;
+  let effectiveArgs = tool === "browser_runner_start"
+    ? { ...args, scope_change_approved: scopeChange && !!approvedWrite }
+    : args;
   if (tool === "start_process") {
     const explicitCwd =
       typeof args.cwd === "string" && args.cwd.trim() ? args.cwd : undefined;

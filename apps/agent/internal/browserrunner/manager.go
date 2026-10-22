@@ -7,6 +7,7 @@ package browserrunner
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -363,8 +364,8 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 			return nil, errors.New("A session keeps its profile. Close it with forget=true to start over with another profile.")
 		}
 		if !s.scope.covers(sc) {
-			if reason == "" {
-				return nil, fmt.Errorf("SCOPE_CHANGE: this task is limited to %v. Adding sites needs scope_change_reason, and should only follow an explicit request from the user.", s.scope.Strings())
+			if reason == "" || args["scope_change_approved"] != true {
+				return nil, fmt.Errorf("SCOPE_CHANGE_REQUIRED: this task is limited to %v. Adding sites requires a one-time approval for the exact origins in the Dashboard; a model-provided reason is not authorization.", s.scope.Strings())
 			}
 			merged, _ := newScope(append(s.scope.Strings(), sc.Strings()...))
 			s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_start", Outcome: "scope_widened", Detail: clip(reason, 200) + " → " + strings.Join(merged.Strings(), ", ")})
@@ -409,8 +410,19 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 	// A known submit key is answered from the checkpoint before anything
 	// else: retries after a navigation must never reach the page again.
 	if protocol.OptionalString(args, "effect") == "submit" {
-		if prev := s.cp.effect(protocol.OptionalString(args, "idempotency_key")); prev != nil && prev.Status != EffectNotDispatched {
+		key := protocol.OptionalString(args, "idempotency_key")
+		if prev := s.cp.effect(key); prev != nil && prev.Status != EffectNotDispatched {
 			return map[string]any{"replayed": true, "effect": *prev, "note": "This submit was already sent; it was not repeated."}, nil
+		}
+		// P0 is one final external submit per task. A model choosing a new key
+		// after a confirmed result must not send the same application twice.
+		for _, previous := range s.cp.Effects {
+			if previous.Key != key && previous.Status != EffectNotDispatched {
+				if previous.Status == EffectUnknown || previous.Status == EffectUnverified || previous.Status == EffectInFlight {
+					return nil, fmt.Errorf("UNRESOLVED_EFFECT: submit %s is %s; inspect and confirm before any other submit.", previous.Key, previous.Status)
+				}
+				return nil, fmt.Errorf("SUBMIT_ALREADY_RECORDED: this task already has submit %s (%s). Start a separately authorized task for another external submit.", previous.Key, previous.Status)
+			}
 		}
 	}
 	snap := protocol.OptionalString(args, "snapshot_id")
@@ -431,6 +443,31 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 	}
 	if effect != "none" && effect != "navigation" && effect != "submit" {
 		return nil, errors.New("effect must be none, navigation or submit.")
+	}
+	// A model can omit effect=submit or mislabel a submit as navigation.
+	// Fail closed for native form submits and suspicious action labels before
+	// dispatch. Unknown JavaScript side effects remain a documented limitation.
+	if req.Action == "press" && req.Key == "Enter" && effect != "submit" {
+		return nil, errors.New("SUBMIT_EFFECT_REQUIRED: Enter can submit a form; use effect=submit and a stable idempotency_key, or a non-submitting action.")
+	}
+	if req.Action == "click" {
+		frameID, e := s.refFrame(req.Ref)
+		if e != nil {
+			return nil, e
+		}
+		risk, e := s.helperIn(ctx, frameID, "effect_risk", map[string]any{"snapshot_id": snap, "ref": req.Ref}, true)
+		if e != nil {
+			return nil, e
+		}
+		var classification struct {
+			RequiresSubmit bool `json:"requires_submit"`
+		}
+		if e := json.Unmarshal(risk.Result.Value, &classification); e != nil {
+			return nil, fmt.Errorf("effect classification failed closed: %w", e)
+		}
+		if classification.RequiresSubmit && effect != "submit" {
+			return nil, errors.New("SUBMIT_EFFECT_REQUIRED: this control may submit data. Use effect=submit and a stable idempotency_key; navigation/none cannot bypass the submit ledger.")
+		}
 	}
 	req.Effect = effect
 	var eff *Effect

@@ -60,6 +60,29 @@ func New() *Manager {
 // Available reports whether this device can run the Browser Runner at all.
 func (m *Manager) Available() bool { _, e := m.findBrowser(); return e == nil }
 
+// ActiveSessions counts tasks with a running browser. A session busy with an
+// action counts as active. Used only to warn before an Agent upgrade.
+func (m *Manager) ActiveSessions() int {
+	m.mu.Lock()
+	list := make([]*session, 0, len(m.sessions))
+	for _, s := range m.sessions {
+		list = append(list, s)
+	}
+	m.mu.Unlock()
+	active := 0
+	for _, s := range list {
+		if !s.mu.TryLock() {
+			active++
+			continue
+		}
+		if s.live() {
+			active++
+		}
+		s.mu.Unlock()
+	}
+	return active
+}
+
 // Close stops every browser and keeps checkpoints so tasks can resume.
 func (m *Manager) Close() {
 	m.mu.Lock()

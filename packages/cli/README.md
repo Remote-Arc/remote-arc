@@ -126,11 +126,14 @@ npx remotelink --foreground    Stay attached without installing/repairing recove
 npx remotelink --background    Enable/repair recovery; keep this terminal attached
 npx remotelink --no-background Disable recovery; preserve current execution
 npx remotelink --reset         Remove local pairing and background registration
+npx remotelink --force-update  Replace the running Agent even if busy or not older
 npx remotelink --version       Show the CLI version
 npx remotelink --help          Show help
 ```
 
 The package also exposes the aliases `remote-link` and `remote-arc`.
+
+**Updating a running Agent.** Run the newer release normally (for example `npx remotelink@latest`). If the running Go Agent is older and idle, it is replaced automatically: it finishes the current operation, releases execution, and the new release takes over and installs itself as the recovery service. Pairing, permissions and pause state are kept. If the running Agent has active work (managed processes or Browser Runner sessions), or is too old to report it, Remote Arc explains what would stop and asks in the terminal; without a terminal it changes nothing. Add `--force-update` to replace it anyway, or to replace an Agent that is the same version or newer (for example to roll back).
 
 Background recovery and Relay reconnect are separate. A normal `npx remotelink@latest` launch can safely hand off a known older background Agent to the current release without creating two executors.
 Recovery installs a user service (macOS/Linux) or a hidden login supervisor

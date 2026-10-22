@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import {
   createBackgroundController,
+  isOlderRelease,
   windowsSupervisorLaunchScript,
   type RunResult,
 } from "../src/background.js";
@@ -16,6 +17,23 @@ import {
   superviseAgent,
   tryAgentLease,
 } from "../src/agent-runtime.js";
+
+// Upgrade handoff ordering must include pre-releases, or rc users never upgrade.
+for (const [older, newer] of [
+  ["0.6.1", "0.6.2-rc.3"],
+  ["0.6.1-rc.5", "0.6.2-rc.4"],
+  ["0.6.2-rc.3", "0.6.2-rc.4"],
+  ["0.6.2-rc.9", "0.6.2-rc.10"],
+  ["0.6.2-rc.4", "0.6.2"],
+  ["0.6.2-alpha", "0.6.2-alpha.1"],
+  ["0.6.2-1", "0.6.2-rc"],
+]) {
+  assert.equal(isOlderRelease(older, newer), true, `${older} < ${newer}`);
+  assert.equal(isOlderRelease(newer, older), false, `${newer} !< ${older}`);
+}
+for (const [a, b] of [["0.6.2", "0.6.2"], ["0.6.2-rc.4", "0.6.2-rc.4"], ["dev", "0.6.2"], ["0.6.2", ""], [null, "0.6.2"]] as const) {
+  assert.equal(isOlderRelease(a, b), false, `${a} vs ${b}`);
+}
 
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), "remotearc-recovery-"));
 const result = (code = 0, stdout = "", stderr = ""): RunResult => ({

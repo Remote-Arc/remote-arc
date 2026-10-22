@@ -74,9 +74,18 @@ func (a *Agent) log(level, message string) {
 }
 func (a *Agent) cfg() config.Config { a.mu.Lock(); defer a.mu.Unlock(); return a.Config }
 func (a *Agent) Status() map[string]any {
+	// Work that stopping this Agent would interrupt, reported as counts only so
+	// a newer CLI can decide whether an automatic upgrade is safe.
+	work := map[string]any{"managedProcesses": 0, "browserRunnerSessions": 0}
+	if a.Core != nil && a.Core.Processes != nil {
+		work["managedProcesses"] = a.Core.Processes.ActiveCount()
+	}
+	if a.Browser != nil {
+		work["browserRunnerSessions"] = a.Browser.ActiveSessions()
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	return map[string]any{"executionPaused": a.WakeOnly || a.Config.ExecutionPaused, "engine": "go", "version": a.Version, "pid": os.Getpid(), "deviceId": a.Config.DeviceID, "mode": a.Config.Mode, "connected": a.connected, "connectedAt": a.connectedAt, "connectionSequence": a.connectionSequence, "fileDurability": config.FileDurability(), "undoDurability": config.UndoDurability(), "backgroundProcess": a.BackgroundProcess}
+	return map[string]any{"activeWork": work, "executionPaused": a.WakeOnly || a.Config.ExecutionPaused, "engine": "go", "version": a.Version, "pid": os.Getpid(), "deviceId": a.Config.DeviceID, "mode": a.Config.Mode, "connected": a.connected, "connectedAt": a.connectedAt, "connectionSequence": a.connectionSequence, "fileDurability": config.FileDurability(), "undoDurability": config.UndoDurability(), "backgroundProcess": a.BackgroundProcess}
 }
 func (a *Agent) identityValid() bool {
 	saved, e := a.Load()

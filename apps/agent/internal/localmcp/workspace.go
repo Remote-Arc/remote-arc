@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/workspaceidentity"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/policy"
@@ -35,6 +36,10 @@ func (s *workspaceScope) verify() error {
 }
 
 func WorkspaceServer(core *execution.Core, version, workspace string) (*mcp.Server, error) {
+	return workspaceServer(core, version, workspace, "")
+}
+
+func workspaceServer(core *execution.Core, version, workspace, expectedIdentity string) (*mcp.Server, error) {
 	if core.Mode != "safe" {
 		return nil, errors.New("Workspace MCP requires safe mode.")
 	}
@@ -68,14 +73,24 @@ func WorkspaceServer(core *execution.Core, version, workspace string) (*mcp.Serv
 	if !os.SameFile(info, info) {
 		return nil, errors.New("Could not verify local MCP workspace identity.")
 	}
+	if expectedIdentity != "" {
+		identity, err := workspaceidentity.Read(root)
+		if err != nil || identity != expectedIdentity {
+			return nil, errors.New("Local MCP workspace was replaced since installation; reinstall the integration for the intended project.")
+		}
+	}
 	// Pin the resolved root, not an alias that can later point elsewhere.
 	p.TaskWorkspaceRoot = root
 	return server(core, version, p, &workspaceScope{root, info}), nil
 }
 
 func RunWorkspace(ctx context.Context, core *execution.Core, version, workspace string) error {
+	return RunWorkspaceWithIdentity(ctx, core, version, workspace, "")
+}
+
+func RunWorkspaceWithIdentity(ctx context.Context, core *execution.Core, version, workspace, expectedIdentity string) error {
 	defer core.Close()
-	s, err := WorkspaceServer(core, version, workspace)
+	s, err := workspaceServer(core, version, workspace, expectedIdentity)
 	if err != nil {
 		return err
 	}

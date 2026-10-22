@@ -24,13 +24,17 @@ on every call. Out-of-scope paths and symlink targets are denied, and directory
 listing omits protected entries. Known private Codex/Claude roots (including
 absolute environment overrides) and Remote Arc pairing storage remain blocked;
 workspace consent is separate from session import. Status reports the resolved
-root and whether it remains available. Replacing the root directory requires a
-review and server restart.
+root and whether it remains available. A replaced root is rejected. The
+[automatic Codex registration](codex-local-integration.md) additionally pins a
+persistent directory identity with `--mcp-workspace-id`, so a later client start
+cannot silently bind a different directory at the same path. Uninstall the old
+registration before selecting the replacement project.
 
 This restricts tools offered by this MCP endpoint. It is not an OS sandbox or
 interception of other tools/processes on the computer; a client may have its own
 filesystem tools with different permissions. The path policy is not protection
-against a hostile local actor racing filesystem changes. Automatic local setup,
-managed configuration checks, conditional updates and rollback/uninstall
-and real Windows/macOS/WSL onboarding acceptance remain in #254. The ordinary
-`--mcp` endpoint keeps its existing device-level behavior.
+against a hostile local actor racing filesystem changes. Local Codex setup,
+conditional updates, managed-config refusal and owned-entry uninstall are
+available in the development candidate. Full first-run/distribution and real
+macOS/WSL onboarding acceptance remain in #254. The ordinary `--mcp` endpoint
+keeps its existing device-level behavior.

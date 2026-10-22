@@ -30,10 +30,11 @@ files. No administrative permission is needed. Output contains local executable
 paths; treat it as local information when sharing diagnostics. It is not saved
 automatically.
 
-The next separately reviewed slices of #254 must provide explicit version and
-capability diagnostics, automatic supported integration, conditional updates with
-backups, repair/rollback/uninstall, managed-config checks and real
-Windows/macOS/WSL acceptance. Hook trust and cloud pairing remain separate
-provider/account requirements. Routine local setup must not add preview or
-approval gates; dry-run remains optional. No production or package promotion is
-implied by this PR.
+The separate [local Codex integration](codex-local-integration.md) commands now
+provide capability-qualified installation, status, doctor, repair and owned-entry
+uninstall in the development candidate. `inspect` itself retains the limited,
+non-executing behavior described above. Automatic first-run dispatch, Claude
+integration and full distribution/real macOS/WSL acceptance remain in #254.
+Hook trust and cloud pairing remain separate provider/account requirements.
+Routine local setup does not add preview or approval gates. No production or
+package promotion is implied by these candidate commands.

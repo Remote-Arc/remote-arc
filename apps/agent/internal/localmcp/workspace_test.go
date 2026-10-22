@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/workspaceidentity"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/policy"
 )
@@ -45,6 +46,29 @@ func workspaceClient(t *testing.T, root string) (context.Context, *mcp.ClientSes
 		}
 	})
 	return ctx, session
+}
+
+func TestInstalledWorkspaceIdentityIsCheckedBeforeServing(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("REMOTEARC_HOME", home)
+	root := filepath.Join(home, "project")
+	put(t, filepath.Join(root, "file.txt"), "original")
+	identity, err := workspaceidentity.Read(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	core := execution.New("safe")
+	defer core.Close()
+	if _, err = workspaceServer(core, "test", root, identity); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Rename(root, filepath.Join(home, "original")); err != nil {
+		t.Fatal(err)
+	}
+	put(t, filepath.Join(root, "file.txt"), "replacement")
+	if _, err = workspaceServer(core, "test", root, identity); err == nil {
+		t.Fatal("installed registration accepted replacement directory")
+	}
 }
 
 func put(t *testing.T, path, value string) {

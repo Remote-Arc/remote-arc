@@ -4,11 +4,16 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.2 - Unreleased
 
-### Device Fleet resource-aware scheduling (release candidate)
+### Local coding-agent tools and resource-aware Fleet (release candidate)
 
+- Add native project-scoped Codex/Claude session metadata discovery with `takeover --workspace`, plus non-executing local installation detection with `setup inspect`. These commands do not reconstruct full history or resume an agent.
+- Automatically register project read-only tools in a supported local Codex client using `setup install --agent codex --workspace <absolute-project>`. Provide status, doctor, repair and clean uninstall without manual MCP configuration or additional Remote Arc preview/approval prompts; retain native provider trust and decline unsupported managed profiles.
+- Use the installed Codex client's capability-qualified configuration API with conditional revisions and durable owned-entry recovery. Preserve unrelated settings/comments, refuse configuration drift, reconcile interrupted writes and pin project directory identity. Verify real client tool discovery and a read-only status call without a model turn; existing Codex clients need restart.
+- Expose only project-scoped file reads with `--mcp --safe --mcp-workspace=<absolute-project>`. No process/write tools, implicit Hooks, cloud pairing or transcript upload are introduced by local setup. Windows real-client acceptance passed; live macOS/WSL/Claude integration, default first-run dispatch, full distribution parity and cross-agent continuation remain incomplete.
 - Publish bounded CPU utilization and available-memory telemetry from the Go and TypeScript device runtimes over their existing authenticated connection. Ignore stale measurements and never transfer process lists or file content as telemetry.
 - Make account-level fleet placement aware of host pressure, Windows/WSL shared hardware, the number of active RA-managed processes, and device connection stability, while keeping tool permissions, Trusted Write Locations, and explicit OS requirements as hard constraints. Uninstrumented agents remain usable but are ranked conservatively behind idle instrumented agents.
 - Introduce immutable GitHub-commit workspace materialization on a selected fleet node, isolated to an approved directory and verified through a managed process; do not silently copy uncommitted changes or migrate an active task.
+- Include integrated hosted Arc task/conversation discovery, input/refresh recovery, configured email-sender fixes and localized official installation-guide links on every AI connection card in the source snapshot. Those changes require a separate Relay/UI deployment; installing this device RC does not deploy them or qualify AI Teams acceptance.
 - Keep this release candidate separate from the already published 0.6.1 binaries and Homebrew checksums.
 
 ## 0.6.1 - 2026-10-11

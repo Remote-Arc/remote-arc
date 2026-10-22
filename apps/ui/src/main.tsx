@@ -6024,53 +6024,53 @@ function Dashboard({
               </div>
 
               <div className="connectClientGrid connectAgentLaunchers">
-                <a className="connectClientCard primary" href={CHATGPT_PLUGIN_DIRECTORY_URL} target="_blank" rel="noreferrer">
+                <article className="connectClientCard primary">
                   <div className="connectClientTop">
                     <div className="connectClientIdentity"><img className="monoLogo" src={aiClients[0].icon} alt="" /><div><span className="eyebrow">CHATGPT</span><h3>ChatGPT</h3></div></div>
                     <span className="clientState recommended">{tr("Plugins", "Plugins")}</span>
                   </div>
                   <p>{tr("Open ChatGPT Plugins and look for Remote Arc. If it is not listed, use the custom MCP setup supported by your account and complete Remote Arc sign-in.", "打开 ChatGPT Plugins 查找 Remote Arc。如果没有列出，可通过账号支持的自定义 MCP 入口添加，并完成 Remote Arc 登录。")}</p>
-                  <div className="connectAgentAction"><span>{tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins")}</span><b>↗</b></div>
-                </a>
+                  <div className="connectClientActions">
+                    <a className="connectAgentAction" href={CHATGPT_PLUGIN_DIRECTORY_URL} target="_blank" rel="noreferrer"><span>{tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins")}</span><b>↗</b></a>
+                    <a className="connectClientGuide" href={MARKETING_ORIGIN + localizedWebsiteHref("/install/chatgpt", locale)} target="_blank" rel="noreferrer"><ProductIcon name="book" size={14} /><span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span><span aria-hidden="true">↗</span></a>
+                  </div>
+                </article>
 
-                <a
-                  className="connectClientCard"
-                  href={CLAUDE_CONNECTORS_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => void navigator.clipboard?.writeText(mcpEndpoint).catch(() => undefined)}
-                >
+                <article className="connectClientCard">
                   <div className="connectClientTop">
                     <div className="connectClientIdentity"><img className="colorLogo" src={aiClients[1].icon} alt="" /><div><span className="eyebrow">CLAUDE</span><h3>Claude</h3></div></div>
                     <span className="clientState">{tr("Connectors", "Connectors")}</span>
                   </div>
                   <p>{tr("Open Claude Connectors. The Remote Arc endpoint is copied automatically so you can add it as a Remote MCP connector.", "打开 Claude Connectors；Remote Arc Endpoint 会自动复制，可直接添加为 Remote MCP Connector。")}</p>
-                  <div className="connectAgentAction"><span>{tr("Open Claude Connectors", "打开 Claude Connectors")}</span><b>↗</b></div>
-                </a>
+                  <div className="connectClientActions">
+                    <a className="connectAgentAction" href={CLAUDE_CONNECTORS_URL} target="_blank" rel="noreferrer" onClick={() => void navigator.clipboard?.writeText(mcpEndpoint).catch(() => undefined)}><span>{tr("Open Claude Connectors", "打开 Claude Connectors")}</span><b>↗</b></a>
+                    <a className="connectClientGuide" href={MARKETING_ORIGIN + localizedWebsiteHref("/install/claude", locale)} target="_blank" rel="noreferrer"><ProductIcon name="book" size={14} /><span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span><span aria-hidden="true">↗</span></a>
+                  </div>
+                </article>
 
-                <a className="connectClientCard" href={cursorMcpInstallUrl()}>
+                <article className="connectClientCard">
                   <div className="connectClientTop">
                     <div className="connectClientIdentity"><img className="colorLogo" src={aiClients[2].icon} alt="" /><div><span className="eyebrow">CURSOR</span><h3>Cursor</h3></div></div>
                     <span className="clientState">{tr("One-click MCP", "一键 MCP")}</span>
                   </div>
                   <p>{tr("Use Cursor's MCP install deeplink. Cursor reviews the Remote Arc configuration before installation and then completes OAuth.", "使用 Cursor 官方 MCP 安装 Deeplink；Cursor 会先确认 Remote Arc 配置，再完成 OAuth。")}</p>
-                  <div className="connectAgentAction"><span>{tr("Add to Cursor", "添加到 Cursor")}</span><b>↗</b></div>
-                </a>
+                  <div className="connectClientActions">
+                    <a className="connectAgentAction" href={cursorMcpInstallUrl()}><span>{tr("Add to Cursor", "添加到 Cursor")}</span><b>↗</b></a>
+                    <a className="connectClientGuide" href={MARKETING_ORIGIN + localizedWebsiteHref("/install/cursor", locale)} target="_blank" rel="noreferrer"><ProductIcon name="book" size={14} /><span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span><span aria-hidden="true">↗</span></a>
+                  </div>
+                </article>
 
-                <a
-                  className="connectClientCard"
-                  href={MARKETING_ORIGIN + "/docs/mcp"}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => void navigator.clipboard?.writeText(mcpEndpoint).catch(() => undefined)}
-                >
+                <article className="connectClientCard">
                   <div className="connectClientTop">
                     <div className="connectClientIdentity"><span className="protocolMark large">M</span><div><span className="eyebrow">REMOTE MCP</span><h3>{tr("Other MCP client", "其他 MCP 客户端")}</h3></div></div>
                     <span className="clientState">{tr("Manual", "手动")}</span>
                   </div>
                   <p>{tr("Copy the production endpoint and open the Remote MCP reference for any compatible client.", "复制生产 Endpoint，并打开 Remote MCP 参考文档用于其他兼容客户端。")}</p>
-                  <div className="connectAgentAction"><span>{tr("Copy endpoint & open docs", "复制地址并打开文档")}</span><b>↗</b></div>
-                </a>
+                  <div className="connectClientActions">
+                    <a className="connectAgentAction" href={MARKETING_ORIGIN + localizedWebsiteHref("/docs/mcp", locale)} target="_blank" rel="noreferrer" onClick={() => void navigator.clipboard?.writeText(mcpEndpoint).catch(() => undefined)}><span>{tr("Copy endpoint & open docs", "复制地址并打开文档")}</span><b>↗</b></a>
+                    <a className="connectClientGuide" href={MARKETING_ORIGIN + localizedWebsiteHref("/remote-mcp", locale)} target="_blank" rel="noreferrer"><ProductIcon name="book" size={14} /><span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span><span aria-hidden="true">↗</span></a>
+                  </div>
+                </article>
               </div>
             </section>
 

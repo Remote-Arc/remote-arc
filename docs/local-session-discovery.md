@@ -1,7 +1,7 @@
 # Local session discovery — acceptance step 1
 
-Development candidate, 22 October 2026. This step implements project-scoped
-session discovery in the native Go CLI. It is not a published CLI release.
+Available in **0.6.2-rc.3** or later. This step implements project-scoped session
+metadata discovery in the native Go CLI; it does not resume a task.
 
 ## Try it
 
@@ -20,8 +20,9 @@ remotelink takeover --help
 ```
 
 The existing npm launcher forwards this command to the matching Go binary.
-The explicit TypeScript fallback does not implement it. Published `npx
-remotelink` installations do not gain the command until a separate release.
+The explicit TypeScript fallback does not implement it. Select the RC explicitly
+with `npx remotelink@0.6.2-rc.3 takeover --workspace /path/to/project`; the stable
+`latest` package remains unchanged.
 
 The explicit workspace is a local directory; Git is not required. Discovery
 includes sessions with a recorded working directory inside that directory,

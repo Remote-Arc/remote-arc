@@ -1,6 +1,6 @@
 # Remote Arc agent platform: architecture and execution contract
 
-Updated 20 October 2026. This is the current platform reference. The native device stable release and a hosted service deployment have independent versions; 0.6.2-rc.2 is a device candidate, not a stable-version promise. See [user documentation](https://remotearc.app/docs/start-here), [public technical guide](https://remotearc.app/docs/architecture), [release status](https://remotearc.app/releases) and [security policy](../SECURITY.md).
+Updated 22 October 2026. This is the current platform reference. The native device stable release and a hosted service deployment have independent versions; 0.6.2-rc.3 is a device candidate, not a stable-version promise. See [user documentation](https://remotearc.app/docs/start-here), [public technical guide](https://remotearc.app/docs/architecture), [release status](https://remotearc.app/releases) and [security policy](../SECURITY.md).
 
 ## Product and responsibilities
 

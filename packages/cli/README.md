@@ -85,26 +85,26 @@ https://remotearc.app
 
 ## Commands
 
-Development candidate: [automatic local Codex integration](../../docs/codex-local-integration.md)
+In **0.6.2-rc.3**, [automatic local Codex integration](../../docs/codex-local-integration.md)
 adds native `setup install`, `status`, `doctor`, `repair` and `uninstall` commands
 for a selected project, with automatic configuration and actual client tool
-verification. It is not yet in published 0.6.2-rc.2 artifacts; the existing default
+verification. Select `npx remotelink@0.6.2-rc.3` or the matching native RC; the existing default
 pairing flow is unchanged and first-run bootstrap automation remains pending.
 
-Development candidate: [workspace read-only MCP](../../docs/workspace-local-mcp.md)
+In **0.6.2-rc.3**, [workspace read-only MCP](../../docs/workspace-local-mcp.md)
 adds `remotelink --mcp --safe --mcp-workspace=<absolute-dir>` for selected-directory
 file reads. It requires no pairing and exposes no process or mutation tools.
-This option is not yet in a published package.
+The stable `latest` package remains separate from this RC.
 
-Development candidate: [local setup inspection](../../docs/local-setup-inspection.md)
+In **0.6.2-rc.3**, [local setup inspection](../../docs/local-setup-inspection.md)
 adds `remotelink setup inspect` to find coding-agent executable candidates without
 running them or reading private sessions/configuration. Versions and integrations
-remain unchecked; this command is not yet in a published package.
+remain unchecked by inspection; use the separate setup commands to verify Codex.
 
-Development candidate: [local coding-session discovery](../../docs/local-session-discovery.md)
+In **0.6.2-rc.3**, [local coding-session discovery](../../docs/local-session-discovery.md)
 adds `remotelink takeover --workspace <directory>` to the native Go runtime. It lists
-project-scoped Codex / Claude Code metadata for review. This command is not yet
-part of a published package and does not resume an agent.
+project-scoped Codex / Claude Code metadata for review. This command does not
+resume an agent or reconstruct its full task history.
 
 ```text
 npx remotelink                 Pair/reconnect and keep the terminal and logs open

@@ -1,10 +1,11 @@
-# Local setup inspection (development candidate)
+# Local setup inspection (0.6.2-rc.3)
 
 First implementation slice for [#254](https://github.com/Remote-Arc/remote-arc/issues/254),
 following the accepted [compatibility matrix](agent-takeover-compatibility-v1.md)
 and [consent ADR](agent-takeover-consent-adr.md). This does not complete #254 or
-install an integration. Use a binary built from this PR; an older installed CLI
-may not have this command. Check `remotelink --version` and `remotelink setup --help`.
+install an integration. Use native **0.6.2-rc.3** or later, or
+`npx remotelink@0.6.2-rc.3 setup inspect`; stable and older RC installations may
+not have this command. Check `remotelink --version` and `remotelink setup --help`.
 
 ```sh
 remotelink setup inspect

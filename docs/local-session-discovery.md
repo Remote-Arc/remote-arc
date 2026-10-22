@@ -3,6 +3,10 @@
 Available in **0.6.2-rc.3** or later. This step implements project-scoped session
 metadata discovery in the native Go CLI; it does not resume a task.
 
+The separate [actual Git/worktree inspection](local-worktree-inspection.md)
+command is available in source builds after this RC. Session-reported `cwd`
+is not proof of the repository, branch or current file state.
+
 ## Try it
 
 From the repository:

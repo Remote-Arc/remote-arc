@@ -21,12 +21,14 @@ read-only validation example for #253 and partial groundwork for
 [Codex #255](https://github.com/Remote-Arc/remote-arc/issues/255) and
 [Claude #256](https://github.com/Remote-Arc/remote-arc/issues/256). It does not
 complete either adapter Issue or the Local Takeover Beta milestone. It lists
-recorded cwd metadata; actual worktree reconciliation remains separate.
+recorded cwd metadata. The separate [worktree inspection](local-worktree-inspection.md)
+source-build command now reports actual Git state and a bounded fingerprint;
+session-to-worktree association and complete task reconstruction remain separate.
 
 Current evidence: synthetic metadata fixtures for both sources, native Go tests,
 and Windows/macOS real Codex metadata smoke scans (21 and 1 matched sessions
 respectively). The Mac native discovery and CLI tests pass. These are bounded
-metadata checks; complete history, actual worktree association, target
+metadata checks; complete history, session-to-worktree association, target
 continuation, WSL mappings and real Claude acceptance remain unqualified.
 
 Use the accepted compatibility and automatic-workflow contract before widening session access
@@ -34,3 +36,12 @@ or promising agent continuation. Onboarding,
 handoff, checkpoints, Observe, Guard/Isolate, Fleet and cloud feasibility retain
 their separate child Issues and release gates in #252. This candidate does not
 authorize deployment, package publication or paid provider activation.
+
+## Parallel ownership
+
+[Roadmap #283](https://github.com/Remote-Arc/remote-arc/issues/283) coordinates
+project priorities. Claude owns the [Browser Runner epic #274](https://github.com/Remote-Arc/remote-arc/issues/274)
+and its Go Agent browser runtime; Codex advances #252 in separate worktrees and
+PRs. This inspection slice touches the takeover module and CLI only. A later
+#257 handoff contract must coordinate with #279's browser-effect ledger; this
+slice neither defines that ledger nor registers browser tools.

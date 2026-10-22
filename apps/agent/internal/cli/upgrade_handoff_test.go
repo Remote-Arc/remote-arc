@@ -317,11 +317,24 @@ func TestBusyOlderAgentIsKeptWithoutForceUpdate(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "--force-update") || !strings.Contains(err.Error(), "nothing was changed") {
 		t.Fatalf("expected a clear refusal, got %v", err)
 	}
-	if !strings.Contains(out, "2 managed processes, 1 Browser Runner session") {
+	if !strings.Contains(out, "2 managed processes, 1 browser_runner session") {
 		t.Fatalf("active work not explained:\n%s", out)
 	}
 	if !lease.Active(filepath.Join(config.Dir(), "agent"), "execution") {
 		t.Fatal("busy Agent lost execution")
+	}
+}
+
+func TestBrowserRunnerSessionStatusNamingCompatibility(t *testing.T) {
+	for _, work := range []map[string]any{
+		{"browser_runner_sessions": float64(2)},
+		{"browserRunnerSessions": float64(2)},
+		{"browser_runner_sessions": float64(2), "browserRunnerSessions": float64(1)},
+	} {
+		summary, busy, known := activeWork(map[string]any{"activeWork": work})
+		if !known || !busy || summary != "2 browser_runner sessions" {
+			t.Fatalf("browser_runner work disappeared across API versions: %s %v %v", summary, busy, known)
+		}
 	}
 }
 

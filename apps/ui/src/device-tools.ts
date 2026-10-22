@@ -1,4 +1,4 @@
-// Browser Runner is one capability made of six tools. The Relay requires each
+// browser_runner is one capability made of six tools. The Relay requires each
 // to be listed explicitly (a device with no stored list never has it), so the
 // Dashboard switches them together and never infers them from a legacy list.
 export const BROWSER_RUNNER_TOOLS = [
@@ -12,7 +12,7 @@ export const BROWSER_RUNNER_TOOLS = [
 
 export const isBrowserRunnerTool = (tool: string) => (BROWSER_RUNNER_TOOLS as readonly string[]).includes(tool);
 
-/** The allowed-tool list after switching one tool (or all of Browser Runner). */
+/** The allowed-tool list after switching one tool (or all of browser_runner). */
 export function toggledDeviceTools(
   allowed: readonly string[] | null | undefined,
   baseline: readonly string[],
@@ -24,6 +24,6 @@ export function toggledDeviceTools(
   return enabled ? Array.from(new Set([...current, ...group])) : current.filter((item) => !group.includes(item));
 }
 
-/** Browser Runner is on only when every tool is listed explicitly, as the Relay requires. */
+/** browser_runner is on only when every tool is listed explicitly, as the Relay requires. */
 export const browserRunnerEnabled = (allowed: readonly string[] | null | undefined) =>
   BROWSER_RUNNER_TOOLS.every((tool) => (allowed || []).includes(tool));

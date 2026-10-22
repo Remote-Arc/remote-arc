@@ -39,7 +39,7 @@ func FindBrowser() (string, error) {
 			return p, nil
 		}
 	}
-	return "", errors.New("Browser Runner needs Google Chrome, Microsoft Edge or Chromium installed on this device.")
+	return "", errors.New("browser_runner needs Google Chrome, Microsoft Edge or Chromium installed on this device.")
 }
 
 func isExecutable(p string) bool {
@@ -186,7 +186,7 @@ func launchBrowser(ctx context.Context, exe, profile string, headless bool) (*br
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
 	detach(cmd)
 	if e := cmd.Start(); e != nil {
-		return nil, fmt.Errorf("Browser Runner could not start the browser: %w", e)
+		return nil, fmt.Errorf("browser_runner could not start the browser: %w", e)
 	}
 	exited := make(chan struct{})
 	go func() { _ = cmd.Wait(); close(exited) }()
@@ -252,7 +252,7 @@ func (b *browserProcess) pageTarget(ctx context.Context) (string, error) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return "", errors.New("Browser Runner could not open a page.")
+	return "", errors.New("browser_runner could not open a page.")
 }
 
 // stop closes the browser gracefully so the profile (cookies the user chose to

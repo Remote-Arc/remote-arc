@@ -106,10 +106,10 @@ func loadCheckpoint(id string) (*Checkpoint, error) {
 	}
 	var c Checkpoint
 	if e := json.Unmarshal(b, &c); e != nil {
-		return nil, errors.New("Browser Runner checkpoint is unreadable; close the session with forget=true to reset it.")
+		return nil, errors.New("browser_runner checkpoint is unreadable; close the session with forget=true to reset it.")
 	}
 	if c.Version != checkpointVersion || c.SessionID != id {
-		return nil, errors.New("Browser Runner checkpoint has an unsupported format.")
+		return nil, errors.New("browser_runner checkpoint has an unsupported format.")
 	}
 	return &c, nil
 }

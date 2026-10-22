@@ -282,7 +282,7 @@ func (s *session) setup(ctx context.Context) error {
 	}
 	for _, c := range calls {
 		if e := s.conn.Call(ctx, c.method, c.params, nil); e != nil {
-			return fmt.Errorf("Browser Runner setup failed (%s): %w", c.method, e)
+			return fmt.Errorf("browser_runner setup failed (%s): %w", c.method, e)
 		}
 	}
 	// Downloads are not part of the delegated surface.
@@ -854,7 +854,7 @@ func fileDigest(path string) (int64, string, error) {
 		return 0, "", fmt.Errorf("Upload files must be between 1 byte and %d MB.", maxUpload>>20)
 	}
 	if !uploadTypes[strings.ToLower(filepath.Ext(path))] {
-		return 0, "", errors.New("Browser Runner uploads documents and images only (pdf, doc, docx, txt, rtf, odt, png, jpg).")
+		return 0, "", errors.New("browser_runner uploads documents and images only (pdf, doc, docx, txt, rtf, odt, png, jpg).")
 	}
 	f, e := os.Open(path)
 	if e != nil {
@@ -883,7 +883,7 @@ func (s *session) upload(ctx context.Context, snapshotID, ref, path string) (map
 		return nil, e
 	}
 	if r.Result.ObjectID == "" {
-		return nil, errors.New("Browser Runner could not resolve the file input.")
+		return nil, errors.New("browser_runner could not resolve the file input.")
 	}
 	defer s.conn.FireIn(cdpSession, "Runtime.releaseObject", map[string]any{"objectId": r.Result.ObjectID})
 	if e := s.conn.CallIn(ctx, cdpSession, "DOM.setFileInputFiles", map[string]any{"files": []string{path}, "objectId": r.Result.ObjectID}, nil); e != nil {

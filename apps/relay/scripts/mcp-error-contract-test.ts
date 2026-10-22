@@ -30,6 +30,10 @@ const expectedCases: Array<[Error, string]> = [
   [new Error("Binary file detected. read_file currently supports text files only."), "BINARY_FILE_REQUIRES_BINARY_READ"],
   [new Error("Expected 1 replacement(s) in /tmp/a.txt, found 0. No changes were written."), "EDIT_CONFLICT"],
   [new Error("No reversible Remote Arc file change is available on this device."), "UNDO_UNAVAILABLE"],
+  [new Error('No browser_runner session "missing" on this device. Call browser_runner_start first.'), "BROWSER_SESSION_NOT_FOUND"],
+  [new Error('No Browser Runner session "missing" on this device. Call browser_runner_start first.'), "BROWSER_SESSION_NOT_FOUND"],
+  [new Error("browser_runner requires terminal mode on this device."), "BROWSER_RUNNER_UNAVAILABLE"],
+  [new Error("Browser Runner requires terminal mode on this device."), "BROWSER_RUNNER_UNAVAILABLE"],
 ];
 
 for (const [error, code] of expectedCases) {

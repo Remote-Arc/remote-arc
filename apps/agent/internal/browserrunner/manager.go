@@ -57,7 +57,7 @@ func New() *Manager {
 	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, now: time.Now, IdleTimeout: 20 * time.Minute, stop: make(chan struct{})}
 }
 
-// Available reports whether this device can run the Browser Runner at all.
+// Available reports whether this device can run the browser_runner at all.
 func (m *Manager) Available() bool { _, e := m.findBrowser(); return e == nil }
 
 // ActiveSessions counts tasks with a running browser. A session busy with an
@@ -174,7 +174,7 @@ func sessionID(args map[string]any, key string) (string, error) {
 	return id, nil
 }
 
-// Call dispatches one Browser Runner tool. The returned value is serialized
+// Call dispatches one browser_runner tool. The returned value is serialized
 // by the Agent like any other tool result.
 func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p protocol.Policy) (any, error) {
 	if args == nil {
@@ -242,7 +242,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	case "browser_runner_confirm":
 		out, e = m.resolve(ctx, s, args)
 	default:
-		return nil, fmt.Errorf("Unknown Browser Runner tool: %s", tool)
+		return nil, fmt.Errorf("Unknown browser_runner tool: %s", tool)
 	}
 	s.ev.Lock()
 	newlyBlocked := len(s.blocked) > 0
@@ -257,7 +257,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 		}
 	}
 	if ferr := s.flush(); ferr != nil && e == nil {
-		e = fmt.Errorf("Browser Runner could not save its checkpoint: %w", ferr)
+		e = fmt.Errorf("browser_runner could not save its checkpoint: %w", ferr)
 	}
 	if e != nil {
 		return nil, e
@@ -279,7 +279,7 @@ func (m *Manager) get(id string) (*session, error) {
 	cp, e := loadCheckpoint(id)
 	if e != nil {
 		if errors.Is(e, os.ErrNotExist) {
-			return nil, fmt.Errorf("No Browser Runner session %q on this device. Call browser_runner_start first.", id)
+			return nil, fmt.Errorf("No browser_runner session %q on this device. Call browser_runner_start first.", id)
 		}
 		return nil, e
 	}
@@ -357,18 +357,18 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 
 	s, e := m.get(id)
 	resumed := e == nil
-	if e != nil && !strings.HasPrefix(e.Error(), "No Browser Runner session") {
+	if e != nil && !strings.HasPrefix(e.Error(), "No browser_runner session") {
 		return nil, e
 	}
 	m.mu.Lock()
 	n, clash := m.liveCount(id, profile)
 	if clash {
 		m.mu.Unlock()
-		return nil, fmt.Errorf("Profile %q is already open in another Browser Runner session. Close it first or use a different profile.", profile)
+		return nil, fmt.Errorf("Profile %q is already open in another browser_runner session. Close it first or use a different profile.", profile)
 	}
 	if n >= maxLiveSessions {
 		m.mu.Unlock()
-		return nil, fmt.Errorf("At most %d Browser Runner sessions can run at once on this device. Close one first.", maxLiveSessions)
+		return nil, fmt.Errorf("At most %d browser_runner sessions can run at once on this device. Close one first.", maxLiveSessions)
 	}
 	if s == nil {
 		now := m.now()
@@ -482,7 +482,7 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 			Target         json.RawMessage `json:"target"`
 		}
 		if e := json.Unmarshal(risk.Result.Value, &classification); e != nil || len(classification.Target) == 0 {
-			return nil, errors.New("Browser Runner could not classify this control, so it was not clicked. Take a new snapshot and try again.")
+			return nil, errors.New("browser_runner could not classify this control, so it was not clicked. Take a new snapshot and try again.")
 		}
 		if req.Action == "click" && classification.RequiresSubmit && effect != "submit" {
 			return nil, errors.New("SUBMIT_EFFECT_REQUIRED: this control may submit data. Use effect=submit and a stable idempotency_key; navigation/none cannot bypass the submit ledger.")
@@ -522,7 +522,7 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 		// Durable before the click: a crash now leaves an unknown effect,
 		// never a silent duplicate.
 		if e := s.flush(); e != nil {
-			return nil, fmt.Errorf("Browser Runner could not record the submit before sending it: %w", e)
+			return nil, fmt.Errorf("browser_runner could not record the submit before sending it: %w", e)
 		}
 		s.ev.Lock()
 		s.submitting = true
@@ -595,7 +595,7 @@ func (m *Manager) upload(ctx context.Context, s *session, args map[string]any, p
 	}
 	p = protocol.Normalize(p)
 	if len(p.WorkspaceRoots) == 0 && p.TaskWorkspaceRoot == "" {
-		return nil, errors.New("Browser Runner uploads only from a Trusted Location. Ask the user to add the folder that holds the document on this device in Remote Arc.")
+		return nil, errors.New("browser_runner uploads only from a Trusted Location. Ask the user to add the folder that holds the document on this device in Remote Arc.")
 	}
 	raw := protocol.OptionalString(args, "path")
 	if raw == "" {

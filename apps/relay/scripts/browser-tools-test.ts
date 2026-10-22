@@ -111,7 +111,7 @@ const env = {
 const owner = identity("browser:interact");
 
 // A legacy device with no stored tool list must not get Browser Runner.
-await assert.rejects(callDevice(env, owner, "dev", "browser_runner_start", {}), /disabled for this device\. Enable Browser Runner/);
+await assert.rejects(callDevice(env, owner, "dev", "browser_runner_start", {}), /disabled for this device\. Enable browser_runner/);
 device = row("linux", ["read_file"]);
 await assert.rejects(callDevice(env, owner, "dev", "browser_runner_start", {}), /is disabled for this device/);
 device = row("linux", ["browser_runner_start"]);

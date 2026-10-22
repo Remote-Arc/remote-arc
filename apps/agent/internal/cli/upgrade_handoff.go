@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -123,7 +126,11 @@ func compareRelease(a, b release) int {
 // after the old Agent has released execution. If the old Agent does not
 // stop in time, everything is restored and it keeps running.
 func handOffOlderGoAgent(ctx context.Context, dir string, bg *service.Controller, log *journal.Journal, running, version string) error {
-	log.Log("info", fmt.Sprintf("Upgrading the running Agent v%s to v%s · pairing, permissions and recovery settings are kept.", running, version))
+	verb := "Upgrading"
+	if !olderRelease(running, version) {
+		verb = "Replacing"
+	}
+	log.Log("info", fmt.Sprintf("%s the running Agent v%s with v%s · pairing, permissions and recovery settings are kept.", verb, running, version))
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -170,4 +177,75 @@ func handOffOlderGoAgent(ctx context.Context, dir string, bg *service.Controller
 	}
 	log.Log("info", "The older Agent stopped and released execution · starting v"+version+".")
 	return nil
+}
+
+// activeWork reads the work a running Agent would lose if it stopped:
+// managed processes are terminated and Browser Runner browsers are closed
+// (their checkpoints survive). Agents before 0.6.2-rc.5 do not report it.
+func activeWork(status map[string]any) (summary string, busy, known bool) {
+	work, ok := status["activeWork"].(map[string]any)
+	if !ok {
+		return "", false, false
+	}
+	count := func(key string) int {
+		n, _ := work[key].(float64)
+		return int(n)
+	}
+	processes, sessions := count("managedProcesses"), count("browserRunnerSessions")
+	parts := []string{}
+	if processes > 0 {
+		parts = append(parts, plural(processes, "managed process", "managed processes"))
+	}
+	if sessions > 0 {
+		parts = append(parts, plural(sessions, "Browser Runner session", "Browser Runner sessions"))
+	}
+	return strings.Join(parts, ", "), len(parts) > 0, true
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return strconv.Itoa(n) + " " + many
+}
+
+// confirmReplace asks in an attached terminal; it returns false without a
+// terminal so scripts never replace a busy Agent implicitly.
+var confirmReplace = func(input *os.File, out io.Writer, question string) bool {
+	if input == nil || !isTerminal(input) || !isOutputTerminal() {
+		return false
+	}
+	fmt.Fprint(out, question+" [y/N] ")
+	line, _ := bufio.NewReader(input).ReadString('\n')
+	answer := strings.ToLower(strings.TrimSpace(line))
+	return answer == "y" || answer == "yes"
+}
+
+// replaceRunningAgent decides whether this launch may stop the running Go
+// Agent. An older, idle Agent is upgraded automatically. If it is busy, or
+// too old to say, or not older at all, the user must confirm in the terminal
+// or pass --force-update; otherwise nothing changes.
+func replaceRunningAgent(ctx context.Context, o Options, dir string, bg *service.Controller, log *journal.Journal, status map[string]any, running, version string, input *os.File, out io.Writer) error {
+	summary, busy, known := activeWork(status)
+	if !o.ForceUpdate && known && !busy {
+		return handOffOlderGoAgent(ctx, dir, bg, log, running, version)
+	}
+	var risk string
+	switch {
+	case busy:
+		risk = fmt.Sprintf("The running Agent v%s has active work (%s). Replacing it stops managed processes and closes Browser Runner browsers; their tasks can resume but running commands cannot.", running, summary)
+	case !known:
+		risk = fmt.Sprintf("The running Agent v%s cannot report whether it has active work. Replacing it stops any managed processes and Browser Runner browsers it has.", running)
+	}
+	if o.ForceUpdate {
+		if risk != "" {
+			log.Log("warn", risk+" Continuing because --force-update was given.")
+		}
+		return handOffOlderGoAgent(ctx, dir, bg, log, running, version)
+	}
+	log.Log("warn", risk)
+	if confirmReplace(input, out, fmt.Sprintf("Replace the running Agent v%s with v%s now?", running, version)) {
+		return handOffOlderGoAgent(ctx, dir, bg, log, running, version)
+	}
+	return fmt.Errorf("The running Agent v%s was kept and nothing was changed. Run again when its work has finished, or run npx remotelink@%s --force-update to replace it now.", running, version)
 }

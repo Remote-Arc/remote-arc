@@ -39,6 +39,7 @@ Usage: remotelink [options]
   --reset           Remove pairing after gracefully stopping this Go agent
   --status          Print the active Go agent and recovery status
   --stop            Disable recovery and gracefully stop this Go agent
+  --force-update    Replace the running Go agent even if it is busy or not older
   --logs            Print the last 100 local operation log entries
   --mcp             Serve local MCP over stdio (default mode: safe)
   --mcp-workspace=<absolute-dir>  Restrict MCP to selected workspace file reads
@@ -48,9 +49,9 @@ Usage: remotelink [options]
 `
 
 type Options struct {
-	Safe, Developer, Foreground, Background, NoBackground, Reset, Status, Stop, Logs, MCP, Agent, Supervise, Help, Version bool
-	Origin, MCPWorkspace                                                                                                   string
-	MCPWorkspaceID                                                                                                         string
+	Safe, Developer, Foreground, Background, NoBackground, Reset, Status, Stop, Logs, MCP, Agent, Supervise, Help, Version, ForceUpdate bool
+	Origin, MCPWorkspace                                                                                                                string
+	MCPWorkspaceID                                                                                                                      string
 }
 
 func Parse(args []string) (Options, error) {
@@ -74,6 +75,8 @@ func Parse(args []string) (Options, error) {
 			o.Status = true
 		case "--stop":
 			o.Stop = true
+		case "--force-update":
+			o.ForceUpdate = true
 		case "--logs":
 			o.Logs = true
 		case "--mcp":
@@ -109,6 +112,9 @@ func Parse(args []string) (Options, error) {
 	}
 	if o.MCPWorkspace != "" && (!o.MCP || o.Developer || o.Foreground || o.Background || o.NoBackground || o.Reset || o.Status || o.Stop || o.Logs || o.Agent || o.Supervise || o.Origin != "") {
 		return o, errors.New("--mcp-workspace requires --mcp and cannot be combined with device or developer options.")
+	}
+	if o.ForceUpdate && (o.Safe || o.Developer || o.Foreground || o.NoBackground || o.Reset || o.Status || o.Stop || o.Logs || o.MCP || o.Agent || o.Supervise) {
+		return o, errors.New("--force-update can only be combined with --background or --origin.")
 	}
 	if o.MCPWorkspaceID != "" && o.MCPWorkspace == "" {
 		return o, errors.New("--mcp-workspace-id requires --mcp-workspace.")
@@ -253,10 +259,12 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 			if e := waitForPriorOwnerRelease(ctx, dir); e != nil {
 				return e
 			}
-		} else if running, _ := status["version"].(string); !o.Foreground && !o.Safe && !o.Developer && !o.NoBackground && olderRelease(running, version) {
+		} else if running, _ := status["version"].(string); !o.Foreground && !o.Safe && !o.Developer && !o.NoBackground && (o.ForceUpdate || olderRelease(running, version)) {
 			// A plain launch (or --background) of a newer release replaces
-			// an older Go Agent instead of only following its log.
-			if e := handOffOlderGoAgent(ctx, dir, bg, log, running, version); e != nil {
+			// an older, idle Go Agent instead of only following its log.
+			// Busy, unknown or same/newer Agents need --force-update or an
+			// explicit yes in the terminal.
+			if e := replaceRunningAgent(ctx, o, dir, bg, log, status, running, version, input, out); e != nil {
 				return e
 			}
 		} else {
@@ -373,6 +381,9 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 				}
 				if !announced {
 					log.Log("info", "A Go agent owns execution. Following its operation log; Ctrl+C closes this viewer.")
+					if running, _ := status["version"].(string); running != "" && !olderRelease(running, version) {
+						log.Log("info", fmt.Sprintf("The running Agent v%s is the same as or newer than v%s, so it was kept. To replace it anyway, run npx remotelink@%s --force-update.", running, version, version))
+					}
 					announced = true
 				}
 				next, text := log.Read(cursor)

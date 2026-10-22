@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -55,7 +56,11 @@ type oldAgent struct {
 	obey           bool
 }
 
-func startOldAgent(t *testing.T, version string, obey bool) *oldAgent {
+var idle = map[string]any{"managedProcesses": 0, "browserRunnerSessions": 0}
+
+// startOldAgent runs a fake Agent; work is its reported activeWork, or nil
+// for an Agent from before activeWork existed.
+func startOldAgent(t *testing.T, version string, obey bool, work ...map[string]any) *oldAgent {
 	t.Helper()
 	dir := filepath.Join(config.Dir(), "agent")
 	owned, e := lease.Acquire(dir, "execution")
@@ -63,7 +68,13 @@ func startOldAgent(t *testing.T, version string, obey bool) *oldAgent {
 		t.Fatalf("old agent could not own execution: %v", e)
 	}
 	a := &oldAgent{owned: owned, obey: obey}
-	a.server, e = control.Start(dir, version, func() any { return map[string]any{"engine": "go", "version": version} }, func() {
+	a.server, e = control.Start(dir, version, func() any {
+		status := map[string]any{"engine": "go", "version": version}
+		if len(work) > 0 && work[0] != nil {
+			status["activeWork"] = work[0]
+		}
+		return status
+	}, func() {
 		a.mu.Lock()
 		defer a.mu.Unlock()
 		a.stops++
@@ -191,7 +202,7 @@ func TestPlainLaunchOfNewerReleaseReplacesOlderGoAgent(t *testing.T) {
 	if e := config.Save(c); e != nil {
 		t.Fatal(e)
 	}
-	old := startOldAgent(t, "0.6.2-rc.4", true)
+	old := startOldAgent(t, "0.6.2-rc.4", true, idle)
 	dir := filepath.Join(config.Dir(), "agent")
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -240,4 +251,135 @@ func (s *syncBuffer) String() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.b.String()
+}
+
+func launchFixture(t *testing.T) {
+	t.Helper()
+	handoffFixture(t)
+	previousHook := startClientIntegrations
+	startClientIntegrations = func(context.Context, string, func(string, string)) context.CancelFunc { return func() {} }
+	previousConfirm := confirmReplace
+	confirmReplace = func(*os.File, io.Writer, string) bool { return false }
+	t.Cleanup(func() { startClientIntegrations = previousHook; confirmReplace = previousConfirm })
+	relay := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	t.Cleanup(relay.Close)
+	c, _ := config.Load()
+	c.Origin = relay.URL
+	c.BackgroundEnabled = nil // keep the host's real service manager out of this test
+	if e := config.Save(c); e != nil {
+		t.Fatal(e)
+	}
+}
+
+// launch runs the CLI briefly and reports whether the old Agent was stopped
+// and whether a new control endpoint then owned execution.
+func launch(t *testing.T, old *oldAgent, args []string, version string) (stopped, replaced bool, out string, err error) {
+	t.Helper()
+	control := filepath.Join(config.Dir(), "agent", "control.json")
+	before, _ := os.ReadFile(control)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	done := make(chan error, 1)
+	var buf syncBuffer
+	go func() { done <- Main(ctx, args, version, os.Stdin, &buf, &buf) }()
+	exited := false
+	for !exited && !replaced && ctx.Err() == nil {
+		select {
+		case err = <-done:
+			exited = true
+		case <-time.After(50 * time.Millisecond):
+			now, e := os.ReadFile(control)
+			replaced = e == nil && string(now) != string(before) && lease.Active(filepath.Dir(control), "execution")
+		}
+	}
+	if !exited {
+		// Let the viewer print its first lines before stopping it.
+		time.Sleep(300 * time.Millisecond)
+		cancel()
+		err = <-done
+	}
+	old.mu.Lock()
+	stopped = old.stops > 0
+	old.mu.Unlock()
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		err = nil
+	}
+	return stopped, replaced, buf.String(), err
+}
+
+func TestBusyOlderAgentIsKeptWithoutForceUpdate(t *testing.T) {
+	launchFixture(t)
+	old := startOldAgent(t, "0.6.2-rc.4", true, map[string]any{"managedProcesses": 2, "browserRunnerSessions": 1})
+	stopped, replaced, out, err := launch(t, old, nil, "0.6.2-rc.5")
+	if stopped || replaced {
+		t.Fatal("a busy Agent was replaced without --force-update")
+	}
+	if err == nil || !strings.Contains(err.Error(), "--force-update") || !strings.Contains(err.Error(), "nothing was changed") {
+		t.Fatalf("expected a clear refusal, got %v", err)
+	}
+	if !strings.Contains(out, "2 managed processes, 1 Browser Runner session") {
+		t.Fatalf("active work not explained:\n%s", out)
+	}
+	if !lease.Active(filepath.Join(config.Dir(), "agent"), "execution") {
+		t.Fatal("busy Agent lost execution")
+	}
+}
+
+func TestLegacyAgentNeedsConfirmationOrForceUpdate(t *testing.T) {
+	launchFixture(t)
+	// rc.4 and earlier cannot report active work.
+	old := startOldAgent(t, "0.6.2-rc.4", true)
+	stopped, replaced, out, err := launch(t, old, nil, "0.6.2-rc.5")
+	if stopped || replaced || err == nil || !strings.Contains(out, "cannot report whether it has active work") {
+		t.Fatalf("legacy Agent replaced without consent: stopped=%v err=%v\n%s", stopped, err, out)
+	}
+	old.server.Close()
+	old.owned.Release()
+
+	old = startOldAgent(t, "0.6.2-rc.4", true)
+	stopped, replaced, out, err = launch(t, old, []string{"--force-update"}, "0.6.2-rc.5")
+	if err != nil || !stopped || !replaced || !strings.Contains(out, "Continuing because --force-update was given") {
+		t.Fatalf("--force-update did not replace the legacy Agent: stopped=%v replaced=%v err=%v\n%s", stopped, replaced, err, out)
+	}
+}
+
+func TestTerminalConfirmationReplacesBusyAgent(t *testing.T) {
+	launchFixture(t)
+	var asked string
+	confirmReplace = func(_ *os.File, _ io.Writer, question string) bool { asked = question; return true }
+	old := startOldAgent(t, "0.6.2-rc.4", true, map[string]any{"managedProcesses": 1, "browserRunnerSessions": 0})
+	stopped, replaced, _, err := launch(t, old, nil, "0.6.2-rc.5")
+	if err != nil || !stopped || !replaced || !strings.Contains(asked, "v0.6.2-rc.4 with v0.6.2-rc.5") {
+		t.Fatalf("confirmed replacement failed: stopped=%v replaced=%v err=%v asked=%q", stopped, replaced, err, asked)
+	}
+}
+
+func TestForceUpdateReplacesSameOrNewerAgent(t *testing.T) {
+	launchFixture(t)
+	// Rollback: an explicit --force-update may replace a newer Agent.
+	old := startOldAgent(t, "0.6.3", true, idle)
+	stopped, replaced, out, err := launch(t, old, []string{"--force-update"}, "0.6.2-rc.5")
+	if err != nil || !stopped || !replaced || !strings.Contains(out, "Replacing the running Agent v0.6.3") {
+		t.Fatalf("--force-update rollback failed: stopped=%v replaced=%v err=%v\n%s", stopped, replaced, err, out)
+	}
+}
+
+func TestSameVersionViewerExplainsForceUpdate(t *testing.T) {
+	launchFixture(t)
+	old := startOldAgent(t, "0.6.2-rc.5", true, idle)
+	stopped, _, out, _ := launch(t, old, nil, "0.6.2-rc.5")
+	if stopped || !strings.Contains(out, "npx remotelink@0.6.2-rc.5 --force-update") {
+		t.Fatalf("viewer did not explain how to replace the Agent: stopped=%v\n%s", stopped, out)
+	}
+}
+
+func TestForceUpdateOptionCombinations(t *testing.T) {
+	if o, e := Parse([]string{"--force-update", "--background"}); e != nil || !o.ForceUpdate || !o.Background {
+		t.Fatalf("--force-update --background rejected: %v", e)
+	}
+	for _, bad := range []string{"--stop", "--reset", "--foreground", "--safe", "--no-background", "--status"} {
+		if _, e := Parse([]string{"--force-update", bad}); e == nil {
+			t.Fatalf("--force-update %s accepted", bad)
+		}
+	}
 }

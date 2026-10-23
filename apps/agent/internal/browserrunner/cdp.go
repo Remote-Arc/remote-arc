@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -47,10 +48,41 @@ type cdpMessage struct {
 
 var errBrowserGone = errors.New("browser_runner lost its browser connection; the session checkpoint was kept.")
 
+// cdpClient is what a task uses to drive its page: a connection to the page
+// target itself (a Runner window), or a page session on the shared
+// connection to the user's own Chrome (see yourchrome.go).
+type cdpClient interface {
+	Call(ctx context.Context, method string, params any, out any) error
+	CallIn(ctx context.Context, session, method string, params any, out any) error
+	Fire(method string, params any)
+	FireIn(session, method string, params any)
+	Close()
+	Alive() bool
+}
+
 func dialCDP(ctx context.Context, url string, onEvent func(string, string, json.RawMessage)) (*cdpConn, error) {
+	return dialCDPWait(ctx, url, onEvent, 10*time.Second)
+}
+
+// dialCDPWait allows a long handshake: Chrome holds a connection to the
+// user's own browser open until the user answers its Allow prompt.
+func dialCDPWait(ctx context.Context, url string, onEvent func(string, string, json.RawMessage), handshake time.Duration) (*cdpConn, error) {
 	// Loopback only: never proxy a DevTools connection.
-	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second, Proxy: nil}
+	dialer := websocket.Dialer{HandshakeTimeout: handshake, Proxy: nil}
+	// DialContext only uses cancellation to establish TCP. Chrome may hold
+	// the HTTP upgrade for its Allow prompt, so cancel that wait as well.
+	var stopCancel func() bool
+	dialer.NetDialContext = func(dialCtx context.Context, network, address string) (net.Conn, error) {
+		c, err := (&net.Dialer{}).DialContext(dialCtx, network, address)
+		if err == nil {
+			stopCancel = context.AfterFunc(ctx, func() { _ = c.Close() })
+		}
+		return c, err
+	}
 	ws, resp, err := dialer.DialContext(ctx, url, nil)
+	if stopCancel != nil {
+		stopCancel()
+	}
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

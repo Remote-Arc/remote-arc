@@ -2,6 +2,7 @@ import { localizedWebsiteHref } from "./marketing-paths.js";
 import React from "react";
 import { useI18n } from "./i18n.js";
 import { ArchitectureDeepDive } from "./architecture-deep-dive.js";
+import { BrowserModes } from "./browser-modes.js";
 import "./public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
@@ -13,6 +14,8 @@ export const publicToolGroups = [
   { en: "Edit files and run commands", zh: "编辑文件与执行命令", scope: "computer:write", tools: ["write_file", "edit_block", "undo_last_change", "start_process", "process_status", "process_output", "stop_process"] },
   { en: "Explicitly shared browser tabs", zh: "明确共享的浏览器标签页", scope: "browser:read", tools: ["shared_tab_list", "shared_tab_read"] },
   { en: "Per-tab browser interaction", zh: "按标签页授权浏览器交互", scope: "browser:interact", tools: ["shared_tab_click", "shared_tab_fill"] },
+  { en: "Task browser snapshots and checkpoints (Beta)", zh: "任务浏览器快照与检查点（Beta）", scope: "browser:read", tools: ["browser_runner_snapshot", "browser_runner_status"] },
+  { en: "Task browser actions (Beta, enable per computer)", zh: "任务浏览器操作（Beta，按电脑开启）", scope: "browser:interact", tools: ["browser_runner_start", "browser_runner_act", "browser_runner_confirm", "browser_runner_close"] },
   { en: "Read durable tasks", zh: "读取持久任务", scope: "automation:read", tools: ["list_automations", "get_automation"] },
   { en: "Create and manage durable tasks", zh: "创建与管理持久任务", scope: "automation:write", tools: ["create_automation", "manage_automation"] },
   { en: "Connected app discovery", zh: "发现已连接的应用", scope: "apps:read", tools: ["list_apps"] },
@@ -209,7 +212,7 @@ export function McpReference() {
     </header>
     <div className="technicalDocLayout"><aside className="articleToc"><strong>{tr("CONTENTS", "目录")}</strong>{[
       ["mcp-connect", tr("Connect your client", "连接客户端")], ["mcp-auth", tr("Authorization", "授权")], ["mcp-device", tr("Select a device", "选择设备")],
-      ["mcp-apps", tr("Use connected apps", "使用连接的应用")], ["mcp-tools", tr("Tools and scopes", "工具与 Scope")], ["chrome-browser", tr("Browser companion", "浏览器 Companion")],
+      ["mcp-apps", tr("Use connected apps", "使用连接的应用")], ["mcp-tools", tr("Tools and scopes", "工具与 Scope")], ["browser-runner", tr("Task browsers", "任务浏览器")], ["your-chrome", tr("Your Chrome", "你的 Chrome")], ["chrome-browser", tr("Browser companion", "浏览器 Companion")],
     ].map(([id, label]) => <a key={id} href={"#" + id}>{label}</a>)}</aside><article className="technicalArticle">
       <section id="mcp-connect"><h2>{tr("Connect using the client installation path", "通过客户端安装入口连接")}</h2>
         <p>{tr("Add the HTTPS endpoint in your AI client's remote MCP settings and complete Remote Arc sign-in. Choose the guide below for your client's setup screens. To use computer tools, also install the device Agent and pair that computer. Cloud Apps only need their account connection.", "在 AI 客户端的 Remote MCP 设置中添加 HTTPS 地址，并完成 Remote Arc 登录。各客户端的具体配置步骤见下方指南。使用电脑工具时，另需安装设备 Agent 并配对电脑；云端 Apps 只需要相应账号连接。")}</p>
@@ -234,6 +237,18 @@ export function McpReference() {
         <a href={localizedWebsiteHref("/docs/apps",locale)}>{tr("Apps connection guide", "Apps 连接指南")} →</a>
       </section>
       <section id="mcp-tools"><h2>{tr("Tools and required scopes", "工具与所需 Scope")}</h2><ToolReference /></section>
+      <BrowserModes />
+      <section id="browser-runner"><h2>{tr("Runner: sign in once, reuse your profile", "Runner：登录一次，复用浏览器资料")}</h2>
+        <p>{tr("Enable Browser Runner for the computer in Dashboard and keep its Agent running. The default Runner uses a separate browser profile. Choose one profile per person, sign in once with headless=false, and reuse that profile in later tasks and chats. Sign-ins entered in its window are saved locally unless browserRunnerSaveLogins is disabled. You can also add a site-bound sign-in with remotelink vault add on the computer. fill_secret fills it only on its saved sites; the password stays out of the AI conversation.", "在 Dashboard 为电脑开启 Browser Runner，并保持 Agent 运行。默认 Runner 使用独立的浏览器资料。为每个人选定一份 profile，用 headless=false 打开窗口登录一次，后续任务和聊天复用该 profile。窗口中输入的登录信息会保存在本机，除非关闭 browserRunnerSaveLogins；也可在电脑终端用 remotelink vault add 添加限定网站的登录信息。fill_secret 只在保存时指定的网站填写，密码不会进入 AI 对话。")}</p>
+        <Code>{'{ "device_id": "<computer>", "task_id": "application", "browser": "runner", "profile": "jenny", "headless": false, "allowed_origins": ["https://jobs.example.com"], "start_url": "https://jobs.example.com" }'}</Code>
+        <p>{tr("Allowed sites apply to both Runner modes. Embedded forms on other sites also need to be named. Payment details and CAPTCHAs require you; one-time codes may be filled from the connected app where they arrived if enabled on the computer. Review answers before authorizing a final submission.", "两种 Runner 模式都受 allowed_origins 限制，其他网站的内嵌表单也需列入允许范围。支付信息和 CAPTCHA 由你处理；若电脑允许，可从收到验证码的连接应用中获取并填写一次性验证码。最终提交前先核对答案并授权。")}</p>
+      </section>
+      <section id="your-chrome"><h2>{tr("Connect the Chrome you already use", "连接你正在使用的 Chrome")}</h2>
+        <ol><li>{tr("Open Chrome 144 or later on the linked computer. Visit chrome://inspect/#remote-debugging and enable Allow remote debugging for this browser instance.", "在已连接的电脑上打开 Chrome 144 或更新版本，进入 chrome://inspect/#remote-debugging，勾选「允许对此浏览器实例进行远程调试」。")}</li><li>{tr("Start the task with browser=your_chrome. Leave profile and headless out. Chrome asks you to click Allow for the connection.", "使用 browser=your_chrome 启动任务，不传 profile 和 headless；在 Chrome 的连接提示中点击「允许」。")}</li><li>{tr("The task opens its own window using your current sign-ins. Several tasks share the connection. A new connection needs Allow again; Chrome shows a control banner while connected.", "任务会使用现有登录状态打开自己的窗口，多个任务共用连接。每次建立新连接仍需授权；连接期间 Chrome 会显示受控提示。")}</li></ol>
+        <Code>{'{ "device_id": "<computer>", "task_id": "chrome-application", "browser": "your_chrome", "allowed_origins": ["https://jobs.example.com"], "start_url": "https://jobs.example.com" }'}</Code>
+        <p>{tr("If Chrome is waiting for Allow, retry the same task_id after approving; the pending request lasts 3 minutes. Closing a task closes its own tab. The connection disconnects 5 minutes after the last task detaches; unused tasks pause after 20 minutes. Stopping the Agent disconnects and leaves task windows for later recovery. If already disconnected, closing a task reports tab_left_open so you can close that window manually. Your other tabs and Chrome profile are kept.", "若 Chrome 正等待授权，点击「允许」后用同一 task_id 重试，授权请求保留 3 分钟。关闭任务会关闭它自己的标签页。最后一个任务脱离连接后 5 分钟会断开；未使用的任务在 20 分钟后暂停。停止 Agent 会断开连接并保留任务窗口，方便之后恢复。若已经断开，关闭任务会返回 tab_left_open，可手动关闭该窗口。你原有的标签页和 Chrome 资料会保留。")}</p>
+        <p><a href="https://developer.chrome.com/blog/chrome-devtools-mcp-debug-your-browser-session" target="_blank" rel="noreferrer">{tr("Chrome's connection and permission guide", "Chrome 官方连接与授权说明")} ↗</a></p>
+      </section>
       <section id="chrome-browser"><h2>{tr("Install the scoped Chrome companion", "安装受控 Chrome Companion")}</h2>
         <p><a href={localizedWebsiteHref("/chrome-extension", locale)}>{tr("Open the Chrome Companion download and installation page", "打开 Chrome Companion 下载与安装页面")} →</a></p>
         <p>{tr("Download and unzip the companion. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted folder. Open its popup, select Connect to Remote Arc and approve browser pairing, then explicitly Share this tab. It is an unpacked beta, not a Chrome Web Store extension; downloaded versions must be reloaded manually.", "下载并解压 Companion，在 chrome://extensions 开启开发者模式，选择「加载已解压的扩展程序」并指定解压文件夹。打开扩展，点击 Connect to Remote Arc 并批准浏览器配对，再手动 Share this tab。此 Beta 尚未上架 Chrome Web Store；以后更新仍需重新下载并加载。")}</p>

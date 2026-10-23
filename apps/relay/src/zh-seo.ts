@@ -3,6 +3,16 @@ type ChineseSeoContent = {
   sections: Array<{heading: string; text: string}>;
 };
 export const chineseSeo: Record<string, ChineseSeoContent> = {
+  "/chrome-extension": {
+    title: "浏览器三种使用方式与 Chrome 扩展下载 — Remote Arc",
+    description: "对比默认 Runner 自动登录、连接现有 Chrome 和逐标签页共享的 Chrome Companion，了解适用场景、设置步骤和限制。",
+    h1: "三种浏览器使用方式", intro: "选择独立任务浏览器、沿用 Chrome 现有登录，或只共享指定标签页。",
+    sections: [
+      {heading:"默认 Runner",text:"在 Dashboard 为电脑开启 Browser Runner。使用独立的浏览器资料，登录一次后复用；保存的登录信息在本机填写，密码不会进入 AI 对话。"},
+      {heading:"连接你的 Chrome",text:"Chrome 144 或更新版本可在 chrome://inspect/#remote-debugging 开启远程调试。连接时点击允许，任务会在自己的新窗口中沿用现有登录。连接保持期间多个任务共用授权；新连接仍需允许，Chrome 会显示受控提示。"},
+      {heading:"下载与安装 Chrome Companion",text:"下载扩展 ZIP 后解压，在 chrome://extensions 开启开发者模式并加载已解压的扩展程序。配对并手动共享标签页，默认只读，点击和填写按标签页单独授权。当前尚未上架 Chrome Web Store，需要手动更新。"},
+    ],
+  },
   "/privacy": {
     title: "隐私政策 — Remote Arc", description: "了解 Remote Arc 如何处理账户、Apps 授权、设备工具结果、Arc 对话、计费与支持信息。",
     h1: "你的工作，你的信息。", intro: "Remote Arc 隐私政策，更新于 2026 年 10 月 19 日。了解信息如何经过服务、保存哪些数据以及如何撤销访问和申请删除。",

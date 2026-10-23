@@ -48,7 +48,7 @@ const ref = z.string().regex(/^(f[1-9]\d?)?e[1-9]\d{0,3}$/);
 const idempotencyKey = z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/);
 
 const what =
-  " browser_runner is a separate background browser that the Remote Arc Agent runs on the user's computer for multi-step web tasks (applications, bookings, forms). It never uses the user's everyday browser, cookies or passwords. To read or act on a tab the user is looking at in their own browser, use shared_tab_* instead.";
+  " browser_runner runs multi-step web tasks on the linked computer. browser=runner (default) uses a separate profile with its own saved sign-ins; browser=your_chrome uses the user's running Chrome and its existing sign-ins, in a new task window. It never selects or operates the user's other tabs. To read or act on a specific existing tab the user shares through Chrome Companion, use shared_tab_* instead.";
 
 type Definition = {
   scope: Scope;
@@ -61,13 +61,14 @@ type Definition = {
 const definitions: Record<BrowserRunnerTool, Definition> = {
   browser_runner_start: {
     scope: "browser:interact",
-    title: "Start or resume a background browser task",
+    title: "Start or resume a browser task",
     description:
       "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. profile is the browser profile, which keeps sign-ins and cookies between tasks: use one profile per person and reuse it (for example profile=jenny), so a site signed into once stays signed in for later tasks and new conversations; browser_runner_status without session_id lists the profiles on the computer and the sites used in each. A new profile runs headless unless headless=false; pass headless=false when the user must sign in, enter a code or solve a CAPTCHA in the window. Leaving headless out keeps the task's current mode, or for a new task the profile's last mode, so a profile the user signed into in a visible window keeps opening visibly. Resuming reopens the last page and reports unconfirmed submits." +
-      what,
+      " browser=your_chrome requires Chrome 144+ with remote debugging enabled at chrome://inspect/#remote-debugging. Leave profile and headless out: this mode uses the user's current sign-ins and is always visible. Chrome asks Allow for each new connection; tasks share one connection so follow-up tasks do not ask again while it stays connected. If YOUR_CHROME_NOT_ENABLED, ask the user to enable the switch in the page opened on their computer. If YOUR_CHROME_WAITING, ask them to click Allow and retry with the same task_id; the request stays open for 3 minutes. YOUR_CHROME_DENIED means the request was declined or expired. Without browser or profile, a resumed task keeps its original browser and profile." + what,
     input: z.object({
       device_id: deviceId,
       task_id: id,
+      browser: z.enum(["runner", "your_chrome"]).optional(),
       allowed_origins: z.array(z.string().min(1).max(260)).min(1).max(20),
       start_url: z.string().url().max(2000).optional(),
       profile: id.optional(),
@@ -130,7 +131,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:read",
     title: "Show a browser task's checkpoint",
     description:
-      "Return a task's saved checkpoint: state, last page, recent action receipts, uploads with SHA-256, submits with their status (unverified, unknown, confirmed) and next_action. Use it to continue in a new conversation or a different AI. Omit session_id to list the tasks the running Agent has open and the browser profiles on the computer (with their tasks and sites), to pick the profile that is already signed in, and saved_logins: sign-ins kept on the computer for fill_secret (names, sites, masked usernames; never passwords).",
+      "Return a task's saved checkpoint: state, last page, recent action receipts, uploads with SHA-256, submits with their status (unverified, unknown, confirmed) and next_action. Use it to continue in a new conversation or a different AI. Omit session_id to list open tasks, browser profiles (with their tasks and sites), saved_logins for fill_secret (names, sites, masked usernames; never passwords), and your_chrome: ready means the user's Chrome has remote debugging enabled; connected means the Agent is attached now.",
     input: z.object({ device_id: deviceId, session_id: id.optional() }),
     annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
   },
@@ -153,7 +154,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Close a browser task",
     description:
-      "Close the task browser and keep its checkpoint so the task can be resumed. forget=true also deletes the checkpoint and the task's own browser profile, including any sign-in kept there.",
+      "Close the task browser and keep its checkpoint so the task can be resumed. In your_chrome mode, close only the task's tab; the user's other tabs and profile are kept. If already disconnected, tab_left_open=true means the user can close the remaining task window manually. The shared Chrome connection disconnects 5 minutes after the last task detaches. forget=true also deletes the checkpoint and, for a dedicated Runner task profile, its sign-ins.",
     input: z.object({ device_id: deviceId, session_id: id, forget: z.boolean().optional() }),
     annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
   },
@@ -179,7 +180,7 @@ export function registerBrowserRunnerTools(server: McpServer, deps: BrowserRunne
         if (usageError) return usageError;
         const { device_id, ...args } = input;
         const call: DeviceCall = (name, callArgs) => deps.callDevice(identity, String(device_id), name, callArgs);
-        return deps.textResult(tool === "browser_runner_act" ? await runAct(call, args) : await call(tool, args));
+        return deps.textResult(tool === "browser_runner_act" ? await runAct(call, args) : tool === "browser_runner_start" ? await runStart(call, args) : await call(tool, args));
       },
     );
   }
@@ -191,6 +192,16 @@ type FormField = { ref: string; action: string; value?: string };
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+// Older Agents ignore unknown start arguments. Never present their separate
+// Runner as a successful connection to the user's own Chrome.
+export async function runStart(call: DeviceCall, args: Record<string, unknown>): Promise<unknown> {
+  const out = await call("browser_runner_start", args);
+  if (args.browser === "your_chrome" && (!isRecord(out) || out.browser !== "your_chrome")) {
+    throw new Error("YOUR_CHROME_UNSUPPORTED: this computer's Agent does not support connecting your Chrome. Update the Agent before retrying. It opened a separate Runner instead; no connection to your Chrome was made.");
+  }
+  return out;
+}
 
 // What an Agent from before fill_form answers to it: rc.7 and earlier treat
 // it as a single act without a ref.

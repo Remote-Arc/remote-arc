@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/shared-tab-mcp.js";
-import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct } from "../src/browser-runner-mcp.js";
+import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct, runStart } from "../src/browser-runner-mcp.js";
 import { callDevice } from "../src/device-call.js";
 import { classifyExpectedMcpError } from "../src/mcp-errors.js";
 import type { OAuthIdentity } from "../src/auth.js";
@@ -40,6 +40,18 @@ assert.match(tools.get("shared_tab_read")!.def.description, /browser_runner_\*/,
 assert.equal(tools.get("browser_runner_snapshot")!.def.annotations.readOnlyHint, true);
 assert.equal(tools.get("browser_runner_act")!.def.annotations.destructiveHint, true);
 assert.equal(tools.get("shared_tab_click")!.def.annotations.destructiveHint, true);
+
+const chromeTask = browserRunnerDefinitionsForTest.browser_runner_start.input.parse({
+  device_id: "d", task_id: "chrome-task", browser: "your_chrome", allowed_origins: ["https://example.test"],
+});
+assert.equal(chromeTask.browser, "your_chrome", "MCP must preserve the selected Chrome mode");
+assert.equal(browserRunnerDefinitionsForTest.browser_runner_start.input.safeParse({ ...chromeTask, browser: "firefox" }).success, false);
+for (const code of ["YOUR_CHROME_NOT_ENABLED", "YOUR_CHROME_WAITING", "YOUR_CHROME_DENIED", "YOUR_CHROME_UNSUPPORTED"]) {
+  assert.equal(classifyExpectedMcpError(new Error(`${code}: next step`))?.code, code);
+}
+await assert.rejects(runStart(async () => ({ session_id: "chrome-task" }), chromeTask), /YOUR_CHROME_UNSUPPORTED/);
+assert.deepEqual(await runStart(async () => ({ browser: "your_chrome" }), chromeTask), { browser: "your_chrome" });
+assert.deepEqual(await runStart(async () => ({ session_id: "runner-task" }), { task_id: "runner-task" }), { session_id: "runner-task" });
 
 // Scopes: interaction needs browser:interact even when reading is allowed.
 current = identity("browser:read");

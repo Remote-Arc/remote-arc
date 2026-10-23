@@ -31,7 +31,7 @@ type session struct {
 	cp       *Checkpoint
 	scope    scope
 	proc     *browserProcess
-	conn     *cdpConn
+	conn     cdpClient
 	lastUsed time.Time
 
 	ev           sync.Mutex
@@ -286,25 +286,34 @@ func (s *session) ensureLive(ctx context.Context) error {
 		return nil
 	}
 	s.shutdownBrowser(false)
-	exe, e := s.m.findBrowser()
-	if e != nil {
-		return e
+	if s.cp.Browser == browserYourChrome {
+		page, e := s.m.yourChrome().openTab(ctx, s, s.cp.YourTab)
+		if e != nil {
+			return e
+		}
+		s.conn = page
+		s.cp.YourTab = page.target
+	} else {
+		exe, e := s.m.findBrowser()
+		if e != nil {
+			return e
+		}
+		proc, e := launchBrowser(ctx, exe, profilePath(s.cp.Profile), s.cp.Headless)
+		if e != nil {
+			return e
+		}
+		ws, e := proc.pageTarget(ctx)
+		if e != nil {
+			proc.stop()
+			return e
+		}
+		conn, e := dialCDP(ctx, ws, s.onEvent)
+		if e != nil {
+			proc.stop()
+			return e
+		}
+		s.proc, s.conn = proc, conn
 	}
-	proc, e := launchBrowser(ctx, exe, profilePath(s.cp.Profile), s.cp.Headless)
-	if e != nil {
-		return e
-	}
-	ws, e := proc.pageTarget(ctx)
-	if e != nil {
-		proc.stop()
-		return e
-	}
-	conn, e := dialCDP(ctx, ws, s.onEvent)
-	if e != nil {
-		proc.stop()
-		return e
-	}
-	s.proc, s.conn = proc, conn
 	s.ev.Lock()
 	s.worldCtx, s.mainFrame, s.href = 0, "", ""
 	s.frames = map[string]*frameInfo{}
@@ -317,7 +326,11 @@ func (s *session) ensureLive(ctx context.Context) error {
 	if s.cp.recover(s.m.now()) {
 		s.cp.receipt(s.m.now(), Receipt{Tool: "browser_runner_start", Outcome: "recovered", Detail: "an in-flight submit was interrupted; its effect is now unknown"})
 	}
-	if !s.cp.Headless {
+	if s.cp.Browser == browserYourChrome {
+		// The task's window opens without taking the user's focus; pages that
+		// check focus still behave as in a focused window.
+		_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
+	} else if !s.cp.Headless {
 		_ = s.conn.Call(ctx, "Page.bringToFront", nil, nil)
 	}
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
@@ -362,8 +375,12 @@ func (s *session) setup(ctx context.Context) error {
 			return fmt.Errorf("browser_runner setup failed (%s): %w", c.method, e)
 		}
 	}
-	// Downloads are not part of the delegated surface.
-	_ = s.conn.Call(ctx, "Page.setDownloadBehavior", map[string]any{"behavior": "deny"}, nil)
+	// Downloads are not part of the delegated surface. In the user's own
+	// Chrome this setting would reach their whole profile, so it is left as
+	// the user has it there.
+	if s.cp.Browser != browserYourChrome {
+		_ = s.conn.Call(ctx, "Page.setDownloadBehavior", map[string]any{"behavior": "deny"}, nil)
+	}
 	var tree struct {
 		FrameTree struct {
 			Frame struct {

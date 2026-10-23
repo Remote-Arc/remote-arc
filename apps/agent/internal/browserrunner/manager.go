@@ -52,6 +52,7 @@ type Manager struct {
 	IdleTimeout time.Duration
 	reaper      sync.Once
 	stop        chan struct{}
+	your        *yourChrome // the shared connection to the user's own Chrome, when a task uses it
 }
 
 func New() *Manager {
@@ -96,7 +97,11 @@ func (m *Manager) Close() {
 	for _, s := range m.sessions {
 		list = append(list, s)
 	}
+	your := m.your
 	m.mu.Unlock()
+	if your != nil {
+		your.closeNow()
+	}
 	for _, s := range list {
 		s.mu.Lock()
 		s.shutdownBrowser(true)
@@ -207,7 +212,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 		return s.cp.Summary(s.live()), nil
 	}
 	if tool == "browser_runner_close" {
-		return m.close(s, protocol.Bool(args, "forget"))
+		return m.close(ctx, s, protocol.Bool(args, "forget"))
 	}
 	if s.cp.State == StateClosed {
 		return nil, errors.New("Session is closed. Call browser_runner_start with the same task_id to reopen it.")
@@ -333,7 +338,11 @@ func (m *Manager) list() map[string]any {
 		"sessions":     items,
 		"profiles":     profileInfos(),
 		"saved_logins": savedLogins(),
-		"note":         "sessions lists tasks open in this Agent run; profiles lists the browser profiles on this computer with the tasks and sites used in each. A profile keeps its sign-ins: pass the same profile to browser_runner_start (for example the person's name) to continue signed in, even from a new conversation. Any task listed can be reopened with browser_runner_start and its task_id. saved_logins are sign-ins kept on this computer (names, sites, masked usernames; never passwords): fill them with action=fill_secret.",
+		"your_chrome": map[string]any{
+			"ready":     YourChromeReady(),
+			"connected": m.your != nil && m.your.connected(),
+		},
+		"note": "sessions lists tasks open in this Agent run; profiles lists the browser profiles on this computer with the tasks and sites used in each. A profile keeps its sign-ins: pass the same profile to browser_runner_start (for example the person's name) to continue signed in, even from a new conversation. Any task listed can be reopened with browser_runner_start and its task_id. saved_logins are sign-ins kept on this computer (names, sites, masked usernames; never passwords): fill them with action=fill_secret. your_chrome.ready means the user's own Chrome is open to Remote Arc (browser=your_chrome works without setup); connected means Remote Arc is attached to it now.",
 	}
 }
 
@@ -346,7 +355,8 @@ func (m *Manager) liveCount(except string, profile string) (int, bool) {
 		if s.live() {
 			n++
 		}
-		if s.cp.Profile == profile && s.cp.State != StateClosed && s.live() {
+		// Tasks in the user's own Chrome each have their own tab there.
+		if profile != yourChromeProfile && s.cp.Profile == profile && s.cp.State != StateClosed && s.live() {
 			clash = true
 		}
 	}
@@ -366,7 +376,36 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	if e != nil {
 		return nil, e
 	}
+	s, e := m.get(id)
+	resumed := e == nil
+	if e != nil && !strings.HasPrefix(e.Error(), "No browser_runner session") {
+		return nil, e
+	}
+	// browser=your_chrome runs the task in the user's own Chrome, signed in
+	// as they are; runner (the default) in a Runner window with its own
+	// profile.
+	browser := protocol.OptionalString(args, "browser")
+	if browser == "" {
+		browser = browserRunner
+		if resumed && s.cp.Browser == browserYourChrome {
+			browser = browserYourChrome
+		}
+	}
+	if browser != browserRunner && browser != browserYourChrome {
+		return nil, errors.New(`browser must be "runner" or "your_chrome".`)
+	}
 	profile := protocol.OptionalString(args, "profile")
+	if profile == "" && resumed {
+		profile = s.cp.Profile
+	}
+	if browser == browserYourChrome {
+		if profile != "" && profile != yourChromeProfile {
+			return nil, errors.New("A task in the user's own Chrome uses the user's own sign-ins; leave profile out.")
+		}
+		profile = yourChromeProfile
+	} else if profile == yourChromeProfile {
+		return nil, errors.New(`profile "your-chrome" is the user's own Chrome; pass browser="your_chrome" instead.`)
+	}
 	if profile == "" {
 		profile = id
 	}
@@ -379,17 +418,18 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	if v, ok := args["headless"].(bool); ok {
 		headless, chosen = v, true
 	}
+	if browser == browserYourChrome {
+		if chosen && headless {
+			return nil, errors.New("The user's own Chrome is always visible; leave headless out.")
+		}
+		headless, chosen = false, false
+	}
 	startURL := protocol.OptionalString(args, "start_url")
 	if startURL != "" && !sc.Allows(startURL) {
 		return nil, fmt.Errorf("OUT_OF_SCOPE: start_url %s is not in allowed_origins.", originOf(startURL))
 	}
 	reason := strings.TrimSpace(protocol.OptionalString(args, "scope_change_reason"))
 
-	s, e := m.get(id)
-	resumed := e == nil
-	if e != nil && !strings.HasPrefix(e.Error(), "No browser_runner session") {
-		return nil, e
-	}
 	m.mu.Lock()
 	n, clash := m.liveCount(id, profile)
 	if clash {
@@ -401,13 +441,13 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 		return nil, fmt.Errorf("At most %d browser_runner sessions can run at once on this device. Close one first.", maxLiveSessions)
 	}
 	if s == nil {
-		if h, known := lastProfileMode(profile); known && !chosen {
+		if h, known := lastProfileMode(profile); known && !chosen && browser == browserRunner {
 			headless = h
 		}
 		now := m.now()
 		s = &session{m: m, scope: sc, lastUsed: now, cp: &Checkpoint{
 			Version: checkpointVersion, SessionID: id, Profile: profile, AllowedOrigins: sc.Strings(),
-			Headless: headless, State: StateActive, Receipts: []Receipt{}, Uploads: []Upload{},
+			Headless: headless, Browser: map[bool]string{true: browserYourChrome, false: ""}[browser == browserYourChrome], State: StateActive, Receipts: []Receipt{}, Uploads: []Upload{},
 			Effects: []Effect{}, Blocked: []Blocked{}, CreatedAt: stamp(now),
 		}}
 		m.sessions[id] = s
@@ -418,8 +458,8 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	defer s.mu.Unlock()
 	s.lastUsed = m.now()
 	if resumed {
-		if s.cp.Profile != profile && protocol.OptionalString(args, "profile") != "" {
-			return nil, errors.New("A session keeps its profile. Close it with forget=true to start over with another profile.")
+		if s.cp.Profile != profile || (s.cp.Browser == browserYourChrome) != (browser == browserYourChrome) {
+			return nil, errors.New("A session keeps its browser and profile. Close it with forget=true to start over in another.")
 		}
 		if !s.scope.covers(sc) {
 			if reason == "" || args["scope_change_approved"] != true {
@@ -462,6 +502,12 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	out["resumed"] = resumed
 	out["profile"] = s.cp.Profile
 	out["headless"] = s.cp.Headless
+	if s.cp.Browser == browserYourChrome {
+		out["browser"] = browserYourChrome
+		out["note"] = "This task runs in its own window of the user's Chrome, signed in as the user is. Chrome shows that it is being controlled while Remote Arc is connected. Closing the task closes only its window's tab."
+	} else {
+		out["browser"] = browserRunner
+	}
 	out["status"] = s.cp.Summary(true)
 	return out, nil
 }
@@ -980,7 +1026,30 @@ func (m *Manager) resolve(ctx context.Context, s *session, args map[string]any) 
 	return map[string]any{"effect": *eff}, nil
 }
 
-func (m *Manager) close(s *session, forget bool) (any, error) {
+func (m *Manager) close(ctx context.Context, s *session, forget bool) (any, error) {
+	// A finished task closes its own tab in the user's Chrome; nothing else
+	// there is touched.
+	if page, ok := s.conn.(*yourPage); ok && page != nil {
+		if e := page.closeTab(ctx); e != nil {
+			return nil, e
+		}
+		s.cp.YourTab = ""
+	}
+	if s.cp.Browser == browserYourChrome && s.cp.YourTab != "" {
+		m.mu.Lock()
+		your := m.your
+		m.mu.Unlock()
+		if your != nil {
+			closed, e := your.closeTabIfConnected(ctx, s.cp.YourTab)
+			if e != nil {
+				return nil, e
+			}
+			if closed {
+				s.cp.YourTab = ""
+			}
+		}
+	}
+	tabLeftOpen := s.cp.Browser == browserYourChrome && s.cp.YourTab != ""
 	s.shutdownBrowser(false)
 	s.cp.State = StateClosed
 	s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_close", Outcome: "closed"})
@@ -988,7 +1057,7 @@ func (m *Manager) close(s *session, forget bool) (any, error) {
 		if e := s.flush(); e != nil {
 			return nil, e
 		}
-		return map[string]any{"session_id": s.cp.SessionID, "state": StateClosed, "checkpoint_kept": true}, nil
+		return map[string]any{"session_id": s.cp.SessionID, "state": StateClosed, "checkpoint_kept": true, "tab_left_open": tabLeftOpen}, nil
 	}
 	m.mu.Lock()
 	delete(m.sessions, s.cp.SessionID)
@@ -1000,10 +1069,11 @@ func (m *Manager) close(s *session, forget bool) (any, error) {
 	}
 	m.mu.Unlock()
 	_ = os.Remove(checkpointPath(s.cp.SessionID))
-	if !shared && s.cp.Profile == s.cp.SessionID {
+	removeProfile := s.cp.Browser != browserYourChrome && !shared && s.cp.Profile == s.cp.SessionID
+	if removeProfile {
 		_ = os.RemoveAll(profilePath(s.cp.Profile))
 	}
-	return map[string]any{"session_id": s.cp.SessionID, "state": StateClosed, "forgotten": true, "profile_removed": !shared && s.cp.Profile == s.cp.SessionID}, nil
+	return map[string]any{"session_id": s.cp.SessionID, "state": StateClosed, "forgotten": true, "profile_removed": removeProfile, "tab_left_open": tabLeftOpen}, nil
 }
 
 // submitTarget hashes what a submit acts on: the action plus the page helper's

@@ -1,10 +1,11 @@
 import React, { useEffect } from "react";
-import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./public-docs.css";
 
-const version = cliPackage.version;
+// Vite derives this from dated stable CHANGELOG entries, even on RC branches.
+declare const __REMOTEARC_CLI_VERSION__: string;
+const version = __REMOTEARC_CLI_VERSION__;
 const release = `https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v${version}`;
 const download = `https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v${version}/`;
 const targets = [

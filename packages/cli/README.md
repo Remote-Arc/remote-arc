@@ -53,18 +53,24 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.6.1 — Native pause, resume and recovery fixes**
+**remotelink 0.6.2 — Browser Runner, native client setup and device upgrades**
 
-Published 2026-10-11
+Published 2026-10-23
 
-- Pause a device from Dashboard without exposing its filesystem, terminal or process tools. The native Go runtime retains only an authenticated, supervised wake connection; an explicit owner-authorized request resumes execution.
-- Preserve the paused state across worker restarts and foreground/background execution-lease handoffs, without allocating an execution core while paused.
-- Disconnect Completely disables background supervision and login recovery, closes execution and wake connections, and requires a local restart before the device can reconnect. A paused device can also be fully disconnected.
-- Restore capability-gated remote Stop Agent for supported foreground and background runtimes, and verify that the device actually disconnects before reporting success.
-- Use a hidden, per-user Windows Script Host launcher for Windows login recovery and migrate owned legacy startup entries while preserving pairing. This remains user-login recovery rather than a privileged Windows service.
-- Wait for an abandoned TS/Go execution lease to expire before Windows Go recovery; never take over a live execution owner.
-- Migrate idle legacy macOS launchd Node/TS jobs to the native Go service, while preserving pairing and refusing takeover of an active foreign owner.
-- Publish six native binaries, checksum manifests, npm and Homebrew artifacts under version 0.6.1. Keep existing 0.6.0 and RC release assets unchanged.
+- Add Browser Runner (beta) to the native Go Agent: task-scoped Chrome, Edge or Chromium sessions, declared site boundaries, durable submit receipts and restart recovery. Enable it separately for each device in Dashboard.
+- Let Browser Runner connect to the user's running Chrome with `browser=your_chrome`, reusing existing sign-ins in a task-owned window. Chrome 144+ requires remote debugging and approval for each new connection; tasks share a connection that disconnects five minutes after the last task detaches. Closing a task preserves the user's Chrome profile.
+- Replace fixed action delays with page, network and DOM settling. Batch ordinary fields with `action=fill_form`, request the resulting page with `snapshot=true`, and wait for uploaded-file parsing. Older Agents receive compatible sequential field entry and snapshots through the Relay.
+- Separate repeatable sign-in steps, intermediate form pages and final submissions. Intermediate steps settle from the next page's evidence; final submit, pay, book, post and send actions retain one-time dispatch and confirmation. A click that sent nothing can be retried with the same key until something leaves the page.
+- Hand off only open CAPTCHA challenges, resume when they close, and report visible checkboxes as non-blocking attention notes. CAPTCHA response values remain secret and cannot be filled or read by the agent.
+- Preserve browser profiles and saved sign-ins across conversations. Restarted pages report the labels of missing fields, choices and uploads without retaining their values; relabelled controls stay unverified until checked.
+- Support filling one-time sign-in codes through authorized connected sources without recording their values. Each device can disable this with `browserRunnerOneTimeCodes=false`. Passwords and payment details are never typed from the conversation; CAPTCHAs still require the user.
+- Add local saved sign-ins with `remotelink vault add` and `action=fill_secret`, constrained to the saved site and credential part. Use Windows DPAPI, macOS Keychain or a user-restricted credential file as appropriate. Completed browser sign-ins can be saved automatically and disabled with `browserRunnerSaveLogins=false`.
+- Attempt Codex and Claude Code MCP setup independently in the background during normal startup. Preserve existing registrations, disabled entries, pairing and permissions; missing clients, uncertain inventories and setup failures never block the Agent.
+- Discover official Windows npm client binaries in local and global prefixes, including nested native packages, without evaluating command wrappers. Add project-scoped setup inspection, read-only MCP, coding-session metadata discovery and repair commands; session discovery does not resume another agent.
+- Replace an older idle Agent when a newer release starts, preserving pairing, permissions, pause state and recovery ownership. Active or uninstrumented Agents require terminal confirmation or explicit `--force-update`; unattended updates leave them running.
+- Use `browser_runner_*` and `shared_tab_*` consistently while keeping cached legacy shared-tab tool calls working during upgrades. Existing AI clients should refresh their connector's tool list after updating.
+- Add bounded CPU and available-memory telemetry and resource-aware Fleet placement, respecting device ownership, tool permissions, trusted directories, explicit OS requirements and Windows/WSL shared hardware. Active work is not silently migrated.
+- Publish fresh 0.6.2 npm, six native binaries, SHA256 manifests and Homebrew formulas. The website's default Agent downloads and version badge use the latest stable release rather than the development package's RC version.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->
@@ -91,50 +97,24 @@ Clients that still show the older shared-tab names (`browser_read_page`, `browse
 
 ## Commands
 
-In **0.6.2-rc.7**, Browser Runner hands a CAPTCHA to you only while its challenge is
-actually open, and the task continues by itself once it closes; a visible CAPTCHA
-checkbox is reported as a note to complete before submitting. Remote Arc never fills
-or reads CAPTCHA responses. After a browser restart reopens a page, the snapshot lists
-the fields and uploads to enter again. Select `npx remotelink@0.6.2-rc.7` or the
-matching native RC.
+In **0.6.2**, Browser Runner (beta) uses task-scoped Chrome, Edge or Chromium,
+with optional connection to your running Chrome, batched form entry, durable final
+submissions, profile reuse and restart recovery. Enable **Browser Runner** for the
+device in Dashboard. Open CAPTCHA challenges still need you; the Agent never reads
+or fills their responses. Sign-in codes can come from an authorized connected source,
+and saved passwords are filled only from the computer's protected local vault.
 
-In **0.6.2-rc.6**, Windows npm-installed Codex/Claude clients are discovered through
-their official native packages, including global nested dependencies. Normal
-startup attempts client setup in independent background tasks. Existing MCP
-entries and device pairing are preserved; a skipped client never blocks the Agent.
-The Dashboard and tool/API messages use `browser_runner` consistently.
+Normal startup attempts Codex and Claude Code setup in independent background tasks.
+Existing MCP entries, device pairing and permissions are preserved; a skipped client
+never blocks the Agent. Project-scoped [local setup](../../docs/codex-local-integration.md),
+[read-only MCP](../../docs/workspace-local-mcp.md), [setup inspection](../../docs/local-setup-inspection.md)
+and [coding-session discovery](../../docs/local-session-discovery.md) are included.
+Discovery lists metadata for review; it does not resume an agent or reconstruct its history.
 
-From **0.6.2-rc.5**, running a newer release replaces an older, idle Agent automatically, and
-`--force-update` replaces one that is busy, too old to report its work, or not older. AI clients
-with a cached tool list keep working with the previous shared-tab tool names. Select
-`npx remotelink@0.6.2-rc.6` or the matching native RC.
-
-In **0.6.2-rc.4**, **Browser Runner (beta)** lets a connected AI open, read and act on
-websites in a separate background Chrome, Edge or Chromium on this computer, only on
-the sites each task names. Turn it on per device with the **Browser Runner** switch in the
-Dashboard. Passwords, verification codes and payment details are always left to you, and a
-submit is never sent twice. Select `npx remotelink@0.6.2-rc.4` or the matching native RC.
-
-In **0.6.2-rc.3**, [automatic local Codex integration](../../docs/codex-local-integration.md)
-adds native `setup install`, `status`, `doctor`, `repair` and `uninstall` commands
-for a selected project, with automatic configuration and actual client tool
-verification. Select `npx remotelink@0.6.2-rc.3` or the matching native RC; the existing default
-pairing flow is unchanged and first-run bootstrap automation remains pending.
-
-In **0.6.2-rc.3**, [workspace read-only MCP](../../docs/workspace-local-mcp.md)
-adds `remotelink --mcp --safe --mcp-workspace=<absolute-dir>` for selected-directory
-file reads. It requires no pairing and exposes no process or mutation tools.
-The stable `latest` package remains separate from this RC.
-
-In **0.6.2-rc.3**, [local setup inspection](../../docs/local-setup-inspection.md)
-adds `remotelink setup inspect` to find coding-agent executable candidates without
-running them or reading private sessions/configuration. Versions and integrations
-remain unchecked by inspection; use the separate setup commands to verify Codex.
-
-In **0.6.2-rc.3**, [local coding-session discovery](../../docs/local-session-discovery.md)
-adds `remotelink takeover --workspace <directory>` to the native Go runtime. It lists
-project-scoped Codex / Claude Code metadata for review. This command does not
-resume an agent or reconstruct its full task history.
+A newer release replaces an older idle Agent automatically. Active work, an Agent too
+old to report its work, or a same/newer version requires terminal confirmation or explicit
+`--force-update`. Install the stable release with `npx remotelink@latest` or a matching
+native download. Refresh the Remote Arc connector in your AI client after upgrading.
 
 ```text
 npx remotelink                 Pair/reconnect and keep the terminal and logs open

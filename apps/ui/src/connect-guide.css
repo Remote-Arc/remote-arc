@@ -1,0 +1,31 @@
+/* /connect-ai: numbered setup steps and readable reference tables. Loaded
+   after experience-refresh.css, whose public-page table rules it refines. */
+.publicPage .connectSetupPage .manualArticle{max-width:900px}
+.publicPage .connectSetupPage .manualArticle h2{display:flex;align-items:center;gap:12px}
+.connectStepNo{display:inline-flex;align-items:center;justify-content:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;border:1px solid var(--site-line,var(--line));background:var(--site-subtle,var(--panel-2));color:var(--site-ink,var(--text));font-size:13px;font-weight:650;letter-spacing:0}
+
+.connectChoice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:6px}
+.connectChoice>div{min-width:0;padding:22px 22px 18px;border:1px solid var(--site-line,var(--line));border-radius:12px;background:var(--site-surface,var(--panel))}
+.connectChoice h3{margin:0 0 8px;font-size:16px;font-weight:600;color:var(--site-ink,var(--text))}
+.connectChoice p{margin:0 0 12px;color:var(--site-muted,var(--muted));font-size:14px;line-height:1.75}
+.connectChoice p:last-child{margin-bottom:0}
+.connectChoice .manualFinePrint{margin:14px 0 8px;font-size:12px}
+.connectChoice .docsCodeLine{margin:0}
+
+.publicPage .connectSetupPage .compactReferenceTable{margin-top:16px;border:1px solid var(--site-line,var(--line))!important;border-radius:12px;overflow:hidden}
+.publicPage .connectSetupPage .compactReferenceTable>div{grid-template-columns:minmax(150px,200px) minmax(0,1fr);gap:20px;padding:16px 20px;align-items:baseline}
+.publicPage .connectSetupPage .compactReferenceTable>div:last-child{border-bottom:0!important}
+.publicPage .connectSetupPage .compactReferenceTable strong{display:flex;flex-direction:column;gap:3px;font-size:14px;font-weight:600}
+.publicPage .connectSetupPage .compactReferenceTable strong small{font-size:11px;font-weight:500;color:var(--site-muted,var(--muted))}
+.publicPage .connectSetupPage .compactReferenceTable code{font-size:13px;color:var(--setup-accent,var(--sky-light))}
+.publicPage .connectSetupPage .compactReferenceTable span{font-size:14px;line-height:1.7}
+.publicPage .connectSetupPage .compactReferenceTable span a{white-space:nowrap;color:var(--setup-accent,var(--sky-light))}
+
+.connectTryList{margin:4px 0 14px;padding:0;list-style:none;display:grid;gap:8px}
+.connectTryList li{padding:12px 16px;border:1px solid var(--site-line,var(--line));border-radius:10px;background:var(--site-subtle,var(--panel-2));color:var(--site-ink,var(--text));font-size:14px;line-height:1.6}
+
+@media(max-width:720px){
+  .connectChoice{grid-template-columns:1fr}
+  .publicPage .connectSetupPage .compactReferenceTable>div{grid-template-columns:1fr;gap:6px;padding:14px 16px}
+  .publicPage .connectSetupPage .manualArticle h2{align-items:flex-start}
+}

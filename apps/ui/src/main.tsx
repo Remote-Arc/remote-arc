@@ -59,6 +59,7 @@ import "./product-typography.css";
 import "./arc-product-polish.css";
 import "./brand-wordmark.css";
 import "./experience-refresh.css";
+import "./connect-guide.css";
 import "./pairing.css";
 import "./security-center.css";
 
@@ -2580,94 +2581,106 @@ function ConnectPage({ user }: { user?: User | null }) {
   const scopes = [
     ["apps:read", tr("Discover connected apps and read data within each account's granted access.", "发现已连接的应用，并在各账号授权范围内读取数据。")],
     ["apps:write", tr("Use supported app actions within the connected account's permissions.", "在连接账号的授权范围内执行受支持的应用操作。")],
-    ["devices:read", tr("List paired computers and their online state.", "列出已配对电脑及在线状态。")],
-    ["computer:read", tr("Read files, directories and process metadata when the selected device allows it.", "在目标设备允许时读取文件、目录和进程元数据。")],
-    ["computer:write", tr("Request edit and terminal tools; the selected device policy still decides whether they are available.", "请求编辑和终端工具；最终是否可用仍由目标设备策略决定。")],
-    ["browser:read", tr("Read content from browser tabs explicitly shared by the user.", "读取用户明确共享的浏览器标签页内容。")],
-    ["browser:interact", tr("Click or fill non-sensitive controls only on shared tabs where the user separately enabled interaction.", "仅在用户对已共享标签页单独开启交互后，点击或填写非敏感控件。")],
-    ["automation:read", tr("View persistent tasks, watches and run state.", "查看持久任务、监听与运行状态。")],
-    ["automation:write", tr("Create and manage persistent work that can continue after the creating chat ends.", "创建和管理可在原聊天结束后继续运行的持久任务。")],
-    ["agent:write", tr("Allow durable Agent Goals to inspect results and adapt their next approved action over time.", "允许 Durable Agent Goal 根据执行结果持续调整后续已授权动作。")],
+    ["devices:read", tr("List paired computers and whether they are online.", "列出已配对的电脑及是否在线。")],
+    ["computer:read", tr("Read files, folders and process information, when the computer allows it.", "在电脑允许时读取文件、文件夹和进程信息。")],
+    ["computer:write", tr("Ask for editing and terminal tools; the computer's own permissions decide whether they are available.", "请求编辑和终端工具；能否使用由电脑自己的权限设置决定。")],
+    ["browser:read", tr("Read browser pages: tabs you share, and the pages and status of browser tasks the AI runs (in a Remote Arc window or your own Chrome).", "读取浏览器页面：你共享的标签页，以及 AI 运行的浏览器任务（Remote Arc 窗口或你自己的 Chrome）的页面和状态。")],
+    ["browser:interact", tr("Act in a browser: start browser tasks that click, fill and submit only on the sites each task names (the computer must have browser_runner on), or click and fill on a shared tab where you turned on Click & fill.", "在浏览器里操作：开始浏览器任务，只在任务指定的网站上点击、填写和提交（需要这台电脑开启 browser_runner）；或在你为某个共享标签页开启「点击与填写」后操作它。")],
+    ["automation:read", tr("View persistent tasks, watches and their runs.", "查看持久任务、监听及其运行情况。")],
+    ["automation:write", tr("Create and manage work that keeps running after the chat that created it ends.", "创建和管理在原聊天结束后仍会继续运行的任务。")],
+    ["agent:write", tr("Let durable Agent Goals check results and choose their next permitted action.", "允许 Durable Agent Goal 检查结果并选择下一步已授权的动作。")],
   ];
+  const step = (n: number, title: string) => <h2><span className="connectStepNo" aria-hidden="true">{n}</span>{title}</h2>;
 
   return (
     <PublicLayout user={user}>
-      <main className="referenceManual">
+      <main className="referenceManual connectSetupPage">
         <header className="toolPageHeader">
           <span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span>
-          <h1>{tr("Connect an AI client", "连接 AI 客户端")}</h1>
+          <h1>{tr("Connect Remote Arc to your AI", "把 Remote Arc 接入你的 AI")}</h1>
           <p>{tr(
-            "Connect the apps you need, then authorize your compatible AI client. Install the local Agent only for work on your computer. App authorization, device pairing and AI access are independent.",
-            "连接需要的应用，再授权兼容的 AI 客户端。只有需要操作自己电脑时才安装本机 Agent。应用授权、设备配对和 AI 访问彼此独立。",
+            "Add Remote Arc to the AI you already use, connect your computer or your apps, then decide what that computer allows. It takes about five minutes, and every part can be changed or revoked later on its own.",
+            "在你常用的 AI 里添加 Remote Arc，接上你的电脑或应用，再决定这台电脑允许 AI 做什么。大约 5 分钟，之后每一部分都可以单独修改或撤销。",
           )}</p>
         </header>
 
         <section className="connectClientCards" aria-label={tr("Choose your AI client","选择你的 AI 客户端")}>{[{id:'chatgpt',name:'ChatGPT',logo:'/ai-openai.svg',detail:tr('Connect through a supported MCP app','通过受支持的 MCP 应用连接')},{id:'claude',name:'Claude',logo:'/ai-claude.svg',detail:tr('Add a custom remote connector','添加自定义远程连接器')},{id:'cursor',name:'Cursor',logo:'/ai-cursor.svg',detail:tr('Use your coding workspace','连接你的开发工作空间')}].map(client=><a href={localizedWebsiteHref('/install/'+client.id,locale)} key={client.id}><img src={client.logo} alt=""/><strong>{client.name}</strong><small>{client.detail}</small><ProductIcon name="arrowUpRight" size={15}/></a>)}</section>
         <div className="manualLayout">
           <aside className="manualToc">
-            <strong>{tr("CONNECTION", "连接")}</strong>
-            <a href="#connect-apps">{tr("Apps without an Agent", "无需 Agent 的应用连接")}</a>
-            <a href="#connect-computer">{tr("Pair computer", "配对电脑")}</a>
-            <a href="#connect-policy">{tr("Device policy", "设备策略")}</a>
-            <a href="#connect-client">{tr("AI client", "AI 客户端")}</a>
-            <a href="#connect-scopes">{tr("OAuth scopes", "OAuth Scope")}</a>
+            <strong>{tr("SETUP", "设置步骤")}</strong>
+            <a href="#connect-client">{tr("1. Add to your AI", "1. 添加到你的 AI")}</a>
+            <a href="#connect-computer">{tr("2. Computer or apps", "2. 接上电脑或应用")}</a>
+            <a href="#connect-policy">{tr("3. What the computer allows", "3. 电脑允许做什么")}</a>
+            <a href="#connect-try">{tr("4. Try a request", "4. 试一个请求")}</a>
+            <a href="#connect-scopes">{tr("Reference: OAuth scopes", "参考：OAuth Scope")}</a>
           </aside>
 
           <article className="manualArticle">
-            <section id="connect-apps">
-              <h2>{tr("Connect your apps", "连接你的应用")}</h2>
-              <p>{tr("Open Apps in your Connect workspace, choose an available app and authorize your account. Cloud app workflows do not require a paired computer or a local Agent.", "在 Connect 工作空间打开应用，选择已开放的应用并授权自己的账号。云应用工作无需配对电脑或安装本机 Agent。")}</p>
-              <p><a href="https://agent.remotearc.app/dashboard/connect/apps">{tr("Open Apps", "打开应用")} →</a></p>
-              <p>{tr("Then add Remote Arc inside your AI client using the connection guide below. Try a small read request with the account you just connected.", "然后按下方连接指南，在 AI 客户端中添加 Remote Arc。先用刚连接的账号尝试一个简单的读取请求。")}</p>
-            </section>
-            <section id="connect-computer">
-              <h2>{tr("Optional: pair your computer", "可选：配对自己的电脑")}</h2>
-              <p>{tr(
-                "Run the CLI on the computer you want the AI to reach. It creates a short-lived pairing request, opens the browser, and stores a revocable device credential locally after approval.",
-                "在希望 AI 访问的电脑上运行 CLI。它会创建短期配对请求、自动打开浏览器，并在确认后把可撤销的设备凭证保存在本机。",
-              )}</p>
-              <div className="docsCodeLine"><code>npx remotelink</code><CopyButton value="npx remotelink" /></div>
-              <p className="manualFinePrint">{tr("No repository clone, VPN, public IP or inbound port is required.", "无需 clone 仓库、VPN、公网 IP 或入站端口。")}</p>
-            </section>
-
-            <section id="connect-policy">
-              <h2>{tr("Choose the device policy", "选择设备策略")}</h2>
-              <p>{tr(
-                "Safe, Developer and Full are shortcuts over an editable per-device skill list. Reading files does not imply editing; listing processes does not imply shell execution.",
-                "Safe、Developer、Full 只是逐设备 Skill 列表的快捷预设。能读文件不代表能编辑，能列进程也不代表能执行 Shell。",
-              )}</p>
-              <div className="compactReferenceTable">
-                <div><strong>Safe</strong><span>{tr("Read files, directories, metadata and processes", "读取文件、目录、元数据和进程")}</span></div>
-                <div><strong>Developer</strong><span>{tr("Add editing and Local Undo", "增加编辑与 Local Undo")}</span></div>
-                <div><strong>Full</strong><span>{tr("Add terminal and managed processes", "增加终端与受管后台进程")}</span></div>
-              </div>
-            </section>
-
             <section id="connect-client">
-              <h2>{tr("Add Remote Arc to your AI client", "在 AI 客户端中添加 Remote Arc")}</h2>
-              <p>{tr("All compatible clients use the same OAuth-protected Remote MCP endpoint.", "所有兼容客户端都使用同一个受 OAuth 保护的 Remote MCP Endpoint。")}</p>
+              {step(1, tr("Add Remote Arc to your AI client", "在 AI 客户端里添加 Remote Arc"))}
+              <p>{tr("Every compatible client uses the same Remote MCP address. Add it where your client lists connectors or MCP servers; the client then opens Remote Arc's sign-in page, where you sign in and approve access. The guide for each client shows exactly where to click.", "所有兼容的客户端都使用同一个 Remote MCP 地址。在客户端管理连接器或 MCP 服务器的地方添加它，客户端会打开 Remote Arc 的登录页，登录并批准授权即可。每个客户端具体点哪里，见对应的配置说明。")}</p>
               <div className="docsCodeLine"><code>{MCP_ENDPOINT}</code><CopyButton value={MCP_ENDPOINT} /></div>
               <div className="clientGuideRows compactClientRows">
                 {aiClients.map((client) => (
-                  <a href={"/install/" + client.slug} key={client.name}>
+                  <a href={localizedWebsiteHref("/install/" + client.slug, locale)} key={client.name}>
                     <img className={client.tone === "mono" ? "monoLogo" : "colorLogo"} src={client.icon} alt="" />
-                    <div><strong>{client.name}</strong><span>{tr("Setup instructions", "配置说明")}</span></div>
+                    <div><strong>{client.name}</strong><span>{tr("Step-by-step setup", "分步配置说明")}</span></div>
                     <b>→</b>
                   </a>
                 ))}
-                <a href="/docs/mcp">
+                <a href={localizedWebsiteHref("/docs/mcp", locale)}>
                   <span className="miniMcp">M</span>
-                  <div><strong>{tr("Other Remote MCP clients", "其他 Remote MCP 客户端")}</strong><span>{tr("Use the endpoint directly", "直接使用 Endpoint")}</span></div>
+                  <div><strong>{tr("Other Remote MCP clients", "其他 Remote MCP 客户端")}</strong><span>{tr("Use the address above with OAuth", "用上面的地址并通过 OAuth 授权")}</span></div>
                   <b>→</b>
                 </a>
               </div>
             </section>
 
+            <section id="connect-computer">
+              {step(2, tr("Connect your computer, your apps, or both (each is optional)", "接上你的电脑、应用，或两者都接（都是可选的）"))}
+              <div className="connectChoice">
+                <div>
+                  <h3>{tr("Your computer", "你的电脑")}</h3>
+                  <p>{tr("Install the Remote Arc app on the computer you want the AI to use. It opens your browser to confirm pairing, then the computer appears in your dashboard and in your AI. No VPN, public IP or open port is needed.", "在希望 AI 使用的电脑上安装 Remote Arc 应用。它会打开浏览器让你确认配对，之后这台电脑就会出现在控制台和你的 AI 里。不需要 VPN、公网 IP 或开放端口。")}</p>
+                  <p><a href={localizedWebsiteHref("/downloads", locale)}>{tr("Download for Windows, macOS or Linux", "下载 Windows、macOS 或 Linux 版")} →</a></p>
+                  <p className="manualFinePrint">{tr("With Node.js installed you can run this instead:", "已安装 Node.js 时也可以直接运行：")}</p>
+                  <div className="docsCodeLine"><code>npx remotelink</code><CopyButton value="npx remotelink" /></div>
+                </div>
+                <div id="connect-apps">
+                  <h3>{tr("Your apps", "你的应用")}</h3>
+                  <p>{tr("Open Apps in your Connect workspace and authorize the accounts you want the AI to use. Apps run in the cloud and do not require a paired computer.", "在 Connect 工作空间打开「应用」，授权你希望 AI 使用的账号。应用在云端运行，无需配对电脑。")}</p>
+                  <p><a href="https://agent.remotearc.app/dashboard/connect/apps">{tr("Open Apps", "打开应用")} →</a></p>
+                </div>
+              </div>
+            </section>
+
+            <section id="connect-policy">
+              {step(3, tr("Decide what the computer allows", "决定这台电脑允许 AI 做什么"))}
+              <p>{tr("A newly paired computer starts in Safe, which is read-only. Choose a preset on the computer's page in the dashboard, or switch individual skills on and off. Your AI client's authorization never goes beyond these settings.", "新配对的电脑默认是 Safe（只读）。在控制台的电脑页面选择预设，或逐项开关技能。AI 客户端的授权不会超出这里的设置。")}</p>
+              <div className="compactReferenceTable connectPolicyTable">
+                <div><strong>Safe<small>{tr("Default", "默认")}</small></strong><span>{tr("Read only: list folders, read files and file details, and see running processes.", "只读：列出文件夹、读取文件和文件信息、查看正在运行的进程。")}</span></div>
+                <div><strong>Developer</strong><span>{tr("Adds creating and editing files, which Local Undo can reverse. Needs a Trusted Write Location first, so edits stay inside folders you choose.", "增加新建和编辑文件，可用 Local Undo 撤销。需要先设置「可信写入区域」，编辑只发生在你选定的文件夹里。")}</span></div>
+                <div><strong>Full</strong><span>{tr("Adds terminal commands and background processes. Commands can change things Local Undo cannot reverse, so you confirm before turning it on.", "增加终端命令和后台进程。命令可能做出 Local Undo 无法撤销的改动，所以开启前需要你再次确认。")}</span></div>
+                <div><strong>browser_runner<small>{tr("Separate switch, off by default", "单独开关，默认关闭")}</small></strong><span>{tr("Lets the AI use websites for you, only on the sites each task names: in a separate Remote Arc window, or in your own Chrome when you allow it. Changing presets leaves this switch as it is.", "允许 AI 替你操作网站，只能访问每个任务指定的网站：在独立的 Remote Arc 窗口里，或经你允许后在你自己的 Chrome 里。切换预设不会改变这个开关。")} <a href={localizedWebsiteHref("/chrome-extension", locale)}>{tr("Browser options", "浏览器使用方式")} →</a></span></div>
+              </div>
+            </section>
+
+            <section id="connect-try">
+              {step(4, tr("Try a request", "试一个请求"))}
+              <p>{tr("Start a new chat in your AI client and ask for something small. The first time, the client may ask you to allow Remote Arc's tools.", "在 AI 客户端里新开一个对话，先试一个简单的请求。第一次使用时，客户端可能会请你允许调用 Remote Arc 的工具。")}</p>
+              <ul className="connectTryList">
+                <li>{tr("\"List the computers I have connected to Remote Arc.\"", "「列出我在 Remote Arc 里连接的电脑。」")}</li>
+                <li>{tr("\"Show the 10 largest files in my Downloads folder.\"", "「看看我「下载」文件夹里最大的 10 个文件。」")}</li>
+                <li>{tr("\"Using the app I just connected, summarize what's new today.\"", "「用我刚连接的应用，总结一下今天有什么新内容。」")}</li>
+              </ul>
+              <p className="manualFinePrint">{tr("If the AI says it cannot see Remote Arc, refresh or reconnect the connector in your client; if a computer shows as offline, make sure it is on and the Remote Arc app is running.", "如果 AI 说看不到 Remote Arc，请在客户端里刷新或重新连接连接器；如果电脑显示离线，确认它已开机且 Remote Arc 应用正在运行。")}</p>
+            </section>
+
             <section id="connect-scopes">
-              <h2>{tr("OAuth scopes", "OAuth Scope")}</h2>
+              <h2>{tr("Reference: OAuth scopes", "参考：OAuth Scope")}</h2>
               <p>{tr(
-                "OAuth scopes describe what an AI client may request from your account. They do not override the policy stored for the selected computer.",
-                "OAuth Scope 描述 AI 客户端可以向账户请求什么，但不会覆盖目标电脑保存的设备策略。",
+                "Scopes are what an AI client may ask your account for when you approve it. They never override what the selected computer allows.",
+                "Scope 是你批准授权时，AI 客户端可以向你的账号请求的范围。它们不会越过所选电脑自己允许的范围。",
               )}</p>
               <div className="compactReferenceTable scopeReference">
                 {scopes.map(([scope, body]) => <div key={scope}><code>{scope}</code><span>{body}</span></div>)}
@@ -4579,8 +4592,8 @@ function Dashboard({
       const confirmed = await askConfirm(
         tr("Let AI act on websites from " + device.name + "?", "允许 AI 在 " + device.name + " 上操作网站？"),
         tr(
-          "Connected AI clients will be able to click, fill, upload files from Trusted Locations and submit forms in a separate background browser, only on the sites each task names. Passwords, verification codes and payment details are never entered, and a submit is never sent twice.",
-          "已连接的 AI 将可以在独立的后台浏览器里点击、填写、从可信目录上传文件并提交表单，且只能访问每个任务指定的网站。密码、验证码和支付信息一律不会填写，提交也不会重复发送。",
+          "Connected AI clients will be able to click, fill, upload files from Trusted Locations and submit forms, only on the sites each task names: in a separate Remote Arc browser window, or in your own Chrome if you allow it there. The AI never types passwords or card numbers; sign-ins saved on this computer are filled by Remote Arc itself, and a submit is never sent twice.",
+          "已连接的 AI 将可以点击、填写、从可信目录上传文件并提交表单，且只能访问每个任务指定的网站：在独立的 Remote Arc 浏览器窗口里，或经你在 Chrome 里允许后在你自己的 Chrome 里。AI 从不输入密码和卡号；保存在这台电脑上的登录信息由 Remote Arc 自己填写，提交也不会重复发送。",
         ),
         tr("Enable browser_runner", "开启 browser_runner"),
         "danger",
@@ -5450,7 +5463,7 @@ function Dashboard({
                               <HelpTip
                                 label={tr("About browser_runner", "了解 browser_runner")}
                                 text={runnerAdvertised
-                                  ? tr("Lets your AI open, read and act on websites in a separate background browser on this computer (installed Chrome, Edge or Chromium), only on the sites each task names. It never uses your everyday browser or its sign-ins. Passwords, verification codes and payment details are always left to you; a submit is never sent twice.", "允许你的 AI 在这台电脑的独立后台浏览器（已安装的 Chrome、Edge 或 Chromium）里打开、读取和操作网站，只能访问每个任务指定的网站，不使用你日常的浏览器和登录状态。密码、验证码和支付信息一律由你自己填写；提交不会重复发送。")
+                                  ? tr("Lets your AI open, read and act on websites, only on the sites each task names. By default it uses a separate Remote Arc window (installed Chrome, Edge or Chromium) with its own sign-ins; it uses your own Chrome only when you turn that on in Chrome and click Allow. The AI never types passwords or card numbers, one-time codes can be filled from your connected email, and a submit is never sent twice.", "允许你的 AI 打开、读取和操作网站，只能访问每个任务指定的网站。默认使用独立的 Remote Arc 窗口（已安装的 Chrome、Edge 或 Chromium），有自己的登录状态；只有你在 Chrome 里打开开关并点允许后，才会使用你自己的 Chrome。AI 从不输入密码和卡号，验证码可以从你连接的邮箱里获取填写，提交不会重复发送。")
                                   : tr("Needs Remote Arc Agent 0.6.2-rc.4 or newer and Chrome, Edge or Chromium installed on this computer.", "需要 Remote Arc Agent 0.6.2-rc.4 或更新版本，并且这台电脑装有 Chrome、Edge 或 Chromium。")}
                               />
                             </span>

@@ -75,9 +75,14 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     sections:[{heading:"先连接，再验证",text:"配对自己的电脑，在 AI 客户端添加远程 MCP 地址并完成授权。先用只读工具验证目标设备与结果，再按需开启写入与终端工具。"}]
   },
   "/connect-ai": {
-    title:"连接 AI 客户端 — Remote Arc",description:"配对电脑、选择设备权限，再通过 OAuth 连接 ChatGPT、Claude、Cursor 或其他兼容 MCP 的 AI 客户端。",
-    h1:"连接 AI 客户端",intro:"电脑配对与 AI 授权彼此独立，按指南完成两端设置即可开始。",
-    sections:[{heading:"选择你的客户端",text:"查看 ChatGPT、Claude 或 Cursor 的安装指南，添加 https://mcp.remotearc.app/mcp 并完成账号授权。"}]
+    title:"把 Remote Arc 接入你的 AI — ChatGPT、Claude、Gemini、Cursor",description:"在 ChatGPT、Claude、Gemini、Cursor 或其他 MCP 客户端里添加 Remote Arc，接上你的电脑或应用，再决定每台电脑允许做什么。大约 5 分钟。",
+    h1:"把 Remote Arc 接入你的 AI",intro:"在你常用的 AI 里添加 Remote Arc，接上你的电脑或应用，再决定这台电脑允许 AI 做什么。大约 5 分钟，之后每一部分都可以单独修改或撤销。",
+    sections:[
+      {heading:"1. 在 AI 客户端里添加 Remote Arc",text:"所有兼容的客户端都使用同一个 Remote MCP 地址 https://mcp.remotearc.app/mcp。在客户端管理连接器或 MCP 服务器的地方添加它，客户端会打开 Remote Arc 的登录页，登录并批准授权即可。ChatGPT、Claude、Gemini 和 Cursor 都有分步说明。"},
+      {heading:"2. 接上你的电脑、应用，或两者都接",text:"在希望 AI 使用的 Windows、macOS 或 Linux 电脑上安装 Remote Arc 应用；已安装 Node.js 时也可以运行 npx remotelink。它会打开浏览器让你确认配对，不需要 VPN、公网 IP 或开放端口。邮箱、日历等应用在 Connect 工作空间的「应用」里授权，在云端运行，不需要配对电脑。"},
+      {heading:"3. 决定这台电脑允许 AI 做什么",text:"新配对的电脑默认是 Safe（只读）。Developer 增加新建和编辑文件，可用 Local Undo 撤销，需要先设置可信写入区域。Full 在确认后增加终端命令和后台进程。browser_runner 是单独开关，默认关闭，允许 AI 只在任务指定的网站上操作：在独立的 Remote Arc 窗口里，或经你允许后在你自己的 Chrome 里。AI 客户端的授权不会超出这些设置。"},
+      {heading:"4. 试一个简单的请求",text:"新开一个对话，让 AI 列出你连接的电脑，或看看「下载」文件夹里最大的文件。如果 AI 看不到 Remote Arc，请在客户端里刷新或重新连接连接器；如果电脑显示离线，确认它已开机且 Remote Arc 应用正在运行。"}
+    ]
   },
   "/": {
     title: "Remote Arc — 连接 AI、应用与电脑",

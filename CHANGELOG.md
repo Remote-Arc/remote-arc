@@ -2,6 +2,12 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.6.4 - Unreleased
+
+### Correct systemd service log paths
+
+- Render literal systemd output paths so Linux and WSL user services can append Agent logs without non-absolute-path warnings. Preserve paths containing spaces, percent signs, quotes and Unicode. WSL lifetime and reconnect acceptance remain separate from this log-path correction.
+
 ## 0.6.3 - 2026-10-23
 
 ### Connected browsers, Slack conversations and responsive setup

@@ -321,7 +321,11 @@ func (m *Manager) list() map[string]any {
 		items = append(items, map[string]any{"session_id": id, "state": s.cp.State, "last_url": s.cp.LastURL, "browser_running": s.live()})
 	}
 	sort.Slice(items, func(i, j int) bool { return fmt.Sprint(items[i]["session_id"]) < fmt.Sprint(items[j]["session_id"]) })
-	return map[string]any{"sessions": items, "note": "Sessions from before an Agent restart are listed after any call that names them."}
+	return map[string]any{
+		"sessions": items,
+		"profiles": profileInfos(),
+		"note":     "sessions lists tasks open in this Agent run; profiles lists the browser profiles on this computer with the tasks and sites used in each. A profile keeps its sign-ins: pass the same profile to browser_runner_start (for example the person's name) to continue signed in, even from a new conversation. Any task listed can be reopened with browser_runner_start and its task_id.",
+	}
 }
 
 func (m *Manager) liveCount(except string, profile string) (int, bool) {
@@ -360,9 +364,11 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	if !idPattern.MatchString(profile) {
 		return nil, errors.New("profile must be 1-100 characters of letters, digits, '-' or '_'.")
 	}
-	headless := true
+	// headless left out keeps how this task, or else this profile, last ran:
+	// a profile the user signed into in a visible window opens visibly.
+	headless, chosen := true, false
 	if v, ok := args["headless"].(bool); ok {
-		headless = v
+		headless, chosen = v, true
 	}
 	startURL := protocol.OptionalString(args, "start_url")
 	if startURL != "" && !sc.Allows(startURL) {
@@ -386,6 +392,9 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 		return nil, fmt.Errorf("At most %d browser_runner sessions can run at once on this device. Close one first.", maxLiveSessions)
 	}
 	if s == nil {
+		if h, known := lastProfileMode(profile); known && !chosen {
+			headless = h
+		}
 		now := m.now()
 		s = &session{m: m, scope: sc, lastUsed: now, cp: &Checkpoint{
 			Version: checkpointVersion, SessionID: id, Profile: profile, AllowedOrigins: sc.Strings(),
@@ -414,7 +423,7 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 			s.ev.Unlock()
 			s.cp.AllowedOrigins = merged.Strings()
 		}
-		if s.cp.Headless != headless {
+		if chosen && s.cp.Headless != headless {
 			s.shutdownBrowser(false)
 			s.cp.Headless = headless
 		}
@@ -442,6 +451,8 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	}
 	out["session_id"] = id
 	out["resumed"] = resumed
+	out["profile"] = s.cp.Profile
+	out["headless"] = s.cp.Headless
 	out["status"] = s.cp.Summary(true)
 	return out, nil
 }

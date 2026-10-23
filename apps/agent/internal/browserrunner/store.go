@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
@@ -125,6 +127,73 @@ func checkpointPath(id string) string {
 	return filepath.Join(runnerDir(), "sessions", id+".json")
 }
 func profilePath(profile string) string { return filepath.Join(runnerDir(), "profiles", profile) }
+
+// ProfileInfo describes a browser profile from the checkpoints of the tasks
+// that used it. A profile keeps its sign-ins and cookies, so a later task
+// that passes the same profile starts signed in. Nothing is read from the
+// profile itself.
+type ProfileInfo struct {
+	Profile  string   `json:"profile"`
+	Tasks    []string `json:"tasks"`
+	Sites    []string `json:"sites"`
+	Headless bool     `json:"headless"` // how its most recent task ran
+	LastUsed string   `json:"last_used"`
+}
+
+// profileInfos lists profiles that still exist on this computer, most
+// recently used first.
+func profileInfos() []ProfileInfo {
+	entries, _ := os.ReadDir(filepath.Join(runnerDir(), "sessions"))
+	byName := map[string]*ProfileInfo{}
+	sites := map[string]map[string]bool{}
+	for _, en := range entries {
+		id, ok := strings.CutSuffix(en.Name(), ".json")
+		if !ok || !idPattern.MatchString(id) {
+			continue
+		}
+		c, e := loadCheckpoint(id)
+		if e != nil || c.Profile == "" {
+			continue
+		}
+		if _, e := os.Stat(profilePath(c.Profile)); e != nil {
+			continue
+		}
+		p := byName[c.Profile]
+		if p == nil {
+			p = &ProfileInfo{Profile: c.Profile}
+			byName[c.Profile] = p
+			sites[c.Profile] = map[string]bool{}
+		}
+		p.Tasks = append(p.Tasks, c.SessionID)
+		for _, o := range c.AllowedOrigins {
+			sites[c.Profile][o] = true
+		}
+		if c.UpdatedAt >= p.LastUsed {
+			p.LastUsed, p.Headless = c.UpdatedAt, c.Headless
+		}
+	}
+	out := make([]ProfileInfo, 0, len(byName))
+	for name, p := range byName {
+		for s := range sites[name] {
+			p.Sites = append(p.Sites, s)
+		}
+		sort.Strings(p.Sites)
+		sort.Strings(p.Tasks)
+		out = append(out, *p)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].LastUsed > out[j].LastUsed })
+	return out
+}
+
+// lastProfileMode is whether the most recent task on a profile ran headless.
+func lastProfileMode(profile string) (headless bool, known bool) {
+	for _, p := range profileInfos() {
+		if p.Profile == profile {
+			return p.Headless, true
+		}
+	}
+	return false, false
+}
 
 func loadCheckpoint(id string) (*Checkpoint, error) {
 	b, e := os.ReadFile(checkpointPath(id))

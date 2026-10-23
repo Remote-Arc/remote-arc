@@ -63,7 +63,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Start or resume a background browser task",
     description:
-      "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. Runs headless by default; pass headless=false when the user must sign in, enter a code or solve a CAPTCHA in the window. Resuming reopens the last page and reports unconfirmed submits." +
+      "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. profile is the browser profile, which keeps sign-ins and cookies between tasks: use one profile per person and reuse it (for example profile=jenny), so a site signed into once stays signed in for later tasks and new conversations; browser_runner_status without session_id lists the profiles on the computer and the sites used in each. A new profile runs headless unless headless=false; pass headless=false when the user must sign in, enter a code or solve a CAPTCHA in the window. Leaving headless out keeps the task's current mode, or for a new task the profile's last mode, so a profile the user signed into in a visible window keeps opening visibly. Resuming reopens the last page and reports unconfirmed submits." +
       what,
     input: z.object({
       device_id: deviceId,
@@ -128,7 +128,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:read",
     title: "Show a browser task's checkpoint",
     description:
-      "Return a task's saved checkpoint: state, last page, recent action receipts, uploads with SHA-256, submits with their status (unverified, unknown, confirmed) and next_action. Use it to continue in a new conversation or a different AI. Omit session_id to list tasks the running Agent knows.",
+      "Return a task's saved checkpoint: state, last page, recent action receipts, uploads with SHA-256, submits with their status (unverified, unknown, confirmed) and next_action. Use it to continue in a new conversation or a different AI. Omit session_id to list the tasks the running Agent has open and the browser profiles on the computer (with their tasks and sites), to pick the profile that is already signed in.",
     input: z.object({ device_id: deviceId, session_id: id.optional() }),
     annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
   },

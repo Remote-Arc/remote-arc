@@ -7,21 +7,21 @@ class Remotelink < Formula
   on_macos do
     on_arm do
       url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-darwin-arm64", using: :nounzip
-      sha256 "877aea726aa382c6fdee7ae111c837b0b5a49af5c386fb6a99e46ff6a7101e61"
+      sha256 "c1becffeffd1feca642abe90fb17a5064997539c98bac881ab81085b3c3e6596"
     end
     on_intel do
       url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-darwin-amd64", using: :nounzip
-      sha256 "c57e2913c2a12beed253f8c61e7a0cb313adb126de9aa4c846bdab472edaf89c"
+      sha256 "bb65004f952abe5af2b31ada6ce00365b0dcc47f728376d139976616697e1e52"
     end
   end
   on_linux do
     on_arm do
       url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-linux-arm64", using: :nounzip
-      sha256 "b7d0b839b8face61fb1180d3d95071daf46085d635a18f972fbe2292d4ad169d"
+      sha256 "7cbeb659ce46fa3c12797a2fe36c9fb5648c09270c2c5423df52b49099399f17"
     end
     on_intel do
       url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-linux-amd64", using: :nounzip
-      sha256 "cda7da3bea1bc77ec5c5431c62e8054539d6919f0a98d6b08110e9f191d58988"
+      sha256 "8eb12e4503423be8eb69725afb85c83b375e371ccf7ae485cb3ae4efa7038adc"
     end
   end
 

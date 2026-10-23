@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"runtime"
 	"time"
 )
@@ -43,68 +42,94 @@ func (s *session) setBounds(ctx context.Context, id int, b map[string]any) error
 	return s.conn.Call(ctx, "Browser.setWindowBounds", map[string]any{"windowId": id, "bounds": b}, nil)
 }
 
-// Native window transitions can finish after the CDP command acknowledges them.
-func (s *session) setWindowState(ctx context.Context, id int, state string) error {
-	if e := s.setBounds(ctx, id, map[string]any{"windowState": state}); e != nil {
-		return e
-	}
-	wait, cancel := context.WithTimeout(ctx, 3*time.Second)
+// windowStep bounds each window call: a native transition (minimize on
+// macOS) can hold the browser's answer for a while, and showing or hiding
+// the window must never hold up or fail the task itself.
+const windowStep = 500 * time.Millisecond
+
+func (s *session) quickBounds(ctx context.Context, id int, b map[string]any) error {
+	c, cancel := context.WithTimeout(ctx, windowStep)
 	defer cancel()
-	tick := time.NewTicker(50 * time.Millisecond)
-	defer tick.Stop()
+	return s.setBounds(c, id, b)
+}
+
+func (s *session) quickWindow(ctx context.Context) (windowBounds, bool) {
+	c, cancel := context.WithTimeout(ctx, windowStep)
+	defer cancel()
+	_, b, e := s.window(c)
+	return b, e == nil
+}
+
+// awaitState waits up to limit for a native window transition to finish.
+func (s *session) awaitState(ctx context.Context, state string, limit time.Duration) bool {
+	until := time.Now().Add(limit)
 	for {
-		_, b, e := s.window(wait)
-		if e != nil {
-			return e
+		if b, ok := s.quickWindow(ctx); ok && b.WindowState == state {
+			return true
 		}
-		if b.WindowState == state {
-			return nil
+		if time.Now().After(until) || ctx.Err() != nil {
+			return false
 		}
-		select {
-		case <-wait.Done():
-			return fmt.Errorf("task window did not become %s: %w", state, wait.Err())
-		case <-tick.C:
-		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
 // setVisible brings the task window on screen and to the front, or moves it
-// back out of sight. Nothing is reloaded.
+// back out of sight. Nothing is reloaded. Hiding is best effort: a window
+// the system will not move or minimize stays where it is, and the task goes
+// on.
 func (s *session) setVisible(ctx context.Context, visible bool) error {
 	if !s.hasWindow() {
 		return errNoWindow
 	}
-	id, b, e := s.window(ctx)
+	c, cancel := context.WithTimeout(ctx, windowStep)
+	id, b, e := s.window(c)
+	cancel()
 	if e != nil {
-		return e
+		if visible {
+			return e
+		}
+		return nil
 	}
-	if !visible && b.WindowState == "minimized" {
+	if !visible {
+		if b.WindowState == "minimized" {
+			return nil
+		}
+		if b.WindowState != "normal" {
+			_ = s.quickBounds(ctx, id, map[string]any{"windowState": "normal"})
+			s.awaitState(ctx, "normal", 2*time.Second)
+		}
+		// macOS keeps part of every window on screen and reports the
+		// clamped position only later, so the window is minimized there.
+		if runtime.GOOS == "darwin" {
+			// A window that has just opened can ignore the first request.
+			for i := 0; i < 3; i++ {
+				_ = s.quickBounds(ctx, id, map[string]any{"windowState": "minimized"})
+				if s.awaitState(ctx, "minimized", time.Second) {
+					break
+				}
+			}
+			return nil
+		}
+		// Off screen keeps the page rendering normally. Some Linux window
+		// managers keep part of a window on screen, sometimes only after
+		// acknowledging the move; there the window is minimized.
+		_ = s.quickBounds(ctx, id, map[string]any{"left": offscreen, "top": 0, "width": 1280, "height": 900})
+		until := time.Now().Add(600 * time.Millisecond)
+		for time.Now().Before(until) {
+			if now, ok := s.quickWindow(ctx); ok && now.Left > offscreen/2 {
+				_ = s.quickBounds(ctx, id, map[string]any{"windowState": "minimized"})
+				return nil
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
 		return nil
 	}
 	if b.WindowState != "normal" {
-		if e := s.setWindowState(ctx, id, "normal"); e != nil {
+		if e := s.quickBounds(ctx, id, map[string]any{"windowState": "normal"}); e != nil {
 			return e
 		}
-	}
-	if !visible {
-		// macOS may clamp the requested position after acknowledging it.
-		// Minimize directly and wait for the native transition to complete.
-		if runtime.GOOS == "darwin" {
-			return s.setWindowState(ctx, id, "minimized")
-		}
-		// Prefer an off-screen window so rendering continues normally.
-		if e := s.setBounds(ctx, id, map[string]any{"left": offscreen, "top": 0, "width": 1280, "height": 900}); e != nil {
-			return e
-		}
-		// Fall back to minimizing if the window manager clamps this position.
-		_, now, e := s.window(ctx)
-		if e != nil {
-			return e
-		}
-		if now.Left > offscreen/2 {
-			return s.setWindowState(ctx, id, "minimized")
-		}
-		return nil
+		s.awaitState(ctx, "normal", 3*time.Second)
 	}
 	left, top, width, height := 40, 40, 1280, 900
 	if raw, e := s.evaluateMain(ctx, `JSON.stringify([screen.availLeft||0, screen.availTop||0, screen.availWidth||0, screen.availHeight||0])`); e == nil {
@@ -115,11 +140,22 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 			left, top = area[0]+(area[2]-width)/2, area[1]+(area[3]-height)/2
 		}
 	}
-	if e := s.setBounds(ctx, id, map[string]any{"left": left, "top": top, "width": width, "height": height}); e != nil {
+	if e := s.quickBounds(ctx, id, map[string]any{"left": left, "top": top, "width": width, "height": height}); e != nil {
 		return e
 	}
 	// The user asked for it: here taking focus is the point.
 	return s.conn.Call(ctx, "Page.bringToFront", nil, nil)
+}
+
+// keepHidden puts a hidden task window back out of sight if it is on
+// screen (the system restored it, or hiding did not take at launch).
+func (s *session) keepHidden(ctx context.Context) {
+	if !s.cp.Headless || !s.hasWindow() || !s.live() {
+		return
+	}
+	if b, ok := s.quickWindow(ctx); ok && b.WindowState == "normal" && b.Left > offscreen/2 {
+		_ = s.setVisible(ctx, false)
+	}
 }
 
 // hideAfterUser puts the window back out of sight when it was shown for the

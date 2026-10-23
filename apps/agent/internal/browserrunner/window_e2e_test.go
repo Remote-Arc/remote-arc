@@ -34,7 +34,7 @@ func TestE2EHiddenWindowShowsAndHidesInPlace(t *testing.T) {
 		return b
 	}
 	offScreen := func(b windowBounds) bool {
-		return b.WindowState == "minimized" || b.Left <= offscreen/2 || b.Top <= offscreen/2
+		return b.WindowState != "minimized" && b.Left <= offscreen/2
 	}
 	typed := func() string {
 		t.Helper()

@@ -12,6 +12,8 @@ remote_arc_install() (
   for tool in curl uname mktemp mkdir awk cat chmod mv rm rmdir; do
     command -v "$tool" >/dev/null 2>&1 || fail "Required tool missing: $tool"
   done
+  version=${REMOTEARC_INSTALL_VERSION:-$version}
+  printf '%s\n' "$version" | awk -F. 'NF == 3 && $1 ~ /^(0|[1-9][0-9]*)$/ && $2 ~ /^(0|[1-9][0-9]*)$/ && $3 ~ /^(0|[1-9][0-9]*)$/ { valid=1 } END { exit !valid }' || fail "REMOTEARC_INSTALL_VERSION must be a stable x.y.z version."
   case "$(uname -s)" in
     Darwin) platform=darwin ;;
     Linux) platform=linux ;;

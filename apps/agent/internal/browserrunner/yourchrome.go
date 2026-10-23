@@ -73,7 +73,7 @@ type yourChrome struct {
 	dialErr    error
 	dialCancel context.CancelFunc
 	stopped    bool
-	opening    int                  // keeps the idle timer from closing a tab being attached
+	operations int                  // keeps the idle timer from interrupting tab attachment or closure
 	routes     map[string]yourRoute // CDP session id (a task's tab or one of its frames) -> task
 	pages      map[*yourPage]bool
 	idle       *time.Timer
@@ -363,14 +363,14 @@ func (u *yourChrome) lingerLocked() {
 		u.idle.Stop()
 		u.idle = nil
 	}
-	if len(u.pages) > 0 || u.opening > 0 || u.conn == nil {
+	if len(u.pages) > 0 || u.operations > 0 || u.conn == nil {
 		return
 	}
 	conn := u.conn
 	u.idle = time.AfterFunc(yourChromeLinger, func() {
 		u.mu.Lock()
 		defer u.mu.Unlock()
-		if len(u.pages) == 0 && u.opening == 0 && u.conn == conn {
+		if len(u.pages) == 0 && u.operations == 0 && u.conn == conn {
 			conn.Close()
 			u.conn = nil
 		}
@@ -404,6 +404,8 @@ func (u *yourChrome) connected() bool {
 // Closing a paused task may use the lingering connection, but never opens
 // an Allow prompt just to close a window. A disconnected window stays open.
 func (u *yourChrome) closeTabIfConnected(ctx context.Context, target string) (bool, error) {
+	release := u.holdConnection()
+	defer release()
 	u.mu.Lock()
 	conn := u.conn
 	u.mu.Unlock()
@@ -461,21 +463,28 @@ func closeChromeTab(ctx context.Context, conn *cdpConn, target string) error {
 	}
 }
 
+// holdConnection keeps the idle timer from disconnecting while Chrome is
+// confirming an operation. A close can detach the page before its reply arrives.
+func (u *yourChrome) holdConnection() func() {
+	u.mu.Lock()
+	u.operations++
+	u.lingerLocked()
+	u.mu.Unlock()
+	return func() {
+		u.mu.Lock()
+		u.operations--
+		u.lingerLocked()
+		u.mu.Unlock()
+	}
+}
+
 // openTab gives a task its tab: the one it had, if the user has not closed
 // it, or a new window that does not take the user's focus. A window of its
 // own keeps the task out of the user's tabs, and unlike a background tab it
 // is not throttled while the user works elsewhere.
 func (u *yourChrome) openTab(ctx context.Context, s *session, target string) (*yourPage, error) {
-	u.mu.Lock()
-	u.opening++
-	u.lingerLocked()
-	u.mu.Unlock()
-	defer func() {
-		u.mu.Lock()
-		u.opening--
-		u.lingerLocked()
-		u.mu.Unlock()
-	}()
+	release := u.holdConnection()
+	defer release()
 	conn, e := u.connect(ctx)
 	if e != nil {
 		return nil, e
@@ -572,6 +581,8 @@ func (p *yourPage) Close() {
 
 // closeTab closes the task's own tab (the task is finished).
 func (p *yourPage) closeTab(ctx context.Context) error {
+	release := p.u.holdConnection()
+	defer release()
 	if p.Alive() {
 		if e := closeChromeTab(ctx, p.base, p.target); e != nil {
 			return e

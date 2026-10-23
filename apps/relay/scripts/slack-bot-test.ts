@@ -58,9 +58,11 @@ const reply=(text:string)=>({decision:'reply',tool:'none',arguments_json:'{}',me
 async function linkUser(user:string,arcUser:string,text='Hello'){
  const id=await enqueue(event(user,text));await runSlackJobs(env,{fetcher});
  const message=calls.filter(call=>call.method==='chat.postMessage').at(-1)!.body;
- assert.equal(message.channel,'D'+user.slice(1));const code=message.text.match(/code=([\w-]+)/)?.[1];assert(code);
+  assert.equal(message.channel,'D'+user.slice(1));const code=message.text.match(/code=([\w-]+)/)?.[1];assert(code);
+  assert.match(message.text,/<https:\/\/[^\s<>|]+\/slack\/link\?code=[a-f0-9]{64}\|Connect your Remote Arc account>/,'Account linking remains clickable with parse:none');
  assert.equal(row(id).status,'awaiting_link');assert.equal(row(id).run_id,null);
- const page=await botAccount('/slack/link?code='+code,'GET',arcUser);assert((await page.text()).includes(arcUser+'@example.invalid'));
+  const page=await botAccount('/slack/link?code='+code,'GET',arcUser);assert((await page.text()).includes(arcUser+'@example.invalid'));
+  assert.equal(page.headers.get('referrer-policy'),'same-origin');
  const forged=await handleSlackBotAccount(account('/slack/link?code='+code,'POST',arcUser,{},'https://evil.example'),env,fetcher);assert.equal(forged.status,403);
  assert.equal((await botAccount('/slack/link?code='+code,'POST',arcUser,{})).status,200);
  return id;

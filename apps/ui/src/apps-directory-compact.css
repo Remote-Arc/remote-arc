@@ -1,0 +1,17 @@
+/* Keep category cards on the same compact rhythm, independent of logo count. */
+.appsDirectory .appsDirectoryCard{padding:24px;overflow:visible}
+.appsDirectory .appsDirectoryCard>p{margin:12px 0 16px;min-height:40px}
+.appsDirectory .appsDirectoryExamples{margin-bottom:18px;gap:8px}
+.appsDirectory .appsDirectoryExamples li{padding:10px 12px;min-height:44px;display:flex;align-items:center;font-size:11px;line-height:1.6}
+.appsDirectory .appsDirectoryBrands{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:34px;gap:8px;align-content:start;margin:0;min-height:76px}
+.appsDirectory .appsDirectoryBrands>a{position:relative;display:grid;place-items:center;min-width:0;width:100%;padding:0;gap:0;text-decoration:none}
+.appsDirectory .appsDirectoryBrands>a>span[data-brand]{width:34px;height:34px;border-radius:8px}
+.appsDirectory .appsDirectoryBrands .appsDirectoryBrandName{position:absolute;z-index:5;bottom:calc(100% + 8px);left:50%;width:max-content;max-width:190px;height:auto;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--text);color:var(--bg);font-size:10px;line-height:1.4;white-space:nowrap;pointer-events:none;opacity:0;visibility:hidden;transform:translateX(-50%);box-shadow:0 6px 18px #00000014}
+.appsDirectory .appsDirectoryBrands>a:is(:hover,:focus-visible) .appsDirectoryBrandName{opacity:1;visibility:visible}
+.appsDirectory .appsDirectoryBrands:has(>a:only-child){display:flex;align-items:center}
+.appsDirectory .appsDirectoryBrands>a:only-child{display:flex;justify-content:flex-start;gap:12px;min-height:54px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.appsDirectory .appsDirectoryBrands>a:only-child .appsDirectoryBrandName{position:static;visibility:visible;opacity:1;transform:none;max-width:none;width:auto;background:transparent;color:var(--text);border:0;box-shadow:none;padding:0;font-size:12px}
+.appsDirectory .appsDirectoryExplore{margin-top:18px;padding-top:14px}
+@media(max-width:1100px){.appsDirectory .appsDirectoryBrands{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:620px){.appsDirectory .appsDirectoryCard{padding:22px}.appsDirectory .appsDirectoryBrands{grid-template-columns:repeat(7,minmax(0,1fr));min-height:34px}.appsDirectory .appsDirectoryCard>p{min-height:0}.appsDirectory .appsDirectoryExamples li{min-height:42px}.appsDirectory .appsDirectoryExplore{margin-top:16px}.appsDirectory .appsDirectoryBrands .appsDirectoryBrandName{font-size:9px;max-width:145px}}
+@media(max-width:380px){.appsDirectory .appsDirectoryBrands{grid-template-columns:repeat(6,minmax(0,1fr))}}

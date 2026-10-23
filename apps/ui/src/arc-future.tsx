@@ -5,6 +5,7 @@ import { ArcCapabilities } from "./arc-capabilities.js";
 import { ArcExecutionScene } from "./arc-workspace-scene.js";
 import { ArcWhy } from "./arc-why.js";
 import "./arc-why.css";
+import { SlackAgentPreview } from "./arc-connected-previews.js";
 import {ProductIcon as Icon} from './product-icon.js';
 
 // Marketing demonstrations use example data; CTAs open the real workspace.
@@ -23,11 +24,11 @@ export function ArcTeaser() {
   return <section className="arcProductTeaser" aria-labelledby="arcV3TeaserHeading">
     <div className="arcProductTeaserCopy"><span className="marketingLabel">{tr('THE NEXT CHAPTER / ARC','下一篇章 / ARC')}<i>{tr('Available now','现已上线')}</i></span>
     <h2 id="arcV3TeaserHeading">{tr('Your next personal agent.','你的下一位个人 AI 队友。')}</h2>
-    <p>{tr('The same apps. The same computers. A new place to hand off the work — just tell Arc what you need.','沿用同一套应用与电脑连接，在新的工作空间里，把工作交出去。告诉 Arc 你想完成什么就好。')}</p>
+    <p>{tr('A familiar conversation. A whole fleet behind it. Chat with Remote Arc to check your devices, find a workspace and get work moving.','熟悉的聊天方式，背后是你的整个设备集群。和 Remote Arc 对话，查看设备情况、找到工作区，让工作继续。')}</p>
     <ul><li><Icon name="chat"/>{tr('Talk naturally. Get work done.','自然对话，完成工作。')}</li><li><Icon name="device"/>{tr('Coordinate apps and your own fleet.','协调应用与自己的设备集群。')}</li><li><Icon name="routine"/>{tr('One-off tasks. Everyday routines.','一次性任务，每日 Routine。')}</li></ul>
     <a className="marketingSecondary" href={localizedWebsiteHref('/arc',locale)}>{tr('Meet Arc','认识 Arc')}<Icon name="arrowUpRight" size={16}/></a>
     <small>{tr('Arc and Connect share your connections. Open Arc to try it.','Arc 与 Connect 共用你的连接，现在即可打开 Arc 体验。')}</small></div>
-    <div className="arcProductWindow" aria-label={tr('Illustrative Arc product preview, not a live run','Arc 产品示意，并非真实执行')}><header><img src="/remote-arc.svg" alt="" width={22} height={22}/><strong>Arc</strong><span>{tr('PRODUCT PREVIEW','产品预览')}</span></header><div className="arcProductWindowBody"><aside><span><Icon name="chat"/>{tr('Chat','对话')}</span><span><Icon name="tasks"/>{tr('Tasks','任务')}</span><span className="selected"><Icon name="routine"/>{tr('Routines','例行工作')}</span><small>{tr('YOUR TOOLS','你的工具')}</small><span><Icon name="apps"/>{tr('Apps','应用')}</span><span><Icon name="device"/>{tr('Devices','设备')}</span></aside><div className="arcProductConversation"><div className="arcProductPrompt">{tr('Every weekday at 9, prepare my morning brief.','每个工作日早上 9 点，整理我的晨间简报。')}</div><div className="arcProductResponse"><img src="/remote-arc.svg" alt="" width={22} height={22}/><p>{tr('A little less busywork. A clearer start to your day.','少一点琐事，清晰地开始每一天。')}</p></div><div className="arcProductRoutine"><div><span><Icon name="routine" size={15}/>{tr('Morning brief','晨间简报')}</span><small>{tr('Example','示例')}</small></div><p>{tr('Email priorities, today’s meetings and a plan for what comes next.','重点邮件、今天的会议，以及接下来的行动安排。')}</p><footer><span>09:00 · {tr('Weekdays','工作日')}</span><div>{['gmail','googlecalendar','notion'].map(brand=><img key={brand} src={'/app-brands/'+brand+'.svg'} alt="" width={17} height={17}/>)}</div></footer></div><div className="arcProductPreviewComposer">{tr('Tell Arc what’s next…','告诉 Arc 下一步…')}<span><Icon name="arrowUp" size={15}/></span></div></div></div></div>
+    <SlackAgentPreview />
   </section>;
 }
 

@@ -15,7 +15,8 @@ export const test=base.extend<{siteErrors:string[]}>({
   },{language,theme});
   // Only the isolated local preview is reachable during this suite. External
   // OAuth, mail, payment, model and customer systems cannot be called.
-  await context.route('**/*',route=>new URL(route.request().url()).origin==='http://127.0.0.1:4331'?route.continue():route.abort());
+  const previewOrigin = new URL(String(testInfo.project.use.baseURL || 'http://127.0.0.1:4331')).origin;
+  await context.route('**/*',route=>new URL(route.request().url()).origin===previewOrigin?route.continue():route.abort());
   page.on('pageerror',error=>errors.push(error.message));
   await use(errors);
   expect(errors,'Uncaught browser errors').toEqual([]);

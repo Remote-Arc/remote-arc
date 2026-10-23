@@ -45,7 +45,7 @@ try {
     assert.match(body, locale === "zh" ? /AI 可以使用的账号与电脑/ : /Choose the accounts and computers your AI can use/);
     assert.doesNotMatch(html, /data-step=|data-routine-step=|hcsPlayButton|hcsSteps/);
     assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/);
-    for (const client of clients) assert.ok(html.includes('href="/install/' + client.slug + '"'));
+    for (const client of clients) assert.ok(html.includes('href="' + (locale === 'zh' ? '/zh' : '') + '/install/' + client.slug + '"'));
     for(const mode of ['connect','arc']){
       const hero=renderToStaticMarkup(React.createElement(I18nProvider,null,React.createElement(HomeHeroCopy,{mode,arcAvailable:true,arcHref:'https://agent.remotearc.app/chat',connectHref:'https://mcp.remotearc.app/dashboard/connect/overview'})));
       assert.match(hero,new RegExp('data-product="'+mode+'"'));assert.equal((hero.match(/<h1\b/g)||[]).length,1);

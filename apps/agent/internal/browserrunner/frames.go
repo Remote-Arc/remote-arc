@@ -174,7 +174,7 @@ func (s *session) childDetached(raw json.RawMessage) {
 	s.ev.Unlock()
 }
 
-func (s *session) setupChild(conn *cdpConn, child string) {
+func (s *session) setupChild(conn cdpClient, child string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	// Always release the paused frame, even if setup fails.

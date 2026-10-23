@@ -71,6 +71,10 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     // browser_runner is canonical; rc.4/rc.5 Agents still return the older label.
     [/^STALE_REF:/, "STALE_REF"],
     [/^OUT_OF_SCOPE:/, "OUT_OF_SCOPE"],
+    [/^YOUR_CHROME_NOT_ENABLED:/, "YOUR_CHROME_NOT_ENABLED"],
+    [/^YOUR_CHROME_WAITING:/, "YOUR_CHROME_WAITING"],
+    [/^YOUR_CHROME_DENIED:/, "YOUR_CHROME_DENIED"],
+    [/^YOUR_CHROME_UNSUPPORTED:/, "YOUR_CHROME_UNSUPPORTED"],
     [/^SCOPE_CHANGE(?:_REQUIRED)?:/, "SCOPE_CHANGE_REQUIRED"],
     [/^SUBMIT_EFFECT_REQUIRED:/, "SUBMIT_EFFECT_REQUIRED"],
     [/^SUBMIT_ALREADY_RECORDED:/, "SUBMIT_ALREADY_RECORDED"],

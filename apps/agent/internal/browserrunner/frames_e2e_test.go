@@ -59,7 +59,16 @@ customElements.define("consent-box", class extends HTMLElement {
 }
 
 func TestE2EEmbeddedCrossSiteFormAndShadowDOM(t *testing.T) {
+	for _, browser := range []string{browserRunner, browserYourChrome} {
+		t.Run(browser, func(t *testing.T) { testEmbeddedCrossSiteForm(t, browser) })
+	}
+}
+
+func testEmbeddedCrossSiteForm(t *testing.T, browser string) {
 	h, _, _, _ := newHarness(t)
+	if browser == browserYourChrome {
+		userChromeForTest(t, h, "about:blank")
+	}
 	ats := &embeddedATS{}
 	atsSrv := httptest.NewServer(ats.handler())
 	t.Cleanup(atsSrv.Close)
@@ -91,7 +100,7 @@ customElements.define("job-search", class extends HTMLElement {
 	t.Cleanup(careers.Close)
 	resume := writePDF(t, h.policy.WorkspaceRoots[0], "Resume-Embedded.pdf")
 
-	h.call("browser_runner_start", map[string]any{"task_id": "embedded", "allowed_origins": []any{careers.URL, atsOrigin}, "start_url": careers.URL + "/"})
+	h.call("browser_runner_start", map[string]any{"task_id": "embedded", "browser": browser, "allowed_origins": []any{careers.URL, atsOrigin}, "start_url": careers.URL + "/"})
 	h.call("browser_runner_act", map[string]any{"session_id": "embedded", "action": "wait", "text": "Legal name", "timeout_ms": 8000})
 	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "embedded"})
 	sid := snap["snapshot_id"]

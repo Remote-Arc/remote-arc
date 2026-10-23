@@ -22,6 +22,7 @@ import (
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/onboarding"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/takeover"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/vault"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
 )
@@ -30,6 +31,7 @@ const Help = `Remote Arc Go device agent
 Usage: remotelink [options]
   setup             Inspect/install/check/repair/remove local coding-agent tools
   takeover          Discover local Codex/Claude sessions for a project directory
+  vault             Save sign-ins Browser Runner fills on their own sites (remotelink vault --help)
   --go              Select the complete Go runtime (also accepted natively)
   --safe            Hard local read-only cap
   --developer       Legacy alias for dashboard-managed capabilities
@@ -151,7 +153,7 @@ var startClientIntegrations = onboarding.StartAutomatic
 
 func Main(ctx context.Context, args []string, version string, input *os.File, output, errorOutput io.Writer) error {
 	// Local inspection never pairs, changes policy or acquires execution.
-	if len(args) > 1 && args[0] == "--go" && (args[1] == "takeover" || args[1] == "setup") {
+	if len(args) > 1 && args[0] == "--go" && (args[1] == "takeover" || args[1] == "setup" || args[1] == "vault") {
 		args = args[1:]
 	}
 	if len(args) > 0 && args[0] == "takeover" {
@@ -159,6 +161,9 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 	}
 	if len(args) > 0 && args[0] == "setup" {
 		return onboarding.Run(ctx, args, version, output)
+	}
+	if len(args) > 0 && args[0] == "vault" {
+		return vault.Command(args[1:], input, output)
 	}
 	o, e := Parse(args)
 	if e != nil {

@@ -1,7 +1,7 @@
 .chromeExtensionPage{max-width:1210px;margin:0 auto;padding:0 28px 100px;color:var(--text)}
 .chromeDownloadHero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);align-items:center;gap:42px;margin:0;padding:52px 36px 48px;border:1px solid var(--line);border-radius:20px;background:var(--panel)}
 .chromeDownloadCopy{min-width:0}.chromeDownloadCopy .eyebrow{color:var(--sky-light)}
-.chromeDownloadCopy h1{margin:13px 0 19px;font-size:clamp(32px,4.5vw,56px);letter-spacing:-.047em;line-height:1.1;max-width:700px}
+.chromeDownloadCopy h2{margin:13px 0 19px;font-size:clamp(32px,4.5vw,56px);letter-spacing:-.047em;line-height:1.1;max-width:700px}
 .chromeDownloadCopy>p{color:var(--muted);font-size:16px;line-height:1.8;margin:0 0 25px;max-width:670px}
 .chromeDownloadCtas{display:flex;align-items:center;gap:14px 20px;flex-wrap:wrap}
 .chromeDownloadPrimary{display:inline-flex;align-items:center;justify-content:center;gap:14px;min-height:51px;padding:13px 21px;font-weight:700;font-size:15px;white-space:normal;text-decoration:none}
@@ -31,4 +31,4 @@
 .chromeGuideFooter{display:flex;gap:12px 26px;flex-wrap:wrap;margin:45px 0 0;padding-top:24px;border-top:1px solid var(--line)}
 .chromeGuideFooter a{font-size:14px;font-weight:650;color:var(--sky-light)}
 @media(max-width:900px){.chromeDownloadHero{gap:25px;padding:35px 26px;grid-template-columns:1fr}.chromeDownloadGraphic{max-width:650px}}
-@media(max-width:680px){.chromeExtensionPage{padding:0 16px 72px}.chromeDownloadHero{padding:27px 20px}.chromeDownloadCopy h1{font-size:clamp(30px,9vw,40px)}.chromeDownloadPrimary{width:100%}.chromeDownloadCtas{display:block}.chromeDownloadVersion{display:block;margin-top:10px}.chromeStepsGrid,.chromeGuideDetails{grid-template-columns:1fr}.chromeStepsGrid li{padding:20px}.chromeGuideSteps{padding-top:45px}}
+@media(max-width:680px){.chromeExtensionPage{padding:0 16px 72px}.chromeDownloadHero{padding:27px 20px}.chromeDownloadCopy h2{font-size:clamp(30px,9vw,40px)}.chromeDownloadPrimary{width:100%}.chromeDownloadCtas{display:block}.chromeDownloadVersion{display:block;margin-top:10px}.chromeStepsGrid,.chromeGuideDetails{grid-template-columns:1fr}.chromeStepsGrid li{padding:20px}.chromeGuideSteps{padding-top:45px}}

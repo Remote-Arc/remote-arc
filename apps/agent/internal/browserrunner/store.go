@@ -103,6 +103,8 @@ type Checkpoint struct {
 	Profile        string    `json:"profile"`
 	AllowedOrigins []string  `json:"allowed_origins"`
 	Headless       bool      `json:"headless"`
+	Browser        string    `json:"browser,omitempty"`  // "your_chrome" for the user's own Chrome; empty for a Runner window
+	YourTab        string    `json:"your_tab,omitempty"` // the task's tab in the user's Chrome (device-local)
 	State          string    `json:"state"`
 	NeedsUser      string    `json:"needs_user,omitempty"`
 	ResumeURL      string    `json:"resume_url,omitempty"` // device-local only, never returned
@@ -168,7 +170,7 @@ func profileInfos() []ProfileInfo {
 			continue
 		}
 		c, e := loadCheckpoint(id)
-		if e != nil || c.Profile == "" {
+		if e != nil || c.Profile == "" || c.Browser == browserYourChrome {
 			continue
 		}
 		if _, e := os.Stat(profilePath(c.Profile)); e != nil {
@@ -382,6 +384,7 @@ func (c *Checkpoint) Summary(live bool) map[string]any {
 		"browser_running":     live,
 		"allowed_origins":     c.AllowedOrigins,
 		"headless":            c.Headless,
+		"browser":             map[bool]string{true: browserYourChrome, false: browserRunner}[c.Browser == browserYourChrome],
 		"last_url":            c.LastURL,
 		"title":               c.Title,
 		"navigations":         c.Navigations,

@@ -39,6 +39,9 @@
     const kind = secretKind(el);
     if (kind === "captcha") throw new Error(CAPTCHA_REFUSAL);
     if (kind === "code" && a.allow_codes) return;
+    // A password from the user's vault, filled by the Agent itself; the
+    // caller never sees it.
+    if (kind === "password" && a.secret_part === "password") return;
     if (kind === "code") throw new Error("BLOCKED_SENSITIVE: one-time codes are turned off for Browser Runner on this computer (browserRunnerOneTimeCodes). Ask the user to enter it.");
     if (kind) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords or payment details from the conversation. Ask the user to enter this field themselves.");
   };
@@ -380,6 +383,34 @@
     return { fields: [...names].sort().join("|").slice(0, 2000), headings: headings.slice(0, 8), title: clip(document.title, 200) };
   }
 
+  if (op === "watch_logins") {
+    // Tell the Agent when a sign-in form is sent, so a sign-in the user did
+    // once in the Runner window can be saved to the vault on this computer.
+    // Runs only in the Runner's isolated world; the page cannot call it.
+    if (window.__remotearcLogins) return true;
+    window.__remotearcLogins = true;
+    const report = (scope) => {
+      try {
+        if (typeof window.__remotearcLogin !== "function") return;
+        const root = scope && scope.querySelectorAll ? scope : document;
+        const fields = Array.from(root.querySelectorAll("input")).filter((f) => visible(f) && f.value);
+        const pw = fields.find((f) => secretKind(f) === "password");
+        const id = fields.find((f) => /^(email|text|tel)$/i.test(f.type || "text") && !sensitive(f) && /e-?mail|user|login|account|phone/i.test([f.type, f.name, f.id, f.getAttribute("autocomplete"), labelText(f)].join(" ")));
+        if (!pw && !id) return;
+        window.__remotearcLogin(JSON.stringify({ url: location.href, username: id ? id.value : "", password: pw ? pw.value : "" }));
+      } catch (_) {}
+    };
+    document.addEventListener("submit", (e) => report(e.target), true);
+    document.addEventListener("click", (e) => {
+      const b = e.isTrusted && e.target && e.target.closest && e.target.closest("button, input[type=submit], input[type=image], [role=button]");
+      if (b) report(b.form || b.closest("form") || document);
+    }, true);
+    document.addEventListener("keydown", (e) => {
+      if (e.isTrusted && e.key === "Enter" && e.target && e.target.tagName === "INPUT") report(e.target.form || document);
+    }, true);
+    return true;
+  }
+
   if (op === "quiet") {
     // How long the DOM has been unchanged, so the Runner can continue as soon
     // as the page has taken in an action rather than after a fixed delay.
@@ -399,6 +430,9 @@
   if (op === "locate") {
     const el = lookup();
     if (a.action === "fill") refuseSecret(el);
+    // A saved password goes only into a password field, never a field whose
+    // value a snapshot would show.
+    if (a.secret_part === "password" && secretKind(el) !== "password") throw new Error("WRONG_FIELD: " + describe(el) + " is not a password field; fill the password only into the field marked secret: password.");
     if (el.disabled || el.getAttribute("aria-disabled") === "true") throw new Error("DISABLED: " + describe(el) + " is disabled.");
     el.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
     const r = el.getBoundingClientRect();

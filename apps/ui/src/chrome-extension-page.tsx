@@ -1,5 +1,6 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
+import { BrowserModes } from "./browser-modes.js";
 import companionManifest from "../../browser-extension/manifest.json" with { type: "json" };
 import "./chrome-extension-page.css";
 
@@ -10,11 +11,12 @@ export function ChromeExtensionPage() {
 
   return (
     <main className="chromeExtensionPage">
+      <BrowserModes primary />
       {/* The download card is the FIRST content on this page, not a hash target. */}
       <section className="chromeDownloadHero" aria-labelledby="chrome-download-title">
         <div className="chromeDownloadCopy">
           <span className="eyebrow">{tr("CHROME EXTENSION · BETA", "CHROME 扩展 · BETA")}</span>
-          <h1 id="chrome-download-title">{tr("Download Chrome Companion", "下载 Chrome Companion 浏览器扩展")}</h1>
+          <h2 id="chrome-download-title">{tr("Download Chrome Companion", "下载 Chrome Companion 浏览器扩展")}</h2>
           <p>{tr(
             "Let your AI work with specific Chrome tabs that you choose to share. Read the page, extract selected text, links or tables, and enable click and fill only for tabs you explicitly approve.",
             "让 AI 使用你明确共享的 Chrome 标签页。读取页面、提取选中文字、链接或表格；只有你为某个标签页单独授权后，才能点击和填写。",

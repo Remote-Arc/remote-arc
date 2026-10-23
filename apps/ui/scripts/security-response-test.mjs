@@ -12,6 +12,7 @@ const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "u
   .replaceAll('"./arc-preview.js"', JSON.stringify(new URL("../src/arc-preview.ts", import.meta.url).href))
   .replaceAll("'./arc-input-preview.js'", JSON.stringify(new URL("../src/arc-input-preview.ts", import.meta.url).href))
   .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/billing-preview.ts", import.meta.url).href))
+  .replaceAll("'./onboarding-preview.js'", JSON.stringify(new URL("../src/onboarding-preview.ts", import.meta.url).href))
   .replaceAll("'./followup-preview.js'", JSON.stringify(new URL("../src/followup-preview.ts", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
@@ -35,6 +36,7 @@ assert.ok(apps.apps.every(app => Array.isArray(app.operations)));
 assert.ok(apps.apps.some(app => app.configured) && apps.apps.some(app => !app.configured), "Exercise both available and coming-soon catalog states");
 assert.ok(apps.connections.length > 0 && apps.connections.every(connection => connection.accountLabel.startsWith("Example ")), "Preview connections are explicitly named examples");
 assert.equal((await window.fetch("/api/apps/authorize", { method: "POST" })).status, 403);
+assert.equal((await window.fetch("/api/devices/preview-mac/tools", { method: "POST", body: '{}' })).status, 403, "Onboarding simulation must not enable writes for other devices");
 
 const grant = security.grants[0];
 const invalidGrants = [

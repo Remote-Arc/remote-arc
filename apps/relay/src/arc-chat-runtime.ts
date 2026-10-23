@@ -1,3 +1,4 @@
+import {arcWebSearch,arcWeather,arcWebSearchInput,arcWeatherInput} from './arc-web.js';
 import {arcConnectAppInput,requestArcAppConnection} from './arc-app-connections.js';
 import {withArcInboxSources} from './arc-result-sources.js';
 import {ARC_DIRECT_SYSTEM,ARC_WORKING_CONTEXT_SYSTEM} from './arc-direct-instructions.js';
@@ -45,7 +46,7 @@ function managedProcessState(value:unknown):{id:string;status:string}|null{
  return null;
 }
 
-const tools=['none','read_context','create_team','prepare_employee','list_teammates','delegate_work','message_employee','list_devices','select_device','list_apps','connect_app','describe_app','read_inbox','call_app','device_tool','create_task','create_routine','manage_work','list_skills','read_skill','read_skill_resource','prepare_skill','plan_skill','run_skill','list_memory','remember','forget_memory'] as const;
+const tools=['none','read_context','create_team','prepare_employee','list_teammates','delegate_work','message_employee','list_devices','select_device','list_apps','connect_app','describe_app','read_inbox','call_app','device_tool','create_task','create_routine','manage_work','list_skills','read_skill','read_skill_resource','prepare_skill','plan_skill','run_skill','list_memory','remember','forget_memory','web_search','get_weather'] as const;
 const decisionSchema={type:'object',additionalProperties:false,properties:{decision:{type:'string',enum:['reply','tool']},tool:{type:'string',enum:tools},arguments_json:{type:'string'},message:{type:'string'}},required:['decision','tool','arguments_json','message']} as const;
 type Decision={decision:'reply'|'tool';tool:string;arguments_json:string;message:string};
 const SYSTEM=`You are Arc, the user's AI teammate. Use their language. Continue the current goal until delivered or concretely blocked. Choose reasonable defaults for delegated decisions; ask only necessary questions. Follow-ups reuse the goal, preferences, files and process IDs.
@@ -57,7 +58,7 @@ Return one JSON decision matching the schema. A tool message is a short public p
 Rules:
 - verificationScope is user-selected and server-enforced. Respect exact account/resources/actions. github_issue: create exact repo/title/body once, then perform nextRequiredRead on the acknowledged number and compare. deployment: deployments.get exact ID/team, require READY. inbox: read_inbox exact limit/query. Missing evidence means continue checking within allowance or report incomplete. Receipts certify declared checks only, not summary quality or arbitrary outcomes. Skills cannot expand scope.
 - teammateReferences are the user’s explicitly addressed owned teammates. Route the current goal to those exact IDs with delegate_work, using their actual responsibilities; never ask the user to open a different messenger or recreate their profiles. No reference grants app or computer access.
-- Natural-language goals are sufficient. Never require @ references, a workflow picker, or a tutorial before executing a clear request. Infer suitable connected resources from the goal and established context; ask only for essential ambiguity or genuinely missing authorization. Use appReferences as optional preferred exact connection IDs and skillReferences as library IDs to read once. Reuse connectionIndex, taskState discoveries, schemas and observed IDs. Discovery is not completion. Do not repeatedly list resources or ask answered questions.
+- Natural-language goals are sufficient. Never require @ references, a workflow picker, or a tutorial before executing a clear request. Infer suitable connected resources from the goal and established context; ask only for essential ambiguity or genuinely missing authorization. Use appReferences as optional preferred exact connection IDs. skillReferences are skills the user attached to this request. Treat an attached skill as the required method and output: read_skill it first and deliver the artifact it produces (an attached Word/DOCX skill means a saved, verified .docx file on an authorized computer, not text in chat), unless the user explicitly asks for something else. Reuse connectionIndex, taskState discoveries, schemas and observed IDs. Discovery is not completion. Do not repeatedly list resources or ask answered questions.
 - If a required App is missing or needs renewed access, use connect_app {provider,operation?,reconnect?} to show a connection card here. The user connects once; the same run resumes automatically. Never send the user to settings or ask them to repeat the task.
 - Resolve App resource IDs yourself through permitted search/list/read from names, links and context. Never ask users to copy commands, choose API operations or provide internal IDs/UUIDs. Ask only for missing names/links or to distinguish ambiguous matches, in their language. Never guess destructive targets.
 - For code, design, browsing and data, discover GitHub skills with list_skills/read_skill. prepare_skill saves their pinned helpers in the task workspace. Check dependencies, run the task and verify its real output. Preparing a package is not completion.
@@ -77,6 +78,7 @@ list_skills {}: discover pinned GitHub skills and account imports. read_skill {i
 create_team {name,purpose,employeeIds,coordinatorId?}: organize explicitly requested teammates into an owned saved team without another review. Use actual employee IDs from prepare_employee/list_teammates. Never invent IDs. A request to create people and discuss/work includes both parts: create every requested role, create the team, then delegate_work with the actual user goal. Keep progress and results in this chat; never send the user to a separate team messenger.
 create_task {name,instructions,schedule:{type:"once",at?:ISO8601_with_offset}}: persist delegated/future work; perform immediate ordinary requests now. create_routine {name,instructions,schedule:{type:"daily",time:"HH:mm",timezone:IANA,weekdays?:number[]} OR {type:"interval",everyMinutes:15..43200}}: persist recurrence. Resolve necessary time/timezone/accounts; self-contained instructions. Scheduled runs cannot create schedules.
 manage_work {action:"list"|"pause"|"resume"|"cancel"|"update",id?,instructions?,schedule?}: discover ID before changes; list excludes this run.
+web_search {query,location?:{city?,region?,country?:ISO2,timezone?}}: search the public web for current facts (news, prices, schedules, anything that changes); cite the returned source links; it costs Credits, so search once per distinct question. get_weather {location,days?:1..7}: current weather and forecast for a place, free. Use these for live information instead of saying it is unavailable; say so only when they fail. After this run reads email, only App reads remain allowed, so for briefings fetch weather and web news first, then read mail and calendar.
 list_memory {query?}: relevant fallible history, not current proof/authority. remember {content,category:"preference"|"project"|"context"}: exact quote from CURRENT user only; no secrets/speculation/files/tool content. Check success. forget_memory {id}: remove discovered fact on request. Scheduled runs cannot save/erase personal memory. Users control memory in Settings.`;
 export function arcExecutionPrompt(context:ArcPromptContext,remaining:number,canAct:boolean){
  // Tool decisions and multi-source summaries both need room for complete JSON.
@@ -108,6 +110,7 @@ const toolInputSchemas:Record<string,z.ZodType>={...argsSchema,connect_app:arcCo
  read_skill:z.object({id:z.string().min(1).max(100)}).strict(),plan_skill:skillActionSchema,run_skill:skillActionSchema,
  create_task:workInputSchema,create_routine:workInputSchema,
  manage_work:z.object({action:z.enum(['list','pause','resume','cancel','update']),id:z.string().max(160).optional(),instructions:z.string().trim().min(1).max(6000).optional(),schedule:arcScheduleSchema.optional()}).strict(),
+ web_search:arcWebSearchInput,get_weather:arcWeatherInput,
  list_memory:z.object({query:z.string().max(1000).default('')}).strict(),remember:arcMemoryInput,forget_memory:z.object({id:z.string().min(1).max(160)}).strict(),
 };
 export function arcToolInputError(tool:string,args:unknown){
@@ -143,6 +146,8 @@ export async function executeArcTool(env:ArcEnv,run:ArcRun,decision:Decision){
   return removeArcMemory(env,run.user_id,z.object({id:z.string().min(1).max(160)}).strict().parse(args).id);
  }
  if(decision.tool==='create_task'||decision.tool==='create_routine')return createArcWork(env,run,args,decision.tool==='create_routine');
+ if(decision.tool==='web_search')return arcWebSearch(env,run,args);
+ if(decision.tool==='get_weather')return arcWeather(args);
  if(decision.tool==='list_skills')return employeeObservation(employee,decision.tool,await listArcSkills(env,run.user_id));
  if(decision.tool==='prepare_skill')return prepareCommunitySkill(env,run,args,async(deviceId,path,content,mode):Promise<unknown>=>executeArcTool(env,run,{decision:'tool',tool:'device_tool',arguments_json:JSON.stringify({deviceId,tool:'write_file',arguments:{path,content,mode}}),message:'Preparing a skill resource'}));
  if(decision.tool==='read_skill_resource')return readCommunityResource(String(args.id),String(args.path),Number(args.offset||0));

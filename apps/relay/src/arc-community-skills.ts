@@ -24,7 +24,12 @@ export async function prepareCommunitySkill(env:ArcEnv,run:ArcRun,raw:unknown,wr
   for(let offset=0;offset<file.content.length;){
    const active=await env.DB.prepare("SELECT r.id FROM arc_chat_runs r JOIN arc_chat_sessions s ON s.id=r.session_id WHERE r.id=?1 AND r.user_id=?2 AND r.step=?3 AND r.cancel_requested=0 AND r.status IN ('queued','thinking','working') AND r.deadline>?4 AND s.deleted_at IS NULL").bind(run.id,run.user_id,run.step,new Date().toISOString()).first();if(!active)throw new ArcError('ARC_SKILL_SOURCE_ENDED',409);
    let end=Math.min(offset+12000,file.content.length);if(end<file.content.length&&/[\uD800-\uDBFF]/.test(file.content[end-1]!))end--;
-   const target=directory+'/'+file.path,chunk=file.content.slice(offset,end),mode=offset?'append':'rewrite',result=await write(input.deviceId,target,chunk,mode);
+   const target=directory+'/'+file.path,chunk=file.content.slice(offset,end),mode=offset?'append':'rewrite';
+   // A refused or failed device write is an observation the model can act on
+   // (pick an allowed workspace or another device), not a failed run.
+   let result:unknown;
+   try{result=await write(input.deviceId,target,chunk,mode);}
+   catch(error){const code=error instanceof Error?error.message.slice(0,200):'DEVICE_WRITE_FAILED';return{prepared:false,directory,written,remaining:paths.filter(path=>!written.includes(path)),failedPath:target,error:code,guidance:'Writing the skill files failed on this device. Choose a workspace inside the device\'s allowed folders (see list_devices workspace_roots) or another online device with write_file, then call prepare_skill again. Files are rewritten from the start, so retrying is safe. If no device can be written, explain this to the user instead of retrying.'};}
    if(!confirmedWrite(result,target,chunk,mode))return{prepared:false,directory,written,remaining:paths.filter(path=>!written.includes(path)),observation:result,guidance:'Preparation is incomplete. Inspect the observed write outcome before continuing. Do not claim the skill or its dependencies are ready.'};
    offset=end;
   }

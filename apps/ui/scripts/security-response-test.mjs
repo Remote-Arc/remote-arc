@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
-import { parseSecurityState, parsePendingApprovals } from "../src/security-state.ts";
+import { parseSecurityState, parsePendingApprovals, parsePersistentApprovals } from "../src/security-state.ts";
 
 // Exercise the real preview fixture, rather than duplicating its response here.
 const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "utf8"))
@@ -26,6 +26,7 @@ assert.ok(parseSecurityState(security), "Preview must match the real authorizati
 assert.equal(new Set(security.grants.map(g => g.grantId)).size, security.grants.length);
 assert.ok(security.grants.length > 0, "Exercise grant-row rendering identities");
 assert.deepEqual(parsePendingApprovals(await (await window.fetch("/api/approvals")).json()), []);
+assert.deepEqual(parsePersistentApprovals(await (await window.fetch("/api/approvals/permissions")).json()), []);
 assert.equal((await window.fetch("/api/security/mcp", { method: "POST" })).status, 403);
 const apps = await (await window.fetch("/api/apps")).json();
 assert.equal(apps.enabled, true);
@@ -58,4 +59,7 @@ const approval = {
 assert.deepEqual(parsePendingApprovals([approval]), [approval]);
 assert.equal(parsePendingApprovals([{ ...approval, device_id: undefined }]), null);
 assert.equal(parsePendingApprovals([{ ...approval, expires_at: "bad" }]), null);
+const persistent = { ...approval, status: "approved", decision_scope: "allow_always", approved_until: null, decided_at: new Date().toISOString() };
+assert.deepEqual(parsePersistentApprovals([persistent]), [persistent]);
+for (const invalid of [{ ...persistent, status: "revoked" }, { ...persistent, decision_scope: "allow_once" }, { ...persistent, approved_until: "2099-01-01" }, { ...persistent, decided_at: "invalid" }]) assert.equal(parsePersistentApprovals([invalid]), null);
 console.log("PASS: preview security contract, authorization identities, malformed responses and read-only access");

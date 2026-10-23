@@ -1,0 +1,60 @@
+/* Security uses the shared workspace palette in both themes. */
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.securityPanel,.securityDeviceRow){background:var(--dash-surface)!important;border:1px solid var(--dash-line)!important;box-shadow:none!important}
+:root[data-theme] .appFrame[data-active-tab="security"] .securityPanel{border-radius:12px;padding:24px}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.securityTopbar,.securityPanelHeader,.securityTopActions){flex-wrap:wrap}
+:root[data-theme] .appFrame[data-active-tab="security"] .securityTopActions{gap:8px}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(h2,h3,.securityExposureMeta strong,.securityAuditRow strong){color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.securityPanelHeader p,.securityAuditRow>b){color:var(--dash-muted)!important;font-size:14px;line-height:1.6}
+:root[data-theme] .appFrame[data-active-tab="security"] .securityPanelHeader p{margin:8px 0 0;max-width:760px}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.grantState,.approvalWaiting,.approvalCount){border:1px solid var(--dash-line)!important;background:var(--dash-subtle)!important;color:var(--dash-muted)!important;font-size:12px;font-weight:500;box-shadow:none}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.aiAuthStats>span,.aiAuthClientBody,.aiAuthGrant,.aiAuthIdentity .securityGrantIcon,.securityGrantScopes code){background:var(--dash-subtle)!important;border-color:var(--dash-line)!important;color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.aiAuthClient,.aiAuthGrant,.aiAuthGrantBody,.aiAuthRevokeActions){border-color:var(--dash-line)!important}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.aiAuthClientSummary:hover,.aiAuthGrantSummary:hover){background:var(--dash-subtle)!important}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.aiAuthActivity,.aiAuthScopeCount,.aiAuthNameBlock small,.aiAuthGrantId small,.aiAuthGrantMeta dt,.aiAuthPermissions>strong,.aiAuthExpand){color:var(--dash-muted)!important}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.aiAuthNameBlock strong,.aiAuthGrantId strong,.aiAuthGrantMeta dd){color:var(--dash-text)!important}
+:root[data-theme] .appFrame[data-active-tab="security"] .aiAuthDot.refreshable{background:var(--dash-muted)}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.aiAuthClientSummary,.aiAuthGrantSummary):focus-visible{outline-color:var(--dash-accent)}
+:root[data-theme] .appFrame[data-active-tab="security"] .securityGrantList{gap:16px}
+:root[data-theme] .appFrame[data-active-tab="security"] :is(.securityDeviceSection,.securityActivitySection){margin-top:16px}
+:root[data-theme] .appFrame[data-active-tab="security"] .aiAuthRevokeActions{justify-content:flex-end}
+:root[data-theme] .appFrame .approvalRequest{min-width:0;border:1px solid var(--dash-line);border-radius:10px;padding:20px;background:var(--dash-canvas)}
+:root[data-theme] .appFrame .approvalRequestHeader{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+:root[data-theme] .appFrame .approvalRequestIcon{display:grid;place-items:center;width:40px;height:40px;flex:none;border:1px solid var(--dash-line);border-radius:10px;background:var(--dash-subtle);color:var(--dash-text)}
+:root[data-theme] .appFrame .approvalRequestHeader>div{min-width:0;flex:1}
+:root[data-theme] .appFrame .approvalRequestHeader h3{font-size:16px;font-weight:600;margin:0;line-height:1.5}
+:root[data-theme] .appFrame .approvalRequestHeader p,:root[data-theme] .appFrame .persistentPermission p{font-size:14px;color:var(--dash-muted);margin:3px 0 0;overflow-wrap:anywhere}
+:root[data-theme] .appFrame .approvalWaiting,:root[data-theme] .appFrame .approvalCount{white-space:nowrap;padding:4px 8px;border-radius:6px}
+:root[data-theme] .appFrame .approvalCount{vertical-align:middle;margin-left:6px;font-variant-numeric:tabular-nums}
+:root[data-theme] .appFrame .approvalTarget{display:grid;gap:7px;min-width:0;background:var(--dash-subtle);border:1px solid var(--dash-line);border-radius:8px;padding:14px 16px}
+:root[data-theme] .appFrame .approvalTarget>span{font-size:12px;color:var(--dash-muted)}
+:root[data-theme] .appFrame :is(.approvalTarget code,.persistentPermission code){font-size:14px;line-height:1.65;color:var(--dash-text);overflow-wrap:anywhere;white-space:pre-wrap;word-break:break-word}
+:root[data-theme] .appFrame .approvalRequestMeta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;font-size:12px;color:var(--dash-muted);margin:12px 0 18px}
+:root[data-theme] .appFrame .approvalRequestMeta code{font-size:12px;color:var(--dash-muted);background:transparent}
+:root[data-theme] .appFrame .approvalDecision{display:grid;grid-template-columns:minmax(180px,320px) 1fr;gap:12px 20px;align-items:end;border-top:1px solid var(--dash-line);padding-top:18px}
+:root[data-theme] .appFrame .approvalDecision label{display:grid;gap:7px;min-width:0;font-size:13px;color:var(--dash-muted)}
+:root[data-theme] .appFrame .approvalDecision select{min-height:44px;width:100%;padding:10px 12px;border:1px solid var(--dash-line);border-radius:7px;background:var(--dash-surface);color:var(--dash-text);font-size:14px;box-shadow:none}
+:root[data-theme] .appFrame .approvalDecisionActions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+:root[data-theme] .appFrame[data-workspace] .approvalDecisionActions button{min-height:44px;padding:11px 16px}
+:root[data-theme] .appFrame .approvalScopeNote{grid-column:1/-1;color:var(--dash-muted);font-size:13px;line-height:1.6;margin:0;max-width:850px}
+:root[data-theme] .appFrame .persistentPermissionList{display:grid;gap:10px}
+:root[data-theme] .appFrame .persistentPermission{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px;border:1px solid var(--dash-line);border-radius:9px;background:var(--dash-canvas);min-width:0}
+:root[data-theme] .appFrame .persistentPermission>div{display:grid;gap:5px;min-width:0}
+:root[data-theme] .appFrame .persistentPermission strong{color:var(--dash-text);font-size:15px}
+:root[data-theme] .appFrame .persistentPermission small{font-size:12px;color:var(--dash-muted)}
+:root[data-theme] .appFrame .persistentPermission button{flex:none}
+:root[data-theme] .appFrame[data-workspace="connect"] .mobileBottomNav{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media(max-width:700px){
+ :root[data-theme] .appFrame[data-active-tab="security"] .securityPanel{padding:18px}
+ :root[data-theme] .appFrame .approvalRequest{padding:16px}
+ :root[data-theme] .appFrame .approvalRequestHeader{flex-wrap:wrap;gap:10px}
+ :root[data-theme] .appFrame .approvalWaiting{margin-left:50px}
+ :root[data-theme] .appFrame .approvalDecision{grid-template-columns:1fr}
+ :root[data-theme] .appFrame .approvalDecisionActions{justify-content:stretch}
+ :root[data-theme] .appFrame .approvalDecisionActions button{flex:1}
+ :root[data-theme] .appFrame .persistentPermission{align-items:stretch;flex-direction:column;gap:14px;padding:16px}
+ :root[data-theme] .appFrame[data-active-tab="security"] .securityStatusGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:440px){
+ :root[data-theme] .appFrame[data-active-tab="security"] .securityStatusGrid{grid-template-columns:1fr}
+ :root[data-theme] .appFrame[data-workspace="connect"] .mobileBottomNav small{font-size:10px}
+}

@@ -330,6 +330,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       });
     }
 
+    if (url.pathname === "/api/approvals/permissions") return json([]);
     if (url.pathname === "/api/approvals") return json([]);
 
     // Isolated mock accounts make management/reconnect UX reviewable. No credentials or writes.

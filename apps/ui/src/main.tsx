@@ -44,8 +44,9 @@ import {BrandWordmark} from './brand-wordmark.js';
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
-import { parsePendingApprovals, parseSecurityState, type PendingApproval } from "./security-state.js";
+import { parsePendingApprovals, parsePersistentApprovals, parseSecurityState, type PendingApproval, type PersistentApproval } from "./security-state.js";
 import { SecurityAuthorizations } from "./security-authorizations.js";
+import { ApprovalRequest, PersistentPermissions, type ApprovalChoice } from "./security-approvals.js";
 import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery.js";
 import { isOlderRelease, goUpdateCommands } from "./agent-update-guide.js";
 import "./styles.css";
@@ -59,6 +60,7 @@ import "./arc-product-polish.css";
 import "./brand-wordmark.css";
 import "./experience-refresh.css";
 import "./pairing.css";
+import "./security-center.css";
 
 declare const __REMOTEARC_CLI_VERSION__: string;
 
@@ -3660,6 +3662,7 @@ function Dashboard({
   const [securityError, setSecurityError] = useState(false);
   const securityRefreshRevision = useRef(0);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [persistentApprovals, setPersistentApprovals] = useState<PersistentApproval[]>([]);
   const [securityBusy, setSecurityBusy] = useState(false);
   const [monitorState, setMonitorState] = useState<MonitorState | null>(null);
   const [monitorLoading, setMonitorLoading] = useState(false);
@@ -3848,31 +3851,33 @@ function Dashboard({
   async function refreshSecurity() {
     const revision = ++securityRefreshRevision.current;
     try {
-      const [securityResponse, approvalsResponse] = await Promise.all([
-        fetch("/api/security"), fetch("/api/approvals"),
+      const [securityResponse, approvalsResponse, permissionsResponse] = await Promise.all([
+        fetch("/api/security"), fetch("/api/approvals"), fetch("/api/approvals/permissions"),
       ]);
-      if (!securityResponse.ok || !approvalsResponse.ok) throw new Error("Security data unavailable");
-      const [security, approvals] = await Promise.all([
-        securityResponse.json().then(parseSecurityState), approvalsResponse.json().then(parsePendingApprovals),
+      if (!securityResponse.ok || !approvalsResponse.ok || !permissionsResponse.ok) throw new Error("Security data unavailable");
+      const [security, approvals, permissions] = await Promise.all([
+        securityResponse.json().then(parseSecurityState), approvalsResponse.json().then(parsePendingApprovals), permissionsResponse.json().then(parsePersistentApprovals),
       ]);
-      if (!security || !approvals) throw new Error("Invalid security response");
+      if (!security || !approvals || !permissions) throw new Error("Invalid security response");
       if (revision !== securityRefreshRevision.current) return;
       setSecurityState(security);
       setPendingApprovals(approvals);
+      setPersistentApprovals(permissions);
       setSecurityError(false);
     } catch {
       if (revision !== securityRefreshRevision.current) return;
       setSecurityState(null);
       setPendingApprovals([]);
+      setPersistentApprovals([]);
       setSecurityError(true);
     }
   }
 
   async function decidePendingApproval(
     approval: PendingApproval,
-    decision: "allow_once" | "allow_10m" | "always_folder" | "deny",
+    decision: ApprovalChoice,
   ) {
-    if (UI_PREVIEW || !securityState) return;
+    if (UI_PREVIEW || !securityState || securityBusy) return;
     setSecurityBusy(true);
     try {
       const response = await fetch(
@@ -3893,9 +3898,23 @@ function Dashboard({
       }
       await refreshSecurity();
       await refreshAll();
+    } catch {
+      await showNotice(tr("Approval was not updated", "审批未更新"), tr("Check your connection and try again.", "请检查网络后重试。"));
     } finally {
       setSecurityBusy(false);
     }
+  }
+
+  async function revokeSavedApproval(permission: PersistentApproval) {
+    if (UI_PREVIEW || !securityState || securityBusy) return;
+    setSecurityBusy(true);
+    try {
+      const response = await fetch("/api/approvals/" + encodeURIComponent(permission.id) + "/revoke", { method: "POST" });
+      if (!response.ok) throw new Error("revoke failed");
+      await refreshSecurity();
+    } catch {
+      await showNotice(tr("Permission was not revoked", "权限未撤销"), tr("Refresh and try again.", "请刷新后重试。"));
+    } finally { setSecurityBusy(false); }
   }
 
   // Approval prompts stay responsive, while the expensive OAuth grants summary
@@ -5137,14 +5156,16 @@ function Dashboard({
     ["devices", tr("Devices", "设备")],
     ["apps", tr("Apps", "应用")],
     ["connect", tr("AI clients", "AI 客户端")],
+    ["security", tr("Security & access", "安全与授权")],
   ];
   const mobileNavItems = navItems.filter(([id]) => !["agent-activity", "agent-skills", "agent-devices"].includes(id)).slice(0,4);
+  if (workspace === "connect") mobileNavItems.push(["security", tr("Security", "安全")]);
   const renderWorkspacePicker = (mobile = false) => (
     <WorkspacePicker workspace={workspace} arcAvailable={arcAvailable} mobile={mobile} tr={tr} onNavigate={navigateTab} />
   );
 
   return (
-    <div className="appFrame" data-workspace={workspace} data-sidebar-collapsed={sidebarCollapsed}>
+    <div className="appFrame" data-active-tab={active} data-workspace={workspace} data-sidebar-collapsed={sidebarCollapsed}>
       <aside className="sidebar">
         <div className="sidebarBrand"><Brand /><button type="button" className="sidebarCollapseToggle" aria-label={sidebarCollapsed ? tr('Expand sidebar','展开侧栏') : tr('Collapse sidebar','收起侧栏')} aria-expanded={!sidebarCollapsed} aria-controls={workspace === 'agent' ? 'arc-sidebar-nav-root' : 'dashboard-sidebar-navigation'} title={sidebarCollapsed ? tr('Expand sidebar','展开侧栏') : tr('Collapse sidebar','收起侧栏')} onClick={toggleSidebar}><ProductIcon name="panel" size={17}/></button></div>
         {renderWorkspacePicker()}
@@ -6188,14 +6209,11 @@ function Dashboard({
               <div>
                 <span className="eyebrow">{tr("SECURITY", "安全")}</span>
                 <h1>{tr("Security center", "安全中心")}</h1>
-                <p>{tr("Review authentication, device exposure and recent Remote Arc activity.", "查看身份验证、设备暴露范围与 Remote Arc 最近活动。")}</p>
               </div>
               <div className="securityTopActions">
                 <button className={securityState?.mcpPaused ? "goldButton" : "dangerButton"} disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void setMcpPaused(!securityState?.mcpPaused)}>
                   {securityState?.mcpPaused ? tr("Resume AI MCP access", "恢复 AI MCP 访问") : tr("Pause AI MCP access", "暂停 AI MCP 访问")}
                 </button>
-                <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Device permissions", "设备权限")}</button>
-                <a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md" target="_blank" rel="noreferrer">SECURITY.md</a>
               </div>
             </section>
 
@@ -6205,72 +6223,19 @@ function Dashboard({
               <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Retry", "重试")}</button>
             </section>}
 
-            <section className="securityStatusGrid">
-              <article className={"securityStatusCard primary" + (securityState?.mcpPaused ? " paused" : "")}>
-                <div><span>{tr("Remote MCP", "Remote MCP")}</span><i className={"healthDot " + (!securityState || securityState.mcpPaused ? "idle" : "good")} /></div>
-                <strong>{!securityState ? (securityError ? tr("Unavailable", "暂无法确认") : tr("Checking…", "正在检查…")) : securityState.mcpPaused ? tr("Paused", "已暂停") : tr("Protected", "已保护")}</strong>
-                <small>{!securityState ? tr("Waiting for the current access state from Remote Arc.", "等待 Remote Arc 返回当前访问状态。") : securityState.mcpPaused ? tr("Authenticated AI MCP calls are blocked until resumed. This does not stop paired Agents or already-running tasks.", "已认证 AI MCP 请求会被拦截，直到恢复。此操作不会停止已配对的 Agent 或正在执行的独立任务。") : tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
-              </article>
-              <article className="securityStatusCard">
-                <div><span>{tr("Authentication", "身份验证")}</span><span className="securityMiniState">OAuth</span></div>
-                <strong>OAuth 2.1 + PKCE</strong>
-                <small>{tr("Scoped access to the account you approve.", "仅授予你批准账户范围内的权限。")}</small>
-              </article>
-              <article className="securityStatusCard">
-                <div><span>{tr("Device pairing credentials", "设备配对凭证")}</span><span className="securityMiniState">{devices.length}</span></div>
-                <strong>{tr("Unique per device", "每设备独立")}</strong>
-                <small>{tr("One pairing credential per device (not AI OAuth). Only hashes are stored in the cloud.", "每台设备一份配对凭证（不是 AI OAuth），云端仅保存哈希。")}</small>
-              </article>
-              <article className="securityStatusCard">
-                <div><span>{tr("Edge protection", "边缘保护")}</span><span className="securityMiniState">Cloudflare</span></div>
-                <strong>{tr("Rate limiting active", "限流保护已启用")}</strong>
-                <small>{tr("Traffic is protected by per-user/client limits. This status means protection is enabled, not that requests are currently being blocked.", "流量已受到按用户/客户端的限流保护。这个状态表示保护已启用，并不代表当前请求正在被拦截。")}</small>
-              </article>
-            </section>
-
             <section className="securityPanel securityGrantsPanel">
               <div className="securityPanelHeader">
                 <div>
                   <span className="eyebrow">{tr("PENDING APPROVALS", "待审批")}</span>
                   <div className="headingWithHelp">
-                    <h2>{tr("Boundary requests", "越界访问请求")}</h2>
-                    <HelpTip
-                      label={tr("About boundary approvals", "了解越界审批")}
-                      text={tr(
-                        "Remote Arc can read ordinary non-sensitive files outside Trusted Write Locations. File changes outside those locations pause and ask you for a narrowly scoped approval.",
-                        "Remote Arc 可以读取可信写入区域之外的普通非敏感文件；如果要在这些区域之外修改文件，会暂停并请求一份最小范围的授权。",
-                      )}
-                    />
+                    <h2>{tr("Pending approvals", "待审批请求")} <span className="approvalCount">{pendingApprovals.length}</span></h2>
                   </div>
                 </div>
                 <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
               </div>
               <div className="securityGrantList">
-                {pendingApprovals.map((approval) => (
-                  <div className="securityGrantRow active" key={approval.id}>
-                    <div className="securityGrantIdentity">
-                      <span className="securityGrantIcon">!</span>
-                      <div>
-                        <strong>{approval.tool_name}</strong>
-                        <small>{approval.client_name || approval.client_id?.slice(0, 12) || tr("AI client", "AI 客户端")} · {deviceNameById.get(approval.device_id) || approval.device_id.slice(0, 8)}</small>
-                      </div>
-                    </div>
-                    <div className="securityGrantState">
-                      <span className="grantState refreshable">{tr("Waiting for you", "等待确认")}</span>
-                    </div>
-                    <div className="securityGrantDetails">
-                      <span>{tr("Target", "目标")} <strong><code>{approval.target_path}</code></strong></span>
-                      <span>{tr("Request", "请求")} <strong>{approval.request_id?.slice(0, 8) || "—"}</strong></span>
-                      <span>{tr("Request expires", "请求过期时间")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}</strong></span>
-                    </div>
-                    <div className="securityGrantScopes">
-                      <button className="goldButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
-                      {approval.tool_name !== "browser_runner_start" && <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_10m")}>{tr("Allow 10 min", "允许 10 分钟")}</button>}
-                      {approval.tool_name !== "browser_runner_start" && <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "always_folder")}>{tr("Trust this folder", "信任此文件夹")}</button>}
-                      <button className="dangerButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "deny")}>{tr("Deny", "拒绝")}</button>
-                    </div>
-                  </div>
-                ))}
+                {pendingApprovals.map(approval => <ApprovalRequest key={approval.id} approval={approval}
+                  deviceNames={deviceNameById} disabled={UI_PREVIEW || securityBusy || !securityState} decide={decidePendingApproval}/>)}
                 {!pendingApprovals.length && (
                   <div className="securityEmptyState compact">
                     <strong>{securityState ? tr("No pending approvals", "暂无待审批请求") : securityError ? tr("Approvals unavailable", "暂无法获取审批请求") : tr("Loading approvals…", "正在加载审批请求…")}</strong>
@@ -6286,13 +6251,6 @@ function Dashboard({
                   <span className="eyebrow">{tr("CONNECTED AI ACCESS", "已连接 AI 访问")}</span>
                   <div className="headingWithHelp">
                     <h2>{tr("AI authorizations", "AI 授权")}</h2>
-                    <HelpTip
-                      label={tr("About AI authorizations", "了解 AI 授权")}
-                      text={tr(
-                        "Each row is one OAuth authorization instance created when an AI client connects to Remote Arc. Multiple ChatGPT rows can exist if ChatGPT registered or authorized Remote Arc more than once. Active means the current access token works now; Refreshable means the access token expired but the client can obtain a new one without asking again; Expired can no longer reconnect.",
-                        "每一行代表 AI 客户端连接 Remote Arc 时创建的一份 OAuth 授权实例。ChatGPT 多次注册或授权时可能出现多行。Active 表示当前 Access Token 可用；Refreshable 表示 Access Token 已过期但仍可无须重新确认地换取新 Token；Expired 表示已无法重新连接。",
-                      )}
-                    />
                   </div>
                 </div>
                 <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
@@ -6301,14 +6259,16 @@ function Dashboard({
                 <SecurityAuthorizations grants={securityState.grants} busy={securityBusy}
                   preview={UI_PREVIEW} timeAgo={timeAgo} revoke={revokeGrant} />
               )}
-              {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
+              {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
               {!securityState && <div className="securityEmptyState compact"><strong>{securityError ? tr("Authorizations unavailable", "暂无法获取授权") : tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
             </section>
 
-            <section className="securityMainGrid">
+            {securityState && <PersistentPermissions permissions={persistentApprovals} disabled={UI_PREVIEW || securityBusy} deviceNames={deviceNameById} revoke={revokeSavedApproval}/>}
+
+            <section className="securityDeviceSection">
               <article className="securityPanel securityExposurePanel">
                 <div className="securityPanelHeader">
-                  <div><span className="eyebrow">{tr("DEVICE EXPOSURE", "设备暴露范围")}</span><h2>{tr("What each computer exposes", "每台电脑开放了什么")}</h2></div>
+                  <div><span className="eyebrow">{tr("DEVICES", "设备")}</span><h2>{tr("Device permissions", "设备权限")}</h2></div>
                   <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage", "管理")}</button>
                 </div>
                 <div className="securityDeviceList">
@@ -6321,29 +6281,16 @@ function Dashboard({
                       <span className={"badge " + device.status}><i />{device.status}</span>
                     </button>;
                   })}
-                  {!devices.length && <div className="securityEmptyState"><strong>{tr("No paired devices", "暂无配对设备")}</strong><span>{tr("Pair a computer before granting any tool access.", "先配对电脑，再开放任何工具权限。")}</span><button className="ghostButton" onClick={() => setShowAdd(true)}>{tr("Add device", "添加设备")}</button></div>}
+                  {!devices.length && <div className="securityEmptyState"><strong>{tr("No paired devices", "暂无配对设备")}</strong><button className="ghostButton" onClick={() => setShowAdd(true)}>{tr("Add device", "添加设备")}</button></div>}
                 </div>
               </article>
 
-              <article className="securityPanel securityModelPanel">
-                <div className="securityPanelHeader"><div><span className="eyebrow">{tr("ACCESS MODEL", "访问模型")}</span><h2>{tr("Requests pass four boundaries", "请求需要通过四层边界")}</h2></div></div>
-                <div className="securityFlow">
-                  <div><span>1</span><p><strong>{tr("AI client", "AI 客户端")}</strong><small>{tr("Starts an MCP request.", "发起 MCP 请求。")}</small></p></div>
-                  <i>↓</i>
-                  <div><span>2</span><p><strong>OAuth 2.1 + PKCE</strong><small>{tr("Validates user identity and scopes.", "验证用户身份与 Scope。")}</small></p></div>
-                  <i>↓</i>
-                  <div><span>3</span><p><strong>{tr("Relay policy", "Relay 权限策略")}</strong><small>{tr("Blocks disabled tools before reaching the computer.", "关闭的工具会在到达电脑前被拦截。")}</small></p></div>
-                  <i>↓</i>
-                  <div><span>4</span><p><strong>{tr("Local device agent", "本机 Device Agent")}</strong><small>{tr("Executes only tools the device actually exposes.", "只执行设备实际开放的工具。")}</small></p></div>
-                </div>
-              </article>
             </section>
 
-            <section className="securityLowerGrid">
+            <section className="securityActivitySection">
               <article className="securityPanel">
                 <div className="securityPanelHeader">
                   <div><span className="eyebrow">{tr("AUDIT ACTIVITY", "审计活动")}</span><h2>{tr("Recent access", "最近访问")}</h2></div>
-                  <span className="privacyPill">{tr("Arguments not logged", "不记录参数")}</span>
                 </div>
                 <div className="securityAuditList">
                   {(status?.recentActivity || []).slice(0,6).map((event) => (
@@ -6353,29 +6300,13 @@ function Dashboard({
                       <b>{event.success ? tr("Allowed", "已允许") : tr("Failed", "失败")}</b>
                     </div>
                   ))}
-                  {!status?.recentActivity?.length && <div className="securityEmptyState compact"><strong>{tr("No audit events yet", "暂无审计事件")}</strong><span>{tr("Tool calls and security events will appear here.", "工具调用和安全事件会显示在这里。")}</span></div>}
+                  {!status?.recentActivity?.length && <div className="securityEmptyState compact"><strong>{tr("No audit events yet", "暂无审计事件")}</strong></div>}
                 </div>
               </article>
 
-              <article className="securityPanel securityPrivacyPanel">
-                <div className="securityPanelHeader"><div><span className="eyebrow">{tr("PRIVACY BOUNDARY", "隐私边界")}</span><h2>{tr("What the audit log keeps", "审计日志记录什么")}</h2></div></div>
-                <div className="privacyBoundaryGrid">
-                  <div className="kept"><span>✓</span><p><strong>{tr("Operational metadata", "运行元数据")}</strong><small>{tr("Tool, device, OAuth client, request ID, outcome and time.", "工具、设备、OAuth 客户端、Request ID、结果与时间。")}</small></p></div>
-                  <div className="notKept"><span>×</span><p><strong>{tr("File contents", "文件内容")}</strong><small>{tr("Not intentionally stored in audit records.", "不会有意保存在审计记录中。")}</small></p></div>
-                  <div className="notKept"><span>×</span><p><strong>{tr("Command arguments", "命令参数")}</strong><small>{tr("Not intentionally stored in audit records.", "不会有意保存在审计记录中。")}</small></p></div>
-                  <div className="notKept"><span>×</span><p><strong>{tr("OAuth tokens & device credentials", "OAuth Token 与设备凭证")}</strong><small>{tr("Never exposed in the activity feed.", "不会暴露在活动记录中。")}</small></p></div>
-                </div>
-              </article>
             </section>
 
-            <section className="securityActionsPanel">
-              <div><span className="eyebrow">{tr("SECURITY ACTIONS", "安全操作")}</span><h2>{tr("Keep access intentional.", "确保每一次访问都是有意授权。")}</h2><p>{tr("Review device permissions regularly, revoke computers you no longer use, and sign out of shared browsers.", "定期检查设备权限、撤销不再使用的电脑，并在共享浏览器中及时退出登录。")}</p></div>
-              <div className="securityActionButtons">
-                <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Review device tools", "检查设备工具")}</button>
-                <button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Review MCP connection", "检查 MCP 连接")}</button>
-                <button className="dangerButton" onClick={() => void signOutSafely()}>{tr("Sign out", "退出登录")}</button>
-              </div>
-            </section>
+
           </>
         )}
 

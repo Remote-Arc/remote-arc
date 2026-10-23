@@ -87,6 +87,8 @@ import {
 import {
   handleApprovalDecision,
   handleApprovalList,
+  handlePersistentApprovalList,
+  handlePersistentApprovalRevoke,
   handleDeviceApprovalDecision,
   handleDeviceApprovalList,
   runApprovalMaintenance,
@@ -620,6 +622,14 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     if (url.pathname === "/api/approvals" && request.method === "GET") {
       return handleApprovalList(request, env);
+    }
+
+    if (url.pathname === "/api/approvals/permissions" && request.method === "GET") {
+      return handlePersistentApprovalList(request, env);
+    }
+
+    if (/^\/api\/approvals\/[^/]+\/revoke$/.test(url.pathname) && request.method === "POST") {
+      return handlePersistentApprovalRevoke(request, env);
     }
 
     if (

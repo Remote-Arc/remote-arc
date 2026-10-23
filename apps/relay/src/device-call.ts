@@ -167,11 +167,11 @@ export async function callDevice(
     ? await findApprovedWriteApproval(env, identity, deviceId, tool, args)
     : null;
 
-  // The model's reason is not authorization. An exact user-approved scope
-  // change is needed before any new site reaches the Go Agent.
+  // An exact user-approved scope change (once or saved until revoked) is
+  // needed before any new site reaches the Go Agent.
   if (scopeChange && !approvedWrite) {
     const approval = await requestWriteApproval(env, { identity, deviceId, requestId, tool, args });
-    throw new Error("SCOPE_CHANGE_REQUIRED: approve the exact sites in Dashboard Security / Boundary requests (" + (approval?.id ?? "pending") + ") and retry the same request.");
+    throw new Error("SCOPE_CHANGE_REQUIRED: approve the exact sites in Dashboard Security & access / Pending approvals (" + (approval?.id ?? "pending") + ") and retry the same request.");
   }
 
   if (

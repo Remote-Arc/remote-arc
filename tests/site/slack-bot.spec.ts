@@ -31,3 +31,12 @@ test('Slack provider distribution failures return a useful recoverable error',as
  await expect(page.getByRole('dialog')).toHaveCount(0);
  await expect(page.locator('[data-provider="slack"]')).toBeVisible();
 });
+
+test('Slack card and direct setup links expose Bot installation without outbound OAuth',async({page})=>{
+ await page.goto('/dashboard/connect/apps');
+ await page.locator('[data-provider="slack"] .appsCardTitle').click();
+ await expect(page.locator('.slackBotPanel')).toBeVisible();
+ await page.keyboard.press('Escape');
+ await page.goto('/dashboard/connect/apps?provider=slack');
+ await expect(page.locator('.slackBotPanel')).toBeVisible();
+});

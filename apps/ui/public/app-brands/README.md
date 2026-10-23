@@ -14,3 +14,7 @@ Linear and HubSpot use their official vector marks from the [Simple Icons](https
 - Jira and Confluence now use the current, unmodified app icon artwork from the [official Atlassian logo downloads](https://atlassian.design/foundations/logos), replacing the older standalone gradient symbols.
 - Microsoft Outlook now uses Microsoft’s 2025 app artwork, replacing the 2019 icon. [Microsoft’s announcement](https://techcommunity.microsoft.com/blog/microsoft365insiderblog/new-microsoft-365-icons-for-the-ai-era/4458674) confirms the refresh; the SVG is [archived on Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Microsoft_Outlook_Icon_(2025%E2%80%93present).svg) with Microsoft listed as author and microsoft.com as its original source.
 - SVG artwork remains local, with its original colors and geometry. Source descriptions are embedded in corrected files.
+
+## Color logo corrections on 2026-10-23
+
+Monochrome fallbacks for Google Slides, Asana, Airtable, Dropbox, Google Analytics, HubSpot, Instagram, LinkedIn, Salesforce, Shopify, Supabase, WhatsApp and YouTube were replaced with original color SVG artwork from the Iconify SVG Logos collection. Google Slides and Instagram use Homarr Dashboard Icons, as Google Docs and Sheets already do. HubSpot retains the existing compact Simple Icons symbol in brand orange (#ff7a59). Exact collection identifiers and source are recorded in `SOURCES.json`. These assets are bundled locally and retain the source geometry and colors.

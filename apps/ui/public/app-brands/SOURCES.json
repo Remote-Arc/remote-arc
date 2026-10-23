@@ -2,7 +2,8 @@
   {
     "brand": "youtube",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/youtube.svg"
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "icon": "logos:youtube-icon"
   },
   {
     "brand": "facebook",
@@ -12,7 +13,7 @@
   {
     "brand": "instagram",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/instagram.svg"
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/instagram.svg"
   },
   {
     "brand": "vercel",
@@ -22,12 +23,14 @@
   {
     "brand": "whatsapp",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/whatsapp.svg"
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "icon": "logos:whatsapp-icon"
   },
   {
     "brand": "shopify",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/shopify.svg"
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "icon": "logos:shopify"
   },
   {
     "brand": "x",
@@ -37,7 +40,8 @@
   {
     "brand": "supabase",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/supabase.svg"
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "icon": "logos:supabase-icon"
   },
   {
     "brand": "googlesearchconsole",
@@ -47,7 +51,8 @@
   {
     "brand": "googleanalytics",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googleanalytics.svg"
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "icon": "logos:google-analytics"
   },
   {
     "brand": "googleads",
@@ -61,13 +66,15 @@
   },
   {
     "brand": "linkedin",
-    "url": "https://raw.githubusercontent.com/gilbarbara/logos/main/logos/linkedin-icon.svg",
-    "status": 200
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "status": 200,
+    "icon": "logos:linkedin-icon"
   },
   {
     "brand": "salesforce",
-    "url": "https://raw.githubusercontent.com/gilbarbara/logos/main/logos/salesforce.svg",
-    "status": 200
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "status": 200,
+    "icon": "logos:salesforce"
   },
   {
     "brand": "runwayattribution",
@@ -83,22 +90,25 @@
   {
     "brand": "dropbox",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/dropbox.svg"
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "icon": "logos:dropbox"
   },
   {
     "brand": "airtable",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/airtable.svg"
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "icon": "logos:airtable"
   },
   {
     "brand": "googleslides",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googleslides.svg"
+    "url": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/google-slides.svg"
   },
   {
     "brand": "asana",
     "status": 200,
-    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/asana.svg"
+    "url": "https://raw.githubusercontent.com/iconify/icon-sets/master/json/logos.json",
+    "icon": "logos:asana-icon"
   },
   {
     "brand": "onedrive",
@@ -119,5 +129,11 @@
     "brand": "microsofttodo",
     "status": 200,
     "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/todo_48x1.svg"
+  },
+  {
+    "brand": "hubspot",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/hubspot.svg",
+    "color": "#ff7a59"
   }
 ]

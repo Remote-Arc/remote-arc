@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { useI18n } from "./i18n.js";
+import { localizedWebsiteHref } from "./marketing-paths.js";
+import directory from "./app-directory.json" with { type: "json" };
 import "./home-connection-scene.css";
 
 type AiClient = { name: string; slug: string; icon: string; tone: string };
@@ -54,7 +56,7 @@ const position = (x: number, y: number, delay = 0): CSSProperties =>
   ({ left: x / 6 + "%", top: y / 5 + "%", "--float-delay": delay + "s" } as CSSProperties);
 
 export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='connect',mode:controlledMode,onModeChange }: { clients: readonly AiClient[];arcAvailable?:boolean;initialMode?:Mode;mode?:Mode;onModeChange?:(mode:Mode)=>void }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const { ref, running } = useAmbientMotion();
   const [localMode,setLocalMode]=useState<Mode>(initialMode);
   const mode=controlledMode??localMode;
@@ -69,6 +71,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
       <header className="hcsHeader">
         <h2 id={headlineId}>{tr("FROM CHAT TO ACTION", "让对话变成行动")}</h2>
         <div className="hcsModeSwitch" role="tablist" aria-label={tr("Explore Remote Arc modes", "查看 Remote Arc 两种模式")}>
+          <span className="hcsModeSlider" aria-hidden="true" />
           {(["connect", "arc"] as const).map(value => (
             <button key={value} id={uid + "-" + value} type="button" role="tab"
               aria-selected={mode === value} aria-controls={panelId} tabIndex={mode === value ? 0 : -1}
@@ -132,7 +135,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
           {clients.slice(0, 3).map((client, index) => {
             const at = aiPositions[index]!;
             return <a className={"hcsFloatingNode hcsAiNode " + (client.tone === "mono" ? "hcsAiNode--mono" : "")}
-              key={client.slug} href={"/install/" + client.slug} tabIndex={arc ? -1 : 0}
+              key={client.slug} href={localizedWebsiteHref("/install/" + client.slug, locale)} tabIndex={arc ? -1 : 0}
               aria-label={tr("Connect " + client.name, "连接 " + client.name)} style={position(at.x, at.y, index * -1.7)}>
               <span className="hcsLogoTile"><img src={client.icon} alt="" width={28} height={28} /></span><span className="hcsNodeLabel">{client.name}</span>
             </a>;
@@ -144,19 +147,21 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
         <span className="hcsGroupCaption hcsAppsCaption">APPS</span>
         <span className="hcsGroupCaption hcsDevicesCaption">DEVICES</span>
         {resources.map((node, index) => (
-          <div key={node.name} className={"hcsFloatingNode hcsResourceNode hcsResourceNode--" + node.kind} style={position(node.x, node.y, index * -.93)} data-resource={node.kind}>
+          <a key={node.name} className={"hcsFloatingNode hcsResourceNode hcsResourceNode--" + node.kind} style={position(node.x, node.y, index * -.93)} data-resource={node.kind}
+            href={localizedWebsiteHref(node.kind === "app" ? "/integrations?provider=" + directory.apps.find(app => app.name === node.name)!.provider : node.name === "Browser" ? "/chrome-extension" : "/downloads", locale)}
+            aria-label={node.kind === "app" ? tr("Explore ", "查看应用连接：") + node.name : tr("Connect ", "连接设备：") + node.name}>
             <span className="hcsLogoTile" style={{'--power-delay': (index * .085) + 's'} as CSSProperties}>
               <img src={node.icon} alt="" width={30} height={30} />
               {node.calendar && <svg className="hcsCalendarCue" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" /><path d="M5 2v3m6-3v3M3 7h10M6 10h4" /></svg>}
             </span>
             <span className="hcsNodeLabel">{node.name}</span>
-          </div>
+          </a>
         ))}
         <div className="hcsCore" style={position(300, 246)}>
           <div className="hcsCoreEnergy" aria-hidden="true" />
           <div className="hcsCoreRing hcsCoreRing--one" aria-hidden="true" />
           <div className="hcsCoreRing hcsCoreRing--two" aria-hidden="true" />
-          <div className="hcsCoreMark">
+          <a className="hcsCoreMark" href={localizedWebsiteHref(arc ? "/arc" : "/connect-ai", locale)} aria-label={arc ? tr("Explore Arc Agent", "认识 Arc Agent") : tr("Explore Remote Arc Connect", "认识 Remote Arc Connect")}>
             <div className="hcsPowerCore">
               <img className="hcsBrandLogo" src="/remote-arc.svg" alt="Remote Arc" width={86} height={86}/>
               <span className="hcsLogoCurrent" aria-hidden="true"/>
@@ -167,7 +172,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
                 <circle className="hcsArcContact hcsArcContact--right" cx="54" cy="42" r="5"/>
               </svg>
             </div>
-          </div>
+          </a>
           <strong>{arc ? "Arc Agent" : "Remote Arc"}</strong>
           <span>{arc ? tr("Your AI teammate.", "你的专属 AI 队友。") : tr("Your AI. Your rules.", "你的 AI，你的权限。")}</span>
         </div>
@@ -177,7 +182,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
       </ul>
       <footer className="hcsFooter">
         <span className="hcsModeStatus"><i aria-hidden="true" />{arc ? arcAvailable?tr('Arc Agent · Available now','Arc Agent · 现已可用'):tr("Arc Agent · Check workspace access", "Arc Agent · 查看工作空间权限") : tr("Connect available now", "Connect 现已可用")}</span>
-        <a href={arc ? "/arc" : "/connect-ai"}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
+        <a href={localizedWebsiteHref(arc ? "/arc" : "/connect-ai", locale)}>{arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")} <span aria-hidden="true">↗</span></a>
       </footer>
       <p className="hcsPlatformScope">{tr("Choose the accounts and computers your AI can use.", "由你选择 AI 可以使用的账号与电脑。")}</p>
     </div>

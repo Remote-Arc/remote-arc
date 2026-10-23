@@ -75,11 +75,11 @@ assert.equal(canonicalForPath("/definitely-not-a-real-page"), null);
 // Homepage SEO must match the actual product position and expose distinct
 // destinations to search crawlers and users; Google decides whether to show sitelinks.
 const homepageTemplate = readFileSync(new URL("../../ui/index.html", import.meta.url), "utf8");
-const homepageTitle = "Remote Arc — Connect AI to Apps &amp; Computers";
+const homepageTitle = "Remote Arc — AI Computer Access, Browser Automation &amp; Device Fleet";
 assert.ok(homepageTemplate.includes("<title>" + homepageTitle + "</title>"));
 const homeHtml = renderMarketingHtml(homepageTemplate, "/");
 assert.ok(homeHtml.includes("<title>" + homepageTitle + "</title>"));
-assert.ok(homeHtml.includes("per-device permissions and cross-device workflows"));
+assert.ok(homeHtml.includes("browser workflows and dispatch eligible work"));
 for (const path of ["/connect-ai", "/integrations", "/arc", "/pricing", "/docs", "/security-model"]) {
   assert.ok(homeHtml.includes('href="' + path + '"'), "homepage should link directly to " + path);
   assert.ok(sitemapXml().includes("<loc>https://remotearc.app" + path + "</loc>"));
@@ -87,7 +87,7 @@ for (const path of ["/connect-ai", "/integrations", "/arc", "/pricing", "/docs",
 assert.ok(homeHtml.includes("Arc Agent"));
 assert.ok(!homeHtml.includes("coming soon"), "homepage must reflect the current Arc release");
 assert.ok(homeHtml.includes("https://github.com/Remote-Arc/remote-arc"));
-assert.ok(sitemapXml().includes("<lastmod>2026-10-18</lastmod>"), "homepage changed on Oct 18");
+assert.ok(sitemapXml().includes("<lastmod>2026-10-23</lastmod>"), "homepage changed on Oct 23");
 const homepageSchema = homeHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1];
 assert.ok(homepageSchema, "homepage structured data should be published");
 const graph = JSON.parse(homepageSchema)["@graph"];
@@ -263,7 +263,7 @@ for (const slug of ["desktop-automation", "remote-support", "browser-research", 
 const home = renderMarketingHtml(shell, "/");
 assert.ok(home.includes('"@type":"SoftwareApplication"'));
 assert.ok(home.includes('<noscript><main class="seo-blog-shell">'), "homepage should provide a no-JavaScript semantic fallback");
-assert.ok(home.includes('<h1>Connect AI agents to your apps and computers</h1>'));
+assert.ok(home.includes('<h1>Remote Arc: AI computer access, browser automation and device fleet</h1>'));
 assert.ok(home.includes('href="/integrations"'), "homepage fallback must link to app integrations");
 assert.ok(home.includes('href="/pricing"'), "homepage fallback must link to pricing");
 assert.ok(home.includes('Use the computer where the work already lives'));

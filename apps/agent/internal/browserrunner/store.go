@@ -203,16 +203,6 @@ func profileInfos() []ProfileInfo {
 	return out
 }
 
-// lastProfileMode is whether the most recent task on a profile ran headless.
-func lastProfileMode(profile string) (headless bool, known bool) {
-	for _, p := range profileInfos() {
-		if p.Profile == profile {
-			return p.Headless, true
-		}
-	}
-	return false, false
-}
-
 func loadCheckpoint(id string) (*Checkpoint, error) {
 	b, e := os.ReadFile(checkpointPath(id))
 	if e != nil {

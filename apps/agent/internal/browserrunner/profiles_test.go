@@ -8,7 +8,7 @@ import (
 )
 
 // A new conversation finds the profile that holds a person's sign-ins from
-// the checkpoints of earlier tasks, and a profile used visibly stays visible.
+// the checkpoints of earlier tasks.
 func TestProfilesAreListedFromEarlierTasks(t *testing.T) {
 	t.Setenv("REMOTEARC_HOME", t.TempDir())
 	save := func(id, profile string, headless bool, origins []string, at time.Time) {
@@ -36,14 +36,8 @@ func TestProfilesAreListedFromEarlierTasks(t *testing.T) {
 	if fmt.Sprint(j.Tasks) != "[jenny-linfox-apply jenny-linfox-login]" || fmt.Sprint(j.Sites) != "[https://careers.pageuppeople.com https://nzlinfox-identity.login.pageuppeople.com]" {
 		t.Fatalf("jenny: %+v", j)
 	}
-	if h, known := lastProfileMode("jenny"); !known || h {
-		t.Fatalf("jenny's last task ran in a visible window: headless=%v known=%v", h, known)
-	}
-	if h, known := lastProfileMode("sam-clearpoint"); !known || !h {
-		t.Fatalf("sam-clearpoint: headless=%v known=%v", h, known)
-	}
-	if _, known := lastProfileMode("gone"); known {
-		t.Fatal("a deleted profile is still offered")
+	if j.Headless || !got[1].Headless {
+		t.Fatalf("profiles report how their last task ran: %+v", got)
 	}
 }
 

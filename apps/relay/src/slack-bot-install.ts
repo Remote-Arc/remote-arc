@@ -5,13 +5,14 @@ import { authPage, escapeAuthHtml } from './auth-page.js';
 import { slackLinkConfirmationPage } from './slack-bot-link-page.js';
 import {arcGateway,arcAutoId,arcModelAccess} from './arc-chat-model.js';
 import {arcAccountAccess} from './arc-trial.js';
+import {runSlackJobs} from './slack-bot-jobs.js';
 import { SLACK_BOT_SCOPES, slackDashboard, slackReady, slackStamp, slackTokenContext, type BotTokens, type SlackBotEnv } from './slack-bot-common.js';
 
 export const slackBotCallback=(env:SlackBotEnv)=>(env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/api/slack/oauth/callback';
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'no-store'}});
 const redirect=(env:SlackBotEnv,key:string,value:string)=>Response.redirect(slackDashboard(env)+'/apps?'+key+'='+encodeURIComponent(value),303);
 
-export async function handleSlackBotAccount(request:Request,env:SlackBotEnv,fetcher:typeof fetch=fetch):Promise<Response>{
+export async function handleSlackBotAccount(request:Request,env:SlackBotEnv,fetcher:typeof fetch=fetch,ctx?:Pick<ExecutionContext,'waitUntil'>):Promise<Response>{
  const url=new URL(request.url),user=await getSessionUser(request,env);
  if(!user){
   if(url.pathname==='/slack/link')return Response.redirect(slackDashboard(env)+'/auth/login?return_to='+encodeURIComponent(slackDashboard(env)+url.pathname+url.search),302);
@@ -19,11 +20,11 @@ export async function handleSlackBotAccount(request:Request,env:SlackBotEnv,fetc
  }
  if(url.pathname==='/api/slack/status'&&request.method==='GET'){
   const links=(await env.DB.prepare("SELECT l.team_id,l.slack_user_id,l.status,i.team_name,i.app_id,i.bot_user_id,i.status AS installation_status FROM slack_arc_links l LEFT JOIN slack_bot_installations i ON i.team_id=l.team_id WHERE l.user_id=?1 AND l.status='active'").bind(user.id).all()).results;
-  const installations=(await env.DB.prepare("SELECT team_id,team_name,app_id,status FROM slack_bot_installations WHERE installer_user_id=?1 AND status='active'").bind(user.id).all()).results;
+  const installations=(await env.DB.prepare("SELECT team_id,team_name,app_id,status FROM slack_bot_installations WHERE installer_user_id=?1").bind(user.id).all()).results;
   const access=await arcAccountAccess(env,user.id),premium=access.paid&&access.premium,gateway=arcGateway(env);
   const preference=await env.DB.prepare('SELECT model_id FROM slack_arc_preferences WHERE user_id=?1').bind(user.id).first<{model_id:string}>();
   const models=[{id:'auto',label:'Auto'},...(premium?gateway?.models.filter(model=>model.id!==arcAutoId(env)&&model.provider!=='workers_ai'&&gateway.adapters[model.provider]).map(model=>({id:model.id,label:model.label||model.model}))||[]:[])];
-  return json({configured:slackReady(env),links,installations,modelId:premium&&models.some(model=>model.id===preference?.model_id)?preference!.model_id:'auto',models,canSelectModel:premium,autoModel:gateway?.models.find(model=>model.id===arcAutoId(env))?.model||null});
+  return json({configured:slackReady(env),links,installations,setup:{eventUrl:(env.APP_ORIGIN||env.PUBLIC_ORIGIN).replace(/\/$/,'')+'/api/slack/events',events:['message.im','app_mention']},modelId:premium&&models.some(model=>model.id===preference?.model_id)?preference!.model_id:'auto',models,canSelectModel:premium,autoModel:gateway?.models.find(model=>model.id===arcAutoId(env))?.model||null});
  }
  if(request.method==='POST'&&!isTrustedDashboardMutation(request,env))return json({error:'same_origin_required'},403);
  if(url.pathname==='/api/slack/settings'&&request.method==='POST'){
@@ -78,6 +79,7 @@ export async function handleSlackBotAccount(request:Request,env:SlackBotEnv,fetc
     env.DB.prepare(`INSERT INTO slack_arc_links(team_id,slack_user_id,user_id,status,updated_at) VALUES(?1,?2,?3,'active',?4) ON CONFLICT(team_id,slack_user_id) DO UPDATE SET user_id=excluded.user_id,status='active',updated_at=excluded.updated_at`).bind(link.team_id,link.slack_user_id,user.id,slackStamp()),
     env.DB.prepare("UPDATE slack_arc_events SET status='pending',reply_ciphertext=NULL,delivery_kind=NULL,reply_ts=NULL,lease=NULL,lease_until=NULL,next_attempt_at=?1,updated_at=?1 WHERE id=?2 AND status IN ('awaiting_link','delivered') AND delivery_kind='link'").bind(slackStamp(),link.event_id),
    ]);
+   ctx?.waitUntil(runSlackJobs(env,{eventId:link.event_id,limit:1,fetcher}));
    return authPage('Slack connected','<h1>You’re connected</h1><p class="lead">Your Slack request will continue using this Remote Arc account. You can return to Slack.</p><a class="google" href="'+escapeAuthHtml(slackDashboard(env)+'/dashboard/agent/chat')+'">Open Remote Arc</a>');
   }
   return slackLinkConfirmationPage(url.pathname+url.search,user.email,link.slack_user_id,link.team_id);

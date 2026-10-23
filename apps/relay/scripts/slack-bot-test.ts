@@ -32,6 +32,7 @@ const fetcher:typeof fetch=async(input,init)=>{
  const url=new URL(String(input)),method=url.pathname.split('/').at(-1)!;
  if(method==='oauth.v2.access')return Response.json({ok:true,app_id:'AAPP123',team:{id:'TTEAM123',name:'External workspace'},bot_user_id:'UBOT123',access_token:'fixture-bot-token',scope:SLACK_BOT_SCOPES.join(',')});
  const body=method==='users.info'?Object.fromEntries(url.searchParams):JSON.parse(String(init?.body||'{}'));calls.push({method,body});
+ if(method==='assistant.threads.setStatus')return Response.json({ok:true});
  if(method==='users.info'){
   assert.equal(init?.method,'GET','Member lookup uses the documented HTTP method and query arguments');
   assert.equal(init?.body,undefined);assert.equal(new Headers(init?.headers).get('authorization'),'Bearer fixture-bot-token');
@@ -76,6 +77,9 @@ async function linkUser(user:string,arcUser:string,text='Hello'){
 
 // Install is a workspace capability, not a grant of the installer's Arc account.
 assert.equal((await handleSlackBotAccount(new Request(origin+'/api/slack/status'),env)).status,401);
+const missingInstallation=await handleSlackEvents(await signed(event('UMISSING','Hello')),env);
+assert.equal(missingInstallation.status,503,'Missing Bot installation must not silently acknowledge and discard a signed message');
+assert.equal((await missingInstallation.json() as any).error,'slack_bot_installation_required');
 const install=await botAccount('/api/slack/install','POST','owner',{}),auth=new URL((await install.json() as any).authorizationUrl);
 assert.equal(auth.searchParams.has('team'),false);assert.equal(auth.searchParams.has('user_scope'),false);assert.equal(auth.searchParams.get('scope'),SLACK_BOT_SCOPES.join(','));
 const callback='/api/slack/oauth/callback?code=fixture-code&state='+auth.searchParams.get('state');assert.equal((await botAccount(callback)).status,303);assert.equal((await botAccount(callback)).status,400);
@@ -101,9 +105,32 @@ assert.equal((await handleSlackEvents(await signed(event(),Math.floor(Date.now()
 for(const extra of [{subtype:'message_changed'},{bot_id:'BBOT'},{user:'UBOT123'},{type:'message',channel_type:'channel'}])await enqueue(event('UOWNER','ignore',extra));
 assert.equal(sql.prepare('SELECT COUNT(*) n FROM slack_arc_events').get()?.n,0);
 const wrongApp=event();wrongApp.api_app_id='AOTHER';await enqueue(wrongApp);assert.equal(sql.prepare('SELECT COUNT(*) n FROM slack_arc_events').get()?.n,0);
+sql.prepare("UPDATE slack_bot_installations SET status='refreshing',updated_at=?").run(new Date().toISOString());
+const refreshing=await handleSlackEvents(await signed(event('UREFRESH')),env);
+assert.equal(refreshing.status,503,'An installation refresh must let Slack retry rather than lose ingress');
+assert.equal(refreshing.headers.get('retry-after'),'5');
+sql.prepare("UPDATE slack_bot_installations SET status='active'").run();
+for(let index=0;index<12;index++)await enqueue(event('UFLOOD','A capacity test'));
+assert.equal((await handleSlackEvents(await signed(event('UFLOOD','Overflow')),env)).status,429,'An event that was not retained must not be acknowledged as accepted');
+sql.prepare("DELETE FROM slack_arc_events WHERE slack_user_id='UFLOOD'").run();
+
+// A new event warms its own job, even when an unrelated older request is due.
+const older=await enqueue(event('UWARMOLD','An older message'));
+const fresh=event('UWARMNEW','A new message'),freshId=fresh.team_id+':'+fresh.event_id;
+const deferred:Promise<unknown>[]=[];const originalFetch=globalThis.fetch;
+try{globalThis.fetch=fetcher;assert.equal((await handleSlackEvents(await signed(fresh),env,{waitUntil:promise=>{deferred.push(promise);}})).status,200);await Promise.all(deferred);}
+finally{globalThis.fetch=originalFetch;}
+assert.equal(row(freshId).status,'awaiting_link','The arriving user receives an immediate account-link reply');
+assert.equal(row(older).status,'pending','Another user’s older job must not consume this event’s wake-up');
+sql.prepare("UPDATE slack_arc_events SET status='delivered' WHERE id IN (?,?)").run(older,freshId);
 
 const first=await linkUser('UOWNER','owner','Find my computers');assert.equal(models,0);
+assert(!calls.some(call=>call.method==='assistant.threads.setStatus'&&call.body.channel_id==='DOWNER'),'An optional AI indicator must not delay the account-link reply');
 await runSlackJobs(env,{fetcher});const ownerRun=row(first).run_id;assert(ownerRun);assert.equal(row(first).user_id,'owner');assert.equal(row(first).status,'waiting_run');
+const ownerCalls=calls.filter(call=>call.body.channel==='DOWNER'||call.body.channel_id==='DOWNER'||call.method==='users.info'&&call.body.user==='UOWNER');
+const progress=ownerCalls.findIndex(call=>call.method==='chat.postMessage'&&call.body.text.includes('working on your request'));
+assert(progress>=0&&progress<ownerCalls.findIndex(call=>call.method==='users.info'),'A normal acknowledgement must arrive before member lookup and Arc admission');
+assert(ownerCalls.some(call=>call.method==='assistant.threads.setStatus'&&call.body.thread_ts===row(first).source_ts),'Native status follows the reliable acknowledgement');
 decisions.push({decision:'tool',tool:'list_devices',arguments_json:'{}',message:'Checking your computers'},reply('Found your own computer.'));
 assert.equal(await runArcStep(env,ownerRun),true,JSON.stringify(sql.prepare('SELECT status,error_code FROM arc_chat_runs WHERE id=?').get(ownerRun)));assert.equal(await runArcStep(env,ownerRun),false);
 const journal=await arcMessages(env,'owner',(sql.prepare('SELECT session_id FROM arc_chat_runs WHERE id=?').get(ownerRun) as any).session_id,ownerRun);
@@ -116,6 +143,33 @@ const second=await linkUser('UOTHER','other','Hello from another account');await
 decisions.push(reply('Private response for the other account.'));await runArcStep(env,otherRun);await runSlackJobs(env,{runId:otherRun,fetcher});assert.equal(row(second).status,'delivered');
 assert(calls.some(call=>call.method==='chat.update'&&call.body.channel==='DOTHER'&&call.body.text.includes('Private response for the other account.')));
 assert.notEqual((sql.prepare('SELECT session_id FROM arc_chat_runs WHERE id=?').get(ownerRun) as any).session_id,(sql.prepare('SELECT session_id FROM arc_chat_runs WHERE id=?').get(otherRun) as any).session_id);
+
+// A rejected optional status cannot prevent a durable normal reply or execution.
+const noNative=await enqueue(event('UOTHER','Continue without an AI indicator'));
+await runSlackJobs(env,{eventId:noNative,fetcher:async(input,init)=>String(input).endsWith('/assistant.threads.setStatus')?Response.json({ok:false,error:'missing_scope'}):fetcher(input,init)});
+assert.equal(row(noNative).status,'waiting_run');assert(row(noNative).reply_ts);assert(row(noNative).run_id);
+decisions.push(reply('The normal reply still works.'));await runArcStep(env,row(noNative).run_id);await runSlackJobs(env,{runId:row(noNative).run_id,fetcher});assert.equal(row(noNative).status,'delivered');
+
+// Ordered messages acknowledge the waiting turn without starting two Arc runs.
+const busy=await enqueue(event('UOTHER','The first queued request'));
+await runSlackJobs(env,{eventId:busy,fetcher});
+const queued=await enqueue(event('UOTHER','帮我检查设备'));
+await runSlackJobs(env,{eventId:queued,fetcher});
+assert.equal(row(queued).status,'pending');assert.equal(row(queued).run_id,null);assert(row(queued).reply_ts);
+assert(calls.some(call=>call.method==='chat.postMessage'&&call.body.channel==='DOTHER'&&call.body.text.includes('已收到')));
+decisions.push(reply('First task complete.'));await runArcStep(env,row(busy).run_id);await runSlackJobs(env,{runId:row(busy).run_id,fetcher});
+ready(queued);await runSlackJobs(env,{eventId:queued,fetcher});assert(row(queued).run_id);
+decisions.push(reply('Second task complete.'));await runArcStep(env,row(queued).run_id);await runSlackJobs(env,{runId:row(queued).run_id,fetcher});assert.equal(row(queued).status,'delivered');
+
+// Completing account association also warms that exact request immediately.
+const linkWarm=await enqueue(event('ULINKWARM','Continue after account linking'));
+await runSlackJobs(env,{eventId:linkWarm,fetcher});
+const linkWarmCode=calls.filter(call=>call.method==='chat.postMessage').at(-1)!.body.text.match(/code=([\w-]+)/)?.[1];assert(linkWarmCode);
+const linkDeferred:Promise<unknown>[]=[];
+assert.equal((await handleSlackBotAccount(account('/slack/link?code='+linkWarmCode,'POST','other',{}),env,fetcher,{waitUntil:promise=>{linkDeferred.push(promise);}})).status,200);
+assert.equal(linkDeferred.length,1);await Promise.all(linkDeferred);
+assert.equal(row(linkWarm).status,'waiting_run');assert(row(linkWarm).run_id);
+decisions.push(reply('Resumed immediately after linking.'));await runArcStep(env,row(linkWarm).run_id);await runSlackJobs(env,{runId:row(linkWarm).run_id,fetcher});
 
 // A shared thread never joins two principals or publishes personal results.
 const mentionIds=[];
@@ -139,7 +193,7 @@ const missing=await linkUser('UMISSING','owner','Check my device status'),before
 await runSlackJobs(env,{fetcher});
 assert.equal(row(missing).status,'blocked');assert.equal(row(missing).last_error,'slack_user_not_found');
 assert.equal(row(missing).run_id,null);assert.equal(models,beforeMissing);
-assert(calls.some(call=>call.method==='chat.postMessage'&&call.body.channel==='DMISSING'&&call.body.text.includes('couldn’t verify your Slack workspace identity')));
+assert(calls.some(call=>['chat.postMessage','chat.update'].includes(call.method)&&call.body.channel==='DMISSING'&&call.body.text.includes('couldn’t verify your Slack workspace identity')));
 
 // Stop remains available after a plan expires, without a model call.
 const enterpriseIdentity=await enqueue(event('WENTERPRISE','Link my Enterprise identity'));await runSlackJobs(env,{fetcher});assert.equal(row(enterpriseIdentity).status,'awaiting_link');
@@ -147,12 +201,16 @@ const stopped=await enqueue(event('UOWNER','Start a request I will stop'));await
 sql.prepare("UPDATE arc_trials SET started_at='1999-01-01T00:00:00.000Z',expires_at='2000-01-01T00:00:00.000Z' WHERE user_id='owner'").run();
 const beforeStop=models;const stop=await enqueue(event('UOWNER','stop'));await runSlackJobs(env,{fetcher});assert.equal(row(stop).status,'delivered',JSON.stringify(row(stop)));assert.equal((sql.prepare('SELECT status FROM arc_chat_runs WHERE id=?').get(stoppedRun) as any).status,'cancelled');assert.equal(models,beforeStop);
 const expired=await enqueue(event('UOWNER','Paid reasoning after expiry'));ready();await runSlackJobs(env,{fetcher});assert.equal(row(expired).run_id,null);assert.equal(models,beforeStop);
-assert(calls.filter(call=>call.method==='chat.postMessage').at(-1)?.body.text.includes('trial has ended'));
+assert(calls.filter(call=>['chat.postMessage','chat.update'].includes(call.method)).at(-1)?.body.text.includes('trial has ended'));
 assert.equal((await botAccount('/api/slack/unlink','POST','other',{teamId:'TTEAM123',slackUserId:'UOWNER'})).status,200);assert.equal((sql.prepare('SELECT status FROM slack_arc_links WHERE slack_user_id=?').get('UOWNER') as any).status,'active');
 await botAccount('/api/slack/unlink','POST','owner',{teamId:'TTEAM123',slackUserId:'UOWNER'});assert.equal((sql.prepare('SELECT status FROM slack_arc_links WHERE slack_user_id=?').get('UOWNER') as any).status,'revoked');
 assert.equal((sql.prepare('SELECT status FROM slack_arc_links WHERE slack_user_id=?').get('UOTHER') as any).status,'active');
 
 const uninstall=event();(uninstall as any).event={type:'app_uninstalled'};await enqueue(uninstall);assert.equal((sql.prepare('SELECT status FROM slack_bot_installations').get() as any).status,'revoked');assert.equal((sql.prepare('SELECT token_ciphertext FROM slack_bot_installations').get() as any).token_ciphertext,null);
+const installationStatus=await (await botAccount('/api/slack/status')).json() as any;
+assert.equal(installationStatus.installations[0].status,'revoked','Expired installations remain visible for repair');
+assert.equal(installationStatus.setup.eventUrl,origin+'/api/slack/events');
+assert(!JSON.stringify(installationStatus).includes('fixture-bot-token'));
 assert(!JSON.stringify(sql.prepare('SELECT * FROM slack_arc_events').all()).includes('Find my computers'));
 assert(wakes>0);
 console.log('PASS: signed Slack ingress → durable queue → explicit per-user linking → existing Arc plan/budget/tool engine → private durable replies; account/thread isolation, retries, no-loop dedupe, restart, stop, expiry, unlink and uninstall. No real messages or provider charges.');

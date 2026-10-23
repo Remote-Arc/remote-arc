@@ -2,6 +2,8 @@
  * access tokens, device names, paths, or arguments enter Analytics Engine.
  * Query P95 from Analytics Engine; query D1 rows/latency from native D1 metrics.
  */
+import { diagnosticError } from "./diagnostics.js";
+
 export type TelemetryEnv = {
   MCP_ANALYTICS?: AnalyticsEngineDataset;
   MCP_METRICS_SAMPLE_RATE?: string;
@@ -38,7 +40,7 @@ export function recordMcpTelemetry(
     });
     return true;
   } catch (error) {
-    console.warn("mcp_metric_write_failed", { message: error instanceof Error ? error.message : String(error) });
+    console.warn("mcp_metric_write_failed", { message: diagnosticError(error) });
     return false;
   }
 }

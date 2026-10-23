@@ -1,4 +1,5 @@
 import { getSessionUser, nowIso } from "./auth.js";
+import { diagnosticError, diagnosticRoute } from "./diagnostics.js";
 
 type EmailBinding = {
   send(message: {
@@ -34,6 +35,26 @@ type IncidentInput = {
 };
 
 const ALERT_COOLDOWN_MS = 10 * 60_000;
+
+// Arbitrary exception strings cannot be safely filtered by credential patterns.
+// Preserve only operational classifications; never use this for recovery state.
+function safeIncident(input: IncidentInput): IncidentInput {
+  const kind = ["http_5xx", "exception", "synthetic_d1_failure"].includes(input.kind)
+    ? input.kind : "exception";
+  const statusCode = typeof input.statusCode === "number" && Number.isInteger(input.statusCode)
+    && input.statusCode >= 500 && input.statusCode <= 599 ? input.statusCode : undefined;
+  return {
+    kind,
+    severity: ["warning", "error", "critical"].includes(input.severity ?? "") ? input.severity : "error",
+    statusCode,
+    method: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].includes(input.method ?? "")
+      ? input.method : undefined,
+    path: diagnosticRoute(input.path),
+    message: kind === "http_5xx" ? "Remote Arc returned HTTP " + (statusCode ?? 500) : diagnosticError(input.message),
+    rayId: typeof input.rayId === "string" && /^[a-f0-9]{16,32}-[A-Z]{3}$/i.test(input.rayId) ? input.rayId : null,
+    colo: typeof input.colo === "string" && /^[A-Z]{3}$/.test(input.colo) ? input.colo : null,
+  };
+}
 
 function isAdmin(user: { role?: string | null } | null) {
   return user?.role === "admin";
@@ -112,8 +133,10 @@ async function sendIncidentAlert(
 
 export async function recordServiceIncident(
   env: MonitorEnv,
-  incident: IncidentInput,
+  input: IncidentInput,
 ) {
+  // Persistence, email and fallback logs must all use this sanitized copy.
+  const incident = safeIncident(input);
   // A 5xx flood must not insert an unbounded number of incident rows into
   // the same D1 database that is already having trouble.
   if (env.INCIDENT_RATE_LIMITER) {
@@ -124,7 +147,7 @@ export async function recordServiceIncident(
       if (!success) return;
     } catch (error) {
       console.warn("incident_rate_limit_unavailable", {
-        message: error instanceof Error ? error.message : String(error),
+        message: diagnosticError(error),
       });
       return; // Fail closed on incident persistence, not on the user request.
     }
@@ -157,14 +180,14 @@ export async function recordServiceIncident(
     } catch (error) {
       console.error("monitor_email_alert_failed", {
         incidentId: id,
-        error: error instanceof Error ? error.message : String(error),
+        error: diagnosticError(error),
       });
     }
   } catch (error) {
     console.error("monitor_incident_write_failed", {
       incidentId: id,
       original: incident.message,
-      error: error instanceof Error ? error.message : String(error),
+      error: diagnosticError(error),
     });
   }
 }
@@ -281,7 +304,7 @@ export async function runSyntheticMonitor(env: MonitorEnv) {
     await recordServiceIncident(env, {
       severity: "critical",
       kind: "synthetic_d1_failure",
-      message: error instanceof Error ? error.message : String(error),
+      message: diagnosticError(error),
     });
   }
 }

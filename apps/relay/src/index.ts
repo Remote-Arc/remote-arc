@@ -885,20 +885,20 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     const isMarketingHost = url.hostname === "remotearc.app" || url.hostname === "www.remotearc.app";
 
-    if (request.method === "GET" && url.pathname === "/robots.txt") {
-      return new Response(isMarketingHost ? robotsTxt() : "User-agent: *\nDisallow: /\n", {
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/robots.txt") {
+      return new Response(request.method === "HEAD" ? null : (isMarketingHost ? robotsTxt() : "User-agent: *\nDisallow: /\n"), {
         headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" },
       });
     }
 
-    if (request.method === "GET" && isMarketingHost && url.pathname === "/sitemap.xml") {
-      return new Response(sitemapXml(), {
+    if ((request.method === "GET" || request.method === "HEAD") && isMarketingHost && url.pathname === "/sitemap.xml") {
+      return new Response(request.method === "HEAD" ? null : sitemapXml(), {
         headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=3600" },
       });
     }
 
-    if (request.method === "GET" && isMarketingHost && url.pathname === "/feed.xml") {
-      return new Response(feedXml(), {
+    if ((request.method === "GET" || request.method === "HEAD") && isMarketingHost && url.pathname === "/feed.xml") {
+      return new Response(request.method === "HEAD" ? null : feedXml(), {
         headers: { "content-type": "application/rss+xml; charset=utf-8", "cache-control": "public, max-age=3600" },
       });
     }

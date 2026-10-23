@@ -126,7 +126,7 @@ const articles: Record<string, SeoPage> = {
 
 const pages: Record<string, SeoPage> = {
   "/integrations": { title: "Remote Arc Apps — Explore native integrations", description: "Browse App categories, supported operations, authorization requirements and usage costs. Connect Apps works independently of Arc Agent; account connections require provider setup.", canonical: SITE + "/integrations" },
-  "/": { title: "Remote Arc — Connect AI to Apps & Computers", description: "Connect AI to your apps and computers with per-device permissions and cross-device workflows. Delegate goals to Arc with retained context, scheduled judgment and result checks.", canonical: SITE + "/" },
+  "/": { title: "Remote Arc — AI Computer Access, Browser Automation & Device Fleet", description: "Connect ChatGPT, Claude, Codex and compatible MCP clients to your authorized computers. Automate browser workflows and dispatch eligible work across Windows, Mac and Linux with device-level permissions.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude, Gemini and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
@@ -245,8 +245,8 @@ const crawlPages: Record<string, CrawlPage> = {
     links: [["/#apps", "App categories"], ["/connect-ai", "Set up Remote Arc Connect"], ["/arc", "Explore Arc"], ["/security-model", "Permissions and security"]]
   },
   "/": {
-    h1: "Connect AI agents to your apps and computers",
-    intro: "Remote Arc Connect links compatible AI assistants such as ChatGPT, Claude and Cursor to supported apps and explicitly paired Windows, macOS and Linux computers through a secure MCP connection. Arc provides hosted conversations, retained context and scheduled fresh judgment over the same authorized execution infrastructure. Your connected services and devices retain their own authorization and permissions.",
+    h1: "Remote Arc: AI computer access, browser automation and device fleet",
+    intro: "Remote Arc connects ChatGPT, Claude, Codex, Cursor and compatible MCP clients to authorized apps and Windows, macOS and Linux computers. Its browser tools support approved web workflows; its fleet scheduler can dispatch eligible work to an available device without requiring manual selection. Each device has its own permissions, and Arc adds bounded hosted conversations and scheduled reasoning over the same execution infrastructure.",
     sections: [
       { heading: "Use the computer where the work already lives", text: "Your repositories, files, runtimes, credentials and command-line tools can stay on your own machine. Remote Arc exposes named MCP capabilities for inspecting directories, reading files, making supported edits, checking processes and running approved commands. The AI asks for a specific tool operation and the paired device executes it locally, so you do not need to move an entire development environment into a hosted VM just to let an AI help with real work." },
       { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client to your Remote Arc account, while each paired computer keeps its own policy. A development workstation can allow file edits and managed terminal commands while another machine remains read-only. Trusted Write Locations, protected paths, per-tool permissions and explicit approvals let you narrow ordinary file workflows without pretending that powerful terminal access is risk free." },
@@ -771,7 +771,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       "@id": SITE + "/#software",
       name: "Remote Arc",
       applicationCategory: "DeveloperApplication",
-      applicationSubCategory: "Remote MCP computer access",
+      applicationSubCategory: "Remote MCP computer access and device fleet management",
       operatingSystem: "Windows, macOS, Linux",
       url: SITE,
       description: page.description,
@@ -783,7 +783,8 @@ function jsonLd(page: SeoPage, pathname: string) {
         "Workspace and sensitive-path controls",
         "File inspection and supported edits",
         "Managed command execution",
-        "Browser tab context",
+        "Browser tab context and permissioned browser automation",
+        "Cross-device task dispatch for eligible work",
         "Local undo for supported edits",
         "Long-running task controls"
       ]
@@ -995,7 +996,7 @@ export function sitemapXml() {
         : '';
       const isRoot = path === "/" || path === "/zh";
       const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/remote-mcp" || path === "/docs/mcp";
-      return '<url><loc>' + SITE + path + '</loc>' + alternates + '<lastmod>' + (isRoot ? '2026-10-18' : path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
+      return '<url><loc>' + SITE + path + '</loc>' + alternates + '<lastmod>' + (isRoot ? '2026-10-23' : path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
     }).join("") + '</urlset>';
 }
 

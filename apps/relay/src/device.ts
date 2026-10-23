@@ -44,6 +44,8 @@ const BROWSER_DEFAULT_ALLOWED_TOOLS = [
   "browser_extract_table",
   "browser_click",
   "browser_fill",
+  "browser_open_tab",
+  "browser_act",
 ] as const;
 
 const parseJsonStringArray = (value: string | null) => {
@@ -492,7 +494,7 @@ export async function getDevicesForUser(
     }
     const tools = allowedTools === null
       ? availableTools
-      : availableTools.filter((tool) => allowedTools!.includes(tool));
+      : availableTools.filter((tool) => allowedTools!.includes(tool) || ((tool === "browser_open_tab" || tool === "browser_act") && allowedTools!.includes("browser_click")));
 
     return {
       id: device.id,

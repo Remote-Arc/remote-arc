@@ -2846,7 +2846,7 @@ function SecurityModelPage({ user }: { user?: User | null }) {
                 <li>{tr("Terminal execution is not sandboxed by Remote Arc when Full access is enabled.", "开启 Full 后，终端执行不会被 Remote Arc 变成沙箱。")}</li>
                 <li>{tr("Local Undo is not a general transaction rollback system.", "Local Undo 不是通用事务回滚系统。")}</li>
                 <li>{tr("Direct process handles are local to the agent. Durable Tasks preserve progress across interruptions; recovery may inspect or start a new attempt rather than preserve the same OS process.", "直接进程句柄属于本地 Agent；持久 Task 可跨中断保存进度，恢复时可能检查或启动新尝试，不保留同一个 OS 进程。")}</li>
-                <li>{tr("Browser tabs start read-only; click/fill is a separate per-tab opt-in rather than unrestricted browser automation.", "浏览器标签页默认只读；点击/填写需按标签页单独授权，而不是无限制浏览器自动化。")}</li>
+                <li>{tr("The browser extension works only on sites you allowed and tabs you shared; a shared tab starts read-only and click/fill is a separate per-tab opt-in.", "浏览器扩展只能在你允许的网站和你共享的标签页上工作；共享的标签页默认只读，点击/填写需按标签页单独开启。")}</li>
                 <li>{tr("Adaptive Agent Goals may choose different next actions over time, but only inside the approved objective, tool set, device policy, iteration/expiry limits and optional deterministic verification boundary.", "Adaptive Agent Goal 可以随执行结果调整下一步，但只能在已批准目标、Tool Set、设备策略、迭代/到期限制与可选确定性验证边界内行动。")}</li>
                 <li>{tr("Login background connection is separate from task keep-awake. Opted-in active tasks can request temporary sleep inhibition; power loss, forced sleep and network loss still make the device unavailable.", "登录后台连接与任务保持唤醒不同。已授权活动任务可临时申请抑制休眠，断电、强制休眠和断网仍会使设备不可用。")}</li>
               </ul>
@@ -5347,7 +5347,8 @@ function Dashboard({
               {filteredDevices.map((device) => {
                 const advertisedTools = device.available_tools || device.tools;
                 const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
-                const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools])).filter((tool) => !isBrowserRunnerTool(tool));
+                // Extension 0.4.0 tab opening and actions follow its click & fill switch.
+                const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools])).filter((tool) => !isBrowserRunnerTool(tool) && tool !== "browser_open_tab" && tool !== "browser_act");
                 const runnerAdvertised = device.status !== "online" || BROWSER_RUNNER_TOOLS.every((tool) => advertisedTools.includes(tool));
                 const runnerEnabled = browserRunnerEnabled(device.allowed_tools);
                 const runnerVisible = device.platform !== "browser" && (runnerEnabled || BROWSER_RUNNER_TOOLS.some((tool) => advertisedTools.includes(tool)) || device.status === "online");

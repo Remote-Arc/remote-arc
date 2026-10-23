@@ -10,7 +10,7 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     sections: [
       {heading:"默认 Runner",text:"在 Dashboard 为电脑开启 Browser Runner。使用独立的浏览器资料，登录一次后复用；保存的登录信息在本机填写，密码不会进入 AI 对话。"},
       {heading:"连接你的 Chrome",text:"Chrome 144 或更新版本可在 chrome://inspect/#remote-debugging 开启远程调试。连接时点击允许，任务会在自己的新窗口中沿用现有登录。连接保持期间多个任务共用授权；新连接仍需允许，Chrome 会显示受控提示。"},
-      {heading:"下载与安装 Chrome Companion",text:"下载扩展 ZIP 后解压，在 chrome://extensions 开启开发者模式并加载已解压的扩展程序。配对并手动共享标签页，默认只读，点击和填写按标签页单独授权。当前尚未上架 Chrome Web Store，需要手动更新。"},
+      {heading:"下载与安装 Chrome Companion",text:"下载扩展 ZIP 后解压，在 chrome://extensions 开启开发者模式并加载已解压的扩展程序。配对后，AI 需要某个网站时你允许一次（Chrome 会再确认），之后它可以在这个网站上自己打开标签页、读取、点击和填写；也可以只共享单个标签页，默认只读。下单和发布只发送一次，密码和卡号不会填写。当前尚未上架 Chrome Web Store，需要手动更新。"},
     ],
   },
   "/privacy": {

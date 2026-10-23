@@ -204,8 +204,14 @@ assert.match(workerSource, /const grants = new Map\(\)/);
 assert.doesNotMatch(workerSource, /MAX_SHARED_TABS|sharedTabsLimit|grantLimit/);
 
 const manifest = JSON.parse(fs.readFileSync(new URL("./manifest.json", import.meta.url), "utf8"));
-assert.equal(manifest.version, "0.3.0");
-assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storage"].sort());
-assert.equal(manifest.host_permissions.includes("<all_urls>"), false);
+assert.equal(manifest.version, "0.4.0");
+assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storage", "tabGroups"].sort());
+// Sites are granted one at a time through Chrome's own prompt; nothing is
+// granted up front except the Remote Arc relay.
+assert.deepEqual(manifest.host_permissions, ["https://mcp.remotearc.app/*"]);
+assert.deepEqual(manifest.optional_host_permissions.sort(), ["http://*/*", "https://*/*"]);
+assert.equal(manifest.permissions.includes("tabs") || manifest.permissions.includes("debugger") || manifest.permissions.includes("cookies"), false);
+assert.match(workerSource, /SUBMIT_EFFECT_REQUIRED/);
+assert.match(workerSource, /SITE_NOT_ALLOWED/);
 
 process.stdout.write("Remote Arc browser capability tests passed\n");

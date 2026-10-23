@@ -1,6 +1,8 @@
 const connection = document.querySelector("#connection");
 const tab = document.querySelector("#tab");
 const sharedTabs = document.querySelector("#shared-tabs");
+const siteBox = document.querySelector("#site");
+const sitesBox = document.querySelector("#sites");
 const status = document.querySelector("#status");
 
 const send = (type, payload = {}) => chrome.runtime.sendMessage({ type, ...payload });
@@ -41,6 +43,67 @@ async function render() {
     const result = await send("start-pairing");
     status.textContent = result?.error || "Approve the pairing in the Remote Arc tab.";
   });
+
+  // This site: lets the AI open and use tabs here on its own, signed in as
+  // the user. Chrome asks for the permission itself.
+  const site = state.activeSite;
+  siteBox.hidden = !site;
+  siteBox.innerHTML = !site
+    ? ""
+    : site.allowed
+      ? `<div class="permission"><span>${escapeHtml(shortUrl(site.origin))}</span><span class="on">AI allowed</span></div>
+         <p class="hint">Your AI can open tabs on this site and read, click and fill there. Purchases, posts and submissions are sent once.</p>
+         <button class="secondary" id="remove-site">Remove this site</button>`
+      : `<div class="permission"><span>${escapeHtml(shortUrl(site.origin))}</span><span>Not allowed</span></div>
+         <p class="hint">Let your AI open and use this site in your browser, signed in as you are. It still cannot see your other tabs or sites.</p>
+         <button class="primary" id="allow-site" ${state.connected ? "" : "disabled"}>Allow AI on this site</button>`;
+
+  document.querySelector("#allow-site")?.addEventListener("click", () => {
+    const u = new URL(site.origin);
+    // Requested straight from the click, as Chrome requires.
+    chrome.permissions.request({ origins: [u.protocol + "//" + u.hostname + "/*"] }).then(async (granted) => {
+      if (!granted) {
+        status.textContent = "Not allowed.";
+        return;
+      }
+      await send("site-allowed", { origin: site.origin });
+      status.textContent = "AI allowed on " + shortUrl(site.origin) + ".";
+      await render();
+    }, (error) => {
+      status.textContent = error instanceof Error ? error.message : String(error);
+    });
+  });
+
+  document.querySelector("#remove-site")?.addEventListener("click", async () => {
+    await send("remove-site", { origin: site.origin });
+    status.textContent = "Site removed.";
+    await render();
+  });
+
+  const sites = state.sites || [];
+  sitesBox.innerHTML = `
+    <div class="permission"><span>Allowed sites</span><span>${sites.length}</span></div>
+    <div class="shared-list">
+      ${sites.map((origin) => `<div class="shared-item">
+          <div class="shared-copy"><strong>${escapeHtml(shortUrl(origin))}</strong><small>${escapeHtml(origin)}</small></div>
+          <button class="icon-button" data-remove-site="${escapeHtml(origin)}" aria-label="Remove this site">×</button>
+        </div>`).join("") || '<p class="empty">No sites allowed yet. Your AI asks when it needs one.</p>'}
+    </div>
+    <label class="permission"><span>Let your AI fill one-time codes</span><input type="checkbox" id="allow-codes" ${state.allowCodes ? "checked" : ""}></label>
+    <p class="hint">Remote Arc Browser ${escapeHtml(state.version || "")}</p>`;
+
+  document.querySelector("#allow-codes")?.addEventListener("change", async (event) => {
+    await send("set-allow-codes", { enabled: event.target.checked });
+    status.textContent = event.target.checked ? "One-time codes can be filled." : "One-time codes stay with you.";
+  });
+
+  for (const button of sitesBox.querySelectorAll("[data-remove-site]")) {
+    button.addEventListener("click", async () => {
+      await send("remove-site", { origin: button.dataset.removeSite });
+      status.textContent = "Site removed.";
+      await render();
+    });
+  }
 
   const grants = state.grants || [];
   const count = grants.length;
@@ -97,7 +160,7 @@ async function render() {
           <div class="shared-copy">
             <strong>${escapeHtml(grant.title || shortUrl(grant.url) || "Shared tab")}</strong>
             <span>${escapeHtml(shortUrl(grant.url))}</span>
-            <small>${grantInteract ? "Read + click/fill" : "Read only"}</small>
+            <small>${grant.opened ? "Opened by your AI" : grantInteract ? "Read + click/fill" : "Read only"}</small>
           </div>
           <button class="icon-button" data-revoke-tab="${grant.tabId}" aria-label="Stop sharing this tab">×</button>
         </div>`;

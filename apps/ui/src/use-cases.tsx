@@ -156,7 +156,7 @@ function cases(tr: Tr) {
       slug: "browser-research", category: tr("BROWSER CONTEXT", "浏览器上下文"), title: tr("Read a page you explicitly share", "读取你明确共享的页面"),
       intro: tr("Share selected Chrome tabs and let the AI read page text, selections, links or tables through the same MCP connection.", "共享选定的 Chrome 标签页，让 AI 通过同一 MCP 连接读取正文、选中文字、链接或表格。"),
       prompt: tr("Read the tab I shared, extract the feature-comparison table and list the documentation links. Do not navigate or submit anything.", "读取我共享的标签页、提取功能对比表并列出文档链接，不跳转或提交任何内容。"),
-      tools: "shared_tab_list · shared_tab_read · shared_tab_click · shared_tab_fill", permission: tr("Explicit tab sharing; click/fill is a separate per-tab opt-in", "明确共享标签页；点击/填写需对具体标签页单独开启"),
+      tools: "shared_tab_list · shared_tab_read · shared_tab_open · shared_tab_act", permission: tr("A tab you share, or a site you allowed in the extension; clicking on shared tabs is a separate per-tab opt-in", "你共享的标签页，或你在扩展里允许的网站；共享标签页的点击需单独开启"),
       steps: [tr("Install the companion and explicitly share a tab.", "安装 Companion 并明确共享标签页。"), tr("Select the shared tab ID and request only the needed context.", "选择已共享标签页 ID，只读取需要的上下文。"), tr("Return the extracted facts; revoke tab access when finished.", "返回提取的事实，结束后可以撤销标签页访问。")],
       proof: tr("Extracted text or table rows tied to the shared page.", "来自共享页面的正文或表格行。"),
       limit: tr("Tabs start read-only. Click/fill is available only after a separate per-tab opt-in, uses fresh snapshot refs, and blocks recognized sensitive fields. Browser tools remain outside the current Agent Goal action set.", "标签页默认只读；只有对具体标签页单独开启后才能点击/填写，且必须使用最新快照引用并阻止能够识别出的敏感字段。浏览器工具仍不属于当前 Agent Goal 动作集合。"), durable: false,

@@ -124,7 +124,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   try{connectionId=await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);}catch(error){if(error instanceof AppError&&error.code==='app_connection_limit')await revokeProvider(env,provider,tokens,fetcher).catch(()=>undefined);throw error;}
   if(chatRequestId&&destination){await chat!.resumeArcAppConnection(env as import('./arc-chat.js').ArcEnv,userId,chatRequestId,connectionId);return redirect(destination);}
   return new Response(null, { status: 303, headers: { location: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps?connected=" + provider, "cache-control": "no-store" } });
-  }catch(error){if(destination)return retry();throw error;}
+  }catch(error){if(destination)return retry();if(provider==='slack'&&error instanceof AppError&&error.code==='slack_distribution_required')return redirect((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/apps?app_error=slack_distribution_required');throw error;}
 }
 async function accessToken(env: AppEnv, row: Connection, fetcher: typeof fetch): Promise<AppTokens> {
   const tokens = await unseal<AppTokens>(env, row.token_ciphertext!, tokenContext(row));

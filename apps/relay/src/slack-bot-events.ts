@@ -20,7 +20,7 @@ export async function handleSlackEvents(request:Request,env:SlackBotEnv,ctx?:Pic
  }
  // Only explicit mentions and ordinary human DMs are an instruction entrance.
  // Never consume arbitrary channel history, edits, bot replies or file events.
- if(!event||event.bot_id||event.subtype||event.user===installation.bot_user_id||!identifier(event.user,'U')||!identifier(event.channel,'[CDG]')||typeof event.text!=='string'||event.text.length>6000||!/^\d{10,16}\.\d{1,6}$/.test(event.ts||''))return Response.json({ok:true});
+ if(!event||event.bot_id||event.subtype||event.user===installation.bot_user_id||!identifier(event.user,'[UW]')||!identifier(event.channel,'[CDG]')||typeof event.text!=='string'||event.text.length>6000||!/^\d{10,16}\.\d{1,6}$/.test(event.ts||''))return Response.json({ok:true});
  if(event.type!=='app_mention'&&!(event.type==='message'&&event.channel_type==='im'))return Response.json({ok:true});
  if(event.thread_ts!==undefined&&!/^\d{10,16}\.\d{1,6}$/.test(event.thread_ts))return Response.json({ok:true});
  const since=new Date(Date.now()-60000).toISOString(),now=slackStamp(),id=input.team_id+':'+input.event_id;

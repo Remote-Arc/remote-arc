@@ -60,7 +60,7 @@ export async function handleSlackBotAccount(request:Request,env:SlackBotEnv,fetc
  }
  if(url.pathname==='/api/slack/unlink'&&request.method==='POST'){
   const input=await request.json().catch(()=>null) as any;
-  if(!/^T[A-Z0-9]+$/.test(input?.teamId||'')||!/^U[A-Z0-9]+$/.test(input?.slackUserId||''))return json({error:'invalid_request'},400);
+  if(!/^T[A-Z0-9]+$/.test(input?.teamId||'')||!/^[UW][A-Z0-9]+$/.test(input?.slackUserId||''))return json({error:'invalid_request'},400);
   await env.DB.batch([
    env.DB.prepare("UPDATE slack_arc_links SET status='revoked',updated_at=?1 WHERE team_id=?2 AND slack_user_id=?3 AND user_id=?4").bind(slackStamp(),input.teamId,input.slackUserId,user.id),
    env.DB.prepare("UPDATE arc_chat_runs SET status='cancelled',cancel_requested=1,updated_at=?1 WHERE user_id=?2 AND status IN ('queued','thinking','working') AND id IN (SELECT run_id FROM slack_arc_events WHERE team_id=?3 AND slack_user_id=?4 AND user_id=?2)").bind(slackStamp(),user.id,input.teamId,input.slackUserId),

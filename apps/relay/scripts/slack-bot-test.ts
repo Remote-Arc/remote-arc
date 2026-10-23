@@ -126,6 +126,7 @@ failPost=true;const uncertain=await enqueue(event('UUNLINKED','Link my account')
 ratePost=true;const limited=await enqueue(event('URATELIMIT','Link my account'));await runSlackJobs(env,{fetcher});assert.equal(row(limited).status,'pending');ready(limited);await runSlackJobs(env,{fetcher});assert.equal(row(limited).status,'awaiting_link');
 
 // Stop remains available after a plan expires, without a model call.
+const enterpriseIdentity=await enqueue(event('WENTERPRISE','Link my Enterprise identity'));await runSlackJobs(env,{fetcher});assert.equal(row(enterpriseIdentity).status,'awaiting_link');
 const stopped=await enqueue(event('UOWNER','Start a request I will stop'));await runSlackJobs(env,{fetcher});const stoppedRun=row(stopped).run_id;assert(stoppedRun);
 sql.prepare("UPDATE arc_trials SET started_at='1999-01-01T00:00:00.000Z',expires_at='2000-01-01T00:00:00.000Z' WHERE user_id='owner'").run();
 const beforeStop=models;const stop=await enqueue(event('UOWNER','stop'));await runSlackJobs(env,{fetcher});assert.equal(row(stop).status,'delivered',JSON.stringify(row(stop)));assert.equal((sql.prepare('SELECT status FROM arc_chat_runs WHERE id=?').get(stoppedRun) as any).status,'cancelled');assert.equal(models,beforeStop);

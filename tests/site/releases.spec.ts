@@ -17,5 +17,5 @@ test('Default Agent downloads advertise one stable release across all native tar
   await expect(page.locator('.nativeInstall a').filter({ hasText: 'SHA256SUMS' })).toHaveAttribute('href', `https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v${version}/SHA256SUMS`);
   await expect(page.locator('.nativeInstall')).not.toContainText(/\d+\.\d+\.\d+-(rc|alpha|beta|canary)\./);
   await page.goto(prefix + '/releases');
-  await expect(page.locator('main')).toContainText(version);
+  await expect(page.locator('.releasesPage')).toContainText(version);
 });

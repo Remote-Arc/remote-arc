@@ -11,7 +11,7 @@ type ApprovalEnv = ApprovalDbEnv & {
   APP_ORIGIN?: string;
 };
 
-export type ApprovalDecision = "allow_once" | "allow_10m" | "always_folder" | "deny";
+export type ApprovalDecision = "allow_once" | "allow_10m" | "allow_always" | "always_folder" | "deny";
 
 export type ApprovalRow = {
   id: string;
@@ -137,7 +137,7 @@ async function expireStale(env: ApprovalDbEnv, userId?: string) {
   const cleanupClause = userId ? " AND user_id = ?2" : "";
   const cleanup = env.DB.prepare(
     `DELETE FROM approval_requests
-     WHERE status IN ('consumed', 'denied', 'expired')
+     WHERE status IN ('consumed', 'denied', 'expired', 'revoked')
        AND COALESCE(decided_at, consumed_at, expires_at) < ?1${cleanupClause}`,
   );
   if (userId) await cleanup.bind(cutoff, userId).run();
@@ -174,10 +174,11 @@ export async function findApprovedWriteApproval(
        AND tool_name = ?5
        AND target_path = ?7
        AND status = 'approved'
-       AND approved_until > ?8
+       AND (approved_until > ?8 OR (decision_scope = 'allow_always' AND approved_until IS NULL))
        AND (
          (tool_name <> 'browser_runner_start' AND decision_scope = 'allow_10m')
          OR (tool_name <> 'browser_runner_start' AND decision_scope = 'always_folder')
+         OR (tool_name IN ('write_file', 'edit_block') AND decision_scope = 'allow_always')
          OR args_hash = ?6
        )
        AND (decision_scope <> 'allow_once' OR consumed_at IS NULL)
@@ -371,8 +372,11 @@ export async function decideApproval(
     : await select.bind(input.approvalId, input.userId).first<ApprovalRow>();
 
   if (!approval) return { status: 404, payload: { error: "approval not found" } };
-  if (approval.tool_name === "browser_runner_start" && input.decision !== "allow_once" && input.decision !== "deny") {
-    return { status: 400, payload: { error: "browser_runner site expansion requires exact, one-time approval" } };
+  if (approval.tool_name === "browser_runner_start" && !["allow_once", "allow_always", "deny"].includes(input.decision)) {
+    return { status: 400, payload: { error: "browser_runner site expansion requires approval of the exact request" } };
+  }
+  if (input.decision === "allow_always" && !["write_file", "edit_block", "browser_runner_start"].includes(approval.tool_name)) {
+    return { status: 400, payload: { error: "persistent approval is not supported for this tool" } };
   }
   if (approval.status !== "pending") {
     return {
@@ -383,14 +387,15 @@ export async function decideApproval(
 
   const decidedAt = nowIso();
   if (input.decision === "deny") {
-    await env.DB.prepare(
+    const update = await env.DB.prepare(
       `UPDATE approval_requests
        SET status = 'denied', decision_scope = 'deny', decision_source = ?1,
            decided_at = ?2, approved_until = NULL
-       WHERE id = ?3 AND status = 'pending'`,
+       WHERE id = ?3 AND status = 'pending' AND expires_at > ?2`,
     )
       .bind(input.source, decidedAt, approval.id)
       .run();
+    if (update.meta.changes !== 1) return { status: 409, payload: { error: "approval is no longer pending" } };
 
     await writeAudit(env, {
       userId: input.userId,
@@ -431,14 +436,16 @@ export async function decideApproval(
       .run();
   }
 
-  const approvedUntil =
+  // NULL is deliberate: a persistent approval is valid until explicitly revoked.
+  // Lookup still binds it to the user, device, OAuth grant, tool and exact target.
+  const approvedUntil = input.decision === "allow_always" ? null :
     input.decision === "allow_10m" ? addMinutes(10) : addMinutes(15);
 
-  await env.DB.prepare(
+  const update = await env.DB.prepare(
     `UPDATE approval_requests
      SET status = 'approved', decision_scope = ?1, decision_source = ?2,
          decided_at = ?3, approved_until = ?4
-     WHERE id = ?5 AND status = 'pending'`,
+     WHERE id = ?5 AND status = 'pending' AND expires_at > ?3`,
   )
     .bind(
       input.decision,
@@ -448,6 +455,7 @@ export async function decideApproval(
       approval.id,
     )
     .run();
+  if (update.meta.changes !== 1) return { status: 409, payload: { error: "approval is no longer pending" } };
 
   await writeAudit(env, {
     userId: input.userId,
@@ -478,6 +486,51 @@ export async function handleApprovalList(request: Request, env: ApprovalEnv) {
   return Response.json(await listApprovalsFor(env, { userId: user.id }));
 }
 
+export async function listPersistentApprovals(env: ApprovalDbEnv, userId: string) {
+  const rows = await retryTransientD1Read(() => env.DB.prepare(
+    `SELECT a.*, c.client_name FROM approval_requests a
+     LEFT JOIN oauth_clients c ON c.client_id = a.client_id
+     JOIN devices d ON d.id = a.device_id AND d.user_id = a.user_id AND d.revoked_at IS NULL
+     WHERE a.user_id = ?1 AND a.status = 'approved'
+       AND a.decision_scope = 'allow_always' AND a.approved_until IS NULL
+     ORDER BY a.decided_at DESC`,
+  ).bind(userId).all<ApprovalRow>());
+  return rows.results || [];
+}
+
+export async function revokePersistentApproval(env: ApprovalDbEnv, userId: string, approvalId: string) {
+  const approval = await env.DB.prepare(
+    `SELECT * FROM approval_requests WHERE id = ?1 AND user_id = ?2
+     AND status = 'approved' AND decision_scope = 'allow_always' AND approved_until IS NULL`,
+  ).bind(approvalId, userId).first<ApprovalRow>();
+  if (!approval) return { status: 404, payload: { error: "permission not found" } };
+  await env.DB.prepare(
+    `UPDATE approval_requests SET status = 'revoked', decided_at = ?1
+     WHERE id = ?2 AND user_id = ?3 AND status = 'approved' AND decision_scope = 'allow_always'`,
+  ).bind(nowIso(), approvalId, userId).run();
+  await writeAudit(env, {
+    userId, deviceId: approval.device_id, eventType: "security.approval_revoked",
+    toolName: approval.tool_name, success: true, requestId: approval.request_id,
+    clientId: approval.client_id, grantId: approval.grant_id, outcome: "revoked",
+  }).catch(() => undefined);
+  return { status: 200, payload: { ok: true, status: "revoked" } };
+}
+
+export async function handlePersistentApprovalList(request: Request, env: ApprovalEnv) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  return Response.json(await listPersistentApprovals(env, user.id));
+}
+
+export async function handlePersistentApprovalRevoke(request: Request, env: ApprovalEnv) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const id = new URL(request.url).pathname.match(/^\/api\/approvals\/([^/]+)\/revoke$/)?.[1];
+  if (!id) return Response.json({ error: "permission id required" }, { status: 400 });
+  const result = await revokePersistentApproval(env, user.id, decodeURIComponent(id));
+  return Response.json(result.payload, { status: result.status });
+}
+
 export async function handleApprovalDecision(request: Request, env: ApprovalEnv) {
   const user = await getSessionUser(request, env);
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
@@ -491,7 +544,7 @@ export async function handleApprovalDecision(request: Request, env: ApprovalEnv)
   };
   if (
     !approvalId ||
-    !["allow_once", "allow_10m", "always_folder", "deny"].includes(
+    !["allow_once", "allow_10m", "allow_always", "always_folder", "deny"].includes(
       String(body.decision),
     )
   ) {
@@ -537,7 +590,7 @@ export async function handleDeviceApprovalDecision(
   };
   if (
     !approvalId ||
-    !["allow_once", "allow_10m", "always_folder", "deny"].includes(
+    !["allow_once", "allow_10m", "allow_always", "always_folder", "deny"].includes(
       String(body.decision),
     )
   ) {

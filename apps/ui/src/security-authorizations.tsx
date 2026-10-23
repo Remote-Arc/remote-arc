@@ -37,10 +37,6 @@ export function SecurityAuthorizations({ grants, busy, preview, timeAgo, revoke 
       <span><i className="aiAuthDot active" />{countActive} {tr("valid access tokens", "份有效访问 Token")}</span>
       {countRefreshable > 0 && <span><i className="aiAuthDot refreshable" />{countRefreshable} {tr("refreshable", "份可刷新")}</span>}
     </div>
-    <p className="aiAuthExplain">{tr(
-      "These are permissions granted to AI chat clients (OAuth), not your computers' pairing credentials. Select a client to manage its individual authorizations.",
-      "这里管理的是 AI 聊天客户端的 OAuth 授权，不是电脑的配对凭证。点击客户端即可管理每份独立授权。",
-    )}</p>
     <div className="aiAuthClients">
       {groups.map((group) => {
         const overallStatus = group.active > 0 ? "active" : group.refreshable > 0 ? "refreshable" : "expired";
@@ -81,7 +77,6 @@ export function SecurityAuthorizations({ grants, busy, preview, timeAgo, revoke 
                   <div className="securityGrantScopes">{grant.scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
                 </div>
                 <div className="aiAuthRevokeActions">
-                  <small>{tr("Revoking this authorization does not unpair a device or revoke other grants.", "撤销此授权不会解绑设备，也不会影响其他独立授权。")}</small>
                   <button className={grant.status === "expired" ? "ghostButton small" : "dangerButton small"}
                     disabled={preview || busy} onClick={() => void revoke(grant)}>
                     {grant.status === "expired" ? tr("Remove expired authorization", "移除过期授权")

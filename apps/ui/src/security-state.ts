@@ -13,6 +13,20 @@ export type PendingApproval = {
   expires_at: string;
 };
 
+export type PersistentApproval = PendingApproval & {
+  decision_scope: "allow_always";
+  status: "approved";
+  approved_until: null;
+  decided_at: string;
+};
+
+export function parsePersistentApprovals(value: unknown): PersistentApproval[] | null {
+  if (!parsePendingApprovals(value)) return null;
+  if (!(value as Record<string, unknown>[]).every(permission => permission.decision_scope === "allow_always"
+    && permission.status === "approved" && permission.approved_until === null && timestamp(permission.decided_at))) return null;
+  return value as PersistentApproval[];
+}
+
 const object = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 const text = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;

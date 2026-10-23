@@ -3,6 +3,7 @@ import {runFollowupBatches} from './followup-batches.js';
 import {handleSlackEvents} from './slack-bot-events.js';
 import {handleSlackBotAccount} from './slack-bot-install.js';
 import {runSlackJobs} from './slack-bot-jobs.js';
+import {ensureOperatorAllowance} from './operator-allowance.js';
 import {publicFeedbackReward} from './connect-rewards.js';
 import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.js";
 export { AdminApiService } from "./admin-entrypoint.js";
@@ -1080,6 +1081,7 @@ export default {
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));
       ctx.waitUntil(runApprovalMaintenance(env));
+      ctx.waitUntil(ensureOperatorAllowance(env).catch((error) => console.error("operator_allowance_failed", { message: error instanceof Error ? error.message : String(error) })));
       ctx.waitUntil(purgeDeletedArcContent(env));
       if (env.AUDIT_ARCHIVE_ENABLED === "1") {
         ctx.waitUntil(archiveOldAudit(env).then(({ archived, batches }) => {

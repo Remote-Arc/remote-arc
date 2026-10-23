@@ -80,12 +80,14 @@ async function notify(env:SlackBotEnv,job:SlackJob,installation:BotInstallation,
   if(typeof result.ts==='string'){job.progress_ts=result.ts;await env.DB.prepare('UPDATE slack_arc_events SET progress_ts=?1 WHERE id=?2 AND lease=?3').bind(result.ts,job.id,job.lease).run();}
  }catch{/* A notice is best effort; the final reply never depends on it. */}
 }
-const blocker=(code:string)=>{
- if(/ARC_TRIAL_REQUIRED/.test(code))return 'Start your Arc trial in Remote Arc before asking me to reason or run tasks.';
- if(/ARC_TRIAL_EXPIRED/.test(code))return 'Your Arc trial has ended. Choose an Arc plan to continue.';
- if(/CREDIT|BUDGET|FUNDING|PAYMENT|PAID_MODEL/.test(code))return 'Your current Arc plan or allowance cannot run this request. Check your plan and credits in Remote Arc.';
- if(/NOT_CONFIGURED|NOT_ALLOWED|NOT_ENABLED/.test(code))return 'Arc is currently unavailable for this account. Open Remote Arc to check availability.';
- return 'I could not start this request. Open Remote Arc to review your account and try again.';
+const blocker=(code:string,zh=false)=>{
+ const say=(en:string,cn:string)=>zh?cn:en;
+ if(/ARC_TRIAL_REQUIRED/.test(code))return say('Start your Arc trial in Remote Arc before asking me to reason or run tasks.','请先在 Remote Arc 开启 Arc 试用，我才能帮你思考和执行任务。');
+ if(/ARC_TRIAL_EXPIRED/.test(code))return say('Your Arc trial has ended. Choose an Arc plan to continue.','Arc 试用已结束，选择套餐后可以继续。');
+ if(/CREDITS_EXHAUSTED/.test(code))return say('Your Arc Credits have run out, so this request has not started. Choose a plan or top up to continue.','你的 Arc Credits 已用完，这次请求没有开始。选择套餐或补充额度后可以继续。');
+ if(/CREDIT|BUDGET|QUOTA|FUNDING|PAYMENT|PAID_MODEL/.test(code))return say('Your current Arc plan or allowance cannot run this request. Check your plan and credits in Remote Arc.','当前的 Arc 套餐或额度无法运行这次请求，请在 Remote Arc 查看套餐和 Credits。');
+ if(/NOT_CONFIGURED|NOT_ALLOWED|NOT_ENABLED/.test(code))return say('Arc is currently unavailable for this account. Open Remote Arc to check availability.','此账号暂时无法使用 Arc，请打开 Remote Arc 查看。');
+ return say('I could not start this request. Open Remote Arc to review your account and try again.','这次请求没能开始，请打开 Remote Arc 查看账号后再试。');
 };
 async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
  const installation=await slackInstallation(env,job.team_id);if(!installation){await saveJob(env,job,'blocked',{error:'slack_installation_revoked'});return;}
@@ -156,7 +158,7 @@ async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
   }catch(error){
    const code=error instanceof Error?error.message:'ARC_EXECUTION_FAILED';
    if(['CHAT_BUSY_OR_LIMIT_REACHED','CHAT_START_UNAVAILABLE'].includes(code)){if(slow)await notify(env,job,installation,'progress',notices.progress(zh,web),fetcher);await saveJob(env,job,'pending',{error:code,delay:15});return;}
-   job.delivery_kind='blocker';await deliver(env,job,installation,blocker(code)+'\n'+slackDashboard(env)+'/dashboard/agent/settings','delivered',fetcher);return;
+   job.delivery_kind='blocker';await deliver(env,job,installation,blocker(code,chinese(input.text))+'\n'+slackLink(slackDashboard(env)+(/CREDIT|BUDGET|QUOTA|TRIAL|PAID/.test(code)?'/checkout':'/dashboard/agent/settings'),chinese(input.text)?'在 Remote Arc 中查看':'Open in Remote Arc'),'delivered',fetcher);return;
   }
  }
  const run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE id=?1 AND user_id=?2').bind(job.run_id,userId).first<ArcRun>();
@@ -175,7 +177,7 @@ async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
  // A finished answer stands on its own in Slack. The dashboard link is kept only
  // for outcomes the user should review there.
  const review=slackLink(web,zh?'在 Remote Arc 中查看':'Open in Remote Arc');
- const text=run.status==='succeeded'&&answer?encodeSlack(answer).slice(0,3400):(run.status==='cancelled'?'This request was stopped.':run.status==='unknown'?'An action may have completed, but I could not confirm its result. Review the task before retrying.':blocker(run.error_code||'ARC_EXECUTION_FAILED'))+'\n\n'+review;
+ const text=run.status==='succeeded'&&answer?encodeSlack(answer).slice(0,3400):(run.status==='cancelled'?(zh?'这次请求已停止。':'This request was stopped.'):run.status==='unknown'?(zh?'有一个操作可能已经完成，但我没能确认结果。重试前请先在 Remote Arc 中核对。':'An action may have completed, but I could not confirm its result. Review the task before retrying.'):blocker(run.error_code||'ARC_EXECUTION_FAILED',zh))+'\n\n'+review;
  job.delivery_kind='result';await deliver(env,job,installation,text,'delivered',fetcher);
 }
 

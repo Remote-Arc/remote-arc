@@ -100,6 +100,7 @@
     "AUDIT_ARCHIVE_ENABLED": "0",
     "AUDIT_RETENTION_DAYS": "30",
     "OPERATOR_EMAIL": "moviegoer24@gmail.com",
+    "OPERATOR_MONTHLY_CREDITS": "5000",
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
     "ALERT_EMAIL": "moviegoer24@gmail.com",

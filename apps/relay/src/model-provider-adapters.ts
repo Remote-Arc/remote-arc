@@ -1,11 +1,13 @@
 export type ModelProvider = "workers_ai" | "openai" | "anthropic" | "openrouter";
-export type ModelUsage = {inputTokens:number;outputTokens:number;cachedInputTokens:number;cacheWriteTokens:number;reasoningTokens:number;cacheWrite5mTokens?:number;cacheWrite1hTokens?:number};
+export type ModelUsage = {inputTokens:number;outputTokens:number;cachedInputTokens:number;cacheWriteTokens:number;reasoningTokens:number;cacheWrite5mTokens?:number;cacheWrite1hTokens?:number;webSearchCalls?:number};
+export type WebSearchLocation={city?:string;region?:string;country?:string;timezone?:string};
+export type WebSearchResult={text:string;sources:{title:string;url:string}[]};
 export type ModelDefinition = {
   id:string;label?:string;provider:ModelProvider;model:string;maxOutputTokens:number;
   inputMicrosPerMillion:number;outputMicrosPerMillion:number;cacheWriteMicrosPerMillion?:number;cacheWrite5mMicrosPerMillion?:number;cachedInputMicrosPerMillion?:number;structuredOutput?:boolean;
   inputNeuronsPerMillion?:number;outputNeuronsPerMillion?:number;freeEligible?:boolean;
 };
-export type ModelRequest = {decisionTool?:boolean;images?:{dataUrl:string}[];definition:ModelDefinition;system:string;user:string;schema:Record<string,unknown>;maxOutputTokens:number;signal:AbortSignal};
+export type ModelRequest = {webSearch?:{location?:WebSearchLocation;maxCalls:number};decisionTool?:boolean;images?:{dataUrl:string}[];definition:ModelDefinition;system:string;user:string;schema:Record<string,unknown>;maxOutputTokens:number;signal:AbortSignal};
 export type ModelResult = {value:unknown;usage:ModelUsage;providerRequestId:string|null};
 export class ModelProviderError extends Error {
   constructor(readonly code:string,readonly retryable=false,readonly usage?:ModelUsage) {super(code);this.name="ModelProviderError";}
@@ -68,6 +70,7 @@ async function post(fetcher:typeof fetch,url:string,headers:Record<string,string
 export function openAiAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAdapter {
   return async r=>{
     if(!apiKey.trim())throw new ModelProviderError("MODEL_NOT_CONFIGURED");
+    if(r.webSearch)return openAiWebSearch(apiKey,fetcher,r);
     const decisionTools=r.decisionTool?arcDecisionTools(r.schema):undefined;
     const p=await post(fetcher,"https://api.openai.com/v1/responses",{authorization:"Bearer "+apiKey},{
       model:r.definition.model,store:false,max_output_tokens:r.maxOutputTokens,
@@ -76,6 +79,28 @@ export function openAiAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAda
     },r.signal);
     const u=usage(p);if(u.cachedInputTokens+u.cacheWriteTokens>u.inputTokens||u.reasoningTokens>u.outputTokens)throw new ModelProviderError('MODEL_USAGE_UNAVAILABLE');return {value:textResponse(p,u,decisionTools?.map(tool=>tool.name)),usage:u,providerRequestId:typeof p.id==="string"?p.id:null};
   };
+}
+/** A bounded hosted web search: at most maxCalls searches, sourced text out. */
+async function openAiWebSearch(apiKey:string,fetcher:typeof fetch,r:ModelRequest):Promise<ModelResult>{
+  const location=r.webSearch!.location,approximate=location&&Object.fromEntries(Object.entries(location).filter(([,v])=>typeof v==='string'&&v.trim()).map(([k,v])=>[k,String(v).slice(0,80)]));
+  const p=await post(fetcher,"https://api.openai.com/v1/responses",{authorization:"Bearer "+apiKey},{
+    model:r.definition.model,store:false,max_output_tokens:r.maxOutputTokens,max_tool_calls:r.webSearch!.maxCalls,
+    tools:[{type:'web_search',search_context_size:'low',...(approximate&&Object.keys(approximate).length?{user_location:{type:'approximate',...approximate}}:{})}],tool_choice:'auto',
+    input:[{role:"system",content:r.system},{role:"user",content:r.user}],
+  },r.signal);
+  const u=usage(p),output=Array.isArray(p.output)?p.output as Array<Record<string,unknown>>:[];
+  const calls=output.filter(item=>item.type==='web_search_call').length;
+  const blocks=output.filter(item=>item.type==='message').flatMap(item=>Array.isArray(item.content)?item.content as Array<Record<string,unknown>>:[]).filter(block=>block.type==='output_text');
+  const text=blocks.map(block=>String(block.text||'')).join('\n').trim();
+  const seen=new Set<string>(),sources:{title:string;url:string}[]=[];
+  for(const annotation of blocks.flatMap(block=>Array.isArray(block.annotations)?block.annotations as Array<Record<string,unknown>>:[])){
+    const url=typeof annotation.url==='string'?annotation.url:'';
+    if(annotation.type!=='url_citation'||!/^https?:\/\//.test(url)||seen.has(url))continue;
+    seen.add(url);sources.push({title:String(annotation.title||url).slice(0,200),url:url.slice(0,2000)});
+  }
+  const used={...u,webSearchCalls:calls};
+  if(!text)throw new ModelProviderError('MODEL_INCOMPLETE_RESPONSE',false,used);
+  return {value:{text,sources:sources.slice(0,10)} satisfies WebSearchResult,usage:used,providerRequestId:typeof p.id==="string"?p.id:null};
 }
 export function anthropicAdapter(apiKey:string,fetcher:typeof fetch=fetch):ModelAdapter {
   return async r=>{

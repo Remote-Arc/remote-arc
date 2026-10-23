@@ -38,7 +38,7 @@ export async function arcEmployeeExecution(env:ArcEnv,run:ArcRun):Promise<Employ
 export function employeeToolError(execution:EmployeeExecution|undefined,tool:string,args:Record<string,any>){
  if(!execution)return tool==='message_employee'?{code:'ARC_EMPLOYEE_CONVERSATION_REQUIRED',dispatched:false}:null;
  const scope=execution.scope;
- let allowed=['list_teammates','list_apps','list_devices','list_skills','describe_app','select_device'].includes(tool);
+ let allowed=['list_teammates','list_apps','list_devices','list_skills','describe_app','select_device','web_search','get_weather'].includes(tool);
  if(tool==='read_skill'||tool==='read_skill_resource')allowed=scope.skillIds.includes(args.id);
  if(tool==='prepare_skill')allowed=scope.skillIds.includes(args.id)&&scope.deviceIds.includes(args.deviceId)&&scope.deviceTools.includes('write_file');
  if(tool==='read_inbox')allowed=scope.appMode!=='none'&&scope.connectionIds.includes(args.connectionId);

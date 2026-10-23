@@ -1,6 +1,6 @@
 import {reserveBilling,settleBilling,type BillingContext,type BillingUnits} from "./billing-ledger.js";
 import {MODEL_CONTEXT_BYTES} from './model-context.js';
-import {ModelProviderError,openAiAdapter,anthropicAdapter,openRouterAdapter,workersAiAdapter,type WorkersAiBinding,type ModelAdapter,type ModelDefinition,type ModelProvider,type ModelUsage} from "./model-provider-adapters.js";
+import {ModelProviderError,openAiAdapter,type WebSearchLocation,anthropicAdapter,openRouterAdapter,workersAiAdapter,type WorkersAiBinding,type ModelAdapter,type ModelDefinition,type ModelProvider,type ModelUsage} from "./model-provider-adapters.js";
 
 export const DEFAULT_AUTO_MODEL:ModelDefinition={
   id:"workers-auto",provider:"workers_ai",model:"@cf/qwen/qwen3-30b-a3b-fp8",maxOutputTokens:4096,
@@ -19,7 +19,12 @@ export type ModelGatewayBinding={
   enabled:boolean;
   creditWallet?:boolean;
 };
+/** Hosted web search tool fee per call (OpenAI web_search, $10 per 1,000 calls). */
+export const WEB_SEARCH_CALL_MICROS=10000;
+/** Retrieved page content is billed as input tokens; reserve for it up front. */
+export const WEB_SEARCH_CONTENT_TOKENS=64000;
 export type GatewayRequest={
+  webSearch?:{location?:WebSearchLocation;maxCalls:number};
   decisionTool?:boolean;
   images?:{dataUrl:string}[];context:BillingContext;modelId?:"auto"|string;system:string;user:string;schema:Record<string,unknown>;
   maxOutputTokens:number;timeoutMs?:number;
@@ -53,7 +58,8 @@ function observedCharges(d:ModelDefinition,u:ModelUsage):BillingUnits {
   // Reasoning is already included in output_tokens and is never charged twice.
   const uncached=d.provider==='anthropic'?u.inputTokens:Math.max(0,u.inputTokens-u.cachedInputTokens-u.cacheWriteTokens);
   const split=u.cacheWrite5mTokens!==undefined;
-  return charges(d,uncached,u.outputTokens,split?0:u.cacheWriteTokens,u.cachedInputTokens,u.cacheWrite5mTokens??0,u.cacheWrite1hTokens??0);
+  const base=charges(d,uncached,u.outputTokens,split?0:u.cacheWriteTokens,u.cachedInputTokens,u.cacheWrite5mTokens??0,u.cacheWrite1hTokens??0);
+  return u.webSearchCalls?{...base,costMicros:base.costMicros+u.webSearchCalls*WEB_SEARCH_CALL_MICROS}:base;
 }
 /** One provider attempt only. No automatic paid fallback or invisible retry. */
 export async function runModelGateway<T>(binding:ModelGatewayBinding,request:GatewayRequest,validate:(value:unknown)=>T):Promise<{value:T;usage:ModelUsage;provider:ModelProvider;modelId:string;reservationId:string}> {
@@ -69,13 +75,15 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   if(!safe(request.maxOutputTokens)||request.maxOutputTokens<1||request.maxOutputTokens>definition.maxOutputTokens||
     !request.system.trim()||!request.user.trim())throw new ModelProviderError("MODEL_REQUEST_INVALID");
   if(request.images!==undefined&&(!Array.isArray(request.images)||request.images.length>3||request.images.some(image=>!/^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(image.dataUrl)||image.dataUrl.length>3000000)))throw new ModelProviderError('MODEL_IMAGE_INPUT_INVALID');
+  if(request.webSearch&&(definition.provider!=='openai'||!Number.isSafeInteger(request.webSearch.maxCalls)||request.webSearch.maxCalls<1||request.webSearch.maxCalls>3))throw new ModelProviderError('MODEL_WEB_SEARCH_UNSUPPORTED');
   if(request.images?.length&&definition.provider==='workers_ai')throw new ModelProviderError('MODEL_IMAGE_INPUT_UNSUPPORTED');
   const encoded=new TextEncoder().encode(JSON.stringify([request.system,request.user,request.schema]));
   if(encoded.byteLength>MODEL_CONTEXT_BYTES)throw new ModelProviderError("MODEL_CONTEXT_TOO_LARGE");
   // Byte-bound input estimate plus template overhead; reserve all permitted output before dispatch.
   const inputBound=encoded.byteLength+8192+(request.images?.length||0)*32768;
   const ceiling={...definition,inputMicrosPerMillion:Math.max(definition.inputMicrosPerMillion,definition.cacheWriteMicrosPerMillion??definition.inputMicrosPerMillion*2,definition.cacheWrite5mMicrosPerMillion??0,definition.cachedInputMicrosPerMillion??0)};
-  const maximum=charges(ceiling,inputBound,request.maxOutputTokens);
+  const tokens=charges(ceiling,inputBound+(request.webSearch?WEB_SEARCH_CONTENT_TOKENS:0),request.maxOutputTokens);
+  const maximum=request.webSearch?{...tokens,costMicros:tokens.costMicros+request.webSearch.maxCalls*WEB_SEARCH_CALL_MICROS}:tokens;
   const authorizationId=definition.provider==="workers_ai"?binding.freePoolId:binding.paidGrantId;
   if(!authorizationId)throw new ModelProviderError(definition.provider==="workers_ai"?"FREE_POOL_NOT_VERIFIED":"PAID_MODEL_NOT_AUTHORIZED");
   const timeout=request.timeoutMs??90000;
@@ -87,7 +95,7 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   let knownUsage:ModelUsage|undefined,phase:'provider'|'decision'|'settlement'='provider';
   try{
     const result=await Promise.race([
-      adapter({definition,system:request.system,user:request.user,...(request.decisionTool?{decisionTool:true}:{}),...(request.images?.length?{images:request.images}:{}),schema:request.schema,maxOutputTokens:request.maxOutputTokens,signal:controller.signal}),
+      adapter({definition,system:request.system,user:request.user,...(request.webSearch?{webSearch:request.webSearch}:{}),...(request.decisionTool?{decisionTool:true}:{}),...(request.images?.length?{images:request.images}:{}),schema:request.schema,maxOutputTokens:request.maxOutputTokens,signal:controller.signal}),
       new Promise<never>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new ModelProviderError("MODEL_TIMEOUT",true));},timeout);}),
     ]);
     knownUsage=result.usage;

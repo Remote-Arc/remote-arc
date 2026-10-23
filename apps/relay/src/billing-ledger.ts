@@ -93,7 +93,17 @@ export async function reserveBilling(db: D1Database, input: BillingReservationIn
   ]);
   const row = await db.prepare("SELECT id,request_json,entries_json,status,settlement_json FROM billing_reservations WHERE operation_key=?1")
     .bind(operationKey).first<Row>();
-  if (!row) throw new BillingDeniedError("BILLING_QUOTA_OR_AUTHORITY_UNAVAILABLE");
+  if (!row) {
+    // Name the actual limiter. A trial wallet that cannot cover this step's
+    // worst case otherwise surfaced as a generic quota error while the daily
+    // meter still showed most of the day's allowance unused.
+    if (input.creditWallet) {
+      const wallet = await db.prepare(`SELECT COALESCE(SUM(granted_units-spent_units-reserved_units),0) AS available FROM arc_credit_lots
+        WHERE user_id=?1 AND revoked_at IS NULL AND starts_at<=?2 AND (expires_at IS NULL OR expires_at>?2)`).bind(input.userId,at).first<{available:number}>();
+      if ((wallet?.available ?? 0) < walletMaximum) throw new BillingDeniedError("BILLING_CREDITS_EXHAUSTED");
+    }
+    throw new BillingDeniedError("BILLING_QUOTA_OR_AUTHORITY_UNAVAILABLE");
+  }
   if (row.request_json !== n.requestJson) throw new BillingDeniedError("BILLING_IDEMPOTENCY_CONFLICT");
   // D1 reports sqlite3_total_changes(), including trigger writes. The freshly
   // generated ID proves ownership of this insert; an idempotent replay has a

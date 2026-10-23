@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"runtime"
 	"time"
 )
 
@@ -98,9 +99,15 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 			_ = s.quickBounds(ctx, id, map[string]any{"windowState": "normal"})
 			s.awaitState(ctx, "normal", 2*time.Second)
 		}
-		// Off screen keeps the page rendering normally. macOS and some Linux
-		// window managers keep part of a window on screen, sometimes only
-		// after acknowledging the move; there the window is minimized.
+		// macOS keeps part of every window on screen and reports the
+		// clamped position only later, so the window is minimized there.
+		if runtime.GOOS == "darwin" {
+			_ = s.quickBounds(ctx, id, map[string]any{"windowState": "minimized"})
+			return nil
+		}
+		// Off screen keeps the page rendering normally. Some Linux window
+		// managers keep part of a window on screen, sometimes only after
+		// acknowledging the move; there the window is minimized.
 		_ = s.quickBounds(ctx, id, map[string]any{"left": offscreen, "top": 0, "width": 1280, "height": 900})
 		until := time.Now().Add(600 * time.Millisecond)
 		for time.Now().Before(until) {

@@ -36,6 +36,19 @@ func TestE2EHiddenWindowShowsAndHidesInPlace(t *testing.T) {
 	offScreen := func(b windowBounds) bool {
 		return b.WindowState == "minimized" || b.Left <= offscreen/2
 	}
+	// settled waits for a native window transition (minimizing on macOS
+	// animates) to show the expected side of the screen.
+	settled := func(off bool) windowBounds {
+		t.Helper()
+		var b windowBounds
+		for i := 0; i < 30; i++ {
+			if b = bounds(); offScreen(b) == off {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		return b
+	}
 	typed := func() string {
 		t.Helper()
 		s.mu.Lock()
@@ -46,7 +59,7 @@ func TestE2EHiddenWindowShowsAndHidesInPlace(t *testing.T) {
 		}
 		return strings.Trim(string(raw), `"`)
 	}
-	if b := bounds(); !offScreen(b) {
+	if b := settled(true); !offScreen(b) {
 		t.Fatalf("hidden task window is on screen: %+v", b)
 	}
 	proc := s.proc
@@ -59,14 +72,14 @@ func TestE2EHiddenWindowShowsAndHidesInPlace(t *testing.T) {
 	if shown["window"] != "on screen" || shown["headless"] != false {
 		t.Fatalf("show: %v", shown)
 	}
-	if b := bounds(); offScreen(b) || b.Width < 400 {
+	if b := settled(false); offScreen(b) || b.Width < 400 {
 		t.Fatalf("shown window is not on screen: %+v", b)
 	}
 	if s.proc != proc || typed() != "Sam Example" {
 		t.Fatalf("showing reopened the page: same browser=%v typed=%q", s.proc == proc, typed())
 	}
 	h.call("browser_runner_start", map[string]any{"task_id": "quiet", "allowed_origins": []any{base}, "headless": true})
-	if b := bounds(); !offScreen(b) || s.proc != proc || typed() != "Sam Example" {
+	if b := settled(true); !offScreen(b) || s.proc != proc || typed() != "Sam Example" {
 		t.Fatalf("hiding moved or reloaded the page: %+v typed=%q", b, typed())
 	}
 
@@ -77,7 +90,7 @@ func TestE2EHiddenWindowShowsAndHidesInPlace(t *testing.T) {
 		t.Fatalf("sign-in not handed to the user: %v", snap["needs_user"])
 	}
 	h.call("browser_runner_start", map[string]any{"task_id": "quiet", "allowed_origins": []any{base}, "headless": false})
-	if offScreen(bounds()) {
+	if offScreen(settled(false)) {
 		t.Fatal("window not shown for the user")
 	}
 	// The user signs in; the page moves on.
@@ -90,8 +103,8 @@ func TestE2EHiddenWindowShowsAndHidesInPlace(t *testing.T) {
 		t.Fatalf("state after sign-in: %v", snap["session_state"])
 	}
 	out := h.call("browser_runner_act", map[string]any{"session_id": "quiet", "snapshot_id": snap["snapshot_id"], "ref": ref(t, snap, "textbox", "full name"), "action": "fill", "value": "Jenny"})
-	if !strings.HasPrefix(out["window"].(string), "hidden again") || !offScreen(bounds()) {
-		t.Fatalf("window not hidden after the user finished: %v %+v", out["window"], bounds())
+	if !strings.HasPrefix(out["window"].(string), "hidden again") || !offScreen(settled(true)) {
+		t.Fatalf("window not hidden after the user finished: %v %+v", out["window"], settled(true))
 	}
 	if st := h.call("browser_runner_start", map[string]any{"task_id": "quiet", "allowed_origins": []any{base}}); st["headless"] != true {
 		t.Fatalf("resume after auto-hide: %v", st)

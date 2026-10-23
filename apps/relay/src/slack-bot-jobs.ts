@@ -13,7 +13,7 @@ async function saveJob(env:SlackBotEnv,job:SlackJob,status:string,values:{error?
 async function linkedOwner(env:SlackBotEnv,job:SlackJob){
  return env.DB.prepare("SELECT user_id FROM slack_arc_links WHERE team_id=?1 AND slack_user_id=?2 AND status='active'").bind(job.team_id,job.slack_user_id).first<{user_id:string}>();
 }
-async function deliver(env:SlackBotEnv,job:SlackJob,installation:BotInstallation,text:string,finalStatus:string,fetcher:typeof fetch){
+async function deliver(env:SlackBotEnv,job:SlackJob,installation:BotInstallation,text:string,finalStatus:string,fetcher:typeof fetch,errorCode?:string){
  // All inference results are sent privately. A channel mention never widens the
  // audience of the initiating user's connected Apps, computers or memories.
  if(!job.reply_channel){
@@ -32,7 +32,7 @@ async function deliver(env:SlackBotEnv,job:SlackJob,installation:BotInstallation
  if(typeof result.ts!=='string')throw new SlackBotError('slack_delivery_unknown',0,true);
  job.reply_ts=result.ts;
  await env.DB.prepare('UPDATE slack_arc_events SET reply_ts=?1,delivery_kind=?2 WHERE id=?3 AND lease=?4').bind(result.ts,job.delivery_kind||'result',job.id,job.lease).run();
- await saveJob(env,job,finalStatus);
+ await saveJob(env,job,finalStatus,{error:errorCode});
 }
 const blocker=(code:string)=>{
  if(/ARC_TRIAL_REQUIRED/.test(code))return 'Start your Arc trial in Remote Arc before asking me to reason or run tasks.';
@@ -77,8 +77,15 @@ async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
   if(earlier){await saveJob(env,job,'pending',{delay:15});return;}
   // Check that the initiating Slack member still exists; workspace installation
   // ownership provides no authority over the user's private Arc account.
-  const member=await slackApi(env,installation,'users.info',{user:job.slack_user_id},fetcher);
-  if(member.user?.deleted||member.user?.is_bot||member.user?.id!==job.slack_user_id)throw new SlackBotError('slack_user_inactive');
+  try{
+   const member=await slackApi(env,installation,'users.info',{user:job.slack_user_id},fetcher);
+   if(member.user?.deleted||member.user?.is_bot||member.user?.id!==job.slack_user_id)throw new SlackBotError('slack_user_inactive');
+  }catch(error){
+   if(!(error instanceof SlackBotError)||!['slack_user_not_found','slack_user_inactive','slack_missing_scope'].includes(error.code))throw error;
+   job.delivery_kind='blocker';
+   await deliver(env,job,installation,'I couldn’t verify your Slack workspace identity, so this request has not started. Check the Remote Arc Slack connection and try again.\n<'+encodeSlack(slackDashboard(env)+'/apps')+'|Check Slack connection>','blocked',fetcher,error.code);
+   return;
+  }
   try{
    await createArcConversation(env,userId,sessionId,'Slack · '+input.text.slice(0,48));
    await env.DB.prepare('INSERT OR IGNORE INTO slack_arc_conversations(id,team_id,slack_user_id,user_id,channel_id,thread_key,session_id) VALUES(?1,?2,?3,?4,?5,?6,?7)').bind(key,job.team_id,job.slack_user_id,userId,job.channel_id,job.thread_ts||'dm',sessionId).run();

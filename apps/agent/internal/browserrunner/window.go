@@ -50,17 +50,29 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 	if e != nil {
 		return e
 	}
+	if !visible && b.WindowState == "minimized" {
+		return nil
+	}
 	if b.WindowState != "normal" {
 		if e := s.setBounds(ctx, id, map[string]any{"windowState": "normal"}); e != nil {
 			return e
 		}
 	}
 	if !visible {
-		// Far to the left of every screen. Not minimized: a minimized page
-		// counts as hidden, and pages pause work (animation frames, some
-		// timers) while hidden. macOS keeps a window's top edge on screen,
-		// so the window is moved sideways only.
-		return s.setBounds(ctx, id, map[string]any{"left": offscreen, "top": 0, "width": 1280, "height": 900})
+		// Prefer an off-screen window so rendering continues normally.
+		if e := s.setBounds(ctx, id, map[string]any{"left": offscreen, "top": 0, "width": 1280, "height": 900}); e != nil {
+			return e
+		}
+		// macOS clamps even horizontal moves to keep part of the window on
+		// screen. Minimize that task window instead of leaving an edge visible.
+		_, now, e := s.window(ctx)
+		if e != nil {
+			return e
+		}
+		if now.Left > offscreen/2 {
+			return s.setBounds(ctx, id, map[string]any{"windowState": "minimized"})
+		}
+		return nil
 	}
 	left, top, width, height := 40, 40, 1280, 900
 	if raw, e := s.evaluateMain(ctx, `JSON.stringify([screen.availLeft||0, screen.availTop||0, screen.availWidth||0, screen.availHeight||0])`); e == nil {

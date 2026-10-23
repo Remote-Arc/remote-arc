@@ -1094,6 +1094,17 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		}
 		_ = json.Unmarshal(r.Result.Value, &loc)
 		result["label"] = loc.Label
+		minimized := false
+		if s.hasWindow() {
+			if _, b, e := s.window(ctx); e != nil {
+				return nil, false, e
+			} else if b.WindowState == "minimized" {
+				// A minimized window can discard mouse input. Choose one exact
+				// element click before dispatch, rather than trying a mouse click
+				// and risking a second final submit as a fallback.
+				minimized, loc.Reachable = true, false
+			}
+		}
 		if frameID != "" {
 			// Aim at the element through the frame's position in the page;
 			// if that cannot be measured, click the element directly.
@@ -1144,7 +1155,11 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 			if _, e := s.helperIn(ctx, frameID, "jsclick", ref, true); e != nil {
 				return nil, true, e
 			}
-			result["note"] = "element was covered; a direct element click was used"
+			if minimized {
+				result["note"] = "the task window is minimized; a direct element click was used"
+			} else {
+				result["note"] = "element was covered; a direct element click was used"
+			}
 		}
 	case "fill":
 		if !a.HasValue {

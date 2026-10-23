@@ -1,6 +1,6 @@
 import { seal } from './app-oauth.js';
 import { slackInstallation, slackJobContext, slackReadBody, slackReady, slackStamp, verifySlackSignature, SlackBotError, type SlackBotEnv } from './slack-bot-common.js';
-import { runSlackJobs } from './slack-bot-jobs.js';
+import { wakeSlackJob } from './slack-bot-jobs.js';
 
 const identifier=(value:unknown,prefix:string)=>typeof value==='string'&&new RegExp('^'+prefix+'[A-Z0-9]{2,40}$').test(value);
 export async function handleSlackEvents(request:Request,env:SlackBotEnv,ctx?:Pick<ExecutionContext,'waitUntil'>){
@@ -37,6 +37,6 @@ export async function handleSlackEvents(request:Request,env:SlackBotEnv,ctx?:Pic
  // A duplicate is already durable; a rate/capacity rejection is not. Let Slack
  // retry the latter instead of acknowledging a message we never retained.
  if(!await env.DB.prepare('SELECT id FROM slack_arc_events WHERE id=?1').bind(id).first())return Response.json({error:'slack_event_capacity_reached'},{status:429,headers:{'retry-after':'60'}});
- ctx?.waitUntil(runSlackJobs(env,{eventId:id,limit:1}));
+ ctx?.waitUntil(wakeSlackJob(env,id));
  return Response.json({ok:true});
 }

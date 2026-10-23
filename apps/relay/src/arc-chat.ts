@@ -18,7 +18,20 @@ import {arcMemoryInput,listArcMemory,rememberArcFact,removeArcMemory,configureAr
 import type {ArcEmployeeAvatar,ArcVerification} from '@remotearc/protocol';
 import {arcVerificationSchema,validateArcVerification,arcReceipt,type ArcProof} from './arc-verification.js';
 
-export type ArcEnv = AppEnv & DeviceCallEnv & ArcModelEnv & { ARC_RUNTIME?:DurableObjectNamespace };
+export type ArcEnv = AppEnv & DeviceCallEnv & ArcModelEnv & { ARC_RUNTIME?:DurableObjectNamespace; ARC_RUNTIME_LOCATION_HINT?:string };
+const runtimeLocations=new Set<string>(['wnam','enam','sam','weur','eeur','apac','apac-ne','apac-se','oc','afr','me']);
+/**
+ * A runtime object makes dozens of sequential D1 queries per Arc step, so it
+ * must live beside the D1 primary (Oceania), not beside whoever first woke it.
+ * Slack ingress and cron arrive from North America; without a hint every query
+ * crossed the Pacific and each step paid ~7s before the model was even called.
+ * The hint only applies when an object is first created.
+ */
+export function arcRuntime(env:ArcEnv,name:string){
+ if(!env.ARC_RUNTIME)throw new ArcError('ARC_NOT_CONFIGURED',503);
+ const hint=env.ARC_RUNTIME_LOCATION_HINT||'oc';
+ return env.ARC_RUNTIME.getByName(name,runtimeLocations.has(hint)?{locationHint:hint as DurableObjectLocationHint}:undefined);
+}
 export type ArcSession = {id:string;user_id:string;organization_id:string;title_ciphertext:string;model_id:string;created_at:string;updated_at:string;deleted_at:string|null;automation_id?:string|null};
 export type ArcRun = {id:string;session_id:string;user_id:string;request_id:string;input_hash:string;model_id:string;automation_id:string|null;status:string;step:number;tokens_used:number;max_tokens:number;max_steps:number;deadline:string;cancel_requested:number;error_code:string|null;created_at:string;updated_at:string};
 export type ArcMessageBody = {text:string;attachments?:ArcAttachment[];location?:ArcLocation;teammates?:{id:string;name:string;responsibility:string;avatar:ArcEmployeeAvatar}[];skills?:{id:string;name:string}[];apps?:{id:string;name:string;provider:string}[];tool?:string;arguments?:unknown;result?:unknown;status?:string;verification?:ArcVerification;proof?:ArcProof};
@@ -68,8 +81,7 @@ async function body(request:Request){
 }
 const idValue=(value:unknown)=>{if(typeof value!=='string'||!/^[\w:.-]{1,160}$/.test(value))throw new ArcError('INVALID_REQUEST_ID');return value;};
 export async function wakeArcRun(env:ArcEnv,runId:string){
- if(!env.ARC_RUNTIME)throw new ArcError('ARC_NOT_CONFIGURED',503);
- const result=await env.ARC_RUNTIME.getByName(runId).fetch('https://arc/start',{method:'POST',body:JSON.stringify({runId})});
+ const result=await arcRuntime(env,runId).fetch('https://arc/start',{method:'POST',body:JSON.stringify({runId})});
  if(!result.ok)throw new ArcError('CHAT_START_UNAVAILABLE',503);
 }
 export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response>{

@@ -4,7 +4,7 @@ import {arcDispatchContext,type ArcDispatchData} from './arc-dispatch-context.js
 import {getSessionUser,sha256Hex} from './auth.js';
 import {isTrustedDashboardMutation} from './dashboard-origin.js';
 import {seal,unseal} from './app-oauth.js';
-import {arcContext,arcSession,arcMessages,publicRun,stamp,wakeArcRun,ArcError,type ArcEnv,type ArcRun} from './arc-chat.js';
+import {arcContext,arcRuntime,arcSession,arcMessages,publicRun,stamp,wakeArcRun,ArcError,type ArcEnv,type ArcRun} from './arc-chat.js';
 import {arcModelAccess} from './arc-chat-model.js';
 import {currentArcPlan} from './arc-plan.js';
 import {readArcEmployee,readArcTeam} from './arc-teams.js';
@@ -37,7 +37,7 @@ export async function createArcRoom(env:ArcEnv,userId:string,raw:unknown){
  ]);
  const row=await arcRoom(env,userId,input.id);if(row.creation_hash!==hash)throw new ArcError('REQUEST_ID_CONFLICT',409);return publicRoom(env,row);
 }
-export async function wakeArcRoom(env:ArcEnv,roomId:string){if(!env.ARC_RUNTIME)throw new ArcError('ARC_NOT_CONFIGURED',503);const response=await env.ARC_RUNTIME.getByName('room-'+roomId).fetch('https://arc/room',{method:'POST',body:JSON.stringify({roomId})});if(!response.ok)throw new ArcError('ARC_ROOM_START_UNAVAILABLE',503);}
+export async function wakeArcRoom(env:ArcEnv,roomId:string){const response=await arcRuntime(env,'room-'+roomId).fetch('https://arc/room',{method:'POST',body:JSON.stringify({roomId})});if(!response.ok)throw new ArcError('ARC_ROOM_START_UNAVAILABLE',503);}
 export async function enqueueArcRoomMessage(env:ArcEnv,userId:string,roomId:string,raw:unknown,sourceDispatchId?:string){
  let delegation:ArcDispatchData|null=null;
  if(sourceDispatchId){const record=await env.DB.prepare('SELECT input_ciphertext FROM arc_dispatches WHERE id=?1 AND user_id=?2 AND room_id=?3').bind(sourceDispatchId,userId,roomId).first<{input_ciphertext:string}>();if(!record)throw new ArcError('ARC_DISPATCH_AUTHORITY_REQUIRED',403);delegation=await unseal<ArcDispatchData>(env,record.input_ciphertext,arcDispatchContext(userId,sourceDispatchId));}

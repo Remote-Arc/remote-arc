@@ -52,6 +52,13 @@ type session struct {
 	frames   map[string]*frameInfo // child frames, guarded by ev
 	frameSeq int
 
+	// identifiers remembers the username sent on each site's first sign-in
+	// step, for a password page that asks for it alone. Guarded by ev.
+	identifiers map[string]identifier
+	// savedLogin names a sign-in saved to the vault since the last tool
+	// result, to report it. Guarded by ev.
+	savedLogin string
+
 	// unsent remembers, per submit key, the page state at a click that sent
 	// nothing, so a retry can prove nothing has been sent since.
 	unsent map[string]navMark
@@ -233,6 +240,14 @@ func (s *session) onEvent(cdpSession, method string, raw json.RawMessage) {
 		s.worldCtx = 0
 		s.clearWorlds("")
 		s.ev.Unlock()
+	case "Runtime.bindingCalled":
+		var p struct {
+			Name    string `json:"name"`
+			Payload string `json:"payload"`
+		}
+		if json.Unmarshal(raw, &p) == nil && p.Name == loginBinding {
+			go s.loginSent(p.Payload)
+		}
 	case "Page.javascriptDialogOpening":
 		s.onDialog("", raw)
 	}
@@ -329,7 +344,7 @@ func (s *session) setup(ctx context.Context) error {
 		{"Runtime.enable", nil},
 		{"Fetch.enable", map[string]any{"patterns": []map[string]any{{"urlPattern": "*", "resourceType": "Document", "requestStage": "Request"}}}},
 		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": pageJS + `("install", {})`}},
-		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": "void 0", "worldName": worldName}},
+		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": pageJS + `("watch_logins", {})`, "worldName": worldName}},
 		{"DOM.enable", nil},
 		// Request start and end events (never bodies) tell when the page has
 		// finished what an action started, instead of waiting a fixed time.
@@ -338,6 +353,10 @@ func (s *session) setup(ctx context.Context) error {
 		// embedded forms can be read and filled.
 		{"Target.setAutoAttach", map[string]any{"autoAttach": true, "waitForDebuggerOnStart": true, "flatten": true}},
 	}
+	// The isolated world watches sign-in forms (see watch_logins) and reports
+	// through a binding that exists only in that world. A browser too old
+	// for it still runs; sign-ins are then just not saved.
+	_ = s.conn.Call(ctx, "Runtime.addBinding", map[string]any{"name": loginBinding, "executionContextName": worldName}, nil)
 	for _, c := range calls {
 		if e := s.conn.Call(ctx, c.method, c.params, nil); e != nil {
 			return fmt.Errorf("browser_runner setup failed (%s): %w", c.method, e)
@@ -360,6 +379,7 @@ func (s *session) setup(ctx context.Context) error {
 	s.mainFrame, s.href = tree.FrameTree.Frame.ID, tree.FrameTree.Frame.URL
 	s.ev.Unlock()
 	_, _ = s.evaluateMain(ctx, pageJS+`("install", {})`)
+	_, _ = s.helper(ctx, "watch_logins", nil, true)
 	return nil
 }
 
@@ -847,6 +867,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	if t, ok := page["title"].(string); ok {
 		s.cp.Title = t
 	}
+	s.applySavedLogins(page)
 	blockers, _ := page["blockers"].([]any)
 	if len(blockers) > 0 {
 		kinds := []string{}
@@ -1018,12 +1039,13 @@ type actRequest struct {
 	HasValue   bool
 	Effect     string
 	Key        string
+	SecretPart string // username or password from the vault (fill_secret)
 }
 
 // act performs one input action. dispatched reports whether any input may
 // have reached the page, which decides between not_dispatched and unknown.
 func (s *session) act(ctx context.Context, a actRequest) (result map[string]any, dispatched bool, err error) {
-	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action, "allow_codes": oneTimeCodesAllowed()}
+	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action, "allow_codes": oneTimeCodesAllowed(), "secret_part": a.SecretPart}
 	result = map[string]any{"action": a.Action}
 	frameID, e := s.refFrame(a.Ref)
 	if e != nil {

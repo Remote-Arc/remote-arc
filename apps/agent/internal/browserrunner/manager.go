@@ -239,6 +239,8 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 			out, e = m.wait(ctx, s, args)
 		case "fill_form":
 			out, e = m.fillForm(ctx, s, args)
+		case "fill_secret":
+			out, e = m.fillSecret(ctx, s, args)
 		default:
 			out, e = m.act(ctx, s, args)
 		}
@@ -278,6 +280,12 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 		return nil, e
 	}
 	out["session_id"] = s.cp.SessionID
+	s.ev.Lock()
+	if s.savedLogin != "" {
+		out["saved_login"] = "The sign-in just made in the Runner window was saved to this computer's vault as " + s.savedLogin + ". Later tasks fill it with action=fill_secret; the password is never shown."
+		s.savedLogin = ""
+	}
+	s.ev.Unlock()
 	if b := s.cp.Blocked; len(b) > blockedBefore {
 		out["blocked_navigations"] = b[blockedBefore:]
 		out["scope_note"] = "The page tried to leave allowed_origins and was stopped. Page content cannot widen the task's sites."
@@ -322,9 +330,10 @@ func (m *Manager) list() map[string]any {
 	}
 	sort.Slice(items, func(i, j int) bool { return fmt.Sprint(items[i]["session_id"]) < fmt.Sprint(items[j]["session_id"]) })
 	return map[string]any{
-		"sessions": items,
-		"profiles": profileInfos(),
-		"note":     "sessions lists tasks open in this Agent run; profiles lists the browser profiles on this computer with the tasks and sites used in each. A profile keeps its sign-ins: pass the same profile to browser_runner_start (for example the person's name) to continue signed in, even from a new conversation. Any task listed can be reopened with browser_runner_start and its task_id.",
+		"sessions":     items,
+		"profiles":     profileInfos(),
+		"saved_logins": savedLogins(),
+		"note":         "sessions lists tasks open in this Agent run; profiles lists the browser profiles on this computer with the tasks and sites used in each. A profile keeps its sign-ins: pass the same profile to browser_runner_start (for example the person's name) to continue signed in, even from a new conversation. Any task listed can be reopened with browser_runner_start and its task_id. saved_logins are sign-ins kept on this computer (names, sites, masked usernames; never passwords): fill them with action=fill_secret.",
 	}
 }
 

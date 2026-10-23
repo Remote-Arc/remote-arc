@@ -232,3 +232,10 @@ assert.match(tools.get("browser_runner_act")!.def.description, /snapshot=true/);
   assert.deepEqual(out.snapshot, { snapshot_id: "s5" });
 }
 console.log("PASS: Browser Runner fill_form and snapshot=true on current and older Agents");
+
+// fill_secret names a saved sign-in and a part; never a value.
+assert.ok(actSchema.safeParse({ device_id: "pc", session_id: "s1", snapshot_id: "s3", action: "fill_secret", ref: "e4", secret: "jenny-nzlinfox-identity.login.pageuppeople.com", part: "password" }).success);
+assert.ok(!actSchema.safeParse({ device_id: "pc", session_id: "s1", snapshot_id: "s3", action: "fill_secret", ref: "e4", secret: "jenny pageup", part: "password" }).success, "names have no spaces");
+assert.ok(!actSchema.safeParse({ device_id: "pc", session_id: "s1", snapshot_id: "s3", action: "fill_secret", ref: "e4", secret: "jenny-acme", part: "token" }).success, "only username or password");
+assert.match(tools.get("browser_runner_act")!.def.description, /fill_secret/);
+console.log("PASS: Browser Runner fill_secret contract");

@@ -1,26 +1,44 @@
-:root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-body { margin: 0; width: 390px; min-height: 260px; }
+/* Remote Arc dark design, same tokens as remotearc.app (dark theme). */
+:root {
+  color-scheme: dark;
+  --ink: #eeeef1;
+  --muted: #9c9ca6;
+  --line: #2a2a30;
+  --surface: #19191e;
+  --subtle: #1d1d23;
+  --canvas: #111114;
+  --on: #8fe3c3;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+html, body { background: var(--canvas); color: var(--ink); }
+body { margin: 0; width: 390px; min-height: 260px; -webkit-font-smoothing: antialiased; }
 main { padding: 18px; }
-header { display:flex; align-items:baseline; gap:8px; margin-bottom:16px; }
-header strong { font-size:18px; }
-header span { opacity:.68; font-size:13px; }
-section { padding: 14px 0; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
-button { width:100%; border:0; border-radius:10px; padding:11px 12px; font:inherit; font-size:14px; font-weight:650; cursor:pointer; }
-button:disabled { cursor:not-allowed; opacity:.45; }
-button.primary { background:#b7f34a; color:#111; }
-button.secondary { background:color-mix(in srgb, currentColor 10%, transparent); color:inherit; }
-button.icon-button { width:34px; height:34px; padding:0; border-radius:9px; flex:0 0 auto; font-size:20px; line-height:1; background:color-mix(in srgb, currentColor 9%, transparent); color:inherit; }
-.meta { font-size:13px; opacity:.7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:6px 0 10px; }
-.permission { display:flex; justify-content:space-between; gap:16px; font-size:14px; margin:8px 0; }
-.on { color:#76b900; font-weight:700; }
-.hint { font-size:13px; line-height:1.45; opacity:.72; margin:8px 0 12px; }
+header { display:flex; align-items:baseline; gap:8px; margin-bottom:14px; }
+header strong { font-size:17px; font-weight:600; letter-spacing:-.02em; }
+header span { color: var(--muted); font-size:12px; letter-spacing:.02em; }
+section { padding: 14px 0; border-top: 1px solid var(--line); }
+section[hidden] { display:none; }
+button { width:100%; border:1px solid transparent; border-radius:10px; padding:10px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; transition: background .15s ease, border-color .15s ease; }
+button:disabled { cursor:not-allowed; opacity:.4; }
+button.primary { background: var(--ink); color: #111114; }
+button.primary:hover:not(:disabled) { background: #ffffff; }
+button.secondary { background: var(--subtle); border-color: var(--line); color: var(--ink); }
+button.secondary:hover:not(:disabled) { border-color: #3a3a42; }
+button.icon-button { width:30px; height:30px; padding:0; border-radius:8px; flex:0 0 auto; font-size:17px; line-height:1; background: transparent; border-color: var(--line); color: var(--muted); }
+button.icon-button:hover { color: var(--ink); border-color: #3a3a42; }
+.meta { font-size:12px; color: var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:6px 0 10px; }
+.permission { display:flex; justify-content:space-between; align-items:center; gap:16px; font-size:13px; margin:6px 0; }
+.permission > span:last-child { color: var(--muted); font-size:12px; }
+.permission > span.on { color: var(--on); font-weight:600; }
+.hint { font-size:12px; line-height:1.6; color: var(--muted); margin:6px 0 12px; }
 .top-gap { margin-top:8px; }
-.shared-list { display:flex; flex-direction:column; gap:8px; max-height:230px; overflow:auto; }
-.shared-item { display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; background:color-mix(in srgb, currentColor 7%, transparent); }
-.shared-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
+.shared-list { display:flex; flex-direction:column; gap:6px; max-height:230px; overflow:auto; }
+.shared-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; background: var(--surface); border:1px solid var(--line); }
+.shared-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
 .shared-copy strong, .shared-copy span, .shared-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.shared-copy strong { font-size:13px; }
-.shared-copy span { font-size:13px; opacity:.67; }
-.shared-copy small { font-size:13px; opacity:.76; }
-.empty { font-size:13px; opacity:.67; margin:4px 0; }
-#status { min-height:19px; font-size:13px; line-height:1.4; opacity:.8; margin:10px 0 0; }
+.shared-copy strong { font-size:13px; font-weight:600; }
+.shared-copy span, .shared-copy small { font-size:12px; color: var(--muted); }
+.empty { font-size:12px; color: var(--muted); margin:4px 0; }
+input[type=checkbox] { accent-color: var(--ink); width:15px; height:15px; }
+label.permission { cursor:pointer; margin-top:12px; }
+#status { min-height:18px; font-size:12px; line-height:1.4; color: var(--muted); margin:10px 0 0; }

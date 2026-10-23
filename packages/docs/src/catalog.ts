@@ -204,8 +204,8 @@ export const DOC_TOPICS: DocTopic[] = platformDocTopics([
       "zh": "浏览器标签页"
     },
     "description": {
-      "en": "Share selected tabs read-only and opt into click and fill per tab.",
-      "zh": "只读共享指定标签页，按标签页开启点击与填写。"
+      "en": "Let the AI work on sites you allow in your browser, or share a single tab read-only.",
+      "zh": "让 AI 在你允许的网站上操作你的浏览器，或只读共享单个标签页。"
     },
     "legacyIds": [
       "browser"

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Allow AI on this site · Remote Arc</title>
+<link rel="stylesheet" href="popup.css" />
+<link rel="stylesheet" href="approve.css" />
+</head>
+<body>
+<main class="approve">
+<header><strong>Remote Arc</strong><span>Browser</span></header>
+<h1 id="title">Allow your AI to work on this site?</h1>
+<p class="site" id="site"></p>
+<p id="explain">Your AI asked to open and use this site in your browser, signed in as you are. It can then open tabs there, read pages and click or fill. It cannot see your other tabs or other sites, and Chrome will ask you to confirm.</p>
+<ul>
+  <li id="li-once">Purchases, posts and submissions are sent once, and your AI should ask you first.</li>
+  <li id="li-secrets">Passwords and card numbers are never typed by the AI.</li>
+  <li id="li-revoke">You can remove the site any time from the Remote Arc Browser popup.</li>
+</ul>
+<div class="approveActions">
+  <button class="primary" id="allow">Allow</button>
+  <button class="secondary" id="deny">Not now</button>
+</div>
+<p id="status" role="status"></p>
+</main>
+<script type="module" src="approve.js"></script>
+</body>
+</html>

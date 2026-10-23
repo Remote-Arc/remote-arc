@@ -29,9 +29,9 @@ const deps = {
 registerSharedTabTools(server as never, deps as never);
 registerBrowserRunnerTools(server as never, deps as never);
 
-// Two families with names that cannot be confused, 10 tools in total.
+// Two families with names that cannot be confused, 12 tools in total.
 assert.deepEqual([...tools.keys()].sort(), [...SHARED_TAB_TOOLS, ...BROWSER_RUNNER_TOOLS].sort());
-assert.equal(tools.size, 10);
+assert.equal(tools.size, 12);
 for (const name of BROWSER_RUNNER_TOOLS) {
   assert.match(tools.get(name)!.def.description + browserRunnerDefinitionsForTest[name].description, /./);
 }
@@ -139,6 +139,16 @@ device = row("win32", ["browser_read_page"]);
 const wrongTab = await callDevice(env, owner, "dev", "browser_read_page", {}).catch((e: Error) => e);
 assert.match(String(wrongTab), /not available on this computer.*browser_runner_start/);
 assert.deepEqual(dispatched, [], "wrong-family calls never reach a device");
+
+// Extension 0.4.0 actions follow the click & fill permission an
+// already-paired browser has; without it they are refused.
+device = row("browser", ["browser_read_page", "browser_click", "browser_fill"]);
+assert.deepEqual(await callDevice(env, owner, "dev", "browser_act", { action: "back" }), { ok: true });
+assert.deepEqual(await callDevice(env, owner, "dev", "browser_open_tab", { url: "https://example.com/" }), { ok: true });
+device = row("browser", ["browser_read_page", "browser_act", "browser_open_tab"]);
+await assert.rejects(callDevice(env, owner, "dev", "browser_act", { action: "back" }), /is disabled for this device/);
+assert.deepEqual(dispatched, ["browser_act", "browser_open_tab"]);
+dispatched = [];
 assert.equal(classifyExpectedMcpError(wrongRunner)?.code, "WRONG_BROWSER_TOOL");
 assert.equal(classifyExpectedMcpError(new Error("STALE_REF: take a new snapshot"))?.code, "STALE_REF");
 for (const [message, code] of [
@@ -251,3 +261,40 @@ assert.ok(!actSchema.safeParse({ device_id: "pc", session_id: "s1", snapshot_id:
 assert.ok(!actSchema.safeParse({ device_id: "pc", session_id: "s1", snapshot_id: "s3", action: "fill_secret", ref: "e4", secret: "jenny-acme", part: "token" }).success, "only username or password");
 assert.match(tools.get("browser_runner_act")!.def.description, /fill_secret/);
 console.log("PASS: Browser Runner fill_secret contract");
+
+// Extension 0.4.0: open tabs on allowed sites and act in them.
+{
+  const openSchema = (tools.get("shared_tab_open")!.def as unknown as { inputSchema: { safeParse: (v: unknown) => { success: boolean } } }).inputSchema;
+  const actSchemaTab = (tools.get("shared_tab_act")!.def as unknown as { inputSchema: { safeParse: (v: unknown) => { success: boolean } } }).inputSchema;
+  assert.ok(openSchema.safeParse({ device_id: "ext", url: "https://www.maoyan.com/" }).success);
+  assert.ok(!openSchema.safeParse({ device_id: "ext", url: "not a url" }).success);
+  assert.ok(actSchemaTab.safeParse({ device_id: "ext", tab_id: 3, action: "click", snapshot_id: "s1", ref: "e2", effect: "submit", idempotency_key: "order-1" }).success);
+  assert.ok(actSchemaTab.safeParse({ device_id: "ext", action: "confirm", idempotency_key: "order-1", outcome: "succeeded" }).success);
+  assert.ok(!actSchemaTab.safeParse({ device_id: "ext", action: "evaluate" }).success, "no generic script action");
+  assert.ok(!actSchemaTab.safeParse({ device_id: "ext", action: "press", key: "F12" }).success);
+  assert.match(tools.get("shared_tab_act")!.def.description, /SUBMIT_ALREADY_RECORDED/);
+  assert.match(tools.get("shared_tab_open")!.def.description, /SITE_NOT_ALLOWED/);
+  assert.equal(tools.get("shared_tab_act")!.def.annotations.destructiveHint, true);
+
+  current = identity("browser:read");
+  assert.deepEqual(await tools.get("shared_tab_open")!.handler({ device_id: "ext", url: "https://example.com/" }), { auth: "browser:interact" });
+  current = identity("browser:read browser:interact");
+  calls.length = 0;
+  await tools.get("shared_tab_open")!.handler({ device_id: "ext", url: "https://example.com/" });
+  await tools.get("shared_tab_act")!.handler({ device_id: "ext", tab_id: 4, action: "fill", snapshot_id: "s1", ref: "e1", value: "hi", snapshot: undefined });
+  assert.deepEqual(calls.splice(0), [
+    { tool: "browser_open_tab", args: { url: "https://example.com/" } },
+    { tool: "browser_act", args: { tab_id: 4, action: "fill", snapshot_id: "s1", ref: "e1", value: "hi" } },
+  ]);
+
+  // An extension older than 0.4.0 does not know these tools: the user is told to update.
+  const old = deps.callDevice;
+  deps.callDevice = async () => { throw new Error("Unsupported browser tool: browser_act"); };
+  const outdated = await tools.get("shared_tab_act")!.handler({ device_id: "ext", action: "back" }).catch((e: Error) => e);
+  assert.match(JSON.stringify(outdated instanceof Error ? outdated.message : outdated), /EXTENSION_UPDATE_REQUIRED/);
+  deps.callDevice = old;
+}
+for (const code of ["SUBMIT_KEY_USED", "SITE_NOT_ALLOWED", "EXTENSION_UPDATE_REQUIRED", "WAIT_TIMEOUT"]) {
+  assert.equal(classifyExpectedMcpError(new Error(`${code}: next step`))?.code, code);
+}
+console.log("PASS: shared_tab_open and shared_tab_act contract");

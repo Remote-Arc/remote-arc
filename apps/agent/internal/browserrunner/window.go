@@ -102,7 +102,13 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 		// macOS keeps part of every window on screen and reports the
 		// clamped position only later, so the window is minimized there.
 		if runtime.GOOS == "darwin" {
-			_ = s.quickBounds(ctx, id, map[string]any{"windowState": "minimized"})
+			// A window that has just opened can ignore the first request.
+			for i := 0; i < 3; i++ {
+				_ = s.quickBounds(ctx, id, map[string]any{"windowState": "minimized"})
+				if s.awaitState(ctx, "minimized", time.Second) {
+					break
+				}
+			}
 			return nil
 		}
 		// Off screen keeps the page rendering normally. Some Linux window
@@ -139,6 +145,17 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 	}
 	// The user asked for it: here taking focus is the point.
 	return s.conn.Call(ctx, "Page.bringToFront", nil, nil)
+}
+
+// keepHidden puts a hidden task window back out of sight if it is on
+// screen (the system restored it, or hiding did not take at launch).
+func (s *session) keepHidden(ctx context.Context) {
+	if !s.cp.Headless || !s.hasWindow() || !s.live() {
+		return
+	}
+	if b, ok := s.quickWindow(ctx); ok && b.WindowState == "normal" && b.Left > offscreen/2 {
+		_ = s.setVisible(ctx, false)
+	}
 }
 
 // hideAfterUser puts the window back out of sight when it was shown for the

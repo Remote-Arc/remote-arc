@@ -220,6 +220,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	if e := s.ensureLive(ctx); e != nil {
 		return nil, e
 	}
+	s.keepHidden(ctx)
 	blockedBefore := len(s.cp.Blocked)
 	var out map[string]any
 	hidAgain := false

@@ -417,11 +417,48 @@ func (u *yourChrome) closeTabIfConnected(ctx context.Context, target string) (bo
 }
 
 func closeChromeTab(ctx context.Context, conn *cdpConn, target string) error {
-	err := conn.Call(ctx, "Target.closeTarget", map[string]any{"targetId": target}, nil)
+	var result struct {
+		Success bool `json:"success"`
+	}
+	err := conn.Call(ctx, "Target.closeTarget", map[string]any{"targetId": target}, &result)
 	if err != nil && strings.Contains(strings.ToLower(err.Error()), "no target with given id") {
 		return nil // the user already closed this task's window
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	if !result.Success {
+		return fmt.Errorf("Chrome refused to close task tab %s", target)
+	}
+
+	// CDP acknowledges closeTarget before the tab necessarily disappears.
+	// Wait for the exact target to be gone before reporting that closing
+	// succeeded, including after an Agent restart.
+	deadline := time.NewTimer(3 * time.Second)
+	defer deadline.Stop()
+	tick := time.NewTicker(25 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		var info struct {
+			TargetInfo struct {
+				TargetID string `json:"targetId"`
+			} `json:"targetInfo"`
+		}
+		err := conn.Call(ctx, "Target.getTargetInfo", map[string]any{"targetId": target}, &info)
+		if err != nil && strings.Contains(strings.ToLower(err.Error()), "no target with given id") {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-deadline.C:
+			return fmt.Errorf("Chrome did not finish closing task tab %s", target)
+		case <-tick.C:
+		}
+	}
 }
 
 // openTab gives a task its tab: the one it had, if the user has not closed

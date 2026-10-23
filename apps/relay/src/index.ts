@@ -1,4 +1,5 @@
 import {handleFollowupUnsubscribe} from './user-followups.js';
+import {runFollowupBatches} from './followup-batches.js';
 import {publicFeedbackReward} from './connect-rewards.js';
 import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.js";
 export { AdminApiService } from "./admin-entrypoint.js";
@@ -192,7 +193,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
         /^\/(?:remote-arc(?:-app-icon)?[.]svg|remote-arc-(?:180|192|512)[.]png|favicon[.]ico|(?:admin|manifest)[.]webmanifest|sw[.]js|offline[.]html)$/.test(url.pathname);
       const adminApi = url.pathname === "/api/me" || url.pathname === "/api/monitor" ||
         url.pathname.startsWith("/api/admin/");
-      if (adminApi) return handleAdminServiceRequest(request, env);
+      if (adminApi) return handleAdminServiceRequest(request, env, ctx);
       const document = url.pathname === "/" || url.pathname === "/overview";
       if (!adminApi && !staticAsset && !document) {
         return request.method === "GET" || request.method === "HEAD"
@@ -1051,6 +1052,7 @@ export default {
     if (["* * * * *", "*/5 * * * *"].includes(controller.cron)) {
       ctx.waitUntil(runScheduledTasks(env, controller.cron));
     }
+    if(controller.cron==='* * * * *')ctx.waitUntil(runFollowupBatches(env));
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));
       ctx.waitUntil(runApprovalMaintenance(env));

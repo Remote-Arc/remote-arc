@@ -1,21 +1,46 @@
-# Manual user follow-ups
+# User follow-up CRM
 
-The Admin **User follow-ups** section helps an operator offer relevant onboarding help, request product feedback and follow up on a support issue. It starts with individual, reviewed emails; a due date creates an Admin reminder.
+The Admin **User follow-ups** workspace manages individual support conversations and reviewed bulk follow-ups. A reminder creates an Admin task; it does not send an email automatically.
 
-## Workflow
+## Contacts and status
 
-1. Filter users by no active connections, no retained usage records, recorded usage, a due reminder, or suppression. Counts include connected computers, active App connections, retained Connect calls and Arc run counts. These signals do not expose conversations, files, email contents or tool arguments. “No recorded usage” is deliberately distinct from a claim that the person has never used the product.
-2. Choose a user, review contact history, and record the request or permission that makes the outreach relevant. A contact request from the existing Feedback/Support form applies to that request; it is not blanket marketing consent.
-3. Choose an English or Chinese template, personalize its subject, body and branded HTML design, then save the immutable draft for review. The preview switches to the exact server-saved HTML snapshot; all preview links open in a new tab and the preview can be reloaded without altering the draft. Templates cover first connection, first result, experience feedback, after-support follow-up and finding a useful workflow.
-4. The send controls explain a missing sender, missing or unsaved permission, recipient suppression, a 72-hour cooldown or unresolved delivery beside the button. Saving a contact record never sends an email; unsaved permission revocation immediately disables sending. Send the reviewed draft manually. The server resolves and snapshots the recipient; the browser cannot supply a sender or recipient email. A changed recipient requires a fresh draft. The send uses the existing Resend channel, a per-draft idempotency key, an atomic dispatch claim and a 72-hour per-user cooldown.
-5. Record replies in notes and choose the next follow-up date/status. Feedback forms opened from the template retain `source=followup:<draft-id>`; matching submissions appear in the existing Leads & feedback inbox and are counted beside the user. This is form attribution, not verified identity or email-open tracking.
+- Visible tabs show All users, To follow up, Contacted, Waiting for reply, Resolved and Stopped, with server-calculated counts. Search and product-activity filters apply to the counts and list together. These are saved views: Contacted includes historical contact and can overlap Waiting/Resolved; overdue reminders also appear in To follow up.
+- To follow up includes contacts marked new and contacts with a due reminder, excluding resolved and stopped contacts. Successful submission clears the fulfilled reminder and marks the contact contacted. Waiting and Resolved can be recorded manually, individually or in bulk. Receiving replies in the support mailbox does not automatically update CRM status.
+- Filter by paired computer without active MCP authorization, no connections, no retained usage records, recorded usage or due reminders. Activity does not expose conversations, files or tool arguments. No retained usage is not proof that someone never used the product.
+- The full table shows status, activity, last contact and next reminder. Selecting a user opens the existing editable draft/history/notes workspace beside a compact contact list. Switching users preserves in-progress drafts.
+- Select a page or up to the first 100 matching users across pages to update their status or compose a bulk follow-up. Stopped contacts remain stopped; updating another status cannot restore their subscription.
 
-Every email includes the configured reply mailbox and a recipient-specific unsubscribe link. Link GET shows a confirmation; POST suppresses future follow-ups. Admin cannot undo a recipient unsubscribe. Essential sign-in mail is independent. A provider acceptance is shown as sent, not delivered. A timeout or ambiguous provider failure stays unknown and blocks blind resending; inspect the provider delivery log before taking further action. Provider bounce/complaint reconciliation remains an operator task in this manual version.
+## Individual emails
 
-## Deployment
+Choose an English or Chinese template, personalize it, save the draft and review the exact saved HTML before sending. Saved drafts remain editable using revision checks; stale browser tabs cannot replace or send a newer version. The send dialog displays recipient, From, Reply-To and subject, and records an existing support request or agreement in place when needed.
 
-Apply migrations `0040_arc_skills.sql`, `0041_user_followups.sql` and `0049_followup_email_design.sql` with the normal release. The follow-up API is restricted to the Admin origin and real Admin sessions, including same-origin JSON checks on changes. The named Admin service includes the same routes.
+Templates include finishing MCP installation after device pairing, first connection, first result, feedback, after-support follow-up and workflow help. Installation links go directly to the official ChatGPT, Claude and Cursor guides in the chosen language.
 
-Follow-ups reuse the existing `RESEND_API_KEY` but have a separate sender: `Remote Arc <support@remotearc.app>`. Optional `FOLLOWUP_FROM` and `FOLLOWUP_REPLY_TO` override the follow-up sender and reply mailbox; blank overrides keep the defaults. `FOLLOWUP_REPLY_TO` defaults to `support@remotearc.app`. `EMAIL_FROM` remains the login sender setting and does not change follow-ups. The send confirmation shows both From and Reply to. Both channel availability and dispatch use the same resolver; a missing or blank key keeps sending closed without claiming the draft. Drafts remain available without a channel. Configure and verify the sender domain through the existing email-provider process before live outreach. PR previews show illustrative users and block all follow-up writes and sends.
+## Bulk follow-ups
 
-No real user was emailed during development. The SQLite/provider-mock tests cover RBAC, host/CSRF checks, segments, permission, immutable drafts, concurrent sends, cooldown, uncertainty, suppression and feedback attribution. Browser checks cover template personalization, notes, language, draft/history and the preview send lock.
+1. Select users, then choose **Bulk email**. Pick the email language/template, customize subject, message and appearance, and choose the recorded contact basis for this group. Personalization supports `{{name}}`, `{{setupUrl}}`, `{{feedbackUrl}}` and the template's official client installation URLs. Switching a template asks before replacing edited text.
+2. **Review recipients & emails** prepares a durable draft batch without sending. The server resolves every address, creates an immutable personalized email per eligible user and reports exclusions. Preview each recipient's exact saved HTML. Existing opt-outs, missing basis, unresolved deliveries and recent contact remain visible exclusions.
+3. **Confirm & send** explicitly queues the reviewed batch. A recorded group support request/agreement is applied atomically at confirmation. Repeated confirmation does not duplicate the task. Each recipient receives a separate email with a personal feedback and unsubscribe link; recipient addresses are never shared in To/CC.
+4. Sending continues after the page closes. **Bulk history** shows prepared drafts, progress, individual results and saved previews. A prepared draft can be reviewed and confirmed later. **Cancel remaining** cancels emails that have not started; an in-flight submission can still finish. Reopening or refreshing the page never starts a new batch by itself.
+
+Batch-owned emails also appear in individual contact history. Manage them through Bulk history; they cannot be edited or dispatched through individual-draft routes. To change a prepared batch, return to editing, which cancels the old snapshot and prepares a new one.
+
+## Delivery behavior
+
+The server rechecks recipient address, opt-out, contact basis, cooldown and operator access at dispatch. An atomic claim and per-message provider idempotency key prevent duplicate sends. The 72-hour per-user cooldown applies across individual and bulk sends.
+
+A global D1 lease serializes background workers. The existing one-minute cron drains the durable queue; an explicit queue action also warms the worker through `waitUntil`. Work is bounded per invocation and paced at one provider call per second. Explicit rate-limit rejections receive delayed, bounded retries using the same saved content/key. Timeouts, ambiguous provider failures and interrupted in-flight sends become unknown and are never blindly resent. Revoked operator access, changed sender configuration and changed recipients are recorded as exclusions.
+
+Provider acceptance is shown as submitted, not delivered. Bounce/complaint reconciliation and verification of unknown delivery remain operator tasks. There is no email-open tracking. Feedback form submissions retain `source=followup:<message-id>`; this is attribution, not verified identity.
+
+Every email includes the reply mailbox and a recipient-specific unsubscribe link. GET shows a confirmation; POST stops future follow-ups. Admin cannot undo a recipient unsubscribe. Essential sign-in mail remains independent.
+
+## Deployment and sender configuration
+
+Deploy all normal migrations, including `0041_user_followups.sql`, `0049_followup_email_design.sql`, `0058_followup_draft_revisions.sql` and `0059_followup_batches.sql`. The new migration adds durable batches, recipient state, a dispatch lease and batch ownership on messages. Production promotion must run the existing encrypted-backup and migration preflight before deploying the Worker and UI.
+
+Follow-ups reuse `RESEND_API_KEY` with a separate default sender, `Remote Arc <support@remotearc.app>`. Optional `FOLLOWUP_FROM` and `FOLLOWUP_REPLY_TO` override the follow-up sender and reply mailbox; blanks keep the defaults. Reply-To defaults to `support@remotearc.app`. `EMAIL_FROM` remains the login-mail setting. Missing/blank provider keys keep sending closed without claiming a draft. Verify the sender domain and configure the support mailbox through the existing provider/DNS process before live outreach.
+
+The follow-up API is restricted to the Admin origin and real Admin sessions, with same-origin JSON checks on writes. Background dispatch verifies the confirming operator is still an Admin. Public previews use illustrative users and local simulation; no production OAuth, D1, email or customer system is connected.
+
+SQLite/provider-mock and desktop English/light plus mobile Chinese/dark browser checks cover CRM counts, status updates, selection, editable drafts, personalized snapshots, queue replay, concurrent preparation/dispatch, cancellation, changed permissions/recipients, rate-limit backoff and crash uncertainty. No real user is emailed by development checks.

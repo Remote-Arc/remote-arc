@@ -6,11 +6,11 @@ import {renderFollowupEmail,type FollowupDesign} from '../../../../packages/prot
 import {FollowupEmailPreview} from './followup-email-preview.js';
 import {followupApi,FollowupApiError,followupTime,newFollowupDraft,savedFollowupDraft,draftFingerprint,draftDirty,type Person,type ContactDetail,type EmailDraft} from './followup-model.js';
 
-function FollowupDialog({title,busy,onClose,children}:{title:string;busy:boolean;onClose:()=>void;children:ReactNode}){
+export function FollowupDialog({title,busy,onClose,children,className=''}:{title:string;busy:boolean;onClose:()=>void;children:ReactNode;className?:string}){
  const {tr}=useI18n();
  const ref=useRef<HTMLDialogElement>(null),titleId=useId();
  useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>dialog?.close();},[]);
- return <dialog ref={ref} className="adminFollowupDialog" aria-labelledby={titleId} onCancel={event=>{event.preventDefault();if(!busy)onClose();}}>
+ return <dialog ref={ref} className={'adminFollowupDialog '+className} aria-labelledby={titleId} onCancel={event=>{event.preventDefault();if(!busy)onClose();}}>
   <header><h3 id={titleId}>{title}</h3><button type="button" className="adminOutlineBtn" disabled={busy} onClick={onClose} aria-label={tr('Close','关闭')}><Icon name="close" size={16}/></button></header>{children}
  </dialog>;
 }
@@ -18,6 +18,7 @@ function hardBlock(data:ContactDetail|null,suppress=false,now=Date.now()){
  if(!data)return 'loading';
  if(data.contact.suppressed_at||suppress)return 'recipient_suppressed';
  if(!data.emailConfigured)return 'email_not_configured';
+ if(data.messages.some(mail=>mail.batch_status==='queued'&&['pending','processing'].includes(mail.batch_recipient_status||'')))return 'batch_pending';
  if(data.messages.some(mail=>['sending','unknown'].includes(mail.status)))return 'delivery_unconfirmed';
  const next=Math.max(0,...data.messages.map(mail=>mail.sent_at?Date.parse(mail.sent_at)+72*3600000:0));
  return next>now?'contact_cooldown':null;
@@ -43,7 +44,7 @@ export function FollowupDetail({person,initialDraft,cacheDraft,onUpdate}:{person
    if(initialized.current)return;initialized.current=true;
    const date=value.contact.next_followup_at?new Date(value.contact.next_followup_at):null;
    setNotes({status:value.contact.status,note:value.contact.note,due:date?new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16):'',suppress:Boolean(value.contact.suppressed_at)});
-   const saved=value.messages.find(mail=>mail.status==='draft');
+   const saved=value.messages.find(mail=>mail.status==='draft'&&!mail.batch_id);
    if(saved&&!draftTouched.current)setDraft(savedFollowupDraft(saved));
   }).catch(()=>{if(!controller.signal.aborted){setRefreshing(false);setError('history_unavailable');}});
   return()=>controller.abort();
@@ -56,6 +57,7 @@ export function FollowupDetail({person,initialDraft,cacheDraft,onUpdate}:{person
   recipient_suppressed:tr('This user has stopped follow-ups. Sending is unavailable.','该用户已停止接收回访，无法发送。'),
   contact_cooldown:tr('A follow-up was sent recently. You can send again at ','近期已联系过此用户，下次可发送时间：')+followupTime(new Date(nextSendAt).toISOString()),
   contact_cooldown_or_in_progress:tr('Another email was sent recently or needs delivery verification. Refresh the history.','近期已有邮件发出，或投递状态待核实，请刷新历史记录。'),
+  batch_pending:tr('A bulk email is queued for this user. Manage it in Bulk history before sending another email.','该用户已有群发邮件排队中，请先在群发记录中处理，再发送其他邮件。'),
   delivery_unconfirmed:tr('A delivery is in progress or uncertain. Check its record before sending another email.','有邮件正在发送或投递状态待核实，请先查看历史记录。'),
   draft_conflict:tr('This draft changed in another tab. Open the latest saved draft from History before sending. Your current text is kept here.','草稿已在其他页面修改。请从历史记录打开最新版；当前编辑内容仍保留在这里。'),
   draft_not_editable:tr('This email was already processed. Open History or start a new email.','这封邮件已处理，请查看历史记录或新建邮件。'),
@@ -111,8 +113,8 @@ export function FollowupDetail({person,initialDraft,cacheDraft,onUpdate}:{person
   try{await followupApi('/'+encodeURIComponent(person.id),{method:'PATCH',body:JSON.stringify({status:notes.status,note:notes.note,nextFollowupAt:notes.due?new Date(notes.due).toISOString():null,permission:Boolean(data.contact.consent_at),consentNote:data.contact.consent_note,suppress:notes.suppress})});setNotice('notes');setRevision(value=>value+1);onUpdate();}
   catch(err){setError((err as Error).message);}finally{mutation.current=false;setBusy(null);}
  }
- const draftCount=data?.messages.filter(mail=>mail.status==='draft').length||0;
- const mailStatus=(status:string)=>({draft:tr('Draft','草稿'),sent:tr('Submitted','已提交发送'),sending:tr('Sending','发送中'),unknown:tr('Check delivery','投递待核实'),failed:tr('Send failed','发送失败')}[status]||status);
+ const draftCount=data?.messages.filter(mail=>mail.status==='draft'&&!mail.batch_id).length||0;
+ const mailStatus=(status:string)=>({batch_draft:tr('Bulk draft','群发草稿'),queued:tr('Queued','已排队'),cancelled:tr('Cancelled','已取消'),skipped:tr('Excluded','已排除'),draft:tr('Draft','草稿'),sent:tr('Submitted','已提交发送'),sending:tr('Sending','发送中'),unknown:tr('Check delivery','投递待核实'),failed:tr('Send failed','发送失败')}[status]||status);
  return <section className="adminFollowupDetail" aria-label={tr('Follow-up email','跟进邮件')}>
   <header className="followupDetailHeader"><div><h3>{person.name||person.email}</h3><span>{person.email}</span></div><button type="button" className="adminOutlineBtn" disabled={Boolean(busy)} onClick={()=>replaceDraft(newFollowupDraft(person,draft.locale))}><Icon name="add" size={14}/>{tr('New email','新建邮件')}</button></header>
   <nav className="followupTabs" aria-label={tr('Follow-up workspace','跟进工作区')}>
@@ -140,8 +142,9 @@ export function FollowupDetail({person,initialDraft,cacheDraft,onUpdate}:{person
   </div>
   {tab==='history'&&<section className="adminFollowupHistory"><div className="followupHistoryHeading"><h4>{tr('Drafts & contact history','草稿与联系历史')}</h4><button type="button" className="adminOutlineBtn" onClick={()=>setRevision(value=>value+1)}><Icon name="refresh" size={14}/>{tr('Refresh history','刷新记录')}</button></div>
    {data?.messages.length===0&&<p className="adminNoData">{tr('No saved drafts or emails yet.','还没有保存的草稿或邮件。')}</p>}
-   {data?.messages.map(mail=><article className="followupHistoryItem" key={mail.id}><header><div><strong>{mail.subject}</strong><small>{followupTime(mail.sent_at||mail.created_at)}</small></div><span className="adminLeadStatus" data-status={mail.status}>{mailStatus(mail.status)}</span></header>
-    {mail.status==='draft'?<button type="button" className="adminOutlineBtn" disabled={Boolean(busy)} onClick={()=>replaceDraft(savedFollowupDraft(mail))}>{tr('Continue editing','继续编辑')}</button>:<details><summary>{tr('View email','查看邮件')}</summary><pre>{mail.body}</pre>{mail.html_body&&<FollowupEmailPreview html={mail.html_body} title={tr('Saved email','已保存邮件')}/>}</details>}
+   {data?.messages.map(mail=><article className="followupHistoryItem" key={mail.id}><header><div><strong>{mail.subject}</strong><small>{followupTime(mail.sent_at||mail.created_at)}</small></div><span className="adminLeadStatus" data-status={mail.status}>{mailStatus(mail.batch_id?['preparing','draft'].includes(mail.batch_status||'')?'batch_draft':mail.batch_recipient_status==='pending'?'queued':mail.batch_recipient_status==='processing'?'sending':mail.batch_recipient_status||mail.status:mail.status)}</span></header>
+    {mail.batch_id&&<small>{tr('Part of a bulk follow-up · manage in Bulk history','来自群发任务 · 可在群发记录中管理')}</small>}
+    {mail.status==='draft'&&!mail.batch_id?<button type="button" className="adminOutlineBtn" disabled={Boolean(busy)} onClick={()=>replaceDraft(savedFollowupDraft(mail))}>{tr('Continue editing','继续编辑')}</button>:<details><summary>{tr('View email','查看邮件')}</summary><pre>{mail.body}</pre>{mail.html_body&&<FollowupEmailPreview html={mail.html_body} title={tr('Saved email','已保存邮件')}/>}</details>}
     {['sending','unknown'].includes(mail.status)&&<p>{tr('Verify the sender’s delivery log before another send. This email will not be resent automatically.','请先核实发信服务的投递记录，这封邮件不会自动重发。')}</p>}
     {mail.error_code&&<p className="adminAlert">{errorText(mail.error_code)} <small>{mail.error_code}</small></p>}
    </article>)}

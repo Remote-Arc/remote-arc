@@ -93,14 +93,26 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Act in the task browser",
     description:
-      "Do one thing in the task browser. On an element from the latest snapshot (snapshot_id + ref): click, fill (value), select (option value or label), check, uncheck, press (key), or upload (path of a pdf/doc/docx/txt/rtf/odt/png/jpg up to 25 MB in a Trusted Location on the computer). Without a ref: navigate (url inside allowed_origins) or wait (text and/or url_contains, timeout_ms up to 30000). Passwords, one-time codes and payment fields are always refused. Mark anything that sends or saves externally (submit, apply, book, pay, post, or a Next button that posts the form) with effect=submit and a stable idempotency_key per step. The Agent refuses POST form buttons, submit-like controls and Enter without effect=submit (SUBMIT_EFFECT_REQUIRED). A key is never sent twice; the same form and button is never sent again under a new key (SUBMIT_ALREADY_RECORDED); each submit must be settled with browser_runner_confirm before the next; after a crash or timeout a submit is reported as unknown rather than retried. Use effect=navigation for links and GET steps.",
+      "Do one thing in the task browser, or enter a whole form at once. On an element from the latest snapshot (snapshot_id + ref): click, fill (value), select (option value or label), check, uncheck, press (key), or upload (path of a pdf/doc/docx/txt/rtf/odt/png/jpg up to 25 MB in a Trusted Location on the computer). fill_form enters many fields from one snapshot in one call: fields=[{ref, action: fill|select|check|uncheck, value}], in order; each field reports ok or its own error and the others still go in; it never clicks, submits or uploads. Use fill_form whenever two or more fields are ready, then click Next or Submit as its own act. snapshot=true returns the page as the action left it (with a new snapshot_id), so a click that opens a dropdown, dialog or next step needs no separate browser_runner_snapshot. Without a ref: navigate (url inside allowed_origins) or wait (text and/or url_contains, timeout_ms up to 30000). Passwords, one-time codes and payment fields are always refused. Mark anything that sends or saves externally (submit, apply, book, pay, post, or a Next button that posts the form) with effect=submit and a stable idempotency_key per step. The Agent refuses POST form buttons, submit-like controls and Enter without effect=submit (SUBMIT_EFFECT_REQUIRED). A key is never sent twice; the same form and button is never sent again under a new key (SUBMIT_ALREADY_RECORDED); each submit must be settled with browser_runner_confirm before the next; after a crash or timeout a submit is reported as unknown rather than retried. Use effect=navigation for links and GET steps.",
     input: z.object({
       device_id: deviceId,
       session_id: id,
-      action: z.enum(["click", "fill", "select", "check", "uncheck", "press", "upload", "navigate", "wait"]),
+      action: z.enum(["click", "fill", "select", "check", "uncheck", "press", "upload", "navigate", "wait", "fill_form"]),
       snapshot_id: snapshotId.optional(),
       ref: ref.optional(),
       value: z.string().max(10000).optional(),
+      fields: z
+        .array(
+          z.object({
+            ref,
+            action: z.enum(["fill", "select", "check", "uncheck"]),
+            value: z.string().max(10000).optional(),
+          }),
+        )
+        .min(1)
+        .max(40)
+        .optional(),
+      snapshot: z.boolean().optional(),
       key: z.enum(["Enter", "Tab", "Escape", "ArrowDown", "ArrowUp", "Space"]).optional(),
       path: z.string().min(1).max(1000).optional(),
       url: z.string().url().max(2000).optional(),
@@ -164,10 +176,97 @@ export function registerBrowserRunnerTools(server: McpServer, deps: BrowserRunne
         const usageError = await deps.consume(identity);
         if (usageError) return usageError;
         const { device_id, ...args } = input;
-        return deps.textResult(await deps.callDevice(identity, String(device_id), tool, args));
+        const call: DeviceCall = (name, callArgs) => deps.callDevice(identity, String(device_id), name, callArgs);
+        return deps.textResult(tool === "browser_runner_act" ? await runAct(call, args) : await call(tool, args));
       },
     );
   }
+}
+
+type DeviceCall = (tool: BrowserRunnerTool, args: Record<string, unknown>) => Promise<unknown>;
+type FormField = { ref: string; action: string; value?: string };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+// What an Agent from before fill_form answers to it: rc.7 and earlier treat
+// it as a single act without a ref.
+const FILL_FORM_UNKNOWN = /^(ref is required|action must be )/;
+const SNAPSHOT_REPLACED = /^STALE_REF: snapshot /;
+
+/**
+ * browser_runner_act with the same contract on every Agent. Agents before
+ * 0.6.2-rc.8 know neither fill_form nor snapshot=true; for them the Relay
+ * enters the fields one call at a time and takes the snapshot itself, so a
+ * caller never has to know the Agent version. Only the speed differs.
+ */
+export async function runAct(call: DeviceCall, args: Record<string, unknown>): Promise<unknown> {
+  let out: unknown;
+  try {
+    out = await call("browser_runner_act", args);
+  } catch (error) {
+    if (args.action !== "fill_form" || !FILL_FORM_UNKNOWN.test(messageOf(error))) throw error;
+    out = await fillFormOneByOne(call, args);
+  }
+  if (args.snapshot === true && isRecord(out) && !("snapshot" in out) && !("snapshot_error" in out)) {
+    const result: Record<string, unknown> = out;
+    try {
+      return { ...result, snapshot: await call("browser_runner_snapshot", { session_id: args.session_id }) };
+    } catch (error) {
+      return { ...result, snapshot_error: messageOf(error) + " Call browser_runner_snapshot." };
+    }
+  }
+  return out;
+}
+
+async function fillFormOneByOne(call: DeviceCall, args: Record<string, unknown>) {
+  const fields = (Array.isArray(args.fields) ? args.fields : []) as FormField[];
+  const results: Record<string, unknown>[] = [];
+  let entered = 0;
+  let failed = 0;
+  let navigated = false;
+  let stopped: string | undefined;
+  let page: Record<string, unknown> = {};
+  for (const [i, field] of fields.entries()) {
+    const single: Record<string, unknown> = { session_id: args.session_id, snapshot_id: args.snapshot_id, ref: field.ref, action: field.action };
+    if (field.value !== undefined) single.value = field.value;
+    try {
+      const out = await call("browser_runner_act", single);
+      page = isRecord(out) ? out : {};
+      const result: Record<string, unknown> = { ref: field.ref, action: field.action, ok: true };
+      for (const key of ["label", "selected", "checked", "value_length", "frame"]) if (key in page) result[key] = page[key];
+      results.push(result);
+      entered++;
+      if (page.navigated === true) {
+        navigated = true;
+        if (i + 1 < fields.length) stopped = `The page navigated after fields[${i}]; the remaining fields were not entered. Take a new snapshot.`;
+        break;
+      }
+    } catch (error) {
+      const message = messageOf(error);
+      if (SNAPSHOT_REPLACED.test(message)) {
+        stopped = `The page changed before fields[${i}]; the remaining fields were not entered. Take a new snapshot.`;
+        break;
+      }
+      results.push({ ref: field.ref, action: field.action, error: message });
+      failed++;
+    }
+  }
+  const out: Record<string, unknown> = {
+    action: "fill_form",
+    fields: results,
+    entered,
+    failed,
+    navigated,
+    compatibility: "This computer's Remote Arc Agent is older than 0.6.2-rc.8, so the fields were entered one call at a time. Updating the Agent makes forms faster.",
+  };
+  if (results.length < fields.length) out.not_entered = fields.slice(results.length).map((f) => f.ref);
+  if (stopped) out.stopped = stopped;
+  if (failed > 0) out.next_action = "Fix the fields with an error (see each error), then continue. Fields marked ok hold their values.";
+  for (const key of ["url", "title", "session_id"]) if (key in page) out[key] = page[key];
+  if (navigated) out.note = "The page changed; earlier refs are stale. Take a new browser_runner_snapshot.";
+  return out;
 }
 
 export const browserRunnerDefinitionsForTest = definitions;

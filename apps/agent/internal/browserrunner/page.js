@@ -305,12 +305,39 @@
       label: label.toLowerCase().replace(/\s+/g, " ").trim(),
       fields: [...names].sort().slice(0, 50),
     };
+    // Whether a click here may load another page or step, which decides how
+    // long the Runner waits for one to begin. Controls that only change the
+    // current view (choices, options, tabs, menus, toggles) do not.
+    const link = el.closest && el.closest("a[href]");
+    const href = link ? String(link.getAttribute("href") || "").trim() : "";
+    const navLink = !!link && href !== "" && !/^(#|javascript:)/i.test(href);
+    const buttonType = el.tagName === "BUTTON" ? String(el.getAttribute("type") || "submit").toLowerCase() : type;
+    const formButton = !!form && (buttonType === "submit" || buttonType === "image");
+    const role = roleOf(el);
+    const toggles = ["checkbox", "radio", "option", "tab", "menuitem", "menuitemcheckbox", "menuitemradio", "switch", "combobox", "listbox", "treeitem", "textbox", "slider", "spinbutton", "label", "summary", "select"].includes(role) ||
+      el.hasAttribute("aria-expanded") || el.hasAttribute("aria-haspopup") || el.hasAttribute("aria-pressed");
+    const stepWords = /\b(next|continue|proceed|start|begin|sign in|log in|login|search|go|view|back|previous|review|save|submit|apply|checkout|buy|book|pay|confirm|finish|done)\b/i.test(label);
+    const mayNavigate = navLink || formButton || (!toggles && stepWords);
     // A regular href is navigation even when the label says "Apply now".
-    if (el.tagName === "A" && el.href && !form) return { requires_submit: false, target };
+    if (el.tagName === "A" && el.href && !form) return { requires_submit: false, may_navigate: mayNavigate, target };
     const danger = /\b(submit|send|apply|finish|confirm|place order|book now|purchase|pay now|delete|publish|post|save changes|complete application)\b/i.test(label);
     // GET-form Next means navigation; a POST native submit is an external effect.
     const formSubmits = !!form && (type === "submit" || type === "image") && (form.method.toLowerCase() !== "get" || danger);
-    return { requires_submit: formSubmits || danger, target };
+    return { requires_submit: formSubmits || danger, may_navigate: mayNavigate || formSubmits || danger, target };
+  }
+
+  if (op === "quiet") {
+    // How long the DOM has been unchanged, so the Runner can continue as soon
+    // as the page has taken in an action rather than after a fixed delay.
+    let q = window.__remotearcQuiet;
+    if (!q || q.doc !== document) {
+      q = window.__remotearcQuiet = { doc: document, last: performance.now(), changes: 0 };
+      new MutationObserver((records) => {
+        q.last = performance.now();
+        q.changes += records.length;
+      }).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
+    }
+    return { idle: Math.round(performance.now() - q.last), changes: q.changes };
   }
 
   const CAPTCHA_REFUSAL = "BLOCKED_CAPTCHA: a CAPTCHA response comes only from the user solving the CAPTCHA in the Runner window. Browser Runner never fills, reads or supplies CAPTCHA responses.";

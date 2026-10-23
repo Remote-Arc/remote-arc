@@ -4,6 +4,14 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.2 - Unreleased
 
+### Faster Browser Runner forms (release candidate 0.6.2-rc.8)
+
+- Browser Runner no longer waits a fixed time after each action. It continues once the page has taken the action in: a page load is followed to the end, and otherwise it waits until requests the action started are done and the page has stopped changing. Clicks that only change the current view (a choice, an option, a dropdown, an in-page link) used to wait 2.5 seconds for a page load that never came and now take about 0.2 seconds; field entries take about 0.1 seconds instead of 0.4; a single-page "Continue" that changes the route without loading a page is recognised. A page that navigates later than this is still caught: the next action on its old refs is refused (`STALE_REF`).
+- `browser_runner_act` with `action=fill_form` enters many fields from one snapshot in one call (`fields`: fill, select, check, uncheck). Each field gets the same checks and receipt as a single action and reports `ok` or its own error while the others still go in; it never clicks, submits or uploads, and it stops if the page navigates.
+- `snapshot=true` on `browser_runner_act` returns the page as the action left it, so a click that opens a dropdown or the next step needs no separate snapshot.
+- After an upload, Browser Runner waits for the form to finish reading the file (for example resume parsing) before answering.
+- The Relay gives older Agents the same contract: for Agents before 0.6.2-rc.8 it enters `fill_form` fields one call at a time and takes the requested snapshot itself.
+
 ### Browser Runner CAPTCHA handoff and restart recovery (release candidate 0.6.2-rc.7)
 
 - Only an open CAPTCHA challenge puts a Browser Runner task in `needs_user`. Invisible badges, challenges parked off the page and frames that stay mounted after the user has solved one no longer hold the task, and the next snapshot continues once the challenge closes. A visible CAPTCHA checkbox is reported as a non-blocking `attention` note to complete before submitting. Challenges inside open shadow roots are now detected.

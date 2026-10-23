@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -236,6 +237,8 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 			out, e = m.upload(ctx, s, args, p)
 		case "wait":
 			out, e = m.wait(ctx, s, args)
+		case "fill_form":
+			out, e = m.fillForm(ctx, s, args)
 		default:
 			out, e = m.act(ctx, s, args)
 		}
@@ -254,6 +257,18 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 				out[k] = v
 			}
 			out["navigated"] = false
+		}
+	}
+	// snapshot=true returns the page as the action left it, so the next step
+	// (an option that just appeared, the next page) needs no extra call.
+	if e == nil && out != nil && tool == "browser_runner_act" && protocol.Bool(args, "snapshot") && s.live() {
+		if snap, se := s.snapshot(ctx, 150, 6000); se == nil {
+			out["snapshot"] = snap
+			if out["note"] != nil && out["navigated"] == true {
+				out["note"] = "The page changed; use the snapshot in this result."
+			}
+		} else {
+			out["snapshot_error"] = clip(se.Error(), 200) + " Call browser_runner_snapshot."
 		}
 	}
 	if ferr := s.flush(); ferr != nil && e == nil {
@@ -468,6 +483,7 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 	// target identifies what a submit acts on (form, control, fields), so
 	// one action is never sent twice under different idempotency keys.
 	target, targetLabel := "", ""
+	mayNavigate := false
 	if (req.Action == "click" || req.Action == "press") && req.Ref != "" {
 		frameID, e := s.refFrame(req.Ref)
 		if e != nil {
@@ -479,11 +495,13 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 		}
 		var classification struct {
 			RequiresSubmit bool            `json:"requires_submit"`
+			MayNavigate    bool            `json:"may_navigate"`
 			Target         json.RawMessage `json:"target"`
 		}
 		if e := json.Unmarshal(risk.Result.Value, &classification); e != nil || len(classification.Target) == 0 {
 			return nil, errors.New("browser_runner could not classify this control, so it was not clicked. Take a new snapshot and try again.")
 		}
+		mayNavigate = classification.MayNavigate
 		if req.Action == "click" && classification.RequiresSubmit && effect != "submit" {
 			return nil, errors.New("SUBMIT_EFFECT_REQUIRED: this control may submit data. Use effect=submit and a stable idempotency_key; navigation/none cannot bypass the submit ledger.")
 		}
@@ -529,13 +547,15 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 		s.ev.Unlock()
 		defer func() { s.ev.Lock(); s.submitting = false; s.ev.Unlock() }()
 	}
+	frameID, _ := s.refFrame(req.Ref)
+	_, domBefore, _ := s.domState(ctx, frameID)
 	before := s.mark()
 	out, dispatched, err := s.act(ctx, req)
 	navigated := false
 	if dispatched && s.live() {
-		navigated = s.waitSettled(ctx, before, effect != "none" || req.Action == "click" || req.Action == "press")
+		navigated = s.settle(ctx, before, frameID, domBefore, actPlan(req.Action, req.Key, effect, mayNavigate))
 		// An action inside an embedded form changes that frame, not the page.
-		if frameID, _ := s.refFrame(req.Ref); frameID != "" && !navigated && effect != "none" {
+		if frameID != "" && !navigated && effect != "none" {
 			s.settleFrame(ctx, frameID)
 		}
 	}
@@ -586,6 +606,134 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 	return out, nil
 }
 
+// maxFormFields bounds one fill_form call.
+const maxFormFields = 40
+
+var refPattern = regexp.MustCompile(`^(f[1-9]\d?)?e[1-9]\d{0,3}$`)
+
+// fillForm enters several fields from one snapshot in one call: fill,
+// select, check and uncheck, in order. Each field goes through the same
+// checks as a single act (sensitive and CAPTCHA fields are refused) and gets
+// its own receipt. A field that fails is reported and the rest continue;
+// nothing here can click, submit, navigate or upload, which stay single
+// acts. If the page navigates, the remaining fields are not entered.
+func (m *Manager) fillForm(ctx context.Context, s *session, args map[string]any) (map[string]any, error) {
+	snap := protocol.OptionalString(args, "snapshot_id")
+	if e := s.checkSnapshot(snap); e != nil {
+		return nil, e
+	}
+	if eff := protocol.OptionalString(args, "effect"); eff != "" && eff != "none" {
+		return nil, errors.New("fill_form never submits or navigates; send the submit or Next click as its own browser_runner_act after the fields.")
+	}
+	raw, _ := args["fields"].([]any)
+	if len(raw) == 0 || len(raw) > maxFormFields {
+		return nil, fmt.Errorf("fill_form needs fields: 1 to %d entries of {ref, action, value}.", maxFormFields)
+	}
+	steps := make([]actRequest, 0, len(raw))
+	for i, r := range raw {
+		f, ok := r.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("fields[%d] must be an object with ref, action and value.", i)
+		}
+		step := actRequest{SnapshotID: snap, Ref: protocol.OptionalString(f, "ref"), Action: protocol.OptionalString(f, "action"), Effect: "none"}
+		step.Value, step.HasValue = f["value"].(string)
+		switch step.Action {
+		case "fill", "select", "check", "uncheck":
+		default:
+			return nil, fmt.Errorf("fields[%d].action must be fill, select, check or uncheck. Clicks, keys, uploads and submits are separate browser_runner_act calls.", i)
+		}
+		if !refPattern.MatchString(step.Ref) {
+			return nil, fmt.Errorf("fields[%d].ref must be a ref from the snapshot, such as e12.", i)
+		}
+		if (step.Action == "fill" || step.Action == "select") && !step.HasValue {
+			return nil, fmt.Errorf("fields[%d] (%s) needs value.", i, step.Action)
+		}
+		if len(step.Value) > 10000 {
+			return nil, fmt.Errorf("fields[%d].value must be at most 10000 characters.", i)
+		}
+		steps = append(steps, step)
+	}
+	before := s.mark()
+	results := make([]map[string]any, 0, len(steps))
+	entered, failed := 0, 0
+	var stopped string
+	for i, step := range steps {
+		if dl, ok := ctx.Deadline(); ok && time.Until(dl) < 4*time.Second {
+			stopped = fmt.Sprintf("Out of time for this call at fields[%d]; send the remaining fields in another fill_form.", i)
+			break
+		}
+		if e := s.checkSnapshot(snap); e != nil {
+			stopped = fmt.Sprintf("The page changed before fields[%d]; the remaining fields were not entered. Take a new snapshot.", i)
+			break
+		}
+		frameID, _ := s.refFrame(step.Ref)
+		_, domBefore, _ := s.domState(ctx, frameID)
+		mark := s.mark()
+		out, dispatched, err := s.act(ctx, step)
+		rc := Receipt{Tool: "browser_runner_act", Action: step.Action, URL: safeURL(s.currentHref()), Outcome: "ok"}
+		res := map[string]any{"ref": step.Ref, "action": step.Action}
+		if l, ok := out["label"].(string); ok {
+			rc.Label = clip(l, 120)
+			res["label"] = l
+		}
+		for _, k := range []string{"selected", "checked", "value_length", "frame"} {
+			if v, ok := out[k]; ok {
+				res[k] = v
+			}
+		}
+		if err != nil {
+			rc.Outcome, rc.Detail = "error", clip(err.Error(), 200)
+			res["error"] = err.Error()
+			failed++
+		} else {
+			res["ok"] = true
+			entered++
+		}
+		s.cp.receipt(m.now(), rc)
+		results = append(results, res)
+		// Let the page react (validation, fields that appear) before the
+		// next field; a navigation ends the batch.
+		if dispatched && s.live() && s.settle(ctx, mark, frameID, domBefore, settleStep) {
+			if i+1 < len(steps) {
+				stopped = fmt.Sprintf("The page navigated after fields[%d]; the remaining fields were not entered. Take a new snapshot.", i)
+			}
+			break
+		}
+	}
+	navigated := false
+	if s.live() {
+		_, domBefore, _ := s.domState(ctx, "")
+		navigated = s.settle(ctx, before, "", domBefore, settleField)
+		s.ev.Lock()
+		navigated = navigated || s.epoch != before.epoch
+		s.ev.Unlock()
+	}
+	out := map[string]any{"action": "fill_form", "fields": results, "entered": entered, "failed": failed, "navigated": navigated}
+	if len(results) < len(steps) {
+		rest := make([]string, 0, len(steps)-len(results))
+		for _, st := range steps[len(results):] {
+			rest = append(rest, st.Ref)
+		}
+		out["not_entered"] = rest
+	}
+	if stopped != "" {
+		out["stopped"] = stopped
+	}
+	if failed > 0 {
+		out["next_action"] = "Fix the fields with an error (see each error), then continue. Fields marked ok hold their values."
+	}
+	for k, v := range s.pageState(ctx) {
+		out[k] = v
+	}
+	if navigated {
+		out["note"] = "The page changed; earlier refs are stale. Take a new browser_runner_snapshot."
+	}
+	if d := s.takeDialogs(); len(d) > 0 {
+		out["dialogs"] = d
+	}
+	return out, nil
+}
+
 // upload enforces Remote Arc device policy: files must sit inside a Trusted
 // Location the user configured, and outside protected sensitive paths.
 func (m *Manager) upload(ctx context.Context, s *session, args map[string]any, p protocol.Policy) (map[string]any, error) {
@@ -617,7 +765,17 @@ func (m *Manager) upload(ctx context.Context, s *session, args map[string]any, p
 		}
 	}
 	ref := protocol.OptionalString(args, "ref")
+	frameID, _ := s.refFrame(ref)
+	_, domBefore, _ := s.domState(ctx, frameID)
+	before := s.mark()
 	out, e := s.upload(ctx, snap, ref, original)
+	if e == nil && s.live() {
+		// Many forms read an uploaded resume and fill fields from it; let
+		// that finish so the next snapshot shows the result.
+		if s.settle(ctx, before, frameID, domBefore, settleUpload) {
+			out["navigated"] = true
+		}
+	}
 	rc := Receipt{Tool: "browser_runner_act", Action: "upload", Label: ref, URL: safeURL(s.currentHref()), Outcome: "ok"}
 	if e != nil {
 		rc.Outcome, rc.Detail = "error", clip(e.Error(), 200)

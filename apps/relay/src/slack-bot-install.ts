@@ -2,6 +2,7 @@ import { getSessionUser, randomToken, sha256Hex } from './auth.js';
 import { isTrustedDashboardMutation } from './dashboard-origin.js';
 import { seal } from './app-oauth.js';
 import { authPage, escapeAuthHtml } from './auth-page.js';
+import { slackLinkConfirmationPage } from './slack-bot-link-page.js';
 import {arcGateway,arcAutoId,arcModelAccess} from './arc-chat-model.js';
 import {arcAccountAccess} from './arc-trial.js';
 import { SLACK_BOT_SCOPES, slackDashboard, slackReady, slackStamp, slackTokenContext, type BotTokens, type SlackBotEnv } from './slack-bot-common.js';
@@ -79,7 +80,7 @@ export async function handleSlackBotAccount(request:Request,env:SlackBotEnv,fetc
    ]);
    return authPage('Slack connected','<h1>You’re connected</h1><p class="lead">Your Slack request will continue using this Remote Arc account. You can return to Slack.</p><a class="google" href="'+escapeAuthHtml(slackDashboard(env)+'/dashboard/agent/chat')+'">Open Remote Arc</a>');
   }
-  return authPage('Connect Slack',`<h1>Connect your Slack identity</h1><p class="lead">Use <span class="email-highlight">${escapeAuthHtml(user.email)}</span> for Slack user ${escapeAuthHtml(link.slack_user_id)} in ${escapeAuthHtml(link.team_id)}. Your pending Slack request will continue under this account’s plan, credits and permissions.</p><form method="post" action="${escapeAuthHtml(url.pathname+url.search)}"><button class="primary" type="submit">Connect &amp; continue my request</button></form>`);
+  return slackLinkConfirmationPage(url.pathname+url.search,user.email,link.slack_user_id,link.team_id);
  }
  return json({error:'not_found'},404);
 }

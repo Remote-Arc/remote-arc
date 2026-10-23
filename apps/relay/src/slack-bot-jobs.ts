@@ -49,7 +49,7 @@ async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
  if(!userId){
   const code=randomToken();await env.DB.prepare('INSERT INTO slack_arc_link_requests(code_hash,team_id,slack_user_id,event_id,expires_at) VALUES(?1,?2,?3,?4,?5)').bind(await sha256Hex(code),job.team_id,job.slack_user_id,job.id,timeAfter(600)).run();
   job.delivery_kind='link';
-  await deliver(env,job,installation,'Connect your own Remote Arc account to continue this request:\n'+slackDashboard(env)+'/slack/link?code='+code+'\nYour plan, credits and permissions apply. This link expires in 10 minutes.','awaiting_link',fetcher);return;
+  await deliver(env,job,installation,'Connect your own Remote Arc account to continue this request:\n<'+encodeSlack(slackDashboard(env)+'/slack/link?code='+code)+'|Connect your Remote Arc account>\nYour plan, credits and permissions apply. This link expires in 10 minutes.','awaiting_link',fetcher);return;
  }
  job.user_id=userId;
  await env.DB.prepare('UPDATE slack_arc_events SET user_id=?1 WHERE id=?2 AND lease=?3').bind(userId,job.id,job.lease).run();

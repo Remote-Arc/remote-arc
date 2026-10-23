@@ -128,6 +128,22 @@ func checkpointPath(id string) string {
 }
 func profilePath(profile string) string { return filepath.Join(runnerDir(), "profiles", profile) }
 
+// oneTimeCodesAllowed is the computer's choice whether Browser Runner may
+// enter one-time codes the caller found (for example in the user's email).
+// On unless config.json sets "browserRunnerOneTimeCodes": false. Passwords
+// and payment details are never typed from the conversation.
+func oneTimeCodesAllowed() bool {
+	c, e := config.Load()
+	if e != nil {
+		return true
+	}
+	var on bool
+	if raw, ok := c.Extra["browserRunnerOneTimeCodes"]; ok && json.Unmarshal(raw, &on) == nil {
+		return on
+	}
+	return true
+}
+
 // ProfileInfo describes a browser profile from the checkpoints of the tasks
 // that used it. A profile keeps its sign-ins and cookies, so a later task
 // that passes the same profile starts signed in. Nothing is read from the

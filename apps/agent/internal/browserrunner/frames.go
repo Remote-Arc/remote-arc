@@ -308,7 +308,7 @@ func (s *session) snapshotFrames(ctx context.Context, page map[string]any, id st
 		if !s.scope.Allows(f.url) || budget <= 0 {
 			continue
 		}
-		r, e := s.helperIn(ctx, f.id, "snapshot", map[string]any{"snapshot_id": id, "ref_prefix": prefix, "max_elements": max(10, budget), "max_text": max(200, maxText/2)}, true)
+		r, e := s.helperIn(ctx, f.id, "snapshot", map[string]any{"snapshot_id": id, "ref_prefix": prefix, "max_elements": max(10, budget), "max_text": max(200, maxText/2), "allow_codes": oneTimeCodesAllowed()}, true)
 		if e != nil {
 			entry["error"] = clip(e.Error(), 120)
 			continue

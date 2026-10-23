@@ -833,7 +833,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	s.ev.Lock()
 	epoch := s.epoch
 	s.ev.Unlock()
-	r, e := s.helper(ctx, "snapshot", map[string]any{"snapshot_id": id, "max_elements": maxElements, "max_text": maxText}, true)
+	r, e := s.helper(ctx, "snapshot", map[string]any{"snapshot_id": id, "max_elements": maxElements, "max_text": maxText, "allow_codes": oneTimeCodesAllowed()}, true)
 	if e != nil {
 		return nil, e
 	}
@@ -1023,7 +1023,7 @@ type actRequest struct {
 // act performs one input action. dispatched reports whether any input may
 // have reached the page, which decides between not_dispatched and unknown.
 func (s *session) act(ctx context.Context, a actRequest) (result map[string]any, dispatched bool, err error) {
-	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action}
+	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action, "allow_codes": oneTimeCodesAllowed()}
 	result = map[string]any{"action": a.Action}
 	frameID, e := s.refFrame(a.Ref)
 	if e != nil {

@@ -10,8 +10,10 @@ export type FollowupTemplateId=typeof FOLLOWUP_TEMPLATES[number]['id'];
 export function followupTemplate(id:string,locale:'en'|'zh',values:{name:string;setupUrl:string;feedbackUrl:string}){
  const template=FOLLOWUP_TEMPLATES.find(item=>item.id===id);if(!template)throw new Error('unknown_template');
  const index=locale==='zh'?1:0;
+ return {subject:personalizeFollowupText(template.subject[index],locale,values),body:personalizeFollowupText(template.body[index],locale,values)};
+}
+export function personalizeFollowupText(text:string,locale:'en'|'zh',values:{name:string;setupUrl:string;feedbackUrl:string}){
  const site=new URL(values.setupUrl).origin,prefix=locale==='zh'?'/zh':'';
  const replacements={...values,chatgptUrl:site+prefix+'/install/chatgpt',claudeUrl:site+prefix+'/install/claude',cursorUrl:site+prefix+'/install/cursor'};
- const fill=(text:string)=>text.replace(/\{\{(name|setupUrl|feedbackUrl|chatgptUrl|claudeUrl|cursorUrl)\}\}/g,(_,key:keyof typeof replacements)=>replacements[key]);
- return {subject:fill(template.subject[index]),body:fill(template.body[index])};
+ return text.replace(/\{\{(name|setupUrl|feedbackUrl|chatgptUrl|claudeUrl|cursorUrl)\}\}/g,(_,key:keyof typeof replacements)=>replacements[key]);
 }

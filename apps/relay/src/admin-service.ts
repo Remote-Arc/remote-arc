@@ -1,4 +1,5 @@
 import {handleUserFollowups,type FollowupEnv} from './user-followups.js';
+import {runFollowupBatches} from './followup-batches.js';
 import {handleAdminPayments,type AdminPaymentsEnv} from './admin-payments.js';
 import {handleFeedbackRewardAdmin} from './connect-rewards.js';
 import { getSessionUser } from "./auth.js";
@@ -28,6 +29,11 @@ export function adminApiMethods(path: string): readonly string[] | null {
   if(path==='/api/admin/payments/funding')return ['POST'];
   if(/^\/api\/admin\/payments\/(config|promotions)\/drafts$/.test(path)||/^\/api\/admin\/payments\/(config|promotions)\/[a-f0-9-]{36}\/(publish|disable)$/.test(path))return ['POST'];
   if(path==='/api/admin/followups')return ['GET'];
+  if(path==='/api/admin/followups/selection')return ['GET'];
+  if(path==='/api/admin/followups/bulk-status')return ['PATCH'];
+  if(path==='/api/admin/followups/batches')return ['GET','POST'];
+  if(/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}$/.test(path))return ['GET'];
+  if(/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}\/(queue|cancel)$/.test(path))return ['POST'];
   if(path==='/api/admin/followups/drafts')return ['POST'];
   if(/^\/api\/admin\/followups\/[^/]+\/send$/.test(path))return ['POST'];
   if(/^\/api\/admin\/followups\/[^/]+$/.test(path))return ['GET','PATCH'];
@@ -48,7 +54,7 @@ const failure = (error: string, status: number) => finish(Response.json({ error 
 
 // A dedicated named service entrypoint calls this handler. The public relay
 // keeps its existing host restriction and can be disabled independently.
-export async function handleAdminServiceRequest(request: Request, env: AdminServiceEnv): Promise<Response> {
+export async function handleAdminServiceRequest(request: Request, env: AdminServiceEnv,ctx?:Pick<ExecutionContext,'waitUntil'>): Promise<Response> {
   const url = new URL(request.url);
   const expectedOrigin = new URL(env.ADMIN_ORIGIN || "https://admin.remotearc.app").origin;
   if (url.origin !== expectedOrigin) return failure("admin_host_required", 404);
@@ -65,7 +71,11 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
   if (!user) return failure("unauthorized", 401);
   if (!user.isAdmin) return failure("forbidden", 403);
 
-  if(url.pathname.startsWith('/api/admin/followups'))return finish(await handleUserFollowups(request,env));
+  if(url.pathname.startsWith('/api/admin/followups')){
+    const response=await handleUserFollowups(request,env);
+    if(ctx&&response.ok&&request.method==='POST'&&/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}\/queue$/.test(url.pathname))ctx.waitUntil(runFollowupBatches(env));
+    return finish(response);
+  }
   if(url.pathname.startsWith('/api/admin/payments'))return finish(await handleAdminPayments(request,env));
   if(url.pathname.startsWith('/api/admin/feedback-rewards'))return finish(await handleFeedbackRewardAdmin(request,env));
   let response: Response;

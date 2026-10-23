@@ -16,15 +16,31 @@
     return s.length > n ? s.slice(0, n - 1) + "…" : s;
   };
   const captchaField = (el) => !!el && !!el.tagName && CAPTCHA_RESPONSE.test([el.name, el.id].join(" "));
-  const sensitive = (el) => {
-    if (!el || !el.tagName) return false;
-    if (captchaField(el)) return true;
+  // Which kind of secret a field holds: captcha, payment, code (a one-time
+  // code), password, or "" for none. Values of every kind are redacted.
+  const secretKind = (el) => {
+    if (!el || !el.tagName) return "";
+    if (captchaField(el)) return "captcha";
     const type = String(el.type || "").toLowerCase();
-    if (type === "password") return true;
     const ac = String(el.getAttribute("autocomplete") || "").toLowerCase().split(/\s+/);
-    if (ac.some((t) => SENSITIVE_AUTOCOMPLETE.includes(t))) return true;
     const hint = [el.name, el.id, el.getAttribute("aria-label"), el.getAttribute("placeholder")].join(" ");
-    return SENSITIVE_NAME.test(hint);
+    if (ac.some((t) => t.startsWith("cc-")) || /(cvv|cvc|csc|card[-_ ]?num|ccnum|cc[-_]?number|security[-_ ]?code)/i.test(hint)) return "payment";
+    if (ac.includes("one-time-code") || /(otp|one[-_ ]?time|verification[-_ ]?code|passcode)/i.test(hint + " " + (type === "password" ? "" : labelText(el)))) return "code";
+    if (type === "password" || ac.includes("current-password") || ac.includes("new-password")) return "password";
+    if (SENSITIVE_AUTOCOMPLETE.some((t) => ac.includes(t)) || SENSITIVE_NAME.test(hint)) return "password";
+    return "";
+  };
+  const sensitive = (el) => secretKind(el) !== "";
+  // Fill refuses CAPTCHA responses always, passwords and payment details from
+  // the conversation always, and one-time codes only when the computer has
+  // them turned off. A code the caller found (for example in the user's
+  // email) is entered like any value and never recorded.
+  const refuseSecret = (el) => {
+    const kind = secretKind(el);
+    if (kind === "captcha") throw new Error(CAPTCHA_REFUSAL);
+    if (kind === "code" && a.allow_codes) return;
+    if (kind === "code") throw new Error("BLOCKED_SENSITIVE: one-time codes are turned off for Browser Runner on this computer (browserRunnerOneTimeCodes). Ask the user to enter it.");
+    if (kind) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords or payment details from the conversation. Ask the user to enter this field themselves.");
   };
   const visible = (el) => {
     if (!el.isConnected) return false;
@@ -233,7 +249,10 @@
         item.value = isSensitive ? "[redacted]" : clip(el.innerText, 200);
       }
       if (tag === "a" && el.href) item.href = clip(el.href, 300);
-      if (isSensitive) item.sensitive = true;
+      if (isSensitive) {
+        item.sensitive = true;
+        item.secret = secretKind(el);
+      }
       if (el.disabled || el.getAttribute("aria-disabled") === "true") item.disabled = true;
       elements.push(item);
     }
@@ -258,8 +277,11 @@
     for (const v of shownBy("challenge")) blockers.push({ kind: "captcha", detail: v + " challenge is open on the page; the user completes it in the Runner window" });
     for (const v of shownBy("widget")) attention.push({ kind: "captcha_widget", detail: v + " check is shown. If it is not completed yet, ask the user to complete it in the Runner window before any effect=submit. The Runner cannot tell whether it is completed and never reads its response." });
     const secret = Array.from(document.querySelectorAll("input")).filter((el) => visible(el) && sensitive(el));
-    if (secret.some((el) => String(el.type).toLowerCase() === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
-    if (secret.some((el) => /one-time-code|otp|verification/i.test([el.autocomplete, el.name, el.id].join(" ")))) blockers.push({ kind: "verification_code", detail: "one-time code requested; the user must enter it" });
+    if (secret.some((el) => secretKind(el) === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
+    if (secret.some((el) => secretKind(el) === "code")) {
+      if (a.allow_codes) attention.push({ kind: "verification_code", detail: "A one-time code is requested. Get it from where it was sent (for example the user's email through a connected mail app) and fill it into the field marked secret: code. The code is never recorded." });
+      else blockers.push({ kind: "verification_code", detail: "one-time code requested; one-time codes are turned off on this computer, so the user enters it" });
+    }
     let body = document.body ? document.body.innerText || "" : "";
     for (const sr of shadowRoots()) {
       const t = Array.from(sr.children).filter((c) => !/^(STYLE|SCRIPT|TEMPLATE|LINK)$/.test(c.tagName)).map((c) => c.innerText || "").join("\n").trim();
@@ -305,20 +327,78 @@
       label: label.toLowerCase().replace(/\s+/g, " ").trim(),
       fields: [...names].sort().slice(0, 50),
     };
+    // Whether a click here may load another page or step, which decides how
+    // long the Runner waits for one to begin. Controls that only change the
+    // current view (choices, options, tabs, menus, toggles) do not.
+    const link = el.closest && el.closest("a[href]");
+    const href = link ? String(link.getAttribute("href") || "").trim() : "";
+    const navLink = !!link && href !== "" && !/^(#|javascript:)/i.test(href);
+    const buttonType = el.tagName === "BUTTON" ? String(el.getAttribute("type") || "submit").toLowerCase() : type;
+    const formButton = !!form && (buttonType === "submit" || buttonType === "image");
+    const role = roleOf(el);
+    const toggles = ["checkbox", "radio", "option", "tab", "menuitem", "menuitemcheckbox", "menuitemradio", "switch", "combobox", "listbox", "treeitem", "textbox", "slider", "spinbutton", "label", "summary", "select"].includes(role) ||
+      el.hasAttribute("aria-expanded") || el.hasAttribute("aria-haspopup") || el.hasAttribute("aria-pressed");
+    const stepWords = /\b(next|continue|proceed|start|begin|sign in|log in|login|search|go|view|back|previous|review|save|submit|apply|checkout|buy|book|pay|confirm|finish|done)\b/i.test(label);
+    const mayNavigate = navLink || formButton || (!toggles && stepWords);
     // A regular href is navigation even when the label says "Apply now".
-    if (el.tagName === "A" && el.href && !form) return { requires_submit: false, target };
+    if (el.tagName === "A" && el.href && !form) return { requires_submit: false, may_navigate: mayNavigate, kind: "", target };
     const danger = /\b(submit|send|apply|finish|confirm|place order|book now|purchase|pay now|delete|publish|post|save changes|complete application)\b/i.test(label);
     // GET-form Next means navigation; a POST native submit is an external effect.
     const formSubmits = !!form && (type === "submit" || type === "image") && (form.method.toLowerCase() !== "get" || danger);
-    return { requires_submit: formSubmits || danger, target };
+    // Sign-in and verification steps (an identifier, a password the user
+    // typed, a one-time code) are repeated whenever a session expires; they
+    // are never one-time submits. Strong purchase or publish words override.
+    const inputs = Array.from(scope.querySelectorAll("input, select, textarea")).filter((f) => {
+      const t = String(f.type || "").toLowerCase();
+      return !["hidden", "submit", "button", "image", "reset"].includes(t) && visible(f);
+    });
+    const hint = (f) => [f.type, f.name, f.id, f.getAttribute("autocomplete"), labelText(f)].join(" ");
+    const choice = (f) => /^(checkbox|radio)$/i.test(String(f.type || ""));
+    const password = inputs.some((f) => String(f.type).toLowerCase() === "password");
+    const code = inputs.some((f) => /one-time-code|\botp\b|verification|passcode|security code|\bcode\b/i.test(hint(f)));
+    const identifier = inputs.some((f) => !choice(f)) && inputs.filter((f) => !choice(f)).length <= 2 && inputs.every((f) => choice(f) || /e-?mail|user|login|account|phone|mobile/i.test(hint(f)));
+    const authWords = /\b(sign ?in|log ?in|log ?on|sign ?on|send (me )?(a |the )?(code|link)|resend|verify|one-time|continue with|continue|next)\b/i.test(label);
+    const authPlace = /(login|signin|sign-in|identity|auth|sso|oauth)/i.test(location.hostname + location.pathname);
+    const strongFinal = /\b(pay|purchase|place order|book now|submit application|complete application|delete|publish|post)\b/i.test(label);
+    const auth = !strongFinal && (password || code || (identifier && !danger && (authWords || authPlace)));
+    // final: sent once, confirmed by the caller. step: a page of a longer
+    // form; it may be saved again and settles itself when the next page opens.
+    const kind = auth ? "auth" : danger ? "final" : formSubmits ? "step" : "";
+    return { requires_submit: !auth && (formSubmits || danger), may_navigate: mayNavigate || formSubmits || danger, kind, target };
+  }
+
+  if (op === "step_state") {
+    // What tells one page of a form from the next: its field names and
+    // headings. Values are never read.
+    const names = new Set();
+    for (const f of document.querySelectorAll("input, select, textarea")) {
+      const t = String(f.type || "").toLowerCase();
+      if (["hidden", "submit", "button", "image", "reset"].includes(t) || !visible(f)) continue;
+      names.add(f.name || f.id || t);
+    }
+    const headings = Array.from(document.querySelectorAll("h1, h2, h3, legend")).filter(visible).map((h) => clip(h.innerText, 120)).filter(Boolean);
+    return { fields: [...names].sort().join("|").slice(0, 2000), headings: headings.slice(0, 8), title: clip(document.title, 200) };
+  }
+
+  if (op === "quiet") {
+    // How long the DOM has been unchanged, so the Runner can continue as soon
+    // as the page has taken in an action rather than after a fixed delay.
+    let q = window.__remotearcQuiet;
+    if (!q || q.doc !== document) {
+      q = window.__remotearcQuiet = { doc: document, last: performance.now(), changes: 0 };
+      new MutationObserver((records) => {
+        q.last = performance.now();
+        q.changes += records.length;
+      }).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
+    }
+    return { idle: Math.round(performance.now() - q.last), changes: q.changes };
   }
 
   const CAPTCHA_REFUSAL = "BLOCKED_CAPTCHA: a CAPTCHA response comes only from the user solving the CAPTCHA in the Runner window. Browser Runner never fills, reads or supplies CAPTCHA responses.";
 
   if (op === "locate") {
     const el = lookup();
-    if (a.action === "fill" && captchaField(el)) throw new Error(CAPTCHA_REFUSAL);
-    if (a.action === "fill" && sensitive(el)) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords, one-time codes or payment details. Ask the user to enter this field themselves.");
+    if (a.action === "fill") refuseSecret(el);
     if (el.disabled || el.getAttribute("aria-disabled") === "true") throw new Error("DISABLED: " + describe(el) + " is disabled.");
     el.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
     const r = el.getBoundingClientRect();
@@ -354,8 +434,7 @@
 
   if (op === "prepare_fill") {
     const el = lookup();
-    if (captchaField(el)) throw new Error(CAPTCHA_REFUSAL);
-    if (sensitive(el)) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords, one-time codes or payment details. Ask the user to enter this field themselves.");
+    refuseSecret(el);
     const type = String(el.type || "").toLowerCase();
     if (["checkbox", "radio", "file", "submit", "button", "image", "reset"].includes(type) || el.tagName === "SELECT") throw new Error("WRONG_ACTION: use " + (el.tagName === "SELECT" ? "select" : type === "file" ? "action=upload" : "click/check") + " for " + describe(el) + ".");
     el.focus();

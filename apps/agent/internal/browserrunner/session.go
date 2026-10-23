@@ -38,8 +38,11 @@ type session struct {
 	mainFrame    string
 	worldCtx     int
 	epoch        int
-	loads        int  // main-frame loads started; moves before a navigation commits
-	loading      bool // main frame is loading (including blocked attempts)
+	loads        int                  // main-frame loads started; moves before a navigation commits
+	loading      bool                 // main frame is loading (including blocked attempts)
+	routes       int                  // same-document navigations (pushState, hash) of the main frame
+	requests     map[string]time.Time // page XHR/fetch requests in flight, by request id
+	lastRequest  time.Time            // when the page last sent anything that can carry data
 	flushedEpoch int
 	href         string
 	submitting   bool
@@ -48,6 +51,10 @@ type session struct {
 
 	frames   map[string]*frameInfo // child frames, guarded by ev
 	frameSeq int
+
+	// unsent remembers, per submit key, the page state at a click that sent
+	// nothing, so a retry can prove nothing has been sent since.
+	unsent map[string]navMark
 
 	snapshotID    string
 	snapshotEpoch int
@@ -157,7 +164,49 @@ func (s *session) onEvent(cdpSession, method string, raw json.RawMessage) {
 			s.ev.Lock()
 			if p.FrameID == s.mainFrame {
 				s.href = p.URL
+				s.routes++
 			}
+			s.ev.Unlock()
+		}
+	case "Network.requestWillBeSent":
+		// Only the page's own data requests say whether an action is still
+		// being processed; images, media and scripts do not.
+		var p struct {
+			RequestID string `json:"requestId"`
+			Type      string `json:"type"`
+		}
+		if json.Unmarshal(raw, &p) != nil {
+			break
+		}
+		data := p.Type == "XHR" || p.Type == "Fetch"
+		// Anything that can carry data off the page counts as sent; passive
+		// loads (images, scripts, styles, fonts, media) do not.
+		if !data && p.Type != "Ping" && p.Type != "EventSource" && p.Type != "Document" {
+			break
+		}
+		now := time.Now()
+		s.ev.Lock()
+		if data {
+			if s.requests == nil {
+				s.requests = map[string]time.Time{}
+			}
+			if _, redirect := s.requests[p.RequestID]; !redirect {
+				s.requests[p.RequestID] = now
+			}
+		}
+		s.lastRequest = now
+		s.ev.Unlock()
+	case "Network.webSocketFrameSent":
+		s.ev.Lock()
+		s.lastRequest = time.Now()
+		s.ev.Unlock()
+	case "Network.loadingFinished", "Network.loadingFailed":
+		var p struct {
+			RequestID string `json:"requestId"`
+		}
+		if json.Unmarshal(raw, &p) == nil {
+			s.ev.Lock()
+			delete(s.requests, p.RequestID)
 			s.ev.Unlock()
 		}
 	case "Runtime.executionContextCreated":
@@ -282,6 +331,9 @@ func (s *session) setup(ctx context.Context) error {
 		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": pageJS + `("install", {})`}},
 		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": "void 0", "worldName": worldName}},
 		{"DOM.enable", nil},
+		// Request start and end events (never bodies) tell when the page has
+		// finished what an action started, instead of waiting a fixed time.
+		{"Network.enable", nil},
 		// Cross-site iframes run in their own process; attach to them so
 		// embedded forms can be read and filled.
 		{"Target.setAutoAttach", map[string]any{"autoAttach": true, "waitForDebuggerOnStart": true, "flatten": true}},
@@ -468,23 +520,206 @@ func randomHex(n int) string {
 	return hex.EncodeToString(b)
 }
 
-type navMark struct{ epoch, loads int }
+type navMark struct {
+	epoch, loads, routes int
+	at                   time.Time
+}
 
 func (s *session) mark() navMark {
 	s.ev.Lock()
 	defer s.ev.Unlock()
-	return navMark{s.epoch, s.loads}
+	return navMark{s.epoch, s.loads, s.routes, time.Now()}
+}
+
+// navWindowLong is how long a navigation may take to begin after an action
+// that is expected to navigate (a link, a submit, a declared navigation).
+const navWindowLong = 2500 * time.Millisecond
+
+// settlePlan says how long to wait after an action, by what the action can
+// do. Waits end as soon as the page is still; the durations are upper bounds.
+type settlePlan struct {
+	// expectNav: the action may navigate, so absence of change is not taken
+	// as done until navWindow has passed.
+	expectNav bool
+	// navWindow is how long a document navigation may take to begin.
+	navWindow time.Duration
+	// minWait is the least time given for the action to take effect.
+	minWait time.Duration
+	// quiet is how long the DOM must be unchanged with no request the
+	// action started still running.
+	quiet time.Duration
+	// noisyAfter stops waiting for the DOM to be still on pages that never
+	// are (tickers, animations) once no request is outstanding.
+	noisyAfter time.Duration
+	// limit bounds the wait for outstanding requests.
+	limit time.Duration
+}
+
+var (
+	// fill, select, check: the field updates synchronously; a change handler
+	// may still validate, reveal fields or submit a GET form.
+	settleField = settlePlan{navWindow: 100 * time.Millisecond, minWait: 60 * time.Millisecond, quiet: 60 * time.Millisecond, noisyAfter: 400 * time.Millisecond, limit: 2 * time.Second}
+	// between the fields of one fill_form call.
+	settleStep = settlePlan{navWindow: 50 * time.Millisecond, minWait: 20 * time.Millisecond, quiet: 40 * time.Millisecond, noisyAfter: 250 * time.Millisecond, limit: 1500 * time.Millisecond}
+	// a click or key on something that does not navigate (radio, option,
+	// tab, menu, dropdown toggle): wait for what it opens to render.
+	settleToggle = settlePlan{navWindow: 200 * time.Millisecond, minWait: 150 * time.Millisecond, quiet: 100 * time.Millisecond, noisyAfter: time.Second, limit: 4 * time.Second}
+	// links, Next/Continue and declared navigations.
+	settleNav = settlePlan{expectNav: true, navWindow: navWindowLong, minWait: 400 * time.Millisecond, quiet: 150 * time.Millisecond, noisyAfter: navWindowLong, limit: 10 * time.Second}
+	// submits: same, with more time for a confirmation page to begin loading.
+	settleSubmit = settlePlan{expectNav: true, navWindow: navWindowLong, minWait: 1200 * time.Millisecond, quiet: 200 * time.Millisecond, noisyAfter: navWindowLong, limit: 15 * time.Second}
+	// uploads: a form may read the file (resume parsing) and fill fields.
+	settleUpload = settlePlan{navWindow: 100 * time.Millisecond, minWait: 150 * time.Millisecond, quiet: 200 * time.Millisecond, noisyAfter: time.Second, limit: 8 * time.Second}
+)
+
+// actPlan picks how long to wait after one act from what it can do.
+func actPlan(action, key, effect string, mayNavigate bool) settlePlan {
+	activates := action == "click" || (action == "press" && (key == "Enter" || key == "Space"))
+	switch {
+	case effect == "submit":
+		return settleSubmit
+	case effect == "navigation", activates && mayNavigate:
+		return settleNav
+	case action == "click" || action == "press":
+		return settleToggle
+	default:
+		return settleField
+	}
+}
+
+// domState reports how long the DOM of a frame ("" for the page) has been
+// unchanged and how many changes it has seen.
+func (s *session) domState(ctx context.Context, frameID string) (idle time.Duration, changes int, ok bool) {
+	r, e := s.helperIn(ctx, frameID, "quiet", nil, true)
+	if e != nil {
+		return 0, 0, false
+	}
+	var q struct {
+		Idle    float64 `json:"idle"`
+		Changes int     `json:"changes"`
+	}
+	if json.Unmarshal(r.Result.Value, &q) != nil {
+		return 0, 0, false
+	}
+	return time.Duration(q.Idle) * time.Millisecond, q.Changes, true
+}
+
+// stepView tells one page of a form from the next: its field names and
+// headings, never values.
+type stepView struct {
+	Fields   string   `json:"fields"`
+	Headings []string `json:"headings"`
+	Title    string   `json:"title"`
+	ok       bool
+}
+
+func (s *session) stepState(ctx context.Context) stepView {
+	var v stepView
+	if r, e := s.helper(ctx, "step_state", nil, true); e == nil && json.Unmarshal(r.Result.Value, &v) == nil {
+		v.ok = true
+	}
+	return v
+}
+
+// evidence names the page a step led to: its first new heading, else its
+// first heading, else its title.
+func (v stepView) evidence(prev stepView) string {
+	seen := map[string]bool{}
+	for _, h := range prev.Headings {
+		seen[h] = true
+	}
+	for _, h := range v.Headings {
+		if !seen[h] {
+			return h
+		}
+	}
+	if len(v.Headings) > 0 {
+		return v.Headings[0]
+	}
+	return v.Title
+}
+
+// pending counts the page's data requests started since t that are still
+// running. Requests open for over 20 s (long polling, streams) are ignored.
+func (s *session) pending(t time.Time) (open int, any bool) {
+	s.ev.Lock()
+	defer s.ev.Unlock()
+	now := time.Now()
+	for id, at := range s.requests {
+		if now.Sub(at) > 20*time.Second {
+			delete(s.requests, id)
+			continue
+		}
+		if !at.Before(t) {
+			open++
+		}
+	}
+	return open, !s.lastRequest.Before(t)
+}
+
+// settle waits after an action until the page has taken it in: a document
+// load is followed to the end; otherwise it returns once requests the action
+// started are done and the DOM is still, within the plan's bounds. A
+// navigation that begins after it returns is caught by the next call
+// (STALE_REF), never acted through. It reports whether the document changed.
+func (s *session) settle(ctx context.Context, mark navMark, frameID string, domBefore int, p settlePlan) bool {
+	start := time.Now()
+	for {
+		if ctx.Err() != nil || !s.live() {
+			return false
+		}
+		elapsed := time.Since(start)
+		s.ev.Lock()
+		committed := s.epoch != mark.epoch
+		loadStarted := s.loads != mark.loads
+		routed := s.routes != mark.routes
+		s.ev.Unlock()
+		if committed {
+			return s.waitSettled(ctx, mark, p.navWindow)
+		}
+		if loadStarted && !routed {
+			if s.waitSettled(ctx, mark, p.navWindow) {
+				return true
+			}
+			// The load ended without a new document. Unless it was a
+			// same-document navigation (pushState), it was blocked or a
+			// download, and the page is as it was.
+			s.ev.Lock()
+			routed = s.routes != mark.routes
+			s.ev.Unlock()
+			if !routed {
+				return false
+			}
+		}
+		open, requested := s.pending(mark.at)
+		if elapsed >= p.minWait {
+			idle, changes, ok := s.domState(ctx, frameID)
+			if !ok {
+				// The document went away under us: a navigation is starting.
+				time.Sleep(40 * time.Millisecond)
+				continue
+			}
+			still := open == 0 && idle >= p.quiet
+			happened := routed || requested || changes != domBefore
+			if still && (!p.expectNav || happened || elapsed >= p.navWindow) {
+				return false
+			}
+			if open == 0 && elapsed >= p.noisyAfter && (!p.expectNav || elapsed >= p.navWindow) {
+				return false
+			}
+		}
+		if elapsed >= p.limit {
+			return false
+		}
+		time.Sleep(30 * time.Millisecond)
+	}
 }
 
 // waitSettled waits for a navigation that may follow an action, then for the
-// document to finish loading. expectNav widens the window in which a
-// navigation is allowed to start.
-func (s *session) waitSettled(ctx context.Context, mark navMark, expectNav bool) bool {
+// document to finish loading. navWindow is how long a navigation may take to
+// begin.
+func (s *session) waitSettled(ctx context.Context, mark navMark, navWindow time.Duration) bool {
 	start := time.Now()
-	navWindow := 400 * time.Millisecond
-	if expectNav {
-		navWindow = 2500 * time.Millisecond
-	}
 	navigated := false
 	for time.Since(start) < 20*time.Second {
 		if ctx.Err() != nil || !s.live() {
@@ -494,7 +729,13 @@ func (s *session) waitSettled(ctx context.Context, mark navMark, expectNav bool)
 		navigated = s.epoch != mark.epoch
 		started := navigated || s.loads != mark.loads
 		loading := s.loading
+		routed := s.routes != mark.routes
 		s.ev.Unlock()
+		// A same-document navigation (pushState, hash) also reports loading;
+		// it leaves no document to wait for.
+		if started && !navigated && !loading && routed {
+			return false
+		}
 		// A load that started (even one later blocked by scope) is followed
 		// to the end; only a page that never began loading times out early.
 		if !started && time.Since(start) > navWindow {
@@ -538,7 +779,7 @@ func (s *session) navigate(ctx context.Context, target string) (map[string]any, 
 	if r.ErrorText != "" {
 		return nil, errors.New("Navigation failed: " + r.ErrorText)
 	}
-	s.waitSettled(ctx, before, true)
+	s.waitSettled(ctx, before, navWindowLong)
 	return s.pageState(ctx), nil
 }
 
@@ -560,7 +801,7 @@ func (s *session) restoreAfterBlock(ctx context.Context) {
 		for i := h.CurrentIndex - 1; i >= 0 && i < len(h.Entries); i-- {
 			if s.scope.Allows(h.Entries[i].URL) {
 				if s.conn.Call(ctx, "Page.navigateToHistoryEntry", map[string]any{"entryId": h.Entries[i].ID}, nil) == nil {
-					s.waitSettled(ctx, before, true)
+					s.waitSettled(ctx, before, navWindowLong)
 					return
 				}
 				break
@@ -592,7 +833,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	s.ev.Lock()
 	epoch := s.epoch
 	s.ev.Unlock()
-	r, e := s.helper(ctx, "snapshot", map[string]any{"snapshot_id": id, "max_elements": maxElements, "max_text": maxText}, true)
+	r, e := s.helper(ctx, "snapshot", map[string]any{"snapshot_id": id, "max_elements": maxElements, "max_text": maxText, "allow_codes": oneTimeCodesAllowed()}, true)
 	if e != nil {
 		return nil, e
 	}
@@ -782,7 +1023,7 @@ type actRequest struct {
 // act performs one input action. dispatched reports whether any input may
 // have reached the page, which decides between not_dispatched and unknown.
 func (s *session) act(ctx context.Context, a actRequest) (result map[string]any, dispatched bool, err error) {
-	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action}
+	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action, "allow_codes": oneTimeCodesAllowed()}
 	result = map[string]any{"action": a.Action}
 	frameID, e := s.refFrame(a.Ref)
 	if e != nil {
@@ -950,7 +1191,7 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		}
 		result["key"] = a.Key
 	default:
-		return nil, false, errors.New("action must be click, fill, select, check, uncheck, press, navigate, upload or wait.")
+		return nil, false, errors.New("action must be click, fill, select, check, uncheck, press, navigate, upload, wait or fill_form.")
 	}
 	return result, dispatched, nil
 }

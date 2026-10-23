@@ -80,6 +80,7 @@ func TestE2EMultiStepPostWizardSubmitsEachStepOnce(t *testing.T) {
 		s := h.call("browser_runner_snapshot", map[string]any{"session_id": "wizard"})
 		return s["snapshot_id"], s
 	}
+	effect := func(out map[string]any) map[string]any { return out["effect"].(map[string]any) }
 	confirm := func(key, evidence string) {
 		c := h.call("browser_runner_confirm", map[string]any{"session_id": "wizard", "idempotency_key": key, "outcome": "confirmed", "evidence": evidence})
 		if c["effect"].(map[string]any)["status"] != EffectConfirmed {
@@ -90,46 +91,61 @@ func TestE2EMultiStepPostWizardSubmitsEachStepOnce(t *testing.T) {
 	h.call("browser_runner_start", map[string]any{"task_id": "wizard", "allowed_origins": []any{srv.URL}, "start_url": srv.URL + "/job"})
 
 	// 1. "Apply" is a submit-like label on a plain button: it needs a submit
-	// key of its own, and must not use up the final submit.
+	// key, but it only reveals the form. Nothing leaves the page, which the
+	// Runner reports; the caller settles it as not submitted.
 	sid, snap := fresh()
 	open := map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "button", "apply"), "action": "click"}
 	h.fail("browser_runner_act", merge(map[string]any{"session_id": "wizard"}, open), "SUBMIT_EFFECT_REQUIRED")
-	act(merge(open, map[string]any{"effect": "submit", "idempotency_key": "wizard-open"}))
-	confirm("wizard-open", "Legal name")
+	if e := effect(act(merge(open, map[string]any{"effect": "submit", "idempotency_key": "wizard-open"}))); e["status"] != EffectUnverified || e["nothing_sent"] != true {
+		t.Fatalf("revealing the form: %v", e)
+	}
+	settleReveal := func(key string) {
+		c := h.call("browser_runner_confirm", map[string]any{"session_id": "wizard", "idempotency_key": key, "outcome": "not_submitted", "evidence": "Legal name"})
+		if c["effect"].(map[string]any)["status"] != EffectNotDispatched {
+			t.Fatalf("settle %s: %v", key, c)
+		}
+	}
+	settleReveal("wizard-open")
 
-	// 2. A POST "Next" sends data: effect=submit with its own key.
+	// 2. A POST "Next" sends data: effect=submit with its own key. The next
+	// page has other fields, so the step settles itself.
 	sid, snap = fresh()
 	act(map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "textbox", "legal name"), "action": "fill", "value": "Sam Example"})
 	next := map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "button", "next"), "action": "click"}
 	h.fail("browser_runner_act", merge(map[string]any{"session_id": "wizard"}, merge(next, map[string]any{"effect": "navigation"})), "SUBMIT_EFFECT_REQUIRED")
-	act(merge(next, map[string]any{"effect": "submit", "idempotency_key": "wizard-step1"}))
-	// The next step waits until this one is settled.
-	sid, snap = fresh()
-	final := map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "button", "submit application"), "action": "click", "effect": "submit", "idempotency_key": "wizard-final"}
-	act(map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "textbox", "email"), "action": "fill", "value": "sam@example.test"})
-	h.fail("browser_runner_act", merge(map[string]any{"session_id": "wizard"}, final), "UNRESOLVED_EFFECT")
-	confirm("wizard-step1", "Contact details")
+	if e := effect(act(merge(next, map[string]any{"effect": "submit", "idempotency_key": "wizard-step1"}))); e["status"] != EffectConfirmed || e["evidence"] != "Contact details" {
+		t.Fatalf("step 1: %v", e)
+	}
 
-	// 3. The final submit is still allowed after the earlier steps.
-	res := act(final)
-	if res["effect"].(map[string]any)["status"] != EffectUnverified {
-		t.Fatalf("final submit: %v", res)
+	// 3. The final submit follows without a manual confirm of the step, and
+	// is itself left for the caller to confirm.
+	sid, snap = fresh()
+	act(map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "textbox", "email"), "action": "fill", "value": "sam@example.test"})
+	final := map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "button", "submit application"), "action": "click", "effect": "submit", "idempotency_key": "wizard-final"}
+	if e := effect(act(final)); e["status"] != EffectUnverified {
+		t.Fatalf("final submit: %v", e)
 	}
 	confirm("wizard-final", "Reference W-1")
 	if ats.count("/step2") != 1 || ats.count("/submit") != 1 || ats.email != "sam@example.test" {
 		t.Fatalf("server saw step2=%d submit=%d email=%q", ats.count("/step2"), ats.count("/submit"), ats.email)
 	}
 
-	// 4. The same final submit under a new key is refused, even from a fresh
-	// copy of the same form.
+	// 4. Going through the form again re-saves the step, but the same final
+	// submit under a new key is refused, even from a fresh copy of the form.
 	act(map[string]any{"action": "navigate", "url": srv.URL + "/job"})
 	sid, snap = fresh()
-	h.fail("browser_runner_act", map[string]any{"session_id": "wizard", "snapshot_id": sid, "ref": ref(t, snap, "button", "apply"), "action": "click", "effect": "submit", "idempotency_key": "wizard-open-again"}, "SUBMIT_ALREADY_RECORDED")
+	act(map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "button", "apply"), "action": "click", "effect": "submit", "idempotency_key": "wizard-open-again"})
+	settleReveal("wizard-open-again")
+	sid, snap = fresh()
+	act(map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "textbox", "legal name"), "action": "fill", "value": "Sam Example"})
+	act(map[string]any{"snapshot_id": sid, "ref": ref(t, snap, "button", "next"), "action": "click", "effect": "submit", "idempotency_key": "wizard-step1-again"})
+	sid, snap = fresh()
+	h.fail("browser_runner_act", map[string]any{"session_id": "wizard", "snapshot_id": sid, "ref": ref(t, snap, "button", "submit application"), "action": "click", "effect": "submit", "idempotency_key": "wizard-final-again"}, "SUBMIT_ALREADY_RECORDED")
 	st := h.call("browser_runner_status", map[string]any{"session_id": "wizard"})
 	if fmt.Sprint(st["effects"]) == "" {
 		t.Fatalf("status lost effects: %v", st)
 	}
-	if ats.count("/step2") != 1 || ats.count("/submit") != 1 {
-		t.Fatalf("a step was sent twice: step2=%d submit=%d", ats.count("/step2"), ats.count("/submit"))
+	if ats.count("/step2") != 2 || ats.count("/submit") != 1 {
+		t.Fatalf("server saw step2=%d submit=%d", ats.count("/step2"), ats.count("/submit"))
 	}
 }

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
@@ -31,16 +33,27 @@ const (
 )
 
 type Effect struct {
-	Key       string `json:"idempotency_key"`
-	Action    string `json:"action"`
-	Label     string `json:"label"`
-	Target    string `json:"target,omitempty"` // fingerprint of the form/control the submit acted on
-	Status    string `json:"status"`
-	URLBefore string `json:"url_before"`
-	URLAfter  string `json:"url_after,omitempty"`
-	Evidence  string `json:"evidence,omitempty"`
-	StartedAt string `json:"started_at"`
-	UpdatedAt string `json:"updated_at"`
+	Key    string `json:"idempotency_key"`
+	Action string `json:"action"`
+	Label  string `json:"label"`
+	Target string `json:"target,omitempty"` // fingerprint of the form/control the submit acted on
+	// Kind is "step" for one page of a longer form (Next, Continue, Save),
+	// which may be saved again; otherwise the submit is final and sent once.
+	Kind   string `json:"kind,omitempty"`
+	Status string `json:"status"`
+	// SettledBy is "runner" when the Runner settled the effect itself: the
+	// next step of the form opened.
+	SettledBy string `json:"settled_by,omitempty"`
+	// NothingSent: right after the click, no request had left the page and
+	// it had not navigated (client-side validation, or a step such as a
+	// CAPTCHA challenge that may still send it). The same key may be clicked
+	// again only while that stays true.
+	NothingSent bool   `json:"nothing_sent,omitempty"`
+	URLBefore   string `json:"url_before"`
+	URLAfter    string `json:"url_after,omitempty"`
+	Evidence    string `json:"evidence,omitempty"`
+	StartedAt   string `json:"started_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 type Receipt struct {
@@ -115,6 +128,89 @@ func checkpointPath(id string) string {
 }
 func profilePath(profile string) string { return filepath.Join(runnerDir(), "profiles", profile) }
 
+// oneTimeCodesAllowed is the computer's choice whether Browser Runner may
+// enter one-time codes the caller found (for example in the user's email).
+// On unless config.json sets "browserRunnerOneTimeCodes": false. Passwords
+// and payment details are never typed from the conversation.
+func oneTimeCodesAllowed() bool {
+	c, e := config.Load()
+	if e != nil {
+		return true
+	}
+	var on bool
+	if raw, ok := c.Extra["browserRunnerOneTimeCodes"]; ok && json.Unmarshal(raw, &on) == nil {
+		return on
+	}
+	return true
+}
+
+// ProfileInfo describes a browser profile from the checkpoints of the tasks
+// that used it. A profile keeps its sign-ins and cookies, so a later task
+// that passes the same profile starts signed in. Nothing is read from the
+// profile itself.
+type ProfileInfo struct {
+	Profile  string   `json:"profile"`
+	Tasks    []string `json:"tasks"`
+	Sites    []string `json:"sites"`
+	Headless bool     `json:"headless"` // how its most recent task ran
+	LastUsed string   `json:"last_used"`
+}
+
+// profileInfos lists profiles that still exist on this computer, most
+// recently used first.
+func profileInfos() []ProfileInfo {
+	entries, _ := os.ReadDir(filepath.Join(runnerDir(), "sessions"))
+	byName := map[string]*ProfileInfo{}
+	sites := map[string]map[string]bool{}
+	for _, en := range entries {
+		id, ok := strings.CutSuffix(en.Name(), ".json")
+		if !ok || !idPattern.MatchString(id) {
+			continue
+		}
+		c, e := loadCheckpoint(id)
+		if e != nil || c.Profile == "" {
+			continue
+		}
+		if _, e := os.Stat(profilePath(c.Profile)); e != nil {
+			continue
+		}
+		p := byName[c.Profile]
+		if p == nil {
+			p = &ProfileInfo{Profile: c.Profile}
+			byName[c.Profile] = p
+			sites[c.Profile] = map[string]bool{}
+		}
+		p.Tasks = append(p.Tasks, c.SessionID)
+		for _, o := range c.AllowedOrigins {
+			sites[c.Profile][o] = true
+		}
+		if c.UpdatedAt >= p.LastUsed {
+			p.LastUsed, p.Headless = c.UpdatedAt, c.Headless
+		}
+	}
+	out := make([]ProfileInfo, 0, len(byName))
+	for name, p := range byName {
+		for s := range sites[name] {
+			p.Sites = append(p.Sites, s)
+		}
+		sort.Strings(p.Sites)
+		sort.Strings(p.Tasks)
+		out = append(out, *p)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].LastUsed > out[j].LastUsed })
+	return out
+}
+
+// lastProfileMode is whether the most recent task on a profile ran headless.
+func lastProfileMode(profile string) (headless bool, known bool) {
+	for _, p := range profileInfos() {
+		if p.Profile == profile {
+			return p.Headless, true
+		}
+	}
+	return false, false
+}
+
 func loadCheckpoint(id string) (*Checkpoint, error) {
 	b, e := os.ReadFile(checkpointPath(id))
 	if e != nil {
@@ -178,9 +274,29 @@ func (c *Checkpoint) effect(key string) *Effect {
 	return nil
 }
 
-// unresolved returns a submit whose external result is not proven.
+// maxStepSends bounds how often one page of a form is sent in a task: enough
+// to fix errors or resume a saved draft, never a loop.
+const maxStepSends = 3
+
+// stepSends counts how often a form step with this target was sent.
+func (c *Checkpoint) stepSends(target string) int {
+	n := 0
+	for _, e := range c.Effects {
+		if e.Kind == "step" && e.Target == target && e.Status != EffectNotDispatched {
+			n++
+		}
+	}
+	return n
+}
+
+// unresolved returns a final submit whose external result is not proven.
+// A form step does not hold up what follows: sending it again only saves
+// the same page again.
 func (c *Checkpoint) unresolved() *Effect {
 	for i := range c.Effects {
+		if c.Effects[i].Kind == "step" {
+			continue
+		}
 		switch c.Effects[i].Status {
 		case EffectInFlight, EffectUnverified, EffectUnknown:
 			return &c.Effects[i]

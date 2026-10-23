@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/shared-tab-mcp.js";
-import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest } from "../src/browser-runner-mcp.js";
+import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct } from "../src/browser-runner-mcp.js";
 import { callDevice } from "../src/device-call.js";
 import { classifyExpectedMcpError } from "../src/mcp-errors.js";
 import type { OAuthIdentity } from "../src/auth.js";
@@ -143,3 +143,92 @@ const refSchema = browserRunnerDefinitionsForTest.browser_runner_act.input.shape
 for (const ok of ["e1", "e400", "f1e3", "f12e9"]) assert.ok(refSchema.safeParse(ok).success, ok);
 for (const bad of ["f0e1", "fe1", "e0", "f1", "x1"]) assert.ok(!refSchema.safeParse(bad).success, bad);
 console.log("PASS: Browser Runner frame refs");
+
+// fill_form and snapshot=true are part of the act contract.
+const actSchema = browserRunnerDefinitionsForTest.browser_runner_act.input;
+const formArgs = { device_id: "pc", session_id: "s1", snapshot_id: "s3-abc", action: "fill_form", fields: [{ ref: "e3", action: "fill", value: "Sam" }, { ref: "f1e2", action: "check" }], snapshot: true };
+assert.ok(actSchema.safeParse(formArgs).success, "fill_form with fields");
+assert.ok(!actSchema.safeParse({ ...formArgs, fields: [{ ref: "e3", action: "click" }] }).success, "clicks are not batch fields");
+assert.ok(!actSchema.safeParse({ ...formArgs, fields: Array.from({ length: 41 }, (_, i) => ({ ref: "e" + (i + 1), action: "check" })) }).success, "at most 40 fields");
+assert.ok(!actSchema.safeParse({ ...formArgs, fields: [] }).success, "at least one field");
+assert.match(tools.get("browser_runner_act")!.def.description, /fill_form/);
+assert.match(tools.get("browser_runner_act")!.def.description, /snapshot=true/);
+
+// A current Agent answers both itself: the Relay passes the call through once.
+{
+  const seen: Array<[string, Record<string, unknown>]> = [];
+  const call = async (tool: string, args: Record<string, unknown>) => {
+    seen.push([tool, args]);
+    return { action: "fill_form", entered: 2, failed: 0, snapshot: { snapshot_id: "s4" } };
+  };
+  const { device_id: _d, ...forwarded } = formArgs;
+  const out = (await runAct(call as never, forwarded)) as Record<string, unknown>;
+  assert.equal(seen.length, 1);
+  assert.equal(out.entered, 2);
+  assert.equal(out.compatibility, undefined);
+}
+
+// An older Agent (rc.7 and before) answers fill_form with "ref is required.":
+// the Relay enters the fields one at a time with the same result shape, keeps
+// going past a field that fails, and stops when the page navigates.
+{
+  const seen: Array<[string, Record<string, unknown>]> = [];
+  const call = async (tool: string, args: Record<string, unknown>) => {
+    seen.push([tool, args]);
+    if (tool === "browser_runner_snapshot") return { snapshot_id: "s9", elements: [] };
+    if (args.action === "fill_form") throw new Error("ref is required.");
+    if (args.ref === "e2") throw new Error('NO_OPTION: no option matches "Narnia". Available: Choose | New Zealand');
+    if (args.ref === "e3") return { action: "select", label: "Sort", selected: "Newest", navigated: true, url: "https://jobs.example.com/results", session_id: "s1" };
+    return { action: args.action, label: "Field " + String(args.ref), value_length: 3, navigated: false, url: "https://jobs.example.com/apply", session_id: "s1" };
+  };
+  const out = (await runAct(call as never, {
+    session_id: "s1", snapshot_id: "s3-abc", action: "fill_form", snapshot: true,
+    fields: [{ ref: "e1", action: "fill", value: "Sam" }, { ref: "e2", action: "select", value: "Narnia" }, { ref: "e3", action: "select", value: "Newest" }, { ref: "e4", action: "fill", value: "x" }],
+  })) as Record<string, unknown>;
+  assert.deepEqual(seen.map(([tool, args]) => tool + ":" + String(args.ref ?? args.action)), [
+    "browser_runner_act:fill_form", "browser_runner_act:e1", "browser_runner_act:e2", "browser_runner_act:e3", "browser_runner_snapshot:undefined",
+  ]);
+  assert.deepEqual(seen[1][1], { session_id: "s1", snapshot_id: "s3-abc", ref: "e1", action: "fill", value: "Sam" });
+  assert.equal(out.entered, 2);
+  assert.equal(out.failed, 1);
+  assert.equal(out.navigated, true);
+  assert.deepEqual(out.not_entered, ["e4"]);
+  assert.match(String(out.stopped), /navigated after fields\[2\]/);
+  assert.match(String((out.fields as Record<string, unknown>[])[1].error), /^NO_OPTION/);
+  assert.equal(out.url, "https://jobs.example.com/results");
+  assert.match(String(out.compatibility), /older than 0\.6\.2-rc\.8/);
+  assert.deepEqual(out.snapshot, { snapshot_id: "s9", elements: [] });
+}
+
+// A replaced snapshot stops the fallback before anything is typed; other
+// errors from an older Agent are not mistaken for an unknown fill_form.
+{
+  const call = async (_tool: string, args: Record<string, unknown>) => {
+    if (args.action === "fill_form") throw new Error("action must be click, fill, select, check, uncheck, press, navigate, upload or wait.");
+    throw new Error("STALE_REF: snapshot s3-abc is not the latest snapshot of the current page. Take a new browser_runner_snapshot.");
+  };
+  const out = (await runAct(call as never, { session_id: "s1", snapshot_id: "s3-abc", action: "fill_form", fields: [{ ref: "e1", action: "fill", value: "Sam" }] })) as Record<string, unknown>;
+  assert.equal(out.entered, 0);
+  assert.deepEqual(out.not_entered, ["e1"]);
+  await assert.rejects(
+    runAct((async () => { throw new Error("BLOCKED_SENSITIVE: never types passwords"); }) as never, { session_id: "s1", action: "fill_form", fields: [] }),
+    /BLOCKED_SENSITIVE/,
+  );
+  await assert.rejects(
+    runAct((async () => { throw new Error("ref is required."); }) as never, { session_id: "s1", action: "click" }),
+    /ref is required/,
+  );
+}
+
+// snapshot=true on an older Agent: the Relay takes the snapshot after the act.
+{
+  const seen: string[] = [];
+  const call = async (tool: string) => {
+    seen.push(tool);
+    return tool === "browser_runner_snapshot" ? { snapshot_id: "s5" } : { action: "click", navigated: false };
+  };
+  const out = (await runAct(call as never, { session_id: "s1", snapshot_id: "s4", ref: "e7", action: "click", snapshot: true })) as Record<string, unknown>;
+  assert.deepEqual(seen, ["browser_runner_act", "browser_runner_snapshot"]);
+  assert.deepEqual(out.snapshot, { snapshot_id: "s5" });
+}
+console.log("PASS: Browser Runner fill_form and snapshot=true on current and older Agents");

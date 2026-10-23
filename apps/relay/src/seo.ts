@@ -149,7 +149,7 @@ const pages: Record<string, SeoPage> = {
   },
   "/docs/mcp": { title: "Remote Arc MCP Reference — OAuth, Tools & Browser", description: "Remote MCP connection, OAuth scopes, device tools, deterministic task controls and browser companion setup for Remote Arc.", canonical: SITE + "/docs/mcp" },
   "/chrome-extension": { title: "Download Chrome Companion for Remote Arc — Extension Setup", description: "Download Remote Arc Chrome Companion, load the unpacked extension in Chrome, approve browser pairing and choose which tabs to share with AI.", canonical: SITE + "/chrome-extension" },
-  "/connect-ai": { title: "Connect an AI client to Remote Arc", description: "Pair a computer, choose its device permissions, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.", canonical: SITE + "/connect-ai" },
+  "/connect-ai": { title: "Connect Remote Arc to Your AI — ChatGPT, Claude, Gemini, Cursor", description: "Add Remote Arc to ChatGPT, Claude, Gemini, Cursor or another MCP client, connect your computer or apps, and choose what each computer allows. About five minutes.", canonical: SITE + "/connect-ai" },
   "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
   "/blogs": { title: "Remote Arc Blog — MCP, Security & Remote AI Engineering", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
   "/use-cases": { title: "Remote Arc Use Cases — Connect your AI to your computers, browser and apps", description: "Use ChatGPT, Claude, Cursor or Codex with Remote Arc Connect to work on your own computers, complete web forms with Browser Runner (Beta) and use your apps. 16 workflows with exact requirements and verifiable results; most also run with Arc.", canonical: SITE + "/use-cases" },
@@ -459,15 +459,15 @@ const crawlPages: Record<string, CrawlPage> = {
     links: [["/install/chatgpt", "Install for ChatGPT"], ["/mcp-computer-access", "How MCP computer access works"], ["/security-model", "Security model"], ["/docs", "Documentation"]]
   },
   "/connect-ai": {
-    h1: "Connect an AI client to Remote Arc",
-    intro: "Pair a computer first, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.",
+    h1: "Connect Remote Arc to your AI",
+    intro: "Add Remote Arc to the AI you already use, connect your computer or your apps, then decide what that computer allows. It takes about five minutes, and every part can be changed or revoked later on its own.",
     sections: [
-      { heading: "Pair the computer before connecting the AI", text: "Run remotelink on the Windows, macOS or Linux machine that should receive Remote Arc tool calls. Approve the pairing request in your account and confirm the device appears online. Device pairing establishes the computer identity separately from any AI client authorization." },
-      { heading: "Add the Remote MCP endpoint", text: "Use https://mcp.remotearc.app/mcp in a compatible client and complete Remote Arc OAuth when prompted. The client can then discover the tools permitted by your account and the selected device without needing the computer's operating-system password." },
-      { heading: "Start with the narrowest useful permissions", text: "Read-only inspection is enough for many diagnosis and review tasks. Enable supported editing, terminal execution, browser interaction or durable task permissions only where the workflow requires them. Different computers can expose different capability sets under the same account." },
-      { heading: "Verify with a small first request", text: "After connecting, list paired devices and ask the AI to read a harmless file or inspect a project directory on the intended computer. Confirm the device, path and result before granting broader capabilities. This catches wrong-device or wrong-workspace mistakes early in onboarding." }
+      { heading: "1. Add Remote Arc to your AI client", text: "Every compatible client uses the same Remote MCP address, https://mcp.remotearc.app/mcp. Add it where your client lists connectors or MCP servers; the client opens Remote Arc's sign-in page, where you sign in and approve access. Step-by-step guides cover ChatGPT, Claude, Gemini and Cursor." },
+      { heading: "2. Connect your computer, your apps, or both", text: "Install the Remote Arc app on the Windows, macOS or Linux computer you want the AI to use, or run npx remotelink where Node.js is installed. It opens your browser to confirm pairing. No VPN, public IP or open port is needed. Apps such as email or calendars are authorized under Apps in your Connect workspace and run in the cloud without a paired computer." },
+      { heading: "3. Decide what the computer allows", text: "A newly paired computer starts in Safe, which is read-only. Developer adds creating and editing files, which Local Undo can reverse, and needs a Trusted Write Location. Full adds terminal commands and background processes after a confirmation. browser_runner is a separate switch, off by default, that lets the AI use websites only on the sites each task names, in a separate Remote Arc window or in your own Chrome when you allow it. Your AI client's authorization never goes beyond these settings." },
+      { heading: "4. Try a small request", text: "Start a new chat and ask the AI to list the computers you connected, or to show the largest files in your Downloads folder. If the AI cannot see Remote Arc, refresh or reconnect the connector in your client; if a computer shows as offline, make sure it is on and the Remote Arc app is running." }
     ],
-    links: [["/install/chatgpt", "ChatGPT"], ["/install/claude", "Claude"], ["/install/cursor", "Cursor"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"]]
+    links: [["/install/chatgpt", "ChatGPT"], ["/install/claude", "Claude"], ["/install/cursor", "Cursor"], ["/downloads", "Download the Remote Arc app"], ["/chrome-extension", "Browser options"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"]]
   },
   "/privacy": {
     h1: "Remote Arc privacy policy",

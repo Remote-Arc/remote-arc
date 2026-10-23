@@ -32,6 +32,7 @@ const fetcher:typeof fetch=async(input,init)=>{
  const method=new URL(String(input)).pathname.split('/').at(-1)!;
  if(method==='oauth.v2.access')return Response.json({ok:true,app_id:'AAPP123',team:{id:'TTEAM123',name:'External workspace'},bot_user_id:'UBOT123',access_token:'fixture-bot-token',scope:SLACK_BOT_SCOPES.join(',')});
  const body=JSON.parse(String(init?.body||'{}'));calls.push({method,body});
+ if(method==='assistant.threads.setStatus')return Response.json({ok:true});
  if(method==='users.info')return Response.json({ok:true,user:{id:body.user,team_id:'TTEAM123',deleted:false,is_bot:false}});
  if(method==='conversations.open')return Response.json({ok:true,channel:{id:'D'+body.users.slice(1)}});
  if(method==='chat.postMessage'){
@@ -95,6 +96,7 @@ assert.equal(sql.prepare('SELECT COUNT(*) n FROM slack_arc_events').get()?.n,0);
 const wrongApp=event();wrongApp.api_app_id='AOTHER';await enqueue(wrongApp);assert.equal(sql.prepare('SELECT COUNT(*) n FROM slack_arc_events').get()?.n,0);
 
 const first=await linkUser('UOWNER','owner','Find my computers');assert.equal(models,0);
+assert(calls.some(call=>call.method==='assistant.threads.setStatus'&&call.body.channel_id==='DOWNER'&&call.body.thread_ts===row(first).source_ts),'DM ingress should emit a native Slack AI status before the account-link message');
 await runSlackJobs(env,{fetcher});const ownerRun=row(first).run_id;assert(ownerRun);assert.equal(row(first).user_id,'owner');assert.equal(row(first).status,'waiting_run');
 decisions.push({decision:'tool',tool:'list_devices',arguments_json:'{}',message:'Checking your computers'},reply('Found your own computer.'));
 assert.equal(await runArcStep(env,ownerRun),true,JSON.stringify(sql.prepare('SELECT status,error_code FROM arc_chat_runs WHERE id=?').get(ownerRun)));assert.equal(await runArcStep(env,ownerRun),false);

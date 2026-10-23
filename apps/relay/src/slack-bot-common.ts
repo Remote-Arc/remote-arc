@@ -5,7 +5,7 @@ export type SlackBotEnv = ArcEnv & { APP_SLACK_SIGNING_SECRET?:string; SLACK_BOT
 export const SLACK_BOT_SCOPES = ['app_mentions:read','chat:write','im:history','im:write','users:read'] as const;
 export type BotTokens = { accessToken:string; refreshToken?:string; expiresAt:string|null };
 export type BotInstallation = {team_id:string;app_id:string;bot_user_id:string;team_name:string;installer_user_id:string;token_ciphertext:string|null;status:string;generation:number};
-export type SlackJob = {id:string;team_id:string;slack_user_id:string|null;channel_id:string|null;thread_ts:string|null;event_type:string;body_ciphertext:string;status:string;user_id:string|null;run_id:string|null;reply_channel:string|null;reply_ts:string|null;reply_ciphertext:string|null;delivery_kind:string|null;lease:string|null;attempts:number;created_at:string};
+export type SlackJob = {id:string;team_id:string;slack_user_id:string|null;channel_id:string|null;source_ts:string|null;thread_ts:string|null;event_type:string;body_ciphertext:string;status:string;user_id:string|null;run_id:string|null;reply_channel:string|null;reply_ts:string|null;reply_ciphertext:string|null;delivery_kind:string|null;lease:string|null;attempts:number;created_at:string};
 export const slackStamp=()=>new Date().toISOString();
 export const slackDashboard=(env:SlackBotEnv)=>env.DASHBOARD_ORIGIN||'https://agent.remotearc.app';
 export const slackReady=(env:SlackBotEnv)=>env.SLACK_BOT_ENABLED!=='0'&&Boolean(env.APP_SLACK_SIGNING_SECRET&&env.APP_SLACK_CLIENT_ID&&env.APP_SLACK_CLIENT_SECRET&&env.APP_TOKEN_KEY);

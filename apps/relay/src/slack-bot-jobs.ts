@@ -43,6 +43,13 @@ const blocker=(code:string)=>{
 };
 async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
  const installation=await slackInstallation(env,job.team_id);if(!installation){await saveJob(env,job,'blocked',{error:'slack_installation_revoked'});return;}
+ // The Slack AI status is a cosmetic hint, not task completion evidence.
+ // Unsupported Slack agent messaging must not block durable processing
+ // or the ordinary account-link and progress message fallback.
+ if(job.attempts===0&&job.event_type==='message'&&job.source_ts&&job.channel_id){
+  try{await slackApi(env,installation,'assistant.threads.setStatus',{channel_id:job.channel_id,thread_ts:job.thread_ts||job.source_ts,status:'is checking your request…'},fetcher);}
+  catch{/* The Slack workspace may not support AI thread status. */}
+ }
  const input=await unseal<{text:string;kind:string}>(env,job.body_ciphertext,slackJobContext(job.id));
  const owner=await linkedOwner(env,job),userId=owner?.user_id;
  if(job.run_id&&job.user_id!==userId){await saveJob(env,job,'blocked',{error:'slack_link_revoked'});return;}

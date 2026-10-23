@@ -26,10 +26,10 @@ export async function handleSlackEvents(request:Request,env:SlackBotEnv,ctx?:Pic
  const since=new Date(Date.now()-60000).toISOString(),now=slackStamp(),id=input.team_id+':'+input.event_id;
  const body={text:event.text.replace(new RegExp('<@'+installation.bot_user_id+'>','g'),'').trim(),kind:event.type==='app_mention'?'mention':'dm'};
  if(!body.text)return Response.json({ok:true});
- await env.DB.prepare(`INSERT OR IGNORE INTO slack_arc_events(id,team_id,slack_user_id,channel_id,thread_ts,event_type,body_ciphertext,status,next_attempt_at,created_at,updated_at)
-  SELECT ?1,?2,?3,?4,?5,?6,?7,'pending',?8,?8,?8 WHERE (SELECT COUNT(*) FROM slack_arc_events WHERE team_id=?2 AND slack_user_id=?3 AND created_at>?9)<12
+ await env.DB.prepare(`INSERT OR IGNORE INTO slack_arc_events(id,team_id,slack_user_id,channel_id,source_ts,thread_ts,event_type,body_ciphertext,status,next_attempt_at,created_at,updated_at)
+  SELECT ?1,?2,?3,?4,?5,?6,?7,?8,'pending',?9,?9,?9 WHERE (SELECT COUNT(*) FROM slack_arc_events WHERE team_id=?2 AND slack_user_id=?3 AND created_at>?10)<12
   AND (SELECT COUNT(*) FROM slack_arc_events WHERE team_id=?2 AND status IN ('pending','processing','waiting_run'))<1000`)
-  .bind(id,input.team_id,event.user,event.channel,event.thread_ts||(event.type==='app_mention'?event.ts:null),event.type,await seal(env,body,slackJobContext(id)),now,since).run();
+  .bind(id,input.team_id,event.user,event.channel,event.ts,event.thread_ts||(event.type==='app_mention'?event.ts:null),event.type,await seal(env,body,slackJobContext(id)),now,since).run();
  ctx?.waitUntil(runSlackJobs(env,{limit:1}));
  return Response.json({ok:true});
 }

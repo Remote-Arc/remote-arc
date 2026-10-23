@@ -29,10 +29,16 @@ await activateArcTrial(env,'owner');await activateArcTrial(env,'other');
 const calls:{method:string;body:any}[]=[];
 let messageNumber=0,failPost=false,ratePost=false,failUpdate=false;
 const fetcher:typeof fetch=async(input,init)=>{
- const method=new URL(String(input)).pathname.split('/').at(-1)!;
+ const url=new URL(String(input)),method=url.pathname.split('/').at(-1)!;
  if(method==='oauth.v2.access')return Response.json({ok:true,app_id:'AAPP123',team:{id:'TTEAM123',name:'External workspace'},bot_user_id:'UBOT123',access_token:'fixture-bot-token',scope:SLACK_BOT_SCOPES.join(',')});
- const body=JSON.parse(String(init?.body||'{}'));calls.push({method,body});
- if(method==='users.info')return Response.json({ok:true,user:{id:body.user,team_id:'TTEAM123',deleted:false,is_bot:false}});
+ const body=method==='users.info'?Object.fromEntries(url.searchParams):JSON.parse(String(init?.body||'{}'));calls.push({method,body});
+ if(method==='users.info'){
+  assert.equal(init?.method,'GET','Member lookup uses the documented HTTP method and query arguments');
+  assert.equal(init?.body,undefined);assert.equal(new Headers(init?.headers).get('authorization'),'Bearer fixture-bot-token');
+  assert.match(body.user,/^[UW][A-Z0-9]+$/,'The signed initiating identity reaches Slack as a query argument');
+  if(body.user==='UMISSING')return Response.json({ok:false,error:'user_not_found'});
+  return Response.json({ok:true,user:{id:body.user,team_id:'TTEAM123',deleted:false,is_bot:false}});
+ }
  if(method==='conversations.open')return Response.json({ok:true,channel:{id:'D'+body.users.slice(1)}});
  if(method==='chat.postMessage'){
   if(failPost){failPost=false;throw Error('simulated transport loss');}
@@ -126,6 +132,14 @@ decisions.push(reply('Recovered without replay.'));await runArcStep(env,recovere
 // Loss of a first Slack post is journalled and never blindly resent.
 failPost=true;const uncertain=await enqueue(event('UUNLINKED','Link my account'));await runSlackJobs(env,{fetcher});assert.equal(row(uncertain).status,'unknown');const sentBefore=calls.filter(call=>call.method==='chat.postMessage').length;await runSlackJobs(env,{fetcher});assert.equal(calls.filter(call=>call.method==='chat.postMessage').length,sentBefore);
 ratePost=true;const limited=await enqueue(event('URATELIMIT','Link my account'));await runSlackJobs(env,{fetcher});assert.equal(row(limited).status,'pending');ready(limited);await runSlackJobs(env,{fetcher});assert.equal(row(limited).status,'awaiting_link');
+
+// A failed member lookup must answer privately and retain its diagnostic,
+// without admitting a run or using the installer's account as a fallback.
+const missing=await linkUser('UMISSING','owner','Check my device status'),beforeMissing=models;
+await runSlackJobs(env,{fetcher});
+assert.equal(row(missing).status,'blocked');assert.equal(row(missing).last_error,'slack_user_not_found');
+assert.equal(row(missing).run_id,null);assert.equal(models,beforeMissing);
+assert(calls.some(call=>call.method==='chat.postMessage'&&call.body.channel==='DMISSING'&&call.body.text.includes('couldn’t verify your Slack workspace identity')));
 
 // Stop remains available after a plan expires, without a model call.
 const enterpriseIdentity=await enqueue(event('WENTERPRISE','Link my Enterprise identity'));await runSlackJobs(env,{fetcher});assert.equal(row(enterpriseIdentity).status,'awaiting_link');

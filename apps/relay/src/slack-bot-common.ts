@@ -45,7 +45,9 @@ export async function slackApi(env:SlackBotEnv,installation:BotInstallation,meth
   }catch{await env.DB.prepare("UPDATE slack_bot_installations SET status='reauthorization_required',updated_at=?1 WHERE team_id=?2 AND generation=?3 AND status='refreshing'").bind(slackStamp(),installation.team_id,installation.generation).run();throw new SlackBotError('slack_reinstall_required');}
  }
  let response:Response;
- try{response=await fetcher('https://slack.com/api/'+method,{method:'POST',redirect:'manual',headers:{authorization:'Bearer '+token.accessToken,'content-type':'application/json; charset=utf-8'},body:JSON.stringify(input),signal:AbortSignal.timeout(10000)});}
+ const lookup=method==='users.info',url=new URL('https://slack.com/api/'+method);
+ if(lookup)for(const [key,value] of Object.entries(input))url.searchParams.set(key,String(value));
+ try{response=await fetcher(url.href,{method:lookup?'GET':'POST',redirect:'manual',headers:{authorization:'Bearer '+token.accessToken,...(lookup?{}:{'content-type':'application/json; charset=utf-8'})},...(lookup?{}:{body:JSON.stringify(input)}),signal:AbortSignal.timeout(10000)});}
  catch{throw new SlackBotError('slack_delivery_unknown',['users.info','conversations.open'].includes(method)?5:0,true);}
  if(response.status===429)throw new SlackBotError('slack_rate_limited',Math.max(1,Math.min(3600,Number(response.headers.get('retry-after')||30))));
  if(response.status>=500)throw new SlackBotError('slack_delivery_unknown',['users.info','conversations.open'].includes(method)?5:0,true);

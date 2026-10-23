@@ -22,9 +22,11 @@ export function HomeHeroCopy({mode,arcAvailable,arcHref,connectHref}:{mode:'conn
    <a className="primaryButton marketingPrimary" href={arc?arcHref:connectHref}>{arc?(arcAvailable?tr('Start your free trial','开始免费试用'):tr('Explore Arc','了解 Arc')):tr('Connect your AI','连接你的 AI')}<ProductIcon name="arrowUpRight" size={16}/></a>
    <a className="marketingSecondary" href="#how-it-works">{tr('See it in action','看看如何工作')}<ProductIcon name="arrowUpRight" size={15}/></a>
   </div>
-  <div className="heroProofLine"><ProductIcon name="check" size={14}/>{arc?tr('No model API key required','无需模型 API Key'):tr('Works with your existing AI account','沿用你现有的 AI 账户')}<span>·</span>Windows · Mac · Linux</div>
-  <a className="heroSecurityLink" href="/security-model"><ProductIcon name="shield" size={13}/>{tr('Scoped access · device policies · local Undo','限定访问范围 · 设备策略 · 本地 Undo')}<ProductIcon name="arrowUpRight" size={12}/></a>
-  <a className="heroTaskAvailability" href={arc?'/connect-ai':'/arc'}>{arc?tr('Already use ChatGPT or Claude? Explore Connect','已经在用 ChatGPT 或 Claude？了解 Connect'):tr('Want an AI teammate? Meet Arc','想把目标直接交给 AI 队友？认识 Arc')}<ProductIcon name="arrowUpRight" size={13}/></a>
+  <div className="heroSupportingInfo">
+   <div className="heroProofLine"><span className="heroAccountFact"><ProductIcon name="check" size={14}/><span>{arc?tr('No model API key required','无需模型 API Key'):tr('Works with your existing AI account','沿用你现有的 AI 账户')}</span></span><span className="heroPlatforms">Windows · Mac · Linux</span></div>
+   <a className="heroSecurityLink" href="/security-model"><ProductIcon name="shield" size={14}/><span>{tr('Scoped access · device policies · local Undo','限定访问范围 · 设备策略 · 本地 Undo')}</span><ProductIcon name="arrowUpRight" size={12}/></a>
+   <a className="heroTaskAvailability" href={arc?'/connect-ai':'/arc'}><img src={arc?'/connect-logo.svg':'/remote-arc.svg'} width="14" height="14" alt=""/><span>{arc?tr('Already use ChatGPT or Claude? Explore Connect','已经在用 ChatGPT 或 Claude？了解 Connect'):tr('Want an AI teammate? Meet Arc','想把目标直接交给 AI 队友？认识 Arc')}</span><ProductIcon name="arrowUpRight" size={12}/></a>
+  </div>
  </div>;
 }
 

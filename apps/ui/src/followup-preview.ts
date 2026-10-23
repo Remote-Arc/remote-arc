@@ -12,7 +12,7 @@ export function createFollowupPreview(storage:Pick<Storage,'getItem'|'setItem'>)
  const persist=()=>storage.setItem(key,JSON.stringify(state));
  const detail=(id:string)=>state[id]??(state[id]={contact:{status:'new',note:'',next_followup_at:null,consent_at:null,consent_note:'',suppressed_at:null},messages:[]});
  const json=(value:unknown,status=200)=>Response.json(value,{status});
- const sender={from:'Remote Arc <login@remotearc.app>',replyTo:'support@remotearc.app'};
+ const sender={from:'Remote Arc <support@remotearc.app>',replyTo:'support@remotearc.app'};
  return {handle(url:URL,method:string,body?:BodyInit|null){
   if(!url.pathname.startsWith('/api/admin/followups'))return null;
   const path=url.pathname.slice('/api/admin/followups'.length),value=typeof body==='string'?JSON.parse(body):{};

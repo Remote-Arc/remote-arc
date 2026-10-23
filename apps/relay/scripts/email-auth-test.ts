@@ -71,7 +71,7 @@ const originalFetch = globalThis.fetch;
 globalThis.fetch = async (_input, init) => {
   sent++;
   const payload = JSON.parse(String(init?.body)) as { text: string; from: string; html: string; subject: string };
-  assert.match(payload.from, /remotearc\.app/);
+  assert.equal(payload.from, 'Remote Arc <login@remotearc.app>');
   assert.match(payload.subject, /Remote Arc verification code/);
   assert.match(payload.text, /one-time Remote Arc code/);
   assert.match(payload.html, /remote-arc-192\.png/);

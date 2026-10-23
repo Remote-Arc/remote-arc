@@ -23,8 +23,8 @@ export async function ensureOperatorAllowance(env:OperatorAllowanceEnv,at=new Da
  // Only an existing administrator account qualifies; an unclaimed email never does.
  if(!operator||operator.role!=='admin')return null;
  const month=at.slice(0,7),start=monthStart(at),nextMonth=monthStart(at,1),expires=monthStart(at,2);
- // Unused Credits roll over for one month, so a month boundary never strands work.
- const lot=await grantArcCredits(env.DB,{userId:operator.id,source:'promotion',sourceRef:'operator:'+operator.id+':'+month,units:credits*ARC_CREDIT_RATE.unitsPerCredit,startsAt:start,expiresAt:expires,reason:'Operator monthly Arc allowance ('+credits+' Credits)',actorId:operator.id},at);
+ // Same terms as customers' monthly plan Credits: they expire at period end, no rollover.
+ const lot=await grantArcCredits(env.DB,{userId:operator.id,source:'promotion',sourceRef:'operator:'+operator.id+':'+month,units:credits*ARC_CREDIT_RATE.unitsPerCredit,startsAt:start,expiresAt:nextMonth,reason:'Operator monthly Arc allowance ('+credits+' Credits)',actorId:operator.id},at);
  const planId=env.OPERATOR_PLAN_ID||'arc-pro-v1';
  const current=await env.DB.prepare("SELECT id FROM billing_plan_assignments WHERE subject_type='user' AND subject_id=?1 AND plan_id=?2 AND revoked_at IS NULL AND expires_at>?3 LIMIT 1").bind(operator.id,planId,nextMonth).first();
  if(!current)await assignBillingPlan(env.DB,operator.id,{id:'operator:'+operator.id+':'+planId+':'+month,planId,subjectType:'user',subjectId:operator.id,expiresAt:expires},at);

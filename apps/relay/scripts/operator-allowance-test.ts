@@ -27,7 +27,7 @@ assert.equal((sql.prepare('SELECT COUNT(*) n FROM arc_credit_lots').get() as any
 const first=await ensureOperatorAllowance(env,now);assert(first);
 await ensureOperatorAllowance(env,'2026-10-24T00:05:00.000Z');await ensureOperatorAllowance(env,'2026-10-31T23:55:00.000Z');
 const lots=sql.prepare("SELECT source,granted_units,starts_at,expires_at,actor_id FROM arc_credit_lots WHERE user_id='operator'").all() as any[];
-assert.equal(lots.length,1);assert.deepEqual({...lots[0]},{source:'promotion',granted_units:5_000_000,starts_at:'2026-10-01T00:00:00.000Z',expires_at:'2026-12-01T00:00:00.000Z',actor_id:'operator'});
+assert.equal(lots.length,1);assert.deepEqual({...lots[0]},{source:'promotion',granted_units:5_000_000,starts_at:'2026-10-01T00:00:00.000Z',expires_at:'2026-11-01T00:00:00.000Z',actor_id:'operator'});
 assert.equal((await creditBalance(db,'operator',now)).available,5000);
 const plans=sql.prepare("SELECT plan_id,expires_at FROM billing_plan_assignments WHERE subject_id='operator'").all() as any[];
 assert.equal(plans.length,1);assert.equal(plans[0].plan_id,'arc-pro-v1');
@@ -36,6 +36,7 @@ assert.equal((await arcAccountAccess(env,'operator',now)).paid,true,'The operato
 // A new month adds one more lot and renews the plan before it lapses.
 await ensureOperatorAllowance(env,'2026-11-01T00:00:00.000Z');await ensureOperatorAllowance(env,'2026-11-01T00:05:00.000Z');
 assert.equal((sql.prepare("SELECT COUNT(*) n FROM arc_credit_lots WHERE user_id='operator'").get() as any).n,2);
+assert.equal((await creditBalance(db,'operator','2026-11-01T00:05:00.000Z')).available,5000,'Last month\'s Credits do not accumulate');
 assert.equal((sql.prepare("SELECT COUNT(*) n FROM billing_plan_assignments WHERE subject_id='operator'").get() as any).n,2);
 assert.equal((sql.prepare("SELECT COUNT(*) n FROM arc_credit_lots WHERE user_id='member'").get() as any).n,0);
 // A wallet that cannot cover a step's worst case is named as exhausted Credits,

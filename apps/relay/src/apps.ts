@@ -111,7 +111,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   const destination=chatRequestId?await chat!.arcAppConnectionDestination(env as import('./arc-chat.js').ArcEnv,userId,chatRequestId).catch(()=>((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/dashboard/agent/chat')):undefined;
   const redirect=(target:string)=>new Response(null,{status:303,headers:{location:target,'cache-control':'no-store'}});
   const retry=()=>{const target=new URL(destination!);target.searchParams.set('connection','retry');return redirect(target.href);};
-  if(query.has('error')){if(destination)return retry();throw new AppError('app_authorization_denied');}
+  if(query.has('error')){if(destination)return retry();if(provider==='slack')return redirect((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/apps?app_error='+(query.get('error')==='invalid_team_for_non_distributed_app'?'slack_distribution_required':'app_authorization_denied'));throw new AppError('app_authorization_denied');}
   try{
   const code = query.get("code"); if (!code || code.length > 4096) throw new AppError("missing_oauth_code");
   const verifier = typeof payload === "string" ? payload : payload.verifier;

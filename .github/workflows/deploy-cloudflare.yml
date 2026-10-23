@@ -179,6 +179,13 @@ jobs:
           REMOTEARC_DEPLOY_REF: master
         run: pnpm deploy:relay
 
+      - name: "Secrets: Configure Slack request verification"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+          APP_SLACK_SIGNING_SECRET: ${{ secrets.APP_SLACK_SIGNING_SECRET }}
+        run: node scripts/configure-slack-bot.mjs
+
       - name: "Assets: Configure Stripe public key (NOT live activation)"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

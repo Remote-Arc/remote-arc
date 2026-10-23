@@ -62,6 +62,8 @@ try{
  const trialBilling=await trialResponse.json() as any;assert.equal(trialBilling.plan.id,'free');assert.equal(trialBilling.access.status,'active');assert.equal(trialBilling.access.daysRemaining,14);assert(trialBilling.credits.available>0);assert.equal(trialBilling.subscriptions.length,0);assert.equal(trialBilling.hasCustomer,false);assert.equal(mutations.length,0,'Viewing an active trial does not bind a card or create a subscription');
  sql.prepare("UPDATE arc_trials SET started_at='2000-01-01',expires_at='2000-01-15' WHERE user_id='trial'").run();
  const expiredBilling=await (await handleBilling(trialRequest(),env)).json() as any;assert.equal(expiredBilling.access.status,'expired');assert.equal(expiredBilling.access.canUse,false);assert.equal(expiredBilling.plan.id,'free');
+ assert.equal(expiredBilling.credits.available,trialBilling.credits.available,'Trial expiry preserves all remaining wallet Credits');
+ assert.equal(expiredBilling.credits.buckets.find((lot:any)=>lot.source==='trial')?.expiresAt,null);
  await processStripeEvent(env,event('initial'),'initial');assert.equal((await creditBalance(db,'one')).available,1500);assert.equal((await currentArcPlan(db,'one')).id,'arc-plus-v1');
  assert.equal(await getAccountPlan(env,'one'),'plus');assert.equal((await getMonthlyUsage(env,'one')).limit,null);assert.equal((await getSessionUser(new Request('https://agent.remotearc.app/api/me',{headers:{cookie:'rl_session=fixture-session'}}),env))?.plan,'plus');
  for(let i=0;i<9;i++)sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)').run('existing-'+i,'one','Computer','linux','existing-secret-'+i,stamp);

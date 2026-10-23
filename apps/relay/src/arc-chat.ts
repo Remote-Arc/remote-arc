@@ -10,7 +10,7 @@ import { isTrustedDashboardMutation } from './dashboard-origin.js';
 import { seal, unseal } from './app-oauth.js';
 import type { AppEnv } from './app-catalog.js';
 import type { DeviceCallEnv } from './device-call.js';
-import { arcGateway, arcAutoId, arcModelAccess, type ArcModelEnv } from './arc-chat-model.js';
+import { arcGateway, arcAutoId, arcModelAccess, arcDeploymentReady, type ArcModelEnv } from './arc-chat-model.js';
 import {listArcWork,arcSessionWork} from './arc-work.js';
 import {activateArcTrial,publicArcAccess} from './arc-trial.js';
 import {currentArcPlan} from './arc-plan.js';
@@ -147,8 +147,30 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
    const input=await body(request);await env.DB.prepare("UPDATE arc_chat_runs SET cancel_requested=1,status='cancelled',updated_at=?1 WHERE id=?2 AND session_id=?3 AND user_id=?4 AND status IN ('queued','thinking','working')").bind(stamp(),idValue(input.runId),sessionId,user.id).run();await env.DB.prepare("UPDATE arc_app_connection_requests SET status='cancelled',updated_at=?1 WHERE source_run_id=?2 AND user_id=?3 AND status='pending' AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?2 AND session_id=?4 AND user_id=?3 AND cancel_requested=1)").bind(stamp(),idValue(input.runId),user.id,sessionId).run();return json(await snapshot(env,user.id,sessionId));
   }
   if(match[2]==='messages'&&request.method==='POST'){
-   if(await env.DB.prepare('SELECT session_id FROM arc_team_rooms WHERE session_id=?1 AND user_id=?2').bind(sessionId,user.id).first())throw new ArcError('ARC_ROOM_QUEUE_REQUIRED',409);
-   const input=await body(request),requestId=idValue(input.requestId),text=typeof input.text==='string'?input.text.trim():'';
+   const run=await submitArcMessage(env,user.id,sessionId,await body(request));return json({run:publicRun(run)},202);
+  }
+  throw new ArcError('method_not_allowed',405);
+ }catch(error){
+  const code=error instanceof ArcError?error.code:error instanceof Error&&/^(ARC_|MODEL_|PAID_|BILLING_|app_vault_)/.test(error.message)?error.message:'CHAT_UNAVAILABLE';
+  return json({error:code},error instanceof ArcError?error.status:/^(PAID_MODEL|ARC_TRIAL)/.test(code)?402:503);
+ }
+}
+
+/** Shared, identity-explicit admission for web chat and verified channel adapters. */
+export async function createArcConversation(env:ArcEnv,userId:string,id:string=crypto.randomUUID(),title='New chat'){
+ if(!arcDeploymentReady(env))throw new ArcError('ARC_NOT_CONFIGURED',503);
+ await arcModelAccess(env,userId,'personal:'+userId,'auto');
+ const time=stamp();
+ await env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at)
+ SELECT ?1,?2,?3,?4,'auto',?5,?5 WHERE (SELECT COUNT(*) FROM arc_chat_sessions WHERE user_id=?2 AND deleted_at IS NULL AND automation_id IS NULL)<100`)
+ .bind(id,userId,'personal:'+userId,await seal(env,title.slice(0,64),arcContext(userId,id)),time).run();
+ return arcSession(env,userId,id);
+}
+export async function submitArcMessage(env:ArcEnv,userId:string,sessionId:string,input:Record<string,unknown>):Promise<ArcRun>{
+ const session=await arcSession(env,userId,sessionId),organizationId='personal:'+userId;
+ const plan=await currentArcPlan(env,userId),limits={maxSteps:plan.maxSteps,maxTokens:plan.maxTokens,maxSeconds:plan.maxSeconds,concurrentRuns:plan.concurrentRuns};
+   if(await env.DB.prepare('SELECT session_id FROM arc_team_rooms WHERE session_id=?1 AND user_id=?2').bind(sessionId,userId).first())throw new ArcError('ARC_ROOM_QUEUE_REQUIRED',409);
+   const requestId=idValue(input.requestId),text=typeof input.text==='string'?input.text.trim():'';
    if(input.skillIds!==undefined&&(!Array.isArray(input.skillIds)||input.skillIds.length>3||input.skillIds.some((id:unknown)=>typeof id!=='string'||!/^[\w:-]{1,100}$/.test(id))))throw new ArcError('INVALID_SKILL_REFERENCES');
    const skillIds=[...new Set((input.skillIds||[]) as string[])];
    if(input.appIds!==undefined&&(!Array.isArray(input.appIds)||input.appIds.length>5||input.appIds.some((id:unknown)=>typeof id!=='string'||!/^[-\w:]{1,160}$/.test(id))))throw new ArcError('INVALID_APP_REFERENCES');
@@ -161,31 +183,25 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
    if(verificationInput&&!verificationInput.success)throw new ArcError('ARC_INVALID_VERIFICATION');
    const verification=verificationInput?.success?verificationInput.data:undefined;
    if(!text||text.length>6000)throw new ArcError('INVALID_MESSAGE');const model=typeof input.modelId==='string'?input.modelId:session.model_id;
-   await arcModelAccess(env,user.id,organizationId,model);
-   const hashInput=verification?[sessionId,text,model,skillIds,verification]:skillIds.length?[sessionId,text,model,skillIds]:[sessionId,text,model];const hash=await sha256Hex(JSON.stringify(attachmentIds.length||location?[employeeIds.length?[...(appIds.length?[...hashInput,appIds]:hashInput),employeeIds]:appIds.length?[...hashInput,appIds]:hashInput,attachmentIds,location||null]:employeeIds.length?[...(appIds.length?[...hashInput,appIds]:hashInput),employeeIds]:appIds.length?[...hashInput,appIds]:hashInput));let run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE user_id=?1 AND request_id=?2').bind(user.id,requestId).first<ArcRun>();
+   await arcModelAccess(env,userId,organizationId,model);
+   const hashInput=verification?[sessionId,text,model,skillIds,verification]:skillIds.length?[sessionId,text,model,skillIds]:[sessionId,text,model];const hash=await sha256Hex(JSON.stringify(attachmentIds.length||location?[employeeIds.length?[...(appIds.length?[...hashInput,appIds]:hashInput),employeeIds]:appIds.length?[...hashInput,appIds]:hashInput,attachmentIds,location||null]:employeeIds.length?[...(appIds.length?[...hashInput,appIds]:hashInput),employeeIds]:appIds.length?[...hashInput,appIds]:hashInput));let run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE user_id=?1 AND request_id=?2').bind(userId,requestId).first<ArcRun>();
    if(run&&run.input_hash!==hash)throw new ArcError('REQUEST_ID_CONFLICT',409);
    if(!run){
-    if(verification)try{await validateArcVerification(env,user.id,verification);}catch{throw new ArcError('ARC_VERIFICATION_CONNECTION_REQUIRED',403);}
-    const skills=await Promise.all(skillIds.map(async id=>{try{const skill=await readArcSkill(env,user.id,id);return{id:skill.id,name:skill.name};}catch{throw new ArcError('ARC_SKILL_NOT_FOUND',404);}}));
-    const apps=await Promise.all(appIds.map(async id=>{const app=await env.DB.prepare("SELECT id,provider,account_label FROM app_connections WHERE id=?1 AND user_id=?2 AND status='active'").bind(id,user.id).first<{id:string;provider:string;account_label:string|null}>();if(!app)throw new ArcError('ARC_APP_NOT_FOUND',404);return{id:app.id,provider:app.provider,name:app.account_label?app.provider+' · '+app.account_label:app.provider};}));
-    const teammates=await Promise.all(employeeIds.map(async id=>{const {readArcEmployee}=await import('./arc-teams.js'),employee=await readArcEmployee(env,user.id,id);if(employee.status!=='active')throw new ArcError('ARC_TEAM_MEMBER_ARCHIVED',409);return{id:employee.id,name:employee.name,responsibility:employee.responsibility,avatar:employee.avatar};}));
-    const attachments=await Promise.all(attachmentIds.map(async id=>{const {meta}=await readArcAttachment(env,user.id,id,sessionId);const {text,...publicMeta}=meta;return publicMeta;}));
-    await cancelArcAppConnections(env,user.id,sessionId);
+    if(verification)try{await validateArcVerification(env,userId,verification);}catch{throw new ArcError('ARC_VERIFICATION_CONNECTION_REQUIRED',403);}
+    const skills=await Promise.all(skillIds.map(async id=>{try{const skill=await readArcSkill(env,userId,id);return{id:skill.id,name:skill.name};}catch{throw new ArcError('ARC_SKILL_NOT_FOUND',404);}}));
+    const apps=await Promise.all(appIds.map(async id=>{const app=await env.DB.prepare("SELECT id,provider,account_label FROM app_connections WHERE id=?1 AND user_id=?2 AND status='active'").bind(id,userId).first<{id:string;provider:string;account_label:string|null}>();if(!app)throw new ArcError('ARC_APP_NOT_FOUND',404);return{id:app.id,provider:app.provider,name:app.account_label?app.provider+' · '+app.account_label:app.provider};}));
+    const teammates=await Promise.all(employeeIds.map(async id=>{const {readArcEmployee}=await import('./arc-teams.js'),employee=await readArcEmployee(env,userId,id);if(employee.status!=='active')throw new ArcError('ARC_TEAM_MEMBER_ARCHIVED',409);return{id:employee.id,name:employee.name,responsibility:employee.responsibility,avatar:employee.avatar};}));
+    const attachments=await Promise.all(attachmentIds.map(async id=>{const {meta}=await readArcAttachment(env,userId,id,sessionId);const {text,...publicMeta}=meta;return publicMeta;}));
+    await cancelArcAppConnections(env,userId,sessionId);
     const id=crypto.randomUUID(),now=stamp();
     await env.DB.batch([
-       env.DB.prepare(`INSERT INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,'queued',?9,?10,?7,?8,?8 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM arc_chat_runs WHERE session_id=?2 AND status IN ('queued','thinking','working')) AND (SELECT COUNT(*) FROM arc_chat_runs r WHERE user_id=?3 AND status IN ('queued','thinking','working') AND NOT EXISTS(SELECT 1 FROM arc_app_connection_requests q WHERE q.source_run_id=r.id AND q.status='pending'))<?11 AND NOT EXISTS(SELECT 1 FROM json_each(?12) a LEFT JOIN arc_attachments f ON f.id=a.value AND f.user_id=?3 WHERE f.id IS NULL OR f.expires_at<=?8 OR (f.session_id IS NOT NULL AND f.session_id<>?2)) ON CONFLICT(user_id,request_id) DO NOTHING`).bind(id,sessionId,user.id,requestId,hash,model,new Date(Date.now()+limits.maxSeconds*1000).toISOString(),now,limits.maxTokens,limits.maxSteps,limits.concurrentRuns,JSON.stringify(attachmentIds)),
-     env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,'user',?5,?6 WHERE EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?4)`).bind(id+':user',sessionId,user.id,id,await seal(env,{text,...(attachments.length?{attachments}:{}),...(location?{location}:{}),...(teammates.length?{teammates}:{}),...(apps.length?{apps}:{}),...(skills.length?{skills}:{}),...(verification?{verification}:{})},arcContext(user.id,id+':user')),now),
-     env.DB.prepare(`UPDATE arc_chat_sessions SET title_ciphertext=CASE WHEN (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?1 AND role='user')=1 THEN ?2 ELSE title_ciphertext END,model_id=?3,updated_at=?4 WHERE id=?1 AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?5)`).bind(sessionId,await seal(env,text.slice(0,64),arcContext(user.id,sessionId)),model,now,id),
-     ...attachmentIds.map(attachmentId=>env.DB.prepare("UPDATE arc_attachments SET session_id=?1,expires_at=?2 WHERE id=?3 AND user_id=?4 AND (session_id IS NULL OR session_id=?1) AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?5)").bind(sessionId,new Date(Date.now()+30*86400000).toISOString(),attachmentId,user.id,id)),
+       env.DB.prepare(`INSERT INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,status,max_tokens,max_steps,deadline,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,'queued',?9,?10,?7,?8,?8 WHERE EXISTS(SELECT 1 FROM arc_chat_sessions WHERE id=?2 AND user_id=?3 AND deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM arc_chat_runs WHERE session_id=?2 AND status IN ('queued','thinking','working')) AND (SELECT COUNT(*) FROM arc_chat_runs r WHERE user_id=?3 AND status IN ('queued','thinking','working') AND NOT EXISTS(SELECT 1 FROM arc_app_connection_requests q WHERE q.source_run_id=r.id AND q.status='pending'))<?11 AND NOT EXISTS(SELECT 1 FROM json_each(?12) a LEFT JOIN arc_attachments f ON f.id=a.value AND f.user_id=?3 WHERE f.id IS NULL OR f.expires_at<=?8 OR (f.session_id IS NOT NULL AND f.session_id<>?2)) ON CONFLICT(user_id,request_id) DO NOTHING`).bind(id,sessionId,userId,requestId,hash,model,new Date(Date.now()+limits.maxSeconds*1000).toISOString(),now,limits.maxTokens,limits.maxSteps,limits.concurrentRuns,JSON.stringify(attachmentIds)),
+     env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_messages(id,session_id,user_id,run_id,role,body_ciphertext,created_at) SELECT ?1,?2,?3,?4,'user',?5,?6 WHERE EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?4)`).bind(id+':user',sessionId,userId,id,await seal(env,{text,...(attachments.length?{attachments}:{}),...(location?{location}:{}),...(teammates.length?{teammates}:{}),...(apps.length?{apps}:{}),...(skills.length?{skills}:{}),...(verification?{verification}:{})},arcContext(userId,id+':user')),now),
+     env.DB.prepare(`UPDATE arc_chat_sessions SET title_ciphertext=CASE WHEN (SELECT COUNT(*) FROM arc_chat_messages WHERE session_id=?1 AND role='user')=1 THEN ?2 ELSE title_ciphertext END,model_id=?3,updated_at=?4 WHERE id=?1 AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?5)`).bind(sessionId,await seal(env,text.slice(0,64),arcContext(userId,sessionId)),model,now,id),
+     ...attachmentIds.map(attachmentId=>env.DB.prepare("UPDATE arc_attachments SET session_id=?1,expires_at=?2 WHERE id=?3 AND user_id=?4 AND (session_id IS NULL OR session_id=?1) AND EXISTS(SELECT 1 FROM arc_chat_runs WHERE id=?5)").bind(sessionId,new Date(Date.now()+30*86400000).toISOString(),attachmentId,userId,id)),
     ]);
-    run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE user_id=?1 AND request_id=?2').bind(user.id,requestId).first<ArcRun>();
+    run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE user_id=?1 AND request_id=?2').bind(userId,requestId).first<ArcRun>();
     if(!run)throw new ArcError('CHAT_BUSY_OR_LIMIT_REACHED',409);
    }
-   if(run.status==='queued')await wakeArcRun(env,run.id);return json({run:publicRun(run)},202);
-  }
-  throw new ArcError('method_not_allowed',405);
- }catch(error){
-  const code=error instanceof ArcError?error.code:error instanceof Error&&/^(ARC_|MODEL_|PAID_|BILLING_|app_vault_)/.test(error.message)?error.message:'CHAT_UNAVAILABLE';
-  return json({error:code},error instanceof ArcError?error.status:/^(PAID_MODEL|ARC_TRIAL)/.test(code)?402:503);
- }
+   if(run.status==='queued')await wakeArcRun(env,run.id);return run;
 }

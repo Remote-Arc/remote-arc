@@ -15,7 +15,8 @@ type Grant={userId:string;source:CreditSource;sourceRef:string;units:number;star
 export async function grantArcCredits(db:D1Database,input:Grant,at=new Date().toISOString()){
   const granted=safeUnits(input.units),spent=safeUnits(input.alreadySpentUnits??0);
   if(!granted||spent>granted||!input.userId||!input.sourceRef||input.sourceRef.length>200||!input.reason.trim()||input.reason.length>500||!['trial','subscription','topup','promotion'].includes(input.source))throw new CreditError('ARC_CREDITS_INVALID_GRANT');
-  const start=iso(input.startsAt||at),expiry=input.expiresAt?iso(input.expiresAt):null;
+  // Trial access has a time window; its remaining Credits stay in the wallet.
+  const start=iso(input.startsAt||at),expiry=input.source==='trial'?null:input.expiresAt?iso(input.expiresAt):null;
   if(expiry&&expiry<=start)throw new CreditError('ARC_CREDITS_INVALID_DATE');
   if(input.source==='trial'){
     const trial=await db.prepare('SELECT commercial_version_id FROM arc_trials WHERE user_id=?1 AND started_at=?2').bind(input.userId,start).first<{commercial_version_id:string|null}>();
@@ -38,7 +39,7 @@ export async function grantArcCredits(db:D1Database,input:Grant,at=new Date().to
   await db.batch([
     db.prepare(`INSERT OR IGNORE INTO arc_credit_lots(id,user_id,source,source_ref,granted_units,spent_units,starts_at,expires_at,reason,actor_id,created_at)
       SELECT ?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11 WHERE
-      (?3='trial' AND EXISTS(SELECT 1 FROM arc_trials t WHERE t.user_id=?2 AND t.started_at=?7 AND t.expires_at=?8))
+      (?3='trial' AND ?8 IS NULL AND EXISTS(SELECT 1 FROM arc_trials t WHERE t.user_id=?2 AND t.started_at=?7))
       OR (?3='promotion' AND EXISTS(SELECT 1 FROM users WHERE id=?10 AND role='admin'))
       OR (?3 IN ('subscription','topup') AND EXISTS(SELECT 1 FROM arc_payment_receipts r WHERE r.id=?4 AND r.user_id=?2 AND r.state='paid' AND r.product_id=?12 AND r.amount_cents=?13 AND r.period_start IS ?14 AND r.period_end IS ?15 AND r.commercial_version_id IS ?16 AND r.discount_cents=?17))`)
       .bind(id,input.userId,input.source,input.sourceRef,granted,spent,start,expiry,input.reason,input.actorId??null,at,receipt?.product_id??null,receipt?.amount_cents??null,receipt?.period_start??null,receipt?.period_end??null,receipt?.commercial_version_id??null,receipt?.discount_cents??0),

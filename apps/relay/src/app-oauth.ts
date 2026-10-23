@@ -37,6 +37,7 @@ export async function providerJson(url: string, init: RequestInit, fetcher: type
   let body: any; try { body = text ? JSON.parse(text) : {}; } catch { throw new AppError("app_invalid_provider_response", 502); }
   if (!response.ok || body.ok === false || body.error || body.errors?.length) {
     const error = typeof body.error === "string" ? body.error : body.error?.code;
+    if(error==='invalid_team_for_non_distributed_app')throw new AppError('slack_distribution_required',503);
     if (response.status === 401 || ["invalid_grant", "bad_refresh_token", "invalid_auth", "token_revoked", "token_expired"].includes(error)) throw new AppError("app_reauthorization_required", 401);
     if (response.status === 429 || error === "ratelimited") throw new AppError("app_rate_limited", 429);
     if (response.status === 412) throw new AppError("app_review_changed", 409);

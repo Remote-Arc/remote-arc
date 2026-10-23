@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import {runArcStep} from './arc-chat-runtime.js';
 import {advanceArcRoom,wakeArcRoom} from './arc-team-rooms.js';
 import type {ArcEnv} from './arc-chat.js';
+import {runSlackJobs} from './slack-bot-jobs.js';
 
 /** A run or room queue keeps working independently of an open browser tab. */
 export class ArcChatRuntime extends DurableObject<ArcEnv>{
@@ -22,7 +23,7 @@ export class ArcChatRuntime extends DurableObject<ArcEnv>{
    if(roomId){if(await advanceArcRoom(this.env,roomId))await this.ctx.storage.setAlarm(Date.now()+30000);return;}
    const runId=await this.ctx.storage.get<string>('runId');if(!runId)return;
    if(await runArcStep(this.env,runId))await this.ctx.storage.setAlarm(Date.now()+50);
-   else{const room=await this.env.DB.prepare('SELECT d.room_id FROM arc_employee_runs e JOIN arc_room_deliveries d ON d.id=e.delivery_id WHERE e.run_id=?1').bind(runId).first<{room_id:string}>();if(room)await wakeArcRoom(this.env,room.room_id);}
+   else{const room=await this.env.DB.prepare('SELECT d.room_id FROM arc_employee_runs e JOIN arc_room_deliveries d ON d.id=e.delivery_id WHERE e.run_id=?1').bind(runId).first<{room_id:string}>();if(room)await wakeArcRoom(this.env,room.room_id);await runSlackJobs(this.env,{runId,limit:1});}
   }catch(error){await this.ctx.storage.setAlarm(Date.now()+30000);throw error;}
   finally{this.running=false;}
  }

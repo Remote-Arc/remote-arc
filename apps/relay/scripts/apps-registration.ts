@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { APP_CATALOG, APP_PROVIDERS, appScopes } from "../src/app-catalog.js";
 import { callbackUrl } from "../src/app-oauth.js";
+import {SLACK_BOT_SCOPES} from '../src/slack-bot-common.js';
 
 export function registrationPack(value: string) {
   const origin = new URL(value);
@@ -65,11 +66,13 @@ export function registrationPack(value: string) {
     slack: {
       registrationUrl: "https://api.slack.com/apps",
       manifest: {
-        display_information: { name: "Remote Arc", description: "Connect approved AI workflows to your Slack workspace.", background_color: "#07151f" },
-        oauth_config: { redirect_urls: [callbacks.slack], scopes: { user: declaredScopes(["slack"]) } },
-        settings: { org_deploy_enabled: false, socket_mode_enabled: false, token_rotation_enabled: true },
+        display_information: { name: "Remote Arc", description: "Chat with Remote Arc and run tasks with your own connected tools.", background_color: "#19191d" },
+        features:{bot_user:{display_name:'Remote Arc',always_online:false},app_home:{home_tab_enabled:false,messages_tab_enabled:true,messages_tab_read_only_enabled:false}},
+        oauth_config: { redirect_urls: [callbacks.slack,origin.origin+'/api/slack/oauth/callback'], scopes: { user: declaredScopes(["slack"]),bot:[...SLACK_BOT_SCOPES] } },
+        settings: { org_deploy_enabled: false, socket_mode_enabled: false, token_rotation_enabled: true,event_subscriptions:{request_url:origin.origin+'/api/slack/events',bot_events:['message.im','app_mention','app_uninstalled','tokens_revoked']} },
       },
-      scopeModel: "User token. These are User Token Scopes, not Bot Token Scopes.",
+      scopeModel: "Separate user OAuth for outbound tools and workspace Bot OAuth for inbound conversations. Bot installation never grants the installer's Arc identity to other members.",
+      signingSecretName:'APP_SLACK_SIGNING_SECRET',
       distribution: "Enable the provider's distribution settings before onboarding workspaces outside the development workspace.",
       clientIdSecretName: "APP_SLACK_CLIENT_ID",
       clientSecretSecretName: "APP_SLACK_CLIENT_SECRET",

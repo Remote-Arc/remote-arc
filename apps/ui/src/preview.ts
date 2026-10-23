@@ -330,6 +330,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       });
     }
 
+    if (url.pathname === "/api/slack/status") return json({configured:true,links:[]});
     if (url.pathname === "/api/approvals/permissions") return json([]);
     if (url.pathname === "/api/approvals") return json([]);
 

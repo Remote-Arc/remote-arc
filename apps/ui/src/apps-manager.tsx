@@ -1,3 +1,4 @@
+import {SlackBotPanel} from "./slack-bot-panel.js";
 import {WorkspaceLoading} from './workspace-loading.js';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -64,6 +65,8 @@ function errorLabel(code: string, tr: (en: string, zh: string) => string) {
     case "unauthorized": return tr("Your session expired. Sign in again to manage Apps.", "登录已过期，请重新登录后管理应用。");
     case "apps_not_enabled": return tr("Apps are not enabled yet. Contact your administrator.", "应用连接尚未启用，请联系管理员。");
     case "app_not_configured": return tr("This provider has not been configured by your administrator.", "管理员尚未配置此应用的授权信息。");
+    case "slack_distribution_required": return tr("Slack installation is not available for this workspace yet. Contact support@remotearc.app or try again later.", "此工作区暂时无法安装 Slack 应用，请联系 support@remotearc.app 或稍后重试。");
+    case "app_authorization_denied": return tr("Slack authorization was cancelled or denied. You can connect again.", "Slack 授权已取消或被拒绝，可以重新连接。");
     case "app_scope_required": return tr("The provider needs additional permissions. Reconnect the account with the access you want.", "应用需要额外授权，请选择所需权限后重新连接账号。");
     case "app_reauthorization_required": return tr("This account needs authorization again. Reconnect to continue.", "此账号需要重新授权，请重新连接后继续。");
     case "app_account_changed": return tr("The provider returned a different account. Reconnect the intended account.", "服务商返回了不同的账号，请重新授权你要使用的账号。");
@@ -247,6 +250,7 @@ function AppDetailsPanel({ app, connections, initialTab, onClose, onAuthorize, o
           {notice && !error && <p className="appsPanelFeedback" role="status">{notice}</p>}
           <section id={"app-panel-" + tab} role="tabpanel" aria-labelledby={"app-panel-tab-" + tab}>
             {tab === "tools" ? <AppTools app={app} connections={connections} busy={busy} onConnect={() => connect(app.provider, connectedPermissions)}/> : <>
+              {app.provider === "slack" && <SlackBotPanel/>}
               {summary && <p className="appsPanelIntro">{tr(...summary)}</p>}
               {connections.length ? <div className="appsPanelAccounts">{connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onDisconnect={onDisconnect} onCheck={onCheck}/>)}</div> : <div className="appsPanelEmpty"><ProductIcon name="link" size={25}/><h3>{tr("Connect your " + app.name + " account", "连接你的 " + app.name + " 账号")}</h3><p>{tr("Your connected AI can use this app with the access you grant.", "连接后，你的 AI 即可在授权范围内使用此应用。")}</p></div>}
               {!app.configured ? <p className="appsPanelAvailability">{tr("Account connection is coming soon. You can explore the tools in the meantime.", "账号连接即将开放，你可以先浏览应用工具。")}</p> : <div className="appsPanelConnect">
@@ -297,7 +301,9 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
   const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get("provider") || "");
   const [category, setCategory] = useState(() => new URLSearchParams(window.location.search).get("category") || "all");
   const [connectionView, setConnectionView] = useState<"all" | "available" | "connected">("all");
-  const [details, setDetails] = useState<{ provider: string; tab: AppPanelTab } | null>(null);
+  const [details, setDetails] = useState<{ provider: string; tab: AppPanelTab } | null>(() => {const query=new URLSearchParams(location.search);return query.has("slack_bot")||query.has("slack_error")||query.get("app_error")?.startsWith("slack_")?{provider:"slack",tab:"accounts"}:null;});
+  const callbackFeedback=useRef(false);
+  useEffect(()=>{if(loading||callbackFeedback.current)return;callbackFeedback.current=true;const query=new URLSearchParams(location.search),appError=query.get('app_error'),slackError=query.get('slack_error');if(appError==='slack_distribution_required'||slackError==='distribution_not_enabled')setError('slack_distribution_required');else if(appError==='app_authorization_denied'||slackError)setError('app_authorization_denied');else if(query.get('slack_bot')==='installed')setNotice(tr('Remote Arc Bot was installed. Open Remote Arc in Slack Apps and send a message to link your account.','Remote Arc Bot 已安装。在 Slack 应用中打开 Remote Arc，发送消息以关联账号。'));},[loading,tr]);
   const closeDetails = useCallback(() => setDetails(null), []);
   const mounted = useRef(false);
   const revision = useRef(0);

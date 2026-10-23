@@ -33,7 +33,7 @@ export async function ensureTrialCredits(env:TrialEnv,userId:string,trial:Trial)
    FROM billing_reservations WHERE user_id=?1 AND lane='arc_hosted' AND created_at>=?2 AND json_extract(request_json,'$.creditRate') IS NULL AND (authorization_id LIKE 'arc-auto:%' OR authorization_id LIKE 'arc-trial:%')`).bind(userId,trial.started_at).first<{cost:number}>();
  const terms=(await commercialVersion(env.DB,trial.commercial_version_id||'seed:live:arc-trial-v1')).config;if(!('days' in terms))throw new ArcAccessError('ARC_TRIAL_CONFIGURATION_INVALID');
  const units=terms.credits*ARC_CREDIT_RATE.unitsPerCredit;
- await grantArcCredits(env.DB,{userId,source:'trial',sourceRef:'trial:'+userId+':'+trial.started_at,units,alreadySpentUnits:Math.min(units,costCreditUnits(previous?.cost||0)),startsAt:trial.started_at,expiresAt:trial.expires_at,reason:terms.days+'-day Arc trial'});
+ await grantArcCredits(env.DB,{userId,source:'trial',sourceRef:'trial:'+userId+':'+trial.started_at,units,alreadySpentUnits:Math.min(units,costCreditUnits(previous?.cost||0)),startsAt:trial.started_at,expiresAt:null,reason:terms.days+'-day Arc trial'});
 }
 export async function publicArcAccess(env:TrialEnv,userId:string){
  await reconcileArcDispatchRejects(env.DB,userId);

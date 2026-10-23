@@ -5,7 +5,7 @@ import { authPage, escapeAuthHtml } from './auth-page.js';
 import { slackLinkConfirmationPage } from './slack-bot-link-page.js';
 import {arcGateway,arcAutoId,arcModelAccess} from './arc-chat-model.js';
 import {arcAccountAccess} from './arc-trial.js';
-import {runSlackJobs} from './slack-bot-jobs.js';
+import {wakeSlackJob} from './slack-bot-jobs.js';
 import { SLACK_BOT_SCOPES, slackDashboard, slackReady, slackStamp, slackTokenContext, type BotTokens, type SlackBotEnv } from './slack-bot-common.js';
 
 export const slackBotCallback=(env:SlackBotEnv)=>(env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/api/slack/oauth/callback';
@@ -79,7 +79,7 @@ export async function handleSlackBotAccount(request:Request,env:SlackBotEnv,fetc
     env.DB.prepare(`INSERT INTO slack_arc_links(team_id,slack_user_id,user_id,status,updated_at) VALUES(?1,?2,?3,'active',?4) ON CONFLICT(team_id,slack_user_id) DO UPDATE SET user_id=excluded.user_id,status='active',updated_at=excluded.updated_at`).bind(link.team_id,link.slack_user_id,user.id,slackStamp()),
     env.DB.prepare("UPDATE slack_arc_events SET status='pending',reply_ciphertext=NULL,delivery_kind=NULL,reply_ts=NULL,lease=NULL,lease_until=NULL,next_attempt_at=?1,updated_at=?1 WHERE id=?2 AND status IN ('awaiting_link','delivered') AND delivery_kind='link'").bind(slackStamp(),link.event_id),
    ]);
-   ctx?.waitUntil(runSlackJobs(env,{eventId:link.event_id,limit:1,fetcher}));
+   ctx?.waitUntil(wakeSlackJob(env,link.event_id,fetcher));
    return authPage('Slack connected','<h1>You’re connected</h1><p class="lead">Your Slack request will continue using this Remote Arc account. You can return to Slack.</p><a class="google" href="'+escapeAuthHtml(slackDashboard(env)+'/dashboard/agent/chat')+'">Open Remote Arc</a>');
   }
   return slackLinkConfirmationPage(url.pathname+url.search,user.email,link.slack_user_id,link.team_id);

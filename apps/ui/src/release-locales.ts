@@ -1,5 +1,6 @@
 /** Reviewed summaries for the original version history. Full source notes remain available in English. */
 export const releaseChinese: Record<string, { title: string; summary: string }> = {
+ "0.6.3": {title:"浏览器工作流、Slack 对话与响应式首页",summary:"Runner 默认在后台隐藏任务窗口，需要接管时在原页面显示，保留已输入内容；扩展 0.4 可在你允许的网站打开标签页并操作，修复并发提交与键盘提交校验。修复 Slack 首次关联、成员查询和处理回执，整理手机与 iPad 的首页对齐，并更新 Connect 接入指南。发布六个平台的 0.6.3 正式客户端、npm、Homebrew 与官网稳定版下载。"},
  "0.6.2": {title:"Browser Runner 与设备集群调度",summary:"新增 Beta 浏览器任务，可连接已打开的 Chrome、填写表单、跨页面继续任务，并在购买和提交前确认；支持本地保存的登录信息及需要机主接管的验证码。改进 Codex、Claude Code 配置与后台升级，增加 CPU、内存状态及设备集群任务分配。发布六个平台的原生二进制、npm 与 Homebrew 安装包，官网默认展示正式版下载。"},
  "0.6.1": {title:"原生暂停、恢复与后台恢复修复",summary:"Dashboard 可暂停设备执行、经机主授权恢复，或完全断开并关闭后台监督及登录恢复。暂停时仅保留受监督的唤醒连接，不开放文件、终端等普通工具，且重启及前后台切换后仍保持暂停。另修复 Windows 执行锁交接和隐藏登录启动、macOS 旧 launchd 服务迁移，并发布六个平台的原生二进制、npm 与 Homebrew 安装包。"},
  "0.6.0": {title:"原生 Go Agent 与执行核心成为默认运行时",summary:"默认使用完整原生 Go Agent，包含文件、进程、策略及 Undo 执行核心；保留 TypeScript 兼容回退。加强 Windows 路径安全、跨平台恢复测试、Homebrew 和六个平台二进制发布，并区分文件 Atomic 与 Durable 持久化策略。"},

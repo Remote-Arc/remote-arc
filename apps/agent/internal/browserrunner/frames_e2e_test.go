@@ -146,7 +146,13 @@ customElements.define("job-search", class extends HTMLElement {
 	if res["effect"].(map[string]any)["status"] != EffectUnverified {
 		t.Fatalf("submit: %v", res)
 	}
-	h.call("browser_runner_confirm", map[string]any{"session_id": "embedded", "idempotency_key": "embedded-apply", "outcome": "confirmed", "evidence": "Reference GH-1"})
+	if _, e := h.m.Call(h.ctx, "browser_runner_confirm", map[string]any{"session_id": "embedded", "idempotency_key": "embedded-apply", "outcome": "confirmed", "evidence": "Reference GH-1"}, h.policy); e != nil {
+		ats.mu.Lock()
+		sent := ats.submits
+		ats.mu.Unlock()
+		state, _ := h.m.Call(h.ctx, "browser_runner_snapshot", map[string]any{"session_id": "embedded"}, h.policy)
+		t.Fatalf("embedded confirmation: %v; actual submits=%d; page=%v", e, sent, state)
+	}
 
 	ats.mu.Lock()
 	defer ats.mu.Unlock()

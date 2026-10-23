@@ -214,4 +214,52 @@ assert.equal(manifest.permissions.includes("tabs") || manifest.permissions.inclu
 assert.match(workerSource, /SUBMIT_EFFECT_REQUIRED/);
 assert.match(workerSource, /SITE_NOT_ALLOWED/);
 
-process.stdout.write("Remote Arc browser capability tests passed\n");
+// Exercise the worker against asynchronous Chrome-like storage. Calls may
+// overlap across different tabs, and storage reads return independent copies.
+const disk = {};
+const event = () => ({ addListener() {} });
+const workerContext = vm.createContext({
+  console, URL, setTimeout, clearTimeout, setInterval, clearInterval,
+  chrome: {
+    runtime: { id:"fixture",getManifest:()=>({version:"0.4.0"}),getURL:part=>"chrome-extension://fixture/"+part,onMessage:event(),onStartup:event(),onInstalled:event() },
+    storage: {
+      local: { async get(){await Promise.resolve();return structuredClone(disk);},async set(values){await Promise.resolve();Object.assign(disk,structuredClone(values));} },
+      session: {async get(){return{};},async set(){}},onChanged:event()
+    },
+    permissions: {onAdded:event(),onRemoved:event()},
+    tabs: {onUpdated:event(),onRemoved:event()}
+  }
+});
+vm.runInContext(workerSource, workerContext);
+const tabForSubmit={url:"https://example.com/shop"},effect={kind:"final",target:"order-form",label:"Place order"};
+const submitArgs=key=>({effect:"submit",idempotency_key:key});
+const parallel=await Promise.allSettled([
+  workerContext.guardFinal(submitArgs("one-key"),effect,tabForSubmit),
+  workerContext.guardFinal(submitArgs("one-key"),effect,tabForSubmit)
+]);
+assert.equal(parallel.filter(result=>result.status==="fulfilled").length,1);
+assert.match(parallel.find(result=>result.status==="rejected").reason.message,/SUBMIT_KEY_USED/);
+await workerContext.confirmSubmit({idempotency_key:"one-key",outcome:"succeeded"});
+const sameTarget=await Promise.allSettled([
+  workerContext.guardFinal(submitArgs("target-a"),effect,tabForSubmit),
+  workerContext.guardFinal(submitArgs("target-b"),effect,tabForSubmit)
+]);
+assert.equal(sameTarget.filter(result=>result.status==="fulfilled").length,1);
+assert.match(sameTarget.find(result=>result.status==="rejected").reason.message,/SUBMIT_ALREADY_RECORDED/);
+const unrelated=await Promise.all([
+  workerContext.guardFinal(submitArgs("independent-a"),{...effect,target:"form-a"},tabForSubmit),
+  workerContext.guardFinal(submitArgs("independent-b"),{...effect,target:"form-b"},tabForSubmit)
+]);
+assert.equal(unrelated.length,2);
+assert(disk.raSubmits["independent-a"]&&disk.raSubmits["independent-b"],"independent reservations do not overwrite one another");
+const old=Date.now()-8*24*3600*1000;
+await workerContext.saveLedger({
+  settled:{at:old,status:"succeeded",target:"old-form",url:tabForSubmit.url},
+  unresolved:{at:old,status:"unverified",target:"old-pending",origin:"https://example.com"}
+});
+assert.deepEqual(disk.raSubmits.settled,{at:old,status:"succeeded"});
+assert.equal(disk.raSubmits.unresolved.target,"old-pending");
+await assert.rejects(workerContext.guardFinal(submitArgs("settled"),effect,tabForSubmit),/SUBMIT_KEY_USED/);
+await assert.rejects(workerContext.guardFinal(submitArgs("new-old-target"),{...effect,target:"old-pending"},tabForSubmit),/SUBMIT_ALREADY_RECORDED/);
+
+process.stdout.write("Remote Arc browser capability, concurrent submit and durable ledger tests passed\n");

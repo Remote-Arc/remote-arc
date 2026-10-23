@@ -99,7 +99,7 @@ The npm launcher installs and checksums the native Go Agent and Execution Core. 
 <!-- native-install:start -->
 ### Native downloads and Homebrew
 
-Standalone 0.6.2 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
+Standalone 0.6.3 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
 
 On macOS or Linux (including WSL), install without Node.js:
 
@@ -112,14 +112,14 @@ The script verifies SHA256, installs to ~/.local/bin without sudo, and leaves pa
 
 | Platform | Download |
 | --- | --- |
-| macOS Apple Silicon | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-darwin-arm64) |
-| macOS Intel | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-darwin-amd64) |
-| Windows x64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-windows-amd64.exe) |
-| Windows ARM64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-windows-arm64.exe) |
-| Linux x64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-linux-amd64) |
-| Linux ARM64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-linux-arm64) |
+| macOS Apple Silicon | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-darwin-arm64) |
+| macOS Intel | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-darwin-amd64) |
+| Windows x64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-windows-amd64.exe) |
+| Windows ARM64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-windows-arm64.exe) |
+| Linux x64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-linux-amd64) |
+| Linux ARM64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-linux-arm64) |
 
-[SHA256SUMS](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/SHA256SUMS) · [Release notes](https://github.com/yaohuangguan/remote-arc/releases/tag/remotelink-v0.6.2)
+[SHA256SUMS](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/SHA256SUMS) · [Release notes](https://github.com/yaohuangguan/remote-arc/releases/tag/remotelink-v0.6.3)
 
 ```bash
 brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc

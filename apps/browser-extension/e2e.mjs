@@ -154,6 +154,7 @@ const profile = fs.mkdtempSync(path.join(os.tmpdir(), "ra-ext-profile-"));
 const executablePath = process.env.REMOTEARC_E2E_CHROME || (fs.existsSync("/opt/pw-browsers/chromium-1194/chrome-linux/chrome") ? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" : undefined);
 const context = await chromium.launchPersistentContext(profile, {
   headless: false,
+  ignoreDefaultArgs: ["--disable-extensions"],
   ...(executablePath ? { executablePath } : {}),
   args: ["--headless=new", `--disable-extensions-except=${ext}`, `--load-extension=${ext}`, "--no-first-run"],
 });
@@ -184,6 +185,8 @@ try {
 
   // A purchase is never sent without effect=submit and a key.
   await fails("browser_act", { tab_id: tab, action: "click", snapshot_id: snap.snapshotId, ref: ref(snap, "button", "place order") }, /SUBMIT_EFFECT_REQUIRED/);
+  await fails("browser_act", { tab_id: tab, action: "press", key: "Space", snapshot_id: snap.snapshotId, ref: ref(snap, "button", "place order") }, /SUBMIT_EFFECT_REQUIRED/);
+  await fails("browser_click", { tab_id: tab, snapshot_id: snap.snapshotId, ref: ref(snap, "button", "place order") }, /SUBMIT_EFFECT_REQUIRED/);
   assert.equal(orders.length, 0);
   let out = await ok("browser_act", { tab_id: tab, action: "click", snapshot_id: snap.snapshotId, ref: ref(snap, "button", "place order"), effect: "submit", idempotency_key: "order-1", snapshot: true });
   assert.equal(orders.length, 1);
@@ -199,6 +202,7 @@ try {
   await ok("browser_act", { action: "confirm", idempotency_key: "order-1", outcome: "succeeded" });
   await ok("browser_act", { tab_id: tab, action: "click", snapshot_id: snap.snapshotId, ref: ref(snap, "button", "place order"), effect: "submit", idempotency_key: "order-2" });
   assert.equal(orders.length, 2);
+  await ok("browser_act", { action: "confirm", idempotency_key: "order-2", outcome: "succeeded" });
 
   // The tab keeps access as it moves within allowed sites; a comment in a
   // rich text box is typed the way the editor expects, and posting is final.
@@ -253,6 +257,23 @@ try {
   assert.equal(tabs.length, 1);
   assert.equal(tabs[0].openedByRemoteArc, true);
   assert.equal(tabs[0].mode, "site");
+
+  // Two tabs have independent snapshots, so concurrent calls must reserve
+  // the global submit ledger atomically before either page is clicked.
+  const racing=await Promise.all([ok("browser_open_tab",{url:BASE+"/shop"}),ok("browser_open_tab",{url:BASE+"/shop"})]);
+  const submit=(opened,key)=>({tab_id:opened.tabId,action:"click",snapshot_id:opened.snapshot.snapshotId,ref:ref(opened.snapshot,"button","place order"),effect:"submit",idempotency_key:key});
+  const beforeRace=orders.length;
+  const sameKey=await Promise.all(racing.map(opened=>call("browser_act",submit(opened,"concurrent-order"))));
+  assert.equal(sameKey.filter(result=>!result.error).length,1);
+  assert.match(sameKey.find(result=>result.error)?.error||"",/SUBMIT_KEY_USED/);
+  assert.equal(orders.length,beforeRace+1,"one stable key sends one order across concurrent tabs");
+  await ok("browser_act",{action:"confirm",idempotency_key:"concurrent-order",outcome:"succeeded"});
+  for(const opened of racing)opened.snapshot=await ok("browser_read_page",{tab_id:opened.tabId});
+  const differentKeys=await Promise.all(racing.map((opened,index)=>call("browser_act",submit(opened,"concurrent-target-"+index))));
+  assert.equal(differentKeys.filter(result=>!result.error).length,1);
+  assert.match(differentKeys.find(result=>result.error)?.error||"",/SUBMIT_ALREADY_RECORDED/);
+  assert.equal(orders.length,beforeRace+2,"one unverified target cannot be sent under a second concurrent key");
+  for(const opened of racing)await ok("browser_act",{tab_id:opened.tabId,action:"close"});
 
   // Only tabs Remote Arc opened can be closed by the AI.
   await ok("browser_act", { tab_id: tab, action: "close" });

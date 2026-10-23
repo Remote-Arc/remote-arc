@@ -7,7 +7,6 @@ import { ArcWhy } from "./arc-why.js";
 import "./arc-why.css";
 import { SlackAgentPreview } from "./arc-connected-previews.js";
 import {ProductIcon as Icon} from './product-icon.js';
-import { UI_PREVIEW } from "./preview.js";
 
 // Marketing demonstrations use example data; CTAs open the real workspace.
 const connectWorkspaceHref = "https://agent.remotearc.app/dashboard/connect/overview";
@@ -22,7 +21,7 @@ function ArcStatus({ children }: { children: React.ReactNode }) {
 
 export function ArcTeaser() {
   const {tr,locale}=useI18n();
-  const slackBotHref = (UI_PREVIEW ? "" : "https://agent.remotearc.app") + "/dashboard/connect/apps?provider=slack&lang=" + locale;
+  const slackBotHref = (import.meta.env?.VITE_UI_PREVIEW === "1" ? "" : "https://agent.remotearc.app") + "/dashboard/connect/apps?provider=slack&lang=" + locale;
   return <section className="arcProductTeaser" aria-labelledby="arcV3TeaserHeading">
     <div className="arcProductTeaserCopy"><span className="marketingLabel">{tr('THE NEXT CHAPTER / ARC','下一篇章 / ARC')}<i>{tr('Available now','现已上线')}</i></span>
     <h2 id="arcV3TeaserHeading">{tr('Your next personal agent.','你的下一位个人 AI 队友。')}</h2>

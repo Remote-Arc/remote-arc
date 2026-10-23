@@ -1,45 +1,66 @@
 # Remote Arc Browser
 
-Scoped Chrome companion for Remote Arc.
+Chrome companion for Remote Arc (0.4.0). It lets an AI work in the user's own
+browser, on sites the user allowed, or on single tabs the user shares.
 
 ## Security model
 
-- No `<all_urls>` host permission.
-- No Chrome `debugger` / CDP permission.
-- No cookies, history, or password access.
-- The only fixed host permission is the Remote Arc relay itself.
-- A user must open the extension and click **Share this tab** for every tab they want to expose.
-- Remote Arc does not impose a hard tab-count limit. Multiple tabs can stay shared concurrently, subject only to normal browser resource limits.
-- Every shared tab starts read-only. **Click & fill** is a separate per-tab permission the user must explicitly enable in the popup.
-- Recognized password, one-time-code, payment-card, and file-picker fields cannot be filled through Remote Arc. Detection uses standard input types and autocomplete metadata; sites that mislabel sensitive fields can bypass this classification.
-- Interaction uses element refs from the most recent `browser_read_page` snapshot. Stale refs are rejected instead of being re-targeted.
-- A click invalidates the current interaction snapshot so the AI must read the page again before another click.
-- Access is revoked for a tab on navigation, reload, tab close, or manual revoke.
-- Browser tools operate on a simplified DOM snapshot rather than raw HTML and do not return form values.
-- WebSocket device credentials are sent as a WebSocket subprotocol, not in the URL.
+- No `<all_urls>` host permission, no Chrome `debugger` / CDP permission, no
+  `tabs`, cookies, history or password access.
+- The only fixed host permission is the Remote Arc relay. Every other site is
+  an optional host permission the user grants one site at a time through
+  Chrome's own prompt (from the popup, or from the approval page the
+  extension opens when the AI asks for a site). Removing the site in the popup
+  or in Chrome's site settings removes the permission.
+- On an allowed site the AI can open tabs (in the background, in a "Remote
+  Arc" tab group) and read, click and fill there. A tab keeps access while it
+  moves between allowed sites; on any other site it is paused until the user
+  allows that site. The AI never sees tabs it did not open or the user did not
+  share.
+- A tab the user shares from the popup starts read-only. **Click & fill** is a
+  separate per-tab permission. A shared tab loses access when it leaves its
+  page, unless it moves to an allowed site.
+- Password, payment-card and file-picker fields are never filled. One-time
+  codes can be filled through `shared_tab_act` unless the user turns that off.
+  Detection uses input types and autocomplete metadata; sites that mislabel
+  sensitive fields can bypass this classification.
+- A click or Enter that sends something on the user's behalf (place order,
+  pay, buy, post, comment, reply, send, submit, apply, delete, and their
+  Chinese equivalents) is a final submit: it needs `effect=submit` and an
+  `idempotency_key`, a key is sent once, and the same form and button is
+  refused under a new key until the earlier one is confirmed
+  (`action=confirm`, `outcome=succeeded|failed`). The record is kept for seven
+  days in the extension's local storage.
+- Interaction uses element refs from the latest snapshot; stale refs are
+  rejected instead of being re-targeted. Snapshots never include field values.
+- Clicks and keys are page events. A few sites that accept only real input
+  may ignore them; Remote Arc Browser Runner (`browser_runner_*`) covers those.
+- WebSocket device credentials are sent as a WebSocket subprotocol, not in
+  the URL.
 
 ## Tools
 
-Read scope:
+Device tools (MCP names in brackets):
 
-- `browser_list_tabs`
-- `browser_get_current_tab`
-- `browser_read_page`
-- `browser_get_selected_text`
-- `browser_extract_links`
-- `browser_extract_table`
+- Read: `browser_list_tabs` (`shared_tab_list`), `browser_read_page`,
+  `browser_get_selected_text`, `browser_extract_links`,
+  `browser_extract_table` (`shared_tab_read`), `browser_get_current_tab`.
+- Interact: `browser_click` (`shared_tab_click`), `browser_fill`
+  (`shared_tab_fill`), `browser_open_tab` (`shared_tab_open`), `browser_act`
+  (`shared_tab_act`: click, fill, select, check, uncheck, press, scroll,
+  fill_form, navigate, back, reload, wait, close, confirm).
 
-Interaction scope:
+The Relay allows `browser_open_tab` and `browser_act` wherever the paired
+browser allows `browser_click`; the sites themselves are allowed in the
+browser.
 
-- `browser_click`
-- `browser_fill`
+## Tests
 
-## Interaction flow
-
-1. Share a tab. It starts with read permission only.
-2. Call `browser_read_page` and keep the returned `snapshotId` plus element `ref`.
-3. If the user has enabled **Click & fill** for that tab, call `browser_fill` or `browser_click` with the same `snapshot_id` and `ref`.
-4. After a click, read the page again before the next interaction.
+- `pnpm test:browser`: page script and manifest checks in Node.
+- `pnpm test:browser:e2e`: the extension in a real Chromium against local
+  test sites and a stand-in Relay (orders sent once, a comment in a rich text
+  box, a multi-page form, Enter to search, waiting, a site that is not
+  allowed). Set `REMOTEARC_E2E_CHROME` to use a specific browser.
 
 ## Load locally
 
@@ -48,4 +69,4 @@ Interaction scope:
 3. Choose **Load unpacked**.
 4. Select `apps/browser-extension`.
 5. Open the extension and connect it to Remote Arc.
-6. On a normal HTTP/HTTPS page, click **Share this tab**.
+6. Allow a site from the popup, or click **Share this tab** on a normal page.

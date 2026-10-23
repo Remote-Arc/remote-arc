@@ -19,6 +19,8 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Browser extension in a real Chromium
+        run: pnpm test:browser && pnpm test:browser:e2e
       - name: Website behavior and browser regression matrix
         run: pnpm test:site
       - name: Verify the production website build

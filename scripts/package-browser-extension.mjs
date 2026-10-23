@@ -11,7 +11,8 @@ const staging = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-browser-"));
 
 try {
   for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
-    if (entry.name === "test.mjs") continue;
+    // Tests and docs stay out of the user's download.
+    if (["test.mjs", "e2e.mjs", "readme.md"].includes(entry.name)) continue;
     fs.cpSync(
       path.join(source, entry.name),
       path.join(staging, entry.name),

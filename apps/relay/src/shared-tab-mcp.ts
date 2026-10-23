@@ -10,7 +10,7 @@ import { registerMcpTool } from "./mcp-errors.js";
  * browser_click, ...) and stored device permissions are unchanged, so no
  * extension update or re-grant is needed.
  */
-export const SHARED_TAB_TOOLS = ["shared_tab_list", "shared_tab_read", "shared_tab_click", "shared_tab_fill"] as const;
+export const SHARED_TAB_TOOLS = ["shared_tab_list", "shared_tab_read", "shared_tab_click", "shared_tab_fill", "shared_tab_open", "shared_tab_act"] as const;
 
 type Scope = "browser:read" | "browser:interact";
 type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
@@ -22,7 +22,9 @@ type DeviceTool =
   | "browser_extract_links"
   | "browser_extract_table"
   | "browser_click"
-  | "browser_fill";
+  | "browser_fill"
+  | "browser_open_tab"
+  | "browser_act";
 
 export type SharedTabDeps = {
   identity: OAuthIdentity | null;
@@ -35,7 +37,24 @@ export type SharedTabDeps = {
 };
 
 const scopeNote =
-  " Works only on tabs the user shared from their own browser with the Remote Arc Companion extension (a device with platform browser). For multi-step work in a separate background browser on a computer, use browser_runner_* instead.";
+  " Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. For multi-step work on a linked computer, browser_runner_* (a Remote Arc window, or the user's own Chrome with browser=your_chrome) needs no extension.";
+
+/**
+ * Tools added in extension 0.4.0. An older extension rejects them with
+ * "Unsupported browser tool"; the user is then told to update it.
+ */
+export const EXTENSION_04_TOOLS = ["browser_open_tab", "browser_act"] as const;
+const updateNotice =
+  "EXTENSION_UPDATE_REQUIRED: this Remote Arc Browser extension is older than 0.4.0 and cannot open tabs or use shared_tab_act. Ask the user to download the current extension from https://remotearc.app/chrome-extension and reload it in chrome://extensions. shared_tab_read, shared_tab_click and shared_tab_fill still work.";
+export function extensionUpdateError(tool: string, error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  return (EXTENSION_04_TOOLS as readonly string[]).includes(tool) && /Unsupported browser tool|unsupported browser tool/.test(message)
+    ? new Error(updateNotice)
+    : error instanceof Error ? error : new Error(message);
+}
+
+const actActions = ["click", "fill", "select", "check", "uncheck", "press", "scroll", "fill_form", "navigate", "back", "reload", "wait", "close", "confirm"] as const;
+const ref = z.string().regex(/^e[1-9]\d*$/);
 
 const deviceId = z.string().min(1).max(200);
 const tabId = z.number().int().optional();
@@ -121,6 +140,66 @@ export function registerSharedTabTools(server: McpServer, deps: SharedTabDeps) {
     const g = await guard("browser:interact");
     if (!g.identity) return g.denied;
     return deps.textResult(await deps.callDevice(g.identity, device_id, "browser_click", { ...tab(tab_id), snapshot_id, ref }));
+  });
+
+  registerMcpTool(server, "shared_tab_open", {
+    title: "Open a tab in the user's browser",
+    description:
+      "Open a new tab in the user's own browser on a site the user allowed for AI, signed in as the user is. It opens in the background in a Remote Arc tab group and returns tab_id (and a page snapshot unless snapshot=false). If the site is not allowed yet, the call fails with SITE_NOT_ALLOWED and the user sees a page with an Allow button: ask the user to click it once, then call again. The tab keeps access as it moves between allowed sites. Use shared_tab_act to work in it." +
+      scopeNote,
+    inputSchema: z.object({
+      device_id: deviceId,
+      url: z.string().url().max(2000),
+      active: z.boolean().optional(),
+      snapshot: z.boolean().optional(),
+    }),
+    annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: false },
+    _meta: deps.oauthToolMeta("browser:interact"),
+  }, async ({ device_id, url, active, snapshot }: { device_id: string; url: string; active?: boolean; snapshot?: boolean }) => {
+    const g = await guard("browser:interact");
+    if (!g.identity) return g.denied;
+    try {
+      return deps.textResult(await deps.callDevice(g.identity, device_id, "browser_open_tab", { url, ...(active !== undefined ? { active } : {}), ...(snapshot !== undefined ? { snapshot } : {}) }));
+    } catch (error) {
+      throw extensionUpdateError("browser_open_tab", error);
+    }
+  });
+
+  registerMcpTool(server, "shared_tab_act", {
+    title: "Act in a tab in the user's browser",
+    description:
+      "Do one thing in a tab of the user's own browser, on a tab Remote Arc opened or one the user shared with Click & fill on. With snapshot_id + ref from the latest snapshot: click, fill (value; also rich text boxes), select (option value or label), check, uncheck, press (key: Enter, Tab, Escape, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, Space, PageDown, PageUp, Home, End, Backspace), scroll (ref, or value up|down|top|bottom). fill_form fills many fields from one snapshot: fields=[{ref, action: fill|select|check|uncheck, value}]; each reports ok or its own error. Without a ref: navigate (url on an allowed site), back, reload, wait (text and/or url_contains, timeout_ms up to 30000), close (only tabs Remote Arc opened). snapshot=true returns the page as the action left it. Each action waits for what it started (a page load, or the page to stop changing). Passwords, card numbers and file pickers are never filled; one-time codes may be, unless the user turned that off. A click or Enter that sends something on the user's behalf (place order, pay, buy, post, comment, reply, send, submit, apply, delete, 提交, 支付, 购买, 下单, 发布, 评论...) is a final submit: confirm with the user first, then pass effect=submit and a stable idempotency_key. It is sent once (SUBMIT_KEY_USED for a used key), and the same form and button is refused under a new key (SUBMIT_ALREADY_RECORDED) until you settle it with action=confirm, idempotency_key and outcome=succeeded|failed after checking the page. Clicks and keys run as page events, so a few sites that only accept real input may ignore them; use browser_runner_* there." +
+      scopeNote,
+    inputSchema: z.object({
+      device_id: deviceId,
+      tab_id: tabId,
+      action: z.enum(actActions),
+      snapshot_id: z.string().min(1).max(120).optional(),
+      ref: ref.optional(),
+      value: z.string().max(20000).optional(),
+      fields: z.array(z.object({ ref, action: z.enum(["fill", "select", "check", "uncheck"]).optional(), value: z.string().max(20000).optional() })).min(1).max(40).optional(),
+      key: z.enum(["Enter", "Tab", "Escape", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Space", "PageDown", "PageUp", "Home", "End", "Backspace"]).optional(),
+      url: z.string().url().max(2000).optional(),
+      text: z.string().min(1).max(500).optional(),
+      url_contains: z.string().min(1).max(500).optional(),
+      timeout_ms: z.number().int().min(250).max(30000).optional(),
+      effect: z.enum(["submit"]).optional(),
+      idempotency_key: z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/).optional(),
+      outcome: z.enum(["succeeded", "failed"]).optional(),
+      snapshot: z.boolean().optional(),
+    }),
+    annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
+    _meta: deps.oauthToolMeta("browser:interact"),
+  }, async (input: Record<string, unknown>) => {
+    const g = await guard("browser:interact");
+    if (!g.identity) return g.denied;
+    const { device_id, ...args } = input as { device_id: string } & Record<string, unknown>;
+    for (const key of Object.keys(args)) if (args[key] === undefined) delete args[key];
+    try {
+      return deps.textResult(await deps.callDevice(g.identity, device_id, "browser_act", args));
+    } catch (error) {
+      throw extensionUpdateError("browser_act", error);
+    }
   });
 
   registerMcpTool(server, "shared_tab_fill", {

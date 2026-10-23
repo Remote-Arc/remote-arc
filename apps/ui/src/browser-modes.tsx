@@ -22,10 +22,10 @@ export function BrowserModes({ primary = false }: { primary?: boolean }) {
       href: "/docs/mcp#your-chrome", cta: tr("Chrome connection steps", "查看 Chrome 连接步骤"),
     },
     {
-      id: "companion", name: tr("Chrome Companion", "Chrome 扩展"), badge: tr("Selected tabs", "共享指定标签页"),
-      fit: tr("Read or work with a particular tab you already have open.", "读取或操作你已经打开的某一个标签页。"),
-      steps: [tr("Download the extension ZIP and load it unpacked in Chrome.", "下载扩展 ZIP，并在 Chrome 中加载已解压的扩展程序。"), tr("Pair the extension and share a tab. Enable Click & fill for that tab only when needed.", "配对扩展并共享标签页；需要交互时，再为该标签页开启 Click & fill。")],
-      limit: tr("Read-only by default. No password, code, payment or file-picker filling. Unpacked beta; updates are manual.", "默认只读，不代填密码、验证码、支付和文件选择字段。当前为解压安装 Beta，需要手动更新。"),
+      id: "companion", name: tr("Chrome Companion", "Chrome 扩展"), badge: tr("Sites you allow", "你允许的网站"),
+      fit: tr("Let your AI open tabs and work on the sites you allow in your everyday Chrome, or share one tab you have open.", "让 AI 在你日常的 Chrome 里、你允许的网站上打开标签页并操作，或只共享你打开的某一个标签页。"),
+      steps: [tr("Download the extension ZIP and load it unpacked in Chrome.", "下载扩展 ZIP，并在 Chrome 中加载已解压的扩展程序。"), tr("Pair it, then allow a site once when your AI asks (one Allow button, then Chrome's prompt), or share a single tab.", "配对扩展；AI 需要某个网站时允许一次（一个「允许」按钮，再加 Chrome 的确认），或只共享某一个标签页。")],
+      limit: tr("No control banner and no prompt per connection, but it must be installed. Passwords, card numbers and file pickers are never filled; orders and posts are sent once. A few sites ignore scripted clicks. Unpacked beta; updates are manual.", "没有受控提示条，也不需要每次连接都允许，但需要安装。密码、卡号和文件选择框不会填写；下单和发布只发送一次。少数网站不响应脚本点击。当前为解压安装 Beta，需要手动更新。"),
       href: "/chrome-extension#chrome-steps-title", cta: tr("Extension installation", "查看扩展安装步骤"),
     },
   ];

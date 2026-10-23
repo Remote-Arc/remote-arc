@@ -2,6 +2,19 @@
 
 All notable changes to Remote Arc are documented here.
 
+## Unreleased
+
+### Remote Arc Browser extension 0.4.0
+
+- The extension can now work on its own in the user's browser, on sites the user allowed. `shared_tab_open` opens a tab there (in the background, in a "Remote Arc" tab group), signed in as the user is, and `shared_tab_act` clicks, fills (including rich text boxes such as comment fields), selects, checks, presses keys, scrolls, navigates, goes back, reloads, waits for text or a URL, fills a whole form in one call and closes tabs it opened. Each action waits for what it started instead of a fixed delay, and `snapshot=true` returns the page as the action left it.
+- Sites are allowed one at a time through Chrome's own permission prompt: from the popup ("Allow AI on this site"), or from a page with one Allow button that opens when the AI asks for a site it may not use yet (`SITE_NOT_ALLOWED`). The popup lists allowed sites and removes them. A tab keeps access while it moves between allowed sites and is paused on any other. The extension still has no `<all_urls>`, `tabs`, `debugger`, cookie or password permission.
+- Orders, payments, posts, comments, messages and submissions are final submits: they need `effect=submit` and an `idempotency_key`, a key is sent once (`SUBMIT_KEY_USED`), and the same form and button is refused under a new key (`SUBMIT_ALREADY_RECORDED`) until the earlier one is settled with `action=confirm`. English and Chinese button wording is recognised.
+- Passwords, card numbers and file pickers are never filled; one-time codes can be, unless the user turns that off in the popup.
+- Sharing a single tab works as before (read-only until Click & fill is enabled for it); a shared tab that moves to an allowed site keeps access.
+- The popup and the new approval page use the dark Remote Arc website design.
+- Already paired extensions need no new pairing: the Relay allows the new tools wherever the browser allows click & fill. An extension older than 0.4.0 answers `EXTENSION_UPDATE_REQUIRED` with a download link.
+- The website's browser page, MCP reference, use cases and the browser skill describe the new behaviour, and CI runs the extension in a real Chromium against local test sites.
+
 ## 0.6.2 - 2026-10-23
 
 ### Browser Runner, native client setup and device upgrades

@@ -78,6 +78,11 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     [/^SCOPE_CHANGE(?:_REQUIRED)?:/, "SCOPE_CHANGE_REQUIRED"],
     [/^SUBMIT_EFFECT_REQUIRED:/, "SUBMIT_EFFECT_REQUIRED"],
     [/^SUBMIT_ALREADY_RECORDED:/, "SUBMIT_ALREADY_RECORDED"],
+    // Remote Arc Browser extension 0.4.0 (shared_tab_open / shared_tab_act).
+    [/^SUBMIT_KEY_USED:/, "SUBMIT_KEY_USED"],
+    [/^SITE_NOT_ALLOWED:/, "SITE_NOT_ALLOWED"],
+    [/^EXTENSION_UPDATE_REQUIRED:/, "EXTENSION_UPDATE_REQUIRED"],
+    [/^WAIT_TIMEOUT:/, "WAIT_TIMEOUT"],
     [/^UNRESOLVED_EFFECT:/, "UNRESOLVED_EFFECT"],
     [/^BLOCKED_SENSITIVE:/, "SENSITIVE_FIELD_BLOCKED"],
     [/^EVIDENCE_NOT_FOUND:/, "EVIDENCE_NOT_FOUND"],

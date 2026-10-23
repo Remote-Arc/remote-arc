@@ -130,7 +130,10 @@ export async function callDevice(
     } catch {
       allowedTools = [];
     }
-    if (!allowedTools.includes(tool === "goal_workspace" ? "start_process" : tool)) {
+    // Extension 0.4.0 actions are covered by the click & fill permission an
+    // already-paired browser has; each site is still allowed in the browser.
+    const permissionTool = tool === "goal_workspace" ? "start_process" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : tool;
+    if (!allowedTools.includes(permissionTool)) {
       throw new Error('tool "' + tool + '" is disabled for this device');
     }
   }

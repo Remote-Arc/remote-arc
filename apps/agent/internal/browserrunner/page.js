@@ -319,11 +319,43 @@
     const stepWords = /\b(next|continue|proceed|start|begin|sign in|log in|login|search|go|view|back|previous|review|save|submit|apply|checkout|buy|book|pay|confirm|finish|done)\b/i.test(label);
     const mayNavigate = navLink || formButton || (!toggles && stepWords);
     // A regular href is navigation even when the label says "Apply now".
-    if (el.tagName === "A" && el.href && !form) return { requires_submit: false, may_navigate: mayNavigate, target };
+    if (el.tagName === "A" && el.href && !form) return { requires_submit: false, may_navigate: mayNavigate, kind: "", target };
     const danger = /\b(submit|send|apply|finish|confirm|place order|book now|purchase|pay now|delete|publish|post|save changes|complete application)\b/i.test(label);
     // GET-form Next means navigation; a POST native submit is an external effect.
     const formSubmits = !!form && (type === "submit" || type === "image") && (form.method.toLowerCase() !== "get" || danger);
-    return { requires_submit: formSubmits || danger, may_navigate: mayNavigate || formSubmits || danger, target };
+    // Sign-in and verification steps (an identifier, a password the user
+    // typed, a one-time code) are repeated whenever a session expires; they
+    // are never one-time submits. Strong purchase or publish words override.
+    const inputs = Array.from(scope.querySelectorAll("input, select, textarea")).filter((f) => {
+      const t = String(f.type || "").toLowerCase();
+      return !["hidden", "submit", "button", "image", "reset"].includes(t) && visible(f);
+    });
+    const hint = (f) => [f.type, f.name, f.id, f.getAttribute("autocomplete"), labelText(f)].join(" ");
+    const choice = (f) => /^(checkbox|radio)$/i.test(String(f.type || ""));
+    const password = inputs.some((f) => String(f.type).toLowerCase() === "password");
+    const code = inputs.some((f) => /one-time-code|\botp\b|verification|passcode|security code|\bcode\b/i.test(hint(f)));
+    const identifier = inputs.some((f) => !choice(f)) && inputs.filter((f) => !choice(f)).length <= 2 && inputs.every((f) => choice(f) || /e-?mail|user|login|account|phone|mobile/i.test(hint(f)));
+    const authWords = /\b(sign ?in|log ?in|log ?on|sign ?on|send (me )?(a |the )?(code|link)|resend|verify|one-time|continue with|continue|next)\b/i.test(label);
+    const authPlace = /(login|signin|sign-in|identity|auth|sso|oauth)/i.test(location.hostname + location.pathname);
+    const strongFinal = /\b(pay|purchase|place order|book now|submit application|complete application|delete|publish|post)\b/i.test(label);
+    const auth = !strongFinal && (password || code || (identifier && !danger && (authWords || authPlace)));
+    // final: sent once, confirmed by the caller. step: a page of a longer
+    // form; it may be saved again and settles itself when the next page opens.
+    const kind = auth ? "auth" : danger ? "final" : formSubmits ? "step" : "";
+    return { requires_submit: !auth && (formSubmits || danger), may_navigate: mayNavigate || formSubmits || danger, kind, target };
+  }
+
+  if (op === "step_state") {
+    // What tells one page of a form from the next: its field names and
+    // headings. Values are never read.
+    const names = new Set();
+    for (const f of document.querySelectorAll("input, select, textarea")) {
+      const t = String(f.type || "").toLowerCase();
+      if (["hidden", "submit", "button", "image", "reset"].includes(t) || !visible(f)) continue;
+      names.add(f.name || f.id || t);
+    }
+    const headings = Array.from(document.querySelectorAll("h1, h2, h3, legend")).filter(visible).map((h) => clip(h.innerText, 120)).filter(Boolean);
+    return { fields: [...names].sort().join("|").slice(0, 2000), headings: headings.slice(0, 8), title: clip(document.title, 200) };
   }
 
   if (op === "quiet") {

@@ -42,7 +42,7 @@ type session struct {
 	loading      bool                 // main frame is loading (including blocked attempts)
 	routes       int                  // same-document navigations (pushState, hash) of the main frame
 	requests     map[string]time.Time // page XHR/fetch requests in flight, by request id
-	lastRequest  time.Time            // when the page last started an XHR/fetch
+	lastRequest  time.Time            // when the page last sent anything that can carry data
 	flushedEpoch int
 	href         string
 	submitting   bool
@@ -51,6 +51,10 @@ type session struct {
 
 	frames   map[string]*frameInfo // child frames, guarded by ev
 	frameSeq int
+
+	// unsent remembers, per submit key, the page state at a click that sent
+	// nothing, so a retry can prove nothing has been sent since.
+	unsent map[string]navMark
 
 	snapshotID    string
 	snapshotEpoch int
@@ -171,18 +175,31 @@ func (s *session) onEvent(cdpSession, method string, raw json.RawMessage) {
 			RequestID string `json:"requestId"`
 			Type      string `json:"type"`
 		}
-		if json.Unmarshal(raw, &p) == nil && (p.Type == "XHR" || p.Type == "Fetch") {
-			now := time.Now()
-			s.ev.Lock()
+		if json.Unmarshal(raw, &p) != nil {
+			break
+		}
+		data := p.Type == "XHR" || p.Type == "Fetch"
+		// Anything that can carry data off the page counts as sent; passive
+		// loads (images, scripts, styles, fonts, media) do not.
+		if !data && p.Type != "Ping" && p.Type != "EventSource" && p.Type != "Document" {
+			break
+		}
+		now := time.Now()
+		s.ev.Lock()
+		if data {
 			if s.requests == nil {
 				s.requests = map[string]time.Time{}
 			}
 			if _, redirect := s.requests[p.RequestID]; !redirect {
 				s.requests[p.RequestID] = now
 			}
-			s.lastRequest = now
-			s.ev.Unlock()
 		}
+		s.lastRequest = now
+		s.ev.Unlock()
+	case "Network.webSocketFrameSent":
+		s.ev.Lock()
+		s.lastRequest = time.Now()
+		s.ev.Unlock()
 	case "Network.loadingFinished", "Network.loadingFailed":
 		var p struct {
 			RequestID string `json:"requestId"`
@@ -585,6 +602,41 @@ func (s *session) domState(ctx context.Context, frameID string) (idle time.Durat
 		return 0, 0, false
 	}
 	return time.Duration(q.Idle) * time.Millisecond, q.Changes, true
+}
+
+// stepView tells one page of a form from the next: its field names and
+// headings, never values.
+type stepView struct {
+	Fields   string   `json:"fields"`
+	Headings []string `json:"headings"`
+	Title    string   `json:"title"`
+	ok       bool
+}
+
+func (s *session) stepState(ctx context.Context) stepView {
+	var v stepView
+	if r, e := s.helper(ctx, "step_state", nil, true); e == nil && json.Unmarshal(r.Result.Value, &v) == nil {
+		v.ok = true
+	}
+	return v
+}
+
+// evidence names the page a step led to: its first new heading, else its
+// first heading, else its title.
+func (v stepView) evidence(prev stepView) string {
+	seen := map[string]bool{}
+	for _, h := range prev.Headings {
+		seen[h] = true
+	}
+	for _, h := range v.Headings {
+		if !seen[h] {
+			return h
+		}
+	}
+	if len(v.Headings) > 0 {
+		return v.Headings[0]
+	}
+	return v.Title
 }
 
 // pending counts the page's data requests started since t that are still

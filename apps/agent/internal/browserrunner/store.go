@@ -31,16 +31,27 @@ const (
 )
 
 type Effect struct {
-	Key       string `json:"idempotency_key"`
-	Action    string `json:"action"`
-	Label     string `json:"label"`
-	Target    string `json:"target,omitempty"` // fingerprint of the form/control the submit acted on
-	Status    string `json:"status"`
-	URLBefore string `json:"url_before"`
-	URLAfter  string `json:"url_after,omitempty"`
-	Evidence  string `json:"evidence,omitempty"`
-	StartedAt string `json:"started_at"`
-	UpdatedAt string `json:"updated_at"`
+	Key    string `json:"idempotency_key"`
+	Action string `json:"action"`
+	Label  string `json:"label"`
+	Target string `json:"target,omitempty"` // fingerprint of the form/control the submit acted on
+	// Kind is "step" for one page of a longer form (Next, Continue, Save),
+	// which may be saved again; otherwise the submit is final and sent once.
+	Kind   string `json:"kind,omitempty"`
+	Status string `json:"status"`
+	// SettledBy is "runner" when the Runner settled the effect itself: the
+	// next step of the form opened.
+	SettledBy string `json:"settled_by,omitempty"`
+	// NothingSent: right after the click, no request had left the page and
+	// it had not navigated (client-side validation, or a step such as a
+	// CAPTCHA challenge that may still send it). The same key may be clicked
+	// again only while that stays true.
+	NothingSent bool   `json:"nothing_sent,omitempty"`
+	URLBefore   string `json:"url_before"`
+	URLAfter    string `json:"url_after,omitempty"`
+	Evidence    string `json:"evidence,omitempty"`
+	StartedAt   string `json:"started_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 type Receipt struct {
@@ -178,9 +189,29 @@ func (c *Checkpoint) effect(key string) *Effect {
 	return nil
 }
 
-// unresolved returns a submit whose external result is not proven.
+// maxStepSends bounds how often one page of a form is sent in a task: enough
+// to fix errors or resume a saved draft, never a loop.
+const maxStepSends = 3
+
+// stepSends counts how often a form step with this target was sent.
+func (c *Checkpoint) stepSends(target string) int {
+	n := 0
+	for _, e := range c.Effects {
+		if e.Kind == "step" && e.Target == target && e.Status != EffectNotDispatched {
+			n++
+		}
+	}
+	return n
+}
+
+// unresolved returns a final submit whose external result is not proven.
+// A form step does not hold up what follows: sending it again only saves
+// the same page again.
 func (c *Checkpoint) unresolved() *Effect {
 	for i := range c.Effects {
+		if c.Effects[i].Kind == "step" {
+			continue
+		}
 		switch c.Effects[i].Status {
 		case EffectInFlight, EffectUnverified, EffectUnknown:
 			return &c.Effects[i]

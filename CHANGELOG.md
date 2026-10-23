@@ -11,6 +11,9 @@ All notable changes to Remote Arc are documented here.
 - `snapshot=true` on `browser_runner_act` returns the page as the action left it, so a click that opens a dropdown or the next step needs no separate snapshot.
 - After an upload, Browser Runner waits for the form to finish reading the file (for example resume parsing) before answering.
 - The Relay gives older Agents the same contract: for Agents before 0.6.2-rc.8 it enters `fill_form` fields one call at a time and takes the requested snapshot itself.
+- Signing in is no longer recorded as a one-time submit. A sign-in or verification step (an email or username, a password or code the user typed, Send code) needs no submit key and can be repeated, so an expired session no longer meets `SUBMIT_ALREADY_RECORDED` on the identity page.
+- A page of a longer form (Next, Continue, Save and continue) still needs `effect=submit`, but settles itself when the next page opens (`settled_by: runner`, with the new page's heading as evidence), so it needs no `browser_runner_confirm`. A page that comes back with errors holds nothing up and can be sent again with a new key, up to three times per page. Final submits (submit application, pay, book, post, send) are unchanged: sent once and confirmed by the caller.
+- When a submit click sends nothing (no request leaves the page and it does not navigate, for example client-side validation), the effect is marked `nothing_sent`, and the same key may be clicked again for as long as nothing has left the page since. If a step the click opened sends it later (a CAPTCHA challenge, a confirmation), the key is answered from the checkpoint and never sent again.
 
 ### Browser Runner CAPTCHA handoff and restart recovery (release candidate 0.6.2-rc.7)
 

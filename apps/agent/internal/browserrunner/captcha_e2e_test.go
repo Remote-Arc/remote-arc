@@ -154,6 +154,12 @@ func TestE2ECaptchaOnlyAnOpenChallengeNeedsTheUser(t *testing.T) {
 	if snap["session_state"] != StateActive || len(captchaKinds(snap, "blockers")) != 0 || !strings.Contains(fmt.Sprint(snap["text"]), "ACME-7731") {
 		t.Fatalf("task did not continue after the challenge closed: state=%v blockers=%v text=%v", snap["session_state"], snap["blockers"], snap["text"])
 	}
+	// The click sent nothing itself, but the challenge it opened did: the
+	// same key is now answered from the checkpoint, never sent again.
+	again := h.call("browser_runner_act", map[string]any{"session_id": "lever", "snapshot_id": sid, "ref": "e1", "action": "click", "effect": "submit", "idempotency_key": "lever-apply"})
+	if again["replayed"] != true || site.count() != 1 {
+		t.Fatalf("retry after the challenge sent the form: %v count=%d", again, site.count())
+	}
 	done := h.call("browser_runner_confirm", map[string]any{"session_id": "lever", "idempotency_key": "lever-apply", "outcome": "confirmed", "evidence": "ACME-7731"})
 	if done["effect"].(map[string]any)["status"] != EffectConfirmed || site.count() != 1 {
 		t.Fatalf("confirm: %v count=%d", done["effect"], site.count())

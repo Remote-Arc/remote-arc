@@ -108,6 +108,15 @@ func demoMode() (bool, time.Duration) {
 	return true, time.Duration(ms) * time.Millisecond
 }
 
+// showHint is how needs_user tells the AI to bring the user in: show the
+// hidden window, or, without a display, that it cannot be done here.
+func showHint() string {
+	if hasDisplay() {
+		return "headless=false"
+	}
+	return "without a window"
+}
+
 func (h *harness) call(tool string, args map[string]any) map[string]any {
 	h.t.Helper()
 	if headed, pause := demoMode(); headed {
@@ -298,7 +307,7 @@ func TestE2ESignInIsHandedToUserAndPasswordsAreNeverTyped(t *testing.T) {
 	h, _, base, _ := newHarness(t)
 	h.call("browser_runner_start", map[string]any{"task_id": "login", "allowed_origins": []any{base}, "start_url": base + "/login"})
 	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "login"})
-	if snap["session_state"] != StateNeedsUser || !strings.Contains(fmt.Sprint(snap["needs_user"]), "headless=false") {
+	if snap["session_state"] != StateNeedsUser || !strings.Contains(fmt.Sprint(snap["needs_user"]), showHint()) {
 		t.Fatalf("login wall not handed to user: %v %v", snap["session_state"], snap["needs_user"])
 	}
 	pw := ref(t, snap, "textbox", "password")

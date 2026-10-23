@@ -9,7 +9,7 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     h1: "三种浏览器使用方式", intro: "选择独立任务浏览器、沿用 Chrome 现有登录，或只共享指定标签页。",
     sections: [
       {heading:"默认 Runner",text:"在 Dashboard 为电脑开启 Browser Runner。使用独立的浏览器资料，登录一次后复用；保存的登录信息在本机填写，密码不会进入 AI 对话。"},
-      {heading:"连接你的 Chrome",text:"Chrome 144 或更新版本可在 chrome://inspect/#remote-debugging 开启远程调试。连接时点击允许，任务会在自己的新窗口中沿用现有登录。连接保持期间多个任务共用授权；新连接仍需允许，Chrome 会显示受控提示。"},
+      {heading:"连接你的 Chrome（高级，可选）",text:"默认使用 Runner 的隐藏浏览器；只有你要求时，AI 才连接你的 Chrome。Chrome 144 或更新版本可在 chrome://inspect/#remote-debugging 开启远程调试。连接时点击允许，任务会在自己的新窗口中沿用现有登录。连接保持期间多个任务共用授权；新连接仍需允许，Chrome 会显示受控提示。"},
       {heading:"下载与安装 Chrome Companion",text:"下载扩展 ZIP 后解压，在 chrome://extensions 开启开发者模式并加载已解压的扩展程序。配对并手动共享标签页，默认只读，点击和填写按标签页单独授权。当前尚未上架 Chrome Web Store，需要手动更新。"},
     ],
   },

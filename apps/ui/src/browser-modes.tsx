@@ -9,17 +9,10 @@ export function BrowserModes({ primary = false }: { primary?: boolean }) {
   const modes = [
     {
       id: "runner", name: tr("Runner", "Runner 独立浏览器"), badge: tr("Default", "默认方式"),
-      fit: tr("Complete forms and longer tasks with a separate browser profile on your computer.", "在电脑上的独立浏览器资料中，完成表单填写和多步骤任务。"),
-      steps: [tr("Enable Browser Runner for the computer in Dashboard.", "在 Dashboard 为电脑开启 Browser Runner。"), tr("Sign in once in the task window, then reuse the same profile. Saved sign-ins can be filled locally without showing the password to your AI.", "在任务窗口登录一次，后续复用同一份浏览器资料；保存的登录信息可在本机填写，AI 看不到密码。")],
+      fit: tr("Complete forms and longer tasks in a hidden browser on your computer that never interrupts you.", "在电脑上的隐藏浏览器中完成表单填写和多步骤任务，不打扰你。"),
+      steps: [tr("Enable Browser Runner for the computer in Dashboard.", "在 Dashboard 为电脑开启 Browser Runner。"), tr("When a page needs you (a sign-in or CAPTCHA), your AI asks first; the window appears when you are ready and hides again after. Sign in once and later tasks reuse it; saved passwords are filled locally and never shown to your AI.", "页面需要你（登录或 CAPTCHA）时，AI 会先问你；你准备好后窗口才出现，处理完自动隐藏。登录一次，后续任务复用；保存的密码在本机填写，AI 看不到。")],
       limit: tr("Uses its own sign-ins. CAPTCHAs and payment details still need you.", "使用独立的登录状态。CAPTCHA 和支付信息仍需你处理。"),
       href: "/docs/mcp#browser-runner", cta: tr("Runner setup", "查看 Runner 设置"),
-    },
-    {
-      id: "your-chrome", name: tr("Connect your Chrome", "连接你的 Chrome"), badge: tr("Existing sign-ins", "沿用现有登录"),
-      fit: tr("Let a task use the accounts you are already signed into in Chrome, in its own new window.", "让任务在新的专用窗口中，沿用你已经登录 Chrome 的网站账号。"),
-      steps: [tr("Use Chrome 144 or later. In chrome://inspect/#remote-debugging, enable remote debugging.", "使用 Chrome 144 或更新版本，在 chrome://inspect/#remote-debugging 开启远程调试。"), tr("Ask your AI to connect your Chrome, then click Allow in Chrome. Tasks share that connection until it disconnects.", "让 AI 连接你的 Chrome，并在 Chrome 中点击「允许」。连接保持期间，后续任务共用这次连接。")],
-      limit: tr("Chrome asks again after a new connection. A control banner stays visible while connected. Tasks use their own windows and named sites; your other tabs stay yours.", "新连接仍需 Chrome 授权；连接期间会显示受控提示。任务只使用自己的窗口和指定网站，你原来的标签页由你继续使用。"),
-      href: "/docs/mcp#your-chrome", cta: tr("Chrome connection steps", "查看 Chrome 连接步骤"),
     },
     {
       id: "companion", name: tr("Chrome Companion", "Chrome 扩展"), badge: tr("Selected tabs", "共享指定标签页"),
@@ -28,10 +21,17 @@ export function BrowserModes({ primary = false }: { primary?: boolean }) {
       limit: tr("Read-only by default. No password, code, payment or file-picker filling. Unpacked beta; updates are manual.", "默认只读，不代填密码、验证码、支付和文件选择字段。当前为解压安装 Beta，需要手动更新。"),
       href: "/chrome-extension#chrome-steps-title", cta: tr("Extension installation", "查看扩展安装步骤"),
     },
+    {
+      id: "your-chrome", name: tr("Connect your Chrome", "连接你的 Chrome"), badge: tr("Advanced · only if you ask", "高级 · 你要求时才用"),
+      fit: tr("Your AI uses Runner unless you ask for this. Then a task uses the accounts you are already signed into in Chrome, in its own new window.", "除非你明确要求，AI 都使用 Runner。你要求时，任务会在新的专用窗口中沿用你已经登录 Chrome 的网站账号。"),
+      steps: [tr("Use Chrome 144 or later. In chrome://inspect/#remote-debugging, enable remote debugging.", "使用 Chrome 144 或更新版本，在 chrome://inspect/#remote-debugging 开启远程调试。"), tr("Ask your AI to connect your Chrome, then click Allow in Chrome. Tasks share that connection until it disconnects.", "让 AI 连接你的 Chrome，并在 Chrome 中点击「允许」。连接保持期间，后续任务共用这次连接。")],
+      limit: tr("Chrome asks you to click Allow for every new connection and shows a control banner while connected, which can interrupt what you are doing. Tasks use their own windows and named sites; your other tabs stay yours.", "每次新连接都需要在 Chrome 里点「允许」，连接期间会显示受控提示，可能打断你手上的事。任务只使用自己的窗口和指定网站，你原来的标签页由你继续使用。"),
+      href: "/docs/mcp#your-chrome", cta: tr("Chrome connection steps", "查看 Chrome 连接步骤"),
+    },
   ];
   return <section className="browserModes" aria-labelledby="browser-modes-title">
     <Heading id="browser-modes-title">{tr("Three ways to work with your browser", "三种浏览器使用方式")}</Heading>
-    <p className="browserModesIntro">{tr("Choose a separate task browser, your existing Chrome sign-ins, or a tab you explicitly share. Runner modes require the computer Agent; Chrome Companion pairs separately.", "可以使用独立的任务浏览器、沿用 Chrome 的登录状态，或只共享某个标签页。两种 Runner 模式需要电脑 Agent；Chrome 扩展单独配对。")}</p>
+    <p className="browserModesIntro">{tr("Runner is the default: a hidden task browser with its own sign-ins that never interrupts you. Chrome Companion works through an extension in your own Chrome. Connecting your running Chrome is an advanced option, used only when you ask. Runner modes require the computer Agent; Chrome Companion pairs separately.", "默认使用 Runner：隐藏的任务浏览器，有自己的登录状态，不打扰你。Chrome 扩展通过扩展程序在你自己的 Chrome 里工作。连接你正在用的 Chrome 是高级选项，只有你要求时才用。Runner 模式需要电脑 Agent；Chrome 扩展单独配对。")}</p>
     <div className="browserModesGrid">{modes.map(mode => <article key={mode.id}>
       <span className="browserModeBadge">{mode.badge}</span><h3>{mode.name}</h3><p>{mode.fit}</p>
       <ol>{mode.steps.map(step => <li key={step}>{step}</li>)}</ol>

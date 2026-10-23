@@ -123,7 +123,9 @@ func TestE2ECaptchaOnlyAnOpenChallengeNeedsTheUser(t *testing.T) {
 	if parts, _ := snap["captcha"].([]any); len(parts) == 0 {
 		t.Fatalf("CAPTCHA parts not reported: %v", snap)
 	}
-	if !headed && !strings.Contains(strings.Join(captchaKinds(snap, "attention"), ","), "captcha_headless") {
+	// Only a windowless browser warns early: a hidden window is shown in
+	// place later, keeping what was entered.
+	if !headed && !hasDisplay() && !strings.Contains(strings.Join(captchaKinds(snap, "attention"), ","), "captcha_headless") {
 		t.Fatalf("hidden browser on a CAPTCHA page gave no early warning: %v", snap["attention"])
 	}
 	sid := snap["snapshot_id"]
@@ -139,7 +141,7 @@ func TestE2ECaptchaOnlyAnOpenChallengeNeedsTheUser(t *testing.T) {
 	if snap["session_state"] != StateNeedsUser || strings.Join(captchaKinds(snap, "blockers"), ",") != "captcha" || !strings.Contains(needs, "never reads") {
 		t.Fatalf("open challenge not handed to the user: state=%v blockers=%v needs=%q", snap["session_state"], snap["blockers"], needs)
 	}
-	if !headed && !strings.Contains(needs, "headless=false") {
+	if !headed && !strings.Contains(needs, showHint()) {
 		t.Fatalf("hidden browser: no instruction to show the window: %q", needs)
 	}
 	// The submit is still unverified, so next_action is about settling it;

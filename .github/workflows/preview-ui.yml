@@ -75,7 +75,7 @@ jobs:
               `**Dashboard:** ${preview}/overview`,
               `**Onboarding:** ${preview}/device?code=DEMO-CODE`,
               `**Onboarding permissions:** ${preview}/device?code=DEMO-CODE&demo=permissions`,
-              `**Onboarding ready:** ${preview}/device?code=DEMO-CODE&demo=ready`,
+              `**Onboarding MCP connection:** ${preview}/device?code=DEMO-CODE&demo=ready`,
               `**Arc Chat:** ${preview}/dashboard/agent/chat`,
               `**Workflows:** ${preview}/dashboard/agent/skills`,
               `**Teammate profiles:** ${preview}/dashboard/agent/settings?section=teammates`,

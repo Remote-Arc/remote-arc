@@ -8,7 +8,7 @@ test('Onboarding preview completes pairing, permissions and recovery with simula
  await expect(page.getByText('DEMO-CODE',{exact:true})).toBeVisible();
  await expect(page.locator('.pairingPreview')).toContainText(tr('simulated computer','模拟电脑'));
  await page.getByRole('button',{name:tr('Authorize this device','授权此设备')}).click();
- await expect(page.getByRole('button',{name:tr('Finish setup','完成设置')})).toBeEnabled();
+ await expect(page.getByRole('button',{name:tr('Continue to AI connection','继续连接 AI')})).toBeEnabled();
  await page.getByRole('button',{name:tr('Enable file editing','开启文件编辑')}).click();
  await page.getByLabel(tr('Folder path','目录路径'),{exact:true}).fill('C:\\Projects');
  await page.getByRole('button',{name:tr('Use folder & continue','使用此目录并继续')}).click();
@@ -16,15 +16,18 @@ test('Onboarding preview completes pairing, permissions and recovery with simula
  await page.getByRole('button',{name:tr('Enable terminal access','开启终端权限')}).click();
  await page.getByRole('button',{name:tr('Cancel','取消'),exact:true}).click();
  await expect(page.getByRole('button',{name:tr('Enable terminal access','开启终端权限')})).toBeVisible();
- await page.getByRole('button',{name:tr('Finish setup','完成设置')}).click();
- await expect(page.getByRole('heading',{name:tr('Computer ready','电脑已就绪'),exact:true})).toBeVisible();
+ await page.getByRole('button',{name:tr('Continue to AI connection','继续连接 AI')}).click();
+ await expect(page.getByRole('heading',{name:tr('Connect your AI','连接你的 AI'),exact:true})).toBeVisible();
+ await expect(page.locator('.pairConnectStatus')).toContainText(tr('MCP connection required','还需完成 MCP 连接'));
+ await expect(page.locator('.pairAgentGuide')).toHaveCount(4);
+ await expect(page.locator('.pairDeviceSummary')).not.toHaveAttribute('open');
  await expect(page.locator('.pairSetupSummary')).toContainText(tr('Enabled','已开启'));
  expect(forwarded,'onboarding API actions stay in browser memory').toEqual([]);
 });
 
 test('Onboarding preview stages have direct links and mobile-friendly layouts',async({page},info)=>{
  const zh=info.project.metadata.language==='zh',tr=(en:string,cn:string)=>zh?cn:en;
- for(const [phase,title]of [['permissions',tr('Choose what AI can do','选择 AI 可以做什么')],['ready',tr('Computer ready','电脑已就绪')]]){
+ for(const [phase,title]of [['permissions',tr('Choose what AI can do','选择 AI 可以做什么')],['ready',tr('Connect your AI','连接你的 AI')]]){
   await page.goto('/device?demo='+phase);
   await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(2);

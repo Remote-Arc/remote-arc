@@ -35,8 +35,8 @@ assert.match(
 );
 assert.match(
   source,
-  /OPTIONAL NEXT STEP · CONNECT AN AI/,
-  "AI connector selection must remain optional after the device itself is ready.",
+  /REQUIRED FOR CONNECT/,
+  "Device pairing must lead into the required MCP connection step for Connect.",
 );
 assert.match(
   source,
@@ -49,4 +49,4 @@ assert.doesNotMatch(
   "Background recovery support must not block basic onboarding completion.",
 );
 
-console.log("PASS: onboarding keeps workspace selection generic, resumable and connector-optional");
+console.log("PASS: onboarding keeps workspace selection generic, resumable and requires MCP connection for Connect");

@@ -91,12 +91,12 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark', 'a new user starts dark even with a light OS');
   await screenshot(page, 'onboarding-pair');
   await page.getByRole('button', { name: 'Authorize this device' }).click();
-  await page.getByRole('button', { name: 'Finish setup' }).waitFor({ state: 'visible' });
-  await page.waitForFunction(() => ![...document.querySelectorAll('button')].find(button => button.textContent === 'Finish setup')?.disabled);
+  await page.getByRole('button', { name: 'Continue to AI connection' }).waitFor({ state: 'visible' });
+  await page.waitForFunction(() => ![...document.querySelectorAll('button')].find(button => button.textContent === 'Continue to AI connection')?.disabled);
   assert.deepEqual(device.allowed_tools, safeTools, 'pairing must remain read-only by default');
   await screenshot(page, 'onboarding-permissions');
-  await page.getByRole('button', { name: 'Finish setup' }).click();
-  await page.getByRole('heading', { name: 'Computer ready', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Continue to AI connection' }).click();
+  await page.getByRole('heading', { name: 'Connect your AI', exact: true }).waitFor();
   for (const client of ['chatgpt', 'claude', 'cursor']) {
     const link = page.locator('.pairAgentGuide[href="https://remotearc.app/install/' + client + '"]');
     assert.equal(await link.count(), 1, client + ' must have an official guide');
@@ -108,7 +108,7 @@ try {
   const navigationCount = await page.evaluate(() => performance.timeOrigin);
   await page.getByRole('button', { name: 'Language', exact: true }).click();
   await page.getByRole('menuitemradio', { name: '简体中文' }).click();
-  await page.getByRole('heading', { name: '电脑已就绪', exact: true }).waitFor();
+  await page.getByRole('heading', { name: '连接你的 AI', exact: true }).waitFor();
   assert.equal(await page.evaluate(() => performance.timeOrigin), navigationCount, 'switching language must preserve the live onboarding state');
   assert.equal(new URL(page.url()).searchParams.get('lang'), 'zh', 'manual language selection updates the onboarding URL without reloading');
   assert.equal(await page.locator('.pairAgentGuide[href="https://remotearc.app/zh/install/chatgpt"]').count(), 1, 'Chinese setup must open the Chinese guide');

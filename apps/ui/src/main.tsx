@@ -616,7 +616,7 @@ function PairingCard({ title, body, children, step = 1 }: {
   step?: 1 | 2 | 3;
 }) {
   const { tr, locale } = useI18n();
-  const steps = [tr("Pair computer", "配对电脑"), tr("Permissions", "设置权限"), tr("Ready to use", "开始使用")];
+  const steps = [tr("Pair computer", "配对电脑"), tr("Permissions", "设置权限"), tr("Connect AI", "连接 AI")];
   return (
     <main className="pairingShell workspaceSurface">
       <header className="pairingHeader">
@@ -625,7 +625,7 @@ function PairingCard({ title, body, children, step = 1 }: {
       </header>
       {UI_PREVIEW && <aside className="pairingPreview" aria-label={tr("Onboarding preview", "配对流程预览")}>
         <span>{tr("UI preview · simulated computer", "UI 预览 · 模拟电脑")}</span>
-        <nav>{(["pair", "permissions", "ready"] as const).map((phase, index) => <a key={phase} href={"/device?code=" + ONBOARDING_PREVIEW_CODE + "&demo=" + phase + "&lang=" + locale}>{[tr("Pair", "配对"), tr("Permissions", "权限设置"), tr("Ready", "已就绪")][index]}</a>)}</nav>
+        <nav>{(["pair", "permissions", "ready"] as const).map((phase, index) => <a key={phase} href={"/device?code=" + ONBOARDING_PREVIEW_CODE + "&demo=" + phase + "&lang=" + locale}>{[tr("Pair", "配对"), tr("Permissions", "权限设置"), tr("Connect AI", "连接 AI")][index]}</a>)}</nav>
       </aside>}
       <div className="pairingFlow">
         <ol className="pairingSteps" aria-label={tr("Computer setup", "电脑设置")}>
@@ -637,7 +637,7 @@ function PairingCard({ title, body, children, step = 1 }: {
         </ol>
         <section className="pairingCard" aria-labelledby="pairing-title">
           <header className="pairingTitle">
-            <span className={"pairingTitleIcon" + (step === 3 ? " complete" : "")}><ProductIcon name={step === 3 ? "check" : step === 2 ? "shield" : "device"} size={24} /></span>
+            <span className="pairingTitleIcon"><ProductIcon name={step === 3 ? "link" : step === 2 ? "shield" : "device"} size={24} /></span>
             <h1 id="pairing-title">{title}</h1>
             <p>{body}</p>
           </header>
@@ -1129,7 +1129,7 @@ function PairDevice({
         icon: "/ai-openai.svg",
         href: CHATGPT_PLUGIN_DIRECTORY_URL,
         guidePath: "/install/chatgpt",
-        detail: tr("Find Remote Arc in the Plugin Directory", "在 Plugin Directory 中找到 Remote Arc"),
+        detail: tr("Add Remote Arc, then authorize your account", "添加 Remote Arc，然后完成账号授权"),
         action: tr("Open Plugins", "打开 Plugins"),
         copyEndpoint: false,
       },
@@ -1168,33 +1168,21 @@ function PairDevice({
     return (
       <PairingCard
         step={3}
-        title={tr("Computer ready", "电脑已就绪")}
+        title={tr("Connect your AI", "连接你的 AI")}
         body={tr(
-          "Setup is complete and this computer is ready to use. Connecting an AI is optional here; if you already connected one, you can go straight to Dashboard.",
-          "设置已经完成，这台电脑现在可以使用。这里连接 AI 是可选的；如果你已经连接过 AI，可以直接进入 Dashboard。",
+          "Your computer is paired. To use Connect, you must also add Remote Arc to your AI client and complete MCP authorization. Pairing the computer alone does not connect your AI.",
+          "电脑已配对。使用 Connect 还必须在 AI 客户端中添加 Remote Arc，并完成 MCP 授权。仅配对电脑，不代表 AI 已经连接。",
         )}
       >
-        <div className="pairSetupSummary">
-          <div>
-            <span>{tr("Background connection", "后台连接")}</span>
-            <strong>
-              {backgroundActuallyEnabled
-                ? tr("Enabled", "已开启")
-                : tr("Foreground only", "仅前台运行")}
-            </strong>
-          </div>
-          <div><span>{tr("Read access", "读取权限")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
-          <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
-          <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
-        </div>
+        <div className="pairConnectStatus"><span><ProductIcon name="check" size={15}/>{tr("Computer paired", "电脑已配对")}</span><strong><ProductIcon name="link" size={15}/>{tr("MCP connection required", "还需完成 MCP 连接")}</strong></div>
 
         <section className="pairAgentConnect">
           <div className="pairAgentConnectIntro">
-            <span className="eyebrow">{tr("OPTIONAL NEXT STEP · CONNECT AN AI", "可选下一步 · 连接 AI")}</span>
-            <h3>{tr("Use this computer from the AI you already work with.", "从你正在使用的 AI 里操作这台电脑。")}</h3>
+            <span className="eyebrow">{tr("REQUIRED FOR CONNECT", "CONNECT 必需步骤")}</span>
+            <h3>{tr("Choose your AI client", "选择你的 AI 客户端")}</h3>
             <p>{tr(
-              "Device setup is already finished. Follow your client’s installation guide, or open it directly if you already know the steps. You can also connect later from Dashboard → Connect AI.",
-              "设备设置已经完成。按照客户端的安装指南完成连接；熟悉步骤后也可直接打开客户端。之后可以随时从 Dashboard → Connect AI 继续。",
+              "Follow the setup guide to add Remote Arc and authorize this account in your client. Then enable Remote Arc in a chat to use your computer.",
+              "按照安装指南在客户端添加 Remote Arc，并授权当前账号。然后在 AI 对话中启用 Remote Arc，才能操作这台电脑。",
             )}</p>
           </div>
 
@@ -1218,7 +1206,7 @@ function PairDevice({
                 </div>
                 <div className="pairAgentActions">
                   <a className="pairAgentGuide" href={MARKETING_ORIGIN + localizedWebsiteHref(agent.guidePath, locale)} target="_blank" rel="noreferrer" aria-label={agent.name + " · " + tr("Installation guide", "安装指南")}>
-                    <ProductIcon name="book" size={15} /><span>{tr("Installation guide", "安装指南")}</span><ProductIcon name="arrowUpRight" size={14} />
+                    <ProductIcon name="link" size={15} /><span>{tr("Connect ", "连接 ")}{agent.name}</span><ProductIcon name="arrowUpRight" size={14} />
                   </a>
                   <a className="pairAgentLaunch" href={agent.href} target="_blank" rel="noreferrer" onClick={agent.copyEndpoint ? copyEndpoint : undefined}>
                     {agent.action}<ProductIcon name="arrowUpRight" size={14} />
@@ -1234,10 +1222,27 @@ function PairDevice({
             <CopyButton value={MCP_ENDPOINT} />
           </div>
         </section>
+        <div className="pairConnectionCheck"><strong>{tr("Check the connection", "确认连接成功")}</strong><p>{tr("After authorization, select Remote Arc in your AI chat and ask for your device list. A successful device result confirms the connection.", "授权后，在 AI 对话中启用 Remote Arc，发送“列出我的设备”。成功返回设备结果，才说明连接已经可用。")}</p></div>
+
+        <details className="pairDeviceSummary"><summary>{tr("Computer paired · review permissions", "电脑已配对 · 查看权限")}</summary>
+        <div className="pairSetupSummary">
+          <div>
+            <span>{tr("Background connection", "后台连接")}</span>
+            <strong>
+              {backgroundActuallyEnabled
+                ? tr("Enabled", "已开启")
+                : tr("Foreground only", "仅前台运行")}
+            </strong>
+          </div>
+          <div><span>{tr("Read access", "读取权限")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
+          <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+          <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+        </div>
+        </details>
 
         <div className="pairDoneSecondary">
-          <a href="/devices" className="pairDonePrimary">{tr("Open Dashboard", "进入 Dashboard")} →</a>
-          <a href="/connect">{tr("Connect an AI later", "之后再连接 AI")} →</a>
+          <a href="/connect">{tr("Already connected? Open Connect AI", "已完成连接？打开 Connect AI")} →</a>
+          <a href="/devices">{tr("Manage computer permissions", "管理电脑权限")} →</a>
         </div>
       </PairingCard>
     );
@@ -1526,7 +1531,7 @@ function PairDevice({
           >
             {busy
               ? tr("Saving setup…", "正在保存设置…")
-              : tr("Finish setup", "完成设置")}
+              : tr("Continue to AI connection", "继续连接 AI")}
           </button>
         </div>
       </PairingCard>

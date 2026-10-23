@@ -58,13 +58,22 @@ test('Connected capabilities show fleet, performance, workspaces and a reviewabl
   await tabs.nth(1).click();
   await expect(section.locator('.connectedChart')).toBeVisible();
   await tabs.nth(2).click();
-  await expect(section.locator('.connectedWorkspace')).toHaveCount(3);
+  await expect(section.locator('.connectedWorkspaceFlow')).toBeVisible();
+  await section.getByRole('button', { name: 'Build PC', exact: true }).click();
+  await expect(section.locator('.connectedWorkspaceJob code')).toContainText('D:\\Projects\\remote-arc');
+  await section.locator('.connectedProjectChoices button').last().click();
+  await expect(section.locator('.connectedWorkspaceJob code')).toContainText('sales-report');
+  await section.locator('.connectedWorkspaceRun').click();
+  await expect(section.locator('.connectedWorkspaceJob footer')).toContainText('monthly-sales.xlsx');
   const draft = new URL((await section.locator('.agentConnectedAction').getAttribute('href'))!);
   expect(draft.origin).toBe('https://agent.remotearc.app');
   expect(draft.searchParams.has('prompt')).toBe(true);
+  await tabs.nth(2).focus();
   await page.keyboard.press('End');
   await expect(tabs.last()).toBeFocused();
   await expect(section.locator('.agentConnectedPanel')).toHaveAttribute('data-workflow', 'browser');
+  await expect(section.locator('.connectedMoviePoster')).toBeVisible();
+  await expect(section.locator('.connectedMovieInfo h4')).toHaveText(/The Avengers|复仇者联盟/);
   await section.getByRole('button', { name: '21:00', exact: true }).click();
   await section.locator('.connectedTicketButton').click();
   await expect(section.locator('.connectedBrowserResult')).toContainText('21:00');
@@ -73,11 +82,18 @@ test('Connected capabilities show fleet, performance, workspaces and a reviewabl
 });
 
 test('New previews have no horizontal overflow or missing images', async ({ page }) => {
-  for (const selector of ['.slackAgentPreview', '#agent-use-cases']) {
+  for (const selector of ['.slackAgentPreview', '#agent-use-cases', '.appsDirectory']) {
     const region = page.locator(selector);
     await region.scrollIntoViewIfNeeded();
     expect(await region.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
-    const failed = await region.locator('img').evaluateAll(images => images.filter(image => !(image as HTMLImageElement).complete || !(image as HTMLImageElement).naturalWidth).map(image => image.getAttribute('src')));
+    const failed = await region.locator('img').evaluateAll(async images => {
+      const results = await Promise.all(images.map(async element => {
+        const image = element as HTMLImageElement;
+        image.loading = 'eager';
+        try { await image.decode(); return null; } catch { return image.getAttribute('src'); }
+      }));
+      return results.filter(Boolean);
+    });
     expect(failed).toEqual([]);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

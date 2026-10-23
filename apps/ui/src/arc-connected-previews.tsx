@@ -4,6 +4,7 @@ import { localizedWebsiteHref } from './marketing-paths.js';
 import { ProductIcon as Icon } from './product-icon.js';
 import { arcChatHref } from '../../../packages/docs/src/arc-use-cases.js';
 import './arc-connected-previews.css';
+import './arc-connected-workspace.css';
 
 export const previewDevices = [
   { name: 'Studio Mac', platform: 'macos', system: 'macOS', cpu: 24, memory: '12.8 / 32 GB', state: 'online' },
@@ -35,7 +36,20 @@ export function PerformancePreview({ compact = false }: { compact?: boolean }) {
 
 export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
   const { tr } = useI18n();
-  return <div className={'connectedWorkspaces' + (compact ? ' connectedWorkspaces--compact' : '')}>
+  const [project, setProject] = useState(0);
+  const [device, setDevice] = useState<'mac' | 'windows'>('mac');
+  const [result, setResult] = useState(false);
+  const projects = [{ name: tr('Website project', '官网项目'), folder: 'remote-arc', task: tr('Fix the login button layout, then run the project tests.', '修复登录按钮的布局，然后运行项目测试。'), output: 'login-fix.md', checks: tr('12 tests passed', '12 项测试通过') }, { name: tr('Sales report', '销售报表'), folder: 'sales-report', task: tr('Summarize this month’s orders and generate an Excel report.', '汇总本月订单，生成一份 Excel 销售报表。'), output: 'monthly-sales.xlsx', checks: tr('Totals reconciled', '订单合计已核对') }];
+  const current = projects[project]!;
+  const directory = device === 'mac' ? '~/Projects/' + current.folder : 'D:\\Projects\\' + current.folder;
+  if (!compact) return <div className="connectedWorkspaceFlow">
+    <div className="connectedWorkspaceStep"><span>01</span><strong>{tr('Choose a project', '选择项目')}</strong></div>
+    <div className="connectedProjectChoices" role="group" aria-label={tr('Example project', '示例项目')}>{projects.map((item, index) => <button key={item.folder} type="button" aria-pressed={project === index} onClick={() => { setProject(index); setResult(false); }}><Icon name={index === 0 ? 'panel' : 'chart'} size={16} /><span>{item.name}</span></button>)}</div>
+    <div className="connectedWorkspaceStep"><span>02</span><strong>{tr('Choose the computer', '选择执行电脑')}</strong></div>
+    <div className="connectedWorkspaceMachines" role="group" aria-label={tr('Example workspace computer', '示例工作区电脑')}>{(['mac', 'windows'] as const).map(value => <button key={value} type="button" aria-pressed={device === value} onClick={() => { setDevice(value); setResult(false); }}><img src={'/platform-brands/' + (value === 'mac' ? 'macos' : 'windows') + '.svg'} width={17} height={17} alt="" /><span>{value === 'mac' ? 'Studio Mac' : 'Build PC'}</span><i className="connectedOnlineDot" /></button>)}</div>
+    <div className="connectedWorkspaceJob"><header><Icon name="panel" size={14} /><code>{directory}</code><span>{tr('WORKSPACE', '当前工作区')}</span></header><div><span className="connectedWorkspaceStep"><span>03</span><strong>{tr('Tell Arc what to do here', '交代这个项目里的任务')}</strong></span><p><img src="/remote-arc.svg" width={22} height={22} alt="Arc" /><span>{current.task}</span></p><button className="connectedWorkspaceRun" type="button" onClick={() => setResult(!result)}>{result ? tr('Back to task', '返回任务') : tr('See example result', '查看示例结果')}<Icon name={result ? 'refresh' : 'arrowUpRight'} size={13} /></button></div><footer aria-live="polite">{result ? <><Icon name="check" size={14} /><span><strong>{current.output}</strong>{current.checks}</span></> : <><Icon name="shield" size={14} /><span>{tr('Arc works in this project folder, with its own files and context.', 'Arc 在这个项目目录里工作，文件和上下文随项目保留。')}</span></>}</footer></div>
+  </div>;
+  return <div className="connectedWorkspaces connectedWorkspaces--compact">
     <div className="connectedWorkspacePath"><Icon name="panel" size={15} /><span>Studio Mac</span><span>/</span><strong>Workspaces</strong></div>
     {[{ name: 'remote-arc', detail: tr('App & website', '应用与网站'), path: '~/Projects/remote-arc', branch: 'main', color: 'blue' }, { name: 'design-system', detail: tr('Components & brand', '组件与品牌'), path: '~/Projects/design-system', branch: 'design/v2', color: 'violet' }, { name: 'research', detail: tr('Notes & browser work', '笔记与浏览器任务'), path: '~/Work/research', branch: '—', color: 'green' }].slice(0, compact ? 2 : 3).map(project => <div className="connectedWorkspace" key={project.name}><span data-color={project.color}><Icon name="panel" size={19} /></span><div><strong>{project.name}</strong><small>{compact ? project.detail : project.path}</small></div><code>{project.branch}</code></div>)}
     {!compact && <div className="connectedWorkspaceNote"><Icon name="link" size={14} />{tr('The right project. On the right computer.', '选对项目，交给合适的电脑。')}</div>}
@@ -48,7 +62,7 @@ export function BrowserPreview() {
   const [review, setReview] = useState(false);
   return <div className="connectedBrowser">
     <div className="connectedBrowserBar"><span className="connectedWindowDots"><i /><i /><i /></span><span><Icon name="shield" size={12} />cinema.example / showtimes</span><img src="/platform-brands/browser.svg" alt="Chrome" width={16} height={16} /></div>
-    <div className="connectedCinema"><div className="connectedMovieArt" aria-hidden="true"><span /><i /><small>AN EVENING<br />BEYOND THE ORDINARY</small></div><div className="connectedMovieInfo"><span className="connectedMiniLabel">{tr('A NIGHT AT THE MOVIES', '今晚，去看电影')}</span><h4>{tr('Beyond the blue', '蓝色边界')}</h4><p>{tr('Friday · 2 people · Standard', '周五 · 2 人 · 标准厅')}</p><div className="connectedShowtimes" role="group" aria-label={tr('Example showtimes', '示例场次')}>{['18:00', '19:30', '21:00'].map(value => <button key={value} type="button" aria-pressed={time === value} onClick={() => { setTime(value); setReview(false); }}>{value}</button>)}</div><button className="connectedTicketButton" type="button" onClick={() => setReview(!review)}>{review ? tr('Edit selection', '修改选择') : tr('Preview selection', '预览选择')}<Icon name={review ? 'refresh' : 'arrowUpRight'} size={14} /></button></div></div>
+    <div className="connectedCinema"><img className="connectedMoviePoster" src="/marketing/avengers-poster.jpg" alt={tr('Marvel Studios The Avengers poster', '漫威《复仇者联盟》电影海报')} width={382} height={566} /><div className="connectedMovieInfo"><span className="connectedMiniLabel">MARVEL STUDIOS</span><h4>{tr('The Avengers', '复仇者联盟')}</h4><p>{tr('Friday · 2 tickets · IMAX', '周五 · 2 张票 · IMAX')}</p><small className="connectedShowtimesLabel">{tr('Choose a showtime', '选择场次')}</small><div className="connectedShowtimes" role="group" aria-label={tr('Example showtimes', '示例场次')}>{['18:00', '19:30', '21:00'].map(value => <button key={value} type="button" aria-pressed={time === value} onClick={() => { setTime(value); setReview(false); }}>{value}</button>)}</div><button className="connectedTicketButton" type="button" onClick={() => setReview(!review)}>{review ? tr('Edit selection', '修改选择') : tr('Review 2 tickets', '查看 2 张电影票')}<Icon name={review ? 'refresh' : 'arrowUpRight'} size={14} /></button></div></div>
     <div className="connectedBrowserResult" aria-live="polite"><Icon name={review ? 'check' : 'shield'} size={15} /><span>{review ? tr(`Selection ready: Friday, ${time}, 2 tickets. Review before checkout.`, `已准备：周五 ${time}，2 张电影票。结账前由你审核。`) : tr('Arc finds the options. You confirm the purchase.', 'Arc 帮你查找场次，购买由你确认。')}</span></div>
   </div>;
 }

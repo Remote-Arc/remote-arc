@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+import {activateArcTrial} from '../src/arc-trial.js';
+import {creditBalance} from '../src/arc-credits.js';
+const sql=new DatabaseSync(':memory:');
+const migrations=new URL('../migrations/',import.meta.url);
+for(const name of fs.readdirSync(migrations).filter(name=>name.endsWith('.sql')&&name!=='0061_trial_credit_retention.sql').sort())sql.exec(fs.readFileSync(new URL(name,migrations),'utf8'));
+const db={prepare(query:string){const stmt=sql.prepare(query);const bind=(args:any[])=>({async first(){return stmt.get(...args)||null},async all(){return{results:stmt.all(...args)}},async run(){return this.sync()},sync(){const r=stmt.run(...args);return{meta:{changes:Number(r.changes)}}}});return{...bind([]),bind(...args:any[]){return bind(args)}}},async batch(items:any[]){sql.exec('BEGIN');try{const rows=items.map(item=>item.sync());sql.exec('COMMIT');return rows}catch(error){sql.exec('ROLLBACK');throw error}}} as unknown as D1Database;
+const now=new Date().toISOString(),future=new Date(Date.now()+60*86400000).toISOString();
+sql.prepare('INSERT INTO users(id,google_sub,email,created_at) VALUES(?,?,?,?)').run('trial','trial','trial@example.invalid',now);
+const env={DB:db,ARC_PLATFORM_ENABLED:'1'};
+await activateArcTrial(env,'trial');
+const lot=sql.prepare("SELECT * FROM arc_credit_lots WHERE user_id='trial'").get()!;
+assert.equal(lot.expires_at,null,'New trial credit grants do not expire');
+// Simulate an already-issued legacy lot with both spent and reserved balances.
+sql.prepare("UPDATE arc_credit_lots SET spent_units=3000,reserved_units=2000,expires_at=(SELECT expires_at FROM arc_trials WHERE user_id='trial') WHERE id=?").run(lot.id);
+assert.equal((await creditBalance(db,'trial',future)).available,0);
+const retained=fs.readFileSync(new URL('0061_trial_credit_retention.sql',migrations),'utf8');sql.exec(retained);sql.exec(retained);
+const updated=sql.prepare('SELECT * FROM arc_credit_lots WHERE id=?').get(lot.id)!;
+assert.equal(updated.granted_units,lot.granted_units);assert.equal(updated.spent_units,3000);assert.equal(updated.reserved_units,2000);assert.equal(updated.expires_at,null);
+assert.equal((await creditBalance(db,'trial',future)).available,(Number(lot.granted_units)-5000)/1000);
+assert.equal((await creditBalance(db,'trial',future)).pending,2);
+await activateArcTrial(env,'trial');assert.equal(sql.prepare("SELECT COUNT(*) n FROM arc_credit_lots WHERE user_id='trial'").get()?.n,1);
+console.log('PASS: trial access window is separate from retained Credits; new and legacy grants preserve spent/reserved amounts, one-time issuance and migration replay.');

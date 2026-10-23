@@ -1,0 +1,14 @@
+.slackBotPanel{padding:20px;border:1px solid var(--dash-line);border-radius:10px;background:var(--dash-subtle);color:var(--dash-text);margin:0 0 24px;display:grid;gap:16px;min-width:0}
+.slackBotPanel header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.slackBotPanel h3{margin:0;font-size:17px;font-weight:600;color:var(--dash-text)}
+.slackBotPanel p{font-size:14px;line-height:1.6;color:var(--dash-muted);margin:6px 0 0}
+.slackBotPanel>small,.slackBotPanel small{color:var(--dash-muted);font-size:12px}
+.slackBotPanel [role=alert]{color:#c86b79}
+.slackBotLinks{display:grid;gap:10px;min-width:0}
+.slackBotModel{display:grid;gap:8px;font-size:14px;color:var(--dash-text)}
+.slackBotModel select{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--dash-line);border-radius:8px;background:var(--dash-surface);color:var(--dash-text)}
+.slackBotLinks article{display:flex;justify-content:space-between;gap:16px;padding:14px;border:1px solid var(--dash-line);border-radius:8px;background:var(--dash-surface);min-width:0}
+.slackBotLinks article>div{display:grid;gap:6px;min-width:0;overflow-wrap:anywhere}
+.slackBotLinks strong{color:var(--dash-text);font-size:14px}
+.slackBotLinks a,.slackBotLinks button{font-size:13px;color:var(--dash-text);padding:4px 0;background:transparent;text-align:left}
+@media(max-width:600px){.slackBotLinks article{flex-direction:column}.slackBotPanel{padding:16px}.slackBotLinks article>div:last-child{display:flex;gap:16px;flex-wrap:wrap}}

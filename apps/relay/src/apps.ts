@@ -111,7 +111,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   const destination=chatRequestId?await chat!.arcAppConnectionDestination(env as import('./arc-chat.js').ArcEnv,userId,chatRequestId).catch(()=>((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/dashboard/agent/chat')):undefined;
   const redirect=(target:string)=>new Response(null,{status:303,headers:{location:target,'cache-control':'no-store'}});
   const retry=()=>{const target=new URL(destination!);target.searchParams.set('connection','retry');return redirect(target.href);};
-  if(query.has('error')){if(destination)return retry();throw new AppError('app_authorization_denied');}
+  if(query.has('error')){if(destination)return retry();if(provider==='slack')return redirect((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/apps?app_error='+(query.get('error')==='invalid_team_for_non_distributed_app'?'slack_distribution_required':'app_authorization_denied'));throw new AppError('app_authorization_denied');}
   try{
   const code = query.get("code"); if (!code || code.length > 4096) throw new AppError("missing_oauth_code");
   const verifier = typeof payload === "string" ? payload : payload.verifier;
@@ -124,7 +124,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   try{connectionId=await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);}catch(error){if(error instanceof AppError&&error.code==='app_connection_limit')await revokeProvider(env,provider,tokens,fetcher).catch(()=>undefined);throw error;}
   if(chatRequestId&&destination){await chat!.resumeArcAppConnection(env as import('./arc-chat.js').ArcEnv,userId,chatRequestId,connectionId);return redirect(destination);}
   return new Response(null, { status: 303, headers: { location: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps?connected=" + provider, "cache-control": "no-store" } });
-  }catch(error){if(destination)return retry();throw error;}
+  }catch(error){if(destination)return retry();if(provider==='slack'&&error instanceof AppError&&error.code==='slack_distribution_required')return redirect((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/apps?app_error=slack_distribution_required');throw error;}
 }
 async function accessToken(env: AppEnv, row: Connection, fetcher: typeof fetch): Promise<AppTokens> {
   const tokens = await unseal<AppTokens>(env, row.token_ciphertext!, tokenContext(row));

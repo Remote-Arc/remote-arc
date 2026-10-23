@@ -1,5 +1,8 @@
 import {handleFollowupUnsubscribe} from './user-followups.js';
 import {runFollowupBatches} from './followup-batches.js';
+import {handleSlackEvents} from './slack-bot-events.js';
+import {handleSlackBotAccount} from './slack-bot-install.js';
+import {runSlackJobs} from './slack-bot-jobs.js';
 import {publicFeedbackReward} from './connect-rewards.js';
 import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.js";
 export { AdminApiService } from "./admin-entrypoint.js";
@@ -225,6 +228,16 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     if (httpsCanonical) return Response.redirect(httpsCanonical, 301);
 
     if(url.pathname==='/email/follow-up/unsubscribe'&&url.origin===new URL(marketingOrigin).origin)return handleFollowupUnsubscribe(request,env);
+
+    if(url.pathname==='/api/slack/events'){
+      if(url.origin!==new URL(env.PUBLIC_ORIGIN).origin||request.method!=='POST')return Response.json({error:'not_found'},{status:404});
+      return handleSlackEvents(request,env,ctx);
+    }
+    if(url.pathname.startsWith('/api/slack/')||url.pathname==='/slack/link'){
+      const response=await handleSlackBotAccount(request,env);
+      if(request.method==='POST'&&response.ok)ctx?.waitUntil(runSlackJobs(env,{limit:1}));
+      return response;
+    }
 
     const authSensitive =
       url.pathname === "/oauth/register" ||
@@ -1063,6 +1076,7 @@ export default {
       ctx.waitUntil(runScheduledTasks(env, controller.cron));
     }
     if(controller.cron==='* * * * *')ctx.waitUntil(runFollowupBatches(env));
+    if(controller.cron==='* * * * *')ctx.waitUntil(runSlackJobs(env));
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));
       ctx.waitUntil(runApprovalMaintenance(env));

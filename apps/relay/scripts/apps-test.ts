@@ -410,6 +410,12 @@ for(const [suffix,code] of [["&error=access_denied","app_authorization_denied"],
   assert.equal((await result.json() as any).error,code);
 }
 assert.equal((await api("/api/apps/oauth/github/callback")).status,400);
+for(const mode of ['query','token']){
+ const started=await (await api('/api/apps/authorize','POST',{provider:'slack'})).json() as any,state=new URL(started.authorizationUrl).searchParams.get('state');
+ const callback='/api/apps/oauth/slack/callback?state='+state+(mode==='query'?'&error=invalid_team_for_non_distributed_app':'&code=fixture');
+ const result=await handleApps(req(callback),env,async()=>json({ok:false,error:'invalid_team_for_non_distributed_app'}));
+ assert.equal(result.status,303);assert.equal(new URL(result.headers.get('location')!).searchParams.get('app_error'),'slack_distribution_required');
+}
 assert.equal((await api("/api/apps/oauth/github/callback?state="+"a".repeat(129))).status,400);
 assert.equal((await api("/api/apps/authorize","POST",{provider:"github",permissions:["read"]},"one",{"content-type":"text/plain"})).status,415);
 const malformed=await handleApps(new Request(origin+"/api/apps/authorize",{method:"POST",headers:{origin,cookie:"rl_session=session-one","content-type":"application/json"},body:"{"}),env,fetcher);

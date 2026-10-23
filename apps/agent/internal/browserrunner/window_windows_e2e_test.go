@@ -39,7 +39,7 @@ func TestE2EWindowsTaskDoesNotTakeFocus(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if b.WindowState != "minimized" && b.Left > offscreen/2 && b.Top > offscreen/2 {
+	if b.WindowState == "minimized" || b.Left > offscreen/2 {
 		t.Fatalf("the task window is on screen: %+v", b)
 	}
 	t.Logf("task window %+v; focus stayed on %#x", b, before)

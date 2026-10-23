@@ -207,7 +207,7 @@ func launchBrowser(ctx context.Context, exe, profile string, hidden bool) (*brow
 	} else if hidden {
 		// Opened out of sight; Remote Arc brings it on screen only when the
 		// user is ready to act in it (setVisible).
-		args = append(args, fmt.Sprintf("--window-position=%d,%d", offscreen, offscreen), "--mute-audio")
+		args = append(args, fmt.Sprintf("--window-position=%d,0", offscreen), "--mute-audio")
 	}
 	if runtime.GOOS == "linux" && os.Geteuid() == 0 {
 		// Chromium refuses to start as root with its sandbox (containers/CI).

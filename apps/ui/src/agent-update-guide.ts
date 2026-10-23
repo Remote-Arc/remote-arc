@@ -1,6 +1,5 @@
-// These commands work with the current, published Go CLI. Background recovery
-// is not a live updater in remotelink 0.6.1: the existing Go owner must first
-// release its execution lease gracefully. Never reset pairing for an upgrade.
+// The current Go CLI hands over an older idle Agent automatically and asks
+// before interrupting active work. Preserve the device's recovery choice.
 export function isOlderRelease(current: string | null | undefined, latest: string): boolean {
   const parse = (value: string | null | undefined) => {
     const match = String(value || "").trim().match(/^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/);
@@ -18,10 +17,5 @@ export function isOlderRelease(current: string | null | undefined, latest: strin
 
 export function goUpdateCommands(version: string, recoverInBackground: boolean): string[] {
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("Invalid stable Agent release");
-  return [
-    `npx -y remotelink@${version} --go --stop`,
-    recoverInBackground
-      ? `npx -y remotelink@${version} --background`
-      : `npx -y remotelink@${version}`,
-  ];
+  return [`npx -y remotelink@${version} ${recoverInBackground ? "--background" : "--foreground"}`];
 }

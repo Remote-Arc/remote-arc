@@ -5792,21 +5792,19 @@ function Dashboard({
                           <strong>{tr("Remote Arc update available", "Remote Arc 有可用更新")}</strong>
                           <span>{tr("Running: ", "运行版本：")}v{runtimeVersion} · {tr("Latest: ", "最新版本：")}v{LATEST_AGENT_VERSION}</span>
                           {recoveryVersion && <span>{tr("Installed recovery bundle: ", "已安装恢复包：")}v{recoveryVersion}</span>}
-                          <span>{device.background_enabled === true
-                            ? tr("Run both commands in order on this computer: stop the old Go Agent, then start the new version. A brief disconnect is normal; pairing and permissions remain.", "请在这台电脑上按顺序执行两条命令：先停止旧版 Go Agent，再启动新版。短暂断线是正常的，配对与权限保持不变。")
-                            : tr("Run both commands in order: stop the old Go Agent, then start the new foreground version. Do not use --reset.", "依次执行两条命令：先停止旧版 Go Agent，再启动新版前台 Agent。不要使用 --reset。")}</span>
+                          <span>{tr("Run the upgrade command on this computer. An older idle Agent is replaced automatically; active work asks for confirmation. Pairing, permissions and your recovery setting are preserved.", "在这台电脑上执行升级命令。旧版 Agent 空闲时会自动接替；有任务运行时会先询问确认。配对、权限和恢复设置会保留。")}</span>
                         </div>
                         <button className="ghostButton small" onClick={async () => {
                           try {
                             if (navigator.clipboard) await navigator.clipboard.writeText(updateCommand);
                             await showNotice(
-                              tr("Go Agent upgrade: run both lines in order", "Go Agent 升级：依次执行两行命令"),
+                              tr("Upgrade Remote Arc", "升级 Remote Arc"),
                               updateCommand + (navigator.clipboard ? "\n\n" + tr("Copied to clipboard.", "已复制到剪贴板。") : ""),
                             );
                           } catch {
-                            await showNotice(tr("Go Agent upgrade: run both lines in order", "Go Agent 升级：依次执行两行命令"), updateCommand);
+                            await showNotice(tr("Upgrade Remote Arc", "升级 Remote Arc"), updateCommand);
                           }
-                        }}>{tr("Copy two upgrade steps", "复制两步升级命令")}</button>
+                        }}>{tr("Copy upgrade command", "复制升级命令")}</button>
                       </div>
                     )}
                     <div className="deviceBackgroundRow" aria-busy={backgroundUpdatingId === device.id}>

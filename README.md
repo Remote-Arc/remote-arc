@@ -94,7 +94,7 @@ For hosted Arc, [sign in](https://agent.remotearc.app), activate the trial or ch
 npx remotelink@latest
 ```
 
-The npm launcher installs and checksums the native Go Agent and Execution Core. Standalone and Homebrew installations need no Node.js. Stop the active Agent before changing versions or runtimes; `--ts` explicitly selects the retained TypeScript fallback.
+The npm launcher installs and checksums the native Go Agent and Execution Core. Run `npx remotelink@latest` to upgrade: an older idle Go Agent is replaced automatically, while active work asks for confirmation. Pairing and permissions are preserved. Stop the active Agent before switching runtimes; `--ts` explicitly selects the retained TypeScript fallback. Standalone and Homebrew installations need no Node.js.
 
 <!-- native-install:start -->
 ### Native downloads and Homebrew

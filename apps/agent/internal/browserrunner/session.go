@@ -336,7 +336,10 @@ func (s *session) ensureLive(ctx context.Context) error {
 	if s.hasWindow() {
 		// Out of sight unless the user asked to see it. A browser that
 		// restored an old window position is moved back off screen too.
-		_ = s.setVisible(ctx, !s.cp.Headless)
+		if e := s.setVisible(ctx, !s.cp.Headless); e != nil {
+			s.shutdownBrowser(false)
+			return fmt.Errorf("cannot set task window visibility: %w", e)
+		}
 	}
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
 		// Reopening loads the page fresh: whatever was typed, chosen or

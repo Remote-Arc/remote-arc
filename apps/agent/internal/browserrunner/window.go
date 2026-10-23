@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"runtime"
+	"time"
 )
 
 // The task browser is a sandbox the user does not see: a real browser
@@ -40,6 +43,31 @@ func (s *session) setBounds(ctx context.Context, id int, b map[string]any) error
 	return s.conn.Call(ctx, "Browser.setWindowBounds", map[string]any{"windowId": id, "bounds": b}, nil)
 }
 
+// Native window transitions can finish after the CDP command acknowledges them.
+func (s *session) setWindowState(ctx context.Context, id int, state string) error {
+	if e := s.setBounds(ctx, id, map[string]any{"windowState": state}); e != nil {
+		return e
+	}
+	wait, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	tick := time.NewTicker(50 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		_, b, e := s.window(wait)
+		if e != nil {
+			return e
+		}
+		if b.WindowState == state {
+			return nil
+		}
+		select {
+		case <-wait.Done():
+			return fmt.Errorf("task window did not become %s: %w", state, wait.Err())
+		case <-tick.C:
+		}
+	}
+}
+
 // setVisible brings the task window on screen and to the front, or moves it
 // back out of sight. Nothing is reloaded.
 func (s *session) setVisible(ctx context.Context, visible bool) error {
@@ -54,23 +82,27 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 		return nil
 	}
 	if b.WindowState != "normal" {
-		if e := s.setBounds(ctx, id, map[string]any{"windowState": "normal"}); e != nil {
+		if e := s.setWindowState(ctx, id, "normal"); e != nil {
 			return e
 		}
 	}
 	if !visible {
+		// macOS may clamp the requested position after acknowledging it.
+		// Minimize directly and wait for the native transition to complete.
+		if runtime.GOOS == "darwin" {
+			return s.setWindowState(ctx, id, "minimized")
+		}
 		// Prefer an off-screen window so rendering continues normally.
 		if e := s.setBounds(ctx, id, map[string]any{"left": offscreen, "top": 0, "width": 1280, "height": 900}); e != nil {
 			return e
 		}
-		// macOS clamps even horizontal moves to keep part of the window on
-		// screen. Minimize that task window instead of leaving an edge visible.
+		// Fall back to minimizing if the window manager clamps this position.
 		_, now, e := s.window(ctx)
 		if e != nil {
 			return e
 		}
 		if now.Left > offscreen/2 {
-			return s.setBounds(ctx, id, map[string]any{"windowState": "minimized"})
+			return s.setWindowState(ctx, id, "minimized")
 		}
 		return nil
 	}

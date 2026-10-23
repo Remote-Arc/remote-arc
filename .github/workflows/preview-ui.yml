@@ -73,6 +73,9 @@ jobs:
               '',
               `**Public site:** ${preview}`,
               `**Dashboard:** ${preview}/overview`,
+              `**Onboarding:** ${preview}/device?code=DEMO-CODE`,
+              `**Onboarding permissions:** ${preview}/device?code=DEMO-CODE&demo=permissions`,
+              `**Onboarding MCP connection:** ${preview}/device?code=DEMO-CODE&demo=ready`,
               `**Arc Chat:** ${preview}/dashboard/agent/chat`,
               `**Workflows:** ${preview}/dashboard/agent/skills`,
               `**Teammate profiles:** ${preview}/dashboard/agent/settings?section=teammates`,
@@ -84,7 +87,7 @@ jobs:
               `**Subscription management:** ${preview}/settings?section=billing`,
               unique ? `**This deployment:** ${unique}` : '',
               '',
-              'Dashboard routes use simulated data. Arc and billing interactions are local demos; production OAuth, D1, MCP, Stripe and devices are not connected. No real payment is made.',
+              'Dashboard routes use simulated data. Onboarding, Arc and billing interactions are local demos; production OAuth, D1, MCP, Stripe and devices are not connected. No real payment is made.',
             ].filter(Boolean).join('\n');
 
             const { owner, repo } = context.repo;
@@ -107,7 +110,7 @@ jobs:
             }
 
   cleanup:
-    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]' && !contains(github.event.pull_request.labels.*.name, 'keep-preview')
     runs-on: ubuntu-latest
 
     steps:

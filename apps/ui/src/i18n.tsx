@@ -31,8 +31,13 @@ function initialLocale(): Locale {
   try {
     const saved = localStorage.getItem(LOCALE_KEY);
     if (saved === "en" || saved === "zh") return saved;
-  } catch { /* Storage can be disabled; the site still works in English. */ }
-  return "en";
+  } catch { /* Storage can be disabled; use the browser preference. */ }
+  const preferred = typeof navigator === "undefined" ? "" : navigator.languages?.[0] || navigator.language;
+  return /^zh(?:-|$)/i.test(preferred) ? "zh" : "en";
+}
+
+function rememberLocale(locale: Locale) {
+  try { localStorage.setItem(LOCALE_KEY, locale); } catch { /* In-memory switching still works. */ }
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
@@ -40,7 +45,6 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
-    try { localStorage.setItem(LOCALE_KEY, locale); } catch { /* In-memory switching still works. */ }
     if (window.location.pathname === "/") {
       document.title = locale === "zh" ? "Remote Arc — 让 AI 安全连接你的电脑" : "Remote Arc";
       document.querySelector('meta[name="description"]')?.setAttribute(
@@ -73,6 +77,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<I18n>(() => ({
     locale,
     setLocale(next) {
+      rememberLocale(next);
       setLocaleState(next);
     },
     tr: (en, zh) => (locale === "zh" ? zh : en),
@@ -87,7 +92,7 @@ export function useI18n() {
   return value;
 }
 
-export function LanguageSwitcher({ compact = false, syncUrl = false, dropdown = false }: { compact?: boolean; syncUrl?: boolean; dropdown?: boolean }) {
+export function LanguageSwitcher({ compact = false, syncUrl = false, dropdown = false, iconOnly = false }: { compact?: boolean; syncUrl?: boolean; dropdown?: boolean; iconOnly?: boolean }) {
   const { locale, setLocale } = useI18n();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -104,7 +109,9 @@ export function LanguageSwitcher({ compact = false, syncUrl = false, dropdown = 
     return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); };
   }, [open]);
   const choose = (next: Locale) => {
-    if (syncUrl && isWebsite()) {
+    const path = location.pathname.replace(/\/+$/, "") || "/";
+    if (syncUrl && isWebsite() && !dashboardPaths.has(path)) {
+      rememberLocale(next);
       const url = new URL(window.location.href);
       url.pathname = pageForLanguage(url.pathname, next);
       url.searchParams.delete("lang");
@@ -120,17 +127,20 @@ export function LanguageSwitcher({ compact = false, syncUrl = false, dropdown = 
     setOpen(false);
   };
   if (dropdown) return (
-    <div className="languageDropdown" ref={menuRef}>
+    <div className={"languageDropdown" + (iconOnly ? " iconOnly" : "")} ref={menuRef}>
       <button type="button" className="languageDropdownTrigger"
-        aria-label={locale === "zh" ? "选择网站语言" : "Select website language"}
+        aria-label={iconOnly ? (locale === "zh" ? "语言" : "Language") : (locale === "zh" ? "选择网站语言" : "Select website language")}
+        title={iconOnly ? (locale === "zh" ? "语言" : "Language") : undefined}
         aria-haspopup="menu" aria-expanded={open}
         onClick={() => setOpen(previous => !previous)}>
         <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 5h12M9 3v2m3 0c-.4 5-2.7 8.2-7 10m2-7c1 2.1 3 4.1 6 5"/>
-          <path d="m14 21 4-10 4 10m-6.8-3h5.6"/>
+          {iconOnly ? <><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></> : <>
+            <path d="M3 5h12M9 3v2m3 0c-.4 5-2.7 8.2-7 10m2-7c1 2.1 3 4.1 6 5"/>
+            <path d="m14 21 4-10 4 10m-6.8-3h5.6"/>
+          </>}
         </svg>
-        <span className="languageDropdownCode">{locale === "zh" ? "中文" : "EN"}</span>
-        <svg aria-hidden="true" viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m2 4 4 4 4-4" /></svg>
+        {!iconOnly && <><span className="languageDropdownCode">{locale === "zh" ? "中文" : "EN"}</span>
+        <svg aria-hidden="true" viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m2 4 4 4 4-4" /></svg></>}
       </button>
       {open && <div className="languageDropdownMenu" role="menu" aria-label={locale === "zh" ? "语言" : "Languages"}>
         <button type="button" role="menuitemradio" lang="en" aria-checked={locale === "en"}

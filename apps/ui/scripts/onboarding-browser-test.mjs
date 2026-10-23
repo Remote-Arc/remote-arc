@@ -59,7 +59,28 @@ const browser = await chromium.launch({ headless: true, ...(process.platform ===
 const screenshot = async (page, name) => { if (output) await page.screenshot({ path: path.join(output, name + '.png'), fullPage: true, animations: 'disabled' }); };
 const noOverflow = async page => assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'page must fit the viewport');
 try {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, colorScheme: 'light' });
+  for (const [preferred, expected] of [['en-NZ', 'en'], ['zh-CN', 'zh-CN'], ['zh-TW', 'zh-CN'], ['fr-FR', 'en']]) {
+    const localeContext = await browser.newContext({ locale: preferred });
+    await localeContext.route('**/*', route => route.request().url().startsWith(origin + '/') ? route.continue() : route.abort());
+    // A secondary language must not override the user's primary preference.
+    await localeContext.addInitScript(primary => Object.defineProperty(navigator, 'languages', { value: [primary, 'zh-CN'] }), preferred);
+    const localePage = await localeContext.newPage();
+    await localePage.goto(origin + '/');
+    await localePage.locator('.publicPage').waitFor();
+    assert.equal(await localePage.evaluate(() => localStorage.getItem('remotearc-locale-v2')), null, 'a marketing URL must not save an automatic language choice');
+    await localePage.goto(origin + '/device?code=ABCD-EFGH');
+    await localePage.locator('.pairingShell').waitFor();
+    assert.equal(await localePage.locator('html').getAttribute('lang'), expected, 'onboarding follows primary browser language: ' + preferred);
+    assert.doesNotMatch(await localePage.locator('.pairingHeader').innerText(), /EN|English|中文|简体中文/, 'the header must not display language names');
+    assert.equal(await localePage.getByRole('menuitemradio').count(), 0, 'language options appear only after opening the menu');
+    await localePage.goto(origin + '/device?code=ABCD-EFGH&lang=en');
+    await localePage.getByRole('button', { name: 'Authorize this device' }).waitFor();
+    assert.equal(await localePage.locator('html').getAttribute('lang'), 'en', 'an explicit language URL overrides automatic detection');
+    await localeContext.close();
+  }
+  console.log('PASS: primary browser language, Chinese regions, English fallback, explicit URL and quiet header');
+
+  const context = await browser.newContext({ locale: 'en-NZ', viewport: { width: 1280, height: 1000 }, colorScheme: 'light' });
   // No fixture page may contact production APIs or external services.
   await context.route('**/*', route => route.request().url().startsWith(origin + '/') ? route.continue() : route.abort());
   const page = await context.newPage();
@@ -70,12 +91,12 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark', 'a new user starts dark even with a light OS');
   await screenshot(page, 'onboarding-pair');
   await page.getByRole('button', { name: 'Authorize this device' }).click();
-  await page.getByRole('button', { name: 'Finish setup' }).waitFor({ state: 'visible' });
-  await page.waitForFunction(() => ![...document.querySelectorAll('button')].find(button => button.textContent === 'Finish setup')?.disabled);
+  await page.getByRole('button', { name: 'Continue to AI connection' }).waitFor({ state: 'visible' });
+  await page.waitForFunction(() => ![...document.querySelectorAll('button')].find(button => button.textContent === 'Continue to AI connection')?.disabled);
   assert.deepEqual(device.allowed_tools, safeTools, 'pairing must remain read-only by default');
   await screenshot(page, 'onboarding-permissions');
-  await page.getByRole('button', { name: 'Finish setup' }).click();
-  await page.getByRole('heading', { name: 'Computer ready', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Continue to AI connection' }).click();
+  await page.getByRole('heading', { name: 'Connect your AI', exact: true }).waitFor();
   for (const client of ['chatgpt', 'claude', 'cursor']) {
     const link = page.locator('.pairAgentGuide[href="https://remotearc.app/install/' + client + '"]');
     assert.equal(await link.count(), 1, client + ' must have an official guide');
@@ -84,8 +105,12 @@ try {
   assert.equal(await page.locator('.pairAgentLaunch[href="https://chatgpt.com/plugins?q=Remote%20Arc"]').count(), 1, 'direct ChatGPT launch stays available');
   await noOverflow(page);
   await screenshot(page, 'onboarding-ready-dark');
-  await page.getByRole('button', { name: '切换网站语言为简体中文' }).click();
-  await page.getByRole('heading', { name: '电脑已就绪', exact: true }).waitFor();
+  const navigationCount = await page.evaluate(() => performance.timeOrigin);
+  await page.getByRole('button', { name: 'Language', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '简体中文' }).click();
+  await page.getByRole('heading', { name: '连接你的 AI', exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => performance.timeOrigin), navigationCount, 'switching language must preserve the live onboarding state');
+  assert.equal(new URL(page.url()).searchParams.get('lang'), 'zh', 'manual language selection updates the onboarding URL without reloading');
   assert.equal(await page.locator('.pairAgentGuide[href="https://remotearc.app/zh/install/chatgpt"]').count(), 1, 'Chinese setup must open the Chinese guide');
   await page.setViewportSize({ width: 390, height: 844 });
   await noOverflow(page);
@@ -96,6 +121,9 @@ try {
   await screenshot(page, 'onboarding-ready-light-zh');
   await page.reload();
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light', 'saved light preference survives reload');
+  await page.goto(origin + '/device?code=ABCD-EFGH');
+  await page.getByRole('button', { name: '语言', exact: true }).waitFor();
+  assert.equal(await page.locator('html').getAttribute('lang'), 'zh-CN', 'manual language preference survives reload and overrides the browser default');
   assert.deepEqual(mutations.map(item => item.path), ['/api/pairing/approve'], 'opening guides and finishing with recovery off must not grant capabilities');
   console.log('PASS: local onboarding, safe defaults, optional guides, Chinese, mobile, saved light mode');
 

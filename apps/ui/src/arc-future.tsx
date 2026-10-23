@@ -21,12 +21,16 @@ function ArcStatus({ children }: { children: React.ReactNode }) {
 
 export function ArcTeaser() {
   const {tr,locale}=useI18n();
+  const slackBotHref = (import.meta.env?.VITE_UI_PREVIEW === "1" ? "" : "https://agent.remotearc.app") + "/dashboard/connect/apps?provider=slack&lang=" + locale;
   return <section className="arcProductTeaser" aria-labelledby="arcV3TeaserHeading">
     <div className="arcProductTeaserCopy"><span className="marketingLabel">{tr('THE NEXT CHAPTER / ARC','下一篇章 / ARC')}<i>{tr('Available now','现已上线')}</i></span>
     <h2 id="arcV3TeaserHeading">{tr('Your next personal agent.','你的下一位个人 AI 队友。')}</h2>
     <p>{tr('A familiar conversation. A whole fleet behind it. Chat with Remote Arc to check your devices, find a workspace and get work moving.','熟悉的聊天方式，背后是你的整个设备集群。和 Remote Arc 对话，查看设备情况、找到工作区，让工作继续。')}</p>
     <ul><li><Icon name="chat"/>{tr('Talk naturally. Get work done.','自然对话，完成工作。')}</li><li><Icon name="device"/>{tr('Coordinate apps and your own fleet.','协调应用与自己的设备集群。')}</li><li><Icon name="routine"/>{tr('One-off tasks. Everyday routines.','一次性任务，每日 Routine。')}</li></ul>
-    <a className="marketingSecondary" href={localizedWebsiteHref('/arc',locale)}>{tr('Meet Arc','认识 Arc')}<Icon name="arrowUpRight" size={16}/></a>
+    <div className="arcProductTeaserActions">
+      <a className="marketingSecondary" href={localizedWebsiteHref('/arc',locale)}>{tr('Meet Arc','认识 Arc')}<Icon name="arrowUpRight" size={16}/></a>
+      <a className="marketingSecondary" href={slackBotHref}><img src="/app-brands/slack.svg" alt="" width="16" height="16"/>{tr('Use in Slack','在 Slack 中使用')}<Icon name="arrowUpRight" size={16}/></a>
+    </div>
     <small>{tr('Arc and Connect share your connections. Open Arc to try it.','Arc 与 Connect 共用你的连接，现在即可打开 Arc 体验。')}</small></div>
     <SlackAgentPreview />
   </section>;

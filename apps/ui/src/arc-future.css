@@ -13,6 +13,7 @@
 .arcV3Secondary span{color:var(--accent)}
 .arcV3HeroActions{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;margin:28px auto 0}
 /* Home teaser is centered, narrow and atmospheric. */
+.arcProductTeaserActions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .arcV3Teaser{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:center;text-align:center;border-block:1px solid var(--line);padding:64px 18px 69px;margin:65px auto 75px;overflow:hidden}
 .arcV3TeaserAmbient{position:absolute;inset:-40%;z-index:-1;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--accent) 10%,transparent) 0%,transparent 42%);pointer-events:none}
 .arcV3TeaserLine{font-size:10px;letter-spacing:.17em;color:var(--muted);font-weight:720}

@@ -43,14 +43,16 @@ func (s *session) setBounds(ctx context.Context, id int, b map[string]any) error
 	return s.conn.Call(ctx, "Browser.setWindowBounds", map[string]any{"windowId": id, "bounds": b}, nil)
 }
 
-// Native window transitions can finish after the CDP command acknowledges them.
+// A native window transition can acknowledge without applying during startup.
+// Reissue the idempotent state request while observing the actual window, as
+// ChromeDriver does, rather than only polling a request the OS has discarded.
 func (s *session) setWindowState(ctx context.Context, id int, state string) error {
-	if e := s.setBounds(ctx, id, map[string]any{"windowState": state}); e != nil {
-		return e
-	}
 	wait, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	tick := time.NewTicker(50 * time.Millisecond)
+	if e := s.setBounds(wait, id, map[string]any{"windowState": state}); e != nil {
+		return e
+	}
+	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
 		_, b, e := s.window(wait)
@@ -64,6 +66,9 @@ func (s *session) setWindowState(ctx context.Context, id int, state string) erro
 		case <-wait.Done():
 			return fmt.Errorf("task window did not become %s: %w", state, wait.Err())
 		case <-tick.C:
+			if e := s.setBounds(wait, id, map[string]any{"windowState": state}); e != nil {
+				return e
+			}
 		}
 	}
 }

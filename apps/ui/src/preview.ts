@@ -5,6 +5,7 @@ import appDirectory from "./app-directory.json" with { type: "json" };
 import {createArcPreview} from "./arc-preview.js";
 import {createBillingPreview} from "./billing-preview.js";
 import {createFollowupPreview} from './followup-preview.js';
+import {createOnboardingPreview} from './onboarding-preview.js';
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
@@ -15,6 +16,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
   if (!UI_PREVIEW || typeof window === "undefined") return;
 
   const nativeFetch = window.fetch.bind(window);
+  const onboardingPreview = createOnboardingPreview(new URL(location.href));
   const followupPreview=createFollowupPreview(window.sessionStorage);
   const previewEmployees=[{id:'preview-developer',name:'开发队友',responsibility:'技术架构与产品实现'},{id:'preview-designer',name:'设计队友',responsibility:'产品体验与交互设计'},{id:'preview-business',name:'商务队友',responsibility:'商业模式与市场验证'},{id:'preview-researcher',name:'领域专家',responsibility:'行业调研与事实核对'}].map(person=>({...person,version:1,status:'active',instructions:'',modelId:'auto',avatar:{kind:'initials',color:'#446655'},scope:{appMode:'none',connectionIds:[],deviceIds:[],deviceTools:[],skillIds:[]},createdAt:previewNow(),updatedAt:previewNow()}));
   const previewConnections=[
@@ -217,6 +219,9 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       init?.method ||
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
+
+    const onboardingResponse = onboardingPreview.handle(url, method, init?.body ?? (input instanceof Request && method !== "GET" ? await input.clone().text() : undefined));
+    if (onboardingResponse) return onboardingResponse;
 
     if(url.pathname.startsWith('/api/arc/attachments')){if(!(await runtimeConfig()).arcAvailable)return json({error:'ARC_NOT_CONFIGURED'},503);const response=await inputPreview.handle(url,method,init?.body??(input instanceof Request?await input.blob():undefined),init?.headers);if(response)return response;}
     if((url.pathname.startsWith('/api/arc/sessions')||url.pathname.startsWith('/api/arc/skills')||url.pathname.startsWith('/api/arc/memory')||url.pathname.startsWith('/api/arc/app-connections/'))) {
@@ -437,7 +442,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       });
     }
 
-    if (url.pathname === "/api/devices") return json(devices);
+    if (url.pathname === "/api/devices") return json([...devices, ...onboardingPreview.devices()]);
     if (url.pathname === "/api/automations") return json({ automations: automations.map(item => ({ ...item, run_started_count: item.run_count + (item.status === "running" ? 1 : 0) })), capabilities: { hosted_planner: true, github_merge: true }, scheduler: { state: "healthy", last_success_at: new Date().toISOString(), overdue_count: 0 } });
     const taskId = url.pathname.match(/^\/api\/automations\/([^/]+)$/)?.[1];
     if (taskId) {

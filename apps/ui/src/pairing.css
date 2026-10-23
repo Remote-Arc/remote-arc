@@ -9,6 +9,9 @@
 .pairingShell :is(a, button, input):focus-visible { outline: 2px solid var(--dash-accent); outline-offset: 4px; }
 .pairingHeader { max-width: 1120px; margin: auto; min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--dash-line); }
 .pairingHeader > div { display: flex; align-items: center; gap: 10px; }
+.pairingPreview { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; max-width: 740px; margin: 20px auto -16px; padding: 10px 12px; border: 1px dashed var(--dash-line); border-radius: 8px; color: var(--dash-muted); font-size: 12px; }
+.pairingPreview nav { display: flex; gap: 14px; }
+.pairingPreview a { text-decoration: underline; text-underline-offset: 3px; }
 .pairingShell .brand.brandHasWordmark { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
 .pairingShell .brand .brandLockup { display: inline-flex; gap: .18em; font: 600 22px/1 "Arc Wordmark", Inter, sans-serif; letter-spacing: -.045em; color: var(--dash-text); }
 :root[data-theme] .pairingShell .brand .brandLockup b { font: inherit; color: var(--dash-text) !important; background: none !important; -webkit-text-fill-color: currentColor !important; }

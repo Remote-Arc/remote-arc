@@ -43,6 +43,7 @@ import {TrustPage} from "./trust-pages.js";
 import {BrandWordmark} from './brand-wordmark.js';
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
+import { ONBOARDING_PREVIEW_CODE, createOnboardingPreviewDevice, onboardingPreviewStep } from "./onboarding-preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import { parsePendingApprovals, parsePersistentApprovals, parseSecurityState, type PendingApproval, type PersistentApproval } from "./security-state.js";
 import { SecurityAuthorizations } from "./security-authorizations.js";
@@ -622,6 +623,10 @@ function PairingCard({ title, body, children, step = 1 }: {
         <Brand compact />
         <div><LanguageSwitcher compact syncUrl dropdown iconOnly /><ThemeSwitcher compact /></div>
       </header>
+      {UI_PREVIEW && <aside className="pairingPreview" aria-label={tr("Onboarding preview", "配对流程预览")}>
+        <span>{tr("UI preview · simulated computer", "UI 预览 · 模拟电脑")}</span>
+        <nav>{(["pair", "permissions", "ready"] as const).map((phase, index) => <a key={phase} href={"/device?code=" + ONBOARDING_PREVIEW_CODE + "&demo=" + phase + "&lang=" + locale}>{[tr("Pair", "配对"), tr("Permissions", "权限设置"), tr("Ready", "已就绪")][index]}</a>)}</nav>
+      </aside>}
       <div className="pairingFlow">
         <ol className="pairingSteps" aria-label={tr("Computer setup", "电脑设置")}>
           {steps.map((label, index) => (
@@ -655,16 +660,18 @@ function PairDevice({
   onSignedIn: () => Promise<void>;
 }) {
   const { tr, locale } = useI18n();
+  const previewStep = UI_PREVIEW ? onboardingPreviewStep(new URL(location.href)) : "pair";
+  const previewDevice = UI_PREVIEW && previewStep !== "pair" ? createOnboardingPreviewDevice() : null;
   const initialCode =
-    new URLSearchParams(location.search).get("code")?.toUpperCase() || "";
+    new URLSearchParams(location.search).get("code")?.toUpperCase() || (UI_PREVIEW ? ONBOARDING_PREVIEW_CODE : "");
   const [code, setCode] = useState(initialCode);
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
-  const [approvedDeviceId, setApprovedDeviceId] = useState("");
-  const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
-  const [setupStep, setSetupStep] = useState<"permissions" | "workspace" | "done">("permissions");
+  const [approvedDeviceId, setApprovedDeviceId] = useState(previewDevice?.id || "");
+  const [pairedDevice, setPairedDevice] = useState<Device | null>(previewDevice);
+  const [setupStep, setSetupStep] = useState<"permissions" | "workspace" | "done">(previewStep === "ready" ? "done" : "permissions");
   const [directoryBrowser, setDirectoryBrowser] = useState<DirectoryBrowser | null>(null);
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [workspacePathInput, setWorkspacePathInput] = useState("");
@@ -5216,6 +5223,7 @@ function Dashboard({
           <div className="previewModeBanner" role="status">
             <strong>PR PREVIEW</strong>
             <span>{tr("Interactive Arc demo · simulated data · no real accounts, tools, models or payments", "Arc 交互演示 · 模拟数据 · 不连接真实账号、工具、模型或支付")}</span>
+            <a href="/device">{tr("Preview onboarding", "预览配对流程")} →</a>
           </div>
         )}
         <header className="mobileTopbar">

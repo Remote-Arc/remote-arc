@@ -36,8 +36,10 @@ sql.prepare('UPDATE oauth_tokens SET revoked_at=NULL').run();
 assert.equal((await decode(await api('?segment=device-only'))).total,0,'A valid MCP access token counts as connected');
 sql.prepare('DELETE FROM oauth_tokens').run();
 for(const from of [undefined,'','   ']){
- const status=await decode(await handleAdminServiceRequest(request(),{...env,EMAIL_FROM:from}));
+ const status=await decode(await handleAdminServiceRequest(request(),{...env,FOLLOWUP_FROM:from}));
  assert.equal(status.emailConfigured,true,'An optional sender override must not disable the existing email channel');
+ const detail=await decode(await handleAdminServiceRequest(request('/person'),{...env,FOLLOWUP_FROM:from,FOLLOWUP_REPLY_TO:from}));
+ assert.deepEqual(detail.sender,{from:'Remote Arc <support@remotearc.app>',replyTo:'support@remotearc.app'},'Login sender settings and blank overrides must not replace the follow-up support sender');
 }
 for(const key of [undefined,'','   ']){
  const status=await decode(await handleAdminServiceRequest(request(),{...env,RESEND_API_KEY:key}));
@@ -54,12 +56,12 @@ assert.equal((await decode(await api('/drafts','POST',changed))).revision,2,'Ret
 assert.equal((await decode(await api('/drafts','POST',{...changed,body:changed.body+' Stale edit.'}),409)).error,'draft_conflict');
 assert.equal((await decode(await api('/drafts','POST',{...changed,userId:'other',expectedRevision:2}),409)).error,'draft_conflict','Draft ownership cannot be changed');
 assert.equal((await decode(await api('/'+id+'/send','POST',{expectedRevision:1}),409)).error,'draft_conflict','An outdated reviewed snapshot is never sent');
-const detail=await decode(await api('/person'));assert.equal(detail.messages[0].draft_revision,2);assert(detail.sender.from);assert(detail.emailConfigured);assert(!JSON.stringify(detail).includes('fixture-key'));
+const detail=await decode(await api('/person'));assert.equal(detail.messages[0].draft_revision,2);assert.deepEqual(detail.sender,{from:'Remote Arc <support@remotearc.app>',replyTo:'support@remotearc.app'});assert(detail.emailConfigured);assert(!JSON.stringify(detail).includes('fixture-key'));
 let sends=0;const native=globalThis.fetch;
 globalThis.fetch=async(input,options)=>{
  assert.equal(String(input),'https://api.resend.com/emails');sends++;
  assert.equal(new Headers(options?.headers).get('idempotency-key'),'followup/'+id);
- const body=JSON.parse(String(options?.body));assert.equal(body.from,'Remote Arc <login@remotearc.app>');assert.deepEqual(body.to,['person@example.invalid']);assert(body.text.includes('/email/follow-up/unsubscribe?token='));assert(body.headers['List-Unsubscribe-Post']);assert(body.html.includes('role="presentation"'));assert(body.html.includes('Share your feedback'));assert(body.html.includes('Your next result'));assert.equal(body.html,sql.prepare('SELECT html_body FROM user_followup_messages WHERE id=?').get(id)?.html_body,'Sending uses the exact saved HTML snapshot');assert(!/<img[^>]+(?:token=|person%40|person@)/i.test(body.html),'Brand image is static, with no recipient tracking');
+ const body=JSON.parse(String(options?.body));assert.equal(body.from,detail.sender.from);assert.equal(body.reply_to,detail.sender.replyTo);assert.deepEqual(body.to,['person@example.invalid']);assert(body.text.includes('/email/follow-up/unsubscribe?token='));assert(body.headers['List-Unsubscribe-Post']);assert(body.html.includes('role="presentation"'));assert(body.html.includes('Share your feedback'));assert(body.html.includes('Your next result'));assert.equal(body.html,sql.prepare('SELECT html_body FROM user_followup_messages WHERE id=?').get(id)?.html_body,'Sending uses the exact saved HTML snapshot');assert(!/<img[^>]+(?:token=|person%40|person@)/i.test(body.html),'Brand image is static, with no recipient tracking');
  return Response.json({id:'provider-fixture'});
 };
 try{
@@ -68,16 +70,16 @@ try{
   assert.equal(sql.prepare('SELECT status FROM user_followup_messages WHERE id=?').get(id)?.status,'draft');
  }
  assert.equal(sends,0,'Disabled channels never dispatch or claim a reviewed draft');
- env.EMAIL_FROM=undefined;
  const [first,second]=await Promise.all([api('/'+id+'/send','POST',{}),api('/'+id+'/send','POST',{})]);
  assert([200,409].includes(first.status));assert([200,409].includes(second.status));assert.equal(sends,1);
  assert.equal((await decode(await api('/'+id+'/send','POST',{}))).status,'sent');assert.equal(sends,1);
  assert.equal((await decode(await api('/drafts','POST',{...changed,subject:'Cannot edit a sent email',expectedRevision:2}),409)).error,'draft_not_editable');
  const later=await createDraft();assert.equal((await api('/'+later+'/send','POST',{})).status,409);assert.equal(sends,1,'72 hour cooldown blocks another draft');
+ env.FOLLOWUP_FROM=' Remote Arc Support <help@example.invalid> ';env.FOLLOWUP_REPLY_TO=' replies@example.invalid ';
  const other=await createDraft('other');assert.equal((await decode(await api('/'+other+'/send','POST',{}),409)).error,'contact_permission_required');
  await decode(await api('/other','PATCH',{...profile,nextFollowupAt:null}));
- env.EMAIL_FROM='Remote Arc <hello@example.invalid>';
- globalThis.fetch=async(_input,options)=>{assert.equal(JSON.parse(String(options?.body)).from,env.EMAIL_FROM,'Explicit sender overrides remain authoritative');sends++;throw Error('simulated ambiguous timeout');};
+ const configured=await decode(await api('/other'));assert.deepEqual(configured.sender,{from:'Remote Arc Support <help@example.invalid>',replyTo:'replies@example.invalid'});
+ globalThis.fetch=async(_input,options)=>{const payload=JSON.parse(String(options?.body));assert.equal(payload.from,configured.sender.from,'Dedicated follow-up sender overrides remain authoritative');assert.equal(payload.reply_to,configured.sender.replyTo);assert(payload.text.includes(configured.sender.replyTo));sends++;throw Error('simulated ambiguous timeout');};
  assert.equal((await api('/'+other+'/send','POST',{})).status,502);assert.equal((await decode(await api('/'+other+'/send','POST',{}))).status,'unknown');assert.equal(sends,2,'Unknown deliveries never trigger a blind resend');
  const contact=sql.prepare('SELECT * FROM user_followup_contacts WHERE user_id=?').get('person')!;
  const unsubscribe='https://remotearc.app/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;

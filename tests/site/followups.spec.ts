@@ -32,6 +32,10 @@ test('Send records the contact basis in place and submits the latest saved conte
  await open(page);await save(page).click();await expect(send(page)).toBeEnabled();
  await subject(page).fill('Latest reviewed installation help');await send(page).click();
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();
+ await expect(dialog.getByText('Remote Arc <support@remotearc.app>',{exact:true})).toBeVisible();
+ await expect(dialog.getByText('support@remotearc.app',{exact:true})).toBeVisible();
+ await expect(dialog.locator('dt').filter({hasText:/^(Reply to|回复地址)$/})).toBeVisible();
+ await expect(dialog).not.toContainText('login@remotearc.app');
  await expect(dialog.getByRole('radio').first().locator('..')).toHaveCSS('flex-direction','row');
  await dialog.getByRole('button',{name:/Record basis & send|记录依据并发送/}).click();
  await expect(dialog.getByRole('alert')).toContainText(/Choose|选择/);
@@ -76,4 +80,23 @@ for(const reason of ['email_not_configured','recipient_suppressed','delivery_unc
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();await expect(dialog.locator('.adminFollowupSendHint')).toBeVisible();
  await expect(dialog.getByRole('button',{name:/Record basis & send|记录依据并发送|Confirm send|确认发送/})).toHaveCount(0);
  await page.keyboard.press('Escape');await expect(subject(page)).toBeEditable();
+});
+
+test('Contact suppression keeps a compact checkbox and readable label, and saves independently',async({page})=>{
+ await open(page);await page.getByRole('button',{name:/^(Contact notes|跟进记录)$/}).click();
+ const checkbox=page.getByRole('checkbox',{name:/Stop follow-ups to this user|停止向此用户发送回访/});
+ const label=checkbox.locator('..'),text=label.locator('span');await expect(checkbox).toBeVisible();
+ const box=await checkbox.boundingBox(),copy=await text.boundingBox();
+ expect(box).not.toBeNull();expect(copy).not.toBeNull();
+ expect(box!.width).toBeGreaterThanOrEqual(16);expect(box!.width).toBeLessThanOrEqual(20);
+ expect(box!.height).toBeLessThanOrEqual(20);expect(copy!.width).toBeGreaterThan(150);expect(copy!.height).toBeLessThan(30);
+ expect(copy!.x).toBeGreaterThan(box!.x+box!.width);
+ await text.click();await expect(checkbox).toBeChecked();
+ await checkbox.focus();await page.keyboard.press('Space');await expect(checkbox).not.toBeChecked();
+ await checkbox.check();await page.getByRole('button',{name:/^(Save notes|保存记录)$/}).click();
+ await expect(page.getByRole('status').filter({hasText:/Contact notes saved|跟进记录已保存/})).toBeVisible();
+ await expect(checkbox).toBeDisabled();await page.reload();await page.getByRole('button',{name:/Alex Chen/}).click();
+ await page.getByRole('button',{name:/^(Contact notes|跟进记录)$/}).click();
+ await expect(checkbox).toBeChecked();await expect(checkbox).toBeDisabled();
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

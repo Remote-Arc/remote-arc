@@ -1,6 +1,6 @@
 {
   "name": "remotelink",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Controlled remote computer access for AI across computers you own.",
   "type": "module",
   "bin": {
@@ -33,7 +33,7 @@
     "tsup": "^8.5.0",
     "typescript": "^6.0.3"
   },
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://remotearc.app",
   "repository": {
     "type": "git",

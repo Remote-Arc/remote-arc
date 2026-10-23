@@ -5,7 +5,7 @@ export type SlackBotEnv = ArcEnv & { APP_SLACK_SIGNING_SECRET?:string; SLACK_BOT
 export const SLACK_BOT_SCOPES = ['app_mentions:read','chat:write','im:history','im:write','users:read'] as const;
 export type BotTokens = { accessToken:string; refreshToken?:string; expiresAt:string|null };
 export type BotInstallation = {team_id:string;app_id:string;bot_user_id:string;team_name:string;installer_user_id:string;token_ciphertext:string|null;status:string;generation:number};
-export type SlackJob = {id:string;team_id:string;slack_user_id:string|null;channel_id:string|null;thread_ts:string|null;event_type:string;body_ciphertext:string;status:string;user_id:string|null;run_id:string|null;reply_channel:string|null;reply_ts:string|null;reply_ciphertext:string|null;delivery_kind:string|null;lease:string|null;attempts:number;created_at:string};
+export type SlackJob = {id:string;team_id:string;slack_user_id:string|null;channel_id:string|null;source_ts:string|null;thread_ts:string|null;event_type:string;body_ciphertext:string;status:string;user_id:string|null;run_id:string|null;reply_channel:string|null;reply_ts:string|null;reply_ciphertext:string|null;delivery_kind:string|null;lease:string|null;attempts:number;created_at:string};
 export const slackStamp=()=>new Date().toISOString();
 export const slackDashboard=(env:SlackBotEnv)=>env.DASHBOARD_ORIGIN||'https://agent.remotearc.app';
 export const slackReady=(env:SlackBotEnv)=>env.SLACK_BOT_ENABLED!=='0'&&Boolean(env.APP_SLACK_SIGNING_SECRET&&env.APP_SLACK_CLIENT_ID&&env.APP_SLACK_CLIENT_SECRET&&env.APP_TOKEN_KEY);
@@ -28,7 +28,7 @@ export async function slackInstallation(env:SlackBotEnv,team:string){
  if(row?.status==='refreshing'&&Date.parse(row.updated_at)>Date.now()-30000)throw new SlackBotError('slack_refresh_in_progress',5);
  return row?.status==='active'?row:null;
 }
-export async function slackApi(env:SlackBotEnv,installation:BotInstallation,method:string,input:Record<string,unknown>,fetcher:typeof fetch=fetch):Promise<Record<string,any>>{
+export async function slackApi(env:SlackBotEnv,installation:BotInstallation,method:string,input:Record<string,unknown>,fetcher:typeof fetch=fetch,timeoutMs=10000):Promise<Record<string,any>>{
  let token=await unseal<BotTokens>(env,installation.token_ciphertext!,slackTokenContext(installation.team_id));
  if(token.expiresAt&&Date.parse(token.expiresAt)<Date.now()+60_000){
   // Slack rotates refresh tokens. Claim the generation before dispatch, so a
@@ -47,7 +47,7 @@ export async function slackApi(env:SlackBotEnv,installation:BotInstallation,meth
  let response:Response;
  const lookup=method==='users.info',url=new URL('https://slack.com/api/'+method);
  if(lookup)for(const [key,value] of Object.entries(input))url.searchParams.set(key,String(value));
- try{response=await fetcher(url.href,{method:lookup?'GET':'POST',redirect:'manual',headers:{authorization:'Bearer '+token.accessToken,...(lookup?{}:{'content-type':'application/json; charset=utf-8'})},...(lookup?{}:{body:JSON.stringify(input)}),signal:AbortSignal.timeout(10000)});}
+ try{response=await fetcher(url.href,{method:lookup?'GET':'POST',redirect:'manual',headers:{authorization:'Bearer '+token.accessToken,...(lookup?{}:{'content-type':'application/json; charset=utf-8'})},...(lookup?{}:{body:JSON.stringify(input)}),signal:AbortSignal.timeout(timeoutMs)});}
  catch{throw new SlackBotError('slack_delivery_unknown',['users.info','conversations.open'].includes(method)?5:0,true);}
  if(response.status===429)throw new SlackBotError('slack_rate_limited',Math.max(1,Math.min(3600,Number(response.headers.get('retry-after')||30))));
  if(response.status>=500)throw new SlackBotError('slack_delivery_unknown',['users.info','conversations.open'].includes(method)?5:0,true);

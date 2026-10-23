@@ -111,10 +111,17 @@ func PinBinary(ctx context.Context, binary string) (string, error) {
 	// executable being read or started is unreliable on Windows.
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+	var acquireErr error
 	for {
 		lock, e := lease.Acquire(filepath.Join(config.Dir(), "integrations", "bin", ".locks"), key)
 		if e != nil {
-			return "", errors.New("native_cache_unavailable")
+			if runtime.GOOS != "windows" {
+				return "", errors.New("native_cache_unavailable")
+			}
+			// A lock directory can be pending deletion while another client
+			// closes its Windows handle. Retry within the same bounded wait;
+			// never proceed without actually acquiring the lease.
+			acquireErr = e
 		}
 		if lock != nil {
 			defer lock.Release()
@@ -124,6 +131,9 @@ func PinBinary(ctx context.Context, binary string) (string, error) {
 		select {
 		case <-ctx.Done():
 			timer.Stop()
+			if acquireErr != nil {
+				return "", errors.New("native_cache_unavailable")
+			}
 			return "", errors.New("native_cache_busy")
 		case <-timer.C:
 		}

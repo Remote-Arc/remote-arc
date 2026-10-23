@@ -63,6 +63,10 @@ type session struct {
 	// nothing, so a retry can prove nothing has been sent since.
 	unsent map[string]navMark
 
+	// shownForUser: the window was brought on screen for the user to act
+	// in; it goes back out of sight when the AI continues.
+	shownForUser bool
+
 	snapshotID    string
 	snapshotEpoch int
 	snapshotSeq   int
@@ -326,12 +330,16 @@ func (s *session) ensureLive(ctx context.Context) error {
 	if s.cp.recover(s.m.now()) {
 		s.cp.receipt(s.m.now(), Receipt{Tool: "browser_runner_start", Outcome: "recovered", Detail: "an in-flight submit was interrupted; its effect is now unknown"})
 	}
-	if s.cp.Browser == browserYourChrome {
-		// The task's window opens without taking the user's focus; pages that
-		// check focus still behave as in a focused window.
-		_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
-	} else if !s.cp.Headless {
-		_ = s.conn.Call(ctx, "Page.bringToFront", nil, nil)
+	// Task windows never take the user's focus; pages that check focus
+	// still behave as in a focused window.
+	_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
+	if s.hasWindow() {
+		// Out of sight unless the user asked to see it. A browser that
+		// restored an old window position is moved back off screen too.
+		if e := s.setVisible(ctx, !s.cp.Headless); e != nil {
+			s.shutdownBrowser(false)
+			return fmt.Errorf("cannot set task window visibility: %w", e)
+		}
 	}
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
 		// Reopening loads the page fresh: whatever was typed, chosen or
@@ -896,11 +904,13 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 			}
 		}
 		s.cp.State = StateNeedsUser
-		s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Sign-in, verification codes and CAPTCHAs are completed by the user in the Runner browser window"
-		if s.cp.Headless {
-			s.cp.NeedsUser += "; call browser_runner_start with headless=false to show it (that reopens the page, so values entered on it may have to be entered again)"
+		s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Sign-in, verification codes and CAPTCHAs are completed by the user in the task window."
+		switch {
+		case s.cp.Headless && s.hasWindow():
+			s.cp.NeedsUser += " The window is hidden so it does not interrupt the user. Tell the user what is needed and ask them to say when they are ready; then call browser_runner_start with the same task_id and headless=false. The window comes on screen as it is, with everything entered on it, and goes back out of sight when you continue."
+		case s.cp.Headless:
+			s.cp.NeedsUser += " This computer runs the browser without a window, so the user cannot do it here."
 		}
-		s.cp.NeedsUser += "."
 		if captcha {
 			s.cp.NeedsUser += " Remote Arc does not solve CAPTCHAs and never reads their responses. When the challenge has closed, the next snapshot continues the task."
 		}
@@ -910,7 +920,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	attention, _ := page["attention"].([]any)
 	// A hidden browser cannot show the user a challenge later without
 	// reopening the page, which clears the form. Say it before any typing.
-	if s.cp.Headless && len(blockers) == 0 {
+	if s.cp.Headless && !s.hasWindow() && len(blockers) == 0 {
 		if parts, _ := page["captcha"].([]any); len(parts) > 0 {
 			attention = append(attention, map[string]any{"kind": "captcha_headless", "detail": "This page carries a CAPTCHA and the task browser is hidden. If the user may have to solve it, call browser_runner_start with headless=false now, before entering anything: switching later reopens the page and clears what was entered."})
 		}
@@ -1087,6 +1097,17 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		}
 		_ = json.Unmarshal(r.Result.Value, &loc)
 		result["label"] = loc.Label
+		minimized := false
+		if s.hasWindow() {
+			if _, b, e := s.window(ctx); e != nil {
+				return nil, false, e
+			} else if b.WindowState == "minimized" {
+				// A minimized window can discard mouse input. Choose one exact
+				// element click before dispatch, rather than trying a mouse click
+				// and risking a second final submit as a fallback.
+				minimized, loc.Reachable = true, false
+			}
+		}
 		if frameID != "" {
 			// Aim at the element through the frame's position in the page;
 			// if that cannot be measured, click the element directly.
@@ -1137,7 +1158,11 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 			if _, e := s.helperIn(ctx, frameID, "jsclick", ref, true); e != nil {
 				return nil, true, e
 			}
-			result["note"] = "element was covered; a direct element click was used"
+			if minimized {
+				result["note"] = "the task window is minimized; a direct element click was used"
+			} else {
+				result["note"] = "element was covered; a direct element click was used"
+			}
 		}
 	case "fill":
 		if !a.HasValue {

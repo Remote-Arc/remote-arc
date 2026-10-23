@@ -437,44 +437,64 @@ async function ledger() {
 
 async function saveLedger(entries) {
   const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
-  for (const [key, entry] of Object.entries(entries)) if (entry.at < weekAgo) delete entries[key];
+  for (const [key, entry] of Object.entries(entries)) {
+    // Expire settled page metadata, never the used-key tombstone or an
+    // unresolved action. Resuming an old task must not send it a second time.
+    if (entry.at < weekAgo && ["succeeded", "failed"].includes(entry.status)) {
+      entries[key] = { at: entry.at, status: entry.status };
+    }
+  }
   await storageSet({ raSubmits: entries });
 }
 
 const KEY_PATTERN = /^[A-Za-z0-9_.:-]{1,120}$/;
+
+// WebSocket calls can arrive together, including calls for different tabs.
+// Reserve and settle the shared ledger serially so storage read/modify/write
+// cannot admit the same key or target twice or overwrite another reservation.
+let ledgerUpdates = Promise.resolve();
+function withLedgerLock(operation) {
+  const next = ledgerUpdates.then(operation);
+  ledgerUpdates = next.catch(() => undefined);
+  return next;
+}
 
 // A final submit (order, pay, post, send, apply...) is sent once: it needs
 // effect=submit and a key, a key is never sent twice, and the same form and
 // button is not sent again until the earlier one is confirmed.
 async function guardFinal(args, effect, tab) {
   if (effect.kind !== "final") return null;
-  const key = String(args.idempotency_key || "");
-  if (args.effect !== "submit" || !KEY_PATTERN.test(key)) {
-    throw new Error("SUBMIT_EFFECT_REQUIRED: \"" + effect.label + "\" sends something on the user's behalf (submit, order, pay, post, send). Confirm with the user first, then call again with effect=\"submit\" and a stable idempotency_key for this one action.");
-  }
-  const entries = await ledger();
-  if (entries[key]) {
-    throw new Error("SUBMIT_KEY_USED: idempotency_key " + key + " was already sent (" + entries[key].status + "). Read the page to see the result; use a new key only for a new action.");
-  }
-  const origin = originOf(tab.url || "");
-  for (const [other, entry] of Object.entries(entries)) {
-    if (entry.target === effect.target && entry.origin === origin && entry.status === "unverified") {
-      throw new Error("SUBMIT_ALREADY_RECORDED: the same form and button was already sent under idempotency_key " + other + " and is not settled. Read the page, then call shared_tab_act with action=confirm, idempotency_key=" + other + " and outcome=succeeded or failed. Only failed allows sending it again.");
+  return withLedgerLock(async () => {
+    const key = String(args.idempotency_key || "");
+    if (args.effect !== "submit" || !KEY_PATTERN.test(key)) {
+      throw new Error("SUBMIT_EFFECT_REQUIRED: \"" + effect.label + "\" sends something on the user's behalf (submit, order, pay, post, send). Confirm with the user first, then use shared_tab_act with effect=\"submit\" and a stable idempotency_key for this one action.");
     }
-  }
-  entries[key] = { target: effect.target, origin, label: effect.label, url: tab.url, at: Date.now(), status: "unverified" };
-  await saveLedger(entries);
-  return { idempotency_key: key, status: "unverified", next_action: "Check the page for the result, then call shared_tab_act with action=confirm, idempotency_key=" + key + " and outcome=succeeded or failed." };
+    const entries = await ledger();
+    if (entries[key]) {
+      throw new Error("SUBMIT_KEY_USED: idempotency_key " + key + " was already sent (" + entries[key].status + "). Read the page to see the result; use a new key only for a new action.");
+    }
+    const origin = originOf(tab.url || "");
+    for (const [other, entry] of Object.entries(entries)) {
+      if (entry.target === effect.target && entry.origin === origin && entry.status === "unverified") {
+        throw new Error("SUBMIT_ALREADY_RECORDED: the same form and button was already sent under idempotency_key " + other + " and is not settled. Read the page, then call shared_tab_act with action=confirm, idempotency_key=" + other + " and outcome=succeeded or failed. Retry the previous action only after failure; a new action needs fresh user approval and a new key.");
+      }
+    }
+    entries[key] = { target: effect.target, origin, label: effect.label, url: tab.url, at: Date.now(), status: "unverified" };
+    await saveLedger(entries);
+    return { idempotency_key: key, status: "unverified", next_action: "Check the page for the result, then call shared_tab_act with action=confirm, idempotency_key=" + key + " and outcome=succeeded or failed." };
+  });
 }
 
 async function confirmSubmit(args) {
-  const key = String(args.idempotency_key || "");
-  const entries = await ledger();
-  if (!entries[key]) throw new Error("No submit was sent with idempotency_key " + key + ".");
-  if (args.outcome !== "succeeded" && args.outcome !== "failed") throw new Error("outcome must be succeeded or failed.");
-  entries[key] = { ...entries[key], status: args.outcome, confirmedAt: Date.now() };
-  await saveLedger(entries);
-  return { ok: true, action: "confirm", idempotency_key: key, status: args.outcome };
+  return withLedgerLock(async () => {
+    const key = String(args.idempotency_key || "");
+    const entries = await ledger();
+    if (!entries[key]) throw new Error("No submit was sent with idempotency_key " + key + ".");
+    if (args.outcome !== "succeeded" && args.outcome !== "failed") throw new Error("outcome must be succeeded or failed.");
+    entries[key] = { ...entries[key], status: args.outcome, confirmedAt: Date.now() };
+    await saveLedger(entries);
+    return { ok: true, action: "confirm", idempotency_key: key, status: args.outcome };
+  });
 }
 
 // ---- shared_tab_act --------------------------------------------------------
@@ -547,7 +567,7 @@ async function act(args) {
     } else {
       await ensureInjected(tabId);
       const contentArgs = { ...args, allow_codes: await allowCodes() };
-      if (action === "click" || (action === "press" && args.key === "Enter")) {
+      if (action === "click" || (action === "press" && ["Enter", "Space"].includes(args.key))) {
         const kind = await send(tabId, "ra_effect", { snapshot_id: args.snapshot_id, ref: args.ref, key: args.key });
         if (kind?.error) throw new Error(kind.error);
         effect = await guardFinal(args, kind, tab);
@@ -577,6 +597,7 @@ async function executeTool(tool, args) {
   if (tool === "browser_list_tabs") return listSharedTabs();
   if (tool === "browser_open_tab") return openTab(args);
   if (tool === "browser_act") return act(args);
+  if (tool === "browser_click") return act({ ...args, action: "click" });
 
   const { tab, grant } = await resolveSharedTab(args.tab_id);
 

@@ -60,11 +60,17 @@ customElements.define("consent-box", class extends HTMLElement {
 
 func TestE2EEmbeddedCrossSiteFormAndShadowDOM(t *testing.T) {
 	for _, browser := range []string{browserRunner, browserYourChrome} {
-		t.Run(browser, func(t *testing.T) { testEmbeddedCrossSiteForm(t, browser) })
+		t.Run(browser, func(t *testing.T) { testEmbeddedCrossSiteForm(t, browser, false) })
 	}
+	t.Run("runner_minimized", func(t *testing.T) {
+		if !hasDisplay() {
+			t.Skip("minimized-window regression requires a display")
+		}
+		testEmbeddedCrossSiteForm(t, browserRunner, true)
+	})
 }
 
-func testEmbeddedCrossSiteForm(t *testing.T, browser string) {
+func testEmbeddedCrossSiteForm(t *testing.T, browser string, minimize bool) {
 	h, _, _, _ := newHarness(t)
 	if browser == browserYourChrome {
 		userChromeForTest(t, h, "about:blank")
@@ -101,6 +107,19 @@ customElements.define("job-search", class extends HTMLElement {
 	resume := writePDF(t, h.policy.WorkspaceRoots[0], "Resume-Embedded.pdf")
 
 	h.call("browser_runner_start", map[string]any{"task_id": "embedded", "browser": browser, "allowed_origins": []any{careers.URL, atsOrigin}, "start_url": careers.URL + "/"})
+	if minimize {
+		s, _ := h.m.get("embedded")
+		s.mu.Lock()
+		id, _, e := s.window(h.ctx)
+		if e == nil {
+			e = s.setBounds(h.ctx, id, map[string]any{"windowState": "minimized"})
+		}
+		_, b, boundsError := s.window(h.ctx)
+		s.mu.Unlock()
+		if e != nil || boundsError != nil || b.WindowState != "minimized" {
+			t.Fatalf("could not minimize the test task: %v %v %+v", e, boundsError, b)
+		}
+	}
 	h.call("browser_runner_act", map[string]any{"session_id": "embedded", "action": "wait", "text": "Legal name", "timeout_ms": 8000})
 	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "embedded"})
 	sid := snap["snapshot_id"]
@@ -125,7 +144,7 @@ customElements.define("job-search", class extends HTMLElement {
 	// Shadow DOM on the page itself: fill and click inside an open root.
 	h.call("browser_runner_act", map[string]any{"session_id": "embedded", "snapshot_id": sid, "ref": ref(t, snap, "textbox", "keyword"), "action": "fill", "value": "golang"})
 	click := h.call("browser_runner_act", map[string]any{"session_id": "embedded", "snapshot_id": sid, "ref": ref(t, snap, "button", "search roles"), "action": "click"})
-	if click["note"] != nil {
+	if click["note"] != nil && click["note"] != "the task window is minimized; a direct element click was used" {
 		t.Fatalf("trusted click into shadow DOM did not land: %v", click["note"])
 	}
 	if w := h.call("browser_runner_act", map[string]any{"session_id": "embedded", "action": "wait", "text": "Searched for golang", "timeout_ms": 3000}); w["matched"] != true {
@@ -146,7 +165,13 @@ customElements.define("job-search", class extends HTMLElement {
 	if res["effect"].(map[string]any)["status"] != EffectUnverified {
 		t.Fatalf("submit: %v", res)
 	}
-	h.call("browser_runner_confirm", map[string]any{"session_id": "embedded", "idempotency_key": "embedded-apply", "outcome": "confirmed", "evidence": "Reference GH-1"})
+	if _, e := h.m.Call(h.ctx, "browser_runner_confirm", map[string]any{"session_id": "embedded", "idempotency_key": "embedded-apply", "outcome": "confirmed", "evidence": "Reference GH-1"}, h.policy); e != nil {
+		ats.mu.Lock()
+		sent := ats.submits
+		ats.mu.Unlock()
+		state, _ := h.m.Call(h.ctx, "browser_runner_snapshot", map[string]any{"session_id": "embedded"}, h.policy)
+		t.Fatalf("embedded confirmation: %v; actual submits=%d; page=%v", e, sent, state)
+	}
 
 	ats.mu.Lock()
 	defer ats.mu.Unlock()

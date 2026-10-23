@@ -193,6 +193,10 @@ func (s *session) setupChild(conn cdpClient, child string) {
 			return
 		}
 	}
+	// Match the task page: an embedded hosted form must keep its focus state
+	// while the real task window is off screen or minimized. This never moves
+	// the user's foreground window; unsupported emulation is best effort.
+	_ = conn.CallIn(ctx, child, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
 }
 
 // childFrames lists frames that may be read, in the order they appeared.

@@ -1,27 +1,27 @@
 class RemotelinkGo < Formula
   desc "Controlled remote computer access for AI"
   homepage "https://remotearc.app"
-  version "0.6.2"
+  version "0.6.3"
   conflicts_with "remotelink", because: "both install remotelink"
 
   on_macos do
     on_arm do
-      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-darwin-arm64", using: :nounzip
-      sha256 "ac4ab301989b5718ebb5eb69cb830b75f2dd04d244da43a68e25eb08973748db"
+      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-darwin-arm64", using: :nounzip
+      sha256 "877aea726aa382c6fdee7ae111c837b0b5a49af5c386fb6a99e46ff6a7101e61"
     end
     on_intel do
-      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-darwin-amd64", using: :nounzip
-      sha256 "49e3ac5a348f2871aa26a473d787e59f2aabf773af335771fc2c46d0d4f53e29"
+      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-darwin-amd64", using: :nounzip
+      sha256 "c57e2913c2a12beed253f8c61e7a0cb313adb126de9aa4c846bdab472edaf89c"
     end
   end
   on_linux do
     on_arm do
-      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-linux-arm64", using: :nounzip
-      sha256 "14eea9e756a50b0e32298157cbb8bac6b9a73adc99ad93c582a66def279948fb"
+      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-linux-arm64", using: :nounzip
+      sha256 "b7d0b839b8face61fb1180d3d95071daf46085d635a18f972fbe2292d4ad169d"
     end
     on_intel do
-      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.2/remotelink-v0.6.2-linux-amd64", using: :nounzip
-      sha256 "6db407510ea65766d99dbd76d3613c0d0bd58ff5c9cdfd8ef89bb2981c025e47"
+      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.3/remotelink-v0.6.3-linux-amd64", using: :nounzip
+      sha256 "cda7da3bea1bc77ec5c5431c62e8054539d6919f0a98d6b08110e9f191d58988"
     end
   end
 
@@ -31,6 +31,6 @@ class RemotelinkGo < Formula
   end
 
   test do
-    assert_equal "0.6.2", shell_output("#{bin}/remotelink --version").strip
+    assert_equal "0.6.3", shell_output("#{bin}/remotelink --version").strip
   end
 end

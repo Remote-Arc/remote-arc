@@ -96,6 +96,29 @@ type browserProcess struct {
 	browserWS  string
 	attached   bool // reused a browser that survived an Agent restart
 	profileDir string
+	// headless is a browser without any window (no display on this
+	// computer). Otherwise the task browser has a real window that Remote
+	// Arc keeps out of sight and shows only when the user needs to act.
+	headless bool
+}
+
+// offscreen is where a hidden task window waits: a normal, rendering window
+// that is not on any screen, so it never covers or interrupts what the user
+// is doing.
+const offscreen = -25000
+
+// hasDisplay reports whether this computer can show a browser window.
+// REMOTEARC_BROWSER_HEADLESS=1 forces a windowless browser (servers, CI).
+func hasDisplay() bool {
+	if v := strings.TrimSpace(os.Getenv("REMOTEARC_BROWSER_HEADLESS")); v == "1" || strings.EqualFold(v, "true") {
+		return false
+	}
+	switch runtime.GOOS {
+	case "windows", "darwin":
+		return true
+	default:
+		return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
+	}
 }
 
 func readActivePort(profile string) (int, string, error) {
@@ -139,14 +162,17 @@ func attachExisting(ctx context.Context, profile string) (*browserProcess, bool)
 	}
 	var v struct {
 		WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
+		UserAgent            string `json:"User-Agent"`
 	}
 	if devtoolsJSON(ctx, port, "/json/version", &v) != nil || !strings.HasSuffix(v.WebSocketDebuggerURL, path) {
 		return nil, false
 	}
-	return &browserProcess{port: port, browserWS: v.WebSocketDebuggerURL, attached: true, profileDir: profile}, true
+	return &browserProcess{port: port, browserWS: v.WebSocketDebuggerURL, attached: true, profileDir: profile, headless: strings.Contains(v.UserAgent, "HeadlessChrome")}, true
 }
 
-func launchBrowser(ctx context.Context, exe, profile string, headless bool) (*browserProcess, error) {
+// launchBrowser starts the task browser. hidden opens its window off screen
+// and without taking focus; without a display the browser has no window.
+func launchBrowser(ctx context.Context, exe, profile string, hidden bool) (*browserProcess, error) {
 	if p, ok := attachExisting(ctx, profile); ok {
 		return p, nil
 	}
@@ -175,8 +201,13 @@ func launchBrowser(ctx context.Context, exe, profile string, headless bool) (*br
 		"--use-mock-keychain",
 		"--window-size=1280,900",
 	}
+	headless := !hasDisplay()
 	if headless {
 		args = append(args, "--headless=new", "--hide-scrollbars", "--mute-audio")
+	} else if hidden {
+		// Opened out of sight; Remote Arc brings it on screen only when the
+		// user is ready to act in it (setVisible).
+		args = append(args, fmt.Sprintf("--window-position=%d,0", offscreen), "--mute-audio")
 	}
 	if runtime.GOOS == "linux" && os.Geteuid() == 0 {
 		// Chromium refuses to start as root with its sandbox (containers/CI).
@@ -209,7 +240,7 @@ func launchBrowser(ctx context.Context, exe, profile string, headless bool) (*br
 			WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
 		}
 		if devtoolsJSON(ctx, port, "/json/version", &v) == nil && strings.HasSuffix(v.WebSocketDebuggerURL, path) {
-			return &browserProcess{cmd: cmd, exited: exited, port: port, browserWS: v.WebSocketDebuggerURL, profileDir: profile}, nil
+			return &browserProcess{cmd: cmd, exited: exited, port: port, browserWS: v.WebSocketDebuggerURL, profileDir: profile, headless: headless}, nil
 		}
 	}
 	_ = cmd.Process.Kill()

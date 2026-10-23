@@ -2661,7 +2661,7 @@ function ConnectPage({ user }: { user?: User | null }) {
                 <div><strong>Safe<small>{tr("Default", "默认")}</small></strong><span>{tr("Read only: list folders, read files and file details, and see running processes.", "只读：列出文件夹、读取文件和文件信息、查看正在运行的进程。")}</span></div>
                 <div><strong>Developer</strong><span>{tr("Adds creating and editing files, which Local Undo can reverse. Needs a Trusted Write Location first, so edits stay inside folders you choose.", "增加新建和编辑文件，可用 Local Undo 撤销。需要先设置「可信写入区域」，编辑只发生在你选定的文件夹里。")}</span></div>
                 <div><strong>Full</strong><span>{tr("Adds terminal commands and background processes. Commands can change things Local Undo cannot reverse, so you confirm before turning it on.", "增加终端命令和后台进程。命令可能做出 Local Undo 无法撤销的改动，所以开启前需要你再次确认。")}</span></div>
-                <div><strong>browser_runner<small>{tr("Separate switch, off by default", "单独开关，默认关闭")}</small></strong><span>{tr("Lets the AI use websites for you, only on the sites each task names: in a separate Remote Arc window, or in your own Chrome when you allow it. Changing presets leaves this switch as it is.", "允许 AI 替你操作网站，只能访问每个任务指定的网站：在独立的 Remote Arc 窗口里，或经你允许后在你自己的 Chrome 里。切换预设不会改变这个开关。")} <a href={localizedWebsiteHref("/chrome-extension", locale)}>{tr("Browser options", "浏览器使用方式")} →</a></span></div>
+                <div><strong>browser_runner<small>{tr("Separate switch, off by default", "单独开关，默认关闭")}</small></strong><span>{tr("Lets the AI use websites for you, only on the sites each task names: in a hidden Remote Arc browser that does not interrupt you (your own Chrome only if you ask for it). Changing presets leaves this switch as it is.", "允许 AI 替你操作网站，只能访问每个任务指定的网站：在不打扰你的隐藏 Remote Arc 浏览器里（只有你要求时才用你自己的 Chrome）。切换预设不会改变这个开关。")} <a href={localizedWebsiteHref("/chrome-extension", locale)}>{tr("Browser options", "浏览器使用方式")} →</a></span></div>
               </div>
             </section>
 
@@ -4592,8 +4592,8 @@ function Dashboard({
       const confirmed = await askConfirm(
         tr("Let AI act on websites from " + device.name + "?", "允许 AI 在 " + device.name + " 上操作网站？"),
         tr(
-          "Connected AI clients will be able to click, fill, upload files from Trusted Locations and submit forms, only on the sites each task names: in a separate Remote Arc browser window, or in your own Chrome if you allow it there. The AI never types passwords or card numbers; sign-ins saved on this computer are filled by Remote Arc itself, and a submit is never sent twice.",
-          "已连接的 AI 将可以点击、填写、从可信目录上传文件并提交表单，且只能访问每个任务指定的网站：在独立的 Remote Arc 浏览器窗口里，或经你在 Chrome 里允许后在你自己的 Chrome 里。AI 从不输入密码和卡号；保存在这台电脑上的登录信息由 Remote Arc 自己填写，提交也不会重复发送。",
+          "Connected AI clients will be able to click, fill, upload files from Trusted Locations and submit forms, only on the sites each task names: in a hidden Remote Arc browser window that only appears when you need to act (your own Chrome only if you ask for it). The AI never types passwords or card numbers; sign-ins saved on this computer are filled by Remote Arc itself, and a submit is never sent twice.",
+          "已连接的 AI 将可以点击、填写、从可信目录上传文件并提交表单，且只能访问每个任务指定的网站：在隐藏的 Remote Arc 浏览器窗口里，只有需要你操作时才会出现（只有你要求时才用你自己的 Chrome）。AI 从不输入密码和卡号；保存在这台电脑上的登录信息由 Remote Arc 自己填写，提交也不会重复发送。",
         ),
         tr("Enable browser_runner", "开启 browser_runner"),
         "danger",
@@ -5464,7 +5464,7 @@ function Dashboard({
                               <HelpTip
                                 label={tr("About browser_runner", "了解 browser_runner")}
                                 text={runnerAdvertised
-                                  ? tr("Lets your AI open, read and act on websites, only on the sites each task names. By default it uses a separate Remote Arc window (installed Chrome, Edge or Chromium) with its own sign-ins; it uses your own Chrome only when you turn that on in Chrome and click Allow. The AI never types passwords or card numbers, one-time codes can be filled from your connected email, and a submit is never sent twice.", "允许你的 AI 打开、读取和操作网站，只能访问每个任务指定的网站。默认使用独立的 Remote Arc 窗口（已安装的 Chrome、Edge 或 Chromium），有自己的登录状态；只有你在 Chrome 里打开开关并点允许后，才会使用你自己的 Chrome。AI 从不输入密码和卡号，验证码可以从你连接的邮箱里获取填写，提交不会重复发送。")
+                                  ? tr("Lets your AI open, read and act on websites, only on the sites each task names. It uses a hidden Remote Arc window (installed Chrome, Edge or Chromium) with its own sign-ins, which appears only when a page needs you and you are ready; your own Chrome is an advanced option used only when you ask for it. The AI never types passwords or card numbers, one-time codes can be filled from your connected email, and a submit is never sent twice.", "允许你的 AI 打开、读取和操作网站，只能访问每个任务指定的网站。使用隐藏的 Remote Arc 窗口（已安装的 Chrome、Edge 或 Chromium），有自己的登录状态，只有页面需要你、且你准备好时才出现；使用你自己的 Chrome 是高级选项，只有你要求时才用。AI 从不输入密码和卡号，验证码可以从你连接的邮箱里获取填写，提交不会重复发送。")
                                   : tr("Needs Remote Arc Agent 0.6.2-rc.4 or newer and Chrome, Edge or Chromium installed on this computer.", "需要 Remote Arc Agent 0.6.2-rc.4 或更新版本，并且这台电脑装有 Chrome、Edge 或 Chromium。")}
                               />
                             </span>
@@ -5792,21 +5792,19 @@ function Dashboard({
                           <strong>{tr("Remote Arc update available", "Remote Arc 有可用更新")}</strong>
                           <span>{tr("Running: ", "运行版本：")}v{runtimeVersion} · {tr("Latest: ", "最新版本：")}v{LATEST_AGENT_VERSION}</span>
                           {recoveryVersion && <span>{tr("Installed recovery bundle: ", "已安装恢复包：")}v{recoveryVersion}</span>}
-                          <span>{device.background_enabled === true
-                            ? tr("Run both commands in order on this computer: stop the old Go Agent, then start the new version. A brief disconnect is normal; pairing and permissions remain.", "请在这台电脑上按顺序执行两条命令：先停止旧版 Go Agent，再启动新版。短暂断线是正常的，配对与权限保持不变。")
-                            : tr("Run both commands in order: stop the old Go Agent, then start the new foreground version. Do not use --reset.", "依次执行两条命令：先停止旧版 Go Agent，再启动新版前台 Agent。不要使用 --reset。")}</span>
+                          <span>{tr("Run the upgrade command on this computer. An older idle Agent is replaced automatically; active work asks for confirmation. Pairing, permissions and your recovery setting are preserved.", "在这台电脑上执行升级命令。旧版 Agent 空闲时会自动接替；有任务运行时会先询问确认。配对、权限和恢复设置会保留。")}</span>
                         </div>
                         <button className="ghostButton small" onClick={async () => {
                           try {
                             if (navigator.clipboard) await navigator.clipboard.writeText(updateCommand);
                             await showNotice(
-                              tr("Go Agent upgrade: run both lines in order", "Go Agent 升级：依次执行两行命令"),
+                              tr("Upgrade Remote Arc", "升级 Remote Arc"),
                               updateCommand + (navigator.clipboard ? "\n\n" + tr("Copied to clipboard.", "已复制到剪贴板。") : ""),
                             );
                           } catch {
-                            await showNotice(tr("Go Agent upgrade: run both lines in order", "Go Agent 升级：依次执行两行命令"), updateCommand);
+                            await showNotice(tr("Upgrade Remote Arc", "升级 Remote Arc"), updateCommand);
                           }
-                        }}>{tr("Copy two upgrade steps", "复制两步升级命令")}</button>
+                        }}>{tr("Copy upgrade command", "复制升级命令")}</button>
                       </div>
                     )}
                     <div className="deviceBackgroundRow" aria-busy={backgroundUpdatingId === device.id}>

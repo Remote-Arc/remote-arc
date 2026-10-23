@@ -32,7 +32,14 @@ async function deliver(env:SlackBotEnv,job:SlackJob,installation:BotInstallation
  if(typeof result.ts!=='string')throw new SlackBotError('slack_delivery_unknown',0,true);
  job.reply_ts=result.ts;
  await env.DB.prepare('UPDATE slack_arc_events SET reply_ts=?1,delivery_kind=?2 WHERE id=?3 AND lease=?4').bind(result.ts,job.delivery_kind||'result',job.id,job.lease).run();
- await saveJob(env,job,finalStatus,{error:errorCode});
+ if(finalStatus==='processing'){
+  // A receipt must retain its worker lease. Releasing it here would let another
+  // worker enter while this one is still admitting the same Arc request.
+  await env.DB.prepare("UPDATE slack_arc_events SET status='processing',updated_at=?1 WHERE id=?2 AND lease=?3").bind(slackStamp(),job.id,job.lease).run();
+ }else await saveJob(env,job,finalStatus,{error:errorCode});
+ if((finalStatus==='delivered'||finalStatus==='blocked')&&job.event_type==='message'&&job.source_ts){
+  try{await slackApi(env,installation,'assistant.threads.setStatus',{channel_id:job.channel_id,thread_ts:job.thread_ts||job.source_ts,status:''},fetcher,1500);}catch{/* Delivery is already recorded; cosmetic cleanup is best effort. */}
+ }
 }
 const blocker=(code:string)=>{
  if(/ARC_TRIAL_REQUIRED/.test(code))return 'Start your Arc trial in Remote Arc before asking me to reason or run tasks.';
@@ -66,12 +73,26 @@ async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
    env.DB.prepare("UPDATE arc_chat_runs SET status='cancelled',cancel_requested=1,updated_at=?1 WHERE user_id=?2 AND status IN ('queued','thinking','working') AND id IN (SELECT run_id FROM slack_arc_events WHERE team_id=?3 AND slack_user_id=?4 AND user_id=?2)").bind(slackStamp(),userId,job.team_id,job.slack_user_id),
   ]);job.delivery_kind='account';await deliver(env,job,installation,'Your Remote Arc account is disconnected from this Slack identity. Send another message when you want to link again.','delivered',fetcher);return;
  }
+ if(!job.run_id&&Date.parse(job.created_at)<Date.now()-86400000){
+  job.delivery_kind='blocker';await deliver(env,job,installation,'This request has expired. Send a new message to continue.','delivered',fetcher);return;
+ }
+ if(!job.reply_ts){
+  const web=slackDashboard(env)+'/dashboard/agent/chat?session='+encodeURIComponent(sessionId);
+  job.delivery_kind='progress';
+  const receipt=/[\u3400-\u9fff]/u.test(input.text)?'已收到，正在处理你的请求。可以在 Remote Arc 中查看进度。':'I’m working on your request. You can follow the task in Remote Arc.';
+  await deliver(env,job,installation,receipt+'\n'+web,'processing',fetcher);
+  if(!job.reply_ts)return;
+  // The normal message is already visible. An unsupported or slow AI status
+  // can no longer delay the first reply or prevent account-link instructions.
+  if(job.event_type==='message'&&job.source_ts&&job.channel_id){
+   try{await slackApi(env,installation,'assistant.threads.setStatus',{channel_id:job.channel_id,thread_ts:job.thread_ts||job.source_ts,status:/[\u3400-\u9fff]/u.test(input.text)?'正在处理你的请求…':'is checking your request…'},fetcher,1500);}catch{/* Cosmetic hint; the durable receipt remains the fallback. */}
+  }
+ }
  if(!job.run_id){
   const admitted=await env.DB.prepare('SELECT id FROM arc_chat_runs WHERE user_id=?1 AND request_id=?2').bind(userId,'slack:'+job.id).first<{id:string}>();
   if(admitted){job.run_id=admitted.id;await env.DB.prepare('UPDATE slack_arc_events SET run_id=?1 WHERE id=?2 AND lease=?3').bind(admitted.id,job.id,job.lease).run();}
  }
  if(!job.run_id){
-  if(Date.parse(job.created_at)<Date.now()-86400000){await saveJob(env,job,'expired',{error:'slack_request_expired'});return;}
   const earlier=await env.DB.prepare(`SELECT id FROM slack_arc_events WHERE team_id=?1 AND slack_user_id=?2 AND channel_id=?3 AND COALESCE(thread_ts,'')=COALESCE(?4,'') AND id<>?5
     AND status IN ('pending','processing','replying','waiting_run') AND (created_at<?6 OR (created_at=?6 AND id<?5)) LIMIT 1`).bind(job.team_id,job.slack_user_id,job.channel_id,job.thread_ts,job.id,job.created_at).first();
   if(earlier){await saveJob(env,job,'pending',{delay:15});return;}
@@ -116,14 +137,14 @@ async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
 }
 
 /** Bounded durable queue; ingress and Arc completion warm it, cron recovers it. */
-export async function runSlackJobs(env:SlackBotEnv,options:{runId?:string;fetcher?:typeof fetch;limit?:number}={}){
+export async function runSlackJobs(env:SlackBotEnv,options:{runId?:string;eventId?:string;fetcher?:typeof fetch;limit?:number}={}){
  if(!slackReady(env))return;
  const now=slackStamp();
  // An unacknowledged first post is never blindly repeated. Updating an already
  // known Slack message is idempotent and safe to recover after a crash.
  await env.DB.prepare("UPDATE slack_arc_events SET status=CASE WHEN reply_ts IS NULL THEN 'unknown' ELSE 'waiting_run' END,last_error='slack_delivery_interrupted',lease=NULL,lease_until=NULL WHERE status='replying' AND lease_until<=?1").bind(now).run();
  const rows=(await env.DB.prepare(`SELECT e.* FROM slack_arc_events e WHERE e.status IN ('pending','processing','waiting_run') AND (e.lease_until IS NULL OR e.lease_until<=?1) AND (e.next_attempt_at<=?1 OR ?2 IS NOT NULL)
-  AND (?2 IS NULL OR e.run_id=?2) ORDER BY e.created_at,e.id LIMIT ?3`).bind(now,options.runId||null,Math.min(10,options.limit||5)).all<SlackJob>()).results;
+  AND (?2 IS NULL OR e.run_id=?2) AND (?4 IS NULL OR e.id=?4) ORDER BY e.created_at,e.id LIMIT ?3`).bind(now,options.runId||null,Math.min(10,options.limit||5),options.eventId||null).all<SlackJob>()).results;
  for(const row of rows){
   const lease=randomToken(16),claimed=await env.DB.prepare("UPDATE slack_arc_events SET status='processing',lease=?1,lease_until=?2,attempts=attempts+1,updated_at=?3 WHERE id=?4 AND status IN ('pending','processing','waiting_run') AND (lease_until IS NULL OR lease_until<=?3) RETURNING id").bind(lease,timeAfter(90),slackStamp(),row.id).first();
   if(!claimed)continue;const job={...row,lease};

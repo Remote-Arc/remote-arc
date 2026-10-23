@@ -7,7 +7,7 @@
 remote_arc_install() (
   set -eu
   umask 077
-  version='0.6.2'
+  version='0.6.3'
   fail() { printf 'Remote Arc: %s\n' "$*" >&2; exit 1; }
   for tool in curl uname mktemp mkdir awk cat chmod mv rm rmdir; do
     command -v "$tool" >/dev/null 2>&1 || fail "Required tool missing: $tool"

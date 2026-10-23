@@ -222,6 +222,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	}
 	blockedBefore := len(s.cp.Blocked)
 	var out map[string]any
+	hidAgain := false
 	switch tool {
 	case "browser_runner_snapshot":
 		maxEl, e1 := protocol.Integer(args, "max_elements", 150, 10, 400)
@@ -230,6 +231,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 			out, e = s.snapshot(ctx, maxEl, maxText)
 		}
 	case "browser_runner_act":
+		hidAgain = s.hideAfterUser(ctx)
 		// One action tool keeps the surface small for every AI host:
 		// page actions on snapshot refs, plus navigate, upload and wait.
 		switch protocol.OptionalString(args, "action") {
@@ -285,6 +287,9 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 		return nil, e
 	}
 	out["session_id"] = s.cp.SessionID
+	if hidAgain {
+		out["window"] = "hidden again: the user finished, so the task window is back out of sight"
+	}
 	s.ev.Lock()
 	if s.savedLogin != "" {
 		out["saved_login"] = "The sign-in just made in the Runner window was saved to this computer's vault as " + s.savedLogin + ". Later tasks fill it with action=fill_secret; the password is never shown."
@@ -412,8 +417,8 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	if !idPattern.MatchString(profile) {
 		return nil, errors.New("profile must be 1-100 characters of letters, digits, '-' or '_'.")
 	}
-	// headless left out keeps how this task, or else this profile, last ran:
-	// a profile the user signed into in a visible window opens visibly.
+	// The task window is hidden unless headless=false asks to show it;
+	// headless left out keeps a running task as it is.
 	headless, chosen := true, false
 	if v, ok := args["headless"].(bool); ok {
 		headless, chosen = v, true
@@ -441,9 +446,6 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 		return nil, fmt.Errorf("At most %d browser_runner sessions can run at once on this device. Close one first.", maxLiveSessions)
 	}
 	if s == nil {
-		if h, known := lastProfileMode(profile); known && !chosen && browser == browserRunner {
-			headless = h
-		}
 		now := m.now()
 		s = &session{m: m, scope: sc, lastUsed: now, cp: &Checkpoint{
 			Version: checkpointVersion, SessionID: id, Profile: profile, AllowedOrigins: sc.Strings(),
@@ -473,8 +475,21 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 			s.cp.AllowedOrigins = merged.Strings()
 		}
 		if chosen && s.cp.Headless != headless {
-			s.shutdownBrowser(false)
-			s.cp.Headless = headless
+			switch {
+			case s.live() && s.hasWindow():
+				// Shown or hidden in place: the page and what was entered stay.
+				if e := s.setVisible(ctx, !headless); e != nil {
+					return nil, fmt.Errorf("browser_runner could not %s the task window: %w", map[bool]string{true: "hide", false: "show"}[headless], e)
+				}
+				s.cp.Headless = headless
+				s.shownForUser = !headless && s.cp.State == StateNeedsUser
+			case !headless && !hasDisplay():
+				return nil, errNoWindow
+			default:
+				s.shutdownBrowser(false)
+				s.cp.Headless = headless
+				s.shownForUser = !headless && s.cp.State == StateNeedsUser
+			}
 		}
 		if s.cp.State == StateClosed {
 			s.cp.State = StatePaused
@@ -502,6 +517,16 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	out["resumed"] = resumed
 	out["profile"] = s.cp.Profile
 	out["headless"] = s.cp.Headless
+	if s.cp.Browser != browserYourChrome {
+		switch {
+		case !s.hasWindow():
+			out["window"] = "none: this computer has no display, so the browser runs without a window"
+		case s.cp.Headless:
+			out["window"] = "hidden: the task runs out of sight and never takes the user's focus"
+		default:
+			out["window"] = "on screen"
+		}
+	}
 	if s.cp.Browser == browserYourChrome {
 		out["browser"] = browserYourChrome
 		out["note"] = "This task runs in its own window of the user's Chrome, signed in as the user is. Chrome shows that it is being controlled while Remote Arc is connected. Closing the task closes only its window's tab."

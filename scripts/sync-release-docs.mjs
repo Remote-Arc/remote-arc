@@ -5,6 +5,9 @@ const root = new URL("../", import.meta.url);
 const changelogPath = new URL("CHANGELOG.md", root);
 const cliPackagePath = new URL("packages/cli/package.json", root);
 const cliReadmePath = new URL("packages/cli/README.md", root);
+const cliLicensePath = new URL("packages/cli/LICENSE", root);
+const rootLicense = readFileSync(new URL("LICENSE", root), "utf8").replaceAll("\r\n", "\n");
+const cliLicense = readFileSync(cliLicensePath, "utf8").replaceAll("\r\n", "\n");
 
 const changelog = readFileSync(changelogPath, "utf8").replaceAll("\r\n", "\n");
 const releases = parseChangelog(changelog);
@@ -52,9 +55,9 @@ const releaseBlock = [
   "",
   "Published " + latest.date,
   "",
-  ...latest.changes.map((change) => "- " + change),
+  ...latest.changes.slice(0, 6).map((change) => "- " + change),
   "",
-  "See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).",
+  "See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).",
   end,
 ].join("\n");
 
@@ -72,6 +75,19 @@ if (readme.includes(start) && readme.includes(end)) {
 
 const rootReadmePath = new URL("README.md", root);
 const rootReadme = readFileSync(rootReadmePath, "utf8").replaceAll("\r\n", "\n");
+// Keep npm's product description aligned with GitHub, while npm's quick start
+// remains specific to the npm/npx package rather than other installers.
+const overviewStart = "<!-- github-overview:start -->";
+const overviewEnd = "<!-- github-overview:end -->";
+const introduction = rootReadme.match(/^# Remote Arc\n\n([\s\S]*?)\n\n\[Website\]/m)?.[1];
+const productSection = rootReadme.match(/## Two ways to work\n[\s\S]*?(?=\n## From a goal to a result)/)?.[0];
+if (!introduction || !productSection || !expected.includes(overviewStart) || !expected.includes(overviewEnd)) {
+  throw new Error("GitHub/npm product overview markers or source sections are missing");
+}
+const overviewBlock = [overviewStart, introduction, "", productSection.trimEnd(), overviewEnd].join("\n");
+const overviewIndex = expected.indexOf(overviewStart);
+expected = expected.slice(0, overviewIndex) + overviewBlock + expected.slice(expected.indexOf(overviewEnd, overviewIndex) + overviewEnd.length);
+if (cliPackage.license !== "SEE LICENSE IN LICENSE") throw new Error("npm must reference the bundled custom LICENSE");
 const installStart = "<!-- native-install:start -->";
 const installEnd = "<!-- native-install:end -->";
 const nativeVersion = latest.version;
@@ -101,7 +117,7 @@ const rootStart = rootReadme.indexOf(installStart);
 const expectedRootReadme = rootReadme.slice(0, rootStart) + nativeBlock + rootReadme.slice(rootReadme.indexOf(installEnd, rootStart) + installEnd.length);
 
 if (mode === "--check") {
-  if (expected !== readme || expectedRootReadme !== rootReadme || expectedInstaller !== installer) {
+  if (expected !== readme || expectedRootReadme !== rootReadme || expectedInstaller !== installer || cliLicense !== rootLicense) {
     console.error("Release or native download documentation is out of sync with CHANGELOG.md");
     process.exit(1);
   }
@@ -113,4 +129,5 @@ if (mode !== "--write") throw new Error("Unknown mode: " + mode);
 if (expectedInstaller !== installer) writeFileSync(installerPath, expectedInstaller);
 if (expected !== readme) writeFileSync(cliReadmePath, expected);
 if (expectedRootReadme !== rootReadme) writeFileSync(rootReadmePath, expectedRootReadme);
+if (cliLicense !== rootLicense) writeFileSync(cliLicensePath, rootLicense);
 console.log("synced release docs for remotelink " + latest.version);

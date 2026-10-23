@@ -1,14 +1,30 @@
-# remotelink
+# Remote Arc
 
-Connect a Windows, macOS, or Linux computer to **Remote Arc** with one command.
+`remotelink` is the official npm CLI for pairing your Windows, macOS or Linux computer with Remote Arc.
 
-Remote Arc lets authorized AI clients such as ChatGPT, Claude, and Codex reach
-the computers you explicitly pair through a secure outbound connection.
+[Website](https://remotearc.app) · [GitHub](https://github.com/Remote-Arc/remote-arc) · [User guide](https://remotearc.app/docs/start-here)
+
+<!-- github-overview:start -->
+**Agent infrastructure for real work across your apps and computers.**
+
+Arc is your hosted AI teammate. Connect brings the same authorized Apps and device execution to the AI client you already use. Remote Arc manages the context, permissions, persistent work, device placement and usage around model decisions so work can proceed from a request to an inspectable result.
+
+## Two ways to work
+
+| Product | Start here | What it does |
+| --- | --- | --- |
+| **Arc** | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines. |
+| **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts and paired devices from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
+
+Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
+
+Arc offers an explicitly activated 14-day Auto trial and Plus / Pro subscriptions. Users do not supply a model API key. Hosted model use has Credits and run limits; available models and plan details are shown in the workspace. Connect calls and third-party App charges have their own allowances. Preview environments use simulated data.
+<!-- github-overview:end -->
 
 ## Quick start
 
 ```bash
-npx remotelink
+npx remotelink@latest
 ```
 
 From 0.6.0, this npm command starts the complete **native Go Agent** by default.
@@ -16,21 +32,21 @@ The Node launcher verifies the matching platform binary against the SHA256
 manifest pinned to this npm release. `--go` remains an alias; `--ts` selects the
 retained TypeScript implementation.
 
-Without Node, use [standalone downloads](https://remotearc.app/downloads) or:
+Or install the CLI globally:
 
 ```bash
-brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
-if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi
-brew install yaohuangguan/remote-arc/remotelink
+npm install -g remotelink@latest
 remotelink
 ```
 
-Stop the current Go Agent before upgrading: `npx remotelink@latest --stop`, then
-`npx remotelink@latest --foreground`. Existing TS owners require
-`npx remotelink@latest --ts --no-background` and stopping their original terminal
-before Go starts. Go refuses to take execution from an active TS owner.
-Pairing, permissions and Undo records are preserved; commands are not replayed.
-For TS fallback, stop Go first, then run `npx remotelink@latest --ts`.
+Requires Node.js 20 or later. The npm launcher downloads and verifies the
+matching native Agent. For installation without Node.js, see the
+[download guide](https://remotearc.app/downloads).
+
+**Updating:** run `npx remotelink@latest`. A known older, idle Go Agent is
+replaced while preserving pairing, permissions and pause state. Active work
+requires confirmation in the terminal. Stop the current Agent before changing
+runtimes; `--ts` selects the TypeScript compatibility implementation.
 
 The primary runtime is `apps/agent` and its independent Go module is
 `packages/execution-core`. `apps/agent-ts` and `packages/execution-core-ts` support
@@ -63,17 +79,8 @@ Published 2026-10-23
 - Align homepage actions, security information and Arc links on phones. Use balanced columns on wider iPads and a shared content column on smaller tablets; retain the same alignment in English and Chinese.
 - Rewrite Connect setup into four concrete steps and clarify when to use the default Runner, the browser extension or the advanced existing-Chrome connection.
 - Serialize browser extension submit reservations across tabs. Space-key actions and legacy click calls now use the same submission checks as ordinary clicks.
-- Publish 0.6.3 native binaries for six targets, npm and Homebrew packages, with stable-only website downloads and refreshed browser extension packaging.
-- The extension can now work on its own in the user's browser, on sites the user allowed. `shared_tab_open` opens a tab there (in the background, in a "Remote Arc" tab group), signed in as the user is, and `shared_tab_act` clicks, fills (including rich text boxes such as comment fields), selects, checks, presses keys, scrolls, navigates, goes back, reloads, waits for text or a URL, fills a whole form in one call and closes tabs it opened. Each action waits for what it started instead of a fixed delay, and `snapshot=true` returns the page as the action left it.
-- Sites are allowed one at a time through Chrome's own permission prompt: from the popup ("Allow AI on this site"), or from a page with one Allow button that opens when the AI asks for a site it may not use yet (`SITE_NOT_ALLOWED`). The popup lists allowed sites and removes them. A tab keeps access while it moves between allowed sites and is paused on any other. The extension still has no `<all_urls>`, `tabs`, `debugger`, cookie or password permission.
-- Orders, payments, posts, comments, messages and submissions are final submits: they need `effect=submit` and an `idempotency_key`, a key is sent once (`SUBMIT_KEY_USED`), and the same form and button is refused under a new key (`SUBMIT_ALREADY_RECORDED`) until the earlier one is settled with `action=confirm`. English and Chinese button wording is recognised.
-- Passwords, card numbers and file pickers are never filled; one-time codes can be, unless the user turns that off in the popup.
-- Sharing a single tab works as before (read-only until Click & fill is enabled for it); a shared tab that moves to an allowed site keeps access.
-- The popup and the new approval page use the dark Remote Arc website design.
-- Already paired extensions need no new pairing: the Relay allows the new tools wherever the browser allows click & fill. An extension older than 0.4.0 answers `EXTENSION_UPDATE_REQUIRED` with a download link.
-- The website's browser page, MCP reference, use cases and the browser skill describe the new behaviour, and CI runs the extension in a real Chromium against local test sites.
 
-See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).
+See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->
 
 ## Connect your AI client
@@ -98,7 +105,8 @@ Clients that still show the older shared-tab names (`browser_read_page`, `browse
 
 ## Commands
 
-In **0.6.2**, Browser Runner (beta) uses task-scoped Chrome, Edge or Chromium,
+In **0.6.3**, Browser Runner (beta) keeps task windows out of sight by default
+and uses task-scoped Chrome, Edge or Chromium,
 with optional connection to your running Chrome, batched form entry, durable final
 submissions, profile reuse and restart recovery. Enable **Browser Runner** for the
 device in Dashboard. Open CAPTCHA challenges still need you; the Agent never reads
@@ -107,9 +115,9 @@ and saved passwords are filled only from the computer's protected local vault.
 
 Normal startup attempts Codex and Claude Code setup in independent background tasks.
 Existing MCP entries, device pairing and permissions are preserved; a skipped client
-never blocks the Agent. Project-scoped [local setup](../../docs/codex-local-integration.md),
-[read-only MCP](../../docs/workspace-local-mcp.md), [setup inspection](../../docs/local-setup-inspection.md)
-and [coding-session discovery](../../docs/local-session-discovery.md) are included.
+never blocks the Agent. Project-scoped [local setup](https://github.com/Remote-Arc/remote-arc/blob/master/docs/codex-local-integration.md),
+[read-only MCP](https://github.com/Remote-Arc/remote-arc/blob/master/docs/workspace-local-mcp.md), [setup inspection](https://github.com/Remote-Arc/remote-arc/blob/master/docs/local-setup-inspection.md)
+and [coding-session discovery](https://github.com/Remote-Arc/remote-arc/blob/master/docs/local-session-discovery.md) are included.
 Discovery lists metadata for review; it does not resume an agent or reconstruct its history.
 
 A newer release replaces an older idle Agent automatically. Active work, an Agent too
@@ -257,7 +265,7 @@ you control.
 ## Requirements for npm / npx
 
 Node.js is required only for this npm package and the TS fallback. Standalone
-Agent binaries and Homebrew installations need no Node.js; see the
+Agent binaries need no Node.js; see the
 [installation guide](https://remotearc.app/downloads).
 
 - Node.js 20 or later
@@ -275,18 +283,9 @@ Start Go with `npx remotelink@latest --go --foreground`. Use
 `npx remotelink@latest --go --status` to inspect the native runtime, or
 `npx remotelink@latest --go --stop` to stop it before returning to TS.
 
-For native installation on macOS/Linux without Node:
-
-```sh
-brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
-if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi
-brew install yaohuangguan/remote-arc/remotelink
-remotelink --foreground
-```
-
 Go binaries accompany the matching npm release. For development builds,
 installation, compatibility coverage and recovery behavior, see the
-[Go device runtime guide](https://github.com/yaohuangguan/remote-arc/blob/master/apps/agent/README.md).
+[Go device runtime guide](https://github.com/Remote-Arc/remote-arc/blob/master/apps/agent/README.md).
 
 ## Product vs package name
 
@@ -298,12 +297,18 @@ installation, compatibility coverage and recovery behavior, see the
 
 - Website: https://remotearc.app
 - Support: https://remotearc.app/support
-- GitHub: https://github.com/yaohuangguan/remote-arc
+- GitHub: https://github.com/Remote-Arc/remote-arc
 
 ## License
 
-The Remote Arc implementation is source-available under the **Remote Arc
-Proprietary Source License**. It is not MIT-licensed for new releases.
+**Remote Arc Proprietary Source License — commercial exploitation requires
+written permission from Remote Arc.**
 
-Historical revisions that were previously released under MIT remain governed
-by the MIT terms that applied to those revisions.
+You may use the official software under its applicable terms. Selling,
+redistributing, sublicensing, white-labeling, modifying it, or offering a
+competing service requires written authorization. The full terms are in the
+[LICENSE](https://github.com/Remote-Arc/remote-arc/blob/master/LICENSE),
+which is included in this npm package and synchronized with the GitHub repository.
+
+Historical revisions previously released under MIT retain the MIT terms that
+applied to those revisions. Third-party components retain their own licenses.

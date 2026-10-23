@@ -41,12 +41,15 @@ jobs:
         run: echo "REMOTEARC_PUBLIC_VERSION=$(npm view remotelink dist-tags.latest --registry=https://registry.npmjs.org/)" >> "$GITHUB_ENV"
       - name: Verify public npm and native Go installation
         run: node scripts/public-device-smoke.mjs
+      - name: Verify installer fixtures and stable version pinning
+        if: runner.os != 'Windows'
+        run: node scripts/native-installer-test.mjs
       - name: Verify shell installation and native execution without Node
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          REMOTEARC_INSTALL_DIR="$RUNNER_TEMP/remote-arc-native" sh apps/ui/public/install.sh
-          VERSION="$(sed -n "s/^  version='\(.*\)'$/\1/p" apps/ui/public/install.sh)"
+          VERSION="${REMOTEARC_PUBLIC_VERSION:-$(sed -n "s/^  version='\(.*\)'$/\1/p" apps/ui/public/install.sh)}"
+          REMOTEARC_INSTALL_VERSION="$VERSION" REMOTEARC_INSTALL_DIR="$RUNNER_TEMP/remote-arc-native" sh apps/ui/public/install.sh
           test "$(env PATH=/usr/bin:/bin "$RUNNER_TEMP/remote-arc-native/remotelink" --version)" = "$VERSION"
       - name: Verify Homebrew installation without Node
         if: runner.os == 'macOS'

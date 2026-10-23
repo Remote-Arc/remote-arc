@@ -121,3 +121,66 @@ func TestYourChromeDeniedIsRetryable(t *testing.T) {
 		t.Fatalf("retry did not open a new request: %d", u.dials)
 	}
 }
+
+func TestYourChromeCloseKeepsConnectionUntilTargetConfirmedGone(t *testing.T) {
+	old := yourChromeLinger
+	t.Cleanup(func() { yourChromeLinger = old })
+	for _, paused := range []bool{false, true} {
+		t.Run(fmt.Sprintf("paused=%v", paused), func(t *testing.T) {
+			yourChromeLinger = time.Minute
+			chromeEndpointForTest(t, func(w http.ResponseWriter, r *http.Request) {
+				ws, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+				if err != nil {
+					return
+				}
+				defer ws.Close()
+				for {
+					var message cdpMessage
+					if ws.ReadJSON(&message) != nil {
+						return
+					}
+					switch message.Method {
+					case "Target.closeTarget":
+						// Chrome detaches the tab before acknowledging its closure.
+						_ = ws.WriteJSON(map[string]any{"method": "Target.detachedFromTarget", "params": map[string]any{"sessionId": "owned-session"}})
+						time.Sleep(80 * time.Millisecond)
+						_ = ws.WriteJSON(map[string]any{"id": message.ID, "result": map[string]any{"success": true}})
+					case "Target.getTargetInfo":
+						_ = ws.WriteJSON(map[string]any{"id": message.ID, "error": map[string]any{"code": -32602, "message": "No target with given id found"}})
+					}
+				}
+			})
+			m := New()
+			t.Cleanup(m.Close)
+			u := m.yourChrome()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			conn, err := u.connect(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			page := &yourPage{u: u, base: conn, root: "owned-session", target: "owned-tab", closed: make(chan struct{})}
+			if !paused {
+				u.mu.Lock()
+				u.pages[page] = true
+				u.routes[page.root] = yourRoute{page: page}
+				u.mu.Unlock()
+			}
+			yourChromeLinger = 5 * time.Millisecond
+			if paused {
+				if closed, err := u.closeTabIfConnected(ctx, page.target); err != nil || !closed {
+					t.Fatalf("paused close: closed=%v err=%v", closed, err)
+				}
+			} else if err := page.closeTab(ctx); err != nil {
+				t.Fatal(err)
+			}
+			deadline := time.Now().Add(time.Second)
+			for u.connected() && time.Now().Before(deadline) {
+				time.Sleep(time.Millisecond)
+			}
+			if u.connected() {
+				t.Fatal("idle connection was not released after confirmed closure")
+			}
+		})
+	}
+}

@@ -620,7 +620,7 @@ function PairingCard({ title, body, children, step = 1 }: {
     <main className="pairingShell workspaceSurface">
       <header className="pairingHeader">
         <Brand compact />
-        <div><LanguageSwitcher compact /><ThemeSwitcher compact /></div>
+        <div><LanguageSwitcher compact syncUrl dropdown iconOnly /><ThemeSwitcher compact /></div>
       </header>
       <div className="pairingFlow">
         <ol className="pairingSteps" aria-label={tr("Computer setup", "电脑设置")}>

@@ -13,9 +13,14 @@
 .pairingShell .brand .brandLockup { display: inline-flex; gap: .18em; font: 600 22px/1 "Arc Wordmark", Inter, sans-serif; letter-spacing: -.045em; color: var(--dash-text); }
 :root[data-theme] .pairingShell .brand .brandLockup b { font: inherit; color: var(--dash-text) !important; background: none !important; -webkit-text-fill-color: currentColor !important; }
 .pairingShell .brandSymbol img { display: block; position: absolute; width: 32px; height: 32px; left: -2px; top: -4px; }
-:root[data-theme] .pairingShell :is(.themeSwitch, .languageSwitch) { min-height: 38px; background: transparent !important; color: var(--dash-muted) !important; border: 1px solid var(--dash-line); border-radius: 7px; box-shadow: none; }
-:root[data-theme] .pairingShell .languageSwitch button { color: var(--dash-muted); background: transparent; box-shadow: none; }
-:root[data-theme] .pairingShell .languageSwitch button.active { color: var(--dash-inverse) !important; background: var(--dash-accent) !important; box-shadow: none; }
+:root[data-theme] .pairingShell .themeSwitch { min-height: 38px; background: transparent !important; color: var(--dash-muted) !important; border: 1px solid var(--dash-line); border-radius: 7px; box-shadow: none; }
+.pairingHeader .languageDropdown { position: relative; flex: none; }
+.pairingHeader .languageDropdownTrigger { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--dash-muted); }
+.pairingHeader .languageDropdownTrigger:hover, .pairingHeader .languageDropdownTrigger[aria-expanded="true"] { background: var(--dash-subtle); color: var(--dash-text); }
+.pairingHeader .languageDropdownMenu { background: var(--dash-surface); border-color: var(--dash-line); color: var(--dash-text); }
+.pairingHeader .languageDropdownMenu button { color: var(--dash-text); }
+.pairingHeader .languageDropdownMenu button:hover, .pairingHeader .languageDropdownMenu button[aria-checked="true"] { background: var(--dash-subtle); }
+.pairingHeader .languageDropdownMenu button span { color: var(--dash-text); }
 .pairingFlow { width: 100%; max-width: 740px; margin: 40px auto 0; }
 .pairingSteps { display: flex; justify-content: space-between; gap: 12px; list-style: none; padding: 0 12px; margin: 0 0 26px; }
 .pairingSteps li { display: flex; align-items: center; gap: 9px; color: var(--dash-muted); font-size: 13px; }

@@ -20,6 +20,7 @@ All notable changes to Remote Arc are documented here.
 - Use `browser_runner_*` and `shared_tab_*` consistently while keeping cached legacy shared-tab tool calls working during upgrades. Existing AI clients should refresh their connector's tool list after updating.
 - Add bounded CPU and available-memory telemetry and resource-aware Fleet placement, respecting device ownership, tool permissions, trusted directories, explicit OS requirements and Windows/WSL shared hardware. Active work is not silently migrated.
 - Publish fresh 0.6.2 npm, six native binaries, SHA256 manifests and Homebrew formulas. The website's default Agent downloads and version badge use the latest stable release rather than the development package's RC version.
+- Keep the shared Chrome connection alive until a task tab's closure is confirmed, then release it when idle. This avoids reporting a lost connection while Chrome is still finishing a close.
 
 ## 0.6.1 - 2026-10-11
 

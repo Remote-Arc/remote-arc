@@ -1,3 +1,5 @@
+import {readCommunityResource} from './arc-community-skills.js';
+import {BUILTIN_SKILL_RESOURCES} from '../../../packages/skills/src/media-resources.generated.js';
 import { getGoalContext, submitGoalDecision } from "./source-goals.js";
 import { appDiscoverySchema, discoverApps } from "./app-discovery.js";
 import { callApp, listApps, appCallSchema } from "./apps.js";
@@ -272,7 +274,7 @@ export function createRemoteLinkMcp(
     // Resources let any resource-capable Connect client discover reusable skills.
     const catalogUri = "remotearc://skills/catalog";
     server.registerResource("remote-arc-skill-catalog", catalogUri,
-      { title: "Remote Arc Skill Library", description: "Built-in skill index; optional local engines are not installed automatically.", mimeType: "application/json" },
+      { title: "Remote Arc Skill Library", description: "Built-in skill index. Media helpers prepare ordinary local engines when a task needs them; large model installs need user consent.", mimeType: "application/json" },
       async (uri) => {
         if (!identity) throw new Error("Sign in to Remote Arc to read Skills");
         return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(BUILTIN_SKILLS.map(({id,name,description,priority,category}) => ({id,name,description,priority,category}))) }] };
@@ -286,6 +288,17 @@ export function createRemoteLinkMcp(
           return { contents: [{ uri: uri.href, mimeType: "text/markdown", text: skill.content }] };
         },
       );
+    }
+
+    for(const [skillId,files] of Object.entries(BUILTIN_SKILL_RESOURCES)){
+      for(const file of files.filter(item=>item.path.startsWith('scripts/'))){
+        server.registerResource('remote-arc-skill-'+skillId+'-helper','remotearc://skills/'+skillId+'/'+file.path,
+          {title:skillId+' local media helper',mimeType:'text/javascript'},
+          async(uri)=>{
+            if(!identity)throw new Error("Sign in to Remote Arc to read Skills");
+            return {contents:[{uri:uri.href,mimeType:'text/javascript',text:file.content}]};
+          });
+      }
     }
 
     // Skills as tools as well as Resources: most MCP hosts never surface
@@ -317,14 +330,15 @@ export function createRemoteLinkMcp(
       "read_skill",
       {
         title: "Read a Remote Arc skill",
-        description: "Read one skill's full instructions by id from find_skills. Community skills also list helper resources. Check that any named engine (ffmpeg, python, etc.) exists on the chosen computer before relying on it.",
-        inputSchema: z.object({ id: z.string().min(1).max(100) }),
+        description: "Read a skill by id. Packaged media/community skills list pinned helper resources; pass path and offset to read a resource in chunks, following nextOffset. Save those bytes on the authorized user device, run the helper when the task needs it, and verify actual outputs. Qwen TTS and ACE-Step installation needs explicit size-aware user consent.",
+        inputSchema: z.object({ id: z.string().min(1).max(100), path:z.string().min(1).max(200).optional(), offset:z.number().int().nonnegative().optional() }),
         annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("devices:read"),
       },
-      async ({ id }) => {
+      async ({ id, path, offset }) => {
         if (!identity || !hasScope(identity, "devices:read")) return authRequired(env, "devices:read", identity);
         try {
+          if(path)return textResult(readCommunityResource(id,path,offset||0));
           return textResult(await readArcSkill(env as unknown as ArcEnv, identity.userId, id));
         } catch {
           return { ...toolErrorResult("Skill not found. Use find_skills to get a valid id.", "SKILL_NOT_FOUND"), isError: true };

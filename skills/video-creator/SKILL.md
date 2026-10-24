@@ -1,6 +1,6 @@
 ---
 name: video-creator
-description: Make finished videos (promos, explainers, launch clips, social cuts) on the user's own computer with OpenFilm, no API keys needed.
+description: Create finished local videos with OpenFilm or HyperFrames, including animation, maps, narration and music. Automatically prepare ordinary dependencies; ask before large Qwen TTS or ACE-Step installs.
 priority: P0
 category: media
 status: builtin-guidance
@@ -8,77 +8,61 @@ status: builtin-guidance
 
 # Video Creator
 
-**Engine:** OpenFilm 0.2.5 (MIT, `npx -y openfilm@0.2.5`) + FFmpeg. **Source:** https://github.com/openfilm/openfilm
-
-You write the film; the user's computer renders it. Text, graphics, animation, charts, maps, screenshots and the user's own footage need **no paid model API**. Local rendering still consumes device compute, electricity, storage and downloads; the calling AI may consume its plan allowance or Arc Credits. Optional local voice-over/music require separate model downloads and the user's explicit approval when large. AI-generated images/video may need a paid provider the user connects with their own key.
-
-## Preflight (once per computer)
-
-Use a computer whose tools include `start_process`, `write_file` and `read_file`, inside one of its Trusted Write Locations.
-- Windows (cmd.exe): `node -v & ffmpeg -version | findstr /b "ffmpeg version" & git --version`
-- macOS / Linux: `node -v; ffmpeg -version | head -1; git --version`
-Need Node 22.2+, ffmpeg and git. If one is missing, tell the user exactly what to install (nodejs.org, ffmpeg.org) and stop; never install system software silently. The first OpenFilm run downloads a headless Chromium (~115 MB) once: tell the user it can take a minute.
-
-**Every OpenFilm command must run unattended:** set `OPENFILM_NO_BROWSER=1` and `OPENFILM_NO_UPDATE_CHECK=1`. Without them a non-interactive run opens Studio in the user's browser after 15 s.
-- Windows: `set OPENFILM_NO_BROWSER=1& set OPENFILM_NO_UPDATE_CHECK=1& npx -y openfilm@0.2.5 <command>`
-- macOS / Linux: `OPENFILM_NO_BROWSER=1 OPENFILM_NO_UPDATE_CHECK=1 npx -y openfilm@0.2.5 <command>`
-Run `npx -y openfilm@0.2.5` once (no command) and read its printed manual whole: it is the format reference.
-
-## What makes it look good
-
-OpenFilm composes and renders; it does not invent footage. A film of only text and shapes looks like animated slides. Quality comes from **real material**, so gather it before writing pages:
-- the user's own footage, photos, logo and screen recordings (ask for them, or find them in the folders they point to);
-- product screenshots or recordings of the user's own site or app, made with the tools you already have;
-- charts and diagrams drawn in code from real data.
-Then direct it like an editor: camera moves on stills (slow push-in/pan), cuts on the beat, big type on few words, depth with layered tracks, consistent palette. Generated images, AI video and AI voice look most "cinematic" but need the user's keys and cost money (see below): offer them, never assume them. Say plainly what is achievable with the material available.
-
-## Workflow
-
-1. **Brief.** Settle length (default 30 s), frame (1920×1080 landscape; 1080×1920 for Reels/Shorts/TikTok), language, message, brand colours and any assets the user owns. Ask only what you cannot infer.
-2. **Project.** Make a new folder named after the film inside a Trusted Write Location (e.g. `<root>\films\launch-30s`). Never write into the user's existing projects.
-3. **Pages.** One shot per page (`title.html`, `steps.html`, …), plus a background page for the whole length. Each page sets `window.film = { duration, frame(t) }` and **draws only from t**: no timers, `requestAnimationFrame`, CSS transitions, `Math.random()` or `Date`. Shared colours/helpers go in one `shared.js` the pages import. Keep text inside its box (long strings overflow cards).
-4. **film.html.** `<meta name="viewport" content="width=1920, height=1080">`; one `<section>` per track, top track first (titles over footage, background last); each clip has `at` (start second); pictures and pages without a `duration` need `#t=0,length`; sound is only `<audio>` clips in film.html, never in pages.
-5. **Sound without keys.** Generate a bed with ffmpeg into `assets/`, normalised so it is audible, e.g. a soft A-major pad:
-   `ffmpeg -y -f lavfi -i "sine=f=220:d=30" -f lavfi -i "sine=f=277.18:d=30" -f lavfi -i "sine=f=329.63:d=30" -f lavfi -i "sine=f=110:d=30" -filter_complex "[0][1][2][3]amix=inputs=4:normalize=1,tremolo=f=0.5:d=0.35,loudnorm=I=-18:TP=-2,afade=t=in:d=2,afade=t=out:st=27:d=3" -ar 48000 assets/bed.wav`
-   Use the user's own music only if they provide it.
-6. **Check with `look`** (run in the film folder, `background:true`, then wait on the process). It must report "same t, same picture"; fix every warning (too-quiet sound, nondeterministic page). Read the contact sheet PNG it prints (`.film/cache/look/0-30s.png`) and fix overflow, collisions and empty frames before rendering.
-7. **Render** with `render` (`background:true`; add `--4k` or `--fps 60` only when asked). A 30 s 1080p film rendered in ~25 s on a desktop with 4 parallel browsers; expect longer on laptops. Wait for the process to exit; do not sleep-and-poll in short loops.
-8. **Verify** the actual file: `ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,nb_frames -of json <film>.mp4`. Duration, size and frame count must match the brief; check loudness with `ffmpeg -i <film>.mp4 -af volumedetect -vn -f null -` (mean around -20 dB, not below -35).
-9. **Deliver the video itself.** The MP4 is `<folder>/<folder name>.mp4` beside film.html. Give the user its exact path; if they are away from that computer, use `create_file_resource` for a short-lived download link, or upload it where they asked (video uploads require a compatible Runner release; published Agent 0.6.3 does not support MP4. Check the installed version and advertised upload contract first; if unsupported, deliver the file/link or update with approval, and do not bypass Runner with custom browser scripts). Never open Studio or a browser on the user's screen; mention only that `npx -y openfilm@0.2.5 open <folder>` opens the film in Studio if they want to edit it by hand.
-
-## Voice-over, music and maps — local, no keys
-
-Vibe videos (抖音/Reels explainers) usually need narration and a music bed. All of this runs locally on the user's computer with no API key; install under `<root>\.ra-media-tools\`.
-
-**Voice-over (Qwen3-TTS, Apache-2.0).** This is a **multi-GB** first download (PyTorch + weights), potentially substantial disk use and GPU load. **Ask the user for explicit approval of the approximate download size and destination before any install, model fetch or inference.** Requesting narration is not consent to an unbounded installation. If approval is absent, do not download Qwen; offer the user's own recorded voice, captions-only delivery, or a simple local audio bed instead. A dedicated NVIDIA GPU makes approved inference faster. Install into a venv: `py -3.11 -m venv venv` then `venv\Scripts\pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu126` and `pip install -U qwen-tts huggingface_hub`; download `Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice` and `Qwen/Qwen3-TTS-Tokenizer-12Hz` (set `HF_HOME` onto a roomy drive). Synthesize: load `Qwen3TTSModel.from_pretrained(path, device_map="cuda:0", dtype=torch.float16)`, call `generate_custom_voice(text, language="Chinese", speaker="Vivian")` → `wavs, sr`, save with `soundfile.write`. Chinese speakers: Vivian, Serena, Uncle_Fu, Dylan (Beijing), Eric (Sichuan). Write the line's words into a `.vtt` next to the wav so Studio adds subtitles. Then place the wav as an `<audio>` clip in film.html at the shot's second.
-
-**Music bed (ACE-Step 1.5, MIT).** Big download (10 GB+ model/dependencies) ; the recipe below targets an NVIDIA GPU (8 GB+ VRAM) and still needs real-device acceptance. Upstream supports other backends, which must be verified separately. **Ask for explicit approval of estimated download/disk use and destination before cloning, `uv sync`, downloading weights or starting an API server.** Never infer consent from a generic music request. Otherwise fall back to the ffmpeg-synth bed above; if approved, bind its local API to loopback only, never a public interface. Install with `uv sync` in a clone of `https://github.com/ACE-Step/ACE-Step-1.5`, start the API `uv run acestep-api --host 127.0.0.1 --port 8001` (with `ACESTEP_OFFLOAD_TO_CPU=true` on 8 GB cards), then `POST http://127.0.0.1:8001/release_task` with `{"prompt":"lofi ambient, soft piano, 72bpm","lyrics":"","audio_duration":<seconds>,"model":"acestep-v15-turbo"}`, poll `POST /query_result` with `task_id_list` until `status:1`, and fetch the file via `GET /v1/audio?path=<file>`. Save under `assets/`.
-
-**Maps & data (d3-geo + Natural Earth, free).** For map animations (like 来龙去脉 / 冷知识大赏), `npm i d3-geo d3-geo-projection topojson-client` and download Natural Earth GeoJSON (`raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson`, provinces, rivers, coastline). In an OpenFilm page, use `d3.geoMercator()`/`geoConicEqualArea()` fitted to the frame and draw country/province paths on canvas, highlighting regions by t. Deterministic (no randomness, no timers), so `look` stays stable.
-
-### HyperFrames alternative
-
-For richer scripted motion, HyperFrames (Apache-2.0) also renders HTML→MP4 with GSAP: `npx hyperframes init`, write compositions with `data-start`/`data-duration`, render with `npx hyperframes render`. Same headless-Chromium + FFmpeg pipeline. Use it when the user wants GSAP timelines; otherwise OpenFilm is the default.
-
-### Paid providers (user's keys, optional)
-
-`npx -y openfilm@0.2.5 get` lists provider-backed media (ElevenLabs, OpenAI, Google, fal) the user connects in Studio with **their own key**. Never ask for or handle keys in chat. AI video clips cost real money: get explicit go-ahead with the expected cost first. Prefer the local, no-key tools above.
-
-## Rules
-
-- Make the film; do not stop at a plan or storyboard unless the user asked for one.
-- Use only assets the user owns or code/ffmpeg you generate. Never download other people's media.
-- OpenFilm starts a local Studio server on first `look`/`render`; it may keep running so the user can edit. Say so; stop it only if the user asks.
-- Remotion is an alternative only when the user confirms they hold the right Remotion licence.
-
-## Delivering the video
-
-Keep the final file inside a Trusted Write Location and report its path, duration, resolution and size from ffprobe. To give the person a download, use `create_file_resource` on that path. To post it to a website the person has authorized (for example a video platform's upload page), use Browser Runner: `browser_runner_snapshot`, then `browser_runner_act` with `upload` on the file input. Browser Runner accepts mp4, mov, m4v and webm up to 2 GB from Remote Arc 0.6.4; older devices reject video, so check the device's Agent version first and otherwise hand the file over for the person to upload. Uploading is a step inside the site's own flow; publishing, scheduling or making the video public still needs the person's confirmation.
+Write the film and deliver the rendered file. OpenFilm 0.2.5 and HyperFrames 0.8.193 render code on the user's computer. Core rendering, maps and local transcription need no model API key. Device compute, storage, downloads and the calling AI's allowance still apply.
 
 ## Device and permission gates
 
-Required authorization scopes: computer:read, computer:write. Running OpenFilm needs the device's `start_process` skill and a Trusted Write Location. Scripts, OS/desktop actions, external service side effects, media generation and paid API usage require independent user-approved execution permissions. This skill does not elevate Remote Arc Tool privileges or authorize use of hidden credentials.
+Use an online user device with read_file, write_file and start_process, and a task folder inside its Trusted Write Locations. The requested media task authorizes preparing the ordinary dependencies below within existing device permissions. Do not ask again merely because OpenFilm, HyperFrames, FFmpeg, Chromium, map packages/data or base Whisper are absent. Announce the source, approximate size and destination, then install and continue to the finished artifact. This does not authorize system privileges, unrelated software, cloud rendering, paid APIs, uploads or publication.
+
+All rendering, inference, audio processing and output files stay on the selected user device. Dependency downloads contact npm, official GitHub releases and Hugging Face; never send user recordings or project assets to those services. Keep caches and tools under <workspace>/.ra-media-tools. Respect disk-space failures and OS permission prompts; do not clean unrelated user files to make room.
+
+## Prepare and run
+
+This package includes the pinned helper scripts/local-media.mjs.
+- Arc: prepare_skill {id:"video-creator",deviceId,workspace} saves the helper and returns its directory.
+- Connect: read_skill {id:"video-creator"} lists the helper SHA-256 and bytes. Read read_skill {id:"video-creator",path:"scripts/local-media.mjs",offset:0}, follow nextOffset until null, write the exact chunks on the device and check their SHA-256 against the manifest. Never reconstruct a helper from a truncated response.
+- Resource-only clients can read remotearc://skills/video-creator/scripts/local-media.mjs. The skill's mere availability does not mean its engines are installed.
+
+Use Node.js 22.2+ with npm. If absent, automatically prepare a portable official Node distribution inside .ra-media-tools/node: choose the device OS/architecture from nodejs.org/dist, verify its archive against that release's SHASUMS256.txt, extract locally and use that node/npm path for this task. Do not require a global package manager or administrator installation. If an OS prerequisite cannot be installed within existing permissions, explain the specific blocker and retain completed work.
+
+Run, with absolute paths and quoted arguments:
+    node "<helper>/scripts/local-media.mjs" ensure --workspace "<workspace>" --components openfilm
+This installs only the requested engine, missing portable FFmpeg/ffprobe and Chromium; initial setup is usually hundreds of MB. For HyperFrames use --components hyperframes. For a map use --components maps; it caches d3/d3-geo-projection/topojson-client and Natural Earth country geometry. For subtitles read transcribe-subtitles and use --components whisper (base model ~148 MB plus executable/build tools). Reuse the cache and package-lock on later tasks; do not reinstall everything for each job. Check the returned engine CLI paths and version. An ensure result is dependency readiness, never task completion.
+
+OpenFilm commands must receive OPENFILM_NO_BROWSER=1 and OPENFILM_NO_UPDATE_CHECK=1. The helper does this and confines browser/download caches to the workspace. Never open Studio or preview on the user's screen merely to show progress. For direct CLI invocations, preserve the helper environment (PATH includes .ra-media-tools/bin and Node; PLAYWRIGHT_BROWSERS_PATH points to .ra-media-tools/browsers). Read the installed OpenFilm manual by running its CLI without arguments before authoring; read HyperFrames --help for exact command flags.
+
+## Author and deliver the film
+
+1. Infer the brief from context; use 30 s, 1920×1080 by default or 1080×1920 for Shorts/Reels. Choose language, palette and source assets. Create a new film folder within the workspace; preserve existing projects.
+2. Build deterministic pages from the user's footage, photos, logo, authorized screenshots, real data or code graphics. In OpenFilm each page exposes window.film = {duration, frame(t)} and draws solely from t. No timers, random values, transitions or Date-driven animation. Put shared styles/helpers in shared.js.
+3. In film.html set the viewport width/height, one section per track, upper tracks first, clips with at timestamps, static clips with #t=0,length, and audio clips only in film.html. In HyperFrames use index.html with its documented composition metadata and paused GSAP timelines; bundle fonts/scripts locally.
+4. Add sound if requested. Reuse already installed native voices (macOS say or Windows speech), supplied recordings/music, or a simple local FFmpeg synth bed. Qwen/ACE installation follows the separate consent gate below. Avoid silent output when narration or music was part of the brief.
+5. Render a real file:
+       node "<helper>/scripts/local-media.mjs" render --workspace "<workspace>" --engine openfilm --project "<film folder>" --output "<new output>.mp4"
+   HyperFrames uses --engine hyperframes. The helper installs missing ordinary tools, runs look/lint, renders, checks positive duration/video tracks, decodes the result and writes a SHA-256 artifact receipt. Run long work with start_process background:true, then inspect process_status/process_output through completion. Never treat a started process as success.
+6. Inspect contact sheets/keyframes at beginning, middle and end, including title transitions and the longest text. Check legibility, clipping, collisions, blank frames, aspect ratio and audio sync. Read actual ffprobe duration/resolution/size; compare them with the brief. Check audio loudness when audio was requested. Fix observed problems and rerender to a new output.
+7. Deliver the MP4 itself, its absolute local path, duration, resolution and size, together with editable project sources when useful. Keep the local file as the durable copy. create_file_resource can give a temporary download; state its expiry and regenerate on request. Upload or publish only where the user requested, using supported tools and existing permissions. Do not promise a permanent public link from a temporary bearer URL.
+
+## Maps — local and reusable
+
+For a finished static world map:
+    node "<helper>/scripts/local-media.mjs" map --workspace "<workspace>" --output "<new map>.svg" --highlight NZL,CHN
+Use ISO three-letter highlights. The helper caches Natural Earth public-domain geometry, pins its source revision and SHA-256 and writes an SVG plus artifact receipt.
+
+For animation, copy the cached GeoJSON and local d3 distributions into the film's assets folder; load those local files in pages. Use d3.geoMercator, geoNaturalEarth1 or a suitable regional projection, and draw regions/camera motion from t. No online tile/API/CDN dependency during rendering. Country geometry is the default; fetch official Natural Earth admin-1, coastline or river datasets locally when the brief needs them, retaining source revision/hash. Do not invent province detail from country data. Check disputed boundaries and labels against the user's intended presentation.
+
+## Voice-over, music and maps — local, no keys
+
+**Voice-over (Qwen3-TTS, Apache-2.0).** Before installing Qwen TTS or fetching missing weights, **ask the user for explicit approval**: disclose multi-GB downloads (PyTorch plus weights), estimated expanded disk use, chosen model, destination and CPU/GPU expectations. Do not download Qwen while awaiting approval; continue independent visuals/subtitles or use an existing native voice if suitable. Requesting narration is not installation consent. An already installed compatible model or existing explicit consent within the same scope can be reused without asking again.
+
+After approval, use a dedicated local venv and model cache under .ra-media-tools/qwen. Select PyTorch wheels for the actual device: CUDA only with supported NVIDIA hardware, MPS only where verified, CPU otherwise. Install qwen-tts and huggingface_hub with pinned versions recorded in a receipt; download Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice and its tokenizer into that cache. Qwen3TTSModel.from_pretrained with the verified backend, generate_custom_voice(text, language="Chinese", speaker="Vivian"), then save the returned waveform with its actual sample rate. Check duration, intelligibility and clipping before adding it to the film. No cloud TTS fallback without authorization.
+
+**Music bed (ACE-Step 1.5, MIT).** **Ask for explicit approval** before cloning/installing dependencies or downloading weights: disclose 10 GB+ downloads, expanded disk use, destination and hardware/runtime estimates. A generic music request does not authorize installation. Reuse an installed compatible model or existing scoped approval. While approval is pending, continue independent work or use the supplied/local synth bed if suitable.
+
+After approval, clone https://github.com/ACE-Step/ACE-Step-1.5 at a recorded revision under .ra-media-tools/acestep, use its isolated environment and actual supported device backend, and record installed versions/model hashes. NVIDIA examples are not a promise of CPU/Intel Mac performance. If its local API is needed, start acestep-api --host 127.0.0.1 --port 8001; check that installed version's schema, submit a bounded duration, wait for completion and copy the audio into film assets. Never start a public listener. Inspect the generated audio before delivery.
+
+**Maps & data.** Automatically prepare only the packages and datasets needed by the brief as described above. No extra installation question for ordinary local map preparation.
 
 ## Evidence of completion
 
-Report the device, film folder, rendered file path, duration, resolution, frame count, size, render time and anything you could not verify. Do not claim a video exists until ffprobe has read it.
+Report the device, rendered file and editable project paths, verified duration/resolution/size, selected engines and remaining limitations. The helper's artifact receipt proves file/decoder checks; visual quality and speech accuracy still need review. Do not claim delivery from a plan, dependency install, sample scaffold or failed render. Paid providers, image models, Remotion licensing and publication retain their separate authorization requirements.

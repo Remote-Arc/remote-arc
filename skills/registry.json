@@ -62,8 +62,8 @@
       "name": "Video Creator",
       "priority": "P0",
       "category": "media",
-      "description": "Make finished videos (promos, explainers, vibe/抖音 clips) on the user's computer with OpenFilm; local voice-over, music and maps, no keys for the core.",
-      "engine": "OpenFilm 0.2.5 + FFmpeg",
+      "description": "Create finished local videos with OpenFilm or HyperFrames; automatically prepare rendering and map dependencies, ask before Qwen TTS/ACE-Step installation.",
+      "engine": "OpenFilm 0.2.5 / HyperFrames 0.8.193 + FFmpeg",
       "requires": [
         "node",
         "ffmpeg",
@@ -75,7 +75,7 @@
       ],
       "upstream": "https://github.com/openfilm/openfilm",
       "license": "MIT; generated media follows each provider's terms",
-      "optIn": true
+      "optIn": false
     },
     {
       "id": "image-studio",
@@ -117,7 +117,7 @@
       "name": "Transcribe & Subtitles",
       "priority": "P1",
       "category": "media",
-      "description": "Transcribe audio or video to timed subtitles (SRT/VTT) locally with whisper.cpp — auto-installed on first use, no API key, works for Chinese and English.",
+      "description": "Transcribe audio/video into finished SRT/VTT subtitles locally; automatically install whisper.cpp, FFmpeg and the base multilingual model when needed.",
       "engine": "whisper.cpp + FFmpeg",
       "requires": [
         "ffmpeg"
@@ -128,7 +128,7 @@
       ],
       "upstream": "https://github.com/ggml-org/whisper.cpp",
       "license": "MIT; model weights separate",
-      "optIn": true
+      "optIn": false
     },
     {
       "id": "research-reports",

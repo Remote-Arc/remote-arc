@@ -1967,7 +1967,7 @@
     {
       "name": "read_skill",
       "title": "Read a Remote Arc skill",
-      "description": "Read one skill's full instructions by id from find_skills. Community skills also list helper resources. Check that any named engine (ffmpeg, python, etc.) exists on the chosen computer before relying on it.",
+      "description": "Read a skill by id. Packaged media/community skills list pinned helper resources; pass path and offset to read a resource in chunks, following nextOffset. Save those bytes on the authorized user device, run the helper when the task needs it, and verify actual outputs. Qwen TTS and ACE-Step installation needs explicit size-aware user consent.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1976,6 +1976,16 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 100
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": [

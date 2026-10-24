@@ -1,3 +1,4 @@
+import { diagnosticError } from "./diagnostics.js";
 import {handleFollowupUnsubscribe} from './user-followups.js';
 import {runFollowupBatches} from './followup-batches.js';
 import {handleSlackEvents} from './slack-bot-events.js';
@@ -832,7 +833,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
           .fetch(withTrustedDeviceHeaders(request, identity));
       } catch (error) {
         console.error("agent_connect_failed", {
-          error: error instanceof Error ? error.message : String(error),
+          error: diagnosticError(error),
         });
         return new Response("Relay temporarily unavailable", {
           status: 503,
@@ -883,7 +884,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
           ctx.waitUntil(
             runAutomationTick(env, new Date(), automationId).catch((error) => {
               console.warn("source_goal_scheduler_kick_failed", {
-                error: error instanceof Error ? error.message : String(error),
+                error: diagnosticError(error),
               });
             }),
           );
@@ -1043,7 +1044,7 @@ export default {
       if (isMcpRequest) recordMcpTelemetry(env, {
         status: 500, durationMs: Date.now() - started, method: request.method,
       });
-      const message = error instanceof Error ? error.message : String(error);
+      const message = diagnosticError(error);
       console.error("worker_unhandled_exception", { message });
       ctx.waitUntil(
         recordServiceIncident(
@@ -1088,7 +1089,7 @@ export default {
         ctx.waitUntil(archiveOldAudit(env).then(({ archived, batches }) => {
           if (archived) console.info("audit_archive_completed", { archived, batches });
         }).catch((error) => {
-          console.error("audit_archive_failed", { message: error instanceof Error ? error.message : String(error) });
+          console.error("audit_archive_failed", { message: diagnosticError(error) });
         }));
       }
     }

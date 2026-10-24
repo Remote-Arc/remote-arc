@@ -21,6 +21,9 @@ Usage: remotelink setup inspect [--agent codex|claude|all]
                  Project setup supports codex; --global supports both clients
   --workspace <absolute-dir>  Select the project for local Codex integration
   --codex-binary <absolute-file>  Optional native Codex executable
+  --skip-connector-check  With --global install/repair: register Codex MCP even
+                 when Codex cannot list its ChatGPT connectors. Use only when
+                 Codex has no Remote Arc connector, to avoid duplicate tools.
   --help, -h     Show this help
 
 Inspection only:
@@ -67,6 +70,7 @@ func Run(ctx context.Context, args []string, version string, output io.Writer) e
 	workspace := f.String("workspace", "", "selected project")
 	binary := f.String("codex-binary", "", "native Codex binary")
 	global := f.Bool("global", action == "auto", "user-wide client integration")
+	skipConnectorCheck := f.Bool("skip-connector-check", false, "register even when Codex cannot list connectors")
 	help := f.Bool("help", false, "show help")
 	f.BoolVar(help, "h", false, "show help")
 	if err := f.Parse(args[2:]); err != nil {
@@ -91,7 +95,10 @@ func Run(ctx context.Context, args []string, version string, output io.Writer) e
 		if action == "auto" {
 			action = "install"
 		}
-		return encodeAutomatic(ctx, *agent, action, version, encoder)
+		if *skipConnectorCheck && action != "install" && action != "repair" {
+			return errors.New("--skip-connector-check only applies to install or repair")
+		}
+		return encodeAutomatic(ctx, *agent, action, version, *skipConnectorCheck, encoder)
 	}
 	if action == "inspect" {
 		if *workspace != "" || *binary != "" {
@@ -102,6 +109,9 @@ func Run(ctx context.Context, args []string, version string, output io.Writer) e
 			return err
 		}
 		return encoder.Encode(r)
+	}
+	if *skipConnectorCheck {
+		return errors.New("--skip-connector-check applies to --global setup only")
 	}
 	if *agent != "codex" {
 		return errors.New("project installation supports --agent codex; use --global for Claude Code")

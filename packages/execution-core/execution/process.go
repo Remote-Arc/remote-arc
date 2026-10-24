@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 const MaxCaptureBytes = 2 * 1024 * 1024
@@ -39,12 +40,27 @@ func (b *cappedBuffer) Write(p []byte) (int, error) {
 func (b *cappedBuffer) Text() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	s := strings.ToValidUTF8(string(b.b), "�")
+	s := decodeOutput(b.b)
 	if b.truncated {
 		s += "\n… output truncated …"
 	}
 	return s
 }
+
+// utf8Prefix drops an incomplete rune left at the end by truncation or a
+// still-running process, so it is not mistaken for a legacy code page.
+func utf8Prefix(b []byte) []byte {
+	for i := len(b) - 1; i >= 0 && i >= len(b)-utf8.UTFMax; i-- {
+		if utf8.RuneStart(b[i]) {
+			if !utf8.FullRune(b[i:]) {
+				return b[:i]
+			}
+			break
+		}
+	}
+	return b
+}
+
 func (b *cappedBuffer) Size() int { b.mu.Lock(); defer b.mu.Unlock(); return len(b.b) }
 func randomID() string {
 	b := make([]byte, 16)

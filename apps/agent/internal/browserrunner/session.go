@@ -1275,9 +1275,25 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 	return result, dispatched, nil
 }
 
-var uploadTypes = map[string]bool{".pdf": true, ".doc": true, ".docx": true, ".txt": true, ".rtf": true, ".odt": true, ".png": true, ".jpg": true, ".jpeg": true}
+// uploadLimits lists the file types browser_runner may attach and the size
+// limit for each class. Media files are passed to Chrome by path and hashed as
+// a stream, so larger videos do not need to fit in memory.
+const (
+	maxDocumentUpload = 25 << 20
+	maxAudioUpload    = 512 << 20
+	maxVideoUpload    = 2 << 30
+)
 
-const maxUpload = 25 << 20
+var uploadLimits = map[string]int64{
+	".pdf": maxDocumentUpload, ".doc": maxDocumentUpload, ".docx": maxDocumentUpload, ".txt": maxDocumentUpload,
+	".rtf": maxDocumentUpload, ".odt": maxDocumentUpload, ".csv": maxDocumentUpload, ".xlsx": maxDocumentUpload,
+	".pptx": maxDocumentUpload, ".png": maxDocumentUpload, ".jpg": maxDocumentUpload, ".jpeg": maxDocumentUpload,
+	".gif": maxDocumentUpload, ".webp": maxDocumentUpload,
+	".mp3": maxAudioUpload, ".wav": maxAudioUpload, ".m4a": maxAudioUpload,
+	".mp4": maxVideoUpload, ".mov": maxVideoUpload, ".m4v": maxVideoUpload, ".webm": maxVideoUpload,
+}
+
+const uploadTypesText = "documents (pdf, doc, docx, txt, rtf, odt, csv, xlsx, pptx), images (png, jpg, gif, webp), audio (mp3, wav, m4a) and video (mp4, mov, m4v, webm)"
 
 func fileDigest(path string) (int64, string, error) {
 	st, e := os.Stat(path)
@@ -1290,11 +1306,12 @@ func fileDigest(path string) (int64, string, error) {
 	if !st.Mode().IsRegular() {
 		return 0, "", errors.New("Upload path must be a regular file.")
 	}
-	if st.Size() == 0 || st.Size() > maxUpload {
-		return 0, "", fmt.Errorf("Upload files must be between 1 byte and %d MB.", maxUpload>>20)
+	limit, ok := uploadLimits[strings.ToLower(filepath.Ext(path))]
+	if !ok {
+		return 0, "", errors.New("UNSUPPORTED_UPLOAD_TYPE: browser_runner uploads " + uploadTypesText + ".")
 	}
-	if !uploadTypes[strings.ToLower(filepath.Ext(path))] {
-		return 0, "", errors.New("browser_runner uploads documents and images only (pdf, doc, docx, txt, rtf, odt, png, jpg).")
+	if st.Size() == 0 || st.Size() > limit {
+		return 0, "", fmt.Errorf("UPLOAD_SIZE_LIMIT: %s files must be between 1 byte and %d MB.", strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), "."), limit>>20)
 	}
 	f, e := os.Open(path)
 	if e != nil {

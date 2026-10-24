@@ -179,11 +179,16 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        if: github.event_name != 'workflow_dispatch'
+        # A manual (workflow_dispatch) run only updates the release when it
+        # actually published this version, so re-running an old commit can
+        # never move the Latest marker backwards.
+        if: github.event_name != 'workflow_dispatch' || steps.npm_version.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ "$GITHUB_REF" == refs/heads/release/remotelink-v* ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            TAG_NAME="remotelink-v$(node -p "require('./packages/cli/package.json').version")"
+          elif [[ "$GITHUB_REF" == refs/heads/release/remotelink-v* ]]; then
             TAG_NAME="${GITHUB_REF_NAME#release/}"
           else
             TAG_NAME="$GITHUB_REF_NAME"

@@ -10,7 +10,7 @@ status: builtin-guidance
 
 **Engine:** OpenFilm 0.2.5 (MIT, `npx -y openfilm@0.2.5`) + FFmpeg. **Source:** https://github.com/openfilm/openfilm
 
-You write the film; the user's computer renders it. Text, graphics, animation, charts, screenshots and the user's own footage need **no API key and no extra cost**: your own model usage (the user's AI plan, or Arc Credits) is the only cost. Only *generated* voice-over, music, images and AI video need a service the user connects with their own key.
+You write the film; the user's computer renders it. Text, graphics, animation, charts, maps, screenshots and the user's own footage need **no API key and no extra cost**: your own model usage (the user's AI plan, or Arc Credits) is the only cost. Voice-over and music can also run **locally with no key** (see below). Only AI-generated images/video need a provider the user connects with their own key.
 
 ## Preflight (once per computer)
 
@@ -46,9 +46,23 @@ Then direct it like an editor: camera moves on stills (slow push-in/pan), cuts o
 8. **Verify** the actual file: `ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height,nb_frames -of json <film>.mp4`. Duration, size and frame count must match the brief; check loudness with `ffmpeg -i <film>.mp4 -af volumedetect -vn -f null -` (mean around -20 dB, not below -35).
 9. **Deliver the video itself.** The MP4 is `<folder>/<folder name>.mp4` beside film.html. Give the user its exact path; if they are away from that computer, use `create_file_resource` for a short-lived download link, or upload it where they asked (video uploads require a compatible Runner release; published Agent 0.6.3 does not support MP4. Check the installed version and advertised upload contract first; if unsupported, deliver the file/link or update with approval, and do not bypass Runner with custom browser scripts). Never open Studio or a browser on the user's screen; mention only that `npx -y openfilm@0.2.5 open <folder>` opens the film in Studio if they want to edit it by hand.
 
-## Generated media (optional, user's keys)
+## Voice-over, music and maps — local, no keys
 
-`npx -y openfilm@0.2.5 get` lists what is connected. Voice-over, music, images and AI video work only after the user connects a provider (ElevenLabs, OpenAI, Google, fal, …) in Studio → Settings → Providers with **their own key**. Never ask for or handle keys in chat. AI video clips cost real money: get the user's explicit go-ahead with the expected cost first.
+Vibe videos (抖音/Reels explainers) usually need narration and a music bed. All of this runs locally on the user's computer with no API key; install under `<root>\.ra-media-tools\`.
+
+**Voice-over (Qwen3-TTS, Apache-2.0).** Large first download (~several GB: PyTorch + weights) — tell the user and proceed if they want narration; a dedicated NVIDIA GPU makes it fast. Install into a venv: `py -3.11 -m venv venv` then `venv\Scripts\pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu126` and `pip install -U qwen-tts huggingface_hub`; download `Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice` and `Qwen/Qwen3-TTS-Tokenizer-12Hz` (set `HF_HOME` onto a roomy drive). Synthesize: load `Qwen3TTSModel.from_pretrained(path, device_map="cuda:0", dtype=torch.float16)`, call `generate_custom_voice(text, language="Chinese", speaker="Vivian")` → `wavs, sr`, save with `soundfile.write`. Chinese speakers: Vivian, Serena, Uncle_Fu, Dylan (Beijing), Eric (Sichuan). Write the line's words into a `.vtt` next to the wav so Studio adds subtitles. Then place the wav as an `<audio>` clip in film.html at the shot's second.
+
+**Music bed (ACE-Step 1.5, MIT).** Big download (10 GB+ model) and needs an NVIDIA GPU (8 GB+ VRAM) — **ask the user before installing**; otherwise fall back to the ffmpeg-synth bed above. Install with `uv sync` in a clone of `https://github.com/ACE-Step/ACE-Step-1.5`, start the API `uv run acestep-api` (with `ACESTEP_OFFLOAD_TO_CPU=true` on 8 GB cards), then `POST http://127.0.0.1:8001/release_task` with `{"prompt":"lofi ambient, soft piano, 72bpm","lyrics":"","audio_duration":<seconds>,"model":"acestep-v15-turbo"}`, poll `POST /query_result` with `task_id_list` until `status:1`, and fetch the file via `GET /v1/audio?path=<file>`. Save under `assets/`.
+
+**Maps & data (d3-geo + Natural Earth, free).** For map animations (like 来龙去脉 / 冷知识大赏), `npm i d3-geo d3-geo-projection topojson-client` and download Natural Earth GeoJSON (`raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson`, provinces, rivers, coastline). In an OpenFilm page, use `d3.geoMercator()`/`geoConicEqualArea()` fitted to the frame and draw country/province paths on canvas, highlighting regions by t. Deterministic (no randomness, no timers), so `look` stays stable.
+
+### HyperFrames alternative
+
+For richer scripted motion, HyperFrames (Apache-2.0) also renders HTML→MP4 with GSAP: `npx hyperframes init`, write compositions with `data-start`/`data-duration`, render with `npx hyperframes render`. Same headless-Chromium + FFmpeg pipeline. Use it when the user wants GSAP timelines; otherwise OpenFilm is the default.
+
+### Paid providers (user's keys, optional)
+
+`npx -y openfilm@0.2.5 get` lists provider-backed media (ElevenLabs, OpenAI, Google, fal) the user connects in Studio with **their own key**. Never ask for or handle keys in chat. AI video clips cost real money: get explicit go-ahead with the expected cost first. Prefer the local, no-key tools above.
 
 ## Rules
 

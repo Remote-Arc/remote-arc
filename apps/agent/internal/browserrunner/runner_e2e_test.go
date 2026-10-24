@@ -150,7 +150,7 @@ func ref(t *testing.T, snap map[string]any, role, name string) string {
 func newHarness(t *testing.T) (*harness, *fakeATS, string, string) {
 	t.Helper()
 	if _, e := FindBrowser(); e != nil {
-		t.Skip("no Chromium-family browser on this machine: " + e.Error())
+		t.Fatal("required Chromium-family browser unavailable: " + e.Error())
 	}
 	home := t.TempDir()
 	t.Setenv("REMOTEARC_HOME", home)

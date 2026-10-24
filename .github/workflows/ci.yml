@@ -5,9 +5,17 @@ on:
     branches: [debug/pr345-mac-capture-20261024]
 
 jobs:
-  capture-probes:
+  capture-probe:
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - baseline-no-automation
+          - legacy-surface-no-reacquire
+          - native-only-no-reacquire
+          - focus-after-hide-no-reacquire
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -16,53 +24,21 @@ jobs:
           cache-dependency-path: |
             apps/agent/go.sum
             packages/execution-core/go.sum
-      - name: New surface enabled (current source)
-        continue-on-error: true
+      - name: Fresh machine with three pixel-verified repetitions
+        shell: bash
         run: |
-          python3 scripts/pr345-capture-probe.py new-surface
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Every frame screencast with no screenshot request
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py screencast-1-only
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Every frame screencast plus screenshot fallback
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py screencast-1
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Legacy surface snapshot
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py legacy-surface
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Native view snapshot without screencast
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py native-only
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Focus emulation initialized after native hide
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py focus-after-hide
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Shut off macOS 26 occlusion detector
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py mac-occlusion-shutoff
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Disable GPU vsync
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py no-gpu-vsync
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Disable GPU vsync and force all compositor stages
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py no-gpu-vsync-allstages
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Force all compositor stages before draw
-        continue-on-error: true
-        run: |
-          python3 scripts/pr345-capture-probe.py all-compositor-stages
-          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+          set -o pipefail
+          python3 scripts/pr345-capture-probe.py "${{ matrix.mode }}"
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=3 -v | tee capture-probe.log
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path("capture-probe.log").read_text()
+          assert "--- SKIP:" not in text, "Browser acceptance was skipped"
+          assert text.count("--- PASS: TestE2EWaitConditionsAndLiveView") == 3, "Expected three actual passes"
+          assert text.count("CAPTURE_PROBE_UPDATED_FRAME") == 6, "Expected two fresh fixture colors per repetition"
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: capture-probe-${{ matrix.mode }}
+          path: capture-probe.log

@@ -213,11 +213,11 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 	if s.hasWindow() {
 		_, beforeView, _ = s.window(h.ctx)
 	}
-	var commandLine struct {
-		Arguments []string `json:"arguments"`
+	var browserVersion struct {
+		Product string `json:"product"`
 	}
-	_ = s.conn.Call(h.ctx, "Browser.getBrowserCommandLine", nil, &commandLine)
-	t.Logf("CAPTURE_PROBE_COMMAND_LINE %q", commandLine.Arguments)
+	_ = s.conn.Call(h.ctx, "Browser.getVersion", nil, &browserVersion)
+	t.Logf("CAPTURE_PROBE_BROWSER %s", browserVersion.Product)
 	near := func(actual uint32, want int) bool {
 		return int(actual>>8) >= want-10 && int(actual>>8) <= want+10
 	}
@@ -245,6 +245,7 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 				bounds := img.Bounds()
 				r, g, b, _ := img.At(bounds.Max.X-10, bounds.Max.Y-10).RGBA()
 				if near(r, red) && near(g, green) && near(b, blue) {
+					t.Logf("CAPTURE_PROBE_UPDATED_FRAME rgb=%d,%d,%d", red, green, blue)
 					break frameLoop
 				}
 			case <-deadline.C:

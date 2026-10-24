@@ -163,6 +163,23 @@ jobs:
       - name: Minimized macOS live-view regression
         if: runner.os == 'macOS'
         run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStaticLiveView|TestViewJPEG|TestLiveViewSlow|TestE2EWaitConditionsAndLiveView' -count=3
+      - name: Diagnose minimized Mac compositor when live-view fails
+        if: failure() && runner.os == 'macOS'
+        shell: bash
+        run: |
+          # Keep the failing acceptance result. Probe only isolated test profiles
+          # to distinguish native GPU presentation from the protocol itself.
+          for mode in disable-gpu disable-gpu-compositing disable-frame-rate-limit; do
+            wrapper="$RUNNER_TEMP/ra-chrome-$mode.sh"
+            printf '#!/bin/sh\nexec "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --%s "$@"\n' "$mode" > "$wrapper"
+            chmod +x "$wrapper"
+            echo "COMPOSITOR_PROBE $mode"
+            if REMOTEARC_BROWSER_PATH="$wrapper" go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v; then
+              echo "COMPOSITOR_PROBE_PASS $mode"
+            else
+              echo "COMPOSITOR_PROBE_FAIL $mode"
+            fi
+          done
       - run: pnpm test:device
       - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
       - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json

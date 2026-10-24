@@ -179,6 +179,7 @@ try {
       "set_task_keep_awake",
       "goal_workspace",
       "agent_execution_log",
+      "list_agent_sessions",
     ]),
   );
   assert(hello.capabilities.includes("go_agent_v1"));

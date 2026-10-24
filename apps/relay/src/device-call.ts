@@ -134,7 +134,8 @@ export async function callDevice(
     }
     // Extension 0.4.0 actions are covered by the click & fill permission an
     // already-paired browser has; each site is still allowed in the browser.
-    const permissionTool = tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool === "goal_workspace" ? "start_process" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : tool;
+    // New read-only tools reuse existing read grants for upgrade compatibility.
+    const permissionTool = tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool === "goal_workspace" ? "start_process" : tool === "list_agent_sessions" ? "read_file" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : tool;
     if (!allowedTools.includes(permissionTool)) {
       throw new Error('tool "' + tool + '" is disabled for this device');
     }
@@ -203,6 +204,7 @@ export async function callDevice(
   }
 
   const readOnlyPathTools = new Set([
+    "list_agent_sessions",
     "read_file",
     "read_binary_file",
     "list_directory",

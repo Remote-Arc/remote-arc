@@ -19,6 +19,7 @@ const SENSITIVE_BASENAMES = new Set([
   "id_rsa",
   "id_ed25519",
   "credentials",
+  ".credentials.json",
 ]);
 
 const expandPath = (value: string) => {
@@ -67,6 +68,22 @@ const isInside = (target: string, root: string) => {
   );
 };
 
+/** Sign-in state of local AI coding agents. Session logs stay readable for
+ * task discovery; tokens and secret stores do not. Roots are canonicalized
+ * when matched, so a linked home (~/.codex -> another drive) is covered. */
+function agentCredentialRoots(home: string) {
+  const codex = [path.join(home, ".codex"), process.env.CODEX_HOME?.trim()].filter(Boolean) as string[];
+  const claude = [path.join(home, ".claude"), process.env.CLAUDE_CONFIG_DIR?.trim()].filter(Boolean) as string[];
+  const roots = codex.flatMap((dir) =>
+    ["auth.json", ".credentials.json", "secrets", ".sandbox-secrets"].map((name) => path.join(dir, name)),
+  );
+  roots.push(...claude.map((dir) => path.join(dir, ".credentials.json")));
+  if (process.platform === "win32" && process.env.APPDATA) {
+    roots.push(path.join(process.env.APPDATA, "GitHub CLI", "hosts.yml"));
+  }
+  return roots;
+}
+
 function defaultSensitiveRoots() {
   const home = os.homedir();
   const roots = [
@@ -77,6 +94,10 @@ function defaultSensitiveRoots() {
     path.join(home, ".kube"),
     path.join(home, ".docker"),
     path.join(home, ".config", "gcloud"),
+    path.join(home, ".config", "gh", "hosts.yml"),
+    path.join(home, ".claude.json"),
+    path.join(home, ".remotearc", "config.json"),
+    ...agentCredentialRoots(home),
   ];
 
   if (process.platform === "darwin") {

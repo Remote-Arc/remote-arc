@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -309,13 +311,76 @@ func (p *Processes) Close() {
 	}
 	wg.Wait()
 }
-func listProcesses() (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "ps", "-axo", "pid,ppid,user,%cpu,%mem,etime,command")
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "tasklist.exe", "/FO", "CSV", "/NH")
+
+// secretArgument redacts obvious credentials that some tools pass on their
+// command line, so a process listing does not become a token leak.
+var secretArgument = regexp.MustCompile(`(?i)((?:--?|/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("(?:\\.|[^"\\])*"|'[^']*'|\S+)|(bearer\s+)\S+`)
+
+func redactCommandLine(line string) string {
+	return secretArgument.ReplaceAllStringFunc(line, func(match string) string {
+		parts := secretArgument.FindStringSubmatch(match)
+		if parts[3] != "" {
+			return parts[3] + "[redacted]"
+		}
+		return parts[1] + "[redacted]"
+	})
+}
+
+// processCommand picks the OS listing command. tasklist has no header row of
+// its own, so one is supplied; details on Windows adds command lines via CIM.
+func processCommand(goos string, details bool) (name string, args []string, header string) {
+	if goos != "windows" {
+		return "ps", []string{"-axo", "pid,ppid,user,%cpu,%mem,etime,command"}, ""
 	}
+	if details {
+		return "powershell.exe", []string{"-NoProfile", "-NonInteractive", "-Command",
+			"[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Json -Compress"}, ""
+	}
+	return "tasklist.exe", []string{"/FO", "CSV", "/NH"}, `"Image Name","PID","Session Name","Session#","Mem Usage"`
+}
+
+// Redact the actual command before formatting it. CSV doubles embedded quotes,
+// so applying the command-line regex to raw CSV can redact an empty quote pair
+// and leave the credential behind. JSON also preserves multiline commands.
+func windowsProcessDetails(output string) (string, error) {
+	type row struct {
+		PID     int     `json:"ProcessId"`
+		PPID    int     `json:"ParentProcessId"`
+		Name    string  `json:"Name"`
+		Memory  float64 `json:"MemoryMB"`
+		Command string  `json:"CommandLine"`
+	}
+	rows := []row{}
+	output = strings.TrimSpace(output)
+	if output != "" && output != "null" {
+		if strings.HasPrefix(output, "{") {
+			output = "[" + output + "]"
+		}
+		if err := json.Unmarshal([]byte(output), &rows); err != nil {
+			return "", errors.New("Invalid process details response")
+		}
+	}
+	lines := []string{"PID\tPPID\tName\tMemoryMB\tCommandLine"}
+	for _, r := range rows {
+		// Keep each process on one display row after redacting quoted values.
+		command := strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(redactCommandLine(r.Command))
+		name := strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(r.Name)
+		lines = append(lines, fmt.Sprintf("%d\t%d\t%s\t%.0f\t%s", r.PID, r.PPID, name, r.Memory, command))
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+// listProcesses returns a header plus one line per process. filter keeps rows
+// whose text contains it (case-insensitive); limit caps rows; details adds
+// command lines on Windows (ps already includes them elsewhere).
+func listProcesses(filter string, limit int, details bool) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if limit < 1 || limit > 1000 {
+		limit = 200
+	}
+	name, args, header := processCommand(runtime.GOOS, details)
+	cmd := exec.CommandContext(ctx, name, args...)
 	hideCommand(cmd)
 	var out, err cappedBuffer
 	cmd.Stdout = &out
@@ -327,5 +392,36 @@ func listProcesses() (string, error) {
 	if platform == "windows" {
 		platform = "win32"
 	}
-	return "Processes on " + platform + ":\n\n" + strings.TrimSpace(out.Text()), nil
+	output := out.Text()
+	if runtime.GOOS == "windows" && details {
+		var parseErr error
+		output, parseErr = windowsProcessDetails(output)
+		if parseErr != nil {
+			return "", parseErr
+		}
+	}
+	lines := strings.Split(strings.ReplaceAll(strings.TrimSpace(output), "\r\n", "\n"), "\n")
+	if header == "" && len(lines) > 0 {
+		header, lines = lines[0], lines[1:]
+	}
+	needle := strings.ToLower(strings.TrimSpace(filter))
+	kept, matched := []string{}, 0
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" || needle != "" && !strings.Contains(strings.ToLower(line), needle) {
+			continue
+		}
+		matched++
+		if len(kept) < limit {
+			kept = append(kept, redactCommandLine(line))
+		}
+	}
+	summary := fmt.Sprintf("[%d of %d processes", len(kept), matched)
+	if needle != "" {
+		summary += fmt.Sprintf(" matching %q", filter)
+	}
+	if matched > len(kept) {
+		summary += "; raise limit or narrow filter for the rest"
+	}
+	summary += "]"
+	return "Processes on " + platform + ":\n\n" + redactCommandLine(header) + "\n" + strings.Join(kept, "\n") + "\n\n" + summary, nil
 }

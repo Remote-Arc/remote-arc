@@ -131,7 +131,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 		for _, t := range a.Core.ListTools() {
 			names = append(names, t.Name)
 		}
-		names = append(names, "background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace", "agent_execution_log")
+		names = append(names, "background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace", "agent_execution_log", AgentSessionsTool)
 		if a.browserRunnerReady() {
 			names = append(names, browserrunner.Tools...)
 		}
@@ -241,6 +241,9 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 			return nil, errors.New("browser_runner requires terminal mode on this device.")
 		}
 		return a.Browser.Call(ctx, call.Tool, args, call.Policy)
+	case AgentSessionsTool:
+		// Read-only metadata; the relay gates it with the read_file permission.
+		return listAgentSessions(ctx, args, call.Policy)
 	case "goal_workspace":
 		if a.Core.Mode == "safe" || a.Core.Mode == "developer" {
 			return nil, errors.New("Goal checkpoints require terminal mode.")

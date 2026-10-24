@@ -1,7 +1,18 @@
+import assert from "node:assert/strict";
+import {redactCommandLine, windowsProcessDetails} from "../src/process.js";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { RemoteArcExecutionCore, assertCommandAllowed } from "../src/index.js";
+
+assert.equal(redactCommandLine(String.raw`node --token "synthetic\"private" --port 80`),'node --token [redacted] --port 80');
+const processRow = {ProcessId:123,ParentProcessId:12,Name:"node.exe",MemoryMB:42,CommandLine:`node job.js --token "SYNTHETIC PRIVATE TOKEN" --password 'SECRET,WITH,COMMAS' --client-secret "LINE1\nLINE2" --port 80`};
+for (const rows of [processRow,[processRow],null]) {
+  const output = windowsProcessDetails(JSON.stringify(rows));
+  for (const secret of ["SYNTHETIC PRIVATE TOKEN","SECRET,WITH,COMMAS","LINE1","LINE2"]) assert(!output.includes(secret),"decoded process credentials must be redacted");
+  if(rows) {assert(output.includes("--port 80")); assert.equal(output.split("\n").length,2);}
+}
+assert.throws(()=>windowsProcessDetails("malformed details"));
 
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "remotearc-core-"));
 process.env.REMOTEARC_UNDO_ROOT = path.join(root, ".undo");
@@ -204,6 +215,31 @@ try {
   );
   if (!allowedSensitive.content[0]?.text.includes("SECRET=test")) {
     throw new Error("Sensitive Path Policy narrow exception failed");
+  }
+
+  // AI-agent sign-in files are credentials even inside an ordinary project
+  // or a linked agent home; their session logs stay readable.
+  const codexHome = path.join(root, "codex-home");
+  await fs.mkdir(path.join(codexHome, "sessions"), { recursive: true });
+  await fs.writeFile(path.join(codexHome, "auth.json"), "{\"token\":\"x\"}");
+  await fs.writeFile(path.join(codexHome, "sessions", "rollout.jsonl"), "{}\n");
+  await fs.writeFile(path.join(project, ".credentials.json"), "{}");
+  const previousCodexHome = process.env.CODEX_HOME;
+  process.env.CODEX_HOME = codexHome;
+  try {
+    for (const target of [path.join(codexHome, "auth.json"), path.join(project, ".credentials.json")]) {
+      let blocked = false;
+      try {
+        await safe.callTool("read_file", { path: target }, policy);
+      } catch {
+        blocked = true;
+      }
+      if (!blocked) throw new Error(`Sensitive Path Policy did not block agent credential ${target}`);
+    }
+    await safe.callTool("read_file", { path: path.join(codexHome, "sessions", "rollout.jsonl") }, policy);
+  } finally {
+    if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = previousCodexHome;
   }
 
   if (process.platform !== "win32") {

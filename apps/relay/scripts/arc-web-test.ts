@@ -29,8 +29,8 @@ await assert.rejects(()=>empty({definition,system:'s',user:'q',schema:{},maxOutp
 const searchRequest={definition,system:'s',user:'q',schema:{},maxOutputTokens:100,webSearch:{maxCalls:2},signal:new AbortController().signal};
 const call=(status:string)=>({type:'web_search_call',status,action:{type:'search'}});
 const answer={type:'message',content:[{type:'output_text',text:'Result',annotations:[]}]};
-const attempts=openAiAdapter('fixture',(async()=>Response.json({status:'completed',usage,output:[call('completed'),call('failed'),call('incomplete'),answer]})) as any);
-assert.equal((await attempts(searchRequest)).usage.webSearchCalls,1);
+const attempts=openAiAdapter('fixture',(async()=>Response.json({status:'completed',usage,output:[call('completed'),call('failed'),call('incomplete'),call('searching'),call('in_progress'),answer]})) as any);
+assert.equal((await attempts(searchRequest)).usage.webSearchCalls,1,'Only completed searches incur fees; searching/in_progress output items can remain after the response reaches max_tool_calls');
 const overrun=openAiAdapter('fixture',(async()=>Response.json({status:'completed',usage,output:[call('completed'),call('completed'),call('completed'),answer]})) as any);
 assert.equal((await overrun(searchRequest)).usage.webSearchCalls,3,'A real overrun is not hidden by clamping billed usage');
 const partial=openAiAdapter('fixture',(async()=>Response.json({status:'incomplete',usage,output:[call('completed'),answer]})) as any);
@@ -65,7 +65,7 @@ import {runModelGateway,WEB_SEARCH_CALL_MICROS} from '../src/model-gateway.js';
    if(query.includes('FROM billing_reservations WHERE id=?1'))return{id:reserved,request_json:statements.find(s=>s.query.includes('INSERT OR IGNORE INTO billing_reservations'))!.args[12],entries_json:'[]',status:'reserved'};return null;},
   async run(){return{meta:{changes:1}};}};return stmt;},
   async batch(list:any[]){const insert=list.find(s=>s.query?.includes('INSERT OR IGNORE INTO billing_reservations'));if(insert)reserved=insert.args[0];return list.map(()=>({meta:{changes:1}}));}} as any;
- const binding={DB:db,enabled:true,models:[definition],autoModelId:'arc-auto',paidGrantId:'grant',adapters:{openai:openAiAdapter('fixture',(async()=>Response.json({id:'r',usage:{input_tokens:30000,output_tokens:400},output:[{type:'web_search_call',status:'completed',action:{type:'search'}},{type:'web_search_call',status:'completed',action:{type:'open_page'}},{type:'web_search_call',status:'completed',action:{type:'search'}},{type:'web_search_call',status:'completed',action:{type:'find_in_page'}},{type:'message',content:[{type:'output_text',text:'Sourced result',annotations:[]}]}]})) as any)}} as any;
+ const binding={DB:db,enabled:true,models:[definition],autoModelId:'arc-auto',paidGrantId:'grant',adapters:{openai:openAiAdapter('fixture',(async()=>Response.json({id:'r',usage:{input_tokens:30000,output_tokens:400},output:[{type:'web_search_call',status:'completed',action:{type:'search'}},{type:'web_search_call',status:'completed',action:{type:'open_page'}},{type:'web_search_call',status:'completed',action:{type:'search'}},{type:'web_search_call',status:'completed',action:{type:'find_in_page'}},{type:'web_search_call',status:'searching',action:{type:'search'}},{type:'message',content:[{type:'output_text',text:'Sourced result',annotations:[]}]}]})) as any)}} as any;
  const context={userId:'u',organizationId:'o',taskId:'t',runId:'r',operationId:'chat:0:web',lane:'arc_hosted'} as any;
  await runModelGateway(binding,{webSearch:{maxCalls:2},context,modelId:'arc-auto',system:'s',user:'q',schema:{type:'object'},maxOutputTokens:1200},v=>v);
  const maximum=JSON.parse(statements.find(s=>s.query.includes('INSERT OR IGNORE INTO billing_reservations'))!.args[12]).maximum.costMicros;

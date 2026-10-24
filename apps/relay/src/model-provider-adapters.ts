@@ -94,10 +94,11 @@ async function openAiWebSearch(apiKey:string,fetcher:typeof fetch,r:ModelRequest
   }));
   // Only search actions carry a tool-call fee. Opening a result and finding text
   // in it still appear as web_search_call items, but their tokens are already in
-  // provider usage. Failed/incomplete tool attempts are not completed searches.
+  // provider usage. A response can finish with an ignored attempt still marked
+  // searching/in_progress after max_tool_calls; only completed searches incur fees.
   // Keep legacy items without action metadata conservative.
   // https://developers.openai.com/api/docs/guides/tools-web-search#output-and-citations
-  const calls=actions.filter(action=>!['open_page','find_in_page'].includes(action.type)&&!['failed','incomplete'].includes(action.status)).length;
+  const calls=actions.filter(action=>!['open_page','find_in_page'].includes(action.type)&&['completed','unspecified'].includes(action.status)).length;
   const blocks=output.filter(item=>item.type==='message').flatMap(item=>Array.isArray(item.content)?item.content as Array<Record<string,unknown>>:[]).filter(block=>block.type==='output_text');
   const text=blocks.map(block=>String(block.text||'')).join('\n').trim();
   const seen=new Set<string>(),sources:{title:string;url:string}[]=[];

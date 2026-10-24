@@ -3,6 +3,7 @@ package browserrunner
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"time"
 )
 
@@ -63,6 +64,7 @@ func (s *session) serviceView(ctx context.Context) {
 		s.ev.Lock()
 		s.viewConn = s.conn
 		s.viewActive = true
+		s.viewStarted = time.Now()
 		s.ev.Unlock()
 		if err := s.conn.Call(ctx, "Page.startScreencast", map[string]any{"format": "jpeg", "quality": 50, "maxWidth": 1280, "everyNthFrame": 2}, nil); err != nil {
 			s.ev.Lock()
@@ -74,6 +76,16 @@ func (s *session) serviceView(ctx context.Context) {
 		s.ev.Lock()
 		s.viewActive = false
 		s.ev.Unlock()
+	}
+	// A static/headless page may not paint enough frames to satisfy everyNthFrame=2.
+	// Bootstrap from the surface and refresh it if an occluded window stops
+	// painting. Normal updates use screencast events; the fallback uses the same
+	// memory-only/rate/size limits and only runs for an active viewer.
+	s.ev.Lock()
+	needFrame := s.viewActive && time.Now().Before(s.viewUntil) && (s.lastViewFrame.Before(s.viewStarted) || time.Since(s.lastViewFrame) >= 2*time.Second)
+	s.ev.Unlock()
+	if needFrame && ctx.Err() == nil {
+		s.initialViewFrame(ctx)
 	}
 }
 func (s *session) onViewFrame(raw json.RawMessage) {
@@ -92,10 +104,6 @@ func (s *session) onViewFrame(raw json.RawMessage) {
 	s.ev.Lock()
 	conn := s.viewConn
 	wanted := s.viewActive && time.Now().Before(s.viewUntil)
-	send := wanted && time.Since(s.lastViewFrame) >= 500*time.Millisecond && len(event.Data) <= (maxFrameBytes/3)*4
-	if send {
-		s.lastViewFrame = time.Now()
-	}
 	if !wanted {
 		s.viewActive = false
 	}
@@ -108,12 +116,7 @@ func (s *session) onViewFrame(raw json.RawMessage) {
 		conn.Fire("Page.stopScreencast", nil)
 		return
 	}
-	if send {
-		select {
-		case s.m.frames <- ViewFrame{Type: "runner_frame", SessionID: s.cp.SessionID, Data: event.Data}:
-		default:
-		}
-	}
+	s.forwardViewFrame(event.Data)
 }
 func (s *session) stopOversizedView(raw json.RawMessage) {
 	// Still acknowledge a dropped frame so Chrome cannot stall the stream. Decode
@@ -129,5 +132,43 @@ func (s *session) stopOversizedView(raw json.RawMessage) {
 	s.ev.Unlock()
 	if conn != nil {
 		conn.Fire("Page.screencastFrameAck", map[string]any{"sessionId": event.SessionID})
+	}
+}
+
+func (s *session) forwardViewFrame(data string) {
+	s.ev.Lock()
+	send := s.viewActive && time.Now().Before(s.viewUntil) && time.Since(s.lastViewFrame) >= 500*time.Millisecond && len(data) > 0 && len(data) <= (maxFrameBytes/3)*4
+	if send {
+		s.lastViewFrame = time.Now()
+	}
+	s.ev.Unlock()
+	if send {
+		select {
+		case s.m.frames <- ViewFrame{Type: "runner_frame", SessionID: s.cp.SessionID, Data: data}:
+		default:
+		}
+	}
+}
+func (s *session) initialViewFrame(ctx context.Context) {
+	var layout struct {
+		CSSLayoutViewport struct {
+			Width  float64 `json:"clientWidth"`
+			Height float64 `json:"clientHeight"`
+		} `json:"cssLayoutViewport"`
+	}
+	if s.conn.Call(ctx, "Page.getLayoutMetrics", nil, &layout) != nil {
+		return
+	}
+	width, height := layout.CSSLayoutViewport.Width, layout.CSSLayoutViewport.Height
+	if width <= 0 || height <= 0 {
+		return
+	}
+	var frame struct {
+		Data string `json:"data"`
+	}
+	// Scale wide screens down instead of returning an oversized uncapped frame.
+	params := map[string]any{"format": "jpeg", "quality": 50, "captureBeyondViewport": false, "clip": map[string]any{"x": 0, "y": 0, "width": width, "height": height, "scale": math.Min(1, 1280/width)}}
+	if s.conn.Call(ctx, "Page.captureScreenshot", params, &frame) == nil {
+		s.forwardViewFrame(frame.Data)
 	}
 }

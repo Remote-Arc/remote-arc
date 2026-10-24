@@ -227,6 +227,8 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 		t.Fatal("stale watcher retained capture")
 	}
 	// On a real restart this page is reopened; field/upload loss must be reported.
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.cp.receipt(h.m.now(), Receipt{Tool: "browser_runner_act", Action: "fill", Label: "Full name", URL: safeURL(s.currentHref()), Outcome: "ok"})
 	s.cp.receipt(h.m.now(), Receipt{Tool: "browser_runner_act", Action: "upload", Label: "Resume", URL: safeURL(s.currentHref()), Outcome: "ok"})
 	s.cp.Uploads = append(s.cp.Uploads, Upload{Field: "Resume", File: "resume.txt", Status: "attached", At: stamp(h.m.now())})
@@ -245,6 +247,7 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 }
 
 func TestWaitDeadlineIncludesQueuedSession(t *testing.T) {
+	t.Setenv("REMOTEARC_HOME", t.TempDir())
 	m := New()
 	defer m.Close()
 	s := &session{m: m, cp: &Checkpoint{SessionID: "busy", State: StateActive}}

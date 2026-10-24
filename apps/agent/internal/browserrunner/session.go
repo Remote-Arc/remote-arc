@@ -70,6 +70,7 @@ type session struct {
 	viewActive      bool
 	viewConn        cdpClient
 	lastViewFrame   time.Time
+	viewStarted     time.Time
 	networkRequests map[string]bool
 	networkChanged  time.Time
 

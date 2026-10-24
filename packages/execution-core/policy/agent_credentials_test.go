@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
@@ -80,5 +81,18 @@ func TestAgentCredentialsFollowLinkedHomes(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", claude)
 	if _, e := Enforce(filepath.Join(claude, ".credentials.json"), protocol.Policy{}, false); e == nil {
 		t.Fatal("CLAUDE_CONFIG_DIR credential readable")
+	}
+}
+
+func TestAgentCredentialRootsPerPlatform(t *testing.T) {
+	env := map[string]string{"APPDATA": `C:\Users\u\AppData\Roaming`, "CODEX_HOME": " /codex ", "CLAUDE_CONFIG_DIR": ""}
+	getenv := func(k string) string { return env[k] }
+	win := agentCredentialRootsFor("/home/u", "windows", getenv)
+	joined := strings.Join(win, "\n")
+	if !strings.Contains(joined, filepath.Join(`C:\Users\u\AppData\Roaming`, "GitHub CLI", "hosts.yml")) || !strings.Contains(joined, filepath.Join("/codex", "auth.json")) {
+		t.Fatalf("windows roots missing gh/CODEX_HOME: %v", win)
+	}
+	if linux := strings.Join(agentCredentialRootsFor("/home/u", "linux", getenv), "\n"); strings.Contains(linux, "GitHub CLI") {
+		t.Fatalf("APPDATA root outside Windows: %v", linux)
 	}
 }

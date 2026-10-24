@@ -49,3 +49,30 @@ func TestListProcessesFilterAndLimit(t *testing.T) {
 		t.Fatalf("filter wrong: %q %v", none, err)
 	}
 }
+
+func TestProcessCommandPerPlatform(t *testing.T) {
+	name, args, header := processCommand("linux", true)
+	if name != "ps" || header != "" || !strings.Contains(strings.Join(args, " "), "command") {
+		t.Fatalf("unix listing wrong: %s %v %q", name, args, header)
+	}
+	name, args, header = processCommand("windows", false)
+	if name != "tasklist.exe" || !strings.Contains(header, `"PID"`) || strings.Join(args, " ") != "/FO CSV /NH" {
+		t.Fatalf("windows listing wrong: %s %v %q", name, args, header)
+	}
+	name, args, header = processCommand("windows", true)
+	if name != "powershell.exe" || header != "" || !strings.Contains(args[len(args)-1], "CommandLine") {
+		t.Fatalf("windows details wrong: %s %v %q", name, args, header)
+	}
+}
+
+func TestListProcessesInvalidLimitFallsBack(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("tasklist covered by the Windows CI matrix")
+	}
+	for _, limit := range []int{0, -3, 5000} {
+		out, err := listProcesses("", limit, false)
+		if err != nil || !strings.Contains(out, " processes") {
+			t.Fatalf("limit %d: %v %q", limit, err, out)
+		}
+	}
+}

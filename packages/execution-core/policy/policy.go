@@ -119,12 +119,15 @@ func defaultRoots() []string {
 // folder that is a junction or symlink (e.g. ~/.codex -> E:\AI\codexdata)
 // is protected at its real location too.
 func agentCredentialRoots(home string) []string {
+	return agentCredentialRootsFor(home, runtime.GOOS, os.Getenv)
+}
+func agentCredentialRootsFor(home, goos string, getenv func(string) string) []string {
 	codex := []string{filepath.Join(home, ".codex")}
-	if s := strings.TrimSpace(os.Getenv("CODEX_HOME")); s != "" {
+	if s := strings.TrimSpace(getenv("CODEX_HOME")); s != "" {
 		codex = append(codex, s)
 	}
 	claude := []string{filepath.Join(home, ".claude")}
-	if s := strings.TrimSpace(os.Getenv("CLAUDE_CONFIG_DIR")); s != "" {
+	if s := strings.TrimSpace(getenv("CLAUDE_CONFIG_DIR")); s != "" {
 		claude = append(claude, s)
 	}
 	r := []string{}
@@ -136,10 +139,8 @@ func agentCredentialRoots(home string) []string {
 	for _, dir := range claude {
 		r = append(r, filepath.Join(dir, ".credentials.json"))
 	}
-	if runtime.GOOS == "windows" {
-		if a := os.Getenv("APPDATA"); a != "" {
-			r = append(r, filepath.Join(a, "GitHub CLI", "hosts.yml"))
-		}
+	if a := getenv("APPDATA"); goos == "windows" && a != "" {
+		r = append(r, filepath.Join(a, "GitHub CLI", "hosts.yml"))
 	}
 	return r
 }

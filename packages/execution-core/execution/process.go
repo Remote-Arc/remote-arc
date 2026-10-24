@@ -325,6 +325,19 @@ func redactCommandLine(line string) string {
 	})
 }
 
+// processCommand picks the OS listing command. tasklist has no header row of
+// its own, so one is supplied; details on Windows adds command lines via CIM.
+func processCommand(goos string, details bool) (name string, args []string, header string) {
+	if goos != "windows" {
+		return "ps", []string{"-axo", "pid,ppid,user,%cpu,%mem,etime,command"}, ""
+	}
+	if details {
+		return "powershell.exe", []string{"-NoProfile", "-NonInteractive", "-Command",
+			"[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Csv -NoTypeInformation"}, ""
+	}
+	return "tasklist.exe", []string{"/FO", "CSV", "/NH"}, `"Image Name","PID","Session Name","Session#","Mem Usage"`
+}
+
 // listProcesses returns a header plus one line per process. filter keeps rows
 // whose text contains it (case-insensitive); limit caps rows; details adds
 // command lines on Windows (ps already includes them elsewhere).
@@ -334,17 +347,8 @@ func listProcesses(filter string, limit int, details bool) (string, error) {
 	if limit < 1 || limit > 1000 {
 		limit = 200
 	}
-	header := ""
-	cmd := exec.CommandContext(ctx, "ps", "-axo", "pid,ppid,user,%cpu,%mem,etime,command")
-	if runtime.GOOS == "windows" {
-		if details {
-			cmd = exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
-				"[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Csv -NoTypeInformation")
-		} else {
-			cmd = exec.CommandContext(ctx, "tasklist.exe", "/FO", "CSV", "/NH")
-			header = `"Image Name","PID","Session Name","Session#","Mem Usage"`
-		}
-	}
+	name, args, header := processCommand(runtime.GOOS, details)
+	cmd := exec.CommandContext(ctx, name, args...)
 	hideCommand(cmd)
 	var out, err cappedBuffer
 	cmd.Stdout = &out

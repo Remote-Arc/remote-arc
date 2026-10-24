@@ -94,9 +94,10 @@ async function openAiWebSearch(apiKey:string,fetcher:typeof fetch,r:ModelRequest
   }));
   // Only search actions carry a tool-call fee. Opening a result and finding text
   // in it still appear as web_search_call items, but their tokens are already in
-  // provider usage. Keep legacy items without action metadata conservative.
+  // provider usage. Failed/incomplete tool attempts are not completed searches.
+  // Keep legacy items without action metadata conservative.
   // https://developers.openai.com/api/docs/guides/tools-web-search#output-and-citations
-  const calls=actions.filter(action=>!['open_page','find_in_page'].includes(action.type)).length;
+  const calls=actions.filter(action=>!['open_page','find_in_page'].includes(action.type)&&!['failed','incomplete'].includes(action.status)).length;
   const blocks=output.filter(item=>item.type==='message').flatMap(item=>Array.isArray(item.content)?item.content as Array<Record<string,unknown>>:[]).filter(block=>block.type==='output_text');
   const text=blocks.map(block=>String(block.text||'')).join('\n').trim();
   const seen=new Set<string>(),sources:{title:string;url:string}[]=[];
@@ -106,6 +107,7 @@ async function openAiWebSearch(apiKey:string,fetcher:typeof fetch,r:ModelRequest
     seen.add(url);sources.push({title:String(annotation.title||url).slice(0,200),url:url.slice(0,2000)});
   }
   const used={...u,webSearchCalls:calls,webSearchActions:actions.slice(0,10)};
+  if(p.status!==undefined&&p.status!=='completed')throw new ModelProviderError('MODEL_INCOMPLETE_RESPONSE',false,used);
   if(!text)throw new ModelProviderError('MODEL_INCOMPLETE_RESPONSE',false,used);
   return {value:{text,sources:sources.slice(0,10)} satisfies WebSearchResult,usage:used,providerRequestId:typeof p.id==="string"?p.id:null};
 }

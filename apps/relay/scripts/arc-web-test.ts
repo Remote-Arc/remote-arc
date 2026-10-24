@@ -24,6 +24,18 @@ assert.deepEqual((result.value as any).sources,[{title:'MetService Auckland',url
 const empty=openAiAdapter('key',(async()=>Response.json({id:'r',usage,output:[{type:'web_search_call'}]})) as any);
 await assert.rejects(()=>empty({definition,system:'s',user:'q',schema:{},maxOutputTokens:100,webSearch:{maxCalls:1},signal:new AbortController().signal}),(error:any)=>error instanceof ModelProviderError&&error.code==='MODEL_INCOMPLETE_RESPONSE'&&error.usage?.webSearchCalls===1,'A search with no answer is still billed for the calls it made');
 
+// Failed or ignored attempts are not completed searches. Never clamp actual
+// completed searches to the requested cap: an overrun must retain safeguards.
+const searchRequest={definition,system:'s',user:'q',schema:{},maxOutputTokens:100,webSearch:{maxCalls:2},signal:new AbortController().signal};
+const call=(status:string)=>({type:'web_search_call',status,action:{type:'search'}});
+const answer={type:'message',content:[{type:'output_text',text:'Result',annotations:[]}]};
+const attempts=openAiAdapter('fixture',(async()=>Response.json({status:'completed',usage,output:[call('completed'),call('failed'),call('incomplete'),answer]})) as any);
+assert.equal((await attempts(searchRequest)).usage.webSearchCalls,1);
+const overrun=openAiAdapter('fixture',(async()=>Response.json({status:'completed',usage,output:[call('completed'),call('completed'),call('completed'),answer]})) as any);
+assert.equal((await overrun(searchRequest)).usage.webSearchCalls,3,'A real overrun is not hidden by clamping billed usage');
+const partial=openAiAdapter('fixture',(async()=>Response.json({status:'incomplete',usage,output:[call('completed'),answer]})) as any);
+await assert.rejects(()=>partial(searchRequest),(error:any)=>error.code==='MODEL_INCOMPLETE_RESPONSE'&&error.usage?.webSearchCalls===1,'Partial responses retain usage and do not masquerade as a completed result');
+
 // Weather: keyless, place disambiguation by country, structured forecast with source.
 const urls:string[]=[];
 const weather=await arcWeather({location:'Auckland, New Zealand',days:2},(async(url:string)=>{urls.push(url);

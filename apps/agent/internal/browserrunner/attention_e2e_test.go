@@ -218,6 +218,9 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 	}
 	_ = s.conn.Call(h.ctx, "Browser.getVersion", nil, &browserVersion)
 	t.Logf("CAPTURE_PROBE_BROWSER %s", browserVersion.Product)
+	if expected := os.Getenv("REMOTEARC_EXPECTED_BROWSER_VERSION"); expected != "" && browserVersion.Product != "Chrome/"+expected {
+		t.Fatalf("pinned browser version mismatch: got %s, want Chrome/%s", browserVersion.Product, expected)
+	}
 	near := func(actual uint32, want int) bool {
 		return int(actual>>8) >= want-10 && int(actual>>8) <= want+10
 	}

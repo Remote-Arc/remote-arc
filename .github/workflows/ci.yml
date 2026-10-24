@@ -7,15 +7,21 @@ on:
 jobs:
   capture-probe:
     runs-on: macos-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     strategy:
       fail-fast: false
       matrix:
-        mode:
-          - baseline-no-automation
-          - legacy-surface-no-reacquire
-          - native-only-no-reacquire
-          - focus-after-hide-no-reacquire
+        include:
+          - mode: baseline-no-automation
+            browser: 155.0.8059.40
+          - mode: legacy-surface-no-reacquire
+            browser: 155.0.8059.40
+          - mode: native-only-no-reacquire
+            browser: 155.0.8059.40
+          - mode: focus-after-hide-no-reacquire
+            browser: 155.0.8059.40
+          - mode: baseline-no-reacquire
+            browser: 156.0.8078.47
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -24,6 +30,15 @@ jobs:
           cache-dependency-path: |
             apps/agent/go.sum
             packages/execution-core/go.sum
+      - name: Download the exact official Chrome for Testing build
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 "https://storage.googleapis.com/chrome-for-testing-public/${{ matrix.browser }}/mac-arm64/chrome-mac-arm64.zip" -o "$RUNNER_TEMP/chrome.zip"
+          unzip -q "$RUNNER_TEMP/chrome.zip" -d "$RUNNER_TEMP/pinned-chrome"
+          browser_path="$RUNNER_TEMP/pinned-chrome/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+          "$browser_path" --version
+          printf 'REMOTEARC_BROWSER_PATH=%s\n' "$browser_path" >> "$GITHUB_ENV"
+          printf 'REMOTEARC_EXPECTED_BROWSER_VERSION=%s\n' "${{ matrix.browser }}" >> "$GITHUB_ENV"
       - name: Fresh machine with three pixel-verified repetitions
         shell: bash
         run: |
@@ -31,14 +46,16 @@ jobs:
           python3 scripts/pr345-capture-probe.py "${{ matrix.mode }}"
           go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=3 -v | tee capture-probe.log
           python3 - <<'PY'
+          import os
           from pathlib import Path
           text = Path("capture-probe.log").read_text()
           assert "--- SKIP:" not in text, "Browser acceptance was skipped"
           assert text.count("--- PASS: TestE2EWaitConditionsAndLiveView") == 3, "Expected three actual passes"
           assert text.count("CAPTURE_PROBE_UPDATED_FRAME") == 6, "Expected two fresh fixture colors per repetition"
+          assert text.count("CAPTURE_PROBE_BROWSER Chrome/" + os.environ["REMOTEARC_EXPECTED_BROWSER_VERSION"]) == 3, "Browser version changed"
           PY
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: capture-probe-${{ matrix.mode }}
+          name: capture-probe-${{ matrix.mode }}-${{ matrix.browser }}
           path: capture-probe.log

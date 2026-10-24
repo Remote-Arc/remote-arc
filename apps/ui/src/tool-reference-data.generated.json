@@ -445,8 +445,8 @@
       ],
       "readOnly": true,
       "group": "browser-runner",
-      "summary": "Wait on the device for user completion, a page condition or an upload.",
-      "zh": "在设备端等待用户完成验证、页面变化或上传结束。"
+      "summary": "Wait for a user handoff or page/upload/network condition for up to 40 seconds without confirming a submit.",
+      "zh": "等待用户交接、页面、文本、网址、上传或网络空闲条件，最长 40 秒；等待完成不代表提交成功。"
     },
     {
       "name": "call_app",

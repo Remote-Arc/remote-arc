@@ -206,11 +206,6 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     zh: "关闭任务浏览器，并按请求保留或删除检查点。",
     summary: "Close the task browser and keep or forget its checkpoint.",
   },
-  browser_runner_wait: {
-    zh: "在设备端等待用户完成验证、页面变化或上传结束。",
-    summary:
-      "Wait on the device for user completion, a page condition or an upload.",
-  },
   create_automation: {
     zh: "保存获授权的确定性任务、定时工作或条件监听。",
     summary:

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	"runtime"
 	"time"
 )
 
@@ -71,13 +72,24 @@ func (s *session) serviceView(ctx context.Context) {
 		return
 	}
 	if wanted && !active {
-		// Native minimize/occlusion callbacks on macOS can suspend the compositor
-		// even while focus emulation still reports a visible document. Reacquire
-		// Chromium's keep-visible capturer after hiding, before requesting frames.
-		// Repeating true alone is a no-op in Chromium; this does not focus, move
-		// or resize the native window and leaves the existing viewport intact.
-		_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": false}, nil)
-		_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
+		if runtime.GOOS == "darwin" && s.hasWindow() && s.cp.Headless {
+			// Native minimize/occlusion callbacks can suspend the compositor even
+			// while focus emulation still reports a visible document. Reacquire
+			// Chromium's keep-visible capturer after hiding. Repeating true alone
+			// is a no-op; this never focuses, moves or resizes the native window.
+			_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": false}, nil)
+			// Restore focus emulation even if the control tick expires after the
+			// first call. Limit this cleanup independently of that expired tick.
+			resumeCtx, resumeCancel := context.WithTimeout(context.WithoutCancel(ctx), windowStep)
+			err := s.conn.Call(resumeCtx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
+			resumeCancel()
+			if err != nil {
+				s.ev.Lock()
+				s.viewError = "resume hidden compositor: " + err.Error()
+				s.ev.Unlock()
+				return
+			}
+		}
 		s.ev.Lock()
 		s.viewConn = s.conn
 		s.viewActive = true

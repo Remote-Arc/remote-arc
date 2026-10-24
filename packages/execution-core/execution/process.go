@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -313,7 +314,7 @@ func (p *Processes) Close() {
 
 // secretArgument redacts obvious credentials that some tools pass on their
 // command line, so a process listing does not become a token leak.
-var secretArgument = regexp.MustCompile(`(?i)((?:--?|/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("[^"]*"|'[^']*'|\S+)|(bearer\s+)\S+`)
+var secretArgument = regexp.MustCompile(`(?i)((?:--?|/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("(?:\\.|[^"\\])*"|'[^']*'|\S+)|(bearer\s+)\S+`)
 
 func redactCommandLine(line string) string {
 	return secretArgument.ReplaceAllStringFunc(line, func(match string) string {
@@ -333,9 +334,40 @@ func processCommand(goos string, details bool) (name string, args []string, head
 	}
 	if details {
 		return "powershell.exe", []string{"-NoProfile", "-NonInteractive", "-Command",
-			"[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Csv -NoTypeInformation"}, ""
+			"[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Json -Compress"}, ""
 	}
 	return "tasklist.exe", []string{"/FO", "CSV", "/NH"}, `"Image Name","PID","Session Name","Session#","Mem Usage"`
+}
+
+// Redact the actual command before formatting it. CSV doubles embedded quotes,
+// so applying the command-line regex to raw CSV can redact an empty quote pair
+// and leave the credential behind. JSON also preserves multiline commands.
+func windowsProcessDetails(output string) (string, error) {
+	type row struct {
+		PID     int     `json:"ProcessId"`
+		PPID    int     `json:"ParentProcessId"`
+		Name    string  `json:"Name"`
+		Memory  float64 `json:"MemoryMB"`
+		Command string  `json:"CommandLine"`
+	}
+	rows := []row{}
+	output = strings.TrimSpace(output)
+	if output != "" && output != "null" {
+		if strings.HasPrefix(output, "{") {
+			output = "[" + output + "]"
+		}
+		if err := json.Unmarshal([]byte(output), &rows); err != nil {
+			return "", errors.New("Invalid process details response")
+		}
+	}
+	lines := []string{"PID\tPPID\tName\tMemoryMB\tCommandLine"}
+	for _, r := range rows {
+		// Keep each process on one display row after redacting quoted values.
+		command := strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(redactCommandLine(r.Command))
+		name := strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(r.Name)
+		lines = append(lines, fmt.Sprintf("%d\t%d\t%s\t%.0f\t%s", r.PID, r.PPID, name, r.Memory, command))
+	}
+	return strings.Join(lines, "\n"), nil
 }
 
 // listProcesses returns a header plus one line per process. filter keeps rows
@@ -360,7 +392,15 @@ func listProcesses(filter string, limit int, details bool) (string, error) {
 	if platform == "windows" {
 		platform = "win32"
 	}
-	lines := strings.Split(strings.ReplaceAll(strings.TrimSpace(out.Text()), "\r\n", "\n"), "\n")
+	output := out.Text()
+	if runtime.GOOS == "windows" && details {
+		var parseErr error
+		output, parseErr = windowsProcessDetails(output)
+		if parseErr != nil {
+			return "", parseErr
+		}
+	}
+	lines := strings.Split(strings.ReplaceAll(strings.TrimSpace(output), "\r\n", "\n"), "\n")
 	if header == "" && len(lines) > 0 {
 		header, lines = lines[0], lines[1:]
 	}

@@ -107,6 +107,19 @@ func unitQuote(s string) string {
 	b, _ := json.Marshal(s)
 	return strings.ReplaceAll(string(b), "%", "%%")
 }
+
+// StandardOutput/StandardError take the literal path after append:, unlike
+// ExecStart's word parser. Quoting just the path makes the leading quote part
+// of the path and systemd rejects it as non-absolute. Escape specifiers only.
+func linuxUnit(binary, logs string) (string, error) {
+	if strings.ContainsAny(logs, "\r\n\x00") {
+		return "", errors.New("Invalid systemd log directory.")
+	}
+	output := strings.ReplaceAll(filepath.Join(logs, "agent.log"), "%", "%%")
+	stderr := strings.ReplaceAll(filepath.Join(logs, "agent-error.log"), "%", "%%")
+	return "[Unit]\nDescription=Remote Arc Go device agent\n[Service]\nType=simple\nExecStart=" + unitQuote(binary) + " --agent\nRestart=on-failure\nRestartSec=5\nStandardOutput=append:" + output + "\nStandardError=append:" + stderr + "\n[Install]\nWantedBy=default.target\n", nil
+}
+
 func (c *Controller) serviceFile() string {
 	if c.Platform == "darwin" {
 		return filepath.Join(c.Home, "Library", "LaunchAgents", Label+".plist")
@@ -304,7 +317,10 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 			e = run("launchctl", "bootstrap", "gui/"+c.UID, c.serviceFile())
 		}
 	case "linux":
-		unit := "[Unit]\nDescription=Remote Arc Go device agent\n[Service]\nType=simple\nExecStart=" + unitQuote(reg.Binary) + " --agent\nRestart=on-failure\nRestartSec=5\nStandardOutput=append:" + unitQuote(filepath.Join(logs, "agent.log")) + "\nStandardError=append:" + unitQuote(filepath.Join(logs, "agent-error.log")) + "\n[Install]\nWantedBy=default.target\n"
+		unit, err := linuxUnit(reg.Binary, logs)
+		if err != nil {
+			return current, err
+		}
 		if e = config.DurableWrite(c.serviceFile(), []byte(unit), 0600); e == nil {
 			e = run("systemctl", "--user", "daemon-reload")
 		}

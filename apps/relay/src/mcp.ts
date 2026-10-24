@@ -296,7 +296,7 @@ export function createRemoteLinkMcp(
         _meta: oauthToolMeta("devices:read"),
       },
       async ({ query, limit }) => {
-        if (!identity) return authRequired(env, "devices:read", identity);
+        if (!identity || !hasScope(identity, "devices:read")) return authRequired(env, "devices:read", identity);
         const imported = await importedSkillSummaries(env as unknown as ArcEnv, identity.userId).catch(() => []);
         const index = skillIndex(imported);
         const skills = (query?.trim() ? findSkills(query, index, limit ?? 8) : index.slice(0, limit ?? 25))
@@ -315,7 +315,7 @@ export function createRemoteLinkMcp(
         _meta: oauthToolMeta("devices:read"),
       },
       async ({ id }) => {
-        if (!identity) return authRequired(env, "devices:read", identity);
+        if (!identity || !hasScope(identity, "devices:read")) return authRequired(env, "devices:read", identity);
         try {
           return textResult(await readArcSkill(env as unknown as ArcEnv, identity.userId, id));
         } catch {

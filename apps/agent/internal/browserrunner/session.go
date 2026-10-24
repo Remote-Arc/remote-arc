@@ -71,6 +71,7 @@ type session struct {
 	viewConn        cdpClient
 	lastViewFrame   time.Time
 	viewStarted     time.Time
+	viewError       string // diagnostic only; never contains a frame
 	networkRequests map[string]bool
 	networkChanged  time.Time
 

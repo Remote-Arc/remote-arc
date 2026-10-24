@@ -214,8 +214,11 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 		if frame.SessionID != "conditions" || frame.Type != "runner_frame" || len(frame.Data) == 0 || len(frame.Data) > maxFrameBytes*4/3 {
 			t.Fatal("bad frame", frame.Type, len(frame.Data))
 		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("live view produced no frame")
+	case <-time.After(10 * time.Second):
+		s.ev.Lock()
+		active, viewError := s.viewActive, s.viewError
+		s.ev.Unlock()
+		t.Fatalf("live view produced no frame (active=%v, error=%q)", active, viewError)
 	}
 	s.ev.Lock()
 	s.viewUntil = time.Now().Add(-time.Second)

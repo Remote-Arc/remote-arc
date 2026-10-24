@@ -47,13 +47,15 @@ func (m *Manager) serviceViews() {
 		if !s.mu.TryLock() {
 			continue
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		s.serviceView(ctx)
 		cancel()
 		s.mu.Unlock()
 	}
 }
 func (s *session) serviceView(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 	s.ev.Lock()
 	wanted, active := time.Now().Before(s.viewUntil), s.viewActive
 	s.ev.Unlock()
@@ -72,6 +74,7 @@ func (s *session) serviceView(ctx context.Context) {
 		if err := s.conn.Call(ctx, "Page.startScreencast", map[string]any{"format": "jpeg", "quality": 50, "maxWidth": 1280, "everyNthFrame": 2}, nil); err != nil {
 			s.ev.Lock()
 			s.viewActive = false
+			s.viewError = "start screencast: " + err.Error()
 			s.ev.Unlock()
 		}
 	} else if !wanted && active {
@@ -143,6 +146,7 @@ func (s *session) forwardViewFrame(data string) {
 	send := s.viewActive && time.Now().Before(s.viewUntil) && time.Since(s.lastViewFrame) >= 500*time.Millisecond && len(data) > 0 && len(data) <= (maxFrameBytes/3)*4
 	if send {
 		s.lastViewFrame = time.Now()
+		s.viewError = ""
 	}
 	s.ev.Unlock()
 	if send {
@@ -159,7 +163,10 @@ func (s *session) initialViewFrame(ctx context.Context) {
 			Height float64 `json:"clientHeight"`
 		} `json:"cssLayoutViewport"`
 	}
-	if s.conn.Call(ctx, "Page.getLayoutMetrics", nil, &layout) != nil {
+	if err := s.conn.Call(ctx, "Page.getLayoutMetrics", nil, &layout); err != nil {
+		s.ev.Lock()
+		s.viewError = "view metrics: " + err.Error()
+		s.ev.Unlock()
 		return
 	}
 	width, height := layout.CSSLayoutViewport.Width, layout.CSSLayoutViewport.Height
@@ -177,8 +184,12 @@ func (s *session) initialViewFrame(ctx context.Context) {
 			dpr = value
 		}
 	}
-	params := map[string]any{"format": "jpeg", "quality": 50, "captureBeyondViewport": false, "clip": map[string]any{"x": 0, "y": 0, "width": width, "height": height, "scale": math.Min(1, 1280/(width*dpr))}}
-	if s.conn.Call(ctx, "Page.captureScreenshot", params, &frame) == nil {
+	params := map[string]any{"format": "jpeg", "quality": 50, "captureBeyondViewport": true, "fromSurface": true, "optimizeForSpeed": true, "clip": map[string]any{"x": 0, "y": 0, "width": width, "height": height, "scale": math.Min(1, 1280/(width*dpr))}}
+	if err := s.conn.Call(ctx, "Page.captureScreenshot", params, &frame); err == nil {
 		s.forwardViewFrame(frame.Data)
+	} else {
+		s.ev.Lock()
+		s.viewError = "initial frame: " + err.Error()
+		s.ev.Unlock()
 	}
 }

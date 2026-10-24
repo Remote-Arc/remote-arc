@@ -4,6 +4,7 @@ import cliPackage from "../../../packages/cli/package.json" with { type: "json" 
 import { localizedPages, isChineseMarketingPath, unprefixedMarketingPath } from "./marketing-locale.js";
 import { chineseSeo } from "./zh-seo.js";
 import { chineseResourceSeo } from "./zh-resources.js";
+import { marketingShell, marketingShellStyle } from "./marketing-shell.js";
 
 const SITE = "https://remotearc.app";
 
@@ -246,7 +247,7 @@ const crawlPages: Record<string, CrawlPage> = {
   },
   "/": {
     h1: "Remote Arc: AI computer access, browser automation and device fleet",
-    intro: "Remote Arc connects ChatGPT, Claude, Codex, Cursor and compatible MCP clients to authorized apps and Windows, macOS and Linux computers. Its browser tools support approved web workflows; its fleet scheduler can dispatch eligible work to an available device without requiring manual selection. Each device has its own permissions, and Arc adds bounded hosted conversations and scheduled reasoning over the same execution infrastructure.",
+    intro: "Remote Arc (RemoteArc) connects ChatGPT, Claude, Codex, Cursor and compatible MCP clients to authorized apps and Windows, macOS and Linux computers. Its browser tools support approved web workflows; its fleet scheduler can dispatch eligible work to an available device without requiring manual selection. Each device has its own permissions, and Arc adds bounded hosted conversations and scheduled reasoning over the same execution infrastructure.",
     sections: [
       { heading: "Use the computer where the work already lives", text: "Your repositories, files, runtimes, credentials and command-line tools can stay on your own machine. Remote Arc exposes named MCP capabilities for inspecting directories, reading files, making supported edits, checking processes and running approved commands. The AI asks for a specific tool operation and the paired device executes it locally, so you do not need to move an entire development environment into a hosted VM just to let an AI help with real work." },
       { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client to your Remote Arc account, while each paired computer keeps its own policy. A development workstation can allow file edits and managed terminal commands while another machine remains read-only. Trusted Write Locations, protected paths, per-tool permissions and explicit approvals let you narrow ordinary file workflows without pretending that powerful terminal access is risk free." },
@@ -733,6 +734,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       "@type": "Organization",
       "@id": SITE + "/#organization",
       name: "Remote Arc",
+      alternateName: ["RemoteArc", "remotearc.app"],
       url: SITE,
       logo: { "@type": "ImageObject", url: SITE + "/remote-arc-512.png", width: 512, height: 512 },
       sameAs: ["https://github.com/Remote-Arc/remote-arc"]
@@ -741,6 +743,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       "@type": "WebSite",
       "@id": SITE + "/#website",
       name: "Remote Arc",
+      alternateName: ["RemoteArc", "remotearc.app"],
       url: SITE,
       publisher: { "@id": SITE + "/#organization" },
       inLanguage: schemaLanguage,
@@ -930,18 +933,18 @@ export function renderMarketingHtml(html: string, pathname: string) {
     .replace(/<meta property="og:description"[^>]*>/, '<meta property="og:description" content="' + esc(resolved.description) + '" />')
     .replace(/<meta property="og:url"[^>]*>/, '<meta property="og:url" content="' + esc(indexable ? resolved.canonical : SITE + pathname) + '" />')
     .replace(/<meta property="og:image"[^>]*>/, "")
-    .replace("</head>", extra + "</head>");
+    .replace("</head>", extra + marketingShellStyle + "</head>");
 
-  // All public routes use the same client-rendered design. The semantic fallback
-  // remains available without JavaScript; it must not paint the legacy shell
-  // while the current application loads during navigation or language changes.
+  // Publish semantic content in the ordinary DOM, including when scripts are
+  // delayed or fail. A noscript-only body disappears when Google renders JS.
+  // The shell inherits the current theme instead of painting the legacy design.
   const fallback = !page ? notFoundHtml(pathname)
     : basePath === "/blogs" ? blogIndexHtml(chinese)
     : articles[basePath] ? articleHtml(page)
     : crawlablePageHtml(pathname, page);
   return html.replace(
     '<div id="root"></div>',
-    '<div id="root"><noscript>' + fallback + '</noscript></div>',
+    '<div id="root">' + marketingShell(fallback, chinese) + '</div>',
   );
 }
 
@@ -996,7 +999,7 @@ export function sitemapXml() {
         : '';
       const isRoot = path === "/" || path === "/zh";
       const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/remote-mcp" || path === "/docs/mcp";
-      return '<url><loc>' + SITE + path + '</loc>' + alternates + '<lastmod>' + (isRoot ? '2026-10-23' : path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
+      return '<url><loc>' + SITE + path + '</loc>' + alternates + '<lastmod>' + (isRoot ? '2026-10-24' : path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
     }).join("") + '</urlset>';
 }
 

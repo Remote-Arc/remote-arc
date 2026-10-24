@@ -172,13 +172,20 @@ try {
   const inspectBeforeReact = async (navigation, theme = 'dark') => {
     holdModule();
     await navigation();
-    await publicPage.waitForSelector('#root noscript', { state: 'attached' });
+    await publicPage.locator('.marketingShell').waitFor();
     assert.equal(await publicPage.locator('.seo-blog-shell').count(), 0, 'legacy SEO shell must never paint with JavaScript enabled');
-    assert.equal(await publicPage.locator('#root').innerText(), '', 'pre-React root contains only the non-JS fallback');
+    assert.equal(await publicPage.locator('.marketingContent h1').count(), 1, 'readable page content must exist while JavaScript is delayed');
+    assert.equal(await publicPage.locator('.marketingShellBrand').innerText(), 'Remote Arc');
+    await noOverflow(publicPage);
+    const seoTitle = await publicPage.title();
+    const seoDescription = await publicPage.locator('meta[name="description"]').getAttribute('content');
     assert.equal(await publicPage.evaluate(() => document.documentElement.dataset.theme), theme);
     assert.equal(await publicPage.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), theme === 'dark' ? 'rgb(17, 17, 20)' : 'rgb(253, 253, 253)', 'critical canvas must match the final theme');
     releaseModule();
     await publicPage.locator('.publicPage').waitFor();
+    assert.equal(await publicPage.locator('.marketingShell').count(), 0, 'React must replace the initial document without duplicate content');
+    assert.equal(await publicPage.title(), seoTitle, 'JavaScript must preserve the full SEO title');
+    assert.equal(await publicPage.locator('meta[name="description"]').getAttribute('content'), seoDescription, 'JavaScript must preserve the server description');
     await publicPage.evaluate(() => document.fonts.ready);
     await noOverflow(publicPage);
   };
@@ -197,14 +204,15 @@ try {
   await publicPage.evaluate(() => localStorage.setItem('remote-arc-theme', 'light'));
   await inspectBeforeReact(() => publicPage.goto(origin + '/zh/install/chatgpt', { waitUntil: 'commit' }), 'light');
   await screenshot(publicPage, 'website-install-light-zh');
-  const noJs = await browser.newContext({ javaScriptEnabled: false });
+  const noJs = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   const staticPage = await noJs.newPage();
   for (const route of ['/', '/zh/docs', '/blogs/why-i-built-remote-arc', '/unknown-page']) {
     await staticPage.goto(origin + route);
-    assert.equal(await staticPage.locator('noscript .seo-blog-shell h1').count(), 1, 'non-JS visitors retain semantic content on ' + route);
+    assert.equal(await staticPage.locator('.marketingContent h1').count(), 1, 'non-JS visitors retain semantic content on ' + route);
+    await noOverflow(staticPage);
   }
   assert.deepEqual(errors, [], 'browser must not report runtime errors');
-  console.log('PASS: delayed JavaScript on 11 navigations, real language switch, dark/light first paint, non-JS fallback');
+  console.log('PASS: readable HTML on 11 delayed navigations, stable SEO metadata, language switch, dark/light first paint, non-JS content');
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));

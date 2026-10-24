@@ -11,6 +11,10 @@ All notable changes to Remote Arc are documented here.
 - In WSL, a missing Claude Code or Codex now explains that Windows apps are configured by running `npx remotelink@latest` in Windows PowerShell.
 - When an old global install makes `npx remotelink` run an older version than the running Agent, the message leads with `npx remotelink@latest` and labels `--force-update` as an explicit rollback.
 - A manually dispatched stable publish now marks its GitHub release as Latest.
+- On Windows, command output written in the console code page (for example GBK on Chinese Windows) is decoded instead of returned as mojibake.
+- `start_process` now tells the AI which shell runs the command (`/bin/sh` or `cmd.exe`), how to use PowerShell, and when to raise the 5-second timeout or run in the background.
+- A connection that predates a newer permission (for example Apps access) now explains that the person should reconnect Remote Arc in the AI app's connector settings.
+- The Video Creator skill explains how to hand over or upload the finished video.
 
 ### Correct systemd service log paths
 

@@ -1178,6 +1178,33 @@
       "zh": "按匹配文本修改文件中的指定片段。"
     },
     {
+      "name": "find_skills",
+      "title": "Find Remote Arc skills for a task",
+      "description": "Search Remote Arc's skill library (built-in, community, workflow and the user's imported skills) for a task, in any language: documents, spreadsheets, slides, PDFs, video, subtitles, images, browser work, data analysis, charts, websites, testing and schedules. Returns the best matches; read one with read_skill and follow its method using the tools you have. A skill is instructions only: it installs nothing and grants no permission.",
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25
+          }
+        }
+      },
+      "scopes": [
+        "devices:read"
+      ],
+      "readOnly": true,
+      "group": "skills",
+      "summary": "Find relevant instructions across the Skill library; execution tools and dependencies must be checked separately.",
+      "zh": "按任务搜索内置、社区、工作流及个人导入的 Skill；搜索结果不代表执行器或模型已安装。"
+    },
+    {
       "name": "fleet_dispatch",
       "title": "Smart Device Fleet dispatch",
       "description": "Run a one-off operation on an eligible, least-busy device in this account. Automatically considers online status, tool permissions, platform, workspace and running tasks; no device selection needed. Use platform for OS-specific shell commands. Never moves an existing process or copies files between computers. Follow-up process operations use the returned device_id.",
@@ -1451,6 +1478,51 @@
       "zh": "读取目标当前状态及下一步决策所需上下文。"
     },
     {
+      "name": "list_agent_sessions",
+      "title": "List coding-agent tasks on a remote computer",
+      "description": "List Codex and Claude Code sessions on a linked computer: each task's working directory or Git worktree, last activity, and (with git, the default) its branch, uncommitted changes and other worktrees of the same repository. Use this before guessing paths when asked about coding-agent tasks, worktrees or their progress. Metadata only: no conversation text. Last activity is a file time, not proof that the agent is still running; pair with list_processes filter \"codex\" or \"claude\". Needs agent 0.6.4 or later on the device.",
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "codex",
+              "claude",
+              "all"
+            ]
+          },
+          "workspace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "git": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device_id"
+        ]
+      },
+      "scopes": [
+        "computer:read"
+      ],
+      "readOnly": true,
+      "group": "processes",
+      "summary": "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
+      "zh": "查看 Codex、Claude Code 任务的工作目录、活动时间与 Git 元数据；需要设备 Agent 0.6.4 或更新版本。"
+    },
+    {
       "name": "list_apps",
       "title": "Find the services you connected",
       "description": "Find your linked accounts, such as Slack, and see what the AI can do with each service. This only reads connection details and available actions; it does not send messages or change anything.",
@@ -1609,13 +1681,25 @@
     {
       "name": "list_processes",
       "title": "List processes on a remote computer",
-      "description": "List processes running on a linked computer.",
+      "description": "List processes on a linked computer with a header row. Use filter to find specific programs (for example \"codex\", \"claude\" or \"node\"), limit to cap rows, and details:true on Windows to include command lines. Obvious secrets in command lines are redacted.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "properties": {
           "device_id": {
             "type": "string"
+          },
+          "filter": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "details": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -1767,7 +1851,7 @@
     {
       "name": "read_file",
       "title": "Read a file on a remote computer",
-      "description": "Read a local file from a linked computer.",
+      "description": "Read a text file on a linked computer by line range. offset is a 0-based line number (negative reads from the end) and length is a line count (default 240). The result header reports total lines, so continue with a later offset for long files. Use read_binary_file for images and other binaries.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1801,6 +1885,32 @@
       "group": "files",
       "summary": "Read a bounded range of lines from a text file.",
       "zh": "按行读取文本文件。"
+    },
+    {
+      "name": "read_skill",
+      "title": "Read a Remote Arc skill",
+      "description": "Read one skill's full instructions by id from find_skills. Community skills also list helper resources. Check that any named engine (ffmpeg, python, etc.) exists on the chosen computer before relying on it.",
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "scopes": [
+        "devices:read"
+      ],
+      "readOnly": true,
+      "group": "skills",
+      "summary": "Read a Skill's instructions and helper resources without granting execution permissions.",
+      "zh": "读取指定 Skill 的完整说明与辅助资源；执行仍受设备权限和安装条件约束。"
     },
     {
       "name": "revoke_file_resource",
@@ -12175,10 +12285,25 @@
     },
     {
       "name": "list_processes",
-      "description": "List processes running on this computer.",
+      "description": "List processes on this computer with a header row. Use filter to find specific programs (e.g. \"claude\", \"codex\", \"node\"), limit to cap rows, and details:true on Windows to include command lines. Obvious secrets in command lines are redacted.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "filter": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 200
+          },
+          "details": {
+            "type": "boolean",
+            "default": false
+          }
+        },
         "additionalProperties": false
       },
       "title": "list_processes",
@@ -12310,7 +12435,7 @@
     },
     {
       "name": "read_file",
-      "description": "Read a text file by line range. Negative offsets read from the end.",
+      "description": "Read a text file by line range. offset is a 0-based line number (negative reads from the end); length is a line count (default 240). The result header reports total lines so you can continue with a later offset.",
       "inputSchema": {
         "type": "object",
         "properties": {

@@ -99,6 +99,14 @@
       ]
     },
     {
+      "name": "find_skills",
+      "title": "Find Remote Arc skills for a task",
+      "group": "skills",
+      "scopes": [
+        "devices:read"
+      ]
+    },
+    {
       "name": "fleet_dispatch",
       "title": "Smart Device Fleet dispatch",
       "group": "devices",
@@ -139,6 +147,14 @@
       "group": "goals",
       "scopes": [
         "automation:read"
+      ]
+    },
+    {
+      "name": "list_agent_sessions",
+      "title": "List coding-agent tasks on a remote computer",
+      "group": "processes",
+      "scopes": [
+        "computer:read"
       ]
     },
     {
@@ -219,6 +235,14 @@
       "group": "files",
       "scopes": [
         "computer:read"
+      ]
+    },
+    {
+      "name": "read_skill",
+      "title": "Read a Remote Arc skill",
+      "group": "skills",
+      "scopes": [
+        "devices:read"
       ]
     },
     {

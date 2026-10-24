@@ -45,6 +45,9 @@ assert.deepEqual(
   data.local.map((tool) => tool.name),
 );
 for (const name of [
+  "find_skills",
+  "read_skill",
+  "list_agent_sessions",
   "fleet_dispatch",
   "fleet_sync_workspace",
   "create_agent_goal",

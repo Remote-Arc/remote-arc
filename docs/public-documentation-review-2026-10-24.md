@@ -5,7 +5,7 @@ Reviewed against master `dbb3ac8e2b5d01da5255a3d14538516f7db93f3c`, the publishe
 ## Findings addressed
 
 - Replaced the incomplete hand-maintained MCP table with generated definitions. Added `/docs/tools` and `/zh/docs/tools`, linked from the public navigation, docs landing page, sidebar and MCP reference. Docs search also finds tool and App operation names.
-- The directory includes 39 public Remote MCP tools, 37 Apps with 344 operations called through `call_app`, and 17 local stdio MCP tools. Retired shared-tab aliases are excluded. Experimental goals and per-device Browser Runner activation are labelled; the connected client's real tool list remains authoritative.
+- The directory includes 42 public Remote MCP tools, 37 Apps with 344 operations called through `call_app`, and 17 local stdio MCP tools. Retired shared-tab aliases are excluded. Experimental goals and per-device Browser Runner activation are labelled; the connected client's real tool list remains authoritative.
 - Added purpose/name/parameter search, category/App/read-write filters, OAuth scopes, exact generated input schemas, copy buttons and per-tool links. Local modes and workspace-only restrictions are explained separately from Remote MCP.
 - Removed the obsolete 0.4.4 candidate recovery wording in both languages. Corrected AI teams from future-only to Beta, and corrected its navigation location.
 - Distinguished bounded hosted Arc Chat/Tasks/Routines from Connect's deterministic saved execution and experimental continuation contracts. Corrected the detailed architecture and full reference, including hosted message/memory storage and the current repository links.

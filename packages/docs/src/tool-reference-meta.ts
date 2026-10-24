@@ -1,5 +1,6 @@
 export type ToolGroup =
   | "devices"
+  | "skills"
   | "files"
   | "processes"
   | "shared-tabs"
@@ -9,6 +10,7 @@ export type ToolGroup =
   | "goals";
 export const TOOL_GROUPS: Record<ToolGroup, { en: string; zh: string }> = {
   devices: { en: "Devices and workspaces", zh: "设备与工作区" },
+  skills: { en: "Skills and guides", zh: "Skills 与使用指南" },
   files: { en: "Files and Undo", zh: "文件与撤销" },
   processes: { en: "Commands and processes", zh: "命令与进程" },
   "shared-tabs": { en: "Shared browser tabs", zh: "共享浏览器标签页" },
@@ -18,6 +20,8 @@ export const TOOL_GROUPS: Record<ToolGroup, { en: string; zh: string }> = {
   goals: { en: "Agent goals · experimental", zh: "Agent 目标 · 实验能力" },
 };
 export function toolGroup(name: string): ToolGroup {
+  if (["find_skills", "read_skill"].includes(name)) return "skills";
+  if (name === "list_agent_sessions") return "processes";
   if (name.startsWith("shared_tab_")) return "shared-tabs";
   if (name.startsWith("browser_runner_")) return "browser-runner";
   if (["list_apps", "call_app"].includes(name)) return "apps";
@@ -37,6 +41,18 @@ export function toolGroup(name: string): ToolGroup {
   return "files";
 }
 export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
+  find_skills: {
+    zh: "按任务搜索内置、社区、工作流及个人导入的 Skill；搜索结果不代表执行器或模型已安装。",
+    summary: "Find relevant instructions across the Skill library; execution tools and dependencies must be checked separately.",
+  },
+  read_skill: {
+    zh: "读取指定 Skill 的完整说明与辅助资源；执行仍受设备权限和安装条件约束。",
+    summary: "Read a Skill's instructions and helper resources without granting execution permissions.",
+  },
+  list_agent_sessions: {
+    zh: "查看 Codex、Claude Code 任务的工作目录、活动时间与 Git 元数据；需要设备 Agent 0.6.4 或更新版本。",
+    summary: "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
+  },
   list_apps: {
     zh: "查找已连接的应用及账号、支持的操作与所需参数。",
     summary:

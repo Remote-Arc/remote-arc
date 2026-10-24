@@ -38,6 +38,7 @@ assert.ok(qwenSection,'Qwen voice-over section missing');
 assert.match(qwenSection,/ask the user for explicit approval/i,'Qwen must require size-aware download approval');
 assert.match(qwenSection,/do not download Qwen/i,'Qwen must have a no-consent fallback');
 assert.ok(aceSection,'ACE-Step music section missing');
+assert.match(aceSection,/acestep-api --host 127\.0\.0\.1 --port 8001/,'ACE-Step command must force loopback despite inherited environment');
 assert.match(aceSection,/ask for explicit approval/i,'ACE-Step must require size-aware download approval');
 const subtitlesSkill=fs.readFileSync(path.join(root,'skills/transcribe-subtitles/SKILL.md'),'utf8');
 assert.match(subtitlesSkill,/\*\*Default model:\*\* `ggml-base\.bin`/,'Whisper default must be small');

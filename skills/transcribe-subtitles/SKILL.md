@@ -10,18 +10,18 @@ status: builtin-guidance
 
 **Engine:** whisper.cpp (MIT) + FFmpeg, run locally. **Source:** https://github.com/ggml-org/whisper.cpp
 
-Transcription is **free and local**: no API key, nothing leaves the computer. The only cost is your own model usage. For the user's own audio/video, deliver the finished `.srt`/`.vtt` (and burned-in subtitles if asked); do not stop at a plan.
+Transcription has **no paid API requirement** and keeps recordings on the selected computer. Downloads, device compute, electricity and storage still have costs; the calling AI can consume its plan allowance. For the user's own audio/video, deliver the finished `.srt`/`.vtt` (and burned-in subtitles if asked); do not stop at a plan.
 
-## Preflight and auto-install (lightweight — just do it)
+## Preflight and bounded local install
 
-Need FFmpeg (`ffmpeg -version`) and a whisper.cpp build with a model. If missing, install them without asking — they are small and local. Put everything under a tools folder in a Trusted Write Location, e.g. `<root>\.ra-media-tools\whisper`.
+Need FFmpeg (`ffmpeg -version`) and a whisper.cpp build with a model. Use an existing verified installation first. If absent, the calling AI may provision a **small, pinned** whisper.cpp executable and `ggml-base.bin` (~142 MB) into a Trusted Write Location without another approval *only if* the user already authorized local dependency installation and sufficient space/network are available. Tell them the source, total size and destination before starting. Do not silently install system-level FFmpeg, request administrator rights, execute arbitrary downloaded scripts or exceed the small default. If the download fails, report it instead of claiming subtitles are ready.
 
 Windows (cmd/PowerShell), GPU build + a model (~272 MB binary, model 142 MB–1.6 GB):
 - Binary (NVIDIA): download `https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-win-cuda-11.8.0-x64.zip` and extract with `tar -xf`. No NVIDIA GPU: use `whisper-bin-x64.zip` from the same release (CPU).
-- Model: `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin` (best, ~1.6 GB). For a quick/low-RAM default use `ggml-base.bin` (142 MB) or `ggml-small.bin` (466 MB).
-- macOS/Linux: `brew install whisper-cpp` (or build from source); download the same `ggml-*.bin` model.
+- **Default model:** `ggml-base.bin` (~142 MB), fetched from `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin`. `ggml-small.bin` (~466 MB) or `ggml-large-v3-turbo.bin` (~1.6 GB) require explicit size-aware consent before downloading. Never fetch the largest model by default.
+- macOS/Linux: use an existing whisper.cpp binary, or explain an approved local `brew install whisper-cpp` / source build; do not silently change system packages. Use the same bounded model policy.
 
-The `whisper-cli.exe` must keep the DLLs from the zip beside it. Tell the user once what is being downloaded and its size; then proceed.
+Check release integrity (official source and published checksum when available), verify the archive contents before extraction, and preserve the Windows DLLs beside `whisper-cli.exe`. Confirm the executable actually launches. A downloaded file is not proof that transcription works.
 
 ## Workflow
 

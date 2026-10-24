@@ -42,7 +42,7 @@ func listDirectory(target string, depth int, p protocol.Policy) (string, error) 
 		return "", errors.New("Path is not a directory: " + target)
 	}
 	lines := []string{}
-	seen, protected := 0, 0
+	seen, protected, unreadable := 0, 0, 0
 	var walk func(string, int, string) error
 	walk = func(dir string, level int, prefix string) error {
 		es, e := os.ReadDir(dir)
@@ -73,8 +73,12 @@ func listDirectory(target string, depth int, p protocol.Policy) (string, error) 
 			}
 			lines = append(lines, prefix+label+" "+entry.Name())
 			if entry.IsDir() && level < depth {
+				// One unreadable subfolder (e.g. "System Volume Information"
+				// at a drive root) must not hide everything else: mark it
+				// and keep listing. Only the requested folder itself fails.
 				if e := walk(abs, level+1, prefix+"  "); e != nil {
-					return e
+					unreadable++
+					lines = append(lines, prefix+"  (not readable: "+readableError(e)+")")
 				}
 			}
 		}
@@ -97,7 +101,20 @@ func listDirectory(target string, depth int, p protocol.Policy) (string, error) 
 		}
 		text += fmt.Sprintf("\n\n[Remote Arc omitted %d protected or out-of-scope entr%s.]", protected, suffix)
 	}
+	if unreadable > 0 {
+		text += fmt.Sprintf("\n[%d subfolder(s) could not be read and were skipped.]", unreadable)
+	}
 	return fmt.Sprintf("Directory: %s\nDepth: %d\n\n%s", target, depth, text), nil
+}
+
+// readableError keeps the OS reason ("Access is denied.") without repeating
+// the full path, which the listing already shows.
+func readableError(e error) string {
+	var pe *os.PathError
+	if errors.As(e, &pe) {
+		return pe.Err.Error()
+	}
+	return e.Error()
 }
 func readText(target string, offset, length int) (string, error) {
 	s, e := os.Stat(target)

@@ -65,15 +65,17 @@ type session struct {
 
 	// shownForUser: the window was brought on screen for the user to act
 	// in; it goes back out of sight when the AI continues.
-	shownForUser    bool
-	viewUntil       time.Time // guarded by ev
-	viewActive      bool
-	viewConn        cdpClient
-	lastViewFrame   time.Time
-	viewStarted     time.Time
-	viewError       string // diagnostic only; never contains a frame
-	networkRequests map[string]bool
-	networkChanged  time.Time
+	shownForUser      bool
+	viewUntil         time.Time // guarded by ev
+	viewActive        bool
+	viewConn          cdpClient
+	lastViewFrame     time.Time
+	viewStarted       time.Time
+	viewError         string             // diagnostic only; never contains a frame
+	viewCaptureCancel context.CancelFunc // guarded by ev; at most one viewport capture
+	viewCaptureID     uint64
+	networkRequests   map[string]bool
+	networkChanged    time.Time
 
 	snapshotID    string
 	snapshotEpoch int
@@ -442,6 +444,7 @@ func (s *session) shutdownBrowser(markPaused bool) {
 	s.ev.Lock()
 	s.viewActive = false
 	s.viewUntil = time.Time{}
+	s.cancelViewCapture()
 	s.ev.Unlock()
 	if s.conn != nil {
 		s.conn.Close()

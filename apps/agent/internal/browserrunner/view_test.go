@@ -10,17 +10,21 @@ import (
 	"image/jpeg"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 type staticViewClient struct {
+	mu          sync.Mutex
 	methods     []string
 	params      map[string]any
 	screenshots int
 }
 
 func (c *staticViewClient) Call(ctx context.Context, method string, params any, out any) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.methods = append(c.methods, method)
 	var value any
 	switch method {
@@ -39,7 +43,11 @@ func (c *staticViewClient) Call(ctx context.Context, method string, params any, 
 func (c *staticViewClient) CallIn(ctx context.Context, session, method string, params any, out any) error {
 	return c.Call(ctx, method, params, out)
 }
-func (c *staticViewClient) Fire(method string, params any)            { c.methods = append(c.methods, method) }
+func (c *staticViewClient) Fire(method string, params any) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.methods = append(c.methods, method)
+}
 func (c *staticViewClient) FireIn(session, method string, params any) { c.Fire(method, params) }
 func (c *staticViewClient) Close()                                    {}
 func (c *staticViewClient) Alive() bool                               { return true }
@@ -64,9 +72,10 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 		if err != nil || cfg.Width != 1280 || cfg.Height != 720 {
 			t.Fatal("Retina frame was not scaled", cfg, err)
 		}
-	default:
+	case <-time.After(3 * time.Second):
 		t.Fatal("static page must send its first frame without a paint event")
 	}
+	client.mu.Lock()
 	if _, exists := client.params["clip"]; exists || client.params["captureBeyondViewport"] != false {
 		t.Fatal("live view must not resize or capture beyond the existing viewport", client.params)
 	}
@@ -75,10 +84,13 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 			t.Fatal("capture changed the page or window", method)
 		}
 	}
+	client.mu.Unlock()
 	s.serviceView(context.Background())
+	client.mu.Lock()
 	if client.screenshots != 1 {
 		t.Fatal("initial screenshot repeated after first frame")
 	}
+	client.mu.Unlock()
 	// A second frame inside 500ms is dropped, even from the bootstrap path.
 	s.forwardViewFrame("anBlZw==")
 	select {
@@ -86,28 +98,35 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 		t.Fatal("frame rate exceeded")
 	default:
 	}
+	// Invalidate the completed worker before asking for a fresh frame.
+	s.ev.Lock()
 	s.lastViewFrame = time.Now().Add(-3 * time.Second)
+	s.cancelViewCapture()
+	s.ev.Unlock()
 	s.serviceView(context.Background())
-	if client.screenshots != 2 {
-		t.Fatal("occluded view was not refreshed")
-	}
 	select {
 	case <-m.Frames():
-	default:
-		t.Fatal("no refresh frame")
+	case <-time.After(3 * time.Second):
+		t.Fatal("occluded view was not refreshed")
 	}
+	s.ev.Lock()
 	s.lastViewFrame = time.Now().Add(-time.Second)
+	s.ev.Unlock()
 	s.forwardViewFrame(strings.Repeat("A", maxFrameBytes*2))
 	select {
 	case <-m.Frames():
 		t.Fatal("oversized frame forwarded")
 	default:
 	}
+	s.ev.Lock()
 	s.viewUntil = time.Now().Add(-time.Second)
+	s.ev.Unlock()
 	s.serviceView(context.Background())
 	if s.viewActive {
 		t.Fatal("stale heartbeat did not stop capture")
 	}
+	client.mu.Lock()
+	defer client.mu.Unlock()
 	if client.methods[len(client.methods)-1] != "Page.stopScreencast" {
 		t.Fatal(client.methods)
 	}
@@ -141,5 +160,53 @@ func TestViewJPEGRejectsInvalidAndCapsNoisyFrames(t *testing.T) {
 	cfg, err := jpeg.DecodeConfig(bytes.NewReader(raw))
 	if err != nil || cfg.Width != 1280 || cfg.Height != 720 {
 		t.Fatal("aspect ratio or width changed", cfg, err)
+	}
+}
+
+type slowViewClient struct {
+	staticViewClient
+	started chan struct{}
+	done    chan struct{}
+	once    sync.Once
+}
+
+func (c *slowViewClient) Call(ctx context.Context, method string, params any, out any) error {
+	if method == "Page.captureScreenshot" {
+		c.once.Do(func() { close(c.started) })
+		<-ctx.Done()
+		close(c.done)
+		return ctx.Err()
+	}
+	return c.staticViewClient.Call(ctx, method, params, out)
+}
+func TestLiveViewSlowCaptureIsSingleAndCancelled(t *testing.T) {
+	m := New()
+	c := &slowViewClient{started: make(chan struct{}), done: make(chan struct{})}
+	s := &session{m: m, cp: &Checkpoint{SessionID: "slow-view"}, conn: c, viewUntil: time.Now().Add(time.Minute)}
+	m.sessions["slow-view"] = s
+	returned := make(chan struct{})
+	go func() { s.serviceView(context.Background()); close(returned) }()
+	select {
+	case <-returned:
+	case <-time.After(time.Second):
+		t.Fatal("native capture blocked the control loop")
+	}
+	select {
+	case <-c.started:
+	case <-time.After(time.Second):
+		t.Fatal("capture was not started")
+	}
+	// A second service pass must not start another pending screenshot.
+	s.serviceView(context.Background())
+	m.ViewHeartbeat("slow-view", false)
+	select {
+	case <-c.done:
+	case <-time.After(time.Second):
+		t.Fatal("viewer expiry did not cancel capture")
+	}
+	select {
+	case <-m.Frames():
+		t.Fatal("cancelled capture forwarded an image")
+	default:
 	}
 }

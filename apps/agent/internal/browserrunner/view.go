@@ -36,6 +36,7 @@ func (m *Manager) ViewHeartbeat(id string, watching bool) {
 		s.viewUntil = time.Now().Add(30 * time.Second)
 	} else {
 		s.viewUntil = time.Time{}
+		s.cancelViewCapture()
 	}
 	s.ev.Unlock()
 }
@@ -85,6 +86,7 @@ func (s *session) serviceView(ctx context.Context) {
 		s.conn.Fire("Page.stopScreencast", nil)
 		s.ev.Lock()
 		s.viewActive = false
+		s.cancelViewCapture()
 		s.ev.Unlock()
 	}
 	// A static/headless page may not paint enough frames to satisfy everyNthFrame=2.
@@ -92,11 +94,18 @@ func (s *session) serviceView(ctx context.Context) {
 	// painting. Normal updates use screencast events; the fallback uses the same
 	// memory-only/rate/size limits and only runs for an active viewer.
 	s.ev.Lock()
-	needFrame := s.viewActive && time.Now().Before(s.viewUntil) && (s.lastViewFrame.Before(s.viewStarted) || time.Since(s.lastViewFrame) >= 2*time.Second)
-	s.ev.Unlock()
-	if needFrame && ctx.Err() == nil {
-		s.initialViewFrame(ctx)
+	needFrame := s.viewActive && time.Now().Before(s.viewUntil) && s.viewCaptureCancel == nil && (s.lastViewFrame.Before(s.viewStarted) || time.Since(s.lastViewFrame) >= 2*time.Second)
+	if needFrame {
+		// Native screenshot callbacks can take longer than the control tick on a
+		// minimized Mac. Keep a single request alive without holding the session
+		// mutex, so page actions, waits and heartbeat expiry remain responsive.
+		captureCtx, captureCancel := context.WithTimeout(context.Background(), 25*time.Second)
+		s.viewCaptureCancel = captureCancel
+		s.viewCaptureID++
+		id, conn := s.viewCaptureID, s.conn
+		go s.initialViewFrame(captureCtx, captureCancel, conn, id)
 	}
+	s.ev.Unlock()
 }
 func (s *session) onViewFrame(raw json.RawMessage) {
 	// Reject oversized payloads before decoding the frame's base64 string.
@@ -116,6 +125,7 @@ func (s *session) onViewFrame(raw json.RawMessage) {
 	wanted := s.viewActive && time.Now().Before(s.viewUntil)
 	if !wanted {
 		s.viewActive = false
+		s.cancelViewCapture()
 	}
 	s.ev.Unlock()
 	if conn == nil {
@@ -161,28 +171,53 @@ func (s *session) forwardViewFrame(data string) {
 	}
 }
 
+// cancelViewCapture requires ev. Incrementing the ID also invalidates a late
+// reply after cancellation or after a new viewer/browser connection takes over.
+func (s *session) cancelViewCapture() {
+	if s.viewCaptureCancel != nil {
+		s.viewCaptureCancel()
+		s.viewCaptureCancel = nil
+	}
+	s.viewCaptureID++
+}
+
 // Capture the existing viewport without clip/device emulation. Chromium resizes
 // its RenderWidgetHostView when a clip is supplied; a minimized macOS window can
 // never present that resized surface, leaving captureScreenshot pending. Scaling
 // the JPEG locally avoids changing the page or showing/focusing its native window.
-func (s *session) initialViewFrame(ctx context.Context) {
+func (s *session) initialViewFrame(ctx context.Context, cancel context.CancelFunc, conn cdpClient, id uint64) {
+	defer cancel()
+	defer func() {
+		s.ev.Lock()
+		if s.viewCaptureID == id {
+			s.viewCaptureCancel = nil
+		}
+		s.ev.Unlock()
+	}()
 	var frame struct {
 		Data string `json:"data"`
 	}
 	params := map[string]any{"format": "jpeg", "quality": 50, "captureBeyondViewport": false, "fromSurface": true, "optimizeForSpeed": true}
-	err := s.conn.Call(ctx, "Page.captureScreenshot", params, &frame)
+	err := conn.Call(ctx, "Page.captureScreenshot", params, &frame)
 	if err == nil && ctx.Err() == nil {
 		frame.Data, err = cappedViewJPEG(frame.Data)
-		if err == nil {
-			s.forwardViewFrame(frame.Data)
-			return
-		}
 	}
 	if err == nil {
 		err = ctx.Err()
 	}
 	s.ev.Lock()
-	s.viewError = "initial frame: " + err.Error()
+	current := s.viewCaptureID == id && s.viewConn == conn && s.viewActive && time.Now().Before(s.viewUntil)
+	if current && err != nil {
+		s.viewError = "initial frame: " + err.Error()
+	}
+	if current && err == nil && time.Since(s.lastViewFrame) >= 500*time.Millisecond {
+		s.lastViewFrame = time.Now()
+		s.viewError = ""
+		select {
+		case s.m.frames <- ViewFrame{Type: "runner_frame", SessionID: s.cp.SessionID, Data: frame.Data}:
+		default:
+		}
+	}
 	s.ev.Unlock()
 }
 

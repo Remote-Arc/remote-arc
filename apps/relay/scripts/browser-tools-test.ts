@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/shared-tab-mcp.js";
 import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct, runStart } from "../src/browser-runner-mcp.js";
 import { callDevice } from "../src/device-call.js";
+import { parseRunnerAttention, runnerViewPath } from "../src/runner-attention.js";
 import { classifyExpectedMcpError } from "../src/mcp-errors.js";
 import type { OAuthIdentity } from "../src/auth.js";
 
@@ -29,9 +30,24 @@ const deps = {
 registerSharedTabTools(server as never, deps as never);
 registerBrowserRunnerTools(server as never, deps as never);
 
-// Two families with names that cannot be confused, 12 tools in total.
+// Two families with names that cannot be confused, 13 tools in total.
 assert.deepEqual([...tools.keys()].sort(), [...SHARED_TAB_TOOLS, ...BROWSER_RUNNER_TOOLS].sort());
-assert.equal(tools.size, 12);
+assert.equal(tools.size, 13);
+// Routing-only notifications must discard page content, query strings and secrets.
+const parsedAttention = parseRunnerAttention({
+  type: "runner_attention", event_id: "a".repeat(32), session_id: "runner-1",
+  task_id: "untrusted", kind: "captcha", origin: "https://example.test/private?token=secret",
+  title: "untrusted title", password: "never-forward", screenshot: "never-forward",
+});
+assert.deepEqual(parsedAttention, {
+  type: "runner_attention", event_id: "a".repeat(32), session_id: "runner-1",
+  task_id: "runner-1", kind: "captcha", origin: "https://example.test",
+});
+assert.equal(parseRunnerAttention({ ...parsedAttention, origin: "javascript:alert(1)" }), null);
+assert.equal(parseRunnerAttention({ ...parsedAttention, origin: "https://user:pass@example.test" }), null);
+assert.equal(parseRunnerAttention({ ...parsedAttention, kind: "screenshot" }), null);
+assert.equal(parseRunnerAttention({ ...parsedAttention, session_id: "../escape" }), null);
+assert.equal(runnerViewPath("device-1", "session-1"), "/dashboard/browser/device-1/session-1");
 for (const name of BROWSER_RUNNER_TOOLS) {
   assert.match(tools.get(name)!.def.description + browserRunnerDefinitionsForTest[name].description, /./);
 }

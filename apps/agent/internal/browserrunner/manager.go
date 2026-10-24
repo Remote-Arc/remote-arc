@@ -27,7 +27,7 @@ import (
 // Tools is the device tool contract. Names are stable across AI hosts.
 var Tools = []string{
 	"browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
-	"browser_runner_status", "browser_runner_confirm", "browser_runner_close",
+	"browser_runner_status", "browser_runner_confirm", "browser_runner_close", "browser_runner_wait",
 }
 
 func IsTool(name string) bool {
@@ -45,18 +45,22 @@ const maxLiveSessions = 4
 var CallBudget = 40 * time.Second
 
 type Manager struct {
-	mu          sync.Mutex
-	sessions    map[string]*session
-	findBrowser func() (string, error)
-	now         func() time.Time
-	IdleTimeout time.Duration
-	reaper      sync.Once
-	stop        chan struct{}
-	your        *yourChrome // the shared connection to the user's own Chrome, when a task uses it
+	mu                sync.Mutex
+	sessions          map[string]*session
+	findBrowser       func() (string, error)
+	now               func() time.Time
+	IdleTimeout       time.Duration
+	UserActionTimeout time.Duration
+	attentionMode     string
+	attentionEvents   map[string]Attention
+	frames            chan ViewFrame
+	reaper            sync.Once
+	stop              chan struct{}
+	your              *yourChrome // the shared connection to the user's own Chrome, when a task uses it
 }
 
 func New() *Manager {
-	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, now: time.Now, IdleTimeout: 20 * time.Minute, stop: make(chan struct{})}
+	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, now: time.Now, IdleTimeout: 20 * time.Minute, UserActionTimeout: 2 * time.Hour, attentionEvents: map[string]Attention{}, frames: make(chan ViewFrame, 2), stop: make(chan struct{})}
 }
 
 // Available reports whether this device can run the browser_runner at all.
@@ -113,14 +117,19 @@ func (m *Manager) Close() {
 func (m *Manager) startReaper() {
 	m.reaper.Do(func() {
 		go func() {
-			t := time.NewTicker(time.Minute)
+			t := time.NewTicker(time.Second)
+			nextReap := time.Now().Add(time.Minute)
 			defer t.Stop()
 			for {
 				select {
 				case <-m.stop:
 					return
 				case <-t.C:
-					m.reapIdle()
+					m.serviceViews()
+					if time.Now().After(nextReap) {
+						m.reapIdle()
+						nextReap = time.Now().Add(time.Minute)
+					}
 				}
 			}
 		}()
@@ -140,7 +149,24 @@ func (m *Manager) reapIdle() {
 		if !s.mu.TryLock() {
 			continue
 		}
-		if s.live() && m.now().Sub(s.lastUsed) > m.IdleTimeout {
+		limit, since := m.IdleTimeout, s.lastUsed
+		if s.cp.State == StateNeedsUser {
+			limit = m.UserActionTimeout
+			if limit <= 0 {
+				limit = 2 * time.Hour
+			}
+			if at, e := time.Parse(time.RFC3339Nano, s.cp.AttentionSince); e == nil {
+				since = at
+			}
+			if s.live() && m.now().Sub(since) >= limit*9/10 && !s.cp.AttentionReminded {
+				s.cp.AttentionReminded = true
+				s.emitAttention("reminder")
+				_ = s.flush()
+				s.mu.Unlock()
+				continue // A reminder always precedes collection by at least one reaper pass.
+			}
+		}
+		if s.live() && m.now().Sub(since) > limit {
 			s.shutdownBrowser(true)
 			s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_status", Outcome: "paused", Detail: "idle timeout; browser closed, checkpoint kept"})
 			_ = s.flush()
@@ -212,7 +238,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 		return s.cp.Summary(s.live()), nil
 	}
 	if tool == "browser_runner_close" {
-		return m.close(ctx, s, protocol.Bool(args, "forget"))
+		return m.close(ctx, s, args)
 	}
 	if s.cp.State == StateClosed {
 		return nil, errors.New("Session is closed. Call browser_runner_start with the same task_id to reopen it.")
@@ -225,6 +251,8 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	var out map[string]any
 	hidAgain := false
 	switch tool {
+	case "browser_runner_wait":
+		out, e = m.waitUntil(ctx, s, args)
 	case "browser_runner_snapshot":
 		maxEl, e1 := protocol.Integer(args, "max_elements", 150, 10, 400)
 		maxText, e2 := protocol.Integer(args, "max_text", 6000, 500, 20000)
@@ -239,6 +267,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 		case "navigate":
 			out, e = s.navigate(ctx, protocol.OptionalString(args, "url"))
 			if e == nil {
+				s.scanAfterAction(ctx)
 				s.cp.receipt(m.now(), Receipt{Tool: tool, Action: "navigate", URL: safeURL(fmt.Sprint(out["url"])), Outcome: "ok"})
 			}
 		case "upload":
@@ -288,7 +317,8 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 		return nil, e
 	}
 	out["session_id"] = s.cp.SessionID
-	if hidAgain {
+	s.addAttentionResult(out)
+	if hidAgain && s.cp.State != StateNeedsUser {
 		out["window"] = "hidden again: the user finished, so the task window is back out of sight"
 	}
 	s.ev.Lock()
@@ -474,6 +504,9 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 			s.scope = merged
 			s.ev.Unlock()
 			s.cp.AllowedOrigins = merged.Strings()
+		}
+		if chosen && headless && s.cp.State == StateNeedsUser {
+			return nil, errors.New("RUNNER_USER_ACTION_PENDING: finish the user handoff before hiding the task window.")
 		}
 		if chosen && s.cp.Headless != headless {
 			switch {
@@ -692,6 +725,13 @@ func (m *Manager) act(ctx context.Context, s *session, args map[string]any) (map
 			eff.Label = clip(l, 120)
 		}
 	}
+	if dispatched && s.live() && (effect == "submit" || effect == "navigation" || navigated) {
+		s.scanAfterAction(ctx)
+		if s.cp.State == StateNeedsUser && eff != nil {
+			eff.Status, eff.NothingSent, eff.SettledBy, eff.Evidence = EffectUnverified, false, "", ""
+			delete(s.unsent, eff.Key)
+		}
+	}
 	rc := Receipt{Tool: "browser_runner_act", Action: req.Action, URL: safeURL(s.currentHref()), Outcome: "ok"}
 	if l, ok := out["label"].(string); ok {
 		rc.Label = clip(l, 120)
@@ -772,7 +812,7 @@ func (s *session) settleEffect(ctx context.Context, eff *Effect, mark navMark, n
 // since. Only this session's observation counts; after a restart the answer
 // is no, and the submit is treated as possibly sent.
 func (s *session) stillUnsent(e *Effect) bool {
-	if !e.NothingSent || e.Status != EffectUnverified {
+	if s.cp.State == StateNeedsUser || !e.NothingSent || e.Status != EffectUnverified {
 		return false
 	}
 	m, ok := s.unsent[e.Key]
@@ -1052,7 +1092,24 @@ func (m *Manager) resolve(ctx context.Context, s *session, args map[string]any) 
 	return map[string]any{"effect": *eff}, nil
 }
 
-func (m *Manager) close(ctx context.Context, s *session, forget bool) (any, error) {
+func (m *Manager) close(ctx context.Context, s *session, args map[string]any) (any, error) {
+	forget := protocol.Bool(args, "forget")
+	force := protocol.Bool(args, "force")
+	reason := strings.TrimSpace(protocol.OptionalString(args, "reason"))
+	if force && (reason == "" || len(reason) > 200) {
+		return nil, errors.New("force=true requires a reason of 1-200 characters.")
+	}
+	if (s.cp.State == StateNeedsUser || s.cp.unresolved() != nil) && !force {
+		return nil, errors.New("RUNNER_USER_ACTION_PENDING: the task needs the user or has an unresolved submit. Use browser_runner_wait until=user_done, inspect the result and browser_runner_confirm before closing. To deliberately abandon it, use force=true with a reason.")
+	}
+	if force {
+		s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_close", Outcome: "forced", Detail: reason})
+		if e := s.flush(); e != nil {
+			return nil, e
+		}
+	}
+	s.clearAttention()
+
 	// A finished task closes its own tab in the user's Chrome; nothing else
 	// there is touched.
 	if page, ok := s.conn.(*yourPage); ok && page != nil {

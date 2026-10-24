@@ -8,7 +8,7 @@ export const arcDeviceSchemas:Record<string,z.ZodType>={
  write_file:z.object({path,content:z.string().max(200000),mode:z.enum(['rewrite','append']).optional()}).strict(),
  edit_block:z.object({file_path:path,old_string:z.string().max(200000),new_string:z.string().max(200000),expected_replacements:z.number().int().min(1).max(20).optional()}).strict(),
  start_process:z.object({command:z.string().min(1).max(4000),cwd:z.string().max(500).optional(),timeout_ms:z.number().int().min(1).max(120000).optional(),background:z.boolean().optional()}).strict(),
- process_status:z.object({process_id:processId}).strict(),
+ process_status:z.object({process_id:processId,wait_ms:z.number().int().nonnegative().optional(),until_text:z.string().max(500).optional()}).strict(),
  process_output:z.object({process_id:processId,cursor:z.number().int().nonnegative().optional(),max_bytes:z.number().int().min(1).max(262144).optional()}).strict(),
  stop_process:z.object({process_id:processId}).strict(),
 };

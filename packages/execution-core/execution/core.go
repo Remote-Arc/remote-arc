@@ -208,7 +208,7 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 		}
 		switch name {
 		case "process_status":
-			result, e = c.Processes.Status(id)
+			result, e = c.Processes.WaitStatus(ctx, id, protocol.Number(args, "wait_ms", 0), protocol.OptionalString(args, "until_text"))
 		case "process_output":
 			result, e = c.Processes.Output(id)
 		case "stop_process":

@@ -85,6 +85,8 @@ export type AgentHelloMessage = {
 };
 
 export type DeviceExecutionPolicy = {
+  runnerAttentionMode?: "show_and_notify" | "notify_only";
+  browserRunnerEnabled?: boolean;
   workspaceRoots?: string[];
   taskWorkspaceRoot?: string;
   protectSensitivePaths?: boolean;

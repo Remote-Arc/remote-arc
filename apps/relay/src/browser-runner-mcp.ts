@@ -21,6 +21,7 @@ export const BROWSER_RUNNER_TOOLS = [
   "browser_runner_status",
   "browser_runner_confirm",
   "browser_runner_close",
+  "browser_runner_wait",
 ] as const;
 
 export type BrowserRunnerTool = (typeof BROWSER_RUNNER_TOOLS)[number];
@@ -63,7 +64,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Start or resume a browser task",
     description:
-      "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. profile is the browser profile, which keeps sign-ins and cookies between tasks: use one profile per person and reuse it (for example profile=jenny), so a site signed into once stays signed in for later tasks and new conversations; browser_runner_status without session_id lists the profiles on the computer and the sites used in each. The task browser works out of sight so it never interrupts the user: a hidden window that does not take focus (headless=true, the default for every new task). Do not show it to watch progress. When a snapshot reports needs_user (a sign-in, code or CAPTCHA only the user can do), tell the user what is needed and wait until they say they are ready, then call this again with the same task_id and headless=false: the window comes on screen as it is, nothing entered on the page is lost, and it goes back out of sight on your next browser_runner_act once the page no longer needs the user. A computer without a display has no window to show. Leaving headless out keeps a running task as it is. Resuming reopens the last page and reports unconfirmed submits." +
+      "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. profile is the browser profile, which keeps sign-ins and cookies between tasks: use one profile per person and reuse it (for example profile=jenny), so a site signed into once stays signed in for later tasks and new conversations; browser_runner_status without session_id lists the profiles on the computer and the sites used in each. The task browser works out of sight so it never interrupts the user: a hidden window that does not take focus (headless=true, the default for every new task). Do not show it to watch progress. After submit/navigation, visible challenges are detected automatically: needs_user raises the task window and notifies the user (unless they chose notify_only). Use browser_runner_wait until=user_done; do not sleep and poll or repeat a submit. The window goes back out of sight after the user finishes. A computer without a display has no window to show. Leaving headless out keeps a running task as it is. Resuming reopens the last page and reports unconfirmed submits." +
       " Use browser=your_chrome only when the user explicitly asks to use their own Chrome; never suggest or choose it yourself. It requires Chrome 144+ with remote debugging enabled at chrome://inspect/#remote-debugging. Leave profile and headless out: this mode uses the user's current sign-ins and is always visible. Chrome asks Allow for each new connection; tasks share one connection so follow-up tasks do not ask again while it stays connected. If YOUR_CHROME_NOT_ENABLED, ask the user to enable the switch in the page opened on their computer. If YOUR_CHROME_WAITING, ask them to click Allow and retry with the same task_id; the request stays open for 3 minutes. YOUR_CHROME_DENIED means the request was declined or expired. Without browser or profile, a resumed task keeps its original browser and profile." + what,
     input: z.object({
       device_id: deviceId,
@@ -127,6 +128,13 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     }),
     annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: true },
   },
+  browser_runner_wait: {
+    scope: "browser:read",
+    title: "Wait for a browser task",
+    description: "Wait on the device for user_done (two clear blocker scans), page_change, text, url_contains, upload_done or idle. Uses no sleep/poll turns. timeout_ms defaults to 30000 and is capped at 40000 even if a larger value is supplied. Returns met, timeout or needs_user. On timeout call wait again. Waiting never retries or authorizes a submit; inspect and confirm the existing effect after the user finishes. snapshot=true optionally returns the resulting page.",
+    input: z.object({ device_id: deviceId, session_id: id, until: z.enum(["user_done", "page_change", "text", "url_contains", "upload_done", "idle"]), text: z.string().min(1).max(200).optional(), url_contains: z.string().min(1).max(300).optional(), timeout_ms: z.number().int().min(1000).optional(), snapshot: z.boolean().optional() }),
+    annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+  },
   browser_runner_status: {
     scope: "browser:read",
     title: "Show a browser task's checkpoint",
@@ -154,8 +162,8 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Close a browser task",
     description:
-      "Close the task browser and keep its checkpoint so the task can be resumed. In your_chrome mode, close only the task's tab; the user's other tabs and profile are kept. If already disconnected, tab_left_open=true means the user can close the remaining task window manually. The shared Chrome connection disconnects 5 minutes after the last task detaches. forget=true also deletes the checkpoint and, for a dedicated Runner task profile, its sign-ins.",
-    input: z.object({ device_id: deviceId, session_id: id, forget: z.boolean().optional() }),
+      "Close the task browser and keep its checkpoint so the task can be resumed. RUNNER_USER_ACTION_PENDING refuses to close during user handoff or an unresolved submit: wait and confirm first. Deliberate abandonment requires force=true and reason and records a receipt. In your_chrome mode, close only the task's tab; the user's other tabs and profile are kept. If already disconnected, tab_left_open=true means the user can close the remaining task window manually. The shared Chrome connection disconnects 5 minutes after the last task detaches. forget=true also deletes the checkpoint and, for a dedicated Runner task profile, its sign-ins.",
+    input: z.object({ device_id: deviceId, session_id: id, forget: z.boolean().optional(), force: z.boolean().optional(), reason: z.string().min(1).max(200).optional() }),
     annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
   },
 };

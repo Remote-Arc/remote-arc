@@ -309,7 +309,7 @@ func (s *session) snapshotFrames(ctx context.Context, page map[string]any, id st
 		prefix := fmt.Sprintf("f%d", i+1)
 		entry := map[string]any{"frame": prefix, "origin": originOf(f.url), "in_scope": s.scope.Allows(f.url)}
 		frames = append(frames, entry)
-		if !s.scope.Allows(f.url) || budget <= 0 {
+		if !s.scope.Allows(f.url) || budget <= 0 || !s.frameVisible(ctx, f) {
 			continue
 		}
 		r, e := s.helperIn(ctx, f.id, "snapshot", map[string]any{"snapshot_id": id, "ref_prefix": prefix, "max_elements": max(10, budget), "max_text": max(200, maxText/2), "allow_codes": oneTimeCodesAllowed()}, true)

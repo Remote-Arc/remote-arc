@@ -1,3 +1,4 @@
+import { recordRunnerAttention, type RunnerEnv } from "./runner-attention.js";
 import type {
   AgentCallMessage,
   AgentHelloMessage,
@@ -12,6 +13,10 @@ type PendingCall = {
 };
 
 type SocketAttachment = {
+  viewer?: boolean;
+  sessionId?: string;
+  heartbeatAt?: number;
+  frameTimes?: Record<string, number>;
   userId: string;
   deviceId: string;
   device?: DeviceMetadata;
@@ -22,7 +27,7 @@ type SocketAttachment = {
 export class DeviceRegistry {
   private pending = new Map<string, PendingCall>();
 
-  constructor(private readonly ctx: DurableObjectState) {}
+  constructor(private readonly ctx: DurableObjectState, private readonly env?: RunnerEnv) {}
 
   private preferredSocket(sockets: WebSocket[]) {
     return [...sockets].sort((a, b) => {
@@ -41,6 +46,8 @@ export class DeviceRegistry {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname === "/runner-view") return this.handleRunnerView(request);
+
     if (url.pathname === "/agent") {
       return this.handleAgentConnect(request);
     }
@@ -58,6 +65,44 @@ export class DeviceRegistry {
     }
 
     return new Response("Not found", { status: 404 });
+  }
+
+  private runnerDevice(userId: string, deviceId: string) {
+    return this.preferredSocket(this.ctx.getWebSockets("device:"+deviceId).filter(socket => {
+      const a = socket.deserializeAttachment() as SocketAttachment | null;
+      return a?.userId === userId && !a.viewer;
+    }));
+  }
+  private viewTag(a: SocketAttachment) { return "runner-view:"+a.userId+":"+a.deviceId+":"+a.sessionId; }
+  private viewControl(a: SocketAttachment, watching: boolean) {
+    const device = this.runnerDevice(a.userId,a.deviceId);
+    try { device?.send(JSON.stringify({type:"runner_view",session_id:a.sessionId,action:watching?"watch":"stop"})); } catch { /* Device disconnected. */ }
+  }
+  private handleRunnerView(request: Request): Response {
+    if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") return new Response("WebSocket required",{status:426});
+    const userId=request.headers.get("x-remote-link-user-id"),deviceId=request.headers.get("x-remote-link-device-id"),sessionId=request.headers.get("x-runner-session-id");
+    if (!userId || !deviceId || !sessionId || !/^[A-Za-z0-9_-]{1,100}$/.test(sessionId)) return new Response("Forbidden",{status:403});
+    if (!this.runnerDevice(userId,deviceId)) return new Response("Device offline",{status:404});
+    const a:SocketAttachment={viewer:true,userId,deviceId,sessionId,heartbeatAt:Date.now()};
+    if(this.ctx.getWebSockets(this.viewTag(a)).length>=4)return new Response("Too many viewers",{status:429});
+    const pair=new WebSocketPair();pair[1].serializeAttachment(a);this.ctx.acceptWebSocket(pair[1],[this.viewTag(a)]);
+    this.viewControl(a,true);
+    return new Response(null,{status:101,webSocket:pair[0],headers:{"cache-control":"no-store"}});
+  }
+  private forwardRunnerFrame(socket: WebSocket, a: SocketAttachment, value: any) {
+    if (!/^[A-Za-z0-9_-]{1,100}$/.test(value.session_id || "") || typeof value.data !== "string" || value.data.length > 273064 || !/^[A-Za-z0-9+/]+={0,2}$/.test(value.data)) return;
+    const now=Date.now();
+    if(now-(a.frameTimes?.[value.session_id]||0)<500)return;
+    const viewers=this.ctx.getWebSockets(this.viewTag({...a,sessionId:value.session_id})).filter(viewer=>{
+      const target=viewer.deserializeAttachment() as SocketAttachment|null;
+      return target?.viewer && target.userId===a.userId && target.deviceId===a.deviceId && target.sessionId===value.session_id && now-(target.heartbeatAt||0)<30000;
+    });
+    if(!viewers.length){this.viewControl({...a,sessionId:value.session_id},false);return;}
+    const times=Object.fromEntries(Object.entries(a.frameTimes||{}).filter(([,time])=>now-time<30000));
+    socket.serializeAttachment({...a,frameTimes:{...times,[value.session_id]:now}});
+    // Memory-only forwarding. No D1, storage, analytics, logging, or model calls.
+    const frame=JSON.stringify({type:"runner_frame",session_id:value.session_id,data:value.data});
+    for(const viewer of viewers){try{viewer.send(frame);}catch{/* Slow/disconnected viewer drops the frame. */}}
   }
 
   private handleAgentConnect(request: Request): Response {
@@ -272,6 +317,24 @@ export class DeviceRegistry {
       return;
     }
 
+    const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+    if (!attachment) return;
+    if (attachment.viewer) {
+      if ((parsed as any).type === "ping") {
+        const current={...attachment,heartbeatAt:Date.now()};socket.serializeAttachment(current);this.viewControl(current,true);
+        socket.send(JSON.stringify({type:"pong"}));
+      }
+      return; // A viewer can never impersonate an Agent or dispatch an action.
+    }
+    if ((parsed as any).type === "runner_frame") { this.forwardRunnerFrame(socket,attachment,parsed); return; }
+    if ((parsed as any).type === "runner_attention" && this.env) {
+      this.ctx.waitUntil(recordRunnerAttention(this.env,attachment.userId,attachment.deviceId,parsed).then(()=>{
+        const event=parsed as any;
+        socket.send(JSON.stringify({type:"runner_attention_ack",event_id:event.event_id,kind:event.kind}));
+      }).catch(()=>{}));
+      return;
+    }
+
     if (parsed.type === "hello") {
       const attachment =
         socket.deserializeAttachment() as SocketAttachment | null;
@@ -328,6 +391,8 @@ export class DeviceRegistry {
   }
 
   webSocketClose(socket: WebSocket) {
+    const a=socket.deserializeAttachment() as SocketAttachment|null;
+    if(a?.viewer && !this.ctx.getWebSockets(this.viewTag(a)).some(other=>other!==socket && Date.now()-((other.deserializeAttachment() as SocketAttachment)?.heartbeatAt||0)<30000))this.viewControl(a,false);
     try {
       socket.close(1000, "closed");
     } catch {

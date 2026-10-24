@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -72,6 +73,9 @@ func (a *Agent) log(level, message string) {
 		a.Journal.Log(level, CleanMessage(message))
 	}
 }
+
+var runnerBypass = regexp.MustCompile(`(?i)(playwright|puppeteer|selenium|chromedriver|webdriver)`)
+
 func (a *Agent) cfg() config.Config { a.mu.Lock(); defer a.mu.Unlock(); return a.Config }
 func (a *Agent) Status() map[string]any {
 	// Work that stopping this Agent would interrupt, reported as counts only so
@@ -236,10 +240,11 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		}
 		return awake.Set(id, seconds)
 	case "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
-		"browser_runner_status", "browser_runner_confirm", "browser_runner_close":
+		"browser_runner_status", "browser_runner_confirm", "browser_runner_close", "browser_runner_wait":
 		if a.Browser == nil || a.Core == nil || a.Core.Mode == "safe" || a.Core.Mode == "developer" {
 			return nil, errors.New("browser_runner requires terminal mode on this device.")
 		}
+		a.Browser.SetAttentionMode(call.Policy.RunnerAttentionMode)
 		return a.Browser.Call(ctx, call.Tool, args, call.Policy)
 	case "goal_workspace":
 		if a.Core.Mode == "safe" || a.Core.Mode == "developer" {
@@ -294,7 +299,19 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		if a.Core == nil {
 			return nil, errors.New("Execution core unavailable while paused.")
 		}
-		return a.Core.Call(ctx, call.Tool, args, call.Policy)
+		result, err := a.Core.Call(ctx, call.Tool, args, call.Policy)
+		if err == nil && call.Tool == "start_process" && call.Policy.BrowserRunnerEnabled && runnerBypass.MatchString(protocol.OptionalString(args, "command")) {
+			a.log("warn", "RUNNER_BYPASS: browser automation started outside Browser Runner; handoff and submit deduplication are unavailable.")
+			if len(result.Content) > 0 {
+				var value map[string]any
+				if json.Unmarshal([]byte(result.Content[0].Text), &value) == nil && value != nil {
+					value["warning"] = "RUNNER_BYPASS"
+					value["guidance"] = "For websites use browser_runner_*; custom Playwright, Puppeteer or Selenium scripts lose CAPTCHA handoff, submit deduplication and saved credentials. The requested command still ran."
+					result = protocol.TextResult(value)
+				}
+			}
+		}
+		return result, err
 	}
 }
 func (a *Agent) Run(ctx context.Context) error {
@@ -385,6 +402,10 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 	conn.SetReadLimit(32 << 20)
 	conn.SetReadDeadline(time.Now().Add(75 * time.Second))
 	conn.SetPongHandler(func(string) error { return conn.SetReadDeadline(time.Now().Add(75 * time.Second)) })
+	var frames <-chan browserrunner.ViewFrame
+	if a.Browser != nil {
+		frames = a.Browser.Frames()
+	}
 	var workers sync.WaitGroup
 	slots := make(chan struct{}, 32)
 	finished := make(chan struct{})
@@ -392,6 +413,8 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 	go func() {
 		defer close(finished)
 		presence := time.NewTicker(30 * time.Second)
+		attention := time.NewTicker(time.Second)
+		defer attention.Stop()
 		heartbeat := time.NewTicker(15 * time.Minute)
 		defer presence.Stop()
 		defer heartbeat.Stop()
@@ -400,6 +423,19 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 			case <-ctx.Done():
 				conn.Close()
 				return
+			case frame := <-frames:
+				if send(frame) != nil {
+					cancel()
+				}
+			case <-attention.C:
+				if a.Browser != nil {
+					for _, event := range a.Browser.PendingAttention() {
+						if send(event) != nil {
+							cancel()
+							break
+						}
+					}
+				}
 			case <-presence.C:
 				if !a.identityValid() {
 					revoked <- struct{}{}
@@ -436,6 +472,24 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 			}
 		}
 		conn.SetReadDeadline(time.Now().Add(75 * time.Second))
+		var ack browserrunner.Attention
+		if json.Unmarshal(data, &ack) == nil && ack.Type == "runner_attention_ack" {
+			if a.Browser != nil {
+				a.Browser.AckAttention(ack)
+			}
+			continue
+		}
+		var control struct {
+			Type      string `json:"type"`
+			SessionID string `json:"session_id"`
+			Action    string `json:"action"`
+		}
+		if json.Unmarshal(data, &control) == nil && control.Type == "runner_view" {
+			if a.Browser != nil && (control.Action == "watch" || control.Action == "stop") {
+				a.Browser.ViewHeartbeat(control.SessionID, control.Action == "watch")
+			}
+			continue
+		}
 		var call protocol.Call
 		if json.Unmarshal(data, &call) != nil || call.Type != "call" || call.ID == "" || call.Tool == "" || len(call.ID) > 256 || len(call.Tool) > 100 {
 			continue

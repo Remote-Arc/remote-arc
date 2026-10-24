@@ -141,9 +141,9 @@ func TestE2ECaptchaOnlyAnOpenChallengeNeedsTheUser(t *testing.T) {
 	if snap["session_state"] != StateNeedsUser || strings.Join(captchaKinds(snap, "blockers"), ",") != "captcha" || !strings.Contains(needs, "never reads") {
 		t.Fatalf("open challenge not handed to the user: state=%v blockers=%v needs=%q", snap["session_state"], snap["blockers"], needs)
 	}
-	if !headed && !strings.Contains(needs, showHint()) {
-		t.Fatalf("hidden browser: no instruction to show the window: %q", needs)
-	}
+	if !strings.Contains(needs, "browser_runner_wait") {
+  t.Fatalf("handoff must guide the caller to wait: %q", needs)
+ }
 	// The submit is still unverified, so next_action is about settling it;
 	// the checkpoint must still say the user is needed.
 	if st := h.call("browser_runner_status", map[string]any{"session_id": "lever"}); st["state"] != StateNeedsUser || st["needs_user"] == nil {

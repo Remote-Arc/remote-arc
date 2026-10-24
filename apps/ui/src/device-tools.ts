@@ -10,7 +10,7 @@ export const BROWSER_RUNNER_TOOLS = [
   "browser_runner_close",
 ] as const;
 
-export const isBrowserRunnerTool = (tool: string) => (BROWSER_RUNNER_TOOLS as readonly string[]).includes(tool);
+export const isBrowserRunnerTool = (tool: string) => tool === "browser_runner_wait" || (BROWSER_RUNNER_TOOLS as readonly string[]).includes(tool);
 
 /** The allowed-tool list after switching one tool (or all of browser_runner). */
 export function toggledDeviceTools(
@@ -20,7 +20,7 @@ export function toggledDeviceTools(
   enabled: boolean,
 ): string[] {
   const current = allowed == null ? baseline.filter((item) => !isBrowserRunnerTool(item)) : [...allowed];
-  const group: string[] = isBrowserRunnerTool(tool) ? [...BROWSER_RUNNER_TOOLS] : [tool];
+  const group: string[] = isBrowserRunnerTool(tool) ? [...BROWSER_RUNNER_TOOLS, "browser_runner_wait"] : [tool];
   return enabled ? Array.from(new Set([...current, ...group])) : current.filter((item) => !group.includes(item));
 }
 

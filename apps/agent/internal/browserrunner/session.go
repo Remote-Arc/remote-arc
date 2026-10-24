@@ -65,7 +65,13 @@ type session struct {
 
 	// shownForUser: the window was brought on screen for the user to act
 	// in; it goes back out of sight when the AI continues.
-	shownForUser bool
+	shownForUser    bool
+	viewUntil       time.Time // guarded by ev
+	viewActive      bool
+	viewConn        cdpClient
+	lastViewFrame   time.Time
+	networkRequests map[string]bool
+	networkChanged  time.Time
 
 	snapshotID    string
 	snapshotEpoch int
@@ -76,11 +82,33 @@ type session struct {
 func (s *session) live() bool { return s.conn != nil && s.conn.Alive() }
 
 func (s *session) onEvent(cdpSession, method string, raw json.RawMessage) {
+	if method == "Network.requestWillBeSent" || method == "Network.loadingFinished" || method == "Network.loadingFailed" {
+		var event struct {
+			RequestID string `json:"requestId"`
+		}
+		if json.Unmarshal(raw, &event) == nil {
+			s.ev.Lock()
+			if s.networkRequests == nil {
+				s.networkRequests = map[string]bool{}
+			}
+			key := cdpSession + ":" + event.RequestID
+			if method == "Network.requestWillBeSent" {
+				s.networkRequests[key] = true
+			} else {
+				delete(s.networkRequests, key)
+			}
+			s.networkChanged = time.Now()
+			s.ev.Unlock()
+		}
+	}
+
 	if cdpSession != "" {
 		s.onChildEvent(cdpSession, method, raw)
 		return
 	}
 	switch method {
+	case "Page.screencastFrame":
+		s.onViewFrame(raw)
 	case "Fetch.requestPaused":
 		var p struct {
 			RequestID string `json:"requestId"`
@@ -407,6 +435,10 @@ func (s *session) setup(ctx context.Context) error {
 }
 
 func (s *session) shutdownBrowser(markPaused bool) {
+	s.ev.Lock()
+	s.viewActive = false
+	s.viewUntil = time.Time{}
+	s.ev.Unlock()
 	if s.conn != nil {
 		s.conn.Close()
 		s.conn = nil
@@ -892,29 +924,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	}
 	s.applySavedLogins(page)
 	blockers, _ := page["blockers"].([]any)
-	if len(blockers) > 0 {
-		kinds := []string{}
-		captcha := false
-		for _, b := range blockers {
-			if m, ok := b.(map[string]any); ok {
-				kinds = append(kinds, fmt.Sprint(m["kind"]))
-				captcha = captcha || m["kind"] == "captcha"
-			}
-		}
-		s.cp.State = StateNeedsUser
-		s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Sign-in, verification codes and CAPTCHAs are completed by the user in the task window."
-		switch {
-		case s.cp.Headless && s.hasWindow():
-			s.cp.NeedsUser += " The window is hidden so it does not interrupt the user. Tell the user what is needed and ask them to say when they are ready; then call browser_runner_start with the same task_id and headless=false. The window comes on screen as it is, with everything entered on it, and goes back out of sight when you continue."
-		case s.cp.Headless:
-			s.cp.NeedsUser += " This computer runs the browser without a window, so the user cannot do it here."
-		}
-		if captcha {
-			s.cp.NeedsUser += " Remote Arc does not solve CAPTCHAs and never reads their responses. When the challenge has closed, the next snapshot continues the task."
-		}
-	} else if s.cp.State == StateNeedsUser {
-		s.cp.State, s.cp.NeedsUser = StateActive, ""
-	}
+	s.updateAttention(ctx, blockers)
 	attention, _ := page["attention"].([]any)
 	// A hidden browser cannot show the user a challenge later without
 	// reopening the page, which clears the form. Say it before any typing.

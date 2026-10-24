@@ -631,7 +631,7 @@ export function createRemoteLinkMcp(
       {
         title: "Run a command on a remote computer",
         description:
-          "Run a terminal command on a linked computer when the start_process skill is enabled for that device. The local Remote Arc Safety Guard blocks a narrow set of catastrophic system commands. If the device has multiple Trusted Write Locations, cwd is required; with exactly one Trusted Write Location, that location is used by default.",
+          "For websites use browser_runner_*; do not write Playwright/Puppeteer/Selenium scripts, which lose CAPTCHA handoff, submit deduplication and saved credentials. Run a terminal command on a linked computer when the start_process skill is enabled for that device. The local Remote Arc Safety Guard blocks a narrow set of catastrophic system commands. If the device has multiple Trusted Write Locations, cwd is required; with exactly one Trusted Write Location, that location is used by default.",
         inputSchema: z.object({
           device_id: z.string(),
           command: z.string(),
@@ -664,15 +664,17 @@ export function createRemoteLinkMcp(
       {
         title: "Get background process status",
         description:
-          "Get the status of a Remote Arc managed background process on a linked computer.",
+          "Get managed background process status. For long tasks use wait_ms (up to 40000 ms; larger values are capped) and optional until_text; do not sleep and poll. Returns when the process exits, text appears or the deadline expires.",
         inputSchema: z.object({
           device_id: z.string(),
           process_id: z.string(),
+          wait_ms: z.number().int().nonnegative().optional(),
+          until_text: z.string().max(500).optional(),
         }),
         annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("computer:write"),
       },
-      async ({ device_id, process_id }) => {
+      async ({ device_id, process_id, wait_ms, until_text }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
           return authRequired(env, "computer:write", identity);
         }
@@ -680,7 +682,7 @@ export function createRemoteLinkMcp(
         if (usageError) return usageError;
         return textResult(
           await callDevice(env, identity, device_id, "process_status", {
-            process_id,
+            process_id, wait_ms, until_text,
           }),
         );
       },

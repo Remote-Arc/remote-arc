@@ -246,12 +246,20 @@
   },
   {
     "name": "process_status",
-    "description": "Get status for a Remote Arc managed background process.",
+    "description": "Get status for a managed background process. For long tasks use wait_ms (up to 40000 ms, longer values are capped), optionally until_text; do not sleep and poll.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "process_id": {
           "type": "string"
+        },
+        "wait_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "until_text": {
+          "type": "string",
+          "maxLength": 500
         }
       },
       "required": [

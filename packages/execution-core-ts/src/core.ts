@@ -8,7 +8,7 @@ import {
   writeTextFile,
 } from "./filesystem.js";
 import {
-  getManagedProcessStatus,
+  waitManagedProcessStatus,
   listManagedProcesses,
   listProcesses,
   readManagedProcessOutput,
@@ -209,10 +209,10 @@ const DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: "process_status",
-    description: "Get status for a Remote Arc managed background process.",
+    description: "Get status for a managed background process. For long tasks use wait_ms (up to 40000 ms, longer values are capped), optionally until_text; do not sleep and poll.",
     inputSchema: {
       type: "object",
-      properties: { process_id: { type: "string" } },
+      properties: { process_id: { type: "string" }, wait_ms: { type: "integer", minimum: 0 }, until_text: { type: "string", maxLength: 500 } },
       required: ["process_id"],
       additionalProperties: false,
     },
@@ -457,7 +457,7 @@ export class RemoteArcExecutionCore {
       }
       case "process_status":
         return textResult(
-          getManagedProcessStatus(requiredString(args, "process_id")),
+          await waitManagedProcessStatus(requiredString(args, "process_id"), optionalNumber(args, "wait_ms") ?? 0, optionalString(args, "until_text") ?? ""),
         );
       case "process_output":
         return textResult(

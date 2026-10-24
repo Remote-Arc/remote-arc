@@ -7,7 +7,7 @@ Remote Arc includes **9 original, curated Skill instructions** (`SKILL.md`) orga
 - P0: browser-operator (agent-browser + Microsoft Playwright MCP workflow)
 - P0: autonomous-browser (browser-use planning, opt-in model budgets)
 - P0: desktop-operator (PyAutoGUI/native accessibility, opt-in OS privileges)
-- P0: video-creator (Remotion Skills + FFmpeg, license-aware)
+- P0: video-creator (OpenFilm + FFmpeg, MIT; renders on the user's computer, no keys for text, graphics and own footage)
 - P0: research-reports (existing read/browser/file operations)
 - P0: scheduled-routines (existing automation/goal runtime)
 - P1: image-studio (ComfyUI, optional GPU/model weights)

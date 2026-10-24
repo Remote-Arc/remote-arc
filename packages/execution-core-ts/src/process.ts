@@ -11,23 +11,85 @@ function appendCapped(current: string, chunk: Buffer | string) {
   return next.slice(0, MAX_CAPTURE_BYTES) + "\n… output truncated …";
 }
 
-export async function listProcesses() {
-  const output = await new Promise<string>((resolve, reject) => {
-    const command = process.platform === "win32" ? "tasklist.exe" : "ps";
-    const args =
-      process.platform === "win32"
-        ? ["/FO", "CSV", "/NH"]
-        : ["-axo", "pid,ppid,user,%cpu,%mem,etime,command"];
-    execFile(command, args, { maxBuffer: MAX_CAPTURE_BYTES }, (error, stdout, stderr) => {
-      if (error) {
-        reject(new Error(`Could not list processes: ${stderr || error.message}`));
-        return;
-      }
-      resolve(stdout.trim());
-    });
-  });
+// Obvious credentials some tools pass on their command line. Kept identical
+// to the Go core's redaction so both runtimes return the same listing.
+const SECRET_ARGUMENT =
+  /((?:--?|\/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("(?:\\.|[^"\\])*"|'[^']*'|\S+)|(bearer\s+)\S+/gi;
 
-  return `Processes on ${process.platform}:\n\n${output}`;
+export function redactCommandLine(line: string) {
+  return line.replace(SECRET_ARGUMENT, (_match, flag?: string, _value?: string, bearer?: string) =>
+    bearer ? `${bearer}[redacted]` : `${flag}[redacted]`,
+  );
+}
+
+// Decode before redacting: CSV quoting can conceal quoted credentials from
+// the command-line matcher. JSON preserves one row even for multiline commands.
+export function windowsProcessDetails(output: string) {
+  const parsed: unknown = output.trim() ? JSON.parse(output) : [];
+  const rows = parsed === null ? [] : Array.isArray(parsed) ? parsed : [parsed];
+  const clean = (value: unknown) => String(value ?? "").replace(/[\r\n\t]/g, " ");
+  return ["PID\tPPID\tName\tMemoryMB\tCommandLine", ...rows.map((raw) => {
+    if (!raw || typeof raw !== "object") throw new Error("Invalid process details response");
+    const row = raw as Record<string, unknown>;
+    return [row.ProcessId, row.ParentProcessId, row.Name, row.MemoryMB, redactCommandLine(String(row.CommandLine ?? ""))].map(clean).join("\t");
+  })].join("\n");
+}
+
+export async function listProcesses(
+  options: { filter?: string; limit?: number; details?: boolean } = {},
+) {
+  const limit =
+    Number.isSafeInteger(options.limit) && options.limit! >= 1 && options.limit! <= 1000
+      ? options.limit!
+      : 200;
+  const windows = process.platform === "win32";
+  let header = "";
+  const [command, args] = windows
+    ? options.details
+      ? [
+          "powershell.exe",
+          [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Json -Compress",
+          ],
+        ]
+      : ["tasklist.exe", ["/FO", "CSV", "/NH"]]
+    : ["ps", ["-axo", "pid,ppid,user,%cpu,%mem,etime,command"]];
+  if (windows && !options.details) {
+    header = '"Image Name","PID","Session Name","Session#","Mem Usage"';
+  }
+  const output = await new Promise<string>((resolve, reject) => {
+    execFile(
+      command as string,
+      args as string[],
+      { maxBuffer: MAX_CAPTURE_BYTES, windowsHide: true, timeout: 15000 },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(`Could not list processes: ${stderr || error.message}`));
+          return;
+        }
+        resolve(stdout.trim());
+      },
+    );
+  });
+  let lines = (windows && options.details ? windowsProcessDetails(output) : output).replace(/\r\n/g, "\n").split("\n");
+  if (!header && lines.length) {
+    header = lines[0] ?? "";
+    lines = lines.slice(1);
+  }
+  const needle = (options.filter || "").trim().toLowerCase();
+  const matched = lines.filter(
+    (line) => line.trim() && (!needle || line.toLowerCase().includes(needle)),
+  );
+  const kept = matched.slice(0, limit).map(redactCommandLine);
+  let summary = `[${kept.length} of ${matched.length} processes`;
+  if (needle) summary += ` matching ${JSON.stringify(options.filter)}`;
+  if (matched.length > kept.length) summary += "; raise limit or narrow filter for the rest";
+  summary += "]";
+  const platform = windows ? "win32" : process.platform;
+  return `Processes on ${platform}:\n\n${redactCommandLine(header)}\n${kept.join("\n")}\n\n${summary}`;
 }
 
 async function terminateTree(child: ReturnType<typeof spawn>) {

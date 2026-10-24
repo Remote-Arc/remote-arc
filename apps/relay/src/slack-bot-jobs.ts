@@ -2,6 +2,7 @@ import { randomToken, sha256Hex } from './auth.js';
 import { arcActive, arcMessages, arcRuntime, createArcConversation, submitArcMessage, wakeArcRun, type ArcRun } from './arc-chat.js';
 import { seal, unseal } from './app-oauth.js';
 import {arcAccountAccess} from './arc-trial.js';
+import { markdownToSlack, fitSlackText } from './slack-format.js';
 import { slackApi, slackDashboard, slackInstallation, slackJobContext, slackReady, slackStamp, SlackBotError, type SlackBotEnv, type SlackJob, type BotInstallation } from './slack-bot-common.js';
 
 /** Quick answers arrive as a single message; slower ones show one notice first. */
@@ -177,7 +178,7 @@ async function processJob(env:SlackBotEnv,job:SlackJob,fetcher:typeof fetch){
  // A finished answer stands on its own in Slack. The dashboard link is kept only
  // for outcomes the user should review there.
  const review=slackLink(web,zh?'在 Remote Arc 中查看':'Open in Remote Arc');
- const text=run.status==='succeeded'&&answer?encodeSlack(answer).slice(0,3400):(run.status==='cancelled'?(zh?'这次请求已停止。':'This request was stopped.'):run.status==='unknown'?(zh?'有一个操作可能已经完成，但我没能确认结果。重试前请先在 Remote Arc 中核对。':'An action may have completed, but I could not confirm its result. Review the task before retrying.'):blocker(run.error_code||'ARC_EXECUTION_FAILED',zh))+'\n\n'+review;
+ const text=run.status==='succeeded'&&answer?fitSlackText(markdownToSlack(answer),3400,zh?'（回答较长，完整内容请在 Remote Arc 查看）':'(Shortened here; the full answer is in Remote Arc.)'):(run.status==='cancelled'?(zh?'这次请求已停止。':'This request was stopped.'):run.status==='unknown'?(zh?'有一个操作可能已经完成，但我没能确认结果。重试前请先在 Remote Arc 中核对。':'An action may have completed, but I could not confirm its result. Review the task before retrying.'):blocker(run.error_code||'ARC_EXECUTION_FAILED',zh))+'\n\n'+review;
  job.delivery_kind='result';await deliver(env,job,installation,text,'delivered',fetcher);
 }
 

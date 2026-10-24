@@ -22,6 +22,7 @@ export async function listDirectory(
   const lines: string[] = [];
   let entriesSeen = 0;
   let protectedEntries = 0;
+  let unreadableFolders = 0;
 
   async function walk(directory: string, level: number, prefix: string) {
     if (entriesSeen >= MAX_DIRECTORY_ENTRIES) return;
@@ -49,7 +50,15 @@ export async function listDirectory(
       lines.push(`${prefix}${label} ${entry.name}`);
 
       if (entry.isDirectory() && level < maxDepth) {
-        await walk(absolute, level + 1, prefix + "  ");
+        // An unreadable subfolder (e.g. "System Volume Information") is
+        // marked and skipped; only the requested folder itself fails.
+        try {
+          await walk(absolute, level + 1, prefix + "  ");
+        } catch (error) {
+          unreadableFolders += 1;
+          const code = (error as NodeJS.ErrnoException)?.code;
+          lines.push(`${prefix}  (not readable: ${code || (error instanceof Error ? error.message : "error")})`);
+        }
       }
     }
   }
@@ -66,7 +75,11 @@ export async function listDirectory(
     ? `\n\n[Remote Arc omitted ${protectedEntries} protected or out-of-scope entr${protectedEntries === 1 ? "y" : "ies"}.]`
     : "";
 
-  return `Directory: ${targetPath}\nDepth: ${maxDepth}\n\n${lines.join("\n") || "(empty)"}${protectionNote}`;
+  const unreadableNote = unreadableFolders
+    ? `\n[${unreadableFolders} subfolder(s) could not be read and were skipped.]`
+    : "";
+
+  return `Directory: ${targetPath}\nDepth: ${maxDepth}\n\n${lines.join("\n") || "(empty)"}${protectionNote}${unreadableNote}`;
 }
 
 export async function readTextFile(

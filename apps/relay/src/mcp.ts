@@ -4,6 +4,9 @@ import { callApp, listApps, appCallSchema } from "./apps.js";
 import { AppError, type AppEnv } from "./app-catalog.js";
 import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";
 import { routeSkillIntent } from "./skill-runtime.js";
+import { findSkills, skillIndex } from "./skill-index.js";
+import { importedSkillSummaries, readArcSkill } from "./arc-skills.js";
+import type { ArcEnv } from "./arc-chat.js";
 import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
@@ -277,6 +280,50 @@ export function createRemoteLinkMcp(
       );
     }
 
+    // Skills as tools as well as Resources: most MCP hosts never surface
+    // Resources to the model, so a skill nobody can find does no work.
+    registerMcpTool(server,
+      "find_skills",
+      {
+        title: "Find Remote Arc skills for a task",
+        description:
+          "Search Remote Arc's skill library (built-in, community, workflow and the user's imported skills) for a task, in any language: documents, spreadsheets, slides, PDFs, video, subtitles, images, browser work, data analysis, charts, websites, testing and schedules. Returns the best matches; read one with read_skill and follow its method using the tools you have. A skill is instructions only: it installs nothing and grants no permission.",
+        inputSchema: z.object({
+          query: z.string().max(300).optional(),
+          limit: z.number().int().min(1).max(25).optional(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("devices:read"),
+      },
+      async ({ query, limit }) => {
+        if (!identity || !hasScope(identity, "devices:read")) return authRequired(env, "devices:read", identity);
+        const imported = await importedSkillSummaries(env as unknown as ArcEnv, identity.userId).catch(() => []);
+        const index = skillIndex(imported);
+        const skills = (query?.trim() ? findSkills(query, index, limit ?? 8) : index.slice(0, limit ?? 25))
+          .map(({ id, name, description, origin, category, requires }) => ({ id, name, description, origin, ...(category ? { category } : {}), ...(requires?.length ? { requires } : {}) }));
+        return textResult({ skills, total: index.length, ...(skills.length ? {} : { note: "No skill matched. Try a broader query, or continue with the available tools." }) });
+      },
+    );
+
+    registerMcpTool(server,
+      "read_skill",
+      {
+        title: "Read a Remote Arc skill",
+        description: "Read one skill's full instructions by id from find_skills. Community skills also list helper resources. Check that any named engine (ffmpeg, python, etc.) exists on the chosen computer before relying on it.",
+        inputSchema: z.object({ id: z.string().min(1).max(100) }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("devices:read"),
+      },
+      async ({ id }) => {
+        if (!identity || !hasScope(identity, "devices:read")) return authRequired(env, "devices:read", identity);
+        try {
+          return textResult(await readArcSkill(env as unknown as ArcEnv, identity.userId, id));
+        } catch {
+          return { ...toolErrorResult("Skill not found. Use find_skills to get a valid id.", "SKILL_NOT_FOUND"), isError: true };
+        }
+      },
+    );
+
     registerMcpTool(server,
       "list_devices",
       {
@@ -466,7 +513,7 @@ export function createRemoteLinkMcp(
       "read_file",
       {
         title: "Read a file on a remote computer",
-        description: "Read a local file from a linked computer.",
+        description: "Read a text file on a linked computer by line range. offset is a 0-based line number (negative reads from the end) and length is a line count (default 240). The result header reports total lines, so continue with a later offset for long files. Use read_binary_file for images and other binaries.",
         inputSchema: z.object({
           device_id: z.string(),
           path: z.string(),
@@ -607,21 +654,61 @@ export function createRemoteLinkMcp(
       "list_processes",
       {
         title: "List processes on a remote computer",
-        description: "List processes running on a linked computer.",
+        description: "List processes on a linked computer with a header row. Use filter to find specific programs (for example \"codex\", \"claude\" or \"node\"), limit to cap rows, and details:true on Windows to include command lines. Obvious secrets in command lines are redacted.",
         inputSchema: z.object({
           device_id: z.string(),
+          filter: z.string().max(200).optional(),
+          limit: z.number().int().min(1).max(1000).optional(),
+          details: z.boolean().optional(),
         }),
         annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("computer:read"),
       },
-      async ({ device_id }) => {
+      async ({ device_id, filter, limit, details }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
           return authRequired(env, "computer:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
         return textResult(
-          await callDevice(env, identity, device_id, "list_processes", {}),
+          await callDevice(env, identity, device_id, "list_processes", {
+            ...(filter ? { filter } : {}),
+            ...(limit !== undefined ? { limit } : {}),
+            ...(details ? { details } : {}),
+          }),
+        );
+      },
+    );
+
+    registerMcpTool(server,
+      "list_agent_sessions",
+      {
+        title: "List coding-agent tasks on a remote computer",
+        description:
+          "List Codex and Claude Code sessions on a linked computer: each task's working directory or Git worktree, last activity, and (with git, the default) its branch, uncommitted changes and other worktrees of the same repository. Use this before guessing paths when asked about coding-agent tasks, worktrees or their progress. Metadata only: no conversation text. Last activity is a file time, not proof that the agent is still running; pair with list_processes filter \"codex\" or \"claude\". Needs agent 0.6.4 or later on the device.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          source: z.enum(["codex", "claude", "all"]).optional(),
+          workspace: z.string().min(1).max(1000).optional(),
+          limit: z.number().int().min(1).max(50).optional(),
+          git: z.boolean().optional(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:read"),
+      },
+      async ({ device_id, source, workspace, limit, git }) => {
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read", identity);
+        }
+        const usageError = await consume(env, identity);
+        if (usageError) return usageError;
+        return textResult(
+          await callDevice(env, identity, device_id, "list_agent_sessions", {
+            ...(source ? { source } : {}),
+            ...(workspace ? { workspace } : {}),
+            ...(limit !== undefined ? { limit } : {}),
+            ...(git !== undefined ? { git } : {}),
+          }),
         );
       },
     );

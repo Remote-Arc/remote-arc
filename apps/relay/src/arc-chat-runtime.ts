@@ -35,6 +35,10 @@ import {readArcInbox,readableEmail,arcInboxInputSchema,arcInboxReadToolAllowed} 
 import {arcTaskState,prepareArcAppAction,actionKey} from './arc-task-state.js';
 import {arcRunVerification,arcVerificationNextRead,arcVerificationToolError,arcObservationProof,arcReceipt,arcVerificationContextArguments} from './arc-verification.js';
 
+// Only intrinsically read-only device operations may recover from a failed dispatch.
+// Commands, browser actions and unknown tool names can have effects and stay unknown.
+const recoverableDeviceReads=new Set(['list_directory','read_file','get_file_info','list_processes','process_status','process_output']);
+
 function managedProcessState(value:unknown):{id:string;status:string}|null{
  for(let depth=0;depth<8;depth++){
   if(typeof value==='string'){try{value=JSON.parse(value);}catch{return null;}}
@@ -352,10 +356,11 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
   const code=error instanceof Error&&/^(ARC_|MODEL_|PAID_|BILLING_|app_)/.test(error.message)?error.message:'ARC_EXECUTION_FAILED';
   if(step?.status==='dispatching'){
    const savedRead=await env.DB.prepare('SELECT decision_ciphertext FROM arc_chat_steps WHERE run_id=?1 AND step=?2').bind(runId,run.step).first<{decision_ciphertext:string}>();
-   if(savedRead&&/^app_/.test(code)){
+   if(savedRead){
     const failedDecision=await unseal<Decision>(env,savedRead.decision_ciphertext,arcContext(run.user_id,`${runId}:${run.step}:decision`)),args=JSON.parse(failedDecision.arguments_json);
-    if(await arcInboxReadToolAllowed(env,run,failedDecision.tool,args)){
-     const observation={code,readFailed:true,dispatched:true,guidance:'This App read failed and returned no usable content. Continue other required sources. Retry this read only when the error is transient; otherwise explain the specific unavailable source. A failed read is not evidence that there are no items. Do not retry writes.'};
+    const deviceRead=failedDecision.tool==='device_tool'&&recoverableDeviceReads.has(args.tool);
+    if(deviceRead||(/^app_/.test(code)&&await arcInboxReadToolAllowed(env,run,failedDecision.tool,args))){
+     const observation=deviceRead?{code:'ARC_DEVICE_READ_FAILED',detail:boundedArcText(error instanceof Error?error.message:'Device read failed',1000),readFailed:true,guidance:'This read returned no usable content. Continue other required sources. Correct paths using the observed operating system and directories, or retry only a transient read failure. Respect device permissions and sensitive-path protections. A failed read is not evidence that a directory is empty or a task is complete. Do not restart processes or repeat writes.'}:{code,readFailed:true,dispatched:true,guidance:'This App read failed and returned no usable content. Continue other required sources. Retry this read only when the error is transient; otherwise explain the specific unavailable source. A failed read is not evidence that there are no items. Do not retry writes.'};
      await appendArcMessage(env,run,'tool',`${run.step}:tool`,{text:failedDecision.message,tool:failedDecision.tool,arguments:args,status:'failed',result:observation});
      await env.DB.batch([
       env.DB.prepare("UPDATE arc_chat_steps SET status='done',result_ciphertext=?1,updated_at=?2 WHERE run_id=?3 AND step=?4 AND status='dispatching'").bind(await seal(env,observation,arcContext(run.user_id,`${runId}:${run.step}:result`)),stamp(),runId,run.step),

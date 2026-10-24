@@ -8,6 +8,8 @@ import (
 )
 
 type Policy struct {
+	RunnerAttentionMode   string   `json:"runnerAttentionMode,omitempty"`
+	BrowserRunnerEnabled  bool     `json:"browserRunnerEnabled,omitempty"`
 	WorkspaceRoots        []string `json:"workspaceRoots,omitempty"`
 	TaskWorkspaceRoot     string   `json:"taskWorkspaceRoot,omitempty"`
 	ProtectSensitivePaths *bool    `json:"protectSensitivePaths,omitempty"`

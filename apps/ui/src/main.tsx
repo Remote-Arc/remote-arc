@@ -1,3 +1,4 @@
+import { RunnerAttentionList, RunnerAttentionSetting, RunnerView } from "./runner-view.js";
 import './arc-composer.css';
 import './arc-references.css';
 import { BROWSER_RUNNER_TOOLS, browserRunnerEnabled, isBrowserRunnerTool, toggledDeviceTools } from "./device-tools.js";
@@ -5224,6 +5225,7 @@ function Dashboard({
       </aside>
 
       <main className="dashboardMain">
+        {active !== "agent-chat" && <RunnerAttentionList/>}
         {UI_PREVIEW && (
           <div className="previewModeBanner" role="status">
             <strong>PR PREVIEW</strong>
@@ -5483,6 +5485,7 @@ function Dashboard({
                             </span>
                           </label>
                         )}
+                        {runnerEnabled && <RunnerAttentionSetting deviceId={device.id}/>}
                         {allTools.map((tool) => {
                           const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
                           const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
@@ -7001,6 +7004,12 @@ function App() {
   if (routePath === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
   if (routePath === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
+  const runnerRoute = routePath.match(/^\/dashboard\/browser\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]{1,100})$/);
+  if (isDashboardHost && runnerRoute) {
+    if (user === undefined) return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
+    if (!user) return <DashboardAccess/>;
+    return <RunnerView deviceId={runnerRoute[1]!} sessionId={runnerRoute[2]!} preview={UI_PREVIEW}/>;
+  }
   if (isDashboardHost && (routePath === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(routePath) || Object.hasOwn(LEGACY_DASHBOARD_PATHS, routePath))) {
     if (user === undefined) {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;

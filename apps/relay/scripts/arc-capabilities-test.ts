@@ -66,6 +66,11 @@ assert.match(guide,/list_agent_sessions \{source/);assert.match(guide,/length\?:
 assert.match(guide,/also available: future_tool/);
 assert(!/write_file|edit_block/.test(guide),'absent tools are not advertised');
 assert.match(arcDeviceToolGuide([]),/no computer tools/);
+const waits=arcDeviceToolGuide(compactArcDevices([{id:'new',name:'New Agent',platform:'win32',tools:['browser_runner_wait','process_status','browser_runner_close']}]));
+assert.match(waits,/process_status .*wait_ms/);
+assert.match(waits,/browser_runner_wait .*user_done/);
+assert.match(waits,/browser_runner_close .*abandonment reason/);
+assert(!waits.includes('list_agent_sessions'),'unavailable tools stay absent after wait guidance integration');
 const context={objective:'x',messages:[],memory:[],deviceIndex:devices};
 for(const system of [ARC_DIRECT_SYSTEM,ARC_COMPACT_SYSTEM]){
  const filled=withArcDeviceTools(system,context);

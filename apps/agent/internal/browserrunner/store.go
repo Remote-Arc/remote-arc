@@ -98,27 +98,31 @@ type ReentryField struct {
 }
 
 type Checkpoint struct {
-	Version        int       `json:"version"`
-	SessionID      string    `json:"session_id"`
-	Profile        string    `json:"profile"`
-	AllowedOrigins []string  `json:"allowed_origins"`
-	Headless       bool      `json:"headless"`
-	Browser        string    `json:"browser,omitempty"`  // "your_chrome" for the user's own Chrome; empty for a Runner window
-	YourTab        string    `json:"your_tab,omitempty"` // the task's tab in the user's Chrome (device-local)
-	State          string    `json:"state"`
-	NeedsUser      string    `json:"needs_user,omitempty"`
-	ResumeURL      string    `json:"resume_url,omitempty"` // device-local only, never returned
-	LastURL        string    `json:"last_url,omitempty"`   // query/fragment removed
-	Title          string    `json:"title,omitempty"`
-	Navigations    int       `json:"navigations"`
-	NextSeq        int       `json:"next_seq"`
-	Receipts       []Receipt `json:"receipts"`
-	Uploads        []Upload  `json:"uploads"`
-	Effects        []Effect  `json:"effects"`
-	Blocked        []Blocked `json:"blocked_navigations"`
-	Reentry        *Reentry  `json:"reentry_needed,omitempty"`
-	CreatedAt      string    `json:"created_at"`
-	UpdatedAt      string    `json:"updated_at"`
+	Version           int       `json:"version"`
+	SessionID         string    `json:"session_id"`
+	Profile           string    `json:"profile"`
+	AllowedOrigins    []string  `json:"allowed_origins"`
+	Headless          bool      `json:"headless"`
+	Browser           string    `json:"browser,omitempty"`  // "your_chrome" for the user's own Chrome; empty for a Runner window
+	YourTab           string    `json:"your_tab,omitempty"` // the task's tab in the user's Chrome (device-local)
+	State             string    `json:"state"`
+	NeedsUser         string    `json:"needs_user,omitempty"`
+	AttentionID       string    `json:"attention_id,omitempty"`
+	AttentionSince    string    `json:"attention_since,omitempty"`
+	AttentionKind     string    `json:"attention_kind,omitempty"`
+	AttentionReminded bool      `json:"attention_reminded,omitempty"`
+	ResumeURL         string    `json:"resume_url,omitempty"` // device-local only, never returned
+	LastURL           string    `json:"last_url,omitempty"`   // query/fragment removed
+	Title             string    `json:"title,omitempty"`
+	Navigations       int       `json:"navigations"`
+	NextSeq           int       `json:"next_seq"`
+	Receipts          []Receipt `json:"receipts"`
+	Uploads           []Upload  `json:"uploads"`
+	Effects           []Effect  `json:"effects"`
+	Blocked           []Blocked `json:"blocked_navigations"`
+	Reentry           *Reentry  `json:"reentry_needed,omitempty"`
+	CreatedAt         string    `json:"created_at"`
+	UpdatedAt         string    `json:"updated_at"`
 }
 
 var idPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,100}$`)
@@ -400,7 +404,7 @@ func (c *Checkpoint) nextAction() string {
 	}
 	switch c.State {
 	case StateNeedsUser:
-		return "Wait for the user: " + c.NeedsUser + " Then take a new browser_runner_snapshot."
+		return "Wait for the user: " + c.NeedsUser + " Use browser_runner_wait until=user_done, then inspect and confirm any unresolved submit."
 	case StatePaused:
 		return "Call browser_runner_start with the same task_id to reopen the browser at the last page, then take a new browser_runner_snapshot."
 	case StateClosed:

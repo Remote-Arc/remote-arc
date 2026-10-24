@@ -49,6 +49,14 @@
       ]
     },
     {
+      "name": "browser_runner_wait",
+      "title": "Wait for a browser task",
+      "group": "browser-runner",
+      "scopes": [
+        "browser:read"
+      ]
+    },
+    {
       "name": "call_app",
       "title": "Read or update a connected service",
       "group": "apps",

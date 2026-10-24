@@ -49,6 +49,10 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     zh: "读取指定 Skill 的完整说明与辅助资源；执行仍受设备权限和安装条件约束。",
     summary: "Read a Skill's instructions and helper resources without granting execution permissions.",
   },
+  browser_runner_wait: {
+    zh: "等待用户交接、页面、文本、网址、上传或网络空闲条件，最长 40 秒；等待完成不代表提交成功。",
+    summary: "Wait for a user handoff or page/upload/network condition for up to 40 seconds without confirming a submit.",
+  },
   list_agent_sessions: {
     zh: "查看 Codex、Claude Code 任务的工作目录、活动时间与 Git 元数据；需要设备 Agent 0.6.4 或更新版本。",
     summary: "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
@@ -201,11 +205,6 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   browser_runner_close: {
     zh: "关闭任务浏览器，并按请求保留或删除检查点。",
     summary: "Close the task browser and keep or forget its checkpoint.",
-  },
-  browser_runner_wait: {
-    zh: "在设备端等待用户完成验证、页面变化或上传结束。",
-    summary:
-      "Wait on the device for user completion, a page condition or an upload.",
   },
   create_automation: {
     zh: "保存获授权的确定性任务、定时工作或条件监听。",

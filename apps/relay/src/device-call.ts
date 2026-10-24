@@ -53,11 +53,12 @@ export async function callDevice(
   tool: string,
   args: Record<string, unknown>,
   taskWorkspaceRoot?: string,
+  runnerRunId?: string,
 ) {
   const started = Date.now();
   const ownedDevice = await env.DB.prepare(
     `SELECT id, platform, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
-            protect_sensitive_paths, undo_enabled
+            protect_sensitive_paths, undo_enabled, runner_attention_mode
      FROM devices
      WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
   )
@@ -71,6 +72,7 @@ export async function callDevice(
       sensitive_allow_paths: string | null;
       protect_sensitive_paths: number;
       undo_enabled: number;
+      runner_attention_mode?: string;
     }>();
 
   if (!ownedDevice) {
@@ -132,9 +134,8 @@ export async function callDevice(
     }
     // Extension 0.4.0 actions are covered by the click & fill permission an
     // already-paired browser has; each site is still allowed in the browser.
-    // list_agent_sessions only reads session metadata and Git state, so any
-    // device that may read files may use it without a dashboard change.
-    const permissionTool = tool === "goal_workspace" ? "start_process" : tool === "list_agent_sessions" ? "read_file" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : tool;
+    // New read-only tools reuse existing read grants for upgrade compatibility.
+    const permissionTool = tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool === "goal_workspace" ? "start_process" : tool === "list_agent_sessions" ? "read_file" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : tool;
     if (!allowedTools.includes(permissionTool)) {
       throw new Error('tool "' + tool + '" is disabled for this device');
     }
@@ -143,7 +144,7 @@ export async function callDevice(
   // browser_runner acts on websites for the user. It is never implied by a
   // legacy device with no stored tool list: each tool must be enabled
   // explicitly for this computer.
-  if (isBrowserRunnerTool(tool) && !parseStoredStringArray(ownedDevice.allowed_tools).includes(tool)) {
+  if (isBrowserRunnerTool(tool) && !parseStoredStringArray(ownedDevice.allowed_tools).includes(tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool)) {
     throw new Error(
       'tool "' + tool + '" is disabled for this device. Enable browser_runner for this computer in the Remote Arc dashboard.',
     );
@@ -241,6 +242,14 @@ export async function callDevice(
     }
   }
 
+  if (isBrowserRunnerTool(tool) && identity.clientId !== "dashboard") {
+    const sessionId = tool === "browser_runner_start" ? args.task_id : args.session_id;
+    if (typeof sessionId === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(sessionId)) {
+      await env.DB.prepare("INSERT INTO runner_session_links(user_id,device_id,session_id,run_id) VALUES(?1,?2,?3,?4) ON CONFLICT(user_id,device_id,session_id) DO UPDATE SET run_id=excluded.run_id")
+        .bind(identity.userId,deviceId,sessionId,runnerRunId || null).run();
+    }
+  }
+
   const registryRequest = () =>
     new Request("https://registry/call", {
       method: "POST",
@@ -262,6 +271,8 @@ export async function callDevice(
           // setting remains fail-closed (protected) by default.
           protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
           undoEnabled: ownedDevice.undo_enabled !== 0,
+          runnerAttentionMode: ownedDevice.runner_attention_mode === "notify_only" ? "notify_only" : "show_and_notify",
+          browserRunnerEnabled: parseStoredStringArray(ownedDevice.allowed_tools).includes("browser_runner_act"),
         },
       }),
     });

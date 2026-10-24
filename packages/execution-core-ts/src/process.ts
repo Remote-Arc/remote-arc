@@ -319,6 +319,29 @@ export function getManagedProcessStatus(processId: string) {
   };
 }
 
+/** Wait locally for completion or output, bounded by the Relay deadline. */
+export async function waitManagedProcessStatus(processId: string, waitMs = 0, untilText = "") {
+  if (!Number.isSafeInteger(waitMs) || waitMs < 0 || untilText.length > 500) throw new Error("wait_ms must be a non-negative integer and until_text at most 500 characters.");
+  const item = managedProcessOrThrow(processId);
+  const started = Date.now();
+  const limit = Math.min(40000, waitMs);
+  let reason = "timeout";
+  while (true) {
+    if (untilText && (item.stdout.includes(untilText) || item.stderr.includes(untilText))) { reason = "text"; break; }
+    if (item.endedAt !== null) { reason = "exited"; break; }
+    if (Date.now() - started >= limit) break;
+    await new Promise<void>((resolve) => {
+      const finish = () => { clearTimeout(timer); item.child.off("close", finish); item.child.stdout?.off("data", finish); item.child.stderr?.off("data", finish); resolve(); };
+      const timer = setTimeout(finish, Math.min(100, limit - (Date.now() - started)));
+      item.child.once("close", finish);
+      item.child.stdout?.once("data", finish);
+      item.child.stderr?.once("data", finish);
+    });
+  }
+  return { ...getManagedProcessStatus(processId), waited_ms: Date.now() - started, wait_reason: reason,
+    ...(waitMs > limit ? { note: "wait_ms was capped at 40000 ms to return before the Relay deadline." } : {}) };
+}
+
 export function readManagedProcessOutput(processId: string) {
   const item = managedProcessOrThrow(processId);
   return {

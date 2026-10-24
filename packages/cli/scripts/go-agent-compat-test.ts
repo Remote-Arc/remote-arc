@@ -47,7 +47,7 @@ let nextID = 0;
 let hello: any;
 const goBrowserRunnerTools = [
   "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
-  "browser_runner_status", "browser_runner_confirm", "browser_runner_close",
+  "browser_runner_status", "browser_runner_confirm", "browser_runner_close", "browser_runner_wait",
 ];
 let stderr = "";
 const server = http.createServer((_req, res) => {
@@ -159,7 +159,8 @@ async function run(
   const timer = setTimeout(() => child.kill(), 20000);
   const code = await new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);
-    child.once("exit", resolve);
+    // Wait for inherited output handles to close as well as process exit.
+    child.once("close", resolve);
   });
   clearTimeout(timer);
   return { code, output };
@@ -441,7 +442,11 @@ try {
       NODE_OPTIONS: "--import=" + pathToFileURL(preload).href,
       RA_DOWNLOAD_SOURCE: binary,
     };
-    await fs.writeFile(cache, "corrupt-cache");
+    // Replace the completed launch's executable instead of truncating its
+    // inode, which can still be mapped briefly on Linux (ETXTBSY).
+    const corruptCache = cache + ".fixture-corrupt";
+    await fs.writeFile(corruptCache, "corrupt-cache", { mode: 0o700, flag: "wx" });
+    await fs.rename(corruptCache, cache);
     selection = await run(process.execPath, [cliEntry, "--go", "--version"], {
       ...downloadEnv,
       RA_CORRUPT_DOWNLOAD: "1",

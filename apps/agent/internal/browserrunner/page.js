@@ -133,10 +133,10 @@
   // Whether the user can actually see el: rendered, big enough to interact
   // with, not parked off the page (CAPTCHA popups wait at top:-10000px) and
   // not hidden by visibility, display or opacity anywhere up the tree.
-  const onPage = (el) => {
+  const onPage = (el, minimum = 20) => {
     if (!el.isConnected) return false;
     const r = el.getBoundingClientRect();
-    if (r.width < 20 || r.height < 20) return false;
+    if (r.width < minimum || r.height < minimum) return false;
     const de = document.documentElement;
     const w = Math.max(de.scrollWidth, innerWidth);
     const h = Math.max(de.scrollHeight, innerHeight);
@@ -189,6 +189,36 @@
     else el.value = value;
   };
   const fire = (el, names) => names.forEach((n) => el.dispatchEvent(new Event(n, { bubbles: true })));
+
+  // Shared by snapshots and the post-action/wait scanner. Never enter CAPTCHA
+  // frames or read their response tokens; only an active challenge blocks.
+  const scanBlockers = () => {
+    const blockers = [], attention = [];
+    // Only an open challenge stops the task. Hidden, parked or invisible
+    // CAPTCHA assets stay mounted after the user solves one and say nothing
+    // about whether anything is left to do.
+    const captcha = captchaParts();
+    const shownBy = (part) => [...new Set(captcha.filter((c) => c.part === part && c.shown).map((c) => c.vendor))];
+    for (const v of shownBy("challenge")) blockers.push({ kind: "captcha", detail: v + " challenge is open on the page; the user completes it in the Runner window" });
+    for (const v of shownBy("widget")) attention.push({ kind: "captcha_widget", detail: v + " check is shown. If it is not completed yet, ask the user to complete it in the Runner window before any effect=submit. The Runner cannot tell whether it is completed and never reads its response." });
+    const secret = [];
+    walk(document.documentElement || document, el => { if (el.tagName === "INPUT" && onPage(el) && sensitive(el)) secret.push(el); }, { left: 20000 });
+    if (secret.some((el) => secretKind(el) === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
+    if (secret.some((el) => secretKind(el) === "code")) {
+      if (a.allow_codes) attention.push({ kind: "verification_code", detail: "A one-time code is requested. Get it from where it was sent (for example the user's email through a connected mail app) and fill it into the field marked secret: code. The code is never recorded." });
+      else blockers.push({ kind: "verification_code", detail: "one-time code requested; one-time codes are turned off on this computer, so the user enters it" });
+    }
+    return { blockers, attention, captcha };
+  };
+  if (op === "frame_visible") return onPage(a.element);
+  if (op === "scan_blockers") {
+    const result = scanBlockers();
+    const roots = [document, ...shadowRoots()];
+    const busy = roots.some(root => Array.from(root.querySelectorAll('[role="progressbar"],[aria-busy="true"]')).some(el => onPage(el, 1)));
+    const body = roots.map(root => root === document ? (document.body?.innerText || "") : Array.from(root.children).map(c => c.innerText || "").join(" ")).join(" ");
+    const hasFile = roots.some(root => Array.from(root.querySelectorAll('input[type="file"]')).some(el => el.files?.length > 0));
+    return { ...result, busy: busy || /\b(uploading|processing)\b|上传中|处理中/i.test(body), has_file: hasFile, ready: document.readyState };
+  }
 
   if (op === "install") {
     // Keep navigation inside the one scoped tab: popups and target=_blank
@@ -260,8 +290,7 @@
       elements.push(item);
     }
     window.__remotearcRunner = { sid: a.snapshot_id, els };
-    const blockers = [];
-    const attention = [];
+    const { blockers, attention, captcha } = scanBlockers();
     const frames = [];
     for (const f of Array.from(document.querySelectorAll("iframe"))) {
       const src = f.src || "";
@@ -271,19 +300,6 @@
           if (new URL(src).origin !== location.origin) frames.push(clip(src.split("#")[0], 300));
         } catch (_) {}
       }
-    }
-    // Only an open challenge stops the task. Hidden, parked or invisible
-    // CAPTCHA assets stay mounted after the user solves one and say nothing
-    // about whether anything is left to do.
-    const captcha = captchaParts();
-    const shownBy = (part) => [...new Set(captcha.filter((c) => c.part === part && c.shown).map((c) => c.vendor))];
-    for (const v of shownBy("challenge")) blockers.push({ kind: "captcha", detail: v + " challenge is open on the page; the user completes it in the Runner window" });
-    for (const v of shownBy("widget")) attention.push({ kind: "captcha_widget", detail: v + " check is shown. If it is not completed yet, ask the user to complete it in the Runner window before any effect=submit. The Runner cannot tell whether it is completed and never reads its response." });
-    const secret = Array.from(document.querySelectorAll("input")).filter((el) => visible(el) && sensitive(el));
-    if (secret.some((el) => secretKind(el) === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
-    if (secret.some((el) => secretKind(el) === "code")) {
-      if (a.allow_codes) attention.push({ kind: "verification_code", detail: "A one-time code is requested. Get it from where it was sent (for example the user's email through a connected mail app) and fill it into the field marked secret: code. The code is never recorded." });
-      else blockers.push({ kind: "verification_code", detail: "one-time code requested; one-time codes are turned off on this computer, so the user enters it" });
     }
     let body = document.body ? document.body.innerText || "" : "";
     for (const sr of shadowRoots()) {

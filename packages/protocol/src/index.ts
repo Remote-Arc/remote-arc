@@ -85,6 +85,8 @@ export type AgentHelloMessage = {
 };
 
 export type DeviceExecutionPolicy = {
+  runnerAttentionMode?: "show_and_notify" | "notify_only";
+  browserRunnerEnabled?: boolean;
   workspaceRoots?: string[];
   taskWorkspaceRoot?: string;
   protectSensitivePaths?: boolean;
@@ -108,8 +110,17 @@ export type AgentResultMessage = {
   error?: string;
 };
 
-export type RelayToAgentMessage = AgentCallMessage;
-export type AgentToRelayMessage = AgentHelloMessage | AgentResultMessage;
+/** Internal Dashboard control; not part of the AI tool surface. */
+export type RunnerViewControl = { type: "runner_view"; session_id: string; action: "watch" | "stop" };
+export type RunnerAttentionMessage = {
+  type: "runner_attention"; event_id: string; session_id: string; task_id: string;
+  kind: "captcha" | "sign_in" | "otp" | "scope" | "reminder" | "resolved";
+  origin: string; title?: string;
+};
+export type RunnerAttentionAck = { type: "runner_attention_ack"; event_id: string; kind: RunnerAttentionMessage["kind"] };
+export type RunnerFrameMessage = { type: "runner_frame"; session_id: string; data: string };
+export type RelayToAgentMessage = AgentCallMessage | RunnerViewControl | RunnerAttentionAck;
+export type AgentToRelayMessage = AgentHelloMessage | AgentResultMessage | RunnerAttentionMessage | RunnerFrameMessage;
 
 export const DEFAULT_RELAY_URL = "wss://remotearc.app";
 

@@ -230,6 +230,57 @@ func (p *Processes) Status(id string) (map[string]any, error) {
 	}
 	return m.status(), nil
 }
+
+// WaitStatus waits on the device instead of spending caller turns sleeping and polling.
+func (p *Processes) WaitStatus(ctx context.Context, id string, waitMS int, untilText string) (map[string]any, error) {
+	m, e := p.get(id)
+	if e != nil {
+		return nil, e
+	}
+	if waitMS < 0 || len(untilText) > 500 {
+		return nil, errors.New("wait_ms must be non-negative and until_text at most 500 characters.")
+	}
+	started := time.Now()
+	limit := min(waitMS, 40000)
+	deadline := time.NewTimer(time.Duration(limit) * time.Millisecond)
+	defer deadline.Stop()
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	reason := "timeout"
+waitLoop:
+	for {
+		if untilText != "" && (strings.Contains(m.out.Text(), untilText) || strings.Contains(m.err.Text(), untilText)) {
+			reason = "text"
+			break
+		}
+		select {
+		case <-m.done:
+			reason = "exited"
+			break waitLoop
+		default:
+		}
+		if limit == 0 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-deadline.C:
+			break waitLoop
+		case <-m.done:
+			reason = "exited"
+			break waitLoop
+		case <-tick.C:
+		}
+	}
+	result := m.status()
+	result["waited_ms"], result["wait_reason"] = time.Since(started).Milliseconds(), reason
+	if waitMS > limit {
+		result["note"] = "wait_ms was capped at 40000 ms to return before the Relay deadline."
+	}
+	return result, nil
+}
+
 func (p *Processes) Output(id string) (map[string]any, error) {
 	m, e := p.get(id)
 	if e != nil {

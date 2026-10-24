@@ -14,15 +14,16 @@ export const ARC_DEVICE_TOOL_GUIDE:Readonly<Record<string,string>>={
  edit_block:'{file_path,old_string,new_string,expected_replacements?}',
  undo_last_change:'{} revert the most recent Remote Arc file change on that computer.',
  start_process:'{command,cwd?,background?:true,timeout_ms?:1..120000} shell: cmd.exe on Windows (wrap PowerShell as powershell -NoProfile -Command "..."), /bin/sh on macOS/Linux. Use background:true for anything over ~20 s.',
- process_status:'{process_id}',
+ process_status:'{process_id,wait_ms?:0..40000,until_text?} wait locally for output/completion instead of sleeping and polling.',
  process_output:'{process_id,cursor?,max_bytes?}',
  stop_process:'{process_id}',
  browser_runner_start:'{task_id,allowed_origins:[...],start_url?} start or resume a task browser limited to those sites.',
  browser_runner_snapshot:'{session_id,max_elements?,max_text?} read the page with element refs.',
  browser_runner_act:'{session_id,action,snapshot_id?,ref?,value?,fields?,url?,key?,path?,effect?,idempotency_key?} click/fill/select/press/upload/navigate/wait/fill_form; final submits need effect:"submit" and an idempotency_key.',
+ browser_runner_wait:'{session_id,until:"user_done"|"page_change"|"text"|"url_contains"|"upload_done"|"idle",text?,url_contains?,timeout_ms?:1000..40000} wait without polling; finishing a handoff does not confirm or retry a submit.',
  browser_runner_status:'{session_id?} saved checkpoint, or open tasks when omitted.',
  browser_runner_confirm:'{session_id,idempotency_key,outcome,evidence} settle an unverified submit with on-page evidence.',
- browser_runner_close:'{session_id,forget?}',
+ browser_runner_close:'{session_id,forget?,force?,reason?} pending handoff or submit requires force:true and an explicit abandonment reason.',
 };
 
 // Tools used only by the dashboard or the agent itself.

@@ -1,3 +1,4 @@
+import { handleRunnerRequest } from "./runner-attention.js";
 import { diagnosticError } from "./diagnostics.js";
 import {handleFollowupUnsubscribe} from './user-followups.js';
 import {runFollowupBatches} from './followup-batches.js';
@@ -540,6 +541,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({error:"app_host_required"},{status:404});
       return handleApps(request, env);
     }
+
+    if (url.pathname.startsWith("/api/runner/")) return handleRunnerRequest(request, env);
 
     if (url.pathname === "/api/status" && request.method === "GET") {
       const user = await getSessionUser(request, env);

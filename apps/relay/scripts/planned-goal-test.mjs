@@ -29,6 +29,7 @@ fs.writeFileSync(
 const sharedModules = [
   ["skills/src/community.generated", "community-skills"],
   ["skills/src/catalog.generated", "cloud-skill-catalog"],
+  ["skills/src/media-resources.generated", "media-resources"],
   ["protocol/src/followup-templates", "followup-templates"],
 ];
 for (const [source, target] of sharedModules) {

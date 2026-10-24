@@ -1,6 +1,6 @@
 # Local video demo gallery
 
-The bilingual gallery is part of /use-cases#video-gallery and /zh/use-cases#video-gallery. It includes the basketball film, the HyperFrames 24-hour explainer, the Venus and Pluto episodes, and three new product/data/map examples.
+The bilingual gallery lives in the dedicated video creation use case at /use-cases/video-creation#video-gallery and /zh/use-cases/video-creation#video-gallery. The main /use-cases catalog stays a flat, searchable grid of illustrated tasks, including local audio transcription and the other packaged skills. Previous catalog gallery bookmarks redirect to the video detail. It includes the basketball film, the HyperFrames 24-hour explainer, the Venus and Pluto episodes, and three new product/data/map examples.
 
 Video and poster bytes are stored in the remote-arc-public-media R2 bucket under demo-gallery/. Git contains presentation metadata, file sizes and SHA-256 hashes in packages/docs/src/media-gallery.ts. Media files remain outside the repository; prepare them in an ignored workspace or another local directory. No API tokens or signed URLs belong in the manifest.
 

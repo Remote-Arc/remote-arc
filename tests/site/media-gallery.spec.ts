@@ -6,7 +6,7 @@ test('video gallery filters, opens a single player and restores keyboard focus',
   if(route.request().url().endsWith('.mp4')){mediaRequests++;await route.abort();return;}
   await route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540"><rect width="960" height="540" fill="#17231d"/></svg>'});
  });
- await page.goto((zh?'/zh':'')+'/use-cases#video-gallery');
+ await page.goto((zh?'/zh':'')+'/use-cases/video-creation#video-gallery');
  const gallery=page.locator('#video-gallery');
  await expect(gallery).toBeVisible();await expect(gallery.locator('article')).toHaveCount(7);
  expect(mediaRequests).toBe(0);await expect(gallery.locator('video')).toHaveCount(0);

@@ -1,9 +1,11 @@
-import React,{useState} from "react";
+import {SKILL_USE_CASES,useCaseSkillIds} from '../../../packages/docs/src/skill-use-cases.js';
+import './use-case-catalog.css';
+import React,{useEffect,useState} from "react";
 import {MediaDemoGallery} from "./media-demo-gallery.js";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import { TaskAvailability } from "./product-docs.js";
-import {ARC_DELEGATED_WORK,ARC_USE_CASES,arcChatHref,arcUseCasePrompt} from '../../../packages/docs/src/arc-use-cases.js';
+import {ARC_USE_CASES,arcChatHref,arcUseCasePrompt} from '../../../packages/docs/src/arc-use-cases.js';
 import "./public-docs.css";
 
 export {useCaseSlugs} from '../../../packages/docs/src/arc-use-cases.js';
@@ -13,6 +15,7 @@ type Tr = (en: string, zh: string) => string;
 
 function cases(tr: Tr) {
   return [
+    ...SKILL_USE_CASES.map(item=>({slug:item.slug,category:tr(item.category.en,item.category.zh),title:tr(item.title.en,item.title.zh),intro:tr(item.intro.en,item.intro.zh),prompt:tr(item.prompt.en,item.prompt.zh),permission:tr(item.requires.en,item.requires.zh),limit:tr(item.boundary.en,item.boundary.zh),proof:tr(item.proof.en,item.proof.zh),steps:item.steps.map(step=>tr(step.en,step.zh)),tools:item.tools,durable:false,connectOnly:item.connectOnly})),
     {
       slug: "job-applications", category: tr("BROWSER RUNNER · BETA", "BROWSER RUNNER · BETA"), title: tr("Prepare a job application on the employer's site", "在雇主官网上准备职位申请"),
       intro: tr("Your AI fills a real application form on your computer and uploads your CV from a folder you trust. It works in a hidden window and asks you only when a page needs you; sign in once and later tasks stay signed in. You handle CAPTCHAs and approve the final submit.", "你的 AI 在电脑上填写真实的申请表，并从你信任的文件夹上传简历。它在隐藏窗口中工作，只有页面需要你时才找你；登录一次，之后的任务保持登录。CAPTCHA 由你处理，最终提交由你批准。"),
@@ -184,39 +187,21 @@ function RunModeChoice({mode,onChange,tr}:{mode:RunMode;onChange:(value:RunMode)
 }
 function caseTitle(slug:string,fallback:string,tr:Tr){return slug==='overnight-goals'?tr('Delegate a bounded task for later','委派稍后执行的有界任务'):slug==='ci-follow-up'?tr('Check CI and prepare the next step','检查 CI，准备下一步'):slug==='scheduled-checks'?tr('Keep a check on a daily or interval routine','按每日或间隔 Routine 持续检查'):fallback;}
 
-// What Connect adds to the user's own AI, shown first on the catalog.
-function ConnectCapabilities({tr,locale}:{tr:Tr;locale:'en'|'zh'}){
- const items=[
-  {href:'/docs/devices',title:tr('Computers','电脑'),text:tr('Read and edit files, run commands and keep long tasks going on the Windows, macOS and Linux computers you pair.','在你配对的 Windows、macOS 和 Linux 电脑上读写文件、运行命令，并让长任务持续执行。'),cta:tr('Device guide','设备指南')},
-  {href:'/use-cases/job-applications?mode=connect',title:tr('Browser Runner · Beta','Browser Runner · Beta'),text:tr('Fill forms, upload documents and submit once with evidence. Runs out of sight; you are asked only for CAPTCHAs and final approval.','填写表单、上传文件、只提交一次并留下证据。在后台运行；只有 CAPTCHA 和最终确认才需要你。'),cta:tr('See the workflow','查看场景')},
-  {href:'/use-cases/browser-research?mode=connect',title:tr('Shared tabs','共享标签页'),text:tr('Let your AI read a tab you share from your own Chrome, and click or fill only on tabs where you allow it.','让 AI 读取你从自己 Chrome 共享的标签页；只有你允许的标签页才能点击或填写。'),cta:tr('See the workflow','查看场景')},
-  {href:'/docs/apps',title:tr('Apps','应用'),text:tr('Use the apps you connect in Remote Arc through the same connection, with the access each app grants.','通过同一个连接使用你在 Remote Arc 中接入的应用，权限以各应用授予的为准。'),cta:tr('Apps guide','应用指南')},
- ];
- return <section className="arcDelegatedWork connectCapabilities"><header><span className="eyebrow">{tr('REMOTE ARC CONNECT','REMOTE ARC CONNECT')}</span><h2>{tr('One connection gives your AI your computers, a browser and your apps.','一个连接，让你的 AI 用上你的电脑、浏览器和应用。')}</h2><p>{tr('Add Remote Arc to ChatGPT, Claude, Cursor, Codex or any MCP client. Your AI keeps the reasoning; Remote Arc carries out each step on devices you paired, within the permissions you set, and returns what actually happened.','把 Remote Arc 加到 ChatGPT、Claude、Cursor、Codex 或任何 MCP 客户端。推理仍由你的 AI 完成；Remote Arc 在你配对的设备上、按你设定的权限执行每一步，并返回实际发生了什么。')}</p></header><div>{items.map(item=><a className="arcDelegatedCard" key={item.href} href={localizedWebsiteHref(item.href,locale)}><h3>{item.title}</h3><p>{item.text}</p><strong>{item.cta} →</strong></a>)}</div></section>;
-}
-
 export function UseCaseCatalog() {
-  const { tr, locale } = useI18n();
-  const [mode,setMode]=useRunMode();
-  // Arc cannot drive every capability yet; its list shows only what it can do.
-  const items = cases(tr).filter(item=>mode==='connect'||!item.connectOnly);
-  return <main className="useCaseCatalog revisedUseCases">
-    <header className="toolPageHeader"><span className="eyebrow">{tr("USE CASES", "使用场景")}</span><h1>{mode==='arc'?tr('What would you like Arc to get done?','你想让 Arc 完成什么？'):tr("What would you like your AI to get done?", "你想让你的 AI 完成什么？")}</h1>
-      <p>{mode==='arc'?tr('Delegate a goal to Arc, the hosted agent, with retained context, scheduled judgment and result checks. Arc uses the same tools as Connect and keeps the work and its follow-through together.','将目标交给托管 Agent Arc，保留上下文、按计划判断并核验结果。Arc 与 Connect 共用工具，并把工作和后续跟进持续保存在一起。'):tr('Connect the AI you already use to the computers, browser and apps you choose. Your AI decides the steps; Remote Arc carries them out on your own devices and reports the evidence. Prefer a hosted agent that keeps the work going? Switch to Arc.','把你已经在用的 AI 连接到你选择的电脑、浏览器和应用。由你的 AI 决定步骤，Remote Arc 在你自己的设备上执行并返回证据。想要一个持续推进工作的托管 Agent？切换到 Arc。')}</p>
-      <RunModeChoice mode={mode} onChange={setMode} tr={tr}/>
-      {mode==='arc'?<div className="useCaseEntry"><strong>{tr('Start with the result. Arc checks what the work needs.','从结果开始，由 Arc 检查所需能力。')}</strong><p>{tr('Open a workflow to prepare its request in Arc. Review the draft before sending. Arc uses your authorized Apps and computer tools, or saves a bounded Task or routine when requested.','打开具体场景，将请求带进 Arc，检查草稿后再发送。Arc 使用已授权应用与电脑工具；需要时保存有界 Task 或 Routine。')}</p><a href={arcChatHref(tr('Help me choose a useful task using my connected Apps and computers. Inspect available capabilities and ask only for missing details before acting.','根据我已连接的 Apps 和电脑，帮我选择一项有用任务。先检查可用能力，执行前只补齐缺失信息。'),'use-cases')}>{tr('Open Arc','打开 Arc')} →</a></div>:<>
-      <div className="useCaseEntry"><strong>{tr("Connect once, then just ask.", "连接一次，之后直接提出请求。")}</strong><p>{tr("Quick work uses tools directly; ongoing work is saved as an authorized long-running or scheduled Task with progress and stop controls in Dashboard.", "即时工作直接使用工具；持续工作保存为已授权的长任务或定时任务，可在 Dashboard 查看进度并停止。")}</p><a href={localizedWebsiteHref("/connect-ai", locale)}>{tr("Connect your AI", "连接你的 AI")} →</a> <a href="/docs/long-running-work">{tr("Understand durable work", "了解持久工作")} →</a></div>
-      </>}
-    </header>
-    <MediaDemoGallery/>
-    {mode==='connect'&&<ConnectCapabilities tr={tr} locale={locale}/>}
-    {mode==='arc'&&<section className="arcDelegatedWork"><header><span className="eyebrow">{tr('DELEGATE · FOLLOW THROUGH · VERIFY','委派 · 跟进 · 核验')}</span><h2>{tr('Give Arc a responsibility.','把一项职责交给 Arc。')}</h2><p>{tr('Agree on the sources, boundaries and evidence once. Arc retains the instructions and run history, makes a fresh bounded assessment when scheduled, and leaves the outcome ready for review.','先约定信息源、边界与证据，Arc 保存指令和执行历史，在安排的时间做新的有界判断，并留下可复核的结果。')}</p></header><div>{ARC_DELEGATED_WORK.map(work=><a className="arcDelegatedCard" key={work.id} href={arcChatHref(work.prompt[locale],'delegated-work:'+work.id)}><h3>{work.title[locale]}</h3><p>{work.detail[locale]}</p><dl><dt>{tr('Arc retains','Arc 保留')}</dt><dd>{work.retains[locale]}</dd><dt>{tr('Arc checks','Arc 核验')}</dt><dd>{work.checks[locale]}</dd></dl><strong>{tr('Delegate in Arc','交给 Arc')} ↗</strong></a>)}</div></section>}
-    <h2 className="useCaseSectionTitle">{mode==='arc'?tr('The practical work behind a goal','目标背后的具体工作'):tr('Work with your existing AI','使用已有 AI 推进工作')}</h2>
-    <section className="useCaseGrid" aria-label={tr("Workflows", "工作流程")}>{items.map(item => <a className="useCaseCard" key={item.slug} href={localizedWebsiteHref("/use-cases/" + item.slug+'?mode='+mode, locale)}>
-      <span className="eyebrow">{item.category}</span><h2>{mode==='arc'?caseTitle(item.slug,item.title,tr):item.title}</h2><p>{mode==='arc'?ARC_USE_CASES[item.slug as UseCaseSlug].intro[locale]:item.intro}</p><span className="caseMode">{mode==='arc'?tr('Arc · Apps, devices & Tasks','Arc · 应用、设备与 Tasks'):item.connectOnly?tr('Connect · Browser Runner','Connect · Browser Runner'):item.durable?tr('Connect · saved Task','Connect · 持久 Task'):tr('Connect · direct tools','Connect · 直接工具')}</span><b aria-hidden="true">↗</b>
-    </a>)}</section>
-    {mode==='connect'&&<TaskAvailability />}
-    <footer className="catalogFooter"><p>{tr("Use your own projects and installed tools. Terminal access remains local-user access. Browser Runner works only on the sites a task names, in its own browser profile; shared tabs are scoped tab by tab. Review the exact boundaries before granting capabilities.", "使用自己的项目和现有工具。终端仍是本机用户权限。Browser Runner 只访问任务指定的网站，并使用独立的浏览器资料；共享标签页逐个授权。授予能力前请了解具体边界。")}</p><a href="/docs">{tr("Exact capabilities", "准确能力")} →</a></footer>
+  const {tr,locale}=useI18n(),[mode,setMode]=useRunMode(),[query,setQuery]=useState('');
+  useEffect(()=>{if(window.location.hash==='#video-gallery')window.location.replace(localizedWebsiteHref('/use-cases/video-creation#video-gallery',locale));},[locale]);
+  const order=['video-creation','audio-transcription','word-documents','pdf-workflows','presentation-deck','spreadsheet-report','image-studio','website-building','research-reports','data-work','data-visualization','statistical-analysis','machine-learning','network-analysis','ui-inspection','webapp-testing','mcp-integrations','browser-workflows','job-applications','remote-development','desktop-automation','file-organization','disk-space-cleanup','scheduled-checks','overnight-goals','long-running-jobs','ci-follow-up','cross-device-handoff','home-lab','browser-research','remote-support'];
+  const needle=query.trim().toLocaleLowerCase();
+  const items=cases(tr).filter(item=>mode==='connect'||!item.connectOnly).filter(item=>!needle||[item.title,item.intro,item.category,item.slug,...useCaseSkillIds(item.slug)].join(' ').toLocaleLowerCase().includes(needle)).sort((a,b)=>order.indexOf(a.slug)-order.indexOf(b.slug));
+  return <main className="useCaseCatalog revisedUseCases flatUseCaseCatalog">
+   <header className="toolPageHeader"><span className="eyebrow">{tr('USE CASES','使用场景')}</span><h1>{mode==='arc'?tr('What would you like Arc to get done?','你想让 Arc 完成什么？'):tr('What would you like your AI to get done?','你想让你的 AI 完成什么？')}</h1><p>{tr('Create, analyze, research or automate. Choose a task to see examples, useful outputs and what it needs.','创作、分析、研究，或自动处理日常工作。选择一个场景，查看示例、交付结果和所需条件。')}</p><RunModeChoice mode={mode} onChange={setMode} tr={tr}/></header>
+   <div className="useCaseBrowse"><label className="useCaseSearch"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span className="srOnly">{tr('Search use cases','搜索使用场景')}</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={tr('Search: recordings, video, Word, charts…','搜索：录音、视频、Word、图表…')}/></label><span className="useCaseResultCount" aria-live="polite">{items.length} {tr('use cases','个场景')}</span></div>
+   <section className="useCaseGrid visualUseCaseGrid" aria-label={tr('Workflows','工作流程')}>{items.map((item,index)=><a className="useCaseCard" key={item.slug} href={localizedWebsiteHref('/use-cases/'+item.slug+'?mode='+mode,locale)}>
+    <div className="useCaseCardPreview"><img data-use-case-art={item.slug} src={'/use-case-art/'+item.slug+'.svg'} alt="" width="640" height="360" loading={index<6?'eager':'lazy'} decoding="async"/></div>
+    <div className="useCaseCardBody"><span className="eyebrow">{item.category}</span><h2>{mode==='arc'?caseTitle(item.slug,item.title,tr):item.title}</h2><p className="useCaseCardIntro">{mode==='arc'?ARC_USE_CASES[item.slug as UseCaseSlug].intro[locale]:item.intro}</p><span className="caseMode">{mode==='arc'?tr('Arc · Apps, devices & Tasks','Arc · 应用、设备与 Tasks'):item.connectOnly?tr('Connect · Browser Runner','Connect · Browser Runner'):item.durable?tr('Connect · saved Task','Connect · 持续 Task'):tr('Connect · direct tools','Connect · 直接工具')}</span></div><b aria-hidden="true">→</b>
+   </a>)}</section>
+   {items.length===0&&<div className="useCaseEmpty"><h2>{tr('Try another task or keyword','试试其他任务或关键词')}</h2><p>{tr('Search a result such as a transcript, document, chart or website.','可以按文字稿、文档、图表或网站等目标结果搜索。')}</p><button type="button" onClick={()=>setQuery('')}>{tr('Show all use cases','查看全部场景')}</button></div>}
+   <footer className="catalogFooter"><p>{tr('Work runs through the tools and permissions available to your selected AI and connected computer. Each use case explains its requirements and how to verify the result.','工作通过所选 AI 与已连接电脑可用的工具和权限完成。每个场景都说明所需条件，以及如何核验结果。')}</p><a href={localizedWebsiteHref('/docs/skills',locale)}>{tr('Explore the skills','了解技能')} →</a></footer>
   </main>;
 }
 
@@ -227,8 +212,9 @@ export function UseCaseDetail({ slug }: { slug: UseCaseSlug }) {
   const mode:RunMode=item.connectOnly?'connect':chosenMode;
   const arcHref=arcChatHref(arcUseCasePrompt(slug,locale),'use-case:'+slug);
   const arcProof=slug==='ci-follow-up'?tr('The actual commit, workflow status, inspected failure evidence and source links, with any proposed next action kept within your authorization.','实际提交、工作流状态、已检查的失败证据和来源链接；建议下一步须保持在你的授权范围内。'):slug==='scheduled-checks'?tr('Per-run timestamps, actual resource observations, source links and result summaries; include exit status when a command was executed.','每轮时间、实际资源观察、来源链接与结果摘要；执行了命令时另附退出状态。'):item.proof;
-  return <main className="technicalDoc revisedUseCases">
+  return <main className={"technicalDoc revisedUseCases"+(slug==="video-creation"?" videoCreationCase":"")}>
     <header className="articleHeader"><a className="caseBack" href={localizedWebsiteHref("/use-cases?mode="+mode, locale)}>← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{mode==='arc'?caseTitle(slug,item.title,tr):item.title}</h1><p>{mode==='arc'?arc.intro[locale]:item.intro}</p>{item.connectOnly?<p className="caseConnectOnly">{tr('Available through Connect from the AI you already use. Arc will use Browser Runner later.','通过 Connect 在你已经使用的 AI 中可用。Arc 之后也会支持 Browser Runner。')} <a href={localizedWebsiteHref('/connect-ai',locale)}>{tr('Connect your AI','连接你的 AI')} →</a></p>:<RunModeChoice mode={mode} onChange={setMode} tr={tr}/>}{mode==='arc'?<div className="caseStartActions"><a className="primaryButton" href={arcHref}>{tr('Start in Arc','在 Arc 中开始')} ↗</a><span>{tr('Review the prepared request before sending.','检查预填请求后，再发送执行。')}</span></div>:item.durable&&<TaskAvailability />}</header>
+    {slug==="video-creation"&&<MediaDemoGallery/>}
     <article className="technicalArticle useCaseDetailBody">
       {mode==='arc'?<>
        <section><h2>{tr('Ask Arc','向 Arc 提出请求')}</h2><blockquote className="casePrompt">{arc.prompt[locale]}</blockquote><p>{tr('The button opens a draft in Arc, then you send it when ready. Arc checks current access and dependencies before acting; missing details or capabilities are concrete blockers.','按钮会在 Arc 中打开草稿，由你检查后发送。Arc 执行前检查当前权限与依赖；缺少信息或能力时会说明具体阻碍。')}</p></section>

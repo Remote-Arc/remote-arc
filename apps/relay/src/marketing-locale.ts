@@ -1,7 +1,9 @@
 import { DOC_PATHS } from "../../../packages/docs/src/catalog.js";
+import {SKILL_USE_CASES} from "../../../packages/docs/src/skill-use-cases.js";
 /** Public pages with both English and Simplified Chinese content. */
 export const localizedPages = [
  ...DOC_PATHS,
+ ...SKILL_USE_CASES.map(item=>"/use-cases/"+item.slug),
  "/privacy", "/terms", "/support", "/remote-mcp", "/connect-ai", "/chrome-extension",
  "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work",

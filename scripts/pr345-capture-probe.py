@@ -16,10 +16,11 @@ source = p.read_text().replace('"--disable-sync",', '"--disable-sync",\n\t\t"--e
 if mode == "legacy-surface":
     source = source.replace('CalculateNativeWinOcclusion"', 'CalculateNativeWinOcclusion,CDPScreenshotNewSurface"')
     source = source.replace('args = append(args, "--enable-features=CDPScreenshotNewSurface")', '// New surface disabled for this diagnostic probe.')
-elif mode == "no-mac-occlusion":
-    source = source.replace('CalculateNativeWinOcclusion"', 'CalculateNativeWinOcclusion,MacWebContentsOcclusion"')
-elif mode == "no-display-link":
-    source = source.replace('CalculateNativeWinOcclusion"', 'CalculateNativeWinOcclusion,UseDisplayLinkOnApple"')
+elif mode in ("no-gpu-vsync", "no-gpu-vsync-allstages"):
+    extra = '"--disable-gpu-vsync",'
+    if mode == "no-gpu-vsync-allstages":
+        extra += '\n\t\t"--run-all-compositor-stages-before-draw",'
+    source = source.replace('"--disable-background-timer-throttling",', '"--disable-background-timer-throttling",\n\t\t' + extra)
 elif mode == "all-compositor-stages":
     source = source.replace('"--disable-background-timer-throttling",', '"--disable-background-timer-throttling",\n\t\t"--run-all-compositor-stages-before-draw",')
 p.write_text(source)

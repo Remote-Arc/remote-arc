@@ -46,15 +46,15 @@ jobs:
         run: |
           python3 scripts/pr345-capture-probe.py focus-after-hide
           go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Disable Mac web contents occlusion
+      - name: Disable GPU vsync
         continue-on-error: true
         run: |
-          python3 scripts/pr345-capture-probe.py no-mac-occlusion
+          python3 scripts/pr345-capture-probe.py no-gpu-vsync
           go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
-      - name: Disable Apple display link
+      - name: Disable GPU vsync and force all compositor stages
         continue-on-error: true
         run: |
-          python3 scripts/pr345-capture-probe.py no-display-link
+          python3 scripts/pr345-capture-probe.py no-gpu-vsync-allstages
           go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
       - name: Force all compositor stages before draw
         continue-on-error: true

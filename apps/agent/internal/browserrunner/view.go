@@ -57,6 +57,9 @@ func (s *session) serviceView(ctx context.Context) {
 	s.ev.Lock()
 	wanted, active := time.Now().Before(s.viewUntil), s.viewActive
 	s.ev.Unlock()
+	if !wanted && !active {
+		return
+	}
 	if !s.live() {
 		return
 	}
@@ -167,7 +170,14 @@ func (s *session) initialViewFrame(ctx context.Context) {
 		Data string `json:"data"`
 	}
 	// Scale wide screens down instead of returning an oversized uncapped frame.
-	params := map[string]any{"format": "jpeg", "quality": 50, "captureBeyondViewport": false, "clip": map[string]any{"x": 0, "y": 0, "width": width, "height": height, "scale": math.Min(1, 1280/width)}}
+	dpr := 1.0
+	if raw, e := s.evaluateMain(ctx, "window.devicePixelRatio || 1"); e == nil {
+		var value float64
+		if json.Unmarshal(raw, &value) == nil && value > 0 && value <= 8 {
+			dpr = value
+		}
+	}
+	params := map[string]any{"format": "jpeg", "quality": 50, "captureBeyondViewport": false, "clip": map[string]any{"x": 0, "y": 0, "width": width, "height": height, "scale": math.Min(1, 1280/(width*dpr))}}
 	if s.conn.Call(ctx, "Page.captureScreenshot", params, &frame) == nil {
 		s.forwardViewFrame(frame.Data)
 	}

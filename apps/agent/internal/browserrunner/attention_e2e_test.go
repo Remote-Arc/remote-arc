@@ -3,7 +3,6 @@ package browserrunner
 import (
 	"context"
 	"fmt"
-	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 )
 
 func TestE2EDelayedChallengeHandoffAndWait(t *testing.T) {

@@ -20,6 +20,8 @@ func (c *staticViewClient) Call(ctx context.Context, method string, params any, 
 	switch method {
 	case "Page.getLayoutMetrics":
 		value = map[string]any{"cssLayoutViewport": map[string]any{"clientWidth": 2560, "clientHeight": 1440}}
+	case "Runtime.evaluate":
+		value = map[string]any{"result": map[string]any{"value": 2}}
 	case "Page.captureScreenshot":
 		c.params = params.(map[string]any)
 		c.screenshots++
@@ -57,7 +59,7 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 		t.Fatal("static page must send its first frame without a paint event")
 	}
 	clip := client.params["clip"].(map[string]any)
-	if clip["scale"] != 0.5 || client.params["quality"] != 50 {
+	if clip["scale"] != 0.25 || client.params["quality"] != 50 {
 		t.Fatal("first frame not scaled/capped", client.params)
 	}
 	s.serviceView(context.Background())

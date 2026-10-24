@@ -206,6 +206,31 @@ try {
     throw new Error("Sensitive Path Policy narrow exception failed");
   }
 
+  // AI-agent sign-in files are credentials even inside an ordinary project
+  // or a linked agent home; their session logs stay readable.
+  const codexHome = path.join(root, "codex-home");
+  await fs.mkdir(path.join(codexHome, "sessions"), { recursive: true });
+  await fs.writeFile(path.join(codexHome, "auth.json"), "{\"token\":\"x\"}");
+  await fs.writeFile(path.join(codexHome, "sessions", "rollout.jsonl"), "{}\n");
+  await fs.writeFile(path.join(project, ".credentials.json"), "{}");
+  const previousCodexHome = process.env.CODEX_HOME;
+  process.env.CODEX_HOME = codexHome;
+  try {
+    for (const target of [path.join(codexHome, "auth.json"), path.join(project, ".credentials.json")]) {
+      let blocked = false;
+      try {
+        await safe.callTool("read_file", { path: target }, policy);
+      } catch {
+        blocked = true;
+      }
+      if (!blocked) throw new Error(`Sensitive Path Policy did not block agent credential ${target}`);
+    }
+    await safe.callTool("read_file", { path: path.join(codexHome, "sessions", "rollout.jsonl") }, policy);
+  } finally {
+    if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = previousCodexHome;
+  }
+
   if (process.platform !== "win32") {
     const escapeLink = path.join(project, "escape-link");
     await fs.symlink(root, escapeLink, "dir");

@@ -79,7 +79,7 @@ func matches(target string, roots []string) bool {
 }
 func Sensitive(target string) bool {
 	base := strings.ToLower(filepath.Base(target))
-	for _, s := range []string{".npmrc", ".pypirc", ".netrc", ".git-credentials", "id_rsa", "id_ed25519", "credentials"} {
+	for _, s := range []string{".npmrc", ".pypirc", ".netrc", ".git-credentials", "id_rsa", "id_ed25519", "credentials", ".credentials.json"} {
 		if base == s {
 			return true
 		}
@@ -93,9 +93,10 @@ func Sensitive(target string) bool {
 func defaultRoots() []string {
 	home := config.Home()
 	r := []string{}
-	for _, p := range []string{".ssh", ".aws", ".gnupg", ".azure", ".kube", ".docker", ".config/gcloud"} {
+	for _, p := range []string{".ssh", ".aws", ".gnupg", ".azure", ".kube", ".docker", ".config/gcloud", ".config/gh/hosts.yml", ".claude.json", ".remotearc/config.json"} {
 		r = append(r, filepath.Join(home, filepath.FromSlash(p)))
 	}
+	r = append(r, agentCredentialRoots(home)...)
 	if runtime.GOOS == "darwin" {
 		for _, p := range []string{"Google/Chrome", "Microsoft Edge", "Firefox"} {
 			r = append(r, filepath.Join(home, "Library", "Application Support", filepath.FromSlash(p)))
@@ -107,6 +108,37 @@ func defaultRoots() []string {
 		}
 		if a := os.Getenv("LOCALAPPDATA"); a != "" {
 			r = append(r, filepath.Join(a, "Google", "Chrome", "User Data"), filepath.Join(a, "Microsoft", "Edge", "User Data"))
+		}
+	}
+	return r
+}
+
+// agentCredentialRoots protects the sign-in state of local AI coding agents.
+// Their session logs stay readable (task discovery needs them), but tokens and
+// secret stores do not. Roots are canonicalized at match time, so a home
+// folder that is a junction or symlink (e.g. ~/.codex -> E:\AI\codexdata)
+// is protected at its real location too.
+func agentCredentialRoots(home string) []string {
+	codex := []string{filepath.Join(home, ".codex")}
+	if s := strings.TrimSpace(os.Getenv("CODEX_HOME")); s != "" {
+		codex = append(codex, s)
+	}
+	claude := []string{filepath.Join(home, ".claude")}
+	if s := strings.TrimSpace(os.Getenv("CLAUDE_CONFIG_DIR")); s != "" {
+		claude = append(claude, s)
+	}
+	r := []string{}
+	for _, dir := range codex {
+		for _, name := range []string{"auth.json", ".credentials.json", "secrets", ".sandbox-secrets"} {
+			r = append(r, filepath.Join(dir, name))
+		}
+	}
+	for _, dir := range claude {
+		r = append(r, filepath.Join(dir, ".credentials.json"))
+	}
+	if runtime.GOOS == "windows" {
+		if a := os.Getenv("APPDATA"); a != "" {
+			r = append(r, filepath.Join(a, "GitHub CLI", "hosts.yml"))
 		}
 	}
 	return r

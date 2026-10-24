@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -309,12 +310,40 @@ func (p *Processes) Close() {
 	}
 	wg.Wait()
 }
-func listProcesses() (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+// secretArgument redacts obvious credentials that some tools pass on their
+// command line, so a process listing does not become a token leak.
+var secretArgument = regexp.MustCompile(`(?i)((?:--?|/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("[^"]*"|'[^']*'|\S+)|(bearer\s+)\S+`)
+
+func redactCommandLine(line string) string {
+	return secretArgument.ReplaceAllStringFunc(line, func(match string) string {
+		parts := secretArgument.FindStringSubmatch(match)
+		if parts[3] != "" {
+			return parts[3] + "[redacted]"
+		}
+		return parts[1] + "[redacted]"
+	})
+}
+
+// listProcesses returns a header plus one line per process. filter keeps rows
+// whose text contains it (case-insensitive); limit caps rows; details adds
+// command lines on Windows (ps already includes them elsewhere).
+func listProcesses(filter string, limit int, details bool) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	if limit < 1 || limit > 1000 {
+		limit = 200
+	}
+	header := ""
 	cmd := exec.CommandContext(ctx, "ps", "-axo", "pid,ppid,user,%cpu,%mem,etime,command")
 	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "tasklist.exe", "/FO", "CSV", "/NH")
+		if details {
+			cmd = exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+				"[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Csv -NoTypeInformation")
+		} else {
+			cmd = exec.CommandContext(ctx, "tasklist.exe", "/FO", "CSV", "/NH")
+			header = `"Image Name","PID","Session Name","Session#","Mem Usage"`
+		}
 	}
 	hideCommand(cmd)
 	var out, err cappedBuffer
@@ -327,5 +356,28 @@ func listProcesses() (string, error) {
 	if platform == "windows" {
 		platform = "win32"
 	}
-	return "Processes on " + platform + ":\n\n" + strings.TrimSpace(out.Text()), nil
+	lines := strings.Split(strings.ReplaceAll(strings.TrimSpace(out.Text()), "\r\n", "\n"), "\n")
+	if header == "" && len(lines) > 0 {
+		header, lines = lines[0], lines[1:]
+	}
+	needle := strings.ToLower(strings.TrimSpace(filter))
+	kept, matched := []string{}, 0
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" || needle != "" && !strings.Contains(strings.ToLower(line), needle) {
+			continue
+		}
+		matched++
+		if len(kept) < limit {
+			kept = append(kept, redactCommandLine(line))
+		}
+	}
+	summary := fmt.Sprintf("[%d of %d processes", len(kept), matched)
+	if needle != "" {
+		summary += fmt.Sprintf(" matching %q", filter)
+	}
+	if matched > len(kept) {
+		summary += "; raise limit or narrow filter for the rest"
+	}
+	summary += "]"
+	return "Processes on " + platform + ":\n\n" + redactCommandLine(header) + "\n" + strings.Join(kept, "\n") + "\n\n" + summary, nil
 }

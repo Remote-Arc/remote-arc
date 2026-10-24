@@ -122,7 +122,7 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 			result, e = fileInfo(target)
 		}
 	case "list_processes":
-		result, e = listProcesses()
+		result, e = listProcesses(protocol.OptionalString(args, "filter"), protocol.Number(args, "limit", 200), protocol.Bool(args, "details"))
 	case "list_undo_actions", "undo_change", "undo_last_change":
 		c.mutation.Lock()
 		defer c.mutation.Unlock()

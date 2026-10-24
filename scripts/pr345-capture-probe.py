@@ -16,6 +16,8 @@ source = p.read_text().replace('"--disable-sync",', '"--disable-sync",\n\t\t"--e
 if mode == "legacy-surface":
     source = source.replace('CalculateNativeWinOcclusion"', 'CalculateNativeWinOcclusion,CDPScreenshotNewSurface"')
     source = source.replace('args = append(args, "--enable-features=CDPScreenshotNewSurface")', '// New surface disabled for this diagnostic probe.')
+elif mode == "mac-occlusion-shutoff":
+    source = source.replace('--enable-features=CDPScreenshotNewSurface', '--enable-features=CDPScreenshotNewSurface,MacOcclusionForceShutoff')
 elif mode in ("no-gpu-vsync", "no-gpu-vsync-allstages"):
     extra = '"--disable-gpu-vsync",'
     if mode == "no-gpu-vsync-allstages":

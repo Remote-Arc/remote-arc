@@ -14,7 +14,7 @@ Remote Arc includes **9 original, curated Skill instructions** (`SKILL.md`) orga
 - P1: ui-inspector (OmniParser, optional vision weights)
 - P1: transcribe-subtitles (whisper.cpp + FFmpeg, optional model weights)
 
-**Packaged means the instructions are available, NOT that an external executable/model is installed on a user's device.** A successful Skill run requires (1) a deployed Connect or Arc integration, (2) authorized devices and existing tools, (3) verified required engine(s) and licenses on the selected device, and (4) validation of actual output. No third-party binaries or model weights are vendored in this PR. No tools are registered or silently installed. No automatic API spend.
+**Packaged means the instructions are available, NOT that an external executable/model is installed on a user's device.** A successful Skill run requires (1) a deployed Connect or Arc integration, (2) authorized devices and existing tools, (3) verified required engine(s) and licenses on the selected device, and (4) validation of actual output. No third-party binaries or model weights are vendored in this PR, and no executable tools are registered merely by adding a Skill. A calling AI may arrange a bounded, local first-use install only inside already authorized device/workspace permissions and with source/size/destination disclosed. Qwen3-TTS (multi-GB), ACE-Step (10 GB+) and Whisper models beyond the small default require explicit download approval. No unattended paid API spend or GCP GPU service.
 
 ## One cloud catalog, all devices
 

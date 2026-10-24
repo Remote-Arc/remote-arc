@@ -15,6 +15,9 @@ export type ImportedSkillSummary={id:string;name:string;description:string};
 // cues are what make "帮我剪个视频" find the video skill.
 const CUES:Array<[RegExp,string[]]>=[
  [/video|clip|mp4|movie|render|视频|剪辑|短片|渲染|录屏/i,['video-creator']],
+ [/voice.?over|narrat|配音|旁白|解说|朗读|tts|dub/i,['video-creator']],
+ [/music|soundtrack|bgm|配乐|背景音乐|作曲/i,['video-creator']],
+ [/\bmap\b|地图|省份|国家边界|geojson|choropleth/i,['video-creator']],
  [/subtitle|caption|transcri|speech.to.text|whisper|字幕|转录|语音识别|听写/i,['transcribe-subtitles']],
  [/image|picture|photo|poster|illustrat|图片|照片|图像|修图|海报|生图|画/i,['image-studio']],
  [/browser|website|webpage|web page|tab|scrape|crawl|网页|浏览器|网站|页面|抓取|爬/i,['browser-operator','community-playwright']],

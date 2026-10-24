@@ -62,7 +62,7 @@
       "name": "Video Creator",
       "priority": "P0",
       "category": "media",
-      "description": "Make finished videos (promos, explainers, launch clips, social cuts) on the user's own computer with OpenFilm, no API keys needed.",
+      "description": "Make finished videos (promos, explainers, vibe/抖音 clips) on the user's computer with OpenFilm; local voice-over, music and maps, no keys for the core.",
       "engine": "OpenFilm 0.2.5 + FFmpeg",
       "requires": [
         "node",
@@ -117,7 +117,7 @@
       "name": "Transcribe & Subtitles",
       "priority": "P1",
       "category": "media",
-      "description": "Transcribe authorized audio locally, timestamp captions and render with FFmpeg.",
+      "description": "Transcribe audio or video to timed subtitles (SRT/VTT) locally with whisper.cpp — auto-installed on first use, no API key, works for Chinese and English.",
       "engine": "whisper.cpp + FFmpeg",
       "requires": [
         "ffmpeg"

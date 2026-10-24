@@ -47,7 +47,7 @@ let nextID = 0;
 let hello: any;
 const goBrowserRunnerTools = [
   "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
-  "browser_runner_status", "browser_runner_confirm", "browser_runner_close",
+  "browser_runner_status", "browser_runner_confirm", "browser_runner_close", "browser_runner_wait",
 ];
 let stderr = "";
 const server = http.createServer((_req, res) => {

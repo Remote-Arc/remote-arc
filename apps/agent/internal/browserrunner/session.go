@@ -349,6 +349,8 @@ func (s *session) ensureLive(ctx context.Context) error {
 	s.ev.Lock()
 	s.worldCtx, s.mainFrame, s.href = 0, "", ""
 	s.frames = map[string]*frameInfo{}
+	s.networkRequests = map[string]bool{}
+	s.networkChanged = time.Now()
 	s.ev.Unlock()
 	s.snapFrames = nil
 	if e := s.setup(ctx); e != nil {

@@ -209,6 +209,7 @@ func sessionID(args map[string]any, key string) (string, error) {
 // Call dispatches one browser_runner tool. The returned value is serialized
 // by the Agent like any other tool result.
 func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p protocol.Policy) (any, error) {
+	callStarted := time.Now()
 	if args == nil {
 		args = map[string]any{}
 	}
@@ -231,7 +232,12 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	if e != nil {
 		return nil, e
 	}
-	s.mu.Lock()
+	if !lockSession(ctx, s) {
+		if tool == "browser_runner_wait" {
+			return map[string]any{"state": "timeout", "waited_ms": time.Since(callStarted).Milliseconds(), "reason": "The session is busy with another call.", "next_action": "Call browser_runner_wait again after the active call returns."}, nil
+		}
+		return nil, ctx.Err()
+	}
 	defer s.mu.Unlock()
 	s.lastUsed = m.now()
 	if tool == "browser_runner_status" {

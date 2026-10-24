@@ -147,7 +147,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 	if !a.WakeOnly {
 		capabilities = append(capabilities, "native_core_v1", "undo_history_v1")
 		if a.browserRunnerReady() {
-			capabilities = append(capabilities, "browser_runner_v1")
+			capabilities = append(capabilities, "browser_runner_v1", "runner_view_v1")
 		}
 	}
 	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.fleetCapacity(ctx)}, "tools": names, "capabilities": capabilities}

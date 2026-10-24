@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -37,6 +38,7 @@ func (m *Manager) PendingAttention() []Attention {
 	for _, event := range m.attentionEvents {
 		result = append(result, event)
 	}
+	sort.SliceStable(result, func(i, j int) bool { return result[i].Kind != "reminder" && result[j].Kind == "reminder" })
 	return result
 }
 func (m *Manager) AckAttention(event Attention) {
@@ -83,7 +85,9 @@ func (s *session) updateAttention(ctx context.Context, blockers []any) {
 		if b, ok := raw.(map[string]any); ok {
 			value := fmt.Sprint(b["kind"])
 			kinds = append(kinds, value)
-			if value == "captcha" {
+			if value == "scope" {
+				kind = "scope"
+			} else if value == "captcha" {
 				kind = "captcha"
 			} else if value == "verification_code" && kind != "captcha" {
 				kind = "otp"
@@ -93,6 +97,9 @@ func (s *session) updateAttention(ctx context.Context, blockers []any) {
 	fresh := s.cp.AttentionID == ""
 	s.cp.State = StateNeedsUser
 	s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Complete it in the task window; Remote Arc never solves CAPTCHAs and never reads their responses. Then use browser_runner_wait until=user_done. This does not authorize another submit."
+	if kind == "scope" {
+		s.cp.NeedsUser = "The task attempted to leave allowed_origins. Ask the user to review the exact sites in Dashboard Boundary requests; waiting does not expand scope. Resume with browser_runner_start only after approval."
+	}
 	if fresh {
 		s.cp.AttentionID, s.cp.AttentionSince, s.cp.AttentionKind = randomHex(16), stamp(s.m.now()), kind
 		s.cp.AttentionReminded = false
@@ -129,7 +136,7 @@ type blockerScan struct {
 
 // frameVisible checks the embedding element from its parent document. It does
 // not enter cross-origin CAPTCHA frames or mistake a hidden sign-in for a stop.
-func (s *session) frameVisible(ctx context.Context, f frameInfo) bool {
+func (s *session) frameVisibility(ctx context.Context, f frameInfo) (shown, known bool) {
 	parentSession := ""
 	if parent, ok := s.frameByID(f.parent); ok {
 		parentSession = parent.session
@@ -138,7 +145,7 @@ func (s *session) frameVisible(ctx context.Context, f frameInfo) bool {
 		BackendNodeID int `json:"backendNodeId"`
 	}
 	if s.conn.CallIn(ctx, parentSession, "DOM.getFrameOwner", map[string]any{"frameId": f.id}, &owner) != nil || owner.BackendNodeID == 0 {
-		return false
+		return false, false
 	}
 	var node struct {
 		Object struct {
@@ -146,16 +153,22 @@ func (s *session) frameVisible(ctx context.Context, f frameInfo) bool {
 		} `json:"object"`
 	}
 	if s.conn.CallIn(ctx, parentSession, "DOM.resolveNode", map[string]any{"backendNodeId": owner.BackendNodeID}, &node) != nil || node.Object.ObjectID == "" {
-		return false
+		return false, false
 	}
 	defer s.conn.FireIn(parentSession, "Runtime.releaseObject", map[string]any{"objectId": node.Object.ObjectID})
 	var result struct {
 		Result struct {
 			Value bool `json:"value"`
 		} `json:"result"`
+		ExceptionDetails json.RawMessage `json:"exceptionDetails"`
 	}
 	e := s.conn.CallIn(ctx, parentSession, "Runtime.callFunctionOn", map[string]any{"objectId": node.Object.ObjectID, "functionDeclaration": "function(){return (" + pageJS + ")('frame_visible',{element:this})}", "returnByValue": true}, &result)
-	return e == nil && result.Result.Value
+	return result.Result.Value, e == nil && len(result.ExceptionDetails) == 0
+}
+
+func (s *session) frameVisible(ctx context.Context, f frameInfo) bool {
+	shown, known := s.frameVisibility(ctx, f)
+	return known && shown
 }
 
 func (s *session) scanBlockers(ctx context.Context) (blockerScan, bool) {
@@ -172,7 +185,15 @@ func (s *session) scanBlockers(ctx context.Context) (blockerScan, bool) {
 	visible := map[string]bool{s.mainFrame: true}
 	complete := true
 	for _, f := range s.childFrames() {
-		if !s.scope.Allows(f.url) || !visible[f.parent] || !s.frameVisible(ctx, f) {
+		if !s.scope.Allows(f.url) || !visible[f.parent] {
+			continue
+		}
+		shown, known := s.frameVisibility(ctx, f)
+		if !known {
+			complete = false
+			continue
+		}
+		if !shown {
 			continue
 		}
 		visible[f.id] = true
@@ -185,6 +206,7 @@ func (s *session) scanBlockers(ctx context.Context) (blockerScan, bool) {
 		scan.Blockers = append(scan.Blockers, child.Blockers...)
 		scan.Busy, scan.HasFile = scan.Busy || child.Busy, scan.HasFile || child.HasFile
 	}
+
 	return scan, complete
 }
 
@@ -195,8 +217,8 @@ func (s *session) scanAfterAction(ctx context.Context) {
 	defer cancel()
 	for scanCtx.Err() == nil {
 		s.serviceView(scanCtx)
-		if scan, ok := s.scanBlockers(scanCtx); ok && len(scan.Blockers) > 0 {
-			s.updateAttention(ctx, scan.Blockers)
+		if scan, _ := s.scanBlockers(scanCtx); len(scan.Blockers) > 0 {
+			s.updateAttention(scanCtx, scan.Blockers)
 			return
 		}
 		if !waitTick(scanCtx, 500*time.Millisecond) {
@@ -204,6 +226,21 @@ func (s *session) scanAfterAction(ctx context.Context) {
 		}
 	}
 }
+
+// Wait tools may be queued behind an action. Acquiring the session itself
+// must respect the same deadline as scanning, rather than blocking the Relay.
+func lockSession(ctx context.Context, s *session) bool {
+	for ctx.Err() == nil {
+		if s.mu.TryLock() {
+			return true
+		}
+		if !waitTick(ctx, 25*time.Millisecond) {
+			return false
+		}
+	}
+	return false
+}
+
 func waitTick(ctx context.Context, duration time.Duration) bool {
 	timer := time.NewTimer(duration)
 	defer timer.Stop()
@@ -238,7 +275,7 @@ func (m *Manager) waitUntil(ctx context.Context, s *session, args map[string]any
 	waitCtx, cancel := context.WithTimeout(ctx, time.Duration(ms)*time.Millisecond)
 	defer cancel()
 	initialURL, initialMark := s.currentHref(), s.mark()
-	_, initialDOM, _ := s.domState(waitCtx, "")
+	_, initialDOM, initialDOMOK := s.domState(waitCtx, "")
 	clearScans := 0
 	idleSince := time.Now()
 	state, reason := "timeout", "Condition not met before the wait deadline."
@@ -247,17 +284,17 @@ func (m *Manager) waitUntil(ctx context.Context, s *session, args map[string]any
 		scanCtx, stopScan := context.WithTimeout(waitCtx, time.Second)
 		scan, scanned := s.scanBlockers(scanCtx)
 		stopScan()
-		if !scanned {
-			clearScans = 0
-		} else if len(scan.Blockers) > 0 {
+		if len(scan.Blockers) > 0 {
 			s.updateAttention(waitCtx, scan.Blockers)
 			clearScans = 0
 			if until != "user_done" {
 				state, reason = "needs_user", s.cp.NeedsUser
 				break
 			}
-		} else {
+		} else if scanned {
 			clearScans++
+		} else {
+			clearScans = 0
 		}
 		met := false
 		if scanned && len(scan.Blockers) == 0 {
@@ -267,7 +304,7 @@ func (m *Manager) waitUntil(ctx context.Context, s *session, args map[string]any
 			case "page_change":
 				mark := s.mark()
 				_, dom, ok := s.domState(waitCtx, "")
-				met = initialURL != s.currentHref() || mark.epoch != initialMark.epoch || mark.routes != initialMark.routes || (ok && dom != initialDOM)
+				met = initialURL != s.currentHref() || mark.epoch != initialMark.epoch || mark.routes != initialMark.routes || (initialDOMOK && ok && dom != initialDOM)
 			case "text":
 				met, _ = s.probeAll(waitCtx, text)
 			case "url_contains":

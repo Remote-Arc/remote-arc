@@ -1,1 +1,292 @@
-.runnerAttentionList{margin:12px 24px;position:relative;z-index:1}.runnerAttention{display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:12px;background:color-mix(in srgb,currentColor 3%,transparent)}.runnerAttention+.runnerAttention{margin-top:8px}.runnerAttentionDot{width:7px;height:7px;border-radius:50%;background:#d59b44;flex-shrink:0}.runnerAttentionCopy{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}.runnerAttentionCopy strong{font-size:14px;font-weight:550;overflow-wrap:anywhere}.runnerAttentionCopy>span{font-size:13px;opacity:.65}.runnerAttentionActions{display:flex;align-items:center;gap:18px;font-size:13px;flex-shrink:0}.runnerAttentionActions a{color:inherit;text-decoration:none}.runnerAttentionActions button,.runnerScreenEmpty button{color:inherit;background:color-mix(in srgb,currentColor 6%,transparent);border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:7px;padding:8px 12px;font:inherit;cursor:pointer}.runnerAttentionActions button:disabled{opacity:.5;cursor:wait}.runnerNotice{font-size:13px;line-height:1.5;opacity:.75;margin:10px 0}.runnerSetting{grid-column:1/-1;padding:8px 2px}.runnerSetting label{display:flex;gap:20px;align-items:center;justify-content:space-between;font-size:13px}.runnerSetting select{font:inherit;color:inherit;background:transparent;border:1px solid color-mix(in srgb,currentColor 16%,transparent);padding:7px 9px;border-radius:6px;max-width:55%}.runnerSetting option{color:CanvasText;background:Canvas}.runnerSetting small{color:#bd635b}.runnerView{max-width:1120px;padding:28px 32px 50px;margin:auto;color:var(--text,inherit)}.runnerViewHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:55px}.runnerBack{font-size:13px;color:inherit;text-decoration:none;opacity:.7}.runnerViewIntro>span{font-size:10px;letter-spacing:.12em;font-weight:600;opacity:.5}.runnerViewIntro h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.035em;line-height:1.2;font-weight:550;margin:12px 0}.runnerViewIntro p{font-size:14px;opacity:.65;line-height:1.6;margin:0 0 26px}.runnerView .runnerAttentionList{margin:0 0 18px}.runnerScreen{overflow:hidden;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:12px;background:color-mix(in srgb,currentColor 3%,transparent)}.runnerScreenBar{display:flex;justify-content:space-between;font-size:11px;opacity:.65;padding:12px 16px;border-bottom:1px solid color-mix(in srgb,currentColor 10%,transparent)}.runnerLive:before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#4bc99b;margin-right:6px}.runnerScreen img{display:block;width:100%;height:auto}.runnerScreenEmpty{min-height:360px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:30px;text-align:center;font-size:14px;opacity:.6}.runnerViewFootnote{font-size:11px;line-height:1.7;opacity:.45;margin:14px 0 24px}.runnerReceipts{font-size:12px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);padding-top:20px}.runnerReceipts summary{cursor:pointer;opacity:.6}.runnerReceipts ol{list-style:none;padding:8px 0}.runnerReceipts li{display:flex;justify-content:space-between;padding:7px 0}.runnerReceipts small{opacity:.5}.runnerSample{min-height:440px;display:grid;place-items:center;background:#fafaf8;color:#252525;padding:35px}.runnerSampleForm{max-width:420px;width:100%}.runnerSampleBrand{font-size:10px;letter-spacing:.12em;color:#7c7c7c}.runnerSampleForm h2{font-size:26px;letter-spacing:-.03em;font-weight:500;margin:35px 0 14px}.runnerSampleForm p{font-size:13px;color:#717171;line-height:1.7}.runnerSampleCheck{display:flex;align-items:center;gap:14px;border:1px solid #ddd;background:#fff;border-radius:7px;padding:24px;margin:24px 0;font-size:13px}.runnerSampleCheck>span{font-size:27px;color:#888}.runnerSampleForm small{font-size:11px;color:#969696}@media(max-width:640px){.runnerView{padding:20px 16px 32px}.runnerViewHeader{margin-bottom:36px}.runnerAttentionList{margin:10px 12px}.runnerAttention{flex-wrap:wrap;gap:10px;padding:14px}.runnerAttentionActions{width:100%;justify-content:flex-end;gap:16px}.runnerViewIntro p{font-size:13px}.runnerSample{min-height:330px;padding:26px}.runnerSampleForm h2{font-size:22px;margin-top:24px}.runnerScreenEmpty{min-height:260px}.runnerSetting label{align-items:flex-start}.runnerAttentionCopy>span{font-size:12px}}
+.runnerAttentionList {
+  margin: 12px 24px;
+  position: relative;
+  z-index: 1;
+}
+.runnerAttention {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 3%, transparent);
+}
+.runnerAttention + .runnerAttention {
+  margin-top: 8px;
+}
+.runnerAttentionDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d59b44;
+  flex-shrink: 0;
+}
+.runnerAttentionCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.runnerAttentionCopy strong {
+  font-size: 14px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.runnerAttentionCopy > span {
+  font-size: 13px;
+  opacity: 0.65;
+}
+.runnerAttentionActions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.runnerAttentionActions a {
+  color: inherit;
+  text-decoration: none;
+}
+.runnerAttentionActions button,
+.runnerScreenEmpty button {
+  color: inherit;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 7px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.runnerAttentionActions button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.runnerNotice {
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.75;
+  margin: 10px 0;
+}
+.runnerSetting {
+  grid-column: 1/-1;
+  padding: 8px 2px;
+}
+.runnerSetting label {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.runnerSetting select {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  padding: 7px 9px;
+  border-radius: 6px;
+  max-width: 55%;
+}
+.runnerSetting option {
+  color: CanvasText;
+  background: Canvas;
+}
+.runnerSetting small {
+  color: #bd635b;
+}
+.runnerView {
+  max-width: 1120px;
+  padding: 28px 32px 50px;
+  margin: auto;
+  color: var(--text, inherit);
+}
+.runnerViewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 55px;
+}
+.runnerBack {
+  font-size: 13px;
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.7;
+}
+.runnerViewIntro > span {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  opacity: 0.5;
+}
+.runnerViewIntro h1 {
+  font-size: clamp(26px, 4vw, 36px);
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  font-weight: 550;
+  margin: 12px 0;
+}
+.runnerViewIntro p {
+  font-size: 14px;
+  opacity: 0.65;
+  line-height: 1.6;
+  margin: 0 0 26px;
+}
+.runnerView .runnerAttentionList {
+  margin: 0 0 18px;
+}
+.runnerScreen {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, currentColor 3%, transparent);
+}
+.runnerScreenBar {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  opacity: 0.65;
+  padding: 12px 16px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+.runnerLive:before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4bc99b;
+  margin-right: 6px;
+}
+.runnerScreen img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.runnerScreenEmpty {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 30px;
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.6;
+}
+.runnerViewFootnote {
+  font-size: 11px;
+  line-height: 1.7;
+  opacity: 0.45;
+  margin: 14px 0 24px;
+}
+.runnerReceipts {
+  font-size: 12px;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  padding-top: 20px;
+}
+.runnerReceipts summary {
+  cursor: pointer;
+  opacity: 0.6;
+}
+.runnerReceipts ol {
+  list-style: none;
+  padding: 8px 0;
+}
+.runnerReceipts li {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 0;
+}
+.runnerReceipts small {
+  opacity: 0.5;
+}
+.runnerSample {
+  min-height: 440px;
+  display: grid;
+  place-items: center;
+  background: #fafaf8;
+  color: #252525;
+  padding: 35px;
+}
+.runnerSampleForm {
+  max-width: 420px;
+  width: 100%;
+}
+.runnerSampleBrand {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #7c7c7c;
+}
+.runnerSampleForm h2 {
+  font-size: 26px;
+  letter-spacing: -0.03em;
+  font-weight: 500;
+  margin: 35px 0 14px;
+}
+.runnerSampleForm p {
+  font-size: 13px;
+  color: #717171;
+  line-height: 1.7;
+}
+.runnerSampleCheck {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 7px;
+  padding: 24px;
+  margin: 24px 0;
+  font-size: 13px;
+}
+.runnerSampleCheck > span {
+  font-size: 27px;
+  color: #888;
+}
+.runnerSampleForm small {
+  font-size: 11px;
+  color: #969696;
+}
+@media (max-width: 640px) {
+  .runnerView {
+    padding: 20px 16px 32px;
+  }
+  .runnerViewHeader {
+    margin-bottom: 36px;
+  }
+  .runnerAttentionList {
+    margin: 10px 12px;
+  }
+  .runnerAttention {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px;
+  }
+  .runnerAttentionActions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+  .runnerViewIntro p {
+    font-size: 13px;
+  }
+  .runnerSample {
+    min-height: 330px;
+    padding: 26px;
+  }
+  .runnerSampleForm h2 {
+    font-size: 22px;
+    margin-top: 24px;
+  }
+  .runnerScreenEmpty {
+    min-height: 260px;
+  }
+  .runnerSetting label {
+    align-items: flex-start;
+  }
+  .runnerAttentionCopy > span {
+    font-size: 12px;
+  }
+}

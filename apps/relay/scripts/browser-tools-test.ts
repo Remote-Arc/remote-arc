@@ -314,3 +314,17 @@ for (const code of ["SUBMIT_KEY_USED", "SITE_NOT_ALLOWED", "EXTENSION_UPDATE_REQ
   assert.equal(classifyExpectedMcpError(new Error(`${code}: next step`))?.code, code);
 }
 console.log("PASS: shared_tab_open and shared_tab_act contract");
+
+// Wait reuses the existing read permission so old device opt-ins need no reset.
+const waitDefinition=browserRunnerDefinitionsForTest.browser_runner_wait;
+assert.equal(waitDefinition.scope,"browser:read");assert.equal(waitDefinition.annotations.readOnlyHint,true);
+assert(waitDefinition.input.safeParse({device_id:"d",session_id:"s",until:"user_done",timeout_ms:60000}).success,"large waits reach the Agent for clamping");
+assert(!waitDefinition.input.safeParse({device_id:"d",session_id:"s",until:"invalid"}).success);
+current=identity("browser:read");calls.length=0;
+await tools.get("browser_runner_wait")!.handler({device_id:"d",session_id:"s",until:"user_done",timeout_ms:40000});
+assert.deepEqual(calls.pop(),{tool:"browser_runner_wait",args:{session_id:"s",until:"user_done",timeout_ms:40000}});
+device=row("linux",["browser_runner_snapshot"]);
+assert.deepEqual(await callDevice(env,owner,"dev","browser_runner_wait",{session_id:"s",until:"user_done"}),{ok:true});
+device=row("linux",["read_file"]);
+await assert.rejects(callDevice(env,owner,"dev","browser_runner_wait",{session_id:"s",until:"user_done"}),/disabled/);
+console.log("PASS: Browser Runner wait read scope, legacy opt-in and timeout contract");

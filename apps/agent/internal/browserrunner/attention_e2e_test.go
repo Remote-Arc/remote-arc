@@ -1,9 +1,13 @@
 package browserrunner
 
 import (
+	"context"
 	"fmt"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -121,5 +125,137 @@ func TestWaitLimitCapsWithoutRejecting(t *testing.T) {
 	}
 	if _, _, e := waitLimit(map[string]any{"timeout_ms": 999}); e == nil {
 		t.Fatal("invalid lower bound")
+	}
+}
+
+func TestE2EWaitConditionsAndLiveView(t *testing.T) {
+	h, _, _, _ := newHarness(t)
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		if r.URL.Path == "/ping" {
+			time.Sleep(200 * time.Millisecond)
+			fmt.Fprint(w, "ok")
+			return
+		}
+		fmt.Fprint(w, `<h1>Application</h1><input type="file" id="file" aria-label="Resume"><div id="progress" role="progressbar" style="width:100px;height:8px">Processing</div><p id="result"></p>`)
+	}))
+	defer site.Close()
+	h.call("browser_runner_start", map[string]any{"task_id": "conditions", "allowed_origins": []any{site.URL}, "start_url": site.URL})
+	s, _ := h.m.get("conditions")
+	evaluate := func(js string) {
+		t.Helper()
+		if _, e := s.evaluateMain(h.ctx, js); e != nil {
+			t.Fatal(e)
+		}
+	}
+	waiting := func(until string, args map[string]any) map[string]any {
+		return h.call("browser_runner_wait", merge(map[string]any{"session_id": "conditions", "until": until, "timeout_ms": 3000}, args))
+	}
+	evaluate(`setTimeout(()=>document.getElementById('result').textContent='Application ready',200)`)
+	if r := waiting("text", map[string]any{"text": "Application ready"}); r["state"] != "met" {
+		t.Fatal(r)
+	}
+	if r := waiting("text", map[string]any{"text": "Application ready", "timeout_ms": 60000}); r["state"] != "met" || r["note"] == nil {
+		t.Fatal("large wait must be capped with a note", r)
+	}
+	evaluate(`setTimeout(()=>history.pushState({},'',location.pathname+'?stage=ready'),200)`)
+	if r := waiting("url_contains", map[string]any{"url_contains": "stage=ready"}); r["state"] != "met" {
+		t.Fatal(r)
+	}
+	evaluate(`setTimeout(()=>document.getElementById('result').textContent='Changed',200)`)
+	if r := waiting("page_change", nil); r["state"] != "met" {
+		t.Fatal(r)
+	}
+	if r := waiting("upload_done", map[string]any{"timeout_ms": 1000}); r["state"] != "timeout" {
+		t.Fatal("empty file cannot be done", r)
+	}
+	file := filepath.Join(h.policy.WorkspaceRoots[0], "resume.txt")
+	if e := os.WriteFile(file, []byte("synthetic resume"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	var doc struct {
+		Root struct {
+			NodeID int `json:"nodeId"`
+		} `json:"root"`
+	}
+	if e := s.conn.Call(h.ctx, "DOM.getDocument", nil, &doc); e != nil {
+		t.Fatal(e)
+	}
+	var node struct {
+		NodeID int `json:"nodeId"`
+	}
+	if e := s.conn.Call(h.ctx, "DOM.querySelector", map[string]any{"nodeId": doc.Root.NodeID, "selector": "#file"}, &node); e != nil {
+		t.Fatal(e)
+	}
+	if e := s.conn.Call(h.ctx, "DOM.setFileInputFiles", map[string]any{"nodeId": node.NodeID, "files": []string{file}}, nil); e != nil {
+		t.Fatal(e)
+	}
+	evaluate(`setTimeout(()=>document.getElementById('progress').remove(),700)`)
+	if r := waiting("upload_done", nil); r["state"] != "met" || r["waited_ms"].(float64) < 500 {
+		t.Fatal("processing was not awaited", r)
+	}
+	evaluate(`fetch('/ping')`)
+	if r := waiting("idle", nil); r["state"] != "met" || r["waited_ms"].(float64) < 1000 {
+		t.Fatal(r)
+	}
+	h.fail("browser_runner_wait", map[string]any{"session_id": "conditions", "until": "text"}, "required")
+	h.fail("browser_runner_wait", map[string]any{"session_id": "conditions", "until": "invalid"}, "until must")
+	if r := waiting("text", map[string]any{"text": "missing", "timeout_ms": 1000}); r["state"] != "timeout" {
+		t.Fatal(r)
+	}
+	// Screen capture starts only after a Dashboard viewer heartbeat, without
+	// reading a snapshot or exposing an AI tool. A stale heartbeat stops it.
+	h.m.ViewHeartbeat("conditions", true)
+	h.m.serviceViews()
+	evaluate(`document.body.style.background='rgb(42,55,88)'`)
+	select {
+	case frame := <-h.m.Frames():
+		if frame.SessionID != "conditions" || frame.Type != "runner_frame" || len(frame.Data) == 0 || len(frame.Data) > maxFrameBytes*4/3 {
+			t.Fatal("bad frame", frame.Type, len(frame.Data))
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("live view produced no frame")
+	}
+	s.ev.Lock()
+	s.viewUntil = time.Now().Add(-time.Second)
+	s.ev.Unlock()
+	h.m.serviceViews()
+	s.ev.Lock()
+	active := s.viewActive
+	s.ev.Unlock()
+	if active {
+		t.Fatal("stale watcher retained capture")
+	}
+	// On a real restart this page is reopened; field/upload loss must be reported.
+	s.cp.receipt(h.m.now(), Receipt{Tool: "browser_runner_act", Action: "fill", Label: "Full name", URL: safeURL(s.currentHref()), Outcome: "ok"})
+	s.cp.receipt(h.m.now(), Receipt{Tool: "browser_runner_act", Action: "upload", Label: "Resume", URL: safeURL(s.currentHref()), Outcome: "ok"})
+	s.cp.Uploads = append(s.cp.Uploads, Upload{Field: "Resume", File: "resume.txt", Status: "attached", At: stamp(h.m.now())})
+	s.cp.State = StateNeedsUser
+	s.cp.NeedsUser = "synthetic sign-in"
+	s.shutdownBrowser(true)
+	if e := s.flush(); e != nil {
+		t.Fatal(e)
+	}
+	if e := s.ensureLive(h.ctx); e != nil {
+		t.Fatal(e)
+	}
+	if s.cp.Reentry == nil || len(s.cp.Reentry.Fields) < 2 {
+		t.Fatal("lost fields/uploads not reported after restart", s.cp.Reentry)
+	}
+}
+
+func TestWaitDeadlineIncludesQueuedSession(t *testing.T) {
+	m := New()
+	defer m.Close()
+	s := &session{m: m, cp: &Checkpoint{SessionID: "busy", State: StateActive}}
+	m.sessions["busy"] = s
+	s.mu.Lock()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+	started := time.Now()
+	result, e := m.Call(ctx, "browser_runner_wait", map[string]any{"session_id": "busy", "until": "user_done"}, protocol.Policy{})
+	s.mu.Unlock()
+	if e != nil || result.(map[string]any)["state"] != "timeout" || time.Since(started) > 500*time.Millisecond {
+		t.Fatal("queued wait ignored deadline", result, e)
 	}
 }

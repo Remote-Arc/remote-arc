@@ -240,10 +240,10 @@ export async function callDevice(
     }
   }
 
-  if (isBrowserRunnerTool(tool)) {
+  if (isBrowserRunnerTool(tool) && identity.clientId !== "dashboard") {
     const sessionId = tool === "browser_runner_start" ? args.task_id : args.session_id;
     if (typeof sessionId === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(sessionId)) {
-      await env.DB.prepare("INSERT INTO runner_session_links(user_id,device_id,session_id,run_id) VALUES(?1,?2,?3,?4) ON CONFLICT(user_id,device_id,session_id) DO UPDATE SET run_id=COALESCE(excluded.run_id,runner_session_links.run_id)")
+      await env.DB.prepare("INSERT INTO runner_session_links(user_id,device_id,session_id,run_id) VALUES(?1,?2,?3,?4) ON CONFLICT(user_id,device_id,session_id) DO UPDATE SET run_id=excluded.run_id")
         .bind(identity.userId,deviceId,sessionId,runnerRunId || null).run();
     }
   }

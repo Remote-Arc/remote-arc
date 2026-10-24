@@ -213,44 +213,61 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 	if s.hasWindow() {
 		_, beforeView, _ = s.window(h.ctx)
 	}
-	h.m.ViewHeartbeat("conditions", true)
-	h.m.serviceViews()
-	evaluate(`document.body.style.background='rgb(42,55,88)'`)
-	// A nonempty JPEG alone could be a stale/blank surface. Require an updated
-	// fixture pixel as well, proving a minimized window continues to render.
-	deadline := time.NewTimer(10 * time.Second)
-	defer deadline.Stop()
-frameLoop:
-	for {
-		select {
-		case frame := <-h.m.Frames():
-			if frame.SessionID != "conditions" || frame.Type != "runner_frame" || len(frame.Data) == 0 || len(frame.Data) > maxFrameBytes*4/3 {
-				t.Fatal("bad frame", frame.Type, len(frame.Data))
+	near := func(actual uint32, want int) bool {
+		return int(actual>>8) >= want-10 && int(actual>>8) <= want+10
+	}
+	updatedFrame := func(red, green, blue int) {
+		t.Helper()
+		// A nonempty JPEG alone could be a stale/blank surface. Require an updated
+		// fixture pixel as well, proving a minimized window continues to render.
+		deadline := time.NewTimer(10 * time.Second)
+		defer deadline.Stop()
+	frameLoop:
+		for {
+			select {
+			case frame := <-h.m.Frames():
+				if frame.SessionID != "conditions" || frame.Type != "runner_frame" || len(frame.Data) == 0 || len(frame.Data) > maxFrameBytes*4/3 {
+					t.Fatal("bad frame", frame.Type, len(frame.Data))
+				}
+				raw, err := base64.StdEncoding.DecodeString(frame.Data)
+				if err != nil {
+					t.Fatal("invalid frame encoding")
+				}
+				img, err := jpeg.Decode(bytes.NewReader(raw))
+				if err != nil {
+					t.Fatal("invalid frame JPEG")
+				}
+				bounds := img.Bounds()
+				r, g, b, _ := img.At(bounds.Max.X-10, bounds.Max.Y-10).RGBA()
+				if near(r, red) && near(g, green) && near(b, blue) {
+					break frameLoop
+				}
+			case <-deadline.C:
+				s.ev.Lock()
+				active, viewError, pending := s.viewActive, s.viewError, s.viewCaptureCancel != nil
+				s.ev.Unlock()
+				visibility, _ := s.evaluateMain(h.ctx, `JSON.stringify({visibility:document.visibilityState,focus:document.hasFocus(),width:innerWidth,height:innerHeight,dpr:devicePixelRatio})`)
+				var version struct {
+					Product string `json:"product"`
+				}
+				_ = s.conn.Call(h.ctx, "Browser.getVersion", nil, &version)
+				t.Fatalf("live view produced no updated frame (active=%v, pending_capture=%v, error=%q, browser=%s, window=%+v, renderer=%s)", active, pending, viewError, version.Product, beforeView, visibility)
 			}
-			raw, err := base64.StdEncoding.DecodeString(frame.Data)
-			if err != nil {
-				t.Fatal("invalid frame encoding")
-			}
-			img, err := jpeg.Decode(bytes.NewReader(raw))
-			if err != nil {
-				t.Fatal("invalid frame JPEG")
-			}
-			bounds := img.Bounds()
-			r, g, b, _ := img.At(bounds.Max.X-10, bounds.Max.Y-10).RGBA()
-			if r>>8 >= 32 && r>>8 <= 52 && g>>8 >= 45 && g>>8 <= 65 && b>>8 >= 78 && b>>8 <= 98 {
-				break frameLoop
-			}
-		case <-deadline.C:
-			s.ev.Lock()
-			active, viewError, pending := s.viewActive, s.viewError, s.viewCaptureCancel != nil
-			s.ev.Unlock()
-			visibility, _ := s.evaluateMain(h.ctx, `JSON.stringify({visibility:document.visibilityState,focus:document.hasFocus(),width:innerWidth,height:innerHeight,dpr:devicePixelRatio})`)
-			var version struct {
-				Product string `json:"product"`
-			}
-			_ = s.conn.Call(h.ctx, "Browser.getVersion", nil, &version)
-			t.Fatalf("live view produced no updated frame (active=%v, pending_capture=%v, error=%q, browser=%s, window=%+v, renderer=%s)", active, pending, viewError, version.Product, beforeView, visibility)
 		}
+	}
+	for pass, rgb := range [][3]int{{42, 55, 88}, {88, 55, 42}} {
+		if pass > 0 {
+			// Reopening the viewer must also recover fresh rendering while the
+			// same native window remains minimized, without reloading the page.
+			h.m.ViewHeartbeat("conditions", false)
+			s.mu.Lock()
+			s.serviceView(h.ctx)
+			s.mu.Unlock()
+		}
+		h.m.ViewHeartbeat("conditions", true)
+		h.m.serviceViews()
+		evaluate(fmt.Sprintf("document.body.style.background='rgb(%d,%d,%d)'", rgb[0], rgb[1], rgb[2]))
+		updatedFrame(rgb[0], rgb[1], rgb[2])
 	}
 
 	if s.hasWindow() {

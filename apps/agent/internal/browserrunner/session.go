@@ -364,15 +364,18 @@ func (s *session) ensureLive(ctx context.Context) error {
 	if s.cp.recover(s.m.now()) {
 		s.cp.receipt(s.m.now(), Receipt{Tool: "browser_runner_start", Outcome: "recovered", Detail: "an in-flight submit was interrupted; its effect is now unknown"})
 	}
-	// Task windows never take the user's focus; pages that check focus
-	// still behave as in a focused window.
-	_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
 	if s.hasWindow() {
 		// Out of sight unless the user asked to see it. A browser that
 		// restored an old window position is moved back off screen too.
 		// Best effort: where the window cannot be moved, the task still runs.
 		_ = s.setVisible(ctx, !s.cp.Headless)
 	}
+	// Task windows never take the user's focus; pages that check focus still
+	// behave as in a focused window. Apply this after the native hide, so
+	// Chromium acquires its keep-visible capturer after macOS minimizes the
+	// window and suspends the compositor. Live viewing then needs no emulation
+	// changes and keeps the native window hidden.
+	_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
 		// Reopening loads the page fresh: whatever was typed, chosen or
 		// attached there before the restart is gone. Say so instead of

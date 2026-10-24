@@ -71,6 +71,13 @@ func (s *session) serviceView(ctx context.Context) {
 		return
 	}
 	if wanted && !active {
+		// Native minimize/occlusion callbacks on macOS can suspend the compositor
+		// even while focus emulation still reports a visible document. Reacquire
+		// Chromium's keep-visible capturer after hiding, before requesting frames.
+		// Repeating true alone is a no-op in Chromium; this does not focus, move
+		// or resize the native window and leaves the existing viewport intact.
+		_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": false}, nil)
+		_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
 		s.ev.Lock()
 		s.viewConn = s.conn
 		s.viewActive = true

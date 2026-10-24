@@ -8,10 +8,10 @@ export function LongRunningWorkDocs() {
     <main className="technicalDoc productDocs">
       <header className="articleHeader">
         <span className="eyebrow">{tr("DOCUMENTATION · DURABLE TASKS", "文档 · 持久任务")}</span>
-        <h1>{tr("Long commands, schedules and event-driven work", "长命令、定时任务与事件驱动工作")}</h1>
+        <h1>{tr("Tasks, routines and long-running work", "Task、Routine 与持续工作")}</h1>
         <p>{tr(
-          "Remote Arc can keep approved deterministic work durable after the chat turn ends. It can track a long process, run a saved command later or repeatedly, and react to a configured event. It does not currently claim that ordinary Chat keeps making new AI decisions after the chat has ended.",
-          "聊天轮次结束后，Remote Arc 可以继续保存并执行已授权的确定性工作：跟踪长进程、稍后或周期执行保存的命令，以及响应已配置事件。目前不声称普通 Chat 结束后 AI 还能自动继续做新的判断。",
+          "Arc Tasks and Routines run bounded hosted AI work using saved instructions, even when the chat tab is closed. Connect Tasks separately persist approved commands, schedules and event conditions. Choose the mode that matches whether the work needs fresh AI judgment or a fixed execution contract.",
+          "Arc Task 与 Routine 按保存的指令执行有界的托管 AI 工作，无需一直打开聊天标签页。Connect Task 则持久保存已授权的命令、定时与事件条件。根据工作是否需要新的 AI 判断，选择托管工作或固定执行契约。",
         )}</p>
         <div className="articleMetaLinks">
           <a href="/docs">{tr("All documentation", "全部文档")} →</a>
@@ -33,19 +33,19 @@ export function LongRunningWorkDocs() {
         </aside>
         <article className="technicalArticle">
           <section id="work-boundary">
-            <h2>{tr("Durable execution is not durable AI reasoning", "持久执行不等于持久 AI 推理")}</h2>
+            <h2>{tr("Choose Arc or Connect for saved work", "选择 Arc 或 Connect 保存工作")}</h2>
             <p>{tr(
               "A chat can authorize and save work that is already concrete: a command, working directory, schedule, event condition, retry bound and verification command. Remote Arc persists that contract and its run state independently of the original chat.",
               "聊天可以授权并保存已经明确的工作：命令、工作目录、时间计划、事件条件、重试边界和验收命令。Remote Arc 独立于原聊天持久保存这份任务契约和运行状态。",
             )}</p>
             <p>{tr(
-              "If a new observation requires a genuinely new strategy, Remote Arc currently stops at that reasoning boundary. Ordinary Chat has no supported code-level wake primitive that lets Remote Arc start a fresh turn in the same conversation. We do not hide that gap behind a hosted model or browser automation.",
-              "如果新的观察结果需要真正的新策略，Remote Arc 当前会停在这个推理边界。普通 Chat 目前没有受支持的代码级唤醒能力，让 Remote Arc 能在同一对话里主动启动新一轮。我们不会用托管模型或浏览器自动化悄悄掩盖这个缺口。",
+              "Arc starts a bounded hosted model run for a saved Task or Routine, subject to Credits, time and step limits. Connect can continue a known execution contract after an external chat turn ends, but cannot guarantee that the external AI client will start a fresh reasoning turn. A new strategy needs an active compatible host or a separately configured goal continuation contract.",
+              "Arc 为保存的 Task 或 Routine 启动有界托管模型运行，遵循 Credits、时间与步数限制。Connect 可以在外部聊天轮次结束后继续已有执行契约，但不保证外部 AI 客户端主动开始新一轮推理。新策略仍需兼容且可用的宿主，或单独配置目标续跑契约。",
             )}</p>
           </section>
 
           <section id="work-modes">
-            <h2>{tr("Production task modes", "当前生产任务模式")}</h2>
+            <h2>{tr("Connect task modes", "Connect 任务模式")}</h2>
             <div className="tableScroll"><table><thead><tr><th>{tr("Mode", "模式")}</th><th>{tr("What persists", "持久内容")}</th></tr></thead><tbody>
               <tr><td>{tr("Long task", "长任务")}</td><td>{tr("Start and track one approved command after the creating chat turn ends.", "聊天结束后启动并跟踪一个已批准命令。")}</td></tr>
               <tr><td>{tr("Scheduled task", "定时任务")}</td><td>{tr("Run approved deterministic work at a future time or completion-based interval.", "在未来时间或按完成间隔执行已批准的确定性工作。")}</td></tr>
@@ -61,8 +61,8 @@ export function LongRunningWorkDocs() {
               "确定性 Task 可以在不持续占用模型推理的情况下等待进程和事件。但如果测试失败需要重新诊断、仓库出现意外状态，或需要在新策略之间做选择，就必须由可用的 AI 宿主或用户重新接手。",
             )}</p>
             <p>{tr(
-              "Experimental source-goal and provider work remains in development branches and is not part of the production website or normal Remote Arc tool contract.",
-              "Source Goal 与模型 Provider 相关实验仍保留在开发分支，不属于生产官网或 Remote Arc 的正常工具契约。",
+              "Experimental source-goal and hosted-goal tools appear only where those capabilities are enabled. They use explicit continuation contracts and still require an available reasoning host. Arc Tasks and Routines use a separate bounded hosted runtime.",
+              "Source Goal 与托管目标工具只在相应实验能力开启时提供，使用明确的续跑契约，仍需可用推理宿主。Arc Task 与 Routine 则使用独立的有界托管运行时。",
             )}</p>
           </section>
 

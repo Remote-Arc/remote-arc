@@ -1,3 +1,5 @@
+import toolIndex from "../../../packages/docs/src/tool-index.generated.json" with {type:"json"};
+import {TOOL_GROUPS} from "../../../packages/docs/src/tool-reference-meta.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import React from "react";
 import { useI18n } from "./i18n.js";
@@ -8,26 +10,14 @@ import "./public-docs.css";
 const endpoint = "https://mcp.remotearc.app/mcp";
 const engineering = "https://github.com/Remote-Arc/remote-arc/blob/master/docs/";
 
-export const publicToolGroups = [
-  { en: "Device discovery", zh: "设备发现", scope: "devices:read", tools: ["list_devices", "device_tools"] },
-  { en: "Read files and processes", zh: "文件与进程读取", scope: "computer:read", tools: ["list_directory", "read_file", "read_binary_file", "create_file_resource", "revoke_file_resource", "get_file_info", "list_processes"] },
-  { en: "Edit files and run commands", zh: "编辑文件与执行命令", scope: "computer:write", tools: ["write_file", "edit_block", "undo_last_change", "start_process", "process_status", "process_output", "stop_process"] },
-  { en: "Browser tabs you share or allow", zh: "你共享或允许的浏览器标签页", scope: "browser:read", tools: ["shared_tab_list", "shared_tab_read"] },
-  { en: "Acting in your browser (extension)", zh: "在你的浏览器里操作（扩展）", scope: "browser:interact", tools: ["shared_tab_open", "shared_tab_act", "shared_tab_click", "shared_tab_fill"] },
-  { en: "Task browser snapshots and checkpoints (Beta)", zh: "任务浏览器快照与检查点（Beta）", scope: "browser:read", tools: ["browser_runner_snapshot", "browser_runner_status"] },
-  { en: "Task browser actions (Beta, enable per computer)", zh: "任务浏览器操作（Beta，按电脑开启）", scope: "browser:interact", tools: ["browser_runner_start", "browser_runner_act", "browser_runner_confirm", "browser_runner_close"] },
-  { en: "Read durable tasks", zh: "读取持久任务", scope: "automation:read", tools: ["list_automations", "get_automation"] },
-  { en: "Create and manage durable tasks", zh: "创建与管理持久任务", scope: "automation:write", tools: ["create_automation", "manage_automation"] },
-  { en: "Connected app discovery", zh: "发现已连接的应用", scope: "apps:read", tools: ["list_apps"] },
-  { en: "Connected app actions", zh: "使用已连接的应用", scope: "apps:read; apps:write for write actions", tools: ["call_app"] },
-] as const;
-const toolCount = publicToolGroups.reduce((count, group) => count + group.tools.length, 0);
+export const publicToolGroups = Object.entries(TOOL_GROUPS).map(([id,copy])=>({...copy,scope:[...new Set(toolIndex.remote.filter(tool=>tool.group===id).flatMap(tool=>tool.scopes))].join(" · "),tools:toolIndex.remote.filter(tool=>tool.group===id).map(tool=>tool.name)})).filter(group=>group.tools.length);
+const toolCount=toolIndex.remote.length;
 
 export function TaskAvailability() {
   const { tr } = useI18n();
   return <aside className="docsAvailability">
     <strong>{tr("About availability", "关于可用状态")}</strong>
-    <p>{tr("Durable Tasks require Plus, the matching local agent and enabled device permissions. They persist approved deterministic work such as long commands, schedules and condition watches. They do not keep ordinary Chat reasoning alive after the chat ends; fresh judgment still needs an active supported AI host. A UI preview does not execute tasks.", "持久 Task 需要 Plus、匹配的本地 Agent 和已开启的设备权限。它们持久执行长命令、定时任务和条件监听等已授权确定性工作，但不会在普通 Chat 结束后继续维持 AI 推理；新的判断仍需要可用且受支持的 AI 宿主。界面预览不会执行任务。")}</p>
+    <p>{tr("Arc Tasks and Routines run bounded hosted AI work using your trial or paid Arc Credits, even when its chat tab is closed. Connect Tasks save approved deterministic commands, schedules and condition watches; new AI decisions still need a compatible active host. Computer work requires the appropriate plan, an online Agent and device permissions; cloud App work does not need a paired computer. A UI preview uses simulated data.","Arc Task 与 Routine 使用试用或付费 Arc Credits 执行有界的托管 AI 工作，无需一直打开聊天标签页。Connect Task 保存已授权的确定性命令、定时与条件监听；新的 AI 决策仍需兼容且可用的宿主。电脑工作还需匹配套餐、在线 Agent 和设备权限；云端应用工作无需配对电脑。界面预览使用模拟数据。")}</p>
   </aside>;
 }
 
@@ -36,14 +26,15 @@ function Code({ children }: { children: string }) {
 }
 
 function ToolReference() {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   return <>
     <p>{tr(`The groups below cover ${toolCount} MCP tools for devices, saved work and connected apps. Your client shows the tools enabled for your account. Computer tools also depend on the selected device's permissions and installed Agent. process_status and process_output require computer:write. Apps use list_apps to discover account-specific actions, then call_app to execute them; they do not require a paired computer.`, `下列分组包含 ${toolCount} 个 MCP 工具，覆盖设备、已保存工作和连接的应用。客户端显示当前账号已开放的工具。电脑工具还取决于目标设备权限与已安装 Agent；process_status 和 process_output 需要 computer:write。Apps 通过 list_apps 发现账号可用操作，再通过 call_app 执行，无需配对电脑。`)}</p>
-    <p>{tr("Available tools depend on your plan as well as your authorization and device settings. Free includes core remote-computer tools with a finite call allowance. Plus also includes binary reads, temporary file links tied to a file version, durable Tasks, schedules, condition watches and supported keep-awake. Check Settings → Billing for your current allowance.", "可用工具取决于套餐、账号授权和设备设置。Free 包含有调用额度上限的核心远程电脑工具；Plus 还支持二进制读取、绑定文件版本的临时文件链接、持久 Task、定时任务、条件监听和受支持的保持唤醒。在设置 → 账单查看当前额度。")}</p>
+    <p>{tr("Available tools depend on your plan as well as your authorization and device settings. Free includes core remote-computer tools with a finite call allowance. Plus also includes binary reads, temporary file links tied to a file version, durable Tasks, schedules, condition watches and supported keep-awake. Check Settings → Plan & usage for your current allowance.", "可用工具取决于套餐、账号授权和设备设置。Free 包含有调用额度上限的核心远程电脑工具；Plus 还支持二进制读取、绑定文件版本的临时文件链接、持久 Task、定时任务、条件监听和受支持的保持唤醒。在设置 → 套餐与用量查看当前额度。")}</p>
+    <p><a href={localizedWebsiteHref("/docs/tools",locale)}>{tr("Search all tools, App operations and parameters","搜索全部工具、Apps 操作与参数")} →</a></p>
     <div className="toolReferenceList">{publicToolGroups.map(group => <div key={group.en}>
-      <h3>{tr(group.en, group.zh)}</h3><code>{group.tools.join(" · ")}</code><p>{tr("Required OAuth scope: ", "所需 OAuth Scope：")}{group.scope}</p>
+      <h3>{tr(group.en, group.zh)}</h3><code>{group.tools.join(" · ")}</code><p>{tr("Scopes used in this group: ", "本组使用的 OAuth Scope：")}{group.scope}</p>
     </div>)}</div>
-    <p>{tr("Background-service controls, directory pickers and power leases are internal device/Dashboard helpers. MCP event methods are protocol extensions, not additional tools.", "后台服务控制、目录选择器和保持唤醒租约是设备或 Dashboard 内部辅助能力。MCP 事件方法属于协议扩展，不计入工具数量。")}</p>
+    <p>{tr("Background-service controls and power leases are internal device/Dashboard helpers; local MCP additionally exposes directory browsing, Undo lists and managed-process lists. MCP event methods are protocol extensions, not additional tools.", "后台服务控制与保持唤醒租约是设备或 Dashboard 内部辅助能力；本地 MCP 另外提供目录浏览、Undo 列表与受管进程列表。MCP 事件方法属于协议扩展，不计入工具数量。")}</p>
   </>;
 }
 
@@ -152,14 +143,14 @@ export function Documentation({ sectionIds, title, description }: { sectionIds?:
         </section>
         <section id="docs-continuation">
           <h2>{tr("Fresh AI judgment has a hard boundary", "新的 AI 判断有明确边界")}</h2>
-          <p>{tr("Remote Arc can keep deterministic commands and waits durable without a model thinking continuously. If a new result requires diagnosis, strategy selection or another genuinely new decision, an active supported AI host must resume the work.", "Remote Arc 可以在模型不持续推理时持久执行确定性命令与等待。如果新结果需要诊断、策略选择或其他真正的新判断，就必须由可用且受支持的 AI 宿主重新接手。")}</p>
-          <p>{tr("Ordinary Chat currently has no supported code-level primitive that lets Remote Arc wake the same conversation and start a new turn. Experimental source-goal work remains in development and is not part of the production tool contract.", "普通 Chat 目前没有受支持的代码级能力，让 Remote Arc 主动唤醒同一对话并开始新一轮。Source Goal 等实验仍留在开发阶段，不属于生产工具契约。")}</p>
+          <p>{tr("Connect keeps deterministic commands and waits durable without continuous model inference. A new diagnosis or strategy needs an active compatible host. Arc Tasks and Routines separately start bounded hosted model runs using saved instructions and account Credits.", "Connect 可以在模型不持续推理时持久执行确定性命令与等待。新的诊断或策略需要可用且兼容的宿主；Arc Task 与 Routine 则按保存的指令启动有界托管模型运行，使用账号 Credits。")}</p>
+          <p>{tr("Connect cannot promise to wake the same external chat for a new reasoning turn. Experimental source-goal and hosted-goal tools appear only when enabled and use explicit continuation contracts; they do not provide unlimited reasoning or override permissions and budgets.", "Connect 不保证能唤醒同一外部聊天并开始新推理。实验性源目标与托管目标工具仅在开启时提供，使用明确的续跑契约，不提供无限推理，也不会绕过权限或预算。")}</p>
           <a href={localizedWebsiteHref("/docs/long-running-work", locale)}>{tr("Durable-task boundaries", "持久任务边界")} →</a>
         </section>
         <section id="docs-schedule">
           <h2>{tr("Future starts, recurring work and keeping the computer awake", "未来启动、周期工作与电脑保持唤醒")}</h2>
-          <p>{tr("Durable deterministic Tasks support a future ISO timestamp or interval schedule. Recurring runs of the same task do not overlap, and the next interval starts from the previous run's completion. Calendar cron, timezone/DST handling and missed-run backfill are not implemented.", "持久确定性 Task 支持未来 ISO 时间或间隔调度。同一任务不重叠运行，下一次间隔从上轮完成开始计算；当前未实现日历 Cron、时区与夏令时处理或错过运行补跑。")}</p>
-          <p>{tr("The 0.4.4 candidate separates process recovery from Relay reconnect. Normal launches keep the terminal open. macOS launchd/Linux systemd supervise a daemon; Windows login starts a hidden supervisor that restarts its Agent. One Agent executes while other terminals show its operation log. Recovery off preserves execution; Stop background Agent is separate. Windows needs its supervisor to remain running. Sleep and power loss still make the computer unavailable. Update all running instances to use the execution lease.", "0.4.4 候选版本将进程恢复与 Relay 重连分开。正常启动保留终端。macOS launchd/Linux systemd 守护 Agent；Windows 登录启动隐藏守护并在 Agent 结束后重启。仅一个 Agent 执行，其他终端显示操作日志。关闭恢复保留执行，停止后台 Agent 是独立操作。Windows 守护本身需要保持运行。睡眠和断电仍会让设备不可用；所有运行实例都需更新才会遵守执行锁。")}</p>
+          <p>{tr("Durable deterministic Tasks support a future ISO timestamp or interval schedule. Recurring runs of the same task do not overlap, and the next interval starts from the previous run's completion. These Connect contracts do not add calendar cron or missed-run backfill. Arc Routines separately support local-time schedules with IANA timezones and DST handling.", "持久确定性 Task 支持未来 ISO 时间或间隔调度。同一任务不重叠运行，下一次间隔从上轮完成开始计算；这些 Connect 契约不提供日历 Cron 或错过运行补跑；Arc Routine 另行支持本地时间、IANA 时区与夏令时处理。")}</p>
+          <p>{tr("The current native Agent separates process recovery from Relay reconnect. Normal launches keep the terminal open. macOS launchd/Linux systemd supervise a daemon; Windows login starts a hidden supervisor that restarts its Agent. One Agent executes while other terminals show its operation log. Recovery off preserves execution; Stop background Agent is separate. Windows needs its supervisor to remain running. Sleep and power loss still make the computer unavailable. Update all running instances to use the execution lease.", "当前原生 Agent 将进程恢复与 Relay 重连分开。正常启动保留终端。macOS launchd/Linux systemd 守护 Agent；Windows 登录启动隐藏守护并在 Agent 结束后重启。仅一个 Agent 执行，其他终端显示操作日志。关闭恢复保留执行，停止后台 Agent 是独立操作。Windows 守护本身需要保持运行。睡眠和断电仍会让设备不可用；所有运行实例都需更新才会遵守执行锁。")}</p>
           <p>{tr("Task keep-awake requires both device permission and keep_awake=true on that task, plus a compatible local agent. Active tasks renew short-lived OS power requests; completion, cancellation, pause or lease expiry releases them. This does not power on a shut-down computer, defeat forced sleep or permanently change power settings. Future tasks need an available computer when they start.", "任务保持唤醒同时要求设备授权、任务设置 keep_awake=true 和兼容的本地 Agent。活动任务续租短期 OS 电源请求，完成、取消、暂停或租约到期后释放。它不能启动已关机电脑、阻止强制休眠或永久修改电源设置；未来任务开始时电脑需要可用。")}</p>
         </section>
         <section id="docs-browser">
@@ -180,6 +171,7 @@ export function Documentation({ sectionIds, title, description }: { sectionIds?:
           <p>{tr("Active file contents, tool arguments and command output pass through the hosted relay and your chosen AI client. Transport uses HTTPS/WSS; this is not zero-knowledge end-to-end encryption. Operational audit records retain metadata such as tool, device, time and outcome rather than raw payloads.", "当前文件内容、工具参数和命令输出会经过托管 Relay 并返回所选 AI 客户端。传输使用 HTTPS/WSS，不属于 zero-knowledge 端到端加密。运行审计保留工具、设备、时间和结果等元数据，而非原始 Payload。")}</p>
           <p>{tr("Durable task storage is separate from audit storage. It saves approved commands/plans, objectives, verification, policy snapshots, run summaries, factual memory, bounded observations and completion evidence. Observations can contain file content or command output. Pending source decisions can contain edit content; their bodies are cleared after consumption, while idempotency hashes remain.", "持久任务存储独立于审计存储，会保存已批准的命令或计划、目标、验证、策略快照、运行摘要、事实记忆、受限观察和完成证据。观察可能包含文件内容或命令输出；待消费源决策可能包含编辑内容，消费后清除正文并保留幂等 Hash。")}</p>
           <p>{tr("Hosted goals send bounded context to the configured planner provider. Source goals return it to the authorized source client. Task event callbacks use an encrypted stored signing secret and carry short change metadata; readers obtain full context through authorized tools. Full local process capture and Undo snapshots have local retention limits.", "托管目标把受限上下文发送到配置的 Planner 服务，源目标则返回给已授权源客户端。任务事件回调使用加密保存的签名 Secret，仅携带简短变化元数据；完整上下文通过授权工具读取。本地完整进程捕获和 Undo 快照有各自的保留限制。")}</p>
+          <p>{tr("Arc additionally stores encrypted chat messages, tool observations, selected Skills and bounded personal memories for hosted work. Relevant context is sent to the selected model provider. Inspect or delete personal notes in Memory settings; chat history, App accounts and device access have separate controls.", "Arc 还为托管工作保存加密聊天消息、工具观察、选择的技能与有界个人记忆，相关上下文会发送到所选模型服务商。可在记忆设置查看或删除个人笔记；聊天历史、应用账号与设备访问分别管理。")}</p>
           <a href={localizedWebsiteHref("/privacy", locale)}>{tr("Privacy details", "隐私详情")} →</a>
         </section>
         <section id="docs-troubleshoot">
@@ -194,7 +186,7 @@ export function Documentation({ sectionIds, title, description }: { sectionIds?:
         </section>
         <section id="docs-limits">
           <h2>{tr("Availability and practical limits", "可用状态与实际边界")}</h2>
-          <p>{tr("The production contract includes remote tools, durable deterministic task recovery, device task controls and bounded keep-awake helpers. Adaptive source-goal continuation and autonomous ordinary-Chat wakeup remain experimental and are not advertised as shipped capability.", "生产契约包含远程工具、持久确定性任务恢复、设备任务控制和有界保持唤醒 Helper。自适应 Source Goal 续接与普通 Chat 自主唤醒仍属实验，不作为已上线能力宣传。")}</p>
+          <p>{tr("Remote MCP exposes authorized App and device tools. Connect persists deterministic task contracts, with experimental goal tools where enabled. Arc provides bounded hosted chat, Tasks, Routines and AI teams Beta on the same account connections. Availability still depends on configuration, access, device version and Credits.", "Remote MCP 提供已授权的应用与设备工具。Connect 保存确定性任务契约，开启实验能力时另有目标工具。Arc 在同一账号连接之上提供有界托管聊天、Task、Routine 和 AI 团队 Beta。可用性仍取决于配置、权限、设备版本与 Credits。")}</p>
           <p>{tr("Remote Arc does not provide GUI desktop control, arbitrary shell containment, exactly-once external effects or guaranteed model reasoning duration. Set a deliverable, verification and reasonable limits; treat failed, expired, cancelled and blocked work as distinct outcomes.", "Remote Arc 当前不提供 GUI 桌面控制、任意 Shell 隔离、外部副作用 exactly-once 保证或固定模型推理时长。请设置交付物、验收和合理限制，区分失败、到期、取消与阻塞结果。")}</p>
           <div className="articleEndLinks"><a href={localizedWebsiteHref("/docs/long-running-work", locale)}>{tr("Long-running work", "持续工作")} →</a><a href={localizedWebsiteHref("/security-model", locale)}>{tr("Security model", "安全模型")} →</a><a href={localizedWebsiteHref("/use-cases", locale)}>{tr("Use cases", "使用场景")} →</a></div>
         </section>
@@ -239,7 +231,7 @@ export function McpReference() {
       <section id="mcp-tools"><h2>{tr("Tools and required scopes", "工具与所需 Scope")}</h2><ToolReference /></section>
       <BrowserModes />
       <section id="browser-runner"><h2>{tr("Runner: sign in once, reuse your profile", "Runner：登录一次，复用浏览器资料")}</h2>
-        <p>{tr("Enable Browser Runner for the computer in Dashboard and keep its Agent running. The default Runner uses a separate browser profile. The task runs in a hidden window that never takes your focus; when a page needs you (a sign-in or CAPTCHA), your AI asks, and when you say you are ready it shows the window as it is, then hides it again. Choose one profile per person, sign in once, and reuse that profile in later tasks and chats. Sign-ins entered in its window are saved locally unless browserRunnerSaveLogins is disabled. You can also add a site-bound sign-in with remotelink vault add on the computer. fill_secret fills it only on its saved sites; the password stays out of the AI conversation.", "在 Dashboard 为电脑开启 Browser Runner，并保持 Agent 运行。默认 Runner 使用独立的浏览器资料。任务在隐藏窗口中运行，不会抢走你的焦点；页面需要你（登录或 CAPTCHA）时，AI 会先问你，你说准备好后窗口原样出现，处理完再自动隐藏。为每个人选定一份 profile，登录一次，后续任务和聊天复用该 profile。窗口中输入的登录信息会保存在本机，除非关闭 browserRunnerSaveLogins；也可在电脑终端用 remotelink vault add 添加限定网站的登录信息。fill_secret 只在保存时指定的网站填写，密码不会进入 AI 对话。")}</p>
+        <p>{tr("Enable Browser Runner for the computer in Dashboard and keep its Agent running. The default Runner uses a separate browser profile. In Agent 0.6.3, Runner keeps its window in the background. Inspect a snapshot after submission or navigation. If needs_user is reported, resume the same task_id with headless=false to show its existing window, let the user complete sign-in or verification, then inspect another snapshot. Automatic post-submit handoff and live view are pending release. Choose one profile per person, sign in once, and reuse that profile in later tasks and chats. Sign-ins entered in its window are saved locally unless browserRunnerSaveLogins is disabled. You can also add a site-bound sign-in with remotelink vault add on the computer. fill_secret fills it only on its saved sites; the password stays out of the AI conversation.", "在 Dashboard 为电脑开启 Browser Runner，并保持 Agent 运行。默认 Runner 使用独立的浏览器资料。使用 Agent 0.6.3 时，Runner 将窗口保持在后台。提交或跳转后读取快照；如返回 needs_user，使用同一 task_id 和 headless=false 显示原窗口，让用户完成登录或验证，再读取新快照。提交后自动交接与实时画面尚待发布。为每个人选定一份 profile，登录一次，后续任务和聊天复用该 profile。窗口中输入的登录信息会保存在本机，除非关闭 browserRunnerSaveLogins；也可在电脑终端用 remotelink vault add 添加限定网站的登录信息。fill_secret 只在保存时指定的网站填写，密码不会进入 AI 对话。")}</p>
         <Code>{'{ "device_id": "<computer>", "task_id": "application", "browser": "runner", "profile": "jenny", "allowed_origins": ["https://jobs.example.com"], "start_url": "https://jobs.example.com" }'}</Code>
         <p>{tr("Allowed sites apply to both Runner modes. Embedded forms on other sites also need to be named. Payment details and CAPTCHAs require you; one-time codes may be filled from the connected app where they arrived if enabled on the computer. Review answers before authorizing a final submission.", "两种 Runner 模式都受 allowed_origins 限制，其他网站的内嵌表单也需列入允许范围。支付信息和 CAPTCHA 由你处理；若电脑允许，可从收到验证码的连接应用中获取并填写一次性验证码。最终提交前先核对答案并授权。")}</p>
       </section>

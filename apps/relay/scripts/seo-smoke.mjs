@@ -87,11 +87,14 @@ for (const path of ["/connect-ai", "/integrations", "/arc", "/pricing", "/docs",
 assert.ok(homeHtml.includes("Arc Agent"));
 assert.ok(!homeHtml.includes("coming soon"), "homepage must reflect the current Arc release");
 assert.ok(homeHtml.includes("https://github.com/Remote-Arc/remote-arc"));
-assert.ok(sitemapXml().includes("<lastmod>2026-10-23</lastmod>"), "homepage changed on Oct 23");
+assert.ok(sitemapXml().includes("<lastmod>2026-10-24</lastmod>"), "homepage changed on Oct 24");
 const homepageSchema = homeHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1];
 assert.ok(homepageSchema, "homepage structured data should be published");
 const graph = JSON.parse(homepageSchema)["@graph"];
 assert.equal(graph.find(entry => entry["@type"] === "WebSite")?.hasPart?.length, 6);
+for (const type of ["WebSite", "Organization"]) {
+  assert.ok(graph.find(entry => entry["@type"] === type)?.alternateName.includes("RemoteArc"), type + " must associate the unspaced brand name");
+}
 
 const blogPath = "/blogs/go-vs-typescript-agent-benchmarks";
 const blogHtml = renderMarketingHtml('<html><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', blogPath);
@@ -262,7 +265,9 @@ for (const slug of ["desktop-automation", "remote-support", "browser-research", 
 }
 const home = renderMarketingHtml(shell, "/");
 assert.ok(home.includes('"@type":"SoftwareApplication"'));
-assert.ok(home.includes('<noscript><main class="seo-blog-shell">'), "homepage should provide a no-JavaScript semantic fallback");
+assert.ok(home.includes('<div id="root"><div class="marketingShell">'), "homepage must publish normal, visible server-rendered content");
+assert.ok(!home.includes('<noscript>'), "Google's JavaScript rendering must not discard the only server-rendered copy");
+assert.ok(home.includes('Remote Arc (RemoteArc)'));
 assert.ok(home.includes('<h1>Remote Arc: AI computer access, browser automation and device fleet</h1>'));
 assert.ok(home.includes('href="/integrations"'), "homepage fallback must link to app integrations");
 assert.ok(home.includes('href="/pricing"'), "homepage fallback must link to pricing");
@@ -306,3 +311,45 @@ for (const topic of DOC_TOPICS) for (const prefix of ["","/zh"]) {
 }
 assert.equal(marketingStatusCode("/docs/unknown-guide"),404);
 assert.equal(marketingStatusCode("/zh/docs/unknown-guide"),404);
+
+// Exercise the actual Worker: HEAD must match GET even without Accept: text/html.
+// Static asset fallback normally returns 200 for every extensionless path.
+// These routes never instantiate a Durable Object, but importing the Worker in
+// Node needs the Cloudflare-only base classes used by unrelated exports.
+const { registerHooks } = await import('node:module');
+const hooks = registerHooks({ resolve(specifier, context, nextResolve) {
+  if (specifier === 'cloudflare:workers') return {
+    url: 'data:text/javascript,export class DurableObject {} export class WorkerEntrypoint {}', shortCircuit: true,
+  };
+  return nextResolve(specifier, context);
+} });
+const worker = (await import('../src/index.ts')).default;
+hooks.deregister();
+const assetMethods = [];
+const env = {
+  PUBLIC_ORIGIN: 'https://mcp.remotearc.app', MARKETING_ORIGIN: 'https://remotearc.app',
+  DASHBOARD_ORIGIN: 'https://agent.remotearc.app',
+  ASSETS: { async fetch(request) {
+    assetMethods.push(request.method);
+    return new Response(request.method === 'HEAD' ? null : homepageTemplate, { headers: { 'content-type': 'text/html' } });
+  } },
+};
+const ctx = { waitUntil() { throw new Error('SEO requests must not record an incident'); } };
+for (const path of ['/', '/zh', '/docs', '/unknown-seo-page']) {
+  const get = await worker.fetch(new Request('https://remotearc.app' + path), env, ctx);
+  const head = await worker.fetch(new Request('https://remotearc.app' + path, { method: 'HEAD' }), env, ctx);
+  assert.equal(head.status, get.status, path + ' HEAD status must match GET');
+  for (const key of ['link', 'x-robots-tag', 'content-type', 'cache-control']) {
+    assert.equal(head.headers.get(key), get.headers.get(key), path + ' mismatched HEAD header: ' + key);
+  }
+  assert.equal(await head.text(), '', 'HEAD must never include a body');
+  const body = await get.text();
+  assert.ok(body.includes('class="marketingContent"') && body.includes('<h1>'), path + ' must have visible document content');
+}
+assert.ok(assetMethods.every(method => method === 'GET'), 'HEAD must fetch the shell with GET before stripping its body');
+for (const url of locs) {
+  const document = renderMarketingHtml(homepageTemplate, new URL(url).pathname);
+  assert.ok(document.includes('class="marketingContent"') && document.includes('<h1>'), url + ' needs visible document content');
+  assert.ok(!document.includes('<noscript>'), url + ' must not require JavaScript to be disabled');
+}
+console.log('PASS: visible server documents, brand aliases and real Worker GET/HEAD parity');

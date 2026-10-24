@@ -45,7 +45,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
-    if (window.location.pathname === "/") {
+    // Marketing documents already carry localized SEO metadata from the Worker.
+    // Do not replace it after Google renders the page with JavaScript enabled.
+    if (!isWebsite() && window.location.pathname === "/") {
       document.title = locale === "zh" ? "Remote Arc — 让 AI 安全连接你的电脑" : "Remote Arc";
       document.querySelector('meta[name="description"]')?.setAttribute(
         "content",

@@ -88,7 +88,7 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     title: "Remote Arc — 连接 AI、应用与电脑",
     description: "Connect 让现有 AI 使用已授权应用与电脑；Arc 保留目标和上下文、按计划重新判断并核验结果。两者共用权限与执行基础设施。",
     h1: "别让 AI 只停留在聊天。让它在你的电脑上真正完成工作。",
-    intro: "Connect 将现有 AI 连接到受支持应用与已授权 Windows、macOS、Linux 设备。Arc 在同一执行基础设施上保留目标与上下文，按计划判断并核验结果；每个应用与设备仍由独立权限控制。",
+    intro: "Remote Arc（RemoteArc）通过 Connect 将现有 AI 连接到受支持应用与已授权 Windows、macOS、Linux 设备。Arc 在同一执行基础设施上保留目标与上下文，按计划判断并核验结果；每个应用与设备仍由独立权限控制。",
     sections: [
       { heading: "你的电脑仍由你掌控", text: "设备主动连接云端中继，无需打开入站端口。按设备控制权限，必要时要求确认，并可随时撤销 AI 访问。" },
       { heading: "使用你已经熟悉的 AI", text: "在支持 Remote MCP 的 ChatGPT、Claude 或其他客户端中添加 Remote Arc，无需让 Remote Arc 接管模型、对话或 API 密钥。" },

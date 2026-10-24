@@ -951,7 +951,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     const marketingDocumentRequest =
       isMarketingHost &&
-      request.method === "GET" &&
+      (request.method === "GET" || request.method === "HEAD") &&
       !url.pathname.split("/").pop()?.includes(".");
 
     const acceptsHtml =
@@ -965,12 +965,13 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       assetHeaders.set("cache-control", "no-store");
 
       const assetResponse = await env.ASSETS.fetch(
-        new Request(request, { headers: assetHeaders }),
+        new Request(request, { method: request.method === "HEAD" ? "GET" : request.method, headers: assetHeaders }),
       );
       const headers = new Headers(assetResponse.headers);
       headers.set("cache-control", "no-store");
       headers.set("cloudflare-cdn-cache-control", "no-store");
       headers.delete("etag");
+      headers.delete("content-length");
 
       const html = await assetResponse.text();
       let rendered = isMarketingHost ? renderMarketingHtml(html, url.pathname) : html;
@@ -1001,7 +1002,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
         }
       }
 
-      return new Response(rendered, {
+      return new Response(request.method === "HEAD" ? null : rendered, {
         status: isMarketingHost ? marketingStatusCode(url.pathname) : assetResponse.status,
         statusText: isMarketingHost && marketingStatusCode(url.pathname) === 404 ? "Not Found" : assetResponse.statusText,
         headers,

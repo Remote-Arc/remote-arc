@@ -1,215 +1,63 @@
-name: CI
+name: Mac capture protocol probes
 
 on:
   push:
-  pull_request:
+    branches: [debug/pr345-mac-capture-20261024]
 
 jobs:
-  website:
-    runs-on: ubuntu-latest
+  capture-probes:
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10.17.1
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Browser extension in a real Chromium
-        run: pnpm test:browser && pnpm test:browser:e2e
-      - name: Website behavior and browser regression matrix
-        run: pnpm test:site
-      - name: Verify the production website build
-        run: pnpm build:ui
-      - name: Public document SEO and rendered metadata
-        run: |
-          pnpm test:seo
-          pnpm --filter @remotearc/ui test:onboarding-browser
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: website-browser-report
-          path: |
-            work/site-test-report/
-            work/site-test-results/
-          retention-days: 7
-
-  verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10.17.1
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm device:contract --check
-      - name: Check Apps core coverage at 90% for every metric and file
-        run: pnpm coverage:apps
-      - run: pnpm coverage:ts
-      - run: pnpm build:ui
-      - run: pnpm test:automations
-      - run: pnpm test:recovery
-
-  go-coverage:
-    # Initial measurable gate: prevent regression while lifting both full
-    # modules toward 90%. Strict 90% command remains available locally.
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
       - uses: actions/setup-go@v7
         with:
           go-version-file: apps/agent/go.mod
           cache-dependency-path: |
             apps/agent/go.sum
             packages/execution-core/go.sum
-      - name: Check Go coverage floors and protected packages
-        run: node scripts/go-coverage.mjs
-      - name: Check synthetic takeover source fixtures
-        run: python3 scripts/takeover-session-probe-test.py
-
-  relay-coverage:
-    # Instrument actual source files (not just passing test scripts).
-    # Raise these regression floors to 90 as uncovered branches are tested.
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10.17.1
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm coverage:relay
-
-  go-distribution:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10.17.1
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: apps/agent/go.mod
-          cache-dependency-path: |
-            apps/agent/go.sum
-            packages/execution-core/go.sum
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build:device --release
-      # A release candidate on master is still a candidate: published stable
-      # Homebrew checksums MUST remain unchanged until an explicit release.
-      # Stable versions on either PRs or master must match committed Formula.
-      - name: Verify candidate artifacts or stable committed formulas
-        shell: bash
+      - name: New surface enabled (current source)
+        continue-on-error: true
         run: |
-          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
-          if [[ "$CLI_VERSION" == *-* ]]; then
-            node scripts/verify-device-artifacts.mjs --candidate
-          else
-            node scripts/verify-device-artifacts.mjs
-          fi
-      - uses: actions/upload-artifact@v7
-        with:
-          name: go-device-binaries
-          path: work/go-device/*
-
-  go-device:
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10.17.1
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: apps/agent/go.mod
-          cache-dependency-path: |
-            apps/agent/go.sum
-            packages/execution-core/go.sum
-      - run: pnpm install --frozen-lockfile
-      - name: Minimized macOS live-view regression
-        if: runner.os == 'macOS'
-        run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStaticLiveView|TestViewJPEG|TestLiveViewSlow|TestE2EWaitConditionsAndLiveView' -count=3
-      - name: Diagnose minimized Mac compositor when live-view fails
-        if: failure() && runner.os == 'macOS'
-        shell: bash
+          python3 scripts/pr345-capture-probe.py new-surface
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+      - name: Every frame screencast with no screenshot request
+        continue-on-error: true
         run: |
-          # Keep the failing acceptance result. Probe only isolated test profiles
-          # to distinguish native GPU presentation from the protocol itself.
-          for mode in disable-gpu disable-gpu-compositing disable-frame-rate-limit; do
-            wrapper="$RUNNER_TEMP/ra-chrome-$mode.sh"
-            printf '#!/bin/sh\nexec "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --%s "$@"\n' "$mode" > "$wrapper"
-            chmod +x "$wrapper"
-            echo "COMPOSITOR_PROBE $mode"
-            if REMOTEARC_BROWSER_PATH="$wrapper" go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v; then
-              echo "COMPOSITOR_PROBE_PASS $mode"
-            else
-              echo "COMPOSITOR_PROBE_FAIL $mode"
-            fi
-          done
-      - run: pnpm test:device
-      - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
-      - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: agent-validation-${{ matrix.os }}
-          path: work/benchmarks/*.json
-
-  native-core:
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10.17.1
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @remotearc/execution-core-ts test:integration
-      - run: pnpm --filter @remotearc/mcp test:smoke
-      - run: pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/goal-workspace-test.ts
-      - run: pnpm test:recovery
+          python3 scripts/pr345-capture-probe.py screencast-1-only
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+      - name: Every frame screencast plus screenshot fallback
+        continue-on-error: true
+        run: |
+          python3 scripts/pr345-capture-probe.py screencast-1
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+      - name: Legacy surface snapshot
+        continue-on-error: true
+        run: |
+          python3 scripts/pr345-capture-probe.py legacy-surface
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+      - name: Native view snapshot without screencast
+        continue-on-error: true
+        run: |
+          python3 scripts/pr345-capture-probe.py native-only
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+      - name: Focus emulation initialized after native hide
+        continue-on-error: true
+        run: |
+          python3 scripts/pr345-capture-probe.py focus-after-hide
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+      - name: Disable Mac web contents occlusion
+        continue-on-error: true
+        run: |
+          python3 scripts/pr345-capture-probe.py no-mac-occlusion
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+      - name: Disable Apple display link
+        continue-on-error: true
+        run: |
+          python3 scripts/pr345-capture-probe.py no-display-link
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v
+      - name: Force all compositor stages before draw
+        continue-on-error: true
+        run: |
+          python3 scripts/pr345-capture-probe.py all-compositor-stages
+          go -C apps/agent test -race ./internal/browserrunner -run '^TestE2EWaitConditionsAndLiveView$' -count=1 -v

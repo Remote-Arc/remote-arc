@@ -213,6 +213,11 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 	if s.hasWindow() {
 		_, beforeView, _ = s.window(h.ctx)
 	}
+	var commandLine struct {
+		Arguments []string `json:"arguments"`
+	}
+	_ = s.conn.Call(h.ctx, "Browser.getBrowserCommandLine", nil, &commandLine)
+	t.Logf("CAPTURE_PROBE_COMMAND_LINE %q", commandLine.Arguments)
 	near := func(actual uint32, want int) bool {
 		return int(actual>>8) >= want-10 && int(actual>>8) <= want+10
 	}

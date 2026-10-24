@@ -1142,26 +1142,34 @@ func (m *Manager) close(ctx context.Context, s *session, args map[string]any) (a
 	s.shutdownBrowser(false)
 	s.cp.State = StateClosed
 	s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_close", Outcome: "closed"})
+	// Keep a closed checkpoint until forgetting succeeds, so an OS cleanup
+	// failure can be retried without losing the profile's owning session.
+	if e := s.flush(); e != nil {
+		return nil, e
+	}
 	if !forget {
-		if e := s.flush(); e != nil {
-			return nil, e
-		}
 		return map[string]any{"session_id": s.cp.SessionID, "state": StateClosed, "checkpoint_kept": true, "tab_left_open": tabLeftOpen}, nil
 	}
 	m.mu.Lock()
-	delete(m.sessions, s.cp.SessionID)
 	shared := false
 	for _, o := range m.sessions {
-		if o.cp.Profile == s.cp.Profile {
+		if o != s && o.cp.Profile == s.cp.Profile {
 			shared = true
 		}
 	}
 	m.mu.Unlock()
-	_ = os.Remove(checkpointPath(s.cp.SessionID))
 	removeProfile := s.cp.Browser != browserYourChrome && !shared && s.cp.Profile == s.cp.SessionID
 	if removeProfile {
-		_ = os.RemoveAll(profilePath(s.cp.Profile))
+		if e := removeBrowserProfile(ctx, profilePath(s.cp.Profile)); e != nil {
+			return nil, fmt.Errorf("browser closed but its profile could not be forgotten; retry close with forget=true: %w", e)
+		}
 	}
+	if e := os.Remove(checkpointPath(s.cp.SessionID)); e != nil && !os.IsNotExist(e) {
+		return nil, fmt.Errorf("browser closed but its checkpoint could not be forgotten; retry close with forget=true: %w", e)
+	}
+	m.mu.Lock()
+	delete(m.sessions, s.cp.SessionID)
+	m.mu.Unlock()
 	return map[string]any{"session_id": s.cp.SessionID, "state": StateClosed, "forgotten": true, "profile_removed": removeProfile, "tab_left_open": tabLeftOpen}, nil
 }
 

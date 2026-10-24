@@ -1,9 +1,13 @@
 package browserrunner
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
-	"math"
+	"fmt"
+	"image"
+	"image/jpeg"
 	"time"
 )
 
@@ -156,40 +160,71 @@ func (s *session) forwardViewFrame(data string) {
 		}
 	}
 }
+
+// Capture the existing viewport without clip/device emulation. Chromium resizes
+// its RenderWidgetHostView when a clip is supplied; a minimized macOS window can
+// never present that resized surface, leaving captureScreenshot pending. Scaling
+// the JPEG locally avoids changing the page or showing/focusing its native window.
 func (s *session) initialViewFrame(ctx context.Context) {
-	var layout struct {
-		CSSLayoutViewport struct {
-			Width  float64 `json:"clientWidth"`
-			Height float64 `json:"clientHeight"`
-		} `json:"cssLayoutViewport"`
-	}
-	if err := s.conn.Call(ctx, "Page.getLayoutMetrics", nil, &layout); err != nil {
-		s.ev.Lock()
-		s.viewError = "view metrics: " + err.Error()
-		s.ev.Unlock()
-		return
-	}
-	width, height := layout.CSSLayoutViewport.Width, layout.CSSLayoutViewport.Height
-	if width <= 0 || height <= 0 {
-		return
-	}
 	var frame struct {
 		Data string `json:"data"`
 	}
-	// Scale wide screens down instead of returning an oversized uncapped frame.
-	dpr := 1.0
-	if raw, e := s.evaluateMain(ctx, "window.devicePixelRatio || 1"); e == nil {
-		var value float64
-		if json.Unmarshal(raw, &value) == nil && value > 0 && value <= 8 {
-			dpr = value
+	params := map[string]any{"format": "jpeg", "quality": 50, "captureBeyondViewport": false, "fromSurface": true, "optimizeForSpeed": true}
+	err := s.conn.Call(ctx, "Page.captureScreenshot", params, &frame)
+	if err == nil && ctx.Err() == nil {
+		frame.Data, err = cappedViewJPEG(frame.Data)
+		if err == nil {
+			s.forwardViewFrame(frame.Data)
+			return
 		}
 	}
-	params := map[string]any{"format": "jpeg", "quality": 50, "captureBeyondViewport": true, "fromSurface": true, "optimizeForSpeed": true, "clip": map[string]any{"x": 0, "y": 0, "width": width, "height": height, "scale": math.Min(1, 1280/(width*dpr))}}
-	if err := s.conn.Call(ctx, "Page.captureScreenshot", params, &frame); err == nil {
-		s.forwardViewFrame(frame.Data)
-	} else {
-		s.ev.Lock()
-		s.viewError = "initial frame: " + err.Error()
-		s.ev.Unlock()
+	if err == nil {
+		err = ctx.Err()
 	}
+	s.ev.Lock()
+	s.viewError = "initial frame: " + err.Error()
+	s.ev.Unlock()
+}
+
+// Decode only a bounded viewport image, never a whole-document screenshot. The
+// input cap and JPEG header limits apply before allocating the decoded bitmap.
+func cappedViewJPEG(data string) (string, error) {
+	const maxCaptureBytes = 8 * 1024 * 1024
+	if len(data) > base64.StdEncoding.EncodedLen(maxCaptureBytes) {
+		return "", fmt.Errorf("viewport capture exceeds the local size limit")
+	}
+	raw, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return "", fmt.Errorf("invalid viewport image")
+	}
+	cfg, err := jpeg.DecodeConfig(bytes.NewReader(raw))
+	if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > 16384 || cfg.Height > 16384 || int64(cfg.Width)*int64(cfg.Height) > 32*1024*1024 {
+		return "", fmt.Errorf("invalid or oversized viewport dimensions")
+	}
+	if cfg.Width <= 1280 && len(raw) <= maxFrameBytes {
+		return data, nil
+	}
+	src, err := jpeg.Decode(bytes.NewReader(raw))
+	if err != nil {
+		return "", fmt.Errorf("invalid viewport image")
+	}
+	width := min(cfg.Width, 1280)
+	height := max(1, cfg.Height*width/cfg.Width)
+	// Sampling stays bounded to the output viewport, including on Retina screens.
+	dst := image.NewRGBA(image.Rect(0, 0, width, height))
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			dst.Set(x, y, src.At(x*cfg.Width/width, y*cfg.Height/height))
+		}
+	}
+	for _, quality := range []int{50, 35, 20} {
+		var out bytes.Buffer
+		if err := jpeg.Encode(&out, dst, &jpeg.Options{Quality: quality}); err != nil {
+			return "", fmt.Errorf("unable to encode viewport image")
+		}
+		if out.Len() <= maxFrameBytes {
+			return base64.StdEncoding.EncodeToString(out.Bytes()), nil
+		}
+	}
+	return "", fmt.Errorf("viewport image exceeds the frame size limit")
 }

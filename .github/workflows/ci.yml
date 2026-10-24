@@ -160,6 +160,9 @@ jobs:
             apps/agent/go.sum
             packages/execution-core/go.sum
       - run: pnpm install --frozen-lockfile
+      - name: Minimized macOS live-view regression
+        if: runner.os == 'macOS'
+        run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStaticLiveView|TestViewJPEG|TestE2EWaitConditionsAndLiveView' -count=3
       - run: pnpm test:device
       - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
       - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json

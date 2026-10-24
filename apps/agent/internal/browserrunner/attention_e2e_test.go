@@ -206,6 +206,10 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 	}
 	// Screen capture starts only after a Dashboard viewer heartbeat, without
 	// reading a snapshot or exposing an AI tool. A stale heartbeat stops it.
+	var beforeView windowBounds
+	if s.hasWindow() {
+		_, beforeView, _ = s.window(h.ctx)
+	}
 	h.m.ViewHeartbeat("conditions", true)
 	h.m.serviceViews()
 	evaluate(`document.body.style.background='rgb(42,55,88)'`)
@@ -218,7 +222,14 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 		s.ev.Lock()
 		active, viewError := s.viewActive, s.viewError
 		s.ev.Unlock()
-		t.Fatalf("live view produced no frame (active=%v, error=%q)", active, viewError)
+		visibility, _ := s.evaluateMain(h.ctx, `JSON.stringify({visibility:document.visibilityState,focus:document.hasFocus(),width:innerWidth,height:innerHeight,dpr:devicePixelRatio})`)
+		t.Fatalf("live view produced no frame (active=%v, error=%q, window=%+v, renderer=%s)", active, viewError, beforeView, visibility)
+	}
+	if s.hasWindow() {
+		_, afterView, err := s.window(h.ctx)
+		if err != nil || afterView != beforeView {
+			t.Fatalf("view capture changed native window: before=%+v after=%+v error=%v", beforeView, afterView, err)
+		}
 	}
 	s.ev.Lock()
 	s.viewUntil = time.Now().Add(-time.Second)

@@ -1,8 +1,14 @@
 package browserrunner
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -18,14 +24,12 @@ func (c *staticViewClient) Call(ctx context.Context, method string, params any, 
 	c.methods = append(c.methods, method)
 	var value any
 	switch method {
-	case "Page.getLayoutMetrics":
-		value = map[string]any{"cssLayoutViewport": map[string]any{"clientWidth": 2560, "clientHeight": 1440}}
-	case "Runtime.evaluate":
-		value = map[string]any{"result": map[string]any{"value": 2}}
 	case "Page.captureScreenshot":
 		c.params = params.(map[string]any)
 		c.screenshots++
-		value = map[string]any{"data": "anBlZw=="}
+		var out bytes.Buffer
+		_ = jpeg.Encode(&out, image.NewRGBA(image.Rect(0, 0, 2560, 1440)), &jpeg.Options{Quality: 50})
+		value = map[string]any{"data": base64.StdEncoding.EncodeToString(out.Bytes())}
 	default:
 		return nil
 	}
@@ -52,15 +56,24 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 	s.serviceView(context.Background())
 	select {
 	case frame := <-m.Frames():
-		if frame.Data != "anBlZw==" {
-			t.Fatal(frame)
+		raw, err := base64.StdEncoding.DecodeString(frame.Data)
+		if err != nil || len(raw) > maxFrameBytes {
+			t.Fatal("invalid frame size")
+		}
+		cfg, err := jpeg.DecodeConfig(bytes.NewReader(raw))
+		if err != nil || cfg.Width != 1280 || cfg.Height != 720 {
+			t.Fatal("Retina frame was not scaled", cfg, err)
 		}
 	default:
 		t.Fatal("static page must send its first frame without a paint event")
 	}
-	clip := client.params["clip"].(map[string]any)
-	if clip["scale"] != 0.25 || client.params["quality"] != 50 {
-		t.Fatal("first frame not scaled/capped", client.params)
+	if _, exists := client.params["clip"]; exists || client.params["captureBeyondViewport"] != false {
+		t.Fatal("live view must not resize or capture beyond the existing viewport", client.params)
+	}
+	for _, method := range client.methods {
+		if method == "Browser.setWindowBounds" || method == "Page.bringToFront" || strings.HasPrefix(method, "Emulation.") {
+			t.Fatal("capture changed the page or window", method)
+		}
 	}
 	s.serviceView(context.Background())
 	if client.screenshots != 1 {
@@ -97,5 +110,36 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 	}
 	if client.methods[len(client.methods)-1] != "Page.stopScreencast" {
 		t.Fatal(client.methods)
+	}
+}
+
+func TestViewJPEGRejectsInvalidAndCapsNoisyFrames(t *testing.T) {
+	for _, data := range []string{"", "not base64", "anBlZw==", strings.Repeat("A", 12*1024*1024)} {
+		if _, err := cappedViewJPEG(data); err == nil {
+			t.Fatal("invalid capture accepted")
+		}
+	}
+	img := image.NewRGBA(image.Rect(0, 0, 2560, 1440))
+	rng := rand.New(rand.NewSource(42))
+	for y := 0; y < 1440; y++ {
+		for x := 0; x < 2560; x++ {
+			img.SetRGBA(x, y, color.RGBA{byte(rng.Intn(256)), byte(rng.Intn(256)), byte(rng.Intn(256)), 255})
+		}
+	}
+	var source bytes.Buffer
+	if err := jpeg.Encode(&source, img, &jpeg.Options{Quality: 50}); err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := cappedViewJPEG(base64.StdEncoding.EncodeToString(source.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil || len(raw) > maxFrameBytes {
+		t.Fatal("frame size cap not enforced", len(raw), err)
+	}
+	cfg, err := jpeg.DecodeConfig(bytes.NewReader(raw))
+	if err != nil || cfg.Width != 1280 || cfg.Height != 720 {
+		t.Fatal("aspect ratio or width changed", cfg, err)
 	}
 }

@@ -2,7 +2,18 @@
 
 All notable changes to Remote Arc are documented here.
 
-## 0.6.4 - Unreleased
+## 0.6.5 - Unreleased
+
+### Candidate: device tools, browser handoff and local media
+
+- Add read-only Codex and Claude Code session/worktree discovery, filtered process details, credential redaction and bounded Git metadata. Last activity is metadata, not proof that another agent is still running.
+- Expose scoped Skill search/read and a generated bilingual directory of 43 Remote MCP tools. Skills are instructions; executors, downloads and account permissions remain separate requirements.
+- Hand off delayed browser verification, retain unverified final-submit records, support explicit waits for page/upload/network and user-completion conditions, and report missing fields/uploads after restart without storing their values.
+- Provide an owner-only, view-only browser stream while the Dashboard is watching, with bounded memory-only frames, heartbeat expiry and cancellable viewport capture. Remote input is not included.
+- Let managed process status wait locally for output or completion, up to 40 seconds. Preserve existing tools and policy grants during upgrades.
+- Add OpenFilm/HyperFrames video, map and Whisper guidance with size-aware download permission rules. Windows synthetic video/map/subtitle outputs were verified; Qwen/ACE, other OS media paths and production host discovery remain pending in #350.
+- Publish 0.6.5-rc.1 as a prerelease on the npm rc channel for tool-capability qualification. Keep stable downloads, npm latest and published Homebrew formulas on 0.6.3 until a separate stable release.
+
 
 ### Video uploads and clearer setup on Windows and WSL
 

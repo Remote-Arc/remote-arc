@@ -1,5 +1,5 @@
 export type ModelProvider = "workers_ai" | "openai" | "anthropic" | "openrouter";
-export type ModelUsage = {inputTokens:number;outputTokens:number;cachedInputTokens:number;cacheWriteTokens:number;reasoningTokens:number;cacheWrite5mTokens?:number;cacheWrite1hTokens?:number;webSearchCalls?:number};
+export type ModelUsage = {inputTokens:number;outputTokens:number;cachedInputTokens:number;cacheWriteTokens:number;reasoningTokens:number;cacheWrite5mTokens?:number;cacheWrite1hTokens?:number;webSearchCalls?:number;webSearchActions?:{type:string;status:string}[]};
 export type WebSearchLocation={city?:string;region?:string;country?:string;timezone?:string};
 export type WebSearchResult={text:string;sources:{title:string;url:string}[]};
 export type ModelDefinition = {
@@ -85,11 +85,18 @@ async function openAiWebSearch(apiKey:string,fetcher:typeof fetch,r:ModelRequest
   const location=r.webSearch!.location,approximate=location&&Object.fromEntries(Object.entries(location).filter(([,v])=>typeof v==='string'&&v.trim()).map(([k,v])=>[k,String(v).slice(0,80)]));
   const p=await post(fetcher,"https://api.openai.com/v1/responses",{authorization:"Bearer "+apiKey},{
     model:r.definition.model,store:false,max_output_tokens:r.maxOutputTokens,max_tool_calls:r.webSearch!.maxCalls,
-    tools:[{type:'web_search',search_context_size:'low',...(approximate&&Object.keys(approximate).length?{user_location:{type:'approximate',...approximate}}:{})}],tool_choice:'auto',
+    parallel_tool_calls:false,tools:[{type:'web_search',search_context_size:'low',...(approximate&&Object.keys(approximate).length?{user_location:{type:'approximate',...approximate}}:{})}],tool_choice:'auto',
     input:[{role:"system",content:r.system},{role:"user",content:r.user}],
   },r.signal);
   const u=usage(p),output=Array.isArray(p.output)?p.output as Array<Record<string,unknown>>:[];
-  const calls=output.filter(item=>item.type==='web_search_call').length;
+  const actions=output.filter(item=>item.type==='web_search_call').map(item=>({
+    type:String(object(item.action).type||'unspecified').slice(0,40),status:String(item.status||'unspecified').slice(0,40),
+  }));
+  // Only search actions carry a tool-call fee. Opening a result and finding text
+  // in it still appear as web_search_call items, but their tokens are already in
+  // provider usage. Keep legacy items without action metadata conservative.
+  // https://developers.openai.com/api/docs/guides/tools-web-search#output-and-citations
+  const calls=actions.filter(action=>!['open_page','find_in_page'].includes(action.type)).length;
   const blocks=output.filter(item=>item.type==='message').flatMap(item=>Array.isArray(item.content)?item.content as Array<Record<string,unknown>>:[]).filter(block=>block.type==='output_text');
   const text=blocks.map(block=>String(block.text||'')).join('\n').trim();
   const seen=new Set<string>(),sources:{title:string;url:string}[]=[];
@@ -98,7 +105,7 @@ async function openAiWebSearch(apiKey:string,fetcher:typeof fetch,r:ModelRequest
     if(annotation.type!=='url_citation'||!/^https?:\/\//.test(url)||seen.has(url))continue;
     seen.add(url);sources.push({title:String(annotation.title||url).slice(0,200),url:url.slice(0,2000)});
   }
-  const used={...u,webSearchCalls:calls};
+  const used={...u,webSearchCalls:calls,webSearchActions:actions.slice(0,10)};
   if(!text)throw new ModelProviderError('MODEL_INCOMPLETE_RESPONSE',false,used);
   return {value:{text,sources:sources.slice(0,10)} satisfies WebSearchResult,usage:used,providerRequestId:typeof p.id==="string"?p.id:null};
 }

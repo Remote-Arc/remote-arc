@@ -328,7 +328,9 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
    if(earlier?.key===prepared.key){prior=message;break;}
   }}
   const reused=prior?{code:prepared?.write||processStart||['message_employee','delegate_work','prepare_employee','create_team'].includes(decision.tool)?'ARC_ACTION_ALREADY_COMPLETED':'ARC_DISCOVERY_REUSED',observation:arcObservation(prior.tool,prior.result),guidance:'This action already succeeded in this run and was not dispatched again. Reuse its observed IDs and result to advance or verify the user’s objective. Do not repeat a completed write or rediscover the same resource.'}:null;
-  const result=reused??await Promise.race([(deps.executeTool||executeArcTool)(env,run,decision),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('ARC_TOOL_OUTCOME_UNKNOWN')),Math.min(['read_inbox','read_context'].includes(decision.tool)?60000:25000,Math.max(1,Date.parse(run!.deadline)-Date.now())));})]).finally(()=>clearTimeout(timer));
+  // Hosted search has a 60-second provider budget; allow its settlement to finish.
+  const toolTimeout=decision.tool==='web_search'?75000:['read_inbox','read_context'].includes(decision.tool)?60000:25000;
+  const result=reused??await Promise.race([(deps.executeTool||executeArcTool)(env,run,decision),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('ARC_TOOL_OUTCOME_UNKNOWN')),Math.min(toolTimeout,Math.max(1,Date.parse(run!.deadline)-Date.now())));})]).finally(()=>clearTimeout(timer));
   const rejectedSelection=decision.tool==='select_device'&&result&&typeof result==='object'&&'dispatched' in result&&result.dispatched===false;
   const bounded=arcObservationText(arcObservation(decision.tool,result));
   const proof=reused?undefined:arcObservationProof(verificationScope,decision.tool,toolBody.arguments,result);

@@ -329,6 +329,37 @@ try{
 const unknown=await send(id,'Uncertain external write');decisions.push(tool('call_app',{connectionId,operation:'issues.create',arguments:{repo:'example/repo',title:'unknown',body:'unknown'}}));
 let dispatches=0;await runArcStep(env,unknown.run.id,{executeTool:async()=>{dispatches++;throw new Error('ARC_TOOL_OUTCOME_UNKNOWN');}});assert.equal(row(unknown.run.id).status,'unknown');await runArcStep(env,unknown.run.id);assert.equal(dispatches,1);assert.equal((await arcMessages(env,'owner',id)).filter(m=>m.run_id===unknown.run.id&&m.role==='tool')[0]?.status,'unknown');
 
+// A device read error is an observation, not an uncertain mutation. Exercise
+// the real device dispatcher and encrypted journal before correcting the path.
+sql.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES('read-device','owner','Windows fixture','win32','read-device-credential',?)").run(now);
+let directoryReads=0;
+const deviceReadEnv={...env,REGISTRY:{getByName:()=>({fetch:async(request:Request)=>{
+ const body=await request.json() as any;assert.equal(body.tool,'list_directory');directoryReads++;
+ if(directoryReads===1)return Response.json({error:'ENOENT: directory does not exist: C:/missing'},{status:502});
+ assert.equal(body.arguments.path,'C:/observed');return Response.json({result:{entries:['tasks.json']}});
+}})}} as unknown as ArcEnv;
+try{
+ const readSession=await create(),readRun=await send(readSession,'Check the task files, then summarize the available results.');
+ decisions.push(tool('device_tool',{deviceId:'read-device',tool:'list_directory',arguments:{path:'C:/missing'}}),tool('device_tool',{deviceId:'read-device',tool:'list_directory',arguments:{path:'C:/observed'}}),reply('The observed directory contains tasks.json.'));
+ assert.equal(await runArcStep(deviceReadEnv,readRun.run.id),true,'A failed read must allow the next decision');
+ assert.equal(row(readRun.run.id).status,'queued');
+ const failedRead=(await arcMessages(env,'owner',readSession)).find(m=>m.run_id===readRun.run.id&&m.role==='tool')!;
+ assert.equal(failedRead.status,'failed');assert.equal((failedRead.result as any).code,'ARC_DEVICE_READ_FAILED');
+ assert.match((failedRead.result as any).detail,/ENOENT/);assert((failedRead.result as any).readFailed);
+ assert.equal(sql.prepare('SELECT status FROM arc_chat_steps WHERE run_id=? AND step=0').get(readRun.run.id)?.status,'done');
+ assert.equal(await runArcStep(deviceReadEnv,readRun.run.id),true);assert.equal(await runArcStep(deviceReadEnv,readRun.run.id),false);
+ assert.equal(row(readRun.run.id).status,'succeeded');assert.equal(directoryReads,2,'Recovery does not automatically replay the failed read');
+}finally{sql.prepare("DELETE FROM audit_events WHERE device_id='read-device'").run();sql.prepare("DELETE FROM devices WHERE id='read-device'").run();}
+// An arbitrary tool name and a process launch remain fail-closed even when
+// their errors look like a missing path. Never replay a possible write.
+for(const innerTool of ['start_process','write_file','unknown_read_tool']){
+ const uncertainDevice=await send(await create(),'Inspect this authorized task.');
+ const arguments_=innerTool==='start_process'?{command:'node check.js',cwd:'C:/observed'}:innerTool==='write_file'?{path:'C:/observed/report.txt',content:'report'}:{};
+ decisions.push(tool('device_tool',{deviceId:'fixture-device',tool:innerTool,arguments:arguments_}));let attempts=0;
+ await runArcStep(env,uncertainDevice.run.id,{executeTool:async()=>{attempts++;throw new Error('ENOENT: unknown device outcome');}});
+ assert.equal(row(uncertainDevice.run.id).status,'unknown');await runArcStep(env,uncertainDevice.run.id);assert.equal(attempts,1);
+}
+
 // A native managed-process acknowledgement is known running work, not an
 // uncertain dispatch. Reuse a live handle; a verified exit permits a new run.
 const processSession=await create(),processTask=await send(processSession,'Run two approved checks sequentially, retaining and verifying their process handles.');

@@ -25,13 +25,13 @@
   "dependencies": {
     "@remotearc/protocol": "workspace:*",
     "@stripe/stripe-js": "^10.1.0",
-    "@vitejs/plugin-react": "^5.0.4",
+    "@vitejs/plugin-react": "^6.1.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "typescript": "^6.0.3",
-    "vite": "^7.1.7"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
   },
   "devDependencies": {
     "@types/react": "^19.1.16",

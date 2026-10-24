@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {createRemoteLinkMcp} from '../src/mcp.js';
 import {markdownToSlack,fitSlackText} from '../src/slack-format.js';
 import {findSkills,skillIndex,suggestedSkills} from '../src/skill-index.js';
 import {arcDeviceInputError,normalizeArcDeviceArguments} from '../src/arc-device-tools.js';
@@ -75,3 +76,20 @@ assert.match(ARC_DIRECT_SYSTEM,/report a blocker only when the routes are exhaus
 assert.match(ARC_DIRECT_SYSTEM,/skillSuggestions/);
 
 console.log('PASS: Slack mrkdwn answers, one bilingual skill index with quiet suggestions, built-in skill reads, paged device reads, agent-session/process arguments and live per-device tool guides in every Arc prompt');
+
+// Tool annotations do not enforce OAuth scopes. App-only grants must not read
+// imported Skill metadata/content before the devices:read challenge is returned.
+let accountReads = 0;
+const deniedEnv = {PUBLIC_ORIGIN:'https://mcp.example.test',DB:{prepare(){accountReads++;throw new Error('unexpected account read');}},REGISTRY:{}};
+const appOnly = {userId:'scope-test',clientId:'client',grantId:'grant',scope:'apps:read',resource:'https://mcp.example.test/mcp'};
+for (const [name,args] of [['find_skills',{query:'private'}],['read_skill',{id:'private-skill'}]] as const) {
+ const response=await createRemoteLinkMcp(deniedEnv as never,appOnly as never).fetch(new Request('https://mcp.example.test/mcp',{
+  method:'POST',headers:{'content-type':'application/json',accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}}),
+ }));
+ const body=await response.text();const packet=JSON.parse(body.trim().startsWith('{')?body:body.split('\n').find(line=>line.startsWith('data: '))!.slice(6));
+ assert.equal(packet.result.isError,true,name+' must challenge missing scope');
+ assert.match(packet.result._meta['mcp/www_authenticate'][0],/insufficient_scope/);
+ assert.match(packet.result._meta['mcp/www_authenticate'][0],/devices:read/);
+}
+assert.equal(accountReads,0,'missing-scope Skill requests must not reach account data');
+console.log('PASS: public Skill tools enforce devices:read before private account access');

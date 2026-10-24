@@ -1,8 +1,11 @@
 package browserrunner
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"image/jpeg"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -213,18 +216,39 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 	h.m.ViewHeartbeat("conditions", true)
 	h.m.serviceViews()
 	evaluate(`document.body.style.background='rgb(42,55,88)'`)
-	select {
-	case frame := <-h.m.Frames():
-		if frame.SessionID != "conditions" || frame.Type != "runner_frame" || len(frame.Data) == 0 || len(frame.Data) > maxFrameBytes*4/3 {
-			t.Fatal("bad frame", frame.Type, len(frame.Data))
+	// A nonempty JPEG alone could be a stale/blank surface. Require an updated
+	// fixture pixel as well, proving a minimized window continues to render.
+	deadline := time.NewTimer(10 * time.Second)
+	defer deadline.Stop()
+frameLoop:
+	for {
+		select {
+		case frame := <-h.m.Frames():
+			if frame.SessionID != "conditions" || frame.Type != "runner_frame" || len(frame.Data) == 0 || len(frame.Data) > maxFrameBytes*4/3 {
+				t.Fatal("bad frame", frame.Type, len(frame.Data))
+			}
+			raw, err := base64.StdEncoding.DecodeString(frame.Data)
+			if err != nil {
+				t.Fatal("invalid frame encoding")
+			}
+			img, err := jpeg.Decode(bytes.NewReader(raw))
+			if err != nil {
+				t.Fatal("invalid frame JPEG")
+			}
+			bounds := img.Bounds()
+			r, g, b, _ := img.At(bounds.Max.X-10, bounds.Max.Y-10).RGBA()
+			if r>>8 >= 32 && r>>8 <= 52 && g>>8 >= 45 && g>>8 <= 65 && b>>8 >= 78 && b>>8 <= 98 {
+				break frameLoop
+			}
+		case <-deadline.C:
+			s.ev.Lock()
+			active, viewError := s.viewActive, s.viewError
+			s.ev.Unlock()
+			visibility, _ := s.evaluateMain(h.ctx, `JSON.stringify({visibility:document.visibilityState,focus:document.hasFocus(),width:innerWidth,height:innerHeight,dpr:devicePixelRatio})`)
+			t.Fatalf("live view produced no updated frame (active=%v, error=%q, window=%+v, renderer=%s)", active, viewError, beforeView, visibility)
 		}
-	case <-time.After(10 * time.Second):
-		s.ev.Lock()
-		active, viewError := s.viewActive, s.viewError
-		s.ev.Unlock()
-		visibility, _ := s.evaluateMain(h.ctx, `JSON.stringify({visibility:document.visibilityState,focus:document.hasFocus(),width:innerWidth,height:innerHeight,dpr:devicePixelRatio})`)
-		t.Fatalf("live view produced no frame (active=%v, error=%q, window=%+v, renderer=%s)", active, viewError, beforeView, visibility)
 	}
+
 	if s.hasWindow() {
 		_, afterView, err := s.window(h.ctx)
 		if err != nil || afterView != beforeView {
@@ -234,7 +258,11 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 	s.ev.Lock()
 	s.viewUntil = time.Now().Add(-time.Second)
 	s.ev.Unlock()
-	h.m.serviceViews()
+	// The frame can arrive while the background reaper still owns s.mu. Wait
+	// for that service pass before checking expiry; serviceViews uses TryLock.
+	s.mu.Lock()
+	s.serviceView(h.ctx)
+	s.mu.Unlock()
 	s.ev.Lock()
 	active := s.viewActive
 	s.ev.Unlock()

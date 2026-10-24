@@ -80,7 +80,7 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 		t.Fatal("live view must not resize or capture beyond the existing viewport", client.params)
 	}
 	for _, method := range client.methods {
-		if method == "Browser.setWindowBounds" || method == "Page.bringToFront" || (strings.HasPrefix(method, "Emulation.") && method != "Emulation.setFocusEmulationEnabled") {
+		if method == "Browser.setWindowBounds" || method == "Page.bringToFront" || strings.HasPrefix(method, "Emulation.") {
 			t.Fatal("capture changed the page or window", method)
 		}
 	}

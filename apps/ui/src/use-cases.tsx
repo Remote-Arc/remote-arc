@@ -1,4 +1,5 @@
 import React,{useState} from "react";
+import {MediaDemoGallery} from "./media-demo-gallery.js";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import { TaskAvailability } from "./product-docs.js";
@@ -207,6 +208,7 @@ export function UseCaseCatalog() {
       <div className="useCaseEntry"><strong>{tr("Connect once, then just ask.", "连接一次，之后直接提出请求。")}</strong><p>{tr("Quick work uses tools directly; ongoing work is saved as an authorized long-running or scheduled Task with progress and stop controls in Dashboard.", "即时工作直接使用工具；持续工作保存为已授权的长任务或定时任务，可在 Dashboard 查看进度并停止。")}</p><a href={localizedWebsiteHref("/connect-ai", locale)}>{tr("Connect your AI", "连接你的 AI")} →</a> <a href="/docs/long-running-work">{tr("Understand durable work", "了解持久工作")} →</a></div>
       </>}
     </header>
+    <MediaDemoGallery/>
     {mode==='connect'&&<ConnectCapabilities tr={tr} locale={locale}/>}
     {mode==='arc'&&<section className="arcDelegatedWork"><header><span className="eyebrow">{tr('DELEGATE · FOLLOW THROUGH · VERIFY','委派 · 跟进 · 核验')}</span><h2>{tr('Give Arc a responsibility.','把一项职责交给 Arc。')}</h2><p>{tr('Agree on the sources, boundaries and evidence once. Arc retains the instructions and run history, makes a fresh bounded assessment when scheduled, and leaves the outcome ready for review.','先约定信息源、边界与证据，Arc 保存指令和执行历史，在安排的时间做新的有界判断，并留下可复核的结果。')}</p></header><div>{ARC_DELEGATED_WORK.map(work=><a className="arcDelegatedCard" key={work.id} href={arcChatHref(work.prompt[locale],'delegated-work:'+work.id)}><h3>{work.title[locale]}</h3><p>{work.detail[locale]}</p><dl><dt>{tr('Arc retains','Arc 保留')}</dt><dd>{work.retains[locale]}</dd><dt>{tr('Arc checks','Arc 核验')}</dt><dd>{work.checks[locale]}</dd></dl><strong>{tr('Delegate in Arc','交给 Arc')} ↗</strong></a>)}</div></section>}
     <h2 className="useCaseSectionTitle">{mode==='arc'?tr('The practical work behind a goal','目标背后的具体工作'):tr('Work with your existing AI','使用已有 AI 推进工作')}</h2>

@@ -79,6 +79,7 @@
     ],
     "not_found_handling": "single-page-application"
   },
+  "r2_buckets": [{"binding":"PUBLIC_MEDIA","bucket_name":"remote-arc-public-media"}],
   "d1_databases": [
     {
       "binding": "DB",

@@ -9,5 +9,6 @@
     "binding": "ASSETS",
     "run_worker_first": ["/*"]
   },
+  "r2_buckets": [{"binding":"PUBLIC_MEDIA","bucket_name":"remote-arc-public-media"}],
   "previews": {}
 }

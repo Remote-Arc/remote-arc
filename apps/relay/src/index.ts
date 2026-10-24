@@ -1,3 +1,4 @@
+import {serveDemoMedia} from './demo-media.js';
 import { handleRunnerRequest } from "./runner-attention.js";
 import { diagnosticError } from "./diagnostics.js";
 import {handleFollowupUnsubscribe} from './user-followups.js';
@@ -121,6 +122,7 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
+  PUBLIC_MEDIA?: R2Bucket;
   PUBLIC_ORIGIN: string;
   DEPLOYMENT_SHA?: string;
   APP_ORIGIN?: string;
@@ -229,6 +231,11 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     // Serve one canonical public URL; do not alter HTTPS MCP or dashboard calls.
     const httpsCanonical = marketingHttpsRedirect(url);
     if (httpsCanonical) return Response.redirect(httpsCanonical, 301);
+
+    if(url.pathname.startsWith('/media/demo-gallery/')){
+      if(url.origin!==new URL(marketingOrigin).origin)return new Response('Not found',{status:404});
+      return serveDemoMedia(request,env.PUBLIC_MEDIA);
+    }
 
     if(url.pathname==='/email/follow-up/unsubscribe'&&url.origin===new URL(marketingOrigin).origin)return handleFollowupUnsubscribe(request,env);
 

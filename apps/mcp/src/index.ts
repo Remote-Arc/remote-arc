@@ -31,7 +31,11 @@ const schemas = {
     expected_revision: z.string().min(1).max(128).optional(),
   }),
   get_file_info: z.object({ path: z.string() }),
-  list_processes: z.object({}),
+  list_processes: z.object({
+    filter: z.string().max(200).optional(),
+    limit: z.number().int().min(1).max(1000).optional(),
+    details: z.boolean().optional(),
+  }),
   write_file: z.object({
     path: z.string(),
     content: z.string(),

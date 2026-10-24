@@ -197,7 +197,7 @@ func TestAuthenticatedWebsocketToolCallsReconnectAndPrivateJournal(t *testing.T)
 					}
 				}
 				// browser_runner tools are advertised only where a browser exists.
-				if core != 22 || (runner != 0 && runner != len(browserrunner.Tools)) {
+				if core != 23 || (runner != 0 && runner != len(browserrunner.Tools)) {
 					t.Fatalf("tool surface incomplete: core=%d runner=%d", core, runner)
 				}
 			} else if reply["error"] != nil {

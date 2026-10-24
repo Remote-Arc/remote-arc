@@ -1,0 +1,238 @@
+.toolCatalog {
+  max-width: 1100px;
+}
+.toolCatalogTabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line, rgba(127, 127, 127, 0.2));
+  margin: 30px 0 18px;
+  overflow-x: auto;
+}
+.toolCatalogTabs button {
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 12px 15px;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.toolCatalogTabs button[aria-selected="true"] {
+  opacity: 1;
+  border-bottom-color: currentColor;
+}
+.toolCatalogTabs small {
+  font-size: 11px;
+  opacity: 0.55;
+  margin-left: 9px;
+}
+.toolCatalogExplanation {
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+  opacity: 0.72;
+}
+.toolCatalogFilters {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin: 24px 0 14px;
+  flex-wrap: wrap;
+}
+.toolCatalogFilters label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 11px;
+  flex: 0 1 auto;
+}
+.toolCatalogFilters .toolCatalogSearch {
+  flex: 1 1 230px;
+}
+.toolCatalogFilters input,
+.toolCatalogFilters select {
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.25));
+  padding: 10px 12px;
+  min-height: 42px;
+  border-radius: 7px;
+  max-width: 100%;
+}
+.toolCatalogFilters select {
+  max-width: 200px;
+}
+.toolCatalogFilters option {
+  color: CanvasText;
+  background: Canvas;
+}
+.toolCatalogCount {
+  font-size: 11px;
+  opacity: 0.55;
+  margin: 18px 0;
+}
+.toolCatalogRow {
+  padding: 24px 0;
+  border-top: 1px solid var(--line, rgba(127, 127, 127, 0.18));
+  scroll-margin-top: 100px;
+}
+.toolCatalogName {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.toolCatalogName > a {
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+.toolCatalogName > a code {
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.toolCatalogName > span {
+  font-size: 12px;
+  opacity: 0.55;
+}
+.toolCatalogName button {
+  font: inherit;
+  font-size: 11px;
+  margin-left: auto;
+  padding: 5px 8px;
+  color: inherit;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.2));
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+.toolCatalogRow > p {
+  font-size: 13px;
+  line-height: 1.65;
+  margin: 10px 0;
+  opacity: 0.75;
+}
+.toolCatalogBadges {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 12px 0 14px;
+}
+.toolCatalogBadges > span,
+.toolCatalogBadges > code {
+  font-size: 10px;
+  font-weight: 400;
+  padding: 3px 6px;
+  background: rgba(127, 127, 127, 0.07);
+  border-radius: 4px;
+}
+.toolCatalogBadges > code {
+  opacity: 0.65;
+}
+.toolCatalogRow details {
+  font-size: 12px;
+}
+.toolCatalogRow summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  list-style: revert;
+  opacity: 0.65;
+}
+.toolCatalogRow summary:before {
+  content: "+";
+  font-size: 13px;
+}
+.toolCatalogRow details[open] summary:before {
+  content: "−";
+}
+.toolCatalogRow summary small {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  opacity: 0.65;
+  overflow-wrap: anywhere;
+}
+.toolCatalogContract {
+  margin-top: 15px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.toolCatalogContract > p {
+  opacity: 0.65;
+}
+.toolCatalogContract pre {
+  padding: 18px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.06);
+  overflow: auto;
+  max-height: 430px;
+  font-size: 11px;
+}
+.toolCatalogEmpty {
+  padding: 40px 0;
+  opacity: 0.6;
+}
+.toolCatalogFootnote {
+  border-top: 1px solid var(--line, rgba(127, 127, 127, 0.2));
+  margin-top: 28px;
+  padding: 20px 0;
+  font-size: 12px;
+  line-height: 1.7;
+  opacity: 0.65;
+}
+.toolCatalogFootnote a {
+  color: inherit;
+}
+@media (max-width: 640px) {
+  .toolCatalogTabs {
+    margin-top: 22px;
+    gap: 0;
+  }
+  .toolCatalogTabs small { margin-left: 4px; font-size: 10px; }
+  .toolCatalogTabs button {
+    flex: 1 0 auto;
+    padding: 11px 6px;
+    font-size: 12px;
+  }
+  .toolCatalogFilters {
+    gap: 10px;
+  }
+  .toolCatalogFilters label {
+    flex: 1 1 40%;
+  }
+  .toolCatalogFilters .toolCatalogSearch {
+    flex-basis: 100%;
+  }
+  .toolCatalogFilters select {
+    max-width: none;
+    width: 100%;
+  }
+  .toolCatalogName > a {
+    max-width: calc(100% - 70px);
+  }
+  .toolCatalogName {
+    gap: 8px;
+  }
+  .toolCatalogRow {
+    padding: 22px 0;
+  }
+  .toolCatalogRow summary {
+    gap: 8px;
+  }
+  .toolCatalogRow summary small {
+    width: 100%;
+    padding-left: 20px;
+  }
+  .toolCatalogContract pre {
+    padding: 12px;
+    font-size: 10px;
+  }
+}

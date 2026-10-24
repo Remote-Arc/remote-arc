@@ -242,10 +242,14 @@ frameLoop:
 			}
 		case <-deadline.C:
 			s.ev.Lock()
-			active, viewError := s.viewActive, s.viewError
+			active, viewError, pending := s.viewActive, s.viewError, s.viewCaptureCancel != nil
 			s.ev.Unlock()
 			visibility, _ := s.evaluateMain(h.ctx, `JSON.stringify({visibility:document.visibilityState,focus:document.hasFocus(),width:innerWidth,height:innerHeight,dpr:devicePixelRatio})`)
-			t.Fatalf("live view produced no updated frame (active=%v, error=%q, window=%+v, renderer=%s)", active, viewError, beforeView, visibility)
+			var version struct {
+				Product string `json:"product"`
+			}
+			_ = s.conn.Call(h.ctx, "Browser.getVersion", nil, &version)
+			t.Fatalf("live view produced no updated frame (active=%v, pending_capture=%v, error=%q, browser=%s, window=%+v, renderer=%s)", active, pending, viewError, version.Product, beforeView, visibility)
 		}
 	}
 

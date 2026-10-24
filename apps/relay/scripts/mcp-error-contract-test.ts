@@ -242,3 +242,14 @@ const listApps = appsTools.find(tool => tool.name === "list_apps");
 assert.deepEqual(listApps?.securitySchemes?.[0]?.scopes, ["apps:read"]);
 
 console.log("PASS: MCP error contract, incremental OAuth scopes, and admin/operator unlimited usage regressions");
+
+{
+  const { authRequiredText } = await import("../src/mcp.js");
+  const signedIn = authRequiredText(["apps:read"], true);
+  assert.match(signedIn, /apps:read scope/);
+  assert.match(signedIn, /reconnect Remote Arc in this AI app's connector settings/);
+  const signedOut = authRequiredText(["computer:read", "computer:write"], false);
+  assert.match(signedOut, /computer:read \+ computer:write scopes/);
+  assert.match(signedOut, /connect Remote Arc/);
+  console.log("PASS: missing-scope errors tell the AI what the person should do");
+}

@@ -124,6 +124,14 @@ const oauthToolMeta = (scope: Scope | readonly Scope[]) => ({
   securitySchemes: oauthSchemes(scope),
 });
 
+// The calling AI reads only this text, so say what the person should do.
+export const authRequiredText = (requiredScopes: readonly string[], signedIn: boolean) => {
+  const scopes = `${requiredScopes.join(" + ")} scope${requiredScopes.length === 1 ? "" : "s"}`;
+  return signedIn
+    ? `Authentication required. This Remote Arc connection does not include the ${scopes}, usually because it was connected before this feature existed. Ask the person to reconnect Remote Arc in this AI app's connector settings (disconnect, then connect again) and approve the new access; tools that are already authorized keep working meanwhile.`
+    : `Authentication required. Remote Arc needs the ${scopes}. Ask the person to connect Remote Arc in this AI app's connector settings and sign in.`;
+};
+
 const authRequired = (env: Env, scope: Scope | readonly Scope[], identity: OAuthIdentity | null) => {
   const requiredScopes = scopeList(scope);
   // Reauthorization replaces the client's token. Ask for the existing scopes
@@ -140,7 +148,7 @@ const authRequired = (env: Env, scope: Scope | readonly Scope[], identity: OAuth
     content: [
       {
         type: "text" as const,
-        text: `Authentication required. Remote Arc needs the ${requiredScopes.join(" + ")} scope${requiredScopes.length === 1 ? "" : "s"}.`,
+        text: authRequiredText(requiredScopes, identity !== null),
       },
     ],
     _meta: {
@@ -718,7 +726,7 @@ export function createRemoteLinkMcp(
       {
         title: "Run a command on a remote computer",
         description:
-          "Run a terminal command on a linked computer when the start_process skill is enabled for that device. The local Remote Arc Safety Guard blocks a narrow set of catastrophic system commands. If the device has multiple Trusted Write Locations, cwd is required; with exactly one Trusted Write Location, that location is used by default.",
+          "Run a terminal command on a linked computer when the start_process skill is enabled for that device. Commands run through /bin/sh -c on macOS and Linux (POSIX sh, not bash or the user's login shell) and cmd.exe /c on Windows; for PowerShell syntax, run powershell -NoProfile -Command \"...\". The default timeout is 5 s: raise timeout_ms, or set background and read process_output, for longer work such as installs, builds or clones. The local Remote Arc Safety Guard blocks a narrow set of catastrophic system commands. If the device has multiple Trusted Write Locations, cwd is required; with exactly one Trusted Write Location, that location is used by default.",
         inputSchema: z.object({
           device_id: z.string(),
           command: z.string(),

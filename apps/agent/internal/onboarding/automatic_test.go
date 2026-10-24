@@ -128,3 +128,21 @@ func TestOptionalStartupReturnsBeforeSetupAndCancels(t *testing.T) {
 		t.Fatal("panic was not handled")
 	}
 }
+
+func TestWSLMissingClientPointsToWindows(t *testing.T) {
+	for _, wsl := range []bool{true, false} {
+		notices := make(chan string, 1)
+		stop := startAutomaticOn(context.Background(), "test", func(_, message string) { notices <- message }, func(context.Context, string, string, string) []AutomaticResult {
+			return []AutomaticResult{{Agent: "claude", Status: "not_found"}}
+		}, wsl)
+		select {
+		case got := <-notices:
+			if !strings.Contains(got, "skipped") || strings.Contains(got, "Windows PowerShell") != wsl {
+				t.Fatal(wsl, got)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("missing notice")
+		}
+		stop()
+	}
+}

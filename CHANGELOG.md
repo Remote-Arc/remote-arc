@@ -4,6 +4,14 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.4 - Unreleased
 
+### Video uploads and clearer setup on Windows and WSL
+
+- Browser Runner can attach video (mp4, mov, m4v, webm, up to 2 GB), audio (mp3, wav, m4a, up to 512 MB) and more document/image types (csv, xlsx, pptx, gif, webp). Rejections now return `UNSUPPORTED_UPLOAD_TYPE` or `UPLOAD_SIZE_LIMIT`.
+- Automatic Codex setup works with Codex 0.163+, which rejected the empty connector-list cursor. When Codex cannot list its ChatGPT connectors, the message now says why and how to continue: `npx remotelink setup install --global --agent codex --skip-connector-check`.
+- In WSL, a missing Claude Code or Codex now explains that Windows apps are configured by running `npx remotelink@latest` in Windows PowerShell.
+- When an old global install makes `npx remotelink` run an older version than the running Agent, the message leads with `npx remotelink@latest` and labels `--force-update` as an explicit rollback.
+- A manually dispatched stable publish now marks its GitHub release as Latest.
+
 ### Correct systemd service log paths
 
 - Render literal systemd output paths so Linux and WSL user services can append Agent logs without non-absolute-path warnings. Preserve paths containing spaces, percent signs, quotes and Unicode. WSL lifetime and reconnect acceptance remain separate from this log-path correction.

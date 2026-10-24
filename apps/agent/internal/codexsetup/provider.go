@@ -2,6 +2,8 @@ package codexsetup
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -221,12 +223,34 @@ func (p *codexProvider) verify(name, workspace string, binding json.RawMessage) 
 	return nil
 }
 
+// SkipConnectorCheckHint is the manual way forward when Codex cannot list its
+// connectors (for example a Codex version change or a ChatGPT network block).
+const SkipConnectorCheckHint = "If Codex has no Remote Arc connector, run: npx remotelink setup install --global --agent codex --skip-connector-check"
+
+// connectorFailure keeps the redacted reason class so users and support can
+// tell a Codex protocol rejection from a disconnect, without vendor text.
+func connectorFailure(action string, err error) error {
+	reason := "Codex did not answer"
+	var f *Failure
+	if errors.As(err, &f) {
+		switch {
+		case f.RPCCode == -32600 || f.RPCCode == -32601 || f.RPCCode == -32602:
+			reason = fmt.Sprintf("this Codex version rejected the request (code %d); update Remote Arc or Codex", f.RPCCode)
+		case f.RPCCode != 0:
+			reason = fmt.Sprintf("Codex could not reach its connector directory (code %d); this is often a temporary ChatGPT network or sign-in issue", f.RPCCode)
+		default:
+			reason = "Codex " + strings.TrimPrefix(f.Code, "client_")
+		}
+	}
+	return fail("connector_inspection_failed", fmt.Sprintf("Could not %s: %s. Registration was skipped to avoid a duplicate Remote Arc connector. %s.", action, reason, SkipConnectorCheckHint))
+}
+
 func (p *codexProvider) remoteArcApp() (bool, error) {
 	var identity struct {
 		Account json.RawMessage `json:"account"`
 	}
 	if err := p.rpc.call("account/read", map[string]any{"refreshToken": false}, &identity); err != nil {
-		return false, fail("connector_inspection_failed", "Could not determine Codex connector availability; automatic setup was skipped.")
+		return false, connectorFailure("read the Codex account", err)
 	}
 	if len(identity.Account) == 0 {
 		return false, fail("connector_inspection_failed", "Codex returned incomplete account information; automatic setup was skipped.")
@@ -255,8 +279,13 @@ func (p *codexProvider) remoteArcApp() (bool, error) {
 			} `json:"data"`
 			NextCursor *string `json:"nextCursor"`
 		}
-		if err := p.rpc.call("app/list", map[string]any{"cursor": cursor, "limit": 100, "forceRefetch": false}, &response); err != nil {
-			return false, fail("connector_inspection_failed", "Could not check existing Codex connectors; registration was skipped to avoid duplicates.")
+		params := map[string]any{"limit": 100, "forceRefetch": false}
+		if cursor != "" {
+			// Codex 0.163+ rejects an empty cursor; the first page has none.
+			params["cursor"] = cursor
+		}
+		if err := p.rpc.call("app/list", params, &response); err != nil {
+			return false, connectorFailure("check existing Codex connectors", err)
 		}
 		if response.Data == nil {
 			return false, fail("connector_inspection_failed", "Codex returned an incomplete connector list; registration was skipped.")

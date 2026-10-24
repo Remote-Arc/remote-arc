@@ -14,12 +14,25 @@ function appendCapped(current: string, chunk: Buffer | string) {
 // Obvious credentials some tools pass on their command line. Kept identical
 // to the Go core's redaction so both runtimes return the same listing.
 const SECRET_ARGUMENT =
-  /((?:--?|\/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("[^"]*"|'[^']*'|\S+)|(bearer\s+)\S+/gi;
+  /((?:--?|\/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("(?:\\.|[^"\\])*"|'[^']*'|\S+)|(bearer\s+)\S+/gi;
 
 export function redactCommandLine(line: string) {
   return line.replace(SECRET_ARGUMENT, (_match, flag?: string, _value?: string, bearer?: string) =>
     bearer ? `${bearer}[redacted]` : `${flag}[redacted]`,
   );
+}
+
+// Decode before redacting: CSV quoting can conceal quoted credentials from
+// the command-line matcher. JSON preserves one row even for multiline commands.
+export function windowsProcessDetails(output: string) {
+  const parsed: unknown = output.trim() ? JSON.parse(output) : [];
+  const rows = parsed === null ? [] : Array.isArray(parsed) ? parsed : [parsed];
+  const clean = (value: unknown) => String(value ?? "").replace(/[\r\n\t]/g, " ");
+  return ["PID\tPPID\tName\tMemoryMB\tCommandLine", ...rows.map((raw) => {
+    if (!raw || typeof raw !== "object") throw new Error("Invalid process details response");
+    const row = raw as Record<string, unknown>;
+    return [row.ProcessId, row.ParentProcessId, row.Name, row.MemoryMB, redactCommandLine(String(row.CommandLine ?? ""))].map(clean).join("\t");
+  })].join("\n");
 }
 
 export async function listProcesses(
@@ -39,7 +52,7 @@ export async function listProcesses(
             "-NoProfile",
             "-NonInteractive",
             "-Command",
-            "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Csv -NoTypeInformation",
+            "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Json -Compress",
           ],
         ]
       : ["tasklist.exe", ["/FO", "CSV", "/NH"]]
@@ -61,7 +74,7 @@ export async function listProcesses(
       },
     );
   });
-  let lines = output.replace(/\r\n/g, "\n").split("\n");
+  let lines = (windows && options.details ? windowsProcessDetails(output) : output).replace(/\r\n/g, "\n").split("\n");
   if (!header && lines.length) {
     header = lines[0] ?? "";
     lines = lines.slice(1);

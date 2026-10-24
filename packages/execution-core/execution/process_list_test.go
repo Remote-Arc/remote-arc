@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"runtime"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ func TestRedactCommandLine(t *testing.T) {
 		`C:\pwd\author\tokenizer.exe --tokens 4`:            `C:\pwd\author\tokenizer.exe --tokens 4`,
 		`claude.exe --resume 0b1c --dangerously-skip-perms`: `claude.exe --resume 0b1c --dangerously-skip-perms`,
 	}
+	cases[`node --token "synthetic\"private" --port 80`] = `node --token [redacted] --port 80`
 	for in, want := range cases {
 		if got := redactCommandLine(in); got != want {
 			t.Errorf("redact(%q) = %q, want %q", in, got, want)
@@ -74,5 +76,28 @@ func TestListProcessesInvalidLimitFallsBack(t *testing.T) {
 		if err != nil || !strings.Contains(out, " processes") {
 			t.Fatalf("limit %d: %v %q", limit, err, out)
 		}
+	}
+}
+
+func TestWindowsProcessDetailsRedactsDecodedCommands(t *testing.T) {
+	command := "node job.js --token \"SYNTHETIC PRIVATE TOKEN\" --password 'SECRET,WITH,COMMAS' --client-secret \"LINE1\nLINE2\" --port 80"
+	row := map[string]any{"ProcessId": 123, "ParentProcessId": 12, "Name": "node.exe", "MemoryMB": 42, "CommandLine": command}
+	for _, value := range []any{row, []any{row}, nil} {
+		raw, _ := json.Marshal(value)
+		out, err := windowsProcessDetails(string(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, secret := range []string{"SYNTHETIC PRIVATE TOKEN", "SECRET,WITH,COMMAS", "LINE1", "LINE2"} {
+			if strings.Contains(out, secret) {
+				t.Fatalf("quoted process credential leaked: %s", secret)
+			}
+		}
+		if value != nil && (!strings.Contains(out, "--port 80") || strings.Count(out, "\n") != 1) {
+			t.Fatal("process rows corrupted", out)
+		}
+	}
+	if _, err := windowsProcessDetails("malformed details"); err == nil {
+		t.Fatal("invalid process output accepted")
 	}
 }

@@ -1,7 +1,18 @@
+import assert from "node:assert/strict";
+import {redactCommandLine, windowsProcessDetails} from "../src/process.js";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { RemoteArcExecutionCore, assertCommandAllowed } from "../src/index.js";
+
+assert.equal(redactCommandLine(String.raw`node --token "synthetic\"private" --port 80`),'node --token [redacted] --port 80');
+const processRow = {ProcessId:123,ParentProcessId:12,Name:"node.exe",MemoryMB:42,CommandLine:`node job.js --token "SYNTHETIC PRIVATE TOKEN" --password 'SECRET,WITH,COMMAS' --client-secret "LINE1\nLINE2" --port 80`};
+for (const rows of [processRow,[processRow],null]) {
+  const output = windowsProcessDetails(JSON.stringify(rows));
+  for (const secret of ["SYNTHETIC PRIVATE TOKEN","SECRET,WITH,COMMAS","LINE1","LINE2"]) assert(!output.includes(secret),"decoded process credentials must be redacted");
+  if(rows) {assert(output.includes("--port 80")); assert.equal(output.split("\n").length,2);}
+}
+assert.throws(()=>windowsProcessDetails("malformed details"));
 
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "remotearc-core-"));
 process.env.REMOTEARC_UNDO_ROOT = path.join(root, ".undo");

@@ -1,0 +1,18 @@
+.usageConversion{position:relative;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.85fr);gap:36px;align-items:center;border:1px solid rgba(33,151,176,.22);border-radius:19px;padding:28px 30px;margin:0 0 20px;background:linear-gradient(113deg,rgba(58,179,191,.10),rgba(89,171,180,.045) 58%,rgba(112,144,186,.055));color:var(--text);overflow:hidden}
+.usageConversion:before{content:"";position:absolute;height:210px;width:210px;border-radius:50%;background:rgba(41,181,190,.07);right:-80px;top:-120px;pointer-events:none}
+.usageConversionCopy{z-index:1;min-width:0}.usageConversionKicker{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:770;letter-spacing:.09em;color:var(--sky-light)}
+.usageConversionKicker i{height:8px;width:8px;border-radius:50%;background:#25adab;box-shadow:0 0 0 4px rgba(42,173,167,.11)}
+.usageConversion h2{font-size:clamp(21px,2.35vw,27px);line-height:1.24;letter-spacing:-.035em;margin:12px 0 10px;max-width:570px}
+.usageConversion p{font-size:14px;color:var(--muted);line-height:1.65;margin:0;max-width:590px}
+.usageConversionActions{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:20px}
+.usageConversionActions button,.usageConversionActions a{font:inherit;font-size:13px;font-weight:720}
+.usageConversionPrimary{display:flex;gap:12px;align-items:center;justify-content:center;color:#fff;background:#167a92;border:1px solid #167a92;border-radius:10px;padding:12px 17px;cursor:pointer}
+.usageConversionPrimary:hover{background:#11657e}.usageConversionActions a{color:var(--sky-light);text-decoration:none}.usageConversionActions a:hover{text-decoration:underline}
+.usageConversionPanel{padding:21px 22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 8px 26px rgba(14,44,61,.055);min-width:0;z-index:1}
+.usageConversionPanelTop,.usageConversionPanelBottom{display:flex;justify-content:space-between;align-items:center;gap:12px}.usageConversionPanelTop{font-size:12px;color:var(--muted)}.usageConversionPanelTop strong{color:var(--sky-light);font-size:13px}
+.usageConversionNumbers{margin:14px 0 15px;font-variant-numeric:tabular-nums}.usageConversionNumbers strong{font-size:clamp(24px,3vw,33px);letter-spacing:-.04em}.usageConversionNumbers span{font-size:14px;color:var(--muted)}
+.usageConversionTrack{height:8px;background:rgba(100,130,152,.15);border-radius:10px;overflow:hidden}.usageConversionTrack i{display:block;height:100%;border-radius:10px;background:linear-gradient(90deg,#3ebfbe,#168aa4);transition:width .3s}
+.usageConversionPanelBottom{margin-top:12px;font-size:11px;color:var(--muted);line-height:1.4}
+.usageConversionMax{border-color:rgba(210,129,86,.31);background:linear-gradient(111deg,rgba(191,134,83,.10),rgba(156,113,96,.035))}.usageConversionMax .usageConversionKicker i{background:#d1945e;box-shadow:0 0 0 4px rgba(209,148,94,.13)}.usageConversionMax .usageConversionTrack i{background:linear-gradient(90deg,#d49f64,#c16e52)}.usageConversionMax .usageConversionPanelTop strong{color:#c78053}
+@media(max-width:960px){.usageConversion{grid-template-columns:1fr;gap:18px;padding:22px}.usageConversionPanel{max-width:none}}
+@media(max-width:550px){.usageConversion{padding:18px;border-radius:14px}.usageConversion h2{font-size:22px}.usageConversion p{font-size:13px}.usageConversionActions{align-items:stretch}.usageConversionPrimary{width:100%}.usageConversionPanel{padding:16px}}

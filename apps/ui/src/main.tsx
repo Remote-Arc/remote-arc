@@ -37,6 +37,7 @@ import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from
 import { releaseChinese } from "./release-locales.js";
 import { DashboardSettings } from "./dashboard-settings.js";
 import { AdminOperations } from "./admin-operations.js";
+import { UsageConversionBanner } from "./usage-conversion.js";
 import { AdminConsole } from "./admin/admin-console.js";
 import {registerProductPwa} from './product-pwa.js';
 import { EngagementPage } from "./public-engagement.js";
@@ -5283,6 +5284,7 @@ function Dashboard({
                 <button className="addButton arcRadiantCta" onClick={() => navigateTab("connect")}><ProductIcon name="link"/>{tr("Connect your AI", "连接你的 AI")}</button>
               </div>
             </section>
+            <UsageConversionBanner usage={usage} pricingUrl={MARKETING_ORIGIN + (locale==="zh"?"/zh/pricing":"/pricing")} onManagePlan={()=>{navigateTab("settings");const target=new URL(location.href);target.searchParams.set("section","billing");history.replaceState(history.state,"",target);window.dispatchEvent(new PopStateEvent("popstate"));}} />
             <section className="overviewStatusGrid">
               <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Devices online", "在线设备")}</span><i className={"healthDot " + ((status?.onlineDevices ?? 0) > 0 ? "good" : "idle")} /></div><strong>{status?.onlineDevices ?? 0} / {status?.totalDevices ?? devices.length}</strong><small>{tr("Ready for MCP calls", "可接受 MCP 调用")}</small></article>
                              <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr('Connected Apps','应用连接')}</span><ProductIcon name="apps"/></div><strong>{tr('Your tools','你的工具')}</strong><button className="ghostButton overviewManageLink" onClick={()=>navigateTab('apps')}>{tr('Manage connections','管理连接')}<ProductIcon name="arrowUpRight" size={14}/></button></article>

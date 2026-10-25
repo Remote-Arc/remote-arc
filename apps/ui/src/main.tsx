@@ -1,5 +1,5 @@
 import {useCaseSlugs} from '../../../packages/docs/src/arc-use-cases.js';
-import { RunnerAttentionList, RunnerAttentionSetting, RunnerView } from "./runner-view.js";
+import { DeviceBrowserSessions, RunnerAttentionList, RunnerAttentionSetting, RunnerView } from "./runner-view.js";
 import './arc-composer.css';
 import './arc-references.css';
 import { BROWSER_RUNNER_TOOLS, browserRunnerEnabled, isBrowserRunnerTool, toggledDeviceTools } from "./device-tools.js";
@@ -5422,6 +5422,7 @@ function Dashboard({
                       <span>{device.background_guard_active ? tr("Recovery supervisor running", "恢复守护运行中") : device.background_enabled ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认") : tr("Automatic recovery off", "自动恢复关闭")}</span>
                       <span>{tr("Seen ", "最后在线：")}{timeAgo(device.last_seen)}</span>
                     </div>
+                    {device.status === "online" && runnerEnabled && runnerAdvertised && <DeviceBrowserSessions deviceId={device.id}/>}
                     {device.status === "offline" && <p className="deviceOfflineHint">{tr("Tasks wait until this computer reconnects. Remote Arc cannot power it on.", "任务会等待这台电脑重新连接，Remote Arc 无法远程开机。")}</p>}
                     <div id={"device-management-" + device.id} hidden={managedDeviceId !== device.id} className="deviceManagementPanel">
                       {managedDeviceId === device.id && <>

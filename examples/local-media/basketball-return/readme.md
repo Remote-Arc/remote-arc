@@ -10,4 +10,4 @@ The Windows session used a local bundled Chromium with GPU canvas acceleration d
 
 Mix the recording supplied by the user as BGM, with small event sounds. The recording and font binaries are runtime assets and are not included here. Video/poster bytes are in R2, outside Git. Sources and a record of the requested music are in facts.md; no royalty-free music license is asserted.
 
-This is a sample for reviewing the revised direction. Earlier short gallery records are archived while their full-minute replacements await that review.
+This is a sample for reviewing the revised direction. Earlier films remain visible alongside the pilot while full-minute replacements are prepared.

@@ -2,9 +2,9 @@
 
 The video gallery lives in /use-cases/video-creation#video-gallery and its Chinese counterpart. It follows the website language automatically; there are no category or language filter controls inside the gallery. The main use-cases directory remains a flat illustrated task catalog.
 
-The current published demonstration is The Return / 回弹, a 60-second original basketball knowledge film in separate English and Chinese versions. It uses the vibe-knowledge-film method: a factual brief and storyboard, visible object actions, close-ups, cutaway compression, comparison, a return to the opening, iterative still/transition review and deterministic local rendering. There is no voiceover. The requested recording and small event sounds form its soundtrack; the recording is identified in the local facts sheet without a royalty-free claim.
+The featured addition is The Return / 回弹, a 60-second original basketball knowledge film in separate English and Chinese versions. It uses the vibe-knowledge-film method: a factual brief and storyboard, visible object actions, close-ups, cutaway compression, comparison, a return to the opening, iterative still/transition review and deterministic local rendering. There is no voiceover. The requested recording and small event sounds form its soundtrack; the recording is identified in the local facts sheet without a royalty-free claim.
 
-Earlier short demonstrations retain archived metadata with published=false so existing approved media URLs continue to work. They are not shown as current finished examples while their full-minute replacements await the user's sample review. The published list is explicit, and every current entry meets the full-minute/no-narration brief.
+Existing demonstrations stay visible alongside the new pilot: eight Chinese films and four English films, selected automatically by website language. New full-minute editions can be added progressively; producing a pilot does not unpublish earlier examples. Existing entries keep their actual duration and soundtrack metadata until remade.
 
 Video/poster bytes live in the remote-arc-public-media R2 bucket under demo-gallery/. Git contains metadata, file sizes and SHA-256 hashes. Original image PNGs and WebP previews use the same approved route and publisher. Raster and video bytes remain outside Git.
 

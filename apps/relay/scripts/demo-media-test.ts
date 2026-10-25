@@ -26,5 +26,8 @@ assert.equal(new Set(GALLERY_ASSETS.map(item=>item.name)).size,GALLERY_ASSETS.le
 for(const file of GALLERY_ASSETS){assert.match(file.name,/^[a-z0-9-]+-[a-f0-9]{12}\.(mp4|webp|png)$/);assert.match(file.sha256,/^[a-f0-9]{64}$/);}
 for(const item of IMAGE_DEMOS){const response=await serveDemoMedia(new Request('https://remotearc.app/media/demo-gallery/'+item.image),bucket);assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/png');const thumb=await serveDemoMedia(new Request('https://remotearc.app/media/demo-gallery/'+item.thumb,{method:'HEAD'}),bucket);assert.equal(thumb.headers.get('content-type'),'image/webp');}
 assert.deepEqual([...new Set(PUBLISHED_MEDIA_DEMOS.map(item=>item.language))].sort(),['en','zh']);
-assert(PUBLISHED_MEDIA_DEMOS.every(item=>item.duration>=59.9&&item.audio==='music'),'Published films meet the full-minute, no-narration brief');
+const pilots=PUBLISHED_MEDIA_DEMOS.filter(item=>item.id.startsWith('basketball-return-'));
+assert.equal(pilots.length,2);
+assert(pilots.every(item=>item.duration>=59.9&&item.audio==='music'),'The new pilot meets the full-minute, no-narration brief');
+for(const id of ['basketball','why-24-hours','venus','pluto','aura-product','data-in-motion','world-connections','aura-focus-en','data-story-en','connected-world-en'])assert(PUBLISHED_MEDIA_DEMOS.some(item=>item.id===id),'Existing demo must remain visible: '+id);
 console.log('PASS: English media metadata, original PNG references and shared allowlist integrity');

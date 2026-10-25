@@ -45,6 +45,8 @@ export const SKILL_USE_CASES = [
   "remotion-video",
   "hyperframes-video",
   "openfilm-video",
+  "manim-video",
+  "blender-mcp",
   "map-creator",
   "community-vibe-knowledge-film"
 ],
@@ -239,6 +241,7 @@ export const SKILL_USE_CASES = [
     },
     "skillIds": [
       "image-studio",
+      "blender-mcp",
       "community-canvas-design",
       "community-algorithmic-art"
     ],
@@ -750,7 +753,103 @@ export const SKILL_USE_CASES = [
     "format": "BROWSER",
     "tools": "read_skill · read_file · write_file · start_process",
     "connectOnly": true
-  }
+  },
+{
+  "slug": "mathematical-animation",
+  "category": {
+    "en": "MATHEMATICAL ANIMATION",
+    "zh": "数学与原理动画"
+  },
+  "title": {
+    "en": "Explain a concept with Manim",
+    "zh": "用 Manim 把原理讲明白"
+  },
+  "intro": {
+    "en": "Make geometry, formulas, algorithms and changing quantities visible: a proof, the area under a curve, a sorting algorithm or a data mechanism.",
+    "zh": "把几何、公式、算法和数量变化变成看得见的过程：演示证明、曲线下面积、排序步骤或数据原理。"
+  },
+  "prompt": {
+    "en": "Use Manim on my authorized computer to explain the concept I provide through a clear visual derivation. Prepare its ordinary local dependencies, use my chosen language and notation, verify the mathematics, render and inspect the actual animation, and deliver an MP4 and editable Python scene.",
+    "zh": "用我已授权电脑上的 Manim，通过清晰的视觉推演讲解我给出的概念。按需准备普通本地依赖，使用我指定的语言与符号，核对数学关系，渲染并检查实际动画，交付 MP4 和可编辑 Python 场景。"
+  },
+  "requires": {
+    "en": "An authorized computer, a writable task folder and Python/rendering dependencies.",
+    "zh": "获授权电脑、可写任务目录和 Python／渲染依赖。"
+  },
+  "boundary": {
+    "en": "Manim and rendering run locally. The ordinary bootstrap includes Cairo rendering, not a TeX distribution; mathematical typesetting dependencies depend on the requested notation.",
+    "zh": "Manim 与渲染在本地执行。普通准备流程包含 Cairo 渲染，未包含 TeX 发行版；公式排版依赖按实际符号需求选择。"
+  },
+  "steps": [
+    {
+      "en": "Translate the concept into quantities, geometry and meaningful transformations.",
+      "zh": "把概念拆成数量、几何对象和有含义的变化。"
+    },
+    {
+      "en": "Render the sequence, inspect the reasoning and labels, and deliver the editable scene.",
+      "zh": "渲染过程，检查推理与标签，交付可编辑场景。"
+    }
+  ],
+  "proof": {
+    "en": "A playable MP4, editable Python source, measured output metadata and checked mathematical relationships.",
+    "zh": "可播放 MP4、可编辑 Python 源码、实测文件信息，以及已核对的数学关系。"
+  },
+  "skillIds": [
+    "manim-video"
+  ],
+  "art": "math-motion",
+  "format": "MP4 · PY",
+  "tools": "read_skill · write_file · start_process",
+  "connectOnly": false
+},
+{
+  "slug": "blender-3d",
+  "category": {
+    "en": "3D CREATION",
+    "zh": "三维创作"
+  },
+  "title": {
+    "en": "Create a 3D product or scene",
+    "zh": "制作三维产品与场景"
+  },
+  "intro": {
+    "en": "Use Blender MCP for real geometry, materials, lights and cameras: product packshots, a room or server hall, an exploded view or an orbit animation.",
+    "zh": "用 Blender MCP 创建真实几何、材质、灯光和相机，制作产品展示、房间与机房、结构拆解或环绕运镜。"
+  },
+  "prompt": {
+    "en": "Use local Blender MCP on my authorized computer to create the 3D product or scene I describe. Prepare ordinary dependencies in the task folder, connect to a fresh owned Blender instance, inspect the scene, model and light it, render a preview and deliver the editable blend file and requested final renders.",
+    "zh": "用我已授权电脑上的本地 Blender MCP，制作我描述的三维产品或场景。在任务目录准备普通依赖，连接独立 Blender 实例，检查场景，完成建模和布光，渲染预览，交付可编辑 blend 文件和要求的最终渲染。"
+  },
+  "requires": {
+    "en": "An authorized computer with a desktop/display, a writable task folder and space for portable Blender.",
+    "zh": "具备桌面／显示环境的获授权电脑、可写任务目录和便携 Blender 所需空间。"
+  },
+  "boundary": {
+    "en": "The live MCP addon needs a Blender GUI event loop; background rendering is a separate process. The local workflow does not enable paid model-generation services or change other AI clients.",
+    "zh": "实时 MCP 插件需要 Blender 图形界面的事件循环；后台渲染另行执行。本地流程不会启用付费模型生成服务，也不修改其他 AI 客户端。"
+  },
+  "steps": [
+    {
+      "en": "Connect through real MCP, inspect the scene and build named geometry and materials.",
+      "zh": "通过真实 MCP 连接，检查场景并创建命名几何与材质。"
+    },
+    {
+      "en": "Preview lighting/camera framing, save the scene, render and inspect the actual output.",
+      "zh": "预览灯光与构图，保存场景，渲染并检查真实输出。"
+    }
+  ],
+  "proof": {
+    "en": "An editable blend project, actual images or video, scene readback and render checks.",
+    "zh": "可编辑 blend 工程、实际图像或视频、场景读回和渲染检查。"
+  },
+  "skillIds": [
+    "blender-mcp"
+  ],
+  "art": "product-3d",
+  "format": "BLEND · PNG",
+  "tools": "read_skill · write_file · start_process",
+  "connectOnly": false
+}
 ] as const;
 export type SkillUseCaseSlug=typeof SKILL_USE_CASES[number]['slug'];
 export const LEGACY_USE_CASE_SKILLS:Readonly<Record<string,readonly string[]>>={

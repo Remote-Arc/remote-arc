@@ -64,3 +64,7 @@ Run node --test scripts/local-media-test.mjs and the relay local-media-resources
 ## Core video and skill-library additions
 
 Remotion is a core P0 local video workflow, alongside dedicated HyperFrames and OpenFilm workflows and Map Creator. The dashboard and preview use the same unified library as built-in and pinned package discovery. Requested Vibe Knowledge Film, A Stock Data and Nuwa plus fifteen ready-made Nuwa perspectives have pinned source and license manifests. Their presence does not imply installed runtimes or completed user work.
+
+## Mathematical animation and Blender MCP
+
+Manim renders precise explanatory scenes in a task-local Python environment. Blender MCP uses a real stdio MCP handshake and a loopback addon in a fresh Blender GUI instance, with task-local configuration, disabled telemetry and upstream code safe mode. Its local bridge exposes only scene reads and Blender code; paid asset services and global AI-client configuration are outside this workflow. A GUI/display is required for the addon, while saved .blend files can render in a separate background process. Both workflows preserve editable sources and verify actual artifacts.

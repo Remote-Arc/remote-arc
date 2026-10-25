@@ -17,8 +17,10 @@ const skills=registry.skills.map((item)=>{
 });
 const helper=fs.readFileSync(path.join(root,'skills/media-runtime/local-media.mjs'),'utf8').replace(/\r\n/g,'\n');
 const resource={path:'scripts/local-media.mjs',bytes:Buffer.byteLength(helper),sha256:createHash('sha256').update(helper).digest('hex'),content:helper};
-const mediaIds=new Set(['video-creator','remotion-video','hyperframes-video','openfilm-video','map-creator','transcribe-subtitles']);
-const resources=Object.fromEntries(skills.map(skill=>[skill.id,[{path:'SKILL.md',content:skill.content,bytes:Buffer.byteLength(skill.content),sha256:createHash('sha256').update(skill.content).digest('hex')},...(mediaIds.has(skill.id)?[resource]:[])]]));
+const mediaIds=new Set(['video-creator','remotion-video','hyperframes-video','openfilm-video','map-creator','transcribe-subtitles','manim-video','blender-mcp']);
+const creativeResource=name=>{const content=fs.readFileSync(path.join(root,'skills/media-runtime',name),'utf8').replace(/\r\n/g,'\n');return {path:'scripts/'+name,content,bytes:Buffer.byteLength(content),sha256:createHash('sha256').update(content).digest('hex')};};
+const creative=creativeResource('local-creative.mjs'),blender=[creativeResource('blender-host.py'),creativeResource('blender-session.py')];
+const resources=Object.fromEntries(skills.map(skill=>[skill.id,[{path:'SKILL.md',content:skill.content,bytes:Buffer.byteLength(skill.content),sha256:createHash('sha256').update(skill.content).digest('hex')},...(mediaIds.has(skill.id)?[resource]:[]),...(['manim-video','blender-mcp'].includes(skill.id)?[creative]:[]),...(skill.id==='blender-mcp'?blender:[])]]));
 const revision=createHash('sha256').update(JSON.stringify({skills,resources})).digest('hex').slice(0,16);
 const resourceGenerated='/* GENERATED. Run node scripts/generate-builtin-skills.mjs */\nexport type BuiltinSkillResource={readonly path:string;readonly bytes:number;readonly sha256:string;readonly content:string};\nexport const BUILTIN_SKILL_RESOURCES:Readonly<Record<string,readonly BuiltinSkillResource[]>>=JSON.parse('+JSON.stringify(JSON.stringify(resources))+');\n';
 const resourceDest=path.join(root,'packages/skills/src/media-resources.generated.ts');

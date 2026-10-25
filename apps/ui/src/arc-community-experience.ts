@@ -1,4 +1,6 @@
 export function communityExperience(id:string,tr:(en:string,zh:string)=>string){const names:Record<string,[string,string,string,string]>={
+ "manim-video":["Manim · mathematical animation","Manim · 数学与原理动画","Animate geometry, formulas, algorithms and changing data step by step, rendering locally with editable Python scenes.","把几何、公式推导、算法与数据变化做成逐步讲解的动画，本地渲染并交付 Python 工程。"],
+ "blender-mcp":["Blender MCP · 3D creation","Blender MCP · 三维创作","Build and inspect real Blender scenes through local MCP: models, materials, lighting, product renders and camera animation.","通过本地 MCP 创建和检查真实三维场景，完成建模、材质灯光、产品渲染与运镜，交付可编辑 .blend。"],
  "browser-operator":["Browser Operator","浏览器操作","Operate an authorized browser using DOM snapshots and repeatable actions.","在已授权浏览器中读取页面、操作表单并保留结果证据。"],
  "autonomous-browser":["Autonomous Browser","多步骤浏览器任务","Plan multi-step browser work using browser-use with an approved model budget.","用已有授权和任务预算完成多步骤浏览器工作，遇到登录验证时交还用户。"],
  "desktop-operator":["Desktop Operator","桌面操作","Move pointer, drag, type and click in a permitted local desktop session.","在获授权的桌面会话中操作鼠标、键盘与应用界面。"],

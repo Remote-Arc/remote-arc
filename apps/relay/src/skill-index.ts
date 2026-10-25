@@ -14,6 +14,8 @@ export type ImportedSkillSummary={id:string;name:string;description:string};
 // Chinese requests rarely share tokens with English descriptions, so these
 // cues are what make "帮我剪个视频" find the video skill.
 const CUES:Array<[RegExp,string[],number?]>=[
+ [/\bmanim\b|数学动画|几何动画|公式推导动画|算法动画/i,['manim-video'],12],
+ [/\bblender\b|三维建模|3d model|产品三维|三维产品|材质灯光/i,['blender-mcp'],12],
  [/remotion|three\.?js|3d camera|三维运镜|三维视频|粒子光影|音乐卡点/i,['remotion-video'],12],
  [/hyperframes|gsap|动态排版|界面演示视频/i,['hyperframes-video'],12],
  [/openfilm/i,['openfilm-video'],12],

@@ -241,6 +241,47 @@
       "upstream": "https://www.naturalearthdata.com/",
       "license": "RA-authored workflow; Natural Earth public-domain data",
       "optIn": false
+    },
+    {
+      "id": "manim-video",
+      "name": "Manim Video",
+      "priority": "P1",
+      "category": "media",
+      "description": "Local mathematical, geometric, algorithm and data-explanation animation with precise visual derivations and editable Python scenes.",
+      "engine": "Manim 0.22.0 / Cairo / Python + FFmpeg",
+      "requires": [
+        "python3",
+        "node",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ManimCommunity/manim",
+      "license": "RA-authored workflow; Manim MIT license",
+      "optIn": false
+    },
+    {
+      "id": "blender-mcp",
+      "name": "Blender MCP",
+      "priority": "P1",
+      "category": "media",
+      "description": "Real local MCP connection to Blender for 3D modeling, materials, lighting, product visualization and camera animation; editable blend projects and rendered assets.",
+      "engine": "Blender 4.5.15 LTS / mcp-for-blender 2.2.4 / MCP 1.26.0",
+      "requires": [
+        "python3",
+        "node",
+        "desktop GUI",
+        "Blender"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ahujasid/mcp-for-blender",
+      "license": "RA-authored workflow; MCP integration MIT; Blender GPL",
+      "optIn": false
     }
   ]
 }

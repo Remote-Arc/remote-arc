@@ -1,5 +1,6 @@
+import {SKILL_USE_CASES} from './skill-use-cases.js';
 // Pure public workflow data shared by the UI and crawlable server rendering.
-export const useCaseSlugs = ["remote-development", "file-organization", "disk-space-cleanup", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff", "job-applications"] as const;
+export const useCaseSlugs = [...SKILL_USE_CASES.map(item=>item.slug),"remote-development", "file-organization", "disk-space-cleanup", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff", "job-applications"] as const;
 export type UseCaseSlug = typeof useCaseSlugs[number];
 type Copy={en:string;zh:string};
 // connectOnly: the workflow needs a capability Arc cannot drive yet, so the
@@ -28,7 +29,9 @@ export const ARC_DELEGATED_WORK=[
   checks:copy('Observed changes, current state, source evidence and decisions needing your input.','实际变化、当前状态、来源证据与需要你决定的事项。'),
   prompt:copy('Help me create a read-only Arc routine to follow changes in a connected deployment or project queue. Confirm the account, resource, changes I care about and interval of at least 15 minutes. Save self-contained instructions. Each run should read the actual state, compare available previous observations and record meaningful changes, current evidence and anything requiring my decision in the task conversation. Do not silently publish changes or send messages. Explain how I can inspect or pause the routine.','帮我创建只读 Arc Routine，跟进已连接部署或项目队列的变化。确认账号、资源、关注变化和至少 15 分钟的间隔，保存自包含指令。每轮读取实际状态，对照可用历史观察，在任务对话记录重要变化、当前证据和需要我决定的事项。不擅自发布修改或发送消息，并说明如何查看或暂停 Routine。')},
 ];
+const skillArcCases=Object.fromEntries(SKILL_USE_CASES.map(item=>[item.slug,{kind:'direct',intro:item.connectOnly?copy('Available through Connect. '+item.intro.en,'通过 Connect 使用。'+item.intro.zh):item.intro,prompt:item.connectOnly?copy('Arc does not drive Browser Runner yet. '+item.prompt.en,'Arc 暂不支持驱动 Browser Runner。'+item.prompt.zh):item.prompt,requires:item.requires,boundary:item.boundary,...(item.connectOnly?{connectOnly:true}:{})}])) as Record<typeof SKILL_USE_CASES[number]['slug'],ArcCase>;
 export const ARC_USE_CASES:Record<UseCaseSlug,ArcCase>={
+ ...skillArcCases,
  'remote-development':{kind:'direct',
   intro:copy('Let Arc inspect, fix and test the project on the computer where your checkout already lives.','让 Arc 在已有项目的电脑上检查、修复并测试。'),
   prompt:copy('Help me fix a project on my connected computer. Confirm the device, checkout path and failing behavior, inspect the existing work, reproduce the failure, make the authorized change and run focused tests. Return the diff and actual check results; ask before committing or deploying.','帮我修复已连接电脑上的项目。确认设备、仓库路径和失败现象，检查已有工作、复现失败、完成获授权修改并运行相关测试。返回 diff 和实际检查结果；提交或部署前先确认。'),

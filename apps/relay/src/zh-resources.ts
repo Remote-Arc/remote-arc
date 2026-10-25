@@ -1,4 +1,5 @@
-import { ARC_DELEGATED_WORK, ARC_USE_CASES, arcUseCasePrompt, type UseCaseSlug } from '../../../packages/docs/src/arc-use-cases.js';
+import {SKILL_USE_CASES} from '../../../packages/docs/src/skill-use-cases.js';
+import { ARC_USE_CASES, arcUseCasePrompt, type UseCaseSlug } from '../../../packages/docs/src/arc-use-cases.js';
 type Section = { heading: string; text: string };
 type ResourceSeo = {
  title: string; description: string; h1: string; intro: string; sections: Section[];
@@ -93,6 +94,7 @@ const useCases: Record<string, Brief> = {
  "desktop-automation": ["执行审查过的桌面自动化脚本", "通过授权本机命令调用用户已安装的键鼠自动化工具，执行可观察的桌面动作。", "先明确动作脚本、交互会话与撤销计划。", "这不是 Remote Arc 内置的 GUI 操作工具；终端脚本继承本机账户权限。"],
  "cross-device-handoff": ["在一个 AI 对话中协作 Windows 与 macOS", "通过分别配对的 Windows 和 Mac 设备执行各自授权的工作，再核对交接成果。", "设备之间独立配置工具、目录范围和授权，交接文件需显式安排。", "配对多个电脑不会自动同步仓库或绕过每台电脑独立的权限设置。"]
 };
+Object.assign(useCases,Object.fromEntries(SKILL_USE_CASES.map(item=>[item.slug,[item.title.zh,item.intro.zh,item.steps.map(step=>step.zh).join(' '),item.boundary.zh]])));
 export const chineseResourceSeo: Record<string, ResourceSeo> = {
  "/blogs": {
   title: "Remote Arc 中文博客 — 架构、MCP、安全与工程实践",
@@ -103,14 +105,14 @@ export const chineseResourceSeo: Record<string, ResourceSeo> = {
  },
  "/use-cases": {
   title: "Remote Arc 使用场景 — 用 Connect 把你的 AI 连到电脑、浏览器和应用",
-  description: "通过 Remote Arc Connect，让 ChatGPT、Claude、Cursor 或 Codex 在你自己的电脑上工作、用 Browser Runner（Beta）完成网页表单、使用你的应用。16 个具体场景，列明依赖、权限和核验要求；大多数也可交给 Arc。",
+  description: "通过 Remote Arc Connect，让 ChatGPT、Claude、Cursor 或 Codex 在你自己的电脑上工作、用 Browser Runner（Beta）完成网页表单、使用你的应用。覆盖视频创作、录音转文字、办公文档、研究、数据与自动化等场景，列明依赖、权限和核验要求。",
   h1: "Remote Arc 使用场景",
-  intro: "把你已经在用的 AI（ChatGPT、Claude、Cursor 或 Codex）通过 Connect 连接到你自己的电脑、任务浏览器和应用；也可以把职责交给 Arc，保留上下文、按计划重新判断并核验结果。16 个具体场景都可通过 Connect 使用，除 Browser Runner 场景外也都可交给 Arc。",
+  intro: "从平铺图文卡片选择一个任务：制作视频、录音转文字、整理办公文档、分析数据、研究资料或自动处理工作。每个详情都说明实际产物、所需条件和核验方式；通过现有 AI 使用 Connect，或选择 Arc 支持的场景。",
   sections: [
-   ...ARC_DELEGATED_WORK.map(item=>({heading:item.title.zh,text:item.detail.zh+' Arc 保留：'+item.retains.zh+' Arc 核验：'+item.checks.zh})),
-   {heading:"即时工作",text:"让兼容 AI 客户端读取指定设备上的项目、检查进程，并按批准的工具权限编辑文件或执行命令。"},
-   {heading:"持续执行",text:"长命令、固定的周期检查和条件触发任务可以保存状态、期限与结果；新策略仍需要模型参与。"},
-   {heading:"权限边界",text:"每台电脑都有独立的权限与路径规则。终端继承本机用户权限；文件 Undo 不能保证撤回 Shell 或外部 API 操作。"}
+   {heading:"视频、文字稿与办公文档",text:"在已连接电脑上生成 MP4、TXT/Markdown 文字稿、SRT/VTT 字幕、Word、PDF、PowerPoint 和 Excel。完整视频作品画廊位于视频创作详情页。"},
+   {heading:"研究、可视化与数据分析",text:"从获授权来源整理可追溯研究报告，用图表、统计、机器学习和网络分析理解数据；各场景列明所需材料和本地工具。"},
+   {heading:"开发、检查与自动化",text:"创建网站、检查界面、测试网页应用、接入 MCP，或在现有仓库上工作。Browser Runner 场景通过 Connect 使用，其他场景标明 Arc 所需能力。"},
+   {heading:"本地执行与结果核验",text:"媒体处理在所选电脑上运行。普通视频、地图和基础 Whisper 依赖按现有权限自动准备；安装 Qwen TTS、ACE-Step 前说明体积并确认。完成后检查实际文件与运行结果。"}
   ]
  },
  "/security-model": {

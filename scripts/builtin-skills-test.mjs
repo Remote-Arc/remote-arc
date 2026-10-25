@@ -30,7 +30,7 @@ assert.doesNotMatch(cli,/handleSkillsCli|BUILTIN_SKILLS/,'device CLI must not bu
 const cat=fs.readFileSync(path.join(root,'packages/skills/src/catalog.generated.ts'),'utf8');
 assert.ok(cat.includes('BUILTIN_SKILLS_REVISION'));
 assert.ok(cat.includes('transcribe-subtitles'));
-// Media Skills are guidance-only. Keep explicit large-download consent even when local execution is authorized.
+// Ordinary media setup is automatic; large local models retain explicit consent.
 const videoSkill=fs.readFileSync(path.join(root,'skills/video-creator/SKILL.md'),'utf8');
 const qwenSection=videoSkill.split('**Voice-over (Qwen3-TTS')[1]?.split('**Music bed (ACE-Step')[0];
 const aceSection=videoSkill.split('**Music bed (ACE-Step')[1]?.split('**Maps & data')[0];

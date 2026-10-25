@@ -7,7 +7,7 @@ import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated
 import {prepareCommunitySkill,readCommunityResource,communitySkillSummaries} from '../src/arc-community-skills.js';
 import type {ArcEnv,ArcRun} from '../src/arc-chat.js';
 export async function testCommunitySkills(env:ArcEnv,run:ArcRun){
- assert.equal(COMMUNITY_SKILLS.length,16);for(const skill of COMMUNITY_SKILLS){
+ assert.equal(COMMUNITY_SKILLS.length,18);for(const skill of COMMUNITY_SKILLS){
   const builtin=skill.origin==='builtin';
   if(builtin){assert(/^[a-f0-9]{64}$/.test(skill.revision));assert.equal(skill.version,'1.0.0');assert.equal(skill.sourceUrl,null);assert.equal(skill.license,'Remote Arc Source License');}
   else{assert(/^[a-f0-9]{40}$/.test(skill.revision));assert(skill.sourceUrl?.includes(skill.revision));assert(['Apache-2.0','MIT'].includes(skill.license));}
@@ -27,5 +27,5 @@ export async function testCommunitySkills(env:ArcEnv,run:ArcRun){
   const reference=COMMUNITY_SKILLS.find(skill=>skill.id==='community-polars')!.resources.find(file=>file.path.startsWith('references/')&&file.content.length>12000)!;assert(reference);
   const large=await prepareCommunitySkill(env,run,{id:'community-polars',deviceId:'fixture',workspace:directory,paths:[reference.path]},write);assert.equal(large.prepared,true);assert.equal(fs.readFileSync(path.join(large.directory,reference.path),'utf8'),reference.content,'Chunked writes preserve the entire real upstream reference');
  }finally{const target=path.resolve(directory),root=path.resolve(os.tmpdir());assert(target.startsWith(root+path.sep)&&path.basename(target).startsWith('arc-skill-resources-'));fs.rmSync(target,{recursive:true,force:true});}
- console.log('PASS: 12 pinned licensed upstream packages and 4 versioned office skills, resource hashes, actual staged helpers, bounded reads and truthful preparation');
+ console.log('PASS: 14 pinned licensed upstream packages and 4 versioned office skills, resource hashes, actual staged helpers, bounded reads and truthful preparation');
 }

@@ -49,7 +49,7 @@
     "package:browser": "node scripts/package-browser-extension.mjs",
     "test:release-notify": "node .github/scripts/release-ready-notify-test.mjs",
     "test:fleet": "pnpm --filter @remotearc/relay exec tsx scripts/fleet-scheduler-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/fleet-workspace-test.mjs && pnpm --filter @remotearc/relay exec tsx ../../packages/cli/src/fleet-capacity-test.mjs",
-    "test:skills": "node scripts/generate-builtin-skills.mjs --check && node packages/skills/scripts/generate-community.mjs --check && node scripts/builtin-skills-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/cloud-skills-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/skill-runtime-test.ts && node scripts/skill-artifacts-qa.mjs",
+    "test:skills": "node scripts/generate-builtin-skills.mjs --check && node packages/skills/scripts/generate-community.mjs --check && node scripts/builtin-skills-test.mjs && node --test scripts/local-media-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/local-media-resources-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/cloud-skills-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/skill-runtime-test.ts && node scripts/skill-artifacts-qa.mjs && pnpm --filter @remotearc/relay exec tsx scripts/demo-media-test.ts",
     "docs:tools": "pnpm --filter @remotearc/relay exec tsx scripts/generate-tool-reference.ts",
     "docs:tools:check": "pnpm docs:tools --check",
     "apps:inventory": "pnpm --filter @remotearc/relay exec tsx ../../scripts/app-tool-inventory.ts",

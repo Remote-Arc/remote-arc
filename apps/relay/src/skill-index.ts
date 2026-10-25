@@ -14,7 +14,7 @@ export type ImportedSkillSummary={id:string;name:string;description:string};
 // Chinese requests rarely share tokens with English descriptions, so these
 // cues are what make "帮我剪个视频" find the video skill.
 const CUES:Array<[RegExp,string[]]>=[
- [/video|clip|mp4|movie|render|视频|剪辑|短片|渲染|录屏/i,['video-creator']],
+ [/video|clip|mp4|movie|render|openfilm|hyperframes|gsap|视频|剪辑|短片|渲染|录屏/i,['video-creator']],
  [/voice.?over|narrat|配音|旁白|解说|朗读|tts|dub/i,['video-creator']],
  [/music|soundtrack|bgm|配乐|背景音乐|作曲/i,['video-creator']],
  [/\bmap\b|地图|省份|国家边界|geojson|choropleth/i,['video-creator']],

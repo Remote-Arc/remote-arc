@@ -6,6 +6,7 @@ import type {ArcEnv} from './arc-chat.js';
 import {ARC_OUTCOME_SKILLS,arcOutcomeSkill} from './arc-outcome-skills.js';
 import {ARC_VERIFICATION_SKILLS,arcVerificationSkill} from './arc-verification-skills.js';
 import {cloudSkillById} from './cloud-skills.js';
+import {builtinResourceSummary} from './arc-builtin-resources.js';
 import {findSkills,skillIndex,suggestedSkills} from './skill-index.js';
 
 type SkillRow={id:string;name:string;description:string;source_url:string|null;content_ciphertext:string;content_hash:string;created_at:string};
@@ -46,7 +47,7 @@ export async function saveArcSkill(env:ArcEnv,userId:string,value:unknown){
 }
 export async function readArcSkill(env:ArcEnv,userId:string,id:string){
  const community=readCommunitySkill(id);if(community)return community;
- const builtin=cloudSkillById(id);if(builtin)return {...builtin,origin:'builtin',note:'Instructions only: check that the named engines exist on the chosen computer before relying on them.'};
+ const builtin=cloudSkillById(id);if(builtin)return {...builtin,origin:'builtin',...builtinResourceSummary(id),note:'Follow the skill on an authorized user device. Media workflows prepare missing local dependencies on demand; Qwen TTS and ACE-Step require size-aware installation approval. Verify the actual deliverable.'};
  const guide=arcVerificationSkill(id)||arcOutcomeSkill(id);if(guide)return guide;
  const row=await env.DB.prepare('SELECT * FROM arc_skills WHERE id=?1 AND user_id=?2').bind(id,userId).first<SkillRow>();
  if(!row)throw new Error('ARC_SKILL_NOT_FOUND');

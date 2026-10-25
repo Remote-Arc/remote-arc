@@ -8,9 +8,9 @@ import {pathToFileURL} from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 
-export const VERSIONS={openfilm:'0.2.5',hyperframes:'0.8.193',whisper:'v1.9.2',ffmpeg:'b6.1.1',cmake:'4.1.2'};
-const PACKAGES={openfilm:{openfilm:VERSIONS.openfilm},hyperframes:{hyperframes:VERSIONS.hyperframes,'playwright-core':'1.61.1',gsap:'3.14.2'},maps:{d3:'7.9.0','d3-geo':'3.1.1','d3-geo-projection':'4.0.0','topojson-client':'3.1.0'}};
-const ALLOWED=new Set(['openfilm','hyperframes','maps','whisper','ffmpeg']);
+export const VERSIONS={openfilm:'0.2.5',hyperframes:'0.8.193',remotion:'4.0.538',whisper:'v1.9.2',ffmpeg:'b6.1.1',cmake:'4.1.2'};
+const PACKAGES={openfilm:{openfilm:VERSIONS.openfilm},hyperframes:{hyperframes:VERSIONS.hyperframes,'playwright-core':'1.61.1',gsap:'3.14.2'},remotion:{remotion:VERSIONS.remotion,'@remotion/cli':VERSIONS.remotion,'@remotion/renderer':VERSIONS.remotion,'@remotion/bundler':VERSIONS.remotion,'@remotion/fonts':VERSIONS.remotion,'@remotion/three':VERSIONS.remotion,'@react-three/fiber':'9.8.2',three:'0.180.0',react:'19.2.0','react-dom':'19.2.0','playwright-core':'1.61.1'},maps:{d3:'7.9.0','d3-geo':'3.1.1','d3-geo-projection':'4.0.0','topojson-client':'3.1.0'}};
+const ALLOWED=new Set(['openfilm','hyperframes','remotion','maps','whisper','ffmpeg']);
 const LARGE=new Set(['qwen','qwen-tts','qwen3-tts','ace-step','acestep']);
 const MODEL={url:'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.bin',sha256:'60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe',bytes:147951465};
 const log=(value)=>process.stderr.write(JSON.stringify(value)+'\n');
@@ -19,7 +19,7 @@ export function components(value){
  const selected=[...new Set(String(value).split(',').map(x=>x.trim().toLowerCase()).filter(Boolean))];
  // Validate the WHOLE request before creating directories, fetching or installing.
  if(selected.some(x=>LARGE.has(x)))throw fault('APPROVAL_REQUIRED','Ask the user before installing Qwen TTS (multi-GB) or ACE-Step (10 GB+). Disclose size, disk use, destination and hardware. Reuse existing approval only for that scope.');
- if(!selected.length||selected.some(x=>!ALLOWED.has(x)))throw fault('INVALID_COMPONENT','Use openfilm, hyperframes, maps, whisper or ffmpeg.');
+ if(!selected.length||selected.some(x=>!ALLOWED.has(x)))throw fault('INVALID_COMPONENT','Use remotion, openfilm, hyperframes, maps, whisper or ffmpeg.');
  return selected;
 }
 export function inside(root,target){
@@ -168,10 +168,21 @@ export class Runtime{
   // render, account login, preview window or provider setup is invoked here.
   await run(process.execPath,[cli,'--help'],{cwd:directory,env:this.env,quiet:true});return cli;
  }
+ async remotion(){
+  const directory=await this.npm('remotion'),require=createRequire(path.join(directory,'package.json'));
+  const cli=path.join(path.dirname(require.resolve('@remotion/cli/package.json')),'remotion-cli.js');
+  await run(process.execPath,[cli,'--help'],{cwd:directory,env:this.env,quiet:true});
+  const playwright=path.join(path.dirname(require.resolve('playwright-core/package.json')),'cli.js');
+  const browser=await run(process.execPath,['-e',"process.stdout.write(require('playwright-core').chromium.executablePath())"],{cwd:directory,env:this.env,quiet:true});
+  const browserExecutable=browser.stdout.trim();await checkedPath(this.workspace,browserExecutable);
+  if(!await exists(browserExecutable))await run(process.execPath,[playwright,'install','chromium'],{cwd:directory,env:this.env});
+  await fs.access(browserExecutable);
+  return {cli,directory,browserExecutable,version:VERSIONS.remotion};
+ }
  async ensure(selected){
   components(selected.join(','));await this.init();const engines={};
-  if(selected.some(x=>['ffmpeg','openfilm','hyperframes','whisper'].includes(x)))await this.ffmpeg();
-  for(const item of selected){if(item==='maps')engines.maps=await this.maps();else if(item==='whisper')engines.whisper=await this.whisper();else if(item!=='ffmpeg')engines[item]={cli:await this.engine(item),version:VERSIONS[item]};}
+  if(selected.some(x=>['ffmpeg','openfilm','hyperframes','remotion','whisper'].includes(x)))await this.ffmpeg();
+  for(const item of selected){if(item==='maps')engines.maps=await this.maps();else if(item==='whisper')engines.whisper=await this.whisper();else if(item==='remotion')engines.remotion=await this.remotion();else if(item!=='ffmpeg')engines[item]={cli:await this.engine(item),version:VERSIONS[item]};}
   const receipt={status:'ready',verified:false,meaning:'Dependencies launch; no deliverable has been created yet.',workspace:this.workspace,tools:this.home,platform:process.platform,arch:process.arch,engines,preparedAt:new Date().toISOString()};
   await fs.writeFile(path.join(this.home,'readiness.json'),JSON.stringify(receipt,null,2));return receipt;
  }
@@ -181,15 +192,20 @@ export class Runtime{
   await fs.writeFile(file+'.artifact.json',JSON.stringify(receipt,null,2));return receipt;
  }
  async probe(file){const result=await run(await this.executable('ffprobe'),['-v','error','-show_entries','format=duration,size:stream=codec_type,codec_name,width,height,nb_frames','-of','json',file],{env:this.env,quiet:true});const info=JSON.parse(result.stdout);if(!(Number(info.format?.duration)>0))throw fault('INVALID_MEDIA','Output has no positive duration.');return info;}
- async render(engine,project,output){
-  components(engine);if(!['openfilm','hyperframes'].includes(engine))throw fault('INVALID_ENGINE','Choose openfilm or hyperframes.');
+ async render(engine,project,output,{entry='src/index.tsx',composition}={}){
+  components(engine);if(!['openfilm','hyperframes','remotion'].includes(engine))throw fault('INVALID_ENGINE','Choose remotion, openfilm or hyperframes.');
   project=await checkedPath(this.workspace,project);output=await checkedPath(this.workspace,output);
   if(await exists(output))throw fault('OUTPUT_EXISTS','Choose a new output path; existing user files are preserved.');
-  await fs.access(path.join(project,engine==='openfilm'?'film.html':'index.html'));
+  const entryFile=engine==='remotion'?await checkedPath(this.workspace,path.resolve(project,entry)):path.join(project,engine==='openfilm'?'film.html':'index.html');
+  if(engine==='remotion'&&(!composition||!/^[A-Za-z0-9-]{1,120}$/.test(composition)))throw fault('COMPOSITION_REQUIRED','Pass the registered Remotion composition ID with --composition.');
+  await fs.access(entryFile);
   const ready=await this.ensure([engine]),cli=ready.engines[engine].cli;await fs.mkdir(path.dirname(output),{recursive:true});
-  if(engine==='openfilm')await run(process.execPath,[cli,'look'],{cwd:project,env:this.env});
-  else await run(process.execPath,[cli,'lint'],{cwd:project,env:this.env});
-  await run(process.execPath,[cli,'render',engine==='openfilm'?'--out':'--output',output],{cwd:project,env:this.env});
+  if(engine==='remotion')await run(process.execPath,[cli,'render',entryFile,composition,output,'--browser-executable',ready.engines.remotion.browserExecutable,'--codec','h264','--crf','18','--concurrency','2'],{cwd:project,env:this.env});
+  else{
+   if(engine==='openfilm')await run(process.execPath,[cli,'look'],{cwd:project,env:this.env});
+   else await run(process.execPath,[cli,'lint'],{cwd:project,env:this.env});
+   await run(process.execPath,[cli,'render',engine==='openfilm'?'--out':'--output',output],{cwd:project,env:this.env});
+  }
   const media=await this.probe(output);if(!media.streams?.some(s=>s.codec_type==='video'))throw fault('INVALID_MEDIA','Rendered output has no video stream.');
   await run(await this.executable('ffmpeg'),['-v','error','-i',output,'-f','null','-'],{env:this.env,quiet:true});
   return this.artifact(output,{kind:'video',engine,media,review:'Decoder and metadata checked. Inspect contact sheets/keyframes and audio against the brief before final delivery.'});
@@ -228,13 +244,13 @@ export function validateSubtitles(srt,duration){
 }
 export async function main(argv=process.argv.slice(2)){
  const [action,...rest]=argv,options={};for(let i=0;i<rest.length;i+=2){if(!/^--[a-z-]+$/.test(rest[i])||rest[i+1]===undefined)throw fault('INVALID_ARGUMENT','Use --name value arguments.');options[rest[i].slice(2)]=rest[i+1];}
- if(!['ensure','render','transcribe','map'].includes(action))throw fault('USAGE','ensure --components openfilm|hyperframes|maps|whisper; render --engine openfilm --project DIR --output FILE; transcribe --input FILE --output PREFIX [--language auto]; map --output FILE.svg [--highlight NZL,CHN]. Always pass --workspace ROOT.');
+ if(!['ensure','render','transcribe','map'].includes(action))throw fault('USAGE','ensure --components remotion|openfilm|hyperframes|maps|whisper; render --engine remotion --project DIR --entry src/index.tsx --composition Main --output FILE; transcribe --input FILE --output PREFIX [--language auto]; map --output FILE.svg [--highlight NZL,CHN]. Always pass --workspace ROOT.');
  if(!options.workspace||!path.isAbsolute(options.workspace))throw fault('WORKSPACE_REQUIRED','Pass an absolute Trusted Write Location as --workspace.');
  const selected=action==='ensure'?components(options.components):action==='render'?components(options.engine):action==='map'?['maps']:['whisper'];
  if(+process.versions.node.split('.')[0]<22)throw fault('NODE_REQUIRED','Use Node.js 22.2+ (portable official Node.js is sufficient).');
  const runtime=new Runtime(options.workspace);
  if(action==='ensure')return runtime.ensure(selected);
- if(action==='render')return runtime.render(options.engine,options.project,options.output);
+ if(action==='render')return runtime.render(options.engine,options.project,options.output,{entry:options.entry,composition:options.composition});
  if(action==='transcribe')return runtime.transcribe(options.input,options.output,options.language||'auto');
  return runtime.map(options.output,options.highlight||'');
 }

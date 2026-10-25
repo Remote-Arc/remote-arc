@@ -236,7 +236,7 @@ export function createRemoteLinkMcp(
       { name: "remotearc", version: "0.4.4" },
       {
         capabilities: { tools: {}, resources: {} },
-        instructions: "Remote Arc offers nine curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed. If your tool list shows browser_list_tabs or browser_read_page but no shared_tab_* or browser_runner_* tools, it is a cached list from an older Remote Arc release: ask the user to refresh or reconnect the Remote Arc connector.",
+        instructions: "Remote Arc offers curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed. If your tool list shows browser_list_tabs or browser_read_page but no shared_tab_* or browser_runner_* tools, it is a cached list from an older Remote Arc release: ask the user to refresh or reconnect the Remote Arc connector.",
       },
     );
 

@@ -1,6 +1,6 @@
 import {appOperation} from '../src/app-catalog.js';
 import {arcVerificationToolError} from '../src/arc-verification.js';
-import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
+import {SKILL_LIBRARY} from '../../../packages/skills/src/library.js';
 import {readableArcAppContent} from '../src/arc-app-content.js';
 import {testArcOutcomes} from './arc-outcomes-test.js';
 import {testArcCompactContinuation} from './arc-compact-continuation-test.js';
@@ -482,7 +482,7 @@ await decode(await api('memory/settings','POST',{enabled:true,clear:true}));
 
 // Arc consumes the existing cloud catalog, with private Markdown imports alongside it.
 const library=await decode(await api('skills'));
-assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),COMMUNITY_SKILLS.map(s=>s.id).sort());
+assert.deepEqual(library.skills.map((s:any)=>s.id).sort(),SKILL_LIBRARY.map(s=>s.id).sort());
 const skillInput={name:'Private workflow',description:'Owner-only instructions',content:'# Private workflow\nUse scripts/check.py and verify its result.',sourceUrl:'https://github.com/example/workflow'};
 const imported=await decode(await api('skills','POST',skillInput),201);
 assert.equal((await decode(await api('skills','POST',skillInput),201)).id,imported.id,'Duplicate imports are idempotent');

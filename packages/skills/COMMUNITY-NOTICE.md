@@ -21,3 +21,24 @@ The DOCX, XLSX, PPTX and PDF packages in `builtin/` are original Remote Arc work
 
 - Canvas design: Anthropic, Apache-2.0, https://github.com/anthropics/skills/tree/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/canvas-design. Optional font binaries are not embedded; pinned hashes and upstream font licenses are included.
 - Algorithmic art: Anthropic, Apache-2.0, https://github.com/anthropics/skills/tree/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/algorithmic-art. Original viewer and generator templates are retained.
+
+## Requested video, market-data and Nuwa skills
+
+- Vibe knowledge films: MIT engine and method resources, https://github.com/HeyChengC/vibe-knowledge-film/tree/62d51508aad00003dc6209afa80c4b5dc540de59. Original guide and reusable text resources retained with a Remote Arc routing entry. Example films and filled third-party-film briefs are excluded; their analysis/prompt reference files contain attributed upstream pointers instead.
+- A-share market data: Apache-2.0, https://github.com/simonlin1212/a-stock-data/tree/02aa8b4d1316629e819cdc17a14297ca1a70edcd. Original guide and text resources retained with a Remote Arc routing entry.
+- Nuwa · create thinking skills: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24. Original guide and text resources retained with a Remote Arc routing entry.
+- Andrej Karpathy · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/andrej-karpathy-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Elon Musk · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/elon-musk-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Richard Feynman · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/feynman-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Ilya Sutskever · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/ilya-sutskever-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- MrBeast · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/mrbeast-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Charlie Munger · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/munger-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Naval Ravikant · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/naval-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Paul Graham · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/paul-graham-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Steve Jobs · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/steve-jobs-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Sun Yuchen · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/sun-yuchen-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Nassim Taleb · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/taleb-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Donald Trump · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/trump-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- X publishing mentor · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/x-mastery-mentor. Original guide and text resources retained with a Remote Arc routing entry.
+- Zhang Yiming · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/zhang-yiming-perspective. Original guide and text resources retained with a Remote Arc routing entry.
+- Zhang Xuefeng · thinking framework: MIT, https://github.com/alchaincyf/nuwa-skill/tree/7c7edfeb9d90a28b1f79e7847e1ba27a698cdc24/examples/zhangxuefeng-perspective. Original guide and text resources retained with a Remote Arc routing entry.

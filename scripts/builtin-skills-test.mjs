@@ -6,8 +6,9 @@ import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const registry=JSON.parse(fs.readFileSync(path.join(root,'skills/registry.json'),'utf8'));
 assert.equal(registry.schemaVersion,1);
-assert.equal(registry.skills.length,9);
-assert.equal(new Set(registry.skills.map(x=>x.id)).size,9);
+assert.equal(registry.skills.length,13);
+assert.equal(new Set(registry.skills.map(x=>x.id)).size,13);
+for(const id of ['remotion-video','hyperframes-video','openfilm-video','map-creator'])assert(registry.skills.some(skill=>skill.id===id));
 for(const skill of registry.skills){
  assert.ok(['P0','P1'].includes(skill.priority),skill.id);
  assert.ok(/^https:\/\//.test(skill.upstream),skill.id);

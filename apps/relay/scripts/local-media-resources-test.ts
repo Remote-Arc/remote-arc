@@ -14,7 +14,7 @@ const env={DB:{prepare(){return {bind(){return {first:async()=>active?{id:'activ
 const run={id:'active-run',user_id:'owner',step:1} as ArcRun;
 const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-media-resource-'));
 try{
- for(const id of ['video-creator','transcribe-subtitles']){
+ for(const id of ['video-creator','transcribe-subtitles','remotion-video','hyperframes-video','openfilm-video','map-creator']){
   const summary=builtinResourceSummary(id),manifest=summary.resources!.find(file=>file.path==='scripts/local-media.mjs')!;
   assert(manifest.bytes>12000,'Real helper must exercise chunked reads/writes');
   let content='',offset:number|null=0,reads=0;

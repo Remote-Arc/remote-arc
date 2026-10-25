@@ -23,8 +23,8 @@ export const SKILL_USE_CASES = [
       "zh": "获授权电脑、可写项目目录，以及本地渲染工具所需空间。"
     },
     "boundary": {
-      "en": "Rendering runs on the selected device. Ordinary OpenFilm/HyperFrames, FFmpeg, map and base Whisper setup is automatic within existing permissions; large voice/music model installation needs confirmation.",
-      "zh": "渲染在所选设备完成。OpenFilm/HyperFrames、FFmpeg、地图及基础 Whisper 按现有权限自动准备；大型语音、音乐模型安装前确认。"
+      "en": "Rendering runs on the selected device. Ordinary Remotion/HyperFrames/OpenFilm, FFmpeg, map and base Whisper setup is automatic within existing permissions; large voice/music model installation needs confirmation.",
+      "zh": "渲染在所选设备完成。Remotion/HyperFrames/OpenFilm、FFmpeg、地图及基础 Whisper 按现有权限自动准备；大型语音、音乐模型安装前确认。"
     },
     "steps": [
       {
@@ -41,8 +41,13 @@ export const SKILL_USE_CASES = [
       "zh": "可播放 MP4、可编辑工程、实测时长和分辨率，以及已执行的检查。"
     },
     "skillIds": [
-      "video-creator"
-    ],
+  "video-creator",
+  "remotion-video",
+  "hyperframes-video",
+  "openfilm-video",
+  "map-creator",
+  "community-vibe-knowledge-film"
+],
     "art": "video",
     "format": "MP4",
     "tools": "read_skill · read_file · write_file · start_process",
@@ -333,9 +338,10 @@ export const SKILL_USE_CASES = [
       "zh": "所需格式的图表、绘图源码及数值和标签检查。"
     },
     "skillIds": [
-      "community-matplotlib",
-      "community-seaborn"
-    ],
+  "community-matplotlib",
+  "community-seaborn",
+  "community-a-stock-data"
+],
     "art": "chart",
     "format": "SVG · PNG",
     "tools": "read_skill · read_file · write_file · start_process",
@@ -526,8 +532,24 @@ export const SKILL_USE_CASES = [
       "zh": "有来源的报告、证据链接与不确定性说明。"
     },
     "skillIds": [
-      "research-reports"
-    ],
+  "research-reports",
+  "community-nuwa",
+  "community-nuwa-andrej-karpathy",
+  "community-nuwa-elon-musk",
+  "community-nuwa-feynman",
+  "community-nuwa-ilya-sutskever",
+  "community-nuwa-mrbeast",
+  "community-nuwa-munger",
+  "community-nuwa-naval",
+  "community-nuwa-paul-graham",
+  "community-nuwa-steve-jobs",
+  "community-nuwa-sun-yuchen",
+  "community-nuwa-taleb",
+  "community-nuwa-trump",
+  "community-nuwa-x-mentor",
+  "community-nuwa-zhang-yiming",
+  "community-nuwa-zhangxuefeng"
+],
     "art": "research",
     "format": "REPORT",
     "tools": "read_skill · read_file · write_file · start_process",

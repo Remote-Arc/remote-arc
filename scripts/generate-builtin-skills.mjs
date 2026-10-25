@@ -17,7 +17,8 @@ const skills=registry.skills.map((item)=>{
 });
 const helper=fs.readFileSync(path.join(root,'skills/media-runtime/local-media.mjs'),'utf8').replace(/\r\n/g,'\n');
 const resource={path:'scripts/local-media.mjs',bytes:Buffer.byteLength(helper),sha256:createHash('sha256').update(helper).digest('hex'),content:helper};
-const resources=Object.fromEntries(skills.filter(skill=>['video-creator','transcribe-subtitles'].includes(skill.id)).map(skill=>[skill.id,[{path:'SKILL.md',content:skill.content,bytes:Buffer.byteLength(skill.content),sha256:createHash('sha256').update(skill.content).digest('hex')},resource]]));
+const mediaIds=new Set(['video-creator','remotion-video','hyperframes-video','openfilm-video','map-creator','transcribe-subtitles']);
+const resources=Object.fromEntries(skills.map(skill=>[skill.id,[{path:'SKILL.md',content:skill.content,bytes:Buffer.byteLength(skill.content),sha256:createHash('sha256').update(skill.content).digest('hex')},...(mediaIds.has(skill.id)?[resource]:[])]]));
 const revision=createHash('sha256').update(JSON.stringify({skills,resources})).digest('hex').slice(0,16);
 const resourceGenerated='/* GENERATED. Run node scripts/generate-builtin-skills.mjs */\nexport type BuiltinSkillResource={readonly path:string;readonly bytes:number;readonly sha256:string;readonly content:string};\nexport const BUILTIN_SKILL_RESOURCES:Readonly<Record<string,readonly BuiltinSkillResource[]>>=JSON.parse('+JSON.stringify(JSON.stringify(resources))+');\n';
 const resourceDest=path.join(root,'packages/skills/src/media-resources.generated.ts');

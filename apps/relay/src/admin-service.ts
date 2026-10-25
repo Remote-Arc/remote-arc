@@ -5,6 +5,7 @@ import {handleFeedbackRewardAdmin} from './connect-rewards.js';
 import { getSessionUser } from "./auth.js";
 import {handleArcAdminBilling} from './arc-admin-billing.js';
 import { handleAdminBilling, handleAdminCallCredits, handleAdminOperations, type OpsEnv } from "./admin-operations.js";
+import { handleAdminUsageInsights } from "./admin-usage-insights.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './device-capacity-admin.js';
 import { listWebsiteSubmissions, updateWebsiteSubmission, type EngagementEnv } from "./domains/engagement.js";
@@ -14,7 +15,7 @@ export type AdminServiceEnv = OpsEnv & EngagementEnv & MonitorEnv & FollowupEnv 
 export const ADMIN_CONTRACT_VERSION = "1";
 const methods: Record<string, readonly string[]> = {
   "/api/me": ["GET"], "/api/monitor": ["GET"],
-  "/api/admin/operations": ["GET"], "/api/admin/billing": ["GET"],
+  "/api/admin/operations": ["GET"], "/api/admin/usage-insights": ["GET"], "/api/admin/billing": ["GET"],
   '/api/admin/arc-billing':['GET'],
   "/api/admin/call-credits": ["POST"], "/api/admin/plan-grants": ["GET", "POST"],
   "/api/admin/device-capacity": ["GET","POST"],
@@ -83,6 +84,7 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
     case "/api/me": response = Response.json({ authenticated: true, user }); break;
     case "/api/monitor": response = await handleMonitorState(request, env); break;
     case "/api/admin/operations": response = await handleAdminOperations(request, env); break;
+    case "/api/admin/usage-insights": response = await handleAdminUsageInsights(request, env); break;
     case "/api/admin/billing": response = await handleAdminBilling(request, env); break;
     case '/api/admin/arc-billing': response = await handleArcAdminBilling(request,env);break;
     case "/api/admin/call-credits": response = await handleAdminCallCredits(request, env); break;

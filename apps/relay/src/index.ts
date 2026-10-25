@@ -77,6 +77,7 @@ import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './device-capacity-admin.js';
 import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
+import { handleAdminUsageInsights } from "./admin-usage-insights.js";
 import { handleOrganizations } from "./organizations.js";
 import { submitWebsiteInterest, listWebsiteSubmissions, updateWebsiteSubmission } from "./domains/engagement.js";
 import {
@@ -583,6 +584,9 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
     if (url.pathname === "/api/admin/operations") {
       return handleAdminOperations(request, env);
+    }
+    if (url.pathname === "/api/admin/usage-insights") {
+      return handleAdminUsageInsights(request, env);
     }
     if (url.pathname === "/api/admin/billing") {
       return handleAdminBilling(request, env);

@@ -30,11 +30,14 @@ const sharedModules = [
   ["skills/src/community.generated", "community-skills"],
   ["skills/src/catalog.generated", "cloud-skill-catalog"],
   ["skills/src/media-resources.generated", "media-resources"],
+  ["skills/src/library", "skill-library"],
   ["protocol/src/followup-templates", "followup-templates"],
 ];
 for (const [source, target] of sharedModules) {
+  let input=fs.readFileSync(path.resolve(relay, "../../packages/" + source + ".ts"), "utf8");
+  for(const [dependency,local] of sharedModules)input=input.replaceAll("./"+path.basename(dependency)+".js","./"+local+".js");
   fs.writeFileSync(path.join(compiled, target + ".js"), ts.transpileModule(
-    fs.readFileSync(path.resolve(relay, "../../packages/" + source + ".ts"), "utf8"),
+    input,
     { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } },
   ).outputText);
 }

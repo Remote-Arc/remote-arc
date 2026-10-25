@@ -17,13 +17,13 @@ export const IMAGE_DEMOS:readonly ImageDemo[]=[
       "en": "Create an original basketball poster with orange, deep teal, strong type and detailed court geometry. Render a PNG locally and keep the editable drawing code.",
       "zh": "制作原创篮球海报：橙色、深青色、强烈字体和球场几何，本地输出 PNG 并保留绘图代码。"
     },
-    "image": "court-energy-bbdb1d95df3b.png",
-    "thumb": "court-energy-thumb-1f4f58bf152e.webp",
+    "image": "court-energy-f50162d5ca65.png",
+    "thumb": "court-energy-thumb-cef18937a215.webp",
     "width": 1200,
     "height": 1500,
-    "bytes": 571924,
-    "sha256": "bbdb1d95df3b1cbdac2318b8175859b477df4c9d0b33307e9ea6d029d697f8a2",
-    "thumbSha256": "1f4f58bf152ea8fab461a77e8661a8ebe874ec833e9059c33b7a0f043146f4ee"
+    "bytes": 538531,
+    "sha256": "f50162d5ca65c1ba719020355ed7d673cfa4a74e307bc0e1d5f955c1f5854834",
+    "thumbSha256": "cef18937a2153e111beb1fd61d39d2c99098e624ca4114d1f24cfa0affb3697a"
   },
   {
     "id": "quiet-objects",

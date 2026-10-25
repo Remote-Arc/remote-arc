@@ -1,19 +1,19 @@
-# Local video demo gallery
+# Local film gallery
 
-The bilingual gallery lives in the dedicated video creation use case at /use-cases/video-creation#video-gallery and /zh/use-cases/video-creation#video-gallery. The main /use-cases catalog stays a flat, searchable grid of illustrated tasks, including local audio transcription and the other packaged skills. Previous catalog gallery bookmarks redirect to the video detail. It includes the basketball film, the HyperFrames 24-hour explainer, the Venus and Pluto episodes, and product/data/map examples with three additional fully English versions. Each English edition has readable English graphics and narration generated with an installed local Windows voice. The gallery supports category and language filters; the English page orders English editions first.
+The video gallery lives in /use-cases/video-creation#video-gallery and its Chinese counterpart. It follows the website language automatically; there are no category or language filter controls inside the gallery. The main use-cases directory remains a flat illustrated task catalog.
 
-Video and poster bytes are stored in the remote-arc-public-media R2 bucket under demo-gallery/. Git contains presentation metadata, file sizes and SHA-256 hashes in packages/docs/src/media-gallery.ts. Media files remain outside the repository; prepare them in an ignored workspace or another local directory. No API tokens or signed URLs belong in the manifest.
+The current published demonstration is The Return / 回弹, a 60-second original basketball knowledge film in separate English and Chinese versions. It uses the vibe-knowledge-film method: a factual brief and storyboard, visible object actions, close-ups, cutaway compression, comparison, a return to the opening, iterative still/transition review and deterministic local rendering. There is no voiceover. The requested recording and small event sounds form its soundtrack; the recording is identified in the local facts sheet without a royalty-free claim.
 
-The production Relay and UI preview Worker expose only the manifest's approved filenames through /media/demo-gallery/. GET/HEAD, ETags, immutable cache headers and single byte ranges support playback and seeking. Unknown keys cannot expose other bucket objects. A missing binding returns a clear unavailable response rather than an HTML fallback.
+Earlier short demonstrations retain archived metadata with published=false so existing approved media URLs continue to work. They are not shown as current finished examples while their full-minute replacements await the user's sample review. The published list is explicit, and every current entry meets the full-minute/no-narration brief.
 
-To verify prepared files without uploading:
+Video/poster bytes live in the remote-arc-public-media R2 bucket under demo-gallery/. Git contains metadata, file sizes and SHA-256 hashes. Original image PNGs and WebP previews use the same approved route and publisher. Raster and video bytes remain outside Git.
+
+The Relay and preview Worker expose only approved filenames. GET/HEAD, ETags, immutable caching and single byte ranges support native playback and seeking. Unknown keys cannot expose other bucket objects. A missing binding returns an unavailable response rather than an HTML fallback.
+
+Verify prepared files:
     node scripts/media-gallery-publish.mjs --directory <local media folder>
 
-To publish those exact verified bytes using the existing Cloudflare account:
+Publish verified files through the existing account:
     node scripts/media-gallery-publish.mjs --directory <local media folder> --upload
 
-The publisher verifies every local SHA-256 before its first upload, uses the project's Wrangler account/bucket configuration and never records credentials. The R2 binding is required in both production and preview configurations.
-
-For a new demo, render and review the actual film locally, check audio/frames and metadata, create a web version with H.264/AAC and fast-start metadata, and generate a WebP poster. Use content-hashed filenames; update the shared manifest with measured dimensions/duration, bilingual copy, audio status and a reusable human-language brief. Upload before publishing the referencing site version. Keep synthetic data and fictional products labeled.
-
-Verification includes the media route tests, desktop/mobile gallery interaction tests, local file checksums and a live R2 playback/seek check. Videos are fetched only after a viewer chooses one; closing the native dialog removes the player and returns keyboard focus.
+The publisher checks every local SHA-256 before upload. Use content-hashed filenames and upload before publishing a referencing UI. Keep language, duration, soundtrack, sources and synthetic/schematic claims accurate. Videos are fetched only after a viewer chooses one; closing the native dialog removes the player and restores focus.

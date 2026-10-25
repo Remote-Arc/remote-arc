@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {MEDIA_DEMOS} from '../../packages/docs/src/media-gallery';
+import {PUBLISHED_MEDIA_DEMOS} from '../../packages/docs/src/media-gallery';
 test('catalog stays flat and illustrated, with searchable audio and a dedicated video use case',async({page},info)=>{
  const zh=info.project.metadata.language==='zh',prefix=zh?'/zh':'';
  await page.goto(prefix+'/use-cases');
@@ -18,11 +18,11 @@ test('catalog stays flat and illustrated, with searchable audio and a dedicated 
  await page.getByRole('button',{name:zh?'使用 Arc':'With Arc',exact:true}).click();await expect(cards).toHaveCount(29);
  await page.getByRole('button',{name:zh?'使用 Connect':'With Connect',exact:true}).click();
  await page.getByRole('link',{name:new RegExp(zh?'制作视频与动态图形':'Create a finished video')}).click();
- await expect(page).toHaveURL(/\/use-cases\/video-creation/);await expect(page.locator('#video-gallery .mediaDemoCard')).toHaveCount(MEDIA_DEMOS.length);
+ await expect(page).toHaveURL(/\/use-cases\/video-creation/);await expect(page.locator('#video-gallery .mediaDemoCard')).toHaveCount(PUBLISHED_MEDIA_DEMOS.filter(item=>item.language===(zh?'zh':'en')).length);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
 });
 test('legacy gallery bookmark resolves to the video creation detail',async({page},info)=>{
- const prefix=info.project.metadata.language==='zh'?'/zh':'';
+ const zh=info.project.metadata.language==='zh',prefix=zh?'/zh':'';
  await page.goto(prefix+'/use-cases#video-gallery');await expect(page).toHaveURL(/\/use-cases\/video-creation#video-gallery$/);
- await expect(page.locator('#video-gallery .mediaDemoCard')).toHaveCount(MEDIA_DEMOS.length);
+ await expect(page.locator('#video-gallery .mediaDemoCard')).toHaveCount(PUBLISHED_MEDIA_DEMOS.filter(item=>item.language===(zh?'zh':'en')).length);
 });

@@ -1,6 +1,6 @@
 export type MediaCategory='motion'|'explainer'|'product'|'data'|'maps';
 type Localized={en:string;zh:string};
-export type MediaDemo={id:string;category:MediaCategory;language:'en'|'zh';title:Localized;description:Localized;engine:string;audio:'music'|'narration'|'silent';prompt:Localized;video:string;poster:string;duration:number;width:number;height:number;bytes:number;sha256:string;posterSha256:string};
+export type MediaDemo={id:string;category:MediaCategory;language:'en'|'zh';published?:boolean;title:Localized;description:Localized;engine:string;audio:'music'|'narration'|'silent';prompt:Localized;video:string;poster:string;duration:number;width:number;height:number;bytes:number;sha256:string;posterSha256:string};
 export const MEDIA_CATEGORIES:ReadonlyArray<{id:MediaCategory;en:string;zh:string}>=[
 {id:'motion',en:'Sports & motion',zh:'运动'},
 {id:'explainer',en:'Explainers',zh:'科普'},
@@ -35,7 +35,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "bytes": 6492809,
     "sha256": "70058ce458b3859795501be8a2ad24636871480b54660dc586e55ffba9a5f38d",
     "posterSha256": "bcae4493ee5f281bc11e3ca8837472bb4abe809998e33812c503b3b8234d349f",
-    "language": "zh"
+    "language": "zh",
+    "published": false
   },
   {
     "id": "why-24-hours",
@@ -62,7 +63,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "bytes": 2144519,
     "sha256": "32532fed221d658ddd7cdcd973c9e991099b5b70c7e58f74d375c56050dfc867",
     "posterSha256": "18e810ef9a8b03c7c77d713e153c2b5e42de3188cb477de0bd962ec5c89c1938",
-    "language": "zh"
+    "language": "zh",
+    "published": false
   },
   {
     "id": "venus",
@@ -89,7 +91,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "bytes": 14410593,
     "sha256": "42f284da9abef5224c5c9c633c1fee665adf4d6f7496cb02479e12e376ff8c76",
     "posterSha256": "ef104c1e9c51e90d0e07b8251e4c4b0dc0e3621f39f63b93204417aa749a0274",
-    "language": "zh"
+    "language": "zh",
+    "published": false
   },
   {
     "id": "pluto",
@@ -116,7 +119,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "bytes": 5359605,
     "sha256": "b6f7047a99ff4b02b2451b4e1472b0a489e21e89e34a4bcb4a9556009a6c69cc",
     "posterSha256": "6bd9bc96fa97df591ba0df5f795872d84e87e5bde585df0a2e4361c507ba2b81",
-    "language": "zh"
+    "language": "zh",
+    "published": false
   },
   {
     "id": "aura-product",
@@ -143,7 +147,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "bytes": 1394721,
     "sha256": "b276fd0784e32ee58a5148b77ab662806ca81292f439bb001282e3a73639073e",
     "posterSha256": "836dc8070849341f2fb70637cb113c4778cad1e0b2facdd119b5a6e5e23630c6",
-    "language": "zh"
+    "language": "zh",
+    "published": false
   },
   {
     "id": "data-in-motion",
@@ -170,7 +175,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "bytes": 619510,
     "sha256": "a8b35bd37c41bcefaae1d6dbdaf7ff115b7e5553fbb50729c6d5e3dc3c4593ca",
     "posterSha256": "051d8ea3529f5b99e59c8839fcb3ff95bc669c0fd539617b224863f16095af44",
-    "language": "zh"
+    "language": "zh",
+    "published": false
   },
   {
     "id": "world-connections",
@@ -197,7 +203,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "bytes": 1974633,
     "sha256": "0c24960266d349368d090d93847e729fe5fd28f258ae19b2f95e040aacde5ceb",
     "posterSha256": "9d4bcaa57ff91a7a54588bfbb861e4501a63a09384b4e7434d0de1458348f1ea",
-    "language": "zh"
+    "language": "zh",
+    "published": false
   },
   {
     "id": "aura-focus-en",
@@ -224,7 +231,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "height": 1080,
     "bytes": 1380945,
     "sha256": "db1f7c69ec70044adc5b8e1f5fd8893f9eaf9b91f3a4b4daa86c818eb06be682",
-    "posterSha256": "fc769ea835d79eb04d200006ff87448fc2338d0be4eda8e2a5f3c30bc946693a"
+    "posterSha256": "fc769ea835d79eb04d200006ff87448fc2338d0be4eda8e2a5f3c30bc946693a",
+    "published": false
   },
   {
     "id": "data-story-en",
@@ -251,7 +259,8 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "height": 1080,
     "bytes": 610019,
     "sha256": "154eff343e06fde79deb5e035d0b82210c471448b5fce765aaa21eb2b0ec205e",
-    "posterSha256": "a64960b9034be00cd10f62c9205fe83b338741a55c5a029ac2873002ecc8873b"
+    "posterSha256": "a64960b9034be00cd10f62c9205fe83b338741a55c5a029ac2873002ecc8873b",
+    "published": false
   },
   {
     "id": "connected-world-en",
@@ -278,7 +287,65 @@ export const MEDIA_DEMOS:readonly MediaDemo[]=[
     "height": 1080,
     "bytes": 1960207,
     "sha256": "547b923d457eeb33a1c575bb895bc4e6a98b31c171f7ae723b17b2ce3edba613",
-    "posterSha256": "0ea0df429d4151a741976d554520c8a7006131e07d558e7afc7b1fb1ae88f654"
+    "posterSha256": "0ea0df429d4151a741976d554520c8a7006131e07d558e7afc7b1fb1ae88f654",
+    "published": false
+  },
+  {
+    "id": "basketball-return-zh",
+    "category": "explainer",
+    "language": "zh",
+    "published": true,
+    "title": {
+      "zh": "回弹 · 篮球里面的能量接力",
+      "en": "The Return · The energy inside a bouncing ball"
+    },
+    "description": {
+      "zh": "60 秒无旁白知识短片：从篮球落地、压缩空气到回弹与损耗，推进剖面、同高对比，再回到一次运球。",
+      "en": "A 60-second film without voiceover: impact, compressed air, recovery, energy loss and a controlled comparison, ending with the next dribble."
+    },
+    "engine": "Vibe Knowledge Film · Canvas",
+    "audio": "music",
+    "prompt": {
+      "zh": "在我的电脑上用 vibe-knowledge-film 制作一支 60 秒无旁白知识短片。先写事实表和分镜，让物体与动词真正出现在画面里，安排连续推拉、剖面与对比镜头，使用我提供的 BGM，检查两轮画面和转场，交付 MP4 与可编辑工程。",
+      "en": "Use vibe-knowledge-film on my computer to make a 60-second knowledge film without voiceover. Write facts and a storyboard first, show the actual objects and actions, connect close-ups, cutaways and comparisons, use the BGM I provide, review at least two rounds and deliver the MP4 and editable project."
+    },
+    "video": "basketball-return-zh-fa20c92cf5e6.mp4",
+    "poster": "basketball-return-zh-9d390b3cca9e.webp",
+    "duration": 60,
+    "width": 1920,
+    "height": 1080,
+    "bytes": 15634261,
+    "sha256": "fa20c92cf5e697f7f1459ba99be176fca490f3fe35230094d11e40059aeb20a2",
+    "posterSha256": "9d390b3cca9e58f9a5f4d03032764bd1debda1f6d8a803f5908c9a4d1d9034e3"
+  },
+  {
+    "id": "basketball-return-en",
+    "category": "explainer",
+    "language": "en",
+    "published": true,
+    "title": {
+      "zh": "回弹 · 篮球里面的能量接力",
+      "en": "The Return · The energy inside a bouncing ball"
+    },
+    "description": {
+      "zh": "60 秒无旁白知识短片：从篮球落地、压缩空气到回弹与损耗，推进剖面、同高对比，再回到一次运球。",
+      "en": "A 60-second film without voiceover: impact, compressed air, recovery, energy loss and a controlled comparison, ending with the next dribble."
+    },
+    "engine": "Vibe Knowledge Film · Canvas",
+    "audio": "music",
+    "prompt": {
+      "zh": "在我的电脑上用 vibe-knowledge-film 制作一支 60 秒无旁白知识短片。先写事实表和分镜，让物体与动词真正出现在画面里，安排连续推拉、剖面与对比镜头，使用我提供的 BGM，检查两轮画面和转场，交付 MP4 与可编辑工程。",
+      "en": "Use vibe-knowledge-film on my computer to make a 60-second knowledge film without voiceover. Write facts and a storyboard first, show the actual objects and actions, connect close-ups, cutaways and comparisons, use the BGM I provide, review at least two rounds and deliver the MP4 and editable project."
+    },
+    "video": "basketball-return-en-559a541a006b.mp4",
+    "poster": "basketball-return-en-93f5b5cf44e3.webp",
+    "duration": 60,
+    "width": 1920,
+    "height": 1080,
+    "bytes": 15385927,
+    "sha256": "559a541a006b4bb5f34ecec1ec716e9149ca140b38f77a80c47d5825e129f74c",
+    "posterSha256": "93f5b5cf44e3b6d9304e68496f4258c0e4face6f6c8910f330ca42c04a79f5e8"
   }
 ];
+export const PUBLISHED_MEDIA_DEMOS=MEDIA_DEMOS.filter(item=>item.published!==false);
 export const mediaDemoPath=(file:string)=>'/media/demo-gallery/'+file;

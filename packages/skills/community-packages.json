@@ -249,5 +249,43 @@
       "Python",
       "networkx"
     ]
+  },
+  {
+    "id": "community-canvas-design",
+    "name": "Canvas image design",
+    "description": "Create original posters, covers and static PNG/PDF graphics with local code and careful visual review.",
+    "owner": "Anthropic",
+    "category": "design",
+    "keywords": [
+      "image",
+      "poster",
+      "canvas",
+      "图片",
+      "海报",
+      "代码绘图"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python or browser Canvas"
+    ]
+  },
+  {
+    "id": "community-algorithmic-art",
+    "name": "Algorithmic art with p5.js",
+    "description": "Create reproducible generative art with seeded p5.js algorithms, interactive parameters and PNG exports.",
+    "owner": "Anthropic",
+    "category": "design",
+    "keywords": [
+      "generative art",
+      "p5.js",
+      "algorithm",
+      "生成艺术",
+      "代码绘图"
+    ],
+    "requires": [
+      "Connected computer",
+      "Node.js and a local browser",
+      "p5.js"
+    ]
   }
 ]

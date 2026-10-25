@@ -1,6 +1,6 @@
-import {MEDIA_DEMOS} from '../../../packages/docs/src/media-gallery.js';
+import {GALLERY_ASSETS,galleryContentType} from '../../../packages/docs/src/gallery-assets.js';
 const prefix='/media/demo-gallery/';
-const files=new Set(MEDIA_DEMOS.flatMap(item=>[item.video,item.poster]));
+const files=new Set(GALLERY_ASSETS.map(item=>item.name));
 export type DemoMediaBucket={
  head(key:string):Promise<{size:number;httpEtag:string;uploaded:Date}|null>;
  get(key:string,options?:{range:{offset:number;length:number}}):Promise<{body:ReadableStream<Uint8Array>}|null>;
@@ -12,7 +12,7 @@ export async function serveDemoMedia(request:Request,bucket:DemoMediaBucket|unde
  if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
  if(!bucket)return new Response('Media temporarily unavailable',{status:503,headers:{'cache-control':'no-store'}});
  const key='demo-gallery/'+name,object=await bucket.head(key);if(!object)return missing();
- const headers=new Headers({'content-type':name.endsWith('.mp4')?'video/mp4':'image/webp','cache-control':'public, max-age=31536000, immutable','accept-ranges':'bytes','etag':object.httpEtag,'last-modified':object.uploaded.toUTCString(),'x-content-type-options':'nosniff','content-disposition':'inline'});
+ const headers=new Headers({'content-type':galleryContentType(name),'cache-control':'public, max-age=31536000, immutable','accept-ranges':'bytes','etag':object.httpEtag,'last-modified':object.uploaded.toUTCString(),'x-content-type-options':'nosniff','content-disposition':'inline'});
  const etags=request.headers.get('if-none-match')?.split(',').map(tag=>tag.trim().replace(/^W\//,''));
  if(etags?.some(tag=>tag==='*'||tag===object.httpEtag))return new Response(null,{status:304,headers});
  if(request.method==='HEAD'){headers.set('content-length',String(object.size));return new Response(null,{headers});}

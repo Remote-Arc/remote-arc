@@ -82,10 +82,10 @@
       "name": "Image Studio",
       "priority": "P1",
       "category": "media",
-      "description": "Generate, retouch and upscale images using a user-hosted ComfyUI backend.",
-      "engine": "ComfyUI",
+      "description": "Draw posters, illustrations and seeded generative art with local code; optionally synthesize, retouch and upscale through a user-hosted ComfyUI backend.",
+      "engine": "Canvas/Python + p5.js; optional ComfyUI",
       "requires": [
-        "comfy"
+        "node or python3"
       ],
       "scopes": [
         "computer:read",

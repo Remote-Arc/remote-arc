@@ -18,3 +18,6 @@ These snapshots retain their upstream entry points, helper scripts and reference
 ## Remote Arc original skills
 
 The DOCX, XLSX, PPTX and PDF packages in `builtin/` are original Remote Arc work, versioned at 1.0.0 under the repository's Remote Arc Proprietary Source License. They are not copies of Anthropic's office skills. Their revisions are SHA-256 content manifests rather than upstream Git revisions. Each includes a real, read-only Python inspector and precise dependency and verification instructions. Structural inspection does not substitute for rendering, spreadsheet recalculation, OCR or independent semantic verification.
+
+- Canvas design: Anthropic, Apache-2.0, https://github.com/anthropics/skills/tree/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/canvas-design. Optional font binaries are not embedded; pinned hashes and upstream font licenses are included.
+- Algorithmic art: Anthropic, Apache-2.0, https://github.com/anthropics/skills/tree/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/algorithmic-art. Original viewer and generator templates are retained.

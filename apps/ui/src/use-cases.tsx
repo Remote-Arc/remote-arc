@@ -1,6 +1,7 @@
 import {SKILL_USE_CASES,useCaseSkillIds} from '../../../packages/docs/src/skill-use-cases.js';
 import './use-case-catalog.css';
 import React,{useEffect,useState} from "react";
+import {ImageDemoGallery} from "./image-demo-gallery.js";
 import {MediaDemoGallery} from "./media-demo-gallery.js";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
@@ -212,9 +213,10 @@ export function UseCaseDetail({ slug }: { slug: UseCaseSlug }) {
   const mode:RunMode=item.connectOnly?'connect':chosenMode;
   const arcHref=arcChatHref(arcUseCasePrompt(slug,locale),'use-case:'+slug);
   const arcProof=slug==='ci-follow-up'?tr('The actual commit, workflow status, inspected failure evidence and source links, with any proposed next action kept within your authorization.','实际提交、工作流状态、已检查的失败证据和来源链接；建议下一步须保持在你的授权范围内。'):slug==='scheduled-checks'?tr('Per-run timestamps, actual resource observations, source links and result summaries; include exit status when a command was executed.','每轮时间、实际资源观察、来源链接与结果摘要；执行了命令时另附退出状态。'):item.proof;
-  return <main className={"technicalDoc revisedUseCases"+(slug==="video-creation"?" videoCreationCase":"")}>
+  return <main className={"technicalDoc revisedUseCases"+(slug==="video-creation"?" videoCreationCase":slug==="image-studio"?" imageCreationCase":"")}>
     <header className="articleHeader"><a className="caseBack" href={localizedWebsiteHref("/use-cases?mode="+mode, locale)}>← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{mode==='arc'?caseTitle(slug,item.title,tr):item.title}</h1><p>{mode==='arc'?arc.intro[locale]:item.intro}</p>{item.connectOnly?<p className="caseConnectOnly">{tr('Available through Connect from the AI you already use. Arc will use Browser Runner later.','通过 Connect 在你已经使用的 AI 中可用。Arc 之后也会支持 Browser Runner。')} <a href={localizedWebsiteHref('/connect-ai',locale)}>{tr('Connect your AI','连接你的 AI')} →</a></p>:<RunModeChoice mode={mode} onChange={setMode} tr={tr}/>}{mode==='arc'?<div className="caseStartActions"><a className="primaryButton" href={arcHref}>{tr('Start in Arc','在 Arc 中开始')} ↗</a><span>{tr('Review the prepared request before sending.','检查预填请求后，再发送执行。')}</span></div>:item.durable&&<TaskAvailability />}</header>
     {slug==="video-creation"&&<MediaDemoGallery/>}
+    {slug==="image-studio"&&<ImageDemoGallery/>}
     <article className="technicalArticle useCaseDetailBody">
       {mode==='arc'?<>
        <section><h2>{tr('Ask Arc','向 Arc 提出请求')}</h2><blockquote className="casePrompt">{arc.prompt[locale]}</blockquote><p>{tr('The button opens a draft in Arc, then you send it when ready. Arc checks current access and dependencies before acting; missing details or capabilities are concrete blockers.','按钮会在 Arc 中打开草稿，由你检查后发送。Arc 执行前检查当前权限与依赖；缺少信息或能力时会说明具体阻碍。')}</p></section>

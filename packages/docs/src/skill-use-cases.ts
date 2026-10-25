@@ -199,29 +199,29 @@ export const SKILL_USE_CASES = [
       "zh": "图片创作"
     },
     "title": {
-      "en": "Create, retouch and upscale images",
-      "zh": "图片创作、修图与放大"
+      "en": "Create images and code-driven graphics",
+      "zh": "图片创作与代码绘图"
     },
     "intro": {
-      "en": "Use a local image workflow to create visuals, edit supplied images or improve resolution.",
-      "zh": "使用本机图片工作流创作视觉素材、编辑已有图片或提高分辨率。"
+      "en": "Draw posters, covers, editorial illustrations and generative art with local code, or use an available local image model for synthesis and editing.",
+      "zh": "用本地代码绘制海报、封面、编辑插画与生成艺术，也可通过已有本地图片模型完成生成和编辑。"
     },
     "prompt": {
-      "en": "Help create or edit the image I describe using my connected computer. Read the image skill and inspect the available local ComfyUI workflow, models and hardware first. Agree on any missing model download before installing it. Generate the requested file, inspect it against the brief and return the actual output.",
-      "zh": "使用已连接电脑帮我创作或编辑所描述的图片。读取图片技能，先检查本地 ComfyUI 工作流、模型与硬件；缺少模型时，安装下载前先说明并确认。生成所需图片，按要求检查画面并交付实际文件。"
+      "en": "Create an original image on my connected computer. For posters, graphic illustration or generative art, read Canvas Design or Algorithmic Art and render locally without an image model. Keep editable code and seeds, inspect the actual PNG, and deliver the image. For photographic synthesis or edits, check my local ComfyUI backend and model first; ask before downloading weights.",
+      "zh": "在已连接电脑上制作原创图片。海报、图形插画或生成艺术优先读取 Canvas Design 或 Algorithmic Art，用本地代码渲染，无需绘图模型。保留可编辑代码与种子，检查实际 PNG 后交付。照片级生成或图片编辑先检查本地 ComfyUI 和模型，下载权重前确认。"
     },
     "requires": {
-      "en": "A working local ComfyUI backend, suitable models and compatible compute.",
-      "zh": "可运行的本地 ComfyUI、合适模型与兼容算力。"
+      "en": "For code graphics: a local Canvas/Python renderer or p5.js and a browser. Model-based images additionally need a configured local ComfyUI backend and suitable weights.",
+      "zh": "代码绘图需要本地 Canvas/Python 渲染器，或 p5.js 与浏览器；模型生图另需可用本地 ComfyUI 后端和适合的模型。"
     },
     "boundary": {
-      "en": "A skill does not include model weights. Generation depends on the installed workflow and hardware; remote providers are a separate choice.",
-      "zh": "技能不包含模型权重；生成效果取决于本地工作流与硬件，远程服务需另行选择。"
+      "en": "Code graphics use a local renderer and need no image model. Photographic synthesis needs a configured local model; downloads and paid providers retain their own authorization.",
+      "zh": "代码绘图无需图片模型；照片级生图另需配置本地模型，模型下载和付费服务各自遵循授权。"
     },
     "steps": [
       {
-        "en": "Check source images, dimensions and the installed model workflow.",
-        "zh": "检查源图片、尺寸要求与已安装模型工作流。"
+        "en": "Choose code graphics or an available local model, then confirm dimensions, text and source images.",
+        "zh": "选择代码绘图或已有本地模型，检查尺寸、文字与源图片。"
       },
       {
         "en": "Generate/edit locally and inspect the resulting file.",
@@ -229,11 +229,13 @@ export const SKILL_USE_CASES = [
       }
     ],
     "proof": {
-      "en": "Actual image files, dimensions and visible quality checks.",
-      "zh": "实际图片文件、尺寸与画面质量检查。"
+      "en": "Actual image files, dimensions, editable code/seeds where applicable and visible quality checks.",
+      "zh": "实际图片文件、尺寸、适用时的可编辑代码与种子，以及画面质量检查。"
     },
     "skillIds": [
-      "image-studio"
+      "image-studio",
+      "community-canvas-design",
+      "community-algorithmic-art"
     ],
     "art": "image",
     "format": "PNG",

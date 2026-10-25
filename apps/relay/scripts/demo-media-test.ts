@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {serveDemoMedia} from '../src/demo-media.js';
+import {IMAGE_DEMOS} from '../../../packages/docs/src/image-gallery.js';
+import {GALLERY_ASSETS} from '../../../packages/docs/src/gallery-assets.js';
 import {MEDIA_DEMOS} from '../../../packages/docs/src/media-gallery.js';
 const data=new TextEncoder().encode('0123456789'),etag='"test-etag"',uploaded=new Date('2026-10-25T00:00:00Z');let gets=0,heads=0;
 const bucket={async head(key:string){heads++;assert(key.startsWith('demo-gallery/'));return{size:data.length,httpEtag:etag,uploaded};},async get(_key:string,options?:{range:{offset:number;length:number}}){gets++;const bytes=options?data.slice(options.range.offset,options.range.offset+options.range.length):data;return{body:new ReadableStream({start(controller){controller.enqueue(bytes);controller.close();}})};}} as unknown as R2Bucket;
@@ -19,3 +21,9 @@ const count=heads;assert.equal((await serveDemoMedia(new Request('https://remote
 assert.equal((await serveDemoMedia(req(),undefined)).status,503);
 const missing={head:async()=>null} as unknown as R2Bucket;assert.equal((await serveDemoMedia(req(),missing)).status,404);
 console.log('PASS: public demo media allowlist, streaming, byte ranges/seeking, HEAD, ETags, cache and method boundaries');
+
+assert.equal(new Set(GALLERY_ASSETS.map(item=>item.name)).size,GALLERY_ASSETS.length,'Each approved media filename is unique');
+for(const file of GALLERY_ASSETS){assert.match(file.name,/^[a-z0-9-]+-[a-f0-9]{12}\.(mp4|webp|png)$/);assert.match(file.sha256,/^[a-f0-9]{64}$/);}
+for(const item of IMAGE_DEMOS){const response=await serveDemoMedia(new Request('https://remotearc.app/media/demo-gallery/'+item.image),bucket);assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/png');const thumb=await serveDemoMedia(new Request('https://remotearc.app/media/demo-gallery/'+item.thumb,{method:'HEAD'}),bucket);assert.equal(thumb.headers.get('content-type'),'image/webp');}
+assert.equal(MEDIA_DEMOS.filter(item=>item.language==='en').length,3);
+console.log('PASS: English media metadata, original PNG references and shared allowlist integrity');

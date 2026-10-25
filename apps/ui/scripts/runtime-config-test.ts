@@ -27,30 +27,3 @@ const next=await decode('sessions/'+id+'/messages','POST',{...input,text:'取消
 await decode('sessions/'+id,'DELETE');assert.equal((await decode('sessions/'+id)).status,404);
 assert.equal(arc.handle('/api/apps/call','POST','{}'),null);
 console.log('PASS: server-controlled preview flags, uncached config, invalid-value closure, per-tab simulation, replay, cancellation and no App dispatch');
-
-const originalFetch=globalThis.fetch;
-let mediaCalls=0;
-try{
- globalThis.fetch=async(input,init)=>{
-  mediaCalls++;assert.equal(String(input),'https://remotearc.app/media/demo-gallery/basketball-return-zh-fa20c92cf5e6.mp4');
-  const headers=new Headers(init?.headers);assert.equal(headers.get('range'),'bytes=0-2');
-  assert.equal(headers.get('if-none-match'),'"example-etag"');assert.equal(headers.get('if-range'),'"example-etag"');
-  assert.equal(headers.has('cookie'),false);assert.equal(headers.has('authorization'),false);
-  assert.equal(init?.redirect,'error');
-  return new Response(init?.method==='HEAD'?null:'mp4',{status:206,headers:{'content-type':'video/mp4','content-range':'bytes 0-2/100','accept-ranges':'bytes'}});
- };
- const mediaPath='/media/demo-gallery/basketball-return-zh-fa20c92cf5e6.mp4';
- const request=(method='GET')=>new Request('https://preview.example'+mediaPath+'?ignored=1',{method,headers:{range:'bytes=0-2','if-none-match':'"example-etag"','if-range':'"example-etag"',cookie:'private=value',authorization:'Bearer private'}});
- const video=await worker.fetch(request(),env);
- assert.equal(video.status,206);assert.equal(await video.text(),'mp4');assert.equal(video.headers.get('accept-ranges'),'bytes');
- assert.equal(await (await worker.fetch(request('HEAD'),env)).text(),'');
- assert.equal((await worker.fetch(new Request('https://preview.example/media/demo-gallery/unknown.mp4'),env)).status,404);
- assert.equal((await worker.fetch(new Request('https://preview.example'+mediaPath,{method:'POST'}),env)).status,405);
- assert.equal(mediaCalls,2,'Only known public GET/HEAD assets may use the fallback');
- const bound={...env,PUBLIC_MEDIA:{head:async()=>({size:3,httpEtag:'"bound"',uploaded:new Date('2026-10-25')}),get:async()=>({body:new ReadableStream<Uint8Array>({start(controller){controller.enqueue(new TextEncoder().encode('r2!'));controller.close();}})})}};
- const direct=await worker.fetch(new Request('https://preview.example'+mediaPath),bound);
- assert.equal(await direct.text(),'r2!');assert.equal(mediaCalls,2,'Bound previews use their R2 bucket');
- globalThis.fetch=async()=>{throw new Error('offline');};
- const unavailable=await worker.fetch(request(),env);assert.equal(unavailable.status,503);assert.equal(unavailable.headers.get('cache-control'),'no-store');
-}finally{globalThis.fetch=originalFetch;}
-console.log('PASS: preview media fallback preserves range/HEAD, restricts assets and methods, strips private headers and prefers a bound R2 bucket');

@@ -23,7 +23,7 @@ type Status = {
     at: string;
   }[];
 };
-const viewPath = (row: Attention) =>
+const viewPath = (row: Pick<Attention, "device_id" | "session_id">) =>
   `/dashboard/browser/${encodeURIComponent(row.device_id)}/${encodeURIComponent(row.session_id)}`;
 async function requestJSON(path: string, init?: RequestInit) {
   const response = await fetch(path, {
@@ -409,6 +409,65 @@ function LiveScreen({
         </div>
       )}
     </section>
+  );
+}
+
+// Device-level session discovery is intentionally independent of handoff alerts.
+// The live stream starts only after the owner explicitly opens a task.
+export function DeviceBrowserSessions({ deviceId }: { deviceId: string }) {
+  const { tr } = useI18n();
+  const [expanded, setExpanded] = useState(false);
+  const [sessions, setSessions] = useState<{ session_id: string; hostname: string; state: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function refresh() {
+      setLoading(true);
+      try {
+        const data = await requestJSON(`/api/runner/sessions/${encodeURIComponent(deviceId)}`);
+        if (!stopped) {
+          setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+          setError(false);
+        }
+      } catch {
+        if (!stopped) setError(true);
+      } finally {
+        if (!stopped) {
+          setLoading(false);
+          timer = setTimeout(refresh, 10000);
+        }
+      }
+    }
+    void refresh();
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [deviceId, expanded]);
+  return (
+    <details className="deviceBrowserSessions" onToggle={event => setExpanded(event.currentTarget.open)}>
+      <summary>
+        <span>{tr("Browser live view", "浏览器实时画面")}</span>
+        <span>{tr("View running tasks", "查看运行中的任务")}</span>
+      </summary>
+      <div className="deviceBrowserSessionList" aria-live="polite">
+        {error ? (
+          <p role="status">{tr("Could not load browser sessions. Check the device connection and permission.", "获取浏览器会话失败，请检查设备连接和权限。")}</p>
+        ) : sessions.length ? (
+          sessions.map(session => (
+            <a key={session.session_id} href={viewPath({ device_id: deviceId, session_id: session.session_id })} title={session.session_id}>
+              <span>
+                <strong>{session.hostname || tr("Task browser", "任务浏览器")}</strong>
+                <small>{session.state === "needs_user" ? tr("Needs attention", "等待人工处理") : tr("Running", "运行中")}</small>
+              </span>
+              <span>{tr("Watch", "查看画面")} ↗</span>
+            </a>
+          ))
+        ) : (
+          <p>{loading ? tr("Finding running browsers…", "正在查询运行中的浏览器…") : tr("No running browser tasks on this device.", "这台设备暂时没有运行中的浏览器任务。")}</p>
+        )}
+      </div>
+    </details>
   );
 }
 

@@ -99,6 +99,11 @@ sql
     "INSERT INTO runner_session_links(user_id,device_id,session_id,run_id) VALUES('owner','device-owner','task','run')",
   )
   .run();
+let sessionFixtures: any[] = [
+  { session_id: "active-task", browser_running: true, state: "active", last_url: "https://jobs.example.invalid/apply?private=secret" },
+  { session_id: "closed-task", browser_running: false, state: "closed", last_url: "https://hidden.example.invalid/" },
+  { session_id: "../bad", browser_running: true, state: "active", last_url: "https://hidden.example.invalid/" },
+];
 let waitResult = "timeout",
   dispatches: any[] = [],
   viewerRequests = 0;
@@ -117,6 +122,8 @@ const env = {
         }
         const body = (await request.json()) as any;
         dispatches.push(body);
+        if (body.tool === "browser_runner_status")
+          return Response.json({ result: { sessions: sessionFixtures, profiles: [{ saved_logins: "never-return" }] } });
         return Response.json({ result: { state: waitResult } });
       },
     }),
@@ -221,6 +228,17 @@ function request(
     ...(body ? { body } : {}),
   });
 }
+const listed = await handleRunnerRequest(request("/api/runner/sessions/device-owner"), env);
+assert.equal(listed.status, 200);
+const listedJSON = await listed.json() as any;
+assert.deepEqual(listedJSON.sessions, [
+  { session_id: "active-task", state: "active", hostname: "jobs.example.invalid" },
+]);
+assert(!JSON.stringify(listedJSON).includes("secret"), "never return full URLs");
+assert(!JSON.stringify(listedJSON).includes("saved_logins"), "never return profiles");
+assert.equal((await handleRunnerRequest(request("/api/runner/sessions/device-owner", "other"), env)).status, 403);
+assert.equal((await handleRunnerRequest(request("/api/runner/sessions/device-other", "owner"), env)).status, 403);
+
 const attention = (
   (await (
     await handleRunnerRequest(
@@ -273,14 +291,14 @@ assert.equal(
   true,
 );
 assert(
-  dispatches.every(
+  dispatches.filter(call => call.tool === "browser_runner_wait").every(
     (call) =>
       call.tool === "browser_runner_wait" &&
       call.arguments.until === "user_done",
   ),
 );
 assert(
-  dispatches.every(
+  dispatches.filter(call => call.tool === "browser_runner_wait").every(
     (call) => call.policy.runnerAttentionMode === "show_and_notify",
   ),
 );

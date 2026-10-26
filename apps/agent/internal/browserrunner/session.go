@@ -66,7 +66,9 @@ type session struct {
 	// shownForUser: the window was brought on screen for the user to act
 	// in; it goes back out of sight when the AI continues.
 	shownForUser      bool
-	viewUntil         time.Time // guarded by ev
+	viewUntil         time.Time    // guarded by ev
+	video             *videoStream // guarded by ev; one encoded publisher per task
+	viewJPEG          bool         // guarded by ev; false only after all viewers play video
 	viewActive        bool
 	viewConn          cdpClient
 	lastViewFrame     time.Time
@@ -442,6 +444,7 @@ func (s *session) setup(ctx context.Context) error {
 
 func (s *session) shutdownBrowser(markPaused bool) {
 	s.ev.Lock()
+	s.stopVideoLocked()
 	s.viewActive = false
 	s.viewUntil = time.Time{}
 	s.cancelViewCapture()

@@ -1,13 +1,14 @@
 import { getSessionUser } from "./auth.js";
 import { isTrustedDashboardMutation } from "./dashboard-origin.js";
 import { callDevice } from "./device-call.js";
+import type { RunnerVideoEnv } from "./runner-video.js";
 import {
   slackApi,
   slackInstallation,
   type SlackBotEnv,
 } from "./slack-bot-common.js";
 
-export type RunnerEnv = SlackBotEnv;
+export type RunnerEnv = SlackBotEnv & RunnerVideoEnv;
 export type RunnerAttentionEvent = {
   type: "runner_attention";
   event_id: string;

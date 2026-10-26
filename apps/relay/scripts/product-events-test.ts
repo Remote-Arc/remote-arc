@@ -28,6 +28,7 @@ assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed'}],{},'htt
 assert.equal((await ingest(Array.from({length:21},()=>({id:crypto.randomUUID(),name:'page.viewed'})))).status,400);
 assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed',message:'x'.repeat(20000)}])).status,400);
 assert.equal((sql.prepare('SELECT user_id FROM product_events WHERE id=?').get(eventId) as any).user_id,'user');
+await observeProductRequest(new Request('https://agent.remotearc.app/auth/email/verify',{method:'POST'}),new Response('<form>Invalid code</form>',{headers:{'content-type':'text/html'}}),env,Date.now());assert.equal((sql.prepare("SELECT outcome FROM product_events WHERE name='auth.email.verify_requested'").get() as any).outcome,'accepted','A successful HTTP form response is not proof of successful login');
 const request=new Request('https://agent.remotearc.app/api/billing/checkout',{method:'POST',headers:{cookie:'rl_session=user','x-ra-journey-id':journey,'x-ra-trace-id':trace}});
 sql.prepare("INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,session_id,expires_at,created_at) VALUES('checkout_fixture','user','arc-topup-500-v1','payment','open','cs_live_fixture',?,?)").run(new Date(Date.now()+3600000).toISOString(),stamp);
 const response=Response.json({sessionId:'cs_live_fixture',clientSecret:'DO_NOT_RECORD_ME'});

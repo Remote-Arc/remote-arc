@@ -6,7 +6,7 @@ Admin → Events & journeys (`https://admin.remotearc.app/?section=events`) prov
 
 | Area | Authoritative backend events | Browser observations |
 | --- | --- | --- |
-| Login / OAuth | session creation, email request/verification, Google callback, OAuth consent/token HTTP outcomes | None on the sign-in form |
+| Login / OAuth | session creation, email request/verification-attempt and invalid-code failure, Google callback, OAuth consent/token HTTP outcomes | None on the sign-in form |
 | Devices | pairing start/token/approval, device mutations, completed device dispatch outcomes | Approved workspace page views |
 | Apps | persisted connection readiness and mutation-request HTTP outcomes (accepted, not proof of provider completion) | Apps workspace views |
 | Tasks | accepted HTTP requests and persisted Arc run terminal states | Task workspace views |

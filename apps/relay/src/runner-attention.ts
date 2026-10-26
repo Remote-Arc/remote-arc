@@ -71,6 +71,34 @@ const actionName = (kind: string) =>
         ? "review a site permission"
         : "sign in";
 
+async function runnerSessions(env: RunnerEnv, userId: string, deviceId: string) {
+  const result = unwrapRunnerResult(await callDevice(
+    env,
+    { userId, clientId: "dashboard", grantId: null, scope: "browser:read", resource: env.PUBLIC_ORIGIN },
+    deviceId, "browser_runner_status", {},
+  ));
+  // An unavailable/malformed reply is not proof that a task ended. Only a
+  // successful inventory may hide an old handoff; checkpoints stay on device.
+  if (!Array.isArray(result.sessions)) throw new Error("invalid_runner_inventory");
+  const sessions = new Map<string, { browser_running: boolean; state: string; last_url?: string }>();
+  for (const item of result.sessions) {
+    if (!item || !idPattern.test(item.session_id || "")) continue;
+    if (typeof item.browser_running !== "boolean" || typeof item.state !== "string")
+      throw new Error("invalid_runner_inventory");
+    sessions.set(item.session_id, item);
+  }
+  return sessions;
+}
+
+const needsAttention = (session: { browser_running: boolean; state: string } | undefined) =>
+  session?.browser_running === true && session.state === "needs_user";
+
+function inactiveAttention(session: { browser_running: boolean; state: string } | undefined) {
+  // Removing an inactive reminder does not confirm a submit, complete a task,
+  // reopen its browser, or tombstone an episode that may be resumed later.
+  return json({ resolved: true, state: session?.browser_running ? "not_needed" : "not_running" });
+}
+
 export async function recordRunnerAttention(
   env: RunnerEnv,
   userId: string,
@@ -228,8 +256,18 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
       WHERE a.user_id=?1 AND a.resolved_at IS NULL AND (?2 IS NULL OR r.session_id=?2) ORDER BY a.created_at DESC LIMIT 20`,
     )
       .bind(user.id, arcSession)
-      .all();
-    return json({ attention: rows.results });
+      .all<{ id: string; device_id: string; session_id: string }>();
+    const inventories = new Map<string, Awaited<ReturnType<typeof runnerSessions>> | null>();
+    // One read per device, not per reminder. Do not scan a page or start a browser.
+    await Promise.all([...new Set(rows.results.map(row => row.device_id))].map(async deviceId => {
+      try { inventories.set(deviceId, await runnerSessions(env, user.id, deviceId)); }
+      catch { inventories.set(deviceId, null); }
+    }));
+    return json({ attention: rows.results.flatMap(row => {
+      const inventory = inventories.get(row.device_id);
+      if (!inventory) return [{ ...row, availability: "unavailable" }];
+      return needsAttention(inventory.get(row.session_id)) ? [{ ...row, availability: "live" }] : [];
+    }) });
   }
   // Device cards can list active task browsers without a CAPTCHA/sign-in alert.
   // Expose only owner-scoped, bounded metadata; never full URLs, profiles or logins.
@@ -245,22 +283,17 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
     if (!Array.isArray(allowed) || !allowed.includes("browser_runner_status") || !allowed.includes("browser_runner_snapshot"))
       return json({ error: "runner_disabled" }, 403);
     try {
-      const result = unwrapRunnerResult(await callDevice(
-        env,
-        { userId: user.id, clientId: "dashboard", grantId: null, scope: "browser:read", resource: env.PUBLIC_ORIGIN },
-        deviceId, "browser_runner_status", {},
-      ));
-      const sessions = (Array.isArray(result.sessions) ? result.sessions : [])
-        .filter((item: any) => item && item.browser_running === true && idPattern.test(item.session_id || ""))
+      const sessions = [...(await runnerSessions(env, user.id, deviceId)).entries()]
+        .filter(([, item]) => item.browser_running && item.state !== "closed")
         .slice(0, 20)
-        .map((item: any) => {
+        .map(([sessionId, item]) => {
           let hostname = "";
           try {
             const parsed = new URL(item.last_url || "");
             if (parsed.protocol === "https:" || parsed.protocol === "http:") hostname = parsed.hostname.slice(0, 120);
           } catch { /* Never disclose malformed or untrusted page URLs. */ }
           return {
-            session_id: item.session_id,
+            session_id: sessionId,
             state: ["active", "needs_user", "paused"].includes(item.state) ? item.state : "active",
             hostname,
           };
@@ -275,13 +308,16 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
   );
   if (resolve && request.method === "POST") {
     const row = await env.DB.prepare(
-      "SELECT device_id,session_id FROM runner_attention WHERE id=?1 AND user_id=?2 AND resolved_at IS NULL",
+      "SELECT device_id,session_id,resolved_at FROM runner_attention WHERE id=?1 AND user_id=?2",
     )
       .bind(resolve[1], user.id)
-      .first<{ device_id: string; session_id: string }>();
+      .first<{ device_id: string; session_id: string; resolved_at: string | null }>();
     if (!row) return json({ error: "not_found" }, 404);
+    if (row.resolved_at) return json({ resolved: true, state: "already_resolved" });
     // A fresh scan, not a submit, is the only device operation this button can cause.
     try {
+      const current = (await runnerSessions(env, user.id, row.device_id)).get(row.session_id);
+      if (!needsAttention(current)) return inactiveAttention(current);
       const result = await callDevice(
         env,
         {
@@ -308,11 +344,16 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
         reason: value.reason,
       });
     } catch {
+      // The browser may close between the status read and the blocker scan.
+      try {
+        const current = (await runnerSessions(env, user.id, row.device_id)).get(row.session_id);
+        if (!needsAttention(current)) return inactiveAttention(current);
+      } catch { /* An offline device is never treated as an ended task. */ }
       return json(
         {
           error: "device_unavailable",
           message:
-            "The task could not be checked. Reconnect the device and try again.",
+            "The task could not be checked. Check the computer connection and browser task permission, then retry.",
         },
         503,
       );
@@ -397,7 +438,9 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
         ),
       ),
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && /^No browser_runner session /i.test(error.message))
+      return json({ error: "session_not_found" }, 404);
     return json({ error: "device_unavailable" }, 503);
   }
 }

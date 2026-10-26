@@ -7,6 +7,7 @@ import {recordProductEvent,recordCheckoutCompletion,purgeProductEvents,eventStat
 import {handleAdminEvents,paymentReadiness} from '../src/admin-events.js';
 import {grantArcCredits} from '../src/arc-credits.js';
 import {adminApiMethods} from '../src/admin-service.js';
+import {processStripeEvent} from '../src/stripe-billing.js';
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const file of fs.readdirSync(new URL('../migrations/',import.meta.url)).filter(v=>v.endsWith('.sql')).sort())sql.exec(fs.readFileSync(new URL('../migrations/'+file,import.meta.url),'utf8'));
 const db={prepare(query:string){const stmt=sql.prepare(query);const bound=(args:any[])=>({async first(){return stmt.get(...args)||null;},async all(){return{results:stmt.all(...args)};},async run(){return this.runSync();},runSync(){const r=stmt.run(...args);return{success:true,meta:{changes:Number(r.changes)}};}});return{...bound([]),bind(...args:any[]){assert(!args.includes(undefined),query);return bound(args);}};},async batch(items:Array<{runSync:()=>unknown}>){sql.exec('BEGIN');try{const r=items.map(s=>s.runSync());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}}} as unknown as D1Database;
@@ -63,5 +64,48 @@ assert.equal((await paymentReadiness({...env,STRIPE_SECRET_KEY:undefined,STRIPE_
 const previous=globalThis.fetch;let charges=true,calls=0;
 globalThis.fetch=async(input,init)=>{calls++;assert(!init?.method||init.method==='GET');const url=new URL(String(input));assert.equal(url.origin,'https://api.stripe.com');if(url.pathname==='/v1/checkout/sessions/cs_live_missing')return Response.json({livemode:true,status:'complete',payment_status:'paid',mode:'payment'});if(url.pathname==='/v1/account')return Response.json({charges_enabled:charges});if(url.pathname==='/v1/webhook_endpoints')return Response.json({data:[{url:env.PUBLIC_ORIGIN+'/api/billing/webhook',status:'enabled',livemode:true,enabled_events:['*']}]});throw Error('Unexpected provider request');};
 try{const ready=await paymentReadiness(env);assert.equal(ready.conclusion,'ready_unverified');assert.equal(ready.verifiedMemberships?.total,0);charges=false;assert.equal((await paymentReadiness(env)).conclusion,'blocked');assert.equal(calls,4);charges=true;sql.prepare("INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,session_id,expires_at,created_at) VALUES('missing','user','arc-topup-500-v1','payment','open','cs_live_missing',?,?)").run(new Date(Date.now()+3600000).toISOString(),new Date(Date.now()-1200000).toISOString());const discrepancy=await paymentReadiness(env);assert.equal(discrepancy.conclusion,'needs_attention');assert.equal(discrepancy.providerPaidUnprocessed.length,1);assert.equal(discrepancy.providerPaidUnprocessed[0]?.checkoutId,'missing');}finally{globalThis.fetch=previous;}
+// Real ledger writes with a failed commit or a lease stolen by another worker
+// must never produce an authoritative successful webhook observation.
+function settlementEnv(mode:'fail'|'lose_lease'|'telemetry_failure'){
+ return {...env,DB:{...db,prepare(query:string){
+  const statement=db.prepare(query);
+  const finalCommit=query.startsWith("UPDATE arc_payment_events SET status='processed'");
+  const telemetryWrite=query.startsWith('INSERT OR IGNORE INTO product_events');
+  if(!finalCommit&&!(mode==='telemetry_failure'&&telemetryWrite))return statement;
+  return {...statement,bind(...args:unknown[]){
+   const bound=statement.bind(...args);
+   return {...bound,async run(){
+    if(mode==='fail'&&finalCommit)throw Error('fixture: final ledger write failed');
+    if(mode==='telemetry_failure'&&telemetryWrite)throw Error('fixture: telemetry unavailable');
+    if(mode==='lose_lease'&&finalCommit)sql.prepare('UPDATE arc_payment_events SET lease_token=? WHERE id=?').run('another-worker',args[1] as string);
+    return bound.run();
+   }};
+  }} as D1PreparedStatement;
+ }} as D1Database};
+}
+const webhook=(id:string)=>({id,livemode:true,type:'checkout.session.expired',data:{object:{id:'cs_ordering_fixture'}}});
+const webhookObservations=(id:string)=>sql.prepare('SELECT name,outcome FROM product_events WHERE entity_id=? ORDER BY rowid').all(id);
+const webhookState=(id:string)=>sql.prepare('SELECT status,lease_token FROM arc_payment_events WHERE id=?').get(id);
+const beforeSettlementFetch=globalThis.fetch;
+globalThis.fetch=async()=>{throw Error('Webhook settlement fixtures must not access a provider');};
+try{
+ const failedId='evt_commit_failure';
+ await assert.rejects(processStripeEvent(settlementEnv('fail'),webhook(failedId),'commit-hash'),/fixture: final ledger write failed/);
+ assert.equal(webhookState(failedId)?.status,'failed');
+ assert.deepEqual(webhookObservations(failedId).map(e=>[e.name,e.outcome]),[['billing.webhook.failed','failed']],'A failed ledger commit cannot leave a successful webhook observation');
+ await processStripeEvent(env,webhook(failedId),'commit-hash');
+ assert.equal(webhookState(failedId)?.status,'processed');
+ assert.deepEqual(webhookObservations(failedId).map(e=>[e.name,e.outcome]),[['billing.webhook.failed','failed'],['billing.webhook.processed','succeeded']],'A successful retry is recorded after the failed attempt');
+ await processStripeEvent(env,webhook(failedId),'commit-hash');
+ assert.equal(webhookObservations(failedId).length,2,'Replaying an already processed webhook creates no extra observations');
+ const lostLeaseId='evt_lost_lease';
+ await processStripeEvent(settlementEnv('lose_lease'),webhook(lostLeaseId),'lease-hash');
+ assert.equal(webhookState(lostLeaseId)?.status,'processing');
+ assert.equal(webhookState(lostLeaseId)?.lease_token,'another-worker');
+ assert.equal(webhookObservations(lostLeaseId).length,0,'A worker that lost its lease cannot claim another worker completed the webhook');
+ const telemetryId='evt_telemetry_failure';
+ await processStripeEvent(settlementEnv('telemetry_failure'),webhook(telemetryId),'telemetry-hash');
+ assert.equal(webhookState(telemetryId)?.status,'processed','Telemetry failure cannot undo a committed webhook');
+}finally{globalThis.fetch=beforeSettlementFetch;}
 const unavailable={DB:{prepare(){throw Error('storage offline');}}} as any;assert.equal(await recordProductEvent(unavailable,{domain:'tasks',name:'task.failed',source:'server',outcome:'failed'}),false,'Telemetry storage failure never replaces the product result');
-sql.close();console.log('PASS: real SQLite migrations, intake auth/origin/allowlist/body bounds, forged payment prevention, ID deduplication, checkout correlation, source privacy, admin RBAC/filters/cursor pagination, retention, read-only live readiness and fail-open writes');
+sql.close();console.log('PASS: real SQLite migrations, intake auth/origin/allowlist/body bounds, forged payment prevention, ID deduplication, checkout correlation, source privacy, admin RBAC/filters/cursor pagination, retention, read-only live readiness, webhook commit/lease/retry ordering and fail-open writes');

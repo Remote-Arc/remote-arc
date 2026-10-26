@@ -149,8 +149,10 @@ export async function processStripeEvent(env:BillingEnv,event:Record<string,any>
    await env.DB.prepare('UPDATE arc_billing_subscriptions SET status=?1,cancel_at_period_end=?2,updated_at=?3,revision=revision+1 WHERE id=?4').bind(s.status,Number(Boolean(s.cancel_at_period_end)),now(),id(s,'sub')).run();
    // Cancellation retains the paid period. No renewal event means no next-period credits.
   }else if(event.type==='checkout.session.expired')await env.DB.prepare("UPDATE arc_billing_checkouts SET status='expired' WHERE session_id=?1 AND status IN ('creating','open')").bind(id(event.data?.object,'cs')).run();
-  await recordProductEvent(env,{domain:'billing',name:'billing.webhook.processed',source:'stripe',outcome:'succeeded',entityId:eventId});
-   await env.DB.prepare("UPDATE arc_payment_events SET status='processed',completed_at=?1,lease_until=NULL WHERE id=?2 AND lease_token=?3").bind(now(),eventId,token).run();
+  const settled=await env.DB.prepare("UPDATE arc_payment_events SET status='processed',completed_at=?1,lease_until=NULL WHERE id=?2 AND lease_token=?3").bind(now(),eventId,token).run();
+  // Only the worker that committed the ledger under its own lease can report
+  // success. Observability stays fail-open after the authoritative write.
+  if(settled.meta.changes)await recordProductEvent(env,{domain:'billing',name:'billing.webhook.processed',source:'stripe',outcome:'succeeded',entityId:eventId});
  }catch(error){const code=error instanceof StripeError?error.code:'BILLING_FULFILLMENT_UNAVAILABLE';await recordProductEvent(env,{domain:'billing',name:'billing.webhook.failed',source:'stripe',outcome:'failed',entityId:eventId,errorCode:code});await env.DB.prepare("UPDATE arc_payment_events SET status='failed',lease_until=NULL,error_code=?1 WHERE id=?2 AND lease_token=?3").bind(code,eventId,token).run();throw error;}
 }
 async function portal(env:BillingEnv,customerId:string,returnUrl:string){

@@ -148,6 +148,9 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 		capabilities = append(capabilities, "native_core_v1", "undo_history_v1")
 		if a.browserRunnerReady() {
 			capabilities = append(capabilities, "browser_runner_v1", "runner_view_v1")
+			if a.Browser.VideoAvailable() {
+				capabilities = append(capabilities, "runner_video_v1")
+			}
 		}
 	}
 	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.fleetCapacity(ctx)}, "tools": names, "capabilities": capabilities}
@@ -406,8 +409,10 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 	conn.SetReadDeadline(time.Now().Add(75 * time.Second))
 	conn.SetPongHandler(func(string) error { return conn.SetReadDeadline(time.Now().Add(75 * time.Second)) })
 	var frames <-chan browserrunner.ViewFrame
+	var videoSignals <-chan browserrunner.VideoSignal
 	if a.Browser != nil {
 		frames = a.Browser.Frames()
+		videoSignals = a.Browser.VideoSignals()
 	}
 	var workers sync.WaitGroup
 	slots := make(chan struct{}, 32)
@@ -428,6 +433,10 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 				return
 			case frame := <-frames:
 				if send(frame) != nil {
+					cancel()
+				}
+			case signal := <-videoSignals:
+				if send(signal) != nil {
 					cancel()
 				}
 			case <-attention.C:
@@ -463,7 +472,15 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 			}
 		}
 	}()
-	defer func() { cancel(); conn.Close(); <-finished; workers.Wait() }()
+	defer func() {
+		cancel()
+		conn.Close()
+		if a.Browser != nil {
+			a.Browser.StopViews()
+		}
+		<-finished
+		workers.Wait()
+	}()
 	for {
 		_, data, e := conn.ReadMessage()
 		if e != nil {
@@ -486,10 +503,18 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 			Type      string `json:"type"`
 			SessionID string `json:"session_id"`
 			Action    string `json:"action"`
+			JPEG      *bool  `json:"jpeg"`
 		}
 		if json.Unmarshal(data, &control) == nil && control.Type == "runner_view" {
 			if a.Browser != nil && (control.Action == "watch" || control.Action == "stop") {
-				a.Browser.ViewHeartbeat(control.SessionID, control.Action == "watch")
+				a.Browser.ViewHeartbeatMode(control.SessionID, control.Action == "watch", control.JPEG == nil || *control.JPEG)
+			}
+			continue
+		}
+		var video browserrunner.VideoSignal
+		if json.Unmarshal(data, &video) == nil && video.Type == "runner_video" {
+			if a.Browser != nil && a.browserRunnerReady() && a.identityValid() && !a.cfg().ExecutionPaused {
+				a.Browser.VideoControl(video)
 			}
 			continue
 		}

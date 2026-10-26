@@ -54,13 +54,14 @@ type Manager struct {
 	attentionMode     string
 	attentionEvents   map[string]Attention
 	frames            chan ViewFrame
+	videoSignals      chan VideoSignal
 	reaper            sync.Once
 	stop              chan struct{}
 	your              *yourChrome // the shared connection to the user's own Chrome, when a task uses it
 }
 
 func New() *Manager {
-	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, now: time.Now, IdleTimeout: 20 * time.Minute, UserActionTimeout: 2 * time.Hour, attentionEvents: map[string]Attention{}, frames: make(chan ViewFrame, 2), stop: make(chan struct{})}
+	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, now: time.Now, IdleTimeout: 20 * time.Minute, UserActionTimeout: 2 * time.Hour, attentionEvents: map[string]Attention{}, frames: make(chan ViewFrame, 2), videoSignals: make(chan VideoSignal, 16), stop: make(chan struct{})}
 }
 
 // Available reports whether this device can run the browser_runner at all.

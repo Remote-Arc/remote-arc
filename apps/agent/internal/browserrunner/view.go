@@ -22,6 +22,10 @@ type ViewFrame struct {
 // ViewHeartbeat is an internal authenticated Dashboard control, never an AI tool.
 // It does not operate the page, show a window, or start a stopped browser.
 func (m *Manager) ViewHeartbeat(id string, watching bool) {
+	m.ViewHeartbeatMode(id, watching, true)
+}
+
+func (m *Manager) ViewHeartbeatMode(id string, watching, jpeg bool) {
 	if !idPattern.MatchString(id) {
 		return
 	}
@@ -32,10 +36,12 @@ func (m *Manager) ViewHeartbeat(id string, watching bool) {
 		return
 	}
 	s.ev.Lock()
+	s.viewJPEG = jpeg
 	if watching {
 		s.viewUntil = time.Now().Add(30 * time.Second)
 	} else {
 		s.viewUntil = time.Time{}
+		s.stopVideoLocked()
 		s.cancelViewCapture()
 	}
 	s.ev.Unlock()
@@ -63,6 +69,10 @@ func (s *session) serviceView(ctx context.Context) {
 	defer cancel()
 	s.ev.Lock()
 	wanted, active := time.Now().Before(s.viewUntil), s.viewActive
+	if !wanted {
+		s.stopVideoLocked()
+		active = s.viewActive
+	}
 	s.ev.Unlock()
 	if !wanted && !active {
 		return
@@ -76,7 +86,14 @@ func (s *session) serviceView(ctx context.Context) {
 		s.viewActive = true
 		s.viewStarted = time.Now()
 		s.ev.Unlock()
-		if err := s.conn.Call(ctx, "Page.startScreencast", map[string]any{"format": "jpeg", "quality": 50, "maxWidth": 1280, "everyNthFrame": 2}, nil); err != nil {
+		s.ev.Lock()
+		video := s.video != nil
+		s.ev.Unlock()
+		params := map[string]any{"format": "jpeg", "quality": 50, "maxWidth": 1280, "everyNthFrame": 2}
+		if video {
+			params["maxHeight"], params["everyNthFrame"] = 720, 1
+		}
+		if err := s.conn.Call(ctx, "Page.startScreencast", params, nil); err != nil {
 			s.ev.Lock()
 			s.viewActive = false
 			s.viewError = "start screencast: " + err.Error()
@@ -95,6 +112,9 @@ func (s *session) serviceView(ctx context.Context) {
 	// memory-only/rate/size limits and only runs for an active viewer.
 	s.ev.Lock()
 	needFrame := s.viewActive && time.Now().Before(s.viewUntil) && s.viewCaptureCancel == nil && (s.lastViewFrame.Before(s.viewStarted) || time.Since(s.lastViewFrame) >= 2*time.Second)
+	if s.video != nil && time.Since(s.video.last) < 2*time.Second {
+		needFrame = false
+	}
 	if needFrame {
 		// Native screenshot callbacks can take longer than the control tick on a
 		// minimized Mac. Keep a single request alive without holding the session
@@ -122,8 +142,10 @@ func (s *session) onViewFrame(raw json.RawMessage) {
 	}
 	s.ev.Lock()
 	conn := s.viewConn
-	wanted := s.viewActive && time.Now().Before(s.viewUntil)
-	if !wanted {
+	lease := time.Now().Before(s.viewUntil)
+	wanted := s.viewActive && lease
+	if !lease {
+		s.stopVideoLocked()
 		s.viewActive = false
 		s.cancelViewCapture()
 	}
@@ -133,7 +155,11 @@ func (s *session) onViewFrame(raw json.RawMessage) {
 	}
 	conn.Fire("Page.screencastFrameAck", map[string]any{"sessionId": event.SessionID})
 	if !wanted {
-		conn.Fire("Page.stopScreencast", nil)
+		// Frames queued by the previous JPEG screencast can arrive while a
+		// video start restarts capture. They must not cancel the new publisher.
+		if !lease {
+			conn.Fire("Page.stopScreencast", nil)
+		}
 		return
 	}
 	s.forwardViewFrame(event.Data)
@@ -157,7 +183,8 @@ func (s *session) stopOversizedView(raw json.RawMessage) {
 
 func (s *session) forwardViewFrame(data string) {
 	s.ev.Lock()
-	send := s.viewActive && time.Now().Before(s.viewUntil) && time.Since(s.lastViewFrame) >= 500*time.Millisecond && len(data) > 0 && len(data) <= (maxFrameBytes/3)*4
+	s.offerVideoFrame(data)
+	send := s.viewActive && (s.video == nil || s.viewJPEG) && time.Now().Before(s.viewUntil) && time.Since(s.lastViewFrame) >= 500*time.Millisecond && len(data) > 0 && len(data) <= (maxFrameBytes/3)*4
 	if send {
 		s.lastViewFrame = time.Now()
 		s.viewError = ""
@@ -211,6 +238,7 @@ func (s *session) initialViewFrame(ctx context.Context, cancel context.CancelFun
 		s.viewError = "initial frame: " + err.Error()
 	}
 	if current && err == nil && time.Since(s.lastViewFrame) >= 500*time.Millisecond {
+		s.offerVideoFrame(frame.Data)
 		s.lastViewFrame = time.Now()
 		s.viewError = ""
 		select {

@@ -1,13 +1,14 @@
 import { getSessionUser } from "./auth.js";
 import { isTrustedDashboardMutation } from "./dashboard-origin.js";
 import { callDevice } from "./device-call.js";
+import type { RunnerVideoEnv } from "./runner-video.js";
 import {
   slackApi,
   slackInstallation,
   type SlackBotEnv,
 } from "./slack-bot-common.js";
 
-export type RunnerEnv = SlackBotEnv;
+export type RunnerEnv = SlackBotEnv & RunnerVideoEnv;
 export type RunnerAttentionEvent = {
   type: "runner_attention";
   event_id: string;
@@ -229,6 +230,45 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
       .bind(user.id, arcSession)
       .all();
     return json({ attention: rows.results });
+  }
+  // Device cards can list active task browsers without a CAPTCHA/sign-in alert.
+  // Expose only owner-scoped, bounded metadata; never full URLs, profiles or logins.
+  const sessionsRoute = url.pathname.match(/^\/api\/runner\/sessions\/([A-Za-z0-9_-]+)$/);
+  if (sessionsRoute && request.method === "GET") {
+    const deviceId = sessionsRoute[1]!;
+    const owned = await env.DB.prepare(
+      "SELECT allowed_tools FROM devices WHERE id=?1 AND user_id=?2 AND revoked_at IS NULL",
+    ).bind(deviceId, user.id).first<{ allowed_tools: string | null }>();
+    if (!owned) return json({ error: "forbidden" }, 403);
+    let allowed: unknown;
+    try { allowed = JSON.parse(owned.allowed_tools || "[]"); } catch { allowed = []; }
+    if (!Array.isArray(allowed) || !allowed.includes("browser_runner_status") || !allowed.includes("browser_runner_snapshot"))
+      return json({ error: "runner_disabled" }, 403);
+    try {
+      const result = unwrapRunnerResult(await callDevice(
+        env,
+        { userId: user.id, clientId: "dashboard", grantId: null, scope: "browser:read", resource: env.PUBLIC_ORIGIN },
+        deviceId, "browser_runner_status", {},
+      ));
+      const sessions = (Array.isArray(result.sessions) ? result.sessions : [])
+        .filter((item: any) => item && item.browser_running === true && idPattern.test(item.session_id || ""))
+        .slice(0, 20)
+        .map((item: any) => {
+          let hostname = "";
+          try {
+            const parsed = new URL(item.last_url || "");
+            if (parsed.protocol === "https:" || parsed.protocol === "http:") hostname = parsed.hostname.slice(0, 120);
+          } catch { /* Never disclose malformed or untrusted page URLs. */ }
+          return {
+            session_id: item.session_id,
+            state: ["active", "needs_user", "paused"].includes(item.state) ? item.state : "active",
+            hostname,
+          };
+        });
+      return json({ sessions });
+    } catch {
+      return json({ error: "device_unavailable" }, 503);
+    }
   }
   const resolve = url.pathname.match(
     /^\/api\/runner\/attention\/([A-Za-z0-9-]+)\/resolve$/,

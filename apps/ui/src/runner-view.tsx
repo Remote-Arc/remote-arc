@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./runner-view.css";
+import { RunnerVideoPlayer } from "./runner-video.js";
 
 type Attention = {
   id: string;
@@ -22,7 +23,7 @@ type Status = {
     at: string;
   }[];
 };
-const viewPath = (row: Attention) =>
+const viewPath = (row: Pick<Attention, "device_id" | "session_id">) =>
   `/dashboard/browser/${encodeURIComponent(row.device_id)}/${encodeURIComponent(row.session_id)}`;
 async function requestJSON(path: string, init?: RequestInit) {
   const response = await fetch(path, {
@@ -234,10 +235,13 @@ function LiveScreen({
   const [frame, setFrame] = useState("");
   const [connection, setConnection] = useState("connecting");
   const [attempt, setAttempt] = useState(0);
+  const [videoLive, setVideoLive] = useState(false);
+  const videoElement = useRef<HTMLVideoElement>(null);
   const lastFrame = useRef(0);
   useEffect(() => {
     if (preview) return;
     setFrame("");
+    setVideoLive(false);
     setConnection("connecting");
     let disposed = false;
     const url = new URL(
@@ -246,9 +250,27 @@ function LiveScreen({
     );
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
     const socket = new WebSocket(url);
+    let video: RunnerVideoPlayer | undefined;
     socket.onopen = () => {
       if (!disposed) setConnection("waiting");
       socket.send(JSON.stringify({ type: "ping" }));
+      if (videoElement.current) {
+        video = new RunnerVideoPlayer(
+          socket,
+          videoElement.current,
+          () => {
+            if (!disposed) {
+              setVideoLive(true);
+              setFrame("");
+              setConnection("live");
+            }
+          },
+          () => {
+            if (!disposed) setVideoLive(false);
+          },
+        );
+        video.start();
+      }
     };
     socket.onmessage = (event) => {
       if (
@@ -259,6 +281,10 @@ function LiveScreen({
         return;
       try {
         const value = JSON.parse(event.data);
+        if (value.type === "runner_video") {
+          void video?.signal(value);
+          return;
+        }
         if (
           value.type === "runner_frame" &&
           value.session_id === sessionId &&
@@ -266,6 +292,7 @@ function LiveScreen({
           value.data.length <= 273064 &&
           /^[A-Za-z0-9+/]+={0,2}$/.test(value.data)
         ) {
+          if (video?.playing) return;
           lastFrame.current = Date.now();
           setFrame("data:image/jpeg;base64," + value.data);
           setConnection("live");
@@ -276,6 +303,8 @@ function LiveScreen({
     };
     socket.onclose = () => {
       if (!disposed) {
+        video?.close();
+        setVideoLive(false);
         setConnection("disconnected");
         setFrame("");
       }
@@ -286,13 +315,18 @@ function LiveScreen({
     const heartbeat = setInterval(() => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: "ping" }));
-        if (lastFrame.current && Date.now() - lastFrame.current > 30000)
+        if (
+          !video?.playing &&
+          lastFrame.current &&
+          Date.now() - lastFrame.current > 30000
+        )
           setConnection("waiting");
       }
     }, 10000);
     return () => {
       disposed = true;
       clearInterval(heartbeat);
+      video?.close();
       socket.close();
     };
   }, [deviceId, sessionId, preview, attempt]);
@@ -313,6 +347,16 @@ function LiveScreen({
         </span>
         <span>{tr("View only", "仅查看")}</span>
       </div>
+      {!preview && (
+        <video
+          ref={videoElement}
+          autoPlay
+          muted
+          playsInline
+          hidden={!videoLive}
+          aria-label={tr("Current task browser screen", "任务浏览器当前画面")}
+        />
+      )}
       {preview ? (
         <div className="runnerSample">
           <div className="runnerSampleForm">
@@ -336,7 +380,7 @@ function LiveScreen({
             </small>
           </div>
         </div>
-      ) : frame ? (
+      ) : videoLive ? null : frame ? (
         <img
           src={frame}
           alt={tr("Current task browser screen", "任务浏览器当前画面")}
@@ -365,6 +409,65 @@ function LiveScreen({
         </div>
       )}
     </section>
+  );
+}
+
+// Device-level session discovery is intentionally independent of handoff alerts.
+// The live stream starts only after the owner explicitly opens a task.
+export function DeviceBrowserSessions({ deviceId }: { deviceId: string }) {
+  const { tr } = useI18n();
+  const [expanded, setExpanded] = useState(false);
+  const [sessions, setSessions] = useState<{ session_id: string; hostname: string; state: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function refresh() {
+      setLoading(true);
+      try {
+        const data = await requestJSON(`/api/runner/sessions/${encodeURIComponent(deviceId)}`);
+        if (!stopped) {
+          setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+          setError(false);
+        }
+      } catch {
+        if (!stopped) setError(true);
+      } finally {
+        if (!stopped) {
+          setLoading(false);
+          timer = setTimeout(refresh, 10000);
+        }
+      }
+    }
+    void refresh();
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [deviceId, expanded]);
+  return (
+    <details className="deviceBrowserSessions" onToggle={event => setExpanded(event.currentTarget.open)}>
+      <summary>
+        <span>{tr("Browser live view", "浏览器实时画面")}</span>
+        <span>{tr("View running tasks", "查看运行中的任务")}</span>
+      </summary>
+      <div className="deviceBrowserSessionList" aria-live="polite">
+        {error ? (
+          <p role="status">{tr("Could not load browser sessions. Check the device connection and permission.", "获取浏览器会话失败，请检查设备连接和权限。")}</p>
+        ) : sessions.length ? (
+          sessions.map(session => (
+            <a key={session.session_id} href={viewPath({ device_id: deviceId, session_id: session.session_id })} title={session.session_id}>
+              <span>
+                <strong>{session.hostname || tr("Task browser", "任务浏览器")}</strong>
+                <small>{session.state === "needs_user" ? tr("Needs attention", "等待人工处理") : tr("Running", "运行中")}</small>
+              </span>
+              <span>{tr("Watch", "查看画面")} ↗</span>
+            </a>
+          ))
+        ) : (
+          <p>{loading ? tr("Finding running browsers…", "正在查询运行中的浏览器…") : tr("No running browser tasks on this device.", "这台设备暂时没有运行中的浏览器任务。")}</p>
+        )}
+      </div>
+    </details>
   );
 }
 

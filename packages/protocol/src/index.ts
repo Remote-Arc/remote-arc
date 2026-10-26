@@ -111,7 +111,8 @@ export type AgentResultMessage = {
 };
 
 /** Internal Dashboard control; not part of the AI tool surface. */
-export type RunnerViewControl = { type: "runner_view"; session_id: string; action: "watch" | "stop" };
+export type RunnerViewControl = { type: "runner_view"; session_id: string; action: "watch" | "stop"; jpeg?: boolean };
+export type RunnerVideoSignal = { type: "runner_video"; session_id: string; stream_id: string; action: "start" | "stop" | "offer" | "answer" | "ready" | "ended"; sdp?: string; mid?: string };
 export type RunnerAttentionMessage = {
   type: "runner_attention"; event_id: string; session_id: string; task_id: string;
   kind: "captcha" | "sign_in" | "otp" | "scope" | "reminder" | "resolved";
@@ -119,8 +120,8 @@ export type RunnerAttentionMessage = {
 };
 export type RunnerAttentionAck = { type: "runner_attention_ack"; event_id: string; kind: RunnerAttentionMessage["kind"] };
 export type RunnerFrameMessage = { type: "runner_frame"; session_id: string; data: string };
-export type RelayToAgentMessage = AgentCallMessage | RunnerViewControl | RunnerAttentionAck;
-export type AgentToRelayMessage = AgentHelloMessage | AgentResultMessage | RunnerAttentionMessage | RunnerFrameMessage;
+export type RelayToAgentMessage = AgentCallMessage | RunnerViewControl | RunnerAttentionAck | RunnerVideoSignal;
+export type AgentToRelayMessage = AgentHelloMessage | AgentResultMessage | RunnerAttentionMessage | RunnerFrameMessage | RunnerVideoSignal;
 
 export const DEFAULT_RELAY_URL = "wss://remotearc.app";
 

@@ -159,7 +159,8 @@
   background: #4bc99b;
   margin-right: 6px;
 }
-.runnerScreen img {
+.runnerScreen img,
+.runnerScreen video {
   display: block;
   width: 100%;
   height: auto;
@@ -253,6 +254,7 @@
   .runnerView {
     padding: 20px 16px 32px;
   }
+.runnerScreen video[hidden] { display: none; }
   .runnerViewHeader {
     margin-bottom: 36px;
   }

@@ -120,6 +120,7 @@
     "ARC_TRIAL_PREMIUM_MICROS": "250000"
   },
   "ratelimits": [
+    {"name":"PRODUCT_EVENTS_RATE_LIMITER","namespace_id":"41008","simple":{"limit":30,"period":60}},
     {
       "name": "MCP_RATE_LIMITER",
       "namespace_id": "41001",

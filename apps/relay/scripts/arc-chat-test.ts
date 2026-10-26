@@ -59,6 +59,8 @@ assert.equal((await decode(await handleArcChat(req('status'),{...env,ARC_CHAT_EN
 assert.equal((await decode(await api('status'))).enabled,true);
 const autoOption=(await decode(await api('status'))).models.find((model:any)=>model.id==='auto');
 assert.deepEqual(autoOption,{id:'auto',label:'Auto',provider:'arc',premium:false,configured:true,requiresPaid:false},'Auto public metadata contains no routing model or provider rates');
+const terraOption=(await decode(await api('status'))).models.find((model:any)=>model.id==='gpt-6.1-terra');
+assert.deepEqual(terraOption,{id:'gpt-6.1-terra',label:'GPT-6.1 Terra',provider:'openai',premium:true,configured:true,requiresPaid:true,inputCreditsPer1000:.5,outputCreditsPer1000:2.5},'The model picker receives Terra with its own price and the existing paid access requirement');
 assert.equal((await api('sessions','POST',{},'owner',{origin:'https://evil.invalid'})).status,403);
 assert.equal((await api('sessions','POST',{},'owner',{'content-type':'text/plain'})).status,415);
 assert.equal((await api('sessions','POST',{})).status,402,'An account must activate its trial or have paid access');
@@ -542,6 +544,13 @@ console.log('Arc Chat: authenticated encrypted conversations, funded inference, 
 const qualityAuto=await prepareArcBudget({...env,ARC_AUTO_MODEL_ID:'gpt-6.1-sol'},'owner','personal:owner',id,'auto');
 assert.equal(qualityAuto.definition.model,'gpt-6.1-sol');assert.equal(qualityAuto.premium,false,'A stronger server-selected Auto model is usable without a client-supplied key');
 await assert.rejects(()=>prepareArcBudget(env,'owner','personal:owner',id,'gpt-6.1-sol'),/PAID_MODEL_REQUIRED/,'Trial users cannot obtain a premium grant');
+await assert.rejects(()=>prepareArcBudget(env,'owner','personal:owner',id,'gpt-6.1-terra'),/PAID_MODEL_REQUIRED/);
+const terraAutoProfile=ARC_MODELS.find(model=>model.id==='gpt-6.1-terra')!;
+const terraAuto=await prepareArcBudget({...env,MODEL_GATEWAY:{...env.MODEL_GATEWAY!,models:ARC_MODELS.map(model=>model.id==='arc-auto'?{...terraAutoProfile,id:'arc-auto'}:model)}},'owner','personal:owner',id,'auto');
+assert.equal(terraAuto.definition.model,'gpt-6.1-terra');assert.equal(terraAuto.premium,false);
+assert.equal(terraAuto.definition.id,'arc-auto','The pilot preserves the funded Auto alias required by the database guard');
+assert.equal(terraAuto.definition.inputMicrosPerMillion,1000000,'A server-selected Terra pilot retains Terra pricing');
+assert.equal(ARC_MODELS.find(model=>model.id==='arc-auto')?.model,'gpt-6-luna','The public Auto default stays on Luna until a measured promotion');
 const premium=await prepareArcBudget(env,'owner','personal:owner',id,'auto');
 sql.prepare(`UPDATE billing_model_grants SET max_cost_micros=10000+COALESCE((SELECT SUM(CASE WHEN status IN ('completed','failed','settling') THEN json_extract(settlement_json,'$.actual.costMicros') ELSE json_extract(request_json,'$.maximum.costMicros') END) FROM billing_reservations WHERE authorization_id=billing_model_grants.id),0) WHERE id=?`).run(premium.gateway.paidGrantId!);
 const reservations=await Promise.allSettled(Array.from({length:3},(_,i)=>reserveBilling(db,{userId:'owner',organizationId:'personal:owner',taskId:id,runId:'trial-budget-test',operationId:'op-'+i,lane:'arc_hosted',provider:'openai',modelId:'arc-auto',authorizationId:premium.gateway.paidGrantId!,maximum:{credits:1,costMicros:4000,neurons:0}})));

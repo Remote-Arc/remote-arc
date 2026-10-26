@@ -19,6 +19,8 @@ export const ARC_ENTERPRISE={id:'enterprise',label:'Enterprise',pricing:'contact
  * This is shared by the gateway, billing UI and SaaS economics tools. */
 export const ARC_PREMIUM_MODELS = [
   {id:'gpt-6-luna',label:'GPT-6 Luna',provider:'openai',model:'gpt-6-luna',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000,cachedInputMicrosPerMillion:10000,cacheWriteMicrosPerMillion:125000},
+  // Terra Standard rates reviewed 2026-10-27: https://developers.openai.com/api/docs/models/gpt-6.1-terra
+  {id:'gpt-6.1-terra',label:'GPT-6.1 Terra',provider:'openai',model:'gpt-6.1-terra',maxOutputTokens:4096,inputMicrosPerMillion:1000000,outputMicrosPerMillion:5000000,cachedInputMicrosPerMillion:50000,cacheWriteMicrosPerMillion:1250000,longContext:{thresholdTokens:272000,inputMicrosPerMillion:2000000,outputMicrosPerMillion:7500000,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:2500000}},
   {id:'gpt-6.1-sol',label:'GPT-6.1 Sol',provider:'openai',model:'gpt-6.1-sol',maxOutputTokens:4096,inputMicrosPerMillion:2000000,outputMicrosPerMillion:10000000,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:2500000},
   {id:'gpt-6-astra',label:'GPT-6 Astra',provider:'openai',model:'gpt-6-astra',maxOutputTokens:4096,inputMicrosPerMillion:10000000,outputMicrosPerMillion:50000000,cachedInputMicrosPerMillion:1000000,cacheWriteMicrosPerMillion:12500000},
   {id:'claude-sonnet-5-5',label:'Claude Sonnet 5.5',provider:'anthropic',model:'claude-sonnet-5-5',maxOutputTokens:4096,inputMicrosPerMillion:2000000,outputMicrosPerMillion:10000000,cachedInputMicrosPerMillion:100000,cacheWriteMicrosPerMillion:4000000,cacheWrite5mMicrosPerMillion:2500000,structuredOutput:true},

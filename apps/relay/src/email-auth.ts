@@ -1,3 +1,4 @@
+import {recordProductEvent,eventContext} from './product-events.js';
 import {
   addSecondsIso,
   createSession,
@@ -208,6 +209,7 @@ export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
     await env.DB.prepare(
       "UPDATE email_login_challenges SET attempts = attempts + 1 WHERE email = ?1 AND verified_at IS NULL AND expires_at > ?2 AND attempts < ?3",
     ).bind(email, now, MAX_ATTEMPTS).run();
+    await recordProductEvent(env,{...eventContext(request),domain:'auth',name:'auth.email.verification_failed',source:'server',outcome:'failed',errorCode:'AUTH_CODE_INVALID_OR_EXPIRED'});
     return formPage(email, returnTo, "Incorrect, expired, or already used code. Please try again or request a new one.", request);
   }
 

@@ -1,3 +1,4 @@
+import {recordProductEvent} from './product-events.js';
 import {arcWebSearch,arcWeather,arcWebSearchInput,arcWeatherInput} from './arc-web.js';
 import {arcConnectAppInput,requestArcAppConnection} from './arc-app-connections.js';
 import {withArcInboxSources} from './arc-result-sources.js';
@@ -212,7 +213,7 @@ export type ArcRuntimeDeps={executeTool?:typeof executeArcTool};
 export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={}):Promise<boolean>{
  let run=await env.DB.prepare('SELECT * FROM arc_chat_runs WHERE id=?1').bind(runId).first<ArcRun>();
  if(!run||!arcActive(run.status))return false;
- const finish=async(status:string,error:string|null=null)=>{await env.DB.prepare("UPDATE arc_chat_runs SET status=?1,error_code=?2,updated_at=?3 WHERE id=?4 AND status IN ('queued','thinking','working')").bind(status,error,stamp(),runId).run();return false;};
+ const finish=async(status:string,error:string|null=null)=>{const settled=await env.DB.prepare("UPDATE arc_chat_runs SET status=?1,error_code=?2,updated_at=?3 WHERE id=?4 AND status IN ('queued','thinking','working')").bind(status,error,stamp(),runId).run();if(settled.meta?.changes)await recordProductEvent(env,{domain:'tasks',name:'task.run.'+(['succeeded','failed','cancelled','unknown'].includes(status)?status:'stopped'),source:'server',outcome:status==='succeeded'?'succeeded':status==='failed'?'failed':'waiting',userId:run!.user_id,entityId:runId,errorCode:error||undefined});return false;};
  try{
   const session=await arcSession(env,run.user_id,run.session_id);
    if(run.automation_id){

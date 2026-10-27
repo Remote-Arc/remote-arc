@@ -565,3 +565,6 @@ const deletedRun=sql.prepare('SELECT * FROM arc_chat_runs WHERE session_id=? LIM
 await appendArcMessage(env,deletedRun,'assistant','late-retention-fixture',{text:'Must not restore deleted content'});
 assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_chat_messages WHERE session_id=?').get(id)?.n,0);
 assert.equal((await purgeDeletedArcContent(env,retentionAt)).purged,0,'Cleanup is idempotent');
+
+assert(Number(sql.prepare("SELECT COUNT(*) n FROM product_events e JOIN arc_chat_runs r ON r.id=e.entity_id WHERE e.name='task.run.succeeded' AND e.outcome='succeeded' AND r.status='succeeded'").get()?.n)>0,'Persisted successful runs must produce successful terminal events');
+assert.equal(Number(sql.prepare("SELECT COUNT(*) n FROM product_events e JOIN arc_chat_runs r ON r.id=e.entity_id WHERE e.name='task.run.stopped' AND r.status='succeeded'").get()?.n),0,'A successful run is never labelled stopped');

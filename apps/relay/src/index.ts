@@ -1,3 +1,5 @@
+import {ingestProductEvents,observeProductRequest,requestEventRoute} from './product-observability.js';
+import {eventContext,purgeProductEvents,recordProductEvent} from './product-events.js';
 import {serveDemoMedia} from './demo-media.js';
 import { handleRunnerRequest } from "./runner-attention.js";
 import { diagnosticError } from "./diagnostics.js";
@@ -132,6 +134,7 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   ADMIN_ORIGIN?: string;
   ADMIN_SERVICE_MODE?: string;
   ADMIN_UI?: Fetcher;
+  PRODUCT_EVENTS_RATE_LIMITER?: { limit(input: {key:string}):Promise<{success:boolean}> };
   ENGAGEMENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{success: boolean}> };
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -525,6 +528,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
       return handleOrganizations(request, env, user.id);
     }
+
+    if(url.pathname==='/api/product-events')return ingestProductEvents(request,env);
 
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
@@ -1034,9 +1039,14 @@ export default {
     ctx: ExecutionContext,
   ): Promise<Response> {
     const started = Date.now();
+    const observationContext=eventContext(request);
     const isMcpRequest = ["/mcp", "/mcp/"].includes(new URL(request.url).pathname);
     try {
-      const response = await handleFetch(request, env, ctx);
+      let response = await handleFetch(request, env, ctx);
+      if(requestEventRoute(request)){
+        ctx.waitUntil(observeProductRequest(request,response,env,started,observationContext));
+        if(response.status!==101){const headers=new Headers(response.headers);headers.set('x-ra-trace-id',observationContext.traceId);response=new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
+      }
       if (isMcpRequest) recordMcpTelemetry(env, {
         status: response.status, durationMs: Date.now() - started, method: request.method,
       });
@@ -1058,6 +1068,8 @@ export default {
       if (isMcpRequest) recordMcpTelemetry(env, {
         status: 500, durationMs: Date.now() - started, method: request.method,
       });
+      const eventSpec=requestEventRoute(request);
+      if(eventSpec)ctx.waitUntil(recordProductEvent(env,{...eventSpec,...observationContext,source:'server',outcome:'failed',errorCode:'internal_error',httpStatus:500,durationMs:Date.now()-started}));
       const message = diagnosticError(error);
       console.error("worker_unhandled_exception", { message });
       ctx.waitUntil(
@@ -1095,6 +1107,7 @@ export default {
     if(controller.cron==='* * * * *')ctx.waitUntil(runFollowupBatches(env));
     if(controller.cron==='* * * * *')ctx.waitUntil(runSlackJobs(env));
     if (controller.cron === "*/5 * * * *") {
+      ctx.waitUntil(purgeProductEvents(env));
       ctx.waitUntil(runSyntheticMonitor(env));
       ctx.waitUntil(runApprovalMaintenance(env));
       ctx.waitUntil(ensureOperatorAllowance(env).catch((error) => console.error("operator_allowance_failed", { message: error instanceof Error ? error.message : String(error) })));

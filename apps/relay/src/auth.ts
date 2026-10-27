@@ -1,3 +1,4 @@
+import {recordProductEvent} from './product-events.js';
 import { retryTransientD1Read } from "./d1-read-retry.js";
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
@@ -163,6 +164,7 @@ export async function createSession(userId: string, env: AuthEnv) {
     )
     .run();
 
+  await recordProductEvent(env,{domain:'auth',name:'auth.session.created',source:'server',outcome:'succeeded',userId});
   return token;
 }
 

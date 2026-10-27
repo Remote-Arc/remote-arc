@@ -1,3 +1,4 @@
+import {recordProductEvent} from './product-events.js';
 import { z } from "zod";
 import {billingEnabled} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
@@ -84,6 +85,7 @@ async function saveConnection(env: AppEnv, userId: string, provider: AppProvider
     ON CONFLICT(user_id,provider,account_id) DO UPDATE SET account_label=excluded.account_label,status='active',permissions_json=excluded.permissions_json,scopes_json=excluded.scopes_json,token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,generation=app_connections.generation+1,refresh_lease=NULL,refresh_lease_until=NULL,last_error=NULL,updated_at=excluded.updated_at,daily_call_limit=excluded.daily_call_limit,connection_metadata_json=excluded.connection_metadata_json`)
     .bind(id, userId, provider, account.id, account.label, JSON.stringify(permissions), JSON.stringify(tokens.scopes), cipher, tokens.expiresAt, now(), dailyLimit, JSON.stringify({ shopDomain: tokens.context?.shopDomain, businessAccountId: tokens.context?.businessAccountId, phoneNumberId: tokens.context?.phoneNumberId }),Number(Boolean(plan)),plan?.connectionLimit??100000).run();
   if(!saved.meta.changes)throw new AppError('app_connection_limit',402);
+  await recordProductEvent(env,{domain:'apps',name:'app.connection.ready',source:'server',outcome:'succeeded',userId,entityId:id,route:'/apps/'+provider});
   return id;
 }
 async function connectApiKey(request: Request, env: AppEnv, userId: string, fetcher: typeof fetch) {

@@ -1,3 +1,4 @@
+import {recordProductEvent,recordCheckoutCompletion} from './product-events.js';
 import {arcEnabled,creditsEnabled} from './platform-launch.js';
 import {ARC_PLANS,ARC_TOPUPS,ARC_CREDIT_RATE,ARC_PREMIUM_MODELS} from '@remotearc/protocol';
 import {getSessionUser,sha256Hex} from './auth.js';
@@ -66,6 +67,7 @@ async function fulfill(env:BillingEnv,r:Receipt){
    ...(['openai','anthropic','openrouter'] as const).map(provider=>env.DB.prepare(`INSERT OR IGNORE INTO billing_model_grants(id,user_id,organization_id,provider,max_cost_micros,expires_at,created_at) SELECT ?1,?2,?3,?4,1000000000,?5,?6 FROM arc_payment_receipts WHERE id=?7 AND state='paid'`).bind('stripe:'+r.receipt+':'+provider,r.userId,'personal:'+r.userId,provider,r.end,at,r.receipt)),
   ]);
  }
+ await recordProductEvent(env,{domain:'billing',name:'billing.entitlement.granted',source:'stripe',outcome:'succeeded',userId:r.userId,entityId:r.receipt});
 }
 async function invoicePaid(env:BillingEnv,event:Record<string,any>,hash:string){
  const invoice=await stripeRequest(env,'/v1/invoices/'+id(event.data?.object,'in'));
@@ -96,7 +98,7 @@ async function invoicePaid(env:BillingEnv,event:Record<string,any>,hash:string){
  const open=await env.DB.prepare("SELECT 1 FROM arc_billing_checkouts WHERE user_id=?1 AND kind='subscription' AND status IN ('creating','open')").bind(user.user_id).first();
  if(open&&invoice.billing_reason==='subscription_create'){
   const sessions=await stripeRequest(env,'/v1/checkout/sessions?'+form({subscription:subscriptionId,limit:2}));
-  if(!sessions.has_more)for(const session of sessions.data||[])await env.DB.prepare("UPDATE arc_billing_checkouts SET status='complete',session_id=COALESCE(session_id,?1) WHERE user_id=?2 AND product_id=?3 AND commercial_version_id=?4 AND (session_id=?1 OR id=?5 AND session_id IS NULL)").bind(id(session,'cs'),user.user_id,p.id,p.versionId,String(session.metadata?.remote_arc_checkout||'')).run();
+  if(!sessions.has_more)for(const session of sessions.data||[]){await env.DB.prepare("UPDATE arc_billing_checkouts SET status='complete',session_id=COALESCE(session_id,?1) WHERE user_id=?2 AND product_id=?3 AND commercial_version_id=?4 AND (session_id=?1 OR id=?5 AND session_id IS NULL)").bind(id(session,'cs'),user.user_id,p.id,p.versionId,String(session.metadata?.remote_arc_checkout||'')).run();await recordCheckoutCompletion(env,user.user_id,id(session,'cs'),id(invoice,'in'));}
  }
 }
 async function checkoutPaid(env:BillingEnv,event:Record<string,any>,hash:string){
@@ -110,6 +112,7 @@ async function checkoutPaid(env:BillingEnv,event:Record<string,any>,hash:string)
  const pay=await payment(env,session.payment_intent,session.amount_total);
  await fulfill(env,{receipt:id(session,'cs'),eventId:id(event,'evt'),userId:user.user_id,sku:p.id,versionId:p.versionId,cents:p.cents,start:null,end:null,payment:pay,hash});
  await env.DB.prepare("UPDATE arc_billing_checkouts SET status='complete' WHERE session_id=?1").bind(id(session,'cs')).run();
+  await recordCheckoutCompletion(env,user.user_id,id(session,'cs'),id(session,'cs'));
 }
 async function blockPayment(env:BillingEnv,charge:Record<string,any>,reason:string){
  const intent=id(charge.payment_intent,'pi'),at=now();
@@ -134,6 +137,7 @@ export async function processStripeEvent(env:BillingEnv,event:Record<string,any>
   else if(event.type==='invoice.payment_failed'){
    const invoice=await stripeRequest(env,'/v1/invoices/'+id(event.data?.object,'in')),user=await owner(env,invoice.customer);
    if(user&&invoice.livemode===stripeLive(env)&&invoice.currency==='usd')await env.DB.prepare(`INSERT INTO arc_payment_issues(invoice_id,user_id,amount_due_cents,status,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?5) ON CONFLICT(invoice_id) DO UPDATE SET status=excluded.status,amount_due_cents=excluded.amount_due_cents,updated_at=excluded.updated_at`).bind(id(invoice,'in'),user.user_id,invoice.amount_due,invoice.status==='paid'?'resolved':'open',now()).run();
+    if(user&&invoice.livemode===stripeLive(env)&&invoice.currency==='usd'&&invoice.status!=='paid')await recordProductEvent(env,{domain:'billing',name:'billing.payment.failed',source:'stripe',outcome:'failed',userId:user.user_id,entityId:id(invoice,'in'),errorCode:'BILLING_INVOICE_PAYMENT_FAILED'});
   }
   else if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type))await checkoutPaid(env,event,hash);
   else if(event.type==='charge.refunded'){
@@ -145,8 +149,11 @@ export async function processStripeEvent(env:BillingEnv,event:Record<string,any>
    await env.DB.prepare('UPDATE arc_billing_subscriptions SET status=?1,cancel_at_period_end=?2,updated_at=?3,revision=revision+1 WHERE id=?4').bind(s.status,Number(Boolean(s.cancel_at_period_end)),now(),id(s,'sub')).run();
    // Cancellation retains the paid period. No renewal event means no next-period credits.
   }else if(event.type==='checkout.session.expired')await env.DB.prepare("UPDATE arc_billing_checkouts SET status='expired' WHERE session_id=?1 AND status IN ('creating','open')").bind(id(event.data?.object,'cs')).run();
-  await env.DB.prepare("UPDATE arc_payment_events SET status='processed',completed_at=?1,lease_until=NULL WHERE id=?2 AND lease_token=?3").bind(now(),eventId,token).run();
- }catch(error){const code=error instanceof StripeError?error.code:'BILLING_FULFILLMENT_UNAVAILABLE';await env.DB.prepare("UPDATE arc_payment_events SET status='failed',lease_until=NULL,error_code=?1 WHERE id=?2 AND lease_token=?3").bind(code,eventId,token).run();throw error;}
+  const settled=await env.DB.prepare("UPDATE arc_payment_events SET status='processed',completed_at=?1,lease_until=NULL WHERE id=?2 AND lease_token=?3").bind(now(),eventId,token).run();
+  // Only the worker that committed the ledger under its own lease can report
+  // success. Observability stays fail-open after the authoritative write.
+  if(settled.meta.changes)await recordProductEvent(env,{domain:'billing',name:'billing.webhook.processed',source:'stripe',outcome:'succeeded',entityId:eventId});
+ }catch(error){const code=error instanceof StripeError?error.code:'BILLING_FULFILLMENT_UNAVAILABLE';await recordProductEvent(env,{domain:'billing',name:'billing.webhook.failed',source:'stripe',outcome:'failed',entityId:eventId,errorCode:code});await env.DB.prepare("UPDATE arc_payment_events SET status='failed',lease_until=NULL,error_code=?1 WHERE id=?2 AND lease_token=?3").bind(code,eventId,token).run();throw error;}
 }
 async function portal(env:BillingEnv,customerId:string,returnUrl:string){
  // Only payment details, invoices and period-end cancellation; no prorated allowance duplication.

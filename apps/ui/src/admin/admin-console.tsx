@@ -1,6 +1,7 @@
 import {WorkspaceLoading} from '../workspace-loading.js';
 import {BrandWordmark} from '../brand-wordmark.js';
 import {lazy,Suspense,useEffect,useState} from "react";
+const AdminEvents=lazy(()=>import('./admin-events.js').then(module=>({default:module.AdminEvents})));
 const AdminFollowups=lazy(()=>import('./admin-followups.js').then(module=>({default:module.AdminFollowups})));
 const AdminApiUsage=lazy(()=>import('./admin-api-usage.js').then(module=>({default:module.AdminApiUsage})));
 const AdminPayments=lazy(()=>import('./admin-payments.js').then(module=>({default:module.AdminPayments})));
@@ -12,7 +13,7 @@ import {useTheme} from '../theme.js';
 import "./admin-console.css";
 import './admin-design.css';
 
-type Section="overview"|"leads"|"operations"|"health"|"followups"|"payments";
+type Section="overview"|"leads"|"operations"|"health"|"followups"|"payments"|"events";
 type Submission={id:string;category:"early_access"|"feedback";email:string;name:string;message:string;source:string;status:string;consent_at:string;created_at:string;updated_at:string};
 type LeadsResponse={items:Submission[];total:number;page:number;pageSize:number;counts:Array<{category:string;count:number}>};
 type Operations={checkedAt?:string;totals:{users:number;devices:number;online:number;monthlyCalls:number;auditLast7d:number;teams?:number;teamMembers?:number};activity?:Array<{hour:string;calls:number;users:number}>};
@@ -90,7 +91,7 @@ function HealthPanel({health,loading,reload}:{health:Health|null;loading:boolean
 }
 
 function AdminGlyph({name}:{name:Section|"arrow"|"refresh"|"shield"|"pulse"}){
-  const names:Record<typeof name,ProductIconName>={overview:'overview',leads:'inbox',operations:'users',health:'activity',followups:'chat',payments:'chart',arrow:'arrowUpRight',refresh:'refresh',shield:'shield',pulse:'activity'};
+  const names:Record<typeof name,ProductIconName>={overview:'overview',leads:'inbox',operations:'users',health:'activity',followups:'chat',payments:'chart',events:'activity',arrow:'arrowUpRight',refresh:'refresh',shield:'shield',pulse:'activity'};
   return <Icon name={names[name]}/>;
 }
 function MiniActivity({ops}:{ops:Operations|null}){
@@ -151,7 +152,7 @@ function AdminOverview({ops,health,leadOverview,setSection,preview=false}:{ops:O
 export function AdminConsole({preview=false}:{preview?:boolean}){
   const {tr,locale,setLocale}=useI18n();
   const {theme,setTheme}=useTheme();
-  const readSection=()=>{const value=new URLSearchParams(location.search).get('section');return ['overview','leads','operations','health','followups','payments'].includes(value||'')?value as Section:'overview';};
+  const readSection=()=>{const value=new URLSearchParams(location.search).get('section');return ['overview','leads','operations','health','followups','payments','events'].includes(value||'')?value as Section:'overview';};
   const [section,updateSection]=useState<Section>(readSection);
   const setSection=(value:Section)=>{updateSection(value);const url=new URL(location.href);url.searchParams.set('section',value);history.replaceState({},'',url);};
   useEffect(()=>{const restore=()=>updateSection(readSection());window.addEventListener('popstate',restore);return()=>window.removeEventListener('popstate',restore);},[]);
@@ -183,6 +184,7 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
   {key:"leads",en:"Leads & feedback",zh:"线索与反馈"},
   {key:"followups",en:"User follow-ups",zh:"用户跟进"},
   {key:"payments",en:"Payments & offers",zh:"支付与优惠"},
+   {key:"events",en:"Events & journeys",zh:"事件与转化"},
   {key:"operations",en:"Users & operations",zh:"用户与运营"},
   {key:"health",en:"Service health",zh:"服务健康"}
  ];
@@ -196,11 +198,12 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
   </aside>
   <main className="adminContent">
    <div className="adminTopbar"><div className="adminBreadcrumb">Remote Arc <span>/</span> Admin <span>/</span> <strong>{tr(current.en,current.zh)}</strong></div><div className="adminTopActions"><span className="adminTopPrivate"><AdminGlyph name="shield"/>{tr("Private console","私有后台")}</span><button type="button" onClick={()=>void refresh()} disabled={loading||preview}><AdminGlyph name="refresh"/>{loading?tr("Refreshing","刷新中"):tr("Refresh","刷新数据")}</button></div></div>
-   <header className="adminHeading"><span className="adminSmallLabel">{tr("OPERATIONS CENTER","运营工作台")}</span><h1>{tr(current.en,current.zh)}</h1><p>{section==="overview"?tr("Product adoption, real activity and service health. One clear view.","产品增长、真实使用与服务状态，一目了然。"):section==="leads"?tr("Follow up on the people who actually reached out.","了解并跟进每一条用户主动提交的申请与反馈。"):section==="followups"?tr("Help people get started, learn from feedback and keep track of each follow-up.","帮助用户上手、收集真实反馈，并跟进每一次联系。"):section==="payments"?tr("Verified payments, versioned plans and offers with clear limits.","核实支付、管理套餐版本，并发布规则清晰的优惠。"):section==="operations"?tr("Manage accounts, connected devices, capacity and costs.","管理用户账户、连接设备、用量配额和成本。"):tr("Keep the service stable, with evidence rather than guesswork.","以真实基础设施指标及时识别服务问题。")}</p></header>
+   <header className="adminHeading"><span className="adminSmallLabel">{tr("OPERATIONS CENTER","运营工作台")}</span><h1>{tr(current.en,current.zh)}</h1><p>{section==="overview"?tr("Product adoption, real activity and service health. One clear view.","产品增长、真实使用与服务状态，一目了然。"):section==="leads"?tr("Follow up on the people who actually reached out.","了解并跟进每一条用户主动提交的申请与反馈。"):section==="followups"?tr("Help people get started, learn from feedback and keep track of each follow-up.","帮助用户上手、收集真实反馈，并跟进每一次联系。"):section==="events"?tr("Follow user journeys, diagnose failures and verify payment processing.","追踪用户路径，定位失败步骤，并核实支付处理。"):section==="payments"?tr("Verified payments, versioned plans and offers with clear limits.","核实支付、管理套餐版本，并发布规则清晰的优惠。"):section==="operations"?tr("Manage accounts, connected devices, capacity and costs.","管理用户账户、连接设备、用量配额和成本。"):tr("Keep the service stable, with evidence rather than guesswork.","以真实基础设施指标及时识别服务问题。")}</p></header>
    {preview&&<div className="adminPreviewNote" role="status">{tr("Design preview · illustrative sample metrics. No customer or billing data is connected here.","设计预览 · 指标均为示例，不连接真实客户与账单数据。")}</div>}
    {error&&<div className="adminAlert" role="alert">{error}</div>}
    {section==="followups"&&<Suspense fallback={<WorkspaceLoading label={tr("Loading follow-ups…","正在加载跟进信息…")} variant="rows"/>}><AdminFollowups/></Suspense>}
-   {section==="payments"&&<Suspense fallback={<WorkspaceLoading label={tr('Loading payments…','正在读取支付…')} variant="rows"/>}><AdminPayments preview={preview}/></Suspense>}
+   {section==="events"&&<Suspense fallback={<WorkspaceLoading label={tr("Loading events…","正在读取埋点…")} variant="rows"/>}><AdminEvents preview={preview}/></Suspense>}
+    {section==="payments"&&<Suspense fallback={<WorkspaceLoading label={tr('Loading payments…','正在读取支付…')} variant="rows"/>}><AdminPayments preview={preview}/></Suspense>}
    {section==="overview"&&<AdminOverview preview={preview} ops={ops} health={health} leadOverview={leadOverview} setSection={setSection}/>}
    {section==="leads"&&(preview?<div className="adminNoData">{tr("Preview mode: private submissions are not loaded.","预览环境不加载真实反馈记录。")}</div>:<LeadsPanel/>)}
    {section==="operations"&&<AdminOperations readOnly={preview} embedded/>}

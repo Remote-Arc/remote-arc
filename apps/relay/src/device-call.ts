@@ -1,3 +1,4 @@
+import {recordProductEvent} from './product-events.js';
 import type { OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
 import { recordMcpTelemetry } from "./relay-telemetry.js";
@@ -327,6 +328,8 @@ export async function callDevice(
     grantId: identity.grantId,
     outcome,
   }).catch(() => undefined);
+
+  await recordProductEvent(env,{domain:'devices',name:'device.tool.completed',source:'server',outcome:success?'succeeded':'failed',userId:identity.userId,entityId:deviceId,route:/^[a-z_]{1,80}$/.test(tool)?'/device-tools/'+tool:'/device-tools/:redacted',httpStatus:success?200:502,errorCode:success?undefined:'REQUEST_FAILED',durationMs:Date.now()-started});
 
   recordMcpTelemetry(env, {
     kind: "device_tool",

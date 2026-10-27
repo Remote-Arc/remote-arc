@@ -1,3 +1,4 @@
+import {startProductEvents,recordProductView} from './product-events.js';
 import {useCaseSlugs} from '../../../packages/docs/src/arc-use-cases.js';
 import { DeviceBrowserSessions, RunnerAttentionList, RunnerAttentionSetting, RunnerView } from "./runner-view.js";
 import './arc-composer.css';
@@ -5034,7 +5035,7 @@ function Dashboard({
   function navigateTab(tab: DashboardTab) {
     tab = availableDashboardTab(tab,arcAvailable);
     const path = DASHBOARD_PATHS[tab];
-    if (location.pathname !== path) history.pushState({}, "", path);
+    if (location.pathname !== path) {history.pushState({}, "", path);recordProductView();}
     if (workspaceForTab(active) !== workspaceForTab(tab)) setShowAutomationCreate(false);
     setActive(tab);
   }
@@ -7029,6 +7030,7 @@ function App() {
   return <Landing user={user === undefined ? null : user} />;
 }
 
+startProductEvents();
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ThemeProvider>

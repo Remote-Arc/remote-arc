@@ -1,4 +1,5 @@
 import {ingestProductEvents,observeProductRequest,requestEventRoute} from './product-observability.js';
+import {recordDeviceOnline,purgeBusinessMetrics} from './business-tracking.js';
 import {eventContext,purgeProductEvents,recordProductEvent} from './product-events.js';
 import {serveDemoMedia} from './demo-media.js';
 import { handleRunnerRequest } from "./runner-attention.js";
@@ -847,9 +848,11 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
           return new Response("Unauthorized device", { status: 401 });
         }
 
-        return await env.REGISTRY
+        const connection = await env.REGISTRY
           .getByName("user:" + identity.user_id)
           .fetch(withTrustedDeviceHeaders(request, identity));
+        if(connection.status===101){const tracked=recordDeviceOnline(env,identity.id,identity.user_id);if(ctx)ctx.waitUntil(tracked);else await tracked;}
+        return connection;
       } catch (error) {
         console.error("agent_connect_failed", {
           error: diagnosticError(error),
@@ -1108,6 +1111,7 @@ export default {
     if(controller.cron==='* * * * *')ctx.waitUntil(runSlackJobs(env));
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(purgeProductEvents(env));
+      ctx.waitUntil(purgeBusinessMetrics(env));
       ctx.waitUntil(runSyntheticMonitor(env));
       ctx.waitUntil(runApprovalMaintenance(env));
       ctx.waitUntil(ensureOperatorAllowance(env).catch((error) => console.error("operator_allowance_failed", { message: error instanceof Error ? error.message : String(error) })));

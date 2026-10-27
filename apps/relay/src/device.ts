@@ -1,4 +1,5 @@
 import { parseTaskPermissions } from "./device-task-policy.js";
+import {startBusinessFlow,advanceBusinessFlow,failBusinessFlow} from './business-tracking.js';
 import {
   addSecondsIso,
   getSessionUser,
@@ -91,6 +92,7 @@ export async function handleDeviceStart(request: Request, env: DeviceEnv) {
   const deviceCode = randomToken();
   const deviceSecret = randomToken();
   const userCode = randomUserCode();
+  const pairingCodeHash=await sha256Hex(deviceCode),pairingStartedAt=nowIso(),pairingExpiresAt=addSecondsIso(600);
 
   await env.DB.prepare(
     `INSERT INTO device_pairings (
@@ -99,17 +101,19 @@ export async function handleDeviceStart(request: Request, env: DeviceEnv) {
     ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'pending', ?8, ?9)`,
   )
     .bind(
-      await sha256Hex(deviceCode),
+      pairingCodeHash,
       await sha256Hex(deviceSecret),
       userCode,
       deviceName,
       platform,
       body.arch || null,
       body.hostname || null,
-      addSecondsIso(600),
-      nowIso(),
+      pairingExpiresAt,
+      pairingStartedAt,
     )
     .run();
+
+  await startBusinessFlow(env,{id:'device:'+pairingCodeHash,scene:'device_pairing',dimension:platform,at:pairingStartedAt,expiresAt:pairingExpiresAt});
 
   return Response.json({
     device_code: deviceCode,
@@ -140,7 +144,7 @@ export async function handleDeviceToken(request: Request, env: DeviceEnv) {
   const secretHash = await sha256Hex(body.device_secret);
 
   const pairing = await env.DB.prepare(
-    `SELECT status, approved_device_id, expires_at
+    `SELECT status, approved_device_id, approved_user_id, expires_at
      FROM device_pairings
      WHERE device_code_hash = ?1 AND device_secret_hash = ?2`,
   )
@@ -148,10 +152,12 @@ export async function handleDeviceToken(request: Request, env: DeviceEnv) {
     .first<{
       status: string;
       approved_device_id: string | null;
+      approved_user_id: string | null;
       expires_at: string;
     }>();
 
   if (!pairing || pairing.expires_at <= nowIso()) {
+    if(pairing)await failBusinessFlow(env,'device:'+codeHash,'expired');
     return Response.json(
       { error: "expired_token", error_description: "Pairing code expired" },
       { status: 400 },
@@ -180,6 +186,8 @@ export async function handleDeviceToken(request: Request, env: DeviceEnv) {
   )
     .bind(codeHash)
     .run();
+
+  await advanceBusinessFlow(env,'device:'+codeHash,'device_pairing','credential',{userId:pairing.approved_user_id,deviceId:pairing.approved_device_id});
 
   return Response.json({
     device_id: pairing.approved_device_id,
@@ -231,12 +239,13 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
   const userCode = (body.user_code || "").trim().toUpperCase();
 
   const pairing = await env.DB.prepare(
-    `SELECT device_secret_hash, device_name, platform, arch, hostname, status, expires_at
+    `SELECT device_code_hash, device_secret_hash, device_name, platform, arch, hostname, status, expires_at
      FROM device_pairings
      WHERE user_code = ?1`,
   )
     .bind(userCode)
     .first<{
+      device_code_hash: string;
       device_secret_hash: string;
       device_name: string;
       platform: string;
@@ -309,6 +318,8 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
       : Response.json({ error: 'pairing_changed', message: 'Start a new pairing from your computer.' }, { status: 409 });
   }
   if (!pairingResult[1]?.meta.changes) return Response.json({ error: 'pairing_changed' }, { status: 409 });
+
+  await advanceBusinessFlow(env,'device:'+pairing.device_code_hash,'device_pairing','approved',{userId:user.id,deviceId,at:createdAt});
 
   await writeAudit(env, {
     userId: user.id,

@@ -1,4 +1,5 @@
 import {handleAdminEvents} from './admin-events.js';
+import {handleBusinessAnalytics} from './business-analytics.js';
 import {handleUserFollowups,type FollowupEnv} from './user-followups.js';
 import {runFollowupBatches} from './followup-batches.js';
 import {handleAdminPayments,type AdminPaymentsEnv} from './admin-payments.js';
@@ -24,6 +25,7 @@ const methods: Record<string, readonly string[]> = {
 };
 
 export function adminApiMethods(path: string): readonly string[] | null {
+  if(path==='/api/admin/analytics')return ['GET'];
   if(path==='/api/admin/feedback-rewards')return ['GET'];
   if(path==='/api/admin/feedback-rewards/config'||/^\/api\/admin\/feedback-rewards\/claims\/[a-f0-9-]{36}\/(approve|reject)$/.test(path))return ['POST'];
   if(path==='/api/admin/events'||path==='/api/admin/events/readiness')return ['GET'];
@@ -80,6 +82,7 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
     return finish(response);
   }
   if(url.pathname==='/api/admin/events'||url.pathname==='/api/admin/events/readiness')return finish(await handleAdminEvents(request,env));
+  if(url.pathname==='/api/admin/analytics')return finish(await handleBusinessAnalytics(request,env));
   if(url.pathname.startsWith('/api/admin/payments'))return finish(await handleAdminPayments(request,env));
   if(url.pathname.startsWith('/api/admin/feedback-rewards'))return finish(await handleFeedbackRewardAdmin(request,env));
   let response: Response;

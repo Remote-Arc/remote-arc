@@ -1,4 +1,5 @@
 /** Operational metadata only. Never pass exception text, URLs, form values or provider payloads. */
+import {recordBusinessActivity,linkBusinessReceipt} from './business-tracking.js';
 export type EventEnv={DB:D1Database;DEPLOYMENT_SHA?:string};
 export type ProductEvent={name:string;domain:string;source:'browser'|'server'|'stripe';outcome:'succeeded'|'accepted'|'failed'|'waiting';userId?:string|null;journeyId?:string|null;traceId?:string;entityId?:string|null;route?:string;errorCode?:string;httpStatus?:number;durationMs?:number;id?:string};
 export const uuid=(v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(v);
@@ -16,12 +17,17 @@ export function eventStatement(env:EventEnv,event:ProductEvent,at=new Date().toI
  /^[a-f0-9]{40}$/.test(env.DEPLOYMENT_SHA||'')?env.DEPLOYMENT_SHA!:null);
 }
 export async function recordProductEvent(env:EventEnv,event:ProductEvent){
- try{await eventStatement(env,event).run();return true;}catch{console.warn('product_event_write_failed');return false;}
+ try{await eventStatement(env,event).run();
+  if(event.userId&&event.outcome!=='failed'&&['auth.session.created','page.viewed','device.tool.completed','task.request','task.run.succeeded','app.request','app.call.succeeded'].includes(event.name))await recordBusinessActivity(env,event.userId);
+  return true;}catch{console.warn('product_event_write_failed');return false;}
 }
 export async function recordCheckoutCompletion(env:EventEnv,userId:string,sessionId:string,receiptId:string){
  try{
  const paid=await env.DB.prepare("SELECT r.id FROM arc_payment_receipts r JOIN arc_billing_checkouts c ON c.session_id=?3 AND c.user_id=r.user_id AND c.product_id=r.product_id WHERE r.id=?1 AND r.user_id=?2 AND r.state='paid' AND EXISTS(SELECT 1 FROM arc_credit_lots l WHERE l.source_ref=r.id AND l.user_id=r.user_id) AND (r.period_end IS NULL OR EXISTS(SELECT 1 FROM billing_plan_assignments a WHERE a.id='stripe:'||r.id AND a.subject_id=r.user_id))").bind(receiptId,userId,sessionId).first();
  if(!paid)return;
+ const linkedCheckout=await env.DB.prepare('SELECT id,product_id FROM arc_billing_checkouts WHERE user_id=?1 AND session_id=?2').bind(userId,sessionId).first<{id:string;product_id:string}>();
+ if(linkedCheckout)await linkBusinessReceipt(env,linkedCheckout.id,receiptId,userId,linkedCheckout.product_id);
+ await env.DB.prepare('UPDATE arc_billing_checkouts SET completed_at=COALESCE(completed_at,?3) WHERE user_id=?1 AND session_id=?2').bind(userId,sessionId,new Date().toISOString()).run();
  const checkout=await env.DB.prepare('SELECT journey_id,trace_id FROM arc_billing_checkouts WHERE user_id=?1 AND session_id=?2').bind(userId,sessionId).first<{journey_id:string|null;trace_id:string|null}>();
  await recordProductEvent(env,{id:undefined,domain:'billing',name:'billing.purchase.completed',source:'stripe',outcome:'succeeded',userId,entityId:sessionId,journeyId:checkout?.journey_id,traceId:checkout?.trace_id||undefined});
  }catch{console.warn('product_completion_write_failed');}

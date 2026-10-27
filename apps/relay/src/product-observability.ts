@@ -1,4 +1,5 @@
 import {getSessionUser} from './auth.js';
+import {recordBusinessActivity} from './business-tracking.js';
 import {recordProductEvent,eventStatement,eventContext,eventIdentity,safeEventError,uuid,type EventEnv} from './product-events.js';
 type Env=EventEnv&{PUBLIC_ORIGIN:string;APP_ORIGIN?:string;DASHBOARD_ORIGIN?:string;MARKETING_ORIGIN?:string;PRODUCT_EVENTS_RATE_LIMITER?:{limit(input:{key:string}):Promise<{success:boolean}>}};
 export const browserEvents:Record<string,{domain:string;outcome:'succeeded'|'accepted'|'failed'|'waiting'}>={
@@ -33,12 +34,17 @@ export async function ingestProductEvents(request:Request,env:Env){
  if(!input||Object.keys(input).some(k=>!['journeyId','events'].includes(k))||!uuid(input.journeyId)||!Array.isArray(input.events)||input.events.length<1||input.events.length>20)throw Error('invalid');
  const count=await env.DB.prepare("SELECT COUNT(*) n FROM product_events WHERE user_id=?1 AND source='browser' AND occurred_at>=?2").bind(user.id,new Date(Date.now()-60000).toISOString()).first<{n:number}>();
  if((count?.n||0)+input.events.length>120)return Response.json({error:'rate_limited'},{status:429});
+ const receivedAt=Date.now(),activityTimes:string[]=[];
  const events=input.events.map((e:any)=>{
-  if(!e||Object.keys(e).some(k=>!['id','name','entityId','route','errorCode','traceId'].includes(k))||!uuid(e.id)||!Object.hasOwn(browserEvents,e.name)||e.traceId!==undefined&&!uuid(e.traceId)||e.entityId!==undefined&&!eventIdentity(e.entityId)||e.route!==undefined&&!viewRoutes.includes(e.route))throw Error('invalid');
+  if(!e||Object.keys(e).some(k=>!['id','name','occurredAt','entityId','route','errorCode','traceId'].includes(k))||!uuid(e.id)||!Object.hasOwn(browserEvents,e.name)||e.traceId!==undefined&&!uuid(e.traceId)||e.entityId!==undefined&&!eventIdentity(e.entityId)||e.route!==undefined&&!viewRoutes.includes(e.route))throw Error('invalid');
+  let at=new Date(receivedAt).toISOString();
+  if(e.occurredAt!==undefined){const time=Date.parse(e.occurredAt);if(typeof e.occurredAt!=='string'||!Number.isFinite(time)||time<receivedAt-300000||time>receivedAt+5000)throw Error('invalid_time');at=new Date(Math.min(receivedAt,time)).toISOString();}
   const spec=browserEvents[e.name]!;
-  return eventStatement(env,{...spec,id:e.id,name:e.name,source:'browser',userId:user.id,journeyId:input.journeyId,traceId:e.traceId,entityId:e.entityId,route:e.route,errorCode:e.errorCode?'CLIENT_ERROR':undefined});
+  if(e.name==='page.viewed')activityTimes.push(at);
+  return eventStatement(env,{...spec,id:e.id,name:e.name,source:'browser',userId:user.id,journeyId:input.journeyId,traceId:e.traceId,entityId:e.entityId,route:e.route,errorCode:e.errorCode?'CLIENT_ERROR':undefined},at);
  });
  await env.DB.batch(events);
+ await Promise.all([...new Map(activityTimes.map(at=>[at.slice(0,10),at])).values()].map(at=>recordBusinessActivity(env,user.id,at)));
  return new Response(null,{status:204,headers:{'cache-control':'no-store'}});
  }catch{return Response.json({error:'events_unavailable_or_invalid'},{status:400,headers:{'cache-control':'no-store'}});}
 }
@@ -73,7 +79,7 @@ export async function observeProductRequest(request:Request,response:Response,en
   const error=response.status>=400?safeEventError(result?.error):undefined;
   const entityId=spec.name==='billing.checkout.created'?eventIdentity(result?.sessionId):null;
   if(entityId&&user)await env.DB.prepare('UPDATE arc_billing_checkouts SET journey_id=COALESCE(journey_id,?1),trace_id=COALESCE(trace_id,?2) WHERE session_id=?3 AND user_id=?4').bind(context.journeyId,context.traceId,entityId,user.id).run();
-  const pairingWait=spec.name==='device.token.requested'&&response.status===400&&result?.error==='authorization_pending';
+  const pairingWait=spec.name==='device.token.requested'&&[400,428].includes(response.status)&&result?.error==='authorization_pending';
   await recordProductEvent(env,{...spec,...context,source:'server',outcome:pairingWait?'waiting':response.status>=400?'failed':(spec.name.endsWith('.request')||spec.domain==='auth'||spec.domain==='oauth')?'accepted':'succeeded',userId:user?.id,entityId,errorCode:error,httpStatus:response.status,durationMs:Date.now()-started});
   if(spec.name==='billing.offers.loaded'&&response.ok&&result?.enabled===false)await recordProductEvent(env,{domain:'billing',name:'billing.checkout.unavailable',source:'server',outcome:'failed',userId:user?.id,...context,errorCode:'BILLING_NOT_CONFIGURED'});
  }catch{console.warn('product_request_observation_failed');}

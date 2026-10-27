@@ -6,7 +6,7 @@ export const eventIdentity=(v:unknown)=>typeof v==='string'&&/^[A-Za-z0-9_:-]{1,
 export function eventContext(request:Request){return{traceId:uuid(request.headers.get('x-ra-trace-id'))?request.headers.get('x-ra-trace-id')!:crypto.randomUUID(),journeyId:uuid(request.headers.get('x-ra-journey-id'))?request.headers.get('x-ra-journey-id'):null};}
 export function safeEventError(value:unknown){
  const code=typeof value==='string'?value:'';
- return /^(?:(?:BILLING|ARC|MODEL|PAID|APP|AUTH)_[A-Z_]{1,70}|unauthorized|forbidden|rate_limited|same_origin_required|invalid_request|internal_error|CLIENT_ERROR|NETWORK_ERROR|PAYMENT_FORM_LOAD_FAILED|CONFIRMATION_TIMEOUT)$/.test(code)?code:'REQUEST_FAILED';
+ return /^(?:(?:BILLING|ARC|MODEL|PAID|APP|AUTH)_[A-Z_]{1,70}|authorization_pending|unauthorized|forbidden|rate_limited|same_origin_required|invalid_request|internal_error|CLIENT_ERROR|NETWORK_ERROR|PAYMENT_FORM_LOAD_FAILED|CONFIRMATION_TIMEOUT)$/.test(code)?code:'REQUEST_FAILED';
 }
 export function eventStatement(env:EventEnv,event:ProductEvent,at=new Date().toISOString()){
  return env.DB.prepare(`INSERT OR IGNORE INTO product_events(id,occurred_at,domain,name,source,outcome,user_id,journey_id,trace_id,entity_id,route,error_code,http_status,duration_ms,deployment) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)`).bind(

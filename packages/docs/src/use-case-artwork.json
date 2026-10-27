@@ -122,5 +122,13 @@
   "job-applications": {
     "kind": "browser",
     "label": "FORM"
+  },
+  "mathematical-animation": {
+    "kind": "math-motion",
+    "label": "MP4 · PY"
+  },
+  "blender-3d": {
+    "kind": "product-3d",
+    "label": "BLEND · PNG"
   }
 }

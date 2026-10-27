@@ -1,6 +1,6 @@
 ---
 name: video-creator
-description: Create finished local videos with OpenFilm or HyperFrames, including animation, maps, narration and music. Automatically prepare ordinary dependencies; ask before large Qwen TTS or ACE-Step installs.
+description: Create finished local videos with Remotion, OpenFilm or HyperFrames, including animation, maps, narration and music. Automatically prepare ordinary dependencies; ask before large Qwen TTS or ACE-Step installs.
 priority: P0
 category: media
 status: builtin-guidance
@@ -8,11 +8,11 @@ status: builtin-guidance
 
 # Video Creator
 
-Write the film and deliver the rendered file. OpenFilm 0.2.5 and HyperFrames 0.8.193 render code on the user's computer. Core rendering, maps and local transcription need no model API key. Device compute, storage, downloads and the calling AI's allowance still apply.
+Write the film and deliver the rendered file. Remotion 4.0.538, OpenFilm 0.2.5 and HyperFrames 0.8.193 render code on the user's computer. Read remotion-video for React scenes and Three.js cameras, hyperframes-video for HTML/SVG/GSAP motion, and openfilm-video for shot assembly. A named engine takes priority over automatic routing. Core rendering, maps and local transcription need no model API key. Device compute, storage, downloads and the calling AI's allowance still apply.
 
 ## Device and permission gates
 
-Use an online user device with read_file, write_file and start_process, and a task folder inside its Trusted Write Locations. The requested media task authorizes preparing the ordinary dependencies below within existing device permissions. Do not ask again merely because OpenFilm, HyperFrames, FFmpeg, Chromium, map packages/data or base Whisper are absent. Announce the source, approximate size and destination, then install and continue to the finished artifact. This does not authorize system privileges, unrelated software, cloud rendering, paid APIs, uploads or publication.
+Use an online user device with read_file, write_file and start_process, and a task folder inside its Trusted Write Locations. The requested media task authorizes preparing the ordinary dependencies below within existing device permissions. Do not ask again merely because Remotion, OpenFilm, HyperFrames, FFmpeg, Chromium, map packages/data or base Whisper are absent. Announce the source, approximate size and destination, then install and continue to the finished artifact. This does not authorize system privileges, unrelated software, cloud rendering, paid APIs, uploads or publication.
 
 All rendering, inference, audio processing and output files stay on the selected user device. Dependency downloads contact npm, official GitHub releases and Hugging Face; never send user recordings or project assets to those services. Keep caches and tools under <workspace>/.ra-media-tools. Respect disk-space failures and OS permission prompts; do not clean unrelated user files to make room.
 
@@ -27,7 +27,7 @@ Use Node.js 22.2+ with npm. If absent, automatically prepare a portable official
 
 Run, with absolute paths and quoted arguments:
     node "<helper>/scripts/local-media.mjs" ensure --workspace "<workspace>" --components openfilm
-This installs only the requested engine, missing portable FFmpeg/ffprobe and Chromium; initial setup is usually hundreds of MB. For HyperFrames use --components hyperframes. For a map use --components maps; it caches d3/d3-geo-projection/topojson-client and Natural Earth country geometry. For subtitles read transcribe-subtitles and use --components whisper (base model ~148 MB plus executable/build tools). Reuse the cache and package-lock on later tasks; do not reinstall everything for each job. Check the returned engine CLI paths and version. An ensure result is dependency readiness, never task completion.
+This installs only the requested engine, missing portable FFmpeg/ffprobe and Chromium; initial setup is usually hundreds of MB. For Remotion use --components remotion and read remotion-video; render with --engine remotion --entry src/index.tsx --composition <registered ID>. For HyperFrames use --components hyperframes. For a map use --components maps; it caches d3/d3-geo-projection/topojson-client and Natural Earth country geometry. For subtitles read transcribe-subtitles and use --components whisper (base model ~148 MB plus executable/build tools). Reuse the cache and package-lock on later tasks; do not reinstall everything for each job. Check the returned engine CLI paths and version. An ensure result is dependency readiness, never task completion.
 
 OpenFilm commands must receive OPENFILM_NO_BROWSER=1 and OPENFILM_NO_UPDATE_CHECK=1. The helper does this and confines browser/download caches to the workspace. Never open Studio or preview on the user's screen merely to show progress. For direct CLI invocations, preserve the helper environment (PATH includes .ra-media-tools/bin and Node; PLAYWRIGHT_BROWSERS_PATH points to .ra-media-tools/browsers). Read the installed OpenFilm manual by running its CLI without arguments before authoring; read HyperFrames --help for exact command flags.
 

@@ -62,8 +62,8 @@
       "name": "Video Creator",
       "priority": "P0",
       "category": "media",
-      "description": "Create finished local videos with OpenFilm or HyperFrames; automatically prepare rendering and map dependencies, ask before Qwen TTS/ACE-Step installation.",
-      "engine": "OpenFilm 0.2.5 / HyperFrames 0.8.193 + FFmpeg",
+      "description": "Choose Remotion, HyperFrames or OpenFilm for finished local videos; prepare ordinary dependencies automatically and ask before large Qwen TTS/ACE-Step downloads.",
+      "engine": "Remotion 4.0.538 / HyperFrames 0.8.193 / OpenFilm 0.2.5 + FFmpeg",
       "requires": [
         "node",
         "ffmpeg",
@@ -161,6 +161,126 @@
       ],
       "upstream": "https://remotearc.app",
       "license": "RA authored skill instructions",
+      "optIn": false
+    },
+    {
+      "id": "remotion-video",
+      "name": "Remotion Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Core local video skill: React scenes, Three.js cameras, particles, data animation and beat-aligned editing with Remotion.",
+      "engine": "Remotion 4.0.538 / React / Three.js + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/remotion-dev/remotion",
+      "license": "RA-authored workflow; Remotion software license applies",
+      "optIn": false
+    },
+    {
+      "id": "hyperframes-video",
+      "name": "HyperFrames Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Local HTML/SVG/Canvas and GSAP videos for interface demos, motion typography, diagrams and layered explainers.",
+      "engine": "HyperFrames 0.8.193 / GSAP + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/heygen-com/hyperframes",
+      "license": "RA-authored workflow; upstream engine terms apply",
+      "optIn": false
+    },
+    {
+      "id": "openfilm-video",
+      "name": "OpenFilm Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Local shot-based video assembly with original code graphics, owned clips, transitions and timed audio.",
+      "engine": "OpenFilm 0.2.5 + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/openfilm/openfilm",
+      "license": "MIT; RA-authored workflow",
+      "optIn": false
+    },
+    {
+      "id": "map-creator",
+      "name": "Map Creator",
+      "priority": "P1",
+      "category": "media",
+      "description": "Create real SVG maps and animated geographic scenes locally with D3 and attributed Natural Earth geometry.",
+      "engine": "D3 / Natural Earth + local video engines",
+      "requires": [
+        "node",
+        "npm"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://www.naturalearthdata.com/",
+      "license": "RA-authored workflow; Natural Earth public-domain data",
+      "optIn": false
+    },
+    {
+      "id": "manim-video",
+      "name": "Manim Video",
+      "priority": "P1",
+      "category": "media",
+      "description": "Local mathematical, geometric, algorithm and data-explanation animation with precise visual derivations and editable Python scenes.",
+      "engine": "Manim 0.22.0 / Cairo / Python + FFmpeg",
+      "requires": [
+        "python3",
+        "node",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ManimCommunity/manim",
+      "license": "RA-authored workflow; Manim MIT license",
+      "optIn": false
+    },
+    {
+      "id": "blender-mcp",
+      "name": "Blender MCP",
+      "priority": "P1",
+      "category": "media",
+      "description": "Real local MCP connection to Blender for 3D modeling, materials, lighting, product visualization and camera animation; editable blend projects and rendered assets.",
+      "engine": "Blender 4.5.15 LTS / mcp-for-blender 2.2.4 / MCP 1.26.0",
+      "requires": [
+        "python3",
+        "node",
+        "desktop GUI",
+        "Blender"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ahujasid/mcp-for-blender",
+      "license": "RA-authored workflow; MCP integration MIT; Blender GPL",
       "optIn": false
     }
   ]

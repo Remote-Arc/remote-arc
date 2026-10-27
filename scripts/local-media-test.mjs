@@ -23,6 +23,7 @@ test('unknown/empty components cannot start setup',()=>{
  assert.throws(()=>components(''),{code:'INVALID_COMPONENT'});
  assert.throws(()=>components('curl-something'),{code:'INVALID_COMPONENT'});
  assert.deepEqual(components('maps,whisper,maps'),['maps','whisper']);
+ assert.deepEqual(components('remotion,maps,remotion'),['remotion','maps']);
 });
 test('filesystem traversal and escaping symlinks are rejected',()=>temporary(async root=>{
  const workspace=path.join(root,'workspace'),outside=path.join(root,'outside');await fs.mkdir(workspace);await fs.mkdir(outside);
@@ -67,6 +68,15 @@ test('existing final outputs are preserved before setup or rendering',()=>tempor
 test('failed subprocesses cannot be mistaken for completed output',async()=>{
  await assert.rejects(run(process.execPath,['-e','process.exit(7)'],{quiet:true}),{code:'COMMAND_FAILED'});
 });
+
+test('Remotion requires an explicit composition before setup and never overwrites user output',()=>temporary(async root=>{
+ const project=path.join(root,'film');await fs.mkdir(path.join(project,'src'),{recursive:true});await fs.writeFile(path.join(project,'src/index.tsx'),'registered composition');
+ const runtime=new Runtime(root);runtime.ensure=async()=>{throw Error('setup must not run');};
+ await assert.rejects(runtime.render('remotion',project,path.join(root,'new.mp4')),{code:'COMPOSITION_REQUIRED'});
+ const output=path.join(root,'existing.mp4');await fs.writeFile(output,'user output');
+ await assert.rejects(runtime.render('remotion',project,output,{composition:'Main'}),{code:'OUTPUT_EXISTS'});
+ assert.equal(await fs.readFile(output,'utf8'),'user output');
+}));
 test('artifact receipts require actual nonempty files',()=>temporary(async root=>{
  const runtime=new Runtime(root),output=path.join(root,'result');await fs.writeFile(output,'');
  await assert.rejects(runtime.artifact(output,{kind:'map'}),{code:'EMPTY_OUTPUT'});

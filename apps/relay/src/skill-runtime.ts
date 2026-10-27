@@ -4,6 +4,12 @@ type Skill=typeof BUILTIN_SKILLS[number];
 type ExecutionState='ready_readonly'|'needs_local_device'|'needs_approval_or_engine'|'guidance_only';
 
 const keywords:Record<string,Array<[RegExp,number]>>={
+  'manim-video': [[/\bmanim\b|数学动画|几何动画|公式推导动画|算法动画/i,12]],
+  'blender-mcp': [[/\bblender\b|三维建模|3d model|三维产品|材质灯光/i,12]],
+  'remotion-video': [[/remotion|three\.?js|3d camera|三维运镜|粒子光影|音乐卡点/i,8]],
+  'hyperframes-video': [[/hyperframes|gsap|动态排版|界面演示视频/i,8]],
+  'openfilm-video': [[/openfilm/i,8]],
+  'map-creator': [[/\bmap\b|地图|geojson|choropleth/i,8]],
   'browser-operator': [[/browser|website|webpage|网页|浏览器|网站|页面|tab|网页操作/i,4],[/click|fill|navigate|form|点击|填写|搜索页面/i,2]],
   'autonomous-browser': [[/multi.step browse|autonomous brows|自动浏览|网页自动化|自动操作网页/i,4]],
   'desktop-operator': [[/mouse|pointer|desktop|screen control|鼠标|桌面操作|拖拽|键盘操作/i,5]],
@@ -19,6 +25,8 @@ const execution:Readonly<Record<string,ExecutionState>>={
   'autonomous-browser':'needs_approval_or_engine',
   'desktop-operator':'needs_approval_or_engine',
   'image-studio':'needs_local_device','video-creator':'needs_local_device',
+  'remotion-video':'needs_local_device','hyperframes-video':'needs_local_device','openfilm-video':'needs_local_device','map-creator':'needs_local_device',
+  'manim-video':'needs_local_device','blender-mcp':'needs_local_device',
   'ui-inspector':'needs_approval_or_engine','transcribe-subtitles':'needs_local_device',
   'scheduled-routines':'guidance_only',
 };

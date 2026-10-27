@@ -18,3 +18,7 @@ packages/execution-core/execution/*.json text eol=lf
 # These two pinned snapshots retain upstream trailing spaces verbatim.
 /packages/skills/vendor/community-canvas-design/** whitespace=-blank-at-eol
 /packages/skills/vendor/community-algorithmic-art/** whitespace=-blank-at-eol
+# Preserve the pinned authors' Markdown whitespace and trailing blank lines.
+/packages/skills/vendor/community-a-stock-data/** whitespace=-blank-at-eol,-blank-at-eof
+/packages/skills/vendor/community-nuwa*/** whitespace=-blank-at-eol,-blank-at-eof
+/packages/skills/vendor/community-vibe-knowledge-film/** whitespace=-blank-at-eol,-blank-at-eof

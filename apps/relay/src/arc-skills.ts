@@ -1,4 +1,5 @@
-import {communitySkillSummaries,readCommunitySkill} from './arc-community-skills.js';
+import {readCommunitySkill} from './arc-community-skills.js';
+import {skillLibrarySummaries} from '../../../packages/skills/src/library.js';
 import {z} from 'zod';
 import {seal,unseal} from './app-oauth.js';
 import {sha256Hex} from './auth.js';
@@ -20,10 +21,10 @@ async function importedSkills(env:ArcEnv,userId:string){
 export async function importedSkillSummaries(env:ArcEnv,userId:string){
  return (await importedSkills(env,userId)).map(summary);
 }
-/** The dashboard Skills library: account imports plus pinned community packages. */
+/** The dashboard library includes the same built-in media and pinned packages as task discovery. */
 export async function listArcSkills(env:ArcEnv,userId:string){
  const rows=await importedSkills(env,userId);
- return {skills:[...rows.map(summary),...communitySkillSummaries()]};
+ return {skills:[...rows.map(summary),...skillLibrarySummaries()]};
 }
 /** Arc's list_skills tool: every skill source (built-in, community, workflow,
  * imports). With a query, the best matches in any language come first. */

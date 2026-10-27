@@ -7,14 +7,14 @@ Remote Arc includes **9 original, curated Skill instructions** (`SKILL.md`) orga
 - P0: browser-operator (agent-browser + Microsoft Playwright MCP workflow)
 - P0: autonomous-browser (browser-use planning, opt-in model budgets)
 - P0: desktop-operator (PyAutoGUI/native accessibility, opt-in OS privileges)
-- P0: video-creator (OpenFilm + FFmpeg, MIT; renders on the user's computer, no keys for text, graphics and own footage)
+- P0: video-creator (Remotion / HyperFrames / OpenFilm + FFmpeg; renders on the user's computer, no keys for text, graphics and own footage)
 - P0: research-reports (existing read/browser/file operations)
 - P0: scheduled-routines (existing automation/goal runtime)
 - P1: image-studio (ComfyUI, optional GPU/model weights)
 - P1: ui-inspector (OmniParser, optional vision weights)
 - P1: transcribe-subtitles (whisper.cpp + FFmpeg, optional model weights)
 
-**Packaged means the instructions are available, NOT that an external executable/model is installed on a user's device.** A successful Skill run requires (1) a deployed Connect or Arc integration, (2) authorized devices and existing tools, (3) verified required engine(s) and licenses on the selected device, and (4) validation of actual output. No third-party binaries or model weights are vendored in this PR, and no executable tools are registered merely by adding a Skill. For media tasks, the calling AI automatically prepares missing OpenFilm, HyperFrames, FFmpeg/Chromium, map packages/data and base Whisper inside authorized device/workspace permissions, with source/size/destination disclosed. The packaged local helper performs setup and actual rendering/transcription; no system-level package install is needed. Qwen3-TTS (multi-GB), ACE-Step (10 GB+) and Whisper models beyond the small default require explicit download approval. No unattended paid API spend or GCP GPU service.
+**Packaged means the instructions are available, NOT that an external executable/model is installed on a user's device.** A successful Skill run requires (1) a deployed Connect or Arc integration, (2) authorized devices and existing tools, (3) verified required engine(s) and licenses on the selected device, and (4) validation of actual output. No third-party binaries or model weights are vendored in this PR, and no executable tools are registered merely by adding a Skill. For media tasks, the calling AI automatically prepares missing Remotion, OpenFilm, HyperFrames, FFmpeg/Chromium, map packages/data and base Whisper inside authorized device/workspace permissions, with source/size/destination disclosed. The packaged local helper performs setup and actual rendering/transcription; no system-level package install is needed. Qwen3-TTS (multi-GB), ACE-Step (10 GB+) and Whisper models beyond the small default require explicit download approval. No unattended paid API spend or GCP GPU service.
 
 ## One cloud catalog, all devices
 
@@ -53,10 +53,18 @@ An existing source-owned Agent Goal also receives up to two relevant cloud Skill
 
 The video/subtitle packages expose the same SHA-256-versioned scripts/local-media.mjs through Arc prepare_skill/read_skill_resource, Connect read_skill with path/offset, and read-only MCP Resources. The cloud stores instructions/helper bytes; downloads, preparation, rendering and inference run on the user's device. The read-only /api/skills/run adapter remains a browser observation adapter and never claims that it rendered a video.
 
-- Automatically prepare only the needed ordinary components: OpenFilm 0.2.5, HyperFrames 0.8.193, portable FFmpeg/ffprobe, Chromium, d3/Natural Earth maps, whisper.cpp v1.9.2 and the multilingual base model.
+- Automatically prepare only the needed ordinary components: Remotion 4.0.538 / React / Three.js, OpenFilm 0.2.5, HyperFrames 0.8.193, portable FFmpeg/ffprobe, Chromium, d3/Natural Earth maps, whisper.cpp v1.9.2 and the multilingual base model.
 - Ask before installing Qwen TTS or ACE-Step, disclosing multi-GB / 10 GB+ downloads, disk use, destination and hardware expectations. The ordinary bootstrap rejects these requests before any download. After approval, the AI follows the separately documented local isolated-environment recipes; these large-model paths are not claimed as hardware-tested.
 - Reuse task-local caches and npm lockfiles. Verify published binary/model hashes. No global installs, administrator elevation, cloud inference or media uploads are part of setup.
 - Render/transcribe/map actions create actual outputs and artifact receipts. Metadata and decoder/timing checks support completion evidence; visual and language quality still require inspection.
 - Disk shortage, unsupported hardware, missing OS compiler tools and download failures are truthful blockers. Existing outputs are preserved.
 
 Run node --test scripts/local-media-test.mjs and the relay local-media-resources-test.ts for executable consent, path, integrity, cache, resource delivery and preparation checks. Real-device acceptance results must identify the OS and engine actually exercised.
+
+## Core video and skill-library additions
+
+Remotion is a core P0 local video workflow, alongside dedicated HyperFrames and OpenFilm workflows and Map Creator. The dashboard and preview use the same unified library as built-in and pinned package discovery. Requested Vibe Knowledge Film, A Stock Data and Nuwa plus fifteen ready-made Nuwa perspectives have pinned source and license manifests. Their presence does not imply installed runtimes or completed user work.
+
+## Mathematical animation and Blender MCP
+
+Manim renders precise explanatory scenes in a task-local Python environment. Blender MCP uses a real stdio MCP handshake and a loopback addon in a fresh Blender GUI instance, with task-local configuration, disabled telemetry and upstream code safe mode. Its local bridge exposes only scene reads and Blender code; paid asset services and global AI-client configuration are outside this workflow. A GUI/display is required for the addon, while saved .blend files can render in a separate background process. Both workflows preserve editable sources and verify actual artifacts.

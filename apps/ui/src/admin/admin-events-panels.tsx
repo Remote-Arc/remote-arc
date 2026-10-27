@@ -1,34 +1,31 @@
-import {useEffect,useRef,useState} from 'react';
-import {ProductIcon as Icon} from '../product-icon.js';
-import {accountLabel,checkLabel,formatEventTime,type Detail,type PaymentReadiness,type Translate} from './admin-events-model.js';
+import {useState} from 'react';
+import {percent,retentionState,type Analytics,type Translate} from './admin-events-model.js';
 
-export function OperationsDetail({detail,accounts,tr,locale,onClose,onUser,onTrace}:{detail:Detail;accounts:Map<string,string>;tr:Translate;locale:string;onClose:()=>void;onUser:(id:string)=>void;onTrace:(id:string)=>void}){
- const dialog=useRef<HTMLDialogElement>(null),[copied,setCopied]=useState(false);
- useEffect(()=>{const element=dialog.current,previous=document.activeElement;element?.showModal();return()=>{element?.close();if(previous instanceof HTMLElement&&previous.isConnected)previous.focus();};},[]);
- async function copy(){try{await navigator.clipboard.writeText([detail.title,...detail.fields.map(([label,value])=>label+': '+value)].join('\n'));setCopied(true);}catch{setCopied(false);}}
- return <dialog ref={dialog} className="eventDetail" aria-labelledby="event-detail-title" onCancel={event=>{event.preventDefault();onClose();}} onClick={event=>{if(event.target===event.currentTarget)onClose();}}>
-  <div className="eventDetailHeader"><span>{tr('FOLLOW-UP DETAILS','核查详情')}</span><button type="button" onClick={onClose} aria-label={tr('Close details','关闭详情')}><Icon name="close"/></button></div>
-  <h2 id="event-detail-title">{detail.title}</h2><p className="eventDetailLead">{detail.explanation}</p>
-  <dl className="eventDetailFacts"><div><dt>{tr('Account','相关账户')}</dt><dd>{accountLabel(detail.userId,accounts,tr)}</dd></div>{detail.time&&<div><dt>{tr('Recorded at','记录时间')}</dt><dd>{formatEventTime(detail.time,locale)}</dd></div>}</dl>
-  <div className="eventNextStep"><span><Icon name="tasks"/>{tr('What to do next','建议下一步')}</span><p>{detail.next}</p></div>
-  {detail.userId&&<button className="adminOutlineBtn eventDetailUser" type="button" onClick={()=>onUser(detail.userId!)}><Icon name="users"/>{tr('View this user’s activity','查看这个用户的操作')}</button>}
-  <details className="eventTechnical"><summary>{tr('Diagnostic details for the technical team','给技术同事的排查信息')}</summary><dl>{detail.fields.map(([key,value],index)=><div key={key+index}><dt>{key}</dt><dd><code>{value}</code></dd></div>)}</dl><div className="eventDetailButtons"><button className="adminOutlineBtn" type="button" onClick={()=>void copy()}>{copied?tr('Copied','已复制'):tr('Copy diagnostic details','复制排查信息')}</button>{detail.trace&&<button className="adminOutlineBtn" type="button" onClick={()=>onTrace(detail.trace!)}>{tr('See related steps','查看同次操作')}</button>}</div></details>
- </dialog>;
+export function GrowthChart({data,tr}:{data:Analytics|null;tr:Translate}) {
+ const [metric,setMetric]=useState<'activeUsers'|'payingUsers'>('activeUsers');
+ const rows=data?.trend||[],maximum=Math.max(1,...rows.flatMap(row=>[row.newUsers,row[metric]]));
+ const width=760,height=210,left=34,top=16,plotWidth=width-52,plotHeight=height-54;
+ const point=(value:number,index:number)=>[left+(rows.length>1?index/(rows.length-1):.5)*plotWidth,top+plotHeight-value/maximum*plotHeight];
+ return <section className="businessPanel businessGrowth">
+  <header><div><h2>{tr('Are more people coming back?','用户有没有增长、有没有回来？')}</h2><p>{tr('Daily registrations and real product activity.','按天看新注册和真实使用的变化。')}</p></div><select aria-label={tr('Trend metric','趋势指标')} value={metric} onChange={event=>setMetric(event.target.value as typeof metric)}><option value="activeUsers">{tr('Active users','活跃用户')}</option><option value="payingUsers">{tr('Paying users','付费用户')}</option></select></header>
+  {data?<><div className="businessLegend"><span data-series="new">{tr('New users','新增用户')}</span><span data-series="active">{metric==='activeUsers'?tr('Recorded active users','有记录的活跃用户'):tr('Verified paying users','已确认付费用户')}</span></div>
+   <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={tr('Daily user trend; exact values in the table below','每日用户趋势，准确数值可在下方表格查看')}>
+    {[0,.5,1].map(fraction=><g key={fraction}><line x1={left} x2={width-18} y1={top+plotHeight*fraction} y2={top+plotHeight*fraction} className="businessGridline"/><text x={left-10} y={top+plotHeight*fraction+4} textAnchor="end">{Math.round(maximum*(1-fraction))}</text></g>)}
+    <polyline points={rows.map((row,i)=>point(row[metric],i).join(',')).join(' ')} className="businessLine businessLineActive"/><polyline points={rows.map((row,i)=>point(row.newUsers,i).join(',')).join(' ')} className="businessLine businessLineNew"/>
+    {rows.map((row,i)=><g key={row.day}><circle cx={point(row.newUsers,i)[0]} cy={point(row.newUsers,i)[1]} r="3" className="businessPoint"><title>{row.day}: {row.newUsers} / {row[metric]}</title></circle>{(i===0||i===rows.length-1||i%Math.ceil(rows.length/5)===0)&&<text x={point(0,i)[0]} y={height-8} textAnchor="middle">{row.day.slice(5)}</text>}</g>)}
+   </svg><details className="businessSource"><summary>{tr('Daily figures','查看每日数值')}</summary><div className="businessTableScroll"><table><thead><tr><th>{tr('Date · UTC','日期 · UTC')}</th><th>{tr('New','新增')}</th><th>{tr('Recorded active','有记录的活跃')}</th><th>{tr('Paid','已付费')}</th></tr></thead><tbody>{rows.map(row=><tr key={row.day}><td>{row.day}</td><td>{row.newUsers}</td><td>{row.activeUsers}</td><td>{row.payingUsers}</td></tr>)}</tbody></table></div></details>
+  </>:<div className="businessChartEmpty">{tr('Real user trends appear after data loads.','读取真实数据后显示用户趋势。')}</div>}
+ </section>;
 }
 
-export function PaymentPanel({payment,checking,error,preview,tr,locale,onRefresh,onDetail}:{payment:PaymentReadiness|null;checking:boolean;error:string;preview:boolean;tr:Translate;locale:string;onRefresh:()=>void;onDetail:(detail:Detail)=>void}){
- const needsAttention=payment&&['blocked','needs_attention'].includes(payment.conclusion),unknown=payment&&(payment.conclusion==='unknown'||payment.reconciliationUnavailable>0);
- const label=needsAttention?tr('Needs attention','需要跟进'):unknown?tr('Partly checked','部分待核对'):tr('No issues found in this check','本次抽查未见异常');
- return <section className="eventPanel eventPaymentPanel"><header><div><span className="eventEyebrow">{tr('PAYMENT STATUS','付款与权益')}</span><h2>{tr('Did access reach the user?','付款后，权益到账了吗？')}</h2></div><Icon name="shield"/></header>
-  {error&&<p className="eventInlineError" role="alert">{error}</p>}
-  {checking?<p role="status">{tr('Checking payment and access records…','正在核对付款与权益记录…')}</p>:payment&&<>
-   <div className="eventPaymentVerdict" data-tone={needsAttention?'attention':unknown?'muted':'good'}><span className="eventStatusDot"/>{label}</div>
-   <dl className="eventPaymentFacts"><div><dt>{tr('Verified memberships · 30 days','30 天内已核验会员购买')}</dt><dd>{payment.verifiedMemberships.total}</dd></div><div><dt>{tr('Paid; order record missing','已收款，缺少入账记录')}</dt><dd data-warning={payment.providerPaidUnprocessed.length>0}>{payment.providerPaidUnprocessed.length}</dd></div><div><dt>{tr('Paid; access incomplete','已入账，权益不完整')}</dt><dd data-warning={payment.paidWithoutEntitlements.length>0}>{payment.paidWithoutEntitlements.length}</dd></div><div><dt>{tr('Payment updates to check','付款通知处理异常')}</dt><dd>{payment.webhookFailures.length}</dd></div></dl>
-   <p className="eventSectionNote">{tr('Checked ','抽查 ')}{payment.reconciliationChecked}{tr(' recent unfinished orders; ',' 笔近期未完成订单；')}{payment.reconciliationUnavailable}{tr(' unavailable.',' 笔暂无法核对。')}{payment.verifiedMemberships.lastPaidAt&&<> {tr('Latest verified purchase: ','最近核验购买：')}{formatEventTime(payment.verifiedMemberships.lastPaidAt,locale)}</>}</p>
-   {payment.unfinishedCheckouts.length>0&&<div className="eventAbandonedNote"><strong>{payment.unfinishedCheckouts.length} {tr('orders have been open for 10+ minutes','笔订单超过 10 分钟未完成')}</strong><p>{tr('People may have left checkout. These are not confirmed failed payments.','用户可能只是离开了购买页，不代表付款失败。')}</p><button className="eventTextButton" onClick={()=>onDetail({title:tr('Unfinished orders','未完成的订单'),explanation:tr('An open order is not proof that payment was collected.','订单未完成不代表已收款。'),next:tr('Check the payment platform result before following up with the user.','先核对支付平台的实际结果，再决定是否跟进用户。'),fields:payment.unfinishedCheckouts.slice(0,10).map(order=>['Order',order.id] as [string,string])})}>{tr('View order references','查看订单记录')} <Icon name="arrowUpRight" size={13}/></button></div>}
-   <details className="eventPaymentChecks"><summary>{tr('Purchase readiness checks','查看购买功能检查')}</summary>{payment.checks.map(check=><div key={check.key}><span>{checkLabel(check.key,tr)}</span><strong data-state={check.state}>{check.state==='pass'?tr('Passed','已通过'):check.state==='fail'?tr('Needs attention','需处理'):tr('Not verified','待验证')}</strong></div>)}</details>
-   <small className="eventCheckedAt">{tr('Checked ','核查于 ')}{formatEventTime(payment.checkedAt,locale)}</small>
-  </>}
-  <button className="adminOutlineBtn eventPaymentRefresh" disabled={preview||checking} onClick={onRefresh}><Icon name="refresh" size={13}/>{tr('Check payments again','重新核查支付')}</button>
+export function RetentionPanel({data,tr}:{data:Analytics|null;tr:Translate}) {
+ const [page,setPage]=useState(0),cohorts=data?.cohorts||[],rows=cohorts.slice(page*7,page*7+7);
+ return <section className="businessPanel businessRetention">
+  <header><div><h2>{tr('Do new users stay?','新用户留下来了吗？')}</h2><p>{tr('Registration cohorts over 60 days. Returns on the exact next, 7th and 30th day.','最近 60 天注册的用户，在注册后的第 1、7、30 天是否再次使用。')}</p></div><span className="businessTag">{tr('Registration cohorts','按注册批次')}</span></header>
+  <div className="businessRetentionSummary">{[1,7,30].map(day=>{const cell=data?.retention.find(item=>item.day===day);return <article key={day}><span>{day===1?tr('Next-day retention','次日留存'):day+tr('-day retention',' 日留存')}</span><strong>{percent(cell?.rate)}</strong><small>{cell?.status==='ready'?`${cell.returned} / ${cell.eligible} `+tr('eligible users returned','位到期用户回访'):retentionState(cell,tr)}</small></article>;})}</div>
+  <div className="businessTableScroll"><table className="businessCohorts"><thead><tr><th>{tr('Registered','注册日期')}</th><th>{tr('New users','注册人数')}</th><th>{tr('Day 1','次日')}</th><th>{tr('Day 7','第 7 天')}</th><th>{tr('Day 30','第 30 天')}</th></tr></thead><tbody>{rows.map(row=><tr key={row.day}><th scope="row">{row.day.slice(5)}</th><td>{row.users}</td>{row.cells.map(cell=><td key={cell.day} data-state={cell.status} style={cell.rate===null?undefined:{background:`color-mix(in srgb,var(--business-teal) ${Math.round(cell.rate*24)}%,transparent)`}}><strong>{cell.status==='ready'?percent(cell.rate):retentionState(cell,tr)}</strong><small>{cell.status==='ready'?`${cell.returned} / ${cell.eligible}`:cell.returned?cell.returned+tr(' returns recorded',' 人有回访记录'):'—'}</small></td>)}</tr>)}</tbody></table></div>
+  {!cohorts.length&&<p className="businessNoCohort">{data?tr('No new users registered in these cohorts.','这些注册批次中暂无用户。'):tr('Waiting for real registration cohorts.','等待真实注册批次数据。')}</p>}
+  {cohorts.length>7&&<div className="businessPager"><span>{page*7+1}–{Math.min(page*7+7,cohorts.length)} / {cohorts.length} {tr('cohorts','个注册批次')}</span><button disabled={!page} onClick={()=>setPage(value=>value-1)}>{tr('Newer','较新批次')}</button><button disabled={(page+1)*7>=cohorts.length} onClick={()=>setPage(value=>value+1)}>{tr('Older','较早批次')}</button></div>}
+  <p className="businessFootnote">{tr('Only fully observed return days enter the rate. Future days are still observing; days before complete collection are not treated as lost users. UTC dates.','只用已完整观察的批次计算留存率。尚未到期显示“观察中”，历史未采集不当作用户流失。日期按 UTC。')}</p>
  </section>;
 }

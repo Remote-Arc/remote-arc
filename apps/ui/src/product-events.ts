@@ -22,6 +22,7 @@ export function startProductEvents(){
  if(installed||typeof window==='undefined'||location.hostname!=='agent.remotearc.app'||import.meta.env?.VITE_UI_PREVIEW==='1')return;installed=true;
  const view=recordProductView;
  view();window.addEventListener('popstate',view);
+ window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')view();});
  window.addEventListener('pagehide',()=>void flush());
  window.addEventListener('error',()=>trackProductEvent('client.runtime.failed',{errorCode:'CLIENT_ERROR'}));
  window.addEventListener('unhandledrejection',()=>trackProductEvent('client.runtime.failed',{errorCode:'CLIENT_ERROR'}));

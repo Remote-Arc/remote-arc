@@ -293,8 +293,8 @@
   }
 }
 
-/* Owner-only Browser Runner session entry point on each connected device. */
-.deviceBrowserSessions { margin: 10px 18px 14px; border: 1px solid var(--border, #36383e); border-radius: 10px; }
+/* Owner-only Browser Runner entry inside device management activity details. */
+.deviceBrowserSessions { margin: 0 0 18px; border: 1px solid var(--border, #36383e); border-radius: 10px; }
 .deviceBrowserSessions > summary { cursor: pointer; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 600; }
 .deviceBrowserSessions > summary > span:last-child { font-weight: 400; opacity: .75; }
 .deviceBrowserSessions[open] > summary { border-bottom: 1px solid var(--border, #36383e); }

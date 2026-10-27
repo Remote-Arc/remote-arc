@@ -1,4 +1,5 @@
 import {recordProductEvent,recordCheckoutCompletion} from './product-events.js';
+import {linkBusinessReceipt} from './business-tracking.js';
 import {arcEnabled,creditsEnabled} from './platform-launch.js';
 import {ARC_PLANS,ARC_TOPUPS,ARC_CREDIT_RATE,ARC_PREMIUM_MODELS} from '@remotearc/protocol';
 import {getSessionUser,sha256Hex} from './auth.js';
@@ -47,7 +48,7 @@ async function payment(env:BillingEnv,paymentIntent:unknown,minimum:number){
  return {intent:id(pi,'pi'),charge:id(charge,'ch')};
 }
 async function owner(env:BillingEnv,customerId:unknown){return env.DB.prepare('SELECT user_id FROM arc_billing_customers WHERE customer_id=?1').bind(id(customerId,'cus')).first<{user_id:string}>();}
-type Receipt={receipt:string;eventId:string;userId:string;sku:string;versionId:string;cents:number;start:string|null;end:string|null;payment:{intent:string;charge:string};hash:string;discountCents?:number;promotionId?:string};
+type Receipt={receipt:string;eventId:string;userId:string;sku:string;versionId:string;cents:number;start:string|null;end:string|null;payment:{intent:string;charge:string};hash:string;discountCents?:number;promotionId?:string;checkoutId?:string};
 async function fulfill(env:BillingEnv,r:Receipt){
  const p=commercialOffer(await commercialVersion(env.DB,r.versionId)),at=now();if(p.id!==r.sku)throw new StripeError('BILLING_CATALOG_CONFLICT');
  await env.DB.batch([
@@ -60,6 +61,7 @@ async function fulfill(env:BillingEnv,r:Receipt){
    .bind(r.promotionId,r.userId,r.receipt,r.discountCents??0,at)]:[]),
  ]);
  const paid=await env.DB.prepare("SELECT id FROM arc_payment_receipts WHERE id=?1 AND user_id=?2 AND state='paid'").bind(r.receipt,r.userId).first();if(!paid)return;
+ await linkBusinessReceipt(env,r.checkoutId,r.receipt,r.userId,r.sku);
  await grantArcCredits(env.DB,{userId:r.userId,source:p.subscription?'subscription':'topup',sourceRef:r.receipt,units:p.credits*ARC_CREDIT_RATE.unitsPerCredit,...(r.start?{startsAt:r.start}:{}),expiresAt:r.end,reason:'Verified Stripe '+(p.subscription?'subscription invoice':'credit purchase')});
  if(p.subscription){
   await env.DB.batch([
@@ -86,7 +88,7 @@ async function invoicePaid(env:BillingEnv,event:Record<string,any>,hash:string){
  const payments=await stripeRequest(env,'/v1/invoice_payments?'+form({invoice:id(invoice,'in'),limit:2}));
  if(payments.has_more||payments.data?.length!==1||payments.data[0].status!=='paid')throw new StripeError('BILLING_PAYMENT_NOT_FINAL');
  const pay=await payment(env,payments.data[0].payment?.payment_intent,invoice.total);
- await fulfill(env,{receipt:id(invoice,'in'),eventId:id(event,'evt'),userId:user.user_id,sku:p.id,versionId:p.versionId,cents:p.cents-promotion.discountCents,start,end,payment:pay,hash,...promotion});
+ await fulfill(env,{receipt:id(invoice,'in'),eventId:id(event,'evt'),userId:user.user_id,sku:p.id,versionId:p.versionId,cents:p.cents-promotion.discountCents,start,end,payment:pay,hash,...promotion,checkoutId:invoice.billing_reason==='subscription_create'?String(subscription.metadata?.remote_arc_checkout||''):undefined});
  await env.DB.prepare("UPDATE arc_payment_issues SET status='resolved',updated_at=?1 WHERE invoice_id=?2").bind(now(),id(invoice,'in')).run();
   const at=now();await env.DB.prepare(`INSERT INTO arc_billing_subscriptions(id,user_id,product_id,status,period_end,cancel_at_period_end,updated_at,commercial_version_id) VALUES(?1,?2,?3,?4,?5,?6,?7,?9) ON CONFLICT(id) DO UPDATE SET
    product_id=CASE WHEN excluded.period_end>=arc_billing_subscriptions.period_end THEN excluded.product_id ELSE arc_billing_subscriptions.product_id END,
@@ -104,13 +106,13 @@ async function invoicePaid(env:BillingEnv,event:Record<string,any>,hash:string){
 async function checkoutPaid(env:BillingEnv,event:Record<string,any>,hash:string){
  const session=await stripeRequest(env,'/v1/checkout/sessions/'+id(event.data?.object,'cs'));
  if(session.mode!=='payment')return;
- const intent=await env.DB.prepare('SELECT * FROM arc_billing_checkouts WHERE session_id=?1 OR (id=?2 AND session_id IS NULL)').bind(id(session,'cs'),String(session.metadata?.remote_arc_checkout||'')).first<{user_id:string;product_id:string;commercial_version_id:string|null}>();if(!intent)return;
+ const intent=await env.DB.prepare('SELECT * FROM arc_billing_checkouts WHERE session_id=?1 OR (id=?2 AND session_id IS NULL)').bind(id(session,'cs'),String(session.metadata?.remote_arc_checkout||'')).first<{id:string;user_id:string;product_id:string;commercial_version_id:string|null}>();if(!intent)return;
  const user=await owner(env,session.customer),p=commercialOffer(await commercialVersion(env.DB,intent.commercial_version_id||`seed:${commercialMode(env)}:${intent.product_id}`));
  if(!user||user.user_id!==intent.user_id||p.subscription||session.livemode!==stripeLive(env)||session.payment_status!=='paid'||session.status!=='complete'||session.currency!=='usd'||session.amount_subtotal!==p.cents||session.total_details?.amount_discount>0)throw new StripeError('BILLING_CHECKOUT_MISMATCH');
  const lines=await stripeRequest(env,'/v1/checkout/sessions/'+id(session,'cs')+'/line_items?limit=2');
  if(lines.has_more||lines.data?.length!==1||lines.data[0].quantity!==1||(await canonicalProduct(env,lines.data[0].price)).versionId!==p.versionId)throw new StripeError('BILLING_CHECKOUT_MISMATCH');
  const pay=await payment(env,session.payment_intent,session.amount_total);
- await fulfill(env,{receipt:id(session,'cs'),eventId:id(event,'evt'),userId:user.user_id,sku:p.id,versionId:p.versionId,cents:p.cents,start:null,end:null,payment:pay,hash});
+ await fulfill(env,{receipt:id(session,'cs'),eventId:id(event,'evt'),userId:user.user_id,sku:p.id,versionId:p.versionId,cents:p.cents,start:null,end:null,payment:pay,hash,checkoutId:intent.id});
  await env.DB.prepare("UPDATE arc_billing_checkouts SET status='complete' WHERE session_id=?1").bind(id(session,'cs')).run();
   await recordCheckoutCompletion(env,user.user_id,id(session,'cs'),id(session,'cs'));
 }
@@ -252,7 +254,7 @@ export async function handleBilling(request:Request,env:BillingEnv){
    expires=(await env.DB.prepare('SELECT expires_at FROM arc_billing_checkouts WHERE id=?1 AND user_id=?2').bind(checkoutId,user.id).first<{expires_at:string}>())!.expires_at;
   }
   if(!pending)try{const inserted=await env.DB.prepare(`INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,expires_at,created_at,commercial_version_id,promotion_id,ui_mode) SELECT ?1,?2,?3,?4,'creating',?5,?6,?7,?8,?9 WHERE (SELECT COUNT(*) FROM arc_billing_checkouts WHERE user_id=?2 AND status IN ('creating','open'))<3`).bind(checkoutId,user.id,p.id,p.subscription?'subscription':'payment',expires,at,p.versionId,promo?.id??null,uiMode).run();if(!inserted.meta.changes)throw 0;}catch{throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);}
-  const price=await ensureStripePrice(env,p.id,p.versionId),session=await stripeRequest(env,'/v1/checkout/sessions','POST',form({customer:customerId,mode:p.subscription?'subscription':'payment','line_items[0][price]':price,'line_items[0][quantity]':1,...(promo?{'discounts[0][promotion_code]':promo.promotion_code_id!}:{}),...(uiMode==='embedded_page'?{ui_mode:'embedded_page',return_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',redirect_on_completion:'if_required'}:{success_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:returnUrl+'&checkout=cancelled'}),expires_at:Math.floor(Date.parse(expires)/1000),'automatic_tax[enabled]':env.STRIPE_AUTOMATIC_TAX==='1',...(env.STRIPE_AUTOMATIC_TAX==='1'?{billing_address_collection:'required','customer_update[address]':'auto','tax_id_collection[enabled]':true}:{}),'metadata[remote_arc_checkout]':checkoutId,...(p.subscription?{'subscription_data[metadata][remote_arc_user]':user.id}:{'payment_intent_data[metadata][remote_arc_user]':user.id})}),'arc-checkout:'+checkoutId);
+  const price=await ensureStripePrice(env,p.id,p.versionId),session=await stripeRequest(env,'/v1/checkout/sessions','POST',form({customer:customerId,mode:p.subscription?'subscription':'payment','line_items[0][price]':price,'line_items[0][quantity]':1,...(promo?{'discounts[0][promotion_code]':promo.promotion_code_id!}:{}),...(uiMode==='embedded_page'?{ui_mode:'embedded_page',return_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',redirect_on_completion:'if_required'}:{success_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:returnUrl+'&checkout=cancelled'}),expires_at:Math.floor(Date.parse(expires)/1000),'automatic_tax[enabled]':env.STRIPE_AUTOMATIC_TAX==='1',...(env.STRIPE_AUTOMATIC_TAX==='1'?{billing_address_collection:'required','customer_update[address]':'auto','tax_id_collection[enabled]':true}:{}),'metadata[remote_arc_checkout]':checkoutId,...(p.subscription?{'subscription_data[metadata][remote_arc_user]':user.id,'subscription_data[metadata][remote_arc_checkout]':checkoutId}:{'payment_intent_data[metadata][remote_arc_user]':user.id})}),'arc-checkout:'+checkoutId);
   const sessionId=id(session,'cs'),result=checkoutResponse(env,session,String(uiMode));
   await env.DB.prepare("UPDATE arc_billing_checkouts SET session_id=?1,status='open' WHERE id=?2").bind(sessionId,checkoutId).run();return json(result);
  }catch(error){return json({error:error instanceof StripeError?error.code:error instanceof z.ZodError?'BILLING_INVALID_REQUEST':'BILLING_UNAVAILABLE',...(error instanceof StripeError&&error.reference?{reference:error.reference}:{})},error instanceof StripeError?error.status:error instanceof z.ZodError?400:503);}

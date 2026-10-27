@@ -1,83 +1,85 @@
 import {test,expect} from './fixtures';
 import type {Page} from '@playwright/test';
-
-const stamp='2026-10-27T02:30:00.000Z',trace='a148e16f-bd4a-4896-8027-3fd6578fb05a';
-const activity={id:'bc68cc7a-ed58-4454-9271-e94960229290',occurred_at:stamp,domain:'billing',name:'billing.webhook.failed',source:'stripe',outcome:'failed',user_id:'user_fixture',journey_id:null,trace_id:trace,entity_id:'evt_fixture',error_code:'BILLING_FULFILLMENT_UNAVAILABLE',http_status:503,duration_ms:220};
-const events=Array.from({length:100},(_,index)=>({...activity,id:'record-'+index,occurred_at:new Date(Date.parse(stamp)-index*60000).toISOString(),...(index%3===1?{domain:'tasks',name:'task.request',source:'server',outcome:'accepted',error_code:null}:index%3===2?{domain:'devices',name:'device.token.requested',source:'server',outcome:'waiting',error_code:'authorization_pending'}:{})}));
-const data={checkedAt:stamp,summary:{total:309,users:12,affectedUsers:3,failures:223,browser:47},accounts:[{id:'user_fixture',email:'mia@example.invalid'}],byDomain:[{domain:'billing',total:7,failures:1}],errors:[{name:activity.name,error_code:activity.error_code,total:1,users:1,last_seen:stamp},{name:'device.token.requested',error_code:'REQUEST_FAILED',total:219,users:0,last_seen:stamp},{name:'auth.email.verify_requested',error_code:'unauthorized',total:3,users:2,last_seen:stamp}],events,funnel:[{name:'billing.checkout.viewed',journeys:24},{name:'billing.checkout.continued',journeys:18},{name:'billing.checkout.created',journeys:16},{name:'billing.payment.mounted',journeys:15},{name:'billing.payment.completed_client',journeys:12},{name:'billing.purchase.completed',journeys:11}],nextCursor:stamp+'|'+activity.id};
-const readiness={checkedAt:stamp,conclusion:'needs_attention',checks:[{key:'live_keys',state:'pass',detail:'Live secret key required for real purchases'},{key:'charges_enabled',state:'pass',detail:'Stripe account can accept charges'},{key:'webhook_endpoint',state:'pass',detail:'Callback is connected'}],accounts:data.accounts,verifiedMemberships:{total:14,lastPaidAt:stamp},paidWithoutEntitlements:[],unfinishedCheckouts:[],webhookFailures:[{id:'evt_fixture',status:'failed',error_code:'BILLING_FULFILLMENT_UNAVAILABLE'}],providerPaidUnprocessed:[{checkoutId:'checkout_fixture',userId:'user_fixture',sessionId:'cs_live_fixture'}],reconciliationChecked:3,reconciliationUnavailable:0};
-async function mount(page:Page,{eventsFail=false,paymentFail=false}={}){
- await page.route(/\/api\/admin\/events(?:\/readiness)?(?:\?|$)/,route=>{
-  const payment=new URL(route.request().url()).pathname.endsWith('/readiness');
-  return route.fulfill((payment?paymentFail:eventsFail)?{status:503,json:{error:'observability_unavailable'}}:{json:payment?readiness:data});
- });
+const stamp='2026-10-27T12:00:00.000Z';
+function flow(id:string,keys:string[],counts:number[]) {
+ const total=counts[0]!,completed=counts.at(-1)!;
+ return {id,total,completed,rate:total?completed/total:null,pending:1,failed:2,unfinished:total-completed-1,incompleteEvidence:0,steps:keys.map((key,index)=>({key,count:counts[index]!,rate:total?counts[index]!/total:null,previousRate:index&&counts[index-1]?counts[index]!/counts[index-1]!:null,dropoff:index?counts[index-1]!-counts[index]!:0}))};
+}
+const scenes=[flow('login',['started','verification','verified','completed'],[40,35,30,28]),flow('devices',['started','approved','online'],[20,15,12]),{...flow('payment',['entered','ordered','paid','fulfilled'],[36,18,12,9]),orders:{total:20,ready:18,paid:13,fulfilled:10,pending:2,refunded:0,unattributed:2}},{...flow('tasks',['started','succeeded'],[10,6]),cancelled:1,unknown:1}];
+const summary={newUsers:17,activeUsers:72,payingUsers:9,paidCents:35100,newPaired:8,newUsed:6,newPaid:3};
+const cohorts=Array.from({length:12},(_,index)=>({day:new Date(Date.parse(stamp)-(index+3)*86400000).toISOString().slice(0,10),users:12,cells:[{day:1,status:'ready',eligible:12,returned:6,rate:.5},{day:7,status:index<4?'observing':'ready',eligible:index<4?0:12,returned:index<4?0:3,rate:index<4?null:.25},{day:30,status:'not_collected',eligible:0,returned:0,rate:null}]}));
+const data={checkedAt:stamp,days:7,from:'2026-10-21T00:00:00.000Z',to:stamp,timezone:'UTC',previousFrom:'2026-10-14T00:00:00.000Z',previousTo:'2026-10-20T12:00:00.000Z',summary,scenes,loginMethods:[flow('email_login',['started','delivered','verification','verified','completed'],[30,29,26,24,22]),flow('google_login',['started','callback','verified','completed'],[10,8,6,6])],previous:{summary:{...summary,newUsers:10,payingUsers:6},scenes:scenes.map(scene=>({...scene,rate:.5})),loginMethods:[]},trend:Array.from({length:7},(_,index)=>({day:'2026-10-'+(index+21),newUsers:[1,3,2,0,5,4,2][index],activeUsers:[18,24,22,19,34,31,28][index],payingUsers:index%3})),retention:[{day:1,status:'ready',eligible:20,returned:8,rate:.4},{day:7,status:'ready',eligible:10,returned:3,rate:.3},{day:30,status:'not_collected',eligible:0,returned:0,rate:null}],cohorts,coverage:{flowSince:'2026-10-20T12:00:00.000Z',activityCompleteFrom:'2026-10-21T00:00:00.000Z',oldestEvent:'2026-10-20T12:00:00.000Z',recordedEvents:309,includesInternalAccounts:true}};
+async function mount(page:Page,{fail=false,payload=data}:{fail?:boolean;payload?:typeof data}={}){
+ await page.route(/\/api\/admin\/analytics(?:\?|$)/,route=>route.fulfill(fail?{status:503,json:{error:'business_analytics_unavailable'}}:{json:payload}));
  await page.addInitScript(()=>{(window as Window&{eventsTestFetch?:typeof fetch}).eventsTestFetch=window.fetch.bind(window);});
  await page.goto('/admin-preview');await expect(page.locator('.adminShell')).toBeVisible();
  await page.addScriptTag({type:'module',url:'/scripts/admin-events-browser-fixture.tsx'});
  return page.locator('#events-browser-fixture');
 }
 
-test('Operations shows grouped follow-ups and bounded plain-language activity; payment evidence opens on demand',async({page},testInfo)=>{
+test('Business overview shows response-backed acquisition, conversion and retention rather than event logs',async({page},testInfo)=>{
  const panel=await mount(page),zh=testInfo.project.metadata.language==='zh';
- await expect(panel.locator('.eventActivityTable tbody tr')).toHaveCount(8);
- await expect(panel.locator('.eventFollowupList article')).toHaveCount(4);
- await expect(panel).toContainText('mia@example.invalid');
- await expect(panel.locator('.eventFollowups')).toContainText('219');
- await expect(panel.getByText('BILLING_FULFILLMENT_UNAVAILABLE',{exact:true})).toHaveCount(0);
- await expect(panel.getByText(trace,{exact:true})).toHaveCount(0);
- await expect(panel.locator('.eventActivityTable')).toContainText(zh?'请求已接收':'Request received');
- await expect(panel.locator('.eventActivityTable')).toContainText(zh?'等待确认':'Waiting for confirmation');
+ await expect(panel.locator('.businessKpis article')).toHaveCount(6);
+ await expect(panel.locator('.businessKpis article').nth(0)).toContainText('17');
+ await expect(panel.locator('.businessKpis article').nth(1)).toContainText('72');
+ await expect(panel.locator('.businessKpis article').nth(3)).toContainText('25%');
+ await expect(panel.locator('.businessKpis article').nth(5)).toContainText('30%');
+ await expect(panel.getByRole('tab')).toHaveCount(4);
+ await expect(panel.getByRole('tabpanel')).toContainText('70%');
+ await expect(panel.getByRole('tabpanel')).toContainText('28 / 40');
+ await expect(panel.locator('.businessFunnelSteps article')).toHaveCount(4);
+ await expect(panel.getByRole('tabpanel')).toContainText(zh?'主要流失环节':'Largest drop-off');
+ await expect(panel.locator('.eventActivityTable,.eventFollowupList,.eventTechnical')).toHaveCount(0);
+ await expect(panel).not.toContainText('REQUEST_FAILED');await expect(panel).not.toContainText('技术同事');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.screenshot({path:testInfo.outputPath('operator-overview.png'),fullPage:true});
- await panel.locator('.eventFollowupList').getByRole('button',{name:zh?'查看原因与下一步':'See what happened'}).first().click();
- const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();
- await expect(dialog.getByRole('heading',{level:2})).toHaveText(zh?'已收款，订单尚未完成处理':'Payment received; order processing incomplete');
- await expect(dialog.getByText('cs_live_fixture',{exact:true})).not.toBeVisible();
- await dialog.locator('.eventTechnical summary').click();await expect(dialog.getByText('cs_live_fixture',{exact:true})).toBeVisible();
- const userResponse=page.waitForResponse(response=>new URL(response.url()).searchParams.get('userId')==='user_fixture');
- await dialog.getByRole('button',{name:zh?'查看这个用户的操作':'View this user’s activity'}).click();await userResponse;await expect(dialog).toHaveCount(0);
- await expect(panel.locator('.eventActivityTable tbody tr')).toHaveCount(8);
- const trigger=panel.locator('.eventActivityTable tbody tr').first().getByRole('button');await trigger.click();
- await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
+ await page.screenshot({path:testInfo.outputPath('business-overview.png'),fullPage:true});
 });
 
-test('Activity details retain technical trace filters without showing codes in the default table',async({page},testInfo)=>{
+test('Scene selection shows the matching denominators, payment order rate and sign-in channel',async({page},testInfo)=>{
  const panel=await mount(page),zh=testInfo.project.metadata.language==='zh';
- await expect(panel.locator('.eventActivityTable tbody tr')).toHaveCount(8);
- await panel.locator('.eventActivityTable tbody tr').first().getByRole('button').click();
- const dialog=page.getByRole('dialog');await expect(dialog).toContainText(zh?'建议下一步':'What to do next');
- await expect(dialog.getByText('BILLING_FULFILLMENT_UNAVAILABLE',{exact:true})).not.toBeVisible();
- await dialog.locator('.eventTechnical summary').click();await expect(dialog.getByText('BILLING_FULFILLMENT_UNAVAILABLE',{exact:true})).toBeVisible();
- const response=page.waitForResponse(value=>new URL(value.url()).searchParams.get('trace')===trace);
- await dialog.getByRole('button',{name:zh?'查看同次操作':'See related steps'}).click();await response;
- await expect(dialog).toHaveCount(0);
+ await panel.getByRole('tab',{name:zh?/连接设备/:/Connect a device/}).click();
+ await expect(panel.locator('.businessFunnelSteps article')).toHaveCount(3);await expect(panel.getByRole('tabpanel')).toContainText('12 / 20');
+ await panel.getByRole('tab',{name:zh?/支付购买/:/Purchase/}).click();
+ await expect(panel.getByRole('tabpanel')).toContainText('9 / 36');
+ await expect(panel.locator('.businessOrderMetrics')).toContainText('50%');await expect(panel.locator('.businessOrderMetrics')).toContainText('10 / 20');
+ await panel.getByRole('tab',{name:zh?/登录/:/Sign-in/}).click();
+ await panel.getByLabel(zh?'登录方式':'Sign-in method').selectOption('email_login');
+ await expect(panel.locator('.businessFunnelSteps article')).toHaveCount(5);await expect(panel.getByRole('tabpanel')).toContainText('22 / 30');
+ await panel.getByRole('tab',{name:zh?/任务执行/:/Run a task/}).click();await expect(panel.getByRole('tabpanel')).toContainText('6 / 10');
+ await expect(panel.getByRole('tabpanel')).toContainText(zh?'结果待确认':'unknown');
 });
 
-test('Operations paginates locally and accepts an email search',async({page},testInfo)=>{
+test('Range and refresh fetch current business data; growth values remain inspectable',async({page},testInfo)=>{
  const panel=await mount(page),zh=testInfo.project.metadata.language==='zh';
- await expect(panel.locator('.eventActivityTable tbody tr')).toHaveCount(8);
- await panel.locator('.eventActivityPager').getByRole('button',{name:zh?'下一页':'Next',exact:true}).click();
- await expect(panel.locator('.eventActivityTable tbody tr').first().locator('time')).toHaveAttribute('datetime',events[8]!.occurred_at);
- await expect(panel.locator('.eventActivityTable tbody tr')).toHaveCount(8);
- await panel.getByRole('textbox',{name:zh?'用户邮箱或账号编号':'User email or account ID'}).fill('mia@example.invalid');
- const response=page.waitForResponse(value=>new URL(value.url()).searchParams.get('email')==='mia@example.invalid');
- await panel.getByRole('button',{name:zh?'查找':'Search',exact:true}).click();await response;
- await expect(panel.locator('.eventActivityTable tbody tr').first().locator('time')).toHaveAttribute('datetime',events[0]!.occurred_at);
- await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ const changed=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/admin/analytics'&&new URL(response.url()).searchParams.get('days')==='30');
+ await panel.getByRole('button',{name:zh?'近 30 天':'Last 30 days',exact:true}).click();await changed;
+ await panel.locator('.businessGrowth summary').click();await expect(panel.locator('.businessGrowth tbody tr')).toHaveCount(7);
+ await panel.getByLabel(zh?'趋势指标':'Trend metric').selectOption('payingUsers');
+ await expect(panel.locator('.businessLegend')).toContainText(zh?'已确认付费用户':'Verified paying users');
+ const refreshed=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/admin/analytics');
+ await panel.getByRole('button',{name:zh?'刷新':'Refresh',exact:true}).click();await refreshed;
 });
 
-test('A failed activity load never reports zero accounts or a clean overall result',async({page})=>{
- const panel=await mount(page,{eventsFail:true,paymentFail:true});
- await expect(panel.getByRole('alert').first()).toBeVisible();
- await expect(panel.locator('.eventActivityTable')).toHaveCount(0);
- await expect(panel.locator('.eventOverviewMetrics article').first().locator('strong')).toHaveText('—');
- await expect(panel.locator('.eventQuietState strong')).toContainText(/Some records are unavailable|部分数据暂不可用/);
+test('Retention shows observation and collection gaps, exact denominators and bounded cohorts',async({page},testInfo)=>{
+ const panel=await mount(page),zh=testInfo.project.metadata.language==='zh';
+ await expect(panel.locator('.businessRetentionSummary')).toContainText('40%');
+ await expect(panel.locator('.businessRetentionSummary')).toContainText(zh?'尚未采集':'Not collected');
+ await expect(panel.locator('.businessCohorts tbody tr')).toHaveCount(7);
+ await expect(panel.locator('.businessCohorts')).toContainText(zh?'观察中':'Still observing');
+ await panel.getByRole('button',{name:zh?'较早批次':'Older',exact:true}).click();await expect(panel.locator('.businessCohorts tbody tr')).toHaveCount(5);
+ await panel.getByRole('button',{name:zh?'较新批次':'Newer',exact:true}).click();await expect(panel.locator('.businessCohorts tbody tr')).toHaveCount(7);
 });
 
-test('An unavailable payment check leaves activity usable and its conclusion unknown',async({page})=>{
- const panel=await mount(page,{paymentFail:true});
- await expect(panel.locator('.eventPaymentPanel').getByRole('alert')).toBeVisible();
- await expect(panel.locator('.eventActivityTable tbody tr')).toHaveCount(8);
- await expect(panel.locator('.eventOverviewMetrics article').last().locator('strong')).toHaveText(/Unavailable|暂无法判断/);
- await expect(panel.locator('.eventPaymentVerdict')).toHaveCount(0);
+test('A business-data outage never turns into zero users or an invented success rate',async({page},testInfo)=>{
+ const panel=await mount(page,{fail:true}),zh=testInfo.project.metadata.language==='zh';
+ await expect(panel.getByRole('alert')).toContainText(zh?'不代表用户数或成功率为零':'not zero users');
+ for(const card of await panel.locator('.businessKpis article').all())await expect(card.locator('strong')).toHaveText('—');
+ await expect(panel.locator('.businessSceneTabs strong')).toHaveText(['—','—','—','—']);
+ await expect(panel.locator('.businessGrowth table')).toHaveCount(0);
+});
+
+test('Production-style preview does not generate example business figures',async({page},testInfo)=>{
+ const zh=testInfo.project.metadata.language==='zh';await page.goto('/admin-preview?section=events');
+ await expect(page.locator('.businessDataStatus')).toContainText(zh?'不填充示例经营数据':'no invented figures');
+ await expect(page.locator('.businessKpis strong')).toHaveText(['—','—','—','—','—','—']);
 });

@@ -5423,7 +5423,6 @@ function Dashboard({
                       <span>{device.background_guard_active ? tr("Recovery supervisor running", "恢复守护运行中") : device.background_enabled ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认") : tr("Automatic recovery off", "自动恢复关闭")}</span>
                       <span>{tr("Seen ", "最后在线：")}{timeAgo(device.last_seen)}</span>
                     </div>
-                    {device.status === "online" && runnerEnabled && runnerAdvertised && <DeviceBrowserSessions deviceId={device.id}/>}
                     {device.status === "offline" && <p className="deviceOfflineHint">{tr("Tasks wait until this computer reconnects. Remote Arc cannot power it on.", "任务会等待这台电脑重新连接，Remote Arc 无法远程开机。")}</p>}
                     <div id={"device-management-" + device.id} hidden={managedDeviceId !== device.id} className="deviceManagementPanel">
                       {managedDeviceId === device.id && <>
@@ -5941,6 +5940,7 @@ function Dashboard({
 
                         </section>
                         <section role="tabpanel" id={"device-panel-"+device.id+"-activity"} aria-labelledby={"device-tab-"+device.id+"-activity"} aria-label={tr("Activity and details", "活动与详情")} hidden={devicePanel !== "activity"}>
+                    {devicePanel === "activity" && device.status === "online" && runnerEnabled && runnerAdvertised && <DeviceBrowserSessions deviceId={device.id}/>}
                           <div className="deviceTechnicalIdentity"><span>{tr("Device ID", "设备 ID")} <code>{device.id}</code></span><span>{tr("Architecture", "架构")} <code>{device.arch || "—"}</code></span></div>
 
                     <div className="deviceExecutionLogPanel">

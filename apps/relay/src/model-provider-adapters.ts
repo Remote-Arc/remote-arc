@@ -6,6 +6,7 @@ export type ModelDefinition = {
   id:string;label?:string;provider:ModelProvider;model:string;maxOutputTokens:number;
   inputMicrosPerMillion:number;outputMicrosPerMillion:number;cacheWriteMicrosPerMillion?:number;cacheWrite5mMicrosPerMillion?:number;cachedInputMicrosPerMillion?:number;structuredOutput?:boolean;
   inputNeuronsPerMillion?:number;outputNeuronsPerMillion?:number;freeEligible?:boolean;
+  longContext?:{thresholdTokens:number;inputMicrosPerMillion:number;outputMicrosPerMillion:number;cachedInputMicrosPerMillion:number;cacheWriteMicrosPerMillion:number};
 };
 export type ModelRequest = {webSearch?:{location?:WebSearchLocation;maxCalls:number};decisionTool?:boolean;images?:{dataUrl:string}[];definition:ModelDefinition;system:string;user:string;schema:Record<string,unknown>;maxOutputTokens:number;signal:AbortSignal};
 export type ModelResult = {value:unknown;usage:ModelUsage;providerRequestId:string|null};

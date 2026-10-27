@@ -1,6 +1,8 @@
 # Product events and production payment diagnosis
 
-Admin → Events & journeys (`https://admin.remotearc.app/?section=events`) provides account-level timelines, domain and time filters, trace/journey/order lookup, failure groups and payment evidence.
+Admin → User experience (`https://admin.remotearc.app/?section=events`) presents business-level follow-up signals, payment/access checks and eight-row user activity pages. Raw event names and trace/order IDs are available in an on-demand detail drawer. See the [operator guide](./operator-experience.md) for workflows and metric boundaries.
+
+Current pairing polls explicitly returning `authorization_pending` are recorded as waiting, not failure. Historical opaque `REQUEST_FAILED` rows are preserved. Admin reads can search an exact email and return a separate directory for at most 100 accounts referenced by the displayed event batch or payment checks; emails are resolved from the existing account table and are never added to event storage.
 
 ## Recorded events
 

@@ -73,7 +73,8 @@ export async function observeProductRequest(request:Request,response:Response,en
   const error=response.status>=400?safeEventError(result?.error):undefined;
   const entityId=spec.name==='billing.checkout.created'?eventIdentity(result?.sessionId):null;
   if(entityId&&user)await env.DB.prepare('UPDATE arc_billing_checkouts SET journey_id=COALESCE(journey_id,?1),trace_id=COALESCE(trace_id,?2) WHERE session_id=?3 AND user_id=?4').bind(context.journeyId,context.traceId,entityId,user.id).run();
-  await recordProductEvent(env,{...spec,...context,source:'server',outcome:response.status>=400?'failed':(spec.name.endsWith('.request')||spec.domain==='auth'||spec.domain==='oauth')?'accepted':'succeeded',userId:user?.id,entityId,errorCode:error,httpStatus:response.status,durationMs:Date.now()-started});
+  const pairingWait=spec.name==='device.token.requested'&&response.status===400&&result?.error==='authorization_pending';
+  await recordProductEvent(env,{...spec,...context,source:'server',outcome:pairingWait?'waiting':response.status>=400?'failed':(spec.name.endsWith('.request')||spec.domain==='auth'||spec.domain==='oauth')?'accepted':'succeeded',userId:user?.id,entityId,errorCode:error,httpStatus:response.status,durationMs:Date.now()-started});
   if(spec.name==='billing.offers.loaded'&&response.ok&&result?.enabled===false)await recordProductEvent(env,{domain:'billing',name:'billing.checkout.unavailable',source:'server',outcome:'failed',userId:user?.id,...context,errorCode:'BILLING_NOT_CONFIGURED'});
  }catch{console.warn('product_request_observation_failed');}
 }

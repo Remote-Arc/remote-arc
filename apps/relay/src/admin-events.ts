@@ -4,6 +4,11 @@ import {arcEnabled,creditsEnabled} from './platform-launch.js';
 import type {BillingEnv} from './stripe-billing.js';
 const json=(v:unknown,status=200)=>Response.json(v,{status,headers:{'cache-control':'private, no-store'}});
 const domains=['billing','auth','oauth','devices','apps','tasks','automations','navigation','client'];
+async function eventAccounts(db:D1Database,ids:(string|null|undefined)[]){
+ const keys=[...new Set(ids.filter((id):id is string=>Boolean(id)))].slice(0,100);
+ if(!keys.length)return [];
+ return (await db.prepare(`SELECT id,email FROM users WHERE id IN (${keys.map((_,i)=>'?'+(i+1)).join(',')})`).bind(...keys).all()).results;
+}
 export async function handleAdminEvents(request:Request,env:BillingEnv&{ADMIN_ORIGIN?:string}){
  if(new URL(request.url).origin!==new URL(env.ADMIN_ORIGIN||'https://admin.remotearc.app').origin)return json({error:'admin_host_required'},404);
  if(request.method!=='GET')return json({error:'method_not_allowed'},405);
@@ -13,6 +18,8 @@ export async function handleAdminEvents(request:Request,env:BillingEnv&{ADMIN_OR
   if(url.pathname==='/api/admin/events/readiness')return json(await paymentReadiness(env));
   const hours=Number(url.searchParams.get('hours')||'24');
   const domain=url.searchParams.get('domain')||'',userId=url.searchParams.get('userId')||'',trace=url.searchParams.get('trace')||'',failures=url.searchParams.get('failures')==='1';
+  const email=(url.searchParams.get('email')||'').trim();
+  if(email&&(email.length>254||!/^\S+@\S+\.\S+$/.test(email)))return json({error:'invalid_filter'},400);
   if(![1,24,168,720].includes(hours)||domain&&!domains.includes(domain)||userId&&!/^[A-Za-z0-9_-]{1,100}$/.test(userId)||trace&&!/^[A-Za-z0-9_-]{1,180}$/.test(trace))return json({error:'invalid_filter'},400);
   const before=url.searchParams.get('before')||'';
   if(before&&!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z\|[a-f0-9-]{36}$/.test(before))return json({error:'invalid_cursor'},400);
@@ -20,17 +27,19 @@ export async function handleAdminEvents(request:Request,env:BillingEnv&{ADMIN_OR
   const args:unknown[]=[from];let where='occurred_at>=?1';
   function filter(sql:string,value:unknown){args.push(value);where+=' AND '+sql.replace('?', '?'+args.length);}
   if(domain)filter('domain=?',domain);if(userId)filter('user_id=?',userId);if(trace){args.push(trace);where+=' AND (trace_id=?'+args.length+' OR journey_id=?'+args.length+' OR entity_id=?'+args.length+')';}
+  if(email)filter('user_id IN (SELECT id FROM users WHERE lower(email)=lower(?))',email);
   if(failures)where+=" AND outcome='failed'";
   let pageWhere=where;const pageArgs=[...args];if(before){const [at,id]=before.split('|');pageArgs.push(at,id);pageWhere+=' AND (occurred_at<?'+(pageArgs.length-1)+' OR (occurred_at=?'+(pageArgs.length-1)+' AND id<?'+pageArgs.length+'))';}
   const [summary,byDomain,errors,events,funnel]=await Promise.all([
-   env.DB.prepare(`SELECT COUNT(*) total,COUNT(DISTINCT user_id) users,SUM(CASE WHEN outcome='failed' THEN 1 ELSE 0 END) failures,SUM(CASE WHEN source='browser' THEN 1 ELSE 0 END) browser FROM product_events WHERE ${where}`).bind(...args).first(),
+   env.DB.prepare(`SELECT COUNT(*) total,COUNT(DISTINCT user_id) users,COUNT(DISTINCT CASE WHEN outcome='failed' THEN user_id END) affectedUsers,SUM(CASE WHEN outcome='failed' THEN 1 ELSE 0 END) failures,SUM(CASE WHEN source='browser' THEN 1 ELSE 0 END) browser FROM product_events WHERE ${where}`).bind(...args).first(),
    env.DB.prepare(`SELECT domain,COUNT(*) total,SUM(CASE WHEN outcome='failed' THEN 1 ELSE 0 END) failures FROM product_events WHERE ${where} GROUP BY domain ORDER BY failures DESC,total DESC`).bind(...args).all(),
-   env.DB.prepare(`SELECT name,error_code,COUNT(*) total,MAX(occurred_at) last_seen FROM product_events WHERE ${where} AND outcome='failed' GROUP BY name,error_code ORDER BY total DESC LIMIT 12`).bind(...args).all(),
+   env.DB.prepare(`SELECT name,error_code,COUNT(*) total,COUNT(DISTINCT user_id) users,MAX(occurred_at) last_seen FROM product_events WHERE ${where} AND outcome='failed' GROUP BY name,error_code ORDER BY total DESC LIMIT 12`).bind(...args).all(),
    env.DB.prepare(`SELECT * FROM product_events WHERE ${pageWhere} ORDER BY occurred_at DESC,id DESC LIMIT 101`).bind(...pageArgs).all<Record<string,any>>(),
    env.DB.prepare(`SELECT name,COUNT(DISTINCT journey_id) journeys FROM product_events WHERE ${where} AND domain='billing' AND journey_id IS NOT NULL AND outcome!='failed' GROUP BY name`).bind(...args).all(),
   ]);
   const rows=events.results||[],hasMore=rows.length>100,items=rows.slice(0,100),last=items.at(-1);
-  return json({from,checkedAt:new Date().toISOString(),retentionDays:30,summary,byDomain:byDomain.results,errors:errors.results,events:items,funnel:funnel.results,nextCursor:hasMore&&last?last.occurred_at+'|'+last.id:null});
+  const accounts=await eventAccounts(env.DB,items.map(item=>item.user_id));
+  return json({from,checkedAt:new Date().toISOString(),retentionDays:30,summary,byDomain:byDomain.results,errors:errors.results,events:items,accounts,funnel:funnel.results,nextCursor:hasMore&&last?last.occurred_at+'|'+last.id:null});
  }catch{return json({error:'observability_unavailable'},503);}
 }
 export async function paymentReadiness(env:BillingEnv){
@@ -68,5 +77,6 @@ export async function paymentReadiness(env:BillingEnv){
   }catch{return{checkoutId:c.id,state:'unavailable'};}
  }));
  const providerPaidUnprocessed=reconciliation.filter(r=>r.state==='paid_unprocessed');
- return{checkedAt:at,checks,providerReachable,providerPaidUnprocessed,reconciliationChecked:reconciliation.length,reconciliationUnavailable:reconciliation.filter(r=>r.state==='unavailable').length,verifiedMemberships:verified,paidWithoutEntitlements:unfulfilled.results,unfinishedCheckouts:stuck.results,webhookFailures:webhookFailures.results,conclusion:checks.some(c=>c.state==='fail')?'blocked':(unfulfilled.results?.length||webhookFailures.results?.length||providerPaidUnprocessed.length)?'needs_attention':checks.some(c=>c.state==='unknown')||reconciliation.some(r=>r.state==='unavailable')?'unknown':'ready_unverified',limits:'Configuration and saved ledger evidence. No charge is made. An open checkout can mean abandonment. Browser completion is not proof of payment. Webhook secret correspondence and a new real-card purchase are not established by this probe.'};
+ const accounts=await eventAccounts(env.DB,[...(unfulfilled.results||[]).map((r:any)=>r.user_id),...(stuck.results||[]).map(r=>r.user_id)]);
+ return{checkedAt:at,checks,providerReachable,providerPaidUnprocessed,accounts,reconciliationChecked:reconciliation.length,reconciliationUnavailable:reconciliation.filter(r=>r.state==='unavailable').length,verifiedMemberships:verified,paidWithoutEntitlements:unfulfilled.results,unfinishedCheckouts:stuck.results,webhookFailures:webhookFailures.results,conclusion:checks.some(c=>c.state==='fail')?'blocked':(unfulfilled.results?.length||webhookFailures.results?.length||providerPaidUnprocessed.length)?'needs_attention':checks.some(c=>c.state==='unknown')||reconciliation.some(r=>r.state==='unavailable')?'unknown':'ready_unverified',limits:'Configuration and saved ledger evidence. No charge is made. An open checkout can mean abandonment. Browser completion is not proof of payment. Webhook secret correspondence and a new real-card purchase are not established by this probe.'};
 }

@@ -34,13 +34,17 @@ export async function ingestProductEvents(request:Request,env:Env){
  if(!input||Object.keys(input).some(k=>!['journeyId','events'].includes(k))||!uuid(input.journeyId)||!Array.isArray(input.events)||input.events.length<1||input.events.length>20)throw Error('invalid');
  const count=await env.DB.prepare("SELECT COUNT(*) n FROM product_events WHERE user_id=?1 AND source='browser' AND occurred_at>=?2").bind(user.id,new Date(Date.now()-60000).toISOString()).first<{n:number}>();
  if((count?.n||0)+input.events.length>120)return Response.json({error:'rate_limited'},{status:429});
+ const receivedAt=Date.now(),activityTimes:string[]=[];
  const events=input.events.map((e:any)=>{
-  if(!e||Object.keys(e).some(k=>!['id','name','entityId','route','errorCode','traceId'].includes(k))||!uuid(e.id)||!Object.hasOwn(browserEvents,e.name)||e.traceId!==undefined&&!uuid(e.traceId)||e.entityId!==undefined&&!eventIdentity(e.entityId)||e.route!==undefined&&!viewRoutes.includes(e.route))throw Error('invalid');
+  if(!e||Object.keys(e).some(k=>!['id','name','occurredAt','entityId','route','errorCode','traceId'].includes(k))||!uuid(e.id)||!Object.hasOwn(browserEvents,e.name)||e.traceId!==undefined&&!uuid(e.traceId)||e.entityId!==undefined&&!eventIdentity(e.entityId)||e.route!==undefined&&!viewRoutes.includes(e.route))throw Error('invalid');
+  let at=new Date(receivedAt).toISOString();
+  if(e.occurredAt!==undefined){const time=Date.parse(e.occurredAt);if(typeof e.occurredAt!=='string'||!Number.isFinite(time)||time<receivedAt-300000||time>receivedAt+5000)throw Error('invalid_time');at=new Date(Math.min(receivedAt,time)).toISOString();}
   const spec=browserEvents[e.name]!;
-  return eventStatement(env,{...spec,id:e.id,name:e.name,source:'browser',userId:user.id,journeyId:input.journeyId,traceId:e.traceId,entityId:e.entityId,route:e.route,errorCode:e.errorCode?'CLIENT_ERROR':undefined});
+  if(e.name==='page.viewed')activityTimes.push(at);
+  return eventStatement(env,{...spec,id:e.id,name:e.name,source:'browser',userId:user.id,journeyId:input.journeyId,traceId:e.traceId,entityId:e.entityId,route:e.route,errorCode:e.errorCode?'CLIENT_ERROR':undefined},at);
  });
  await env.DB.batch(events);
- if(input.events.some((event:any)=>event.name==='page.viewed'))await recordBusinessActivity(env,user.id);
+ await Promise.all([...new Map(activityTimes.map(at=>[at.slice(0,10),at])).values()].map(at=>recordBusinessActivity(env,user.id,at)));
  return new Response(null,{status:204,headers:{'cache-control':'no-store'}});
  }catch{return Response.json({error:'events_unavailable_or_invalid'},{status:400,headers:{'cache-control':'no-store'}});}
 }

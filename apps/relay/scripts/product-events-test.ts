@@ -118,5 +118,10 @@ try{
  await processStripeEvent(settlementEnv('telemetry_failure'),webhook(telemetryId),'telemetry-hash');
  assert.equal(webhookState(telemetryId)?.status,'processed','Telemetry failure cannot undo a committed webhook');
 }finally{globalThis.fetch=beforeSettlementFetch;}
+const capturedId=crypto.randomUUID(),capturedAt=new Date(Date.now()-2000).toISOString();
+assert.equal((await ingest([{id:capturedId,name:'billing.checkout.viewed',route:'/checkout',occurredAt:capturedAt}])).status,204);
+assert.equal(sql.prepare('SELECT occurred_at FROM product_events WHERE id=?').get(capturedId)?.occurred_at,capturedAt,'Batch delivery does not move purchase entry after order creation');
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed',occurredAt:'2000-01-01T00:00:00.000Z'}])).status,400,'Browser cannot backdate business cohorts');
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed',occurredAt:new Date(Date.now()+60000).toISOString()}])).status,400,'Browser cannot fabricate future activity');
 const unavailable={DB:{prepare(){throw Error('storage offline');}}} as any;assert.equal(await recordProductEvent(unavailable,{domain:'tasks',name:'task.failed',source:'server',outcome:'failed'}),false,'Telemetry storage failure never replaces the product result');
 sql.close();console.log('PASS: real SQLite migrations, intake auth/origin/allowlist/body bounds, forged payment prevention, ID deduplication, checkout correlation, source privacy, admin RBAC/filters/cursor pagination, retention, read-only live readiness, webhook commit/lease/retry ordering and fail-open writes');

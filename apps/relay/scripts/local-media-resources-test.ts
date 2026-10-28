@@ -14,7 +14,7 @@ const env={DB:{prepare(){return {bind(){return {first:async()=>active?{id:'activ
 const run={id:'active-run',user_id:'owner',step:1} as ArcRun;
 const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-media-resource-'));
 try{
- for(const id of ['manim-video','blender-mcp','video-creator','transcribe-subtitles','remotion-video','hyperframes-video','openfilm-video','map-creator']){
+ for(const id of ['media-intelligence','manim-video','blender-mcp','video-creator','transcribe-subtitles','remotion-video','hyperframes-video','openfilm-video','map-creator']){
   const summary=builtinResourceSummary(id),manifest=summary.resources!.find(file=>file.path==='scripts/local-media.mjs')!;
   assert(manifest.bytes>12000,'Real helper must exercise chunked reads/writes');
   let content='',offset:number|null=0,reads=0;
@@ -29,13 +29,23 @@ try{
   });
   assert(prepared.prepared);assert(writes>=3);
   assert.equal(await fs.readFile(path.join(prepared.directory,manifest.path),'utf8'),content);
+  if(id==='media-intelligence'){
+   assert.deepEqual(summary.resources!.map(file=>file.path),['SKILL.md','scripts/local-media.mjs','scripts/media-intelligence.mjs','scripts/media-intelligence.py']);
+   for(const resource of summary.resources!){
+    let bytes='',offset:number|null=0;
+    while(offset!==null){const chunk=readCommunityResource(id,resource.path,offset);bytes+=chunk.content;offset=chunk.nextOffset;}
+    assert.equal(Buffer.byteLength(bytes),resource.bytes);
+    assert.equal(createHash('sha256').update(bytes).digest('hex'),resource.sha256);
+    assert.equal(await fs.readFile(path.join(prepared.directory,resource.path),'utf8'),bytes);
+   }
+  }
  }
  assert.throws(()=>readCommunityResource('video-creator','../private'),/ARC_SKILL_RESOURCE_NOT_FOUND/);
  assert.throws(()=>readCommunityResource('video-creator','scripts/local-media.mjs',-1),/ARC_SKILL_RESOURCE_NOT_FOUND/);
  let calls=0;active=true;
  await assert.rejects(prepareCommunitySkill(env,run,{id:'video-creator',deviceId:'owned-local-device',workspace:root},async(_device,target,content,mode)=>{calls++;active=false;return{path:target,mode,bytes:Buffer.byteLength(content)};}),/ARC_SKILL_SOURCE_ENDED/);
  assert.equal(calls,1,'Revoked run must stop between resource writes');
- for(const query of ['Manim 数学动画','Blender 三维建模','HyperFrames GSAP animation','OpenFilm','制作地图','Whisper 转录']){
+ for(const query of ['分析这个发布会视频','Manim 数学动画','Blender 三维建模','HyperFrames GSAP animation','OpenFilm','制作地图','Whisper 转录']){
   const plan=routeSkillIntent(query);assert.equal(plan.steps[0]!.state,'needs_local_device');assert.equal(plan.runnable,false,'Read-only HTTP adapter cannot claim to render locally');
  }
  console.log('PASS: Arc/Connect use identical hashed media helper bytes, chunked local preparation, cancellation and local workflow routing');

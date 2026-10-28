@@ -1,6 +1,54 @@
 /** Task-oriented entry points for the packaged local skills. */
 export const SKILL_USE_CASES = [
   {
+    "slug": "video-analysis",
+    "category": {
+      "en": "MEDIA INTELLIGENCE",
+      "zh": "视频理解"
+    },
+    "title": {
+      "en": "Understand videos with source timestamps",
+      "zh": "分析视频，追溯原片证据"
+    },
+    "intro": {
+      "en": "Compare release videos, explain demonstrations and find technical details. Start with captions, then retrieve only the audio or frames needed.",
+      "zh": "对比发布会、解析演示、查找技术细节。先读字幕，需要时再提取音频或画面。"
+    },
+    "prompt": {
+      "en": "Analyze the public video links I provide on my connected computer. Read Media Intelligence, retrieve metadata and captions first, and compare concrete features and technical differences with links to the original timestamps. Download only bounded audio or video sections when evidence is missing; inspect sampled frames for visual claims. Deliver a cited Markdown report and verified evidence files, distinguish source claims from inference, and disclose unavailable or unverified portions.",
+      "zh": "在已连接电脑上分析我提供的公开视频链接。读取 Media Intelligence，先获取元数据和字幕，比较具体功能及技术差异，附原视频时间点。缺少证据时才下载有界音频或视频片段；涉及画面结论时查看实际抽帧。交付带引用的 Markdown 报告和校验后的证据文件，区分原文主张与分析推断，说明无法获取或未核实部分。"
+    },
+    "requires": {
+      "en": "Public individual video links, Python 3.11+, Node and an authorized writable workspace on a connected computer.",
+      "zh": "单条公开视频链接、Python 3.11+、Node，以及已连接电脑上获授权的可写工作目录。"
+    },
+    "boundary": {
+      "en": "Processing stays on the device. Captions can be wrong; still frames cannot establish continuous action. Protected or bot-blocked sources may be unavailable. No account cookies or paid APIs.",
+      "zh": "处理在设备完成。字幕可能有误，静帧无法证明连续动作；受保护或触发反爬的视频可能无法访问。不读取账号 Cookie，不调用付费 API。"
+    },
+    "steps": [
+      {
+        "en": "Retrieve captions and locate relevant original-video timestamps.",
+        "zh": "优先读取字幕，定位原视频相关时间点。"
+      },
+      {
+        "en": "Inspect missing audio/visual evidence and verify report citations.",
+        "zh": "按需补充音频或画面证据，核验报告引用。"
+      }
+    ],
+    "proof": {
+      "en": "A cited report, timed transcript or sampled frames, evidence hashes, covered intervals and stated limitations.",
+      "zh": "带引用的报告、时间轴文字或抽帧、证据哈希、覆盖区间及已知限制。"
+    },
+    "skillIds": [
+      "media-intelligence"
+    ],
+    "art": "research",
+    "format": "REPORT",
+    "tools": "read_skill · read_file · write_file · start_process",
+    "connectOnly": false
+  },
+  {
     "slug": "video-creation",
     "category": {
       "en": "VIDEO & MOTION",

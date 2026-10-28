@@ -27,9 +27,9 @@ test('catalog stays flat and illustrated, with searchable audio and a dedicated 
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
 });
 
-test('Manim and Blender cards open their localized detail pages in Arc and Connect',async({page},info)=>{
+test('Media Intelligence, Manim and Blender open localized detail pages in Arc and Connect',async({page},info)=>{
  const language=info.project.metadata.language==='zh'?'zh':'en',prefix=language==='zh'?'/zh':'';
- for(const mode of ['arc','connect'])for(const slug of ['mathematical-animation','blender-3d']){
+ for(const mode of ['arc','connect'])for(const slug of ['video-analysis','mathematical-animation','blender-3d']){
   const workflow=SKILL_USE_CASES.find(item=>item.slug===slug)!;
   await page.goto(prefix+'/use-cases?mode='+mode);
   await page.locator(`.useCaseCard[href="${prefix}/use-cases/${slug}?mode=${mode}"]`).click();

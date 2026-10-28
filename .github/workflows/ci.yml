@@ -5,6 +5,23 @@ on:
   pull_request:
 
 jobs:
+  media-intelligence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Caption parsing, budgets, failures and evidence validation
+        run: node --test scripts/media-intelligence-test.mjs
+      - name: Real yt-dlp, HTTP captions, bounded FFmpeg and cited report
+        run: node scripts/media-intelligence-integration.mjs --workspace "$RUNNER_TEMP/ra-media-intelligence"
+
   website:
     runs-on: ubuntu-latest
     timeout-minutes: 15

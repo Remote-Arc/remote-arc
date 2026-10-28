@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev:studio": "node scripts/studio-dev.mjs",
-    "test:studio": "node scripts/ensure-studio-storage-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/studio-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/studio-ai-test.ts",
+    "test:studio": "node scripts/ensure-studio-storage-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/studio-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/studio-ai-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/studio-arc-isolation-test.ts",
     "test:studio:browser": "node scripts/studio-e2e.mjs",
     "test:site": "pnpm --filter @remotearc/ui test:site && pnpm test:site:types && pnpm exec playwright test",
     "test:site:types": "pnpm --filter @remotearc/ui exec tsc -p ../../tests/site/tsconfig.json",

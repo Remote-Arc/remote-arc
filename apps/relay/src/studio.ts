@@ -593,7 +593,7 @@ export async function handleStudio(
           label = await seal(env, "创建项目", ctx);
         const result = await env.DB.batch([
           env.DB.prepare(
-            "INSERT INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at) SELECT ?1,?2,?3,?4,'auto',?5,?5 WHERE (SELECT COUNT(*) FROM studio_projects WHERE user_id=?2 AND deleted_at IS NULL)<100",
+            "INSERT INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at,workspace) SELECT ?1,?2,?3,?4,'auto',?5,?5,'studio' WHERE (SELECT COUNT(*) FROM studio_projects WHERE user_id=?2 AND deleted_at IS NULL)<100",
           ).bind(
             sessionId,
             user.id,

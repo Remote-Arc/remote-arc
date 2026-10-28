@@ -89,9 +89,12 @@ remain selectable. Generation errors retain the original project.
 - `apps/relay/src/studio-runtime.ts`: persisted Durable Object wakeups. A unique
   database claim owns model dispatch. A minute sweep recovers lost queue wakeups.
   Interrupted or unknown paid outcomes are not dispatched again automatically.
-- Migration `0067_studio.sql`: projects, immutable versions, private asset metadata
+- Migrations `0067_studio.sql` and `0068_studio_session_isolation.sql`: projects, immutable versions, private asset metadata
   and idempotent jobs. Model authorization uses an account-owned Arc session and
   the existing allowance, reservation and settlement ledger.
+  Studio authority sessions have a separate workspace discriminator. Chat APIs
+  cannot read, delete or send messages into them, and they do not consume the
+  ordinary web/channel chat limit.
 
 The model returns validated scene data. Skills provide creative guidance, with
 their content hashes recorded per job. Skills grant no filesystem or command

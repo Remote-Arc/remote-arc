@@ -41,7 +41,7 @@ const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cac
 export class ArcError extends Error {constructor(readonly code:string,readonly status=400){super(code);}}
 export const arcActive=(status:string)=>['queued','thinking','working'].includes(status);
 export async function arcSession(env:ArcEnv,userId:string,id:string){
- const session=await env.DB.prepare('SELECT * FROM arc_chat_sessions WHERE id=?1 AND user_id=?2 AND deleted_at IS NULL').bind(id,userId).first<ArcSession>();
+ const session=await env.DB.prepare("SELECT * FROM arc_chat_sessions WHERE id=?1 AND user_id=?2 AND deleted_at IS NULL AND workspace='chat'").bind(id,userId).first<ArcSession>();
  if(!session)throw new ArcError('CHAT_NOT_FOUND',404);return session;
 }
 export async function appendArcMessage(env:ArcEnv,run:ArcRun,role:'assistant'|'tool',suffix:string,body:ArcMessageBody){
@@ -138,12 +138,12 @@ export async function handleArcChat(request:Request,env:ArcEnv):Promise<Response
   }
   if(path==='/api/arc/sessions'){
    if(request.method==='GET'){
-     const rows=(await env.DB.prepare('SELECT * FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM arc_team_rooms WHERE session_id=arc_chat_sessions.id) ORDER BY updated_at DESC LIMIT 100').bind(user.id).all<ArcSession&{automation_id:string|null}>()).results;
+     const rows=(await env.DB.prepare("SELECT * FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL AND workspace='chat' AND NOT EXISTS(SELECT 1 FROM arc_team_rooms WHERE session_id=arc_chat_sessions.id) ORDER BY updated_at DESC LIMIT 100").bind(user.id).all<ArcSession&{automation_id:string|null}>()).results;
     return json({sessions:await Promise.all(rows.map(async row=>({id:row.id,title:await unseal<string>(env,row.title_ciphertext,arcContext(user.id,row.id)),modelId:row.model_id,updatedAt:row.updated_at,...(row.automation_id?{automationId:row.automation_id}:{})})))});
    }
    if(request.method==='POST'){
     const input=await body(request),id=crypto.randomUUID(),now=stamp(),model=typeof input.modelId==='string'?input.modelId:'auto';await arcModelAccess(env,user.id,organizationId,model);
-     const inserted=await env.DB.prepare(`INSERT INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,?6 WHERE (SELECT COUNT(*) FROM arc_chat_sessions WHERE user_id=?2 AND deleted_at IS NULL AND automation_id IS NULL)<100 RETURNING id`).bind(id,user.id,organizationId,await seal(env,'New chat',arcContext(user.id,id)),model,now).first();
+     const inserted=await env.DB.prepare(`INSERT INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,?6 WHERE (SELECT COUNT(*) FROM arc_chat_sessions WHERE user_id=?2 AND deleted_at IS NULL AND automation_id IS NULL AND workspace='chat')<100 RETURNING id`).bind(id,user.id,organizationId,await seal(env,'New chat',arcContext(user.id,id)),model,now).first();
     if(!inserted)throw new ArcError('CHAT_LIMIT_REACHED',429);return json({id},201);
    }
   }
@@ -174,7 +174,7 @@ export async function createArcConversation(env:ArcEnv,userId:string,id:string=c
  await arcModelAccess(env,userId,'personal:'+userId,'auto');
  const time=stamp();
  await env.DB.prepare(`INSERT OR IGNORE INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at)
- SELECT ?1,?2,?3,?4,'auto',?5,?5 WHERE (SELECT COUNT(*) FROM arc_chat_sessions WHERE user_id=?2 AND deleted_at IS NULL AND automation_id IS NULL)<100`)
+ SELECT ?1,?2,?3,?4,'auto',?5,?5 WHERE (SELECT COUNT(*) FROM arc_chat_sessions WHERE user_id=?2 AND deleted_at IS NULL AND automation_id IS NULL AND workspace='chat')<100`)
  .bind(id,userId,'personal:'+userId,await seal(env,title.slice(0,64),arcContext(userId,id)),time).run();
  return arcSession(env,userId,id);
 }

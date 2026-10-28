@@ -203,7 +203,13 @@ type ManagedProcess = {
 };
 
 const managedProcesses = new Map<string, ManagedProcess>();
-const MAX_MANAGED_PROCESSES = 32;
+const MAX_FINISHED_PROCESSES = 128;
+function activeProcessLimit() {
+ const raw=process.env.REMOTEARC_MAX_ACTIVE_PROCESSES||"";
+ if(!/^[0-9]+$/.test(raw))return 64;
+ const value=Number(raw);
+ return Number.isInteger(value)&&value>=1&&value<=256?value:64;
+}
 const FINISHED_PROCESS_RETENTION_MS = 30 * 60 * 1000;
 
 function cleanupManagedProcesses() {
@@ -217,12 +223,10 @@ function cleanupManagedProcesses() {
     }
   }
 
-  if (managedProcesses.size <= MAX_MANAGED_PROCESSES) return;
   const finished = [...managedProcesses.values()]
     .filter((item) => item.endedAt !== null)
     .sort((a, b) => (a.endedAt || 0) - (b.endedAt || 0));
-  for (const item of finished) {
-    if (managedProcesses.size <= MAX_MANAGED_PROCESSES) break;
+  for (const item of finished.slice(0,Math.max(0,finished.length-MAX_FINISHED_PROCESSES))) {
     managedProcesses.delete(item.id);
   }
 }
@@ -230,10 +234,9 @@ function cleanupManagedProcesses() {
 export async function startBackgroundProcess(command: string, cwd?: string, maxDurationSeconds?: number) {
   if (maxDurationSeconds !== undefined && (!Number.isInteger(maxDurationSeconds) || maxDurationSeconds < 1 || maxDurationSeconds > 7 * 86400)) throw new Error("Invalid managed process duration.");
   cleanupManagedProcesses();
-  if (managedProcesses.size >= MAX_MANAGED_PROCESSES) {
-    throw new Error(
-      "Remote Arc already has the maximum number of managed background processes on this device.",
-    );
+  const active=[...managedProcesses.values()].filter(item=>item.endedAt===null).length,limit=activeProcessLimit();
+  if (active>=limit) {
+    throw new Error("Remote Arc already has the maximum number of managed background processes on this device. Running: "+active+"; limit: "+limit+". Finished tasks do not count. Set REMOTEARC_MAX_ACTIVE_PROCESSES to 1-256 to change the limit.");
   }
 
   const child = spawn(command, {
@@ -274,12 +277,14 @@ export async function startBackgroundProcess(command: string, cwd?: string, maxD
     clearTimeout(deadlineTimer);
     item.stderr = appendCapped(item.stderr, "\n" + error.message);
     item.endedAt = Date.now();
+    cleanupManagedProcesses();
   });
   child.once("close", (code, signal) => {
     clearTimeout(deadlineTimer);
     item.exitCode = code;
     item.signal = signal;
     item.endedAt = Date.now();
+    cleanupManagedProcesses();
   });
 
   return {

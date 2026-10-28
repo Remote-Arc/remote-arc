@@ -168,7 +168,7 @@ try {
   }, [`ws://127.0.0.1:${relay.address().port}`]);
   for (let i = 0; i < 100 && !hello; i++) await new Promise((r) => setTimeout(r, 100));
   assert.ok(hello, "extension did not connect to the Relay");
-  assert.equal(hello.device.agentVersion, "browser-0.4.0");
+  assert.equal(hello.device.agentVersion, "browser-0.4.1");
   assert.ok(hello.tools.includes("browser_open_tab") && hello.tools.includes("browser_act"));
   assert.ok(hello.capabilities.includes("browser_act_v1"));
 

@@ -2,9 +2,18 @@
 
 All notable changes to Remote Arc are documented here.
 
-## 0.6.5 - Unreleased
+## 0.6.5 - 2026-10-28
 
-### Candidate: device tools, browser handoff and local media
+### Dashboard browser authentication and reliable process admission
+
+- Add per-device, exact-website Dashboard approval and revocation for OTP sign-in/registration and supported CAPTCHA controls. Snapshots report effective authorization; missing approval and outdated clients return actionable errors.
+- Make legacy shared-tab fill and current action tools use the same OTP policy. Approved Runner verification providers expose visible controls and optional cropped challenge images; response tokens stay private, unsupported challenges retain human handoff and final submissions remain separately authorized.
+- Record authentication permission changes without recording code values, and remove authentication codes from resumable URLs.
+- Raise the default running-command limit from 32 to 64, configurable from 1 to 256 with REMOTEARC_MAX_ACTIVE_PROCESSES. Completed jobs no longer occupy running slots; retain at most 128 finished records for up to 30 minutes in both Go and TypeScript runtimes.
+- Publish Remote Arc Browser 0.4.1 with Dashboard OTP enforcement and corrected legacy tool behavior.
+- Promote the qualified Agent changes to the stable 0.6.5 npm/native release.
+
+### Device tools, browser handoff and local media
 
 - Add read-only Codex and Claude Code session/worktree discovery, filtered process details, credential redaction and bounded Git metadata. Last activity is metadata, not proof that another agent is still running.
 - Expose scoped Skill search/read and a generated bilingual directory of 43 Remote MCP tools. Skills are instructions; executors, downloads and account permissions remain separate requirements.
@@ -12,7 +21,7 @@ All notable changes to Remote Arc are documented here.
 - Provide an owner-only, view-only browser stream while the Dashboard is watching, with bounded memory-only frames, heartbeat expiry and cancellable viewport capture. Remote input is not included.
 - Let managed process status wait locally for output or completion, up to 40 seconds. Preserve existing tools and policy grants during upgrades.
 - Add OpenFilm/HyperFrames video, map and Whisper guidance with size-aware download permission rules. Windows synthetic video/map/subtitle outputs were verified; Qwen/ACE, other OS media paths and production host discovery remain pending in #350.
-- Publish 0.6.5-rc.1 as a prerelease on the npm rc channel for tool-capability qualification. Keep stable downloads, npm latest and published Homebrew formulas on 0.6.3 until a separate stable release.
+- The earlier 0.6.5-rc.1 prerelease qualified the tool-capability changes; this release updates stable downloads, npm latest and Homebrew formulas to 0.6.5.
 
 
 ### Video uploads and clearer setup on Windows and WSL

@@ -148,6 +148,22 @@
       "optIn": false
     },
     {
+      "id": "safe-cleanup",
+      "name": "Safe Cleanup",
+      "priority": "P0",
+      "category": "productivity",
+      "description": "Safely reclaim disk space: inspect exact targets, guard Windows/CMD/PowerShell path quoting, and permanently delete verified disposable data without same-volume quarantine.",
+      "engine": "Remote Arc authorized local file/process tools; OS-native cleanup",
+      "requires": [],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://remotearc.app",
+      "license": "RA authored skill instructions",
+      "optIn": false
+    },
+    {
       "id": "scheduled-routines",
       "name": "Scheduled Routines",
       "priority": "P0",

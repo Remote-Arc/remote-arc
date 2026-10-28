@@ -282,6 +282,25 @@
       "upstream": "https://github.com/ahujasid/mcp-for-blender",
       "license": "RA-authored workflow; MCP integration MIT; Blender GPL",
       "optIn": false
+    },
+    {
+      "id": "media-intelligence",
+      "name": "Media Intelligence",
+      "priority": "P0",
+      "category": "media",
+      "description": "Analyze public videos with yt-dlp: captions first, bounded audio/video and sampled frames only when needed, with original timestamps and source-backed reports.",
+      "engine": "yt-dlp 2026.10.26 + FFmpeg; optional local Whisper",
+      "requires": [
+        "node",
+        "python3 >=3.11"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/yt-dlp/yt-dlp",
+      "license": "RA-authored workflow; yt-dlp Unlicense and bundled dependency terms apply",
+      "optIn": false
     }
   ]
 }

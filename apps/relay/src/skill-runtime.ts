@@ -4,6 +4,7 @@ type Skill=typeof BUILTIN_SKILLS[number];
 type ExecutionState='ready_readonly'|'needs_local_device'|'needs_approval_or_engine'|'guidance_only';
 
 const keywords:Record<string,Array<[RegExp,number]>>={
+  'media-intelligence': [[/yt-dlp|media intelligence|视频分析|分析.{0,12}(视频|发布会)|视频.{0,8}(总结|技术差异)|原视频时间点|字幕优先|(?:analy[sz]e|summari[sz]e|compare).{0,24}(?:videos?|youtube|bilibili)|(?:youtube|bilibili).{0,24}(?:analy[sz]|summar|compare)/i,16]],
   'manim-video': [[/\bmanim\b|数学动画|几何动画|公式推导动画|算法动画/i,12]],
   'blender-mcp': [[/\bblender\b|三维建模|3d model|三维产品|材质灯光/i,12]],
   'remotion-video': [[/remotion|three\.?js|3d camera|三维运镜|粒子光影|音乐卡点/i,8]],
@@ -26,7 +27,7 @@ const execution:Readonly<Record<string,ExecutionState>>={
   'desktop-operator':'needs_approval_or_engine',
   'image-studio':'needs_local_device','video-creator':'needs_local_device',
   'remotion-video':'needs_local_device','hyperframes-video':'needs_local_device','openfilm-video':'needs_local_device','map-creator':'needs_local_device',
-  'manim-video':'needs_local_device','blender-mcp':'needs_local_device',
+  'media-intelligence':'needs_local_device','manim-video':'needs_local_device','blender-mcp':'needs_local_device',
   'ui-inspector':'needs_approval_or_engine','transcribe-subtitles':'needs_local_device',
   'scheduled-routines':'guidance_only',
 };
@@ -53,7 +54,7 @@ export function routeSkillIntent(objective:string,requestedId?:string):SkillPlan
     reason:execution[skill.id]==='ready_readonly'
       ?'Existing approved browser snapshot tool; read-only execution only'
       :execution[skill.id]==='needs_local_device'
-        ?skill.id==='image-studio'?'Use Canvas Design or Algorithmic Art on an authorized local device for code graphics; no image model is required. Inspect the exported image and retain source/seed. Photographic synthesis needs a configured local ComfyUI backend; ask before weight downloads.':'Use the packaged helper on an authorized user device: prepare ordinary media dependencies automatically, execute and verify the deliverable. Ask before Qwen TTS or ACE-Step installation.'
+        ?skill.id==='media-intelligence'?'Use the packaged yt-dlp helper on an authorized device: retrieve captions first, download bounded media or sample frames only when evidence requires it, then verify citations at original timestamps. Retrieval does not imply semantic understanding.':skill.id==='image-studio'?'Use Canvas Design or Algorithmic Art on an authorized local device for code graphics; no image model is required. Inspect the exported image and retain source/seed. Photographic synthesis needs a configured local ComfyUI backend; ask before weight downloads.':'Use the packaged helper on an authorized user device: prepare ordinary media dependencies automatically, execute and verify the deliverable. Ask before Qwen TTS or ACE-Step installation.'
       :execution[skill.id]==='guidance_only'
         ?'This workflow is configured through existing approved automation tools'
         :'Requires separately approved execution engine, permissions and budget; not installed by Cloud Skills',

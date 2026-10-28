@@ -14,6 +14,7 @@ export type ImportedSkillSummary={id:string;name:string;description:string};
 // Chinese requests rarely share tokens with English descriptions, so these
 // cues are what make "帮我剪个视频" find the video skill.
 const CUES:Array<[RegExp,string[],number?]>=[
+ [/yt-dlp|media intelligence|视频分析|分析.{0,12}(视频|发布会)|视频.{0,8}(总结|技术差异)|原视频时间点|字幕优先|(?:analy[sz]e|summari[sz]e|compare).{0,24}(?:videos?|youtube|bilibili)|(?:youtube|bilibili).{0,24}(?:analy[sz]|summar|compare)/i,['media-intelligence'],16],
  [/\bmanim\b|数学动画|几何动画|公式推导动画|算法动画/i,['manim-video'],12],
  [/\bblender\b|三维建模|3d model|产品三维|三维产品|材质灯光/i,['blender-mcp'],12],
  [/remotion|three\.?js|3d camera|三维运镜|三维视频|粒子光影|音乐卡点/i,['remotion-video'],12],

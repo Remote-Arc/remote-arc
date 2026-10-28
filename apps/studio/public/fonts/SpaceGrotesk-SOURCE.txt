@@ -1,0 +1,6 @@
+Space Grotesk, unmodified variable WOFF2.
+Author: Florian Karsten. License: SIL Open Font License 1.1 (see SpaceGrotesk-LICENSE.txt).
+Source: https://github.com/floriankarsten/space-grotesk/tree/master/fonts/woff2
+Reviewed Git blob: 0c4d65824309f9107f096fb4421e14782cb3ec81
+Retrieved: 2026-10-19
+Used only for the Remote Arc wordmark. Interface typography remains Inter.

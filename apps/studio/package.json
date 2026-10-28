@@ -1,0 +1,41 @@
+{
+  "name": "@rearc/studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./core": "./core/document.ts",
+    "./ports": "./server/ports.ts",
+    "./server": "./server/service.ts",
+    "./providers": "./server/providers.ts",
+    "./ui": "./src/app.tsx",
+    "./runtime": "./server/runtime.ts",
+    "./worker": "./server/worker.ts"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json",
+    "test:independent": "node scripts/check-boundaries.mjs && tsx scripts/independent-test.ts",
+    "dev:ui": "vite --host 127.0.0.1"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "mediabunny": "1.62.1",
+    "fflate": "0.8.3"
+  },
+  "devDependencies": {
+    "vite": "7.3.6",
+    "@vitejs/plugin-react": "5.2.0",
+    "typescript": "6.0.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@cloudflare/workers-types": "5.20261013.1",
+    "tsx": "4.23.15",
+    "@types/node": "24.13.6"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

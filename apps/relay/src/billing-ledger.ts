@@ -33,7 +33,8 @@ const sameEntry = `b.scope_type=json_extract(e.value,'$.scope_type') AND b.scope
  AND b.period_key=json_extract(e.value,'$.period_key')`;
 const userTaskAuth = `EXISTS(SELECT 1 FROM organization_members m WHERE m.organization_id=?3 AND m.user_id=?2 AND m.status='active')
  AND (EXISTS(SELECT 1 FROM automations a WHERE a.id=?4 AND a.user_id=?2)
- OR EXISTS(SELECT 1 FROM arc_chat_sessions c WHERE c.id=?4 AND c.user_id=?2 AND c.organization_id=?3 AND c.deleted_at IS NULL))`;
+ OR EXISTS(SELECT 1 FROM arc_chat_sessions c WHERE c.id=?4 AND c.user_id=?2 AND c.organization_id=?3 AND c.deleted_at IS NULL)
+ OR EXISTS(SELECT 1 FROM billing_workloads w WHERE w.id=?4 AND w.user_id=?2 AND w.organization_id=?3 AND w.status='active'))`;
 function normalize(input: BillingReservationInput, at: string) {
   for (const id of [input.userId,input.organizationId,input.taskId,input.runId,input.operationId,input.modelId,input.authorizationId]) textId(id);
   if (!["connect","arc_hosted"].includes(input.lane) || !["workers_ai","openai","anthropic","openrouter"].includes(input.provider)) throw new BillingDeniedError("BILLING_INVALID_CONTEXT");
@@ -208,7 +209,7 @@ export async function getBillingUsage(db:D1Database,context:Pick<BillingContext,
   if(!membership)throw new BillingDeniedError("BILLING_MEMBERSHIP_REQUIRED");
   return (await db.prepare(`SELECT scope_type,scope_id,lane,metric,period_key,limit_units,spent_units,reserved_units FROM billing_budgets
     WHERE period_key=?3 AND ((scope_type='user' AND scope_id=?1) OR (scope_type='task' AND scope_id IN
-    (SELECT id FROM automations WHERE user_id=?1 UNION SELECT id FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL)) OR (scope_type='organization' AND scope_id=?2 AND EXISTS
+    (SELECT id FROM automations WHERE user_id=?1 UNION SELECT id FROM arc_chat_sessions WHERE user_id=?1 AND deleted_at IS NULL UNION SELECT id FROM billing_workloads WHERE user_id=?1 AND organization_id=?2 AND status='active')) OR (scope_type='organization' AND scope_id=?2 AND EXISTS
     (SELECT 1 FROM organization_members WHERE user_id=?1 AND organization_id=?2 AND status='active' AND role IN ('owner','admin'))))`)
     .bind(context.userId,context.organizationId,period).all()).results;
 }

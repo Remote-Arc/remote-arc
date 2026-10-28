@@ -12,13 +12,13 @@ type I18n = {
 
 const I18nContext = createContext<I18n | null>(null);
 const LOCALE_KEY = "remotearc-locale-v2";
-const dashboardPaths = new Set([...Object.values(DASHBOARD_PATHS), ...Object.keys(LEGACY_DASHBOARD_PATHS),"/admin-preview","/checkout","/device"]);
+const dashboardPaths = new Set([...Object.values(DASHBOARD_PATHS), ...Object.keys(LEGACY_DASHBOARD_PATHS),"/admin-preview","/checkout","/device","/studio"]);
 
 function urlLocale(): Locale | null {
   // PR previews host the website and workspace together. Website URL prefixes
   // choose its language; workspace routes retain the user's saved preference.
   const path = location.pathname.replace(/\/+$/, "") || "/";
-  if (isWebsite() && !dashboardPaths.has(path) && !path.startsWith("/dashboard/browser/")) return path === "/zh" || path.startsWith("/zh/") ? "zh" : "en";
+  if (isWebsite() && !dashboardPaths.has(path) && !path.startsWith("/dashboard/browser/") && !/^\/studio(?:\/|$)/.test(path)) return path === "/zh" || path.startsWith("/zh/") ? "zh" : "en";
   const requested = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
   if (requested === "zh" || requested === "zh-cn" || requested === "zh-hans") return "zh";
   if (requested === "en") return "en";
@@ -47,7 +47,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
     // Marketing documents already carry localized SEO metadata from the Worker.
     // Do not replace it after Google renders the page with JavaScript enabled.
-    if (!isWebsite() && window.location.pathname === "/") {
+    if (!isWebsite() && window.location.pathname === "/" && location.hostname!=='studio.remotearc.app') {
       document.title = locale === "zh" ? "Remote Arc — 让 AI 安全连接你的电脑" : "Remote Arc";
       document.querySelector('meta[name="description"]')?.setAttribute(
         "content",

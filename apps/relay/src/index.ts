@@ -2,6 +2,8 @@ import {ingestProductEvents,observeProductRequest,requestEventRoute} from './pro
 import {recordDeviceOnline,purgeBusinessMetrics} from './business-tracking.js';
 import {eventContext,purgeProductEvents,recordProductEvent} from './product-events.js';
 import {serveDemoMedia} from './demo-media.js';
+import {handleStudio, resumeStudioJobs, type StudioEnv} from './studio.js';
+export {StudioRuntime} from './studio-runtime.js';
 import { handleRunnerRequest } from "./runner-attention.js";
 import { diagnosticError } from "./diagnostics.js";
 import {handleFollowupUnsubscribe} from './user-followups.js';
@@ -122,7 +124,7 @@ import {
 
 export { DeviceRegistry };
 
-type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
+type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & StudioEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
@@ -539,6 +541,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
         : Response.json({ authenticated: false }, { status: 401 });
     }
 
+    if (/^\/api\/studio(?:\/|$)/.test(url.pathname)) return handleStudio(request,env);
     if (/^\/api\/arc\/rooms(?:\/|$)/.test(url.pathname)) return handleArcRooms(request,env);
     if (/^\/api\/arc\/(employees|teams|team-events|employee-drafts)(?:\/|$)/.test(url.pathname)) return handleArcTeams(request,env);
     if (url.pathname.startsWith("/api/arc/")) return handleArcChat(request, env);
@@ -987,9 +990,9 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       assetHeaders.set("authorization", "Bearer remote-arc-html-shell");
       assetHeaders.set("cache-control", "no-store");
 
-      const assetResponse = await env.ASSETS.fetch(
-        new Request(request, { method: request.method === "HEAD" ? "GET" : request.method, headers: assetHeaders }),
-      );
+      const studioDocument = url.origin === new URL(env.STUDIO_ORIGIN || "https://studio.remotearc.app").origin || /^\/studio(?:\/|$)/.test(url.pathname);
+      const assetRequest = studioDocument ? new Request(new URL("/studio/index.html", url), {method: "GET", headers: assetHeaders}) : new Request(request, { method: request.method === "HEAD" ? "GET" : request.method, headers: assetHeaders });
+      const assetResponse = await env.ASSETS.fetch(assetRequest);
       const headers = new Headers(assetResponse.headers);
       headers.set("cache-control", "no-store");
       headers.set("cloudflare-cdn-cache-control", "no-store");
@@ -1109,6 +1112,7 @@ export default {
     }
     if(controller.cron==='* * * * *')ctx.waitUntil(runFollowupBatches(env));
     if(controller.cron==='* * * * *')ctx.waitUntil(runSlackJobs(env));
+    if(controller.cron==='* * * * *')ctx.waitUntil(resumeStudioJobs(env));
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(purgeProductEvents(env));
       ctx.waitUntil(purgeBusinessMetrics(env));

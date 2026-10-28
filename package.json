@@ -8,6 +8,9 @@
     "node": ">=24"
   },
   "scripts": {
+    "dev:studio": "node scripts/studio-dev.mjs",
+    "test:studio": "pnpm --filter @rearc/studio test:independent && node scripts/ensure-studio-storage-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/studio-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/studio-ai-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/studio-arc-isolation-test.ts && pnpm --filter @remotearc/relay exec tsx scripts/studio-migration-test.ts",
+    "test:studio:browser": "node scripts/studio-e2e.mjs",
     "test:site": "pnpm --filter @remotearc/ui test:site && pnpm test:site:types && pnpm exec playwright test",
     "test:site:types": "pnpm --filter @remotearc/ui exec tsc -p ../../tests/site/tsconfig.json",
     "test:site:browser": "pnpm exec playwright test",
@@ -23,7 +26,7 @@
     "test:agent-log": "pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/agent-log-test.ts",
     "test:goals": "node apps/relay/scripts/goal-continuation-test.mjs && node apps/relay/scripts/planned-goal-test.mjs && pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/goal-workspace-test.ts",
     "ci": "pnpm release:check && pnpm test:installer && pnpm test:skills && pnpm test:release-notify && pnpm test:fleet && pnpm test:deploy-policy && pnpm test:organization && pnpm typecheck && pnpm --filter @remotearc/ui test:workspaces && pnpm --filter @remotearc/ui test:security && pnpm --filter @remotearc/ui test:onboarding && pnpm --filter @remotearc/ui test:arc-experience && pnpm --filter @remotearc/ui test:onboarding-readability && pnpm --filter @remotearc/ui test:device-removal && pnpm --filter @remotearc/ui test:device-execution-log && pnpm --filter @remotearc/ui test:background-recovery && pnpm test:agent-log && pnpm test && pnpm test:goals && pnpm test:runtime-surface && pnpm test:seo && pnpm --filter @remotearc/relay test:security && pnpm test:saas",
-    "build:ui": "pnpm package:browser && pnpm --filter @remotearc/ui build",
+    "build:ui": "pnpm package:browser && pnpm --filter @remotearc/ui build && node scripts/build-studio.mjs",
     "deploy:relay": "node scripts/deploy-relay.mjs",
     "test:installer": "node scripts/native-installer-test.mjs",
     "test:deploy-policy": "node scripts/deploy-relay-policy-test.mjs && node scripts/deploy-cloudflare-workflow-test.mjs && node scripts/d1-promotion-preflight-test.mjs && node scripts/release-ops-test.mjs && node scripts/wait-production-ci-test.mjs && node scripts/production-smoke-test.mjs",
@@ -62,7 +65,8 @@
     "test:saas": "node tools/saas/economics-test.mjs && node tools/saas/cli.mjs --check",
     "arc:setup": "node scripts/arc-platform-setup.mjs",
     "billing:setup": "pnpm --filter @remotearc/relay exec tsx ../../scripts/stripe-billing-setup.ts",
-    "saas:apps": "node tools/saas/apps.mjs"
+    "saas:apps": "node tools/saas/apps.mjs",
+    "build:studio": "pnpm --filter @rearc/studio build"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

@@ -1,0 +1,90 @@
+/* Remote Arc brand values are retained; no Agent CSS or component import is needed. */
+@font-face {
+  font-family: Inter;
+  src: url("/fonts/InterVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Arc Wordmark";
+  src: url("/fonts/SpaceGroteskVariable.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-product:
+    Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #111114;
+  color: #eeeef1;
+  font-family: var(--font-product);
+}
+body {
+  margin: 0;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a,
+input,
+select,
+textarea {
+  outline-offset: 3px;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+}
+a {
+  color: inherit;
+}
+html[data-theme="light"] {
+  background: #fff;
+  color: #202024;
+}
+.workspaceSurface {
+  --dash-text: #202024;
+  --dash-muted: #73737c;
+  --dash-line: #e7e7eb;
+  --dash-surface: #fff;
+  --dash-subtle: #f5f5f7;
+  --dash-accent: #242428;
+  --dash-accent-hover: #45454b;
+  --dash-accent-soft: #eeeef1;
+  --dash-sidebar: #f8f8fa;
+  --dash-canvas: #fff;
+  --dash-inverse: #fff;
+  font-family: var(--font-product);
+  font-size: 16px;
+  line-height: 1.5;
+  color-scheme: light;
+}
+:root[data-theme="dark"] .workspaceSurface {
+  --dash-text: #eeeef1;
+  --dash-muted: #9999a4;
+  --dash-line: #2a2a30;
+  --dash-surface: #19191d;
+  --dash-subtle: #222227;
+  --dash-accent: #eeeef1;
+  --dash-accent-hover: #d6d6dc;
+  --dash-accent-soft: #2b2b31;
+  --dash-sidebar: #151518;
+  --dash-canvas: #111114;
+  --dash-inverse: #19191d;
+  color-scheme: dark;
+}
+.studio-connection-error {
+  max-width: 600px;
+  margin: 20vh auto;
+  padding: 24px;
+}

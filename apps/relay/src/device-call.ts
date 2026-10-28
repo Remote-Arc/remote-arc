@@ -1,3 +1,4 @@
+import {browserAuthForDevice} from "./browser-auth.js";
 import {recordProductEvent} from './product-events.js';
 import type { OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
@@ -251,6 +252,8 @@ export async function callDevice(
     }
   }
 
+  const browserAuth = (isBrowserRunnerTool(tool) || /^browser_/.test(tool))
+    ? await browserAuthForDevice(env, identity.userId, deviceId) : undefined;
   const registryRequest = () =>
     new Request("https://registry/call", {
       method: "POST",
@@ -264,6 +267,7 @@ export async function callDevice(
         tool,
         arguments: effectiveArgs,
         policy: {
+          ...(browserAuth ? {browserAuth} : {}),
           ...(taskWorkspaceRoot ? { taskWorkspaceRoot } : {}),
           workspaceRoots: effectiveWorkspaceRoots,
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),

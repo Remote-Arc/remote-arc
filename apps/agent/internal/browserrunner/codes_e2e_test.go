@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 )
 
 // codeSite asks for an emailed one-time code after the email step, as the
@@ -42,6 +43,7 @@ func codeSite(t *testing.T) (string, func() string) {
 func TestE2EOneTimeCodeIsEnteredAndNeverRecorded(t *testing.T) {
 	h, _, _, _ := newHarness(t)
 	base, received := codeSite(t)
+	h.policy.BrowserAuth = protocol.BrowserAuth{OTP: true, Origins: []string{base}}
 	h.call("browser_runner_start", map[string]any{"task_id": "otp", "allowed_origins": []any{base}, "start_url": base + "/login/code"})
 	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "otp"})
 	if !strings.Contains(fmt.Sprint(snap["attention"]), "verification_code") || strings.Contains(fmt.Sprint(snap["blockers"]), "verification_code") {
@@ -79,6 +81,7 @@ func TestE2EOneTimeCodesCanBeTurnedOff(t *testing.T) {
 		t.Fatal(e, home)
 	}
 	base, _ := codeSite(t)
+	h.policy.BrowserAuth = protocol.BrowserAuth{OTP: true, Origins: []string{base}}
 	h.call("browser_runner_start", map[string]any{"task_id": "otp-off", "allowed_origins": []any{base}, "start_url": base + "/login/code"})
 	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "otp-off"})
 	if !strings.Contains(fmt.Sprint(snap["blockers"]), "verification_code") {

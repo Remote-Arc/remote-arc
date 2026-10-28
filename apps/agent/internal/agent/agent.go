@@ -147,7 +147,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 	if !a.WakeOnly {
 		capabilities = append(capabilities, "native_core_v1", "undo_history_v1")
 		if a.browserRunnerReady() {
-			capabilities = append(capabilities, "browser_runner_v1", "runner_view_v1")
+			capabilities = append(capabilities, "browser_runner_v1", "runner_view_v1", "browser_auth_policy_v1")
 			if a.Browser.VideoAvailable() {
 				capabilities = append(capabilities, "runner_video_v1")
 			}

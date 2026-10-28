@@ -186,7 +186,7 @@ async function connectSocket() {
         agentVersion: "browser-" + VERSION,
       },
       tools: TOOLS,
-      capabilities: ["browser_tab_grant_v2", "browser_multi_tab_v1", "browser_interact_v1", "browser_site_grants_v1", "browser_act_v1"],
+      capabilities: ["browser_tab_grant_v2", "browser_multi_tab_v1", "browser_interact_v1", "browser_site_grants_v1", "browser_act_v1", "browser_auth_policy_v1"],
     }));
 
     clearInterval(heartbeat);
@@ -207,7 +207,7 @@ async function connectSocket() {
     if (message?.type !== "call" || !message.id) return;
 
     try {
-      const result = await executeTool(message.tool, message.arguments || {});
+      const result = await executeTool(message.tool, message.arguments || {}, message.policy || {});
       socket.send(JSON.stringify({ type: "result", id: message.id, result }));
     } catch (error) {
       socket.send(JSON.stringify({
@@ -566,7 +566,9 @@ async function act(args) {
       result = { ok: true, action, url: state?.url };
     } else {
       await ensureInjected(tabId);
-      const contentArgs = { ...args, allow_codes: await allowCodes() };
+      const auth = args._auth || {};
+      const contentArgs = { ...args, allow_codes: auth.otp === true && Array.isArray(auth.origins) && auth.origins.includes(originOf(tab.url || "")) && await allowCodes() };
+      delete contentArgs._auth;
       if (action === "click" || (action === "press" && ["Enter", "Space"].includes(args.key))) {
         const kind = await send(tabId, "ra_effect", { snapshot_id: args.snapshot_id, ref: args.ref, key: args.key });
         if (kind?.error) throw new Error(kind.error);
@@ -593,10 +595,13 @@ async function act(args) {
   }
 }
 
-async function executeTool(tool, args) {
+async function executeTool(tool, args, policy = {}) {
+  // Policy comes from the authenticated Relay envelope, never tool arguments.
+  args = {...args, _auth: policy.browserAuth || {}};
   if (tool === "browser_list_tabs") return listSharedTabs();
   if (tool === "browser_open_tab") return openTab(args);
   if (tool === "browser_act") return act(args);
+  if (tool === "browser_fill") return act({...args, action:"fill"});
   if (tool === "browser_click") return act({ ...args, action: "click" });
 
   const { tab, grant } = await resolveSharedTab(args.tab_id);
@@ -619,6 +624,10 @@ async function executeTool(tool, args) {
   const response = await send(tab.id, tool, args);
 
   if (response?.error) throw new Error(response.error);
+  if (tool==="browser_read_page") {
+    const auth=policy.browserAuth||{};
+    response.authentication={otp:auth.otp===true && Array.isArray(auth.origins) && auth.origins.includes(originOf(tab.url||"")) && await allowCodes(),captcha:false,mailbox:auth.mailbox||"",approval_location:"Dashboard → device → Browser authentication"};
+  }
   return response;
 }
 

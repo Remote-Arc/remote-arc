@@ -2,6 +2,7 @@ import {ingestProductEvents,observeProductRequest,requestEventRoute} from './pro
 import {recordDeviceOnline,purgeBusinessMetrics} from './business-tracking.js';
 import {eventContext,purgeProductEvents,recordProductEvent} from './product-events.js';
 import {serveDemoMedia} from './demo-media.js';
+import {handleBrowserAuth} from "./browser-auth.js";
 import { handleRunnerRequest } from "./runner-attention.js";
 import { diagnosticError } from "./diagnostics.js";
 import {handleFollowupUnsubscribe} from './user-followups.js';
@@ -556,6 +557,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return handleApps(request, env);
     }
 
+    if (/^\/api\/browser-auth\/[A-Za-z0-9_-]+$/.test(url.pathname)) return handleBrowserAuth(request, env);
     if (url.pathname.startsWith("/api/runner/")) return handleRunnerRequest(request, env);
 
     if (url.pathname === "/api/status" && request.method === "GET") {

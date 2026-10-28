@@ -491,10 +491,10 @@ const crawlPages: Record<string, CrawlPage> = {
 const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools: string; proof: string; boundary: string }> = {
   "job-applications": {
     prompt: "From ChatGPT, Claude or another MCP client, ask Browser Runner to prepare one application on the employer's careers site, allowing only that site, filling from a CV and answers file in a trusted folder, and stopping before submit to show every answer.",
-    flow: "The Remote Arc Agent opens a task browser on your computer, with its own profile and limited to the sites the task names. Your AI reads the page, fills fields and uploads documents. Sign-in, one-time codes, payment fields and CAPTCHAs are handed to you in the visible window, and the task continues from the next snapshot once you finish. The submit happens once, after your approval.",
+    flow: "The Remote Arc Agent opens a task browser on your computer, with its own profile and limited to the sites the task names. Your AI reads the page, fills fields and uploads documents. OTP sign-in/registration and supported CAPTCHA controls can be approved per website in Dashboard. Unsupported challenges and payment fields are handed to you, and the task continues once you finish. The submit happens once, after your approval.",
     tools: "browser_runner_start, browser_runner_snapshot, browser_runner_act, browser_runner_confirm and browser_runner_status. Browser Runner must be switched on for the computer in Dashboard, and uploads are limited to Trusted Locations.",
     proof: "The confirmation text or reference number read from the page, SHA-256 receipts for uploaded files, and the submit's recorded status: confirmed, unverified or unknown.",
-    boundary: "Beta. Browser Runner does not sign in for you, solve CAPTCHAs or enter payment details, and it is not for applying in bulk. Some sites do not allow automated submission. A submit with an unknown outcome is never retried automatically. Page content and form values pass through the hosted relay and your AI client. Arc does not drive Browser Runner yet."
+    boundary: "Beta. Browser Runner supports OTP sign-in/registration and supported CAPTCHA controls after per-site Dashboard approval. Unsupported challenges and payment details need you; it is not for applying in bulk. Some sites do not allow automated submission. A submit with an unknown outcome is never retried automatically. Page content and form values pass through the hosted relay and your AI client. Arc does not drive Browser Runner yet."
   },
   "remote-development": {
     prompt: "Ask the AI to inspect a named checkout, reproduce a failing test, edit only the affected code and rerun focused verification on the same paired workstation.",
@@ -564,7 +564,7 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
     flow: "Install the browser companion, share the intended tab, select its tab identifier, request only the needed context and revoke sharing when the work is finished.",
     tools: "shared_tab_read returns the page, selected text, links or a table from a tab the user shared or Remote Arc opened. shared_tab_open opens a tab on a site the user allowed; shared_tab_act clicks, fills, selects, presses keys, navigates and waits there, and sends final submits once. shared_tab_click and shared_tab_fill work on shared tabs after a separate per-tab opt-in.",
     proof: "The returned facts should be tied to the explicitly shared page, such as extracted rows, visible links or selected text.",
-    boundary: "Tabs begin read-only. Recognized password, one-time-code, payment-card and file-upload fields are blocked from the ordinary fill path, and browser tools are not the same thing as unrestricted profile-wide browser control."
+    boundary: "Tabs begin read-only. Recognized password, payment-card and file-upload fields are blocked from the ordinary fill path; OTP requires per-site Dashboard approval, and browser tools are not the same thing as unrestricted profile-wide browser control."
   },
   "presentation-deck": {
     prompt: "Ask your AI to build a 12-slide editable PPTX from an outline and charts stored in an approved folder on the workstation.",

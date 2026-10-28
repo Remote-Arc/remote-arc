@@ -57,6 +57,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     "stop_process",
   ];
 
+  if(new URL(location.href).searchParams.get("demo")==="browser-auth") tools.push("browser_runner_start","browser_runner_snapshot","browser_runner_act","browser_runner_status","browser_runner_confirm","browser_runner_close","browser_runner_wait");
   const devices = [
     {
       id: "preview-mac",
@@ -220,6 +221,14 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
 
+    if (url.pathname.startsWith("/api/browser-auth/")) {
+      const key="browser-auth-preview-"+url.pathname.split("/").pop();
+      if(method==="POST") {
+        const value=JSON.parse(String(init?.body || "{}"));
+        window.sessionStorage.setItem(key,JSON.stringify(value));return json(value);
+      }
+      return json(JSON.parse(window.sessionStorage.getItem(key)||'{"otp":false,"captcha":false,"origins":[],"mailbox":""}'));
+    }
     if (url.pathname.startsWith("/api/runner/")) {
       const demo = new URL(location.href).searchParams.get("demo") === "runner" || location.pathname.startsWith("/dashboard/browser/");
       const sample = {id:"preview-runner-attention",device_id:"preview-mac",device_name:"Studio Mac",session_id:"sample-application",kind:"captcha",origin:"https://careers.example.com"};

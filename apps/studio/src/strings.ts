@@ -1,4 +1,5 @@
 export const STUDIO_EN: Record<string, string> = {
+  "账户 ↗": "Account ↗",
   导出前检查: "Before you export",
   "正在检查排版和素材…": "Checking layout and assets…",
   "请先修复以下问题，再导出视频。": "Fix these issues before exporting.",
@@ -74,7 +75,7 @@ export const STUDIO_EN: Record<string, string> = {
   "成为下一条视频。": "a life in motion.",
   "从分镜到成片，每一处都可以继续打磨。":
     "From storyboard to final cut, every detail stays editable.",
-  "登录 Remote Arc →": "Sign in with Remote Arc →",
+  "登录 ReArc Studio →": "Sign in to ReArc Studio →",
   "了解 Remote Arc ↗": "About Remote Arc ↗",
   开始一个新作品: "Start a new project",
   作品名称: "Project name",
@@ -86,10 +87,10 @@ export const STUDIO_EN: Record<string, string> = {
   创建空白作品: "Create blank project",
   "✦ 生成分镜": "✦ Generate storyboard",
   "正在创建…": "Creating…",
-  "当前环境尚未启用 Arc AI，可先用模板或手动编排。":
-    "Arc AI is not enabled here. Start with a template or build your scenes manually.",
-  "AI 编排使用你的 Arc 账户 Credits。素材与数字以你提供的资料为准。":
-    "AI storyboarding uses your Arc Credits. Facts, figures and assets come from your brief.",
+  "当前环境尚未启用 Studio AI，可先用模板或手动编排。":
+    "Studio AI is not enabled here. Start with a template or build your scenes manually.",
+  "AI 编排遵循当前账户的模型额度。素材与数字以你提供的资料为准。":
+    "AI storyboarding uses your account model allowance. Facts, figures and assets come from your brief.",
   关闭: "Close",
   关闭提示: "Dismiss",
   返回作品列表: "Back to projects",
@@ -115,7 +116,7 @@ export const STUDIO_EN: Record<string, string> = {
   发送创作要求: "Send instructions",
   停止: "Stop",
   "创作 Skills ·": "Creative Skills ·",
-  "使用 Arc Credits ·": "Uses Arc Credits ·",
+  "使用账户模型额度 ·": "Uses account model allowance ·",
   "查看账户 ↗": "View account ↗",
   生成分镜: "Generate storyboard",
   "正在编排分镜…": "Shaping your storyboard…",
@@ -129,8 +130,8 @@ export const STUDIO_EN: Record<string, string> = {
   结果待核实: "Outcome unconfirmed",
   版本发生变化: "Project version changed",
   本次编排未完成: "This edit could not be completed",
-  "当前环境未启用 Arc AI。你可以手动编排、预览和导出。":
-    "Arc AI is not enabled here. You can still edit, preview and export manually.",
+  "当前环境未启用 Studio AI。你可以手动编排、预览和导出。":
+    "Studio AI is not enabled here. You can still edit, preview and export manually.",
   画面预览: "Preview",
   视频预览: "Video preview",
   预览进度: "Playback position",
@@ -248,17 +249,18 @@ export const STUDIO_EN: Record<string, string> = {
     "The request origin could not be verified. Reopen this page.",
   "作品已在其他页面更新。请先下载当前项目备份，再刷新载入最新版本。":
     "This project changed in another tab. Back up your edits, then reload the latest version.",
-  "当前环境尚未启用 Arc AI。你仍可手动编排、预览和导出。":
-    "Arc AI is not enabled here. You can still edit, preview and export manually.",
-  "当前环境尚未启用 Arc AI。": "Arc AI is not enabled in this environment.",
-  "请先在 Arc 账户中启用试用或选择套餐。":
-    "Activate your trial or choose a plan in your Arc account first.",
-  "Arc 试用已结束，请在账户中选择套餐。":
-    "Your Arc trial has ended. Choose a plan in your account.",
-  "可用 Credits 不足，请在 Arc 账户中查看用量。":
-    "Not enough Credits. Check usage in your Arc account.",
-  "当前账户的 AI 额度或授权不足，请检查 Arc 账户。":
-    "Your AI allowance or authorization is unavailable. Check your Arc account.",
+  "当前环境尚未启用 Studio AI。你仍可手动编排、预览和导出。":
+    "Studio AI is not enabled here. You can still edit, preview and export manually.",
+  "当前环境尚未启用 Studio AI。":
+    "Studio AI is not enabled in this environment.",
+  "请先在账户中启用试用或选择套餐。":
+    "Activate your trial or choose a plan in your account first.",
+  "试用已结束，请在账户中选择套餐。":
+    "Your trial has ended. Choose a plan in your account.",
+  "可用额度不足，请在账户中查看用量。":
+    "Not enough Credits. Check usage in your account.",
+  "当前账户的 AI 额度或授权不足，请检查账户。":
+    "Your AI allowance or authorization is unavailable. Check your account.",
   "已有两个 AI 任务正在执行，请等待完成。":
     "Two AI jobs are already running. Wait for one to finish.",
   "文件或内容超过大小限制。": "The file or content exceeds the size limit.",

@@ -8,7 +8,7 @@ import {
   parseStudioDocument,
   studioDuration,
   studioSceneAt,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import { handleStudio, commitStudioDocument } from "../src/studio.js";
 import { safeReturnTo } from "../src/auth.js";
 import { createStudioLocal } from "./studio-local.js";

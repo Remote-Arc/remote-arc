@@ -990,9 +990,9 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       assetHeaders.set("authorization", "Bearer remote-arc-html-shell");
       assetHeaders.set("cache-control", "no-store");
 
-      const assetResponse = await env.ASSETS.fetch(
-        new Request(request, { method: request.method === "HEAD" ? "GET" : request.method, headers: assetHeaders }),
-      );
+      const studioDocument = url.origin === new URL(env.STUDIO_ORIGIN || "https://studio.remotearc.app").origin || /^\/studio(?:\/|$)/.test(url.pathname);
+      const assetRequest = studioDocument ? new Request(new URL("/studio/index.html", url), {method: "GET", headers: assetHeaders}) : new Request(request, { method: request.method === "HEAD" ? "GET" : request.method, headers: assetHeaders });
+      const assetResponse = await env.ASSETS.fetch(assetRequest);
       const headers = new Headers(assetResponse.headers);
       headers.set("cache-control", "no-store");
       headers.set("cloudflare-cdn-cache-control", "no-store");

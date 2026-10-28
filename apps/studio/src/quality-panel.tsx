@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { StudioAsset, StudioDocument } from "@remotearc/protocol/studio";
+import type { StudioAsset, StudioDocument } from "@rearc/studio/core";
 import { inspectStudioVideo, type StudioQualityIssue } from "./quality.js";
 import { prepareStudioFonts } from "./layout.js";
 import { useStudioLocale } from "./locale.js";

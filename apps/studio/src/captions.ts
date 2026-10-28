@@ -1,4 +1,4 @@
-import type { StudioScene } from "@remotearc/protocol/studio";
+import type { StudioScene } from "@rearc/studio/core";
 
 /** One timing source for burnt-in subtitles, SRT and publication checks. */
 export function studioCaptionCues(scene: StudioScene) {

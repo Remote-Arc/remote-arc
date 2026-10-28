@@ -2,7 +2,9 @@
 
 ReArc Studio is Remote Arc's bilingual, versioned video workspace. It shares the
 Remote Arc blue symbol, Space Grotesk wordmark styling, Inter interface type,
-workspace light/dark tokens, language preferences, login and metered model gateway.
+brand colors and light/dark values. The standalone application has its own page,
+preferences and build; a host adapter currently shares Remote Arc login and its
+metered model gateway.
 
 ## Product workflow
 
@@ -63,38 +65,46 @@ pnpm dev:studio
 
 Open `http://127.0.0.1:4331/studio`. Use `?lang=zh` or the language control for
 Chinese. Both servers bind only to loopback. The development adapter uses a real
-SQLite database, the real SQL migrations, encrypted document storage and private
-local media files. Its local identity and disabled AI configuration are development
-facilities; the production Worker never imports this adapter.
+SQLite database with only the four Studio tables, encrypted document storage and
+private local media files. It creates no Agent, account or billing tables. Its local
+identity and disabled AI configuration are development facilities; the production
+Worker never imports this adapter.
 
 Development data defaults to `work/studio-local`. `STUDIO_DATA_DIR`,
 `STUDIO_UI_PORT` and `STUDIO_API_PORT` can select another task-owned directory and
 ports. The local vault key stays with that data directory and is not committed.
 
-Local generation is explicitly disabled. Hosted generation uses the existing Arc
+Local generation is explicitly disabled. The current host adapter uses existing Arc
 model configuration and account entitlement, rather than asking visitors for API
 keys or inventing an AI result. Auto is the default; existing configured models
 remain selectable. Generation errors retain the original project.
 
 ## Architecture
 
-- `packages/protocol/src/studio.ts`: dependency-free document validation, stable
-  scene IDs, timing, formats and shared types. Its dedicated protocol subpath keeps
-  native Node type-stripping consumers of the main protocol compatible.
-- `apps/ui/src/studio`: project gallery, editor, bilingual strings, templates,
-  playback, deterministic frame renderer, portable archives and MP4/SRT export.
-  Media encoding and ZIP code load on demand.
-- `apps/relay/src/studio.ts`: authenticated same-origin API, project ownership,
-  encrypted snapshots, optimistic revisions, private media, skills and AI jobs.
-- `apps/relay/src/studio-runtime.ts`: persisted Durable Object wakeups. A unique
-  database claim owns model dispatch. A minute sweep recovers lost queue wakeups.
-  Interrupted or unknown paid outcomes are not dispatched again automatically.
-- Migrations `0067_studio.sql` and `0068_studio_session_isolation.sql`: projects, immutable versions, private asset metadata
-  and idempotent jobs. Model authorization uses an account-owned Arc session and
-  the existing allowance, reservation and settlement ledger.
-  Studio authority sessions have a separate workspace discriminator. Chat APIs
-  cannot read, delete or send messages into them, and they do not consume the
-  ordinary web/channel chat limit.
+Studio lives in `apps/studio` as a separate, independently buildable application.
+See [the application boundary and split-operation guide](../apps/studio/README.md).
+
+- `core/document.ts`: dependency-free contract, validation, stable IDs and timing.
+- `src/`: editor, preferences, brand styles, templates, preview, MP4 and archives.
+- `server/service.ts`: project API and durable job state, using explicit host ports.
+- `server/ports.ts`: identity, vault, skills, storyboard inference and atomic
+  lifecycle hooks. No Agent application package is imported by Studio.
+- `server/providers.ts`: a future video-model adapter contract, separated from
+  storyboard inference and final composition. No live video vendor is configured.
+- `server/runtime.ts` / `worker.ts`: reusable Cloudflare execution adapters.
+- `migrations/0001_studio.sql`: four owned tables, with no account/chat foreign keys.
+- `apps/relay/src/studio-platform.ts`: the current host's narrow shared-account
+  adapter. It reuses existing entitlement and metering, registering a generic
+  owner-scoped `billing_workloads` record instead of an Agent chat session.
+
+Relay migrations 0067/0068 remain in the historical upgrade chain. Additive 0069
+preserves documents, versions, private-media IDs/keys and job receipts while
+removing the session relationship and external foreign keys. Legacy internal
+sessions are retired. Ordinary chats are unchanged.
+
+`pnpm build:studio` builds Studio alone. The combined release separately builds
+both frontends and assembles Studio under `/studio/`. Studio's custom domain serves
+its own HTML and JavaScript entry, without downloading the Agent/marketing bundle.
 
 The model returns validated scene data. Skills provide creative guidance, with
 their content hashes recorded per job. Skills grant no filesystem or command
@@ -134,6 +144,8 @@ pnpm build:ui
 pnpm --filter @remotearc/relay exec wrangler deploy --dry-run
 ```
 
+Independent tests run against only Studio tables with a substituted identity and
+storyboard provider. Upgrade tests preserve populated legacy rows and ciphertext.
 API tests execute real migrations and SQLite transactions. AI tests execute real
 entitlement, reservation and settlement SQL with a deterministic provider adapter;
 they spend no paid API credits. They cover scoped edits, skill hashes, idempotency,

@@ -2,7 +2,7 @@ import {
   studioDimensions,
   type StudioDocument,
   type StudioScene,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 
 export const studioFonts = {
   sans: '"Inter", "PingFang SC", "Microsoft YaHei", sans-serif',

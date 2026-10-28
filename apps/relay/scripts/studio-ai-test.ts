@@ -6,7 +6,7 @@ import {
   newStudioDocument,
   newStudioScene,
   type StudioDocument,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import {
   handleStudio,
   runStudioJob,
@@ -109,6 +109,9 @@ const finish = (document: StudioDocument): ReturnType<ModelAdapter> =>
     providerRequestId: "test-result",
   });
 try {
+  // Studio can enable its model adapter while the Agent chat switch is disabled.
+  local.env.STUDIO_AI_ENABLED = "1";
+  local.env.ARC_CHAT_ENABLED = "0";
   await activateArcTrial(local.env, "director");
   const doc = newStudioDocument("AI project");
   doc.scenes.push({ ...newStudioScene(), title: "Preserve this scene" });
@@ -235,6 +238,47 @@ try {
   assert.equal((await api("/projects/" + id)).data.project.revision, 3);
   assert.equal((await api(`/projects/${id}/jobs`)).data.jobs.length, 5);
   assert.equal(wakes, 5);
+  const dispatchesBefore = calls;
+  await local.env.DB.prepare(
+    "UPDATE billing_workloads SET status='closed' WHERE id=?1",
+  )
+    .bind(id)
+    .run();
+  const closedAuthority = await start(id, 3, "closed-authority");
+  await runStudioJob(local.env, closedAuthority.id);
+  assert.equal(
+    (await api(`/projects/${id}/jobs/${closedAuthority.id}`)).data.job.status,
+    "failed",
+  );
+  assert.equal(
+    calls,
+    dispatchesBefore,
+    "Closed project authority cannot dispatch or spend",
+  );
+  await local.env.DB.prepare(
+    "UPDATE billing_workloads SET status='active',user_id='other-owner' WHERE id=?1",
+  )
+    .bind(id)
+    .run()
+    .catch(async () => {
+      local.seedUser("other-owner");
+      await local.env.DB.prepare(
+        "UPDATE billing_workloads SET status='active',user_id='other-owner' WHERE id=?1",
+      )
+        .bind(id)
+        .run();
+    });
+  const mismatchedOwner = await start(id, 3, "wrong-authority-owner");
+  await runStudioJob(local.env, mismatchedOwner.id);
+  assert.equal(
+    (await api(`/projects/${id}/jobs/${mismatchedOwner.id}`)).data.job.status,
+    "failed",
+  );
+  assert.equal(
+    calls,
+    dispatchesBefore,
+    "A workload belonging to another identity cannot authorize spending",
+  );
   console.log(
     "PASS Studio AI: real entitlement/budget/billing SQL, pinned skill content, scoped edits, idempotency, cancellation commit guard, unknown non-replay, pre-spend revision conflict and invalid output preservation. Provider calls use a deterministic test adapter; no paid API is called.",
   );

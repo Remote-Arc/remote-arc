@@ -45,7 +45,6 @@ if (candidateMatch) {
 
 export default defineConfig(({mode}) => ({
   server: process.env.STUDIO_LOCAL_API ? {proxy: {'/api/studio': {target:process.env.STUDIO_LOCAL_API}, '/api/me': {target:process.env.STUDIO_LOCAL_API}, '/api/status': {target:process.env.STUDIO_LOCAL_API}}} : undefined,
-  optimizeDeps: {include: ['mediabunny', 'fflate']},
   plugins: [react(), {
     name: "local-runtime-config",
     configureServer(server) {

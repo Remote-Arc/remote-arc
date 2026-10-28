@@ -27,7 +27,8 @@
     "@remotearc/protocol": "workspace:*",
     "fflate": "^0.8.3",
     "unpdf": "^1.9.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.5",
+    "@rearc/studio": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261013.1",

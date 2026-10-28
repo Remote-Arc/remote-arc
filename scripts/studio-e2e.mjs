@@ -27,7 +27,7 @@ try {
     if (server.exitCode !== null)
       throw Error("Studio development server exited.");
     try {
-      const response = await fetch(origin + "/api/me", {
+      const response = await fetch(origin + "/api/studio/session", {
         signal: AbortSignal.timeout(1000),
       });
       if (response.ok && (await response.json()).authenticated) {

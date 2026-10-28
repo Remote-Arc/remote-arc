@@ -4,7 +4,7 @@ import {
   studioSceneAt,
   type StudioAsset,
   type StudioDocument,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import { studioApi } from "./api.js";
 import type { StudioVisuals } from "./frame.js";
 import type { Input, CanvasSink } from "mediabunny";

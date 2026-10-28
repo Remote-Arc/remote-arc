@@ -4,7 +4,7 @@ import {
   studioDuration,
   type StudioDocument,
   type StudioAsset,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import { paintStudioFrame } from "./frame.js";
 import { StudioMedia, mixStudioAudio } from "./media.js";
 import { assertStudioPublishable } from "./quality.js";

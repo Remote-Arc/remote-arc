@@ -2,12 +2,11 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { newStudioDocument } from "@remotearc/protocol/studio";
+import { newStudioDocument } from "@rearc/studio/core";
 import { createStudioLocal } from "./studio-local.js";
 import { handleStudio } from "../src/studio.js";
 import { handleArcChat, createArcConversation } from "../src/arc-chat.js";
 import { activateArcTrial } from "../src/arc-trial.js";
-
 const directory = mkdtempSync(
   path.join(process.env.STUDIO_TEST_DIR || tmpdir(), "studio-isolation-"),
 );
@@ -33,7 +32,7 @@ local.env.MODEL_GATEWAY = {
   autoModelId: "arc-auto",
   adapters: {
     openai: async () => {
-      throw Error("No provider calls are expected");
+      throw Error("No provider calls expected");
     },
   },
 };
@@ -57,89 +56,94 @@ try {
   );
   assert.equal(created.status, 201);
   const project = ((await created.json()) as any).project;
-  const internal = await local.env.DB.prepare(
-    "SELECT session_id FROM studio_projects WHERE id=?1",
+  assert.equal(
+    (
+      await local.env.DB.prepare(
+        "SELECT COUNT(*) AS total FROM arc_chat_sessions",
+      ).first<{ total: number }>()
+    )?.total,
+    0,
+    "Creating Studio projects never creates an Agent session",
+  );
+  const workload = await local.env.DB.prepare(
+    "SELECT * FROM billing_workloads WHERE id=?1",
   )
     .bind(project.id)
-    .first<{ session_id: string }>();
-  assert(internal);
+    .first<{ user_id: string; product: string; status: string }>();
+  assert.equal(workload?.user_id, "creator");
+  assert.equal(workload?.product, "studio");
+  assert.equal(workload?.status, "active");
   const sessions = await handleArcChat(request("/api/arc/sessions"), local.env);
   assert.equal(sessions.status, 200);
-  assert.deepEqual(
-    ((await sessions.json()) as any).sessions,
-    [],
-    "Studio projects do not appear as empty Arc chats",
-  );
+  assert.deepEqual(((await sessions.json()) as any).sessions, []);
   for (const method of ["GET", "DELETE"]) {
     const result = await handleArcChat(
-      request("/api/arc/sessions/" + internal.session_id, method),
+      request("/api/arc/sessions/" + project.id, method),
       local.env,
     );
     assert.equal(
       result.status,
       404,
-      "The ordinary chat API cannot read or delete Studio billing authority",
+      "Chat APIs cannot access a Studio project",
     );
   }
   const message = await handleArcChat(
-    request(`/api/arc/sessions/${internal.session_id}/messages`, "POST", {
+    request(`/api/arc/sessions/${project.id}/messages`, "POST", {
       text: "unwanted chat",
       requestId: "message",
     }),
     local.env,
   );
+  assert.equal(message.status, 404);
   assert.equal(
-    message.status,
-    404,
-    "The chat API cannot send a message into a Studio session",
-  );
-  const projectStillExists = await handleStudio(
-    request("/api/studio/projects/" + project.id),
-    local.env,
-  );
-  assert.equal(projectStillExists.status, 200);
-  // Populate real rows above the chat cap; the API must still admit ordinary conversations.
-  await local.env.DB.batch(
-    Array.from({ length: 100 }, (_, i) =>
-      local.env.DB.prepare(
-        "INSERT INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at,workspace) SELECT ?1,user_id,organization_id,title_ciphertext,model_id,created_at,updated_at,'studio' FROM arc_chat_sessions WHERE id=?2",
-      ).bind(`studio-cap-${i}`, internal.session_id),
-    ),
+    (
+      await handleStudio(
+        request("/api/studio/projects/" + project.id),
+        local.env,
+      )
+    ).status,
+    200,
   );
   const chat = await handleArcChat(
     request("/api/arc/sessions", "POST", { modelId: "auto" }),
     local.env,
   );
-  assert.equal(
-    chat.status,
-    201,
-    "Studio sessions do not consume the 100-chat limit",
-  );
-  const channelChat = await createArcConversation(
+  assert.equal(chat.status, 201);
+  const channel = await createArcConversation(
     local.env,
     "creator",
     "channel-chat",
     "Channel conversation",
   );
-  assert.equal(
-    channelChat.id,
-    "channel-chat",
-    "Channel adapters use the same isolated chat limit",
-  );
+  assert.equal(channel.id, "channel-chat");
   const list = await handleArcChat(request("/api/arc/sessions"), local.env);
   assert.equal(((await list.json()) as any).sessions.length, 2);
-  const before = await local.env.DB.prepare(
-    "SELECT deleted_at FROM arc_chat_sessions WHERE id=?1",
+  const deleted = await handleStudio(
+    request("/api/studio/projects/" + project.id, "DELETE"),
+    local.env,
+  );
+  assert.equal(deleted.status, 200);
+  const closed = await local.env.DB.prepare(
+    "SELECT status FROM billing_workloads WHERE id=?1",
   )
-    .bind(internal.session_id)
-    .first<{ deleted_at: string | null }>();
+    .bind(project.id)
+    .first<{ status: string }>();
   assert.equal(
-    before?.deleted_at,
-    null,
-    "Billing authority remains live and owned",
+    closed?.status,
+    "closed",
+    "Deletion closes model spending authority atomically",
+  );
+  assert.equal(
+    (
+      await local.env.DB.prepare(
+        "SELECT COUNT(*) AS total FROM arc_chat_sessions WHERE deleted_at IS NULL",
+      ).first<{ total: number }>()
+    )?.total,
+    2,
+    "Deleting Studio projects leaves ordinary chats untouched",
   );
   console.log(
-    "PASS Studio/Arc isolation: internal sessions are hidden and inaccessible to chat APIs, preserve billing authority, and do not consume web/channel chat limits.",
+    "PASS Studio/Arc independence: no chat sessions created; project-owned billing workloads; chat APIs cannot access projects; web/channel chats unchanged; project deletion revokes workload authority.",
   );
 } finally {
   local.close();

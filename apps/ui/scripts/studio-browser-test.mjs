@@ -17,6 +17,8 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1440, height: 960 } }),
   errors = [];
+const requests = [];
+page.on("request", request=>requests.push(request.url()));
 page.on("pageerror", (error) => errors.push(error.message));
 const assertOk = async (response) =>
   assert(response.ok(), `${response.status()} ${await response.text()}`);
@@ -123,6 +125,9 @@ try {
   await page.reload();
   await page.getByRole("textbox", { name: "作品名称", exact: true }).waitFor();
   await page.locator(".st-scene").first().click();
+  await page.getByRole("slider",{name:"预览进度"}).fill("0");
+  await page.locator(".st-scene").first().click();
+  await page.waitForFunction(()=>Number(document.querySelector('input[aria-label="预览进度"]')?.value)>=29);
   assert.equal(
     await page
       .getByRole("textbox", { name: "主标题", exact: true })
@@ -219,14 +224,14 @@ try {
   await assertOk(clipResponse);
   const clip = (await clipResponse.json()).asset;
   const quality = await page.evaluate(async () => {
-    const { studioTemplate } = await import("/src/studio/templates.ts");
+    const { studioTemplate } = await import("/src/templates.ts");
     const { inspectStudioVideo, assertStudioPublishable } = await import(
-      "/src/studio/quality.ts"
+      "/src/quality.ts"
     );
-    const { paintStudioFrame } = await import("/src/studio/frame.ts");
-    const { prepareStudioFonts } = await import("/src/studio/layout.ts");
-    const { studioCaptionCues } = await import("/src/studio/captions.ts");
-    const { exportStudioCaptions } = await import("/src/studio/export.ts");
+    const { paintStudioFrame } = await import("/src/frame.ts");
+    const { prepareStudioFonts } = await import("/src/layout.ts");
+    const { studioCaptionCues } = await import("/src/captions.ts");
+    const { exportStudioCaptions } = await import("/src/export.ts");
     await prepareStudioFonts();
     const failures = [];
     for (const locale of ["en", "zh"])
@@ -297,7 +302,7 @@ try {
   for (const format of ["portrait", "square"]) {
     const result = await page.evaluate(
       async ({ id, format, clip }) => {
-        const { exportStudioVideo } = await import("/src/studio/export.ts");
+        const { exportStudioVideo } = await import("/src/export.ts");
         const snapshot = await (
           await fetch(`/api/studio/projects/${id}`)
         ).json();
@@ -341,8 +346,8 @@ try {
   }
   const hdBytes = await page.evaluate(
     async ({ id }) => {
-      const { exportStudioVideo } = await import("/src/studio/export.ts");
-      const { studioTemplate } = await import("/src/studio/templates.ts");
+      const { exportStudioVideo } = await import("/src/export.ts");
+      const { studioTemplate } = await import("/src/templates.ts");
       const doc = studioTemplate("product", "en");
       doc.scenes = [{ ...doc.scenes[0], durationFrames: 30 }];
       const result = await exportStudioVideo(id, doc, [], {
@@ -475,6 +480,7 @@ try {
     "No horizontal overflow on mobile",
   );
   assert.deepEqual(errors, [], "No uncaught browser errors");
+  assert(!requests.some(url=>/\/api\/(?:arc|status|me)(?:\/|\?|$)/.test(url)),"The independent app makes no Agent API requests");
   writeFileSync(
     path.join(artifacts, "verification.json"),
     JSON.stringify(
@@ -490,6 +496,8 @@ try {
         hd: { width: 1920, height: 1080, fps: 30, decoded: true },
         decoded: true,
         browserErrors: errors,
+        independentFrontend: true,
+        agentApiRequests: false,
         checks: [
           "template creation",
           "scene edits",

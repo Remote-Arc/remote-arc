@@ -1,7 +1,7 @@
 import { useStudioLocale } from "./locale.js";
 import { translateStudio } from "./strings.js";
-import { LanguageSwitcher } from "../i18n.js";
-import { useTheme } from "../theme.js";
+import { LanguageSwitcher, useTheme } from "./preferences.js";
+import { useStudioAccount } from "./account.js";
 import {
   useCallback,
   useEffect,
@@ -21,7 +21,7 @@ import {
   type StudioProjectSummary,
   type StudioScene,
   type StudioVersion,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import {
   studioApi,
   studioErrorMessage,
@@ -59,7 +59,7 @@ const time = (frames: number) => `${(frames / 30).toFixed(1)}s`;
 function Mark() {
   return (
     <span className="st-mark" aria-hidden="true">
-      <img src="/remote-arc.svg" alt="" />
+      <img src={`${import.meta.env.BASE_URL}remote-arc.svg`} alt="" />
     </span>
   );
 }
@@ -153,6 +153,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 
 export function Studio({ user }: { user: User | null | undefined }) {
   const { locale, t } = useStudioLocale();
+  const links = useStudioAccount();
   useEffect(() => {
     globalThis.document.title = "ReArc Studio";
   }, [locale]);
@@ -278,15 +279,17 @@ export function Studio({ user }: { user: User | null | undefined }) {
           <p>{t("从分镜到成片，每一处都可以继续打磨。")}</p>
           <a
             className="st-button st-primary"
-            href={`/auth/login?return_to=${encodeURIComponent(location.href)}`}
+            href={`${links.login}?return_to=${encodeURIComponent(location.href)}`}
           >
             {" "}
-            {t("登录 Remote Arc →")}{" "}
+            {t("登录 ReArc Studio →")}{" "}
           </a>
-          <a className="st-text-link" href="https://remotearc.app">
-            {" "}
-            {t("了解 Remote Arc ↗")}{" "}
-          </a>
+          {links.home ? (
+            <a className="st-text-link" href={links.home}>
+              {" "}
+              {t("了解 Remote Arc ↗")}{" "}
+            </a>
+          ) : null}
         </div>
         <div className="st-gate-visual">
           <span>
@@ -319,9 +322,7 @@ export function Studio({ user }: { user: User | null | undefined }) {
         </div>
         <nav>
           <StudioControls />
-          <a href="https://agent.remotearc.app/overview">
-            {t("Arc 工作区 ↗")}
-          </a>
+          {links.account ? <a href={links.account}>{t("账户 ↗")}</a> : null}
           <span className="st-avatar" title={user.email}>
             {(user.name || user.email).slice(0, 1).toUpperCase()}
           </span>
@@ -619,13 +620,13 @@ function NewProject({
         {!aiAvailable ? (
           <p className="st-help">
             {" "}
-            {t("当前环境尚未启用 Arc AI，可先用模板或手动编排。")}{" "}
+            {t("当前环境尚未启用 Studio AI，可先用模板或手动编排。")}{" "}
           </p>
         ) : (
           <p className="st-help">
             {" "}
             {t(
-              "AI 编排使用你的 Arc 账户 Credits。素材与数字以你提供的资料为准。",
+              "AI 编排遵循当前账户的模型额度。素材与数字以你提供的资料为准。",
             )}{" "}
           </p>
         )}
@@ -648,6 +649,7 @@ function Editor({
   initialGenerate: boolean;
 }) {
   const { locale, t } = useStudioLocale();
+  const links = useStudioAccount();
 
   const [saved, setSaved] = useState(initialProject),
     [document, setDocument] = useState(initialProject.document),
@@ -656,13 +658,16 @@ function Editor({
     [versions, setVersions] = useState<StudioVersion[]>([]),
     [jobs, setJobs] = useState<StudioJob[]>([]),
     [selected, setSelected] = useState(initialProject.document.scenes[0]!.id),
+    [seekVersion, setSeekVersion] = useState(0),
     [seek, setSeek] = useState(
       Math.min(30, initialProject.document.scenes[0]!.durationFrames - 1),
     ),
     [tab, setTab] = useState<"content" | "style" | "assets">("content"),
     [prompt, setPrompt] = useState(""),
     [model, setModel] = useState("auto"),
-    [skillIds, setSkillIds] = useState(["remotion-video"]),
+    [skillIds, setSkillIds] = useState<string[]>(
+      initialConfig?.defaultSkillIds || [],
+    ),
     [onlySelected, setOnlySelected] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -707,6 +712,7 @@ function Editor({
           setVersions(history.versions);
           setJobs(work.jobs);
           setConfig(settings);
+          if (!initialConfig) setSkillIds(settings.defaultSkillIds || []);
         }
       })
       .catch((e) => {
@@ -743,7 +749,9 @@ function Editor({
           setDocument(value.project.document);
           setSaved(value.project);
           setSelected(value.project.document.scenes[0]!.id);
-          setSeek(0);
+          setSeek(
+            Math.min(30, value.project.document.scenes[0]!.durationFrames - 1),
+          );
           setNotice(t("新的分镜已保存，可以继续打磨。"));
         }
         if (active(value.job)) timer = setTimeout(() => void poll(), 1500);
@@ -782,7 +790,15 @@ function Editor({
       if (item.id === selected) break;
       frame += item.durationFrames;
     }
-    setSeek(Math.min(frame, studioDuration(next) - 1));
+    const target =
+      next.scenes.find((item) => item.id === selected) || next.scenes[0]!;
+    setSeek(
+      Math.min(
+        frame + Math.min(30, target.durationFrames - 1),
+        studioDuration(next) - 1,
+      ),
+    );
+    setSeekVersion((value) => value + 1);
     setNotice("");
   }
   function updateScene(patch: Partial<StudioScene>) {
@@ -794,6 +810,7 @@ function Editor({
     });
   }
   function choose(id: string) {
+    setSeekVersion((value) => value + 1);
     setSelected(id);
     let start = 0;
     for (const item of document.scenes) {
@@ -899,7 +916,7 @@ function Editor({
     const next = newStudioScene("feature", locale);
     update({ ...document, scenes: [...document.scenes, next] });
     setSelected(next.id);
-    setSeek(studioDuration(document));
+    setSeek(studioDuration(document) + Math.min(30, next.durationFrames - 1));
   }
   function moveScene(direction: number) {
     const index = document.scenes.findIndex((item) => item.id === scene.id),
@@ -914,7 +931,7 @@ function Editor({
     const scenes = document.scenes.filter((item) => item.id !== scene.id);
     update({ ...document, scenes });
     setSelected(scenes[0]!.id);
-    setSeek(0);
+    setSeek(Math.min(30, scenes[0]!.durationFrames - 1));
   }
   function duplicateScene() {
     if (document.scenes.length >= 12) return;
@@ -1326,20 +1343,20 @@ function Editor({
             {!config?.generationAvailable ? (
               <p className="st-help">
                 {" "}
-                {t("当前环境未启用 Arc AI。你可以手动编排、预览和导出。")}{" "}
+                {t(
+                  "当前环境未启用 Studio AI。你可以手动编排、预览和导出。",
+                )}{" "}
               </p>
             ) : (
               <p className="st-help">
                 {" "}
-                {t("使用 Arc Credits ·")}{" "}
-                <a
-                  href="https://agent.remotearc.app/settings"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {" "}
-                  {t("查看账户 ↗")}{" "}
-                </a>
+                {t("使用账户模型额度 ·")}{" "}
+                {links.account ? (
+                  <a href={links.account} target="_blank" rel="noreferrer">
+                    {" "}
+                    {t("查看账户 ↗")}{" "}
+                  </a>
+                ) : null}
               </p>
             )}
           </form>
@@ -1371,6 +1388,7 @@ function Editor({
             document={document}
             assets={assets}
             seekFrame={seek}
+            seekVersion={seekVersion}
             onError={report}
           />
           <section className="st-storyboard">

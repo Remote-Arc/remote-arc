@@ -4,7 +4,7 @@ import {
   studioDuration,
   type StudioAsset,
   type StudioDocument,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import { paintStudioFrame } from "./frame.js";
 import { StudioMedia, mixStudioAudio } from "./media.js";
 import { useStudioLocale } from "./locale.js";
@@ -15,12 +15,14 @@ export function StudioPlayer({
   document,
   assets,
   seekFrame,
+  seekVersion = 0,
   onError,
 }: {
   projectId: string;
   document: StudioDocument;
   assets: StudioAsset[];
   seekFrame: number;
+  seekVersion?: number;
   onError: (message: string) => void;
 }) {
   const { t } = useStudioLocale();
@@ -73,7 +75,7 @@ export function StudioPlayer({
     stop();
     currentFrame.current = Math.min(seekFrame, total - 1);
     setFrame(currentFrame.current);
-  }, [seekFrame, document]);
+  }, [seekFrame, seekVersion, document]);
   useEffect(() => {
     const serial = ++renderId.current,
       media = mediaRef.current,

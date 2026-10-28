@@ -289,3 +289,10 @@ export function studioSummary(project: StudioProject): StudioProjectSummary {
     updatedAt: project.updatedAt,
   };
 }
+
+export type StudioIdentity = { id: string; email: string; name: string | null };
+export type StudioAccountLinks = {
+  login: string;
+  account: string | null;
+  home: string | null;
+};

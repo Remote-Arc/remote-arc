@@ -2,7 +2,7 @@ import {
   studioDuration,
   studioSceneAt,
   type StudioDocument,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import {
   layoutStudioScene,
   studioFonts,

@@ -6,9 +6,10 @@ import type {
   StudioProject,
   StudioProjectSummary,
   StudioVersion,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 
 export type StudioConfig = {
+  defaultSkillIds?: string[];
   models: { id: string; label: string; configured: boolean }[];
   generationAvailable: boolean;
   uploadsAvailable: boolean;
@@ -34,13 +35,13 @@ const messages: Record<string, string> = {
   STUDIO_REVISION_CONFLICT:
     "作品已在其他页面更新。请先下载当前项目备份，再刷新载入最新版本。",
   STUDIO_AI_UNAVAILABLE:
-    "当前环境尚未启用 Arc AI。你仍可手动编排、预览和导出。",
-  ARC_NOT_CONFIGURED: "当前环境尚未启用 Arc AI。",
-  ARC_TRIAL_REQUIRED: "请先在 Arc 账户中启用试用或选择套餐。",
-  ARC_TRIAL_EXPIRED: "Arc 试用已结束，请在账户中选择套餐。",
-  BILLING_CREDITS_EXHAUSTED: "可用 Credits 不足，请在 Arc 账户中查看用量。",
+    "当前环境尚未启用 Studio AI。你仍可手动编排、预览和导出。",
+  ARC_NOT_CONFIGURED: "当前环境尚未启用 Studio AI。",
+  ARC_TRIAL_REQUIRED: "请先在账户中启用试用或选择套餐。",
+  ARC_TRIAL_EXPIRED: "试用已结束，请在账户中选择套餐。",
+  BILLING_CREDITS_EXHAUSTED: "可用额度不足，请在账户中查看用量。",
   BILLING_QUOTA_OR_AUTHORITY_UNAVAILABLE:
-    "当前账户的 AI 额度或授权不足，请检查 Arc 账户。",
+    "当前账户的 AI 额度或授权不足，请检查账户。",
   STUDIO_CONCURRENT_LIMIT: "已有两个 AI 任务正在执行，请等待完成。",
   STUDIO_INPUT_TOO_LARGE: "文件或内容超过大小限制。",
   STUDIO_ASSET_TYPE:

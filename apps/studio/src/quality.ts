@@ -2,7 +2,7 @@ import {
   studioReferencedAssets,
   type StudioAsset,
   type StudioDocument,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import {
   layoutStudioScene,
   studioFonts,

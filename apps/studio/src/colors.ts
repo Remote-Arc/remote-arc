@@ -1,4 +1,4 @@
-import type { StudioDocument, StudioScene } from "@remotearc/protocol/studio";
+import type { StudioDocument, StudioScene } from "@rearc/studio/core";
 
 export function studioLuminance(hex: string) {
   const channels = [1, 3, 5].map((i) => {

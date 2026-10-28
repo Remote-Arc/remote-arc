@@ -3,7 +3,7 @@ import {
   studioReferencedAssets,
   type StudioAsset,
   type StudioDocument,
-} from "@remotearc/protocol/studio";
+} from "@rearc/studio/core";
 import { studioApi } from "./api.js";
 
 type Manifest = {

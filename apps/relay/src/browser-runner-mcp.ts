@@ -28,9 +28,16 @@ export type BrowserRunnerTool = (typeof BROWSER_RUNNER_TOOLS)[number];
 export const isBrowserRunnerTool = (tool: string): tool is BrowserRunnerTool =>
   (BROWSER_RUNNER_TOOLS as readonly string[]).includes(tool);
 
-type Scope = "browser:read" | "browser:interact";
-type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
+import {extractCaptchaImages} from "./browser-auth-result.js";
 
+type Scope = "browser:read" | "browser:interact";
+type ToolResult = { content: ({ type: "text"; text: string } | {type:"image";data:string;mimeType:string})[]; isError?: boolean };
+
+export function browserRunnerResult(value:unknown,textResult:(value:unknown)=>ToolResult):ToolResult {
+ const {clean,images}=extractCaptchaImages(value);
+ const result=textResult(clean);
+ return {...result,content:[...result.content,...images]};
+}
 export type BrowserRunnerDeps = {
   identity: OAuthIdentity | null;
   hasScope: (identity: OAuthIdentity, scope: Scope) => boolean;
@@ -82,12 +89,13 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:read",
     title: "Read the task browser's page",
     description:
-      "Return a bounded view of the current page: url, title, headings, visible text and interactive elements with refs (e1, e2, ...; f1e1 for elements inside embedded frames such as hosted application forms), roles, labels, non-sensitive values, options and validation errors. Refs are valid only for the returned snapshot_id; take a new snapshot after the page changes. frames lists embedded frames; frames outside allowed_origins are named but never read. Sensitive fields are marked and never show values. blockers report a sign-in or CAPTCHA that only the user can complete; a requested one-time code is an attention note, to be filled from where it was sent.",
+      "Return a bounded view of the current page: url, title, headings, visible text and interactive elements with refs (e1, e2, ...; f1e1 for elements inside embedded frames such as hosted application forms), roles, labels, non-sensitive values, options and validation errors. Refs are valid only for the returned snapshot_id; take a new snapshot after the page changes. frames lists embedded frames; frames outside allowed_origins are named but never read, except supported embedded CAPTCHA providers approved for the current top-level website in Dashboard. Sensitive fields are marked and never show values. authentication reports current Dashboard approval for OTP and CAPTCHA on this site. Approved OTP codes can be read from the connected mail app and entered for login or registration. Approved CAPTCHA frames expose visible controls; include_captcha_images=true adds cropped challenge images for visual verification. Interact with these controls after approval; response tokens remain private. Unapproved or unsupported challenges require the user. No blanket prohibition applies to approved OTP or CAPTCHA.",
     input: z.object({
       device_id: deviceId,
       session_id: id,
       max_elements: z.number().int().min(10).max(400).optional(),
       max_text: z.number().int().min(500).max(20000).optional(),
+      include_captcha_images: z.boolean().optional(),
     }),
     annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
   },
@@ -95,7 +103,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Act in the task browser",
     description:
-      "Do one thing in the task browser, or enter a whole form at once. On an element from the latest snapshot (snapshot_id + ref): click, fill (value), select (option value or label), check, uncheck, press (key), or upload (path of a file in a Trusted Location on the computer: documents and images pdf/doc/docx/txt/rtf/odt/csv/xlsx/pptx/png/jpg/gif/webp up to 25 MB; on Agent 0.6.4+ also audio mp3/wav/m4a up to 512 MB and video mp4/mov/m4v/webm up to 2 GB). fill_form enters many fields from one snapshot in one call: fields=[{ref, action: fill|select|check|uncheck, value}], in order; each field reports ok or its own error and the others still go in; it never clicks, submits or uploads. Use fill_form whenever two or more fields are ready, then click Next or Submit as its own act. snapshot=true returns the page as the action left it (with a new snapshot_id), so a click that opens a dropdown, dialog or next step needs no separate browser_runner_snapshot. Without a ref: navigate (url inside allowed_origins) or wait (text and/or url_contains, timeout_ms up to 30000). fill_secret fills a sign-in saved on the computer into a field: secret=<name from saved_logins or a saved_login note>, part=username or password; the Agent fills it only on the sites it is saved for and a password only into a field marked secret: password, and never returns either value. Passwords and payment details are never accepted as a value. One-time codes (fields marked secret: code) may be filled with the code from where it was sent, for example the user's email through a connected mail app, unless the computer turned this off; codes are never recorded. Mark anything that sends or saves externally (submit, apply, book, pay, post, or a Next button that posts the form) with effect=submit and a stable idempotency_key per step. The Agent refuses POST form buttons, submit-like controls and Enter without effect=submit (SUBMIT_EFFECT_REQUIRED). Sign-in steps (an email or username, a password or code the user typed, Send code) are not one-time submits and can always be repeated. A page of a longer form (Next, Continue, Save and continue) settles itself when the next page opens (effect.settled_by=runner, no confirm needed); if it comes back on the same page it holds nothing up and can be sent again with a new key, up to 3 times. A final submit (submit application, pay, book, post, send) is sent once: a key is never sent twice, the same form and button is never sent again under a new key (SUBMIT_ALREADY_RECORDED), and it must be settled with browser_runner_confirm before another final submit. If nothing left the page after a click (effect.nothing_sent), the same key may be clicked again while that stays true. After a crash or timeout a submit is reported as unknown rather than retried. Use effect=navigation for links and GET steps.",
+      "Do one thing in the task browser, or enter a whole form at once. On an element from the latest snapshot (snapshot_id + ref): click, fill (value), select (option value or label), check, uncheck, press (key), or upload (path of a file in a Trusted Location on the computer: documents and images pdf/doc/docx/txt/rtf/odt/csv/xlsx/pptx/png/jpg/gif/webp up to 25 MB; on Agent 0.6.4+ also audio mp3/wav/m4a up to 512 MB and video mp4/mov/m4v/webm up to 2 GB). fill_form enters many fields from one snapshot in one call: fields=[{ref, action: fill|select|check|uncheck, value}], in order; each field reports ok or its own error and the others still go in; it never clicks, submits or uploads. Use fill_form whenever two or more fields are ready, then click Next or Submit as its own act. snapshot=true returns the page as the action left it (with a new snapshot_id), so a click that opens a dropdown, dialog or next step needs no separate browser_runner_snapshot. Without a ref: navigate (url inside allowed_origins) or wait (text and/or url_contains, timeout_ms up to 30000). fill_secret fills a sign-in saved on the computer into a field: secret=<name from saved_logins or a saved_login note>, part=username or password; the Agent fills it only on the sites it is saved for and a password only into a field marked secret: password, and never returns either value. Passwords and payment details are never accepted as a value. OTP login and registration are supported after the user approves OTP for the target site in Dashboard → device → Browser authentication. Read authentication in the snapshot: otp=true means approved. Get a fresh code through the connected mail app, using the configured mailbox when provided, match the site and account, and fill the field marked secret: code. Do not claim AI is prohibited when authentication.otp is true. If BROWSER_AUTH_REQUIRED or otp=false, direct the user to the Dashboard approval. The local code switch must also be on; codes are never recorded. Mark anything that sends or saves externally (submit, apply, book, pay, post, or a Next button that posts the form) with effect=submit and a stable idempotency_key per step. The Agent refuses POST form buttons, submit-like controls and Enter without effect=submit (SUBMIT_EFFECT_REQUIRED). Sign-in steps (an email or username, a password or code the user typed, Send code) are not one-time submits and can always be repeated. A page of a longer form (Next, Continue, Save and continue) settles itself when the next page opens (effect.settled_by=runner, no confirm needed); if it comes back on the same page it holds nothing up and can be sent again with a new key, up to 3 times. A final submit (submit application, pay, book, post, send) is sent once: a key is never sent twice, the same form and button is never sent again under a new key (SUBMIT_ALREADY_RECORDED), and it must be settled with browser_runner_confirm before another final submit. If nothing left the page after a click (effect.nothing_sent), the same key may be clicked again while that stays true. After a crash or timeout a submit is reported as unknown rather than retried. Use effect=navigation for links and GET steps.",
     input: z.object({
       device_id: deviceId,
       session_id: id,
@@ -188,7 +196,8 @@ export function registerBrowserRunnerTools(server: McpServer, deps: BrowserRunne
         if (usageError) return usageError;
         const { device_id, ...args } = input;
         const call: DeviceCall = (name, callArgs) => deps.callDevice(identity, String(device_id), name, callArgs);
-        return deps.textResult(tool === "browser_runner_act" ? await runAct(call, args) : tool === "browser_runner_start" ? await runStart(call, args) : await call(tool, args));
+        const out=tool === "browser_runner_act" ? await runAct(call, args) : tool === "browser_runner_start" ? await runStart(call, args) : await call(tool, args);
+        return browserRunnerResult(out,deps.textResult);
       },
     );
   }

@@ -407,6 +407,13 @@ export class DeviceRegistry {
       );
     }
 
+    const authFill = body.tool === "browser_fill" ||
+      (["browser_act","browser_runner_act"].includes(body.tool) &&
+       ["fill","fill_form"].includes(String(body.arguments?.action)));
+    if (body.policy?.browserAuth && authFill && !attachment.capabilities?.includes("browser_auth_policy_v1")) {
+      return Response.json({error:"BROWSER_AUTH_UPDATE_REQUIRED: update the Remote Arc Agent or Chrome extension before filling fields. This version cannot enforce Dashboard authentication approvals."},{status:409});
+    }
+
     const id =
       body.requestId && /^[0-9a-f-]{36}$/i.test(body.requestId)
         ? body.requestId

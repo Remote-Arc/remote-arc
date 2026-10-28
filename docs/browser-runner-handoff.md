@@ -2,7 +2,7 @@
 
 Browser Runner uses an installed Chrome, Edge or Chromium window on the linked computer. By default the window runs out of sight. It is not a cloud browser or a truly windowless browser. True headless operation and datacenter IP addresses can cause sites to request more verification; use a computer with a display for human handoff.
 
-After a submit or navigation, the Agent checks for visible verification, sign-in and one-time-code blockers. It shows the existing task window without reloading it and notifies its owner. Dashboard device settings can change this to **Notify only** for meetings or presentations. Hidden, inactive CAPTCHA frames do not stop a task. Remote Arc does not solve challenges or read their responses.
+After a submit or navigation, the Agent checks for visible verification, sign-in and one-time-code blockers. It shows the existing task window without reloading it and notifies its owner. Dashboard device settings can change this to **Notify only** for meetings or presentations. Hidden, inactive CAPTCHA frames do not stop a task. OTP and supported CAPTCHA controls can be operated after per-site Dashboard approval; unapproved or unsupported challenges use this handoff. Response tokens remain private. See [browser authentication](browser-authentication.md).
 
 Use `browser_runner_wait` with `until=user_done` to wait while the owner finishes. Other conditions are `page_change`, `text`, `url_contains`, `upload_done` and `idle`. Each call waits locally for up to 40 seconds and returns `met`, `timeout` or `needs_user`. A timeout can be followed by another wait. Waiting never authorizes or retries a submit; inspect the result and confirm the existing effect.
 

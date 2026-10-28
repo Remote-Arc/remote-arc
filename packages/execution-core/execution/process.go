@@ -120,6 +120,24 @@ func (p *Processes) cleanup() {
 			delete(p.items, id)
 		}
 	}
+	// Keep a separate bounded history. Never evict a running process to make room.
+	type completed struct {
+		id string
+		at time.Time
+	}
+	finished := []completed{}
+	for id, m := range p.items {
+		m.mu.Lock()
+		if m.ended != nil {
+			finished = append(finished, completed{id, *m.ended})
+		}
+		m.mu.Unlock()
+	}
+	sort.Slice(finished, func(i, j int) bool { return finished[i].at.Before(finished[j].at) })
+	for len(finished) > maxFinishedProcesses {
+		delete(p.items, finished[0].id)
+		finished = finished[1:]
+	}
 }
 func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed, error) {
 	p.mu.Lock()
@@ -128,8 +146,8 @@ func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed
 		return nil, errors.New("Execution core is closed.")
 	}
 	p.cleanup()
-	if len(p.items) >= 32 {
-		return nil, errors.New("Remote Arc already has the maximum number of managed background processes on this device.")
+	if active, limit := p.activeCountLocked(), activeProcessLimit(); active >= limit {
+		return nil, fmt.Errorf("Remote Arc already has the maximum number of managed background processes on this device. Running: %d; limit: %d. Finished tasks do not count. Set REMOTEARC_MAX_ACTIVE_PROCESSES to 1-256 to change the limit.", active, limit)
 	}
 	cmd := shellCommand(command)
 	cmd.Dir = cwd
@@ -160,6 +178,9 @@ func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed
 		}
 		m.mu.Unlock()
 		close(m.done)
+		p.mu.Lock()
+		p.cleanup()
+		p.mu.Unlock()
 	}()
 	if deadline > 0 {
 		go func() {
@@ -322,15 +343,7 @@ func (p *Processes) Stop(id string) (map[string]any, error) {
 func (p *Processes) ActiveCount() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	active := 0
-	for _, job := range p.items {
-		select {
-		case <-job.done:
-		default:
-			active++
-		}
-	}
-	return active
+	return p.activeCountLocked()
 }
 
 func (p *Processes) List() []map[string]any {

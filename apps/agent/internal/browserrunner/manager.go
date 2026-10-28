@@ -220,7 +220,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	defer cancel()
 	m.startReaper()
 	if tool == "browser_runner_start" {
-		return m.start(ctx, args)
+		return m.start(ctx, args, p)
 	}
 	if tool == "browser_runner_status" && protocol.OptionalString(args, "session_id") == "" {
 		return m.list(), nil
@@ -241,6 +241,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	}
 	defer s.mu.Unlock()
 	s.lastUsed = m.now()
+	s.auth = p.BrowserAuth
 	if tool == "browser_runner_status" {
 		return s.cp.Summary(s.live()), nil
 	}
@@ -265,6 +266,9 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 		maxText, e2 := protocol.Integer(args, "max_text", 6000, 500, 20000)
 		if e = errors.Join(e1, e2); e == nil {
 			out, e = s.snapshot(ctx, maxEl, maxText)
+			if e == nil && protocol.Bool(args, "include_captcha_images") {
+				out["captcha_images"] = s.captchaImages(ctx)
+			}
 		}
 	case "browser_runner_act":
 		hidAgain = s.hideAfterUser(ctx)
@@ -406,7 +410,7 @@ func (m *Manager) liveCount(except string, profile string) (int, bool) {
 	return n, clash
 }
 
-func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
+func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Policy) (any, error) {
 	id, e := sessionID(args, "task_id")
 	if e != nil {
 		return nil, e
@@ -497,6 +501,7 @@ func (m *Manager) start(ctx context.Context, args map[string]any) (any, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastUsed = m.now()
+	s.auth = p.BrowserAuth
 	if resumed {
 		if s.cp.Profile != profile || (s.cp.Browser == browserYourChrome) != (browser == browserYourChrome) {
 			return nil, errors.New("A session keeps its browser and profile. Close it with forget=true to start over in another.")

@@ -24,8 +24,9 @@
     const type = String(el.type || "").toLowerCase();
     const ac = String(el.getAttribute("autocomplete") || "").toLowerCase().split(/\s+/);
     const hint = [el.name, el.id, el.getAttribute("aria-label"), el.getAttribute("placeholder")].join(" ");
-    if (ac.some((t) => t.startsWith("cc-")) || /(cvv|cvc|csc|card[-_ ]?num|ccnum|cc[-_]?number|security[-_ ]?code)/i.test(hint)) return "payment";
-    if (ac.includes("one-time-code") || /(otp|one[-_ ]?time|verification[-_ ]?code|passcode)/i.test(hint + " " + (type === "password" ? "" : labelText(el)))) return "code";
+    if (ac.some((t) => t.startsWith("cc-")) || /(cvv|cvc|csc|card[-_ ]?num|ccnum|cc[-_]?number|cc[-_]?security[-_ ]?code)/i.test(hint)) return "payment";
+    if (type !== "password" && !ac.some(t => /^(current|new)-password$/.test(t)) && /(captcha|验证码图片|图形验证码)/i.test(hint)) return "captcha_answer";
+    if (ac.includes("one-time-code") || /(otp|one[-_ ]?time|verification[-_ ]?code|passcode|security[-_ ]?code|验证码|驗證碼)/i.test(hint + " " + (type === "password" ? "" : labelText(el)))) return "code";
     if (type === "password" || ac.includes("current-password") || ac.includes("new-password")) return "password";
     if (SENSITIVE_AUTOCOMPLETE.some((t) => ac.includes(t)) || SENSITIVE_NAME.test(hint)) return "password";
     return "";
@@ -38,11 +39,13 @@
   const refuseSecret = (el) => {
     const kind = secretKind(el);
     if (kind === "captcha") throw new Error(CAPTCHA_REFUSAL);
+    if (kind === "captcha_answer" && a.allow_captcha) return;
+    if (kind === "captcha_answer") throw new Error("BROWSER_AUTH_REQUIRED: approve CAPTCHA for this site in Dashboard Browser authentication.");
     if (kind === "code" && a.allow_codes) return;
     // A password from the user's vault, filled by the Agent itself; the
     // caller never sees it.
     if (kind === "password" && a.secret_part === "password") return;
-    if (kind === "code") throw new Error("BLOCKED_SENSITIVE: one-time codes are turned off for Browser Runner on this computer (browserRunnerOneTimeCodes). Ask the user to enter it.");
+    if (kind === "code") throw new Error("BROWSER_AUTH_REQUIRED: one-time codes are turned off or this site has not been approved in Dashboard Browser authentication. Approve OTP for this site or ask the user to enter it.");
     if (kind) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords or payment details from the conversation. Ask the user to enter this field themselves.");
   };
   const visible = (el) => {
@@ -162,9 +165,9 @@
     return r.width >= 250 && r.height >= 250 ? "challenge" : "widget";
   };
   // CAPTCHA parts on this document, judged only from the outside: the frames
-  // are cross-site, so the Runner neither reads nor touches them, and it never
-  // reads a response token. Solved or not cannot be known from here; a shown
-  // challenge is what needs the user.
+  // may be cross-site. Approved provider frames expose visible controls in the
+  // combined snapshot; response tokens stay private. Without approval, an open
+  // challenge needs the user.
   const captchaParts = () => {
     const parts = [];
     const frames = [];
@@ -199,17 +202,24 @@
     // about whether anything is left to do.
     const captcha = captchaParts();
     const shownBy = (part) => [...new Set(captcha.filter((c) => c.part === part && c.shown).map((c) => c.vendor))];
-    for (const v of shownBy("challenge")) blockers.push({ kind: "captcha", detail: v + " challenge is open on the page; the user completes it in the Runner window" });
-    for (const v of shownBy("widget")) attention.push({ kind: "captcha_widget", detail: v + " check is shown. If it is not completed yet, ask the user to complete it in the Runner window before any effect=submit. The Runner cannot tell whether it is completed and never reads its response." });
+    for (const v of shownBy("challenge")) (a.allow_captcha ? attention : blockers).push({ kind: "captcha", detail: a.allow_captcha ? v + " verification is approved in Dashboard. Read the challenge frames and interact with their visible controls; request include_captcha_images for image challenges. If it cannot be completed, hand it to the user." : v + " challenge is open. Approve CAPTCHA for this site in Dashboard Browser authentication, or complete it in the Runner window." });
+    for (const v of shownBy("widget")) attention.push({ kind: "captcha_widget", detail: a.allow_captcha ? v + " verification is approved; interact with its visible controls. Response tokens stay private to the page." : v + " check is shown. Approve CAPTCHA for this site in Dashboard Browser authentication, or ask the user to complete it." });
     const secret = [];
     walk(document.documentElement || document, el => { if (el.tagName === "INPUT" && onPage(el) && sensitive(el)) secret.push(el); }, { left: 20000 });
+    if (secret.some((el) => secretKind(el) === "captcha_answer")) (a.allow_captcha ? attention : blockers).push({kind:"captcha",detail:a.allow_captcha ? "CAPTCHA answer entry is approved for this site." : "Approve CAPTCHA for this site in Dashboard Browser authentication, or complete it yourself."});
     if (secret.some((el) => secretKind(el) === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
     if (secret.some((el) => secretKind(el) === "code")) {
-      if (a.allow_codes) attention.push({ kind: "verification_code", detail: "A one-time code is requested. Get it from where it was sent (for example the user's email through a connected mail app) and fill it into the field marked secret: code. The code is never recorded." });
-      else blockers.push({ kind: "verification_code", detail: "one-time code requested; one-time codes are turned off on this computer, so the user enters it" });
+      if (a.allow_codes) attention.push({ kind: "verification_code", detail: "OTP sign-in or registration is approved for this site. Get the latest unexpired code from " + (a.mailbox || "the connected app where it was sent") + " for this site and account, then fill the field marked secret: code. Do not reuse codes. The code is never recorded." });
+      else blockers.push({ kind: "verification_code", detail: "one-time code requested; approve OTP for this website in Dashboard Browser authentication and enable the local code switch, or ask the user to enter it" });
     }
     return { blockers, attention, captcha };
   };
+  if (op === "guard_key_focus") {
+    let el=document.activeElement;
+    while(el && el.shadowRoot && el.shadowRoot.activeElement)el=el.shadowRoot.activeElement;
+    if(el && el.tagName==="IFRAME")throw new Error("BROWSER_AUTH_REQUIRED: keyboard input into an embedded frame requires an explicit ref from a fresh approved snapshot.");
+    return true;
+  }
   if (op === "frame_visible") return onPage(a.element);
   if (op === "scan_blockers") {
     const result = scanBlockers();
@@ -244,7 +254,7 @@
     const selector = "a[href],button,input,select,textarea,[role=button],[role=link],[role=checkbox],[role=radio],[role=combobox],[role=option],[role=tab],[role=menuitem],[role=switch],[contenteditable=true],[contenteditable='']";
     const all = [];
     walk(document.documentElement || document, (el) => {
-      if (!el.matches(selector)) return;
+      if (!el.matches(selector) && !(a.captcha_frame && /^(IMG|CANVAS)$/.test(el.tagName))) return;
       const type = String(el.type || "").toLowerCase();
       if (type !== "hidden" && visible(el)) all.push(el);
     }, { left: 20000 });
@@ -259,7 +269,7 @@
       const tag = el.tagName.toLowerCase();
       const type = String(el.type || "").toLowerCase();
       const isSensitive = sensitive(el);
-      const item = { ref, role: roleOf(el), name: describe(el) };
+      const item = { ref, role: roleOf(el), name: describe(el) || (a.captcha_frame ? tag + " " + n : "") };
       if (tag === "input" || tag === "textarea" || tag === "select") {
         if (type && tag === "input") item.type = type;
         if (el.required || el.getAttribute("aria-required") === "true") item.required = true;
@@ -376,10 +386,10 @@
     const password = inputs.some((f) => String(f.type).toLowerCase() === "password");
     const code = inputs.some((f) => /one-time-code|\botp\b|verification|passcode|security code|\bcode\b/i.test(hint(f)));
     const identifier = inputs.some((f) => !choice(f)) && inputs.filter((f) => !choice(f)).length <= 2 && inputs.every((f) => choice(f) || /e-?mail|user|login|account|phone|mobile/i.test(hint(f)));
-    const authWords = /\b(sign ?in|log ?in|log ?on|sign ?on|send (me )?(a |the )?(code|link)|resend|verify|one-time|continue with|continue|next)\b/i.test(label);
+    const authWords = /\b(sign ?in|log ?in|log ?on|sign ?on|sign ?up|register|create account|send (me )?(a |the )?(code|link)|resend|verify|one-time|continue with|continue|next)\b|登录|登入|注册|註冊|验证|驗證/i.test(label);
     const authPlace = /(login|signin|sign-in|identity|auth|sso|oauth)/i.test(location.hostname + location.pathname);
     const strongFinal = /\b(pay|purchase|place order|book now|submit application|complete application|delete|publish|post)\b/i.test(label);
-    const auth = !strongFinal && (password || code || (identifier && !danger && (authWords || authPlace)));
+    const auth = !strongFinal && ((a.captcha_frame && a.allow_captcha) || password || code || (identifier && (authWords || (authPlace && !danger))));
     // final: sent once, confirmed by the caller. step: a page of a longer
     // form; it may be saved again and settles itself when the next page opens.
     const kind = auth ? "auth" : danger ? "final" : formSubmits ? "step" : "";
@@ -441,7 +451,7 @@
     return { idle: Math.round(performance.now() - q.last), changes: q.changes };
   }
 
-  const CAPTCHA_REFUSAL = "BLOCKED_CAPTCHA: a CAPTCHA response comes only from the user solving the CAPTCHA in the Runner window. Browser Runner never fills, reads or supplies CAPTCHA responses.";
+  const CAPTCHA_REFUSAL = "BLOCKED_CAPTCHA: response tokens are private. Use approved visible CAPTCHA controls; never read, inject or supply response tokens.";
 
   if (op === "locate") {
     const el = lookup();

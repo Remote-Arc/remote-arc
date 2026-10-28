@@ -1,3 +1,4 @@
+import {BrowserAuthSetting} from "./browser-auth-setting.js";
 import {startProductEvents,recordProductView} from './product-events.js';
 import {useCaseSlugs} from '../../../packages/docs/src/arc-use-cases.js';
 import { DeviceBrowserSessions, RunnerAttentionList, RunnerAttentionSetting, RunnerView } from "./runner-view.js";
@@ -5490,6 +5491,7 @@ function Dashboard({
                           </label>
                         )}
                         {runnerEnabled && <RunnerAttentionSetting deviceId={device.id}/>}
+                        {(runnerEnabled || device.platform === "browser") && <BrowserAuthSetting deviceId={device.id} browserExtension={device.platform === "browser"}/>}
                         {allTools.map((tool) => {
                           const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
                           const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;

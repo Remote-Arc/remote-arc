@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 )
 
 //go:embed page.js
@@ -29,6 +31,7 @@ type session struct {
 	mu       sync.Mutex
 	m        *Manager
 	cp       *Checkpoint
+	auth     protocol.BrowserAuth
 	scope    scope
 	proc     *browserProcess
 	conn     cdpClient
@@ -476,7 +479,7 @@ func (s *session) flush() error {
 	s.cp.Blocked = append(s.cp.Blocked, s.blocked...)
 	s.blocked = nil
 	if strings.HasPrefix(s.href, "http") {
-		s.cp.ResumeURL = s.href
+		s.cp.ResumeURL = authResumeURL(s.href)
 		s.cp.LastURL = safeURL(s.href)
 	}
 	s.ev.Unlock()
@@ -569,6 +572,18 @@ func (s *session) helperIn(ctx context.Context, frameID, op string, args map[str
 	if args == nil {
 		args = map[string]any{}
 	}
+	rawURL := s.currentHref()
+	if frameID != "" {
+		f, ok := s.frameByID(frameID)
+		if !ok || !s.readableFrame(f) {
+			return nil, errors.New("BROWSER_AUTH_REQUIRED: this frame is not approved in Dashboard.")
+		}
+		rawURL = f.url
+		args["captcha_frame"] = s.captchaFrame(f)
+	}
+	args["allow_codes"] = s.codesAllowed(rawURL)
+	args["allow_captcha"] = s.captchaAllowed()
+	args["mailbox"] = s.auth.Mailbox
 	b, _ := json.Marshal(args)
 	expr := pageJS + "(" + quoteJS(op) + ", " + string(b) + ")"
 	var r evalResult
@@ -918,7 +933,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	s.ev.Lock()
 	epoch := s.epoch
 	s.ev.Unlock()
-	r, e := s.helper(ctx, "snapshot", map[string]any{"snapshot_id": id, "max_elements": maxElements, "max_text": maxText, "allow_codes": oneTimeCodesAllowed()}, true)
+	r, e := s.helper(ctx, "snapshot", map[string]any{"snapshot_id": id, "max_elements": maxElements, "max_text": maxText, "allow_codes": s.codesAllowed(s.currentHref()), "allow_captcha": s.captchaAllowed()}, true)
 	if e != nil {
 		return nil, e
 	}
@@ -926,6 +941,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	if e := json.Unmarshal(r.Result.Value, &page); e != nil {
 		return nil, e
 	}
+	page["authentication"] = map[string]any{"otp": s.codesAllowed(s.currentHref()), "captcha": s.captchaAllowed(), "mailbox": s.auth.Mailbox, "approval_location": "Dashboard → device → Browser authentication"}
 	s.snapshotID, s.snapshotEpoch = id, epoch
 	elements, _ := page["elements"].([]any)
 	s.snapshotFrames(ctx, page, id, maxElements-len(elements), maxText)
@@ -1090,11 +1106,19 @@ type actRequest struct {
 // act performs one input action. dispatched reports whether any input may
 // have reached the page, which decides between not_dispatched and unknown.
 func (s *session) act(ctx context.Context, a actRequest) (result map[string]any, dispatched bool, err error) {
-	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action, "allow_codes": oneTimeCodesAllowed(), "secret_part": a.SecretPart}
+	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action, "allow_codes": s.codesAllowed(s.currentHref()), "allow_captcha": s.captchaAllowed(), "secret_part": a.SecretPart}
 	result = map[string]any{"action": a.Action}
 	frameID, e := s.refFrame(a.Ref)
 	if e != nil {
 		return nil, false, e
+	}
+	if e := s.checkAuthRef(a.Ref); e != nil {
+		return nil, false, e
+	}
+	if frameID != "" {
+		if f, ok := s.frameByID(frameID); ok {
+			ref["allow_codes"] = s.codesAllowed(f.url)
+		}
 	}
 	if frameID != "" {
 		result["frame"] = a.Ref[:strings.IndexByte(a.Ref, 'e')]
@@ -1254,6 +1278,11 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		k, ok := keys[a.Key]
 		if !ok {
 			return nil, false, errors.New("press key must be one of Enter, Tab, Escape, ArrowDown, ArrowUp, Space.")
+		}
+		if a.Ref == "" {
+			if _, e := s.helper(ctx, "guard_key_focus", nil, true); e != nil {
+				return nil, false, e
+			}
 		}
 		if a.Ref != "" {
 			if _, e := s.helperIn(ctx, frameID, "focus", ref, true); e != nil {

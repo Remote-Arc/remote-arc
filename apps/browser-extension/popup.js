@@ -115,7 +115,7 @@ async function render() {
        <div class="meta">${escapeHtml(state.activeGrant.title || shortUrl(state.activeGrant.url))}</div>
        <div class="permission"><span>Read page</span><span class="on">Allowed</span></div>
        <div class="permission"><span>Click & fill</span><span class="${interact ? "on" : ""}">${interact ? "Allowed" : "Blocked"}</span></div>
-       <p class="hint">Interaction is per-tab. Recognized password, one-time-code, payment and file fields stay blocked.</p>
+       <p class="hint">Interaction is per-tab. OTP requires approval for the website in Dashboard and the code switch above. Password, payment and file fields stay blocked.</p>
        <button class="${interact ? "secondary" : "primary"}" id="toggle-interact">${interact ? "Disable click & fill on this tab" : "Enable click & fill on this tab"}</button>
        <button class="secondary top-gap" id="revoke">Stop AI access on this tab</button>`
     : `<div class="permission"><span>Current tab</span><span>No access</span></div>

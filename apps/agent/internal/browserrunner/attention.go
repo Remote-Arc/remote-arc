@@ -96,7 +96,7 @@ func (s *session) updateAttention(ctx context.Context, blockers []any) {
 	}
 	fresh := s.cp.AttentionID == ""
 	s.cp.State = StateNeedsUser
-	s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Complete it in the task window; Remote Arc never solves CAPTCHAs and never reads their responses. Then use browser_runner_wait until=user_done. This does not authorize another submit."
+	s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Complete it in the task window, or approve supported OTP/CAPTCHA actions in Dashboard Browser authentication. CAPTCHA response tokens stay private; Remote Arc never reads their responses. Then use browser_runner_wait until=user_done. This does not authorize another submit."
 	if kind == "scope" {
 		s.cp.NeedsUser = "The task attempted to leave allowed_origins. Ask the user to review the exact sites in Dashboard Boundary requests; waiting does not expand scope. Resume with browser_runner_start only after approval."
 	}
@@ -173,7 +173,7 @@ func (s *session) frameVisible(ctx context.Context, f frameInfo) bool {
 
 func (s *session) scanBlockers(ctx context.Context) (blockerScan, bool) {
 	var scan blockerScan
-	r, e := s.helper(ctx, "scan_blockers", map[string]any{"allow_codes": oneTimeCodesAllowed()}, true)
+	r, e := s.helper(ctx, "scan_blockers", map[string]any{"allow_codes": s.codesAllowed(s.currentHref()), "allow_captcha": s.captchaAllowed()}, true)
 	if e != nil || json.Unmarshal(r.Result.Value, &scan) != nil {
 		return scan, false
 	}
@@ -185,7 +185,7 @@ func (s *session) scanBlockers(ctx context.Context) (blockerScan, bool) {
 	visible := map[string]bool{s.mainFrame: true}
 	complete := true
 	for _, f := range s.childFrames() {
-		if !s.scope.Allows(f.url) || !visible[f.parent] {
+		if !s.readableFrame(f) || !visible[f.parent] {
 			continue
 		}
 		shown, known := s.frameVisibility(ctx, f)
@@ -197,7 +197,7 @@ func (s *session) scanBlockers(ctx context.Context) (blockerScan, bool) {
 			continue
 		}
 		visible[f.id] = true
-		r, e := s.helperIn(ctx, f.id, "scan_blockers", map[string]any{"allow_codes": oneTimeCodesAllowed()}, true)
+		r, e := s.helperIn(ctx, f.id, "scan_blockers", map[string]any{"allow_codes": s.codesAllowed(s.currentHref()), "allow_captcha": s.captchaAllowed()}, true)
 		var child blockerScan
 		if e != nil || json.Unmarshal(r.Result.Value, &child) != nil {
 			complete = false

@@ -307,6 +307,8 @@ def download_source(request, output):
 
 def evidence_source(root, directory):
     directory = inside(root, directory)
+    if (directory / "failure.json").exists():
+        fail("FAILED_EVIDENCE", "This bundle has a failed processing receipt; use a fresh verified result.")
     source = load_json(directory / "source.json")
     if source.get("schemaVersion") != 1 or not re.fullmatch(r"[a-f0-9]{16}", source.get("sourceId", "")):
         fail("INVALID_EVIDENCE", "Invalid evidence manifest.")

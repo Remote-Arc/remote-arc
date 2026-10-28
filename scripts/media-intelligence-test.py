@@ -160,4 +160,11 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaises(m.MediaError) as error: m.execute(self.request(action, **fields))
             self.assertEqual(error.exception.code, 'EVIDENCE_CHANGED')
 
+    def test_failed_bundle_is_never_reused_as_completed_evidence(self):
+        self.transcript()
+        (self.root / 'transcript/failure.json').write_text('{"status":"failed","verified":false}')
+        with self.assertRaises(m.MediaError) as error:
+            m.execute(self.request('find', evidence='transcript', query='export', limit=20))
+        self.assertEqual(error.exception.code, 'FAILED_EVIDENCE')
+
 if __name__ == '__main__': unittest.main(verbosity=2)

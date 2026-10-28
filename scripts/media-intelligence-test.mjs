@@ -37,6 +37,10 @@ test('worker failure, timeout and disk budget never become a verified result',as
   const output=path.join(temp,'out');await fs.mkdir(output);
   await fs.writeFile(worker,"const fs=require('node:fs');let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{fs.writeFileSync(JSON.parse(s).output+'/partial',Buffer.alloc(100000));setInterval(()=>{},1000);});");
   await assert.rejects(runWorker({workspace:temp,output},{python:interpreter,worker,byteBudget:1000}),{code:'DOWNLOAD_LIMIT'});
+  assert.equal(JSON.parse(await fs.readFile(path.join(output,'failure.json'),'utf8')).verified,false);
+  const fast=path.join(temp,'fast');await fs.mkdir(fast);
+  await fs.writeFile(worker,"const fs=require('node:fs');let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{fs.writeFileSync(JSON.parse(s).output+'/partial',Buffer.alloc(100000));console.log(JSON.stringify({verified:true}));});");
+  await assert.rejects(runWorker({workspace:temp,output:fast},{python:interpreter,worker,byteBudget:1000}),{code:'DOWNLOAD_LIMIT'});
  }finally{await fs.rm(temp,{recursive:true,force:true});}
 });
 test('Python evidence workflow: retrieval decisions, caption parsing, offsets, tampering and citations',()=>{

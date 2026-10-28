@@ -23,8 +23,8 @@ export const SKILL_USE_CASES = [
       "zh": "单条公开视频链接、Python 3.11+、Node，以及已连接电脑上获授权的可写工作目录。"
     },
     "boundary": {
-      "en": "Processing stays on the device. Captions can be wrong; still frames cannot establish continuous action. Protected or bot-blocked sources may be unavailable. No account cookies or paid APIs.",
-      "zh": "处理在设备完成。字幕可能有误，静帧无法证明连续动作；受保护或触发反爬的视频可能无法访问。不读取账号 Cookie，不调用付费 API。"
+      "en": "Retrieval and local transcription run on the device; selected evidence enters your AI's model context. Captions can be wrong and frames are samples. Protected or bot-blocked sources may be unavailable. No account cookies.",
+      "zh": "获取和本地转录在设备执行，选定证据会进入 AI 的模型上下文。字幕可能有误，画面仅为采样；受保护或触发反爬的视频可能无法访问。不读取账号 Cookie。"
     },
     "steps": [
       {

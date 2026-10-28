@@ -52,16 +52,17 @@ async function bytesIn(directory){let bytes=0;try{for(const item of await fs.rea
 export async function runWorker(request,{python:interpreter,worker=fileURLToPath(new URL('./media-intelligence.py',import.meta.url)),env=process.env,timeout=600000,byteBudget=(request.maxBytes??32*MB)*2+16*MB}={}){
  return new Promise((resolve,reject)=>{
   const child=spawn(interpreter.command,[...interpreter.prefix,worker],{cwd:request.workspace,env:{...env,PYTHONUTF8:'1',PYTHONDONTWRITEBYTECODE:'1'},shell:false,windowsHide:true,detached:process.platform!=='win32',stdio:['pipe','pipe','pipe']});
-  let stdout='',error=null,checking=false,killPromise;
-  const stop=(failure)=>{if(error)return;error=failure;if(!child.pid)return;killPromise=process.platform==='win32'?new Promise(done=>{const killer=spawn('taskkill',['/PID',String(child.pid),'/T','/F'],{windowsHide:true,stdio:'ignore',shell:false});killer.on('error',()=>{child.kill();done();});killer.on('close',done);}):Promise.resolve().then(()=>{try{process.kill(-child.pid,'SIGKILL');}catch{child.kill('SIGKILL');}});};
+  let stdout='',error=null,checking=false,finished=false,killPromise;
+  const failed=async failure=>{if(request.output&&request.action!=='report')try{const directory=await checkedPath(request.workspace,request.output);if((await fs.stat(directory)).isDirectory())await fs.writeFile(path.join(directory,'failure.json'),JSON.stringify({status:'failed',verified:false,code:failure.code||'PROCESSING_FAILED'})+'\n',{flag:'wx'});}catch{}reject(failure);};
+  const stop=(failure)=>{if(error||finished)return;error=failure;if(!child.pid)return;killPromise=process.platform==='win32'?new Promise(done=>{const killer=spawn('taskkill',['/PID',String(child.pid),'/T','/F'],{windowsHide:true,stdio:'ignore',shell:false});killer.on('error',()=>{child.kill();done();});killer.on('close',done);}):Promise.resolve().then(()=>{try{process.kill(-child.pid,'SIGKILL');}catch{child.kill('SIGKILL');}});};
   const timer=setTimeout(()=>stop(fault('TIMEOUT','Media processing exceeded the time budget; no result is claimed.')),timeout);
   const monitor=setInterval(async()=>{if(checking||!request.output||request.action==='report')return;checking=true;try{if(await bytesIn(request.output)>byteBudget)stop(fault('DOWNLOAD_LIMIT','Task-owned output exceeded the disk budget.'));}catch(failure){stop(failure);}finally{checking=false;}},100);
   child.stdout.on('data',data=>{stdout+=data;if(Buffer.byteLength(stdout)>8*MB)stop(fault('OUTPUT_LIMIT','Worker response exceeded 8 MiB.'));});
   // Provider stderr can contain signed CDN URLs. Keep it out of chat and receipts.
   child.stderr.on('data',()=>{});
   child.stdin.on('error',()=>{});
-  child.on('error',failure=>{clearTimeout(timer);clearInterval(monitor);reject(fault('WORKER_START_FAILED',`Could not start the local media worker (${failure.code||'unknown'}).`));});
-  child.on('close',async code=>{clearTimeout(timer);clearInterval(monitor);await killPromise;if(error){reject(error);return;}let result;try{result=JSON.parse(stdout);}catch{reject(fault('INVALID_WORKER_RESPONSE','Local worker returned no structured result.'));return;}if(code!==0||result.verified!==true){reject(fault(result.code||'PROCESSING_FAILED',result.message||'No verified result was produced.'));return;}resolve(result);});
+  child.on('error',failure=>{finished=true;clearTimeout(timer);clearInterval(monitor);void failed(fault('WORKER_START_FAILED',`Could not start the local media worker (${failure.code||'unknown'}).`));});
+  child.on('close',async code=>{finished=true;clearTimeout(timer);clearInterval(monitor);await killPromise;if(error){await failed(error);return;}let result;try{result=JSON.parse(stdout);}catch{await failed(fault('INVALID_WORKER_RESPONSE','Local worker returned no structured result.'));return;}if(code!==0||result.verified!==true){await failed(fault(result.code||'PROCESSING_FAILED',result.message||'No verified result was produced.'));return;}try{if(request.output&&request.action!=='report'&&await bytesIn(request.output)>byteBudget)throw fault('DOWNLOAD_LIMIT','Final task-owned output exceeded the disk budget.');}catch(failure){await failed(failure);return;}resolve(result);});
   child.stdin.end(JSON.stringify(request));
  });
 }

@@ -11,6 +11,7 @@ type AuthEnv = PlatformLaunchEnv & {
   DASHBOARD_ORIGIN?: string;
   MARKETING_ORIGIN?: string;
   ADMIN_ORIGIN?: string;
+  STUDIO_ORIGIN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   // During migration the old pair remains live as a fallback.
@@ -88,7 +89,7 @@ function cookieValue(request: Request, name: string) {
 export function safeReturnTo(value: string | null, request: Request, env: AuthEnv) {
   const requestOrigin = new URL(request.url).origin;
   const allowedOrigins = new Set(
-    [env.MARKETING_ORIGIN, env.APP_ORIGIN, env.DASHBOARD_ORIGIN, env.ADMIN_ORIGIN, env.PUBLIC_ORIGIN, requestOrigin]
+    [env.MARKETING_ORIGIN, env.APP_ORIGIN, env.DASHBOARD_ORIGIN, env.ADMIN_ORIGIN, env.STUDIO_ORIGIN, env.PUBLIC_ORIGIN, requestOrigin]
       .filter(Boolean)
       .map((origin) => new URL(origin as string).origin),
   );

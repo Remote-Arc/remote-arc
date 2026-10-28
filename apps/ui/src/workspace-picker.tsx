@@ -89,7 +89,7 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate, arc
   };
 
   const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]:not(:disabled)') || []);
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]:not(:disabled)') || []);
     const index = items.indexOf(document.activeElement as HTMLButtonElement);
     if (!items.length) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -135,6 +135,11 @@ export function WorkspacePicker({ workspace, mobile = false, tr, onNavigate, arc
           <span className="workspaceOptionIcon agent" aria-hidden="true"><ProductIcon workspace="agent"/></span>
           <span className="workspaceOptionDescription"><strong>Arc</strong><small>{tr("Your personal AI workspace", "你的个人 AI 工作空间")}</small></span>
           {arcAvailable ? <span className="workspaceOptionCheck"><Icon name={workspace === "agent" ? 'check' : 'arrowUpRight'} size={15}/></span> : <span className="workspaceComingSoon">{tr("Coming soon", "即将上线")}</span>}
+        </button>
+        <button type="button" role="menuitem" onClick={()=>location.assign('/studio')}>
+          <span className="workspaceOptionIcon" aria-hidden="true">▷</span>
+          <span className="workspaceOptionDescription"><strong>Studio</strong><small>{tr("Create and refine your next video", "创作并打磨你的下一条视频")}</small></span>
+          <span className="workspaceOptionCheck"><Icon name="arrowUpRight" size={15}/></span>
         </button>
         <div className="workspacePickerMenuFoot">{tr("One account. Shared apps and devices.","同一个账号，共享已连接的应用与设备。")}</div>
       </div>,

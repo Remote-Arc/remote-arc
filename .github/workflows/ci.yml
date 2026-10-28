@@ -5,6 +5,30 @@ on:
   pull_request:
 
 jobs:
+  studio:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install chromium
+      - run: choco install ffmpeg --no-progress -y
+      - run: pnpm test:studio
+      - run: pnpm test:studio:browser
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: studio-acceptance
+          path: work/studio-browser/
+          retention-days: 7
+
   website:
     runs-on: ubuntu-latest
     timeout-minutes: 15

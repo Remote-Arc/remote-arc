@@ -30,6 +30,10 @@
       {
         "name": "ARC_RUNTIME",
         "class_name": "ArcChatRuntime"
+      },
+      {
+        "name": "STUDIO_RUNTIME",
+        "class_name": "StudioRuntime"
       }
     ]
   },
@@ -40,7 +44,8 @@
         "DeviceRegistry"
       ]
     },
-    { "tag": "v2-arc-chat", "new_sqlite_classes": ["ArcChatRuntime"] }
+    { "tag": "v2-arc-chat", "new_sqlite_classes": ["ArcChatRuntime"] },
+    { "tag": "v3-studio", "new_sqlite_classes": ["StudioRuntime"] }
   ],
   "routes": [
     {
@@ -62,6 +67,10 @@
     {
       "pattern": "admin.remotearc.app",
       "custom_domain": true
+    },
+    {
+      "pattern": "studio.remotearc.app",
+      "custom_domain": true
     }
   ],
   "assets": {
@@ -79,7 +88,7 @@
     ],
     "not_found_handling": "single-page-application"
   },
-  "r2_buckets": [{"binding":"PUBLIC_MEDIA","bucket_name":"remote-arc-public-media"}],
+  "r2_buckets": [{"binding":"PUBLIC_MEDIA","bucket_name":"remote-arc-public-media"},{"binding":"STUDIO_MEDIA","bucket_name":"remote-arc-studio-private"}],
   "d1_databases": [
     {
       "binding": "DB",
@@ -94,6 +103,7 @@
     "DASHBOARD_ORIGIN": "https://agent.remotearc.app",
     "MARKETING_ORIGIN": "https://remotearc.app",
     "ADMIN_ORIGIN": "https://admin.remotearc.app",
+    "STUDIO_ORIGIN": "https://studio.remotearc.app",
     "ADMIN_SERVICE_MODE": "legacy",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",

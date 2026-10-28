@@ -73,6 +73,7 @@ declare const __REMOTEARC_CLI_VERSION__: string;
 const LATEST_AGENT_VERSION = __REMOTEARC_CLI_VERSION__;
 
 const ArcNativeChat = React.lazy(() => import("./arc-native-chat.js").then(module => ({default:module.ArcNativeChat})));
+const Studio = React.lazy(() => import('./studio/studio.js').then(module => ({default: module.Studio})));
 
 const ArcTeammates = React.lazy(() => import('./arc-teams-page.js').then(module=>({default:module.ArcTeamsPage})));
 const ArcSkills = React.lazy(() => import("./arc-skills.js").then(module => ({default:module.ArcSkills})));
@@ -6936,6 +6937,9 @@ function App() {
     };
   }, [user?.id]);
 
+  if (location.hostname === 'studio.remotearc.app' || routePath === '/studio' || routePath.startsWith('/studio/')) {
+    return <React.Suspense fallback={<CenteredCard title="ReArc Studio" body={tr('Opening your creative workspace…','正在打开创作空间…')} />}><Studio key={user?.id || 'guest'} user={user} /></React.Suspense>;
+  }
   const isAdminHost = location.hostname === "admin.remotearc.app";
   if (isAdminHost || (UI_PREVIEW && routePath === "/admin-preview")) {
     if (UI_PREVIEW) return <AdminConsole preview />;

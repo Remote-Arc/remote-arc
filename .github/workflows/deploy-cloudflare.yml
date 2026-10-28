@@ -171,6 +171,12 @@ jobs:
           APP_TOKEN_KEY: ${{ secrets.APP_TOKEN_KEY }}
         run: node scripts/ensure-apps-vault.mjs
 
+      - name: "Storage: Ensure private Studio media bucket"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+        run: node scripts/ensure-studio-storage.mjs
+
       - name: "Deploy: Relay Worker + Website + Agent/Admin dashboards"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

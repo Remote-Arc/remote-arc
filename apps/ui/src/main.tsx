@@ -2625,9 +2625,13 @@ function ConnectPage({ user }: { user?: User | null }) {
             "Add Remote Arc to the AI you already use, connect your computer or your apps, then decide what that computer allows. It takes about five minutes, and every part can be changed or revoked later on its own.",
             "在你常用的 AI 里添加 Remote Arc，接上你的电脑或应用，再决定这台电脑允许 AI 做什么。大约 5 分钟，之后每一部分都可以单独修改或撤销。",
           )}</p>
+          <div className="connectStartActions">
+            <a className="primaryButton" href={localizedWebsiteHref("/downloads", locale)}>{tr("Download the Agent", "下载 Agent")}<ProductIcon name="arrowUpRight" size={16}/></a>
+            <a href="https://agent.remotearc.app/devices">{tr("Open Dashboard", "打开 Dashboard")} ↗</a>
+          </div>
         </header>
 
-        <section className="connectClientCards" aria-label={tr("Choose your AI client","选择你的 AI 客户端")}>{[{id:'chatgpt',name:'ChatGPT',logo:'/ai-openai.svg',detail:tr('Connect through a supported MCP app','通过受支持的 MCP 应用连接')},{id:'claude',name:'Claude',logo:'/ai-claude.svg',detail:tr('Add a custom remote connector','添加自定义远程连接器')},{id:'cursor',name:'Cursor',logo:'/ai-cursor.svg',detail:tr('Use your coding workspace','连接你的开发工作空间')}].map(client=><a href={localizedWebsiteHref('/install/'+client.id,locale)} key={client.id}><img src={client.logo} alt=""/><strong>{client.name}</strong><small>{client.detail}</small><ProductIcon name="arrowUpRight" size={15}/></a>)}</section>
+        <section className="connectClientCards" aria-label={tr("Choose your AI client","选择你的 AI 客户端")}>{[{id:'chatgpt',name:'ChatGPT',logo:'/ai-openai.svg',detail:tr('Install the published Remote Arc plugin','安装已上架的 Remote Arc 插件')},{id:'claude',name:'Claude',logo:'/ai-claude.svg',detail:tr('Add a custom remote connector','添加自定义远程连接器')},{id:'cursor',name:'Cursor',logo:'/ai-cursor.svg',detail:tr('Use your coding workspace','连接你的开发工作空间')}].map(client=><a href={localizedWebsiteHref('/install/'+client.id,locale)} key={client.id}><img src={client.logo} alt=""/><strong>{client.name}</strong><small>{client.detail}</small><ProductIcon name="arrowUpRight" size={15}/></a>)}</section>
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("SETUP", "设置步骤")}</strong>
@@ -2641,8 +2645,8 @@ function ConnectPage({ user }: { user?: User | null }) {
           <article className="manualArticle">
             <section id="connect-client">
               {step(1, tr("Add Remote Arc to your AI client", "在 AI 客户端里添加 Remote Arc"))}
-              <p>{tr("Every compatible client uses the same Remote MCP address. Add it where your client lists connectors or MCP servers; the client then opens Remote Arc's sign-in page, where you sign in and approve access. The guide for each client shows exactly where to click.", "所有兼容的客户端都使用同一个 Remote MCP 地址。在客户端管理连接器或 MCP 服务器的地方添加它，客户端会打开 Remote Arc 的登录页，登录并批准授权即可。每个客户端具体点哪里，见对应的配置说明。")}</p>
-              <div className="docsCodeLine"><code>{MCP_ENDPOINT}</code><CopyButton value={MCP_ENDPOINT} /></div>
+              <p>{tr("Choose the guide for the AI client you use. ChatGPT can install the published Remote Arc plugin; Claude, Codex, Cursor and other compatible clients use their own connection setup. Sign in to the same Remote Arc account when connecting your AI and pairing your computer.", "选择你正在使用的 AI 客户端指南。ChatGPT 可安装已上架的 Remote Arc 插件；Claude、Codex、Cursor 等客户端使用各自的连接方式。连接 AI 与配对电脑时，请登录同一个 Remote Arc 账号。")}</p>
+              <details className="connectCustomMcp"><summary>{tr("Custom MCP address", "自定义 MCP 地址")}</summary><div className="docsCodeLine"><code>{MCP_ENDPOINT}</code><CopyButton value={MCP_ENDPOINT} /></div></details>
               <div className="clientGuideRows compactClientRows">
                 {aiClients.map((client) => (
                   <a href={localizedWebsiteHref("/install/" + client.slug, locale)} key={client.name}>
@@ -2653,7 +2657,7 @@ function ConnectPage({ user }: { user?: User | null }) {
                 ))}
                 <a href={localizedWebsiteHref("/docs/mcp", locale)}>
                   <span className="miniMcp">M</span>
-                  <div><strong>{tr("Other Remote MCP clients", "其他 Remote MCP 客户端")}</strong><span>{tr("Use the address above with OAuth", "用上面的地址并通过 OAuth 授权")}</span></div>
+                  <div><strong>{tr("Other Remote MCP clients", "其他 Remote MCP 客户端")}</strong><span>{tr("Use the custom MCP address with OAuth", "使用自定义 MCP 地址并通过 OAuth 授权")}</span></div>
                   <b>→</b>
                 </a>
               </div>
@@ -2664,10 +2668,10 @@ function ConnectPage({ user }: { user?: User | null }) {
               <div className="connectChoice">
                 <div>
                   <h3>{tr("Your computer", "你的电脑")}</h3>
-                  <p>{tr("Install the Remote Arc app on the computer you want the AI to use. It opens your browser to confirm pairing, then the computer appears in your dashboard and in your AI. No VPN, public IP or open port is needed.", "在希望 AI 使用的电脑上安装 Remote Arc 应用。它会打开浏览器让你确认配对，之后这台电脑就会出现在控制台和你的 AI 里。不需要 VPN、公网 IP 或开放端口。")}</p>
-                  <p><a href={localizedWebsiteHref("/downloads", locale)}>{tr("Download for Windows, macOS or Linux", "下载 Windows、macOS 或 Linux 版")} →</a></p>
-                  <p className="manualFinePrint">{tr("With Node.js installed you can run this instead:", "已安装 Node.js 时也可以直接运行：")}</p>
-                  <div className="docsCodeLine"><code>npx remotelink</code><CopyButton value="npx remotelink" /></div>
+                  <p>{tr("Download the native Agent for the computer you want your AI to use. No Node.js is needed. Run it, approve browser pairing with the same Remote Arc account, and keep the computer online. If already paired, start the existing Agent instead of installing again.", "在希望 AI 使用的电脑上下载并运行原生 Agent，无需 Node.js。到浏览器使用同一个 Remote Arc 账号批准配对，并保持电脑在线。已经配对时，启动原来的 Agent 即可。")}</p>
+                  <p><a className="connectNativeDownload" href={localizedWebsiteHref("/downloads", locale)}>{['macos','windows','linux'].map(platform=><img key={platform} src={'/platform-brands/'+platform+'.svg'} width={20} height={20} alt=""/>)}<span>{tr("Download for your computer", "下载适合你电脑的版本")} →</span></a></p>
+                  <p><a href="https://agent.remotearc.app/devices">{tr("See your computers in Dashboard", "在 Dashboard 查看已配对电脑")} ↗</a></p>
+                  <details className="connectCommandAlternatives"><summary>{tr("Prefer the command line?", "想用命令行安装？")}</summary><InstallCommands /></details>
                 </div>
                 <div id="connect-apps">
                   <h3>{tr("Your apps", "你的应用")}</h3>

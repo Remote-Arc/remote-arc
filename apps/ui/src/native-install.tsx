@@ -105,6 +105,6 @@ export function NativeInstall() {
         <pre className="docsExample"><code>{"npx remotelink@latest --stop\nnpx remotelink@latest --foreground"}</code></pre>
       </details>
     </section>
-    <footer className="nativeInstallFooter"><a href="https://agent.remotearc.app/devices">{tr("Manage your computers", "管理已配对电脑")} →</a><a href={localizedWebsiteHref("/docs/connect", locale)}>{tr("Connect your AI", "连接你的 AI")} →</a></footer>
+    <footer className="nativeInstallFooter"><a href="https://agent.remotearc.app/devices">{tr("Manage your computers", "管理已配对电脑")} →</a><a href={localizedWebsiteHref("/connect-ai", locale)}>{tr("Connect your AI", "连接你的 AI")} →</a></footer>
   </section>;
 }

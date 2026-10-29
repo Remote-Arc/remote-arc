@@ -45,7 +45,7 @@ test('The Connect guide exposes an app-only path and optional computer setup',as
  await expect(page.locator('#connect-apps a')).toHaveAttribute('href','https://agent.remotearc.app/dashboard/connect/apps');
  await expect(page.locator('#connect-computer h2')).toContainText(/optional|可选/);
  await expect(page.locator('#connect-policy')).toContainText(/Safe/);
- await expect(page.locator('#connect-policy')).toContainText('browser_runner');
+ await expect(page.locator('#connect-policy')).not.toContainText('browser_runner');
  await expect(page.locator('#connect-scopes')).toContainText('apps:read');
  await expect(page.locator('#connect-scopes')).toContainText('apps:write');
 });

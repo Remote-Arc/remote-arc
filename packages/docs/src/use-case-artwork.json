@@ -130,5 +130,9 @@
   "blender-3d": {
     "kind": "product-3d",
     "label": "BLEND · PNG"
+  },
+  "video-analysis": {
+    "kind": "research",
+    "label": "REPORT"
   }
 }

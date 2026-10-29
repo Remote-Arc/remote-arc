@@ -58,7 +58,7 @@
     },
     {
       "name": "call_app",
-      "title": "Read or update a connected service",
+      "title": "Execute a selected action in a connected App",
       "group": "apps",
       "scopes": [
         "apps:read",
@@ -167,7 +167,7 @@
     },
     {
       "name": "list_apps",
-      "title": "Find the services you connected",
+      "title": "Find connected App tools and their input schemas",
       "group": "apps",
       "scopes": [
         "apps:read"

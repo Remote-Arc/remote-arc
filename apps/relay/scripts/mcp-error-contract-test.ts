@@ -221,8 +221,8 @@ for (const name of ["browser_list_tabs", "browser_get_current_tab", "browser_rea
 assert.deepEqual(await challengedScopes(authIdentity("devices:read"), "browser_read_page", { device_id: "ext" }),
   new Set(["devices:read", "browser:read", "offline_access"]));
 
-// Initial ChatGPT Apps permission discovery must request read + write up
-// front, instead of failing to reconnect when the first write is attempted.
+// Fixed public operations declare their own read/write contracts; the
+// internal generic executor must not remain callable through cached names.
 const appsMcp = createRemoteLinkMcp({ ...authEnv, ENABLE_APPS: "1" }, authIdentity("apps:read apps:write"));
 const appsList = await appsMcp.fetch(new Request(authEnv.PUBLIC_ORIGIN + "/mcp", {
   method: "POST",
@@ -237,7 +237,9 @@ const appsTools = appsJson.result.tools as Array<{
   name: string; securitySchemes?: Array<{ scopes: string[] }>;
 }>;
 const callApp = appsTools.find(tool => tool.name === "call_app");
-assert.deepEqual(callApp?.securitySchemes?.[0]?.scopes, ["apps:read", "apps:write"]);
+assert(callApp, "The reviewed two-tool Apps router exposes call_app");
+assert.deepEqual(callApp.securitySchemes?.[0]?.scopes, ["apps:read", "apps:write"]);
+assert(!appsTools.some(tool => ["github_issues_create", "gmail_messages_get"].includes(tool.name)));
 const listApps = appsTools.find(tool => tool.name === "list_apps");
 assert.deepEqual(listApps?.securitySchemes?.[0]?.scopes, ["apps:read"]);
 

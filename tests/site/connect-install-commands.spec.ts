@@ -21,7 +21,7 @@ test('Connect homepage offers local installation commands in the hero', async ({
   await expect(download).toHaveAttribute('href', zh ? '/zh/downloads' : '/downloads');
   await download.click();
   await expect(page.locator('.nativeDownloadCard')).toHaveCount(3);
-  await expect(page.locator('.nativeDownloads a')).toHaveCount(6);
+  await expect(page.locator('.nativeInstall a[href^="/api/downloads/agent/"]')).toHaveCount(6);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
   await page.screenshot({ path: `work/native-downloads-${info.project.name}.png`, fullPage: true });
 });

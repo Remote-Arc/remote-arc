@@ -8,7 +8,7 @@ test('Native download cards use the stable channel and show platform-specific he
   for (const icon of await page.locator('.nativePlatformIcon img').all()) {
     await expect.poll(() => icon.evaluate((node: HTMLImageElement) => node.naturalWidth)).toBeGreaterThan(0);
   }
-  const links = page.locator('.nativeDownloads a');
+  const links = page.locator('.nativeInstall a[href^="/api/downloads/agent/"]');
   await expect(links).toHaveCount(6);
   const hrefs = await links.evaluateAll(elements => elements.map(element => (element as HTMLAnchorElement).href));
   expect(new Set(hrefs).size).toBe(6);
@@ -18,7 +18,12 @@ test('Native download cards use the stable channel and show platform-specific he
   await expect(page.locator('.nativeInstall a').filter({ hasText: 'SHA256SUMS' })).toHaveAttribute('href', 'https://github.com/Remote-Arc/remote-arc/releases/latest/download/SHA256SUMS');
   await expect(page.locator('.nativeInstall')).not.toContainText(/\d+\.\d+\.\d+-(rc|alpha|beta|canary)\./);
   await page.locator('.nativeStartGuides summary').first().click();
-  await expect(page.locator('.nativeStartGuides details').first()).toContainText('chmod +x');
+  await expect(page.locator('.nativeStartGuides details').first()).toContainText('curl');
+  await expect(page.locator('.nativeStartGuides details').first()).not.toContainText('chmod +x');
+  await page.locator('.nativeShellChoice').click();
+  await expect(page.locator('#shell-install')).toHaveAttribute('open');
+  await expect(page.locator('#shell-install code')).toHaveText('curl -fsSL https://remotearc.app/install.sh | sh');
+  await expect(page.locator('#shell-install button')).toBeVisible();
   await page.goto(prefix + '/downloads#homebrew');
   await expect(page.locator('#homebrew')).toHaveAttribute('open');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);

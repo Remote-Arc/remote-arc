@@ -19,6 +19,9 @@ try {
     assert.equal(new Set(native).size, 6);
     for (const href of native) assert.match(href, /^\/api\/downloads\/agent\/(darwin|windows|linux)\/(amd64|arm64)$/);
     for (const icon of ['macos', 'windows', 'linux']) assert(html.includes('/platform-brands/' + icon + '.svg'));
+    assert.match(html, /class="nativeShellChoice" href="#shell-install"/);
+    assert.match(html, /curl -fsSL https:\/\/remotearc\.app\/install\.sh \| sh/);
+    assert.doesNotMatch(html, /ChatGPT|Type chmod \+x|输入 chmod \+x/);
     assert.match(html, /releases\/latest\/download\/SHA256SUMS/);
     assert.doesNotMatch(html, /releases\/download\/remotelink-v|REMOTE ARC \d+\.\d+\.\d+/);
   }

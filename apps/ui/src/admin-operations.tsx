@@ -108,9 +108,11 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
     return () => { requestSequence.current++; };
   }, [page, activation, sort, appliedQuery]);
   useEffect(() => {
-    const timer = setTimeout(() => { setPage(0); setSelectedUser(null); setAppliedQuery(query.trim()); }, 250);
+    const nextQuery = query.trim();
+    if (nextQuery === appliedQuery) return;
+    const timer = setTimeout(() => { setPage(0); setSelectedUser(null); setAppliedQuery(nextQuery); }, 250);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, appliedQuery]);
 
   const filtered = data?.users || [];
   const chosen = data?.users.find(u => u.id === selectedUser) || null;

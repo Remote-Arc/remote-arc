@@ -1,4 +1,4 @@
-import {browserAuthForDevice} from "./browser-auth.js";
+import {browserAuthForDevice, NO_BROWSER_AUTH} from "./browser-auth.js";
 import {recordProductEvent} from './product-events.js';
 import type { OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
@@ -56,6 +56,7 @@ export async function callDevice(
   args: Record<string, unknown>,
   taskWorkspaceRoot?: string,
   runnerRunId?: string,
+  options: { browserAuthentication?: "user" } = {},
 ) {
   const started = Date.now();
   const ownedDevice = await env.DB.prepare(
@@ -253,7 +254,10 @@ export async function callDevice(
   }
 
   const browserAuth = (isBrowserRunnerTool(tool) || /^browser_/.test(tool))
-    ? await browserAuthForDevice(env, identity.userId, deviceId) : undefined;
+    ? options.browserAuthentication === "user"
+      ? { ...NO_BROWSER_AUTH, origins: [] }
+      : await browserAuthForDevice(env, identity.userId, deviceId)
+    : undefined;
   const registryRequest = () =>
     new Request("https://registry/call", {
       method: "POST",

@@ -1,0 +1,25 @@
+import {test,expect} from "./fixtures";
+test("Website authentication approval persists and can be revoked",async({page})=>{
+ await page.goto("/dashboard/connect/devices?demo=browser-auth");
+ await page.getByRole("button",{name:/Manage Personal Mac|管理 Personal Mac/}).click();
+ const details=page.locator(".deviceToolDetails").first();
+ await details.locator("summary").click();
+ const form=page.locator(".browserAuthSetting").first();
+ await expect(form).toBeVisible();
+ await form.locator("textarea").fill("https://www.seek.co.nz");
+ await form.locator('input[type="email"]').fill("jenny@example.test");
+ await form.locator('input[type="checkbox"]').nth(0).check();
+ await form.locator('input[type="checkbox"]').nth(1).check();
+ await form.getByRole("button",{name:/Approve and save|批准并保存/}).click();
+ await expect(form.getByRole("status")).toContainText(/Approved|已批准/);
+ await page.reload();
+ await page.getByRole("button",{name:/Manage Personal Mac|管理 Personal Mac/}).click();
+ await page.locator(".deviceToolDetails").first().locator("summary").click();
+ await expect(form.locator('input[type="checkbox"]').nth(0)).toBeChecked();
+ await expect(form.locator("textarea")).toHaveValue("https://www.seek.co.nz");
+ await form.getByRole("button",{name:/Revoke|撤销/}).click();
+ await expect(form.locator('input[type="checkbox"]').nth(0)).not.toBeChecked();
+ await expect(form.locator('input[type="checkbox"]').nth(1)).not.toBeChecked();
+ await expect(form.locator("textarea")).toHaveValue("");
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});

@@ -22,6 +22,9 @@ import (
 type Request struct {
 	Action, Workspace, CodexBinary, RemoteArcBinary, Version string
 	Global                                                   bool
+	// SkipConnectorCheck is an explicit user choice to register the local
+	// MCP even when Codex cannot list its ChatGPT connectors.
+	SkipConnectorCheck bool
 }
 type Result struct {
 	Contract      string `json:"contract"`
@@ -197,11 +200,14 @@ func Run(ctx context.Context, request Request) (result Result, err error) {
 					return result, nil
 				}
 			}
-			if found, e := provider.remoteArcApp(); e != nil {
-				return result, e
-			} else if found {
-				result.Status = "connector_present"
-				return result, nil
+			// SkipConnectorCheck: the user confirmed Codex has no Remote Arc connector.
+			if !request.SkipConnectorCheck {
+				if found, e := provider.remoteArcApp(); e != nil {
+					return result, e
+				} else if found {
+					result.Status = "connector_present"
+					return result, nil
+				}
 			}
 		}
 	}

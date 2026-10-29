@@ -36,9 +36,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate Preview Navigation
+        run: node scripts/preview-comment.test.cjs
+
       - name: Build UI
         env:
           VITE_UI_PREVIEW: "1"
+          # Public R2 artifacts are shared with production; Wrangler previews may omit bucket bindings.
+          VITE_MEDIA_GALLERY_BASE_URL: "https://remotearc.app"
         run: pnpm --filter @remotearc/ui build
 
       - id: preview
@@ -64,31 +69,9 @@ jobs:
           UNIQUE_URL: ${{ steps.preview.outputs.unique_url }}
         with:
           script: |
-            const marker = '<!-- remote-arc-ui-preview -->';
-            const preview = process.env.PREVIEW_URL;
-            const unique = process.env.UNIQUE_URL;
-            const body = [
-              marker,
-              '### Remote Arc UI Preview',
-              '',
-              `**Public site:** ${preview}`,
-              `**Dashboard:** ${preview}/overview`,
-              `**Onboarding:** ${preview}/device?code=DEMO-CODE`,
-              `**Onboarding permissions:** ${preview}/device?code=DEMO-CODE&demo=permissions`,
-              `**Onboarding MCP connection:** ${preview}/device?code=DEMO-CODE&demo=ready`,
-              `**Arc Chat:** ${preview}/dashboard/agent/chat`,
-              `**Workflows:** ${preview}/dashboard/agent/skills`,
-              `**Teammate profiles:** ${preview}/dashboard/agent/settings?section=teammates`,
-              `**Automations:** ${preview}/automations`,
-              `**Releases:** ${preview}/releases`,
-              `**Connect AI:** ${preview}/connect`,
-              `**Settings:** ${preview}/settings`,
-              `**Checkout demo:** ${preview}/checkout?demo=new`,
-              `**Subscription management:** ${preview}/settings?section=billing`,
-              unique ? `**This deployment:** ${unique}` : '',
-              '',
-              'Dashboard routes use simulated data. Onboarding, Arc and billing interactions are local demos; production OAuth, D1, MCP, Stripe and devices are not connected. No real payment is made.',
-            ].filter(Boolean).join('\n');
+            const { buildPreviewComment, MARKER } = require('./scripts/preview-comment.cjs');
+            const marker = MARKER;
+            const body = buildPreviewComment(process.env.PREVIEW_URL, process.env.UNIQUE_URL);
 
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;

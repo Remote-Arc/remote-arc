@@ -79,8 +79,10 @@ const e2eConfig=repo+"/apps/relay/wrangler.e2e.json";
 fs.writeFileSync(e2eConfig,JSON.stringify(baseConfig,null,2));
 
 removePersist();
-let r=spawnSync(process.execPath,[wranglerCli,"d1","migrations","apply","remote-link-auth","--local","--persist-to",persist],{cwd:relayDir,encoding:"utf8"});
-if(r.status!==0)throw new Error("migration failed\n"+r.stdout+"\n"+r.stderr);
+// Wrangler prints the full migration table after each file; 0066 takes the
+// combined output past Node's default 1 MiB pipe buffer before SQL finishes.
+let r=spawnSync(process.execPath,[wranglerCli,"d1","migrations","apply","remote-link-auth","--local","--persist-to",persist],{cwd:relayDir,encoding:"utf8",maxBuffer:8*1024*1024});
+if(r.error||r.status!==0)throw new Error("migration failed ("+(r.error?.code||r.signal||r.status)+")\n"+(r.stdout||'').slice(-10000)+"\n"+(r.stderr||'').slice(-10000));
 
 const args=[wranglerCli,"dev","--config","wrangler.e2e.json","--local","--persist-to",persist,"--port","8789","--test-scheduled",
   "--var","PUBLIC_ORIGIN:"+base,"--var","APP_ORIGIN:"+base,"--var","MARKETING_ORIGIN:"+base,

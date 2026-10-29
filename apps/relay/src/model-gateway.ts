@@ -37,6 +37,9 @@ function validateDefinition(d:ModelDefinition) {
     (d.cachedInputMicrosPerMillion!==undefined&&!safe(d.cachedInputMicrosPerMillion))||
     (d.cacheWrite5mMicrosPerMillion!==undefined&&!safe(d.cacheWrite5mMicrosPerMillion)))
     throw new ModelProviderError("MODEL_CONFIGURATION_INVALID");
+  if(d.longContext&&(d.provider!=='openai'||!safe(d.longContext.thresholdTokens)||d.longContext.thresholdTokens<1||
+    ![d.longContext.inputMicrosPerMillion,d.longContext.outputMicrosPerMillion,d.longContext.cachedInputMicrosPerMillion,d.longContext.cacheWriteMicrosPerMillion].every(safe)))
+    throw new ModelProviderError('MODEL_CONFIGURATION_INVALID');
   if(d.provider==="workers_ai") {
     const approved=WORKERS_FREE_MODELS.find(p=>p.model===d.model);
     if(!approved||!safe(d.inputNeuronsPerMillion!)||!safe(d.outputNeuronsPerMillion!)||!d.freeEligible||
@@ -53,12 +56,13 @@ function charges(d:ModelDefinition,input:number,output:number,cacheWrite=0,cache
   if(!safe(cost)||!safe(neurons))throw new ModelProviderError("MODEL_BUDGET_INVALID");
   return {credits:1,costMicros:d.provider==="workers_ai"?0:cost,neurons};
 }
+const contextPrices=(d:ModelDefinition,inputTokens:number):ModelDefinition=>d.longContext&&inputTokens>d.longContext.thresholdTokens?{...d,...d.longContext}:d;
 function observedCharges(d:ModelDefinition,u:ModelUsage):BillingUnits {
   // OpenAI input includes cached tokens; Anthropic reports them separately.
   // Reasoning is already included in output_tokens and is never charged twice.
   const uncached=d.provider==='anthropic'?u.inputTokens:Math.max(0,u.inputTokens-u.cachedInputTokens-u.cacheWriteTokens);
   const split=u.cacheWrite5mTokens!==undefined;
-  const base=charges(d,uncached,u.outputTokens,split?0:u.cacheWriteTokens,u.cachedInputTokens,u.cacheWrite5mTokens??0,u.cacheWrite1hTokens??0);
+  const base=charges(contextPrices(d,u.inputTokens),uncached,u.outputTokens,split?0:u.cacheWriteTokens,u.cachedInputTokens,u.cacheWrite5mTokens??0,u.cacheWrite1hTokens??0);
   return u.webSearchCalls?{...base,costMicros:base.costMicros+u.webSearchCalls*WEB_SEARCH_CALL_MICROS}:base;
 }
 /** One provider attempt only. No automatic paid fallback or invisible retry. */
@@ -80,9 +84,10 @@ export async function runModelGateway<T>(binding:ModelGatewayBinding,request:Gat
   const encoded=new TextEncoder().encode(JSON.stringify([request.system,request.user,request.schema]));
   if(encoded.byteLength>MODEL_CONTEXT_BYTES)throw new ModelProviderError("MODEL_CONTEXT_TOO_LARGE");
   // Byte-bound input estimate plus template overhead; reserve all permitted output before dispatch.
-  const inputBound=encoded.byteLength+8192+(request.images?.length||0)*32768;
-  const ceiling={...definition,inputMicrosPerMillion:Math.max(definition.inputMicrosPerMillion,definition.cacheWriteMicrosPerMillion??definition.inputMicrosPerMillion*2,definition.cacheWrite5mMicrosPerMillion??0,definition.cachedInputMicrosPerMillion??0)};
-  const tokens=charges(ceiling,inputBound+(request.webSearch?WEB_SEARCH_CONTENT_TOKENS:0),request.maxOutputTokens);
+  const inputBound=encoded.byteLength+8192+(request.images?.length||0)*32768+(request.webSearch?WEB_SEARCH_CONTENT_TOKENS:0);
+  const rated=contextPrices(definition,inputBound);
+  const ceiling={...rated,inputMicrosPerMillion:Math.max(rated.inputMicrosPerMillion,rated.cacheWriteMicrosPerMillion??rated.inputMicrosPerMillion*2,rated.cacheWrite5mMicrosPerMillion??0,rated.cachedInputMicrosPerMillion??0)};
+  const tokens=charges(ceiling,inputBound,request.maxOutputTokens);
   const maximum=request.webSearch?{...tokens,costMicros:tokens.costMicros+request.webSearch.maxCalls*WEB_SEARCH_CALL_MICROS}:tokens;
   const authorizationId=definition.provider==="workers_ai"?binding.freePoolId:binding.paidGrantId;
   if(!authorizationId)throw new ModelProviderError(definition.provider==="workers_ai"?"FREE_POOL_NOT_VERIFIED":"PAID_MODEL_NOT_AUTHORIZED");

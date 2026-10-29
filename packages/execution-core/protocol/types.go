@@ -7,13 +7,23 @@ import (
 	"strings"
 )
 
+type BrowserAuth struct {
+	OTP     bool     `json:"otp"`
+	Captcha bool     `json:"captcha"`
+	Origins []string `json:"origins"`
+	Mailbox string   `json:"mailbox"`
+}
+
 type Policy struct {
-	WorkspaceRoots        []string `json:"workspaceRoots,omitempty"`
-	TaskWorkspaceRoot     string   `json:"taskWorkspaceRoot,omitempty"`
-	ProtectSensitivePaths *bool    `json:"protectSensitivePaths,omitempty"`
-	SensitivePaths        []string `json:"sensitivePaths,omitempty"`
-	SensitiveAllowPaths   []string `json:"sensitiveAllowPaths,omitempty"`
-	UndoEnabled           *bool    `json:"undoEnabled,omitempty"`
+	BrowserAuth           BrowserAuth `json:"browserAuth,omitempty"`
+	RunnerAttentionMode   string      `json:"runnerAttentionMode,omitempty"`
+	BrowserRunnerEnabled  bool        `json:"browserRunnerEnabled,omitempty"`
+	WorkspaceRoots        []string    `json:"workspaceRoots,omitempty"`
+	TaskWorkspaceRoot     string      `json:"taskWorkspaceRoot,omitempty"`
+	ProtectSensitivePaths *bool       `json:"protectSensitivePaths,omitempty"`
+	SensitivePaths        []string    `json:"sensitivePaths,omitempty"`
+	SensitiveAllowPaths   []string    `json:"sensitiveAllowPaths,omitempty"`
+	UndoEnabled           *bool       `json:"undoEnabled,omitempty"`
 }
 
 func Normalize(p Policy) Policy {

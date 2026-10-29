@@ -1,3 +1,4 @@
+import {trackProductEvent} from './product-events.js';
 import {lazy,Suspense,useEffect,useRef,useState,type FormEvent} from 'react';
 import {loadStripe} from '@stripe/stripe-js/pure/index.js';
 import type {Stripe,StripeElements,StripeEmbeddedCheckout,StripeElementLocale} from '@stripe/stripe-js';
@@ -14,12 +15,13 @@ function LiveEmbeddedCheckout({session,locale,tr,onComplete}:CheckoutProps){
  const host=useRef<HTMLDivElement>(null),completed=useRef(onComplete),[ready,setReady]=useState(false),[failed,setFailed]=useState(false),[retry,setRetry]=useState(0);completed.current=onComplete;
  useEffect(()=>{
   let disposed=false,checkout:StripeEmbeddedCheckout|undefined;setReady(false);setFailed(false);
+   const timeout=setTimeout(()=>{if(!disposed){setFailed(true);trackProductEvent('billing.payment.load_failed',{entityId:session.sessionId,errorCode:'PAYMENT_FORM_LOAD_FAILED'});}},20000);
   void loadStripe(session.publishableKey,{locale}).then(async stripe=>{
    if(disposed)return;if(!stripe)throw Error('BILLING_UNAVAILABLE');
    const instance=await stripe.createEmbeddedCheckoutPage({clientSecret:session.clientSecret,onComplete:()=>{if(!disposed)completed.current();}});
-   if(disposed){instance.destroy();return;}checkout=instance;if(host.current)instance.mount(host.current);setReady(true);
-  }).catch(()=>{if(!disposed)setFailed(true);});
-  return()=>{disposed=true;checkout?.destroy();};
+   if(disposed){instance.destroy();return;}checkout=instance;if(host.current)instance.mount(host.current);clearTimeout(timeout);setFailed(false);setReady(true);trackProductEvent('billing.payment.mounted',{entityId:session.sessionId});
+  }).catch(()=>{clearTimeout(timeout);if(!disposed){setFailed(true);trackProductEvent('billing.payment.load_failed',{entityId:session.sessionId,errorCode:'PAYMENT_FORM_LOAD_FAILED'});}});
+  return()=>{disposed=true;clearTimeout(timeout);checkout?.destroy();};
  },[session.clientSecret,session.publishableKey,locale,retry]);
  return <section className="arcEmbeddedPayment" aria-label={tr('Secure payment','安全付款')} aria-busy={!ready&&!failed}>{!ready&&!failed&&<WorkspaceLoading label={tr('Loading secure payment…','正在加载安全付款表单…')} variant="compact"/>}{failed&&<div role="alert"><p>{tr('The payment form could not load. Your order is saved.','付款表单未能加载，订单已保留。')}</p><button className="raSettingsButton" onClick={()=>setRetry(value=>value+1)}>{tr('Reload payment form','重新加载付款表单')}</button></div>}<div ref={host}/></section>;
 }

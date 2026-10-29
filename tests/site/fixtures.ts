@@ -17,6 +17,8 @@ export const test=base.extend<{siteErrors:string[]}>({
   // OAuth, mail, payment, model and customer systems cannot be called.
   const previewOrigin = new URL(String(testInfo.project.use.baseURL || 'http://127.0.0.1:4331')).origin;
   await context.route('**/*',route=>new URL(route.request().url()).origin===previewOrigin?route.continue():route.abort());
+  // Gallery files stay in R2. Browser regressions use a bounded image fixture.
+  await context.route('**/media/demo-gallery/**',route=>route.request().url().endsWith('.mp4')?route.abort():route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540"><rect width="960" height="540" fill="#17231d"/></svg>'}));
   page.on('pageerror',error=>errors.push(error.message));
   await use(errors);
   expect(errors,'Uncaught browser errors').toEqual([]);

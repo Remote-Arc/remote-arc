@@ -1,0 +1,1100 @@
+{
+  "remote": [
+    {
+      "name": "browser_runner_act",
+      "title": "Act in the task browser",
+      "group": "browser-runner",
+      "scopes": [
+        "browser:interact"
+      ]
+    },
+    {
+      "name": "browser_runner_close",
+      "title": "Close a browser task",
+      "group": "browser-runner",
+      "scopes": [
+        "browser:interact"
+      ]
+    },
+    {
+      "name": "browser_runner_confirm",
+      "title": "Confirm the result of a submit",
+      "group": "browser-runner",
+      "scopes": [
+        "browser:interact"
+      ]
+    },
+    {
+      "name": "browser_runner_snapshot",
+      "title": "Read the task browser's page",
+      "group": "browser-runner",
+      "scopes": [
+        "browser:read"
+      ]
+    },
+    {
+      "name": "browser_runner_start",
+      "title": "Start or resume a browser task",
+      "group": "browser-runner",
+      "scopes": [
+        "browser:interact"
+      ]
+    },
+    {
+      "name": "browser_runner_status",
+      "title": "Show a browser task's checkpoint",
+      "group": "browser-runner",
+      "scopes": [
+        "browser:read"
+      ]
+    },
+    {
+      "name": "browser_runner_wait",
+      "title": "Wait for a browser task",
+      "group": "browser-runner",
+      "scopes": [
+        "browser:read"
+      ]
+    },
+    {
+      "name": "call_app",
+      "title": "Execute a selected action in a connected App",
+      "group": "apps",
+      "scopes": [
+        "apps:read",
+        "apps:write"
+      ]
+    },
+    {
+      "name": "create_agent_goal",
+      "title": "Create a self-directed durable Agent Goal",
+      "group": "goals",
+      "scopes": [
+        "automation:write",
+        "agent:write"
+      ]
+    },
+    {
+      "name": "create_automation",
+      "title": "Create a persistent Remote Arc automation",
+      "group": "tasks",
+      "scopes": [
+        "automation:write"
+      ]
+    },
+    {
+      "name": "create_file_resource",
+      "title": "Create a temporary file resource",
+      "group": "files",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "device_tools",
+      "title": "List tools on a device",
+      "group": "devices",
+      "scopes": [
+        "devices:read"
+      ]
+    },
+    {
+      "name": "edit_block",
+      "title": "Edit text on a remote computer",
+      "group": "files",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
+      "name": "find_skills",
+      "title": "Find Remote Arc skills for a task",
+      "group": "skills",
+      "scopes": [
+        "devices:read"
+      ]
+    },
+    {
+      "name": "fleet_dispatch",
+      "title": "Smart Device Fleet dispatch",
+      "group": "devices",
+      "scopes": [
+        "devices:read",
+        "computer:read",
+        "computer:write"
+      ]
+    },
+    {
+      "name": "fleet_sync_workspace",
+      "title": "Sync a Git workspace to the Fleet",
+      "group": "devices",
+      "scopes": [
+        "devices:read",
+        "computer:write"
+      ]
+    },
+    {
+      "name": "get_automation",
+      "title": "Get a Remote Arc automation",
+      "group": "tasks",
+      "scopes": [
+        "automation:read"
+      ]
+    },
+    {
+      "name": "get_file_info",
+      "title": "Get remote file info",
+      "group": "files",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "get_goal_context",
+      "title": "Read durable Agent Goal context",
+      "group": "goals",
+      "scopes": [
+        "automation:read"
+      ]
+    },
+    {
+      "name": "list_agent_sessions",
+      "title": "List coding-agent tasks on a remote computer",
+      "group": "processes",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "list_apps",
+      "title": "Find connected App tools and their input schemas",
+      "group": "apps",
+      "scopes": [
+        "apps:read"
+      ]
+    },
+    {
+      "name": "list_automations",
+      "title": "List persistent Remote Arc automations",
+      "group": "tasks",
+      "scopes": [
+        "automation:read"
+      ]
+    },
+    {
+      "name": "list_devices",
+      "title": "List Remote Arc devices",
+      "group": "devices",
+      "scopes": [
+        "devices:read"
+      ]
+    },
+    {
+      "name": "list_directory",
+      "title": "List directory on a remote computer",
+      "group": "files",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "list_processes",
+      "title": "List processes on a remote computer",
+      "group": "processes",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "manage_automation",
+      "title": "Pause, resume, or cancel an automation",
+      "group": "tasks",
+      "scopes": [
+        "automation:write"
+      ]
+    },
+    {
+      "name": "process_output",
+      "title": "Read background process output",
+      "group": "processes",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
+      "name": "process_status",
+      "title": "Get background process status",
+      "group": "processes",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
+      "name": "read_binary_file",
+      "title": "Read a binary file chunk on a remote computer",
+      "group": "files",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "read_file",
+      "title": "Read a file on a remote computer",
+      "group": "files",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "read_skill",
+      "title": "Read a Remote Arc skill",
+      "group": "skills",
+      "scopes": [
+        "devices:read"
+      ]
+    },
+    {
+      "name": "revoke_file_resource",
+      "title": "Revoke a temporary file resource",
+      "group": "files",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "shared_tab_act",
+      "title": "Act in a tab in the user's browser",
+      "group": "shared-tabs",
+      "scopes": [
+        "browser:interact"
+      ]
+    },
+    {
+      "name": "shared_tab_click",
+      "title": "Click in a shared browser tab",
+      "group": "shared-tabs",
+      "scopes": [
+        "browser:interact"
+      ]
+    },
+    {
+      "name": "shared_tab_fill",
+      "title": "Fill a field in a shared browser tab",
+      "group": "shared-tabs",
+      "scopes": [
+        "browser:interact"
+      ]
+    },
+    {
+      "name": "shared_tab_list",
+      "title": "List the user's shared browser tabs",
+      "group": "shared-tabs",
+      "scopes": [
+        "browser:read"
+      ]
+    },
+    {
+      "name": "shared_tab_open",
+      "title": "Open a tab in the user's browser",
+      "group": "shared-tabs",
+      "scopes": [
+        "browser:interact"
+      ]
+    },
+    {
+      "name": "shared_tab_read",
+      "title": "Read a shared browser tab",
+      "group": "shared-tabs",
+      "scopes": [
+        "browser:read"
+      ]
+    },
+    {
+      "name": "start_process",
+      "title": "Run a command on a remote computer",
+      "group": "processes",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
+      "name": "stop_process",
+      "title": "Stop a background process",
+      "group": "processes",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
+      "name": "submit_goal_decision",
+      "title": "Submit the next source Agent Goal decision",
+      "group": "goals",
+      "scopes": [
+        "automation:write",
+        "agent:write"
+      ]
+    },
+    {
+      "name": "undo_last_change",
+      "title": "Undo the last Remote Arc file change",
+      "group": "files",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
+      "name": "write_file",
+      "title": "Write a file on a remote computer",
+      "group": "files",
+      "scopes": [
+        "computer:write"
+      ]
+    }
+  ],
+  "apps": [
+    {
+      "provider": "airtable",
+      "name": "Airtable",
+      "category": "docs_files",
+      "operations": [
+        "bases.list",
+        "records.create",
+        "records.delete",
+        "records.deleteBatch",
+        "records.get",
+        "records.list",
+        "records.update",
+        "tables.list"
+      ]
+    },
+    {
+      "provider": "asana",
+      "name": "Asana",
+      "category": "development",
+      "operations": [
+        "comments.create",
+        "projects.list",
+        "stories.list",
+        "tasks.create",
+        "tasks.get",
+        "tasks.list",
+        "tasks.update",
+        "workspaces.list"
+      ]
+    },
+    {
+      "provider": "confluence",
+      "name": "Atlassian Confluence",
+      "category": "docs_files",
+      "operations": [
+        "comments.create",
+        "comments.list",
+        "pages.create",
+        "pages.delete",
+        "pages.get",
+        "pages.update",
+        "spaces.get",
+        "spaces.list"
+      ]
+    },
+    {
+      "provider": "jira",
+      "name": "Atlassian Jira",
+      "category": "development",
+      "operations": [
+        "comments.create",
+        "comments.list",
+        "issues.create",
+        "issues.get",
+        "issues.search",
+        "issues.update",
+        "sites.list",
+        "transitions.list"
+      ]
+    },
+    {
+      "provider": "dropbox",
+      "name": "Dropbox",
+      "category": "docs_files",
+      "operations": [
+        "files.continue",
+        "files.copy",
+        "files.delete",
+        "files.get",
+        "files.list",
+        "files.move",
+        "files.search",
+        "folders.create"
+      ]
+    },
+    {
+      "provider": "facebook",
+      "name": "Facebook",
+      "category": "social",
+      "operations": [
+        "comments.create",
+        "comments.list",
+        "pages.list",
+        "posts.create",
+        "posts.delete",
+        "posts.get",
+        "posts.list",
+        "posts.update"
+      ]
+    },
+    {
+      "provider": "github",
+      "name": "GitHub",
+      "category": "development",
+      "operations": [
+        "actions.get",
+        "actions.list",
+        "actions.rerun",
+        "branches.list",
+        "comments.create",
+        "comments.list",
+        "contents.read",
+        "issues.create",
+        "issues.get",
+        "issues.list",
+        "issues.update",
+        "pulls.files",
+        "pulls.get",
+        "pulls.list",
+        "repositories.list"
+      ]
+    },
+    {
+      "provider": "gmail",
+      "name": "Gmail",
+      "category": "email_calendar",
+      "operations": [
+        "drafts.create",
+        "drafts.delete",
+        "drafts.get",
+        "drafts.list",
+        "drafts.send",
+        "labels.create",
+        "labels.list",
+        "messages.get",
+        "messages.list",
+        "messages.modify",
+        "messages.send",
+        "messages.trash",
+        "messages.untrash",
+        "threads.get",
+        "threads.list"
+      ]
+    },
+    {
+      "provider": "google_ads",
+      "name": "Google Ads",
+      "category": "marketing",
+      "operations": [
+        "accounts.list",
+        "adGroups.pause",
+        "adGroups.report",
+        "ads.pause",
+        "ads.report",
+        "campaigns.pause",
+        "campaigns.report",
+        "labels.create"
+      ]
+    },
+    {
+      "provider": "google_analytics",
+      "name": "Google Analytics",
+      "category": "marketing",
+      "operations": [
+        "accounts.list",
+        "customDimensions.archive",
+        "customDimensions.create",
+        "customDimensions.list",
+        "customDimensions.update",
+        "metadata.get",
+        "reports.realtime",
+        "reports.run"
+      ]
+    },
+    {
+      "provider": "google_calendar",
+      "name": "Google Calendar",
+      "category": "email_calendar",
+      "operations": [
+        "availability.query",
+        "calendars.get",
+        "calendars.list",
+        "events.create",
+        "events.delete",
+        "events.get",
+        "events.list",
+        "events.update"
+      ]
+    },
+    {
+      "provider": "google_docs",
+      "name": "Google Docs",
+      "category": "docs_files",
+      "operations": [
+        "documents.create",
+        "documents.deleteText",
+        "documents.get",
+        "documents.insertTable",
+        "documents.insertText",
+        "documents.replaceText",
+        "documents.setBold",
+        "documents.setHeading"
+      ]
+    },
+    {
+      "provider": "google_drive",
+      "name": "Google Drive",
+      "category": "docs_files",
+      "operations": [
+        "comments.list",
+        "files.copy",
+        "files.exportText",
+        "files.get",
+        "files.list",
+        "files.rename",
+        "files.trash",
+        "folders.create"
+      ]
+    },
+    {
+      "provider": "google_search_console",
+      "name": "Google Search Console",
+      "category": "marketing",
+      "operations": [
+        "queries.report",
+        "sitemaps.delete",
+        "sitemaps.list",
+        "sitemaps.submit",
+        "sites.add",
+        "sites.delete",
+        "sites.get",
+        "sites.list"
+      ]
+    },
+    {
+      "provider": "google_sheets",
+      "name": "Google Sheets",
+      "category": "docs_files",
+      "operations": [
+        "rows.insert",
+        "sheets.rename",
+        "spreadsheets.create",
+        "spreadsheets.get",
+        "values.append",
+        "values.clear",
+        "values.get",
+        "values.update"
+      ]
+    },
+    {
+      "provider": "google_slides",
+      "name": "Google Slides",
+      "category": "docs_files",
+      "operations": [
+        "pages.get",
+        "pages.thumbnail",
+        "presentations.create",
+        "presentations.get",
+        "shapes.createTextbox",
+        "slides.create",
+        "text.insert",
+        "text.replaceAll"
+      ]
+    },
+    {
+      "provider": "hubspot",
+      "name": "HubSpot",
+      "category": "sales_commerce",
+      "operations": [
+        "contacts.archive",
+        "contacts.create",
+        "contacts.get",
+        "contacts.list",
+        "contacts.update",
+        "deals.get",
+        "deals.list",
+        "deals.update"
+      ]
+    },
+    {
+      "provider": "instagram",
+      "name": "Instagram",
+      "category": "social",
+      "operations": [
+        "accounts.list",
+        "comments.delete",
+        "comments.list",
+        "comments.reply",
+        "media.create",
+        "media.get",
+        "media.list",
+        "media.publish"
+      ]
+    },
+    {
+      "provider": "linear",
+      "name": "Linear",
+      "category": "development",
+      "operations": [
+        "comments.create",
+        "comments.delete",
+        "issues.create",
+        "issues.get",
+        "issues.list",
+        "issues.update",
+        "teams.list",
+        "viewer.get"
+      ]
+    },
+    {
+      "provider": "linkedin",
+      "name": "LinkedIn",
+      "category": "social",
+      "operations": [
+        "images.get",
+        "images.initializeUpload",
+        "posts.create",
+        "posts.delete",
+        "posts.update",
+        "profile.get",
+        "videos.finalizeUpload",
+        "videos.initializeUpload"
+      ]
+    },
+    {
+      "provider": "meta_ads",
+      "name": "Meta Ads",
+      "category": "marketing",
+      "operations": [
+        "accounts.list",
+        "ads.list",
+        "ads.pause",
+        "adSets.list",
+        "adSets.pause",
+        "campaigns.list",
+        "campaigns.pause",
+        "insights.report"
+      ]
+    },
+    {
+      "provider": "microsoft_excel",
+      "name": "Microsoft Excel",
+      "category": "docs_files",
+      "operations": [
+        "ranges.get",
+        "ranges.update",
+        "rows.append",
+        "tables.create",
+        "tables.list",
+        "worksheets.create",
+        "worksheets.get",
+        "worksheets.list"
+      ]
+    },
+    {
+      "provider": "microsoft_teams",
+      "name": "Microsoft Teams",
+      "category": "communication",
+      "operations": [
+        "chats.get",
+        "chats.list",
+        "members.list",
+        "messages.get",
+        "messages.list",
+        "messages.send",
+        "messages.softDelete",
+        "messages.update"
+      ]
+    },
+    {
+      "provider": "microsoft_todo",
+      "name": "Microsoft To Do",
+      "category": "email_calendar",
+      "operations": [
+        "lists.create",
+        "lists.get",
+        "lists.list",
+        "tasks.create",
+        "tasks.delete",
+        "tasks.get",
+        "tasks.list",
+        "tasks.update"
+      ]
+    },
+    {
+      "provider": "notion",
+      "name": "Notion",
+      "category": "docs_files",
+      "operations": [
+        "blocks.appendText",
+        "blocks.get",
+        "blocks.list",
+        "pages.archive",
+        "pages.create",
+        "pages.get",
+        "search",
+        "users.list"
+      ]
+    },
+    {
+      "provider": "onedrive",
+      "name": "OneDrive",
+      "category": "docs_files",
+      "operations": [
+        "drive.get",
+        "files.delete",
+        "files.get",
+        "files.list",
+        "files.move",
+        "files.rename",
+        "files.search",
+        "folders.create"
+      ]
+    },
+    {
+      "provider": "outlook",
+      "name": "Outlook",
+      "category": "email_calendar",
+      "operations": [
+        "attachments.list",
+        "drafts.create",
+        "drafts.send",
+        "folders.list",
+        "messages.get",
+        "messages.list",
+        "messages.markRead",
+        "messages.move",
+        "messages.reply",
+        "messages.send"
+      ]
+    },
+    {
+      "provider": "microsoft_calendar",
+      "name": "Outlook Calendar",
+      "category": "email_calendar",
+      "operations": [
+        "calendars.get",
+        "calendars.list",
+        "events.accept",
+        "events.create",
+        "events.decline",
+        "events.delete",
+        "events.get",
+        "events.list",
+        "events.update"
+      ]
+    },
+    {
+      "provider": "runway",
+      "name": "Runway",
+      "category": "creative",
+      "operations": [
+        "avatars.list",
+        "images.generate",
+        "organization.get",
+        "tasks.cancel",
+        "tasks.get",
+        "videos.fromImage",
+        "videos.generate",
+        "voices.list"
+      ]
+    },
+    {
+      "provider": "salesforce",
+      "name": "Salesforce",
+      "category": "sales_commerce",
+      "operations": [
+        "contacts.create",
+        "contacts.delete",
+        "contacts.get",
+        "contacts.list",
+        "contacts.update",
+        "opportunities.get",
+        "opportunities.list",
+        "opportunities.update"
+      ]
+    },
+    {
+      "provider": "shopify",
+      "name": "Shopify",
+      "category": "sales_commerce",
+      "operations": [
+        "orders.get",
+        "orders.list",
+        "products.archive",
+        "products.createDraft",
+        "products.get",
+        "products.list",
+        "products.update",
+        "shop.get"
+      ]
+    },
+    {
+      "provider": "slack",
+      "name": "Slack",
+      "category": "communication",
+      "operations": [
+        "auth.test",
+        "bookmarks.add",
+        "bookmarks.edit",
+        "bookmarks.list",
+        "bookmarks.remove",
+        "channels.get",
+        "channels.list",
+        "channels.members",
+        "emoji.list",
+        "files.get",
+        "files.list",
+        "messages.delete",
+        "messages.get",
+        "messages.list",
+        "messages.permalink",
+        "messages.schedule",
+        "messages.send",
+        "messages.update",
+        "pins.add",
+        "pins.list",
+        "pins.remove",
+        "reactions.add",
+        "reactions.get",
+        "reactions.list",
+        "reactions.remove",
+        "scheduled.delete",
+        "scheduled.list",
+        "search",
+        "search.files",
+        "team.info",
+        "threads.replies",
+        "users.get",
+        "users.list",
+        "users.lookup",
+        "users.presence"
+      ]
+    },
+    {
+      "provider": "supabase",
+      "name": "Supabase",
+      "category": "development",
+      "operations": [
+        "config.get",
+        "database.query",
+        "functions.delete",
+        "functions.list",
+        "organizations.list",
+        "projects.get",
+        "projects.list",
+        "secrets.upsert"
+      ]
+    },
+    {
+      "provider": "vercel",
+      "name": "Vercel",
+      "category": "development",
+      "operations": [
+        "deployments.cancel",
+        "deployments.get",
+        "deployments.list",
+        "domains.list",
+        "env.create",
+        "env.delete",
+        "env.update",
+        "projects.get",
+        "projects.list"
+      ]
+    },
+    {
+      "provider": "whatsapp",
+      "name": "WhatsApp Business",
+      "category": "communication",
+      "operations": [
+        "messages.send",
+        "phone.get",
+        "phones.list",
+        "profile.get",
+        "templates.create",
+        "templates.delete",
+        "templates.list",
+        "templates.send"
+      ]
+    },
+    {
+      "provider": "x",
+      "name": "X",
+      "category": "social",
+      "operations": [
+        "bookmarks.create",
+        "likes.create",
+        "likes.delete",
+        "posts.create",
+        "posts.delete",
+        "posts.get",
+        "posts.list",
+        "profile.get"
+      ]
+    },
+    {
+      "provider": "youtube",
+      "name": "YouTube",
+      "category": "social",
+      "operations": [
+        "channels.list",
+        "comments.list",
+        "playlistItems.delete",
+        "playlistItems.insert",
+        "playlists.create",
+        "playlists.delete",
+        "playlists.list",
+        "playlists.update",
+        "subscriptions.list",
+        "videos.list",
+        "videos.statistics"
+      ]
+    }
+  ],
+  "local": [
+    {
+      "name": "browse_directories",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "edit_block",
+      "modes": [
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "get_file_info",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "list_directory",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "list_managed_processes",
+      "modes": [
+        "full"
+      ],
+      "group": "processes"
+    },
+    {
+      "name": "list_processes",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "processes"
+    },
+    {
+      "name": "list_undo_actions",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "process_output",
+      "modes": [
+        "full"
+      ],
+      "group": "processes"
+    },
+    {
+      "name": "process_status",
+      "modes": [
+        "full"
+      ],
+      "group": "processes"
+    },
+    {
+      "name": "read_binary_file",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "read_file",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "remote_arc_status",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "devices"
+    },
+    {
+      "name": "start_process",
+      "modes": [
+        "full"
+      ],
+      "group": "processes"
+    },
+    {
+      "name": "stop_process",
+      "modes": [
+        "full"
+      ],
+      "group": "processes"
+    },
+    {
+      "name": "undo_change",
+      "modes": [
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "undo_last_change",
+      "modes": [
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
+      "name": "write_file",
+      "modes": [
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    }
+  ]
+}

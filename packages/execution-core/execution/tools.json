@@ -39,7 +39,7 @@
   },
   {
     "name": "read_file",
-    "description": "Read a text file by line range. Negative offsets read from the end.",
+    "description": "Read a text file by line range. offset is a 0-based line number (negative reads from the end); length is a line count (default 240). The result header reports total lines so you can continue with a later offset.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -110,10 +110,25 @@
   },
   {
     "name": "list_processes",
-    "description": "List processes running on this computer.",
+    "description": "List processes on this computer with a header row. Use filter to find specific programs (e.g. \"claude\", \"codex\", \"node\"), limit to cap rows, and details:true on Windows to include command lines. Obvious secrets in command lines are redacted.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "filter": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 200
+        },
+        "details": {
+          "type": "boolean",
+          "default": false
+        }
+      },
       "additionalProperties": false
     }
   },
@@ -246,12 +261,20 @@
   },
   {
     "name": "process_status",
-    "description": "Get status for a Remote Arc managed background process.",
+    "description": "Get status for a managed background process. For long tasks use wait_ms (up to 40000 ms, longer values are capped), optionally until_text; do not sleep and poll.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "process_id": {
           "type": "string"
+        },
+        "wait_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "until_text": {
+          "type": "string",
+          "maxLength": 500
         }
       },
       "required": [

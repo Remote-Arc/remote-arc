@@ -1,0 +1,127 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+import {sha256Hex} from '../src/auth.js';
+import {ingestProductEvents,observeProductRequest,requestEventRoute} from '../src/product-observability.js';
+import {recordProductEvent,recordCheckoutCompletion,purgeProductEvents,eventStatement} from '../src/product-events.js';
+import {handleAdminEvents,paymentReadiness} from '../src/admin-events.js';
+import {grantArcCredits} from '../src/arc-credits.js';
+import {adminApiMethods} from '../src/admin-service.js';
+import {processStripeEvent} from '../src/stripe-billing.js';
+const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
+for(const file of fs.readdirSync(new URL('../migrations/',import.meta.url)).filter(v=>v.endsWith('.sql')).sort())sql.exec(fs.readFileSync(new URL('../migrations/'+file,import.meta.url),'utf8'));
+const db={prepare(query:string){const stmt=sql.prepare(query);const bound=(args:any[])=>({async first(){return stmt.get(...args)||null;},async all(){return{results:stmt.all(...args)};},async run(){return this.runSync();},runSync(){const r=stmt.run(...args);return{success:true,meta:{changes:Number(r.changes)}};}});return{...bound([]),bind(...args:any[]){assert(!args.includes(undefined),query);return bound(args);}};},async batch(items:Array<{runSync:()=>unknown}>){sql.exec('BEGIN');try{const r=items.map(s=>s.runSync());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}}} as unknown as D1Database;
+const stamp=new Date().toISOString();
+for(const role of ['admin','user']){sql.prepare('INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,?,?)').run(role,role,role+'@test.invalid',role,stamp);sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex(role),role,new Date(Date.now()+3600000).toISOString(),stamp);}
+const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',DASHBOARD_ORIGIN:'https://agent.remotearc.app',ADMIN_ORIGIN:'https://admin.remotearc.app',STRIPE_SECRET_KEY:'sk_live_fixture',STRIPE_PUBLISHABLE_KEY:'pk_live_fixture',STRIPE_WEBHOOK_SECRET:'whsec_fixture',ARC_BILLING_ENABLED:'1',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1'};
+const journey=crypto.randomUUID(),trace=crypto.randomUUID(),eventId=crypto.randomUUID();
+const count=()=>Number((sql.prepare('SELECT COUNT(*) n FROM product_events').get() as any).n);
+const ingest=(events:unknown[],extra:Record<string,unknown>={},origin='https://agent.remotearc.app',cookie='user')=>ingestProductEvents(new Request('https://agent.remotearc.app/api/product-events',{method:'POST',headers:{origin,cookie:'rl_session='+cookie,'content-type':'application/json'},body:JSON.stringify({journeyId:journey,events,...extra})}),env);
+assert.equal((await ingest([{id:eventId,name:'billing.checkout.viewed',route:'/checkout'}])).status,204);
+assert.equal(count(),1);
+assert.equal((await ingest([{id:eventId,name:'billing.checkout.viewed',route:'/checkout'}])).status,204);assert.equal(count(),1,'Retry deduplicates event IDs');
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'billing.purchase.completed'}])).status,400,'Browser cannot forge authoritative payment events');
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed',route:'/checkout?email=private'}])).status,400);
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed',message:'private-token'}])).status,400);
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed'}],{userId:'admin'})).status,400);
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed'}],{},'https://attacker.invalid')).status,403);
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed'}],{},'https://agent.remotearc.app','missing')).status,401);
+assert.equal((await ingest(Array.from({length:21},()=>({id:crypto.randomUUID(),name:'page.viewed'})))).status,400);
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed',message:'x'.repeat(20000)}])).status,400);
+assert.equal((sql.prepare('SELECT user_id FROM product_events WHERE id=?').get(eventId) as any).user_id,'user');
+await observeProductRequest(new Request('https://agent.remotearc.app/auth/email/verify',{method:'POST'}),new Response('<form>Invalid code</form>',{headers:{'content-type':'text/html'}}),env,Date.now());assert.equal((sql.prepare("SELECT outcome FROM product_events WHERE name='auth.email.verify_requested'").get() as any).outcome,'accepted','A successful HTTP form response is not proof of successful login');
+const request=new Request('https://agent.remotearc.app/api/billing/checkout',{method:'POST',headers:{cookie:'rl_session=user','x-ra-journey-id':journey,'x-ra-trace-id':trace}});
+sql.prepare("INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,session_id,expires_at,created_at) VALUES('checkout_fixture','user','arc-topup-500-v1','payment','open','cs_live_fixture',?,?)").run(new Date(Date.now()+3600000).toISOString(),stamp);
+const response=Response.json({sessionId:'cs_live_fixture',clientSecret:'DO_NOT_RECORD_ME'});
+const observed=observeProductRequest(request,response,env,Date.now()-20);
+assert.equal((await response.json() as any).clientSecret,'DO_NOT_RECORD_ME','Observing a response does not consume it');await observed;
+const checkout=sql.prepare("SELECT journey_id,trace_id FROM arc_billing_checkouts WHERE id='checkout_fixture'").get() as any;
+assert.equal(checkout.journey_id,journey);assert.equal(checkout.trace_id,trace);
+await observeProductRequest(request,Response.json({error:'BILLING_PROVIDER_ERROR',secret:'PRIVATE'},{status:503}),env,Date.now());
+await observeProductRequest(request,Response.json({error:'PRIVATE_TOKEN_foo'},{status:503}),env,Date.now());
+assert((sql.prepare("SELECT COUNT(*) n FROM product_events WHERE error_code='BILLING_PROVIDER_ERROR'").get() as any).n===1);
+assert((sql.prepare("SELECT COUNT(*) n FROM product_events WHERE error_code='REQUEST_FAILED'").get() as any).n===1);
+await recordCheckoutCompletion(env,'user','cs_live_fixture','in_unpaid');
+assert.equal((sql.prepare("SELECT COUNT(*) n FROM product_events WHERE name='billing.purchase.completed'").get() as any).n,0);
+sql.prepare("INSERT INTO arc_payment_receipts(id,provider,event_id,user_id,product_id,state,amount_cents,currency,verified_at,payload_hash,commercial_version_id) VALUES('in_fixture','stripe','evt_fixture','user','arc-topup-500-v1','paid',1000,'usd',?,'hash','seed:live:arc-topup-500-v1')").run(stamp);
+await recordCheckoutCompletion(env,'user','cs_live_fixture','in_fixture');assert.equal((sql.prepare("SELECT COUNT(*) n FROM product_events WHERE name='billing.purchase.completed'").get() as any).n,0,'Paid receipt without Credits is not fulfillment');await grantArcCredits(db,{userId:'user',source:'topup',sourceRef:'in_fixture',units:500000,reason:'Fixture'});
+await recordCheckoutCompletion(env,'user','cs_live_fixture','in_fixture');await recordCheckoutCompletion(env,'user','cs_live_fixture','in_fixture');
+assert.equal((sql.prepare("SELECT COUNT(*) n FROM product_events WHERE name='billing.purchase.completed'").get() as any).n,1);
+assert.equal((sql.prepare("SELECT journey_id FROM product_events WHERE name='billing.purchase.completed'").get() as any).journey_id,journey);
+const admin=(query='',token='admin',method='GET',origin='https://admin.remotearc.app')=>handleAdminEvents(new Request(origin+'/api/admin/events'+query,{method,headers:{cookie:'rl_session='+token}}),env);
+assert.deepEqual(adminApiMethods('/api/admin/events'),['GET']);assert.deepEqual(adminApiMethods('/api/admin/events/readiness'),['GET']);
+assert.equal((await admin('','missing')).status,401);assert.equal((await admin('','user')).status,403);assert.equal((await admin('','admin','POST')).status,405);assert.equal((await admin('','admin','GET','https://agent.remotearc.app')).status,404);
+assert.equal((await admin('?hours=999')).status,400);assert.equal((await admin('?userId=%27%20OR%201%3D1')).status,400);assert.equal((await admin('?before=garbage')).status,400);
+assert.equal(requestEventRoute(new Request('https://test.invalid/api/product-events',{method:'POST'})),null,'Ingest never observes itself');
+assert.equal(requestEventRoute(new Request('https://test.invalid/api/device/heartbeat',{method:'POST'})),null,'No heartbeat event flood');
+const result=await admin('?userId=user&hours=24');assert.equal(result.headers.get('cache-control'),'private, no-store');
+const data=await result.json() as any;assert(data.events.length>0);assert(data.events.every((e:any)=>e.user_id==='user'));assert(!JSON.stringify(data).includes('DO_NOT_RECORD_ME'));assert(!JSON.stringify(data).includes('PRIVATE_TOKEN'));assert(!JSON.stringify(data.events).includes('@test.invalid'),'Telemetry remains free of account emails');
+assert.deepEqual(data.accounts,[{id:'user',email:'user@test.invalid'}],'Only the authenticated administrator receives a bounded account directory for displayed events');
+assert.equal(data.summary.affectedUsers,1);assert(data.errors.every((group:any)=>Number.isInteger(group.users)));
+const byEmail=await(await admin('?email=USER%40test.invalid')).json() as any;assert(byEmail.events.length>0);assert(byEmail.events.every((event:any)=>event.user_id==='user'));
+assert.equal((await admin('?email=invalid')).status,400);assert.equal((await admin('?email=user%40test.invalid','user')).status,403);
+const unmatched=await(await admin('?email='+encodeURIComponent("user'OR'1'='1@test.invalid"))).json() as any;assert.equal(unmatched.events.length,0);assert.equal(unmatched.accounts.length,0,'Email searches are bound values and cannot read unrelated accounts');
+const pairing=new Request('https://agent.remotearc.app/api/device/token',{method:'POST'});
+await observeProductRequest(pairing,Response.json({error:'authorization_pending'},{status:400}),env,Date.now());
+const pending=sql.prepare("SELECT outcome,error_code FROM product_events WHERE name='device.token.requested' ORDER BY occurred_at DESC LIMIT 1").get() as any;
+assert.equal(pending.outcome,'waiting');assert.equal(pending.error_code,'authorization_pending','A normal pairing poll is a waiting state, not a failure');
+await observeProductRequest(pairing,Response.json({error:'unauthorized'},{status:401}),env,Date.now());
+assert.equal((sql.prepare("SELECT outcome FROM product_events WHERE name='device.token.requested' AND error_code='unauthorized'").get() as any).outcome,'failed','Actual pairing failures remain visible');
+for(let i=0;i<110;i++)await recordProductEvent(env,{domain:'tasks',name:'task.request',source:'server',outcome:'accepted',userId:'user',entityId:'task_'+i});
+const first=await(await admin('?domain=tasks')).json() as any;assert.equal(first.events.length,100);assert(first.nextCursor);
+const second=await(await admin('?domain=tasks&before='+encodeURIComponent(first.nextCursor))).json() as any;assert.equal(second.events.length,10);assert(!second.events.some((e:any)=>first.events.some((f:any)=>f.id===e.id)));
+await eventStatement(env,{domain:'auth',name:'auth.session.created',source:'server',outcome:'succeeded',userId:'user'},new Date(Date.now()-31*86400000).toISOString()).run();await purgeProductEvents(env);assert.equal((sql.prepare('SELECT COUNT(*) n FROM product_events WHERE occurred_at<?').get(new Date(Date.now()-30*86400000).toISOString()) as any).n,0);
+assert.equal((await paymentReadiness({...env,STRIPE_SECRET_KEY:undefined,STRIPE_PUBLISHABLE_KEY:undefined})).conclusion,'blocked','Missing keys are diagnosed as blocked, rather than throwing');
+const previous=globalThis.fetch;let charges=true,calls=0;
+globalThis.fetch=async(input,init)=>{calls++;assert(!init?.method||init.method==='GET');const url=new URL(String(input));assert.equal(url.origin,'https://api.stripe.com');if(url.pathname==='/v1/checkout/sessions/cs_live_missing')return Response.json({livemode:true,status:'complete',payment_status:'paid',mode:'payment'});if(url.pathname==='/v1/account')return Response.json({charges_enabled:charges});if(url.pathname==='/v1/webhook_endpoints')return Response.json({data:[{url:env.PUBLIC_ORIGIN+'/api/billing/webhook',status:'enabled',livemode:true,enabled_events:['*']}]});throw Error('Unexpected provider request');};
+try{const ready=await paymentReadiness(env);assert.equal(ready.conclusion,'ready_unverified');assert.equal(ready.verifiedMemberships?.total,0);charges=false;assert.equal((await paymentReadiness(env)).conclusion,'blocked');assert.equal(calls,4);charges=true;sql.prepare("INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,session_id,expires_at,created_at) VALUES('missing','user','arc-topup-500-v1','payment','open','cs_live_missing',?,?)").run(new Date(Date.now()+3600000).toISOString(),new Date(Date.now()-1200000).toISOString());const discrepancy=await paymentReadiness(env);assert.equal(discrepancy.conclusion,'needs_attention');assert.equal(discrepancy.providerPaidUnprocessed.length,1);assert.equal(discrepancy.providerPaidUnprocessed[0]?.checkoutId,'missing');}finally{globalThis.fetch=previous;}
+// Real ledger writes with a failed commit or a lease stolen by another worker
+// must never produce an authoritative successful webhook observation.
+function settlementEnv(mode:'fail'|'lose_lease'|'telemetry_failure'){
+ return {...env,DB:{...db,prepare(query:string){
+  const statement=db.prepare(query);
+  const finalCommit=query.startsWith("UPDATE arc_payment_events SET status='processed'");
+  const telemetryWrite=query.startsWith('INSERT OR IGNORE INTO product_events');
+  if(!finalCommit&&!(mode==='telemetry_failure'&&telemetryWrite))return statement;
+  return {...statement,bind(...args:unknown[]){
+   const bound=statement.bind(...args);
+   return {...bound,async run(){
+    if(mode==='fail'&&finalCommit)throw Error('fixture: final ledger write failed');
+    if(mode==='telemetry_failure'&&telemetryWrite)throw Error('fixture: telemetry unavailable');
+    if(mode==='lose_lease'&&finalCommit)sql.prepare('UPDATE arc_payment_events SET lease_token=? WHERE id=?').run('another-worker',args[1] as string);
+    return bound.run();
+   }};
+  }} as D1PreparedStatement;
+ }} as D1Database};
+}
+const webhook=(id:string)=>({id,livemode:true,type:'checkout.session.expired',data:{object:{id:'cs_ordering_fixture'}}});
+const webhookObservations=(id:string)=>sql.prepare('SELECT name,outcome FROM product_events WHERE entity_id=? ORDER BY rowid').all(id);
+const webhookState=(id:string)=>sql.prepare('SELECT status,lease_token FROM arc_payment_events WHERE id=?').get(id);
+const beforeSettlementFetch=globalThis.fetch;
+globalThis.fetch=async()=>{throw Error('Webhook settlement fixtures must not access a provider');};
+try{
+ const failedId='evt_commit_failure';
+ await assert.rejects(processStripeEvent(settlementEnv('fail'),webhook(failedId),'commit-hash'),/fixture: final ledger write failed/);
+ assert.equal(webhookState(failedId)?.status,'failed');
+ assert.deepEqual(webhookObservations(failedId).map(e=>[e.name,e.outcome]),[['billing.webhook.failed','failed']],'A failed ledger commit cannot leave a successful webhook observation');
+ await processStripeEvent(env,webhook(failedId),'commit-hash');
+ assert.equal(webhookState(failedId)?.status,'processed');
+ assert.deepEqual(webhookObservations(failedId).map(e=>[e.name,e.outcome]),[['billing.webhook.failed','failed'],['billing.webhook.processed','succeeded']],'A successful retry is recorded after the failed attempt');
+ await processStripeEvent(env,webhook(failedId),'commit-hash');
+ assert.equal(webhookObservations(failedId).length,2,'Replaying an already processed webhook creates no extra observations');
+ const lostLeaseId='evt_lost_lease';
+ await processStripeEvent(settlementEnv('lose_lease'),webhook(lostLeaseId),'lease-hash');
+ assert.equal(webhookState(lostLeaseId)?.status,'processing');
+ assert.equal(webhookState(lostLeaseId)?.lease_token,'another-worker');
+ assert.equal(webhookObservations(lostLeaseId).length,0,'A worker that lost its lease cannot claim another worker completed the webhook');
+ const telemetryId='evt_telemetry_failure';
+ await processStripeEvent(settlementEnv('telemetry_failure'),webhook(telemetryId),'telemetry-hash');
+ assert.equal(webhookState(telemetryId)?.status,'processed','Telemetry failure cannot undo a committed webhook');
+}finally{globalThis.fetch=beforeSettlementFetch;}
+const capturedId=crypto.randomUUID(),capturedAt=new Date(Date.now()-2000).toISOString();
+assert.equal((await ingest([{id:capturedId,name:'billing.checkout.viewed',route:'/checkout',occurredAt:capturedAt}])).status,204);
+assert.equal(sql.prepare('SELECT occurred_at FROM product_events WHERE id=?').get(capturedId)?.occurred_at,capturedAt,'Batch delivery does not move purchase entry after order creation');
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed',occurredAt:'2000-01-01T00:00:00.000Z'}])).status,400,'Browser cannot backdate business cohorts');
+assert.equal((await ingest([{id:crypto.randomUUID(),name:'page.viewed',occurredAt:new Date(Date.now()+60000).toISOString()}])).status,400,'Browser cannot fabricate future activity');
+const unavailable={DB:{prepare(){throw Error('storage offline');}}} as any;assert.equal(await recordProductEvent(unavailable,{domain:'tasks',name:'task.failed',source:'server',outcome:'failed'}),false,'Telemetry storage failure never replaces the product result');
+sql.close();console.log('PASS: real SQLite migrations, intake auth/origin/allowlist/body bounds, forged payment prevention, ID deduplication, checkout correlation, source privacy, admin RBAC/filters/cursor pagination, retention, read-only live readiness, webhook commit/lease/retry ordering and fail-open writes');

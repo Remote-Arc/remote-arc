@@ -21,15 +21,23 @@ export const BROWSER_RUNNER_TOOLS = [
   "browser_runner_status",
   "browser_runner_confirm",
   "browser_runner_close",
+  "browser_runner_wait",
 ] as const;
 
 export type BrowserRunnerTool = (typeof BROWSER_RUNNER_TOOLS)[number];
 export const isBrowserRunnerTool = (tool: string): tool is BrowserRunnerTool =>
   (BROWSER_RUNNER_TOOLS as readonly string[]).includes(tool);
 
-type Scope = "browser:read" | "browser:interact";
-type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
+import {extractCaptchaImages} from "./browser-auth-result.js";
 
+type Scope = "browser:read" | "browser:interact";
+type ToolResult = { content: ({ type: "text"; text: string } | {type:"image";data:string;mimeType:string})[]; isError?: boolean };
+
+export function browserRunnerResult(value:unknown,textResult:(value:unknown)=>ToolResult):ToolResult {
+ const {clean,images}=extractCaptchaImages(value);
+ const result=textResult(clean);
+ return {...result,content:[...result.content,...images]};
+}
 export type BrowserRunnerDeps = {
   identity: OAuthIdentity | null;
   hasScope: (identity: OAuthIdentity, scope: Scope) => boolean;
@@ -63,7 +71,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Start or resume a browser task",
     description:
-      "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. profile is the browser profile, which keeps sign-ins and cookies between tasks: use one profile per person and reuse it (for example profile=jenny), so a site signed into once stays signed in for later tasks and new conversations; browser_runner_status without session_id lists the profiles on the computer and the sites used in each. The task browser works out of sight so it never interrupts the user: a hidden window that does not take focus (headless=true, the default for every new task). Do not show it to watch progress. When a snapshot reports needs_user (a sign-in, code or CAPTCHA only the user can do), tell the user what is needed and wait until they say they are ready, then call this again with the same task_id and headless=false: the window comes on screen as it is, nothing entered on the page is lost, and it goes back out of sight on your next browser_runner_act once the page no longer needs the user. A computer without a display has no window to show. Leaving headless out keeps a running task as it is. Resuming reopens the last page and reports unconfirmed submits." +
+      "Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. profile is the browser profile, which keeps sign-ins and cookies between tasks: use one profile per person and reuse it (for example profile=jenny), so a site signed into once stays signed in for later tasks and new conversations; browser_runner_status without session_id lists the profiles on the computer and the sites used in each. The task browser works out of sight so it never interrupts the user: a hidden window that does not take focus (headless=true, the default for every new task). Do not show it to watch progress. After submit/navigation, visible challenges are detected automatically: needs_user raises the task window and notifies the user (unless they chose notify_only). Use browser_runner_wait until=user_done; do not sleep and poll or repeat a submit. The window goes back out of sight after the user finishes. A computer without a display has no window to show. Leaving headless out keeps a running task as it is. Resuming reopens the last page and reports unconfirmed submits." +
       " Use browser=your_chrome only when the user explicitly asks to use their own Chrome; never suggest or choose it yourself. It requires Chrome 144+ with remote debugging enabled at chrome://inspect/#remote-debugging. Leave profile and headless out: this mode uses the user's current sign-ins and is always visible. Chrome asks Allow for each new connection; tasks share one connection so follow-up tasks do not ask again while it stays connected. If YOUR_CHROME_NOT_ENABLED, ask the user to enable the switch in the page opened on their computer. If YOUR_CHROME_WAITING, ask them to click Allow and retry with the same task_id; the request stays open for 3 minutes. YOUR_CHROME_DENIED means the request was declined or expired. Without browser or profile, a resumed task keeps its original browser and profile." + what,
     input: z.object({
       device_id: deviceId,
@@ -81,12 +89,13 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:read",
     title: "Read the task browser's page",
     description:
-      "Return a bounded view of the current page: url, title, headings, visible text and interactive elements with refs (e1, e2, ...; f1e1 for elements inside embedded frames such as hosted application forms), roles, labels, non-sensitive values, options and validation errors. Refs are valid only for the returned snapshot_id; take a new snapshot after the page changes. frames lists embedded frames; frames outside allowed_origins are named but never read. Sensitive fields are marked and never show values. blockers report a sign-in or CAPTCHA that only the user can complete; a requested one-time code is an attention note, to be filled from where it was sent.",
+      "Return a bounded view of the current page: url, title, headings, visible text and interactive elements with refs (e1, e2, ...; f1e1 for elements inside embedded frames such as hosted application forms), roles, labels, non-sensitive values, options and validation errors. Refs are valid only for the returned snapshot_id; take a new snapshot after the page changes. frames lists embedded frames; frames outside allowed_origins are named but never read. Sensitive fields are marked and never show values. Public MCP calls disable OTP and CAPTCHA automation even if enabled in Dashboard; complete those challenges through user takeover. Authentication challenges require the user to complete the step in their own browser; do not retrieve, handle or pass OTP codes, passwords or CAPTCHA solutions through model tools. Sensitive field values remain private. Unsupported challenges require user takeover.",
     input: z.object({
       device_id: deviceId,
       session_id: id,
       max_elements: z.number().int().min(10).max(400).optional(),
       max_text: z.number().int().min(500).max(20000).optional(),
+      include_captcha_images: z.boolean().optional(),
     }),
     annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
   },
@@ -94,7 +103,7 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Act in the task browser",
     description:
-      "Do one thing in the task browser, or enter a whole form at once. On an element from the latest snapshot (snapshot_id + ref): click, fill (value), select (option value or label), check, uncheck, press (key), or upload (path of a pdf/doc/docx/txt/rtf/odt/png/jpg up to 25 MB in a Trusted Location on the computer). fill_form enters many fields from one snapshot in one call: fields=[{ref, action: fill|select|check|uncheck, value}], in order; each field reports ok or its own error and the others still go in; it never clicks, submits or uploads. Use fill_form whenever two or more fields are ready, then click Next or Submit as its own act. snapshot=true returns the page as the action left it (with a new snapshot_id), so a click that opens a dropdown, dialog or next step needs no separate browser_runner_snapshot. Without a ref: navigate (url inside allowed_origins) or wait (text and/or url_contains, timeout_ms up to 30000). fill_secret fills a sign-in saved on the computer into a field: secret=<name from saved_logins or a saved_login note>, part=username or password; the Agent fills it only on the sites it is saved for and a password only into a field marked secret: password, and never returns either value. Passwords and payment details are never accepted as a value. One-time codes (fields marked secret: code) may be filled with the code from where it was sent, for example the user's email through a connected mail app, unless the computer turned this off; codes are never recorded. Mark anything that sends or saves externally (submit, apply, book, pay, post, or a Next button that posts the form) with effect=submit and a stable idempotency_key per step. The Agent refuses POST form buttons, submit-like controls and Enter without effect=submit (SUBMIT_EFFECT_REQUIRED). Sign-in steps (an email or username, a password or code the user typed, Send code) are not one-time submits and can always be repeated. A page of a longer form (Next, Continue, Save and continue) settles itself when the next page opens (effect.settled_by=runner, no confirm needed); if it comes back on the same page it holds nothing up and can be sent again with a new key, up to 3 times. A final submit (submit application, pay, book, post, send) is sent once: a key is never sent twice, the same form and button is never sent again under a new key (SUBMIT_ALREADY_RECORDED), and it must be settled with browser_runner_confirm before another final submit. If nothing left the page after a click (effect.nothing_sent), the same key may be clicked again while that stays true. After a crash or timeout a submit is reported as unknown rather than retried. Use effect=navigation for links and GET steps.",
+      "Do one thing in the task browser, or enter a whole form at once. On an element from the latest snapshot (snapshot_id + ref): click, fill (value), select (option value or label), check, uncheck, press (key), or upload (path of a file in a Trusted Location on the computer: documents and images pdf/doc/docx/txt/rtf/odt/csv/xlsx/pptx/png/jpg/gif/webp up to 25 MB; on Agent 0.6.4+ also audio mp3/wav/m4a up to 512 MB and video mp4/mov/m4v/webm up to 2 GB). fill_form enters many fields from one snapshot in one call: fields=[{ref, action: fill|select|check|uncheck, value}], in order; each field reports ok or its own error and the others still go in; it never clicks, submits or uploads. Use fill_form whenever two or more fields are ready, then click Next or Submit as its own act. snapshot=true returns the page as the action left it (with a new snapshot_id), so a click that opens a dropdown, dialog or next step needs no separate browser_runner_snapshot. Without a ref: navigate (url inside allowed_origins) or wait (text and/or url_contains, timeout_ms up to 30000). fill_secret fills a sign-in saved on the computer into a field: secret=<name from saved_logins or a saved_login note>, part=username or password; the Agent fills it only on the sites it is saved for and a password only into a field marked secret: password, and never returns either value. Passwords and payment details are never accepted as a value. Use existing sessions or allow the user to complete authentication challenges via the task browser handoff. Never ask for, retrieve or pass passwords, OTP codes, API keys, or CAPTCHA solutions as model tool arguments. Public MCP calls cannot fill OTP or CAPTCHA answers even when Dashboard approval exists. If BROWSER_AUTH_REQUIRED, ask the user to complete the site authentication and resume the same task. Mark anything that sends or saves externally (submit, apply, book, pay, post, or a Next button that posts the form) with effect=submit and a stable idempotency_key per step. The Agent refuses POST form buttons, submit-like controls and Enter without effect=submit (SUBMIT_EFFECT_REQUIRED). Sign-in steps (an email or username, a password or code the user typed, Send code) are not one-time submits and can always be repeated. A page of a longer form (Next, Continue, Save and continue) settles itself when the next page opens (effect.settled_by=runner, no confirm needed); if it comes back on the same page it holds nothing up and can be sent again with a new key, up to 3 times. A final submit (submit application, pay, book, post, send) is sent once: a key is never sent twice, the same form and button is never sent again under a new key (SUBMIT_ALREADY_RECORDED), and it must be settled with browser_runner_confirm before another final submit. If nothing left the page after a click (effect.nothing_sent), the same key may be clicked again while that stays true. After a crash or timeout a submit is reported as unknown rather than retried. Use effect=navigation for links and GET steps.",
     input: z.object({
       device_id: deviceId,
       session_id: id,
@@ -125,7 +134,14 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
       effect: z.enum(["none", "navigation", "submit"]).optional(),
       idempotency_key: idempotencyKey.optional(),
     }),
-    annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: true },
+    annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: false },
+  },
+  browser_runner_wait: {
+    scope: "browser:read",
+    title: "Wait for a browser task",
+    description: "Wait on the device for user_done (two clear blocker scans), page_change, text, url_contains, upload_done or idle. Uses no sleep/poll turns. timeout_ms defaults to 30000 and is capped at 40000 even if a larger value is supplied. Returns met, timeout or needs_user. On timeout call wait again. Waiting never retries or authorizes a submit; inspect and confirm the existing effect after the user finishes. snapshot=true optionally returns the resulting page.",
+    input: z.object({ device_id: deviceId, session_id: id, until: z.enum(["user_done", "page_change", "text", "url_contains", "upload_done", "idle"]), text: z.string().min(1).max(200).optional(), url_contains: z.string().min(1).max(300).optional(), timeout_ms: z.number().int().min(1000).optional(), snapshot: z.boolean().optional() }),
+    annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
   },
   browser_runner_status: {
     scope: "browser:read",
@@ -154,8 +170,8 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     scope: "browser:interact",
     title: "Close a browser task",
     description:
-      "Close the task browser and keep its checkpoint so the task can be resumed. In your_chrome mode, close only the task's tab; the user's other tabs and profile are kept. If already disconnected, tab_left_open=true means the user can close the remaining task window manually. The shared Chrome connection disconnects 5 minutes after the last task detaches. forget=true also deletes the checkpoint and, for a dedicated Runner task profile, its sign-ins.",
-    input: z.object({ device_id: deviceId, session_id: id, forget: z.boolean().optional() }),
+      "Close the task browser and keep its checkpoint so the task can be resumed. RUNNER_USER_ACTION_PENDING refuses to close during user handoff or an unresolved submit: wait and confirm first. Deliberate abandonment requires force=true and reason and records a receipt. In your_chrome mode, close only the task's tab; the user's other tabs and profile are kept. If already disconnected, tab_left_open=true means the user can close the remaining task window manually. The shared Chrome connection disconnects 5 minutes after the last task detaches. forget=true also deletes the checkpoint and, for a dedicated Runner task profile, its sign-ins.",
+    input: z.object({ device_id: deviceId, session_id: id, forget: z.boolean().optional(), force: z.boolean().optional(), reason: z.string().min(1).max(200).optional() }),
     annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
   },
 };
@@ -180,7 +196,8 @@ export function registerBrowserRunnerTools(server: McpServer, deps: BrowserRunne
         if (usageError) return usageError;
         const { device_id, ...args } = input;
         const call: DeviceCall = (name, callArgs) => deps.callDevice(identity, String(device_id), name, callArgs);
-        return deps.textResult(tool === "browser_runner_act" ? await runAct(call, args) : tool === "browser_runner_start" ? await runStart(call, args) : await call(tool, args));
+        const out=tool === "browser_runner_act" ? await runAct(call, args) : tool === "browser_runner_start" ? await runStart(call, args) : await call(tool, args);
+        return browserRunnerResult(out,deps.textResult);
       },
     );
   }

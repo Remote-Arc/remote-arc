@@ -1,3 +1,9 @@
+import {ingestProductEvents,observeProductRequest,requestEventRoute} from './product-observability.js';
+import {recordDeviceOnline,purgeBusinessMetrics} from './business-tracking.js';
+import {eventContext,purgeProductEvents,recordProductEvent} from './product-events.js';
+import {serveDemoMedia} from './demo-media.js';
+import {handleBrowserAuth} from "./browser-auth.js";
+import { handleRunnerRequest } from "./runner-attention.js";
 import { diagnosticError } from "./diagnostics.js";
 import {handleFollowupUnsubscribe} from './user-followups.js';
 import {runFollowupBatches} from './followup-batches.js';
@@ -75,6 +81,7 @@ import { handleFileResource } from "./file-resources.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './device-capacity-admin.js';
 import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
+import { handleAdminUsageInsights } from "./admin-usage-insights.js";
 import { handleOrganizations } from "./organizations.js";
 import { submitWebsiteInterest, listWebsiteSubmissions, updateWebsiteSubmission } from "./domains/engagement.js";
 import {
@@ -120,6 +127,7 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
+  PUBLIC_MEDIA?: R2Bucket;
   PUBLIC_ORIGIN: string;
   DEPLOYMENT_SHA?: string;
   APP_ORIGIN?: string;
@@ -128,6 +136,7 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   ADMIN_ORIGIN?: string;
   ADMIN_SERVICE_MODE?: string;
   ADMIN_UI?: Fetcher;
+  PRODUCT_EVENTS_RATE_LIMITER?: { limit(input: {key:string}):Promise<{success:boolean}> };
   ENGAGEMENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{success: boolean}> };
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -228,6 +237,11 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     // Serve one canonical public URL; do not alter HTTPS MCP or dashboard calls.
     const httpsCanonical = marketingHttpsRedirect(url);
     if (httpsCanonical) return Response.redirect(httpsCanonical, 301);
+
+    if(url.pathname.startsWith('/media/demo-gallery/')){
+      if(url.origin!==new URL(marketingOrigin).origin)return new Response('Not found',{status:404});
+      return serveDemoMedia(request,env.PUBLIC_MEDIA);
+    }
 
     if(url.pathname==='/email/follow-up/unsubscribe'&&url.origin===new URL(marketingOrigin).origin)return handleFollowupUnsubscribe(request,env);
 
@@ -517,6 +531,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return handleOrganizations(request, env, user.id);
     }
 
+    if(url.pathname==='/api/product-events')return ingestProductEvents(request,env);
+
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
       return user
@@ -540,6 +556,9 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       if (url.origin !== new URL(dashboardOrigin).origin && url.origin !== new URL(appOrigin).origin) return Response.json({error:"app_host_required"},{status:404});
       return handleApps(request, env);
     }
+
+    if (/^\/api\/browser-auth\/[A-Za-z0-9_-]+$/.test(url.pathname)) return handleBrowserAuth(request, env);
+    if (url.pathname.startsWith("/api/runner/")) return handleRunnerRequest(request, env);
 
     if (url.pathname === "/api/status" && request.method === "GET") {
       const user = await getSessionUser(request, env);
@@ -573,6 +592,9 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
     if (url.pathname === "/api/admin/operations") {
       return handleAdminOperations(request, env);
+    }
+    if (url.pathname === "/api/admin/usage-insights") {
+      return handleAdminUsageInsights(request, env);
     }
     if (url.pathname === "/api/admin/billing") {
       return handleAdminBilling(request, env);
@@ -828,9 +850,11 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
           return new Response("Unauthorized device", { status: 401 });
         }
 
-        return await env.REGISTRY
+        const connection = await env.REGISTRY
           .getByName("user:" + identity.user_id)
           .fetch(withTrustedDeviceHeaders(request, identity));
+        if(connection.status===101){const tracked=recordDeviceOnline(env,identity.id,identity.user_id);if(ctx)ctx.waitUntil(tracked);else await tracked;}
+        return connection;
       } catch (error) {
         console.error("agent_connect_failed", {
           error: diagnosticError(error),
@@ -1020,9 +1044,14 @@ export default {
     ctx: ExecutionContext,
   ): Promise<Response> {
     const started = Date.now();
+    const observationContext=eventContext(request);
     const isMcpRequest = ["/mcp", "/mcp/"].includes(new URL(request.url).pathname);
     try {
-      const response = await handleFetch(request, env, ctx);
+      let response = await handleFetch(request, env, ctx);
+      if(requestEventRoute(request)){
+        ctx.waitUntil(observeProductRequest(request,response,env,started,observationContext));
+        if(response.status!==101){const headers=new Headers(response.headers);headers.set('x-ra-trace-id',observationContext.traceId);response=new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
+      }
       if (isMcpRequest) recordMcpTelemetry(env, {
         status: response.status, durationMs: Date.now() - started, method: request.method,
       });
@@ -1044,6 +1073,8 @@ export default {
       if (isMcpRequest) recordMcpTelemetry(env, {
         status: 500, durationMs: Date.now() - started, method: request.method,
       });
+      const eventSpec=requestEventRoute(request);
+      if(eventSpec)ctx.waitUntil(recordProductEvent(env,{...eventSpec,...observationContext,source:'server',outcome:'failed',errorCode:'internal_error',httpStatus:500,durationMs:Date.now()-started}));
       const message = diagnosticError(error);
       console.error("worker_unhandled_exception", { message });
       ctx.waitUntil(
@@ -1081,6 +1112,8 @@ export default {
     if(controller.cron==='* * * * *')ctx.waitUntil(runFollowupBatches(env));
     if(controller.cron==='* * * * *')ctx.waitUntil(runSlackJobs(env));
     if (controller.cron === "*/5 * * * *") {
+      ctx.waitUntil(purgeProductEvents(env));
+      ctx.waitUntil(purgeBusinessMetrics(env));
       ctx.waitUntil(runSyntheticMonitor(env));
       ctx.waitUntil(runApprovalMaintenance(env));
       ctx.waitUntil(ensureOperatorAllowance(env).catch((error) => console.error("operator_allowance_failed", { message: error instanceof Error ? error.message : String(error) })));

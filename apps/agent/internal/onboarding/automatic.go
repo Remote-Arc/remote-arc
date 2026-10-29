@@ -34,6 +34,10 @@ func nativeCandidate(client Client) string {
 }
 
 func globalSetup(ctx context.Context, client Client, action, version string) AutomaticResult {
+	return globalSetupWith(ctx, client, action, version, false)
+}
+
+func globalSetupWith(ctx context.Context, client Client, action, version string, skipConnectorCheck bool) AutomaticResult {
 	r := AutomaticResult{Agent: client.Agent, Status: "not_found", Hint: "Client is not installed or its executable is unavailable; skipped."}
 	binary := nativeCandidate(client)
 	if binary == "" {
@@ -45,7 +49,7 @@ func globalSetup(ctx context.Context, client Client, action, version string) Aut
 		return r
 	}
 	if client.Agent == "codex" {
-		result, err := codexsetup.Run(ctx, codexsetup.Request{Action: action, Global: true, CodexBinary: binary, RemoteArcBinary: native, Version: version})
+		result, err := codexsetup.Run(ctx, codexsetup.Request{Action: action, Global: true, CodexBinary: binary, RemoteArcBinary: native, Version: version, SkipConnectorCheck: skipConnectorCheck})
 		r.Status, r.ToolsVerified, r.Hint = result.Status, result.ToolsVerified, result.Hint
 		r.ConnectionVerified = result.ToolsVerified
 		if err != nil && r.Hint == "" {
@@ -64,6 +68,14 @@ func globalSetup(ctx context.Context, client Client, action, version string) Aut
 // startup always launches this work through StartAutomatic, never inline.
 func Automatic(ctx context.Context, agent, action, version string) []AutomaticResult {
 	return automatic(ctx, agent, action, version, Inspect, globalSetup)
+}
+
+// AutomaticSkippingConnectorCheck is the explicit manual path for users whose
+// Codex cannot list ChatGPT connectors.
+func AutomaticSkippingConnectorCheck(ctx context.Context, agent, action, version string) []AutomaticResult {
+	return automatic(ctx, agent, action, version, Inspect, func(ctx context.Context, c Client, action, version string) AutomaticResult {
+		return globalSetupWith(ctx, c, action, version, true)
+	})
 }
 
 func automatic(ctx context.Context, agent, action, version string, inspect func(context.Context, string, string) (Inspection, error), setup func(context.Context, Client, string, string) AutomaticResult) []AutomaticResult {
@@ -107,6 +119,10 @@ func StartAutomatic(parent context.Context, version string, notify func(string, 
 }
 
 func startAutomatic(parent context.Context, version string, notify func(string, string), run func(context.Context, string, string, string) []AutomaticResult) context.CancelFunc {
+	return startAutomaticOn(parent, version, notify, run, IsWSL())
+}
+
+func startAutomaticOn(parent context.Context, version string, notify func(string, string), run func(context.Context, string, string, string) []AutomaticResult, wsl bool) context.CancelFunc {
 	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	go func() {
 		defer cancel()
@@ -131,7 +147,12 @@ func startAutomatic(parent context.Context, version string, notify func(string, 
 			case "already_registered", "connector_present":
 				notify("info", label+": existing Remote Arc MCP/Connector kept; no duplicate added.")
 			case "not_found":
-				notify("info", label+": no supported executable found; automatic MCP setup skipped.")
+				if wsl {
+					// WSL and Windows keep separate client installs and configs.
+					notify("info", label+": not installed inside this WSL distro; automatic MCP setup skipped. If you use it on Windows, run npx remotelink@latest in Windows PowerShell to connect it there.")
+				} else {
+					notify("info", label+": no supported executable found; automatic MCP setup skipped.")
+				}
 			default:
 				notify("info", fmt.Sprintf("%s: automatic MCP setup skipped (%s). Remote Arc continues normally.", label, result.Hint))
 			}
@@ -140,8 +161,25 @@ func startAutomatic(parent context.Context, version string, notify func(string, 
 	return cancel
 }
 
-func encodeAutomatic(ctx context.Context, agent, action, version string, encoder *json.Encoder) error {
+func encodeAutomatic(ctx context.Context, agent, action, version string, skipConnectorCheck bool, encoder *json.Encoder) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	return encoder.Encode(map[string]any{"contract": "remotearc.automatic-client-mcp/v1", "clients": Automatic(ctx, agent, action, version)})
+	run := Automatic
+	if skipConnectorCheck {
+		run = AutomaticSkippingConnectorCheck
+	}
+	return encoder.Encode(map[string]any{"contract": "remotearc.automatic-client-mcp/v1", "clients": run(ctx, agent, action, version)})
+}
+
+// IsWSL reports whether this Linux process runs inside Windows Subsystem for
+// Linux, where Windows-side clients are not visible on PATH.
+func IsWSL() bool {
+	if runtime.GOOS != "linux" {
+		return false
+	}
+	if os.Getenv("WSL_DISTRO_NAME") != "" || os.Getenv("WSL_INTEROP") != "" {
+		return true
+	}
+	b, err := os.ReadFile("/proc/sys/kernel/osrelease")
+	return err == nil && strings.Contains(strings.ToLower(string(b)), "microsoft")
 }

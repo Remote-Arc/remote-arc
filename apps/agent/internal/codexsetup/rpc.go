@@ -13,10 +13,15 @@ import (
 	"time"
 )
 
-type Failure struct{ Code, Hint string }
+// Failure is a redacted setup error. RPCCode keeps only the numeric JSON-RPC
+// error code from Codex; vendor messages are never retained.
+type Failure struct {
+	Code, Hint string
+	RPCCode    int
+}
 
 func (e *Failure) Error() string   { return e.Code + ": " + e.Hint }
-func fail(code, hint string) error { return &Failure{code, hint} }
+func fail(code, hint string) error { return &Failure{Code: code, Hint: hint} }
 
 type rpcClient struct {
 	cmd    *exec.Cmd
@@ -115,7 +120,7 @@ func (r *rpcClient) call(method string, params, result any) error {
 			continue
 		}
 		if message.Error != nil {
-			return fail("codex_request_rejected", fmt.Sprintf("Codex rejected %s (code %d); run setup doctor or update Codex. Private provider diagnostics were omitted.", method, message.Error.Code))
+			return &Failure{Code: "codex_request_rejected", Hint: fmt.Sprintf("Codex rejected %s (code %d); run setup doctor or update Codex. Private provider diagnostics were omitted.", method, message.Error.Code), RPCCode: message.Error.Code}
 		}
 		if len(message.Result) == 0 || json.Unmarshal(message.Result, result) != nil {
 			return fail("client_protocol_invalid", "Codex returned an unsupported response shape; update the client.")

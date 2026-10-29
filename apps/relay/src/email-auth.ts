@@ -1,9 +1,12 @@
+import {recordProductEvent,eventContext} from './product-events.js';
+import {startBusinessFlow,advanceBusinessFlow,failBusinessFlow} from './business-tracking.js';
 import {
   addSecondsIso,
   createSession,
   nowIso,
   safeReturnTo,
   sessionCookie,
+  sha256Hex,
 } from "./auth.js";
 import { authPage, escapeAuthHtml } from "./auth-page.js";
 import { renderOtpEmail } from "./email-template.js";
@@ -157,6 +160,9 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
 
   if ((result.meta?.changes || 0) !== 1) return formPage(email, returnTo, "", request);
 
+  const businessFlow='email:'+await sha256Hex(email+'|'+now);
+  await startBusinessFlow(env,{id:businessFlow,scene:'email_login',at:now,expiresAt:addSecondsIso(CODE_TTL_SECONDS)});
+
   let sent = false;
   try {
     const sender = emailSender(env)!;
@@ -179,10 +185,12 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
     console.warn("email_delivery_unreachable");
   }
   if (!sent) {
+    await failBusinessFlow(env,businessFlow,'delivery_failed');
     await env.DB.prepare("DELETE FROM email_login_challenges WHERE email = ?1 AND code_hash = ?2")
       .bind(email, hash).run();
     return new Response("Email service temporarily unavailable. Try again later.", { status: 503 });
   }
+  await advanceBusinessFlow(env,businessFlow,'email_login','delivered');
   return formPage(email, returnTo, "", request);
 }
 
@@ -198,6 +206,11 @@ export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
   const returnTo = safeReturnTo(String(form.get("return_to") || ""), request, env);
   const hash = await codeHash(email, code, env.EMAIL_AUTH_SECRET!);
   const now = nowIso();
+  let businessFlow:string|null=null;
+  try{
+    const challenge=await env.DB.prepare('SELECT requested_at FROM email_login_challenges WHERE email=?1').bind(email).first<{requested_at:string}>();
+    if(challenge){businessFlow='email:'+await sha256Hex(email+'|'+challenge.requested_at);await advanceBusinessFlow(env,businessFlow,'email_login','verification');}
+  }catch{console.warn('business_login_correlation_unavailable');}
   // The matching challenge is consumed exactly once even under concurrent verify calls.
   const consumed = await env.DB.prepare(
     `UPDATE email_login_challenges SET verified_at = ?3
@@ -208,10 +221,12 @@ export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
     await env.DB.prepare(
       "UPDATE email_login_challenges SET attempts = attempts + 1 WHERE email = ?1 AND verified_at IS NULL AND expires_at > ?2 AND attempts < ?3",
     ).bind(email, now, MAX_ATTEMPTS).run();
+    await recordProductEvent(env,{...eventContext(request),domain:'auth',name:'auth.email.verification_failed',source:'server',outcome:'failed',errorCode:'AUTH_CODE_INVALID_OR_EXPIRED'});
     return formPage(email, returnTo, "Incorrect, expired, or already used code. Please try again or request a new one.", request);
   }
 
   if (!(await eligibleForEmailAuth(env, email))) {
+    if(businessFlow)await failBusinessFlow(env,businessFlow,'account_ineligible');
     return new Response("Email account is not eligible", { status: 403 });
   }
 
@@ -225,7 +240,9 @@ export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
     user = await lookupUser(env, email);
   }
   if (!user) return new Response("Unable to create account", { status: 503 });
+  if(businessFlow)await advanceBusinessFlow(env,businessFlow,'email_login','verified',{userId:user.id});
   const token = await createSession(user.id, env);
+  if(businessFlow)await advanceBusinessFlow(env,businessFlow,'email_login','completed',{userId:user.id});
   return new Response(null, {
     status: 303,
     headers: {

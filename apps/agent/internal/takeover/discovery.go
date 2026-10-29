@@ -145,6 +145,22 @@ func sourceRoot(agent, home string) string {
 }
 
 func Discover(ctx context.Context, workspace, agent, override string, limit int) (Discovery, error) {
+	root, err := workspaceDirectory(ctx, workspace)
+	if err != nil {
+		return Discovery{Version: Version, Sessions: []Session{}, Sources: []Source{}}, err
+	}
+	return discover(ctx, root, agent, override, limit)
+}
+
+// DiscoverRecent lists the newest Codex/Claude Code sessions on this device
+// without a project filter. It answers "which agent tasks exist and where is
+// each one's working directory/worktree"; it still returns metadata only.
+func DiscoverRecent(ctx context.Context, agent string, limit int) (Discovery, error) {
+	return discover(ctx, "", agent, "", limit)
+}
+
+// discover scans session stores. An empty root means every recorded cwd.
+func discover(ctx context.Context, root, agent, override string, limit int) (Discovery, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	d := Discovery{Version: Version, Sessions: []Session{}, Sources: []Source{}}
@@ -157,10 +173,7 @@ func Discover(ctx context.Context, workspace, agent, override string, limit int)
 	if limit < 1 || limit > 100 {
 		return d, errors.New("--limit must be between 1 and 100")
 	}
-	root, err := workspaceDirectory(ctx, workspace)
-	if err != nil {
-		return d, err
-	}
+	var err error
 	d.Workspace = root
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -179,6 +192,15 @@ func Discover(ctx context.Context, workspace, agent, override string, limit int)
 		base, err = filepath.Abs(base)
 		if err != nil {
 			return d, err
+		}
+		// Agent homes are often links to another drive (Windows junction
+		// ~/.codex -> E:\AI\codexdata). Resolve the default store itself;
+		// an explicit --sessions-root and links inside the store are still
+		// never followed.
+		if override == "" {
+			if real, linkErr := filepath.EvalSymlinks(base); linkErr == nil {
+				base = real
+			}
 		}
 		source := Source{Agent: current, Root: base, Status: "available"}
 		err = filepath.WalkDir(base, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -230,7 +252,7 @@ func Discover(ctx context.Context, workspace, agent, override string, limit int)
 			s, err := sessionMeta(current, path)
 			if err != nil {
 				d.Skipped++
-			} else if belongsToWorkspace(s, root) {
+			} else if root == "" || belongsToWorkspace(s, root) {
 				d.Sessions = append(d.Sessions, s)
 			}
 			return nil

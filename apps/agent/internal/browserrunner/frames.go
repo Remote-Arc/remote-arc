@@ -299,7 +299,8 @@ func (s *session) frameOffset(ctx context.Context, frameID string) (float64, flo
 }
 
 // snapshotFrames reads in-scope child frames into the page snapshot. Frames
-// from sites outside allowed_origins are listed but never read or acted on.
+// from sites outside allowed_origins are listed but never read or acted on,
+// except embedded CAPTCHA providers approved for the top-level site.
 func (s *session) snapshotFrames(ctx context.Context, page map[string]any, id string, budget, maxText int) {
 	s.snapFrames = map[string]string{}
 	elements, _ := page["elements"].([]any)
@@ -307,12 +308,12 @@ func (s *session) snapshotFrames(ctx context.Context, page map[string]any, id st
 	frames := []map[string]any{}
 	for i, f := range s.childFrames() {
 		prefix := fmt.Sprintf("f%d", i+1)
-		entry := map[string]any{"frame": prefix, "origin": originOf(f.url), "in_scope": s.scope.Allows(f.url)}
+		entry := map[string]any{"frame": prefix, "origin": originOf(f.url), "in_scope": s.readableFrame(f), "authentication": map[string]any{"otp": s.codesAllowed(f.url), "captcha": s.captchaFrame(f)}}
 		frames = append(frames, entry)
-		if !s.scope.Allows(f.url) || budget <= 0 {
+		if !s.readableFrame(f) || budget <= 0 || !s.frameVisible(ctx, f) {
 			continue
 		}
-		r, e := s.helperIn(ctx, f.id, "snapshot", map[string]any{"snapshot_id": id, "ref_prefix": prefix, "max_elements": max(10, budget), "max_text": max(200, maxText/2), "allow_codes": oneTimeCodesAllowed()}, true)
+		r, e := s.helperIn(ctx, f.id, "snapshot", map[string]any{"snapshot_id": id, "ref_prefix": prefix, "max_elements": max(10, budget), "max_text": max(200, maxText/2), "allow_codes": s.codesAllowed(f.url), "allow_captcha": s.captchaAllowed()}, true)
 		if e != nil {
 			entry["error"] = clip(e.Error(), 120)
 			continue
@@ -356,7 +357,7 @@ func (s *session) probeAll(ctx context.Context, text string) (bool, map[string]a
 		return found, page
 	}
 	for _, f := range s.childFrames() {
-		if !s.scope.Allows(f.url) {
+		if !s.readableFrame(f) {
 			continue
 		}
 		if r, e := s.helperIn(ctx, f.id, "probe", map[string]any{"text": text}, true); e == nil {

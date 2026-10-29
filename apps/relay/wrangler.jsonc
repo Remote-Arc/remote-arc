@@ -79,6 +79,7 @@
     ],
     "not_found_handling": "single-page-application"
   },
+  "r2_buckets": [{"binding":"PUBLIC_MEDIA","bucket_name":"remote-arc-public-media"}],
   "d1_databases": [
     {
       "binding": "DB",
@@ -119,6 +120,7 @@
     "ARC_TRIAL_PREMIUM_MICROS": "250000"
   },
   "ratelimits": [
+    {"name":"PRODUCT_EVENTS_RATE_LIMITER","namespace_id":"41008","simple":{"limit":30,"period":60}},
     {
       "name": "MCP_RATE_LIMITER",
       "namespace_id": "41001",

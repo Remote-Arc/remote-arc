@@ -51,7 +51,7 @@ Use Remote Arc only with computers, files, accounts, and services you own or are
 | `shared_tab_list` | true | false | false | Lists metadata for explicitly shared browser tabs without navigating or modifying them. |
 | `shared_tab_read` | true | false | false | Reads a simplified snapshot of an explicitly shared page, and optionally the selected text, visible links or one table, without page interaction. |
 | `shared_tab_click` | false | true | true | Clicks one element from a fresh shared-tab snapshot only after the user enables interaction for that tab; the click may navigate, submit, or trigger an external action. |
-| `shared_tab_fill` | false | true | false | Fills a non-sensitive control from a fresh shared-tab snapshot only after per-tab interaction opt-in; recognized password, OTP, payment-card, and file fields stay blocked. |
+| `shared_tab_fill` | false | true | false | Fills a control from a fresh shared-tab snapshot after per-tab interaction opt-in. OTP sign-in/registration requires per-site Dashboard approval and the extension code switch; password, payment-card, CAPTCHA response token and file fields stay blocked. |
 | `list_directory` | true | false | false | Retrieves a directory listing from a private paired computer without modifying filesystem state. |
 | `read_file` | true | false | false | Retrieves file content from a private paired computer without modifying the file. |
 | `read_binary_file` | true | false | false | Reads a bounded binary chunk from an authorized paired device without modifying it. |

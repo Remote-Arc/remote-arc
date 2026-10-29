@@ -40,12 +40,20 @@ const diagnosticFetch:typeof fetch=async(url,init)=>{
 };
 const scriptedFixture=process.argv.includes('--scripted-fixture');
 if(scriptedFixture&&process.env.OPENAI_API_KEY!=='synthetic-eval-fixture-not-a-secret')throw Error('Scripted fixtures require the nonfunctional fixture key');
+const evaluationModel=ARC_MODELS.find(model=>model.id===(process.env.ARC_EVAL_MODEL_ID||'arc-auto'));
+if(!evaluationModel||evaluationModel.provider!=='openai')throw Error('ARC_EVAL_MODEL_NOT_ALLOWED');
+const selectedCases=process.env.ARC_EVAL_CASES?.split(',').map(id=>id.trim()).filter(Boolean)||[];
+const modelMetadata={modelId:evaluationModel.id,providerModel:evaluationModel.model};
+if((evaluationModel.id!=='arc-auto'||selectedCases.length)&&(process.argv.includes('--resume-accepted-cases')||process.argv.includes('--resume-fixture')))throw Error('ARC_EVAL_MODEL_OR_CASE_RESUME_UNSUPPORTED');
 // Historical proof may be reused only by an explicit matching-code resume.
 const resume=process.argv.includes('--resume-accepted-cases')||process.argv.includes('--resume-fixture')?loadPriorAcceptance('../..'):null;
 const maximumUsd=resume?.maximumResumeUsd??0.25,maximumMicros=Math.round(maximumUsd*1e6);
 // Fleet placement requires the full managed-process lifecycle, including stop.
 const processTools=['start_process','process_status','process_output','stop_process'];
 const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,APP_TOKEN_KEY:Buffer.alloc(32,8).toString('base64'),ENABLE_APPS:'1',GOOGLE_CLIENT_ID:'fixture',GOOGLE_CLIENT_SECRET:'fixture',ARC_CHAT_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_TRIAL_DAILY_MICROS:'100000',ARC_USER_DAILY_MICROS:'100000',ARC_PLATFORM_DAILY_MICROS:String(maximumMicros),ARC_RUNTIME:{getByName:()=>({fetch:async()=>Response.json({started:true})})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:openAiAdapter(process.env.OPENAI_API_KEY,diagnosticFetch)}}} as unknown as ArcEnv;
+// Keep the funded Auto alias required by the trial database guard, while
+// replacing its provider model and all prices only in this isolated environment.
+env.MODEL_GATEWAY!.models=ARC_MODELS.map(model=>model.id==='arc-auto'?{...evaluationModel,id:'arc-auto'}:model);
 sql.prepare("UPDATE arc_funding_policy SET managed=1,enabled=1,mode='automatic',started_at=?,total_micros=?,daily_micros=?").run(at,maximumMicros,maximumMicros);
 const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
  {id:'attention',provider:'gmail',scopes:[scope],prompt:'帮我看下目前我有什么需要关注的'},
@@ -69,7 +77,8 @@ const scope='https://www.googleapis.com/auth/gmail.readonly',cases=[
  {id:'verified-mail',provider:'gmail',scopes:[scope],prompt:'Read the exact inbox verification scope and summarize the excerpts with their actual actions.'},
  {id:'verified-issue',provider:'github',scopes:['repo','read:user'],prompt:'Create the exact issue from verificationScope, independently read it back and return the actual issue URL.'},
  {id:'verified-deployment',provider:'vercel',scopes:[],prompt:'Verify the exact deployment from verificationScope and report its observed readiness and URL.'},
-],report:any[]=resume?resume.cases.map((item:any)=>({...item,reusedFromRun:resume.sourceRunId})):[];
+].filter(item=>!selectedCases.length||selectedCases.includes(item.id)),report:any[]=resume?resume.cases.map((item:any)=>({...item,reusedFromRun:resume.sourceRunId})):[];
+if(!cases.length||selectedCases.some(id=>!cases.some(item=>item.id===id)))throw Error('ARC_EVAL_CASE_NOT_ALLOWED');
 if(resume&&(arcCaseDigest(cases)!==resume.caseDigest||resume.cases.some((item:any)=>!cases.some(current=>current.id===item.case))))throw Error('ARC_EVAL_PRIOR_CASES_MISMATCH');
 const resumeMetadata=resume?{resumedFrom:{runId:resume.sourceRunId,sourceCommit:resume.sourceCommit,runtimeDigest:resume.runtimeDigest,reusedPassedCases:resume.cases.map((item:any)=>item.case),priorRatedUsd:resume.priorRatedUsd}}:{};
 let issueTitle='',issueBody='',currentCase='',reads=0,lists=0,unexpected=0,issueWrites=0,deploymentReads=0,processStarts=0,processChecks=0,processOutputs=0,calendarReads=0,projectDocumentReads=0;
@@ -197,16 +206,16 @@ try{
   const corrections=messages.filter(message=>message.role==='tool'&&message.status==='failed').map(message=>({tool:message.tool,arguments:message.arguments,result:message.result}));
   report.push({case:item.id,passed,...(verification?{receipt}:{}),modelRepairs,modelDiagnostics:modelDiagnostics.filter(item=>item.case===currentCase),corrections,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step),modelTokens:run.tokens_used+(goalRun.id===run.id?0:goalRun.tokens_used),providerRequests:reads,listCalls:lists,...(item.project?{projectDocumentReads}:{}),...(item.id.startsWith('attention')||item.id==='calendar'?{calendarReads}:{}),...(taskId?{taskId,scheduledGoalVerified:taskEvidence}:{}),...(item.id==='managed-process'?{processStarts,processChecks,processOutputs}:{}),answer,trace});
   console.log(JSON.stringify({case:item.id,passed,status:goalRun.status,error:goalRun.error_code,steps:run.step+(goalRun.id===run.id?0:goalRun.step)}));
-  fs.mkdirSync('../../work/arc-task-eval',{recursive:true});fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({passed:report.length===cases.length&&report.every(value=>value.passed),maximumUsd,cases:report},null,2));
+  fs.mkdirSync('../../work/arc-task-eval',{recursive:true});fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({...modelMetadata,mode:scriptedFixture?'scripted-inference-synthetic-providers':'real-model-synthetic-providers',passed:report.length===cases.length&&report.every(value=>value.passed),maximumUsd,cases:report},null,2));
  }
  const funding=sql.prepare('SELECT spent_micros,reserved_micros FROM arc_funding_policy WHERE id=1').get()!;
  const passed=report.length===cases.length&&report.every(value=>value.passed);
- fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({checkedAt:new Date().toISOString(),passed,mode:scriptedFixture?'scripted-inference-synthetic-providers':'real-model-synthetic-providers',maximumUsd,...resumeMetadata,ratedUsd:Number(funding.spent_micros)/1e6,reservedUsd:Number(funding.reserved_micros)/1e6,cases:report},null,2));
+ fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({...modelMetadata,checkedAt:new Date().toISOString(),passed,mode:scriptedFixture?'scripted-inference-synthetic-providers':'real-model-synthetic-providers',maximumUsd,...resumeMetadata,ratedUsd:Number(funding.spent_micros)/1e6,reservedUsd:Number(funding.reserved_micros)/1e6,cases:report},null,2));
  console.log(JSON.stringify({passed,cases:report.map(({answer,trace,receipt,...result})=>({...result,...(receipt?{receiptStatus:receipt.status}:{})})),ratedUsd:Number(funding.spent_micros)/1e6,maximumUsd}));
  if(!passed)throw Error('ARC_TASK_LIVE_EVAL_CASE_FAILED');
  }catch(error){
  const funding=sql.prepare('SELECT spent_micros,reserved_micros FROM arc_funding_policy WHERE id=1').get()!;
  fs.mkdirSync('../../work/arc-task-eval',{recursive:true});
- fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({checkedAt:new Date().toISOString(),passed:false,mode:scriptedFixture?'scripted-inference-synthetic-providers':'real-model-synthetic-providers',maximumUsd,ratedUsd:Number(funding.spent_micros)/1e6,reservedUsd:Number(funding.reserved_micros)/1e6,error:error instanceof Error&&error.message==='ARC_TASK_LIVE_EVAL_CASE_FAILED'?error.message:'ACCEPTANCE_INTERRUPTED',cases:report},null,2));
+ fs.writeFileSync('../../work/arc-task-eval/report.json',JSON.stringify({...modelMetadata,checkedAt:new Date().toISOString(),passed:false,mode:scriptedFixture?'scripted-inference-synthetic-providers':'real-model-synthetic-providers',maximumUsd,ratedUsd:Number(funding.spent_micros)/1e6,reservedUsd:Number(funding.reserved_micros)/1e6,error:error instanceof Error&&error.message==='ARC_TASK_LIVE_EVAL_CASE_FAILED'?error.message:'ACCEPTANCE_INTERRUPTED',cases:report},null,2));
  throw error;
 }finally{globalThis.fetch=nativeFetch;sql.close();}

@@ -128,6 +128,24 @@ async function blockPayment(env:BillingEnv,charge:Record<string,any>,reason:stri
   env.DB.prepare("UPDATE billing_plan_assignments SET revoked_at=COALESCE(revoked_at,?1) WHERE id IN (SELECT 'stripe:'||receipt_id FROM arc_payment_links WHERE payment_intent_id=?2)").bind(at,intent),
   ...(['openai','anthropic','openrouter'] as const).map(provider=>env.DB.prepare("UPDATE billing_model_grants SET revoked_at=COALESCE(revoked_at,?1) WHERE id IN (SELECT 'stripe:'||receipt_id||':'||?3 FROM arc_payment_links WHERE payment_intent_id=?2)").bind(at,intent,provider)),
  ]);
+ await endRefundedSubscriptions(env,intent);
+}
+/** A refunded or disputed current-period invoice ends its subscription now: the
+ * paid period is already revoked, so Stripe must not keep it renewable or block
+ * a fresh checkout. Older-period refunds leave the current subscription alone. */
+async function endRefundedSubscriptions(env:BillingEnv,intent:string){
+ const receipts=(await env.DB.prepare("SELECT r.id FROM arc_payment_receipts r JOIN arc_payment_links k ON k.receipt_id=r.id WHERE k.payment_intent_id=?1 AND r.id LIKE 'in_%' AND r.period_end>?2").bind(intent,now()).all<{id:string}>()).results;
+ for(const receipt of receipts){
+  const invoice=await stripeRequest(env,'/v1/invoices/'+id(receipt.id,'in'));
+  const subscriptionId=id(invoice.parent?.subscription_details?.subscription||invoice.subscription,'sub');
+  const subscription=await stripeRequest(env,'/v1/subscriptions/'+subscriptionId);
+  if(!['canceled','incomplete_expired'].includes(subscription.status)){
+   if(subscription.schedule)await stripeRequest(env,'/v1/subscription_schedules/'+id(subscription.schedule,'sub_sched')+'/cancel','POST',form({invoice_now:false,prorate:false}),'arc-refund-end:'+subscriptionId);
+   // Cancelling is naturally idempotent; Stripe idempotency keys apply to POST only.
+   else await stripeRequest(env,'/v1/subscriptions/'+subscriptionId,'DELETE');
+  }
+  await env.DB.prepare("UPDATE arc_billing_subscriptions SET status='canceled',cancel_at_period_end=0,pending_product_id=NULL,pending_effective_at=NULL,revision=revision+1,updated_at=?1 WHERE id=?2 AND status!='canceled'").bind(now(),subscriptionId).run();
+ }
 }
 export async function processStripeEvent(env:BillingEnv,event:Record<string,any>,hash:string){
  if(event.livemode!==stripeLive(env)||event.account)throw new StripeError('BILLING_ACCOUNT_MISMATCH',400);

@@ -29,7 +29,7 @@ sql.prepare('INSERT INTO arc_billing_customers VALUES(?,?,?)').run('connect','cu
 const base={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',DASHBOARD_ORIGIN:'https://agent.remotearc.app',ARC_BILLING_ENABLED:'1',ARC_CREDITS_ENABLED:'1',ARC_BILLING_ALLOW_TEST_MODE:'1',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_WEBHOOK_SECRET:'whsec_fixture'};
 const env:BillingEnv={...base,ARC_CHAT_ENABLED:'1'},arcPaused:BillingEnv={...base,ARC_CHAT_ENABLED:'0'};
 
-let refunded=false;const checkouts:URLSearchParams[]=[];
+let refunded=false;const checkouts:URLSearchParams[]=[],cancellations:string[]=[];
 const connectPrice={id:'price_connect',lookup_key:'remote-arc:'+CONNECT_UNLIMITED_PLAN_ID,currency:'usd',unit_amount:1900,tax_behavior:'exclusive',active:true,recurring:{interval:'month',interval_count:1}};
 const fixtures:Record<string,any>={
  ['/v1/prices?lookup_keys%5B%5D=remote-arc%3A'+CONNECT_UNLIMITED_PLAN_ID+'&active=true&limit=2']:{has_more:false,data:[connectPrice]},
@@ -46,7 +46,8 @@ const original=globalThis.fetch;
 globalThis.fetch=async(input,init)=>{
  const u=new URL(String(input));assert.equal(u.origin,'https://api.stripe.com');assert.equal(new Headers(init?.headers).get('stripe-version'),STRIPE_API_VERSION);
  if(init?.method==='POST'&&u.pathname==='/v1/checkout/sessions'){const body=new URLSearchParams(String(init.body));checkouts.push(body);return Response.json({id:'cs_test_connect',url:'https://checkout.stripe.com/c/pay/connect'});}
- assert.notEqual(init?.method,'POST','Unexpected provider mutation '+u.pathname);
+ if(init?.method==='DELETE'&&u.pathname==='/v1/subscriptions/sub_connect'){cancellations.push(u.pathname);fixtures['/v1/subscriptions/sub_connect'].status='canceled';return Response.json(fixtures['/v1/subscriptions/sub_connect']);}
+ assert(!init?.method||init.method==='GET','Unexpected provider mutation '+init?.method+' '+u.pathname);
  if(u.pathname==='/v1/charges/ch_connect')return Response.json({id:'ch_connect',payment_intent:'pi_connect',paid:true,amount_refunded:refunded?1900:0,disputed:false});
  const value=fixtures[u.pathname+u.search];assert(value,'Unexpected provider call '+u.pathname+u.search);return Response.json(value);
 };
@@ -147,11 +148,24 @@ try{
  seedComputers('operator',CONNECT_FAIR_USE.computerRegistrationsPerDay+5,stamp);assert.equal((await pair('operator')).status,200);
 
  // Refund revokes the entitlement immediately: no hidden carry-over.
- refunded=true;await processStripeEvent(env,{id:'evt_connect_refund',type:'charge.refunded',livemode:false,data:{object:{id:'ch_connect'}}},'connect-refund');
+ refunded=true;
+ // Refunding an invoice whose period already ended leaves the current subscription alone.
+ const periodEnd=sql.prepare("SELECT period_end FROM arc_payment_receipts WHERE id='in_connect'").get()!.period_end as string;
+ sql.prepare("UPDATE arc_payment_receipts SET period_end='2000-01-01T00:00:00.000Z' WHERE id='in_connect'").run();
+ await processStripeEvent(env,{id:'evt_connect_refund_old',type:'charge.refunded',livemode:false,data:{object:{id:'ch_connect'}}},'connect-refund-old');
+ assert.equal(cancellations.length,0,'An older-period refund does not cancel the current subscription');
+ sql.prepare("UPDATE arc_payment_receipts SET period_end=? WHERE id='in_connect'").run(periodEnd);
+ // A refunded current period ends the Stripe subscription now: it cannot renew or block a new checkout.
+ await processStripeEvent(env,{id:'evt_connect_refund',type:'charge.refunded',livemode:false,data:{object:{id:'ch_connect'}}},'connect-refund');
+ assert.deepEqual(cancellations,['/v1/subscriptions/sub_connect']);
+ assert.deepEqual({...sql.prepare("SELECT status,cancel_at_period_end FROM arc_billing_subscriptions WHERE id='sub_connect'").get()},{status:'canceled',cancel_at_period_end:0});
+ await processStripeEvent(env,{id:'evt_connect_refund_replay',type:'charge.refunded',livemode:false,data:{object:{id:'ch_connect'}}},'connect-refund-replay');
+ assert.equal(cancellations.length,1,'A replayed refund does not cancel twice');
+ assert.equal((await billing('connect')).value.subscriptions[0].status,'canceled','Settings sees the subscription as ended');
  assert.equal((await currentArcPlan(env,'connect')).id,'free');assert.equal(await getAccountPlan(env,'connect'),'free');
  assert.equal((await getMonthlyUsage(env,'connect')).limit,10000);
  const downgraded=await pair('connect');assert.equal(downgraded.status,403);assert.deepEqual([downgraded.value.limit,downgraded.value.count],[2,registered]);
  assert.equal(computers('connect'),registered,'Already registered computers stay registered after a downgrade');
  assert.equal((await arcAccountAccess(env,'connect')).status,'expired','After leaving Connect-only the account is an ordinary Free account with a used trial');
- console.log('PASS: Connect Unlimited catalog/schema, checkout while Arc paused, invoice without Credits or model grants, unlimited calls, one-time Arc trial then ARC_PLAN_EXCLUDES_HOSTED, planner denial, 0/10/11/100+ computers, fair-use rate and churn, Free 2/Plus 10/Pro 20 unchanged, refund revocation');
+ console.log('PASS: Connect Unlimited catalog/schema, checkout while Arc paused, invoice without Credits or model grants, unlimited calls, one-time Arc trial then ARC_PLAN_EXCLUDES_HOSTED, planner denial, 0/10/11/100+ computers, fair-use rate and churn, Free 2/Plus 10/Pro 20 unchanged, refund revocation and immediate subscription end');
 }finally{globalThis.fetch=original;sql.close();}

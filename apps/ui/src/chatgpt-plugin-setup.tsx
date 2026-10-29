@@ -1,5 +1,6 @@
 import React from "react";
 import { CHATGPT_PLUGIN_URL } from "./client-links.js";
+import { ChatGptCustomSetup } from "./chatgpt-custom-setup.js";
 import { InstallCommands } from "./install-commands.js";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
@@ -63,6 +64,7 @@ export function ChatGptPluginSetup({ endpoint }: { endpoint: string }) {
       <summary>{tr("Advanced: connect a custom MCP server instead", "高级：改用 Custom MCP 连接")}</summary>
       <p>{tr("Custom MCP is still supported for compatible accounts and clients. If you deliberately choose this route, use your client's custom MCP settings, enter the endpoint below, choose OAuth and authorize the same Remote Arc account. You only need one connection route for each client.", "兼容的账号和客户端仍可使用 Custom MCP。选择这条路径时，在客户端的自定义 MCP 设置中填写下方地址，使用 OAuth 并授权同一个 Remote Arc 账号。每个客户端选择一条接入路径即可。")}</p>
       <pre className="docsExample"><code>{endpoint}</code></pre>
+      <ChatGptCustomSetup />
       <p><a href={localizedWebsiteHref("/remote-mcp", locale)}>{tr("Custom MCP and other AI clients", "Custom MCP 与其他 AI 客户端指南")} →</a></p>
     </details>
   </div>;

@@ -13,7 +13,7 @@ test('Published ChatGPT setup links installation, local pairing and a read-only 
   await expect(setup.locator('.installCommands code')).toHaveText('npx remotelink');
   await expect(setup.getByRole('link', { name: /No Node.js|没有 Node.js/ })).toHaveAttribute('href', zh ? '/zh/downloads' : '/downloads');
   await expect(setup.locator('blockquote')).toContainText(zh ? '不要修改任何文件' : 'Do not change any files');
-  const image = setup.locator('img');
+  const image = setup.locator('.pluginSetupListing img');
   await expect(image).toBeVisible();
   await expect.poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth)).toBeGreaterThan(0);
   await expect(setup.locator('#custom-mcp')).not.toHaveAttribute('open');
@@ -28,6 +28,10 @@ test('Custom MCP stays available as an explicit alternative and troubleshooting 
   const advanced = page.locator('#custom-mcp');
   await advanced.locator('summary').click();
   await expect(advanced.locator('code')).toHaveText('https://mcp.remotearc.app/mcp');
+  await expect(advanced.locator('.pluginCustomWalkthrough img')).toHaveCount(4);
+  const legacyScreenshot = advanced.locator('.pluginCustomWalkthrough img').first();
+  await legacyScreenshot.scrollIntoViewIfNeeded();
+  await expect.poll(() => legacyScreenshot.evaluate((node: HTMLImageElement) => node.naturalWidth)).toBeGreaterThan(0);
   const help = page.locator('.pluginSetupTroubleshooting');
   await help.getByText(zh ? '没有找到电脑' : 'No computers found', { exact: true }).click();
   await expect(help).toContainText(zh ? '不要先反复重装' : 'reinstalling the Agent is not the first step');

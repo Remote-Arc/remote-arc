@@ -17,4 +17,11 @@ test('Connect homepage offers local installation commands in the hero', async ({
   await commands.locator('code').click();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
   await page.screenshot({ path: `work/home-install-commands-${info.project.name}.png`, fullPage: false });
+  const download = commands.getByRole('link', { name: zh ? '直接下载' : 'Download', exact: true });
+  await expect(download).toHaveAttribute('href', zh ? '/zh/downloads' : '/downloads');
+  await download.click();
+  await expect(page.locator('.nativeDownloadCard')).toHaveCount(3);
+  await expect(page.locator('.nativeDownloads a')).toHaveCount(6);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
+  await page.screenshot({ path: `work/native-downloads-${info.project.name}.png`, fullPage: true });
 });

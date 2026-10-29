@@ -1,0 +1,41 @@
+.nativeInstall{max-width:1000px;padding-top:44px}
+.nativeInstallHeader{max-width:670px;margin-bottom:32px}
+.nativeInstallHeader h1{margin:16px 0;letter-spacing:-.04em}
+.nativeInstallHeader p{margin:0;font-size:16px;line-height:1.8}
+.nativeInstall .nativeDownloads{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:0}
+.nativeDownloadCard{min-width:0;padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.nativeDownloadHeading{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.nativePlatformIcon{display:grid;place-items:center;flex-shrink:0;width:52px;height:52px;border:1px solid var(--line);border-radius:13px;background:var(--bg)}
+.nativePlatformIcon img{display:block;object-fit:contain}
+.nativeDownloadHeading h2{margin:0 0 4px;font-size:21px;line-height:1.3;letter-spacing:-.02em}
+.nativeDownloadHeading>div>span{font-size:12px;color:var(--muted)}
+.nativeDownloadChoices{display:grid;gap:10px}
+.nativeDownloadCard .nativeDownloadChoices a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-radius:9px;background:var(--bg);border:1px solid var(--line);text-decoration:none;transition:border-color .15s,background .15s}
+.nativeDownloadChoices a>span{display:flex;flex-direction:column;gap:3px}
+.nativeDownloadChoices strong{font-size:14px;font-weight:600;line-height:1.4}
+.nativeDownloadChoices small{color:var(--muted);font-size:11px;font-weight:400;line-height:1.4}
+.nativeDownloadChoices svg{flex-shrink:0;color:var(--muted)}
+.nativeDownloadCard .nativeDownloadChoices a:hover,.nativeDownloadCard .nativeDownloadChoices a:focus-visible{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--bg))}
+.nativeDownloadMeta{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:17px 0 42px;color:var(--muted);font-size:12px;line-height:1.7}
+.nativeDownloadMeta>div{display:flex;align-items:center;gap:12px}
+.nativeDownloadMeta a{color:var(--muted);text-decoration:none}.nativeDownloadMeta a:hover{color:var(--text)}
+.nativeInstallStart{padding-top:30px;border-top:1px solid var(--line)}
+.nativeInstall .nativeInstallStart h2,.nativeInstall .nativeInstallOther h2{margin:0 0 12px;font-size:24px;letter-spacing:-.025em}
+.nativeInstallStart>p{max-width:760px;margin:0 0 22px;font-size:14px}
+.nativeStartGuides,.nativeInstallOther{display:grid;gap:10px}
+.nativeInstall :is(.nativeStartGuides,.nativeInstallOther)>details{padding:0 19px;border:1px solid var(--line);border-radius:10px;min-width:0}
+.nativeInstall :is(.nativeStartGuides,.nativeInstallOther) summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none;min-height:58px;font-size:14px;font-weight:550}
+.nativeInstall summary::-webkit-details-marker{display:none}
+.nativeInstall :is(.nativeStartGuides,.nativeInstallOther) summary::after{content:'+';margin-left:auto;flex-shrink:0;font-size:19px;color:var(--muted);font-weight:400}
+.nativeInstall details[open]>summary::after{content:'−'}
+.nativeInstall :is(.nativeStartGuides,.nativeInstallOther) summary img{object-fit:contain;flex-shrink:0}
+.nativeInstall summary small{font-size:12px;color:var(--muted);font-weight:400}
+.nativeInstall details p,.nativeInstall details li{font-size:14px;line-height:1.85;color:var(--muted)}
+.nativeInstall details p{margin:0 0 18px}.nativeInstall details ol{padding-left:22px;margin:0 0 18px}
+.nativeInstall details li+li{margin-top:8px}.nativeInstall details .docsExample{margin:0 0 16px}
+.nativeInstallOther{margin-top:36px}.nativeInstall .nativeInstallOther h2{margin-bottom:4px}
+.nativeInstallFooter{display:flex;flex-wrap:wrap;gap:24px;margin-top:32px;font-size:13px}.nativeInstallFooter a{color:var(--muted);text-decoration:none}
+.nativeInstall :is(a,summary):focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.nativeInstall :is(#native-downloads,#homebrew,#shell-install){scroll-margin-top:110px}
+@media(max-width:760px){.nativeInstall .nativeDownloads{grid-template-columns:1fr;gap:14px}.nativeInstall{padding-top:26px}.nativeInstallHeader{margin-bottom:26px}.nativeInstallHeader h1{font-size:34px}.nativeInstallHeader p{font-size:14px}.nativeDownloadCard{padding:22px}.nativeDownloadHeading{margin-bottom:20px}.nativeDownloadChoices{grid-template-columns:repeat(2,minmax(0,1fr))}.nativeDownloadCard .nativeDownloadChoices a{padding:13px 12px;gap:8px}.nativeDownloadChoices strong{font-size:13px}.nativeDownloadMeta{display:grid;gap:8px;margin-bottom:30px}.nativeInstallStart{padding-top:26px}.nativeInstall .nativeInstallStart h2,.nativeInstall .nativeInstallOther h2{font-size:22px}.nativeInstall summary{flex-wrap:wrap}.nativeInstall summary small{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.nativeDownloadCard .nativeDownloadChoices a{transition:none}}

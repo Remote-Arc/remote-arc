@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
+import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./install-commands.css";
 
 const methods = [
@@ -8,7 +9,7 @@ const methods = [
 ] as const;
 
 export function InstallCommands() {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const id = useId();
   const [selected, setSelected] = useState(0);
   const [copyResult, setCopyResult] = useState<{ command: string; ok: boolean } | null>(null);
@@ -53,14 +54,17 @@ export function InstallCommands() {
   return <section className="installCommands" aria-label={tr("Install Remote Arc", "安装 Remote Arc")}>
     <div className="installCommandsHeader">
       <span className="installCommandsLabel">{tr("Install on your computer", "在你的电脑上安装")}</span>
-      <div className="installCommandsTabs" role="tablist" aria-label={tr("Installation method", "安装方式")}>
-        {methods.map((item, index) => <button key={item.id} type="button" role="tab"
-          ref={node => { tabs.current[index] = node; }}
-          id={id + "-" + item.id} aria-controls={id + "-panel"}
-          aria-selected={selected === index} tabIndex={selected === index ? 0 : -1}
-          onClick={() => select(index)} onKeyDown={navigate}>
-          {item.label}
-        </button>)}
+      <div className="installCommandsMethods">
+        <div className="installCommandsTabs" role="tablist" aria-label={tr("Installation method", "安装方式")}>
+          {methods.map((item, index) => <button key={item.id} type="button" role="tab"
+            ref={node => { tabs.current[index] = node; }}
+            id={id + "-" + item.id} aria-controls={id + "-panel"}
+            aria-selected={selected === index} tabIndex={selected === index ? 0 : -1}
+            onClick={() => select(index)} onKeyDown={navigate}>
+            {item.label}
+          </button>)}
+        </div>
+        <a className="installCommandsDownload" href={localizedWebsiteHref("/downloads", locale)}>{tr("Download", "直接下载")}</a>
       </div>
     </div>
     <div className="installCommandsCard">

@@ -145,8 +145,8 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Inspect the computer's operating-system process list.",
   },
   start_process: {
-    zh: "执行终端命令，或启动可查询、可停止的后台进程。",
-    summary: "Run a shell command or start a managed background process.",
+    zh: "执行终端命令，或启动可查询、可停止的后台进程；部署、迁移、云管理等技术任务优先使用 CLI/API。",
+    summary: "Run a shell command or managed process; prefer CLI/API for technical tasks such as deployments and migrations.",
   },
   process_status: {
     zh: "查询由 Remote Arc 管理的后台进程状态。",
@@ -189,8 +189,8 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Perform a supported action in a shared browser tab.",
   },
   browser_runner_start: {
-    zh: "在已连接电脑上开始或恢复有站点范围限制的浏览器任务。",
-    summary: "Start or resume a task-scoped browser on a linked computer.",
+    zh: "为实际网页交互开始或恢复有站点范围限制的浏览器任务；技术任务优先使用 CLI/API。",
+    summary: "Start or resume a scoped browser for webpage interaction; prefer CLI/API for technical tasks.",
   },
   browser_runner_snapshot: {
     zh: "读取任务页面快照、元素引用与需要用户处理的阻碍。",

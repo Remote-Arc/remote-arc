@@ -253,7 +253,7 @@ func TestE2EActTimings(t *testing.T) {
 	// steady-state five-field performance regression threshold below.
 	_, coldFill := h.timed("browser_runner_act", map[string]any{
 		"session_id": "pace", "snapshot_id": sid,
-		"ref": ref(t, snap, "textbox", "linkedin"),
+		"ref":    ref(t, snap, "textbox", "linkedin"),
 		"action": "fill", "value": "https://example.test/profile",
 	})
 	t.Logf("cold first fill (browser warmup): %d ms", coldFill.Milliseconds())

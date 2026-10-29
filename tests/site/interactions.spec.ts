@@ -144,7 +144,7 @@ test('Connect Unlimited checkout is Connect-only, without monthly Credits or pro
  await expect(page.locator('.arcCheckoutFeatures')).toContainText(/Unlimited registered computers|不限已注册电脑数量/);
  await expect(page.locator('.arcCheckoutFeatures')).toContainText(/Arc after the free trial needs Plus|免费试用后使用 Arc 需要 Plus/);
  await expect(page.locator('.arcCheckoutSummary h2')).toHaveText('Connect Unlimited');
- await expect(page.locator('.arcCheckoutTotal')).toContainText('19.99');
+ await expect(page.locator('.arcCheckoutTotal')).toContainText('$19.00');
  await expect(page.locator('.arcCheckoutPromo')).toHaveCount(0);
  await page.locator('.arcCheckoutContinue').click();
  await expect(page.locator('.arcCheckoutEmbedded')).toContainText(/Unlimited Connect|无限 Connect/);
@@ -156,7 +156,7 @@ test('Pricing separates Connect Unlimited from Arc plans',async({page},testInfo)
  await page.goto((testInfo.project.metadata.language==='zh'?'/zh':'')+'/pricing');
  const card=page.locator('.planCard').filter({hasText:'CONNECT ONLY'});
  await expect(page.locator('.pricingPlans--saas .planCard')).toHaveCount(5);
- await expect(card).toContainText('US$19.99');
+ await expect(card.locator('.hostedPrice strong')).toHaveText('US$19');
  await expect(card).toContainText(/Unlimited registered computers|不限已注册电脑数量/);
  await expect(card.getByRole('link')).toHaveAttribute('href',/product=connect-unlimited-v1/);
  await expect(page.locator('.planCard').filter({hasText:'ARC + CONNECT'})).toHaveCount(2);

@@ -30,24 +30,24 @@ const base={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',DASHBOARD_ORIGIN:'ht
 const env:BillingEnv={...base,ARC_CHAT_ENABLED:'1'},arcPaused:BillingEnv={...base,ARC_CHAT_ENABLED:'0'};
 
 let refunded=false;const checkouts:URLSearchParams[]=[];
-const connectPrice={id:'price_connect',lookup_key:'remote-arc:'+CONNECT_UNLIMITED_PLAN_ID,currency:'usd',unit_amount:1999,tax_behavior:'exclusive',active:true,recurring:{interval:'month',interval_count:1}};
+const connectPrice={id:'price_connect',lookup_key:'remote-arc:'+CONNECT_UNLIMITED_PLAN_ID,currency:'usd',unit_amount:1900,tax_behavior:'exclusive',active:true,recurring:{interval:'month',interval_count:1}};
 const fixtures:Record<string,any>={
  ['/v1/prices?lookup_keys%5B%5D=remote-arc%3A'+CONNECT_UNLIMITED_PLAN_ID+'&active=true&limit=2']:{has_more:false,data:[connectPrice]},
  '/v1/prices/price_connect':connectPrice,
  '/v1/subscriptions?customer=cus_connect&status=all&limit=100':{has_more:false,data:[]},
- '/v1/invoices/in_connect':{id:'in_connect',customer:'cus_connect',livemode:false,status:'paid',currency:'usd',amount_remaining:0,amount_paid:1999,total:1999,total_excluding_tax:1999,subtotal_excluding_tax:1999,total_discount_amounts:[],post_payment_credit_notes_amount:0,billing_reason:'subscription_create',parent:{subscription_details:{subscription:'sub_connect'}}},
+ '/v1/invoices/in_connect':{id:'in_connect',customer:'cus_connect',livemode:false,status:'paid',currency:'usd',amount_remaining:0,amount_paid:1900,total:1900,total_excluding_tax:1900,subtotal_excluding_tax:1900,total_discount_amounts:[],post_payment_credit_notes_amount:0,billing_reason:'subscription_create',parent:{subscription_details:{subscription:'sub_connect'}}},
  '/v1/subscriptions/sub_connect':{id:'sub_connect',customer:'cus_connect',status:'active',cancel_at_period_end:false,items:{data:[{quantity:1,price:'price_connect'}]},schedule:null,metadata:{}},
- '/v1/invoices/in_connect/lines?limit=2':{has_more:false,data:[{quantity:1,amount:1999,pricing:{price_details:{price:'price_connect'}},period:{start,end}}]},
+ '/v1/invoices/in_connect/lines?limit=2':{has_more:false,data:[{quantity:1,amount:1900,pricing:{price_details:{price:'price_connect'}},period:{start,end}}]},
  '/v1/invoice_payments?invoice=in_connect&limit=2':{has_more:false,data:[{status:'paid',payment:{payment_intent:'pi_connect'}}]},
  '/v1/checkout/sessions?subscription=sub_connect&limit=2':{has_more:false,data:[{id:'cs_test_connect',metadata:{}}]},
- '/v1/payment_intents/pi_connect':{id:'pi_connect',status:'succeeded',currency:'usd',amount_received:1999,latest_charge:'ch_connect'},
+ '/v1/payment_intents/pi_connect':{id:'pi_connect',status:'succeeded',currency:'usd',amount_received:1900,latest_charge:'ch_connect'},
 };
 const original=globalThis.fetch;
 globalThis.fetch=async(input,init)=>{
  const u=new URL(String(input));assert.equal(u.origin,'https://api.stripe.com');assert.equal(new Headers(init?.headers).get('stripe-version'),STRIPE_API_VERSION);
  if(init?.method==='POST'&&u.pathname==='/v1/checkout/sessions'){const body=new URLSearchParams(String(init.body));checkouts.push(body);return Response.json({id:'cs_test_connect',url:'https://checkout.stripe.com/c/pay/connect'});}
  assert.notEqual(init?.method,'POST','Unexpected provider mutation '+u.pathname);
- if(u.pathname==='/v1/charges/ch_connect')return Response.json({id:'ch_connect',payment_intent:'pi_connect',paid:true,amount_refunded:refunded?1999:0,disputed:false});
+ if(u.pathname==='/v1/charges/ch_connect')return Response.json({id:'ch_connect',payment_intent:'pi_connect',paid:true,amount_refunded:refunded?1900:0,disputed:false});
  const value=fixtures[u.pathname+u.search];assert(value,'Unexpected provider call '+u.pathname+u.search);return Response.json(value);
 };
 const request=(user:string,path:string,body?:unknown)=>new Request('https://agent.remotearc.app'+path,{method:body===undefined?'GET':'POST',headers:{origin:'https://agent.remotearc.app',cookie:'rl_session='+user+'-session',...(body===undefined?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -65,7 +65,7 @@ const seedComputers=(user:string,count:number,createdAt:string)=>{for(let i=0;i<
 try{
  // Catalog: a distinct, versioned Connect-only plan; existing plans unchanged.
  const catalog=await commercialCatalog(env),connectPlan=catalog.plans.find(p=>p.id===CONNECT_UNLIMITED_PLAN_ID)!;
- assert.deepEqual([connectPlan.monthlyPriceCents,connectPlan.monthlyCredits,connectPlan.connectToolCalls,connectPlan.deviceLimit,connectPlan.allHostedModels],[1999,0,null,null,false]);
+ assert.deepEqual([connectPlan.monthlyPriceCents,connectPlan.monthlyCredits,connectPlan.connectToolCalls,connectPlan.deviceLimit,connectPlan.allHostedModels],[1900,0,null,null,false]);
  assert.equal(connectPlan.versionId,'seed:test:'+CONNECT_UNLIMITED_PLAN_ID);
  assert.deepEqual(catalog.plans.filter(p=>p.id!==CONNECT_UNLIMITED_PLAN_ID).map(p=>[p.id,p.monthlyPriceCents,p.monthlyCredits,p.deviceLimit]),[['free',0,0,2],['arc-plus-v1',3900,1500,10],['arc-pro-v1',7900,5000,20]],'Existing customers keep their prices, Credits and device limits');
  assert.equal(sql.prepare("SELECT lane FROM billing_plans WHERE id=?").get(CONNECT_UNLIMITED_PLAN_ID)!.lane,'connect','Never on the arc_hosted lane');

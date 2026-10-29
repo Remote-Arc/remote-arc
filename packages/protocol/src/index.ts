@@ -16,7 +16,7 @@ export const CONNECT_FAIR_USE = {computerRegistrationsPerDay:20,browserInstallat
  * `null` limits are explicit unlimited entitlements, never magic large numbers. */
 export const ARC_PLANS = [
   {id:'free',label:'Free',monthlyPriceCents:0,monthlyCredits:0,connectToolCalls:10000,deviceLimit:2,connectionLimit:5,allHostedModels:false,concurrentRuns:1,routines:3,maxSteps:8,maxTokens:24000,maxSeconds:180},
-  {id:'connect-unlimited-v1',label:'Connect Unlimited',monthlyPriceCents:1999,monthlyCredits:0,connectToolCalls:null,deviceLimit:null,connectionLimit:50,allHostedModels:false,concurrentRuns:1,routines:3,maxSteps:8,maxTokens:24000,maxSeconds:180},
+  {id:'connect-unlimited-v1',label:'Connect Unlimited',monthlyPriceCents:1900,monthlyCredits:0,connectToolCalls:null,deviceLimit:null,connectionLimit:50,allHostedModels:false,concurrentRuns:1,routines:3,maxSteps:8,maxTokens:24000,maxSeconds:180},
   {id:'arc-plus-v1',label:'Plus',monthlyPriceCents:3900,monthlyCredits:1500,connectToolCalls:null,deviceLimit:10,connectionLimit:50,allHostedModels:true,concurrentRuns:2,routines:20,maxSteps:16,maxTokens:48000,maxSeconds:600},
   {id:'arc-pro-v1',label:'Pro',monthlyPriceCents:7900,monthlyCredits:5000,connectToolCalls:null,deviceLimit:20,connectionLimit:200,allHostedModels:true,concurrentRuns:5,routines:100,maxSteps:32,maxTokens:96000,maxSeconds:1800}
 ] as const;

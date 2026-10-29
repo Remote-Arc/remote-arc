@@ -8,7 +8,7 @@ const methods = [
   { id: "curl", label: "curl", command: 'curl -fsSL https://remotearc.app/install.sh | sh' },
 ] as const;
 
-export function InstallCommands() {
+export function InstallCommands({ downloadHref, followHash = false }: { downloadHref?: string; followHash?: boolean } = {}) {
   const { tr, locale } = useI18n();
   const id = useId();
   const [selected, setSelected] = useState(0);
@@ -25,8 +25,23 @@ export function InstallCommands() {
     setCopyResult(null);
     clearTimeout(reset.current);
     setSelected(index);
+    if (followHash) {
+      const hash = index === 1 ? '#shell-install' : '#npx-install';
+      if (window.location.hash !== hash) window.history.replaceState(window.history.state, '', hash);
+    }
     if (focus) tabs.current[index]?.focus();
   }
+
+  useEffect(() => {
+    if (!followHash) return;
+    const syncMethod = () => {
+      if (window.location.hash === '#shell-install') select(1);
+      else if (window.location.hash === '#npx-install') select(0);
+    };
+    syncMethod();
+    window.addEventListener('hashchange', syncMethod);
+    return () => window.removeEventListener('hashchange', syncMethod);
+  }, [followHash]);
 
   function navigate(event: React.KeyboardEvent<HTMLButtonElement>) {
     const next = event.key === "ArrowRight" ? (selected + 1) % methods.length
@@ -64,7 +79,7 @@ export function InstallCommands() {
             {item.label}
           </button>)}
         </div>
-        <a className="installCommandsDownload" href={localizedWebsiteHref("/downloads", locale)}>{tr("Download", "直接下载")}</a>
+        <a className="installCommandsDownload" href={downloadHref ?? localizedWebsiteHref("/downloads", locale)}>{tr("Download", "直接下载")}</a>
       </div>
     </div>
     <div className="installCommandsCard">

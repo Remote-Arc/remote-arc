@@ -2688,7 +2688,6 @@ function ConnectPage({ user }: { user?: User | null }) {
                 <div><strong>Safe<small>{tr("Default", "默认")}</small></strong><span>{tr("Read only: list folders, read files and file details, and see running processes.", "只读：列出文件夹、读取文件和文件信息、查看正在运行的进程。")}</span></div>
                 <div><strong>Developer</strong><span>{tr("Adds creating and editing files, which Local Undo can reverse. Needs a Trusted Write Location first, so edits stay inside folders you choose.", "增加新建和编辑文件，可用 Local Undo 撤销。需要先设置「可信写入区域」，编辑只发生在你选定的文件夹里。")}</span></div>
                 <div><strong>Full</strong><span>{tr("Adds terminal commands and background processes. Commands can change things Local Undo cannot reverse, so you confirm before turning it on.", "增加终端命令和后台进程。命令可能做出 Local Undo 无法撤销的改动，所以开启前需要你再次确认。")}</span></div>
-                <div><strong>browser_runner<small>{tr("Separate switch, off by default", "单独开关，默认关闭")}</small></strong><span>{tr("Lets the AI use websites for you, only on the sites each task names: in a hidden Remote Arc browser that does not interrupt you (your own Chrome only if you ask for it). Changing presets leaves this switch as it is.", "允许 AI 替你操作网站，只能访问每个任务指定的网站：在不打扰你的隐藏 Remote Arc 浏览器里（只有你要求时才用你自己的 Chrome）。切换预设不会改变这个开关。")} <a href={localizedWebsiteHref("/chrome-extension", locale)}>{tr("Browser options", "浏览器使用方式")} →</a></span></div>
               </div>
             </section>
 

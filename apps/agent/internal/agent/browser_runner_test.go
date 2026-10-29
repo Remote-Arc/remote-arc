@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -54,5 +55,43 @@ func TestBrowserRunnerFollowsDeviceModeAndPause(t *testing.T) {
 	}
 	if _, e := wake.dispatch(context.Background(), protocol.Call{Tool: "browser_runner_start", Arguments: map[string]any{"task_id": "x"}}, nil); e == nil || !strings.Contains(e.Error(), "paused") {
 		t.Fatalf("paused Agent ran a browser tool: %v", e)
+	}
+}
+
+func TestRunnerBypassWarnsWithoutBlockingProcess(t *testing.T) {
+	t.Setenv("REMOTEARC_HOME", t.TempDir())
+	cfg := config.Config{DeviceID: "fixture", DeviceToken: "secret", Origin: "https://example.invalid", Mode: "managed"}
+	if e := config.Save(cfg); e != nil {
+		t.Fatal(e)
+	}
+	a := New(cfg, "test", false, nil)
+	defer a.Browser.Close()
+	defer a.Core.Close()
+	for _, enabled := range []bool{true, false} {
+		result, e := a.dispatch(context.Background(), protocol.Call{Tool: "start_process", Arguments: map[string]any{"command": "echo playwright", "timeout_ms": 5000}, Policy: protocol.Policy{BrowserRunnerEnabled: enabled}}, nil)
+		if e != nil {
+			t.Fatal(e)
+		}
+		b, _ := json.Marshal(result)
+		var returned protocol.Result
+		if e := json.Unmarshal(b, &returned); e != nil {
+			t.Fatal(e)
+		}
+		if len(returned.Content) == 0 {
+			t.Fatal("no process result")
+		}
+		var value map[string]any
+		if e := json.Unmarshal([]byte(returned.Content[0].Text), &value); e != nil {
+			t.Fatal(e)
+		}
+		if !strings.Contains(value["stdout"].(string), "playwright") {
+			t.Fatal("command was blocked", value)
+		}
+		if enabled && value["warning"] != "RUNNER_BYPASS" {
+			t.Fatal("warning missing", value)
+		}
+		if !enabled && value["warning"] != nil {
+			t.Fatal("disabled Runner emitted warning", value)
+		}
 	}
 }

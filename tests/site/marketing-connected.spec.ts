@@ -9,7 +9,7 @@ test('The constellation switches with a shared slider and every brand opens a va
   await expect(scene.locator('a.hcsFloatingNode')).toHaveCount(13);
   for (const link of await scene.locator('a.hcsFloatingNode').all()) {
     const href = await link.getAttribute('href');
-    expect(href).toMatch(/^\/(zh\/)?(install\/|integrations\?provider=|downloads$|chrome-extension$)/);
+    expect(href).toMatch(/^\/(zh\/)?(install\/|integrations\?provider=|downloads$|chrome-extension$|use-cases\/video-creation#video-gallery$)/);
     const result = await page.request.get(href!);
     expect(result.ok(), href!).toBe(true);
   }

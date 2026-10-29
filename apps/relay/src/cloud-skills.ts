@@ -25,7 +25,7 @@ export function handleCloudSkills(request:Request, principal:Principal):Response
       schemaVersion:1,
       revision:BUILTIN_SKILLS_REVISION,
       availability:'instructions-only',
-      note:'Skill definitions are cloud-hosted. Execution engines require independently authorized devices or providers.',
+      note:'Skill definitions are cloud-hosted. Media helpers prepare ordinary dependencies on authorized user devices; Qwen TTS and ACE-Step installation requires user consent. Engine presence and output are verified locally.',
       items:cloudSkillCatalog().map(({id,name,priority,category,description,engine,requires,scopes})=>({id,name,priority,category,description,engine,requires,scopes,available:true,engineInstalled:null})),
     },{headers});
   }

@@ -1,14 +1,12 @@
 # Admin instrumentation & Cloudflare billable usage
 
-## What the admin dashboard displays without adding hot-path D1 writes
+## Product event diagnosis (26 October 2026)
 
-- **remotelink version**: from the existing per-user Durable Object's attached WebSocket session (`agentVersion`). This is the *current connected runtime*, not a historical version; offline devices display unknown.
-- **Background version**: if the Agent provides `background_agent_version`, display it separately.
-- **Linked login method**: inferred from the existing account `google_sub` convention (Google identity or email-only sentinel). This is **NOT guaranteed to be the initial signup method** if a user later links Google.
-- **First recorded MCP client**: read from existing OAuth token records and their client name. This is a previously connected client, not a trustworthy original marketing acquisition/referral source.
-- No click tracking, IP/device fingerprinting, browser referrers, full URLs or arbitrary UTM strings are inserted into D1. Admin-only page refreshes reuse the existing D1 and DO queries.
+Admin now includes Events & journeys. It records fixed operational events for login, device pairing/dispatch, Apps and task requests, persisted task outcomes, and checkout/payment processing. Browser signals are explicitly separated from backend and Stripe evidence. Records exclude user content, full URLs, IPs and payment details; retention targets 30 days. Migration 0065 and the existing protected release are required.
 
-If product attribution becomes useful, prefer aggregated Cloudflare Web Analytics/Analytics Engine with privacy policy disclosure, opt-out where applicable, short retention and sampling. For an individual account attribution field, record a small explicitly disclosed **allowlisted** campaign value only at signup (one write), not events on every page view. Do not guess legacy sources.
+See [Product events](product-events.md) for event definitions, access controls, read-only live payment checks, sampling limits and validation. This supersedes the earlier statement that no click events were recorded in D1. Existing current Agent/background versions and inferred login-method metadata remain unchanged. Marketing attribution, referrers and arbitrary campaign strings are not collected.
+
+The historical Cloudflare billing and mail setup notes below describe their own integrations.
 
 ## Real account billable usage API (requires explicit setup)
 
@@ -58,7 +56,7 @@ Cloudflare DNS/Email Routing integration.
 incoming message is received.** The support/lifecycle implementation is in
 PR #156 and should remain behind that deployment check.
 
-## Guardrails
+## Guardrails for the earlier billing-read integration
 
 - This change makes no production D1 migration and does not touch existing
   audit data, monthly quotas, MCP OAuth or device permissions.

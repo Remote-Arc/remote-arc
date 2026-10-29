@@ -1,3 +1,5 @@
+import {handleAdminEvents} from './admin-events.js';
+import {handleBusinessAnalytics} from './business-analytics.js';
 import {handleUserFollowups,type FollowupEnv} from './user-followups.js';
 import {runFollowupBatches} from './followup-batches.js';
 import {handleAdminPayments,type AdminPaymentsEnv} from './admin-payments.js';
@@ -5,6 +7,7 @@ import {handleFeedbackRewardAdmin} from './connect-rewards.js';
 import { getSessionUser } from "./auth.js";
 import {handleArcAdminBilling} from './arc-admin-billing.js';
 import { handleAdminBilling, handleAdminCallCredits, handleAdminOperations, type OpsEnv } from "./admin-operations.js";
+import { handleAdminUsageInsights } from "./admin-usage-insights.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './device-capacity-admin.js';
 import { listWebsiteSubmissions, updateWebsiteSubmission, type EngagementEnv } from "./domains/engagement.js";
@@ -14,7 +17,7 @@ export type AdminServiceEnv = OpsEnv & EngagementEnv & MonitorEnv & FollowupEnv 
 export const ADMIN_CONTRACT_VERSION = "1";
 const methods: Record<string, readonly string[]> = {
   "/api/me": ["GET"], "/api/monitor": ["GET"],
-  "/api/admin/operations": ["GET"], "/api/admin/billing": ["GET"],
+  "/api/admin/operations": ["GET"], "/api/admin/usage-insights": ["GET"], "/api/admin/billing": ["GET"],
   '/api/admin/arc-billing':['GET'],
   "/api/admin/call-credits": ["POST"], "/api/admin/plan-grants": ["GET", "POST"],
   "/api/admin/device-capacity": ["GET","POST"],
@@ -22,8 +25,10 @@ const methods: Record<string, readonly string[]> = {
 };
 
 export function adminApiMethods(path: string): readonly string[] | null {
+  if(path==='/api/admin/analytics')return ['GET'];
   if(path==='/api/admin/feedback-rewards')return ['GET'];
   if(path==='/api/admin/feedback-rewards/config'||/^\/api\/admin\/feedback-rewards\/claims\/[a-f0-9-]{36}\/(approve|reject)$/.test(path))return ['POST'];
+  if(path==='/api/admin/events'||path==='/api/admin/events/readiness')return ['GET'];
   if(path==='/api/admin/payments')return ['GET'];
   if(path==='/api/admin/payments/trials')return ['GET'];
   if(path==='/api/admin/payments/funding')return ['POST'];
@@ -76,6 +81,8 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
     if(ctx&&response.ok&&request.method==='POST'&&/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}\/queue$/.test(url.pathname))ctx.waitUntil(runFollowupBatches(env));
     return finish(response);
   }
+  if(url.pathname==='/api/admin/events'||url.pathname==='/api/admin/events/readiness')return finish(await handleAdminEvents(request,env));
+  if(url.pathname==='/api/admin/analytics')return finish(await handleBusinessAnalytics(request,env));
   if(url.pathname.startsWith('/api/admin/payments'))return finish(await handleAdminPayments(request,env));
   if(url.pathname.startsWith('/api/admin/feedback-rewards'))return finish(await handleFeedbackRewardAdmin(request,env));
   let response: Response;
@@ -83,6 +90,7 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
     case "/api/me": response = Response.json({ authenticated: true, user }); break;
     case "/api/monitor": response = await handleMonitorState(request, env); break;
     case "/api/admin/operations": response = await handleAdminOperations(request, env); break;
+    case "/api/admin/usage-insights": response = await handleAdminUsageInsights(request, env); break;
     case "/api/admin/billing": response = await handleAdminBilling(request, env); break;
     case '/api/admin/arc-billing': response = await handleArcAdminBilling(request,env);break;
     case "/api/admin/call-credits": response = await handleAdminCallCredits(request, env); break;

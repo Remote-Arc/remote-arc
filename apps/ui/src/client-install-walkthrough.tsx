@@ -50,8 +50,8 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
     {
       kind: "add", group: tr("SET UP", "添加连接"),
       title: tr("Add a custom connector", "添加自定义连接器"),
-      detail: tr("In Claude, open Settings → Connectors. Click + Add in the top-right corner and choose Add custom connector. Name it Remote Arc and paste the MCP URL above, then Continue.",
-        "在 Claude 的 Settings → Connectors 页面，点击右上角 + Add → Add custom connector。名称填写 Remote Arc，粘贴上面的 MCP 地址并点击 Continue。"),
+      detail: tr("In Claude, open Customize → Connectors. Click + Add in the top-right corner and choose Add custom connector. Name it Remote Arc and paste the MCP URL above, then Continue.",
+        "在 Claude 的 Customize → Connectors 页面，点击右上角 + Add → Add custom connector。名称填写 Remote Arc，粘贴上面的 MCP 地址并点击 Continue。"),
       note: tr("The URL must end in /mcp. Do not paste an npx command.", "URL 必须包含 /mcp；不要填入 npx 命令。"),
     },
     {
@@ -81,8 +81,8 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
     {
       kind: "approval", group: tr("TRY IT", "开始使用"),
       title: tr("Approve the first tool call", "批准第一次工具调用"),
-      detail: tr("Ask Claude to use @Remote Arc in a chat. On the first call, choose Allow once, or Always allow for tools you fully trust.",
-        "在 Claude 对话中使用 @Remote Arc 发起请求。首次调用可选 Allow once，完全信任的工具才考虑 Always allow。"),
+      detail: tr("Enable Remote Arc from the chat’s + → Connectors menu, then ask Claude to use it. Review any tool approval shown before the first call.",
+        "在对话的 ＋ → Connectors 菜单中启用 Remote Arc，再让 Claude 使用它。首次调用时检查出现的工具授权提示。"),
       note: tr("For a safer first test, start with read-only operations such as listing devices.",
         "第一次测试建议从列设备等只读操作开始。"),
     },
@@ -140,8 +140,8 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
     {
       kind: "gemini-url", group: tr("CONNECT", "添加连接"),
       title: tr("Add the Remote Arc MCP URL", "添加 Remote Arc MCP 地址"),
-      detail: tr("Open Gemini → Connectors → + Custom. Paste https://mcp.remotearc.app/mcp into the MCP Server URL field and select Next.",
-        "在 Gemini 中进入 Connectors → ＋ Custom，将 https://mcp.remotearc.app/mcp 粘贴到 MCP Server URL 并点击 Next。"),
+      detail: tr("In Gemini on the web, open Settings → Connected Apps (sometimes under Personal Intelligence). Under Custom apps, add https://mcp.remotearc.app/mcp and select Next.",
+        "在 Gemini 网页版进入 Settings → Connected Apps（部分账号在 Personal Intelligence 下），在 Custom apps 中添加 https://mcp.remotearc.app/mcp 并点击 Next。"),
       note: tr("Enter the complete HTTPS URL including /mcp. No API key or local command is needed in Gemini.", "填写包含 /mcp 的完整 HTTPS 地址；Gemini 中不需要 API Key 或本地命令。"),
     },
     {
@@ -160,9 +160,9 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
     },
     {
       kind: "gemini-use", group: tr("START", "开始使用"),
-      title: tr("Choose Use now", "选择 Use now"),
-      detail: tr("On the Remote Arc connector details page, open the more menu and select Use now to start using it with Gemini.",
-        "在 Remote Arc 连接器详情页打开更多菜单，选择 Use now，即可在 Gemini 中开始使用。"),
+      title: tr("Select Remote Arc with @", "用 @ 选择 Remote Arc"),
+      detail: tr("In a Gemini chat, enter @ and select Remote Arc. Some versions also offer Use now from the custom app details.",
+        "在 Remote Arc 连接器详情页打开更多菜单，用 @ 选择 Remote Arc，即可在 Gemini 中开始使用。"),
       note: tr("Keep your computer online with npx remotelink before requesting device tools.", "调用设备工具前，请确保目标电脑正在运行 npx remotelink 并在线。"),
     },
     {

@@ -86,7 +86,7 @@ func TestE2EHiddenWindowShowsAndHidesInPlace(t *testing.T) {
 	// Shown for the user (a sign-in), it goes back out of sight once the page
 	// no longer needs them and the AI continues.
 	h.call("browser_runner_act", map[string]any{"session_id": "quiet", "action": "navigate", "url": base + "/login"})
-	if snap = h.call("browser_runner_snapshot", map[string]any{"session_id": "quiet"}); snap["session_state"] != StateNeedsUser || !strings.Contains(snap["needs_user"].(string), "headless=false") {
+	if snap = h.call("browser_runner_snapshot", map[string]any{"session_id": "quiet"}); snap["session_state"] != StateNeedsUser || !strings.Contains(snap["needs_user"].(string), "browser_runner_wait") {
 		t.Fatalf("sign-in not handed to the user: %v", snap["needs_user"])
 	}
 	h.call("browser_runner_start", map[string]any{"task_id": "quiet", "allowed_origins": []any{base}, "headless": false})

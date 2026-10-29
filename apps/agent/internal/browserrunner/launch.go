@@ -201,6 +201,13 @@ func launchBrowser(ctx context.Context, exe, profile string, hidden bool) (*brow
 		"--use-mock-keychain",
 		"--window-size=1280,900",
 	}
+	if runtime.GOOS == "darwin" {
+		// A minimized native window may never present the frame that Chrome's
+		// legacy ForceRedraw screenshot waits for. Chromium's surface-copy path
+		// requests a new surface instead (kCDPScreenshotNewSurface), preserving
+		// both the hidden window and the existing viewport during live viewing.
+		args = append(args, "--enable-features=CDPScreenshotNewSurface")
+	}
 	headless := !hasDisplay()
 	if headless {
 		args = append(args, "--headless=new", "--hide-scrollbars", "--mute-audio")

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/shared-tab-mcp.js";
 import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct, runStart } from "../src/browser-runner-mcp.js";
 import { callDevice } from "../src/device-call.js";
+import { parseRunnerAttention, runnerViewPath } from "../src/runner-attention.js";
 import { classifyExpectedMcpError } from "../src/mcp-errors.js";
 import type { OAuthIdentity } from "../src/auth.js";
 
@@ -29,9 +30,24 @@ const deps = {
 registerSharedTabTools(server as never, deps as never);
 registerBrowserRunnerTools(server as never, deps as never);
 
-// Two families with names that cannot be confused, 12 tools in total.
+// Two families with names that cannot be confused, 13 tools in total.
 assert.deepEqual([...tools.keys()].sort(), [...SHARED_TAB_TOOLS, ...BROWSER_RUNNER_TOOLS].sort());
-assert.equal(tools.size, 12);
+assert.equal(tools.size, 13);
+// Routing-only notifications must discard page content, query strings and secrets.
+const parsedAttention = parseRunnerAttention({
+  type: "runner_attention", event_id: "a".repeat(32), session_id: "runner-1",
+  task_id: "untrusted", kind: "captcha", origin: "https://example.test/private?token=secret",
+  title: "untrusted title", password: "never-forward", screenshot: "never-forward",
+});
+assert.deepEqual(parsedAttention, {
+  type: "runner_attention", event_id: "a".repeat(32), session_id: "runner-1",
+  task_id: "runner-1", kind: "captcha", origin: "https://example.test",
+});
+assert.equal(parseRunnerAttention({ ...parsedAttention, origin: "javascript:alert(1)" }), null);
+assert.equal(parseRunnerAttention({ ...parsedAttention, origin: "https://user:pass@example.test" }), null);
+assert.equal(parseRunnerAttention({ ...parsedAttention, kind: "screenshot" }), null);
+assert.equal(parseRunnerAttention({ ...parsedAttention, session_id: "../escape" }), null);
+assert.equal(runnerViewPath("device-1", "session-1"), "/dashboard/browser/device-1/session-1");
 for (const name of BROWSER_RUNNER_TOOLS) {
   assert.match(tools.get(name)!.def.description + browserRunnerDefinitionsForTest[name].description, /./);
 }
@@ -298,3 +314,17 @@ for (const code of ["SUBMIT_KEY_USED", "SITE_NOT_ALLOWED", "EXTENSION_UPDATE_REQ
   assert.equal(classifyExpectedMcpError(new Error(`${code}: next step`))?.code, code);
 }
 console.log("PASS: shared_tab_open and shared_tab_act contract");
+
+// Wait reuses the existing read permission so old device opt-ins need no reset.
+const waitDefinition=browserRunnerDefinitionsForTest.browser_runner_wait;
+assert.equal(waitDefinition.scope,"browser:read");assert.equal(waitDefinition.annotations.readOnlyHint,true);
+assert(waitDefinition.input.safeParse({device_id:"d",session_id:"s",until:"user_done",timeout_ms:60000}).success,"large waits reach the Agent for clamping");
+assert(!waitDefinition.input.safeParse({device_id:"d",session_id:"s",until:"invalid"}).success);
+current=identity("browser:read");calls.length=0;
+await tools.get("browser_runner_wait")!.handler({device_id:"d",session_id:"s",until:"user_done",timeout_ms:40000});
+assert.deepEqual(calls.pop(),{tool:"browser_runner_wait",args:{session_id:"s",until:"user_done",timeout_ms:40000}});
+device=row("linux",["browser_runner_snapshot"]);
+assert.deepEqual(await callDevice(env,owner,"dev","browser_runner_wait",{session_id:"s",until:"user_done"}),{ok:true});
+device=row("linux",["read_file"]);
+await assert.rejects(callDevice(env,owner,"dev","browser_runner_wait",{session_id:"s",until:"user_done"}),/disabled/);
+console.log("PASS: Browser Runner wait read scope, legacy opt-in and timeout contract");

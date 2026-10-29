@@ -1,7 +1,8 @@
+import {reviewedDocTopics} from "./documentation-review.js";
 import {platformDocTopics} from './platform-docs.js';
 export type DocCopy = { en: string; zh: string };
 export type DocTopic = { slug: string; group: "start" | "work" | "understand"; title: DocCopy; description: DocCopy; legacyIds?: string[]; sections?: { heading: DocCopy; text: DocCopy }[]; links?: string[][] };
-export const DOC_TOPICS: DocTopic[] = platformDocTopics([
+export const DOC_TOPICS: DocTopic[] = reviewedDocTopics(platformDocTopics([
   {
     slug: 'install-app', group: 'start',
     title: {en: 'Install the web app', zh: '安装网页应用'},
@@ -360,7 +361,7 @@ export const DOC_TOPICS: DocTopic[] = platformDocTopics([
       },
       {
         "heading":{"en":"Billing and allowance","zh":"账单与额度"},
-        "text":{"en":"Settings → Billing shows your plan, available/reserved Credits, Connect calls and model rates. Monthly Credits expire at the paid period end; top-ups do not expire but require an active paid Arc subscription. Stripe handles checkout, payment methods, invoices and cancellation. Plan changes take effect at the next billing cycle. A checkout return page does not grant Credits until payment is verified. Refunds revoke unused purchased allowance; there are no automatic overage charges.","zh":"设置 → 账单显示套餐、可用与预留 Credits、Connect 调用和模型费率。套餐 Credits 在已付账期结束时到期；充值额度不设到期日，但使用时需有有效 Arc 付费订阅。Stripe 处理结账、付款方式、发票与取消订阅；套餐变更从下个账期生效。支付结果经核验后才发放额度，退款会撤销未使用的购买额度，不会自动收取超额费用。"}
+        "text":{"en":"Settings → Plan & usage shows your plan, available/reserved Credits, Connect calls and model rates. Monthly Credits expire at the paid period end; top-ups do not expire but require an active paid Arc subscription. Stripe handles checkout, payment methods, invoices and cancellation. Plan changes take effect at the next billing cycle. A checkout return page does not grant Credits until payment is verified. Refunds revoke unused purchased allowance; there are no automatic overage charges.","zh":"设置 → 套餐与用量显示套餐、可用与预留 Credits、Connect 调用和模型费率。套餐 Credits 在已付账期结束时到期；充值额度不设到期日，但使用时需有有效 Arc 付费订阅。Stripe 处理结账、付款方式、发票与取消订阅；套餐变更从下个账期生效。支付结果经核验后才发放额度，退款会撤销未使用的购买额度，不会自动收取超额费用。"}
       }
     ],
     "links": [
@@ -396,6 +397,13 @@ export const DOC_TOPICS: DocTopic[] = platformDocTopics([
         "text": {
           "en": "Remote Arc tool-call entitlement, your AI chat subscription and third-party App usage are separate. Connecting an App does not make its API free. OAuth identifies who authorizes an account; it does not decide who receives the API bill. A user's web subscription can differ from that provider's API plan or credit balance.",
           "zh": "Remote Arc 工具调用额度、你的 AI 聊天订阅和第三方 App 用量分别计算。连接应用不代表 API 免费。OAuth 确定谁授权账号，不决定 API 账单由谁承担。用户的网页订阅也可能与同一服务商的 API 套餐或积分分开。"
+        }
+      },
+      {
+        "heading": {"en": "Arc Credits and Connect allowance", "zh": "Arc Credits 与 Connect 额度"},
+        "text": {
+          "en": "Arc chat, Slack bot requests, hosted Tasks, Routines and AI teams use your Arc account Credits and run limits. Connect has its own tool-call allowance and uses your external AI client for reasoning. Trial and paid balances, pending reservations and model rates appear in Settings → Plan & usage. A paid plan does not remove per-run limits or a third-party provider outage; preserve the Run ID and error code when asking for help.",
+          "zh": "Arc 聊天、Slack Bot 请求、托管 Task、Routine 和 AI 团队使用 Arc 账号 Credits 与单次运行限制。Connect 使用独立的工具调用额度，由外部 AI 客户端负责推理。试用与付费余额、待结算预留及模型费率显示在设置 → 套餐与用量。付费套餐不会取消单次运行限制，也不能消除第三方服务故障；排查时保留 Run ID 与错误代码。"
         }
       },
       {
@@ -519,6 +527,6 @@ export const DOC_TOPICS: DocTopic[] = platformDocTopics([
       "zh": "在同一页面查看完整的产品操作参考。"
     }
   }
-]);
+]));
 export const DOC_PATHS = DOC_TOPICS.map(topic => "/docs/" + topic.slug);
 export const docTopic = (path: string) => DOC_TOPICS.find(topic => "/docs/" + topic.slug === path);

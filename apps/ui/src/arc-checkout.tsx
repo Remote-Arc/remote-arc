@@ -1,3 +1,4 @@
+import {trackProductEvent} from './product-events.js';
 import {lazy,Suspense,useEffect,useRef,useState} from 'react';
 import {useI18n} from './i18n.js';
 import {WorkspaceLoading} from './workspace-loading.js';
@@ -13,23 +14,24 @@ export function ArcCheckout({email}:{email:string}){
  const [selected,setSelected]=useState(()=>new URLSearchParams(location.search).get('product')||new URLSearchParams(location.search).get('plan')||'');
  const [payment,setPayment]=useState<'pending'|'confirmed'|'waiting'>('pending'),sending=useRef(false),mounted=useRef(true);
  const result=new URLSearchParams(location.search).get('checkout'),session=new URLSearchParams(location.search).get('session_id');
+ useEffect(()=>{trackProductEvent('billing.checkout.viewed',{route:'/checkout'});},[]);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  useEffect(()=>{const controller=new AbortController();void billingRequest<ArcBilling>('',undefined,controller.signal).then(value=>{if(!controller.signal.aborted){setData(value);setSelected(previous=>previous||value.plans.find(plan=>plan.monthlyPriceCents>0)?.id||'');}}).catch(error=>{if(!controller.signal.aborted)setFailure(error);});return()=>controller.abort();},[revision]);
  useEffect(()=>{
   if(result!=='success'||!session)return;const controller=new AbortController();let timer:ReturnType<typeof setTimeout>,attempt=0;
-  async function check(){try{const status=await billingRequest<{status:string}>('checkout-status?session='+encodeURIComponent(session!),undefined,controller.signal);if(controller.signal.aborted)return;if(status.status==='complete'){setPayment('confirmed');setRevision(value=>value+1);return;}}catch{if(controller.signal.aborted)return;}if(++attempt>=10){setPayment('waiting');return;}timer=setTimeout(check,3000);}
+  async function check(){try{const status=await billingRequest<{status:string}>('checkout-status?session='+encodeURIComponent(session!),undefined,controller.signal);if(controller.signal.aborted)return;if(status.status==='complete'){trackProductEvent('billing.confirmation.displayed',{entityId:session!});setPayment('confirmed');setRevision(value=>value+1);return;}}catch{if(controller.signal.aborted)return;}if(++attempt>=10){trackProductEvent('billing.confirmation.waiting',{entityId:session!});setPayment('waiting');return;}timer=setTimeout(check,3000);}
   void check();return()=>{controller.abort();clearTimeout(timer);};
  },[result,session]);
- function choose(id:string){if(busy)return;setSelected(id);setFailure(null);setScheduled(null);const url=new URL(location.href);url.searchParams.set('product',id);url.searchParams.delete('plan');history.replaceState({},'',url);}
+ function choose(id:string){if(busy)return;trackProductEvent('billing.offer.selected',{entityId:id});setSelected(id);setFailure(null);setScheduled(null);const url=new URL(location.href);url.searchParams.set('product',id);url.searchParams.delete('plan');history.replaceState({},'',url);}
  const plan=data?.plans.find(product=>product.id===selected&&product.monthlyPriceCents>0),topup=data?.topups.find(product=>product.id===selected),paid=Boolean(data&&data.plan.monthlyPriceCents>0),product=plan||topup;
  async function proceed(){
-  if(sending.current||!data?.enabled||!product||result==='success')return;sending.current=true;setBusy(true);setFailure(null);
+  if(sending.current||!data?.enabled||!product||result==='success')return;sending.current=true;setBusy(true);setFailure(null);trackProductEvent('billing.checkout.continued');
   try{const response=await billingRequest<NativePaymentSession&{mode?:string;scheduled?:boolean;effectiveAt?:string}>(paid&&plan?'plan/change':'checkout',{productId:product.id,versionId:product.versionId,...(!(paid&&plan)?{uiMode:'embedded_page'}:{}),...(!paid&&plan&&promo.trim()?{promoCode:promo.trim()}:{})});if(!mounted.current)return;if(response.scheduled&&response.effectiveAt){setScheduled(response.effectiveAt);setRevision(value=>value+1);}else if(response.mode==='embedded_page'&&response.clientSecret&&response.publishableKey&&response.sessionId)setEmbedded(response);else throw new BillingFailure('BILLING_UNAVAILABLE');}
   catch(error){if(mounted.current){setFailure(error);if(error instanceof Error&&error.message==='BILLING_PRICE_CHANGED')setRevision(value=>value+1);}}
   finally{sending.current=false;if(mounted.current)setBusy(false);}
  }
- function complete(){if(embedded?.sessionId)location.assign('/checkout?product='+encodeURIComponent(selected)+'&checkout=success&session_id='+encodeURIComponent(embedded.sessionId));}
- async function back(){if(sending.current||!embedded?.sessionId)return;sending.current=true;setBusy(true);setFailure(null);try{const response=await billingRequest<{expired?:boolean;complete?:boolean}>('checkout/abandon',{sessionId:embedded.sessionId});if(!mounted.current)return;if(response.complete)complete();else if(response.expired)setEmbedded(null);}catch(error){if(mounted.current)setFailure(error);}finally{sending.current=false;if(mounted.current)setBusy(false);}}
+ function complete(){trackProductEvent('billing.payment.completed_client',{entityId:embedded?.sessionId});if(embedded?.sessionId)location.assign('/checkout?product='+encodeURIComponent(selected)+'&checkout=success&session_id='+encodeURIComponent(embedded.sessionId));}
+ async function back(){if(sending.current||!embedded?.sessionId)return;sending.current=true;setBusy(true);setFailure(null);try{const response=await billingRequest<{expired?:boolean;complete?:boolean}>('checkout/abandon',{sessionId:embedded.sessionId});if(!mounted.current)return;if(response.complete)complete();else if(response.expired){trackProductEvent('billing.checkout.abandoned_client',{entityId:embedded.sessionId});setEmbedded(null);}}catch(error){if(mounted.current)setFailure(error);}finally{sending.current=false;if(mounted.current)setBusy(false);}}
  const amount=plan?.monthlyPriceCents??topup?.priceCents,price=amount===undefined?'':new Intl.NumberFormat(locale==='zh'?'zh-CN':'en-US',{style:'currency',currency:'USD',currencyDisplay:'narrowSymbol'}).format(amount/100),orderLabel=plan?'Arc '+plan.label:topup?topup.credits.toLocaleString()+' Credits':tr('Offer unavailable','套餐暂不可用'),code=failure instanceof Error&&/^[\w]{1,100}$/.test(failure.message)?failure.message:'BILLING_UNAVAILABLE';
  return <div className="appFrame arcCheckoutFrame" data-workspace="agent"><main className="arcCheckoutPage raSettings">
   {import.meta.env.VITE_UI_PREVIEW==='1'&&<div className="arcCheckoutPreviewNotice" role="status"><strong>PR PREVIEW</strong><span>{tr('Simulated orders and payments. No real accounts or charges.','订单与付款均为模拟，不连接真实账户，不扣款。')}</span><a href="/checkout?demo=new">{tr('Preview a new purchase','重新预览新购')}</a></div>}

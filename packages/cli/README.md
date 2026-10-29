@@ -69,16 +69,16 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.6.3 — Connected browsers, Slack conversations and responsive setup**
+**remotelink 0.6.5 — Dashboard browser authentication and reliable process admission**
 
-Published 2026-10-23
+Published 2026-10-28
 
-- Keep Browser Runner task windows out of sight by default on desktop computers. Show or hide the same window without reopening the page or losing entered values, and return it out of sight when the user has finished a sign-in or other handoff. Computers without a display continue to use a windowless browser.
-- Fix Slack account confirmation, clickable association links and member lookup. Linked users use their own Arc account, device access and allowance; failed verification now returns an explanation instead of silently dropping the conversation.
-- Add immediate durable Slack processing receipts and optional native AI status. Target the newly received message when waking the queue, preserve leases through admission, and bound optional status calls so they cannot hold up normal replies.
-- Align homepage actions, security information and Arc links on phones. Use balanced columns on wider iPads and a shared content column on smaller tablets; retain the same alignment in English and Chinese.
-- Replace the old stop/start upgrade instructions with one versioned command that hands over an older idle Agent, asks before interrupting active work, and preserves the device's recovery setting.
-- Rewrite Connect setup into four concrete steps and clarify when to use the default Runner, the browser extension or the advanced existing-Chrome connection.
+- Add per-device, exact-website Dashboard approval and revocation for OTP sign-in/registration and supported CAPTCHA controls. Snapshots report effective authorization; missing approval and outdated clients return actionable errors.
+- Make legacy shared-tab fill and current action tools use the same OTP policy. Approved Runner verification providers expose visible controls and optional cropped challenge images; response tokens stay private, unsupported challenges retain human handoff and final submissions remain separately authorized.
+- Record authentication permission changes without recording code values, and remove authentication codes from resumable URLs.
+- Raise the default running-command limit from 32 to 64, configurable from 1 to 256 with REMOTEARC_MAX_ACTIVE_PROCESSES. Completed jobs no longer occupy running slots; retain at most 128 finished records for up to 30 minutes in both Go and TypeScript runtimes.
+- Publish Remote Arc Browser 0.4.1 with Dashboard OTP enforcement and corrected legacy tool behavior.
+- Promote the qualified Agent changes to the stable 0.6.5 npm/native release.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->

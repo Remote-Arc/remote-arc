@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -121,5 +122,49 @@ func TestAccountConnectorEnumerationPaginationAndUnknowns(t *testing.T) {
 				t.Fatal(scenario, found, e, string(b))
 			}
 		})
+	}
+}
+
+func TestConnectorListOmitsEmptyCursorAndExplainsFailures(t *testing.T) {
+	t.Setenv("REMOTEARC_CODEX_TEST_MODE", "")
+	log := filepath.Join(t.TempDir(), "requests.jsonl")
+	t.Setenv("REMOTEARC_CODEX_TEST_LOG", log)
+	replies := map[string][]map[string]any{
+		"account/read": {ok(map[string]any{"account": map[string]any{"type": "chatgpt"}})},
+		"app/list":     {ok(map[string]any{"data": []any{}, "nextCursor": "page2"}), ok(map[string]any{"data": []any{}, "nextCursor": nil})},
+	}
+	rpc, profile := fixtureRPC(t, replies)
+	if found, err := (&codexProvider{rpc: rpc, profile: profile}).remoteArcApp(); found || err != nil {
+		t.Fatal(found, err)
+	}
+	b, _ := os.ReadFile(log)
+	var cursors []any
+	for _, line := range strings.Split(strings.TrimSpace(string(b)), "\n") {
+		var entry struct {
+			Method string         `json:"method"`
+			Params map[string]any `json:"params"`
+		}
+		if json.Unmarshal([]byte(line), &entry) == nil && entry.Method == "app/list" {
+			cursor, present := entry.Params["cursor"]
+			if !present {
+				cursor = "<omitted>"
+			}
+			cursors = append(cursors, cursor)
+		}
+	}
+	if len(cursors) != 2 || cursors[0] != "<omitted>" || cursors[1] != "page2" {
+		t.Fatal(cursors)
+	}
+
+	for code, want := range map[int]string{-32600: "this Codex version rejected", -32603: "connector directory"} {
+		replies := map[string][]map[string]any{
+			"account/read": {ok(map[string]any{"account": map[string]any{"type": "chatgpt"}})},
+			"app/list":     {{"error": map[string]any{"code": code, "message": "PRIVATE 403 <html>"}}},
+		}
+		rpc, profile := fixtureRPC(t, replies)
+		_, err := (&codexProvider{rpc: rpc, profile: profile}).remoteArcApp()
+		if err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), "--skip-connector-check") || strings.Contains(err.Error(), "PRIVATE") {
+			t.Fatal(code, err)
+		}
 	}
 }

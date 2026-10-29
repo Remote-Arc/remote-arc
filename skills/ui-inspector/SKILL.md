@@ -20,7 +20,7 @@ Required authorization scopes: computer:read. Scripts, OS/desktop actions, exter
 
 ## Preflight
 
-Call `remotelink skills doctor` on the selected device, or inspect dependencies using already authorized process/file tools. Missing executors must be installed explicitly on the correct user device. A Skill being built-in is NOT evidence an engine is present.
+Check the engines this skill names before relying on them, with tools you already have (for example `<engine> --version` through start_process, or list_directory on its install folder). Missing executors must be installed explicitly on the correct user device. A Skill being built-in is NOT evidence an engine is present.
 
 ## Evidence of completion
 

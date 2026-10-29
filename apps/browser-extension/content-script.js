@@ -65,6 +65,8 @@
   // one-time code may be filled through shared_tab_act when the user allows
   // codes (the default), like Browser Runner.
   const secretKind = (element) => {
+    const hint = [element.name, element.id, element.getAttribute("aria-label"), element.getAttribute("placeholder"), labelText(element)].join(" ");
+    if (/(g-recaptcha-response|h-captcha-response|cf-turnstile-response|captcha[-_]?(response|token|solution))/i.test(hint)) return "captcha";
     if (!(element instanceof HTMLInputElement)) return "";
     const type = (element.type || "text").toLowerCase();
     if (type === "password") return "password";
@@ -72,7 +74,7 @@
     const tokens = String(element.autocomplete || "").toLowerCase().split(/\s+/);
     if (tokens.some((t) => t === "current-password" || t === "new-password")) return "password";
     if (tokens.some((t) => t.startsWith("cc-"))) return "payment";
-    if (tokens.includes("one-time-code")) return "code";
+    if (tokens.includes("one-time-code") || /\botp\b|one[-_ ]?time|verification[-_ ]?code|passcode|security[-_ ]?code|验证码|驗證碼/i.test(hint)) return "code";
     return "";
   };
 
@@ -253,7 +255,7 @@
     const element = resolveElement(snapshotId, ref);
     const secret = secretKind(element);
     if (secret && !(secret === "code" && allowCodes)) {
-      throw new Error("Remote Arc blocks filling password, one-time-code, payment, and file fields.");
+      throw new Error(secret === "code" ? "BROWSER_AUTH_REQUIRED: approve OTP for this website in Dashboard Browser authentication; the extension code switch must also be on." : "Remote Arc blocks filling password, payment, CAPTCHA response token, and file fields.");
     }
     if (!fillable(element)) {
       throw new Error("Element cannot be filled. Use browser_click for buttons, checkboxes, or radio controls.");

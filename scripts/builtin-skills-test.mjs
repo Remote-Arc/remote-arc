@@ -6,8 +6,9 @@ import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const registry=JSON.parse(fs.readFileSync(path.join(root,'skills/registry.json'),'utf8'));
 assert.equal(registry.schemaVersion,1);
-assert.equal(registry.skills.length,9);
-assert.equal(new Set(registry.skills.map(x=>x.id)).size,9);
+assert.equal(registry.skills.length,16);
+assert.equal(new Set(registry.skills.map(x=>x.id)).size,16);
+for(const id of ['remotion-video','hyperframes-video','openfilm-video','map-creator'])assert(registry.skills.some(skill=>skill.id===id));
 for(const skill of registry.skills){
  assert.ok(['P0','P1'].includes(skill.priority),skill.id);
  assert.ok(/^https:\/\//.test(skill.upstream),skill.id);
@@ -30,6 +31,19 @@ assert.doesNotMatch(cli,/handleSkillsCli|BUILTIN_SKILLS/,'device CLI must not bu
 const cat=fs.readFileSync(path.join(root,'packages/skills/src/catalog.generated.ts'),'utf8');
 assert.ok(cat.includes('BUILTIN_SKILLS_REVISION'));
 assert.ok(cat.includes('transcribe-subtitles'));
+// Ordinary media setup is automatic; large local models retain explicit consent.
+const videoSkill=fs.readFileSync(path.join(root,'skills/video-creator/SKILL.md'),'utf8');
+const qwenSection=videoSkill.split('**Voice-over (Qwen3-TTS')[1]?.split('**Music bed (ACE-Step')[0];
+const aceSection=videoSkill.split('**Music bed (ACE-Step')[1]?.split('**Maps & data')[0];
+assert.ok(qwenSection,'Qwen voice-over section missing');
+assert.match(qwenSection,/ask the user for explicit approval/i,'Qwen must require size-aware download approval');
+assert.match(qwenSection,/do not download Qwen/i,'Qwen must have a no-consent fallback');
+assert.ok(aceSection,'ACE-Step music section missing');
+assert.match(aceSection,/acestep-api --host 127\.0\.0\.1 --port 8001/,'ACE-Step command must force loopback despite inherited environment');
+assert.match(aceSection,/ask for explicit approval/i,'ACE-Step must require size-aware download approval');
+const subtitlesSkill=fs.readFileSync(path.join(root,'skills/transcribe-subtitles/SKILL.md'),'utf8');
+assert.match(subtitlesSkill,/\*\*Default model:\*\* `ggml-base\.bin`/,'Whisper default must be small');
+assert.match(subtitlesSkill,/1\.6 GB\) require explicit size-aware consent/i,'Large Whisper model must not auto-download');
 const cloud=fs.readFileSync(path.join(root,'apps/relay/src/cloud-skills.ts'),'utf8');
 assert.match(cloud,/unauthorized/);
 assert.match(cloud,/mcp.remotearc.app/);

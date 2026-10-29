@@ -119,7 +119,16 @@ def ordinary_start(binary, env, fixture, should_skip=False, launcher=None):
                                    stdin=subprocess.DEVNULL, stdout=output, stderr=output, **options())
         try:
             kind, connected, hello = relay.messages.get(timeout=5)
-            assert kind == "hello" and hello["type"] == "hello" and len(hello["tools"]) == 13
+            assert kind == "hello" and hello["type"] == "hello"
+            expected_safe = {"list_directory", "browse_directories", "read_file", "read_binary_file",
+                             "get_file_info", "list_processes", "list_undo_actions",
+                             "background_agent_status", "set_background_agent", "set_task_keep_awake",
+                             "goal_workspace", "agent_execution_log", "set_device_runtime"}
+            # Older public candidates predate metadata discovery. Accept only
+            # that additive read-only tool; writes/process execution stay absent.
+            actual_safe = set(hello["tools"])
+            assert actual_safe in (expected_safe, expected_safe | {"list_agent_sessions"}), sorted(actual_safe)
+            assert len(actual_safe) == len(hello["tools"]), "duplicate advertised tools"
             kind, _, reply = relay.messages.get(timeout=5)
             assert kind == "read" and not reply.get("error") and "synthetic-file-ok" in json.dumps(reply)
             deadline = time.monotonic() + 35

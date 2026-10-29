@@ -1,3 +1,4 @@
+import {ARC_USE_CASES,useCaseSlugs} from "../../../packages/docs/src/arc-use-cases.ts";
 import { DOC_TOPICS } from "../../../packages/docs/src/catalog.ts";
 import assert from "node:assert/strict";
 import {chineseSeo} from '../src/zh-seo.ts';
@@ -148,7 +149,7 @@ assert.ok(sitemap.includes('hreflang="zh-CN"'));
 // All Resources links and detail pages must have real Chinese URL, metadata,
 // server-visible Chinese content, and reciprocal English/Chinese alternates.
 const resourcePaths = Object.keys(chineseResourceSeo);
-assert.equal(resourcePaths.length, 25, "Resources needs blog index, five articles, use-case index, sixteen details, security and releases");
+assert.equal(resourcePaths.length, useCaseSlugs.length + 9, "Resources needs every use-case detail plus blog, security and release pages");
 for (const base of resourcePaths) {
   const path = "/zh" + base;
   assert.ok(localizedPages.includes(base), "missing localized route: " + base);
@@ -248,11 +249,12 @@ assert.ok(mcp.includes('"@type":"TechArticle"'));
 assert.ok(mcp.includes('rel="canonical" href="https://remotearc.app/mcp-computer-access"'));
 
 const useCasesCatalog = renderMarketingHtml(shell, "/use-cases");
-assert.ok(useCasesCatalog.includes('retained context') && useCasesCatalog.includes('scheduled fresh judgment'));
-for(const workflow of ['Your daily work brief','A project check-in','An independent delivery check','Follow changes that matter'])assert.ok(useCasesCatalog.includes(workflow));
+assert.ok(useCasesCatalog.includes('illustrated catalog'));
+for(const slug of useCaseSlugs)assert.ok(useCasesCatalog.includes('href="/use-cases/'+slug+'"'),'catalog must link to '+slug);
+assert.ok(useCasesCatalog.includes('timed SRT/VTT subtitles'),'catalog must describe transcription outputs');
 for(const slug of [...chinesePages].filter(path=>path.startsWith('/use-cases/'))){
  // Browser Runner is Connect-only today; its page must not offer an Arc path.
- const connectOnly=slug==='/use-cases/job-applications';
+ const connectOnly=ARC_USE_CASES[slug.slice('/use-cases/'.length)].connectOnly;
  for(const prefix of ['', '/zh']){
   const html=renderMarketingHtml(shell,prefix+slug);
   assert.equal(html.includes(prefix?'使用 Arc':'With Arc'),!connectOnly,slug+(connectOnly?' must not offer an Arc path':' Arc path must be crawlable'));

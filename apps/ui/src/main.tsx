@@ -1,3 +1,7 @@
+import {BrowserAuthSetting} from "./browser-auth-setting.js";
+import {startProductEvents,recordProductView} from './product-events.js';
+import {useCaseSlugs} from '../../../packages/docs/src/arc-use-cases.js';
+import { DeviceBrowserSessions, RunnerAttentionList, RunnerAttentionSetting, RunnerView } from "./runner-view.js";
 import './arc-composer.css';
 import './arc-references.css';
 import { BROWSER_RUNNER_TOOLS, browserRunnerEnabled, isBrowserRunnerTool, toggledDeviceTools } from "./device-tools.js";
@@ -36,6 +40,7 @@ import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from
 import { releaseChinese } from "./release-locales.js";
 import { DashboardSettings } from "./dashboard-settings.js";
 import { AdminOperations } from "./admin-operations.js";
+import { UsageConversionBanner } from "./usage-conversion.js";
 import { AdminConsole } from "./admin/admin-console.js";
 import {registerProductPwa} from './product-pwa.js';
 import { EngagementPage } from "./public-engagement.js";
@@ -546,7 +551,7 @@ function PublicHeader({ user }: { user?: User | null }) {
           <div className="publicNavMenu" data-open={openMenu==='resources'}>
             <button type="button" className="publicNavMenuTrigger" aria-expanded={openMenu==='resources'} aria-controls="public-nav-resources" onClick={()=>setOpenMenu(openMenu==='resources'?null:'resources')}>{tr('Resources','资源')} {arrow}</button>
             <div id="public-nav-resources" className="publicNavDropdown resourceDropdown"><div className="publicNavDropdownColumns">
-              <section className="publicNavGroup"><span className="publicNavGroupLabel">{tr('GET STARTED','开始使用')}</span><a href={navHref('/docs')}><strong>{tr('Documentation','文档')}</strong><small>{tr('Connections, tools and product guides','连接、工具与产品指南')}</small></a><a href={navHref('/downloads')}><strong>{tr('Downloads','下载')}</strong><small>Windows · macOS · Linux</small></a><a href={navHref('/chrome-extension')}><strong>{tr('Browser extension','浏览器扩展')}</strong><small>{tr('Share selected browser context','共享选定的浏览器上下文')}</small></a><a href={navHref('/security-model')}><strong>{tr('Security','安全')}</strong><small>{tr('Your devices, your rules','自己的设备，自己的规则')}</small></a></section>
+              <section className="publicNavGroup"><span className="publicNavGroupLabel">{tr('GET STARTED','开始使用')}</span><a href={navHref('/docs')}><strong>{tr('Documentation','文档')}</strong><small>{tr('Connections, tools and product guides','连接、工具与产品指南')}</small></a><a href={navHref('/docs/tools')}><strong>{tr('All tools','全部工具')}</strong><small>{tr('Search tools, actions and parameters','查找工具、操作与参数')}</small></a><a href={navHref('/downloads')}><strong>{tr('Downloads','下载')}</strong><small>Windows · macOS · Linux</small></a><a href={navHref('/chrome-extension')}><strong>{tr('Browser extension','浏览器扩展')}</strong><small>{tr('Share selected browser context','共享选定的浏览器上下文')}</small></a><a href={navHref('/security-model')}><strong>{tr('Security','安全')}</strong><small>{tr('Your devices, your rules','自己的设备，自己的规则')}</small></a></section>
               <section className="publicNavGroup"><span className="publicNavGroupLabel">{tr('FOLLOW ALONG','关注进展')}</span><a href={navHref('/blogs')}><strong>{tr('Blog','博客')}</strong><small>{tr('Ideas from the team','团队思考与分享')}</small></a><a href={navHref('/releases')}><strong>{tr('Changelog','更新日志')}</strong><small>{tr('What shipped recently','近期产品更新')}</small></a><a href={navHref('/roadmap')}><strong>{tr('Roadmap','路线图')}</strong><small>{tr('What we are building next','我们正在打造什么')}</small></a></section>
             </div></div>
           </div>
@@ -5031,7 +5036,7 @@ function Dashboard({
   function navigateTab(tab: DashboardTab) {
     tab = availableDashboardTab(tab,arcAvailable);
     const path = DASHBOARD_PATHS[tab];
-    if (location.pathname !== path) history.pushState({}, "", path);
+    if (location.pathname !== path) {history.pushState({}, "", path);recordProductView();}
     if (workspaceForTab(active) !== workspaceForTab(tab)) setShowAutomationCreate(false);
     setActive(tab);
   }
@@ -5224,6 +5229,7 @@ function Dashboard({
       </aside>
 
       <main className="dashboardMain">
+        {active !== "agent-chat" && <RunnerAttentionList/>}
         {UI_PREVIEW && (
           <div className="previewModeBanner" role="status">
             <strong>PR PREVIEW</strong>
@@ -5281,6 +5287,7 @@ function Dashboard({
                 <button className="addButton arcRadiantCta" onClick={() => navigateTab("connect")}><ProductIcon name="link"/>{tr("Connect your AI", "连接你的 AI")}</button>
               </div>
             </section>
+            <UsageConversionBanner usage={usage} pricingUrl={MARKETING_ORIGIN + (locale==="zh"?"/zh/pricing":"/pricing")} onManagePlan={()=>{navigateTab("settings");const target=new URL(location.href);target.searchParams.set("section","billing");history.replaceState(history.state,"",target);window.dispatchEvent(new PopStateEvent("popstate"));}} />
             <section className="overviewStatusGrid">
               <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Devices online", "在线设备")}</span><i className={"healthDot " + ((status?.onlineDevices ?? 0) > 0 ? "good" : "idle")} /></div><strong>{status?.onlineDevices ?? 0} / {status?.totalDevices ?? devices.length}</strong><small>{tr("Ready for MCP calls", "可接受 MCP 调用")}</small></article>
                              <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr('Connected Apps','应用连接')}</span><ProductIcon name="apps"/></div><strong>{tr('Your tools','你的工具')}</strong><button className="ghostButton overviewManageLink" onClick={()=>navigateTab('apps')}>{tr('Manage connections','管理连接')}<ProductIcon name="arrowUpRight" size={14}/></button></article>
@@ -5483,6 +5490,8 @@ function Dashboard({
                             </span>
                           </label>
                         )}
+                        {runnerEnabled && <RunnerAttentionSetting deviceId={device.id}/>}
+                        {(runnerEnabled || device.platform === "browser") && <BrowserAuthSetting deviceId={device.id} browserExtension={device.platform === "browser"}/>}
                         {allTools.map((tool) => {
                           const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
                           const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
@@ -5933,6 +5942,7 @@ function Dashboard({
 
                         </section>
                         <section role="tabpanel" id={"device-panel-"+device.id+"-activity"} aria-labelledby={"device-tab-"+device.id+"-activity"} aria-label={tr("Activity and details", "活动与详情")} hidden={devicePanel !== "activity"}>
+                    {devicePanel === "activity" && device.status === "online" && runnerEnabled && runnerAdvertised && <DeviceBrowserSessions deviceId={device.id}/>}
                           <div className="deviceTechnicalIdentity"><span>{tr("Device ID", "设备 ID")} <code>{device.id}</code></span><span>{tr("Architecture", "架构")} <code>{device.arch || "—"}</code></span></div>
 
                     <div className="deviceExecutionLogPanel">
@@ -6972,8 +6982,8 @@ function App() {
   if (routePath === "/docs" || (routePath.startsWith("/docs/") && routePath !== "/docs/mcp")) return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc"><WorkspaceLoading label={tr("Loading documentation…", "正在加载文档…")}/></main>}><DocsPortal path={routePath}/></React.Suspense></PublicLayout>;
   if (routePath === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
   if (routePath === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
-  const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff|job-applications)$/);
-  if (useCaseMatch) {
+  const useCaseMatch = routePath.match(/^\/use-cases\/([a-z0-9-]+)$/);
+  if (useCaseMatch && useCaseSlugs.includes(useCaseMatch[1] as UseCaseSlug)) {
     return <UseCaseDetailPage slug={useCaseMatch[1] as UseCaseSlug} user={user === undefined ? null : user} />;
   }
   if (routePath === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
@@ -7001,6 +7011,12 @@ function App() {
   if (routePath === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
   if (routePath === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
+  const runnerRoute = routePath.match(/^\/dashboard\/browser\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]{1,100})$/);
+  if (isDashboardHost && runnerRoute) {
+    if (user === undefined) return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
+    if (!user) return <DashboardAccess/>;
+    return <RunnerView deviceId={runnerRoute[1]!} sessionId={runnerRoute[2]!} preview={UI_PREVIEW}/>;
+  }
   if (isDashboardHost && (routePath === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(routePath) || Object.hasOwn(LEGACY_DASHBOARD_PATHS, routePath))) {
     if (user === undefined) {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
@@ -7016,6 +7032,7 @@ function App() {
   return <Landing user={user === undefined ? null : user} />;
 }
 
+startProductEvents();
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ThemeProvider>

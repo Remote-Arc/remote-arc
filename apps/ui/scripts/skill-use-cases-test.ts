@@ -23,4 +23,5 @@ for(const entry of SKILL_USE_CASES){
 }
 assert(useCaseSkillIds('audio-transcription').includes('transcribe-subtitles'));
 assert(useCaseSkillIds('video-creation').includes('video-creator'));
+assert(useCaseSkillIds('job-applications').includes('authentic-thinking-expression'));
 console.log('PASS: '+useCaseSlugs.length+' illustrated use cases cover all '+skills.length+' packaged skills, with bounded bilingual drafts');

@@ -16,7 +16,7 @@ const collection=handleCloudSkills(request("/api/skills"),granted);
 assert.equal(collection.status,200);
 assert.equal(collection.headers.get("x-robots-tag"),"noindex");
 const catalog=await collection.json() as {items:Array<{id:string;engineInstalled:boolean|null}>;revision:string;availability:string};
-assert.equal(catalog.items.length,16);
+assert.deepEqual(catalog.items.map(skill=>skill.id).sort(), BUILTIN_SKILLS.map(skill=>skill.id).sort());
 assert.equal(catalog.availability,"instructions-only");
 assert.ok(catalog.items.every(x=>x.engineInstalled===null));
 assert.match(catalog.revision,/^[a-f0-9]{16}$/);
@@ -28,4 +28,4 @@ for(const skill of BUILTIN_SKILLS){
  assert.equal(body.revision,catalog.revision);
  assert.match(body.skill.content,/## Device and permission gates/);
 }
-console.log("Cloud Skills test passed: 16 cloud-hosted Skills, auth, host partition and no-runtime promises");
+console.log(`Cloud Skills test passed: ${catalog.items.length} cloud-hosted Skills, auth, host partition and no-runtime promises`);

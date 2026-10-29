@@ -55,7 +55,8 @@ for (const name of [
   "get_goal_context",
   "submit_goal_decision",
   "browser_runner_act",
-  "call_app",
+  "github_issues_create",
+  "gmail_drafts_create",
 ])
   assert(
     data.remote.some((tool) => tool.name === name),
@@ -67,6 +68,7 @@ assert(
   ),
   "Retired aliases must not inflate the public tool list",
 );
+assert(!data.remote.some(tool => tool.name === "call_app"), "The generic internal App executor must not be public");
 const operations = data.apps.flatMap((app) =>
   app.operations.map((operation) => app.provider + ":" + operation.name),
 );

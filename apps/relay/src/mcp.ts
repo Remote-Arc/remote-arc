@@ -2,6 +2,8 @@ import {readCommunityResource} from './arc-community-skills.js';
 import {BUILTIN_SKILL_RESOURCES} from '../../../packages/skills/src/media-resources.generated.js';
 import { getGoalContext, submitGoalDecision } from "./source-goals.js";
 import { callApp, listApps } from "./apps.js";
+import { appDiscoverySchema } from "./app-discovery.js";
+import { callPublicBrowserDevice } from "./public-browser.js";
 import { appOperation, AppError, type AppEnv } from "./app-catalog.js";
 import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";
 import { routeSkillIntent } from "./skill-runtime.js";
@@ -245,15 +247,21 @@ export function createRemoteLinkMcp(
       registerMcpTool(server, "list_apps", {
         title: "List connected accounts",
         description: "List the user's linked service accounts and connection IDs. Read-only; does not enumerate or execute hidden operations. Only separately advertised tools can act on an account.",
-        inputSchema: z.object({}),
+        // Preserve cached discovery inputs, but return account metadata only.
+        inputSchema: appDiscoverySchema,
         annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("apps:read"),
-      }, async () => {
+      }, async (input) => {
         if (!identity || !hasScope(identity, "apps:read")) return authRequired(env, "apps:read", identity);
         const catalog = await listApps(env, identity.userId);
+        const connections = catalog.connections.filter(account => (!input.provider || account.provider === input.provider)
+          && (!input.category || catalog.apps.some(app => app.provider === account.provider && app.category === input.category))
+          && (!input.query || (account.accountLabel + " " + account.provider).toLowerCase().includes(input.query.toLowerCase())));
         return textResult({
-          connections: catalog.connections.map(({ id, provider, accountLabel, status, permissions }) =>
-            ({ id, provider, accountLabel, status, permissions })),
+          connections: connections.slice(input.cursor, input.cursor + input.limit)
+            .map(({ id, provider, accountLabel, status }) => ({ id, provider, accountLabel, status })),
+          total: connections.length,
+          nextCursor: input.cursor + input.limit < connections.length ? input.cursor + input.limit : null,
         });
       });
 
@@ -275,10 +283,9 @@ export function createRemoteLinkMcp(
         const operation = appOperation(provider, action);
         if (!(operation.schema instanceof z.ZodObject)) throw new Error("Public App operation must have a fixed object schema");
         const toolName = provider + "_" + action.replaceAll(".", "_");
-        const schema = z.object({
+        const schema = operation.schema.safeExtend({
           connectionId: z.string().uuid(),
           requestId: z.string().regex(/^[\w-]{8,100}$/),
-          ...operation.schema.shape,
         }).strict();
         registerMcpTool(server, toolName, {
           title: operation.description,
@@ -286,17 +293,21 @@ export function createRemoteLinkMcp(
           inputSchema: schema,
           annotations: {
             readOnlyHint: operation.permission === "read",
-            destructiveHint: operation.permission === "write",
+            // Draft creation is additive; published issues/comments have
+            // irreversible visibility even if they can later be removed.
+            destructiveHint: operation.permission === "write" && action !== "drafts.create",
             openWorldHint: true,
             idempotentHint: operation.permission === "read",
           },
           _meta: oauthToolMeta(operation.permission === "write" ? ["apps:read", "apps:write"] : "apps:read"),
         }, async (raw: Record<string, unknown>) => {
           const required = operation.permission === "write" ? "apps:write" : "apps:read";
-          if (!identity || !hasScope(identity, required)) return authRequired(env, required, identity);
+          const requiredScopes = operation.permission === "write" ? ["apps:read", "apps:write"] as const : "apps:read";
+          if (!identity || !hasScope(identity, "apps:read") || !hasScope(identity, required)) return authRequired(env, requiredScopes, identity);
           const { connectionId, requestId, ...arguments_ } = schema.parse(raw);
-          const catalog = await listApps(env, identity.userId);
-          if (!catalog.connections.some(account => account.id === connectionId && account.provider === provider && account.status === "active")) {
+          const account = await env.DB.prepare("SELECT provider, status FROM app_connections WHERE id=?1 AND user_id=?2")
+            .bind(connectionId, identity.userId).first<{ provider: string; status: string }>();
+          if (!account || account.provider !== provider || account.status !== "active") {
             return { ...toolErrorResult("The selected connection is not an active " + provider + " account.", "APP_CONNECTION_PROVIDER_MISMATCH"), isError: true };
           }
           try {
@@ -304,7 +315,7 @@ export function createRemoteLinkMcp(
               connectionId, requestId, operation: action, arguments: arguments_,
             }));
           } catch (error) {
-            if (error instanceof AppError && error.code === "app_mcp_scope_required") return authRequired(env, required, identity);
+            if (error instanceof AppError && error.code === "app_mcp_scope_required") return authRequired(env, requiredScopes, identity);
             return { ...toolErrorResult(error instanceof AppError ? error.code : "Invalid or unavailable App request", error instanceof AppError ? error.code : "APP_REQUEST_FAILED"), isError: true };
           }
         });
@@ -525,7 +536,7 @@ export function createRemoteLinkMcp(
         consume: (current) => consume(env, current),
         oauthToolMeta,
         textResult,
-        callDevice: (current, device, tool, args) => callDevice(env, current, device, tool, args),
+        callDevice: (current, device, tool, args) => callPublicBrowserDevice(env, current, device, tool, args),
       });
     }
 
@@ -539,7 +550,7 @@ export function createRemoteLinkMcp(
       oauthToolMeta,
       textResult,
       callDevice: (current: OAuthIdentity, device: string, tool: Parameters<typeof callDevice>[3], args: Record<string, unknown>) =>
-        callDevice(env, current, device, tool, args),
+        callPublicBrowserDevice(env, current, device, tool, args),
     };
     registerSharedTabTools(server, sharedTabDeps);
     registerLegacySharedTabAliases(server, sharedTabDeps);

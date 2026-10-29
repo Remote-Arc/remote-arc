@@ -57,15 +57,6 @@
       ]
     },
     {
-      "name": "call_app",
-      "title": "Read or update a connected service",
-      "group": "apps",
-      "scopes": [
-        "apps:read",
-        "apps:write"
-      ]
-    },
-    {
       "name": "create_agent_goal",
       "title": "Create a self-directed durable Agent Goal",
       "group": "goals",
@@ -158,6 +149,89 @@
       ]
     },
     {
+      "name": "github_comments_create",
+      "title": "Comment on an issue or pull request",
+      "group": "apps",
+      "scopes": [
+        "apps:read",
+        "apps:write"
+      ]
+    },
+    {
+      "name": "github_comments_list",
+      "title": "Read issue or pull request comments",
+      "group": "apps",
+      "scopes": [
+        "apps:read"
+      ]
+    },
+    {
+      "name": "github_issues_create",
+      "title": "Create a repository issue",
+      "group": "apps",
+      "scopes": [
+        "apps:read",
+        "apps:write"
+      ]
+    },
+    {
+      "name": "github_issues_get",
+      "title": "Read one issue",
+      "group": "apps",
+      "scopes": [
+        "apps:read"
+      ]
+    },
+    {
+      "name": "github_issues_list",
+      "title": "List repository issues",
+      "group": "apps",
+      "scopes": [
+        "apps:read"
+      ]
+    },
+    {
+      "name": "github_pulls_list",
+      "title": "List pull requests",
+      "group": "apps",
+      "scopes": [
+        "apps:read"
+      ]
+    },
+    {
+      "name": "github_repositories_list",
+      "title": "List accessible repositories",
+      "group": "apps",
+      "scopes": [
+        "apps:read"
+      ]
+    },
+    {
+      "name": "gmail_drafts_create",
+      "title": "Create an email draft",
+      "group": "apps",
+      "scopes": [
+        "apps:read",
+        "apps:write"
+      ]
+    },
+    {
+      "name": "gmail_messages_get",
+      "title": "Read one email message",
+      "group": "apps",
+      "scopes": [
+        "apps:read"
+      ]
+    },
+    {
+      "name": "gmail_messages_list",
+      "title": "Search email messages",
+      "group": "apps",
+      "scopes": [
+        "apps:read"
+      ]
+    },
+    {
       "name": "list_agent_sessions",
       "title": "List coding-agent tasks on a remote computer",
       "group": "processes",
@@ -167,7 +241,7 @@
     },
     {
       "name": "list_apps",
-      "title": "Find the services you connected",
+      "title": "List connected accounts",
       "group": "apps",
       "scopes": [
         "apps:read"

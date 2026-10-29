@@ -24,7 +24,7 @@ export function toolGroup(name: string): ToolGroup {
   if (name === "list_agent_sessions") return "processes";
   if (name.startsWith("shared_tab_")) return "shared-tabs";
   if (name.startsWith("browser_runner_")) return "browser-runner";
-  if (["list_apps", "call_app"].includes(name)) return "apps";
+  if (["list_apps", "call_app"].includes(name) || /^(github|gmail)_/.test(name)) return "apps";
   if (
     ["create_agent_goal", "get_goal_context", "submit_goal_decision"].includes(
       name,
@@ -58,15 +58,19 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
   },
   list_apps: {
-    zh: "查找已连接的应用及账号、支持的操作与所需参数。",
-    summary:
-      "Find connected accounts and discover each app's supported operations.",
+    zh: "列出已连接账号，支持筛选与分页；具体操作由独立公开工具提供。",
+    summary: "List connected account metadata with filters and pagination.",
   },
-  call_app: {
-    zh: "使用指定账号读取或修改应用数据；写入还需要 Apps 写权限。",
-    summary:
-      "Run a supported operation with a connection ID and a stable request ID.",
-  },
+  github_repositories_list: { zh: "列出所选 GitHub 账号可访问的仓库。", summary: "List repositories accessible to the selected GitHub account." },
+  github_issues_list: { zh: "列出指定仓库的 Issue。", summary: "List issues in a specified repository." },
+  github_issues_get: { zh: "读取指定仓库中的一个 Issue。", summary: "Read one repository issue." },
+  github_pulls_list: { zh: "列出指定仓库的 Pull Request。", summary: "List repository pull requests." },
+  github_comments_list: { zh: "读取指定 Issue 或 Pull Request 的评论。", summary: "Read issue or pull request comments." },
+  github_issues_create: { zh: "按指定标题与内容创建一个 GitHub Issue。", summary: "Create a GitHub issue with the specified title and body." },
+  github_comments_create: { zh: "在指定 Issue 或 Pull Request 中发布评论。", summary: "Publish a comment on an issue or pull request." },
+  gmail_messages_list: { zh: "在所选 Gmail 账号中搜索邮件，返回邮件 ID。", summary: "Search Gmail messages and return message IDs." },
+  gmail_messages_get: { zh: "读取所选 Gmail 账号中的一封邮件。", summary: "Read one Gmail message." },
+  gmail_drafts_create: { zh: "在所选 Gmail 账号中创建草稿，不发送邮件。", summary: "Create a Gmail draft without sending it." },
   list_devices: {
     zh: "查看账号下的电脑、在线状态与设备能力。",
     summary: "Find your linked computers and their current connection state.",

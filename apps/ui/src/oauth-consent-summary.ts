@@ -41,10 +41,10 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
     groups.push({
       key: "apps", icon: "▦", title: "Use services you connect", titleZh: "使用你连接的应用服务",
       description: canWrite
-        ? "Find your linked services, such as Slack. Changes require permissions granted by the connected service and the user request; Remote Arc does not require a separate approval for each App operation."
+        ? "Find your linked services, such as GitHub and Gmail. Changes require permissions granted by the connected service and the user request; Remote Arc does not require a separate approval for each App operation."
         : "Find and read services you have separately connected.",
       descriptionZh: canWrite
-        ? "查找你连接的 Slack 等服务。写入操作须符合已授权的服务权限和你的任务指令，Remote Arc 不再逐次审批每项操作。"
+        ? "查找你连接的 GitHub、Gmail 等服务。写入操作须符合已授权的服务权限和你的任务指令，Remote Arc 不再逐次审批每项操作。"
         : "查找、读取你独立授权的服务，不会自动连接新账号。",
     });
   }

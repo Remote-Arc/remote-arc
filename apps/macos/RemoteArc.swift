@@ -57,7 +57,7 @@ final class RemoteArcApp: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "point.3.connected.trianglepath.dotted", accessibilityDescription: "Remote Arc")
         let menu = NSMenu()
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        let version = Bundle.main.object(forInfoDictionaryKey: "RemoteArcAgentVersion") as? String ?? "dev"
         menu.addItem(withTitle: "Remote Arc \(version)", action: nil, keyEquivalent: "")
         statusRow = menu.addItem(withTitle: "Starting Agent…", action: nil, keyEquivalent: "")
         menu.addItem(.separator())
@@ -73,6 +73,12 @@ final class RemoteArcApp: NSObject, NSApplicationDelegate {
         add(menu, "Show local logs", #selector(showLogs))
         add(menu, "Quit Remote Arc", #selector(quit), "q")
         statusItem.menu = menu
+        if CommandLine.arguments.contains("--ui-smoke-test") {
+            // Exercise the real menu/event loop without pairing or starting an Agent.
+            print("PASS: native menu bar, Dashboard, connection controls and login-item menu")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { NSApp.terminate(nil) }
+            return
+        }
         startAgent()
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.refreshStatus() }
         refreshStatus()
@@ -98,9 +104,10 @@ final class RemoteArcApp: NSObject, NSApplicationDelegate {
             logHandle = handle
             let process = Process()
             process.executableURL = AgentCommand.executable
-            // Reuse the real Agent, pairing and execution lease. Never force an update,
-            // reset pairing, request extra permissions or silently enable recovery.
-            process.arguments = ["--foreground"]
+            // Reuse the normal idle-only version handoff, pairing, execution lease
+            // and saved recovery choice. Busy/unknown older Agents remain intact;
+            // never force an update, reset pairing or request extra permissions.
+            process.arguments = []
             process.standardInput = FileHandle.nullDevice
             process.standardOutput = handle
             process.standardError = handle
@@ -215,11 +222,11 @@ final class RemoteArcApp: NSObject, NSApplicationDelegate {
 }
 
 if CommandLine.arguments.contains("--version") {
-    print(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
+    print(Bundle.main.object(forInfoDictionaryKey: "RemoteArcAgentVersion") as? String ?? "dev")
 } else if CommandLine.arguments.contains("--self-test") {
     // Non-interactive package acceptance: no pairing, network, login item or Agent startup.
     let result = try AgentCommand.run(["--version"])
-    let expected = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+    let expected = Bundle.main.object(forInfoDictionaryKey: "RemoteArcAgentVersion") as? String ?? "dev"
     guard result.status == 0, String(data: result.output, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == expected else {
         fatalError("Bundled Agent version mismatch")
     }

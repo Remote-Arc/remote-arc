@@ -25,7 +25,10 @@ if (process.platform !== 'darwin') {
   run('plutil',['-lint',path.join(app,'Contents/Info.plist')]);
   const machine = arch === 'amd64' ? 'x86_64' : 'arm64';
   for (const name of ['RemoteArc','remotelink']) assert(run('lipo',['-archs',path.join(app,'Contents/MacOS',name)]).includes(machine));
-  if ((process.arch === 'arm64' ? 'arm64' : 'amd64') === arch) assert.match(run(path.join(app,'Contents/MacOS/RemoteArc'),['--self-test']),/PASS:/);
+  if ((process.arch === 'arm64' ? 'arm64' : 'amd64') === arch) {
+    assert.match(run(path.join(app,'Contents/MacOS/RemoteArc'),['--self-test']),/PASS:/);
+    assert.match(run(path.join(app,'Contents/MacOS/RemoteArc'),['--ui-smoke-test']),/PASS: native menu bar/);
+  }
   const mount = path.join(path.dirname(dmg),'mounted-test');
   await fs.mkdir(mount);
   let attached=false;

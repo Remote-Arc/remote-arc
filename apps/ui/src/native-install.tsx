@@ -28,6 +28,16 @@ function DownloadIcon() {
 export function NativeInstall() {
   const { tr, locale } = useI18n();
   const [copyResult, setCopyResult] = useState<"copied" | "blocked" | null>(null);
+  const [macAppVersion, setMacAppVersion] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch('/api/downloads/macos', {cache:'no-store',signal:controller.signal})
+      .then(async response => response.ok ? response.json() : null)
+      .then((release: {available?:boolean;version?:string;minimumMacOS?:string} | null) => {
+        if(!controller.signal.aborted && release?.available === true && typeof release.version === 'string' && /^\d+\.\d+\.\d+$/.test(release.version) && release.minimumMacOS === '13.0') setMacAppVersion(release.version);
+      }).catch(() => { /* Keep the working shell installer until a verified signed package is available. */ });
+    return () => controller.abort();
+  }, []);
   async function copyShellCommand() {
     try { await navigator.clipboard.writeText(shellCommand); setCopyResult("copied"); }
     catch { setCopyResult("blocked"); }
@@ -61,20 +71,20 @@ export function NativeInstall() {
       {platforms.map(platform => <li key={platform.id} className="nativeDownloadCard">
         <div className="nativeDownloadHeading">
           <span className="nativePlatformIcon"><img src={`/platform-brands/${platform.icon}.svg`} width="32" height="32" alt="" /></span>
-          <div><h2>{platform.name}</h2><span>{tr("Native Agent", "原生 Agent")}</span></div>
+          <div><h2>{platform.name}</h2><span>{platform.id === 'darwin' && macAppVersion ? tr('macOS 13+ · App installer', 'macOS 13+ · App 安装包') : tr("Native Agent", "原生 Agent")}</span></div>
         </div>
-        <div className="nativeDownloadChoices">{platform.id === "darwin" ? <a className="nativeShellChoice" href="#shell-install">
+        <div className="nativeDownloadChoices">{platform.id === "darwin" && !macAppVersion ? <a className="nativeShellChoice" href="#shell-install">
           <span><strong>{tr("Install with curl", "使用 curl 安装")}</strong><small>Apple Silicon · Intel</small></span><DownloadIcon />
         </a> : platform.choices.map(choice => <a key={choice.arch}
-          href={`/api/downloads/agent/${platform.id}/${choice.arch}`}
+          href={platform.id === 'darwin' ? `/api/downloads/macos/${choice.arch}` : `/api/downloads/agent/${platform.id}/${choice.arch}`}
           aria-label={tr(`Download for ${platform.name} ${choice.label}`, `下载 ${platform.name} ${choice.label}`)}>
-          <span><strong>{choice.label}</strong><small>{choice.detail}</small></span><DownloadIcon />
+          <span><strong>{choice.label}</strong><small>{platform.id === 'darwin' ? '.dmg' : choice.detail}</small></span><DownloadIcon />
         </a>)}</div>
       </li>)}
     </ul>
     <div className="nativeDownloadMeta">
       <span>{tr("Every download follows the latest stable release.", "每次下载均获取最新稳定版。")}</span>
-      <div><a href={release + "/download/SHA256SUMS"}>SHA256SUMS</a><span aria-hidden="true">·</span><a href={release}>{tr("Release notes", "发布说明")}</a></div>
+      <div><a href={release + "/download/SHA256SUMS"}>SHA256SUMS</a>{macAppVersion && <a href={release + '/download/MACOS-SHA256SUMS'}>{tr('Mac checksums', 'Mac 校验值')}</a>}<span aria-hidden="true">·</span><a href={release}>{tr("Release notes", "发布说明")}</a></div>
     </div>
 
     <section className="nativeInstallStart">
@@ -82,7 +92,8 @@ export function NativeInstall() {
       <p>{tr("Use the same Remote Arc account you connected to your AI client. Once your computer appears online, return to your conversation. If it is already paired, start your existing Agent.", "使用你在 AI 客户端中连接的同一个 Remote Arc 账号。电脑显示在线后，即可回到聊天继续。已经配对过的电脑，启动原来的 Agent 即可。")}</p>
       <div className="nativeStartGuides">
         <details><summary><img src="/platform-brands/macos.svg" width="20" height="20" alt="" />{tr("Starting on macOS", "macOS 启动说明")}</summary>
-          <ol><li><a href="#shell-install">{tr("Copy the curl installation command below", "复制下方 curl 安装命令")}</a>{tr(" and run it in Terminal. It selects Apple Silicon or Intel and sets executable permissions automatically. Node.js is not required.", "，在终端中运行。脚本会自动选择 Apple Silicon 或 Intel 并设置执行权限，无需 Node.js，也不用手动运行 chmod。")}</li><li>{tr("Run the startup command printed by the installer, then approve pairing in your browser. Keep the Agent running while using your computer through AI.", "运行安装完成后终端提示的启动命令，再到浏览器批准配对。通过 AI 使用电脑时，请保持 Agent 运行。")}</li></ol>
+          {macAppVersion ? <ol><li>{tr('Open the downloaded DMG and drag Remote Arc into Applications.', '打开下载的 DMG，把 Remote Arc 拖入 Applications（应用程序）。')}</li><li>{tr('Open Remote Arc from Applications. It runs in your menu bar and opens browser pairing automatically. Sign in with the same Remote Arc account and approve this computer.', '从应用程序打开 Remote Arc。它会在菜单栏运行并自动打开浏览器配对；使用同一个 Remote Arc 账号登录并批准这台电脑。')}</li><li>{tr('Use the menu bar to open Dashboard, stop the connection or choose Launch at login. To upgrade, quit the app, replace it with the latest download and reopen it; pairing is preserved.', '通过菜单栏打开 Dashboard、停止连接或选择开机启动。升级时先退出 App，再用最新下载替换并重新打开，配对会保留。')}</li></ol>
+            : <ol><li><a href="#shell-install">{tr("Copy the curl installation command below", "复制下方 curl 安装命令")}</a>{tr(" and run it in Terminal. It selects Apple Silicon or Intel and sets executable permissions automatically. Node.js is not required.", "，在终端中运行。脚本会自动选择 Apple Silicon 或 Intel 并设置执行权限，无需 Node.js，也不用手动运行 chmod。")}</li><li>{tr("Run the startup command printed by the installer, then approve pairing in your browser. Keep the Agent running while using your computer through AI.", "运行安装完成后终端提示的启动命令，再到浏览器批准配对。通过 AI 使用电脑时，请保持 Agent 运行。")}</li></ol>}
         </details>
         <details><summary><img src="/platform-brands/windows.svg" width="20" height="20" alt="" />{tr("Starting on Windows", "Windows 启动说明")}</summary>
           <p>{tr("Run the downloaded .exe on the computer you want to connect. Follow its browser pairing page, check the computer and approve its permissions. PowerShell can also run the downloaded file.", "在你希望连接的电脑上运行下载的 .exe，按浏览器页面核对电脑并批准权限；也可以从 PowerShell 运行该文件。")}</p>

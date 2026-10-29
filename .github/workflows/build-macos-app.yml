@@ -22,6 +22,7 @@ permissions:
 
 jobs:
   package:
+    environment: ${{ inputs.release && 'production' || 'macos-preview' }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,6 +39,8 @@ jobs:
         with:
           go-version-file: apps/agent/go.mod
           cache-dependency-path: apps/agent/go.sum
+      - name: Validate release manifests reject unsigned or stale packages
+        run: node scripts/collect-macos-apps-test.mjs
       - name: Import Developer ID and notarization credentials
         if: inputs.release
         env:

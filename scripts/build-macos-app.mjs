@@ -52,7 +52,7 @@ export async function buildMacosApp(args = process.argv.slice(2), env = process.
   run('iconutil',['-c','icns',iconset,'-o',path.join(resources,'RemoteArc.icns')]);
   const info = {
     CFBundleIdentifier:'app.remotearc.agent',CFBundleName:'Remote Arc',CFBundleDisplayName:'Remote Arc',
-    CFBundleExecutable:'RemoteArc',CFBundlePackageType:'APPL',CFBundleShortVersionString:version,
+    CFBundleExecutable:'RemoteArc',CFBundlePackageType:'APPL',CFBundleShortVersionString:version.replace(/-.*/,''),RemoteArcAgentVersion:version,
     CFBundleVersion:version.replace(/-.*/,''),CFBundleIconFile:'RemoteArc',LSMinimumSystemVersion:minimum,
     NSHighResolutionCapable:true,LSUIElement:true,
     NSAppleEventsUsageDescription:'Remote Arc controls a browser only when you enable browser tasks for this computer.',
@@ -65,6 +65,20 @@ export async function buildMacosApp(args = process.argv.slice(2), env = process.
   run('codesign',['--force','--sign',identity,...signing,'--entitlements',path.join(root,'apps/macos/entitlements.plist'),goBinary]);
   run('codesign',['--force','--sign',identity,...signing,app]);
   run('codesign',['--verify','--deep','--strict','--verbose=2',app]);
+  const auth = !release ? [] : env.MACOS_NOTARY_PROFILE ? ['--keychain-profile',env.MACOS_NOTARY_PROFILE]
+    : ['--key',env.MACOS_NOTARY_KEY_PATH,'--key-id',env.MACOS_NOTARY_KEY_ID,'--issuer',env.MACOS_NOTARY_ISSUER_ID];
+  const notarize = file => {
+    const result = JSON.parse(run('xcrun',['notarytool','submit',file,...auth,'--wait','--timeout','15m','--output-format','json'],{timeout:16*60*1000}));
+    if (result.status !== 'Accepted') throw Error('Apple notarization was not Accepted; do not publish this artifact.');
+  };
+  if(release) {
+    const archive = path.join(temporary,'RemoteArc.zip');
+    run('ditto',['-c','-k','--keepParent',app,archive]);
+    notarize(archive);
+    run('xcrun',['stapler','staple',app]);
+    run('xcrun',['stapler','validate',app]);
+    run('spctl',['--assess','--type','execute','--verbose=2',app]);
+  }
   await fs.symlink('/Applications',path.join(staging,'Applications'));
   const filename = `RemoteArc-v${version}-macos-${arch}.dmg`;
   const dmg = path.join(output,filename);
@@ -74,10 +88,7 @@ export async function buildMacosApp(args = process.argv.slice(2), env = process.
   run('hdiutil',['create','-volname','Remote Arc','-srcfolder',staging,'-format','UDZO',dmg]);
   if (release) {
     run('codesign',['--sign',identity,'--timestamp',dmg]);
-    const auth = env.MACOS_NOTARY_PROFILE ? ['--keychain-profile',env.MACOS_NOTARY_PROFILE]
-      : ['--key',env.MACOS_NOTARY_KEY_PATH,'--key-id',env.MACOS_NOTARY_KEY_ID,'--issuer',env.MACOS_NOTARY_ISSUER_ID];
-    const result = JSON.parse(run('xcrun',['notarytool','submit',dmg,...auth,'--wait','--timeout','20m','--output-format','json'],{timeout:21*60*1000}));
-    if (result.status !== 'Accepted') throw Error('Apple notarization was not Accepted; do not publish this artifact.');
+    notarize(dmg);
     run('xcrun',['stapler','staple',dmg]);
     run('xcrun',['stapler','validate',dmg]);
     run('spctl',['--assess','--type','open','--context','context:primary-signature','--verbose=2',dmg]);

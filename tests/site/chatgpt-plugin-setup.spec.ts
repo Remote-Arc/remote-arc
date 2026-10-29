@@ -10,7 +10,7 @@ test('Published ChatGPT setup links installation, local pairing and a read-only 
   await expect(setup.getByRole('link', { name: zh ? '在 ChatGPT 打开 Remote Arc ↗' : 'Open Remote Arc in ChatGPT ↗' })).toHaveAttribute('href', pluginUrl);
   await expect(setup).toContainText(zh ? '不会在电脑上自动安装程序' : 'does not install anything on your computer');
   await expect(setup).toContainText(zh ? '相同的 Remote Arc 账号' : 'same Remote Arc account');
-  await expect(setup.locator('.installCommands code')).toHaveText('npx remotelink');
+  await expect(setup.locator('.installCommands code')).toHaveText('npx remotelink@latest');
   await expect(setup.getByRole('link', { name: /No Node.js|没有 Node.js/ })).toHaveAttribute('href', zh ? '/zh/downloads' : '/downloads');
   await expect(setup.locator('blockquote')).toContainText(zh ? '不要修改任何文件' : 'Do not change any files');
   const image = setup.locator('.pluginSetupListing img');

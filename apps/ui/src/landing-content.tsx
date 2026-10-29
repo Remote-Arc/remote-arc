@@ -6,6 +6,7 @@ import { useI18n } from "./i18n.js";
 import { ProductIcon } from "./product-icon.js";
 import { InteractiveWorkDemo } from "./landing-interactive-demo.js";
 import { ArcTeaser } from "./arc-future.js";
+import { InstallCommands } from "./install-commands.js";
 import "./landing-content.css";
 
 export function HeroHeadline({mode='arc'}:{mode?:'connect'|'arc'}) {
@@ -23,6 +24,7 @@ export function HomeHeroCopy({mode,arcAvailable,arcHref,connectHref}:{mode:'conn
    <a className="primaryButton marketingPrimary" href={arc?arcHref:connectHref}>{arc?(arcAvailable?tr('Start your free trial','开始免费试用'):tr('Explore Arc','了解 Arc')):tr('Connect your AI','连接你的 AI')}<ProductIcon name="arrowUpRight" size={16}/></a>
    <a className="marketingSecondary" href="#how-it-works">{tr('See it in action','看看如何工作')}<ProductIcon name="arrowUpRight" size={15}/></a>
   </div>
+  {!arc && <InstallCommands />}
   <div className="heroSupportingInfo">
    <div className="heroProofLine"><span className="heroAccountFact"><ProductIcon name="check" size={14}/><span>{arc?tr('No model API key required','无需模型 API Key'):tr('Works with your existing AI account','沿用你现有的 AI 账户')}</span></span><span className="heroPlatforms">Windows · Mac · Linux</span></div>
    <a className="heroSecurityLink" href="/security-model"><ProductIcon name="shield" size={14}/><span>{tr('Scoped access · device policies · local Undo','限定访问范围 · 设备策略 · 本地 Undo')}</span><ProductIcon name="arrowUpRight" size={12}/></a>

@@ -7,13 +7,17 @@
 remote_arc_install() (
   set -eu
   umask 077
-  version='0.6.5'
   fail() { printf 'Remote Arc: %s\n' "$*" >&2; exit 1; }
   for tool in curl uname mktemp mkdir awk cat chmod mv rm rmdir; do
     command -v "$tool" >/dev/null 2>&1 || fail "Required tool missing: $tool"
   done
-  version=${REMOTEARC_INSTALL_VERSION:-$version}
-  printf '%s\n' "$version" | awk -F. 'NF == 3 && $1 ~ /^(0|[1-9][0-9]*)$/ && $2 ~ /^(0|[1-9][0-9]*)$/ && $3 ~ /^(0|[1-9][0-9]*)$/ { valid=1 } END { exit !valid }' || fail "REMOTEARC_INSTALL_VERSION must be a stable x.y.z version."
+  stable_version() {
+    printf '%s\n' "$1" | awk -F. 'NF == 3 && $1 ~ /^(0|[1-9][0-9]*)$/ && $2 ~ /^(0|[1-9][0-9]*)$/ && $3 ~ /^(0|[1-9][0-9]*)$/ { valid=1 } END { exit !valid }'
+  }
+  version=${REMOTEARC_INSTALL_VERSION:-}
+  if [ -n "$version" ]; then
+    stable_version "$version" || fail "REMOTEARC_INSTALL_VERSION must be a stable x.y.z version."
+  fi
   case "$(uname -s)" in
     Darwin) platform=darwin ;;
     Linux) platform=linux ;;
@@ -44,7 +48,7 @@ remote_arc_install() (
   cleanup() {
     [ -z "$staged" ] || rm -f "$staged"
     if [ -n "$work_dir" ]; then
-      rm -f "$work_dir/agent" "$work_dir/SHA256SUMS"
+      rm -f "$work_dir/agent" "$work_dir/SHA256SUMS" "$work_dir/latest.json"
       rmdir "$work_dir" 2>/dev/null || :
     fi
   }
@@ -52,6 +56,14 @@ remote_arc_install() (
   trap 'exit 130' INT
   trap 'exit 143' TERM HUP
   work_dir=$(mktemp -d "${TMPDIR:-/tmp}/remotearc-install.XXXXXXXX")
+  if [ -z "$version" ]; then
+    # Resolve the stable channel on every install, even if this website has not
+    # been redeployed since the native release. Release assets already include
+    # this manifest; prereleases are not promoted to GitHub's Latest channel.
+    curl --proto '=https' --tlsv1.2 -fsSL "https://github.com/Remote-Arc/remote-arc/releases/latest/download/go-binaries.json" -o "$work_dir/latest.json" --header 'Cache-Control: no-cache'
+    version=$(awk -F '"' '/"version"[[:space:]]*:/ { count++; value=$4 } END { if (count != 1) exit 1; print value }' "$work_dir/latest.json") || fail "Cannot determine the latest stable Agent version."
+    stable_version "$version" || fail "Latest release did not contain a stable x.y.z version."
+  fi
   asset="remotelink-v$version-$platform-$arch"
   release="https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v$version"
   printf 'Downloading Remote Arc %s for %s/%s…\n' "$version" "$platform" "$arch"

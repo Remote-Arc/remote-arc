@@ -902,7 +902,8 @@ export const SKILL_USE_CASES = [
 export type SkillUseCaseSlug=typeof SKILL_USE_CASES[number]['slug'];
 export const LEGACY_USE_CASE_SKILLS:Readonly<Record<string,readonly string[]>>={
   "job-applications": [
-    "browser-operator"
+    "browser-operator",
+    "authentic-thinking-expression"
   ],
   "remote-development": [
     "community-react-best-practices"

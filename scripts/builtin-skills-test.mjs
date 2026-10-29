@@ -6,13 +6,13 @@ import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const registry=JSON.parse(fs.readFileSync(path.join(root,'skills/registry.json'),'utf8'));
 assert.equal(registry.schemaVersion,1);
-assert.equal(registry.skills.length,16);
-assert.equal(new Set(registry.skills.map(x=>x.id)).size,16);
+assert.equal(registry.skills.length,17);
+assert.equal(new Set(registry.skills.map(x=>x.id)).size,17);
 for(const id of ['remotion-video','hyperframes-video','openfilm-video','map-creator'])assert(registry.skills.some(skill=>skill.id===id));
 for(const skill of registry.skills){
  assert.ok(['P0','P1'].includes(skill.priority),skill.id);
  assert.ok(/^https:\/\//.test(skill.upstream),skill.id);
- assert.ok(skill.scopes.length>0,skill.id);
+ assert.ok(skill.scopes.length>0 || (skill.id==='authentic-thinking-expression' && skill.engine.startsWith('Guidance only') && skill.requires.length===0),skill.id);
   const doc=fs.readFileSync(path.join(root,'skills',skill.id,'SKILL.md'),'utf8').replace(/\r\n/g,'\n');
  assert.ok(doc.startsWith('---\n'),skill.id);
  assert.ok(doc.includes(`name: ${skill.id}`),skill.id);

@@ -16,12 +16,12 @@
       "interface": {
         "displayName": "Remote Arc",
         "shortDescription": "Controlled remote access to your computers.",
-        "longDescription": "Remote Arc connects AI clients to Windows, macOS, and Linux computers you explicitly pair. Inspect files, run approved development commands, use explicitly shared browser tabs, and manage deterministic durable tasks under per-device permissions and local safety boundaries. Continuous autonomous AI reasoning after a chat ends is not currently a production capability. First-time computer setup: run npx remotelink@latest on your own computer (Node.js 20+), approve pairing in the browser, then use the ChatGPT Plugin.",
+        "longDescription": "Remote Arc connects AI clients to Windows, macOS, and Linux computers you explicitly pair. Inspect files, run approved development commands, use explicitly shared browser tabs, and manage deterministic durable tasks under per-device permissions and local safety boundaries. Continuous autonomous AI reasoning after a chat ends is not currently a production capability. First-time setup: https://remotearc.app/install/chatgpt. Native Agent downloads at https://remotearc.app/downloads need no Node.js. Run the Agent on your own computer, approve browser pairing with the same account, and manage devices at https://agent.remotearc.app/devices. Command-line installation remains optional.",
         "websiteURL": "https://remotearc.app",
         "brandColor": "#38BDF8",
         "logo": "./assets/plugin-logo.svg",
         "composerIcon": "./assets/plugin-logo.svg",
-        "defaultPrompt": "Help me set up Remote Arc on my computer. First check whether a device is already paired; if not, give me the install command and pairing steps."
+        "defaultPrompt": "Help me set up Remote Arc. Check my paired computers first; if none are paired, show the setup guide, recommend the native download without Node.js, offer command-line alternatives and link to my device Dashboard."
       },
       "onboardingSkill": "./skills/setup/SKILL.md"
     }

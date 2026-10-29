@@ -7,7 +7,7 @@
     "brandColor": "#38BDF8",
     "logo": "../assets/plugin-logo.svg",
     "composerIcon": "../assets/plugin-logo.svg",
-    "defaultPrompt": "Help me set up Remote Arc on my computer. First check whether a device is already paired; if not, give me the install command and pairing steps.",
+    "defaultPrompt": "Help me set up Remote Arc. Check my paired computers first; if none are paired, show the setup guide, recommend the native download without Node.js, offer command-line alternatives and link to my device Dashboard.",
     "developerName": "Remote Arc",
     "category": "Other",
     "capabilities": []

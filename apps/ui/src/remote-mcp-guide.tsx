@@ -23,7 +23,7 @@ const steps = [
     id: "connect",
     index: "02",
     title: ["Add the Remote MCP server to your AI client", "在 AI 客户端添加 Remote MCP Server"],
-    body: ["In your client's MCP / apps / connectors settings, add the URL below using its supported remote HTTP setup. Complete Remote Arc OAuth when prompted. The exact menu and availability depend on the client and account.", "在 AI 客户端的 MCP、应用或连接器设置中，通过受支持的 Remote HTTP 配置添加下方地址。按提示完成 Remote Arc OAuth。具体菜单与功能可用性取决于客户端和账户。"],
+    body: ["In ChatGPT, install the published Remote Arc plugin using the guide below. Other compatible clients can add the URL below through their remote MCP settings. In either case, authorize the same Remote Arc account used to pair your computer.", "ChatGPT 用户按下方指南安装已上架的 Remote Arc 插件；其他兼容客户端可在 Remote MCP 设置中添加下方地址。两种方式均需授权配对电脑时使用的同一 Remote Arc 账号。"],
   },
   {
     id: "verify",
@@ -34,7 +34,7 @@ const steps = [
 ] as const;
 
 const clients = [
-  { name: "ChatGPT", logo: "/demo-brands/chatgpt.svg", url: "/install/chatgpt", hint: ["Plugins / supported MCP app path", "Plugins / 受支持的 MCP 应用入口"] },
+  { name: "ChatGPT", logo: "/demo-brands/chatgpt.svg", url: "/install/chatgpt", hint: ["Published ChatGPT plugin", "已上架 ChatGPT 插件"] },
   { name: "Claude", logo: "/demo-brands/claude.svg", url: "/install/claude", hint: ["Custom connector + OAuth", "自定义连接器 + OAuth"] },
   { name: "Cursor", logo: "/demo-brands/cursor.svg", url: "/install/cursor", hint: ["Remote HTTP MCP configuration", "Remote HTTP MCP 配置"] },
 ] as const;
@@ -143,7 +143,7 @@ export function RemoteMcpGuide() {
       <div className="rmgFaq">
         <h3>{tr("Common connection questions", "常见连接问题")}</h3>
         {[
-          [tr("The MCP server doesn't appear in ChatGPT, Claude or Cursor.", "ChatGPT、Claude 或 Cursor 中看不到 MCP Server。"),tr("Check whether your client/account supports remote MCP connections, add the endpoint inside that application's own settings, and complete OAuth. Pairing the computer alone does not register the AI connector. See the client-specific installation pages above.", "检查 AI 客户端与账户是否支持 Remote MCP，在应用内添加端点并完成 OAuth。仅配对电脑不会自动注册 AI 连接器。请参照上方客户端专属安装页面。")],
+          [tr("The MCP server doesn't appear in ChatGPT, Claude or Cursor.", "ChatGPT、Claude 或 Cursor 中看不到 MCP Server。"),tr("In ChatGPT, open the published Remote Arc plugin and install or enable it. For other clients or a deliberate custom connection, add the endpoint in that client's settings and complete OAuth. Pairing a computer alone does not connect your AI; use the guide for your client above.", "ChatGPT 用户直接打开已上架的 Remote Arc 插件并安装或启用；其他客户端或自选 Custom MCP 的用户，在客户端设置中添加地址并完成 OAuth。仅配对电脑不会自动连接 AI，请参照上方对应客户端指南。")],
           [tr("The connection works, but my device shows offline.", "MCP 已连接，但电脑显示离线。"),tr("The computer may be asleep, powered off, disconnected, or running an outdated/stopped local agent. Run npx remotelink on the device and check it appears online in Dashboard. Login autostart cannot wake a sleeping or powered-off computer.", "电脑可能休眠、关机、断网，或本地 Agent 已停止/过期。请在目标设备运行 npx remotelink，并检查 Dashboard 在线状态。登录自启不能唤醒休眠或关机的电脑。")],
           [tr("OAuth succeeded, but a file or terminal tool is blocked.", "OAuth 成功，但文件或终端工具被拒绝。"),tr("OAuth grants the AI client's account connection, not blanket device access. Check the chosen device's tool permissions, trusted write locations and sensitive-path settings. Only enable the narrow capability you need.", "OAuth 只授权 AI 客户端连接账户，不代表赋予设备所有权限。检查目标设备的工具授权、可信写入目录和敏感路径策略，按需开启最小权限。")],
           [tr("Is a remote MCP server the same as Remote Arc?", "Remote MCP Server 就是 Remote Arc 吗？"),tr("No. Remote MCP is a general connection pattern within MCP. Remote Arc is a source-viewable, proprietary-licensed product using a hosted MCP endpoint to reach explicitly paired personal computers.", "不是。Remote MCP 是 MCP 中的一种通用连接方式；Remote Arc 是采用托管 MCP 端点、连接明确配对的个人电脑的专有许可产品，源码可供审查。")],

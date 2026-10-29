@@ -1,0 +1,36 @@
+.chatgptPluginSetup { max-width: 1160px; margin-top: 24px; }
+.pluginSetupTrail { display: flex; flex-wrap: wrap; gap: 10px 28px; padding: 18px 0; border-block: 1px solid var(--line); }
+.pluginSetupTrail a { font-weight: 650; font-size: 14px; text-decoration: none; }
+.pluginSetupStep { padding: 38px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 100px; }
+.pluginSetupStep .eyebrow { display: block; margin-bottom: 12px; }
+.pluginSetupStep h2 { max-width: 740px; margin: 0 0 16px; font-size: clamp(25px, 3vw, 36px); line-height: 1.2; letter-spacing: -.025em; }
+.pluginSetupStep p, .pluginSetupChecklist { color: var(--muted); font-size: 15px; line-height: 1.8; }
+.pluginSetupStep p { max-width: 800px; }
+.pluginSetupListing { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .65fr); gap: 36px; align-items: start; }
+.pluginSetupListing .primaryButton { margin: 12px 0; }
+.pluginSetupListing .pluginSetupHint { font-size: 13px; }
+.pluginSetupListing figure { margin: 0; min-width: 0; }
+.pluginSetupListing img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 14px; }
+.pluginSetupListing figcaption { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.pluginSetupStep .installCommands { max-width: 780px; }
+.pluginSetupChecklist { padding-left: 22px; max-width: 800px; }
+.pluginSetupChecklist li { padding-left: 4px; margin: 10px 0; }
+.pluginSetupStep blockquote { max-width: 800px; margin: 22px 0; padding: 20px 24px; border-left: 3px solid var(--accent); background: var(--panel); border-radius: 0 12px 12px 0; line-height: 1.7; overflow-wrap: anywhere; }
+.pluginSetupTroubleshooting { max-width: 800px; margin-top: 24px; }
+.pluginSetupTroubleshooting details { padding: 16px 0; border-top: 1px solid var(--line); }
+.pluginSetupTroubleshooting summary, .pluginSetupAdvanced summary { cursor: pointer; font-weight: 650; line-height: 1.6; }
+.pluginSetupAdvanced { margin: 30px 0 50px; padding: 22px; border: 1px solid var(--line); border-radius: 14px; scroll-margin-top: 100px; }
+.pluginSetupAdvanced p { color: var(--muted); font-size: 14px; line-height: 1.8; }
+.pluginSetupAdvanced pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pluginCustomWalkthrough ol { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.pluginCustomWalkthrough li { min-width: 0; }
+.pluginCustomWalkthrough h3 { font-size: 17px; line-height: 1.5; }
+.pluginCustomWalkthrough img { display: block; width: 100%; max-height: 340px; object-fit: contain; border: 1px solid var(--line); border-radius: 10px; background: #101010; }
+@media (max-width: 760px) {
+  .pluginSetupListing { grid-template-columns: 1fr; gap: 24px; }
+  .pluginCustomWalkthrough ol { grid-template-columns: 1fr; }
+  .pluginSetupListing figure { max-width: 420px; }
+  .pluginSetupStep { padding: 28px 0; }
+  .pluginSetupStep .primaryButton { max-width: 100%; white-space: normal; text-align: center; }
+  .pluginSetupStep blockquote { padding: 16px; }
+}

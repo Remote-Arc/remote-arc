@@ -18,11 +18,12 @@ assert.match(source, /<ClientMcpGuide client=\{slug\}/, "each installation page 
 assert.match(source, /className="installMustDo"/, "both setup sides should be prominent");
 assert.doesNotMatch(source, /<InstallCompanionNotice \/>/, "Companion download belongs on the Chrome Browser section, not the AI client pages");
 for (const path of [
-  "https://chatgpt.com/plugins",
   "https://claude.ai/customize/connectors",
   "https://cursor.com/docs/mcp",
-  "https://developers.openai.com/plugins/deploy/connect-chatgpt",
 ]) assert.ok(installGuide.includes(path), "missing official setup link: " + path);
+const publicSetup = readFileSync(new URL("../src/chatgpt-plugin-setup.tsx", import.meta.url), "utf8");
+assert.ok(publicSetup.includes("Try in chat"));
+assert.ok(publicSetup.includes("same Remote Arc account"));
 const mcpDocs = readFileSync(new URL("../src/product-docs.tsx", import.meta.url), "utf8");
 assert.ok(!installGuide.includes("remote-arc-browser.zip"), "AI client setup guides must not include Chrome download");
 const chromeSection = mcpDocs.slice(mcpDocs.indexOf('<section id="chrome-browser">'));

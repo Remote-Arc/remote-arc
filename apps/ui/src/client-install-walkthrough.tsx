@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useI18n } from "./i18n.js";
 import "./client-install-walkthrough.css";
 
-type Client = "claude" | "chatgpt" | "gemini";
+type Client = "claude" | "gemini";
 type StepKind = "add" | "auth" | "connect" | "tools" | "approval" | "running" | "result"
-  | "gpt-create" | "gpt-plugin" | "gpt-running" | "gpt-result"
   | "gemini-url" | "gemini-auth" | "gemini-connect" | "gemini-use" | "gemini-ready";
 
 const filenames: Record<StepKind, string> = {
@@ -15,10 +14,6 @@ const filenames: Record<StepKind, string> = {
   approval: "05-tool-approval.png",
   running: "06-scan-progress.png",
   result: "07-readonly-scan-result.png",
-  "gpt-create": "01-create-custom-mcp.png",
-  "gpt-plugin": "02-plugin-ready.png",
-  "gpt-running": "03-run-in-chat.png",
-  "gpt-result": "04-mac-result.png",
   "gemini-url": "step-01.png",
   "gemini-auth": "step-02.png",
   "gemini-connect": "step-03.png",
@@ -102,40 +97,6 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
       note: tr("The example numbers are illustrative, not a live scan of your device.", "示例数值仅用于说明，并非你的设备实时扫描结果。"),
     },
   ];
-  const chatgptSteps: { kind: StepKind; group: string; title: string; detail: string; note: string }[] = [
-    {
-      kind: "gpt-create", group: tr("CONNECT", "添加连接"),
-      title: tr("Add a custom MCP server", "创建自定义 MCP Server"),
-      detail: tr("In ChatGPT Plugins, add a custom MCP server. Enter Remote Arc as the name and https://mcp.remotearc.app/mcp as the Server URL, select OAuth, review the warning, then choose Create as a plugin.",
-        "在 ChatGPT Plugins 中添加自定义 MCP Server。名称输入 Remote Arc，Server URL 填写 https://mcp.remotearc.app/mcp，认证选择 OAuth，阅读提示后点击 Create as a plugin。"),
-      note: tr("The exact menu depends on your account and workspace. Use the full HTTPS URL including /mcp; no local API keys are required.",
-        "菜单入口取决于账户和工作区权限。必须填写包含 /mcp 的完整 HTTPS 地址，不需要本地 API Key。"),
-    },
-    {
-      kind: "gpt-plugin", group: tr("AUTHORIZE", "授权连接"),
-      title: tr("Confirm the Remote Arc plugin", "确认 Remote Arc 插件"),
-      detail: tr("Complete the Remote Arc OAuth sign-in when prompted. Open the Remote Arc plugin details and check that it is connected. Choose Try in chat to start using it.",
-        "根据提示完成 Remote Arc OAuth 登录。打开 Remote Arc 插件详情确认连接，随后点击 Try in chat 开始使用。"),
-      note: tr("A connected plugin is not the same as an online computer. The target computer must also be paired and running Remote Arc.",
-        "插件连接成功不代表电脑已在线；目标设备还需要先配对并运行 Remote Arc。"),
-    },
-    {
-      kind: "gpt-running", group: tr("TRY IT", "开始使用"),
-      title: tr("Ask ChatGPT to use Remote Arc", "让 ChatGPT 开始使用 Remote Arc"),
-      detail: tr("In a chat, select @Remote Arc and request a read-only action — for example: 'Could you help summarize my Mac information?' ChatGPT will call the tools your device makes available.",
-        "在对话中选择 @Remote Arc，提出一个只读请求，例如“Could you help summarize my Mac information?”，ChatGPT 会调用设备已开放的工具。"),
-      note: tr("The first invocation may need approval. Remote Arc’s own device-side policies still apply.",
-        "首次调用可能需要批准，而且 Remote Arc 本机权限策略仍然生效。"),
-    },
-    {
-      kind: "gpt-result", group: tr("RESULT", "执行结果"),
-      title: tr("Review your Mac's live details", "查看 Mac 的真实执行结果"),
-      detail: tr("ChatGPT returns information gathered through your Mac via Remote Arc, such as hardware details, storage and battery health. The screenshot shows a real completed session.",
-        "ChatGPT 会通过 Remote Arc 读取 Mac 的硬件、存储、电池健康等信息。这张图展示的是实际完成的一次任务。"),
-      note: tr("This is an example session, not your computer's current live status. Only approved read operations were used.",
-        "这里展示的是历史实际操作案例，不代表你当前设备的实时状态；示例仅涉及已授权的读取操作。"),
-    },
-  ];
   const geminiSteps: { kind: StepKind; group: string; title: string; detail: string; note: string }[] = [
     {
       kind: "gemini-url", group: tr("CONNECT", "添加连接"),
@@ -173,12 +134,12 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
       note: tr("A connected app still needs an online, explicitly paired device for real computer access.", "连接器显示成功后，仍需要电脑在线并完成设备配对才能操作真实电脑。"),
     },
   ];
-  const steps = client === "claude" ? claudeSteps : client === "gemini" ? geminiSteps : chatgptSteps;
+  const steps = client === "claude" ? claudeSteps : geminiSteps;
   const count = steps.length;
   const step = steps[selected]!;
-  const src = "/" + (client === "claude" ? "claude-setup/" : client === "gemini" ? "guides/gemini/" : "chatgpt-setup/") + filenames[step.kind];
+  const src = "/" + (client === "claude" ? "claude-setup/" : "guides/gemini/") + filenames[step.kind];
   const move = (next: number) => setSelected(Math.max(0, Math.min(count - 1, next)));
-  const clientName = client === "claude" ? "Claude" : client === "gemini" ? "Gemini" : "ChatGPT";
+  const clientName = client === "claude" ? "Claude" : "Gemini";
 
   return <div className="claudeWalkthrough">
     <div className="claudeGuideIntro">

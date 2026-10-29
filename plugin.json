@@ -16,13 +16,14 @@
       "interface": {
         "displayName": "Remote Arc",
         "shortDescription": "Controlled remote access to your computers.",
-        "longDescription": "Remote Arc connects AI clients to Windows, macOS, and Linux computers you explicitly pair. Inspect files, run approved development commands, use explicitly shared browser tabs, and manage deterministic durable tasks under per-device permissions and local safety boundaries. Continuous autonomous AI reasoning after a chat ends is not currently a production capability.",
+        "longDescription": "Remote Arc connects AI clients to Windows, macOS, and Linux computers you explicitly pair. Inspect files, run approved development commands, use explicitly shared browser tabs, and manage deterministic durable tasks under per-device permissions and local safety boundaries. Continuous autonomous AI reasoning after a chat ends is not currently a production capability. First-time computer setup: run npx remotelink@latest on your own computer (Node.js 20+), approve pairing in the browser, then use the ChatGPT Plugin.",
         "websiteURL": "https://remotearc.app",
         "brandColor": "#38BDF8",
         "logo": "./assets/plugin-logo.svg",
         "composerIcon": "./assets/plugin-logo.svg",
-        "defaultPrompt": "List my Remote Arc devices, then tell me what is online and which remote tools are available."
-      }
+        "defaultPrompt": "Help me set up Remote Arc on my computer. First check whether a device is already paired; if not, give me the install command and pairing steps."
+      },
+      "onboardingSkill": "./skills/setup/SKILL.md"
     }
   }
 }

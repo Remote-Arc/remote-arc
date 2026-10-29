@@ -7,7 +7,7 @@
     "brandColor": "#38BDF8",
     "logo": "../assets/plugin-logo.svg",
     "composerIcon": "../assets/plugin-logo.svg",
-    "defaultPrompt": "List my Remote Arc devices, then tell me what is online and which remote tools are available.",
+    "defaultPrompt": "Help me set up Remote Arc on my computer. First check whether a device is already paired; if not, give me the install command and pairing steps.",
     "developerName": "Remote Arc",
     "category": "Other",
     "capabilities": []

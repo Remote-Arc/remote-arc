@@ -248,6 +248,18 @@ func (h *harness) timed(tool string, args map[string]any) (map[string]any, time.
 func TestE2EActTimings(t *testing.T) {
 	h, snap := paceStart(t, "/apply")
 	sid := snap["snapshot_id"]
+	// On cold Windows CI runners the first action pays for browser/DevTools
+	// initialization. Measure that separately; it must not contaminate the
+	// steady-state five-field performance regression threshold below.
+	_, coldFill := h.timed("browser_runner_act", map[string]any{
+		"session_id": "pace", "snapshot_id": sid,
+		"ref": ref(t, snap, "textbox", "linkedin"),
+		"action": "fill", "value": "https://example.test/profile",
+	})
+	t.Logf("cold first fill (browser warmup): %d ms", coldFill.Milliseconds())
+	if coldFill > 4*time.Second {
+		t.Errorf("cold first fill took %s", coldFill)
+	}
 	act := func(label string, a map[string]any) time.Duration {
 		_, d := h.timed("browser_runner_act", merge(map[string]any{"session_id": "pace", "snapshot_id": sid}, a))
 		t.Logf("%-28s %6d ms", label, d.Milliseconds())

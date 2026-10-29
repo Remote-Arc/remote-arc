@@ -1,0 +1,24 @@
+import { test, expect } from './fixtures';
+
+test('General connection guide prioritizes native downloads and the current AI client', async ({ page }, info) => {
+  const zh = info.project.metadata.language === 'zh';
+  const prefix = zh ? '/zh' : '';
+  await page.goto(prefix + '/connect-ai');
+  const start = page.locator('.connectStartActions');
+  await expect(start.getByRole('link', { name: zh ? '下载 Agent' : 'Download the Agent' })).toHaveAttribute('href', prefix + '/downloads');
+  await expect(start.locator('a').last()).toHaveAttribute('href', 'https://agent.remotearc.app/devices');
+  await expect(page.locator('#connect-client')).toContainText(zh ? '已上架' : 'published Remote Arc plugin');
+  await expect(page.locator('.connectCustomMcp')).not.toHaveAttribute('open');
+  await page.locator('.connectCustomMcp summary').click();
+  await expect(page.locator('.connectCustomMcp code')).toHaveText('https://mcp.remotearc.app/mcp');
+  const computer = page.locator('.connectChoice > div').first();
+  await expect(computer).toContainText(zh ? '无需 Node.js' : 'No Node.js');
+  await expect(computer.locator('.connectNativeDownload')).toHaveAttribute('href', prefix + '/downloads');
+  await expect(computer.locator('.connectNativeDownload img')).toHaveCount(3);
+  await expect(computer.locator('.connectCommandAlternatives')).not.toHaveAttribute('open');
+  await expect(page.locator('#connect-apps')).toContainText(zh ? '无需配对电脑' : 'do not require a paired computer');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
+  await page.screenshot({path: `work/general-setup-${info.project.name}.png`, fullPage: true});
+  await start.locator('a').first().click();
+  await expect(page.locator('.nativeDownloadCard')).toHaveCount(3);
+});

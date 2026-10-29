@@ -92,18 +92,39 @@ const data = (response: any) => JSON.parse(response.result.content[0].text);
 const rejected = (response: any) => Boolean(response.error || response.result?.isError);
 const emptyDevices = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read", env, { ...identity("devices:read"), userId: "newcomer" });
 assert.deepEqual(JSON.parse(emptyDevices.result.content[0].text), []);
-assert(emptyDevices.result.content[1].text.includes("npx remotelink@latest"));
+const assertFirstRunLinks = (text: string) => {
+  const ordered = ["https://remotearc.app/downloads", "https://remotearc.app/connect-ai", "curl -fsSL https://remotearc.app/install.sh | sh", "npx remotelink@latest"];
+  const positions = ordered.map(value => text.indexOf(value));
+  assert(positions.every(position => position >= 0));
+  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Direct download and optional setup information must precede terminal alternatives");
+  assert(text.includes("https://agent.remotearc.app/devices"), "First-time users get the Dashboard link");
+  assert.match(text, /Node.js 20(?:\+| or newer)/);
+};
+assertFirstRunLinks(emptyDevices.result.content[1].text);
+for (const clientId of ["chatgpt-client", "claude-client", "codex-client", "unrecognized-client"]) {
+  const response = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read", env,
+    { ...identity("devices:read"), userId: "newcomer", clientId });
+  const text = response.result.content[1].text;
+  assertFirstRunLinks(text);
+  assert(!text.includes("/install/chatgpt"), "The shared MCP must use a general setup guide");
+  assert(!text.includes("this ChatGPT conversation"));
+  assert(!text.includes("ChatGPT Plugin"));
+}
+
 sql.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools) VALUES(?,'newcomer','Chrome Companion','browser',?, ?,?)").run("browser-only", "test-browser", stamp, "[]");
 const browserOnly = await rpc("tools/call", { name: "list_devices", arguments: {} },
   "devices:read", env, { ...identity("devices:read"), userId: "newcomer" });
 assert.equal(JSON.parse(browserOnly.result.content[0].text).length, 1);
-assert(browserOnly.result.content[1].text.includes("npx remotelink@latest"));
+assertFirstRunLinks(browserOnly.result.content[1].text);
 const linkedDevices = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read");
 assert.equal(linkedDevices.result.content.length, 1);
 assert.equal(JSON.parse(linkedDevices.result.content[0].text).length, 2);
 const setupManifest = JSON.parse(fs.readFileSync(new URL("../../../plugin.json", import.meta.url), "utf8"));
 assert.equal(setupManifest.extensions["com.openai"].onboardingSkill, "./skills/setup/SKILL.md");
-assert(fs.readFileSync(new URL("../../../skills/setup/SKILL.md", import.meta.url), "utf8").includes("npx remotelink@latest"));
+assertFirstRunLinks(fs.readFileSync(new URL("../../../skills/setup/SKILL.md", import.meta.url), "utf8"));
+const listDevicesDefinition = ((await rpc("tools/list", {})).result.tools as any[]).find(tool => tool.name === "list_devices");
+assert(listDevicesDefinition.description.includes("https://remotearc.app/connect-ai"));
+assert(!listDevicesDefinition.description.includes("/install/chatgpt"));
 const listed = (await rpc("tools/list", {})).result.tools as any[];
 const appNames = listed.filter(tool => tool.name === "list_apps" || tool.name === "call_app").map(tool => tool.name).sort();
 assert.deepEqual(appNames, ["call_app", "list_apps"]);

@@ -1968,7 +1968,7 @@
     {
       "name": "list_devices",
       "title": "List Remote Arc devices",
-      "description": "List computers linked to this Remote Arc account and show whether each device is online. If there are no paired computers, tell the user how to set up their first computer: on Windows, macOS, or Linux with Node.js 20+, run npx remotelink@latest in a terminal, approve the pairing in the browser, then call list_devices again. Setup details: https://remotearc.app/install/chatgpt. OAuth connection alone does not pair a computer.",
+      "description": "List computers linked to this Remote Arc account and show whether each device is online. Check existing paired devices before recommending installation. If no computer Agent is paired, recommend the native download at https://remotearc.app/downloads without Node.js. Offer https://remotearc.app/connect-ai for more setup information and https://agent.remotearc.app/devices for the device Dashboard. Terminal installation is an alternative. The account connection does not install or pair the local Agent. Continue in the current AI client after browser pairing; do not assume a specific client.",
       "inputSchema": {
         "type": "object",
         "properties": {}

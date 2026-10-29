@@ -46,6 +46,7 @@ test('Trailing slashes preserve public, documentation and workspace pages',async
   await page.goto(target);
   const heading=page.getByRole('heading',{level:1}).first();
   await expect(heading).toBeVisible();
+  await expect(heading).not.toHaveText(/^(?:Loading|加载中)[.…]*$/);
   const title=await heading.innerText();
   await page.goto(target+'/');
   await expect(page.getByRole('heading',{level:1}).first()).toHaveText(title);

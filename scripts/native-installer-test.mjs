@@ -9,7 +9,8 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 const installer = readFileSync(new URL("../apps/ui/public/install.sh", import.meta.url), "utf8");
-const version = installer.match(/^  version='([^']+)'$/m)[1];
+// Fixture versions deliberately do not depend on the deployed website build.
+const version = '1.2.3';
 const root = mkdtempSync(join(tmpdir(), "remote-arc-installer-test-"));
 try {
   const bin = join(root, "bin"), fixtures = join(root, "fixtures");
@@ -26,6 +27,7 @@ case "$1 $2 $3 $4" in "--proto =https --tlsv1.2 -fsSL") ;; *) exit 51;; esac
 url=$5
 [ "$6" = -o ] || exit 52
 case "$url" in
+  https://github.com/Remote-Arc/remote-arc/releases/latest/download/go-binaries.json) [ "$TEST_MANIFEST_FAIL" != 1 ] || exit 56; cp "$TEST_FIXTURES/latest.json" "$7" ;;
   https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v$TEST_VERSION/SHA256SUMS) cp "$TEST_FIXTURES/SHA256SUMS" "$7" ;;
   https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v$TEST_VERSION/remotelink-v$TEST_VERSION-*) cp "$TEST_FIXTURES/agent" "$7" ;;
   *) exit 53 ;;
@@ -35,9 +37,10 @@ esac
   const hash = createHash("sha256").update(native).digest("hex");
   writeFileSync(join(fixtures, "agent"), native);
   let count = 0;
-  function run({ os = "Linux", arch = "x86_64", checksum, dir, script = installer, env = {} } = {}) {
+  function run({ os = "Linux", arch = "x86_64", checksum, dir, script = installer, env = {}, latestVersion = version, manifest } = {}) {
     count++;
-    const selectedVersion = env.REMOTEARC_INSTALL_VERSION || version;
+    const selectedVersion = env.REMOTEARC_INSTALL_VERSION || latestVersion;
+    writeFileSync(join(fixtures, 'latest.json'), manifest ?? JSON.stringify({ version: latestVersion }, null, 2));
     const selectedNative = native.replace('echo ' + version, 'echo ' + selectedVersion);
     writeFileSync(join(fixtures, 'agent'), selectedNative);
     const selectedHash = createHash('sha256').update(selectedNative).digest('hex');
@@ -76,6 +79,21 @@ esac
   const pinnedDir = join(root, 'pinned-stable');
   assert.equal(run({ dir: pinnedDir, env: { REMOTEARC_INSTALL_VERSION: '0.0.1' } }).status, 0);
   assert.match(readFileSync(join(pinnedDir, 'remotelink'), 'utf8'), /echo 0\.0\.1/);
+  const freshDir = join(root, 'new-stable-without-web-redeploy');
+  assert.equal(run({ dir: freshDir, latestVersion: '1.2.4' }).status, 0);
+  assert.match(readFileSync(join(freshDir, 'remotelink'), 'utf8'), /echo 1\.2\.4/);
+  const pinnedWithoutChannel = join(root, 'explicit-version-offline-channel');
+  assert.equal(run({ dir: pinnedWithoutChannel, env: { REMOTEARC_INSTALL_VERSION: '0.0.1', TEST_MANIFEST_FAIL: '1' } }).status, 0);
+  for (const extra of [
+    { env: { TEST_MANIFEST_FAIL: '1' } },
+    { manifest: '{}' },
+    { manifest: '{"version":"1.2.4-rc.1"}' },
+    { manifest: '{"version":"../other"}' },
+  ]) {
+    const result = run({ dir: installed, ...extra });
+    assert.notEqual(result.status, 0, 'An unavailable or invalid stable channel must not fall back to an old version');
+    assert.equal(readFileSync(target, 'utf8'), 'previous version');
+  }
   for (const selected of ['0.6.2-rc.7', 'latest', '1.2', '01.2.3', '1.2.3.4', '1.2.3/other']) {
     assert.notEqual(run({ dir: installed, env: { REMOTEARC_INSTALL_VERSION: selected } }).status, 0);
     assert.equal(readFileSync(target, 'utf8'), 'previous version');

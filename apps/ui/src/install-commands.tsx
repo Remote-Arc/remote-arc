@@ -1,14 +1,15 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
+import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./install-commands.css";
 
 const methods = [
-  { id: "npx", label: "npx", command: "npx remotelink" },
-  { id: "curl", label: "curl", command: "curl -fsSL https://remotearc.app/install.sh | sh\nremotelink" },
+  { id: "npx", label: "npx", command: "npx remotelink@latest" },
+  { id: "curl", label: "curl", command: 'curl -fsSL https://remotearc.app/install.sh | sh' },
 ] as const;
 
 export function InstallCommands() {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const id = useId();
   const [selected, setSelected] = useState(0);
   const [copyResult, setCopyResult] = useState<{ command: string; ok: boolean } | null>(null);
@@ -51,16 +52,22 @@ export function InstallCommands() {
     : tr("No Node.js · macOS, Linux & WSL", "无需 Node.js · macOS、Linux、WSL");
 
   return <section className="installCommands" aria-label={tr("Install Remote Arc", "安装 Remote Arc")}>
-    <div className="installCommandsCard">
-      <div className="installCommandsTabs" role="tablist" aria-label={tr("Installation method", "安装方式")}>
-        {methods.map((item, index) => <button key={item.id} type="button" role="tab"
-          ref={node => { tabs.current[index] = node; }}
-          id={id + "-" + item.id} aria-controls={id + "-panel"}
-          aria-selected={selected === index} tabIndex={selected === index ? 0 : -1}
-          onClick={() => select(index)} onKeyDown={navigate}>
-          {item.label}<span className="installCommandsRecommended">{index === 0 ? tr("Recommended", "推荐") : tr("No Node.js", "无需 Node.js")}</span>
-        </button>)}
+    <div className="installCommandsHeader">
+      <span className="installCommandsLabel">{tr("Install on your computer", "在你的电脑上安装")}</span>
+      <div className="installCommandsMethods">
+        <div className="installCommandsTabs" role="tablist" aria-label={tr("Installation method", "安装方式")}>
+          {methods.map((item, index) => <button key={item.id} type="button" role="tab"
+            ref={node => { tabs.current[index] = node; }}
+            id={id + "-" + item.id} aria-controls={id + "-panel"}
+            aria-selected={selected === index} tabIndex={selected === index ? 0 : -1}
+            onClick={() => select(index)} onKeyDown={navigate}>
+            {item.label}
+          </button>)}
+        </div>
+        <a className="installCommandsDownload" href={localizedWebsiteHref("/downloads", locale)}>{tr("Download", "直接下载")}</a>
       </div>
+    </div>
+    <div className="installCommandsCard">
       <div className="installCommandsPanel" role="tabpanel" id={id + "-panel"}
         aria-labelledby={id + "-" + method.id} tabIndex={0}>
         <div className="installCommandsCode">
@@ -77,5 +84,6 @@ export function InstallCommands() {
     <p className="installCommandsRequirements" role="status" aria-live="polite">
       {feedback ? feedback.ok ? tr("Commands copied.", "命令已复制。") : tr("Clipboard blocked. Select and copy the command.", "剪贴板不可用，请选中命令手动复制。") : requirements}
     </p>
+    {method.id === "curl" && <p className="installCommandsNext">{tr("Then run the startup command shown in Terminal to pair your computer.", "安装完成后，运行终端提示的启动命令，配对你的电脑。")}</p>}
   </section>;
 }

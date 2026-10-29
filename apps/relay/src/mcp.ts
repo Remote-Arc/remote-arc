@@ -360,7 +360,7 @@ export function createRemoteLinkMcp(
       {
         title: "List Remote Arc devices",
         description:
-          "List computers linked to this Remote Arc account and show whether each device is online. If there are no paired computers, tell the user how to set up their first computer: on Windows, macOS, or Linux with Node.js 20+, run npx remotelink@latest in a terminal, approve the pairing in the browser, then call list_devices again. Setup details: https://remotearc.app/install/chatgpt. OAuth connection alone does not pair a computer.",
+          "List computers linked to this Remote Arc account and show whether each device is online. Check existing paired devices before recommending installation. If no computer Agent is paired, recommend the native download at https://remotearc.app/downloads without Node.js. Offer https://remotearc.app/connect-ai for more setup information and https://agent.remotearc.app/devices for the device Dashboard. Terminal installation is an alternative. The account connection does not install or pair the local Agent. Continue in the current AI client after browser pairing; do not assume a specific client.",
         annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("devices:read"),
       },
@@ -374,11 +374,11 @@ export function createRemoteLinkMcp(
         if (devices.some((device) => device.platform !== "browser")) return textResult(devices);
         // Keep the first content item as the legacy JSON array to avoid
         // breaking clients. An additional text item gives a first-time user
-        // the next step directly in ChatGPT, without requiring a website visit.
+        // the next step in the current AI client, without requiring a website visit.
         return {
           content: [
             { type: "text" as const, text: JSON.stringify(devices) },
-            { type: "text" as const, text: "No Windows, macOS, or Linux computer Agent is paired with this Remote Arc account yet. A Chrome Companion extension, if shown in the device list, does not replace the computer Agent. On the Windows, macOS, or Linux computer you want to control, open a terminal and run: npx remotelink@latest (requires Node.js 20+). The Agent will open a browser; sign in to this same Remote Arc account, compare the pairing code and approve the computer and its permissions. Then return to this ChatGPT conversation and check devices again. Without Node.js, see native installation options at https://remotearc.app/docs/connect. Setup guide: https://remotearc.app/install/chatgpt. Connecting the Plugin via OAuth does NOT install or start the Agent on the computer. Do not run the command in ChatGPT's cloud shell or on a different computer." },
+            { type: "text" as const, text: "No Windows, macOS, or Linux computer Agent is paired with this Remote Arc account yet. A Chrome Companion browser entry does not replace the computer Agent. The next step is to download and run the Agent on the computer the user wants to connect. Lead with this direct download-page link: https://remotearc.app/downloads (Windows, macOS and Linux; no Node.js required). Keep the first reply brief: download, run the Agent, then approve its browser pairing using the same Remote Arc account connected to the current AI client. Offer https://remotearc.app/connect-ai as more setup information, and Dashboard https://agent.remotearc.app/devices to see paired computers, online status and permissions. Only expand terminal alternatives when useful or requested: on macOS/Linux without Node.js, run curl -fsSL https://remotearc.app/install.sh | sh and then the startup command shown by the installer; in WSL this installs the WSL Agent. For users who already have Node.js 20+, npx remotelink@latest is another option on Windows, macOS or Linux. Do not make installing Node.js the default step. After browser pairing, return to this conversation and call list_devices again to verify the computer is online. Connecting an AI client via OAuth does not install or start the Agent. The user runs the Agent on their own computer; do not install it in a cloud shell or claim it is already installed. Use the current AI client and the user's language; do not assume a particular client." },
           ],
         };
       },

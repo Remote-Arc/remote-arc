@@ -17,6 +17,12 @@ test('General connection guide prioritizes native downloads and the current AI c
   await expect(computer.locator('.connectNativeDownload img')).toHaveCount(3);
   await expect(computer.locator('.connectCommandAlternatives')).not.toHaveAttribute('open');
   await expect(page.locator('#connect-apps')).toContainText(zh ? '无需配对电脑' : 'do not require a paired computer');
+  const presets = page.locator('.connectPolicyTable > div');
+  await expect(presets).toHaveCount(3);
+  await expect(presets.nth(0)).toContainText('Safe');
+  await expect(presets.nth(1)).toContainText('Developer');
+  await expect(presets.nth(2)).toContainText('Full');
+  await expect(page.locator('#connect-policy')).not.toContainText('browser_runner');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
   await page.screenshot({path: `work/general-setup-${info.project.name}.png`, fullPage: true});
   await start.locator('a').first().click();

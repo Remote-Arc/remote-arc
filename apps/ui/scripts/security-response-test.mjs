@@ -13,7 +13,8 @@ const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "u
   .replaceAll("'./arc-input-preview.js'", JSON.stringify(new URL("../src/arc-input-preview.ts", import.meta.url).href))
   .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/billing-preview.ts", import.meta.url).href))
   .replaceAll("'./onboarding-preview.js'", JSON.stringify(new URL("../src/onboarding-preview.ts", import.meta.url).href))
-  .replaceAll("'./followup-preview.js'", JSON.stringify(new URL("../src/followup-preview.ts", import.meta.url).href));
+  .replaceAll("'./followup-preview.js'", JSON.stringify(new URL("../src/followup-preview.ts", import.meta.url).href))
+  .replaceAll("'./admin/activation-preview.js'", JSON.stringify(new URL("../src/admin/activation-preview.ts", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;

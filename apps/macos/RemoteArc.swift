@@ -55,7 +55,7 @@ final class RemoteArcApp: NSObject, NSApplicationDelegate {
             return
         }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "point.3.connected.trianglepath.dotted", accessibilityDescription: "Remote Arc")
+        statusItem.button?.image = NSImage(systemSymbolName: "network", accessibilityDescription: "Remote Arc")
         let menu = NSMenu()
         let version = Bundle.main.object(forInfoDictionaryKey: "RemoteArcAgentVersion") as? String ?? "dev"
         menu.addItem(withTitle: "Remote Arc \(version)", action: nil, keyEquivalent: "")

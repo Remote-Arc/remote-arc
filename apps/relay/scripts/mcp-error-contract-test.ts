@@ -237,9 +237,9 @@ const appsTools = appsJson.result.tools as Array<{
   name: string; securitySchemes?: Array<{ scopes: string[] }>;
 }>;
 const callApp = appsTools.find(tool => tool.name === "call_app");
-assert.equal(callApp, undefined);
-assert.deepEqual(appsTools.find(tool => tool.name === "github_issues_create")?.securitySchemes?.[0]?.scopes, ["apps:read", "apps:write"]);
-assert.deepEqual(appsTools.find(tool => tool.name === "gmail_messages_get")?.securitySchemes?.[0]?.scopes, ["apps:read"]);
+assert(callApp, "The reviewed two-tool Apps router exposes call_app");
+assert.deepEqual(callApp.securitySchemes?.[0]?.scopes, ["apps:read", "apps:write"]);
+assert(!appsTools.some(tool => ["github_issues_create", "gmail_messages_get"].includes(tool.name)));
 const listApps = appsTools.find(tool => tool.name === "list_apps");
 assert.deepEqual(listApps?.securitySchemes?.[0]?.scopes, ["apps:read"]);
 

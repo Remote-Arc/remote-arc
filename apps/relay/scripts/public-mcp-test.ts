@@ -116,6 +116,10 @@ assert(slides.operations.some((o: any) => o.provider === "google_slides" && o.in
 const slack = data(await invoke("list_apps", { use_case: "send slack message", limit: 10, includeSchemas: true }));
 assert(slack.operations.some((o: any) => o.provider === "slack" && o.inputSchema),
   "Slack actions must be searchable without thousands of top-level MCP tools");
+const slidesZh = data(await invoke("list_apps", { use_case: "创建 Google Slides 演示文稿", limit: 10 }));
+assert(slidesZh.operations.some((o: any) => o.provider === "google_slides"), "Chinese Slides requests must find operations");
+const slackZh = data(await invoke("list_apps", { use_case: "给 Slack 发消息", limit: 10 }));
+assert(slackZh.operations.some((o: any) => o.provider === "slack"), "Chinese Slack requests must find operations");
 const gh = data(await invoke("list_apps", { provider: "github", use_case: "create issue", includeSchemas: true }));
 assert(gh.operations.some((o: any) => o.operation === "issues.create" && o.inputSchema),
   "Search must return the exact operation name and schema");

@@ -2,7 +2,7 @@ import {readCommunityResource} from './arc-community-skills.js';
 import {BUILTIN_SKILL_RESOURCES} from '../../../packages/skills/src/media-resources.generated.js';
 import { getGoalContext, submitGoalDecision } from "./source-goals.js";
 import { appCallSchema, callApp } from "./apps.js";
-import { appDiscoverySchema, discoverApps } from "./app-discovery.js";
+import { appDiscoverySchema, discoverMcpAppTools } from "./mcp-app-search.js";
 import { callPublicBrowserDevice } from "./public-browser.js";
 import { APP_OPERATIONS, AppError, type AppEnv } from "./app-catalog.js";
 import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";
@@ -251,7 +251,7 @@ export function createRemoteLinkMcp(
         _meta: oauthToolMeta("apps:read"),
       }, async (input) => {
         if (!identity || !hasScope(identity, "apps:read")) return authRequired(env, "apps:read", identity);
-        return textResult(await discoverApps(env, identity.userId, input));
+        return textResult(await discoverMcpAppTools(env, identity.userId, input));
       });
 
       // Operation IDs are a static whitelist sourced from the reviewed code,

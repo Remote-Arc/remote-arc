@@ -1918,14 +1918,6 @@
             "type": "string",
             "maxLength": 100
           },
-          "use_case": {
-            "type": "string",
-            "maxLength": 300
-          },
-          "includeSchemas": {
-            "default": false,
-            "type": "boolean"
-          },
           "limit": {
             "default": 12,
             "type": "integer",
@@ -1937,6 +1929,14 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 10000
+          },
+          "use_case": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "includeSchemas": {
+            "default": false,
+            "type": "boolean"
           }
         },
         "additionalProperties": false

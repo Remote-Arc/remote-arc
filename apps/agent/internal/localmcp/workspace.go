@@ -90,6 +90,9 @@ func RunWorkspace(ctx context.Context, core *execution.Core, version, workspace 
 
 func RunWorkspaceWithIdentity(ctx context.Context, core *execution.Core, version, workspace, expectedIdentity string) error {
 	defer core.Close()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	s, err := workspaceServer(core, version, workspace, expectedIdentity)
 	if err != nil {
 		return err

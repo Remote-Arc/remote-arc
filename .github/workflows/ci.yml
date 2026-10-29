@@ -137,18 +137,14 @@ jobs:
             packages/execution-core/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:device --release
-      # A release candidate on master is still a candidate: published stable
-      # Homebrew checksums MUST remain unchanged until an explicit release.
-      # Stable versions on either PRs or master must match committed Formula.
-      - name: Verify candidate artifacts or stable committed formulas
-        shell: bash
+      # Every CI rebuild is unpublished, even while package.json retains the
+      # stable version. Verify its checksums independently of released binaries.
+      # The publish workflow still requires exact committed/generated equality.
+      - name: Verify source artifacts and preserve published Homebrew formulas
         run: |
-          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
-          if [[ "$CLI_VERSION" == *-* ]]; then
-            node scripts/verify-device-artifacts.mjs --candidate
-          else
-            node scripts/verify-device-artifacts.mjs
-          fi
+          node scripts/verify-device-artifacts.mjs --candidate
+          node scripts/verify-published-formulas-test.mjs
+          node scripts/verify-published-formulas.mjs
       - uses: actions/upload-artifact@v7
         with:
           name: go-device-binaries

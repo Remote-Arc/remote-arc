@@ -236,9 +236,11 @@ const appsJson = JSON.parse(appsText.trim().startsWith("{")
 const appsTools = appsJson.result.tools as Array<{
   name: string; securitySchemes?: Array<{ scopes: string[] }>;
 }>;
-const callApp = appsTools.find(tool => tool.name === "call_app");
-assert(callApp, "The reviewed two-tool Apps router exposes call_app");
-assert.deepEqual(callApp.securitySchemes?.[0]?.scopes, ["apps:read", "apps:write"]);
+assert(!appsTools.some(tool => tool.name === "call_app"), "The generic call_app executor is no longer published");
+const readAction = appsTools.find(tool => tool.name === "run_app_read_action");
+assert.deepEqual(readAction?.securitySchemes?.[0]?.scopes, ["apps:read"]);
+const writeAction = appsTools.find(tool => tool.name === "run_app_write_action");
+assert.deepEqual(writeAction?.securitySchemes?.[0]?.scopes, ["apps:read", "apps:write"]);
 assert(!appsTools.some(tool => ["github_issues_create", "gmail_messages_get"].includes(tool.name)));
 const listApps = appsTools.find(tool => tool.name === "list_apps");
 assert.deepEqual(listApps?.securitySchemes?.[0]?.scopes, ["apps:read"]);

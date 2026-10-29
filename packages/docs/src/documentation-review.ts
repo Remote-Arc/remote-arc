@@ -111,8 +111,8 @@ const slack: DocTopic = {
         "Bot 对话与 Slack 应用连接",
       ),
       text: copy(
-        "The bot is an entry point for talking to your hosted Arc agent. The Slack App connection separately authorizes supported operations such as searching messages or posting through call_app. Installing a bot does not connect every employee's personal apps or computers. Cloud App work needs no paired computer; local files or commands still require an online device with the relevant permissions.",
-        "Bot 是与托管 Arc 对话的入口；Slack 应用连接则单独授权搜索消息、通过 call_app 发送内容等支持的操作。安装 Bot 不会把所有员工的个人应用或电脑自动接入。云端应用工作无需配对电脑；操作本地文件或命令仍需在线且已授权的设备。",
+        "The bot is an entry point for talking to your hosted Arc agent. The Slack App connection separately authorizes supported operations such as searching or posting messages. Installing a bot does not connect every employee's personal apps or computers. Cloud App work needs no paired computer; local files or commands still require an online device with the relevant permissions.",
+        "Bot 是与托管 Arc 对话的入口；Slack 应用连接则单独授权搜索消息、发送消息等支持的操作。安装 Bot 不会把所有员工的个人应用或电脑自动接入。云端应用工作无需配对电脑；操作本地文件或命令仍需在线且已授权的设备。",
       ),
     },
     {

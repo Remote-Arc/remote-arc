@@ -17,7 +17,7 @@ Pin a supported Meta Graph API version using `APP_META_GRAPH_VERSION`. Google Ad
 
 ## Operations and authorization
 
-Browse `list_apps` by category, query and cursor. Broad results omit operation schemas; selecting one provider loads its schemas. `call_app` uses a user-owned connection and stable request ID. Expanding the catalog does not add hundreds of tools to every AI turn.
+Browse `list_apps` by category, query and cursor to find connection IDs and action IDs. `run_app_read_action` and `run_app_write_action` each list their operations (reads and writes respectively) as typed `{action, arguments}` variants in the input schema and use a user-owned connection and stable request ID. Expanding the catalog grows those two schemas rather than adding a tool per operation; keep new operations' schemas compact.
 
 The catalog contains 344 unique operations. Each of the 37 Apps has at least eight operations, including at least three writes. YouTube now manages playlists and playlist items; Search Console manages sitemaps and account properties; GA4 manages custom dimensions; Google Ads can pause existing ads or create labels. Social writes include posting, editing and selected deletion/comment workflows. Runway supports balance, task status, Gen-4.5 text-to-video, Gen-4 image generation and Gen-4 Turbo image-to-video. New productivity Apps cover Google Slides, OneDrive, Excel, Teams, To Do, Dropbox, Asana and Airtable. See the generated [per-App write inventory](apps-tool-coverage.md). Supabase arbitrary SQL is always classified as a write, including SELECT, since SQL can have side effects.
 

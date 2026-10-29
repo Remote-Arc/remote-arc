@@ -186,9 +186,12 @@ async function updateConnection(request: Request, env: AppEnv, userId: string, i
 export const appCallSchema = z.object({ connectionId: z.string().uuid(), operation: z.string().min(1).max(80), arguments: z.record(z.string(), z.unknown()), requestId: z.string().regex(/^[\w-]{8,100}$/) }).strict();
 export type AppCallInput = z.infer<typeof appCallSchema>;
 const stableJson = (value: unknown): string => value === null || typeof value !== "object" ? JSON.stringify(value) : Array.isArray(value) ? "[" + value.map(stableJson).join(",") + "]" : "{" + Object.keys(value).sort().map(k => JSON.stringify(k) + ":" + stableJson((value as Record<string, unknown>)[k])).join(",") + "}";
-export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId" | "scope">, raw: unknown, fetcher: typeof fetch = fetch) {
+export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId" | "scope">, raw: unknown, fetcher: typeof fetch = fetch, expectedProvider?: AppProvider) {
   enabled(env); const input = appCallSchema.parse(raw);
-  const row = await connection(env, identity.userId, input.connectionId); const operation = appOperation(row.provider, input.operation);
+  const row = await connection(env, identity.userId, input.connectionId);
+  // Typed MCP action IDs name their provider; never run one on another provider's account.
+  if (expectedProvider && row.provider !== expectedProvider) throw new AppError("app_connection_provider_mismatch");
+  const operation = appOperation(row.provider, input.operation);
   const required = operation.permission === "write" ? "apps:write" : "apps:read";
   if (!identity.scope.split(/\s+/).includes(required)) throw new AppError("app_mcp_scope_required", 403);
   if (await isMcpPaused(env, identity.userId)) throw new AppError("mcp_paused", 403);

@@ -87,12 +87,26 @@ const metadata = (name: string) => {
   if (!copy) throw Error("Add bilingual documentation for tool " + name);
   return { group: toolGroup(name), summary: copy.summary, zh: copy.zh };
 };
+// The App action tools publish one schema variant per catalog operation. The
+// catalog below already documents each operation, so don't embed them twice.
+const documentedSchema = (schema: any) => {
+  const variants = schema?.properties?.operation?.oneOf ?? schema?.properties?.operation?.anyOf;
+  if (!Array.isArray(variants)) return schema;
+  const { oneOf, anyOf, ...operation } = schema.properties.operation;
+  return {
+    ...schema,
+    properties: {
+      ...schema.properties,
+      operation: { ...operation, type: "object", "x-remotearc-app-actions": variants.length },
+    },
+  };
+};
 const remote = payload.result.tools
   .map((tool: any) => ({
     name: tool.name,
     title: tool.title,
     description: tool.description,
-    inputSchema: tool.inputSchema,
+    inputSchema: documentedSchema(tool.inputSchema),
     scopes: [
       ...new Set(
         (tool.securitySchemes || tool._meta?.securitySchemes || []).flatMap(

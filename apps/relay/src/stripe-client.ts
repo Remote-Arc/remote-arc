@@ -9,7 +9,7 @@ export function stripeLive(env:StripeEnv){
  return /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY!);
 }
 export function stripeConfigured(env:StripeEnv){try{return billingEnabled(env)&&Boolean(env.STRIPE_WEBHOOK_SECRET)&&(stripeLive(env)||env.ARC_BILLING_ALLOW_TEST_MODE==='1');}catch{return false;}}
-export async function stripeRequest(env:StripeEnv,path:string,method:'GET'|'POST'='GET',params?:URLSearchParams,idempotencyKey?:string){
+export async function stripeRequest(env:StripeEnv,path:string,method:'GET'|'POST'|'DELETE'='GET',params?:URLSearchParams,idempotencyKey?:string){
  stripeLive(env);
  if(!/^\/v1\/[a-z_]+(?:[/?][\w\[\]%=&+.,:-]*)*$/.test(path))throw new StripeError('BILLING_INVALID_API_PATH');
  let response:Response;

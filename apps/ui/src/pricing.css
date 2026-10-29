@@ -62,9 +62,25 @@
 @media(max-width:700px){.pricingContent{padding-top:49px}.pricingIntro{margin-bottom:30px}.pricingContent .pricingIntro h1{font-size:40px;line-height:1.12}.pricingIntro>p{font-size:17px}.pricingPlans{gap:19px}.planCard{padding:27px 24px}.hostedPrice>strong{font-size:58px}.plusPrice>strong{font-size:28px}.pricingCompare{padding-top:54px}.pricingContent section>header h2{font-size:31px}.planMatrix th,.planMatrix td{padding:15px 16px}.pricingMetering{padding:52px 0}.pricingTasks{padding:26px}.pricingTasks h2{font-size:27px}.pricingQuestions{grid-template-columns:1fr;gap:12px;padding-top:52px}.pricingQuestions summary{font-size:17px}.pricingFooter{gap:15px}}
 @media(prefers-reduced-motion:reduce){.pricingContent *{transition:none!important;animation:none!important}}
 /* Shared launch catalog; the prelaunch Connect presentation remains available. */
-/* Free, Connect Unlimited, Plus, Pro and Enterprise: three readable columns. */
-.pricingPlans.pricingPlans--saas{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+/* Free, Connect Unlimited, Plus and Pro share one row; Enterprise is a slim bar below. */
+.pricingPlans.pricingPlans--saas{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.pricingEnterprise{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:16px;padding:20px 24px;border:1px solid var(--line);border-radius:18px}
+.pricingEnterprise>div{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 18px;min-width:0}
+.pricingEnterprise strong{font-size:20px;letter-spacing:-.015em}
+.pricingEnterprise p{margin:0;color:var(--pricing-muted);font-size:15px;line-height:1.6}
+.pricingEnterprise>.ghostButton{flex:none;min-height:46px;display:inline-flex;align-items:center;padding:10px 20px;border-radius:9px}
+@media(max-width:620px){.pricingEnterprise{flex-direction:column;align-items:flex-start}}
 .pricingPlans--saas .planCard{display:flex;flex-direction:column;padding:24px}
+/* Badges never break mid-word; on narrower cards they move below the plan name. */
+.pricingPlans--saas .planHeader{flex-wrap:wrap;row-gap:8px;min-height:30px}
+.pricingPlans--saas .plusBadge{white-space:nowrap}
+/* Four laptop-width columns: reserve two header lines so every price aligns. */
+@media(min-width:1101px) and (max-width:1499px){.pricingPlans--saas .planHeader{min-height:64px;align-content:flex-start}}
+/* Keep "/ month" beside the price on four-column laptop widths. */
+.pricingPlans--saas .hostedPrice>strong{font-size:clamp(48px,3.6vw,64px)}
+.pricingPlans--saas .hostedPrice>span{white-space:nowrap}
+/* Large displays: plans use up to 1600px instead of the 1280px text column. */
+@media(min-width:1500px){.pricingPlans.pricingPlans--saas,.pricingEnterprise{--pricing-wide:min(1600px,calc(100vw - 160px));width:var(--pricing-wide);margin-inline:calc((100% - var(--pricing-wide))/2)}}
 .pricingPlans--saas .planCard>a{margin-top:auto}
 @media(max-width:1100px){.pricingPlans.pricingPlans--saas{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.pricingPlans.pricingPlans--saas{grid-template-columns:1fr}}

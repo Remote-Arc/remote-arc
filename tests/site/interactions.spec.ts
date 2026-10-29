@@ -155,7 +155,8 @@ test('Connect Unlimited checkout is Connect-only, without monthly Credits or pro
 test('Pricing separates Connect Unlimited from Arc plans',async({page},testInfo)=>{
  await page.goto((testInfo.project.metadata.language==='zh'?'/zh':'')+'/pricing');
  const card=page.locator('.planCard').filter({hasText:'CONNECT ONLY'});
- await expect(page.locator('.pricingPlans--saas .planCard')).toHaveCount(5);
+ await expect(page.locator('.pricingPlans--saas .planCard')).toHaveCount(4);
+ await expect(page.locator('.pricingEnterprise').getByRole('link')).toHaveAttribute('href',/topic=enterprise/);
  await expect(card.locator('.hostedPrice strong')).toHaveText('US$19');
  await expect(card).toContainText(/Unlimited registered computers|不限已注册电脑数量/);
  await expect(card.getByRole('link')).toHaveAttribute('href',/product=connect-unlimited-v1/);

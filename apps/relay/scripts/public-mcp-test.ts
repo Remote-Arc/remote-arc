@@ -25,7 +25,7 @@ const db = {
   },
 } as unknown as D1Database;
 const stamp = new Date().toISOString();
-for (const id of ["owner", "other"]) {
+for (const id of ["owner", "other", "newcomer"]) {
   sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'admin',?)")
     .run(id, id, id + "@example.test", stamp);
 }
@@ -34,6 +34,8 @@ const env = {
   DB: db, PUBLIC_ORIGIN: "https://mcp.remotearc.app", ENABLE_APPS: "1", ENABLE_BROWSER_RUNNER: "1",
   ENABLE_EXPERIMENTAL_AGENT_GOALS: "0", APP_TOKEN_KEY: Buffer.alloc(32, 7).toString("base64"),
   REGISTRY: { getByName: () => ({ fetch: async (request: Request) => {
+    if (request.method === "GET" && new URL(request.url).pathname === "/devices")
+      return Response.json([]);
     const call = await request.json() as any;
     dispatches.push(call);
     if (call.arguments.ref === "e2" || call.arguments.fields?.some((field: any) => field.ref === "e2")) {
@@ -76,8 +78,8 @@ for (const [id, platform, tools] of [
 const identity = (scope = "apps:read apps:write browser:read browser:interact") => ({
   userId: "owner", clientId: "public-test", grantId: null, resource: env.PUBLIC_ORIGIN + "/mcp", scope,
 });
-async function rpc(method: string, params: unknown, scope?: string, options = env) {
-  const response = await createRemoteLinkMcp(options, identity(scope)).fetch(new Request(env.PUBLIC_ORIGIN + "/mcp", {
+async function rpc(method: string, params: unknown, scope?: string, options = env, currentIdentity = identity(scope)) {
+  const response = await createRemoteLinkMcp(options, currentIdentity).fetch(new Request(env.PUBLIC_ORIGIN + "/mcp", {
     method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   }));
@@ -88,6 +90,20 @@ async function rpc(method: string, params: unknown, scope?: string, options = en
 const invoke = (name: string, args: unknown, scope?: string) => rpc("tools/call", { name, arguments: args }, scope);
 const data = (response: any) => JSON.parse(response.result.content[0].text);
 const rejected = (response: any) => Boolean(response.error || response.result?.isError);
+const emptyDevices = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read", env, { ...identity("devices:read"), userId: "newcomer" });
+assert.deepEqual(JSON.parse(emptyDevices.result.content[0].text), []);
+assert(emptyDevices.result.content[1].text.includes("npx remotelink@latest"));
+sql.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools) VALUES(?,'newcomer','Chrome Companion','browser',?, ?,?)").run("browser-only", "test-browser", stamp, "[]");
+const browserOnly = await rpc("tools/call", { name: "list_devices", arguments: {} },
+  "devices:read", env, { ...identity("devices:read"), userId: "newcomer" });
+assert.equal(JSON.parse(browserOnly.result.content[0].text).length, 1);
+assert(browserOnly.result.content[1].text.includes("npx remotelink@latest"));
+const linkedDevices = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read");
+assert.equal(linkedDevices.result.content.length, 1);
+assert.equal(JSON.parse(linkedDevices.result.content[0].text).length, 2);
+const setupManifest = JSON.parse(fs.readFileSync(new URL("../../../plugin.json", import.meta.url), "utf8"));
+assert.equal(setupManifest.extensions["com.openai"].onboardingSkill, "./skills/setup/SKILL.md");
+assert(fs.readFileSync(new URL("../../../skills/setup/SKILL.md", import.meta.url), "utf8").includes("npx remotelink@latest"));
 const listed = (await rpc("tools/list", {})).result.tools as any[];
 const appNames = listed.filter(tool => tool.name === "list_apps" || tool.name === "call_app").map(tool => tool.name).sort();
 assert.deepEqual(appNames, ["call_app", "list_apps"]);

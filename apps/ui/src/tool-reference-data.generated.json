@@ -1968,7 +1968,7 @@
     {
       "name": "list_devices",
       "title": "List Remote Arc devices",
-      "description": "List computers linked to this Remote Arc account and show whether each device is online.",
+      "description": "List computers linked to this Remote Arc account and show whether each device is online. If there are no paired computers, tell the user how to set up their first computer: on Windows, macOS, or Linux with Node.js 20+, run npx remotelink@latest in a terminal, approve the pairing in the browser, then call list_devices again. Setup details: https://remotearc.app/install/chatgpt. OAuth connection alone does not pair a computer.",
       "inputSchema": {
         "type": "object",
         "properties": {}

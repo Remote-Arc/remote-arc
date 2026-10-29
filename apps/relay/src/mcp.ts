@@ -360,7 +360,7 @@ export function createRemoteLinkMcp(
       {
         title: "List Remote Arc devices",
         description:
-          "List computers linked to this Remote Arc account and show whether each device is online.",
+          "List computers linked to this Remote Arc account and show whether each device is online. If there are no paired computers, tell the user how to set up their first computer: on Windows, macOS, or Linux with Node.js 20+, run npx remotelink@latest in a terminal, approve the pairing in the browser, then call list_devices again. Setup details: https://remotearc.app/install/chatgpt. OAuth connection alone does not pair a computer.",
         annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("devices:read"),
       },
@@ -370,7 +370,17 @@ export function createRemoteLinkMcp(
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
-        return textResult(await getDevicesForUser(env, identity.userId));
+        const devices = await getDevicesForUser(env, identity.userId);
+        if (devices.some((device) => device.platform !== "browser")) return textResult(devices);
+        // Keep the first content item as the legacy JSON array to avoid
+        // breaking clients. An additional text item gives a first-time user
+        // the next step directly in ChatGPT, without requiring a website visit.
+        return {
+          content: [
+            { type: "text" as const, text: JSON.stringify(devices) },
+            { type: "text" as const, text: "No Windows, macOS, or Linux computer Agent is paired with this Remote Arc account yet. A Chrome Companion extension, if shown in the device list, does not replace the computer Agent. On the Windows, macOS, or Linux computer you want to control, open a terminal and run: npx remotelink@latest (requires Node.js 20+). The Agent will open a browser; sign in to this same Remote Arc account, compare the pairing code and approve the computer and its permissions. Then return to this ChatGPT conversation and check devices again. Without Node.js, see native installation options at https://remotearc.app/docs/connect. Setup guide: https://remotearc.app/install/chatgpt. Connecting the Plugin via OAuth does NOT install or start the Agent on the computer. Do not run the command in ChatGPT's cloud shell or on a different computer." },
+          ],
+        };
       },
     );
 

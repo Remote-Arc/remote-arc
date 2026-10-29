@@ -20,7 +20,7 @@ Use the current client context. Do not assume ChatGPT: users may be in Claude, C
 
 Keep the first reply short and use the user's language. When they need to install the Agent, give the download link directly rather than requiring a documentation visit first.
 
-1. **Download the Agent:** https://remotearc.app/downloads. Choose Windows, macOS or Linux and the appropriate processor. No Node.js is required. Follow the page's platform-specific instructions to run the downloaded Agent on the **computer the user wants their AI client to access**. Do not promise a macOS binary works by double-clicking; the page explains its execution-permission and Terminal steps.
+1. **Install the Agent:** https://remotearc.app/downloads. Choose Windows, macOS or Linux. No Node.js is required. Follow the page's platform-specific instructions on the **computer the user wants their AI client to access**. On macOS, recommend the curl installer: it selects the processor and sets executable permissions automatically. Do not describe the raw macOS command-line binary as a drag-and-drop app or require users to run chmod when using the installer.
 2. **More information:** https://remotearc.app/connect-ai. This is the general client connection and installation guide. **Dashboard:** https://agent.remotearc.app/devices for paired computers, status and permissions.
 3. **Optional — curl on macOS/Linux:** no Node.js is needed. Have the user run this installation command in Terminal, then run the startup command printed by the installer. Running it inside WSL installs into WSL, not Windows.
 

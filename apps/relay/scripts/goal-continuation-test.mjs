@@ -7,11 +7,11 @@ import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createRequire } from "node:module";
+import { createRequire, stripTypeScriptTypes } from "node:module";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
 const relay = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ts = createRequire(path.join(relay, "package.json"))("typescript");
+const compile = source => stripTypeScriptTypes(source, { mode: "transform" });
 const compiled = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-goal-test-"));
 fs.writeFileSync(path.join(compiled, "package.json"), '{"type":"module"}');
 // Newly imported relay modules also use runtime dependencies (for example Zod).
@@ -23,9 +23,7 @@ const protocolSource = fs.readFileSync(
 );
 fs.writeFileSync(
   path.join(compiled, "protocol.js"),
-  ts.transpileModule(protocolSource, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-  }).outputText,
+  compile(protocolSource),
 );
 // Keep real shared cloud definitions and follow-up templates inside the
 // fixture root; their repository-relative paths are invalid after transpiling.
@@ -39,10 +37,7 @@ const sharedModules = [
 for (const [source, target] of sharedModules) {
   let input=fs.readFileSync(path.resolve(relay, "../../packages/" + source + ".ts"), "utf8");
   for(const [dependency,local] of sharedModules)input=input.replaceAll("./"+path.basename(dependency)+".js","./"+local+".js");
-  fs.writeFileSync(path.join(compiled, target + ".js"), ts.transpileModule(
-    input,
-    { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } },
-  ).outputText);
+  fs.writeFileSync(path.join(compiled, target + ".js"), compile(input));
 }
 for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWith(".ts"))) {
   let input = fs.readFileSync(path.join(relay, "src", name), "utf8");
@@ -53,9 +48,7 @@ for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWit
   if (name === "mcp.ts") for (const packageName of ["@modelcontextprotocol/server", "zod"]) {
     input = input.replace('from "' + packageName + '"', 'from "' + pathToFileURL(createRequire(path.join(relay, "package.json")).resolve(packageName)).href + '"');
   }
-  const js = ts.transpileModule(input, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-  }).outputText;
+  const js = compile(input);
   fs.writeFileSync(path.join(compiled, name.replace(/\.ts$/, ".js")), js);
 }
 const importSource = name => import(pathToFileURL(path.join(compiled, name + ".js")).href);
@@ -390,7 +383,7 @@ try {
   await deviceCalls.callDevice(env, identity, "device", "set_task_keep_awake", { task_id: taskId, seconds: 0 });
   assert.equal(calls.at(-1), "set_task_keep_awake", "Revoked power permission must still allow releasing an existing lease");
   const powerFile = path.join(relay, "../../packages/cli/src/keep-awake.ts");
-  fs.writeFileSync(path.join(compiled, "keep-awake.js"), ts.transpileModule(fs.readFileSync(powerFile, "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
+  fs.writeFileSync(path.join(compiled, "keep-awake.js"), compile(fs.readFileSync(powerFile, "utf8")));
   const power = await importSource("keep-awake");
   let clock = 1000, launches = [];
   const manager = power.createTaskKeepAwakeManager({ platform: "win32", now: () => clock, spawn(command, args, options) {

@@ -10,7 +10,9 @@ export function economics(overrides={}){
   const revenue=p.monthlyPriceCents/100,model=p.monthlyCredits*costPerCredit;
   // Each registered computer holds a Durable Object WebSocket (mostly hibernated)
   // plus heartbeats and D1 rows. Unlimited plans are stressed at a heavy fleet.
-  const devices=p.deviceLimit??a.unlimitedDevicesPerAccount,acquisition=p.allHostedModels?trialAcquisition:0;
+  // Connect-only subscribers may take the one-time Arc trial: charge its direct
+  // cost to them, not the conversion-weighted Arc acquisition cost.
+  const devices=p.deviceLimit??a.unlimitedDevicesPerAccount,acquisition=p.allHostedModels?trialAcquisition:ARC_TRIAL_CREDITS*costPerCredit;
   const costs={model,payments:revenue*a.paymentPercent+a.paymentFixed,refundReserve:revenue*a.refundReservePercent,hosting:a.hostingPerAccount+(p.connectToolCalls??a.expectedConnectCalls)*a.hostingPerToolCall,devices:devices*a.hostingPerDevice,platformApps:p.allHostedModels?a.platformAppsPerAccount:a.connectOnlyPlatformApps,support:a.supportPerAccount,freeCohort:a.freeAccountsPerPaid*a.freeAccountCost};
   const total=Object.values(costs).reduce((x,y)=>x+y,0),margin=(revenue-total)/revenue,headroom=revenue*(1-a.targetMargin)-total;
   const firstMonthContributionMargin=(revenue-total-acquisition)/revenue;

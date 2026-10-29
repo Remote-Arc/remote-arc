@@ -90,7 +90,7 @@ try{
  assert.equal(await getAccountPlan(env,'connect'),'connect');
  assert.equal((await getSessionUser(request('connect','/api/me'),env))?.plan,'connect');
  const overview=await billing('connect');
- assert.equal(overview.value.plan.id,CONNECT_UNLIMITED_PLAN_ID);assert.equal(overview.value.access.status,'excluded');assert.equal(overview.value.access.canUse,false);assert.equal(overview.value.connectEnabled,true);
+ assert.equal(overview.value.plan.id,CONNECT_UNLIMITED_PLAN_ID);assert.equal(overview.value.access.status,'eligible','Connect subscribers can still start the Arc trial');assert.equal(overview.value.access.canUse,false);assert.equal(overview.value.connectEnabled,true);
  assert.equal((await billing('connect','/checkout',{productId:'arc-topup-500-v1'})).value.error,'BILLING_SUBSCRIPTION_REQUIRED','Credits top-ups need a hosted Arc plan');
 
  // Unlimited Connect calls: no monthly quota, every call still counted.
@@ -99,18 +99,24 @@ try{
  assert.equal((await consumeToolCall(env,'connect')).used,250001);
  assert.equal((await getMonthlyUsage(env,'free')).limit,10000,'Free keeps its 10,000-call allowance');
 
- // No hosted inference: Arc Chat/model gateway, trials and the hosted goal planner are all denied.
- await assert.rejects(()=>requireArcAccess(env,'connect'),/ARC_PLAN_EXCLUDES_HOSTED/);
- await assert.rejects(()=>activateArcTrial(env,'connect'),/ARC_PLAN_EXCLUDES_HOSTED/);
- assert.equal(sql.prepare("SELECT COUNT(*) n FROM arc_trials WHERE user_id='connect'").get()!.n,0,'No trial Credits through the back door');
+ // Hosted Arc: only the standard one-time trial, never an included allowance.
+ await assert.rejects(()=>requireArcAccess(env,'connect'),/ARC_TRIAL_REQUIRED/);
+ const trial=await activateArcTrial(env,'connect');assert.deepEqual([trial.status,trial.active,trial.excluded],['active',true,false]);
+ assert.equal((await requireArcAccess(env,'connect')).active,true,'Arc works during the trial');
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM arc_credit_lots WHERE user_id='connect' AND source<>'trial'").get()!.n,0,'Only trial Credits, never subscription Credits');
+ assert.equal((await activateArcTrial(env,'connect')).trial!.started_at,trial.trial!.started_at,'The trial is one-time; repeating does not restart it');
+ sql.prepare("UPDATE arc_trials SET started_at='2000-01-01',expires_at='2000-01-15' WHERE user_id='connect'").run();
+ const ended=await arcAccountAccess(env,'connect');assert.deepEqual([ended.status,ended.allowed],['excluded',false]);
+ await assert.rejects(()=>requireArcAccess(env,'connect'),/ARC_PLAN_EXCLUDES_HOSTED/,'After the trial, hosted Arc needs Plus');
+ assert.equal((await billing('connect')).value.access.status,'excluded');
  const connectFeatures=planEntitlements('connect');
  assert.throws(()=>requireEntitledFeatures(connectFeatures,requiredAutomationFeatures({kind:'agent_goal'} as any)),/PLAN_UPGRADE_REQUIRED|Plus is required/);
  requireEntitledFeatures(connectFeatures,requiredAutomationFeatures({kind:'agent_goal',agent_goal:{controller:'source'},schedule:{} ,keep_awake:true} as any));
  assert(accountPlanHasFeature('plus','hosted_planner')&&!accountPlanHasFeature('connect','hosted_planner')&&!accountPlanHasFeature('free','planned_agent_goals'));
- // A subscriber who activated a trial earlier loses hosted access on subscribing.
- await activateArcTrial(env,'trialist');assert.equal((await arcAccountAccess(env,'trialist')).active,true);
+ // A trial already running when someone subscribes keeps its remaining days.
+ await activateArcTrial(env,'trialist');
  sql.prepare('INSERT INTO billing_plan_assignments(id,plan_id,subject_type,subject_id,expires_at,created_at,commercial_version_id) VALUES(?,?,?,?,?,?,?)').run('trialist-connect',CONNECT_UNLIMITED_PLAN_ID,'user','trialist',future,stamp,'seed:test:'+CONNECT_UNLIMITED_PLAN_ID);
- const trialist=await arcAccountAccess(env,'trialist');assert.deepEqual([trialist.status,trialist.active,trialist.allowed],['excluded',false,false]);
+ const trialist=await arcAccountAccess(env,'trialist');assert.deepEqual([trialist.status,trialist.active,trialist.allowed],['active',true,true]);
 
  // Existing paid customers are unchanged.
  for(const user of ['plus','pro']){const access=await arcAccountAccess(env,user);assert.equal(access.paid,true);assert.equal(access.excluded,false);assert.equal(await getAccountPlan(env,user),'plus');}
@@ -146,6 +152,6 @@ try{
  assert.equal((await getMonthlyUsage(env,'connect')).limit,10000);
  const downgraded=await pair('connect');assert.equal(downgraded.status,403);assert.deepEqual([downgraded.value.limit,downgraded.value.count],[2,registered]);
  assert.equal(computers('connect'),registered,'Already registered computers stay registered after a downgrade');
- assert.equal((await arcAccountAccess(env,'connect')).status,'eligible','After leaving Connect-only the account is an ordinary Free account again');
- console.log('PASS: Connect Unlimited catalog/schema, checkout while Arc paused, invoice without Credits or model grants, unlimited calls, Arc/trial/planner denial, 0/10/11/100+ computers, fair-use rate and churn, Free 2/Plus 10/Pro 20 unchanged, refund revocation');
+ assert.equal((await arcAccountAccess(env,'connect')).status,'expired','After leaving Connect-only the account is an ordinary Free account with a used trial');
+ console.log('PASS: Connect Unlimited catalog/schema, checkout while Arc paused, invoice without Credits or model grants, unlimited calls, one-time Arc trial then ARC_PLAN_EXCLUDES_HOSTED, planner denial, 0/10/11/100+ computers, fair-use rate and churn, Free 2/Plus 10/Pro 20 unchanged, refund revocation');
 }finally{globalThis.fetch=original;sql.close();}

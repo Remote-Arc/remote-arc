@@ -6,7 +6,8 @@ export const ARC_MEMORY_LIMITS={facts:100,work:40,factBytes:768,workBytes:2048,c
 export const ARC_PLATFORM_APP_BUDGETS_MICROS={free:10000,paid:500000} as const;
 export type ArcPlanId = 'free'|'connect-unlimited-v1'|'arc-plus-v1'|'arc-pro-v1';
 /** Connect-only paid plan. Users bring their own AI client; Remote Arc provides
- * secure remote execution only. No hosted inference, Arc Chat or Credits. */
+ * secure remote execution. No included hosted inference or monthly Credits;
+ * like every account it may use the one-time Arc trial. */
 export const CONNECT_UNLIMITED_PLAN_ID = 'connect-unlimited-v1';
 /** Published fair-use guards for plans whose calls/devices are unlimited.
  * These are rate limits, never hidden monthly quotas. */

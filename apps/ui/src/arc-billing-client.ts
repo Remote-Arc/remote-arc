@@ -14,11 +14,11 @@ export function secureBillingUrl(value:unknown){
  if(typeof value!=='string')throw new BillingFailure('BILLING_UNAVAILABLE');
  const url=new URL(value);if(url.protocol!=='https:'||url.username||url.password||!['checkout.stripe.com','billing.stripe.com'].includes(url.hostname))throw new BillingFailure('BILLING_UNAVAILABLE');return url.href;
 }
-/** Connect Unlimited: paid remote execution only, no Arc-hosted AI or Credits. */
+/** Connect Unlimited: paid remote execution; no monthly Credits or hosted Arc beyond the one-time trial. */
 export const isConnectOnlyPlan=(plan:{id:string})=>plan.id===CONNECT_UNLIMITED_PLAN_ID;
 export function connectPlanFeatures(tr:(en:string,zh:string)=>string){
  const registrationsPerDay=CONNECT_FAIR_USE.computerRegistrationsPerDay;
- return [tr('Unlimited Connect calls · fair-use rate limits, no monthly cap','无限 Connect 调用 · 仅有公开的速率限制，无月度上限'),tr('Unlimited registered computers, each authenticated and revocable','不限已注册电脑数量，每台独立认证、可随时撤销'),tr(`Up to ${registrationsPerDay} new computers per day · runs follow each computer’s own capacity`,`每天最多新增 ${registrationsPerDay} 台电脑 · 运行并发取决于每台电脑自身容量`),tr('Local terminal, files, browser, Fleet and connected Apps','本地终端、文件、浏览器、Fleet 与已连接应用'),tr('Bring your own ChatGPT, Claude or Codex · no Arc-hosted AI or Credits','使用你自己的 ChatGPT、Claude 或 Codex · 不含 Arc 托管 AI 与 Credits')];
+ return [tr('Unlimited Connect calls · fair-use rate limits, no monthly cap','无限 Connect 调用 · 仅有公开的速率限制，无月度上限'),tr('Unlimited registered computers, each authenticated and revocable','不限已注册电脑数量，每台独立认证、可随时撤销'),tr(`Up to ${registrationsPerDay} new computers per day · runs follow each computer’s own capacity`,`每天最多新增 ${registrationsPerDay} 台电脑 · 运行并发取决于每台电脑自身容量`),tr('Local terminal, files, browser, Fleet and connected Apps','本地终端、文件、浏览器、Fleet 与已连接应用'),tr('Bring your own ChatGPT, Claude or Codex · no monthly Credits; Arc after the free trial needs Plus','使用你自己的 ChatGPT、Claude 或 Codex · 不含月度 Credits；免费试用后使用 Arc 需要 Plus')];
 }
 export function billingFailureMessage(error:unknown,tr:(en:string,zh:string)=>string){
  const code=error instanceof Error?error.message:'';

@@ -138,11 +138,11 @@ test('Checkout completes only a local simulated payment and survives refresh',as
  await expect(page.locator('.arcCheckoutResult')).toContainText(/Payment confirmed|支付已确认/);
 });
 
-test('Connect Unlimited checkout is Connect-only, without Credits or promo codes',async({page})=>{
+test('Connect Unlimited checkout is Connect-only, without monthly Credits or promo codes',async({page})=>{
  await page.goto('/checkout?product=connect-unlimited-v1');
  await expect(page.locator('.arcCheckoutChoices button[aria-pressed="true"]')).toContainText('Connect Unlimited');
  await expect(page.locator('.arcCheckoutFeatures')).toContainText(/Unlimited registered computers|不限已注册电脑数量/);
- await expect(page.locator('.arcCheckoutFeatures')).toContainText(/no Arc-hosted AI or Credits|不含 Arc 托管 AI 与 Credits/);
+ await expect(page.locator('.arcCheckoutFeatures')).toContainText(/Arc after the free trial needs Plus|免费试用后使用 Arc 需要 Plus/);
  await expect(page.locator('.arcCheckoutSummary h2')).toHaveText('Connect Unlimited');
  await expect(page.locator('.arcCheckoutTotal')).toContainText('19.99');
  await expect(page.locator('.arcCheckoutPromo')).toHaveCount(0);

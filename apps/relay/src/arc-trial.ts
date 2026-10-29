@@ -16,14 +16,16 @@ export async function arcAccountAccess(env:TrialEnv,userId:string,at=new Date().
   env.DB.prepare('SELECT * FROM arc_trials WHERE user_id=?1').bind(userId).first<Trial>(),
  ]);
  const paid=entitlements.features.includes('hosted_inference'),funded=await fundingAvailable(env.DB,userId);
- // A Connect-only subscription excludes hosted Arc, including any trial window.
- const excluded=!paid&&connect.planIds.includes(CONNECT_UNLIMITED_PLAN_ID),active=!excluded&&Boolean(trial&&trial.started_at<=at&&trial.expires_at>at);
+ const active=Boolean(trial&&trial.started_at<=at&&trial.expires_at>at);
+ // Connect-only subscribers get the same one-time trial as every account; once it
+ // has been used, hosted Arc needs a plan that includes it.
+ const excluded=!paid&&!active&&Boolean(trial)&&connect.planIds.includes(CONNECT_UNLIMITED_PLAN_ID);
  return{paid,premium:entitlements.features.includes('paid_models'),trial,active,excluded,funded,allowed:(paid||active)&&funded,status:paid?'paid':excluded?'excluded':active?'active':trial?'expired':'eligible'};
 }
 export async function requireArcAccess(env:TrialEnv,userId:string){const access=await arcAccountAccess(env,userId);if(access.excluded)throw new ArcAccessError('ARC_PLAN_EXCLUDES_HOSTED');if(!access.funded)throw new ArcAccessError('ARC_FUNDING_PAUSED_OR_LIMIT');if(!access.allowed)throw new ArcAccessError(access.trial?'ARC_TRIAL_EXPIRED':'ARC_TRIAL_REQUIRED');return access;}
 export async function activateArcTrial(env:TrialEnv,userId:string,at=new Date().toISOString()){
  if(!await fundingAvailable(env.DB))throw new ArcAccessError('ARC_FUNDING_PAUSED_OR_LIMIT');
- const access=await arcAccountAccess(env,userId,at);if(access.excluded)throw new ArcAccessError('ARC_PLAN_EXCLUDES_HOSTED');if(access.paid||access.trial){if(access.active&&!access.paid)await ensureTrialCredits(env,userId,access.trial!);return access;}
+ const access=await arcAccountAccess(env,userId,at);if(access.paid||access.trial){if(access.active&&!access.paid)await ensureTrialCredits(env,userId,access.trial!);return access;}
  const version=await activeCommercial(env,'arc-trial-v1'),terms=version.config;if(!('days' in terms))throw new ArcAccessError('ARC_TRIAL_CONFIGURATION_INVALID');
  await env.DB.prepare(`INSERT OR IGNORE INTO arc_trials(user_id,started_at,expires_at,premium_allowance_micros,daily_allowance_micros,commercial_version_id) VALUES(?1,?2,?3,?4,?5,?6)`)
   .bind(userId,at,new Date(Date.parse(at)+terms.days*86400000).toISOString(),arcLimit(env.ARC_TRIAL_PREMIUM_MICROS,250000),arcLimit(env.ARC_TRIAL_DAILY_MICROS,100000),version.id).run();

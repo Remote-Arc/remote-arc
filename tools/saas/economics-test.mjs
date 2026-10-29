@@ -6,7 +6,7 @@ assert.equal(report.models.find(m=>m.id==='gpt-6-astra').exampleCredits,65);
 assert.equal(report.models.find(m=>m.id==='gpt-6.1-terra').exampleCredits,6.5,'8K uncached input + 1K output costs $0.013 / 6.5 Credits on Terra');
 assert(economics({platformAppsPerAccount:20}).plans.filter(p=>p.allHostedModels).every(p=>!p.meetsTarget));
 const connect=report.plans.find(p=>p.id==='connect-unlimited-v1');
-assert.equal(connect.costs.model,0,'Connect Unlimited carries no hosted model cost');assert.equal(connect.trialAcquisition,0,'Connect-only accounts do not receive Arc trials');
+assert.equal(connect.costs.model,0,'Connect Unlimited carries no hosted model cost');assert(Math.abs(connect.trialAcquisition-.4)<1e-10,'One-time Arc trial for a Connect subscriber costs its direct 200 Credits, $0.40');
 assert.equal(connect.costs.devices,25*report.assumptions.hostingPerDevice,'Unlimited devices are stressed at a heavy 25-computer fleet');
 const heavy=economics({unlimitedDevicesPerAccount:100,expectedConnectCalls:100000}).plans.find(p=>p.id==='connect-unlimited-v1');
 assert(heavy.margin>0&&!heavy.meetsTarget,'100 computers and 100k calls stay contribution-positive but below target: fair-use rate limits matter');

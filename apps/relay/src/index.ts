@@ -2,7 +2,7 @@ import {ingestProductEvents,observeProductRequest,requestEventRoute} from './pro
 import {recordDeviceOnline,purgeBusinessMetrics} from './business-tracking.js';
 import {eventContext,purgeProductEvents,recordProductEvent} from './product-events.js';
 import {serveDemoMedia} from './demo-media.js';
-import { handleAgentDownload } from './agent-downloads.js';
+import { handleAgentDownload, handleMacAppDownload } from './agent-downloads.js';
 import {handleBrowserAuth} from "./browser-auth.js";
 import { handleRunnerRequest } from "./runner-attention.js";
 import { diagnosticError } from "./diagnostics.js";
@@ -240,6 +240,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     if (httpsCanonical) return Response.redirect(httpsCanonical, 301);
 
     if (!isAdminHost && url.pathname.startsWith("/api/downloads/agent/")) return handleAgentDownload(request);
+    if (!isAdminHost && url.pathname.startsWith('/api/downloads/macos')) return handleMacAppDownload(request);
 
     if(url.pathname.startsWith('/media/demo-gallery/')){
       if(url.origin!==new URL(marketingOrigin).origin)return new Response('Not found',{status:404});

@@ -17,7 +17,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  macos-app:
+    uses: ./.github/workflows/build-macos-app.yml
+    with:
+      release: true
+    secrets: inherit
+
   publish:
+    needs: macos-app
     runs-on: ubuntu-latest
     environment: production
 
@@ -74,6 +81,16 @@ jobs:
       - name: Build CLI and native Go distribution
         run: pnpm build:device --release
 
+      - name: Download signed and notarized Mac packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: macos-app-*
+          merge-multiple: true
+          path: work/macos-release
+
+      - name: Verify both Mac packages before publishing any release
+        run: node scripts/collect-macos-apps.mjs
+
       - name: Verify native distribution and Homebrew formula
         run: |
           CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
@@ -97,6 +114,7 @@ jobs:
             gh release create "$GO_TAG" \
               work/go-device/remotelink-v"$CLI_VERSION"-* \
               work/go-device/SHA256SUMS work/go-device/go-binaries.json work/go-device/remotelink.rb work/go-device/remotelink-go.rb \
+              work/macos-release/RemoteArc-v"$CLI_VERSION"-macos-*.dmg work/macos-release/macos-apps.json work/macos-release/MACOS-SHA256SUMS \
               --target "$GITHUB_SHA" --title "Remote Arc $CLI_VERSION" \
               --notes-file /tmp/go-release-notes.md "${RELEASE_ARGS[@]}"
           fi
@@ -115,6 +133,11 @@ jobs:
             cmp Formula/remotelink-go.rb "$VERIFY_DIR/remotelink-go.rb"
           fi
           (cd "$VERIFY_DIR" && sha256sum --check SHA256SUMS)
+          gh release download "$GO_TAG" --dir "$VERIFY_DIR" \
+            --pattern "RemoteArc-v$CLI_VERSION-macos-*.dmg" --pattern macos-apps.json --pattern MACOS-SHA256SUMS
+          cmp work/macos-release/macos-apps.json "$VERIFY_DIR/macos-apps.json"
+          cmp work/macos-release/MACOS-SHA256SUMS "$VERIFY_DIR/MACOS-SHA256SUMS"
+          (cd "$VERIFY_DIR" && sha256sum --check MACOS-SHA256SUMS)
 
       - name: Verify publish artifact
         run: |

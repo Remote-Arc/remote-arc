@@ -1,6 +1,6 @@
 import { previewRuntimeConfig, type PreviewConfigEnv } from "./preview-config.js";
 import {serveDemoMedia,type DemoMediaBucket} from "../../relay/src/demo-media.js";
-import { handleAgentDownload } from "../../relay/src/agent-downloads.js";
+import { handleAgentDownload, handleMacAppDownload } from "../../relay/src/agent-downloads.js";
 type PreviewEnv = PreviewConfigEnv & {
   PUBLIC_MEDIA?: DemoMediaBucket;
   ASSETS: {
@@ -18,6 +18,7 @@ const isSpaNavigation = (request: Request) => {
 export default {
   async fetch(request: Request, env: PreviewEnv): Promise<Response> {
     if (new URL(request.url).pathname.startsWith("/api/downloads/agent/")) return handleAgentDownload(request);
+    if (new URL(request.url).pathname.startsWith('/api/downloads/macos')) return handleMacAppDownload(request);
     if(new URL(request.url).pathname.startsWith("/media/demo-gallery/"))return serveDemoMedia(request,env.PUBLIC_MEDIA);
     if (new URL(request.url).pathname === "/api/runtime-config") {
       if (!["GET", "HEAD"].includes(request.method)) return new Response(null, {status:405, headers:{allow:"GET, HEAD"}});

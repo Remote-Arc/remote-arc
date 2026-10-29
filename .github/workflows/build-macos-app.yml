@@ -1,0 +1,92 @@
+name: macOS App and DMG
+
+on:
+  pull_request:
+    paths:
+      - 'apps/macos/**'
+      - 'apps/agent/**'
+      - 'packages/execution-core/**'
+      - 'packages/cli/package.json'
+      - 'scripts/*macos-app*'
+      - '.github/workflows/*macos-app*'
+      - '.github/workflows/publish-remotelink.yml'
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    environment: ${{ inputs.release && 'production' || 'macos-preview' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-latest
+          - arch: amd64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: apps/agent/go.sum
+      - name: Validate release manifests reject unsigned or stale packages
+        run: node scripts/collect-macos-apps-test.mjs
+      - name: Import Developer ID and notarization credentials
+        if: inputs.release
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_NOTARY_PRIVATE_KEY: ${{ secrets.MACOS_NOTARY_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$MACOS_CERTIFICATE_P12" && test -n "$MACOS_CERTIFICATE_PASSWORD" && test -n "$MACOS_NOTARY_PRIVATE_KEY" || {
+            echo '::error::Configure Developer ID P12 and notarization credentials before publishing Mac apps.'; exit 1;
+          }
+          KEYCHAIN="$RUNNER_TEMP/remotearc-build.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          printf '%s' "$MACOS_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          printf '%s' "$MACOS_NOTARY_PRIVATE_KEY" > "$RUNNER_TEMP/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/signing.p12" "$RUNNER_TEMP/AuthKey.p8"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/signing.p12" -P "$MACOS_CERTIFICATE_PASSWORD" -k "$KEYCHAIN" -t cert -f pkcs12 -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" "$HOME/Library/Keychains/login.keychain-db"
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -1)"
+          test -n "$IDENTITY" || { echo '::error::P12 must contain a Developer ID Application identity and its private key.'; exit 1; }
+          echo "MACOS_SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "MACOS_NOTARY_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+      - name: Build and verify draggable App and DMG
+        env:
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+        run: node scripts/macos-app-test.mjs --arch=${{ matrix.arch }} ${{ inputs.release && '--release' || '' }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos-app-${{ matrix.arch }}
+          path: |
+            work/macos-app/${{ matrix.arch }}/*.dmg
+            work/macos-app/${{ matrix.arch }}/macos-app-${{ matrix.arch }}.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove temporary signing material
+        if: always() && inputs.release
+        run: |
+          security delete-keychain "$RUNNER_TEMP/remotearc-build.keychain-db" || true
+          rm -f "$RUNNER_TEMP/signing.p12" "$RUNNER_TEMP/AuthKey.p8"

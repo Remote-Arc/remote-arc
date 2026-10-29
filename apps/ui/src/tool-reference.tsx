@@ -295,8 +295,8 @@ export function ToolReference() {
             )
           : kind === "apps"
             ? tr(
-                `Arc's App library contains ${entries.apps.length} operations across ${data.apps.length} apps. The public remote MCP exposes a smaller set of individually named GitHub and Gmail tools; see the Remote MCP tab for that list. list_apps returns linked accounts and connection IDs, not operation schemas. Provider setup and account permissions still apply.`,
-                `Arc 的 Apps 库包含 ${data.apps.length} 个应用、${entries.apps.length} 个操作。公开远程 MCP 先开放部分独立命名的 GitHub 和 Gmail 工具，具体见 Remote MCP 页签。list_apps 只返回已连接账号及连接 ID，不返回操作结构；可用性仍取决于服务商配置和账号授权。`,
+                `Arc's App library contains ${entries.apps.length} operations across ${data.apps.length} apps. The remote MCP exposes list_apps and call_app for bounded discovery and execution of the fixed App catalog. Use list_apps with use_case and includeSchemas to find one operation before invoking call_app. Provider setup and account permissions still apply.`,
+                `Arc 的 Apps 库包含 ${data.apps.length} 个应用、${entries.apps.length} 个操作。远程 MCP 使用 list_apps 搜索操作与参数结构，再通过 call_app 执行目录中经过验证的操作；可用性仍取决于服务商配置和账号授权。`,
               )
             : tr(
                 "Local stdio MCP runs on the computer that starts it: remotelink --mcp --safe. Safe, developer and full modes expose different subsets. A workspace-only connection is narrower still. It does not provide cloud App or Browser Runner tools.",

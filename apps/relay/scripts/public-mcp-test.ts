@@ -89,40 +89,54 @@ const invoke = (name: string, args: unknown, scope?: string) => rpc("tools/call"
 const data = (response: any) => JSON.parse(response.result.content[0].text);
 const rejected = (response: any) => Boolean(response.error || response.result?.isError);
 const listed = (await rpc("tools/list", {})).result.tools as any[];
-const appNames = listed.filter(tool => /^(github|gmail)_/.test(tool.name)).map(tool => tool.name).sort();
-assert.deepEqual(appNames, ["github_repositories_list", "github_issues_list", "github_issues_get", "github_pulls_list", "github_comments_list", "github_issues_create", "github_comments_create", "gmail_messages_list", "gmail_messages_get", "gmail_drafts_create"].sort());
-assert(!listed.some(tool => tool.name === "call_app"));
+const appNames = listed.filter(tool => tool.name === "list_apps" || tool.name === "call_app").map(tool => tool.name).sort();
+assert.deepEqual(appNames, ["call_app", "list_apps"]);
+assert(!listed.some(tool => /^(github|gmail|slack|google_slides)_(messages|issues|presentations|channels)_/.test(tool.name)),
+  "Apps should not add hundreds of per-operation MCP tool definitions");
+const callSchema = listed.find(tool => tool.name === "call_app").inputSchema;
+assert.equal(callSchema.additionalProperties, false);
+assert(callSchema.properties.connectionId && callSchema.properties.requestId);
+assert(callSchema.properties.operation?.enum.includes("issues.create"));
+assert(callSchema.properties.operation?.enum.includes("messages.send"));
+assert(callSchema.properties.arguments, "Arguments must be explicitly supplied and validated by the fixed catalog");
+const discoverySchema = listed.find(tool => tool.name === "list_apps").inputSchema;
+assert(discoverySchema.properties.use_case && discoverySchema.properties.includeSchemas);
 const disabled = (await rpc("tools/list", {}, undefined, { ...env, ENABLE_APPS: "0" })).result.tools;
-assert(!disabled.some((tool: any) => tool.name === "list_apps" || /^(github|gmail)_/.test(tool.name)));
-assert(rejected(await invoke("call_app", { connectionId: ids.github, operation: "issues.create", arguments: {}, requestId: "cached-old-call" })),
-  "Cached generic names must not provide a hidden executor");
-for (const name of appNames) {
-  const schema = listed.find(tool => tool.name === name).inputSchema;
-  assert.equal(schema.additionalProperties, false);
-  assert(schema.properties.connectionId && schema.properties.requestId);
-  assert(!schema.properties.operation && !schema.properties.arguments);
-}
+assert(!disabled.some((tool: any) => tool.name === "list_apps" || tool.name === "call_app"));
 const accounts = data(await invoke("list_apps", { provider: "gmail", limit: 1 }));
-assert.equal(accounts.connections.length, 1);
-assert.equal(accounts.total, 2);
-assert.equal(accounts.nextCursor, 1);
+assert.equal(accounts.connections.length, 2, "Legacy provider lookup retains all matching account connections");
+assert.equal(accounts.total, 1, "Legacy provider query totals applications, not operations");
+assert.equal(accounts.nextCursor, null);
+assert.equal(accounts.apps.length, 1);
+assert.equal(accounts.apps[0].operations.length, 15, "Explicit provider lookup remains backwards-compatible");
 assert(accounts.connections.every((row: any) => row.provider === "gmail"));
-assert(!JSON.stringify(accounts).includes("operations") && !JSON.stringify(accounts).includes("inputSchema"));
-assert(!JSON.stringify(data(await invoke("list_apps", {}))).includes(ids.other));
-assert.equal(listed.find(tool => tool.name === "gmail_drafts_create").annotations.destructiveHint, false);
-assert.equal(listed.find(tool => tool.name === "github_issues_create").annotations.destructiveHint, true);
+const slides = data(await invoke("list_apps", { use_case: "create google slides presentation", limit: 10, includeSchemas: true }));
+assert(slides.operations.some((o: any) => o.provider === "google_slides" && o.inputSchema),
+  "Google Slides actions must be discoverable with their fixed schema");
+const slack = data(await invoke("list_apps", { use_case: "send slack message", limit: 10, includeSchemas: true }));
+assert(slack.operations.some((o: any) => o.provider === "slack" && o.inputSchema),
+  "Slack actions must be searchable without thousands of top-level MCP tools");
+const gh = data(await invoke("list_apps", { provider: "github", use_case: "create issue", includeSchemas: true }));
+assert(gh.operations.some((o: any) => o.operation === "issues.create" && o.inputSchema),
+  "Search must return the exact operation name and schema");
+const summary = data(await invoke("list_apps", {}));
+assert.equal(summary.operationCatalogSize, 344);
+assert(!JSON.stringify(summary).includes(ids.other), "Do not expose another owner's connection IDs");
+assert(!JSON.stringify(summary).includes("inputSchema"));
+assert.equal(listed.find(tool => tool.name === "call_app").annotations.destructiveHint, true);
+assert.equal(listed.find(tool => tool.name === "call_app").annotations.idempotentHint, false);
 assert.equal(listed.find(tool => tool.name === "revoke_file_resource").annotations.destructiveHint, true);
 assert.equal(listed.find(tool => tool.name === "undo_last_change").annotations.destructiveHint, true);
 assert.equal(listed.find(tool => tool.name === "browser_runner_act").annotations.idempotentHint, false);
 
 const providerRequests: string[] = [];
 const additionalOperations = [
-  ["github_repositories_list", ids.github, { limit: 2 }, "GET", "https://api.github.com/user/repos?per_page=2&sort=updated"],
-  ["github_issues_list", ids.github, { repo: "test/project", limit: 2 }, "GET", "https://api.github.com/repos/test/project/issues?per_page=2"],
-  ["github_pulls_list", ids.github, { repo: "test/project", limit: 2, state: "open" }, "GET", "https://api.github.com/repos/test/project/pulls?per_page=2&state=open"],
-  ["github_comments_list", ids.github, { repo: "test/project", number: 17, limit: 2 }, "GET", "https://api.github.com/repos/test/project/issues/17/comments?per_page=2"],
-  ["github_comments_create", ids.github, { repo: "test/project", number: 17, body: "Test comment" }, "POST", "https://api.github.com/repos/test/project/issues/17/comments"],
-  ["gmail_messages_list", ids.gmail, { query: "in:inbox", limit: 2 }, "GET", "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in%3Ainbox&maxResults=2"],
+  ["repositories.list", ids.github, { limit: 2 }, "GET", "https://api.github.com/user/repos?per_page=2&sort=updated"],
+  ["issues.list", ids.github, { repo: "test/project", limit: 2 }, "GET", "https://api.github.com/repos/test/project/issues?per_page=2"],
+  ["pulls.list", ids.github, { repo: "test/project", limit: 2, state: "open" }, "GET", "https://api.github.com/repos/test/project/pulls?per_page=2&state=open"],
+  ["comments.list", ids.github, { repo: "test/project", number: 17, limit: 2 }, "GET", "https://api.github.com/repos/test/project/issues/17/comments?per_page=2"],
+  ["comments.create", ids.github, { repo: "test/project", number: 17, body: "Test comment" }, "POST", "https://api.github.com/repos/test/project/issues/17/comments"],
+  ["messages.list", ids.gmail, { query: "in:inbox", limit: 2 }, "GET", "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in%3Ainbox&maxResults=2"],
 ] as const;
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
@@ -137,32 +151,40 @@ globalThis.fetch = async (url, init = {}) => {
   throw new Error("Unexpected provider URL in test: " + href);
 };
 try {
-  const create = { connectionId: ids.github, requestId: "create-issue-1", repo: "test/project", title: "Review", body: "Body" };
+  const create = { connectionId: ids.github, operation: "issues.create", arguments: { repo: "test/project", title: "Review", body: "Body" }, requestId: "create-issue-1" };
   for (const connectionId of [ids.gmail, ids.other, ids.revoked]) {
-    assert.equal(data(await invoke("github_issues_create", { ...create, connectionId })).error.code, "APP_CONNECTION_PROVIDER_MISMATCH");
+    assert(rejected(await invoke("call_app", { ...create, connectionId })),
+      "Wrong provider, owner or revoked accounts must not dispatch");
   }
-  assert.equal(providerRequests.length, 0, "Wrong provider, owner or revoked connections must not dispatch");
-  assert(rejected(await invoke("github_issues_create", { ...create, operation: "messages.send" })));
-  assert(rejected(await invoke("github_issues_create", { ...create, repo: "../escape" })));
-  assert((await invoke("github_issues_create", create, "apps:read")).result._meta["mcp/www_authenticate"]);
-  assert((await invoke("github_issues_create", create, "apps:write")).result._meta["mcp/www_authenticate"]);
-  assert.equal(providerRequests.length, 0, "Invalid inputs and missing MCP scopes must not dispatch");
-  const result = data(await invoke("github_issues_create", create));
+  assert.equal(providerRequests.length, 0);
+  assert(rejected(await invoke("call_app", { ...create, operation: "messages.send" })));
+  assert(rejected(await invoke("call_app", { ...create, operation: "issues.unknown" })));
+  assert(rejected(await invoke("call_app", { ...create, arguments: { ...create.arguments, repo: "../escape" } })));
+  assert((await invoke("call_app", create, "apps:read")).result._meta["mcp/www_authenticate"]);
+  assert((await invoke("call_app", create, "apps:write")).result._meta["mcp/www_authenticate"]);
+  assert.equal(providerRequests.length, 0, "Invalid operations, inputs or missing OAuth scopes must not dispatch");
+  const result = data(await invoke("call_app", create));
   assert.equal(result.result.number, 17);
-  assert.equal(data(await invoke("github_issues_create", create)).replayed, true);
-  assert.equal(providerRequests.length, 1, "The real ledger reuses an acknowledged write");
-  assert.equal(data(await invoke("github_issues_create", { ...create, title: "Changed" })).error.code, "app_request_id_conflict");
-  const readBack = data(await invoke("github_issues_get", { connectionId: ids.github, requestId: "read-issue-1", repo: "test/project", number: 17 }));
-  assert.deepEqual(readBack.result, result.result, "Read the independently selected issue back through a separate tool");
-  assert.equal(data(await invoke("gmail_messages_get", { connectionId: ids.gmail, requestId: "read-mail-1", id: "message-1" })).result.id, "message-1");
-  const draft = { connectionId: ids.gmail, requestId: "create-draft-1", to: ["test@example.test"], subject: "Subject", body: "Body" };
-  assert.equal(data(await invoke("gmail_drafts_create", { ...draft, connectionId: ids.readonly })).error.code, "app_scope_required");
-  assert.equal(data(await invoke("gmail_drafts_create", draft)).result.id, "draft-1");
+  assert.equal(data(await invoke("call_app", create)).replayed, true);
+  assert.equal(providerRequests.length, 1, "Stable requestId must prevent duplicate writes");
+  assert.equal(data(await invoke("call_app", { ...create, arguments: { ...create.arguments, title: "Changed" } })).error.code, "app_request_id_conflict");
+  const readBack = data(await invoke("call_app", {
+    connectionId: ids.github, operation: "issues.get", arguments: { repo: "test/project", number: 17 }, requestId: "read-issue-1",
+  }));
+  assert.deepEqual(readBack.result, result.result);
+  const msg = data(await invoke("call_app", {
+    connectionId: ids.gmail, operation: "messages.get", arguments: { id: "message-1" }, requestId: "read-mail-1",
+  }));
+  assert.equal(msg.result.id, "message-1");
+  const draft = { connectionId: ids.gmail, operation: "drafts.create",
+    arguments: { to: ["test@example.test"], subject: "Subject", body: "Body" }, requestId: "create-draft-1" };
+  assert(rejected(await invoke("call_app", { ...draft, connectionId: ids.readonly })), "Provider write scope must be enforced");
+  assert.equal(data(await invoke("call_app", draft)).result.id, "draft-1");
   assert(!providerRequests.some(url => url.endsWith("/send")), "Draft creation must not send mail");
   assert(!JSON.stringify(result).includes("test-provider-token"));
-  for (const [name, connectionId, fields] of additionalOperations) {
-    const reply = data(await invoke(name, { connectionId, requestId: "public-" + name, ...fields }));
-    assert.equal(reply.result.testedOperation, name, "Every advertised App tool must reach only its fixed operation");
+  for (const [operation, connectionId, fields] of additionalOperations) {
+    const reply = data(await invoke("call_app", { connectionId, requestId: "router-" + operation.replaceAll(".", "-"), operation, arguments: fields }));
+    assert.equal(reply.result.testedOperation, operation, "The fixed registry must dispatch only the selected action");
   }
 } finally { globalThis.fetch = originalFetch; }
 
@@ -186,4 +208,4 @@ assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH);
 await callDevice(env, { ...identity(), clientId: "dashboard" }, "computer", "browser_runner_snapshot", { session_id: "task" });
 assert.deepEqual(dispatches.at(-1).policy.browserAuth, approved, "The internal Dashboard policy remains separate");
 sql.close();
-console.log("PASS: public MCP tool schemas, owner/provider/scope checks, real App ledger replay/read-back, and public browser policy across current and cached aliases");
+console.log("PASS: two-tool App discovery/execute router, 344 fixed schemas, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");

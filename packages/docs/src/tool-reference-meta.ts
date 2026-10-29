@@ -58,8 +58,12 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
   },
   list_apps: {
-    zh: "列出已连接账号，支持筛选与分页；具体操作由独立公开工具提供。",
-    summary: "List connected account metadata with filters and pagination.",
+    zh: "搜索 37 个连接应用的固定操作目录；按任务查询并仅在需要时返回参数 Schema。",
+    summary: "Discover connected accounts and search the fixed App operation catalog, with bounded optional schemas.",
+  },
+  call_app: {
+    zh: "在已连接账号执行经过固定目录和参数校验的操作，受账号权限、OAuth Scope 和写入去重保护。",
+    summary: "Execute a fixed App operation with provider ownership, scopes, validation and replay protection.",
   },
   github_repositories_list: { zh: "列出所选 GitHub 账号可访问的仓库。", summary: "List repositories accessible to the selected GitHub account." },
   github_issues_list: { zh: "列出指定仓库的 Issue。", summary: "List issues in a specified repository." },

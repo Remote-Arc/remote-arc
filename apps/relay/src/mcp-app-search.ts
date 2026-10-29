@@ -47,9 +47,9 @@ const relevance = (app: ListedApp, operation: ListedOperation, tokens: string[])
   return matches >= Math.min(tokens.length, 2) ? score : 0;
 };
 
-export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unknown = {}) {
+export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unknown = {}, options: { excludeRunway?: boolean } = {}) {
   const input = appDiscoverySchema.parse(raw);
-  if (!input.use_case && !input.includeSchemas) {
+  if (!options.excludeRunway && !input.use_case && !input.includeSchemas) {
     const legacy = await discoverApps(env, userId, {
       provider: input.provider, category: input.category, query: input.query,
       limit: input.limit, cursor: input.cursor,
@@ -60,6 +60,7 @@ export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unkn
   const query = (input.use_case || input.query || "").trim();
   const tokens = terms(query);
   const matchingApps = all.apps.filter(app =>
+    (!options.excludeRunway || app.provider !== "runway") &&
     (!input.provider || app.provider === input.provider) && (!input.category || app.category === input.category));
   const connections = all.connections.filter(account => matchingApps.some(app => app.provider === account.provider));
   const matchingAccounts = connections.filter(account => !input.query ||
@@ -79,7 +80,7 @@ export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unkn
       apps: page.map(({ operations, ...app }) =>
         ({ provider: app.provider, name: app.name, category: app.category, configured: app.configured,
           operationCount: operations.length, connected: connections.some(c => c.provider === app.provider && c.status === "active") })),
-      operationCatalogSize: all.apps.reduce((count, app) => count + app.operations.length, 0),
+      operationCatalogSize: matchingApps.reduce((count, app) => count + app.operations.length, 0),
       guidance: `Search with use_case to find action IDs. Run reads with ${APP_ACTION_TOOLS.read} and user-requested changes with ${APP_ACTION_TOOLS.write}, passing a connectionId for the same provider; external changes require user authorization.`,
     };
   }

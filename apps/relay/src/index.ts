@@ -35,6 +35,7 @@ import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingHttpsRedirect, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { legacyLanguageRedirect } from "./marketing-locale.js";
 import { createRemoteLinkMcp } from "./mcp.js";
+import { mcpClientProfile } from "./mcp-client-profile.js";
 import { handleCloudSkills, handleCloudSkillAction } from "./cloud-skills.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
@@ -905,7 +906,9 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
       const eventResponse = await handleTaskEventRpc(request, env, validIdentity);
       if (eventResponse) return eventResponse;
+      const clientProfile = validIdentity ? await mcpClientProfile(env.DB, validIdentity.clientId) : "generic";
       const handler = createRemoteLinkMcp(env, validIdentity, {
+        clientProfile,
         kickScheduler: (automationId) => {
           if (!ctx) return;
           ctx.waitUntil(

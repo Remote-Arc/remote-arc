@@ -5,10 +5,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { createRequire } from "node:module";
+import { stripTypeScriptTypes } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 const relay = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ts = createRequire(path.join(relay, "package.json"))("typescript");
+const compile = source => stripTypeScriptTypes(source, { mode: "transform" });
 const compiled = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-plan-test-"));
 fs.writeFileSync(path.join(compiled, "package.json"), '{"type":"module"}');
 // The compiled scheduler imports native Arc work and its runtime schemas.
@@ -20,9 +20,7 @@ const protocolSource = fs.readFileSync(
 );
 fs.writeFileSync(
   path.join(compiled, "protocol.js"),
-  ts.transpileModule(protocolSource, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-  }).outputText,
+  compile(protocolSource),
 );
 // Keep real shared cloud definitions and follow-up templates inside the
 // fixture root; their repository-relative paths are invalid after transpiling.
@@ -36,10 +34,7 @@ const sharedModules = [
 for (const [source, target] of sharedModules) {
   let input=fs.readFileSync(path.resolve(relay, "../../packages/" + source + ".ts"), "utf8");
   for(const [dependency,local] of sharedModules)input=input.replaceAll("./"+path.basename(dependency)+".js","./"+local+".js");
-  fs.writeFileSync(path.join(compiled, target + ".js"), ts.transpileModule(
-    input,
-    { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } },
-  ).outputText);
+  fs.writeFileSync(path.join(compiled, target + ".js"), compile(input));
 }
 for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWith(".ts") && n !== "mcp.ts")) {
   let input = fs.readFileSync(path.join(relay, "src", name), "utf8");
@@ -47,7 +42,7 @@ for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWit
   for (const [source, target] of sharedModules) {
     input = input.replaceAll("../../../packages/" + source + ".js", "./" + target + ".js");
   }
-  fs.writeFileSync(path.join(compiled, name.replace(/\.ts$/, ".js")), ts.transpileModule(input, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
+  fs.writeFileSync(path.join(compiled, name.replace(/\.ts$/, ".js")), compile(input));
 }
 try {
   const load = name => import(pathToFileURL(path.join(compiled, name + ".js")).href);

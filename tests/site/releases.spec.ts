@@ -5,6 +5,12 @@ test('Native download cards use the stable channel and show platform-specific he
   await page.goto(prefix + '/downloads');
   await expect(page.locator('.nativeInstallHeader .eyebrow')).toContainText(info.project.metadata.language === 'zh' ? '最新稳定版' : 'LATEST STABLE');
   await expect(page.locator('.nativeDownloadCard')).toHaveCount(3);
+  await expect(page.locator('.nativeInstallQuick')).toBeVisible();
+  await expect(page.locator('.nativeInstallQuick code')).toHaveText('npx remotelink@latest');
+  const commandsBottom = await page.locator('.nativeInstallQuick').evaluate(node => node.getBoundingClientRect().bottom);
+  const downloadsTop = await page.locator('.nativeDownloads').evaluate(node => node.getBoundingClientRect().top);
+  expect(commandsBottom).toBeLessThan(downloadsTop);
+  await expect(page.locator('.nativeDownloadAction')).toHaveAttribute('href', '#native-downloads');
   for (const icon of await page.locator('.nativePlatformIcon img').all()) {
     await expect.poll(() => icon.evaluate((node: HTMLImageElement) => node.naturalWidth)).toBeGreaterThan(0);
   }
@@ -21,10 +27,34 @@ test('Native download cards use the stable channel and show platform-specific he
   await expect(page.locator('.nativeStartGuides details').first()).toContainText('curl');
   await expect(page.locator('.nativeStartGuides details').first()).not.toContainText('chmod +x');
   await page.locator('.nativeShellChoice').click();
-  await expect(page.locator('#shell-install')).toHaveAttribute('open');
+  await expect(page.locator('#shell-install')).toBeVisible();
   await expect(page.locator('#shell-install code')).toHaveText('curl -fsSL https://remotearc.app/install.sh | sh');
-  await expect(page.locator('#shell-install button')).toBeVisible();
+  await expect(page.locator('#shell-install .installCommandsCopy')).toBeVisible();
   await page.goto(prefix + '/downloads#homebrew');
   await expect(page.locator('#homebrew')).toHaveAttribute('open');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
+});
+
+test('Download page command links select the requested method and keep platform downloads accessible', async ({ page, context }, info) => {
+  const zh = info.project.metadata.language === 'zh';
+  const prefix = zh ? '/zh' : '';
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto(prefix + '/downloads#shell-install');
+  const commands = page.locator('.nativeInstallQuick .installCommands');
+  await expect(commands.getByRole('tab', { name:'curl', exact:true })).toHaveAttribute('aria-selected', 'true');
+  await expect(commands.locator('code')).toHaveText('curl -fsSL https://remotearc.app/install.sh | sh');
+  await commands.locator('.installCommandsCopy').click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('curl -fsSL https://remotearc.app/install.sh | sh');
+  await commands.getByRole('tab', { name:'npx', exact:true }).click();
+  await expect(commands.locator('code')).toHaveText('npx remotelink@latest');
+  await page.locator('.nativeShellChoice').click();
+  await expect(commands.locator('code')).toHaveText('curl -fsSL https://remotearc.app/install.sh | sh');
+  await page.evaluate(() => { location.hash = '#npx-install'; });
+  await expect(commands.locator('code')).toHaveText('npx remotelink@latest');
+  await commands.getByRole('link', { name:zh ? '直接下载' : 'Download', exact:true }).click();
+  await expect(page).toHaveURL(new RegExp(prefix + '/downloads#native-downloads$'));
+  await expect(page.locator('.nativeDownloadCard')).toHaveCount(3);
+  await page.locator('.nativeInstallHeader').scrollIntoViewIfNeeded();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2);
+  await page.screenshot({path:`work/downloads-quick-install-${info.project.name}.png`,fullPage:true});
 });

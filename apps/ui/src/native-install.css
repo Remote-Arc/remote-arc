@@ -2,6 +2,16 @@
 .nativeInstallHeader{max-width:670px;margin-bottom:32px}
 .nativeInstallHeader h1{margin:16px 0;letter-spacing:-.04em}
 .nativeInstallHeader p{margin:0;font-size:16px;line-height:1.8}
+.nativeInstallActions{display:flex;align-items:center;flex-wrap:wrap;gap:12px 22px;margin-top:22px}
+.nativeInstallActions a{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:42px;font-size:13px;font-weight:600;text-decoration:none}
+.nativeInstallActions .nativeDownloadAction{padding:10px 17px;border-radius:9px;background:var(--text);color:var(--bg)}
+.nativeInstallActions>a:not(.nativeDownloadAction){color:var(--muted)}
+.nativeInstallQuick{display:grid;grid-template-columns:minmax(180px,.7fr) minmax(0,1.7fr);align-items:center;gap:28px;margin:0 0 34px;padding:24px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}
+.nativeInstall .nativeQuickIntro h2,.nativeInstall .nativeDownloadSectionHeading h2{margin:0 0 8px;font-size:21px;letter-spacing:-.025em}
+.nativeQuickIntro p{margin:0;font-size:13px;line-height:1.8;color:var(--muted)}
+.nativeQuickCommands{min-width:0}.nativeQuickCommands .installCommands{max-width:none;margin:0}.nativeQuickCommands .installCommandsCode pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.nativeInstall .nativeScriptLink{display:inline-block;margin-top:8px;color:var(--muted);font-size:11px;text-decoration:none}.nativeScriptLink:hover{color:var(--text)}
+.nativeDownloadSectionHeading{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:0 16px;margin-bottom:12px}.nativeDownloadSectionHeading p{margin:0;color:var(--muted);font-size:12px;line-height:1.8}
 .nativeInstall .nativeDownloads{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:0}
 .nativeDownloadCard{min-width:0;padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
 .nativeDownloadHeading{display:flex;align-items:center;gap:14px;margin-bottom:26px}
@@ -11,8 +21,6 @@
 .nativeDownloadHeading>div>span{font-size:12px;color:var(--muted)}
 .nativeDownloadChoices{display:grid;gap:10px}
 .nativeShellChoice{grid-column:1/-1}
-.nativeShellCommand{position:relative}.nativeInstall details .nativeShellCommand .docsExample{padding-top:44px;white-space:pre-wrap;overflow-wrap:anywhere}
-.nativeShellCommand button{position:absolute;right:12px;top:9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
 .nativeInstallOther>.nativeDownloadChoices,.nativeInstallOther details>.nativeDownloadChoices{margin-bottom:18px}
 .nativeInstallOther .nativeDownloadChoices a{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;text-decoration:none}
 .nativeDownloadCard .nativeDownloadChoices a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-radius:9px;background:var(--bg);border:1px solid var(--line);text-decoration:none;transition:border-color .15s,background .15s}
@@ -41,6 +49,7 @@
 .nativeInstallOther{margin-top:36px}.nativeInstall .nativeInstallOther h2{margin-bottom:4px}
 .nativeInstallFooter{display:flex;flex-wrap:wrap;gap:24px;margin-top:32px;font-size:13px}.nativeInstallFooter a{color:var(--muted);text-decoration:none}
 .nativeInstall :is(a,summary):focus-visible{outline:2px solid var(--accent);outline-offset:4px}
-.nativeInstall :is(#native-downloads,#homebrew,#shell-install){scroll-margin-top:110px}
+.nativeInstall :is(#native-downloads,#homebrew,#shell-install,#terminal-install,#npx-install){scroll-margin-top:110px}
+@media(max-width:760px){.nativeInstallQuick{grid-template-columns:1fr;gap:18px;padding:20px;margin-bottom:28px}.nativeInstallActions{gap:10px 18px;margin-top:18px}.nativeDownloadSectionHeading{display:block}.nativeDownloadSectionHeading p{margin:0 0 14px}}
 @media(max-width:760px){.nativeInstall .nativeDownloads{grid-template-columns:1fr;gap:14px}.nativeInstall{padding-top:26px}.nativeInstallHeader{margin-bottom:26px}.nativeInstallHeader h1{font-size:34px}.nativeInstallHeader p{font-size:14px}.nativeDownloadCard{padding:22px}.nativeDownloadHeading{margin-bottom:20px}.nativeDownloadChoices{grid-template-columns:repeat(2,minmax(0,1fr))}.nativeDownloadCard .nativeDownloadChoices a{padding:13px 12px;gap:8px}.nativeDownloadChoices strong{font-size:13px}.nativeDownloadMeta{display:grid;gap:8px;margin-bottom:30px}.nativeInstallStart{padding-top:26px}.nativeInstall .nativeInstallStart h2,.nativeInstall .nativeInstallOther h2{font-size:22px}.nativeInstall summary{flex-wrap:wrap}.nativeInstall summary small{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.nativeDownloadCard .nativeDownloadChoices a{transition:none}}

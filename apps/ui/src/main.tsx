@@ -30,6 +30,7 @@ import "./dashboard-workspaces.css";
 import { ArcComingSoonPageContent } from "./arc-future.js";
 import { ArcRoadmapPageContent } from "./arc-roadmap.js";
 import { ClientMcpGuide } from "./client-setup-guides.js";
+import { CHATGPT_PLUGIN_URL } from "./client-links.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress, taskActivity } from "./dashboard-task-view.js";
 import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
@@ -367,7 +368,6 @@ const APP_ORIGIN = "https://agent.remotearc.app";
 const MCP_ENDPOINT = "https://mcp.remotearc.app/mcp";
 const dashboardHref = (path: string) => UI_PREVIEW ? path : APP_ORIGIN + path;
 installUiPreviewFetchMock(MCP_ENDPOINT);
-const CHATGPT_PLUGIN_DIRECTORY_URL = "https://chatgpt.com/plugins?q=Remote%20Arc";
 const CLAUDE_CONNECTORS_URL = "https://claude.ai/settings/connectors";
 const GEMINI_CONNECTORS_URL = "https://gemini.google.com/customize/connectors";
 
@@ -1132,10 +1132,10 @@ function PairDevice({
         id: "chatgpt",
         name: "ChatGPT",
         icon: "/ai-openai.svg",
-        href: CHATGPT_PLUGIN_DIRECTORY_URL,
+        href: CHATGPT_PLUGIN_URL,
         guidePath: "/install/chatgpt",
-        detail: tr("Add Remote Arc, then authorize your account", "添加 Remote Arc，然后完成账号授权"),
-        action: tr("Open Plugins", "打开 Plugins"),
+        detail: tr("Install the published plugin and connect this same Remote Arc account", "安装已上架插件，并连接当前这个 Remote Arc 账号"),
+        action: tr("Open official plugin", "打开官方插件"),
         copyEndpoint: false,
       },
       {
@@ -1186,8 +1186,8 @@ function PairDevice({
             <span className="eyebrow">{tr("REQUIRED FOR CONNECT", "CONNECT 必需步骤")}</span>
             <h3>{tr("Choose your AI client", "选择你的 AI 客户端")}</h3>
             <p>{tr(
-              "Follow the setup guide to add Remote Arc and authorize this account in your client. Then enable Remote Arc in a chat to use your computer.",
-              "按照安装指南在客户端添加 Remote Arc，并授权当前账号。然后在 AI 对话中启用 Remote Arc，才能操作这台电脑。",
+              "For ChatGPT, open the published Remote Arc plugin and connect the same account used to pair this computer. Other clients can use a custom MCP connection. Then ask your AI to list your computers.",
+              "ChatGPT 用户直接打开已上架的 Remote Arc 插件，并连接配对这台电脑时使用的同一账号。其他客户端仍可使用 Custom MCP。然后让 AI 列出你的电脑。",
             )}</p>
           </div>
 
@@ -1221,11 +1221,14 @@ function PairDevice({
             ))}
           </div>
 
-          <div className="pairAgentEndpoint">
-            <span>{tr("Remote MCP endpoint", "Remote MCP 地址")}</span>
-            <code>{MCP_ENDPOINT}</code>
-            <CopyButton value={MCP_ENDPOINT} />
-          </div>
+          <details className="pairCustomMcp">
+            <summary>{tr("Custom MCP / other clients", "Custom MCP / 其他客户端")}</summary>
+            <div className="pairAgentEndpoint">
+              <span>{tr("Remote MCP endpoint", "Remote MCP 地址")}</span>
+              <code>{MCP_ENDPOINT}</code>
+              <CopyButton value={MCP_ENDPOINT} />
+            </div>
+          </details>
         </section>
         <div className="pairConnectionCheck"><strong>{tr("Check the connection", "确认连接成功")}</strong><p>{tr("After authorization, select Remote Arc in your AI chat and ask for your device list. A successful device result confirms the connection.", "授权后，在 AI 对话中启用 Remote Arc，发送“列出我的设备”。成功返回设备结果，才说明连接已经可用。")}</p></div>
 
@@ -2048,15 +2051,15 @@ function ClientInstallPage({
         eyebrow: tr("CHATGPT INSTALLATION", "CHATGPT 安装"),
         title: tr("Give ChatGPT access to your local computer.", "让 ChatGPT 连接你的本地电脑。"),
         intro: tr(
-          "Pair a computer once, add Remote Arc as a Remote MCP app on an eligible ChatGPT account, then work with that machine from chat.",
-          "电脑只需配对一次，再在支持 Remote MCP App 的 ChatGPT 账户中添加 Remote Arc，之后即可直接在聊天里操作这台电脑。",
+          "Install the published Remote Arc plugin, pair your computer with the local Agent, then verify the connection in chat. Both steps use the same Remote Arc account.",
+          "安装已上架的 Remote Arc 插件，用本地 Agent 配对电脑，再回到聊天验证。插件与电脑配对使用同一个 Remote Arc 账号。",
         ),
         availability: tr(
-          "Use a ChatGPT account that supports custom MCP connections. If Remote Arc is not listed in Plugins, add the endpoint manually using the steps below.",
-          "请使用支持自定义 MCP 连接的 ChatGPT 账号。如果 Plugins 中没有列出 Remote Arc，按下面的步骤手动添加地址。",
+          "Available as a published ChatGPT plugin. A paired computer with its Agent online is required for computer tools.",
+          "已上架 ChatGPT 插件。使用电脑工具时，仍需配对电脑并保持 Agent 在线。",
         ),
-        externalHref: CHATGPT_PLUGIN_DIRECTORY_URL,
-        externalLabel: tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins"),
+        externalHref: CHATGPT_PLUGIN_URL,
+        externalLabel: tr("Open official plugin", "打开官方插件"),
         steps: [
           {
             title: tr("Pair your computer", "配对你的电脑"),
@@ -2066,8 +2069,8 @@ function ClientInstallPage({
           {
             title: tr("Connect the Remote Arc Plugin", "连接 Remote Arc Plugin"),
             body: tr(
-              "Open ChatGPT Plugins → + → Add custom MCP server (where available), enter the HTTPS endpoint, complete OAuth and install or enable the created plugin. Account and workspace permissions apply.",
-              "打开 ChatGPT Plugins → ＋ → Add custom MCP server（若账户支持），填写 HTTPS 地址、完成 OAuth，再安装或启用创建好的插件。具体权限受账户和工作区限制。",
+              "Open the published Remote Arc plugin, install or enable it, and authorize the same Remote Arc account used to pair your computer. Custom MCP remains an optional alternative.",
+              "打开已上架的 Remote Arc 插件，安装或启用，并授权配对电脑时使用的同一 Remote Arc 账号。Custom MCP 仍作为可选替代方式保留。",
             ),
             code: MCP_ENDPOINT,
           },
@@ -2283,6 +2286,8 @@ function ClientInstallPage({
           </div>
         </header>
 
+        {slug === "chatgpt" ? <ClientMcpGuide client="chatgpt" endpoint={MCP_ENDPOINT}
+          cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} /> : <>
         <section id="installation-command" className="installQuickStart" aria-label={tr("Install Remote Arc on your computer", "在电脑上安装 Remote Arc")}>
           <div className="installQuickStartCopy">
             <span className="eyebrow">{tr("START HERE · INSTALLATION", "从这里开始 · 安装指南")}</span>
@@ -2416,6 +2421,7 @@ function ClientInstallPage({
           </div>
           <InstallTypewriterDemo config={config.demo} />
         </section>
+        </>}
 
       </main>
     </PublicLayout>
@@ -6166,9 +6172,9 @@ function Dashboard({
                     <div className="connectClientIdentity"><img className="monoLogo" src={aiClients[0].icon} alt="" /><div><span className="eyebrow">CHATGPT</span><h3>ChatGPT</h3></div></div>
                     <span className="clientState recommended">{tr("Plugins", "Plugins")}</span>
                   </div>
-                  <p>{tr("Open ChatGPT Plugins and look for Remote Arc. If it is not listed, use the custom MCP setup supported by your account and complete Remote Arc sign-in.", "打开 ChatGPT Plugins 查找 Remote Arc。如果没有列出，可通过账号支持的自定义 MCP 入口添加，并完成 Remote Arc 登录。")}</p>
+                  <p>{tr("Install the published Remote Arc plugin, connect the same account as your paired computer, then choose Try in chat. Custom MCP is an optional alternative in the setup guide.", "安装已上架的 Remote Arc 插件，连接与配对电脑相同的账号，再选择 Try in chat。安装指南中仍保留 Custom MCP 作为可选替代方式。")}</p>
                   <div className="connectClientActions">
-                    <a className="connectAgentAction" href={CHATGPT_PLUGIN_DIRECTORY_URL} target="_blank" rel="noreferrer"><span>{tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins")}</span><b>↗</b></a>
+                    <a className="connectAgentAction" href={CHATGPT_PLUGIN_URL} target="_blank" rel="noreferrer"><span>{tr("Open official plugin", "打开官方插件")}</span><b>↗</b></a>
                     <a className="connectClientGuide" href={MARKETING_ORIGIN + localizedWebsiteHref("/install/chatgpt", locale)} target="_blank" rel="noreferrer"><ProductIcon name="book" size={14} /><span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span><span aria-hidden="true">↗</span></a>
                   </div>
                 </article>

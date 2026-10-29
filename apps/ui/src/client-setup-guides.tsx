@@ -1,12 +1,10 @@
 import React from "react";
 import { ClientInstallWalkthrough } from "./client-install-walkthrough.js";
+import { ChatGptPluginSetup } from "./chatgpt-plugin-setup.js";
 import { useI18n } from "./i18n.js";
 import "./client-setup-guides.css";
 
 type Client = "chatgpt" | "claude" | "gemini" | "cursor";
-const chatgptPlugins = "https://chatgpt.com/plugins";
-const chatgptDocs = "https://developers.openai.com/plugins/deploy/connect-chatgpt";
-const chatgptAccess = "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt";
 const claudeConnectors = "https://claude.ai/customize/connectors";
 const geminiConnectors = "https://gemini.google.com/apps";
 const geminiDocs = "https://support.google.com/gemini/answer/17209137";
@@ -25,25 +23,8 @@ export function ClientMcpGuide({
   client: Client; endpoint: string; cursorInstallUrl: string; copyEndpoint: React.ReactNode;
 }) {
   const { tr } = useI18n();
-  const info = client === "chatgpt"
-    ? {
-      destination: chatgptPlugins,
-      destinationLabel: tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins"),
-      path: tr("Plugins → + → Add custom MCP server", "Plugins → ＋ → Add custom MCP server"),
-      steps: [
-        tr("Open ChatGPT Plugins. If your workspace already provides Remote Arc, install or enable it. For a custom connection, use + → Add custom MCP server when your account permits it.",
-          "打开 ChatGPT Plugins。如果工作区已提供 Remote Arc，直接安装或启用；配置自定义连接时，在账户允许的情况下选择 ＋ → Add custom MCP server。"),
-        tr("Name the connection Remote Arc, enter the HTTPS endpoint shown below (including /mcp), and choose OAuth for authentication.",
-          "名称填写 Remote Arc，粘贴下方完整 HTTPS 地址（含 /mcp），认证方式选择 OAuth。"),
-        tr("Complete Remote Arc OAuth, review permissions and create the plugin. Install or enable the resulting plugin, then select it from your chat with @Remote Arc.",
-          "完成 Remote Arc OAuth、核对权限并创建 Plugin。安装或启用后，在对话中通过 @Remote Arc 选择它。"),
-      ],
-      docs: chatgptDocs,
-      access: chatgptAccess,
-      important: tr("If the + / custom MCP option is missing, your account, plan or workspace may not have this feature. Managed workspaces can require an administrator to enable developer mode or approve the app. Do not assume every plan can use write tools.",
-        "如果找不到 ＋ / Add custom MCP server，通常是套餐、账户或工作区尚未开放。组织账户可能需要管理员开启 Developer mode 或批准应用；不要假设所有套餐都能使用写入工具。"),
-    }
-    : client === "claude"
+  if (client === "chatgpt") return <ChatGptPluginSetup endpoint={endpoint} />;
+  const info = client === "claude"
       ? {
         destination: claudeConnectors,
         destinationLabel: tr("Open Claude Connectors", "打开 Claude Connectors"),
@@ -109,7 +90,7 @@ export function ClientMcpGuide({
     <div className="installClientDetailsHeading">
       <div>
         <span className="eyebrow">{tr("REQUIRED · AI CLIENT", "必需 · AI 客户端")}</span>
-        <h2>{tr("Add Remote Arc inside ", "在客户端中添加 Remote Arc · ") + (client === "chatgpt" ? "ChatGPT" : client === "claude" ? "Claude" : client === "gemini" ? "Gemini" : "Cursor")}</h2>
+        <h2>{tr("Add Remote Arc inside ", "在客户端中添加 Remote Arc · ") + (client === "claude" ? "Claude" : client === "gemini" ? "Gemini" : "Cursor")}</h2>
         <p>{tr("This is a separate step from pairing your computer. Without the app / connector, your AI cannot call Remote Arc tools even if the agent is running.",
           "这一步与配对电脑相互独立。即使本地 Agent 正在运行，没有安装 MCP App / Connector，AI 也无法调用 Remote Arc 工具。")}</p>
       </div>

@@ -100,7 +100,7 @@ type User = {
   name: string | null;
   avatarUrl: string | null;
   role: "user" | "admin";
-  plan: "free" | "plus";
+  plan: "free" | "connect" | "plus";
   isAdmin: boolean;
 };
 
@@ -238,7 +238,7 @@ type ProductStatus = {
   recentActivity: AuditEvent[];
   usage: MonthlyUsage;
   entitlements: {
-    plan: "free" | "plus";
+    plan: "free" | "connect" | "plus";
     features: string[];
   };
 };

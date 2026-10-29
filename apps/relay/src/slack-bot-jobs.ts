@@ -83,6 +83,7 @@ async function notify(env:SlackBotEnv,job:SlackJob,installation:BotInstallation,
 }
 const blocker=(code:string,zh=false)=>{
  const say=(en:string,cn:string)=>zh?cn:en;
+ if(/ARC_PLAN_EXCLUDES_HOSTED/.test(code))return say('Connect Unlimited does not include Arc-hosted AI. Upgrade to Plus in Remote Arc to use Arc here.','Connect Unlimited 不包含 Arc 托管 AI。请在 Remote Arc 升级到 Plus 后在这里使用 Arc。');
  if(/ARC_TRIAL_REQUIRED/.test(code))return say('Start your Arc trial in Remote Arc before asking me to reason or run tasks.','请先在 Remote Arc 开启 Arc 试用，我才能帮你思考和执行任务。');
  if(/ARC_TRIAL_EXPIRED/.test(code))return say('Your Arc trial has ended. Choose an Arc plan to continue.','Arc 试用已结束，选择套餐后可以继续。');
  if(/CREDITS_EXHAUSTED/.test(code))return say('Your Arc Credits have run out, so this request has not started. Choose a plan or top up to continue.','你的 Arc Credits 已用完，这次请求没有开始。选择套餐或补充额度后可以继续。');

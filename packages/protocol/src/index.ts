@@ -4,9 +4,18 @@ export const ARC_CREDIT_RATE = {version:'arc-credits-v1',unitsPerCredit:1000,cos
 export const ARC_TRIAL_CREDITS = 200;
 export const ARC_MEMORY_LIMITS={facts:100,work:40,factBytes:768,workBytes:2048,contextBytes:4000} as const;
 export const ARC_PLATFORM_APP_BUDGETS_MICROS={free:10000,paid:500000} as const;
-export type ArcPlanId = 'free'|'arc-plus-v1'|'arc-pro-v1';
+export type ArcPlanId = 'free'|'connect-unlimited-v1'|'arc-plus-v1'|'arc-pro-v1';
+/** Connect-only paid plan. Users bring their own AI client; Remote Arc provides
+ * secure remote execution only. No hosted inference, Arc Chat or Credits. */
+export const CONNECT_UNLIMITED_PLAN_ID = 'connect-unlimited-v1';
+/** Published fair-use guards for plans whose calls/devices are unlimited.
+ * These are rate limits, never hidden monthly quotas. */
+export const CONNECT_FAIR_USE = {computerRegistrationsPerDay:20,browserInstallations:20} as const;
+/** Ordered by precedence: a later entry wins when several assignments are active.
+ * `null` limits are explicit unlimited entitlements, never magic large numbers. */
 export const ARC_PLANS = [
   {id:'free',label:'Free',monthlyPriceCents:0,monthlyCredits:0,connectToolCalls:10000,deviceLimit:2,connectionLimit:5,allHostedModels:false,concurrentRuns:1,routines:3,maxSteps:8,maxTokens:24000,maxSeconds:180},
+  {id:'connect-unlimited-v1',label:'Connect Unlimited',monthlyPriceCents:1999,monthlyCredits:0,connectToolCalls:null,deviceLimit:null,connectionLimit:50,allHostedModels:false,concurrentRuns:1,routines:3,maxSteps:8,maxTokens:24000,maxSeconds:180},
   {id:'arc-plus-v1',label:'Plus',monthlyPriceCents:3900,monthlyCredits:1500,connectToolCalls:null,deviceLimit:10,connectionLimit:50,allHostedModels:true,concurrentRuns:2,routines:20,maxSteps:16,maxTokens:48000,maxSeconds:600},
   {id:'arc-pro-v1',label:'Pro',monthlyPriceCents:7900,monthlyCredits:5000,connectToolCalls:null,deviceLimit:20,connectionLimit:200,allHostedModels:true,concurrentRuns:5,routines:100,maxSteps:32,maxTokens:96000,maxSeconds:1800}
 ] as const;
@@ -129,28 +138,35 @@ export type AgentToRelayMessage = AgentHelloMessage | AgentResultMessage | Runne
 export const DEFAULT_RELAY_URL = "wss://remotearc.app";
 
 
-export type AccountPlan = "free" | "plus";
+/** "connect" is a paid Connect-only tier: every device-side feature, but no
+ * Remote Arc-hosted inference (including the hosted goal planner). */
+export type AccountPlan = "free" | "connect" | "plus";
 
 export type AccountFeature =
   | "binary_read"
   | "durable_tasks"
   | "scheduled_tasks"
   | "planned_agent_goals"
-  | "keep_awake";
+  | "keep_awake"
+  | "hosted_planner";
+
+const CONNECT_ACCOUNT_FEATURES = [
+  "binary_read",
+  "durable_tasks",
+  "scheduled_tasks",
+  "planned_agent_goals",
+  "keep_awake",
+] as const satisfies readonly AccountFeature[];
 
 export const ACCOUNT_PLAN_FEATURES: Record<AccountPlan, readonly AccountFeature[]> = {
   free: [],
-  plus: [
-    "binary_read",
-    "durable_tasks",
-    "scheduled_tasks",
-    "planned_agent_goals",
-    "keep_awake",
-  ],
+  connect: CONNECT_ACCOUNT_FEATURES,
+  plus: [...CONNECT_ACCOUNT_FEATURES, "hosted_planner"],
 };
 
 export const ACCOUNT_PLAN_LABELS: Record<AccountPlan, string> = {
   free: "Free",
+  connect: "Connect Unlimited",
   plus: "Plus",
 };
 

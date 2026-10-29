@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import ts from "typescript";
+import { stripTypeScriptTypes } from "node:module";
 import { parseSecurityState, parsePendingApprovals, parsePersistentApprovals } from "../src/security-state.ts";
 
 // Exercise the real preview fixture, rather than duplicating its response here.
@@ -14,9 +14,9 @@ const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "u
   .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/billing-preview.ts", import.meta.url).href))
   .replaceAll("'./onboarding-preview.js'", JSON.stringify(new URL("../src/onboarding-preview.ts", import.meta.url).href))
   .replaceAll("'./followup-preview.js'", JSON.stringify(new URL("../src/followup-preview.ts", import.meta.url).href));
-const compiled = ts.transpileModule(source, {
-  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-}).outputText;
+// This test runs on Node 24. Strip the real fixture's types with the runtime
+// parser so compiler CLI upgrades do not change the test's source loader.
+const compiled = stripTypeScriptTypes(source, { mode: "transform" });
 const storage=new Map();
 globalThis.window = { sessionStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},fetch: async () => { throw new Error("Unexpected native request"); } };
 globalThis.location = { origin: "https://preview.test", href: "https://preview.test/overview" };

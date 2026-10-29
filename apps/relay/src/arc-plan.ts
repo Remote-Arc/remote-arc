@@ -3,12 +3,14 @@ import {commercialVersion,activeCommercial,type ArcPlanConfig} from './arc-comme
 /** Replace only untouched bootstrap execution windows. Published administrator
  * configurations, prices, credits and financial budgets remain authoritative. */
 export function arcExecutionCapacity(plan:ArcPlanConfig,versionId:string):ArcPlanConfig{
- const legacy={free:[8,24000,180],'arc-plus-v1':[16,48000,600],'arc-pro-v1':[32,96000,1800]}[plan.id]!;
+ const legacy=({free:[8,24000,180],'arc-plus-v1':[16,48000,600],'arc-pro-v1':[32,96000,1800]} as Record<string,number[]>)[plan.id];
+ // Plans launched after the capacity repair (Connect-only) have no legacy window.
+ if(!legacy)return plan;
  // The quota repair clones the active version and changes only Connect calls;
  // keep the same execution capacity for cloned bootstrap versions.
  const capacityVersion=versionId.replace(/^free-connect-10000:/,'');
  if(!['seed:live:'+plan.id,'seed:test:'+plan.id].includes(capacityVersion)||plan.maxSteps!==legacy[0]||plan.maxTokens!==legacy[1]||plan.maxSeconds!==legacy[2])return plan;
- const capacity={free:[32,128000,900],'arc-plus-v1':[48,192000,1800],'arc-pro-v1':[64,256000,3600]}[plan.id]!;
+ const capacity=({free:[32,128000,900],'arc-plus-v1':[48,192000,1800],'arc-pro-v1':[64,256000,3600]} as Record<string,number[]>)[plan.id]!;
  return{...plan,maxSteps:capacity[0]!,maxTokens:capacity[1]!,maxSeconds:capacity[2]!};
 }
 export async function currentArcPlan(binding:D1Database|{DB:D1Database;STRIPE_SECRET_KEY?:string},userId:string,at=new Date().toISOString()){

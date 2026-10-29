@@ -28,7 +28,7 @@ export type SessionUser = {
   name: string | null;
   avatarUrl: string | null;
   role: "user" | "admin";
-  plan: "free" | "plus";
+  plan: "free" | "connect" | "plus";
   isAdmin: boolean;
 };
 
@@ -139,7 +139,9 @@ export async function getSessionUser(
     }>());
 
   if (!row) return null;
-  const hostedPaid=billingEnabled(env)&&(await currentArcPlan(env,row.id)).id!=='free';
+  const paidPlan=billingEnabled(env)?await currentArcPlan(env,row.id):null;
+  const hostedPaid=Boolean(paidPlan?.allHostedModels);
+  const connectPaid=Boolean(paidPlan&&paidPlan.id!=='free'&&!hostedPaid);
 
   return {
     id: row.id,
@@ -147,7 +149,7 @@ export async function getSessionUser(
     name: row.name,
     avatarUrl: row.avatar_url,
     role: row.role || "user",
-    plan: row.role === "admin" || row.plan === "plus" || row.has_plus_grant || hostedPaid ? "plus" : "free",
+    plan: row.role === "admin" || row.plan === "plus" || row.has_plus_grant || hostedPaid ? "plus" as const : connectPaid ? "connect" as const : "free" as const,
     isAdmin: row.role === "admin",
   };
 }

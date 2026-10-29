@@ -1,6 +1,6 @@
 import {creditsEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 import {getBillingEntitlements,reconcileArcDispatchRejects} from './billing-ledger.js';
-import {ARC_CREDIT_RATE} from '@remotearc/protocol';
+import {ARC_CREDIT_RATE,CONNECT_UNLIMITED_PLAN_ID} from '@remotearc/protocol';
 import {activeCommercial,commercialVersion} from './arc-commercial-config.js';
 import type {StripeEnv} from './stripe-client.js';
 import {grantArcCredits,creditBalance,costCreditUnits} from './arc-credits.js';
@@ -10,14 +10,19 @@ type Trial={user_id:string;started_at:string;expires_at:string;premium_allowance
 export class ArcAccessError extends Error {constructor(code:string){super(code);}}
 export function arcLimit(value:string|undefined,fallback:number){const n=Number(value??fallback);if(!Number.isSafeInteger(n)||n<1||n>1000000000)throw new ArcAccessError('ARC_BUDGET_CONFIGURATION_INVALID');return n;}
 export async function arcAccountAccess(env:TrialEnv,userId:string,at=new Date().toISOString()){
- const [entitlements,trial]=await Promise.all([
+ const [entitlements,connect,trial]=await Promise.all([
   getBillingEntitlements(env.DB,{userId,organizationId:'personal:'+userId},'arc_hosted',at),
+  getBillingEntitlements(env.DB,{userId,organizationId:'personal:'+userId},'connect',at),
   env.DB.prepare('SELECT * FROM arc_trials WHERE user_id=?1').bind(userId).first<Trial>(),
  ]);
- const paid=entitlements.features.includes('hosted_inference'),active=Boolean(trial&&trial.started_at<=at&&trial.expires_at>at),funded=await fundingAvailable(env.DB,userId);
- return{paid,premium:entitlements.features.includes('paid_models'),trial,active,funded,allowed:(paid||active)&&funded,status:paid?'paid':active?'active':trial?'expired':'eligible'};
+ const paid=entitlements.features.includes('hosted_inference'),funded=await fundingAvailable(env.DB,userId);
+ const active=Boolean(trial&&trial.started_at<=at&&trial.expires_at>at);
+ // Connect-only subscribers get the same one-time trial as every account; once it
+ // has been used, hosted Arc needs a plan that includes it.
+ const excluded=!paid&&!active&&Boolean(trial)&&connect.planIds.includes(CONNECT_UNLIMITED_PLAN_ID);
+ return{paid,premium:entitlements.features.includes('paid_models'),trial,active,excluded,funded,allowed:(paid||active)&&funded,status:paid?'paid':excluded?'excluded':active?'active':trial?'expired':'eligible'};
 }
-export async function requireArcAccess(env:TrialEnv,userId:string){const access=await arcAccountAccess(env,userId);if(!access.funded)throw new ArcAccessError('ARC_FUNDING_PAUSED_OR_LIMIT');if(!access.allowed)throw new ArcAccessError(access.trial?'ARC_TRIAL_EXPIRED':'ARC_TRIAL_REQUIRED');return access;}
+export async function requireArcAccess(env:TrialEnv,userId:string){const access=await arcAccountAccess(env,userId);if(access.excluded)throw new ArcAccessError('ARC_PLAN_EXCLUDES_HOSTED');if(!access.funded)throw new ArcAccessError('ARC_FUNDING_PAUSED_OR_LIMIT');if(!access.allowed)throw new ArcAccessError(access.trial?'ARC_TRIAL_EXPIRED':'ARC_TRIAL_REQUIRED');return access;}
 export async function activateArcTrial(env:TrialEnv,userId:string,at=new Date().toISOString()){
  if(!await fundingAvailable(env.DB))throw new ArcAccessError('ARC_FUNDING_PAUSED_OR_LIMIT');
  const access=await arcAccountAccess(env,userId,at);if(access.paid||access.trial){if(access.active&&!access.paid)await ensureTrialCredits(env,userId,access.trial!);return access;}

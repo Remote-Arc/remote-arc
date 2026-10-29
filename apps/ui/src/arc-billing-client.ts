@@ -1,9 +1,10 @@
+import {CONNECT_FAIR_USE,CONNECT_UNLIMITED_PLAN_ID} from '@remotearc/protocol';
 import {productRequestHeaders} from './product-events.js';
 import type {ArcAccess} from './use-arc-chat.js';
-export type BillingPlan={versionId?:string;id:string;label:string;monthlyPriceCents:number;monthlyCredits:number;connectToolCalls:number|null;concurrentRuns:number;maxSeconds:number};
+export type BillingPlan={versionId?:string;id:string;label:string;monthlyPriceCents:number;monthlyCredits:number;connectToolCalls:number|null;concurrentRuns:number;maxSeconds:number;deviceLimit?:number|null;allHostedModels?:boolean};
 export type NativePaymentSession={clientSecret:string;publishableKey:string;sessionId?:string;id?:string};
 export type BillingDetails={paymentMethod:null|{type:'card';brand:string;last4:string;expMonth:number;expYear:number;wallet?:'apple_pay'|'google_pay'}|{type:'link'|'other'};invoices:{id:string;number:string|null;status:string;currency:string;amountPaid:number;amountDue:number;createdAt:string;pdfUrl:string|null}[];hasMore:boolean};
-export type ArcBilling={embeddedCheckoutEnabled?:boolean;subscriptionManagementEnabled?:boolean;enabled:boolean;portalEnabled?:boolean;hasCustomer?:boolean;plan:BillingPlan;access?:ArcAccess;credits:{available:number;pending:number};usage:{used:number;limit:number|null};plans:BillingPlan[];topups:{versionId?:string;id:string;credits:number;priceCents:number}[];models:{id:string;label:string;inputCreditsPer1000:number;outputCreditsPer1000:number}[];subscriptions:{revision?:number;status:string;period_end:string;cancel_at_period_end:number;pending_product_id?:string|null;pending_effective_at?:string|null}[]};
+export type ArcBilling={embeddedCheckoutEnabled?:boolean;subscriptionManagementEnabled?:boolean;enabled:boolean;connectEnabled?:boolean;portalEnabled?:boolean;hasCustomer?:boolean;plan:BillingPlan;access?:ArcAccess;credits:{available:number;pending:number};usage:{used:number;limit:number|null};plans:BillingPlan[];topups:{versionId?:string;id:string;credits:number;priceCents:number}[];models:{id:string;label:string;inputCreditsPer1000:number;outputCreditsPer1000:number}[];subscriptions:{revision?:number;status:string;period_end:string;cancel_at_period_end:number;pending_product_id?:string|null;pending_effective_at?:string|null}[]};
 export class BillingFailure extends Error{constructor(code:string,readonly reference?:string){super(code);}}
 export async function billingRequest<T>(path='',body?:unknown,signal?:AbortSignal):Promise<T>{
  const response=await fetch('/api/billing'+(path?'/'+path:''),{credentials:'same-origin',signal,headers:{accept:'application/json',...productRequestHeaders(),...(body!==undefined?{'content-type':'application/json'}:{})},...(body!==undefined?{method:'POST',body:JSON.stringify(body)}:{})});
@@ -12,6 +13,12 @@ export async function billingRequest<T>(path='',body?:unknown,signal?:AbortSigna
 export function secureBillingUrl(value:unknown){
  if(typeof value!=='string')throw new BillingFailure('BILLING_UNAVAILABLE');
  const url=new URL(value);if(url.protocol!=='https:'||url.username||url.password||!['checkout.stripe.com','billing.stripe.com'].includes(url.hostname))throw new BillingFailure('BILLING_UNAVAILABLE');return url.href;
+}
+/** Connect Unlimited: paid remote execution; no monthly Credits or hosted Arc beyond the one-time trial. */
+export const isConnectOnlyPlan=(plan:{id:string})=>plan.id===CONNECT_UNLIMITED_PLAN_ID;
+export function connectPlanFeatures(tr:(en:string,zh:string)=>string){
+ const registrationsPerDay=CONNECT_FAIR_USE.computerRegistrationsPerDay;
+ return [tr('Unlimited Connect calls · fair-use rate limits, no monthly cap','无限 Connect 调用 · 仅有公开的速率限制，无月度上限'),tr('Unlimited registered computers, each authenticated and revocable','不限已注册电脑数量，每台独立认证、可随时撤销'),tr(`Up to ${registrationsPerDay} new computers per day · runs follow each computer’s own capacity`,`每天最多新增 ${registrationsPerDay} 台电脑 · 运行并发取决于每台电脑自身容量`),tr('Local terminal, files, browser, Fleet and connected Apps','本地终端、文件、浏览器、Fleet 与已连接应用'),tr('Bring your own ChatGPT, Claude or Codex · no monthly Credits; Arc after the free trial needs Plus','使用你自己的 ChatGPT、Claude 或 Codex · 不含月度 Credits；免费试用后使用 Arc 需要 Plus')];
 }
 export function billingFailureMessage(error:unknown,tr:(en:string,zh:string)=>string){
  const code=error instanceof Error?error.message:'';

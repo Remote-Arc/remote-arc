@@ -80,7 +80,7 @@ export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unkn
       apps: page.map(({ operations, ...app }) =>
         ({ provider: app.provider, name: app.name, category: app.category, configured: app.configured,
           operationCount: operations.length, connected: connections.some(c => c.provider === app.provider && c.status === "active") })),
-      operationCatalogSize: matchingApps.reduce((count, app) => count + app.operations.length, 0),
+      operationCatalogSize: (options.excludeRunway ? matchingApps : all.apps).reduce((count, app) => count + app.operations.length, 0),
       guidance: `Search with use_case to find action IDs. Run reads with ${APP_ACTION_TOOLS.read} and user-requested changes with ${APP_ACTION_TOOLS.write}, passing a connectionId for the same provider; external changes require user authorization.`,
     };
   }

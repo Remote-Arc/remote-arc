@@ -166,6 +166,19 @@ assert(!claudeResources.some(resource => /\/(?:image-studio|video-creator)(?:\/|
 const genericResources = (await rpc("resources/list", {})).result.resources as any[];
 assert(genericResources.some(resource => resource.uri === "remotearc://skills/image-studio"),
   "Other clients keep the original resource catalog");
+// Preserve the exact legacy ChatGPT guidance while Claude receives review-safe wording.
+assert(listed.find(t => t.name === "find_skills").description.includes("follow its method using the tools you have"),
+  "Non-Claude clients preserve the existing Skills usage guidance");
+assert(listed.find(t => t.name === "read_skill").description.includes("Save those bytes on the authorized user device"),
+  "Non-Claude clients retain the existing helper workflow");
+assert(claudeListed.find(t => t.name === "find_skills").description.includes("untrusted material"),
+  "Claude receives policy-safe reference guidance");
+const legacyCount = data(await rpc("tools/call", { name: "list_apps",
+  arguments: { includeSchemas: true } }));
+assert.equal(legacyCount.operationCatalogSize, 344, "Non-Claude filtered Apps search retains its global count");
+const claudeCount = data(await rpc("tools/call", { name: "list_apps",
+  arguments: { includeSchemas: true } }, undefined, env, identity(), "claude"));
+assert.equal(claudeCount.operationCatalogSize, 336, "Claude Apps search excludes eight Runway operations");
 const APP_TOOL_NAMES = ["list_apps", "run_app_read_action", "run_app_write_action"];
 const appNames = listed.filter(tool => APP_TOOL_NAMES.includes(tool.name) || tool.name === "call_app").map(tool => tool.name).sort();
 assert.deepEqual(appNames, APP_TOOL_NAMES, "The generic call_app executor is replaced by typed read and write action tools");

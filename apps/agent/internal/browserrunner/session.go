@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 )
 
 //go:embed page.js
@@ -29,6 +31,7 @@ type session struct {
 	mu       sync.Mutex
 	m        *Manager
 	cp       *Checkpoint
+	auth     protocol.BrowserAuth
 	scope    scope
 	proc     *browserProcess
 	conn     cdpClient
@@ -65,7 +68,19 @@ type session struct {
 
 	// shownForUser: the window was brought on screen for the user to act
 	// in; it goes back out of sight when the AI continues.
-	shownForUser bool
+	shownForUser      bool
+	viewUntil         time.Time    // guarded by ev
+	video             *videoStream // guarded by ev; one encoded publisher per task
+	viewJPEG          bool         // guarded by ev; false only after all viewers play video
+	viewActive        bool
+	viewConn          cdpClient
+	lastViewFrame     time.Time
+	viewStarted       time.Time
+	viewError         string             // diagnostic only; never contains a frame
+	viewCaptureCancel context.CancelFunc // guarded by ev; at most one viewport capture
+	viewCaptureID     uint64
+	networkRequests   map[string]bool
+	networkChanged    time.Time
 
 	snapshotID    string
 	snapshotEpoch int
@@ -76,11 +91,33 @@ type session struct {
 func (s *session) live() bool { return s.conn != nil && s.conn.Alive() }
 
 func (s *session) onEvent(cdpSession, method string, raw json.RawMessage) {
+	if method == "Network.requestWillBeSent" || method == "Network.loadingFinished" || method == "Network.loadingFailed" {
+		var event struct {
+			RequestID string `json:"requestId"`
+		}
+		if json.Unmarshal(raw, &event) == nil {
+			s.ev.Lock()
+			if s.networkRequests == nil {
+				s.networkRequests = map[string]bool{}
+			}
+			key := cdpSession + ":" + event.RequestID
+			if method == "Network.requestWillBeSent" {
+				s.networkRequests[key] = true
+			} else {
+				delete(s.networkRequests, key)
+			}
+			s.networkChanged = time.Now()
+			s.ev.Unlock()
+		}
+	}
+
 	if cdpSession != "" {
 		s.onChildEvent(cdpSession, method, raw)
 		return
 	}
 	switch method {
+	case "Page.screencastFrame":
+		s.onViewFrame(raw)
 	case "Fetch.requestPaused":
 		var p struct {
 			RequestID string `json:"requestId"`
@@ -321,6 +358,8 @@ func (s *session) ensureLive(ctx context.Context) error {
 	s.ev.Lock()
 	s.worldCtx, s.mainFrame, s.href = 0, "", ""
 	s.frames = map[string]*frameInfo{}
+	s.networkRequests = map[string]bool{}
+	s.networkChanged = time.Now()
 	s.ev.Unlock()
 	s.snapFrames = nil
 	if e := s.setup(ctx); e != nil {
@@ -407,6 +446,12 @@ func (s *session) setup(ctx context.Context) error {
 }
 
 func (s *session) shutdownBrowser(markPaused bool) {
+	s.ev.Lock()
+	s.stopVideoLocked()
+	s.viewActive = false
+	s.viewUntil = time.Time{}
+	s.cancelViewCapture()
+	s.ev.Unlock()
 	if s.conn != nil {
 		s.conn.Close()
 		s.conn = nil
@@ -434,7 +479,7 @@ func (s *session) flush() error {
 	s.cp.Blocked = append(s.cp.Blocked, s.blocked...)
 	s.blocked = nil
 	if strings.HasPrefix(s.href, "http") {
-		s.cp.ResumeURL = s.href
+		s.cp.ResumeURL = authResumeURL(s.href)
 		s.cp.LastURL = safeURL(s.href)
 	}
 	s.ev.Unlock()
@@ -527,6 +572,18 @@ func (s *session) helperIn(ctx context.Context, frameID, op string, args map[str
 	if args == nil {
 		args = map[string]any{}
 	}
+	rawURL := s.currentHref()
+	if frameID != "" {
+		f, ok := s.frameByID(frameID)
+		if !ok || !s.readableFrame(f) {
+			return nil, errors.New("BROWSER_AUTH_REQUIRED: this frame is not approved in Dashboard.")
+		}
+		rawURL = f.url
+		args["captcha_frame"] = s.captchaFrame(f)
+	}
+	args["allow_codes"] = s.codesAllowed(rawURL)
+	args["allow_captcha"] = s.captchaAllowed()
+	args["mailbox"] = s.auth.Mailbox
 	b, _ := json.Marshal(args)
 	expr := pageJS + "(" + quoteJS(op) + ", " + string(b) + ")"
 	var r evalResult
@@ -876,7 +933,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	s.ev.Lock()
 	epoch := s.epoch
 	s.ev.Unlock()
-	r, e := s.helper(ctx, "snapshot", map[string]any{"snapshot_id": id, "max_elements": maxElements, "max_text": maxText, "allow_codes": oneTimeCodesAllowed()}, true)
+	r, e := s.helper(ctx, "snapshot", map[string]any{"snapshot_id": id, "max_elements": maxElements, "max_text": maxText, "allow_codes": s.codesAllowed(s.currentHref()), "allow_captcha": s.captchaAllowed()}, true)
 	if e != nil {
 		return nil, e
 	}
@@ -884,6 +941,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	if e := json.Unmarshal(r.Result.Value, &page); e != nil {
 		return nil, e
 	}
+	page["authentication"] = map[string]any{"otp": s.codesAllowed(s.currentHref()), "captcha": s.captchaAllowed(), "mailbox": s.auth.Mailbox, "approval_location": "Dashboard → device → Browser authentication"}
 	s.snapshotID, s.snapshotEpoch = id, epoch
 	elements, _ := page["elements"].([]any)
 	s.snapshotFrames(ctx, page, id, maxElements-len(elements), maxText)
@@ -892,29 +950,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	}
 	s.applySavedLogins(page)
 	blockers, _ := page["blockers"].([]any)
-	if len(blockers) > 0 {
-		kinds := []string{}
-		captcha := false
-		for _, b := range blockers {
-			if m, ok := b.(map[string]any); ok {
-				kinds = append(kinds, fmt.Sprint(m["kind"]))
-				captcha = captcha || m["kind"] == "captcha"
-			}
-		}
-		s.cp.State = StateNeedsUser
-		s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Sign-in, verification codes and CAPTCHAs are completed by the user in the task window."
-		switch {
-		case s.cp.Headless && s.hasWindow():
-			s.cp.NeedsUser += " The window is hidden so it does not interrupt the user. Tell the user what is needed and ask them to say when they are ready; then call browser_runner_start with the same task_id and headless=false. The window comes on screen as it is, with everything entered on it, and goes back out of sight when you continue."
-		case s.cp.Headless:
-			s.cp.NeedsUser += " This computer runs the browser without a window, so the user cannot do it here."
-		}
-		if captcha {
-			s.cp.NeedsUser += " Remote Arc does not solve CAPTCHAs and never reads their responses. When the challenge has closed, the next snapshot continues the task."
-		}
-	} else if s.cp.State == StateNeedsUser {
-		s.cp.State, s.cp.NeedsUser = StateActive, ""
-	}
+	s.updateAttention(ctx, blockers)
 	attention, _ := page["attention"].([]any)
 	// A hidden browser cannot show the user a challenge later without
 	// reopening the page, which clears the form. Say it before any typing.
@@ -1070,11 +1106,19 @@ type actRequest struct {
 // act performs one input action. dispatched reports whether any input may
 // have reached the page, which decides between not_dispatched and unknown.
 func (s *session) act(ctx context.Context, a actRequest) (result map[string]any, dispatched bool, err error) {
-	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action, "allow_codes": oneTimeCodesAllowed(), "secret_part": a.SecretPart}
+	ref := map[string]any{"snapshot_id": a.SnapshotID, "ref": a.Ref, "action": a.Action, "allow_codes": s.codesAllowed(s.currentHref()), "allow_captcha": s.captchaAllowed(), "secret_part": a.SecretPart}
 	result = map[string]any{"action": a.Action}
 	frameID, e := s.refFrame(a.Ref)
 	if e != nil {
 		return nil, false, e
+	}
+	if e := s.checkAuthRef(a.Ref); e != nil {
+		return nil, false, e
+	}
+	if frameID != "" {
+		if f, ok := s.frameByID(frameID); ok {
+			ref["allow_codes"] = s.codesAllowed(f.url)
+		}
 	}
 	if frameID != "" {
 		result["frame"] = a.Ref[:strings.IndexByte(a.Ref, 'e')]
@@ -1235,6 +1279,11 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 		if !ok {
 			return nil, false, errors.New("press key must be one of Enter, Tab, Escape, ArrowDown, ArrowUp, Space.")
 		}
+		if a.Ref == "" {
+			if _, e := s.helper(ctx, "guard_key_focus", nil, true); e != nil {
+				return nil, false, e
+			}
+		}
 		if a.Ref != "" {
 			if _, e := s.helperIn(ctx, frameID, "focus", ref, true); e != nil {
 				return nil, false, e
@@ -1258,9 +1307,25 @@ func (s *session) act(ctx context.Context, a actRequest) (result map[string]any,
 	return result, dispatched, nil
 }
 
-var uploadTypes = map[string]bool{".pdf": true, ".doc": true, ".docx": true, ".txt": true, ".rtf": true, ".odt": true, ".png": true, ".jpg": true, ".jpeg": true}
+// uploadLimits lists the file types browser_runner may attach and the size
+// limit for each class. Media files are passed to Chrome by path and hashed as
+// a stream, so larger videos do not need to fit in memory.
+const (
+	maxDocumentUpload = 25 << 20
+	maxAudioUpload    = 512 << 20
+	maxVideoUpload    = 2 << 30
+)
 
-const maxUpload = 25 << 20
+var uploadLimits = map[string]int64{
+	".pdf": maxDocumentUpload, ".doc": maxDocumentUpload, ".docx": maxDocumentUpload, ".txt": maxDocumentUpload,
+	".rtf": maxDocumentUpload, ".odt": maxDocumentUpload, ".csv": maxDocumentUpload, ".xlsx": maxDocumentUpload,
+	".pptx": maxDocumentUpload, ".png": maxDocumentUpload, ".jpg": maxDocumentUpload, ".jpeg": maxDocumentUpload,
+	".gif": maxDocumentUpload, ".webp": maxDocumentUpload,
+	".mp3": maxAudioUpload, ".wav": maxAudioUpload, ".m4a": maxAudioUpload,
+	".mp4": maxVideoUpload, ".mov": maxVideoUpload, ".m4v": maxVideoUpload, ".webm": maxVideoUpload,
+}
+
+const uploadTypesText = "documents (pdf, doc, docx, txt, rtf, odt, csv, xlsx, pptx), images (png, jpg, gif, webp), audio (mp3, wav, m4a) and video (mp4, mov, m4v, webm)"
 
 func fileDigest(path string) (int64, string, error) {
 	st, e := os.Stat(path)
@@ -1273,11 +1338,12 @@ func fileDigest(path string) (int64, string, error) {
 	if !st.Mode().IsRegular() {
 		return 0, "", errors.New("Upload path must be a regular file.")
 	}
-	if st.Size() == 0 || st.Size() > maxUpload {
-		return 0, "", fmt.Errorf("Upload files must be between 1 byte and %d MB.", maxUpload>>20)
+	limit, ok := uploadLimits[strings.ToLower(filepath.Ext(path))]
+	if !ok {
+		return 0, "", errors.New("UNSUPPORTED_UPLOAD_TYPE: browser_runner uploads " + uploadTypesText + ".")
 	}
-	if !uploadTypes[strings.ToLower(filepath.Ext(path))] {
-		return 0, "", errors.New("browser_runner uploads documents and images only (pdf, doc, docx, txt, rtf, odt, png, jpg).")
+	if st.Size() == 0 || st.Size() > limit {
+		return 0, "", fmt.Errorf("UPLOAD_SIZE_LIMIT: %s files must be between 1 byte and %d MB.", strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), "."), limit>>20)
 	}
 	f, e := os.Open(path)
 	if e != nil {

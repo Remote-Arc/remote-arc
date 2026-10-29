@@ -1,3 +1,4 @@
+import {SKILL_USE_CASES} from '../../../packages/docs/src/skill-use-cases.js';
 import { DOC_TOPICS, DOC_PATHS } from "../../../packages/docs/src/catalog.js";
 import { ARC_DELEGATED_WORK, ARC_USE_CASES, arcChatHref, arcUseCasePrompt, type UseCaseSlug } from "../../../packages/docs/src/arc-use-cases.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
@@ -153,7 +154,7 @@ const pages: Record<string, SeoPage> = {
   "/connect-ai": { title: "Connect Remote Arc to Your AI — ChatGPT, Claude, Gemini, Cursor", description: "Add Remote Arc to ChatGPT, Claude, Gemini, Cursor or another MCP client, connect your computer or apps, and choose what each computer allows. About five minutes.", canonical: SITE + "/connect-ai" },
   "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
   "/blogs": { title: "Remote Arc Blog — MCP, Security & Remote AI Engineering", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
-  "/use-cases": { title: "Remote Arc Use Cases — Connect your AI to your computers, browser and apps", description: "Use ChatGPT, Claude, Cursor or Codex with Remote Arc Connect to work on your own computers, complete web forms with Browser Runner (Beta) and use your apps. 16 workflows with exact requirements and verifiable results; most also run with Arc.", canonical: SITE + "/use-cases" },
+  "/use-cases": { title: "Remote Arc Use Cases — Connect your AI to your computers, browser and apps", description: "Explore illustrated tasks for local video creation, audio transcription, documents, images, research, data and automation. Each use case explains its outputs, requirements and verification.", canonical: SITE + "/use-cases" },
   "/chatgpt-computer-access": { title: "ChatGPT Computer Access via Remote MCP — Remote Arc", description: "Connect ChatGPT to a real Windows, macOS or Linux computer through Remote MCP, OAuth and explicit per-device permissions.", canonical: SITE + "/chatgpt-computer-access" },
   "/claude-computer-access": { title: "Claude Computer Access via Remote MCP — Remote Arc", description: "Connect Claude to explicitly paired Windows, macOS and Linux computers through Remote MCP, OAuth and per-device permissions.", canonical: SITE + "/claude-computer-access" },
   "/mcp-computer-access": { title: "MCP Computer Access for AI Agents — Remote Arc", description: "Use a hosted Remote MCP bridge to give compatible AI clients controlled access to files, processes, browser tabs and approved commands on paired computers.", canonical: SITE + "/mcp-computer-access" },
@@ -180,6 +181,7 @@ const useCaseSeo: Record<string, [string, string]> = {
   "job-applications": ["Prepare a job application with your own AI", "Browser Runner (Beta) lets ChatGPT, Claude or another MCP client fill an employer's application form in a task browser on your computer, while you handle sign-in, CAPTCHAs and the final submit."],
   "cross-device-handoff": ["Work across Windows and macOS from one AI chat", "Coordinate actions on separately paired Windows and Mac computers, enforcing each device's own tool permissions and verifying results independently."],
 };
+Object.assign(useCaseSeo,Object.fromEntries(SKILL_USE_CASES.map(item=>[item.slug,[item.title.en,item.intro.en]])));
 for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   const path = "/use-cases/" + slug;
   pages[path] = { title: title + " — Remote Arc", description, canonical: SITE + path };
@@ -411,14 +413,12 @@ const crawlPages: Record<string, CrawlPage> = {
   },
   "/use-cases": {
     h1: "Remote Arc use cases",
-    intro: "Connect the AI you already use, such as ChatGPT, Claude, Cursor or Codex, to your own computers, a task browser and your apps, or delegate a responsibility to Arc with retained context, scheduled fresh judgment and result checks. Sixteen concrete workflows; all run through Connect, and all but the Browser Runner workflow also run with Arc.",
+    intro: "Choose a task from the illustrated catalog: create a video, transcribe a recording, write a document, analyze data, research a topic or automate work on your connected computer. Each detail explains the actual outputs, requirements and checks. Use Connect from your existing AI or choose an eligible Arc workflow.",
     sections: [
-      ...ARC_DELEGATED_WORK.map(item => ({heading:item.title.en,text:item.detail.en+' Arc retains: '+item.retains.en+' Arc checks: '+item.checks.en})),
-      { heading: "Remote development on the machine that owns the checkout", text: "An AI can inspect an existing repository, read configuration, edit selected files and run the project's own tests without first copying the project into another hosted environment. Device policy determines whether the session stays read-only or can use targeted edits and managed commands." },
-      { heading: "Durable jobs without keeping a chat stream open", text: "Builds, exports, scripts and scheduled checks can be stored as bounded tasks so the device can keep working after the immediate conversation ends. Remote Arc records task state and results, while new reasoning is requested only when a later step actually requires judgment." },
-      { heading: "Authorized diagnostics and support", text: "A paired machine can expose logs, file metadata and running processes for diagnosis before repair permissions are enabled. This separates observing a problem from changing the system and is useful for home-lab maintenance, remote support and incident investigation on computers you control." },
-      { heading: "Web tasks with Browser Runner (Beta)", text: "Through Connect, your own AI can drive a separate task browser on your computer for multi-step websites such as an employer's application form: it reads the page, fills fields, uploads documents from trusted folders and submits once with page evidence. Sign-in, verification codes, CAPTCHAs and payment details stay with you in the visible window." },
-      { heading: "Explicit browser context", text: "The browser companion works only with tabs the user shares. An AI can read simplified page content, selections, links and tables, then use scoped click or fill capabilities only when interaction is enabled for that tab. This keeps browser access narrower than handing an agent unrestricted control of the whole browser profile." }
+      { heading: "Create videos, transcripts and documents", text: "Produce local MP4 films, TXT/Markdown transcripts, timed SRT/VTT subtitles, editable Word documents, PDFs, PowerPoint decks and Excel reports. Finished video demonstrations live inside the dedicated video creation use case." },
+      { heading: "Research, visualize and analyze", text: "Work from authorized sources, prepare traceable research reports and inspect data with charts, statistical checks, machine learning or network analysis. The use cases describe the required inputs and libraries." },
+      { heading: "Build, inspect and automate", text: "Create websites, inspect interfaces, test web apps, connect MCP integrations and work on an existing checkout. Browser Runner workflows currently use Connect; Arc eligibility is stated for each task." },
+      { heading: "Run on the connected computer", text: "Media processing runs locally. Ordinary video, map and base Whisper dependencies can be prepared within existing permissions. Qwen TTS and ACE-Step installation requires size-aware confirmation. Inspect the actual output before treating a task as complete." }
     ],
     links: [...Object.entries(useCaseSeo).map(([slug, [title]]): [string, string] => ["/use-cases/" + slug, title]), ["/docs", "Documentation"] as [string, string]]
   },
@@ -491,10 +491,10 @@ const crawlPages: Record<string, CrawlPage> = {
 const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools: string; proof: string; boundary: string }> = {
   "job-applications": {
     prompt: "From ChatGPT, Claude or another MCP client, ask Browser Runner to prepare one application on the employer's careers site, allowing only that site, filling from a CV and answers file in a trusted folder, and stopping before submit to show every answer.",
-    flow: "The Remote Arc Agent opens a task browser on your computer, with its own profile and limited to the sites the task names. Your AI reads the page, fills fields and uploads documents. Sign-in, one-time codes, payment fields and CAPTCHAs are handed to you in the visible window, and the task continues from the next snapshot once you finish. The submit happens once, after your approval.",
+    flow: "The Remote Arc Agent opens a task browser on your computer, with its own profile and limited to the sites the task names. Your AI reads the page, fills fields and uploads documents. OTP sign-in/registration and supported CAPTCHA controls can be approved per website in Dashboard. Unsupported challenges and payment fields are handed to you, and the task continues once you finish. The submit happens once, after your approval.",
     tools: "browser_runner_start, browser_runner_snapshot, browser_runner_act, browser_runner_confirm and browser_runner_status. Browser Runner must be switched on for the computer in Dashboard, and uploads are limited to Trusted Locations.",
     proof: "The confirmation text or reference number read from the page, SHA-256 receipts for uploaded files, and the submit's recorded status: confirmed, unverified or unknown.",
-    boundary: "Beta. Browser Runner does not sign in for you, solve CAPTCHAs or enter payment details, and it is not for applying in bulk. Some sites do not allow automated submission. A submit with an unknown outcome is never retried automatically. Page content and form values pass through the hosted relay and your AI client. Arc does not drive Browser Runner yet."
+    boundary: "Beta. Browser Runner supports OTP sign-in/registration and supported CAPTCHA controls after per-site Dashboard approval. Unsupported challenges and payment details need you; it is not for applying in bulk. Some sites do not allow automated submission. A submit with an unknown outcome is never retried automatically. Page content and form values pass through the hosted relay and your AI client. Arc does not drive Browser Runner yet."
   },
   "remote-development": {
     prompt: "Ask the AI to inspect a named checkout, reproduce a failing test, edit only the affected code and rerun focused verification on the same paired workstation.",
@@ -564,7 +564,7 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
     flow: "Install the browser companion, share the intended tab, select its tab identifier, request only the needed context and revoke sharing when the work is finished.",
     tools: "shared_tab_read returns the page, selected text, links or a table from a tab the user shared or Remote Arc opened. shared_tab_open opens a tab on a site the user allowed; shared_tab_act clicks, fills, selects, presses keys, navigates and waits there, and sends final submits once. shared_tab_click and shared_tab_fill work on shared tabs after a separate per-tab opt-in.",
     proof: "The returned facts should be tied to the explicitly shared page, such as extracted rows, visible links or selected text.",
-    boundary: "Tabs begin read-only. Recognized password, one-time-code, payment-card and file-upload fields are blocked from the ordinary fill path, and browser tools are not the same thing as unrestricted profile-wide browser control."
+    boundary: "Tabs begin read-only. Recognized password, payment-card and file-upload fields are blocked from the ordinary fill path; OTP requires per-site Dashboard approval, and browser tools are not the same thing as unrestricted profile-wide browser control."
   },
   "presentation-deck": {
     prompt: "Ask your AI to build a 12-slide editable PPTX from an outline and charts stored in an approved folder on the workstation.",
@@ -603,6 +603,7 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
   }
 };
 
+Object.assign(useCaseCrawlDetails,Object.fromEntries(SKILL_USE_CASES.map(item=>[item.slug,{prompt:item.prompt.en,flow:item.steps.map(step=>step.en).join(' '),tools:item.tools+'. '+item.requires.en,proof:item.proof.en,boundary:item.boundary.en}])));
 for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   const path = "/use-cases/" + slug;
   const detail = useCaseCrawlDetails[slug]!;

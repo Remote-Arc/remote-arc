@@ -1,4 +1,6 @@
 import {z} from 'zod';
+import {getDevicesForUser} from './device.js';
+import {compactArcDevices} from './arc-device-guide.js';
 import {seal,unseal} from './app-oauth.js';
 import {sha256Hex} from './auth.js';
 import type {ArcEnv,ArcRun} from './arc-chat.js';
@@ -100,7 +102,15 @@ export async function arcMemoryContext(env:ArcEnv,userId:string,objective:string
   }
   return result;
 }
+/** Live, compact device view for Arc: online status, the tools each computer
+ * can run now and its workspace roots, so Arc plans with real capabilities
+ * instead of guessing. Falls back to stored rows if live status is unavailable. */
 export async function arcDeviceContext(env:ArcEnv,userId:string){
-  const devices=(await env.DB.prepare('SELECT id,name,platform,last_seen FROM devices WHERE user_id=?1 AND revoked_at IS NULL ORDER BY last_seen DESC LIMIT 8').bind(userId).all<{id:string;name:string;platform:string;last_seen:string|null}>()).results;
-  return devices.map(d=>({id:d.id,name:d.name.slice(0,80),platform:d.platform,lastSeen:d.last_seen}));
+  try{
+    const live=await getDevicesForUser(env as Parameters<typeof getDevicesForUser>[0],userId) as unknown as Parameters<typeof compactArcDevices>[0];
+    return compactArcDevices([...live].sort((a,b)=>Number(b.status==='online')-Number(a.status==='online')));
+  }catch{
+    const devices=(await env.DB.prepare('SELECT id,name,platform,last_seen FROM devices WHERE user_id=?1 AND revoked_at IS NULL ORDER BY last_seen DESC LIMIT 8').bind(userId).all<{id:string;name:string;platform:string;last_seen:string|null}>()).results;
+    return compactArcDevices(devices);
+  }
 }

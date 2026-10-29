@@ -1,3 +1,5 @@
+import {recordProductEvent} from './product-events.js';
+import {startBusinessFlow,advanceBusinessFlow,failBusinessFlow} from './business-tracking.js';
 import { retryTransientD1Read } from "./d1-read-retry.js";
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
@@ -163,6 +165,7 @@ export async function createSession(userId: string, env: AuthEnv) {
     )
     .run();
 
+  await recordProductEvent(env,{domain:'auth',name:'auth.session.created',source:'server',outcome:'succeeded',userId});
   return token;
 }
 
@@ -240,6 +243,8 @@ export async function handleGoogleLogin(request: Request, env: AuthEnv) {
     .bind(stateHash, returnTo, addSecondsIso(600), nowIso())
     .run();
 
+  await startBusinessFlow(env,{id:'google:'+stateHash,scene:'google_login',expiresAt:addSecondsIso(600)});
+
   const target = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   target.searchParams.set("client_id", primaryClient.clientId);
   target.searchParams.set("redirect_uri", (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback");
@@ -260,6 +265,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
   const state = url.searchParams.get("state");
   const code = url.searchParams.get("code");
   if (!state || !code) {
+    if(state)await failBusinessFlow(env,'google:'+await sha256Hex(state),url.searchParams.get('error')==='access_denied'?'declined':'callback_incomplete');
     return new Response("Missing OAuth code or state", { status: 400 });
   }
 
@@ -277,8 +283,12 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     .run();
 
   if (!stateRow) {
+    await failBusinessFlow(env,'google:'+stateHash,'expired');
     return new Response("Google login state expired or invalid", { status: 400 });
   }
+
+  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','callback');
+  const loginFailure=async(message:string,status:number)=>{await failBusinessFlow(env,'google:'+stateHash,'verification_failed');return new Response(message,{status});};
 
   const accessToken = await exchangeGoogleLoginCode(
     code,
@@ -286,7 +296,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     env,
   );
   if (!accessToken) {
-    return new Response("Google token exchange failed", { status: 502 });
+    return loginFailure("Google token exchange failed",502);
   }
 
   const userInfoResponse = await fetch(
@@ -295,7 +305,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
   );
 
   if (!userInfoResponse.ok) {
-    return new Response("Google user lookup failed", { status: 502 });
+    return loginFailure("Google user lookup failed",502);
   }
 
   const profile = (await userInfoResponse.json()) as {
@@ -307,7 +317,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
   };
 
   if (!profile.sub || !profile.email || profile.email_verified === false) {
-    return new Response("Verified Google email is required", { status: 403 });
+    return loginFailure("Verified Google email is required",403);
   }
 
   const allowed = (env.ALLOWED_EMAILS || "")
@@ -316,7 +326,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     .filter(Boolean);
 
   if (allowed.length && !allowed.includes(profile.email.toLowerCase())) {
-    return new Response("This Google account is not allowed", { status: 403 });
+    return loginFailure("This Google account is not allowed",403);
   }
 
   const existing = await env.DB.prepare(
@@ -331,10 +341,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     ).first<{ count: number }>();
 
     if ((countRow?.count || 0) > 0) {
-      return new Response(
-        "This Remote Arc instance is private. New account registration is disabled.",
-        { status: 403 },
-      );
+      return loginFailure("This Remote Arc instance is private. New account registration is disabled.",403);
     }
   }
 
@@ -370,7 +377,9 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
       .run();
   }
 
+  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','verified',{userId});
   const session = await createSession(userId, env);
+  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','completed',{userId});
   return new Response(null, {
     status: 302,
     headers: {

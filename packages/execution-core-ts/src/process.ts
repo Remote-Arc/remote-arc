@@ -11,23 +11,85 @@ function appendCapped(current: string, chunk: Buffer | string) {
   return next.slice(0, MAX_CAPTURE_BYTES) + "\n… output truncated …";
 }
 
-export async function listProcesses() {
-  const output = await new Promise<string>((resolve, reject) => {
-    const command = process.platform === "win32" ? "tasklist.exe" : "ps";
-    const args =
-      process.platform === "win32"
-        ? ["/FO", "CSV", "/NH"]
-        : ["-axo", "pid,ppid,user,%cpu,%mem,etime,command"];
-    execFile(command, args, { maxBuffer: MAX_CAPTURE_BYTES }, (error, stdout, stderr) => {
-      if (error) {
-        reject(new Error(`Could not list processes: ${stderr || error.message}`));
-        return;
-      }
-      resolve(stdout.trim());
-    });
-  });
+// Obvious credentials some tools pass on their command line. Kept identical
+// to the Go core's redaction so both runtimes return the same listing.
+const SECRET_ARGUMENT =
+  /((?:--?|\/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("(?:\\.|[^"\\])*"|'[^']*'|\S+)|(bearer\s+)\S+/gi;
 
-  return `Processes on ${process.platform}:\n\n${output}`;
+export function redactCommandLine(line: string) {
+  return line.replace(SECRET_ARGUMENT, (_match, flag?: string, _value?: string, bearer?: string) =>
+    bearer ? `${bearer}[redacted]` : `${flag}[redacted]`,
+  );
+}
+
+// Decode before redacting: CSV quoting can conceal quoted credentials from
+// the command-line matcher. JSON preserves one row even for multiline commands.
+export function windowsProcessDetails(output: string) {
+  const parsed: unknown = output.trim() ? JSON.parse(output) : [];
+  const rows = parsed === null ? [] : Array.isArray(parsed) ? parsed : [parsed];
+  const clean = (value: unknown) => String(value ?? "").replace(/[\r\n\t]/g, " ");
+  return ["PID\tPPID\tName\tMemoryMB\tCommandLine", ...rows.map((raw) => {
+    if (!raw || typeof raw !== "object") throw new Error("Invalid process details response");
+    const row = raw as Record<string, unknown>;
+    return [row.ProcessId, row.ParentProcessId, row.Name, row.MemoryMB, redactCommandLine(String(row.CommandLine ?? ""))].map(clean).join("\t");
+  })].join("\n");
+}
+
+export async function listProcesses(
+  options: { filter?: string; limit?: number; details?: boolean } = {},
+) {
+  const limit =
+    Number.isSafeInteger(options.limit) && options.limit! >= 1 && options.limit! <= 1000
+      ? options.limit!
+      : 200;
+  const windows = process.platform === "win32";
+  let header = "";
+  const [command, args] = windows
+    ? options.details
+      ? [
+          "powershell.exe",
+          [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Json -Compress",
+          ],
+        ]
+      : ["tasklist.exe", ["/FO", "CSV", "/NH"]]
+    : ["ps", ["-axo", "pid,ppid,user,%cpu,%mem,etime,command"]];
+  if (windows && !options.details) {
+    header = '"Image Name","PID","Session Name","Session#","Mem Usage"';
+  }
+  const output = await new Promise<string>((resolve, reject) => {
+    execFile(
+      command as string,
+      args as string[],
+      { maxBuffer: MAX_CAPTURE_BYTES, windowsHide: true, timeout: 15000 },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(`Could not list processes: ${stderr || error.message}`));
+          return;
+        }
+        resolve(stdout.trim());
+      },
+    );
+  });
+  let lines = (windows && options.details ? windowsProcessDetails(output) : output).replace(/\r\n/g, "\n").split("\n");
+  if (!header && lines.length) {
+    header = lines[0] ?? "";
+    lines = lines.slice(1);
+  }
+  const needle = (options.filter || "").trim().toLowerCase();
+  const matched = lines.filter(
+    (line) => line.trim() && (!needle || line.toLowerCase().includes(needle)),
+  );
+  const kept = matched.slice(0, limit).map(redactCommandLine);
+  let summary = `[${kept.length} of ${matched.length} processes`;
+  if (needle) summary += ` matching ${JSON.stringify(options.filter)}`;
+  if (matched.length > kept.length) summary += "; raise limit or narrow filter for the rest";
+  summary += "]";
+  const platform = windows ? "win32" : process.platform;
+  return `Processes on ${platform}:\n\n${redactCommandLine(header)}\n${kept.join("\n")}\n\n${summary}`;
 }
 
 async function terminateTree(child: ReturnType<typeof spawn>) {
@@ -141,7 +203,13 @@ type ManagedProcess = {
 };
 
 const managedProcesses = new Map<string, ManagedProcess>();
-const MAX_MANAGED_PROCESSES = 32;
+const MAX_FINISHED_PROCESSES = 128;
+function activeProcessLimit() {
+ const raw=process.env.REMOTEARC_MAX_ACTIVE_PROCESSES||"";
+ if(!/^[0-9]+$/.test(raw))return 64;
+ const value=Number(raw);
+ return Number.isInteger(value)&&value>=1&&value<=256?value:64;
+}
 const FINISHED_PROCESS_RETENTION_MS = 30 * 60 * 1000;
 
 function cleanupManagedProcesses() {
@@ -155,12 +223,10 @@ function cleanupManagedProcesses() {
     }
   }
 
-  if (managedProcesses.size <= MAX_MANAGED_PROCESSES) return;
   const finished = [...managedProcesses.values()]
     .filter((item) => item.endedAt !== null)
     .sort((a, b) => (a.endedAt || 0) - (b.endedAt || 0));
-  for (const item of finished) {
-    if (managedProcesses.size <= MAX_MANAGED_PROCESSES) break;
+  for (const item of finished.slice(0,Math.max(0,finished.length-MAX_FINISHED_PROCESSES))) {
     managedProcesses.delete(item.id);
   }
 }
@@ -168,10 +234,9 @@ function cleanupManagedProcesses() {
 export async function startBackgroundProcess(command: string, cwd?: string, maxDurationSeconds?: number) {
   if (maxDurationSeconds !== undefined && (!Number.isInteger(maxDurationSeconds) || maxDurationSeconds < 1 || maxDurationSeconds > 7 * 86400)) throw new Error("Invalid managed process duration.");
   cleanupManagedProcesses();
-  if (managedProcesses.size >= MAX_MANAGED_PROCESSES) {
-    throw new Error(
-      "Remote Arc already has the maximum number of managed background processes on this device.",
-    );
+  const active=[...managedProcesses.values()].filter(item=>item.endedAt===null).length,limit=activeProcessLimit();
+  if (active>=limit) {
+    throw new Error("Remote Arc already has the maximum number of managed background processes on this device. Running: "+active+"; limit: "+limit+". Finished tasks do not count. Set REMOTEARC_MAX_ACTIVE_PROCESSES to 1-256 to change the limit.");
   }
 
   const child = spawn(command, {
@@ -212,12 +277,14 @@ export async function startBackgroundProcess(command: string, cwd?: string, maxD
     clearTimeout(deadlineTimer);
     item.stderr = appendCapped(item.stderr, "\n" + error.message);
     item.endedAt = Date.now();
+    cleanupManagedProcesses();
   });
   child.once("close", (code, signal) => {
     clearTimeout(deadlineTimer);
     item.exitCode = code;
     item.signal = signal;
     item.endedAt = Date.now();
+    cleanupManagedProcesses();
   });
 
   return {
@@ -255,6 +322,29 @@ export function getManagedProcessStatus(processId: string) {
     ended_at: item.endedAt === null ? null : new Date(item.endedAt).toISOString(),
     duration_ms: (item.endedAt || Date.now()) - item.startedAt,
   };
+}
+
+/** Wait locally for completion or output, bounded by the Relay deadline. */
+export async function waitManagedProcessStatus(processId: string, waitMs = 0, untilText = "") {
+  if (!Number.isSafeInteger(waitMs) || waitMs < 0 || untilText.length > 500) throw new Error("wait_ms must be a non-negative integer and until_text at most 500 characters.");
+  const item = managedProcessOrThrow(processId);
+  const started = Date.now();
+  const limit = Math.min(40000, waitMs);
+  let reason = "timeout";
+  while (true) {
+    if (untilText && (item.stdout.includes(untilText) || item.stderr.includes(untilText))) { reason = "text"; break; }
+    if (item.endedAt !== null) { reason = "exited"; break; }
+    if (Date.now() - started >= limit) break;
+    await new Promise<void>((resolve) => {
+      const finish = () => { clearTimeout(timer); item.child.off("close", finish); item.child.stdout?.off("data", finish); item.child.stderr?.off("data", finish); resolve(); };
+      const timer = setTimeout(finish, Math.min(100, limit - (Date.now() - started)));
+      item.child.once("close", finish);
+      item.child.stdout?.once("data", finish);
+      item.child.stderr?.once("data", finish);
+    });
+  }
+  return { ...getManagedProcessStatus(processId), waited_ms: Date.now() - started, wait_reason: reason,
+    ...(waitMs > limit ? { note: "wait_ms was capped at 40000 ms to return before the Relay deadline." } : {}) };
 }
 
 export function readManagedProcessOutput(processId: string) {

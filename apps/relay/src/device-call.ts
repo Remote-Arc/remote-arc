@@ -1,3 +1,5 @@
+import {browserAuthForDevice, NO_BROWSER_AUTH} from "./browser-auth.js";
+import {recordProductEvent} from './product-events.js';
 import type { OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
 import { recordMcpTelemetry } from "./relay-telemetry.js";
@@ -53,11 +55,13 @@ export async function callDevice(
   tool: string,
   args: Record<string, unknown>,
   taskWorkspaceRoot?: string,
+  runnerRunId?: string,
+  options: { browserAuthentication?: "user" } = {},
 ) {
   const started = Date.now();
   const ownedDevice = await env.DB.prepare(
     `SELECT id, platform, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
-            protect_sensitive_paths, undo_enabled
+            protect_sensitive_paths, undo_enabled, runner_attention_mode
      FROM devices
      WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
   )
@@ -71,6 +75,7 @@ export async function callDevice(
       sensitive_allow_paths: string | null;
       protect_sensitive_paths: number;
       undo_enabled: number;
+      runner_attention_mode?: string;
     }>();
 
   if (!ownedDevice) {
@@ -132,7 +137,8 @@ export async function callDevice(
     }
     // Extension 0.4.0 actions are covered by the click & fill permission an
     // already-paired browser has; each site is still allowed in the browser.
-    const permissionTool = tool === "goal_workspace" ? "start_process" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : tool;
+    // New read-only tools reuse existing read grants for upgrade compatibility.
+    const permissionTool = tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool === "goal_workspace" ? "start_process" : tool === "list_agent_sessions" ? "read_file" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : tool;
     if (!allowedTools.includes(permissionTool)) {
       throw new Error('tool "' + tool + '" is disabled for this device');
     }
@@ -141,7 +147,7 @@ export async function callDevice(
   // browser_runner acts on websites for the user. It is never implied by a
   // legacy device with no stored tool list: each tool must be enabled
   // explicitly for this computer.
-  if (isBrowserRunnerTool(tool) && !parseStoredStringArray(ownedDevice.allowed_tools).includes(tool)) {
+  if (isBrowserRunnerTool(tool) && !parseStoredStringArray(ownedDevice.allowed_tools).includes(tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool)) {
     throw new Error(
       'tool "' + tool + '" is disabled for this device. Enable browser_runner for this computer in the Remote Arc dashboard.',
     );
@@ -201,6 +207,7 @@ export async function callDevice(
   }
 
   const readOnlyPathTools = new Set([
+    "list_agent_sessions",
     "read_file",
     "read_binary_file",
     "list_directory",
@@ -238,6 +245,19 @@ export async function callDevice(
     }
   }
 
+  if (isBrowserRunnerTool(tool) && identity.clientId !== "dashboard") {
+    const sessionId = tool === "browser_runner_start" ? args.task_id : args.session_id;
+    if (typeof sessionId === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(sessionId)) {
+      await env.DB.prepare("INSERT INTO runner_session_links(user_id,device_id,session_id,run_id) VALUES(?1,?2,?3,?4) ON CONFLICT(user_id,device_id,session_id) DO UPDATE SET run_id=excluded.run_id")
+        .bind(identity.userId,deviceId,sessionId,runnerRunId || null).run();
+    }
+  }
+
+  const browserAuth = (isBrowserRunnerTool(tool) || /^browser_/.test(tool))
+    ? options.browserAuthentication === "user"
+      ? { ...NO_BROWSER_AUTH, origins: [] }
+      : await browserAuthForDevice(env, identity.userId, deviceId)
+    : undefined;
   const registryRequest = () =>
     new Request("https://registry/call", {
       method: "POST",
@@ -251,6 +271,7 @@ export async function callDevice(
         tool,
         arguments: effectiveArgs,
         policy: {
+          ...(browserAuth ? {browserAuth} : {}),
           ...(taskWorkspaceRoot ? { taskWorkspaceRoot } : {}),
           workspaceRoots: effectiveWorkspaceRoots,
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
@@ -259,6 +280,8 @@ export async function callDevice(
           // setting remains fail-closed (protected) by default.
           protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
           undoEnabled: ownedDevice.undo_enabled !== 0,
+          runnerAttentionMode: ownedDevice.runner_attention_mode === "notify_only" ? "notify_only" : "show_and_notify",
+          browserRunnerEnabled: parseStoredStringArray(ownedDevice.allowed_tools).includes("browser_runner_act"),
         },
       }),
     });
@@ -313,6 +336,8 @@ export async function callDevice(
     grantId: identity.grantId,
     outcome,
   }).catch(() => undefined);
+
+  await recordProductEvent(env,{domain:'devices',name:'device.tool.completed',source:'server',outcome:success?'succeeded':'failed',userId:identity.userId,entityId:deviceId,route:/^[a-z_]{1,80}$/.test(tool)?'/device-tools/'+tool:'/device-tools/:redacted',httpStatus:success?200:502,errorCode:success?undefined:'REQUEST_FAILED',durationMs:Date.now()-started});
 
   recordMcpTelemetry(env, {
     kind: "device_tool",

@@ -8,7 +8,7 @@ import {
   writeTextFile,
 } from "./filesystem.js";
 import {
-  getManagedProcessStatus,
+  waitManagedProcessStatus,
   listManagedProcesses,
   listProcesses,
   readManagedProcessOutput,
@@ -93,7 +93,7 @@ const DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: "read_file",
-    description: "Read a text file by line range. Negative offsets read from the end.",
+    description: "Read a text file by line range. offset is a 0-based line number (negative reads from the end); length is a line count (default 240). The result header reports total lines so you can continue with a later offset.",
     inputSchema: {
       type: "object",
       properties: {
@@ -132,8 +132,16 @@ const DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: "list_processes",
-    description: "List processes running on this computer.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    description: "List processes on this computer with a header row. Use filter to find specific programs (e.g. \"claude\", \"codex\", \"node\"), limit to cap rows, and details:true on Windows to include command lines. Obvious secrets in command lines are redacted.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filter: { type: "string", maxLength: 200 },
+        limit: { type: "integer", minimum: 1, maximum: 1000, default: 200 },
+        details: { type: "boolean", default: false },
+      },
+      additionalProperties: false,
+    },
   },
   {
     name: "write_file",
@@ -209,10 +217,10 @@ const DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: "process_status",
-    description: "Get status for a Remote Arc managed background process.",
+    description: "Get status for a managed background process. For long tasks use wait_ms (up to 40000 ms, longer values are capped), optionally until_text; do not sleep and poll.",
     inputSchema: {
       type: "object",
-      properties: { process_id: { type: "string" } },
+      properties: { process_id: { type: "string" }, wait_ms: { type: "integer", minimum: 0 }, until_text: { type: "string", maxLength: 500 } },
       required: ["process_id"],
       additionalProperties: false,
     },
@@ -394,7 +402,13 @@ export class RemoteArcExecutionCore {
         return textResult(await getFileInfo(target));
       }
       case "list_processes":
-        return textResult(await listProcesses());
+        return textResult(
+          await listProcesses({
+            filter: typeof args.filter === "string" ? args.filter : "",
+            limit: optionalNumber(args, "limit") ?? 200,
+            details: args.details === true,
+          }),
+        );
       case "list_undo_actions": {
         const actions = await listUndoActions(optionalNumber(args, "limit") ?? 20);
         const visible = [];
@@ -457,7 +471,7 @@ export class RemoteArcExecutionCore {
       }
       case "process_status":
         return textResult(
-          getManagedProcessStatus(requiredString(args, "process_id")),
+          await waitManagedProcessStatus(requiredString(args, "process_id"), optionalNumber(args, "wait_ms") ?? 0, optionalString(args, "until_text") ?? ""),
         );
       case "process_output":
         return textResult(

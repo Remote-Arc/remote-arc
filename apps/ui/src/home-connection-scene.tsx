@@ -7,12 +7,12 @@ import "./home-connection-scene.css";
 type AiClient = { name: string; slug: string; icon: string; tone: string };
 export type HomeConnectionMode = "connect" | "arc";
 type Mode=HomeConnectionMode;
-type OrbitNode = { name: string; icon: string; x: number; y: number; kind: "app" | "device"; calendar?: boolean };
+type OrbitNode = { name: string; icon: string; x: number; y: number; kind: "app" | "device" | "skill"; calendar?: boolean };
 
 const resources: readonly OrbitNode[] = [
   { name: "GitHub", icon: "/app-brands/github.svg", x: 115, y: 157, kind: "app" },
   { name: "Slack", icon: "/app-brands/slack.svg", x: 57, y: 250, kind: "app" },
-  { name: "Runway", icon: "/app-brands/runway.svg", x: 95, y: 345, kind: "app" },
+  { name: "Video & images", icon: "/local-creative.svg", x: 95, y: 345, kind: "skill" },
   { name: "Vercel", icon: "/app-brands/vercel.svg", x: 195, y: 414, kind: "app" },
   { name: "Google Drive", icon: "/app-brands/googledrive.svg", x: 310, y: 438, kind: "app" },
   { name: "Notion", icon: "/app-brands/notion.svg", x: 425, y: 414, kind: "app" },
@@ -148,13 +148,13 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
         <span className="hcsGroupCaption hcsDevicesCaption">DEVICES</span>
         {resources.map((node, index) => (
           <a key={node.name} className={"hcsFloatingNode hcsResourceNode hcsResourceNode--" + node.kind} style={position(node.x, node.y, index * -.93)} data-resource={node.kind}
-            href={localizedWebsiteHref(node.kind === "app" ? "/integrations?provider=" + directory.apps.find(app => app.name === node.name)!.provider : node.name === "Browser" ? "/chrome-extension" : "/downloads", locale)}
-            aria-label={node.kind === "app" ? tr("Explore ", "查看应用连接：") + node.name : tr("Connect ", "连接设备：") + node.name}>
+            href={localizedWebsiteHref(node.kind === "skill" ? "/use-cases/video-creation#video-gallery" : node.kind === "app" ? "/integrations?provider=" + directory.apps.find(app => app.name === node.name)!.provider : node.name === "Browser" ? "/chrome-extension" : "/downloads", locale)}
+            aria-label={node.kind === "skill" ? tr("Explore local video and image creation","查看本地视频与图片创作") : node.kind === "app" ? tr("Explore ", "查看应用连接：") + node.name : tr("Connect ", "连接设备：") + node.name}>
             <span className="hcsLogoTile" style={{'--power-delay': (index * .085) + 's'} as CSSProperties}>
               <img src={node.icon} alt="" width={30} height={30} />
               {node.calendar && <svg className="hcsCalendarCue" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="2" /><path d="M5 2v3m6-3v3M3 7h10M6 10h4" /></svg>}
             </span>
-            <span className="hcsNodeLabel">{node.name}</span>
+            <span className="hcsNodeLabel">{node.kind==="skill"?tr("Video & images","视频与图片"):node.name}</span>
           </a>
         ))}
         <div className="hcsCore" style={position(300, 246)}>

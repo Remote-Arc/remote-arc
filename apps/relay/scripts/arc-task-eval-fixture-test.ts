@@ -1,7 +1,11 @@
 // Check that protected acceptance fixtures themselves satisfy production
 // contracts. Inference here is scripted; live acceptance remains a separate gate.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 const previousFetch=globalThis.fetch,previousKey=process.env.OPENAI_API_KEY;
+const previousModel=process.env.ARC_EVAL_MODEL_ID,previousCases=process.env.ARC_EVAL_CASES;
+const terra=process.argv.includes('--terra');
+if(terra){process.env.ARC_EVAL_MODEL_ID='gpt-6.1-terra';process.env.ARC_EVAL_CASES='mail,github,vercel,calendar,managed-process,vercel-error';}
 let modelCalls=0;
 const expandedPaths=process.argv.includes('--expanded-paths');
 const injectInvalidDecision=process.argv.includes('--invalid-decision');let invalidSent=false,awaitingRepair=false;
@@ -10,6 +14,7 @@ process.argv.push('--scripted-fixture');
 globalThis.fetch=(async(url,init)=>{
  assert.equal(String(url),'https://api.openai.com/v1/responses');modelCalls++;
  const request=JSON.parse(String(init?.body)),context=JSON.parse(request.input[1].content),connectionId=context.connectionIndex[0].id;
+ if(terra)assert.equal(request.model,'gpt-6.1-terra');
  assert.equal(request.tool_choice,'required');assert.equal(request.parallel_tool_calls,false);assert(request.tools.every((tool:any)=>tool.strict));assert(request.tools.some((tool:any)=>tool.name==='arc_deliver_answer'));
  assert.match(connectionId,/^[\da-f]{8}-[\da-f-]{27}$/i);
  const observations=context.taskState.completedActions as {tool:string;arguments:any}[];
@@ -91,5 +96,5 @@ globalThis.fetch=(async(url,init)=>{
  }
  return Response.json({id:'synthetic-response',status:'completed',output:[{type:'message',phase:'commentary',content:[{type:'output_text',text:'I am checking the requested work.'}]},{type:'function_call',name:value.decision==='reply'?'arc_deliver_answer':'arc_call_tool',arguments:JSON.stringify(value.decision==='reply'?{answer:value.message}:value)}],usage:{input_tokens:expandedPaths?2700:2000,output_tokens:200,input_tokens_details:{cached_tokens:expandedPaths?1500:1000}}});
 }) as typeof fetch;
-try{await import('./arc-task-live-eval.js');assert(modelCalls>=(process.argv.includes('--resume-fixture')?8:18));if(injectInvalidDecision){assert(invalidSent);assert.equal(awaitingRepair,false);}console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
-finally{process.argv.splice(process.argv.lastIndexOf('--scripted-fixture'),1);globalThis.fetch=previousFetch;if(previousKey===undefined)delete process.env.OPENAI_API_KEY;else process.env.OPENAI_API_KEY=previousKey;}
+try{await import('./arc-task-live-eval.js');assert(modelCalls>=(process.argv.includes('--resume-fixture')?8:18));if(injectInvalidDecision){assert(invalidSent);assert.equal(awaitingRepair,false);}if(terra){const report=JSON.parse(fs.readFileSync('../../work/arc-task-eval/report.json','utf8'));assert.equal(report.modelId,'gpt-6.1-terra');assert.equal(report.providerModel,'gpt-6.1-terra');assert.equal(report.mode,'scripted-inference-synthetic-providers');assert.equal(report.cases.length,6);assert.equal(report.passed,true);assert(report.ratedUsd>0&&report.ratedUsd<=report.maximumUsd);}console.log('PASS: Apps, scheduled Tasks, referenced Skills, managed processes and failed deployments execute through production schemas and dispatcher');}
+finally{process.argv.splice(process.argv.lastIndexOf('--scripted-fixture'),1);globalThis.fetch=previousFetch;for(const [name,value] of [['OPENAI_API_KEY',previousKey],['ARC_EVAL_MODEL_ID',previousModel],['ARC_EVAL_CASES',previousCases]]){if(value===undefined)delete process.env[name!];else process.env[name!]=value;}}

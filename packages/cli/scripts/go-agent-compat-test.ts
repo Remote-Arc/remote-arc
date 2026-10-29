@@ -32,6 +32,8 @@ const temp = await fs.realpath(
 const env = {
   ...process.env,
   REMOTEARC_HOME: temp,
+  CODEX_HOME: path.join(temp, "codex-fixture"),
+  CLAUDE_CONFIG_DIR: path.join(temp, "claude-fixture"),
   HOME: temp,
   USERPROFILE: temp,
   NO_COLOR: "1",
@@ -47,7 +49,7 @@ let nextID = 0;
 let hello: any;
 const goBrowserRunnerTools = [
   "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
-  "browser_runner_status", "browser_runner_confirm", "browser_runner_close",
+  "browser_runner_status", "browser_runner_confirm", "browser_runner_close", "browser_runner_wait",
 ];
 let stderr = "";
 const server = http.createServer((_req, res) => {
@@ -159,7 +161,8 @@ async function run(
   const timer = setTimeout(() => child.kill(), 20000);
   const code = await new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);
-    child.once("exit", resolve);
+    // Wait for inherited output handles to close as well as process exit.
+    child.once("close", resolve);
   });
   clearTimeout(timer);
   return { code, output };
@@ -179,6 +182,7 @@ try {
       "set_task_keep_awake",
       "goal_workspace",
       "agent_execution_log",
+      "list_agent_sessions",
     ]),
   );
   assert(hello.capabilities.includes("go_agent_v1"));
@@ -369,6 +373,23 @@ try {
     "timed_out",
   ])
     assert.deepEqual(goRun[field], tsRun[field], "command " + field);
+  const waitingProcess = decode(await go("start_process", {
+    command: `"${process.execPath}" -e "setTimeout(()=>console.log('native-wait-ready'),350);setTimeout(()=>process.exit(0),1200)"`,
+    background: true,
+  }));
+  const outputReady = decode(await go("process_status", {
+    process_id: waitingProcess.process_id, wait_ms: 60000, until_text: "native-wait-ready",
+  }));
+  assert.equal(outputReady.wait_reason, "text");
+  const waitedOutput = decode(await go("process_output", {process_id: waitingProcess.process_id}));
+  assert.match(waitedOutput.stdout, /native-wait-ready/);
+  assert.match(outputReady.note, /40000/, "large device-side waits report their cap");
+  const processExited = decode(await go("process_status", {
+    process_id: waitingProcess.process_id, wait_ms: 4000,
+  }));
+  assert.equal(processExited.wait_reason, "exited");
+  assert.equal(processExited.exit_code, 0);
+  await assert.rejects(() => go("process_status", {process_id: waitingProcess.process_id, wait_ms: -1}));
   const bg = decode(
     await go("start_process", {
       command: `"${process.execPath}" -e "setTimeout(()=>{},15000)"`,
@@ -440,7 +461,11 @@ try {
       NODE_OPTIONS: "--import=" + pathToFileURL(preload).href,
       RA_DOWNLOAD_SOURCE: binary,
     };
-    await fs.writeFile(cache, "corrupt-cache");
+    // Replace the completed launch's executable instead of truncating its
+    // inode, which can still be mapped briefly on Linux (ETXTBSY).
+    const corruptCache = cache + ".fixture-corrupt";
+    await fs.writeFile(corruptCache, "corrupt-cache", { mode: 0o700, flag: "wx" });
+    await fs.rename(corruptCache, cache);
     selection = await run(process.execPath, [cliEntry, "--go", "--version"], {
       ...downloadEnv,
       RA_CORRUPT_DOWNLOAD: "1",
@@ -512,6 +537,34 @@ try {
   git(["add", "."]);
   git(["commit", "-m", "baseline"]);
   const originalHead = git(["rev-parse", "HEAD"]);
+  const sessionWorktree = path.join(temp, "session-feature");
+  git(["worktree", "add", "-b", "session-feature", sessionWorktree]);
+  await fs.writeFile(path.join(sessionWorktree, "uncommitted.txt"), "synthetic change");
+  const codexSessions = path.join(env.CODEX_HOME, "sessions", "2026", "10", "24");
+  const claudeSessions = path.join(env.CLAUDE_CONFIG_DIR, "projects", "fixture-project");
+  await fs.mkdir(codexSessions, { recursive: true });
+  await fs.mkdir(claudeSessions, { recursive: true });
+  await fs.writeFile(path.join(codexSessions, "rollout-fixture.jsonl"),
+    JSON.stringify({type:"session_meta",payload:{id:"codex-fixture-task",cwd:sessionWorktree}})+"\n"+
+    JSON.stringify({type:"response_item",payload:{role:"user",content:"PRIVATE_PROMPT_TEXT"}})+"\n");
+  await fs.writeFile(path.join(claudeSessions, "claude-fixture.jsonl"),
+    JSON.stringify({sessionId:"claude-fixture-task",cwd:repo,message:{content:"PRIVATE_PROMPT_TEXT"}})+"\n");
+  await fs.writeFile(path.join(env.CODEX_HOME, "auth.json"), JSON.stringify({token:"PRIVATE_FIXTURE_TOKEN"}));
+  const sessions = await go("list_agent_sessions", {source:"all",limit:10,git:true});
+  const sessionRows = new Map(sessions.sessions.map((row:any) => [row.id,row]));
+  assert.equal(sessionRows.size, 2, "native WebSocket route finds both synthetic client sources on Windows too");
+  const codexTask:any = sessionRows.get("codex-fixture-task");
+  assert.equal(path.normalize(codexTask.working_directory).toLowerCase(), path.normalize(sessionWorktree).toLowerCase());
+  assert.equal(codexTask.recent_activity, true);
+  const sessionGit = sessions.workspaces.find((row:any) => row.branch === "session-feature");
+  assert(sessionGit?.is_linked_worktree, "session discovery resolves the actual linked Git worktree");
+  assert.equal(sessionGit.changed_files, 1);
+  assert(!/PRIVATE_PROMPT_TEXT|PRIVATE_FIXTURE_TOKEN|auth\.json/.test(JSON.stringify(sessions)), "session metadata must not leak conversation or credentials");
+  const filtered = await go("list_agent_sessions", {source:"codex",workspace:sessionWorktree,git:false});
+  assert.equal(filtered.sessions.length, 1);
+  assert.equal(filtered.workspaces.length, 0);
+  await assert.rejects(() => go("list_agent_sessions", {source:"cursor"}), /source/);
+
   const workspacePolicy = { workspaceRoots: [repo] };
   for (const first of ["ts", "go"]) {
     const task_id = "cross-" + first;
@@ -587,7 +640,7 @@ try {
     "compat-device",
   );
   console.log(
-    "Go/TS parity OK: tools, files, binary revision, metadata, bidirectional Undo, policy, processes, logs, runtime selection and shared execution lease.",
+    "Go/TS parity OK: tools, files, binary revision, metadata, bidirectional Undo, policy, processes, native process waits, coding-session/worktree discovery without private text, logs, runtime selection and shared execution lease.",
   );
 } finally {
   await ts.close();

@@ -19,7 +19,7 @@ assert.match(source, /className="installMustDo"/, "both setup sides should be pr
 assert.doesNotMatch(source, /<InstallCompanionNotice \/>/, "Companion download belongs on the Chrome Browser section, not the AI client pages");
 for (const path of [
   "https://chatgpt.com/plugins",
-  "https://claude.ai/settings/connectors",
+  "https://claude.ai/customize/connectors",
   "https://cursor.com/docs/mcp",
   "https://developers.openai.com/plugins/deploy/connect-chatgpt",
 ]) assert.ok(installGuide.includes(path), "missing official setup link: " + path);

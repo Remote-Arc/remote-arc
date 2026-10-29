@@ -387,7 +387,7 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 				if !announced {
 					log.Log("info", "A Go agent owns execution. Following its operation log; Ctrl+C closes this viewer.")
 					if running, _ := status["version"].(string); running != "" && !olderRelease(running, version) {
-						log.Log("info", fmt.Sprintf("The running Agent v%s is the same as or newer than v%s, so it was kept. To replace it anyway, run npx remotelink@%s --force-update.", running, version, version))
+						log.Log("info", keptAgentMessage(running, version))
 					}
 					announced = true
 				}
@@ -547,4 +547,14 @@ func openBrowser(link string) error {
 		return errors.New("Invalid browser authorization URL.")
 	}
 	return launchBrowser(u.String())
+}
+
+// keptAgentMessage explains why a launch did not replace the running Agent.
+// When this command is older, the usual cause is an old global npm install that
+// npx prefers over the registry, so lead with @latest; a rollback stays explicit.
+func keptAgentMessage(running, invoked string) string {
+	if running == invoked {
+		return fmt.Sprintf("Agent v%s is already running and was kept. To restart it with this version anyway, run npx remotelink@%s --force-update.", running, invoked)
+	}
+	return fmt.Sprintf("This command is remotelink v%s, older than the running Agent v%s, so the Agent was kept. An old global install can make npx run an old version: use npx remotelink@latest, or update it with npm install -g remotelink@latest. To roll back on purpose, run npx remotelink@%s --force-update.", invoked, running, invoked)
 }

@@ -150,7 +150,7 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 // keepHidden puts a hidden task window back out of sight if it is on
 // screen (the system restored it, or hiding did not take at launch).
 func (s *session) keepHidden(ctx context.Context) {
-	if !s.cp.Headless || !s.hasWindow() || !s.live() {
+	if s.cp.State == StateNeedsUser || !s.cp.Headless || !s.hasWindow() || !s.live() {
 		return
 	}
 	if b, ok := s.quickWindow(ctx); ok && b.WindowState == "normal" && b.Left > offscreen/2 {

@@ -1,4 +1,6 @@
 import { findAppWorkflow, translateCopy } from "./app-workflow-examples.js";
+import {findLocalCreative} from "./local-creative-examples.js";
+import {LocalCreativeResult} from "./local-creative-demo.js";
 import {DemoResultCard} from './landing-demo-result.js';
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
@@ -30,7 +32,7 @@ const clientLogo: Record<DemoClient, string> = {
   Cursor: "/demo-brands/cursor.svg",
 };
 
-type DemoGlyphName = "menu" | "new" | "share" | "dots" | "plus" | "mic" | "send" | "chevron" | "terminal" | "check" | "sidebar" | "paperclip" | "sparkle" | "search" | "code" | "slides" | "table";
+type DemoGlyphName = "menu" | "new" | "share" | "dots" | "plus" | "mic" | "send" | "chevron" | "terminal" | "check" | "sidebar" | "paperclip" | "sparkle" | "search" | "code" | "slides" | "table" | "video" | "image";
 
 function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) {
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -50,6 +52,8 @@ function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) 
     {name === "search" && <><circle cx="10" cy="10" r="6" /><path d="m14.5 14.5 6 6" /></>}
     {name === "code" && <><path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-14-2 18" /></>}
     {name === "slides" && <><path d="M3 3h18M4 3v13h16V3M12 16v5m-4 0 4-3 4 3" /><path d="m8 11 3-3 3 2 2-3" /></>}
+    {name === "video" && <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/></>}
+    {name === "image" && <><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/></>}
     {name === "table" && <><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 9h18M3 15h18M9 3v18" /></>}
   </svg>;
 }
@@ -57,11 +61,13 @@ function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) 
 function ScenarioIcon({ id }: { id: string }) {
   const workflow = findAppWorkflow(id);
   if (workflow) return <span className="homeDemoExampleLogos" aria-hidden="true">{workflow.brands.slice(0, 2).map(brand => <img src={"/app-brands/" + brand.brand + ".svg"} key={brand.brand} alt="" />)}</span>;
-  return <span className="homeDemoScenarioGlyph" aria-hidden="true"><DemoGlyph name={id === "slides" ? "slides" : id === "excel" ? "table" : "code"} size={18} /></span>;
+  return <span className="homeDemoScenarioGlyph" aria-hidden="true"><DemoGlyph name={id === "video" ? "video" : id === "image" ? "image" : id === "slides" ? "slides" : id === "excel" ? "table" : "code"} size={18} /></span>;
 }
 
 function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEvent[] {
   const workflow = findAppWorkflow(id);
+  const creative=findLocalCreative(id);
+  if(creative)return creative.traces.map(trace=>({tool:trace.tool,arguments:JSON.stringify(trace.input),output:translateCopy(trace.output,tr),duration:"example"}));
   if (workflow) return workflow.traces.map(trace => ({tool: trace.tool + (trace.provider ? " · " + trace.provider : ""), arguments: JSON.stringify(trace.input), output: translateCopy(trace.output,tr),duration: "example"}));
   switch (id) {
     case "mail":
@@ -122,6 +128,8 @@ type DemoProgress = { working: string; done: string };
 
 function progressFor(id: string, tr: (en: string, zh: string) => string): DemoProgress[] {
   const workflow = findAppWorkflow(id);
+  const creative=findLocalCreative(id);
+  if(creative)return creative.traces.map(trace=>({working:translateCopy(trace.working,tr),done:translateCopy(trace.output,tr)}));
   if (workflow) return workflow.traces.map(trace => ({working: translateCopy(trace.working,tr),done:translateCopy(trace.output,tr)}));
   switch (id) {
     case "mail":
@@ -234,7 +242,8 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   if (!scenario) return null;
 
   const isAppScenario = Boolean(findAppWorkflow(scenario.id)) || ["mail", "calendar"].includes(scenario.id);
-  const finalReply = isAppScenario
+  const isCreativeScenario=scenario.id==="video"||scenario.id==="image";
+  const finalReply = isAppScenario||isCreativeScenario
     ? scenario.result
     : scenarios[selected]?.id === "code"
     ? tr("I fixed the formatting edge case and reran the tests: 24 passed. The diff is ready for review.", "我修复了格式化的边界问题并重新运行测试：24 项全部通过。修改内容已准备好供你检查。")
@@ -347,18 +356,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 {finished ? <>
                   <p className="homeDemoAssistantAnswer">{finalReply}</p>
                   <DemoResultCard key={scenario.id} id={scenario.id}/>
-                  {scenario.id === "video" && <div className="homeDemoRunwayCard">
-                    <a className="homeDemoRunwayVisual" href="https://runwayml.com" target="_blank" rel="noopener noreferrer" aria-label={tr("Open Runway (illustrative preview only; no real generation)","打开 Runway（仅模拟预览，未真实生成视频）")}>
-                      <span className="homeDemoRunwayObject" aria-hidden="true" />
-                      <small>{tr("ILLUSTRATIVE PREVIEW","模拟预览")}</small>
-                      <span className="homeDemoRunwayDuration">0:05</span>
-                    </a>
-                    <div className="homeDemoRunwayInfo">
-                      <img src="/app-brands/runway.svg" alt="" width="22" height="22"/>
-                      <div><strong>{tr("Cinematic product film","电影感产品短片")}</strong><span>Gen-4.5 · 1280 × 720 · 5s</span></div>
-                      <a href="https://runwayml.com" target="_blank" rel="noopener noreferrer" aria-label={tr("Open Runway website (sample card, no video was generated)","打开 Runway 官网（示例卡片，未真实生成视频）")}>{tr("Open Runway","打开 Runway")} ↗</a>
-                    </div>
-                  </div>}
+                  {isCreativeScenario&&<LocalCreativeResult key={scenario.id+locale} kind={scenario.id as "video"|"image"}/>}
                   <div className="homeDemoMessageTools" aria-hidden="true"><DemoGlyph name="paperclip" size={14} /><DemoGlyph name="share" size={14} /><DemoGlyph name="dots" size={16} /></div>
                 </> : null}
               </div>}
@@ -435,7 +433,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
       </div>
 
       <div className="homeDemoUnder">
-        <p>{isAppScenario ? tr("Interactive simulation with example accounts. Apps require provider setup and user authorization; this preview performs no live actions or paid generation.", "使用示例账号的交互模拟。Apps 需要平台配置与用户授权；本预览不会操作真实账户或付费生成。") : tr("Guided simulation with example data. No real device is connected and no commands are executed.", "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。")}</p>
+        <p>{isCreativeScenario ? tr("Guided tool-call simulation. The finished video and images shown here were actually rendered on a personal computer; playing this demo does not start a new render.","工具调用过程为引导式模拟。这里的视频与图片是在个人电脑上实际渲染的作品；播放演示不会启动新的创作任务。") : isAppScenario ? tr("Interactive simulation with example accounts. Apps require provider setup and user authorization; this preview performs no live actions or paid generation.", "使用示例账号的交互模拟。Apps 需要平台配置与用户授权；本预览不会操作真实账户或付费生成。") : tr("Guided simulation with example data. No real device is connected and no commands are executed.", "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。")}</p>
         <a href={localizedWebsiteHref(workflowHref, locale)}>{tr("Explore this workflow", "了解这类工作流程")} ↗</a>
       </div>
     </div>

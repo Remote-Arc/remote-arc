@@ -1,10 +1,11 @@
 import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
 import {z} from 'zod';
+import {builtinSkillPackage} from './arc-builtin-resources.js';
 import {ArcError,type ArcEnv,type ArcRun} from './arc-chat.js';
 export const communitySkill=(id:string)=>COMMUNITY_SKILLS.find(skill=>skill.id===id);
 export const communitySkillSummaries=()=>COMMUNITY_SKILLS.map(({content,resources,...skill})=>({...skill,resourceCount:resources.length,createdAt:null}));
 export function readCommunitySkill(id:string){const skill=communitySkill(id);if(!skill)return null;return{...skill,resources:skill.resources.map(({content,...file})=>file)};}
-export function readCommunityResource(id:string,path:string,offset=0){const skill=communitySkill(id),resource=skill?.resources.find(file=>file.path===path);if(!resource||!Number.isSafeInteger(offset)||offset<0||offset>resource.content.length)throw new ArcError('ARC_SKILL_RESOURCE_NOT_FOUND',404);const content=resource.content.slice(offset,offset+12000),nextOffset=offset+content.length;return{id,path,sha256:resource.sha256,bytes:resource.bytes,content,offset,nextOffset:nextOffset<resource.content.length?nextOffset:null};}
+export function readCommunityResource(id:string,path:string,offset=0){const skill=communitySkill(id)||builtinSkillPackage(id),resource=skill?.resources.find(file=>file.path===path);if(!resource||!Number.isSafeInteger(offset)||offset<0||offset>resource.content.length)throw new ArcError('ARC_SKILL_RESOURCE_NOT_FOUND',404);const content=resource.content.slice(offset,offset+12000),nextOffset=offset+content.length;return{id,path,sha256:resource.sha256,bytes:resource.bytes,content,offset,nextOffset:nextOffset<resource.content.length?nextOffset:null};}
 export const prepareCommunitySkillInput=z.object({id:z.string().max(100),deviceId:z.string().min(1).max(128),workspace:z.string().min(3).max(1800),paths:z.array(z.string().min(1).max(200)).max(6).optional()}).strict();
 function confirmedWrite(result:unknown,path:string,content:string,mode:string){
  if(!result||typeof result!=='object'||('isError' in result&&result.isError))return false;
@@ -15,7 +16,7 @@ function confirmedWrite(result:unknown,path:string,content:string,mode:string){
 }
 /** Materialize only the pinned package resources inside a task workspace; never run upstream commands. */
 export async function prepareCommunitySkill(env:ArcEnv,run:ArcRun,raw:unknown,write:(deviceId:string,path:string,content:string,mode:'rewrite'|'append')=>Promise<unknown>){
- const input=prepareCommunitySkillInput.parse(raw),skill=communitySkill(input.id);if(!skill)throw new ArcError('ARC_SKILL_NOT_FOUND',404);
+ const input=prepareCommunitySkillInput.parse(raw),skill=communitySkill(input.id)||builtinSkillPackage(input.id);if(!skill)throw new ArcError('ARC_SKILL_NOT_FOUND',404);
  const workspace=input.workspace.replace(/\\/g,'/').replace(/\/+$/,'');if(!/^(?:[A-Za-z]:\/|\/)/.test(workspace)||workspace.split('/').some(part=>part==='..'||part==='.')||/[\x00-\x1f]/.test(workspace)||/^\/?[A-Za-z]:?$|^$/.test(workspace))throw new ArcError('ARC_SKILL_WORKSPACE_REQUIRED');
  const requested=input.paths||skill.resources.filter(file=>file.path.startsWith('scripts/')).slice(0,4).map(file=>file.path),paths=[...new Set(['SKILL.md',...skill.resources.filter(file=>/^licen[cs]e/i.test(file.path)).map(file=>file.path),...requested])];
  const resources=paths.map(path=>{const file=skill.resources.find(file=>file.path===path);if(!file)throw new ArcError('ARC_SKILL_RESOURCE_NOT_FOUND',404);return file;});if(resources.reduce((n,file)=>n+file.content.length,0)>160000)throw new ArcError('ARC_SKILL_RESOURCE_LIMIT',413);

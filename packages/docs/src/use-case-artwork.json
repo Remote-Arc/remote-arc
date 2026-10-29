@@ -1,0 +1,138 @@
+{
+  "video-creation": {
+    "kind": "video",
+    "label": "MP4"
+  },
+  "audio-transcription": {
+    "kind": "audio",
+    "label": "TXT · SRT"
+  },
+  "word-documents": {
+    "kind": "document",
+    "label": "DOCX"
+  },
+  "pdf-workflows": {
+    "kind": "pdf",
+    "label": "PDF"
+  },
+  "image-studio": {
+    "kind": "image",
+    "label": "PNG"
+  },
+  "website-building": {
+    "kind": "design",
+    "label": "WEB"
+  },
+  "data-visualization": {
+    "kind": "chart",
+    "label": "SVG · PNG"
+  },
+  "statistical-analysis": {
+    "kind": "statistics",
+    "label": "ANALYSIS"
+  },
+  "machine-learning": {
+    "kind": "model",
+    "label": "MODEL"
+  },
+  "network-analysis": {
+    "kind": "network",
+    "label": "GRAPH"
+  },
+  "research-reports": {
+    "kind": "research",
+    "label": "REPORT"
+  },
+  "webapp-testing": {
+    "kind": "browser",
+    "label": "TEST"
+  },
+  "mcp-integrations": {
+    "kind": "mcp",
+    "label": "MCP"
+  },
+  "ui-inspection": {
+    "kind": "inspect",
+    "label": "REVIEW"
+  },
+  "browser-workflows": {
+    "kind": "browser",
+    "label": "BROWSER"
+  },
+  "remote-development": {
+    "kind": "code",
+    "label": "CODE"
+  },
+  "file-organization": {
+    "kind": "files",
+    "label": "FILES"
+  },
+  "disk-space-cleanup": {
+    "kind": "storage",
+    "label": "DISK"
+  },
+  "overnight-goals": {
+    "kind": "loop",
+    "label": "TASK"
+  },
+  "long-running-jobs": {
+    "kind": "progress",
+    "label": "RUN"
+  },
+  "scheduled-checks": {
+    "kind": "calendar",
+    "label": "SCHEDULE"
+  },
+  "ci-follow-up": {
+    "kind": "pipeline",
+    "label": "CI"
+  },
+  "data-work": {
+    "kind": "table",
+    "label": "DATA"
+  },
+  "home-lab": {
+    "kind": "server",
+    "label": "SERVER"
+  },
+  "browser-research": {
+    "kind": "research",
+    "label": "WEB"
+  },
+  "remote-support": {
+    "kind": "inspect",
+    "label": "SUPPORT"
+  },
+  "presentation-deck": {
+    "kind": "slides",
+    "label": "PPTX"
+  },
+  "spreadsheet-report": {
+    "kind": "table",
+    "label": "XLSX"
+  },
+  "desktop-automation": {
+    "kind": "cursor",
+    "label": "DESKTOP"
+  },
+  "cross-device-handoff": {
+    "kind": "devices",
+    "label": "DEVICES"
+  },
+  "job-applications": {
+    "kind": "browser",
+    "label": "FORM"
+  },
+  "mathematical-animation": {
+    "kind": "math-motion",
+    "label": "MP4 · PY"
+  },
+  "blender-3d": {
+    "kind": "product-3d",
+    "label": "BLEND · PNG"
+  },
+  "video-analysis": {
+    "kind": "research",
+    "label": "REPORT"
+  }
+}

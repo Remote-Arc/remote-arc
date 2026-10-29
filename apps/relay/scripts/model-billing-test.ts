@@ -7,6 +7,7 @@ import {reserveBilling,settleBilling,setBillingLimit,grantPaidModel,configureFre
 import {runModelGateway,DEFAULT_AUTO_MODEL,resolveModelGateway,type ModelGatewayBinding} from "../src/model-gateway.js";
 import {openAiAdapter,anthropicAdapter,openRouterAdapter,workersAiAdapter,ModelProviderError,type ModelDefinition,type ModelUsage} from "../src/model-provider-adapters.js";
 import {planAgentTurn,agentPlannerConfigured} from "../src/agent-planner.js";
+import {ARC_HOSTED_MODELS} from '@remotearc/protocol';
 
 const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),".."),sql=new DatabaseSync(":memory:");
 sql.exec("PRAGMA foreign_keys=ON");
@@ -224,5 +225,36 @@ for(const provider of ['openai','anthropic','openrouter'] as const){
  const actual=JSON.parse(sql.prepare('SELECT settlement_json FROM billing_reservations WHERE id=?').get(settled.reservationId)!.settlement_json as string).actual;
  assert.equal(actual.costMicros,provider==='anthropic'?98:102,'Cache reads, cache write TTLs and reasoning must be rated exactly once');
 }
-console.log("Model/Billing foundation: real SQLite atomic caps, concurrency, grants, tenant isolation, unknown reservation retention, four mocked provider contracts and exact cache accounting passed.");
+// Exercise the shipped Terra profile through the real Responses adapter and
+// ledger, including vision/tool decisions, cache rating and budget admission.
+await reset();
+const terra=ARC_HOSTED_MODELS.find(model=>model.id==='gpt-6.1-terra');assert(terra);
+await grantPaidModel(db,'admin',{id:'terra',userId:'owner',organizationId:'personal:owner',provider:'openai',maxCostMicros:1000000,expiresAt:future});
+let terraCalls=0;
+const terraGateway:ModelGatewayBinding={...gateway,models:[terra],paidGrantId:'terra',adapters:{openai:openAiAdapter('fixture',async(url,init)=>{
+ terraCalls++;const request=JSON.parse(String(init?.body));
+ assert.equal(String(url),'https://api.openai.com/v1/responses');assert.equal(request.model,'gpt-6.1-terra');assert.equal(request.store,false);
+ assert.equal(request.tool_choice,'required');assert.equal(request.parallel_tool_calls,false);
+ assert.equal(request.input[1].content[1].type,'input_image');
+ return response({...nativePayload,usage:{input_tokens:1000,output_tokens:100,input_tokens_details:{cached_tokens:200,cache_write_tokens:100},output_tokens_details:{reasoning_tokens:30}}});
+})}};
+const terraRequest=()=>req({modelId:terra.id,decisionTool:true,schema:nativeSchema,images:[{dataUrl:'data:image/png;base64,AAAA'}]});
+const terraResult=await runModelGateway(terraGateway,terraRequest(),validate);
+assert.deepEqual(terraResult.value,nativeAction);
+const terraReservation=sql.prepare('SELECT model_id,settlement_json FROM billing_reservations WHERE id=?').get(terraResult.reservationId)!;
+assert.equal(terraReservation.model_id,'gpt-6.1-terra');
+assert.equal(JSON.parse(terraReservation.settlement_json as string).actual.costMicros,1335,'Terra rates uncached input, cache reads/writes and output; reasoning is already in output');
+await setBillingLimit(db,'admin',{scope_type:'user',scope_id:'owner',lane:'arc_hosted',metric:'cost_micros',period_key:day,limit:2000});
+await deny(()=>runModelGateway(terraGateway,terraRequest(),validate),/BILLING_QUOTA/);
+assert.equal(terraCalls,1,'An insufficient Terra budget prevents dispatch and never falls back to Luna');
+await reset();
+await grantPaidModel(db,'admin',{id:'terra',userId:'owner',organizationId:'personal:owner',provider:'openai',maxCostMicros:3000000,expiresAt:future});
+for(const [inputTokens,costMicros] of [[272000,272500],[272001,544752]]){
+ const longResult=await runModelGateway({...terraGateway,adapters:{openai:async()=>({value:raw,usage:{inputTokens:inputTokens!,outputTokens:100,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:30},providerRequestId:'terra-long-context'})}},req({modelId:terra.id,user:'x'.repeat(190000),images:Array(3).fill({dataUrl:'data:image/png;base64,AAAA'})}),validate);
+ const row=sql.prepare('SELECT request_json,settlement_json FROM billing_reservations WHERE id=?').get(longResult.reservationId)!;
+ assert.equal(JSON.parse(row.settlement_json as string).actual.costMicros,costMicros,'Only usage above 272K triggers full-request Terra long-context pricing');
+ assert(JSON.parse(row.request_json as string).maximum.costMicros>costMicros!,'Admission reserves the long-context rate when the conservative input bound crosses the threshold');
+}
+await deny(()=>runModelGateway({...terraGateway,models:[{...terra,longContext:{...terra.longContext,thresholdTokens:-1}}]},req({modelId:terra.id}),validate),/CONFIGURATION_INVALID/);
+console.log("Model/Billing foundation: real SQLite atomic caps, concurrency, grants, tenant isolation, unknown reservation retention, four mocked provider contracts, Terra vision/tool admission and exact cache accounting passed.");
 sql.close();

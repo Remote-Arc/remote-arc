@@ -29,9 +29,11 @@ try {
     assert.match(html, /role="region"[^>]*aria-labelledby=/);
     const label = html.match(/aria-labelledby="([^"]+)"/)?.[1];
     assert.ok(label && html.includes('id="' + label + '"'));
-    for (const name of ["GitHub", "Slack", "Runway", "Vercel", "Google Drive", "Notion", "Mac", "Windows", "Linux", "Browser"]) assert.ok(body.includes(name), "Present all resources together: " + name);
-    assert.equal((html.match(/data-resource="app"/g) || []).length, 6);
+    for (const name of ["GitHub", "Slack", "Vercel", "Google Drive", "Notion", "Mac", "Windows", "Linux", "Browser"]) assert.ok(body.includes(name), "Present all resources together: " + name);
+    assert.equal((html.match(/data-resource="app"/g) || []).length, 5);
     assert.equal((html.match(/data-resource="device"/g) || []).length, 4);
+    assert.equal((html.match(/data-resource="skill"/g)||[]).length,1);
+    assert.doesNotMatch(html,/Runway|runway/);
     for (const name of locale === "zh" ? ["专业技能", "任务执行", "操作审批", "结果验证"] : ["Skills", "Execution", "Approvals", "Verified Results"]) assert.ok(body.includes(name));
     assert.equal((html.match(/role="tab"/g) || []).length, 2, "Only manual product-mode controls");
     assert.match(html, /role="tabpanel"/);
@@ -53,10 +55,13 @@ try {
       assert.match(copy,mode==='connect'?(locale==='zh'?/转眼接入真实工作/:/Connected in seconds/):(locale==='zh'?/随时接手工作/:/Ready around the clock/));
       assert.match(hero,mode==='connect'?/href="https:\/\/mcp.remotearc.app\/dashboard\/connect\/overview"/:/href="https:\/\/agent.remotearc.app\/chat"/);
     }
+    assert.doesNotMatch(lowerHome,/Runway|runway/);
+    assert.match(lowerHome,/data-category="creative"/);
+    assert.match(lowerHome,/use-cases\/image-studio#image-gallery/);
     assert.match(lowerHome, /class="homeDemo"/, "Preserve the lower interactive conversation and execution demo");
     assert.match(lowerHome, /id="how-it-works"/);
     assert.match(lowerHome, /arcV3Teaser/);
-    for (const name of locale === "zh" ? ["修复项目", "GitHub + Vercel", "Runway 创作", "Drive + Notion", "制作 PPT", "生成 Excel"] : ["Fix a project", "GitHub + Vercel", "Create with Runway", "Drive + Notion", "Create a PPT", "Build an Excel report"]) assert.ok(lowerHome.includes(name.replaceAll(">", "&gt;")), "Preserve selected task: " + name);
+    for (const name of locale === "zh" ? ["修复项目", "GitHub + Vercel", "制作视频", "生成图片", "Drive + Notion", "制作 PPT", "生成 Excel"] : ["Fix a project", "GitHub + Vercel", "Make a video", "Create images", "Drive + Notion", "Create a PPT", "Build an Excel report"]) assert.ok(lowerHome.includes(name.replaceAll(">", "&gt;")), "Preserve selected task: " + name);
     assert.match(lowerHome, locale === "zh" ? /别只和 AI 聊天，让它真正动手/ : /Don’t just chat. Watch AI do the work/);
     const images = [...html.matchAll(/<img\b[^>]*src="([^"]+)"/g)].map(match => match[1]);
     assert.ok(images.includes("/remote-arc.svg"), "Preserve the actual blue brand Logo");

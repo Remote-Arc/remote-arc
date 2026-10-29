@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
+import { AdminUserUsageInsights } from "./user-usage-insights.js";
 import "./admin-operations.css";
 
 type DeviceCapacityGrant = {
@@ -58,6 +59,7 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
+  const [sortByUsage,setSortByUsage]=useState(true);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [credit, setCredit] = useState("500");
   const [reason, setReason] = useState("");
@@ -93,10 +95,13 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
     void refresh(page);
   }, [page]);
 
-  const filtered = useMemo(() => data?.users.filter(u => {
-    const text = query.toLowerCase();
-    return u.email.toLowerCase().includes(text) || (u.name || "").toLowerCase().includes(text);
-  }) || [], [data, query]);
+  const filtered = useMemo(() => {
+    const items=(data?.users||[]).filter(u => {
+      const text=query.toLowerCase();
+      return u.email.toLowerCase().includes(text)||(u.name||"").toLowerCase().includes(text);
+    });
+    return sortByUsage?items.sort((a,b)=>((b.allowance&&b.used/b.allowance)||0)-((a.allowance&&a.used/a.allowance)||0)):items;
+  }, [data, query, sortByUsage]);
   const chosen = data?.users.find(u => u.id === selectedUser) || null;
   const activeDeviceGrants = deviceGrants.filter(g => !g.revoked_at && (!g.expires_at || Date.parse(g.expires_at)>Date.now()));
   const activeDeviceExtra = activeDeviceGrants.reduce((total,g)=>total+g.extra_devices,0);
@@ -351,7 +356,13 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
     {section === "users" && <div className="opsContent">
       <div className="opsToolbar">
         <div><h3>{tr("User management", "用户管理")}</h3><p>{tr("Select a user to inspect usage and grant extra calls for the current month.", "选择用户查看使用情况、在线设备并追加本月额度。")}</p></div>
-        <input aria-label={tr("Search users", "搜索用户")} placeholder={tr("Search name or email", "搜索姓名或邮箱")} value={query} onChange={e => setQuery(e.target.value)} />
+        <div className="opsUsageControls"><button type="button" className={sortByUsage?"isSelected":""} onClick={()=>setSortByUsage(value=>!value)} aria-pressed={sortByUsage}>{tr("Highest usage first","高用量优先")} ↕</button><input aria-label={tr("Search users", "搜索用户")} placeholder={tr("Search name or email", "搜索姓名或邮箱")} value={query} onChange={e => setQuery(e.target.value)} /></div>
+      </div>
+      <div className="opsUsagePulse" aria-label={tr("Usage status on this page","当前页用量状况")}>
+        <div><strong>{filtered.filter(u=>u.allowance!==null&&u.used>=u.allowance).length}</strong><span>{tr("At limit","额度已满")}</span></div>
+        <div><strong>{filtered.filter(u=>u.allowance!==null&&u.used<u.allowance&&u.used>=u.allowance*.8).length}</strong><span>{tr("80% or more","已用超过 80%")}</span></div>
+        <div><strong>{filtered.filter(u=>u.extra>0).length}</strong><span>{tr("With bonus calls","已赠送额度")}</span></div>
+        <small>{tr("Filtered users on this page · not all accounts","仅当前页筛选用户 · 非全站统计")}</small>
       </div>
       <div className="opsTableScroll">
         <table className="opsTable">
@@ -370,6 +381,7 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
           </tr>)}</tbody>
         </table>
       </div>
+      {chosen && <AdminUserUsageInsights key={chosen.id} userId={chosen.id} used={chosen.used} allowance={chosen.allowance} extra={chosen.extra} />}
       {chosen && <div className="opsUserDetail">
         <div><h3>{chosen.name || chosen.email}</h3><p>{chosen.email} · {tr("Joined", "注册于")} {new Date(chosen.created_at).toLocaleDateString()}</p><p>{tr("Monthly plan quota", "本月基础额度")}: {chosen.allowance === null ? "∞" : fmt(chosen.allowance - chosen.extra)} · {tr("Extra granted", "额外赠送")}: {fmt(chosen.extra)}</p></div>
         <div className="opsPlusGrant">

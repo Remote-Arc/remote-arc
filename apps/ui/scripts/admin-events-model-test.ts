@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {percent,rate,percentagePoints,biggestDrop,retentionState,validAnalytics,type Scene} from '../src/admin/admin-events-model.js';
+const zh=(_en:string,chinese:string)=>chinese;
+assert.equal(percent(rate(0,0)),'—','No denominator is not a 0% success rate');
+assert.equal(percent(rate(0,10)),'0%','Observed failures with a real denominator can be zero');
+assert.equal(percent(rate(3,4)),'75%');
+assert.equal(percent(undefined),'—');assert.equal(percent(Number.NaN),'—');
+assert.equal(percentagePoints(.75,.5),25,'Conversion changes use percentage points');
+assert.equal(percentagePoints(.75,null),null,'Missing history is never a fake improvement');
+assert.equal(retentionState({day:7,status:'observing',returned:0,eligible:0,rate:null},zh),'观察中');
+assert.equal(retentionState({day:7,status:'not_collected',returned:2,eligible:0,rate:null},zh),'尚未采集','Known historical positives do not establish a complete denominator');
+const scene={steps:[{key:'start',count:20,dropoff:0},{key:'verified',count:12,dropoff:8},{key:'complete',count:10,dropoff:2}]} as Scene;
+assert.equal(biggestDrop(scene)?.key,'verified');
+assert.equal(biggestDrop(undefined),null);
+assert.equal(validAnalytics({summary:{},scenes:[]}),false);
+console.log('PASS: business percentages, absent denominators, percentage-point comparisons, real drop-offs and retention maturity copy');

@@ -249,5 +249,350 @@
       "Python",
       "networkx"
     ]
+  },
+  {
+    "id": "community-canvas-design",
+    "name": "Canvas image design",
+    "description": "Create original posters, covers and static PNG/PDF graphics with local code and careful visual review.",
+    "owner": "Anthropic",
+    "category": "design",
+    "keywords": [
+      "image",
+      "poster",
+      "canvas",
+      "图片",
+      "海报",
+      "代码绘图"
+    ],
+    "requires": [
+      "Connected computer",
+      "Python or browser Canvas"
+    ]
+  },
+  {
+    "id": "community-algorithmic-art",
+    "name": "Algorithmic art with p5.js",
+    "description": "Create reproducible generative art with seeded p5.js algorithms, interactive parameters and PNG exports.",
+    "owner": "Anthropic",
+    "category": "design",
+    "keywords": [
+      "generative art",
+      "p5.js",
+      "algorithm",
+      "生成艺术",
+      "代码绘图"
+    ],
+    "requires": [
+      "Connected computer",
+      "Node.js and a local browser",
+      "p5.js"
+    ]
+  },
+  {
+    "id": "community-vibe-knowledge-film",
+    "name": "Vibe knowledge films",
+    "description": "Create original cinematic knowledge films with a storyboard, deterministic Canvas scenes and local rendering.",
+    "owner": "HeyChengC",
+    "requires": [
+      "Connected computer",
+      "Python",
+      "Chrome",
+      "FFmpeg"
+    ],
+    "category": "media",
+    "keywords": [
+      "vibe",
+      "knowledge film",
+      "知识大赏",
+      "科普视频",
+      "分镜"
+    ]
+  },
+  {
+    "id": "community-a-stock-data",
+    "name": "A-share market data",
+    "description": "Fetch real A-share prices, financial statements, market news and trading datasets with source-aware Python examples.",
+    "owner": "Simon Lin",
+    "requires": [
+      "Connected computer",
+      "Python",
+      "Network access to selected data sources"
+    ],
+    "category": "data",
+    "keywords": [
+      "a-stock-data",
+      "A股",
+      "股票",
+      "行情",
+      "财报",
+      "涨停池"
+    ]
+  },
+  {
+    "id": "community-nuwa",
+    "name": "Nuwa · create thinking skills",
+    "description": "Research public or user-provided sources and distill thinking frameworks into a reusable, self-contained skill.",
+    "owner": "Huashu",
+    "requires": [
+      "Authorized sources",
+      "Connected computer for saved skills"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "蒸馏",
+      "造技能",
+      "思维框架"
+    ]
+  },
+  {
+    "id": "community-nuwa-andrej-karpathy",
+    "name": "Andrej Karpathy · thinking framework",
+    "description": "Nuwa source-based perspective on AI engineering, learning and technical explanation. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Andrej Karpathy",
+      "Karpathy",
+      "卡帕西"
+    ]
+  },
+  {
+    "id": "community-nuwa-elon-musk",
+    "name": "Elon Musk · thinking framework",
+    "description": "Nuwa source-based perspective on first principles, engineering and cost analysis. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Elon Musk",
+      "马斯克"
+    ]
+  },
+  {
+    "id": "community-nuwa-feynman",
+    "name": "Richard Feynman · thinking framework",
+    "description": "Nuwa source-based perspective on learning, teaching and explaining difficult ideas. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Richard Feynman",
+      "Feynman",
+      "费曼"
+    ]
+  },
+  {
+    "id": "community-nuwa-ilya-sutskever",
+    "name": "Ilya Sutskever · thinking framework",
+    "description": "Nuwa source-based perspective on research judgment, scaling and AI safety. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Ilya Sutskever",
+      "Ilya",
+      "伊利亚"
+    ]
+  },
+  {
+    "id": "community-nuwa-mrbeast",
+    "name": "MrBeast · thinking framework",
+    "description": "Nuwa source-based perspective on video concepts, audience retention and iteration. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "MrBeast",
+      "野兽先生"
+    ]
+  },
+  {
+    "id": "community-nuwa-munger",
+    "name": "Charlie Munger · thinking framework",
+    "description": "Nuwa source-based perspective on mental models, inversion and decision making. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Charlie Munger",
+      "Munger",
+      "芒格"
+    ]
+  },
+  {
+    "id": "community-nuwa-naval",
+    "name": "Naval Ravikant · thinking framework",
+    "description": "Nuwa source-based perspective on leverage, specific knowledge and long-term choices. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Naval Ravikant",
+      "Naval",
+      "纳瓦尔"
+    ]
+  },
+  {
+    "id": "community-nuwa-paul-graham",
+    "name": "Paul Graham · thinking framework",
+    "description": "Nuwa source-based perspective on startups, products and clear writing. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Paul Graham",
+      "格雷厄姆"
+    ]
+  },
+  {
+    "id": "community-nuwa-steve-jobs",
+    "name": "Steve Jobs · thinking framework",
+    "description": "Nuwa source-based perspective on product focus, design and end-to-end experience. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Steve Jobs",
+      "乔布斯"
+    ]
+  },
+  {
+    "id": "community-nuwa-sun-yuchen",
+    "name": "Sun Yuchen · thinking framework",
+    "description": "Nuwa source-based perspective on marketing, attention and narratives. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Sun Yuchen",
+      "Justin Sun",
+      "孙宇晨"
+    ]
+  },
+  {
+    "id": "community-nuwa-taleb",
+    "name": "Nassim Taleb · thinking framework",
+    "description": "Nuwa source-based perspective on risk, uncertainty and antifragility. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Nassim Taleb",
+      "Taleb",
+      "塔勒布"
+    ]
+  },
+  {
+    "id": "community-nuwa-trump",
+    "name": "Donald Trump · thinking framework",
+    "description": "Nuwa source-based perspective on negotiation, persuasion and public communication. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Donald Trump",
+      "Trump",
+      "特朗普"
+    ]
+  },
+  {
+    "id": "community-nuwa-x-mentor",
+    "name": "X publishing mentor · thinking framework",
+    "description": "Nuwa source-based perspective on X content, audience development and publishing workflows. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "X publishing mentor",
+      "X mastery",
+      "X 导师"
+    ]
+  },
+  {
+    "id": "community-nuwa-zhang-yiming",
+    "name": "Zhang Yiming · thinking framework",
+    "description": "Nuwa source-based perspective on product thinking, organizations and global growth. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Zhang Yiming",
+      "张一鸣"
+    ]
+  },
+  {
+    "id": "community-nuwa-zhangxuefeng",
+    "name": "Zhang Xuefeng · thinking framework",
+    "description": "Nuwa source-based perspective on education and career choices. An interpretation of published materials, not the person or their endorsement.",
+    "owner": "Huashu",
+    "requires": [
+      "Relevant source material"
+    ],
+    "category": "cognition",
+    "keywords": [
+      "nuwa",
+      "女娲",
+      "Zhang Xuefeng",
+      "张雪峰"
+    ]
   }
 ]

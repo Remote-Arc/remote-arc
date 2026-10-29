@@ -120,11 +120,12 @@ const sendFrame = (text) => {
   const head = payload.length < 126 ? Buffer.from([0x81, payload.length]) : Buffer.from([0x81, 126, payload.length >> 8, payload.length & 255]);
   ws.write(Buffer.concat([head, payload]));
 };
+let callPolicy = {};
 const call = (tool, args = {}) => new Promise((resolve, reject) => {
   const id = "c" + nextId++;
   const timer = setTimeout(() => reject(new Error("timeout " + tool)), 40000);
   pending.set(id, (msg) => { clearTimeout(timer); resolve(msg); });
-  sendFrame(JSON.stringify({ type: "call", id, tool, arguments: args }));
+  sendFrame(JSON.stringify({ type: "call", id, tool, arguments: args, policy:callPolicy }));
 });
 const ok = async (tool, args) => {
   const r = await call(tool, args);
@@ -167,7 +168,7 @@ try {
   }, [`ws://127.0.0.1:${relay.address().port}`]);
   for (let i = 0; i < 100 && !hello; i++) await new Promise((r) => setTimeout(r, 100));
   assert.ok(hello, "extension did not connect to the Relay");
-  assert.equal(hello.device.agentVersion, "browser-0.4.0");
+  assert.equal(hello.device.agentVersion, "browser-0.4.1");
   assert.ok(hello.tools.includes("browser_open_tab") && hello.tools.includes("browser_act"));
   assert.ok(hello.capabilities.includes("browser_act_v1"));
 
@@ -219,6 +220,15 @@ try {
   // next page, and Enter in a search box submits it.
   out = await ok("browser_act", { tab_id: tab, action: "navigate", url: BASE + "/form", snapshot: true });
   snap = out.snapshot;
+  const otpArgs={tab_id:tab,snapshot_id:snap.snapshotId,ref:ref(snap,"textbox","code"),value:"123456"};
+  await fails("browser_fill",otpArgs,/BROWSER_AUTH_REQUIRED/);
+  callPolicy={browserAuth:{otp:true,captcha:false,origins:["https://other.example"],mailbox:"sam@example.test"}};
+  await fails("browser_fill",otpArgs,/BROWSER_AUTH_REQUIRED/);
+  callPolicy={browserAuth:{otp:true,captcha:false,origins:[BASE],mailbox:"sam@example.test"}};
+  await ok("browser_fill",otpArgs);
+  callPolicy={};
+  await fails("browser_fill",otpArgs,/BROWSER_AUTH_REQUIRED/);
+  callPolicy={browserAuth:{otp:true,captcha:false,origins:[BASE],mailbox:"sam@example.test"}};
   const form = await ok("browser_act", { tab_id: tab, action: "fill_form", snapshot_id: snap.snapshotId, fields: [
     { ref: ref(snap, "textbox", "full name"), value: "Sam Yao" },
     { ref: ref(snap, "textbox", "email"), value: "sam@example.test" },

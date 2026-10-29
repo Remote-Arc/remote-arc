@@ -10,13 +10,13 @@ assert.deepEqual(legacy, ["read_file"]);
 assert.equal(browserRunnerEnabled(null), false, "legacy list is not an explicit opt-in");
 assert.equal(browserRunnerEnabled(advertised.slice(0, 4)), false);
 
-// One switch turns all six tools on or off together.
+// One switch turns all tools on or off together.
 const on = toggledDeviceTools(["read_file"], advertised, "browser_runner_act", true);
-assert.deepEqual(on, ["read_file", ...BROWSER_RUNNER_TOOLS]);
+assert.deepEqual(on, ["read_file", ...BROWSER_RUNNER_TOOLS, "browser_runner_wait"]);
 assert.equal(browserRunnerEnabled(on), true);
 const off = toggledDeviceTools(on, advertised, "browser_runner_status", false);
 assert.deepEqual(off, ["read_file"]);
 
 // Other tools still switch one by one.
-assert.deepEqual(toggledDeviceTools(on, advertised, "read_file", false), [...BROWSER_RUNNER_TOOLS]);
+assert.deepEqual(toggledDeviceTools(on, advertised, "read_file", false), [...BROWSER_RUNNER_TOOLS, "browser_runner_wait"]);
 console.log("PASS: Browser Runner device switch");

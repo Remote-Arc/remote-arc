@@ -12,14 +12,14 @@ export function ArchitectureDeepDive() {
     <section id="docs-architecture-deep">
       <h2>{tr("Architecture deep dive: control plane vs execution plane", "架构详解：控制面与执行面")}</h2>
       <p>{tr(
-        "Remote Arc has three separate responsibilities: your AI host decides what to do; the Cloudflare control plane authenticates, authorizes, routes and persists known work; the device Agent executes already-permitted operations. The hosted service is not a second remote computer and does not acquire an operating-system login.",
-        "Remote Arc 分为三种职责：AI 宿主判断下一步；Cloudflare 控制面负责认证、授权、路由和保存已知工作；设备 Agent 执行已经获批的操作。云端并不是另一台被操作的电脑，也不会获取操作系统登录身份。",
+        "Remote Arc has three separate responsibilities: your external AI host or Arc’s hosted model decides what to do; the Cloudflare control plane authenticates, authorizes, routes and persists known work; the device Agent executes already-permitted operations. The hosted service is not a second remote computer and does not acquire an operating-system login.",
+        "Remote Arc 分为三种职责：外部 AI 宿主或 Arc 托管模型判断下一步；Cloudflare 控制面负责认证、授权、路由和保存已知工作；设备 Agent 执行已经获批的操作。云端并不是另一台被操作的电脑，也不会获取操作系统登录身份。",
       )}</p>
       <div className="articleFlow"><code>AI / MCP</code><span>→</span><code>OAuth + Worker</code><span>→</span><code>D1 + Durable Object</code><span>→</span><code>Outbound WSS</code><span>→</span><code>Go Agent + Core</code></div>
       <div className="docsTableWrap"><table className="articleTable"><thead><tr><th>{tr("Layer", "层级")}</th><th>{tr("Responsibilities", "职责")}</th><th>{tr("Trust boundary", "信任边界")}</th></tr></thead><tbody>
         <tr><td>{tr("Reasoning host", "推理宿主")}</td><td>{tr("Selects tools and assesses results", "选择工具并判断结果")}</td><td>{tr("Does not inherit OS authority", "不继承操作系统权限")}</td></tr>
         <tr><td>Worker + D1</td><td>{tr("OAuth, grants, policy, task records and leases", "OAuth、授权、策略、任务记录与租约")}</td><td>{tr("Account, scope, plan and device checks", "账户、Scope、套餐及设备检查")}</td></tr>
-        <tr><td>Durable Object</td><td>{tr("Routes live calls to the connected computer", "向在线电脑路由实时调用")}</td><td>{tr("Authenticated outbound device session", "已认证的设备出站会话")}</td></tr>
+        <tr><td>Durable Object</td><td>{tr("Serializes Arc runs and routes live device calls", "串行推进 Arc 并路由设备实时调用")}</td><td>{tr("Authenticated outbound device session", "已认证的设备出站会话")}</td></tr>
         <tr><td>Go Agent + Core</td><td>{tr("Files, processes, terminal and Undo", "文件、进程、终端和 Undo")}</td><td>{tr("Local tools, paths and OS user", "本地工具、路径及 OS 用户权限")}</td></tr>
       </tbody></table></div>
       <p>{tr(
@@ -70,7 +70,7 @@ export function ArchitectureDeepDive() {
     <section id="docs-architecture-data">
       <h2>{tr("Storage, privacy and observability", "存储、隐私与可观测性")}</h2>
       <div className="docsTableWrap"><table className="articleTable"><thead><tr><th>{tr("Location", "位置")}</th><th>{tr("Stored or managed data", "数据内容")}</th></tr></thead><tbody>
-        <tr><td>D1</td><td>{tr("Accounts, device and OAuth grants, policies, Task metadata, leases and bounded results", "账户、设备与 OAuth 授权、策略、Task 元数据、租约和有界结果")}</td></tr>
+        <tr><td>D1</td><td>{tr("Accounts, grants, encrypted Arc messages and memories, Skills, Tasks, leases and bounded results", "账户与授权、加密 Arc 消息和记忆、技能、Task、租约和有界结果")}</td></tr>
         <tr><td>Durable Objects</td><td>{tr("Live routing and session ownership", "实时路由与会话所有权")}</td></tr>
         <tr><td>{tr("Local device", "本地设备")}</td><td>{tr("Pairing state, Agent log, process state and Local Undo", "配对状态、Agent 日志、进程状态与 Local Undo")}</td></tr>
       </tbody></table></div>
@@ -82,12 +82,12 @@ export function ArchitectureDeepDive() {
     <section id="docs-architecture-limits">
       <h2>{tr("What is shipping, and what is still experimental?", "哪些已经上线，哪些仍属于实验？")}</h2>
       <p>{tr(
-        "Production Remote Arc supports native device execution, permissioned tools and bounded deterministic tasks. It does not guarantee continuous reasoning by an ordinary Chat session. Source-controlled adaptive continuation, hosted planning, MCP callback wakeup and an isolated OS execution profile require separate host integrations or acceptance tests; their presence in an engineering design does not imply shipped availability.",
-        "正式 Remote Arc 支持原生设备执行、受控工具和有界确定性 Task，但不保证普通 Chat 在会话结束后继续推理。源 Agent 自适应续接、托管规划、MCP 回调唤醒和 OS 隔离执行配置都需要独立的宿主集成或验收；出现在设计文档中不代表已经上线。",
+        "Arc supports bounded hosted chat, Tasks, Routines and AI teams Beta; Connect exposes scoped App and device tools, deterministic tasks and enabled experimental goal contracts. These paths have separate execution limits. Connect does not guarantee that an external chat will start a new turn, and local terminal execution is not an OS sandbox. Check installed Agent capabilities and actual tool discovery before using a new feature.",
+        "Arc 提供有界托管聊天、Task、Routine 与 AI 团队 Beta；Connect 提供受控应用和设备工具、确定性任务，以及已开启的实验目标契约。这些执行路径各有上限。Connect 不保证外部聊天主动开始新轮次，本地终端也不是 OS 沙箱。使用新功能前检查已安装 Agent 能力与实际工具列表。",
       )}</p>
       <div className="articleEndLinks">
-        <a href="https://github.com/yaohuangguan/remote-arc/blob/master/docs/system-architecture.en.md" target="_blank" rel="noreferrer">{tr("Complete engineering reference (English)", "完整工程参考（英文）")} ↗</a>
-        <a href="https://github.com/yaohuangguan/remote-arc/blob/master/docs/system-architecture.md" target="_blank" rel="noreferrer">{tr("Complete engineering reference (Chinese)", "完整工程参考（中文）")} ↗</a>
+        <a href="https://github.com/Remote-Arc/remote-arc/blob/master/docs/system-architecture.en.md" target="_blank" rel="noreferrer">{tr("Complete engineering reference (English)", "完整工程参考（英文）")} ↗</a>
+        <a href="https://github.com/Remote-Arc/remote-arc/blob/master/docs/system-architecture.md" target="_blank" rel="noreferrer">{tr("Complete engineering reference (Chinese)", "完整工程参考（中文）")} ↗</a>
         <a href="/docs/long-running-work">{tr("Durable work and limitations", "持久工作与功能边界")} →</a>
       </div>
     </section>

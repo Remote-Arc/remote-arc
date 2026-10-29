@@ -1,7 +1,7 @@
 import type {ArcWork} from './arc-task-card.js';
 import type {ArcAppConnectionRequest} from '@remotearc/protocol';
-import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
-const PREVIEW_SKILLS=COMMUNITY_SKILLS;
+import {SKILL_LIBRARY} from '../../../packages/skills/src/library.js';
+const PREVIEW_SKILLS=SKILL_LIBRARY;
 import {ARC_MEMORY_LIMITS} from '@remotearc/protocol';
 import type {ArcAttachment} from '@remotearc/protocol';
 import type {ChatMessage, ChatRun, ChatSession} from "./use-arc-chat.js";
@@ -14,7 +14,7 @@ const makeRun = ():ChatRun => ({id:crypto.randomUUID(),status:"queued",step:0,to
 export function createArcPreview(references:{work?:ArcWork[];attachments?:Map<string,{meta:ArcAttachment}>;apps?:NonNullable<ChatMessage['apps']>;employees?:NonNullable<ChatMessage['teammates']>}={}) {
   let memoryEnabled=true;const connectedApps=new Set(references.apps?.map(app=>app.provider)||[]);
   const memories=new Map<string,{id:string;kind:'fact'|'work';category:string;content:string;source_session_id:string|null;updated_at:string}>([['example-preference',{id:'example-preference',kind:'fact',category:'preference',content:'Keep release summaries concise and link the relevant pull requests.',source_session_id:'sample-conversation',updated_at:new Date().toISOString()}]]);
-  const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string;owner?:string;requires?:string[];revision?:string;license?:string;resourceCount?:number;version?:string;category?:string;keywords?:string[]}>(PREVIEW_SKILLS.map(({resources,...skill})=>[skill.id,{...skill,resourceCount:resources.length}]));
+  const skills=new Map<string,{id:string;name:string;description:string;sourceUrl:string|null;origin:string;content:string;owner?:string;requires?:readonly string[];revision?:string;license?:string;resourceCount?:number;version?:string;category?:string;keywords?:readonly string[]}>(PREVIEW_SKILLS.map(({resources,...skill})=>[skill.id,{...skill,resourceCount:resources.length}]));
   const sessions = new Map<string,PreviewSession>();
   const example:PreviewSession = {
     session:{id:"sample-conversation",title:"Review the release and share a summary",modelId:"auto",updatedAt:new Date().toISOString()},

@@ -57,6 +57,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     "stop_process",
   ];
 
+  if(new URL(location.href).searchParams.get("demo")==="browser-auth") tools.push("browser_runner_start","browser_runner_snapshot","browser_runner_act","browser_runner_status","browser_runner_confirm","browser_runner_close","browser_runner_wait");
   const devices = [
     {
       id: "preview-mac",
@@ -220,6 +221,24 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
 
+    if (url.pathname.startsWith("/api/browser-auth/")) {
+      const key="browser-auth-preview-"+url.pathname.split("/").pop();
+      if(method==="POST") {
+        const value=JSON.parse(String(init?.body || "{}"));
+        window.sessionStorage.setItem(key,JSON.stringify(value));return json(value);
+      }
+      return json(JSON.parse(window.sessionStorage.getItem(key)||'{"otp":false,"captcha":false,"origins":[],"mailbox":""}'));
+    }
+    if (url.pathname.startsWith("/api/runner/")) {
+      const demo = new URL(location.href).searchParams.get("demo") === "runner" || location.pathname.startsWith("/dashboard/browser/");
+      const sample = {id:"preview-runner-attention",device_id:"preview-mac",device_name:"Studio Mac",session_id:"sample-application",kind:"captcha",origin:"https://careers.example.com"};
+      if (url.pathname === "/api/runner/attention") return json({attention:demo && !window.sessionStorage.getItem("runner-preview-resolved")?[sample]:[]});
+      if (url.pathname.endsWith("/resolve")) { window.sessionStorage.setItem("runner-preview-resolved","1");return json({resolved:true,state:"met"}); }
+      if (url.pathname.includes("/settings/")) return json({runner_attention_mode:"show_and_notify"});
+      if (url.pathname.includes("/session/")) return json({state:"needs_user",browser_running:true,recent_receipts:[{seq:1,tool:"browser_runner_act",action:"upload",outcome:"ok"},{seq:2,tool:"browser_runner_act",action:"submit",outcome:"unverified"}]});
+      return json({error:"preview_only"},404);
+    }
+
     const onboardingResponse = onboardingPreview.handle(url, method, init?.body ?? (input instanceof Request && method !== "GET" ? await input.clone().text() : undefined));
     if (onboardingResponse) return onboardingResponse;
 
@@ -326,10 +345,10 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
         ],
         entitlements: { plan: "plus", features: ["binary_read", "durable_tasks", "scheduled_tasks", "planned_agent_goals", "keep_awake"] },
         usage: {
-          month: "2026-09",
-          used: 1732,
+          month: new Date().toISOString().slice(0,7),
+          used: new URL(location.href).searchParams.get("quota") === "full" ? 10000 : 8700,
           limit: 10000,
-          remaining: 8268,
+          remaining: new URL(location.href).searchParams.get("quota") === "full" ? 0 : 1300,
           unlimited: false,
         },
       });
@@ -379,12 +398,21 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       } satisfies SecurityState);
     }
 
+    if (url.pathname === "/api/admin/usage-insights") {
+      const userId=url.searchParams.get("userId")||"u2";
+      const month=new Date().toISOString().slice(0,7);
+      return json({userId,month,timeZone:"UTC",chargedCalls:userId==="u2"?20000:8689,
+        audited:{total:12460,succeeded:11916,failed:544},
+        daily:Array.from({length:new Date().getUTCDate()},(_,i)=>({day:month+"-"+String(i+1).padStart(2,"0"),calls:140+(i%7)*65+(i%3)*24,failures:3+(i%5)*2})),
+        tools:[{tool:"read_file",calls:4410,failures:18},{tool:"list_directory",calls:3008,failures:29},{tool:"process_status",calls:2570,failures:210},{tool:"start_process",calls:1170,failures:180},{tool:"browser_runner_snapshot",calls:760,failures:12},{tool:"edit_block",calls:542,failures:95}],
+        outcomes:[{outcome:"allowed",calls:11916},{outcome:"device_error",calls:544}],taskSuccessAvailable:false,retriesAvailable:false});
+    }
     if (url.pathname === "/api/admin/operations") {
       const day = new Date();
       const sampleUsers = [
         {id:"preview-user",email:"owner@example.com",name:"Operator",role:"admin",plan:"plus",used:1570,extra:0,allowance:null,device_count:2,online_devices:1,created_at:previewAgo(40*86400000),last_activity:previewAgo(600000),has_plus_grant:1},
-        {id:"u2",email:"tester@example.com",name:"Early tester",role:"user",plan:"free",used:720,extra:500,allowance:10500,device_count:1,online_devices:1,created_at:previewAgo(3*86400000),last_activity:previewAgo(3600000),has_plus_grant:0},
-        {id:"u3",email:"builder@example.com",name:"Developer",role:"user",plan:"plus",used:2400,extra:0,allowance:10000,device_count:2,online_devices:0,created_at:previewAgo(7*86400000),last_activity:previewAgo(29000000),has_plus_grant:1},
+        {id:"u2",email:"tester@example.com",name:"Early tester",role:"user",plan:"free",used:20000,extra:10000,allowance:20000,device_count:1,online_devices:1,created_at:previewAgo(3*86400000),last_activity:previewAgo(3600000),has_plus_grant:0},
+        {id:"u3",email:"builder@example.com",name:"Developer",role:"user",plan:"free",used:8689,extra:0,allowance:10000,device_count:2,online_devices:0,created_at:previewAgo(7*86400000),last_activity:previewAgo(29000000),has_plus_grant:1},
       ];
       return json({
         checkedAt:previewNow(),month:day.toISOString().slice(0,7),page:0,pageSize:30,creditsReady:true,

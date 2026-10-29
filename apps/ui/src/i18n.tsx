@@ -18,7 +18,7 @@ function urlLocale(): Locale | null {
   // PR previews host the website and workspace together. Website URL prefixes
   // choose its language; workspace routes retain the user's saved preference.
   const path = location.pathname.replace(/\/+$/, "") || "/";
-  if (isWebsite() && !dashboardPaths.has(path)) return path === "/zh" || path.startsWith("/zh/") ? "zh" : "en";
+  if (isWebsite() && !dashboardPaths.has(path) && !path.startsWith("/dashboard/browser/")) return path === "/zh" || path.startsWith("/zh/") ? "zh" : "en";
   const requested = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
   if (requested === "zh" || requested === "zh-cn" || requested === "zh-hans") return "zh";
   if (requested === "en") return "en";
@@ -112,7 +112,7 @@ export function LanguageSwitcher({ compact = false, syncUrl = false, dropdown = 
   }, [open]);
   const choose = (next: Locale) => {
     const path = location.pathname.replace(/\/+$/, "") || "/";
-    if (syncUrl && isWebsite() && !dashboardPaths.has(path)) {
+    if (syncUrl && isWebsite() && !dashboardPaths.has(path) && !path.startsWith("/dashboard/browser/")) {
       rememberLocale(next);
       const url = new URL(window.location.href);
       url.pathname = pageForLanguage(url.pathname, next);

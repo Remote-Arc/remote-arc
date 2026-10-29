@@ -4,14 +4,17 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 const MaxCaptureBytes = 2 * 1024 * 1024
@@ -37,12 +40,27 @@ func (b *cappedBuffer) Write(p []byte) (int, error) {
 func (b *cappedBuffer) Text() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	s := strings.ToValidUTF8(string(b.b), "�")
+	s := decodeOutput(b.b)
 	if b.truncated {
 		s += "\n… output truncated …"
 	}
 	return s
 }
+
+// utf8Prefix drops an incomplete rune left at the end by truncation or a
+// still-running process, so it is not mistaken for a legacy code page.
+func utf8Prefix(b []byte) []byte {
+	for i := len(b) - 1; i >= 0 && i >= len(b)-utf8.UTFMax; i-- {
+		if utf8.RuneStart(b[i]) {
+			if !utf8.FullRune(b[i:]) {
+				return b[:i]
+			}
+			break
+		}
+	}
+	return b
+}
+
 func (b *cappedBuffer) Size() int { b.mu.Lock(); defer b.mu.Unlock(); return len(b.b) }
 func randomID() string {
 	b := make([]byte, 16)
@@ -102,6 +120,24 @@ func (p *Processes) cleanup() {
 			delete(p.items, id)
 		}
 	}
+	// Keep a separate bounded history. Never evict a running process to make room.
+	type completed struct {
+		id string
+		at time.Time
+	}
+	finished := []completed{}
+	for id, m := range p.items {
+		m.mu.Lock()
+		if m.ended != nil {
+			finished = append(finished, completed{id, *m.ended})
+		}
+		m.mu.Unlock()
+	}
+	sort.Slice(finished, func(i, j int) bool { return finished[i].at.Before(finished[j].at) })
+	for len(finished) > maxFinishedProcesses {
+		delete(p.items, finished[0].id)
+		finished = finished[1:]
+	}
 }
 func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed, error) {
 	p.mu.Lock()
@@ -110,8 +146,8 @@ func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed
 		return nil, errors.New("Execution core is closed.")
 	}
 	p.cleanup()
-	if len(p.items) >= 32 {
-		return nil, errors.New("Remote Arc already has the maximum number of managed background processes on this device.")
+	if active, limit := p.activeCountLocked(), activeProcessLimit(); active >= limit {
+		return nil, fmt.Errorf("Remote Arc already has the maximum number of managed background processes on this device. Running: %d; limit: %d. Finished tasks do not count. Set REMOTEARC_MAX_ACTIVE_PROCESSES to 1-256 to change the limit.", active, limit)
 	}
 	cmd := shellCommand(command)
 	cmd.Dir = cwd
@@ -142,6 +178,9 @@ func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed
 		}
 		m.mu.Unlock()
 		close(m.done)
+		p.mu.Lock()
+		p.cleanup()
+		p.mu.Unlock()
 	}()
 	if deadline > 0 {
 		go func() {
@@ -212,6 +251,57 @@ func (p *Processes) Status(id string) (map[string]any, error) {
 	}
 	return m.status(), nil
 }
+
+// WaitStatus waits on the device instead of spending caller turns sleeping and polling.
+func (p *Processes) WaitStatus(ctx context.Context, id string, waitMS int, untilText string) (map[string]any, error) {
+	m, e := p.get(id)
+	if e != nil {
+		return nil, e
+	}
+	if waitMS < 0 || len(untilText) > 500 {
+		return nil, errors.New("wait_ms must be non-negative and until_text at most 500 characters.")
+	}
+	started := time.Now()
+	limit := min(waitMS, 40000)
+	deadline := time.NewTimer(time.Duration(limit) * time.Millisecond)
+	defer deadline.Stop()
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	reason := "timeout"
+waitLoop:
+	for {
+		if untilText != "" && (strings.Contains(m.out.Text(), untilText) || strings.Contains(m.err.Text(), untilText)) {
+			reason = "text"
+			break
+		}
+		select {
+		case <-m.done:
+			reason = "exited"
+			break waitLoop
+		default:
+		}
+		if limit == 0 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-deadline.C:
+			break waitLoop
+		case <-m.done:
+			reason = "exited"
+			break waitLoop
+		case <-tick.C:
+		}
+	}
+	result := m.status()
+	result["waited_ms"], result["wait_reason"] = time.Since(started).Milliseconds(), reason
+	if waitMS > limit {
+		result["note"] = "wait_ms was capped at 40000 ms to return before the Relay deadline."
+	}
+	return result, nil
+}
+
 func (p *Processes) Output(id string) (map[string]any, error) {
 	m, e := p.get(id)
 	if e != nil {
@@ -253,15 +343,7 @@ func (p *Processes) Stop(id string) (map[string]any, error) {
 func (p *Processes) ActiveCount() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	active := 0
-	for _, job := range p.items {
-		select {
-		case <-job.done:
-		default:
-			active++
-		}
-	}
-	return active
+	return p.activeCountLocked()
 }
 
 func (p *Processes) List() []map[string]any {
@@ -309,13 +391,76 @@ func (p *Processes) Close() {
 	}
 	wg.Wait()
 }
-func listProcesses() (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "ps", "-axo", "pid,ppid,user,%cpu,%mem,etime,command")
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "tasklist.exe", "/FO", "CSV", "/NH")
+
+// secretArgument redacts obvious credentials that some tools pass on their
+// command line, so a process listing does not become a token leak.
+var secretArgument = regexp.MustCompile(`(?i)((?:--?|/)(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|auth[-_]?token|client[-_]secret)[=: ]+|\b(?:token|password|passwd|secret|api[-_]?key|access[-_]?key|client[-_]secret)=)("(?:\\.|[^"\\])*"|'[^']*'|\S+)|(bearer\s+)\S+`)
+
+func redactCommandLine(line string) string {
+	return secretArgument.ReplaceAllStringFunc(line, func(match string) string {
+		parts := secretArgument.FindStringSubmatch(match)
+		if parts[3] != "" {
+			return parts[3] + "[redacted]"
+		}
+		return parts[1] + "[redacted]"
+	})
+}
+
+// processCommand picks the OS listing command. tasklist has no header row of
+// its own, so one is supplied; details on Windows adds command lines via CIM.
+func processCommand(goos string, details bool) (name string, args []string, header string) {
+	if goos != "windows" {
+		return "ps", []string{"-axo", "pid,ppid,user,%cpu,%mem,etime,command"}, ""
 	}
+	if details {
+		return "powershell.exe", []string{"-NoProfile", "-NonInteractive", "-Command",
+			"[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,@{n='MemoryMB';e={[math]::Round($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Json -Compress"}, ""
+	}
+	return "tasklist.exe", []string{"/FO", "CSV", "/NH"}, `"Image Name","PID","Session Name","Session#","Mem Usage"`
+}
+
+// Redact the actual command before formatting it. CSV doubles embedded quotes,
+// so applying the command-line regex to raw CSV can redact an empty quote pair
+// and leave the credential behind. JSON also preserves multiline commands.
+func windowsProcessDetails(output string) (string, error) {
+	type row struct {
+		PID     int     `json:"ProcessId"`
+		PPID    int     `json:"ParentProcessId"`
+		Name    string  `json:"Name"`
+		Memory  float64 `json:"MemoryMB"`
+		Command string  `json:"CommandLine"`
+	}
+	rows := []row{}
+	output = strings.TrimSpace(output)
+	if output != "" && output != "null" {
+		if strings.HasPrefix(output, "{") {
+			output = "[" + output + "]"
+		}
+		if err := json.Unmarshal([]byte(output), &rows); err != nil {
+			return "", errors.New("Invalid process details response")
+		}
+	}
+	lines := []string{"PID\tPPID\tName\tMemoryMB\tCommandLine"}
+	for _, r := range rows {
+		// Keep each process on one display row after redacting quoted values.
+		command := strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(redactCommandLine(r.Command))
+		name := strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(r.Name)
+		lines = append(lines, fmt.Sprintf("%d\t%d\t%s\t%.0f\t%s", r.PID, r.PPID, name, r.Memory, command))
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+// listProcesses returns a header plus one line per process. filter keeps rows
+// whose text contains it (case-insensitive); limit caps rows; details adds
+// command lines on Windows (ps already includes them elsewhere).
+func listProcesses(filter string, limit int, details bool) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if limit < 1 || limit > 1000 {
+		limit = 200
+	}
+	name, args, header := processCommand(runtime.GOOS, details)
+	cmd := exec.CommandContext(ctx, name, args...)
 	hideCommand(cmd)
 	var out, err cappedBuffer
 	cmd.Stdout = &out
@@ -327,5 +472,36 @@ func listProcesses() (string, error) {
 	if platform == "windows" {
 		platform = "win32"
 	}
-	return "Processes on " + platform + ":\n\n" + strings.TrimSpace(out.Text()), nil
+	output := out.Text()
+	if runtime.GOOS == "windows" && details {
+		var parseErr error
+		output, parseErr = windowsProcessDetails(output)
+		if parseErr != nil {
+			return "", parseErr
+		}
+	}
+	lines := strings.Split(strings.ReplaceAll(strings.TrimSpace(output), "\r\n", "\n"), "\n")
+	if header == "" && len(lines) > 0 {
+		header, lines = lines[0], lines[1:]
+	}
+	needle := strings.ToLower(strings.TrimSpace(filter))
+	kept, matched := []string{}, 0
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" || needle != "" && !strings.Contains(strings.ToLower(line), needle) {
+			continue
+		}
+		matched++
+		if len(kept) < limit {
+			kept = append(kept, redactCommandLine(line))
+		}
+	}
+	summary := fmt.Sprintf("[%d of %d processes", len(kept), matched)
+	if needle != "" {
+		summary += fmt.Sprintf(" matching %q", filter)
+	}
+	if matched > len(kept) {
+		summary += "; raise limit or narrow filter for the rest"
+	}
+	summary += "]"
+	return "Processes on " + platform + ":\n\n" + redactCommandLine(header) + "\n" + strings.Join(kept, "\n") + "\n\n" + summary, nil
 }

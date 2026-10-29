@@ -62,29 +62,30 @@
       "name": "Video Creator",
       "priority": "P0",
       "category": "media",
-      "description": "Storyboard, compose, caption and export predictable videos using local render engines.",
-      "engine": "Remotion skills + FFmpeg",
+      "description": "Choose Remotion, HyperFrames or OpenFilm for finished local videos; prepare ordinary dependencies automatically and ask before large Qwen TTS/ACE-Step downloads.",
+      "engine": "Remotion 4.0.538 / HyperFrames 0.8.193 / OpenFilm 0.2.5 + FFmpeg",
       "requires": [
+        "node",
         "ffmpeg",
-        "node"
+        "git"
       ],
       "scopes": [
         "computer:read",
         "computer:write"
       ],
-      "upstream": "https://github.com/remotion-dev/skills",
-      "license": "Review Remotion commercial terms",
-      "optIn": true
+      "upstream": "https://github.com/openfilm/openfilm",
+      "license": "MIT; generated media follows each provider's terms",
+      "optIn": false
     },
     {
       "id": "image-studio",
       "name": "Image Studio",
       "priority": "P1",
       "category": "media",
-      "description": "Generate, retouch and upscale images using a user-hosted ComfyUI backend.",
-      "engine": "ComfyUI",
+      "description": "Draw posters, illustrations and seeded generative art with local code; optionally synthesize, retouch and upscale through a user-hosted ComfyUI backend.",
+      "engine": "Canvas/Python + p5.js; optional ComfyUI",
       "requires": [
-        "comfy"
+        "node or python3"
       ],
       "scopes": [
         "computer:read",
@@ -116,7 +117,7 @@
       "name": "Transcribe & Subtitles",
       "priority": "P1",
       "category": "media",
-      "description": "Transcribe authorized audio locally, timestamp captions and render with FFmpeg.",
+      "description": "Transcribe audio/video into finished SRT/VTT subtitles locally; automatically install whisper.cpp, FFmpeg and the base multilingual model when needed.",
       "engine": "whisper.cpp + FFmpeg",
       "requires": [
         "ffmpeg"
@@ -127,7 +128,7 @@
       ],
       "upstream": "https://github.com/ggml-org/whisper.cpp",
       "license": "MIT; model weights separate",
-      "optIn": true
+      "optIn": false
     },
     {
       "id": "research-reports",
@@ -160,6 +161,145 @@
       ],
       "upstream": "https://remotearc.app",
       "license": "RA authored skill instructions",
+      "optIn": false
+    },
+    {
+      "id": "remotion-video",
+      "name": "Remotion Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Core local video skill: React scenes, Three.js cameras, particles, data animation and beat-aligned editing with Remotion.",
+      "engine": "Remotion 4.0.538 / React / Three.js + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/remotion-dev/remotion",
+      "license": "RA-authored workflow; Remotion software license applies",
+      "optIn": false
+    },
+    {
+      "id": "hyperframes-video",
+      "name": "HyperFrames Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Local HTML/SVG/Canvas and GSAP videos for interface demos, motion typography, diagrams and layered explainers.",
+      "engine": "HyperFrames 0.8.193 / GSAP + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/heygen-com/hyperframes",
+      "license": "RA-authored workflow; upstream engine terms apply",
+      "optIn": false
+    },
+    {
+      "id": "openfilm-video",
+      "name": "OpenFilm Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Local shot-based video assembly with original code graphics, owned clips, transitions and timed audio.",
+      "engine": "OpenFilm 0.2.5 + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/openfilm/openfilm",
+      "license": "MIT; RA-authored workflow",
+      "optIn": false
+    },
+    {
+      "id": "map-creator",
+      "name": "Map Creator",
+      "priority": "P1",
+      "category": "media",
+      "description": "Create real SVG maps and animated geographic scenes locally with D3 and attributed Natural Earth geometry.",
+      "engine": "D3 / Natural Earth + local video engines",
+      "requires": [
+        "node",
+        "npm"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://www.naturalearthdata.com/",
+      "license": "RA-authored workflow; Natural Earth public-domain data",
+      "optIn": false
+    },
+    {
+      "id": "manim-video",
+      "name": "Manim Video",
+      "priority": "P1",
+      "category": "media",
+      "description": "Local mathematical, geometric, algorithm and data-explanation animation with precise visual derivations and editable Python scenes.",
+      "engine": "Manim 0.22.0 / Cairo / Python + FFmpeg",
+      "requires": [
+        "python3",
+        "node",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ManimCommunity/manim",
+      "license": "RA-authored workflow; Manim MIT license",
+      "optIn": false
+    },
+    {
+      "id": "blender-mcp",
+      "name": "Blender MCP",
+      "priority": "P1",
+      "category": "media",
+      "description": "Real local MCP connection to Blender for 3D modeling, materials, lighting, product visualization and camera animation; editable blend projects and rendered assets.",
+      "engine": "Blender 4.5.15 LTS / mcp-for-blender 2.2.4 / MCP 1.26.0",
+      "requires": [
+        "python3",
+        "node",
+        "desktop GUI",
+        "Blender"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ahujasid/mcp-for-blender",
+      "license": "RA-authored workflow; MCP integration MIT; Blender GPL",
+      "optIn": false
+    },
+    {
+      "id": "media-intelligence",
+      "name": "Media Intelligence",
+      "priority": "P0",
+      "category": "media",
+      "description": "Analyze public videos with yt-dlp: captions first, bounded audio/video and sampled frames only when needed, with original timestamps and source-backed reports.",
+      "engine": "yt-dlp 2026.10.26 + FFmpeg; optional local Whisper",
+      "requires": [
+        "node",
+        "python3 >=3.11"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/yt-dlp/yt-dlp",
+      "license": "RA-authored workflow; yt-dlp Unlicense and bundled dependency terms apply",
       "optIn": false
     }
   ]

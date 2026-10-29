@@ -1,3 +1,4 @@
+import {recordProductEvent} from './product-events.js';
 import { z } from "zod";
 import {billingEnabled} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
@@ -84,6 +85,7 @@ async function saveConnection(env: AppEnv, userId: string, provider: AppProvider
     ON CONFLICT(user_id,provider,account_id) DO UPDATE SET account_label=excluded.account_label,status='active',permissions_json=excluded.permissions_json,scopes_json=excluded.scopes_json,token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,generation=app_connections.generation+1,refresh_lease=NULL,refresh_lease_until=NULL,last_error=NULL,updated_at=excluded.updated_at,daily_call_limit=excluded.daily_call_limit,connection_metadata_json=excluded.connection_metadata_json`)
     .bind(id, userId, provider, account.id, account.label, JSON.stringify(permissions), JSON.stringify(tokens.scopes), cipher, tokens.expiresAt, now(), dailyLimit, JSON.stringify({ shopDomain: tokens.context?.shopDomain, businessAccountId: tokens.context?.businessAccountId, phoneNumberId: tokens.context?.phoneNumberId }),Number(Boolean(plan)),plan?.connectionLimit??100000).run();
   if(!saved.meta.changes)throw new AppError('app_connection_limit',402);
+  await recordProductEvent(env,{domain:'apps',name:'app.connection.ready',source:'server',outcome:'succeeded',userId,entityId:id,route:'/apps/'+provider});
   return id;
 }
 async function connectApiKey(request: Request, env: AppEnv, userId: string, fetcher: typeof fetch) {
@@ -239,7 +241,8 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
     const rawResult = await providerJson(plan.url, { method: plan.method, headers: { ...headers, ...plan.headers, ...conditionalHeaders }, body: plan.body === undefined ? undefined : headers["content-type"] === "application/x-www-form-urlencoded" ? new URLSearchParams(Object.entries(plan.body as Record<string,unknown>).map(([k,v]) => [k, String(v)])) : JSON.stringify(plan.body) }, fetcher, plan.responseKind);
     validateAppResult(row.provider, operation.name, rawResult);
     const result = redactProviderCredentials(rawResult,(row.provider==='vercel'&&operation.name.startsWith('env.')||row.provider==='supabase'&&operation.name.startsWith('secrets.'))?['value','decrypted']:[]);
-    await env.DB.prepare("UPDATE app_calls SET status='succeeded',result_ciphertext=?1,updated_at=?2 WHERE id=?3 AND user_id=?4 AND status='running'").bind(await seal(env, result, callContext(identity.userId, call.id, "result")), now(), call.id, identity.userId).run();
+    const settled=await env.DB.prepare("UPDATE app_calls SET status='succeeded',result_ciphertext=?1,updated_at=?2 WHERE id=?3 AND user_id=?4 AND status='running'").bind(await seal(env, result, callContext(identity.userId, call.id, "result")), now(), call.id, identity.userId).run();
+    if(settled.meta?.changes)await recordProductEvent(env,{domain:'apps',name:'app.call.succeeded',source:'server',outcome:'succeeded',userId:identity.userId,entityId:call.id});
     return { status: "succeeded", callId: call.id, untrustedData: true, verification: "provider_acknowledged", result };
   } catch (error) {
     const code = error instanceof AppError ? error.code : (error as { code?: string }).code || "app_execution_failed";

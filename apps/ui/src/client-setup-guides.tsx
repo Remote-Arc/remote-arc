@@ -7,8 +7,9 @@ type Client = "chatgpt" | "claude" | "gemini" | "cursor";
 const chatgptPlugins = "https://chatgpt.com/plugins";
 const chatgptDocs = "https://developers.openai.com/plugins/deploy/connect-chatgpt";
 const chatgptAccess = "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt";
-const claudeConnectors = "https://claude.ai/settings/connectors";
-const geminiConnectors = "https://gemini.google.com/customize/connectors";
+const claudeConnectors = "https://claude.ai/customize/connectors";
+const geminiConnectors = "https://gemini.google.com/apps";
+const geminiDocs = "https://support.google.com/gemini/answer/17209137";
 const claudeDocs = "https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp";
 const cursorDocs = "https://cursor.com/docs/mcp";
 const cursorCustomize = "https://cursor.com/docs/customize-cursor";
@@ -30,10 +31,10 @@ export function ClientMcpGuide({
       destinationLabel: tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins"),
       path: tr("Plugins → + → Add custom MCP server", "Plugins → ＋ → Add custom MCP server"),
       steps: [
-        tr("Open ChatGPT Plugins. On an eligible account, click + and choose Add custom MCP server. This is a private/custom setup; Remote Arc is not yet a public directory listing.",
-          "打开 ChatGPT Plugins。如果账户支持自定义 MCP，点击 ＋ → Add custom MCP server。这里是私有/开发者接入，并非 Remote Arc 已正式上架。"),
-        tr("Name the connection Remote Arc, enter the HTTPS endpoint shown below (including /mcp), and set the connection/authentication method.",
-          "名称填写 Remote Arc，粘贴下方完整 HTTPS 地址（含 /mcp），按界面配置连接和认证方式。"),
+        tr("Open ChatGPT Plugins. If your workspace already provides Remote Arc, install or enable it. For a custom connection, use + → Add custom MCP server when your account permits it.",
+          "打开 ChatGPT Plugins。如果工作区已提供 Remote Arc，直接安装或启用；配置自定义连接时，在账户允许的情况下选择 ＋ → Add custom MCP server。"),
+        tr("Name the connection Remote Arc, enter the HTTPS endpoint shown below (including /mcp), and choose OAuth for authentication.",
+          "名称填写 Remote Arc，粘贴下方完整 HTTPS 地址（含 /mcp），认证方式选择 OAuth。"),
         tr("Complete Remote Arc OAuth, review permissions and create the plugin. Install or enable the resulting plugin, then select it from your chat with @Remote Arc.",
           "完成 Remote Arc OAuth、核对权限并创建 Plugin。安装或启用后，在对话中通过 @Remote Arc 选择它。"),
       ],
@@ -46,14 +47,14 @@ export function ClientMcpGuide({
       ? {
         destination: claudeConnectors,
         destinationLabel: tr("Open Claude Connectors", "打开 Claude Connectors"),
-        path: tr("Settings → Connectors → + Add → Add custom connector", "Settings → Connectors → ＋ Add → Add custom connector"),
+        path: tr("Customize → Connectors → + Add → Add custom connector", "Customize → Connectors → ＋ Add → Add custom connector"),
         steps: [
-          tr("Open Claude Settings → Connectors. Click + Add at the top right, then Add custom connector.",
-            "打开 Claude 的 Settings → Connectors，点击右上角 ＋ Add → Add custom connector。"),
+          tr("Open Claude Customize → Connectors and add a custom remote connector. For Team or Enterprise, an owner first adds it in Organization settings; each member then connects their own account.",
+            "打开 Claude 的 Customize → Connectors，添加自定义远程连接。Team 或 Enterprise 先由所有者在组织设置中添加，再由每位成员关联自己的账号。"),
           tr("Set the name to Remote Arc and paste the HTTPS MCP endpoint below. Continue, select Sign in now and Use Claude’s published identity for OAuth, then Add.",
             "名称填写 Remote Arc，粘贴下方 HTTPS MCP 地址。点击 Continue，选择 Sign in now 与 Use Claude’s published identity，再点击 Add。"),
-          tr("Click Connect and finish Remote Arc OAuth, review tool permissions, then ask Claude to use @Remote Arc in a chat.",
-            "点击 Connect 并完成 Remote Arc OAuth，检查工具权限，然后在 Claude 对话中使用 @Remote Arc。"),
+          tr("Click Connect and finish Remote Arc OAuth. In a chat, enable Remote Arc from + → Connectors, review tool permissions and ask Claude to use it.",
+            "点击 Connect 并完成 Remote Arc OAuth。在对话中通过 ＋ → Connectors 启用 Remote Arc，检查工具权限后开始使用。"),
         ],
         docs: claudeDocs,
         access: claudeDocs,
@@ -64,26 +65,26 @@ export function ClientMcpGuide({
         ? {
             destination: geminiConnectors,
             destinationLabel: tr("Open Gemini Connectors", "打开 Gemini Connectors"),
-            path: tr("Connectors → + Custom → MCP Server URL", "Connectors → ＋ Custom → MCP Server URL"),
+            path: tr("Settings → Connected Apps → Custom apps", "Settings → Connected Apps → Custom apps"),
             steps: [
               tr(
-                "Open Gemini's Connectors page and choose + Custom. Enter the full https://mcp.remotearc.app/mcp URL, then select Next.",
-                "进入 Gemini Connectors 页面，点击 ＋ Custom，输入完整的 https://mcp.remotearc.app/mcp 地址，点击 Next。",
+                "In Gemini on the web, open Settings → Connected Apps (or Personal Intelligence → Connected Apps). Under Custom apps, add https://mcp.remotearc.app/mcp and continue.",
+                "在 Gemini 网页版进入 Settings → Connected Apps；部分账号位于 Personal Intelligence 下。在 Custom apps 中添加 https://mcp.remotearc.app/mcp，再继续。",
               ),
               tr(
                 "Review Google's account linking consent. If you trust the connection, finish authorization and choose Remote Arc as the custom app name.",
                 "查看 Google 账户关联授权范围，确认信任后完成授权，将自定义 App 命名为 Remote Arc。",
               ),
               tr(
-                "Review the available actions and click Connect. In the connector menu choose Use now to start a conversation with Remote Arc.",
-                "核对可用的工具操作并点击 Connect，然后在连接器菜单中选择 Use now 开始对话。",
+                "Finish the connection and review the available actions. Enter @ in a chat and select Remote Arc to use the custom app.",
+                "完成连接并核对可用操作，在对话中输入 @ 并选择 Remote Arc 开始使用。",
               ),
             ],
-            docs: geminiConnectors,
-            access: geminiConnectors,
+            docs: geminiDocs,
+            access: geminiDocs,
             important: tr(
-              "Google's custom connected app is not reviewed by Google. Only connect to the official Remote Arc MCP URL, verify the authorization screen, and keep device-side permissions restrictive.",
-              "Google 会提示自定义连接器未经 Google 审核。请核实连接的是 Remote Arc 官方 MCP 地址，并检查授权范围和设备端权限。",
+              "Google currently limits custom apps to eligible personal accounts, age 18+, in the US, in English, with Keep Activity on. Add them on the web; work and school accounts are not supported. Check Google's current requirements if the option is missing.",
+              "Google 当前仅向美国年满 18 岁、使用英语并开启 Keep Activity 的合资格个人账号提供自定义应用。需在网页版添加，工作和学校账号尚不支持；缺少入口时请核对 Google 最新条件。",
             ),
           }
       : {

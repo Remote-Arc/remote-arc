@@ -21,7 +21,9 @@ browser, on sites the user allowed, or on single tabs the user shares.
   separate per-tab permission. A shared tab loses access when it leaves its
   page, unless it moves to an allowed site.
 - Password, payment-card and file-picker fields are never filled. One-time
-  codes can be filled through `shared_tab_act` unless the user turns that off.
+  codes for sign-in or registration can be filled through `shared_tab_fill` or
+  `shared_tab_act` after Dashboard approval for the website and with the local
+  code switch enabled. See [browser authentication](../../docs/browser-authentication.md).
   Detection uses input types and autocomplete metadata; sites that mislabel
   sensitive fields can bypass this classification.
 - A click or Enter that sends something on the user's behalf (place order,

@@ -122,7 +122,7 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 			result, e = fileInfo(target)
 		}
 	case "list_processes":
-		result, e = listProcesses()
+		result, e = listProcesses(protocol.OptionalString(args, "filter"), protocol.Number(args, "limit", 200), protocol.Bool(args, "details"))
 	case "list_undo_actions", "undo_change", "undo_last_change":
 		c.mutation.Lock()
 		defer c.mutation.Unlock()
@@ -208,7 +208,11 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 		}
 		switch name {
 		case "process_status":
-			result, e = c.Processes.Status(id)
+			waitMS, err := protocol.Integer(args, "wait_ms", 0, 0, 9007199254740991)
+			if err != nil {
+				return protocol.Result{}, err
+			}
+			result, e = c.Processes.WaitStatus(ctx, id, waitMS, protocol.OptionalString(args, "until_text"))
 		case "process_output":
 			result, e = c.Processes.Output(id)
 		case "stop_process":

@@ -112,7 +112,9 @@ func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
 	go func() { done <- Main(ctx, []string{"--foreground", "--safe"}, "test", os.Stdin, &output, &output) }()
 	select {
 	case hello := <-hellos:
-		if len(hello["tools"].([]any)) != 13 {
+		// Safe mode: read-only core tools plus agent controls, including the
+		// read-only list_agent_sessions metadata tool.
+		if len(hello["tools"].([]any)) != 14 {
 			t.Fatal("native CLI did not apply the safe cap")
 		}
 	case <-time.After(15 * time.Second):

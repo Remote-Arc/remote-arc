@@ -126,20 +126,38 @@ const listDevicesDefinition = ((await rpc("tools/list", {})).result.tools as any
 assert(listDevicesDefinition.description.includes("https://remotearc.app/connect-ai"));
 assert(!listDevicesDefinition.description.includes("/install/chatgpt"));
 const listed = (await rpc("tools/list", {})).result.tools as any[];
-const appNames = listed.filter(tool => tool.name === "list_apps" || tool.name === "call_app").map(tool => tool.name).sort();
-assert.deepEqual(appNames, ["call_app", "list_apps"]);
+const APP_TOOL_NAMES = ["list_apps", "run_app_read_action", "run_app_write_action"];
+const appNames = listed.filter(tool => APP_TOOL_NAMES.includes(tool.name) || tool.name === "call_app").map(tool => tool.name).sort();
+assert.deepEqual(appNames, APP_TOOL_NAMES, "The generic call_app executor is replaced by typed read and write action tools");
 assert(!listed.some(tool => /^(github|gmail|slack|google_slides)_(messages|issues|presentations|channels)_/.test(tool.name)),
   "Apps should not add hundreds of per-operation MCP tool definitions");
-const callSchema = listed.find(tool => tool.name === "call_app").inputSchema;
-assert.equal(callSchema.additionalProperties, false);
-assert(callSchema.properties.connectionId && callSchema.properties.requestId);
-assert(callSchema.properties.operation?.enum.includes("issues.create"));
-assert(callSchema.properties.operation?.enum.includes("messages.send"));
-assert(callSchema.properties.arguments, "Arguments must be explicitly supplied and validated by the fixed catalog");
+// Every operation is published up front with its own description and exact schema.
+const { APP_OPERATIONS } = await import("../src/app-catalog.js");
+const actionVariants = (name: string) => {
+  const schema = listed.find(tool => tool.name === name).inputSchema;
+  assert.equal(schema.type, "object");
+  assert.equal(schema.additionalProperties, false);
+  assert.deepEqual([...schema.required].sort(), ["connectionId", "operation", "requestId"]);
+  const variants = schema.properties.operation.oneOf ?? schema.properties.operation.anyOf;
+  for (const variant of variants) {
+    assert.equal(variant.additionalProperties, false);
+    assert.equal(typeof variant.properties.action.const, "string");
+    assert(variant.description?.length > 10, variant.properties.action.const + " needs its own description");
+    assert.equal(variant.properties.arguments.type, "object", variant.properties.action.const + " needs a typed argument schema");
+  }
+  return variants.map((variant: any) => variant.properties.action.const as string);
+};
+const readActions = actionVariants("run_app_read_action"), writeActions = actionVariants("run_app_write_action");
+const expectedActions = (permission: string) => APP_OPERATIONS.filter(o => o.permission === permission).map(o => o.provider + "." + o.name).sort();
+assert.deepEqual([...readActions].sort(), expectedActions("read"), "The read tool exposes exactly the read operations");
+assert.deepEqual([...writeActions].sort(), expectedActions("write"), "The write tool exposes exactly the write operations");
+assert.equal(readActions.length + writeActions.length, 344);
+assert.equal(new Set([...readActions, ...writeActions]).size, 344, "Action IDs are unique across providers");
+assert(writeActions.includes("gmail.messages.send") && readActions.includes("gmail.messages.get") && !readActions.includes("gmail.messages.send"));
 const discoverySchema = listed.find(tool => tool.name === "list_apps").inputSchema;
 assert(discoverySchema.properties.use_case && discoverySchema.properties.includeSchemas);
 const disabled = (await rpc("tools/list", {}, undefined, { ...env, ENABLE_APPS: "0" })).result.tools;
-assert(!disabled.some((tool: any) => tool.name === "list_apps" || tool.name === "call_app"));
+assert(!disabled.some((tool: any) => APP_TOOL_NAMES.includes(tool.name)));
 const accounts = data(await invoke("list_apps", { provider: "gmail", limit: 1 }));
 assert.equal(accounts.connections.length, 2, "Legacy provider lookup retains all matching account connections");
 assert.equal(accounts.total, 1, "Legacy provider query totals applications, not operations");
@@ -164,8 +182,11 @@ const summary = data(await invoke("list_apps", {}));
 assert.equal(summary.operationCatalogSize, 344);
 assert(!JSON.stringify(summary).includes(ids.other), "Do not expose another owner's connection IDs");
 assert(!JSON.stringify(summary).includes("inputSchema"));
-assert.equal(listed.find(tool => tool.name === "call_app").annotations.destructiveHint, true);
-assert.equal(listed.find(tool => tool.name === "call_app").annotations.idempotentHint, false);
+assert(gh.operations.some((o: any) => o.action === "github.issues.create"), "Search returns the typed action ID");
+const annotations = (name: string) => listed.find(tool => tool.name === name).annotations;
+assert.deepEqual(annotations("list_apps"), { readOnlyHint: true, openWorldHint: false, destructiveHint: false, idempotentHint: true });
+assert.deepEqual(annotations("run_app_read_action"), { readOnlyHint: true, openWorldHint: true, destructiveHint: false, idempotentHint: true });
+assert.deepEqual(annotations("run_app_write_action"), { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: false });
 assert.equal(listed.find(tool => tool.name === "revoke_file_resource").annotations.destructiveHint, true);
 assert.equal(listed.find(tool => tool.name === "undo_last_change").annotations.destructiveHint, true);
 assert.equal(listed.find(tool => tool.name === "browser_runner_act").annotations.idempotentHint, false);
@@ -192,39 +213,47 @@ globalThis.fetch = async (url, init = {}) => {
   throw new Error("Unexpected provider URL in test: " + href);
 };
 try {
-  const create = { connectionId: ids.github, operation: "issues.create", arguments: { repo: "test/project", title: "Review", body: "Body" }, requestId: "create-issue-1" };
+  // Typed action calls: { connectionId, requestId, operation: { action, arguments } }.
+  const READ = "run_app_read_action", WRITE = "run_app_write_action";
+  const action = (connectionId: string, id: string, args: unknown, requestId: string) => ({ connectionId, requestId, operation: { action: id, arguments: args } });
+  const createArgs = { repo: "test/project", title: "Review", body: "Body" };
+  const create = action(ids.github, "github.issues.create", createArgs, "create-issue-1");
   for (const connectionId of [ids.gmail, ids.other, ids.revoked]) {
-    assert(rejected(await invoke("call_app", { ...create, connectionId })),
+    assert(rejected(await invoke(WRITE, { ...create, connectionId })),
       "Wrong provider, owner or revoked accounts must not dispatch");
   }
   assert.equal(providerRequests.length, 0);
-  assert(rejected(await invoke("call_app", { ...create, operation: "messages.send" })));
-  assert(rejected(await invoke("call_app", { ...create, operation: "issues.unknown" })));
-  assert(rejected(await invoke("call_app", { ...create, arguments: { ...create.arguments, repo: "../escape" } })));
-  assert((await invoke("call_app", create, "apps:read")).result._meta["mcp/www_authenticate"]);
-  assert((await invoke("call_app", create, "apps:write")).result._meta["mcp/www_authenticate"]);
+  assert(rejected(await invoke(WRITE, action(ids.github, "gmail.messages.send", { to: ["a@example.test"], subject: "S", body: "B" }, "wrong-provider-1"))),
+    "An action ID must match the connection's provider");
+  assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.unknown", createArgs, "unknown-action-1"))));
+  assert(rejected(await invoke(READ, create)), "The read-only tool cannot run a write action");
+  assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-via-write-1"))),
+    "The write tool exposes only write actions");
+  assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, repo: "../escape" }, "escape-1"))));
+  assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, extra: true }, "extra-field-1"))),
+    "Arguments are validated against the action's exact schema");
+  assert((await invoke(WRITE, create, "apps:read")).result._meta["mcp/www_authenticate"]);
+  assert((await invoke(WRITE, create, "apps:write")).result._meta["mcp/www_authenticate"]);
+  assert((await invoke(READ, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-scope-1"), "apps:write")).result._meta["mcp/www_authenticate"]);
   assert.equal(providerRequests.length, 0, "Invalid operations, inputs or missing OAuth scopes must not dispatch");
-  const result = data(await invoke("call_app", create));
+  const result = data(await invoke(WRITE, create));
   assert.equal(result.result.number, 17);
-  assert.equal(data(await invoke("call_app", create)).replayed, true);
+  assert.equal(data(await invoke(WRITE, create)).replayed, true);
   assert.equal(providerRequests.length, 1, "Stable requestId must prevent duplicate writes");
-  assert.equal(data(await invoke("call_app", { ...create, arguments: { ...create.arguments, title: "Changed" } })).error.code, "app_request_id_conflict");
-  const readBack = data(await invoke("call_app", {
-    connectionId: ids.github, operation: "issues.get", arguments: { repo: "test/project", number: 17 }, requestId: "read-issue-1",
-  }));
+  assert.equal(data(await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, title: "Changed" }, "create-issue-1"))).error.code, "app_request_id_conflict");
+  const readBack = data(await invoke(READ, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-issue-1")));
   assert.deepEqual(readBack.result, result.result);
-  const msg = data(await invoke("call_app", {
-    connectionId: ids.gmail, operation: "messages.get", arguments: { id: "message-1" }, requestId: "read-mail-1",
-  }));
+  const msg = data(await invoke(READ, action(ids.gmail, "gmail.messages.get", { id: "message-1" }, "read-mail-1")));
   assert.equal(msg.result.id, "message-1");
-  const draft = { connectionId: ids.gmail, operation: "drafts.create",
-    arguments: { to: ["test@example.test"], subject: "Subject", body: "Body" }, requestId: "create-draft-1" };
-  assert(rejected(await invoke("call_app", { ...draft, connectionId: ids.readonly })), "Provider write scope must be enforced");
-  assert.equal(data(await invoke("call_app", draft)).result.id, "draft-1");
+  const draft = action(ids.gmail, "gmail.drafts.create", { to: ["test@example.test"], subject: "Subject", body: "Body" }, "create-draft-1");
+  assert(rejected(await invoke(WRITE, { ...draft, connectionId: ids.readonly })), "Provider write scope must be enforced");
+  assert.equal(data(await invoke(WRITE, draft)).result.id, "draft-1");
   assert(!providerRequests.some(url => url.endsWith("/send")), "Draft creation must not send mail");
   assert(!JSON.stringify(result).includes("test-provider-token"));
   for (const [operation, connectionId, fields] of additionalOperations) {
-    const reply = data(await invoke("call_app", { connectionId, requestId: "router-" + operation.replaceAll(".", "-"), operation, arguments: fields }));
+    const provider = connectionId === ids.github ? "github" : "gmail";
+    const tool = APP_OPERATIONS.find(o => o.provider === provider && o.name === operation)!.permission === "write" ? WRITE : READ;
+    const reply = data(await invoke(tool, action(connectionId, provider + "." + operation, fields, "router-" + operation.replaceAll(".", "-"))));
     assert.equal(reply.result.testedOperation, operation, "The fixed registry must dispatch only the selected action");
   }
 } finally { globalThis.fetch = originalFetch; }
@@ -249,4 +278,4 @@ assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH);
 await callDevice(env, { ...identity(), clientId: "dashboard" }, "computer", "browser_runner_snapshot", { session_id: "task" });
 assert.deepEqual(dispatches.at(-1).policy.browserAuth, approved, "The internal Dashboard policy remains separate");
 sql.close();
-console.log("PASS: two-tool App discovery/execute router, 344 fixed schemas, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");
+console.log("PASS: App discovery plus typed read/write action tools publishing all 344 operation schemas, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { APP_OPERATIONS, type AppEnv } from "./app-catalog.js";
 import { listApps } from "./apps.js";
 import { appDiscoverySchema as baseSchema, discoverApps } from "./app-discovery.js";
+import { APP_ACTION_TOOLS } from "./mcp-app-actions.js";
 
 export const appDiscoverySchema = baseSchema.safeExtend({
   use_case: z.string().max(300).optional(),
@@ -79,7 +80,7 @@ export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unkn
         ({ provider: app.provider, name: app.name, category: app.category, configured: app.configured,
           operationCount: operations.length, connected: connections.some(c => c.provider === app.provider && c.status === "active") })),
       operationCatalogSize: all.apps.reduce((count, app) => count + app.operations.length, 0),
-      guidance: "Search with use_case, then set includeSchemas=true for matching actions. call_app accepts only fixed operation IDs; external changes require user authorization.",
+      guidance: `Search with use_case to find action IDs. Run reads with ${APP_ACTION_TOOLS.read} and user-requested changes with ${APP_ACTION_TOOLS.write}, passing a connectionId for the same provider; external changes require user authorization.`,
     };
   }
 
@@ -98,12 +99,12 @@ export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unkn
       .slice(query ? 0 : input.cursor, (query ? 0 : input.cursor) + input.limit)
       .map(({ id, provider, accountLabel, status }) => ({ id, provider, accountLabel, status })),
     operations: page.map(({ app, operation }) => ({
-      provider: app.provider, providerName: app.name, operation: operation.name,
+      provider: app.provider, providerName: app.name, action: `${app.provider}.${operation.name}`, operation: operation.name,
       description: operation.description, permission: operation.permission,
       configured: app.configured,
       connected: connections.some(account => account.provider === app.provider && account.status === "active"),
       ...(input.includeSchemas ? { inputSchema: operation.inputSchema } : {}),
     })),
-    guidance: "Use call_app with connectionId, exact operation name, arguments matching inputSchema, and a stable requestId. A write may send, delete, publish or incur costs; do not infer approval from discovery.",
+    guidance: `Run a read action with ${APP_ACTION_TOOLS.read} or a change with ${APP_ACTION_TOOLS.write}: operation {action, arguments matching inputSchema}, a connectionId for the same provider, and a stable requestId. A write may send, delete, publish or incur costs; do not infer approval from discovery.`,
   };
 }

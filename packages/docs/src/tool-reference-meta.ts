@@ -24,7 +24,7 @@ export function toolGroup(name: string): ToolGroup {
   if (name === "list_agent_sessions") return "processes";
   if (name.startsWith("shared_tab_")) return "shared-tabs";
   if (name.startsWith("browser_runner_")) return "browser-runner";
-  if (["list_apps", "call_app"].includes(name) || /^(github|gmail)_/.test(name)) return "apps";
+  if (["list_apps", "run_app_read_action", "run_app_write_action"].includes(name) || /^(github|gmail)_/.test(name)) return "apps";
   if (
     ["create_agent_goal", "get_goal_context", "submit_goal_decision"].includes(
       name,
@@ -58,12 +58,16 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
   },
   list_apps: {
-    zh: "搜索 37 个连接应用的固定操作目录；按任务查询并仅在需要时返回参数 Schema。",
-    summary: "Discover connected accounts and search the fixed App operation catalog, with bounded optional schemas.",
+    zh: "列出已连接的应用账号（connectionId），并按任务搜索 37 个应用的固定操作目录；只读，不执行任何操作。",
+    summary: "List connected App accounts and search the fixed App action catalog by task. Read-only; never runs an action.",
   },
-  call_app: {
-    zh: "在已连接账号执行经过固定目录和参数校验的操作，受账号权限、OAuth Scope 和写入去重保护。",
-    summary: "Execute a fixed App operation with provider ownership, scopes, validation and replay protection.",
+  run_app_read_action: {
+    zh: "在已连接账号中执行一个只读操作；全部读取操作及其参数 Schema 都逐一列在工具定义中，不会修改任何数据。",
+    summary: "Run one read-only App action. Every read action and its exact argument schema is listed in the tool definition.",
+  },
+  run_app_write_action: {
+    zh: "在已连接账号中执行一个用户明确要求的更改（发送、发布、创建、更新或删除）；全部写入操作逐一列出，受账号权限、OAuth Scope 和写入去重保护。",
+    summary: "Run one user-requested App change, such as send, publish, create, update or delete. Each write action is listed with its schema and protected by ownership, scopes and replay checks.",
   },
   github_repositories_list: { zh: "列出所选 GitHub 账号可访问的仓库。", summary: "List repositories accessible to the selected GitHub account." },
   github_issues_list: { zh: "列出指定仓库的 Issue。", summary: "List issues in a specified repository." },

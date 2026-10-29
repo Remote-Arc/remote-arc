@@ -56,7 +56,8 @@ for (const name of [
   "submit_goal_decision",
   "browser_runner_act",
   "list_apps",
-  "call_app",
+  "run_app_read_action",
+  "run_app_write_action",
 ])
   assert(
     data.remote.some((tool) => tool.name === name),

@@ -19,7 +19,7 @@ The authenticated App host exposes:
 
 Writes require the App origin; POST/PATCH requests also require JSON. Every route authenticates the real session. OAuth state, tokens, action arguments and results are owner-bound. Token storage uses AES-256-GCM with authenticated owner/provider/record context. Refresh leases and connection generations prevent refresh/disconnect races from reactivating a disconnected connection.
 
-The optional MCP tools are `list_apps` and `call_app`. They require incremental `apps:read` and `apps:write` scopes; the existing core tool set and default OAuth scopes are unchanged. The runtime can also be reused by the future Agent, with the same user identity and policy checks.
+The optional MCP tools are `list_apps` (connected accounts and action search), `run_app_read_action` (one read-only action) and `run_app_write_action` (one user-requested change). Every catalog operation is published in the two action tools' input schemas as its own variant with its description and exact arguments, so reviewers and clients see each operation up front. They require incremental `apps:read` and `apps:write` scopes; the existing core tool set and default OAuth scopes are unchanged. The runtime can also be reused by the future Agent, with the same user identity and policy checks.
 
 ## Workspace experience
 

@@ -18,6 +18,7 @@ const expected = [
   "process_status", "process_output", "stop_process", "write_file", "edit_block",
   "undo_last_change", "create_automation", "list_automations",
   "get_automation", "manage_automation",
+  "list_apps", "run_app_read_action", "run_app_write_action",
 ];
 
 const missingRelay = expected.filter((name) => !registered.has(name));
@@ -33,7 +34,7 @@ if (missingRelay.length || missingSubmission.length || extraSubmission.length) {
   process.exit(1);
 }
 
-if (expected.length !== 24) {
+if (expected.length !== 27) {
   console.error(`Expected runtime surface count changed: ${expected.length}`);
   process.exit(1);
 }

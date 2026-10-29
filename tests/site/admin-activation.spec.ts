@@ -1,0 +1,37 @@
+import { test, expect } from './fixtures';
+
+test('Admin activation filters, sorting and provenance evidence stay distinct from device counts', async ({ page }, info) => {
+  const zh = info.project.metadata.language === 'zh';
+  await page.goto('/admin-preview?section=operations');
+  const stage = page.getByRole('combobox', {name:zh ? '激活阶段' : 'Activation stage', exact:true});
+  const sort = page.getByRole('combobox', {name:zh ? '用户排序' : 'Sort users', exact:true});
+  await expect(stage).toBeVisible();
+  await expect(page.locator('.opsResultStatus')).toContainText('9');
+  await stage.selectOption('mcp_connected_no_device');
+  await expect(page.locator('.opsTable tbody tr')).toHaveCount(1);
+  await expect(page.locator('.opsTable tbody')).toContainText(zh ? 'MCP 已连接，未配对电脑' : 'MCP connected, no computer');
+  await expect(page.locator('.opsTable tbody')).toContainText('0 / 0');
+  await expect(page.locator('.opsTable tbody')).not.toContainText(zh ? '插件已连接' : 'Plugin connected');
+  await page.locator('.opsTable tbody button').click();
+  await expect(page.locator('.opsActivationEvidence')).toContainText(zh ? '插件来源未核实' : 'plugin source unverified');
+  await expect(page.locator('.opsActivationEvidence')).toContainText(zh ? '整个用户目标' : 'entire user goal');
+  await stage.selectOption('history_unknown');
+  await expect(page.locator('.opsTable tbody tr')).toHaveCount(1);
+  await expect(page.locator('.opsTable tbody')).toContainText('history@example.com');
+  await expect(page.locator('.opsActivationEvidence')).toHaveCount(0);
+  await stage.selectOption('all');
+  await sort.selectOption('activation_desc');
+  await expect(page.locator('.opsTable tbody tr').first()).toContainText(zh ? '回访活跃用户' : 'Returning active user');
+  await sort.selectOption('activation_asc');
+  await expect(page.locator('.opsTable tbody tr').first()).toContainText(zh ? '仅注册' : 'Registered only');
+  await page.getByLabel(zh ? '搜索用户' : 'Search users', {exact:true}).fill('tester@example.com');
+  await expect(page.locator('.opsTable tbody tr')).toHaveCount(1);
+  await expect(page.locator('.opsTable tbody')).toContainText('tester@example.com');
+  await page.getByLabel(zh ? '搜索用户' : 'Search users', {exact:true}).fill('no-such-account');
+  await expect(page.locator('.opsResultStatus')).toContainText('0');
+  await expect(page.locator('.opsTable tbody')).toContainText(zh ? '没有符合筛选条件' : 'No users match');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(2);
+  await page.getByLabel(zh ? '搜索用户' : 'Search users', {exact:true}).fill('');
+  await expect(page.locator('.opsResultStatus')).toContainText('9');
+  await page.screenshot({path:`work/admin-activation-${info.project.name}.png`,fullPage:true});
+});

@@ -22,8 +22,27 @@ type Entry = {
   readOnly: boolean;
   scopes: string[];
   modes?: string[];
+  unavailableIn?: string[];
   inputSchema: Schema;
 };
+// Clients receive the same remote MCP except where a tool lists unavailableIn
+// (generated from each client profile's real tools/list).
+const AI_CLIENTS = [
+  { id: "chatgpt", name: "ChatGPT", logo: "/ai-openai.svg" },
+  { id: "claude", name: "Claude", logo: "/ai-claude.svg" },
+  { id: "cursor", name: "Cursor", logo: "/ai-cursor.svg" },
+  { id: "gemini", name: "Gemini", logo: "/ai-gemini.svg" },
+] as const;
+const availableIn = (entry: Entry, client: string) =>
+  !entry.unavailableIn?.includes(client);
+function ClientChip({ client }: { client: (typeof AI_CLIENTS)[number] }) {
+  return (
+    <span className="toolClient">
+      <img src={client.logo} alt="" width={14} height={14} />
+      {client.name}
+    </span>
+  );
+}
 const entries: Record<Interface, Entry[]> = {
   remote: data.remote.map((tool) => ({ ...tool, id: "remote-" + tool.name })),
   apps: data.apps.flatMap((app) =>
@@ -40,6 +59,8 @@ const entries: Record<Interface, Entry[]> = {
         operation.permission === "read"
           ? ["apps:read"]
           : ["apps:read", "apps:write"],
+      unavailableIn:
+        "unavailableIn" in operation ? operation.unavailableIn : undefined,
       inputSchema: operation.inputSchema,
     })),
   ),
@@ -133,6 +154,24 @@ function ToolRow({ entry, kind }: { entry: Entry; kind: Interface }) {
           <code key={mode}>{mode}</code>
         ))}
       </div>
+      {kind !== "local" && entry.unavailableIn?.length ? (
+        <p className="toolClientSupport">
+          <span>{tr("Available in", "可用于")}</span>
+          {AI_CLIENTS.filter((client) => availableIn(entry, client.id)).map(
+            (client) => (
+              <ClientChip key={client.id} client={client} />
+            ),
+          )}
+          <span>{tr("Not available in", "不可用于")}</span>
+          {AI_CLIENTS.filter((client) => !availableIn(entry, client.id)).map(
+            (client) => (
+              <span className="toolClientUnavailable" key={client.id}>
+                <ClientChip client={client} />
+              </span>
+            ),
+          )}
+        </p>
+      ) : null}
       <details
         open={open}
         onToggle={(event) => setOpen(event.currentTarget.open)}
@@ -186,7 +225,12 @@ export function ToolReference() {
     [query, setQuery] = useState(initial.get("q") || ""),
     [group, setGroup] = useState(initial.get("group") || ""),
     [provider, setProvider] = useState(initial.get("app") || ""),
-    [access, setAccess] = useState("");
+    [access, setAccess] = useState(""),
+    [client, setClient] = useState(
+      AI_CLIENTS.some((item) => item.id === initial.get("client"))
+        ? initial.get("client")!
+        : "",
+    );
   useEffect(() => {
     const id = location.hash.slice(1);
     if (id) document.getElementById(id)?.scrollIntoView({block: "start"});
@@ -199,6 +243,7 @@ export function ToolReference() {
       (!group || entry.group === group) &&
       (!provider || kind !== "apps" || entry.provider === provider) &&
       (!access || (access === "read") === entry.readOnly) &&
+      (!client || kind === "local" || availableIn(entry, client)) &&
       (!needle ||
         [
           entry.name,
@@ -227,6 +272,13 @@ export function ToolReference() {
     url.searchParams.delete("app");
     url.searchParams.delete("group");
     url.hash = "";
+    history.replaceState(history.state, "", url);
+  }
+  function chooseClient(value: string) {
+    setClient(value);
+    const url = new URL(location.href);
+    if (value) url.searchParams.set("client", value);
+    else url.searchParams.delete("client");
     history.replaceState(history.state, "", url);
   }
   function groupName(id: string) {
@@ -303,6 +355,40 @@ export function ToolReference() {
                 "本地 stdio MCP 在启动它的电脑上执行：remotelink --mcp --safe。safe、developer、full 模式开放不同工具子集，限定工作区的连接范围更窄，不提供云端 Apps 或 Browser Runner 工具。",
               )}
       </p>
+      {kind !== "local" && (
+        <div className="toolClientLegend">
+          <div
+            className="toolClientFilter"
+            role="group"
+            aria-label={tr("Show tools for an AI client", "按 AI 客户端查看工具")}
+          >
+            <button
+              type="button"
+              aria-pressed={!client}
+              onClick={() => chooseClient("")}
+            >
+              {tr("All AI clients", "全部 AI 客户端")}
+            </button>
+            {AI_CLIENTS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={client === item.id}
+                onClick={() => chooseClient(client === item.id ? "" : item.id)}
+              >
+                <img src={item.logo} alt="" width={16} height={16} />
+                {item.name}
+              </button>
+            ))}
+          </div>
+          <p>
+            {tr(
+              "Every tool works in ChatGPT, Claude, Cursor, Gemini and other MCP clients unless its entry lists the clients it is available in. Claude means Remote Arc added as a connector in Claude on the web, desktop or mobile: the Skill library and Runway actions are not offered there.",
+              "除非条目单独标注了可用客户端，所有工具都可在 ChatGPT、Claude、Cursor、Gemini 及其他 MCP 客户端中使用。Claude 指在网页版、桌面版或移动版 Claude 中添加的 Remote Arc 连接器：其中不提供 Skill 库和 Runway 操作。",
+            )}
+          </p>
+        </div>
+      )}
       <div className="toolCatalogFilters">
         <label className="toolCatalogSearch">
           <span>{tr("Find a tool", "查找工具")}</span>

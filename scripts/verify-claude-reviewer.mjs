@@ -54,7 +54,7 @@ export async function verifyClaudeReviewer({origin='https://mcp.remotearc.app',e
  await successful('undo_last_change',args);tested.push('undo_last_change');
  assert(text(await successful('read_file',{...args,path:file})).includes('reviewer-smoke-before'));
  const blocked=await call('read_file',{...args,path:'/etc/passwd'});assert(blocked.isError,'Fixture allowed reading outside its workspace');
- const media=await call('read_skill',{id:'image-studio'});assert(media.isError,'Claude can read a restricted AI-generation Skill');
+ assert(!tools.some(tool=>['find_skills','read_skill'].includes(tool.name)),'Claude catalog must not include the Skill library');
  return{oauth:'DCR, password login, consent, PKCE and refresh passed',fixtureToolsTested:tested,advertisedToolCount:tools.length,untestedTools:tools.map(tool=>tool.name).filter(name=>!tested.includes(name)),limitations:'Protocol smoke only. This does not confirm every advertised tool works or replace testing in a Claude conversation.'};
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){

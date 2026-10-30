@@ -1227,7 +1227,10 @@
       "readOnly": true,
       "group": "skills",
       "summary": "Find relevant instructions across the Skill library; execution tools and dependencies must be checked separately.",
-      "zh": "按任务搜索内置、社区、工作流及个人导入的 Skill；搜索结果不代表执行器或模型已安装。"
+      "zh": "按任务搜索内置、社区、工作流及个人导入的 Skill；搜索结果不代表执行器或模型已安装。",
+      "unavailableIn": [
+        "claude"
+      ]
     },
     {
       "name": "fleet_dispatch",
@@ -1962,7 +1965,10 @@
       "readOnly": true,
       "group": "skills",
       "summary": "Read a Skill's instructions and helper resources without granting execution permissions.",
-      "zh": "读取指定 Skill 的完整说明与辅助资源；执行仍受设备权限和安装条件约束。"
+      "zh": "读取指定 Skill 的完整说明与辅助资源；执行仍受设备权限和安装条件约束。",
+      "unavailableIn": [
+        "claude"
+      ]
     },
     {
       "name": "revoke_file_resource",
@@ -9648,7 +9654,10 @@
             "type": "object",
             "properties": {},
             "additionalProperties": false
-          }
+          },
+          "unavailableIn": [
+            "claude"
+          ]
         },
         {
           "name": "images.generate",
@@ -9682,7 +9691,10 @@
               "maxCredits"
             ],
             "additionalProperties": false
-          }
+          },
+          "unavailableIn": [
+            "claude"
+          ]
         },
         {
           "name": "organization.get",
@@ -9693,7 +9705,10 @@
             "type": "object",
             "properties": {},
             "additionalProperties": false
-          }
+          },
+          "unavailableIn": [
+            "claude"
+          ]
         },
         {
           "name": "tasks.cancel",
@@ -9713,7 +9728,10 @@
               "taskId"
             ],
             "additionalProperties": false
-          }
+          },
+          "unavailableIn": [
+            "claude"
+          ]
         },
         {
           "name": "tasks.get",
@@ -9733,7 +9751,10 @@
               "taskId"
             ],
             "additionalProperties": false
-          }
+          },
+          "unavailableIn": [
+            "claude"
+          ]
         },
         {
           "name": "videos.fromImage",
@@ -9786,7 +9807,10 @@
               "maxCredits"
             ],
             "additionalProperties": false
-          }
+          },
+          "unavailableIn": [
+            "claude"
+          ]
         },
         {
           "name": "videos.generate",
@@ -9826,7 +9850,10 @@
               "maxCredits"
             ],
             "additionalProperties": false
-          }
+          },
+          "unavailableIn": [
+            "claude"
+          ]
         },
         {
           "name": "voices.list",
@@ -9852,7 +9879,10 @@
               "limit"
             ],
             "additionalProperties": false
-          }
+          },
+          "unavailableIn": [
+            "claude"
+          ]
         }
       ]
     },

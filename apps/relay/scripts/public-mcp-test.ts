@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createRemoteLinkMcp } from "../src/mcp.js";
+import { CLAUDE_TOOL_DESCRIPTIONS } from "../src/mcp-claude-descriptions.js";
 import { mcpClientProfile } from "../src/mcp-client-profile.js";
 import { APP_OPERATIONS } from "../src/app-catalog.js";
 import { callDevice } from "../src/device-call.js";
@@ -146,7 +147,24 @@ assert(actionText(listed, "run_app_write_action").includes("runway.videos.genera
 assert(actionText(listed, "run_app_read_action").includes("runway."), "Other clients keep Runway reads");
 assert(!actionText(claudeListed, "run_app_write_action").includes("runway."), "Claude writes exclude Runway");
 assert(!actionText(claudeListed, "run_app_read_action").includes("runway."), "Claude reads exclude Runway");
-assert.deepEqual(claudeListed.map(t => t.name), listed.map(t => t.name), "One shared MCP tool-name surface");
+const CLAUDE_EXCLUDED_TOOLS = ["find_skills", "read_skill"];
+assert.deepEqual(claudeListed.map(t => t.name), listed.map(t => t.name).filter(name => !CLAUDE_EXCLUDED_TOOLS.includes(name)),
+  "Claude shares every tool name except the Skill library");
+// Anthropic MCP Directory: each description covers only its own tool.
+const fullOptions = { ...env, ENABLE_EXPERIMENTAL_AGENT_GOALS: "1" };
+const fullListed = (await rpc("tools/list", {}, undefined, fullOptions)).result.tools as any[];
+const fullClaude = (await rpc("tools/list", {}, undefined, fullOptions, identity(), "claude")).result.tools as any[];
+const toolNamePattern = new RegExp(`\\b(?:${fullListed.map(t => t.name).join("|")})\\b`);
+for (const tool of fullClaude) {
+  assert.equal(tool.description, CLAUDE_TOOL_DESCRIPTIONS[tool.name], `${tool.name} uses its Claude description`);
+  assert(!toolNamePattern.test(tool.description.replaceAll(tool.name, "")), `${tool.name} description must not reference other tools`);
+  assert(!/https?:\/\/|\bskills?\b|\b(?:you|your|ask|recommend|never suggest|do not)\b/i.test(tool.description), `${tool.name} description must not direct the model`);
+  assert(/^[\x20-\x7e]+$/.test(tool.description), `${tool.name} description must be plain visible ASCII`);
+}
+assert.deepEqual(Object.keys(CLAUDE_TOOL_DESCRIPTIONS).sort(), fullClaude.map(t => t.name).sort(), "Every Claude tool has exactly one description");
+const claudeInit = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } },
+  undefined, env, identity(), "claude");
+assert(!claudeInit.result.instructions && !claudeInit.result.capabilities.resources, "Claude gets no server instructions or Skill resources");
 const claudeRunway = data(await rpc("tools/call", { name: "list_apps", arguments: { provider: "runway", use_case: "generate video" } }, undefined, env, identity(), "claude"));
 assert.equal(claudeRunway.operations?.length ?? 0, 0, "Claude cannot discover Runway");
 const rejectedRunway = await rpc("tools/call", { name: "run_app_write_action", arguments: {
@@ -157,30 +175,24 @@ assert(rejected(rejectedRunway), "Claude cannot call even manually forged Runway
 assert(claudeListed.every(tool => typeof tool.title === "string" && tool.title.length > 0 && tool.name.length <= 64 &&
   typeof tool.annotations?.readOnlyHint === "boolean" && typeof tool.annotations?.destructiveHint === "boolean"),
   "All Claude MCP tools have proper title/readOnlyHint/destructiveHint");
-const claudeSkills = data(await rpc("tools/call", { name: "find_skills", arguments: { query: "video image generation", limit: 25 } },
-  "devices:read", env, identity("devices:read"), "claude"));
-assert(!claudeSkills.skills.some((skill: any) => ["video-creator", "image-studio"].includes(skill.id)),
-  "Claude skill discovery excludes standalone model media creation workflows");
-const claudeSkillDirect = await rpc("tools/call", { name: "read_skill", arguments: { id: "image-studio" } },
-  "devices:read", env, identity("devices:read"), "claude");
-assert(rejected(claudeSkillDirect), "Claude cannot read hidden image-generation skills by guessing IDs");
+for (const [name, args] of [["find_skills", { query: "video" }], ["read_skill", { id: "manim-video" }]] as const) {
+  assert(rejected(await rpc("tools/call", { name, arguments: args }, "devices:read", env, identity("devices:read"), "claude")),
+    `Claude cannot call ${name} by name`);
+}
 const genericSkills = data(await rpc("tools/call", { name: "find_skills", arguments: { query: "image" } },
   "devices:read", env, identity("devices:read"), "generic"));
 assert(genericSkills.skills.some((skill: any) => skill.id === "image-studio"),
   "ChatGPT and other clients retain the existing image creation skill");
-const claudeResources = (await rpc("resources/list", {}, undefined, env, identity(), "claude")).result.resources as any[];
-assert(!claudeResources.some(resource => /\/(?:image-studio|video-creator)(?:\/|$)/.test(resource.uri)),
-  "Claude resource discovery also excludes standalone model media skills");
+const claudeResources = await rpc("resources/list", {}, undefined, env, identity(), "claude");
+assert(rejected(claudeResources) || claudeResources.result.resources.length === 0, "Claude gets no Skill resources");
 const genericResources = (await rpc("resources/list", {})).result.resources as any[];
 assert(genericResources.some(resource => resource.uri === "remotearc://skills/image-studio"),
   "Other clients keep the original resource catalog");
-// Preserve the exact legacy ChatGPT guidance while Claude receives review-safe wording.
+// Preserve the exact legacy guidance for every other client.
 assert(listed.find(t => t.name === "find_skills").description.includes("follow its method using the tools you have"),
   "Non-Claude clients preserve the existing Skills usage guidance");
 assert(listed.find(t => t.name === "read_skill").description.includes("Save those bytes on the authorized user device"),
   "Non-Claude clients retain the existing helper workflow");
-assert(claudeListed.find(t => t.name === "find_skills").description.includes("untrusted material"),
-  "Claude receives policy-safe reference guidance");
 const legacyCount = data(await rpc("tools/call", { name: "list_apps",
   arguments: { includeSchemas: true } }));
 assert.equal(legacyCount.operationCatalogSize, APP_OPERATIONS.length, "Non-Claude filtered Apps search retains its global count");
@@ -194,8 +206,8 @@ assert.equal(claudeDirectory.total, genericDirectory.total - 1, "Claude pages ov
 assert(!claudeDirectory.apps.some((app: any) => app.provider === "runway"));
 assert.equal(typeof claudeDirectory.nextCursor === "number" || claudeDirectory.nextCursor === null, true);
 const claudeDescription = (name: string) => claudeListed.find(t => t.name === name).description as string;
-assert(claudeDescription("run_app_read_action").includes(`All ${APP_OPERATIONS.filter(o => o.permission === "read" && o.provider !== "runway").length} read actions`), "Claude read count matches its schema");
-assert(claudeDescription("run_app_write_action").includes(`All ${APP_OPERATIONS.filter(o => o.permission === "write" && o.provider !== "runway").length} change actions`), "Claude write count matches its schema");
+assert(claudeDescription("run_app_read_action").includes(`all ${APP_OPERATIONS.filter(o => o.permission === "read" && o.provider !== "runway").length} read actions`), "Claude read count matches its schema");
+assert(claudeDescription("run_app_write_action").includes(`all ${APP_OPERATIONS.filter(o => o.permission === "write" && o.provider !== "runway").length} change actions`), "Claude write count matches its schema");
 const APP_TOOL_NAMES = ["list_apps", "run_app_read_action", "run_app_write_action"];
 const appNames = listed.filter(tool => APP_TOOL_NAMES.includes(tool.name) || tool.name === "call_app").map(tool => tool.name).sort();
 assert.deepEqual(appNames, APP_TOOL_NAMES, "The generic call_app executor is replaced by typed read and write action tools");

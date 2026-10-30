@@ -28,14 +28,24 @@ Remote Arc serves every AI host from the same URL:
 - **Other hosts (including ChatGPT):** unchanged public MCP schema, Apps
   provider catalog (including Runway), Skills, local tools, OAuth scopes,
   limits, and security rules.
-- **Claude:** identical top-level MCP tool names and endpoint, but the
-  Runway provider and its 8 read/write actions are excluded from typed
-  Apps action schemas, Apps discovery and server-side dispatch.
-- Claude also cannot access bundled `image-studio` or `video-creator`
-  AI-generation guidance through Skill discovery, direct reads, or
-  MCP Resources. Imported user Skills are not exposed to Claude.
+- **Claude:** same endpoint and the same tool names, schemas and handlers,
+  with three differences:
+  - The Runway provider and its 8 read/write actions are excluded from typed
+    Apps action schemas, Apps discovery and server-side dispatch.
+  - The Skill library is not offered: no `find_skills` or `read_skill` tools,
+    no Skill MCP Resources and no server `instructions` (42 tools instead of
+    44). Skills are an external instruction source, and several bundled media
+    Skills mention local AI voice and music models.
+  - Every tool description comes from
+    `apps/relay/src/mcp-claude-descriptions.ts`. Each one describes only its
+    own tool: no references to other tools, no directions to the model and no
+    links. `apps/relay/scripts/public-mcp-test.ts` fails if a Claude tool has no
+    entry there or breaks these rules.
 - All other local device, browser, file, task, automation and Apps
   operations follow the same execution implementation and permissions.
+- The public tool directory (`/docs/tools`) marks tools and App actions that
+  are not available in Claude. The marks are generated from the real Claude
+  `tools/list` by `pnpm docs:tools`.
 - These policy limits are not a security sandbox. A general-purpose
   terminal is capable of invoking arbitrary installed programs, so
   Anthropic may still evaluate the scope of that capability during review.
@@ -46,9 +56,10 @@ Remote Arc serves every AI host from the same URL:
 2. Provide a dedicated isolated reviewer account and deterministic
    Review Desktop fixture. Never grant access to a real user's computer.
 3. Verify `tools/list` under both an authenticated Claude OAuth grant
-   and an authenticated ChatGPT grant, including the different Runway schemas.
+   and an authenticated ChatGPT grant, including the different Runway schemas,
+   the missing Skill tools and the Claude descriptions.
 4. Test representative reads, reversible edits and expected error feedback.
-5. Verify no hosted AI media generation is reachable through Claude.
+5. Verify no hosted AI media generation or Skill text is reachable through Claude.
 6. Supply privacy, terms, support, and at least three working prompts.
 7. Anthropic's directory team makes the final approval decision; passing
    local tests cannot guarantee listing.
@@ -99,6 +110,6 @@ https://claude.com/docs/connectors/building/review-criteria.
 
 For production follow-up, verify both reviewer logins independently, complete
 authorization-code + PKCE and a refresh-token exchange, confirm the authenticated
-Claude catalog excludes Runway/media-generation Skills, and run the fixture
+Claude catalog excludes Runway and the Skill library, and run the fixture
 read/write/edit/undo prompts. Record the deployed SHA and actual outcomes. Keep
 remaining untested capabilities listed explicitly in the handoff.

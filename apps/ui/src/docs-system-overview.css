@@ -1,0 +1,19 @@
+.systemOverview{margin:44px 0 12px;padding:34px;border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--text)}
+.systemOverview>header{max-width:760px}.systemOverview>header .eyebrow{color:var(--accent)}.systemOverview h2{font-size:clamp(24px,3vw,32px);letter-spacing:-.03em;line-height:1.25;margin:12px 0 14px}.systemOverview>header p{color:var(--muted);font-size:14px;line-height:1.8;margin:0}
+.systemOverview h3{font-size:16px;margin:34px 0 16px}
+.systemLanes{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.25fr) auto minmax(0,1fr);gap:12px;align-items:stretch;margin-top:28px}
+.systemLane{display:grid;align-content:start;gap:8px;padding:14px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--panel) 70%,var(--bg))}
+.systemLane>span{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;letter-spacing:.12em;color:var(--accent);padding:0 2px 4px}
+.systemLane>div{display:grid;gap:4px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.systemLane strong{font-size:13px;font-weight:600}.systemLane small{font-size:12px;color:var(--muted);line-height:1.5}
+.systemLaneArrow{align-self:center;color:var(--accent);font-size:18px}
+.systemNote{color:var(--muted);font-size:12px;line-height:1.8;margin:14px 0 0}
+.systemSteps{list-style:none;margin:0;padding:0;display:grid;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.systemSteps li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:16px;align-items:start;padding:16px 18px;border-top:1px solid var(--line)}.systemSteps li:first-child{border-top:0}
+.systemStepIndex{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--accent);padding-top:2px}
+.systemSteps strong{font-size:14px}.systemSteps p{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.7}
+.systemSteps code{font-size:11px;white-space:nowrap;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.systemOverview .docsTableWrap{margin:0}
+.systemLinks{display:flex;flex-wrap:wrap;gap:20px;margin-top:26px;padding-top:20px;border-top:1px solid var(--line)}.systemLinks a{font-size:12px;color:var(--accent);text-decoration:none}
+@media(max-width:860px){.systemLanes{grid-template-columns:minmax(0,1fr)}.systemLaneArrow{justify-self:center;transform:rotate(90deg)}.systemSteps li{grid-template-columns:34px minmax(0,1fr)}.systemSteps code{grid-column:2;justify-self:start}}
+@media(max-width:620px){.systemOverview{padding:22px 18px}}

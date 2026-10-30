@@ -14,11 +14,11 @@ Arc is your hosted AI teammate. Connect brings the same authorized Apps and devi
 | Product | Start here | What it does |
 | --- | --- | --- |
 | **Arc** | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines. |
-| **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts and paired devices from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
+| **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts, paired devices and your browser from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
 
 Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
 
-Arc offers an explicitly activated 14-day Auto trial and Plus / Pro subscriptions. Users do not supply a model API key. Hosted model use has Credits and run limits; available models and plan details are shown in the workspace. Connect calls and third-party App charges have their own allowances. Preview environments use simulated data.
+Every plan includes every Connect tool. **Free** has monthly Connect call and file-transfer allowances and up to 2 computers. **Connect Unlimited** removes the call and computer limits for people who bring their own AI client; it includes no hosted models. **Plus** and **Pro** add Arc-hosted AI with monthly Credits. Every account can activate a one-time 14-day Arc trial. Users never supply a model API key. Current prices and allowances are on the [pricing page](https://remotearc.app/pricing); third-party App charges are separate. Preview environments use simulated data.
 <!-- github-overview:end -->
 
 ## Quick start

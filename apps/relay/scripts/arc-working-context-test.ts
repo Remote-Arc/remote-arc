@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import {handleArcChat,arcContext,type ArcRun} from '../src/arc-chat.js';
-import {arcWorkingContext,arcTeammateIndex,readArcContext,projectMatches} from '../src/arc-working-context.js';
-import {seal} from '../src/app-oauth.js';
-import {appScopes} from '../src/app-catalog.js';
-import {employeeToolError} from '../src/arc-team-execution.js';
-import {arcExecutionPrompt} from '../src/arc-chat-runtime.js';
-import {executeArcTool} from '../src/arc-chat-runtime.js';
+import {handleArcChat,arcContext,type ArcRun} from '../src/arc/arc-chat.js';
+import {arcWorkingContext,arcTeammateIndex,readArcContext,projectMatches} from '../src/arc/arc-working-context.js';
+import {seal} from '../src/apps/app-oauth.js';
+import {appScopes} from '../src/apps/app-catalog.js';
+import {employeeToolError} from '../src/arc/arc-team-execution.js';
+import {arcExecutionPrompt} from '../src/arc/arc-chat-runtime.js';
+import {executeArcTool} from '../src/arc/arc-chat-runtime.js';
 
 /** Real encrypted storage, authorization, App gateway and HTTP fixture reads.
  * No assertion here pretends that scripted inference proves model quality. */

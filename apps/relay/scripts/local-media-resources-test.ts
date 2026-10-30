@@ -3,11 +3,11 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {builtinResourceSummary} from '../src/arc-builtin-resources.js';
-import {prepareCommunitySkill,readCommunityResource} from '../src/arc-community-skills.js';
-import {readArcSkill} from '../src/arc-skills.js';
-import {routeSkillIntent} from '../src/skill-runtime.js';
-import type {ArcEnv,ArcRun} from '../src/arc-chat.js';
+import {builtinResourceSummary} from '../src/arc/arc-builtin-resources.js';
+import {prepareCommunitySkill,readCommunityResource} from '../src/arc/arc-community-skills.js';
+import {readArcSkill} from '../src/arc/arc-skills.js';
+import {routeSkillIntent} from '../src/skills/skill-runtime.js';
+import type {ArcEnv,ArcRun} from '../src/arc/arc-chat.js';
 
 let active=true;
 const env={DB:{prepare(){return {bind(){return {first:async()=>active?{id:'active-run'}:null};}};}}} as unknown as ArcEnv;

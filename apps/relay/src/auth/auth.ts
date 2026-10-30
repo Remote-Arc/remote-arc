@@ -1,0 +1,509 @@
+import {recordProductEvent} from '../analytics/product-events.js';
+import {startBusinessFlow,advanceBusinessFlow,failBusinessFlow} from '../analytics/business-tracking.js';
+import { retryTransientD1Read } from "../platform/d1-read-retry.js";
+import {billingEnabled,type PlatformLaunchEnv} from '../platform/platform-launch.js';
+import {currentArcPlan} from '../arc/arc-plan.js';
+import {isReviewerEmail,isReviewerUserId} from './reviewer-identity.js';
+
+type AuthEnv = PlatformLaunchEnv & {
+  DB: D1Database;
+  PUBLIC_ORIGIN: string;
+  APP_ORIGIN?: string;
+  DASHBOARD_ORIGIN?: string;
+  MARKETING_ORIGIN?: string;
+  ADMIN_ORIGIN?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  // During migration the old pair remains live as a fallback.
+  GOOGLE_NEXT_CLIENT_ID?: string;
+  GOOGLE_NEXT_CLIENT_SECRET?: string;
+  ALLOWED_EMAILS?: string;
+  ALLOW_SIGNUPS?: string;
+  REVIEWER_EMAIL?: string;
+  ANTHROPIC_REVIEWER_EMAIL?: string;
+  REVIEWER_PASSWORD_SHA256?: string;
+};
+
+export type SessionUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+  role: "user" | "admin";
+  plan: "free" | "connect" | "plus";
+  isAdmin: boolean;
+};
+
+export type OAuthIdentity = {
+  userId: string;
+  clientId: string;
+  grantId: string | null;
+  scope: string;
+  resource: string;
+};
+
+const encoder = new TextEncoder();
+
+export const nowIso = () => new Date().toISOString();
+
+export const addSecondsIso = (seconds: number) =>
+  new Date(Date.now() + seconds * 1000).toISOString();
+
+export function randomToken(bytes = 32) {
+  const value = new Uint8Array(bytes);
+  crypto.getRandomValues(value);
+  return Array.from(value, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export function randomUserCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  const chars = Array.from(bytes, (byte) => alphabet[byte % alphabet.length]);
+  return chars.slice(0, 4).join("") + "-" + chars.slice(4).join("");
+}
+
+export async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+export async function pkceChallenge(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
+  const bytes = new Uint8Array(digest);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function cookieValue(request: Request, name: string) {
+  const cookie = request.headers.get("cookie") || "";
+  for (const part of cookie.split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) return decodeURIComponent(rest.join("="));
+  }
+  return null;
+}
+
+export function safeReturnTo(value: string | null, request: Request, env: AuthEnv) {
+  const requestOrigin = new URL(request.url).origin;
+  const allowedOrigins = new Set(
+    [env.MARKETING_ORIGIN, env.APP_ORIGIN, env.DASHBOARD_ORIGIN, env.ADMIN_ORIGIN, env.PUBLIC_ORIGIN, requestOrigin]
+      .filter(Boolean)
+      .map((origin) => new URL(origin as string).origin),
+  );
+
+  if (!value) return requestOrigin + "/";
+
+  try {
+    const target = new URL(value, requestOrigin);
+    if (target.protocol !== "https:" || !allowedOrigins.has(target.origin)) {
+      return requestOrigin + "/";
+    }
+    return target.toString();
+  } catch {
+    return requestOrigin + "/";
+  }
+}
+
+export async function getSessionUser(
+  request: Request,
+  env: AuthEnv,
+): Promise<SessionUser | null> {
+  const token = cookieValue(request, "rl_session");
+  if (!token) return null;
+
+  const tokenHash = await sha256Hex(token);
+  const row = await retryTransientD1Read(() => env.DB.prepare(
+    `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.plan,
+       EXISTS(
+         SELECT 1 FROM plan_grants g
+         WHERE g.user_id = u.id
+           AND g.plan = 'plus'
+           AND g.revoked_at IS NULL
+           AND (g.expires_at IS NULL OR g.expires_at > ?2)
+       ) AS has_plus_grant
+     FROM sessions s
+     JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = ?1 AND s.expires_at > ?2`,
+  )
+    .bind(tokenHash, nowIso())
+    .first<{
+      id: string;
+      email: string;
+      name: string | null;
+      avatar_url: string | null;
+      role: "user" | "admin";
+      plan: "free" | "plus" | null;
+      has_plus_grant: number;
+    }>());
+
+  if (!row) return null;
+  const paidPlan=billingEnabled(env)?await currentArcPlan(env,row.id):null;
+  const hostedPaid=Boolean(paidPlan?.allHostedModels);
+  const connectPaid=Boolean(paidPlan&&paidPlan.id!=='free'&&!hostedPaid);
+
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    avatarUrl: row.avatar_url,
+    role: row.role || "user",
+    plan: row.role === "admin" || row.plan === "plus" || row.has_plus_grant || hostedPaid ? "plus" as const : connectPaid ? "connect" as const : "free" as const,
+    isAdmin: row.role === "admin",
+  };
+}
+
+export async function createSession(userId: string, env: AuthEnv) {
+  const token = randomToken();
+  await env.DB.prepare(
+    "INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)",
+  )
+    .bind(
+      await sha256Hex(token),
+      userId,
+      addSecondsIso(60 * 60 * 24 * 30),
+      nowIso(),
+    )
+    .run();
+
+  await recordProductEvent(env,{domain:'auth',name:'auth.session.created',source:'server',outcome:'succeeded',userId});
+  return token;
+}
+
+export function sessionCookie(token: string) {
+  return [
+    "rl_session=" + encodeURIComponent(token),
+    "Path=/",
+    "Domain=.remotearc.app",
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax",
+    "Max-Age=2592000",
+  ].join("; ");
+}
+
+type GoogleLoginClient = { clientId: string; clientSecret: string };
+
+// Switch new authorizations to the new Cloud project only after both new
+// secrets are provisioned. Keep the legacy pair for in-flight callbacks.
+export function googleLoginClients(env: AuthEnv): GoogleLoginClient[] {
+  const clients: GoogleLoginClient[] = [];
+  if (env.GOOGLE_NEXT_CLIENT_ID && env.GOOGLE_NEXT_CLIENT_SECRET) {
+    clients.push({ clientId: env.GOOGLE_NEXT_CLIENT_ID, clientSecret: env.GOOGLE_NEXT_CLIENT_SECRET });
+  }
+  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+    clients.push({ clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET });
+  }
+  return clients;
+}
+
+// A code issued before deployment can belong to the legacy Google client;
+// retry the exchange once with the old pair. Codes cannot be used twice.
+export async function exchangeGoogleLoginCode(
+  code: string, redirectUri: string, env: AuthEnv,
+): Promise<string | null> {
+  for (const client of googleLoginClients(env)) {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: client.clientId,
+        client_secret: client.clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+    if (!response.ok) continue;
+    const tokens = (await response.json()) as { access_token?: string };
+    if (tokens.access_token) return tokens.access_token;
+  }
+  return null;
+}
+
+export async function handleGoogleLogin(request: Request, env: AuthEnv) {
+  const [primaryClient] = googleLoginClients(env);
+  if (!primaryClient) {
+    return Response.json(
+      {
+        error: "google_login_not_configured",
+        message: "Google OAuth credentials have not been configured yet.",
+      },
+      { status: 503 },
+    );
+  }
+
+  const url = new URL(request.url);
+  const returnTo = safeReturnTo(url.searchParams.get("return_to"), request, env);
+  const state = randomToken();
+  const stateHash = await sha256Hex(state);
+
+  await env.DB.prepare(
+    "INSERT INTO google_login_states (state_hash, return_to, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)",
+  )
+    .bind(stateHash, returnTo, addSecondsIso(600), nowIso())
+    .run();
+
+  await startBusinessFlow(env,{id:'google:'+stateHash,scene:'google_login',expiresAt:addSecondsIso(600)});
+
+  const target = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  target.searchParams.set("client_id", primaryClient.clientId);
+  target.searchParams.set("redirect_uri", (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback");
+  target.searchParams.set("response_type", "code");
+  target.searchParams.set("scope", "openid email profile");
+  target.searchParams.set("state", state);
+  target.searchParams.set("prompt", "select_account");
+
+  return Response.redirect(target.toString(), 302);
+}
+
+export async function handleGoogleCallback(request: Request, env: AuthEnv) {
+  if (!googleLoginClients(env).length) {
+    return new Response("Google OAuth is not configured", { status: 503 });
+  }
+
+  const url = new URL(request.url);
+  const state = url.searchParams.get("state");
+  const code = url.searchParams.get("code");
+  if (!state || !code) {
+    if(state)await failBusinessFlow(env,'google:'+await sha256Hex(state),url.searchParams.get('error')==='access_denied'?'declined':'callback_incomplete');
+    return new Response("Missing OAuth code or state", { status: 400 });
+  }
+
+  const stateHash = await sha256Hex(state);
+  const stateRow = await env.DB.prepare(
+    "SELECT return_to FROM google_login_states WHERE state_hash = ?1 AND expires_at > ?2",
+  )
+    .bind(stateHash, nowIso())
+    .first<{ return_to: string }>();
+
+  await env.DB.prepare(
+    "DELETE FROM google_login_states WHERE state_hash = ?1",
+  )
+    .bind(stateHash)
+    .run();
+
+  if (!stateRow) {
+    await failBusinessFlow(env,'google:'+stateHash,'expired');
+    return new Response("Google login state expired or invalid", { status: 400 });
+  }
+
+  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','callback');
+  const loginFailure=async(message:string,status:number)=>{await failBusinessFlow(env,'google:'+stateHash,'verification_failed');return new Response(message,{status});};
+
+  const accessToken = await exchangeGoogleLoginCode(
+    code,
+    (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback",
+    env,
+  );
+  if (!accessToken) {
+    return loginFailure("Google token exchange failed",502);
+  }
+
+  const userInfoResponse = await fetch(
+    "https://openidconnect.googleapis.com/v1/userinfo",
+    { headers: { Authorization: "Bearer " + accessToken } },
+  );
+
+  if (!userInfoResponse.ok) {
+    return loginFailure("Google user lookup failed",502);
+  }
+
+  const profile = (await userInfoResponse.json()) as {
+    sub?: string;
+    email?: string;
+    email_verified?: boolean;
+    name?: string;
+    picture?: string;
+  };
+
+  if (!profile.sub || !profile.email || profile.email_verified === false) {
+    return loginFailure("Verified Google email is required",403);
+  }
+
+  if (isReviewerEmail(env, profile.email)) {
+    return loginFailure("Use the dedicated reviewer sign-in for this account",403);
+  }
+
+  const allowed = (env.ALLOWED_EMAILS || "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (allowed.length && !allowed.includes(profile.email.toLowerCase())) {
+    return loginFailure("This Google account is not allowed",403);
+  }
+
+  const existing = await env.DB.prepare(
+    "SELECT id FROM users WHERE google_sub = ?1 OR email = ?2 LIMIT 1",
+  )
+    .bind(profile.sub, profile.email)
+    .first<{ id: string }>();
+
+  if (isReviewerUserId(existing?.id)) {
+    return loginFailure("Use the dedicated reviewer sign-in for this account",403);
+  }
+
+  if (!existing && env.ALLOW_SIGNUPS !== "1") {
+    const countRow = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM users",
+    ).first<{ count: number }>();
+
+    if ((countRow?.count || 0) > 0) {
+      return loginFailure("This Remote Arc instance is private. New account registration is disabled.",403);
+    }
+  }
+
+  const userId = existing?.id || crypto.randomUUID();
+  if (existing) {
+    await env.DB.prepare(
+      `UPDATE users
+       SET google_sub = ?1, email = ?2, name = ?3, avatar_url = ?4
+       WHERE id = ?5`,
+    )
+      .bind(
+        profile.sub,
+        profile.email,
+        profile.name || null,
+        profile.picture || null,
+        userId,
+      )
+      .run();
+  } else {
+    await env.DB.prepare(
+      `INSERT INTO users
+       (id, google_sub, email, name, avatar_url, created_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+    )
+      .bind(
+        userId,
+        profile.sub,
+        profile.email,
+        profile.name || null,
+        profile.picture || null,
+        nowIso(),
+      )
+      .run();
+  }
+
+  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','verified',{userId});
+  const session = await createSession(userId, env);
+  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','completed',{userId});
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location: stateRow.return_to,
+      "set-cookie": sessionCookie(session),
+    },
+  });
+}
+
+export async function handleLogout(request: Request, env: AuthEnv) {
+  const token = cookieValue(request, "rl_session");
+  if (token) {
+    await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?1")
+      .bind(await sha256Hex(token))
+      .run();
+  }
+
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "set-cookie":
+        "rl_session=; Path=/; Domain=.remotearc.app; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+    },
+  });
+}
+
+function deviceTokenFromRequest(request: Request) {
+  const header = request.headers.get("authorization") || "";
+  if (header.startsWith("Bearer ")) return header.slice(7);
+
+  const protocols = (request.headers.get("sec-websocket-protocol") || "")
+    .split(",")
+    .map((value) => value.trim());
+  const tokenProtocol = protocols.find((value) => value.startsWith("token."));
+  return tokenProtocol ? tokenProtocol.slice("token.".length) : null;
+}
+
+export async function authenticateDevice(
+  request: Request,
+  env: AuthEnv,
+  options: { touchLastSeen?: boolean } = {},
+) {
+  const token = deviceTokenFromRequest(request);
+  if (!token) return null;
+
+  const tokenHash = await sha256Hex(token);
+  const row = await retryTransientD1Read(() => env.DB.prepare(
+    `SELECT id, user_id, name, platform, arch, hostname
+     FROM devices
+     WHERE credential_hash = ?1 AND revoked_at IS NULL`,
+  )
+    .bind(tokenHash)
+    .first<{
+      id: string;
+      user_id: string;
+      name: string;
+      platform: string;
+      arch: string | null;
+      hostname: string | null;
+    }>());
+
+  if (!row) return null;
+  // Polling only validates credentials; the regular device heartbeat owns presence.
+  if (options.touchLastSeen === false) return row;
+
+  // Presence metadata is useful, but it is not part of credential validity.
+  // A transient D1 write failure must not turn an otherwise valid WebSocket
+  // reconnect into a 500 response.
+  try {
+    await env.DB.prepare("UPDATE devices SET last_seen = ?1 WHERE id = ?2")
+      .bind(nowIso(), row.id)
+      .run();
+  } catch (error) {
+    console.warn("device_last_seen_update_failed", {
+      deviceId: row.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return row;
+}
+
+export async function authenticateMcp(
+  request: Request,
+  env: AuthEnv,
+): Promise<OAuthIdentity | null> {
+  const header = request.headers.get("authorization") || "";
+  if (!header.startsWith("Bearer ")) return null;
+
+  const tokenHash = await sha256Hex(header.slice(7));
+  const row = await env.DB.prepare(
+    `SELECT user_id, client_id, grant_id, scope, resource
+     FROM oauth_tokens
+     WHERE access_token_hash = ?1
+       AND expires_at > ?2
+       AND revoked_at IS NULL`,
+  )
+    .bind(tokenHash, nowIso())
+    .first<{
+      user_id: string;
+      client_id: string;
+      grant_id: string | null;
+      scope: string;
+      resource: string;
+    }>();
+
+  if (!row) return null;
+  return {
+    userId: row.user_id,
+    clientId: row.client_id,
+    grantId: row.grant_id,
+    scope: row.scope,
+    resource: row.resource,
+  };
+}

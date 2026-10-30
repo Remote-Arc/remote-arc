@@ -40,7 +40,7 @@ Free 每月仍为 **10,000 次工具调用**。现有额度计量方式、设备
 - [路由映射](../apps/ui/src/dashboard-workspaces.ts)
 - [独立 Connect 任务页面](../apps/ui/src/connect-tasks.tsx)
 - [Arc 任务页面](../apps/ui/src/arc-workspace.tsx)
-- [Arc 专属任务查询](../apps/relay/src/arc-work.ts)
+- [Arc 专属任务查询](../apps/relay/src/arc/arc-work.ts)
 
 ### 持久状态不能保证进程和输出跨重启保留
 
@@ -55,8 +55,8 @@ Free 每月仍为 **10,000 次工具调用**。现有额度计量方式、设备
 相关位置：
 
 - [Go 进程管理](../packages/execution-core/execution/process.go)
-- [自动化执行与恢复](../apps/relay/src/automations.ts)
-- [状态、租约与记录](../apps/relay/src/automation-store.ts)
+- [自动化执行与恢复](../apps/relay/src/tasks/automations.ts)
+- [状态、租约与记录](../apps/relay/src/tasks/automation-store.ts)
 
 ### source Agent Goal 需要可用的决策来源
 

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {activateArcTrial} from '../src/arc-trial.js';
-import {creditBalance} from '../src/arc-credits.js';
+import {activateArcTrial} from '../src/arc/arc-trial.js';
+import {creditBalance} from '../src/arc/arc-credits.js';
 const sql=new DatabaseSync(':memory:');
 const migrations=new URL('../migrations/',import.meta.url);
 for(const name of fs.readdirSync(migrations).filter(name=>name.endsWith('.sql')&&name!=='0061_trial_credit_retention.sql').sort())sql.exec(fs.readFileSync(new URL(name,migrations),'utf8'));

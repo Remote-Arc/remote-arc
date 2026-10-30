@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import {arcVerificationSchema,arcVerificationToolError,arcObservationProof,arcReceipt} from '../src/arc-verification.js';
-import {ARC_VERIFICATION_SKILLS} from '../src/arc-verification-skills.js';
-import {runArcStep} from '../src/arc-chat-runtime.js';
-import {ARC_CLOSING_SYSTEM} from '../src/arc-chat-context.js';
-import {seal} from '../src/app-oauth.js';
-import {arcContext} from '../src/arc-chat.js';
+import {arcVerificationSchema,arcVerificationToolError,arcObservationProof,arcReceipt} from '../src/arc/arc-verification.js';
+import {ARC_VERIFICATION_SKILLS} from '../src/arc/arc-verification-skills.js';
+import {runArcStep} from '../src/arc/arc-chat-runtime.js';
+import {ARC_CLOSING_SYSTEM} from '../src/arc/arc-chat-context.js';
+import {seal} from '../src/apps/app-oauth.js';
+import {arcContext} from '../src/arc/arc-chat.js';
 import type {ArcVerification} from '@remotearc/protocol';
 
 // Called by arc-chat-test against its real authenticated API, SQLite journal,

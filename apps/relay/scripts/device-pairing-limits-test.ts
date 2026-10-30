@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {DatabaseSync} from "node:sqlite";
-import {handlePairingApprove,handlePairingLookup,recordPairingStep} from "../src/device.js";
-import {startBusinessFlow} from "../src/business-tracking.js";
-import {handleAdminPlanGrants,handleAdminPlanGrantRevoke} from "../src/plan-admin.js";
-import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from "../src/device-capacity-admin.js";
-import {sha256Hex} from "../src/auth.js";
+import {handlePairingApprove,handlePairingLookup,recordPairingStep} from "../src/devices/device.js";
+import {startBusinessFlow} from "../src/analytics/business-tracking.js";
+import {handleAdminPlanGrants,handleAdminPlanGrantRevoke} from "../src/admin/plan-admin.js";
+import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from "../src/admin/device-capacity-admin.js";
+import {sha256Hex} from "../src/auth/auth.js";
 
 const sql=new DatabaseSync(":memory:");
 sql.exec("PRAGMA foreign_keys=ON");

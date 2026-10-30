@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import {appOperation,type AppProvider} from '../src/app-catalog.js';
-import {excelRangeSize} from '../src/app-productivity.js';
-import {quoteAppOperation,redactProviderCredentials,validateAppResult} from '../src/app-connection-policy.js';
+import {appOperation,type AppProvider} from '../src/apps/app-catalog.js';
+import {excelRangeSize} from '../src/apps/app-productivity.js';
+import {quoteAppOperation,redactProviderCredentials,validateAppResult} from '../src/apps/app-connection-policy.js';
 
 function plan(provider:AppProvider,name:string,args:unknown,context?:any){const operation=appOperation(provider,name);return operation.request(operation.schema.parse(args),context);}
 function invalid(provider:AppProvider,name:string,args:unknown){assert.throws(()=>plan(provider,name,args));}

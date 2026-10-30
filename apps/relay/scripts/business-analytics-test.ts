@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {businessAnalytics,handleBusinessAnalytics} from '../src/business-analytics.js';
-import {startBusinessFlow,advanceBusinessFlow,recordBusinessActivity,recordDeviceOnline,linkBusinessReceipt} from '../src/business-tracking.js';
-import {handleEmailCodeRequest,handleEmailCodeVerify} from '../src/email-auth.js';
-import {handleDeviceStart,handlePairingApprove,handleDeviceToken} from '../src/device.js';
-import {sha256Hex,handleGoogleLogin,handleGoogleCallback} from '../src/auth.js';
-import {adminApiMethods} from '../src/admin-service.js';
+import {businessAnalytics,handleBusinessAnalytics} from '../src/analytics/business-analytics.js';
+import {startBusinessFlow,advanceBusinessFlow,recordBusinessActivity,recordDeviceOnline,linkBusinessReceipt} from '../src/analytics/business-tracking.js';
+import {handleEmailCodeRequest,handleEmailCodeVerify} from '../src/auth/email-auth.js';
+import {handleDeviceStart,handlePairingApprove,handleDeviceToken} from '../src/devices/device.js';
+import {sha256Hex,handleGoogleLogin,handleGoogleCallback} from '../src/auth/auth.js';
+import {adminApiMethods} from '../src/admin/admin-service.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const name of fs.readdirSync(new URL('../migrations/',import.meta.url)).filter(name=>name.endsWith('.sql')).sort())sql.exec(fs.readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));

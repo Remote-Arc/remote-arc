@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { handleAdminUsageInsights } from "../src/admin-usage-insights.js";
-import { adminApiMethods } from "../src/admin-service.js";
+import { handleAdminUsageInsights } from "../src/admin/admin-usage-insights.js";
+import { adminApiMethods } from "../src/admin/admin-service.js";
 
 const origin="https://admin.remotearc.app";
 function fakeEnv(role:"admin"|"user"="admin"){

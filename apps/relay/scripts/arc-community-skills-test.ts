@@ -4,8 +4,8 @@ import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
 import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
-import {prepareCommunitySkill,readCommunityResource,communitySkillSummaries} from '../src/arc-community-skills.js';
-import type {ArcEnv,ArcRun} from '../src/arc-chat.js';
+import {prepareCommunitySkill,readCommunityResource,communitySkillSummaries} from '../src/arc/arc-community-skills.js';
+import type {ArcEnv,ArcRun} from '../src/arc/arc-chat.js';
 export async function testCommunitySkills(env:ArcEnv,run:ArcRun){
  assert.equal(COMMUNITY_SKILLS.length,36);for(const skill of COMMUNITY_SKILLS){
   const builtin=skill.origin==='builtin';

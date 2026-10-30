@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {ARC_PLANS} from '@remotearc/protocol';
-import {commercialCatalog} from '../src/arc-commercial-config.js';
-import {currentArcPlan} from '../src/arc-plan.js';
-import {getMonthlyUsage,consumeToolCall} from '../src/usage.js';
+import {commercialCatalog} from '../src/arc/arc-commercial-config.js';
+import {currentArcPlan} from '../src/arc/arc-plan.js';
+import {getMonthlyUsage,consumeToolCall} from '../src/billing/usage.js';
 
 const sql=new DatabaseSync(':memory:');
 sql.exec('PRAGMA foreign_keys=ON');

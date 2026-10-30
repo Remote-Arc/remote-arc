@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import type { McpServer } from "@modelcontextprotocol/server";
-import { classifyExpectedMcpError, registerMcpTool } from "../src/mcp-errors.js";
-import { consumeToolCall, getMonthlyUsage } from "../src/usage.js";
-import { createRemoteLinkMcp } from "../src/mcp.js";
-import { DEFAULT_MCP_SCOPES } from "../src/oauth.js";
-import type { OAuthIdentity } from "../src/auth.js";
+import { classifyExpectedMcpError, registerMcpTool } from "../src/mcp/mcp-errors.js";
+import { consumeToolCall, getMonthlyUsage } from "../src/billing/usage.js";
+import { createRemoteLinkMcp } from "../src/mcp/mcp.js";
+import { DEFAULT_MCP_SCOPES } from "../src/auth/oauth.js";
+import type { OAuthIdentity } from "../src/auth/auth.js";
 
 const expectedCases: Array<[Error, string]> = [
   [new Error("start_process requires cwd when multiple Trusted Write Locations are configured."), "WORKSPACE_CWD_REQUIRED"],
@@ -248,7 +248,7 @@ assert.deepEqual(listApps?.securitySchemes?.[0]?.scopes, ["apps:read"]);
 console.log("PASS: MCP error contract, incremental OAuth scopes, and admin/operator unlimited usage regressions");
 
 {
-  const { authRequiredText } = await import("../src/mcp.js");
+  const { authRequiredText } = await import("../src/mcp/mcp.js");
   const signedIn = authRequiredText(["apps:read"], true);
   assert.match(signedIn, /apps:read scope/);
   assert.match(signedIn, /reconnect Remote Arc in this AI app's connector settings/);

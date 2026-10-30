@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import {once} from 'node:events';
-import {executeArcTool,runArcStep,arcToolInputError} from '../src/arc-chat-runtime.js';
-import {arcMessages} from '../src/arc-chat.js';
+import {executeArcTool,runArcStep,arcToolInputError} from '../src/arc/arc-chat-runtime.js';
+import {arcMessages} from '../src/arc/arc-chat.js';
 /** Scripted inference, real artifact I/O and HTTP. No customer device, provider or paid model. */
 export async function testArcOutcomes({sql,env,api,create,decode,decisions,tool,reply,row}:any){
  const workspace=await fs.mkdtemp(path.join(os.tmpdir(),'arc-outcome-')),project=path.join(workspace,'portfolio'),file=path.join(project,'index.html');

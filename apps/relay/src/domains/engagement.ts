@@ -1,5 +1,5 @@
-import { getSessionUser } from "../auth.js";
-import {createFeedbackRewardClaim} from '../connect-rewards.js';
+import { getSessionUser } from "../auth/auth.js";
+import {createFeedbackRewardClaim} from '../billing/connect-rewards.js';
 
 export type EngagementEnv = {
   DB: D1Database;

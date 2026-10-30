@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { rankFleetDevices, selectFleetDevice } from "../src/fleet-scheduler.js";
+import { rankFleetDevices, selectFleetDevice } from "../src/devices/fleet-scheduler.js";
 
 const permissions = { background_tasks:true, scheduled_tasks:true, adaptive_agent:true, source_agent:true, keep_awake:true };
 const operations = ["start_process","process_status","process_output","stop_process","read_file","write_file","edit_block"];

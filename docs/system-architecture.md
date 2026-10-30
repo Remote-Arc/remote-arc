@@ -81,15 +81,15 @@ flowchart TB
 | 目录/模块 | 责任 |
 | --- | --- |
 | `apps/relay/src/index.ts` | HTTP/OAuth/MCP/设备及调度入口 |
-| `apps/relay/src/registry.ts` | 设备在线连接及工具路由 |
-| `apps/relay/src/device-call.ts` | 设备所有权、当前工具策略及执行审计 |
-| `apps/relay/src/automations.ts` | 持久任务创建、运行、恢复、验收及停止 |
-| `apps/relay/src/automation-store.ts` | 租约/版本围栏、原子检查点、有序日志 |
-| `apps/relay/src/source-goals.ts` | 源 Agent 上下文及幂等决策提交 |
-| `apps/relay/src/agent-planner.ts` | 可选托管模型的结构化决策与错误分类 |
-| `apps/relay/src/task-events.ts` | MCP Events、密钥保护、签名和有界重试 |
-| `apps/relay/src/device-task-policy.ts` | 每台设备允许的任务能力 |
-| `apps/relay/src/github-automation.ts` | 明确授权的 GitHub App 云端动作 |
+| `apps/relay/src/devices/registry.ts` | 设备在线连接及工具路由 |
+| `apps/relay/src/devices/device-call.ts` | 设备所有权、当前工具策略及执行审计 |
+| `apps/relay/src/tasks/automations.ts` | 持久任务创建、运行、恢复、验收及停止 |
+| `apps/relay/src/tasks/automation-store.ts` | 租约/版本围栏、原子检查点、有序日志 |
+| `apps/relay/src/tasks/source-goals.ts` | 源 Agent 上下文及幂等决策提交 |
+| `apps/relay/src/tasks/agent-planner.ts` | 可选托管模型的结构化决策与错误分类 |
+| `apps/relay/src/tasks/task-events.ts` | MCP Events、密钥保护、签名和有界重试 |
+| `apps/relay/src/devices/device-task-policy.ts` | 每台设备允许的任务能力 |
+| `apps/relay/src/tasks/github-automation.ts` | 明确授权的 GitHub App 云端动作 |
 | `packages/cli` | npm 安装与启动入口，校验并启动 Go Agent |
 | `apps/agent` | Go 设备 Agent：配对、Relay 会话、日志、控制、登录恢复与任务检查点 |
 | `packages/execution-core` | 独立 Go 模块：文件、进程、路径策略与 Undo，和 Agent 编译成一个二进制 |

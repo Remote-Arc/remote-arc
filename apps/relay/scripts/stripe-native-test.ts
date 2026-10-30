@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {handleBilling,type BillingEnv} from '../src/stripe-billing.js';
-import {sha256Hex} from '../src/auth.js';
+import {handleBilling,type BillingEnv} from '../src/billing/stripe-billing.js';
+import {sha256Hex} from '../src/auth/auth.js';
 import {configureStripePublicKey} from '../../../scripts/configure-stripe-public-key.mjs';
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const name of fs.readdirSync(new URL('../migrations/',import.meta.url)).filter(n=>n.endsWith('.sql')).sort())sql.exec(fs.readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));
 const DB={prepare(query:string){const statement=sql.prepare(query),bound=(args:any[])=>({async first(){return statement.get(...args)||null;},async all(){return{results:statement.all(...args)};},async run(){return this.runSync();},runSync(){const result=statement.run(...args);return{meta:{changes:Number(result.changes)}};}});return{...bound([]),bind(...args:any[]){assert(!args.includes(undefined),query);return bound(args);}};},async batch(items:any[]){sql.exec('BEGIN IMMEDIATE');try{const result=items.map(item=>item.runSync());sql.exec('COMMIT');return result;}catch(error){sql.exec('ROLLBACK');throw error;}}} as unknown as D1Database;

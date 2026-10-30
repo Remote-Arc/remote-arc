@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { routeSkillIntent,runReadOnlySkill } from '../src/skill-runtime.js';
-import { handleCloudSkillAction } from '../src/cloud-skills.js';
+import { routeSkillIntent,runReadOnlySkill } from '../src/skills/skill-runtime.js';
+import { handleCloudSkillAction } from '../src/skills/cloud-skills.js';
 
 const cleanup=routeSkillIntent('帮我清理 D 盘缓存腾出空间');
 assert.equal(cleanup.steps[0]?.skill_id,'safe-cleanup');

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import {APP_WORKFLOW_EXAMPLES} from "../src/app-workflow-examples.ts";
-import {APP_CATALOG,appOperation} from "../../relay/src/app-catalog.ts";
-import {appCallSchema} from "../../relay/src/apps.ts";
-import {appDiscoverySchema} from "../../relay/src/app-discovery.ts";
+import {APP_CATALOG,appOperation} from "../../relay/src/apps/app-catalog.ts";
+import {appCallSchema} from "../../relay/src/apps/apps.ts";
+import {appDiscoverySchema} from "../../relay/src/apps/app-discovery.ts";
 assert.deepEqual(APP_WORKFLOW_EXAMPLES.map(example=>example.id),["release","knowledge"]);
 for(const example of APP_WORKFLOW_EXAMPLES){
  assert(example.request[0]&&example.request[1]&&example.result[0]&&example.result[1]);

@@ -74,6 +74,7 @@ jobs:
       - run: pnpm device:contract --check
       - name: Check Apps core coverage at 90% for every metric and file
         run: pnpm coverage:apps
+      - run: pnpm test:coverage-badges
       - run: pnpm coverage:ts
       - run: pnpm build:ui
       - run: pnpm test:automations

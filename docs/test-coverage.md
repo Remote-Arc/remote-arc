@@ -1,34 +1,58 @@
-# Remote Arc coverage tracking — 2026-10-16
+# Test coverage
 
-Goal: **at least 90% statement coverage in every production module**; measure branch coverage as well. Do not hide large production files or command entrypoints to inflate the result.
+The README badge reports the latest validated default-branch measurement. **90% is the target, not a claim that the whole repository has already reached it.**
 
-| Scope | Baseline | After focused tests | Target |
-| --- | ---: | ---: | ---: |
-| Go Agent overall, including cmd | 64.8% | 70.5% | 90% |
-| Go Execution Core overall | 71.3% | 90.1% | 90% |
-| Go Agent local MCP | 87.0% | 95.7% | 90% |
-| Go Execution Core protocol | 46.9% | 100.0% | 90% |
-| TypeScript Relay source, security suite only | 34.85% | 34.85% | 90% |
-| TypeScript Relay source, entire existing CI | 43.11% | 43.11% | 90% |
-| All app/package TypeScript source under existing CI | 28.40% | 28.40% | 90% |
+The [live report](https://github.com/Remote-Arc/remote-arc/tree/coverage-badges) contains the source commit, CI run, measurement time, counts and component metrics. Its JSON and SVG files are generated from actual CI output; percentages are never manually entered into the README.
 
-All figures reflect statement coverage, not test pass rates. The Relay figure covers only the security scripts and must not be advertised as whole-repository coverage. UI and other TS modules still need instrumented measurement.
+## Scope and calculation
 
-## Commands
+The combined badge is statement coverage across three disjoint scopes:
 
-- `pnpm coverage:go`: run Go coverage and non-regression CI gates; displays 90% goal.
-- `pnpm coverage:go:target`: strict 90% aggregate gate for **both** Go modules. Intentionally fails while debt remains.
-- `pnpm coverage:relay`: measure Relay security-suite source coverage, with non-regression floors.
-- `pnpm coverage:relay:target`: strict 90% on Relay statements, lines, branches and functions (currently fails).
-- `pnpm coverage:ts`: execute the existing full CI under source-mapped c8 with all apps/packages TS/TSX source files included, enforcing today's non-regression floors. This replaces the duplicate uninstrumented test step in the CI `verify` job.
-- `pnpm coverage:ts:target`: strict 90% threshold for all four TypeScript coverage dimensions (currently fails).
-- Full existing CI measured with c8 across all apps/packages TS/TSX source: **28.4% statements, 71.24% branches, 54.06% functions**. This is only the instrumented Node CI suite; browser-runtime E2E execution still needs separate instrumentation.
+1. All production TypeScript/TSX source included by `coverage:ts`: `apps/**/src/**/*.ts(x)` and `packages/**/src/**/*.ts(x)`.
+2. All compiled packages in the Go Agent module.
+3. All compiled packages in the Go Execution Core module.
 
-## Priorities
+Add covered statements and total statements across these scopes, then divide. Do not average module percentages. Apps and Relay are TypeScript subsets and appear only as breakdowns, without being counted again.
 
-1. Cover the Go Agent CLI (46.0% after focused safety/flag tests), workspace (68.9%), lease (70.5%), device runtime (73.6%).
-2. Cover execution engine (70.4%), policy (84.3%), config (80.7%) including denied actions, undo conflict, reconnect, credentials and failure paths.
-3. Add source-mapped, all-file coverage accounting and tests for Relay, Dashboard, browser extension, MCP and other TS modules.
-4. Increase CI baseline floors toward 90% and switch to strict mode once objectively achieved.
+Go measurement uses Linux, matching the coverage job. Browser-extension JavaScript, non-source scripts, other OS build-tag branches and generated data outside these existing scopes are not represented by this badge. Browser behavioral tests remain separate evidence; their pass rate is not substituted for source coverage.
 
-**Do not claim 90% based on a passing baseline gate.**
+## Current stages
+
+The measured baseline is [master c4bc77f / CI 40998299997](https://github.com/Remote-Arc/remote-arc/actions/runs/40998299997).
+
+| Scope | Measured statements | Enforced regression floor |
+| --- | ---: | --- |
+| Apps core | 99.49% | 90% for every metric and file |
+| Go Execution Core | 90.88% | 90% module statements; protocol 90% |
+| Go Agent | 78.62% | 78% module statements; local MCP 90% |
+| Relay | 63.76% | 63% lines/statements, 82% branches, 83% functions |
+| TypeScript/TSX | 50.25% | 50% lines/statements, 80% branches, 76% functions |
+
+Combined baseline: **54.41% (32,793 / 60,267 statements)**. Current values continue updating in the live report; this table records the baseline used to raise the regression floors.
+
+`scripts/coverage-policy.mjs` owns the phased floors. Existing Apps and Core 90% gates remain. The Go Agent, Relay and full TypeScript floors have been raised from their earlier lower settings. Source inclusion has not been narrowed.
+
+Strict target commands remain available:
+
+- `pnpm coverage:go:target`
+- `pnpm coverage:relay:target`
+- `pnpm coverage:ts:target`
+
+They require 90% for the relevant metrics. Expand meaningful tests in separate changes, ratchet the measured floors upward, and switch each remaining scope to the strict target only after its real suite reaches it.
+
+## Automatic publication
+
+After CI completes on a push to master, `coverage-badges.yml` reads the verify, go-coverage and relay-coverage job logs. Those coverage-producing jobs must all pass and their run identity must match. Unexpected counts, missing metrics, forks and pull-request runs are rejected.
+
+The publisher checks that the measured commit is still the current master before updating the dedicated `coverage-badges` branch. It checks out trusted master code, never a pull-request checkout with write permissions. Only the publishing job receives repository write permission. It does not need Codecov credentials or another external service.
+
+If coverage measurement fails or the run is obsolete, the previous badge remains; its report still identifies the source SHA and measurement time. The adjacent CI badge separately shows CI health. A failed or incomplete measurement is never rewritten as a successful 90% result.
+
+Local generation, without writing to GitHub:
+
+```sh
+node --test scripts/coverage-badges-test.mjs
+node scripts/coverage-badges.mjs --repo Remote-Arc/remote-arc --run CI_RUN_ID --out work/coverage-badges
+```
+
+The explicit `--publish` option updates only the dedicated badge branch, with a normal fast-forward ref update; it does not modify master or deploy the product.

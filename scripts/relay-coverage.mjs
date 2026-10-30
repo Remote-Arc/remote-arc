@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Relay security suite source coverage; all production Relay source files are counted. */
 import { spawnSync } from "node:child_process";
+import { coverageThresholds } from "./coverage-policy.mjs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -8,9 +9,7 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const temp = mkdtempSync(join(tmpdir(), "remotearc-relay-coverage-"));
 const strict = process.argv.includes("--target");
-const thresholds = strict
-  ? { lines: 90, statements: 90, branches: 90, functions: 90 }
-  : { lines: 34, statements: 34, branches: 66, functions: 43 };
+const thresholds = coverageThresholds("relay", strict);
 const args = [
   "exec", "c8",
   "--all",

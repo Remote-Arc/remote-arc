@@ -1,0 +1,15 @@
+// Measured on master c4bc77f, CI run 40998299997. Raise these floors as tests grow.
+// Keep production source inclusion unchanged; --target remains a strict 90% check.
+export const COVERAGE_TARGET=90;
+export const COVERAGE_FLOORS={
+ typescript:{lines:50,statements:50,branches:80,functions:76},
+ relay:{lines:63,statements:63,branches:82,functions:83},
+ agent:{statements:78},
+ core:{statements:90},
+ apps:{lines:90,statements:90,branches:90,functions:90},
+};
+export function coverageThresholds(scope,strict=false){
+ const floors=COVERAGE_FLOORS[scope];
+ if(!floors)throw Error('Unknown coverage scope: '+scope);
+ return Object.fromEntries(Object.entries(floors).map(([metric,value])=>[metric,strict?COVERAGE_TARGET:value]));
+}

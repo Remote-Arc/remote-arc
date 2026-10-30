@@ -1,0 +1,41 @@
+name: Publish measured coverage badges
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: measured-coverage-badges
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # Never execute a PR checkout with a write-capable token.
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Verify report parsing and source checks
+        run: node --test scripts/coverage-badges-test.mjs
+      - name: Publish the latest validated measurement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COVERAGE_REPOSITORY: ${{ github.repository }}
+          COVERAGE_RUN: ${{ github.event.workflow_run.id }}
+        run: node scripts/coverage-badges.mjs --repo "$COVERAGE_REPOSITORY" --run "$COVERAGE_RUN" --publish

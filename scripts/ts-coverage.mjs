@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Instrument every app/package TS and TSX source file during the actual CI suite. */
 import { spawnSync } from "node:child_process";
+import { coverageThresholds } from "./coverage-policy.mjs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -8,9 +9,7 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const temp = mkdtempSync(join(tmpdir(), "remotearc-typescript-coverage-"));
 const strict = process.argv.includes("--target");
-const thresholds = strict
-  ? { lines: 90, statements: 90, branches: 90, functions: 90 }
-  : { lines: 28, statements: 28, branches: 69, functions: 52 };
+const thresholds = coverageThresholds("typescript", strict);
 const args = [
   "exec", "c8", "--all",
   "--include=apps/**/src/**/*.ts",

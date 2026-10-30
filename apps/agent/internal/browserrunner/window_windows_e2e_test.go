@@ -56,8 +56,24 @@ func TestE2EWindowsCoveredHandoffDoesNotTakeFocus(t *testing.T) {
 	}
 	before := foreground()
 	target, _, ok := s.nativeTaskWindow()
-	if !ok || before == target.hwnd {
-		t.Fatal("fixture must leave keyboard focus outside the Runner")
+	if !ok {
+		t.Fatal("missing native task window")
+	}
+	if before == 0 || before == target.hwnd {
+		// A hosted desktop may have no foreground app besides the test browser.
+		// Give our own cover window focus, never a real user's application, so
+		// the no-focus-steal assertion still has an independent reference HWND.
+		style, _, _ := winWindowLong.Call(cover, ^uintptr(19))
+		winUser32.NewProc("SetWindowLongPtrW").Call(cover, ^uintptr(19), style&^0x08000000)
+		winUser32.NewProc("SetForegroundWindow").Call(cover)
+		deadline := time.Now().Add(time.Second)
+		for foreground() != cover && time.Now().Before(deadline) {
+			time.Sleep(10 * time.Millisecond)
+		}
+		before = foreground()
+		if before != cover {
+			t.Fatal("fixture could not focus its independent native cover window")
+		}
 	}
 	for i := 0; i < 2; i++ {
 		if err := s.setVisible(h.ctx, true); err != nil {

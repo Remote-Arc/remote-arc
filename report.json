@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "repository": "Remote-Arc/remote-arc",
+  "source": {
+    "runId": 40998299997,
+    "sha": "c4bc77f1d6892a2e4f2bf6f3237857facb33ccac",
+    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/40998299997",
+    "measuredAt": "2026-10-30T03:46:41Z"
+  },
+  "scope": "Production TypeScript/TSX and Linux Go module statements; Apps/Relay are overlapping breakouts.",
+  "target": 90,
+  "overall": {
+    "covered": 32793,
+    "total": 60267,
+    "pct": 54.41
+  },
+  "scopes": {
+    "apps": {
+      "statements": {
+        "covered": 1353,
+        "total": 1360,
+        "pct": 99.49
+      },
+      "branches": {
+        "covered": 1445,
+        "total": 1513,
+        "pct": 95.51
+      },
+      "functions": {
+        "covered": 73,
+        "total": 74,
+        "pct": 98.65
+      },
+      "lines": {
+        "covered": 1353,
+        "total": 1360,
+        "pct": 99.49
+      }
+    },
+    "typescript": {
+      "statements": {
+        "covered": 26088,
+        "total": 51913,
+        "pct": 50.25
+      },
+      "branches": {
+        "covered": 9799,
+        "total": 12148,
+        "pct": 80.66
+      },
+      "functions": {
+        "covered": 1078,
+        "total": 1405,
+        "pct": 76.73
+      },
+      "lines": {
+        "covered": 26088,
+        "total": 51913,
+        "pct": 50.25
+      }
+    },
+    "relay": {
+      "statements": {
+        "covered": 16416,
+        "total": 25748,
+        "pct": 63.76
+      },
+      "branches": {
+        "covered": 7879,
+        "total": 9536,
+        "pct": 82.62
+      },
+      "functions": {
+        "covered": 776,
+        "total": 931,
+        "pct": 83.35
+      },
+      "lines": {
+        "covered": 16416,
+        "total": 25748,
+        "pct": 63.76
+      }
+    },
+    "agent": {
+      "statements": {
+        "covered": 5689,
+        "total": 7236,
+        "pct": 78.62
+      }
+    },
+    "core": {
+      "statements": {
+        "covered": 1016,
+        "total": 1118,
+        "pct": 90.88
+      }
+    }
+  }
+}

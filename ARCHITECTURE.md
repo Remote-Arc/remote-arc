@@ -90,7 +90,7 @@ extension open authenticated outbound WebSockets to their owner's Durable Object
 | Hosts and shared infrastructure | `src/platform/` | `host-routing.ts`, `security.ts`, `d1-read-retry.ts` |
 | Sign-in, sessions and OAuth | `src/auth/` | `auth.ts`, `email-auth.ts`, `dashboard-origin.ts`, `oauth.ts` |
 | MCP server and tool surfaces | `src/mcp/` | `mcp.ts`, `mcp-edge-guard.ts`, `mcp-errors.ts`, `mcp-client-profile.ts`, `browser-runner-mcp.ts`, `shared-tab-mcp.ts`, `mcp-app-actions.ts` |
-| Devices and files | `src/devices/` | `device.ts` (pairing, limits), `registry.ts` (`DeviceRegistry` DO), `device-call.ts`, `fleet-scheduler.ts`, `file-resources.ts` |
+| Devices and files | `src/devices/` | `device.ts` (pairing, limits), `registry.ts` (`DeviceRegistry` DO), `device-call.ts`, `call-timeout.ts` (foreground reply budget), `fleet-scheduler.ts`, `file-resources.ts` |
 | Browser authentication and Runner | `src/browser/` | `browser-auth.ts`, `runner-attention.ts` |
 | Tasks, goals and crons | `src/tasks/` | `automations.ts`, `automation-store.ts`, `source-goals.ts`, `planned-goal-runtime.ts`, `task-events.ts`, `task-scheduler.ts` |
 | Arc runtime, plans and credits | `src/arc/` | `arc-chat-object.ts` (`ArcChatRuntime` DO), `arc-chat-runtime.ts`, `arc-dispatcher.ts`, `model-gateway.ts`, `arc-memory.ts`, `arc-teams.ts`, `arc-plan.ts`, `arc-credits.ts` |

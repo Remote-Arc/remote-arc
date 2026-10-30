@@ -49,6 +49,7 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     [/^Managed process not found or its local retention window has expired/i, "PROCESS_NOT_FOUND"],
     [/^Remote Arc already has the maximum number of managed background processes/i, "PROCESS_LIMIT_REACHED"],
     [/^Invalid managed process duration/i, "INVALID_TOOL_REQUEST"],
+    [/^start_process timeout_ms must be an integer/i, "INVALID_TOOL_REQUEST"],
 
     [/ENOENT:.*no such file or directory/i, "PATH_NOT_FOUND"],
     [/(?:EACCES|EPERM):/i, "FILE_PERMISSION_DENIED"],

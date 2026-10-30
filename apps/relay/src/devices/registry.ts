@@ -1,5 +1,6 @@
 import { recordRunnerAttention, type RunnerEnv } from "../browser/runner-attention.js";
 import { RunnerVideoRelay, type VideoAttachment } from "../browser/runner-video.js";
+import { deviceCallTimeoutMs, processTimeoutError } from './call-timeout.js';
 import type {
   AgentCallMessage,
   AgentToRelayMessage,
@@ -372,6 +373,9 @@ export class DeviceRegistry {
       );
     }
 
+    const timeoutError = processTimeoutError(body.tool, body.arguments || {});
+    if (timeoutError) return Response.json({ error: timeoutError }, { status: 400 });
+
     const socket = this.preferredSocket(
       this.ctx.getWebSockets("device:" + body.deviceId),
     );
@@ -430,10 +434,16 @@ export class DeviceRegistry {
       const timeout = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error("device call timed out"));
-      }, 45_000);
+      }, deviceCallTimeoutMs(body.tool!, body.arguments || {}));
 
       this.pending.set(id, { resolve, reject, timeout });
-      socket.send(JSON.stringify(message));
+      try {
+        socket.send(JSON.stringify(message));
+      } catch (error) {
+        clearTimeout(timeout);
+        this.pending.delete(id);
+        reject(error);
+      }
     }).catch((error) => ({
       __remoteLinkError: error instanceof Error ? error.message : String(error),
     }));

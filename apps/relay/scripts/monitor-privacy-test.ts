@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { diagnosticError, diagnosticRoute } from "../src/platform/diagnostics.js";
+import { diagnosticError, diagnosticRoute, deviceReadDiagnostic } from "../src/platform/diagnostics.js";
 import { recordServiceIncident, type MonitorEnv } from "../src/analytics/monitor.js";
 import { recordMcpTelemetry } from "../src/analytics/relay-telemetry.js";
 
@@ -13,6 +13,12 @@ const secrets = [
   "personal file content without a recognizable token",
 ];
 const raw = secrets.join("\n");
+for (const prefix of ['ENOENT:','EACCES:','EPERM:','ENOTDIR:','EISDIR:','FILE_CHANGED_DURING_READ:','device call timed out:','Blocked by Remote Arc Sensitive Path Policy:','', 'Error:']) {
+  const error = Error(prefix + raw), before = error.message;
+  const safe = deviceReadDiagnostic(error);
+  assert.equal(error.message,before,'Caller error remains intact');
+  for (const secret of secrets) assert(!safe.includes(secret));
+}
 assert.equal(diagnosticError(new TypeError(raw)), "TypeError: details omitted");
 assert.equal(diagnosticError(new RangeError(raw)), "RangeError: details omitted");
 assert.equal(diagnosticError("D1_ERROR: " + raw), "D1_ERROR: details omitted");

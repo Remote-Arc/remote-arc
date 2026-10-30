@@ -1,4 +1,5 @@
 import {appOperation} from '../src/apps/app-catalog.js';
+import {unseal} from '../src/apps/app-oauth.js';
 import {arcVerificationToolError} from '../src/arc/arc-verification.js';
 import {SKILL_LIBRARY} from '../../../packages/skills/src/library.js';
 import {readableArcAppContent} from '../src/arc/arc-app-content.js';
@@ -335,9 +336,10 @@ let dispatches=0;await runArcStep(env,unknown.run.id,{executeTool:async()=>{disp
 // the real device dispatcher and encrypted journal before correcting the path.
 sql.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES('read-device','owner','Windows fixture','win32','read-device-credential',?)").run(now);
 let directoryReads=0;
+const diagnosticSecrets=['sk-fixture-read-api-key','Bearer fixture-read-token','Cookie: session=fixture-read-cookie','PASSWORD=fixture-read-password','-----BEGIN PRIVATE KEY-----\nfixture-read-key\n-----END PRIVATE KEY-----','otp=739182','pairing_code=468213','personal file content without a recognizable token'];
 const deviceReadEnv={...env,REGISTRY:{getByName:()=>({fetch:async(request:Request)=>{
  const body=await request.json() as any;assert.equal(body.tool,'list_directory');directoryReads++;
- if(directoryReads===1)return Response.json({error:'ENOENT: directory does not exist: C:/missing'},{status:502});
+ if(directoryReads===1)return Response.json({error:'ENOENT: directory does not exist: C:/missing?'+diagnosticSecrets.join('\n')},{status:502});
  assert.equal(body.arguments.path,'C:/observed');return Response.json({result:{entries:['tasks.json']}});
 }})}} as unknown as ArcEnv;
 try{
@@ -347,7 +349,10 @@ try{
  assert.equal(row(readRun.run.id).status,'queued');
  const failedRead=(await arcMessages(env,'owner',readSession)).find(m=>m.run_id===readRun.run.id&&m.role==='tool')!;
  assert.equal(failedRead.status,'failed');assert.equal((failedRead.result as any).code,'ARC_DEVICE_READ_FAILED');
- assert.match((failedRead.result as any).detail,/ENOENT/);assert((failedRead.result as any).readFailed);
+ assert.equal((failedRead.result as any).detail,'ENOENT: details omitted');assert((failedRead.result as any).readFailed);
+ const savedStep=sql.prepare('SELECT result_ciphertext FROM arc_chat_steps WHERE run_id=? AND step=0').get(readRun.run.id)!;
+ const savedResult=await unseal(env,savedStep.result_ciphertext as string,arcContext('owner',readRun.run.id+':0:result'));
+ for(const secret of diagnosticSecrets)assert(!JSON.stringify({failedRead,savedResult}).includes(secret),'Original exception must not enter either decrypted journal');
  assert.equal(sql.prepare('SELECT status FROM arc_chat_steps WHERE run_id=? AND step=0').get(readRun.run.id)?.status,'done');
  assert.equal(await runArcStep(deviceReadEnv,readRun.run.id),true);assert.equal(await runArcStep(deviceReadEnv,readRun.run.id),false);
  assert.equal(row(readRun.run.id).status,'succeeded');assert.equal(directoryReads,2,'Recovery does not automatically replay the failed read');

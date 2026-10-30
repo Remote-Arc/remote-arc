@@ -7,6 +7,18 @@ export function diagnosticError(error: unknown): string {
   return "Error: details omitted";
 }
 
+/** A failed read needs a stable recovery hint, never its original path/content. */
+export function deviceReadDiagnostic(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  for (const code of ["ENOENT", "EACCES", "EPERM", "ENOTDIR", "EISDIR", "FILE_CHANGED_DURING_READ"]) {
+    if (message === code || message.startsWith(code + ":")) return code + ": details omitted";
+  }
+  if (/^device call timed out(?:$|:)/i.test(message)) return "DEVICE_TIMEOUT: details omitted";
+  if (/^device (?:offline|not found|not found or revoked)$/.test(message)) return "DEVICE_UNAVAILABLE: details omitted";
+  if (message.startsWith("Blocked by Remote Arc ")) return "DEVICE_POLICY_DENIED: details omitted";
+  return diagnosticError(error);
+}
+
 const ROUTES = [
   "/mcp", "/health", "/api/device", "/api/devices", "/api/slack",
   "/api/arc", "/api/admin", "/api/apps", "/api/monitor", "/api/me",

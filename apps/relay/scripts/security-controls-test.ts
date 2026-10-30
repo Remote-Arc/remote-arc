@@ -1,6 +1,6 @@
-import { callDevice } from "../src/device-call.js";
-import { handleDevicePolicyUpdate } from "../src/device.js";
-import { handleGrantRevoke, handleSecurityState } from "../src/security.js";
+import { callDevice } from "../src/devices/device-call.js";
+import { handleDevicePolicyUpdate } from "../src/devices/device.js";
+import { handleGrantRevoke, handleSecurityState } from "../src/platform/security.js";
 import { parseSecurityState } from "../../ui/src/security-state.js";
 
 const APP_ORIGIN = "https://mcp.remotearc.app";

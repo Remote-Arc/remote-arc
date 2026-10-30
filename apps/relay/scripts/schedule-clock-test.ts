@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { nextIntervalRun } from "../src/schedule-clock.js";
+import { nextIntervalRun } from "../src/tasks/schedule-clock.js";
 
 const created = "2026-10-11T11:20:00.000Z";
 const start = "2026-10-11T11:45:00.000Z";

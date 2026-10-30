@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/shared-tab-mcp.js";
-import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct, runStart } from "../src/browser-runner-mcp.js";
-import { callDevice } from "../src/device-call.js";
-import { parseRunnerAttention, runnerViewPath } from "../src/runner-attention.js";
-import { classifyExpectedMcpError } from "../src/mcp-errors.js";
-import type { OAuthIdentity } from "../src/auth.js";
+import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/mcp/shared-tab-mcp.js";
+import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct, runStart } from "../src/mcp/browser-runner-mcp.js";
+import { callDevice } from "../src/devices/device-call.js";
+import { parseRunnerAttention, runnerViewPath } from "../src/browser/runner-attention.js";
+import { classifyExpectedMcpError } from "../src/mcp/mcp-errors.js";
+import type { OAuthIdentity } from "../src/auth/auth.js";
 
 type Registered = { def: { annotations: Record<string, boolean>; description: string }; handler: (input: Record<string, unknown>) => Promise<unknown> };
 const tools = new Map<string, Registered>();

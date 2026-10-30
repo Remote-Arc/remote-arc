@@ -1,4 +1,4 @@
-import { APP_CATALOG, APP_PROVIDERS, type AppProvider } from "../src/app-catalog.js";
+import { APP_CATALOG, APP_PROVIDERS, type AppProvider } from "../src/apps/app-catalog.js";
 import { registrationPack } from "./apps-registration.js";
 
 export type PublicAppsStatus = {

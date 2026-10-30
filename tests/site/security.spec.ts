@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
-import { renderLoginPage } from '../../apps/relay/src/login-page';
-import { authPage } from '../../apps/relay/src/auth-page';
+import { renderLoginPage } from '../../apps/relay/src/auth/login-page';
+import { authPage } from '../../apps/relay/src/auth/auth-page';
 
 async function openApprovals(page: import('@playwright/test').Page) {
   await page.goto('/dashboard/connect/overview');

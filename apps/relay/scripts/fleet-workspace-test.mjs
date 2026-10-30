@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { planFleetGitWorkspace } from "../src/fleet-workspace.js";
+import { planFleetGitWorkspace } from "../src/devices/fleet-workspace.js";
 const sha="a".repeat(40);
 const mac={device_id:"mac",device_name:"Mac",platform:"darwin",running:0,eligible_count:2};
 const win={...mac,device_id:"windows",platform:"win32"};

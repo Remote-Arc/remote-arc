@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Relay security suite source coverage; all production Relay source files are counted. */
+/** Relay test suite source coverage (test:coverage); all production Relay source files are counted. */
 import { spawnSync } from "node:child_process";
 import { coverageThresholds } from "./coverage-policy.mjs";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -19,7 +19,7 @@ const args = [
   "--report-dir=" + join(temp, "report"),
   "--check-coverage",
   ...Object.entries(thresholds).map(([key, value]) => "--" + key + "=" + value),
-  "pnpm", "--filter", "@remotearc/relay", "test:security",
+  "pnpm", "--filter", "@remotearc/relay", "test:coverage",
 ];
 console.log(strict
   ? "Relay strict coverage gate: all metrics must reach 90%."

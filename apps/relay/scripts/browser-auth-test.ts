@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {DatabaseSync} from "node:sqlite";
-import {sha256Hex} from "../src/auth.js";
-import {handleBrowserAuth,parseBrowserAuth,browserAuthForDevice,NO_BROWSER_AUTH} from "../src/browser-auth.js";
-import {callDevice} from "../src/device-call.js";
-import {classifyExpectedMcpError} from "../src/mcp-errors.js";
-import {DeviceRegistry} from "../src/registry.js";
-import {extractCaptchaImages} from "../src/browser-auth-result.js";
+import {sha256Hex} from "../src/auth/auth.js";
+import {handleBrowserAuth,parseBrowserAuth,browserAuthForDevice,NO_BROWSER_AUTH} from "../src/browser/browser-auth.js";
+import {callDevice} from "../src/devices/device-call.js";
+import {classifyExpectedMcpError} from "../src/mcp/mcp-errors.js";
+import {DeviceRegistry} from "../src/devices/registry.js";
+import {extractCaptchaImages} from "../src/browser/browser-auth-result.js";
 const sql=new DatabaseSync(":memory:");
 for(const name of fs.readdirSync(new URL("../migrations/",import.meta.url)).filter(n=>n.endsWith(".sql")).sort())
  sql.exec(fs.readFileSync(new URL("../migrations/"+name,import.meta.url),"utf8"));

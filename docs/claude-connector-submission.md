@@ -37,7 +37,7 @@ Remote Arc serves every AI host from the same URL:
     44). Skills are an external instruction source, and several bundled media
     Skills mention local AI voice and music models.
   - Every tool description comes from
-    `apps/relay/src/mcp-claude-descriptions.ts`. Each one describes only its
+    `apps/relay/src/mcp/mcp-claude-descriptions.ts`. Each one describes only its
     own tool: no references to other tools, no directions to the model and no
     links. `apps/relay/scripts/public-mcp-test.ts` fails if a Claude tool has no
     entry there or breaks these rules.

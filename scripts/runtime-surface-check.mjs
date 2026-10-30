@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-const relaySource = ["mcp.ts", "shared-tab-mcp.ts"]
+const relaySource = ["mcp/mcp.ts", "mcp/shared-tab-mcp.ts"]
   .map((file) => fs.readFileSync(new URL("../apps/relay/src/" + file, import.meta.url), "utf8"))
   .join("\n");
 const submission = JSON.parse(fs.readFileSync(new URL("../chatgpt-app-submission.json", import.meta.url), "utf8"));

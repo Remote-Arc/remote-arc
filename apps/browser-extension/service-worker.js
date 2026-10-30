@@ -241,7 +241,7 @@ async function resolveSharedTab(tabId) {
   }
 
   if (!grant) {
-    throw new Error("No matching shared tab. Share the tab in Remote Arc Browser first, or open one with shared_tab_open.");
+    throw new Error("No matching shared tab. A shared tab stops being shared when it moves to another site. Ask the user to choose Share this tab or Allow AI on this site in the Remote Arc Browser popup, or open one with shared_tab_open, then call this again. Do not switch to remote debugging for this page: it asks the user to approve every step.");
   }
 
   const tab = await chrome.tabs.get(grant.tabId).catch(() => null);
@@ -265,18 +265,34 @@ async function resolveSharedTab(tabId) {
     return { tab, grant: grants.get(tab.id) };
   }
 
-  if (!tab.url || origin !== grant.origin || tab.url !== grant.url) {
-    if (origin && (await siteAllowed(origin))) {
-      const updated = { ...grant, mode: "site", url: tab.url, origin, permissions: ["read", "interact"] };
-      grants.set(tab.id, updated);
-      await persistGrants();
-      return { tab, grant: updated };
+  if (tab.url !== grant.url) {
+    const current = await followTab(grant, tab.url, tab.title);
+    if (!current) {
+      throw new Error("SITE_NOT_ALLOWED: this tab moved to another site, so it is no longer shared. Ask the user to open the Remote Arc Browser popup on that tab and choose Share this tab or Allow AI on this site, then call this again. Do not switch to remote debugging for this page: it asks the user to approve every step.");
     }
-    await revokeGrant(grant.tabId);
-    throw new Error("Tab access was revoked because the page navigated.");
+    return { tab, grant: current };
   }
 
   return { tab, grant };
+}
+
+// A shared tab keeps access on the site it was shared from, which is as far as
+// Chrome keeps activeTab, and on sites the user allowed. Returns the grant for
+// the new page, or null once access has ended.
+async function followTab(grant, url, title) {
+  const origin = originOf(url || "");
+  const allowed = await siteAllowed(origin);
+  const current = grants.get(grant.tabId) || null;
+  if (current !== grant) return current;
+  if (!allowed && (!origin || origin !== grant.origin)) {
+    await revokeGrant(grant.tabId);
+    return null;
+  }
+  const updated = { ...grant, url, title: title || grant.title };
+  if (allowed) Object.assign(updated, { mode: "site", origin, permissions: ["read", "interact"] });
+  grants.set(grant.tabId, updated);
+  await persistGrants();
+  return updated;
 }
 
 async function listSharedTabs() {
@@ -620,7 +636,7 @@ async function executeTool(tool, args, policy = {}) {
     throw new Error("Click/fill is not enabled for this tab. Enable Browser Interact in the Remote Arc Browser popup.");
   }
 
-  if (grant.mode === "site") await ensureInjected(tab.id);
+  await ensureInjected(tab.id);
   const response = await send(tab.id, tool, args);
 
   if (response?.error) throw new Error(response.error);
@@ -660,9 +676,13 @@ async function grantCurrentTab() {
 
   grants.set(tab.id, grant);
   await persistGrants();
-  await chrome.action.setBadgeText({ tabId: tab.id, text: allowed ? "AI+" : "AI" });
-  await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#76b900" });
+  await showBadge(grant);
   return grant;
+}
+
+async function showBadge(grant) {
+  await chrome.action.setBadgeText({ tabId: grant.tabId, text: grant.permissions?.includes("interact") ? "AI+" : "AI" }).catch(() => undefined);
+  await chrome.action.setBadgeBackgroundColor({ tabId: grant.tabId, color: "#76b900" }).catch(() => undefined);
 }
 
 async function setTabInteract(tabId, enabled) {
@@ -811,21 +831,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   const grant = grants.get(tabId);
-  if (!grant || grant.mode === "site") return;
-  if (changeInfo.status === "loading" || changeInfo.url) {
-    // A shared tab keeps access only if it stays on its page, or moves to a
-    // site the user allowed.
-    const origin = originOf(changeInfo.url || tab?.url || "");
-    siteAllowed(origin).then(async (allowed) => {
-      if (grants.get(tabId) !== grant) return;
-      if (allowed) {
-        grants.set(tabId, { ...grant, mode: "site", origin, url: tab?.url || grant.url, permissions: ["read", "interact"] });
-        await persistGrants();
-      } else {
-        await revokeGrant(tabId);
-      }
-    });
-  }
+  if (!grant) return;
+  // Chrome clears a tab's badge when a new page loads. A tab on a site Remote
+  // Arc cannot reach has no address here and keeps no badge.
+  if (changeInfo.status === "complete" && tab?.url) showBadge(grant);
+  if (grant.mode === "site" || !(changeInfo.status || changeInfo.url)) return;
+  const url = changeInfo.url || tab?.url;
+  if (url !== grant.url) followTab(grant, url, tab?.title);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {

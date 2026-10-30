@@ -1,4 +1,4 @@
-import {APP_CATALOG,APP_OPERATIONS} from '../apps/relay/src/app-catalog.js';
+import {APP_CATALOG,APP_OPERATIONS} from '../apps/relay/src/apps/app-catalog.js';
 import {writeFileSync} from 'node:fs';
 const seen=new Set<string>(),duplicates:string[]=[];
 for(const operation of APP_OPERATIONS){const key=operation.provider+':'+operation.name;if(seen.has(key))duplicates.push(key);seen.add(key);}

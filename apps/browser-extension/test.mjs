@@ -204,7 +204,7 @@ assert.match(workerSource, /const grants = new Map\(\)/);
 assert.doesNotMatch(workerSource, /MAX_SHARED_TABS|sharedTabsLimit|grantLimit/);
 
 const manifest = JSON.parse(fs.readFileSync(new URL("./manifest.json", import.meta.url), "utf8"));
-assert.equal(manifest.version, "0.4.1");
+assert.equal(manifest.version, "0.4.2");
 assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storage", "tabGroups"].sort());
 // Sites are granted one at a time through Chrome's own prompt; nothing is
 // granted up front except the Remote Arc relay.
@@ -217,7 +217,11 @@ assert.match(workerSource, /SITE_NOT_ALLOWED/);
 // Exercise the worker against asynchronous Chrome-like storage. Calls may
 // overlap across different tabs, and storage reads return independent copies.
 const disk = {};
-const event = () => ({ addListener() {} });
+const event = () => ({ listeners:[],addListener(listener){this.listeners.push(listener);} });
+const fakeTabs = new Map();
+const injected = new Set();
+const badges = new Map();
+const tabUpdated = event();
 const workerContext = vm.createContext({
   console, URL, setTimeout, clearTimeout, setInterval, clearInterval,
   chrome: {
@@ -226,8 +230,17 @@ const workerContext = vm.createContext({
       local: { async get(){await Promise.resolve();return structuredClone(disk);},async set(values){await Promise.resolve();Object.assign(disk,structuredClone(values));} },
       session: {async get(){return{};},async set(){}},onChanged:event()
     },
-    permissions: {onAdded:event(),onRemoved:event()},
-    tabs: {onUpdated:event(),onRemoved:event()}
+    permissions: {onAdded:event(),onRemoved:event(),async contains(){return true;}},
+    action: {async setBadgeText({tabId,text}){badges.set(tabId,text);},async setBadgeBackgroundColor(){}},
+    scripting: {async executeScript({target}){injected.add(target.tabId);}},
+    tabs: {
+      onUpdated:tabUpdated,onRemoved:event(),
+      async get(tabId){return fakeTabs.get(tabId)||null;},
+      async sendMessage(tabId,message){
+        if(!injected.has(tabId)) throw new Error("Could not establish connection.");
+        return message.tool==="ra_ping"?{ok:true}:{text:"page text"};
+      }
+    }
   }
 });
 vm.runInContext(workerSource, workerContext);
@@ -262,4 +275,62 @@ assert.equal(disk.raSubmits.unresolved.target,"old-pending");
 await assert.rejects(workerContext.guardFinal(submitArgs("settled"),effect,tabForSubmit),/SUBMIT_KEY_USED/);
 await assert.rejects(workerContext.guardFinal(submitArgs("new-old-target"),{...effect,target:"old-pending"},tabForSubmit),/SUBMIT_ALREADY_RECORDED/);
 
-process.stdout.write("Remote Arc browser capability, concurrent submit and durable ledger tests passed\n");
+// A shared tab follows its site, ends on another one, and tells the AI to ask
+// the user rather than fall back to remote debugging.
+const grants = vm.runInContext("grants", workerContext);
+const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+const share = (tabId, url, permissions=["read"]) => {
+  grants.set(tabId, {tabId,title:"Inbox",url,origin:new URL(url).origin,mode:"tab",permissions});
+  fakeTabs.set(tabId, {id:tabId,url,title:"Inbox",status:"complete"});
+};
+// Chrome reports a tab's address only while the extension may access that page.
+const moveTab = async (tabId, url, status="loading") => {
+  const tab = {id:tabId,url,title:url?"Next":undefined,status};
+  fakeTabs.set(tabId, tab);
+  for (const listener of tabUpdated.listeners) listener(tabId, {status}, tab);
+  await flush();
+};
+
+share(1, "https://mail.example.com/inbox", ["read","interact"]);
+await moveTab(1, "https://mail.example.com/inbox");
+assert.equal(grants.get(1).url, "https://mail.example.com/inbox", "a reload keeps the tab shared");
+await moveTab(1, "https://mail.example.com/message/42");
+assert.deepEqual({...grants.get(1)}, {tabId:1,title:"Next",url:"https://mail.example.com/message/42",origin:"https://mail.example.com",mode:"tab",permissions:["read","interact"]});
+await moveTab(1, "https://mail.example.com/message/42", "complete");
+assert.equal(badges.get(1), "AI+", "Chrome clears the badge on load, so it is shown again");
+
+share(2, "https://mail.example.com/inbox");
+fakeTabs.get(2).url = "https://mail.example.com/search?q=one";
+assert.equal((await workerContext.resolveSharedTab(2)).grant.url, "https://mail.example.com/search?q=one", "a client-side route change is followed without a tab event");
+assert.equal(grants.get(2).mode, "tab");
+assert.deepEqual([...grants.get(2).permissions], ["read"], "following a page never adds permissions");
+
+injected.delete(2);
+assert.equal((await workerContext.executeTool("browser_read_page", {tab_id:2}, {})).text, "page text", "the page script returns after a full page load");
+assert(injected.has(2));
+
+share(3, "https://mail.example.com/inbox", ["read","interact"]);
+await moveTab(3, "https://other.example.org/");
+assert.equal(grants.has(3), false, "another site ends access");
+assert.equal(badges.get(3), "", "the badge clears with it");
+await moveTab(3, "https://mail.example.com/inbox");
+assert.equal(grants.has(3), false, "coming back does not restore access");
+await assert.rejects(workerContext.resolveSharedTab(3), /No matching shared tab[^]*Share this tab[^]*Do not switch to remote debugging/);
+
+share(4, "https://mail.example.com/inbox");
+await moveTab(4, undefined, "complete");
+assert.equal(grants.has(4), false, "Chrome hid the address, so the tab is on a site Remote Arc cannot reach");
+
+share(5, "https://mail.example.com/inbox");
+fakeTabs.set(5, {id:5,title:undefined,url:undefined,status:"complete"});
+await assert.rejects(workerContext.resolveSharedTab(5), /^Error: SITE_NOT_ALLOWED:[^]*Do not switch to remote debugging/);
+assert.equal(grants.has(5), false);
+
+disk.raSites = {"https://allowed.example.org":{}};
+share(6, "https://mail.example.com/inbox");
+await moveTab(6, "https://allowed.example.org/start");
+assert.equal(grants.get(6).mode, "site", "an allowed site still takes over the tab");
+assert.equal(grants.get(6).origin, "https://allowed.example.org");
+assert.deepEqual([...grants.get(6).permissions], ["read","interact"]);
+
+process.stdout.write("Remote Arc browser capability, concurrent submit, durable ledger and shared tab navigation tests passed\n");

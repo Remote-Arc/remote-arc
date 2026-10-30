@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {handleReviewerLogin,handleLoginPage} from '../src/reviewer.js';
-import {handleGoogleLogin,handleGoogleCallback,sha256Hex,type OAuthIdentity} from '../src/auth.js';
-import {handleEmailCodeRequest} from '../src/email-auth.js';
-import {getDevicesForUser} from '../src/device.js';
-import {callDevice} from '../src/device-call.js';
-import {REVIEWER_USER_IDS} from '../src/reviewer-identity.js';
-import {authenticateMcp} from '../src/auth.js';
-import {handleDynamicClientRegistration,handleOAuthAuthorize,handleOAuthDecision,handleOAuthToken} from '../src/oauth.js';
-import {createRemoteLinkMcp} from '../src/mcp.js';
-import {mcpClientProfile} from '../src/mcp-client-profile.js';
+import {handleReviewerLogin,handleLoginPage} from '../src/auth/reviewer.js';
+import {handleGoogleLogin,handleGoogleCallback,sha256Hex,type OAuthIdentity} from '../src/auth/auth.js';
+import {handleEmailCodeRequest} from '../src/auth/email-auth.js';
+import {getDevicesForUser} from '../src/devices/device.js';
+import {callDevice} from '../src/devices/device-call.js';
+import {REVIEWER_USER_IDS} from '../src/auth/reviewer-identity.js';
+import {authenticateMcp} from '../src/auth/auth.js';
+import {handleDynamicClientRegistration,handleOAuthAuthorize,handleOAuthDecision,handleOAuthToken} from '../src/auth/oauth.js';
+import {createRemoteLinkMcp} from '../src/mcp/mcp.js';
+import {mcpClientProfile} from '../src/mcp/mcp-client-profile.js';
 import {verifyClaudeReviewer} from '../../../scripts/verify-claude-reviewer.mjs';
 
 const sql=new DatabaseSync(':memory:');

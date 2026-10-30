@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import {openAiAdapter,ModelProviderError} from '../src/model-provider-adapters.js';
-import {arcWeather} from '../src/arc-web.js';
-import {prepareCommunitySkill} from '../src/arc-community-skills.js';
+import {openAiAdapter,ModelProviderError} from '../src/arc/model-provider-adapters.js';
+import {arcWeather} from '../src/arc/arc-web.js';
+import {prepareCommunitySkill} from '../src/arc/arc-community-skills.js';
 import {COMMUNITY_SKILLS} from '../../../packages/skills/src/community.generated.js';
 
 const definition={id:'arc-auto',provider:'openai',model:'fixture-model',maxOutputTokens:4096,inputMicrosPerMillion:100000,outputMicrosPerMillion:500000} as any;
@@ -57,7 +57,7 @@ console.log('PASS: bounded sourced web search with billable call counts, keyless
 
 // Gateway: search is OpenAI-only, the reservation covers retrieved content and
 // the maximum number of calls, and settlement charges each call actually made.
-import {runModelGateway,WEB_SEARCH_CALL_MICROS} from '../src/model-gateway.js';
+import {runModelGateway,WEB_SEARCH_CALL_MICROS} from '../src/arc/model-gateway.js';
 {
  const statements:{query:string;args:any[]}[]=[];let reserved:any;
  const db={prepare(query:string){const stmt={query,args:[] as any[],bind(...args:any[]){stmt.args=args;statements.push(stmt);return stmt;},

@@ -1,36 +1,36 @@
-import {appOperation} from '../src/app-catalog.js';
-import {arcVerificationToolError} from '../src/arc-verification.js';
+import {appOperation} from '../src/apps/app-catalog.js';
+import {arcVerificationToolError} from '../src/arc/arc-verification.js';
 import {SKILL_LIBRARY} from '../../../packages/skills/src/library.js';
-import {readableArcAppContent} from '../src/arc-app-content.js';
+import {readableArcAppContent} from '../src/arc/arc-app-content.js';
 import {testArcOutcomes} from './arc-outcomes-test.js';
 import {testArcCompactContinuation} from './arc-compact-continuation-test.js';
-import {ARC_OUTCOME_SKILLS} from '../src/arc-outcome-skills.js';
+import {ARC_OUTCOME_SKILLS} from '../src/arc/arc-outcome-skills.js';
 import assert from 'node:assert/strict';
-import {withArcInboxSources} from '../src/arc-result-sources.js';
+import {withArcInboxSources} from '../src/arc/arc-result-sources.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
-import {handleArcChat,arcMessages,appendArcMessage,arcContext,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
-import {runArcStep,validateArcDecision,executeArcTool,arcToolInputError,arcExecutionPrompt} from '../src/arc-chat-runtime.js';
-import {ARC_MODELS,prepareArcBudget} from '../src/arc-chat-model.js';
-import {nextArcOccurrence,arcScheduleSchema,createArcWork,manageArcWork} from '../src/arc-work.js';
-import {runAutomationTick} from '../src/automations.js';
-import {sha256Hex} from '../src/auth.js';
-import {purgeDeletedArcContent} from '../src/arc-retention.js';
-import {appendArcMessage} from '../src/arc-chat.js';
-import {activateArcTrial,arcAccountAccess} from '../src/arc-trial.js';
-import {reserveBilling,settleBilling} from '../src/billing-ledger.js';
-import {seal} from '../src/app-oauth.js';
-import {arcMemoryContext,rememberArcFact,saveArcWorkMemory,ARC_MEMORY_LIMITS} from '../src/arc-memory.js';
-import {fitArcContext,arcObservation,arcObservationText} from '../src/arc-chat-context.js';
-import {ModelProviderError} from '../src/model-provider-adapters.js';
-import {readableEmail} from '../src/arc-inbox.js';
-import {arcExecutionCapacity} from '../src/arc-plan.js';
+import {handleArcChat,arcMessages,appendArcMessage,arcContext,type ArcEnv,type ArcRun} from '../src/arc/arc-chat.js';
+import {runArcStep,validateArcDecision,executeArcTool,arcToolInputError,arcExecutionPrompt} from '../src/arc/arc-chat-runtime.js';
+import {ARC_MODELS,prepareArcBudget} from '../src/arc/arc-chat-model.js';
+import {nextArcOccurrence,arcScheduleSchema,createArcWork,manageArcWork} from '../src/arc/arc-work.js';
+import {runAutomationTick} from '../src/tasks/automations.js';
+import {sha256Hex} from '../src/auth/auth.js';
+import {purgeDeletedArcContent} from '../src/arc/arc-retention.js';
+import {appendArcMessage} from '../src/arc/arc-chat.js';
+import {activateArcTrial,arcAccountAccess} from '../src/arc/arc-trial.js';
+import {reserveBilling,settleBilling} from '../src/billing/billing-ledger.js';
+import {seal} from '../src/apps/app-oauth.js';
+import {arcMemoryContext,rememberArcFact,saveArcWorkMemory,ARC_MEMORY_LIMITS} from '../src/arc/arc-memory.js';
+import {fitArcContext,arcObservation,arcObservationText} from '../src/arc/arc-chat-context.js';
+import {ModelProviderError} from '../src/arc/model-provider-adapters.js';
+import {readableEmail} from '../src/arc/arc-inbox.js';
+import {arcExecutionCapacity} from '../src/arc/arc-plan.js';
 import {arcPlan} from '@remotearc/protocol';
-import {handleArcAdminBilling} from '../src/arc-admin-billing.js';
+import {handleArcAdminBilling} from '../src/arc/arc-admin-billing.js';
 import {testArcVerification} from './arc-verification-test.js';
-import {ARC_VERIFICATION_SKILLS} from '../src/arc-verification-skills.js';
+import {ARC_VERIFICATION_SKILLS} from '../src/arc/arc-verification-skills.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -145,7 +145,7 @@ try{
 }finally{env.MODEL_GATEWAY!.adapters.openai=beforeRepairAdapter;}
 // Exercise the actual native-function decoder and gateway settlement, rather
 // than only throwing synthetic errors from the injected adapter.
-const {openAiAdapter}=await import('../src/model-provider-adapters.js');
+const {openAiAdapter}=await import('../src/arc/model-provider-adapters.js');
 const invalidNativeCalls=[
  {code:'MODEL_DECISION_INVALID',call:{name:'arc_deliver_answer',arguments:JSON.stringify({answer:'   '})}},
  {code:'MODEL_DECISION_INVALID',call:{name:'arc_call_tool',arguments:JSON.stringify({...tool('list_devices',{}),arguments_json:'{'})}},

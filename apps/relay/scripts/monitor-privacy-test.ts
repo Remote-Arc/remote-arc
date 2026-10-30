@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { diagnosticError, diagnosticRoute } from "../src/diagnostics.js";
-import { recordServiceIncident, type MonitorEnv } from "../src/monitor.js";
-import { recordMcpTelemetry } from "../src/relay-telemetry.js";
+import { diagnosticError, diagnosticRoute } from "../src/platform/diagnostics.js";
+import { recordServiceIncident, type MonitorEnv } from "../src/analytics/monitor.js";
+import { recordMcpTelemetry } from "../src/analytics/relay-telemetry.js";
 
 const secrets = [
   "sk-fixture-test-key-123456789",

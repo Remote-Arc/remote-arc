@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { handleAgentDownload } from "../src/agent-downloads.js";
+import { handleAgentDownload } from "../src/platform/agent-downloads.js";
 
 let version = "0.6.5";
 let calls = 0;

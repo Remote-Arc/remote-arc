@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { exchangeGoogleLoginCode, googleLoginClients, handleGoogleLogin } from "../src/auth.js";
+import { exchangeGoogleLoginCode, googleLoginClients, handleGoogleLogin } from "../src/auth/auth.js";
 
 const legacy = { GOOGLE_CLIENT_ID: "old-id", GOOGLE_CLIENT_SECRET: "old-secret" };
 const migrated = {

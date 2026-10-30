@@ -1,4 +1,4 @@
-import { handleDynamicClientRegistration, handleOAuthAuthorize, handleOAuthDecision, handleOAuthToken } from "../src/oauth.js";
+import { handleDynamicClientRegistration, handleOAuthAuthorize, handleOAuthDecision, handleOAuthToken } from "../src/auth/oauth.js";
 
 const APP_ORIGIN = "https://mcp.remotearc.app";
 const REDIRECT_URI = "https://client.example/callback";
@@ -153,7 +153,7 @@ function authUrl(extra = "") {
     throw new Error("legacy consent decision flags leaked into consent URL");
   }
   const scopes = (consent.searchParams.get("scope") || "").split(/\s+/);
-  const { DEFAULT_MCP_SCOPES } = await import("../src/oauth.js");
+  const { DEFAULT_MCP_SCOPES } = await import("../src/auth/oauth.js");
   const expected = [...DEFAULT_MCP_SCOPES];
   if (JSON.stringify(scopes) !== JSON.stringify(expected)) {
     throw new Error("new client should request the complete baseline scope bundle: " + scopes.join(" "));
@@ -311,7 +311,7 @@ function authUrl(extra = "") {
 }
 
 {
-  const { mcpUnauthorized, DEFAULT_MCP_SCOPES } = await import("../src/oauth.js");
+  const { mcpUnauthorized, DEFAULT_MCP_SCOPES } = await import("../src/auth/oauth.js");
   if (!DEFAULT_MCP_SCOPES.includes("apps:read") || !DEFAULT_MCP_SCOPES.includes("apps:write")) {
     throw new Error("new MCP clients must have Apps discovery and approval-request scopes by default");
   }
@@ -322,7 +322,7 @@ function authUrl(extra = "") {
 }
 
 {
-  const metadata = await import("../src/oauth.js").then((module) =>
+  const metadata = await import("../src/auth/oauth.js").then((module) =>
     module.authorizationServerMetadata(envBase),
   );
   const body = (await metadata.json()) as { scopes_supported?: string[] };

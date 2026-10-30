@@ -139,10 +139,10 @@ Fixtures test actual adapters/controller paths with controlled provider response
 | Location | Purpose |
 | --- | --- |
 | `apps/relay/src/arc-chat*.ts`, `arc-task-state.ts` | Authenticated chat, state, bounded model/tool loop and context |
-| `apps/relay/src/model-gateway.ts`, `billing-ledger.ts`, `arc-funding.ts` | Cost reservations, usage settlement and funding gates |
-| `apps/relay/src/app-*.ts`, `apps.ts` | Typed provider operations, credential vault and dispatch |
-| `apps/relay/src/arc-work.ts`, `automations.ts`, `fleet-*.ts` | Hosted routines, persistent scheduler and placement |
-| `apps/relay/src/arc-memory.ts`, `arc-skills.ts`, `cloud-skills.ts` | Memory and reusable skill instructions/workflows |
+| `apps/relay/src/arc/model-gateway.ts`, `billing-ledger.ts`, `arc-funding.ts` | Cost reservations, usage settlement and funding gates |
+| `apps/relay/src/apps/` (`app-*.ts`, `apps.ts`) | Typed provider operations, credential vault and dispatch |
+| `apps/relay/src/arc/arc-work.ts`, `automations.ts`, `fleet-*.ts` | Hosted routines, persistent scheduler and placement |
+| `apps/relay/src/arc/arc-memory.ts`, `arc-skills.ts`, `cloud-skills.ts` | Memory and reusable skill instructions/workflows |
 | `apps/agent`, `packages/execution-core` | Native local execution and policy |
 | `apps/ui`, `packages/docs/src` | Arc / Connect / Admin surfaces and bilingual public documentation |
 

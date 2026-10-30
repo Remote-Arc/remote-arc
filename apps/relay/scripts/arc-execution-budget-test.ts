@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {reserveBilling,settleBilling,setBillingLimit,grantPaidModel,type BillingReservationInput} from '../src/billing-ledger.js';
-import {createExecutionBudget,executionBudget,closeExecutionBudget} from '../src/arc-execution-budget.js';
+import {reserveBilling,settleBilling,setBillingLimit,grantPaidModel,type BillingReservationInput} from '../src/billing/billing-ledger.js';
+import {createExecutionBudget,executionBudget,closeExecutionBudget} from '../src/arc/arc-execution-budget.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const file of fs.readdirSync('migrations').filter(name=>name.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+file,'utf8'));

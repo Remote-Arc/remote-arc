@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import {handleArcRooms,advanceArcRoom,arcRoomSnapshot} from '../src/arc-team-rooms.js';
-import {saveArcEmployee,saveArcTeam} from '../src/arc-teams.js';
-import {runArcStep,executeArcTool} from '../src/arc-chat-runtime.js';
-import {arcEmployeeExecution,employeeToolError} from '../src/arc-team-execution.js';
-import {activateArcTrial} from '../src/arc-trial.js';
-import {seal} from '../src/app-oauth.js';
-import {arcContext,handleArcChat,type ArcRun} from '../src/arc-chat.js';
+import {handleArcRooms,advanceArcRoom,arcRoomSnapshot} from '../src/arc/arc-team-rooms.js';
+import {saveArcEmployee,saveArcTeam} from '../src/arc/arc-teams.js';
+import {runArcStep,executeArcTool} from '../src/arc/arc-chat-runtime.js';
+import {arcEmployeeExecution,employeeToolError} from '../src/arc/arc-team-execution.js';
+import {activateArcTrial} from '../src/arc/arc-trial.js';
+import {seal} from '../src/apps/app-oauth.js';
+import {arcContext,handleArcChat,type ArcRun} from '../src/arc/arc-chat.js';
 
 /** Authenticated SQLite/API/runtime integration, scripted inference only. */
 export async function testArcTeamRooms({sql,env}:any){

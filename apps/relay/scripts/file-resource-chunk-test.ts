@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { fileResourceChunk } from "../src/file-resources.js";
+import { fileResourceChunk } from "../src/devices/file-resources.js";
 
 // The Go Execution Core sends its tool value inside an MCP text-result envelope.
 // Legacy TS fixtures may return the same fields as a direct object.

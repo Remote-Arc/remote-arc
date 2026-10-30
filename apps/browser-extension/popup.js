@@ -119,7 +119,7 @@ async function render() {
        <button class="${interact ? "secondary" : "primary"}" id="toggle-interact">${interact ? "Disable click & fill on this tab" : "Enable click & fill on this tab"}</button>
        <button class="secondary top-gap" id="revoke">Stop AI access on this tab</button>`
     : `<div class="permission"><span>Current tab</span><span>No access</span></div>
-       <p class="hint">Share this tab read-only first. You can separately enable click & fill after sharing it.</p>
+       <p class="hint">Share this tab read-only first. It stays shared while this tab is on this site. You can separately enable click & fill after sharing it.</p>
        <button class="primary" id="grant" ${state.connected ? "" : "disabled"}>Share this tab</button>`;
 
   document.querySelector("#revoke")?.addEventListener("click", async () => {

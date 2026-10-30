@@ -55,7 +55,7 @@ PR41 已包含在当前分支祖先中；PR44 的比较基线是 PR43，不能�
 
 ## 来源与措辞边界
 
-产品事实来自 `apps/relay/src/mcp.ts`、`automations.ts`、`source-goals.ts`、
+产品事实来自 `apps/relay/src/mcp/mcp.ts`、`automations.ts`、`source-goals.ts`、
 `automation-store.ts`、`task-events.ts`、`device-task-policy.ts`，以及 Go Agent
 与 `packages/execution-core` 的本地工具实现。
 

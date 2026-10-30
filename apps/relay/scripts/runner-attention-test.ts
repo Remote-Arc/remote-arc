@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { sha256Hex } from "../src/auth.js";
-import { seal } from "../src/app-oauth.js";
-import { slackTokenContext } from "../src/slack-bot-common.js";
+import { sha256Hex } from "../src/auth/auth.js";
+import { seal } from "../src/apps/app-oauth.js";
+import { slackTokenContext } from "../src/slack/slack-bot-common.js";
 import {
   handleRunnerRequest,
   recordRunnerAttention,
   parseRunnerAttention,
   type RunnerEnv,
-} from "../src/runner-attention.js";
-import { DeviceRegistry } from "../src/registry.js";
+} from "../src/browser/runner-attention.js";
+import { DeviceRegistry } from "../src/devices/registry.js";
 
 const sql = new DatabaseSync(":memory:");
 for (const name of fs

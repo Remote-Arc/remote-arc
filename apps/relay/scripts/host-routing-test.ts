@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { dashboardSignInUrl, legacyDashboardRedirect, protocolOnlyPath, publicWebsiteRedirect } from "../src/host-routing.js";
-import { safeReturnTo, sessionCookie } from "../src/auth.js";
-import { isTrustedDashboardMutation } from "../src/dashboard-origin.js";
+import { dashboardSignInUrl, legacyDashboardRedirect, protocolOnlyPath, publicWebsiteRedirect } from "../src/platform/host-routing.js";
+import { safeReturnTo, sessionCookie } from "../src/auth/auth.js";
+import { isTrustedDashboardMutation } from "../src/auth/dashboard-origin.js";
 
 const marketing = "https://remotearc.app";
 const app = "https://mcp.remotearc.app";

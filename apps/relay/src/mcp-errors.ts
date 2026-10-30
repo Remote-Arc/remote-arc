@@ -17,7 +17,7 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
   const message = messageOf(error);
   const code = codeOf(error);
 
-  if (code === "MONTHLY_LIMIT_REACHED") return { code, message };
+  if (code === "MONTHLY_LIMIT_REACHED" || code === "BINARY_TRANSFER_LIMIT_REACHED") return { code, message };
   if (code === "PLAN_UPGRADE_REQUIRED" || /^Remote Arc Plus is required for /i.test(message)) {
     return { code: "PLAN_UPGRADE_REQUIRED", message };
   }

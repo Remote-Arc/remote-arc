@@ -109,6 +109,70 @@ export async function recordPlusUsage(
     .run();
 }
 
+const transferSize = (bytes: number) =>
+  bytes >= 1024 ** 3 ? (bytes / 1024 ** 3).toFixed(2) + " GB" : (bytes / 1024 ** 2).toFixed(1) + " MB";
+
+export class BinaryTransferLimitError extends Error {
+  readonly code = "BINARY_TRANSFER_LIMIT_REACHED";
+
+  constructor(readonly limit: number, readonly used: number, readonly requested: number) {
+    super(
+      `Monthly binary transfer allowance exceeded: ${transferSize(used)} of ${transferSize(limit)} used, ` +
+      `${transferSize(requested)} requested. Free includes ${transferSize(limit)} per month across ` +
+      "read_binary_file and temporary file links; it resets at the start of each UTC month. Paid plans have no transfer limit.",
+    );
+    this.name = "BinaryTransferLimitError";
+  }
+}
+
+export async function binaryBytesUsed(env: PlusUsageEnv, userId: string, at: Date | string = new Date()) {
+  const row = await env.DB.prepare(
+    "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ?1 AND month_key = ?2",
+  )
+    .bind(userId, monthKey(at))
+    .first<{ binary_bytes: number }>();
+  return row?.binary_bytes || 0;
+}
+
+/** Throws unless `bytes` more fit this month's allowance. A null limit is uncapped. */
+export async function assertBinaryAllowance(
+  env: PlusUsageEnv,
+  userId: string,
+  limit: number | null,
+  bytes: number,
+) {
+  if (limit === null) return;
+  const used = await binaryBytesUsed(env, userId);
+  if (used + bytes > limit) throw new BinaryTransferLimitError(limit, used, bytes);
+}
+
+/** Meters returned binary bytes; with a limit, atomically and only when they fit. */
+export async function meterBinaryBytes(
+  env: PlusUsageEnv,
+  userId: string,
+  bytes: number,
+  limit: number | null,
+) {
+  if (limit === null) return recordPlusUsage(env, userId, { binary_bytes: bytes });
+  const binaryBytes = counter(bytes);
+  if (!binaryBytes) return;
+
+  const now = new Date().toISOString();
+  const row = await env.DB.prepare(
+    `INSERT INTO user_monthly_plus_usage (
+       user_id, month_key, binary_bytes, planner_turns, task_runtime_seconds, updated_at
+     ) SELECT ?1, ?2, ?3, 0, 0, ?5 WHERE ?3 <= ?4
+     ON CONFLICT(user_id, month_key) DO UPDATE SET
+       binary_bytes = binary_bytes + excluded.binary_bytes,
+       updated_at = excluded.updated_at
+     WHERE binary_bytes + excluded.binary_bytes <= ?4
+     RETURNING binary_bytes`,
+  )
+    .bind(userId, monthKey(now), binaryBytes, limit, now)
+    .first<{ binary_bytes: number }>();
+  if (!row) throw new BinaryTransferLimitError(limit, await binaryBytesUsed(env, userId, now), binaryBytes);
+}
+
 export async function getMonthlyPlusUsage(
   env: PlusUsageEnv,
   userId: string,

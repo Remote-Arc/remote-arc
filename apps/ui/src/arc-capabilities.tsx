@@ -138,7 +138,7 @@ export function ArcCapabilities() {
       <div className="arcCapabilitiesIntro">
         <span className="arcV3Eyebrow">{tr("BUILT FOR REAL WORK", "为了真正完成工作而设计")}</span>
         <h2>{tr("More than a conversation. A place where work continues.", "不止聊天。让每一项工作，都有下文。")}</h2>
-        <p>{tr("A complete environment for delegated work: long-running routines, reusable skills, connected apps and an accountable AI teammate.", "从持续运行的自动任务到可复用技能、跨应用协作，以及每一步可追溯的 AI 执行。")}</p>
+        <p>{tr("A complete environment for delegated work: long-running routines, reusable skills, connected apps and an accountable AI agent.", "从持续运行的自动任务到可复用技能、跨应用协作，以及每一步可追溯的 AI 执行。")}</p>
       </div>
       <div className="arcCapabilitiesSpotlight">
         <div className="arcCapabilityLead">

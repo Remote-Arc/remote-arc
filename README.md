@@ -6,7 +6,7 @@
 
 **Agent infrastructure for real work across your apps and computers.**
 
-Arc is your hosted AI teammate. Connect brings the same authorized Apps and device execution to the AI client you already use. Remote Arc manages the context, permissions, persistent work, device placement and usage around model decisions so work can proceed from a request to an inspectable result.
+Arc is your hosted AI agent. Connect brings the same authorized Apps and device execution to the AI client you already use. Remote Arc manages the context, permissions, persistent work, device placement and usage around model decisions so work can proceed from a request to an inspectable result.
 
 [Website](https://remotearc.app) · [Open Arc](https://agent.remotearc.app/dashboard/agent/chat) · [User guide](https://remotearc.app/docs/start-here) · [Architecture](./ARCHITECTURE.md) · [Security](./SECURITY.md)
 
@@ -72,7 +72,7 @@ The run status records whether execution ended. Verify the answer and its eviden
 - **Verified results:** optional exact account/resource contracts, independent result checks and source-derived execution receipts. See the [user guide](https://remotearc.app/docs/trust) and [feature map](./docs/feature-map/README.md).
 - **Browser work:** the Chrome Companion shares tabs and allowed sites from the user's own browser; the task browser runs site-scoped page work with checkpoints, user handoff and submission receipts.
 - **Skills:** reusable cloud instructions and imported SKILL.md references, such as Safe Cleanup for disk-space recovery. A skill does not install its required engine, scripts or dependencies.
-- **AI Teams (beta):** configurable employees with their own model, instructions and scoped resources, in direct or group conversations with visible handoffs.
+- **AI Teams (beta):** configurable agents with their own model, instructions and scoped resources, in direct or group conversations with visible handoffs.
 - **Context and memory:** relevant prior observations and learned IDs within a chat, plus bounded encrypted personal notes and work summaries users can inspect and delete.
 - **Device fleet:** filter by ownership, tools, workspace and availability before balancing fresh capacity. Projects are not moved implicitly.
 - **Local control:** read-oriented initial setup, explicit file/terminal/browser permissions, trusted roots, sensitive-path checks and supported Local Undo.
@@ -125,7 +125,7 @@ Remote Arc is not remote-desktop software, and it is more than an MCP server: it
 
 Arc runs follow the same gates from step 2 onward, with the model loop running in a Durable Object under a Credits budget. Durable Tasks reach step 3 through a leased scheduler instead of a live chat. Start with [ARCHITECTURE.md](./ARCHITECTURE.md) for the code map, request paths, data stores and contributor rules.
 
-Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. AI Teams (configurable employees, direct/group conversations and scoped teammate handoffs) is a beta release candidate at `/dashboard/agent/teams`, with its production rollout tracked separately; see the [feature map](./docs/feature-map/ai-teams.md). Cross-run persistent goal continuation and full root-outcome acceptance remain incomplete; see the [implementation/design status](./docs/ai-teams-and-persistent-work.md). Ordinary Connect cannot wake an arbitrary external chat.
+Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. AI Teams (configurable agents, direct/group conversations and scoped agent handoffs) is a beta release candidate at `/dashboard/agent/teams`, with its production rollout tracked separately; see the [feature map](./docs/feature-map/ai-teams.md). Cross-run persistent goal continuation and full root-outcome acceptance remain incomplete; see the [implementation/design status](./docs/ai-teams-and-persistent-work.md). Ordinary Connect cannot wake an arbitrary external chat.
 
 ## Quick start
 

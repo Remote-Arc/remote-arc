@@ -2,6 +2,15 @@ import assert from 'node:assert/strict';
 import { routeSkillIntent,runReadOnlySkill } from '../src/skill-runtime.js';
 import { handleCloudSkillAction } from '../src/cloud-skills.js';
 
+const cleanup=routeSkillIntent('帮我清理 D 盘缓存腾出空间');
+assert.equal(cleanup.steps[0]?.skill_id,'safe-cleanup');
+assert.equal(cleanup.steps[0]?.state,'needs_local_device');
+assert.match(cleanup.steps[0]!.reason,/exact canonical targets/);
+assert.match(cleanup.steps[0]!.reason,/scripts.safe-cleanup.mjs/);
+assert.match(cleanup.steps[0]!.reason,/only that hash after explicit user approval/);
+assert.equal(cleanup.runnable,false,'Cloud plan cannot perform local deletion');
+const plain=routeSkillIntent('请解释 JavaScript delete operator');
+assert.ok(!plain.steps.some(s=>s.skill_id==='safe-cleanup'),'Code keyword must not trigger disk cleanup');
 const video=routeSkillIntent('帮我做一个带中文字幕的视频');
 assert.ok(video.steps.some(s=>s.skill_id==='video-creator'));
 assert.ok(video.steps.some(s=>s.skill_id==='transcribe-subtitles'));

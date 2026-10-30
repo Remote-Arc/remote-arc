@@ -14,6 +14,7 @@ export type ImportedSkillSummary={id:string;name:string;description:string};
 // Chinese requests rarely share tokens with English descriptions, so these
 // cues are what make "帮我剪个视频" find the video skill.
 const CUES:Array<[RegExp,string[],number?]>=[
+ [/safe.cleanup|disk cleanup|free up (?:disk |drive )?space|reclaim (?:disk |drive )?space|permanent(?:ly)? delet|recursive delet|bulk delet|purge (?:files?|caches?)|clean(?:up)? (?:drive|disk|cache)|清理.{0,8}(?:磁盘|硬盘|[a-z]盘|缓存|临时文件)|(?:磁盘|硬盘|[a-z]盘).{0,8}清理|腾.{0,6}空间|释放.{0,6}空间|批量删除|递归删除|永久删除|删.{0,8}(?:缓存|临时文件)/i,['safe-cleanup'],18],
  [/cover.?letter|motivation.?letter|personal statement|statement of purpose|phd outreach|professor outreach|套磁|求职信|求职邮件|写(?:一封|封)?邮件|邮件(?:起草|润色|改写)|个人表达|真实表达|authentic(?: writing| voice)|personal voice|sound like me|(?:write|draft|rewrite|polish|improve).{0,30}(?:email|letter|message)|(?:email|letter|message).{0,15}(?:draft|rewrite|polish)|不要.?ai味/i,['authentic-thinking-expression'],16],
  [/yt-dlp|media intelligence|视频分析|分析.{0,12}(视频|发布会)|视频.{0,8}(总结|技术差异)|原视频时间点|字幕优先|(?:analy[sz]e|summari[sz]e|compare).{0,24}(?:videos?|youtube|bilibili)|(?:youtube|bilibili).{0,24}(?:analy[sz]|summar|compare)/i,['media-intelligence'],16],
  [/\bmanim\b|数学动画|几何动画|公式推导动画|算法动画/i,['manim-video'],12],

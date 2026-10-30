@@ -148,6 +148,22 @@
       "optIn": false
     },
     {
+      "id": "safe-cleanup",
+      "name": "Safe Cleanup",
+      "priority": "P0",
+      "category": "productivity",
+      "description": "Safely reclaim disk space: preview a hash-approved deletion plan, then permanently delete only the unchanged files the user approved, never following links or touching protected folders.",
+      "engine": "Packaged Node helper (scripts/safe-cleanup.mjs) via Remote Arc start_process",
+      "requires": [],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://remotearc.app",
+      "license": "RA authored skill instructions",
+      "optIn": false
+    },
+    {
       "id": "authentic-thinking-expression",
       "name": "Authentic Thinking & Expression",
       "priority": "P1",

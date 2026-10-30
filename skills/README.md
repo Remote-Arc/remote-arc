@@ -1,8 +1,10 @@
 # Remote Arc built-in Skill Packs
 
-Remote Arc includes **9 original, curated Skill instructions** (`SKILL.md`) organized by profession-like capability. A Skill is a procedure, not an executable MCP tool or a user permission. Existing authorized Tools do the actual work. The same version-controlled catalog can be consumed by **Arc Connect via read-only MCP Resources**, by the hosted Agent API and future Arc Agent code.
+Remote Arc includes **versioned, curated Skill instructions** (`SKILL.md`) organized by profession-like capability. A Skill is a procedure, not an executable MCP tool or a user permission. Existing authorized Tools do the actual work. The same version-controlled catalog can be consumed by **Arc Connect via read-only MCP Resources**, by the hosted Agent API and future Arc Agent code.
 
 ## Built-in catalog
+
+- P0: safe-cleanup (plan, hash approval, then exact permanent deletion via the packaged scripts/safe-cleanup.mjs; not an OS sandbox, and Local Undo cannot restore deletions)
 
 - P0: browser-operator (agent-browser + Microsoft Playwright MCP workflow)
 - P0: autonomous-browser (browser-use planning, opt-in model budgets)

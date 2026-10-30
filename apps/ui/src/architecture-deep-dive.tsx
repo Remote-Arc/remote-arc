@@ -86,8 +86,7 @@ export function ArchitectureDeepDive() {
         "Arc 提供有界托管聊天、Task、Routine 与 AI 团队 Beta；Connect 提供受控应用和设备工具、确定性任务，以及已开启的实验目标契约。这些执行路径各有上限。Connect 不保证外部聊天主动开始新轮次，本地终端也不是 OS 沙箱。使用新功能前检查已安装 Agent 能力与实际工具列表。",
       )}</p>
       <div className="articleEndLinks">
-        <a href="https://github.com/Remote-Arc/remote-arc/blob/master/docs/system-architecture.en.md" target="_blank" rel="noreferrer">{tr("Complete engineering reference (English)", "完整工程参考（英文）")} ↗</a>
-        <a href="https://github.com/Remote-Arc/remote-arc/blob/master/docs/system-architecture.md" target="_blank" rel="noreferrer">{tr("Complete engineering reference (Chinese)", "完整工程参考（中文）")} ↗</a>
+        <a href="/docs/engineering-architecture">{tr("Engineering reference", "工程参考")} →</a>
         <a href="/docs/long-running-work">{tr("Durable work and limitations", "持久工作与功能边界")} →</a>
       </div>
     </section>

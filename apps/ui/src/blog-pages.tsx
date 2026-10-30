@@ -236,9 +236,9 @@ export function GoVsTypescriptBenchmarkArticlePage({ user }: { user?: User | nul
         )}</p>
         <div className="benchmarkSources">
           <h2>{tr("Methods and source data", "方法与原始来源")}</h2>
-          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-f68ab09.md">{tr("Mac + Windows baseline (f68ab09)", "Mac + Windows 旧基线（f68ab09）")} ↗</a></p>
-          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-71cde96.md">{tr("Windows path-handling follow-up (71cde96)", "Windows 路径处理修复后测试（71cde96）")} ↗</a></p>
-          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/README.md">{tr("Reproduction steps, profiles and raw-artifact hashes", "复现步骤、同步模式和原始报告哈希")} ↗</a></p>
+          <p><a href="/docs/benchmark-baseline">{tr("Mac + Windows baseline (f68ab09)", "Mac + Windows 旧基线（f68ab09）")} ↗</a></p>
+          <p><a href="/docs/benchmark-windows-followup">{tr("Windows path-handling follow-up (71cde96)", "Windows 路径处理修复后测试（71cde96）")} ↗</a></p>
+          <p><a href="/docs/benchmarks">{tr("Reproduction steps, profiles and raw-artifact hashes", "复现步骤、同步模式和原始报告哈希")} ↗</a></p>
         </div>
         <footer className="blogArticleFooter">
           <div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div>
@@ -533,7 +533,7 @@ export function PowerfulAccessArticlePage({ user }: { user?: User | null }) {
             "一旦你明确开启不受限制的终端执行，Shell 最终继承的是本地操作系统用户本身的权限。Remote Arc 可以严格控制终端工具什么时候可用，但不能假装一个 unrestricted shell 天生无害。正确的安全模型应该是分层控制 + 明确的用户选择，而不是假装强执行能力没有后果。",
           )}</p>
 
-          <footer className="blogArticleFooter"><div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div><a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md">{tr("Read the security model", "查看安全模型")} →</a></footer>
+          <footer className="blogArticleFooter"><div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div><a href="/security-model">{tr("Read the security model", "查看安全模型")} →</a></footer>
         </div>
       </article>
     </PublicLayout>

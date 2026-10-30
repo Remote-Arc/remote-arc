@@ -244,7 +244,7 @@ export function SecurityModelPage({ user }: { user?: User | null }) {
           <div className="articleMetaLinks">
             <a href="/docs#docs-policy">{tr("Permission model", "权限模型")} →</a>
             <a href="/docs#docs-data">{tr("Data handling", "数据处理")} →</a>
-            <a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md">SECURITY.md ↗</a>
+            <a href="/docs/security-policy">{tr("Security policy", "安全策略")} →</a>
           </div>
         </header>
 
@@ -401,7 +401,7 @@ export function SecurityModelPage({ user }: { user?: User | null }) {
               <div className="articleEndLinks">
                 <a href="/docs">{tr("Documentation", "文档")} →</a>
                 <a href="/privacy">{tr("Privacy policy", "隐私政策")} →</a>
-                <a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md">SECURITY.md ↗</a>
+                <a href="/docs/security-policy">{tr("Security policy", "安全策略")} →</a>
               </div>
             </section>
           </article>

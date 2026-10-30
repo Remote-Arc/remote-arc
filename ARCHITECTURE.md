@@ -360,6 +360,9 @@ Playwright site tests use `PLAYWRIGHT_CHANNEL=chrome pnpm exec playwright test`.
   `packages/execution-core/execution/testdata`.
 - **Preview builds:** `VITE_UI_PREVIEW` builds use simulated data. Production
   code paths must not contain preview-only behavior.
+- **Website docs stay on the website.** Do not link to documents on GitHub. Review
+  a document for public reading, then publish it through
+  `packages/docs/src/reference-docs.ts`.
 - **Copy and secrets:**
   - Public copy and docs must not describe internal costs, margins, provider
     terms, secret names or abuse thresholds beyond the published limits.

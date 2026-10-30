@@ -8,7 +8,6 @@ import { BrowserModes } from "./browser-modes.js";
 import "./public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
-const engineering = "https://github.com/Remote-Arc/remote-arc/blob/master/docs/";
 
 export const publicToolGroups = Object.entries(TOOL_GROUPS).map(([id,copy])=>({...copy,scope:[...new Set(toolIndex.remote.filter(tool=>tool.group===id).flatMap(tool=>tool.scopes))].join(" · "),tools:toolIndex.remote.filter(tool=>tool.group===id).map(tool=>tool.name)})).filter(group=>group.tools.length);
 const toolCount=toolIndex.remote.length;
@@ -99,7 +98,7 @@ export function Documentation({ sectionIds, title, description }: { sectionIds?:
           <div className="articleFlow"><code>AI / Plugin</code><span>→</span><code>OAuth · MCP</code><span>→</span><code>Cloudflare Worker</code><span>→</span><code>Durable Object</code><span>→</span><code>outbound WSS</code><span>→</span><code>{tr("Local agent", "本地 Agent")}</code></div>
           <p>{tr("The Worker authenticates the account and client, checks policy and selects the device. Per-user Durable Objects route live requests over the device's outbound WebSocket. D1 stores accounts, authorization, policies and durable task progress. Commands and file operations execute on the paired computer using its installed software.", "Worker 认证账户与客户端、检查策略并选择设备。每用户 Durable Object 通过设备主动建立的出站 WebSocket 路由实时请求；D1 保存账户、授权、策略和持久任务进度。命令和文件操作在已配对电脑上执行，使用本机已经安装的软件。")}</p>
           <p>{tr("No public inbound port, router forwarding or VPN is required. Persistence is handled by the task scheduler and database; the device connection provides execution when the computer is available.", "无需公网入站端口、路由器映射或 VPN。任务调度器和数据库负责持久化，设备连接在电脑可用时提供真实执行。")}</p>
-          <div className="articleMetaLinks"><a href={engineering + "system-architecture.en.md"}>{tr("Engineering reference (English)", "英文工程参考")} ↗</a><a href={engineering + "system-architecture.md"}>{tr("Chinese reference", "中文工程参考")} ↗</a></div>
+          <div className="articleMetaLinks"><a href={localizedWebsiteHref("/docs/engineering-architecture", locale)}>{tr("Engineering reference", "工程参考")} →</a></div>
         </section>
         <ArchitectureDeepDive />
         <section id="docs-policy">
@@ -164,7 +163,7 @@ export function Documentation({ sectionIds, title, description }: { sectionIds?:
           <p>{tr("Sandbox isolation would place commands in an OS-enforced environment with restricted files, processes, credentials and network access. Remote Arc currently executes as the local OS user. Tool permissions, workspace paths and Safety Guard reduce reach and mistakes, but do not create an OS sandbox. A shell can reference paths beyond cwd and use the local user's network access.", "沙箱隔离是把命令放进由 OS 强制约束的环境，限制文件、进程、凭证和网络访问。Remote Arc 当前以本机 OS 用户身份执行。工具权限、工作区路径和 Safety Guard 可以缩小能力与减少误操作，但不构成 OS 沙箱；Shell 仍能引用 cwd 之外的路径并使用本机用户的网络权限。")}</p>
           <p>{tr("An AI client's own sandbox protects its execution environment; it does not automatically contain commands sent through MCP to your computer. For constrained file-only work, keep terminal disabled. For stronger isolation now, pair a dedicated restricted OS account or an isolated machine you manage. A container or VM requires its own correctly configured boundary.", "AI 客户端自身的沙箱保护的是它的运行环境，不会自动隔离通过 MCP 发到你电脑上的命令。仅需受限文件操作时应关闭终端。现阶段若需要更强隔离，可以配对受限的独立 OS 账户或你管理的隔离设备；容器或虚拟机仍需要正确配置自身边界。")}</p>
           <p>{tr("A selectable isolated execution profile is a future design, not a working Dashboard feature. Native access remains useful for your existing projects and tools. The engineering decision explains when isolation is appropriate and what must be verified before adding an isolation switch.", "可选隔离执行配置属于未来设计，当前 Dashboard 没有已实现的沙箱功能。本机访问仍适合已有项目与工具链；技术决策文档说明哪些场景需要隔离，以及增加开关前必须验证的边界。")}</p>
-          <a href={engineering + "execution-isolation.md"}>{tr("Isolation design decision", "隔离技术决策")} ↗</a>
+          <a href={localizedWebsiteHref("/docs/execution-isolation", locale)}>{tr("Isolation design decision", "隔离技术决策")} →</a>
         </section>
         <section id="docs-tools"><h2>{tr("Public MCP tools", "公开 MCP 工具")}</h2><ToolReference /></section>
         <section id="docs-data">

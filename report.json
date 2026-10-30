@@ -2,17 +2,17 @@
   "version": 1,
   "repository": "Remote-Arc/remote-arc",
   "source": {
-    "runId": 41050210281,
-    "sha": "49e92104006b9f8495c071fb321f81283e22248a",
-    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/41050210281",
-    "measuredAt": "2026-10-30T11:59:32Z"
+    "runId": 41052221550,
+    "sha": "add4436b2dc8ebd1e4f906837cbb8236177d361b",
+    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/41052221550",
+    "measuredAt": "2026-10-30T12:11:39Z"
   },
   "scope": "Production TypeScript/TSX and Linux Go module statements; Apps/Relay are overlapping breakouts.",
   "target": 90,
   "overall": {
-    "covered": 32827,
-    "total": 57848,
-    "pct": 56.75
+    "covered": 32903,
+    "total": 57924,
+    "pct": 56.8
   },
   "scopes": {
     "apps": {
@@ -39,14 +39,14 @@
     },
     "typescript": {
       "statements": {
-        "covered": 25102,
-        "total": 48430,
-        "pct": 51.83
+        "covered": 25176,
+        "total": 48506,
+        "pct": 51.9
       },
       "branches": {
-        "covered": 9642,
-        "total": 11907,
-        "pct": 80.98
+        "covered": 9650,
+        "total": 11915,
+        "pct": 80.99
       },
       "functions": {
         "covered": 1035,
@@ -54,16 +54,16 @@
         "pct": 76.5
       },
       "lines": {
-        "covered": 25102,
-        "total": 48430,
-        "pct": 51.83
+        "covered": 25176,
+        "total": 48506,
+        "pct": 51.9
       }
     },
     "relay": {
       "statements": {
         "covered": 17183,
-        "total": 26109,
-        "pct": 65.81
+        "total": 26050,
+        "pct": 65.96
       },
       "branches": {
         "covered": 8035,
@@ -77,15 +77,15 @@
       },
       "lines": {
         "covered": 17183,
-        "total": 26109,
-        "pct": 65.81
+        "total": 26050,
+        "pct": 65.96
       }
     },
     "agent": {
       "statements": {
-        "covered": 5691,
+        "covered": 5693,
         "total": 7237,
-        "pct": 78.64
+        "pct": 78.67
       }
     },
     "core": {

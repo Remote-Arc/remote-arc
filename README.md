@@ -12,11 +12,20 @@ Arc is your hosted AI teammate. Connect brings the same authorized Apps and devi
 
 <sub>Source available for transparency and security review under a [proprietary license](./LICENSE). Not open-source licensed.</sub>
 
-[![CI](https://github.com/Remote-Arc/remote-arc/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Remote-Arc/remote-arc/actions/workflows/ci.yml)
-[![Measured test coverage](https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/coverage.svg)](https://github.com/Remote-Arc/remote-arc/tree/coverage-badges)
-[![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
+[![CI](https://github.com/Remote-Arc/remote-arc/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Remote-Arc/remote-arc/actions/workflows/ci.yml) [![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
 
-<sub>Coverage measures production TypeScript/TSX and Linux Go statements. The target is ≥90%; the badge shows the latest validated measurement, with [scope and source details](./docs/test-coverage.md).</sub>
+<p>
+  <sub><b>Measured test coverage</b></sub><br />
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/coverage.svg" alt="Combined TS + Go statement coverage" /></a>
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/typescript.svg" alt="TypeScript / TSX statement coverage" /></a>
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/relay.svg" alt="Relay statement coverage" /></a>
+  <br />
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/apps.svg" alt="Apps core statement coverage" /></a>
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/agent.svg" alt="Go Agent statement coverage" /></a>
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/core.svg" alt="Go Execution Core statement coverage" /></a>
+</p>
+
+<sub>Latest validated statement coverage; target ≥90%. Apps and Relay overlap TS/TSX. [Scope, other metrics and source](./docs/test-coverage.md).</sub>
 
 </div>
 
@@ -69,6 +78,21 @@ The run status records whether execution ended. Verify the answer and its eviden
 - **Operating controls:** Credits, funding reservations, separate paid/sponsored budgets, billing records and admin usage visibility.
 
 ## Architecture
+
+<p>
+  <sub><b>Runtime &amp; protocol</b></sub><br />
+  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-00ADD8?logo=go&amp;logoColor=white" alt="Go" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&amp;logoColor=white" alt="Node.js" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&amp;logoColor=white" alt="TypeScript" /></a>
+  <a href="https://modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-000000?logo=modelcontextprotocol&amp;logoColor=white" alt="Model Context Protocol" /></a>
+  <br />
+  <sub><b>UI &amp; cloud</b></sub><br />
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-20232A?logo=react&amp;logoColor=61DAFB" alt="React" /></a>
+  <a href="https://vite.dev/"><img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&amp;logoColor=white" alt="Vite" /></a>
+  <a href="https://developers.cloudflare.com/workers/"><img src="https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&amp;logoColor=white" alt="Cloudflare Workers" /></a>
+  <a href="https://developers.cloudflare.com/durable-objects/"><img src="https://img.shields.io/badge/Durable_Objects-F38020?logo=cloudflare&amp;logoColor=white" alt="Cloudflare Durable Objects" /></a>
+  <a href="https://developers.cloudflare.com/d1/"><img src="https://img.shields.io/badge/D1-F38020?logo=cloudflare&amp;logoColor=white" alt="Cloudflare D1" /></a>
+</p>
 
 ```mermaid
 flowchart TB

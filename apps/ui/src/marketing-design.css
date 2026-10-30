@@ -16,7 +16,8 @@
 :root[data-theme] .publicPage .publicNav{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:88px;padding:20px 0;border-bottom:1px solid var(--site-line);background:transparent;z-index:60;margin:0}
 :root[data-theme] .publicPage .publicNav .brand{font-size:19px;gap:8px;flex:none}.publicNav .brandLogo{width:32px;height:32px}
 :root[data-theme] .publicPage .publicNavLinks{display:flex;gap:26px;align-items:center;margin:0}
-:root[data-theme] .publicPage :is(.publicNavLinks>a,.publicNavMenuTrigger){color:var(--site-muted)!important;font-size:12px;font-weight:450}
+/* Links and menu buttons share a line box and hit area so their text stays level. */
+:root[data-theme] .publicPage :is(.publicNavLinks>a,.publicNavMenuTrigger){display:inline-flex;align-items:center;min-height:32px;line-height:1.5;color:var(--site-muted)!important;font-size:12px;font-weight:450}
 :root[data-theme] .publicPage :is(.publicNavLinks>a,.publicNavMenuTrigger):hover{color:var(--site-ink)!important}
 :root[data-theme] .publicPage .publicNavMenuTrigger .publicNavChevron{color:inherit!important;width:12px;height:12px}
 :root[data-theme] .publicPage .publicNavActions{display:flex;align-items:center;gap:10px}

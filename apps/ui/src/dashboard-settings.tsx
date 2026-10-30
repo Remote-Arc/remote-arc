@@ -65,13 +65,13 @@ export function DashboardSettings({
     { id: "account", icon: "user", title: tr("Profile", "个人资料") },
     { id: "appearance", icon: "appearance", title: tr("Appearance", "外观与语言") },
     { id: "memory", icon: "user", title: tr("Memory", "记忆") },
-    ...(accountId?[{id:"teammates" as const,icon:"team" as const,title:tr("Teammates","队友")}]:[]),
+    ...(accountId?[{id:"teammates" as const,icon:"team" as const,title:tr("Agents","智能体")}]:[]),
     { id: "workspaces", icon: "team", title: tr("Workspaces", "工作空间") },
     { id: "connections", icon: "link", title: tr("Connections & security", "连接与安全") },
     { id: "billing", icon: "billing", title: tr("Plan & usage", "套餐与用量") },
   ];
   const titles = {
-    teammates:{eyebrow:tr("OPTIONAL SETTINGS","可选设置"),title:tr("Teammate profiles","队友资料"),detail:tr("Arc Chat is where you organize work. Manage saved identities and access here.","工作统一在 Arc Chat 组织，这里只维护常驻资料和访问设置。")},
+    teammates:{eyebrow:tr("OPTIONAL SETTINGS","可选设置"),title:tr("Agent profiles","智能体资料"),detail:tr("Arc Chat is where you organize work. Manage saved identities and access here.","工作统一在 Arc Chat 组织，这里只维护常驻资料和访问设置。")},
     account: { eyebrow: tr("PERSONAL SETTINGS", "个人设置"), title: tr("Your profile", "个人资料"), detail: tr("The account you use across Arc and Connect.", "在 Arc 与 Connect 中使用同一个账号。") },
     appearance: {eyebrow:tr("PERSONAL SETTINGS","个人设置"),title:tr("Make it yours","调整为你喜欢的样子"),detail:tr("Choose how your workspace looks and the language you use.","选择工作空间的外观与使用语言。")},
     memory: {eyebrow:tr("PERSONAL CONTEXT","个人背景"),title:tr("Memory","记忆"),detail:tr("Useful context that follows you across conversations and models.","让有用的背景信息随你跨越对话与模型。")},
@@ -113,7 +113,7 @@ export function DashboardSettings({
         <p>{active.detail}</p>
       </header>
 
-      {section === "teammates"&&accountId&&<Suspense fallback={<p>{tr("Loading teammates…","正在读取队友…")}</p>}><TeammateSettings accountId={accountId} tr={tr}/></Suspense>}
+      {section === "teammates"&&accountId&&<Suspense fallback={<p>{tr("Loading agents…","正在读取智能体…")}</p>}><TeammateSettings accountId={accountId} tr={tr}/></Suspense>}
       {section === "account" && <div className="raSettingsSections">
         <ArcAccountPlan onManage={()=>selectSection('billing')}/>
         <section className="raSettingsSurface raSettingsIdentity">

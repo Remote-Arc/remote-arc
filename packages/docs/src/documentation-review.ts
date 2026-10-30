@@ -111,8 +111,8 @@ const slack: DocTopic = {
         "Bot 对话与 Slack 应用连接",
       ),
       text: copy(
-        "The bot is an entry point for talking to your hosted Arc agent. The Slack App connection separately authorizes supported operations such as searching or posting messages. Installing a bot does not connect every employee's personal apps or computers. Cloud App work needs no paired computer; local files or commands still require an online device with the relevant permissions.",
-        "Bot 是与托管 Arc 对话的入口；Slack 应用连接则单独授权搜索消息、发送消息等支持的操作。安装 Bot 不会把所有员工的个人应用或电脑自动接入。云端应用工作无需配对电脑；操作本地文件或命令仍需在线且已授权的设备。",
+        "The bot is an entry point for talking to your hosted Arc agent. The Slack App connection separately authorizes supported operations such as searching or posting messages. Installing a bot does not connect every agent's personal apps or computers. Cloud App work needs no paired computer; local files or commands still require an online device with the relevant permissions.",
+        "Bot 是与托管 Arc 对话的入口；Slack 应用连接则单独授权搜索消息、发送消息等支持的操作。安装 Bot 不会把所有智能体的个人应用或电脑自动接入。云端应用工作无需配对电脑；操作本地文件或命令仍需在线且已授权的设备。",
       ),
     },
     {
@@ -232,8 +232,8 @@ export function reviewedDocTopics(topics: DocTopic[]): DocTopic[] {
         {
           heading: copy("AI teams Beta and Slack", "AI 团队 Beta 与 Slack"),
           text: copy(
-            "Open AI teams in Arc to create employees with a role, model and scoped access, then use direct or group conversations. You can also ask Arc to prepare an employee profile and review it before confirming. Creating a profile does not start work. Use the Remote Arc bot as another chat entry point in Slack; each Slack user links their own Arc account and separate threads keep separate task contexts.",
-            "在 Arc 中打开 AI 团队，设置员工职责、模型与访问范围，再使用单聊或群聊。也可以让 Arc 准备员工资料，审阅后确认；创建资料不会自动开始工作。Slack 的 Remote Arc Bot 是另一个对话入口，每位 Slack 用户分别关联自己的 Arc 账号，不同线程保留各自任务上下文。",
+            "Open AI teams in Arc to create agents with a role, model and scoped access, then use direct or group conversations. You can also ask Arc to prepare an agent profile and review it before confirming. Creating a profile does not start work. Use the Remote Arc bot as another chat entry point in Slack; each Slack user links their own Arc account and separate threads keep separate task contexts.",
+            "在 Arc 中打开 AI 团队，设置智能体职责、模型与访问范围，再使用单聊或群聊。也可以让 Arc 准备智能体资料，审阅后确认；创建资料不会自动开始工作。Slack 的 Remote Arc Bot 是另一个对话入口，每位 Slack 用户分别关联自己的 Arc 账号，不同线程保留各自任务上下文。",
           ),
         },
       ];

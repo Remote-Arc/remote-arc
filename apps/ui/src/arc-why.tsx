@@ -8,7 +8,7 @@ export function ArcWhy({ tr, connectHref, arcHref }: ArcWhyProps) {
   const reasons = [
     { title: tr("Manage your device fleet.", "集中管理你的设备集群。"), detail: tr("Bring Windows, macOS and Linux into one device view. Work with the projects, installed tools and environments already on your computers.", "把 Windows、macOS 和 Linux 放进同一个设备视图，沿用电脑里已有的项目、软件和运行环境。"), status: tr("CONNECT · AVAILABLE TODAY", "CONNECT · 现已可用") },
     { title: tr("Set the rules on each machine.", "每台电脑，都有自己的执行边界。"), detail: tr("Choose tools and file-write locations per device, review activity, and pause or revoke access. Terminal access is a separate permission.", "按设备选择工具、限定文件写入目录、审阅操作记录，并随时暂停或撤销访问。终端权限单独授予。"), status: tr("CONNECT · AVAILABLE TODAY", "CONNECT · 现已可用") },
-    { title: tr("Build teammates around repeatable work.", "围绕长期工作，创建你的 AI 队友。"), detail: tr("Use Arc’s workspace for conversations, Skills, tasks and scheduled routines, with visible results and model usage. Start with Auto in your trial, then choose Plus or Pro for more Credits and configured premium models.", "在 Arc 工作空间中使用对话、Skills、任务和定时 Routine，查看执行结果与模型用量。先用试用期的 Auto，再按需选择 Plus 或 Pro，获得更多 Credits 与已配置的高级模型。"), status: tr("ARC · AVAILABLE TODAY", "ARC · 现已可用") },
+    { title: tr("Build agents around repeatable work.", "围绕长期工作，创建你的 AI 智能体。"), detail: tr("Use Arc’s workspace for conversations, Skills, tasks and scheduled routines, with visible results and model usage. Start with Auto in your trial, then choose Plus or Pro for more Credits and configured premium models.", "在 Arc 工作空间中使用对话、Skills、任务和定时 Routine，查看执行结果与模型用量。先用试用期的 Auto，再按需选择 Plus 或 Pro，获得更多 Credits 与已配置的高级模型。"), status: tr("ARC · AVAILABLE TODAY", "ARC · 现已可用") },
   ];
   const devices = [
     { brand: "windows", name: "Windows", task: tr("Run the existing test suite", "运行项目已有的测试"), folder: "~/projects/release" },
@@ -19,7 +19,7 @@ export function ArcWhy({ tr, connectHref, arcHref }: ArcWhyProps) {
     <header className="arcWhyIntro">
       <span className="arcV3Eyebrow">{tr("WHY ARC", "为什么选择 ARC")}</span>
       <h2 id="arcWhyTitle">{tr("Already use ChatGPT? Here’s where Arc fits.", "ChatGPT 已经很好用，为什么还需要 Arc？")}</h2>
-      <p>{tr("ChatGPT already connects apps such as GitHub and email, uses tools and carries out multi-step work. Keep using it for the work it handles well. Arc gives people a dedicated place to manage their own device fleet and AI teammates.", "ChatGPT 已经能连接 GitHub、邮箱，使用工具并完成多步骤工作。如果它已经能完成你的任务，继续用它就好。Arc 面向的是希望把自己的设备集群和 AI 队友，组织成专门工作环境的人。")}</p>
+      <p>{tr("ChatGPT already connects apps such as GitHub and email, uses tools and carries out multi-step work. Keep using it for the work it handles well. Arc gives people a dedicated place to manage their own device fleet and AI agents.", "ChatGPT 已经能连接 GitHub、邮箱，使用工具并完成多步骤工作。如果它已经能完成你的任务，继续用它就好。Arc 面向的是希望把自己的设备集群和 AI 智能体，组织成专门工作环境的人。")}</p>
       <strong className="arcWhyThesis">{tr("Your machines. Your working rules. Your choice of AI.", "设备归你，规则由你设定，AI 由你选择。")}</strong>
     </header>
     <div className="arcWhyFocus">

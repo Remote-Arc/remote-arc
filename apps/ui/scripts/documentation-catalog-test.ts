@@ -90,7 +90,7 @@ const architecture = DOC_TOPICS.find((topic) => topic.slug === "architecture")!
   .join(" ");
 assert(
   !architecture.includes(
-    "Autonomous groups of custom AI teammates remain a future direction",
+    "Autonomous groups of custom AI agents remain a future direction",
   ),
 );
 assert(architecture.includes("AI teams"));

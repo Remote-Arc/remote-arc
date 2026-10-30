@@ -103,16 +103,20 @@ func (s *session) updateAttention(ctx context.Context, blockers []any) {
 	if fresh {
 		s.cp.AttentionID, s.cp.AttentionSince, s.cp.AttentionKind = randomHex(16), stamp(s.m.now()), kind
 		s.cp.AttentionReminded = false
-		s.m.mu.Lock()
-		mode := s.m.attentionMode
-		s.m.mu.Unlock()
-		if mode != "notify_only" && s.hasWindow() {
-			if e := s.setVisible(ctx, true); e == nil {
-				s.shownForUser = s.cp.Headless
-			} else {
-				s.cp.NeedsUser += " The window could not be raised; open it on the device."
-			}
+	}
+	s.m.mu.Lock()
+	mode := s.m.attentionMode
+	s.m.mu.Unlock()
+	// Retry an unsuccessful or interrupted handoff. Do not repeatedly focus a
+	// window the user can already see, or duplicate the attention notification.
+	if mode != "notify_only" && s.hasWindow() && (fresh || !s.windowIsVisible(ctx)) {
+		if e := s.setVisible(ctx, true); e == nil {
+			s.shownForUser = s.shownForUser || s.cp.Headless
+		} else {
+			s.cp.NeedsUser += " The window could not be raised. Retry browser_runner_start with the same task_id and headless=false on the device with the Agent."
 		}
+	}
+	if fresh {
 		if s.cp.Browser != browserYourChrome && !s.hasWindow() {
 			s.cp.NeedsUser += " This device has no display; resume on a device with a display to complete it."
 		}

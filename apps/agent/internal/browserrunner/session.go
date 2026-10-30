@@ -373,10 +373,18 @@ func (s *session) ensureLive(ctx context.Context) error {
 	// still behave as in a focused window.
 	_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
 	if s.hasWindow() {
-		// Out of sight unless the user asked to see it. A browser that
-		// restored an old window position is moved back off screen too.
-		// Best effort: where the window cannot be moved, the task still runs.
-		_ = s.setVisible(ctx, !s.cp.Headless)
+		// A resumed user handoff must remain reachable after an Agent
+		// restart, even when the task's ordinary preference is hidden.
+		s.m.mu.Lock()
+		autoHandoff := s.cp.State == StateNeedsUser && s.m.attentionMode != "notify_only"
+		s.m.mu.Unlock()
+		if e := s.setVisible(ctx, !s.cp.Headless || autoHandoff); e != nil {
+			if !s.cp.Headless {
+				return fmt.Errorf("browser_runner could not show the task window: %w", e)
+			}
+		} else if autoHandoff && s.cp.Headless {
+			s.shownForUser = true
+		}
 	}
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
 		// Reopening loads the page fresh: whatever was typed, chosen or

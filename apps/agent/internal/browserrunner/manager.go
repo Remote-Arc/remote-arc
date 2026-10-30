@@ -520,7 +520,7 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 		if chosen && headless && s.cp.State == StateNeedsUser {
 			return nil, errors.New("RUNNER_USER_ACTION_PENDING: finish the user handoff before hiding the task window.")
 		}
-		if chosen && s.cp.Headless != headless {
+		if chosen && (s.cp.Headless != headless || !headless) {
 			switch {
 			case s.live() && s.hasWindow():
 				// Shown or hidden in place: the page and what was entered stay.
@@ -567,6 +567,8 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 		switch {
 		case !s.hasWindow():
 			out["window"] = "none: this computer has no display, so the browser runs without a window"
+		case s.cp.State == StateNeedsUser && s.shownForUser:
+			out["window"] = "on screen: waiting for the user to finish sign-in or verification"
 		case s.cp.Headless:
 			out["window"] = "hidden: the task runs out of sight and never takes the user's focus"
 		default:

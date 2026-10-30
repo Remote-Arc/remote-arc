@@ -312,8 +312,8 @@ export const DOC_TOPICS: DocTopic[] = [...reviewedDocTopics(platformDocTopics([
     "slug": "arc",
     "group": "understand",
     "title": {
-      "en": "Arc and AI teammates",
-      "zh": "Arc 与 AI 队友"
+      "en": "Arc and AI agents",
+      "zh": "Arc 与 AI 智能体"
     },
     "description": {
       "en": "Use Arc, your hosted personal agent for apps, computers and persistent work.",

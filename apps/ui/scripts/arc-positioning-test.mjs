@@ -47,13 +47,13 @@ for (const locale of ["en", "zh"]) {
   const focusList = html.match(/<ol\b[^>]*>([\s\S]*?)<\/ol>/);
   assert.ok(focusList, "Present the three focus pillars as a readable list");
   const pillars = [...focusList[1].matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/g)].map(([, content]) => text(content));
-  assert.equal(pillars.length, 3, "Explain device fleet, per-device rules and AI teammates");
+  assert.equal(pillars.length, 3, "Explain device fleet, per-device rules and AI agents");
   for (const pillar of pillars.slice(0, 2)) assert.match(pillar, locale === "zh" ? /现已可用/ : /available today/i);
   assert.match(pillars[2], locale === "zh" ? /现已可用/ : /available today/i);
   const body = text(html);
   assert.match(body, /Windows/i, "Show a concrete computer in the multi-device example");
   assert.match(body, /Mac(?:Book|OS)?/i, "Show cross-device work in the example");
-  assert.match(body, locale === "zh" ? /团队|队友|成员/ : /teammate|team/i, "Explain the AI teammate benefit");
+  assert.match(body, locale === "zh" ? /团队|智能体|成员/ : /agent|team/i, "Explain the AI agent benefit");
   const links = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)].map(([, props, content]) => ({ ...attributes(props), text: text(content) }));
   for (const href of [connectHref, arcHref]) {
     const link = links.find(item => item.href === href);

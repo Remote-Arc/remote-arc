@@ -42,11 +42,11 @@ Arc is your hosted AI teammate. Connect brings the same authorized Apps and devi
 | Product | Start here | What it does |
 | --- | --- | --- |
 | **Arc** | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines. |
-| **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts and paired devices from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
+| **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts, paired devices and your browser from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
 
 Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
 
-Arc offers an explicitly activated 14-day Auto trial and Plus / Pro subscriptions. Users do not supply a model API key. Hosted model use has Credits and run limits; available models and plan details are shown in the workspace. Connect calls and third-party App charges have their own allowances. Preview environments use simulated data.
+Every plan includes every Connect tool. **Free** has a monthly Connect call allowance and up to 2 computers. **Connect Unlimited** removes the call and computer limits for people who bring their own AI client; it includes no hosted models. **Plus** and **Pro** add Arc-hosted AI with monthly Credits. Every account can activate a one-time 14-day Arc trial. Users never supply a model API key. Current prices and allowances are on the [pricing page](https://remotearc.app/pricing); third-party App charges are separate. Preview environments use simulated data.
 
 ## From a goal to a result
 
@@ -70,12 +70,14 @@ The run status records whether execution ended. Verify the answer and its eviden
 - **Connected Apps:** account-owned, typed provider operations with live scope checks, stable request identities and recorded outcomes.
 - **Tasks and routines:** saved goals, schedules, leases, bounded hosted runs and result history. Connect also supports deterministic background commands and checks.
 - **Verified results:** optional exact account/resource contracts, independent result checks and source-derived execution receipts. See the [user guide](https://remotearc.app/docs/trust) and [feature map](./docs/feature-map/README.md).
-- **Skills:** reusable cloud instructions and imported SKILL.md references. A skill does not install its required engine, scripts or dependencies.
+- **Browser work:** the Chrome Companion shares tabs and allowed sites from the user's own browser; the task browser runs site-scoped page work with checkpoints, user handoff and submission receipts.
+- **Skills:** reusable cloud instructions and imported SKILL.md references, such as Safe Cleanup for disk-space recovery. A skill does not install its required engine, scripts or dependencies.
+- **AI Teams (beta):** configurable employees with their own model, instructions and scoped resources, in direct or group conversations with visible handoffs.
 - **Context and memory:** relevant prior observations and learned IDs within a chat, plus bounded encrypted personal notes and work summaries users can inspect and delete.
 - **Device fleet:** filter by ownership, tools, workspace and availability before balancing fresh capacity. Projects are not moved implicitly.
 - **Local control:** read-oriented initial setup, explicit file/terminal/browser permissions, trusted roots, sensitive-path checks and supported Local Undo.
 - **Outbound connectivity:** paired Windows, macOS and Linux computers connect outward; no public inbound port or VPN is required.
-- **Operating controls:** Credits, funding reservations, separate paid/sponsored budgets, billing records and admin usage visibility.
+- **Operating controls:** versioned plan configuration, Stripe subscriptions and receipts, Credits, funding reservations, separate paid/sponsored budgets and admin usage visibility.
 
 ## Architecture
 
@@ -112,7 +114,7 @@ flowchart TB
 
 The model is the reasoning component; Remote Arc owns the execution and continuity layer. Provider data, skill text, files and memory remain untrusted observations. Unknown external effects are retained for inspection and are not blindly repeated. A completed run is not a universal semantic proof of success; inspect the returned evidence.
 
-Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. Configurable employees, dedicated direct/group conversations and scoped teammate handoffs are implemented in the AI Teams development branch and remain unreleased; see the [feature map](./docs/feature-map/ai-teams.md). Cross-run persistent goal continuation and full root-outcome acceptance remain incomplete; see the [implementation/design status](./docs/ai-teams-and-persistent-work.md). Ordinary Connect cannot wake an arbitrary external chat.
+Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. AI Teams (configurable employees, direct/group conversations and scoped teammate handoffs) is a beta release candidate at `/dashboard/agent/teams`, with its production rollout tracked separately; see the [feature map](./docs/feature-map/ai-teams.md). Cross-run persistent goal continuation and full root-outcome acceptance remain incomplete; see the [implementation/design status](./docs/ai-teams-and-persistent-work.md). Ordinary Connect cannot wake an arbitrary external chat.
 
 ## Quick start
 
@@ -172,16 +174,21 @@ Pairing a computer and authorizing an AI client are separate, revocable relation
 ```text
 remote-arc/
 ├── apps/
-│   ├── agent/            Native Go device Agent: pairing, relay, recovery, journals
-│   ├── agent-ts/         Explicit TypeScript runtime fallback
-│   ├── ui/               React Arc / Connect / Admin, website and documentation
-│   ├── relay/            Cloudflare Worker, Arc runtime, Apps, tasks, billing, OAuth and MCP
-│   └── mcp/              TS compatibility adapter and native MCP integration tests
-└── packages/
-    ├── execution-core/   Independent Go module: files, processes, policy and Undo
-    ├── execution-core-ts/ Retained TypeScript core for --ts and parity testing
-    ├── cli/              npm installer/launcher; default Go, explicit --ts
-    └── protocol/         Shared wire types for Relay, Dashboard and TS compatibility
+│   ├── agent/             Native Go device Agent: pairing, relay, recovery, journals
+│   ├── agent-ts/          Explicit TypeScript runtime fallback
+│   ├── browser-extension/ Chrome Companion: shared tabs and allowed sites
+│   ├── ui/                React Arc / Connect / Admin, website, checkout and documentation
+│   ├── relay/             Cloudflare Worker: Arc runtime, Apps, tasks, billing, OAuth, MCP and D1 migrations
+│   └── mcp/               TS compatibility adapter and native MCP integration tests
+├── packages/
+│   ├── execution-core/    Independent Go module: files, processes, policy, Safety Guard and Undo
+│   ├── execution-core-ts/ Retained TypeScript core for --ts and parity testing
+│   ├── cli/               npm installer/launcher; default Go, explicit --ts
+│   ├── protocol/          Shared wire types and plan defaults for Relay, Dashboard and TS compatibility
+│   ├── skills/            Generated Skill catalog and community Skills
+│   └── docs/              Generated documentation and tool index
+├── skills/                Source for first-party Skills (for example safe-cleanup)
+└── tools/saas/            SaaS pricing and unit-economics models
 ```
 
 The Go Agent and Execution Core compile into one executable; extracting the core
@@ -414,14 +421,26 @@ described as an atomic rewrite.
 Terminal execution is available only when the device policy allows
 `start_process`.
 
-Before a terminal command runs, the native execution core blocks a narrow set
-of clearly catastrophic patterns such as:
+Before a terminal command runs, both execution cores (Go and TS, with shared
+test cases) check it. Safety Guard 2.0 judges a delete by where it would
+actually land, not by how the command is written:
 
-- recursive deletion of root/home paths
-- disk formatting
-- raw-disk overwrite
-- fork bombs
-- machine shutdown/reboot
+- it tokenizes with the real shell's rules (`cmd.exe`, PowerShell, POSIX `sh`)
+  and follows nested layers such as `cmd /c`, `powershell -EncodedCommand`,
+  `sh -c` and invoked scripts;
+- it tracks `cd`/`Set-Location` and simple assignments, and expands environment
+  variables, `~`, wildcards and pipeline sources from the command's real `cwd`;
+- it refuses deletes that land on drive, volume or share roots, home and personal
+  folders, user-profile roots, system folders, credential stores or the
+  `.remotearc` Undo store;
+- it refuses delete targets it cannot resolve unambiguously, such as unset
+  variables, command substitution or unbalanced quotes;
+- narrow cleanup stays allowed, for example `node_modules`, temp folders and
+  caches.
+
+Disk formatting, raw-disk overwrite, fork bombs and machine shutdown/reboot
+remain blocked. For bulk disk-space recovery, use the `safe-cleanup` Skill.
+`REMOTEARC_ALLOW_DESTRUCTIVE=1` disables the guard locally.
 
 The Safety Guard is defense in depth, not a complete OS sandbox.
 
@@ -436,7 +455,9 @@ Remote Arc separates four identities:
 
 ### Dashboard
 
-Users sign in with Google. The Worker creates a secure HTTP-only session.
+Users sign in with Google or a passwordless email code; both share one account
+and session model. The Worker creates a secure HTTP-only session, and
+cookie-authenticated mutations must come from the first-party dashboard origin.
 
 ### MCP client
 
@@ -483,9 +504,11 @@ Remote Arc does not require inbound access to the computer.
 Production:
 
 ```text
-Website: https://remotearc.app
-MCP:     https://mcp.remotearc.app/mcp
-Health:  https://mcp.remotearc.app/health
+Website:   https://remotearc.app
+Dashboard: https://agent.remotearc.app
+Admin:     https://admin.remotearc.app
+MCP:       https://mcp.remotearc.app/mcp
+Health:    https://mcp.remotearc.app/health
 ```
 
 The hosted architecture currently uses:
@@ -495,63 +518,60 @@ The hosted architecture currently uses:
 - per-user Durable Objects
 - D1 for control-plane state
 - outbound device WebSockets
+- Stripe for subscriptions and payments
 
 Static JS/CSS/assets bypass the Worker runtime so normal website traffic does
 not unnecessarily consume the Workers request quota.
 
-Production deploys are intentionally single-path: a successful CI run on
-`master` triggers `.github/workflows/deploy-cloudflare.yml`, which is the normal
-way production is updated. Local `pnpm deploy:relay` is blocked to prevent a
-second Wrangler deploy racing the CI deployment. For an emergency-only manual
-production deploy, use:
+**Merging does not deploy production.** Production is an explicit promotion: the
+owner runs the manual **Production Release - D1 + Relay + Website** workflow
+(`.github/workflows/deploy-cloudflare.yml`) on `master`, behind the `production`
+environment. It runs these steps:
+
+1. Confirms the exact `master` SHA has a successful CI run.
+2. Takes a verified D1 backup.
+3. Applies pending migrations.
+4. Deploys the Relay Worker and website assets.
+5. Runs smoke checks.
+6. Optionally activates live Stripe or hosted models.
+
+A newer `master` commit stops an older release. npm and Go Agent publishing are
+separate release steps.
+
+Local `pnpm deploy:relay` is blocked so a second Wrangler deploy cannot race the
+release workflow. For an emergency-only manual production deploy, use:
 
 ```bash
 REMOTEARC_MANUAL_PROD_DEPLOY=1 pnpm deploy:relay
 ```
 
 Every allowed deploy writes the verified Git SHA into the Cloudflare version tag
-and message so production history can be traced back to its source commit. GitHub
-Actions also verifies `origin/master` immediately before the build and again
-before upload; if a newer master commit exists, the older successful CI run exits
-without deploying.
+and message so production history can be traced back to its source commit.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes 27 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
+Hosted MCP registers 44 tools, available on every plan. Which ones a client sees still depends on deployment switches, OAuth scopes, the selected device's policy and its live capabilities. App operations are grouped behind the three Apps tools and are not counted separately. See the [complete tool inventory](./docs/connect-tool-inventory.md):
 
 ```text
-list_devices
-device_tools
-
-shared_tab_list
-shared_tab_read
-shared_tab_click
-shared_tab_fill
-
-list_directory
-read_file
-read_binary_file
-create_file_resource
-revoke_file_resource
-get_file_info
-list_processes
-start_process
-process_status
-process_output
-stop_process
-write_file
-edit_block
-undo_last_change
-
-create_automation
-list_automations
-get_automation
-manage_automation
+Devices and Fleet  list_devices, device_tools, fleet_dispatch, fleet_sync_workspace
+Files              list_directory, read_file, read_binary_file, get_file_info, write_file,
+                   edit_block, undo_last_change, create_file_resource, revoke_file_resource
+Processes          list_processes, start_process, process_status, process_output,
+                   stop_process, list_agent_sessions
+Tasks              create_automation, list_automations, get_automation, manage_automation
+Agent Goals        create_agent_goal, get_goal_context, submit_goal_decision (experimental)
+Task browser       browser_runner_start, browser_runner_snapshot, browser_runner_act,
+                   browser_runner_wait, browser_runner_confirm, browser_runner_status,
+                   browser_runner_close
+Shared tabs        shared_tab_list, shared_tab_read, shared_tab_open, shared_tab_act,
+                   shared_tab_click, shared_tab_fill
+Apps               list_apps, run_app_read_action, run_app_write_action
+Skills             find_skills, read_skill
 ```
 
 The automation tools create and manage durable deterministic control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Trusted Write Locations, boundary approvals and Sensitive Path Policy checks still apply. Per-device task permissions independently govern background, scheduled and keep-awake behavior.
 
-Adaptive Agent Goal/source-decision work remains an experimental implementation behind a disabled production feature flag. It is intentionally absent from the shipped MCP tool contract because ordinary Chat cannot yet be autonomously woken for fresh reasoning after the creating turn ends. The engineering notes remain in the repository for continued research.
+Agent Goals are experimental. In source mode the external AI submits each decision; hosted mode additionally needs hosted model access and budget. A saved goal does not guarantee that an external chat is woken automatically.
 
 See [the complete system architecture](docs/system-architecture.md),
 [implementation plan](docs/long-running-work-plan.md),
@@ -572,9 +592,9 @@ Before a device call is forwarded, the relay verifies:
 Requirements:
 
 - Node.js 24+ for the TypeScript development tools and SQLite test suite (npm/npx installation: Node.js 20+; native downloads and Homebrew need no Node.js)
-- Go 1.25.5 for native Agent and Execution Core development
-- pnpm 10
-- Cloudflare Wrangler for relay work
+- Go 1.25 (toolchain 1.25.5) for native Agent and Execution Core development
+- pnpm 10.17
+- Cloudflare Wrangler for relay work (installed as a workspace dependency)
 
 Install:
 
@@ -596,8 +616,10 @@ pnpm dev:ui
 pnpm build:cli
 pnpm build:ui
 pnpm test:deploy-policy
-# production deploys run automatically after CI on master
+# production releases run only through the manual Production Release workflow
 ```
+
+Relay suites are split by area, for example `pnpm --filter @remotearc/relay test:stripe`, `test:security` and `test:apps`; `pnpm test:goals` covers durable task and goal continuation.
 
 Run only the native execution-core-ts integration test:
 
@@ -687,7 +709,8 @@ Current protections include:
 - configurable Trusted Write Locations and boundary approvals
 - canonical/symlink-safe filesystem path enforcement
 - atomic rewrite/edit operations
-- local Safety Guard for catastrophic terminal commands
+- Safety Guard 2.0: delete targets resolved before terminal commands run
+- optional background recovery at login
 - no Desktop Commander dependency
 
 Still planned before broader public use:
@@ -695,50 +718,39 @@ Still planned before broader public use:
 - stronger secret redaction in audit metadata
 - more granular command/network policy
 - signed/notarized installers
-- background service / auto-start
-- auto-update
+- automatic Agent updates (today, rerunning the installer or `npx remotelink@latest` upgrades)
 
 ## Roadmap
 
-### Phase 1 - core platform
+### Shipped
 
-- [x] Cloudflare relay
-- [x] D1 identity/device/OAuth model
-- [x] per-user Durable Object routing
-- [x] Google sign-in
-- [x] OAuth 2.1 + PKCE Remote MCP
-- [x] browser-approved device pairing
-- [x] one-command `remotelink` CLI
-- [x] per-device skill management
-- [x] Safe / Developer / Full presets
-- [x] Local Undo
-- [x] targeted Local Undo history UI
-- [x] Sensitive Path Policy
-- [x] Trusted Write Locations + boundary approvals
-- [x] atomic file rewrites
-- [x] Safety Guard
-- [x] native Remote Arc execution core
-- [x] remove Desktop Commander dependency
+- [x] Cloudflare relay, D1 control plane and per-user Durable Object routing
+- [x] Google and passwordless email sign-in; OAuth 2.1 + PKCE Remote MCP
+- [x] native Go Agent and Execution Core, with npm, standalone and Homebrew installs
+- [x] Safe / Developer / Full presets, Local Undo, Sensitive Path Policy, Trusted Write Locations
+- [x] Safety Guard 2.0 and the Safe Cleanup Skill
+- [x] managed background processes and background recovery at login
+- [x] durable Tasks: long tasks, schedules, condition watches and goal loops
+- [x] hosted Arc workspace with Apps, Skills, memory and a 14-day trial
+- [x] Free, Connect Unlimited, Plus and Pro plans, with Stripe checkout including one-tap wallets
+- [x] Chrome Companion shared tabs and the task browser
+- [x] device Fleet dispatch and workspace sync
+- [x] manual, gated production release workflow
 - [x] Windows/macOS/Linux CI
-- [x] production relay deployment
-- [x] publish native-core CLI to npm
 
-### Phase 2 - local security and reliability
+### In progress
 
-- process handles and background jobs
-- streaming command output
-- richer Windows/macOS/Linux process support
-- signed/notarized installers
-- background service / tray/menu-bar agent
-- auto-update
+- AI Teams beta rollout
+- signed macOS app and DMG packaging
+- ChatGPT and Claude connector directory listings
+- experimental Agent Goals and persistent goal continuation
 
-### Phase 3 - public product
+### Next
 
+- signed/notarized installers on every platform and automatic Agent updates
+- finer command/network policy for Full mode
+- stronger audit-metadata redaction and production abuse controls
 - broader multi-user security review
-- improved audit history
-- organization administration
-- public ChatGPT integration/discovery
-- production observability and abuse controls
 
 ## License
 

@@ -7,13 +7,14 @@
  * 90%, without silently excluding command entrypoints.
  */
 import { spawnSync } from "node:child_process";
+import { coverageThresholds } from "./coverage-policy.mjs";
 import { readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const modules = [
-  { name: "Go Agent", dir: "apps/agent", baseline: 70.5, focus: { "internal/localmcp": 90 } },
-  { name: "Execution Core", dir: "packages/execution-core", baseline: 90.0, focus: { protocol: 90 } },
+  { name: "Go Agent", dir: "apps/agent", scope: "agent", focus: { "internal/localmcp": 90 } },
+  { name: "Execution Core", dir: "packages/execution-core", scope: "core", focus: { protocol: 90 } },
 ];
 const root = resolve(import.meta.dirname, "..");
 const strict = process.argv.includes("--target");
@@ -49,7 +50,7 @@ try {
     run("go", ["test", "./...", "-coverprofile=" + profile, "-cover"], cwd);
     const all = summarise(profile);
     console.log(module.name + " statements: " + all.covered + "/" + all.total + " = " + all.percent + "% (target 90%)");
-    const threshold = strict || module.baseline >= 90 ? 90 : module.baseline - 0.6;
+    const threshold = coverageThresholds(module.scope, strict).statements;
     if (all.percent < threshold) failures.push(module.name + " " + all.percent + "% < " + threshold + "%");
     for (const [pkg, minimum] of Object.entries(module.focus)) {
       const result = summarise(profile, pkg);

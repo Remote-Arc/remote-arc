@@ -12,7 +12,11 @@ Arc is your hosted AI teammate. Connect brings the same authorized Apps and devi
 
 <sub>Source available for transparency and security review under a [proprietary license](./LICENSE). Not open-source licensed.</sub>
 
+[![CI](https://github.com/Remote-Arc/remote-arc/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Remote-Arc/remote-arc/actions/workflows/ci.yml)
+[![Measured test coverage](https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/coverage.svg)](https://github.com/Remote-Arc/remote-arc/tree/coverage-badges)
 [![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
+
+<sub>Coverage measures production TypeScript/TSX and Linux Go statements. The target is ≥90%; the badge shows the latest validated measurement, with [scope and source details](./docs/test-coverage.md).</sub>
 
 </div>
 

@@ -45,7 +45,7 @@ test('The Connect guide exposes an app-only path and optional computer setup',as
  await expect(page.locator('#connect-apps a')).toHaveAttribute('href','https://agent.remotearc.app/dashboard/connect/apps');
  await expect(page.locator('#connect-computer h2')).toContainText(/optional|可选/);
  await expect(page.locator('#connect-policy')).toContainText(/Safe/);
- await expect(page.locator('#connect-policy')).toContainText('browser_runner');
+ await expect(page.locator('#connect-policy')).not.toContainText('browser_runner');
  await expect(page.locator('#connect-scopes')).toContainText('apps:read');
  await expect(page.locator('#connect-scopes')).toContainText('apps:write');
 });
@@ -125,7 +125,8 @@ test('Documentation installation links preserve language and offer every client'
 test('Checkout completes only a local simulated payment and survives refresh',async({page})=>{
  await page.goto('/checkout?plan=arc-plus-v1');
  await expect(page.getByRole('heading',{level:1})).toBeVisible();
- await expect(page.locator('.arcCheckoutChoices button')).toHaveCount(2);
+ await expect(page.locator('.arcCheckoutChoices button')).toHaveCount(3);
+ await expect(page.locator('.arcCheckoutChoices button[aria-pressed="true"]')).toContainText('Plus');
  await page.locator('.arcCheckoutChoices button').last().click();
  await expect(page.locator('.arcCheckoutChoices button').last()).toHaveAttribute('aria-pressed','true');
  await page.locator('.arcCheckoutContinue').click();
@@ -135,6 +136,31 @@ test('Checkout completes only a local simulated payment and survives refresh',as
  await expect(page.locator('.arcCheckoutResult')).toContainText(/Payment confirmed|支付已确认/);
  await page.reload();
  await expect(page.locator('.arcCheckoutResult')).toContainText(/Payment confirmed|支付已确认/);
+});
+
+test('Connect Unlimited checkout is Connect-only, without monthly Credits or promo codes',async({page})=>{
+ await page.goto('/checkout?product=connect-unlimited-v1');
+ await expect(page.locator('.arcCheckoutChoices button[aria-pressed="true"]')).toContainText('Connect Unlimited');
+ await expect(page.locator('.arcCheckoutFeatures')).toContainText(/Unlimited registered computers|不限已注册电脑数量/);
+ await expect(page.locator('.arcCheckoutFeatures')).toContainText(/Arc after the free trial needs Plus|免费试用后使用 Arc 需要 Plus/);
+ await expect(page.locator('.arcCheckoutSummary h2')).toHaveText('Connect Unlimited');
+ await expect(page.locator('.arcCheckoutTotal')).toContainText('$19.00');
+ await expect(page.locator('.arcCheckoutPromo')).toHaveCount(0);
+ await page.locator('.arcCheckoutContinue').click();
+ await expect(page.locator('.arcCheckoutEmbedded')).toContainText(/Unlimited Connect|无限 Connect/);
+ await page.getByRole('button',{name:/Simulate completed payment|模拟完成付款/}).click();
+ await expect(page.locator('.arcCheckoutResult')).toContainText(/Payment confirmed|支付已确认/);
+});
+
+test('Pricing separates Connect Unlimited from Arc plans',async({page},testInfo)=>{
+ await page.goto((testInfo.project.metadata.language==='zh'?'/zh':'')+'/pricing');
+ const card=page.locator('.planCard').filter({hasText:'CONNECT ONLY'});
+ await expect(page.locator('.pricingPlans--saas .planCard')).toHaveCount(4);
+ await expect(page.locator('.pricingEnterprise').getByRole('link')).toHaveAttribute('href',/topic=enterprise/);
+ await expect(card.locator('.hostedPrice strong')).toHaveText('US$19');
+ await expect(card).toContainText(/Unlimited registered computers|不限已注册电脑数量/);
+ await expect(card.getByRole('link')).toHaveAttribute('href',/product=connect-unlimited-v1/);
+ await expect(page.locator('.planCard').filter({hasText:'ARC + CONNECT'})).toHaveCount(2);
 });
 
 for(const failure of ['HTTP failure','network failure'])test('Failed sign-out keeps the workspace and supports keyboard retry: '+failure,async({page})=>{

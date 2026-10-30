@@ -1,5 +1,6 @@
 import { getSessionUser } from "./auth.js";
 import { summarizeCloudflareBillableUsage } from "./cloudflare-billing.js";
+import { activationOptions, listAdminUsers } from './admin-user-activation.js';
 
 export type OpsEnv = {
   DB: D1Database;
@@ -11,24 +12,10 @@ export type OpsEnv = {
   FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
   CF_BILLING_READ_TOKEN?: string;
   CF_BILLING_ACCOUNT_ID?: string;
+  /** JSON array of operator-verified official plugin OAuth client IDs; never client names. */
+  PUBLIC_PLUGIN_OAUTH_CLIENT_IDS?: string;
 };
 
-type OpsUser = {
-  id: string;
-  email: string;
-  name: string | null;
-  created_at: string;
-  role: string;
-  plan: string;
-  used: number;
-  extra: number;
-  device_count: number;
-  computer_count: number;
-  last_activity: string | null;
-  has_plus_grant: number;
-  linked_login: "google" | "email_only";
-  first_mcp_client: string | null;
-};
 type OpsDevice = {
   id: string; user_id: string; name: string; platform: string; arch: string | null;
   last_seen: string | null; created_at: string;
@@ -56,41 +43,17 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
   const page = Math.min(100, Math.max(0, Number(url.searchParams.get("page") || 0) | 0));
   const pageSize = 30;
   const utcMonth = month();
+  const now = new Date().toISOString();
+  const base = safeLimit(env.MONTHLY_TOOL_CALL_LIMIT);
+  const freeBase = env.FREE_MONTHLY_TOOL_CALL_LIMIT === undefined ? base : safeLimit(env.FREE_MONTHLY_TOOL_CALL_LIMIT);
+  let selection: ReturnType<typeof activationOptions>;
+  try { selection = activationOptions(url); }
+  catch (error) { return jsonError((error as Error).message, 400); }
   const from = new Date(Date.now() - 7 * 86400_000).toISOString();
-  let creditsReady = true;
-  const [userRows, deviceRows, chartRows, totalUsers, totalDevices, auditSummary, totalMonthlyCalls, teamCount, teamMembers] = await Promise.all([
-    env.DB.prepare(`SELECT u.id, u.email, u.name, u.created_at, u.role, u.plan,
-      CASE WHEN u.google_sub LIKE 'email:%' THEN 'email_only' ELSE 'google' END AS linked_login,
-      (SELECT COALESCE(NULLIF(c.client_name,''), 'MCP client')
-         FROM oauth_tokens t LEFT JOIN oauth_clients c ON c.client_id=t.client_id
-         WHERE t.user_id=u.id ORDER BY t.created_at ASC LIMIT 1) AS first_mcp_client,
-      COALESCE(um.tool_calls, 0) AS used,
-      COALESCE((SELECT SUM(extra_calls) FROM user_call_credit_grants c
-        WHERE c.user_id=u.id AND c.month_key=?1), 0) AS extra,
-      (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL) AS device_count,
-      (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL AND d.platform<>'browser') AS computer_count,
-      (SELECT MAX(created_at) FROM audit_events a WHERE a.user_id=u.id) AS last_activity,
-      EXISTS(SELECT 1 FROM plan_grants g WHERE g.user_id=u.id AND g.plan='plus'
-        AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at > ?2)) AS has_plus_grant
-      FROM users u LEFT JOIN user_monthly_usage um ON um.user_id=u.id AND um.month_key=?1
-      ORDER BY u.created_at DESC LIMIT ?3 OFFSET ?4`).bind(utcMonth, new Date().toISOString(), pageSize, page * pageSize).all<OpsUser>().catch(async error => {
-        if (!/no such table:\s*user_call_credit_grants/i.test(String(error))) throw error;
-        creditsReady = false;
-        return env.DB.prepare(`SELECT u.id, u.email, u.name, u.created_at, u.role, u.plan,
-          CASE WHEN u.google_sub LIKE 'email:%' THEN 'email_only' ELSE 'google' END AS linked_login,
-          (SELECT COALESCE(NULLIF(c.client_name,''), 'MCP client')
-            FROM oauth_tokens t LEFT JOIN oauth_clients c ON c.client_id=t.client_id
-            WHERE t.user_id=u.id ORDER BY t.created_at ASC LIMIT 1) AS first_mcp_client,
-          COALESCE(um.tool_calls,0) AS used, 0 AS extra,
-          (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL) AS device_count,
-      (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL AND d.platform<>'browser') AS computer_count,
-          (SELECT MAX(created_at) FROM audit_events a WHERE a.user_id=u.id) AS last_activity,
-          EXISTS(SELECT 1 FROM plan_grants g WHERE g.user_id=u.id AND g.plan='plus'
-            AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at > ?2)) AS has_plus_grant
-          FROM users u LEFT JOIN user_monthly_usage um ON um.user_id=u.id AND um.month_key=?1
-          ORDER BY u.created_at DESC LIMIT ?3 OFFSET ?4`)
-          .bind(utcMonth, new Date().toISOString(), pageSize, page * pageSize).all<OpsUser>();
-      }),
+  const [userPage, deviceRows, chartRows, totalUsers, totalDevices, auditSummary, totalMonthlyCalls, teamCount, teamMembers] = await Promise.all([
+    listAdminUsers(env.DB, { ...selection, now, month: utcMonth, page, pageSize,
+      freeLimit: freeBase, plusLimit: base, pluginOAuthClientIds: env.PUBLIC_PLUGIN_OAUTH_CLIENT_IDS,
+      resource: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + '/mcp' }),
     env.DB.prepare(`SELECT d.id, d.user_id, d.name, d.platform, d.arch, d.last_seen, d.created_at
       FROM devices d WHERE d.revoked_at IS NULL
       ORDER BY COALESCE(d.last_seen,d.created_at) DESC LIMIT 200`).all<OpsDevice>(),
@@ -108,12 +71,12 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
     env.DB.prepare("SELECT COUNT(*) AS total FROM organizations WHERE kind='team'").first<{total:number}>(),
     env.DB.prepare("SELECT COUNT(*) AS total FROM organization_members m JOIN organizations o ON o.id=m.organization_id WHERE o.kind='team' AND m.status='active'").first<{total:number}>(),
   ]);
-  const users = userRows.results || [];
+  const users = userPage.users;
   const devices = deviceRows.results || [];
   const byUser = new Map<string, Map<string, LiveDevice>>();
   // Real-time online is queried from the same per-user DO registry used by Devices,
   // not guessed from last_seen. Cap per-refresh DO fan-out.
-  await Promise.all([...new Set(devices.map(d => d.user_id))].slice(0, 60).map(async userId => {
+  await Promise.all([...new Set([...users.map(u => u.id), ...devices.map(d => d.user_id)])].slice(0, 60).map(async userId => {
     try {
       const response = await env.REGISTRY.getByName("user:" + userId).fetch(
         new Request("https://registry/devices", {
@@ -136,10 +99,10 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
       recovery_bundle_version: live?.recovery_bundle_version || null,
     };
   });
-  const base = safeLimit(env.MONTHLY_TOOL_CALL_LIMIT);
-  const freeBase = env.FREE_MONTHLY_TOOL_CALL_LIMIT === undefined ? base : safeLimit(env.FREE_MONTHLY_TOOL_CALL_LIMIT);
   return Response.json({
-    checkedAt: new Date().toISOString(), month: utcMonth, page, pageSize, creditsReady,
+    checkedAt: now, month: utcMonth, page, pageSize, creditsReady: userPage.creditsReady,
+    filteredTotal: userPage.filteredTotal, activationCounts: userPage.activationCounts,
+    selection,
     totals: { users: totalUsers?.total || 0, devices: totalDevices?.total || 0,
       online: extended.filter(x => x.online).length, auditRows: auditSummary?.count || 0,
       auditLast7d: auditSummary?.last7d || 0, monthlyCalls: totalMonthlyCalls?.calls || 0,
@@ -148,9 +111,10 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
     users: users.map(user => {
       const privileged = user.role === "admin";
       const baseCalls = privileged ? null : user.plan === "plus" || user.has_plus_grant ? base : freeBase;
-      const userDevices = extended.filter(x => x.user_id===user.id);
-      return { ...user, online_devices: userDevices.filter(x => x.online).length,
-        live_agent_versions: [...new Set(userDevices.flatMap(x => x.agent_version ? [x.agent_version] : []))],
+      const liveDevices = [...(byUser.get(user.id)?.values() || [])];
+      return { ...user, online_devices: liveDevices.length,
+        live_status_verified: byUser.has(user.id),
+        live_agent_versions: [...new Set(liveDevices.flatMap(x => x.agentVersion ? [x.agentVersion] : []))],
         allowance: baseCalls === null ? null : baseCalls + user.extra };
     }),
     devices: extended, activity: chartRows.results || [],

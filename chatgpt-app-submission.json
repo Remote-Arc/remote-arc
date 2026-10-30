@@ -295,6 +295,42 @@
         "open_world_justification": "The management action targets Remote Arc task state; it does not directly call a public service.",
         "destructive_justification": "Cancel can stop active work and resume can allow consequential saved work to continue, so management is treated as consequential."
       }
+    },
+    "list_apps": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists the authenticated user's own connected App accounts and searches Remote Arc's fixed, versioned action catalog. It never runs an App action, changes a connection or grants consent.",
+        "open_world_justification": "Reads only Remote Arc account metadata and the static catalog bundled with the server; it does not contact any third-party service.",
+        "destructive_justification": "Does not create, modify, send, delete or otherwise change any user, App or external state."
+      }
+    },
+    "run_app_read_action": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Exposes only the catalog's read operations (each listed individually in the input schema with its own description and exact arguments). Every one is a provider GET/search/report request; the server rejects any write operation for this tool before dispatch.",
+        "open_world_justification": "Reads the user's own connected accounts, and a few read actions (for example X post reads) return public third-party content, so results can include open-ended external data.",
+        "destructive_justification": "Retrieval only: no read action creates, modifies, sends, deletes or cancels anything."
+      }
+    },
+    "run_app_write_action": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Each listed write operation changes state in the user's connected account, for example sending an email, posting a message, creating or updating an event, issue or document, or deleting an item.",
+        "open_world_justification": "Some actions publish publicly (X, LinkedIn, Facebook, Instagram posts) or send content to other people (email, Slack, Teams, WhatsApp), so effects reach beyond the user's private account.",
+        "destructive_justification": "Includes deletion, overwriting updates and irreversible sends or publications, and a few actions spend the user's provider credits. Each requestId runs at most once, and the tool requires the separate apps:write OAuth scope plus the provider write grant."
+      }
     }
   },
   "test_cases": [

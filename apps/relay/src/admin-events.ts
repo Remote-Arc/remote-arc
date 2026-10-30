@@ -54,8 +54,9 @@ export async function paymentReadiness(env:BillingEnv){
  if(live)try{
   const [account,hooks]=await Promise.all([stripeRequest(env,'/v1/account'),stripeRequest(env,'/v1/webhook_endpoints?limit=100')]);providerReachable=true;
   check('charges_enabled',account.charges_enabled===true,'Stripe account can accept charges');
-  const expected=new URL('/api/billing/webhook',env.PUBLIC_ORIGIN).href,required=['invoice.paid','invoice.payment_failed','checkout.session.completed','checkout.session.expired','customer.subscription.updated','customer.subscription.deleted','charge.refunded','charge.dispute.created'];
-  const endpoint=hooks.data?.find((h:any)=>h.url===expected&&h.status==='enabled'&&h.livemode===true);
+  // The relay serves the webhook on every production host; activation registers the dashboard host.
+  const expected=new Set([env.PUBLIC_ORIGIN,env.DASHBOARD_ORIGIN,env.APP_ORIGIN].filter(Boolean).map(origin=>new URL('/api/billing/webhook',origin).href)),required=['invoice.paid','invoice.payment_failed','checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.expired','customer.subscription.updated','customer.subscription.deleted','charge.refunded','charge.dispute.created'];
+  const endpoint=hooks.data?.find((h:any)=>expected.has(h.url)&&h.status==='enabled'&&h.livemode===true);
   check('webhook_endpoint',Boolean(endpoint),'Enabled live webhook matches the production callback');
   check('webhook_events',Boolean(endpoint&&required.every(e=>endpoint.enabled_events?.includes('*')||endpoint.enabled_events?.includes(e))),'Required billing event subscriptions');
  }catch{checks.push({key:'stripe_read_access',state:'unknown',detail:'Read-only Stripe inspection unavailable; this does not prove purchases fail'});}

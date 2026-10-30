@@ -164,6 +164,19 @@
       "optIn": false
     },
     {
+      "id": "authentic-thinking-expression",
+      "name": "Authentic Thinking & Expression",
+      "priority": "P1",
+      "category": "cognition",
+      "description": "Preserve genuine personal voice and independently grounded judgment in emails, cover letters, academic outreach and other personal writing; reject generic AI templates and invented motivation.",
+      "engine": "Guidance only (no runtime dependencies)",
+      "requires": [],
+      "scopes": [],
+      "upstream": "https://remotearc.app",
+      "license": "Remote Arc-authored guidance",
+      "optIn": false
+    },
+    {
       "id": "scheduled-routines",
       "name": "Scheduled Routines",
       "priority": "P0",

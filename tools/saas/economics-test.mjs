@@ -4,6 +4,11 @@ const report=economics();assert(report.plans.every(p=>p.meetsTarget));assert(rep
 assert(Math.abs(report.models.find(m=>m.id==='arc-auto').exampleCredits-.65)<1e-10);
 assert.equal(report.models.find(m=>m.id==='gpt-6-astra').exampleCredits,65);
 assert.equal(report.models.find(m=>m.id==='gpt-6.1-terra').exampleCredits,6.5,'8K uncached input + 1K output costs $0.013 / 6.5 Credits on Terra');
-assert(economics({platformAppsPerAccount:20}).plans.every(p=>!p.meetsTarget));
+assert(economics({platformAppsPerAccount:20}).plans.filter(p=>p.allHostedModels).every(p=>!p.meetsTarget));
+const connect=report.plans.find(p=>p.id==='connect-unlimited-v1');
+assert.equal(connect.costs.model,0,'Connect Unlimited carries no hosted model cost');assert.equal(connect.trialAcquisition,0,'The Arc trial is open to every account, so it is not an incremental Connect cost');
+assert.equal(connect.costs.devices,25*report.assumptions.hostingPerDevice,'Unlimited devices are stressed at a heavy 25-computer fleet');
+const heavy=economics({unlimitedDevicesPerAccount:100,expectedConnectCalls:100000}).plans.find(p=>p.id==='connect-unlimited-v1');
+assert(heavy.margin>0&&!heavy.meetsTarget,'100 computers and 100k calls stay contribution-positive but below target: fair-use rate limits matter');
 assert.throws(()=>economics({hostingPerToolCall:-1}));assert.throws(()=>economics({targetMargin:1}));assert.throws(()=>economics({trialConversion:0}));
-console.log('SaaS economics: full utilization, model weighting, trial acquisition cost and margin stress cases passed.');
+console.log('SaaS economics: full utilization, Connect Unlimited device/call stress, model weighting, trial acquisition cost and margin stress cases passed.');

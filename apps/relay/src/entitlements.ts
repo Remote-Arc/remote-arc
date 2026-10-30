@@ -78,7 +78,12 @@ export async function getAccountPlan(
   // Admin is an operational override; base plan and active grants share one
   // effective-plan calculation so billing/promo/workspace sources can coexist.
   if (row.role === "admin" || row.has_plus_grant) return "plus";
-  if(billingEnabled(env)&&(await currentArcPlan(env,userId)).id!=='free')return 'plus';
+  if(billingEnabled(env)){
+    const plan=await currentArcPlan(env,userId);
+    // Only plans that include hosted models unlock hosted features.
+    if(plan.allHostedModels)return 'plus';
+    if(plan.id!=='free'&&normalizeAccountPlan(row.plan)!=='plus')return 'connect';
+  }
   return normalizeAccountPlan(row.plan);
 }
 

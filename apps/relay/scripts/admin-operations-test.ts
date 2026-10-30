@@ -32,10 +32,15 @@ function fakeDB(role = "admin") {
             return null;
           },
           async all() {
-            if (sql.includes("FROM users u LEFT JOIN")) return {results:[{
+            if (sql.includes('GROUP BY activation_stage')) return {results:[{activation_stage:'activated',count:1}]};
+            if (sql.includes("SELECT * FROM matched")) return {results:[{
               id:"target",email:"target@unit.test",name:"Target",role:"user",plan:"free",
               used:250,extra:500,device_count:1,last_activity:"2026-10-10T00:00:00Z",
               created_at:"2026-10-01T00:00:00Z",has_plus_grant:0,linked_login:"email_only",first_mcp_client:"ChatGPT",
+              activation_stage:'activated',mcp_connections:1,active_mcp_connections:1,plugin_connections:0,
+              first_mcp_connected_at:'2026-10-01T00:00:00Z',first_computer_paired_at:'2026-10-01T00:00:00Z',
+              first_computer_online_at:'2026-10-01T00:00:00Z',first_success_at:'2026-10-10T00:00:00Z',
+              last_success_at:'2026-10-10T00:00:00Z',successful_days:1,online_history_complete:0,
             }]};
             if (sql.includes("FROM devices d WHERE")) return {results:[{
               id:"dev-1",user_id:"target",name:"Mac",platform:"darwin",arch:"arm64",

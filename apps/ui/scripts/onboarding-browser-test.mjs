@@ -102,7 +102,7 @@ try {
     assert.equal(await link.count(), 1, client + ' must have an official guide');
     assert.equal(await link.getAttribute('target'), '_blank', 'guide must preserve the completed setup');
   }
-  assert.equal(await page.locator('.pairAgentLaunch[href="https://chatgpt.com/plugins?q=Remote%20Arc"]').count(), 1, 'direct ChatGPT launch stays available');
+  assert.equal(await page.locator('.pairAgentLaunch[href="https://chatgpt.com/plugins/plugin_asdk_app_6abc25fd2a348191a4197f6246994090"]').count(), 1, 'direct ChatGPT launch stays available');
   await noOverflow(page);
   await screenshot(page, 'onboarding-ready-dark');
   const navigationCount = await page.evaluate(() => performance.timeOrigin);

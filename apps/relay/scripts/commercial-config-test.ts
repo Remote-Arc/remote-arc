@@ -65,10 +65,10 @@ try{
  const initial=await commercialCatalog(env);assert.deepEqual(initial.plans.map(({versionId,revision,...p})=>p),ARC_PLANS);assert.deepEqual(initial.topups.map(({versionId,revision,...p})=>p),ARC_TOPUPS);
  const legacy={id:'price_legacy',lookup_key:'remote-arc:arc-plus-v1',unit_amount:3900,currency:'usd',tax_behavior:'exclusive',active:false,recurring:{interval:'month',interval_count:1}};fixtures.set('/v1/prices/'+legacy.id,legacy);
  await processStripeEvent(env,invoice('old','old',legacy),'old');assert.equal((await creditBalance(db,'old')).available,1500);
- const head=await activeCommercial(env,'arc-plus-v1'),id=crypto.randomUUID(),next={...ARC_PLANS[1],monthlyPriceCents:2900,monthlyCredits:1200};
+ const head=await activeCommercial(env,'arc-plus-v1'),id=crypto.randomUUID(),next={...ARC_PLANS.find(p=>p.id==='arc-plus-v1')!,monthlyPriceCents:2900,monthlyCredits:1200};
  await saveCommercialDraft(env,'operator',{id,kind:'plan',revision:head.revision,config:next});assert.equal((await activeCommercial(env,'arc-plus-v1')).id,head.id,'Saving a draft does not change live prices');
  await publishCommercialDraft(env,'operator',id);assert.equal((await activeCommercial(env,'arc-plus-v1')).id,id);assert.equal((await currentArcPlan(db,'old')).monthlyCredits,1500,'Existing paid users keep their saved allowance');
- assert.equal((await currentArcPlan(db,'old')).monthlyPriceCents,3900);assert.equal((await commercialCatalog({DB:db})).plans[1]?.monthlyPriceCents,3900,'Test publication cannot change the live catalog');
+ assert.equal((await currentArcPlan(db,'old')).monthlyPriceCents,3900);assert.equal((await commercialCatalog({DB:db})).plans.find(p=>p.id==='arc-plus-v1')?.monthlyPriceCents,3900,'Test publication cannot change the live catalog');
  assert.throws(()=>sql.prepare('UPDATE arc_commercial_versions SET published_at=NULL WHERE id=?').run(id),/immutable/);
  const stale=crypto.randomUUID();await assert.rejects(()=>saveCommercialDraft(env,'operator',{id:stale,kind:'plan',revision:1,config:next}),/CHANGED/);
  const competing=await activeCommercial(env,'arc-plus-v1'),ids=[crypto.randomUUID(),crypto.randomUUID()];for(const draftId of ids)await saveCommercialDraft(env,'operator',{id:draftId,kind:'plan',revision:competing.revision,config:next});

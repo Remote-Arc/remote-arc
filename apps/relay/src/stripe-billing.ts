@@ -1,7 +1,7 @@
 import {recordProductEvent,recordCheckoutCompletion} from './product-events.js';
 import {linkBusinessReceipt} from './business-tracking.js';
 import {arcEnabled,creditsEnabled} from './platform-launch.js';
-import {ARC_PLANS,ARC_TOPUPS,ARC_CREDIT_RATE,ARC_PREMIUM_MODELS} from '@remotearc/protocol';
+import {ARC_PLANS,ARC_TOPUPS,ARC_CREDIT_RATE,ARC_PREMIUM_MODELS,CONNECT_UNLIMITED_PLAN_ID} from '@remotearc/protocol';
 import {getSessionUser,sha256Hex} from './auth.js';
 import {isTrustedDashboardMutation} from './dashboard-origin.js';
 import {creditBalance,grantArcCredits} from './arc-credits.js';
@@ -50,7 +50,9 @@ async function payment(env:BillingEnv,paymentIntent:unknown,minimum:number){
 async function owner(env:BillingEnv,customerId:unknown){return env.DB.prepare('SELECT user_id FROM arc_billing_customers WHERE customer_id=?1').bind(id(customerId,'cus')).first<{user_id:string}>();}
 type Receipt={receipt:string;eventId:string;userId:string;sku:string;versionId:string;cents:number;start:string|null;end:string|null;payment:{intent:string;charge:string};hash:string;discountCents?:number;promotionId?:string;checkoutId?:string};
 async function fulfill(env:BillingEnv,r:Receipt){
- const p=commercialOffer(await commercialVersion(env.DB,r.versionId)),at=now();if(p.id!==r.sku)throw new StripeError('BILLING_CATALOG_CONFLICT');
+ const version=await commercialVersion(env.DB,r.versionId),p=commercialOffer(version),at=now();if(p.id!==r.sku)throw new StripeError('BILLING_CATALOG_CONFLICT');
+ // Connect-only plans carry neither Credits nor hosted-model grants.
+ const hosted='allHostedModels' in version.config&&version.config.allHostedModels;
  await env.DB.batch([
   env.DB.prepare(`INSERT OR IGNORE INTO arc_payment_receipts(id,provider,event_id,user_id,product_id,state,amount_cents,currency,period_start,period_end,verified_at,payload_hash,commercial_version_id,discount_cents)
    SELECT ?1,'stripe',?2,?3,?4,'paid',?5,'usd',?6,?7,?8,?9,?11,?12 WHERE NOT EXISTS(SELECT 1 FROM arc_payment_blocks WHERE payment_intent_id=?10)`).bind(r.receipt,r.eventId,r.userId,r.sku,r.cents,r.start,r.end,at,r.hash,r.payment.intent,r.versionId,r.discountCents??0),
@@ -62,11 +64,11 @@ async function fulfill(env:BillingEnv,r:Receipt){
  ]);
  const paid=await env.DB.prepare("SELECT id FROM arc_payment_receipts WHERE id=?1 AND user_id=?2 AND state='paid'").bind(r.receipt,r.userId).first();if(!paid)return;
  await linkBusinessReceipt(env,r.checkoutId,r.receipt,r.userId,r.sku);
- await grantArcCredits(env.DB,{userId:r.userId,source:p.subscription?'subscription':'topup',sourceRef:r.receipt,units:p.credits*ARC_CREDIT_RATE.unitsPerCredit,...(r.start?{startsAt:r.start}:{}),expiresAt:r.end,reason:'Verified Stripe '+(p.subscription?'subscription invoice':'credit purchase')});
+ if(p.credits>0)await grantArcCredits(env.DB,{userId:r.userId,source:p.subscription?'subscription':'topup',sourceRef:r.receipt,units:p.credits*ARC_CREDIT_RATE.unitsPerCredit,...(r.start?{startsAt:r.start}:{}),expiresAt:r.end,reason:'Verified Stripe '+(p.subscription?'subscription invoice':'credit purchase')});
  if(p.subscription){
   await env.DB.batch([
    env.DB.prepare(`INSERT OR IGNORE INTO billing_plan_assignments(id,plan_id,subject_type,subject_id,expires_at,created_at,commercial_version_id) SELECT ?1,?2,'user',?3,?4,?5,?7 FROM arc_payment_receipts WHERE id=?6 AND state='paid'`).bind('stripe:'+r.receipt,r.sku,r.userId,r.end,at,r.receipt,r.versionId),
-   ...(['openai','anthropic','openrouter'] as const).map(provider=>env.DB.prepare(`INSERT OR IGNORE INTO billing_model_grants(id,user_id,organization_id,provider,max_cost_micros,expires_at,created_at) SELECT ?1,?2,?3,?4,1000000000,?5,?6 FROM arc_payment_receipts WHERE id=?7 AND state='paid'`).bind('stripe:'+r.receipt+':'+provider,r.userId,'personal:'+r.userId,provider,r.end,at,r.receipt)),
+   ...(hosted?['openai','anthropic','openrouter'] as const:[]).map(provider=>env.DB.prepare(`INSERT OR IGNORE INTO billing_model_grants(id,user_id,organization_id,provider,max_cost_micros,expires_at,created_at) SELECT ?1,?2,?3,?4,1000000000,?5,?6 FROM arc_payment_receipts WHERE id=?7 AND state='paid'`).bind('stripe:'+r.receipt+':'+provider,r.userId,'personal:'+r.userId,provider,r.end,at,r.receipt)),
   ]);
  }
  await recordProductEvent(env,{domain:'billing',name:'billing.entitlement.granted',source:'stripe',outcome:'succeeded',userId:r.userId,entityId:r.receipt});
@@ -126,6 +128,24 @@ async function blockPayment(env:BillingEnv,charge:Record<string,any>,reason:stri
   env.DB.prepare("UPDATE billing_plan_assignments SET revoked_at=COALESCE(revoked_at,?1) WHERE id IN (SELECT 'stripe:'||receipt_id FROM arc_payment_links WHERE payment_intent_id=?2)").bind(at,intent),
   ...(['openai','anthropic','openrouter'] as const).map(provider=>env.DB.prepare("UPDATE billing_model_grants SET revoked_at=COALESCE(revoked_at,?1) WHERE id IN (SELECT 'stripe:'||receipt_id||':'||?3 FROM arc_payment_links WHERE payment_intent_id=?2)").bind(at,intent,provider)),
  ]);
+ await endRefundedSubscriptions(env,intent);
+}
+/** A refunded or disputed current-period invoice ends its subscription now: the
+ * paid period is already revoked, so Stripe must not keep it renewable or block
+ * a fresh checkout. Older-period refunds leave the current subscription alone. */
+async function endRefundedSubscriptions(env:BillingEnv,intent:string){
+ const receipts=(await env.DB.prepare("SELECT r.id FROM arc_payment_receipts r JOIN arc_payment_links k ON k.receipt_id=r.id WHERE k.payment_intent_id=?1 AND r.id LIKE 'in_%' AND r.period_end>?2").bind(intent,now()).all<{id:string}>()).results;
+ for(const receipt of receipts){
+  const invoice=await stripeRequest(env,'/v1/invoices/'+id(receipt.id,'in'));
+  const subscriptionId=id(invoice.parent?.subscription_details?.subscription||invoice.subscription,'sub');
+  const subscription=await stripeRequest(env,'/v1/subscriptions/'+subscriptionId);
+  if(!['canceled','incomplete_expired'].includes(subscription.status)){
+   if(subscription.schedule)await stripeRequest(env,'/v1/subscription_schedules/'+id(subscription.schedule,'sub_sched')+'/cancel','POST',form({invoice_now:false,prorate:false}),'arc-refund-end:'+subscriptionId);
+   // Cancelling is naturally idempotent; Stripe idempotency keys apply to POST only.
+   else await stripeRequest(env,'/v1/subscriptions/'+subscriptionId,'DELETE');
+  }
+  await env.DB.prepare("UPDATE arc_billing_subscriptions SET status='canceled',cancel_at_period_end=0,pending_product_id=NULL,pending_effective_at=NULL,revision=revision+1,updated_at=?1 WHERE id=?2 AND status!='canceled'").bind(now(),subscriptionId).run();
+ }
 }
 export async function processStripeEvent(env:BillingEnv,event:Record<string,any>,hash:string){
  if(event.livemode!==stripeLive(env)||event.account)throw new StripeError('BILLING_ACCOUNT_MISMATCH',400);
@@ -211,16 +231,18 @@ export async function handleBilling(request:Request,env:BillingEnv){
   if(request.method==='GET'&&path==='/api/billing'){
    const access=await publicArcAccess(env,user.id);
    const [plan,credits,usage,subscriptions,customer,catalog]=await Promise.all([currentArcPlan(env,user.id),creditBalance(env.DB,user.id),getMonthlyUsage(env,user.id),env.DB.prepare('SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at,revision FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10').bind(user.id).all(),env.DB.prepare('SELECT 1 AS present FROM arc_billing_customers WHERE user_id=?1').bind(user.id).first(),commercialCatalog(env)]);
-    return json({embeddedCheckoutEnabled:Boolean(stripeConfigured(env)&&stripePublishableKey(env)),subscriptionManagementEnabled:stripeConfigured(env)&&Boolean(customer),enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,access,credits,usage,plans:catalog.plans,topups:catalog.topups,models:ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
+    return json({embeddedCheckoutEnabled:Boolean(stripeConfigured(env)&&stripePublishableKey(env)),subscriptionManagementEnabled:stripeConfigured(env)&&Boolean(customer),enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),connectEnabled:stripeConfigured(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,access,credits,usage,plans:catalog.plans,topups:catalog.topups,models:ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
   }
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   if(!isTrustedDashboardMutation(request,env))throw new StripeError('same_origin_required',403);
-   if(!stripeConfigured(env)||(!path.startsWith('/api/billing/subscription/')&&!path.startsWith('/api/billing/payment-method/')&&path!=='/api/billing/portal'&&(!arcEnabled(env)||!creditsEnabled(env))))throw new StripeError('BILLING_NOT_CONFIGURED');
+   if(!stripeConfigured(env)||(!path.startsWith('/api/billing/subscription/')&&!path.startsWith('/api/billing/payment-method/')&&!['/api/billing/portal','/api/billing/checkout','/api/billing/plan/change'].includes(path)&&(!arcEnabled(env)||!creditsEnabled(env))))throw new StripeError('BILLING_NOT_CONFIGURED');
   if(request.headers.get('content-type')?.split(';')[0]!=='application/json')throw new StripeError('BILLING_JSON_REQUIRED',415);
   let input:Record<string,unknown>;try{input=JSON.parse(await boundedBody(request,2048));if(!input||typeof input!=='object'||Array.isArray(input))throw 0;}catch(e){if(e instanceof StripeError)throw e;throw new StripeError('BILLING_INVALID_REQUEST',400);}
   if(['/api/billing/subscription/renewal','/api/billing/payment-method/setup','/api/billing/payment-method/confirm','/api/billing/checkout/abandon'].includes(path))return json(await nativeBillingAction(env,user.id,path,input));
   if(!['/api/billing/portal','/api/billing/plan/change','/api/billing/checkout'].includes(path))return json({error:'not_found'},404);
   if(Object.keys(input).some(key=>!['productId','versionId','promoCode','uiMode'].includes(key))||path==='/api/billing/portal'&&Object.keys(input).length)throw new StripeError('BILLING_INVALID_REQUEST',400);
+  // Connect Unlimited is sold even while hosted Arc is paused; Arc products are not.
+  if(path!=='/api/billing/portal'&&input.productId!==CONNECT_UNLIMITED_PLAN_ID&&(!arcEnabled(env)||!creditsEnabled(env)))throw new StripeError('BILLING_NOT_CONFIGURED');
   if(path!=='/api/billing/portal')product(input.productId);
   const returnUrl=new URL(path==='/api/billing/portal'?'/settings?section=billing':'/checkout?product='+encodeURIComponent(String(input.productId)),env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN).toString(),customerId=await customer(env,user.id,user.email);
   if(path==='/api/billing/portal')return json({url:await portal(env,customerId,returnUrl)});

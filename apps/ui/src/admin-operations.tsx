@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import { AdminUserUsageInsights } from "./user-usage-insights.js";
+import { ACTIVATION_STAGES, type ActivationEvidence, type ActivationSort, type ActivationStage } from '../../../packages/protocol/src/admin-activation.js';
+import { UserActivationBadge, UserActivationEvidence } from './admin/user-activation.js';
 import "./admin-operations.css";
 
 type DeviceCapacityGrant = {
@@ -9,7 +11,7 @@ type DeviceCapacityGrant = {
 };
 type PlusGrant = { id:string;email:string;expires_at:string|null;revoked_at:string|null;reason:string;created_at:string;plan:string };
 
-type Account = {
+type Account = ActivationEvidence & {
   id: string; email: string; name: string | null; role: string; plan: string;
   created_at: string; used: number; extra: number; allowance: number | null;
   device_count: number; computer_count: number; online_devices: number; last_activity: string | null;
@@ -17,6 +19,7 @@ type Account = {
   linked_login: "google" | "email_only";
   first_mcp_client: string | null;
   live_agent_versions: string[];
+  live_status_verified: boolean;
 };
 type Computer = {
   id: string; user_id: string; name: string; platform: string; arch: string | null;
@@ -29,6 +32,8 @@ type OperationsData = {
   totals: { users: number; devices: number; online: number; auditRows: number; auditLast7d: number; monthlyCalls: number };
   limits: { free: number; plus: number };
   users: Account[]; devices: Computer[]; activity: Hour[];
+  filteredTotal: number;
+  activationCounts: Record<ActivationStage, number>;
   billing: { actualUsd: number | null; source: string; billingUrl: string;
     note: string; services: string[] };
 };
@@ -59,7 +64,10 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
-  const [sortByUsage,setSortByUsage]=useState(true);
+  const [sort, setSort] = useState<ActivationSort>('usage');
+  const [activation, setActivation] = useState<ActivationStage | 'all'>('all');
+  const [appliedQuery, setAppliedQuery] = useState('');
+  const requestSequence = useRef(0);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [credit, setCredit] = useState("500");
   const [reason, setReason] = useState("");
@@ -81,27 +89,32 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
   const pendingCreditRequest = useRef<{ key:string; requestId:string } | null>(null);
 
   async function refresh(pageToLoad = page) {
+    const sequence = ++requestSequence.current;
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/operations?page=" + pageToLoad, { credentials: "same-origin" });
+      const parameters = new URLSearchParams({ page: String(pageToLoad), activation, sort, query: appliedQuery });
+      const res = await fetch('/api/admin/operations?' + parameters, { credentials: "same-origin" });
       if (!res.ok) throw new Error(tr("Admin metrics could not be loaded", "无法加载管理员指标") + " · " + res.status);
-      setData(await res.json() as OperationsData);
+      const result = await res.json() as OperationsData;
+      if (sequence !== requestSequence.current) return;
+      setData(result);
       setError("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally { setLoading(false); }
+      if (sequence === requestSequence.current) setError(cause instanceof Error ? cause.message : String(cause));
+    } finally { if (sequence === requestSequence.current) setLoading(false); }
   }
   useEffect(() => {
     void refresh(page);
-  }, [page]);
+    return () => { requestSequence.current++; };
+  }, [page, activation, sort, appliedQuery]);
+  useEffect(() => {
+    const nextQuery = query.trim();
+    if (nextQuery === appliedQuery) return;
+    const timer = setTimeout(() => { setPage(0); setSelectedUser(null); setAppliedQuery(nextQuery); }, 250);
+    return () => clearTimeout(timer);
+  }, [query, appliedQuery]);
 
-  const filtered = useMemo(() => {
-    const items=(data?.users||[]).filter(u => {
-      const text=query.toLowerCase();
-      return u.email.toLowerCase().includes(text)||(u.name||"").toLowerCase().includes(text);
-    });
-    return sortByUsage?items.sort((a,b)=>((b.allowance&&b.used/b.allowance)||0)-((a.allowance&&a.used/a.allowance)||0)):items;
-  }, [data, query, sortByUsage]);
+  const filtered = data?.users || [];
   const chosen = data?.users.find(u => u.id === selectedUser) || null;
   const activeDeviceGrants = deviceGrants.filter(g => !g.revoked_at && (!g.expires_at || Date.parse(g.expires_at)>Date.now()));
   const activeDeviceExtra = activeDeviceGrants.reduce((total,g)=>total+g.extra_devices,0);
@@ -356,8 +369,18 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
     {section === "users" && <div className="opsContent">
       <div className="opsToolbar">
         <div><h3>{tr("User management", "用户管理")}</h3><p>{tr("Select a user to inspect usage and grant extra calls for the current month.", "选择用户查看使用情况、在线设备并追加本月额度。")}</p></div>
-        <div className="opsUsageControls"><button type="button" className={sortByUsage?"isSelected":""} onClick={()=>setSortByUsage(value=>!value)} aria-pressed={sortByUsage}>{tr("Highest usage first","高用量优先")} ↕</button><input aria-label={tr("Search users", "搜索用户")} placeholder={tr("Search name or email", "搜索姓名或邮箱")} value={query} onChange={e => setQuery(e.target.value)} /></div>
+        <div className="opsUsageControls">
+          <label>{tr('Activation stage', '激活阶段')}<select aria-label={tr('Activation stage', '激活阶段')} value={activation} onChange={e => { setActivation(e.target.value as ActivationStage | 'all'); setPage(0); setSelectedUser(null); }}>
+            <option value="all">{tr('All stages', '全部阶段')}</option>{ACTIVATION_STAGES.map(stage => <option key={stage.id} value={stage.id}>{tr(stage.en, stage.zh)}{data ? ` (${data.activationCounts?.[stage.id] || 0})` : ''}</option>)}
+          </select></label>
+          <label>{tr('Sort users', '用户排序')}<select aria-label={tr('Sort users', '用户排序')} value={sort} onChange={e => { setSort(e.target.value as ActivationSort); setPage(0); setSelectedUser(null); }}>
+            <option value="usage">{tr('Highest usage first', '高用量优先')}</option><option value="recent">{tr('Newest registered', '最近注册优先')}</option><option value="activation_asc">{tr('Activation: early stages first', '激活阶段：流失前段优先')}</option><option value="activation_desc">{tr('Activation: later stages first', '激活阶段：后段优先')}</option>
+          </select></label>
+          <label>{tr('Search users', '搜索用户')}<input placeholder={tr("Search name or email", "搜索姓名或邮箱")} value={query} onChange={e => setQuery(e.target.value)} /></label>
+        </div>
       </div>
+      <p className="opsHelp opsActivationHelp">{tr('Activation filtering, search and sorting cover all users before pagination. A 0/0 device count is not plugin attribution. Client names alone are unverified.', '激活筛选、搜索和排序作用于全部用户，再进行分页。设备 0/0 不能证明插件来源，客户端名称本身也未经核实。')}</p>
+      <div className="opsResultStatus" role="status" aria-live="polite">{loading ? tr('Loading users…', '正在读取用户…') : tr(`${data?.filteredTotal || 0} matching users`, `共 ${data?.filteredTotal || 0} 位匹配用户`)}</div>
       <div className="opsUsagePulse" aria-label={tr("Usage status on this page","当前页用量状况")}>
         <div><strong>{filtered.filter(u=>u.allowance!==null&&u.used>=u.allowance).length}</strong><span>{tr("At limit","额度已满")}</span></div>
         <div><strong>{filtered.filter(u=>u.allowance!==null&&u.used<u.allowance&&u.used>=u.allowance*.8).length}</strong><span>{tr("80% or more","已用超过 80%")}</span></div>
@@ -366,24 +389,25 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
       </div>
       <div className="opsTableScroll">
         <table className="opsTable">
-          <thead><tr><th>{tr("Account", "账户")}</th><th>{tr("Plan", "套餐")}</th><th>{tr("Calls this month", "本月调用")}</th><th>{tr("Devices", "设备")}</th><th>{tr("Login / MCP client", "登录方式 / MCP 客户端")}</th><th>{tr("Agent version", "运行版本")}</th><th>{tr("Last activity", "最近活动")}</th><th></th></tr></thead>
+          <thead><tr><th>{tr("Account", "账户")}</th><th>{tr('Activation', '激活状态')}</th><th>{tr("Plan", "套餐")}</th><th>{tr("Calls this month", "本月调用")}</th><th>{tr("Devices", "设备")}</th><th>{tr("Login / MCP client", "登录方式 / MCP 客户端")}</th><th>{tr("Agent version", "运行版本")}</th><th>{tr("Last activity", "最近活动")}</th><th></th></tr></thead>
           <tbody>{filtered.map(u => <tr key={u.id} className={u.id === selectedUser ? "selected" : ""}>
             <td><strong>{u.name || u.email.split("@")[0]}</strong><small>{u.email}</small></td>
+            <td><UserActivationBadge evidence={u}/><small>{u.first_success_at ? tr('Success recorded', '有成功记录') : u.mcp_connections > 0 ? tr('OAuth recorded', '有 OAuth 记录') : tr('No success recorded', '无成功记录')}</small></td>
             <td>{u.role === "admin" ? "Admin" : u.plan === "plus" || u.has_plus_grant ? "Plus" : "Free"}</td>
             <td><strong>{fmt(u.used)} / {u.allowance === null ? "∞" : fmt(u.allowance)}</strong>
               <div className="opsMeter"><i style={{width: u.allowance ? Math.min(100, u.used / u.allowance * 100) + "%" : "0%"}} /></div></td>
-            <td><span className={u.online_devices ? "opsOnline" : ""}>{u.online_devices} / {u.device_count}</span></td>
+            <td><span className={u.online_devices ? "opsOnline" : ""}>{u.live_status_verified ? u.online_devices : '—'} / {u.device_count}</span>{!u.live_status_verified && <small>{tr('Live status unverified', '实时在线未核实')}</small>}</td>
             <td><strong>{u.linked_login === "google" ? "Google" : "Email"}</strong>
-              <small>{u.first_mcp_client || tr("No MCP connection yet", "尚未连接 MCP")}</small></td>
+              <small>{u.first_mcp_client ? tr('Reported client: ', '客户端自报：') + u.first_mcp_client : tr("No MCP connection recorded", "无 MCP 连接记录")}</small></td>
             <td><small>{u.live_agent_versions?.length ? u.live_agent_versions.join(", ") : "—"}</small></td>
             <td>{relative(u.last_activity, locale)}</td>
             <td><button onClick={() => { setSelectedUser(u.id === selectedUser ? null : u.id); setNotice(""); }}>{tr("Details", "详情")}</button></td>
-          </tr>)}</tbody>
+          </tr>)}{!loading && filtered.length === 0 && <tr><td colSpan={9}>{tr('No users match these filters.', '没有符合筛选条件的用户。')}</td></tr>}</tbody>
         </table>
       </div>
       {chosen && <AdminUserUsageInsights key={chosen.id} userId={chosen.id} used={chosen.used} allowance={chosen.allowance} extra={chosen.extra} />}
       {chosen && <div className="opsUserDetail">
-        <div><h3>{chosen.name || chosen.email}</h3><p>{chosen.email} · {tr("Joined", "注册于")} {new Date(chosen.created_at).toLocaleDateString()}</p><p>{tr("Monthly plan quota", "本月基础额度")}: {chosen.allowance === null ? "∞" : fmt(chosen.allowance - chosen.extra)} · {tr("Extra granted", "额外赠送")}: {fmt(chosen.extra)}</p></div>
+        <div><h3>{chosen.name || chosen.email}</h3><p>{chosen.email} · {tr("Joined", "注册于")} {new Date(chosen.created_at).toLocaleDateString()}</p><p>{tr("Monthly plan quota", "本月基础额度")}: {chosen.allowance === null ? "∞" : fmt(chosen.allowance - chosen.extra)} · {tr("Extra granted", "额外赠送")}: {fmt(chosen.extra)}</p><UserActivationEvidence evidence={chosen}/></div>
         <div className="opsPlusGrant">
           <div>
             <h4>{tr("Additional computer slots","追加电脑名额")}</h4>
@@ -476,9 +500,9 @@ export function AdminOperations({readOnly=false,embedded=false}:{readOnly?:boole
         </div>
       </div>}
       <div className="opsPages">
-        <button disabled={page === 0} onClick={() => setPage(p => Math.max(0,p-1))}>{tr("Previous", "上一页")}</button>
-        <span>{page + 1} / {Math.max(1, Math.ceil((data?.totals.users || 1) / (data?.pageSize || 30)))}</span>
-        <button disabled={!data || (page+1)*data.pageSize >= data.totals.users} onClick={() => setPage(p => p+1)}>{tr("Next", "下一页")}</button>
+        <button disabled={page === 0 || loading} onClick={() => { setPage(p => Math.max(0,p-1)); setSelectedUser(null); }}>{tr("Previous", "上一页")}</button>
+        <span>{page + 1} / {Math.max(1, Math.ceil((data?.filteredTotal || 1) / (data?.pageSize || 30)))}</span>
+        <button disabled={!data || loading || (page+1)*data.pageSize >= data.filteredTotal} onClick={() => { setPage(p => p+1); setSelectedUser(null); }}>{tr("Next", "下一页")}</button>
       </div>
     </div>}
 

@@ -72,5 +72,7 @@ export async function nativeBillingDetails(env:BillingEnv,userId:string){
  const method=account.invoice_settings?.default_payment_method,card=method?.card;
  const wallet=card?.wallet?.type;
  const paymentMethod=method&&typeof method==='object'&&stripeId(method.customer)===row.customer_id?(card?{type:'card',brand:String(card.brand),last4:String(card.last4),expMonth:Number(card.exp_month),expYear:Number(card.exp_year),...(['apple_pay','google_pay'].includes(wallet)?{wallet}:{})}:{type:method.type==='link'?'link':'other'}):null;
- return{paymentMethod,invoices:(invoices.data||[]).map((invoice:Record<string,any>)=>{owned(env,invoice,row.customer_id);return{id:objectId(invoice,'in'),number:invoice.number||null,status:invoice.status,currency:invoice.currency,amountPaid:invoice.amount_paid,amountDue:invoice.amount_due,createdAt:new Date(invoice.created*1000).toISOString(),pdfUrl:pdfUrl(invoice.invoice_pdf)};}),hasMore:Boolean(invoices.has_more)};
+ // Stripe keeps a refunded invoice "paid"; the verified receipt ledger records the refund.
+ const refunded=new Set((await env.DB.prepare("SELECT id FROM arc_payment_receipts WHERE user_id=?1 AND state='refunded' AND id LIKE 'in_%'").bind(userId).all<{id:string}>()).results.map(r=>r.id));
+ return{paymentMethod,invoices:(invoices.data||[]).map((invoice:Record<string,any>)=>{owned(env,invoice,row.customer_id);return{id:objectId(invoice,'in'),number:invoice.number||null,status:refunded.has(objectId(invoice,'in'))?'refunded':invoice.status,currency:invoice.currency,amountPaid:invoice.amount_paid,amountDue:invoice.amount_due,createdAt:new Date(invoice.created*1000).toISOString(),pdfUrl:pdfUrl(invoice.invoice_pdf)};}),hasMore:Boolean(invoices.has_more)};
 }

@@ -325,8 +325,8 @@ export const DOC_TOPICS: DocTopic[] = reviewedDocTopics(platformDocTopics([
           "zh": "一个平台，两种工作方式"
         },
         "text": {
-          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the hosted personal-agent workspace on the same connections: chat, real tools, one-off tasks and routines. You do not supply a model API key. Start a 14-day Arc trial with Auto, or choose Plus or Pro for more Credits and configured premium models. Connect has a separate call allowance.",
-          "zh": "Connect 通过 MCP 把已有 AI 客户端连接到应用与电脑。Arc 是同一套连接之上的托管个人 Agent 工作空间，支持聊天、真实工具、一次性任务和 Routine，无需模型 API Key。可开启包含 Auto 的 14 天 Arc 试用，或选择 Plus、Pro 获得更多 Credits 与已配置的高级模型；Connect 调用使用独立额度。"
+          "en": "Connect brings your own AI client to apps and computers through MCP. Arc is the hosted personal-agent workspace on the same connections: chat, real tools, one-off tasks and routines. You do not supply a model API key. Start a 14-day Arc trial with Auto, or choose Plus or Pro for more Credits and configured premium models. Connect has a separate call allowance; Connect Unlimited removes its monthly call cap and computer limit without adding hosted Arc.",
+          "zh": "Connect 通过 MCP 把已有 AI 客户端连接到应用与电脑。Arc 是同一套连接之上的托管个人 Agent 工作空间，支持聊天、真实工具、一次性任务和 Routine，无需模型 API Key。可开启包含 Auto 的 14 天 Arc 试用，或选择 Plus、Pro 获得更多 Credits 与已配置的高级模型；Connect 调用使用独立额度，Connect Unlimited 可取消其月度调用上限与电脑数量限制，但不含托管 Arc。"
         }
       },
       {

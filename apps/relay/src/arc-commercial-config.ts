@@ -1,16 +1,19 @@
 import {z} from 'zod';
-import {ARC_PLANS,ARC_TOPUPS} from '@remotearc/protocol';
+import {ARC_PLANS,ARC_TOPUPS,CONNECT_UNLIMITED_PLAN_ID} from '@remotearc/protocol';
 import {stripeRequest,stripeId,stripeLive,StripeError,type StripeEnv} from './stripe-client.js';
 
 export type CommercialEnv=StripeEnv&{DB:D1Database};
 export const commercialMode=(env:StripeEnv)=>/^(sk|rk)_test_/.test(env.STRIPE_SECRET_KEY||'')?'test':'live';
 export const planConfigSchema=z.object({
- id:z.enum(['free','arc-plus-v1','arc-pro-v1']),label:z.string().trim().min(1).max(40),
+ id:z.enum(['free',CONNECT_UNLIMITED_PLAN_ID,'arc-plus-v1','arc-pro-v1']),label:z.string().trim().min(1).max(40),
  monthlyPriceCents:z.number().int().min(0).max(999900),monthlyCredits:z.number().int().min(0).max(100000),
- connectToolCalls:z.number().int().min(1).max(100000000).nullable(),deviceLimit:z.number().int().min(1).max(1000),connectionLimit:z.number().int().min(1).max(5000),
+ connectToolCalls:z.number().int().min(1).max(100000000).nullable(),deviceLimit:z.number().int().min(1).max(1000).nullable(),connectionLimit:z.number().int().min(1).max(5000),
  allHostedModels:z.boolean(),concurrentRuns:z.number().int().min(1).max(50),routines:z.number().int().min(0).max(1000),
  maxSteps:z.number().int().min(1).max(100),maxTokens:z.number().int().min(8000).max(1000000),maxSeconds:z.number().int().min(30).max(86400),
-}).strict().refine(p=>p.id==='free'?p.monthlyPriceCents===0&&p.monthlyCredits===0&&!p.allHostedModels:p.monthlyPriceCents>=100&&p.monthlyCredits>0&&p.allHostedModels,'Paid plans require a nonzero price and allowance');
+}).strict().refine(p=>p.id==='free'?p.monthlyPriceCents===0&&p.monthlyCredits===0&&!p.allHostedModels
+ // Connect-only stays Connect-only: no Credits, no hosted models, explicit unlimited entitlements.
+ :p.id===CONNECT_UNLIMITED_PLAN_ID?p.monthlyPriceCents>=100&&p.monthlyCredits===0&&!p.allHostedModels&&p.connectToolCalls===null&&p.deviceLimit===null
+ :p.monthlyPriceCents>=100&&p.monthlyCredits>0&&p.allHostedModels&&p.deviceLimit!==null,'Paid plans require a nonzero price and allowance');
 export type ArcPlanConfig=z.infer<typeof planConfigSchema>;
 const topupConfigSchema=z.object({id:z.literal('arc-topup-500-v1'),credits:z.number().int().min(1).max(100000),priceCents:z.number().int().min(100).max(999900)}).strict();
 const trialConfigSchema=z.object({id:z.literal('arc-trial-v1'),days:z.number().int().min(1).max(90),credits:z.number().int().min(1).max(10000)}).strict();

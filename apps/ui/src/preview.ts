@@ -6,6 +6,7 @@ import {createArcPreview} from "./arc-preview.js";
 import {createBillingPreview} from "./billing-preview.js";
 import {createFollowupPreview} from './followup-preview.js';
 import {createOnboardingPreview} from './onboarding-preview.js';
+import {previewActivationUsers} from './admin/activation-preview.js';
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
@@ -414,10 +415,11 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
         {id:"u2",email:"tester@example.com",name:"Early tester",role:"user",plan:"free",used:20000,extra:10000,allowance:20000,device_count:1,online_devices:1,created_at:previewAgo(3*86400000),last_activity:previewAgo(3600000),has_plus_grant:0},
         {id:"u3",email:"builder@example.com",name:"Developer",role:"user",plan:"free",used:8689,extra:0,allowance:10000,device_count:2,online_devices:0,created_at:previewAgo(7*86400000),last_activity:previewAgo(29000000),has_plus_grant:1},
       ];
+      const activationPreview = previewActivationUsers(sampleUsers, url);
       return json({
-        checkedAt:previewNow(),month:day.toISOString().slice(0,7),page:0,pageSize:30,creditsReady:true,
-        totals:{users:7,devices:8,online:2,auditRows:33200,auditLast7d:10470,monthlyCalls:6750},
-        limits:{free:10000,plus:10000},users:sampleUsers,
+        checkedAt:previewNow(),month:day.toISOString().slice(0,7),pageSize:30,creditsReady:true,...activationPreview,
+        totals:{users:activationPreview.userCount,devices:8,online:2,auditRows:33200,auditLast7d:10470,monthlyCalls:6750},
+        limits:{free:10000,plus:10000},
         devices:[
           {id:"mac-a",user_id:"preview-user",name:"MacBook Pro",platform:"darwin",arch:"arm64",online:true,statusVerified:true,last_seen:previewAgo(30000),created_at:previewAgo(8*86400000)},
           {id:"pc-a",user_id:"preview-user",name:"Windows Desktop",platform:"win32",arch:"x64",online:false,statusVerified:true,last_seen:previewAgo(3*3600000),created_at:previewAgo(9*86400000)},

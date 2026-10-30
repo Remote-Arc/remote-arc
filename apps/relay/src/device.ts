@@ -13,6 +13,7 @@ import { REVIEWER_DEMO_TOOLS } from "./reviewer-fixture.js";
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
 import {activeDeviceCapacityBonus} from './device-capacity-admin.js';
+import {CONNECT_FAIR_USE} from '@remotearc/protocol';
 
 type DeviceEnv = PlatformLaunchEnv & {
   DB: D1Database;
@@ -267,9 +268,14 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
   const createdAt = nowIso();
   const plan=billingEnabled(env)?await currentArcPlan(env,user.id):null;
   // Enforce computer limits even when hosted Arc billing is off. Time-limited Plus grants count.
-  const deviceLimit = user.isAdmin ? 100000
-    : plan?.id === 'arc-pro-v1' ? Math.max(20, plan.deviceLimit)
+  // null is an explicit unlimited entitlement (administrators, Connect Unlimited).
+  const deviceLimit: number | null = user.isAdmin || (plan && plan.deviceLimit === null) ? null
+    : plan?.id === 'arc-pro-v1' ? Math.max(20, plan.deviceLimit ?? 20)
     : user.plan === 'plus' || plan?.id === 'arc-plus-v1' ? 10 : 2;
+  // Unlimited registered computers keep a published fair-use rate, not a hidden cap.
+  // Revoked registrations count, so revoke/re-pair churn cannot bypass it.
+  const dailyRegistrations = deviceLimit === null && !user.isAdmin ? CONNECT_FAIR_USE.computerRegistrationsPerDay : null;
+  const registrationWindow = new Date(Date.now() - 86400_000).toISOString();
 
   const pairingResult=await env.DB.batch([
     env.DB.prepare(
@@ -277,8 +283,10 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
         id, user_id, name, platform, arch, hostname,
         credential_hash, created_at, last_seen, revoked_at, allowed_tools
       ) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL, ?9
-      WHERE ((?4 = 'browser' AND (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform='browser') < 20)
-        OR (?4 <> 'browser' AND (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform<>'browser') < (?10 + (SELECT COALESCE(SUM(extra_devices),0) FROM device_capacity_grants WHERE user_id=?2 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at>?8)))))
+      WHERE ((?4 = 'browser' AND (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform='browser') < ?14)
+        OR (?4 <> 'browser'
+          AND (?10 IS NULL OR (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND revoked_at IS NULL AND platform<>'browser') < (?10 + (SELECT COALESCE(SUM(extra_devices),0) FROM device_capacity_grants WHERE user_id=?2 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at>?8))))
+          AND (?12 IS NULL OR (SELECT COUNT(*) FROM devices WHERE user_id=?2 AND platform<>'browser' AND created_at>?13) < ?12)))
       AND EXISTS(SELECT 1 FROM device_pairings WHERE user_code=?11 AND status='pending' AND expires_at>?8)`,
     ).bind(
       deviceId,
@@ -294,7 +302,7 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
           ? BROWSER_DEFAULT_ALLOWED_TOOLS
           : DEFAULT_ALLOWED_TOOLS,
       ),
-      deviceLimit,userCode,
+      deviceLimit,userCode,dailyRegistrations,registrationWindow,CONNECT_FAIR_USE.browserInstallations,
     ),
     env.DB.prepare(
       `UPDATE device_pairings
@@ -311,9 +319,18 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
     const browsers = pairing.platform === 'browser' ? await env.DB.prepare(
       "SELECT COUNT(*) AS total FROM devices WHERE user_id=?1 AND revoked_at IS NULL AND platform='browser'"
     ).bind(user.id).first<{total:number}>() : null;
+    if (pairing.platform !== 'browser' && dailyRegistrations !== null) {
+      const recent = await env.DB.prepare(
+        "SELECT COUNT(*) AS total FROM devices WHERE user_id=?1 AND platform<>'browser' AND created_at>?2"
+      ).bind(user.id, registrationWindow).first<{total:number}>();
+      if ((recent?.total ?? 0) >= dailyRegistrations) return Response.json({
+        error: 'device_registration_rate_limited', count: recent?.total ?? 0, limit: dailyRegistrations, window: '24h', device_type: 'computer',
+      }, { status: 429, headers: { 'retry-after': '3600' } });
+    }
     const count = pairing.platform === 'browser' ? browsers?.total ?? 0 : computers;
-    const limit = pairing.platform === 'browser' ? 20 : deviceLimit + await activeDeviceCapacityBonus(env.DB,user.id);
-    return count >= limit
+    const limit = pairing.platform === 'browser' ? CONNECT_FAIR_USE.browserInstallations
+      : deviceLimit === null ? null : deviceLimit + await activeDeviceCapacityBonus(env.DB,user.id);
+    return limit !== null && count >= limit
       ? Response.json({ error: 'device_limit_reached', count, limit, device_type: pairing.platform === 'browser' ? 'browser' : 'computer' }, { status: 403 })
       : Response.json({ error: 'pairing_changed', message: 'Start a new pairing from your computer.' }, { status: 409 });
   }

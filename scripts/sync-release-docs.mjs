@@ -93,8 +93,7 @@ const installEnd = "<!-- native-install:end -->";
 const nativeVersion = latest.version;
 const installerPath = new URL("apps/ui/public/install.sh", root);
 const installer = readFileSync(installerPath, "utf8");
-if (!/^  version='[0-9]+\.[0-9]+\.[0-9]+'$/m.test(installer)) throw new Error("Native installer version marker missing");
-const expectedInstaller = installer.replace(/^  version='[0-9]+\.[0-9]+\.[0-9]+'$/m, "  version='" + nativeVersion + "'");
+if (!installer.includes("releases/latest/download/go-binaries.json") || !installer.includes("REMOTEARC_INSTALL_VERSION")) throw new Error("Native installer must follow the stable channel and support explicit version pins");
 const nativeRelease = "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v" + nativeVersion + "/";
 const nativeTargets = [
   ["macOS Apple Silicon", "darwin", "arm64"], ["macOS Intel", "darwin", "amd64"],
@@ -117,7 +116,7 @@ const rootStart = rootReadme.indexOf(installStart);
 const expectedRootReadme = rootReadme.slice(0, rootStart) + nativeBlock + rootReadme.slice(rootReadme.indexOf(installEnd, rootStart) + installEnd.length);
 
 if (mode === "--check") {
-  if (expected !== readme || expectedRootReadme !== rootReadme || expectedInstaller !== installer || cliLicense !== rootLicense) {
+  if (expected !== readme || expectedRootReadme !== rootReadme || cliLicense !== rootLicense) {
     console.error("Release or native download documentation is out of sync with CHANGELOG.md");
     process.exit(1);
   }
@@ -126,7 +125,6 @@ if (mode === "--check") {
 }
 
 if (mode !== "--write") throw new Error("Unknown mode: " + mode);
-if (expectedInstaller !== installer) writeFileSync(installerPath, expectedInstaller);
 if (expected !== readme) writeFileSync(cliReadmePath, expected);
 if (expectedRootReadme !== rootReadme) writeFileSync(rootReadmePath, expectedRootReadme);
 if (cliLicense !== rootLicense) writeFileSync(cliLicensePath, rootLicense);

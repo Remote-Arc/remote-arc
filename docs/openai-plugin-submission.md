@@ -73,6 +73,20 @@ Use Remote Arc only with computers, files, accounts, and services you own or are
 | `get_goal_context` | true | false | false | Reads an account-owned goal, factual memory, observations, revision and bounded journal; it does not retrieve the original chat. |
 | `submit_goal_decision` | false | true | true | Persists an authorized revision-checked next decision which can cause device or external changes; matching idempotency keys prevent duplicate acceptance. |
 | `manage_automation` | false | false | true | Pauses, resumes or cancels account-owned work; cancellation can interrupt its managed process. |
+| `list_apps` | true | false | false | Lists the user's own connected App accounts and searches the static App action catalog. Never runs an action or contacts a provider. |
+| `run_app_read_action` | true | true | false | Runs one of the catalog's read operations, each listed individually in the input schema. Retrieval only; some reads (X posts) return public content. |
+| `run_app_write_action` | false | true | true | Runs one of the catalog's write operations, each listed individually in the input schema: sends, posts, creates, updates or deletes in the user's connected account. Each requestId runs at most once. |
+
+### Connected App tools (resubmission, 2026-10-30)
+
+The first App submission used `list_apps` plus a generic `call_app(operation, arguments)` executor. Review rejected both because operations were "not individually exposed". The replacement keeps one MCP URL and a small fixed tool set but publishes every operation up front:
+
+- `run_app_read_action` and `run_app_write_action` each have an `operation` input whose schema is a closed `oneOf` with one variant per catalog operation (180 reads and 164 writes in the current release). Each variant pins `action` to a constant ID such as `gmail.messages.send`, carries its own description and the operation's exact, strict argument schema. Nothing is fetched at runtime to learn an operation or its arguments, and no operation outside `tools/list` can run.
+- Reads and writes are separate tools, so each tool's annotations hold for every operation it can run. The read tool's schema contains no write operation, and the server rejects any mismatch before dispatch.
+- `list_apps` is optional and read-only: it returns the user's connection IDs and a keyword search over the same catalog.
+- Existing enforcement is unchanged: connection ownership, a provider match between action and connection, `apps:read`/`apps:write` OAuth scopes, provider grants, strict argument validation and at-most-once `requestId` replay.
+
+The reviewer account has no connected Apps, so App tools return connection errors in review unless a reviewer connects their own account. State this in the review notes.
 
 Production tools/list was independently checked on 2026-10-05 and exposed 31 hosted MCP tools. The reviewer fixture intentionally advertises eight representative device tools for deterministic review: directory/file reads, file metadata, process listing, a safe command allowlist, sandboxed write/edit, and undo. Browser reads and production managed-process controls remain declared and annotated but are not required in the five representative positive tests.
 

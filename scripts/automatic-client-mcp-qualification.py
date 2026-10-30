@@ -12,12 +12,92 @@ import os
 import pathlib
 import platform
 import shutil
+import subprocess
 import sys
 import tempfile
+import time
 from urllib.request import urlopen
 
 
+def windows_worker(command, payload):
+    """Contain only this fixture's processes, including orphaned client children.
+
+    The worker waits for stdin before launching clients, so job assignment happens
+    before descendants can escape. Do not kill clients by executable name.
+    https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    class Accounting(ctypes.Structure):
+        _fields_ = [(name, ctypes.c_int64) for name in (
+            "user_time", "kernel_time", "period_user_time", "period_kernel_time")]
+        _fields_ += [(name, wintypes.DWORD) for name in (
+            "page_faults", "total_processes", "active_processes", "terminated_processes")]
+
+    api = ctypes.WinDLL("kernel32", use_last_error=True)
+    api.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    api.CreateJobObjectW.restype = wintypes.HANDLE
+    api.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    api.AssignProcessToJobObject.restype = wintypes.BOOL
+    api.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    api.TerminateJobObject.restype = wintypes.BOOL
+    api.QueryInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int,
+                                             ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p]
+    api.QueryInformationJobObject.restype = wintypes.BOOL
+    api.CloseHandle.argtypes = [wintypes.HANDLE]
+    api.CloseHandle.restype = wintypes.BOOL
+    job = api.CreateJobObjectW(None, None)
+    if not job:
+        raise ctypes.WinError(ctypes.get_last_error())
+    process = None
+    try:
+        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, text=True, encoding="utf-8",
+                                   creationflags=subprocess.CREATE_NO_WINDOW)
+        if not api.AssignProcessToJobObject(job, int(process._handle)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        stdout, stderr = process.communicate(json.dumps(payload), timeout=300)
+        if process.returncode:
+            raise RuntimeError("Client qualification failed:\n" + stderr[-8000:])
+        return json.loads(stdout)
+    finally:
+        try:
+            if not api.TerminateJobObject(job, 1):
+                raise ctypes.WinError(ctypes.get_last_error())
+            deadline = time.monotonic() + 5
+            accounting = Accounting()
+            while True:
+                if not api.QueryInformationJobObject(job, 1, ctypes.byref(accounting),
+                                                    ctypes.sizeof(accounting), None):
+                    raise ctypes.WinError(ctypes.get_last_error())
+                if not accounting.active_processes:
+                    break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("Fixture client processes did not stop before directory cleanup")
+                time.sleep(0.02)
+        finally:
+            api.CloseHandle(job)
+            if process is not None and process.poll() is None:
+                process.kill()  # Also handles failure to assign the waiting worker.
+                process.wait(timeout=5)
+
+
+def worker():
+    request = json.load(sys.stdin)  # Parent assigns the job before releasing this gate.
+    spec = importlib.util.spec_from_file_location("client_mcp_smoke", pathlib.Path(__file__).with_name("automatic-client-mcp-smoke.py"))
+    smoke = importlib.util.module_from_spec(spec)
+    sys.dont_write_bytecode = True
+    spec.loader.exec_module(smoke)
+    paths = [pathlib.Path(request[key]) for key in ("binary", "codex", "claude", "directory")]
+    discovery = pathlib.Path(request["discovery"]) if request["discovery"] else None
+    print(json.dumps(smoke.run(*paths, discovery, request["launcher"])), flush=True)
+
+
 def main():
+    if sys.argv[1:] == ["--worker"]:
+        worker()
+        return
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("client-prefix", "source-binary", "npm-prefix", "report-dir"):
         parser.add_argument("--" + name, type=pathlib.Path, required=True)
@@ -70,7 +150,14 @@ def main():
         cases.append(("source-global-npm-clients", args.source_binary.resolve(), prefix, None, global_codex, global_claude))
     for name, binary, discovery, launcher, actual_codex, actual_claude in cases:
         with tempfile.TemporaryDirectory(prefix="remotearc-client-qualification-") as directory:
-            result = smoke.run(binary, actual_codex, actual_claude, pathlib.Path(directory).resolve(), discovery, launcher)
+            if os.name == "nt":
+                result = windows_worker([sys.executable, str(pathlib.Path(__file__).resolve()), "--worker"], {
+                    "binary": str(binary), "codex": str(actual_codex), "claude": str(actual_claude),
+                    "directory": str(pathlib.Path(directory).resolve()),
+                    "discovery": str(discovery) if discovery else None, "launcher": launcher,
+                })
+            else:
+                result = smoke.run(binary, actual_codex, actual_claude, pathlib.Path(directory).resolve(), discovery, launcher)
         result["qualification_case"] = name
         result["published_version"] = version
         (output / f"{name}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

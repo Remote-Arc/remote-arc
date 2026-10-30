@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,8 +36,8 @@ func TestWorkspaceMCPDoesNotPairOrUseBroaderEnvironmentMode(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	var out, diagnostics bytes.Buffer
-	if err := Main(ctx, []string{"--mcp", "--mcp-workspace=" + home}, "test", os.Stdin, &out, &diagnostics); err == nil {
-		t.Fatal("cancelled MCP server succeeded")
+	if err := Main(ctx, []string{"--mcp", "--mcp-workspace=" + home}, "test", os.Stdin, &out, &diagnostics); !errors.Is(err, context.Canceled) {
+		t.Fatal("cancelled MCP server did not return cancellation", err)
 	}
 	if out.Len() != 0 || !strings.Contains(diagnostics.String(), "read-only workspace") {
 		t.Fatal("nonprotocol stdout or broader mode")

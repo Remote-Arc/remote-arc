@@ -263,12 +263,14 @@ const parseJson = <T>(value: string | null, fallback: T): T => {
   }
 };
 
-export function requiredAutomationFeatures(input: Pick<CreateAutomationInput, "kind" | "schedule" | "keep_awake">) {
+export function requiredAutomationFeatures(input: Pick<CreateAutomationInput, "kind" | "schedule" | "keep_awake" | "agent_goal">) {
   const requestedKind = input.kind || "long_task";
   const features: AccountFeature[] =
     requestedKind === "agent_goal"
       ? ["planned_agent_goals", "durable_tasks"]
       : ["durable_tasks"];
+  // Only source-controlled goals use the user's own AI; hosted planning is Arc inference.
+  if (requestedKind === "agent_goal" && input.agent_goal?.controller !== "source") features.push("hosted_planner");
   if (requestedKind === "schedule_watch" || input.schedule) features.push("scheduled_tasks");
   if (input.keep_awake) features.push("keep_awake");
   return features;
@@ -278,6 +280,7 @@ function requiredAutomationRowFeatures(automation: AutomationRow) {
   const features: AccountFeature[] = ["durable_tasks"];
   const goal = parseJson<GoalSpec | null>(automation.goal_json, null);
   if (goal?.type === "agent_goal") features.push("planned_agent_goals");
+  if (goal?.type === "agent_goal" && goal.controller !== "source") features.push("hosted_planner");
   const trigger = parseJson<TriggerSpec | null>(automation.trigger_json, null);
   if (trigger?.type === "interval" || trigger?.type === "at") features.push("scheduled_tasks");
   const action = parseJson<ActionPlan>(automation.action_json, { steps: [] });

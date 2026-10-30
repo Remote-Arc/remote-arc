@@ -55,7 +55,9 @@ for (const name of [
   "get_goal_context",
   "submit_goal_decision",
   "browser_runner_act",
-  "call_app",
+  "list_apps",
+  "run_app_read_action",
+  "run_app_write_action",
 ])
   assert(
     data.remote.some((tool) => tool.name === name),
@@ -67,6 +69,8 @@ assert(
   ),
   "Retired aliases must not inflate the public tool list",
 );
+assert(!data.remote.some(tool => tool.name === "github_issues_create" || tool.name === "gmail_drafts_create"),
+  "Static provider actions should be discovered via list_apps, not advertised as hundreds of top-level tools");
 const operations = data.apps.flatMap((app) =>
   app.operations.map((operation) => app.provider + ":" + operation.name),
 );

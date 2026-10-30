@@ -24,7 +24,7 @@ export function toolGroup(name: string): ToolGroup {
   if (name === "list_agent_sessions") return "processes";
   if (name.startsWith("shared_tab_")) return "shared-tabs";
   if (name.startsWith("browser_runner_")) return "browser-runner";
-  if (["list_apps", "call_app"].includes(name)) return "apps";
+  if (["list_apps", "run_app_read_action", "run_app_write_action"].includes(name) || /^(github|gmail)_/.test(name)) return "apps";
   if (
     ["create_agent_goal", "get_goal_context", "submit_goal_decision"].includes(
       name,
@@ -58,15 +58,27 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
   },
   list_apps: {
-    zh: "查找已连接的应用及账号、支持的操作与所需参数。",
-    summary:
-      "Find connected accounts and discover each app's supported operations.",
+    zh: "列出已连接的应用账号（connectionId），并按任务搜索 37 个应用的固定操作目录；只读，不执行任何操作。",
+    summary: "List connected App accounts and search the fixed App action catalog by task. Read-only; never runs an action.",
   },
-  call_app: {
-    zh: "使用指定账号读取或修改应用数据；写入还需要 Apps 写权限。",
-    summary:
-      "Run a supported operation with a connection ID and a stable request ID.",
+  run_app_read_action: {
+    zh: "在已连接账号中执行一个只读操作；全部读取操作及其参数 Schema 都逐一列在工具定义中，不会修改任何数据。",
+    summary: "Run one read-only App action. Every read action and its exact argument schema is listed in the tool definition.",
   },
+  run_app_write_action: {
+    zh: "在已连接账号中执行一个用户明确要求的更改（发送、发布、创建、更新或删除）；全部写入操作逐一列出，受账号权限、OAuth Scope 和写入去重保护。",
+    summary: "Run one user-requested App change, such as send, publish, create, update or delete. Each write action is listed with its schema and protected by ownership, scopes and replay checks.",
+  },
+  github_repositories_list: { zh: "列出所选 GitHub 账号可访问的仓库。", summary: "List repositories accessible to the selected GitHub account." },
+  github_issues_list: { zh: "列出指定仓库的 Issue。", summary: "List issues in a specified repository." },
+  github_issues_get: { zh: "读取指定仓库中的一个 Issue。", summary: "Read one repository issue." },
+  github_pulls_list: { zh: "列出指定仓库的 Pull Request。", summary: "List repository pull requests." },
+  github_comments_list: { zh: "读取指定 Issue 或 Pull Request 的评论。", summary: "Read issue or pull request comments." },
+  github_issues_create: { zh: "按指定标题与内容创建一个 GitHub Issue。", summary: "Create a GitHub issue with the specified title and body." },
+  github_comments_create: { zh: "在指定 Issue 或 Pull Request 中发布评论。", summary: "Publish a comment on an issue or pull request." },
+  gmail_messages_list: { zh: "在所选 Gmail 账号中搜索邮件，返回邮件 ID。", summary: "Search Gmail messages and return message IDs." },
+  gmail_messages_get: { zh: "读取所选 Gmail 账号中的一封邮件。", summary: "Read one Gmail message." },
+  gmail_drafts_create: { zh: "在所选 Gmail 账号中创建草稿，不发送邮件。", summary: "Create a Gmail draft without sending it." },
   list_devices: {
     zh: "查看账号下的电脑、在线状态与设备能力。",
     summary: "Find your linked computers and their current connection state.",
@@ -137,8 +149,8 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Inspect the computer's operating-system process list.",
   },
   start_process: {
-    zh: "执行终端命令，或启动可查询、可停止的后台进程。",
-    summary: "Run a shell command or start a managed background process.",
+    zh: "执行终端命令，或启动可查询、可停止的后台进程；部署、迁移、云管理等技术任务优先使用 CLI/API。",
+    summary: "Run a shell command or managed process; prefer CLI/API for technical tasks such as deployments and migrations.",
   },
   process_status: {
     zh: "查询由 Remote Arc 管理的后台进程状态。",
@@ -181,8 +193,8 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Perform a supported action in a shared browser tab.",
   },
   browser_runner_start: {
-    zh: "在已连接电脑上开始或恢复有站点范围限制的浏览器任务。",
-    summary: "Start or resume a task-scoped browser on a linked computer.",
+    zh: "为实际网页交互开始或恢复有站点范围限制的浏览器任务；技术任务优先使用 CLI/API。",
+    summary: "Start or resume a scoped browser for webpage interaction; prefer CLI/API for technical tasks.",
   },
   browser_runner_snapshot: {
     zh: "读取任务页面快照、元素引用与需要用户处理的阻碍。",

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab,
-  isAgentGoalAutomation, isAgentRoutineAutomation, isVisibleInWorkspace,
+  isAgentGoalAutomation, isAgentRoutineAutomation, isVisibleInWorkspace, isNativeArcAutomation,
 } from "../src/dashboard-workspaces.ts";
 
 const plainTask = { kind: "schedule_watch", goal_json: null, trigger_json: '{"type":"interval"}' };
@@ -12,25 +12,25 @@ const aiRoutine = { kind: "long_task", goal_json: '{"type":"agent_goal"}', trigg
 test("Connect release redirects every Arc deep link and preserves shared connections", () => {
   for (const [tab, path] of Object.entries(DASHBOARD_PATHS)) {
     assert.equal(workspaceForTab(availableDashboardTab(dashboardTabFromPath(path))), 'connect');
-    if (tab !== 'automations') assert.equal(availableDashboardTab(tab, true), tab);
+    assert.equal(availableDashboardTab(tab, true), tab);
   }
   assert.equal(availableDashboardTab('agent-apps'), 'apps');
   assert.equal(availableDashboardTab('agent-devices'), 'devices');
   assert.equal(availableDashboardTab('agent-settings'), 'settings');
-  assert.equal(availableDashboardTab(dashboardTabFromPath('/automations')), 'overview');
+  assert.equal(availableDashboardTab(dashboardTabFromPath('/automations')), 'automations');
 });
 
 test("each canonical dashboard route resolves to its tab", () => {
   for (const [tab, path] of Object.entries(DASHBOARD_PATHS)) {
-    assert.equal(dashboardTabFromPath(path), ['automations','agent-routines'].includes(tab) ? 'agent-goals' : tab);
-    assert.equal(dashboardTabFromPath(path + "/"), ['automations','agent-routines'].includes(tab) ? 'agent-goals' : tab);
+    assert.equal(dashboardTabFromPath(path), tab === 'agent-routines' ? 'agent-goals' : tab);
+    assert.equal(dashboardTabFromPath(path + "/"), tab === 'agent-routines' ? 'agent-goals' : tab);
     assert.equal(workspaceForTab(tab), tab.startsWith("agent-") ? "agent" : "connect");
   }
 });
 
 test("existing deep links remain compatible", () => {
   for (const [path, tab] of Object.entries(LEGACY_DASHBOARD_PATHS)) {
-    assert.equal(dashboardTabFromPath(path), ['automations','agent-routines'].includes(tab) ? 'agent-goals' : tab);
+    assert.equal(dashboardTabFromPath(path), tab === 'agent-routines' ? 'agent-goals' : tab);
   }
   assert.equal(dashboardTabFromPath("/unknown"), "overview");
 });
@@ -39,7 +39,7 @@ test("Arc tasks include one-off and recurring work", () => {
   assert.equal(isAgentGoalAutomation(plainTask), false);
   assert.equal(isAgentGoalAutomation(aiGoal), true);
   assert.equal(isVisibleInWorkspace(plainTask, "automations"), true);
-  assert.equal(isVisibleInWorkspace(aiGoal, "automations"), false);
+  assert.equal(isVisibleInWorkspace(aiGoal, "automations"), true);
   assert.equal(isVisibleInWorkspace(aiGoal, "agent-goals"), true);
   assert.equal(isVisibleInWorkspace(plainTask, "agent-goals"), true);
   assert.equal(isVisibleInWorkspace(aiRoutine, "agent-goals"), true);
@@ -60,3 +60,12 @@ test("malformed JSON never crosses the workspace boundary", () => {
   assert.equal(isAgentRoutineAutomation(malformed), false);
   assert.equal(isVisibleInWorkspace(malformed, "automations"), true);
 });
+
+ test("MCP task links stay in Connect and native Arc work stays in Arc", () => {
+  const native = {kind:"goal_loop",goal_json:'{"type":"agent_goal","native_arc":{"version":1}}'};
+  for(const path of ['/automations','/dashboard/connect/tasks'])
+    assert.equal(availableDashboardTab(dashboardTabFromPath(path),false),'automations');
+  assert.equal(isNativeArcAutomation(native),true);
+  assert.equal(isVisibleInWorkspace(native,'automations'),false);
+  assert.equal(isVisibleInWorkspace(aiRoutine,'automations'),true);
+ });

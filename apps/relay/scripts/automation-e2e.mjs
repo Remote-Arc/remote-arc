@@ -212,6 +212,10 @@ try {
   await poke(longId); await tick(); row=await get(longId); assert(row.status==="running","long stays running after first poll "+row.status);
   await poke(longId); await tick(); row=await get(longId); assert(row.status==="completed"&&row.run_count===1,"long completes "+JSON.stringify(row));
 
+  const savedLongRuns=(await api("/api/automations/"+longId)).runs;
+  assert(savedLongRuns[0].output_summary.includes("fake output") && savedLongRuns[0].exit_code===0,
+    "Completed command output and exit status must be saved in the task API");
+
   // A status-query timeout is not evidence that an acknowledged process
   // failed. Keep its handle and original attempt, then poll again.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({

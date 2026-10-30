@@ -147,6 +147,71 @@ try {
   const tick = async id => { sqlite.prepare("UPDATE automations SET next_run_at = ? WHERE id = ? AND status != 'waiting_for_event'").run(new Date().toISOString(), id); await runtime.runAutomationTick(env); };
   const decision = (kind, tool = "none", args = {}, evidence = "") => ({ decision: kind, tool, arguments_json: JSON.stringify(args), decision_summary: "Next bounded action", memory: "Factual checkpoint", completion_evidence: evidence });
 
+  // Completed command output remains in run history, independently of local PID retention.
+  const outputHandler = deviceHandler;
+  let outputReads = 0;
+  deviceHandler = body => body.tool === "process_output"
+    ? (++outputReads === 1
+      ? { content: [{ type: "text", text: JSON.stringify({stdout:"FIRST_STEP_OUTPUT",stderr:""}) }] }
+      : { stdout: "SECOND_STEP_OUTPUT", stderr: "SECOND_STEP_WARNING" })
+    : outputHandler(body);
+  const outputTask = (await runtime.createAutomation(env, "owner", {
+    name: "Retained multi-step output", device_id: "device", kind: "long_task",
+    steps: [{command:"step-one",cwd:"/workspace"},{command:"step-two",cwd:"/workspace"}],
+  })).automation.id;
+  await tick(outputTask); await tick(outputTask); await tick(outputTask);
+  assert.equal((await get(outputTask)).status,"completed");
+  const retained = (await runtime.listAutomationRuns(env,"owner",outputTask))[0];
+  assert.equal(retained.exit_code,0);
+  assert(retained.output_summary.includes("FIRST_STEP_OUTPUT") && retained.output_summary.includes("SECOND_STEP_OUTPUT"));
+  assert(retained.output_summary.includes("SECOND_STEP_WARNING"));
+  assert.equal(outputReads,2,"Fetch output once per completed command");
+  await tick(outputTask);
+  assert.equal(outputReads,2,"A settled run must not re-read or duplicate its output");
+
+  deviceHandler = body => body.tool === "process_output"
+    ? {stdout:"A".repeat(12000)+"LAST_OUTPUT_MARKER",stderr:""}
+    : outputHandler(body);
+  const clippedTask = (await runtime.createAutomation(env,"owner",{
+    name:"Bounded command output",device_id:"device",kind:"long_task",command:"large-output",cwd:"/workspace",
+  })).automation.id;
+  await tick(clippedTask); await tick(clippedTask);
+  const clipped = (await runtime.listAutomationRuns(env,"owner",clippedTask))[0].output_summary;
+  assert(clipped.length<=6000 && clipped.includes("LAST_OUTPUT_MARKER") && clipped.includes("truncated"));
+
+  deviceHandler = body => { if(body.tool==="process_output")throw new Error("Managed output retention expired");return outputHandler(body); };
+  const missingOutputTask = (await runtime.createAutomation(env,"owner",{
+    name:"Output unavailable preserves exit result",device_id:"device",kind:"long_task",command:"missing-output",cwd:"/workspace",
+  })).automation.id;
+  await tick(missingOutputTask); await tick(missingOutputTask);
+  assert.equal((await get(missingOutputTask)).status,"completed","Missing output must not rerun or fail a successful command");
+  assert((await runtime.listAutomationRuns(env,"owner",missingOutputTask))[0].output_summary.includes("Output could not be retained"));
+
+  deviceHandler = body => body.tool === "process_status"
+    ? {status:"exited",exit_code:7}
+    : body.tool === "process_output" ? {stdout:"FAILED_STEP_OUTPUT",stderr:"FAILURE_DETAIL"} : outputHandler(body);
+  const failedOutputTask = (await runtime.createAutomation(env,"owner",{
+    name:"Failed command output",device_id:"device",kind:"long_task",command:"failing-step",cwd:"/workspace",max_runs:1,
+  })).automation.id;
+  await tick(failedOutputTask); await tick(failedOutputTask);
+  const failedOutput = (await runtime.listAutomationRuns(env,"owner",failedOutputTask))[0];
+  assert.equal((await get(failedOutputTask)).status,"failed");
+  assert.equal(failedOutput.exit_code,7);
+  assert(failedOutput.output_summary.includes("FAILED_STEP_OUTPUT") && failedOutput.output_summary.includes("FAILURE_DETAIL"));
+
+  let cancelOutputTask;
+  deviceHandler = async body => {
+    if(body.tool==="process_output"){await runtime.cancelAutomation(env,"owner",cancelOutputTask);return {stdout:"STALE_OUTPUT",stderr:""};}
+    return outputHandler(body);
+  };
+  cancelOutputTask = (await runtime.createAutomation(env,"owner",{
+    name:"Cancel while retaining output",device_id:"device",kind:"long_task",command:"cancel-output",cwd:"/workspace",
+  })).automation.id;
+  await tick(cancelOutputTask); await tick(cancelOutputTask);
+  assert.equal((await get(cancelOutputTask)).status,"cancelled");
+  assert(!(await runtime.listAutomationRuns(env,"owner",cancelOutputTask))[0].output_summary?.includes("STALE_OUTPUT"),"A revoked lease must fence late output writes");
+  deviceHandler = outputHandler;
+
   const downgradeFenceId = await create("Plan downgrade fence");
   await runtime.pauseAutomation(env, "owner", downgradeFenceId);
   sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();

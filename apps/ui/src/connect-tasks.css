@@ -1,0 +1,32 @@
+.connectTasks{max-width:1180px;margin:0 auto;color:var(--text)}
+.connectTasks .overviewTopbar{gap:20px;align-items:flex-start}
+.connectTasks .overviewTopbar p{max-width:660px;line-height:1.7}
+.connectTasksIntro{display:flex;align-items:flex-start;gap:15px;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);margin:22px 0}
+.connectTasksIntro>svg{flex:none;margin-top:2px;color:var(--muted)}
+.connectTasksIntro>div{flex:1;min-width:0}.connectTasksIntro strong{font-size:14px;font-weight:600}.connectTasksIntro p{font-size:13px;line-height:1.8;color:var(--muted);margin:7px 0 0}
+.connectTasksIntro>button{display:flex;align-items:center;gap:7px;flex:none}
+.connectTasksToolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:24px 0 16px}
+.connectTasksToolbar>label{display:flex;align-items:center;gap:10px;flex:1;max-width:450px;border:1px solid var(--line);border-radius:9px;padding:0 12px;color:var(--muted);background:var(--panel)}
+.connectTasksToolbar input{width:100%;min-width:0;border:0;outline:none;color:var(--text);background:transparent;font:inherit;font-size:13px;min-height:42px}
+.connectTasksToolbar>label:focus-within{outline:2px solid var(--text);outline-offset:2px}
+.connectTasksToolbar>div{display:flex;gap:4px;flex-wrap:wrap}.connectTasksToolbar>div button{border:0;border-radius:7px;padding:9px 12px;color:var(--muted);background:transparent;font-size:12px}
+.connectTasksToolbar>div button[aria-pressed=true]{color:var(--text);background:var(--panel-2)}
+.connectTaskList{display:grid;gap:15px;padding-bottom:32px}.connectTaskCard{min-width:0;border:1px solid var(--line);border-radius:14px;padding:22px;background:var(--panel)}
+.connectTaskCard>header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}.connectTaskCard>header>div{min-width:0}
+.connectTaskKind{font-size:11px;color:var(--muted)}.connectTaskCard h2{margin:9px 0 0;font-size:18px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
+.connectTaskCard h2 button{border:0;padding:0;background:transparent;color:inherit;font:inherit;text-align:left}
+.connectTaskStatus{flex:none;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:11px;line-height:1.5;color:var(--muted);background:var(--panel-2)}
+.connectTaskStatus.failed,.connectTaskStatus.waiting_for_device{color:var(--red,#bb5353)}.connectTaskStatus.running{color:var(--text)}
+.connectTaskActivity{font-size:13px;line-height:1.8;margin:14px 0;color:var(--muted)}
+.connectTaskCard>dl{display:grid;grid-template-columns:.6fr 1fr 1fr;gap:16px;margin:20px 0}
+.connectTaskCard dt{font-size:11px;color:var(--muted);margin-bottom:7px}.connectTaskCard dd{margin:0;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.connectTaskActions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:15px 0 6px;border-top:1px solid var(--line)}
+.connectTaskActionSpacer{flex:1}.connectTaskActions .textButton{font-size:12px}
+.connectTasksSelection{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;font-size:12px;overflow-wrap:anywhere}
+.connectTasksNotice{padding:15px 18px;border:1px solid var(--line);border-radius:10px;font-size:13px;line-height:1.7;color:var(--text);background:var(--panel-2);overflow-wrap:anywhere}
+.connectTasksNotice p{margin:0 0 10px}.connectTasksEmpty{padding:50px 24px;text-align:center;color:var(--muted)}.connectTasksEmpty h2{font-size:19px;color:var(--text);font-weight:500}.connectTasksEmpty p{font-size:13px;line-height:1.8}
+.connectTaskCard .automationDetails{margin-top:12px}.connectTaskCard .taskRun pre{max-height:360px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.connectTaskCancelDialog{width:min(460px,calc(100% - 32px));padding:26px;border:1px solid var(--line);border-radius:15px;background:var(--panel-2);color:var(--text);box-shadow:0 24px 80px #0004}
+.connectTaskCancelDialog::backdrop{background:#0007}.connectTaskCancelDialog h2{font-size:20px;margin:0 0 15px}.connectTaskCancelDialog p{font-size:13px;line-height:1.8;overflow-wrap:anywhere}.connectTaskCancelDialog>div{display:flex;justify-content:flex-end;gap:10px;margin-top:23px}
+.connectTasks button:focus-visible{outline:2px solid var(--text);outline-offset:4px}
+@media(max-width:760px){.connectTasksIntro{display:grid;grid-template-columns:20px minmax(0,1fr);padding:17px}.connectTasksIntro>button{grid-column:2;justify-self:start;margin-left:0}.connectTasksToolbar{align-items:stretch;flex-direction:column}.connectTasksToolbar>label{max-width:none}.connectTasksToolbar input{font-size:16px}.connectTasksToolbar>div button{min-height:40px}.connectTaskCard{padding:17px}.connectTaskCard>dl{grid-template-columns:1fr 1fr}.connectTaskCard>dl>div:first-child{grid-column:1/-1}.connectTaskActions{gap:12px}.connectTaskActions button{min-height:40px}.connectTaskActionSpacer{display:none}.connectTaskStatus{max-width:145px;white-space:normal}.connectTasks .overviewTopbar{display:flex;flex-direction:column;align-items:flex-start;gap:16px}}

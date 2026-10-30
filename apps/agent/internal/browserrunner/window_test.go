@@ -3,6 +3,7 @@ package browserrunner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 )
@@ -61,5 +62,50 @@ func TestWindowHandoffDoesNotReportAnIgnoredMoveAsVisible(t *testing.T) {
 	defer cancel()
 	if err := s.setVisible(ctx, true); err == nil {
 		t.Fatal("an unchanged off-screen window was reported as visible")
+	}
+}
+
+type minimizedDuringRaiseClient struct {
+	staticViewClient
+	moved     bool
+	presented bool
+	restores  int
+}
+
+func (c *minimizedDuringRaiseClient) Call(ctx context.Context, method string, params any, out any) error {
+	switch method {
+	case "Browser.getWindowForTarget":
+		b := windowBounds{Left: offscreen, Width: 1000, Height: 700, WindowState: "normal"}
+		if c.moved {
+			b.Left, b.Top = 40, 40
+			if c.presented {
+				b.WindowState = "minimized"
+			}
+			c.presented = true
+		}
+		data, _ := json.Marshal(map[string]any{"windowId": 1, "bounds": b})
+		return json.Unmarshal(data, out)
+	case "Browser.setWindowBounds":
+		bounds := params.(map[string]any)["bounds"].(map[string]any)
+		if bounds["windowState"] == "normal" {
+			c.restores++
+		}
+		if _, ok := bounds["left"]; ok {
+			c.moved = true
+		}
+	case "Page.bringToFront":
+		return errors.New("synthetic raise failure")
+	}
+	return nil
+}
+
+func TestWindowHandoffMinimizedDuringFailedRaiseIsNotRestored(t *testing.T) {
+	client := &minimizedDuringRaiseClient{}
+	s := &session{cp: &Checkpoint{State: StateNeedsUser}, proc: &browserProcess{}, conn: client}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	err := s.setVisible(ctx, true)
+	if !errors.Is(err, errHandoffMinimized) || !s.cp.AttentionDismissed || client.restores != 0 {
+		t.Fatalf("retry undid minimization: err=%v dismissed=%v restores=%d", err, s.cp.AttentionDismissed, client.restores)
 	}
 }

@@ -16,6 +16,15 @@ import (
 // and goes back out of sight once the AI continues.
 
 var errNoWindow = errors.New("This computer runs the task browser without a window (no display), so it cannot be shown here.")
+var errHandoffMinimized = errors.New("the user minimized this handoff; restore the task window manually when ready")
+
+func (s *session) handoffWasMinimized(b windowBounds) bool {
+	if s.cp.State == StateNeedsUser && s.cp.AttentionPresented && b.WindowState == "minimized" {
+		s.cp.AttentionDismissed = true
+		return true
+	}
+	return false
+}
 
 type windowBounds struct {
 	Left        int    `json:"left"`
@@ -131,6 +140,9 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 	var lastErr error
 	for attempt := 0; attempt < 3 && ctx.Err() == nil; attempt++ {
 		if now, ok := s.quickWindow(ctx); ok && now.WindowState != "normal" {
+			if s.handoffWasMinimized(now) {
+				return errHandoffMinimized
+			}
 			if lastErr = s.restoreTaskWindow(ctx, id); lastErr != nil {
 				continue
 			}
@@ -149,8 +161,18 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 		stop()
 		until := time.Now().Add(time.Second)
 		for ctx.Err() == nil {
-			if now, ok := s.quickWindow(ctx); ok && windowInWorkArea(now, area) && lastErr == nil && s.taskWindowUncovered() {
-				return nil
+			if now, ok := s.quickWindow(ctx); ok {
+				if s.handoffWasMinimized(now) {
+					return errHandoffMinimized
+				}
+				if windowInWorkArea(now, area) {
+					if s.cp.State == StateNeedsUser {
+						s.cp.AttentionPresented = true
+					}
+					if lastErr == nil && s.taskWindowUncovered() {
+						return nil
+					}
+				}
 			}
 			if time.Now().After(until) || !waitTick(ctx, 50*time.Millisecond) {
 				break

@@ -371,6 +371,11 @@ func (s *session) ensureLive(ctx context.Context) error {
 			return e
 		}
 		s.proc, s.conn = proc, conn
+		if !proc.attached && !s.cp.AttentionShown {
+			// A new hidden window is minimized by the Agent on some desktops,
+			// not by the user who saw a partial presentation before a crash.
+			s.cp.AttentionPresented = false
+		}
 	}
 	s.ev.Lock()
 	s.worldCtx, s.mainFrame, s.href = 0, "", ""

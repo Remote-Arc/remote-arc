@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test:workspaces": "node --experimental-strip-types --test scripts/dashboard-workspaces-test.mjs scripts/arc-chat-sessions-test.mjs scripts/arc-transcript-test.mjs && node --import tsx scripts/arc-native-client-test.ts && node --import tsx scripts/arc-chat-races-test.ts && node --import tsx scripts/arc-verification-ui-test.tsx && node --import tsx scripts/arc-billing-client-test.ts && node --import tsx scripts/arc-skill-mentions-test.tsx && node --import tsx scripts/arc-home-brief-test.mjs && node --import tsx scripts/runtime-config-test.ts && node --import tsx scripts/admin-events-model-test.ts && pnpm test:billing-preview",
+    "test:workspaces": "node scripts/app-entry-test.mjs && node --experimental-strip-types --test scripts/dashboard-workspaces-test.mjs scripts/arc-chat-sessions-test.mjs scripts/arc-transcript-test.mjs && node --import tsx scripts/arc-native-client-test.ts && node --import tsx scripts/arc-chat-races-test.ts && node --import tsx scripts/arc-verification-ui-test.tsx && node --import tsx scripts/arc-billing-client-test.ts && node --import tsx scripts/arc-skill-mentions-test.tsx && node --import tsx scripts/arc-home-brief-test.mjs && node --import tsx scripts/runtime-config-test.ts && node --import tsx scripts/admin-events-model-test.ts && pnpm test:billing-preview",
     "test:billing-preview": "node --import tsx scripts/billing-preview-test.ts",
     "test:onboarding": "node scripts/onboarding-flow-test.mjs",
     "test:onboarding-browser": "node --import tsx scripts/onboarding-browser-test.mjs",

@@ -547,7 +547,7 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 	}
 	out := map[string]any{}
 	if startURL != "" {
-		out, e = s.navigate(ctx, startURL)
+		e = s.startupStep("navigate", func() error { out, e = s.navigate(ctx, startURL); return e })
 		if e != nil {
 			_ = s.flush()
 			return nil, e

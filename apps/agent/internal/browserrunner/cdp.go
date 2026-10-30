@@ -195,7 +195,7 @@ func (c *cdpConn) CallIn(ctx context.Context, session, method string, params any
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()
-		return ctx.Err()
+		return fmt.Errorf("browser protocol wait (%s): %w", method, ctx.Err())
 	}
 }
 

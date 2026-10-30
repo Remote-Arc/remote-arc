@@ -186,8 +186,24 @@ jobs:
             apps/agent/go.sum
             packages/execution-core/go.sum
       - run: pnpm install --frozen-lockfile
-      - name: Prepare and cold-start the native test browser
-        run: node .github/scripts/install-native-browser.mjs
+      # Hosted images can carry different Chrome majors or update Chrome during
+      # a test. Use one immutable stable browser for native window acceptance.
+      - name: Install pinned Chrome for native macOS acceptance
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          chrome_version="156.0.8078.47"
+          chrome_platform="mac-arm64"
+          if [[ "$(uname -m)" == "x86_64" ]]; then
+            chrome_platform="mac-x64"
+          fi
+          chrome_root="$RUNNER_TEMP/remotearc-test-chrome"
+          chrome_zip="$RUNNER_TEMP/remotearc-test-chrome.zip"
+          curl --fail --location --retry 3 --output "$chrome_zip" "https://storage.googleapis.com/chrome-for-testing-public/$chrome_version/$chrome_platform/chrome-$chrome_platform.zip"
+          ditto -x -k "$chrome_zip" "$chrome_root"
+          chrome_binary="$chrome_root/chrome-$chrome_platform/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+          "$chrome_binary" --version
+          printf 'REMOTEARC_BROWSER_PATH=%s\n' "$chrome_binary" >> "$GITHUB_ENV"
       - name: Minimized macOS live-view regression
         if: runner.os == 'macOS'
         run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStaticLiveView|TestViewJPEG|TestLiveViewSlow|TestE2EWaitConditionsAndLiveView' -count=3

@@ -11,15 +11,15 @@ export const appActionId = (operation: Pick<AppOperation, "provider" | "name">) 
 const variantDescription = (operation: AppOperation) =>
   `${APP_CATALOG[operation.provider].name}: ${operation.description.replace(/\.$/, "")}.`;
 
-const variants = (permission: AppPermission) => APP_OPERATIONS
-  .filter(operation => operation.permission === permission)
+const variants = (permission: AppPermission, excludeRunway = false) => APP_OPERATIONS
+  .filter(operation => operation.permission === permission && !(excludeRunway && operation.provider === "runway"))
   .map(operation => z.object({
     action: z.literal(appActionId(operation)),
     arguments: operation.schema,
   }).strict().describe(variantDescription(operation)));
 
-const actionSchema = (permission: AppPermission) => {
-  const [first, ...rest] = variants(permission);
+const actionSchema = (permission: AppPermission, excludeRunway = false) => {
+  const [first, ...rest] = variants(permission, excludeRunway);
   return z.object({
     connectionId: z.string().uuid().describe("ID of the user's own connected account for this action's provider, from list_apps."),
     requestId: z.string().regex(/^[\w-]{8,100}$/).describe(permission === "write"
@@ -31,6 +31,9 @@ const actionSchema = (permission: AppPermission) => {
 
 export const appReadActionSchema = actionSchema("read");
 export const appWriteActionSchema = actionSchema("write");
+// Shared MCP server; Claude OAuth clients exclude Runway from typed actions.
+export const claudeAppReadActionSchema = actionSchema("read", true);
+export const claudeAppWriteActionSchema = actionSchema("write", true);
 export const appActionCounts = {
   read: APP_OPERATIONS.filter(operation => operation.permission === "read").length,
   write: APP_OPERATIONS.filter(operation => operation.permission === "write").length,

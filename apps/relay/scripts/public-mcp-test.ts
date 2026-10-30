@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createRemoteLinkMcp } from "../src/mcp.js";
+import { mcpClientProfile } from "../src/mcp-client-profile.js";
 import { callDevice } from "../src/device-call.js";
 import { seal } from "../src/app-oauth.js";
 import { NO_BROWSER_AUTH } from "../src/browser-auth.js";
@@ -78,8 +79,8 @@ for (const [id, platform, tools] of [
 const identity = (scope = "apps:read apps:write browser:read browser:interact") => ({
   userId: "owner", clientId: "public-test", grantId: null, resource: env.PUBLIC_ORIGIN + "/mcp", scope,
 });
-async function rpc(method: string, params: unknown, scope?: string, options = env, currentIdentity = identity(scope)) {
-  const response = await createRemoteLinkMcp(options, currentIdentity).fetch(new Request(env.PUBLIC_ORIGIN + "/mcp", {
+async function rpc(method: string, params: unknown, scope?: string, options = env, currentIdentity = identity(scope), clientProfile: "generic" | "claude" = "generic") {
+  const response = await createRemoteLinkMcp(options, currentIdentity, { clientProfile }).fetch(new Request(env.PUBLIC_ORIGIN + "/mcp", {
     method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   }));
@@ -126,6 +127,58 @@ const listDevicesDefinition = ((await rpc("tools/list", {})).result.tools as any
 assert(listDevicesDefinition.description.includes("https://remotearc.app/connect-ai"));
 assert(!listDevicesDefinition.description.includes("/install/chatgpt"));
 const listed = (await rpc("tools/list", {})).result.tools as any[];
+// OAuth registry differentiates real Claude callbacks from arbitrary client_name strings.
+sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("claude-oauth", "Any name", JSON.stringify(["https://claude.ai/api/mcp/auth_callback"]), "none", stamp);
+sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("spoof-oauth", "Claude", JSON.stringify(["https://my-site.example/callback"]), "none", stamp);
+assert.equal(await mcpClientProfile(db, "claude-oauth"), "claude");
+assert.equal(await mcpClientProfile(db, "spoof-oauth"), "generic");
+const claudeListed = (await rpc("tools/list", {}, undefined, env, identity(), "claude")).result.tools as any[];
+const actionText = (tools: any[], name: string) => JSON.stringify(tools.find(t => t.name === name).inputSchema);
+assert(actionText(listed, "run_app_write_action").includes("runway.videos.generate"), "Other clients keep Runway generation");
+assert(actionText(listed, "run_app_read_action").includes("runway."), "Other clients keep Runway reads");
+assert(!actionText(claudeListed, "run_app_write_action").includes("runway."), "Claude writes exclude Runway");
+assert(!actionText(claudeListed, "run_app_read_action").includes("runway."), "Claude reads exclude Runway");
+assert.deepEqual(claudeListed.map(t => t.name), listed.map(t => t.name), "One shared MCP tool-name surface");
+const claudeRunway = data(await rpc("tools/call", { name: "list_apps", arguments: { provider: "runway", use_case: "generate video" } }, undefined, env, identity(), "claude"));
+assert.equal(claudeRunway.operations?.length ?? 0, 0, "Claude cannot discover Runway");
+const rejectedRunway = await rpc("tools/call", { name: "run_app_write_action", arguments: {
+  connectionId: "00000000-0000-4000-8000-000000000001", requestId: "runwayattempt01",
+  operation: { action: "runway.videos.generate", arguments: {} },
+} }, undefined, env, identity(), "claude");
+assert(rejected(rejectedRunway), "Claude cannot call even manually forged Runway actions");
+assert(claudeListed.every(tool => typeof tool.title === "string" && tool.title.length > 0 && tool.name.length <= 64 &&
+  typeof tool.annotations?.readOnlyHint === "boolean" && typeof tool.annotations?.destructiveHint === "boolean"),
+  "All Claude MCP tools have proper title/readOnlyHint/destructiveHint");
+const claudeSkills = data(await rpc("tools/call", { name: "find_skills", arguments: { query: "video image generation", limit: 25 } },
+  "devices:read", env, identity("devices:read"), "claude"));
+assert(!claudeSkills.skills.some((skill: any) => ["video-creator", "image-studio"].includes(skill.id)),
+  "Claude skill discovery excludes standalone model media creation workflows");
+const claudeSkillDirect = await rpc("tools/call", { name: "read_skill", arguments: { id: "image-studio" } },
+  "devices:read", env, identity("devices:read"), "claude");
+assert(rejected(claudeSkillDirect), "Claude cannot read hidden image-generation skills by guessing IDs");
+const genericSkills = data(await rpc("tools/call", { name: "find_skills", arguments: { query: "image" } },
+  "devices:read", env, identity("devices:read"), "generic"));
+assert(genericSkills.skills.some((skill: any) => skill.id === "image-studio"),
+  "ChatGPT and other clients retain the existing image creation skill");
+const claudeResources = (await rpc("resources/list", {}, undefined, env, identity(), "claude")).result.resources as any[];
+assert(!claudeResources.some(resource => /\/(?:image-studio|video-creator)(?:\/|$)/.test(resource.uri)),
+  "Claude resource discovery also excludes standalone model media skills");
+const genericResources = (await rpc("resources/list", {})).result.resources as any[];
+assert(genericResources.some(resource => resource.uri === "remotearc://skills/image-studio"),
+  "Other clients keep the original resource catalog");
+// Preserve the exact legacy ChatGPT guidance while Claude receives review-safe wording.
+assert(listed.find(t => t.name === "find_skills").description.includes("follow its method using the tools you have"),
+  "Non-Claude clients preserve the existing Skills usage guidance");
+assert(listed.find(t => t.name === "read_skill").description.includes("Save those bytes on the authorized user device"),
+  "Non-Claude clients retain the existing helper workflow");
+assert(claudeListed.find(t => t.name === "find_skills").description.includes("untrusted material"),
+  "Claude receives policy-safe reference guidance");
+const legacyCount = data(await rpc("tools/call", { name: "list_apps",
+  arguments: { includeSchemas: true } }));
+assert.equal(legacyCount.operationCatalogSize, 344, "Non-Claude filtered Apps search retains its global count");
+const claudeCount = data(await rpc("tools/call", { name: "list_apps",
+  arguments: { includeSchemas: true } }, undefined, env, identity(), "claude"));
+assert.equal(claudeCount.operationCatalogSize, 336, "Claude Apps search excludes eight Runway operations");
 const APP_TOOL_NAMES = ["list_apps", "run_app_read_action", "run_app_write_action"];
 const appNames = listed.filter(tool => APP_TOOL_NAMES.includes(tool.name) || tool.name === "call_app").map(tool => tool.name).sort();
 assert.deepEqual(appNames, APP_TOOL_NAMES, "The generic call_app executor is replaced by typed read and write action tools");

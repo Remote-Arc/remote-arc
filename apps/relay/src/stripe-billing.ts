@@ -24,10 +24,11 @@ const products=[...ARC_PLANS.filter(p=>p.id!=='free'),...ARC_TOPUPS].map(p=>({id
 const product=(sku:unknown)=>{const p=products.find(p=>p.id===sku);if(!p)throw new StripeError('BILLING_INVALID_PRODUCT',400);return p;};
 const form=(values:Record<string,string|number|boolean>)=>new URLSearchParams(Object.entries(values).map(([k,v])=>[k,String(v)]));
 function checkoutResponse(env:BillingEnv,session:Record<string,any>,mode:string){
- if(mode==='embedded_page'){
+ // Both on-site modes hand the browser a session-bound client secret, never a URL.
+ if(mode==='embedded_page'||mode==='elements'){
   const publishableKey=stripePublishableKey(env),sessionId=id(session,'cs');
-  if(!publishableKey||session.ui_mode!=='embedded_page'||typeof session.client_secret!=='string'||!session.client_secret.startsWith(sessionId+'_secret_'))throw new StripeError('BILLING_PROVIDER_ERROR');
-  return{mode,sessionId,clientSecret:session.client_secret,publishableKey};
+  if(!publishableKey||session.ui_mode!==mode||typeof session.client_secret!=='string'||!session.client_secret.startsWith(sessionId+'_secret_'))throw new StripeError('BILLING_PROVIDER_ERROR');
+  return{mode,sessionId,clientSecret:session.client_secret,publishableKey,...(mode==='elements'?{billingAddress:session.billing_address_collection==='required'}:{})};
  }
  if(typeof session.url!=='string')throw new StripeError('BILLING_PROVIDER_ERROR');
  const url=new URL(session.url);if(url.origin!=='https://checkout.stripe.com'||url.username||url.password)throw new StripeError('BILLING_PROVIDER_ERROR');return{mode:'hosted_page',url:url.href};
@@ -248,7 +249,7 @@ export async function handleBilling(request:Request,env:BillingEnv){
   if(path==='/api/billing/portal')return json({url:await portal(env,customerId,returnUrl)});
   if(path==='/api/billing/plan/change')return json(await changePlan(env,user.id,customerId,input.productId,input.versionId));
   if(path!=='/api/billing/checkout')return json({error:'not_found'},404);
-  const uiMode=input.uiMode??'hosted_page';if(!['hosted_page','embedded_page'].includes(String(uiMode)))throw new StripeError('BILLING_INVALID_REQUEST',400);if(uiMode==='embedded_page'&&!stripePublishableKey(env))throw new StripeError('BILLING_EMBEDDED_NOT_CONFIGURED');
+  const uiMode=input.uiMode??'hosted_page';if(!['hosted_page','embedded_page','elements'].includes(String(uiMode)))throw new StripeError('BILLING_INVALID_REQUEST',400);if(uiMode!=='hosted_page'&&!stripePublishableKey(env))throw new StripeError('BILLING_EMBEDDED_NOT_CONFIGURED');
   let p=commercialOffer(await activeCommercial(env,product(input.productId).id));const at=now(),plan=await currentArcPlan(env,user.id);
   if(input.versionId!==undefined?input.versionId!==p.versionId:!p.versionId.startsWith('seed:'))throw new StripeError('BILLING_PRICE_CHANGED',409);
   if(!p.subscription&&input.promoCode!==undefined)throw new StripeError('BILLING_INVALID_PROMOTION',400);
@@ -257,7 +258,8 @@ export async function handleBilling(request:Request,env:BillingEnv){
   await env.DB.prepare("UPDATE arc_billing_checkouts SET status='expired' WHERE user_id=?1 AND expires_at<=?2 AND status IN ('creating','open')").bind(user.id,at).run();
   const pending=await env.DB.prepare("SELECT id,session_id,expires_at,commercial_version_id,promotion_id,ui_mode FROM arc_billing_checkouts WHERE user_id=?1 AND product_id=?2 AND status IN ('creating','open') AND expires_at>?3 ORDER BY created_at DESC LIMIT 1").bind(user.id,p.id,at).first<{id:string;session_id:string|null;expires_at:string;commercial_version_id:string|null;promotion_id:string|null;ui_mode:string}>();
   let promo:Promotion|null=null;
-  if(pending&&pending.ui_mode!==uiMode)throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);
+  // An open session keeps the UI mode it was created with; the client renders that mode.
+  if(pending&&pending.ui_mode!==uiMode&&!pending.session_id)throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);
   if(pending){
    p=commercialOffer(await commercialVersion(env.DB,pending.commercial_version_id||`seed:${commercialMode(env)}:${p.id}`));
    if(pending.promotion_id)promo=await env.DB.prepare('SELECT * FROM arc_billing_promotions WHERE id=?1').bind(pending.promotion_id).first<Promotion>();
@@ -276,7 +278,7 @@ export async function handleBilling(request:Request,env:BillingEnv){
    expires=(await env.DB.prepare('SELECT expires_at FROM arc_billing_checkouts WHERE id=?1 AND user_id=?2').bind(checkoutId,user.id).first<{expires_at:string}>())!.expires_at;
   }
   if(!pending)try{const inserted=await env.DB.prepare(`INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,expires_at,created_at,commercial_version_id,promotion_id,ui_mode) SELECT ?1,?2,?3,?4,'creating',?5,?6,?7,?8,?9 WHERE (SELECT COUNT(*) FROM arc_billing_checkouts WHERE user_id=?2 AND status IN ('creating','open'))<3`).bind(checkoutId,user.id,p.id,p.subscription?'subscription':'payment',expires,at,p.versionId,promo?.id??null,uiMode).run();if(!inserted.meta.changes)throw 0;}catch{throw new StripeError('BILLING_CHECKOUT_ALREADY_OPEN',409);}
-  const price=await ensureStripePrice(env,p.id,p.versionId),session=await stripeRequest(env,'/v1/checkout/sessions','POST',form({customer:customerId,mode:p.subscription?'subscription':'payment','line_items[0][price]':price,'line_items[0][quantity]':1,...(promo?{'discounts[0][promotion_code]':promo.promotion_code_id!}:{}),...(uiMode==='embedded_page'?{ui_mode:'embedded_page',return_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',redirect_on_completion:'if_required'}:{success_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:returnUrl+'&checkout=cancelled'}),expires_at:Math.floor(Date.parse(expires)/1000),'automatic_tax[enabled]':env.STRIPE_AUTOMATIC_TAX==='1',...(env.STRIPE_AUTOMATIC_TAX==='1'?{billing_address_collection:'required','customer_update[address]':'auto','tax_id_collection[enabled]':true}:{}),'metadata[remote_arc_checkout]':checkoutId,...(p.subscription?{'subscription_data[metadata][remote_arc_user]':user.id,'subscription_data[metadata][remote_arc_checkout]':checkoutId}:{'payment_intent_data[metadata][remote_arc_user]':user.id})}),'arc-checkout:'+checkoutId);
+  const price=await ensureStripePrice(env,p.id,p.versionId),session=await stripeRequest(env,'/v1/checkout/sessions','POST',form({customer:customerId,mode:p.subscription?'subscription':'payment','line_items[0][price]':price,'line_items[0][quantity]':1,...(promo?{'discounts[0][promotion_code]':promo.promotion_code_id!}:{}),...(uiMode==='elements'?{ui_mode:'elements',return_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}'}:uiMode==='embedded_page'?{ui_mode:'embedded_page',return_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',redirect_on_completion:'if_required'}:{success_url:returnUrl+'&checkout=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:returnUrl+'&checkout=cancelled'}),expires_at:Math.floor(Date.parse(expires)/1000),'automatic_tax[enabled]':env.STRIPE_AUTOMATIC_TAX==='1',...(env.STRIPE_AUTOMATIC_TAX==='1'?{billing_address_collection:'required','customer_update[address]':'auto',...(uiMode==='elements'?{}:{'tax_id_collection[enabled]':true})}:{}),'metadata[remote_arc_checkout]':checkoutId,...(p.subscription?{'subscription_data[metadata][remote_arc_user]':user.id,'subscription_data[metadata][remote_arc_checkout]':checkoutId}:{'payment_intent_data[metadata][remote_arc_user]':user.id})}),'arc-checkout:'+checkoutId);
   const sessionId=id(session,'cs'),result=checkoutResponse(env,session,String(uiMode));
   await env.DB.prepare("UPDATE arc_billing_checkouts SET session_id=?1,status='open' WHERE id=?2").bind(sessionId,checkoutId).run();return json(result);
  }catch(error){return json({error:error instanceof StripeError?error.code:error instanceof z.ZodError?'BILLING_INVALID_REQUEST':'BILLING_UNAVAILABLE',...(error instanceof StripeError&&error.reference?{reference:error.reference}:{})},error instanceof StripeError?error.status:error instanceof z.ZodError?400:503);}

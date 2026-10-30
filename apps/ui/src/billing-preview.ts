@@ -20,7 +20,7 @@ export function createBillingPreview(storage:Pick<Storage,'getItem'|'setItem'>,e
    if(![...plans,...topups].some(p=>p.id===input.productId))return json({error:'BILLING_INVALID_PRODUCT'},400);
    let order=Object.entries(state.orders).find(([,order])=>order.status==='open');if(order&&order[1].productId!==input.productId)return json({error:'BILLING_CHECKOUT_IN_PROGRESS'},409);
    if(!order){const id='cs_preview_'+crypto.randomUUID().replaceAll('-','');state.orders[id]={productId:input.productId,status:'open'};order=[id,state.orders[id]];save();}
-   return json({mode:'embedded_page',sessionId:order[0],clientSecret:'preview-only',publishableKey:'preview-only'});
+   return json({mode:input.uiMode==='elements'?'elements':'embedded_page',sessionId:order[0],clientSecret:'preview-only',publishableKey:'preview-only'});
   }
   if(method==='POST'&&path==='/checkout/abandon'){const order=state.orders[input.sessionId];if(!order)return json({error:'BILLING_CHECKOUT_NOT_FOUND'},404);if(order.status==='complete')return json({complete:true});order.status='expired';save();return json({expired:true});}
   if(method==='POST'&&path==='/preview/complete'){const order=state.orders[input.sessionId];if(!order||order.status==='expired')return json({error:'BILLING_CHECKOUT_NOT_FOUND'},404);order.status='complete';if(plans.some(p=>p.id===order.productId))state.planId=order.productId;save();return json({complete:true});}

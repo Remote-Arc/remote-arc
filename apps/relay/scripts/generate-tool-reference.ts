@@ -44,27 +44,43 @@ const identity = {
   scope:
     "devices:read computer:read computer:write browser:read browser:interact apps:read apps:write automation:read automation:write agent:read agent:write",
 };
-const response = await createRemoteLinkMcp(env as never, identity).fetch(
-  new Request(env.PUBLIC_ORIGIN + "/mcp", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      accept: "application/json, text/event-stream",
-    },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
-  }),
+async function listTools(clientProfile: "generic" | "claude"): Promise<any[]> {
+  const response = await createRemoteLinkMcp(env as never, identity, {
+    clientProfile,
+  }).fetch(
+    new Request(env.PUBLIC_ORIGIN + "/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    }),
+  );
+  const text = await response.text();
+  const payload = JSON.parse(
+    text.trim().startsWith("{")
+      ? text
+      : text
+          .split("\n")
+          .find((line) => line.startsWith("data: "))!
+          .slice(6),
+  );
+  if (!response.ok || payload.error || !Array.isArray(payload.result?.tools))
+    throw Error("Unable to enumerate public MCP tools");
+  return payload.result.tools;
+}
+const publicTools = await listTools("generic");
+// Claude connectors receive a restricted profile; record what it leaves out.
+const claudeTools = await listTools("claude");
+const claudeToolNames = new Set(claudeTools.map((tool) => tool.name));
+const claudeAppActions = new Set(
+  JSON.stringify(
+    claudeTools.filter((tool) => tool.name.startsWith("run_app_")).map((tool) => tool.inputSchema),
+  ).match(/"const":"[^"]+"/g)?.map((match) => match.slice(9, -1)) ?? [],
 );
-const text = await response.text();
-const payload = JSON.parse(
-  text.trim().startsWith("{")
-    ? text
-    : text
-        .split("\n")
-        .find((line) => line.startsWith("data: "))!
-        .slice(6),
-);
-if (!response.ok || payload.error || !Array.isArray(payload.result?.tools))
-  throw Error("Unable to enumerate public MCP tools");
+const unavailableIn = (claudeAvailable: boolean) =>
+  claudeAvailable ? {} : { unavailableIn: ["claude"] };
 const readOnly = new Set([
   "list_directory",
   "browse_directories",
@@ -113,7 +129,7 @@ const documentedSchema = (schema: any) => {
     },
   };
 };
-const remote = payload.result.tools
+const remote = publicTools
   .map((tool: any) => ({
     name: tool.name,
     title: tool.title,
@@ -128,6 +144,7 @@ const remote = payload.result.tools
     ],
     readOnly: tool.annotations?.readOnlyHint === true,
     ...metadata(tool.name),
+    ...unavailableIn(claudeToolNames.has(tool.name)),
   }))
   .sort((a: any, b: any) => a.name.localeCompare(b.name, "en"));
 const localTools = local
@@ -156,6 +173,7 @@ const apps = Object.entries(APP_CATALOG)
         description: operation.description,
         permission: operation.permission,
         inputSchema: z.toJSONSchema(operation.schema),
+        ...unavailableIn(claudeAppActions.has(provider + "." + operation.name)),
       }))
       .sort((a, b) => a.name.localeCompare(b.name, "en")),
   }))

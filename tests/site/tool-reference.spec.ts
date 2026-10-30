@@ -69,3 +69,44 @@ test("new guides and tool inventory have working deep links", async ({
     ).toBe(true);
   }
 });
+
+test("tool directory shows which AI clients support each tool", async ({
+  page,
+}, testInfo) => {
+  const zh = testInfo.project.metadata.language === "zh";
+  await page.goto((zh ? "/zh" : "") + "/docs/tools?type=remote");
+  const filter = page.getByRole("group", {
+    name: zh ? "按 AI 客户端查看工具" : "Show tools for an AI client",
+  });
+  for (const name of ["ChatGPT", "Claude", "Cursor", "Gemini"])
+    await expect(filter.getByRole("button", { name })).toBeVisible();
+  const skill = page.locator("#remote-read_skill");
+  await expect(skill.locator(".toolClientSupport")).toContainText("ChatGPT");
+  await expect(
+    skill.locator(".toolClientUnavailable img[src='/ai-claude.svg']"),
+  ).toBeVisible();
+  await expect(
+    page.locator("#remote-list_devices .toolClientSupport"),
+  ).toHaveCount(0);
+  const total = await page.locator(".toolCatalogRow").count();
+  await filter.getByRole("button", { name: "Claude" }).click();
+  await expect(page).toHaveURL(/client=claude/);
+  await expect(page.locator(".toolCatalogRow")).toHaveCount(total - 2);
+  await expect(skill).toHaveCount(0);
+  await page.getByRole("tab", { name: /App actions|Apps 操作/ }).click();
+  await page
+    .getByLabel(zh ? "应用" : "App", { exact: true })
+    .selectOption("runway");
+  await expect(page.locator(".toolCatalogRow")).toHaveCount(0);
+  await filter.getByRole("button", { name: "ChatGPT" }).click();
+  await expect(page.locator(".toolCatalogRow").first()).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `work/tool-clients-${testInfo.project.name}.png`,
+    fullPage: false,
+  });
+});

@@ -232,7 +232,7 @@ export async function reviewerDemoResult(
       );
     }
     if (command === "npm test") {
-      return "PASS  src/router.test.ts\nPASS  src/auth.test.ts\n\nTest Suites: 2 passed, 2 total\nTests: 8 passed, 8 total";
+      return " ✓ src/router.test.ts (1 test)\n ✓ src/auth.test.ts (1 test)\n\n Test Files  2 passed (2)\n      Tests  2 passed (2)";
     }
     if (command === "pwd") return REVIEW_ROOT;
     return "On branch main\nnothing to commit, working tree clean";

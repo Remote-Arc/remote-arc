@@ -144,15 +144,27 @@ try {
     "PASS: npm entry refuses --ts, starts the Go Agent, stays attached, second terminal follows operation history, one execution connection, conflicting local permission profile fails safely",
   );
 } finally {
-  // Killing the launcher does not stop its Go child on Windows.
+  // --stop ends the executing Agent, not a Go viewer. SIGKILL on a launcher would
+  // orphan that viewer holding these pipes, so "close" would never fire.
   spawnSync(binary, ["--stop"], { env, windowsHide: true, timeout: 20_000 });
   for (const child of children)
     if (child.exitCode === null && child.signalCode === null) {
-      const closed = new Promise<void>((resolve) =>
-        child.once("close", () => resolve()),
+      const closed = new Promise<boolean>((resolve) =>
+        child.once("close", () => resolve(true)),
       );
+      if (process.platform === "win32")
+        spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
+          windowsHide: true,
+        });
+      else child.kill("SIGTERM"); // The launcher forwards this to its Go child.
+      const timeout = new Promise<boolean>((resolve) =>
+        setTimeout(() => resolve(false), 5_000).unref(),
+      );
+      if (await Promise.race([closed, timeout])) continue;
       child.kill("SIGKILL");
-      await closed;
+      child.stdout!.destroy();
+      child.stderr!.destroy();
+      child.unref();
     }
   for (const socket of sockets.clients) socket.terminate();
   await new Promise<void>((resolve) => sockets.close(() => resolve()));

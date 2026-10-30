@@ -27,6 +27,9 @@ const MAX_DEPTH = 4;
 const MAX_SCRIPT_BYTES = 256 * 1024;
 const DELETE_MENTION =
   /(?:^|[^a-z0-9_-])(?:rd|rmdir|del|erase|rm|ri|remove-item|unlink|shred|srm|rimraf|rmtree|rmsync|rmdirsync|robocopy|rsync)(?:[^a-z0-9_-]|$)|::delete/i;
+// Past MAX_DEPTH nothing is inspected, so a further shell or script layer could hide a delete.
+const NESTED_MENTION =
+  /(?:^|[^a-z0-9_-])(?:cmd|powershell|pwsh|bash|sh|zsh|dash|ksh)(?:\.exe)?(?:[^a-z0-9_-]|$)|\.(?:ps1|bat|cmd|sh)(?:[^a-z0-9_]|$)/i;
 const INLINE_DELETE =
   /(?:shutil\.rmtree|os\.removedirs|os\.rmdir|os\.remove|os\.unlink|rmtree|rmSync|rmdirSync|unlinkSync|rimraf\.sync|rimraf|fsp\.rm|promises\.rm|fs\.rm|FileUtils\.rm_rf|FileUtils\.rm_r|FileUtils\.remove_dir|remove_tree)\s*\(\s*(?:[rRbBuUfF]{0,2}(?:'([^']*)'|"([^"]*)"|`([^`]*)`))?/g;
 const DOTNET_DELETE = /\[(?:system\.)?io\.(?:directory|file)\]::delete\s*\(\s*(?:'([^']*)'|"([^"]*)")?/gi;
@@ -190,8 +193,10 @@ function skipQuoted(src: string, i: number, shell: Shell): number {
 
 function splitSegments(src: string, shell: Shell): { segments: Segment[]; unbalanced: boolean } {
   const segments: Segment[] = [];
-  let start = 0, sep = "", unbalanced = false;
-  const cut = (end: number, next: string, width: number) => { segments.push({ raw: src.slice(start, end), sep }); sep = next; start = end + width; };
+  let start = 0, sep = "", unbalanced = false, clean = src;
+  const cut = (end: number, next: string, width: number) => { segments.push({ raw: clean.slice(start, end), sep }); sep = next; start = end + width; };
+  // Comments are blanked rather than cut, so `Remove-Item <# x #> C:\` stays one command.
+  const blank = (from: number, to: number) => { clean = clean.slice(0, from) + " ".repeat(to - from) + clean.slice(to); };
   for (let i = 0; i < src.length; i++) {
     const c = src.charAt(i), n = src.charAt(i + 1) || "";
     const wordStart = i === start || /[\s;|&(){}]/.test(src.charAt(i - 1) || " ");
@@ -203,8 +208,9 @@ function splitSegments(src: string, shell: Shell): { segments: Segment[]; unbala
       if (shell === "sh" && c === "\\") { i++; continue; }
       if (shell === "ps" && c === "`") { i++; continue; }
       if (shell === "sh" && c === "`") { const end = src.indexOf("`", i + 1); if (end < 0) { unbalanced = true; break; } i = end; continue; }
-      if (c === "#" && wordStart) { if (shell === "ps" && src.charAt(i - 1) === "<") continue; const nl = src.indexOf("\n", i); i = nl < 0 ? src.length : nl - 1; continue; }
-      if (shell === "ps" && c === "<" && n === "#") { const end = src.indexOf("#>", i + 2); i = end < 0 ? src.length : end + 1; continue; }
+      if (c === "#" && wordStart) { const nl = src.indexOf("\n", i), end = nl < 0 ? src.length : nl; blank(i, end); i = end - 1; continue; }
+      if (shell === "ps" && c === "<" && n === "#") { const close = src.indexOf("#>", i + 2), end = close < 0 ? src.length : close + 2; blank(i, end); i = end - 1; continue; }
+      if (shell === "ps" && c === "$" && n === "{") { const end = src.indexOf("}", i + 2); if (end < 0) { unbalanced = true; break; } i = end; continue; }
       if (c === "$" && n === "(") { const end = matchParen(src, i + 1, shell); if (end < 0) { unbalanced = true; break; } i = end; continue; }
       if (shell === "ps" && (c === "(" || (c === "@" && n === "("))) { const end = matchParen(src, c === "@" ? i + 1 : i, shell); if (end < 0) { unbalanced = true; break; } i = end; continue; }
     }
@@ -216,7 +222,7 @@ function splitSegments(src: string, shell: Shell): { segments: Segment[]; unbala
     if ((c === "(" || c === ")") && shell !== "ps") { cut(i, ";", 1); continue; }
     if (shell === "ps" && (c === "{" || c === "}")) { cut(i, c === "{" ? "{" : ";", 1); continue; }
   }
-  segments.push({ raw: src.slice(start), sep });
+  segments.push({ raw: clean.slice(start), sep });
   return { segments, unbalanced };
 }
 
@@ -465,8 +471,8 @@ function nestedScript(ws: Word[], k: number, seg: Segment, outer: Shell, inner: 
       if (t.length >= 2 && "-command".startsWith(t)) return { script: rest(j, ws[j]!.end - ws[j]!.start), shell: "ps" };
       if ((t.length >= 2 && "-encodedcommand".startsWith(t)) || t === "-ec") {
         const encoded = ws[j + 1]?.text || "";
-        const decoded = Buffer.from(encoded, "base64").toString("utf16le");
-        if (!encoded || !/^[A-Za-z0-9+/=]+$/.test(encoded) || decoded.includes("�")) ambiguous("undecodable -EncodedCommand");
+        const bytes = Buffer.from(encoded, "base64"), decoded = bytes.toString("utf16le");
+        if (!encoded || !/^[A-Za-z0-9+/=]+$/.test(encoded) || bytes.length % 2 !== 0 || decoded.includes("�")) ambiguous("undecodable -EncodedCommand");
         return { script: decoded, shell: "ps" };
       }
       if (t.length >= 2 && "-file".startsWith(t)) return { script: "", shell: "ps", file: ws[j + 1]?.text };
@@ -651,7 +657,7 @@ function scriptShellFor(name: string): Shell | null {
 }
 
 function analyze(src: string, shell: Shell, st: State) {
-  if (st.depth > MAX_DEPTH) { if (DELETE_MENTION.test(src)) ambiguous("too many nested shell layers"); return; }
+  if (st.depth > MAX_DEPTH) { if (DELETE_MENTION.test(src) || NESTED_MENTION.test(src)) ambiguous("too many nested shell layers"); return; }
   const { segments, unbalanced } = splitSegments(src, shell);
   if (unbalanced && DELETE_MENTION.test(src)) ambiguous("unbalanced quotes");
   let last = null as SegInfo | null;
@@ -668,7 +674,8 @@ function analyze(src: string, shell: Shell, st: State) {
     const psAssign = shell === "ps" ? /^\s*\$([A-Za-z_]\w*)\s*=\s*([\s\S]*)$/.exec(seg.raw) : null;
     if (psAssign) {
       const value = words({ raw: psAssign[2]!, sep: "" }, shell, st);
-      st.vars.set(psAssign[1]!.toLowerCase(), value.length === 1 && !value[0]!.unresolved && !value[0]!.pipeItem ? value[0]!.text : null);
+      const literal = value.length === 1 && !value[0]!.unresolved && !value[0]!.pipeItem && (value[0]!.quoted || value[0]!.raw.startsWith("$"));
+      st.vars.set(psAssign[1]!.toLowerCase(), literal ? value[0]!.text : null);
       last = { words: ws, k: ws.length, shell, upstream };
       continue;
     }
@@ -712,7 +719,7 @@ function analyze(src: string, shell: Shell, st: State) {
       continue;
     }
     if (["cd", "chdir", "pushd", "set-location", "sl", "push-location"].includes(name)) {
-      const arg = (shell === "ps" ? psTargets(ws, k + 1) : ws.slice(k + 1).filter((w) => w.quoted || !(w.text.startsWith("/") && shell === "cmd" && w.text.length === 2) && !(shell === "sh" && w.text.startsWith("-"))))[0];
+      const arg = (shell === "ps" ? psTargets(ws, k + 1) : ws.slice(k + 1).filter((w) => w.quoted || !(w.text.startsWith("/") && shell === "cmd" && w.text.length === 2) && !(shell === "sh" && w.text.startsWith("-") && w.text !== "-")))[0];
       if (!arg) { if (shell === "sh") st.cwd = st.ctx.home; continue; }
       if (arg.text === "-" && shell !== "cmd") { st.cwd = null; continue; }
       try { st.cwd = resolveTarget(arg, st, shell); } catch { st.cwd = null; }

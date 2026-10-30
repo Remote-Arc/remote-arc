@@ -45,6 +45,7 @@ func init() {
 		compiled = append(compiled, regexp.MustCompile(g.Pattern))
 	}
 }
+
 // AssertCommandAllowed checks a command that runs in this process's working directory.
 func AssertCommandAllowed(command string) error {
 	return AssertCommandAllowedIn(command, "")

@@ -60,7 +60,9 @@ const maxGuardDepth = 4
 const maxScriptBytes = 256 * 1024
 
 var (
-	deleteMention  = regexp.MustCompile(`(?i)(?:^|[^a-z0-9_-])(?:rd|rmdir|del|erase|rm|ri|remove-item|unlink|shred|srm|rimraf|rmtree|rmsync|rmdirsync|robocopy|rsync)(?:[^a-z0-9_-]|$)|::delete`)
+	deleteMention = regexp.MustCompile(`(?i)(?:^|[^a-z0-9_-])(?:rd|rmdir|del|erase|rm|ri|remove-item|unlink|shred|srm|rimraf|rmtree|rmsync|rmdirsync|robocopy|rsync)(?:[^a-z0-9_-]|$)|::delete`)
+	// Past maxGuardDepth nothing is inspected, so a further shell or script layer could hide a delete.
+	nestedMention  = regexp.MustCompile(`(?i)(?:^|[^a-z0-9_-])(?:cmd|powershell|pwsh|bash|sh|zsh|dash|ksh)(?:\.exe)?(?:[^a-z0-9_-]|$)|\.(?:ps1|bat|cmd|sh)(?:[^a-z0-9_]|$)`)
 	inlineDelete   = regexp.MustCompile(`(?:shutil\.rmtree|os\.removedirs|os\.rmdir|os\.remove|os\.unlink|rmtree|rmSync|rmdirSync|unlinkSync|rimraf\.sync|rimraf|fsp\.rm|promises\.rm|fs\.rm|FileUtils\.rm_rf|FileUtils\.rm_r|FileUtils\.remove_dir|remove_tree)\s*\(\s*(?:[rRbBuUfF]{0,2}(?:'([^']*)'|"([^"]*)"|` + "`([^`]*)`" + `))?`)
 	dotnetDelete   = regexp.MustCompile(`(?i)\[(?:system\.)?io\.(?:directory|file)\]::delete\s*\(\s*(?:'([^']*)'|"([^"]*)")?`)
 	driveRe        = regexp.MustCompile(`^[A-Za-z]:`)
@@ -211,7 +213,7 @@ func parentOf(win bool, p string) string {
 // ------------------------------------------------------- protection rules
 
 type guardRules struct {
-	win, insensitive                                      bool
+	win, insensitive                                   bool
 	ancestor, inside, allow, homeParents, mountParents []string
 }
 
@@ -423,10 +425,17 @@ func skipQuoted(src string, i int, shell shellKind) int {
 func splitSegments(src string, shell shellKind) ([]guardSegment, bool) {
 	segments := []guardSegment{}
 	start, sep, unbalanced := 0, "", false
+	clean := []byte(src)
 	cut := func(end int, next string, width int) {
-		segments = append(segments, guardSegment{raw: src[start:end], sep: sep})
+		segments = append(segments, guardSegment{raw: string(clean[start:end]), sep: sep})
 		sep = next
 		start = end + width
+	}
+	// Comments are blanked rather than cut, so `Remove-Item <# x #> C:\` stays one command.
+	blank := func(from, to int) {
+		for j := from; j < to; j++ {
+			clean[j] = ' '
+		}
 	}
 loop:
 	for i := 0; i < len(src); i++ {
@@ -475,24 +484,30 @@ loop:
 				continue
 			}
 			if c == '#' && wordStart {
-				if shell == shellPS && prev == '<' {
-					continue
+				end := indexFrom(src, "\n", i)
+				if end < 0 {
+					end = len(src)
 				}
-				nl := indexFrom(src, "\n", i)
-				if nl < 0 {
-					i = len(src)
-				} else {
-					i = nl - 1
-				}
+				blank(i, end)
+				i = end - 1
 				continue
 			}
 			if shell == shellPS && c == '<' && n == '#' {
-				end := indexFrom(src, "#>", i+2)
-				if end < 0 {
-					i = len(src)
-				} else {
-					i = end + 1
+				end := len(src)
+				if close := indexFrom(src, "#>", i+2); close >= 0 {
+					end = close + 2
 				}
+				blank(i, end)
+				i = end - 1
+				continue
+			}
+			if shell == shellPS && c == '$' && n == '{' {
+				end := indexFrom(src, "}", i+2)
+				if end < 0 {
+					unbalanced = true
+					break loop
+				}
+				i = end
 				continue
 			}
 			if c == '$' && n == '(' {
@@ -543,7 +558,7 @@ loop:
 	if start > len(src) {
 		start = len(src)
 	}
-	segments = append(segments, guardSegment{raw: src[start:], sep: sep})
+	segments = append(segments, guardSegment{raw: string(clean[start:]), sep: sep})
 	return segments, unbalanced
 }
 
@@ -1436,7 +1451,7 @@ func (st *guardState) child(freshVars bool) *guardState {
 
 func analyzeShell(src string, shell shellKind, st *guardState) {
 	if st.depth > maxGuardDepth {
-		if deleteMention.MatchString(src) {
+		if deleteMention.MatchString(src) || nestedMention.MatchString(src) {
 			ambiguousTarget("too many nested shell layers")
 		}
 		return
@@ -1485,7 +1500,8 @@ func analyzeShell(src string, shell shellKind, st *guardState) {
 		if shell == shellPS {
 			if m := psAssignRe.FindStringSubmatch(seg.raw); m != nil {
 				value := guardWords(guardSegment{raw: m[2]}, shell, st)
-				if len(value) == 1 && !value[0].unresolved && !value[0].pipeItem {
+				// A bareword on the right of `$x =` is a command call, not a string.
+				if len(value) == 1 && !value[0].unresolved && !value[0].pipeItem && (value[0].quoted || strings.HasPrefix(value[0].raw, "$")) {
 					v := value[0].text
 					st.vars[strings.ToLower(m[1])] = &v
 				} else {
@@ -1560,7 +1576,7 @@ func analyzeShell(src string, shell shellKind, st *guardState) {
 				args = psTargets(ws, k+1)
 			} else {
 				for _, w := range ws[k+1:] {
-					if w.quoted || (!(strings.HasPrefix(w.text, "/") && shell == shellCmd && len(w.text) == 2) && !(shell == shellSh && strings.HasPrefix(w.text, "-"))) {
+					if w.quoted || (!(strings.HasPrefix(w.text, "/") && shell == shellCmd && len(w.text) == 2) && !(shell == shellSh && strings.HasPrefix(w.text, "-") && w.text != "-")) {
 						args = append(args, w)
 					}
 				}

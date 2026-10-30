@@ -7,6 +7,8 @@ import {isTrustedDashboardMutation} from './dashboard-origin.js';
 import {creditBalance,grantArcCredits} from './arc-credits.js';
 import {currentArcPlan} from './arc-plan.js';
 import {getMonthlyUsage} from './usage.js';
+import {binaryBytesUsed} from './plus-usage.js';
+import {binaryTransferLimit} from './entitlements.js';
 import {STRIPE_API_VERSION,stripeConfigured,stripeId,stripeLive,stripeRequest,verifyStripeSignature,StripeError,type StripeEnv} from './stripe-client.js';
 import {activeCommercial,commercialVersion,commercialOffer,commercialCatalog,commercialMode,approvedCommercialPrice,ensureCommercialPrice} from './arc-commercial-config.js';
 import {ensureStripeCustomer as customer} from './stripe-customer.js';
@@ -231,8 +233,8 @@ export async function handleBilling(request:Request,env:BillingEnv){
   }
   if(request.method==='GET'&&path==='/api/billing'){
    const access=await publicArcAccess(env,user.id);
-   const [plan,credits,usage,subscriptions,customer,catalog]=await Promise.all([currentArcPlan(env,user.id),creditBalance(env.DB,user.id),getMonthlyUsage(env,user.id),env.DB.prepare('SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at,revision FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10').bind(user.id).all(),env.DB.prepare('SELECT 1 AS present FROM arc_billing_customers WHERE user_id=?1').bind(user.id).first(),commercialCatalog(env)]);
-    return json({embeddedCheckoutEnabled:Boolean(stripeConfigured(env)&&stripePublishableKey(env)),subscriptionManagementEnabled:stripeConfigured(env)&&Boolean(customer),enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),connectEnabled:stripeConfigured(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,access,credits,usage,plans:catalog.plans,topups:catalog.topups,models:ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
+   const [plan,credits,usage,transferUsed,transferLimit,subscriptions,customer,catalog]=await Promise.all([currentArcPlan(env,user.id),creditBalance(env.DB,user.id),getMonthlyUsage(env,user.id),binaryBytesUsed(env,user.id),binaryTransferLimit(env,user.id),env.DB.prepare('SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at,revision FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10').bind(user.id).all(),env.DB.prepare('SELECT 1 AS present FROM arc_billing_customers WHERE user_id=?1').bind(user.id).first(),commercialCatalog(env)]);
+    return json({embeddedCheckoutEnabled:Boolean(stripeConfigured(env)&&stripePublishableKey(env)),subscriptionManagementEnabled:stripeConfigured(env)&&Boolean(customer),enabled:stripeConfigured(env)&&arcEnabled(env)&&creditsEnabled(env),connectEnabled:stripeConfigured(env),portalEnabled:stripeConfigured(env)&&Boolean(customer),hasCustomer:Boolean(customer),plan,access,credits,usage,transfer:{used:transferUsed,limit:transferLimit},plans:catalog.plans,topups:catalog.topups,models:ARC_PREMIUM_MODELS.map(m=>({id:m.id,label:m.label,inputCreditsPer1000:m.inputMicrosPerMillion/2000000,outputCreditsPer1000:m.outputMicrosPerMillion/2000000})),subscriptions:subscriptions.results});
   }
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   if(!isTrustedDashboardMutation(request,env))throw new StripeError('same_origin_required',403);

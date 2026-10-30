@@ -659,6 +659,52 @@ try {
   } });
   assert.equal(JSON.parse(freeRevoke.content[0].text).already_revoked, false);
   assert.equal((await fileResources.handleFileResource(new Request(freeResource.url), env, freeResourceToken)).status, 404);
+
+  // Free binary transfer is capped per UTC month across chunks and every link download.
+  const { FREE_BINARY_BYTES_PER_MONTH: binaryCap } = await importSource("protocol");
+  const binaryUsed = () => Number(sqlite.prepare(
+    "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
+  ).get("owner")?.binary_bytes || 0);
+  const setBinaryUsed = bytes => sqlite.prepare("UPDATE user_monthly_plus_usage SET binary_bytes = ? WHERE user_id = ?").run(bytes, "owner");
+  const errorCode = result => JSON.parse(result.content[0].text).error?.code;
+  const readFourBytes = () => callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
+  } });
+  const createFreeResource = () => callMcp("tools/call", { name: "create_file_resource", arguments: {
+    device_id: "device", path: "/workspace/image.png",
+  } });
+  const meteredBeforeCap = binaryUsed();
+  setBinaryUsed(binaryCap - 4);
+  const lastBinary = await readFourBytes();
+  assert(!lastBinary.isError, JSON.stringify(lastBinary));
+  assert.equal(binaryUsed(), binaryCap, "Free may use its binary allowance exactly");
+  const usageAtCap = usageCount();
+  const callsAtCap = calls.length;
+  assert.equal(errorCode(await readFourBytes()), "BINARY_TRANSFER_LIMIT_REACHED");
+  assert.equal(calls.length, callsAtCap, "An exhausted binary allowance must not reach the device");
+  assert.equal(usageCount(), usageAtCap, "An exhausted binary allowance must not consume a call");
+  assert.equal(errorCode(await createFreeResource()), "BINARY_TRANSFER_LIMIT_REACHED");
+  assert.equal(calls.length, callsAtCap, "An exhausted allowance cannot create file links");
+  setBinaryUsed(binaryCap - 2);
+  assert.equal(errorCode(await readFourBytes()), "BINARY_TRANSFER_LIMIT_REACHED", "A chunk beyond the remaining allowance is withheld");
+  assert.equal(binaryUsed(), binaryCap - 2, "Withheld bytes are not metered");
+  const resourceRows = () => sqlite.prepare("SELECT COUNT(*) AS n FROM file_resources WHERE user_id = ?").get("owner").n;
+  const rowsBeforeRefusal = resourceRows();
+  setBinaryUsed(binaryCap - 4);
+  assert.equal(errorCode(await createFreeResource()), "BINARY_TRANSFER_LIMIT_REACHED", "A link the allowance cannot deliver in full is refused");
+  assert.equal(resourceRows(), rowsBeforeRefusal, "A refused link is not stored");
+  setBinaryUsed(binaryCap - 5);
+  const cappedResource = JSON.parse((await createFreeResource()).content[0].text);
+  const cappedToken = new URL(cappedResource.url).pathname.split("/").at(-1);
+  const cappedDownload = await fileResources.handleFileResource(new Request(cappedResource.url), env, cappedToken);
+  assert.equal(cappedDownload.status, 200);
+  assert.deepEqual(Buffer.from(await cappedDownload.arrayBuffer()), binaryFixture);
+  assert.equal(binaryUsed(), binaryCap, "Link downloads are metered");
+  const repeatedDownload = await fileResources.handleFileResource(new Request(cappedResource.url), env, cappedToken);
+  assert.equal(repeatedDownload.status, 429, "Repeated link downloads count toward the allowance");
+  assert.match(await repeatedDownload.text(), /Monthly binary transfer allowance exceeded/);
+  assert.equal((await fileResources.handleFileResource(new Request(cappedResource.url, { method: "HEAD" }), env, cappedToken)).status, 200, "HEAD transfers no bytes");
+  setBinaryUsed(meteredBeforeCap);
   const usageBeforeDenied = usageCount();
 
   const deniedGoalPlan = await callMcp("tools/call", { name: "create_agent_goal", arguments: {
@@ -688,6 +734,9 @@ try {
     "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
   ).get("owner");
   assert.equal(Number(plusUsageAfterBinary?.binary_bytes || 0), 17, "Free binary chunks, file resources and Plus chunks must all meter returned bytes");
+  setBinaryUsed(binaryCap);
+  assert(!(await readFourBytes()).isError, "Paid plans have no binary transfer cap");
+  setBinaryUsed(17);
 
   const resource = await fileResources.createFileResource(
     env,

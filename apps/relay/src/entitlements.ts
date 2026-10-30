@@ -1,6 +1,7 @@
 import {
   ACCOUNT_PLAN_FEATURES,
   ACCOUNT_PLAN_LABELS,
+  FREE_BINARY_BYTES_PER_MONTH,
   type AccountFeature,
   type AccountPlan,
 } from "@remotearc/protocol";
@@ -85,6 +86,12 @@ export async function getAccountPlan(
     if(plan.id!=='free'&&normalizeAccountPlan(row.plan)!=='plus')return 'connect';
   }
   return normalizeAccountPlan(row.plan);
+}
+
+/** Free accounts have a published monthly binary transfer allowance; paid
+ * plans, Plus grants and administrators are uncapped. */
+export async function binaryTransferLimit(env: EntitlementEnv, userId: string) {
+  return await getAccountPlan(env, userId) === "free" ? FREE_BINARY_BYTES_PER_MONTH : null;
 }
 
 export async function getAccountEntitlements(

@@ -1,6 +1,6 @@
 import { requireTaskPermission } from "./device-task-policy.js";
 import { selectFleetDevice } from "./fleet-scheduler.js";
-import { isPlanUpgradeRequiredError, requireEntitledFeatures, requireFeatures, type AccountFeature, type PlanEntitlements } from "./entitlements.js";
+import { binaryTransferLimit, isPlanUpgradeRequiredError, requireEntitledFeatures, requireFeatures, type AccountFeature, type PlanEntitlements } from "./entitlements.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import {
   getSessionUser,
@@ -25,7 +25,7 @@ import type { ArcEnv } from "./arc-chat.js";
 import {requireArcAccess} from './arc-trial.js';
 import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { taskSchedulerHealth } from "./task-scheduler.js";
-import { binaryBytesRead, finishAutomationRunWithUsage, recordPlusUsage } from "./plus-usage.js";
+import { binaryBytesRead, finishAutomationRunWithUsage, meterBinaryBytes, recordPlusUsage } from "./plus-usage.js";
 import { sanitizePlan, finishPhase, plannedReport, timeBudget, type GoalPlan, type PlannedState } from "./planned-goals.js";
 import { executePlannedGoal } from "./planned-goal-runtime.js";
 import {
@@ -1308,7 +1308,7 @@ async function automationCall(env: AutomationEnv, automation: AutomationRow,
     result = unwrapAutomationResult(await callDevice(env, automationIdentity(automation, env), automation.device_id!, tool, args,
       ["read_file", "read_binary_file", "list_directory", "get_file_info", "write_file", "edit_block", "start_process"].includes(tool) ? state.planned?.workspace?.path : undefined));
     if (tool === "read_binary_file") {
-      await recordPlusUsage(env, automation.user_id, { binary_bytes: binaryBytesRead(result) });
+      await meterBinaryBytes(env, automation.user_id, binaryBytesRead(result), await binaryTransferLimit(env, automation.user_id));
     }
   } catch (error) {
     if (effect) {

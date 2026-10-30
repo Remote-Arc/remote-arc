@@ -1,8 +1,16 @@
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice, type DeviceCallEnv } from "./device-call.js";
-import { binaryBytesRead, binaryChunkResult, recordPlusUsage } from "./plus-usage.js";
+import { binaryTransferLimit } from "./entitlements.js";
+import type { PlatformLaunchEnv } from "./platform-launch.js";
+import {
+  assertBinaryAllowance,
+  binaryBytesRead,
+  binaryChunkResult,
+  BinaryTransferLimitError,
+  meterBinaryBytes,
+} from "./plus-usage.js";
 
-type FileResourceEnv = DeviceCallEnv & {
+type FileResourceEnv = DeviceCallEnv & PlatformLaunchEnv & {
   PUBLIC_ORIGIN: string;
 };
 
@@ -71,7 +79,9 @@ export async function createFileResource(
   identity: OAuthIdentity,
   deviceId: string,
   filePath: string,
+  limit?: number | null,
 ) {
+  const transferLimit = limit === undefined ? await binaryTransferLimit(env, identity.userId) : limit;
   const first = fileResourceChunk(await callDevice(
     env,
     identity,
@@ -85,9 +95,9 @@ export async function createFileResource(
     );
   }
 
-  await recordPlusUsage(env, identity.userId, {
-    binary_bytes: binaryBytesRead(first),
-  });
+  await meterBinaryBytes(env, identity.userId, binaryBytesRead(first), transferLimit);
+  // Refuse a link the remaining allowance could not deliver in full.
+  await assertBinaryAllowance(env, identity.userId, transferLimit, first.size);
 
   const id = crypto.randomUUID();
   const token = randomToken();
@@ -245,6 +255,19 @@ export async function handleFileResource(
   const status = range.partial ? 206 : 200;
   if (request.method === "HEAD") return new Response(null, { status, headers });
 
+  let limit: number | null;
+  try {
+    limit = await binaryTransferLimit(env, resource.user_id);
+  } catch {
+    return new Response("File resource is no longer authorized.", { status: 403 });
+  }
+  try {
+    await assertBinaryAllowance(env, resource.user_id, limit, length);
+  } catch (error) {
+    if (!(error instanceof BinaryTransferLimitError)) throw error;
+    return new Response(error.message, { status: 429 });
+  }
+
   const identity: OAuthIdentity = {
     userId: resource.user_id,
     clientId: "file-resource",
@@ -286,10 +309,9 @@ export async function handleFileResource(
         if (bytes.byteLength !== chunk.bytes_read) {
           throw new Error("Binary resource chunk length mismatch.");
         }
+        // Metered before delivery so concurrent downloads cannot pass the allowance.
+        await meterBinaryBytes(env, resource.user_id, chunk.bytes_read, limit);
         offset += chunk.bytes_read;
-        await recordPlusUsage(env, resource.user_id, {
-          binary_bytes: chunk.bytes_read,
-        });
         controller.enqueue(bytes);
         if (offset >= range.endExclusive) controller.close();
       } catch (error) {

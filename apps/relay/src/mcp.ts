@@ -33,8 +33,8 @@ import { consumeToolCall } from "./usage.js";
 import { registerMcpTool } from "./mcp-errors.js";
 import { registerBrowserRunnerTools } from "./browser-runner-mcp.js";
 import { LEGACY_ALIAS_META_KEY, registerLegacySharedTabAliases, registerSharedTabTools } from "./shared-tab-mcp.js";
-import { requireFeatures } from "./entitlements.js";
-import { binaryBytesRead, recordPlusUsage } from "./plus-usage.js";
+import { binaryTransferLimit, requireFeatures } from "./entitlements.js";
+import { assertBinaryAllowance, binaryBytesRead, meterBinaryBytes } from "./plus-usage.js";
 import { createFileResource, revokeFileResource } from "./file-resources.js";
 import {
   cancelAutomation,
@@ -604,7 +604,7 @@ export function createRemoteLinkMcp(
       {
         title: "Read a binary file chunk on a remote computer",
         description:
-          "Read a bounded binary-file byte range as base64 with MIME metadata. Available on every plan; account call limits and device permissions still apply. Use offset/length for chunking; text files should use read_file.",
+          "Read a bounded binary-file byte range as base64 with MIME metadata. Available on every plan; account call limits and device permissions still apply, and Free includes 2 GB of binary transfer per month shared with file resources. Use offset/length for chunking; text files should use read_file.",
         inputSchema: z.object({
           device_id: z.string(),
           path: z.string(),
@@ -619,6 +619,8 @@ export function createRemoteLinkMcp(
         if (!identity || !hasScope(identity, "computer:read")) {
           return authRequired(env, "computer:read", identity);
         }
+        const limit = await binaryTransferLimit(env, identity.userId);
+        await assertBinaryAllowance(env, identity.userId, limit, 1);
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
         const result = await callDevice(env, identity, device_id, "read_binary_file", {
@@ -627,9 +629,7 @@ export function createRemoteLinkMcp(
           length,
           ...(expected_revision ? { expected_revision } : {}),
         });
-        await recordPlusUsage(env, identity.userId, {
-          binary_bytes: binaryBytesRead(result),
-        });
+        await meterBinaryBytes(env, identity.userId, binaryBytesRead(result), limit);
         return textResult(result);
       },
     );
@@ -639,7 +639,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a temporary file resource",
         description:
-          "Create a 10-minute bearer URL for a binary file so large files can be transferred outside model context. The resource is pinned to the current file revision and still uses the device's read_binary_file permission while streaming.",
+          "Create a 10-minute bearer URL for a binary file so large files can be transferred outside model context. The resource is pinned to the current file revision and still uses the device's read_binary_file permission while streaming. Every download counts toward Free's 2 GB monthly binary transfer.",
         inputSchema: z.object({
           device_id: z.string(),
           path: z.string(),
@@ -651,10 +651,12 @@ export function createRemoteLinkMcp(
         if (!identity || !hasScope(identity, "computer:read")) {
           return authRequired(env, "computer:read", identity);
         }
+        const limit = await binaryTransferLimit(env, identity.userId);
+        await assertBinaryAllowance(env, identity.userId, limit, 1);
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
         return textResult(
-          await createFileResource(env, identity, device_id, path),
+          await createFileResource(env, identity, device_id, path, limit),
         );
       },
     );

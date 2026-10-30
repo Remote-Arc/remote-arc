@@ -12,6 +12,9 @@ export const CONNECT_UNLIMITED_PLAN_ID = 'connect-unlimited-v1';
 /** Published fair-use guards for plans whose calls/devices are unlimited.
  * These are rate limits, never hidden monthly quotas. */
 export const CONNECT_FAIR_USE = {computerRegistrationsPerDay:20,browserInstallations:20} as const;
+/** Published monthly binary transfer allowance for Free accounts, shared by
+ * read_binary_file and temporary file links. Paid plans have no transfer cap. */
+export const FREE_BINARY_BYTES_PER_MONTH = 2 * 1024 ** 3;
 /** Ordered by precedence: a later entry wins when several assignments are active.
  * `null` limits are explicit unlimited entitlements, never magic large numbers. */
 export const ARC_PLANS = [

@@ -10,9 +10,16 @@ Remote Arc serves every AI host from the same URL:
   The "Use Claude's published identity" setting requires CIMD, which this
   authorization server does not yet advertise.
 - After OAuth, a token's registered `client_id` is joined to its saved
-  redirect URIs. Only the exact official
-  `https://claude.ai/api/mcp/auth_callback` establishes the Claude profile.
+  redirect URIs. Only Anthropic's published HTTPS callbacks
+  `https://claude.ai/api/mcp/auth_callback` and
+  `https://claude.com/api/mcp/auth_callback` establish the Claude profile.
   Self-declared client names and HTTP User-Agent are never used.
+- Coverage: remote connectors added in Claude on the web, desktop and mobile
+  authorize through those callbacks, so they all receive the Claude profile.
+  Claude Code and other local clients authorize through a `localhost`
+  callback that any program can use; they cannot be distinguished and
+  receive the generic profile. The profile is cached per server isolate for
+  at most 10 minutes.
 - Because the MCP URL is shared, unauthenticated discovery remains generic.
   Complete Claude OAuth before inspecting its restricted tool catalog.
 

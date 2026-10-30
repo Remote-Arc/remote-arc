@@ -5506,7 +5506,7 @@ function Dashboard({
                           const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
                           const description =
                             tool === "read_binary_file"
-                              ? tr("Plus capability: read bounded binary byte ranges. This device switch is still required in addition to the account plan.", "Plus 能力：读取有界的二进制字节区间。除账户套餐外，这个设备开关仍必须开启。")
+                              ? tr("Read bounded binary byte ranges on every plan. This device switch and account authorization are still required.", "所有套餐均可读取有界的二进制字节区间。仍需账号授权并开启这个设备开关。")
                               : tool === "undo_last_change"
                               ? tr("AI permission: lets the connected AI invoke the newest Local Undo snapshot. Snapshot creation is controlled separately under Recovery below.", "AI 权限：允许已连接的 AI 调用最新一条 Local Undo 快照。是否创建快照由下方 Recovery 中的 Local Undo 单独控制。")
                               : tool === "start_process"

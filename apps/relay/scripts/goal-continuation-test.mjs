@@ -150,18 +150,14 @@ try {
   const downgradeFenceId = await create("Plan downgrade fence");
   await runtime.pauseAutomation(env, "owner", downgradeFenceId);
   sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
-  await assert.rejects(
-    create("Free plan must not create Agent Goals"),
-    /Remote Arc Plus is required for planned agent goals/,
-  );
-  await assert.rejects(
-    runtime.resumeAutomation(env, "owner", downgradeFenceId),
-    /Remote Arc Plus is required for durable tasks/,
-  );
+  const freeGoalId = await create("Free source Agent Goal");
+  await runtime.cancelAutomation(env, "owner", freeGoalId);
+  await runtime.resumeAutomation(env, "owner", downgradeFenceId);
+  assert.notEqual((await get(downgradeFenceId)).status, "paused", "Free retains source-goal resume access");
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
   await runtime.cancelAutomation(env, "owner", downgradeFenceId);
 
-  // Plus downgrade is enforced even for a keep-awake task that is not due.
+  // Changing to Free retains Connect task and keep-awake capabilities.
   sqlite.prepare("UPDATE devices SET automation_permissions = json_set(automation_permissions, '$.keep_awake', json('true')) WHERE id = 'device'").run();
   const keepAwakeTaskId = await create("Keep-awake downgrade fence", { keep_awake: true });
   sqlite.prepare(`UPDATE automations
@@ -173,8 +169,8 @@ try {
   assert.equal(keepAwakeSeconds.at(-1), 180, "Plus task should renew its keep-awake lease");
   sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
   await runtime.runAutomationTick(env);
-  assert.equal((await get(keepAwakeTaskId)).status, "paused", "Downgraded Plus task must pause even when it is not otherwise due");
-  assert.equal(keepAwakeSeconds.at(-1), 0, "Downgrade must release the existing keep-awake lease");
+  assert.equal((await get(keepAwakeTaskId)).status, "waiting_for_event", "Free must retain the saved source task");
+  assert.equal(keepAwakeSeconds.at(-1), 180, "Free retains an explicitly authorized keep-awake lease");
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
   await runtime.cancelAutomation(env, "owner", keepAwakeTaskId);
 
@@ -482,23 +478,130 @@ try {
     sqlite.prepare("SELECT COALESCE(SUM(tool_calls), 0) AS n FROM user_monthly_usage WHERE user_id = ?").get("owner").n,
   );
 
-  // Plan preflight must happen before metering and before a device call.
+  // Every Connect task mode is available to Free through the actual MCP boundary.
   sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
-  const usageBeforeDenied = usageCount();
-  const callsBeforeDenied = calls.length;
-  const deniedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+  for (const input of [
+    { name: "Free long task", kind: "long_task", command: "true" },
+    { name: "Free schedule", kind: "schedule_watch", command: "true", schedule: { every_seconds: 60 } },
+    { name: "Free condition", kind: "condition_watch", command: "true", condition: { source: "generic", event: "check" } },
+    { name: "Free verification loop", kind: "goal_loop", command: "true", goal: { command: "true", cwd: "/workspace" } },
+  ]) {
+    const createdFree = await callMcp("tools/call", { name: "create_automation", arguments: {
+      ...input, device_id: "device", cwd: "/workspace", max_runs: 1, recovery: "fail",
+    } });
+    const createdFreeId = JSON.parse(createdFree.content[0].text).automation?.id;
+    assert(createdFreeId, JSON.stringify(createdFree));
+    for (const action of ["pause", "resume", "cancel"]) {
+      const managedFree = await callMcp("tools/call", { name: "manage_automation", arguments: {
+        automation_id: createdFreeId, action,
+      } });
+      assert.equal(JSON.parse(managedFree.content[0].text).status, action === "pause" ? "paused" : action === "cancel" ? "cancelled" : JSON.parse(createdFree.content[0].text).automation.status);
+    }
+  }
+  const freeGoalMcp = await callMcp("tools/call", { name: "create_agent_goal", arguments: {
+    name: "Free source goal through MCP", device_id: "device", controller: "source",
+    objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"],
+    task_version: 1,
+  } });
+  const freeGoalMcpId = JSON.parse(freeGoalMcp.content[0].text).automation?.id;
+  assert(freeGoalMcpId, JSON.stringify(freeGoalMcp));
+  const freeGoalContext = await callMcp("tools/call", { name: "get_goal_context", arguments: { automation_id: freeGoalMcpId } });
+  assert.equal(JSON.parse(freeGoalContext.content[0].text).controller, "source");
+  const freeReadDecision = await callMcp("tools/call", { name: "submit_goal_decision", arguments: {
+    automation_id: freeGoalMcpId, expected_revision: JSON.parse(freeGoalContext.content[0].text).revision,
+    idempotency_key: "free-source-read", decision: "tool", tool: "read_file",
+    arguments_json: JSON.stringify({ path: "/workspace/app.ts" }), decision_summary: "Inspect the approved file",
+  } });
+  assert.equal(JSON.parse(freeReadDecision.content[0].text).accepted, true);
+  await tick(freeGoalMcpId);
+  const freeReadContext = await source.getGoalContext(db, "owner", freeGoalMcpId);
+  assert(freeReadContext.latest_observation.includes("implementation contents"));
+  const freeCompleteDecision = await callMcp("tools/call", { name: "submit_goal_decision", arguments: {
+    automation_id: freeGoalMcpId, expected_revision: freeReadContext.revision,
+    idempotency_key: "free-source-complete", decision: "complete", tool: "none",
+    decision_summary: "Approved file inspected", completion_evidence: "read_file returned implementation contents",
+  } });
+  assert.equal(JSON.parse(freeCompleteDecision.content[0].text).accepted, true);
+  await tick(freeGoalMcpId);
+  assert.equal((await get(freeGoalMcpId)).status, "completed");
+
+  // Free binary reads retain the normal scope/device/quota checks.
+  const usageBeforeFreeBinary = usageCount();
+  const callsBeforeFreeBinary = calls.length;
+  const deniedBinaryScope = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
+  } }, { ...identity, scope: "devices:read" });
+  assert(deniedBinaryScope.isError, "Free access must still require computer:read");
+  assert.equal(usageCount(), usageBeforeFreeBinary, "Rejected scope must not consume usage");
+  assert.equal(calls.length, callsBeforeFreeBinary, "Rejected scope must not reach the device");
+  const freeBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
     device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
   } });
-  assert.equal(JSON.parse(deniedBinary.content[0].text).error.code, "PLAN_UPGRADE_REQUIRED", JSON.stringify(deniedBinary));
-  assert.equal(usageCount(), usageBeforeDenied, "Denied Plus binary read must not consume monthly usage");
-  assert.equal(calls.length, callsBeforeDenied, "Denied Plus binary read must not reach the device");
+  assert(!freeBinary.isError, JSON.stringify(freeBinary));
+  const freeBinaryPayload = JSON.parse(freeBinary.content[0].text);
+  assert.equal(freeBinaryPayload.data, "AAECAw==");
+  assert.equal(freeBinaryPayload.file_revision, binaryRevision);
+  const freeContinuation = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", offset: 2, length: 2,
+    expected_revision: freeBinaryPayload.file_revision,
+  } });
+  assert(!freeContinuation.isError, JSON.stringify(freeContinuation));
+  assert.equal(JSON.parse(freeContinuation.content[0].text).data, "AgM=");
+  assert.equal(usageCount(), usageBeforeFreeBinary + 2, "Each Free binary chunk consumes one normal call");
+  assert.equal(calls.length, callsBeforeFreeBinary + 2);
+  assert.equal(Number(sqlite.prepare(
+    "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
+  ).get("owner")?.binary_bytes || 0), 6, "Free binary bytes remain metered");
+
+  const usageBeforeGuards = usageCount();
+  const callsBeforeGuards = calls.length;
+  const oversizedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", length: 262145,
+  } });
+  assert(oversizedBinary.isError, "Free binary reads retain the 256 KiB chunk bound");
+  assert.equal(usageCount(), usageBeforeGuards);
+  assert.equal(calls.length, callsBeforeGuards);
+  env.MONTHLY_TOOL_CALL_LIMIT = String(usageBeforeGuards);
+  const exhaustedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", length: 4,
+  } });
+  assert.equal(JSON.parse(exhaustedBinary.content[0].text).error.code, "MONTHLY_LIMIT_REACHED", "Free binary reads must honor the monthly call quota");
+  assert.equal(usageCount(), usageBeforeGuards);
+  assert.equal(calls.length, callsBeforeGuards);
+  delete env.MONTHLY_TOOL_CALL_LIMIT;
+
+  sqlite.prepare("UPDATE devices SET allowed_tools = ? WHERE id = 'device'")
+    .run(JSON.stringify(tools.filter(tool => tool !== "read_binary_file")));
+  const disabledBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", length: 4,
+  } });
+  assert(JSON.parse(disabledBinary.content[0].text).error, "Free binary reads must still require the device tool switch");
+  assert.equal(calls.length, callsBeforeGuards, "Disabled tool must not reach the device");
+  sqlite.prepare("UPDATE devices SET allowed_tools = ? WHERE id = 'device'").run(JSON.stringify(tools));
+
+  // Individual file tools, including temporary links, are available on Free.
+  const freeResourceResult = await callMcp("tools/call", { name: "create_file_resource", arguments: {
+    device_id: "device", path: "/workspace/image.png",
+  } });
+  const freeResource = JSON.parse(freeResourceResult.content[0].text);
+  assert(freeResource.resource_id, JSON.stringify(freeResourceResult));
+  const freeResourceToken = new URL(freeResource.url).pathname.split("/").at(-1);
+  const freeResourceDownload = await fileResources.handleFileResource(new Request(freeResource.url), env, freeResourceToken);
+  assert.equal(freeResourceDownload.status, 200);
+  assert.deepEqual(Buffer.from(await freeResourceDownload.arrayBuffer()), binaryFixture);
+  const freeRevoke = await callMcp("tools/call", { name: "revoke_file_resource", arguments: {
+    resource_id: freeResource.resource_id,
+  } });
+  assert.equal(JSON.parse(freeRevoke.content[0].text).already_revoked, false);
+  assert.equal((await fileResources.handleFileResource(new Request(freeResource.url), env, freeResourceToken)).status, 404);
+  const usageBeforeDenied = usageCount();
 
   const deniedGoalPlan = await callMcp("tools/call", { name: "create_agent_goal", arguments: {
-    name: "Denied Free source goal", device_id: "device", controller: "source",
+    name: "Hosted model access remains separate", device_id: "device", controller: "hosted",
     objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"],
   } });
   assert.equal(JSON.parse(deniedGoalPlan.content[0].text).error.code, "PLAN_UPGRADE_REQUIRED", JSON.stringify(deniedGoalPlan));
-  assert.equal(usageCount(), usageBeforeDenied, "Denied Plus Agent Goal must not consume monthly usage");
+  assert.equal(usageCount(), usageBeforeDenied, "Denied hosted model access must not consume monthly tool usage");
 
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
   const allowedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
@@ -519,7 +622,7 @@ try {
   const plusUsageAfterBinary = sqlite.prepare(
     "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
   ).get("owner");
-  assert.equal(Number(plusUsageAfterBinary?.binary_bytes || 0), 6, "Successful Plus binary chunks must meter returned bytes");
+  assert.equal(Number(plusUsageAfterBinary?.binary_bytes || 0), 17, "Free binary chunks, file resources and Plus chunks must all meter returned bytes");
 
   const resource = await fileResources.createFileResource(
     env,
@@ -566,7 +669,8 @@ try {
     env,
     resourceToken,
   );
-  assert.equal(downgradedResource.status, 403, "Plus downgrade must invalidate resource use immediately");
+  assert.equal(downgradedResource.status, 200, "Free accounts retain individual file resource access");
+  assert.deepEqual(Buffer.from(await downgradedResource.arrayBuffer()), binaryFixture);
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
 
   binaryRevision = "binary-rev-2";

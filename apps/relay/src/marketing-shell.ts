@@ -1,7 +1,11 @@
 // The initial document is readable with or without JavaScript. React replaces
 // this shell on mount; it is identical for users and crawlers of the same URL.
+// With JavaScript the shell stays hidden so people do not see it flash before
+// the app paints, and it reveals itself if the app fails to load. Without
+// JavaScript it shows at once. This is CSS because the CSP pins inline scripts.
 export const marketingShellStyle = `<style id="marketing-shell-style">
-.marketingShell{font:16px/1.7 Inter,system-ui,sans-serif;color:inherit;background:inherit;overflow-wrap:anywhere}
+.marketingShell{font:16px/1.7 Inter,system-ui,sans-serif;color:inherit;background:inherit;overflow-wrap:anywhere;visibility:hidden;animation:marketing-shell-reveal 0s 3s forwards}
+@keyframes marketing-shell-reveal{to{visibility:visible}}
 .marketingShell a{color:inherit;text-underline-offset:4px}
 .marketingShellHeader{max-width:1200px;margin:auto;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #8883}
 .marketingShellBrand{display:flex;align-items:center;gap:9px;text-decoration:none;font-size:23px;font-weight:600;white-space:nowrap}
@@ -13,7 +17,7 @@ export const marketingShellStyle = `<style id="marketing-shell-style">
 .marketingContent p,.marketingContent li{max-width:80ch}
 .marketingContent .seo-eyebrow,.marketingContent .seo-byline{font-size:12px;letter-spacing:.08em}
 @media(max-width:600px){.marketingShellHeader{align-items:flex-start;flex-direction:column}.marketingContent{padding-top:32px}}
-</style>`;
+</style><noscript><style>.marketingShell{visibility:visible;animation:none}</style></noscript>`;
 
 export function marketingShell(content: string, chinese: boolean) {
   const home = chinese ? "/zh" : "/";

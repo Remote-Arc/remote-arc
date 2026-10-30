@@ -10,7 +10,7 @@ status: builtin-guidance
 
 Use this Skill before any AI-initiated disk cleanup, recursive deletion, cache purge or storage-reclamation task through Remote Arc. **Freeing space is the goal.** Moving files to the Recycle Bin/Trash or a quarantine folder on the same volume usually frees **no** space, so do not promise otherwise.
 
-A Skill guides the calling AI. It is **not** an OS sandbox, backup or permission grant. The local Safety Guard blocks only a narrow set of catastrophic commands. Trusted Write Locations do **not** confine shell side effects, and **Local Undo cannot restore shell or helper deletions**.
+A Skill guides the calling AI. It is **not** an OS sandbox, backup or permission grant. The device Safety Guard refuses terminal deletes that would reach roots, home, personal, system or credential folders or whose target is ambiguous, but it cannot see paths a script computes at run time. Trusted Write Locations do **not** confine shell side effects, and **Local Undo cannot restore shell or helper deletions**.
 
 ## Device and permission gates
 

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sync"
 
@@ -44,9 +45,22 @@ func init() {
 		compiled = append(compiled, regexp.MustCompile(g.Pattern))
 	}
 }
+
+// AssertCommandAllowed checks a command that runs in this process's working directory.
 func AssertCommandAllowed(command string) error {
+	return AssertCommandAllowedIn(command, "")
+}
+
+// AssertCommandAllowedIn refuses catastrophic commands before they run. Deletion
+// is judged by where it would land (delete_guard.go), so narrow cleanup stays
+// allowed while roots, homes, protected folders and unresolvable targets are
+// refused. cwd is the directory the shell starts in ("" = this process's).
+func AssertCommandAllowedIn(command, cwd string) error {
 	if os.Getenv("REMOTEARC_ALLOW_DESTRUCTIVE") == "1" {
 		return nil
+	}
+	if reason := FindDangerousDelete(command, LocalDeleteGuardContext(cwd)); reason != "" {
+		return errors.New("Blocked by Remote Arc Safety Guard: " + reason + ". Delete a specific folder with a literal absolute path in a single shell layer, or use the safe-cleanup Skill for bulk cleanup. Run this action manually on the device if you intentionally need it.")
 	}
 	for i, re := range compiled {
 		if re.MatchString(command) {
@@ -177,7 +191,14 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 		if err != nil {
 			return protocol.Result{}, err
 		}
-		if err = AssertCommandAllowed(command); err != nil {
+		// Relative delete targets are judged against the directory the shell starts in.
+		guardCwd := protocol.OptionalString(args, "cwd")
+		if guardCwd != "" {
+			if abs, absErr := filepath.Abs(guardCwd); absErr == nil {
+				guardCwd = abs
+			}
+		}
+		if err = AssertCommandAllowedIn(command, guardCwd); err != nil {
 			return protocol.Result{}, err
 		}
 		cwd := protocol.OptionalString(args, "cwd")

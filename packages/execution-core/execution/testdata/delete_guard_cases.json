@@ -1,0 +1,1321 @@
+{
+ "contexts": {
+  "win": {
+   "platform": "win32",
+   "cwd": "D:\\work",
+   "home": "C:\\Users\\Ann",
+   "env": {
+    "SystemDrive": "C:",
+    "SystemRoot": "C:\\Windows",
+    "ProgramFiles": "C:\\Program Files",
+    "ProgramFiles(x86)": "C:\\Program Files (x86)",
+    "ProgramData": "C:\\ProgramData",
+    "USERPROFILE": "C:\\Users\\Ann",
+    "LOCALAPPDATA": "C:\\Users\\Ann\\AppData\\Local",
+    "TEMP": "C:\\Users\\Ann\\AppData\\Local\\Temp",
+    "OneDrive": "C:\\Users\\Ann\\OneDrive"
+   }
+  },
+  "mac": {
+   "platform": "darwin",
+   "cwd": "/Users/ann/project",
+   "home": "/Users/ann",
+   "env": {
+    "HOME": "/Users/ann",
+    "TMPDIR": "/var/folders/xy/abc/T/"
+   }
+  },
+  "linux": {
+   "platform": "linux",
+   "cwd": "/home/ann/app",
+   "home": "/home/ann",
+   "env": {
+    "HOME": "/home/ann"
+   }
+  }
+ },
+ "cases": [
+  {
+   "context": "win",
+   "command": "cmd /c rd /s /q \\ \"\\\\?\\D:\\wonderfulVideos\\cache\"",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"cmd /c rd /s /q \\\"\\\\?\\D:\\wonderfulVideos\\cache\\\"\"",
+   "block": true,
+   "reason": "escaped quotes"
+  },
+  {
+   "context": "win",
+   "command": "cmd /c \"rd /s /q \"\\\\?\\D:\\wonderful Videos\\cache\\\" \"",
+   "block": true,
+   "reason": "escaped quotes"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \\\\?\\D:\\wonderfulVideos\\cache",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"D:\\wonderful Videos\\cache\\\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \\ & echo done",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "rd/s/q D:\\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "rmdir /s /q \"D:\\\"",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "del /f /s /q C:\\*",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"\\\\?\\C:\\\"",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \\\\fileserver\\share",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "cd /d C:\\ && rd /s /q .",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "start \"\" cmd /c rd /s /q C:\\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"Remove-Item -Recurse -Force C:\\ \"",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAALQBGAG8AcgBjAGUAIABDADoAXAA=",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAALQBGAG8AcgBjAGUAIABEADoAXAB3AG8AcgBrAFwAZABpAHMAdAA=",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"ri -r -fo $env:USERPROFILE\"",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"Remove-Item -Recurse -Force $target\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"$p = 'D:\\work\\dist'; Remove-Item -Recurse -Force $p\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"$p = 'C:\\Users\\Ann'; Remove-Item -Recurse -Force $p\"",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"%MISSING_DIR%\\cache\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"%USERPROFILE%\"",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Users",
+   "block": true,
+   "reason": "Users"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Users\\Bob",
+   "block": true,
+   "reason": "home folder"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"C:\\Users\\Ann\\Documents\"",
+   "block": true,
+   "reason": "Documents"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q c:\\users\\ann\\DOCUMENTS",
+   "block": true,
+   "reason": "Documents"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Users\\Ann\\OneDrive\\Photos\\thumbs",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Users\\Ann\\AppData\\Local",
+   "block": true,
+   "reason": "AppData"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Windows\\System32",
+   "block": true,
+   "reason": "Windows"
+  },
+  {
+   "context": "win",
+   "command": "del /s /q \"C:\\Program Files\\App\"",
+   "block": true,
+   "reason": "Program Files"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Users\\Ann\\.remotearc\\undo",
+   "block": true,
+   "reason": "Undo"
+  },
+  {
+   "context": "win",
+   "command": "del C:\\Users\\Ann\\.ssh\\id_ed25519",
+   "block": true,
+   "reason": ".ssh"
+  },
+  {
+   "context": "win",
+   "command": "for /d %i in (D:\\work\\*) do rd /s /q \"%i\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "if exist C:\\Users\\Ann rd /s /q C:\\Users\\Ann",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Users\\ANNSMI~1",
+   "block": true,
+   "reason": "short name"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"Get-ChildItem C:\\Users\\Ann -Force | Remove-Item -Recurse -Force\"",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"Get-ChildItem D:\\work\\dist | ForEach-Object { Remove-Item $_.FullName -Recurse }\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"Get-ChildItem | Remove-Item -Recurse\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"[IO.Directory]::Delete('C:\\Users\\Ann', $true)\"",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "python -c \"import shutil; shutil.rmtree(r'C:\\Users\\Ann')\"",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "python -c \"import shutil,sys; shutil.rmtree(sys.argv[1])\" C:\\x",
+   "block": true,
+   "reason": "computed"
+  },
+  {
+   "context": "win",
+   "command": "robocopy D:\\empty C:\\Users\\Ann /MIR",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "robocopy D:\\src D:\\backup /E",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q D:\\work\\node_modules",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"D:\\wonderful Videos\\cache\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "del /q /f /s \"%TEMP%\\*\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Windows\\Temp",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "del /q /s C:\\Windows\\Temp\\*",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:\\Windows\\SoftwareDistribution\\Download",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"C:\\$Recycle.Bin\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \\\"Remove-Item -LiteralPath 'C:\\Users\\Ann\\AppData\\Local\\Temp\\x' -Recurse -Force\\\"",
+   "block": true,
+   "reason": "escaped quotes"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"Remove-Item -LiteralPath 'C:\\Users\\Ann\\AppData\\Local\\Temp\\x' -Recurse -Force\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"Remove-Item -Recurse -Force $env:LOCALAPPDATA\\npm-cache\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rmdir build",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q .\\dist",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "cd /d D:\\work && rd /s /q build",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \\\\fileserver\\share\\team\\tmp",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "echo rd /s /q C:\\",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "findstr /s \"rd /s /q C:\\\" *.bat",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "git rm -r --cached .",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "docker rm -f abc",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "npm uninstall left-pad",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"Get-ChildItem D:\\work\\logs -Filter *.log | Remove-Item\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -Command \"Select-String shutdown file.txt\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"D:\\work",
+   "block": true,
+   "reason": "unbalanced"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /*",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "mac",
+   "command": "sudo rm -rf --no-preserve-root /",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf $HOME",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf \"$HOME/\"",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf \"$DIR/\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ${BUILD_DIR}/",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf \"$(pwd)\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/Documents",
+   "block": true,
+   "reason": "Documents"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /users/ANN/documents",
+   "block": true,
+   "reason": "Documents"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/Library",
+   "block": true,
+   "reason": "Library"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/Library/*",
+   "block": true,
+   "reason": "Library"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/Library/Keychains/login.keychain-db",
+   "block": true,
+   "reason": "Keychains"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/.ssh",
+   "block": true,
+   "reason": ".ssh"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/.remotearc",
+   "block": true,
+   "reason": "Undo"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /System/Library/Caches",
+   "block": true,
+   "reason": "System"
+  },
+  {
+   "context": "mac",
+   "command": "sudo rm -rf /usr/bin",
+   "block": true,
+   "reason": "/usr"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /Users/bob",
+   "block": true,
+   "reason": "home folder"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /Volumes/Backup",
+   "block": true,
+   "reason": "mounted volume"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /Applications",
+   "block": true,
+   "reason": "Applications"
+  },
+  {
+   "context": "mac",
+   "command": "cd ~ && rm -rf *",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "cd / ; rm -rf .",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "mac",
+   "command": "cd \"$UNKNOWN\" && rm -rf build",
+   "block": true,
+   "reason": "unknown location"
+  },
+  {
+   "context": "mac",
+   "command": "find ~ -name \"*.log\" -delete",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "ls ~ | xargs rm -rf",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "bash -c \"rm -rf $HOME\"",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "sh -c 'rm -rf \"$HOME\"'",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "node -e \"require('fs').rmSync('/Users/ann', {recursive: true})\"",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "python3 -c \"import shutil; shutil.rmtree('/Users/' + name)\"",
+   "block": true,
+   "reason": "concatenated"
+  },
+  {
+   "context": "mac",
+   "command": "rsync -a --delete empty/ ~/",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf node_modules dist",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/Library/Caches/com.apple.dt.Xcode",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/Library/Developer/Xcode/DerivedData/*",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf \"$TMPDIR/build-cache\"",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/.npm/_cacache",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf ~/.cache/pip",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "find . -name '*.pyc' -delete",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "DIR=/Users/ann/project/build; rm -rf \"$DIR\"",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "DIR=/Users/ann; rm -rf \"$DIR\"",
+   "block": true,
+   "reason": "ann"
+  },
+  {
+   "context": "mac",
+   "command": "echo \"rm -rf /\"",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "grep -R \"rm -rf /\" .",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "printf \"%s\\n\" \"rm -rf /\"",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "git rm --cached file.txt",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /tmp/build-123",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "brew cleanup --prune=all",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "docker system prune -f",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm ~/Downloads/old-installer.dmg",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm ~/Desktop/Screenshot.png",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /Applications/OldApp.app",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "rm -rf /Volumes/Backup/cache",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "ls build | xargs rm -rf",
+   "block": false
+  },
+  {
+   "context": "mac",
+   "command": "if [ -d dist ]; then rm -rf dist; fi",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf /home",
+   "block": true,
+   "reason": "/home"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf /home/ann/Documents",
+   "block": true,
+   "reason": "Documents"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf /home/ann/documents",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf /var/lib/docker",
+   "block": true,
+   "reason": "/var/lib"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf ~/.cache/*",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "sudo rm -rf /var/log/journal/old",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "echo ^& rd /s /q C:\\",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q \"C:\\",
+   "block": true,
+   "reason": "unbalanced"
+  },
+  {
+   "context": "win",
+   "command": "r^d /s /q C:\\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "for %%d in (a b) do rd /s /q %%d",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "for /l %%i in (1,1,3) do echo %%i",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q %~dp0",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "del /q D:\\work\\100%.txt",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "@rd /s /q C:\\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "start /b /wait cmd /c rd /s /q C:\\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "if /i not \"%OS%\"==\"x\" rd /s /q C:\\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "if 1 equ 1 rd /s /q C:\\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q C:temp",
+   "block": true,
+   "reason": "drive-relative"
+  },
+  {
+   "context": "win",
+   "command": "rd /s /q D:temp",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "del D:*.tmp",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "cd %NOPE% & rd /s /q \\foo",
+   "block": true,
+   "reason": "unknown current drive"
+  },
+  {
+   "context": "win",
+   "command": "cd %NOPE% & rd /s /q build",
+   "block": true,
+   "reason": "working directory"
+  },
+  {
+   "context": "win",
+   "command": "cmd /q",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "cmd foo.txt",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "cmd /x /c rd /s /q C:\\",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -File D:\\work\\missing.ps1",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -ExecutionPolicy Bypass -File missing.ps1",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "missing.bat",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -EncodedCommand !!!",
+   "block": true,
+   "reason": "EncodedCommand"
+  },
+  {
+   "context": "win",
+   "command": "powershell -EncodedCommand QQ==",
+   "block": true,
+   "reason": "EncodedCommand"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"& { Remove-Item -Recurse -Force C:\\ }\"",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"Remove-Item -Recurse D:\\work\\dist # Remove-Item C:\\Windows\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"<# Remove-Item C:\\ #> Remove-Item D:\\work\\dist\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"Remove-Item -Recurse -Force (Join-Path C:\\ x)\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"Remove-Item -Recurse $(Get-Location)\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"Remove-Item -Recurse ${env:ProgramData}\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"Write-Output $ ; Remove-Item D:\\work\\dist\"",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"Remove-Item -Recurse $env:NOPE\\x\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"Remove-Item -Recurse -Force $HOME\"",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"cd D:\\; Remove-Item -Recurse $PWD\"",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -Command \"cd $x; Remove-Item -Recurse $PWD\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAIgBEADoAXAB3AG8AcgBrAFwAZABpAHMAdABgACQAeAAiAA==",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAJwBEADoAXAB3AG8AcgBrAFwAaQB0ACcAJwBzACcA",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAIgBEADoAXAB3AG8AcgBrAFwAcwBhAHkAIAAiACIAaABpACIAIgAiAA==",
+   "block": true,
+   "reason": "quote"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAIgAkAEgATwBNAEUAXABEAG8AYwB1AG0AZQBuAHQAcwAiAA==",
+   "block": true,
+   "reason": "Documents"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAARAA6AFwAdwBvAHIAawBcAGEAYAAgAGIA",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAIgBDADoAXAA=",
+   "block": true,
+   "reason": "unbalanced"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBQAGEAdABoADoAQwA6AFwAIAAtAFIAZQBjAHUAcgBzAGUA",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBGAGkAbAB0AGUAcgAgACoALgB0AG0AcAAgAC0AUgBlAGMAdQByAHMAZQAgAEQAOgBcAHcAbwByAGsAXABsAG8AZwBzAA==",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAASABLAEMAVQA6AFwAUwBvAGYAdAB3AGEAcgBlAFwATwBsAGQAQQBwAHAAIAAtAFIAZQBjAHUAcgBzAGUA",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAATQBpAGMAcgBvAHMAbwBmAHQALgBQAG8AdwBlAHIAUwBoAGUAbABsAC4AQwBvAHIAZQBcAEYAaQBsAGUAUwB5AHMAdABlAG0AOgA6AEMAOgBcACAALQBSAGUAYwB1AHIAcwBlAA==",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAAXABcAD8AXABVAE4AQwBcAHMAZQByAHYAZQByAFwAcwBoAGEAcgBlAFwAeAAgAC0AUgBlAGMAdQByAHMAZQA=",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAAXABcAD8AXABVAE4AQwBcAHMAZQByAHYAZQByAFwAcwBoAGEAcgBlACAALQBSAGUAYwB1AHIAcwBlAA==",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAAXABcAC4AXABQAGgAeQBzAGkAYwBhAGwARAByAGkAdgBlADAA",
+   "block": true,
+   "reason": "device"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand RwBlAHQALQBDAGgAaQBsAGQASQB0AGUAbQAgAHwAIABSAGUAbQBvAHYAZQAtAEkAdABlAG0AIAAtAFIAZQBjAHUAcgBzAGUA",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand RwBlAHQALQBQAHIAbwBjAGUAcwBzACAAfAAgAFIAZQBtAG8AdgBlAC0ASQB0AGUAbQA=",
+   "block": true,
+   "reason": "pipeline"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAAJABfAA==",
+   "block": true,
+   "reason": "pipeline source"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand JAB4ACAAPQAgAEcAZQB0AC0ATABvAGMAYQB0AGkAbwBuADsAIABSAGUAbQBvAHYAZQAtAEkAdABlAG0AIAAtAFIAZQBjAHUAcgBzAGUAIAAkAHgA",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UwB0AGEAcgB0AC0AUAByAG8AYwBlAHMAcwAgAGMAbQBkACAALQBBAHIAZwB1AG0AZQBuAHQATABpAHMAdAAgACcALwBjACAAcgBkACAALwBzACAALwBxACAAQwA6AFwAJwA=",
+   "block": true,
+   "reason": "Start-Process"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand YwBtAGQAIAAvAGMAIAByAGQAIAAvAHMAIAAvAHEAIABDADoAXAA=",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand YwBtAGQAIAAvAGMAIAAiAHIAZAAgAC8AcwAgAC8AcQAgAEMAOgBcACIA",
+   "block": true,
+   "reason": "escaped quotes"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand JABwACAAPQAgACQAZQBuAHYAOgBUAEUATQBQADsAIABSAGUAbQBvAHYAZQAtAEkAdABlAG0AIAAtAFIAZQBjAHUAcgBzAGUAIAAkAHAA",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAAPAAjACAARAA6AFwAdwBvAHIAawBcAGQAaQBzAHQAIAAjAD4AIABDADoAXAA=",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UwBlAHQALQBMAG8AYwBhAHQAaQBvAG4AIAAtADsAIABSAGUAbQBvAHYAZQAtAEkAdABlAG0AIAAtAFIAZQBjAHUAcgBzAGUAIABiAHUAaQBsAGQA",
+   "block": true,
+   "reason": "working directory"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand cABvAHcAZQByAHMAaABlAGwAbAAgAFIAZQBtAG8AdgBlAC0ASQB0AGUAbQAgAC0AUgBlAGMAdQByAHMAZQAgAEMAOgBcAA==",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand cABvAHcAZQByAHMAaABlAGwAbAAgAC0ARQB4AGUAYwB1AHQAaQBvAG4AUABvAGwAaQBjAHkAIABCAHkAcABhAHMAcwAgAC0AQwBvAG0AbQBhAG4AZAAgAFIAZQBtAG8AdgBlAC0ASQB0AGUAbQAgAC0AUgBlAGMAdQByAHMAZQAgAEMAOgBcAA==",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand YwBkACAAQwA6AFwAVwBpAG4AZABvAHcAcwA7ACAAUgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAVABlAG0AcAA=",
+   "block": false
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAfgBcAEQAbwB3AG4AbABvAGEAZABzAA==",
+   "block": true,
+   "reason": "Downloads"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAfgA=",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAQAAoACcAQwA6AFwAJwApAA==",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand RwBlAHQALQBDAGgAaQBsAGQASQB0AGUAbQAgAEMAOgBcAFUAcwBlAHIAcwBcAEEAbgBuACAAfAAgAEYAbwByAEUAYQBjAGgALQBPAGIAagBlAGMAdAAgAHsAIABSAGUAbQBvAHYAZQAtAEkAdABlAG0AIAAtAFIAZQBjAHUAcgBzAGUAIAAkAF8ALgBGAHUAbABsAE4AYQBtAGUAIAB9AA==",
+   "block": true,
+   "reason": "Ann"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand UgBlAG0AbwB2AGUALQBJAHQAZQBtACAALQBSAGUAYwB1AHIAcwBlACAAIgBDADoAXABQAHIAbwBnAHIAYQBtACAARgBpAGwAZQBzAFwAeAAiAA==",
+   "block": true,
+   "reason": "Program Files"
+  },
+  {
+   "context": "win",
+   "command": "powershell -NoProfile -EncodedCommand cABvAHcAZQByAHMAaABlAGwAbAAgAC0ATgBvAFAAcgBvAGYAaQBsAGUAIAAtAEUAbgBjAG8AZABlAGQAQwBvAG0AbQBhAG4AZAAgAGMAQQBCAHYAQQBIAGMAQQBaAFEAQgB5AEEASABNAEEAYQBBAEIAbABBAEcAdwBBAGIAQQBBAGcAQQBDADAAQQBUAGcAQgB2AEEARgBBAEEAYwBnAEIAdgBBAEcAWQBBAGEAUQBCAHMAQQBHAFUAQQBJAEEAQQB0AEEARQBVAEEAYgBnAEIAagBBAEcAOABBAFoAQQBCAGwAQQBHAFEAQQBRAHcAQgB2AEEARwAwAEEAYgBRAEIAaABBAEcANABBAFoAQQBBAGcAQQBHAE0AQQBRAFEAQgBDAEEASABZAEEAUQBRAEIASQBBAEcATQBBAFEAUQBCAGEAQQBGAEUAQQBRAGcAQgA1AEEARQBFAEEAUwBBAEIATgBBAEUARQBBAFkAUQBCAEIAQQBFAEkAQQBiAEEAQgBCAEEARQBjAEEAZAB3AEIAQgBBAEcASQBBAFEAUQBCAEIAQQBHAGMAQQBRAFEAQgBEAEEARABBAEEAUQBRAEIAVQBBAEcAYwBBAFEAZwBCADIAQQBFAEUAQQBSAGcAQgBCAEEARQBFAEEAWQB3AEIAbgBBAEUASQBBAGQAZwBCAEIAQQBFAGMAQQBXAFEAQgBCAEEARwBFAEEAVQBRAEIAQwBBAEgATQBBAFEAUQBCAEgAQQBGAFUAQQBRAFEAQgBKAEEARQBFAEEAUQBRAEIAMABBAEUARQBBAFIAUQBCAFYAQQBFAEUAQQBZAGcAQgBuAEEARQBJAEEAYQBnAEIAQgBBAEUAYwBBAE8AQQBCAEIAQQBGAG8AQQBRAFEAQgBDAEEARwB3AEEAUQBRAEIASABBAEYARQBBAFEAUQBCAFIAQQBIAGMAQQBRAGcAQgAyAEEARQBFAEEAUgB3AEEAdwBBAEUARQBBAFkAZwBCAFIAQQBFAEkAQQBhAEEAQgBCAEEARQBjAEEATgBBAEIAQgBBAEYAbwBBAFEAUQBCAEIAQQBHAGMAQQBRAFEAQgBIAEEARQAwAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAEQAQQBFAEUAQQBTAEEAQgBaAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFMAUQBCAEIAQQBFAGMAQQBUAFEAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEcARQBBAFEAUQBCAEcAQQBFAFUAQQBRAFEAQgBSAEEARwBjAEEAUQBnAEEAMQBBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBVAHcAQgBCAEEARQBJAEEAVABnAEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAGsAQQBVAFEAQgBDAEEARQBJAEEAUQBRAEIARgBBAEUAawBBAFEAUQBCAGkAQQBFAEUAQQBRAGcAQgBDAEEARQBFAEEAUgBRAEIAagBBAEUARQBBAFoAQQBCADMAQQBFAEkAQQBRAGcAQgBCAEEARQBjAEEAUwBRAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBFAEkAQQBRAFEAQgBIAEEARwBNAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAEUAQQBFAEUAQQBSAEEAQgBCAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFYAUQBCAEIAQQBFAGMAQQBZAHcAQgBCAEEARgBFAEEAWgB3AEIAQwBBAEQASQBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBTAEEARwBjAEEAUQBnAEIAQwBBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBXAFEAQgAzAEEARQBJAEEAYgBnAEIAQgBBAEUAVQBBAFMAUQBCAEIAQQBHAFEAQQBaAHcAQgBDAEEARQBJAEEAUQBRAEIARgBBAEcATQBBAFEAUQBCAFgAQQBGAEUAQQBRAGcAQgBDAEEARQBFAEEAUgB3AEIARgBBAEUARQBBAFYAUQBCAFIAQQBFAEkAQQBRAHcAQgBCAEEARQBnAEEAVABRAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBFAGcAQQBRAFEAQgBHAEEARgBVAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAEsAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAE0AQQBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBJAEEAVQBRAEIAQwBBAEYAWQBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBaAEEARwBjAEEAUQBnAEIAdQBBAEUARQBBAFIAUQBCAEoAQQBFAEUAQQBZAFEAQgBuAEEARQBJAEEAUQBnAEIAQgBBAEUAVQBBAFkAdwBCAEIAQQBFADgAQQBRAFEAQgBDAEEARQBJAEEAUQBRAEIARwBBAEcAOABBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBEAEEARQBFAEEAUgB3AEIAMwBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBTAEEAQgBCAEEARQBZAEEAUgBRAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBGAEkAQQBRAFEAQgBJAEEARwBNAEEAUQBRAEIAUgBBAEcAYwBBAFEAZwBBAHkAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVQBnAEIAMwBBAEUARQBBAGQAdwBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBrAEEAWgB3AEIAQwBBAEYASQBBAFEAUQBCAEYAQQBFAGsAQQBRAFEAQgBoAEEARQBFAEEAUQBnAEIAQwBBAEUARQBBAFIAUQBCAGoAQQBFAEUAQQBUAGcAQgBCAEEARQBJAEEAUQBnAEIAQgBBAEUAWQBBAGIAdwBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARQBJAEEAUQBRAEIASABBAEcATQBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBJAEEARQBFAEEAUgBRAEEAdwBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBVAGcAQgBCAEEARQBZAEEAUgBRAEIAQgBBAEYARQBBAFoAdwBCAEMAQQBFAFEAQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAVABBAEUARQBBAFEAZwBCAGEAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVgBRAEIAUgBBAEUASQBBAFUAZwBCAEIAQQBFAFUAQQBTAFEAQgBCAEEARgBNAEEAVQBRAEIAQwBBAEUASQBBAFEAUQBCAEYAQQBHAE0AQQBRAFEAQgBVAEEARgBFAEEAUQBnAEIAQwBBAEUARQBBAFIAZwBCAEYAQQBFAEUAQQBWAFEAQgBSAEEARQBJAEEAUQB3AEIAQgBBAEUAYwBBAFIAUQBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARQBjAEEAUQBRAEIARgBBAEYAVQBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBTAEEARQBFAEEAUgB3AEIAagBBAEUARQBBAFUAUQBCAG4AQQBFAEUAQQBNAFEAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYASQBBAFUAUQBCAEMAQQBFAFkAQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAVgBBAEgAYwBBAFEAZwBCAEMAQQBFAEUAQQBSAFEAQgBKAEEARQBFAEEAVgBBAEIAbgBBAEUASQBBAFEAZwBCAEIAQQBFAFUAQQBWAFEAQgBCAEEARgBJAEEAVQBRAEIAQwBBAEUASQBBAFEAUQBCAEcAQQBHAHMAQQBRAFEAQgBWAEEARgBFAEEAUQBnAEIARABBAEUARQBBAFIAUQBCAEoAQQBFAEUAQQBVAFEAQgBSAEEARQBJAEEAUgBnAEIAQgBBAEUAVQBBAGEAdwBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARwBrAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFIAQQBHAGMAQQBRAGcAQgBEAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFUAZwBCAFIAQQBFAEkAQQBhAGcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYAbwBBAFEAUQBCAEMAQQBEAE0AQQBRAFEAQgBGAEEARQBrAEEAUQBRAEIAUgBBAEcAYwBBAFEAZwBCAEMAQQBFAEUAQQBSAFEAQgBqAEEARQBFAEEAVQB3AEIAUgBBAEUASQBBAFEAZwBCAEIAQQBFAFkAQQBSAFEAQgBCAEEARgBVAEEAVQBRAEIAQwBBAEUATQBBAFEAUQBCAEYAQQBFAGsAQQBRAFEAQgBSAEEARgBFAEEAUQBnAEIASQBBAEUARQBBAFIAdwBCAE4AQQBFAEUAQQBVAFEAQgBSAEEARQBJAEEAVQBnAEIAQgBBAEUAWQBBAFIAUQBCAEIAQQBGAEUAQQBaAHcAQgBDAEEARQBVAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFMAQQBFAEUAQQBRAGcAQgBDAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFYAUQBCAFIAQQBFAEkAQQBVAGcAQgBCAEEARQBVAEEAUwBRAEIAQgBBAEYAWQBBAFUAUQBCAEMAQQBFAEkAQQBRAFEAQgBGAEEARwBNAEEAUQBRAEIAWgBBAEgAYwBBAFEAZwBCAEMAQQBFAEUAQQBSAGcAQgBGAEEARQBFAEEAVwBnAEIAMwBBAEUASQBBAFEAdwBCAEIAQQBFAFEAQQBTAFEAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEUAWQBBAFEAUQBCAEYAQQBGAFUAQQBRAFEAQgBSAEEARgBFAEEAUQBnAEIAVABBAEUARQBBAFIAdwBCAGoAQQBFAEUAQQBVAFEAQgBuAEEARQBJAEEAUQB3AEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAEkAQQBVAFEAQgBDAEEARQBZAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFgAQQBGAEUAQQBRAGcAQQB6AEEARQBFAEEAUgBRAEIASgBBAEUARQBBAFkAZwBCAG4AQQBFAEkAQQBRAGcAQgBCAEEARQBVAEEAVgBRAEIAQgBBAEYATQBBAFUAUQBCAEMAQQBFAEkAQQBRAFEAQgBIAEEARgBFAEEAUQBRAEIAYQBBAEgAYwBBAFEAZwBCAEQAQQBFAEUAQQBSAFEAQgBKAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFIAZwBCAEIAQQBFAGMAQQBUAFEAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEYAZwBBAFEAUQBCAEcAQQBFAFUAQQBRAFEAQgBSAEEARwBjAEEAUQBnAEIARABBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBVAGcAQgAzAEEARQBJAEEAUgBnAEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAFkAQQBVAFEAQgBDAEEARgBJAEEAUQBRAEIARgBBAEUAawBBAFEAUQBCAFIAQQBIAGMAQQBRAGcAQgBDAEEARQBFAEEAUgBRAEIAbgBBAEUARQBBAFYAQQBCAFIAQQBFAEkAQQBRAGcAQgBCAEEARQBZAEEAUgBRAEIAQgBBAEYAVQBBAFUAUQBCAEMAQQBFAE0AQQBRAFEAQgBGAEEARwBjAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAEgAQQBFAEUAQQBSAGcAQgBWAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFUAZwBCAEIAQQBFAFkAQQBSAFEAQgBCAEEARgBFAEEAWgB3AEIAQwBBAEUAcwBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBTAEEARgBFAEEAUQBnAEIARwBBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBWAFEAQgBSAEEARQBJAEEAVQBnAEIAQgBBAEUAVQBBAFMAUQBCAEIAQQBFADAAQQBRAFEAQgBDAEEARQBJAEEAUQBRAEIARgBBAEYAVQBBAFEAUQBCAFMAQQBGAEUAQQBRAGcAQgBDAEEARQBFAEEAUgBnAEIASgBBAEUARQBBAFYAUQBCAFIAQQBFAEkAQQBRAHcAQgBCAEEARQBZAEEAVwBRAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBFAFkAQQBRAFEAQgBGAEEARgBVAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAGEAQQBFAEUAQQBSAHcAQgBqAEEARQBFAEEAVQBRAEIAbgBBAEUASQBBAGQAUQBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBJAEEAVQBRAEIAQwBBAEUAbwBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBaAEEARgBFAEEAUQBnAEIAdQBBAEUARQBBAFIAUQBCAEoAQQBFAEUAQQBVAFEAQgBuAEEARQBJAEEAUQBnAEIAQgBBAEUAVQBBAFYAUQBCAEIAQQBGAGsAQQBkAHcAQgBDAEEARQBJAEEAUQBRAEIARgBBAEQAZwBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBEAEEARQBFAEEAUgBRAEIASgBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBSAHcAQgBCAEEARQBjAEEATwBBAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBGAEkAQQBRAFEAQgBHAEEARQBVAEEAUQBRAEIAUgBBAEcAYwBBAFEAZwBCAEUAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVQBnAEIAMwBBAEUASQBBAE0AdwBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBVAEEAVQBRAEIAQwBBAEYASQBBAFEAUQBCAEYAQQBFAGsAQQBRAFEAQgBUAEEARQBFAEEAUQBnAEIAQwBBAEUARQBBAFIAUQBCAFoAQQBFAEUAQQBVAGcAQgBSAEEARQBJAEEAUQBnAEIAQgBBAEUAWQBBAFIAUQBCAEIAQQBGAFUAQQBVAFEAQgBDAEEARQBNAEEAUQBRAEIARwBBAEUAawBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBKAEEARQBFAEEAUgB3AEIATgBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBVAGcAQgBCAEEARQBjAEEAWQB3AEIAQgBBAEYARQBBAFoAdwBCAEIAQQBIAGsAQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAUwBBAEYARQBBAFEAZwBCAEcAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVgBRAEIAbgBBAEUASQBBAE0AdwBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARwBRAEEAZAB3AEIAQwBBAEUASQBBAFEAUQBCAEYAQQBGAFUAQQBRAFEAQgBTAEEARgBFAEEAUQBnAEIAQwBBAEUARQBBAFIAZwBCAHIAQQBFAEUAQQBXAGcAQgAzAEEARQBJAEEAUQB3AEIAQgBBAEUAWQBBAFMAUQBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARQBZAEEAUQBRAEIARgBBAEcAcwBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBvAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFUAUQBCAG4AQQBFAEkAQQBRAHcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYASQBBAFUAUQBCAEMAQQBHAG8AQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAVQBBAEcAYwBBAFEAZwBCAEMAQQBFAEUAQQBSAFEAQgBKAEEARQBFAEEAVQBRAEIAbgBBAEUASQBBAFEAZwBCAEIAQQBFAFUAQQBXAFEAQgBCAEEARwBJAEEAZAB3AEIAQwBBAEUASQBBAFEAUQBCAEcAQQBFAFUAQQBRAFEAQgBWAEEARgBFAEEAUQBnAEIARABBAEUARQBBAFIAUQBCAEoAQQBFAEUAQQBVAFEAQgBSAEEARQBJAEEAUwBBAEIAQgBBAEUAYwBBAFQAUQBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARgBJAEEAUQBRAEIARwBBAEUAVQBBAFEAUQBCAFIAQQBHAGMAQQBRAGcAQgBJAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFUAZwBCAG4AQQBFAEkAQQBWAGcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYAVQBBAFUAUQBCAEMAQQBGAEkAQQBRAFEAQgBGAEEARQBrAEEAUQBRAEIAWgBBAEYARQBBAFEAZwBCAEMAQQBFAEUAQQBSAFEAQgBuAEEARQBFAEEAVwBRAEIAMwBBAEUASQBBAFEAZwBCAEIAQQBFAFkAQQBSAFEAQgBCAEEARgBvAEEAZAB3AEIAQwBBAEUATQBBAFEAUQBCAEYAQQBGAEUAQQBRAFEAQgBSAEEARgBFAEEAUQBnAEIARwBBAEUARQBBAFIAUQBCAFYAQQBFAEUAQQBVAFEAQgBSAEEARQBJAEEAVQB3AEIAQgBBAEUAZwBBAFkAdwBCAEIAQQBGAEUAQQBaAHcAQgBCAEEASABvAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFMAQQBGAEUAQQBRAGcAQgBHAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFYAZwBCAFIAQQBFAEkAQQBVAGcAQgBCAEEARQBVAEEAUwBRAEIAQgBBAEYAVQBBAFoAdwBCAEMAQQBFAEkAQQBRAFEAQgBGAEEARgBVAEEAUQBRAEIAVABBAEYARQBBAFEAZwBCAEMAQQBFAEUAQQBSAGcAQgBOAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFEAdwBCAEIAQQBFAFUAQQBTAFEAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEUAWQBBAFEAUQBCAEcAQQBFAFUAQQBRAFEAQgBSAEEARgBFAEEAUQBnAEIAUwBBAEUARQBBAFIAZwBCAEYAQQBFAEUAQQBVAFEAQgBuAEEARQBJAEEAUQB3AEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAEkAQQBaAHcAQgBDAEEARQBZAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFcAQQBGAEUAQQBRAGcAQgBTAEEARQBFAEEAUgBRAEIASgBBAEUARQBBAFUAUQBCADMAQQBFAEkAQQBRAGcAQgBCAEEARQBVAEEAWQB3AEIAQgBBAEcARQBBAGQAdwBCAEMAQQBFAEkAQQBRAFEAQgBHAEEARQBVAEEAUQBRAEIAVgBBAEYARQBBAFEAZwBCAEQAQQBFAEUAQQBSAFEAQgByAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFMAQQBCAEIAQQBFAFUAQQBNAEEAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEYASQBBAFEAUQBCAEcAQQBFAFUAQQBRAFEAQgBSAEEARwBjAEEAUQBnAEIAVABBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBVAGcAQgAzAEEARQBJAEEAYQBnAEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAFUAQQBVAFEAQgBDAEEARgBJAEEAUQBRAEIARgBBAEUAawBBAFEAUQBCAE8AQQBGAEUAQQBRAGcAQgBDAEEARQBFAEEAUgBRAEIAVgBBAEUARQBBAFUAZwBCAFIAQQBFAEkAQQBRAGcAQgBCAEEARQBZAEEAUwBRAEIAQgBBAEYAVQBBAFUAUQBCAEMAQQBFAE0AQQBRAFEAQgBGAEEARgBrAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAEcAQQBFAEUAQQBSAFEAQgBWAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFYAZwBCAEIAQQBFAGMAQQBZAHcAQgBCAEEARgBFAEEAWgB3AEIAQgBBAEgAbwBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBTAEEARgBFAEEAUQBnAEIASwBBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBWAGcAQgBuAEEARQBJAEEAYgBnAEIAQgBBAEUAVQBBAFMAUQBCAEIAQQBGAEUAQQBaAHcAQgBDAEEARQBJAEEAUQBRAEIARgBBAEYAVQBBAFEAUQBCAFcAQQBGAEUAQQBRAGcAQgBDAEEARQBFAEEAUgBnAEIASgBBAEUARQBBAFYAUQBCAFIAQQBFAEkAQQBRAHcAQgBCAEEARQBVAEEAUwBRAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBFAGMAQQBRAFEAQgBHAEEARQBVAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAFMAQQBFAEUAQQBSAGcAQgBGAEEARQBFAEEAVQBRAEIAbgBBAEUASQBBAFIAQQBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBJAEEAWgB3AEIAQwBBAEUAbwBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBWAEEARgBFAEEAUQBnAEIAUwBBAEUARQBBAFIAUQBCAEoAQQBFAEUAQQBVAGcAQgBuAEEARQBJAEEAUQBnAEIAQgBBAEUAVQBBAFYAUQBCAEIAQQBHAEUAQQBkAHcAQgBDAEEARQBJAEEAUQBRAEIARwBBAEUAVQBBAFEAUQBCAFYAQQBGAEUAQQBRAGcAQgBEAEEARQBFAEEAUgBnAEIAUgBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBTAEEAQgBCAEEARQBjAEEAVABRAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBGAEkAQQBRAFEAQgBIAEEARwBNAEEAUQBRAEIAUgBBAEcAYwBBAFEAZwBCAEUAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVQBnAEIAUgBBAEUASQBBAFIAZwBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBVAEEAWgB3AEIAQwBBAEYASQBBAFEAUQBCAEYAQQBFAGsAQQBRAFEAQgBpAEEARwBjAEEAUQBnAEIAQwBBAEUARQBBAFIAUQBCAFYAQQBFAEUAQQBVAGcAQgBSAEEARQBJAEEAUQBnAEIAQgBBAEUAWQBBAFcAUQBCAEIAQQBGAFUAQQBVAFEAQgBDAEEARQBNAEEAUQBRAEIARwBBAEUAawBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBHAEEARQBFAEEAUgBRAEIAcgBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBVAGcAQgBCAEEARQBjAEEAWQB3AEIAQgBBAEYARQBBAFoAdwBCAEMAQQBFAE0AQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAUwBBAEYARQBBAFEAZwBCAGEAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVwBRAEIAbgBBAEUASQBBAE0AdwBCAEIAQQBFAFUAQQBTAFEAQgBCAEEARgBFAEEAWgB3AEIAQwBBAEUASQBBAFEAUQBCAEYAQQBGAGsAQQBRAFEAQgBXAEEARgBFAEEAUQBnAEIAQwBBAEUARQBBAFIAZwBCAFYAQQBFAEUAQQBWAFEAQgBSAEEARQBJAEEAUQB3AEIAQgBBAEUAVQBBAFQAUQBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARQBZAEEAUQBRAEIARgBBAEQAQQBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBTAEEARQBFAEEAUgBnAEIARgBBAEUARQBBAFUAUQBCAG4AQQBFAEkAQQBTAGcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYASQBBAFoAdwBCAEMAQQBFAFkAQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAVgBBAEYARQBBAFEAZwBCAFMAQQBFAEUAQQBSAFEAQgBKAEEARQBFAEEAVgBRAEIAbgBBAEUASQBBAFEAZwBCAEIAQQBFAFUAQQBXAFEAQgBCAEEARgBJAEEAVQBRAEIAQwBBAEUASQBBAFEAUQBCAEcAQQBFAFUAQQBRAFEAQgBhAEEASABjAEEAUQBnAEIARABBAEUARQBBAFIAUQBCAFYAQQBFAEUAQQBVAFEAQgBSAEEARQBJAEEAUgBnAEIAQgBBAEUAVQBBAFYAUQBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARgBNAEEAUQBRAEIARwBBAEUAVQBBAFEAUQBCAFIAQQBHAGMAQQBRAGcAQgBIAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFUAZwBCAFIAQQBFAEkAQQBSAGcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYAWQBBAFUAUQBCAEMAQQBGAEkAQQBRAFEAQgBGAEEARQBrAEEAUQBRAEIAVgBBAEcAYwBBAFEAZwBCAEMAQQBFAEUAQQBSAFEAQgBWAEEARQBFAEEAVQB3AEIAUgBBAEUASQBBAFEAZwBCAEIAQQBFAFkAQQBVAFEAQgBCAEEARgBVAEEAVQBRAEIAQwBBAEUATQBBAFEAUQBCAEYAQQBFAGsAQQBRAFEAQgBSAEEARgBFAEEAUQBnAEIARwBBAEUARQBBAFIAZwBCAHIAQQBFAEUAQQBVAFEAQgBSAEEARQBJAEEAVQB3AEIAQgBBAEUAWQBBAFIAUQBCAEIAQQBGAEUAQQBaAHcAQgBDAEEARQBNAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFMAQQBHAGMAQQBRAGcAQgBHAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFYAdwBCAG4AQQBFAEkAQQBNAHcAQgBCAEEARQBVAEEAUwBRAEIAQgBBAEYARQBBAGQAdwBCAEMAQQBFAEkAQQBRAFEAQgBGAEEARgBrAEEAUQBRAEIAVgBBAEYARQBBAFEAZwBCAEMAQQBFAEUAQQBSAGcAQgBGAEEARQBFAEEAVgBRAEIAUgBBAEUASQBBAFEAdwBCAEIAQQBFAFUAQQBXAFEAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEUAWQBBAFEAUQBCAEcAQQBGAFUAQQBRAFEAQgBSAEEARgBFAEEAUQBnAEIAUwBBAEUARQBBAFIAZwBCAEYAQQBFAEUAQQBVAFEAQgBuAEEARQBJAEEAVgBBAEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAE0AQQBRAFEAQgBDAEEARwBvAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFYAQQBGAEUAQQBRAGcAQgB1AEEARQBFAEEAUgBRAEIASgBBAEUARQBBAFYAZwBCADMAQQBFAEkAQQBRAGcAQgBCAEEARQBVAEEAVgBRAEIAQgBBAEYASQBBAFUAUQBCAEMAQQBFAEkAQQBRAFEAQgBHAEEARQBrAEEAUQBRAEIAVgBBAEYARQBBAFEAZwBCAEQAQQBFAEUAQQBSAFEAQgBaAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFIAZwBCAEIAQQBFAFUAQQBWAFEAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEYAYwBBAFEAUQBCAEkAQQBHAE0AQQBRAFEAQgBSAEEARwBjAEEAUQBnAEIAVABBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBVAGcAQgBSAEEARQBJAEEAUwBnAEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAFEAQQBVAFEAQgBDAEEARABNAEEAUQBRAEIARgBBAEUAawBBAFEAUQBCAFIAQQBHAGMAQQBRAGcAQgBDAEEARQBFAEEAUgBRAEIAVgBBAEUARQBBAFYAZwBCAFIAQQBFAEkAQQBRAGcAQgBCAEEARQBZAEEAVABRAEIAQgBBAEYAVQBBAFUAUQBCAEMAQQBFAE0AQQBRAFEAQgBGAEEARQBrAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAEcAQQBFAEUAQQBSAEEAQgBCAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFYAZwBCAEIAQQBFAFkAQQBSAFEAQgBCAEEARgBFAEEAWgB3AEIAQwBBAEUAUQBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBTAEEARgBFAEEAUQBnAEIASwBBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBWAFEAQgBSAEEARQBJAEEAVQBnAEIAQgBBAEUAVQBBAFMAUQBCAEIAQQBGAEkAQQBaAHcAQgBDAEEARQBJAEEAUQBRAEIARgBBAEcATQBBAFEAUQBCAFoAQQBIAGMAQQBRAGcAQgBDAEEARQBFAEEAUgBnAEIARgBBAEUARQBBAFYAUQBCAFIAQQBFAEkAQQBRAHcAQgBCAEEARQBZAEEAVQBRAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBFAGMAQQBRAFEAQgBGAEEARgBVAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAFMAQQBFAEUAQQBSAHcAQgBqAEEARQBFAEEAVQBRAEIAbgBBAEUASQBBAFIAQQBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBJAEEAVQBRAEIAQwBBAEUAWQBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBWAEEARwBjAEEAUQBnAEEAegBBAEUARQBBAFIAUQBCAEoAQQBFAEUAQQBWAEEAQgBuAEEARQBJAEEAUQBnAEIAQgBBAEUAVQBBAFYAUQBCAEIAQQBGAEkAQQBVAFEAQgBDAEEARQBJAEEAUQBRAEIARwBBAEcAOABBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBEAEEARQBFAEEAUgBBAEIATgBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBSAGcAQgBCAEEARQBVAEEAYQB3AEIAQgBBAEYARQBBAFUAUQBCAEMAQQBGAEkAQQBRAFEAQgBJAEEARwBNAEEAUQBRAEIAUgBBAEcAYwBBAFEAZwBCAEQAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVQBnAEIAUgBBAEUASQBBAGEAZwBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBvAEEAUQBRAEIAQwBBAEQATQBBAFEAUQBCAEYAQQBFAGsAQQBRAFEAQgBSAEEARwBjAEEAUQBnAEIAQwBBAEUARQBBAFIAUQBCAFoAQQBFAEUAQQBVAGcAQgBSAEEARQBJAEEAUQBnAEIAQgBBAEUAWQBBAFYAUQBCAEIAQQBGAFUAQQBVAFEAQgBDAEEARQBNAEEAUQBRAEIARgBBAEUAMABBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBHAEEARQBFAEEAUgBnAEIARgBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBVAGcAQgBCAEEARQBZAEEAUgBRAEIAQgBBAEYARQBBAFoAdwBCAEMAQQBFAGMAQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAUwBBAEYARQBBAFEAZwBCAFcAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVgBRAEIAUgBBAEUASQBBAFUAZwBCAEIAQQBFAFUAQQBTAFEAQgBCAEEARgBVAEEAWgB3AEIAQwBBAEUASQBBAFEAUQBCAEYAQQBGAGsAQQBRAFEAQgBTAEEARgBFAEEAUQBnAEIAQwBBAEUARQBBAFIAZwBCAEYAQQBFAEUAQQBXAGcAQgAzAEEARQBJAEEAUQB3AEIAQgBBAEUAWQBBAFUAUQBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARQBZAEEAUQBRAEIARgBBAEYAVQBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBUAEEARQBFAEEAUgBnAEIARgBBAEUARQBBAFUAUQBCAG4AQQBFAEkAQQBSAHcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYASQBBAFUAUQBCAEMAQQBFAFkAQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAVwBBAEYARQBBAFEAZwBCAFMAQQBFAEUAQQBSAFEAQgBKAEEARQBFAEEAVgBRAEIAbgBBAEUASQBBAFEAZwBCAEIAQQBFAFUAQQBWAFEAQgBCAEEARgBJAEEAVQBRAEIAQwBBAEUASQBBAFEAUQBCAEYAQQBEAEEAQQBRAFEAQgBhAEEASABjAEEAUQBnAEIARABBAEUARQBBAFIAUQBCAEoAQQBFAEUAQQBVAFEAQgBSAEEARQBJAEEAUgBnAEIAQgBBAEUAWQBBAFYAUQBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARgBNAEEAUQBRAEIARwBBAEUAVQBBAFEAUQBCAFIAQQBHAGMAQQBRAGcAQgBEAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFUAZwBCAG4AQQBFAEkAQQBTAGcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYAYwBBAFoAdwBCAEMAQQBEAE0AQQBRAFEAQgBGAEEARQBrAEEAUQBRAEIAUgBBAEgAYwBBAFEAZwBCAEMAQQBFAEUAQQBSAFEAQgBSAEEARQBFAEEAVgBBAEIAUgBBAEUASQBBAFEAZwBCAEIAQQBFAFkAQQBSAFEAQgBCAEEARgBVAEEAVQBRAEIAQwBBAEUATQBBAFEAUQBCAEYAQQBGAGsAQQBRAFEAQgBSAEEARgBFAEEAUQBnAEIARwBBAEUARQBBAFIAZwBCAFYAQQBFAEUAQQBVAFEAQgBSAEEARQBJAEEAVQBnAEIAQgBBAEUAWQBBAFIAUQBCAEIAQQBGAEUAQQBaAHcAQgBDAEEARwBnAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFMAQQBGAEUAQQBRAGcAQgBHAEEARQBFAEEAUgBRAEIARgBBAEUARQBBAFYAUQBCAFIAQQBFAEkAQQBiAGcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEcAVQBBAFoAdwBCAEMAQQBFAEkAQQBRAFEAQgBGAEEARgBVAEEAUQBRAEIAUwBBAEYARQBBAFEAZwBCAEMAQQBFAEUAQQBSAGcAQgBKAEEARQBFAEEAVgBRAEIAUgBBAEUASQBBAFEAdwBCAEIAQQBFAFUAQQBiAHcAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEUAWQBBAFEAUQBCAEYAQQBGAFUAQQBRAFEAQgBSAEEARgBFAEEAUQBnAEIAaABBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBVAFEAQgBuAEEARQBJAEEAZABRAEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAEkAQQBVAFEAQgBDAEEARQBvAEEAUQBRAEIARgBBAEUAVQBBAFEAUQBCAFYAQQBGAEUAQQBRAGcAQgB1AEEARQBFAEEAUgBRAEIASgBBAEUARQBBAFUAUQBCAG4AQQBFAEkAQQBRAGcAQgBCAEEARQBVAEEAVgBRAEIAQgBBAEYAWQBBAFUAUQBCAEMAQQBFAEkAQQBRAFEAQgBHAEEARwA4AEEAUQBRAEIAawBBAEgAYwBBAFEAZwBCAEQAQQBFAEUAQQBSAFEAQgBKAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFIAdwBCAEIAQQBFAFUAQQBNAEEAQgBCAEEARgBFAEEAVQBRAEIAQwBBAEYAWQBBAFEAUQBCAEcAQQBFAFUAQQBRAFEAQgBSAEEARwBjAEEAUQBnAEIARQBBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBVAGcAQgBSAEEARQBJAEEAUwBnAEIAQgBBAEUAVQBBAFIAUQBCAEIAQQBGAFUAQQBVAFEAQgBDAEEARgBJAEEAUQBRAEIARgBBAEUAawBBAFEAUQBCAFQAQQBFAEUAQQBRAGcAQgBDAEEARQBFAEEAUgBRAEIAVgBBAEUARQBBAFYAZwBCAFIAQQBFAEkAQQBRAGcAQgBCAEEARQBZAEEAUgBRAEIAQgBBAEYAVQBBAFUAUQBCAEMAQQBFAE0AQQBRAFEAQgBIAEEASABNAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAEoAQQBFAEUAQQBSAHcAQgBOAEEARQBFAEEAVQBRAEIAUgBBAEUASQBBAFUAZwBCAEIAQQBFAGMAQQBZAHcAQgBCAEEARgBFAEEAWgB3AEIAQwBBAEUAVQBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBTAEEARgBFAEEAUQBnAEIARwBBAEUARQBBAFIAUQBCAEYAQQBFAEUAQQBWAFEAQgBuAEEARQBJAEEATQB3AEIAQgBBAEUAVQBBAFMAUQBCAEIAQQBGAFEAQQBaAHcAQgBDAEEARQBJAEEAUQBRAEIARgBBAEYAVQBBAFEAUQBCAFMAQQBGAEUAQQBRAGcAQgBDAEEARQBFAEEAUgBnAEIAVgBBAEUARQBBAFYAUQBCAFIAQQBFAEkAQQBRAHcAQgBCAEEARQBZAEEAUwBRAEIAQgBBAEYARQBBAFUAUQBCAEMAQQBFAFkAQQBRAFEAQgBGAEEARwBzAEEAUQBRAEIAUgBBAEYARQBBAFEAZwBCAFUAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVQBRAEIAbgBBAEUASQBBAFEAdwBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBJAEEAVQBRAEIAQwBBAEYAbwBBAFEAUQBCAEYAQQBFAFUAQQBRAFEAQgBWAEEARwBjAEEAUQBnAEIAUwBBAEUARQBBAFIAUQBCAEoAQQBFAEUAQQBVAFEAQgBuAEEARQBJAEEAUQBnAEIAQgBBAEUAVQBBAFcAUQBCAEIAQQBGAEkAQQBVAFEAQgBDAEEARQBJAEEAUQBRAEIARwBBAEYAVQBBAFEAUQBCAFYAQQBGAEUAQQBRAGcAQgBEAEEARQBFAEEAUgBRAEIATgBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBTAEEAQgBCAEEARQBjAEEAWQB3AEIAQgBBAEYARQBBAFUAUQBCAEMAQQBGAEkAQQBRAFEAQgBHAEEARQBVAEEAUQBRAEIAUgBBAEcAYwBBAFEAZwBCAEkAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVQBnAEIAUgBBAEUASQBBAFYAZwBCAEIAQQBFAFUAQQBSAFEAQgBCAEEARgBVAEEAVQBRAEIAQwBBAEYASQBBAFEAUQBCAEYAQQBFAGsAQQBRAFEAQgBWAEEARwBjAEEAUQBnAEIAQwBBAEUARQBBAFIAUQBCAGoAQQBFAEUAQQBXAFEAQgAzAEEARQBJAEEAUQBnAEIAQgBBAEUAWQBBAFIAUQBCAEIAQQBGAG8AQQBkAHcAQgBDAEEARQBJAEEAUQBRAEIARQBBAEUAawBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBHAEEARQBFAEEAUgBRAEIAVgBBAEUARQBBAFUAUQBCAFIAQQBFAEkAQQBVAHcAQgBCAEEARQBZAEEAUgBRAEIAQgBBAEYARQBBAFoAdwBCAEMAQQBFAGMAQQBRAFEAQgBGAEEARQBVAEEAUQBRAEIAUwBBAEYARQBBAFEAZwBCAEcAQQBFAEUAQQBSAFEAQgBGAEEARQBFAEEAVgBnAEIAUgBBAEUASQBBAE0AdwBCAEIAQQBFAFUAQQBTAFEAQgBCAEEARgBFAEEAWgB3AEIAQwBBAEUASQBBAFEAUQBCAEYAQQBGAFUAQQBRAFEAQgBUAEEARgBFAEEAUQBnAEIAQwBBAEUARQBBAFIAZwBCAFYAQQBFAEUAQQBXAGcAQgAzAEEARQBJAEEAUQB3AEIAQgBBAEUAVQBBAFMAUQBCAEIAQQBGAEUAQQBVAFEAQgBDAEEARQBZAEEAUQBRAEIARwBBAEYAVQBBAFEAUQBCAFIAQQBGAEUAQQBRAGcAQgBUAEEARQBFAEEAUgBnAEIARgBBAEUARQBBAFUAUQBCAG4AQQBFAEkAQQBRAHcAQgBCAEEARQBVAEEAUgBRAEIAQgBBAEYARQBBAFUAUQBCAEIAQQBEAGsAQQBRAFEAQgBFAEEARABBAEEAUQBRAEEAPQA=",
+   "block": true,
+   "reason": "nested"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf /tmp/a\\ b",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf \"/home/ann/a\\\"b\"",
+   "block": true,
+   "reason": "quote"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf \"$(pwd)/x\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf \"`pwd`/x\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf `pwd`",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf ${HOME}",
+   "block": true,
+   "reason": "home"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf ${HOME:-/tmp}",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf \"$1\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "linux",
+   "command": "echo $ && rm -rf build",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf ~root",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf build # rm -rf /",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf build > /dev/null 2>&1",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf build >log.txt",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "X=1 rm -rf /",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "linux",
+   "command": "sudo -u root rm -rf /etc",
+   "block": true,
+   "reason": "/etc"
+  },
+  {
+   "context": "linux",
+   "command": "env -i FOO=1 rm -rf /usr",
+   "block": true,
+   "reason": "/usr"
+  },
+  {
+   "context": "linux",
+   "command": "timeout 10 rm -rf /",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "linux",
+   "command": "command -p rm -rf /",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "linux",
+   "command": "pwsh -Command Remove-Item -Recurse /",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "linux",
+   "command": "bash cleanup.sh",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "bash",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "rm -- -rf",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "echo a | xargs rm -rf",
+   "block": true,
+   "reason": "pipeline"
+  },
+  {
+   "context": "linux",
+   "command": "find -name '*.o' -delete",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "rm \"\"",
+   "block": true,
+   "reason": "empty"
+  },
+  {
+   "context": "linux",
+   "command": "cd; rm -rf Documents",
+   "block": true,
+   "reason": "Documents"
+  },
+  {
+   "context": "linux",
+   "command": "cd -; rm -rf build",
+   "block": true,
+   "reason": "working directory"
+  },
+  {
+   "context": "linux",
+   "command": "pushd /tmp; popd; rm -rf build",
+   "block": true,
+   "reason": "working directory"
+  },
+  {
+   "context": "linux",
+   "command": "X=$(pwd); rm -rf \"$X\"",
+   "block": true,
+   "reason": "unexpanded"
+  },
+  {
+   "context": "linux",
+   "command": "ls | xargs -I {} -n 1 rm -rf {}",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "echo x | xargs",
+   "block": false
+  },
+  {
+   "context": "linux",
+   "command": "DIR=/; sh -c 'rm -rf $DIR'",
+   "block": true,
+   "reason": "root"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf \"/tmp/x",
+   "block": true,
+   "reason": "unbalanced"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf $(",
+   "block": true,
+   "reason": "unbalanced"
+  },
+  {
+   "context": "linux",
+   "command": "rm -rf a\\",
+   "block": false
+  }
+ ]
+}

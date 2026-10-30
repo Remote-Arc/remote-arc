@@ -8,6 +8,7 @@ export {
   undoChange,
   undoLastChange,
 } from "./safety.js";
+export { findDangerousDelete, protectedDeleteReason, type DeleteGuardContext } from "./delete-guard.js";
 export {
   enforcePathPolicy,
   normalizePolicy,

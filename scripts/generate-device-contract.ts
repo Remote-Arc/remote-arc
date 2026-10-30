@@ -14,7 +14,7 @@ const rules = [
   pattern: (flags.includes("i") ? "(?i)" : "") + pattern.replaceAll("\\/", "/"),
   reason,
 }));
-if (rules.length !== 9)
+if (rules.length !== 6)
   throw new Error(
     "Safety guard contract changed; review the Go port before regenerating.",
   );

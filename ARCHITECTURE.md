@@ -166,6 +166,19 @@ extension open authenticated outbound WebSockets to their owner's Durable Object
    policy changes, the task stops instead of inheriting new authority. An
    uncertain external effect requires inspection instead of a blind retry.
 
+Every kind of persistent work is a row in the same `automations` table, with the
+same statuses, leases and revisions. The kinds differ only in who makes the next
+decision:
+
+| Work | Next decision comes from |
+| --- | --- |
+| Long task, schedule watch, condition watch, goal loop | The approved contract; nothing new is decided |
+| Agent Goal, `source` controller | The external AI, through `submit_goal_decision` |
+| Agent Goal, `hosted` controller | A hosted planner, within its budget |
+| Arc Work (`goal_json.native_arc`) | An Arc run in `ArcChatRuntime` |
+
+Add new behaviour as a controller on this model, not as a second state machine.
+
 ### 5. Device pairing and connection
 
 The pairing flow runs as follows:
@@ -371,5 +384,8 @@ Before calling work done, whether you are a person or an agent, answer these:
 - [Task architecture v2](docs/task-architecture-v2.md) and [long-running work](docs/long-running-work-plan.md)
 - [Commercial configuration](docs/commercial-configuration.md)
 - [Production release guide](docs/production-release-guide.md)
+- [Feature status](docs/feature-status.md): what is live, beta, experimental or not built
+- [Cloud and Agent compatibility](docs/agent-compatibility.md)
 - [Security model](SECURITY.md) and [security and approvals](docs/security-and-approvals.md)
+- [Execution isolation](docs/execution-isolation.md): the route for sandboxing terminal commands
 - [Current plan](PLAN.md)

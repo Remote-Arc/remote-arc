@@ -42,7 +42,7 @@ The first live purchase, webhook activation, refund and revocation were verified
    - ChatGPT and Claude directory submissions;
    - trial-to-paid conversion;
    - positioning Connect Unlimited on unlimited calls, computers and file transfer.
-5. Architecture risks: a cloud/Agent compatibility matrix, a feature status table, one task state model and an isolation route for terminal execution.
+5. Decide the isolation route for terminal execution ([execution isolation](docs/execution-isolation.md)). Current checks are not a sandbox.
 6. Later:
    - signed installers and automatic Agent updates;
    - finer command/network policy;

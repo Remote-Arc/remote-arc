@@ -15,7 +15,7 @@ export const browserEvents:Record<string,{domain:string;outcome:'succeeded'|'acc
  'billing.checkout.abandoned_client':{domain:'billing',outcome:'accepted'},
  'client.runtime.failed':{domain:'client',outcome:'failed'},
 };
-export const viewRoutes=['/checkout','/settings','/overview','/devices','/apps','/connect','/security','/automations','/dashboard/agent/chat','/dashboard/agent/tasks','/dashboard/connect/overview','/dashboard/connect/devices','/dashboard/connect/apps','/dashboard/agent/skills','/dashboard/agent/routines'];
+export const viewRoutes=['/checkout','/device','/settings','/overview','/devices','/apps','/connect','/security','/automations','/dashboard/agent/chat','/dashboard/agent/tasks','/dashboard/connect/overview','/dashboard/connect/devices','/dashboard/connect/apps','/dashboard/agent/skills','/dashboard/agent/routines'];
 export async function boundedEventJson(request:Pick<Request,'headers'|'body'>,limit=16384){
  if(Number(request.headers.get('content-length'))>limit)throw Error('body_too_large');
  const reader=request.body?.getReader();if(!reader)throw Error('empty_body');let size=0;const chunks:Uint8Array[]=[];

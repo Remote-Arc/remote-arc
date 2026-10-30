@@ -42,3 +42,13 @@ test('Home Slack shortcut opens the Bot setup panel',async({page},info)=>{
  await expect(page.getByRole('heading',{name:zh?'在 Slack 中与 Remote Arc 对话':'Chat with Remote Arc in Slack'})).toBeVisible();
  await expect(page.getByRole('button',{name:zh?'把 Remote Arc Bot 添加到 Slack':'Add Remote Arc Bot to Slack'})).toBeVisible();
 });
+
+test('OAuth consent explains the Agent step only when computer access is requested',async({page})=>{
+ const step=/needs one more step|还需要一步/;
+ await page.goto('/oauth/consent?client_id=preview-client&scope=computer:read%20devices:read');
+ await expect(page.locator('.consentCard')).toContainText(step);
+ await expect(page.locator('.consentCard').getByRole('link',{name:/Get the Agent|下载 Agent/})).toHaveAttribute('href',/\/downloads$/);
+ await page.goto('/oauth/consent?client_id=preview-client&scope=devices:read');
+ await expect(page.locator('.consentCard h1')).toBeVisible();
+ await expect(page.locator('.consentCard')).not.toContainText(step);
+});

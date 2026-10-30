@@ -197,6 +197,26 @@ export async function handleDeviceToken(request: Request, env: DeviceEnv) {
   });
 }
 
+/** Records how far pairing got in the browser. Observability only: it never
+ * changes the pairing, and a failure here never blocks the person pairing. */
+export async function recordPairingStep(
+  env: DeviceEnv,
+  rawCode: string,
+  step: "opened" | "signed_in",
+  userId?: string,
+) {
+  const code = rawCode.trim().toUpperCase();
+  if (!code) return;
+  try {
+    const pairing = await env.DB.prepare(
+      "SELECT device_code_hash FROM device_pairings WHERE user_code = ?1 AND status = 'pending'",
+    ).bind(code).first<{ device_code_hash: string }>();
+    if (pairing) await advanceBusinessFlow(env, 'device:' + pairing.device_code_hash, 'device_pairing', step, { userId });
+  } catch {
+    console.warn("pairing_step_unavailable");
+  }
+}
+
 export async function handlePairingLookup(request: Request, env: DeviceEnv) {
   const user = await getSessionUser(request, env);
   if (!user) return Response.json({ authenticated: false }, { status: 401 });
@@ -206,6 +226,7 @@ export async function handlePairingLookup(request: Request, env: DeviceEnv) {
   if (!code) {
     return Response.json({ error: "code is required" }, { status: 400 });
   }
+  await recordPairingStep(env, code, "signed_in", user.id);
 
   const pairing = await env.DB.prepare(
     `SELECT user_code, device_name, platform, arch, hostname, status, expires_at

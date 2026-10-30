@@ -30,6 +30,7 @@ import { DEFAULT_MCP_SCOPES } from "./oauth.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
+import { recordProductEvent } from "./product-events.js";
 import { registerMcpTool } from "./mcp-errors.js";
 import { registerBrowserRunnerTools } from "./browser-runner-mcp.js";
 import { LEGACY_ALIAS_META_KEY, registerLegacySharedTabAliases, registerSharedTabTools } from "./shared-tab-mcp.js";
@@ -391,13 +392,14 @@ export function createRemoteLinkMcp(
         if (usageError) return usageError;
         const devices = await getDevicesForUser(env, identity.userId);
         if (devices.some((device) => device.platform !== "browser")) return textResult(devices);
+        await recordProductEvent(env, { name: "connect.no_computer_guidance", domain: "devices", source: "server", outcome: "waiting", userId: identity.userId });
         // Keep the first content item as the legacy JSON array to avoid
         // breaking clients. An additional text item gives a first-time user
         // the next step in the current AI client, without requiring a website visit.
         return {
           content: [
             { type: "text" as const, text: JSON.stringify(devices) },
-            { type: "text" as const, text: "No Windows, macOS, or Linux computer Agent is paired with this Remote Arc account yet. A Chrome Companion browser entry does not replace the computer Agent. The next step is to download and run the Agent on the computer the user wants to connect. Lead with this direct download-page link: https://remotearc.app/downloads (Windows, macOS and Linux; no Node.js required). Keep the first reply brief: download, run the Agent, then approve its browser pairing using the same Remote Arc account connected to the current AI client. Offer https://remotearc.app/connect-ai as more setup information, and Dashboard https://agent.remotearc.app/devices to see paired computers, online status and permissions. Only expand terminal alternatives when useful or requested: on macOS/Linux without Node.js, run curl -fsSL https://remotearc.app/install.sh | sh and then the startup command shown by the installer; in WSL this installs the WSL Agent. For users who already have Node.js 20+, npx remotelink@latest is another option on Windows, macOS or Linux. Do not make installing Node.js the default step. After browser pairing, return to this conversation and call list_devices again to verify the computer is online. Connecting an AI client via OAuth does not install or start the Agent. The user runs the Agent on their own computer; do not install it in a cloud shell or claim it is already installed. Use the current AI client and the user's language; do not assume a particular client." },
+            { type: "text" as const, text: "No Windows, macOS, or Linux computer Agent is paired with this Remote Arc account yet. A Chrome Companion browser entry does not replace the computer Agent. The next step is to download and run the Agent on the computer the user wants to connect. Lead with this direct download-page link: https://remotearc.app/downloads (Windows, macOS and Linux; no Node.js required). Keep the first reply brief: download, run the Agent, then approve its browser pairing using the same Remote Arc account connected to the current AI client. Offer https://remotearc.app/connect-ai as more setup information, and Dashboard https://agent.remotearc.app/devices to see paired computers, online status and permissions. Only expand terminal alternatives when useful or requested: on macOS/Linux without Node.js, run curl -fsSL https://remotearc.app/install.sh | sh and then the startup command shown by the installer; in WSL this installs the WSL Agent. For users who already have Node.js 20+, npx remotelink@latest is another option on Windows, macOS or Linux. Do not make installing Node.js the default step. If the goal does not need this computer, such as email, calendar or GitHub work, the Agent is not required: use list_apps, and link an account at https://agent.remotearc.app/apps. After browser pairing, return to this conversation and call list_devices again to verify the computer is online. Connecting an AI client via OAuth does not install or start the Agent. The user runs the Agent on their own computer; do not install it in a cloud shell or claim it is already installed. Use the current AI client and the user's language; do not assume a particular client." },
           ],
         };
       },

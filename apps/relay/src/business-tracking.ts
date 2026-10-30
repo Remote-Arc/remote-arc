@@ -1,6 +1,6 @@
 type TrackingEnv={DB:D1Database};
 export type BusinessScene='email_login'|'google_login'|'device_pairing';
-const stages:Record<BusinessScene,readonly string[]>={email_login:['started','delivered','verification','verified','completed'],google_login:['started','callback','verified','completed'],device_pairing:['started','approved','credential','online']};
+const stages:Record<BusinessScene,readonly string[]>={email_login:['started','delivered','verification','verified','completed'],google_login:['started','callback','verified','completed'],device_pairing:['started','opened','signed_in','approved','credential','online']};
 /** Analytics is fail-open and never changes auth, payment or device results. */
 export async function startBusinessFlow(env:TrackingEnv,input:{id:string;scene:BusinessScene;userId?:string|null;deviceId?:string|null;dimension?:string|null;at?:string;expiresAt:string}){
  try{

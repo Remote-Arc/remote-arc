@@ -70,6 +70,7 @@ import {
   handleDeviceManagedProcessStop,
   handlePairingApprove,
   handlePairingLookup,
+  recordPairingStep,
 } from "./device.js";
 import { readAudit } from "./audit.js";
 import { archiveOldAudit } from "./audit-archive.js";
@@ -195,6 +196,9 @@ function withTrustedDeviceHeaders(
 
 async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === "/device" && request.method === "GET" && url.searchParams.has("code")) {
+      ctx?.waitUntil(recordPairingStep(env, url.searchParams.get("code")!, "opened"));
+    }
 
     const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
     const appOrigin = env.APP_ORIGIN || env.PUBLIC_ORIGIN;

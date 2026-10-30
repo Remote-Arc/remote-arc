@@ -340,9 +340,11 @@ func (s *session) ensureLive(ctx context.Context) error {
 			return e
 		}
 		var proc *browserProcess
+		delivered := s.cp.State == StateNeedsUser && (s.cp.AttentionShown || s.cp.AttentionDismissed)
+		launchHidden := s.cp.Headless || delivered || !s.mayShowWindow()
 		e = s.startupStep("launch", func() error {
 			var err error
-			proc, err = launchBrowser(ctx, exe, profilePath(s.cp.Profile), s.cp.Headless)
+			proc, err = launchBrowser(ctx, exe, profilePath(s.cp.Profile), launchHidden)
 			return err
 		})
 		if e != nil {
@@ -390,8 +392,16 @@ func (s *session) ensureLive(ctx context.Context) error {
 		return s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
 	})
 	if s.hasWindow() {
-		visible := !s.cp.Headless && s.mayShowWindow()
-		if e := s.startupStep("setup.window", func() error { return s.setVisible(ctx, visible) }); e != nil {
+		delivered := s.cp.State == StateNeedsUser && (s.cp.AttentionShown || s.cp.AttentionDismissed)
+		visible := !s.cp.Headless && !delivered && s.mayShowWindow()
+		if e := s.startupStep("setup.window", func() error {
+			// A surviving handoff may have been minimized or restored manually.
+			// Reattaching must preserve that native window exactly as the user left it.
+			if s.proc.attached && delivered {
+				return nil
+			}
+			return s.setVisible(ctx, visible)
+		}); e != nil {
 			if visible {
 				return fmt.Errorf("browser_runner could not show the task window: %w", e)
 			}

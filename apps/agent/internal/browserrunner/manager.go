@@ -584,6 +584,8 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 		switch {
 		case !s.hasWindow():
 			out["window"] = "none: this computer has no display, so the browser runs without a window"
+		case s.cp.State == StateNeedsUser && s.cp.AttentionShown && !s.windowIsVisible(ctx):
+			out["window"] = "not raised again: restore the existing task window on this computer when ready"
 		case s.cp.State == StateNeedsUser && s.shownForUser:
 			out["window"] = "on screen: waiting for the user to finish sign-in or verification"
 		case s.cp.Headless:

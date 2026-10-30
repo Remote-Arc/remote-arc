@@ -156,7 +156,7 @@ func (s *session) showAttention(ctx context.Context) {
 		s.cp.AttentionShown = true
 		s.shownForUser = s.shownForUser || s.cp.Headless
 	} else {
-		s.cp.NeedsUser += " The window could not be raised. Open the task from Dashboard, or retry browser_runner_start with the same task_id and headless=false on this computer."
+		s.cp.NeedsUser += " The window could not be raised. Restore the task window on this computer, or retry browser_runner_start with the same task_id and headless=false."
 	}
 }
 func (s *session) addAttentionResult(out map[string]any) {

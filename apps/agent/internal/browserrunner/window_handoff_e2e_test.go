@@ -150,11 +150,11 @@ func TestE2EHandoffRetriesAfterWindowManagerRecovers(t *testing.T) {
 func TestE2EResumedUserHandoffDoesNotPopupAgain(t *testing.T) {
 	requireHandoffWindow(t)
 	h, _, base, _ := newHarness(t)
-	h.call("browser_runner_start", map[string]any{"task_id": "resume-handoff", "allowed_origins": []string{base}, "start_url": base + "/login"})
+	h.call("browser_runner_start", map[string]any{"task_id": "resume-handoff", "allowed_origins": []string{base}, "start_url": base + "/login", "headless": false})
 	h.call("browser_runner_snapshot", map[string]any{"session_id": "resume-handoff"})
 	s, _ := h.m.get("resume-handoff")
-	if s.cp.State != StateNeedsUser || !s.cp.Headless {
-		t.Fatal("fixture did not begin as a hidden task needing the user")
+	if s.cp.State != StateNeedsUser {
+		t.Fatal("fixture did not begin as a task needing the user")
 	}
 	episode := s.cp.AttentionID
 	if !s.cp.AttentionShown {

@@ -22,6 +22,7 @@
     "test:credits": "tsx scripts/operator-allowance-test.ts && tsx scripts/arc-credits-test.ts && tsx scripts/trial-credit-retention-test.ts && tsx scripts/arc-credit-integration-test.ts && tsx scripts/arc-funding-test.ts && tsx scripts/arc-dispatch-recovery-test.ts && tsx scripts/arc-automatic-funding-test.ts",
     "test:stripe": "tsx scripts/free-connect-quota-test.ts && tsx scripts/connect-unlimited-test.ts && node scripts/stripe-worker-test.mjs && tsx scripts/stripe-billing-test.ts && tsx scripts/stripe-native-test.ts && tsx scripts/commercial-config-test.ts && tsx scripts/stripe-activation-test.ts && tsx scripts/arc-trial-admin-test.ts",
     "test:teams": "tsx scripts/arc-team-profiles-test.ts",
+    "test:coverage": "pnpm test:security && pnpm test:seo && pnpm test:scheduling && tsx scripts/goal-continuation-test.mjs && tsx scripts/planned-goal-test.mjs && tsx scripts/fleet-scheduler-test.mjs && tsx scripts/fleet-workspace-test.mjs && tsx scripts/managed-process-poll-test.ts && tsx scripts/skill-library-test.ts && tsx scripts/skill-runtime-test.ts && tsx scripts/cloud-skills-test.ts && tsx scripts/local-media-resources-test.ts && tsx scripts/demo-media-test.ts",
     "test:events": "tsx scripts/product-events-test.ts && tsx scripts/business-analytics-test.ts"
   },
   "dependencies": {

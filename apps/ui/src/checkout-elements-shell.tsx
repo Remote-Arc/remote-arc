@@ -4,11 +4,13 @@ type Tr=(en:string,zh:string)=>string;
 export type ElementsSummary={label:string;subtotal:string;discount?:string;tax?:string;total:string;cadence:string;recurringNote?:string};
 /** Remote Arc's own payment layout. Only the payment fields inside `fields` are
  * rendered by Stripe; summary, errors and the pay button are ours. */
-export function ElementsShell({tr,summary,fields,status,error,busy,canPay,submitLabel,onSubmit,footer}:{tr:Tr;summary:ElementsSummary;fields:ReactNode;status?:ReactNode;error?:string;busy:boolean;canPay:boolean;submitLabel?:string;onSubmit:(event:FormEvent)=>void;footer?:ReactNode}){
+export function ElementsShell({tr,summary,express,expressState='available',fields,status,error,busy,canPay,submitLabel,onSubmit,footer}:{tr:Tr;summary:ElementsSummary;express?:ReactNode;expressState?:'pending'|'available'|'none';fields:ReactNode;status?:ReactNode;error?:string;busy:boolean;canPay:boolean;submitLabel?:string;onSubmit:(event:FormEvent)=>void;footer?:ReactNode}){
  return <div className="arcElementsCheckout">
   <form className="arcElementsPay" onSubmit={onSubmit} aria-busy={busy} noValidate>
    <header><h3>{tr('Payment details','付款信息')}</h3><p><ProductIcon name="shield" size={14}/>{tr('Card details go directly to Stripe. Remote Arc never sees or stores your card number.','卡片信息直接提交给 Stripe，Remote Arc 不会看到或保存你的卡号。')}</p></header>
    {status}
+   {/* Stays mounted while pending so Stripe can measure; collapses when no wallet applies. */}
+   {express&&<div className="arcElementsExpress" data-state={expressState} aria-hidden={expressState!=='available'}>{express}<p className="arcElementsDivider"><span>{tr('Or pay with card','或使用银行卡付款')}</span></p></div>}
    {fields}
    {error&&<p className="arcElementsError" role="alert">{error}</p>}
    <button type="submit" className="raSettingsButton raSettingsButtonPrimary arcElementsSubmit" disabled={!canPay||busy}>{busy?tr('Processing payment…','正在处理付款…'):submitLabel??tr('Pay ','支付 ')+summary.total}</button>

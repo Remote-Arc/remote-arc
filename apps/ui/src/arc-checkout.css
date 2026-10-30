@@ -44,3 +44,9 @@
 .arcPaymentPreviewElements .arcElementsPreviewFields{border:0;padding:0;margin:0}
 .arcPaymentPreviewElements .arcElementsPreviewFields input{background:var(--rs-bg);border-radius:10px}
 @media(max-width:860px){.arcElementsCheckout{grid-template-columns:1fr}.arcElementsSummary{position:static;order:-1}.arcElementsPay{padding:22px}}
+/* One-tap wallets: collapsed until Stripe reports an available wallet. */
+.arcElementsExpress{display:grid;gap:18px}
+.arcElementsExpress[data-state=pending],.arcElementsExpress[data-state=none]{height:0;overflow:hidden;gap:0;margin-bottom:-18px}
+.arcElementsDivider{display:flex;align-items:center;gap:12px;margin:0;font-size:12px;color:var(--rs-secondary)}
+.arcElementsDivider:before,.arcElementsDivider:after{content:'';flex:1;border-top:1px solid var(--rs-border)}
+.arcElementsStripeSlot{margin:0;padding:14px 16px;border:1px dashed var(--rs-border);border-radius:10px;font-size:12px;line-height:1.6;color:var(--rs-secondary);text-align:center}

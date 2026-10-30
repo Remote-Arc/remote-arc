@@ -1,7 +1,7 @@
 import {trackProductEvent} from './product-events.js';
 import {lazy,Suspense,useEffect,useRef,useState,type FormEvent} from 'react';
 import {loadStripe} from '@stripe/stripe-js/pure/index.js';
-import type {Stripe,StripeElements,StripeEmbeddedCheckout,StripeElementLocale,StripeCheckoutLoadActionsSuccess,StripeCheckoutSession} from '@stripe/stripe-js';
+import type {Stripe,StripeElements,StripeEmbeddedCheckout,StripeElementLocale,StripeCheckoutLoadActionsSuccess,StripeCheckoutSession,StripeCheckoutConfirmResult} from '@stripe/stripe-js';
 import {stripeAppearance,onThemeChange,STRIPE_FONTS} from './stripe-appearance.js';
 import {ElementsShell,type ElementsSummary} from './checkout-elements-shell.js';
 import {billingRequest,billingFailureMessage,type NativePaymentSession} from './arc-billing-client.js';
@@ -50,10 +50,10 @@ function LivePaymentMethod({session,locale,tr,onSaved,onClose}:MethodProps){
 /** Checkout Sessions with ui_mode=elements: our layout, Stripe's themed fields. */
 export function StripeElementsCheckout(props:ElementsProps){return PreviewElements?<Suspense fallback={null}><PreviewElements {...props}/></Suspense>:<LiveElementsCheckout {...props}/>;}
 function LiveElementsCheckout({session,locale,tr,onComplete,summary}:ElementsProps){
- const scope=useRef<HTMLDivElement>(null),paymentHost=useRef<HTMLDivElement>(null),addressHost=useRef<HTMLDivElement>(null),actions=useRef<StripeCheckoutLoadActionsSuccess|null>(null),completed=useRef(onComplete),live=useRef(true),lock=useRef(false);completed.current=onComplete;
- const [stripeSession,setStripeSession]=useState<StripeCheckoutSession|null>(null),[ready,setReady]=useState(false),[failed,setFailed]=useState(false),[retry,setRetry]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const scope=useRef<HTMLDivElement>(null),expressHost=useRef<HTMLDivElement>(null),paymentHost=useRef<HTMLDivElement>(null),addressHost=useRef<HTMLDivElement>(null),actions=useRef<StripeCheckoutLoadActionsSuccess|null>(null),completed=useRef(onComplete),live=useRef(true),lock=useRef(false);completed.current=onComplete;
+ const [expressState,setExpressState]=useState<'pending'|'available'|'none'>('pending'),[stripeSession,setStripeSession]=useState<StripeCheckoutSession|null>(null),[ready,setReady]=useState(false),[failed,setFailed]=useState(false),[retry,setRetry]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState('');
  useEffect(()=>{
-  let disposed=false,cleanup:undefined|(()=>void);live.current=true;setReady(false);setFailed(false);setError('');
+  let disposed=false,cleanup:undefined|(()=>void);live.current=true;setReady(false);setFailed(false);setError('');setExpressState('pending');
   const fail=()=>{if(!disposed){setFailed(true);trackProductEvent('billing.payment.load_failed',{entityId:session.sessionId,errorCode:'PAYMENT_FORM_LOAD_FAILED'});}};
   const timeout=setTimeout(fail,20000);
   void loadStripe(session.publishableKey,{locale}).then(async stripe=>{
@@ -62,27 +62,37 @@ function LiveElementsCheckout({session,locale,tr,onComplete,summary}:ElementsPro
    checkout.on('change',value=>{if(!disposed)setStripeSession(value);});
    const loaded=await checkout.loadActions();if(loaded.type!=='success')throw Error('BILLING_UNAVAILABLE');if(disposed)return;
    actions.current=loaded.actions;setStripeSession(loaded.actions.getSession());
+   // Apple Pay, Google Pay and Link one-tap buttons. Stripe decides which apply to this device.
+   const walletTheme=()=>document.documentElement.dataset.theme==='dark'?'white' as const:'black' as const;
+   const express=checkout.createExpressCheckoutElement({buttonHeight:48,buttonTheme:{applePay:walletTheme(),googlePay:walletTheme()},buttonType:undefined,layout:{maxColumns:3,maxRows:1,overflow:'auto'},paymentMethodOrder:['apple_pay','google_pay','link'],paymentMethods:undefined});
+   express.on('ready',event=>{if(!disposed)setExpressState(event.availablePaymentMethods&&Object.values(event.availablePaymentMethods).some(Boolean)?'available':'none');});
+   express.on('loaderror',()=>{if(!disposed)setExpressState('none');});
+   express.on('confirm',event=>{void confirmPayment(()=>loaded.actions.confirm({expressCheckoutConfirmEvent:event,redirect:'if_required'}));});
    const payment=checkout.createPaymentElement({layout:{type:'tabs'}}),address=session.billingAddress?checkout.createBillingAddressElement():null;
    payment.on('ready',()=>{if(disposed)return;clearTimeout(timeout);setReady(true);trackProductEvent('billing.payment.mounted',{entityId:session.sessionId});});
    payment.on('loaderror',()=>{clearTimeout(timeout);fail();});
-   if(paymentHost.current)payment.mount(paymentHost.current);if(address&&addressHost.current)address.mount(addressHost.current);
+   if(expressHost.current)express.mount(expressHost.current);if(paymentHost.current)payment.mount(paymentHost.current);if(address&&addressHost.current)address.mount(addressHost.current);
+   // Wallet button colors are fixed at creation; card fields follow theme switches live.
    const stopTheme=onThemeChange(()=>checkout.changeAppearance(stripeAppearance(scope.current??document.body)));
-   cleanup=()=>{stopTheme();payment.destroy();address?.destroy();};
+   cleanup=()=>{stopTheme();express.destroy();payment.destroy();address?.destroy();};
   }).catch(()=>{clearTimeout(timeout);fail();});
   return()=>{disposed=true;live.current=false;clearTimeout(timeout);cleanup?.();actions.current=null;};
  },[session.clientSecret,session.publishableKey,session.billingAddress,locale,retry]);
- async function pay(event:FormEvent){
-  event.preventDefault();if(lock.current||!actions.current)return;lock.current=true;setBusy(true);setError('');
+ // One confirmation path for the card form and the one-tap wallet buttons.
+ async function confirmPayment(confirm:()=>Promise<StripeCheckoutConfirmResult>){
+  if(lock.current)return;lock.current=true;setBusy(true);setError('');
   try{
    // Cards finish here; 3D Secure opens Stripe's own dialog, redirect methods return via return_url.
-   const result=await actions.current.confirm({redirect:'if_required'});
+   const result=await confirm();
    if(result.type==='error'){if(live.current)setError(result.error.message||tr('The payment did not go through. Check your details and try again.','付款未完成，请检查信息后重试。'));return;}
    if(live.current)completed.current();
   }catch{if(live.current)setError(tr('The payment did not go through. Check your details and try again.','付款未完成，请检查信息后重试。'));}
   finally{lock.current=false;if(live.current)setBusy(false);}
  }
+ function pay(event:FormEvent){event.preventDefault();const current=actions.current;if(current)void confirmPayment(()=>current.confirm({redirect:'if_required'}));}
  const total=stripeSession?.total,shown:ElementsSummary=total?{...summary,subtotal:total.subtotal.amount,total:total.total.amount,discount:total.discount.minorUnitsAmount>0?total.discount.amount:undefined,tax:total.taxExclusive.minorUnitsAmount>0?total.taxExclusive.amount:undefined}:summary;
- return <div ref={scope}><ElementsShell tr={tr} summary={shown} busy={busy} canPay={ready&&!failed&&Boolean(stripeSession?.canConfirm??true)} error={error} onSubmit={event=>void pay(event)}
+ return <div ref={scope}><ElementsShell tr={tr} summary={shown} busy={busy} canPay={ready&&!failed&&Boolean(stripeSession?.canConfirm??true)} error={error} onSubmit={pay}
+  express={<div ref={expressHost}/>} expressState={expressState}
   status={<>{!ready&&!failed&&<WorkspaceLoading label={tr('Loading secure payment…','正在加载安全付款表单…')} variant="compact"/>}{failed&&<div className="arcElementsError" role="alert"><p>{tr('The payment form could not load. Your order is saved.','付款表单未能加载，订单已保留。')}</p><button type="button" className="raSettingsButton" onClick={()=>setRetry(value=>value+1)}>{tr('Reload payment form','重新加载付款表单')}</button></div>}</>}
   fields={<><div ref={paymentHost} className="arcElementsField"/>{session.billingAddress&&<div ref={addressHost} className="arcElementsField"/>}</>}/></div>;
 }

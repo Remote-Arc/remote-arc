@@ -50,7 +50,7 @@ test('Slack-style conversation answers device questions and handles unsupported 
   expect(new URL(href!).searchParams.get('prompt')).toBe('Write a poem about the ocean');
 });
 
-test('Connected capabilities show fleet, performance, workspaces and a reviewable browser selection', async ({ page }) => {
+test('Connected capabilities show fleet, performance, workspaces and a local video edit plan', async ({ page }) => {
   const section = page.locator('#agent-use-cases');
   await section.scrollIntoViewIfNeeded();
   const tabs = section.getByRole('tab');
@@ -71,14 +71,16 @@ test('Connected capabilities show fleet, performance, workspaces and a reviewabl
   await tabs.nth(2).focus();
   await page.keyboard.press('End');
   await expect(tabs.last()).toBeFocused();
-  await expect(section.locator('.agentConnectedPanel')).toHaveAttribute('data-workflow', 'browser');
-  await expect(section.locator('.connectedMoviePoster')).toBeVisible();
-  await expect(section.locator('.connectedMovieInfo h4')).toHaveText(/The Avengers|复仇者联盟/);
-  await section.getByRole('button', { name: '21:00', exact: true }).click();
-  await section.locator('.connectedTicketButton').click();
-  await expect(section.locator('.connectedBrowserResult')).toContainText('21:00');
-  await expect(section.locator('.connectedBrowserResult')).toContainText(/Review before checkout|结账前由你审核/);
-  await expect(section.locator('.agentConnectedAction')).toHaveAttribute('href', /chrome-extension$/);
+  await expect(section.locator('.agentConnectedPanel')).toHaveAttribute('data-workflow', 'video');
+  await expect(section.locator('.connectedEditClips > span')).toHaveCount(3);
+  await section.getByRole('button', { name: '9:16', exact: true }).click();
+  await expect(section.locator('.connectedEditStage')).toHaveAttribute('data-format','portrait');
+  await section.locator('.connectedEditReview').click();
+  await expect(section.locator('.connectedEditResult')).toContainText('1080 × 1920');
+  await expect(section.locator('.connectedEditResult')).toContainText(/Export plan|导出方案/);
+  const videoDraft = new URL((await section.locator('.agentConnectedAction').getAttribute('href'))!);
+  expect(videoDraft.origin).toBe('https://agent.remotearc.app');
+  expect(videoDraft.searchParams.get('prompt')).toMatch(/MP4/);
 });
 
 test('New previews have no horizontal overflow or missing images', async ({ page }) => {

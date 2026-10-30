@@ -5,6 +5,7 @@ import { ProductIcon as Icon } from './product-icon.js';
 import { arcChatHref } from '../../../packages/docs/src/arc-use-cases.js';
 import './arc-connected-previews.css';
 import './arc-connected-workspace.css';
+import './connected-video-edit.css';
 
 export const previewDevices = [
   { name: 'Studio Mac', platform: 'macos', system: 'macOS', cpu: 24, memory: '12.8 / 32 GB', state: 'online' },
@@ -56,14 +57,23 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
   </div>;
 }
 
-export function BrowserPreview() {
+export function VideoEditingPreview() {
   const { tr } = useI18n();
-  const [time, setTime] = useState('19:30');
+  const [portrait, setPortrait] = useState(false);
   const [review, setReview] = useState(false);
-  return <div className="connectedBrowser">
-    <div className="connectedBrowserBar"><span className="connectedWindowDots"><i /><i /><i /></span><span><Icon name="shield" size={12} />cinema.example / showtimes</span><img src="/platform-brands/browser.svg" alt="Chrome" width={16} height={16} /></div>
-    <div className="connectedCinema"><img className="connectedMoviePoster" src="/marketing/avengers-poster.jpg" alt={tr('Marvel Studios The Avengers poster', '漫威《复仇者联盟》电影海报')} width={382} height={566} /><div className="connectedMovieInfo"><span className="connectedMiniLabel">MARVEL STUDIOS</span><h4>{tr('The Avengers', '复仇者联盟')}</h4><p>{tr('Friday · 2 tickets · IMAX', '周五 · 2 张票 · IMAX')}</p><small className="connectedShowtimesLabel">{tr('Choose a showtime', '选择场次')}</small><div className="connectedShowtimes" role="group" aria-label={tr('Example showtimes', '示例场次')}>{['18:00', '19:30', '21:00'].map(value => <button key={value} type="button" aria-pressed={time === value} onClick={() => { setTime(value); setReview(false); }}>{value}</button>)}</div><button className="connectedTicketButton" type="button" onClick={() => setReview(!review)}>{review ? tr('Edit selection', '修改选择') : tr('Review 2 tickets', '查看 2 张电影票')}<Icon name={review ? 'refresh' : 'arrowUpRight'} size={14} /></button></div></div>
-    <div className="connectedBrowserResult" aria-live="polite"><Icon name={review ? 'check' : 'shield'} size={15} /><span>{review ? tr(`Selection ready: Friday, ${time}, 2 tickets. Review before checkout.`, `已准备：周五 ${time}，2 张电影票。结账前由你审核。`) : tr('Arc finds the options. You confirm the purchase.', 'Arc 帮你查找场次，购买由你确认。')}</span></div>
+  return <div className="connectedVideoEdit">
+    <header><span className="connectedWindowDots"><i /><i /><i /></span><span>weekend-cut</span><small>{tr('LOCAL PROJECT', '本地项目')}</small></header>
+    <div className="connectedEditStage" data-format={portrait ? 'portrait' : 'landscape'}>
+      <div className="connectedEditPicture" aria-hidden="true"><span className="connectedEditSun"/><span className="connectedEditHills"/><span className="connectedEditTitle">WEEKEND<br/>STORIES</span><small>00:12 / 00:30</small></div>
+      <span className="connectedEditCaption">{tr('Keep the moments that matter.', '留下值得记住的瞬间。')}</span>
+    </div>
+    <div className="connectedEditTracks">
+      <div className="connectedEditRuler"><span>00:00</span><span>00:15</span><span>00:30</span></div>
+      <div className="connectedEditClips" aria-label={tr('Three example clips', '三个示例片段')}>{['01','02','03'].map((clip,index)=><span key={clip} data-clip={index}><Icon name="panel" size={13}/><span>clip-{clip}.mp4</span></span>)}</div>
+      <div className="connectedEditSubtitles"><Icon name="chat" size={12}/>{tr('Subtitle track', '字幕轨道')}<span>00:00 — 00:30</span></div>
+    </div>
+    <div className="connectedEditControls"><div role="group" aria-label={tr('Video format', '视频画幅')}>{[false,true].map(value=><button type="button" key={String(value)} aria-pressed={portrait===value} onClick={()=>{setPortrait(value);setReview(false);}}>{value?'9:16':'16:9'}</button>)}</div><button className="connectedEditReview" type="button" onClick={()=>setReview(!review)}>{review?tr('Adjust the edit','调整剪辑'):tr('Review export plan','查看导出方案')}<Icon name={review?'refresh':'arrowUpRight'} size={13}/></button></div>
+    <div className="connectedEditResult" aria-live="polite"><Icon name={review?'check':'device'} size={15}/><span>{review?tr(`Export plan: 30s MP4 · ${portrait?'1080 × 1920':'1920 × 1080'} · subtitles.`, `导出方案：30 秒 MP4 · ${portrait?'1080 × 1920':'1920 × 1080'} · 字幕。`):tr('Trim, combine and subtitle on your computer.', '在你的电脑上裁剪、合并并添加字幕。')}</span></div>
   </div>;
 }
 

@@ -18,6 +18,9 @@ type ReviewerEnv = {
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  ANTHROPIC_REVIEWER_EMAIL?: string;
+  ANTHROPIC_REVIEWER_PASSWORD_SHA256?: string;
+  ANTHROPIC_REVIEWER_DEMO_DEVICE_ID?: string;
   RESEND_API_KEY?: string;
   EMAIL_AUTH_SECRET?: string;
 };
@@ -32,7 +35,10 @@ export function handleLoginPage(request: Request, env: ReviewerEnv) {
   const url = new URL(request.url);
   const returnTo = safeReturnTo(url.searchParams.get("return_to"), request, env);
   const googleHref = "/auth/google?return_to=" + encodeURIComponent(returnTo);
-  const reviewerEnabled = Boolean(env.REVIEWER_EMAIL && env.REVIEWER_PASSWORD_SHA256);
+  const reviewerEnabled = Boolean(
+    (env.REVIEWER_EMAIL && env.REVIEWER_PASSWORD_SHA256) ||
+    (env.ANTHROPIC_REVIEWER_EMAIL && env.ANTHROPIC_REVIEWER_PASSWORD_SHA256),
+  );
   const emailEnabled = emailLoginEnabled(env);
   const { token: emailCsrf, setCookie: emailCsrfCookie } = emailFormToken(request);
 
@@ -42,7 +48,23 @@ export function handleLoginPage(request: Request, env: ReviewerEnv) {
 }
 
 export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
-  if (!env.REVIEWER_EMAIL || !env.REVIEWER_PASSWORD_SHA256) {
+  const reviewers = [
+    {
+      email: env.REVIEWER_EMAIL,
+      passwordHash: env.REVIEWER_PASSWORD_SHA256,
+      userId: "reviewer-openai-v1",
+      displayName: "OpenAI Reviewer",
+      deviceId: env.REVIEWER_DEMO_DEVICE_ID,
+    },
+    {
+      email: env.ANTHROPIC_REVIEWER_EMAIL,
+      passwordHash: env.ANTHROPIC_REVIEWER_PASSWORD_SHA256,
+      userId: "reviewer-anthropic-v1",
+      displayName: "Anthropic Reviewer",
+      deviceId: env.ANTHROPIC_REVIEWER_DEMO_DEVICE_ID,
+    },
+  ];
+  if (!reviewers.some((entry) => entry.email && entry.passwordHash)) {
     return new Response("Reviewer access is not configured", { status: 404 });
   }
 
@@ -51,23 +73,33 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
   const password = String(form.get("password") || "");
   const returnTo = safeReturnTo(String(form.get("return_to") || "/overview"), request, env);
 
-  if (
-    email !== env.REVIEWER_EMAIL.trim().toLowerCase() ||
-    (await sha256Hex(password)) !== env.REVIEWER_PASSWORD_SHA256
-  ) {
+  const reviewer = reviewers.find(
+    (entry) => entry.email && entry.passwordHash && entry.email.trim().toLowerCase() === email,
+  );
+  if (!reviewer || (await sha256Hex(password)) !== reviewer.passwordHash) {
     return new Response("Invalid reviewer credentials", { status: 401 });
+  }
+  // Reviewer identities and fixture IDs must remain separate across providers.
+  if (reviewers.some((entry) => entry !== reviewer && (
+    entry.email?.trim().toLowerCase() === email ||
+    (reviewer.deviceId && entry.deviceId === reviewer.deviceId)
+  ))) {
+    return new Response("Reviewer account configuration conflict", { status: 503 });
   }
 
   let user = await env.DB.prepare(
     "SELECT id FROM users WHERE email = ?1 LIMIT 1",
   ).bind(email).first<{ id: string }>();
 
+  if (user && user.id !== reviewer.userId) {
+    return new Response("Reviewer account is not isolated", { status: 503 });
+  }
   if (!user) {
-    const userId = "reviewer-openai-v1";
+    const userId = reviewer.userId;
     await env.DB.prepare(
       `INSERT INTO users (id, google_sub, email, name, avatar_url, created_at, plan)
        VALUES (?1, ?2, ?3, ?4, NULL, ?5, 'plus')`,
-    ).bind(userId, "reviewer-openai-v1", email, "OpenAI Reviewer", nowIso()).run();
+    ).bind(userId, reviewer.userId, email, reviewer.displayName, nowIso()).run();
     user = { id: userId };
   } else {
     await env.DB.prepare("UPDATE users SET plan = 'plus' WHERE id = ?1")
@@ -75,10 +107,10 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
       .run();
   }
 
-  if (env.REVIEWER_DEMO_DEVICE_ID) {
+  if (reviewer.deviceId) {
     const now = nowIso();
     const credentialHash = await sha256Hex(
-      `reviewer-fixture:${env.REVIEWER_DEMO_DEVICE_ID}`,
+      `reviewer-fixture:${reviewer.deviceId}`,
     );
     await env.DB.prepare(
       `INSERT INTO devices (
@@ -96,7 +128,7 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
          allowed_tools = excluded.allowed_tools`,
     )
       .bind(
-        env.REVIEWER_DEMO_DEVICE_ID,
+        reviewer.deviceId,
         user.id,
         "Review Desktop",
         "win32",

@@ -29,6 +29,7 @@ export type DeviceCallEnv = {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  ANTHROPIC_REVIEWER_DEMO_DEVICE_ID?: string;
   MCP_ANALYTICS?: AnalyticsEngineDataset;
   MCP_METRICS_SAMPLE_RATE?: string;
 };
@@ -95,9 +96,9 @@ export async function callDevice(
     );
   }
 
-  if (env.REVIEWER_DEMO_DEVICE_ID && deviceId === env.REVIEWER_DEMO_DEVICE_ID) {
+  if ([env.REVIEWER_DEMO_DEVICE_ID, env.ANTHROPIC_REVIEWER_DEMO_DEVICE_ID].some((id) => id && id === deviceId)) {
     if (!REVIEWER_DEMO_TOOLS.includes(tool as (typeof REVIEWER_DEMO_TOOLS)[number])) {
-      throw new Error('tool "' + tool + '" is disabled for the OpenAI review fixture');
+      throw new Error('tool "' + tool + '" is disabled for the isolated review fixture');
     }
     return reviewerDemoResult(env, identity.userId, tool, args);
   }

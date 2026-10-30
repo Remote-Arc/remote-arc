@@ -20,6 +20,7 @@ type DeviceEnv = PlatformLaunchEnv & {
   REGISTRY: DurableObjectNamespace;
   PUBLIC_ORIGIN: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  ANTHROPIC_REVIEWER_DEMO_DEVICE_ID?: string;
 };
 
 type DeviceStartBody = {
@@ -508,7 +509,7 @@ export async function getDevicesForUser(
 
   return storedDevices.map((device) => {
     const reviewerFixture: OnlineDevice | undefined =
-      env.REVIEWER_DEMO_DEVICE_ID && device.id === env.REVIEWER_DEMO_DEVICE_ID
+      [env.REVIEWER_DEMO_DEVICE_ID, env.ANTHROPIC_REVIEWER_DEMO_DEVICE_ID].some((id) => id && id === device.id)
         ? {
             id: device.id,
             status: "online",

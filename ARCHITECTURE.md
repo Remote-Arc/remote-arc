@@ -280,29 +280,19 @@ or off.
 - **There are two browser systems.** Shared tabs use the Chrome Companion on
   tabs the user shares. The task browser is run on the computer by the Go Agent.
   Authorization, execution and recovery differ.
-- **There are two MCP servers.** The hosted endpoint is `apps/relay/src/mcp.ts`.
-  `apps/mcp` is a local adapter and test harness, not that endpoint.
-- **A Skill grants nothing.** It is instructions. It adds no authority and does
-  not install the engine it describes.
-- **Protocol constants are not an account's limits.** Live commercial
-  configuration, trials and admin grants can override them.
 
-## Diagnose by symptom
+## Find the layer before fixing
 
-| Symptom | Check first |
+The same symptom can come from different layers, so identify which one produced
+the error first:
+
+| Symptom | Usually |
 | --- | --- |
-| The AI does not see a tool | Tool registration, client cache, OAuth scopes, deployed version |
-| A tool call returns 401 | OAuth token and grant |
-| No devices are listed | Pairing state and device online status |
-| Device unavailable | `DeviceRegistry`, the WebSocket, the Agent process |
-| File not found | The real path on that device and its workspace |
-| Permission denied | OAuth scope, device tool switch, path policy |
-| A command will not start | Agent, Execution Core, OS permissions |
-| A background Task is stuck | Scheduler, lease, `automation-store.ts`, process state |
-| The UI shows a feature that does not work | Flags, D1 migrations, account plan, deployed version |
-
-Some errors come from the cloud and others from the device, so identify which
-layer produced the error before changing code.
+| A tool is missing from the client | Scope or deployment switch, or the client's cached tool list, before the tool code |
+| Permission denied | Three separate gates: OAuth scope (cloud), device tool switch (cloud), path policy (device) |
+| Device unavailable | The Agent's outbound connection, not the tool |
+| A Task is stuck | Its lease and `waiting_for_device` state before the command itself |
+| A shipped feature does not work | Flags, an unapplied migration, or an older Agent (see the three versions above) |
 
 ## Working in this repository
 

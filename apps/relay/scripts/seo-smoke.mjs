@@ -174,7 +174,7 @@ const changelog = readFileSync(new URL("../../../CHANGELOG.md", import.meta.url)
 // Only dated, published releases require public translations. Unreleased RCs
 // must not appear in the published-release catalog or SEO assertions.
 const publishedVersions = [...changelog.matchAll(/^## (\d+\.\d+\.\d+) - \d{4}-\d{2}-\d{2}\s*$/gm)].map(x => x[1]);
-const mainSource = readFileSync(new URL("../../ui/src/main.tsx", import.meta.url), "utf8");
+const { appSource: mainSource } = await import("../../ui/scripts/app-source.mjs");
 const resourceNavStart = mainSource.indexOf('id="public-nav-resources"');
 const resourceNavEnd = mainSource.indexOf('className="publicNavActions"', resourceNavStart);
 assert.ok(resourceNavStart > -1 && resourceNavEnd > resourceNavStart);

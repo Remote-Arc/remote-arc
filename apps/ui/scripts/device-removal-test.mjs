@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { appSource } from "./app-source.mjs";
 
-const source = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
+const source = appSource;
 
 assert.match(source, /tr\("Forget this device\?", "删除这台设备？"\)/);
 assert.match(source, /Local files and software are not deleted/);

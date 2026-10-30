@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { appSource } from "./app-source.mjs";
 
-const source = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
+const source = appSource;
 const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
 assert.match(source, /className=\{agent\.id === "chatgpt" \? "pairChatGptLogo" : undefined\}/);

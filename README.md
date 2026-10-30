@@ -8,7 +8,7 @@
 
 Arc is your hosted AI teammate. Connect brings the same authorized Apps and device execution to the AI client you already use. Remote Arc manages the context, permissions, persistent work, device placement and usage around model decisions so work can proceed from a request to an inspectable result.
 
-[Website](https://remotearc.app) · [Open Arc](https://agent.remotearc.app/dashboard/agent/chat) · [User guide](https://remotearc.app/docs/start-here) · [Architecture](./docs/agent-platform-architecture.md) · [Security](./SECURITY.md)
+[Website](https://remotearc.app) · [Open Arc](https://agent.remotearc.app/dashboard/agent/chat) · [User guide](https://remotearc.app/docs/start-here) · [Architecture](./ARCHITECTURE.md) · [Security](./SECURITY.md)
 
 <sub>Source available for transparency and security review under a [proprietary license](./LICENSE). Not open-source licensed.</sub>
 
@@ -46,7 +46,7 @@ Arc is your hosted AI teammate. Connect brings the same authorized Apps and devi
 
 Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
 
-Every plan includes every Connect tool. **Free** has a monthly Connect call allowance and up to 2 computers. **Connect Unlimited** removes the call and computer limits for people who bring their own AI client; it includes no hosted models. **Plus** and **Pro** add Arc-hosted AI with monthly Credits. Every account can activate a one-time 14-day Arc trial. Users never supply a model API key. Current prices and allowances are on the [pricing page](https://remotearc.app/pricing); third-party App charges are separate. Preview environments use simulated data.
+Every plan includes every Connect tool. **Free** has monthly Connect call and file-transfer allowances and up to 2 computers. **Connect Unlimited** removes the call and computer limits for people who bring their own AI client; it includes no hosted models. **Plus** and **Pro** add Arc-hosted AI with monthly Credits. Every account can activate a one-time 14-day Arc trial. Users never supply a model API key. Current prices and allowances are on the [pricing page](https://remotearc.app/pricing); third-party App charges are separate. Preview environments use simulated data.
 
 ## From a goal to a result
 
@@ -112,7 +112,18 @@ flowchart TB
   Route <-->|Outbound authenticated WSS| Agent[Native Go Agent and Execution Core]
 ```
 
-The model is the reasoning component; Remote Arc owns the execution and continuity layer. Provider data, skill text, files and memory remain untrusted observations. Unknown external effects are retained for inspection and are not blindly repeated. A completed run is not a universal semantic proof of success; inspect the returned evidence.
+Remote Arc is not remote-desktop software, and it is more than an MCP server: it turns AI decisions into authorized, traceable actions. The model is the reasoning component; Remote Arc owns the execution and continuity layer. Provider data, skill text, files and memory remain untrusted observations. Unknown external effects are retained for inspection and are not blindly repeated. A completed run is not a universal semantic proof of success; inspect the returned evidence.
+
+### Life of one tool call
+
+1. **Authenticate.** The AI client calls `mcp.remotearc.app/mcp` with an OAuth token scoped to the work it may do.
+2. **Authorize.** The Worker checks the scope, the account's allowance, device ownership and revocation, and the device's saved tool policy.
+3. **Route.** The account's Durable Object forwards the call over the computer's own outbound WebSocket and keeps no copy of the payload.
+4. **Check locally.** The Agent re-checks the permission mode, Trusted Write Locations, sensitive paths and, for terminal commands, Safety Guard.
+5. **Execute and record.** The Execution Core runs the tool and keeps a Local Undo snapshot for supported edits. The result, usage and activity are recorded.
+6. **Decide again.** The AI sees the real observation and chooses the next step. A lost reply is treated as unknown, never silently retried.
+
+Arc runs follow the same gates from step 2 onward, with the model loop running in a Durable Object under a Credits budget. Durable Tasks reach step 3 through a leased scheduler instead of a live chat. Start with [ARCHITECTURE.md](./ARCHITECTURE.md) for the code map, request paths, data stores and contributor rules.
 
 Read the [current engineering reference](./docs/agent-platform-architecture.md) for run state, context reuse, security boundaries, memory limits, scheduling, funding and validation. [Public technical documentation](https://remotearc.app/docs/architecture) explains the same system for users. AI Teams (configurable employees, direct/group conversations and scoped teammate handoffs) is a beta release candidate at `/dashboard/agent/teams`, with its production rollout tracked separately; see the [feature map](./docs/feature-map/ai-teams.md). Cross-run persistent goal continuation and full root-outcome acceptance remain incomplete; see the [implementation/design status](./docs/ai-teams-and-persistent-work.md). Ordinary Connect cannot wake an arbitrary external chat.
 

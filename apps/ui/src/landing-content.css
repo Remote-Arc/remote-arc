@@ -203,3 +203,14 @@
 .chatSellingPoints{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:16px}
 .chatSellingPoints span{display:inline-flex;align-items:center;min-height:30px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--landing-muted);font-weight:650;font-size:12px;line-height:1.4}
 @media(max-width:600px){.chatSellingPoints{gap:7px;margin-top:14px}.chatSellingPoints span{font-size:11px;padding:5px 9px}}
+.trustChain{list-style:none;margin:36px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+.trustChain li{display:flex;flex-direction:column;padding:24px 22px;border-left:1px solid var(--line);position:relative}.trustChain li:first-child{border-left:0}
+.trustChain li:not(:last-child)::after{content:"→";position:absolute;right:-8px;top:24px;font-size:13px;color:var(--accent);background:var(--panel);line-height:1;padding:2px 0;z-index:1}
+.trustChain span{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--accent)}
+.trustChain h3{font-size:18px;letter-spacing:-.02em;line-height:1.3;margin:14px 0 10px}
+.trustChain p{font-size:14px;color:var(--landing-muted);line-height:1.65;margin:0 0 20px}
+.trustChain code{margin-top:auto;font-size:11px;letter-spacing:.04em;color:var(--text)}
+.trustAfter{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin-top:16px;padding:16px 22px;border:1px solid var(--line);border-radius:12px;font-size:14px;color:var(--landing-muted)}
+.trustAfter strong{color:var(--text);font-weight:600}.trustAfter span::before{content:"✓ ";color:var(--accent)}
+@media(max-width:1100px){.trustChain{grid-template-columns:repeat(2,minmax(0,1fr))}.trustChain li{border-left:0;border-top:1px solid var(--line)}.trustChain li:nth-child(-n+2){border-top:0}.trustChain li:nth-child(even){border-left:1px solid var(--line)}.trustChain li::after{display:none}.trustChain li:last-child{grid-column:1/-1}}
+@media(max-width:620px){.trustChain{grid-template-columns:1fr}.trustChain li:nth-child(2){border-top:1px solid var(--line)}.trustChain li:nth-child(even){border-left:0}}

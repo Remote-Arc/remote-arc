@@ -8,35 +8,32 @@ That history remains in Git and in
 
 ## Where things stand
 
-**In production** (last release `e858d04`):
+**In production** (last release `65015d1`):
 
 - Connect Unlimited, a paid Connect-only plan (#392, #396).
 - Refunding the current payment ends the Stripe subscription (#397).
-- A live purchase, webhook activation, refund and revocation were verified once.
-
-**Merged, waiting for the next production release:**
-
-- Native-looking Stripe Elements checkout with one-tap wallets, plus migration `0070` (#398).
+- Native-looking Stripe Elements checkout with one-tap wallets (#398).
 - Claude connector compatibility and hardening (#399, #401).
-- The Safe Cleanup Skill (#380).
-- Every Connect tool on every plan, and the restored task workspace (#402).
-- Safety Guard 2.0 (#403).
+- The Safe Cleanup Skill (#380) and Safety Guard 2.0 (#403).
+- Every Connect tool on every plan, the restored task workspace (#402), and the Free binary transfer allowance (#405).
 
-**Open:**
+The first live purchase, webhook activation, refund and revocation were verified before #397 and #398.
 
-- The Free binary transfer allowance (#405). Release it together with #402: #402 opens file links to Free, and without #405 Free binary transfer is unlimited.
+**In progress:**
+
+- Archiving the TypeScript runtime to `Remote-Arc/ts-execution-core-archive`.
+- Splitting `apps/ui/src/main.tsx`.
 - Signed macOS app and DMG (#391).
 - The ReArc Studio workspace (#376), which claims migration `0069`.
 - Dependency updates.
 
 ## Next
 
-1. Merge #405, then run one Production Release from the latest `master`. Watch
-   migration `0070`, which rebuilds `arc_billing_checkouts`.
-2. Live acceptance after the release:
+1. Live acceptance of what just shipped:
    - buy Connect Unlimited, refund it, then buy again;
    - check the Elements card form and the wallet buttons;
    - confirm the results in D1 with read-only queries.
+2. Activation. Most new accounts connect an AI client but never pair a computer, so the first-run path from a client connection to a paired device is the top product problem.
 3. Monitoring:
    - Stripe webhook failures and `billing.payment.load_failed`;
    - Connect Unlimited call volume and cost;
@@ -45,7 +42,8 @@ That history remains in Git and in
    - ChatGPT and Claude directory submissions;
    - trial-to-paid conversion;
    - positioning Connect Unlimited on unlimited calls, computers and file transfer.
-5. Later:
+5. Architecture risks: a cloud/Agent compatibility matrix, a feature status table, one task state model and an isolation route for terminal execution.
+6. Later:
    - signed installers and automatic Agent updates;
    - finer command/network policy;
    - persistent goal continuation;
@@ -65,3 +63,5 @@ That history remains in Git and in
   verification is read-only and does not print personal or card data.
 - Keep claims in docs consistent with tests. Real host/device overnight
   acceptance stays pending until it actually runs.
+- Keep `ARCHITECTURE.md` and the website overview current in the same PR as the
+  change they describe. `pnpm docs:architecture:check` runs in CI.

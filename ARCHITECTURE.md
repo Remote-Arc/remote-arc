@@ -102,6 +102,19 @@ extension open authenticated outbound WebSockets to their owner's Durable Object
 | Slack, follow-ups, website | `src/slack/`, `src/followups/`, `src/site/` | `slack-bot-events.ts`, `user-followups.ts`, `seo.ts` |
 | Schema | `apps/relay/migrations/*.sql` | D1, additive, numbered |
 
+### Dashboard map (`apps/ui/src`)
+
+`apps/ui/src/dashboard.tsx` is the Connect and Arc dashboard shell: sidebar,
+header and tab switching. Its state and actions live in hooks under
+`apps/ui/src/dashboard/`, and each tab or device panel is its own component.
+
+| Concern | Files |
+| --- | --- |
+| State and actions | `apps/ui/src/dashboard/use-dashboard-model.ts` composes `apps/ui/src/dashboard/use-dashboard-dialogs.ts`, `apps/ui/src/dashboard/use-dashboard-security.ts` and `apps/ui/src/dashboard/use-device-actions.ts`, which uses `apps/ui/src/dashboard/use-device-settings.ts` and `apps/ui/src/dashboard/use-device-activity.ts` |
+| Tabs | `apps/ui/src/dashboard/overview-view.tsx`, `devices-view.tsx`, `connect-view.tsx`, `security-view.tsx`, `monitor-view.tsx`, `settings-view.tsx` |
+| Device card | `apps/ui/src/dashboard/device-card.tsx` with `device-access-panel.tsx`, `device-tasks-panel.tsx`, `device-activity-panel.tsx` |
+| Dialogs | `apps/ui/src/dashboard/dashboard-overlays.tsx` |
+
 ## Request paths
 
 ### 1. A Connect tool call

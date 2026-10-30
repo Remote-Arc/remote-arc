@@ -39,6 +39,12 @@ export function BlogsPage({ user }: { user?: User | null }) {
   const { tr, locale } = useI18n();
   const posts = [
     {
+      slug: "from-code-to-intent-driven-computing", date: "30 Oct 2026", readTime: "8 min read", author: "Remote Arc",
+      title: tr("From code to intent: what comes after programming?", "从代码到意图：编程之后，人与计算机如何对话？"),
+      summary: tr("From compilers and prompts to constraints, verifiable execution and the real limits of cross-platform infrastructure.", "从编译器与 Prompt，讨论意图、约束、可验证执行，以及跨平台基础设施的真实边界。"),
+      tag: tr("PERSPECTIVE · FUTURE OF SOFTWARE", "观点 · 软件的未来"),
+    },
+    {
       ...blogPosts[4],
       title: tr(
         "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",

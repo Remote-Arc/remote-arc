@@ -34,6 +34,50 @@ function esc(value: string) {
 }
 
 const articles: Record<string, SeoPage> = {
+  "/blogs/from-code-to-intent-driven-computing": {
+ title: "From code to intent: what comes after programming?",
+ description: "A critical look at AI, prompts, compilers, intent-driven software and why Remote Arc must prove reliable cross-client execution rather than promise it.",
+ canonical: SITE + "/blogs/from-code-to-intent-driven-computing",
+ type: "article", author: "Remote Arc", publishedAt: "2026-10-30",
+ blocks: [
+  {
+    "text": "Past programming asked humans to learn computers' language. A future interface may let computers understand human goals, constraints and evidence."
+  },
+  {
+    "heading": "The compiler analogy",
+    "text": "Compilers translate precise code, while AI must interpret ambiguous intent. If a user says 'clean up my unused files', the model must decide what 'unused' means, what to preserve, and when to ask permission."
+  },
+  {
+    "heading": "The strongest objection",
+    "text": "Generating plausible software is not proving that it is safe or correct. Testing, permissions, reproducibility and accountability still matter even if people write fewer lines of code."
+  },
+  {
+    "heading": "Prompt may be transitional",
+    "text": "The more durable interface may be intent, constraints and verification rather than carefully worded prompts. Success criteria and forbidden actions matter more than clever phrasing."
+  },
+  {
+    "heading": "Why the execution layer matters",
+    "text": "Models and coding assistants can already operate tools. Simply invoking a tool is not a durable moat. Trusted cross-device execution, revocable authorization, observable results and safe handling of uncertain outcomes are harder."
+  },
+  {
+    "heading": "One platform, two entrances",
+    "text": "Connect lets users keep their chosen external AI clients while accessing Remote Arc infrastructure. Arc is a first-party experience built on shared infrastructure; it does not replace Connect as the platform definition."
+  },
+  {
+    "heading": "Where the thesis can fail",
+    "text": "AI vendors and operating systems can absorb execution features. Cross-platform neutrality matters only when real people repeatedly use multiple clients, computers and applications; otherwise it remains a story instead of a demonstrated benefit."
+  },
+  {
+    "heading": "Evidence before slogans",
+    "text": "Verify actual task outcomes, interruptions, usage across clients and devices, permission friction and retention. A successful tool call is not the same as completed work. A saved task is not an immortal operating-system process. Terminal permissions are not an OS sandbox."
+  },
+  {
+    "heading": "A conditional conclusion",
+    "text": "Code will likely remain, but many humans may no longer need to write it directly. Intelligence can come from AI; Remote Arc must earn its place through trusted, verifiable execution rather than a promise of inevitable platform dominance."
+  }
+]
+ },
+
   "/blogs/go-vs-typescript-agent-benchmarks": {
     title: "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
     description: "Native Go versus TypeScript Agent benchmarks on Intel Mac and Windows: the Windows regression and fix, atomic/durable write trade-offs, memory residency and unanswered L3 questions.",
@@ -978,6 +1022,7 @@ const sitemapPaths = [
   "/releases",
   "/demo",
   "/blogs",
+  "/blogs/from-code-to-intent-driven-computing",
   "/blogs/go-vs-typescript-agent-benchmarks",
   "/blogs/why-i-built-remote-arc",
   "/blogs/remote-arc-vs-openclaw",

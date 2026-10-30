@@ -55,6 +55,7 @@ import { PairDevice } from "./pair-device.js";
 import { ClientInstallPage, type InstallClientSlug } from "./client-install-page.js";
 import { ArcPage, ChatGptComputerAccessPage, ClaudeComputerAccessPage, ConnectPage, DemoPage, DocsPage, Landing, LegalPage, McpComputerAccessPage, McpPage, NotFoundPage, PricingPage, ResourcesRedirect, RoadmapPage, SecurityModelPage, UseCaseDetailPage, UseCasesPage } from "./marketing-pages.js";
 import { ReleasesPage } from "./releases-page.js";
+import { IntentDrivenComputingArticlePage } from "./intent-driven-article.js";
 import { ArchitectureArticlePage, BlogArticlePage, BlogsPage, GoVsTypescriptBenchmarkArticlePage, PowerfulAccessArticlePage, RemoteArcVsOpenClawArticlePage } from "./blog-pages.js";
 import { Dashboard } from "./dashboard.js";
 
@@ -185,6 +186,7 @@ function App() {
   if (routePath === "/roadmap") return <RoadmapPage user={user === undefined ? null : user} />;
   if (routePath === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<WorkspaceLoading label={tr("Loading downloads…", "正在加载下载页面…")} variant="rows"/>}><NativeInstall /></React.Suspense></main></PublicLayout>;
   if (routePath === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/from-code-to-intent-driven-computing") return <IntentDrivenComputingArticlePage user={user === undefined ? null : user} />;
   if (routePath === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
   if (routePath === "/blogs/go-vs-typescript-agent-benchmarks") return <GoVsTypescriptBenchmarkArticlePage user={user === undefined ? null : user} />;
   if (routePath === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;

@@ -233,11 +233,18 @@ reference other paths, credentials, processes or network services.
 
 ## Safety Guard
 
-Terminal access stays useful for normal development workflows. The local CLI
-only blocks a narrow set of catastrophic commands such as root/home recursive
-deletion, disk formatting or raw-disk overwrite, fork bombs, and machine
-shutdown/reboot. These checks happen on the device before the command reaches
-the local execution core.
+Terminal access stays useful for normal development and cleanup workflows.
+Before a command runs, the device resolves where each delete would land
+(`rd`, `del`, `Remove-Item`, `rm`, `find -delete`, `robocopy /MIR`,
+`rsync --delete`, inline `rmtree`/`rmSync`), including through nested
+cmd/PowerShell/sh layers, variables, wildcards and simple pipelines. It refuses
+drive and volume roots, home and personal folders, system and credential
+folders and the `~/.remotearc` Undo store, plus any delete whose target cannot
+be resolved unambiguously (for example escaped quotes across nested shells or
+an unset variable). Narrow cleanup such as `node_modules`, `%TEMP%` or
+`~/Library/Caches` still runs. It also blocks disk formatting or raw-disk
+overwrite, fork bombs, and machine shutdown/reboot. This is defense in depth,
+not an OS sandbox; `REMOTEARC_ALLOW_DESTRUCTIVE=1` on the device disables it.
 
 Full mode also supports managed background processes. `start_process` can
 return a local process id, and `process_status`, `process_output`, and

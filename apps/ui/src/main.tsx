@@ -2815,8 +2815,8 @@ function SecurityModelPage({ user }: { user?: User | null }) {
                 "Safe、Developer、Full 只是同一份逐设备 Skill 列表上的快捷预设。可以保持读取开启而关闭编辑，也可以保持进程查看开启而关闭 start_process。终端一旦开启，就是继承本机 OS 用户权限的真实 Shell 执行。",
               )}</p>
               <p>{tr(
-                "Safety Guard blocks a narrow set of catastrophic command patterns as defense in depth. It should not be interpreted as an operating-system sandbox or a substitute for running the agent under an appropriately restricted local user.",
-                "Safety Guard 会作为纵深防御拦截一小类灾难性命令模式，但不能把它理解为操作系统沙箱，也不能替代使用权限适当受限的本机用户来运行 Agent。",
+                "Safety Guard is defense in depth. Before a shell command runs, it resolves where each delete would land, including rd, del, Remove-Item, rm, find -delete, robocopy /MIR, rsync --delete and inline rmtree or rmSync calls, through nested cmd, PowerShell and sh layers, variables, wildcards and simple pipelines. It refuses drive and volume roots, home and personal folders, system directories, credential stores and the Remote Arc Undo store, and any delete whose target it cannot resolve unambiguously, such as escaped quotes across nested shells, unset variables or command substitution. Narrow cleanup such as node_modules, %TEMP% or Library/Caches still runs. It also blocks a few other catastrophic commands such as disk formatting and shutdown. It is not an operating-system sandbox: a script can still compute paths at run time, so it does not replace running the agent under an appropriately restricted local user.",
+                "Safety Guard 属于纵深防御。Shell 命令执行前，它会算出每个删除的实际落点，覆盖 rd、del、Remove-Item、rm、find -delete、robocopy /MIR、rsync --delete 以及内联的 rmtree、rmSync，并穿过嵌套的 cmd、PowerShell、sh、变量、通配符和简单管道。会删到盘符或卷根目录、用户主目录和个人文件夹、系统目录、凭证存储或 Remote Arc Undo 存储的命令会被拒绝；无法明确解析目标的删除（例如跨层转义引号、未设置的变量、命令替换）同样拒绝。node_modules、%TEMP%、Library/Caches 这类范围明确的清理照常执行。它还会拦截格式化磁盘、关机等少数其他灾难性命令。它不是操作系统沙箱：脚本仍可能在运行时动态拼出路径，因此不能替代使用权限适当受限的本机用户来运行 Agent。",
               )}</p>
             </section>
 
@@ -4606,8 +4606,8 @@ function Dashboard({
       const confirmed = await askConfirm(
         tr("Enable terminal execution on " + device.name + "?", "在 " + device.name + " 上开启终端执行？"),
         tr(
-          "This lets connected AI clients run shell commands that can modify files, software and external services. Safety Guard blocks a narrow set of catastrophic commands, but terminal access is not an OS sandbox.",
-          "这会允许已连接的 AI 运行可能修改文件、软件和外部服务的 Shell 命令。Safety Guard 会阻止少量灾难级命令，但终端权限并不是操作系统级沙箱。",
+          "This lets connected AI clients run shell commands that can modify files, software and external services. Safety Guard checks where deletes would land and stops ones that would reach drive roots, home, personal or system folders, plus a few other catastrophic commands, but terminal access is not an OS sandbox.",
+          "这会允许已连接的 AI 运行可能修改文件、软件和外部服务的 Shell 命令。Safety Guard 会检查删除的实际落点，拦下会删到盘符根目录、主目录、个人或系统目录的命令以及少量其他灾难级命令，但终端权限并不是操作系统级沙箱。",
         ),
         tr("Enable terminal", "开启终端"),
         "danger",

@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { type DeleteGuardContext, findDangerousDelete } from "./delete-guard.js";
 import { atomicWriteFile, syncDirectory, undoDurability } from "./durability.js";
 
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -308,10 +309,6 @@ type GuardRule = { pattern: RegExp; reason: string };
 
 const DESTRUCTIVE_COMMAND_RULES: GuardRule[] = [
   {
-    pattern: /(?:^|[;&|]\s*)(?:sudo\s+)?rm\s+[^\n]*(?:-rf|-fr|-[a-z]*r[a-z]*f)[^\n]*(?:\s\/\s*$|\s\/\*|\s~(?:\s|$)|\s\$HOME(?:\s|$))/i,
-    reason: "recursive deletion of a root or home path",
-  },
-  {
     pattern: /(?:^|(?:&&|\|\||[;&|])\s*|(?:-Command|-c)\s+["']?\s*)(?:sudo\s+)?(?:mkfs(?:\.\w+)?|wipefs|fdisk|parted)\b/i,
     reason: "disk or filesystem destructive operation",
   },
@@ -332,21 +329,33 @@ const DESTRUCTIVE_COMMAND_RULES: GuardRule[] = [
     reason: "system shutdown or reboot",
   },
   {
-    pattern: /(?:^|(?:&&|\|\||[;&|])\s*|(?:-Command|-c)\s+["']?\s*)remove-item\b[^\n]*(?:-recurse[^\n]*-force|-force[^\n]*-recurse)[^\n]*(?:[a-z]:\\(?:\*|\s|$)|\$env:systemdrive)/i,
-    reason: "recursive forced deletion of a drive root",
-  },
-  {
-    pattern: /(?:^|(?:&&|\|\||[;&|])\s*|(?:-Command|-c)\s+["']?\s*)(?:del|erase|rd|rmdir)\b[^\n]*\/s[^\n]*\/q[^\n]*[a-z]:\\/i,
-    reason: "recursive Windows drive deletion",
-  },
-  {
     pattern: /:\(\)\s*\{\s*:\|:&\s*\};\s*:/,
     reason: "fork bomb",
   },
 ];
 
-export function assertCommandAllowed(command: string) {
+/**
+ * Refuses catastrophic commands before they run. Deletion is judged by where it
+ * would land (see delete-guard.ts), so narrow cleanup stays allowed while roots,
+ * homes, protected folders and unresolvable targets are refused. Pass the cwd
+ * the command will actually run in.
+ */
+export function assertCommandAllowed(command: string, context: Partial<DeleteGuardContext> = {}) {
   if (process.env.REMOTEARC_ALLOW_DESTRUCTIVE === "1") return;
+
+  const deletion = findDangerousDelete(command, {
+    platform: context.platform ?? process.platform,
+    cwd: context.cwd ?? process.cwd(),
+    home: context.home ?? os.homedir(),
+    env: context.env ?? process.env,
+  });
+  if (deletion) {
+    throw new Error(
+      "Blocked by Remote Arc Safety Guard: " +
+        deletion +
+        ". Delete a specific folder with a literal absolute path in a single shell layer, or use the safe-cleanup Skill for bulk cleanup. Run this action manually on the device if you intentionally need it.",
+    );
+  }
 
   for (const rule of DESTRUCTIVE_COMMAND_RULES) {
     if (rule.pattern.test(command)) {

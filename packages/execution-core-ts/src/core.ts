@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   browseDirectories,
   editTextBlock,
@@ -450,8 +451,9 @@ export class RemoteArcExecutionCore {
       }
       case "start_process": {
         const command = requiredString(args, "command");
-        assertCommandAllowed(command);
         const cwdInput = optionalString(args, "cwd");
+        // Relative delete targets are judged against the directory the shell starts in.
+        assertCommandAllowed(command, { cwd: cwdInput ? path.resolve(cwdInput) : process.cwd() });
         if ((policy.workspaceRoots || []).length && !cwdInput) {
           throw new Error(
             "Trusted Write Locations are enabled. start_process requires an in-scope cwd. Terminal commands are not an OS sandbox and may still access paths outside that directory.",

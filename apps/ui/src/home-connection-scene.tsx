@@ -91,7 +91,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
       </header>
       <div className="hcsModeIntroduction" id={descriptionId} aria-live="polite">
         <strong>{arc ? tr("An AI teammate of your own.", "创建属于你的 AI 队友。") : tr("Your favorite AI. Connected to your world.", "熟悉的 AI，连接你的整个世界。")}</strong>
-        <span>{arc ? tr("Natural language. One agent. Your apps and devices.", "用自然语言，让 Arc 协调你的应用与设备。") : tr("Bring ChatGPT, Claude or Cursor. Connect links your tools.", "接入 ChatGPT、Claude 或 Cursor，让 Connect 连通工具与设备。")}</span>
+        <span>{arc ? tr("Built with Connect by AI. Describe the work; Arc uses your apps and devices.", "AI 通过 Connect 写出的智能体。说出要做的事，Arc 来调用你的应用与设备。") : tr("Bring ChatGPT, Claude or Cursor. Connect links your tools.", "接入 ChatGPT、Claude 或 Cursor，让 Connect 连通工具与设备。")}</span>
       </div>
       <div id={panelId} role="tabpanel" aria-labelledby={uid + "-" + mode} aria-describedby={descriptionId} className="hcsUniverse" tabIndex={0}>
         <div className="hcsAtmosphere" aria-hidden="true" />

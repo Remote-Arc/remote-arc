@@ -1674,7 +1674,7 @@ export function Dashboard({
 
         {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat}/>}
 
-        {active === "agent-teams" && <section className="arcTeammatesPage"><header className="overviewTopbar"><div><span className="eyebrow">ARC / {tr('TEAMMATES','队友')}</span><h1>{tr('Teammates','队友')}</h1><p>{tr('Choose who helps with your next goal. Review roles and access, then continue in Chat.','选择协助下一个目标的队友，查看分工与权限，然后在 Chat 中推进工作。')}</p></div></header><React.Suspense fallback={<WorkspaceLoading label={tr('Loading teammates…','正在读取队友…')} variant="cards"/>}><ArcTeammates accountId={user.id} tr={tr} onWork={(prompt,reference)=>openArcChat(prompt,undefined,reference?[reference]:undefined)}/></React.Suspense></section>}
+        {active === "agent-teams" && <section className="arcTeammatesPage"><header className="overviewTopbar"><div><span className="eyebrow">ARC / {tr('AGENTS','智能体')}</span><h1>{tr('Agents','智能体')}</h1><p>{tr('Choose who helps with your next goal. Review roles and access, then continue in Chat.','选择协助下一个目标的智能体，查看分工与权限，然后在 Chat 中推进工作。')}</p></div></header><React.Suspense fallback={<WorkspaceLoading label={tr('Loading agents…','正在读取智能体…')} variant="cards"/>}><ArcTeammates accountId={user.id} tr={tr} onWork={(prompt,reference)=>openArcChat(prompt,undefined,reference?[reference]:undefined)}/></React.Suspense></section>}
         {active === "agent-skills" && <React.Suspense fallback={<WorkspaceLoading label={tr('Loading skills…','正在加载技能…')} variant="rows"/>}><ArcSkills tr={tr} onChat={openArcChat}/></React.Suspense>}
 
         {active === "overview" && (

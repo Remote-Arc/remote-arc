@@ -54,9 +54,9 @@ export const chineseSeo: Record<string, ChineseSeoContent> = {
     sections: [{heading:"反馈与隐私",text:"你主动提交的邮箱、建议及联系同意仅供内部授权管理员跟进，并支持通过客服申请删除。"}]
   },
   "/arc": {
-    title: "Arc — 保留上下文、跟进并核验结果的 AI 队友 | Remote Arc",
+    title: "Arc — 保留上下文、跟进并核验结果的 AI 智能体 | Remote Arc",
     description: "将目标交给 Arc，使用已授权应用与电脑，复用 Skills，保存有界 Tasks 和 Routine，并在工作空间查看真实结果与阻碍。",
-    h1: "认识 Arc，你的 AI 工作队友",
+    h1: "认识 Arc，你的 AI 智能体",
     intro: "Arc 将目标、对话上下文、工具执行与结果核验保存在一起。委托工作后，可按计划进行新的有界判断；应用和设备继续遵守各自授权。",
     sections: [
       { heading: "Arc Chat", text: "直接在 Remote Arc 与托管 AI 对话，Auto 计划按任务质量与使用预算选择模型。" },

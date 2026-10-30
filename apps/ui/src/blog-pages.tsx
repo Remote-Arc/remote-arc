@@ -1,3 +1,4 @@
+import { INTENT_ESSAY } from "../../../packages/docs/src/intent-driven-essay.js";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import { type User } from "./app-types.js";
@@ -39,10 +40,10 @@ export function BlogsPage({ user }: { user?: User | null }) {
   const { tr, locale } = useI18n();
   const posts = [
     {
-      slug: "from-code-to-intent-driven-computing", date: "30 Oct 2026", readTime: "8 min read", author: "Remote Arc",
-      title: tr("From code to intent: what comes after programming?", "从代码到意图：编程之后，人与计算机如何对话？"),
-      summary: tr("From compilers and prompts to constraints, verifiable execution and the real limits of cross-platform infrastructure.", "从编译器与 Prompt，讨论意图、约束、可验证执行，以及跨平台基础设施的真实边界。"),
-      tag: tr("PERSPECTIVE · FUTURE OF SOFTWARE", "观点 · 软件的未来"),
+      slug: INTENT_ESSAY.slug, date: INTENT_ESSAY.date, readTime: "7 min read", author: "Sam Yao",
+      title: tr(INTENT_ESSAY.title.en, INTENT_ESSAY.title.zh),
+      summary: tr(INTENT_ESSAY.deck.en, INTENT_ESSAY.deck.zh),
+      tag: tr("PERSONAL NOTES", "随想"),
     },
     {
       ...blogPosts[4],

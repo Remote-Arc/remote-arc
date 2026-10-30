@@ -4,72 +4,25 @@ import assert from "node:assert/strict";
 import { createHash, createHmac } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { createRequire } from "node:module";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
 const relay = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ts = createRequire(path.join(relay, "package.json"))("typescript");
-const compiled = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-goal-test-"));
-fs.writeFileSync(path.join(compiled, "package.json"), '{"type":"module"}');
-// Newly imported relay modules also use runtime dependencies (for example Zod).
-// Resolve the installed dependencies for the entire compiled module graph.
-fs.symlinkSync(path.join(relay, "node_modules"), path.join(compiled, "node_modules"), "junction");
-const protocolSource = fs.readFileSync(
-  path.resolve(relay, "../../packages/protocol/src/index.ts"),
-  "utf8",
-);
-fs.writeFileSync(
-  path.join(compiled, "protocol.js"),
-  ts.transpileModule(protocolSource, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-  }).outputText,
-);
-// Keep real shared cloud definitions and follow-up templates inside the
-// fixture root; their repository-relative paths are invalid after transpiling.
-const sharedModules = [
-  ["skills/src/community.generated", "community-skills"],
-  ["skills/src/catalog.generated", "cloud-skill-catalog"],
-  ["skills/src/media-resources.generated", "media-resources"],
-  ["skills/src/library", "skill-library"],
-  ["protocol/src/followup-templates", "followup-templates"],
-];
-for (const [source, target] of sharedModules) {
-  let input=fs.readFileSync(path.resolve(relay, "../../packages/" + source + ".ts"), "utf8");
-  for(const [dependency,local] of sharedModules)input=input.replaceAll("./"+path.basename(dependency)+".js","./"+local+".js");
-  fs.writeFileSync(path.join(compiled, target + ".js"), ts.transpileModule(
-    input,
-    { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } },
-  ).outputText);
-}
-// Relay sources live in domain folders; compile them into one flat fixture
-// directory and point their relative imports at the flat module names.
+// Run with tsx: the real relay sources are imported directly, so coverage and
+// stack traces point at apps/relay/src. Module names are unique across folders.
 const relaySources = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
   entry.isDirectory() ? relaySources(path.join(dir, entry.name)) : entry.name.endsWith(".ts") ? [path.join(dir, entry.name)] : []);
-const relayFiles = relaySources(path.join(relay, "src"));
-const relayNames = new Set(relayFiles.map((file) => path.basename(file, ".ts")));
-assert.equal(relayNames.size, relayFiles.length, "Relay module names must stay unique");
-for (const file of relayFiles) {
-  const name = path.basename(file);
-  let input = fs.readFileSync(file, "utf8");
-  input = input.replaceAll('from "@remotearc/protocol"', 'from "./protocol.js"');
-  for (const [source, target] of sharedModules) {
-    input = input.replace(new RegExp("(?:\\.\\./)+packages/" + source.replaceAll(".", "\\.") + "\\.js", "g"), "./" + target + ".js");
-  }
-  input = input.replace(/(["'])(?:\.{1,2}\/)+(?:[a-z0-9-]+\/)*([a-z0-9-]+)\.js\1/g,
-    (whole, quote, module) => (relayNames.has(module) && !whole.includes("packages/") ? quote + "./" + module + ".js" + quote : whole));
-  if (name === "mcp.ts") for (const packageName of ["@modelcontextprotocol/server", "zod"]) {
-    input = input.replace('from "' + packageName + '"', 'from "' + pathToFileURL(createRequire(path.join(relay, "package.json")).resolve(packageName)).href + '"');
-  }
-  const js = ts.transpileModule(input, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-  }).outputText;
-  fs.writeFileSync(path.join(compiled, name.replace(/\.ts$/, ".js")), js);
-}
-const importSource = name => import(pathToFileURL(path.join(compiled, name + ".js")).href);
+const relayByName = new Map(relaySources(path.join(relay, "src")).map((file) => [path.basename(file, ".ts"), file]));
+const relayModule = (name) => {
+  // The shared protocol package, as the relay sources import it.
+  if (name === "protocol") return import("@remotearc/protocol");
+  const file = relayByName.get(name);
+  if (!file) throw new Error("Unknown relay module " + name);
+  return import(pathToFileURL(file).href);
+};
+const importSource = relayModule;
 
-try {
+{
   const runtime = await importSource("automations");
   const store = await importSource("automation-store");
   const source = await importSource("source-goals");
@@ -943,7 +896,4 @@ try {
   assert.equal((await scheduler.taskSchedulerHealth(db, "plan-user")).overdue_count, 0, "Due task counts remain scoped to the requesting account");
   sqlite.close();
   console.log("PASS: source protocol, fences/recovery, verification/retry, recurring goals, device permissions, signed events/retry/revocation, bounded power leases, cloud action ownership");
-} finally {
-  if (!path.basename(compiled).startsWith("remote-arc-goal-test-") || path.dirname(compiled) !== os.tmpdir()) throw new Error("Invalid cleanup directory");
-  fs.rmSync(compiled, { recursive: true, force: true });
 }

@@ -20,7 +20,7 @@
     "test:automations": "pnpm --filter @remotearc/relay test:scheduling && pnpm --filter @remotearc/relay exec tsx scripts/managed-process-poll-test.ts && node apps/relay/scripts/automation-e2e.mjs",
     "test:recovery": "go -C apps/agent test ./internal/service ./internal/lease && pnpm build:device && pnpm --filter remotelink exec tsx scripts/attached-terminal-test.ts",
     "test:agent-log": "go -C apps/agent test ./internal/journal",
-    "test:goals": "node apps/relay/scripts/goal-continuation-test.mjs && node apps/relay/scripts/planned-goal-test.mjs && go -C apps/agent test ./internal/workspace",
+    "test:goals": "pnpm --filter @remotearc/relay exec tsx scripts/goal-continuation-test.mjs && pnpm --filter @remotearc/relay exec tsx scripts/planned-goal-test.mjs && go -C apps/agent test ./internal/workspace",
     "ci": "pnpm release:check && pnpm test:installer && pnpm test:skills && pnpm test:release-notify && pnpm test:fleet && pnpm test:deploy-policy && pnpm test:organization && pnpm typecheck && pnpm --filter @remotearc/ui test:workspaces && pnpm --filter @remotearc/ui test:security && pnpm --filter @remotearc/ui test:onboarding && pnpm --filter @remotearc/ui test:arc-experience && pnpm --filter @remotearc/ui test:onboarding-readability && pnpm --filter @remotearc/ui test:device-removal && pnpm --filter @remotearc/ui test:device-execution-log && pnpm --filter @remotearc/ui test:background-recovery && pnpm test:agent-log && pnpm test && pnpm test:goals && pnpm test:runtime-surface && pnpm test:seo && pnpm --filter @remotearc/relay test:security && pnpm test:saas",
     "build:ui": "pnpm package:browser && pnpm --filter @remotearc/ui build",
     "deploy:relay": "node scripts/deploy-relay.mjs",

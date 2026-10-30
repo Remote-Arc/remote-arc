@@ -82,20 +82,25 @@ extension open authenticated outbound WebSockets to their owner's Durable Object
 
 ### Relay map (`apps/relay/src`)
 
-| Area | Main files |
-| --- | --- |
-| Entry, hosts, crons | `index.ts`, `host-routing.ts`, `task-scheduler.ts` |
-| Sign-in and sessions | `auth.ts`, `email-auth.ts`, `dashboard-origin.ts` |
-| OAuth and MCP | `oauth.ts`, `mcp.ts`, `mcp-edge-guard.ts`, `mcp-errors.ts`, `mcp-client-profile.ts` |
-| Devices | `device.ts` (pairing, limits), `registry.ts` (`DeviceRegistry` DO), `device-call.ts`, `fleet-scheduler.ts` |
-| Files and browser | `file-resources.ts`, `browser-runner-mcp.ts`, `shared-tab-mcp.ts` |
-| Tasks and goals | `automations.ts`, `automation-store.ts`, `source-goals.ts`, `planned-goal-runtime.ts`, `task-events.ts` |
-| Arc runtime | `arc-chat-object.ts` (`ArcChatRuntime` DO), `arc-chat-runtime.ts`, `arc-dispatcher.ts`, `model-gateway.ts`, `arc-memory.ts`, `arc-teams.ts` |
-| Apps | `apps.ts`, `app-catalog.ts`, `app-oauth.ts`, `app-discovery.ts`, `mcp-app-actions.ts` |
-| Plans and usage | `arc-commercial-config.ts`, `arc-plan.ts`, `entitlements.ts`, `usage.ts`, `plus-usage.ts` |
-| Billing | `stripe-billing.ts`, `stripe-native.ts`, `stripe-client.ts`, `billing-ledger.ts`, `arc-credits.ts`, `arc-trial.ts` |
-| Admin and analytics | `admin-*.ts`, `product-events.ts`, `business-analytics.ts` |
-| Schema | `apps/relay/migrations/*.sql` (D1, additive, numbered) |
+`index.ts` is the Worker entry. Every other module lives in one domain folder.
+
+| Area | Folder | Main files |
+| --- | --- | --- |
+| Worker entry | `src/` | `index.ts` |
+| Hosts and shared infrastructure | `src/platform/` | `host-routing.ts`, `security.ts`, `d1-read-retry.ts` |
+| Sign-in, sessions and OAuth | `src/auth/` | `auth.ts`, `email-auth.ts`, `dashboard-origin.ts`, `oauth.ts` |
+| MCP server and tool surfaces | `src/mcp/` | `mcp.ts`, `mcp-edge-guard.ts`, `mcp-errors.ts`, `mcp-client-profile.ts`, `browser-runner-mcp.ts`, `shared-tab-mcp.ts`, `mcp-app-actions.ts` |
+| Devices and files | `src/devices/` | `device.ts` (pairing, limits), `registry.ts` (`DeviceRegistry` DO), `device-call.ts`, `fleet-scheduler.ts`, `file-resources.ts` |
+| Browser authentication and Runner | `src/browser/` | `browser-auth.ts`, `runner-attention.ts` |
+| Tasks, goals and crons | `src/tasks/` | `automations.ts`, `automation-store.ts`, `source-goals.ts`, `planned-goal-runtime.ts`, `task-events.ts`, `task-scheduler.ts` |
+| Arc runtime, plans and credits | `src/arc/` | `arc-chat-object.ts` (`ArcChatRuntime` DO), `arc-chat-runtime.ts`, `arc-dispatcher.ts`, `model-gateway.ts`, `arc-memory.ts`, `arc-teams.ts`, `arc-plan.ts`, `arc-credits.ts` |
+| Apps | `src/apps/` | `apps.ts`, `app-catalog.ts`, `app-oauth.ts`, `app-discovery.ts` |
+| Skills | `src/skills/` | `cloud-skills.ts`, `skill-index.ts` |
+| Usage and billing | `src/billing/` | `entitlements.ts`, `usage.ts`, `plus-usage.ts`, `stripe-billing.ts`, `stripe-native.ts`, `billing-ledger.ts` |
+| Admin | `src/admin/` | `admin-*.ts`, `plan-admin.ts` |
+| Analytics, audit and telemetry | `src/analytics/` | `product-events.ts`, `business-analytics.ts`, `audit.ts`, `monitor.ts` |
+| Slack, follow-ups, website | `src/slack/`, `src/followups/`, `src/site/` | `slack-bot-events.ts`, `user-followups.ts`, `seo.ts` |
+| Schema | `apps/relay/migrations/*.sql` | D1, additive, numbered |
 
 ## Request paths
 

@@ -13,9 +13,9 @@ import {
   handlePersistentApprovalRevoke,
   requestWriteApproval,
   runApprovalMaintenance,
-} from "../src/approvals.js";
-import { callDevice } from "../src/device-call.js";
-import { retryTransientD1Read } from "../src/d1-read-retry.js";
+} from "../src/devices/approvals.js";
+import { callDevice } from "../src/devices/device-call.js";
+import { retryTransientD1Read } from "../src/platform/d1-read-retry.js";
 
 const relayDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sqlite = new DatabaseSync(":memory:");

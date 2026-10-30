@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { canManageOrganization, handleOrganizations } from "../src/organizations.js";
+import { canManageOrganization, handleOrganizations } from "../src/auth/organizations.js";
 
 assert.equal(canManageOrganization("owner","member","change_role"),true);
 assert.equal(canManageOrganization("owner","owner","remove"),false);

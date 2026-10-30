@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { z } from "zod";
-import { createRemoteLinkMcp } from "../src/mcp.js";
-import { APP_CATALOG, APP_OPERATIONS } from "../src/app-catalog.js";
+import { createRemoteLinkMcp } from "../src/mcp/mcp.js";
+import { APP_CATALOG, APP_OPERATIONS } from "../src/apps/app-catalog.js";
 import {
   TOOL_COPY,
   toolGroup,

@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import { test, expect } from '@playwright/test';
-import { slackLinkConfirmationPage } from '../../apps/relay/src/slack-bot-link-page.js';
-import { isTrustedDashboardMutation } from '../../apps/relay/src/dashboard-origin.js';
+import { slackLinkConfirmationPage } from '../../apps/relay/src/slack/slack-bot-link-page.js';
+import { isTrustedDashboardMutation } from '../../apps/relay/src/auth/dashboard-origin.js';
 
 let server:Server, attacker:Server, origin:string, attackerOrigin:string, receivedOrigin:string|undefined;
 async function listen(instance:Server) {

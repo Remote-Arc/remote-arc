@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { managedProcessPollSeconds } from "../src/automations.js";
+import { managedProcessPollSeconds } from "../src/tasks/automations.js";
 
 // Never confuse process status latency with the user's recurrence cadence.
 assert.equal(managedProcessPollSeconds(300), 30, "default five-minute cadence polls at 30 seconds");

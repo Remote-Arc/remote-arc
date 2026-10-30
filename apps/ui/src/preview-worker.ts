@@ -1,6 +1,6 @@
 import { previewRuntimeConfig, type PreviewConfigEnv } from "./preview-config.js";
-import {serveDemoMedia,type DemoMediaBucket} from "../../relay/src/demo-media.js";
-import { handleAgentDownload } from "../../relay/src/agent-downloads.js";
+import {serveDemoMedia,type DemoMediaBucket} from "../../relay/src/platform/demo-media.js";
+import { handleAgentDownload } from "../../relay/src/platform/agent-downloads.js";
 type PreviewEnv = PreviewConfigEnv & {
   PUBLIC_MEDIA?: DemoMediaBucket;
   ASSETS: {

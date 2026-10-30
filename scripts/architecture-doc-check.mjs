@@ -1,6 +1,6 @@
 // Keeps ARCHITECTURE.md, README.md and the website overview honest about facts
 // the source can prove. Prose still needs review; this catches silent drift.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
@@ -35,8 +35,15 @@ for (const [name, text] of [["ARCHITECTURE.md", architecture], ["README.md", rea
 }
 
 // Every relay source file the code map names must still exist.
+// Relay modules live in domain folders, so a bare file name may sit in any of them.
+const relayFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+  entry.isDirectory() ? relayFiles(new URL(entry.name + "/", dir)) : [entry.name]);
+const relayNames = new Set(relayFiles(new URL("apps/relay/src/", root)));
 for (const [, file] of architecture.matchAll(/`([a-z0-9-]+\.ts)`/g)) {
-  expect(existsSync(new URL("apps/relay/src/" + file, root)), `ARCHITECTURE.md names missing relay file ${file}`);
+  expect(relayNames.has(file), `ARCHITECTURE.md names missing relay file ${file}`);
+}
+for (const [, folder] of architecture.matchAll(/`src\/([a-z]+)\/`/g)) {
+  expect(existsSync(new URL("apps/relay/src/" + folder, root)), `ARCHITECTURE.md names missing relay folder src/${folder}/`);
 }
 for (const [, path] of architecture.matchAll(/`((?:apps|packages|skills|scripts)\/[A-Za-z0-9_./-]+)`/g)) {
   expect(existsSync(new URL(path.replace(/\/$/, ""), root)), `ARCHITECTURE.md names missing path ${path}`);

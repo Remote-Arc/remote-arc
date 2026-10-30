@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { createRemoteLinkMcp } from "../src/mcp.js";
-import { CLAUDE_TOOL_DESCRIPTIONS } from "../src/mcp-claude-descriptions.js";
-import { mcpClientProfile } from "../src/mcp-client-profile.js";
-import { APP_OPERATIONS } from "../src/app-catalog.js";
-import { callDevice } from "../src/device-call.js";
-import { seal } from "../src/app-oauth.js";
-import { NO_BROWSER_AUTH } from "../src/browser-auth.js";
+import { createRemoteLinkMcp } from "../src/mcp/mcp.js";
+import { CLAUDE_TOOL_DESCRIPTIONS } from "../src/mcp/mcp-claude-descriptions.js";
+import { mcpClientProfile } from "../src/mcp/mcp-client-profile.js";
+import { APP_OPERATIONS } from "../src/apps/app-catalog.js";
+import { callDevice } from "../src/devices/device-call.js";
+import { seal } from "../src/apps/app-oauth.js";
+import { NO_BROWSER_AUTH } from "../src/browser/browser-auth.js";
 
 // Exercise the real MCP protocol, SQL ownership checks and encrypted App ledger.
 // Only the external provider and device transport are simulated.

@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
-import {createRemoteLinkMcp} from '../src/mcp.js';
-import {markdownToSlack,fitSlackText} from '../src/slack-format.js';
-import {findSkills,skillIndex,suggestedSkills} from '../src/skill-index.js';
-import {arcDeviceInputError,normalizeArcDeviceArguments} from '../src/arc-device-tools.js';
-import {arcDeviceToolGuide,compactArcDevices,ARC_DEVICE_TOOL_GUIDE} from '../src/arc-device-guide.js';
-import {withArcDeviceTools,arcToolInputError} from '../src/arc-chat-runtime.js';
-import {ARC_DIRECT_SYSTEM} from '../src/arc-direct-instructions.js';
-import {ARC_COMPACT_SYSTEM} from '../src/arc-chat-context.js';
-import {readArcSkill} from '../src/arc-skills.js';
-import {arcDeviceSchemas} from '../src/arc-device-tools.js';
+import {createRemoteLinkMcp} from '../src/mcp/mcp.js';
+import {markdownToSlack,fitSlackText} from '../src/slack/slack-format.js';
+import {findSkills,skillIndex,suggestedSkills} from '../src/skills/skill-index.js';
+import {arcDeviceInputError,normalizeArcDeviceArguments} from '../src/arc/arc-device-tools.js';
+import {arcDeviceToolGuide,compactArcDevices,ARC_DEVICE_TOOL_GUIDE} from '../src/arc/arc-device-guide.js';
+import {withArcDeviceTools,arcToolInputError} from '../src/arc/arc-chat-runtime.js';
+import {ARC_DIRECT_SYSTEM} from '../src/arc/arc-direct-instructions.js';
+import {ARC_COMPACT_SYSTEM} from '../src/arc/arc-chat-context.js';
+import {readArcSkill} from '../src/arc/arc-skills.js';
+import {arcDeviceSchemas} from '../src/arc/arc-device-tools.js';
 
 // Slack shows Arc answers as mrkdwn, not raw Markdown syntax.
 const slack=markdownToSlack('## Weather\n\nNow **19°C** <hot> & dry. See [Open-Meteo](https://open-meteo.com/).\n\n- **AI**: item\n\n| Device | Status |\n|---|---|\n| SamPC | online |\n\n```\nif (a<b) { x }\n```');

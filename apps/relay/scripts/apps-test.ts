@@ -3,11 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { APP_CATALOG, APP_OPERATIONS, CORE_APP_PROVIDERS as APP_PROVIDERS, AppError, appOperation, appScopes, credentials, type AppEnv, type AppProvider } from "../src/app-catalog.js";
-import { authorizationUrl, callbackUrl, exchangeTokens, providerIdentity, providerJson, revokeProvider, seal, unseal } from "../src/app-oauth.js";
-import { callApp, handleApps, listApps, validateAppAccess } from "../src/apps.js";
-import { loadAppReview, verifyAppReview, reviewRead } from "../src/app-review.js";
-import { sha256Hex } from "../src/auth.js";
+import { APP_CATALOG, APP_OPERATIONS, CORE_APP_PROVIDERS as APP_PROVIDERS, AppError, appOperation, appScopes, credentials, type AppEnv, type AppProvider } from "../src/apps/app-catalog.js";
+import { authorizationUrl, callbackUrl, exchangeTokens, providerIdentity, providerJson, revokeProvider, seal, unseal } from "../src/apps/app-oauth.js";
+import { callApp, handleApps, listApps, validateAppAccess } from "../src/apps/apps.js";
+import { loadAppReview, verifyAppReview, reviewRead } from "../src/apps/app-review.js";
+import { sha256Hex } from "../src/auth/auth.js";
 import { registrationPack } from "./apps-registration.js";
 
 const sql = new DatabaseSync(":memory:");

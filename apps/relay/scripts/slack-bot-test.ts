@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {sha256Hex} from '../src/auth.js';
-import {seal} from '../src/app-oauth.js';
-import {arcMessages,arcRuntime,type ArcRun} from '../src/arc-chat.js';
-import {ARC_MODELS} from '../src/arc-chat-model.js';
-import {runArcStep} from '../src/arc-chat-runtime.js';
-import {activateArcTrial} from '../src/arc-trial.js';
-import {assignBillingPlan} from '../src/billing-ledger.js';
-import {handleSlackEvents} from '../src/slack-bot-events.js';
-import {handleSlackBotAccount} from '../src/slack-bot-install.js';
-import {driveSlackEvent,runSlackJobs,SLACK_PROGRESS_AFTER_MS} from '../src/slack-bot-jobs.js';
-import {SLACK_BOT_SCOPES,slackTokenContext,type SlackBotEnv} from '../src/slack-bot-common.js';
+import {sha256Hex} from '../src/auth/auth.js';
+import {seal} from '../src/apps/app-oauth.js';
+import {arcMessages,arcRuntime,type ArcRun} from '../src/arc/arc-chat.js';
+import {ARC_MODELS} from '../src/arc/arc-chat-model.js';
+import {runArcStep} from '../src/arc/arc-chat-runtime.js';
+import {activateArcTrial} from '../src/arc/arc-trial.js';
+import {assignBillingPlan} from '../src/billing/billing-ledger.js';
+import {handleSlackEvents} from '../src/slack/slack-bot-events.js';
+import {handleSlackBotAccount} from '../src/slack/slack-bot-install.js';
+import {driveSlackEvent,runSlackJobs,SLACK_PROGRESS_AFTER_MS} from '../src/slack/slack-bot-jobs.js';
+import {SLACK_BOT_SCOPES,slackTokenContext,type SlackBotEnv} from '../src/slack/slack-bot-common.js';
 
 const sql=new DatabaseSync(':memory:');
 for(const name of fs.readdirSync(new URL('../migrations/',import.meta.url)).filter(name=>name.endsWith('.sql')).sort())sql.exec(fs.readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));

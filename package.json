@@ -33,7 +33,7 @@
     "test:coverage-badges": "node --test scripts/coverage-badges-test.mjs",
     "coverage:go": "node scripts/go-coverage.mjs",
     "coverage:go:target": "node scripts/go-coverage.mjs --target",
-    "coverage:apps": "pnpm exec c8 --all --include=apps/relay/src/app-*.ts --include=apps/relay/src/apps.ts --report-dir=work/apps-coverage --temp-directory=work/apps-coverage/raw --per-file --check-coverage --lines=90 --statements=90 --branches=90 --functions=90 --reporter=text-summary pnpm --filter @remotearc/relay test:apps",
+    "coverage:apps": "pnpm exec c8 --all --include=apps/relay/src/apps/app-*.ts --include=apps/relay/src/apps/apps.ts --report-dir=work/apps-coverage --temp-directory=work/apps-coverage/raw --per-file --check-coverage --lines=90 --statements=90 --branches=90 --functions=90 --reporter=text-summary pnpm --filter @remotearc/relay test:apps",
     "coverage:relay": "node scripts/relay-coverage.mjs",
     "coverage:relay:target": "node scripts/relay-coverage.mjs --target",
     "coverage:ts": "node scripts/ts-coverage.mjs",

@@ -19,12 +19,12 @@ Deliver this as an **opt-in hosted execution lane** beside the existing **Connec
 
 | Existing surface | Use | Constraint |
 |---|---|---|
-| `apps/relay/src/agent-planner.ts` | structured device action planner, validates allowed tool list | 7 device-oriented tools; no unified app registry or complete per-token model invoice |
-| `apps/relay/src/planned-goal-runtime.ts` | checkpointed goal progression, source vs hosted controller, quality checks | does not implement a user-facing conversation or agent-level billing |
-| `apps/relay/src/automation-store.ts` | fenced leases, revisions, durable audit journal | task and lease are currently user-scoped |
-| `apps/relay/src/task-scheduler.ts` | cron task execution and health checks | a cron tick is not a perpetual inference process |
-| `apps/relay/src/mcp.ts` | external AI, approved tools, client scopes | must continue to work independently of Arc |
-| `apps/relay/src/auth.ts` | user sessions and existing device grants | personal devices cannot be shared via org membership |
+| `apps/relay/src/tasks/agent-planner.ts` | structured device action planner, validates allowed tool list | 7 device-oriented tools; no unified app registry or complete per-token model invoice |
+| `apps/relay/src/tasks/planned-goal-runtime.ts` | checkpointed goal progression, source vs hosted controller, quality checks | does not implement a user-facing conversation or agent-level billing |
+| `apps/relay/src/tasks/automation-store.ts` | fenced leases, revisions, durable audit journal | task and lease are currently user-scoped |
+| `apps/relay/src/tasks/task-scheduler.ts` | cron task execution and health checks | a cron tick is not a perpetual inference process |
+| `apps/relay/src/mcp/mcp.ts` | external AI, approved tools, client scopes | must continue to work independently of Arc |
+| `apps/relay/src/auth/auth.ts` | user sessions and existing device grants | personal devices cannot be shared via org membership |
 | `apps/relay/migrations/0027_organization_foundation.sql` | additive private personal workspace | auth remains legacy user_id until explicit grants are implemented |
 
 ## Phase 1 contracts (before a hosted public beta)

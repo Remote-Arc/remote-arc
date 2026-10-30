@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { APP_PROVIDERS } from "../src/app-catalog.js";
+import { APP_PROVIDERS } from "../src/apps/app-catalog.js";
 import { fetchPublicStatus, formatConnections, summarizeConnections } from "./apps-connect-preflight.js";
 
 const origin = "https://mcp.remotearc.app";

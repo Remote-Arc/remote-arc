@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { handleAdminCallCredits, handleAdminOperations, handleAdminBilling } from "../src/admin-operations.js";
-import { summarizeCloudflareBillableUsage } from "../src/cloudflare-billing.js";
-import { getMonthlyUsage, consumeToolCall } from "../src/usage.js";
+import { handleAdminCallCredits, handleAdminOperations, handleAdminBilling } from "../src/admin/admin-operations.js";
+import { summarizeCloudflareBillableUsage } from "../src/billing/cloudflare-billing.js";
+import { getMonthlyUsage, consumeToolCall } from "../src/billing/usage.js";
 const origin = "https://mcp.remotearc.app";
 const baseUser = {
   id:"operator",email:"admin@unit.test",name:"Operator",avatar_url:null,

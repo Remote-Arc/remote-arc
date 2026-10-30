@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
-import {saveArcEmployee,saveArcTeam} from '../src/arc-teams.js';
-import {handleArcChat,arcMessages,type ArcRun} from '../src/arc-chat.js';
-import {runArcStep} from '../src/arc-chat-runtime.js';
-import {delegateArcWork,arcTeammateDirectory} from '../src/arc-dispatcher.js';
-import {advanceArcRoom,createArcRoom,enqueueArcRoomMessage,arcRoomMessages} from '../src/arc-team-rooms.js';
-import {arcEmployeeExecution,employeeToolError} from '../src/arc-team-execution.js';
-import {seal} from '../src/app-oauth.js';
-import {arcContext} from '../src/arc-chat.js';
-import {appendArcMessage} from '../src/arc-chat.js';
-import {arcDispatchProgress} from '../src/arc-dispatch-progress.js';
+import {saveArcEmployee,saveArcTeam} from '../src/arc/arc-teams.js';
+import {handleArcChat,arcMessages,type ArcRun} from '../src/arc/arc-chat.js';
+import {runArcStep} from '../src/arc/arc-chat-runtime.js';
+import {delegateArcWork,arcTeammateDirectory} from '../src/arc/arc-dispatcher.js';
+import {advanceArcRoom,createArcRoom,enqueueArcRoomMessage,arcRoomMessages} from '../src/arc/arc-team-rooms.js';
+import {arcEmployeeExecution,employeeToolError} from '../src/arc/arc-team-execution.js';
+import {seal} from '../src/apps/app-oauth.js';
+import {arcContext} from '../src/arc/arc-chat.js';
+import {appendArcMessage} from '../src/arc/arc-chat.js';
+import {arcDispatchProgress} from '../src/arc/arc-dispatch-progress.js';
 
 export async function testArcDispatcher({sql,env}:any){
  const adapter=env.MODEL_GATEWAY.adapters.openai,runtime=env.ARC_RUNTIME,origin='https://agent.remotearc.app';let calls=0,wakes=0;

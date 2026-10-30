@@ -6,7 +6,7 @@ export const stripeBillingEvents=['invoice.paid','invoice.payment_failed','check
 export async function activateStripe(env,fetcher=fetch,wait){
  if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_REF!=='refs/heads/master'||env.GITHUB_ACTOR!=='yaohuangguan')throw Error('Protected master promotion required');
  if(!/^(sk|rk)_live_\w+$/.test(env.STRIPE_SECRET_KEY||'')||!/^whsec_\w+$/.test(env.STRIPE_WEBHOOK_SECRET||'')||!env.CLOUDFLARE_API_TOKEN)throw Error('Live Stripe credentials required');
- const {STRIPE_API_VERSION}=await import('../apps/relay/src/stripe-client.ts');
+ const {STRIPE_API_VERSION}=await import('../apps/relay/src/billing/stripe-client.ts');
  async function stripe(suffix){const response=await fetcher('https://api.stripe.com/v1/'+suffix,{headers:{authorization:'Bearer '+env.STRIPE_SECRET_KEY,'stripe-version':STRIPE_API_VERSION},redirect:'error',signal:AbortSignal.timeout(20000)});if(!response.ok)throw Error('Stripe account validation failed');return response.json();}
  const account=await stripe('account');
  // Stripe exposes payment processing and bank payouts independently. The owner

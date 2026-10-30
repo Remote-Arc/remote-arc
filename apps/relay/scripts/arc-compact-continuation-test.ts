@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import {arcExecutionPrompt,withArcDeviceTools,runArcStep} from '../src/arc-chat-runtime.js';
-import {ARC_CLOSING_SYSTEM,ARC_COMPACT_SYSTEM} from '../src/arc-chat-context.js';
-import {arcVerificationNextRead,type ArcEvidenceMessage} from '../src/arc-verification.js';
+import {arcExecutionPrompt,withArcDeviceTools,runArcStep} from '../src/arc/arc-chat-runtime.js';
+import {ARC_CLOSING_SYSTEM,ARC_COMPACT_SYSTEM} from '../src/arc/arc-chat-context.js';
+import {arcVerificationNextRead,type ArcEvidenceMessage} from '../src/arc/arc-verification.js';
 import type {ArcVerification} from '@remotearc/protocol';
 
 /** Scripted inference through the real runtime and device boundary; no model fees. */

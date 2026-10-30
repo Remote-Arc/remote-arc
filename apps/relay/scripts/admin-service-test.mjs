@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { adminApiMethods, handleAdminServiceRequest, publicAdminResponse } from "../src/admin-service.ts";
+import { adminApiMethods, handleAdminServiceRequest, publicAdminResponse } from "../src/admin/admin-service.ts";
 const origin="https://admin.remotearc.app",id="00000000-0000-4000-8000-000000000001";
 let role="admin",writes=[],saved;
 const env={PUBLIC_ORIGIN:"https://mcp.remotearc.app",ADMIN_ORIGIN:origin,REGISTRY:{getByName(){return{async fetch(){return Response.json([])}}}},DB:{prepare(sql){let values=[];return{bind(...items){values=items;return this;},async first(){

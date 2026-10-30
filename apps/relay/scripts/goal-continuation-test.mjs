@@ -43,12 +43,22 @@ for (const [source, target] of sharedModules) {
     { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } },
   ).outputText);
 }
-for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWith(".ts"))) {
-  let input = fs.readFileSync(path.join(relay, "src", name), "utf8");
+// Relay sources live in domain folders; compile them into one flat fixture
+// directory and point their relative imports at the flat module names.
+const relaySources = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+  entry.isDirectory() ? relaySources(path.join(dir, entry.name)) : entry.name.endsWith(".ts") ? [path.join(dir, entry.name)] : []);
+const relayFiles = relaySources(path.join(relay, "src"));
+const relayNames = new Set(relayFiles.map((file) => path.basename(file, ".ts")));
+assert.equal(relayNames.size, relayFiles.length, "Relay module names must stay unique");
+for (const file of relayFiles) {
+  const name = path.basename(file);
+  let input = fs.readFileSync(file, "utf8");
   input = input.replaceAll('from "@remotearc/protocol"', 'from "./protocol.js"');
   for (const [source, target] of sharedModules) {
-    input = input.replaceAll("../../../packages/" + source + ".js", "./" + target + ".js");
+    input = input.replace(new RegExp("(?:\\.\\./)+packages/" + source.replaceAll(".", "\\.") + "\\.js", "g"), "./" + target + ".js");
   }
+  input = input.replace(/(["'])(?:\.{1,2}\/)+(?:[a-z0-9-]+\/)*([a-z0-9-]+)\.js\1/g,
+    (whole, quote, module) => (relayNames.has(module) && !whole.includes("packages/") ? quote + "./" + module + ".js" + quote : whole));
   if (name === "mcp.ts") for (const packageName of ["@modelcontextprotocol/server", "zod"]) {
     input = input.replace('from "' + packageName + '"', 'from "' + pathToFileURL(createRequire(path.join(relay, "package.json")).resolve(packageName)).href + '"');
   }

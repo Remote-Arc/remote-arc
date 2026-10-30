@@ -4,7 +4,7 @@ Status: implemented for production promotion, 23 October 2026. Deployment and re
 
 ## What is available now
 
-The current Slack App uses **user OAuth**. Its published tools can list authorized conversations, read/search messages and threads, send/reply/update messages and manage the supported reactions, pins, bookmarks and scheduled messages. User scopes, channel membership and workspace policy apply. See `apps/relay/src/app-slack.ts` and `app-oauth.ts`.
+The current Slack App uses **user OAuth**. Its published tools can list authorized conversations, read/search messages and threads, send/reply/update messages and manage the supported reactions, pins, bookmarks and scheduled messages. User scopes, channel membership and workspace policy apply. See `apps/relay/src/apps/app-slack.ts` and `app-oauth.ts`.
 
 The separate Bot integration accepts ordinary human DMs and explicit `@Remote Arc` mentions. It verifies Slack signatures, writes an encrypted durable event journal and acknowledges before asynchronous execution. It ignores Bot/self events, edits and arbitrary channel messages. Every initiating Slack identity must explicitly sign in and link its own Remote Arc account; installing the workspace Bot never grants access to the installer's account.
 

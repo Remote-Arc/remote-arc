@@ -390,18 +390,15 @@ func (s *session) ensureLive(ctx context.Context) error {
 		return s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
 	})
 	if s.hasWindow() {
-		// A resumed user handoff must remain reachable after an Agent
-		// restart, even when the task's ordinary preference is hidden.
-		s.m.mu.Lock()
-		autoHandoff := s.cp.State == StateNeedsUser && s.m.attentionMode != "notify_only"
-		s.m.mu.Unlock()
-		if e := s.startupStep("setup.window", func() error { return s.setVisible(ctx, !s.cp.Headless || autoHandoff) }); e != nil {
-			if !s.cp.Headless {
+		visible := !s.cp.Headless && s.mayShowWindow()
+		if e := s.startupStep("setup.window", func() error { return s.setVisible(ctx, visible) }); e != nil {
+			if visible {
 				return fmt.Errorf("browser_runner could not show the task window: %w", e)
 			}
-		} else if autoHandoff && s.cp.Headless {
-			s.shownForUser = true
 		}
+		// Re-check the actual page after navigation; stale checkpoint blockers
+		// must never cause another automatic popup during startup.
+		s.shownForUser = false
 	}
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
 		// Reopening loads the page fresh: whatever was typed, chosen or
@@ -463,14 +460,14 @@ func (s *session) setup(ctx context.Context) error {
 			} `json:"frame"`
 		} `json:"frameTree"`
 	}
-	if e := s.conn.Call(ctx, "Page.getFrameTree", nil, &tree); e != nil {
+	if e := s.startupStep("setup.Page.getFrameTree", func() error { return s.conn.Call(ctx, "Page.getFrameTree", nil, &tree) }); e != nil {
 		return e
 	}
 	s.ev.Lock()
 	s.mainFrame, s.href = tree.FrameTree.Frame.ID, tree.FrameTree.Frame.URL
 	s.ev.Unlock()
-	_, _ = s.evaluateMain(ctx, pageJS+`("install", {})`)
-	_, _ = s.helper(ctx, "watch_logins", nil, true)
+	_ = s.startupStep("setup.install", func() error { _, err := s.evaluateMain(ctx, pageJS+`("install", {})`); return err })
+	_ = s.startupStep("setup.watch_logins", func() error { _, err := s.helper(ctx, "watch_logins", nil, true); return err })
 	return nil
 }
 

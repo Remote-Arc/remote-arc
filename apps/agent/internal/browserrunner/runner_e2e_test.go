@@ -167,6 +167,8 @@ func newHarness(t *testing.T) (*harness, *fakeATS, string, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	t.Cleanup(cancel)
 	m := New()
+	// Presence is a test input; do not move the real user's mouse or keyboard.
+	m.userPresent = func() bool { return true }
 	t.Cleanup(m.Close)
 	return &harness{t: t, m: m, ctx: ctx, policy: protocol.Policy{WorkspaceRoots: []string{docs}}}, ats, srv.URL, outside.URL
 }

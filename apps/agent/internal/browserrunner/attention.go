@@ -70,6 +70,7 @@ func (s *session) clearAttention() {
 	}
 	s.cp.AttentionID, s.cp.AttentionSince, s.cp.AttentionKind = "", "", ""
 	s.cp.AttentionReminded = false
+	s.cp.AttentionShown, s.cp.AttentionDismissed, s.cp.AttentionPresented = false, false, false
 	if s.cp.State == StateNeedsUser {
 		s.cp.State, s.cp.NeedsUser = StateActive, ""
 	}
@@ -104,23 +105,58 @@ func (s *session) updateAttention(ctx context.Context, blockers []any) {
 		s.cp.AttentionID, s.cp.AttentionSince, s.cp.AttentionKind = randomHex(16), stamp(s.m.now()), kind
 		s.cp.AttentionReminded = false
 	}
-	s.m.mu.Lock()
-	mode := s.m.attentionMode
-	s.m.mu.Unlock()
-	// Retry an unsuccessful or interrupted handoff. Do not repeatedly focus a
-	// window the user can already see, or duplicate the attention notification.
-	if mode != "notify_only" && s.hasWindow() && (fresh || !s.windowIsVisible(ctx)) {
-		if e := s.setVisible(ctx, true); e == nil {
-			s.shownForUser = s.shownForUser || s.cp.Headless
-		} else {
-			s.cp.NeedsUser += " The window could not be raised. Retry browser_runner_start with the same task_id and headless=false on the device with the Agent."
-		}
+	if kind != "scope" {
+		s.showAttention(ctx)
 	}
 	if fresh {
 		if s.cp.Browser != browserYourChrome && !s.hasWindow() {
 			s.cp.NeedsUser += " This device has no display; resume on a device with a display to complete it."
 		}
 		s.emitAttention(kind)
+	}
+}
+
+// The policy is session-local: concurrent background tasks must not change an
+// interactive task's behavior, nor inherit its permission to raise a window.
+func (s *session) setCallAttentionMode(mode string) {
+	if mode != "" {
+		s.cp.AttentionMode = mode
+	}
+}
+
+func (s *session) mayShowWindow() bool {
+	mode := s.cp.AttentionMode
+	if mode == "" {
+		s.m.mu.Lock()
+		mode = s.m.attentionMode
+		s.m.mu.Unlock()
+	}
+	return mode != "notify_only" && s.m.userPresent != nil && s.m.userPresent()
+}
+
+func (s *session) showAttention(ctx context.Context) {
+	if s.cp.AttentionID == "" || !s.hasWindow() {
+		return
+	}
+	// Once the window has been delivered, occlusion or minimization is the
+	// user's choice. Persist this decision across Agent/browser reconnects.
+	if s.cp.AttentionPresented {
+		if bounds, ok := s.quickWindow(ctx); ok && bounds.WindowState == "minimized" {
+			s.cp.AttentionDismissed = true
+		}
+	}
+	if s.cp.AttentionShown || s.cp.AttentionDismissed || !s.mayShowWindow() {
+		return
+	}
+	err := s.setVisible(ctx, true)
+	if bounds, ok := s.quickWindow(ctx); ok && windowInWorkArea(bounds, s.windowWorkArea(ctx)) {
+		s.cp.AttentionPresented = true
+	}
+	if err == nil {
+		s.cp.AttentionShown = true
+		s.shownForUser = s.shownForUser || s.cp.Headless
+	} else {
+		s.cp.NeedsUser += " The window could not be raised. Open the task from Dashboard, or retry browser_runner_start with the same task_id and headless=false on this computer."
 	}
 }
 func (s *session) addAttentionResult(out map[string]any) {

@@ -283,7 +283,11 @@ export async function callDevice(
           // setting remains fail-closed (protected) by default.
           protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
           undoEnabled: ownedDevice.undo_enabled !== 0,
-          runnerAttentionMode: ownedDevice.runner_attention_mode === "notify_only" ? "notify_only" : "show_and_notify",
+          // Background origin is established by server-side identity/run routing,
+          // never by arguments supplied by the model. Routines/Arc runs must not
+          // interrupt a person who happens to be using the destination computer.
+          runnerAttentionMode: identity.clientId.startsWith("automation:") || runnerRunId || ownedDevice.runner_attention_mode === "notify_only"
+            ? "notify_only" : "show_and_notify",
           browserRunnerEnabled: parseStoredStringArray(ownedDevice.allowed_tools).includes("browser_runner_act"),
         },
       }),

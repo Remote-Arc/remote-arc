@@ -31,6 +31,7 @@ export const appModules = [
   "dashboard/connect-view.tsx",
   "dashboard/security-view.tsx",
   "dashboard/monitor-view.tsx",
+  "dashboard/monitor-reliability.tsx",
   "dashboard/settings-view.tsx",
   "dashboard/dashboard-overlays.tsx",
 ];

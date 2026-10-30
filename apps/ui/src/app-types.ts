@@ -163,6 +163,16 @@ type MonitorIncident = {
 export type MonitorState = {
   status: "operational" | "degraded";
   checkedAt: string;
+  deployment?: string | null;
+  deviceReliability?: {
+    coverage: 'observed' | 'no_samples' | 'unavailable';
+    scope: 'none' | 'single_device' | 'multiple_devices';
+    windows: Array<{ minutes: number; counts: { connections: number; disconnects: number; heartbeats: number; observedDevices: number; reconnects: number; reconnectingDevices: number } }>;
+    groups: Array<{ platform: string; agentVersion: string; connections: number; reconnects: number; observedDevices: number }>;
+    groupsTruncated: boolean;
+    trend: Array<{ minute: string; connections: number; disconnects: number; heartbeats: number }>;
+    signal: { phase: 'healthy' | 'pending' | 'firing' | 'recovering'; last_evaluated_at: string; last_notification_at: string | null } | null;
+  };
   worker: {
     status: "operational" | "degraded";
     errors15m: number;

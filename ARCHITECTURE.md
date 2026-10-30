@@ -98,7 +98,7 @@ extension open authenticated outbound WebSockets to their owner's Durable Object
 | Skills | `src/skills/` | `cloud-skills.ts`, `skill-index.ts` |
 | Usage and billing | `src/billing/` | `entitlements.ts`, `usage.ts`, `plus-usage.ts`, `stripe-billing.ts`, `stripe-native.ts`, `billing-ledger.ts` |
 | Admin | `src/admin/` | `admin-*.ts`, `plan-admin.ts` |
-| Analytics, audit and telemetry | `src/analytics/` | `product-events.ts`, `business-analytics.ts`, `audit.ts`, `monitor.ts` |
+| Analytics, audit and telemetry | `src/analytics/` | `product-events.ts`, `business-analytics.ts`, `audit.ts`, `monitor.ts`, `device-reliability.ts` (bounded connection counters and alert state) |
 | Slack, follow-ups, website | `src/slack/`, `src/followups/`, `src/site/` | `slack-bot-events.ts`, `user-followups.ts`, `seo.ts` |
 | Schema | `apps/relay/migrations/*.sql` | D1, additive, numbered |
 
@@ -209,6 +209,13 @@ The pairing flow runs as follows:
 After pairing, the Agent keeps an outbound WebSocket to the `DeviceRegistry`. It
 reconnects with backoff, and with background recovery enabled it also restarts
 at login. Revoking a device is checked again before every call.
+
+Registry records bounded per-device/minute connection, close and observed-hello
+counters in D1, with sanitized platform/version labels and no call content.
+Admin Monitor shows recent trends. The five-minute monitor cron evaluates
+sustained multi-device churn and recovery; admin reads never send alerts.
+Unavailable observations cannot prove recovery. The counters have 30-day
+retention and cannot reconstruct historical uptime.
 
 ### 6. Plans, billing and entitlements
 

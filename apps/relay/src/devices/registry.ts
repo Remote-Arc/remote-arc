@@ -1,6 +1,7 @@
 import { recordRunnerAttention, type RunnerEnv } from "../browser/runner-attention.js";
 import { RunnerVideoRelay, type VideoAttachment } from "../browser/runner-video.js";
 import { deviceCallTimeoutMs, processTimeoutError } from './call-timeout.js';
+import { recordDeviceConnection } from '../analytics/device-reliability.js';
 import type {
   AgentCallMessage,
   AgentToRelayMessage,
@@ -23,6 +24,9 @@ type SocketAttachment = VideoAttachment & {
   device?: DeviceMetadata;
   tools?: string[];
   capabilities?: string[];
+  connectionRecorded?: boolean;
+  metricMinute?: number;
+  disconnectRecorded?: boolean;
 };
 
 export class DeviceRegistry {
@@ -552,6 +556,12 @@ export class DeviceRegistry {
         socket.deserializeAttachment() as SocketAttachment | null;
       if (!attachment) return;
 
+      const metricMinute = Math.floor(Date.now()/60000);
+      if (this.env && (!attachment.connectionRecorded || attachment.metricMinute !== metricMinute)) {
+        this.ctx.waitUntil(recordDeviceConnection(this.env,attachment.userId,attachment.deviceId,
+          attachment.connectionRecorded?'heartbeat':'connected',parsed.device || {}));
+      }
+
       // Treat telemetry as untrusted even from an enrolled device. Server timestamps
       // prevent clock skew or spoofed timestamps from bypassing freshness checks.
       const rawCapacity = parsed.device?.capacity;
@@ -588,6 +598,8 @@ export class DeviceRegistry {
           : null;
       socket.serializeAttachment({
         ...attachment,
+        connectionRecorded: true,
+        metricMinute,
         device: {
           ...parsed.device,
           id: attachment.deviceId,
@@ -623,6 +635,10 @@ export class DeviceRegistry {
 
   webSocketClose(socket: WebSocket) {
     const a = socket.deserializeAttachment() as SocketAttachment | null;
+    if (a && !a.viewer && a.connectionRecorded && !a.disconnectRecorded && this.env) {
+      socket.serializeAttachment({...a,disconnectRecorded:true});
+      this.ctx.waitUntil(recordDeviceConnection(this.env,a.userId,a.deviceId,'disconnected',a.device||{}));
+    }
     if (a?.viewer) {
       socket.serializeAttachment({ ...a, heartbeatAt: 0 });
       if (a.video)

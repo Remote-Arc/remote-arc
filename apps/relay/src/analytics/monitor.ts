@@ -1,5 +1,6 @@
 import { getSessionUser, nowIso } from "../auth/auth.js";
 import { diagnosticError, diagnosticRoute } from "../platform/diagnostics.js";
+import { readDeviceReliability, evaluateDeviceReliability, purgeDeviceReliability } from './device-reliability.js';
 
 type EmailBinding = {
   send(message: {
@@ -21,6 +22,7 @@ export type MonitorEnv = {
   EMAIL?: EmailBinding;
   ALERT_EMAIL?: string;
   ALERT_FROM_EMAIL?: string;
+  DEPLOYMENT_SHA?: string;
 };
 
 type IncidentInput = {
@@ -217,7 +219,7 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
   const t1h = new Date(now - 60 * 60_000).toISOString();
   const t24h = new Date(now - 24 * 60 * 60_000).toISOString();
 
-  const [counts, recent, accountCounts, alertState] = await Promise.all([
+  const [counts, recent, accountCounts, alertState, deviceReliability] = await Promise.all([
     env.DB.prepare(
       `SELECT
         SUM(CASE WHEN created_at >= ?1 THEN 1 ELSE 0 END) AS errors_15m,
@@ -246,6 +248,7 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
     env.DB.prepare(
       "SELECT alert_key, last_sent_at, last_status_code, last_path FROM service_alert_state ORDER BY updated_at DESC LIMIT 5",
     ).all(),
+    readDeviceReliability(env),
   ]);
 
   let durableObjectStatus = "operational";
@@ -263,16 +266,19 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
   }
 
   const errors15m = counts?.errors_15m || 0;
-  const status =
+  const workerStatus =
     errors15m > 0 || durableObjectStatus !== "operational"
       ? "degraded"
       : "operational";
+  const status = workerStatus === 'degraded' || ['firing','recovering'].includes(deviceReliability.signal?.phase||'') ? 'degraded' : 'operational';
 
   return Response.json({
     status,
     checkedAt: nowIso(),
+    deployment: /^[a-f0-9]{40}$/.test(env.DEPLOYMENT_SHA||'') ? env.DEPLOYMENT_SHA : null,
+    deviceReliability,
     worker: {
-      status,
+      status: workerStatus,
       errors15m,
       errors1h: counts?.errors_1h || 0,
       errors24h: counts?.errors_24h || 0,
@@ -306,5 +312,20 @@ export async function runSyntheticMonitor(env: MonitorEnv) {
       kind: "synthetic_d1_failure",
       message: diagnosticError(error),
     });
+    return;
   }
+  try {
+    const snapshot=await readDeviceReliability(env);
+    const notify=env.EMAIL&&env.ALERT_EMAIL&&env.ALERT_FROM_EMAIL
+      ?async(input:{phase:'firing'|'healthy';counts:{reconnects:number;reconnectingDevices:number};at:string})=>{
+        await env.EMAIL!.send({to:env.ALERT_EMAIL,from:env.ALERT_FROM_EMAIL!,
+          subject:input.phase==='firing'?'[Remote Arc] Device reconnect anomaly':'[Remote Arc] Device reconnect recovery',
+          text:[input.phase==='firing'?'Sustained reconnect churn across multiple devices. This signal is not proof of a platform outage.':'Observed device reconnect churn has remained below the alert threshold.',
+            'Time: '+input.at,'15-minute reconnects (observed lower bound): '+input.counts.reconnects,
+            'Devices with at least three connections: '+input.counts.reconnectingDevices,
+            'Monitor: https://admin.remotearc.app/monitor'].join('\n')});
+      }:undefined;
+    await evaluateDeviceReliability(env,snapshot,notify);
+    await purgeDeviceReliability(env);
+  }catch{console.warn('device_reliability_monitor_unavailable');}
 }

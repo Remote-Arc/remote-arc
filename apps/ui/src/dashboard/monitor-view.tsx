@@ -1,6 +1,7 @@
 import { AdminOperations } from "../admin-operations.js";
 import { timeAgo } from "./format.js";
 import type { DashboardModel } from "./use-dashboard-model.js";
+import { MonitorReliability } from './monitor-reliability.js';
 
 // Admin monitor tab.
 export function MonitorView({ m }: { m: DashboardModel }) {
@@ -30,6 +31,7 @@ export function MonitorView({ m }: { m: DashboardModel }) {
       </section>
 
       <AdminOperations />
+      <MonitorReliability state={monitorState?.deviceReliability} tr={tr} />
 
       <section className="monitorMainGrid">
         <article className="monitorPanel">
@@ -73,6 +75,7 @@ export function MonitorView({ m }: { m: DashboardModel }) {
           </section>
           <section>
             <span className="eyebrow">{tr("SERVICE", "服务")}</span>
+            <div className="monitorCheck"><span>{tr("Deployment", "部署版本")}</span><code>{monitorState?.deployment?.slice(0, 12) || '—'}</code></div>
             <div className="monitorCheck"><span>{tr("Users", "用户")}</span><strong>{monitorState?.account.users ?? "—"}</strong></div>
             <div className="monitorCheck"><span>{tr("Devices", "设备")}</span><strong>{monitorState?.account.devices ?? "—"}</strong></div>
             <div className="monitorCheck"><span>{tr("Active OAuth tokens", "有效 OAuth Token")}</span><strong>{monitorState?.account.activeTokens ?? "—"}</strong></div>

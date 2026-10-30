@@ -8197,6 +8197,10 @@ body{font-size:18px;line-height:1.6}
 .monitorMainGrid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(280px,.65fr);gap:16px}
 .monitorPanel,.monitorSide>section{border:1px solid var(--line);border-radius:18px;background:var(--panel)}
 .monitorPanel{min-width:0;overflow:hidden}
+.monitorReliability>p,.monitorReliability>details{margin:16px 20px;color:var(--muted)}
+.monitorReliability .docsTableWrap{max-width:100%;overflow-x:auto;padding:0 20px}
+.monitorReliability .articleTable{max-width:none;margin:12px 0}
+.monitorReliability summary{cursor:pointer;color:var(--text)}
 .monitorPanelHeader{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px;border-bottom:1px solid var(--line)}
 .monitorPanelHeader h2{margin:5px 0 0;font-size:20px}
 .monitorIncidentList{display:grid}

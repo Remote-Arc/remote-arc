@@ -507,14 +507,14 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 	s.setCallAttentionMode(p.RunnerAttentionMode)
 	// Policy comes from the Relay, never from model-provided arguments.
 	// An unattended caller cannot make a visible launch by setting headless=false.
-	if !s.mayShowWindow() {
+	if s.cp.Browser != browserYourChrome && !s.mayShowWindow() {
 		headless, chosen = true, false
 		s.cp.Headless = true
 	}
 	if resumed {
 		if chosen && !headless && s.cp.State == StateNeedsUser && (s.cp.AttentionShown || s.cp.AttentionDismissed) {
 			// A model repeating start is not a new human request to interrupt.
-			// The user can open the existing task from Dashboard when ready.
+			// The user can restore the existing task window when ready.
 			chosen, headless = false, s.cp.Headless
 		}
 		if s.cp.Profile != profile || (s.cp.Browser == browserYourChrome) != (browser == browserYourChrome) {

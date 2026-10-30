@@ -186,7 +186,7 @@ jobs:
             apps/agent/go.sum
             packages/execution-core/go.sum
       - run: pnpm install --frozen-lockfile
-      - name: Install and cold-start the pinned native test browser
+      - name: Prepare and cold-start the native test browser
         run: node .github/scripts/install-native-browser.mjs
       - name: Minimized macOS live-view regression
         if: runner.os == 'macOS'

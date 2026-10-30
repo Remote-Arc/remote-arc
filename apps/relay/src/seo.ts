@@ -898,7 +898,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
   const robots = indexable
     ? "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
     : "noindex,nofollow,noarchive";
-  const image = SITE + "/demos/connect-workflow-poster.webp";
+  const image = SITE + "/social-preview.png";
   const extra =
     '<meta name="robots" content="' + robots + '" />' +
     '<meta name="googlebot" content="' + robots + '" />' +
@@ -913,15 +913,15 @@ export function renderMarketingHtml(html: string, pathname: string) {
       : '') +
     '<meta property="og:image" content="' + image + '" />' +
     '<meta property="og:image:secure_url" content="' + image + '" />' +
-    '<meta property="og:image:type" content="image/webp" />' +
-    '<meta property="og:image:width" content="1280" />' +
-    '<meta property="og:image:height" content="800" />' +
-    '<meta property="og:image:alt" content="Remote Arc connecting an AI client to a paired computer" />' +
+    '<meta property="og:image:type" content="image/png" />' +
+    '<meta property="og:image:width" content="1200" />' +
+    '<meta property="og:image:height" content="630" />' +
+    '<meta property="og:image:alt" content="Remote Arc connecting ChatGPT, Claude and Cursor to apps and computers" />' +
     '<meta name="twitter:card" content="summary_large_image" />' +
     '<meta name="twitter:title" content="' + esc(resolved.title) + '" />' +
     '<meta name="twitter:description" content="' + esc(resolved.description) + '" />' +
     '<meta name="twitter:image" content="' + image + '" />' +
-    '<meta name="twitter:image:alt" content="Remote Arc connecting an AI client to a paired computer" />' +
+    '<meta name="twitter:image:alt" content="Remote Arc connecting ChatGPT, Claude and Cursor to apps and computers" />' +
     '<link rel="alternate" type="application/rss+xml" title="Remote Arc Blog" href="' + SITE + '/feed.xml" />' +
     (resolved.type === "article" ? '<meta property="article:published_time" content="' + esc(resolved.publishedAt || "2026-09-27") + 'T00:00:00Z" /><meta property="article:modified_time" content="' + esc(resolved.publishedAt || "2026-09-27") + 'T00:00:00Z" />' : '') +
     (indexable ? '<script type="application/ld+json">' + structured + '</script>' : '');

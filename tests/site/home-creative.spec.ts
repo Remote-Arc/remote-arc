@@ -31,7 +31,7 @@ test('Creative AI points to local film and image galleries, including directory 
  await page.goto(prefix+'/');
  const card=page.locator('.appsDirectoryCard[data-category="creative"]');
  await expect(page.locator('.appsDirectoryCard')).toHaveCount(6);
- await expect(page.locator('.appsDirectorySkills')).toContainText(zh?'女娲 Nuwa':'Nuwa');
+ await expect(page.locator('.appsDirectoryCard[data-category="research"] .appsDirectorySkills')).toContainText(zh?'女娲 Nuwa':'Nuwa');
  await expect(card).toContainText(zh?'在你的电脑上制作视频':'Make videos, posters and illustrations on your computer');
  await expect(card.locator('.creativeDirectoryPreviews a')).toHaveCount(2);
  await expect(card.locator('.creativeDirectoryPreviews a').first()).toHaveAttribute('href',prefix+'/use-cases/video-creation#video-gallery');

@@ -30,11 +30,16 @@ test('Creative AI points to local film and image galleries, including directory 
  const zh=info.project.metadata.language==='zh',prefix=zh?'/zh':'';
  await page.goto(prefix+'/');
  const card=page.locator('.appsDirectoryCard[data-category="creative"]');
+ await expect(page.locator('.appsDirectoryCard')).toHaveCount(6);
+ await expect(page.locator('.appsDirectorySkills')).toContainText(zh?'女娲 Nuwa':'Nuwa');
  await expect(card).toContainText(zh?'在你的电脑上制作视频':'Make videos, posters and illustrations on your computer');
  await expect(card.locator('.creativeDirectoryPreviews a')).toHaveCount(2);
  await expect(card.locator('.creativeDirectoryPreviews a').first()).toHaveAttribute('href',prefix+'/use-cases/video-creation#video-gallery');
  await expect(card.locator('.creativeDirectoryPreviews a').last()).toHaveAttribute('href',prefix+'/use-cases/image-studio#image-gallery');
  await expect(card.locator('a[href*="provider=runway"]')).toHaveCount(0);
+ await page.locator('.appsDirectory input[type="search"]').fill(zh?'女娲':'Nuwa');
+ await expect(page.locator('.appsDirectoryCard')).toHaveCount(1);
+ await expect(page.locator('.appsDirectoryCard')).toHaveAttribute('data-category','research');
  await page.locator('.appsDirectory input[type="search"]').fill(zh?'生图':'video');
  await expect(page.locator('.appsDirectoryCard')).toHaveCount(1);
  await expect(card).toBeVisible();

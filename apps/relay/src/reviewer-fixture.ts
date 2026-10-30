@@ -341,5 +341,5 @@ export async function reviewerDemoResult(
     };
   }
 
-  throw new Error("tool is not enabled on the OpenAI review fixture");
+  throw new Error("tool is not enabled on the isolated review fixture");
 }

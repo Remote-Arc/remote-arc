@@ -7,6 +7,11 @@ import {handleEmailCodeRequest} from '../src/email-auth.js';
 import {getDevicesForUser} from '../src/device.js';
 import {callDevice} from '../src/device-call.js';
 import {REVIEWER_USER_IDS} from '../src/reviewer-identity.js';
+import {authenticateMcp} from '../src/auth.js';
+import {handleDynamicClientRegistration,handleOAuthAuthorize,handleOAuthDecision,handleOAuthToken} from '../src/oauth.js';
+import {createRemoteLinkMcp} from '../src/mcp.js';
+import {mcpClientProfile} from '../src/mcp-client-profile.js';
+import {verifyClaudeReviewer} from '../../../scripts/verify-claude-reviewer.mjs';
 
 const sql=new DatabaseSync(':memory:');
 sql.exec('PRAGMA foreign_keys=ON');
@@ -27,7 +32,7 @@ const origin='https://mcp.remotearc.app';
 const passwords=['fixture-openai-password','fixture-anthropic-password'];
 const emails=['openai-reviewer@example.test','anthropic-reviewer@example.test'];
 const devices=['fixture-openai','fixture-anthropic'];
-const env={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,MARKETING_ORIGIN:'https://remotearc.app',
+ const env={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,MARKETING_ORIGIN:'https://remotearc.app',
  GOOGLE_CLIENT_ID:'test-client',GOOGLE_CLIENT_SECRET:'test-secret',ALLOW_SIGNUPS:'1',
  RESEND_API_KEY:'fixture-only',EMAIL_AUTH_SECRET:'fixture-only',
  REVIEWER_EMAIL:emails[0],REVIEWER_PASSWORD_SHA256:await sha256Hex(passwords[0]!),REVIEWER_DEMO_DEVICE_ID:devices[0],
@@ -121,5 +126,21 @@ try {
   }
  } finally {globalThis.fetch=originalFetch;}
  assert.equal(sessions(),before);
- console.log('PASS: two reviewer logins, isolated online fixtures/read/write/undo/reset, collision and race protection, random credentials, OTP/Google denial and demo cohort isolation');
+ const smokeEnv={...env,ENABLE_APPS:'1'};
+ const smoke=await verifyClaudeReviewer({origin,email:emails[1],password:passwords[1],deviceId:devices[1]},async(url:string,init:RequestInit)=>{
+  const request=new Request(url,init),route=new URL(url).pathname;
+  if(route==='/auth/reviewer')return handleReviewerLogin(request,smokeEnv);
+  if(route==='/oauth/register')return handleDynamicClientRegistration(request,smokeEnv);
+  if(route==='/oauth/authorize')return handleOAuthAuthorize(request,smokeEnv);
+  if(route==='/oauth/decision')return handleOAuthDecision(request,smokeEnv);
+  if(route==='/oauth/token')return handleOAuthToken(request,smokeEnv);
+  if(route==='/mcp'){
+   const owner=await authenticateMcp(request,smokeEnv);assert(owner);
+   return createRemoteLinkMcp(smokeEnv,owner,{clientProfile:await mcpClientProfile(db,owner.clientId)}).fetch(request);
+  }
+  throw Error('Unexpected test endpoint');
+ });
+ assert.equal(smoke.fixtureToolsTested.length,9);
+ assert(smoke.untestedTools.length>0,'The smoke report must retain the all-tools coverage gap');
+ console.log('PASS: isolated reviewer logins/read/write/edit/undo/reset, collision/race protection, OTP/Google denial, demo cohorts, DCR/PKCE/refresh and nine authenticated MCP tool paths');
 } finally {sql.close();}

@@ -65,6 +65,16 @@ through Cloudflare's protected settings. Preserve the existing `REVIEWER_*`
 settings, which belong to OpenAI. Never commit reviewer passwords or put them in
 public documentation or PR comments.
 
+The protected Production Release workflow has an opt-in
+`configure_claude_reviewer` switch. Its three GitHub Secrets are
+`ANTHROPIC_REVIEWER_EMAIL`, `ANTHROPIC_REVIEWER_PASSWORD` and
+`ANTHROPIC_REVIEWER_DEMO_DEVICE_ID`. It derives the runtime password hash,
+provisions only the Anthropic settings after deployment, and runs
+`scripts/verify-claude-reviewer.mjs`. Existing complete reviewer credentials are
+retained; a partial configuration stops the workflow for inspection. The smoke
+report lists untested public tools and does not claim a Claude conversation
+or complete tool coverage.
+
 Reviewers open `https://mcp.remotearc.app/auth/login`, choose Reviewer access,
 and sign in with the dedicated credentials supplied in the submission portal.
 They can authorize `https://mcp.remotearc.app/mcp` through Claude's automatically

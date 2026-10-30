@@ -1,13 +1,13 @@
 # 执行隔离：能力现状与后续决策
 
 状态：设计建议，未实现隔离执行器或 Dashboard 沙箱开关。
-审查依据：PR41 / PR43 / PR44，截至 2026-10-01。
+更新于 2026-10-30。
 
 ## 决策
 
 保留默认本机执行，不把现有路径检查命名为沙箱。建议后续独立实现可选的
 隔离执行配置，优先满足运行不可信仓库、安装依赖和无人值守高权限命令的需求。
-它不是长任务持久化的前置条件，也不是 PR44 本次文档与首页改造已经交付的能力。
+它不是长任务持久化的前置条件。
 
 Remote Arc 的主要价值是访问用户已有的电脑、仓库、依赖和工具链。强制把所有
 工作迁入隔离环境会改变路径、运行时、凭证、开发服务器端口和硬件访问方式。
@@ -32,15 +32,12 @@ AI 宿主自己的沙箱不自动覆盖远端 MCP 动作。宿主通过 Remote A
 | Allowed tools / `--safe` | 控制是否允许读、编辑、终端等工具 | 终端被允许后的任意命令隔离 |
 | Trusted Write Locations + Approval Broker | 普通非敏感文件可只读查看；受支持的持续写入限制在可信写入区域，越界写入在执行前请求窄范围审批；终端需要范围内 cwd | Shell 仍可引用范围外路径、凭证、子进程或网络，因此不是 OS 沙箱 |
 | Sensitive Path Policy | 文件工具保护敏感位置并支持窄例外 | Shell 内部文件访问拦截 |
-| Safety Guard | 拒绝有限灾难性命令模式，纵深防护 | 任意脚本分析或完整命令沙箱 |
+| Safety Guard | 解析终端删除的实际落点并拒绝灾难性命令，纵深防护 | 任意脚本分析或完整命令沙箱 |
 | Task contract / policy snapshot | 冻结目标、工具和限制，策略变化停止旧任务 | OS 内部所有副作用或回滚 |
 | Local Undo | 受支持文件工具编辑的冲突安全恢复 | Shell、数据库、部署、发布等回滚 |
 
-0.6.0 主实现证据：`packages/execution-core/execution`、`packages/execution-core/policy`
-和 `apps/agent`。另见
-`apps/relay/src/device-call.ts`、`device-task-policy.ts` 和 `automations.ts`。
 Go 进程执行使用 `os/exec` 启动本机 Shell，继承本机用户权限。
-未发现 namespace/container/VM/AppContainer 等 OS 沙箱执行路径。
+目前没有 namespace/container/VM/AppContainer 等 OS 沙箱执行路径。
 
 ## 现阶段怎么用
 
@@ -85,5 +82,5 @@ Task 合同冻结执行配置、映射目录、网络/凭证授权与资源限�
 4. 执行配置改变会使旧合同失效；隔离故障不会回退本机。
 5. 每个受支持 OS 的实际权限和兼容性检查，而非仅 mock 测试。
 
-建议作为 PR44 后的独立功能立项。当前文档只解释现状与设计方向，当前 UI
+建议作为独立功能立项。当前文档只解释现状与设计方向，当前 UI
 不显示已经拥有隔离能力，也不改变现有设备执行行为。

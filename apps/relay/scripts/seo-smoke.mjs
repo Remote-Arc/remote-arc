@@ -101,7 +101,7 @@ const blogPath = "/blogs/go-vs-typescript-agent-benchmarks";
 const blogHtml = renderMarketingHtml('<html><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', blogPath);
 assert.ok(blogHtml.includes("Windows: the regression and its correction"), "SSR article must contain test caveats");
 assert.ok(blogHtml.includes("2026-10-09T00:00:00Z"), "article publication date must match the new post");
-assert.ok(blogHtml.includes("RESULTS-2026-10-09-71cde96.md"), "SSR article must link newer source");
+assert.ok(blogHtml.includes("/docs/benchmark-windows-followup"), "SSR article must link newer source");
 assert.ok(feedXml().includes(blogPath), "RSS must contain benchmark article");
 assert.ok(feedXml().includes("Fri, 09 Oct 2026 00:00:00 GMT"), "RSS date must be truthful");
 const sitemap = sitemapXml();

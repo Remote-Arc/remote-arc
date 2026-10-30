@@ -6,6 +6,11 @@ const ToolReference = React.lazy(() =>
     default: module.ToolReference,
   })),
 );
+const ReferenceDoc = React.lazy(() =>
+  import("./reference-doc.js").then((module) => ({
+    default: module.ReferenceDoc,
+  })),
+);
 import { DOC_TOPICS, docTopic } from "../../../packages/docs/src/catalog.js";
 import { Documentation } from "./product-docs.js";
 import { SystemOverview } from "./docs-system-overview.js";
@@ -16,6 +21,7 @@ const groups = [
   { id: "start", en: "Get started", zh: "开始使用" },
   { id: "work", en: "Get work done", zh: "执行工作" },
   { id: "understand", en: "Understand the platform", zh: "了解平台" },
+  { id: "reference", en: "Engineering reference", zh: "工程参考" },
 ];
 export function DocsPortal({ path }: { path: string }) {
   const { tr, locale } = useI18n(),
@@ -133,7 +139,7 @@ export function DocsPortal({ path }: { path: string }) {
           />
         </label>
         {groups.map((group) => {
-          const items = filtered.filter((item) => item.group === group.id);
+          const items = filtered.filter((item) => item.group === group.id && item.listed !== false);
           return items.length ? (
             <section className="docsHubGroup" key={group.id}>
               <h2>{tr(group.en, group.zh)}</h2>
@@ -203,7 +209,7 @@ export function DocsPortal({ path }: { path: string }) {
           {groups.map((group) => (
             <div key={group.id}>
               <strong>{tr(group.en, group.zh)}</strong>
-              {DOC_TOPICS.filter((item) => item.group === group.id).map(
+              {DOC_TOPICS.filter((item) => item.group === group.id && item.listed !== false).map(
                 (item) => (
                   <a
                     key={item.slug}
@@ -228,6 +234,16 @@ export function DocsPortal({ path }: { path: string }) {
             }
           >
             <ToolReference />
+          </React.Suspense>
+        ) : topic.reference ? (
+          <React.Suspense
+            fallback={
+              <main className="technicalDoc">
+                <p>{tr("Loading document…", "正在加载文档…")}</p>
+              </main>
+            }
+          >
+            <ReferenceDoc topic={topic} />
           </React.Suspense>
         ) : topic.sections ? (
           <main className="technicalDoc">

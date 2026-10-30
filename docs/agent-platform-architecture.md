@@ -116,7 +116,7 @@ The dispatcher is a shared server boundary, not an always-on scheduler employee.
 
 Hosted model use reserves and settles Credits and rated cost. Unknown outcomes retain reservations instead of being counted as free. Account plan versions and commercial catalog configuration live in D1; secrets live in protected environment/Worker secrets. Environment variables remain bootstrap/feature switches, not the operator pricing database.
 
-Automatic funding separates sponsored trial capacity from paid capacity based on verified live paid receipts, with a configurable per-paying-user daily ceiling. Sandbox receipts do not fund production usage. Refunds reduce funding availability without erasing incurred model cost. User Credits, per-model limits, concurrency and task limits apply as additional bounds. This is an internal operating budget, not a provider balance reader or automatic recharge system.
+Hosted model use is also bounded by operating budgets that keep trial capacity separate from paid capacity, alongside user Credits, per-model limits, concurrency and task limits. Refunds do not erase model cost already incurred.
 
 Stripe Checkout collects payment; verified webhook/payment state grants the subscription and allowance. A return URL alone cannot activate a plan. Portal manages billing details and subscription lifecycle. Feedback reward campaigns have versioned terms, verified account identity, explicit admin review and atomic capped Connect-call grants. Email drafts and templates do not themselves authorize sends.
 

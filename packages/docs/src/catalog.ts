@@ -1,8 +1,9 @@
 import {reviewedDocTopics} from "./documentation-review.js";
 import {platformDocTopics} from './platform-docs.js';
+import {REFERENCE_TOPICS} from './reference-docs.js';
 export type DocCopy = { en: string; zh: string };
-export type DocTopic = { slug: string; group: "start" | "work" | "understand"; title: DocCopy; description: DocCopy; legacyIds?: string[]; sections?: { heading: DocCopy; text: DocCopy }[]; links?: string[][] };
-export const DOC_TOPICS: DocTopic[] = reviewedDocTopics(platformDocTopics([
+export type DocTopic = { slug: string; group: "start" | "work" | "understand" | "reference"; reference?: {en: string; zh?: string}; listed?: boolean; title: DocCopy; description: DocCopy; legacyIds?: string[]; sections?: { heading: DocCopy; text: DocCopy }[]; links?: string[][] };
+export const DOC_TOPICS: DocTopic[] = [...reviewedDocTopics(platformDocTopics([
   {
     slug: 'install-app', group: 'start',
     title: {en: 'Install the web app', zh: '安装网页应用'},
@@ -527,6 +528,6 @@ export const DOC_TOPICS: DocTopic[] = reviewedDocTopics(platformDocTopics([
       "zh": "在同一页面查看完整的产品操作参考。"
     }
   }
-]));
+])), ...REFERENCE_TOPICS];
 export const DOC_PATHS = DOC_TOPICS.map(topic => "/docs/" + topic.slug);
 export const docTopic = (path: string) => DOC_TOPICS.find(topic => "/docs/" + topic.slug === path);

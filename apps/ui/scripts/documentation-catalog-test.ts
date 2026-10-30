@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { DOC_TOPICS, DOC_PATHS } from "../../../packages/docs/src/catalog.js";
+import { REFERENCE_TOPICS, referenceLink } from "../../../packages/docs/src/reference-docs.js";
 import index from "../../../packages/docs/src/tool-index.generated.json" with { type: "json" };
 import data from "../src/tool-reference-data.generated.json" with { type: "json" };
 assert.equal(new Set(DOC_PATHS).size, DOC_PATHS.length);
@@ -103,3 +104,22 @@ assert(!source.includes("not part of the production tool contract"));
 console.log(
   `PASS: ${DOC_TOPICS.length} bilingual topics, ${data.remote.length} public tools, ${operations.length} App operations and ${data.local.length} local tools; links and release boundaries are consistent`,
 );
+
+// Documentation stays on the website: reviewed repository documents are hosted
+// under /docs and internal links resolve there or render as plain text.
+const repoRoot = new URL("../../../", import.meta.url);
+const hostedGlobs = fs.readFileSync(new URL("apps/ui/src/reference-doc.tsx", repoRoot), "utf8");
+for (const topic of REFERENCE_TOPICS) {
+  for (const source of [topic.reference!.en, topic.reference!.zh].filter(Boolean) as string[]) {
+    assert.ok(fs.existsSync(new URL(source, repoRoot)), source + " must exist");
+    assert.ok(hostedGlobs.includes('"../../../' + source + '"') || (source.startsWith("docs/feature-map/") && hostedGlobs.includes('"../../../docs/feature-map/*.md"')), source + " must be in the reference document bundle");
+  }
+}
+assert.equal(referenceLink("docs/feature-map/README.md", "verified-inbox.md"), "/docs/feature-map-verified-inbox");
+assert.equal(referenceLink("benchmarks/README.md", "RESULTS-2026-10-09-f68ab09.md#hosts"), "/docs/benchmark-baseline#hosts");
+assert.equal(referenceLink("docs/feature-map/ai-teams.md", "../execution-isolation.md"), "/docs/execution-isolation");
+assert.equal(referenceLink("benchmarks/README.md", "../docs/go-persistence-validation.md"), null, "Unpublished files render as plain text");
+assert.equal(referenceLink("SECURITY.md", "https://docs.docker.com/engine/security/"), "https://docs.docker.com/engine/security/");
+for (const file of ["apps/ui/src/product-docs.tsx", "apps/ui/src/architecture-deep-dive.tsx", "apps/ui/src/marketing-pages.tsx", "apps/ui/src/blog-pages.tsx", "apps/relay/src/seo.ts", "packages/docs/src/platform-docs.ts"]) {
+  assert.doesNotMatch(fs.readFileSync(new URL(file, repoRoot), "utf8"), /github\.com\/[^"'\s]+\/(?:blob|tree)\//, file + " must link to hosted documents, not GitHub");
+}

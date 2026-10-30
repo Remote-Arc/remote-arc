@@ -50,9 +50,9 @@ const articles: Record<string, SeoPage> = {
       { heading: "What production benchmarking still needs", text: "L3 remains a future measured comparison: AI client to Cloudflare Relay to device, broken down by routing, network and execution time. Hardware durability, real outages and installed-service upgrade behavior remain distinct release checks. The TypeScript device runtime was later retired; the hosted Worker and Dashboard still use TypeScript." }
     ],
     sources: [
-      ["Mac + Windows baseline (f68ab09)", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-f68ab09.md"],
-      ["Windows fix and follow-up (71cde96)", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-71cde96.md"],
-      ["Reproduction protocol and raw artifact hashes", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/README.md"]
+      ["Mac + Windows baseline (f68ab09)", "/docs/benchmark-baseline"],
+      ["Windows fix and follow-up (71cde96)", "/docs/benchmark-windows-followup"],
+      ["Reproduction protocol and raw artifact hashes", "/docs/benchmarks"]
     ]
   },
 

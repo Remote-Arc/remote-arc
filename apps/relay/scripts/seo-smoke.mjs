@@ -268,7 +268,10 @@ for (const slug of ["desktop-automation", "remote-support", "browser-research", 
 const home = renderMarketingHtml(shell, "/");
 assert.ok(home.includes('"@type":"SoftwareApplication"'));
 assert.ok(home.includes('<div id="root"><div class="marketingShell">'), "homepage must publish normal, visible server-rendered content");
-assert.ok(!home.includes('<noscript>'), "Google's JavaScript rendering must not discard the only server-rendered copy");
+assert.ok(!/<noscript>(?!<style>)/.test(home), "Google's JavaScript rendering must not discard the only server-rendered copy");
+assert.match(home, /\.marketingShell\{[^}]*visibility:hidden;animation:marketing-shell-reveal 0s 3s forwards/, "people must not see the shell flash before the app paints");
+assert.match(home, /@keyframes marketing-shell-reveal\{to\{visibility:visible\}\}/, "the shell must reveal itself if the app fails to load");
+assert.ok(home.includes('<noscript><style>.marketingShell{visibility:visible;animation:none}</style></noscript>'), "without JavaScript the document must show at once");
 assert.ok(home.includes('Remote Arc (RemoteArc)'));
 assert.ok(home.includes('<h1>Remote Arc: AI computer access, browser automation and device fleet</h1>'));
 assert.ok(home.includes('href="/integrations"'), "homepage fallback must link to app integrations");
@@ -352,6 +355,6 @@ assert.ok(assetMethods.every(method => method === 'GET'), 'HEAD must fetch the s
 for (const url of locs) {
   const document = renderMarketingHtml(homepageTemplate, new URL(url).pathname);
   assert.ok(document.includes('class="marketingContent"') && document.includes('<h1>'), url + ' needs visible document content');
-  assert.ok(!document.includes('<noscript>'), url + ' must not require JavaScript to be disabled');
+  assert.ok(!/<noscript>(?!<style>)/.test(document), url + ' must not require JavaScript to be disabled');
 }
 console.log('PASS: visible server documents, brand aliases and real Worker GET/HEAD parity');

@@ -20,10 +20,9 @@ executable directly on a computer without Node. `--help`, `--status`, `--logs`,
 `--stop`, `--reset` and `--mcp` are native commands. `--background` installs
 recovery using the native binary, never Node or npx.
 
-From 0.6.0 the npm entry defaults to the complete Go runtime. `--go` remains
-a compatibility alias; `--ts` explicitly selects the retained TS runtime. The selected runtime is not
-automatically replaced or retried through the other engine when an operation
-fails.
+The npm entry runs the complete Go runtime. `--go` remains a compatibility alias.
+The TypeScript runtime was retired, so `--ts` exits with an error and never falls
+back.
 
 Published releases support `npx remotelink@latest`. The npm launcher downloads
 the matching platform binary and checks its SHA-256 digest against the manifest
@@ -45,16 +44,16 @@ the downloaded file executable with `chmod +x` before running it.
 
 ## Compatibility and ownership
 
-Both runtimes share `~/.remotearc/config.json`, existing device credentials, the
-Local Undo manifest format, the task worktree manifest and the mkdir/mtime
-execution lease. Switching runtime does not create an additional paired device.
+Go keeps reading what the retired TypeScript runtime left on a device:
+`~/.remotearc/config.json`, existing device credentials, the Local Undo manifest
+format, the task worktree manifest and the mkdir/mtime execution lease. Upgrading
+does not create an additional paired device.
 
-Stop the active runtime before selecting the other one. For a TS agent, disable
-future recovery with `--ts --no-background` or Dashboard, then stop its executing
-agent locally. For Go, `--go --stop` disables future recovery, drains calls and
-terminates managed children before releasing the execution lease. Reuse the
-saved pairing when starting the other runtime. Do not use `--reset` to switch;
-reset intentionally removes pairing.
+A TS agent installed by an older release can still be running. Disable its future
+recovery with `npx remotelink@0.6.5 --ts --no-background` or Dashboard, then stop
+its executing agent locally. For Go, `--go --stop` disables future recovery, drains
+calls and terminates managed children before releasing the execution lease. Do
+not use `--reset` to migrate; reset intentionally removes pairing.
 
 Only the lease owner advertises tools and executes calls. Another Go foreground
 terminal follows the active owner's operation log. A foreign TS lease is refused
@@ -65,11 +64,11 @@ does not replay previous writes or process launches.
 
 ## Feature map
 
-| TS behavior | Go package | Verification |
+| Behavior | Go package | Verification |
 | --- | --- | --- |
-| Tool modes, schemas, command guard | `internal/execution`, generated JSON | Mode tests, contract drift check, TS/Go comparison |
-| Text, directories, metadata, bounded binary reads | `internal/execution` | Filesystem tests, revision and metadata comparison |
-| Conflict-safe Local Undo and retention | `internal/execution` | Conflicts, failed mutations, TS-to-Go and Go-to-TS restoration |
+| Tool modes, schemas, command guard | `internal/execution`, checked-in JSON | Mode tests and pinned tool results |
+| Text, directories, metadata, bounded binary reads | `internal/execution` | Filesystem tests, revision and metadata checks |
+| Conflict-safe Local Undo and retention | `internal/execution` | Conflicts, failed mutations and restoring records from earlier releases |
 | Sync and managed processes, time budgets, output caps | `internal/execution` | Timeout, cancellation, retention, output limit and process-tree cleanup |
 | Trusted locations, sensitive exceptions, task boundary | `internal/policy` | Traversal, symlinks, narrow exceptions and remote call tests |
 | Pairing, credential revocation, outbound WS and recovery | `internal/agent` | HTTP/WS fixtures, same identity after crash, transient failures |
@@ -77,7 +76,7 @@ does not replay previous writes or process launches.
 | Local MCP | `internal/localmcp` | Official Go SDK client negotiation, schema validation and mode tests |
 | Log persistence, rotation, bounded tail and cursor | `internal/journal` | Concurrent logging, rotation, truncation recovery and secret exclusion |
 | Native background services and shared owner lock | `internal/service`, `internal/lease`, `internal/cli` | Three-OS service fixtures, compromise detection and real supervisor test |
-| Owned goal worktrees and frozen checkpoints | `internal/workspace` | Real Git tests, bidirectional TS/Go continuation, receipts, candidate rejection and unchanged user checkout |
+| Owned goal worktrees and frozen checkpoints | `internal/workspace` | Real Git tests, receipts, candidate rejection and unchanged user checkout |
 | Expiring keep-awake leases | `internal/power` | Three-OS helpers, renewal, expiry and disconnect cleanup |
 
 The journal retains the TS `tool.call`, `tool.done` and `tool.error` event names,
@@ -99,7 +98,7 @@ the normal platform compiler on Linux/macOS. `REMOTEARC_TEST_CC` can point at an
 isolated compiler. Git is required for worktree tests. Fixtures use isolated
 homes and loopback servers; service installation commands are mocked.
 
-CI runs the Go tests, race detector, TS compatibility and native process recovery
+CI runs the Go tests, race detector, Agent integration tests and native process recovery
 on Windows, macOS and Linux. Distribution builds cover amd64 and arm64 for each.
 The process recovery fixture exercises the native supervisor on all systems;
 launchd/systemd/registry configurations are separately checked through service
@@ -107,9 +106,9 @@ fixtures. Manual installed-service acceptance remains a release check on real
 desktop sessions.
 
 Add new remote capabilities through the existing wire protocol. Implement their
-handlers in Go and TS, add compatibility cases, then regenerate the embedded
-tool and guard contracts with `pnpm device:contract`. `--check` prevents contract
-drift. Go builds use checked-in contracts and do not run TS to execute tools.
+handlers in Go and add tests, then edit the checked-in contracts in
+`packages/execution-core/execution` (`tools.json`, `tool_modes.json`, `guards.json`)
+and run `pnpm docs:tools` to update the public tool reference.
 Prefer platform-specific files for OS behavior and keep protocol/result types
 independent from service and CLI packages.
 
@@ -122,8 +121,8 @@ it does not publish GitHub releases, npm packages or Homebrew taps.
 
 The npm launcher expects matching assets under `remotelink-v<version>` on GitHub.
 Downloads are checked against the digests in the installed npm release, including
-cached executables. An unavailable or corrupt Go binary produces an error and
-preserves the TS fallback entry. Publishing the matching Go assets must precede
+cached executables. An unavailable or corrupt Go binary produces an error.
+Publishing the matching Go assets must precede
 publishing a Go-enabled npm release.
 
 The generated Homebrew formula installs the native `remotelink` executable. The

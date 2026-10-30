@@ -253,7 +253,7 @@ func (c *Controller) loadedMacJob(ctx context.Context) (loaded bool, active bool
 func (c *Controller) Enable(ctx context.Context) (Status, error) {
 	current := c.Status(ctx)
 	if c.Foreign(ctx) {
-		return current, errors.New("A TS background service is registered. Disable TS recovery and stop its agent locally before selecting Go recovery.")
+		return current, errors.New("A retired TypeScript background service is registered. Disable it with npx remotelink@0.6.5 --ts --no-background and stop its agent locally before selecting Go recovery.")
 	}
 	if c.Platform == "darwin" {
 		loaded, running, program := c.loadedMacJob(ctx)

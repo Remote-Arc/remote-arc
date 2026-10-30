@@ -58,7 +58,7 @@ Production requires the existing protected exact-master-SHA workflow. Apply 0029
 
 Run the actual SQLite/D1 adapter and mocked provider contracts:
 
-    pnpm --filter @remotearc/execution-core-ts exec tsx ../../apps/relay/scripts/model-billing-test.ts
+    pnpm --filter @remotearc/relay exec tsx scripts/model-billing-test.ts
 
 This covers all-scope atomic caps, concurrent reservations, idempotency, unknown outcomes, grant expiry/revocation, membership/task ownership, private reads, plan lane isolation, model allowlisting, no paid fallback, token normalization, structured output, refusals, truncated outputs and sanitized provider errors.
 

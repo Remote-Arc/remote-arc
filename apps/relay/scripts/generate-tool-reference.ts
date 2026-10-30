@@ -2,11 +2,26 @@ import fs from "node:fs";
 import { z } from "zod";
 import { createRemoteLinkMcp } from "../src/mcp.js";
 import { APP_CATALOG, APP_OPERATIONS } from "../src/app-catalog.js";
-import { RemoteArcExecutionCore } from "../../../packages/execution-core-ts/src/core.js";
 import {
   TOOL_COPY,
   toolGroup,
 } from "../../../packages/docs/src/tool-reference-meta.js";
+
+// The Go Execution Core owns the local tool contract.
+const coreContract = (file: string) =>
+  JSON.parse(
+    fs.readFileSync(
+      new URL("../../../packages/execution-core/execution/" + file, import.meta.url),
+      "utf8",
+    ),
+  );
+const localDefinitions: {
+  name: string;
+  description: string;
+  inputSchema: unknown;
+}[] = coreContract("tools.json");
+const toolModes: { safe: string[]; developer: string[] } =
+  coreContract("tool_modes.json");
 
 // Read tool definitions only. No account, live service, model or device is used.
 const env = {
@@ -63,14 +78,11 @@ const readOnly = new Set([
   "list_managed_processes",
   "remote_arc_status",
 ]);
-const localModes = Object.fromEntries(
-  ["safe", "developer", "full"].map((mode) => [
-    mode,
-    new RemoteArcExecutionCore(mode as never)
-      .listTools()
-      .map((tool) => tool.name),
-  ]),
-);
+const localModes: Record<string, string[]> = {
+  safe: toolModes.safe,
+  developer: [...toolModes.safe, ...toolModes.developer],
+  full: localDefinitions.map((tool) => tool.name),
+};
 const local = [
   {
     name: "remote_arc_status",
@@ -80,7 +92,7 @@ const local = [
       properties: {},
     },
   },
-  ...new RemoteArcExecutionCore("full").listTools(),
+  ...localDefinitions,
 ];
 const metadata = (name: string) => {
   const copy = TOOL_COPY[name];

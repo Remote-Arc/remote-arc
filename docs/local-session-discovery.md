@@ -28,7 +28,7 @@ remotelink takeover --help
 ```
 
 The existing npm launcher forwards this command to the matching Go binary.
-The explicit TypeScript fallback does not implement it. Select the RC explicitly
+Select the RC explicitly
 with `npx remotelink@0.6.2-rc.3 takeover --workspace /path/to/project`; the stable
 `latest` package remains unchanged.
 

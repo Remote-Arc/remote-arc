@@ -90,10 +90,9 @@ flowchart TB
 | `apps/relay/src/task-events.ts` | MCP Events、密钥保护、签名和有界重试 |
 | `apps/relay/src/device-task-policy.ts` | 每台设备允许的任务能力 |
 | `apps/relay/src/github-automation.ts` | 明确授权的 GitHub App 云端动作 |
-| `packages/cli` | npm 安装与启动入口，默认 Go；`--ts` 选择兼容运行时 |
+| `packages/cli` | npm 安装与启动入口，校验并启动 Go Agent |
 | `apps/agent` | Go 设备 Agent：配对、Relay 会话、日志、控制、登录恢复与任务检查点 |
 | `packages/execution-core` | 独立 Go 模块：文件、进程、路径策略与 Undo，和 Agent 编译成一个二进制 |
-| `apps/agent-ts` / `packages/execution-core-ts` | 显式 TS 回退与兼容/对照测试，默认设备链路不依赖它们 |
 | `apps/ui` | 官网知识文档、配对、Dashboard、设备权限与任务管理 |
 
 ### 0.6.0 安装与执行边界
@@ -107,9 +106,8 @@ Agent 与 Core 本身运行在 Go 进程中。直接下载和 Homebrew 运行 Go
 云端 Relay、Dashboard 与共享 TS 协议仍使用 TypeScript。
 
 升级或切换前先停止现有执行者，保持同一设备 ID、配对、权限与 Undo 格式。
-Go 保留 `--go` 别名，npm 的 `--ts` 明确选择兼容实现；不自动接管活跃 TS
-执行者，不静默退回 TS，也不重放已执行的命令。TS 背景服务和重启子进程
-始终显式传入 `--ts`，避免默认入口变化导致恢复时误切引擎。
+Go 保留 `--go` 别名。TypeScript 设备运行时已退役，`--ts` 会直接报错，不会回退。
+Go 不自动接管旧版本仍在运行的 TS 执行者，也不重放已执行的命令。
 
 ## 3. 能力矩阵
 

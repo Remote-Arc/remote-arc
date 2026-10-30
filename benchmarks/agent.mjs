@@ -9,10 +9,10 @@ const samples=integerOption("--samples",200,20,10000), rounds=integerOption("--r
 const modes=option("--profiles","atomic,durable,layered").split(",");
 for(const mode of modes)profile(mode);
 const reportPath=path.resolve(option("--report",path.join(root,"work/benchmarks/agent.json")));
-const report={layer:"L2",state:"running",...await environmentInfo(),startedAt:new Date().toISOString(),samples,rounds:[],scope:"Full isolated TS/Go foreground Agents with authenticated loopback WebSockets, local journal, config and dispatch. Includes wire serialization; excludes production Cloudflare/connector. Go Agent critical-state writes stay durable; TS Agent config keeps its legacy atomic writes. Forced reconnect counts distinct accepted sockets, not periodic hello messages. Windows TS fixture termination is not a graceful-stop acceptance test."};
+const report={layer:"L2",state:"running",...await environmentInfo(),startedAt:new Date().toISOString(),samples,rounds:[],scope:"Full isolated Go foreground Agents with authenticated loopback WebSockets, local journal, config and dispatch. Includes wire serialization; excludes production Cloudflare/connector. Go Agent critical-state writes stay durable. Forced reconnect counts distinct accepted sockets, not periodic hello messages."};
 try {
- for(let round=1;round<=rounds;round++)for(const mode of modes)for(const engine of round%2?["TS","Go"]:["Go","TS"]){
-  const f=await fixture({engine,environment:profile(mode)});
+ for(let round=1;round<=rounds;round++)for(const mode of modes){
+  const f=await fixture({environment:profile(mode)});
   let managed;
   try {
    const began=performance.now(),owner=f.start(["--foreground"]);
@@ -53,12 +53,12 @@ try {
    await waitFor(()=>f.handshakes.length>beforeHandshake,"real fixture WebSocket handshake");
    const current=f.handshakes.at(-1).device;
    assert.equal(current.id,initial.id);assert.equal(current.pid,initial.pid);assert.equal(current.backgroundProcess,false);
-   if(engine === "Go"){assert(current.connectionSequence>initial.connectionSequence);assert.notEqual(current.connectedAt,initial.connectedAt);}
+   assert(current.connectionSequence>initial.connectionSequence);assert.notEqual(current.connectedAt,initial.connectedAt);
    assert.match(await f.call("read_file",{path:file},policy),/agent-benchmark/);
    const log=await f.call("agent_execution_log",{limit:20});assert(!JSON.stringify(log).includes(f.token));assert(log.lines.some(line=>line.includes("tool.done")));
-   report.rounds.push({engine,mode,round,startup_ms:startup,pid:initial.pid,errors:0,cpu_delta_ms:after.cpuMs-before.cpuMs,rss_mb:after.rssBytes/1048576,reconnect_ms:performance.now()-reconnectBegin,handshakes:f.handshakes.length,metrics:Object.fromEntries(Object.entries(metrics).map(([name,values])=>[name,{...stats(values),samples_ms:values}])),concurrency});
+   report.rounds.push({engine:"Go",mode,round,startup_ms:startup,pid:initial.pid,errors:0,cpu_delta_ms:after.cpuMs-before.cpuMs,rss_mb:after.rssBytes/1048576,reconnect_ms:performance.now()-reconnectBegin,handshakes:f.handshakes.length,metrics:Object.fromEntries(Object.entries(metrics).map(([name,values])=>[name,{...stats(values),samples_ms:values}])),concurrency});
    await saveReport(reportPath,report);
-   console.log(`L2 ${round} ${engine} ${mode}: passed ${samples} mutations and reconnect`);
+   console.log(`L2 ${round} Go ${mode}: passed ${samples} mutations and reconnect`);
   } finally {if(managed)await f.call("stop_process",{process_id:managed.process_id}).catch(()=>{});await f.close();}
  }
  report.state="passed";

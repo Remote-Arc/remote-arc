@@ -21,7 +21,7 @@ for(const skill of registry.skills){
  assert.doesNotMatch(doc,/(curl\s+\S+\s*\|\s*(?:sh|bash)|wget\s+\S+\s*\|\s*(?:sh|bash))/i,'unreviewed remote execution in '+skill.id);
 }
 const remote=fs.readFileSync(path.join(root,'apps/relay/src/mcp.ts'),'utf8');
-const local=fs.readFileSync(path.join(root,'apps/mcp/src/index.ts'),'utf8');
+const local=fs.readFileSync(path.join(root,'apps/agent/internal/localmcp/server.go'),'utf8');
 assert.match(remote,/BUILTIN_SKILLS/);
 assert.match(remote,/registerResource\(/);
 assert.match(remote,/remotearc:\/\/skills\/catalog/);

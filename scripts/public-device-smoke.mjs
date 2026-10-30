@@ -87,9 +87,8 @@ try {
   assert.match(await run(["--help"]), /Go device agent/);
   assert.equal(await run(["--go", "--version"]), version);
   assert.match(await run(["--go", "--help"]), /Go device agent/);
-  assert.equal(await run(["--ts", "--version"]), version);
   console.log(
-    `Public installation verified on ${process.platform}/${process.arch}: npm default Go ${version}, native help and explicit TS fallback.`,
+    `Public installation verified on ${process.platform}/${process.arch}: npm default Go ${version} and native help.`,
   );
 } finally {
   await fs.rm(home, { recursive: true, force: true });

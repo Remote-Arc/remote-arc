@@ -845,7 +845,7 @@ function jsonLd(page: SeoPage, pathname: string) {
 
 crawlPages["/downloads"] = {
   h1: "Download Remote Arc " + cliPackage.version,
-  intro: "The Agent and independent Execution Core are native Go. npm installs and verifies the same binary; standalone downloads and Homebrew need no Node.js. TypeScript is available only with the explicit --ts fallback.",
+  intro: "The Agent and independent Execution Core are native Go. npm installs and verifies the same binary; standalone downloads and Homebrew need no Node.js.",
   sections: [
     { heading: "npm / npx", text: "Run npx remotelink@latest with Node.js 20+. Go is the default; --go remains a compatible alias." },
     { heading: "Homebrew", text: "brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc. On Homebrew versions with trust support, trust the remotelink and remotelink-go formulae with brew trust --formula before running brew install yaohuangguan/remote-arc/remotelink. Existing remotelink-go users can upgrade that formula." },

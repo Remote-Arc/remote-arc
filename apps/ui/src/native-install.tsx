@@ -113,7 +113,7 @@ export function NativeInstall() {
         <div className="nativeDownloadChoices">{platforms[0].choices.map(choice => <a key={choice.arch} href={`/api/downloads/agent/darwin/${choice.arch}`} aria-label={tr(`Download for macOS ${choice.label}`, `下载 macOS ${choice.label}`)}><span><strong>{choice.label}</strong><small>{choice.detail}</small></span><DownloadIcon /></a>)}</div>
       </details>
       <details><summary><span>{tr("Upgrade, stop and compatibility", "升级、停止与兼容选项")}</span></summary>
-        <p>{tr("Stop the current Agent before upgrading. Ctrl+C stops a foreground session; remotelink --stop also stops background recovery. Pairing and Local Undo records are preserved. Native Go is the default; stop the active runtime before explicitly switching with --ts or --go. Runtime switches do not replay commands.", "升级前先停止当前 Agent。Ctrl+C 停止前台会话；remotelink --stop 同时停止后台恢复，配对和 Local Undo 记录会保留。默认运行原生 Go；使用 --ts 或 --go 切换前，先停止当前运行时。切换不会重放命令。")}</p>
+        <p>{tr("Stop the current Agent before upgrading. Ctrl+C stops a foreground session; remotelink --stop also stops background recovery. Pairing and Local Undo records are preserved. The Agent is native Go; the TypeScript runtime was retired and --ts now exits with an error.", "升级前先停止当前 Agent。Ctrl+C 停止前台会话；remotelink --stop 同时停止后台恢复，配对和 Local Undo 记录会保留。Agent 为原生 Go；TypeScript 运行时已退役，--ts 现在会直接报错。")}</p>
         <pre className="docsExample"><code>{"npx remotelink@latest --stop\nnpx remotelink@latest --foreground"}</code></pre>
       </details>
     </section>

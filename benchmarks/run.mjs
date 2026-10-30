@@ -12,13 +12,14 @@ const modes = option("--profiles", "atomic,durable,layered").split(",");
 for (const mode of modes) profile(mode);
 const outfile = path.resolve(option("--report", path.join(root,"work/benchmarks/core.json")));
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), "ra-parity-bench-"));
-const data = {layer:"L1", state:"running", ...await environmentInfo(), startedAt:new Date().toISOString(), samples, requestedRounds:rounds, rounds:[], notes:"Local core JSONL IPC; includes serialization, excludes Relay and full Agent. Warmup excluded. Engines run serially; order alternates. Atomic/durable/layered set both file and Undo policies explicitly. Windows parent-directory sync unavailable. P99 is exploratory at small sample counts."};
+const data = {layer:"L1", state:"running", ...await environmentInfo(), startedAt:new Date().toISOString(), samples, requestedRounds:rounds, rounds:[], notes:"Local core JSONL IPC; includes serialization, excludes Relay and full Agent. Warmup excluded. Rounds run serially. Atomic/durable/layered set both file and Undo policies explicitly. Windows parent-directory sync unavailable. P99 is exploratory at small sample counts."};
 const workers = [];
-async function launch(engine, mode, round) {
+const engine = "Go";
+async function launch(mode, round) {
   const suffix = `${engine}-${mode}-${round}`, undo = path.join(temp,"undo-"+suffix);
   await fs.mkdir(undo,{recursive:true});
   const begin = performance.now();
-  const child = spawn(engine === "Go" ? path.join(root,"benchmarks/.bin/go-core"+(process.platform === "win32" ? ".exe" : "")) : process.execPath, engine === "Go" ? [] : [path.join(root,"benchmarks/.bin/ts-core.mjs")], {windowsHide:true, stdio:["pipe","pipe","pipe"], env:{...process.env,...profile(mode),HOME:temp,USERPROFILE:temp,REMOTEARC_UNDO_ROOT:undo,REMOTEARC_HOME:temp}});
+  const child = spawn(path.join(root,"benchmarks/.bin/go-core"+(process.platform === "win32" ? ".exe" : "")), [], {windowsHide:true, stdio:["pipe","pipe","pipe"], env:{...process.env,...profile(mode),HOME:temp,USERPROFILE:temp,REMOTEARC_UNDO_ROOT:undo,REMOTEARC_HOME:temp}});
   let next = 0, stderr = "", exited = false;
   const pending = new Map();
   const closed = new Promise(resolve => child.once("close", () => {exited=true; resolve();}));
@@ -97,8 +98,8 @@ async function suite(w) {
   console.log(`ROUND ${w.round} ${w.engine} ${w.mode} `+JSON.stringify({write:result.metrics.write_file.p50_ms,undo:result.metrics.undo_last_change.p50_ms,rss:result.rss_mb,rps32:concurrency[32].throughput_rps}));
 }
 try {
-  for(let round=1;round<=rounds;round++)for(const mode of modes)for(const engine of round%2?["TS","Go"]:["Go","TS"]){
-    const worker=await launch(engine,mode,round); await suite(worker);await worker.close();
+  for(let round=1;round<=rounds;round++)for(const mode of modes){
+    const worker=await launch(mode,round); await suite(worker);await worker.close();
   }
   data.state="passed";
 } catch(error){data.state="failed";data.error=error.stack||String(error);console.error(data.error);process.exitCode=1;}

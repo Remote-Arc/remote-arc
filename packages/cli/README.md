@@ -29,8 +29,7 @@ npx remotelink@latest
 
 From 0.6.0, this npm command starts the complete **native Go Agent** by default.
 The Node launcher verifies the matching platform binary against the SHA256
-manifest pinned to this npm release. `--go` remains an alias; `--ts` selects the
-retained TypeScript implementation.
+manifest pinned to this npm release. `--go` remains an alias.
 
 Or install the CLI globally:
 
@@ -45,14 +44,11 @@ matching native Agent. For installation without Node.js, see the
 
 **Updating:** run `npx remotelink@latest`. A known older, idle Go Agent is
 replaced while preserving pairing, permissions and pause state. Active work
-requires confirmation in the terminal. Stop the current Agent before changing
-runtimes; `--ts` selects the TypeScript compatibility implementation.
+requires confirmation in the terminal.
 
 The primary runtime is `apps/agent` and its independent Go module is
-`packages/execution-core`. `apps/agent-ts` and `packages/execution-core-ts` support
-explicit fallback and compatibility checks. The Cloudflare Relay and React
-Dashboard remain TypeScript; native device execution requires neither Node nor
-a local Go compiler.
+`packages/execution-core`. The Cloudflare Relay and React Dashboard remain
+TypeScript; native device execution requires neither Node nor a local Go compiler.
 
 On first run, `remotelink`:
 
@@ -271,7 +267,7 @@ you control.
 
 ## Requirements for npm / npx
 
-Node.js is required only for this npm package and the TS fallback. Standalone
+Node.js is required only for this npm package. Standalone
 Agent binaries need no Node.js; see the
 [installation guide](https://remotearc.app/downloads).
 
@@ -280,15 +276,15 @@ Agent binaries need no Node.js; see the
 
 ### Runtime selection
 
-The CLI defaults to the complete native Go device runtime. `--go` remains a
-compatible alias; `--ts` selects the retained TS runtime. Native Go executables
-run without Node; npx requires Node for the installation and launch entry.
-The Go runtime uses the same paired device identity, permissions and execution
-lease. Stop the executing agent before switching runtimes.
+The CLI runs the complete native Go device runtime. `--go` remains a compatible
+alias. The TypeScript runtime was retired: `--ts` now exits with an error and
+never falls back. Native Go executables run without Node; npx requires Node for
+the installation and launch entry. Devices that used the TypeScript runtime keep
+their paired identity, permissions and Local Undo records.
 
 Start Go with `npx remotelink@latest --go --foreground`. Use
 `npx remotelink@latest --go --status` to inspect the native runtime, or
-`npx remotelink@latest --go --stop` to stop it before returning to TS.
+`npx remotelink@latest --go --stop` to stop it.
 
 Go binaries accompany the matching npm release. For development builds,
 installation, compatibility coverage and recovery behavior, see the

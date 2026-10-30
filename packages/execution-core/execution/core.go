@@ -9,13 +9,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sync"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/policy"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
 )
 
-//go:embed tools.json guards.json
+//go:embed tools.json tool_modes.json guards.json
 var contracts embed.FS
 
 type Definition struct {
@@ -29,12 +30,23 @@ type guardRule struct {
 }
 
 var definitions []Definition
+
+// toolModes is the mode contract shared with the generated tool reference:
+// "developer" adds to "safe", and every other mode exposes all definitions.
+var toolModes struct {
+	Safe      []string `json:"safe"`
+	Developer []string `json:"developer"`
+}
 var guards []guardRule
 var compiled []*regexp.Regexp
 
 func init() {
 	b, _ := contracts.ReadFile("tools.json")
 	if e := json.Unmarshal(b, &definitions); e != nil {
+		panic(e)
+	}
+	b, _ = contracts.ReadFile("tool_modes.json")
+	if e := json.Unmarshal(b, &toolModes); e != nil {
 		panic(e)
 	}
 	b, _ = contracts.ReadFile("guards.json")
@@ -79,13 +91,11 @@ type Core struct {
 func New(mode string) *Core { return &Core{Mode: mode, Processes: NewProcesses()} }
 func (c *Core) ListTools() []Definition {
 	result := []Definition{}
-	safe := map[string]bool{"list_directory": true, "browse_directories": true, "read_file": true, "read_binary_file": true, "get_file_info": true, "list_processes": true, "list_undo_actions": true}
-	dev := map[string]bool{"write_file": true, "edit_block": true, "undo_change": true, "undo_last_change": true}
 	for _, d := range definitions {
-		if c.Mode == "safe" && !safe[d.Name] {
+		if c.Mode == "safe" && !slices.Contains(toolModes.Safe, d.Name) {
 			continue
 		}
-		if c.Mode == "developer" && !safe[d.Name] && !dev[d.Name] {
+		if c.Mode == "developer" && !slices.Contains(toolModes.Safe, d.Name) && !slices.Contains(toolModes.Developer, d.Name) {
 			continue
 		}
 		result = append(result, d)

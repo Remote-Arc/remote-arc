@@ -92,7 +92,7 @@ export async function resolveGoBinary() {
   });
   if (!response.ok || !response.body)
     throw new Error(
-      `Cannot download the Go agent (HTTP ${response.status}). The TS agent remains available with --ts.`,
+      `Cannot download the Go agent (HTTP ${response.status}).`,
     );
   const reader = response.body.getReader();
   const chunks: Buffer[] = [];
@@ -193,23 +193,4 @@ export async function localGoControl(
   });
   if (!response.ok) throw new Error("Local Go agent control request failed.");
   return response.json() as Promise<Record<string, unknown>>;
-}
-export async function assertTSOwnership(args: string[]) {
-  if (args.some((arg) => ["--help", "-h", "--version", "-v"].includes(arg)))
-    return;
-  const home = process.env.REMOTEARC_HOME || os.homedir();
-  try {
-    const lock = await fs.stat(
-      path.join(home, ".remotearc", "agent", "execution.lock"),
-    );
-    if (Date.now() - lock.mtimeMs > 15_000) return;
-    const status = await localGoControl("GET", "/status").catch(() => null);
-    if (status?.engine === "go")
-      throw new Error(
-        "A Go agent owns execution. Use --go --stop before launching --ts; pairing and active operations have been preserved.",
-      );
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
-    throw error;
-  }
 }

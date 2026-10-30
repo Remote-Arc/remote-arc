@@ -4,15 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test:smoke": "tsx scripts/smoke.ts"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/server": "^2.4.0",
-    "@remotearc/execution-core-ts": "workspace:*",
-    "zod": "^4.6.7"
+    "test:smoke": "tsx scripts/go-smoke.ts"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.4.0",

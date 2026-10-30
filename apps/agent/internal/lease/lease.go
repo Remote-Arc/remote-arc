@@ -1,5 +1,6 @@
 // Package lease implements proper-lockfile's shared mkdir/mtime lease protocol.
-// Both engines use the same directory, stale period and heartbeat interval.
+// Older TypeScript agents still running on a device use the same directory, stale
+// period and heartbeat interval, so upgrading never leaves two execution owners.
 package lease
 
 import (

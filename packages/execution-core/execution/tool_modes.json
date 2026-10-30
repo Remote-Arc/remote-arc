@@ -1,0 +1,17 @@
+{
+  "safe": [
+    "list_directory",
+    "browse_directories",
+    "read_file",
+    "read_binary_file",
+    "get_file_info",
+    "list_processes",
+    "list_undo_actions"
+  ],
+  "developer": [
+    "write_file",
+    "edit_block",
+    "undo_change",
+    "undo_last_change"
+  ]
+}

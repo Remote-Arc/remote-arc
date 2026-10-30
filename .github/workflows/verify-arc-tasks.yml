@@ -31,7 +31,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: pnpm --filter @remotearc/relay exec tsx scripts/arc-task-live-eval.ts
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: arc-task-behavior-report

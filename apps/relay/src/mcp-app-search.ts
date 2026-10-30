@@ -49,12 +49,13 @@ const relevance = (app: ListedApp, operation: ListedOperation, tokens: string[])
 
 export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unknown = {}, options: { excludeRunway?: boolean } = {}) {
   const input = appDiscoverySchema.parse(raw);
-  if (!options.excludeRunway && !input.use_case && !input.includeSchemas) {
+  if (!input.use_case && !input.includeSchemas) {
     const legacy = await discoverApps(env, userId, {
       provider: input.provider, category: input.category, query: input.query,
       limit: input.limit, cursor: input.cursor,
-    });
-    return { ...legacy, mode: "providers", operationCatalogSize: APP_OPERATIONS.length };
+    }, options.excludeRunway ? { excludeProvider: "runway" } : {});
+    return { ...legacy, mode: "providers", operationCatalogSize: options.excludeRunway
+      ? APP_OPERATIONS.filter(operation => operation.provider !== "runway").length : APP_OPERATIONS.length };
   }
   const all = await listApps(env, userId);
   const query = (input.use_case || input.query || "").trim();

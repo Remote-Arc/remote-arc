@@ -38,6 +38,9 @@ export const appActionCounts = {
   read: APP_OPERATIONS.filter(operation => operation.permission === "read").length,
   write: APP_OPERATIONS.filter(operation => operation.permission === "write").length,
 };
+// Counts quoted in Claude tool descriptions, derived from the published schemas.
+export const claudeAppActionCounts = { read: variants("read", true).length, write: variants("write", true).length };
+export const claudeAppProviderCount = new Set(APP_OPERATIONS.filter(operation => operation.provider !== "runway").map(operation => operation.provider)).size;
 
 /** Maps a typed action call onto the existing callApp input. */
 export function appCallInput(permission: AppPermission, input: z.infer<typeof appReadActionSchema>) {

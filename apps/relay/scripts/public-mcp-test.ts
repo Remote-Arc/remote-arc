@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createRemoteLinkMcp } from "../src/mcp.js";
 import { mcpClientProfile } from "../src/mcp-client-profile.js";
+import { APP_OPERATIONS } from "../src/app-catalog.js";
 import { callDevice } from "../src/device-call.js";
 import { seal } from "../src/app-oauth.js";
 import { NO_BROWSER_AUTH } from "../src/browser-auth.js";
@@ -132,6 +133,12 @@ sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token
 sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("spoof-oauth", "Claude", JSON.stringify(["https://my-site.example/callback"]), "none", stamp);
 assert.equal(await mcpClientProfile(db, "claude-oauth"), "claude");
 assert.equal(await mcpClientProfile(db, "spoof-oauth"), "generic");
+sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("claude-com-oauth", "Any name", JSON.stringify(["https://claude.com/api/mcp/auth_callback"]), "none", stamp);
+sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("localhost-oauth", "Claude Code", JSON.stringify(["http://localhost:33418/callback"]), "none", stamp);
+sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("lookalike-oauth", "Claude", JSON.stringify(["https://claude.com.example/api/mcp/auth_callback", "http://claude.ai/api/mcp/auth_callback"]), "none", stamp);
+assert.equal(await mcpClientProfile(db, "claude-com-oauth"), "claude", "Anthropic's claude.com callback is the same Claude connector");
+assert.equal(await mcpClientProfile(db, "localhost-oauth"), "generic", "Local callbacks cannot prove a Claude client");
+assert.equal(await mcpClientProfile(db, "lookalike-oauth"), "generic", "Look-alike hosts and plain HTTP never match");
 const claudeListed = (await rpc("tools/list", {}, undefined, env, identity(), "claude")).result.tools as any[];
 const actionText = (tools: any[], name: string) => JSON.stringify(tools.find(t => t.name === name).inputSchema);
 assert(actionText(listed, "run_app_write_action").includes("runway.videos.generate"), "Other clients keep Runway generation");
@@ -175,17 +182,25 @@ assert(claudeListed.find(t => t.name === "find_skills").description.includes("un
   "Claude receives policy-safe reference guidance");
 const legacyCount = data(await rpc("tools/call", { name: "list_apps",
   arguments: { includeSchemas: true } }));
-assert.equal(legacyCount.operationCatalogSize, 344, "Non-Claude filtered Apps search retains its global count");
+assert.equal(legacyCount.operationCatalogSize, APP_OPERATIONS.length, "Non-Claude filtered Apps search retains its global count");
 const claudeCount = data(await rpc("tools/call", { name: "list_apps",
   arguments: { includeSchemas: true } }, undefined, env, identity(), "claude"));
-assert.equal(claudeCount.operationCatalogSize, 336, "Claude Apps search excludes eight Runway operations");
+assert.equal(claudeCount.operationCatalogSize, APP_OPERATIONS.filter(operation => operation.provider !== "runway").length, "Claude Apps search excludes every Runway operation");
+// Claude's default directory keeps the shared paginated provider listing, without Runway.
+const claudeDirectory = data(await rpc("tools/call", { name: "list_apps", arguments: {} }, undefined, env, identity(), "claude"));
+const genericDirectory = data(await rpc("tools/call", { name: "list_apps", arguments: {} }));
+assert.equal(claudeDirectory.total, genericDirectory.total - 1, "Claude pages over every provider except Runway");
+assert(!claudeDirectory.apps.some((app: any) => app.provider === "runway"));
+assert.equal(typeof claudeDirectory.nextCursor === "number" || claudeDirectory.nextCursor === null, true);
+const claudeDescription = (name: string) => claudeListed.find(t => t.name === name).description as string;
+assert(claudeDescription("run_app_read_action").includes(`All ${APP_OPERATIONS.filter(o => o.permission === "read" && o.provider !== "runway").length} read actions`), "Claude read count matches its schema");
+assert(claudeDescription("run_app_write_action").includes(`All ${APP_OPERATIONS.filter(o => o.permission === "write" && o.provider !== "runway").length} change actions`), "Claude write count matches its schema");
 const APP_TOOL_NAMES = ["list_apps", "run_app_read_action", "run_app_write_action"];
 const appNames = listed.filter(tool => APP_TOOL_NAMES.includes(tool.name) || tool.name === "call_app").map(tool => tool.name).sort();
 assert.deepEqual(appNames, APP_TOOL_NAMES, "The generic call_app executor is replaced by typed read and write action tools");
 assert(!listed.some(tool => /^(github|gmail|slack|google_slides)_(messages|issues|presentations|channels)_/.test(tool.name)),
   "Apps should not add hundreds of per-operation MCP tool definitions");
 // Every operation is published up front with its own description and exact schema.
-const { APP_OPERATIONS } = await import("../src/app-catalog.js");
 const actionVariants = (name: string) => {
   const schema = listed.find(tool => tool.name === name).inputSchema;
   assert.equal(schema.type, "object");

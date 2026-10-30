@@ -18,8 +18,10 @@ browser, on sites the user allowed, or on single tabs the user shares.
   allows that site. The AI never sees tabs it did not open or the user did not
   share.
 - A tab the user shares from the popup starts read-only. **Click & fill** is a
-  separate per-tab permission. A shared tab loses access when it leaves its
-  page, unless it moves to an allowed site.
+  separate per-tab permission. A shared tab keeps access, and Click & fill if
+  enabled, while it stays on the same origin. It loses access when it moves to
+  another site, unless that site is allowed. Chrome's `activeTab` has the same
+  limit.
 - Password, payment-card and file-picker fields are never filled. One-time
   codes for sign-in or registration can be filled through `shared_tab_fill` or
   `shared_tab_act` after Dashboard approval for the website and with the local

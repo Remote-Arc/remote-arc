@@ -1,3 +1,81 @@
-/* Keep native scrolling and keyboard navigation without visible scrollbar UI. */
+/* Keep the existing compact scrollbar treatment outside the homepage. */
 *,*::before,*::after{scrollbar-width:none!important;scrollbar-gutter:auto!important;-ms-overflow-style:none!important}
 *::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+
+/* The homepage keeps a visible native scroll rail, including nested demos. */
+:root:has(.landingHero--constellation){
+  --home-scroll-track:#fdfdfd;
+  --home-scroll-thumb:#a1aab5;
+  --home-scroll-hover:#38bdf8;
+  overflow-y:scroll;
+  scrollbar-gutter:stable!important;
+}
+:root[data-theme=dark]:has(.landingHero--constellation){
+  --home-scroll-track:#111114;
+  --home-scroll-thumb:#5c6878;
+  --home-scroll-hover:#7dd3fc;
+}
+:root:has(.landingHero--constellation) .homeDemoTerminal{
+  --home-scroll-track:#19191f;
+  --home-scroll-thumb:#667384;
+}
+:root:has(.landingHero--constellation),
+:root:has(.landingHero--constellation) body,
+.publicPage:has(>.landingHero--constellation) *{
+  scrollbar-width:thin!important;
+  scrollbar-color:var(--home-scroll-thumb) var(--home-scroll-track);
+  -ms-overflow-style:auto!important;
+}
+
+/* Chromium and Safari use an inset, rounded thumb; Firefox uses the colors above. */
+@supports selector(::-webkit-scrollbar){
+  :root:has(.landingHero--constellation),
+  :root:has(.landingHero--constellation) body,
+  .publicPage:has(>.landingHero--constellation) *{
+    scrollbar-width:auto!important;
+    scrollbar-color:auto;
+  }
+  :root:has(.landingHero--constellation)::-webkit-scrollbar,
+  :root:has(.landingHero--constellation) body::-webkit-scrollbar,
+  .publicPage:has(>.landingHero--constellation) *::-webkit-scrollbar{
+    display:block!important;
+    width:10px!important;
+    height:10px!important;
+  }
+  :root:has(.landingHero--constellation)::-webkit-scrollbar-track,
+  :root:has(.landingHero--constellation) body::-webkit-scrollbar-track,
+  .publicPage:has(>.landingHero--constellation) *::-webkit-scrollbar-track{
+    background:var(--home-scroll-track);
+    border-radius:999px;
+  }
+  :root:has(.landingHero--constellation)::-webkit-scrollbar-thumb,
+  :root:has(.landingHero--constellation) body::-webkit-scrollbar-thumb,
+  .publicPage:has(>.landingHero--constellation) *::-webkit-scrollbar-thumb{
+    min-height:36px;
+    border:3px solid var(--home-scroll-track);
+    border-radius:999px;
+    background:var(--home-scroll-thumb);
+  }
+  :root:has(.landingHero--constellation)::-webkit-scrollbar-thumb:hover,
+  :root:has(.landingHero--constellation) body::-webkit-scrollbar-thumb:hover,
+  .publicPage:has(>.landingHero--constellation) *::-webkit-scrollbar-thumb:hover{
+    background:var(--home-scroll-hover);
+  }
+  :root:has(.landingHero--constellation)::-webkit-scrollbar-corner,
+  :root:has(.landingHero--constellation) body::-webkit-scrollbar-corner,
+  .publicPage:has(>.landingHero--constellation) *::-webkit-scrollbar-corner{
+    background:var(--home-scroll-track);
+  }
+}
+
+@media(forced-colors:active){
+  :root:has(.landingHero--constellation){
+    --home-scroll-track:Canvas;
+    --home-scroll-thumb:ButtonText;
+    --home-scroll-hover:Highlight;
+  }
+  :root:has(.landingHero--constellation) .homeDemoTerminal{
+    --home-scroll-track:Canvas;
+    --home-scroll-thumb:ButtonText;
+  }
+}

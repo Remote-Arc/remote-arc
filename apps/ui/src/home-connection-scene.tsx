@@ -12,7 +12,7 @@ type OrbitNode = { name: string; icon: string; x: number; y: number; kind: "app"
 const resources: readonly OrbitNode[] = [
   { name: "GitHub", icon: "/app-brands/github.svg", x: 115, y: 157, kind: "app" },
   { name: "Slack", icon: "/app-brands/slack.svg", x: 57, y: 250, kind: "app" },
-  { name: "Video & images", icon: "/local-creative.svg", x: 95, y: 345, kind: "skill" },
+  { name: "Gmail", icon: "/app-brands/gmail.svg", x: 95, y: 345, kind: "app" },
   { name: "Vercel", icon: "/app-brands/vercel.svg", x: 195, y: 414, kind: "app" },
   { name: "Google Drive", icon: "/app-brands/googledrive.svg", x: 310, y: 438, kind: "app" },
   { name: "Notion", icon: "/app-brands/notion.svg", x: 425, y: 414, kind: "app" },

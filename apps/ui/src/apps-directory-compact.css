@@ -1,17 +1,35 @@
-/* Keep category cards on the same compact rhythm, independent of logo count. */
-.appsDirectory .appsDirectoryCard{padding:24px;overflow:visible}
-.appsDirectory .appsDirectoryCard>p{margin:12px 0 16px;min-height:40px}
-.appsDirectory .appsDirectoryExamples{margin-bottom:18px;gap:8px}
-.appsDirectory .appsDirectoryExamples li{padding:10px 12px;min-height:44px;display:flex;align-items:center;font-size:11px;line-height:1.6}
-.appsDirectory .appsDirectoryBrands{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:34px;gap:8px;align-content:start;margin:0;min-height:76px}
-.appsDirectory .appsDirectoryBrands>a{position:relative;display:grid;place-items:center;min-width:0;width:100%;padding:0;gap:0;text-decoration:none}
-.appsDirectory .appsDirectoryBrands>a>span[data-brand]{width:34px;height:34px;border-radius:8px}
-.appsDirectory .appsDirectoryBrands .appsDirectoryBrandName{position:absolute;z-index:5;bottom:calc(100% + 8px);left:50%;width:max-content;max-width:190px;height:auto;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--text);color:var(--bg);font-size:10px;line-height:1.4;white-space:nowrap;pointer-events:none;opacity:0;visibility:hidden;transform:translateX(-50%);box-shadow:0 6px 18px #00000014}
+/* Six concise, equally weighted workflows on desktop; one column on phones. */
+.appsDirectory .modernSectionIntro h2{font-size:clamp(27px,3.5vw,39px);line-height:1.18;max-width:850px}
+.appsDirectory .modernSectionIntro>p{font-size:14px;line-height:1.7;max-width:700px;margin-top:14px}
+.appsDirectory .appsDirectoryToolbar{gap:16px;margin:24px 0 18px}
+.appsDirectoryActions{display:flex;align-items:center;gap:18px}
+.appsDirectoryActions>a{white-space:nowrap;color:var(--text);text-decoration:none;font-size:12px}
+.appsDirectory .appsDirectoryToolbar input{width:225px;min-height:39px;padding:9px 15px;font-size:12px}
+.appsDirectory .appsDirectoryGrid{gap:14px}
+.appsDirectory .appsDirectoryCard{padding:21px;overflow:visible;border-radius:12px}
+.appsDirectory .appsDirectoryCard:hover{transform:translateY(-2px)}
+.appsDirectory .appsDirectoryCard>header{gap:10px}
+.appsDirectory .appsDirectoryCard h3{font-size:18px}
+.appsDirectory .appsDirectoryCard>p{margin:9px 0 12px;min-height:0;font-size:11px;line-height:1.7}
+.appsDirectory .appsDirectoryExamples{margin:0 0 13px;gap:0}
+.appsDirectory .appsDirectoryExamples li{padding:0;border:0;border-radius:0;background:transparent;color:var(--text);font-size:11px;line-height:1.7;min-height:0}
+.appsDirectory .appsDirectoryBrands{display:flex;flex-wrap:wrap;gap:7px;margin:0;min-height:0}
+.appsDirectory .appsDirectoryBrands>a{position:relative;display:grid;place-items:center;flex:none;min-width:0;padding:0;text-decoration:none}
+.appsDirectory .appsDirectoryBrands>a>span[data-brand]{width:29px;height:29px;border-radius:7px}
+.appsDirectory .appsDirectoryBrands img{width:18px;height:18px}
+.appsDirectory .appsDirectoryBrands .appsDirectoryBrandName{position:absolute;z-index:5;bottom:calc(100% + 7px);left:50%;width:max-content;max-width:180px;height:auto;padding:6px 9px;border:1px solid var(--line);border-radius:5px;background:var(--text);color:var(--bg);font-size:10px;white-space:nowrap;pointer-events:none;opacity:0;visibility:hidden;transform:translateX(-50%)}
 .appsDirectory .appsDirectoryBrands>a:is(:hover,:focus-visible) .appsDirectoryBrandName{opacity:1;visibility:visible}
-.appsDirectory .appsDirectoryBrands:has(>a:only-child){display:flex;align-items:center}
-.appsDirectory .appsDirectoryBrands>a:only-child{display:flex;justify-content:flex-start;gap:12px;min-height:54px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
-.appsDirectory .appsDirectoryBrands>a:only-child .appsDirectoryBrandName{position:static;visibility:visible;opacity:1;transform:none;max-width:none;width:auto;background:transparent;color:var(--text);border:0;box-shadow:none;padding:0;font-size:12px}
-.appsDirectory .appsDirectoryExplore{margin-top:18px;padding-top:14px}
-@media(max-width:1100px){.appsDirectory .appsDirectoryBrands{grid-template-columns:repeat(6,minmax(0,1fr))}}
-@media(max-width:620px){.appsDirectory .appsDirectoryCard{padding:22px}.appsDirectory .appsDirectoryBrands{grid-template-columns:repeat(7,minmax(0,1fr));min-height:34px}.appsDirectory .appsDirectoryCard>p{min-height:0}.appsDirectory .appsDirectoryExamples li{min-height:42px}.appsDirectory .appsDirectoryExplore{margin-top:16px}.appsDirectory .appsDirectoryBrands .appsDirectoryBrandName{font-size:9px;max-width:145px}}
-@media(max-width:380px){.appsDirectory .appsDirectoryBrands{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.appsDirectory .appsDirectoryBrands>.appsDirectoryMore{width:29px;height:29px;border:1px solid var(--line);border-radius:7px;font-size:10px;color:var(--muted)}
+.appsDirectorySkills{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.appsDirectorySkills>a{border:1px solid var(--line);border-radius:5px;padding:4px 7px;font-size:9px;line-height:1.5;text-decoration:none;color:var(--muted)}
+.appsDirectorySkills>a:hover{color:var(--text);border-color:var(--accent)}
+.appsDirectory .creativeDirectoryPreviews{margin:10px 0 0;gap:7px}
+.appsDirectory .creativeDirectoryPreviews>a{display:flex;align-items:center;gap:7px;padding:5px;border:1px solid var(--line);border-radius:6px;background:transparent;min-width:0}
+.appsDirectory .creativeDirectoryPreviews img{width:44px;height:34px;aspect-ratio:auto;object-fit:cover;border-radius:3px}
+.appsDirectory .creativeDirectoryPreviews>a>span{font-size:8px;line-height:1.5;padding:0}
+.appsDirectory .creativeDirectoryPreviews small,.appsDirectory .creativeDirectoryPreviews b{display:none}
+.appsDirectory .appsDirectoryExplore{margin-top:auto;padding-top:14px;border-top:0;font-size:10px;line-height:1.7;min-height:20px}
+.appsDirectory .appsDirectoryFootnote{margin-top:16px;font-size:10px;line-height:1.7}
+@media(max-width:1050px){.appsDirectory .appsDirectoryCard{padding:19px}}
+@media(max-width:620px){.appsDirectoryActions{width:100%;justify-content:space-between;gap:12px}.appsDirectoryActions label{flex:1}.appsDirectory .appsDirectoryToolbar input{width:100%}.appsDirectory .appsDirectoryCard{padding:20px}.appsDirectory .appsDirectoryGrid{gap:12px}.appsDirectory .appsDirectoryExamples{margin-bottom:12px}.appsDirectory .appsDirectoryExplore{padding-top:12px}.appsDirectory .appsDirectoryCard>p{font-size:12px}.appsDirectory .appsDirectoryExamples li{font-size:12px}.appsDirectory .creativeDirectoryPreviews>a>span{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.appsDirectory .appsDirectoryCard:hover{transform:none}}

@@ -1,0 +1,32 @@
+.connectedVideoEdit{overflow:hidden;border:1px solid var(--site-line);border-radius:11px;background:var(--site-surface);color:var(--site-ink)}
+.connectedVideoEdit>header{display:flex;align-items:center;gap:13px;padding:12px 15px;border-bottom:1px solid var(--site-line);font-size:10px;color:var(--site-muted)}
+.connectedVideoEdit>header>small{margin-left:auto;font-size:7px;letter-spacing:.1em}
+.connectedEditStage{position:relative;display:flex;align-items:center;justify-content:center;padding:14px 18px 30px;background:#0c1116;min-height:195px}
+.connectedEditPicture{position:relative;isolation:isolate;overflow:hidden;aspect-ratio:16/7;width:100%;max-width:460px;border-radius:5px;background:linear-gradient(150deg,#718d91,#c6ad83 56%,#aa8163);color:#fff}
+.connectedEditPicture:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent,#0d282a6b);z-index:-1}
+.connectedEditSun{position:absolute;top:15%;right:22%;width:45px;height:45px;border-radius:50%;background:#fff0ca;box-shadow:0 0 60px #ffe9b870;z-index:-1}
+.connectedEditHills{position:absolute;inset:20% -5% -5%;background:linear-gradient(170deg,#3d6e70,#17383c);clip-path:polygon(0 68%,18% 35%,32% 57%,55% 5%,75% 48%,87% 26%,100% 61%,100% 100%,0 100%);z-index:-1}
+.connectedEditTitle{position:absolute;left:8%;top:28%;font-size:clamp(24px,3vw,37px);font-weight:600;line-height:.97;letter-spacing:-.055em;text-shadow:0 2px 16px #001e2e28}
+.connectedEditPicture>small{position:absolute;bottom:10px;right:11px;font:9px ui-monospace,monospace;letter-spacing:.02em}
+.connectedEditStage[data-format=portrait] .connectedEditPicture{aspect-ratio:9/10;max-width:176px;height:164px}
+.connectedEditStage[data-format=portrait] .connectedEditTitle{font-size:25px;top:31%}
+.connectedEditCaption{position:absolute;bottom:9px;left:10px;right:10px;text-align:center;color:#c4d1d8;font-size:9px;line-height:1.5}
+.connectedEditTracks{padding:13px 15px 0}
+.connectedEditRuler{display:flex;justify-content:space-between;margin-bottom:8px;color:var(--site-muted);font:8px ui-monospace,monospace}
+.connectedEditClips{position:relative;display:grid;grid-template-columns:.8fr 1.1fr 1fr;gap:3px}
+.connectedEditClips:after{content:"";position:absolute;top:-5px;bottom:-7px;left:41%;width:1px;background:#f4c782;pointer-events:none}
+.connectedEditClips>span{display:flex;align-items:center;gap:5px;min-width:0;padding:13px 7px;border:1px solid #3cc0ca35;border-radius:4px;background:linear-gradient(120deg,#3cc0ca18,#3cc0ca35);font-size:8px;color:var(--site-ink)}
+.connectedEditClips>span[data-clip="1"]{border-color:#9c8df13d;background:linear-gradient(120deg,#9c8df122,#9c8df138)}
+.connectedEditClips>span[data-clip="2"]{border-color:#e3a55740;background:linear-gradient(120deg,#e3a55720,#e3a55735)}
+.connectedEditClips>span>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.connectedEditClips svg{flex:none;opacity:.65}
+.connectedEditSubtitles{display:flex;align-items:center;gap:6px;padding:7px 9px;margin-top:6px;border-radius:4px;background:var(--site-subtle);font-size:8px;color:var(--site-muted)}
+.connectedEditSubtitles>span{margin-left:auto;font:7px ui-monospace,monospace}
+.connectedEditControls{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 15px}
+.connectedEditControls>[role=group]{display:flex;gap:3px}
+.connectedEditControls button{border:1px solid var(--site-line);border-radius:5px;background:transparent;color:var(--site-muted);font:inherit;font-size:9px;padding:7px 9px;cursor:pointer}
+.connectedEditControls button[aria-pressed=true]{border-color:#38bdf85e;color:var(--site-ink);background:#38bdf810}
+.connectedEditControls .connectedEditReview{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--site-ink);background:var(--site-subtle)}
+.connectedEditResult{display:flex;align-items:center;gap:8px;padding:12px 15px;border-top:1px solid var(--site-line);font-size:9px;line-height:1.7;color:var(--site-muted)}
+.connectedEditResult>svg{flex:none;color:#39c58d}
+@media(max-width:600px){.connectedEditStage{min-height:175px;padding-inline:12px}.connectedEditTitle{font-size:29px}.connectedEditTracks{padding-inline:10px}.connectedEditClips>span{padding:12px 5px;font-size:7px;gap:3px}.connectedEditClips svg{width:11px}.connectedEditControls{padding-inline:10px;gap:6px}.connectedEditControls button{font-size:8px;padding:7px}.connectedEditResult{padding-inline:10px;font-size:8px}}

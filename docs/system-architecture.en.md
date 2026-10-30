@@ -54,8 +54,7 @@ The Worker validates account identity, OAuth grants, entitlement and device poli
 | apps/relay/src/task-events.ts | Event subscription and callback integration subject to safe egress deployment |
 | apps/agent | Native Go pairing, session, control endpoint, startup recovery and logs |
 | packages/execution-core | Go filesystem, process, policy and Undo module |
-| apps/agent-ts / packages/execution-core-ts | Explicit TypeScript compatibility and parity-test implementations |
-| packages/cli | npm/npx launcher; Go by default, explicit --ts fallback |
+| packages/cli | npm/npx launcher that verifies and starts the Go Agent |
 | apps/ui | Public documentation, pairing, Dashboard and device-policy UI |
 
 ### Release 0.6.x installation
@@ -176,7 +175,7 @@ File contents, tool arguments and command output may **transit through** the hos
 
 ## 13. Compatibility, release and verification
 
-The production Go Agent/Core is one native executable available for macOS, Windows and Linux. TypeScript remains as a deliberate compatibility fallback. Both engines should be tested against identical tool, policy, Undo and protocol contracts. A valid benchmark matches durability semantics and specifies whether it measures Core IPC, complete Agent runtime or production Relay end-to-end.
+The production Go Agent/Core is one native executable available for macOS, Windows and Linux. The TypeScript device runtime was retired, and `--ts` now exits with an error instead of falling back. A valid benchmark matches durability semantics and specifies whether it measures Core IPC, complete Agent runtime or production Relay end-to-end.
 
 A release is not complete merely because a binary compiles: test real permissions, conflicting edits, restart/reconnect, same-device ownership, background-service migration, packaging hashes, installer channels and cross-platform behavior. Stable and release-candidate channels must stay distinct. A shell safety guard and file policies must not be marketed as a full OS sandbox.
 

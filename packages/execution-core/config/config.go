@@ -82,7 +82,7 @@ func SaveAt(dir string, c Config) error {
 	return DurableWrite(filepath.Join(dir, "config.json"), append(b, '\n'), 0600)
 }
 
-// FileDurability selects equal atomic/durable profiles in the Go and TS cores.
+// FileDurability selects the atomic or durable profile.
 // Default is durable; the atomic profile is explicit, and never fsyncs.
 func FileDurability() string {
 	if os.Getenv("REMOTEARC_FILE_DURABILITY") == "atomic" {

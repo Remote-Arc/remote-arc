@@ -3,15 +3,12 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import http from "node:http";
+import { createHash } from "node:crypto";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import WebSocket, { WebSocketServer } from "ws";
-import {
-  RemoteArcExecutionCore,
-  type ExecutionPolicy,
-} from "@remotearc/execution-core-ts";
-import { tryAgentLease } from "../src/agent-runtime.js";
-import { goalWorkspace } from "../src/goal-workspace.js";
+
+type Policy = Record<string, unknown>;
 
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const version = JSON.parse(
@@ -38,7 +35,6 @@ const env = {
   USERPROFILE: temp,
   NO_COLOR: "1",
 };
-process.env.REMOTEARC_UNDO_ROOT = path.join(temp, ".remotearc/undo");
 const children: ChildProcess[] = [];
 const pending = new Map<
   string,
@@ -96,7 +92,6 @@ const agent = spawn(binary, ["--foreground"], {
 });
 children.push(agent);
 agent.stderr!.on("data", (b) => (stderr += b.toString()));
-const ts = new RemoteArcExecutionCore("managed");
 const waitFor = async (
   predicate: () => boolean,
   description: string,
@@ -112,7 +107,7 @@ const waitFor = async (
 async function go(
   name: string,
   args: Record<string, unknown> = {},
-  policy?: ExecutionPolicy,
+  policy?: Policy,
 ): Promise<any> {
   const id = "compat-" + ++nextID;
   return new Promise((resolve, reject) => {
@@ -170,13 +165,16 @@ async function run(
 try {
   await waitFor(() => Boolean(hello), "Go connection");
   assert.equal(hello.device.id, "compat-device");
+  const coreTools = JSON.parse(
+    await fs.readFile(
+      path.join(repository, "packages/execution-core/execution/tools.json"),
+      "utf8",
+    ),
+  ).map((tool: { name: string }) => tool.name);
   assert.deepEqual(
-    // The native Go-only device wake control and Browser Runner are
-    // intentionally not exposed by the TS compatibility runtime; ordinary
-    // execution tools must still match.
     new Set(hello.tools.filter((tool: string) => tool !== "set_device_runtime" && !goBrowserRunnerTools.includes(tool))),
     new Set([
-      ...ts.listTools().map((t) => t.name),
+      ...coreTools,
       "background_agent_status",
       "set_background_agent",
       "set_task_keep_awake",
@@ -192,16 +190,18 @@ try {
   const runnerAdvertised = goBrowserRunnerTools.filter((tool) => hello.tools.includes(tool));
   assert(runnerAdvertised.length === 0 || runnerAdvertised.length === goBrowserRunnerTools.length);
   assert.equal(hello.capabilities.includes("browser_runner_v1"), runnerAdvertised.length > 0);
-  const tsRoot = path.join(temp, "ts-fixtures"),
-    goRoot = path.join(temp, "go-fixtures");
-  const normalize = (value: any, root: string): any => {
-    const expression = new RegExp(
-      RegExp.escape(root),
-      process.platform === "win32" ? "gi" : "g",
-    );
+  // Literal results pin the wire contract the Relay and AI clients rely on.
+  const root = path.join(temp, "fixtures");
+  const normalize = (value: any): any => {
+    const flags = process.platform === "win32" ? "gi" : "g";
+    const fixtures = new RegExp(RegExp.escape(root), flags),
+      parent = new RegExp(RegExp.escape(temp), flags);
     const visit = (v: any): any =>
       typeof v === "string"
-        ? v.replace(expression, "ROOT")
+        ? v
+            .replace(fixtures, "ROOT")
+            .replace(parent, "TEMP")
+            .replace(/^(ROOT|TEMP).*/, (p) => p.replaceAll("\\", "/"))
         : Array.isArray(v)
           ? v.map(visit)
           : v && typeof v === "object"
@@ -211,58 +211,65 @@ try {
             : v;
     return visit(value);
   };
-  for (const root of [tsRoot, goRoot]) {
-    await fs.mkdir(path.join(root, "child"), { recursive: true });
-    await fs.writeFile(
-      path.join(root, "fixture.txt"),
-      "alpha\r\nbeta\r\ngamma",
-    );
-    await fs.writeFile(path.join(root, ".env"), "private");
-  }
-  const compare = async (
+  await fs.mkdir(path.join(root, "child"), { recursive: true });
+  await fs.writeFile(path.join(root, "fixture.txt"), "alpha\r\nbeta\r\ngamma");
+  await fs.writeFile(path.join(root, ".env"), "private");
+  const expectTool = async (
     name: string,
-    a: Record<string, unknown>,
-    b: Record<string, unknown>,
-    p?: ExecutionPolicy,
-  ) =>
-    assert.deepEqual(
-      normalize(decode(await go(name, b, p)), goRoot),
-      normalize(decode(await ts.callTool(name, a, p)), tsRoot),
-      name,
-    );
-  await compare("list_directory", { path: tsRoot }, { path: goRoot });
-  await compare("browse_directories", { path: tsRoot }, { path: goRoot });
-  await compare(
+    args: Record<string, unknown>,
+    expected: unknown,
+    policy?: Policy,
+  ) => {
+    assert.deepEqual(normalize(decode(await go(name, args, policy))), expected, name);
+  };
+  await expectTool(
+    "list_directory",
+    { path: root },
+    "Directory: ROOT\nDepth: 2\n\n[DIR] child\n[FILE] fixture.txt\n\n[Remote Arc omitted 1 protected or out-of-scope entry.]",
+  );
+  await expectTool("browse_directories", { path: root }, {
+    directories: [{ name: "child", path: "ROOT/child", type: "directory" }],
+    parent: "TEMP",
+    path: "ROOT",
+    protected_entries_omitted: 0,
+    truncated: false,
+  });
+  await expectTool(
     "read_file",
-    { path: path.join(tsRoot, "fixture.txt"), offset: -2, length: 1 },
-    { path: path.join(goRoot, "fixture.txt"), offset: -2, length: 1 },
+    { path: path.join(root, "fixture.txt"), offset: -2, length: 1 },
+    "[Reading 1 lines from lines 2-2 (total: 3 lines, 18 B)]\n\nbeta",
   );
-  const shared = path.join(temp, "binary.dat");
+  const shared = path.join(root, "binary.dat");
   await fs.writeFile(shared, Buffer.from([0, 1, 2, 3, 4, 255]));
-  await compare(
-    "read_binary_file",
-    { path: shared, offset: 1, length: 3 },
-    { path: shared, offset: 1, length: 3 },
+  const { file_revision: chunkRevision, ...chunk } = normalize(
+    decode(await go("read_binary_file", { path: shared, offset: 1, length: 3 })),
   );
+  assert.match(chunkRevision, /^[a-f0-9]{64}$/);
+  assert.deepEqual(chunk, {
+    bytes_read: 3,
+    chunk_sha256: "039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81",
+    data: "AQID",
+    encoding: "base64",
+    eof: false,
+    mime_type: "application/octet-stream",
+    offset: 1,
+    path: "ROOT/binary.dat",
+    size: 6,
+  });
   await fs.utimes(
     shared,
     new Date("2026-01-01T00:00:00.100Z"),
     new Date("2026-01-01T00:00:00.200Z"),
   );
-  const tsInfo = decode(await ts.callTool("get_file_info", { path: shared })),
-    goInfo = decode(await go("get_file_info", { path: shared }));
-  for (const field of [
-    "path",
-    "type",
-    "size",
-    "size_human",
-    "mode",
-    "created_at",
-    "modified_at",
-    "accessed_at",
-  ]) {
-    assert.deepEqual(goInfo[field], tsInfo[field], "metadata " + field);
-  }
+  const info = decode(await go("get_file_info", { path: shared }));
+  assert.equal(info.path.toLowerCase(), shared.toLowerCase());
+  assert.equal(info.type, "file");
+  assert.equal(info.size, 6);
+  assert.equal(info.size_human, "6 B");
+  assert.equal(typeof info.mode, "number");
+  assert.equal(info.modified_at, "2026-01-01T00:00:00.200Z");
+  assert.equal(info.accessed_at, "2026-01-01T00:00:00.100Z");
+  assert(!Number.isNaN(Date.parse(info.created_at)));
   const revision = decode(
     await go("read_binary_file", { path: shared }),
   ).file_revision;
@@ -271,66 +278,78 @@ try {
     () => go("read_binary_file", { path: shared, expected_revision: revision }),
     /FILE_CHANGED_DURING_READ/,
   );
-  await assert.rejects(
-    () =>
-      ts.callTool("read_binary_file", {
-        path: shared,
-        expected_revision: revision,
-      }),
-    /FILE_CHANGED_DURING_READ/,
+  const mutate = path.join(root, "mutate.txt");
+  const undoReceipt = {
+    path: "ROOT/mutate.txt",
+    undo_available: true,
+    undo_storage: "local-device-only",
+  };
+  await expectTool(
+    "write_file",
+    { path: mutate, content: "old old\n", mode: "rewrite" },
+    { ...undoReceipt, atomic: true, bytes: 8, file_size: 8, mode: "rewrite" },
   );
-  for (const mode of ["rewrite", "append"])
-    await compare(
-      "write_file",
-      { path: path.join(tsRoot, "mutate.txt"), content: "old old\n", mode },
-      { path: path.join(goRoot, "mutate.txt"), content: "old old\n", mode },
-    );
-  await compare(
+  await expectTool(
+    "write_file",
+    { path: mutate, content: "old old\n", mode: "append" },
+    { ...undoReceipt, atomic: false, bytes: 8, file_size: 16, mode: "append" },
+  );
+  await expectTool(
     "edit_block",
-    {
-      file_path: path.join(tsRoot, "mutate.txt"),
-      old_string: "old",
-      new_string: "new",
-      expected_replacements: 4,
-    },
-    {
-      file_path: path.join(goRoot, "mutate.txt"),
-      old_string: "old",
-      new_string: "new",
-      expected_replacements: 4,
-    },
+    { file_path: mutate, old_string: "old", new_string: "new", expected_replacements: 4 },
+    { ...undoReceipt, atomic: true, bytes_after: 16, bytes_before: 16, replacements: 4 },
   );
+  // Devices keep Undo records written by earlier releases, including the
+  // TypeScript runtime. This is that runtime's exact on-disk record.
   const cross = path.join(temp, "cross-undo.txt");
-  await fs.writeFile(cross, "original");
-  await ts.callTool("write_file", { path: cross, content: "TS edit" });
+  await fs.writeFile(cross, "older edit");
+  const olderRecord = path.join(temp, ".remotearc/undo/1793339035453-5a3821ef");
+  await fs.mkdir(olderRecord, { recursive: true });
+  await fs.writeFile(path.join(olderRecord, "content.bin"), "original");
+  await fs.writeFile(
+    path.join(olderRecord, "manifest.json"),
+    JSON.stringify({
+      id: "1793339035453-5a3821ef",
+      createdAt: "2026-10-30T05:43:55.453Z",
+      tool: "write_file",
+      targetPath: process.platform === "win32" ? cross.toLowerCase() : cross,
+      existed: true,
+      mode: (await fs.stat(cross)).mode,
+      bytes: 8,
+      postChangeHash: createHash("sha256").update("older edit").digest("hex"),
+    }),
+  );
   let actions = decode(await go("list_undo_actions", { limit: 100 }));
   let receipt = actions.find(
+    (r: any) => r.path.toLowerCase() === cross.toLowerCase(),
+  );
+  assert(receipt?.can_undo, "Undo records from earlier releases stay restorable");
+  await go("undo_change", { action_id: receipt.id });
+  assert.equal(await fs.readFile(cross, "utf8"), "original");
+  await go("write_file", { path: cross, content: "Go edit" });
+  actions = decode(await go("list_undo_actions", { limit: 100 }));
+  receipt = actions.find(
     (r: any) => r.path.toLowerCase() === cross.toLowerCase(),
   );
   assert(receipt?.can_undo);
   await go("undo_change", { action_id: receipt.id });
   assert.equal(await fs.readFile(cross, "utf8"), "original");
-  await go("write_file", { path: cross, content: "Go edit" });
-  actions = decode(await ts.callTool("list_undo_actions", { limit: 100 }));
-  receipt = actions.find(
-    (r: any) => r.path.toLowerCase() === cross.toLowerCase(),
-  );
-  assert(receipt?.can_undo);
-  await ts.callTool("undo_change", { action_id: receipt.id });
-  assert.equal(await fs.readFile(cross, "utf8"), "original");
-  const noUndo = { undoEnabled: false };
-  await compare(
+  await expectTool(
     "write_file",
-    { path: path.join(tsRoot, "no-undo"), content: "ok" },
-    { path: path.join(goRoot, "no-undo"), content: "ok" },
-    noUndo,
+    { path: path.join(root, "no-undo"), content: "ok" },
+    {
+      atomic: true,
+      bytes: 2,
+      file_size: 2,
+      mode: "rewrite",
+      path: "ROOT/no-undo",
+      undo_available: false,
+      undo_storage: null,
+    },
+    { undoEnabled: false },
   );
   await assert.rejects(
-    () => go("read_file", { path: path.join(goRoot, ".env") }),
-    /Sensitive/,
-  );
-  await assert.rejects(
-    () => ts.callTool("read_file", { path: path.join(tsRoot, ".env") }),
+    () => go("read_file", { path: path.join(root, ".env") }),
     /Sensitive/,
   );
   await assert.rejects(
@@ -338,17 +357,21 @@ try {
       go(
         "write_file",
         { path: cross, content: "escape" },
-        { workspaceRoots: [goRoot] },
+        { workspaceRoots: [root] },
       ),
     /Trusted Write/,
   );
   await assert.rejects(
-    () => go("read_file", { path: cross }, { taskWorkspaceRoot: goRoot }),
+    () => go("read_file", { path: cross }, { taskWorkspaceRoot: root }),
     /Task Workspace/,
   );
   await assert.rejects(
     () => go("start_process", { command: "rm -rf /" }),
     /Safety Guard/,
+  );
+  await assert.rejects(
+    () => go("start_process", { command: "shutdown /s /t 0" }),
+    /^Error: Blocked by Remote Arc Safety Guard: system shutdown or reboot\. Run this action manually on the device if you intentionally need it\.$/,
   );
   await assert.rejects(
     () =>
@@ -359,20 +382,13 @@ try {
       }),
     /Invalid managed/,
   );
-  const tsRun = decode(
-      await ts.callTool("start_process", { command: "echo compatible" }),
-    ),
-    goRun = decode(await go("start_process", { command: "echo compatible" }));
-  for (const field of [
-    "command",
-    "cwd",
-    "exit_code",
-    "signal",
-    "stdout",
-    "stderr",
-    "timed_out",
-  ])
-    assert.deepEqual(goRun[field], tsRun[field], "command " + field);
+  const echoed = decode(await go("start_process", { command: "echo compatible" }));
+  assert.equal(echoed.command, "echo compatible");
+  assert.equal(echoed.exit_code, 0);
+  assert.equal(echoed.signal, null);
+  assert.equal(echoed.stdout.trim(), "compatible");
+  assert.equal(echoed.stderr, "");
+  assert.equal(echoed.timed_out, false);
   const waitingProcess = decode(await go("start_process", {
     command: `"${process.execPath}" -e "setTimeout(()=>console.log('native-wait-ready'),350);setTimeout(()=>process.exit(0),1200)"`,
     background: true,
@@ -414,11 +430,18 @@ try {
     decode(await go("process_output", { process_id: bg.process_id })).status,
     "exited",
   );
-  assert.equal(
-    await tryAgentLease(path.join(temp, ".remotearc/agent")),
-    null,
-    "TS must not acquire a Go execution lease",
+  const expired = decode(
+    await go("start_process", {
+      command: `"${process.execPath}" -e "setTimeout(()=>{},30000)"`,
+      cwd: temp,
+      background: true,
+      max_duration_seconds: 1,
+    }),
   );
+  await new Promise((resolve) => setTimeout(resolve, 1800));
+  const deadline = decode(await go("process_status", { process_id: expired.process_id }));
+  assert.equal(deadline.status, "exited");
+  assert.notEqual(deadline.exit_code, 0);
   const cliEntry = path.join(repository, "packages/cli/dist/index.js");
   let selection = await run(process.execPath, [cliEntry, "--version"], {
     REMOTEARC_GO_BINARY: binary,
@@ -487,12 +510,16 @@ try {
   } finally {
     await fs.rename(hidden, bundled);
   }
-  selection = await run(process.execPath, [cliEntry, "--ts", "--foreground"]);
-  assert.equal(selection.code, 1);
-  assert.match(selection.output, /Go agent owns/);
-  selection = await run(process.execPath, [cliEntry, "--go", "--ts"]);
-  assert.equal(selection.code, 1);
-  assert.match(selection.output, /Choose one/);
+  // --ts must fail through both entry points, never fall back to Go.
+  for (const [command, args] of [
+    [process.execPath, [cliEntry, "--ts", "--foreground"]],
+    [process.execPath, [cliEntry, "--go", "--ts"]],
+    [binary, ["--ts", "--version"]],
+  ] as [string, string[]][]) {
+    selection = await run(command, args, { REMOTEARC_GO_BINARY: binary });
+    assert.equal(selection.code, 1, selection.output);
+    assert.match(selection.output, /TypeScript runtime was retired/);
+  }
   const executionLog = await go("agent_execution_log", { limit: 100 });
   assert.equal(executionLog.source, "local-device");
   assert(executionLog.lines.some((line: string) => line.includes("tool.done")));
@@ -566,88 +593,70 @@ try {
   await assert.rejects(() => go("list_agent_sessions", {source:"cursor"}), /source/);
 
   const workspacePolicy = { workspaceRoots: [repo] };
-  for (const first of ["ts", "go"]) {
-    const task_id = "cross-" + first;
-    const args = {
-      workspace: repo,
-      task_id,
-      action: "create",
-      operation_id: "create",
-    };
-    const created: any =
-      first === "ts"
-        ? await goalWorkspace(args, workspacePolicy)
-        : await go("goal_workspace", args, workspacePolicy);
-    const next = {
-      workspace: repo,
-      task_id,
-      action: "status",
-      operation_id: "status",
-    };
-    const status: any =
-      first === "ts"
-        ? await go("goal_workspace", next, workspacePolicy)
-        : await goalWorkspace(next, workspacePolicy);
-    assert.equal(status.frontier, created.frontier);
-    assert.equal(status.path.toLowerCase(), created.path.toLowerCase());
-    await fs.writeFile(
-      path.join(created.path, "baseline.txt"),
-      "cross-engine checkpoint",
+  const task = (action: string, extra = {}) =>
+    go(
+      "goal_workspace",
+      { workspace: repo, task_id: "fixture-task", action, operation_id: action, ...extra },
+      workspacePolicy,
     );
-    const fpArgs = {
-      workspace: repo,
-      task_id,
-      action: "fingerprint",
-      operation_id: "fingerprint",
-    };
-    const fp: any =
-      first === "ts"
-        ? await go("goal_workspace", fpArgs, workspacePolicy)
-        : await goalWorkspace(fpArgs, workspacePolicy);
-    const capture = {
-      workspace: repo,
-      task_id,
-      action: "capture",
-      operation_id: "capture",
-      expected_frontier: created.frontier,
-      expected_tree: fp.tree,
-    };
-    const accepted: any =
-      first === "ts"
-        ? await go("goal_workspace", capture, workspacePolicy)
-        : await goalWorkspace(capture, workspacePolicy);
-    assert.notEqual(accepted.frontier, originalHead);
-    assert.equal(git(["rev-parse", "HEAD"]), originalHead);
-    assert.equal(
-      await fs.readFile(path.join(repo, "baseline.txt"), "utf8"),
-      "baseline",
-    );
-  }
+  const created = await task("create");
+  const status = await task("status");
+  assert.equal(status.frontier, created.frontier);
+  assert.equal(status.path.toLowerCase(), created.path.toLowerCase());
+  await fs.writeFile(path.join(created.path, "baseline.txt"), "accepted checkpoint");
+  const fingerprint = await task("fingerprint");
+  const accepted = await task("capture", {
+    expected_frontier: created.frontier,
+    expected_tree: fingerprint.tree,
+  });
+  assert.notEqual(accepted.frontier, originalHead);
+  assert.equal(git(["rev-parse", "HEAD"]), originalHead);
+  assert.equal(await fs.readFile(path.join(repo, "baseline.txt"), "utf8"), "baseline");
+  // A junction or symlink inside the candidate must not escape its task root.
+  await fs.mkdir(path.join(repo, "user-folder"));
+  await fs.symlink(
+    path.join(repo, "user-folder"),
+    path.join(created.path, "escape"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  await assert.rejects(
+    () =>
+      go(
+        "write_file",
+        { path: path.join(created.path, "escape", "must-not-write.txt"), content: "blocked" },
+        { ...workspacePolicy, taskWorkspaceRoot: created.path },
+      ),
+    /Task Workspace/,
+  );
   const stopped = await run(binary, ["--stop"]);
   assert.equal(stopped.code, 0, stopped.output);
   await waitFor(() => agent.exitCode !== null, "graceful Go stop");
-  const owned = await tryAgentLease(path.join(temp, ".remotearc/agent"));
-  assert(owned, "TS should acquire the released Go lease");
+  // An older TypeScript agent can still hold the shared mkdir/mtime lease.
+  const olderLease = path.join(temp, ".remotearc/agent/execution.lock");
+  await fs.mkdir(olderLease);
   try {
     selection = await run(binary, ["--foreground"]);
     assert.equal(selection.code, 1);
-    assert.match(selection.output, /TS agent owns/);
+    assert.match(selection.output, /retired TypeScript agent owns execution/);
   } finally {
-    await owned();
+    await fs.rmdir(olderLease);
   }
   assert.equal(
     JSON.parse(await fs.readFile(configPath, "utf8")).deviceId,
     "compat-device",
   );
   console.log(
-    "Go/TS parity OK: tools, files, binary revision, metadata, bidirectional Undo, policy, processes, native process waits, coding-session/worktree discovery without private text, logs, runtime selection and shared execution lease.",
+    "Go agent OK: tools, files, binary revision, metadata, Undo including older records, policy, processes, native process waits, coding-session/worktree discovery without private text, logs, runtime selection, retired --ts and shared execution lease.",
   );
+} catch (error) {
+  // Report the failure itself if cleanup below also fails.
+  console.error(error);
+  throw error;
 } finally {
-  await ts.close();
   for (const child of children) if (child.exitCode === null) child.kill();
   for (const s of sockets.clients) s.terminate();
   await new Promise<void>((resolve) => sockets.close(() => resolve()));
   await new Promise<void>((resolve) => server.close(() => resolve()));
   // All fixtures are under an mkdtemp directory owned by this test.
-  await fs.rm(temp, { recursive: true, force: true });
+  await fs.rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }

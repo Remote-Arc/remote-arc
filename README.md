@@ -135,7 +135,7 @@ For hosted Arc, [sign in](https://agent.remotearc.app), activate the trial or ch
 npx remotelink@latest
 ```
 
-The npm launcher installs and checksums the native Go Agent and Execution Core. Run `npx remotelink@latest` to upgrade: an older idle Go Agent is replaced automatically, while active work asks for confirmation. Pairing and permissions are preserved. Stop the active Agent before switching runtimes; `--ts` explicitly selects the retained TypeScript fallback. Standalone and Homebrew installations need no Node.js.
+The npm launcher installs and checksums the native Go Agent and Execution Core. Run `npx remotelink@latest` to upgrade: an older idle Go Agent is replaced automatically, while active work asks for confirmation. Pairing and permissions are preserved. Standalone and Homebrew installations need no Node.js.
 
 <!-- native-install:start -->
 ### Native downloads and Homebrew
@@ -186,16 +186,14 @@ Pairing a computer and authorizing an AI client are separate, revocable relation
 remote-arc/
 ├── apps/
 │   ├── agent/             Native Go device Agent: pairing, relay, recovery, journals
-│   ├── agent-ts/          Explicit TypeScript runtime fallback
 │   ├── browser-extension/ Chrome Companion: shared tabs and allowed sites
 │   ├── ui/                React Arc / Connect / Admin, website, checkout and documentation
 │   ├── relay/             Cloudflare Worker: Arc runtime, Apps, tasks, billing, OAuth, MCP and D1 migrations
-│   └── mcp/               TS compatibility adapter and native MCP integration tests
+│   └── mcp/               MCP integration tests against the Go Agent
 ├── packages/
 │   ├── execution-core/    Independent Go module: files, processes, policy, Safety Guard and Undo
-│   ├── execution-core-ts/ Retained TypeScript core for --ts and parity testing
-│   ├── cli/               npm installer/launcher; default Go, explicit --ts
-│   ├── protocol/          Shared wire types and plan defaults for Relay, Dashboard and TS compatibility
+│   ├── cli/               npm installer/launcher for the Go Agent
+│   ├── protocol/          Shared wire types and plan defaults for Relay and Dashboard
 │   ├── skills/            Generated Skill catalog and community Skills
 │   └── docs/              Generated documentation and tool index
 ├── skills/                Source for first-party Skills (for example safe-cleanup)
@@ -204,13 +202,12 @@ remote-arc/
 
 The Go Agent and Execution Core compile into one executable; extracting the core
 does not introduce an IPC boundary. The core can be built/tested independently
-with Go. Both engines preserve tool contracts, pairing, file/Undo formats and a
-single execution lease. The cloud Relay and Dashboard remain TypeScript.
+with Go. The cloud Relay and Dashboard remain TypeScript.
 
 ## Native execution core
 
 Remote Arc implements its local computer capabilities directly with Go and OS
-APIs. The retained TS implementation is used only when `--ts` is selected.
+APIs.
 
 Current native tools:
 
@@ -632,14 +629,13 @@ pnpm test:deploy-policy
 
 Relay suites are split by area, for example `pnpm --filter @remotearc/relay test:stripe`, `test:security` and `test:apps`; `pnpm test:goals` covers durable task and goal continuation.
 
-Run only the native execution-core-ts integration test:
+Run only the native Execution Core tests:
 
 ```bash
-pnpm --filter @remotearc/execution-core-ts test:integration
+go -C packages/execution-core test ./...
 ```
 
-The GitHub CI matrix runs native-core integration and MCP adapter smoke tests
-on:
+The GitHub CI matrix runs the Go device and MCP integration tests on:
 
 ```text
 Ubuntu
@@ -669,8 +665,8 @@ remote-link
 remote-arc
 ```
 
-The published CLI bundles `@remotearc/execution-core-ts` into the distributable
-artifact. End users do not install a separate execution server.
+The published CLI downloads the matching native Agent and verifies its SHA-256
+digest. End users do not install a separate execution server.
 
 Release content has one source of truth: `CHANGELOG.md`. Each release section uses
 `## <version> - <date>`, one `### <title>`, and bullet changes. Run:

@@ -28,8 +28,7 @@ export function payload(result) {
   try { return JSON.parse(text); } catch { return text; }
 }
 
-export async function fixture({ recovery = false, mode = "managed", engine = "Go", environment = {} } = {}) {
-  assert(["Go", "TS"].includes(engine));
+export async function fixture({ recovery = false, mode = "managed", environment = {} } = {}) {
   const tempBase = await fs.realpath(os.tmpdir());
   const home = await fs.realpath(await fs.mkdtemp(path.join(tempBase, "ra-go-fixture-")));
   const token = "fixture-private-token", deviceID = "fixture-stable-device";
@@ -61,7 +60,7 @@ export async function fixture({ recovery = false, mode = "managed", engine = "Go
   await fs.mkdir(path.dirname(configPath), { recursive: true });
   await fs.writeFile(configPath, JSON.stringify({ deviceId: deviceID, deviceToken: token, deviceName: "Fixture PC", origin, mode, backgroundEnabled: recovery }));
   const start = (args) => {
-    const child = spawn(engine === "Go" ? binary : process.execPath, engine === "Go" ? args : [path.join(root, "packages/cli/dist/index.js"), "--ts", ...args], { env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(binary, args, { env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
     const entry = { child, output: "", exit: null };
     entry.done = new Promise((resolve, reject) => {
       child.on("error", reject);
@@ -88,12 +87,6 @@ export async function fixture({ recovery = false, mode = "managed", engine = "Go
   };
   const disconnect = () => { for (const socket of sockets.clients) socket.terminate(); };
   const stop = async () => {
-    if (engine === "TS") {
-      // Isolated foreground fixture only: do not install or disable OS services.
-      for (const entry of children) if (!entry.exit) entry.child.kill("SIGTERM");
-      await Promise.all(children.map(entry => entry.done));
-      return "TS fixture stopped";
-    }
     const entry = start(["--stop"]);
     await waitFor(() => entry.exit, "native stop", 25000);
     assert.equal(entry.exit.code, 0, entry.output);

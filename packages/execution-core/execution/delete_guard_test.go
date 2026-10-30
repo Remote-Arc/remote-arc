@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// Shared with the TypeScript port: packages/execution-core-ts/scripts/delete-guard.ts.
 func TestDeleteGuardSharedCases(t *testing.T) {
 	b, err := os.ReadFile("testdata/delete_guard_cases.json")
 	if err != nil {

@@ -23,7 +23,7 @@ func TestPolicyNormalizationBoundsAndDuplicates(t *testing.T) {
 	}
 	p := Normalize(Policy{WorkspaceRoots: roots, SensitivePaths: roots, SensitiveAllowPaths: roots, TaskWorkspaceRoot: " "})
 	if len(p.WorkspaceRoots) != 32 || p.WorkspaceRoots[0] != "root" || len(p.SensitivePaths) != 32 || len(p.SensitiveAllowPaths) != 32 || p.TaskWorkspaceRoot != "" {
-		t.Fatal("normalization differs from TS")
+		t.Fatal("normalization changed")
 	}
 }
 

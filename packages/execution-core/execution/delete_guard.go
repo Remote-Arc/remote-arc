@@ -1,11 +1,9 @@
 package execution
 
-// Safety Guard for deletion commands, ported from
-// packages/execution-core-ts/src/delete-guard.ts. Instead of pattern-matching
-// command text, it finds the delete commands a shell line would run (including
+// Safety Guard for deletion commands. Instead of pattern-matching command text, it finds the delete commands a shell line would run (including
 // nested cmd, PowerShell and sh layers), resolves each target to an absolute
 // path and refuses only roots, homes, protected folders and targets it cannot
-// resolve unambiguously. Both ports run testdata/delete_guard_cases.json.
+// resolve unambiguously. Its cases live in testdata/delete_guard_cases.json.
 
 import (
 	"encoding/base64"

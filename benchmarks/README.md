@@ -1,17 +1,15 @@
-# Remote Arc TS/Go parity benchmark
+# Remote Arc Go benchmark
 
 Run from the repository root using `pnpm benchmark:core`, or `node benchmarks/run.mjs` after
-compiling the two workers. This compares local execution-core-ts JSONL requests
-and responses, **not** production Relay latency.
+compiling the worker. This measures local Execution Core JSONL requests and
+responses, **not** production Relay latency.
 
 - `REMOTEARC_FILE_DURABILITY=atomic`: atomic replacement without explicit
   fsync; process crash safety does not mean power-loss durability.
 - `REMOTEARC_FILE_DURABILITY=durable`: file sync + parent directory sync
-  (best effort on Windows); the Go default in the 0.5.1 preview.
-  The TypeScript compatibility runtime defaults to `atomic`, retaining its
-  old no-explicit-fsync behavior. Profiles are identical when set explicitly.
+  (best effort on Windows); the Go default.
 - `REMOTEARC_FILE_DURABILITY=atomic` plus `REMOTEARC_UNDO_DURABILITY=durable`:
-  opt-in layered policy. Both drivers set both settings explicitly; device
+  opt-in layered policy. The driver sets both settings explicitly; device
   pairing/configuration writes in Go stay durable independently.
 - Undo safeguards are checked separately. The existing write-ahead snapshot
   protocol has a crash window before manifest finalization; such snapshots
@@ -35,8 +33,8 @@ node benchmarks/agent.mjs --samples 200 --rounds 3
 ```
 
 L1 output is `work/benchmarks/core.json`; full Agent L2 output is
-`work/benchmarks/agent.json`. Override with `--report PATH`. Engines run serially,
-order alternates by round, warmup is excluded and raw samples are retained.
+`work/benchmarks/agent.json`. Override with `--report PATH`. Rounds run serially,
+warmup is excluded and raw samples are retained.
 Temporary data and Undo stores are cleaned at exit. The historical report's
 45-second residency is not the multi-hour Agent validation implemented by
 `scripts/go-device-soak.mjs`.
@@ -53,10 +51,13 @@ node benchmarks/summarize.mjs --input core-mac.json --input agent-mac.json --inp
 ```
 
 The summary verifies passed status, a single clean revision, three rounds per
-engine/profile, and zero benchmark errors. It emits Markdown and compact JSON,
+profile, and zero benchmark errors. It emits Markdown and compact JSON,
 including raw artifact SHA256 hashes. Preserve the input reports beside it.
-See [the completed f68ab09 baseline](RESULTS-2026-10-09-f68ab09.md) for the Mac
-and Windows results and two-hour residency evidence. Later optimizations must
+The dated `RESULTS-*` files are historical TS/Go comparisons from before the
+TypeScript runtime was retired; the code they measured is in the private
+`Remote-Arc/ts-execution-core-archive` repository. See
+[the completed f68ab09 baseline](RESULTS-2026-10-09-f68ab09.md) for the Mac and
+Windows results and two-hour residency evidence. Later optimizations must
 retain this baseline and identify their own source revision and sample counts.
 The [Windows native-path follow-up](RESULTS-2026-10-09-71cde96.md) contains
 matched three-round atomic/durable L1/L2 runs and a supplementary 120-second

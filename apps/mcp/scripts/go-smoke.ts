@@ -29,7 +29,7 @@ const home = await fs.realpath(
 );
 try {
   for (const mode of ["safe", "developer", "full"]) {
-    const client = new Client({ name: "ts-go-stdio-parity", version: "test" });
+    const client = new Client({ name: "remotearc-local-mcp-smoke", version: "test" });
     const transport = new StdioClientTransport({
       command: binary,
       args: ["--mcp"],
@@ -50,7 +50,10 @@ try {
         names.size,
         mode === "safe" ? 8 : mode === "developer" ? 12 : 17,
       );
-      assert.equal(names.has("write_file"), mode !== "safe");
+      for (const tool of ["write_file", "edit_block", "undo_change", "undo_last_change"])
+        assert.equal(names.has(tool), mode !== "safe", mode + ": " + tool);
+      assert(names.has("list_undo_actions"));
+      assert(names.has("remote_arc_status"));
       assert.equal(names.has("start_process"), mode === "full");
       const status = await client.callTool({
         name: "remote_arc_status",
@@ -58,7 +61,12 @@ try {
       });
       const text = status.content?.find((c) => c.type === "text");
       assert(text?.type === "text");
-      assert.equal(JSON.parse(text.text).engine, "go");
+      const reported = JSON.parse(text.text);
+      assert.equal(reported.engine, "go");
+      assert.equal(reported.name, "remotearc-local-mcp");
+      assert.equal(reported.mode, mode);
+      assert.equal(reported.backend, "Remote Arc native execution core");
+      assert.equal(reported.desktop_commander, false);
       const file = path.join(home, mode + ".txt");
       await fs.writeFile(file, "original");
       const read = await client.callTool({

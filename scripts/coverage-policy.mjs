@@ -1,8 +1,10 @@
 // Measured on master c4bc77f, CI run 40998299997. Raise these floors as tests grow.
 // Keep production source inclusion unchanged; --target remains a strict 90% check.
+// Retiring the TypeScript runtime removed 125 mostly covered functions, leaving
+// 1013 of 1341 covered (75.5%), so the TypeScript functions floor moved from 76 to 75.
 export const COVERAGE_TARGET=90;
 export const COVERAGE_FLOORS={
- typescript:{lines:50,statements:50,branches:80,functions:76},
+ typescript:{lines:50,statements:50,branches:80,functions:75},
  relay:{lines:63,statements:63,branches:82,functions:83},
  agent:{statements:78},
  core:{statements:90},

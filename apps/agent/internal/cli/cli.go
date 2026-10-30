@@ -27,6 +27,9 @@ import (
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
 )
 
+// RetiredTSRuntime is the only answer to --ts. There is no fallback runtime.
+const RetiredTSRuntime = "The TypeScript runtime was retired. Remove --ts to run the Go Agent."
+
 const Help = `Remote Arc Go device agent
 Usage: remotelink [options]
   setup             Inspect/install/check/repair/remove local coding-agent tools
@@ -61,6 +64,8 @@ func Parse(args []string) (Options, error) {
 	for _, s := range args {
 		switch s {
 		case "--go":
+		case "--ts":
+			return o, errors.New(RetiredTSRuntime)
 		case "--safe":
 			o.Safe = true
 		case "--developer":
@@ -219,7 +224,7 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 		if lease.Active(dir, "execution") {
 			status, err := control.Request(ctx, dir, "GET", "/status")
 			if err != nil || status["engine"] != "go" {
-				return errors.New("A TS agent owns this device. Stop it locally before changing the Go runtime.")
+				return errors.New("A retired TypeScript agent owns this device. Stop it locally before changing the Go runtime.")
 			}
 		}
 		if c, err := config.Load(); err == nil {
@@ -256,9 +261,9 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 		status, err := control.Request(ctx, dir, "GET", "/status")
 		if err != nil || status["engine"] != "go" {
 			if !o.Background {
-				return errors.New("A TS agent owns execution. Use --ts --no-background, stop that agent locally, then launch --go. No commands were replayed.")
+				return errors.New("A retired TypeScript agent owns execution. Disable its recovery with npx remotelink@0.6.5 --ts --no-background, stop that agent locally, then launch again. No commands were replayed.")
 			}
-			// Background startup after a forced TS/Go exit must wait until
+			// Background startup after a forced exit must wait until
 			// the previous execution lease expires. Never take a live lease.
 			log.Log("warn", "Waiting for previous Agent execution lease to release before restoring Go background recovery.")
 			if e := waitForPriorOwnerRelease(ctx, dir); e != nil {

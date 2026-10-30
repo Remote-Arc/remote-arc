@@ -73,13 +73,12 @@ extension open authenticated outbound WebSockets to their owner's Durable Object
 | Dashboard and website | `apps/ui` | React + Vite, served as Worker static assets | Website, docs, Arc and Connect dashboards, checkout, admin console |
 | Go Agent | `apps/agent` | Native binary `remotelink` | Pairing, relay session, background recovery, journals, task browser, local MCP setup for Claude/Codex |
 | Go Execution Core | `packages/execution-core` | Go module compiled into the Agent | File and process tools, path policy, Safety Guard, Local Undo |
-| TS core and runtime | `packages/execution-core-ts`, `apps/agent-ts` | Node | `--ts` fallback and parity tests; shares Safety Guard test cases with Go |
-| CLI launcher | `packages/cli` | npm `remotelink` | Downloads and SHA-verifies the Go binary; `--ts` selects the TS runtime |
+| CLI launcher | `packages/cli` | npm `remotelink` | Downloads and SHA-verifies the Go binary, then starts it |
 | Browser Companion | `apps/browser-extension` | Chrome MV3 | Shared tabs and allowed sites in the user's own browser |
 | Protocol | `packages/protocol` | Shared TS | Wire types, plan defaults (`ARC_PLANS`), features, published limits |
 | Skills | `skills/`, `packages/skills` | Markdown + generated catalog | First-party and community Skills (for example `safe-cleanup`) |
 | Docs data | `packages/docs` | Generated JSON + TS | Docs catalog and the generated tool index used by the website |
-| MCP adapter | `apps/mcp` | Node | TS compatibility adapter and native MCP integration tests |
+| MCP integration tests | `apps/mcp` | Node, test only | Runs the official MCP client against the Go Agent's local MCP server |
 
 ### Relay map (`apps/relay/src`)
 
@@ -355,8 +354,10 @@ Playwright site tests use `PLAYWRIGHT_CHANNEL=chrome pnpm exec playwright test`.
   - A tool description change needs `pnpm docs:tools`.
   - A new tool also needs the inventory in `docs/connect-tool-inventory.md` and
     the counts in this file and the README.
-- **Safety Guard parity:** Go and TS Safety Guard behavior must stay identical,
-  with test cases in `packages/execution-core/execution/testdata`.
+  - Local device tools and their permission modes live in
+    `packages/execution-core/execution/tools.json` and `tool_modes.json`.
+- **Safety Guard:** Delete-guard test cases live in
+  `packages/execution-core/execution/testdata`.
 - **Preview builds:** `VITE_UI_PREVIEW` builds use simulated data. Production
   code paths must not contain preview-only behavior.
 - **Copy and secrets:**

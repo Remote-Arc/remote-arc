@@ -8,7 +8,7 @@ import (
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/lease"
 )
 
-// A force-terminated TS/Go owner cannot remove its execution.lock directory.
+// A force-terminated owner cannot remove its execution.lock directory.
 // Its 15-second heartbeat lease must expire before Go recovery can safely
 // start. Never remove or take over a fresh lock: a live owner may still hold it.
 func waitForPriorOwnerRelease(ctx context.Context, dir string) error {

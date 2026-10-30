@@ -2,7 +2,6 @@
 // authenticated device transport stub. No model, cloud or GitHub effects.
 import assert from "node:assert/strict";
 import { createHash, createHmac } from "node:crypto";
-import { EventEmitter } from "node:events";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import os from "node:os";
@@ -450,23 +449,6 @@ try {
   await assert.rejects(deviceCalls.callDevice(env, identity, "device", "set_task_keep_awake", { task_id: taskId, seconds: 180 }), /disabled/);
   await deviceCalls.callDevice(env, identity, "device", "set_task_keep_awake", { task_id: taskId, seconds: 0 });
   assert.equal(calls.at(-1), "set_task_keep_awake", "Revoked power permission must still allow releasing an existing lease");
-  const powerFile = path.join(relay, "../../packages/cli/src/keep-awake.ts");
-  fs.writeFileSync(path.join(compiled, "keep-awake.js"), ts.transpileModule(fs.readFileSync(powerFile, "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
-  const power = await importSource("keep-awake");
-  let clock = 1000, launches = [];
-  const manager = power.createTaskKeepAwakeManager({ platform: "win32", now: () => clock, spawn(command, args, options) {
-    const child = new EventEmitter(); child.kill = () => { child.killed = true; child.emit("exit", null); };
-    launches.push({ command, args, options, child }); queueMicrotask(() => child.emit("spawn")); return child;
-  } });
-  assert((await manager.set("task-1", 180)).active);
-  assert((await manager.set("task-2", 180)).active);
-  assert.equal(launches.length, 1);
-  assert(launches[0].options.windowsHide && launches[0].args.includes("Hidden"));
-  assert((await manager.set("task-1", 0)).active);
-  clock += 181000;
-  assert(!manager.status().active);
-  assert(launches[0].child.killed);
-  manager.close();
 
   // Exercise actual MCP SDK registration/HTTP dispatch, not only helpers.
   const mcp = await importSource("mcp");

@@ -121,7 +121,7 @@ jobs:
           test -f packages/cli/dist/index.js
           CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
           grep -q "$CLI_VERSION" packages/cli/dist/index.js
-          grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js
+          grep -q 'releases/download/remotelink-v' packages/cli/dist/index.js
           ! grep -qi 'desktop.commander\|wonderwhy' packages/cli/dist/index.js
 
       - name: Smoke-test packed CLI
@@ -146,15 +146,11 @@ jobs:
             exit 1
           }
 
-          # Background mode copies the built entry file to ~/.remotearc/agent
-          # without its package directory. Verify that copied artifact is truly
-          # self-contained and can start from an isolated directory.
-          cp "$GITHUB_WORKSPACE/packages/cli/dist/index.js" "$TMP_DIR/remotelink.mjs"
-          STANDALONE="$(node "$TMP_DIR/remotelink.mjs" --ts --version)"
-          test "$STANDALONE" = "$CLI_VERSION" || {
-            echo "Standalone background bundle reported $STANDALONE, expected $CLI_VERSION"
+          # The retired TypeScript runtime must fail instead of falling back.
+          if ./node_modules/.bin/remotelink --ts --version; then
+            echo "Packed CLI accepted the retired --ts flag"
             exit 1
-          }
+          fi
 
       - name: Check whether version is already published
         id: npm_version

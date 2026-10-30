@@ -28,7 +28,7 @@ func FormatConsoleLine(timestamp time.Time, level, message string, color bool) s
 	return fmt.Sprintf("%s  %s  %s\n", stamp, icon, message)
 }
 
-// FormatHistory restores the familiar TS console style for a CLI attached
+// FormatHistory restores the familiar console style for a CLI attached
 // as a viewer to a running Go agent, without changing persistent log records.
 func FormatHistory(raw string, color bool) string {
 	if !color || raw == "" {

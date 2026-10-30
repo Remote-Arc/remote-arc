@@ -70,8 +70,14 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+
       - run: pnpm install --frozen-lockfile
-      - run: pnpm device:contract --check
       - name: Check Apps core coverage at 90% for every metric and file
         run: pnpm coverage:apps
       - run: pnpm test:coverage-badges
@@ -203,28 +209,3 @@ jobs:
         with:
           name: agent-validation-${{ matrix.os }}
           path: work/benchmarks/*.json
-
-  native-core:
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10.17.1
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @remotearc/execution-core-ts test:integration
-      - run: pnpm --filter @remotearc/mcp test:smoke
-      - run: pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/goal-workspace-test.ts
-      - run: pnpm test:recovery

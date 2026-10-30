@@ -19,4 +19,4 @@ REMOTEARC_MAX_ACTIVE_PROCESSES=128 remotelink --background
 
 Keep process output available for inspection for up to 30 minutes and retain at most 128 completed records per device. If that history fills, the oldest completed records are removed first; running tasks are never evicted to free a slot. Each output stream retains its existing 2 MiB capture cap.
 
-Previously, the Go Agent counted all 32 retained records as occupied slots, even if every command had already exited. That could block new commands, tests and cleanup until records expired. Both Go and TypeScript runtimes now separate active admission from completed history. A genuine concurrency-limit error reports the active count and configured limit.
+Previously, the Go Agent counted all 32 retained records as occupied slots, even if every command had already exited. That could block new commands, tests and cleanup until records expired. The Go runtime now separates active admission from completed history. A genuine concurrency-limit error reports the active count and configured limit.

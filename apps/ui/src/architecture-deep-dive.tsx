@@ -23,8 +23,8 @@ export function ArchitectureDeepDive() {
         <tr><td>Go Agent + Core</td><td>{tr("Files, processes, terminal and Undo", "文件、进程、终端和 Undo")}</td><td>{tr("Local tools, paths and OS user", "本地工具、路径及 OS 用户权限")}</td></tr>
       </tbody></table></div>
       <p>{tr(
-        "The Agent and Go Execution Core are separate modules compiled into one executable, not two RPC services. Cloudflare Worker, Dashboard and the protocol implementation continue to use TypeScript. The explicit TypeScript device runtime is a compatibility option.",
-        "Agent 和 Go Execution Core 是分别维护、最终编译为同一个二进制的模块，而不是两个 RPC 服务。Cloudflare Worker、Dashboard 和协议实现仍使用 TypeScript；TS 设备运行时是明确选择的兼容选项。",
+        "The Agent and Go Execution Core are separate modules compiled into one executable, not two RPC services. Cloudflare Worker, Dashboard and the protocol implementation continue to use TypeScript.",
+        "Agent 和 Go Execution Core 是分别维护、最终编译为同一个二进制的模块，而不是两个 RPC 服务。Cloudflare Worker、Dashboard 和协议实现仍使用 TypeScript。",
       )}</p>
     </section>
     <section id="docs-architecture-trust">

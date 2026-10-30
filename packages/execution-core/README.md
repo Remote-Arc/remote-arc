@@ -8,8 +8,8 @@ It owns the Go device runtime's filesystem and process execution, policy/path en
 
 - Keep the `~/.remotearc` configuration and Undo snapshot paths unchanged, including `REMOTEARC_HOME` handling.
 - Preserve the existing JSON tool definitions, safety guards, wire protocol, execution log behavior, and file/Undo formats.
-- Run `pnpm device:contract --check` and `pnpm test:device` at repository root. The latter runs Go Core formatting, vet and race tests, Agent tests, TS/Go compatibility, MCP smoke, and recovery tests.
-- The Go core is the default from 0.6.0. Keep `packages/execution-core-ts` for explicit fallback, format compatibility and comparative testing.
+- Run `pnpm test:device` at repository root. It runs Go Core formatting, vet and race tests, Agent tests, Agent integration tests, MCP smoke, and recovery tests.
+- `execution/tools.json`, `tool_modes.json` and `guards.json` are maintained by hand and are the source of truth for the tool contract. `pnpm docs:tools` generates the public tool reference from them.
 
 The initial extraction intentionally moves shared configuration, protocol and policy packages with the core to avoid changing runtime semantics. Any future decoupling of device pairing/configuration must be a separate, explicitly tested change.
 

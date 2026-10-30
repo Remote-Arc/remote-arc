@@ -226,8 +226,8 @@ export function GoVsTypescriptBenchmarkArticlePage({ user }: { user?: User | nul
           "在较早的 f68ab09 原生 Go 驻留实验中，Mac 运行 7,200 秒，采样 RSS 从 14.11 增至 17.33 MiB；Windows 同样运行 7,200 秒，从 17.80 增至 24.79 MiB，采样峰值为 25.11 MiB。测试覆盖文件操作、Undo、冲突检查、受管进程及隔离环境下的 WebSocket 重连，并不等于真实生产断网测试。",
         )}</p>
         <p>{tr(
-          "Remote Arc 0.6.0 therefore ships Go as the default native computer Agent: low measured resident memory, native distribution without a Node prerequisite, and one executable that owns the local execution boundary. TypeScript remains an explicit compatibility fallback. Cloudflare Worker and Dashboard still use TypeScript.",
-          "因此，Remote Arc 0.6.0 选择 Go 作为默认原生设备 Agent：实测较低的常驻内存、无需 Node 的原生分发，以及由同一个可执行文件负责本地执行边界。TypeScript 仍作为明确的兼容回退；Cloudflare Worker 和 Dashboard 依然使用 TypeScript。",
+          "Remote Arc 0.6.0 therefore ships Go as the default native computer Agent: low measured resident memory, native distribution without a Node prerequisite, and one executable that owns the local execution boundary. The TypeScript device runtime was later retired. Cloudflare Worker and Dashboard still use TypeScript.",
+          "因此，Remote Arc 0.6.0 选择 Go 作为默认原生设备 Agent：实测较低的常驻内存、无需 Node 的原生分发，以及由同一个可执行文件负责本地执行边界。TypeScript 设备运行时后来已退役；Cloudflare Worker 和 Dashboard 依然使用 TypeScript。",
         )}</p>
         <h2>{tr("What we have not proved yet", "哪些事情仍没有证明？")}</h2>
         <p>{tr(

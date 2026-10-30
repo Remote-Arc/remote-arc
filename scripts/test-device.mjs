@@ -63,12 +63,14 @@ run("go", ["test", "-race", "-count=1", "./..."], {
       : {}),
   },
 });
-const require = createRequire(
-  path.join(root, "packages/execution-core-ts/package.json"),
-);
+const require = createRequire(path.join(root, "packages/cli/package.json"));
 run(process.execPath, [
   require.resolve("tsx/cli"),
-  path.join(root, "packages/cli/scripts/go-agent-compat-test.ts"),
+  path.join(root, "packages/cli/scripts/go-agent-test.ts"),
+]);
+run(process.execPath, [
+  require.resolve("tsx/cli"),
+  path.join(root, "packages/cli/scripts/attached-terminal-test.ts"),
 ]);
 run(process.execPath, [
   require.resolve("tsx/cli"),

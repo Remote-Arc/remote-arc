@@ -1,13 +1,14 @@
 # Go persistence and release validation
 
+> The TypeScript device runtime has since been retired and archived in the private
+> repository `Remote-Arc/ts-execution-core-archive`. This page keeps the validation
+> record from that period, so its TS/Go comparisons and results are historical.
+
 PR #116 prepares `0.6.0` with Go as the default device runtime. Release metadata,
 six native targets and the Homebrew formula use the same version. Installed
 `0.5.1-rc.2` Agents are not automatically replaced by publishing this release.
-The default npm CLI launches Go; `--go` is a compatibility alias and `--ts`
-selects `apps/agent-ts` / `packages/execution-core-ts`. The primary Go modules
-are `apps/agent` and `packages/execution-core`.
-Keep both implementations while completing production comparison and broader
-rollout acceptance; this release does not retire TS or publish a general SDK.
+The default npm CLI launches Go, and `--go` is a compatibility alias. The Go
+modules are `apps/agent` and `packages/execution-core`.
 
 ## Policy follows the operation, not the filename
 
@@ -99,13 +100,12 @@ raw samples, P50/P95/P99, CPU delta and RSS. Low-count tails remain exploratory.
 The Undo store stays bounded per iteration, so growing history does not skew
 later engines. RSS measures the actual child rather than the driver.
 
-CI runs a 60-second Go residency smoke and a small TS/Go L2 validation on each
+CI runs a 60-second Go residency smoke and a small Go L2 validation on each
 OS. A separate workflow adds one/four-hour runs once its workflow definition
 is available on the repository's default branch. For 24-hour local testing use
 `--duration-seconds 86400`; this has not been completed by adding the command.
 Both fixtures use separate homes and loopback Relay, preserve live pairing and
-services, and clean their owned files/processes. Windows TS fixture termination
-is not a graceful-stop or service-upgrade acceptance test.
+services, and clean their owned files/processes.
 
 L3 production connector timing includes client/connector/network/Relay overhead.
 Compare TS and Go on the same actual device, policy and workload only after
@@ -113,13 +113,11 @@ arranging an isolated paired device or a controlled engine switch. Current RC2
 production checks are Go-only regression, not a TS/Go E2E speed ratio. Global
 `undo_last_change` must not accidentally undo another active session's work.
 
-Follow-up acceptance for broader Go rollout and TS retirement includes actual
-production reconnect, Windows service lifecycle, terminal visual acceptance
+Follow-up acceptance for broader Go rollout includes actual production reconnect, Windows service lifecycle, terminal visual acceptance
 and stronger storage fault tests. This release relies on the existing
 cross-platform regression, compatibility, recovery and distribution checks;
 it does not claim that those follow-ups or physical power-loss guarantees
-have been completed. Archive the TS core only after that acceptance and review
-of the three-layer data. Keep both implementations in this repository meanwhile.
+have been completed.
 
 ## Completed f68ab09 follow-up
 

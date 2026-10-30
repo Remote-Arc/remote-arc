@@ -11,9 +11,29 @@ const temp = await fs.mkdtemp(path.join(os.tmpdir(), "remotearc-attached-"));
 const children: ChildProcess[] = [];
 const output = new Map<ChildProcess, string>();
 const entry = path.join(temp, "standalone-agent.mjs");
+const repository = fileURLToPath(new URL("../../../", import.meta.url));
+const version = JSON.parse(
+  await fs.readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
+).version;
+const platform = { win32: "windows", darwin: "darwin", linux: "linux" }[
+  process.platform as "win32" | "darwin" | "linux"
+];
+const arch = { x64: "amd64", arm64: "arm64" }[process.arch as "x64" | "arm64"];
+const binary = path.join(
+  repository,
+  "work/go-device",
+  `remotelink-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`,
+);
 // Launch outside the package tree to catch external runtime dependencies.
-await fs.copyFile(fileURLToPath(new URL("../dist/index.js", import.meta.url)), entry);
-const env = { ...process.env, HOME: temp, USERPROFILE: temp, NO_COLOR: "1" };
+await fs.copyFile(path.join(repository, "packages/cli/dist/index.js"), entry);
+const env = {
+  ...process.env,
+  HOME: temp,
+  USERPROFILE: temp,
+  REMOTEARC_HOME: temp,
+  REMOTEARC_GO_BINARY: binary,
+  NO_COLOR: "1",
+};
 assert.equal(
   spawnSync(
     process.execPath,
@@ -64,7 +84,7 @@ const config = {
 const configPath = path.join(temp, ".remotearc", "config.json");
 await fs.writeFile(configPath, JSON.stringify(config));
 const start = (...args: string[]) => {
-  const child = spawn(process.execPath, [entry, "--ts", ...args], {
+  const child = spawn(process.execPath, [entry, ...args], {
     env,
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
@@ -86,6 +106,12 @@ const waitFor = async (test: () => boolean, description: string) => {
   assert(test(), description + "\n" + [...output.values()].join("\n"));
 };
 try {
+  const retired = spawnSync(process.execPath, [entry, "--ts", "--version"], {
+    env,
+    encoding: "utf8",
+  });
+  assert.equal(retired.status, 1, "--ts must not fall back to Go");
+  assert.match(retired.stderr, /TypeScript runtime was retired/);
   const owner = start();
   await waitFor(
     () => toolDone,
@@ -113,23 +139,37 @@ try {
     "managed",
     "Failed cap change must not rewrite saved permissions",
   );
-  assert(output.get(safe)!.includes("Stop it locally"));
+  assert(output.get(safe)!.includes("already owns execution"));
   console.log(
-    "PASS: bundled CLI stays attached, second terminal follows operation history, one execution connection, conflicting local permission profile fails safely",
+    "PASS: npm entry refuses --ts, starts the Go Agent, stays attached, second terminal follows operation history, one execution connection, conflicting local permission profile fails safely",
   );
 } finally {
+  // --stop ends the executing Agent, not a Go viewer. SIGKILL on a launcher would
+  // orphan that viewer holding these pipes, so "close" would never fire.
+  spawnSync(binary, ["--stop"], { env, windowsHide: true, timeout: 20_000 });
   for (const child of children)
     if (child.exitCode === null && child.signalCode === null) {
-      const closed = new Promise<void>((resolve) =>
-        child.once("close", () => resolve()),
+      const closed = new Promise<boolean>((resolve) =>
+        child.once("close", () => resolve(true)),
       );
+      if (process.platform === "win32")
+        spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
+          windowsHide: true,
+        });
+      else child.kill("SIGTERM"); // The launcher forwards this to its Go child.
+      const timeout = new Promise<boolean>((resolve) =>
+        setTimeout(() => resolve(false), 5_000).unref(),
+      );
+      if (await Promise.race([closed, timeout])) continue;
       child.kill("SIGKILL");
-      await closed;
+      child.stdout!.destroy();
+      child.stderr!.destroy();
+      child.unref();
     }
   for (const socket of sockets.clients) socket.terminate();
   await new Promise<void>((resolve) => sockets.close(() => resolve()));
   await new Promise<void>((resolve) => server.close(() => resolve()));
   assert.equal(path.dirname(temp), os.tmpdir());
   assert(path.basename(temp).startsWith("remotearc-attached-"));
-  await fs.rm(temp, { recursive: true, force: true });
+  await fs.rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }

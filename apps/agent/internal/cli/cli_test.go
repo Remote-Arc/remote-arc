@@ -24,6 +24,9 @@ func TestOptionsVersionAndForeignLeasePreservesPairing(t *testing.T) {
 			t.Fatal("invalid options accepted")
 		}
 	}
+	if _, e := Parse([]string{"--ts", "--version"}); e == nil || e.Error() != RetiredTSRuntime {
+		t.Fatal("--ts must fail instead of falling back", e)
+	}
 	var output bytes.Buffer
 	if e := Main(context.Background(), []string{"--version"}, "test", os.Stdin, &output, &output); e != nil || strings.TrimSpace(output.String()) != "test" {
 		t.Fatal("version")

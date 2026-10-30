@@ -21,17 +21,13 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "node ../../scripts/sync-release-docs.mjs --write && pnpm build && node ../../scripts/build-device.mjs --release"
   },
-  "dependencies": {
-    "proper-lockfile": "^4.1.2",
-    "ws": "^8.22.0"
-  },
   "devDependencies": {
-    "@remotearc/execution-core-ts": "workspace:*",
     "@types/node": "^24.13.6",
-    "@types/proper-lockfile": "^4.1.4",
     "@types/ws": "^8.18.2",
     "tsup": "^8.5.0",
-    "typescript": "^6.0.3"
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "ws": "^8.22.0"
   },
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://remotearc.app",

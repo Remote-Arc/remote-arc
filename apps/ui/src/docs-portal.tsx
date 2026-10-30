@@ -8,6 +8,7 @@ const ToolReference = React.lazy(() =>
 );
 import { DOC_TOPICS, docTopic } from "../../../packages/docs/src/catalog.js";
 import { Documentation } from "./product-docs.js";
+import { SystemOverview } from "./docs-system-overview.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import { useI18n } from "./i18n.js";
 import "./docs-portal.css";
@@ -114,6 +115,7 @@ export function DocsPortal({ path }: { path: string }) {
             {tr("Start with a goal", "从目标开始")} →
           </a>
         </div>
+        <SystemOverview />
         <a className="docsHubToolsLink" href={href("/docs/tools")}>
           {tr(
             "Looking for a tool? Browse the complete directory",
@@ -234,6 +236,7 @@ export function DocsPortal({ path }: { path: string }) {
               <h1>{tr(topic.title.en, topic.title.zh)}</h1>
               <p>{tr(topic.description.en, topic.description.zh)}</p>
             </header>
+            {topic.slug === "architecture" && <SystemOverview guideLink={false} />}
             <article className="technicalArticle">
               {topic.sections.map((section, index) => (
                 <section key={index}>

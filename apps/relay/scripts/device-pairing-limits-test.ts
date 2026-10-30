@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {DatabaseSync} from "node:sqlite";
-import {handlePairingApprove} from "../src/device.js";
+import {handlePairingApprove,handlePairingLookup,recordPairingStep} from "../src/device.js";
+import {startBusinessFlow} from "../src/business-tracking.js";
 import {handleAdminPlanGrants,handleAdminPlanGrantRevoke} from "../src/plan-admin.js";
 import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from "../src/device-capacity-admin.js";
 import {sha256Hex} from "../src/auth.js";
@@ -52,6 +53,23 @@ async function approve(platform:string,user="freeuser"){
 function counts(){
   return sql.prepare("SELECT platform,COUNT(*) n FROM devices WHERE revoked_at IS NULL GROUP BY platform").all() as Array<{platform:string;n:number}>;
 }
+// The browser funnel: did the link open, and did the person sign in?
+const flowCode=pairing("win32"),flowId="device:code-"+seq;
+await startBusinessFlow(env,{id:flowId,scene:"device_pairing",dimension:"win32",at:now,expiresAt:future});
+const flowSteps=()=>(sql.prepare("SELECT step FROM business_flow_steps WHERE flow_id=? ORDER BY step").all(flowId) as Array<{step:string}>).map(row=>row.step);
+const lookup=(code:string,cookie?:string)=>handlePairingLookup(new Request("https://mcp.remotearc.app/api/pairing?code="+code,{headers:cookie?{cookie}:{}}),env);
+await recordPairingStep(env," "+flowCode.toLowerCase()+" ","opened");
+assert.deepEqual(flowSteps(),["opened","started"],"Opening the link is recorded before sign-in");
+assert.equal((await lookup(flowCode)).status,401);
+assert.deepEqual(flowSteps(),["opened","started"],"A signed-out lookup is not a sign-in");
+assert.equal((await lookup(flowCode,"rl_session=freeuser-session")).status,200);
+assert.deepEqual(flowSteps(),["opened","signed_in","started"]);
+await recordPairingStep(env,flowCode,"opened");
+assert.equal((sql.prepare("SELECT COUNT(*) n FROM business_flow_steps WHERE flow_id=?").get(flowId) as {n:number}).n,3,"Reopening the link records nothing new");
+await recordPairingStep(env,"NOT-A-CODE","opened");
+await recordPairingStep(env,"","opened");
+await recordPairingStep({DB:{prepare(){throw new Error("D1 unavailable");}} as unknown as D1Database} as typeof env,flowCode,"opened");
+sql.prepare("DELETE FROM device_pairings WHERE user_code=?").run(flowCode);
 const first=await approve("win32");assert.equal(first.response.status,200);
 assert.equal((await approve("browser")).response.status,200);
 assert.equal((await approve("darwin")).response.status,200,"Free 2nd computer must work despite browser");

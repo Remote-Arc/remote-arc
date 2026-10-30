@@ -87,6 +87,12 @@ export function OAuthConsent({ user }: { user: User | null | undefined }) {
             </div>
           ))}
         </div>
+        {scopes.some(scope => scope.startsWith("computer:")) && (
+          <div className="consentNotice">
+            {tr("Work on a computer needs one more step: install the Remote Arc Agent on it. Connected Apps work without it.", "要在电脑上工作，还需要一步：在那台电脑上安装 Remote Arc Agent。已连接的应用无需安装。")}{" "}
+            <a href={MARKETING_ORIGIN + tr("/downloads", "/zh/downloads")} target="_blank" rel="noreferrer">{tr("Get the Agent", "下载 Agent")} ↗</a>
+          </div>
+        )}
         <div className="consentNotice">
           {tr("Your device and connected-app permissions still apply. This connection does not automatically link new accounts or approve sensitive actions.", "设备及第三方应用的权限仍独立生效。连接 AI 不会自动授权新账号，也不会替你批准敏感操作。")}
         </div>

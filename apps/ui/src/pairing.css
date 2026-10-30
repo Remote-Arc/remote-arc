@@ -31,6 +31,7 @@
 .pairingSteps li[aria-current] { color: var(--dash-text); }
 .pairingSteps li[aria-current] > span { background: var(--dash-accent); color: var(--dash-inverse); border-color: var(--dash-accent); }
 .pairingSteps li[data-complete="true"] > span { color: var(--dash-text); background: var(--dash-subtle); }
+.pairLimitActions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .pairingCard { padding: 32px; border: 1px solid var(--dash-line); border-radius: 14px; background: var(--dash-surface); }
 .pairingTitle { margin-bottom: 26px; }
 .pairingTitleIcon { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--dash-line); border-radius: 12px; background: var(--dash-subtle); margin-bottom: 20px; }

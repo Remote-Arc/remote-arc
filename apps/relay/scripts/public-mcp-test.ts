@@ -103,6 +103,7 @@ const assertFirstRunLinks = (text: string) => {
   assert.match(text, /Node.js 20(?:\+| or newer)/);
 };
 assertFirstRunLinks(emptyDevices.result.content[1].text);
+assert(emptyDevices.result.content[1].text.includes("use list_apps") && emptyDevices.result.content[1].text.includes("https://agent.remotearc.app/apps"), "First-time users learn that Apps need no computer");
 for (const clientId of ["chatgpt-client", "claude-client", "codex-client", "unrecognized-client"]) {
   const response = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read", env,
     { ...identity("devices:read"), userId: "newcomer", clientId });

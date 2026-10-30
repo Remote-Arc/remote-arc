@@ -6,7 +6,8 @@ import { localizedWebsiteHref } from "./marketing-paths.js";
 import { UI_PREVIEW } from "./preview.js";
 import { ONBOARDING_PREVIEW_CODE, createOnboardingPreviewDevice, onboardingPreviewStep } from "./onboarding-preview.js";
 import { Brand, CopyButton, HelpTip, ThemeSwitcher } from "./public-layout.js";
-import { CLAUDE_CONNECTORS_URL, MARKETING_ORIGIN, MCP_ENDPOINT, cursorMcpInstallUrl } from "./app-config.js";
+import { APP_ORIGIN, CLAUDE_CONNECTORS_URL, MARKETING_ORIGIN, MCP_ENDPOINT, cursorMcpInstallUrl } from "./app-config.js";
+import { atComputerLimit, pairingFailureMessage, type PairingFailure } from "./pairing-errors.js";
 import { type Device, type DirectoryBrowser, type Pairing, type User } from "./app-types.js";
 import { SAFE_DEVICE_TOOLS, platformGlyph, platformLabel } from "./device-presets.js";
 import { AuthProviderModal } from "./auth-pages.js";
@@ -68,6 +69,7 @@ export function PairDevice({
   const [code, setCode] = useState(initialCode);
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [message, setMessage] = useState("");
+  const [computerLimitReached, setComputerLimitReached] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const [approvedDeviceId, setApprovedDeviceId] = useState(previewDevice?.id || "");
@@ -148,18 +150,19 @@ export function PairDevice({
     if (!pairing) return;
     setBusy(true);
     setMessage("");
+    setComputerLimitReached(false);
     try {
       const response = await fetch("/api/pairing/approve", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ user_code: pairing.user_code }),
       });
-      const payload = (await response.json()) as {
-        error?: string;
+      const payload = (await response.json()) as PairingFailure & {
         device?: { id: string; name: string; platform: string; arch: string | null };
       };
       if (!response.ok || !payload.device?.id) {
-        throw new Error(payload.error || tr("Could not approve device", "设备授权失败"));
+        setComputerLimitReached(atComputerLimit(payload));
+        throw new Error(pairingFailureMessage(payload, tr));
       }
       setApprovedDeviceId(payload.device.id);
       setDirectoryBrowser(null);
@@ -984,6 +987,12 @@ export function PairDevice({
         </div>
       )}
       {message && <p className="errorText">{message}</p>}
+      {computerLimitReached && (
+        <div className="pairLimitActions">
+          <a className="primaryButton" href={APP_ORIGIN + "/checkout?product=connect-unlimited-v1"}>{tr("Get unlimited computers", "升级，连接更多电脑")} <span>→</span></a>
+          <a className="ghostButton" href={APP_ORIGIN + "/devices"}>{tr("Manage computers", "管理电脑")}</a>
+        </div>
+      )}
       <p className="signedInAs">{tr("Signed in as", "当前登录")} {user.email}</p>
     </PairingCard>
   );

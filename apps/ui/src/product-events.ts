@@ -16,7 +16,7 @@ async function flush(){
  clearTimeout(timer);timer=undefined;const events=queue.splice(0,20);if(!events.length)return;
  try{await fetch('/api/product-events',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'content-type':'application/json'},body:JSON.stringify({journeyId:productJourney(),events})});}catch{/* Telemetry never interrupts a purchase and is not authoritative. */}
 }
-const views=['/checkout','/settings','/overview','/devices','/apps','/connect','/security','/automations','/dashboard/agent/chat','/dashboard/agent/tasks','/dashboard/connect/overview','/dashboard/connect/devices','/dashboard/connect/apps','/dashboard/agent/skills','/dashboard/agent/routines'];
+const views=['/checkout','/device','/settings','/overview','/devices','/apps','/connect','/security','/automations','/dashboard/agent/chat','/dashboard/agent/tasks','/dashboard/connect/overview','/dashboard/connect/devices','/dashboard/connect/apps','/dashboard/agent/skills','/dashboard/agent/routines'];
 export function recordProductView(){if(typeof window!=='undefined'&&views.includes(location.pathname))trackProductEvent('page.viewed',{route:location.pathname});}
 export function startProductEvents(){
  if(installed||typeof window==='undefined'||location.hostname!=='agent.remotearc.app'||import.meta.env?.VITE_UI_PREVIEW==='1')return;installed=true;

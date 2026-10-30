@@ -4,6 +4,7 @@ type Skill=typeof BUILTIN_SKILLS[number];
 type ExecutionState='ready_readonly'|'needs_local_device'|'needs_approval_or_engine'|'guidance_only';
 
 const keywords:Record<string,Array<[RegExp,number]>>={
+  'safe-cleanup': [[/safe.cleanup|disk cleanup|free up (?:disk |drive )?space|reclaim (?:disk |drive )?space|recursive delet|permanent(?:ly)? delet|bulk delet|purge (?:files?|caches?)|clean(?:up)? (?:drive|disk|cache)|清理.{0,8}(?:磁盘|硬盘|[a-z]盘|缓存|临时文件)|(?:磁盘|硬盘|[a-z]盘).{0,8}清理|腾.{0,6}空间|释放.{0,6}空间|批量删除|递归删除|永久删除|删.{0,8}(?:缓存|临时文件)/i,18]],
   'media-intelligence': [[/yt-dlp|media intelligence|视频分析|分析.{0,12}(视频|发布会)|视频.{0,8}(总结|技术差异)|原视频时间点|字幕优先|(?:analy[sz]e|summari[sz]e|compare).{0,24}(?:videos?|youtube|bilibili)|(?:youtube|bilibili).{0,24}(?:analy[sz]|summar|compare)/i,16]],
   'manim-video': [[/\bmanim\b|数学动画|几何动画|公式推导动画|算法动画/i,12]],
   'blender-mcp': [[/\bblender\b|三维建模|3d model|三维产品|材质灯光/i,12]],
@@ -30,6 +31,7 @@ const execution:Readonly<Record<string,ExecutionState>>={
   'media-intelligence':'needs_local_device','manim-video':'needs_local_device','blender-mcp':'needs_local_device',
   'ui-inspector':'needs_approval_or_engine','transcribe-subtitles':'needs_local_device',
   'scheduled-routines':'guidance_only',
+  'safe-cleanup':'needs_local_device',
 };
 export type SkillPlan={
   revision:string; objective:string; steps:Array<{skill_id:string; name:string; state:ExecutionState; reason:string}>;
@@ -54,7 +56,7 @@ export function routeSkillIntent(objective:string,requestedId?:string):SkillPlan
     reason:execution[skill.id]==='ready_readonly'
       ?'Existing approved browser snapshot tool; read-only execution only'
       :execution[skill.id]==='needs_local_device'
-        ?skill.id==='media-intelligence'?'Use the packaged yt-dlp helper on an authorized device: retrieve captions first, download bounded media or sample frames only when evidence requires it, then verify citations at original timestamps. Retrieval does not imply semantic understanding.':skill.id==='image-studio'?'Use Canvas Design or Algorithmic Art on an authorized local device for code graphics; no image model is required. Inspect the exported image and retain source/seed. Photographic synthesis needs a configured local ComfyUI backend; ask before weight downloads.':'Use the packaged helper on an authorized user device: prepare ordinary media dependencies automatically, execute and verify the deliverable. Ask before Qwen TTS or ACE-Step installation.'
+        ?skill.id==='media-intelligence'?'Use the packaged yt-dlp helper on an authorized device: retrieve captions first, download bounded media or sample frames only when evidence requires it, then verify citations at original timestamps. Retrieval does not imply semantic understanding.':skill.id==='safe-cleanup'?'Read the Safe Cleanup instructions and stage scripts/safe-cleanup.mjs on the authorized device. Plan exact canonical targets, show the preview and hash, and execute only that hash after explicit user approval; report removed, kept and free space before/after. Never fall back to rd /s, Remove-Item -Recurse or rm -rf. This HTTP adapter cannot delete files.':skill.id==='image-studio'?'Use Canvas Design or Algorithmic Art on an authorized local device for code graphics; no image model is required. Inspect the exported image and retain source/seed. Photographic synthesis needs a configured local ComfyUI backend; ask before weight downloads.':'Use the packaged helper on an authorized user device: prepare ordinary media dependencies automatically, execute and verify the deliverable. Ask before Qwen TTS or ACE-Step installation.'
       :execution[skill.id]==='guidance_only'
         ?'This workflow is configured through existing approved automation tools'
         :'Requires separately approved execution engine, permissions and budget; not installed by Cloud Skills',

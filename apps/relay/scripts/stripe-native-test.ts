@@ -16,7 +16,8 @@ let cancelled=false,schedule=false,loseRenewalAck=true,setupReady=false,foreignS
 let savedMethod:any={id:'pm_old',type:'card',customer:'cus_owner',card:{brand:'visa',last4:'4242',exp_month:12,exp_year:2030}};
 const mutations:{path:string;body:URLSearchParams;key:string|null}[]=[],original=globalThis.fetch;
 const subscription=()=>({id:'sub_owner',customer:'cus_owner',livemode:false,status:'active',cancel_at_period_end:cancelled,schedule:schedule?'sub_sched_owner':null});
-const checkout=()=>({id:'cs_test_native',customer:'cus_other',livemode:false,status:checkoutStatus,ui_mode:'embedded_page',url:null,client_secret:'cs_test_native_secret_fixture'});
+let checkoutMode='embedded_page';
+const checkout=()=>checkoutMode==='elements'?{id:'cs_test_elements',customer:'cus_other',livemode:false,status:'open',ui_mode:'elements',url:null,client_secret:'cs_test_elements_secret_fixture',billing_address_collection:null}:{id:'cs_test_native',customer:'cus_other',livemode:false,status:checkoutStatus,ui_mode:'embedded_page',url:null,client_secret:'cs_test_native_secret_fixture'};
 globalThis.fetch=async(input,init)=>{
  const url=new URL(String(input));assert.equal(url.origin,'https://api.stripe.com');const key=new Headers(init?.headers).get('idempotency-key');
  if(init?.method==='POST'){
@@ -29,7 +30,7 @@ globalThis.fetch=async(input,init)=>{
   if(url.pathname==='/v1/setup_intents'){assert.equal(body.get('customer'),'cus_owner');assert.equal(body.get('usage'),'off_session');return Response.json({id:'seti_native',customer:'cus_owner',livemode:false,client_secret:'seti_native_secret_fixture'});}
   if(url.pathname==='/v1/customers/cus_owner'){assert.equal(body.get('invoice_settings[default_payment_method]'),'pm_new');return Response.json({id:'cus_owner'});}
   if(url.pathname==='/v1/checkout/sessions'){
-   checkouts++;assert.equal(body.get('ui_mode'),'embedded_page');assert.equal(body.has('success_url'),false);assert.equal(body.has('cancel_url'),false);assert.equal(body.get('redirect_on_completion'),'if_required');assert(new URL(body.get('return_url')!).pathname==='/checkout');assert.equal(body.get('line_items[0][price]'),'price_plus');assert.equal(body.get('customer'),'cus_other');return Response.json(checkout());
+   checkouts++;checkoutMode=body.get('ui_mode')!;assert(['embedded_page','elements'].includes(checkoutMode));assert.equal(body.has('success_url'),false);assert.equal(body.has('cancel_url'),false);assert.equal(body.get('redirect_on_completion'),checkoutMode==='elements'?null:'if_required','Elements sessions confirm on our page and return via return_url');assert(new URL(body.get('return_url')!).pathname==='/checkout');assert.equal(body.get('line_items[0][price]'),'price_plus');assert.equal(body.get('customer'),'cus_other');return Response.json(checkout());
   }
   if(url.pathname==='/v1/checkout/sessions/cs_test_native/expire'){checkoutStatus='expired';return Response.json(checkout());}
   throw Error('Unexpected mutation '+url.pathname);
@@ -42,6 +43,7 @@ globalThis.fetch=async(input,init)=>{
  if(url.pathname==='/v1/subscriptions')return Response.json({has_more:false,data:[]});
  if(url.pathname==='/v1/prices')return Response.json({data:[{id:'price_plus',lookup_key:'remote-arc:arc-plus-v1',currency:'usd',unit_amount:3900,tax_behavior:'exclusive',active:true,recurring:{interval:'month',interval_count:1}}]});
  if(url.pathname==='/v1/checkout/sessions/cs_test_native')return Response.json(checkout());
+ if(url.pathname==='/v1/checkout/sessions/cs_test_elements')return Response.json(checkout());
  throw Error('Unexpected read '+url.pathname);
 };
 try{
@@ -61,9 +63,14 @@ try{
  const reopened=await decode(await api('payment-method/setup',{requestId}));assert.equal(reopened.verified,true);assert.equal(reopened.clientSecret,undefined,'A reopened succeeded setup proceeds to confirmation without re-verifying payment details');
  await decode(await api('payment-method/confirm',{setupIntentId:'seti_native'}));await decode(await api('payment-method/confirm',{setupIntentId:'seti_native'}));const methodWrites=mutations.filter(item=>item.path==='/v1/customers/cus_owner');assert.equal(methodWrites.length,2);assert.equal(methodWrites[0].key,methodWrites[1].key,'Payment-method confirmation retains the same provider idempotency identity');
  const embedded=await decode(await api('checkout',{productId:'arc-plus-v1',uiMode:'embedded_page'},'other'));assert.equal(embedded.clientSecret,'cs_test_native_secret_fixture');assert.equal(embedded.mode,'embedded_page');assert.equal(embedded.url,undefined);assert.equal((await decode(await api('checkout',{productId:'arc-plus-v1',uiMode:'embedded_page'},'other'))).sessionId,embedded.sessionId);assert.equal(checkouts,1,'Repeated checkout returns the same embedded session');assert.equal(sql.prepare('SELECT ui_mode FROM arc_billing_checkouts WHERE session_id=?').get(embedded.sessionId)!.ui_mode,'embedded_page');
- await decode(await api('checkout',{productId:'arc-plus-v1'},'other'),409);assert.equal(checkouts,1,'A saved mode cannot mutate on retry');await decode(await api('checkout',{productId:'arc-plus-v1',uiMode:'embedded_page'},'other',origin,{STRIPE_PUBLISHABLE_KEY:'pk_live_wrongmode'}),503);assert.equal(checkouts,1);
+ const kept=await decode(await api('checkout',{productId:'arc-plus-v1',uiMode:'elements'},'other'));assert.deepEqual([kept.mode,kept.sessionId,checkouts],['embedded_page',embedded.sessionId,1],'An open session keeps its original mode; no second session');await decode(await api('checkout',{productId:'arc-plus-v1',uiMode:'embedded_page'},'other',origin,{STRIPE_PUBLISHABLE_KEY:'pk_live_wrongmode'}),503);assert.equal(checkouts,1);
  await decode(await api('checkout/abandon',{sessionId:embedded.sessionId},'owner'),404);await decode(await api('checkout/abandon',{sessionId:embedded.sessionId},'other'));await decode(await api('checkout/abandon',{sessionId:embedded.sessionId},'other'));assert.equal(mutations.filter(item=>item.path.endsWith('/expire')).length,1);
+ // After the old session is closed, new checkouts use our own page with Stripe's themed fields.
+ const elements=await decode(await api('checkout',{productId:'arc-plus-v1',uiMode:'elements'},'other'));assert.deepEqual([elements.mode,elements.sessionId,elements.clientSecret,elements.billingAddress,elements.url],['elements','cs_test_elements','cs_test_elements_secret_fixture',false,undefined]);assert.equal(checkouts,2);
+ assert.equal(sql.prepare('SELECT ui_mode FROM arc_billing_checkouts WHERE session_id=?').get('cs_test_elements')!.ui_mode,'elements');
+ assert.equal((await decode(await api('checkout',{productId:'arc-plus-v1',uiMode:'elements'},'other'))).sessionId,'cs_test_elements');assert.equal(checkouts,2,'Repeated Elements checkout reuses the open session');
+ await decode(await api('checkout',{productId:'arc-plus-v1',uiMode:'custom'},'other'),400);
  assert.equal(sql.prepare('SELECT COUNT(*) n FROM arc_payment_receipts').get()!.n,0,'Checkout, renewal and payment-method changes do not issue Credits or receipts');assert(!mutations.some(item=>/charges|payment_intents|refunds/.test(item.path)));
  let configured=0;await configureStripePublicKey({GITHUB_ACTIONS:'true',GITHUB_REF:'refs/heads/master',STRIPE_PUBLISHABLE_KEY:'pk_live_fixture',CLOUDFLARE_API_TOKEN:'fixture'},async(_url:any,init:any)=>{configured++;assert.equal(init.method,'PUT');assert.deepEqual(JSON.parse(init.body),{name:'STRIPE_PUBLISHABLE_KEY',type:'secret_text',text:'pk_live_fixture'});return Response.json({success:true});});assert.equal(configured,1);
- console.log('PASS: native embedded checkout/replay/frozen mode, CSRF/ownership, canonical invoices, renewal CAS/lost-ack recovery/scheduled-change release, paused management, verified payment methods and no purchase/receipt side effects');
+ console.log('PASS: native embedded and Elements checkout, replay/frozen mode, CSRF/ownership, canonical invoices, renewal CAS/lost-ack recovery/scheduled-change release, paused management, verified payment methods and no purchase/receipt side effects');
 }finally{globalThis.fetch=original;sql.close();}

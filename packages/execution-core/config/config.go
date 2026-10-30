@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 const DefaultOrigin = "https://mcp.remotearc.app"
@@ -130,7 +131,23 @@ func DurableWrite(path string, b []byte, mode os.FileMode) error {
 	return AtomicWriteWithDurability(path, b, mode, "durable")
 }
 func AtomicWriteWithDurability(path string, b []byte, mode os.FileMode, durability string) error {
-	return atomicWrite(path, b, mode, durability, writeOperations{sync: (*os.File).Sync, rename: os.Rename, syncDirectory: SyncDirectoryWithDurability})
+	return atomicWrite(path, b, mode, durability, writeOperations{sync: (*os.File).Sync, rename: replaceFile, syncDirectory: SyncDirectoryWithDurability})
+}
+
+// A reader only holds the target for a moment, so wait briefly instead of
+// failing an Agent start. renameBlocked is false outside Windows.
+func replaceFile(from, to string) error {
+	return retryRename(os.Rename, renameBlocked, time.Sleep, from, to)
+}
+
+func retryRename(rename func(string, string) error, blocked func(error) bool, sleep func(time.Duration), from, to string) error {
+	for delay := 10 * time.Millisecond; ; delay *= 2 {
+		e := rename(from, to)
+		if e == nil || !blocked(e) || delay > 640*time.Millisecond {
+			return e
+		}
+		sleep(delay)
+	}
 }
 
 // Per-call operations let tests inject storage failures without global hooks.

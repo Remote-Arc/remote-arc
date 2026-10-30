@@ -43,7 +43,7 @@ export function ArcComingSoonPageContent({available=false,startHref=connectWorks
       <div className="arcV3HeroGlow" aria-hidden="true" />
       <div className="arcV3HeroEyebrow"><ArcStatus>{available?tr("Arc · Personal agent", "Arc · 个人智能体"):tr("Arc · Check availability", "Arc · 查看可用状态")}</ArcStatus></div>
       <h1 id="arcV3HeroTitle">{tr("Your apps. Your computers. One personal agent.", "你的应用与电脑，一位个人 AI 队友。")}</h1>
-      <p>{tr("You already connect your AI with Remote Arc. Meet the next step: a personal agent that brings those connections together, coordinates your device fleet, and turns conversations into tasks and routines. No model API key required.", "你已经用 Remote Arc 为 AI 连接工具。接下来，让个人 AI 队友把这些连接串起来，协调设备集群，把一句话变成任务与 Routine。无需模型 API Key。")}</p>
+      <p>{tr("We built Arc with Remote Arc: AI working through Connect wrote its code on our own computers. Arc now uses the same Apps, computers and permissions to bring your work together, coordinate your device fleet, and turn conversations into tasks and routines. No model API key required.", "Arc 就是用 Remote Arc 做出来的：AI 通过 Connect 在我们自己的电脑上写出了它的代码。现在，Arc 用同一套应用、电脑与权限把工作串起来、协调设备集群，并把对话变成任务和 Routine。无需模型 API Key。")}</p>
       <div className="arcV3HeroActions"><a className="arcV3Primary" href={available?startHref:connectWorkspaceHref}>{available?tr("Open Arc", "打开 Arc"):tr("Use Connect now", "先使用 Connect")} <span>↗</span></a><a className="arcV3Secondary" href="#why-arc">{tr("Why use Arc?", "为什么选择 Arc？")} <span>↓</span></a><a className="arcV3Secondary" href={localizedWebsiteHref("/roadmap",locale)}>{tr("See what's next", "查看开发计划")} <span>→</span></a></div>
       <div className="arcV3HeroCue"><span />{tr("ONE WORKSPACE FOR YOUR WORK", "在一个工作空间推进工作")}</div>
       <ArcExecutionScene />

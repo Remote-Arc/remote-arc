@@ -3,6 +3,7 @@ import {startBusinessFlow,advanceBusinessFlow,failBusinessFlow} from './business
 import { retryTransientD1Read } from "./d1-read-retry.js";
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
+import {isReviewerEmail,isReviewerUserId} from './reviewer-identity.js';
 
 type AuthEnv = PlatformLaunchEnv & {
   DB: D1Database;
@@ -19,6 +20,7 @@ type AuthEnv = PlatformLaunchEnv & {
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
   REVIEWER_EMAIL?: string;
+  ANTHROPIC_REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
 };
 
@@ -322,6 +324,10 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     return loginFailure("Verified Google email is required",403);
   }
 
+  if (isReviewerEmail(env, profile.email)) {
+    return loginFailure("Use the dedicated reviewer sign-in for this account",403);
+  }
+
   const allowed = (env.ALLOWED_EMAILS || "")
     .split(",")
     .map((item) => item.trim().toLowerCase())
@@ -336,6 +342,10 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
   )
     .bind(profile.sub, profile.email)
     .first<{ id: string }>();
+
+  if (isReviewerUserId(existing?.id)) {
+    return loginFailure("Use the dedicated reviewer sign-in for this account",403);
+  }
 
   if (!existing && env.ALLOW_SIGNUPS !== "1") {
     const countRow = await env.DB.prepare(

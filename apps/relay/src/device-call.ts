@@ -10,6 +10,7 @@ import {
   requestWriteApproval,
 } from "./approvals.js";
 import { REVIEWER_DEMO_TOOLS, reviewerDemoResult } from "./reviewer-fixture.js";
+import { isReviewerFixture } from "./reviewer-identity.js";
 import { isBrowserRunnerTool } from "./browser-runner-mcp.js";
 
 // A timeout proves only that the Relay did not observe the reply, not that
@@ -97,6 +98,7 @@ export async function callDevice(
   }
 
   if ([env.REVIEWER_DEMO_DEVICE_ID, env.ANTHROPIC_REVIEWER_DEMO_DEVICE_ID].some((id) => id && id === deviceId)) {
+    if (!isReviewerFixture(env, identity.userId, deviceId)) throw new Error("review fixture owner mismatch");
     if (!REVIEWER_DEMO_TOOLS.includes(tool as (typeof REVIEWER_DEMO_TOOLS)[number])) {
       throw new Error('tool "' + tool + '" is disabled for the isolated review fixture');
     }

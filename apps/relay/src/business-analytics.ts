@@ -4,7 +4,7 @@ import type {BillingEnv} from './stripe-billing.js';
 type Row=Record<string,any>;
 const DAY=86400000;
 const ratio=(n:number,d:number)=>d>0?n/d:null;
-const person="u.id<>'reviewer-openai-v1'";
+const person="u.id NOT IN ('reviewer-openai-v1','reviewer-anthropic-v1')";
 const live="COALESCE(v.mode,'live')='live'";
 export const businessStages={
  email_login:['started','delivered','verification','verified','completed'],
@@ -17,12 +17,12 @@ async function flowSummary(db:D1Database,scene:keyof typeof businessStages,from:
  const columns=steps.map((step,i)=>`(SELECT MIN(occurred_at) FROM business_flow_steps s WHERE s.flow_id=f.id AND s.step='${step}' AND s.occurred_at<?3) t${i}`);
  const ordered=steps.map((_,i)=>Array.from({length:i+1},(__,j)=>j===0?'t0 IS NOT NULL':`t${j} IS NOT NULL AND t${j}>=t${j-1}`).join(' AND '));
  const result=await db.prepare(`WITH flows AS(SELECT f.*,${columns.join(',')} FROM business_flow_attempts f
- WHERE scene=?1 AND evidence='observed' AND started_at>=?2 AND started_at<?3 AND (user_id IS NULL OR user_id<>'reviewer-openai-v1'))
+ WHERE scene=?1 AND evidence='observed' AND started_at>=?2 AND started_at<?3 AND (user_id IS NULL OR user_id NOT IN ('reviewer-openai-v1','reviewer-anthropic-v1')))
  SELECT COUNT(*) total,${ordered.map((condition,i)=>`COALESCE(SUM(CASE WHEN ${condition} THEN 1 ELSE 0 END),0) s${i}`).join(',')},
  COALESCE(SUM(CASE WHEN NOT(${ordered.at(-1)}) AND (failed_at IS NULL OR failed_at>=?3) AND expires_at>?3 THEN 1 ELSE 0 END),0) pending,
  COALESCE(SUM(CASE WHEN NOT(${ordered.at(-1)}) AND failed_at<?3 THEN 1 ELSE 0 END),0) failed,
  COALESCE(SUM(CASE WHEN succeeded_at<?3 AND NOT(${ordered.at(-1)}) THEN 1 ELSE 0 END),0) incompleteEvidence
- ,(SELECT COUNT(*) FROM business_flow_attempts h WHERE h.scene=?1 AND h.evidence='ledger' AND h.started_at>=?2 AND h.started_at<?3 AND (h.user_id IS NULL OR h.user_id<>'reviewer-openai-v1')) historyUnmeasured
+ ,(SELECT COUNT(*) FROM business_flow_attempts h WHERE h.scene=?1 AND h.evidence='ledger' AND h.started_at>=?2 AND h.started_at<?3 AND (h.user_id IS NULL OR h.user_id NOT IN ('reviewer-openai-v1','reviewer-anthropic-v1'))) historyUnmeasured
  FROM flows`).bind(scene,from,to).first<Row>();
  return {id:scene,total:Number(result?.total||0),steps:steps.map((key,i)=>({key,count:Number(result?.['s'+i]||0)})),pending:Number(result?.pending||0),failed:Number(result?.failed||0),incompleteEvidence:Number(result?.incompleteEvidence||0),historyUnmeasured:Number(result?.historyUnmeasured||0)};
 }
@@ -35,7 +35,7 @@ async function paymentSummary(db:D1Database,from:string,to:string,current=false)
  const visits=await db.prepare(`WITH entries AS(
  SELECT user_id,journey_id,MIN(occurred_at) entered FROM product_events
  WHERE name='billing.checkout.viewed' AND source='browser' AND journey_id IS NOT NULL AND user_id IS NOT NULL
- AND user_id<>'reviewer-openai-v1' AND occurred_at>=?1 AND occurred_at<?2 GROUP BY user_id,journey_id), evidence AS(
+ AND user_id NOT IN ('reviewer-openai-v1','reviewer-anthropic-v1') AND occurred_at>=?1 AND occurred_at<?2 GROUP BY user_id,journey_id), evidence AS(
  SELECT e.*,c.id checkout_id,CASE WHEN c.id IS NOT NULL AND c.expires_at>?2 AND NOT(${fulfilled}) THEN 1
  WHEN c.id IS NULL AND e.entered>=strftime('%Y-%m-%dT%H:%M:%fZ',?2,'-30 minutes') THEN 1 ELSE 0 END pending,
  CASE WHEN ${paid} THEN 1 ELSE 0 END paid,CASE WHEN ${fulfilled} THEN 1 ELSE 0 END fulfilled

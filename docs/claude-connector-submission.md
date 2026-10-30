@@ -55,3 +55,50 @@ Remote Arc serves every AI host from the same URL:
 
 The shared live service is not changed merely by merging this code;
 production deployment and verification are separate steps.
+
+## Step 8: reviewer access and test evidence
+
+Anthropic has a separate reserved identity (`reviewer-anthropic-v1`), password
+login and Review Desktop. Configure `ANTHROPIC_REVIEWER_EMAIL`,
+`ANTHROPIC_REVIEWER_PASSWORD_SHA256` and `ANTHROPIC_REVIEWER_DEMO_DEVICE_ID`
+through Cloudflare's protected settings. Preserve the existing `REVIEWER_*`
+settings, which belong to OpenAI. Never commit reviewer passwords or put them in
+public documentation or PR comments.
+
+The protected Production Release workflow has an opt-in
+`configure_claude_reviewer` switch. Its three GitHub Secrets are
+`ANTHROPIC_REVIEWER_EMAIL`, `ANTHROPIC_REVIEWER_PASSWORD` and
+`ANTHROPIC_REVIEWER_DEMO_DEVICE_ID`. It derives the runtime password hash,
+provisions only the Anthropic settings after deployment, and runs
+`scripts/verify-claude-reviewer.mjs`. Existing complete reviewer credentials are
+retained; a partial configuration stops the workflow for inspection. The smoke
+report lists untested public tools and does not claim a Claude conversation
+or complete tool coverage.
+
+Reviewers open `https://mcp.remotearc.app/auth/login`, choose Reviewer access,
+and sign in with the dedicated credentials supplied in the submission portal.
+They can authorize `https://mcp.remotearc.app/mcp` through Claude's automatically
+registered OAuth client without Google login, mailbox access or an OTP.
+
+The deterministic Review Desktop provides eight device operations:
+`list_directory`, `read_file`, `get_file_info`, `list_processes`,
+`start_process`, `write_file`, `edit_block` and `undo_last_change`.
+Its files are restricted to `/review-demo`, and its terminal accepts a safe
+command allowlist. Logging in resets only that reviewer's fixture state.
+The two reviewers cannot access each other's devices or file overlays.
+Normal Google and email-OTP login cannot claim either reserved identity.
+
+This fixture does **not** provide Browser Runner, a shared Chrome tab, a real
+Agent, or preconnected third-party Apps. Do not describe it as full coverage of
+the public connector. A successful representative fixture test is not evidence
+that every advertised tool has passed. Before checking the portal's Self-tested
+box, exercise every advertised tool with its real prerequisites through MCP
+Inspector and a Claude custom connector, and retain the actual results. The
+official checklist is at
+https://claude.com/docs/connectors/building/review-criteria.
+
+For production follow-up, verify both reviewer logins independently, complete
+authorization-code + PKCE and a refresh-token exchange, confirm the authenticated
+Claude catalog excludes Runway/media-generation Skills, and run the fixture
+read/write/edit/undo prompts. Record the deployed SHA and actual outcomes. Keep
+remaining untested capabilities listed explicitly in the handoff.

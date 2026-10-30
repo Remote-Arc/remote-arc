@@ -10,6 +10,7 @@ import {
 } from "./auth.js";
 import { writeAudit } from "./audit.js";
 import { REVIEWER_DEMO_TOOLS } from "./reviewer-fixture.js";
+import { isReviewerFixture } from "./reviewer-identity.js";
 import {billingEnabled,type PlatformLaunchEnv} from './platform-launch.js';
 import {currentArcPlan} from './arc-plan.js';
 import {activeDeviceCapacityBonus} from './device-capacity-admin.js';
@@ -20,6 +21,7 @@ type DeviceEnv = PlatformLaunchEnv & {
   REGISTRY: DurableObjectNamespace;
   PUBLIC_ORIGIN: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  ANTHROPIC_REVIEWER_DEMO_DEVICE_ID?: string;
 };
 
 type DeviceStartBody = {
@@ -508,7 +510,7 @@ export async function getDevicesForUser(
 
   return storedDevices.map((device) => {
     const reviewerFixture: OnlineDevice | undefined =
-      env.REVIEWER_DEMO_DEVICE_ID && device.id === env.REVIEWER_DEMO_DEVICE_ID
+      isReviewerFixture(env, userId, device.id)
         ? {
             id: device.id,
             status: "online",

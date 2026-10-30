@@ -18,9 +18,15 @@ user('alpha','2026-10-18T09:00:00.000Z');user('beta','2026-10-18T09:00:00.000Z')
 user('gamma','2026-10-26T09:00:00.000Z');user('delta','2026-10-27T09:00:00.000Z');
 user('older','2026-09-20T09:00:00.000Z');user('admin','2026-09-01T09:00:00.000Z','admin');
 user('reviewer-openai-v1','2026-10-27T09:00:00.000Z');
+user('reviewer-anthropic-v1','2026-10-27T09:00:00.000Z');
+assert.equal(sql.prepare("SELECT is_demo FROM business_cohort_users WHERE user_id='reviewer-anthropic-v1'").get()?.is_demo,1);
 sql.prepare("UPDATE business_metrics_state SET value='2026-09-01T00:00:00.000Z' WHERE key='activity_complete_from'").run();
 for(const [id,at] of [['alpha','2026-10-19T09:00:00.000Z'],['beta','2026-10-25T09:00:00.000Z'],['gamma','2026-10-27T09:00:00.000Z'],['older','2026-10-20T09:00:00.000Z']]){await recordBusinessActivity(env,id!,at);await recordBusinessActivity(env,id!,at);}
 assert.equal(sql.prepare('SELECT COUNT(*) n FROM business_activity_days').get()?.n,4,'Repeated use in the same day is one retained account');
+for(const id of ['reviewer-openai-v1','reviewer-anthropic-v1']){
+ await recordBusinessActivity(env,id,'2026-10-27T10:00:00.000Z');
+ await startBusinessFlow(env,{id:'reviewer-login-'+id,scene:'email_login',userId:id,at:'2026-10-23T09:00:00.000Z',expiresAt:'2026-10-23T09:10:00.000Z'});
+}
 
 for(const id of ['email-a','email-b','email-c','email-pending']){
  await startBusinessFlow(env,{id,scene:'email_login',at:'2026-10-23T09:00:00.000Z',expiresAt:id==='email-pending'?'2026-10-28T09:00:00.000Z':'2026-10-23T09:10:00.000Z'});
@@ -29,7 +35,7 @@ for(const id of ['email-a','email-b','email-c','email-pending']){
 for(const id of ['email-a','email-b'])for(const [index,step] of ['verification','verified','completed'].entries())await advanceBusinessFlow(env,id,'email_login',step,{userId:'alpha',at:`2026-10-23T09:0${index+2}:00.000Z`});
 await advanceBusinessFlow(env,'email-a','email_login','completed',{at:'2026-10-23T09:08:00.000Z'});
 await advanceBusinessFlow(env,'forged-unknown','email_login','completed',{userId:'alpha'});
-assert.equal(sql.prepare("SELECT COUNT(*) n FROM business_flow_attempts WHERE scene='email_login'").get()?.n,4,'Repeated callbacks and unknown completion IDs never create extra attempts');
+assert.equal(sql.prepare("SELECT COUNT(*) n FROM business_flow_attempts WHERE scene='email_login'").get()?.n,6,'Repeated callbacks create no extra attempts; the two declared reviewer flows remain separate');
 
 for(const id of ['device-a','device-b','device-c'])await startBusinessFlow(env,{id,scene:'device_pairing',at:'2026-10-23T09:00:00.000Z',expiresAt:'2026-10-23T09:10:00.000Z'});
 for(const id of ['device-a','device-b'])await advanceBusinessFlow(env,id,'device_pairing','approved',{userId:'alpha',deviceId:id,at:'2026-10-23T09:01:00.000Z'});

@@ -12,6 +12,7 @@ import { authPage, escapeAuthHtml } from "./auth-page.js";
 import { renderOtpEmail } from "./email-template.js";
 import { emailFormToken, validEmailFormToken } from "./email-form-csrf.js";
 import { emailSender } from './email-sender.js';
+import { isReviewerEmail, isReviewerUserId } from './reviewer-identity.js';
 
 type EmailEnv = {
   DB: D1Database;
@@ -21,6 +22,7 @@ type EmailEnv = {
   ALLOW_SIGNUPS?: string;
   ALLOWED_EMAILS?: string;
   REVIEWER_EMAIL?: string;
+  ANTHROPIC_REVIEWER_EMAIL?: string;
   RESEND_API_KEY?: string;
   EMAIL_AUTH_SECRET?: string;
   EMAIL_FROM?: string;
@@ -114,11 +116,11 @@ async function lookupUser(env: EmailEnv, email: string) {
 }
 
 async function eligibleForEmailAuth(env: EmailEnv, email: string) {
-  if (email === env.REVIEWER_EMAIL?.trim().toLowerCase()) return false;
+  if (isReviewerEmail(env, email)) return false;
   const allowed = (env.ALLOWED_EMAILS || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
   if (allowed.length && !allowed.includes(email)) return false;
   const user = await lookupUser(env, email);
-  if (user?.id === "reviewer-openai-v1") return false;
+  if (isReviewerUserId(user?.id)) return false;
   if (user || env.ALLOW_SIGNUPS === "1") return true;
   const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first<{ count: number }>();
   return (row?.count || 0) === 0;

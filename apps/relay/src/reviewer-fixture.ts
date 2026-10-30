@@ -26,7 +26,7 @@ const BASE_FILES: Record<string, string> = {
     2,
   ),
   "/review-demo/README.md":
-    "# Remote Arc Review Demo\n\nThis is deterministic fixture data for OpenAI plugin review.\n\nRemote Arc can inspect, test, edit, and safely restore files in this isolated review workspace.",
+    "# Remote Arc Review Demo\n\nThis is deterministic fixture data for connector review.\n\nRemote Arc can inspect, test, edit, and safely restore files in this isolated review workspace.",
   "/review-demo/src/router.test.ts":
     'import { describe, expect, it } from "vitest";\n\ndescribe("router", () => {\n  it("routes review requests", () => expect(true).toBe(true));\n});\n',
   "/review-demo/src/auth.test.ts":
@@ -151,7 +151,7 @@ export async function reviewerDemoResult(
   args: Record<string, unknown>,
 ) {
   if (!REVIEWER_DEMO_TOOLS.includes(tool as (typeof REVIEWER_DEMO_TOOLS)[number])) {
-    throw new Error("tool is not enabled on the OpenAI review fixture");
+    throw new Error("tool is not enabled on the isolated review fixture");
   }
 
   if (tool === "list_directory") {
@@ -341,5 +341,5 @@ export async function reviewerDemoResult(
     };
   }
 
-  throw new Error("tool is not enabled on the OpenAI review fixture");
+  throw new Error("tool is not enabled on the isolated review fixture");
 }

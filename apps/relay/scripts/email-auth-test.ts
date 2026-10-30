@@ -56,6 +56,7 @@ const env = {
   EMAIL_AUTH_SECRET: "test-secret-not-for-production",
   ALLOW_SIGNUPS: "1",
   REVIEWER_EMAIL: "openai-reviewer@remotearc.app",
+  ANTHROPIC_REVIEWER_EMAIL: "anthropic-reviewer@remotearc.app",
 };
 
 function formRequest(route: string, values: Record<string, string>, origin: string = ORIGIN) {
@@ -220,9 +221,11 @@ try {
 
   // Reviewer-only demo identity must never become an email-login account.
   globalThis.fetch = async () => { throw new Error("not expected"); };
-  const ignored = await handleEmailCodeRequest(formRequest("/auth/email/request", { email: env.REVIEWER_EMAIL }), env);
-  assert.equal(ignored.status, 200);
-  assert.equal(sqlite.prepare("SELECT * FROM email_login_challenges WHERE email = ?").get(env.REVIEWER_EMAIL), undefined);
+  for (const email of [env.REVIEWER_EMAIL, env.ANTHROPIC_REVIEWER_EMAIL]) {
+    const ignored = await handleEmailCodeRequest(formRequest("/auth/email/request", { email }), env);
+    assert.equal(ignored.status, 200);
+    assert.equal(sqlite.prepare("SELECT * FROM email_login_challenges WHERE email = ?").get(email), undefined);
+  }
 
   console.log("PASS: email OTP signup, Google account reuse, origin checks, throttling, expiry, replay, provider failure and reviewer isolation");
 } finally {

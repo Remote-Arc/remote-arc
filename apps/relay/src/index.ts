@@ -161,6 +161,9 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  ANTHROPIC_REVIEWER_EMAIL?: string;
+  ANTHROPIC_REVIEWER_PASSWORD_SHA256?: string;
+  ANTHROPIC_REVIEWER_DEMO_DEVICE_ID?: string;
   GITHUB_MARKETPLACE_WEBHOOK_SECRET?: string;
   EMAIL?: {
     send(message: {

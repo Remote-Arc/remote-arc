@@ -10,6 +10,7 @@ import {
   requestWriteApproval,
 } from "./approvals.js";
 import { REVIEWER_DEMO_TOOLS, reviewerDemoResult } from "./reviewer-fixture.js";
+import { isReviewerFixture } from "./reviewer-identity.js";
 import { isBrowserRunnerTool } from "./browser-runner-mcp.js";
 
 // A timeout proves only that the Relay did not observe the reply, not that
@@ -29,6 +30,7 @@ export type DeviceCallEnv = {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  ANTHROPIC_REVIEWER_DEMO_DEVICE_ID?: string;
   MCP_ANALYTICS?: AnalyticsEngineDataset;
   MCP_METRICS_SAMPLE_RATE?: string;
 };
@@ -95,9 +97,10 @@ export async function callDevice(
     );
   }
 
-  if (env.REVIEWER_DEMO_DEVICE_ID && deviceId === env.REVIEWER_DEMO_DEVICE_ID) {
+  if ([env.REVIEWER_DEMO_DEVICE_ID, env.ANTHROPIC_REVIEWER_DEMO_DEVICE_ID].some((id) => id && id === deviceId)) {
+    if (!isReviewerFixture(env, identity.userId, deviceId)) throw new Error("review fixture owner mismatch");
     if (!REVIEWER_DEMO_TOOLS.includes(tool as (typeof REVIEWER_DEMO_TOOLS)[number])) {
-      throw new Error('tool "' + tool + '" is disabled for the OpenAI review fixture');
+      throw new Error('tool "' + tool + '" is disabled for the isolated review fixture');
     }
     return reviewerDemoResult(env, identity.userId, tool, args);
   }

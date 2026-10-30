@@ -19,12 +19,18 @@ jobs:
           python-version: '3.11'
       - name: Caption parsing, budgets, failures and evidence validation
         run: node --test scripts/media-intelligence-test.mjs
+      - name: Install real FFmpeg and FFprobe for the integration test
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version
+          ffprobe -version
       - name: Real yt-dlp, HTTP captions, bounded FFmpeg and cited report
         run: node scripts/media-intelligence-integration.mjs --workspace "$RUNNER_TEMP/ra-media-intelligence"
 
   website:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

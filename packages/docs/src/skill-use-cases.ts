@@ -909,7 +909,9 @@ export const LEGACY_USE_CASE_SKILLS:Readonly<Record<string,readonly string[]>>={
     "community-react-best-practices"
   ],
   "file-organization": [],
-  "disk-space-cleanup": [],
+  "disk-space-cleanup": [
+    "safe-cleanup"
+  ],
   "overnight-goals": [
     "scheduled-routines"
   ],

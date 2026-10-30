@@ -152,8 +152,8 @@
       "name": "Safe Cleanup",
       "priority": "P0",
       "category": "productivity",
-      "description": "Safely reclaim disk space: inspect exact targets, guard Windows/CMD/PowerShell path quoting, and permanently delete verified disposable data without same-volume quarantine.",
-      "engine": "Remote Arc authorized local file/process tools; OS-native cleanup",
+      "description": "Safely reclaim disk space: preview a hash-approved deletion plan, then permanently delete only the unchanged files the user approved, never following links or touching protected folders.",
+      "engine": "Packaged Node helper (scripts/safe-cleanup.mjs) via Remote Arc start_process",
       "requires": [],
       "scopes": [
         "computer:read",

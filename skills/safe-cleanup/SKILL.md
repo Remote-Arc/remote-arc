@@ -1,51 +1,57 @@
 ---
 name: safe-cleanup
-description: Reclaim disk space safely on Windows, macOS or Linux by inspecting exact targets, avoiding shell quoting hazards, and using verified permanent deletion only when appropriate.
+description: Reclaim disk space safely on Windows, macOS or Linux with a hash-approved deletion plan; the packaged helper deletes only the exact files the user approved and reports what was and was not removed.
 priority: P0
 category: productivity
 status: builtin-guidance
 ---
 
-# Safe Cleanup — reclaim disk space without collateral deletion
+# Safe Cleanup: reclaim disk space without collateral deletion
 
-Use this Skill before any AI-initiated disk cleanup, recursive deletion, cache purge, bulk move, or storage-reclamation task via Remote Arc. **Freeing space is a real goal**: moving files to the Recycle Bin or a quarantine folder on the same filesystem usually does **not** free that filesystem's capacity. Do not promise otherwise or silently retain a seven-day full-size copy.
+Use this Skill before any AI-initiated disk cleanup, recursive deletion, cache purge or storage-reclamation task through Remote Arc. **Freeing space is the goal.** Moving files to the Recycle Bin/Trash or a quarantine folder on the same volume usually frees **no** space, so do not promise otherwise.
 
-A Skill guides the calling AI; it is **not** an enforcement mechanism, OS sandbox, backup, or permission grant. The local Safety Guard has a narrow signature list. Trusted Write Locations constrain supported file tools and require an in-scope working directory for terminal commands, but **do not confine shell side effects** to that directory. Local Undo does not cover shell deletion. Never claim this Skill makes arbitrary terminal commands safe.
+A Skill guides the calling AI. It is **not** an OS sandbox, backup or permission grant. The local Safety Guard blocks only a narrow set of catastrophic commands. Trusted Write Locations do **not** confine shell side effects, and **Local Undo cannot restore shell or helper deletions**.
 
 ## Device and permission gates
 
-Operate only on the user's authorized device, with existing `computer:read` and, for deletion, `computer:write` and the required tool permission. Use no privilege escalation, hidden credentials, unrequested device, network upload, external storage billing, or disabling of Safety Guard. When terminal access is off, produce a safe cleanup plan; don't enable it yourself.
+Work only on the user's authorized device, with existing `computer:read` and, for deletion, `computer:write` plus terminal access (`start_process`). Do not escalate privileges, use hidden credentials, upload data, disable Safety Guard or enable terminal access yourself. If terminal access is off, deliver a read-only cleanup plan and stop there.
 
-## Choose a space-reclamation method
+## Packaged helper: plan, approve, execute
 
-1. **Exact disposable data (preferred):** After the checks below, permanently delete only positively identified, user-authorized temporary/cache/build outputs using supported OS-native file operations. This actually reclaims space on the affected volume; no mandatory seven-day retention. Check whether the cache is owned by an active process.
-2. **Uncertain or personal data:** Inspect first, obtain specific user approval for the exact target and irreversible effect, or ask the user to perform deletion manually on the device if safe enforcement is unavailable. Never infer that photos, documents, media collections, projects, backups, or other valuable files are disposable because they are large.
-3. **Recoverable alternative:** Offer Recycle Bin or same-volume quarantine only if the user wants a recovery window **instead of** immediate free-space recovery. A different-volume backup can free the source volume after deletion, but consumes that destination's space and requires user approval.
-4. **Safer non-deletion alternatives:** Uninstall through the platform package manager, clear a documented application cache, rotate a known log, remove a verified build artifact, or change where future downloads/cache are stored, if this achieves the goal with lower risk.
+All recursive or bulk deletion goes through `scripts/safe-cleanup.mjs` (Node 18.15+, no dependencies). Arc: `prepare_skill {id:"safe-cleanup",deviceId,workspace}`. Connect: `read_skill` id `safe-cleanup`, path `scripts/safe-cleanup.mjs`, follow `nextOffset` to null, save the exact chunks with `write_file` and verify bytes and SHA-256 against the manifest. Check `node --version` first.
 
-## Mandatory preflight before a permanent deletion
+1. **Inspect (read-only).** Confirm device, volume and free space. Find candidates with bounded size checks. Pick the narrowest folders that are clearly disposable (app/package caches, temp, build output). Do not infer that large personal files are disposable.
+2. **Plan (no deletion):**
 
-- Identify the requested **device**, target **volume**, precise **absolute path**, intended contents, owner/application, and whether a process is using it. Do not guess the drive from context or expand a vague request into all large files.
-- Enumerate and record (without modifying) resolved/canonical target path, actual parent, filesystem/volume ID where possible, file count, approximate logical bytes, free bytes on that volume, and a representative listing. Do not follow directory symlinks/junctions/mount points while traversing candidates. A size estimate is not a promise of reclaimed space.
-- Block ambiguous command-line targeting: unmatched/misnested quotes, mixed CMD/PowerShell quoting, shell metacharacters, wildcard/glob expansion, variable interpolation, relative paths, blank paths, drive-relative paths, path separators or escape sequences that change the intended target, and paths whose canonical identity cannot be verified. **Windows `\` is a path separator, not a harmless escape character; quoted paths can be reinterpreted across nested shells.**
-- Reject volume/filesystem roots; system directories; user/home roots; Downloads/Documents/Desktop/Pictures or similarly personal directories; credential or browser-profile stores; backup roots; mixed-purpose parent directories; any ancestor of the intended target; paths outside the explicitly approved scope; and paths that unexpectedly resolve to a different parent or volume.
-- Never “fix” a failed delete by widening the target, falling back to its parent, changing the drive letter, adding recursive flags, or suppressing errors. If a folder is locked, stop and explain which process/files remain rather than deleting a broader path.
-- Prefer a structured file API with a separately passed literal path, no shell string concatenation, no nested `cmd /c` or PowerShell wrapping, and no wildcard-derived selection. When Remote Arc only offers `start_process`, don't treat its `cwd` or Safety Guard regex as proof of containment. Use a vetted narrowly scoped utility with structured arguments; absent a trustworthy implementation, stop and request on-device manual action for risky deletion.
-- Inspect exact target immediately before the operation (including parent identity, reparse point/symlink status, requested list and bound scope). Refuse on changed/mismatched identity or unexpected new contents. Prefer an operation that cannot follow path redirects between validation and mutation; otherwise explicitly acknowledge the remaining race risk.
+       node "<helper>/scripts/safe-cleanup.mjs" plan --target "<absolute folder>" [--target "<another>"] [--older-than-days 2] --output "<workspace>/.safe-cleanup/plan-<UTC time>.json"
 
-## Action decision
+   Pass each path as its own double-quoted argument straight to `start_process`. Do not use nested `cmd /c` or PowerShell wrapping, wildcards, `%VAR%`, `$VAR` or `~`; the helper rejects them. The plan scans without following symlinks/junctions or crossing mounted volumes, skips `.git`/`.hg`/`.svn` and `.remotearc` (Undo store) subtrees, and refuses drive or volume roots, home, personal and cloud-sync folders, credential and browser-profile stores, system directories, project roots, non-build folders inside projects, UNC/network paths and the ancestors of any of these. Use `--older-than-days` for shared temp folders so files in active use stay.
+3. **Preview and approval.** Show the user each root path, total files and bytes, the largest entries, the skipped reasons (`link-not-followed`, `nested-repository`, `newer-than-cutoff`...), the hard-link note and the plan hash. State that deletion is **permanent** and Local Undo cannot restore it. Ask for an explicit yes to *this* plan. If `recognizedCacheLocation` is false, the user must confirm that exact folder is disposable. A generic "free up space" request does not approve a plan.
+4. **Optional check:** `execute --plan "<plan>" --hash <hash> --dry-run` re-verifies every entry and deletes nothing.
+5. **Execute exactly what was approved:**
 
-- **Low risk:** Precisely selected disposable files inside a verified cache/temp/build subtree, no protected or unexpected files, bounded size, and no path ambiguity. The user's request to clean that exact subtree can authorize permanent deletion without a redundant seven-day holding period.
-- **Needs explicit confirmation:** Bulk or recursive permanent deletion, surprising file classes or size, nonstandard cache location, broad user folder, requested folder containing important-looking content, or a plan that differs from the user's initial scope. Present canonical path, drive, representative contents, approximate size, what cannot be restored, and a specific proposed action. No vague “confirm cleanup” prompt.
-- **Never automatically proceed:** Disk/root/home/system targets, credential stores, unresolved links, multi-hop quoting, changed targets, suspected path escape, and any attempt to bypass local policy. Do not allow a user's generic permission to free disk space to waive this boundary. For a truly intentional root erase, require a separate manual OS workflow.
+       node "<helper>/scripts/safe-cleanup.mjs" execute --plan "<plan>" --hash <full 64-char hash>
 
-## Execute and verify
+   Run it with `background: true` and poll `process_status`, so the 5 s default timeout cannot kill it mid-run. The helper refuses a changed, rehashed, expired (>60 min), foreign-device or already-executed plan. It refuses the whole plan if a root was replaced or now resolves elsewhere. It deletes a file only if its parent still resolves to the planned folder and its identity, size and modification time are unchanged. It removes a folder only if it is empty and unchanged. Files created after the preview, files that changed, locked or denied files and redirected folders are **kept and listed**, never "fixed" by widening the action.
+6. **Cancel:** `node "<helper>/scripts/safe-cleanup.mjs" cancel --plan "<plan>"` stops before the next entry. If the process was killed, `<plan>.journal.jsonl` lists every path already removed.
+7. **Report from `<plan>.report.json`:** status (`completed`, `partial`, `cancelled`, `timed_out`), files, folders and bytes removed, `notRemoved` reasons with sample paths, entries not attempted, and free bytes before and after on the same volume. Freed space can be smaller than the bytes removed because of hard links, open handles, snapshots or compression. Never say "saved for recovery" and "space freed" about the same data.
 
-1. Present the selected exact paths and estimated space recovery; record free bytes **before**.
-2. Execute only the approved narrow action. Do not print a potentially destructive copy-paste shell command if a safe structured method is available. Stop on the first validation mismatch or access error.
-3. Reinspect the target and compare actual free bytes **after** on the same volume; report both measurements, number of objects removed, leftovers/locked files, and any filesystem delay. Large apparent deletion might reclaim less capacity because of snapshots, open handles, sparse files, compression, or hard links.
-4. Report whether deletion was **permanent**, recoverable by the OS, or not executed. Never say “saved in recovery” and “space freed” for the same-volume retained data; never claim Local Undo can restore a terminal deletion.
+To clean again, make a new plan. Never edit a plan file or reuse a hash.
+
+## Without the helper
+
+If Node is unavailable or the helper refuses a target, **do not** fall back to `rd /s /q`, `Remove-Item -Recurse`, `rm -rf`, `del /s` or wildcard deletes. Instead:
+- Prefer the owning tool's documented cleanup: `npm cache clean --force`, `pnpm store prune`, `pip cache purge`, `docker system prune` (show what it removes first), `brew cleanup`, Xcode DerivedData via Xcode, Windows Storage Sense/Disk Cleanup, or an app's own "clear cache" setting.
+- To delete one exact, verified file, use a structured file API if one exists. Otherwise give the user exact on-device steps and let them do it.
+- For a refused target (personal folders, project sources, system folders), explain why and let the user decide manually. A user's general permission does not waive these boundaries; erasing a disk or root needs a separate, manual OS workflow.
+
+## Choosing a method
+
+1. **Disposable cache/temp/build data (preferred):** helper plan, approval, then permanent deletion. This really frees space.
+2. **Uncertain or personal data:** inspect and describe; the user decides and deletes manually. Size alone never makes data disposable.
+3. **Recoverable alternative:** offer Recycle Bin/Trash only if the user wants a recovery window **instead of** freed space. A backup on a different volume frees the source only after deletion, uses the destination's space and needs approval.
+4. **Lower-risk options:** uninstall through the package manager, rotate a known log, or move future caches and downloads to another drive.
 
 ## 中文提醒
 
-用户说“清理 C 盘 / D 盘、腾空间、删缓存、永久删除”时，先选准**具体目录**、检查真实绝对路径和文件类型，再决定是否删除。需要立刻腾空间时，同盘回收站/隔离区不是解决方案。遇到反斜杠、引号、CMD 嵌套 PowerShell、递归参数、盘符根目录、路径跳转或未知目标，一律停止，不猜测、不扩大删除范围。既要真的释放磁盘空间，也不能把整盘误删。
+用户说"清理 C 盘/D 盘、腾空间、删缓存、永久删除"时，先只读排查，选准**具体的缓存/临时/构建目录**，然后用随技能附带的 `safe-cleanup.mjs` 生成删除计划（plan）。把目录、文件数、大小、跳过原因和计划哈希给用户看，明确说明删除是**永久**的，Local Undo 无法恢复。用户明确同意这一份计划后，才用同一个哈希执行（execute）。执行时只删计划里且未变化的文件：新出现的、被修改的、被占用的文件，以及被换成链接的目录，一律保留并写进报告，绝不扩大删除范围。不要用 `rd /s /q`、`rm -rf` 或通配符兜底；遇到盘符根目录、个人文件夹、项目源码、系统目录或网络路径，停下并说明原因。

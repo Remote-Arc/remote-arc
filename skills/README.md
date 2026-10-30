@@ -4,7 +4,7 @@ Remote Arc includes **versioned, curated Skill instructions** (`SKILL.md`) organ
 
 ## Built-in catalog
 
-- P0: safe-cleanup (space-reclaiming deletion guidance; no same-volume quarantine, not an OS-enforced protection)
+- P0: safe-cleanup (plan, hash approval, then exact permanent deletion via the packaged scripts/safe-cleanup.mjs; not an OS sandbox, and Local Undo cannot restore deletions)
 
 - P0: browser-operator (agent-browser + Microsoft Playwright MCP workflow)
 - P0: autonomous-browser (browser-use planning, opt-in model budgets)

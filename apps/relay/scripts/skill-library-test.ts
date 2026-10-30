@@ -15,6 +15,7 @@ for(const id of ['safe-cleanup','media-intelligence','manim-video','blender-mcp'
 const authentic=await readArcSkill(env,'owner','authentic-thinking-expression');
 assert.match(authentic.content,/Do not deliberately introduce typos/i,'Authenticity is not detector evasion');
 assert.match(authentic.content,/A request to \*\*draft\*\* does not authorize \*\*sending\*\*/,'Drafting does not grant sending permissions');
+const cleanup=await readArcSkill(env,'owner','safe-cleanup');assert('resources' in cleanup&&cleanup.resources.some(file=>file.path==='scripts/safe-cleanup.mjs'&&/^[a-f0-9]{64}$/.test(file.sha256)),'Safe Cleanup ships its plan/execute helper');
 assert.equal(skills.filter(s=>s.id.startsWith('community-nuwa-')).length,15);
 assert(skillLibrarySummaries().every(s=>!('content' in s)&&!('resources' in s)),'Discovery only returns bounded summaries');
 const index=skillIndex();

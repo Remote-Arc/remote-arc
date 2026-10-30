@@ -110,10 +110,12 @@ try{
  const ended=await arcAccountAccess(env,'connect');assert.deepEqual([ended.status,ended.allowed],['excluded',false]);
  await assert.rejects(()=>requireArcAccess(env,'connect'),/ARC_PLAN_EXCLUDES_HOSTED/,'After the trial, hosted Arc needs Plus');
  assert.equal((await billing('connect')).value.access.status,'excluded');
+ for(const plan of ['free','connect','plus'] as const)for(const feature of ['binary_read','durable_tasks','scheduled_tasks','planned_agent_goals','keep_awake'] as const)
+  assert(accountPlanHasFeature(plan,feature),'Every Connect tool capability is available on '+plan+': '+feature);
  const connectFeatures=planEntitlements('connect');
  assert.throws(()=>requireEntitledFeatures(connectFeatures,requiredAutomationFeatures({kind:'agent_goal'} as any)),/PLAN_UPGRADE_REQUIRED|Plus is required/);
  requireEntitledFeatures(connectFeatures,requiredAutomationFeatures({kind:'agent_goal',agent_goal:{controller:'source'},schedule:{} ,keep_awake:true} as any));
- assert(accountPlanHasFeature('plus','hosted_planner')&&!accountPlanHasFeature('connect','hosted_planner')&&!accountPlanHasFeature('free','planned_agent_goals'));
+ assert(accountPlanHasFeature('plus','hosted_planner')&&!accountPlanHasFeature('connect','hosted_planner')&&!accountPlanHasFeature('free','hosted_planner'));
  // A trial already running when someone subscribes keeps its remaining days.
  await activateArcTrial(env,'trialist');
  sql.prepare('INSERT INTO billing_plan_assignments(id,plan_id,subject_type,subject_id,expires_at,created_at,commercial_version_id) VALUES(?,?,?,?,?,?,?)').run('trialist-connect',CONNECT_UNLIMITED_PLAN_ID,'user','trialist',future,stamp,'seed:test:'+CONNECT_UNLIMITED_PLAN_ID);

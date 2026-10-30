@@ -18,6 +18,7 @@ import {AgentUseCases} from "./agent-use-cases.js";
 import {DeviceFleetOverview,DeviceCapacity} from "./device-fleet-overview.js";
 import {OverviewGreeting} from "./overview-greeting.js";
 import { ArcWorkWorkspace } from "./arc-workspace.js";
+import { ConnectTasks } from "./connect-tasks.js";
 import { ProductIcon, type ProductIconName } from "./product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
 import {usePlatformCatalog} from './use-platform-catalog.js';
@@ -4017,7 +4018,7 @@ function Dashboard({
   }
 
   useEffect(() => {
-    if (active !== "automations" && active !== "overview" && workspaceForTab(active) !== "agent") return;
+    if (active !== "overview" && workspaceForTab(active) !== "agent") return;
     void refreshAutomations();
     const timer = window.setInterval(() => void refreshAutomations(), 15_000);
     return () => window.clearInterval(timer);
@@ -5169,7 +5170,7 @@ function Dashboard({
         : automationDraft.kind === "goal_loop"
           ? tr("Remote Arc repeats the same work command, then runs your check. It stops when the check exits 0 or the attempt limit is reached. It does not rewrite the command using AI.", "Remote Arc 重复同一工作命令，再执行验证；验证退出码为 0 或达到轮数上限后停止。它不会用 AI 改写命令。")
           : tr("Remote Arc starts the exact command you enter and tracks it to completion. No chat or further AI decision is needed. Closing this page does not cancel it.", "Remote Arc 启动你填写的命令并跟踪到结束，无需聊天或进一步的 AI 决策。关闭此页面不会取消任务。");
-  const automationAttentionCount = automations.filter(taskNeedsAttention).length;
+  const automationAttentionCount = automations.filter(task => isVisibleInWorkspace(task, "automations") && taskNeedsAttention(task)).length;
   const automationNeedsAgentCount = automations.filter(taskNeedsAgent).length;
   const matchesTaskFilter = (item: Automation, filter: typeof automationFilter) =>
     filter === "all" || (filter === "attention" ? taskNeedsAttention(item)
@@ -5193,11 +5194,12 @@ function Dashboard({
   ] : [
     ["overview", tr("Overview", "概览")],
     ["devices", tr("Devices", "设备")],
+    ["automations", tr("Tasks", "任务")],
     ["apps", tr("Apps", "应用")],
     ["connect", tr("AI clients", "AI 客户端")],
     ["security", tr("Security & access", "安全与授权")],
   ];
-  const mobileNavItems = navItems.filter(([id]) => !["agent-activity", "agent-skills", "agent-devices"].includes(id)).slice(0,4);
+  const mobileNavItems = navItems.filter(([id]) => !["agent-activity", "agent-skills", "agent-devices"].includes(id)).slice(0,workspace === "connect" ? 5 : 4);
   if (workspace === "connect") mobileNavItems.push(["security", tr("Security", "安全")]);
   const renderWorkspacePicker = (mobile = false) => (
     <WorkspacePicker workspace={workspace} arcAvailable={arcAvailable} mobile={mobile} tr={tr} onNavigate={navigateTab} />
@@ -5278,6 +5280,8 @@ function Dashboard({
           /></React.Suspense>
         </div>}
 
+        {active === "automations" && <ConnectTasks devices={devices} onConnectAI={()=>navigateTab("connect")}/>}
+
         {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat}/>}
 
         {active === "agent-teams" && <section className="arcTeammatesPage"><header className="overviewTopbar"><div><span className="eyebrow">ARC / {tr('TEAMMATES','队友')}</span><h1>{tr('Teammates','队友')}</h1><p>{tr('Choose who helps with your next goal. Review roles and access, then continue in Chat.','选择协助下一个目标的队友，查看分工与权限，然后在 Chat 中推进工作。')}</p></div></header><React.Suspense fallback={<WorkspaceLoading label={tr('Loading teammates…','正在读取队友…')} variant="cards"/>}><ArcTeammates accountId={user.id} tr={tr} onWork={(prompt,reference)=>openArcChat(prompt,undefined,reference?[reference]:undefined)}/></React.Suspense></section>}
@@ -5317,7 +5321,7 @@ function Dashboard({
               <article className="overviewAttentionCard">
                 <span className="eyebrow">{tr("ATTENTION", "需要关注")}</span>
                 <div className="attentionList">
-                  {!!automationAttentionCount && <button onClick={() => arcAvailable ? navigateTab('agent-goals') : navigateTab('connect')}><i className="attentionIcon warn">!</i><div><strong>{automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}</strong><small>{tr("Ask your connected AI to review saved work and continue it.", "让已连接的 AI 检查保存的工作并继续处理。")}</small></div></button>}
+                  {!!automationAttentionCount && <button onClick={() => navigateTab('automations')}><i className="attentionIcon warn">!</i><div><strong>{automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}</strong><small>{tr("Ask your connected AI to review saved work and continue it.", "让已连接的 AI 检查保存的工作并继续处理。")}</small></div></button>}
                   {automationLoadError && <button onClick={() => void refreshAutomations()}><i className="attentionIcon warn">!</i><div><strong>{tr("Task status unavailable", "任务状态暂不可用")}</strong><small>{tr("Retry to see current progress.", "点击重试以查看当前进度。")}</small></div></button>}
                   {!devices.length && <button onClick={() => setShowAdd(true)}><i className="attentionIcon warn">!</i><div><strong>{tr("No computer paired", "还没有配对电脑")}</strong><small>{tr("Pair your first device to start using Remote Arc.", "先配对第一台设备即可开始使用 Remote Arc。")}</small></div></button>}
                   {!!devices.length && devices.some((device) => device.status === "offline") && <button onClick={() => navigateTab("devices")}><i className="attentionIcon idle">•</i><div><strong>{tr("Some devices are offline", "部分设备离线")}</strong><small>{devices.filter((device) => device.status === "offline").length} {tr("device(s) unavailable for MCP calls", "台设备当前无法接受 MCP 调用")}</small></div></button>}
@@ -5506,7 +5510,7 @@ function Dashboard({
                           const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
                           const description =
                             tool === "read_binary_file"
-                              ? tr("Plus capability: read bounded binary byte ranges. This device switch is still required in addition to the account plan.", "Plus 能力：读取有界的二进制字节区间。除账户套餐外，这个设备开关仍必须开启。")
+                              ? tr("Read bounded binary byte ranges on every plan. This device switch and account authorization are still required.", "所有套餐均可读取有界的二进制字节区间。仍需账号授权并开启这个设备开关。")
                               : tool === "undo_last_change"
                               ? tr("AI permission: lets the connected AI invoke the newest Local Undo snapshot. Snapshot creation is controlled separately under Recovery below.", "AI 权限：允许已连接的 AI 调用最新一条 Local Undo 快照。是否创建快照由下方 Recovery 中的 Local Undo 单独控制。")
                               : tool === "start_process"

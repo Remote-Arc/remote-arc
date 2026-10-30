@@ -9,6 +9,7 @@ type Task = {
   status: string;
   state_json: string | null;
   created_at: string;
+  updated_at?: string;
   last_run_at: string | null;
   expires_at: string | null;
   interval_seconds: number;
@@ -53,7 +54,7 @@ export function taskNeedsAttention(task: Pick<Task, "state_json" | "status">) {
 }
 
 export function taskActivity(task: Pick<Task, "status" | "state_json" | "kind" | "next_run_at">, tr: (en: string, zh: string) => string) {
-  if (task.status === "completed") return tr("Completed · results saved", "已完成，结果已保存");
+  if (task.status === "completed") return tr("Completed · view run history", "已完成，查看执行记录");
   if (task.status === "failed") return tr("Execution failed · inspect the error", "执行失败，请查看错误");
   if (task.status === "cancelled") return tr("Cancelled · orchestration stopped", "已取消，编排已停止");
   if (task.status === "expired") return tr("Time limit reached · inspect the outcome", "已到期限，请查看实际成果");
@@ -108,7 +109,7 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
     void load();
     const timer = window.setInterval(() => void load(), 15_000);
     return () => { controller.abort(); window.clearInterval(timer); };
-  }, [open, task.id, retry]);
+  }, [open, task.id, task.updated_at, retry]);
 
   const timestamp = (value: string | null) => value
     ? new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US") : "—";

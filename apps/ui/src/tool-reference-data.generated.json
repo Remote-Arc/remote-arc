@@ -1111,7 +1111,7 @@
     {
       "name": "create_file_resource",
       "title": "Create a temporary file resource",
-      "description": "Remote Arc Plus: create a 10-minute bearer URL for a binary file so large files can be transferred outside model context. The resource is pinned to the current file revision and still uses the device's read_binary_file permission while streaming.",
+      "description": "Create a 10-minute bearer URL for a binary file so large files can be transferred outside model context. The resource is pinned to the current file revision and still uses the device's read_binary_file permission while streaming.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1848,7 +1848,7 @@
     {
       "name": "read_binary_file",
       "title": "Read a binary file chunk on a remote computer",
-      "description": "Remote Arc Plus: read a bounded binary-file byte range as base64 with MIME metadata. Use offset/length for chunking; text files should use read_file.",
+      "description": "Read a bounded binary-file byte range as base64 with MIME metadata. Available on every plan; account call limits and device permissions still apply. Use offset/length for chunking; text files should use read_file.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1967,7 +1967,7 @@
     {
       "name": "revoke_file_resource",
       "title": "Revoke a temporary file resource",
-      "description": "Revoke a previously created Remote Arc Plus temporary file resource before its 10-minute expiry.",
+      "description": "Revoke a previously created temporary file resource before its 10-minute expiry.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",

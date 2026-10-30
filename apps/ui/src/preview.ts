@@ -253,6 +253,15 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       const result=billingPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined));if(result)return result;
     }
     if(url.pathname.startsWith('/api/admin/followups'))return followupPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined))!;
+    const taskAction=url.pathname.match(/^\/api\/automations\/([^/]+)\/(pause|resume|cancel)$/);
+    if(method==="POST"&&taskAction){
+      const item=automations.find(task=>task.id===decodeURIComponent(taskAction[1]!));
+      if(!item)return json({error:"not_found"},404);
+      item.status=taskAction[2]==="cancel"?"cancelled":taskAction[2]==="pause"?"paused":"waiting";
+      item.next_run_at=item.status==="waiting"?previewNow():null;
+      item.updated_at=previewNow();
+      return json({automation:item});
+    }
     if (method !== "GET") {
       return json(
         { error: "PR Preview is read-only. This action is not connected to production." },

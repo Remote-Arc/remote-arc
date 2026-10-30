@@ -119,6 +119,7 @@ type TriggerSpec =
 export type RuntimeState = {
   inflight_action?: { id: string; tool: string };
   retry_count?: number;
+  command_output?: { process_id: string; summary: string };
   phase?:
     | "idle"
     | "awaiting_agent"
@@ -1238,6 +1239,7 @@ async function startRun(
     )
     .run();
   state.run_id = runId;
+  state.command_output = undefined;
   state.phase = "idle";
   state.step_index = 0;
   await persistRuntime(env, automation, state, automation.status, now, null, { retainLease: true, event: "run_started" });
@@ -1488,6 +1490,38 @@ async function updateRunSummary(
   )
     .bind(clipAgentText(summary, 6000), runId, automation.id, automation.lease_token, nowIso())
     .run();
+}
+
+async function retainCommandOutput(
+  env: AutomationEnv, automation: AutomationRow, state: RuntimeState, exitCode: number, verification: boolean,
+) {
+  const processId = state.process_id;
+  if (!processId || !state.run_id) return;
+  if (state.command_output?.process_id !== processId) {
+    let output: string;
+    try {
+      const result = await automationCall(env, automation, state, "process_output", { process_id: processId });
+      if (typeof result === "string") output = result;
+      else {
+        const value = result as { stdout?: unknown; stderr?: unknown } | null;
+        const parts = [
+          typeof value?.stdout === "string" && value.stdout ? "stdout:\n" + value.stdout : "",
+          typeof value?.stderr === "string" && value.stderr ? "stderr:\n" + value.stderr : "",
+        ].filter(Boolean);
+        output = parts.length ? parts.join("\n") : "No command output.";
+      }
+    } catch (error) {
+      if (error instanceof LeaseLostError) throw error;
+      output = "Output could not be retained: " + String(error instanceof Error ? error.message : error).slice(0, 600);
+    }
+    const heading = verification ? "Goal verification" : "Command step " + ((state.step_index || 0) + 1);
+    const combined = [state.command_output?.summary, heading + " exited with code " + exitCode + ".\n" + output].filter(Boolean).join("\n\n");
+    const summary = combined.length > 6000 ? "[Earlier output truncated]\n" + combined.slice(-5973) : combined;
+    state.command_output = { process_id: processId, summary };
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null,
+      { retainLease: true, event: "command_result", summary: heading + " exited with code " + exitCode + "; bounded output retained." });
+  }
+  await updateRunSummary(env, automation, state.run_id, state.command_output.summary);
 }
 
 async function finishAgentRun(env: AutomationEnv, automation: AutomationRow, state: RuntimeState) {
@@ -2103,6 +2137,7 @@ async function executeAutomation(
 
     const exitCode = status.exitCode ?? 1;
     const wasGoal = state.phase === "goal_running";
+    await retainCommandOutput(env, automation, state, exitCode, wasGoal);
     state.process_id = undefined;
     state.phase = "idle";
 

@@ -1,6 +1,5 @@
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice, type DeviceCallEnv } from "./device-call.js";
-import { requireFeature } from "./entitlements.js";
 import { binaryBytesRead, binaryChunkResult, recordPlusUsage } from "./plus-usage.js";
 
 type FileResourceEnv = DeviceCallEnv & {
@@ -218,12 +217,6 @@ export async function handleFileResource(
 
   const resource = await storedResource(env, token);
   if (!resource) return new Response("File resource expired or revoked.", { status: 404 });
-
-  try {
-    await requireFeature(env, resource.user_id, "binary_read");
-  } catch {
-    return new Response("File resource is no longer authorized.", { status: 403 });
-  }
 
   const range = requestedRange(request, resource.size);
   if (!range) {

@@ -33,7 +33,7 @@ import { consumeToolCall } from "./usage.js";
 import { registerMcpTool } from "./mcp-errors.js";
 import { registerBrowserRunnerTools } from "./browser-runner-mcp.js";
 import { LEGACY_ALIAS_META_KEY, registerLegacySharedTabAliases, registerSharedTabTools } from "./shared-tab-mcp.js";
-import { requireFeature, requireFeatures } from "./entitlements.js";
+import { requireFeatures } from "./entitlements.js";
 import { binaryBytesRead, recordPlusUsage } from "./plus-usage.js";
 import { createFileResource, revokeFileResource } from "./file-resources.js";
 import {
@@ -604,7 +604,7 @@ export function createRemoteLinkMcp(
       {
         title: "Read a binary file chunk on a remote computer",
         description:
-          "Remote Arc Plus: read a bounded binary-file byte range as base64 with MIME metadata. Use offset/length for chunking; text files should use read_file.",
+          "Read a bounded binary-file byte range as base64 with MIME metadata. Available on every plan; account call limits and device permissions still apply. Use offset/length for chunking; text files should use read_file.",
         inputSchema: z.object({
           device_id: z.string(),
           path: z.string(),
@@ -619,7 +619,6 @@ export function createRemoteLinkMcp(
         if (!identity || !hasScope(identity, "computer:read")) {
           return authRequired(env, "computer:read", identity);
         }
-        await requireFeature(env, identity.userId, "binary_read");
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
         const result = await callDevice(env, identity, device_id, "read_binary_file", {
@@ -640,7 +639,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a temporary file resource",
         description:
-          "Remote Arc Plus: create a 10-minute bearer URL for a binary file so large files can be transferred outside model context. The resource is pinned to the current file revision and still uses the device's read_binary_file permission while streaming.",
+          "Create a 10-minute bearer URL for a binary file so large files can be transferred outside model context. The resource is pinned to the current file revision and still uses the device's read_binary_file permission while streaming.",
         inputSchema: z.object({
           device_id: z.string(),
           path: z.string(),
@@ -652,7 +651,6 @@ export function createRemoteLinkMcp(
         if (!identity || !hasScope(identity, "computer:read")) {
           return authRequired(env, "computer:read", identity);
         }
-        await requireFeature(env, identity.userId, "binary_read");
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
         return textResult(
@@ -666,7 +664,7 @@ export function createRemoteLinkMcp(
       {
         title: "Revoke a temporary file resource",
         description:
-          "Revoke a previously created Remote Arc Plus temporary file resource before its 10-minute expiry.",
+          "Revoke a previously created temporary file resource before its 10-minute expiry.",
         inputSchema: z.object({
           resource_id: z.string().min(1).max(128),
         }),
@@ -677,7 +675,6 @@ export function createRemoteLinkMcp(
         if (!identity || !hasScope(identity, "computer:read")) {
           return authRequired(env, "computer:read", identity);
         }
-        await requireFeature(env, identity.userId, "binary_read");
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
         return textResult(

@@ -139,8 +139,8 @@ export type AgentToRelayMessage = AgentHelloMessage | AgentResultMessage | Runne
 export const DEFAULT_RELAY_URL = "wss://remotearc.app";
 
 
-/** "connect" is a paid Connect-only tier: every device-side feature, but no
- * Remote Arc-hosted inference (including the hosted goal planner). */
+/** Connect tool capabilities are shared by every account. Plans retain their
+ * existing call/device limits and separate Remote Arc-hosted model access. */
 export type AccountPlan = "free" | "connect" | "plus";
 
 export type AccountFeature =
@@ -160,7 +160,7 @@ const CONNECT_ACCOUNT_FEATURES = [
 ] as const satisfies readonly AccountFeature[];
 
 export const ACCOUNT_PLAN_FEATURES: Record<AccountPlan, readonly AccountFeature[]> = {
-  free: [],
+  free: CONNECT_ACCOUNT_FEATURES,
   connect: CONNECT_ACCOUNT_FEATURES,
   plus: [...CONNECT_ACCOUNT_FEATURES, "hosted_planner"],
 };

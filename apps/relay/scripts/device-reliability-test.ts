@@ -27,6 +27,9 @@ const registry=new DeviceRegistry({getWebSockets:()=>[socket],waitUntil:(job:Pro
 const hello=JSON.stringify({type:'hello',device:metadata,tools:[]});
 registry.webSocketMessage(socket as never,hello);registry.webSocketMessage(socket as never,hello);
 await Promise.all(jobs.splice(0));
+assert.equal(sql.prepare("SELECT SUM(heartbeats) n FROM device_connection_buckets WHERE device_id='d0'").get()!.n,1,'Hello within one heartbeat interval is not written again');
+socket.data.metricWindow--;registry.webSocketMessage(socket as never,hello);await Promise.all(jobs.splice(0));
+assert.equal(sql.prepare("SELECT SUM(heartbeats) n FROM device_connection_buckets WHERE device_id='d0'").get()!.n,2,'The next heartbeat interval records one observation');
 registry.webSocketClose(socket as never);registry.webSocketError(socket as never);await Promise.all(jobs.splice(0));
 assert.equal(sql.prepare("SELECT SUM(connects) n FROM device_connection_buckets WHERE device_id='d0'").get()!.n,1);
 assert.equal(sql.prepare("SELECT SUM(disconnects) n FROM device_connection_buckets WHERE device_id='d0'").get()!.n,1);
@@ -46,25 +49,42 @@ await Promise.all([evaluateDeviceReliability(env,snapshot,notify,now+10*minute),
 assert.equal(notifications.length,1,'Overlapping crons claim at most one notification');assert.equal(notifications[0]!.phase,'firing');
 await evaluateDeviceReliability(env,snapshot,notify,now+15*minute);
 assert.equal(notifications.length,1,'Repeated failures respect the 10-minute cooldown');
+await evaluateDeviceReliability(env,snapshot,notify,now+20*minute);
+assert.equal(notifications.length,1,'A sustained incident alerts once, not every cooldown');
 
 const missing={DB:{prepare(){throw Error('Bearer fixture-secret; personal contents');}}} as never;
 assert.equal((await readDeviceReliability(missing)).coverage,'unavailable');
-await evaluateDeviceReliability(env,await readDeviceReliability(missing),notify,now+20*minute);
+await evaluateDeviceReliability(env,await readDeviceReliability(missing),notify,now+25*minute);
 assert.equal(notifications.length,1,'Missing observations cannot send recovery');
-for(const id of ['d0','d1','d2'])await recordDeviceConnection(env,'user',id,'heartbeat',metadata,now+21*minute);
-await evaluateDeviceReliability(env,await readDeviceReliability(env,now+21*minute),notify,now+21*minute);
-assert.equal(notifications.length,1,'Recovery must remain below threshold');
 for(const id of ['d0','d1','d2'])await recordDeviceConnection(env,'user',id,'heartbeat',metadata,now+26*minute);
 await evaluateDeviceReliability(env,await readDeviceReliability(env,now+26*minute),notify,now+26*minute);
-assert.equal(notifications.length,2);assert.equal(notifications[1]!.phase,'healthy');
+assert.equal(notifications.length,1,'Recovery must remain below threshold');
+for(const id of ['d0','d1','d2'])await recordDeviceConnection(env,'user',id,'heartbeat',metadata,now+31*minute);
 await evaluateDeviceReliability(env,await readDeviceReliability(env,now+31*minute),notify,now+31*minute);
+assert.equal(notifications.length,2);assert.equal(notifications[1]!.phase,'healthy');
+const quiet=await readDeviceReliability(env,now+36*minute);
+await evaluateDeviceReliability(env,quiet,notify,now+36*minute);
 assert.equal(notifications.length,2,'A recovered signal is sent once');
+
+// A gap in observation restarts a sustained window instead of counting towards it.
+const iso=(at:number)=>new Date(at).toISOString(),gapStart=now+41*minute;
+const signalPhase=()=>sql.prepare('SELECT phase FROM service_reliability_state').get()!.phase;
+sql.prepare("UPDATE service_reliability_state SET phase='recovering',unhealthy_since=NULL,healthy_since=?1,last_evaluated_at=?1,last_notification_at=?1,notified_phase='firing'").run(iso(gapStart));
+await evaluateDeviceReliability(env,quiet,notify,gapStart+60*minute);
+assert.equal(notifications.length,2,'One sample after a gap cannot prove recovery');assert.equal(signalPhase(),'recovering');
+await evaluateDeviceReliability(env,quiet,notify,gapStart+65*minute);
+assert.equal(notifications.length,3,'Recovery follows a fully observed window');assert.equal(signalPhase(),'healthy');
+sql.prepare("UPDATE service_reliability_state SET phase='pending',unhealthy_since=?1,healthy_since=NULL,last_evaluated_at=?1").run(iso(gapStart));
+await evaluateDeviceReliability(env,snapshot,notify,gapStart+60*minute);
+assert.equal(signalPhase(),'pending','One sample after a gap cannot fire an alert');
 
 // Only numeric counters, owner-checked identity and fixed labels reach storage.
 const secret='fixture-do-not-store',malicious={platform:secret,agentVersion:'1.2.3-'+secret,name:secret,hostname:secret,command:secret,url:secret};
 await recordDeviceConnection(env,'user','d3','connected',malicious,now);
 const stored=sql.prepare("SELECT * FROM device_connection_buckets WHERE device_id='d3'").get()!;
 assert.equal(stored.platform,'unknown');assert.equal(stored.agent_version,'unknown');assert(!JSON.stringify(stored).includes(secret));
+await recordDeviceConnection(env,'user','d1','connected',{platform:'browser',agentVersion:'browser-0.4.2'},now-40*minute);
+assert.equal(sql.prepare("SELECT agent_version v FROM device_connection_buckets WHERE device_id='d1' ORDER BY bucket_start LIMIT 1").get()!.v,'0.4.2','Extension versions keep their number');
 for(let i=0;i<70;i++)await recordDeviceConnection(env,'user','d3','connected',metadata,now);
 assert.equal(sql.prepare("SELECT connects FROM device_connection_buckets WHERE device_id='d3'").get()!.connects,60,'Bound per-device/minute counters');
 sql.prepare("UPDATE devices SET revoked_at=? WHERE id='d3'").run(new Date(now).toISOString());

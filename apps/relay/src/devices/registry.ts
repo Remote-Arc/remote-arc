@@ -1,7 +1,7 @@
 import { recordRunnerAttention, type RunnerEnv } from "../browser/runner-attention.js";
 import { RunnerVideoRelay, type VideoAttachment } from "../browser/runner-video.js";
 import { deviceCallTimeoutMs, processTimeoutError } from './call-timeout.js';
-import { recordDeviceConnection } from '../analytics/device-reliability.js';
+import { HEARTBEAT_INTERVAL_MS, recordDeviceConnection } from '../analytics/device-reliability.js';
 import type {
   AgentCallMessage,
   AgentToRelayMessage,
@@ -25,7 +25,7 @@ type SocketAttachment = VideoAttachment & {
   tools?: string[];
   capabilities?: string[];
   connectionRecorded?: boolean;
-  metricMinute?: number;
+  metricWindow?: number;
   disconnectRecorded?: boolean;
 };
 
@@ -556,8 +556,8 @@ export class DeviceRegistry {
         socket.deserializeAttachment() as SocketAttachment | null;
       if (!attachment) return;
 
-      const metricMinute = Math.floor(Date.now()/60000);
-      if (this.env && (!attachment.connectionRecorded || attachment.metricMinute !== metricMinute)) {
+      const metricWindow = Math.floor(Date.now()/HEARTBEAT_INTERVAL_MS);
+      if (this.env && (!attachment.connectionRecorded || attachment.metricWindow !== metricWindow)) {
         this.ctx.waitUntil(recordDeviceConnection(this.env,attachment.userId,attachment.deviceId,
           attachment.connectionRecorded?'heartbeat':'connected',parsed.device || {}));
       }
@@ -599,7 +599,7 @@ export class DeviceRegistry {
       socket.serializeAttachment({
         ...attachment,
         connectionRecorded: true,
-        metricMinute,
+        metricWindow,
         device: {
           ...parsed.device,
           id: attachment.deviceId,

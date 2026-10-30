@@ -5,7 +5,9 @@ type SignalState = {
   phase:'healthy'|'pending'|'firing'|'recovering'; unhealthy_since:string|null; healthy_since:string|null;
   last_evaluated_at:string; last_notification_at:string|null; notified_phase:'healthy'|'firing'|null;
 };
-export const RELIABILITY_POLICY = { windowMinutes:15, reconnects:10, reconnectingDevices:3, sustainedMinutes:5, recoveryMinutes:5, cooldownMinutes:10 };
+export const RELIABILITY_POLICY = { windowMinutes:15, reconnects:10, reconnectingDevices:3, sustainedMinutes:5, recoveryMinutes:5, cooldownMinutes:10, observationGapMinutes:12 };
+/** Agents send hello every 30 s; one observation per five minutes is enough for the 15-minute signal. */
+export const HEARTBEAT_INTERVAL_MS = 5*60000;
 export type DeviceReliability = {
   coverage:'observed'|'no_samples'|'unavailable'; scope:'none'|'single_device'|'multiple_devices';
   policy:typeof RELIABILITY_POLICY; windows:{ minutes:number; counts:Counts }[]; groups:Group[];
@@ -18,7 +20,9 @@ export const unavailableReliability = ():DeviceReliability => ({coverage:'unavai
 /** Called only with the socket's authenticated owner/device identity. Device metadata is untrusted. */
 export async function recordDeviceConnection(env:Env,userId:string,deviceId:string,kind:'connected'|'disconnected'|'heartbeat',metadata:{platform?:unknown;agentVersion?:unknown},now=Date.now()) {
   const platform = typeof metadata.platform==='string' && ['win32','darwin','linux','browser'].includes(metadata.platform) ? metadata.platform : 'unknown';
-  const version = typeof metadata.agentVersion==='string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-(?:rc|beta|alpha)(?:\.\d{1,5}){1,3})?$/.test(metadata.agentVersion) ? metadata.agentVersion : 'unknown';
+  // The browser extension reports browser-<version>; its platform label already says so.
+  const reported = typeof metadata.agentVersion==='string' ? metadata.agentVersion.replace(/^browser-/,'') : '';
+  const version = /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-(?:rc|beta|alpha)(?:\.\d{1,5}){1,3})?$/.test(reported) ? reported : 'unknown';
   const bucket = new Date(Math.floor(now/60000)*60000).toISOString();
   try {
     await env.DB.prepare(`INSERT INTO device_connection_buckets(bucket_start,device_id,platform,agent_version,connects,disconnects,heartbeats)
@@ -63,6 +67,8 @@ export async function evaluateDeviceReliability(env:Env,snapshot:DeviceReliabili
   const current=await env.DB.prepare("SELECT * FROM service_reliability_state WHERE signal='device_reconnect_churn'").first<SignalState>();
   if(!current||now-Date.parse(current.last_evaluated_at)<240000)return;
   let phase:SignalState['phase'],unhealthySince=current.unhealthy_since,healthySince=current.healthy_since;
+  // A sustained window must be observed throughout, so a gap starts it again.
+  if(now-Date.parse(current.last_evaluated_at)>RELIABILITY_POLICY.observationGapMinutes*60000)unhealthySince=healthySince=null;
   if(unhealthy){
     unhealthySince??=at;healthySince=null;
     phase=current.phase==='firing'||current.phase==='recovering'||now-Date.parse(unhealthySince)>=RELIABILITY_POLICY.sustainedMinutes*60000?'firing':'pending';
@@ -76,7 +82,8 @@ export async function evaluateDeviceReliability(env:Env,snapshot:DeviceReliabili
   const changed=await env.DB.prepare(`UPDATE service_reliability_state SET phase=?1,unhealthy_since=?2,healthy_since=?3,last_evaluated_at=?4
     WHERE signal='device_reconnect_churn' AND last_evaluated_at=?5 RETURNING signal`).bind(phase,unhealthySince,healthySince,at,current.last_evaluated_at).first();
   if(!changed||!notify)return;
-  const desired=phase==='firing'?'firing':phase==='healthy'&&current.notified_phase==='firing'?'healthy':null;
+  // One alert per incident. A delivery that was not confirmed retries after the cooldown.
+  const desired=phase==='firing'&&current.notified_phase!=='firing'?'firing':phase==='healthy'&&current.notified_phase==='firing'?'healthy':null;
   if(!desired)return;
   const claimed=await env.DB.prepare(`UPDATE service_reliability_state SET last_notification_at=?1 WHERE signal='device_reconnect_churn'
     AND last_evaluated_at=?1 AND (last_notification_at IS NULL OR last_notification_at<=?2) RETURNING signal`)

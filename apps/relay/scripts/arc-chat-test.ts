@@ -339,7 +339,7 @@ let directoryReads=0;
 const diagnosticSecrets=['sk-fixture-read-api-key','Bearer fixture-read-token','Cookie: session=fixture-read-cookie','PASSWORD=fixture-read-password','-----BEGIN PRIVATE KEY-----\nfixture-read-key\n-----END PRIVATE KEY-----','otp=739182','pairing_code=468213','personal file content without a recognizable token'];
 const deviceReadEnv={...env,REGISTRY:{getByName:()=>({fetch:async(request:Request)=>{
  const body=await request.json() as any;assert.equal(body.tool,'list_directory');directoryReads++;
- if(directoryReads===1)return Response.json({error:'ENOENT: directory does not exist: C:/missing?'+diagnosticSecrets.join('\n')},{status:502});
+ if(directoryReads===1)return Response.json({error:'GetFileAttributesEx C:/missing?'+diagnosticSecrets.join('\n')+': The system cannot find the path specified.'},{status:502});
  assert.equal(body.arguments.path,'C:/observed');return Response.json({result:{entries:['tasks.json']}});
 }})}} as unknown as ArcEnv;
 try{

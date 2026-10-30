@@ -3,7 +3,7 @@ import {mock} from 'node:test';
 import {setImmediate} from 'node:timers/promises';
 import {DeviceRegistry} from '../src/devices/registry.js';
 import {callDevice} from '../src/devices/device-call.js';
-import {PROCESS_TIMEOUT_GUIDANCE} from '../src/devices/call-timeout.js';
+import {PROCESS_TIMEOUT_GUIDANCE,deviceCallTimeoutMs,processTimeoutError} from '../src/devices/call-timeout.js';
 import {classifyExpectedMcpError} from '../src/mcp/mcp-errors.js';
 
 const sent: any[] = [];
@@ -52,6 +52,14 @@ try {
   }
   assert.equal(sent.length,count,'Invalid budgets are refused before any device dispatch');
   assert.equal(classifyExpectedMcpError(Error(PROCESS_TIMEOUT_GUIDANCE))?.code,'INVALID_TOOL_REQUEST');
+  // The Agent ignores timeout_ms for background processes, so it cannot refuse one.
+  assert.equal(processTimeoutError('start_process',{background:true,timeout_ms:600000}),null);
+  assert.equal(deviceCallTimeoutMs('start_process',{background:true,timeout_ms:600000}),45000);
+  const background = registry.fetch(new Request('https://registry/call',{method:'POST',headers:{'x-remote-link-user-id':'owner','content-type':'application/json'},body:JSON.stringify({deviceId:'device',tool:'start_process',arguments:{command:'synthetic-only',background:true,timeout_ms:600000}})}));
+  await setImmediate();
+  assert.equal(sent.length,count+1,'A background process is dispatched whatever timeout_ms says');
+  reply(sent[count].id);
+  assert.equal((await background).status,200);
   failSend=true;
   assert.equal((await registry.fetch(request(90000))).status,504);
   assert.equal((registry as any).pending.size,0,'Failed socket send clears the timer and pending entry');

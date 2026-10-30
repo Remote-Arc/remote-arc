@@ -149,7 +149,8 @@ assert.ok(sitemap.includes('hreflang="zh-CN"'));
 // All Resources links and detail pages must have real Chinese URL, metadata,
 // server-visible Chinese content, and reciprocal English/Chinese alternates.
 const resourcePaths = Object.keys(chineseResourceSeo);
-assert.equal(resourcePaths.length, useCaseSlugs.length + 9, "Resources needs every use-case detail plus blog, security and release pages");
+assert.equal(resourcePaths.length, useCaseSlugs.length + 10, "Resources needs every use-case detail plus bilingual blog articles, security and release pages");
+assert.ok(resourcePaths.includes("/blogs/from-code-to-intent-driven-computing"), "new perspective article must have bilingual SEO copy");
 for (const base of resourcePaths) {
   const path = "/zh" + base;
   assert.ok(localizedPages.includes(base), "missing localized route: " + base);

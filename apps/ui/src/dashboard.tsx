@@ -13,8 +13,7 @@ import { ProductIcon, type ProductIconName } from "./product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
 import { DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab, isVisibleInWorkspace, type DashboardTab } from "./dashboard-workspaces.js";
 import { CHATGPT_PLUGIN_URL } from "./client-links.js";
-import { taskNeedsAgent, taskNeedsAttention } from "./dashboard-task-view.js";
-import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
+import { taskNeedsAttention } from "./dashboard-task-view.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
@@ -28,7 +27,7 @@ import { SecurityAuthorizations } from "./security-authorizations.js";
 import { ApprovalRequest, PersistentPermissions, type ApprovalChoice } from "./security-approvals.js";
 import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery.js";
 import { isOlderRelease, goUpdateCommands } from "./agent-update-guide.js";
-import { type AuditEvent, type Automation, type AutomationCreateKind, type AutomationDraft, type AutomationStatus, type DashboardDialog, type Device, type DeviceExecutionLog, type DeviceTaskPermissions, type DirectoryBrowser, type ManagedProcess, type MonitorState, type ProductStatus, type UndoAction, type User } from "./app-types.js";
+import { type AuditEvent, type Automation, type DashboardDialog, type Device, type DeviceExecutionLog, type DeviceTaskPermissions, type DirectoryBrowser, type ManagedProcess, type MonitorState, type ProductStatus, type UndoAction, type User } from "./app-types.js";
 import { CLAUDE_CONNECTORS_URL, MARKETING_ORIGIN, MCP_ENDPOINT, cursorMcpInstallUrl } from "./app-config.js";
 import { DEVELOPER_DEVICE_TOOLS, DEVICE_TOOL_CATALOG, type DeviceAccessPreset, SAFE_DEVICE_TOOLS, deviceAccessPreset, legacyTaskPermissions, platformLabel } from "./device-presets.js";
 import { Brand, CopyButton, HelpTip, ThemeSwitcher, aiClients } from "./public-layout.js";
@@ -50,14 +49,6 @@ const timeAgo = (value?: string | null) => {
   if (delta < 86_400_000) return Math.floor(delta / 3_600_000) + "h";
   return Math.floor(delta / 86_400_000) + "d";
 };
-function Metric({ label, value, detail, good = false }: { label: string; value: React.ReactNode; detail: string; good?: boolean }) {
-  return (
-    <article className="metricCard">
-      <div className="metricTop"><span>{label}</span><i className={"statusDot " + (good ? "good" : "")}/></div>
-      <strong>{value}</strong><small>{detail}</small>
-    </article>
-  );
-}
 export function Dashboard({
   user,
   devices,
@@ -97,51 +88,9 @@ export function Dashboard({
   const [monitorState, setMonitorState] = useState<MonitorState | null>(null);
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [automations, setAutomations] = useState<Automation[]>([]);
-  const [taskScheduler, setTaskScheduler] = useState<{ state: string; last_success_at: string | null; overdue_count: number } | null>(null);
-  const [taskCapabilities, setTaskCapabilities] = useState<{ hosted_planner: boolean; github_merge: boolean } | null>(null);
-  const [createdTask, setCreatedTask] = useState<Automation | null>(null);
-  const [createdTaskOutcome, setCreatedTaskOutcome] = useState<{ title: string; detail: string } | null>(null);
-  const [automationLoading, setAutomationLoading] = useState(false);
   const [automationLoadError, setAutomationLoadError] = useState(false);
-  const [automationQuery, setAutomationQuery] = useState(() => new URLSearchParams(location.search).get("task") || "");
-  const [automationFilter, setAutomationFilter] = useState<"all" | "active" | "attention" | "finished">("all");
   const [deviceTaskBusy, setDeviceTaskBusy] = useState<string | null>(null);
   const [sensitivePolicyBusyId, setSensitivePolicyBusyId] = useState<string | null>(null);
-  const [automationBusy, setAutomationBusy] = useState<string | null>(null);
-  const [showAutomationCreate, setShowAutomationCreate] = useState(false);
-  const [createdWebhook, setCreatedWebhook] = useState<string | null>(null);
-  const [plannedDraft, setPlannedDraft] = useState(newPlannedDraft);
-  const [automationDraft, setAutomationDraft] = useState<AutomationDraft>({
-    name: "",
-    kind: "long_task",
-    trigger_mode: "now",
-    command_confirmed: false,
-    device_id: "",
-    command: "",
-    cwd: "",
-    goal_command: "",
-    agent_objective: "",
-    agent_success_criteria: "",
-    agent_workspace: "",
-    agent_controller: "hosted",
-    agent_start_at: "",
-    agent_repeat_minutes: "",
-    keep_awake: false,
-    agent_verify_command: "",
-    agent_max_iterations: "720",
-    agent_allowed_tools: ["list_directory", "read_file", "get_file_info", "edit_block", "start_process"],
-    interval_minutes: "1",
-    schedule_minutes: "60",
-    max_runs: "",
-    condition_source: "github",
-    condition_event: "workflow_run",
-    condition_match: '{"action":"completed","workflow_run.conclusion":"success"}',
-    condition_action: "device_command",
-    github_owner: "yaohuangguan",
-    github_repo: "remote-arc",
-    github_pr: "",
-    github_merge_method: "merge",
-  });
   const [undoByDevice, setUndoByDevice] = useState<Record<string, UndoAction[]>>({});
   const [undoLoading, setUndoLoading] = useState<string | null>(null);
   const [undoErrors, setUndoErrors] = useState<Record<string, string>>({});
@@ -391,19 +340,14 @@ export function Dashboard({
   }, [active, user.isAdmin]);
 
   async function refreshAutomations() {
-    setAutomationLoading(true);
     try {
       const response = await fetch("/api/automations");
       if (!response.ok) throw new Error("Tasks unavailable");
-      const payload = await response.json() as { automations?: Automation[]; capabilities?: { hosted_planner: boolean; github_merge: boolean }; scheduler?: { state: string; last_success_at: string | null; overdue_count: number } };
+      const payload = await response.json() as { automations?: Automation[] };
       setAutomations(Array.isArray(payload.automations) ? payload.automations : []);
-      setTaskCapabilities(payload.capabilities || null);
-      setTaskScheduler(payload.scheduler || null);
       setAutomationLoadError(false);
     } catch {
       setAutomationLoadError(true);
-    } finally {
-      setAutomationLoading(false);
     }
   }
 
@@ -413,273 +357,6 @@ export function Dashboard({
     const timer = window.setInterval(() => void refreshAutomations(), 15_000);
     return () => window.clearInterval(timer);
   }, [active]);
-
-  useEffect(() => {
-    if (automationDraft.device_id || !devices.length) return;
-    const preferred = devices.find((device) => device.status === "online") || devices[0];
-    if (preferred) {
-      setAutomationDraft((current) => ({ ...current, device_id: preferred.id }));
-    }
-  }, [devices, automationDraft.device_id]);
-
-  async function createDashboardAutomation() {
-    if (UI_PREVIEW) return;
-    const name = automationDraft.name.trim() || (automationDraft.kind === "agent_goal" ? automationDraft.agent_objective.trim().slice(0, 120) : "");
-    const command = automationDraft.command.trim();
-    const isAgentGoal = automationDraft.kind === "agent_goal";
-    const isGitHubMerge =
-      automationDraft.kind === "condition_watch" &&
-      automationDraft.condition_action === "github_merge";
-
-    if (!name) {
-      await showNotice(
-        tr("Missing automation name", "缺少自动化名称"),
-        tr("Give this persistent task a name.", "请为这条持久任务填写名称。"),
-      );
-      return;
-    }
-    if (
-      isAgentGoal &&
-      (!automationDraft.device_id ||
-        !automationDraft.agent_objective.trim() ||
-        !automationDraft.agent_success_criteria.trim() ||
-        automationDraft.agent_allowed_tools.length === 0)
-    ) {
-      await showNotice(
-        tr("Agent Goal details required", "Agent Goal 信息不完整"),
-        tr(
-          "Choose a device, provide the objective and success criteria, and explicitly select at least one Agent Goal tool.",
-          "请选择设备、填写目标与成功标准，并明确选择至少一个 Agent Goal Tool。",
-        ),
-      );
-      return;
-    }
-    if (
-      isGitHubMerge &&
-      (!automationDraft.github_owner.trim() ||
-        !automationDraft.github_repo.trim() ||
-        !/^\d+$/.test(automationDraft.github_pr.trim()))
-    ) {
-      await showNotice(
-        tr("GitHub PR details required", "需要 GitHub PR 信息"),
-        tr(
-          "Repository owner, repository name and pull request number are required.",
-          "需要填写仓库 Owner、仓库名和 Pull Request 编号。",
-        ),
-      );
-      return;
-    }
-    if (!isAgentGoal && !isGitHubMerge && (!command || !automationDraft.device_id || !automationDraft.cwd.trim())) {
-      await showNotice(
-        tr("Missing automation details", "自动化信息不完整"),
-        tr("Device, executable command and an approved working directory are required.", "需要设备、可执行命令以及已批准的工作目录。"),
-      );
-      return;
-    }
-    if (isAgentGoal && automationDraft.agent_allowed_tools.includes("start_process") && !automationDraft.agent_workspace.trim()) {
-      await showNotice(tr("Workspace required", "需要工作区"), tr("Terminal access needs a working directory inside this computer's approved locations.", "终端访问需要填写这台电脑已批准位置中的工作目录。")); return;
-    }
-
-    if (!isAgentGoal && !isGitHubMerge && !automationDraft.command_confirmed) {
-      await showNotice(tr("Confirm executable instructions", "请确认可执行指令"), tr("This field runs shell code verbatim. Use Complete a goal for natural-language requests.", "这里会原样运行 shell 代码。自然语言需求请选择完成一个目标。"));
-      return;
-    }
-    let plannedContract: ReturnType<typeof buildPlannedContract> | undefined;
-    if (isAgentGoal) {
-      try { plannedContract = buildPlannedContract(plannedDraft.enabled ? plannedDraft : { ...newPlannedDraft(), maxMinutes: plannedDraft.maxMinutes }); }
-      catch (error) {
-        await showNotice(tr("Plan details required", "计划信息不完整"), String(error));
-        return;
-      }
-    }
-    const intervalMinutes = Number(automationDraft.interval_minutes || "5");
-    const scheduleMinutes = Number(automationDraft.schedule_minutes || "60");
-    const maxRunsRaw = automationDraft.max_runs.trim();
-    const body: Record<string, unknown> = {
-      name,
-      kind: automationDraft.kind,
-      keep_awake: automationDraft.keep_awake,
-      interval_seconds: Math.max(
-        60,
-        Math.round((Number.isFinite(intervalMinutes) ? intervalMinutes : 5) * 60),
-      ),
-      ...(maxRunsRaw ? { max_runs: Math.max(0, Math.round(Number(maxRunsRaw))) } : {}),
-      recovery: "restart",
-    };
-
-    if (isAgentGoal) {
-      body.device_id = automationDraft.device_id;
-      body.agent_goal = {
-        controller: automationDraft.agent_controller,        objective: automationDraft.agent_objective.trim(),
-        success_criteria: automationDraft.agent_success_criteria.trim(),
-        ...(automationDraft.agent_workspace.trim()
-          ? { workspace: automationDraft.agent_workspace.trim() }
-          : {}),
-        ...(automationDraft.agent_verify_command.trim()
-          ? { verify_command: automationDraft.agent_verify_command.trim() }
-          : {}),
-        ...(automationDraft.agent_workspace.trim()
-          ? { verify_cwd: automationDraft.agent_workspace.trim() }
-          : {}),
-        max_iterations: Math.min(
-          2000,
-          Math.max(1, Math.round(Number(automationDraft.agent_max_iterations || "720"))),
-        ),
-        allowed_tools: automationDraft.agent_allowed_tools,
-        ...(plannedContract ? { plan: plannedContract } : {}),
-        ...(automationDraft.agent_controller === "source" ? { source_capabilities: { durable_context: true, resume_on_next_turn: true, autonomous_event_wakeup: false } } : {}),
-      };
-
-    } else if (isGitHubMerge) {
-      body.github_merge = {
-        owner: automationDraft.github_owner.trim(),
-        repo: automationDraft.github_repo.trim(),
-        pull_number: Number(automationDraft.github_pr),
-        merge_method: automationDraft.github_merge_method,
-      };
-    } else {
-      body.device_id = automationDraft.device_id;
-      body.command = command;
-      if (automationDraft.cwd.trim()) body.cwd = automationDraft.cwd.trim();
-    }
-
-    if (automationDraft.kind === "goal_loop") {
-      if (!automationDraft.goal_command.trim()) {
-        await showNotice(
-          tr("Goal check required", "需要目标验证"),
-          tr("Repeat & check needs a verification command. Exit code 0 means the goal has been reached.", "重复并验证需要填写验证命令；退出码 0 表示目标已经达成。"),
-        );
-        return;
-      }
-      body.goal = {
-        command: automationDraft.goal_command.trim(),
-        expected_exit_code: 0,
-        ...(automationDraft.cwd.trim() ? { cwd: automationDraft.cwd.trim() } : {}),
-      };
-    }
-
-    if (automationDraft.trigger_mode === "at") {
-      if (!automationDraft.agent_start_at || !Number.isFinite(Date.parse(automationDraft.agent_start_at))) {
-        await showNotice(tr("Start time required", "需要启动时间"), tr("Choose a valid future start time.", "请选择有效的未来启动时间。")); return;
-      }
-      body.schedule = { at: new Date(automationDraft.agent_start_at).toISOString() };
-    } else if (automationDraft.trigger_mode === "interval") {
-      body.schedule = { every_seconds: Math.max(60, Math.round(scheduleMinutes * 60)) };
-    }
-
-    if (automationDraft.trigger_mode === "event") {
-      let match: Record<string, string | number | boolean | null> = {};
-      try {
-        const parsed = JSON.parse(automationDraft.condition_match || "{}") as unknown;
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
-        match = parsed as Record<string, string | number | boolean | null>;
-      } catch {
-        await showNotice(
-          tr("Invalid condition JSON", "条件 JSON 无效"),
-          tr("Match conditions must be a JSON object using dotted payload paths.", "Match 条件必须是一个使用点号路径的 JSON 对象。"),
-        );
-        return;
-      }
-      body.condition = {
-        source: isGitHubMerge ? "github" : automationDraft.condition_source,
-        ...(automationDraft.condition_event.trim() ? { event: automationDraft.condition_event.trim() } : {}),
-        match,
-      };
-    }
-
-    const trigger = automationDraft.trigger_mode === "at" ? { type: "at", at: (body.schedule as { at: string }).at }
-      : automationDraft.trigger_mode === "interval" ? { type: "interval", every_seconds: (body.schedule as { every_seconds: number }).every_seconds }
-      : automationDraft.trigger_mode === "event" ? { type: "event", ...(body.condition as object) } : { type: "now" };
-    const taskContract = {
-      version: 1, intent: isAgentGoal ? "goal" : "command", name, device_id: body.device_id,
-      trigger, keep_awake: body.keep_awake,
-      ...(isAgentGoal ? { goal: body.agent_goal } : isGitHubMerge ? { github_merge: body.github_merge }
-        : { command: { text: command, cwd: body.cwd, recovery: "fail", ...(body.goal ? { verification: (body.goal as { command: string }).command } : {}) } }),
-      limits: { check_interval_seconds: body.interval_seconds, ...(body.max_runs !== undefined ? { max_runs: body.max_runs } : {}) },
-    };
-
-    setAutomationBusy("create");
-    try {
-      const response = await fetch("/api/automations", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ task: taskContract }),
-      });
-      const payload = await response.json().catch(() => ({})) as {
-        error?: string;
-        webhook?: { url?: string } | null;
-        automation?: Automation;
-      };
-      if (!response.ok) {
-        await showNotice(
-          tr("Automation was not created", "自动化创建失败"),
-          payload.error || tr("The server rejected this automation.", "服务器拒绝了这条自动化。"),
-        );
-        return;
-      }
-      setCreatedWebhook(payload.webhook?.url || null);
-      setCreatedTask(payload.automation || null);
-      setCreatedTaskOutcome({ title: draftStartTitle, detail: draftStartDetail });
-      if (payload.automation) {
-        setAutomationQuery(payload.automation.id);
-        setAutomationFilter("all");
-      }
-      setShowAutomationCreate(false);
-      setPlannedDraft(newPlannedDraft());
-      setAutomationDraft((current) => ({
-        ...current,
-        name: "",
-        command: "",
-        command_confirmed: false,
-        goal_command: "",
-        agent_objective: "",
-        agent_success_criteria: "",
-        agent_verify_command: "",
-        github_pr: "",
-        max_runs: "",
-      }));
-      await refreshAutomations();
-    } catch {
-      await showNotice(tr("Task creation could not be confirmed", "无法确认任务是否创建成功"), tr("Refresh the task list before trying again. The request may have reached the server, so retrying immediately could create a duplicate.", "请先刷新任务列表再重试。请求可能已到达服务器，立即重试可能产生重复任务。"));
-    } finally {
-      setAutomationBusy(null);
-    }
-  }
-
-  async function manageDashboardAutomation(
-    automation: Automation,
-    action: "pause" | "resume" | "cancel",
-  ) {
-    if (UI_PREVIEW) return;
-    if (
-      action === "cancel" &&
-      !(await askConfirm(
-        tr("Cancel automation?", "取消自动化？"),
-        tr("Remote Arc will stop orchestration and best-effort stop its currently managed process.", "Remote Arc 会停止编排，并尽力停止当前由它管理的进程。"),
-        tr("Cancel automation", "取消自动化"),
-        "danger",
-      ))
-    ) return;
-
-    setAutomationBusy(automation.id + ":" + action);
-    try {
-      const response = await fetch(
-        "/api/automations/" + encodeURIComponent(automation.id) + "/" + action,
-        { method: "POST" },
-      );
-      const payload = await response.json().catch(() => ({})) as { error?: string };
-      if (!response.ok) {
-        await showNotice(
-          tr("Automation was not updated", "自动化更新失败"),
-          payload.error || tr("The server rejected this change.", "服务器拒绝了这次修改。"),
-        );
-        return;
-      }
-      await refreshAutomations();
-    } finally {
-      setAutomationBusy(null);
-    }
-  }
 
   async function setMcpPaused(paused: boolean) {
     if (UI_PREVIEW || !securityState) return;
@@ -1437,7 +1114,6 @@ export function Dashboard({
     tab = availableDashboardTab(tab,arcAvailable);
     const path = DASHBOARD_PATHS[tab];
     if (location.pathname !== path) {history.pushState({}, "", path);recordProductView();}
-    if (workspaceForTab(active) !== workspaceForTab(tab)) setShowAutomationCreate(false);
     setActive(tab);
   }
 
@@ -1453,11 +1129,6 @@ export function Dashboard({
     navigateTab('agent-chat');
     const url=new URL(location.href);if(sessionId)url.searchParams.set('session',sessionId);else url.searchParams.delete('session');history.replaceState(history.state,'',url);
   }
-  function openCreateInWorkspace(_workspace: "connect" | "agent", routine = false, objective = "", successCriteria = "") {
-    openArcChat(objective ? objective + (successCriteria ? '\n' + successCriteria : '') : routine
-      ? tr('Help me set up a routine. Ask what I need, the schedule and timezone.','帮我安排一项例行工作，先了解要做什么、执行时间和时区。')
-      : tr('Help me delegate a task. Ask what result I need.','帮我安排一项任务，先了解我需要的结果。'));
-  }
 
   const eventLabel = (event: AuditEvent) => {
     if (event.event_type === "device.paired") return tr("Device paired", "设备已配对");
@@ -1472,105 +1143,7 @@ export function Dashboard({
     return event.event_type;
   };
 
-  const automationTime = (value: string | null) => {
-    if (!value) return "—";
-    const delta = new Date(value).getTime() - Date.now();
-    if (delta <= 0) return timeAgo(value);
-    if (delta < 60_000) return tr("in <1m", "<1 分钟后");
-    if (delta < 3_600_000) return tr("in " + Math.ceil(delta / 60_000) + "m", Math.ceil(delta / 60_000) + " 分钟后");
-    if (delta < 86_400_000) return tr("in " + Math.ceil(delta / 3_600_000) + "h", Math.ceil(delta / 3_600_000) + " 小时后");
-    return tr("in " + Math.ceil(delta / 86_400_000) + "d", Math.ceil(delta / 86_400_000) + " 天后");
-  };
-
-  const automationDisplayKind = (automation: Automation): AutomationCreateKind => {
-    if (automation.kind !== "goal_loop" || !automation.goal_json) return automation.kind;
-    try {
-      const goal = JSON.parse(automation.goal_json) as { type?: string };
-      return goal?.type === "agent_goal" ? "agent_goal" : automation.kind;
-    } catch {
-      return automation.kind;
-    }
-  };
-
-  const automationKindLabel = (kind: AutomationCreateKind) =>
-    kind === "long_task"
-      ? tr("Run once", "运行一次")
-      : kind === "condition_watch"
-        ? tr("After an event", "事件触发")
-        : kind === "schedule_watch"
-          ? tr("On a timer", "定时运行")
-          : kind === "agent_goal"
-            ? tr("Goal task", "目标任务")
-            : tr("Repeat & check", "重复并验证");
-
-  const automationStatusLabel = (value: AutomationStatus) =>
-    value === "waiting"
-      ? tr("Waiting", "等待中")
-      : value === "running"
-        ? tr("Running", "运行中")
-        : value === "waiting_for_device"
-          ? tr("Waiting for device", "等待设备")
-          : value === "waiting_for_event"
-            ? tr("Waiting for event", "等待事件")
-            : value === "paused"
-              ? tr("Paused", "已暂停")
-                : value === "completed"
-                  ? tr("Completed", "已完成")
-                  : value === "failed"
-                    ? tr("Failed", "失败")
-                    : value === "cancelled"
-                      ? tr("Cancelled", "已取消")
-                      : tr("Expired", "已过期");
-
-  const automationTerminal = (value: AutomationStatus) =>
-    ["completed", "failed", "cancelled", "expired"].includes(value);
-
-  const automationActiveCount = automations.filter((item) =>
-    ["waiting", "running", "waiting_for_device", "waiting_for_event"].includes(item.status),
-  ).length;
-  const backgroundConfiguredCount = devices.filter((device) => device.background_enabled === true).length;
-  const draftDevice = devices.find((device) => device.id === automationDraft.device_id);
-  const draftPermissions = draftDevice?.automation_permissions || legacyTaskPermissions;
-  const draftIsCloud = automationDraft.kind === "condition_watch" && automationDraft.condition_action === "github_merge";
-  const draftAllowedTools = draftDevice?.allowed_tools;
-  const draftRequiredTools = automationDraft.kind === "agent_goal" ? automationDraft.agent_allowed_tools : ["start_process"];
-  const draftToolBlocked = !draftIsCloud && draftAllowedTools != null && draftRequiredTools.some(tool => !draftAllowedTools.includes(tool));
-  const draftPermissionBlocked = draftToolBlocked || (!draftIsCloud && !!draftDevice && (!draftPermissions.background_tasks
-    || (["at", "interval"].includes(automationDraft.trigger_mode) && !draftPermissions.scheduled_tasks)
-    || (automationDraft.kind === "agent_goal" && (!draftPermissions.adaptive_agent || (automationDraft.agent_controller === "source" && !draftPermissions.source_agent)))));
-  const draftServiceBlocked = taskCapabilities !== null && (
-    (automationDraft.kind === "agent_goal" && automationDraft.agent_controller === "hosted" && !taskCapabilities.hosted_planner)
-    || (draftIsCloud && !taskCapabilities.github_merge));
-  const sourceHasSavedCommands = plannedDraft.enabled && plannedDraft.phases.some(phase => !!phase.command.trim());
-  const draftStartTitle = automationDraft.trigger_mode === "event" ? tr("Waits for a matching event", "等待匹配事件")
-    : automationDraft.trigger_mode === "at" ? tr("Starts at the selected time", "在所选时间启动")
-    : automationDraft.trigger_mode === "interval" ? tr("First run after the interval", "首次执行在间隔结束后")
-    : automationDraft.kind === "agent_goal" && automationDraft.agent_controller === "source" ? sourceHasSavedCommands ? tr("Saved steps can run; new decisions wait for your AI", "保存的步骤可执行，新决策等待你的 AI") : tr("Needs an AI decision before starting", "启动前需要 AI 提交决策")
-    : tr("Queues as soon as you create it", "创建后立即排队");
-  const draftStartDetail = automationDraft.kind === "agent_goal"
-    ? automationDraft.agent_controller === "source"
-      ? sourceHasSavedCommands
-        ? tr("Your saved phase commands can run when due. Any new reasoning still needs your connected AI chat. Copy the task reference into that chat to continue; Remote Arc cannot wake it automatically.", "已保存的阶段命令可在到期后执行，任何新判断仍需要已连接的 AI 聊天。复制任务引用到聊天中即可接续，Remote Arc 无法自动唤起它。")
-        : tr("This form saves a goal, not a decision from ChatGPT. Copy the new task reference into your connected AI chat so it can read the context and submit the next action. Remote Arc cannot wake the chat automatically.", "表单保存的是目标，并非 ChatGPT 的决策。创建后将任务引用复制到已连接的 AI 聊天，让它读取上下文并提交下一步。Remote Arc 无法自动唤起聊天。")
-      : tr("A configured Remote Arc hosted model chooses actions from your approved tools. It uses this goal and its results, not your ChatGPT conversation. No chat is needed to start.", "已配置的 Remote Arc 托管模型从你批准的工具中选择操作，依据这里的目标和执行结果工作，不会读取 ChatGPT 对话。启动不需要聊天。")
-    : automationDraft.kind === "condition_watch"
-      ? tr("Connect the webhook returned after creation to your event source. Only a matching event runs the saved action; no AI chat is needed.", "创建后将返回的 Webhook 接入事件来源。只有匹配事件才会执行保存的操作，无需 AI 聊天。")
-      : automationDraft.kind === "schedule_watch"
-        ? tr("The first run follows the interval; later intervals start after the previous run finishes. Remote Arc repeats the saved command without AI planning until stopped or its limit is reached.", "首次执行在间隔结束后开始，后续间隔从上次执行结束后计算。Remote Arc 无需 AI 规划，重复保存的命令，直到停止或达到限制。")
-        : automationDraft.kind === "goal_loop"
-          ? tr("Remote Arc repeats the same work command, then runs your check. It stops when the check exits 0 or the attempt limit is reached. It does not rewrite the command using AI.", "Remote Arc 重复同一工作命令，再执行验证；验证退出码为 0 或达到轮数上限后停止。它不会用 AI 改写命令。")
-          : tr("Remote Arc starts the exact command you enter and tracks it to completion. No chat or further AI decision is needed. Closing this page does not cancel it.", "Remote Arc 启动你填写的命令并跟踪到结束，无需聊天或进一步的 AI 决策。关闭此页面不会取消任务。");
   const automationAttentionCount = automations.filter(task => isVisibleInWorkspace(task, "automations") && taskNeedsAttention(task)).length;
-  const automationNeedsAgentCount = automations.filter(taskNeedsAgent).length;
-  const matchesTaskFilter = (item: Automation, filter: typeof automationFilter) =>
-    filter === "all" || (filter === "attention" ? taskNeedsAttention(item)
-      : filter === "finished" ? automationTerminal(item.status)
-      : !automationTerminal(item.status) && item.status !== "paused");
-  const scopedAutomations = automations.filter((item) => isVisibleInWorkspace(item, active));
-  const visibleAutomations = scopedAutomations.filter((item) => matchesTaskFilter(item, automationFilter))
-    .filter((item) => !automationQuery.trim() || [item.id, item.name, deviceNameById.get(item.device_id || ""), automationKindLabel(automationDisplayKind(item))]
-      .some((value) => value?.toLowerCase().includes(automationQuery.trim().toLowerCase())))
-    .sort((a, b) => Number(taskNeedsAttention(b)) - Number(taskNeedsAttention(a)));
   const hasAttention = automationAttentionCount > 0 || devices.some((device) => device.status === "offline") || usagePct >= 80;
 
   const workspace = workspaceForTab(active);
@@ -1747,7 +1320,6 @@ export function Dashboard({
                 </div>
               </div>
             </section>
-
 
           </>
         )}
@@ -2743,7 +2315,6 @@ export function Dashboard({
               </article>
 
             </section>
-
 
           </>
         )}

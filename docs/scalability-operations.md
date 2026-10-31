@@ -13,7 +13,7 @@ capacity certification.
 - Optional `MCP_ANALYTICS` emits sampled anonymous MCP HTTP latency/status and device-tool latency/outcome **once Analytics Engine has been enabled and the dataset binding deployed**. Default sampling is 10% of successful requests, **100% of errors**; no tokens, IPs, device names, file names, prompts or tool parameters. The sampling rate is tunable with `MCP_METRICS_SAMPLE_RATE`.
 - `AUDIT_ARCHIVE_ENABLED=0` by default: no audit deletion until a private R2 bucket, migration and verification are ready.
 - Optional `FREE_MONTHLY_TOOL_CALL_LIMIT` lets the operator give free accounts a lower budget than Plus; *absent it*, current 10,000-call behavior is unchanged. Admin stays exempt. Existing valid Plus grants count as Plus.
-- Existing global account security pause, device permission system, Undo, and 45-second device timeout are unchanged.
+- Existing global account security pause, device permission system, Undo, and device call timeouts are unchanged. Device calls time out after 45 seconds; a foreground `start_process` waits for its `timeout_ms` plus 5 seconds, up to 125 seconds.
 
 ## Read current D1 activity (safe)
 

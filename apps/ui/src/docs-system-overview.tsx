@@ -82,6 +82,7 @@ export function SystemOverview({ guideLink = true }: { guideLink?: boolean }) {
           "电脑和浏览器扩展都是主动向外连接：没有入站端口、VPN 或桌面串流；AI 客户端和电脑都可以分别撤销。",
         )}
       </p>
+      <p>{tr('Operations use connection counts grouped by platform and Agent version, without recording tool payloads. Missing observations do not prove healthy devices.', '运维按平台与 Agent 版本汇总连接次数，不记录工具调用内容。缺少观测不能证明设备正常。')}</p>
       <h3>{tr("The life of one tool call", "一次工具调用的完整过程")}</h3>
       <ol className="systemSteps">
         {steps.map(([title, text, gate], index) => (

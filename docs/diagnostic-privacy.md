@@ -6,7 +6,9 @@ Exception text can contain credentials or arbitrary personal file contents. Inst
 
 Incident metadata retains only known event/severity/method values, valid 5xx status codes, Cloudflare request/colo identifiers with constrained formats and static route families. Dynamic path suffixes and unknown routes become :redacted. The sanitized copy is created before D1 binding and reused by the email and failure-log paths. The caller's object is preserved.
 
-This is the monitoring slice of #45 / REM-34. It does not sanitize durable-task recovery state, source sessions, all audit writers, other modules' logs, or historical database rows. Those remain separate inventory and migration work. No production data is rewritten by this change.
+Failed Arc device reads also use content-free diagnostics before both the conversation message and the step result are encrypted and persisted. A fixed classification (for example ENOENT or a policy denial) remains available for recovery; original exception paths, queries and contents are omitted, including benign details. Recovery uses the already-authorized tool arguments and observed device state. A failed read remains a failed read, and uncertain writes are never retried by this change.
+
+These are the monitoring and failed-device-read slices of #45. Successful tool output and user-requested file content are not diagnostic errors. This does not sanitize every durable-task recovery field, source session, audit writer, other module's logs, or historical database row. Those remain separate inventory and migration work. No production data is rewritten by this change.
 
 Run the focused credential/content fixtures and failure-sink regression with:
 

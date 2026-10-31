@@ -1,5 +1,6 @@
 import {browserAuthForDevice, NO_BROWSER_AUTH} from "../browser/browser-auth.js";
 import {recordProductEvent} from '../analytics/product-events.js';
+import { processTimeoutError } from './call-timeout.js';
 import type { OAuthIdentity } from "../auth/auth.js";
 import { writeAudit } from "../analytics/audit.js";
 import { recordMcpTelemetry } from "../analytics/relay-telemetry.js";
@@ -60,6 +61,8 @@ export async function callDevice(
   runnerRunId?: string,
   options: { browserAuthentication?: "user" } = {},
 ) {
+  const timeoutError = processTimeoutError(tool, args);
+  if (timeoutError) throw new Error(timeoutError);
   const started = Date.now();
   const ownedDevice = await env.DB.prepare(
     `SELECT id, platform, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,

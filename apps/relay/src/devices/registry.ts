@@ -1,5 +1,7 @@
 import { recordRunnerAttention, type RunnerEnv } from "../browser/runner-attention.js";
 import { RunnerVideoRelay, type VideoAttachment } from "../browser/runner-video.js";
+import { deviceCallTimeoutMs, processTimeoutError } from './call-timeout.js';
+import { HEARTBEAT_INTERVAL_MS, recordDeviceConnection } from '../analytics/device-reliability.js';
 import type {
   AgentCallMessage,
   AgentToRelayMessage,
@@ -22,6 +24,9 @@ type SocketAttachment = VideoAttachment & {
   device?: DeviceMetadata;
   tools?: string[];
   capabilities?: string[];
+  connectionRecorded?: boolean;
+  metricWindow?: number;
+  disconnectRecorded?: boolean;
 };
 
 export class DeviceRegistry {
@@ -372,6 +377,9 @@ export class DeviceRegistry {
       );
     }
 
+    const timeoutError = processTimeoutError(body.tool, body.arguments || {});
+    if (timeoutError) return Response.json({ error: timeoutError }, { status: 400 });
+
     const socket = this.preferredSocket(
       this.ctx.getWebSockets("device:" + body.deviceId),
     );
@@ -430,10 +438,16 @@ export class DeviceRegistry {
       const timeout = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error("device call timed out"));
-      }, 45_000);
+      }, deviceCallTimeoutMs(body.tool!, body.arguments || {}));
 
       this.pending.set(id, { resolve, reject, timeout });
-      socket.send(JSON.stringify(message));
+      try {
+        socket.send(JSON.stringify(message));
+      } catch (error) {
+        clearTimeout(timeout);
+        this.pending.delete(id);
+        reject(error);
+      }
     }).catch((error) => ({
       __remoteLinkError: error instanceof Error ? error.message : String(error),
     }));
@@ -542,6 +556,12 @@ export class DeviceRegistry {
         socket.deserializeAttachment() as SocketAttachment | null;
       if (!attachment) return;
 
+      const metricWindow = Math.floor(Date.now()/HEARTBEAT_INTERVAL_MS);
+      if (this.env && (!attachment.connectionRecorded || attachment.metricWindow !== metricWindow)) {
+        this.ctx.waitUntil(recordDeviceConnection(this.env,attachment.userId,attachment.deviceId,
+          attachment.connectionRecorded?'heartbeat':'connected',parsed.device || {}));
+      }
+
       // Treat telemetry as untrusted even from an enrolled device. Server timestamps
       // prevent clock skew or spoofed timestamps from bypassing freshness checks.
       const rawCapacity = parsed.device?.capacity;
@@ -578,6 +598,8 @@ export class DeviceRegistry {
           : null;
       socket.serializeAttachment({
         ...attachment,
+        connectionRecorded: true,
+        metricWindow,
         device: {
           ...parsed.device,
           id: attachment.deviceId,
@@ -613,6 +635,10 @@ export class DeviceRegistry {
 
   webSocketClose(socket: WebSocket) {
     const a = socket.deserializeAttachment() as SocketAttachment | null;
+    if (a && !a.viewer && a.connectionRecorded && !a.disconnectRecorded && this.env) {
+      socket.serializeAttachment({...a,disconnectRecorded:true});
+      this.ctx.waitUntil(recordDeviceConnection(this.env,a.userId,a.deviceId,'disconnected',a.device||{}));
+    }
     if (a?.viewer) {
       socket.serializeAttachment({ ...a, heartbeatAt: 0 });
       if (a.video)

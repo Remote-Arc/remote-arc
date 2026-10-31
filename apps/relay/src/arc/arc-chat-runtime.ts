@@ -1,4 +1,6 @@
 import {recordProductEvent} from '../analytics/product-events.js';
+import { deviceCallTimeoutMs } from '../devices/call-timeout.js';
+import { deviceReadDiagnostic } from '../platform/diagnostics.js';
 import {arcWebSearch,arcWeather,arcWebSearchInput,arcWeatherInput} from './arc-web.js';
 import {arcConnectAppInput,requestArcAppConnection} from './arc-app-connections.js';
 import {withArcInboxSources} from './arc-result-sources.js';
@@ -345,7 +347,9 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
   }}
   const reused=prior?{code:prepared?.write||processStart||['message_employee','delegate_work','prepare_employee','create_team'].includes(decision.tool)?'ARC_ACTION_ALREADY_COMPLETED':'ARC_DISCOVERY_REUSED',observation:arcObservation(prior.tool,prior.result),guidance:'This action already succeeded in this run and was not dispatched again. Reuse its observed IDs and result to advance or verify the user’s objective. Do not repeat a completed write or rediscover the same resource.'}:null;
   // Hosted search has a 60-second provider budget; allow its settlement to finish.
-  const toolTimeout=decision.tool==='web_search'?75000:['read_inbox','read_context'].includes(decision.tool)?60000:25000;
+  const toolTimeout=decision.tool==='device_tool'&&['start_process','process_status'].includes(toolBody.arguments.tool)
+   ?deviceCallTimeoutMs(toolBody.arguments.tool,toolBody.arguments.arguments||{})+1000
+   :decision.tool==='web_search'?75000:['read_inbox','read_context'].includes(decision.tool)?60000:25000;
   const result=reused??await Promise.race([(deps.executeTool||executeArcTool)(env,run,decision),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('ARC_TOOL_OUTCOME_UNKNOWN')),Math.min(toolTimeout,Math.max(1,Date.parse(run!.deadline)-Date.now())));})]).finally(()=>clearTimeout(timer));
   const rejectedSelection=decision.tool==='select_device'&&result&&typeof result==='object'&&'dispatched' in result&&result.dispatched===false;
   const bounded=arcObservationText(arcObservation(decision.tool,result));
@@ -372,7 +376,7 @@ export async function runArcStep(env:ArcEnv,runId:string,deps:ArcRuntimeDeps={})
     const failedDecision=await unseal<Decision>(env,savedRead.decision_ciphertext,arcContext(run.user_id,`${runId}:${run.step}:decision`)),args=JSON.parse(failedDecision.arguments_json);
     const deviceRead=failedDecision.tool==='device_tool'&&recoverableDeviceReads.has(args.tool);
     if(deviceRead||(/^app_/.test(code)&&await arcInboxReadToolAllowed(env,run,failedDecision.tool,args))){
-     const observation=deviceRead?{code:'ARC_DEVICE_READ_FAILED',detail:boundedArcText(error instanceof Error?error.message:'Device read failed',1000),readFailed:true,guidance:'This read returned no usable content. Continue other required sources. Correct paths using the observed operating system and directories, or retry only a transient read failure. Respect device permissions and sensitive-path protections. A failed read is not evidence that a directory is empty or a task is complete. Do not restart processes or repeat writes.'}:{code,readFailed:true,dispatched:true,guidance:'This App read failed and returned no usable content. Continue other required sources. Retry this read only when the error is transient; otherwise explain the specific unavailable source. A failed read is not evidence that there are no items. Do not retry writes.'};
+     const observation=deviceRead?{code:'ARC_DEVICE_READ_FAILED',detail:deviceReadDiagnostic(error),readFailed:true,guidance:'This read returned no usable content. Continue other required sources. Correct paths using the observed operating system and directories, or retry only a transient read failure. Respect device permissions and sensitive-path protections. A failed read is not evidence that a directory is empty or a task is complete. Do not restart processes or repeat writes.'}:{code,readFailed:true,dispatched:true,guidance:'This App read failed and returned no usable content. Continue other required sources. Retry this read only when the error is transient; otherwise explain the specific unavailable source. A failed read is not evidence that there are no items. Do not retry writes.'};
      await appendArcMessage(env,run,'tool',`${run.step}:tool`,{text:failedDecision.message,tool:failedDecision.tool,arguments:args,status:'failed',result:observation});
      await env.DB.batch([
       env.DB.prepare("UPDATE arc_chat_steps SET status='done',result_ciphertext=?1,updated_at=?2 WHERE run_id=?3 AND step=?4 AND status='dispatching'").bind(await seal(env,observation,arcContext(run.user_id,`${runId}:${run.step}:result`)),stamp(),runId,run.step),

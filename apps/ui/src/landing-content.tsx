@@ -7,6 +7,7 @@ import { ProductIcon } from "./product-icon.js";
 import { InteractiveWorkDemo } from "./landing-interactive-demo.js";
 import { ArcTeaser } from "./arc-future.js";
 import { InstallCommands } from "./install-commands.js";
+import { localizedWebsiteHref } from "./marketing-paths.js";
 import "./landing-content.css";
 
 export function HeroHeadline({mode='arc'}:{mode?:'connect'|'arc'}) {
@@ -15,14 +16,14 @@ export function HeroHeadline({mode='arc'}:{mode?:'connect'|'arc'}) {
 }
 
 export function HomeHeroCopy({mode,arcAvailable,arcHref,connectHref}:{mode:'connect'|'arc';arcAvailable:boolean;arcHref:string;connectHref:string}){
- const {tr}=useI18n(),arc=mode==='arc';
+ const {tr,locale}=useI18n(),arc=mode==='arc';
  return <div className="heroCopy" data-product={mode}>
   <span className="eyebrow heroProductLabel"><i/>{arc?tr('NEXT-GENERATION AI AGENT','新一代 AI AGENT'):tr('AI INFRASTRUCTURE','AI 基础设施')}</span>
   <HeroHeadline mode={mode}/>
-  <p>{arc?tr('Give Arc an outcome. Your AI agent works across your apps and computers, follows up with tasks and routines, and brings back results you can inspect.','把目标交给 Arc。你的 AI 智能体调用应用与电脑，通过任务和例行工作持续跟进，交付可核查的结果。'):tr('Connect ChatGPT, Claude or Cursor to your apps and computers in seconds. Bring leading AI into your real workflow, with access you control.','把 ChatGPT、Claude 或 Cursor 快速接入你的应用与电脑。让顶尖 AI 融入真实工作流，访问范围由你掌控。')}</p>
+  <p>{arc?tr('Give Arc an outcome. Your AI agent works across your apps and computers, follows up with tasks and routines, and brings back results you can inspect.','把目标交给 Arc。你的 AI 智能体调用应用与电脑，通过任务和例行工作持续跟进，交付可核查的结果。'):tr('Connect ChatGPT, Claude, Gemini or Cursor to your apps and computers in seconds. Bring leading AI into your real workflow, with access you control.','把 ChatGPT、Claude、Gemini 或 Cursor 快速接入你的应用与电脑。让顶尖 AI 融入真实工作流，访问范围由你掌控。')}</p>
   <div className="landingActions">
    <a className="primaryButton marketingPrimary" href={arc?arcHref:connectHref}>{arc?(arcAvailable?tr('Start your free trial','开始免费试用'):tr('Explore Arc','了解 Arc')):tr('Connect your AI','连接你的 AI')}<ProductIcon name="arrowUpRight" size={16}/></a>
-   <a className="marketingSecondary" href="#how-it-works">{tr('See it in action','看看如何工作')}<ProductIcon name="arrowUpRight" size={15}/></a>
+   <a className="marketingSecondary" href={arc?localizedWebsiteHref("/arc",locale):"#how-it-works"}>{arc?tr("Meet Arc","认识 Arc"):tr("See it in action","看看如何工作")}<ProductIcon name="arrowUpRight" size={15}/></a>
   </div>
   {!arc && <InstallCommands />}
   <div className="heroSupportingInfo">
@@ -78,7 +79,7 @@ export function ConnectionFilm() {
   const autoplayAttempted = useRef(false);
   const [chapter, setChapter] = useState(0);
   const chapters = [
-    { at: 0, title: tr("Choose your client", "选择 AI 客户端"), body: tr("Open the connection path for ChatGPT, Claude, Cursor or another Remote MCP client.", "打开 ChatGPT、Claude、Cursor 或其他 Remote MCP 客户端的连接入口。") },
+    { at: 0, title: tr("Choose your client", "选择 AI 客户端"), body: tr("Open the connection path for ChatGPT, Claude, Gemini, Cursor or another Remote MCP client.", "打开 ChatGPT、Claude、Gemini、Cursor 或其他 Remote MCP 客户端的连接入口。") },
     { at: 7, title: tr("Authorize in the client", "在客户端完成授权"), body: tr("The client opens Remote Arc OAuth. Review the scopes and authorize your account there.", "客户端会打开 Remote Arc OAuth，在那里核对 Scope 并授权账户。") },
     { at: 14, title: tr("Reuse your devices", "复用已配对设备"), body: tr("Ask in your AI chat. The same paired computers and their individual permissions apply.", "回到 AI 聊天提出请求，复用同一批已配对电脑和各自权限。") },
   ] as const;

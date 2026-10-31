@@ -31,7 +31,7 @@ const AI_CLIENTS = [
   { id: "chatgpt", name: "ChatGPT", logo: "/ai-openai.svg" },
   { id: "claude", name: "Claude", logo: "/ai-claude.svg" },
   { id: "cursor", name: "Cursor", logo: "/ai-cursor.svg" },
-  { id: "gemini", name: "Gemini", logo: "/ai-gemini.svg" },
+  { id: "gemini", name: "Gemini", logo: "/ai-gemini-four-color-2025.svg" },
 ] as const;
 const availableIn = (entry: Entry, client: string) =>
   !entry.unavailableIn?.includes(client);

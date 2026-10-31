@@ -18,7 +18,7 @@ export function AgentUseCases() {
   ] as const;
   const current = cases[selected]!;
   return <section className="agentUseCases sectionBlock" id="agent-use-cases" aria-labelledby={uid + '-heading'}>
-    <header className="modernSectionIntro"><span className="eyebrow">{tr('ARC · YOUR AI AGENT', 'ARC · 你的 AI 智能体')}</span><h2 id={uid + '-heading'}>{tr('Give Arc something worth doing.', '把值得做的工作，交给 Arc。')}</h2><p>{tr('We built Arc with Remote Arc. AI working through Connect wrote its code on our own computers. Now Arc uses the same Apps, computers and permissions, with hosted models included.', 'Arc 就是用 Remote Arc 做出来的：AI 通过 Connect 在我们自己的电脑上写出了它的代码。现在，Arc 使用同一套应用、电脑与权限，并内置托管模型。')}</p></header>
+    <header className="modernSectionIntro"><span className="eyebrow">{tr('A NEW WAY TO WORK', '全新的工作方式')}</span><h2 id={uid + '-heading'}>{tr('A new way to use your computer.', '一种全新的电脑使用方式。')}</h2><p>{tr('For years, using a computer has meant opening apps, clicking through screens and doing every step yourself. Now start with what you want to achieve. Let AI work across your apps and computers, with access you control.', '这么多年，使用电脑仍然离不开打开软件、点击界面、自己完成每一步。现在可以从目标出发：告诉 AI 你想做什么，让它在你授权的应用和电脑上动手。')}</p></header>
     <div className="agentConnectedToolbar"><div className="agentConnectedTabs" role="tablist" aria-label={tr('Explore connected capabilities', '查看连接能力')}>{cases.map((item, index) => <button key={item.id} type="button" role="tab" id={uid + '-' + item.id} aria-controls={uid + '-panel'} aria-selected={selected === index} tabIndex={selected === index ? 0 : -1} onClick={() => setSelected(index)} onKeyDown={event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();

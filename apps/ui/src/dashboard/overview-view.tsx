@@ -5,6 +5,7 @@ import { MARKETING_ORIGIN } from "../app-config.js";
 import { platformLabel } from "../device-presets.js";
 import { CopyButton } from "../public-layout.js";
 import { timeAgo } from "./format.js";
+import { FirstRunCard } from "./first-run-card.js";
 import type { DashboardModel } from "./use-dashboard-model.js";
 
 // Overview tab: status cards, recent devices and activity.
@@ -27,6 +28,7 @@ export function OverviewView({ m }: { m: DashboardModel }) {
           <button className="addButton arcRadiantCta" onClick={() => navigateTab("connect")}><ProductIcon name="link"/>{tr("Connect your AI", "连接你的 AI")}</button>
         </div>
       </section>
+      <FirstRunCard m={m} />
       <UsageConversionBanner usage={usage} pricingUrl={MARKETING_ORIGIN + (locale==="zh"?"/zh/pricing":"/pricing")} onManagePlan={()=>{navigateTab("settings");const target=new URL(location.href);target.searchParams.set("section","billing");history.replaceState(history.state,"",target);window.dispatchEvent(new PopStateEvent("popstate"));}} />
       <section className="overviewStatusGrid">
         <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Devices online", "在线设备")}</span><i className={"healthDot " + ((status?.onlineDevices ?? 0) > 0 ? "good" : "idle")} /></div><strong>{status?.onlineDevices ?? 0} / {status?.totalDevices ?? devices.length}</strong><small>{tr("Ready for MCP calls", "可接受 MCP 调用")}</small></article>

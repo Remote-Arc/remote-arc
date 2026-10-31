@@ -11,13 +11,13 @@ import {followupEmailBudget} from './followup-budget.js';
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
 export const FOLLOWUP_BATCH_LIMIT=100;
 const userIds=z.array(z.string().min(1).max(160)).min(1).max(FOLLOWUP_BATCH_LIMIT).refine(ids=>new Set(ids).size===ids.length);
-const batchSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(120),userIds,templateId:z.enum(FOLLOWUP_TEMPLATES.map(t=>t.id)),locale:z.enum(['en','zh']),subject:z.string().trim().min(1).max(200).refine(s=>!/[\r\n]/.test(s)),body:z.string().trim().min(20).max(6000),design:designSchema,basis:z.enum(['existing','support','agreed']),basisNote:z.string().trim().max(500).default('')}).strict();
+const optionalBasis=z.preprocess(value=>value==null||typeof value==='string'&&!value.trim()?'existing':value,z.enum(['existing','support','agreed']));
+const batchSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(120),userIds,templateId:z.enum(FOLLOWUP_TEMPLATES.map(t=>t.id)),locale:z.enum(['en','zh']),subject:z.string().trim().min(1).max(200).refine(s=>!/[\r\n]/.test(s)),body:z.string().trim().min(20).max(6000),design:designSchema,basis:optionalBasis,basisNote:z.string().trim().max(500).default('')}).strict();
 type Batch={id:string;actor_id:string;status:string;basis:string;basis_note:string;from_email:string;reply_to:string;payload_json:string};
 
-export async function followupBlock(env:FollowupEnv,userId:string,needsPermission=true){
+export async function followupBlock(env:FollowupEnv,userId:string){
  const contact=await ensureContact(env,userId);if(!contact)return 'user_not_found';
  if(contact.suppressed_at)return 'recipient_suppressed';
- if(needsPermission&&!contact.consent_at)return 'contact_permission_required';
  const conflict=await env.DB.prepare(`SELECT status,sent_at FROM user_followup_messages WHERE user_id=?1 AND (status IN ('sending','unknown') OR sent_at>?2) LIMIT 1`).bind(userId,new Date(Date.now()-72*3600000).toISOString()).first<{status:string}>();
  return conflict?['sending','unknown'].includes(conflict.status)?'delivery_unconfirmed':'contact_cooldown':null;
 }
@@ -56,7 +56,7 @@ export async function handleFollowupBatches(request:Request,env:FollowupEnv,acto
   const rewardAvailable=await feedbackRewardAvailable(env.DB);
   for(const contact of contacts){
    if(await env.DB.prepare('SELECT user_id FROM user_followup_batch_recipients WHERE batch_id=?1 AND user_id=?2').bind(value.id,contact.user_id).first())continue;
-   const block=await followupBlock(env,contact.user_id,value.basis==='existing'),hash=await sha256Hex(value.id+':'+contact.user_id);
+   const block=await followupBlock(env,contact.user_id),hash=await sha256Hex(value.id+':'+contact.user_id);
    const id=hash.slice(0,8)+'-'+hash.slice(8,12)+'-8'+hash.slice(13,16)+'-a'+hash.slice(17,20)+'-'+hash.slice(20,32);
    if(block){await env.DB.prepare(`INSERT OR IGNORE INTO user_followup_batch_recipients(batch_id,user_id,status,error_code,updated_at) SELECT ?1,?2,'skipped',?3,?4 WHERE EXISTS(SELECT 1 FROM user_followup_batches WHERE id=?1 AND status='preparing')`).bind(value.id,contact.user_id,block,stamp()).run();continue;}
    const links=followupLinks(env,id,value.locale),values={name:contact.name?.slice(0,160)||(value.locale==='zh'?'朋友':'there'),...links};

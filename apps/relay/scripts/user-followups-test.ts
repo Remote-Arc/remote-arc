@@ -78,11 +78,10 @@ try{
  assert.equal((await decode(await api('/drafts','POST',{...changed,subject:'Cannot edit a sent email',expectedRevision:2}),409)).error,'draft_not_editable');
  const later=await createDraft();assert.equal((await api('/'+later+'/send','POST',{})).status,409);assert.equal(sends,1,'72 hour cooldown blocks another draft');
  env.FOLLOWUP_FROM=' Remote Arc Support <help@example.invalid> ';env.FOLLOWUP_REPLY_TO=' replies@example.invalid ';
- const other=await createDraft('other');assert.equal((await decode(await api('/'+other+'/send','POST',{}),409)).error,'contact_permission_required');
- await decode(await api('/other','PATCH',{...profile,nextFollowupAt:null}));
+ const other=await createDraft('other');assert.equal(sql.prepare('SELECT consent_at FROM user_followup_contacts WHERE user_id=?').get('other')?.consent_at,null);
  const configured=await decode(await api('/other'));assert.deepEqual(configured.sender,{from:'Remote Arc Support <help@example.invalid>',replyTo:'replies@example.invalid'});
  globalThis.fetch=async(_input,options)=>{const payload=JSON.parse(String(options?.body));assert.equal(payload.from,configured.sender.from,'Dedicated follow-up sender overrides remain authoritative');assert.equal(payload.reply_to,configured.sender.replyTo);assert(payload.text.includes(configured.sender.replyTo));sends++;throw Error('simulated ambiguous timeout');};
- assert.equal((await api('/'+other+'/send','POST',{})).status,502);assert.equal((await decode(await api('/'+other+'/send','POST',{}))).status,'unknown');assert.equal(sends,2,'Unknown deliveries never trigger a blind resend');
+ assert.equal((await api('/'+other+'/send','POST',{})).status,502);assert.equal((await decode(await api('/'+other+'/send','POST',{}))).status,'unknown');assert.equal(sends,2,'Unknown deliveries never trigger a blind resend');assert.equal(sql.prepare('SELECT consent_at FROM user_followup_contacts WHERE user_id=?').get('other')?.consent_at,null,'Sending without optional notes does not invent consent');
  const contact=sql.prepare('SELECT * FROM user_followup_contacts WHERE user_id=?').get('person')!;
  const unsubscribe='https://remotearc.app/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;
  assert.equal((await handleFollowupUnsubscribe(new Request(unsubscribe),env as FollowupEnv)).status,200);

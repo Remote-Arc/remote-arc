@@ -97,7 +97,7 @@ func (s *session) updateAttention(ctx context.Context, blockers []any) {
 	}
 	fresh := s.cp.AttentionID == ""
 	s.cp.State = StateNeedsUser
-	s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Complete it in the task window, or approve supported OTP/CAPTCHA actions in Dashboard Browser authentication. CAPTCHA response tokens stay private; Remote Arc never reads their responses. Then use browser_runner_wait until=user_done. This does not authorize another submit."
+	s.cp.NeedsUser = "The page needs the user (" + strings.Join(kinds, ", ") + "). Complete sign-in, verification codes and CAPTCHAs in the task browser yourself, then resume the same task. CAPTCHA response tokens stay private; Remote Arc never reads their responses. Then use browser_runner_wait until=user_done. This does not authorize another submit."
 	if kind == "scope" {
 		s.cp.NeedsUser = "The task attempted to leave allowed_origins. Ask the user to review the exact sites in Dashboard Boundary requests; waiting does not expand scope. Resume with browser_runner_start only after approval."
 	}

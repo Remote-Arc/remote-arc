@@ -255,7 +255,7 @@
     const element = resolveElement(snapshotId, ref);
     const secret = secretKind(element);
     if (secret && !(secret === "code" && allowCodes)) {
-      throw new Error(secret === "code" ? "BROWSER_AUTH_REQUIRED: approve OTP for this website in Dashboard Browser authentication; the extension code switch must also be on." : "Remote Arc blocks filling password, payment, CAPTCHA response token, and file fields.");
+      throw new Error(secret === "code" ? "BROWSER_AUTH_REQUIRED: enter the verification code in your browser yourself, then resume the same task." : "Remote Arc blocks filling password, payment, CAPTCHA response token, and file fields.");
     }
     if (!fillable(element)) {
       throw new Error("Element cannot be filled. Use browser_click for buttons, checkboxes, or radio controls.");

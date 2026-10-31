@@ -620,7 +620,7 @@ func (s *session) helperIn(ctx context.Context, frameID, op string, args map[str
 	if frameID != "" {
 		f, ok := s.frameByID(frameID)
 		if !ok || !s.readableFrame(f) {
-			return nil, errors.New("BROWSER_AUTH_REQUIRED: this frame is not approved in Dashboard.")
+			return nil, errors.New("BROWSER_AUTH_REQUIRED: this frame is not approved. Complete this verification in the task browser yourself.")
 		}
 		rawURL = f.url
 		args["captcha_frame"] = s.captchaFrame(f)
@@ -985,7 +985,7 @@ func (s *session) snapshot(ctx context.Context, maxElements, maxText int) (map[s
 	if e := json.Unmarshal(r.Result.Value, &page); e != nil {
 		return nil, e
 	}
-	page["authentication"] = map[string]any{"otp": s.codesAllowed(s.currentHref()), "captcha": s.captchaAllowed(), "mailbox": s.auth.Mailbox, "approval_location": "Dashboard → device → Browser authentication"}
+	page["authentication"] = map[string]any{"otp": s.codesAllowed(s.currentHref()), "captcha": s.captchaAllowed(), "mailbox": s.auth.Mailbox, "approval_location": "user takeover"}
 	s.snapshotID, s.snapshotEpoch = id, epoch
 	elements, _ := page["elements"].([]any)
 	s.snapshotFrames(ctx, page, id, maxElements-len(elements), maxText)

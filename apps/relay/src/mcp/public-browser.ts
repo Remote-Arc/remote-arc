@@ -3,7 +3,7 @@ import { callDevice } from "../devices/device-call.js";
 // All public MCP browser names, including cached aliases, share this boundary.
 // This is server-owned policy, not an argument or a new Dashboard permission.
 // The existing Agent/extension policy gate refuses fills on older clients that
-// cannot enforce it. Internal Dashboard execution keeps its existing policy.
+// cannot enforce it. Internal calls also receive disabled authentication policy.
 export async function callPublicBrowserDevice(
   env: Parameters<typeof callDevice>[0],
   identity: Parameters<typeof callDevice>[1],

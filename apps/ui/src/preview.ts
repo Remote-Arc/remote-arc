@@ -222,20 +222,19 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
 
-    if (url.pathname.startsWith("/api/browser-auth/")) {
-      const key="browser-auth-preview-"+url.pathname.split("/").pop();
-      if(method==="POST") {
-        const value=JSON.parse(String(init?.body || "{}"));
-        window.sessionStorage.setItem(key,JSON.stringify(value));return json(value);
-      }
-      return json(JSON.parse(window.sessionStorage.getItem(key)||'{"otp":false,"captcha":false,"origins":[],"mailbox":""}'));
-    }
     if (url.pathname.startsWith("/api/runner/")) {
       const demo = new URL(location.href).searchParams.get("demo") === "runner" || location.pathname.startsWith("/dashboard/browser/");
       const sample = {id:"preview-runner-attention",device_id:"preview-mac",device_name:"Studio Mac",session_id:"sample-application",kind:"captcha",origin:"https://careers.example.com"};
       if (url.pathname === "/api/runner/attention") return json({attention:demo && !window.sessionStorage.getItem("runner-preview-resolved")?[sample]:[]});
       if (url.pathname.endsWith("/resolve")) { window.sessionStorage.setItem("runner-preview-resolved","1");return json({resolved:true,state:"met"}); }
-      if (url.pathname.includes("/settings/")) return json({runner_attention_mode:"show_and_notify"});
+      if (url.pathname.includes("/settings/")) {
+        const key="runner-attention-preview-"+url.pathname.split("/").pop();
+        if(method==="POST") {
+          const value=JSON.parse(String(init?.body || "{}"));
+          window.sessionStorage.setItem(key,JSON.stringify(value));return json(value);
+        }
+        return json(JSON.parse(window.sessionStorage.getItem(key)||'{"runner_attention_mode":"show_and_notify"}'));
+      }
       if (url.pathname.includes("/session/")) return json({state:"needs_user",browser_running:true,recent_receipts:[{seq:1,tool:"browser_runner_act",action:"upload",outcome:"ok"},{seq:2,tool:"browser_runner_act",action:"submit",outcome:"unverified"}]});
       return json({error:"preview_only"},404);
     }

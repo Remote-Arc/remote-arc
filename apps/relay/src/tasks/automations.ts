@@ -19,7 +19,7 @@ import {
   type AgentToolName,
 } from "./agent-planner.js";
 import { takeSourceDecision } from "./source-goals.js";
-import { nextIntervalRun } from "./schedule-clock.js";
+import { firstIntervalRun, nextIntervalRun } from "./schedule-clock.js";
 import { nativeArcWork, tickNativeArcWork } from "../arc/arc-work.js";
 import type { ArcEnv } from "../arc/arc-chat.js";
 import {requireArcAccess} from '../arc/arc-trial.js';
@@ -978,7 +978,8 @@ export async function resumeAutomation(
   }
   const trigger = parseJson<TriggerSpec | null>(automation.trigger_json, null);
   let status: AutomationStatus = "waiting";
-  let nextRunAt: string | null = nowIso();
+  const now = nowIso();
+  let nextRunAt: string | null = now;
 
   if (parseJson<AgentGoalSpec | null>(automation.goal_json, null)?.controller === "source"
       && ["awaiting_agent", "needs_reasoning"].includes(state.phase || "") && !state.process_id && !state.planned) {
@@ -989,6 +990,13 @@ export async function resumeAutomation(
     nextRunAt = null;
   } else if (trigger?.type === "at" && !state.process_id) {
     nextRunAt = trigger.at;
+  } else if (trigger?.type === "interval" && !state.process_id && !state.run_id) {
+    // Pausing clears next_run_at. Between runs, a slot that is still ahead
+    // stays scheduled; only a slot missed while paused runs on resume.
+    const slot = automation.last_run_at
+      ? nextIntervalRun(trigger, automation.created_at, automation.last_run_at)
+      : firstIntervalRun(trigger, automation.created_at);
+    if (Date.parse(slot) > Date.parse(now)) nextRunAt = slot;
   }
 
   return updateAutomationStatus(env, userId, automationId, status, nextRunAt);

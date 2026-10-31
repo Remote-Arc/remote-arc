@@ -62,12 +62,12 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "List connected App accounts and search the fixed App action catalog by task. Read-only; never runs an action.",
   },
   run_app_read_action: {
-    zh: "在已连接账号中执行一个只读操作；全部读取操作及其参数 Schema 都逐一列在工具定义中，不会修改任何数据。",
-    summary: "Run one read-only App action. Every read action and its exact argument schema is listed in the tool definition.",
+    zh: "在已连接账号中执行一个只读操作；全部读取操作 ID 都列在工具定义中，参数 Schema 可通过 list_apps 按 ID 查询，不会修改任何数据。",
+    summary: "Run one read-only App action. Every read action ID is listed in the tool definition; list_apps returns its exact argument schema.",
   },
   run_app_write_action: {
-    zh: "在已连接账号中执行一个用户明确要求的更改（发送、发布、创建、更新或删除）；全部写入操作逐一列出，受账号权限、OAuth Scope 和写入去重保护。",
-    summary: "Run one user-requested App change, such as send, publish, create, update or delete. Each write action is listed with its schema and protected by ownership, scopes and replay checks.",
+    zh: "在已连接账号中执行一个用户明确要求的更改（发送、发布、创建、更新或删除）；全部写入操作 ID 都列在工具定义中，受账号权限、OAuth Scope 和写入去重保护。",
+    summary: "Run one user-requested App change, such as send, publish, create, update or delete. Each write action ID is listed in the tool definition and protected by ownership, scopes and replay checks.",
   },
   github_repositories_list: { zh: "列出所选 GitHub 账号可访问的仓库。", summary: "List repositories accessible to the selected GitHub account." },
   github_issues_list: { zh: "列出指定仓库的 Issue。", summary: "List issues in a specified repository." },

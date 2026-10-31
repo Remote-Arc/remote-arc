@@ -206,27 +206,25 @@ assert.equal(claudeDirectory.total, genericDirectory.total - 1, "Claude pages ov
 assert(!claudeDirectory.apps.some((app: any) => app.provider === "runway"));
 assert.equal(typeof claudeDirectory.nextCursor === "number" || claudeDirectory.nextCursor === null, true);
 const claudeDescription = (name: string) => claudeListed.find(t => t.name === name).description as string;
-assert(claudeDescription("run_app_read_action").includes(`all ${APP_OPERATIONS.filter(o => o.permission === "read" && o.provider !== "runway").length} read actions`), "Claude read count matches its schema");
-assert(claudeDescription("run_app_write_action").includes(`all ${APP_OPERATIONS.filter(o => o.permission === "write" && o.provider !== "runway").length} change actions`), "Claude write count matches its schema");
+assert(claudeDescription("run_app_read_action").includes(`all ${APP_OPERATIONS.filter(o => o.permission === "read" && o.provider !== "runway").length} read action IDs`), "Claude read count matches its schema");
+assert(claudeDescription("run_app_write_action").includes(`all ${APP_OPERATIONS.filter(o => o.permission === "write" && o.provider !== "runway").length} change action IDs`), "Claude write count matches its schema");
 const APP_TOOL_NAMES = ["list_apps", "run_app_read_action", "run_app_write_action"];
 const appNames = listed.filter(tool => APP_TOOL_NAMES.includes(tool.name) || tool.name === "call_app").map(tool => tool.name).sort();
 assert.deepEqual(appNames, APP_TOOL_NAMES, "The generic call_app executor is replaced by typed read and write action tools");
 assert(!listed.some(tool => /^(github|gmail|slack|google_slides)_(messages|issues|presentations|channels)_/.test(tool.name)),
   "Apps should not add hundreds of per-operation MCP tool definitions");
-// Every operation is published up front with its own description and exact schema.
+// Every operation ID is published up front in the action enum; argument
+// schemas come from list_apps, which keeps tools/list small.
 const actionVariants = (name: string) => {
   const schema = listed.find(tool => tool.name === name).inputSchema;
   assert.equal(schema.type, "object");
   assert.equal(schema.additionalProperties, false);
   assert.deepEqual([...schema.required].sort(), ["connectionId", "operation", "requestId"]);
-  const variants = schema.properties.operation.oneOf ?? schema.properties.operation.anyOf;
-  for (const variant of variants) {
-    assert.equal(variant.additionalProperties, false);
-    assert.equal(typeof variant.properties.action.const, "string");
-    assert(variant.description?.length > 10, variant.properties.action.const + " needs its own description");
-    assert.equal(variant.properties.arguments.type, "object", variant.properties.action.const + " needs a typed argument schema");
-  }
-  return variants.map((variant: any) => variant.properties.action.const as string);
+  const operation = schema.properties.operation;
+  assert.equal(operation.additionalProperties, false);
+  assert.deepEqual(operation.required, ["action", "arguments"]);
+  assert.equal(operation.properties.arguments.type, "object");
+  return operation.properties.action.enum as string[];
 };
 const readActions = actionVariants("run_app_read_action"), writeActions = actionVariants("run_app_write_action");
 const expectedActions = (permission: string) => APP_OPERATIONS.filter(o => o.permission === permission).map(o => o.provider + "." + o.name).sort();
@@ -236,7 +234,9 @@ assert.equal(readActions.length + writeActions.length, 344);
 assert.equal(new Set([...readActions, ...writeActions]).size, 344, "Action IDs are unique across providers");
 assert(writeActions.includes("gmail.messages.send") && readActions.includes("gmail.messages.get") && !readActions.includes("gmail.messages.send"));
 const discoverySchema = listed.find(tool => tool.name === "list_apps").inputSchema;
-assert(discoverySchema.properties.use_case && discoverySchema.properties.includeSchemas);
+assert(discoverySchema.properties.use_case && discoverySchema.properties.includeSchemas && discoverySchema.properties.actions);
+const appToolBytes = JSON.stringify(listed.filter(tool => APP_TOOL_NAMES.includes(tool.name))).length;
+assert(appToolBytes < 25_000, `App tools must stay small in tools/list (${appToolBytes} bytes)`);
 const disabled = (await rpc("tools/list", {}, undefined, { ...env, ENABLE_APPS: "0" })).result.tools;
 assert(!disabled.some((tool: any) => APP_TOOL_NAMES.includes(tool.name)));
 const accounts = data(await invoke("list_apps", { provider: "gmail", limit: 1 }));
@@ -264,6 +264,14 @@ assert.equal(summary.operationCatalogSize, 344);
 assert(!JSON.stringify(summary).includes(ids.other), "Do not expose another owner's connection IDs");
 assert(!JSON.stringify(summary).includes("inputSchema"));
 assert(gh.operations.some((o: any) => o.action === "github.issues.create"), "Search returns the typed action ID");
+const exact = data(await invoke("list_apps", { actions: ["github.issues.create", "gmail.messages.send", "nope.missing"] }));
+assert.equal(exact.mode, "actions");
+assert.deepEqual(exact.operations.map((o: any) => o.action).sort(), ["github.issues.create", "gmail.messages.send"]);
+assert(exact.operations.every((o: any) => o.inputSchema?.type === "object"), "Exact lookup returns each action's argument schema");
+assert.deepEqual(exact.unknownActions, ["nope.missing"]);
+assert(exact.connections.every((row: any) => ["github", "gmail"].includes(row.provider)) && !JSON.stringify(exact).includes(ids.other));
+const claudeExact = data(await rpc("tools/call", { name: "list_apps", arguments: { actions: ["runway.videos.generate"] } }, undefined, env, identity(), "claude"));
+assert.equal(claudeExact.operations.length, 0, "Claude cannot look up Runway actions");
 const annotations = (name: string) => listed.find(tool => tool.name === name).annotations;
 assert.deepEqual(annotations("list_apps"), { readOnlyHint: true, openWorldHint: false, destructiveHint: false, idempotentHint: true });
 assert.deepEqual(annotations("run_app_read_action"), { readOnlyHint: true, openWorldHint: true, destructiveHint: false, idempotentHint: true });
@@ -311,8 +319,12 @@ try {
   assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-via-write-1"))),
     "The write tool exposes only write actions");
   assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, repo: "../escape" }, "escape-1"))));
-  assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, extra: true }, "extra-field-1"))),
-    "Arguments are validated against the action's exact schema");
+  const extraField = await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, extra: true }, "extra-field-1"));
+  assert(rejected(extraField), "Arguments are validated against the action's exact schema");
+  const extraError = JSON.parse(extraField.result.content[0].text);
+  assert.equal(extraError.error.code, "INVALID_APP_ARGUMENTS");
+  assert.equal(extraError.action, "github.issues.create");
+  assert(extraError.inputSchema?.properties?.repo, "A rejected call returns the action's schema so the model can retry");
   assert((await invoke(WRITE, create, "apps:read")).result._meta["mcp/www_authenticate"]);
   assert((await invoke(WRITE, create, "apps:write")).result._meta["mcp/www_authenticate"]);
   assert((await invoke(READ, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-scope-1"), "apps:write")).result._meta["mcp/www_authenticate"]);
@@ -357,6 +369,6 @@ await invoke("browser_runner_snapshot", { device_id: "computer", session_id: "ta
 assert(!("include_captcha_images" in dispatches.at(-1).arguments));
 assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH);
 await callDevice(env, { ...identity(), clientId: "dashboard" }, "computer", "browser_runner_snapshot", { session_id: "task" });
-assert.deepEqual(dispatches.at(-1).policy.browserAuth, approved, "The internal Dashboard policy remains separate");
+assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH, "Internal Dashboard calls also ignore legacy authentication approval");
 sql.close();
-console.log("PASS: App discovery plus typed read/write action tools publishing all 344 operation schemas, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");
+console.log("PASS: App discovery plus typed read/write action tools listing all 344 operation IDs with schemas by lookup, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");

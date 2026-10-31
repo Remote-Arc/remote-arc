@@ -1,4 +1,4 @@
-import { BrowserAuthSetting } from "../browser-auth-setting.js";
+import { useState } from "react";
 import { RunnerAttentionSetting } from "../runner-view.js";
 import { isBrowserRunnerTool } from "../device-tools.js";
 import { ProductIcon } from "../product-icon.js";
@@ -11,6 +11,7 @@ import type { DeviceFacts } from "./device-card.js";
 
 // Device panel: MCP access, browser tools, file boundaries and Local Undo.
 export function DeviceAccessPanel({ m, device, facts }: { m: DashboardModel; device: Device; facts: DeviceFacts }) {
+  const [runnerSettingsOpen, setRunnerSettingsOpen] = useState(false);
   const {
     addPolicyPath, applyDevicePreset, browseDeviceDirectories, devicePanel, loadUndoHistory,
     removePolicyPath, restoreUndoAction, saveDevicePolicy, sensitivePolicyBusyId, tr, undoByDevice,
@@ -58,21 +59,41 @@ export function DeviceAccessPanel({ m, device, facts }: { m: DashboardModel; dev
   <summary><span className="deviceDisclosureTitle"><ProductIcon name="settings" size={16}/>{tr("Manage individual skills", "逐项管理技能")}</span><span>{enabledTools.filter((tool) => !isBrowserRunnerTool(tool)).length + (runnerVisible && runnerEnabled ? 1 : 0)} / {allTools.length + (runnerVisible ? 1 : 0)}<ProductIcon name="chevron" size={14}/></span></summary>
   <div className="toolToggleGrid">
     {runnerVisible && (
-      <label className={"toolToggle" + (!runnerAdvertised ? " unavailable" : "")} key="browser_runner">
-        <input type="checkbox" checked={runnerEnabled} disabled={!runnerAdvertised && !runnerEnabled} onChange={(event) => void updateDeviceTools(device, "browser_runner_act", event.target.checked)} />
-        <span className="skillLabel">
+      <div className={"toolToggle browserRunnerTool" + (!runnerAdvertised ? " unavailable" : "")} key="browser_runner">
+        <label className="browserRunnerToggle">
+          <input type="checkbox" checked={runnerEnabled} disabled={!runnerAdvertised && !runnerEnabled} onChange={(event) => {
+            if (!event.target.checked) setRunnerSettingsOpen(false);
+            void updateDeviceTools(device, "browser_runner_act", event.target.checked);
+          }} />
           <strong>browser_runner</strong>
+        </label>
           <HelpTip
             label={tr("About browser_runner", "了解 browser_runner")}
             text={runnerAdvertised
-              ? tr("Lets your AI open, read and act on websites, only on the sites each task names. It uses a hidden Remote Arc window (installed Chrome, Edge or Chromium) with its own sign-ins, which appears only when a page needs you and you are ready; your own Chrome is an advanced option used only when you ask for it. The AI never types passwords or card numbers, one-time codes can be filled from your connected email, and a submit is never sent twice.", "允许你的 AI 打开、读取和操作网站，只能访问每个任务指定的网站。使用隐藏的 Remote Arc 窗口（已安装的 Chrome、Edge 或 Chromium），有自己的登录状态，只有页面需要你、且你准备好时才出现；使用你自己的 Chrome 是高级选项，只有你要求时才用。AI 从不输入密码和卡号，验证码可以从你连接的邮箱里获取填写，提交不会重复发送。")
+              ? tr("Lets your AI open, read and act on websites, only on the sites each task names. It uses a hidden Remote Arc window (installed Chrome, Edge or Chromium) with its own sign-ins, which appears only when a page needs you and you are ready; your own Chrome is an advanced option used only when you ask for it. Complete sign-in, verification codes and CAPTCHAs in the task browser yourself, then your AI can continue. A submit is never sent twice.", "允许你的 AI 打开、读取和操作网站，只能访问每个任务指定的网站。使用隐藏的 Remote Arc 窗口（已安装的 Chrome、Edge 或 Chromium），有自己的登录状态，只有页面需要你、且你准备好时才出现；使用你自己的 Chrome 是高级选项，只有你要求时才用。登录、验证码和人机验证需要你在任务浏览器中完成，完成后 AI 可以继续。提交不会重复发送。")
               : tr("Needs Remote Arc Agent 0.6.2-rc.4 or newer and Chrome, Edge or Chromium installed on this computer.", "需要 Remote Arc Agent 0.6.2-rc.4 或更新版本，并且这台电脑装有 Chrome、Edge 或 Chromium。")}
           />
-        </span>
-      </label>
+        {runnerEnabled && <button type="button" className="browserRunnerSettingsButton"
+          aria-label={tr("Browser Runner settings", "Browser Runner 设置")}
+          title={tr("Browser Runner settings", "Browser Runner 设置")}
+          aria-expanded={runnerSettingsOpen} aria-controls={"runner-settings-" + device.id}
+          onClick={() => setRunnerSettingsOpen(open => !open)}>
+          <ProductIcon name="settings" size={14}/>
+        </button>}
+      </div>
     )}
-    {runnerEnabled && <RunnerAttentionSetting deviceId={device.id}/>}
-    {(runnerEnabled || device.platform === "browser") && <BrowserAuthSetting deviceId={device.id} browserExtension={device.platform === "browser"}/>}
+    {runnerEnabled && runnerSettingsOpen && <div className="browserRunnerSettingsPanel" id={"runner-settings-" + device.id}
+      role="region" aria-label={tr("Browser Runner settings", "Browser Runner 设置")}>
+      <RunnerAttentionSetting deviceId={device.id}/>
+      <p className="browserAuthenticationNotice">{tr(
+        "Complete sign-in, verification codes and CAPTCHAs in the task browser yourself. Your AI can continue once you are done.",
+        "登录、验证码和人机验证需要你在任务浏览器中完成，完成后 AI 可以继续。",
+      )}</p>
+    </div>}
+    {device.platform === "browser" && <p className="runnerSetting browserAuthenticationNotice">{tr(
+      "Complete sign-in, verification codes and CAPTCHAs in your browser yourself. Your AI can continue once you are done.",
+      "登录、验证码和人机验证需要你在浏览器中完成，完成后 AI 可以继续。",
+    )}</p>}
     {allTools.map((tool) => {
       const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
       const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;

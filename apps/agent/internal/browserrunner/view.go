@@ -13,6 +13,10 @@ import (
 
 const maxFrameBytes = 200 * 1024
 
+// viewCaptureTimeout bounds one native screenshot for the live view. A
+// minimized Mac can take seconds to answer.
+const viewCaptureTimeout = 25 * time.Second
+
 type ViewFrame struct {
 	Type      string `json:"type"`
 	SessionID string `json:"session_id"`
@@ -119,7 +123,7 @@ func (s *session) serviceView(ctx context.Context) {
 		// Native screenshot callbacks can take longer than the control tick on a
 		// minimized Mac. Keep a single request alive without holding the session
 		// mutex, so page actions, waits and heartbeat expiry remain responsive.
-		captureCtx, captureCancel := context.WithTimeout(context.Background(), 25*time.Second)
+		captureCtx, captureCancel := context.WithTimeout(context.Background(), viewCaptureTimeout)
 		s.viewCaptureCancel = captureCancel
 		s.viewCaptureID++
 		id, conn := s.viewCaptureID, s.conn

@@ -11,7 +11,7 @@ export function BrowserModes({ primary = false }: { primary?: boolean }) {
       id: "runner", name: tr("Runner", "Runner 独立浏览器"), badge: tr("Default", "默认方式"),
       fit: tr("Complete forms and longer tasks in a hidden browser on your computer that never interrupts you.", "在电脑上的隐藏浏览器中完成表单填写和多步骤任务，不打扰你。"),
       steps: [tr("Enable Browser Runner for the computer in Dashboard.", "在 Dashboard 为电脑开启 Browser Runner。"), tr("When a page needs you (a sign-in or CAPTCHA), your AI asks first; the window appears when you are ready and hides again after. Sign in once and later tasks reuse it; saved passwords are filled locally and never shown to your AI.", "页面需要你（登录或 CAPTCHA）时，AI 会先问你；你准备好后窗口才出现，处理完自动隐藏。登录一次，后续任务复用；保存的密码在本机填写，AI 看不到。")],
-      limit: tr("Uses its own sign-ins. OTP and supported CAPTCHAs need website approval in Dashboard. Unsupported challenges and payment details need you.", "使用独立的登录状态。OTP 和支持的 CAPTCHA 需在 Dashboard 按网站授权；不支持的挑战和支付信息仍需你处理。"),
+      limit: tr("Uses its own sign-ins. Complete sign-in, verification codes and CAPTCHAs in the task browser yourself, then your AI can continue. Payment details also need you.", "使用独立的登录状态。登录、验证码和人机验证需要你在任务浏览器中完成，完成后 AI 可以继续。支付信息也需要你处理。"),
       href: "/docs/mcp#browser-runner", cta: tr("Runner setup", "查看 Runner 设置"),
     },
     {

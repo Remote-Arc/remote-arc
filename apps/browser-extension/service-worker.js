@@ -642,7 +642,7 @@ async function executeTool(tool, args, policy = {}) {
   if (response?.error) throw new Error(response.error);
   if (tool==="browser_read_page") {
     const auth=policy.browserAuth||{};
-    response.authentication={otp:auth.otp===true && Array.isArray(auth.origins) && auth.origins.includes(originOf(tab.url||"")) && await allowCodes(),captcha:false,mailbox:auth.mailbox||"",approval_location:"Dashboard → device → Browser authentication"};
+    response.authentication={otp:auth.otp===true && Array.isArray(auth.origins) && auth.origins.includes(originOf(tab.url||"")) && await allowCodes(),captcha:false,mailbox:auth.mailbox||"",approval_location:"user takeover"};
   }
   return response;
 }

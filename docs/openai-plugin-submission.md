@@ -51,7 +51,7 @@ Use Remote Arc only with computers, files, accounts, and services you own or are
 | `shared_tab_list` | true | false | false | Lists metadata for explicitly shared browser tabs without navigating or modifying them. |
 | `shared_tab_read` | true | false | false | Reads a simplified snapshot of an explicitly shared page, and optionally the selected text, visible links or one table, without page interaction. |
 | `shared_tab_click` | false | true | true | Clicks one element from a fresh shared-tab snapshot only after the user enables interaction for that tab; the click may navigate, submit, or trigger an external action. |
-| `shared_tab_fill` | false | true | false | Fills a control from a fresh shared-tab snapshot after per-tab interaction opt-in. OTP sign-in/registration requires per-site Dashboard approval and the extension code switch; password, payment-card, CAPTCHA response token and file fields stay blocked. |
+| `shared_tab_fill` | false | true | false | Fills a control from a fresh shared-tab snapshot after per-tab interaction opt-in. OTP sign-in/registration and CAPTCHA challenges require user takeover; saved Dashboard approvals are inactive and cannot enable authentication automation. Password, payment-card, CAPTCHA response token and file fields stay blocked. |
 | `list_directory` | true | false | false | Retrieves a directory listing from a private paired computer without modifying filesystem state. |
 | `read_file` | true | false | false | Retrieves file content from a private paired computer without modifying the file. |
 | `read_binary_file` | true | false | false | Reads a bounded binary chunk from an authorized paired device without modifying it. |
@@ -74,19 +74,37 @@ Use Remote Arc only with computers, files, accounts, and services you own or are
 | `submit_goal_decision` | false | true | true | Persists an authorized revision-checked next decision which can cause device or external changes; matching idempotency keys prevent duplicate acceptance. |
 | `manage_automation` | false | false | true | Pauses, resumes or cancels account-owned work; cancellation can interrupt its managed process. |
 | `list_apps` | true | false | false | Lists the user's own connected App accounts and searches the static App action catalog. Never runs an action or contacts a provider. |
-| `run_app_read_action` | true | true | false | Runs one of the catalog's read operations, each listed individually in the input schema. Retrieval only; some reads (X posts) return public content. |
-| `run_app_write_action` | false | true | true | Runs one of the catalog's write operations, each listed individually in the input schema: sends, posts, creates, updates or deletes in the user's connected account. Each requestId runs at most once. |
+| `run_app_read_action` | true | true | false | Runs one of the catalog's read operations, each listed by ID in the input schema's `action` enum. Retrieval only; some reads (X posts) return public content. |
+| `run_app_write_action` | false | true | true | Runs one of the catalog's write operations, each listed by ID in the input schema's `action` enum: sends, posts, creates, updates or deletes in the user's connected account. Each requestId runs at most once. |
 
 ### Connected App tools (resubmission, 2026-10-30)
 
-The first App submission used `list_apps` plus a generic `call_app(operation, arguments)` executor. Review rejected both because operations were "not individually exposed". The replacement keeps one MCP URL and a small fixed tool set but publishes every operation up front:
+The first App submission used `list_apps` plus a generic `call_app(operation, arguments)` executor. The automated scan reported findings that operations were "not individually exposed"; it was not a manual-review rejection. The replacement keeps one MCP URL and a small fixed tool set and lists every operation up front:
 
-- `run_app_read_action` and `run_app_write_action` each have an `operation` input whose schema is a closed `oneOf` with one variant per catalog operation (180 reads and 164 writes in the current release). Each variant pins `action` to a constant ID such as `gmail.messages.send`, carries its own description and the operation's exact, strict argument schema. Nothing is fetched at runtime to learn an operation or its arguments, and no operation outside `tools/list` can run.
+- `run_app_read_action` and `run_app_write_action` each have an `operation` input with a closed `action` enum of every catalog operation ID it can run (180 reads and 164 writes in the current release), such as `gmail.messages.send`. No operation outside `tools/list` can run.
+- Argument schemas are not inlined in `tools/list`. Inlining every operation's schema made the App tools about 170 KB (roughly 44k model tokens) of a 234 KB `tools/list`, paid by every user in every conversation. `list_apps` returns the exact schema for up to 10 action IDs (`actions: [id]`), and the server validates arguments strictly against the same catalog schema before dispatch; a mismatch returns `INVALID_APP_ARGUMENTS` with that schema. The call shape `{connectionId, requestId, operation: {action, arguments}}` is unchanged.
 - Reads and writes are separate tools, so each tool's annotations hold for every operation it can run. The read tool's schema contains no write operation, and the server rejects any mismatch before dispatch.
 - `list_apps` is optional and read-only: it returns the user's connection IDs and a keyword search over the same catalog.
 - Existing enforcement is unchanged: connection ownership, a provider match between action and connection, `apps:read`/`apps:write` OAuth scopes, provider grants, strict argument validation and at-most-once `requestId` replay.
 
 The reviewer account has no connected Apps, so App tools return connection errors in review unless a reviewer connects their own account. State this in the review notes.
+
+#### Manual review notes (paste into the submission)
+
+> **Connected App tools: list_apps, run_app_read_action, run_app_write_action**
+>
+> The earlier version of these tools received an automated scan finding that App operations were "not individually exposed". It was never manually reviewed. This version addresses that finding:
+>
+> 1. **Every operation is individually listed in tools/list.** `run_app_read_action` has a closed `action` enum of all 180 read operation IDs, and `run_app_write_action` has a closed enum of all 164 write operation IDs (for example `gmail.messages.get`, `gmail.messages.send`). Nothing outside these enums can run. There is no generic executor and no operation is fetched or added at runtime.
+> 2. **Reads and writes are separate tools**, so the annotations are accurate for every operation each tool can run. The read tool is `readOnlyHint: true` and can only run read operations. The write tool is `destructiveHint: true`, `openWorldHint: true`, and is only for changes the user explicitly asked for.
+> 3. **Exact argument schemas come from a read-only lookup.** `list_apps` with `actions: ["<id>"]` returns each operation's description and exact JSON schema. We moved per-operation schemas out of tools/list because inlining all 344 of them made tools/list about 234 KB (roughly 55k model tokens) for every user in every conversation. It is now about 73 KB (roughly 15k tokens). The tool names, call shape and behavior are unchanged.
+> 4. **The server enforces the same schemas.** Arguments are validated strictly against the operation's catalog schema before anything is sent to the provider. A mismatch returns `INVALID_APP_ARGUMENTS` with the exact schema and nothing is dispatched.
+> 5. **Unchanged safeguards:** the connection must belong to the signed-in user and match the action's provider. Incremental OAuth scopes are required (`apps:read` for reads, `apps:read` + `apps:write` for writes). Provider permissions are limited to what the user granted, and each write `requestId` runs at most once (retries return the stored result).
+>
+> **How to check in review:** the reviewer account has no connected third-party Apps.
+> - Ask "Which apps can Remote Arc use to send an email?" The model calls `list_apps` with a `use_case` and gets matching action IDs such as `gmail.messages.send`.
+> - Ask "What arguments does gmail.messages.send need?" The model calls `list_apps` with `actions: ["gmail.messages.send"]` and gets the exact schema.
+> - Calling `run_app_read_action` or `run_app_write_action` from this account returns `app_connection_not_found`, because no account is connected. Nothing reaches a provider.
 
 Production tools/list was independently checked on 2026-10-05 and exposed 31 hosted MCP tools. The reviewer fixture intentionally advertises eight representative device tools for deterministic review: directory/file reads, file metadata, process listing, a safe command allowlist, sandboxed write/edit, and undo. Browser reads and production managed-process controls remain declared and annotated but are not required in the five representative positive tests.
 

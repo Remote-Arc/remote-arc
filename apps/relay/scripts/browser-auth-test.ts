@@ -47,16 +47,22 @@ for(const source of [null,"https://evil.test"]){
  assert.equal((await handleBrowserAuth(request("POST",approved,"owner",source),env)).status,403);
 }
 assert.equal((await handleBrowserAuth(request("POST",{...approved,origins:["https://www.seek.co.nz/path"]}),env)).status,400);
-assert.equal((await handleBrowserAuth(request("POST",approved),env)).status,200);
-assert.deepEqual(await (await handleBrowserAuth(request(),env)).json(),approved);
+// Simulate an approval saved before the UI and authorization were retired.
+sql.prepare("UPDATE devices SET browser_auth_permissions=? WHERE id='device-owner'").run(JSON.stringify(approved));
+assert.equal((await handleBrowserAuth(request("POST",approved),env)).status,410);
+assert.deepEqual(await (await handleBrowserAuth(request("POST",approved),env)).json(),{error:"browser_auth_disabled"});
+assert.deepEqual(await (await handleBrowserAuth(request(),env)).json(),NO_BROWSER_AUTH);
+assert.deepEqual(await browserAuthForDevice(env,"owner","device-owner"),NO_BROWSER_AUTH);
+assert.deepEqual(JSON.parse(sql.prepare("SELECT browser_auth_permissions FROM devices WHERE id='device-owner'").get()!.browser_auth_permissions as string),approved,"Legacy data is retained, but cannot grant authority");
 assert.deepEqual(await browserAuthForDevice(env,"other","device-owner"),NO_BROWSER_AUTH);
 const identity={userId:"owner",clientId:"dashboard",grantId:null,scopes:["browser:read","browser:interact"]} as any;
 await callDevice(env,identity,"device-owner","browser_runner_snapshot",{session_id:"task",browserAuth:{otp:true}});
-assert.deepEqual(dispatches.at(-1).policy.browserAuth,approved);
+assert.deepEqual(dispatches.at(-1).policy.browserAuth,NO_BROWSER_AUTH,"Internal calls must not inherit legacy approvals or model arguments");
 assert.equal((await handleBrowserAuth(request("POST",NO_BROWSER_AUTH),env)).status,200);
 await callDevice(env,identity,"device-owner","browser_runner_snapshot",{session_id:"task",browserAuth:approved});
 assert.deepEqual(dispatches.at(-1).policy.browserAuth,NO_BROWSER_AUTH,"revocation must be fresh, not from tool args");
-assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE event_type='device.browser_auth_updated'").get()!.n,2);
+assert.deepEqual(JSON.parse(sql.prepare("SELECT browser_auth_permissions FROM devices WHERE id='device-owner'").get()!.browser_auth_permissions as string),NO_BROWSER_AUTH);
+assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE event_type='device.browser_auth_updated'").get()!.n,1);
 const image={frame:"f1",mimeType:"image/png",data:"YWJj"};
 const converted=extractCaptchaImages({authentication:{captcha:true},captcha_images:[image]});
 assert.equal(converted.images.length,1);assert(!("captcha_images" in converted.clean));
@@ -72,4 +78,4 @@ const old=await registry.fetch(new Request("https://registry/call",{method:"POST
 assert.equal(old.status,409);
 assert.match((await old.json() as any).error,/BROWSER_AUTH_UPDATE_REQUIRED/);
 assert.equal(sends,0,"old clients must not receive fills that ignore approval");
-sql.close();console.log("Browser authentication: approval, origin validation, ownership, CSRF, revocation, dispatch policy, audit and image output passed.");
+sql.close();console.log("Browser authentication: legacy grants inactive, new approvals refused, ownership, CSRF, revocation, dispatch policy and retained engine helpers passed.");

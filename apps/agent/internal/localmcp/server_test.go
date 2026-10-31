@@ -3,6 +3,7 @@ package localmcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -74,7 +75,7 @@ func TestRunCancelledContextClosesExecutionCore(t *testing.T) {
 	core := execution.New("safe")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := Run(ctx, core, "test"); err == nil {
-		t.Fatal("cancelled local MCP server should exit with an error")
+	if err := Run(ctx, core, "test"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled local MCP server should preserve context cancellation: %v", err)
 	}
 }

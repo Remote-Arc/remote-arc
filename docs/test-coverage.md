@@ -24,13 +24,17 @@ The measured baseline is [master c4bc77f / CI 40998299997](https://github.com/Re
 | --- | ---: | --- |
 | Apps core | 99.49% | 90% for every metric and file |
 | Go Execution Core | 90.88% | 90% module statements; protocol 90% |
-| Go Agent | 78.62% | 78% module statements; local MCP 90% |
+| Go Agent | 78.62% | 90% module statements; local MCP 90% |
 | Relay | 89.24%* | 88% lines/statements, 82% branches, 95% functions |
 | TypeScript/TSX | 50.25% | 50% lines/statements, 80% branches, 76% functions |
 
 \* Relay was re-measured after `coverage:relay` switched from the security suite alone to `test:coverage`: the security suite plus the other relay suites CI already runs, with the goal harnesses importing the real sources. Its earlier baseline was 63.76%.
 
 Combined baseline: **54.41% (32,793 / 60,267 statements)**. Current values continue updating in the live report; this table records the baseline used to raise the regression floors.
+
+The Agent test expansion measured **90.33% (6,756 / 7,479 statements)** locally on Linux with `node scripts/go-coverage.mjs --target`. The same run measured Execution Core at **93.26% (2,034 / 2,181)**. These local results do not replace the published default-branch measurement above. Both complete Go modules now enforce the 90% target in CI, using exact counts before rounding display values.
+
+Agent coverage includes command entrypoints, real temporary files and Git repositories, owned child-process shutdown, authenticated local HTTP/WebSocket exchanges, browser protocol failure handling, and H264 media received through real FFmpeg/WebRTC peers. The coverage job installs FFmpeg so the media transport test runs. Protocol fixtures simulate the browser or external client boundary while leaving dispatch, authorization, storage and recovery logic intact. Linux coverage does not qualify Windows/macOS native focus behavior; that still requires tests on those desktops.
 
 `scripts/coverage-policy.mjs` owns the phased floors. Existing Apps and Core 90% gates remain. The Go Agent, Relay and full TypeScript floors have been raised from their earlier lower settings. Source inclusion has not been narrowed.
 

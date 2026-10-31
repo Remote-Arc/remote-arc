@@ -95,6 +95,36 @@ Reference: [register an application](https://learn.microsoft.com/en-us/graph/aut
 
 All configured platform client ID/secret pairs and the token vault key are server-side configuration. Never commit them, put them in browser variables, send them through an AI prompt, or ask end users to supply them. Enter credentials through the deployment platform's secret mechanism; the client IDs can also be stored there for consistent operations.
 
+### Adding a client
+
+Keep App OAuth clients only as Cloudflare Worker secrets, not GitHub secrets, so there is one place to manage them. From a machine where Wrangler is signed in to the Remote Arc Cloudflare account, run these in `apps/relay` and paste each value at the prompt so it never appears in shell history or logs:
+
+```sh
+pnpm exec wrangler secret put APP_<PLATFORM>_CLIENT_ID
+pnpm exec wrangler secret put APP_<PLATFORM>_CLIENT_SECRET
+```
+
+Vercel also needs `APP_VERCEL_INTEGRATION_SLUG`. Check `/api/apps/status` afterwards; the provider reports `ready: true` once its pair is present.
+
+`APP_META_GRAPH_VERSION` is a plain Worker variable in `wrangler.jsonc` (currently `v26.0`). With it set, WhatsApp Business is ready, because users connect it with their own Cloud API credentials. Facebook, Instagram and Meta Ads also need the Meta OAuth client.
+
+### Remaining platforms by effort (as of 2026-10-31)
+
+Production `/api/apps/status` reports 14 providers ready: GitHub, Slack, Notion, Runway and the ten Google providers (Gmail, Calendar, Drive, Docs, Sheets, Slides, YouTube, Search Console, Analytics and Ads, which share one client). The rest need a client registered in each provider's developer console with the exact callbacks from the generated pack.
+
+| Effort | Platform (providers it unlocks) | What the registration involves |
+| --- | --- | --- |
+| Self-serve, minutes | Atlassian (Jira, Confluence) | OAuth 2.0 (3LO) app in the Atlassian developer console; enable sharing for other sites. |
+| Self-serve, minutes | Linear, Asana, Airtable, Supabase | OAuth application in the provider's developer settings. |
+| Self-serve, minutes | Dropbox | App Console app; development mode has a user cap until production approval. |
+| Self-serve, minutes | HubSpot | Public app in a developer account; Marketplace listing is optional. |
+| Self-serve, minutes | Vercel | Integration in the Vercel dashboard; also set `APP_VERCEL_INTEGRATION_SLUG`. |
+| Medium | Microsoft (Outlook, Outlook Calendar, OneDrive, Excel, Teams, To Do) | Entra registration as above. One client unlocks six providers; work tenants may require admin consent or publisher verification. |
+| Medium | Salesforce | Connected or external client app in a Salesforce org. |
+| Review required | Meta (Facebook, Instagram, Meta Ads) | App Review and business verification for most permissions. |
+| Review required | LinkedIn, Shopify | Product access approval (LinkedIn) or app distribution review (Shopify). |
+| Paid API | X | Developer project with paid API access; calls are billed to Remote Arc. |
+
 `APP_TOKEN_KEY` must be base64 encoding of 32 cryptographically random bytes. Generate it in the deployment environment and save it securely without printing it into chat or a build log. Existing encrypted connection and approval records depend on it; changing it without a migration invalidates those records. Separate environments require separate keys.
 
 `ENABLE_APPS=1` enables the Apps runtime, which is already deployed. A provider still reports `ready: false` and cannot authorize until its required credentials and platform settings exist. Registering an OAuth client alone does not verify or activate a usable connection. Apply credentials through the protected deployment workflow without modifying or rotating `APP_TOKEN_KEY`.

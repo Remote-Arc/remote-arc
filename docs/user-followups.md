@@ -16,22 +16,22 @@ The page opens with an activation funnel over all users: registered, computer pa
 
 ## Individual emails
 
-Choose an English or Chinese template, personalize it, save the draft and review the exact saved HTML before sending. Saved drafts remain editable using revision checks; stale browser tabs cannot replace or send a newer version. The send dialog displays recipient, From, Reply-To and subject, and records an existing support request or agreement in place when needed.
+Choose an English or Chinese template, personalize it, save the draft and review the exact saved HTML before sending. Saved drafts remain editable using revision checks; stale browser tabs cannot replace or send a newer version. The send dialog displays recipient, From, Reply-To and subject, and optionally records an existing support request or agreement. Leaving the contact basis blank does not block sending and does not create a consent record.
 
 Templates include finishing MCP installation after device pairing, first connection, first result, feedback, after-support follow-up and workflow help. Installation links go directly to the official ChatGPT, Claude and Cursor guides in the chosen language.
 
 ## Bulk follow-ups
 
-1. Select users, then choose **Bulk email**. Pick the email language/template, customize subject, message and appearance, and choose the recorded contact basis for this group. Personalization supports `{{name}}`, `{{setupUrl}}`, `{{feedbackUrl}}` and the template's official client installation URLs. Switching a template asks before replacing edited text.
-2. **Review recipients & emails** prepares a durable draft batch without sending. The server resolves every address, creates an immutable personalized email per eligible user and reports exclusions. Preview each recipient's exact saved HTML. Existing opt-outs, missing basis, unresolved deliveries and recent contact remain visible exclusions.
-3. **Confirm & send** explicitly queues the reviewed batch. A recorded group support request/agreement is applied atomically at confirmation. Repeated confirmation does not duplicate the task. Each recipient receives a separate email with a personal feedback and unsubscribe link; recipient addresses are never shared in To/CC.
+1. Select users, then choose **Bulk email**. Pick the email language/template, customize subject, message and appearance, and optionally record a contact basis for this group. It can be left blank. Personalization supports `{{name}}`, `{{setupUrl}}`, `{{feedbackUrl}}` and the template's official client installation URLs. Switching a template asks before replacing edited text.
+2. **Review recipients & emails** prepares a durable draft batch without sending. The server resolves every address, creates an immutable personalized email per eligible user and reports exclusions. Preview each recipient's exact saved HTML. Existing opt-outs, unresolved deliveries and recent contact remain visible exclusions. Missing contact-basis notes do not exclude a selected registered user.
+3. **Confirm & send** explicitly queues the reviewed batch. An explicitly selected group support request/agreement is applied atomically at confirmation; leaving it blank preserves existing records. Repeated confirmation does not duplicate the task. Each recipient receives a separate email with a personal feedback and unsubscribe link; recipient addresses are never shared in To/CC.
 4. Sending continues after the page closes. **Bulk history** shows prepared drafts, progress, individual results and saved previews. A prepared draft can be reviewed and confirmed later. **Cancel remaining** cancels emails that have not started; an in-flight submission can still finish. Reopening or refreshing the page never starts a new batch by itself.
 
 Batch-owned emails also appear in individual contact history. Manage them through Bulk history; they cannot be edited or dispatched through individual-draft routes. To change a prepared batch, return to editing, which cancels the old snapshot and prepares a new one.
 
 ## Delivery behavior
 
-The server rechecks recipient address, opt-out, contact basis, cooldown and operator access at dispatch. An atomic claim and per-message provider idempotency key prevent duplicate sends. The 72-hour per-user cooldown applies across individual and bulk sends.
+The server rechecks recipient address, opt-out, cooldown and operator access at dispatch. An atomic claim and per-message provider idempotency key prevent duplicate sends. The 72-hour per-user cooldown applies across individual and bulk sends.
 
 A global D1 lease serializes background workers. The existing one-minute cron drains the durable queue; an explicit queue action also warms the worker through `waitUntil`. Work is bounded per invocation and paced at one provider call per second. Explicit rate-limit rejections receive delayed, bounded retries using the same saved content/key. Timeouts, ambiguous provider failures and interrupted in-flight sends become unknown and are never blindly resent. Revoked operator access, changed sender configuration and changed recipients are recorded as exclusions.
 

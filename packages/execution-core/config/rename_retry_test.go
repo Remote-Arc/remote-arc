@@ -43,3 +43,33 @@ func TestRetryRename(t *testing.T) {
 		t.Fatalf("other failures are immediate: calls=%d waits=%v err=%v", calls, waits, e)
 	}
 }
+
+func TestRetryReadFile(t *testing.T) {
+	blocked := errors.New("blocked")
+	isBlocked := func(e error) bool { return errors.Is(e, blocked) }
+	attempt := func(failures int, failure error) (int, []time.Duration, []byte, error) {
+		calls := 0
+		var waits []time.Duration
+		b, e := retryReadFile(func(string) ([]byte, error) {
+			calls++
+			if calls <= failures {
+				return nil, failure
+			}
+			return []byte("data"), nil
+		}, isBlocked, func(d time.Duration) { waits = append(waits, d) }, "path")
+		return calls, waits, b, e
+	}
+	if calls, waits, b, e := attempt(0, nil); e != nil || calls != 1 || len(waits) != 0 || string(b) != "data" {
+		t.Fatalf("clear path: calls=%d waits=%v b=%q err=%v", calls, waits, b, e)
+	}
+	if calls, waits, b, e := attempt(2, blocked); e != nil || calls != 3 || len(waits) != 2 || string(b) != "data" {
+		t.Fatalf("brief writer: calls=%d waits=%v b=%q err=%v", calls, waits, b, e)
+	}
+	if calls, waits, _, e := attempt(100, blocked); !errors.Is(e, blocked) || calls != 8 {
+		t.Fatalf("stuck writer must give up: calls=%d waits=%v err=%v", calls, waits, e)
+	}
+	other := errors.New("not found")
+	if calls, waits, _, e := attempt(100, other); !errors.Is(e, other) || calls != 1 || len(waits) != 0 {
+		t.Fatalf("other failures are immediate: calls=%d waits=%v err=%v", calls, waits, e)
+	}
+}

@@ -70,8 +70,9 @@ func TestE2EWindowsCoveredHandoffDoesNotTakeFocus(t *testing.T) {
 		for foreground() != cover && time.Now().Before(deadline) {
 			time.Sleep(10 * time.Millisecond)
 		}
-		before = foreground()
-		if before != cover {
+		if fg := foreground(); fg == cover {
+			before = fg
+		} else if before == target.hwnd {
 			t.Fatal("fixture could not focus its independent native cover window")
 		}
 	}

@@ -33,9 +33,9 @@ func Dir() string           { return filepath.Join(Home(), ".remotearc") }
 func Load() (Config, error) { return LoadAt(Dir()) }
 func LoadAt(dir string) (Config, error) {
 	var c Config
-	b, e := os.ReadFile(filepath.Join(dir, "config.json"))
+	b, e := readConfigFile(filepath.Join(dir, "config.json"))
 	if errors.Is(e, os.ErrNotExist) {
-		b, e = os.ReadFile(filepath.Join(filepath.Dir(dir), ".remote-link", "config.json"))
+		b, e = readConfigFile(filepath.Join(filepath.Dir(dir), ".remote-link", "config.json"))
 	}
 	if e != nil {
 		return c, e
@@ -145,6 +145,22 @@ func retryRename(rename func(string, string) error, blocked func(error) bool, sl
 		e := rename(from, to)
 		if e == nil || !blocked(e) || delay > 640*time.Millisecond {
 			return e
+		}
+		sleep(delay)
+	}
+}
+
+// An atomic replace only holds the target for a moment, so wait briefly
+// instead of failing concurrent tool validation.
+func readConfigFile(path string) ([]byte, error) {
+	return retryReadFile(os.ReadFile, renameBlocked, time.Sleep, path)
+}
+
+func retryReadFile(readFile func(string) ([]byte, error), blocked func(error) bool, sleep func(time.Duration), path string) ([]byte, error) {
+	for delay := 10 * time.Millisecond; ; delay *= 2 {
+		b, e := readFile(path)
+		if e == nil || !blocked(e) || delay > 640*time.Millisecond {
+			return b, e
 		}
 		sleep(delay)
 	}

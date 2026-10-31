@@ -6,7 +6,7 @@ async function compose(page:import('@playwright/test').Page,names=['Alex Chen','
  for(const name of names)await page.getByRole('checkbox',{name:new RegExp('^(Select |选择 )'+name+'$')}).check();
  await page.getByRole('button',{name:/^(Bulk email|群发邮件)/}).click();
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();
- await dialog.getByRole('combobox',{name:/Bulk contact basis|群发联系依据/}).selectOption('support');
+ await expect(dialog.getByRole('combobox',{name:/Bulk contact basis|群发联系依据/})).toHaveValue('');
  await dialog.getByRole('textbox',{name:/Bulk subject|群发主题/}).fill('A next step for {{name}}');
  await dialog.getByRole('textbox',{name:/Bulk message|群发正文/}).fill('Hello {{name}},\n\nHere is your setup guide: {{setupUrl}}\nSend us your update: {{feedbackUrl}}');
  return dialog;
@@ -36,6 +36,7 @@ test('Bulk review personalizes each recipient and background results survive pag
  await expect(page.locator('.followupBatchDetailHeader .followupStatus')).toContainText(/Completed|已完成/,{timeout:12000});
  await expect(page.locator('.followupBatchHistory tbody tr')).toHaveCount(2);
  await expect(page.locator('.followupBatchHistory tbody')).toContainText('A next step for Alex Chen');await expect(page.locator('.followupBatchHistory tbody')).toContainText('A next step for Taylor');
+ for(const id of ['preview-followup-user','preview-followup-active'])expect(await page.evaluate(async id=>{const value=await(await fetch('/api/admin/followups/'+id)).json();return value.contact.consent_at;},id)).toBeNull();
 });
 
 test('Bulk preview explains excluded users and preserves content when returning to editing',async({page})=>{

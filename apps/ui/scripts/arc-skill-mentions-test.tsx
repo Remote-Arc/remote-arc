@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import React,{useRef,useState} from 'react';
 // @ts-ignore react-test-renderer has no declarations in this workspace.
 import {act,create} from 'react-test-renderer';
-import {skillMentionAt,useArcSkillMentions} from '../src/arc-skill-mentions.js';
+import {skillMentionAt,useArcSkillMentions} from '../src/features/arc/composer/arc-skill-mentions.js';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;
 assert.equal(skillMentionAt('user@example.com',16),null);
 assert.deepEqual(skillMentionAt('Use @review please',11),{start:4,end:11,query:'review'});

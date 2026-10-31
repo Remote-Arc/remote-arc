@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { recoveryConfirmed, waitForAgentOffline, waitForRecoveryState } from "../src/background-recovery.ts";
+import { recoveryConfirmed, waitForAgentOffline, waitForRecoveryState } from "../src/features/dashboard/devices/background-recovery.ts";
 
 const device = (enabled, active, status = "online") => ({
   id: "mac-1", status, background_enabled: enabled, background_guard_active: active,

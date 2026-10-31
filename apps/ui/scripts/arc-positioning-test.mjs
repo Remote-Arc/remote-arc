@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ArcWhy } from "../src/arc-why.tsx";
+import { ArcWhy } from "../src/features/marketing/arc/arc-why.tsx";
 
 // Assert the rendered public contract, rather than a source-text pattern or
 // full markup snapshot. Both locales must distinguish what users can use now.

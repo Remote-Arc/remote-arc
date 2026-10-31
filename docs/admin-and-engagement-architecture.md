@@ -6,7 +6,7 @@ Status: **feature branch, not deployed**. This document defines stable module an
 
 | Host | Audience | Allowed work | Module |
 |---|---|---|---|
-| `remotearc.app` | public | Website, Arc early-access and feedback submissions | `apps/ui/src/public-engagement.tsx` → `POST /api/public/engagement` |
+| `remotearc.app` | public | Website, Arc early-access and feedback submissions | `apps/ui/src/features/marketing/public-engagement.tsx` → `POST /api/public/engagement` |
 | `mcp.remotearc.app` | signed-in customers and MCP providers | Devices, tools, tasks, grants, user billing when launched | Existing Dashboard + relay |
 | **`admin.remotearc.app`** | `role=admin` only | Company health, operational metrics, users, plans/credits, submitted leads, Cloudflare costs | `apps/ui/src/admin` + admin API |
 | `remote-link-relay` Worker (internal implementation today) | service backend | Routing by exact host + contract-specific API handlers | `apps/relay/src/index.ts`, `src/domains/engagement.ts` |

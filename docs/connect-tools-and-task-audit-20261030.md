@@ -37,9 +37,9 @@ Free 每月仍为 **10,000 次工具调用**。现有额度计量方式、设备
 
 相关位置：
 
-- [路由映射](../apps/ui/src/dashboard-workspaces.ts)
-- [独立 Connect 任务页面](../apps/ui/src/connect-tasks.tsx)
-- [Arc 任务页面](../apps/ui/src/arc-workspace.tsx)
+- [路由映射](../apps/ui/src/lib/dashboard-workspaces.ts)
+- [独立 Connect 任务页面](../apps/ui/src/features/tasks/connect-tasks.tsx)
+- [Arc 任务页面](../apps/ui/src/features/arc/workspace/arc-workspace.tsx)
 - [Arc 专属任务查询](../apps/relay/src/arc/arc-work.ts)
 
 ### 持久状态不能保证进程和输出跨重启保留

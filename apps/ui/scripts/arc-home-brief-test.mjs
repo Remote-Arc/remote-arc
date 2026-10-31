@@ -3,7 +3,7 @@ import { registerHooks } from 'node:module';
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 registerHooks({load(url, context, next) { return url.endsWith('.css') ? {format:'module',source:'',shortCircuit:true} : next(url, context); }});
-const { ArcHomeBrief } = await import('../src/arc-home-brief.tsx');
+const { ArcHomeBrief } = await import('../src/features/arc/chat/arc-home-brief.tsx');
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const original = globalThis.fetch;
 let requests = 0, fail = false, lastSignal, reviewed, navigated;

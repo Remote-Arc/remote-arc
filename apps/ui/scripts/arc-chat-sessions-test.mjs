@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   arcChatTitle, arcChatStorageKey, loadArcChatSessions, saveArcChatSessions,
-} from "../src/arc-chat-sessions.ts";
+} from "../src/features/arc/chat/arc-chat-sessions.ts";
 
 function fakeStorage() {
   const data = new Map();

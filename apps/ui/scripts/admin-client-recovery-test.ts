@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { recoverLegacyAdminClient, type AdminClientRecovery } from "../src/admin/admin-client-recovery.js";
+import { recoverLegacyAdminClient, type AdminClientRecovery } from "../src/features/admin/admin-client-recovery.js";
 
 const origin = "https://admin.remotearc.app";
 const calls: string[] = [];

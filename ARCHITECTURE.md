@@ -6,7 +6,7 @@ code. Deeper design contracts are linked at the end.
 
 > Keep it current. When a change adds or moves a component, request path, data
 > store, host, release step or contributor rule described here, update this file
-> and the website architecture section (`apps/ui/src/docs-system-overview.tsx`)
+> and the website architecture section (`apps/ui/src/features/docs/docs-system-overview.tsx`)
 > in the same PR. `pnpm docs:architecture:check` fails CI when the facts it can
 > verify (tool count, plan IDs, hosts, workflow name) drift from the source.
 
@@ -102,18 +102,36 @@ extension open authenticated outbound WebSockets to their owner's Durable Object
 | Slack, follow-ups, website | `src/slack/`, `src/followups/`, `src/site/` | `slack-bot-events.ts`, `user-followups.ts`, `seo.ts` |
 | Schema | `apps/relay/migrations/*.sql` | D1, additive, numbered |
 
-### Dashboard map (`apps/ui/src`)
+### Website and dashboard source (`apps/ui/src`)
 
-`apps/ui/src/dashboard.tsx` is the Connect and Arc dashboard shell: sidebar,
+`apps/ui/src` is grouped by feature. `main.tsx` stays the only entry point: it
+imports the global stylesheets in cascade order, picks a route and mounts the app.
+
+| Folder | Holds |
+| --- | --- |
+| `app/` | App-wide providers and shell services: `i18n.tsx`, `theme.tsx`, `product-pwa.tsx` |
+| `components/` | UI shared across features: `public-layout.tsx`, `product-icon.tsx`, `brand-wordmark.tsx`, `workspace-loading.tsx`, `install-commands.tsx` |
+| `config/`, `types/`, `data/`, `lib/` | Runtime config, shared types, the App catalog JSON, and framework-free helpers such as `apps/ui/src/lib/marketing-paths.ts` and `apps/ui/src/lib/dashboard-workspaces.ts` (route maps) |
+| `styles/` | Global stylesheets imported once by `main.tsx` |
+| `preview/` | The `VITE_UI_PREVIEW` fetch mock and its fixtures; production pages never import it |
+| `features/marketing/` | Public website: `home/` (landing page), `arc/` (Arc product page), `use-cases/`, plus pricing, trust, releases and integrations pages |
+| `features/blog/`, `features/docs/`, `features/install/` | Blog articles, the docs portal and tool reference, client and native install guides |
+| `features/auth/` | Sign-in, OAuth consent and device pairing |
+| `features/dashboard/` | Connect and Arc dashboard shell (see below) |
+| `features/arc/` | Arc agent: `chat/`, `composer/`, `skills/`, `teams/`, `workspace/` |
+| `features/apps/`, `features/billing/`, `features/security/`, `features/settings/`, `features/tasks/`, `features/browser-runner/` | Product areas used by the dashboard |
+| `features/admin/` | `admin.remotearc.app` console: `events/`, `followups/`, `payments/` |
+
+`apps/ui/src/features/dashboard/dashboard.tsx` is the Connect and Arc dashboard shell: sidebar,
 header and tab switching. Its state and actions live in hooks under
-`apps/ui/src/dashboard/`, and each tab or device panel is its own component.
+`apps/ui/src/features/dashboard/hooks/`, and each tab or device panel is its own component.
 
 | Concern | Files |
 | --- | --- |
-| State and actions | `apps/ui/src/dashboard/use-dashboard-model.ts` composes `apps/ui/src/dashboard/use-dashboard-dialogs.ts`, `apps/ui/src/dashboard/use-dashboard-security.ts` and `apps/ui/src/dashboard/use-device-actions.ts`, which uses `apps/ui/src/dashboard/use-device-settings.ts` and `apps/ui/src/dashboard/use-device-activity.ts` |
-| Tabs | `apps/ui/src/dashboard/overview-view.tsx`, `devices-view.tsx`, `connect-view.tsx`, `security-view.tsx`, `monitor-view.tsx`, `settings-view.tsx` |
-| Device card | `apps/ui/src/dashboard/device-card.tsx` with `device-access-panel.tsx`, `device-tasks-panel.tsx`, `device-activity-panel.tsx` |
-| Dialogs | `apps/ui/src/dashboard/dashboard-overlays.tsx` |
+| State and actions | `apps/ui/src/features/dashboard/hooks/use-dashboard-model.ts` composes `apps/ui/src/features/dashboard/hooks/use-dashboard-dialogs.ts`, `apps/ui/src/features/dashboard/hooks/use-dashboard-security.ts` and `apps/ui/src/features/dashboard/hooks/use-device-actions.ts`, which uses `apps/ui/src/features/dashboard/hooks/use-device-settings.ts` and `apps/ui/src/features/dashboard/hooks/use-device-activity.ts` |
+| Tabs | `apps/ui/src/features/dashboard/views/overview-view.tsx`, `devices-view.tsx`, `connect-view.tsx`, `security-view.tsx`, `monitor-view.tsx`, `settings-view.tsx` |
+| Device card | `apps/ui/src/features/dashboard/devices/device-card.tsx` with `device-access-panel.tsx`, `device-tasks-panel.tsx`, `device-activity-panel.tsx` |
+| Dialogs | `apps/ui/src/features/dashboard/views/dashboard-overlays.tsx` |
 
 ## Request paths
 

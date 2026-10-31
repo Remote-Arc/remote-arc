@@ -6,7 +6,7 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const architecture = read("ARCHITECTURE.md");
 const readme = read("README.md");
-const overview = read("apps/ui/src/docs-system-overview.tsx");
+const overview = read("apps/ui/src/features/docs/docs-system-overview.tsx");
 const failures = [];
 const expect = (condition, message) => { if (!condition) failures.push(message); };
 

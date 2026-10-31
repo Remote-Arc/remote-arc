@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
-import { parseSecurityState, parsePendingApprovals, parsePersistentApprovals } from "../src/security-state.ts";
+import { parseSecurityState, parsePendingApprovals, parsePersistentApprovals } from "../src/features/security/security-state.ts";
 
 // Exercise the real preview fixture, rather than duplicating its response here.
-const source = (await readFile(new URL("../src/preview.ts", import.meta.url), "utf8"))
+const source = (await readFile(new URL("../src/preview/preview.ts", import.meta.url), "utf8"))
   .replaceAll("import.meta.env.VITE_UI_PREVIEW", '"1"')
   .replaceAll("'@remotearc/protocol'", JSON.stringify(new URL("../../../packages/protocol/src/index.ts", import.meta.url).href))
   // A data URL has no directory for relative imports. Keep the real catalog import.
-  .replaceAll('"./app-directory.json"', JSON.stringify(new URL("../src/app-directory.json", import.meta.url).href))
-  .replaceAll('"./arc-preview.js"', JSON.stringify(new URL("../src/arc-preview.ts", import.meta.url).href))
-  .replaceAll("'./arc-input-preview.js'", JSON.stringify(new URL("../src/arc-input-preview.ts", import.meta.url).href))
-  .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/billing-preview.ts", import.meta.url).href))
-  .replaceAll("'./onboarding-preview.js'", JSON.stringify(new URL("../src/onboarding-preview.ts", import.meta.url).href))
-  .replaceAll("'./followup-preview.js'", JSON.stringify(new URL("../src/followup-preview.ts", import.meta.url).href))
-  .replaceAll("'./admin/activation-preview.js'", JSON.stringify(new URL("../src/admin/activation-preview.ts", import.meta.url).href));
+  .replaceAll('"../data/app-directory.json"', JSON.stringify(new URL("../src/data/app-directory.json", import.meta.url).href))
+  .replaceAll('"./arc-preview.js"', JSON.stringify(new URL("../src/preview/arc-preview.ts", import.meta.url).href))
+  .replaceAll("'./arc-input-preview.js'", JSON.stringify(new URL("../src/preview/arc-input-preview.ts", import.meta.url).href))
+  .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/preview/billing-preview.ts", import.meta.url).href))
+  .replaceAll("'./onboarding-preview.js'", JSON.stringify(new URL("../src/preview/onboarding-preview.ts", import.meta.url).href))
+  .replaceAll("'./followup-preview.js'", JSON.stringify(new URL("../src/preview/followup-preview.ts", import.meta.url).href))
+  .replaceAll("'./activation-preview.js'", JSON.stringify(new URL("../src/preview/activation-preview.ts", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
 }).outputText;

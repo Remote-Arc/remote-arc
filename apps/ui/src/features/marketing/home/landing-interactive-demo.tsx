@@ -1,0 +1,441 @@
+import { findAppWorkflow, translateCopy } from "./app-workflow-examples.js";
+import {findLocalCreative} from "./local-creative-examples.js";
+import {LocalCreativeResult} from "./local-creative-demo.js";
+import {DemoResultCard} from './landing-demo-result.js';
+import React, { useEffect, useRef, useState } from "react";
+import { useI18n } from "../../../app/i18n.js";
+import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
+import "./landing-interactive-demo.css";
+
+type DemoScenario = {
+  id: string;
+  label: string;
+  request: string;
+  result: string;
+  permission: string;
+  link: string;
+};
+
+type DemoEvent = {
+  tool: string;
+  arguments: string;
+  output: string;
+  duration: string;
+};
+
+
+type DemoClient = "ChatGPT" | "Claude" | "Cursor";
+
+const clientLogo: Record<DemoClient, string> = {
+  ChatGPT: "/demo-brands/chatgpt.svg",
+  Claude: "/demo-brands/claude.svg",
+  Cursor: "/demo-brands/cursor.svg",
+};
+
+type DemoGlyphName = "menu" | "new" | "share" | "dots" | "plus" | "mic" | "send" | "chevron" | "terminal" | "check" | "sidebar" | "paperclip" | "sparkle" | "search" | "code" | "slides" | "table" | "video" | "image";
+
+function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) {
+  return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    {name === "menu" && <><path d="M4 7h16M4 12h16M4 17h16" /></>}
+    {name === "new" && <><path d="M12 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" /><path d="m13 11 7-7 1 1-7 7-3 1 1-3z" /></>}
+    {name === "share" && <><path d="M12 16V3m0 0-4 4m4-4 4 4" /><path d="M5 13v5a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-5" /></>}
+    {name === "dots" && <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>}
+    {name === "plus" && <path d="M12 5v14M5 12h14" />}
+    {name === "mic" && <><rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8" /></>}
+    {name === "send" && <><path d="M12 19V5m0 0-6 6m6-6 6 6" /></>}
+    {name === "chevron" && <path d="m6 9 6 6 6-6" />}
+    {name === "terminal" && <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m7 9 3 3-3 3m6 0h4" /></>}
+    {name === "check" && <path d="m5 12 4 4L19 6" />}
+    {name === "sidebar" && <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></>}
+    {name === "paperclip" && <path d="m20 11-8 8a5 5 0 0 1-7-7l9-9a3 3 0 0 1 4 4l-9 9a1 1 0 0 1-2-2l8-8" />}
+    {name === "sparkle" && <><path d="m12 3 1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8L12 3Z" /><path d="m19 18 .5 1.5L21 20l-1.5.5L19 22l-.5-1.5L17 20l1.5-.5L19 18Z" /></>}
+    {name === "search" && <><circle cx="10" cy="10" r="6" /><path d="m14.5 14.5 6 6" /></>}
+    {name === "code" && <><path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-14-2 18" /></>}
+    {name === "slides" && <><path d="M3 3h18M4 3v13h16V3M12 16v5m-4 0 4-3 4 3" /><path d="m8 11 3-3 3 2 2-3" /></>}
+    {name === "video" && <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/></>}
+    {name === "image" && <><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/></>}
+    {name === "table" && <><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 9h18M3 15h18M9 3v18" /></>}
+  </svg>;
+}
+
+function ScenarioIcon({ id }: { id: string }) {
+  const workflow = findAppWorkflow(id);
+  if (workflow) return <span className="homeDemoExampleLogos" aria-hidden="true">{workflow.brands.slice(0, 2).map(brand => <img src={"/app-brands/" + brand.brand + ".svg"} key={brand.brand} alt="" />)}</span>;
+  return <span className="homeDemoScenarioGlyph" aria-hidden="true"><DemoGlyph name={id === "video" ? "video" : id === "image" ? "image" : id === "slides" ? "slides" : id === "excel" ? "table" : "code"} size={18} /></span>;
+}
+
+function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEvent[] {
+  const workflow = findAppWorkflow(id);
+  const creative=findLocalCreative(id);
+  if(creative)return creative.traces.map(trace=>({tool:trace.tool,arguments:JSON.stringify(trace.input),output:translateCopy(trace.output,tr),duration:"example"}));
+  if (workflow) return workflow.traces.map(trace => ({tool: trace.tool + (trace.provider ? " · " + trace.provider : ""), arguments: JSON.stringify(trace.input), output: translateCopy(trace.output,tr),duration: "example"}));
+  switch (id) {
+    case "mail":
+      return [
+        { tool: "list_apps", arguments: "{}", output: tr("Gmail / Outlook · connected email accounts", "Gmail / Outlook · 已连接的邮箱"), duration: "25ms" },
+        { tool: "call_app · Gmail", arguments: '{"operation":"messages.list","arguments":{"query":"is:unread subject:launch","limit":10}}', output: tr("3 matching threads · selected launch discussion", "3 个相关讨论 · 选中发布邮件"), duration: "129ms" },
+        { tool: "call_app · Gmail", arguments: '{"operation":"messages.get","arguments":{"id":"example-thread-message"}}', output: tr("Original message and participants read", "已读取原邮件与参与者"), duration: "93ms" },
+        { tool: "call_app · Gmail", arguments: '{"operation":"drafts.create","arguments":{"to":["team@example.com"],"subject":"Re: Launch","body":"Thanks — here is the update…"}}', output: tr("Reply draft created · message not sent", "回复草稿已创建 · 未发送邮件"), duration: "21ms" },
+      ];
+    case "calendar":
+      return [
+        { tool: "list_apps", arguments: "{}", output: tr("Google Calendar + Outlook Calendar · read access", "Google Calendar + Outlook Calendar · 读取权限"), duration: "26ms" },
+        { tool: "call_app · Google Calendar", arguments: '{"operation":"events.list","arguments":{"calendar":"primary","limit":30}}', output: tr("Tomorrow’s events read · 10:00–10:30 is open", "已读取明日安排 · 10:00–10:30 空闲"), duration: "118ms" },
+        { tool: "call_app · Outlook Calendar", arguments: '{"operation":"events.list","arguments":{"calendar":"primary","limit":30}}', output: tr("Second calendar checked · no overlapping event", "已核对第二个日历 · 没有冲突"), duration: "104ms" },
+        { tool: "call_app · Google Calendar", arguments: '{"operation":"events.create","arguments":{"calendar":"primary","event":{"summary":"Project review","start":"2026-10-20T10:00:00+13:00","end":"2026-10-20T10:30:00+13:00"}}}', output: tr("Project review event created · 10:00–10:30", "项目评审会议已创建 · 10:00–10:30"), duration: "23ms" },
+      ];
+    case "job":
+      return [
+        { tool: "start_process", arguments: '{"command":"node export-report.js","background":true}', output: tr("process_id: proc_demo_01 · running", "process_id: proc_demo_01 · 运行中"), duration: "164ms" },
+        { tool: "process_status", arguments: '{"process_id":"proc_demo_01"}', output: tr("status: exited · exit_code: 0", "状态：已结束 · 退出码：0"), duration: "19ms" },
+        { tool: "get_file_info", arguments: '{"path":"~/reports/export.csv"}', output: tr("export.csv · file exists", "export.csv · 文件已生成"), duration: "12ms" },
+      ];
+    case "schedule":
+      return [
+        { tool: "list_devices", arguments: "{}", output: tr("home-server · available", "home-server · 可用"), duration: "24ms" },
+        { tool: "create_automation", arguments: '{"device":"home-server","type":"schedule"}', output: tr("schedule saved · awaiting due time", "计划已保存 · 等待执行时间"), duration: "88ms" },
+        { tool: "get_automation", arguments: '{"id":"example_schedule"}', output: tr("status: scheduled · no service restart", "状态：已计划 · 不重启服务"), duration: "16ms" },
+      ];
+    case "slides":
+      return [
+        { tool: "read_file", arguments: '{"path":"~/slides/outline.md"}', output: tr("Outline and references read", "已读取大纲与引用素材"), duration: "31ms" },
+        { tool: "start_process", arguments: '{"command":"node scripts/build-deck.js --verify","cwd":"~/slides"}', output: tr("PPTX generated · 12 slides verified · exit_code: 0", "PPTX 已生成 · 已核验 12 页 · 退出码 0"), duration: "2.3s" },
+        { tool: "get_file_info", arguments: '{"path":"~/slides/review.pptx"}', output: tr("review.pptx · output file exists", "review.pptx · 输出文件已确认存在"), duration: "18ms" },
+      ];
+    case "excel":
+      return [
+        { tool: "list_directory", arguments: '{"path":"~/reports/2026"}', output: tr("Monthly CSV inputs located", "找到月度 CSV 输入文件"), duration: "23ms" },
+        { tool: "start_process", arguments: '{"command":"python make_workbook.py","cwd":"~/reports"}', output: tr("Workbook generated · totals reconciled", "已生成工作簿 · 合计已核对"), duration: "2.8s" },
+        { tool: "get_file_info", arguments: '{"path":"~/reports/output/summary.xlsx"}', output: tr("summary.xlsx · file exists", "summary.xlsx · 文件已生成"), duration: "12ms" },
+      ];
+    case "inspect":
+      return [
+        { tool: "list_processes", arguments: '{"device":"mini-pc"}', output: tr("node service found · pid 2048", "已找到 Node 服务 · pid 2048"), duration: "36ms" },
+        { tool: "read_file", arguments: '{"path":"~/app/logs/server.log","length":80}', output: tr("Found repeated connection timeout warnings", "发现重复的连接超时警告"), duration: "27ms" },
+        { tool: "get_file_info", arguments: '{"path":"~/app/logs/server.log"}', output: tr("Log readable · no files modified", "日志可读 · 未修改文件"), duration: "14ms" },
+      ];
+    default:
+      return [
+        { tool: "list_directory", arguments: '{"path":"~/projects/app"}', output: tr("14 entries · source and tests located", "14 项 · 已定位源代码与测试"), duration: "32ms" },
+        { tool: "read_file", arguments: '{"path":"~/projects/app/src/format.ts"}', output: tr("84 lines read · failing edge case located", "已读取 84 行 · 定位边界条件"), duration: "21ms" },
+        { tool: "edit_block", arguments: JSON.stringify({file_path:"~/projects/app/src/format.ts",old_string:'return value || "—";',new_string:'return value == null ? "—" : String(value);',expected_replacements:1}), output: tr("1 replacement · local undo available", "完成 1 处替换 · 可本地撤销"), duration: "55ms" },
+        { tool: "start_process", arguments: '{"command":"npm test","cwd":"~/projects/app"}', output: tr("PASS · 24 tests · exit_code: 0", "通过 · 24 项测试 · 退出码：0"), duration: "2.4s" },
+      ];
+  }
+}
+
+type DemoProgress = { working: string; done: string };
+
+function progressFor(id: string, tr: (en: string, zh: string) => string): DemoProgress[] {
+  const workflow = findAppWorkflow(id);
+  const creative=findLocalCreative(id);
+  if(creative)return creative.traces.map(trace=>({working:translateCopy(trace.working,tr),done:translateCopy(trace.output,tr)}));
+  if (workflow) return workflow.traces.map(trace => ({working: translateCopy(trace.working,tr),done:translateCopy(trace.output,tr)}));
+  switch (id) {
+    case "mail":
+      return [
+        { working: tr("Checking your connected email accounts…", "正在检查已连接的邮箱…"), done: tr("Your Gmail and Outlook connections are available.", "Gmail 与 Outlook 连接已就绪。") },
+        { working: tr("Finding the launch conversation…", "正在查找发布讨论邮件…"), done: tr("Found the thread that needs your response.", "已找到需要回复的邮件。") },
+        { working: tr("Reading the original message for context…", "正在读取原邮件上下文…"), done: tr("Reply grounded in the original conversation.", "回复依据原始邮件内容拟定。") },
+        { working: tr("Saving the reply as a draft…", "正在保存回复草稿…"), done: tr("Reply draft saved to your mailbox.", "回复草稿已保存到邮箱。") },
+      ];
+    case "calendar":
+      return [
+        { working: tr("Checking both calendar connections…", "正在检查两种日历连接…"), done: tr("Google Calendar and Outlook Calendar are connected.", "Google Calendar 与 Outlook Calendar 已连接。") },
+        { working: tr("Reading your Google Calendar…", "正在读取 Google Calendar…"), done: tr("Found a 30-minute opening in your Google calendar.", "已在 Google 日历中找到 30 分钟空档。") },
+        { working: tr("Cross-checking your Outlook Calendar…", "正在交叉核对 Outlook Calendar…"), done: tr("The proposed time is clear in both calendars.", "建议时间在两种日历中都没有冲突。") },
+        { working: tr("Creating the project review event…", "正在创建项目评审会议…"), done: tr("Meeting created in the available time slot.", "已在空闲时段创建会议。") },
+      ];
+    case "job":
+      return [
+        { working: tr("Starting the report export…", "正在启动报表导出…"), done: tr("Report export started in the background.", "报表已在后台开始导出。") },
+        { working: tr("Checking whether the process finished…", "正在检查进程是否完成…"), done: tr("The export process exited successfully.", "导出进程已成功结束。") },
+        { working: tr("Verifying the output file…", "正在验证输出文件…"), done: tr("Confirmed that export.csv was created.", "已确认 export.csv 文件生成。") },
+      ];
+    case "schedule":
+      return [
+        { working: tr("Checking the available computer…", "正在检查可用电脑…"), done: tr("The home server is available.", "家庭服务器已就绪。") },
+        { working: tr("Saving the health-check schedule…", "正在保存健康检查计划…"), done: tr("The health check is scheduled.", "健康检查任务已安排。") },
+        { working: tr("Checking the saved task settings…", "正在核对已保存的任务…"), done: tr("Confirmed: status only, no service restart.", "已确认只检查状态，不会重启服务。") },
+      ];
+    case "slides":
+      return [
+        { working: tr("Reading the presentation materials…", "正在读取演示素材…"), done: tr("Found the outline and local charts.", "已读取本机大纲与图表。") },
+        { working: tr("Generating and verifying the editable presentation…", "正在生成并验证可编辑 PPT…"), done: tr("The local script generated and verified all 12 slides.", "本机脚本已生成并核验全部 12 页。") },
+        { working: tr("Checking the saved output file…", "正在检查已保存的输出文件…"), done: tr("Confirmed that review.pptx is saved on your computer.", "已确认 review.pptx 保存在你的电脑上。") },
+      ];
+    case "excel":
+      return [
+        { working: tr("Reading the monthly CSV files…", "正在读取月度 CSV…"), done: tr("Found the source files and columns.", "已定位输入文件和字段。") },
+        { working: tr("Generating the workbook and checking totals…", "正在生成 Excel 并核对合计…"), done: tr("The workbook and reconciliation were generated.", "工作簿及核对结果已生成。") },
+        { working: tr("Verifying the output file…", "正在检查输出文件…"), done: tr("Confirmed that summary.xlsx exists.", "已确认 summary.xlsx 存在。") },
+      ];
+    case "inspect":
+      return [
+        { working: tr("Locating the running service…", "正在定位运行中的服务…"), done: tr("Found the running Node.js service.", "已找到正在运行的 Node.js 服务。") },
+        { working: tr("Reading the recent server logs…", "正在读取最近的服务器日志…"), done: tr("Repeated connection timeouts appear in the logs.", "日志中出现了重复的连接超时。") },
+        { working: tr("Confirming read-only access…", "正在确认只读操作…"), done: tr("Log inspection is complete; nothing was changed.", "日志检查完成，没有修改任何文件。") },
+      ];
+    default:
+      return [
+        { working: tr("Finding the relevant files and tests…", "正在定位相关代码和测试…"), done: tr("Located the source file and its tests.", "找到了目标源文件和相关测试。") },
+        { working: tr("Checking the failing edge case…", "正在检查失败的边界情况…"), done: tr("Identified the formatting edge case.", "定位了格式化逻辑中的边界问题。") },
+        { working: tr("Applying a focused, reversible fix…", "正在进行可撤销的针对性修改…"), done: tr("Updated the formatter; local undo is available.", "已修复格式化逻辑，支持本地撤销。") },
+        { working: tr("Running the test suite…", "正在运行测试套件…"), done: tr("All 24 tests passed.", "24 项测试全部通过。") },
+      ];
+  }
+}
+
+export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoScenario[] }) {
+  const { tr, locale } = useI18n();
+  const [selected, setSelected] = useState(0);
+  const [step, setStep] = useState(-1);
+  const [client, setClient] = useState<DemoClient>("ChatGPT");
+  const demoRef = useRef<HTMLDivElement>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const chatBodyRef = useRef<HTMLDivElement>(null);
+  const events = eventsFor(scenarios[selected]?.id ?? "code", tr);
+  const scenario = scenarios[selected] ?? scenarios[0];
+  const finished = step >= events.length * 2 + 1;
+  const active = step >= 0 && !finished;
+
+  useEffect(() => {
+    if (step < 0 || finished) return;
+    const delay = step === 0 ? 800 : step % 2 === 1 ? 580 : 430;
+    const timer = window.setTimeout(() => setStep((previous) => previous + 1), delay);
+    return () => window.clearTimeout(timer);
+  }, [step, selected, finished]);
+
+  useEffect(() => {
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const showResult = () => { if (motion.matches) setStep(events.length * 2 + 1); };
+    showResult();
+    motion.addEventListener("change", showResult);
+    return () => motion.removeEventListener("change", showResult);
+  }, [events.length]);
+
+  useEffect(() => {
+    const container = demoRef.current;
+    if (!container || !("IntersectionObserver" in window)) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) {
+        setStep((current) => current === -1 ? 0 : current);
+        observer.disconnect();
+      }
+    }, { threshold: 0.35 });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+  }, [step, selected]);
+
+  // Reveal the sample result without moving the surrounding page.
+  useEffect(() => {
+    if (finished && chatBodyRef.current) {
+      chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+    }
+  }, [finished, scenario?.id, client]);
+
+  if (!scenario) return null;
+
+  const isAppScenario = Boolean(findAppWorkflow(scenario.id)) || ["mail", "calendar"].includes(scenario.id);
+  const isCreativeScenario=scenario.id==="video"||scenario.id==="image";
+  const finalReply = isAppScenario||isCreativeScenario
+    ? scenario.result
+    : scenarios[selected]?.id === "code"
+    ? tr("I fixed the formatting edge case and reran the tests: 24 passed. The diff is ready for review.", "我修复了格式化的边界问题并重新运行测试：24 项全部通过。修改内容已准备好供你检查。")
+    : scenarios[selected]?.id === "inspect"
+      ? tr("The logs point to repeated connection timeouts. I haven't changed any files or restarted the service.", "日志显示反复发生连接超时。我没有修改任何文件，也没有重启服务。")
+      : scenarios[selected]?.id === "schedule"
+        ? tr("The health check is scheduled. It will collect status only; no service restart is included.", "健康检查已安排，届时只采集状态，不包含重启服务。")
+        : scenarios[selected]?.id === "slides"
+          ? tr("The local script generated review.pptx with 12 slides. Please visually review the layout before sharing.", "本机脚本已生成 12 页的 review.pptx。分享前请检查每页的实际版式。")
+          : scenarios[selected]?.id === "excel"
+            ? tr("The local script generated summary.xlsx and checked the totals. Review the workbook before delivery.", "本机脚本已生成 summary.xlsx 并核对合计，请检查工作簿后再交付。")
+        : tr("The export finished successfully. The result and task status are available to inspect when you return.", "报表导出已成功完成，稍后回来可以查看结果与任务状态。");
+
+  const pickScenario = (index: number) => {
+    setSelected(index);
+    setStep(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? eventsFor(scenarios[index]?.id ?? "code", tr).length * 2 + 1 : 0);
+    if (chatBodyRef.current) chatBodyRef.current.scrollTop = 0;
+    if (terminalRef.current) terminalRef.current.scrollTop = 0;
+  };
+
+  const progress = progressFor(scenario.id, tr);
+  const progressIndex = Math.min(progress.length - 1, Math.max(0, Math.floor(step / 2)));
+  const progressTitle = finished
+    ? tr("Finished working on your request", "已完成本次任务")
+    : step < 1
+      ? tr("Thinking through the next steps…", "正在规划执行步骤…")
+      : step >= progress.length * 2
+        ? tr("Preparing the result…", "正在整理执行结果…")
+        : progress[progressIndex]?.working ?? tr("Working on your request…", "正在执行任务…");
+  const prompt = scenario.request.replace(/^“|”$/g, "");
+  const workflow = findAppWorkflow(scenario.id);
+  const workflowHref = workflow ? "/integrations?provider=" + workflow.connectionProvider : "/use-cases/" + scenario.link;
+
+  return (
+    <div className="homeDemo" ref={demoRef} data-scenario={scenario.id} data-state={finished ? "complete" : active ? "working" : "ready"}>
+      <div className="homeDemoToolbar">
+        <div className="homeDemoExamples" aria-label={tr("Try an example request", "选择示例任务")}>
+          {scenarios.map((example, index) => (
+            <button key={example.id} type="button" className={index === selected ? "active" : ""}
+              aria-pressed={index === selected} onClick={() => pickScenario(index)}>
+              <ScenarioIcon id={example.id} />
+              <span>{example.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="homeDemoClientSwitch" aria-label={tr("Preview the conversation in an AI client", "切换 AI 客户端界面")}>
+          <span>{tr("CHAT VIEW", "对话界面")}</span>
+          {(["ChatGPT", "Claude", "Cursor"] as const).map((name) => (
+            <button type="button" key={name} className={"homeDemoClientTab--" + name.toLowerCase()} aria-pressed={name === client} onClick={() => setClient(name)}>
+              <img src={clientLogo[name]} alt="" />{name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="homeDemoSurface">
+        <section className={"homeDemoChat homeDemoChat--" + client.toLowerCase()} aria-label={tr("Example conversation in " + client, client + " 对话示例")}>
+          {client !== "Cursor" && <aside className="homeDemoChatRail" aria-hidden="true">
+            <div className="homeDemoRailTop"><DemoGlyph name="sidebar" size={19} /><DemoGlyph name="new" size={19} /></div>
+            <div className="homeDemoRailBottom"><span className="homeDemoRailAvatar">S</span></div>
+          </aside>}
+          <div className="homeDemoChatMain">
+            <header className="homeDemoChatChrome">
+              {client === "ChatGPT" && <>
+                <div className="homeDemoBrandTitle"><img src={clientLogo.ChatGPT} alt="" /><strong>ChatGPT</strong><DemoGlyph name="chevron" size={14} /></div>
+                <div className="homeDemoChromeActions"><DemoGlyph name="share" size={17} /><DemoGlyph name="dots" size={19} /></div>
+              </>}
+              {client === "Claude" && <>
+                <div className="homeDemoBrandTitle"><img src={clientLogo.Claude} alt="" /><strong>Claude</strong></div>
+                <div className="homeDemoClaudeNav"><span className="selected">Chat</span><span>Cowork</span><span>Code</span></div>
+              </>}
+              {client === "Cursor" && <>
+                <div className="homeDemoCursorWindow"><span /><span /><span /></div>
+                <div className="homeDemoCursorTab"><img src={clientLogo.Cursor} alt="" /><span>Agent</span><DemoGlyph name="chevron" size={12} /></div>
+                <div className="homeDemoChromeActions"><DemoGlyph name="new" size={16} /><DemoGlyph name="dots" size={17} /></div>
+              </>}
+            </header>
+
+            <div className="homeDemoChatBody" ref={chatBodyRef}>
+              {client === "Cursor" && <div className="homeDemoCursorContext"><DemoGlyph name="sidebar" size={14} /><span>{tr("New chat", "新对话")}</span><span className="homeDemoCursorContextModel">Auto</span></div>}
+              <div className="homeDemoUserBubble">{prompt}</div>
+
+              {step >= 0 && <div className="homeDemoAssistant">
+                {client === "Claude" && <img className="homeDemoAssistantLogo" src={clientLogo.Claude} alt="" />}
+                {client === "Cursor" && <div className="homeDemoCursorAgent"><DemoGlyph name="sparkle" size={15} /><strong>Agent</strong><span>· Auto</span></div>}
+                {client !== "Cursor" && <p className="homeDemoAssistantIntro">
+                  {isAppScenario ? tr("I’ll use your connected Apps to carry this out and check the result.", "我会通过你已连接的应用执行任务，并检查结果。") : tr("I'll use Remote Arc to check this on your computer.", "我会通过 Remote Arc 在你的电脑上检查并处理。")}
+                </p>}
+                <div className="homeDemoActivity" aria-live="polite" aria-atomic="false">
+                  <header className="homeDemoActivityHeader">
+                    <span className="homeDemoActivityIcon"><img src="/remote-arc.svg" alt="" width="30" height="30"/></span>
+                    <div className="homeDemoActivityHeading">
+                      <span>Remote Arc</span>
+                      <strong>{progressTitle}</strong>
+                    </div>
+                    {finished ? <span className="homeDemoActivityCheck"><DemoGlyph name="check" size={15} /></span> : <span className="homeDemoMiniSpinner" aria-label={tr("Working", "正在执行")} />}
+                  </header>
+                  {step > 0 && <ol className="homeDemoProgressList">
+                    {progress.map((part, index) => {
+                      const started = step >= index * 2 + 1;
+                      const done = step >= index * 2 + 2;
+                      if (!started) return null;
+                      return <li key={index} className={done ? "homeDemoProgressDone" : "homeDemoProgressCurrent"}>
+                        <span className="homeDemoProgressMarker">{done ? <DemoGlyph name="check" size={11} /> : <span className="homeDemoProgressPulse" />}</span>
+                        <span>{done ? part.done : part.working}</span>
+                      </li>;
+                    })}
+                  </ol>}
+                </div>
+                {finished ? <>
+                  <p className="homeDemoAssistantAnswer">{finalReply}</p>
+                  <DemoResultCard key={scenario.id} id={scenario.id}/>
+                  {isCreativeScenario&&<LocalCreativeResult key={scenario.id+locale} kind={scenario.id as "video"|"image"}/>}
+                  <div className="homeDemoMessageTools" aria-hidden="true"><DemoGlyph name="paperclip" size={14} /><DemoGlyph name="share" size={14} /><DemoGlyph name="dots" size={16} /></div>
+                </> : null}
+              </div>}
+            </div>
+
+            <div className="homeDemoComposer">
+              {client === "ChatGPT" && <div className="homeDemoComposerBox">
+                <div className="homeDemoComposerPlaceholder">{tr("Ask anything", "有问题，尽管问")}</div>
+                <div className="homeDemoComposerRow">
+                  <span className="homeDemoComposerRound"><DemoGlyph name="plus" size={19} /></span>
+                  <span className="homeDemoComposerTools"><DemoGlyph name="sparkle" size={16} />{tr("Tools", "工具")}</span>
+                  <span className="homeDemoComposerSpacer" />
+                  <DemoGlyph name="mic" size={19} />
+                  <span className="homeDemoComposerSend"><DemoGlyph name="send" size={18} /></span>
+                </div>
+              </div>}
+              {client === "Claude" && <div className="homeDemoComposerBox">
+                <div className="homeDemoComposerPlaceholder">{tr("Reply to Claude…", "回复 Claude…")}</div>
+                <div className="homeDemoComposerRow">
+                  <DemoGlyph name="plus" size={20} /><span className="homeDemoComposerSpacer" />
+                  <span className="homeDemoClaudeModel">Sonnet 4.6 <DemoGlyph name="chevron" size={13} /></span>
+                  <span className="homeDemoComposerSend"><DemoGlyph name="send" size={18} /></span>
+                </div>
+              </div>}
+              {client === "Cursor" && <div className="homeDemoComposerBox">
+                <div className="homeDemoCursorAddContext"><DemoGlyph name="plus" size={13} /> {tr("Add context", "添加上下文")}</div>
+                <div className="homeDemoComposerPlaceholder">{tr("Plan, search, build anything", "规划、搜索、构建任何内容")}</div>
+                <div className="homeDemoComposerRow">
+                  <span className="homeDemoCursorMode">∞ {tr("Agent", "智能体")} <DemoGlyph name="chevron" size={12} /></span>
+                  <span className="homeDemoCursorModel">Auto <DemoGlyph name="chevron" size={12} /></span>
+                  <span className="homeDemoComposerSpacer" />
+                  <DemoGlyph name="paperclip" size={16} />
+                  <span className="homeDemoComposerSend"><DemoGlyph name="send" size={16} /></span>
+                </div>
+              </div>}
+              <span className="homeDemoComposerDisclaimer">{client === "Cursor" ? tr("AI-generated code may contain errors.", "AI 生成的代码可能有误。") : client === "Claude" ? tr("Claude can make mistakes. Please double-check responses.", "Claude 可能出错，请核实回复。") : tr("ChatGPT can make mistakes. Check important info.", "ChatGPT 也可能出错。请核查重要信息。")}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="homeDemoTerminal" aria-label={isAppScenario ? tr("Example App activity", "示例应用活动") : tr("Example device execution log", "示例设备执行日志")}>
+          <header className="homeDemoTerminalHeader">
+            <div className="homeDemoTerminalDots" aria-hidden="true"><i /><i /><i /></div>
+            <span>Remote Arc <b>/</b> {isAppScenario ? tr("app activity", "应用活动") : tr("device activity", "设备活动")}</span>
+            <span className="homeDemoTerminalDevice"><i aria-hidden="true" />{isAppScenario ? tr("connected apps", "已连接的应用") : tr("example-workstation", "示例工作站")}</span>
+          </header>
+          <div className="homeDemoTerminalBody" ref={terminalRef} role="log" aria-label={tr("Simulated tool call sequence", "模拟工具调用序列")}>
+            <div className="homeDemoTerminalBanner">
+              <span className="homeDemoMonoAccent">remote-arc</span>
+              <span>{isAppScenario ? tr(" · cloud apps workflow", " · 云端应用工作流") : tr(" · local execution", " · 本地执行")}</span>
+            </div>
+            <div className="homeDemoTerminalInfo">✓ {tr("Secure MCP connection ready", "安全 MCP 连接已就绪")}</div>
+            {step < 0 && <p className="homeDemoTerminalWaiting">{tr("Waiting for a request from your chat…", "等待来自 AI 对话的请求…")}</p>}
+            {step >= 0 && (
+              <div className="homeDemoTraceLine"><span className="homeDemoTraceTime">00:00</span><span className="homeDemoTraceEvent">request</span><code>{isAppScenario ? tr("Connected account scopes checked · executing your request", "已核对账号授权范围 · 开始执行你的请求") : tr("Device policy checked · approved tools", "已检查设备策略 · 已授权工具")}</code></div>
+            )}
+            {events.map((event, index) => {
+              const showCall = step >= index * 2 + 1;
+              const showResult = step >= index * 2 + 2;
+              return showCall ? <React.Fragment key={event.tool + index}>
+                <div className="homeDemoTraceLine"><span className="homeDemoTraceTime">{`00:${String(index * 2 + 1).padStart(2, "0")}`}</span><span className="homeDemoTraceEvent">tool.call</span><code>{event.tool}</code></div>
+                <div className="homeDemoTraceArgs"><code>{event.arguments}</code></div>
+                {showResult && <div className="homeDemoTraceLine homeDemoTraceResult"><span className="homeDemoTraceTime">{`00:${String(index * 2 + 2).padStart(2, "0")}`}</span><span className="homeDemoTraceSuccess">tool.done</span><code>{event.output} <small>· {event.duration}</small></code></div>}
+              </React.Fragment> : null;
+            })}
+            {finished && <div className="homeDemoTerminalFinished">✓ {tr("Execution complete · response delivered", "执行完成 · 已返回结果")}</div>}
+            {active && <span className="homeDemoTerminalCursor" aria-hidden="true">▌</span>}
+          </div>
+          <footer className="homeDemoTerminalFooter">
+            <span>{tr("Permission", "所需权限")}: {scenario.permission}</span>
+            <span>{finished ? tr("Complete", "已完成") : active ? tr("Executing", "执行中") : tr("Ready", "就绪")}</span>
+          </footer>
+        </section>
+      </div>
+
+      <div className="homeDemoUnder">
+        <p>{isCreativeScenario ? tr("Guided tool-call simulation. The finished video and images shown here were actually rendered on a personal computer; playing this demo does not start a new render.","工具调用过程为引导式模拟。这里的视频与图片是在个人电脑上实际渲染的作品；播放演示不会启动新的创作任务。") : isAppScenario ? tr("Interactive simulation with example accounts. Apps require provider setup and user authorization; this preview performs no live actions or paid generation.", "使用示例账号的交互模拟。Apps 需要平台配置与用户授权；本预览不会操作真实账户或付费生成。") : tr("Guided simulation with example data. No real device is connected and no commands are executed.", "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。")}</p>
+        <a href={localizedWebsiteHref(workflowHref, locale)}>{tr("Explore this workflow", "了解这类工作流程")} ↗</a>
+      </div>
+    </div>
+  );
+}

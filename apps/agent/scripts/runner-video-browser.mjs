@@ -29,7 +29,7 @@ try {
     );
     const bundle = await esbuild.build({
       entryPoints: [
-        fileURLToPath(new URL("../../ui/src/runner-video.ts", import.meta.url)),
+        fileURLToPath(new URL("../../ui/src/features/browser-runner/runner-video.ts", import.meta.url)),
       ],
       bundle: true,
       write: false,

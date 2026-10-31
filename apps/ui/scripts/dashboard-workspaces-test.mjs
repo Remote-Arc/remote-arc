@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS, dashboardTabFromPath, workspaceForTab, availableDashboardTab,
   isAgentGoalAutomation, isAgentRoutineAutomation, isVisibleInWorkspace, isNativeArcAutomation,
-} from "../src/dashboard-workspaces.ts";
+} from "../src/lib/dashboard-workspaces.ts";
 
 const plainTask = { kind: "schedule_watch", goal_json: null, trigger_json: '{"type":"interval"}' };
 const aiGoal = { kind: "goal_loop", goal_json: '{"type":"agent_goal"}', trigger_json: '{"type":"now"}' };

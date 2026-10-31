@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {recoverLegacyAdminClient} from '../src/admin/admin-client-recovery.js';
-import {PRODUCT_CACHE,PRODUCT_SW} from '../src/pwa-config.js';
+import {recoverLegacyAdminClient} from '../src/features/admin/admin-client-recovery.js';
+import {PRODUCT_CACHE,PRODUCT_SW} from '../src/config/pwa-config.js';
 
 const publicRoot=new URL('../public/',import.meta.url), origin='https://admin.remotearc.app';
 for(const [name,start] of [['manifest.webmanifest','/dashboard/connect/overview'],['admin.webmanifest','/']]) {

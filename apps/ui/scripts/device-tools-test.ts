@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { BROWSER_RUNNER_TOOLS, browserRunnerEnabled, toggledDeviceTools } from "../src/device-tools.js";
+import { BROWSER_RUNNER_TOOLS, browserRunnerEnabled, toggledDeviceTools } from "../src/features/dashboard/devices/device-tools.js";
 
 const advertised = ["read_file", "write_file", ...BROWSER_RUNNER_TOOLS];
 

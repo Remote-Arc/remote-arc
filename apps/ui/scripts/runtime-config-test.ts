@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import {previewRuntimeConfig} from '../src/preview-config.js';
-import worker from '../src/preview-worker.js';
-import {createArcPreview} from '../src/arc-preview.js';
+import {previewRuntimeConfig} from '../src/preview/preview-config.js';
+import worker from '../src/preview/preview-worker.js';
+import {createArcPreview} from '../src/preview/arc-preview.js';
 
 assert.equal(previewRuntimeConfig({}).arcAvailable,true);
 for(const value of ['0','true','invalid',''])assert.equal(previewRuntimeConfig({ARC_PREVIEW_ENABLED:value}).arcAvailable,false);

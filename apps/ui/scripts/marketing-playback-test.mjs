@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import React, { act } from "react";
 import { create } from "react-test-renderer";
 import { renderToString } from "react-dom/server";
-import { useMarketingPlayback } from "../src/use-marketing-playback.ts";
+import { useMarketingPlayback } from "../src/features/marketing/home/use-marketing-playback.ts";
 
 // Render the actual hook. Browser events and time are deterministic, so the
 // lifecycle checks do not depend on elapsed wall time or implementation text.

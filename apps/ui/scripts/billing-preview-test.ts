@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createBillingPreview} from '../src/billing-preview.js';
+import {createBillingPreview} from '../src/preview/billing-preview.js';
 const memory=new Map<string,string>(),storage={getItem:(key:string)=>memory.get(key)||null,setItem:(key:string,value:string)=>{memory.set(key,value);}};
 const origin='https://preview.example.invalid';let demo=createBillingPreview(storage,new URL('/checkout?demo=new',origin));
 const call=async(path:string,body?:unknown)=>{const response=demo.handle(new URL('/api/billing'+path,origin),body===undefined?'GET':'POST',body===undefined?undefined:JSON.stringify(body));assert(response);return{status:response.status,value:await response.json() as any};};

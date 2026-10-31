@@ -1,9 +1,9 @@
 import React, {useEffect, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {I18nProvider,useI18n} from '../src/i18n.js';
-import {MonitorReliability} from '../src/dashboard/monitor-reliability.js';
-import type {MonitorState} from '../src/app-types.js';
-import '../src/styles.css';
+import {I18nProvider,useI18n} from '../src/app/i18n.js';
+import {MonitorReliability} from '../src/features/dashboard/views/monitor-reliability.js';
+import type {MonitorState} from '../src/types/app-types.js';
+import '../src/styles/styles.css';
 // Local browser regression entry only. It is never part of a production entry.
 const nativeFetch=(window as Window&{monitorTestFetch?:typeof fetch}).monitorTestFetch;
 if(nativeFetch)window.fetch=nativeFetch;

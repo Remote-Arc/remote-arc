@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {billingRequest,secureBillingUrl,BillingFailure,transferSize,usageResetAt} from '../src/arc-billing-client.js';
+import {billingRequest,secureBillingUrl,BillingFailure,transferSize,usageResetAt} from '../src/features/billing/arc-billing-client.js';
 assert.equal(usageResetAt('2026-10').toISOString(),'2026-11-01T00:00:00.000Z','allowances renew at the next UTC month');
 assert.equal(usageResetAt('2026-12').toISOString(),'2027-01-01T00:00:00.000Z','December renews in January');
 assert.deepEqual([transferSize(0),transferSize(380*1024**2),transferSize(1.5*1024**3),transferSize(2*1024**3)],['0 MB','380 MB','1.5 GB','2 GB']);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { RunnerVideoPlayer } from "../src/runner-video.js";
+import { RunnerVideoPlayer } from "../src/features/browser-runner/runner-video.js";
 const offer =
   "v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 106\r\na=sendonly\r\na=rtpmap:106 H264/90000\r\n";
 class Peer extends EventTarget {

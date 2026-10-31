@@ -72,7 +72,7 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 		if err != nil || cfg.Width != 1280 || cfg.Height != 720 {
 			t.Fatal("Retina frame was not scaled", cfg, err)
 		}
-	case <-time.After(3 * time.Second):
+	case <-time.After(viewCaptureTimeout):
 		t.Fatal("static page must send its first frame without a paint event")
 	}
 	client.mu.Lock()
@@ -106,7 +106,7 @@ func TestStaticLiveViewBootstrapsOneCappedFrame(t *testing.T) {
 	s.serviceView(context.Background())
 	select {
 	case <-m.Frames():
-	case <-time.After(3 * time.Second):
+	case <-time.After(viewCaptureTimeout):
 		t.Fatal("occluded view was not refreshed")
 	}
 	s.ev.Lock()
@@ -179,6 +179,12 @@ func (c *slowViewClient) Call(ctx context.Context, method string, params any, ou
 	}
 	return c.staticViewClient.Call(ctx, method, params, out)
 }
+
+// notBlockedWithin is well under viewCaptureTimeout: a blocking or uncancelled
+// capture would hold for the full timeout, while a loaded -race runner still
+// gets room to schedule the goroutines.
+const notBlockedWithin = 10 * time.Second
+
 func TestLiveViewSlowCaptureIsSingleAndCancelled(t *testing.T) {
 	m := New()
 	c := &slowViewClient{started: make(chan struct{}), done: make(chan struct{})}
@@ -188,12 +194,12 @@ func TestLiveViewSlowCaptureIsSingleAndCancelled(t *testing.T) {
 	go func() { s.serviceView(context.Background()); close(returned) }()
 	select {
 	case <-returned:
-	case <-time.After(time.Second):
+	case <-time.After(notBlockedWithin):
 		t.Fatal("native capture blocked the control loop")
 	}
 	select {
 	case <-c.started:
-	case <-time.After(time.Second):
+	case <-time.After(viewCaptureTimeout):
 		t.Fatal("capture was not started")
 	}
 	// A second service pass must not start another pending screenshot.
@@ -201,7 +207,7 @@ func TestLiveViewSlowCaptureIsSingleAndCancelled(t *testing.T) {
 	m.ViewHeartbeat("slow-view", false)
 	select {
 	case <-c.done:
-	case <-time.After(time.Second):
+	case <-time.After(notBlockedWithin):
 		t.Fatal("viewer expiry did not cancel capture")
 	}
 	select {

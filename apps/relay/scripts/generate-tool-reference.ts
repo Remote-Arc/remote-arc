@@ -74,10 +74,9 @@ const publicTools = await listTools("generic");
 // Claude connectors receive a restricted profile; record what it leaves out.
 const claudeTools = await listTools("claude");
 const claudeToolNames = new Set(claudeTools.map((tool) => tool.name));
-const claudeAppActions = new Set(
-  JSON.stringify(
-    claudeTools.filter((tool) => tool.name.startsWith("run_app_")).map((tool) => tool.inputSchema),
-  ).match(/"const":"[^"]+"/g)?.map((match) => match.slice(9, -1)) ?? [],
+const claudeAppActions = new Set<string>(
+  claudeTools.filter((tool) => tool.name.startsWith("run_app_"))
+    .flatMap((tool) => tool.inputSchema.properties.operation.properties.action.enum),
 );
 const unavailableIn = (claudeAvailable: boolean) =>
   claudeAvailable ? {} : { unavailableIn: ["claude"] };
@@ -115,17 +114,18 @@ const metadata = (name: string) => {
   if (!copy) throw Error("Add bilingual documentation for tool " + name);
   return { group: toolGroup(name), summary: copy.summary, zh: copy.zh };
 };
-// The App action tools publish one schema variant per catalog operation. The
-// catalog below already documents each operation, so don't embed them twice.
+// The App action tools list every catalog action ID in an enum. The catalog
+// below already documents each operation, so record only the count.
 const documentedSchema = (schema: any) => {
-  const variants = schema?.properties?.operation?.oneOf ?? schema?.properties?.operation?.anyOf;
-  if (!Array.isArray(variants)) return schema;
-  const { oneOf, anyOf, ...operation } = schema.properties.operation;
+  const operation = schema?.properties?.operation;
+  const actions = operation?.properties?.action?.enum;
+  if (!Array.isArray(actions)) return schema;
+  const { enum: _ids, ...action } = operation.properties.action;
   return {
     ...schema,
     properties: {
       ...schema.properties,
-      operation: { ...operation, type: "object", "x-remotearc-app-actions": variants.length },
+      operation: { ...operation, properties: { ...operation.properties, action }, "x-remotearc-app-actions": actions.length },
     },
   };
 };

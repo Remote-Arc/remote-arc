@@ -1,4 +1,3 @@
-import { CopyButton } from "../public-layout.js";
 import type { DashboardModel } from "./use-dashboard-model.js";
 
 // Modal dialogs rendered above every tab.
@@ -116,26 +115,3 @@ export function DashboardDialogHost({ m }: { m: DashboardModel }) {
   );
 }
 
-export function AddDeviceDialog({ m }: { m: DashboardModel }) {
-  const { command, safeCommand, setShowAdd, tr } = m;
-  return (
-    <div className="modalBackdrop" onMouseDown={() => setShowAdd(false)}>
-      <section className="modal" onMouseDown={(event) => event.stopPropagation()}>
-        <button className="modalClose" onClick={() => setShowAdd(false)}>×</button>
-        <span className="eyebrow">{tr("ADD A DEVICE", "添加设备")}</span>
-        <h2>{tr("Connect a computer in one command.", "一条命令连接电脑。")}</h2>
-        <p>{tr("No repository clone, environment file, token copy, public IP or router configuration. New devices start with read-only skills enabled.", "无需 clone 仓库、环境文件、复制 Token、公网 IP 或路由器配置。新设备默认只开启只读技能。")}</p>
-        <div className="commandLabel">{tr("Recommended · Safe by default", "推荐 · 默认 Safe")}</div>
-        <div className="commandBox"><code>{command}</code><CopyButton value={command}/></div>
-        <p><a href="/downloads" target="_blank" rel="noopener noreferrer">{tr("Install without Node.js: native download or Homebrew", "无需 Node.js：直接下载或使用 Homebrew")} →</a></p>
-        <div className="commandLabel secondary">{tr("Optional local hard lock · always read-only", "可选本机硬限制 · 始终只读")}</div>
-        <div className="commandBox muted"><code>{safeCommand}</code><CopyButton value={safeCommand}/></div>
-        <div className="onboardingSteps">
-          <div><b>1</b><span><strong>{tr("Run the command", "运行命令")}</strong><small>npm / npx · Node.js 20+</small></span></div>
-          <div><b>2</b><span><strong>{tr("Match the pairing code", "确认配对码")}</strong><small>{tr("The browser opens automatically", "浏览器会自动打开")}</small></span></div>
-          <div><b>3</b><span><strong>{tr("Authorize the computer", "授权电脑")}</strong><small>{tr("It appears here after connecting", "连接后会自动出现在这里")}</small></span></div>
-        </div>
-      </section>
-    </div>
-  );
-}

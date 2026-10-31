@@ -7,6 +7,8 @@ import { APP_ACTION_TOOLS } from "./mcp-app-actions.js";
 export const appDiscoverySchema = baseSchema.safeExtend({
   use_case: z.string().max(300).optional(),
   includeSchemas: z.boolean().default(false),
+  actions: z.array(z.string().max(120)).min(1).max(10).optional()
+    .describe("Action IDs (provider.operation) whose exact argument schemas to return."),
 }).strict();
 
 const stopWords = new Set(["a", "an", "the", "to", "in", "on", "for", "from", "with", "of", "and", "my", "me", "please", "using", "by", "i", "want", "can"]);
@@ -49,6 +51,27 @@ const relevance = (app: ListedApp, operation: ListedOperation, tokens: string[])
 
 export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unknown = {}, options: { excludeRunway?: boolean } = {}) {
   const input = appDiscoverySchema.parse(raw);
+  if (input.actions) {
+    // Exact lookup: the argument schema for each requested action ID.
+    const all = await listApps(env, userId);
+    const requested = new Set(input.actions);
+    const found = all.apps.filter(app => !options.excludeRunway || app.provider !== "runway")
+      .flatMap(app => app.operations.filter(operation => requested.has(`${app.provider}.${operation.name}`)).map(operation => ({ app, operation })));
+    const providers = new Set(found.map(item => item.app.provider));
+    const connections = all.connections.filter(account => providers.has(account.provider));
+    return {
+      enabled: all.enabled, mode: "actions",
+      operations: found.map(({ app, operation }) => ({
+        provider: app.provider, providerName: app.name, action: `${app.provider}.${operation.name}`, operation: operation.name,
+        description: operation.description, permission: operation.permission, configured: app.configured,
+        connected: connections.some(account => account.provider === app.provider && account.status === "active"),
+        inputSchema: operation.inputSchema,
+      })),
+      unknownActions: input.actions.filter(id => !found.some(({ app, operation }) => `${app.provider}.${operation.name}` === id)),
+      connections: connections.map(({ id, provider, accountLabel, status }) => ({ id, provider, accountLabel, status })),
+      guidance: `Run a read action with ${APP_ACTION_TOOLS.read} or a change with ${APP_ACTION_TOOLS.write}: operation {action, arguments matching inputSchema}, a connectionId for the same provider, and a stable requestId. A write may send, delete, publish or incur costs; do not infer approval from discovery.`,
+    };
+  }
   if (!input.use_case && !input.includeSchemas) {
     const legacy = await discoverApps(env, userId, {
       provider: input.provider, category: input.category, query: input.query,
@@ -107,6 +130,6 @@ export async function discoverMcpAppTools(env: AppEnv, userId: string, raw: unkn
       connected: connections.some(account => account.provider === app.provider && account.status === "active"),
       ...(input.includeSchemas ? { inputSchema: operation.inputSchema } : {}),
     })),
-    guidance: `Run a read action with ${APP_ACTION_TOOLS.read} or a change with ${APP_ACTION_TOOLS.write}: operation {action, arguments matching inputSchema}, a connectionId for the same provider, and a stable requestId. A write may send, delete, publish or incur costs; do not infer approval from discovery.`,
+    guidance: `${input.includeSchemas ? "" : "Get an action's inputSchema with actions: [id]. "}Run a read action with ${APP_ACTION_TOOLS.read} or a change with ${APP_ACTION_TOOLS.write}: operation {action, arguments matching inputSchema}, a connectionId for the same provider, and a stable requestId. A write may send, delete, publish or incur costs; do not infer approval from discovery.`,
   };
 }

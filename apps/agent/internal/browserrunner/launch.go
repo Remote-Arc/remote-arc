@@ -173,7 +173,13 @@ func attachExisting(ctx context.Context, profile string) (*browserProcess, bool)
 // launchBrowser starts the task browser. hidden opens its window off screen
 // and without taking focus; without a display the browser has no window.
 func launchBrowser(ctx context.Context, exe, profile string, hidden bool) (*browserProcess, error) {
+	started := time.Now()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	launchProgress(ctx, "attach.begin", started)
 	if p, ok := attachExisting(ctx, profile); ok {
+		launchProgress(ctx, "attach.ready", started)
 		return p, nil
 	}
 	wait := startupWait(profile)
@@ -224,17 +230,26 @@ func launchBrowser(ctx context.Context, exe, profile string, hidden bool) (*brow
 	cmd := exec.Command(exe, args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
 	detach(cmd)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	launchProgress(ctx, "processStart.begin", started)
 	if e := cmd.Start(); e != nil {
 		return nil, fmt.Errorf("browser_runner could not start the browser: %w", e)
 	}
+	launchProgress(ctx, "processStart.ready", started)
 	exited := make(chan struct{})
 	go func() { _ = cmd.Wait(); close(exited) }()
 	deadline := time.Now().Add(wait)
+	stage := "portFile"
+	launchProgress(ctx, stage+".begin", started)
 	for time.Now().Before(deadline) {
 		select {
 		case <-exited:
+			launchProgress(ctx, stage+".processExited", started)
 			return nil, errors.New("The browser exited during startup. If this profile is open in another window, close it and retry.")
 		case <-ctx.Done():
+			launchProgress(ctx, stage+".canceled", started)
 			_ = cmd.Process.Kill()
 			return nil, ctx.Err()
 		case <-time.After(100 * time.Millisecond):
@@ -243,14 +258,21 @@ func launchBrowser(ctx context.Context, exe, profile string, hidden bool) (*brow
 		if e != nil {
 			continue
 		}
+		if stage == "portFile" {
+			launchProgress(ctx, "portFile.ready", started)
+			stage = "endpoint"
+			launchProgress(ctx, "endpoint.begin", started)
+		}
 		var v struct {
 			WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
 		}
 		if devtoolsJSON(ctx, port, "/json/version", &v) == nil && strings.HasSuffix(v.WebSocketDebuggerURL, path) {
+			launchProgress(ctx, "endpoint.ready", started)
 			return &browserProcess{cmd: cmd, exited: exited, port: port, browserWS: v.WebSocketDebuggerURL, profileDir: profile, headless: headless}, nil
 		}
 	}
 	_ = cmd.Process.Kill()
+	launchProgress(ctx, stage+".timeout", started)
 	return nil, fmt.Errorf("The browser did not open its local automation endpoint within %s.", wait)
 }
 

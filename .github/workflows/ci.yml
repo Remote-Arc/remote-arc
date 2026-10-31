@@ -211,7 +211,7 @@ jobs:
         if: runner.os != 'Linux'
         env:
           REMOTEARC_E2E_REQUIRE_WINDOW: '1'
-        run: go -C apps/agent test -race ./internal/browserrunner -run 'TestE2E(CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)' -count=1 -v
+        run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStartup|TestE2E(Startup|CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)' -count=1 -v
       - name: Install the Linux desktop window manager
         if: runner.os == 'Linux'
         run: |
@@ -224,7 +224,7 @@ jobs:
         run: |
           xvfb-run -a --server-args='-screen 0 1920x1080x24' bash -c '
             openbox >"$RUNNER_TEMP/remotearc-window-manager.log" 2>&1 &
-            go -C apps/agent test -race ./internal/browserrunner -run "TestE2E(CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)" -count=1 -v
+            go -C apps/agent test -race ./internal/browserrunner -run "TestStartup|TestE2E(Startup|CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)" -count=1 -v
           '
       - run: pnpm test:device
       - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json

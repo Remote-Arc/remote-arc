@@ -27,3 +27,9 @@ func (s *session) startupStep(phase string, run func() error) error {
 	}
 	return err
 }
+
+func launchProgress(ctx context.Context, event string, started time.Time) {
+	if id, ok := ctx.Value(launchTraceKey{}).(string); ok {
+		log.Printf("browser_runner_launch session=%q event=%s elapsed_ms=%d", id, event, time.Since(started).Milliseconds())
+	}
+}

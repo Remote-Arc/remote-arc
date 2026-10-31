@@ -48,6 +48,8 @@ type Manager struct {
 	mu                sync.Mutex
 	sessions          map[string]*session
 	findBrowser       func() (string, error)
+	launchBrowser     func(context.Context, string, string, bool) (*browserProcess, error)
+	launchWait        time.Duration
 	now               func() time.Time
 	IdleTimeout       time.Duration
 	UserActionTimeout time.Duration
@@ -62,7 +64,7 @@ type Manager struct {
 }
 
 func New() *Manager {
-	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, now: time.Now, userPresent: desktopUserPresent, IdleTimeout: 20 * time.Minute, UserActionTimeout: 2 * time.Hour, attentionEvents: map[string]Attention{}, frames: make(chan ViewFrame, 2), videoSignals: make(chan VideoSignal, 16), stop: make(chan struct{})}
+	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, launchBrowser: launchBrowser, launchWait: 8 * time.Second, now: time.Now, userPresent: desktopUserPresent, IdleTimeout: 20 * time.Minute, UserActionTimeout: 2 * time.Hour, attentionEvents: map[string]Attention{}, frames: make(chan ViewFrame, 2), videoSignals: make(chan VideoSignal, 16), stop: make(chan struct{})}
 }
 
 // Available reports whether this device can run the browser_runner at all.
@@ -83,7 +85,7 @@ func (m *Manager) ActiveSessions() int {
 			active++
 			continue
 		}
-		if s.live() {
+		if s.live() || s.starting.Load() {
 			active++
 		}
 		s.mu.Unlock()
@@ -168,7 +170,7 @@ func (m *Manager) reapIdle() {
 				continue // A reminder always precedes collection by at least one reaper pass.
 			}
 		}
-		if s.live() && m.now().Sub(since) > limit {
+		if (s.live() || s.starting.Load()) && m.now().Sub(since) > limit {
 			s.shutdownBrowser(true)
 			s.cp.receipt(m.now(), Receipt{Tool: "browser_runner_status", Outcome: "paused", Detail: "idle timeout; browser closed, checkpoint kept"})
 			_ = s.flush()
@@ -211,6 +213,11 @@ func sessionID(args map[string]any, key string) (string, error) {
 // Call dispatches one browser_runner tool. The returned value is serialized
 // by the Agent like any other tool result.
 func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p protocol.Policy) (any, error) {
+	select {
+	case <-m.stop:
+		return nil, errors.New("Browser Runner has stopped.")
+	default:
+	}
 	callStarted := time.Now()
 	if args == nil {
 		args = map[string]any{}
@@ -245,6 +252,16 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	s.auth = p.BrowserAuth
 	s.setCallAttentionMode(p.RunnerAttentionMode)
 	if tool == "browser_runner_status" {
+		if s.pendingLaunch != nil && s.cp.State != StateClosed {
+			select {
+			case <-s.pendingLaunch.done:
+				if s.pendingLaunch.err != nil {
+					return nil, s.pendingLaunch.err
+				}
+			default:
+			}
+			return s.startingResult(), nil
+		}
 		return s.cp.Summary(s.live()), nil
 	}
 	if tool == "browser_runner_close" {
@@ -253,7 +270,15 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	if s.cp.State == StateClosed {
 		return nil, errors.New("Session is closed. Call browser_runner_start with the same task_id to reopen it.")
 	}
+	// Only start may finish initialization: retrying an action must not silently
+	// run it against about:blank before the original start_url is supplied again.
+	if s.starting.Load() {
+		return s.startingResult(), nil
+	}
 	if e := s.ensureLive(ctx); e != nil {
+		if errors.Is(e, errBrowserStarting) {
+			return s.startingResult(), nil
+		}
 		return nil, e
 	}
 	s.keepHidden(ctx)
@@ -380,7 +405,11 @@ func (m *Manager) list() map[string]any {
 	defer m.mu.Unlock()
 	items := []map[string]any{}
 	for id, s := range m.sessions {
-		items = append(items, map[string]any{"session_id": id, "state": s.cp.State, "last_url": s.cp.LastURL, "browser_running": s.live()})
+		state := s.cp.State
+		if s.starting.Load() {
+			state = "starting"
+		}
+		items = append(items, map[string]any{"session_id": id, "state": state, "last_url": s.cp.LastURL, "browser_running": s.live()})
 	}
 	sort.Slice(items, func(i, j int) bool { return fmt.Sprint(items[i]["session_id"]) < fmt.Sprint(items[j]["session_id"]) })
 	return map[string]any{
@@ -401,11 +430,11 @@ func (m *Manager) liveCount(except string, profile string) (int, bool) {
 		if id == except {
 			continue
 		}
-		if s.live() {
+		if s.live() || s.starting.Load() {
 			n++
 		}
 		// Tasks in the user's own Chrome each have their own tab there.
-		if profile != yourChromeProfile && s.cp.Profile == profile && s.cp.State != StateClosed && s.live() {
+		if profile != yourChromeProfile && s.cp.Profile == profile && (s.starting.Load() || (s.cp.State != StateClosed && s.live())) {
 			clash = true
 		}
 	}
@@ -500,7 +529,12 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 	}
 	m.mu.Unlock()
 
-	s.mu.Lock()
+	if !lockSession(ctx, s) {
+		if s.starting.Load() {
+			return s.startingResult(), nil
+		}
+		return nil, ctx.Err()
+	}
 	defer s.mu.Unlock()
 	s.lastUsed = m.now()
 	s.auth = p.BrowserAuth
@@ -536,6 +570,8 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 		}
 		if chosen && (s.cp.Headless != headless || !headless) {
 			switch {
+			case s.starting.Load() && s.cp.Headless == headless:
+				// A retry joins the same launch, including headless=false.
 			case s.live() && s.hasWindow():
 				// Shown or hidden in place: the page and what was entered stay.
 				if e := s.setVisible(ctx, !headless); e != nil {
@@ -560,6 +596,9 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 	}
 	if e := s.ensureLive(ctx); e != nil {
 		_ = s.flush()
+		if errors.Is(e, errBrowserStarting) {
+			return s.startingResult(), nil
+		}
 		return nil, e
 	}
 	out := map[string]any{}
@@ -1176,6 +1215,9 @@ func (m *Manager) close(ctx context.Context, s *session, args map[string]any) (a
 	}
 	if !forget {
 		return map[string]any{"session_id": s.cp.SessionID, "state": StateClosed, "checkpoint_kept": true, "tab_left_open": tabLeftOpen}, nil
+	}
+	if s.pendingLaunch != nil {
+		return nil, errors.New("The browser startup is still stopping; retry close with forget=true before removing its profile.")
 	}
 	m.mu.Lock()
 	shared := false

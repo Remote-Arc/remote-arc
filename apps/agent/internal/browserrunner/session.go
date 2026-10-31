@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
@@ -28,14 +29,16 @@ const worldName = "remotearc_browser_runner"
 // serialized by mu; CDP events arrive on another goroutine and only touch the
 // fields guarded by ev.
 type session struct {
-	mu       sync.Mutex
-	m        *Manager
-	cp       *Checkpoint
-	auth     protocol.BrowserAuth
-	scope    scope
-	proc     *browserProcess
-	conn     cdpClient
-	lastUsed time.Time
+	mu            sync.Mutex
+	m             *Manager
+	cp            *Checkpoint
+	auth          protocol.BrowserAuth
+	scope         scope
+	proc          *browserProcess
+	conn          cdpClient
+	lastUsed      time.Time
+	pendingLaunch *browserStartup // guarded by mu; result published by done
+	starting      atomic.Bool     // admission/status can read without the session lock
 
 	ev           sync.Mutex
 	mainFrame    string
@@ -326,7 +329,9 @@ func (s *session) ensureLive(ctx context.Context) error {
 	if s.live() {
 		return nil
 	}
-	s.shutdownBrowser(false)
+	if s.pendingLaunch == nil {
+		s.shutdownBrowser(false)
+	}
 	if s.cp.Browser == browserYourChrome {
 		page, e := s.m.yourChrome().openTab(ctx, s, s.cp.YourTab)
 		if e != nil {
@@ -342,11 +347,7 @@ func (s *session) ensureLive(ctx context.Context) error {
 		var proc *browserProcess
 		delivered := s.cp.State == StateNeedsUser && (s.cp.AttentionShown || s.cp.AttentionDismissed)
 		launchHidden := s.cp.Headless || delivered || !s.mayShowWindow()
-		e = s.startupStep("launch", func() error {
-			var err error
-			proc, err = launchBrowser(ctx, exe, profilePath(s.cp.Profile), launchHidden)
-			return err
-		})
+		proc, e = s.awaitBrowserLaunch(ctx, exe, launchHidden)
 		if e != nil {
 			return e
 		}
@@ -487,6 +488,7 @@ func (s *session) setup(ctx context.Context) error {
 }
 
 func (s *session) shutdownBrowser(markPaused bool) {
+	s.cancelBrowserLaunch()
 	s.ev.Lock()
 	s.stopVideoLocked()
 	s.viewActive = false

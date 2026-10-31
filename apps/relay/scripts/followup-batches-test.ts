@@ -10,7 +10,7 @@ const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const name of fs.readdirSync(new URL('../migrations/',import.meta.url)).filter(n=>n.endsWith('.sql')).sort())sql.exec(fs.readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));
 const db={prepare(query:string){const statement=sql.prepare(query);const bound=(args:unknown[])=>{const run=()=>{const value=statement.run(...args);return{success:true,meta:{changes:Number(value.changes)}};};return{async first(){return statement.get(...args)||null;},async all(){return{results:statement.all(...args)};},async run(){return run();},_run:run,_sql:query};};return{...bound([]),bind(...args:unknown[]){assert(!args.includes(undefined),query);return bound(args);}};},async batch(statements:any[]){sql.exec('BEGIN');try{const result=statements.map(statement=>statement._run());sql.exec('COMMIT');return result;}catch(error){sql.exec('ROLLBACK');throw error;}}} as unknown as D1Database;
 const origin='https://admin.remotearc.app',now=new Date().toISOString(),future=new Date(Date.now()+86400000).toISOString();
-const people=['admin','one','two','stop','cool','unknown','changed','permission','revoked','rate','cancel','crash','inflight','cancelprep','crashcancel','warm'];
+const people=['admin','one','two','stop','cool','unknown','changed','permission','revoked','rate','cancel','crash','inflight','cancelprep','crashcancel','warm','budget'];
 for(const id of people){sql.prepare('INSERT INTO users(id,google_sub,email,name,role,created_at) VALUES(?,?,?,?,?,?)').run(id,id,id+'@example.invalid',id.toUpperCase(),id==='admin'?'admin':'user',now);sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex('batch-'+id),id,future,now);}
 const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',ADMIN_ORIGIN:origin,RESEND_API_KEY:'fixture-key',EMAIL_FROM:'Remote Arc <login@example.invalid>'} as any;
 const req=(path:string,method='GET',value?:unknown,actor='admin',source=origin)=>new Request(origin+'/api/admin/followups'+path,{method,headers:{cookie:'rl_session=batch-'+actor,origin:source,'content-type':'application/json'},...(value===undefined?{}:{body:JSON.stringify(value)})});
@@ -55,5 +55,23 @@ try{
  env.DB={...db,async batch(statements:any[]){if(!held&&statements[0]?._sql.includes('INSERT OR IGNORE INTO user_followup_messages')){held=true;preparationStarted();await preparationGate;}return originalBatch(statements);}};
  const prepInput=input(['cancelprep']),preparing=api('/batches','POST',prepInput);await preparationReady;await decode(await api('/batches/'+prepInput.id+'/cancel','POST',{}));releasePreparation();const prepResult=await decode(await preparing,201);assert.equal(prepResult.batch.status,'cancelled');assert.equal(prepResult.batch.pending,0);assert.equal(sql.prepare('SELECT COUNT(*) count FROM user_followup_messages WHERE batch_id=?').get(prepInput.id)?.count,0,'Cancellation during preparation prevents new email snapshots');env.DB=db;
  const warm=await create(['warm']),tasks:Promise<unknown>[]=[];const before=payloads.length;await handleAdminServiceRequest(req('/batches/'+warm.value.id+'/queue','POST',{}),env,{waitUntil(promise){tasks.push(promise);}});assert.equal(tasks.length,1);await Promise.all(tasks);assert.equal(payloads.length,before+1,'An explicitly queued batch also gets a bounded background warm start');
+
+ // Funnel and next steps: computers (not browser extensions) decide pairing.
+ sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)').run('ext-budget','budget','Chrome','browser','cred-ext',now);
+ let listed=await decode(await api('?query=budget@'));assert.equal(listed.items[0].next_step,'pair_computer','A browser extension is not a paired computer');assert.equal(listed.items[0].computers,0);
+ sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)').run('mac-budget','budget','Mac','darwin','cred-mac',now);
+ listed=await decode(await api('?query=budget@'));assert.equal(listed.items[0].next_step,'connect_ai');
+ assert.equal(listed.funnel.registered,people.length);assert.equal(listed.funnel.paired,1);
+ const stepTotal=(await decode(await api('?segment=step:pair_computer'))).total;assert.equal(stepTotal,listed.funnel.pair_computer,'The funnel count matches its filter');
+ assert.equal((await api('?segment=step:bogus')).status,400);
+ // Follow-ups stop at their daily cap so sign-in codes keep their share.
+ const used=listed.emailBudget.used;env.FOLLOWUP_DAILY_EMAIL_LIMIT=String(used);
+ assert.equal((await decode(await api(''))).emailBudget.remaining,0);
+ const budgeted=await create(['budget']);assert.equal(budgeted.detail.emailBudget.remaining,0);await queue(budgeted.value.id);
+ const sentBefore=payloads.length;await run();
+ assert.equal(payloads.length,sentBefore,'Nothing is sent over the daily cap');assert.equal((await get(budgeted.value.id)).recipients[0].status,'pending','Over-cap recipients wait for the next window');
+ env.FOLLOWUP_DAILY_EMAIL_LIMIT=String(used+1);await run();
+ assert.equal(payloads.length,sentBefore+1);assert.equal((await get(budgeted.value.id)).recipients[0].status,'sent');
+ assert.equal((await decode(await api(''))).emailBudget.remaining,0);delete env.FOLLOWUP_DAILY_EMAIL_LIMIT;
  console.log('PASS: CRM tabs/counts/status/selection; immutable personalized batches; explicit queue; RBAC/CSRF; concurrent preparation/dispatch; revalidated suppression/consent/recipient/admin; cancel remaining; crash uncertainty; rate-limit backoff with stable idempotency. Only mocked emails.');
 }finally{globalThis.fetch=native;sql.close();}

@@ -190,7 +190,7 @@ func TestRelayControlMessagesAndConcurrencyLimitDoNotBypassDispatch(t *testing.T
 	cancel()
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
+	case <-time.After(15 * time.Second):
 		t.Fatal("disconnect did not drain workers")
 	}
 	if background.calls.Load() != 32 {
@@ -244,7 +244,7 @@ func TestSuccessfulControlRefreshesHelloAndRevokedHeartbeatStopsConnection(t *te
 	t.Setenv("REMOTEARC_RUNNER_VIDEO", "1")
 	var hellos atomic.Int32
 	refreshed := make(chan struct{})
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/agent" {

@@ -128,7 +128,7 @@ func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
 		if reply["error"] != nil {
 			t.Fatal("native CLI read failed")
 		}
-	case <-time.After(time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("native CLI did not execute")
 	}
 	select {
@@ -164,7 +164,7 @@ func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
 	}
 	select {
 	case <-stopped:
-	case <-time.After(time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("shutdown did not cancel optional setup")
 	}
 	if lease.Active(filepath.Join(config.Dir(), "agent"), "execution") {

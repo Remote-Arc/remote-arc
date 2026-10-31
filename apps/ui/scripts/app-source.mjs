@@ -34,6 +34,8 @@ export const appModules = [
   "dashboard/monitor-reliability.tsx",
   "dashboard/settings-view.tsx",
   "dashboard/dashboard-overlays.tsx",
+  "dashboard/add-device-dialog.tsx",
+  "dashboard/first-run-card.tsx",
 ];
 
 export const readAppModule = (name) => readFileSync(new URL("../src/" + name, import.meta.url), "utf8");

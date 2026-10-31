@@ -8,6 +8,9 @@ import type {
   DeviceMetadata,
 } from "@remotearc/protocol";
 
+/** An error the device itself returned for a call, as opposed to no reply. */
+class DeviceReportedError extends Error {}
+
 type PendingCall = {
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
@@ -450,6 +453,7 @@ export class DeviceRegistry {
       }
     }).catch((error) => ({
       __remoteLinkError: error instanceof Error ? error.message : String(error),
+      __deviceReported: error instanceof DeviceReportedError,
     }));
 
     if (
@@ -457,13 +461,12 @@ export class DeviceRegistry {
       result !== null &&
       "__remoteLinkError" in result
     ) {
+      const failure = result as { __remoteLinkError: unknown; __deviceReported: boolean };
+      // The device answered with an error (missing path, policy refusal…):
+      // the request was handled, so it is not a gateway timeout.
       return Response.json(
-        {
-          error: String(
-            (result as { __remoteLinkError: unknown }).__remoteLinkError,
-          ),
-        },
-        { status: 504 },
+        { error: String(failure.__remoteLinkError) },
+        { status: failure.__deviceReported ? 422 : 504 },
       );
     }
 
@@ -626,7 +629,7 @@ export class DeviceRegistry {
       this.pending.delete(parsed.id);
 
       if (parsed.error) {
-        pending.reject(new Error(parsed.error));
+        pending.reject(new DeviceReportedError(parsed.error));
       } else {
         pending.resolve(parsed.result);
       }

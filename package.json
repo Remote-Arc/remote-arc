@@ -25,7 +25,7 @@
     "build:ui": "pnpm package:browser && pnpm --filter @remotearc/ui build",
     "deploy:relay": "node scripts/deploy-relay.mjs",
     "test:installer": "node scripts/native-installer-test.mjs",
-    "test:deploy-policy": "node scripts/migration-names-test.mjs && node scripts/device-capability-contract-test.mjs && node --test scripts/configure-claude-reviewer-test.mjs && node scripts/deploy-relay-policy-test.mjs && node scripts/deploy-cloudflare-workflow-test.mjs && node scripts/d1-promotion-preflight-test.mjs && node scripts/release-ops-test.mjs && node scripts/wait-production-ci-test.mjs && node scripts/production-smoke-test.mjs",
+    "test:deploy-policy": "node scripts/migration-names-test.mjs && node scripts/device-capability-contract-test.mjs && node --test scripts/configure-claude-reviewer-test.mjs && node scripts/deploy-relay-policy-test.mjs && node scripts/deploy-cloudflare-workflow-test.mjs && node scripts/d1-promotion-preflight-test.mjs && node scripts/release-ops-test.mjs && node scripts/configure-app-oauth-test.mjs && node scripts/wait-production-ci-test.mjs && node scripts/production-smoke-test.mjs",
     "test:organization": "node scripts/organization-foundation-test.mjs",
     "build:cli": "pnpm --filter remotelink build",
     "build:device": "pnpm build:cli && node scripts/build-device.mjs",

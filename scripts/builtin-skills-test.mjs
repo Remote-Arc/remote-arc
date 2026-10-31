@@ -20,7 +20,7 @@ for(const skill of registry.skills){
  assert.match(doc,/verify|验证|evidence/i,skill.id);
  assert.doesNotMatch(doc,/(curl\s+\S+\s*\|\s*(?:sh|bash)|wget\s+\S+\s*\|\s*(?:sh|bash))/i,'unreviewed remote execution in '+skill.id);
 }
-const remote=fs.readFileSync(path.join(root,'apps/relay/src/mcp.ts'),'utf8');
+const remote=fs.readFileSync(path.join(root,'apps/relay/src/mcp/mcp.ts'),'utf8');
 const local=fs.readFileSync(path.join(root,'apps/agent/internal/localmcp/server.go'),'utf8');
 assert.match(remote,/BUILTIN_SKILLS/);
 assert.match(remote,/registerResource\(/);
@@ -44,7 +44,7 @@ assert.match(aceSection,/ask for explicit approval/i,'ACE-Step must require size
 const subtitlesSkill=fs.readFileSync(path.join(root,'skills/transcribe-subtitles/SKILL.md'),'utf8');
 assert.match(subtitlesSkill,/\*\*Default model:\*\* `ggml-base\.bin`/,'Whisper default must be small');
 assert.match(subtitlesSkill,/1\.6 GB\) require explicit size-aware consent/i,'Large Whisper model must not auto-download');
-const cloud=fs.readFileSync(path.join(root,'apps/relay/src/cloud-skills.ts'),'utf8');
+const cloud=fs.readFileSync(path.join(root,'apps/relay/src/skills/cloud-skills.ts'),'utf8');
 assert.match(cloud,/unauthorized/);
 assert.match(cloud,/mcp.remotearc.app/);
 assert.match(cloud,/BUILTIN_SKILLS_REVISION/);

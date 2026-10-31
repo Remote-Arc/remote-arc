@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { archiveOldAudit, type ArchivedAuditRow, type AuditArchiveEnv } from "../src/audit-archive.js";
-import { recordMcpTelemetry } from "../src/relay-telemetry.js";
-import { limitMcpIngress } from "../src/mcp-edge-guard.js";
-import { recordServiceIncident } from "../src/monitor.js";
+import { archiveOldAudit, type ArchivedAuditRow, type AuditArchiveEnv } from "../src/analytics/audit-archive.js";
+import { recordMcpTelemetry } from "../src/analytics/relay-telemetry.js";
+import { limitMcpIngress } from "../src/mcp/mcp-edge-guard.js";
+import { recordServiceIncident } from "../src/analytics/monitor.js";
 
 const row = (id: string, date: string): ArchivedAuditRow => ({
   id, user_id: "user-test", device_id: "device-test", event_type: "mcp.tool_call",

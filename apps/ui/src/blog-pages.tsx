@@ -1,3 +1,4 @@
+import { INTENT_ESSAY } from "../../../packages/docs/src/intent-driven-essay.js";
 import { useI18n } from "./i18n.js";
 import { localizedWebsiteHref } from "./marketing-paths.js";
 import { type User } from "./app-types.js";
@@ -38,6 +39,12 @@ const blogPosts = [
 export function BlogsPage({ user }: { user?: User | null }) {
   const { tr, locale } = useI18n();
   const posts = [
+    {
+      slug: INTENT_ESSAY.slug, date: INTENT_ESSAY.date, readTime: "7 min read", author: "Sam Yao",
+      title: tr(INTENT_ESSAY.title.en, INTENT_ESSAY.title.zh),
+      summary: tr(INTENT_ESSAY.deck.en, INTENT_ESSAY.deck.zh),
+      tag: tr("PERSONAL NOTES", "随想"),
+    },
     {
       ...blogPosts[4],
       title: tr(

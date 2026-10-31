@@ -62,5 +62,14 @@ func server(core *execution.Core, version string, policy protocol.Policy, scope 
 }
 func Run(ctx context.Context, core *execution.Core, version string) error {
 	defer core.Close()
-	return Server(core, version).Run(ctx, &mcp.StdioTransport{MaxLineLength: 32 << 20})
+	// In CI stdin can already be at EOF. A pre-cancelled invocation must not
+	// race that clean transport shutdown and accidentally report success.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	err := Server(core, version).Run(ctx, &mcp.StdioTransport{MaxLineLength: 32 << 20})
+	if err == nil && ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return err
 }

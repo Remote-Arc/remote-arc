@@ -12,7 +12,7 @@ export function ProductFocus(){
   <header className="homePlatformHeader">
    <div><span className="eyebrow">{tr('THE REMOTE ARC PLATFORM','REMOTE ARC 平台')}</span><h2 id="home-platform-heading">{tr('Agent infrastructure for real work across your apps and computers.','让 AI 跨应用与电脑完成真实工作的基础设施。')}</h2></div>
    <div className="homePlatformSummary">
-    <p><strong>Arc</strong>{tr(' is your hosted AI teammate. Give it a goal and work with it directly.',' 是你的托管 AI 队友，直接与它交流，把目标交给它。')}</p>
+    <p><strong>Arc</strong>{tr(' is your hosted AI agent, written by AI through Connect. Give it a goal and work with it directly.',' 是 AI 通过 Connect 写出来的托管 AI 智能体，直接与它交流，把目标交给它。')}</p>
     <p><strong>Connect</strong>{tr(' brings the same authorized Apps and device execution to the AI client you already use.',' 把同一套已授权的应用与设备执行能力，接入你已有的 AI 客户端。')}</p>
     <p>{tr('Remote Arc manages context, permissions, saved work, device selection and usage around model decisions, so work can move from a request to a result you can inspect.','Remote Arc 围绕模型的决策管理上下文、权限、已保存的工作、设备选择与用量，让需求逐步成为可核查的结果。')}</p>
     <p>{tr('Remote Arc is infrastructure that turns AI decisions into authorized, traceable actions in the real world. It lets AI operate your local computer, work on remote computers you authorize, and coordinate tasks across devices.','Remote Arc 是一套把 AI 的决策转换为经过授权、可追踪的真实操作的基础设施。Remote Arc 不仅让 AI 操作本机，也能让 AI 操作你授权的远程电脑，甚至跨设备协同执行。')}</p>

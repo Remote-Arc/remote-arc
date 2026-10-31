@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {sha256Hex} from '../src/auth.js';
-import {handleAdminServiceRequest} from '../src/admin-service.js';
+import {sha256Hex} from '../src/auth/auth.js';
+import {handleAdminServiceRequest} from '../src/admin/admin-service.js';
 import {submitWebsiteInterest} from '../src/domains/engagement.js';
-import {consumeRewardCall,publicFeedbackReward,rewardAllowance} from '../src/connect-rewards.js';
-import {consumeToolCall,getMonthlyUsage} from '../src/usage.js';
+import {consumeRewardCall,publicFeedbackReward,rewardAllowance} from '../src/billing/connect-rewards.js';
+import {consumeToolCall,getMonthlyUsage} from '../src/billing/usage.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const name of fs.readdirSync('migrations').filter(n=>n.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+name,'utf8'));

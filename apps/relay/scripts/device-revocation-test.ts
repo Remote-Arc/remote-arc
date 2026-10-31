@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { DeviceRegistry } from "../src/registry.js";
-import { disconnectRevokedDevice } from "../src/device.js";
+import { DeviceRegistry } from "../src/devices/registry.js";
+import { disconnectRevokedDevice } from "../src/devices/device.js";
 
 function fakeSocket(userId: string, deviceId: string) {
   let closeCode: number | null = null;

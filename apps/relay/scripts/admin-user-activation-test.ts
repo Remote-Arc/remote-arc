@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { activationOptions, listAdminUsers } from '../src/admin-user-activation.js';
+import { activationOptions, listAdminUsers } from '../src/admin/admin-user-activation.js';
 
 const sql = new DatabaseSync(':memory:');
 sql.exec('PRAGMA foreign_keys=ON');

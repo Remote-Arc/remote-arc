@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { diagnosticError, diagnosticRoute } from "../src/diagnostics.js";
-import { recordServiceIncident, type MonitorEnv } from "../src/monitor.js";
-import { recordMcpTelemetry } from "../src/relay-telemetry.js";
+import { diagnosticError, diagnosticRoute, deviceReadDiagnostic } from "../src/platform/diagnostics.js";
+import { recordServiceIncident, type MonitorEnv } from "../src/analytics/monitor.js";
+import { recordMcpTelemetry } from "../src/analytics/relay-telemetry.js";
 
 const secrets = [
   "sk-fixture-test-key-123456789",
@@ -13,6 +13,25 @@ const secrets = [
   "personal file content without a recognizable token",
 ];
 const raw = secrets.join("\n");
+for (const prefix of ['ENOENT:','EACCES:','EPERM:','ENOTDIR:','EISDIR:','FILE_CHANGED_DURING_READ:','device call timed out:','Blocked by Remote Arc Sensitive Path Policy:','', 'Error:']) {
+  const error = Error(prefix + raw), before = error.message;
+  const safe = deviceReadDiagnostic(error);
+  assert.equal(error.message,before,'Caller error remains intact');
+  for (const secret of secrets) assert(!safe.includes(secret));
+}
+// Exact os error text from the Go Agent, with a path that holds sensitive text.
+for (const [message, code] of [
+  [`stat /home/${raw}: no such file or directory`, "ENOENT"],
+  [`GetFileAttributesEx C:\\${raw}: The system cannot find the file specified.`, "ENOENT"],
+  [`open C:\\${raw}: The system cannot find the path specified.`, "ENOENT"],
+  [`open /root/${raw}: permission denied`, "EACCES"],
+  [`open C:\\Windows\\${raw}: Access is denied.`, "EACCES"],
+  [`Path is not a directory: ${raw}`, "ENOTDIR"],
+  [`Path is not a file: ${raw}`, "EISDIR"],
+  ["File is too large for read_file (21 MB > 20 MB). Use a terminal command or a more targeted tool instead.", "FILE_TOO_LARGE"],
+  ["Binary file detected. read_file currently supports text files only.", "BINARY_FILE"],
+] as const) assert.equal(deviceReadDiagnostic(Error(message)), code + ": details omitted");
+assert.equal(deviceReadDiagnostic(Error(`no such file or directory: ${raw}`)), "Error: details omitted", "Only a trailing os reason is a classification");
 assert.equal(diagnosticError(new TypeError(raw)), "TypeError: details omitted");
 assert.equal(diagnosticError(new RangeError(raw)), "RangeError: details omitted");
 assert.equal(diagnosticError("D1_ERROR: " + raw), "D1_ERROR: details omitted");

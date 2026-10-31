@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
-import {handleArcTeams} from '../src/arc-teams.js';
-import {handleArcChat,type ArcRun} from '../src/arc-chat.js';
-import {draftArcEmployee,listArcEmployeeDrafts} from '../src/arc-team-drafts.js';
-import {runArcStep} from '../src/arc-chat-runtime.js';
-import {createArcOwnerTeam} from '../src/arc-owner-team.js';
-import {seal} from '../src/app-oauth.js';
-import {arcContext} from '../src/arc-chat.js';
-import {delegateArcWork} from '../src/arc-dispatcher.js';
+import {handleArcTeams} from '../src/arc/arc-teams.js';
+import {handleArcChat,type ArcRun} from '../src/arc/arc-chat.js';
+import {draftArcEmployee,listArcEmployeeDrafts} from '../src/arc/arc-team-drafts.js';
+import {runArcStep} from '../src/arc/arc-chat-runtime.js';
+import {createArcOwnerTeam} from '../src/arc/arc-owner-team.js';
+import {seal} from '../src/apps/app-oauth.js';
+import {arcContext} from '../src/arc/arc-chat.js';
+import {delegateArcWork} from '../src/arc/arc-dispatcher.js';
 export async function testArcEmployeeDrafts({sql,env}:any){
  const origin='https://agent.remotearc.app',runtime=env.ARC_RUNTIME,adapter=env.MODEL_GATEWAY.adapters.openai;let modelCalls=0;
  const headers=(user='owner',requestOrigin=origin)=>({cookie:'rl_session='+user+'-session',origin:requestOrigin,'content-type':'application/json'});

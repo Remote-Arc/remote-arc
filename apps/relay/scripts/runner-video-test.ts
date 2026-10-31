@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { RunnerVideoRelay, videoSDP } from "../src/runner-video.js";
+import { RunnerVideoRelay, videoSDP } from "../src/browser/runner-video.js";
 
 const sdp = (direction: string) =>
   `v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 106\r\na=mid:0\r\na=${direction}\r\na=rtpmap:106 H264/90000\r\n`;

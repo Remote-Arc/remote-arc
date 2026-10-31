@@ -1,10 +1,10 @@
 import {ARC_USE_CASES,useCaseSlugs} from "../../../packages/docs/src/arc-use-cases.ts";
 import { DOC_TOPICS } from "../../../packages/docs/src/catalog.ts";
 import assert from "node:assert/strict";
-import {chineseSeo} from '../src/zh-seo.ts';
-import { legacyLanguageRedirect, localizedPages } from "../src/marketing-locale.ts";
+import {chineseSeo} from '../src/site/zh-seo.ts';
+import { legacyLanguageRedirect, localizedPages } from "../src/site/marketing-locale.ts";
 import { chinesePages, pageForLanguage } from "../../ui/src/marketing-paths.ts";
-import { chineseResourceSeo } from "../src/zh-resources.ts";
+import { chineseResourceSeo } from "../src/site/zh-resources.ts";
 import { releaseChinese } from "../../ui/src/release-locales.ts";
 import { readFileSync } from "node:fs";
 import {
@@ -17,7 +17,7 @@ import {
   renderMarketingHtml,
   robotsTxt,
   sitemapXml,
-} from "../src/seo.ts";
+} from "../src/site/seo.ts";
 
 // Marketing HTTP URLs must redirect to HTTPS without altering other hosts.
 for (const path of ["/", "/docs", "/zh/blogs", "/sitemap.xml", "/a%20b?utm_source=test"]) {
@@ -149,7 +149,8 @@ assert.ok(sitemap.includes('hreflang="zh-CN"'));
 // All Resources links and detail pages must have real Chinese URL, metadata,
 // server-visible Chinese content, and reciprocal English/Chinese alternates.
 const resourcePaths = Object.keys(chineseResourceSeo);
-assert.equal(resourcePaths.length, useCaseSlugs.length + 9, "Resources needs every use-case detail plus blog, security and release pages");
+assert.equal(resourcePaths.length, useCaseSlugs.length + 10, "Resources needs every use-case detail plus bilingual blog articles, security and release pages");
+assert.ok(resourcePaths.includes("/blogs/from-code-to-intent-driven-computing"), "new perspective article must have bilingual SEO copy");
 for (const base of resourcePaths) {
   const path = "/zh" + base;
   assert.ok(localizedPages.includes(base), "missing localized route: " + base);

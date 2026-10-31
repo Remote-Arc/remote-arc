@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { handleEmailCodeRequest, handleEmailCodeVerify, emailLoginEnabled } from "../src/email-auth.js";
-import { handleLoginPage } from "../src/reviewer.js";
+import { handleEmailCodeRequest, handleEmailCodeVerify, emailLoginEnabled } from "../src/auth/email-auth.js";
+import { handleLoginPage } from "../src/auth/reviewer.js";
 
 const ORIGIN = "https://mcp.remotearc.app";
 const sqlite = new DatabaseSync(":memory:");

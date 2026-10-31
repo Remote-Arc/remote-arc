@@ -48,10 +48,10 @@ The Worker validates account identity, OAuth grants, entitlement and device poli
 | Location | Responsibility |
 | --- | --- |
 | apps/relay/src/index.ts | HTTP, OAuth, MCP, device and automation entry points |
-| apps/relay/src/registry.ts / device-call.ts | Connection routing, authorization and device-call audit |
-| apps/relay/src/automations.ts / automation-store.ts | Bounded durable task state, leases, runs and journal |
-| apps/relay/src/source-goals.ts | Experimental source-controller context and idempotent decisions |
-| apps/relay/src/task-events.ts | Event subscription and callback integration subject to safe egress deployment |
+| apps/relay/src/devices/registry.ts / device-call.ts | Connection routing, authorization and device-call audit |
+| apps/relay/src/tasks/automations.ts / automation-store.ts | Bounded durable task state, leases, runs and journal |
+| apps/relay/src/tasks/source-goals.ts | Experimental source-controller context and idempotent decisions |
+| apps/relay/src/tasks/task-events.ts | Event subscription and callback integration subject to safe egress deployment |
 | apps/agent | Native Go pairing, session, control endpoint, startup recovery and logs |
 | packages/execution-core | Go filesystem, process, policy and Undo module |
 | packages/cli | npm/npx launcher that verifies and starts the Go Agent |

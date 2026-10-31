@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { handleCloudSkills } from "../src/cloud-skills.js";
+import { handleCloudSkills } from "../src/skills/cloud-skills.js";
 import { BUILTIN_SKILLS } from "../../../packages/skills/src/catalog.generated.js";
 const url="https://mcp.remotearc.app";
 const request=(path:string,method="GET",host=url)=>new Request(host+path,{method});

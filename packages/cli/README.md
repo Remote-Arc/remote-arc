@@ -7,7 +7,7 @@
 <!-- github-overview:start -->
 **Agent infrastructure for real work across your apps and computers.**
 
-Arc is your hosted AI teammate. Connect brings the same authorized Apps and device execution to the AI client you already use. Remote Arc manages the context, permissions, persistent work, device placement and usage around model decisions so work can proceed from a request to an inspectable result.
+Arc is your hosted AI agent. Connect brings the same authorized Apps and device execution to the AI client you already use. Remote Arc manages the context, permissions, persistent work, device placement and usage around model decisions so work can proceed from a request to an inspectable result.
 
 ## Two ways to work
 

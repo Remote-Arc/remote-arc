@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
-import { handleMarketplaceWebhook } from "../src/github-marketplace.js";
+import { handleMarketplaceWebhook } from "../src/billing/github-marketplace.js";
 
 const sqlite = new DatabaseSync(":memory:");
 sqlite.exec(readFileSync(new URL("../migrations/0033_github_marketplace.sql", import.meta.url), "utf8"));

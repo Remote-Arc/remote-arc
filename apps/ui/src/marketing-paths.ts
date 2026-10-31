@@ -9,6 +9,7 @@ export const chinesePages = new Set([
  "/", "/install/chatgpt", "/install/claude", "/install/gemini", "/install/cursor",
  "/docs", "/docs/mcp", "/docs/long-running-work", "/integrations", "/pricing", "/downloads", "/arc", "/roadmap", "/feedback", "/early-access",
  "/blogs",
+ "/blogs/from-code-to-intent-driven-computing",
  "/blogs/go-vs-typescript-agent-benchmarks",
  "/blogs/why-i-built-remote-arc",
  "/blogs/remote-arc-vs-openclaw",

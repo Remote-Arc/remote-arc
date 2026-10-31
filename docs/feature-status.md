@@ -30,6 +30,7 @@ is off.
 | Agent Goals (source and hosted) | Experimental | `ENABLE_EXPERIMENTAL_AGENT_GOALS` | A saved goal does not wake an external chat |
 | Independent Admin service | Staged | `ADMIN_SERVICE_MODE=legacy` | Admin runs inside the main Worker today |
 | Signed macOS app and DMG | Not built | | In review as PR #391 |
+| Device reconnect trends and recovery alerts | Staged | Migration 0072 and Worker release | Implemented and locally verified; production collection and alert drill pending |
 | OS sandbox for terminal commands | Not built | | [Execution isolation](execution-isolation.md); none of the current checks is a sandbox |
 | Automatic Agent updates | Not built | | Users upgrade by rerunning the installer or `npx remotelink@latest` |
 | Waking an arbitrary external chat | Not built | | Depends on the AI host, not on Remote Arc |

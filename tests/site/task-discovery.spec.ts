@@ -36,31 +36,31 @@ test('A task is reachable before its first run and has a history badge',async({p
  await expect(history.locator('.arcSessionDelete')).toHaveCount(0);
 });
 
-test('Teammates navigation opens a workspace with roles, search and explicit chat selection',async({page})=>{
+test('Agents navigation opens a workspace with roles, search and explicit chat selection',async({page})=>{
  await page.goto('/dashboard/agent/chat');
  if(page.viewportSize()!.width<820)await page.getByRole('button',{name:/Open workspace navigation|打开工作空间导航/,exact:true}).click();
- await page.locator('.arcSidebarAction').filter({hasText:/^(Teammates|队友)$/}).filter({visible:true}).click();
+ await page.locator('.arcSidebarAction').filter({hasText:/^(Agents|智能体)$/}).filter({visible:true}).click();
  await expect(page).toHaveURL(/\/dashboard\/agent\/teams$/);
- await expect(page.getByRole('heading',{level:1,name:/Teammates|队友/})).toBeVisible();
+ await expect(page.getByRole('heading',{level:1,name:/Agents|智能体/})).toBeVisible();
  await expect(page.locator('.arcSkillMentionMenu')).toHaveCount(0);
  await expect(page.locator('.arcTeamCard')).toHaveCount(4);
  await expect(page.locator('.arcTeammateAccess').first()).toContainText(/No app access|未授权应用/);
  await page.getByRole('searchbox').fill('NoMatchingRole');
- await expect(page.getByRole('status').filter({hasText:/No matching teammates|没有匹配的队友/})).toBeVisible();
+ await expect(page.getByRole('status').filter({hasText:/No matching agents|没有匹配的智能体/})).toBeVisible();
  await page.getByRole('searchbox').fill('设计');
  await expect(page.locator('.arcTeamCard')).toHaveCount(1);
- await page.getByRole('button',{name:/Work with this teammate|与这位队友协作/}).click();
+ await page.getByRole('button',{name:/Work with this agent|与这个智能体协作/}).click();
  await expect(page).toHaveURL(/\/dashboard\/agent\/chat$/);
- await expect(page.locator('.arcChatComposer .arcContextChip')).toContainText('设计队友');
+ await expect(page.locator('.arcChatComposer .arcContextChip')).toContainText('设计智能体');
  await expect(page.locator('#arc-chat-input')).toHaveValue('');
  await expect(page.locator('.arcChatMessage.user')).toHaveCount(0);
 });
 
-test('Teammate profiles and saved teams can be managed from the workspace',async({page})=>{
+test('Agent profiles and saved teams can be managed from the workspace',async({page})=>{
  await page.goto('/dashboard/agent/teams');
- const add=page.getByRole('button',{name:/^(Add teammate|添加队友)$/});
+ const add=page.getByRole('button',{name:/^(Add agent|添加智能体)$/});
  await add.click();
- const dialog=page.getByRole('dialog',{name:/Add an employee|添加员工/});
+ const dialog=page.getByRole('dialog',{name:/Add an agent|添加智能体/});
  await expect(dialog).toBeVisible();
  await page.keyboard.press('Escape');
  await expect(dialog).toHaveCount(0);

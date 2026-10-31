@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { validateSubmission, submitWebsiteInterest, listWebsiteSubmissions, updateWebsiteSubmission } from "../src/domains/engagement.ts";
-import { safeReturnTo } from "../src/auth.ts";
+import { safeReturnTo } from "../src/auth/auth.ts";
 
 const valid={category:"early_access",email:" Sam@Example.COM ",name:"Sam",message:"Please automate my GitHub report and summary",source:"arc",website:"",consent:true};
 assert.equal(validateSubmission(valid).email,"sam@example.com");

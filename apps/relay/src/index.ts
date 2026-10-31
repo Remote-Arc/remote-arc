@@ -1,44 +1,44 @@
-import {ingestProductEvents,observeProductRequest,requestEventRoute} from './product-observability.js';
-import {recordDeviceOnline,purgeBusinessMetrics} from './business-tracking.js';
-import {eventContext,purgeProductEvents,recordProductEvent} from './product-events.js';
-import {serveDemoMedia} from './demo-media.js';
-import { handleAgentDownload } from './agent-downloads.js';
-import {handleBrowserAuth} from "./browser-auth.js";
-import { handleRunnerRequest } from "./runner-attention.js";
-import { diagnosticError } from "./diagnostics.js";
-import {handleFollowupUnsubscribe} from './user-followups.js';
-import {runFollowupBatches} from './followup-batches.js';
-import {handleSlackEvents} from './slack-bot-events.js';
-import {handleSlackBotAccount} from './slack-bot-install.js';
-import {runSlackJobs} from './slack-bot-jobs.js';
-import {ensureOperatorAllowance} from './operator-allowance.js';
-import {publicFeedbackReward} from './connect-rewards.js';
-import { handleAdminServiceRequest, publicAdminResponse } from "./admin-service.js";
-export { AdminApiService } from "./admin-entrypoint.js";
+import {ingestProductEvents,observeProductRequest,requestEventRoute} from './analytics/product-observability.js';
+import {recordDeviceOnline,purgeBusinessMetrics} from './analytics/business-tracking.js';
+import {eventContext,purgeProductEvents,recordProductEvent} from './analytics/product-events.js';
+import {serveDemoMedia} from './platform/demo-media.js';
+import { handleAgentDownload } from './platform/agent-downloads.js';
+import {handleBrowserAuth} from "./browser/browser-auth.js";
+import { handleRunnerRequest } from "./browser/runner-attention.js";
+import { diagnosticError } from "./platform/diagnostics.js";
+import {handleFollowupUnsubscribe} from './followups/user-followups.js';
+import {runFollowupBatches} from './followups/followup-batches.js';
+import {handleSlackEvents} from './slack/slack-bot-events.js';
+import {handleSlackBotAccount} from './slack/slack-bot-install.js';
+import {runSlackJobs} from './slack/slack-bot-jobs.js';
+import {ensureOperatorAllowance} from './billing/operator-allowance.js';
+import {publicFeedbackReward} from './billing/connect-rewards.js';
+import { handleAdminServiceRequest, publicAdminResponse } from "./admin/admin-service.js";
+export { AdminApiService } from "./admin/admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
-import { handleApps } from "./apps.js";
-import {handleArcTeams} from './arc-teams.js';
-import {handleArcRooms} from './arc-team-rooms.js';
-import { handleArcChat, type ArcEnv } from "./arc-chat.js";
-import {handleBilling,type BillingEnv} from './stripe-billing.js';
-import {arcDeploymentReady} from './arc-chat-model.js';
-import {billingEnabled} from './platform-launch.js';
-import {stripeConfigured} from './stripe-client.js';
-import {commercialCatalog} from './arc-commercial-config.js';
-import {purgeDeletedArcContent} from './arc-retention.js';
-export { ArcChatRuntime } from "./arc-chat-object.js";
-import type { AppEnv } from "./app-catalog.js";
-import { handleDeviceTaskSettings } from "./device-task-settings.js";
-import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
-import { runScheduledTasks } from "./task-scheduler.js";
-import { DeviceRegistry } from "./registry.js";
-import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingHttpsRedirect, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
-import { legacyLanguageRedirect } from "./marketing-locale.js";
-import { createRemoteLinkMcp } from "./mcp.js";
-import { mcpClientProfile } from "./mcp-client-profile.js";
-import { handleCloudSkills, handleCloudSkillAction } from "./cloud-skills.js";
-import { callDevice } from "./device-call.js";
-import { consumeToolCall } from "./usage.js";
+import { handleApps } from "./apps/apps.js";
+import {handleArcTeams} from './arc/arc-teams.js';
+import {handleArcRooms} from './arc/arc-team-rooms.js';
+import { handleArcChat, type ArcEnv } from "./arc/arc-chat.js";
+import {handleBilling,type BillingEnv} from './billing/stripe-billing.js';
+import {arcDeploymentReady} from './arc/arc-chat-model.js';
+import {billingEnabled} from './platform/platform-launch.js';
+import {stripeConfigured} from './billing/stripe-client.js';
+import {commercialCatalog} from './arc/arc-commercial-config.js';
+import {purgeDeletedArcContent} from './arc/arc-retention.js';
+export { ArcChatRuntime } from "./arc/arc-chat-object.js";
+import type { AppEnv } from "./apps/app-catalog.js";
+import { handleDeviceTaskSettings } from "./devices/device-task-settings.js";
+import { handleTaskEventRpc, type TaskEventEnv } from "./tasks/task-events.js";
+import { runScheduledTasks } from "./tasks/task-scheduler.js";
+import { DeviceRegistry } from "./devices/registry.js";
+import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingHttpsRedirect, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./site/seo.js";
+import { legacyLanguageRedirect } from "./site/marketing-locale.js";
+import { createRemoteLinkMcp } from "./mcp/mcp.js";
+import { mcpClientProfile } from "./mcp/mcp-client-profile.js";
+import { handleCloudSkills, handleCloudSkillAction } from "./skills/cloud-skills.js";
+import { callDevice } from "./devices/device-call.js";
+import { consumeToolCall } from "./billing/usage.js";
 import {
   authenticateDevice,
   authenticateMcp,
@@ -46,10 +46,10 @@ import {
   handleGoogleCallback,
   handleGoogleLogin,
   handleLogout,
-} from "./auth.js";
-import { handleLoginPage, handleReviewerLogin } from "./reviewer.js";
-import { handleEmailCodeRequest, handleEmailCodeVerify } from "./email-auth.js";
-import { dashboardSignInUrl, legacyDashboardRedirect, protocolOnlyPath, publicWebsiteRedirect } from "./host-routing.js";
+} from "./auth/auth.js";
+import { handleLoginPage, handleReviewerLogin } from "./auth/reviewer.js";
+import { handleEmailCodeRequest, handleEmailCodeVerify } from "./auth/email-auth.js";
+import { dashboardSignInUrl, legacyDashboardRedirect, protocolOnlyPath, publicWebsiteRedirect } from "./platform/host-routing.js";
 import {
   getDevicesForUser,
   handleDeviceList,
@@ -71,34 +71,34 @@ import {
   handlePairingApprove,
   handlePairingLookup,
   recordPairingStep,
-} from "./device.js";
-import { readAudit } from "./audit.js";
-import { archiveOldAudit } from "./audit-archive.js";
-import { recordMcpTelemetry } from "./relay-telemetry.js";
-import { limitMcpIngress } from "./mcp-edge-guard.js";
-import { getMonthlyUsage } from "./usage.js";
-import { getAccountEntitlements } from "./entitlements.js";
-import { getMonthlyPlusUsage } from "./plus-usage.js";
-import { handleMarketplaceWebhook } from "./github-marketplace.js";
-import { handleFileResource } from "./file-resources.js";
-import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
-import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './device-capacity-admin.js';
-import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin-operations.js";
-import { handleAdminUsageInsights } from "./admin-usage-insights.js";
-import { handleOrganizations } from "./organizations.js";
+} from "./devices/device.js";
+import { readAudit } from "./analytics/audit.js";
+import { archiveOldAudit } from "./analytics/audit-archive.js";
+import { recordMcpTelemetry } from "./analytics/relay-telemetry.js";
+import { limitMcpIngress } from "./mcp/mcp-edge-guard.js";
+import { getMonthlyUsage } from "./billing/usage.js";
+import { getAccountEntitlements } from "./billing/entitlements.js";
+import { getMonthlyPlusUsage } from "./billing/plus-usage.js";
+import { handleMarketplaceWebhook } from "./billing/github-marketplace.js";
+import { handleFileResource } from "./devices/file-resources.js";
+import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./admin/plan-admin.js";
+import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './admin/device-capacity-admin.js';
+import { handleAdminOperations, handleAdminCallCredits, handleAdminBilling } from "./admin/admin-operations.js";
+import { handleAdminUsageInsights } from "./admin/admin-usage-insights.js";
+import { handleOrganizations } from "./auth/organizations.js";
 import { submitWebsiteInterest, listWebsiteSubmissions, updateWebsiteSubmission } from "./domains/engagement.js";
 import {
   handleAutomationCollection,
   handleAutomationItem,
   handleAutomationWebhook,
   runAutomationTick,
-} from "./automations.js";
+} from "./tasks/automations.js";
 import {
   handleGrantRevoke,
   handleMcpPause,
   handleSecurityState,
   isMcpPaused,
-} from "./security.js";
+} from "./platform/security.js";
 import {
   handleApprovalDecision,
   handleApprovalList,
@@ -107,13 +107,13 @@ import {
   handleDeviceApprovalDecision,
   handleDeviceApprovalList,
   runApprovalMaintenance,
-} from "./approvals.js";
+} from "./devices/approvals.js";
 import {
   handleMonitorState,
   incidentFromRequest,
   recordServiceIncident,
   runSyntheticMonitor,
-} from "./monitor.js";
+} from "./analytics/monitor.js";
 import {
   authorizationServerMetadata,
   handleDynamicClientRegistration,
@@ -122,7 +122,7 @@ import {
   handleOAuthToken,
   mcpUnauthorized,
   protectedResourceMetadata,
-} from "./oauth.js";
+} from "./auth/oauth.js";
 
 export { DeviceRegistry };
 

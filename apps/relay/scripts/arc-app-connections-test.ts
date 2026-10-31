@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {handleArcChat,arcMessages,type ArcEnv,type ArcRun} from '../src/arc-chat.js';
-import {runArcStep} from '../src/arc-chat-runtime.js';
-import {ARC_MODELS} from '../src/arc-chat-model.js';
-import {handleApps} from '../src/apps.js';
-import {sha256Hex} from '../src/auth.js';
-import {arcTaskState,prepareArcAppAction} from '../src/arc-task-state.js';
-import {APP_PROVIDERS} from '../src/app-catalog.js';
-import {requestArcAppConnection} from '../src/arc-app-connections.js';
+import {handleArcChat,arcMessages,type ArcEnv,type ArcRun} from '../src/arc/arc-chat.js';
+import {runArcStep} from '../src/arc/arc-chat-runtime.js';
+import {ARC_MODELS} from '../src/arc/arc-chat-model.js';
+import {handleApps} from '../src/apps/apps.js';
+import {sha256Hex} from '../src/auth/auth.js';
+import {arcTaskState,prepareArcAppAction} from '../src/arc/arc-task-state.js';
+import {APP_PROVIDERS} from '../src/apps/app-catalog.js';
+import {requestArcAppConnection} from '../src/arc/arc-app-connections.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
 for(const file of fs.readdirSync('migrations').filter(file=>file.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+file,'utf8'));

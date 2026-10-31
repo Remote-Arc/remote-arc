@@ -5,7 +5,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
-import { renderMarketingHtml } from '../../relay/src/seo.ts';
+import { renderMarketingHtml } from '../../relay/src/site/seo.ts';
 
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const output = process.env.REMOTEARC_QA_OUTPUT;

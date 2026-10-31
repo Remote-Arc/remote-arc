@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {serveDemoMedia} from '../src/demo-media.js';
+import {serveDemoMedia} from '../src/platform/demo-media.js';
 import {IMAGE_DEMOS} from '../../../packages/docs/src/image-gallery.js';
 import {GALLERY_ASSETS} from '../../../packages/docs/src/gallery-assets.js';
 import {MEDIA_DEMOS,PUBLISHED_MEDIA_DEMOS} from '../../../packages/docs/src/media-gallery.js';

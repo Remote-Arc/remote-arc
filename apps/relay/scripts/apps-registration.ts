@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
-import { APP_CATALOG, APP_PROVIDERS, appScopes } from "../src/app-catalog.js";
-import { callbackUrl } from "../src/app-oauth.js";
-import {SLACK_BOT_SCOPES} from '../src/slack-bot-common.js';
+import { APP_CATALOG, APP_PROVIDERS, appScopes } from "../src/apps/app-catalog.js";
+import { callbackUrl } from "../src/apps/app-oauth.js";
+import {SLACK_BOT_SCOPES} from '../src/slack/slack-bot-common.js';
 
 export function registrationPack(value: string) {
   const origin = new URL(value);

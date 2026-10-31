@@ -90,7 +90,7 @@ const architecture = DOC_TOPICS.find((topic) => topic.slug === "architecture")!
   .join(" ");
 assert(
   !architecture.includes(
-    "Autonomous groups of custom AI teammates remain a future direction",
+    "Autonomous groups of custom AI agents remain a future direction",
   ),
 );
 assert(architecture.includes("AI teams"));
@@ -120,6 +120,6 @@ assert.equal(referenceLink("benchmarks/README.md", "RESULTS-2026-10-09-f68ab09.m
 assert.equal(referenceLink("docs/feature-map/ai-teams.md", "../execution-isolation.md"), "/docs/execution-isolation");
 assert.equal(referenceLink("benchmarks/README.md", "../docs/go-persistence-validation.md"), null, "Unpublished files render as plain text");
 assert.equal(referenceLink("SECURITY.md", "https://docs.docker.com/engine/security/"), "https://docs.docker.com/engine/security/");
-for (const file of ["apps/ui/src/product-docs.tsx", "apps/ui/src/architecture-deep-dive.tsx", "apps/ui/src/marketing-pages.tsx", "apps/ui/src/blog-pages.tsx", "apps/relay/src/seo.ts", "packages/docs/src/platform-docs.ts"]) {
+for (const file of ["apps/ui/src/product-docs.tsx", "apps/ui/src/architecture-deep-dive.tsx", "apps/ui/src/marketing-pages.tsx", "apps/ui/src/blog-pages.tsx", "apps/relay/src/site/seo.ts", "packages/docs/src/platform-docs.ts"]) {
   assert.doesNotMatch(fs.readFileSync(new URL(file, repoRoot), "utf8"), /github\.com\/[^"'\s]+\/(?:blob|tree)\//, file + " must link to hosted documents, not GitHub");
 }

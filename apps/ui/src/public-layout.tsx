@@ -94,7 +94,7 @@ function PublicHeader({ user }: { user?: User | null }) {
             <div id="public-nav-product" className="publicNavDropdown productDropdown">
               <section className="publicNavGroup">
                 <span className="publicNavGroupLabel">{tr('ONE PLATFORM. YOUR WAY TO WORK.','一个平台，选择你的工作方式。')}</span>
-                <a className="publicProductEntry" href={navHref('/arc')}><span className="publicProductIcon publicProductLogo"><img src="/remote-arc.svg" alt=""/></span><span className="publicProductCopy"><strong>Arc <em>{arcAvailable?tr('Live','已上线'):tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, working with your apps and computers','你的个人 AI 队友，协同应用与电脑工作')}</small></span><ProductIcon name="arrowUpRight" size={15}/></a>
+                <a className="publicProductEntry" href={navHref('/arc')}><span className="publicProductIcon publicProductLogo"><img src="/remote-arc.svg" alt=""/></span><span className="publicProductCopy"><strong>Arc <em>{arcAvailable?tr('Live','已上线'):tr('Coming soon','即将上线')}</em></strong><small>{tr('Your personal agent, working with your apps and computers','你的个人智能体，协同应用与电脑工作')}</small></span><ProductIcon name="arrowUpRight" size={15}/></a>
                 <a className="publicProductEntry" href={navHref('/connect-ai')}><span className="publicProductIcon publicProductLogo"><img src="/connect-logo.svg" alt=""/></span><span className="publicProductCopy"><strong>Connect <em>{tr('Live','已上线')}</em></strong><small>{tr('Your tools, in the AI you already use','把你的工具，带入你常用的 AI')}</small></span><ProductIcon name="arrowUpRight" size={15}/></a>
               </section>
               <div className="publicNavProductFoot"><a href={navHref('/install/chatgpt')}><img className="monoLogo" src="/ai-openai.svg" alt=""/>ChatGPT</a><a href={navHref('/install/claude')}><img src="/ai-claude.svg" alt=""/>Claude</a><a href={navHref('/install/cursor')}><img className="monoLogo" src="/ai-cursor.svg" alt=""/>Cursor</a><a href={navHref('/remote-mcp')}><ProductIcon name="link" size={15}/>Remote MCP<ProductIcon name="arrowUpRight" size={12}/></a></div>
@@ -205,11 +205,11 @@ export function PublicLayout({
 export const aiClients = [
   { name: "ChatGPT", slug: "chatgpt", icon: "/ai-openai.svg", tone: "mono" },
   { name: "Claude", slug: "claude", icon: "/ai-claude.svg", tone: "color" },
-  { name: "Gemini", slug: "gemini", icon: "/ai-gemini.svg", tone: "color" },
+  { name: "Gemini", slug: "gemini", icon: "/ai-gemini-four-color-2025.svg", tone: "color" },
   { name: "Cursor", slug: "cursor", icon: "/ai-cursor.svg", tone: "color" },
 ] as const;
-// Homepage YOUR AI topology stays on one line; Gemini remains in the install guides.
-export const topologyAiClients = aiClients.filter((client) => client.slug !== "gemini");
+// The homepage topology uses the same supported-client list as the install guides.
+export const topologyAiClients = aiClients;
 function AiClientBadge({ name, icon, note }: { name: string; icon: string; note: string }) {
   return (
     <div className="aiClientBadge">

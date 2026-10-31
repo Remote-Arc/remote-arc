@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
-import { RunnerVideoRelay } from "../src/runner-video.js";
+import { RunnerVideoRelay } from "../src/browser/runner-video.js";
 
 // Real SFU acceptance uses the production broker with synthetic socket identity
 // and a synthetic page. Provider credentials remain in this Node backend.

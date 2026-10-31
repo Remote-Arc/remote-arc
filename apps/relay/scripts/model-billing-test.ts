@@ -3,10 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {DatabaseSync} from "node:sqlite";
-import {reserveBilling,settleBilling,setBillingLimit,grantPaidModel,configureFreeAiPool,getBillingUsage,getAdminBillingUsage,defineBillingPlan,assignBillingPlan,getBillingEntitlements,type BillingReservationInput} from "../src/billing-ledger.js";
-import {runModelGateway,DEFAULT_AUTO_MODEL,resolveModelGateway,type ModelGatewayBinding} from "../src/model-gateway.js";
-import {openAiAdapter,anthropicAdapter,openRouterAdapter,workersAiAdapter,ModelProviderError,type ModelDefinition,type ModelUsage} from "../src/model-provider-adapters.js";
-import {planAgentTurn,agentPlannerConfigured} from "../src/agent-planner.js";
+import {reserveBilling,settleBilling,setBillingLimit,grantPaidModel,configureFreeAiPool,getBillingUsage,getAdminBillingUsage,defineBillingPlan,assignBillingPlan,getBillingEntitlements,type BillingReservationInput} from "../src/billing/billing-ledger.js";
+import {runModelGateway,DEFAULT_AUTO_MODEL,resolveModelGateway,type ModelGatewayBinding} from "../src/arc/model-gateway.js";
+import {openAiAdapter,anthropicAdapter,openRouterAdapter,workersAiAdapter,ModelProviderError,type ModelDefinition,type ModelUsage} from "../src/arc/model-provider-adapters.js";
+import {planAgentTurn,agentPlannerConfigured} from "../src/tasks/agent-planner.js";
 import {ARC_HOSTED_MODELS} from '@remotearc/protocol';
 
 const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),".."),sql=new DatabaseSync(":memory:");

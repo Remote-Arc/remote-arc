@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { DeviceRegistry } from "../src/registry.js";
-import { handleDeviceRuntimeUpdate } from "../src/device.js";
+import { DeviceRegistry } from "../src/devices/registry.js";
+import { handleDeviceRuntimeUpdate } from "../src/devices/device.js";
 
 type Attachment = {
   userId: string;

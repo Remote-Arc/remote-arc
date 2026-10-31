@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/shared-tab-mcp.js";
-import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct, runStart } from "../src/browser-runner-mcp.js";
-import { callDevice } from "../src/device-call.js";
-import { parseRunnerAttention, runnerViewPath } from "../src/runner-attention.js";
-import { classifyExpectedMcpError } from "../src/mcp-errors.js";
-import type { OAuthIdentity } from "../src/auth.js";
+import { LEGACY_ALIAS_META_KEY, LEGACY_SHARED_TAB_ALIASES, registerLegacySharedTabAliases, registerSharedTabTools, SHARED_TAB_TOOLS } from "../src/mcp/shared-tab-mcp.js";
+import { registerBrowserRunnerTools, BROWSER_RUNNER_TOOLS, browserRunnerDefinitionsForTest, runAct, runStart } from "../src/mcp/browser-runner-mcp.js";
+import { callDevice } from "../src/devices/device-call.js";
+import { parseRunnerAttention, runnerViewPath } from "../src/browser/runner-attention.js";
+import { classifyExpectedMcpError } from "../src/mcp/mcp-errors.js";
+import type { OAuthIdentity } from "../src/auth/auth.js";
 
 type Registered = { def: { annotations: Record<string, boolean>; description: string }; handler: (input: Record<string, unknown>) => Promise<unknown> };
 const tools = new Map<string, Registered>();
@@ -129,12 +129,14 @@ console.log("PASS: legacy shared-tab names stay callable for cached hosts");
 const row = (platform: string, allowed: string[] | null) => ({
   id: "dev", platform, allowed_tools: allowed ? JSON.stringify(allowed) : null, workspace_roots: JSON.stringify(["/home/u"]),
   sensitive_paths: null, sensitive_allow_paths: null, protect_sensitive_paths: 1, undo_enabled: 1,
+  runner_attention_mode: "show_and_notify",
 });
 let device = row("linux", null);
 let dispatched: string[] = [];
+let dispatchedAttention = "";
 const env = {
   DB: { prepare: () => ({ bind: () => ({ first: async () => device, run: async () => ({ meta: { changes: 1 } }), all: async () => ({ results: [] }) }) }) },
-  REGISTRY: { getByName: () => ({ fetch: async (request: Request) => { const body = await request.json() as { tool: string }; dispatched.push(body.tool); return Response.json({ result: { ok: true } }); } }) },
+  REGISTRY: { getByName: () => ({ fetch: async (request: Request) => { const body = await request.json() as { tool: string; policy: {runnerAttentionMode: string} }; dispatched.push(body.tool); dispatchedAttention = body.policy.runnerAttentionMode; return Response.json({ result: { ok: true } }); } }) },
 } as never;
 const owner = identity("browser:interact");
 
@@ -145,6 +147,17 @@ await assert.rejects(callDevice(env, owner, "dev", "browser_runner_start", {}), 
 device = row("linux", ["browser_runner_start"]);
 assert.deepEqual(await callDevice(env, owner, "dev", "browser_runner_start", { task_id: "t" }), { ok: true });
 assert.deepEqual(dispatched, ["browser_runner_start"]);
+assert.equal(dispatchedAttention, "show_and_notify");
+await callDevice(env, {...owner, clientId:"automation:scheduled-run"}, "dev", "browser_runner_start", {task_id:"scheduled",runnerAttentionMode:"show_and_notify",headless:false});
+assert.equal(dispatchedAttention,"notify_only","model arguments cannot override background origin");
+await callDevice(env, owner,"dev","browser_runner_start",{task_id:"arc-run"},undefined,"server-side-run-id");
+assert.equal(dispatchedAttention,"notify_only","Arc run routing is unattended");
+device.runner_attention_mode="notify_only";
+await callDevice(env,owner,"dev","browser_runner_start",{task_id:"interactive"});
+assert.equal(dispatchedAttention,"notify_only","device preference overrides interactive origin");
+device.runner_attention_mode="show_and_notify";
+await callDevice(env,owner,"dev","browser_runner_start",{task_id:"interactive"});
+assert.equal(dispatchedAttention,"show_and_notify");
 
 // Wrong family: helpful redirect before any dispatch or permission noise.
 dispatched = [];

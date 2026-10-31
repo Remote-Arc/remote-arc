@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"runtime"
 	"time"
 )
@@ -15,6 +16,15 @@ import (
 // and goes back out of sight once the AI continues.
 
 var errNoWindow = errors.New("This computer runs the task browser without a window (no display), so it cannot be shown here.")
+var errHandoffMinimized = errors.New("the user minimized this handoff; restore the task window manually when ready")
+
+func (s *session) handoffWasMinimized(b windowBounds) bool {
+	if s.cp.State == StateNeedsUser && s.cp.AttentionPresented && b.WindowState == "minimized" {
+		s.cp.AttentionDismissed = true
+		return true
+	}
+	return false
+}
 
 type windowBounds struct {
 	Left        int    `json:"left"`
@@ -125,26 +135,94 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 		}
 		return nil
 	}
-	if b.WindowState != "normal" {
-		if e := s.quickBounds(ctx, id, map[string]any{"windowState": "normal"}); e != nil {
-			return e
+	area := s.windowWorkArea(ctx)
+	want := centeredWindow(area)
+	var lastErr error
+	for attempt := 0; attempt < 3 && ctx.Err() == nil; attempt++ {
+		if now, ok := s.quickWindow(ctx); ok && now.WindowState != "normal" {
+			if s.handoffWasMinimized(now) {
+				return errHandoffMinimized
+			}
+			if lastErr = s.restoreTaskWindow(ctx, id); lastErr != nil {
+				continue
+			}
+			if !s.awaitState(ctx, "normal", time.Second) {
+				lastErr = errors.New("the window did not leave its minimized or fullscreen state")
+				continue
+			}
 		}
-		s.awaitState(ctx, "normal", 3*time.Second)
-	}
-	left, top, width, height := 40, 40, 1280, 900
-	if raw, e := s.evaluateMain(ctx, `JSON.stringify([screen.availLeft||0, screen.availTop||0, screen.availWidth||0, screen.availHeight||0])`); e == nil {
-		var text string
-		var area [4]int
-		if json.Unmarshal(raw, &text) == nil && json.Unmarshal([]byte(text), &area) == nil && area[2] > 400 && area[3] > 300 {
-			width, height = min(width, area[2]-80), min(height, area[3]-80)
-			left, top = area[0]+(area[2]-width)/2, area[1]+(area[3]-height)/2
+		if lastErr = s.quickBounds(ctx, id, map[string]any{"left": want.Left, "top": want.Top, "width": want.Width, "height": want.Height}); lastErr != nil {
+			continue
+		}
+		// An acknowledgement is not evidence that the native window moved.
+		// macOS and desktop window managers may finish the transition later.
+		frontCtx, stop := context.WithTimeout(ctx, windowStep)
+		lastErr = s.raiseTaskWindow(frontCtx)
+		stop()
+		until := time.Now().Add(time.Second)
+		for ctx.Err() == nil {
+			if now, ok := s.quickWindow(ctx); ok {
+				if s.handoffWasMinimized(now) {
+					return errHandoffMinimized
+				}
+				if windowInWorkArea(now, area) {
+					if s.cp.State == StateNeedsUser {
+						s.cp.AttentionPresented = true
+					}
+					if lastErr == nil && s.taskWindowUncovered() {
+						return nil
+					}
+				}
+			}
+			if time.Now().After(until) || !waitTick(ctx, 50*time.Millisecond) {
+				break
+			}
 		}
 	}
-	if e := s.quickBounds(ctx, id, map[string]any{"left": left, "top": top, "width": width, "height": height}); e != nil {
-		return e
+	if lastErr == nil {
+		lastErr = errors.New("the window is outside the work area or covered by another window")
 	}
-	// The user asked for it: here taking focus is the point.
-	return s.conn.Call(ctx, "Page.bringToFront", nil, nil)
+	return fmt.Errorf("could not confirm that the task window is visible: %w; retry browser_runner_start with the same task_id and headless=false", lastErr)
+}
+
+// Read native screen information in the isolated world. A site's replacement
+// of window.screen must never decide where a human's task window is placed.
+func (s *session) windowWorkArea(ctx context.Context) windowBounds {
+	area := windowBounds{Width: 1360, Height: 980}
+	c, cancel := context.WithTimeout(ctx, windowStep)
+	defer cancel()
+	id, err := s.world(c)
+	if err != nil {
+		return area
+	}
+	var out evalResult
+	err = s.conn.Call(c, "Runtime.evaluate", map[string]any{"expression": "[screen.availLeft||0,screen.availTop||0,screen.availWidth,screen.availHeight]", "contextId": id, "returnByValue": true}, &out)
+	var values [4]int
+	if err == nil && json.Unmarshal(out.Result.Value, &values) == nil && values[2] > 0 && values[3] > 0 {
+		area = windowBounds{Left: values[0], Top: values[1], Width: values[2], Height: values[3]}
+	}
+	return area
+}
+
+func centeredWindow(area windowBounds) windowBounds {
+	margin := min(40, area.Width/10, area.Height/10)
+	width, height := min(1280, area.Width-2*margin), min(900, area.Height-2*margin)
+	return windowBounds{Left: area.Left + (area.Width-width)/2, Top: area.Top + (area.Height-height)/2, Width: width, Height: height, WindowState: "normal"}
+}
+
+func windowInWorkArea(b, area windowBounds) bool {
+	if b.WindowState == "minimized" || b.Width <= 0 || b.Height <= 0 {
+		return false
+	}
+	if b.WindowState == "fullscreen" || b.WindowState == "maximized" {
+		return b.Left <= area.Left+8 && b.Top <= area.Top+8 && b.Left+b.Width >= area.Left+area.Width-8 && b.Top+b.Height >= area.Top+area.Height-8
+	}
+	return b.Left >= area.Left-8 && b.Top >= area.Top-8 && b.Left+b.Width <= area.Left+area.Width+8 && b.Top+b.Height <= area.Top+area.Height+8
+}
+
+func (s *session) windowIsVisible(ctx context.Context) bool {
+	b, ok := s.quickWindow(ctx)
+	return ok && windowInWorkArea(b, s.windowWorkArea(ctx)) && s.taskWindowUncovered()
 }
 
 // keepHidden puts a hidden task window back out of sight if it is on

@@ -15,7 +15,7 @@ async function dictate(page:Page,text:string){
  await page.evaluate(text=>{const result:any=[{transcript:text}];result.isFinal=true;(window as any).__voice.onresult({resultIndex:0,results:[result]});},text);
 }
 
-for(const nextProfile of [0,1])test('A delayed teammate save cannot close a reopened editor: '+nextProfile,async({page})=>{
+for(const nextProfile of [0,1])test('A delayed agent save cannot close a reopened editor: '+nextProfile,async({page})=>{
  await page.goto('/dashboard/agent/settings?section=teammates');
  const editors=page.getByRole('button',{name:/Edit details & access|编辑资料与访问设置/});
  await expect(editors).toHaveCount(4);
@@ -30,8 +30,8 @@ for(const nextProfile of [0,1])test('A delayed teammate save cannot close a reop
  });
  await editors.nth(0).click();
  const dialog=page.locator('dialog[open]');
- await dialog.getByRole('textbox',{name:/^(Name|名字)$/}).fill('Saved first teammate');
- await dialog.getByRole('button',{name:/^(Save employee|保存员工)$/}).click();
+ await dialog.getByRole('textbox',{name:/^(Name|名字)$/}).fill('Saved first agent');
+ await dialog.getByRole('button',{name:/^(Save agent|保存智能体)$/}).click();
  await expect.poll(()=>page.evaluate(()=>(window as any).__profileSave.started)).toBe(true);
  await dialog.getByRole('button',{name:/^(Close|关闭)$/}).click();
  await editors.nth(nextProfile).click();
@@ -39,7 +39,7 @@ for(const nextProfile of [0,1])test('A delayed teammate save cannot close a reop
  await page.evaluate(async()=>{(window as any).__profileSave.release();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
  await expect(dialog).toBeVisible();
  await expect(dialog.getByRole('textbox',{name:/^(Name|名字)$/})).toHaveValue('Keep this second draft');
- await expect(dialog).toHaveAccessibleName(/Edit employee|编辑员工/);
+ await expect(dialog).toHaveAccessibleName(/Edit agent|编辑智能体/);
 });
 
 test('Transient work refresh failures preserve cards and recover with retry',async({page})=>{

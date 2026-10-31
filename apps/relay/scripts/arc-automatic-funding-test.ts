@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import {DatabaseSync} from 'node:sqlite';
-import {reserveBilling,settleBilling,type BillingReservationInput} from '../src/billing-ledger.js';
-import {automaticFunding,fundingAvailable,fundingOverview,updateFunding} from '../src/arc-funding.js';
-import {activateArcTrial} from '../src/arc-trial.js';import {prepareArcBudget} from '../src/arc-chat-model.js';import {grantArcCredits} from '../src/arc-credits.js';
+import {reserveBilling,settleBilling,type BillingReservationInput} from '../src/billing/billing-ledger.js';
+import {automaticFunding,fundingAvailable,fundingOverview,updateFunding} from '../src/arc/arc-funding.js';
+import {activateArcTrial} from '../src/arc/arc-trial.js';import {prepareArcBudget} from '../src/arc/arc-chat-model.js';import {grantArcCredits} from '../src/arc/arc-credits.js';
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const name of fs.readdirSync('migrations').filter(n=>n.endsWith('.sql')).sort())sql.exec(fs.readFileSync('migrations/'+name,'utf8'));
 const db={prepare(query:string){const s=sql.prepare(query),bound=(args:any[])=>({async first(){return s.get(...args)||null;},async all(){return{results:s.all(...args)};},async run(){return this.runSync();},runSync(){const before=Number(sql.prepare('SELECT total_changes() n').get()!.n);s.run(...args);return{success:true,meta:{changes:Number(sql.prepare('SELECT total_changes() n').get()!.n)-before}};}});return{...bound([]),bind(...args:any[]){return bound(args);}};},async batch(statements:any[]){sql.exec('BEGIN IMMEDIATE');try{const rows=statements.map(s=>s.runSync());sql.exec('COMMIT');return rows;}catch(e){sql.exec('ROLLBACK');throw e;}}} as unknown as D1Database;
 const at=new Date().toISOString(),future=new Date(Date.now()+30*864e5).toISOString(),env={DB:db,ARC_PLATFORM_ENABLED:'1',OPENAI_API_KEY:'fixture',ARC_PLATFORM_DAILY_MICROS:'10000',ARC_USER_DAILY_MICROS:'100000'};

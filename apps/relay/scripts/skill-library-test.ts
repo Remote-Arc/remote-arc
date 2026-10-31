@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {SKILL_LIBRARY,skillLibrarySummaries} from '../../../packages/skills/src/library.js';
-import {listArcSkills,readArcSkill} from '../src/arc-skills.js';
-import {findSkills,skillIndex,suggestedSkills} from '../src/skill-index.js';
-import type {ArcEnv} from '../src/arc-chat.js';
+import {listArcSkills,readArcSkill} from '../src/arc/arc-skills.js';
+import {findSkills,skillIndex,suggestedSkills} from '../src/skills/skill-index.js';
+import type {ArcEnv} from '../src/arc/arc-chat.js';
 
 const env={DB:{prepare(){return{bind(){return{all:async()=>({results:[]})}}}}}} as unknown as ArcEnv;
 const {skills}=await listArcSkills(env,'owner');

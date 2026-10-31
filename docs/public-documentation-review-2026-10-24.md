@@ -48,10 +48,10 @@ Both languages use the same reviewed topic and tool sources. Unchanged instructi
 
 ## Evidence and maintenance
 
-- Public tools and schemas: `apps/relay/src/mcp.ts` through `tools/list`, with capability flags enabled to enumerate the full documented surface. Generation must not read account data or execute tools.
-- App operations: `APP_CATALOG` and `APP_OPERATIONS` in `apps/relay/src/app-catalog.ts`; schemas are exported from the registered Zod definitions.
+- Public tools and schemas: `apps/relay/src/mcp/mcp.ts` through `tools/list`, with capability flags enabled to enumerate the full documented surface. Generation must not read account data or execute tools.
+- App operations: `APP_CATALOG` and `APP_OPERATIONS` in `apps/relay/src/apps/app-catalog.ts`; schemas are exported from the registered Zod definitions.
 - Local tools/modes: `RemoteArcExecutionCore.listTools()` and the local `remote_arc_status` contract in `apps/agent/internal/localmcp/server.go`; native/TypeScript parity is covered by the device checks.
-- Runtime and billing: `apps/relay/src/arc-*`, `slack-bot-*`, `billing-ledger.ts`, protocol trial constants, `dashboard-workspaces.ts` and the Plan & usage UI.
+- Runtime and billing: `apps/relay/src/arc/`, `apps/relay/src/slack/`, `billing-ledger.ts`, protocol trial constants, `dashboard-workspaces.ts` and the Plan & usage UI.
 - Browser release boundary: Agent 0.6.3, `apps/agent/internal/browserrunner`; video work #340 and handoff/live view #342/#345 remain pending.
 - [OpenAI custom MCP guide](https://developers.openai.com/api/docs/guides/custom-mcp-server), [Codex MCP guide](https://learn.chatgpt.com/docs/extend/mcp), [Codex settings](https://learn.chatgpt.com/docs/developer-settings).
 - [Claude remote connectors](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp), [Cursor MCP](https://cursor.com/docs/mcp), [Google custom apps](https://support.google.com/gemini/answer/17209137).

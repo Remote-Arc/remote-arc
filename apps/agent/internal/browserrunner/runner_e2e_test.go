@@ -93,6 +93,7 @@ type harness struct {
 	m      *Manager
 	policy protocol.Policy
 	ctx    context.Context
+	starts map[string]map[string]any
 }
 
 // REMOTEARC_E2E_HEADED=1 shows the browser window and pauses between steps
@@ -116,14 +117,35 @@ func (h *harness) call(tool string, args map[string]any) map[string]any {
 		}
 		defer time.Sleep(pause)
 	}
-	out, e := h.m.Call(h.ctx, tool, args, h.policy)
-	if e != nil {
-		h.t.Fatalf("%s: %v", tool, e)
+	if tool == "browser_runner_start" {
+		if h.starts == nil {
+			h.starts = map[string]map[string]any{}
+		}
+		h.starts[fmt.Sprint(args["task_id"])] = merge(args, map[string]any{})
 	}
-	b, _ := json.Marshal(out)
-	var m map[string]any
-	_ = json.Unmarshal(b, &m)
-	return m
+	for h.ctx.Err() == nil {
+		out, e := h.m.Call(h.ctx, tool, args, h.policy)
+		if e != nil {
+			h.t.Fatalf("%s: %v", tool, e)
+		}
+		b, _ := json.Marshal(out)
+		var result map[string]any
+		_ = json.Unmarshal(b, &result)
+		if result["state"] != "starting" {
+			return result
+		}
+		if !waitTick(h.ctx, time.Second) {
+			break
+		}
+		if tool != "browser_runner_start" {
+			// A client resumes first, then retries the unexecuted operation.
+			resume := merge(h.starts[fmt.Sprint(args["session_id"])], map[string]any{})
+			delete(resume, "start_url")
+			h.call("browser_runner_start", resume)
+		}
+	}
+	h.t.Fatal("browser did not finish starting before the test deadline")
+	return nil
 }
 
 func (h *harness) fail(tool string, args map[string]any, want string) {
@@ -167,6 +189,8 @@ func newHarness(t *testing.T) (*harness, *fakeATS, string, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	t.Cleanup(cancel)
 	m := New()
+	// Presence is a test input; do not move the real user's mouse or keyboard.
+	m.userPresent = func() bool { return true }
 	t.Cleanup(m.Close)
 	return &harness{t: t, m: m, ctx: ctx, policy: protocol.Policy{WorkspaceRoots: []string{docs}}}, ats, srv.URL, outside.URL
 }

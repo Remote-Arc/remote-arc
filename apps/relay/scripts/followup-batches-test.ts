@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {sha256Hex} from '../src/auth.js';
-import {handleAdminServiceRequest} from '../src/admin-service.js';
-import {runFollowupBatches} from '../src/followup-batches.js';
+import {sha256Hex} from '../src/auth/auth.js';
+import {handleAdminServiceRequest} from '../src/admin/admin-service.js';
+import {runFollowupBatches} from '../src/followups/followup-batches.js';
 import {DEFAULT_FOLLOWUP_DESIGN} from '../../../packages/protocol/src/followup-email.js';
 
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');

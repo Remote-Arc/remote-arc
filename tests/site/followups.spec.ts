@@ -28,7 +28,7 @@ test('Saved drafts reopen, stay editable and update the same message',async({pag
  await page.getByRole('button',{name:/Continue editing|继续编辑/}).click();await expect(subject(page)).toHaveValue('Edited after saving');
 });
 
-test('Send records the contact basis in place and submits the latest saved content once',async({page})=>{
+test('Send permits an empty contact basis and submits the latest saved content once',async({page})=>{
  await open(page);await save(page).click();await expect(send(page)).toBeEnabled();
  await subject(page).fill('Latest reviewed installation help');await send(page).click();
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();
@@ -37,11 +37,10 @@ test('Send records the contact basis in place and submits the latest saved conte
  await expect(dialog.locator('dt').filter({hasText:/^(Reply to|回复地址)$/})).toBeVisible();
  await expect(dialog).not.toContainText('login@remotearc.app');
  await expect(dialog.getByRole('radio').first().locator('..')).toHaveCSS('flex-direction','row');
- await dialog.getByRole('button',{name:/Record basis & send|记录依据并发送/}).click();
- await expect(dialog.getByRole('alert')).toContainText(/Choose|选择/);
- await dialog.getByRole('radio',{name:/requested installation|请求安装/}).check();
- await dialog.getByRole('button',{name:/Record basis & send|记录依据并发送/}).click();
+ await expect(dialog.getByRole('radio',{name:/Do not add a contact basis|暂不记录联系依据/})).toBeChecked();
+ await dialog.getByRole('button',{name:/^(Confirm send|确认发送)$/}).click();
  await expect(dialog).toHaveCount(0);
+ expect(await page.evaluate(async()=>{const value=await(await fetch('/api/admin/followups/preview-followup-user')).json();return value.contact.consent_at;})).toBeNull();
  await expect(page.locator('.followupHistoryItem')).toHaveCount(1);
  await expect(page.locator('.followupHistoryItem')).toContainText('Latest reviewed installation help');
  await expect(page.locator('.followupHistoryItem')).toContainText(/Submitted|已提交发送/);
@@ -49,6 +48,15 @@ test('Send records the contact basis in place and submits the latest saved conte
  await expect(page.locator('.adminFollowupSendHint')).toContainText(/send again at|下次可发送时间/);
  await send(page).click();await expect(page.getByRole('dialog')).toContainText(/send again at|下次可发送时间/);
  await expect(page.getByRole('button',{name:/^(Confirm send|确认发送)$/})).toHaveCount(0);
+});
+
+test('An explicitly selected support basis is saved alongside delivery',async({page})=>{
+ await open(page);await send(page).click();
+ const dialog=page.getByRole('dialog');await dialog.getByRole('radio',{name:/requested installation|请求安装/}).check();
+ await dialog.getByRole('button',{name:/Record basis & send|记录依据并发送/}).click();await expect(dialog).toHaveCount(0);
+ const contact=await page.evaluate(async()=>{const value=await(await fetch('/api/admin/followups/preview-followup-user')).json();return value.contact;});
+ expect(contact.consent_at).toBeTruthy();expect(contact.consent_note).toMatch(/requested|请求/i);
+ await expect(page.locator('.followupHistoryItem')).toContainText(/Submitted|已提交发送/);
 });
 
 test('Switching users retains edits and replacing a template offers save or discard',async({page})=>{

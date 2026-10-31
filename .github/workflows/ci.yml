@@ -93,8 +93,7 @@ jobs:
       - run: pnpm test:recovery
 
   go-coverage:
-    # Initial measurable gate: prevent regression while lifting both full
-    # modules toward 90%. Strict 90% command remains available locally.
+    # Both full Go modules enforce 90%, including command entrypoints.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -108,8 +107,13 @@ jobs:
           cache-dependency-path: |
             apps/agent/go.sum
             packages/execution-core/go.sum
-      - name: Check Go coverage floors and protected packages
-        run: node scripts/go-coverage.mjs
+      - name: Install real H264 encoder for video transport tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version
+      - name: Check Go coverage target and protected packages
+        run: node scripts/go-coverage.mjs --target
       - name: Check synthetic takeover source fixtures
         run: python3 scripts/takeover-session-probe-test.py
 

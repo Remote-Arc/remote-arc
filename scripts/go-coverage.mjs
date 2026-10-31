@@ -51,11 +51,11 @@ try {
     const all = summarise(profile);
     console.log(module.name + " statements: " + all.covered + "/" + all.total + " = " + all.percent + "% (target 90%)");
     const threshold = coverageThresholds(module.scope, strict).statements;
-    if (all.percent < threshold) failures.push(module.name + " " + all.percent + "% < " + threshold + "%");
+    if (!all.total || all.covered * 100 < threshold * all.total) failures.push(module.name + " " + all.covered + "/" + all.total + " statements < " + threshold + "%");
     for (const [pkg, minimum] of Object.entries(module.focus)) {
       const result = summarise(profile, pkg);
       console.log("  " + pkg + ": " + result.percent + "% (minimum " + minimum + "%)");
-      if (!result.total || result.percent < minimum) failures.push(module.name + "/" + pkg + " " + result.percent + "% < " + minimum + "%");
+      if (!result.total || result.covered * 100 < minimum * result.total) failures.push(module.name + "/" + pkg + " " + result.covered + "/" + result.total + " statements < " + minimum + "%");
     }
   }
 } finally {

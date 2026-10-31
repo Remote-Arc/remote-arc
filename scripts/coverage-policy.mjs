@@ -5,11 +5,14 @@
 // Relay coverage now measures test:coverage (the security suite plus the other relay
 // suites CI runs) and new entry, device and organization tests: 89.24% lines, 82.65%
 // branches and 96.56% functions, so its floors moved to 88/88/82/95.
+// Five additional Relay suites raised its floors to 90/90/83/96.
+// Agent lifecycle, browser protocol/media and setup boundary tests now enforce
+// the full-module 90% statement target, including command entrypoints.
 export const COVERAGE_TARGET=90;
 export const COVERAGE_FLOORS={
  typescript:{lines:50,statements:50,branches:80,functions:75},
  relay:{lines:90,statements:90,branches:83,functions:96},
- agent:{statements:78},
+ agent:{statements:90},
  core:{statements:90},
  apps:{lines:90,statements:90,branches:90,functions:90},
 };

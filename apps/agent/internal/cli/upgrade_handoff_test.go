@@ -204,7 +204,7 @@ func TestPlainLaunchOfNewerReleaseReplacesOlderGoAgent(t *testing.T) {
 	}
 	old := startOldAgent(t, "0.6.2-rc.4", true, idle)
 	dir := filepath.Join(config.Dir(), "agent")
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), launchSettleTimeout)
 	defer cancel()
 	done := make(chan error, 1)
 	var out syncBuffer
@@ -271,26 +271,35 @@ func launchFixture(t *testing.T) {
 	}
 }
 
-// launch runs the CLI briefly and reports whether the old Agent was stopped
-// and whether a new control endpoint then owned execution.
+// launch runs the CLI until it settles, then reports whether the old Agent was
+// stopped and whether a new control endpoint then owned execution. It settles
+// when the CLI returns, a new Agent owns execution, or the CLI follows the kept
+// Agent's log. Outcomes are awaited rather than timed, so a slow host cannot end
+// the run first; the deadline only guards against a hang.
 func launch(t *testing.T, old *oldAgent, args []string, version string) (stopped, replaced bool, out string, err error) {
 	t.Helper()
 	control := filepath.Join(config.Dir(), "agent", "control.json")
 	before, _ := os.ReadFile(control)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), launchSettleTimeout)
 	defer cancel()
 	done := make(chan error, 1)
 	var buf syncBuffer
 	go func() { done <- Main(ctx, args, version, os.Stdin, &buf, &buf) }()
-	exited := false
-	for !exited && !replaced && ctx.Err() == nil {
+	exited, viewing := false, false
+	for !exited && !replaced && !viewing && ctx.Err() == nil {
 		select {
 		case err = <-done:
 			exited = true
 		case <-time.After(50 * time.Millisecond):
 			now, e := os.ReadFile(control)
 			replaced = e == nil && string(now) != string(before) && lease.Active(filepath.Dir(control), "execution")
+			viewing = strings.Contains(buf.String(), "Following its operation log")
 		}
+	}
+	if !exited && !replaced && !viewing {
+		cancel()
+		<-done
+		t.Fatalf("launch did not settle within %v:\n%s", launchSettleTimeout, buf.String())
 	}
 	if !exited {
 		// Let the viewer print its first lines before stopping it.
@@ -306,6 +315,10 @@ func launch(t *testing.T, old *oldAgent, args []string, version string) (stopped
 	}
 	return stopped, replaced, buf.String(), err
 }
+
+// launchSettleTimeout bounds a hung launch. A handoff and a new Agent's
+// startup together take seconds on Windows runners.
+const launchSettleTimeout = 60 * time.Second
 
 func TestBusyOlderAgentIsKeptWithoutForceUpdate(t *testing.T) {
 	launchFixture(t)

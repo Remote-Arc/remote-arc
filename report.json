@@ -2,17 +2,17 @@
   "version": 1,
   "repository": "Remote-Arc/remote-arc",
   "source": {
-    "runId": 41143107558,
-    "sha": "f324b708fe53cc981d82588e26e9bf6c8d4952d0",
-    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/41143107558",
-    "measuredAt": "2026-10-30T23:28:59Z"
+    "runId": 41148445863,
+    "sha": "6b8448c63bbdf6b74cbe2f41100660020822205d",
+    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/41148445863",
+    "measuredAt": "2026-10-31T00:22:55Z"
   },
   "scope": "Production TypeScript/TSX and Linux Go module statements; Apps/Relay are overlapping breakouts.",
   "target": 90,
   "overall": {
-    "covered": 36667,
-    "total": 57843,
-    "pct": 63.39
+    "covered": 36746,
+    "total": 57945,
+    "pct": 63.42
   },
   "scopes": {
     "apps": {
@@ -39,14 +39,14 @@
     },
     "typescript": {
       "statements": {
-        "covered": 28895,
-        "total": 48384,
+        "covered": 28899,
+        "total": 48388,
         "pct": 59.72
       },
       "branches": {
-        "covered": 11377,
-        "total": 14010,
-        "pct": 81.21
+        "covered": 11383,
+        "total": 14014,
+        "pct": 81.23
       },
       "functions": {
         "covered": 1136,
@@ -54,21 +54,21 @@
         "pct": 82.74
       },
       "lines": {
-        "covered": 28895,
-        "total": 48384,
+        "covered": 28899,
+        "total": 48388,
         "pct": 59.72
       }
     },
     "relay": {
       "statements": {
-        "covered": 23204,
-        "total": 26050,
-        "pct": 89.07
+        "covered": 23208,
+        "total": 26054,
+        "pct": 89.08
       },
       "branches": {
-        "covered": 10375,
-        "total": 12551,
-        "pct": 82.66
+        "covered": 10380,
+        "total": 12555,
+        "pct": 82.68
       },
       "functions": {
         "covered": 937,
@@ -76,16 +76,16 @@
         "pct": 96.1
       },
       "lines": {
-        "covered": 23204,
-        "total": 26050,
-        "pct": 89.07
+        "covered": 23208,
+        "total": 26054,
+        "pct": 89.08
       }
     },
     "agent": {
       "statements": {
-        "covered": 5738,
-        "total": 7278,
-        "pct": 78.84
+        "covered": 5813,
+        "total": 7376,
+        "pct": 78.81
       }
     },
     "core": {

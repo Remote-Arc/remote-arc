@@ -52,6 +52,7 @@ type Manager struct {
 	IdleTimeout       time.Duration
 	UserActionTimeout time.Duration
 	attentionMode     string
+	userPresent       func() bool
 	attentionEvents   map[string]Attention
 	frames            chan ViewFrame
 	videoSignals      chan VideoSignal
@@ -61,7 +62,7 @@ type Manager struct {
 }
 
 func New() *Manager {
-	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, now: time.Now, IdleTimeout: 20 * time.Minute, UserActionTimeout: 2 * time.Hour, attentionEvents: map[string]Attention{}, frames: make(chan ViewFrame, 2), videoSignals: make(chan VideoSignal, 16), stop: make(chan struct{})}
+	return &Manager{sessions: map[string]*session{}, findBrowser: FindBrowser, now: time.Now, userPresent: desktopUserPresent, IdleTimeout: 20 * time.Minute, UserActionTimeout: 2 * time.Hour, attentionEvents: map[string]Attention{}, frames: make(chan ViewFrame, 2), videoSignals: make(chan VideoSignal, 16), stop: make(chan struct{})}
 }
 
 // Available reports whether this device can run the browser_runner at all.
@@ -242,6 +243,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	defer s.mu.Unlock()
 	s.lastUsed = m.now()
 	s.auth = p.BrowserAuth
+	s.setCallAttentionMode(p.RunnerAttentionMode)
 	if tool == "browser_runner_status" {
 		return s.cp.Summary(s.live()), nil
 	}
@@ -502,7 +504,19 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 	defer s.mu.Unlock()
 	s.lastUsed = m.now()
 	s.auth = p.BrowserAuth
+	s.setCallAttentionMode(p.RunnerAttentionMode)
+	// Policy comes from the Relay, never from model-provided arguments.
+	// An unattended caller cannot make a visible launch by setting headless=false.
+	if s.cp.Browser != browserYourChrome && !s.mayShowWindow() {
+		headless, chosen = true, false
+		s.cp.Headless = true
+	}
 	if resumed {
+		if chosen && !headless && s.cp.State == StateNeedsUser && (s.cp.AttentionShown || s.cp.AttentionDismissed) {
+			// A model repeating start is not a new human request to interrupt.
+			// The user can restore the existing task window when ready.
+			chosen, headless = false, s.cp.Headless
+		}
 		if s.cp.Profile != profile || (s.cp.Browser == browserYourChrome) != (browser == browserYourChrome) {
 			return nil, errors.New("A session keeps its browser and profile. Close it with forget=true to start over in another.")
 		}
@@ -529,6 +543,9 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 				}
 				s.cp.Headless = headless
 				s.shownForUser = !headless && s.cp.State == StateNeedsUser
+				if s.shownForUser {
+					s.cp.AttentionShown = true
+				}
 			case !headless && !hasDisplay():
 				return nil, errNoWindow
 			default:
@@ -547,7 +564,7 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 	}
 	out := map[string]any{}
 	if startURL != "" {
-		out, e = s.navigate(ctx, startURL)
+		e = s.startupStep("navigate", func() error { out, e = s.navigate(ctx, startURL); return e })
 		if e != nil {
 			_ = s.flush()
 			return nil, e
@@ -567,6 +584,8 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 		switch {
 		case !s.hasWindow():
 			out["window"] = "none: this computer has no display, so the browser runs without a window"
+		case s.cp.State == StateNeedsUser && s.cp.AttentionShown && !s.windowIsVisible(ctx):
+			out["window"] = "not raised again: restore the existing task window on this computer when ready"
 		case s.cp.State == StateNeedsUser && s.shownForUser:
 			out["window"] = "on screen: waiting for the user to finish sign-in or verification"
 		case s.cp.Headless:

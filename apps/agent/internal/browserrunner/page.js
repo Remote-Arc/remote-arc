@@ -207,7 +207,7 @@
     const secret = [];
     // Compact sign-in fields can be less than 20px tall (including hosted
     // identity pages). The CAPTCHA size threshold must not hide real inputs.
-    walk(document.documentElement || document, el => { if (el.tagName === "INPUT" && onPage(el, 1) && sensitive(el)) secret.push(el); }, { left: 20000 });
+    walk(document.documentElement || document, el => { if (el.tagName === "INPUT" && onPage(el, 8) && sensitive(el)) secret.push(el); }, { left: 20000 });
     if (secret.some((el) => secretKind(el) === "captcha_answer")) (a.allow_captcha ? attention : blockers).push({kind:"captcha",detail:a.allow_captcha ? "CAPTCHA answer entry is approved for this site." : "Approve CAPTCHA for this site in Dashboard Browser authentication, or complete it yourself."});
     if (secret.some((el) => secretKind(el) === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
     if (secret.some((el) => secretKind(el) === "code")) {

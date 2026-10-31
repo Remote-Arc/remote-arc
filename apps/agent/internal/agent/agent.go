@@ -247,7 +247,6 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		if a.Browser == nil || a.Core == nil || a.Core.Mode == "safe" || a.Core.Mode == "developer" {
 			return nil, errors.New("browser_runner requires terminal mode on this device.")
 		}
-		a.Browser.SetAttentionMode(call.Policy.RunnerAttentionMode)
 		return a.Browser.Call(ctx, call.Tool, args, call.Policy)
 	case AgentSessionsTool:
 		// Read-only metadata; the relay gates it with the read_file permission.

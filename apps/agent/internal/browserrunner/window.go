@@ -16,6 +16,15 @@ import (
 // and goes back out of sight once the AI continues.
 
 var errNoWindow = errors.New("This computer runs the task browser without a window (no display), so it cannot be shown here.")
+var errHandoffMinimized = errors.New("the user minimized this handoff; restore the task window manually when ready")
+
+func (s *session) handoffWasMinimized(b windowBounds) bool {
+	if s.cp.State == StateNeedsUser && s.cp.AttentionPresented && b.WindowState == "minimized" {
+		s.cp.AttentionDismissed = true
+		return true
+	}
+	return false
+}
 
 type windowBounds struct {
 	Left        int    `json:"left"`
@@ -131,7 +140,10 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 	var lastErr error
 	for attempt := 0; attempt < 3 && ctx.Err() == nil; attempt++ {
 		if now, ok := s.quickWindow(ctx); ok && now.WindowState != "normal" {
-			if lastErr = s.quickBounds(ctx, id, map[string]any{"windowState": "normal"}); lastErr != nil {
+			if s.handoffWasMinimized(now) {
+				return errHandoffMinimized
+			}
+			if lastErr = s.restoreTaskWindow(ctx, id); lastErr != nil {
 				continue
 			}
 			if !s.awaitState(ctx, "normal", time.Second) {
@@ -145,12 +157,22 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 		// An acknowledgement is not evidence that the native window moved.
 		// macOS and desktop window managers may finish the transition later.
 		frontCtx, stop := context.WithTimeout(ctx, windowStep)
-		lastErr = s.conn.Call(frontCtx, "Page.bringToFront", nil, nil)
+		lastErr = s.raiseTaskWindow(frontCtx)
 		stop()
 		until := time.Now().Add(time.Second)
 		for ctx.Err() == nil {
-			if now, ok := s.quickWindow(ctx); ok && windowInWorkArea(now, area) {
-				return nil
+			if now, ok := s.quickWindow(ctx); ok {
+				if s.handoffWasMinimized(now) {
+					return errHandoffMinimized
+				}
+				if windowInWorkArea(now, area) {
+					if s.cp.State == StateNeedsUser {
+						s.cp.AttentionPresented = true
+					}
+					if lastErr == nil && s.taskWindowUncovered() {
+						return nil
+					}
+				}
 			}
 			if time.Now().After(until) || !waitTick(ctx, 50*time.Millisecond) {
 				break
@@ -158,7 +180,7 @@ func (s *session) setVisible(ctx context.Context, visible bool) error {
 		}
 	}
 	if lastErr == nil {
-		lastErr = errors.New("the window is still outside the visible work area")
+		lastErr = errors.New("the window is outside the work area or covered by another window")
 	}
 	return fmt.Errorf("could not confirm that the task window is visible: %w; retry browser_runner_start with the same task_id and headless=false", lastErr)
 }
@@ -200,7 +222,7 @@ func windowInWorkArea(b, area windowBounds) bool {
 
 func (s *session) windowIsVisible(ctx context.Context) bool {
 	b, ok := s.quickWindow(ctx)
-	return ok && windowInWorkArea(b, s.windowWorkArea(ctx))
+	return ok && windowInWorkArea(b, s.windowWorkArea(ctx)) && s.taskWindowUncovered()
 }
 
 // keepHidden puts a hidden task window back out of sight if it is on

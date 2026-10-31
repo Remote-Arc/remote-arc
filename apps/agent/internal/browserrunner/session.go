@@ -339,21 +339,43 @@ func (s *session) ensureLive(ctx context.Context) error {
 		if e != nil {
 			return e
 		}
-		proc, e := launchBrowser(ctx, exe, profilePath(s.cp.Profile), s.cp.Headless)
+		var proc *browserProcess
+		delivered := s.cp.State == StateNeedsUser && (s.cp.AttentionShown || s.cp.AttentionDismissed)
+		launchHidden := s.cp.Headless || delivered || !s.mayShowWindow()
+		e = s.startupStep("launch", func() error {
+			var err error
+			proc, err = launchBrowser(ctx, exe, profilePath(s.cp.Profile), launchHidden)
+			return err
+		})
 		if e != nil {
 			return e
 		}
-		ws, e := proc.pageTarget(ctx)
+		var ws string
+		e = s.startupStep("pageTarget", func() error {
+			var err error
+			ws, err = proc.pageTarget(ctx)
+			return err
+		})
 		if e != nil {
 			proc.stop()
 			return e
 		}
-		conn, e := dialCDP(ctx, ws, s.onEvent)
+		var conn *cdpConn
+		e = s.startupStep("dialCDP", func() error {
+			var err error
+			conn, err = dialCDP(ctx, ws, s.onEvent)
+			return err
+		})
 		if e != nil {
 			proc.stop()
 			return e
 		}
 		s.proc, s.conn = proc, conn
+		if !proc.attached && !s.cp.AttentionShown {
+			// A new hidden window is minimized by the Agent on some desktops,
+			// not by the user who saw a partial presentation before a crash.
+			s.cp.AttentionPresented = false
+		}
 	}
 	s.ev.Lock()
 	s.worldCtx, s.mainFrame, s.href = 0, "", ""
@@ -362,7 +384,7 @@ func (s *session) ensureLive(ctx context.Context) error {
 	s.networkChanged = time.Now()
 	s.ev.Unlock()
 	s.snapFrames = nil
-	if e := s.setup(ctx); e != nil {
+	if e := s.startupStep("setup", func() error { return s.setup(ctx) }); e != nil {
 		s.shutdownBrowser(false)
 		return e
 	}
@@ -371,20 +393,27 @@ func (s *session) ensureLive(ctx context.Context) error {
 	}
 	// Task windows never take the user's focus; pages that check focus
 	// still behave as in a focused window.
-	_ = s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
+	_ = s.startupStep("setup.focus", func() error {
+		return s.conn.Call(ctx, "Emulation.setFocusEmulationEnabled", map[string]any{"enabled": true}, nil)
+	})
 	if s.hasWindow() {
-		// A resumed user handoff must remain reachable after an Agent
-		// restart, even when the task's ordinary preference is hidden.
-		s.m.mu.Lock()
-		autoHandoff := s.cp.State == StateNeedsUser && s.m.attentionMode != "notify_only"
-		s.m.mu.Unlock()
-		if e := s.setVisible(ctx, !s.cp.Headless || autoHandoff); e != nil {
-			if !s.cp.Headless {
+		delivered := s.cp.State == StateNeedsUser && (s.cp.AttentionShown || s.cp.AttentionDismissed)
+		visible := !s.cp.Headless && !delivered && s.mayShowWindow()
+		if e := s.startupStep("setup.window", func() error {
+			// A surviving handoff may have been minimized or restored manually.
+			// Reattaching must preserve that native window exactly as the user left it.
+			if s.proc.attached && delivered {
+				return nil
+			}
+			return s.setVisible(ctx, visible)
+		}); e != nil {
+			if visible {
 				return fmt.Errorf("browser_runner could not show the task window: %w", e)
 			}
-		} else if autoHandoff && s.cp.Headless {
-			s.shownForUser = true
 		}
+		// Re-check the actual page after navigation; stale checkpoint blockers
+		// must never cause another automatic popup during startup.
+		s.shownForUser = false
 	}
 	if s.cp.ResumeURL != "" && s.scope.Allows(s.cp.ResumeURL) && !strings.HasPrefix(s.currentHref(), "http") {
 		// Reopening loads the page fresh: whatever was typed, chosen or
@@ -393,7 +422,7 @@ func (s *session) ensureLive(ctx context.Context) error {
 		if r := s.cp.lostInput(safeURL(s.cp.ResumeURL), s.m.now()); r != nil {
 			s.cp.Reentry = r
 		}
-		_, _ = s.navigate(ctx, s.cp.ResumeURL)
+		_ = s.startupStep("navigate", func() error { _, err := s.navigate(ctx, s.cp.ResumeURL); return err })
 	}
 	if s.cp.State == StatePaused || s.cp.State == StateClosed {
 		s.cp.State = StateActive
@@ -422,9 +451,11 @@ func (s *session) setup(ctx context.Context) error {
 	// The isolated world watches sign-in forms (see watch_logins) and reports
 	// through a binding that exists only in that world. A browser too old
 	// for it still runs; sign-ins are then just not saved.
-	_ = s.conn.Call(ctx, "Runtime.addBinding", map[string]any{"name": loginBinding, "executionContextName": worldName}, nil)
+	_ = s.startupStep("setup.Runtime.addBinding", func() error {
+		return s.conn.Call(ctx, "Runtime.addBinding", map[string]any{"name": loginBinding, "executionContextName": worldName}, nil)
+	})
 	for _, c := range calls {
-		if e := s.conn.Call(ctx, c.method, c.params, nil); e != nil {
+		if e := s.startupStep("setup."+c.method, func() error { return s.conn.Call(ctx, c.method, c.params, nil) }); e != nil {
 			return fmt.Errorf("browser_runner setup failed (%s): %w", c.method, e)
 		}
 	}
@@ -432,7 +463,9 @@ func (s *session) setup(ctx context.Context) error {
 	// Chrome this setting would reach their whole profile, so it is left as
 	// the user has it there.
 	if s.cp.Browser != browserYourChrome {
-		_ = s.conn.Call(ctx, "Page.setDownloadBehavior", map[string]any{"behavior": "deny"}, nil)
+		_ = s.startupStep("setup.Page.setDownloadBehavior", func() error {
+			return s.conn.Call(ctx, "Page.setDownloadBehavior", map[string]any{"behavior": "deny"}, nil)
+		})
 	}
 	var tree struct {
 		FrameTree struct {
@@ -442,14 +475,14 @@ func (s *session) setup(ctx context.Context) error {
 			} `json:"frame"`
 		} `json:"frameTree"`
 	}
-	if e := s.conn.Call(ctx, "Page.getFrameTree", nil, &tree); e != nil {
+	if e := s.startupStep("setup.Page.getFrameTree", func() error { return s.conn.Call(ctx, "Page.getFrameTree", nil, &tree) }); e != nil {
 		return e
 	}
 	s.ev.Lock()
 	s.mainFrame, s.href = tree.FrameTree.Frame.ID, tree.FrameTree.Frame.URL
 	s.ev.Unlock()
-	_, _ = s.evaluateMain(ctx, pageJS+`("install", {})`)
-	_, _ = s.helper(ctx, "watch_logins", nil, true)
+	_ = s.startupStep("setup.install", func() error { _, err := s.evaluateMain(ctx, pageJS+`("install", {})`); return err })
+	_ = s.startupStep("setup.watch_logins", func() error { _, err := s.helper(ctx, "watch_logins", nil, true); return err })
 	return nil
 }
 

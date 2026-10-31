@@ -26,7 +26,7 @@ console.log(strict
   : "Relay measured regression floors; full 90% production coverage is NOT yet achieved.");
 let code = 1;
 try {
-  const result = spawnSync("pnpm", args, { cwd: root, stdio: "inherit" });
+  const result = spawnSync("pnpm", args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
   if (result.error) throw result.error;
   code = result.status ?? 1;
 } finally {

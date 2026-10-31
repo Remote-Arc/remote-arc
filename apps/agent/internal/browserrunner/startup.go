@@ -12,7 +12,6 @@ type launchTraceKey struct{}
 
 type browserStartup struct {
 	done   chan struct{}
-	ctx    context.Context
 	cancel context.CancelFunc
 	proc   *browserProcess
 	err    error
@@ -29,7 +28,7 @@ func (s *session) awaitBrowserLaunch(ctx context.Context, exe string, hidden boo
 	if s.pendingLaunch == nil {
 		profile := profilePath(s.cp.Profile)
 		launchCtx, cancel := context.WithTimeout(context.WithValue(context.Background(), launchTraceKey{}, s.cp.SessionID), startupWait(profile))
-		pending := &browserStartup{done: make(chan struct{}), ctx: launchCtx, cancel: cancel}
+		pending := &browserStartup{done: make(chan struct{}), cancel: cancel}
 		s.pendingLaunch = pending
 		s.starting.Store(true)
 		launch := s.m.launchBrowser

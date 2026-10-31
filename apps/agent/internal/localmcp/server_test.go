@@ -79,3 +79,19 @@ func TestRunCancelledContextClosesExecutionCore(t *testing.T) {
 		t.Fatalf("cancelled local MCP server should preserve context cancellation: %v", err)
 	}
 }
+
+func TestRunCleanStdinEOFIsSuccessful(t *testing.T) {
+	t.Setenv("REMOTEARC_HOME", t.TempDir())
+	input, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous := os.Stdin
+	os.Stdin = input
+	t.Cleanup(func() { os.Stdin = previous; input.Close() })
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := Run(ctx, execution.New("safe"), "test"); err != nil {
+		t.Fatalf("clean stdio EOF should be a successful shutdown: %v", err)
+	}
+}

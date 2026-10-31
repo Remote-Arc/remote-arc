@@ -74,6 +74,12 @@ func TestStartupPollsAndActionsDoNotRelaunchOrExecute(t *testing.T) {
 
 func TestStartupCallerDeadlineDoesNotCancelSessionLaunch(t *testing.T) {
 	m, calls, release, want := slowStartupManager(t)
+	launchContexts := make(chan context.Context, 2)
+	launch := m.launchBrowser
+	m.launchBrowser = func(ctx context.Context, exe, profile string, hidden bool) (*browserProcess, error) {
+		launchContexts <- ctx
+		return launch(ctx, exe, profile, hidden)
+	}
 	m.launchWait = time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
@@ -82,9 +88,13 @@ func TestStartupCallerDeadlineDoesNotCancelSessionLaunch(t *testing.T) {
 	if err != nil || out.(map[string]any)["state"] != "starting" {
 		t.Fatalf("caller deadline killed startup: %v %v", out, err)
 	}
-	s, _ := m.get("caller-deadline")
-	if s.pendingLaunch.ctx.Err() != nil {
-		t.Fatal("session launch inherited caller deadline")
+	select {
+	case launchCtx := <-launchContexts:
+		if launchCtx.Err() != nil {
+			t.Fatal("session launch inherited caller deadline")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("launch worker did not start")
 	}
 	close(release)
 	_, err = m.Call(context.Background(), "browser_runner_start", args, protocol.Policy{})

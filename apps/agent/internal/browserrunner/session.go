@@ -29,16 +29,17 @@ const worldName = "remotearc_browser_runner"
 // serialized by mu; CDP events arrive on another goroutine and only touch the
 // fields guarded by ev.
 type session struct {
-	mu            sync.Mutex
-	m             *Manager
-	cp            *Checkpoint
-	auth          protocol.BrowserAuth
-	scope         scope
-	proc          *browserProcess
-	conn          cdpClient
-	lastUsed      time.Time
-	pendingLaunch *browserStartup // guarded by mu; result published by done
-	starting      atomic.Bool     // admission/status can read without the session lock
+	mu                sync.Mutex
+	m                 *Manager
+	cp                *Checkpoint
+	auth              protocol.BrowserAuth
+	scope             scope
+	proc              *browserProcess
+	conn              cdpClient
+	lastUsed          time.Time
+	pendingLaunch     *browserStartup // guarded by mu; result published by done
+	starting          atomic.Bool     // admission/status can read without the session lock
+	startReservations atomic.Int32    // starts admitted before acquiring mu
 
 	ev           sync.Mutex
 	mainFrame    string

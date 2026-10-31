@@ -85,7 +85,7 @@ func (m *Manager) ActiveSessions() int {
 			active++
 			continue
 		}
-		if s.live() || s.starting.Load() {
+		if s.live() || s.starting.Load() || s.startReservations.Load() > 0 {
 			active++
 		}
 		s.mu.Unlock()
@@ -272,7 +272,7 @@ func (m *Manager) Call(ctx context.Context, tool string, args map[string]any, p 
 	}
 	// Only start may finish initialization: retrying an action must not silently
 	// run it against about:blank before the original start_url is supplied again.
-	if s.starting.Load() {
+	if s.starting.Load() || s.startReservations.Load() > 0 {
 		return s.startingResult(), nil
 	}
 	if e := s.ensureLive(ctx); e != nil {
@@ -430,11 +430,21 @@ func (m *Manager) liveCount(except string, profile string) (int, bool) {
 		if id == except {
 			continue
 		}
-		if s.live() || s.starting.Load() {
+		busy := s.starting.Load() || s.startReservations.Load() > 0
+		// Never read a connection while another caller can replace it. A busy
+		// session conservatively owns its slot/profile until its operation ends.
+		if s.mu.TryLock() {
+			busy = busy || s.live()
+			s.mu.Unlock()
+		} else {
+			busy = true
+		}
+		if busy {
 			n++
 		}
 		// Tasks in the user's own Chrome each have their own tab there.
-		if profile != yourChromeProfile && s.cp.Profile == profile && (s.starting.Load() || (s.cp.State != StateClosed && s.live())) {
+		// The profile is immutable for the lifetime of a session.
+		if profile != yourChromeProfile && s.cp.Profile == profile && busy {
 			clash = true
 		}
 	}
@@ -527,6 +537,10 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 		}}
 		m.sessions[id] = s
 	}
+	// Reserve under the admission lock, before another task can observe an
+	// uninitialized session between map insertion and acquiring the session.
+	s.startReservations.Add(1)
+	defer s.startReservations.Add(-1)
 	m.mu.Unlock()
 
 	if !lockSession(ctx, s) {
@@ -536,6 +550,11 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 		return nil, ctx.Err()
 	}
 	defer s.mu.Unlock()
+	select {
+	case <-m.stop:
+		return nil, errors.New("Browser Runner has stopped.")
+	default:
+	}
 	s.lastUsed = m.now()
 	s.auth = p.BrowserAuth
 	s.setCallAttentionMode(p.RunnerAttentionMode)
@@ -570,7 +589,7 @@ func (m *Manager) start(ctx context.Context, args map[string]any, p protocol.Pol
 		}
 		if chosen && (s.cp.Headless != headless || !headless) {
 			switch {
-			case s.starting.Load() && s.cp.Headless == headless:
+			case s.pendingLaunch != nil && s.cp.Headless == headless:
 				// A retry joins the same launch, including headless=false.
 			case s.live() && s.hasWindow():
 				// Shown or hidden in place: the page and what was entered stay.

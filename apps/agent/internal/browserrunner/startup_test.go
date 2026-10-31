@@ -3,6 +3,7 @@ package browserrunner
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -14,7 +15,12 @@ import (
 func slowStartupManager(t *testing.T) (*Manager, *atomic.Int32, chan struct{}, error) {
 	t.Helper()
 	t.Setenv("REMOTEARC_HOME", t.TempDir())
+	// No native process is created by this fixture; display/presence are test
+	// inputs so headless=false retries exercise the same path on every OS.
+	t.Setenv("REMOTEARC_BROWSER_HEADLESS", "")
+	t.Setenv("DISPLAY", ":synthetic")
 	m := New()
+	m.userPresent = func() bool { return true }
 	m.launchWait = 10 * time.Millisecond
 	m.findBrowser = func() (string, error) { return "synthetic-browser", nil }
 	var calls atomic.Int32
@@ -133,6 +139,42 @@ func TestStartupPendingReservesItsProfile(t *testing.T) {
 	}
 	if calls.Load() != 1 {
 		t.Fatal("profile conflict launched another browser")
+	}
+}
+
+func TestStartupConcurrentAdmissionReservesBeforeLaunch(t *testing.T) {
+	for _, shared := range []bool{false, true} {
+		t.Run(fmt.Sprint("shared=", shared), func(t *testing.T) {
+			m, calls, _, _ := slowStartupManager(t)
+			barrier := make(chan struct{})
+			results := make(chan error, 12)
+			for i := 0; i < 12; i++ {
+				go func(i int) {
+					<-barrier
+					args := map[string]any{"task_id": fmt.Sprintf("parallel-%d", i), "allowed_origins": []string{"https://example.test"}}
+					if shared {
+						args["profile"] = "shared"
+					}
+					_, err := m.Call(context.Background(), "browser_runner_start", args, protocol.Policy{})
+					results <- err
+				}(i)
+			}
+			close(barrier)
+			accepted := 0
+			for i := 0; i < 12; i++ {
+				if err := <-results; err == nil {
+					accepted++
+				}
+			}
+			want := 4
+			if shared {
+				want = 1
+			}
+			if accepted != want {
+				t.Fatalf("accepted %d simultaneous starts, want %d", accepted, want)
+			}
+			awaitLaunchCalls(t, calls, int32(want))
+		})
 	}
 }
 

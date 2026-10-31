@@ -40,13 +40,15 @@ try {
     assert.match(html, /role="region"[^>]*aria-labelledby=/);
     const label = html.match(/aria-labelledby="([^"]+)"/)?.[1];
     assert.ok(label && html.includes('id="' + label + '"'));
-    for (const name of ["GitHub", "Slack", "Gmail", "Vercel", "Google Drive", "Notion", "Mac", "Windows", "Linux", "Browser"]) assert.ok(body.includes(name), "Present all resources together: " + name);
+    for (const name of ["GitHub", "Slack", "Gmail", "Google Calendar", "Google Drive", "Notion", "Mac", "Windows", "Linux", "Browser"]) assert.ok(body.includes(name), "Present all resources together: " + name);
     assert.equal((html.match(/data-resource="app"/g) || []).length, 6);
     assert.equal((html.match(/data-resource="device"/g) || []).length, 4);
     assert.equal((html.match(/data-resource="skill"/g)||[]).length,0);
     assert.equal((html.match(/class="hcsFloatingNode hcsAiNode/g) || []).length, 3, "Show ChatGPT, Claude and Cursor in the topology");
     assert.doesNotMatch(html, /Gemini|\/install\/gemini|ai-gemini/, "Gemini stays out of the topology, including its copy and links");
     assert.match(html,/\/integrations\?provider=gmail/);
+    assert.match(html,/\/integrations\?provider=google_calendar/);
+    assert.doesNotMatch(html,/Vercel|vercel/, "The topology promotes Google Calendar instead of the unconfigured Vercel integration");
     assert.doesNotMatch(html,/Runway|runway/);
     for (const name of locale === "zh" ? ["专业技能", "任务执行", "操作审批", "结果验证"] : ["Skills", "Execution", "Approvals", "Verified Results"]) assert.ok(body.includes(name));
     assert.equal((html.match(/role="tab"/g) || []).length, 2, "Only manual product-mode controls");

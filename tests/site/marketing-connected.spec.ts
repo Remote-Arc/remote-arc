@@ -17,6 +17,8 @@ test('The constellation switches with a shared slider and every brand opens a va
   await expect(scene.locator('.hcsInboundPaths > g')).toHaveCount(3);
   await expect(scene).not.toContainText('Gemini');
   await expect(scene.locator('a[href$="/install/gemini"]')).toHaveCount(0);
+  await expect(scene).not.toContainText("Vercel");
+  await expect(scene.locator('a.hcsResourceNode[href$="/integrations?provider=google_calendar"] img')).toHaveAttribute("src", "/app-brands/googlecalendar.svg");
   for (const { slug, icon } of aiClients) {
     const link = scene.locator(`a.hcsAiNode[href$="/install/${slug}"]`);
     await expect(link).toHaveCount(1);

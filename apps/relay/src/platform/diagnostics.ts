@@ -1,7 +1,20 @@
+// Fixed D1 failure classes. The original text can quote values, so only the
+// class is kept.
+const D1_ERROR_CLASSES: [RegExp, string][] = [
+  [/constraint failed/i, "constraint"],
+  [/no such (?:table|column)|has no column named/i, "schema"],
+  [/too (?:big|many)|limit exceeded|SQLITE_TOOBIG/i, "limit"],
+  [/network connection lost|overloaded|internal error|timed? ?out|reset|unavailable|storage operation exceeded/i, "unavailable"],
+];
+function d1ErrorClass(message: string) {
+  for (const [pattern, name] of D1_ERROR_CLASSES) if (pattern.test(message)) return name + " (details omitted)";
+  return "details omitted";
+}
+
 /** Keep operational errors content-free; arbitrary exception text can contain secrets. */
 export function diagnosticError(error: unknown): string {
   const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
-  if (message.startsWith("D1_ERROR:")) return "D1_ERROR: details omitted";
+  if (message.startsWith("D1_ERROR:")) return "D1_ERROR: " + d1ErrorClass(message);
   if (error instanceof TypeError) return "TypeError: details omitted";
   if (error instanceof RangeError) return "RangeError: details omitted";
   return "Error: details omitted";

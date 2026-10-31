@@ -1073,7 +1073,10 @@ export default {
           recordServiceIncident(
             env,
             incidentFromRequest(request, {
-              severity: response.status >= 503 ? "critical" : "error",
+              // A dashboard device action times out when the user's computer
+              // does not answer: worth seeing, but not a Relay failure.
+              severity: response.status === 504 && new URL(request.url).pathname.startsWith("/api/devices/")
+                ? "warning" : response.status >= 503 ? "critical" : "error",
               kind: "http_5xx",
               statusCode: response.status,
               message: "Remote Arc returned HTTP " + response.status,

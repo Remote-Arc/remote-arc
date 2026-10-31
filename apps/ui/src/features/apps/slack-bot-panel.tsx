@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {useI18n} from '../../app/i18n.js';
-import {UI_PREVIEW} from '../../preview/preview.js';
+import {UI_PREVIEW} from '../../preview/preview-mode.js';
 import './slack-bot-panel.css';
 
 type Link={team_id:string;slack_user_id:string;team_name:string|null;app_id:string|null;installation_status:string|null};

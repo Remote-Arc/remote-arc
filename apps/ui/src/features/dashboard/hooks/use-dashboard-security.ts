@@ -1,7 +1,7 @@
 import { type DashboardTab } from "../../../lib/dashboard-workspaces.js";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../../../app/i18n.js";
-import { UI_PREVIEW } from "../../../preview/preview.js";
+import { UI_PREVIEW } from "../../../preview/preview-mode.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import { parsePendingApprovals, parsePersistentApprovals, parseSecurityState, type PendingApproval, type PersistentApproval } from "../../security/security-state.js";
 import { type ApprovalChoice } from "../../security/security-approvals.js";

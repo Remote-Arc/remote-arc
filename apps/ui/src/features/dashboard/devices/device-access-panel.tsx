@@ -2,7 +2,7 @@ import { useState } from "react";
 import { RunnerAttentionSetting } from "../../browser-runner/runner-view.js";
 import { isBrowserRunnerTool } from "./device-tools.js";
 import { ProductIcon } from "../../../components/product-icon.js";
-import { UI_PREVIEW } from "../../../preview/preview.js";
+import { UI_PREVIEW } from "../../../preview/preview-mode.js";
 import { HelpTip } from "../../../components/public-layout.js";
 import { timeAgo } from "../format.js";
 import type { Device } from "../../../types/app-types.js";

@@ -15,7 +15,7 @@ import { SecurityView } from "./views/security-view.js";
 import { MonitorView } from "./views/monitor-view.js";
 import { SettingsView } from "./views/settings-view.js";
 import { AddDeviceDialog, DashboardDialogHost, DirectoryPickerDialog } from "./views/dashboard-overlays.js";
-import { UI_PREVIEW } from "../../preview/preview.js";
+import { UI_PREVIEW } from "../../preview/preview-mode.js";
 import { MARKETING_ORIGIN } from "../../config/app-config.js";
 import { Brand, ThemeSwitcher } from "../../components/public-layout.js";
 

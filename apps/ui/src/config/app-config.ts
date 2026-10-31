@@ -1,4 +1,4 @@
-import { UI_PREVIEW } from "../preview/preview.js";
+import { UI_PREVIEW } from "../preview/preview-mode.js";
 
 export const MARKETING_ORIGIN = "https://remotearc.app";
 export const APP_ORIGIN = "https://agent.remotearc.app";

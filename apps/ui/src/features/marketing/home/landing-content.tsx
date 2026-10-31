@@ -12,13 +12,14 @@ import "./landing-content.css";
 
 export function HeroHeadline({mode='arc'}:{mode?:'connect'|'arc'}) {
   const {tr,locale}=useI18n();const arc=mode==='arc';
-  return <TypewriterHeadline key={locale+mode} fixedLine={arc?tr('Your AI agent.','你的 AI 智能体。'):tr('Your AI.','你常用的 AI。')} accessible={arc?tr('Your AI agent. Ready around the clock.','你的 AI 智能体，随时接手工作。'):tr('Your AI. Connected in seconds.','你常用的 AI，转眼接入真实工作。')} phrases={arc?[tr('Ready around the clock.','随时接手工作。'),tr('Real work, real results.','认真做事，交付结果。'),tr('Keep work moving.','让工作持续推进。')]:[tr('Connected in seconds.','转眼接入真实工作。'),tr('Your tools. Your rules.','你的工具，你定规则。'),tr('Ready for real work.','从对话到真正动手。')]} />;
+  return <TypewriterHeadline key={locale+mode} fixedLine={arc?tr('Your AI agent.','你的 AI 智能体。'):tr('Your AI.','你常用的 AI。')} accessible={arc?tr('Remote Arc: your AI agent, ready around the clock.','Remote Arc：你的 AI 智能体，随时接手工作。'):tr('Remote Arc: your AI, connected in seconds.','Remote Arc：你常用的 AI，转眼接入真实工作。')} phrases={arc?[tr('Ready around the clock.','随时接手工作。'),tr('Real work, real results.','认真做事，交付结果。'),tr('Keep work moving.','让工作持续推进。')]:[tr('Connected in seconds.','转眼接入真实工作。'),tr('Your tools. Your rules.','你的工具，你定规则。'),tr('Ready for real work.','从对话到真正动手。')]} />;
 }
 
 export function HomeHeroCopy({mode,arcAvailable,arcHref,connectHref}:{mode:'connect'|'arc';arcAvailable:boolean;arcHref:string;connectHref:string}){
  const {tr,locale}=useI18n(),arc=mode==='arc';
  return <div className="heroCopy" data-product={mode}>
-  <span className="eyebrow heroProductLabel"><i/>{arc?tr('NEXT-GENERATION AI AGENT','新一代 AI AGENT'):tr('AI INFRASTRUCTURE','AI 基础设施')}</span>
+  {/* The visible brand next to the headline lets the rendered page name Remote Arc, not only the server shell. */}
+  <span className="eyebrow heroProductLabel"><i/>REMOTE ARC · {arc?tr('NEXT-GENERATION AI AGENT','新一代 AI AGENT'):tr('AI INFRASTRUCTURE','AI 基础设施')}</span>
   <HeroHeadline mode={mode}/>
   <p>{arc?tr('Give Arc an outcome. Your AI agent works across your apps and computers, follows up with tasks and routines, and brings back results you can inspect.','把目标交给 Arc。你的 AI 智能体调用应用与电脑，通过任务和例行工作持续跟进，交付可核查的结果。'):tr('Connect ChatGPT, Claude, Gemini or Cursor to your apps and computers in seconds. Bring leading AI into your real workflow, with access you control.','把 ChatGPT、Claude、Gemini 或 Cursor 快速接入你的应用与电脑。让顶尖 AI 融入真实工作流，访问范围由你掌控。')}</p>
   <div className="landingActions">

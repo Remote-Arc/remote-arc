@@ -3,7 +3,7 @@ import { CHATGPT_PLUGIN_URL } from "../install/client-links.js";
 import React, { useEffect, useState } from "react";
 import { LanguageSwitcher, useI18n } from "../../app/i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
-import { UI_PREVIEW } from "../../preview/preview.js";
+import { UI_PREVIEW } from "../../preview/preview-mode.js";
 import { ONBOARDING_PREVIEW_CODE, createOnboardingPreviewDevice, onboardingPreviewStep } from "../../preview/onboarding-preview.js";
 import { Brand, CopyButton, HelpTip, ThemeSwitcher } from "../../components/public-layout.js";
 import { APP_ORIGIN, CLAUDE_CONNECTORS_URL, MARKETING_ORIGIN, MCP_ENDPOINT, cursorMcpInstallUrl } from "../../config/app-config.js";

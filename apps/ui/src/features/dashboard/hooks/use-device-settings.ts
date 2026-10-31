@@ -1,7 +1,7 @@
 import { isBrowserRunnerTool, toggledDeviceTools } from "../devices/device-tools.js";
 import { useRef, useState } from "react";
 import { useI18n } from "../../../app/i18n.js";
-import { UI_PREVIEW } from "../../../preview/preview.js";
+import { UI_PREVIEW } from "../../../preview/preview-mode.js";
 import { waitForAgentOffline, waitForRecoveryState } from "../devices/background-recovery.js";
 import { type Device, type DeviceTaskPermissions, type DirectoryBrowser } from "../../../types/app-types.js";
 import { DEVELOPER_DEVICE_TOOLS, DEVICE_TOOL_CATALOG, type DeviceAccessPreset, SAFE_DEVICE_TOOLS, legacyTaskPermissions } from "../devices/device-presets.js";

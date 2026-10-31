@@ -1,5 +1,5 @@
 import { ProductIcon } from "../../../components/product-icon.js";
-import { UI_PREVIEW } from "../../../preview/preview.js";
+import { UI_PREVIEW } from "../../../preview/preview-mode.js";
 import { SecurityAuthorizations } from "../../security/security-authorizations.js";
 import { ApprovalRequest, PersistentPermissions } from "../../security/security-approvals.js";
 import { platformLabel } from "../devices/device-presets.js";

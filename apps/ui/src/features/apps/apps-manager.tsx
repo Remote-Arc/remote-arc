@@ -3,7 +3,7 @@ import {WorkspaceLoading} from '../../components/workspace-loading.js';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "../../app/i18n.js";
-import {UI_PREVIEW} from "../../preview/preview.js";
+import {UI_PREVIEW} from "../../preview/preview-mode.js";
 import "./apps-manager.css";
 import {ProductIcon} from "../../components/product-icon.js";
 import directory from "../../data/app-directory.json" with { type: "json" };

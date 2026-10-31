@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {ArcAppConnectionRequest} from '@remotearc/protocol';
 import {arcRequest} from './use-arc-chat.js';
 import {AppCredentialForm,type AppCredentialInput} from '../../apps/apps-auth-form.js';
-import {UI_PREVIEW} from '../../../preview/preview.js';
+import {UI_PREVIEW} from '../../../preview/preview-mode.js';
 import './arc-app-connection-card.css';
 
 type Tr=(en:string,zh:string)=>string;

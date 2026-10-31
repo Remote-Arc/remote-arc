@@ -1,7 +1,7 @@
 import { summarizeConsentScopes } from "./oauth-consent-summary.js";
 import { useEffect, useState } from "react";
 import { useI18n } from "../../app/i18n.js";
-import { UI_PREVIEW } from "../../preview/preview.js";
+import { UI_PREVIEW } from "../../preview/preview-mode.js";
 import { type User } from "../../types/app-types.js";
 import { Brand, CenteredCard, LogoMark, PublicLayout } from "../../components/public-layout.js";
 import { APP_ORIGIN, MARKETING_ORIGIN } from "../../config/app-config.js";

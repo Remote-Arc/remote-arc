@@ -32,7 +32,8 @@ import { registerProductPwa } from './app/product-pwa.js';
 import { EngagementPage } from "./features/marketing/public-engagement.js";
 import "./features/marketing/trust-pages.js";
 import { ThemeProvider } from "./app/theme.js";
-import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview/preview.js";
+import { UI_PREVIEW } from "./preview/preview-mode.js";
+import { installUiPreviewFetchMock } from "./preview/preview.js";
 import "./features/security/security-authorizations.js";
 import "./styles/styles.css";
 import "./features/dashboard/dashboard.css";
@@ -66,6 +67,8 @@ const NativeInstall = React.lazy(() => import("./features/install/native-install
 const ChromeExtensionPage = React.lazy(() => import("./features/install/chrome-extension-page.js").then(module => ({ default: module.ChromeExtensionPage })));
 const RemoteMcpGuide = React.lazy(() => import("./features/marketing/remote-mcp-guide.js").then(module => ({ default: module.RemoteMcpGuide })));
 const LongRunningWorkDocs = React.lazy(() => import("./features/docs/long-running-docs.js").then((module) => ({ default: module.LongRunningWorkDocs })));
+// Production builds resolve ./preview/preview.js to preview-disabled.ts (see
+// vite.config.ts), so the website never ships the fixtures and Skill catalog.
 installUiPreviewFetchMock(MCP_ENDPOINT);
 function App() {
   const { tr } = useI18n();

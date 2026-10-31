@@ -1,4 +1,4 @@
-import { UI_PREVIEW } from "../../../preview/preview.js";
+import { UI_PREVIEW } from "../../../preview/preview-mode.js";
 import { type DeviceTaskPermissions } from "../../../types/app-types.js";
 import { legacyTaskPermissions } from "./device-presets.js";
 import { HelpTip } from "../../../components/public-layout.js";

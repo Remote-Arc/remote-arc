@@ -4,6 +4,8 @@ import {isTrustedDashboardMutation} from "../auth/dashboard-origin.js";
 
 export type BrowserAuthPermissions = {otp:boolean;captcha:boolean;origins:string[];mailbox:string};
 export const NO_BROWSER_AUTH: BrowserAuthPermissions = {otp:false,captcha:false,origins:[],mailbox:""};
+// Retain the engine and stored records, but never issue authentication authority.
+const BROWSER_AUTH_AUTOMATION_ENABLED = false;
 type Env = Parameters<typeof getSessionUser>[1];
 export function parseBrowserAuth(raw:unknown):BrowserAuthPermissions {
   try {
@@ -24,6 +26,7 @@ export function parseBrowserAuth(raw:unknown):BrowserAuthPermissions {
   } catch { return {...NO_BROWSER_AUTH,origins:[]}; }
 }
 export async function browserAuthForDevice(env:Pick<Env,"DB">,userId:string,deviceId:string) {
+  if (!BROWSER_AUTH_AUTOMATION_ENABLED) return {...NO_BROWSER_AUTH,origins:[]};
   try {
     const row = await env.DB.prepare("SELECT browser_auth_permissions FROM devices WHERE id=?1 AND user_id=?2 AND revoked_at IS NULL")
       .bind(deviceId,userId).first<{browser_auth_permissions:string}>();
@@ -52,6 +55,9 @@ export async function handleBrowserAuth(request:Request,env:Env) {
       typeof input.mailbox!=="string" || (input.mailbox.trim() && !value.mailbox)) {
     return json({error:"Provide valid exact website origins, OTP/CAPTCHA choices and an optional email address."},400);
   }
+  // Keep legacy revocation available, while refusing new or restored approvals.
+  if(!BROWSER_AUTH_AUTOMATION_ENABLED && (value.otp || value.captcha || value.origins.length || value.mailbox))
+    return json({error:"browser_auth_disabled"},410);
   if(owned.platform==="browser" && value.captcha)return json({error:"Use Browser Runner on a linked computer for CAPTCHA authorization."},400);
   const result=await env.DB.prepare("UPDATE devices SET browser_auth_permissions=?1 WHERE id=?2 AND user_id=?3 AND revoked_at IS NULL")
     .bind(JSON.stringify(value),deviceId,user.id).run();

@@ -293,18 +293,6 @@
   }
 }
 
-
-.browserAuthSetting { display:grid; gap:12px; border-top:1px solid var(--dash-line, #70707055); margin-top:8px; padding-top:18px; }
-.browserAuthSetting > p { margin:0; font-size:13px; line-height:1.6; color:var(--muted); }
-.browserAuthSetting label { justify-content:flex-start; gap:10px; flex-wrap:wrap; }
-.browserAuthSetting label:has(textarea), .browserAuthSetting label:has(input[type="email"]) { display:grid; gap:7px; }
-.browserAuthSetting textarea, .browserAuthSetting input[type="email"] { width:100%; box-sizing:border-box; min-width:0; border:1px solid var(--dash-line, #70707055); border-radius:8px; padding:10px 12px; background:var(--dash-surface, Canvas); color:inherit; font:inherit; }
-.browserAuthSetting textarea { resize:vertical; }
-.browserAuthSetting label:has(textarea), .browserAuthSetting label:has(input[type="email"]) { grid-template-columns:minmax(0,1fr); }
-.browserAuthSetting input[type="checkbox"] { flex:none; }
-.browserAuthSetting small { color:var(--muted); line-height:1.6; }
-.browserAuthSetting small[role="status"] { color:var(--text); }
-
 /* Owner-only Browser Runner entry inside device management activity details. */
 .deviceBrowserSessions { margin: 0 0 18px; border: 1px solid var(--border, #36383e); border-radius: 10px; }
 .deviceBrowserSessions > summary { cursor: pointer; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 600; }
@@ -318,3 +306,5 @@
 .deviceBrowserSessionList strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
 .deviceBrowserSessionList small { font-size: 12px; opacity: .75; }
 .deviceBrowserSessionList a > span:last-child { white-space: nowrap; font-size: 12px; }
+
+.browserAuthenticationNotice { color:var(--muted); font-size:13px; line-height:1.6; margin:0; }

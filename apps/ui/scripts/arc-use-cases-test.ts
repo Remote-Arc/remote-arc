@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {ARC_DELEGATED_WORK,ARC_USE_CASES,arcChatHref,arcUseCasePrompt} from '../../../packages/docs/src/arc-use-cases.js';
-import {chinesePages} from '../src/marketing-paths.js';
-import type {UseCaseSlug} from '../src/use-cases.js';
+import {chinesePages} from '../src/lib/marketing-paths.js';
+import type {UseCaseSlug} from '../src/features/marketing/use-cases/use-cases.js';
 
 const published=[...chinesePages].filter(path=>path.startsWith('/use-cases/')).map(path=>path.slice('/use-cases/'.length)).sort();
 assert.deepEqual(Object.keys(ARC_USE_CASES).sort(),published,'Every published use case must have an Arc execution path');

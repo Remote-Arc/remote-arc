@@ -3,7 +3,7 @@ import React from 'react';
 // The hook is exercised against HTTP responses, independently of the visual mock preview.
 // @ts-ignore react-test-renderer has no declarations in this workspace.
 import {act,create} from 'react-test-renderer';
-import {useArcChat} from '../src/use-arc-chat.js';
+import {useArcChat} from '../src/features/arc/chat/use-arc-chat.js';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;
 const originalFetch=globalThis.fetch;

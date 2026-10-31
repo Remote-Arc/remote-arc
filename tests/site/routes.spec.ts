@@ -1,6 +1,6 @@
 import {test,expect} from './fixtures';
-import {chinesePages} from '../../apps/ui/src/marketing-paths';
-import {DASHBOARD_PATHS,LEGACY_DASHBOARD_PATHS} from '../../apps/ui/src/dashboard-workspaces';
+import {chinesePages} from '../../apps/ui/src/lib/marketing-paths';
+import {DASHBOARD_PATHS,LEGACY_DASHBOARD_PATHS} from '../../apps/ui/src/lib/dashboard-workspaces';
 
 const publicRoutes=[...new Set([...chinesePages,'/chrome-extension','/chatgpt-computer-access','/claude-computer-access','/mcp-computer-access'])];
 const supportedRoutes=new Set([...publicRoutes,...Object.values(DASHBOARD_PATHS),...Object.keys(LEGACY_DASHBOARD_PATHS),'/install','/resources','/device','/oauth/consent','/checkout','/admin-preview','/demo']);

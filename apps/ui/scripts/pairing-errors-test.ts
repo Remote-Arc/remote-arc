@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { atComputerLimit, pairingFailureMessage } from "../src/pairing-errors.js";
+import { atComputerLimit, pairingFailureMessage } from "../src/features/auth/pairing-errors.js";
 
 const en = (text: string) => text;
 const zh = (_: string, text: string) => text;

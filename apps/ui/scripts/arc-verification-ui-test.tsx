@@ -3,7 +3,7 @@ import React from 'react';
 // @ts-ignore Test renderer is provided by this workspace.
 import {act,create} from 'react-test-renderer';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ArcVerifiedTaskForm,ArcRunReceipt} from '../src/arc-verification-ui.js';
+import {ArcVerifiedTaskForm,ArcRunReceipt} from '../src/features/arc/chat/arc-verification-ui.js';
 import type {ArcVerification} from '@remotearc/protocol';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;
 const tr=(en:string)=>en,connections=[{id:'mail',provider:'gmail',accountLabel:'Mailbox',status:'active'},{id:'gh',provider:'github',accountLabel:'Repository',status:'active'},{id:'dpl',provider:'vercel',accountLabel:'Deployments',status:'active'}];

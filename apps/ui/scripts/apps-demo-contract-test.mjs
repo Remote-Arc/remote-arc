@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {APP_WORKFLOW_EXAMPLES} from "../src/app-workflow-examples.ts";
+import {APP_WORKFLOW_EXAMPLES} from "../src/features/marketing/home/app-workflow-examples.ts";
 import {APP_CATALOG,appOperation} from "../../relay/src/apps/app-catalog.ts";
 import {appCallSchema} from "../../relay/src/apps/apps.ts";
 import {appDiscoverySchema} from "../../relay/src/apps/app-discovery.ts";

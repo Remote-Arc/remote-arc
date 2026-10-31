@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { summarizeConsentScopes } from "../src/oauth-consent-summary.ts";
+import { summarizeConsentScopes } from "../src/features/auth/oauth-consent-summary.ts";
 const initial = summarizeConsentScopes([
   "devices:read", "computer:read", "computer:write", "browser:read",
   "apps:read", "apps:write", "offline_access",

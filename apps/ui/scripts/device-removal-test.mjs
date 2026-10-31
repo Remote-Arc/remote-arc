@@ -11,12 +11,12 @@ assert.match(source, /className="deviceDangerZone"/);
 // The settings tabs are the three panel components; the danger zone follows the
 // last one in the device card, so it is not part of any tab.
 assert.match(
-  readAppModule("dashboard/device-card.tsx"),
+  readAppModule("features/dashboard/devices/device-card.tsx"),
   /<DeviceActivityPanel [^>]*\/>\s*<div className="deviceDangerZone">/,
   "Forget device must stay visible outside the currently selected device settings tab.",
 );
 for (const panel of ["device-access-panel.tsx", "device-tasks-panel.tsx", "device-activity-panel.tsx"]) {
-  assert.doesNotMatch(readAppModule("dashboard/" + panel), /deviceDangerZone/, `${panel} must not hold Forget device`);
+  assert.doesNotMatch(readAppModule("features/dashboard/devices/" + panel), /deviceDangerZone/, `${panel} must not hold Forget device`);
 }
 assert.match(source, /tr\("Forget device", "删除设备"\)/);
 

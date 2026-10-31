@@ -1,0 +1,238 @@
+import {SKILL_USE_CASES,useCaseSkillIds} from '../../../../../../packages/docs/src/skill-use-cases.js';
+import './use-case-catalog.css';
+import React,{useEffect,useState} from "react";
+import {ImageDemoGallery} from "./image-demo-gallery.js";
+import {MediaDemoGallery} from "./media-demo-gallery.js";
+import { useI18n } from "../../../app/i18n.js";
+import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
+import { TaskAvailability } from "../../docs/product-docs.js";
+import {ARC_USE_CASES,arcChatHref,arcUseCasePrompt} from '../../../../../../packages/docs/src/arc-use-cases.js';
+import "../../../styles/public-docs.css";
+
+export {useCaseSlugs} from '../../../../../../packages/docs/src/arc-use-cases.js';
+import type {UseCaseSlug} from '../../../../../../packages/docs/src/arc-use-cases.js';
+export type {UseCaseSlug} from '../../../../../../packages/docs/src/arc-use-cases.js';
+type Tr = (en: string, zh: string) => string;
+
+function cases(tr: Tr) {
+  return [
+    ...SKILL_USE_CASES.map(item=>({slug:item.slug,category:tr(item.category.en,item.category.zh),title:tr(item.title.en,item.title.zh),intro:tr(item.intro.en,item.intro.zh),prompt:tr(item.prompt.en,item.prompt.zh),permission:tr(item.requires.en,item.requires.zh),limit:tr(item.boundary.en,item.boundary.zh),proof:tr(item.proof.en,item.proof.zh),steps:item.steps.map(step=>tr(step.en,step.zh)),tools:item.tools,durable:false,connectOnly:item.connectOnly})),
+    {
+      slug: "job-applications", category: tr("BROWSER RUNNER · BETA", "BROWSER RUNNER · BETA"), title: tr("Prepare a job application on the employer's site", "在雇主官网上准备职位申请"),
+      intro: tr("Your AI fills a real application form on your computer and uploads your CV from a folder you trust. It works in a hidden window and asks you only when a page needs you; sign in once and later tasks stay signed in. Complete sign-in, verification codes and CAPTCHAs in the task browser yourself; approve the final submit separately.", "你的 AI 在电脑上填写真实的申请表，并从你信任的文件夹上传简历。它在隐藏窗口中工作，只有页面需要你时才找你；登录一次，之后的任务保持登录。登录、验证码和人机验证需要你在任务浏览器中完成，最终提交由你单独批准。"),
+      prompt: tr("On my Windows PC, use Browser Runner to prepare my application for <job link>. Allow only the employer's careers site. Fill it from Documents/Jobs/CV.pdf and my answers in Documents/Jobs/answers.md, and ask me about work rights, salary and any legal or demographic question. If sign-in, a verification code or CAPTCHA is required, let me complete it in the task browser, then resume the same task. Do not retrieve or pass authentication codes or CAPTCHA answers through model tools. Stop before submitting and show me every answer; submit only after I confirm, then read back the confirmation.", "在我的 Windows 电脑上，用 Browser Runner 准备 <职位链接> 的申请，只允许访问该雇主的招聘网站。根据 Documents/Jobs/CV.pdf 和 Documents/Jobs/answers.md 填写；工作权利、薪资以及任何法律或人口统计类问题先问我。如需登录、验证码或人机验证，请让我在任务浏览器中完成，再继续同一个任务。不要通过模型工具获取或传递验证码或 CAPTCHA 答案。提交前停下来把所有答案给我看，我确认后再提交，并读回确认信息。"),
+      tools: "browser_runner_start · browser_runner_snapshot · browser_runner_act · browser_runner_confirm · browser_runner_status", permission: tr("Browser Runner switched on for the computer in Dashboard; uploads only from a Trusted Location", "在 Dashboard 为该电脑开启 Browser Runner；只能从可信位置上传文件"),
+      steps: [tr("Start a task browser limited to the sites you name. Runner uses its own reusable profile in a hidden window, so a site you sign into once stays signed in. Redirects outside the named sites are blocked.", "启动只能访问你指定网站的任务浏览器。Runner 在隐藏窗口中使用独立且可复用的浏览器资料，登录过一次的网站会保持登录。跳转到其他网站会被拦截。"), tr("Read the page, fill fields and upload documents. Saved sign-ins are filled locally without showing the password to AI. Complete sign-in, verification codes and CAPTCHAs in the task browser yourself, then your AI can continue. Payment details also need you.", "读取页面、填写字段、上传文件。保存的登录信息在本机填写，AI 看不到密码；登录、验证码和人机验证需要你在任务浏览器中完成，完成后 AI 可以继续。支付信息也需要你处理。"), tr("Submit once, with your approval. The submit is recorded before it is sent, is never sent twice, and counts as confirmed only when text from the page, such as a reference number, proves it.", "经你同意后只提交一次。提交在发送前就会记录，不会重复发送；只有页面上的文字（例如申请编号）能证明时才算确认。")],
+      proof: tr("The confirmation text or reference number read from the page, SHA-256 receipts for uploaded files, and the submit's recorded status: confirmed, unverified or unknown.", "从页面读到的确认文字或申请编号、上传文件的 SHA-256 回执，以及提交的记录状态：已确认、未核实或未知。"),
+      limit: tr("Beta. New Chrome connections require Allow. Sign-in, verification codes, CAPTCHAs and payment details need you. Public MCP calls cannot automate authentication challenges. It is not for applying in bulk. Check each site's terms; some do not allow automated submission. A submit whose outcome is unknown is never retried automatically. Page content and ordinary form values pass through the hosted relay and your AI; saved passwords stay on the computer.", "Beta 阶段。新建 Chrome 连接需要点击允许。登录、验证码、人机验证和支付信息需要你处理。公开 MCP 调用不能自动处理认证步骤，也不用于批量海投。请留意各网站条款，有些网站不允许自动提交。结果未知的提交不会自动重试。页面内容和普通表单值会经过托管 Relay 和你的 AI；保存的密码留在本机。"), durable: false, connectOnly: true,
+    },
+    {
+      slug: "remote-development", category: tr("DEVELOPMENT", "开发"), title: tr("Fix a project on your own computer", "修复自己电脑上的项目"),
+      intro: tr("Use the existing checkout, installed dependencies and toolchain. Ask your AI to inspect, edit and test on the computer where the work already lives.", "使用现有仓库、依赖和工具链，让 AI 在项目所在电脑上检查、修改并测试。"),
+      prompt: tr("On my workstation, inspect the checkout in ~/projects/app, reproduce the failing route test, fix the affected code and rerun the focused tests. Show the diff before committing.", "在我的工作站上检查 ~/projects/app，复现失败的路由测试、修复相关代码并重跑测试。提交前给我看 diff。"),
+      tools: "list_devices · device_tools · read_file · edit_block · start_process", permission: tr("File reads, file editing and terminal for tests", "文件读取、文件编辑，以及用于测试的终端权限"),
+      steps: [tr("Resolve the named device and inspect its available tools and checkout.", "确认目标设备、可用工具和仓库状态。"), tr("Read the failing implementation before editing; run commands in the selected workspace.", "编辑前读取失败实现，在所选工作区运行命令。"), tr("Use focused checks, inspect the diff and report the result.", "运行相关检查、检查 diff 并汇报结果。")],
+      proof: tr("A concrete diff, focused test output and a clear statement of remaining failures.", "具体 diff、相关测试结果，以及仍未解决的失败。"),
+      limit: tr("Terminal runs as the local OS user. Trusted Write Locations do not sandbox shell commands. Local Undo covers supported file-tool edits, not shell edits or git history.", "终端以本机 OS 用户运行，可信写入区域不会隔离 Shell。Local Undo 覆盖受支持文件工具的修改，不覆盖 Shell 编辑或 git 历史。"), durable: false,
+    },
+    {
+      slug: "file-organization", category: tr("FILES", "文件"), title: tr("Organize files with a reviewed move plan", "按确认的整理计划归类文件"),
+      intro: tr("Inspect a chosen folder, propose a grouping plan and use an authorized local command to move files. Keep destructive changes separate from organization.", "检查指定文件夹、提出归类计划，再通过获授权本机命令移动文件，将破坏性修改与整理分开。"),
+      prompt: tr("Inspect my selected Downloads folder and propose how to group documents and images. Show the move plan first. After I approve, move only those files, do not delete or overwrite anything, and save a before/after manifest.", "检查我指定的 Downloads 文件夹，提出文档和图片归类方式，先给我看移动计划。确认后只移动这些文件，不删除或覆盖，保存整理前后清单。"),
+      tools: "list_directory · get_file_info · read_file · start_process", permission: tr("Folder reads for planning; separately authorized terminal for file moves", "文件夹读取用于规划，文件移动另需终端授权"),
+      steps: [tr("Inspect names and metadata; avoid reading unnecessary file contents.", "检查名称和元数据，避免读取不必要文件内容。"), tr("Review destinations, collisions and the exact move list.", "确认目标位置、重名冲突和具体移动清单。"), tr("Execute the approved plan and verify the before/after manifest.", "执行已批准计划并核对整理前后清单。")],
+      proof: tr("The approved move list, collision handling and verified destination files.", "已批准移动清单、冲突处理与已核对的目标文件。"),
+      limit: tr("No dedicated move-file MCP tool is currently exposed. Moves use terminal access with real local-user permissions. Shell moves are outside Local Undo; a manifest helps review but is not transactional rollback.", "当前没有专门的移动文件 MCP 工具，移动通过具有真实本机用户权限的终端执行。Shell 移动不属于 Local Undo，清单帮助检查但不是事务回滚。"), durable: false,
+    },
+    {
+      slug: "disk-space-cleanup", category: tr("DISK SPACE", "磁盘空间"),
+      title: tr("Find what is filling your Windows C: drive or Mac", "找出 Windows C 盘或 Mac 空间不足的原因"),
+      intro: tr("Inspect large folders, caches and duplicated build artifacts; preview reclaimable space before authorizing any deletion.", "分析大目录、缓存和重复构建文件；先预估可回收空间，确认后才执行任何删除。"),
+      prompt: tr(
+        "On my Windows PC, investigate why C: is filling up. Start with read-only disk and folder size checks, list the 20 largest safe-to-review candidates and estimate recoverable space. Do not delete, uninstall, change services or clear system caches until I approve each exact path and action. After approval, verify free space and report what changed.",
+        "在我的 Windows 电脑上排查 C 盘空间不足。先只读检查磁盘和目录占用，列出 20 个值得复核的大文件/缓存候选及预计可回收空间。未经我逐项确认具体路径与操作，不删除、不卸载、不改服务、不清系统缓存；获批执行后复测剩余空间并报告变化。",
+      ),
+      tools: "list_directory · get_file_info · start_process · process_output",
+      permission: tr("Read-only inspection first; separately approved terminal access and explicit deletion confirmation", "先只读检查；执行清理需单独授权终端权限，并逐项确认删除"),
+      steps: [
+        tr("Measure total free space and inspect only accessible paths. Use bounded PowerShell on Windows or du on macOS; do not scan protected system folders by force.", "先测量总剩余空间，只检查允许访问的目录；Windows 用有界 PowerShell、macOS 用 du，不强行扫描系统保护目录。"),
+        tr("Group candidates: temporary build outputs, installer leftovers, package caches and confirmed duplicate copies. List exact paths, sizes, ownership and risk.", "按临时构建产物、安装残留、包缓存、确认的重复副本等分类，列出具体路径、大小、归属和风险。"),
+        tr("Present a dry-run plan. Delete only individually approved, verified-safe paths, then remeasure disk space and preserve an audit list.", "给出只读预览计划；只删除逐项批准、验证安全的路径，之后重新测量剩余空间并保留操作清单。"),
+      ],
+      proof: tr("Before/after free space, exact approved paths, measured reclaimed bytes and skipped risky items.", "清理前后剩余空间、逐项获批路径、实际回收字节数以及跳过的高风险项目。"),
+      limit: tr("Never blindly purge Windows, WinSxS, System32, ProgramData, user profiles, Time Machine snapshots, backups or unknown application data. Native OS cleanup tools are preferable for system-managed files. Terminal operations are not protected by Remote Arc file-tool Undo, and folder access remains limited by the device's configured Workspace and approvals.", "严禁盲目删除 Windows、WinSxS、System32、ProgramData、用户资料、Time Machine 快照、备份或不明应用数据。系统管理文件优先用操作系统自带清理工具。终端清理不受 Remote Arc 文件工具 Undo 保护，访问范围仍取决于设备 Workspace 和审批。"),
+      durable: false,
+    },
+    {
+      slug: "overnight-goals", category: tr("DURABLE LOOP", "持久循环"), title: tr("Leave a bounded fixed plan running", "离开前运行一个有界固定计划"),
+      intro: tr("Save a known work plan and its verification command, then let Remote Arc repeat it within your chosen limits. The saved work can continue after you close the chat; a change of strategy still needs your AI.", "保存明确的工作步骤与验证命令，让 Remote Arc 在设定限制内重复执行。关闭聊天后，已保存工作仍可继续；需要改变策略时，再交给 AI 判断。"),
+      prompt: tr("On build-pc, run the existing repair script, then pnpm test. Retry the same approved plan up to three times if verification fails, stop at the deadline, and record the final exit status. Do not invent a new strategy after an unexpected failure.", "在 build-pc 上运行现有修复脚本，然后执行 pnpm test。若验收失败，最多按同一个已批准计划重试三次，到期限停止并记录最终退出状态。遇到意外失败时不要自行发明新策略。"),
+      tools: "create_automation(kind=goal_loop) · get_automation · manage_automation", permission: tr("Terminal + background tasks", "终端 + 后台任务"),
+      steps: [tr("Save the exact work command, verification command, cwd, run limit and expiry.", "保存明确的工作命令、验收命令、cwd、运行次数上限与到期时间。"), tr("Run the same authorized plan and verification until it passes or the bound is reached.", "重复执行同一已授权计划与验收，直到通过或达到边界。"), tr("If the result requires a genuinely new strategy, stop and surface that blocker for a later AI/user decision.", "如果结果需要真正的新策略，则停止并把阻塞留给之后的 AI/用户判断。")],
+      proof: tr("Run history, exit codes and the final verification result.", "运行历史、退出码与最终验收结果。"),
+      limit: tr("This is deterministic orchestration, not a persistent AI reasoning loop. Ordinary Chat is not automatically woken to rethink the strategy.", "这是确定性编排，不是持久 AI 推理循环。普通 Chat 不会被自动唤醒来重新判断策略。"), durable: true,
+    },
+    {
+      slug: "long-running-jobs", category: tr("LONG TASK", "长任务"), title: tr("Track a build, export or script after chat ends", "聊天结束后仍跟踪构建、导出或脚本"),
+      intro: tr("When the command is known, save a Long Task rather than keeping a chat turn open. Remote Arc tracks the command and records its outcome independently of the creating conversation.", "命令已确定时，可以保存 Long Task，无需一直保持一个聊天轮次。Remote Arc 独立于创建它的对话跟踪命令并记录结果。"),
+      prompt: tr("Run the existing report export on data-pc as a saved long task. Use the project directory, keep the output there and report the exit code and result summary. If the process handle is lost, fail instead of automatically running the export twice.", "在 data-pc 上将现有报表导出保存为长任务，使用项目目录并把输出保存在那里。汇报退出码与结果摘要；进程句柄丢失时失败停止，不自动重复导出。"),
+      tools: "create_automation(kind=long_task) · get_automation · manage_automation", permission: tr("Terminal + background tasks", "终端 + 后台任务"),
+      steps: [tr("Save the command, cwd, recovery choice and expiry.", "保存命令、cwd、恢复方式和到期时间。"), tr("The scheduler starts and follows the managed process; offline work waits for reconnection.", "调度器启动并跟踪受管进程，设备离线时等待重连。"), tr("Read exit status and bounded output summary from chat or Dashboard; cancel if needed.", "从聊天或 Dashboard 阅读退出状态与受限输出摘要，必要时取消。")],
+      proof: tr("Exit code and the generated artifact checked on the device; a summary alone does not prove file integrity.", "退出码以及在设备上检查过的生成文件；摘要本身不能证明文件完整。"),
+      limit: tr("The Task survives in the database, not the same PID. A lost acknowledged handle can restart or fail according to recovery. A dispatch with unknown outcome is not blindly replayed. No continuous AI planning is required for this fixed command.", "数据库保存的是 Task，不是同一个 PID。已确认进程的句柄丢失后按 recovery 重启或失败；派发结果未知时不会盲目重放。固定命令不需要持续 AI 规划。"), durable: true,
+    },
+    {
+      slug: "scheduled-checks", category: tr("SCHEDULED WORK", "定时工作"), title: tr("Run a check later, or repeat it between runs", "稍后检查，或按间隔重复"),
+      intro: tr("Save a fixed check or deterministic task for a future time. Repeated work starts a fresh run and keeps its own results without overlapping the same task.", "把固定检查或自主目标安排在未来时间。重复任务每轮重新运行、独立保存结果，同一任务不重叠执行。"),
+      prompt: tr("At the agreed time, run the existing health-check script on home-server and save the result. Repeat 30 minutes after each run completes, stop at the deadline and do not restart services.", "在约定时间运行 home-server 上现有健康检查脚本并保存结果，每轮完成 30 分钟后再次运行，到期限停止，不重启服务。"),
+      tools: "create_automation(kind=schedule_watch) or create_agent_goal(schedule=…) · get_automation", permission: tr("Required tools + background tasks + scheduled tasks; adaptive/source permissions if using an Agent Goal", "所需工具 + 后台任务 + 定时任务；使用自主或源目标时还需对应权限"),
+      steps: [tr("Confirm an explicit timestamp or interval, the permitted action and stop limits.", "确认明确时间或间隔、允许动作与停止限制。"), tr("The cloud scheduler makes work due; device execution waits until the computer is available.", "云调度器把任务设为到期，设备执行等待电脑可用。"), tr("Read each run's result. For recurring goals, memory and iteration budgets reset for each run.", "阅读每轮结果；周期目标每轮重置工作记忆和迭代预算。")],
+      proof: tr("Per-run timestamps, exit codes and result summaries; for an adaptive check, configured verification and evidence.", "每轮时间、退出码与结果摘要；自主检查还包括配置的验证与证据。"),
+      limit: tr("Intervals start after completion, not at fixed wall-clock minutes. Calendar cron, timezone/DST behavior, missed-run backfill and automatic power-on are not implemented. The one-minute scheduler is not a precision timer.", "间隔从完成后开始，不是固定墙钟时间。未实现日历 Cron、时区与夏令时处理、错过运行补跑或自动开机；每分钟调度器不是精确定时器。"), durable: true,
+    },
+    {
+      slug: "ci-follow-up", category: tr("CONDITION WATCH", "条件触发"), title: tr("Act after a matching CI or webhook event", "匹配 CI 或 Webhook 事件后执行"),
+      intro: tr("A Condition Watch saves the matching event and a fixed action. Use it for an authorized follow-up that should wait until an external condition is met.", "Condition Watch 保存匹配事件和固定动作，适合等待外部条件满足后执行已授权后续操作。"),
+      prompt: tr("Watch the configured CI callback for this run. When the expected workflow completes successfully, run the approved follow-up script on build-pc once. Stop at the deadline and record the event and result.", "监听配置的本轮 CI 回调；预期工作流成功完成后，在 build-pc 上运行一次已批准后续脚本，到期限停止，记录事件和结果。"),
+      tools: "create_automation(kind=condition_watch) · get_automation · manage_automation", permission: tr("Required device tools and background tasks, or explicit account/repository authorization for a cloud GitHub merge", "设备所需工具与后台任务；云端 GitHub 合并则要求明确账户与仓库授权"),
+      steps: [tr("Freeze the condition match and action. Store the returned secret callback URL securely.", "冻结条件匹配与动作，安全保存返回的秘密回调 URL。"), tr("Configure the event source to deliver to that URL; a matching event makes the saved plan due.", "配置事件来源向该 URL 投递，匹配事件触发已保存计划。"), tr("Check the action result and run history. A GitHub merge additionally requires an authorized installation and repository.", "检查动作结果和运行历史；GitHub 合并还要求已授权安装与仓库。")],
+      proof: tr("The matched event and the actual action outcome, rather than just a received callback.", "匹配事件与实际动作结果，而非仅仅收到回调。"),
+      limit: tr("Inbound condition hooks use a secret bearer URL and optional delivery-ID deduplication, not provider-specific GitHub HMAC verification. They are separate from signed outbound MCP task events. Do not treat every successful workflow as permission to merge.", "入站条件 Hook 使用秘密 Bearer URL 和可选 Delivery ID 去重，不是 GitHub 专属 HMAC 验证；它与出站签名 MCP 任务事件不同。工作流成功不等于获得合并许可。"), durable: true,
+    },
+    {
+      slug: "data-work", category: tr("DATA", "数据"), title: tr("Process data using your installed environment", "用现有本机环境处理数据"),
+      intro: tr("Use the Python, Node or other runtime already installed on the workstation. Keep input and generated artifacts in the chosen project directory.", "使用工作站已安装的 Python、Node 或其他运行时，将输入和生成文件放在指定项目目录。"),
+      prompt: tr("On data-pc, use the existing Python environment to summarize reports/input.csv, check row totals and write reports/summary.md. If this will take a long time, save the approved script as a Long Task.", "在 data-pc 上使用现有 Python 环境汇总 reports/input.csv，检查行数合计并写入 reports/summary.md。耗时较长时，把已批准脚本保存为 Long Task。"),
+      tools: "read_file · get_file_info · start_process · write_file; create_automation for a long job", permission: tr("File reads + needed editing/terminal tools; background tasks for durable processing", "文件读取 + 所需编辑或终端工具；持久处理还需后台任务"),
+      steps: [tr("Inspect the schema and the installed runtime.", "检查数据结构和已安装运行时。"), tr("Run the approved analysis and keep outputs in the project.", "运行已批准分析，将结果保存在项目中。"), tr("Validate totals or output structure and return a concise report.", "验证合计或输出结构，返回简洁报告。")],
+      proof: tr("Saved output path, validated totals and the command's exit status.", "输出路径、已验证合计和命令退出状态。"),
+      limit: tr("File reads and command results can pass through the relay and AI client. Durable observations can retain excerpts. Keeping the dataset on the device does not mean no data ever leaves it.", "文件读取和命令结果可能经过 Relay 与 AI 客户端；持久观察可以保存片段。数据集留在设备上，不代表绝无数据离开设备。"), durable: false,
+    },
+    {
+      slug: "presentation-deck", category: tr("PRESENTATIONS", "演示文稿"),
+      title: tr("Turn local notes into a PowerPoint deck", "把本机资料变成 PowerPoint 演示文稿"),
+      intro: tr("Ask your AI to turn existing notes, reports and assets into an editable .pptx, using an authorized local script and installed document libraries.", "让 AI 使用已授权的本机脚本和已安装的文档库，把现有笔记、报告与配图整理成可编辑的 .pptx。"),
+      prompt: tr("On my workstation, turn slides/outline.md and the charts in reports/ into a 12-slide product presentation. Use the installed PPTX library, save slides/review.pptx, validate its slide count, and show the result before sharing.", "在我的工作站上，把 slides/outline.md 和 reports/ 里的图表整理成 12 页产品介绍 PPT。使用已安装的 PPTX 库，保存到 slides/review.pptx，检查页数，分享前让我确认。"),
+      tools: "read_file · list_directory · start_process · get_file_info", permission: tr("Read sources + enabled local terminal and output-directory access", "读取素材 + 本机终端授权及输出目录权限"),
+      steps: [tr("Inspect the outline, assets, installed library and intended slide structure.", "检查大纲、图片素材、已安装的文档库和幻灯片结构。"), tr("Generate the .pptx in the chosen local project folder.", "在指定项目文件夹内生成 .pptx。"), tr("Open or inspect the slide structure, count slides and report any layout limits.", "打开或检查演示文稿结构，核对页数并说明可能的排版限制。")],
+      proof: tr("An editable .pptx on the workstation, the generated slide count and verification output.", "工作站上的可编辑 .pptx、生成页数与验证结果。"),
+      limit: tr("This is a workflow using start_process and user-installed libraries such as PptxGenJS or python-pptx, not a built-in PowerPoint authoring MCP tool. Rendering depends on software installed on the computer; AI output needs visual review before delivery.", "这是通过 start_process 与本机已安装的 PptxGenJS 或 python-pptx 等文档库完成的工作流，不是内置 PowerPoint 制作 MCP 工具。渲染效果取决于电脑软件，交付前应人工检查。"), durable: false,
+    },
+    {
+      slug: "spreadsheet-report", category: tr("SPREADSHEETS", "电子表格"),
+      title: tr("Turn hundreds of files into a checked Excel report", "把数百个文件整理成可核验的 Excel"),
+      intro: tr("Read selected CSVs or structured documents in a local folder and generate an .xlsx with formulas, summaries and charts using the existing runtime.", "读取本机指定文件夹内的 CSV 或结构化资料，借助现有运行时生成带公式、汇总与图表的 .xlsx。"),
+      prompt: tr("On data-pc, combine reports/2026/*.csv into output/quarterly.xlsx, deduplicate by invoice ID, add monthly totals and a trend chart. Reconcile the input and output totals, and report any mismatches.", "在 data-pc 上合并 reports/2026/*.csv 到 output/quarterly.xlsx，按发票号去重，添加每月汇总和趋势图，核对输入输出合计并列出差异。"),
+      tools: "list_directory · read_file · start_process · get_file_info", permission: tr("Read access to input files + enabled terminal for workbook generation", "输入文件读取权限 + 用于生成工作簿的终端权限"),
+      steps: [tr("Inspect formats, headers and possible duplicates.", "检查文件格式、表头及潜在重复记录。"), tr("Run a reviewed script using Excel libraries already installed.", "运行使用已安装 Excel 文档库的已审查脚本。"), tr("Reconcile totals, inspect worksheets and return the path plus validation results.", "核对合计、检查工作表，并返回文件路径和验证结果。")],
+      proof: tr("A real .xlsx file with checked row counts, formulas and relevant discrepancy report.", "真实 .xlsx 文件、已核对行数与公式，以及差异报告。"),
+      limit: tr("Excel output requires a suitable installed runtime/library, and may not calculate formulas until opened in a compatible spreadsheet app. It is not a built-in spreadsheet API, and confidential data read by AI can pass through the relay.", "Excel 生成需要安装合适的运行时和文档库，公式可能要在兼容的表格软件中打开后才计算。它不是内置表格 API，AI 读取的敏感数据可能经过 Relay。"), durable: false,
+    },
+    {
+      slug: "desktop-automation", category: tr("DESKTOP AUTOMATION", "桌面自动化"),
+      title: tr("Run an approved mouse-and-keyboard automation script", "用已授权脚本操作鼠标与键盘"),
+      intro: tr("If the computer already has an OS automation utility, Remote Arc can run your reviewed script through the terminal to drive local desktop actions.", "如果电脑已安装系统自动化工具，Remote Arc 可以经由终端运行你确认过的脚本，间接执行本地桌面操作。"),
+      prompt: tr("On my unlocked test workstation, review the existing scripts/export-ui.js and tell me the clicks and keypresses it will make in the demo application. After approval, run it once and check the generated export. Stop if a dialog differs from the expected screen.", "在我已解锁的测试工作站上，先检查 scripts/export-ui.js，说明会在测试软件中做哪些鼠标点击和按键。经我确认后执行一次并检查导出结果；遇到不符合预期的弹窗立即停止。"),
+      tools: "read_file · start_process · get_file_info", permission: tr("Explicit terminal authorization, local interactive desktop session and OS input/accessibility permission", "明确的终端授权、本地图形桌面会话及系统输入或辅助功能权限"),
+      steps: [tr("Read the script and identify window targets, actions and high-impact side effects.", "审查脚本、目标窗口、操作步骤和高影响副作用。"), tr("Confirm the user is present or has explicitly approved the bounded workflow.", "确认用户在场或已明确批准该有界工作流。"), tr("Run the local script with enabled terminal permissions and verify the exported result.", "在已开启终端权限的设备上运行本机脚本并验证导出结果。")],
+      proof: tr("Script output, application export and an explicit report of what was actually verified.", "脚本输出、软件导出文件以及明确说明哪些操作已验证。"),
+      limit: tr("Remote Arc does NOT currently offer native screen capture, mouse-move, click or keyboard-input MCP tools. This example depends entirely on user-installed tools such as PowerShell UI Automation, AppleScript or other desktop scripting software, plus a logged-in interactive session. Browser click/fill uses a separate per-tab permission.", "Remote Arc 目前没有原生屏幕截图、移动鼠标、点击或键盘输入的 MCP 工具。本场景依赖本机安装的 PowerShell UI Automation、AppleScript 等桌面脚本软件，以及已登录的交互桌面会话。浏览器点击与填写另有独立的逐标签页授权。"), durable: false,
+    },
+    {
+      slug: "cross-device-handoff", category: tr("MULTI-COMPUTER", "多电脑协同"),
+      title: tr("Fix on one computer, verify on another", "在一台电脑修复，在另一台电脑验证"),
+      intro: tr("Ask your AI to inspect two explicitly paired devices, work in their existing checkouts and compare actual test results without remote desktop.", "让 AI 检查两台明确配对的设备，在各自已有的仓库中工作、对照真实测试结果，而不需要远程桌面。"),
+      prompt: tr("Use the linked Windows and Mac developer machines: inspect the same repository version on both, fix the cross-platform issue in the approved working tree and run the appropriate tests on each. Report the two results and do not deploy without confirmation.", "使用已连接的 Windows 和 Mac 开发机：检查两台机器上相同版本的代码，在已批准的工作区修复跨平台问题，分别运行测试并汇报；未经确认不要部署。"),
+      tools: "list_devices · read_file · edit_block · start_process", permission: tr("Separate device authorization, file editing and terminal permissions on each computer", "每台电脑单独授权文件编辑和终端权限"),
+      steps: [tr("Select each device and validate that it is online and authorized.", "分别选择设备、确认在线与已授权。"), tr("Run a bounded diagnostic and permitted edits in the correct checkout.", "在正确的代码库内执行有界诊断和允许的修改。"), tr("Verify tests separately on Windows and macOS and compare outcomes.", "分别验证 Windows 与 macOS 的测试，再对照结果。")],
+      proof: tr("Two actual run logs tied to each device plus a reviewed diff.", "分别对应设备的两份实际运行记录与已审核 diff。"),
+      limit: tr("There is no automatic cross-device file sync. The AI must coordinate explicitly, and each device needs to be online, independently authorized, and equipped with the required toolchain.", "Remote Arc 不会自动跨设备同步文件。AI 必须明确协调；每台设备都需要在线、独立授权并安装所需工具链。"), durable: false,
+    },
+    {
+      slug: "home-lab", category: tr("HOME LAB", "家庭实验室"), title: tr("Inspect a headless host through its outbound connection", "通过出站连接检查无头主机"),
+      intro: tr("Inspect services, logs and installed tooling without opening an inbound Remote Arc port. Save repeatable checks when you need them to run later.", "无需开放 Remote Arc 入站端口便可检查服务、日志和已有工具。需要稍后运行时，可保存可重复检查。"),
+      prompt: tr("On home-server, inspect disk usage, failed systemd units and the last 100 lines of the media-service log. Explain the issue. Do not restart or reconfigure anything.", "在 home-server 上检查磁盘占用、失败的 systemd unit 和媒体服务日志最后 100 行，解释问题，不重启或修改配置。"),
+      tools: "list_processes · read_file · start_process · process_output", permission: tr("Read tools; terminal when command-based inspection is required", "读取工具；命令级检查还需终端权限"),
+      steps: [tr("Confirm the host is online and identify its permitted tools.", "确认主机在线及允许的工具。"), tr("Inspect the requested facts with bounded output.", "读取请求的事实，限制输出范围。"), tr("Report diagnosis separately from any proposed repair.", "把诊断结果与建议修复分开汇报。")],
+      proof: tr("Relevant log excerpts, process state and command output tied to the diagnosis.", "支撑诊断的相关日志片段、进程状态和命令输出。"),
+      limit: tr("Background login connection needs an available OS user session and network. Remote Arc does not replace fleet configuration management or permanently supervise arbitrary services.", "登录后台连接需要可用 OS 用户会话和网络。Remote Arc 不替代集群配置管理，也不永久监督任意服务。"), durable: false,
+    },
+    {
+      slug: "browser-research", category: tr("BROWSER CONTEXT", "浏览器上下文"), title: tr("Read a page you explicitly share", "读取你明确共享的页面"),
+      intro: tr("Share selected Chrome tabs and let the AI read page text, selections, links or tables through the same MCP connection.", "共享选定的 Chrome 标签页，让 AI 通过同一 MCP 连接读取正文、选中文字、链接或表格。"),
+      prompt: tr("Read the tab I shared, extract the feature-comparison table and list the documentation links. Do not navigate or submit anything.", "读取我共享的标签页、提取功能对比表并列出文档链接，不跳转或提交任何内容。"),
+      tools: "shared_tab_list · shared_tab_read · shared_tab_open · shared_tab_act", permission: tr("A tab you share, or a site you allowed in the extension; clicking on shared tabs is a separate per-tab opt-in", "你共享的标签页，或你在扩展里允许的网站；共享标签页的点击需单独开启"),
+      steps: [tr("Install the companion and explicitly share a tab.", "安装 Companion 并明确共享标签页。"), tr("Select the shared tab ID and request only the needed context.", "选择已共享标签页 ID，只读取需要的上下文。"), tr("Return the extracted facts; revoke tab access when finished.", "返回提取的事实，结束后可以撤销标签页访问。")],
+      proof: tr("Extracted text or table rows tied to the shared page.", "来自共享页面的正文或表格行。"),
+      limit: tr("Tabs start read-only. Click/fill is available only after a separate per-tab opt-in, uses fresh snapshot refs, and blocks recognized sensitive fields. Browser tools remain outside the current Agent Goal action set.", "标签页默认只读；只有对具体标签页单独开启后才能点击/填写，且必须使用最新快照引用并阻止能够识别出的敏感字段。浏览器工具仍不属于当前 Agent Goal 动作集合。"), durable: false,
+    },
+    {
+      slug: "remote-support", category: tr("AUTHORIZED SUPPORT", "授权支持"), title: tr("Diagnose a computer you are allowed to manage", "诊断你有权管理的电脑"),
+      intro: tr("Read logs and process state on your own machine or one you have permission to administer. Keep diagnosis separate from repair authority.", "读取自己或已获管理许可设备的日志与进程状态，将诊断权限和修复权限区分清楚。"),
+      prompt: tr("On the office mini PC, inspect the sync-worker logs and running processes, explain why it fails and ask before restarting or modifying anything.", "在办公室 Mini PC 上检查 sync-worker 日志和运行进程，解释失败原因；重启或修改任何内容前先问我。"),
+      tools: "read_file · list_processes · start_process", permission: tr("Read tools for diagnosis; separately authorized terminal actions for repairs", "读取工具用于诊断，修复的终端动作需要单独授权"),
+      steps: [tr("Pair only a computer you own or are authorized to administer.", "只配对自己拥有或已获管理授权的电脑。"), tr("Inspect facts within the granted tool and path policy.", "在已授予工具和路径策略内检查事实。"), tr("Explain the cause and obtain the requested repair authorization.", "解释原因并取得请求中要求的修复授权。")],
+      proof: tr("A diagnosis backed by the observed state; if repair is authorized, the post-repair check.", "有观察状态支撑的诊断；修复获授权时还应提供修复后检查。"),
+      limit: tr("This is file/process support rather than GUI screen control. A prompt constraint is not an OS sandbox. Turning off access does not undo earlier changes.", "这是文件与进程支持，不是 GUI 屏幕控制。提示词约束不属于 OS 沙箱，关闭访问也不会撤销此前修改。"), durable: false,
+    },
+  ];
+}
+
+type RunMode='arc'|'connect';
+function useRunMode(){
+ const[mode,setMode]=useState<RunMode>(()=>typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('mode')==='arc'?'arc':'connect');
+ return[mode,(next:RunMode)=>{setMode(next);const url=new URL(window.location.href);url.searchParams.set('mode',next);window.history.replaceState(null,'',url.pathname+url.search+url.hash);}] as const;
+}
+function RunModeChoice({mode,onChange,tr}:{mode:RunMode;onChange:(value:RunMode)=>void;tr:Tr}){
+ return <div className="caseRunModes" role="group" aria-label={tr('Choose how to work','选择工作方式')}><button type="button" aria-pressed={mode==='connect'} onClick={()=>onChange('connect')}>{tr('With Connect','使用 Connect')}</button><button type="button" aria-pressed={mode==='arc'} onClick={()=>onChange('arc')}>{tr('With Arc','使用 Arc')}</button></div>;
+}
+function caseTitle(slug:string,fallback:string,tr:Tr){return slug==='overnight-goals'?tr('Delegate a bounded task for later','委派稍后执行的有界任务'):slug==='ci-follow-up'?tr('Check CI and prepare the next step','检查 CI，准备下一步'):slug==='scheduled-checks'?tr('Keep a check on a daily or interval routine','按每日或间隔 Routine 持续检查'):fallback;}
+
+export function UseCaseCatalog() {
+  const {tr,locale}=useI18n(),[mode,setMode]=useRunMode(),[query,setQuery]=useState('');
+  useEffect(()=>{if(window.location.hash==='#video-gallery')window.location.replace(localizedWebsiteHref('/use-cases/video-creation#video-gallery',locale));},[locale]);
+  const order=['video-creation','mathematical-animation','blender-3d','audio-transcription','word-documents','pdf-workflows','presentation-deck','spreadsheet-report','image-studio','website-building','research-reports','data-work','data-visualization','statistical-analysis','machine-learning','network-analysis','ui-inspection','webapp-testing','mcp-integrations','browser-workflows','job-applications','remote-development','desktop-automation','file-organization','disk-space-cleanup','scheduled-checks','overnight-goals','long-running-jobs','ci-follow-up','cross-device-handoff','home-lab','browser-research','remote-support'];
+  const needle=query.trim().toLocaleLowerCase();
+  const items=cases(tr).filter(item=>mode==='connect'||!item.connectOnly).filter(item=>!needle||[item.title,item.intro,item.category,item.slug,...useCaseSkillIds(item.slug)].join(' ').toLocaleLowerCase().includes(needle)).sort((a,b)=>order.indexOf(a.slug)-order.indexOf(b.slug));
+  return <main className="useCaseCatalog revisedUseCases flatUseCaseCatalog">
+   <header className="toolPageHeader"><span className="eyebrow">{tr('USE CASES','使用场景')}</span><h1>{mode==='arc'?tr('What would you like Arc to get done?','你想让 Arc 完成什么？'):tr('What would you like your AI to get done?','你想让你的 AI 完成什么？')}</h1><p>{tr('Create, analyze, research or automate. Choose a task to see examples, useful outputs and what it needs.','创作、分析、研究，或自动处理日常工作。选择一个场景，查看示例、交付结果和所需条件。')}</p><RunModeChoice mode={mode} onChange={setMode} tr={tr}/></header>
+   <div className="useCaseBrowse"><label className="useCaseSearch"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span className="srOnly">{tr('Search use cases','搜索使用场景')}</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={tr('Search: recordings, video, Word, charts…','搜索：录音、视频、Word、图表…')}/></label><span className="useCaseResultCount" aria-live="polite">{items.length} {tr('use cases','个场景')}</span></div>
+   <section className="useCaseGrid visualUseCaseGrid" aria-label={tr('Workflows','工作流程')}>{items.map((item,index)=><a className="useCaseCard" key={item.slug} href={localizedWebsiteHref('/use-cases/'+item.slug+'?mode='+mode,locale)}>
+    <div className="useCaseCardPreview"><img data-use-case-art={item.slug} src={'/use-case-art/'+item.slug+'.svg'} alt="" width="640" height="360" loading={index<6?'eager':'lazy'} decoding="async"/></div>
+    <div className="useCaseCardBody"><span className="eyebrow">{item.category}</span><h2>{mode==='arc'?caseTitle(item.slug,item.title,tr):item.title}</h2><p className="useCaseCardIntro">{mode==='arc'?ARC_USE_CASES[item.slug as UseCaseSlug].intro[locale]:item.intro}</p><span className="caseMode">{mode==='arc'?tr('Arc · Apps, devices & Tasks','Arc · 应用、设备与 Tasks'):item.connectOnly?tr('Connect · Browser Runner','Connect · Browser Runner'):item.durable?tr('Connect · saved Task','Connect · 持续 Task'):tr('Connect · direct tools','Connect · 直接工具')}</span></div><b aria-hidden="true">→</b>
+   </a>)}</section>
+   {items.length===0&&<div className="useCaseEmpty"><h2>{tr('Try another task or keyword','试试其他任务或关键词')}</h2><p>{tr('Search a result such as a transcript, document, chart or website.','可以按文字稿、文档、图表或网站等目标结果搜索。')}</p><button type="button" onClick={()=>setQuery('')}>{tr('Show all use cases','查看全部场景')}</button></div>}
+   <footer className="catalogFooter"><p>{tr('Work runs through the tools and permissions available to your selected AI and connected computer. Each use case explains its requirements and how to verify the result.','工作通过所选 AI 与已连接电脑可用的工具和权限完成。每个场景都说明所需条件，以及如何核验结果。')}</p><a href={localizedWebsiteHref('/docs/skills',locale)}>{tr('Explore the skills','了解技能')} →</a></footer>
+  </main>;
+}
+
+export function UseCaseDetail({ slug }: { slug: UseCaseSlug }) {
+  const { tr, locale } = useI18n();
+  const item = cases(tr).find(entry => entry.slug === slug)!,[chosenMode,setMode]=useRunMode(),arc=ARC_USE_CASES[slug];
+  // A Connect-only workflow always shows its Connect path.
+  const mode:RunMode=item.connectOnly?'connect':chosenMode;
+  const arcHref=arcChatHref(arcUseCasePrompt(slug,locale),'use-case:'+slug);
+  const arcProof=slug==='ci-follow-up'?tr('The actual commit, workflow status, inspected failure evidence and source links, with any proposed next action kept within your authorization.','实际提交、工作流状态、已检查的失败证据和来源链接；建议下一步须保持在你的授权范围内。'):slug==='scheduled-checks'?tr('Per-run timestamps, actual resource observations, source links and result summaries; include exit status when a command was executed.','每轮时间、实际资源观察、来源链接与结果摘要；执行了命令时另附退出状态。'):item.proof;
+  return <main className={"technicalDoc revisedUseCases"+(slug==="video-creation"?" videoCreationCase":slug==="image-studio"?" imageCreationCase":"")}>
+    <header className="articleHeader"><a className="caseBack" href={localizedWebsiteHref("/use-cases?mode="+mode, locale)}>← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{mode==='arc'?caseTitle(slug,item.title,tr):item.title}</h1><p>{mode==='arc'?arc.intro[locale]:item.intro}</p>{item.connectOnly?<p className="caseConnectOnly">{tr('Available through Connect from the AI you already use. Arc will use Browser Runner later.','通过 Connect 在你已经使用的 AI 中可用。Arc 之后也会支持 Browser Runner。')} <a href={localizedWebsiteHref('/connect-ai',locale)}>{tr('Connect your AI','连接你的 AI')} →</a></p>:<RunModeChoice mode={mode} onChange={setMode} tr={tr}/>}{mode==='arc'?<div className="caseStartActions"><a className="primaryButton" href={arcHref}>{tr('Start in Arc','在 Arc 中开始')} ↗</a><span>{tr('Review the prepared request before sending.','检查预填请求后，再发送执行。')}</span></div>:item.durable&&<TaskAvailability />}</header>
+    {slug==="video-creation"&&<MediaDemoGallery/>}
+    {slug==="image-studio"&&<ImageDemoGallery/>}
+    <article className="technicalArticle useCaseDetailBody">
+      {mode==='arc'?<>
+       <section><h2>{tr('Ask Arc','向 Arc 提出请求')}</h2><blockquote className="casePrompt">{arc.prompt[locale]}</blockquote><p>{tr('The button opens a draft in Arc, then you send it when ready. Arc checks current access and dependencies before acting; missing details or capabilities are concrete blockers.','按钮会在 Arc 中打开草稿，由你检查后发送。Arc 执行前检查当前权限与依赖；缺少信息或能力时会说明具体阻碍。')}</p></section>
+       <section className="caseArcRequirements"><h2>{tr('What to connect','需要连接什么')}</h2><p>{arc.requires[locale]}</p><a href={localizedWebsiteHref('/docs/apps',locale)}>{tr('Apps guide','Apps 指南')} →</a><a href={localizedWebsiteHref('/docs/devices',locale)}>{tr('Device guide','设备指南')} →</a></section>
+       <section><h2>{tr('How Arc handles the work','Arc 如何推进工作')}</h2><ol><li>{tr('Resolve the actual account, computer, files and tools. Check ownership, permissions and installed dependencies.','确认实际账号、电脑、文件和工具，检查归属、权限与已安装依赖。')}</li><li>{arc.kind==='task'?tr('Confirm timing, then save self-contained Task instructions. The scheduler starts a bounded Arc run and retains its conversation.','确认时间后保存自包含 Task 指令，由调度器启动有界 Arc 运行并保留任务对话。'):arc.kind==='routine'?tr('Confirm the schedule and timezone, save a routine and check the acknowledged next run. Each run rechecks permissions and budgets.','确认时间与时区，保存 Routine 并核对返回的下次运行时间；每轮重新检查权限和预算。'):tr('Use the authorized tools to perform the request, observe their results and continue from those observations.','使用获授权工具执行请求，读取结果，再依据实际观察继续。')}</li><li>{tr('Verify the requested output and return its evidence. Distinguish completed work, ongoing processes, unfinished work and exact blockers; do not repeat an uncertain external write.','核验目标产物并返回证据，区分已完成工作、仍运行的进程、未完成工作与具体阻碍；不重复结果不明的外部写入。')}</li></ol></section>
+       <section><h2>{tr('What a useful result contains','有用的结果应该包含什么')}</h2><p>{arcProof}</p>{arc.kind!=='direct'&&<p>{tr('A saved Task or routine returns an acknowledged ID and next run. Inspect its execution result separately in Tasks and Activity; scheduling alone is not completion.','保存 Task 或 Routine 后应返回确认的 ID 与下次运行时间。实际执行结果需在 Tasks 和 Activity 单独核对，保存计划本身不代表目标已完成。')}</p>}</section>
+       <section><h2>{tr('Know the boundary','了解边界')}</h2><p>{arc.boundary[locale]}</p><p>{tr('Arc model use has run and account limits. Relevant observations are sent to the model API; account permissions and local computer policy remain authoritative. You can inspect execution in Activity and stop future dispatch.','Arc 模型使用受单轮和账号额度限制，相关观察会发送给模型 API；账号权限和本机策略继续决定可执行范围。可在 Activity 检查执行，也可停止后续派发。')}</p></section>
+       <footer className="articleEndLinks"><a href={arcHref}>{tr('Start in Arc','在 Arc 中开始')} ↗</a><a href={localizedWebsiteHref('/docs/arc',locale)}>{tr('Arc guide','Arc 指南')} →</a><a href={localizedWebsiteHref('/docs/skills',locale)}>{tr('Reuse a skill','复用技能')} →</a></footer>
+      </>:<>
+      <section><h2>{tr("Ask in your AI chat", "在 AI 聊天中提出请求")}</h2><blockquote className="casePrompt">{item.prompt}</blockquote><p>{tr("This is a sample request, not an automatically started task. The AI resolves the device and checks your existing authorization before using tools or saving ongoing work.", "这是示例请求，不会自动启动任务。AI 会先确认设备和已有授权，再使用工具或保存持续工作。")}</p></section>
+      <section><h2>{tr("How the work proceeds", "工作如何推进")}</h2><ol>{item.steps.map(step => <li key={step}>{step}</li>)}</ol></section>
+      <section><h2>{tr("Tools and permissions", "工具与权限")}</h2><div className="caseTools"><code>{item.tools}</code></div><p>{item.permission}</p><p>{tr("Permissions belong to the device. Task permissions add lifecycle capabilities; they do not override tool access, workspace roots or sensitive-path checks.", "权限属于每台设备。任务权限增加生命周期能力，不会覆盖工具授权、工作区范围或敏感路径检查。")}</p></section>
+      <section><h2>{tr("What a useful result contains", "有用的结果应该包含什么")}</h2><p>{item.proof}</p>{item.durable && <p>{tr("Get the saved status and recent runs with get_automation or open Dashboard → Tasks. Failed, expired, cancelled and paused are distinct outcomes; they should not be described as completed work.", "通过 get_automation 或 Dashboard → Tasks 查看保存状态和近期运行。失败、到期、取消和暂停是不同结果，不能当成工作已完成。")}</p>}</section>
+      <section><h2>{tr("Know the boundary", "了解边界")}</h2><p>{item.limit}</p><p>{tr("Active tool results pass through the hosted relay and your selected AI. Durable goals additionally save their contract, bounded observations, factual memory and evidence. Choose the content and access you grant accordingly.", "当前工具结果经过托管 Relay 和所选 AI；持久目标还会保存合同、受限观察、事实记忆和证据，请据此选择任务内容与访问授权。")}</p></section>
+      <footer className="articleEndLinks"><a href="/connect-ai">{tr("Connect your AI", "连接 AI")} →</a><a href="/docs/long-running-work">{tr("Long-running work", "持续工作")} →</a><a href="/docs#docs-sandbox">{tr("Execution boundaries", "执行边界")} →</a></footer>
+      </>}
+    </article>
+  </main>;
+}

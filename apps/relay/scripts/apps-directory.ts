@@ -1,5 +1,5 @@
 import fs from "node:fs";import {APP_CATALOG,APP_OPERATIONS,APP_CATEGORIES} from "../src/apps/app-catalog.js";
 const result={categories:APP_CATEGORIES,apps:Object.entries(APP_CATALOG).map(([provider,definition])=>({provider,name:definition.name,brand:definition.brand,category:definition.category,auth:definition.auth||"oauth",operationCount:APP_OPERATIONS.filter(op=>op.provider===provider).length,operations:APP_OPERATIONS.filter(op=>op.provider===provider).map(({name,description,permission})=>({name,description,permission})),connectionNote:definition.connectionNote,supportsWrite:APP_OPERATIONS.some(op=>op.provider===provider&&op.permission==="write"),billingNote:definition.billingNote||"Provider usage and API-project quotas follow that provider's rules.",payer:definition.payer||"provider_rules"}))};
-const file=new URL("../../ui/src/app-directory.json",import.meta.url),content=JSON.stringify(result,null,2)+"\n";
+const file=new URL("../../ui/src/data/app-directory.json",import.meta.url),content=JSON.stringify(result,null,2)+"\n";
 if(process.argv.includes("--check")){if(fs.readFileSync(file,"utf8").replace(/\r\n/g,"\n")!==content)throw Error("App directory is stale: run the Apps directory generator.");}else fs.writeFileSync(file,content);
 console.log("Verified "+result.apps.length+" executable integrations in "+result.categories.length+" categories.");

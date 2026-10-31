@@ -1,8 +1,8 @@
 import React from 'react';
 import assert from 'node:assert/strict';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {MonitorReliability} from '../src/dashboard/monitor-reliability.js';
-import type {MonitorState} from '../src/app-types.js';
+import {MonitorReliability} from '../src/features/dashboard/views/monitor-reliability.js';
+import type {MonitorState} from '../src/types/app-types.js';
 const en=(a:string)=>a,zh=(_a:string,b:string)=>b;
 const render=(state:MonitorState['deviceReliability'],tr=en)=>renderToStaticMarkup(<MonitorReliability state={state} tr={tr}/>);
 assert.match(render(undefined),/does not establish healthy/);

@@ -6,8 +6,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 registerHooks({ load(url, context, nextLoad) {
   return url.endsWith('.css') ? { format: 'module', source: '', shortCircuit: true } : nextLoad(url, context);
 } });
-const { NativeInstall } = await import('../src/native-install.tsx');
-const { I18nProvider } = await import('../src/i18n.tsx');
+const { NativeInstall } = await import('../src/features/install/native-install.tsx');
+const { I18nProvider } = await import('../src/app/i18n.tsx');
 const previousWindow = globalThis.window;
 const previousLocation = globalThis.location;
 try {

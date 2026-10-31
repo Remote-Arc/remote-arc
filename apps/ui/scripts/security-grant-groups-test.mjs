@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { groupAuthorizations } from "../src/security-grant-groups.ts";
+import { groupAuthorizations } from "../src/features/security/security-grant-groups.ts";
 
 const sample = (name, status, id, minutes) => ({
   clientName: name,

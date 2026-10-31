@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { goUpdateCommands, isOlderRelease } from "../src/agent-update-guide.ts";
+import { goUpdateCommands, isOlderRelease } from "../src/features/install/agent-update-guide.ts";
 
 for (const [running, published, expected] of [
   ["0.6.1-rc.5", "0.6.1", true],

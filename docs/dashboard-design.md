@@ -20,7 +20,7 @@ Dashboard 是任务与设备的观察、控制入口。用户日常仍从 AI 聊
 页面标题 28–36px、区块标题 22px。主要按钮至少 44px 高，任务权限开关有
 可点击的完整标签、键盘焦点与禁用状态。两种语言及明暗主题共用同一结构。
 
-实现位于 `apps/ui/src/dashboard.css`、`dashboard-task-view.tsx` 及现有
+实现位于 `apps/ui/src/features/dashboard/dashboard.css`、`dashboard-task-view.tsx` 及现有
 `main.tsx`。样式只作用于 Dashboard，保留官网及 Cloudflare 部署结构；
 长任务 Docs 单独加载，避免给官网首页增加不必要的文档代码。
 

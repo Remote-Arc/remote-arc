@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
-import { previewRuntimeConfig } from "./src/preview-config.js";
+import { previewRuntimeConfig } from "./src/preview/preview-config.js";
 
 const cliPackage = JSON.parse(
   readFileSync(new URL("../../packages/cli/package.json", import.meta.url), "utf8"),
@@ -44,6 +45,14 @@ if (candidateMatch) {
 }
 
 export default defineConfig(({mode}) => ({
+  resolve: {
+    // The preview fetch mock embeds every fixture and the full Skill catalog
+    // (several MB). Outside VITE_UI_PREVIEW builds, main.tsx gets a no-op.
+    alias: (process.env.VITE_UI_PREVIEW ?? loadEnv(mode, process.cwd(), "VITE_").VITE_UI_PREVIEW) === "1" ? [] : [{
+      find: /^\.\/preview\/preview\.js$/,
+      replacement: fileURLToPath(new URL("./src/preview/preview-disabled.ts", import.meta.url)),
+    }],
+  },
   plugins: [react(), {
     name: "local-runtime-config",
     configureServer(server) {

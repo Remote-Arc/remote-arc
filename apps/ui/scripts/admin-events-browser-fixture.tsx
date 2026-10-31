@@ -1,9 +1,9 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
-import {I18nProvider} from '../src/i18n.js';
-import {AdminEvents} from '../src/admin/admin-events.js';
-import '../src/admin/admin-console.css';
-import '../src/admin/admin-design.css';
+import {I18nProvider} from '../src/app/i18n.js';
+import {AdminEvents} from '../src/features/admin/events/admin-events.js';
+import '../src/features/admin/admin-console.css';
+import '../src/features/admin/admin-design.css';
 // Browser-only local regression fixture. This file is not a production entrypoint.
 const nativeFetch=(window as Window&{eventsTestFetch?:typeof fetch}).eventsTestFetch;if(nativeFetch)window.fetch=nativeFetch;
 const shell=document.createElement('div');shell.className='adminShell';Object.assign(shell.style,{display:'block',height:'auto',minHeight:'100vh',overflow:'visible'});

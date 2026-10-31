@@ -95,7 +95,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const result = await verifyWithRetry({
       sha, version:JSON.parse(readFileSync(new URL("../packages/cli/package.json",import.meta.url))).version,
       installer:readFileSync(new URL("../apps/ui/public/install.sh",import.meta.url),"utf8"),
-      providers:JSON.parse(readFileSync(new URL("../apps/ui/src/app-directory.json",import.meta.url))).apps.map(item=>item.provider),
+      providers:JSON.parse(readFileSync(new URL("../apps/ui/src/data/app-directory.json",import.meta.url))).apps.map(item=>item.provider),
     });
     console.log("PASS: production read-only checks\n" + JSON.stringify(result,null,2));
   } catch (error) { console.error("::error::" + error.message); process.exitCode = 1; }

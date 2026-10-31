@@ -3,9 +3,9 @@ import { DOC_TOPICS } from "../../../packages/docs/src/catalog.ts";
 import assert from "node:assert/strict";
 import {chineseSeo} from '../src/site/zh-seo.ts';
 import { legacyLanguageRedirect, localizedPages } from "../src/site/marketing-locale.ts";
-import { chinesePages, pageForLanguage } from "../../ui/src/marketing-paths.ts";
+import { chinesePages, pageForLanguage } from "../../ui/src/lib/marketing-paths.ts";
 import { chineseResourceSeo } from "../src/site/zh-resources.ts";
-import { releaseChinese } from "../../ui/src/release-locales.ts";
+import { releaseChinese } from "../../ui/src/features/marketing/release-locales.ts";
 import { readFileSync } from "node:fs";
 import {
   canonicalForPath,

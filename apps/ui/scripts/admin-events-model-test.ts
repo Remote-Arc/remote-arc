@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {percent,rate,percentagePoints,biggestDrop,retentionState,validAnalytics,type Scene} from '../src/admin/admin-events-model.js';
+import {percent,rate,percentagePoints,biggestDrop,retentionState,validAnalytics,type Scene} from '../src/features/admin/events/admin-events-model.js';
 const zh=(_en:string,chinese:string)=>chinese;
 assert.equal(percent(rate(0,0)),'—','No denominator is not a 0% success rate');
 assert.equal(percent(rate(0,10)),'0%','Observed failures with a real denominator can be zero');

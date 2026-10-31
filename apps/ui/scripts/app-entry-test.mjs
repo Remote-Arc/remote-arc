@@ -10,8 +10,8 @@ assert.ok(!/^(export )?function Dashboard\b/m.test(entry), "Dashboard lives in d
 // The Dashboard shell only lays out tabs; state lives in dashboard/use-*.ts
 // hooks and each tab or panel in its own dashboard/ module.
 const lineCount = (name) => readAppModule(name).split(/\r?\n/).length;
-assert.ok(lineCount("dashboard.tsx") <= 250, `dashboard.tsx has ${lineCount("dashboard.tsx")} lines; move tab content into dashboard/`);
-for (const name of appModules.filter((name) => name.startsWith("dashboard/"))) {
+assert.ok(lineCount("features/dashboard/dashboard.tsx") <= 250, `dashboard.tsx has ${lineCount("features/dashboard/dashboard.tsx")} lines; move tab content into dashboard/`);
+for (const name of appModules.filter((name) => name.startsWith("features/dashboard/") && name !== "features/dashboard/dashboard.tsx")) {
   assert.ok(lineCount(name) <= 500, `${name} has ${lineCount(name)} lines; split it by tab, panel or concern`);
 }
 assert.match(entry, /installUiPreviewFetchMock\(MCP_ENDPOINT\);/, "The preview mock must install before the app renders");

@@ -195,7 +195,7 @@ const index = {
   local: localTools.map(({ name, modes, group }) => ({ name, modes, group })),
 };
 const outputs: [[string, unknown], [string, unknown]] = [
-  ["../../ui/src/tool-reference-data.generated.json", catalog],
+  ["../../ui/src/features/docs/tool-reference-data.generated.json", catalog],
   ["../../../packages/docs/src/tool-index.generated.json", index],
 ];
 let changed = false;

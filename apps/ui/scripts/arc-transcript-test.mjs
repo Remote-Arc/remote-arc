@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {arcTranscript} from '../src/arc-transcript.ts';
+import {arcTranscript} from '../src/features/arc/chat/arc-transcript.ts';
 test('chat hides tool traces and legacy intent while preserving user messages and final answers',()=>{
  const messages=[{id:'run:user',run_id:'run',role:'user',text:'Summarize my inbox'},...Array.from({length:6},(_,i)=>[{id:`run:${i}:intent`,run_id:'run',role:'assistant',text:'Working'}, {id:`run:${i}:tool`,run_id:'run',role:'tool',text:'Working',tool:'list_apps',status:'completed'}]).flat(),{id:'run:6:reply',run_id:'run',role:'assistant',text:'Verified summary'}, {id:'next:user',run_id:'next',role:'user',text:'Read the next page'}, {id:'next:0:tool',run_id:'next',role:'tool',text:'Read',tool:'read_inbox',status:'unknown'}];
  const entries=arcTranscript(messages);

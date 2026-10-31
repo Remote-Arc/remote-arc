@@ -306,7 +306,7 @@ export function ClientInstallPage({
       : slug === "gemini"
         ? {
             name: "Google Gemini",
-            icon: "/ai-gemini.svg",
+            icon: "/ai-gemini-four-color-2025.svg",
             eyebrow: tr("GEMINI INSTALLATION", "GEMINI 安装"),
             title: tr("Connect Gemini to your own computers.", "让 Gemini 连接你自己的电脑。"),
             intro: tr(
@@ -343,7 +343,7 @@ export function ClientInstallPage({
             ],
             demo: {
               name: "Gemini",
-              icon: "/ai-gemini.svg",
+              icon: "/ai-gemini-four-color-2025.svg",
               prompt: tr("List my available Remote Arc devices", "列出我 Remote Arc 当前可用的设备"),
               working: tr("Checking your paired devices…", "正在检查已配对设备…"),
               resultLines: [

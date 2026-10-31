@@ -12,10 +12,20 @@ const { HomeConnectionScene } = await import("../src/home-connection-scene.tsx")
 const { LandingContent,HomeHeroCopy } = await import("../src/landing-content.tsx");
 const { I18nProvider } = await import("../src/i18n.tsx");
 const publicDir = fileURLToPath(new URL("../public/", import.meta.url));
+const geminiIcon = "/ai-gemini-four-color-2025.svg";
+const geminiSvg = readFileSync(path.join(publicDir, geminiIcon), "utf8");
+for (const color of ["#FC413D", "#FBBC04", "#00B95C", "#3186FF"]) {
+  assert.ok(geminiSvg.includes(color), "Gemini must use Google's current four-color mark: " + color);
+}
+for (const file of ["public-layout.tsx", "client-install-page.tsx", "tool-reference.tsx"]) {
+  const source = readFileSync(fileURLToPath(new URL("../src/" + file, import.meta.url)), "utf8");
+  assert.ok(source.includes(geminiIcon), file + " must use the versioned Gemini asset, not the cached legacy URL");
+  assert.ok(!source.includes('"/ai-gemini.svg"'), file + " must not use the old browser-cache key");
+}
 const clients = [
   { name: "ChatGPT", slug: "chatgpt", icon: "/ai-openai.svg", tone: "mono" },
   { name: "Claude", slug: "claude", icon: "/ai-claude.svg", tone: "color" },
-  { name: "Gemini", slug: "gemini", icon: "/ai-gemini.svg", tone: "color" },
+  { name: "Gemini", slug: "gemini", icon: "/ai-gemini-four-color-2025.svg", tone: "color" },
   { name: "Cursor", slug: "cursor", icon: "/ai-cursor.svg", tone: "color" },
 ];
 const originalLocation = globalThis.location;

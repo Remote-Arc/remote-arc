@@ -70,6 +70,8 @@ try{
   assert.equal(sql.prepare('SELECT status FROM user_followup_messages WHERE id=?').get(id)?.status,'draft');
  }
  assert.equal(sends,0,'Disabled channels never dispatch or claim a reviewed draft');
+ assert.equal((await decode(await handleAdminServiceRequest(request('/'+id+'/send','POST',{}),{...env,FOLLOWUP_DAILY_EMAIL_LIMIT:'0'}),429)).error,'daily_email_budget_reached');
+ assert.equal(sql.prepare('SELECT status FROM user_followup_messages WHERE id=?').get(id)?.status,'draft','Over the daily cap, a draft is kept unsent');assert.equal(sends,0);
  const [first,second]=await Promise.all([api('/'+id+'/send','POST',{}),api('/'+id+'/send','POST',{})]);
  assert([200,409].includes(first.status));assert([200,409].includes(second.status));assert.equal(sends,1);
  assert.equal((await decode(await api('/'+id+'/send','POST',{}))).status,'sent');assert.equal(sends,1);

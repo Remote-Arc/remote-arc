@@ -70,3 +70,20 @@ test('Changing a bulk template preserves edited text until an explicit replaceme
  await dialog.getByRole('button',{name:/Keep current text|保留当前内容/}).click();await expect(template).toHaveValue('experience');
  await template.selectOption('finish-mcp');await dialog.getByRole('button',{name:/Use new template|使用新模板/}).click();await expect(template).toHaveValue('finish-mcp');await expect(subject).not.toHaveValue('A next step for {{name}}');
 });
+
+test('Funnel shows where users stop and filters to them with the matching template',async({page})=>{
+ await open(page);
+ const funnel=page.getByRole('list',{name:/Activation funnel|激活漏斗/});
+ await expect(funnel.locator('li')).toHaveCount(4);
+ await expect(funnel.locator('li').nth(0).locator('strong')).toHaveText('6');
+ await expect(funnel.locator('li').nth(1).locator('strong')).toHaveText('5');
+ await expect(page.locator('.followupBudget')).toContainText(/\/60/);
+ await funnel.getByRole('button',{name:/Stuck before this|卡在这一步/}).nth(1).click();
+ await expect(contacts(page)).toHaveCount(1);
+ await expect(contacts(page).first()).toContainText(/Alex Chen/);
+ await expect(contacts(page).first()).toContainText(/Next: Connect an AI client|下一步：连接 AI 客户端/);
+ await page.getByRole('checkbox',{name:/^(Select |选择 )Alex Chen$/}).check();
+ await page.getByRole('button',{name:/^(Bulk email|群发邮件)/}).click();
+ await expect(page.getByRole('dialog').getByRole('combobox',{name:/Bulk template|群发模板/})).toHaveValue('finish-mcp');
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});

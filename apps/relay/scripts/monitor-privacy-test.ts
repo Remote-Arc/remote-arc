@@ -35,6 +35,12 @@ assert.equal(deviceReadDiagnostic(Error(`no such file or directory: ${raw}`)), "
 assert.equal(diagnosticError(new TypeError(raw)), "TypeError: details omitted");
 assert.equal(diagnosticError(new RangeError(raw)), "RangeError: details omitted");
 assert.equal(diagnosticError("D1_ERROR: " + raw), "D1_ERROR: details omitted");
+for (const [message, kind] of [
+  [`UNIQUE constraint failed: users.email (${raw})`, "constraint"],
+  [`no such column: ${raw}`, "schema"],
+  [`string or blob too big: ${raw}`, "limit"],
+  [`Network connection lost. ${raw}`, "unavailable"],
+] as const) assert.equal(diagnosticError("D1_ERROR: " + message), `D1_ERROR: ${kind} (details omitted)`, "Only a fixed D1 class leaves the sanitizer");
 assert.equal(diagnosticError({ toString() { throw Error(raw); } }), "Error: details omitted");
 assert.equal(diagnosticRoute("/api/device/" + raw), "/api/device/:redacted");
 assert.equal(diagnosticRoute("/private/" + raw), "/:redacted");

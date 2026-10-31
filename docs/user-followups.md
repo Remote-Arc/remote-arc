@@ -10,6 +10,10 @@ The Admin **User follow-ups** workspace manages individual support conversations
 - The full table shows status, activity, last contact and next reminder. Selecting a user opens the existing editable draft/history/notes workspace beside a compact contact list. Switching users preserves in-progress drafts.
 - Select a page or up to the first 100 matching users across pages to update their status or compose a bulk follow-up. Stopped contacts remain stopped; updating another status cannot restore their subscription.
 
+## Funnel and next steps
+
+The page opens with an activation funnel over all users: registered, computer paired, AI client connected and used Remote Arc. A browser extension is not a paired computer. Each step offers a "stuck before this" filter (`segment=step:pair_computer`, `step:connect_ai`, `step:first_use`), and every user carries a next step with a matching template: "Pair your computer" (install command and Windows download), "Computer paired · finish MCP setup", "Reach a first result", or the experience check-in once they have used the product. A bulk email from a next-step filter starts from that template.
+
 ## Individual emails
 
 Choose an English or Chinese template, personalize it, save the draft and review the exact saved HTML before sending. Saved drafts remain editable using revision checks; stale browser tabs cannot replace or send a newer version. The send dialog displays recipient, From, Reply-To and subject, and records an existing support request or agreement in place when needed.
@@ -34,6 +38,10 @@ A global D1 lease serializes background workers. The existing one-minute cron dr
 Provider acceptance is shown as submitted, not delivered. Bounce/complaint reconciliation and verification of unknown delivery remain operator tasks. There is no email-open tracking. Feedback form submissions retain `source=followup:<message-id>`; this is attribution, not verified identity.
 
 Every email includes the reply mailbox and a recipient-specific unsubscribe link. GET shows a confirmation; POST stops future follow-ups. Admin cannot undo a recipient unsubscribe. Essential sign-in mail remains independent.
+
+## Daily email budget
+
+Follow-ups and sign-in codes share one sending account (Resend's free plan allows 100 emails a day). Follow-ups stop at `FOLLOWUP_DAILY_EMAIL_LIMIT` (default 60) within a rolling 24 hours, counting sent and uncertain deliveries, so sign-in codes keep the rest. A single send over the cap returns `daily_email_budget_reached` and keeps the draft. In a bulk send, recipients over the cap stay pending and the background run continues them when the window allows. The page shows today's usage, and the bulk review says how many can go out today. On a paid sending plan, raise the variable instead of removing the cap.
 
 ## Deployment and sender configuration
 

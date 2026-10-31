@@ -60,6 +60,12 @@ try {
   assert.equal(sent.length,count+1,'A background process is dispatched whatever timeout_ms says');
   reply(sent[count].id);
   assert.equal((await background).status,200);
+  // An error the device returns is an answered call, not a gateway timeout.
+  const refused = registry.fetch(request(undefined,'read_file'));await setImmediate();
+  registry.webSocketMessage(socket as unknown as WebSocket,JSON.stringify({type:'result',id:sent.at(-1).id,error:'ENOENT: details omitted'}));
+  const refusedResponse = await refused;
+  assert.equal(refusedResponse.status,422,'A device-reported error is not a 504');
+  assert.match(JSON.stringify(await refusedResponse.json()),/ENOENT/);
   failSend=true;
   assert.equal((await registry.fetch(request(90000))).status,504);
   assert.equal((registry as any).pending.size,0,'Failed socket send clears the timer and pending entry');

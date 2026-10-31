@@ -2,6 +2,7 @@ import {renderFollowupEmail} from '../../../../packages/protocol/src/followup-em
 import {feedbackRewardAvailable} from '../billing/connect-rewards.js';
 import {followupEmailSender,followupReplyTo} from '../platform/email-sender.js';
 import {ensureContact,followupLinks,stamp,type FollowupEnv,type Message} from './followup-common.js';
+import {followupEmailBudget} from './followup-budget.js';
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
 export async function dispatchFollowup(env:FollowupEnv,id:string,expectedRevision?:number,batchId?:string,timeoutMs=20000){
    const message=await env.DB.prepare('SELECT * FROM user_followup_messages WHERE id=?1').bind(id).first<Message>();if(!message)return json({error:'draft_not_found'},404);
@@ -9,6 +10,7 @@ export async function dispatchFollowup(env:FollowupEnv,id:string,expectedRevisio
    if(message.status!=='draft')return json({id,status:message.status,providerId:message.provider_id});
    if(expectedRevision!==undefined&&expectedRevision!==message.draft_revision)return json({error:'draft_conflict'},409);
    const sender=followupEmailSender(env);if(!sender)return json({error:'email_not_configured'},503);
+   if((await followupEmailBudget(env)).remaining<=0)return json({error:'daily_email_budget_reached'},429);
    const contact=await ensureContact(env,message.user_id);if(!contact||contact.suppressed_at)return json({error:'recipient_suppressed'},409);if(!contact.consent_at)return json({error:'contact_permission_required'},409);if(message.recipient_email!==contact.email)return json({error:'recipient_changed'},409);
    if(batchId&&!await env.DB.prepare("SELECT id FROM user_followup_batches WHERE id=?1 AND status='queued'").bind(batchId).first())return json({error:'batch_not_queued'},409);
    const unsubscribe=new URL(env.MARKETING_ORIGIN||'https://remotearc.app').origin+'/email/follow-up/unsubscribe?token='+contact.unsubscribe_token;

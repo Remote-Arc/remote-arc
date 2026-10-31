@@ -99,6 +99,12 @@ assert.deepEqual(last.arguments, { action_id: "a/1" });
 state.tool = () => Response.json({ error: "conflict detected" }, { status: 409 });
 await expectError(send("/undo/a1", owner), 409, "conflict detected");
 await expectError(send("/undo", owner, "GET"), 409, "conflict detected");
+// A computer that does not answer is a device problem, not a Relay outage.
+state.tool = () => Response.json({ error: "device call timed out" }, { status: 504 });
+await expectError(send("/undo/a1", owner), 504, "device call timed out");
+await Promise.all(pending);
+const timedOut = sql.prepare("SELECT severity, status_code, path FROM service_incidents ORDER BY created_at DESC LIMIT 1").get() as { severity: string; status_code: number; path: string };
+assert.deepEqual({ ...timedOut }, { severity: "warning", status_code: 504, path: "/api/devices/:redacted" }, "Device timeouts are recorded as warnings");
 sql.prepare("UPDATE devices SET undo_enabled=0 WHERE id='laptop'").run();
 await expectError(send("/undo/a1", owner), 409, "Local Undo is disabled");
 await expectError(send("/undo/a1", intruder), 404, "device not found");

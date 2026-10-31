@@ -6,6 +6,7 @@ import {feedbackRewardAvailable} from '../billing/connect-rewards.js';
 import {followupEmailSender} from '../platform/email-sender.js';
 import {ensureContact,followupLinks,designSchema,stamp,type FollowupEnv} from './followup-common.js';
 import {dispatchFollowup} from './followup-delivery.js';
+import {followupEmailBudget} from './followup-budget.js';
 
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
 export const FOLLOWUP_BATCH_LIMIT=100;
@@ -30,7 +31,7 @@ async function batchDetail(env:FollowupEnv,id:string,previewUser?:string|null){
  FROM user_followup_batch_recipients r JOIN users u ON u.id=r.user_id LEFT JOIN user_followup_messages m ON m.id=r.message_id WHERE r.batch_id=?1 ORDER BY u.email`).bind(id).all();
  const preview=await env.DB.prepare(`SELECT m.user_id,m.subject,m.html_body FROM user_followup_messages m JOIN user_followup_batch_recipients r ON r.message_id=m.id WHERE r.batch_id=?1 AND (?2 IS NULL OR m.user_id=?2) ORDER BY r.status='pending' DESC,m.created_at LIMIT 1`).bind(id,previewUser||null).first();
  const config=await env.DB.prepare('SELECT from_email,reply_to,basis,basis_note FROM user_followup_batches WHERE id=?1').bind(id).first();
- return {batch,recipients:recipients.results,preview,sender:config?{from:config.from_email,replyTo:config.reply_to}:null,basis:config?.basis,basisNote:config?.basis_note,emailConfigured:Boolean(followupEmailSender(env))};
+ return {batch,recipients:recipients.results,preview,sender:config?{from:config.from_email,replyTo:config.reply_to}:null,basis:config?.basis,basisNote:config?.basis_note,emailConfigured:Boolean(followupEmailSender(env)),emailBudget:await followupEmailBudget(env)};
 }
 
 /** Called only after the shared admin session, host and CSRF checks. */
@@ -108,6 +109,8 @@ export async function runFollowupBatches(env:FollowupEnv,options:{pause?:(ms:num
   await env.DB.prepare(`UPDATE user_followup_messages SET status='unknown',error_code='delivery_unconfirmed' WHERE status='sending' AND id IN (SELECT message_id FROM user_followup_batch_recipients WHERE status='processing')`).run();
   await env.DB.prepare(`UPDATE user_followup_batch_recipients SET status=CASE (SELECT status FROM user_followup_messages WHERE id=message_id) WHEN 'draft' THEN CASE WHEN EXISTS(SELECT 1 FROM user_followup_batches WHERE id=batch_id AND status='cancelled') THEN 'cancelled' ELSE 'pending' END WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' ELSE 'unknown' END,error_code=CASE WHEN (SELECT status FROM user_followup_messages WHERE id=message_id) IN ('unknown','sending') THEN 'delivery_unconfirmed' ELSE error_code END,updated_at=?1 WHERE status='processing'`).bind(stamp()).run();
   for(let count=0;count<20&&Date.now()<deadline-5000;count++){
+   // Over the daily cap, recipients stay pending and a later run continues.
+   if((await followupEmailBudget(env)).remaining<=0)break;
    const item=await env.DB.prepare(`SELECT r.*,b.actor_id,b.from_email,b.reply_to FROM user_followup_batch_recipients r JOIN user_followup_batches b ON b.id=r.batch_id WHERE b.status='queued' AND r.status='pending' AND (r.next_attempt_at IS NULL OR r.next_attempt_at<=?1) ORDER BY b.queued_at,r.user_id LIMIT 1`).bind(stamp()).first<{batch_id:string;user_id:string;message_id:string;actor_id:string;from_email:string;reply_to:string;attempts:number}>();if(!item)break;
    const claimed=await env.DB.prepare(`UPDATE user_followup_batch_recipients SET status='processing',attempts=attempts+1,updated_at=?3 WHERE batch_id=?1 AND user_id=?2 AND status='pending' AND EXISTS(SELECT 1 FROM user_followup_batches WHERE id=?1 AND status='queued') RETURNING user_id`).bind(item.batch_id,item.user_id,stamp()).first();if(!claimed)continue;
    const actor=await env.DB.prepare('SELECT role FROM users WHERE id=?1').bind(item.actor_id).first<{role:string}>();
@@ -118,7 +121,8 @@ export async function runFollowupBatches(env:FollowupEnv,options:{pause?:(ms:num
     const result=await dispatchFollowup(env,item.message_id,1,item.batch_id,Math.min(15000,Math.max(1000,deadline-Date.now()-1000)));
     const value=await result.json() as {status?:string;error?:string;errorCode?:string};
     status=value.status==='sent'?'sent':value.status==='unknown'||value.status==='sending'?'unknown':value.status==='failed'?'failed':'skipped';error=value.errorCode||value.error||null;
-    if(error==='provider_429'&&item.attempts<4){
+    if(error==='daily_email_budget_reached')status='pending';
+    else if(error==='provider_429'&&item.attempts<4){
      await env.DB.prepare(`UPDATE user_followup_messages SET status='draft',error_code=NULL WHERE id=?1 AND status='failed'`).bind(item.message_id).run();status='pending';
     }
    }

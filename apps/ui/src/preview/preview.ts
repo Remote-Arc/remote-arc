@@ -320,12 +320,14 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     }
 
     if (url.pathname === "/api/status") {
+      // ?demo=first-run previews a new account that has not paired a computer.
+      const firstRun = new URL(location.href).searchParams.get("demo") === "first-run";
       return json({
         googleConfigured: true,
         mcpEndpoint,
-        devices,
-        totalDevices: devices.length,
-        onlineDevices: 1,
+        devices: firstRun ? [] : devices,
+        totalDevices: firstRun ? 0 : devices.length,
+        onlineDevices: firstRun ? 0 : 1,
         recentActivity: [
           {
             id: "preview-a1",
@@ -480,7 +482,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       });
     }
 
-    if (url.pathname === "/api/devices") return json([...devices, ...onboardingPreview.devices()]);
+    if (url.pathname === "/api/devices") return json(new URL(location.href).searchParams.get("demo") === "first-run" ? [] : [...devices, ...onboardingPreview.devices()]);
     if (url.pathname === "/api/automations") return json({ automations: automations.map(item => ({ ...item, run_started_count: item.run_count + (item.status === "running" ? 1 : 0) })), capabilities: { hosted_planner: true, github_merge: true }, scheduler: { state: "healthy", last_success_at: new Date().toISOString(), overdue_count: 0 } });
     const taskId = url.pathname.match(/^\/api\/automations\/([^/]+)$/)?.[1];
     if (taskId) {

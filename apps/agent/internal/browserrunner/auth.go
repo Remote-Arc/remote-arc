@@ -59,7 +59,7 @@ func (s *session) checkAuthRef(ref string) error {
 	}
 	f, ok := s.frameByID(id)
 	if !ok || !s.readableFrame(f) {
-		return errors.New("BROWSER_AUTH_REQUIRED: this frame is no longer approved. Review Browser authentication in Dashboard and take a new snapshot.")
+		return errors.New("BROWSER_AUTH_REQUIRED: this frame is no longer approved. Complete authentication in the task browser yourself and take a new snapshot.")
 	}
 	return nil
 }

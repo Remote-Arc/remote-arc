@@ -87,5 +87,8 @@ func TestE2EOneTimeCodesCanBeTurnedOff(t *testing.T) {
 	if !strings.Contains(fmt.Sprint(snap["blockers"]), "verification_code") {
 		t.Fatalf("with codes off the code is the user's: %v", snap["blockers"])
 	}
-	h.fail("browser_runner_act", map[string]any{"session_id": "otp-off", "snapshot_id": snap["snapshot_id"], "ref": ref(t, snap, "textbox", "one-time code"), "action": "fill", "value": "482913"}, "turned off")
+	if auth := snap["authentication"].(map[string]any); auth["otp"] != false {
+		t.Fatalf("local one-time-code veto must disable OTP even for an approved origin: %v", auth)
+	}
+	h.fail("browser_runner_act", map[string]any{"session_id": "otp-off", "snapshot_id": snap["snapshot_id"], "ref": ref(t, snap, "textbox", "one-time code"), "action": "fill", "value": "482913"}, "BROWSER_AUTH_REQUIRED")
 }

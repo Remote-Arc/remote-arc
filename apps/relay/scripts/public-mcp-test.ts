@@ -369,6 +369,6 @@ await invoke("browser_runner_snapshot", { device_id: "computer", session_id: "ta
 assert(!("include_captcha_images" in dispatches.at(-1).arguments));
 assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH);
 await callDevice(env, { ...identity(), clientId: "dashboard" }, "computer", "browser_runner_snapshot", { session_id: "task" });
-assert.deepEqual(dispatches.at(-1).policy.browserAuth, approved, "The internal Dashboard policy remains separate");
+assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH, "Internal Dashboard calls also ignore legacy authentication approval");
 sql.close();
 console.log("PASS: App discovery plus typed read/write action tools listing all 344 operation IDs with schemas by lookup, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");

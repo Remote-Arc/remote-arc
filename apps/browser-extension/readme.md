@@ -22,10 +22,11 @@ browser, on sites the user allowed, or on single tabs the user shares.
   enabled, while it stays on the same origin. It loses access when it moves to
   another site, unless that site is allowed. Chrome's `activeTab` has the same
   limit.
-- Password, payment-card and file-picker fields are never filled. One-time
-  codes for sign-in or registration can be filled through `shared_tab_fill` or
-  `shared_tab_act` after Dashboard approval for the website and with the local
-  code switch enabled. See [browser authentication](../../docs/browser-authentication.md).
+- Password, payment-card and file-picker fields are never filled. Public MCP
+  connections require the user to complete sign-in, verification codes and
+  CAPTCHAs in their browser, then resume the same task. Authentication automation
+  is disabled for all Relay calls, including internal calls and legacy approvals. See
+  [browser authentication](../../docs/browser-authentication.md).
   Detection uses input types and autocomplete metadata; sites that mislabel
   sensitive fields can bypass this classification.
 - A click or Enter that sends something on the user's behalf (place order,

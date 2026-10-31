@@ -40,12 +40,12 @@
     const kind = secretKind(el);
     if (kind === "captcha") throw new Error(CAPTCHA_REFUSAL);
     if (kind === "captcha_answer" && a.allow_captcha) return;
-    if (kind === "captcha_answer") throw new Error("BROWSER_AUTH_REQUIRED: approve CAPTCHA for this site in Dashboard Browser authentication.");
+    if (kind === "captcha_answer") throw new Error("BROWSER_AUTH_REQUIRED: complete this CAPTCHA in the task browser yourself, then resume the same task.");
     if (kind === "code" && a.allow_codes) return;
     // A password from the user's vault, filled by the Agent itself; the
     // caller never sees it.
     if (kind === "password" && a.secret_part === "password") return;
-    if (kind === "code") throw new Error("BROWSER_AUTH_REQUIRED: one-time codes are turned off or this site has not been approved in Dashboard Browser authentication. Approve OTP for this site or ask the user to enter it.");
+    if (kind === "code") throw new Error("BROWSER_AUTH_REQUIRED: enter the verification code in the task browser yourself, then resume the same task.");
     if (kind) throw new Error("BLOCKED_SENSITIVE: Browser Runner never types passwords or payment details from the conversation. Ask the user to enter this field themselves.");
   };
   const visible = (el) => {
@@ -202,17 +202,17 @@
     // about whether anything is left to do.
     const captcha = captchaParts();
     const shownBy = (part) => [...new Set(captcha.filter((c) => c.part === part && c.shown).map((c) => c.vendor))];
-    for (const v of shownBy("challenge")) (a.allow_captcha ? attention : blockers).push({ kind: "captcha", detail: a.allow_captcha ? v + " verification is approved in Dashboard. Read the challenge frames and interact with their visible controls; request include_captcha_images for image challenges. If it cannot be completed, hand it to the user." : v + " challenge is open. Approve CAPTCHA for this site in Dashboard Browser authentication, or complete it in the Runner window." });
-    for (const v of shownBy("widget")) attention.push({ kind: "captcha_widget", detail: a.allow_captcha ? v + " verification is approved; interact with its visible controls. Response tokens stay private to the page." : v + " check is shown. Approve CAPTCHA for this site in Dashboard Browser authentication, or ask the user to complete it." });
+    for (const v of shownBy("challenge")) (a.allow_captcha ? attention : blockers).push({ kind: "captcha", detail: a.allow_captcha ? v + " verification is approved for this site. Read the challenge frames and interact with their visible controls; request include_captcha_images for image challenges. If it cannot be completed, hand it to the user." : v + " challenge is open. Complete it in the Runner window yourself, then resume the same task." });
+    for (const v of shownBy("widget")) attention.push({ kind: "captcha_widget", detail: a.allow_captcha ? v + " verification is approved; interact with its visible controls. Response tokens stay private to the page." : v + " check is shown. Ask the user to complete it in the Runner window." });
     const secret = [];
     // Compact sign-in fields can be less than 20px tall (including hosted
     // identity pages). The CAPTCHA size threshold must not hide real inputs.
     walk(document.documentElement || document, el => { if (el.tagName === "INPUT" && onPage(el, 8) && sensitive(el)) secret.push(el); }, { left: 20000 });
-    if (secret.some((el) => secretKind(el) === "captcha_answer")) (a.allow_captcha ? attention : blockers).push({kind:"captcha",detail:a.allow_captcha ? "CAPTCHA answer entry is approved for this site." : "Approve CAPTCHA for this site in Dashboard Browser authentication, or complete it yourself."});
+    if (secret.some((el) => secretKind(el) === "captcha_answer")) (a.allow_captcha ? attention : blockers).push({kind:"captcha",detail:a.allow_captcha ? "CAPTCHA answer entry is approved for this site." : "Complete this CAPTCHA in the Runner window yourself."});
     if (secret.some((el) => secretKind(el) === "password")) blockers.push({ kind: "login", detail: "password field present; the user must sign in themselves" });
     if (secret.some((el) => secretKind(el) === "code")) {
       if (a.allow_codes) attention.push({ kind: "verification_code", detail: "OTP sign-in or registration is approved for this site. Get the latest unexpired code from " + (a.mailbox || "the connected app where it was sent") + " for this site and account, then fill the field marked secret: code. Do not reuse codes. The code is never recorded." });
-      else blockers.push({ kind: "verification_code", detail: "one-time code requested; approve OTP for this website in Dashboard Browser authentication and enable the local code switch, or ask the user to enter it" });
+      else blockers.push({ kind: "verification_code", detail: "one-time code requested; ask the user to enter it in the task browser, then resume the same task" });
     }
     return { blockers, attention, captcha };
   };

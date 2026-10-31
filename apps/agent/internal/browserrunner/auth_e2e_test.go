@@ -17,9 +17,9 @@ func TestE2EAuthApprovalAndImmediateRevocation(t *testing.T) {
 	snap := h.call("browser_runner_snapshot", map[string]any{"session_id": "auth-gate"})
 	code := ref(t, snap, "textbox", "one-time code")
 	args := map[string]any{"session_id": "auth-gate", "snapshot_id": snap["snapshot_id"], "ref": code, "action": "fill", "value": "671205"}
-	h.fail("browser_runner_act", args, "Dashboard")
+	h.fail("browser_runner_act", args, "BROWSER_AUTH_REQUIRED")
 	h.policy.BrowserAuth = protocol.BrowserAuth{OTP: true, Origins: []string{"https://other.example"}}
-	h.fail("browser_runner_act", args, "Dashboard")
+	h.fail("browser_runner_act", args, "BROWSER_AUTH_REQUIRED")
 	h.policy.BrowserAuth = protocol.BrowserAuth{OTP: true, Origins: []string{base}, Mailbox: "jenny@example.test"}
 	h.call("browser_runner_act", args)
 	snap = h.call("browser_runner_snapshot", map[string]any{"session_id": "auth-gate"})
@@ -28,7 +28,7 @@ func TestE2EAuthApprovalAndImmediateRevocation(t *testing.T) {
 	}
 	h.policy.BrowserAuth = protocol.BrowserAuth{}
 	args["snapshot_id"] = snap["snapshot_id"]
-	h.fail("browser_runner_act", args, "Dashboard")
+	h.fail("browser_runner_act", args, "BROWSER_AUTH_REQUIRED")
 	b, _ := os.ReadFile(checkpointPath("auth-gate"))
 	if strings.Contains(string(b), "671205") {
 		t.Fatal("OTP persisted")

@@ -174,6 +174,28 @@ const importSource = relayModule;
   assert(!(await runtime.listAutomationRuns(env,"owner",cancelOutputTask))[0].output_summary?.includes("STALE_OUTPUT"),"A revoked lease must fence late output writes");
   deviceHandler = outputHandler;
 
+  // Resume keeps an interval slot that is still ahead; a missed slot runs now.
+  const startAt = new Date(Date.now() + 6 * 3600_000).toISOString();
+  const intervalId = (await runtime.createAutomation(env, "owner", {
+    name: "Future interval start", device_id: "device", kind: "schedule_watch", command: "check", cwd: "/workspace",
+    schedule: { every_seconds: 3600, start_at: startAt },
+  })).automation.id;
+  await runtime.pauseAutomation(env, "owner", intervalId);
+  await runtime.resumeAutomation(env, "owner", intervalId);
+  assert.equal((await get(intervalId)).next_run_at, startAt, "Resume must not run an interval task before its start_at");
+  sqlite.prepare("UPDATE automations SET created_at = ?, trigger_json = json_set(trigger_json, '$.start_at', ?) WHERE id = ?")
+    .run(new Date(Date.now() - 6 * 3600_000).toISOString(), new Date(Date.now() - 5.5 * 3600_000).toISOString(), intervalId);
+  sqlite.prepare("UPDATE automations SET last_run_at = ? WHERE id = ?").run(new Date(Date.now() - 600_000).toISOString(), intervalId);
+  await runtime.pauseAutomation(env, "owner", intervalId);
+  await runtime.resumeAutomation(env, "owner", intervalId);
+  const nextSlot = Date.parse((await get(intervalId)).next_run_at);
+  assert(nextSlot > Date.now() + 1000 && nextSlot - Date.now() <= 3600_000, "Resume keeps the next grid slot after a recent run");
+  sqlite.prepare("UPDATE automations SET last_run_at = ? WHERE id = ?").run(new Date(Date.now() - 2 * 3600_000).toISOString(), intervalId);
+  await runtime.pauseAutomation(env, "owner", intervalId);
+  await runtime.resumeAutomation(env, "owner", intervalId);
+  assert(Date.parse((await get(intervalId)).next_run_at) <= Date.now(), "A slot missed while paused runs on resume");
+  await runtime.cancelAutomation(env, "owner", intervalId);
+
   const downgradeFenceId = await create("Plan downgrade fence");
   await runtime.pauseAutomation(env, "owner", downgradeFenceId);
   sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();

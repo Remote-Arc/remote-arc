@@ -1,11 +1,14 @@
 import { z } from "zod";
-import { APP_OPERATIONS, AppError, type AppOperation, type AppPermission, type AppProvider } from "../apps/app-catalog.js";
+import { APP_CATALOG, APP_OPERATIONS, AppError, type AppOperation, type AppPermission, type AppProvider } from "../apps/app-catalog.js";
 
 // Every App operation is named up front in tools/list: each tool's action enum
 // lists every operation ID it can run, so nothing runs that is not listed.
 // Argument schemas are not inlined (they were ~80% of tools/list); list_apps
 // returns them by action ID, and an invalid call returns the exact schema.
-// Reads and writes live in separate tools so each tool's annotations are accurate.
+// ChatGPT gets the typed form instead: one variant per operation with its
+// description and exact arguments, as its app review requires. Both forms
+// share the call shape {action, arguments}. Reads and writes live in separate
+// tools so each tool's annotations are accurate.
 export const APP_ACTION_TOOLS = { read: "run_app_read_action", write: "run_app_write_action" } as const;
 
 export const appActionId = (operation: Pick<AppOperation, "provider" | "name">) => `${operation.provider}.${operation.name}`;
@@ -29,11 +32,32 @@ const actionSchema = (permission: AppPermission, excludeRunway = false) => {
   }).strict();
 };
 
+const variantDescription = (operation: AppOperation) =>
+  `${APP_CATALOG[operation.provider].name}: ${operation.description.replace(/\.$/, "")}.`;
+
+const typedActionSchema = (permission: AppPermission) => {
+  const [first, ...rest] = APP_OPERATIONS
+    .filter(operation => operation.permission === permission)
+    .map(operation => z.object({
+      action: z.literal(appActionId(operation)),
+      arguments: operation.schema,
+    }).strict().describe(variantDescription(operation)));
+  return z.object({
+    connectionId: z.string().uuid().describe("ID of the user's own connected account for this action's provider, from list_apps."),
+    requestId: z.string().regex(/^[\w-]{8,100}$/).describe(permission === "write"
+      ? "Stable idempotency key. Reuse it unchanged on retries; never retry an uncertain write under a new ID."
+      : "Stable request key, 8–100 letters, digits, '_' or '-'."),
+    operation: z.discriminatedUnion("action", [first!, ...rest]).describe("The single operation to run and its exact arguments."),
+  }).strict();
+};
+
 export const appReadActionSchema = actionSchema("read");
 export const appWriteActionSchema = actionSchema("write");
 // Shared MCP server; Claude OAuth clients exclude Runway from typed actions.
 export const claudeAppReadActionSchema = actionSchema("read", true);
 export const claudeAppWriteActionSchema = actionSchema("write", true);
+export const chatgptAppReadActionSchema = typedActionSchema("read");
+export const chatgptAppWriteActionSchema = typedActionSchema("write");
 export const appActionCounts = {
   read: actionIds("read").length,
   write: actionIds("write").length,

@@ -1,8 +1,12 @@
 // Short-lived: a registration change takes effect within the TTL on every isolate.
 const PROFILE_TTL_MS = 10 * 60 * 1000;
-const profileCache = new Map<string, { profile: "generic" | "claude"; expires: number }>();
+export type McpClientProfile = "generic" | "claude" | "chatgpt";
+const profileCache = new Map<string, { profile: McpClientProfile; expires: number }>();
 // Anthropic publishes both hosts for its remote-connector OAuth callback (web, desktop and mobile).
 const CLAUDE_CALLBACK_HOSTS = new Set(["claude.ai", "claude.com"]);
+// ChatGPT's connector platform registers HTTPS callbacks on its own hosts;
+// OpenAI's app scan and review have registered from chatgpt-staging.com.
+const CHATGPT_CALLBACK_HOSTS = new Set(["chatgpt.com", "chatgpt-staging.com", "chat.openai.com"]);
 
 /**
  * OAuth-authenticated client capability metadata for the single Remote Arc MCP.
@@ -12,7 +16,7 @@ const CLAUDE_CALLBACK_HOSTS = new Set(["claude.ai", "claude.com"]);
  */
 export async function mcpClientProfile(
   db: Pick<D1Database, "prepare">, clientId: string,
-): Promise<"generic" | "claude"> {
+): Promise<McpClientProfile> {
   const cached = profileCache.get(clientId);
   if (cached && cached.expires > Date.now()) return cached.profile;
   const record = await db.prepare("SELECT redirect_uris FROM oauth_clients WHERE client_id = ?1")
@@ -21,16 +25,16 @@ export async function mcpClientProfile(
   let uris: unknown;
   try { uris = JSON.parse(record.redirect_uris); } catch { return "generic"; }
   if (!Array.isArray(uris)) return "generic";
-  const claude = uris.some((entry) => {
-    if (typeof entry !== "string") return false;
+  const callbacks = uris.flatMap((entry) => {
+    if (typeof entry !== "string") return [];
     try {
       const uri = new URL(entry);
-      return uri.protocol === "https:" && CLAUDE_CALLBACK_HOSTS.has(uri.hostname)
-        && uri.pathname === "/api/mcp/auth_callback"
-        && !uri.username && !uri.password;
-    } catch { return false; }
+      return uri.protocol === "https:" && !uri.username && !uri.password ? [uri] : [];
+    } catch { return []; }
   });
-  const profile = claude ? "claude" : "generic";
+  const claude = callbacks.some((uri) => CLAUDE_CALLBACK_HOSTS.has(uri.hostname) && uri.pathname === "/api/mcp/auth_callback");
+  const chatgpt = callbacks.some((uri) => CHATGPT_CALLBACK_HOSTS.has(uri.hostname));
+  const profile: McpClientProfile = claude ? "claude" : chatgpt ? "chatgpt" : "generic";
   // This hot-isolate cache avoids one extra D1 read on most tool calls.
   if (profileCache.size >= 256) profileCache.clear();
   profileCache.set(clientId, { profile, expires: Date.now() + PROFILE_TTL_MS });

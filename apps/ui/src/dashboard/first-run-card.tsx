@@ -22,17 +22,17 @@ export function FirstRunCard({ m }: { m: DashboardModel }) {
       <header>
         <div>
           <span className="eyebrow">{tr("GET STARTED", "开始使用")}</span>
-          <h2 id="first-run-title">{tr("Pair your computer so your AI can work on it", "配对电脑，让你的 AI 在上面工作")}</h2>
+          <h2 id="first-run-title">{tr("Pair your computer so your AI can work on it", "配对电脑，让 AI 在上面工作")}</h2>
           <p>{tr("About a minute. No public IP or port forwarding, and you choose which folders the AI can use.", "大约一分钟。不需要公网 IP 或端口映射，AI 能使用哪些文件夹由你决定。")}</p>
         </div>
-        <button type="button" className="ghostButton" onClick={dismiss}>{tr("Hide", "暂时隐藏")}</button>
+        <button type="button" className="ghostButton firstRunHide" onClick={dismiss}>{tr("Hide", "隐藏")}</button>
       </header>
       <ol className="firstRunSteps">
         <li data-current="true">
           <strong>1 · {tr("Install and pair", "安装并配对")}</strong>
           <small>{tr("Run one command on the computer, then approve it in your browser. On Windows, download the installer.", "在要连接的电脑上运行一条命令，然后在浏览器里确认；Windows 请下载安装程序。")}</small>
           <InstallCommands />
-          <button type="button" className="goldButton" onClick={() => setShowAdd(true)}><ProductIcon name="add" />{tr("Open the pairing guide", "打开配对向导")}</button>
+          <button type="button" className="addButton arcRadiantCta" onClick={() => setShowAdd(true)}><ProductIcon name="add" />{tr("Open the pairing guide", "打开配对向导")}</button>
         </li>
         <li>
           <strong>2 · {tr("Connect your AI", "连接你的 AI")}</strong>

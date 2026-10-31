@@ -295,8 +295,4 @@ const supabaseA=await providerIdentity("supabase",supabaseToken,async()=>json([{
 const supabaseB=await providerIdentity("supabase",{...supabaseToken,accessToken:"another-token"},async()=>json([{id:"a"},{id:"b"}]),env);
 assert.equal(supabaseA.id,supabaseB.id,"OAuth account identity is independent of token refresh and response order");
 await deny(()=>providerIdentity("supabase",supabaseToken,async()=>json([]),env),"app_identity_unavailable");
-// The deploy step that copies OAuth clients from GitHub secrets covers every identity platform.
-const {APP_OAUTH_PLATFORMS}=await import(new URL("../../../scripts/configure-app-oauth.mjs",import.meta.url).href) as {APP_OAUTH_PLATFORMS:string[]};
-assert.deepEqual([...APP_OAUTH_PLATFORMS].sort(),[...new Set(Object.values(APP_CATALOG).filter(def=>(def.auth||"oauth")==="oauth").map(def=>def.credential))].sort(),
-  "Update APP_OAUTH_PLATFORMS in scripts/configure-app-oauth.mjs to match the provider catalog");
 console.log("Managed OAuth upgrades: Vercel installation/team fence, Linear PKCE/refresh, Supabase configured scopes/stable identity and X PKCE/refresh/revocation passed.");

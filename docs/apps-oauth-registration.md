@@ -95,9 +95,16 @@ Reference: [register an application](https://learn.microsoft.com/en-us/graph/aut
 
 All configured platform client ID/secret pairs and the token vault key are server-side configuration. Never commit them, put them in browser variables, send them through an AI prompt, or ask end users to supply them. Enter credentials through the deployment platform's secret mechanism; the client IDs can also be stored there for consistent operations.
 
-### Adding a client through GitHub secrets
+### Adding a client
 
-A production deploy copies App OAuth clients from GitHub to the Worker: add `APP_<PLATFORM>_CLIENT_ID` and `APP_<PLATFORM>_CLIENT_SECRET` (and `APP_VERCEL_INTEGRATION_SLUG` for Vercel) as repository secrets, then run the Deploy workflow. This works from the GitHub mobile app. `scripts/configure-app-oauth.mjs` writes only names the Worker does not have yet, never prints values, and fails if a platform has only one of the pair. It never rotates a configured client; rotate in Cloudflare directly.
+Keep App OAuth clients only as Cloudflare Worker secrets, not GitHub secrets, so there is one place to manage them. From a machine where Wrangler is signed in to the Remote Arc Cloudflare account, run these in `apps/relay` and paste each value at the prompt so it never appears in shell history or logs:
+
+```sh
+pnpm exec wrangler secret put APP_<PLATFORM>_CLIENT_ID
+pnpm exec wrangler secret put APP_<PLATFORM>_CLIENT_SECRET
+```
+
+Vercel also needs `APP_VERCEL_INTEGRATION_SLUG`. Check `/api/apps/status` afterwards; the provider reports `ready: true` once its pair is present.
 
 `APP_META_GRAPH_VERSION` is a plain Worker variable in `wrangler.jsonc` (currently `v26.0`). With it set, WhatsApp Business is ready, because users connect it with their own Cloud API credentials. Facebook, Instagram and Meta Ads also need the Meta OAuth client.
 

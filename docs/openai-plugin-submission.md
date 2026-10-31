@@ -89,6 +89,23 @@ The first App submission used `list_apps` plus a generic `call_app(operation, ar
 
 The reviewer account has no connected Apps, so App tools return connection errors in review unless a reviewer connects their own account. State this in the review notes.
 
+#### Manual review notes (paste into the submission)
+
+> **Connected App tools: list_apps, run_app_read_action, run_app_write_action**
+>
+> The earlier version of these tools received an automated scan finding that App operations were "not individually exposed". It was never manually reviewed. This version addresses that finding:
+>
+> 1. **Every operation is individually listed in tools/list.** `run_app_read_action` has a closed `action` enum of all 180 read operation IDs, and `run_app_write_action` has a closed enum of all 164 write operation IDs (for example `gmail.messages.get`, `gmail.messages.send`). Nothing outside these enums can run. There is no generic executor and no operation is fetched or added at runtime.
+> 2. **Reads and writes are separate tools**, so the annotations are accurate for every operation each tool can run. The read tool is `readOnlyHint: true` and can only run read operations. The write tool is `destructiveHint: true`, `openWorldHint: true`, and is only for changes the user explicitly asked for.
+> 3. **Exact argument schemas come from a read-only lookup.** `list_apps` with `actions: ["<id>"]` returns each operation's description and exact JSON schema. We moved per-operation schemas out of tools/list because inlining all 344 of them made tools/list about 234 KB (roughly 55k model tokens) for every user in every conversation. It is now about 73 KB (roughly 15k tokens). The tool names, call shape and behavior are unchanged.
+> 4. **The server enforces the same schemas.** Arguments are validated strictly against the operation's catalog schema before anything is sent to the provider. A mismatch returns `INVALID_APP_ARGUMENTS` with the exact schema and nothing is dispatched.
+> 5. **Unchanged safeguards:** the connection must belong to the signed-in user and match the action's provider. Incremental OAuth scopes are required (`apps:read` for reads, `apps:read` + `apps:write` for writes). Provider permissions are limited to what the user granted, and each write `requestId` runs at most once (retries return the stored result).
+>
+> **How to check in review:** the reviewer account has no connected third-party Apps.
+> - Ask "Which apps can Remote Arc use to send an email?" The model calls `list_apps` with a `use_case` and gets matching action IDs such as `gmail.messages.send`.
+> - Ask "What arguments does gmail.messages.send need?" The model calls `list_apps` with `actions: ["gmail.messages.send"]` and gets the exact schema.
+> - Calling `run_app_read_action` or `run_app_write_action` from this account returns `app_connection_not_found`, because no account is connected. Nothing reaches a provider.
+
 Production tools/list was independently checked on 2026-10-05 and exposed 31 hosted MCP tools. The reviewer fixture intentionally advertises eight representative device tools for deterministic review: directory/file reads, file metadata, process listing, a safe command allowlist, sandboxed write/edit, and undo. Browser reads and production managed-process controls remain declared and annotated but are not required in the five representative positive tests.
 
 Operational service metering and audit metadata are described in the Privacy Policy. The hints above describe the user-facing capability and external effect of each tool.

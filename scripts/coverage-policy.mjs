@@ -8,7 +8,7 @@
 export const COVERAGE_TARGET=90;
 export const COVERAGE_FLOORS={
  typescript:{lines:50,statements:50,branches:80,functions:75},
- relay:{lines:88,statements:88,branches:82,functions:95},
+ relay:{lines:90,statements:90,branches:83,functions:96},
  agent:{statements:78},
  core:{statements:90},
  apps:{lines:90,statements:90,branches:90,functions:90},

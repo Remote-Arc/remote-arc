@@ -59,7 +59,7 @@ test('phase floors never lower existing 90% gates and strict mode remains 90%',(
  assert.equal(coverageThresholds('core').statements,90);
  assert.equal(coverageThresholds('apps').branches,90);
  assert.equal(coverageThresholds('typescript').lines,50);
- assert.equal(coverageThresholds('relay').lines,88);
+ assert.equal(coverageThresholds('relay').lines,90);
  assert.equal(coverageThresholds('agent').statements,78);
  for(const scope of ['typescript','relay','agent','core','apps'])
   for(const value of Object.values(coverageThresholds(scope,true)))assert.equal(value,90);

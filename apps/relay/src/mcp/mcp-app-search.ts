@@ -4,6 +4,13 @@ import { listApps } from "../apps/apps.js";
 import { appDiscoverySchema as baseSchema, discoverApps } from "../apps/app-discovery.js";
 import { APP_ACTION_TOOLS } from "./mcp-app-actions.js";
 
+// ChatGPT's reviewed list_apps has no action lookup: its action tools already
+// carry every schema.
+export const chatgptAppDiscoverySchema = baseSchema.safeExtend({
+  use_case: z.string().max(300).optional(),
+  includeSchemas: z.boolean().default(false),
+}).strict();
+
 export const appDiscoverySchema = baseSchema.safeExtend({
   use_case: z.string().max(300).optional(),
   includeSchemas: z.boolean().default(false),

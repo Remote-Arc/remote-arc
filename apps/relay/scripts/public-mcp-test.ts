@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createRemoteLinkMcp } from "../src/mcp/mcp.js";
 import { CLAUDE_TOOL_DESCRIPTIONS } from "../src/mcp/mcp-claude-descriptions.js";
-import { mcpClientProfile } from "../src/mcp/mcp-client-profile.js";
+import { mcpClientProfile, type McpClientProfile } from "../src/mcp/mcp-client-profile.js";
 import { APP_OPERATIONS } from "../src/apps/app-catalog.js";
 import { callDevice } from "../src/devices/device-call.js";
 import { seal } from "../src/apps/app-oauth.js";
@@ -81,7 +81,7 @@ for (const [id, platform, tools] of [
 const identity = (scope = "apps:read apps:write browser:read browser:interact") => ({
   userId: "owner", clientId: "public-test", grantId: null, resource: env.PUBLIC_ORIGIN + "/mcp", scope,
 });
-async function rpc(method: string, params: unknown, scope?: string, options = env, currentIdentity = identity(scope), clientProfile: "generic" | "claude" = "generic") {
+async function rpc(method: string, params: unknown, scope?: string, options = env, currentIdentity = identity(scope), clientProfile: McpClientProfile = "generic") {
   const response = await createRemoteLinkMcp(options, currentIdentity, { clientProfile }).fetch(new Request(env.PUBLIC_ORIGIN + "/mcp", {
     method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
@@ -141,6 +141,20 @@ sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token
 assert.equal(await mcpClientProfile(db, "claude-com-oauth"), "claude", "Anthropic's claude.com callback is the same Claude connector");
 assert.equal(await mcpClientProfile(db, "localhost-oauth"), "generic", "Local callbacks cannot prove a Claude client");
 assert.equal(await mcpClientProfile(db, "lookalike-oauth"), "generic", "Look-alike hosts and plain HTTP never match");
+for (const [id, uris] of [
+  ["chatgpt-oauth", ["https://chatgpt.com/connector_platform_oauth_redirect"]],
+  ["chatgpt-connector-oauth", ["https://chatgpt.com/connector/oauth/callback"]],
+  ["chatgpt-legacy-oauth", ["https://chat.openai.com/aip/callback"]],
+  ["chatgpt-staging-oauth", ["https://chatgpt-staging.com/connector_platform_oauth_redirect"]],
+  ["chatgpt-http-oauth", ["http://chatgpt.com/connector_platform_oauth_redirect", "https://chatgpt.com.example/callback"]],
+  ["claude-and-chatgpt-oauth", ["https://chatgpt.com/connector_platform_oauth_redirect", "https://claude.ai/api/mcp/auth_callback"]],
+] as const) sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run(id, "Any name", JSON.stringify(uris), "none", stamp);
+assert.equal(await mcpClientProfile(db, "chatgpt-oauth"), "chatgpt");
+assert.equal(await mcpClientProfile(db, "chatgpt-connector-oauth"), "chatgpt");
+assert.equal(await mcpClientProfile(db, "chatgpt-legacy-oauth"), "chatgpt");
+assert.equal(await mcpClientProfile(db, "chatgpt-staging-oauth"), "chatgpt", "OpenAI's app scan registers from ChatGPT staging");
+assert.equal(await mcpClientProfile(db, "chatgpt-http-oauth"), "generic", "Only HTTPS callbacks on ChatGPT's own hosts match");
+assert.equal(await mcpClientProfile(db, "claude-and-chatgpt-oauth"), "claude", "A Claude callback keeps Claude's restricted profile");
 const claudeListed = (await rpc("tools/list", {}, undefined, env, identity(), "claude")).result.tools as any[];
 const actionText = (tools: any[], name: string) => JSON.stringify(tools.find(t => t.name === name).inputSchema);
 assert(actionText(listed, "run_app_write_action").includes("runway.videos.generate"), "Other clients keep Runway generation");
@@ -233,6 +247,28 @@ assert.deepEqual([...writeActions].sort(), expectedActions("write"), "The write 
 assert.equal(readActions.length + writeActions.length, 344);
 assert.equal(new Set([...readActions, ...writeActions]).size, 344, "Action IDs are unique across providers");
 assert(writeActions.includes("gmail.messages.send") && readActions.includes("gmail.messages.get") && !readActions.includes("gmail.messages.send"));
+// ChatGPT keeps the typed form its app review accepted: one variant per
+// operation with its own description and exact arguments, and no lookup.
+const chatgptListed = (await rpc("tools/list", {}, undefined, env, identity(), "chatgpt")).result.tools as any[];
+assert.deepEqual(chatgptListed.map(t => t.name), listed.map(t => t.name), "ChatGPT shares every tool name");
+for (const name of listed.map(t => t.name).filter(name => !APP_TOOL_NAMES.includes(name)))
+  assert.deepEqual(chatgptListed.find(t => t.name === name), listed.find(t => t.name === name), `${name} is the same for ChatGPT`);
+const typedVariants = (name: string) => {
+  const schema = chatgptListed.find(tool => tool.name === name).inputSchema;
+  const variants = schema.properties.operation.oneOf ?? schema.properties.operation.anyOf;
+  for (const variant of variants) {
+    assert.equal(variant.additionalProperties, false);
+    assert(variant.description?.length > 10, variant.properties.action.const + " needs its own description");
+    assert.equal(variant.properties.arguments.type, "object", variant.properties.action.const + " needs a typed argument schema");
+  }
+  return variants.map((variant: any) => variant.properties.action.const as string).sort();
+};
+assert.deepEqual(typedVariants("run_app_read_action"), [...readActions].sort(), "ChatGPT's read tool types exactly the read operations");
+assert.deepEqual(typedVariants("run_app_write_action"), [...writeActions].sort(), "ChatGPT's write tool types exactly the write operations");
+assert(!chatgptListed.find(t => t.name === "list_apps").inputSchema.properties.actions, "ChatGPT's list_apps keeps its reviewed schema");
+assert(chatgptListed.find(t => t.name === "run_app_write_action").description.includes("listed individually in the operation schema"));
+for (const name of APP_TOOL_NAMES)
+  assert.deepEqual(chatgptListed.find(t => t.name === name).annotations, listed.find(t => t.name === name).annotations, `${name} annotations match`);
 const discoverySchema = listed.find(tool => tool.name === "list_apps").inputSchema;
 assert(discoverySchema.properties.use_case && discoverySchema.properties.includeSchemas && discoverySchema.properties.actions);
 const appToolBytes = JSON.stringify(listed.filter(tool => APP_TOOL_NAMES.includes(tool.name))).length;
@@ -336,6 +372,11 @@ try {
   assert.equal(data(await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, title: "Changed" }, "create-issue-1"))).error.code, "app_request_id_conflict");
   const readBack = data(await invoke(READ, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-issue-1")));
   assert.deepEqual(readBack.result, result.result);
+  // The same call shape dispatches through ChatGPT's typed schema.
+  const chatgptRead = data(await rpc("tools/call", { name: READ, arguments: action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "chatgpt-read-1") }, undefined, env, identity(), "chatgpt"));
+  assert.deepEqual(chatgptRead.result, result.result);
+  assert(rejected(await rpc("tools/call", { name: READ, arguments: action(ids.github, "github.issues.get", { repo: "test/project", number: 17, extra: true }, "chatgpt-read-2") }, undefined, env, identity(), "chatgpt")),
+    "ChatGPT's typed schema rejects extra arguments");
   const msg = data(await invoke(READ, action(ids.gmail, "gmail.messages.get", { id: "message-1" }, "read-mail-1")));
   assert.equal(msg.result.id, "message-1");
   const draft = action(ids.gmail, "gmail.drafts.create", { to: ["test@example.test"], subject: "Subject", body: "Body" }, "create-draft-1");
@@ -371,4 +412,4 @@ assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH);
 await callDevice(env, { ...identity(), clientId: "dashboard" }, "computer", "browser_runner_snapshot", { session_id: "task" });
 assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH, "Internal Dashboard calls also ignore legacy authentication approval");
 sql.close();
-console.log("PASS: App discovery plus typed read/write action tools listing all 344 operation IDs with schemas by lookup, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");
+console.log("PASS: App discovery plus typed read/write action tools listing all 344 operation IDs (typed for ChatGPT) with schemas by lookup, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");

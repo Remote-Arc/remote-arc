@@ -63,7 +63,8 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
   const mode=controlledMode??localMode;
   const uid = useId();
   const arc = mode === "arc";
-  const aiPositions = clients.length >= 4 ? aiPositionsFour : aiPositionsThree;
+  const topologyClients = clients.filter(client => client.slug !== "gemini").slice(0, 4);
+  const aiPositions = topologyClients.length >= 4 ? aiPositionsFour : aiPositionsThree;
   const headlineId = uid + "-heading";
   const descriptionId = uid + "-description";
   const panelId = uid + "-panel";
@@ -93,7 +94,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
       </header>
       <div className="hcsModeIntroduction" id={descriptionId} aria-live="polite">
         <strong>{arc ? tr("An AI agent of your own.", "创建属于你的 AI 智能体。") : tr("Your favorite AI. Connected to your world.", "熟悉的 AI，连接你的整个世界。")}</strong>
-        <span>{arc ? tr("Built with Connect by AI. Describe the work; Arc uses your apps and devices.", "AI 通过 Connect 写出的智能体。说出要做的事，Arc 来调用你的应用与设备。") : tr("Bring ChatGPT, Claude, Gemini or Cursor. Connect links your tools.", "接入 ChatGPT、Claude、Gemini 或 Cursor，让 Connect 连通工具与设备。")}</span>
+        <span>{arc ? tr("Built with Connect by AI. Describe the work; Arc uses your apps and devices.", "AI 通过 Connect 写出的智能体。说出要做的事，Arc 来调用你的应用与设备。") : tr("Bring ChatGPT, Claude or Cursor. Connect links your tools.", "接入 ChatGPT、Claude 或 Cursor，让 Connect 连通工具与设备。")}</span>
       </div>
       <div id={panelId} role="tabpanel" aria-labelledby={uid + "-" + mode} aria-describedby={descriptionId} className="hcsUniverse" tabIndex={0}>
         <div className="hcsAtmosphere" aria-hidden="true" />
@@ -124,7 +125,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
             </g>)}
           </g>
           <g className="hcsInboundPaths">
-            {(arc ? [{ x: 300, y: 76 }] : aiPositions.slice(0, clients.length)).map((node, index) => {
+            {(arc ? [{ x: 300, y: 76 }] : aiPositions.slice(0, topologyClients.length)).map((node, index) => {
               const d = `M${node.x} ${node.y + 20} C${node.x} 132,300 132,300 208`;
               return <g key={index}><path d={d} /><path className="hcsInboundFlow" pathLength="100" d={d} style={{ animationDelay: index * .08 + "s" }} /></g>;
             })}
@@ -134,7 +135,7 @@ export function HomeConnectionScene({ clients,arcAvailable=false,initialMode='co
           </g>
         </svg>
         <div className={"hcsSource hcsSource--connect" + (arc ? " hcsSource--hidden" : "")} aria-hidden={arc}>
-          {clients.slice(0, 4).map((client, index) => {
+          {topologyClients.map((client, index) => {
             const at = aiPositions[index]!;
             return <a className={"hcsFloatingNode hcsAiNode " + (client.tone === "mono" ? "hcsAiNode--mono" : "")}
               key={client.slug} href={localizedWebsiteHref("/install/" + client.slug, locale)} tabIndex={arc ? -1 : 0}

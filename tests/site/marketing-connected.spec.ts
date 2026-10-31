@@ -6,15 +6,17 @@ test.beforeEach(async ({ page }, info) => {
 
 test('The constellation switches with a shared slider and every brand opens a valid local destination', async ({ page }) => {
   const scene = page.locator('.homeConnectionScene');
-  // Four AI clients plus ten Apps / devices.
-  await expect(scene.locator('a.hcsFloatingNode')).toHaveCount(14);
+  // Three AI clients plus ten Apps / devices.
+  await expect(scene.locator('a.hcsFloatingNode')).toHaveCount(13);
   const aiClients = [
     { slug: 'chatgpt', icon: '/ai-openai.svg' },
     { slug: 'claude', icon: '/ai-claude.svg' },
-    { slug: 'gemini', icon: '/ai-gemini-four-color-2025.svg' },
     { slug: 'cursor', icon: '/ai-cursor.svg' },
   ];
   await expect(scene.locator('a.hcsAiNode')).toHaveCount(aiClients.length);
+  await expect(scene.locator('.hcsInboundPaths > g')).toHaveCount(3);
+  await expect(scene).not.toContainText('Gemini');
+  await expect(scene.locator('a[href$="/install/gemini"]')).toHaveCount(0);
   for (const { slug, icon } of aiClients) {
     const link = scene.locator(`a.hcsAiNode[href$="/install/${slug}"]`);
     await expect(link).toHaveCount(1);
@@ -23,7 +25,7 @@ test('The constellation switches with a shared slider and every brand opens a va
     expect(asset.ok(), icon).toBe(true);
   }
   const trustRail = page.locator('.trustRail');
-  for (const { slug, icon } of aiClients) {
+  for (const { slug, icon } of [...aiClients, { slug: 'gemini', icon: '/ai-gemini-four-color-2025.svg' }]) {
     const link = trustRail.locator(`a[href$="/install/${slug}"]`);
     await expect(link).toHaveCount(1);
     await expect(link.locator('img')).toHaveAttribute('src', icon);

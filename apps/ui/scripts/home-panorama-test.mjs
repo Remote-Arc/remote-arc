@@ -44,7 +44,8 @@ try {
     assert.equal((html.match(/data-resource="app"/g) || []).length, 6);
     assert.equal((html.match(/data-resource="device"/g) || []).length, 4);
     assert.equal((html.match(/data-resource="skill"/g)||[]).length,0);
-    assert.equal((html.match(/class="hcsFloatingNode hcsAiNode/g) || []).length, 4, "Show all four supported AI clients in the topology");
+    assert.equal((html.match(/class="hcsFloatingNode hcsAiNode/g) || []).length, 3, "Show ChatGPT, Claude and Cursor in the topology");
+    assert.doesNotMatch(html, /Gemini|\/install\/gemini|ai-gemini/, "Gemini stays out of the topology, including its copy and links");
     assert.match(html,/\/integrations\?provider=gmail/);
     assert.doesNotMatch(html,/Runway|runway/);
     for (const name of locale === "zh" ? ["专业技能", "任务执行", "操作审批", "结果验证"] : ["Skills", "Execution", "Approvals", "Verified Results"]) assert.ok(body.includes(name));
@@ -60,7 +61,7 @@ try {
     assert.match(body, locale === "zh" ? /AI 可以使用的账号与电脑/ : /Choose the accounts and computers your AI can use/);
     assert.doesNotMatch(html, /data-step=|data-routine-step=|hcsPlayButton|hcsSteps/);
     assert.doesNotMatch(body, /npm test|Product illustration|Illustrative demo|Step \d|Pause|Play/);
-    for (const client of clients) assert.ok(html.includes('href="' + (locale === 'zh' ? '/zh' : '') + '/install/' + client.slug + '"'));
+    for (const slug of ["chatgpt", "claude", "cursor"]) assert.ok(html.includes('href="' + (locale === 'zh' ? '/zh' : '') + '/install/' + slug + '"'));
     for(const mode of ['connect','arc']){
       const hero=renderToStaticMarkup(React.createElement(I18nProvider,null,React.createElement(HomeHeroCopy,{mode,arcAvailable:true,arcHref:'https://agent.remotearc.app/chat',connectHref:'https://mcp.remotearc.app/dashboard/connect/overview'})));
       assert.match(hero,new RegExp('data-product="'+mode+'"'));assert.equal((hero.match(/<h1\b/g)||[]).length,1);

@@ -1,0 +1,32 @@
+.adminSupportInbox{min-height:570px}
+.adminSupportInbox h2{font-size:25px;margin:0 0 8px}
+.adminSupportInbox p{line-height:1.55}
+.adminSupportLayout{display:grid;grid-template-columns:minmax(255px,34%) minmax(0,1fr);gap:18px;margin-top:20px;align-items:start}
+.adminSupportList,.adminSupportConversation{border:1px solid var(--border-color, #46505c55);border-radius:14px;padding:15px;min-height:450px}
+.adminSupportList label,.adminSupportConversationHead label{display:grid;gap:6px;font-size:15px}
+.adminSupportList select,.adminSupportConversationHead select{font:inherit;padding:10px;border:1px solid #8886;border-radius:8px;background:transparent;color:inherit}
+.adminSupportThread{display:flex;flex-direction:column;gap:5px;width:100%;background:transparent;color:inherit;text-align:left;cursor:pointer;border:1px solid transparent;border-bottom-color:#8883;padding:13px 10px;border-radius:8px;margin-top:6px}
+.adminSupportThread.active{background:#6d85a51a;border-color:#8da7d866}
+.adminSupportThread strong{font-size:16px;word-break:break-all}
+.adminSupportThread span{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adminSupportThread small{font-size:14px;opacity:.76}
+.adminSupportConversationHead{display:flex;gap:12px;justify-content:space-between;align-items:start}
+.adminSupportConversationHead h3{font-size:20px;margin:0}
+.adminSupportConversationHead p{font-size:15px}
+.adminSupportMessages{display:flex;flex-direction:column;gap:14px;max-height:510px;overflow:auto;margin:16px 0}
+.adminSupportMail{padding:15px;border-radius:12px;background:#8881;border:1px solid #8883}
+.adminSupportMail.outbound{margin-left:min(12%,80px);background:#6486bb16}
+.adminSupportMail>div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-size:15px}
+.adminSupportMail time,.adminSupportDelivery{opacity:.73;font-size:14px}
+.adminSupportMail p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;margin:12px 0 0}
+.adminSupportReview{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:13px;font-size:15px}.adminSupportReview strong{flex:1 1 100%}.adminSupportReview button{font-size:14px;padding:8px;border:1px solid #8886;border-radius:8px;color:inherit;background:transparent;cursor:pointer}
+.adminSupportPlaceholder{padding:70px 16px;text-align:center;font-size:16px;opacity:.8}
+.adminSupportCompose{display:grid;gap:10px;border-top:1px solid #8884;padding-top:18px}
+.adminSupportCompose label{font-size:16px;font-weight:600}
+.adminSupportCompose textarea{width:100%;resize:vertical;min-height:130px;box-sizing:border-box;border:1px solid #8887;background:transparent;border-radius:10px;color:inherit;padding:12px;font:inherit;font-size:16px}
+.adminSupportCompose>div{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.adminSupportCompose small{font-size:14px;line-height:1.4;opacity:.75}
+.adminSupportCompose button{padding:12px 17px;border-radius:9px;font-size:15px;cursor:pointer}
+.adminSupportCompose button:disabled{opacity:.5;cursor:not-allowed}
+.adminSupportNotice{padding:11px;border-radius:8px;border:1px solid #8885}
+@media(max-width:800px){.adminSupportLayout{grid-template-columns:1fr}.adminSupportList,.adminSupportConversation{min-height:unset}.adminSupportCompose>div{align-items:stretch;flex-direction:column}}

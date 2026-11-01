@@ -1,6 +1,6 @@
 import type {FollowupEnv} from './followup-common.js';
 import {followupEmailProvider} from '../platform/email-sender.js';
-import {emailAccountCapacity,emailLimit,emailWindows,providerEmailLimits,otpReserve,otpUsageSql,followupUsageSql} from '../platform/email-capacity.js';
+import {emailAccountCapacity,emailLimit,emailWindows,providerEmailLimits,otpReserve,otpUsageSql,followupUsageSql,supportUsageSql} from '../platform/email-capacity.js';
 
 // Follow-ups have their own caps and yield shared account capacity as OTP grows.
 export const DEFAULT_FOLLOWUP_DAILY_LIMIT=60;
@@ -16,7 +16,7 @@ export function followupBudgetGuard(env:FollowupEnv,now:string){
  const window=followupBudgetWindows(env,Date.parse(now));
  const limits=providerEmailLimits(env,window.provider),reserve=otpReserve(window.provider);
  const count=(since:string)=>followupUsageSql('?6',since);
- const shared=(name:'daily'|'hourly'|'monthly',since:string)=>`${count(since)}+MAX(${otpUsageSql('?6',since)},${Math.min(reserve[name],limits[name])})<${limits[name]}`;
+ const shared=(name:'daily'|'hourly'|'monthly',since:string)=>`${count(since)}+${supportUsageSql('?6',since)}+MAX(${otpUsageSql('?6',since)},${Math.min(reserve[name],limits[name])})<${limits[name]}`;
  return {sql:`${count('?8')}<?9 AND ${count('?10')}<?11 AND ${count('?12')}<?13 AND ${shared('daily','?8')} AND ${shared('hourly','?10')} AND ${shared('monthly','?12')}`,bindings:[window.provider,now,window.daySince,window.daily,window.hourSince,window.hourly,window.monthSince,window.monthly]};
 }
 /** Rolling windows also count in-flight and uncertain deliveries. 31 days is

@@ -1,3 +1,4 @@
+import { handleSecretRequestRead, handleSecretRequestSubmit } from "./devices/secret-requests.js";
 import {ingestProductEvents,observeProductRequest,requestEventRoute} from './analytics/product-observability.js';
 import {recordDeviceOnline,purgeBusinessMetrics} from './analytics/business-tracking.js';
 import {eventContext,purgeProductEvents,recordProductEvent} from './analytics/product-events.js';
@@ -679,6 +680,11 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       request.method === "POST"
     ) {
       return handleGrantRevoke(request, env);
+    }
+
+    if (/^\/api\/secret-requests\/[^/]+$/.test(url.pathname)) {
+      if (request.method === "GET") return handleSecretRequestRead(request, env);
+      if (request.method === "POST") return handleSecretRequestSubmit(request, env);
     }
 
     if (url.pathname === "/api/approvals" && request.method === "GET") {

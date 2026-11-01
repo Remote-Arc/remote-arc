@@ -136,6 +136,9 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 			names = append(names, t.Name)
 		}
 		names = append(names, "background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace", "agent_execution_log", AgentSessionsTool)
+		if a.secretsReady() {
+			names = append(names, "secret_prepare", "secret_deliver")
+		}
 		if a.browserRunnerReady() {
 			names = append(names, browserrunner.Tools...)
 		}
@@ -146,6 +149,9 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 	capabilities := []string{"device_policy_v1", "background_agent_v1", "background_recovery_v2", "device_stop_v1", "device_pause_v1", "go_agent_v1"}
 	if !a.WakeOnly {
 		capabilities = append(capabilities, "native_core_v1", "undo_history_v1")
+		if a.secretsReady() {
+			capabilities = append(capabilities, "one_time_secret_v1")
+		}
 		if a.browserRunnerReady() {
 			capabilities = append(capabilities, "browser_runner_v1", "runner_view_v1", "browser_auth_policy_v1")
 			if a.Browser.VideoAvailable() {
@@ -154,6 +160,20 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 		}
 	}
 	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.fleetCapacity(ctx)}, "tools": names, "capabilities": capabilities}
+}
+
+// secretsReady: a one-time secret is only useful where start_process can
+// take it, so the tools follow terminal mode.
+func (a *Agent) secretsReady() bool {
+	if a.Core == nil || a.Core.Secrets == nil {
+		return false
+	}
+	for _, t := range a.Core.ListTools() {
+		if t.Name == "start_process" {
+			return true
+		}
+	}
+	return false
 }
 
 // browserRunnerReady advertises the browser_runner only where it can run:
@@ -248,6 +268,27 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 			return nil, errors.New("browser_runner requires terminal mode on this device.")
 		}
 		return a.Browser.Call(ctx, call.Tool, args, call.Policy)
+	case "secret_prepare", "secret_deliver":
+		// The Relay sends these when the user is asked for a one-time secret;
+		// the AI never calls them and only holds the handle.
+		if !a.secretsReady() {
+			return nil, errors.New("One-time secrets need terminal mode on this device, where start_process can use them.")
+		}
+		handle, e := protocol.String(args, "handle")
+		if e != nil {
+			return nil, e
+		}
+		if call.Tool == "secret_prepare" {
+			key, e := a.Core.Secrets.Prepare(handle)
+			if e != nil {
+				return nil, e
+			}
+			return map[string]any{"handle": handle, "public_key": key}, nil
+		}
+		if e := a.Core.Secrets.Deliver(handle, protocol.OptionalString(args, "epk"), protocol.OptionalString(args, "iv"), protocol.OptionalString(args, "ciphertext")); e != nil {
+			return nil, e
+		}
+		return map[string]any{"handle": handle, "delivered": true}, nil
 	case AgentSessionsTool:
 		// Read-only metadata; the relay gates it with the read_file permission.
 		return listAgentSessions(ctx, args, call.Policy)

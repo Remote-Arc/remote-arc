@@ -14,6 +14,7 @@ import (
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/policy"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/secrets"
 )
 
 //go:embed tools.json tool_modes.json guards.json
@@ -85,10 +86,14 @@ func AssertCommandAllowedIn(command, cwd string) error {
 type Core struct {
 	Mode      string
 	Processes *Processes
-	mutation  sync.Mutex
+	// Secrets holds one-time values a user entered for start_process stdin_secret.
+	Secrets  *secrets.Store
+	mutation sync.Mutex
 }
 
-func New(mode string) *Core { return &Core{Mode: mode, Processes: NewProcesses()} }
+func New(mode string) *Core {
+	return &Core{Mode: mode, Processes: NewProcesses(), Secrets: secrets.New()}
+}
 func (c *Core) ListTools() []Definition {
 	result := []Definition{}
 	for _, d := range definitions {
@@ -221,14 +226,30 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 				return protocol.Result{}, e
 			}
 		}
+		var seconds int
 		if protocol.Bool(args, "background") {
-			seconds, err := protocol.Integer(args, "max_duration_seconds", 0, 1, 7*86400)
+			seconds, err = protocol.Integer(args, "max_duration_seconds", 0, 1, 7*86400)
 			if err != nil {
 				return protocol.Result{}, errors.New("Invalid managed process duration.")
 			}
-			result, e = c.Processes.Background(command, cwd, seconds)
+		}
+		// Taken last, so a command refused above leaves the secret for a retry.
+		secret := ""
+		if handle := protocol.OptionalString(args, "stdin_secret"); handle != "" {
+			if !secrets.ValidHandle(handle) {
+				return protocol.Result{}, errors.New("stdin_secret must be a handle from request_secret.")
+			}
+			if c.Secrets == nil {
+				return protocol.Result{}, errors.New("One-time secrets are unavailable on this device.")
+			}
+			if secret, err = c.Secrets.Take(handle); err != nil {
+				return protocol.Result{}, err
+			}
+		}
+		if protocol.Bool(args, "background") {
+			result, e = c.Processes.BackgroundWithSecret(command, cwd, seconds, secret)
 		} else {
-			result, e = c.Processes.Run(ctx, command, cwd, protocol.Number(args, "timeout_ms", 5000))
+			result, e = c.Processes.RunWithSecret(ctx, command, cwd, protocol.Number(args, "timeout_ms", 5000), secret)
 		}
 	case "list_managed_processes":
 		result = c.Processes.List()

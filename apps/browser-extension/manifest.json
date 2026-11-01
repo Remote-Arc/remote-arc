@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Remote Arc Browser",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Let your AI work in your own browser on sites you allow, or share single tabs, with every site and tab under your control.",
   "permissions": [
     "activeTab",

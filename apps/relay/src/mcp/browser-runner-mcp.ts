@@ -46,6 +46,8 @@ export type BrowserRunnerDeps = {
   oauthToolMeta: (scope: Scope) => unknown;
   textResult: (value: unknown) => ToolResult;
   callDevice: (identity: OAuthIdentity, deviceId: string, tool: BrowserRunnerTool, args: Record<string, unknown>) => Promise<unknown>;
+  /** An online Remote Arc Browser extension of this user that can open tabs, or null. */
+  browserTabDevice?: (identity: OAuthIdentity) => Promise<string | null>;
 };
 
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
@@ -56,7 +58,7 @@ const ref = z.string().regex(/^(f[1-9]\d?)?e[1-9]\d{0,3}$/);
 const idempotencyKey = z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/);
 
 const what =
-  " browser_runner runs multi-step web tasks on the linked computer. browser=runner (default, use it unless the user explicitly asks for their own Chrome) uses a separate profile with its own saved sign-ins, out of sight. browser=your_chrome (advanced) uses the user's running Chrome and its existing sign-ins, in a new task window; Chrome then asks the user to click Allow for each new connection and shows a control banner, which interrupts them, so do not suggest it. It never selects or operates the user's other tabs. To read or act on a specific existing tab the user shares through Chrome Companion, use shared_tab_* instead.";
+  " browser_runner runs multi-step web tasks on the linked computer. browser=runner (default, use it unless the user explicitly asks for their own Chrome) uses a separate profile with its own saved sign-ins, out of sight. browser=your_chrome (advanced) uses the user's running Chrome and its existing sign-ins, in a new task window; Chrome then asks the user to click Allow for each new connection and shows a control banner, which interrupts them, so do not suggest it. When the user's Remote Arc Browser extension is online (list_devices: platform browser), sites where the user is signed in, or that often show human verification, go there instead: shared_tab_open opens a normal new tab in the user's own browser. When a Runner page needs the user, the result says when to move it there (continue_in_users_browser). It never selects or operates the user's other tabs. To read or act on a specific existing tab the user shares through Chrome Companion, use shared_tab_* instead.";
 
 type Definition = {
   scope: Scope;
@@ -197,7 +199,7 @@ export function registerBrowserRunnerTools(server: McpServer, deps: BrowserRunne
         const { device_id, ...args } = input;
         const call: DeviceCall = (name, callArgs) => deps.callDevice(identity, String(device_id), name, callArgs);
         const out=tool === "browser_runner_act" ? await runAct(call, args) : tool === "browser_runner_start" ? await runStart(call, args) : await call(tool, args);
-        return browserRunnerResult(out,deps.textResult);
+        return browserRunnerResult(await offerUsersBrowser(out, () => deps.browserTabDevice?.(identity) ?? Promise.resolve(null)), deps.textResult);
       },
     );
   }
@@ -209,6 +211,25 @@ type FormField = { ref: string; action: string; value?: string };
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+// A separate Runner window is a fresh, automated browser, so sites ask it for
+// human checks and sign-ins that the user's own browser seldom sees. When the
+// Runner stops for the user and the user's Remote Arc Browser is online, the
+// page moves to a normal new tab there. Scope blocks stay with the Runner, and
+// a task already in the user's Chrome has nowhere better to go.
+export async function offerUsersBrowser(out: unknown, browserTabDevice: () => Promise<string | null>): Promise<unknown> {
+  if (!isRecord(out) || out.session_state !== "needs_user" || out.browser === "your_chrome") return out;
+  const needs = typeof out.needs_user === "string" ? out.needs_user : "";
+  if (!/^The page needs the user/.test(needs)) return out;
+  const device = await browserTabDevice().catch(() => null);
+  if (!device) return out;
+  const url = typeof out.url === "string" && /^https?:\/\//.test(out.url) ? out.url : undefined;
+  return {
+    ...out,
+    continue_in_users_browser: { tool: "shared_tab_open", device_id: device, ...(url ? { url } : {}) },
+    next_action: "The user's own browser is online with Remote Arc Browser. Continue there in a normal new tab, where the user is usually signed in and human checks are rarer: call shared_tab_open with device_id=" + device + " and url=" + (url || "this task's current URL (browser_runner_status)") + ", then work with shared_tab_act. If it returns SITE_NOT_ALLOWED, ask the user to click Allow on the page it opened, then call it again. Then end this Runner task with browser_runner_close with force=true and reason=\"continued in the user's browser\". If shared_tab_open fails otherwise, ask the user to finish in the Runner window and use browser_runner_wait until=user_done.",
+  };
+}
 
 // Older Agents ignore unknown start arguments. Never present their separate
 // Runner as a successful connection to the user's own Chrome.

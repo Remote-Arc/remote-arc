@@ -538,6 +538,10 @@ export function createRemoteLinkMcp(
         oauthToolMeta,
         textResult,
         callDevice: (current, device, tool, args) => callPublicBrowserDevice(env, current, device, tool, args),
+        browserTabDevice: async (current) => {
+          const devices = await getDevicesForUser(env, current.userId);
+          return devices.find((device) => device.platform === "browser" && device.status === "online" && device.available_tools.includes("browser_open_tab"))?.id ?? null;
+        },
       });
     }
 

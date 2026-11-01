@@ -9,7 +9,7 @@ Remote Arc offers Google OAuth and passwordless email sign-in on the **same D1 u
 3. Generate an independent, random 32+ byte secret and store it in the same Worker as `EMAIL_AUTH_SECRET`. This key signs the OTP hashes; do not rotate it during outstanding 10-minute sign-in flows.
 4. Optionally set `EMAIL_FROM` to a verified sender at `remotearc.app`. The default is `Remote Arc <login@remotearc.app>`.
 5. Apply all D1 migrations, including `0024_email_login.sql` and `0073_followup_delivery_providers.sql`, to the production `remote-link-auth` database **before** the new Worker.
-6. For automatic overflow, verify the login sender in SendPulse SMTP and provision the Worker secret `SENDPULSE_API_KEY`. The same key can serve follow-ups; OTP has priority in the shared pool. See [provider activation and limits](./user-followups.md#email-providers-and-budgets).
+6. For automatic overflow, first activate SendPulse Free/paid SMTP and verify the login sender, provision the Worker secret `SENDPULSE_API_KEY`, then explicitly set `SENDPULSE_OTP_ENABLED=1`. An API key by itself never enables backup OTP sending. The same key can serve follow-ups; OTP has priority in the shared pool. See [provider activation and limits](./user-followups.md#email-providers-and-budgets).
 
 From `apps/relay`, with a Cloudflare account already authenticated:
 

@@ -1,5 +1,5 @@
 /** OTP prefers Resend and can borrow SendPulse capacity; follow-ups never fail over. */
-export type EmailSenderEnv = {RESEND_API_KEY?:string;EMAIL_FROM?:string;SENDPULSE_API_KEY?:string};
+export type EmailSenderEnv = {RESEND_API_KEY?:string;EMAIL_FROM?:string;SENDPULSE_API_KEY?:string;SENDPULSE_OTP_ENABLED?:string};
 export function emailSender(env:EmailSenderEnv){
  const apiKey=env.RESEND_API_KEY?.trim();
  return apiKey?{apiKey,from:env.EMAIL_FROM?.trim()||'Remote Arc <login@remotearc.app>'}:null;
@@ -21,7 +21,8 @@ export function otpEmailSenders(env:EmailSenderEnv){
  const primary=emailSender(env),senders:{provider:FollowupEmailProvider;apiKey:string;from:string}[]=[];
  if(primary)senders.push({provider:'resend',...primary});
  const apiKey=env.SENDPULSE_API_KEY?.trim(),from=env.EMAIL_FROM?.trim()||'Remote Arc <login@remotearc.app>';
- if(apiKey&&emailMailbox(from))senders.push({provider:'sendpulse',apiKey,from});
+ // An API key alone does not prove that the SMTP account and sender are approved.
+ if(env.SENDPULSE_OTP_ENABLED?.trim()==='1'&&apiKey&&emailMailbox(from))senders.push({provider:'sendpulse',apiKey,from});
  return senders;
 }
 export function followupEmailSender(env:FollowupSenderEnv){

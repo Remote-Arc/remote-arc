@@ -121,33 +121,63 @@
     return out;
   }
 
+  // Where a control sits decides its place in a snapshot: an open dialog
+  // first, then the page's own content, then site navigation, headers and
+  // footers. A long sidebar then cannot push the controls the user is working
+  // with past the element cap.
+  const DIALOG = "dialog[open],[role='dialog'],[role='alertdialog'],[aria-modal='true']";
+  const NAVIGATION = "nav,aside,[role='navigation'],[role='complementary'],[role='banner'],[role='contentinfo']";
+  const regionOf = (element) => {
+    try {
+      if (typeof element.closest !== "function") return "";
+      if (element.closest(DIALOG)) return "dialog";
+      if (element.closest(NAVIGATION)) return "navigation";
+      // A header or footer inside an article or section belongs to it.
+      const edge = element.closest("header,footer");
+      if (edge && !edge.parentElement?.closest?.("article,aside,main,nav,section,[role='main']")) return "navigation";
+    } catch {
+      // an unusual page keeps document order
+    }
+    return "";
+  };
+  const regionRank = { dialog: 0, "": 1, navigation: 2 };
+  const MAX_ELEMENTS = 250;
+  const MAX_SCANNED = 5000;
+
   function snapshot() {
     const snapshotId = nextSnapshotId();
     activeSnapshotId = snapshotId;
     snapshotElements.clear();
 
-    let next = 1;
     const selector = "a[href],button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role],[tabindex],[onclick]";
-    const interactiveElements = [];
+    const candidates = [];
+    let scanned = 0;
     for (const element of document.querySelectorAll(selector)) {
+      if (++scanned > MAX_SCANNED) break;
       if (!(element instanceof HTMLElement) || !visible(element)) continue;
       if (element instanceof HTMLInputElement && (element.type || "").toLowerCase() === "hidden") continue;
-      const ref = "e" + next++;
+      candidates.push({ element, region: regionOf(element), order: candidates.length });
+    }
+    candidates.sort((a, b) => regionRank[a.region] - regionRank[b.region] || a.order - b.order);
+
+    const interactiveElements = candidates.slice(0, MAX_ELEMENTS).map(({ element, region }, index) => {
+      const ref = "e" + (index + 1);
       const type = element.getAttribute("type") || undefined;
       snapshotElements.set(ref, element);
-      interactiveElements.push({
+      return {
         ref,
         role: roleFor(element),
         name: accessibleName(element),
         ...(type ? { type } : {}),
+        ...(region ? { region } : {}),
         disabled: Boolean(element.disabled),
         canClick: !Boolean(element.disabled),
         canFill: canFill(element),
         sensitive: isSensitiveField(element),
         ...details(element),
-      });
-      if (interactiveElements.length >= 250) break;
-    }
+      };
+    });
+    const omittedElements = candidates.length - interactiveElements.length;
 
     const headings = Array.from(document.querySelectorAll("h1,h2,h3"))
       .filter((el) => el instanceof HTMLElement && visible(el))
@@ -162,6 +192,7 @@
       headings,
       text: clean(document.body?.innerText || "", 50000),
       interactiveElements,
+      ...(omittedElements > 0 ? { omittedElements } : {}),
     };
   }
 

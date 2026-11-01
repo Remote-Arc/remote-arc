@@ -66,6 +66,10 @@ document.getElementById("post").onclick = async () => {
   }
   if (url.pathname === "/form2") return send(page("Apply 2", `<h1>Step 2</h1><p>Hello ${url.searchParams.get("name") || ""}</p>`));
   if (url.pathname === "/search") return send(page("Search", `<h1>Results for ${url.searchParams.get("q") || ""}</h1>`));
+  if (url.pathname === "/dash") {
+    const links = Array.from({ length: 300 }, (_, i) => `<li><a href="/dash?n=${i}">Section ${i}</a></li>`).join("");
+    return send(page("Dashboard", `<nav><ul>${links}</ul></nav><main><h1>DNS records</h1><button>Edit SPF record</button><button>Edit DKIM record</button></main>`));
+  }
   if (url.pathname === "/late") return send(page("Late", `<h1>Loading</h1><script>setTimeout(() => { document.body.insertAdjacentHTML("beforeend", "<p>Ready now</p>"); }, 700)</script>`));
   send(page("Home", `<h1>Home</h1><a href="/shop">Shop</a>`));
 });
@@ -168,7 +172,7 @@ try {
   }, [`ws://127.0.0.1:${relay.address().port}`]);
   for (let i = 0; i < 100 && !hello; i++) await new Promise((r) => setTimeout(r, 100));
   assert.ok(hello, "extension did not connect to the Relay");
-  assert.equal(hello.device.agentVersion, "browser-0.4.2");
+  assert.equal(hello.device.agentVersion, "browser-0.4.3");
   assert.ok(hello.tools.includes("browser_open_tab") && hello.tools.includes("browser_act"));
   assert.ok(hello.capabilities.includes("browser_act_v1"));
 
@@ -284,6 +288,38 @@ try {
   assert.match(differentKeys.find(result=>result.error)?.error||"",/SUBMIT_ALREADY_RECORDED/);
   assert.equal(orders.length,beforeRace+2,"one unverified target cannot be sent under a second concurrent key");
   for(const opened of racing)await ok("browser_act",{tab_id:opened.tabId,action:"close"});
+
+  // The user opens tabs themselves, then shares every tab in the window from
+  // the popup in one click. The site is already allowed here, so Chrome has
+  // nothing to ask.
+  const userTab = await context.newPage();
+  await userTab.goto(BASE + "/dash");
+  const extensionId = new URL(worker.url()).host;
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await popup.bringToFront();
+  const shareAll = popup.locator("#share-window");
+  await shareAll.waitFor();
+  assert.match(await shareAll.textContent(), /Share all \d+ tabs? in this window/);
+  await shareAll.click();
+  await popup.locator("#status", { hasText: /Shared \d+ tab/ }).waitFor();
+  const sharedDash = (await ok("browser_list_tabs")).tabs.find((t) => t.url === BASE + "/dash");
+  assert.ok(sharedDash, "the user's own tab is shared");
+  assert.equal(sharedDash.mode, "site");
+  assert.deepEqual(sharedDash.permissions, ["read", "interact"]);
+  assert.equal((await ok("browser_list_tabs")).tabs.some((t) => t.url.startsWith("chrome-extension://")), false, "extension pages are never shared");
+
+  // A long sidebar does not push the page's own buttons out of the snapshot.
+  const dash = await ok("browser_read_page", { tab_id: sharedDash.tabId });
+  assert.equal(dash.interactiveElements.length, 250);
+  assert.deepEqual(dash.interactiveElements.slice(0, 2).map((e) => e.name), ["Edit SPF record", "Edit DKIM record"]);
+  assert.equal(dash.interactiveElements[2].region, "navigation");
+  assert.equal(dash.omittedElements, 52);
+  await ok("browser_act", { tab_id: sharedDash.tabId, action: "click", snapshot_id: dash.snapshotId, ref: ref(dash, "button", "Edit DKIM") });
+  await popup.close();
+  await userTab.close();
+  for (let i = 0; i < 50 && (await ok("browser_list_tabs")).tabs.some((t) => t.tabId === sharedDash.tabId); i++) await new Promise((r) => setTimeout(r, 50));
+  assert.equal((await ok("browser_list_tabs")).tabs.some((t) => t.tabId === sharedDash.tabId), false, "closing a shared tab ends its access");
 
   // Only tabs Remote Arc opened can be closed by the AI.
   await ok("browser_act", { tab_id: tab, action: "close" });

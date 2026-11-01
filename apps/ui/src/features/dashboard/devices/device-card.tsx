@@ -6,6 +6,7 @@ import { DEVICE_TOOL_CATALOG, deviceAccessPreset, platformLabel } from "./device
 import { DeviceAccessPanel } from "./device-access-panel.js";
 import { DeviceTasksPanel } from "./device-tasks-panel.js";
 import { DeviceActivityPanel } from "./device-activity-panel.js";
+import { browserExtensionUpdate } from "./browser-extension-update.js";
 import { LATEST_AGENT_VERSION, timeAgo } from "../format.js";
 import type { Device } from "../../../types/app-types.js";
 import type { DashboardModel } from "../hooks/use-dashboard-model.js";
@@ -37,7 +38,8 @@ export function deviceFacts(device: Device, m: DashboardModel) {
     device.background_enabled === true
       ? goUpdateCommands(LATEST_AGENT_VERSION, true).join("\n")
       : goUpdateCommands(LATEST_AGENT_VERSION, false).join("\n");
-  return { advertisedTools, enabledTools, allTools, runnerAdvertised, runnerEnabled, runnerVisible, accessPreset, executionLog, executionLogError, runtimeVersion, recoveryVersion, updateAvailable, updateCommand };
+  const extensionUpdate = browserExtensionUpdate(device);
+  return { advertisedTools, enabledTools, allTools, runnerAdvertised, runnerEnabled, runnerVisible, accessPreset, executionLog, executionLogError, runtimeVersion, recoveryVersion, updateAvailable, updateCommand, extensionUpdate };
 }
 
 export type DeviceFacts = ReturnType<typeof deviceFacts>;
@@ -49,7 +51,7 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
     setDevicePanel, setManagedDeviceId, tr,
   } = m;
   const facts = deviceFacts(device, m);
-  const { accessPreset, executionLog, recoveryVersion, runtimeVersion, updateAvailable } = facts;
+  const { accessPreset, executionLog, recoveryVersion, runtimeVersion, updateAvailable, extensionUpdate } = facts;
   return (
     <article className={"deviceCard managed " + device.status}>
       <div className="deviceTop">
@@ -59,6 +61,7 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
         </div>
         <div className="deviceOverviewActions">
           {updateAvailable && <span className="badge updateAvailable"><i/>{tr("Update available", "可更新")}</span>}
+          {extensionUpdate && <span className="badge updateAvailable"><i/>{tr("Update needed", "需要更新")}</span>}
           <span className={"badge " + device.status}><i/>{device.status === "online" ? tr("Online", "在线") : tr("Offline", "离线")}</span>
           <button className="ghostButton" aria-expanded={managedDeviceId === device.id} aria-controls={"device-management-" + device.id} aria-label={tr("Manage " + device.name, "管理 " + device.name)} onClick={() => { setManagedDeviceId(managedDeviceId === device.id ? null : device.id); setDevicePanel("access"); }}>{managedDeviceId === device.id ? tr("Close", "收起") : tr("Manage", "管理")}</button>
         </div>
@@ -67,11 +70,21 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
       <DeviceCapacity device={device} tr={tr}/>
       <div className="deviceOverviewFacts">
         <span><ProductIcon name="shield" size={13}/>{accessPreset === "safe" ? tr("Read only", "只读访问") : accessPreset === "developer" ? tr("Read & edit", "读取与编辑") : accessPreset === "full" ? tr("Terminal enabled", "已启用终端") : tr("Custom permissions", "自定义权限")}</span>
-        <span className="deviceRuntimeVersion"><ProductIcon name="activity" size={13}/>{device.platform === "browser" ? tr("Browser", "浏览器") : tr("Running", "运行中")} {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}{device.platform !== "browser" && recoveryVersion && recoveryVersion !== runtimeVersion ? " · " + tr("Recovery", "恢复包") + " v" + recoveryVersion : ""}{updateAvailable ? " · " + tr("Latest", "最新") + " v" + LATEST_AGENT_VERSION : ""}</span>
+        <span className="deviceRuntimeVersion"><ProductIcon name="activity" size={13}/>{device.platform === "browser" ? tr("Browser", "浏览器") : tr("Running", "运行中")} {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}{device.platform !== "browser" && recoveryVersion && recoveryVersion !== runtimeVersion ? " · " + tr("Recovery", "恢复包") + " v" + recoveryVersion : ""}{updateAvailable ? " · " + tr("Latest", "最新") + " v" + LATEST_AGENT_VERSION : ""}{extensionUpdate ? " · " + tr("Latest", "最新") + " v" + extensionUpdate.latest : ""}</span>
         <span>{(device.workspace_roots || []).length} {tr("trusted folders", "个可信目录")}</span>
         <span>{device.background_guard_active ? tr("Recovery supervisor running", "恢复守护运行中") : device.background_enabled ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认") : tr("Automatic recovery off", "自动恢复关闭")}</span>
         <span>{tr("Seen ", "最后在线：")}{timeAgo(device.last_seen)}</span>
       </div>
+      {extensionUpdate && <div className="deviceExtensionUpdate" role="note">
+        <strong>{tr("Update Remote Arc Browser to v" + extensionUpdate.latest, "请把 Remote Arc Browser 更新到 v" + extensionUpdate.latest)}</strong>
+        <span>{tr("This browser runs v" + extensionUpdate.current + ". The extension is loaded unpacked, so Chrome does not update it, and older versions miss fixes such as tabs staying shared while you use a site.", "这个浏览器在运行 v" + extensionUpdate.current + "。插件是解压加载的，Chrome 不会自动更新它，旧版本缺少一些修复，比如在同一网站内跳转时标签页保持共享。")}</span>
+        <ol>
+          <li><a href="/chrome-extension" target="_blank" rel="noreferrer">{tr("Download the new ZIP", "下载新版 ZIP")}</a>{tr(".", "。")}</li>
+          <li>{tr("Unzip it into the folder you loaded before, replacing the old files. Keeping the same folder keeps this pairing.", "解压到之前加载的同一个文件夹，覆盖旧文件。用同一个文件夹，配对就不会丢。")}</li>
+          <li>{tr("Open chrome://extensions and click Reload on Remote Arc Browser.", "打开 chrome://extensions，在 Remote Arc Browser 上点「重新加载」。")}</li>
+          <li>{tr("Share your tabs again: reloading ends the current sharing.", "重新共享标签页：重新加载会结束当前的共享。")}</li>
+        </ol>
+      </div>}
       {device.status === "offline" && <p className="deviceOfflineHint">{tr("Tasks wait until this computer reconnects. Remote Arc cannot power it on.", "任务会等待这台电脑重新连接，Remote Arc 无法远程开机。")}</p>}
       <div id={"device-management-" + device.id} hidden={managedDeviceId !== device.id} className="deviceManagementPanel">
         {managedDeviceId === device.id && <>

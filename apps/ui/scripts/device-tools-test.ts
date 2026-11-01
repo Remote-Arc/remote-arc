@@ -20,3 +20,16 @@ assert.deepEqual(off, ["read_file"]);
 // Other tools still switch one by one.
 assert.deepEqual(toggledDeviceTools(on, advertised, "read_file", false), [...BROWSER_RUNNER_TOOLS, "browser_runner_wait"]);
 console.log("PASS: Browser Runner device switch");
+
+// A paired browser extension older than the one on the download page shows
+// that an update is needed, like an outdated computer Agent.
+{
+  const { LATEST_BROWSER_EXTENSION_VERSION, browserExtensionUpdate } = await import("../src/features/dashboard/devices/browser-extension-update.js");
+  const manifest = (await import("../../browser-extension/manifest.json", { with: { type: "json" } })).default as { version: string };
+  assert.equal(LATEST_BROWSER_EXTENSION_VERSION, manifest.version, "the latest version is the one the download page serves");
+  assert.deepEqual(browserExtensionUpdate({ platform: "browser", agent_version: "browser-0.3.0" }), { current: "0.3.0", latest: manifest.version });
+  assert.equal(browserExtensionUpdate({ platform: "browser", agent_version: "browser-" + manifest.version }), null);
+  assert.equal(browserExtensionUpdate({ platform: "browser", agent_version: "browser-99.0.0" }), null, "a newer local build is not told to downgrade");
+  assert.equal(browserExtensionUpdate({ platform: "browser", agent_version: null }), null, "an unknown version is not guessed");
+  assert.equal(browserExtensionUpdate({ platform: "darwin", agent_version: "0.3.0" }), null, "computers keep their own update notice");
+}

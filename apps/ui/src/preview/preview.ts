@@ -125,6 +125,16 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     },
   ];
 
+  // An outdated Chrome extension, to show its update notice.
+  if(new URL(location.href).searchParams.get("demo")==="extension-update") devices.push({
+    id: "preview-browser", name: "Chrome Browser", platform: "browser", arch: "chrome", hostname: "chrome-extension",
+    created_at: previewAgo(6 * 86400000), last_seen: previewAgo(20000), status: "online",
+    tools: ["browser_list_tabs", "browser_read_page", "browser_click", "browser_fill"], available_tools: ["browser_list_tabs", "browser_read_page", "browser_click", "browser_fill"], allowed_tools: null,
+    workspace_roots: [], sensitive_paths: [], sensitive_allow_paths: [], protect_sensitive_paths: true, undo_enabled: false,
+    policy_enforcement_available: false, undo_history_available: false, background_agent_available: false,
+    agent_version: "browser-0.3.0",
+  } as unknown as (typeof devices)[number]);
+
   const baseAutomations = [
     {
       id: "preview-goal",

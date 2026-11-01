@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Remote Arc Browser",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Let your AI work in your own browser on sites you allow, or share single tabs, with every site and tab under your control.",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "tabGroups"
+    "tabGroups",
+    "tabs"
   ],
   "host_permissions": [
     "https://mcp.remotearc.app/*"
@@ -16,9 +17,19 @@
     "https://*/*",
     "http://*/*"
   ],
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
   "action": {
     "default_title": "Remote Arc Browser",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png"
+    }
   },
   "background": {
     "service_worker": "service-worker.js",

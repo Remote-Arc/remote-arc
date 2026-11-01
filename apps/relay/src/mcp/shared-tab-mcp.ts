@@ -37,7 +37,7 @@ export type SharedTabDeps = {
 };
 
 const scopeNote =
-  " Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. For multi-step work on a linked computer, browser_runner_* (a Remote Arc window, or the user's own Chrome with browser=your_chrome) needs no extension.";
+  " Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. Prefer it on sites where the user is signed in or that show human verification: it works in a normal tab of the user's own browser. Without the extension, browser_runner_* runs multi-step work in a separate Remote Arc window on a linked computer.";
 
 /**
  * Tools added in extension 0.4.0. An older extension rejects them with

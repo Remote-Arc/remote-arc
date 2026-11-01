@@ -16,6 +16,7 @@ import {
 const { db, sql, now, addUser } = createWorkerFixture();
 addUser("alice");
 addUser("bob");
+addUser("carol");
 sql.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)")
   .run("laptop", "alice", "Laptop", "darwin", "hash-laptop", now);
 
@@ -118,16 +119,19 @@ usage = await getMonthlyPlusUsage({ DB: db }, "alice", "2026-10-31T00:00:00Z");
 assert.equal(usage.active_tasks, 2, "Only waiting/running automations count toward active tasks");
 
 // 3. Binary allowance & BinaryTransferLimitError
+// The allowance reads the current month, so carol's usage is recorded now.
+// Usage from a fixed past month would make this pass only in that month.
+await recordPlusUsage({ DB: db }, "carol", { binary_bytes: 800 });
 // Unlimited (null limit) always passes
-await assertBinaryAllowance({ DB: db }, "alice", null, 10 * 1024 * 1024 * 1024);
+await assertBinaryAllowance({ DB: db }, "carol", null, 10 * 1024 * 1024 * 1024);
 
 // Allowance check with limit
 const LIMIT = 2 * 1024 * 1024 * 1024; // 2 GB
-await assertBinaryAllowance({ DB: db }, "alice", LIMIT, 1024); // 800 bytes used, 1024 requested -> passes
+await assertBinaryAllowance({ DB: db }, "carol", LIMIT, 1024); // 800 bytes used, 1024 requested -> passes
 
 // Throws when exceeding limit
 await assert.rejects(
-  async () => assertBinaryAllowance({ DB: db }, "alice", 1000, 300), // 800 + 300 > 1000
+  async () => assertBinaryAllowance({ DB: db }, "carol", 1000, 300), // 800 + 300 > 1000
   (err: unknown) => {
     assert.ok(err instanceof BinaryTransferLimitError);
     assert.equal(err.code, "BINARY_TRANSFER_LIMIT_REACHED");

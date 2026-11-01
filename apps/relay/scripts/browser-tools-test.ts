@@ -341,3 +341,44 @@ assert.deepEqual(await callDevice(env,owner,"dev","browser_runner_wait",{session
 device=row("linux",["read_file"]);
 await assert.rejects(callDevice(env,owner,"dev","browser_runner_wait",{session_id:"s",until:"user_done"}),/disabled/);
 console.log("PASS: Browser Runner wait read scope, legacy opt-in and timeout contract");
+
+// A Runner window that stops at a human check or a sign-in hands the page to
+// a normal new tab in the user's own browser when Remote Arc Browser is online
+// there. Remote debugging of the user's Chrome is never the suggestion.
+{
+  current = identity("browser:read browser:interact");
+  const handoff = new Map<string, Registered>();
+  let runnerOut: Record<string, unknown> = {};
+  let extension: string | null = "ext-1";
+  const asked: string[] = [];
+  registerBrowserRunnerTools({ registerTool(name: string, def: Registered["def"], handler: Registered["handler"]) { handoff.set(name, { def, handler }); } } as never, {
+    ...deps,
+    callDevice: async () => runnerOut,
+    browserTabDevice: async (id: OAuthIdentity) => { asked.push(id.userId); return extension; },
+  } as never);
+  const run = async (tool: string, out: Record<string, unknown>) => {
+    runnerOut = out;
+    return JSON.parse((await handoff.get(tool)!.handler({ device_id: "pc", session_id: "s1" }) as { content: { text: string }[] }).content[0].text);
+  };
+  const checked = { session_state: "needs_user", needs_user: "The page needs the user (captcha). Complete sign-in, verification codes and CAPTCHAs in the task browser yourself, then resume the same task.", next_action: "browser_runner_wait until=user_done", url: "https://dash.cloudflare.com/acct/dns" };
+  const moved = await run("browser_runner_snapshot", checked);
+  assert.deepEqual(moved.continue_in_users_browser, { tool: "shared_tab_open", device_id: "ext-1", url: "https://dash.cloudflare.com/acct/dns" });
+  assert.match(moved.next_action, /shared_tab_open with device_id=ext-1 and url=https:\/\/dash\.cloudflare\.com\/acct\/dns/);
+  assert.match(moved.next_action, /browser_runner_close with force=true/);
+  assert.doesNotMatch(moved.next_action, /your_chrome/);
+  assert.equal(moved.needs_user, checked.needs_user, "the Runner's own state is kept");
+  assert.equal((await run("browser_runner_act", { ...checked, needs_user: "The page needs the user (sign_in)." })).continue_in_users_browser.device_id, "ext-1", "a sign-in moves too: the user is usually signed in there already");
+  assert.equal((await run("browser_runner_snapshot", { ...checked, url: undefined })).continue_in_users_browser.url, undefined, "without a URL the AI reads it from the task");
+
+  // Nothing changes when the extension is offline, the page needs no one, the
+  // block is about scope, or the task already runs in the user's Chrome.
+  extension = null;
+  assert.equal((await run("browser_runner_snapshot", checked)).next_action, "browser_runner_wait until=user_done");
+  extension = "ext-1";
+  asked.length = 0;
+  assert.equal((await run("browser_runner_snapshot", { session_state: "active", url: "https://example.test/" })).continue_in_users_browser, undefined);
+  assert.equal((await run("browser_runner_snapshot", { ...checked, needs_user: "The task attempted to leave allowed_origins. Ask the user to review the exact sites in Dashboard Boundary requests." })).continue_in_users_browser, undefined);
+  assert.equal((await run("browser_runner_status", { ...checked, browser: "your_chrome" })).continue_in_users_browser, undefined);
+  assert.equal(asked.length, 0, "devices are only looked up when a page needs the user");
+  console.log("PASS: a Runner page that needs the user moves to a new tab in the user's own browser");
+}

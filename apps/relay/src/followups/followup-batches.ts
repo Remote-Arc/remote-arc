@@ -13,7 +13,7 @@ export const FOLLOWUP_BATCH_LIMIT=100;
 const userIds=z.array(z.string().min(1).max(160)).min(1).max(FOLLOWUP_BATCH_LIMIT).refine(ids=>new Set(ids).size===ids.length);
 const optionalBasis=z.preprocess(value=>value==null||typeof value==='string'&&!value.trim()?'existing':value,z.enum(['existing','support','agreed']));
 const batchSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(120),userIds,templateId:z.enum(FOLLOWUP_TEMPLATES.map(t=>t.id)),locale:z.enum(['en','zh']),subject:z.string().trim().min(1).max(200).refine(s=>!/[\r\n]/.test(s)),body:z.string().trim().min(20).max(6000),design:designSchema,basis:optionalBasis,basisNote:z.string().trim().max(500).default('')}).strict();
-type Batch={id:string;actor_id:string;status:string;basis:string;basis_note:string;from_email:string;reply_to:string;payload_json:string};
+type Batch={id:string;actor_id:string;status:string;basis:string;basis_note:string;from_email:string;reply_to:string;payload_json:string;delivery_provider:string};
 
 export async function followupBlock(env:FollowupEnv,userId:string){
  const contact=await ensureContact(env,userId);if(!contact)return 'user_not_found';
@@ -52,7 +52,7 @@ export async function handleFollowupBatches(request:Request,env:FollowupEnv,acto
   if(existing&&existing.status!=='preparing')return json(await batchDetail(env,value.id));
   const contacts=[];
   for(const id of value.userIds){const contact=await ensureContact(env,id);if(!contact)return json({error:'user_not_found'},404);contacts.push(contact);}
-  await env.DB.prepare(`INSERT OR IGNORE INTO user_followup_batches(id,actor_id,title,template_id,locale,subject,body,design_json,basis,basis_note,from_email,reply_to,payload_json,status,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,'preparing',?14)`).bind(value.id,actorId,value.title,value.templateId,value.locale,value.subject,value.body,JSON.stringify(value.design),value.basis,value.basisNote,sender.from,sender.replyTo,payload,stamp()).run();
+  await env.DB.prepare(`INSERT OR IGNORE INTO user_followup_batches(id,actor_id,title,template_id,locale,subject,body,design_json,basis,basis_note,from_email,reply_to,payload_json,status,created_at,delivery_provider) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,'preparing',?14,?15)`).bind(value.id,actorId,value.title,value.templateId,value.locale,value.subject,value.body,JSON.stringify(value.design),value.basis,value.basisNote,sender.from,sender.replyTo,payload,stamp(),sender.provider).run();
   const rewardAvailable=await feedbackRewardAvailable(env.DB);
   for(const contact of contacts){
    if(await env.DB.prepare('SELECT user_id FROM user_followup_batch_recipients WHERE batch_id=?1 AND user_id=?2').bind(value.id,contact.user_id).first())continue;
@@ -79,7 +79,7 @@ export async function handleFollowupBatches(request:Request,env:FollowupEnv,acto
   if(['queued','completed'].includes(batch.status))return json(await batchDetail(env,id));
   if(batch.status!=='draft')return json({error:'batch_not_ready'},409);
   const sender=followupEmailSender(env);if(!sender)return json({error:'email_not_configured'},503);
-  if(sender.from!==batch.from_email||sender.replyTo!==batch.reply_to)return json({error:'sender_changed'},409);
+  if(sender.from!==batch.from_email||sender.replyTo!==batch.reply_to||sender.provider!==batch.delivery_provider)return json({error:'sender_changed'},409);
   if(!await env.DB.prepare(`SELECT user_id FROM user_followup_batch_recipients WHERE batch_id=?1 AND status='pending' LIMIT 1`).bind(id).first())return json({error:'no_eligible_recipients'},409);
   const basis=batch.basis==='support'?'User requested installation or product support':'User agreed to this product follow-up';
   const reason=basis+(batch.basis_note?': '+batch.basis_note:'');
@@ -109,19 +109,19 @@ export async function runFollowupBatches(env:FollowupEnv,options:{pause?:(ms:num
   await env.DB.prepare(`UPDATE user_followup_messages SET status='unknown',error_code='delivery_unconfirmed' WHERE status='sending' AND id IN (SELECT message_id FROM user_followup_batch_recipients WHERE status='processing')`).run();
   await env.DB.prepare(`UPDATE user_followup_batch_recipients SET status=CASE (SELECT status FROM user_followup_messages WHERE id=message_id) WHEN 'draft' THEN CASE WHEN EXISTS(SELECT 1 FROM user_followup_batches WHERE id=batch_id AND status='cancelled') THEN 'cancelled' ELSE 'pending' END WHEN 'sent' THEN 'sent' WHEN 'failed' THEN 'failed' ELSE 'unknown' END,error_code=CASE WHEN (SELECT status FROM user_followup_messages WHERE id=message_id) IN ('unknown','sending') THEN 'delivery_unconfirmed' ELSE error_code END,updated_at=?1 WHERE status='processing'`).bind(stamp()).run();
   for(let count=0;count<20&&Date.now()<deadline-5000;count++){
-   // Over the daily cap, recipients stay pending and a later run continues.
+   // Over any provider cap, recipients stay pending and a later run continues.
    if((await followupEmailBudget(env)).remaining<=0)break;
-   const item=await env.DB.prepare(`SELECT r.*,b.actor_id,b.from_email,b.reply_to FROM user_followup_batch_recipients r JOIN user_followup_batches b ON b.id=r.batch_id WHERE b.status='queued' AND r.status='pending' AND (r.next_attempt_at IS NULL OR r.next_attempt_at<=?1) ORDER BY b.queued_at,r.user_id LIMIT 1`).bind(stamp()).first<{batch_id:string;user_id:string;message_id:string;actor_id:string;from_email:string;reply_to:string;attempts:number}>();if(!item)break;
+   const item=await env.DB.prepare(`SELECT r.*,b.actor_id,b.from_email,b.reply_to,b.delivery_provider FROM user_followup_batch_recipients r JOIN user_followup_batches b ON b.id=r.batch_id WHERE b.status='queued' AND r.status='pending' AND (r.next_attempt_at IS NULL OR r.next_attempt_at<=?1) ORDER BY b.queued_at,r.user_id LIMIT 1`).bind(stamp()).first<{batch_id:string;user_id:string;message_id:string;actor_id:string;from_email:string;reply_to:string;delivery_provider:string;attempts:number}>();if(!item)break;
    const claimed=await env.DB.prepare(`UPDATE user_followup_batch_recipients SET status='processing',attempts=attempts+1,updated_at=?3 WHERE batch_id=?1 AND user_id=?2 AND status='pending' AND EXISTS(SELECT 1 FROM user_followup_batches WHERE id=?1 AND status='queued') RETURNING user_id`).bind(item.batch_id,item.user_id,stamp()).first();if(!claimed)continue;
    const actor=await env.DB.prepare('SELECT role FROM users WHERE id=?1').bind(item.actor_id).first<{role:string}>();
    let status='skipped',error:string|null=null;
    if(actor?.role!=='admin')error='actor_no_longer_admin';
-   else if(sender.from!==item.from_email||sender.replyTo!==item.reply_to)error='sender_changed';
+   else if(sender.from!==item.from_email||sender.replyTo!==item.reply_to||sender.provider!==item.delivery_provider)error='sender_changed';
    else{
     const result=await dispatchFollowup(env,item.message_id,1,item.batch_id,Math.min(15000,Math.max(1000,deadline-Date.now()-1000)));
     const value=await result.json() as {status?:string;error?:string;errorCode?:string};
     status=value.status==='sent'?'sent':value.status==='unknown'||value.status==='sending'?'unknown':value.status==='failed'?'failed':'skipped';error=value.errorCode||value.error||null;
-    if(error==='daily_email_budget_reached')status='pending';
+    if(['daily_email_budget_reached','hourly_email_budget_reached','monthly_email_budget_reached'].includes(error||''))status='pending';
     else if(error==='provider_429'&&item.attempts<4){
      await env.DB.prepare(`UPDATE user_followup_messages SET status='draft',error_code=NULL WHERE id=?1 AND status='failed'`).bind(item.message_id).run();status='pending';
     }

@@ -1,28 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync,readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { handleEmailCodeRequest, handleEmailCodeVerify, emailLoginEnabled } from "../src/auth/email-auth.js";
 import { handleLoginPage } from "../src/auth/reviewer.js";
 
 const ORIGIN = "https://mcp.remotearc.app";
 const sqlite = new DatabaseSync(":memory:");
-sqlite.exec(`
-CREATE TABLE users (
-  id TEXT PRIMARY KEY,
-  google_sub TEXT NOT NULL UNIQUE,
-  email TEXT NOT NULL UNIQUE,
-  name TEXT,
-  avatar_url TEXT,
-  created_at TEXT NOT NULL
-);
-CREATE TABLE sessions (
-  token_hash TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-`);
-sqlite.exec(readFileSync(new URL("../migrations/0024_email_login.sql", import.meta.url), "utf8"));
+for(const name of readdirSync(new URL('../migrations/',import.meta.url)).filter(name=>name.endsWith('.sql')).sort())sqlite.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));
 
 function d1(sqliteDb: DatabaseSync) {
   return {
@@ -213,11 +197,17 @@ try {
   }), env)).status, 200);
   assert.equal(sqlite.prepare("SELECT id FROM users WHERE email = ?").get("locked@example.com"), undefined);
 
-  // A service failure invalidates the challenge; no unusable code remains.
-  globalThis.fetch = async () => new Response("provider temporarily unavailable", { status: 503 });
+  // A confirmed rejection invalidates the challenge; no unusable code remains.
+  globalThis.fetch = async () => new Response("provider rejected the request", { status: 401 });
   const failure = await handleEmailCodeRequest(formRequest("/auth/email/request", { email: "failed@example.com" }), env);
   assert.equal(failure.status, 503);
   assert.equal(sqlite.prepare("SELECT code_hash FROM email_login_challenges WHERE email = ?").get("failed@example.com"), undefined);
+
+  // A 5xx may follow acceptance. Keep the code valid and do not resend it.
+  globalThis.fetch=async()=>new Response('provider temporarily unavailable',{status:503});
+  const uncertain=await handleEmailCodeRequest(formRequest('/auth/email/request',{email:'uncertain@example.com'}),env);
+  assert.equal(uncertain.status,200);
+  assert(sqlite.prepare('SELECT code_hash FROM email_login_challenges WHERE email=?').get('uncertain@example.com'));
 
   // Reviewer-only demo identity must never become an email-login account.
   globalThis.fetch = async () => { throw new Error("not expected"); };

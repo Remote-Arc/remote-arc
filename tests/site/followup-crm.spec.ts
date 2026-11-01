@@ -12,6 +12,30 @@ async function compose(page:import('@playwright/test').Page,names=['Alex Chen','
  return dialog;
 }
 
+test('SendPulse limits show hourly and monthly capacity before queuing',async({page})=>{
+ await open(page);
+ await page.evaluate(()=>{
+  const fetch=window.fetch;
+  window.fetch=async(...args)=>{
+   const response=await fetch(...args),input=args[0];
+   const url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url,location.origin);
+   if(!url.pathname.startsWith('/api/admin/followups'))return response;
+   const value=await response.clone().json();
+   if(!value.emailBudget)return response;
+   value.emailBudget={provider:'sendpulse',limit:400,used:399,remaining:0,hourly:{limit:50,used:50,remaining:0},monthly:{limit:12000,used:11999,remaining:1,windowDays:31},otpUsage:{daily:80,hourly:20,monthly:1400}};
+   return Response.json(value,{status:response.status});
+  };
+ });
+ await page.getByRole('button',{name:/Refresh users|刷新用户/}).click();
+ await expect(page.locator('.followupBudget')).toContainText('SendPulse · 24h 399/400 · 1h 50/50 · 31d 11999/12000');
+ await expect(page.locator('.followupBudget')).toContainText(/Available now 0|当前可发 0/);
+ await expect(page.locator('.followupBudget')).toContainText('OTP 24h 80');
+ const dialog=await compose(page);await dialog.getByRole('button',{name:/Review recipients & emails|检查用户与邮件/}).click();
+ await expect(dialog.locator('.followupBudgetNote')).toContainText(/0 of these can go out now|当前还能发 0 封/);
+ await expect(dialog.getByRole('button',{name:/Confirm & send 2 emails|确认群发 2 封邮件/})).toBeEnabled();
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
 test('CRM tabs expose real counts and bulk status changes move users between views',async({page})=>{
  await open(page);await expect(page.getByRole('tab')).toHaveCount(6);
  await page.getByRole('tab',{name:/^(Waiting for reply|等待回复)/}).click();await expect(contacts(page)).toHaveCount(2);await expect(page.getByRole('button',{name:/Alex Chen/})).toHaveCount(0);

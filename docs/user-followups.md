@@ -39,15 +39,44 @@ Provider acceptance is shown as submitted, not delivered. Bounce/complaint recon
 
 Every email includes the reply mailbox and a recipient-specific unsubscribe link. GET shows a confirmation; POST stops future follow-ups. Admin cannot undo a recipient unsubscribe. Essential sign-in mail remains independent.
 
-## Daily email budget
+## Email providers and budgets
 
-Follow-ups and sign-in codes share one sending account (Resend's free plan allows 100 emails a day). Follow-ups stop at `FOLLOWUP_DAILY_EMAIL_LIMIT` (default 60) within a rolling 24 hours, counting sent and uncertain deliveries, so sign-in codes keep the rest. A single send over the cap returns `daily_email_budget_reached` and keeps the draft. In a bulk send, recipients over the cap stay pending and the background run continues them when the window allows. The page shows today's usage, and the bulk review says how many can go out today. On a paid sending plan, raise the variable instead of removing the cap.
+Login and registration OTP prefer `RESEND_API_KEY` and automatically use `SENDPULSE_API_KEY` when the primary account has no local capacity, rejects delivery or leaves delivery uncertain. OTP uses `EMAIL_FROM` on both providers. Set `FOLLOWUP_EMAIL_PROVIDER=sendpulse` to use SendPulse for follow-ups; follow-ups never fail over to another account. Omitted/blank follow-up provider selection keeps the existing Resend behavior. An unknown provider or a missing selected-provider key disables follow-up sending without claiming a draft.
+
+| Follow-up provider | Key | Default 1-hour limit | Default 24-hour limit | Default 31-day allocation |
+| --- | --- | --- | --- | --- |
+| `resend` | `RESEND_API_KEY` | 60 | 60 | 1,800 |
+| `sendpulse` | `SENDPULSE_API_KEY` | 50 | 400 | 12,000 |
+
+OTP has priority in a shared account pool. Follow-ups reserve at least 40 daily and 1,200 monthly slots for OTP on either provider, plus 10 hourly slots on SendPulse. These are reservation floors, not OTP ceilings: OTP can take every unused follow-up slot up to the account ceiling. As actual OTP usage exceeds a floor, follow-up capacity shrinks automatically. For example, 80 Resend OTPs leave at most 20 daily follow-ups; when that account fills, OTP can borrow unused SendPulse follow-up capacity. Already accepted emails cannot be preempted, and provider ceilings still apply. No paid plan upgrade or credit purchase happens automatically.
+
+The account defaults are Resend 100/day and 3,000/31 days, and SendPulse 50/hour, 400/day and 12,000/31 days. The SendPulse integration uses the [SMTP REST API](https://sendpulse.com/integrations/api/smtp), whose [free plan](https://sendpulse.com/pricing/smtp) has 12,000 emails/month and 50/hour; it does not use the separate 15,000-email marketing plan. The 400/day cap is Remote Arc's conservative default. `RESEND_DAILY_EMAIL_LIMIT`, `RESEND_MONTHLY_EMAIL_LIMIT`, `SENDPULSE_HOURLY_EMAIL_LIMIT`, `SENDPULSE_DAILY_EMAIL_LIMIT` and `SENDPULSE_MONTHLY_EMAIL_LIMIT` configure the shared ceilings for the actual accounts; zero disables that capacity.
+
+`FOLLOWUP_HOURLY_EMAIL_LIMIT`, `FOLLOWUP_DAILY_EMAIL_LIMIT` and `FOLLOWUP_MONTHLY_EMAIL_LIMIT` override the follow-up-only caps in the table (zero pauses follow-ups, not OTP). All windows roll; the monthly allocation uses a conservative 31 days across billing-month boundaries. Usage is counted separately per provider, including in-flight and uncertain deliveries, using delivery-attempt time rather than draft age. Atomic quota reservations cover concurrent OTP, individual follow-ups and bulk sends. Follow-up history remains counted, and the migration conservatively imports retained OTP challenge request counts. The OTP capacity ledger has no addresses or codes and is purged after 32 days.
+
+At a cap or when OTP needs the remaining capacity, a single follow-up returns `hourly_email_budget_reached`, `daily_email_budget_reached` or `monthly_email_budget_reached` and keeps its draft. Bulk recipients stay pending until capacity returns. Admin shows the selected provider, rolling follow-up and OTP usage, and current follow-up capacity. Accounting covers Remote Arc traffic and imported retained challenges, not an authoritative live balance for unrelated senders on the provider account. Set conservative ceilings if the accounts are used elsewhere; raise them only after checking the account plan.
 
 ## Deployment and sender configuration
 
-Deploy all normal migrations, including `0041_user_followups.sql`, `0049_followup_email_design.sql`, `0058_followup_draft_revisions.sql` and `0059_followup_batches.sql`. The new migration adds durable batches, recipient state, a dispatch lease and batch ownership on messages. Production promotion must run the existing encrypted-backup and migration preflight before deploying the Worker and UI.
+Deploy all normal migrations, including `0073_followup_delivery_providers.sql`, before the new Worker. It adds provider/attempt-time fields, indexes and an OTP capacity ledger; old rows and reviewed batches default to Resend. Production promotion must run the existing encrypted-backup and migration preflight before deploying the Worker and UI. Keep the follow-up provider set to Resend during rollout. Provision `SENDPULSE_API_KEY` only after both login and support senders are verified, since the key also enables automatic OTP overflow and failover. To roll back, pause follow-ups, restore the previous Worker and Resend selection, and retain the additive schema/history. The previous Worker does not enforce the new shared pool, so follow-up sending should remain paused until the new Worker is restored. Provider changes invalidate unsent reviewed batches, which must be prepared again. Before moving follow-ups from SendPulse back to Resend, review outstanding `sending` and `unknown` messages so nothing is delivered twice through different providers. Do not revoke the Resend key. Rotate or remove `SENDPULSE_API_KEY` once no provider uses it.
 
-Follow-ups reuse `RESEND_API_KEY` with a separate default sender, `Remote Arc <support@remotearc.app>`. Optional `FOLLOWUP_FROM` and `FOLLOWUP_REPLY_TO` override the follow-up sender and reply mailbox; blanks keep the defaults. Reply-To defaults to `support@remotearc.app`. `EMAIL_FROM` remains the login-mail setting. Missing/blank provider keys keep sending closed without claiming a draft. Verify the sender domain and configure the support mailbox through the existing provider/DNS process before live outreach.
+Both follow-up providers use `Remote Arc <support@remotearc.app>` by default. Optional `FOLLOWUP_FROM` and `FOLLOWUP_REPLY_TO` override the follow-up sender and reply mailbox; blanks keep the defaults. Reply-To defaults to `support@remotearc.app`. `EMAIL_FROM` remains the login-mail setting.
+
+To activate SendPulse:
+
+1. Activate the SendPulse SMTP service, which needs an approved application. Verify the exact `EMAIL_FROM` login sender and `FOLLOWUP_FROM` support sender in SendPulse SMTP, since publishing DNS alone does not verify a sender, and confirm the account is on the Free/paid plan, not the SMTP Test plan (which has lower limits). Configure its DKIM/SPF records without replacing the existing Resend sending DNS or inbound support-mailbox routing. Combine authorized senders into a single SPF record where applicable.
+2. Generate a static API key in **Settings > API > API keys**, as described in [SendPulse authorization](https://sendpulse.com/integrations/api#auth). Keep the existing `RESEND_API_KEY` and `EMAIL_AUTH_SECRET`. From `apps/relay`, on a local interactive terminal authenticated to the Cloudflare account that owns the Worker, store the key as a secret:
+
+   ```sh
+   pnpm exec wrangler whoami
+   pnpm exec wrangler secret put SENDPULSE_API_KEY
+   pnpm exec wrangler secret list
+   ```
+
+   Paste the key into Wrangler's prompt, never into a command argument, `echo`, history, GitHub, logs or chat. Check that `SENDPULSE_API_KEY` appears by name only.
+3. After the additive migration and Worker are deployed, explicitly select `FOLLOWUP_EMAIL_PROVIDER=sendpulse` for follow-ups. Check that Admin reports the expected provider, OTP usage and limits. Confirm operator-owned test deliveries, reply routing, unsubscribe, normal OTP and OTP overflow before customer outreach. Development checks mock both providers and do not prove delivery or DNS.
+
+The exact reviewed HTML is UTF-8/base64 encoded for SendPulse, with the same plain-text body, reply mailbox and in-body unsubscribe link. Resend retains its custom one-click unsubscribe headers and idempotency key. SendPulse's documented JSON endpoint does not specify custom message headers or an idempotency key, so those are not claimed for that provider. The persisted once-only claim and conservative unknown state prevent blind retries after ambiguous responses on either provider.
 
 The follow-up API is restricted to the Admin origin and real Admin sessions, with same-origin JSON checks on writes. Background dispatch verifies the confirming operator is still an Admin. Public previews use illustrative users and local simulation; no production OAuth, D1, email or customer system is connected.
 

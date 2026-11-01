@@ -11,10 +11,12 @@ import {
 import { authPage, escapeAuthHtml } from "./auth-page.js";
 import { renderOtpEmail } from "../platform/email-template.js";
 import { emailFormToken, validEmailFormToken } from "./email-form-csrf.js";
-import { emailSender } from '../platform/email-sender.js';
+import { otpEmailSenders,type EmailSenderEnv } from '../platform/email-sender.js';
+import type {EmailCapacityEnv} from '../platform/email-capacity.js';
+import {deliverOtpEmail} from '../platform/otp-email-delivery.js';
 import { isReviewerEmail, isReviewerUserId } from './reviewer-identity.js';
 
-type EmailEnv = {
+type EmailEnv = EmailSenderEnv & EmailCapacityEnv & {
   DB: D1Database;
   PUBLIC_ORIGIN: string;
   APP_ORIGIN?: string;
@@ -35,7 +37,7 @@ const CODE_TTL_SECONDS = 600;
 const encoder = new TextEncoder();
 
 export function emailLoginEnabled(env: EmailEnv) {
-  return Boolean(emailSender(env) && env.EMAIL_AUTH_SECRET);
+  return Boolean(otpEmailSenders(env).length && env.EMAIL_AUTH_SECRET);
 }
 
 function formPage(email: string, returnTo: string, message = "", request?: Request) {
@@ -165,34 +167,20 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
   const businessFlow='email:'+await sha256Hex(email+'|'+now);
   await startBusinessFlow(env,{id:businessFlow,scene:'email_login',at:now,expiresAt:addSecondsIso(CODE_TTL_SECONDS)});
 
-  let sent = false;
+  let delivery='failed';
   try {
-    const sender = emailSender(env)!;
-    const emailMessage = renderOtpEmail(code);
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + sender.apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: sender.from,
-        to: [email],
-        ...emailMessage,
-      }),
-    });
-    sent = response.ok;
-    if (!sent) console.warn("email_delivery_failed", { status: response.status });
+    delivery=await deliverOtpEmail(env,email,renderOtpEmail(code));
+    if(delivery==='failed')console.warn('email_delivery_failed');
   } catch {
     console.warn("email_delivery_unreachable");
   }
-  if (!sent) {
+  if (delivery==='failed') {
     await failBusinessFlow(env,businessFlow,'delivery_failed');
     await env.DB.prepare("DELETE FROM email_login_challenges WHERE email = ?1 AND code_hash = ?2")
       .bind(email, hash).run();
     return new Response("Email service temporarily unavailable. Try again later.", { status: 503 });
   }
-  await advanceBusinessFlow(env,businessFlow,'email_login','delivered');
+  await advanceBusinessFlow(env,businessFlow,'email_login',delivery==='sent'?'delivered':'delivery_unconfirmed');
   return formPage(email, returnTo, "", request);
 }
 

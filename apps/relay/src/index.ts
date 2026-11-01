@@ -8,6 +8,7 @@ import { handleRunnerRequest } from "./browser/runner-attention.js";
 import { diagnosticError } from "./platform/diagnostics.js";
 import {handleFollowupUnsubscribe} from './followups/user-followups.js';
 import {runFollowupBatches} from './followups/followup-batches.js';
+import {purgeEmailCapacity} from './platform/email-capacity.js';
 import {handleSlackEvents} from './slack/slack-bot-events.js';
 import {handleSlackBotAccount} from './slack/slack-bot-install.js';
 import {runSlackJobs} from './slack/slack-bot-jobs.js';
@@ -150,6 +151,18 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   RESEND_API_KEY?: string;
   EMAIL_AUTH_SECRET?: string;
   EMAIL_FROM?: string;
+  FOLLOWUP_EMAIL_PROVIDER?: string;
+  SENDPULSE_API_KEY?: string;
+  FOLLOWUP_FROM?: string;
+  FOLLOWUP_REPLY_TO?: string;
+  FOLLOWUP_DAILY_EMAIL_LIMIT?: string;
+  FOLLOWUP_HOURLY_EMAIL_LIMIT?: string;
+  FOLLOWUP_MONTHLY_EMAIL_LIMIT?: string;
+  RESEND_DAILY_EMAIL_LIMIT?: string;
+  RESEND_MONTHLY_EMAIL_LIMIT?: string;
+  SENDPULSE_HOURLY_EMAIL_LIMIT?: string;
+  SENDPULSE_DAILY_EMAIL_LIMIT?: string;
+  SENDPULSE_MONTHLY_EMAIL_LIMIT?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
   FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
   AUDIT_ARCHIVE?: R2Bucket;
@@ -1130,6 +1143,7 @@ export default {
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(purgeProductEvents(env));
       ctx.waitUntil(purgeBusinessMetrics(env));
+      ctx.waitUntil(purgeEmailCapacity(env));
       ctx.waitUntil(runSyntheticMonitor(env));
       ctx.waitUntil(runApprovalMaintenance(env));
       ctx.waitUntil(ensureOperatorAllowance(env).catch((error) => console.error("operator_allowance_failed", { message: error instanceof Error ? error.message : String(error) })));

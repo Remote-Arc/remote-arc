@@ -15,7 +15,8 @@ export async function deliverEmail(sender:Sender,mail:Mail,timeoutMs:number){
   url='https://api.resend.com/emails';headers['Idempotency-Key']=mail.idempotencyKey;
   body={from:sender.from,to:[mail.to],...(sender.replyTo?{reply_to:sender.replyTo}:{}),subject:mail.subject,html:mail.html,text:mail.text,...(mail.unsubscribe?{headers:{'List-Unsubscribe':'<'+mail.unsubscribe+'>','List-Unsubscribe-Post':'List-Unsubscribe=One-Click'}}:{})};
  }
- const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(timeoutMs),redirect:'error'});
+ // Workerd supports manual/follow only. Never forward provider credentials on redirects.
+ const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(timeoutMs),redirect:'manual'});
  const result=await response.json().catch(()=>null) as {id?:unknown;result?:unknown}|null;
  const accepted=response.ok&&(sender.provider==='resend'||result?.result===true);
  if(accepted&&typeof result?.id==='string'&&result.id.trim())return {status:'sent',providerId:result.id,errorCode:null};

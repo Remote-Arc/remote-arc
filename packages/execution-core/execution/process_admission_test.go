@@ -36,7 +36,7 @@ func TestConfiguredActiveAdmissionAndHistoryPruning(t *testing.T) {
 		at := time.Now().Add(time.Duration(i) * time.Millisecond)
 		p.items[fmt.Sprintf("finished-%03d", i)] = &managed{done: done, ended: &at}
 	}
-	_, e := p.start("echo must-not-start", "", 0)
+	_, e := p.start("echo must-not-start", "", 0, "")
 	if e == nil || !strings.Contains(e.Error(), "Running: 2; limit: 2") {
 		t.Fatal("active admission not enforced", e)
 	}

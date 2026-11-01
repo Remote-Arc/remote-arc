@@ -181,9 +181,13 @@ try {
       "goal_workspace",
       "agent_execution_log",
       "list_agent_sessions",
+      // One-time secrets for start_process stdin_secret, in terminal mode.
+      "secret_prepare",
+      "secret_deliver",
     ]),
   );
   assert(hello.capabilities.includes("go_agent_v1"));
+  assert(hello.capabilities.includes("one_time_secret_v1"));
   assert(hello.capabilities.includes("device_pause_v1"));
   assert(hello.tools.includes("set_device_runtime"));
   // Advertised only where a Chromium-family browser is installed: all or none.
@@ -389,6 +393,30 @@ try {
   assert.equal(echoed.stdout.trim(), "compatible");
   assert.equal(echoed.stderr, "");
   assert.equal(echoed.timed_out, false);
+  // A one-time secret over the real connection: the device makes a key, the
+  // value is sealed as the Dashboard page seals it, and start_process gives it
+  // to the command on stdin while its output shows [secret].
+  {
+    const subtle = globalThis.crypto.subtle;
+    const handle = "sec_wirewirewirewirewirewire";
+    const prepared = await go("secret_prepare", { handle });
+    const device = await subtle.importKey("raw", Buffer.from(prepared.public_key, "base64url"), { name: "ECDH", namedCurve: "P-256" }, false, []);
+    const eph = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]) as CryptoKeyPair;
+    const ikm = await subtle.importKey("raw", await subtle.deriveBits({ name: "ECDH", public: device }, eph.privateKey, 256), "HKDF", false, ["deriveKey"]);
+    const key = await subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: new TextEncoder().encode("remote-arc one-time secret v1 " + handle) }, ikm, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+    const iv = globalThis.crypto.getRandomValues(new Uint8Array(12));
+    const sealed = await subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(handle) }, key, new TextEncoder().encode("wire-secret-7788"));
+    const b64 = (bytes: ArrayBuffer | Uint8Array) => Buffer.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)).toString("base64url");
+    assert.equal((await go("secret_deliver", { handle, epk: b64(await subtle.exportKey("raw", eph.publicKey)), iv: b64(iv), ciphertext: b64(sealed) })).delivered, true);
+    const secretRun = decode(await go("start_process", {
+      command: `"${process.execPath}" -e "process.stdin.on('data',d=>process.stdout.write('got '+d))"`,
+      stdin_secret: handle,
+      timeout_ms: 20000,
+    }));
+    assert.equal(secretRun.stdout, "got [secret]");
+    assert.equal(JSON.stringify(secretRun).includes("wire-secret"), false);
+    await assert.rejects(() => go("start_process", { command: "echo again", stdin_secret: handle }), /SECRET_NOT_FOUND/);
+  }
   const waitingProcess = decode(await go("start_process", {
     command: `"${process.execPath}" -e "setTimeout(()=>console.log('native-wait-ready'),350);setTimeout(()=>process.exit(0),1200)"`,
     background: true,

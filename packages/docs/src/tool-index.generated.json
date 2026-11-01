@@ -245,6 +245,14 @@
       ]
     },
     {
+      "name": "request_secret",
+      "title": "Ask the user for a secret without seeing it",
+      "group": "devices",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
       "name": "revoke_file_resource",
       "title": "Revoke a temporary file resource",
       "group": "files",

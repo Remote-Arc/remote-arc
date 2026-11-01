@@ -82,6 +82,7 @@ type managed struct {
 	code             *int
 	signal           any
 	out, err         cappedBuffer
+	secret           string // given on stdin; never shown in output
 	done             chan struct{}
 	killOnce         sync.Once
 }
@@ -139,7 +140,18 @@ func (p *Processes) cleanup() {
 		finished = finished[1:]
 	}
 }
-func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed, error) {
+
+// text is what the caller sees of a stream: the secret given on stdin, if
+// any, is replaced wherever the command printed it.
+func (m *managed) text(b *cappedBuffer) string {
+	s := b.Text()
+	if m.secret != "" {
+		s = strings.ReplaceAll(s, m.secret, "[secret]")
+	}
+	return s
+}
+
+func (p *Processes) start(command, cwd string, deadline time.Duration, secret string) (*managed, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
@@ -152,9 +164,12 @@ func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed
 	cmd := shellCommand(command)
 	cmd.Dir = cwd
 	cmd.WaitDelay = 3 * time.Second
-	m := &managed{id: randomID(), command: command, cwd: cwd, cmd: cmd, started: time.Now(), done: make(chan struct{})}
+	m := &managed{id: randomID(), command: command, cwd: cwd, cmd: cmd, started: time.Now(), secret: secret, done: make(chan struct{})}
 	cmd.Stdout = &m.out
 	cmd.Stderr = &m.err
+	if secret != "" {
+		cmd.Stdin = strings.NewReader(secret)
+	}
 	if e := cmd.Start(); e != nil {
 		return nil, e
 	}
@@ -197,10 +212,16 @@ func (p *Processes) start(command, cwd string, deadline time.Duration) (*managed
 	return m, nil
 }
 func (p *Processes) Background(command, cwd string, seconds int) (map[string]any, error) {
+	return p.BackgroundWithSecret(command, cwd, seconds, "")
+}
+
+// BackgroundWithSecret gives secret to the command on stdin and keeps it out
+// of everything the process reports.
+func (p *Processes) BackgroundWithSecret(command, cwd string, seconds int, secret string) (map[string]any, error) {
 	if seconds < 0 || seconds > 7*86400 {
 		return nil, errors.New("Invalid managed process duration.")
 	}
-	m, e := p.start(command, cwd, time.Duration(seconds)*time.Second)
+	m, e := p.start(command, cwd, time.Duration(seconds)*time.Second, secret)
 	if e != nil {
 		return nil, e
 	}
@@ -211,7 +232,13 @@ func (p *Processes) Background(command, cwd string, seconds int) (map[string]any
 	return map[string]any{"process_id": m.id, "pid": m.cmd.Process.Pid, "command": command, "cwd": dir, "status": "running", "started_at": m.started.UTC().Format("2006-01-02T15:04:05.000Z")}, nil
 }
 func (p *Processes) Run(ctx context.Context, command, cwd string, timeout int) (map[string]any, error) {
-	m, e := p.start(command, cwd, 0)
+	return p.RunWithSecret(ctx, command, cwd, timeout, "")
+}
+
+// RunWithSecret gives secret to the command on stdin and keeps it out of the
+// output it returns.
+func (p *Processes) RunWithSecret(ctx context.Context, command, cwd string, timeout int, secret string) (map[string]any, error) {
+	m, e := p.start(command, cwd, 0, secret)
 	if e != nil {
 		return nil, e
 	}
@@ -232,7 +259,7 @@ func (p *Processes) Run(ctx context.Context, command, cwd string, timeout int) (
 	p.mu.Lock()
 	delete(p.items, m.id)
 	p.mu.Unlock()
-	return map[string]any{"command": command, "cwd": s["cwd"], "exit_code": s["exit_code"], "signal": s["signal"], "stdout": m.out.Text(), "stderr": m.err.Text(), "duration_ms": s["duration_ms"], "timed_out": timedOut}, nil
+	return map[string]any{"command": command, "cwd": s["cwd"], "exit_code": s["exit_code"], "signal": s["signal"], "stdout": m.text(&m.out), "stderr": m.text(&m.err), "duration_ms": s["duration_ms"], "timed_out": timedOut}, nil
 }
 func (p *Processes) get(id string) (*managed, error) {
 	p.mu.Lock()
@@ -270,7 +297,8 @@ func (p *Processes) WaitStatus(ctx context.Context, id string, waitMS int, until
 	reason := "timeout"
 waitLoop:
 	for {
-		if untilText != "" && (strings.Contains(m.out.Text(), untilText) || strings.Contains(m.err.Text(), untilText)) {
+		// Matched against what the caller may see, so until_text cannot probe a secret.
+		if untilText != "" && (strings.Contains(m.text(&m.out), untilText) || strings.Contains(m.text(&m.err), untilText)) {
 			reason = "text"
 			break
 		}
@@ -308,8 +336,8 @@ func (p *Processes) Output(id string) (map[string]any, error) {
 		return nil, e
 	}
 	s := m.status()
-	s["stdout"] = m.out.Text()
-	s["stderr"] = m.err.Text()
+	s["stdout"] = m.text(&m.out)
+	s["stderr"] = m.text(&m.err)
 	s["truncated"] = m.out.Size() >= MaxCaptureBytes || m.err.Size() >= MaxCaptureBytes
 	return s, nil
 }

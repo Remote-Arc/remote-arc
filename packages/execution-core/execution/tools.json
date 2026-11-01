@@ -251,6 +251,11 @@
         "background": {
           "type": "boolean",
           "default": false
+        },
+        "stdin_secret": {
+          "type": "string",
+          "pattern": "^sec_[a-z2-7]{24}$",
+          "description": "A one-time secret handle from request_secret. The value the user entered is given to the command on standard input, once, and is shown as [secret] in its output."
         }
       },
       "required": [

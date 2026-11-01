@@ -1,6 +1,6 @@
 # Remote Arc Browser
 
-Chrome companion for Remote Arc (0.4.3). It lets an AI work in the user's own
+Chrome companion for Remote Arc (0.4.4). It lets an AI work in the user's own
 browser, on sites the user allowed, or on single tabs the user shares.
 
 ## Security model
@@ -32,6 +32,15 @@ browser, on sites the user allowed, or on single tabs the user shares.
 - A snapshot lists at most 250 controls: an open dialog first, then the page's
   own content, then site navigation, headers and footers. `omittedElements`
   says how many were left out.
+- **One-time secrets**: when the AI needs an API key or token, `request_secret`
+  sends the user to a Remote Arc page. The page encrypts the value to a P-256
+  key this extension made for that one request (HKDF-SHA-256, AES-256-GCM), so
+  the Relay forwards only ciphertext. The value waits in session storage
+  (memory, out of reach of web pages and content scripts), is bound to the
+  site named in the request, is filled once by `shared_tab_fill` or
+  `shared_tab_act` with `secret`, and expires after 10 minutes. The AI holds
+  only the handle. It is filled like any other value, so password, payment,
+  CAPTCHA, code and file fields stay blocked for it too.
 - Password, payment-card and file-picker fields are never filled. Public MCP
   connections require the user to complete sign-in, verification codes and
   CAPTCHAs in their browser, then resume the same task. Authentication automation

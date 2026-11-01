@@ -53,6 +53,7 @@ import { type Device, type ProductStatus, type User } from "./types/app-types.js
 import { CenteredCard, PublicLayout } from "./components/public-layout.js";
 import { DashboardAccess, OAuthConsent } from "./features/auth/auth-pages.js";
 import { PairDevice } from "./features/auth/pair-device.js";
+const SecretEntry = React.lazy(() => import("./features/secrets/secret-entry.js").then((module) => ({ default: module.SecretEntry })));
 import { ClientInstallPage, type InstallClientSlug } from "./features/install/client-install-page.js";
 import { ArcPage, ChatGptComputerAccessPage, ClaudeComputerAccessPage, ConnectPage, DemoPage, DocsPage, Landing, LegalPage, McpComputerAccessPage, McpPage, NotFoundPage, PricingPage, ResourcesRedirect, RoadmapPage, SecurityModelPage, UseCaseDetailPage, UseCasesPage } from "./features/marketing/marketing-pages.js";
 import { ReleasesPage } from "./features/marketing/releases-page.js";
@@ -144,6 +145,12 @@ function App() {
     if(user===undefined)return <CenteredCard title={tr('Secure checkout','安全支付')} body={tr('Checking your account.','正在核对账户。')}><WorkspaceLoading label={tr('Loading your account…','正在加载账户…')} variant="compact"/></CenteredCard>;
     if(!user)return <DashboardAccess/>;
     return <React.Suspense fallback={<CenteredCard title={tr('Secure checkout','安全支付')} body={tr('Preparing your offers.','正在准备可用套餐。')}><WorkspaceLoading label={tr('Loading your offers…','正在读取可用套餐…')} variant="cards"/></CenteredCard>}><ArcCheckout email={user.email}/></React.Suspense>;
+  }
+  const secretMatch = routePath.match(/^\/secret\/(sec_[a-z2-7]{24})$/);
+  if (secretMatch && isDashboardHost) {
+    if (user === undefined) return <CenteredCard title={tr("Loading request…", "正在读取请求…")} body={tr("Checking your account.", "正在核对账户。")} />;
+    if (!user) return <DashboardAccess />;
+    return <React.Suspense fallback={<CenteredCard title={tr("Loading request…", "正在读取请求…")} body="" />}><SecretEntry handle={secretMatch[1]!} /></React.Suspense>;
   }
   if (isAppHost && routePath === "/") {
     history.replaceState({}, "", "/overview");

@@ -232,6 +232,19 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")
     ).toUpperCase();
 
+    // One-time secret entry: a real device-like key, so the page encrypts as in production.
+    if (url.pathname.startsWith("/api/secret-requests/")) {
+      if (method === "POST") return json({ ok: true, status: "delivered" });
+      const pair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]) as CryptoKeyPair;
+      const raw = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
+      return json({
+        handle: url.pathname.split("/").pop(), purpose: "SendPulse API key, to save as the SENDPULSE_API_KEY secret of the remote-link-relay Worker",
+        site: null, device: { id: "preview-mac", name: "Personal Mac", platform: "darwin" }, requested_by: "ChatGPT",
+        public_key: btoa(String.fromCharCode(...raw)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""),
+        status: "pending", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 600000).toISOString(),
+      });
+    }
+
     if (url.pathname.startsWith("/api/runner/")) {
       const demo = new URL(location.href).searchParams.get("demo") === "runner" || location.pathname.startsWith("/dashboard/browser/");
       const sample = {id:"preview-runner-attention",device_id:"preview-mac",device_name:"Studio Mac",session_id:"sample-application",kind:"captcha",origin:"https://careers.example.com"};

@@ -13,7 +13,10 @@ const INTERACT_TOOLS = [
   "browser_open_tab",
   "browser_act",
 ];
-const TOOLS = [...READ_TOOLS, ...INTERACT_TOOLS];
+// The Relay calls these when the user enters a one-time secret; the AI only
+// ever holds the handle and spends it through a fill.
+const SECRET_TOOLS = ["secret_prepare", "secret_deliver"];
+const TOOLS = [...READ_TOOLS, ...INTERACT_TOOLS, ...SECRET_TOOLS];
 const VERSION = chrome.runtime.getManifest().version;
 
 let socket = null;
@@ -198,7 +201,7 @@ async function connectSocket() {
         agentVersion: "browser-" + VERSION,
       },
       tools: TOOLS,
-      capabilities: ["browser_tab_grant_v2", "browser_multi_tab_v1", "browser_interact_v1", "browser_site_grants_v1", "browser_act_v1", "browser_auth_policy_v1"],
+      capabilities: ["browser_tab_grant_v2", "browser_multi_tab_v1", "browser_interact_v1", "browser_site_grants_v1", "browser_act_v1", "browser_auth_policy_v1", "one_time_secret_v1"],
     }));
 
     clearInterval(heartbeat);
@@ -525,6 +528,101 @@ async function confirmSubmit(args) {
   });
 }
 
+// ---- One-time secrets --------------------------------------------------------
+
+// A value the user typed into Remote Arc for one fill. The browser encrypts it
+// to a key made here for that request (P-256, HKDF-SHA-256, AES-256-GCM), so
+// the Relay forwards only ciphertext. It lives in session storage (memory,
+// out of reach of web pages and content scripts), is bound to one site, is
+// filled once, and expires after 10 minutes.
+const SECRET_HANDLE = /^sec_[a-z2-7]{24}$/;
+const SECRET_LIFETIME_MS = 10 * 60 * 1000;
+const subtle = globalThis.crypto.subtle;
+const encoder = new TextEncoder();
+const fromB64 = (text) => {
+  const binary = atob(String(text).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+};
+const toB64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+let secretUpdates = Promise.resolve();
+function withSecrets(change) {
+  const next = secretUpdates.then(async () => {
+    const { raSecrets } = await chrome.storage.session.get("raSecrets");
+    const items = raSecrets || {};
+    const now = Date.now();
+    for (const [handle, item] of Object.entries(items)) if (!(item.expires > now)) delete items[handle];
+    // Saved even when the change fails: a key used in a failed delivery is
+    // gone, so the same request cannot be tried again.
+    try {
+      return await change(items, now);
+    } finally {
+      await chrome.storage.session.set({ raSecrets: items });
+    }
+  });
+  secretUpdates = next.catch(() => undefined);
+  return next;
+}
+
+async function secretKey(privateKey, publicKey, handle) {
+  const bits = await subtle.deriveBits({ name: "ECDH", public: publicKey }, privateKey, 256);
+  const ikm = await subtle.importKey("raw", bits, "HKDF", false, ["deriveKey"]);
+  return subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: encoder.encode("remote-arc one-time secret v1 " + handle) }, ikm, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+}
+
+async function prepareSecret(args) {
+  const handle = String(args.handle || "");
+  const site = originOf(String(args.site || ""));
+  if (!SECRET_HANDLE.test(handle) || !site) throw new Error("A one-time secret needs a handle and the site it is for.");
+  const pair = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const privateJwk = await subtle.exportKey("jwk", pair.privateKey);
+  const publicKey = toB64(await subtle.exportKey("raw", pair.publicKey));
+  await withSecrets((items, now) => {
+    if (items[handle]) throw new Error("SECRET_EXISTS: this handle was already prepared in this browser.");
+    items[handle] = { site, key: privateJwk, expires: now + SECRET_LIFETIME_MS };
+  });
+  return { handle, public_key: publicKey };
+}
+
+async function deliverSecret(args) {
+  const handle = String(args.handle || "");
+  return withSecrets(async (items, now) => {
+    const item = items[handle];
+    if (!item?.key) throw new Error("SECRET_NOT_FOUND: this request expired or was already used in this browser. Ask the user to start a new one.");
+    const jwk = item.key;
+    delete item.key;
+    try {
+      const privateKey = await subtle.importKey("jwk", jwk, { name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]);
+      const epk = await subtle.importKey("raw", fromB64(args.epk), { name: "ECDH", namedCurve: "P-256" }, false, []);
+      const key = await secretKey(privateKey, epk, handle);
+      const plain = await subtle.decrypt({ name: "AES-GCM", iv: fromB64(args.iv), additionalData: encoder.encode(handle) }, key, fromB64(args.ciphertext));
+      const value = new TextDecoder().decode(plain);
+      if (!value) throw new Error("empty");
+      Object.assign(item, { value, expires: now + SECRET_LIFETIME_MS });
+    } catch {
+      delete items[handle];
+      throw new Error("SECRET_UNREADABLE: the encrypted secret could not be opened in this browser. Ask the user to enter it again.");
+    }
+    return { handle, delivered: true };
+  });
+}
+
+// The value, for a fill on its own site. It is removed only once the fill
+// succeeds, so a stale ref can be fixed and retried.
+async function peekSecret(handle, url) {
+  return withSecrets((items) => {
+    const item = items[handle];
+    if (!item) throw new Error("SECRET_NOT_FOUND: no secret " + handle + " is waiting in this browser. It is used once and expires after 10 minutes; ask the user again with request_secret.");
+    if (item.value === undefined) throw new Error("SECRET_PENDING: the user has not entered " + handle + " yet.");
+    if (originOf(url || "") !== item.site) throw new Error("SECRET_WRONG_SITE: " + handle + " may be filled only on " + item.site + ". Open that site in this tab first.");
+    return item.value;
+  });
+}
+
+const spendSecret = (handle) => withSecrets((items) => {
+  delete items[handle];
+});
+
 // ---- shared_tab_act --------------------------------------------------------
 
 async function allowCodes() {
@@ -597,6 +695,13 @@ async function act(args) {
       const auth = args._auth || {};
       const contentArgs = { ...args, allow_codes: auth.otp === true && Array.isArray(auth.origins) && auth.origins.includes(originOf(tab.url || "")) && await allowCodes() };
       delete contentArgs._auth;
+      // A one-time secret is filled like any value, so password, payment,
+      // CAPTCHA, code and file fields stay blocked for it too.
+      if (args.secret !== undefined) {
+        if (action !== "fill" || args.value !== undefined) throw new Error("secret works only with action=fill, in place of value.");
+        contentArgs.value = await peekSecret(String(args.secret), tab.url);
+        delete contentArgs.secret;
+      }
       if (action === "click" || (action === "press" && ["Enter", "Space"].includes(args.key))) {
         const kind = await send(tabId, "ra_effect", { snapshot_id: args.snapshot_id, ref: args.ref, key: args.key });
         if (kind?.error) throw new Error(kind.error);
@@ -608,6 +713,7 @@ async function act(args) {
       } else {
         const response = await send(tabId, "ra_act", contentArgs);
         if (response?.error) throw new Error(response.error);
+        if (args.secret !== undefined) await spendSecret(String(args.secret));
         const quietLimit = action === "scroll" ? 600 : action === "press" ? 1200 : 400;
         navigated = await settle(tabId, watch, action === "press" ? 300 : 0, 60, quietLimit);
         result = response;
@@ -626,6 +732,8 @@ async function act(args) {
 async function executeTool(tool, args, policy = {}) {
   // Policy comes from the authenticated Relay envelope, never tool arguments.
   args = {...args, _auth: policy.browserAuth || {}};
+  if (tool === "secret_prepare") return prepareSecret(args);
+  if (tool === "secret_deliver") return deliverSecret(args);
   if (tool === "browser_list_tabs") return listSharedTabs();
   if (tool === "browser_open_tab") return openTab(args);
   if (tool === "browser_act") return act(args);

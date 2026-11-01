@@ -558,7 +558,7 @@ and message so production history can be traced back to its source commit.
 
 ## Remote MCP tools
 
-Hosted MCP registers 44 tools, available on every plan. Which ones a client sees still depends on deployment switches, OAuth scopes, the selected device's policy and its live capabilities. App operations are grouped behind the three Apps tools and are not counted separately. See the [complete tool inventory](./docs/connect-tool-inventory.md):
+Hosted MCP registers 45 tools, available on every plan. Which ones a client sees still depends on deployment switches, OAuth scopes, the selected device's policy and its live capabilities. App operations are grouped behind the three Apps tools and are not counted separately. See the [complete tool inventory](./docs/connect-tool-inventory.md):
 
 ```text
 Devices and Fleet  list_devices, device_tools, fleet_dispatch, fleet_sync_workspace
@@ -566,6 +566,7 @@ Files              list_directory, read_file, read_binary_file, get_file_info, w
                    edit_block, undo_last_change, create_file_resource, revoke_file_resource
 Processes          list_processes, start_process, process_status, process_output,
                    stop_process, list_agent_sessions
+Secrets            request_secret
 Tasks              create_automation, list_automations, get_automation, manage_automation
 Agent Goals        create_agent_goal, get_goal_context, submit_goal_decision (experimental)
 Task browser       browser_runner_start, browser_runner_snapshot, browser_runner_act,

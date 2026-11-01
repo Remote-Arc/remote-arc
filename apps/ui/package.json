@@ -37,7 +37,7 @@
   "devDependencies": {
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
-    "react-test-renderer": "19.3.0",
+    "react-test-renderer": "19.3.1",
     "tsx": "4.23.15"
   }
 }

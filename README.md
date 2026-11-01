@@ -1,8 +1,8 @@
 # Latest measured coverage
 
-Source: [4a849c7](https://github.com/Remote-Arc/remote-arc/commit/4a849c795078c6e051de297469bfa2f9a9659f01) · [CI run](https://github.com/Remote-Arc/remote-arc/actions/runs/41272405141) · 2026-11-01T04:27:07Z
+Source: [43478ff](https://github.com/Remote-Arc/remote-arc/commit/43478ff35325728c2534702654a0a73fa0203af7) · [CI run](https://github.com/Remote-Arc/remote-arc/actions/runs/41277351337) · 2026-11-01T05:48:41Z
 
-**Combined statement coverage: 65.22% (38703/59341). Target: ≥90%.**
+**Combined statement coverage: 65.22% (38703/59343). Target: ≥90%.**
 
 Production TypeScript/TSX and Linux Go module statements; Apps/Relay are overlapping breakouts.
 

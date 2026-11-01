@@ -154,6 +154,7 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   EMAIL_FROM?: string;
   FOLLOWUP_EMAIL_PROVIDER?: string;
   SENDPULSE_API_KEY?: string;
+  SENDPULSE_OTP_ENABLED?: string;
   FOLLOWUP_FROM?: string;
   FOLLOWUP_REPLY_TO?: string;
   FOLLOWUP_DAILY_EMAIL_LIMIT?: string;

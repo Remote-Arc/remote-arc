@@ -3,11 +3,16 @@ import {createWorkerFixture,MCP,ADMIN} from './worker-fixture.js';
 import {followupEmailBudget} from '../src/followups/followup-budget.js';
 import {dispatchFollowup} from '../src/followups/followup-delivery.js';
 import {emailAccountCapacity,purgeEmailCapacity} from '../src/platform/email-capacity.js';
+import {otpEmailSenders} from '../src/platform/email-sender.js';
 
 const fixture=createWorkerFixture(),{sql,env,call,addUser,sessionCookie}=fixture;
-Object.assign(env,{RESEND_API_KEY:'fixture-otp-resend',SENDPULSE_API_KEY:'fixture-otp-sendpulse',EMAIL_AUTH_SECRET:'fixture-auth-secret',ALLOW_SIGNUPS:'1',FOLLOWUP_EMAIL_PROVIDER:'resend'});
+Object.assign(env,{RESEND_API_KEY:'fixture-otp-resend',SENDPULSE_API_KEY:'fixture-otp-sendpulse',SENDPULSE_OTP_ENABLED:'1',EMAIL_AUTH_SECRET:'fixture-auth-secret',ALLOW_SIGNUPS:'1',FOLLOWUP_EMAIL_PROVIDER:'resend'});
 addUser('admin','admin');addUser('seed');const cookie=await sessionCookie('admin');
 const typed=()=>env as any;
+assert.deepEqual(otpEmailSenders({...typed(),SENDPULSE_OTP_ENABLED:undefined}).map(sender=>sender.provider),['resend'], 'SendPulse credentials alone never enable OTP fallback');
+assert.deepEqual(otpEmailSenders({...typed(),SENDPULSE_OTP_ENABLED:'0'}).map(sender=>sender.provider),['resend'], 'A disabled flag rejects fallback');
+assert.deepEqual(otpEmailSenders({...typed(),SENDPULSE_OTP_ENABLED:'true'}).map(sender=>sender.provider),['resend'], 'Only explicit 1 activates fallback');
+assert.deepEqual(otpEmailSenders(typed()).map(sender=>sender.provider),['resend','sendpulse'], 'Validated opt-in keeps the tested fallback');
 const form=(path:string,values:Record<string,string>)=>call(MCP+path,{method:'POST',headers:{origin:MCP,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams(values)});
 let nextEmail=0;
 const requestOtp=()=>form('/auth/email/request',{email:'capacity-'+nextEmail+++'@example.test'});

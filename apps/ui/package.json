@@ -15,7 +15,7 @@
     "test:arc-experience": "node scripts/arc-capabilities-test.mjs && node --experimental-strip-types scripts/marketing-playback-test.mjs && node --import tsx scripts/arc-positioning-test.mjs && node --import tsx scripts/home-panorama-test.mjs && node --import tsx scripts/apps-demo-contract-test.mjs && node --import tsx scripts/arc-use-cases-test.ts && node --import tsx scripts/skill-use-cases-test.ts",
     "test:onboarding-readability": "node scripts/onboarding-readability-test.mjs",
     "test:device-removal": "node scripts/device-removal-test.mjs",
-    "test:device-execution-log": "node scripts/device-execution-log-test.mjs",
+    "test:device-execution-log": "node scripts/device-execution-log-test.mjs && node scripts/browser-update-disclosure-test.mjs",
     "test:security": "node --import tsx scripts/device-tools-test.ts && node --import tsx scripts/secret-crypto-test.ts && node --import tsx scripts/security-response-test.mjs && node --experimental-strip-types scripts/security-grant-groups-test.mjs && node --import tsx scripts/admin-client-recovery-test.ts && node --import tsx scripts/product-pwa-test.ts && pnpm test:runner-video",
     "test:background-recovery": "node --experimental-strip-types scripts/background-recovery-test.mjs && node --experimental-strip-types scripts/agent-update-guide-test.ts",
     "test:oauth-consent": "node --import tsx scripts/oauth-consent-summary-test.ts",

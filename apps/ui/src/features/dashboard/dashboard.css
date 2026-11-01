@@ -25,6 +25,10 @@
 :root[data-theme] .appFrame .badge.updateAvailable { border-color:color-mix(in srgb,var(--dash-accent) 38%,transparent); color:var(--dash-accent); background:color-mix(in srgb,var(--dash-accent) 9%,transparent); }
 :root[data-theme] .appFrame .badge.updateAvailable i { background:var(--dash-accent); }
 :root[data-theme] .appFrame .deviceUpdateRow { border-color:color-mix(in srgb,var(--dash-accent) 24%,var(--dash-line)); }
+:root[data-theme] .appFrame .deviceExtensionUpdateToggle { display:inline-flex; align-items:center; gap:6px; min-height:32px; margin-left:10px; padding:5px 9px; border:1px solid color-mix(in srgb,var(--dash-accent) 36%,transparent); border-radius:7px; background:color-mix(in srgb,var(--dash-accent) 8%,transparent); color:var(--dash-accent); font:inherit; font-size:14px; font-weight:600; line-height:1.25; vertical-align:middle; cursor:pointer; }
+:root[data-theme] .appFrame .deviceExtensionUpdateCaret { display:inline-block; transition:transform .16s ease; }
+:root[data-theme] .appFrame .deviceExtensionUpdateToggle[aria-expanded="true"] .deviceExtensionUpdateCaret { transform:rotate(180deg); }
+:root[data-theme] .appFrame .deviceExtensionUpdate[hidden] { display:none; }
 :root[data-theme] .appFrame .deviceExtensionUpdate { display:grid; gap:6px; margin-top:16px; padding:14px 16px; border:1px solid color-mix(in srgb,var(--dash-accent) 24%,var(--dash-line)); border-radius:10px; font-size:14px; color:var(--dash-muted); }
 :root[data-theme] .appFrame .deviceExtensionUpdate strong { color:var(--dash-text); font-weight:600; }
 :root[data-theme] .appFrame .deviceExtensionUpdate ol { margin:4px 0 0; padding-left:20px; display:grid; gap:4px; }

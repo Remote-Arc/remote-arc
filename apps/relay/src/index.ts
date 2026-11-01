@@ -148,6 +148,8 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
   RESEND_API_KEY?: string;
+  SENDPULSE_API_KEY?: string;
+  FOLLOWUP_PROVIDER?: string;
   EMAIL_AUTH_SECRET?: string;
   EMAIL_FROM?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;

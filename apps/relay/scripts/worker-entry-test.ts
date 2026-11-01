@@ -254,11 +254,15 @@ try {
     return pending.length - start;
   };
   assert.equal(await dispatched("* * * * *"), 3, "Every minute: tasks, follow-up batches and Slack jobs");
-  assert.equal(await dispatched("*/5 * * * *"), 7, "Every five minutes: tasks plus maintenance");
+  sql.prepare("INSERT INTO email_otp_deliveries(id,provider,status,attempted_at) VALUES('expired-otp','resend','sent',?)").run(new Date(Date.now()-33*86400000).toISOString());
+  sql.prepare("INSERT INTO email_otp_deliveries(id,provider,status,attempted_at) VALUES('retained-otp','resend','sent',?)").run(new Date(Date.now()-30*86400000).toISOString());
+  assert.equal(await dispatched("*/5 * * * *"), 8, "Every five minutes: tasks plus maintenance, including OTP capacity retention");
   env.AUDIT_ARCHIVE_ENABLED = "1";
-  assert.equal(await dispatched("*/5 * * * *"), 8, "Audit archiving runs only when enabled");
+  assert.equal(await dispatched("*/5 * * * *"), 9, "Audit archiving runs only when enabled");
   assert.equal(await dispatched("0 3 * * *"), 0, "Unknown schedules dispatch nothing");
   await Promise.all(pending);
+  assert.equal(sql.prepare("SELECT id FROM email_otp_deliveries WHERE id='expired-otp'").get(),undefined);
+  assert(sql.prepare("SELECT id FROM email_otp_deliveries WHERE id='retained-otp'").get(),'Cron retains the current monthly capacity history');
   console.log("PASS: Worker entry host partition, redirects, rate limits, session/device/OAuth gates, MCP pause, crawl files, HTML shells, 500 handling and cron dispatch");
 } finally {
   sql.close();

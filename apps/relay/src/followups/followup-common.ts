@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import type {FollowupSenderEnv} from '../platform/email-sender.js';
-export type FollowupEnv=FollowupSenderEnv&{DB:D1Database;PUBLIC_ORIGIN:string;APP_ORIGIN?:string;MARKETING_ORIGIN?:string;FOLLOWUP_DAILY_EMAIL_LIMIT?:string};
+import type {EmailCapacityEnv} from '../platform/email-capacity.js';
+export type FollowupEnv=FollowupSenderEnv&EmailCapacityEnv&{PUBLIC_ORIGIN:string;APP_ORIGIN?:string;MARKETING_ORIGIN?:string;FOLLOWUP_DAILY_EMAIL_LIMIT?:string;FOLLOWUP_HOURLY_EMAIL_LIMIT?:string;FOLLOWUP_MONTHLY_EMAIL_LIMIT?:string};
 export const designSchema=z.object({layout:z.enum(['letter','spotlight','digest']),accent:z.string().regex(/^#[\da-f]{6}$/i),eyebrow:z.string().max(100),headline:z.string().max(200),intro:z.string().max(500),buttonLabel:z.string().max(80),highlights:z.array(z.object({title:z.string().max(100),body:z.string().max(600)}).strict()).max(3)}).strict();
 export const stamp=()=>new Date().toISOString();
 export type Contact={user_id:string;email:string;name:string|null;consent_at:string|null;suppressed_at:string|null;unsubscribe_token:string};

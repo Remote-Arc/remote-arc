@@ -4,6 +4,7 @@ import { WorkspaceLoading } from '../../components/workspace-loading.js';
 import { AppsManager } from "../apps/apps-manager.js";
 import { ArcWorkWorkspace } from "../arc/workspace/arc-workspace.js";
 import { ConnectTasks } from "../tasks/connect-tasks.js";
+import { ConnectTasksErrorBoundary } from "../tasks/connect-tasks-error-boundary.js";
 import { ProductIcon, type ProductIconName } from "../../components/product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
 import { type DashboardTab } from "../../lib/dashboard-workspaces.js";
@@ -113,7 +114,7 @@ export function Dashboard(props: DashboardProps) {
           /></React.Suspense>
         </div>}
 
-        {active === "automations" && <ConnectTasks devices={devices} onConnectAI={()=>navigateTab("connect")}/>}
+        {active === "automations" && <ConnectTasksErrorBoundary tr={tr}><ConnectTasks devices={devices} onConnectAI={()=>navigateTab("connect")}/></ConnectTasksErrorBoundary>}
 
         {['agent-goals','agent-routines','agent-activity'].includes(active) && <ArcWorkWorkspace view={active==='agent-routines'?'routines':active==='agent-activity'?'activity':'tasks'} tr={tr} onChat={openArcChat}/>}
 

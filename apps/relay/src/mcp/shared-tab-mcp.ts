@@ -42,7 +42,7 @@ export type SharedTabDeps = {
 };
 
 const secretHandle = z.string().regex(/^sec_[a-z2-7]{24}$/);
-const secretNote = "secret is a handle from request_secret: the value the user entered there is filled once, only on the site it was requested for, and you never see it. Pass value or secret, not both.";
+const secretNote = "secret is a handle from request_secret: the value the user entered there is filled once, only on the site it was requested for, and you never see it. Password, card, CAPTCHA, code and file fields stay blocked for it too. Pass value or secret, not both.";
 
 const scopeNote =
   " Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. Prefer it on sites where the user is signed in or that show human verification: it works in a normal tab of the user's own browser. Without the extension, browser_runner_* runs multi-step work in a separate Remote Arc window on a linked computer.";

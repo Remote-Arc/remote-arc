@@ -695,11 +695,11 @@ async function act(args) {
       const auth = args._auth || {};
       const contentArgs = { ...args, allow_codes: auth.otp === true && Array.isArray(auth.origins) && auth.origins.includes(originOf(tab.url || "")) && await allowCodes() };
       delete contentArgs._auth;
-      delete contentArgs.from_secret;
+      // A one-time secret is filled like any value, so password, payment,
+      // CAPTCHA, code and file fields stay blocked for it too.
       if (args.secret !== undefined) {
         if (action !== "fill" || args.value !== undefined) throw new Error("secret works only with action=fill, in place of value.");
         contentArgs.value = await peekSecret(String(args.secret), tab.url);
-        contentArgs.from_secret = true;
         delete contentArgs.secret;
       }
       if (action === "click" || (action === "press" && ["Enter", "Space"].includes(args.key))) {

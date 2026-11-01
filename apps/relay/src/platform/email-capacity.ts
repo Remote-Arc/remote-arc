@@ -14,19 +14,20 @@ export const emailWindows=(now=Date.now())=>({daySince:new Date(now-86400000).to
 // every remaining account slot, including the entire unused follow-up share.
 export const otpReserve=(provider:FollowupEmailProvider)=>({hourly:provider==='sendpulse'?10:0,daily:40,monthly:1200});
 export const followupUsageSql=(provider:string,since:string)=>`(SELECT COUNT(*) FROM user_followup_messages WHERE delivery_provider=${provider} AND status IN ('sending','sent','unknown') AND COALESCE(delivery_attempted_at,sent_at,created_at)>${since})`;
+export const supportUsageSql=(provider:string,since:string)=>`(SELECT COUNT(*) FROM support_messages WHERE ${provider}='sendpulse' AND direction='outbound' AND delivery_status IN ('sending','sent','unknown') AND created_at>${since})`;
 export const otpUsageSql=(provider:string,since:string)=>`(SELECT COALESCE(SUM(units),0) FROM email_otp_deliveries WHERE provider=${provider} AND status IN ('sending','sent','unknown') AND attempted_at>${since})`;
 
 export async function emailAccountCapacity(env:EmailCapacityEnv,provider:FollowupEmailProvider){
  const limits=providerEmailLimits(env,provider),windows=emailWindows(),reserve=otpReserve(provider);
- const row=await env.DB.prepare(`SELECT ${followupUsageSql('?1','?2')} daily,${followupUsageSql('?1','?3')} hourly,${followupUsageSql('?1','?4')} monthly,${otpUsageSql('?1','?2')} otp_daily,${otpUsageSql('?1','?3')} otp_hourly,${otpUsageSql('?1','?4')} otp_monthly`).bind(provider,windows.daySince,windows.hourSince,windows.monthSince).first<Record<string,number>>();
- const window=(name:'daily'|'hourly'|'monthly')=>{const followups=Number(row?.[name]||0),otp=Number(row?.['otp_'+name]||0),limit=limits[name];return {limit,followups,otp,remaining:Math.max(0,limit-followups-otp),followupRemaining:Math.max(0,limit-followups-Math.max(otp,Math.min(reserve[name],limit)))};};
+ const row=await env.DB.prepare(`SELECT ${followupUsageSql('?1','?2')} daily,${followupUsageSql('?1','?3')} hourly,${followupUsageSql('?1','?4')} monthly,${otpUsageSql('?1','?2')} otp_daily,${otpUsageSql('?1','?3')} otp_hourly,${otpUsageSql('?1','?4')} otp_monthly,${supportUsageSql('?1','?2')} support_daily,${supportUsageSql('?1','?3')} support_hourly,${supportUsageSql('?1','?4')} support_monthly`).bind(provider,windows.daySince,windows.hourSince,windows.monthSince).first<Record<string,number>>();
+ const window=(name:'daily'|'hourly'|'monthly')=>{const followups=Number(row?.[name]||0),otp=Number(row?.['otp_'+name]||0),support=Number(row?.['support_'+name]||0),limit=limits[name];return {limit,followups,otp,support,remaining:Math.max(0,limit-followups-support-otp),followupRemaining:Math.max(0,limit-followups-support-Math.max(otp,Math.min(reserve[name],limit)))};};
  return {daily:window('daily'),hourly:window('hourly'),monthly:window('monthly')};
 }
 
 /** Atomic account-wide reservation. OTP never checks the follow-up allocation. */
 export async function reserveOtpEmail(env:EmailCapacityEnv,provider:FollowupEmailProvider){
  const id=crypto.randomUUID(),now=new Date().toISOString(),windows=emailWindows(),limits=providerEmailLimits(env,provider);
- const used=(since:string)=>`${followupUsageSql('?1',since)}+${otpUsageSql('?1',since)}`;
+ const used=(since:string)=>`${followupUsageSql('?1',since)}+${supportUsageSql('?1',since)}+${otpUsageSql('?1',since)}`;
  const row=await env.DB.prepare(`INSERT INTO email_otp_deliveries(id,provider,status,attempted_at) SELECT ?2,?1,'sending',?3 WHERE ${used('?4')}<${limits.daily} AND ${used('?5')}<${limits.hourly} AND ${used('?6')}<${limits.monthly} RETURNING id`).bind(provider,id,now,windows.daySince,windows.hourSince,windows.monthSince).first();
  return row?id:null;
 }

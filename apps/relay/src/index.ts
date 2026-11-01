@@ -16,6 +16,7 @@ import {runSlackJobs} from './slack/slack-bot-jobs.js';
 import {ensureOperatorAllowance} from './billing/operator-allowance.js';
 import {publicFeedbackReward} from './billing/connect-rewards.js';
 import { handleAdminServiceRequest, publicAdminResponse } from "./admin/admin-service.js";
+import {handleInboundSupportEmail} from './admin/support-inbox.js';
 export { AdminApiService } from "./admin/admin-entrypoint.js";
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { handleApps } from "./apps/apps.js";
@@ -157,6 +158,7 @@ type Env = TaskEventEnv & AppEnv & ArcEnv & BillingEnv & {
   SENDPULSE_OTP_ENABLED?: string;
   FOLLOWUP_FROM?: string;
   FOLLOWUP_REPLY_TO?: string;
+  SUPPORT_FORWARD_TO?: string;
   FOLLOWUP_DAILY_EMAIL_LIMIT?: string;
   FOLLOWUP_HOURLY_EMAIL_LIMIT?: string;
   FOLLOWUP_MONTHLY_EMAIL_LIMIT?: string;
@@ -1071,6 +1073,9 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 }
 
 export default {
+  async email(message:ForwardableEmailMessage,env:Env):Promise<void>{
+    await handleInboundSupportEmail(message,env);
+  },
   async fetch(
     request: Request,
     env: Env,

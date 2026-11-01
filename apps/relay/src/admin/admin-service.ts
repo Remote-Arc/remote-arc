@@ -1,4 +1,5 @@
 import {handleAdminEvents} from './admin-events.js';
+import {handleAdminSupportInbox} from './support-inbox.js';
 import {handleBusinessAnalytics} from '../analytics/business-analytics.js';
 import {handleUserFollowups,type FollowupEnv} from '../followups/user-followups.js';
 import {runFollowupBatches} from '../followups/followup-batches.js';
@@ -25,6 +26,11 @@ const methods: Record<string, readonly string[]> = {
 };
 
 export function adminApiMethods(path: string): readonly string[] | null {
+  if(path==='/api/admin/support-inbox')return ['GET'];
+  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}$/.test(path))return ['GET'];
+  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/reply$/.test(path))return ['POST'];
+  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/status$/.test(path))return ['PATCH'];
+  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/reconcile$/.test(path))return ['PATCH'];
   if(path==='/api/admin/analytics')return ['GET'];
   if(path==='/api/admin/feedback-rewards')return ['GET'];
   if(path==='/api/admin/feedback-rewards/config'||/^\/api\/admin\/feedback-rewards\/claims\/[a-f0-9-]{36}\/(approve|reject)$/.test(path))return ['POST'];
@@ -76,6 +82,7 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
   if (!user) return failure("unauthorized", 401);
   if (!user.isAdmin) return failure("forbidden", 403);
 
+  if(url.pathname.startsWith('/api/admin/support-inbox'))return finish(await handleAdminSupportInbox(request,env,user.id));
   if(url.pathname.startsWith('/api/admin/followups')){
     const response=await handleUserFollowups(request,env);
     if(ctx&&response.ok&&request.method==='POST'&&/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}\/queue$/.test(url.pathname))ctx.waitUntil(runFollowupBatches(env));

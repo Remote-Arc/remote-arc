@@ -43,6 +43,8 @@ Every email includes the reply mailbox and a recipient-specific unsubscribe link
 
 Login and registration OTP prefer `RESEND_API_KEY` and use SendPulse for overflow **only when** `SENDPULSE_OTP_ENABLED=1` is explicitly configured and `SENDPULSE_API_KEY` is present. The flag defaults off: an API key alone is not proof of SMTP approval or sender verification. After activation, overflow applies when the primary account has no local capacity, rejects delivery or leaves delivery uncertain. OTP uses `EMAIL_FROM` on both providers. Set `FOLLOWUP_EMAIL_PROVIDER=sendpulse` to use SendPulse for follow-ups; follow-ups never fail over to another account. Omitted/blank follow-up provider selection keeps the existing Resend behavior. An unknown provider or a missing selected-provider key disables follow-up sending without claiming a draft.
 
+The production Wrangler configuration explicitly selects `FOLLOWUP_EMAIL_PROVIDER=sendpulse`: reviewed user follow-ups spend SendPulse capacity first and wait at its limits instead of borrowing Resend's OTP allowance. `EMAIL_FROM`, the Resend key and the explicit OTP overflow opt-in are unchanged. Keep this selection in the deployment configuration; a dashboard-only change can be replaced by the next normal deployment. Before promotion, review pending batches prepared under Resend: the existing sender/provider guard requires preparing them again after the switch. This configuration does not queue new emails or bypass review.
+
 | Follow-up provider | Key | Default 1-hour limit | Default 24-hour limit | Default 31-day allocation |
 | --- | --- | --- | --- | --- |
 | `resend` | `RESEND_API_KEY` | 60 | 60 | 1,800 |

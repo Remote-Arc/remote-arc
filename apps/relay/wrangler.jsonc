@@ -96,6 +96,7 @@
     "ADMIN_ORIGIN": "https://admin.remotearc.app",
     "ADMIN_SERVICE_MODE": "legacy",
     "ALLOW_SIGNUPS": "1",
+    "FOLLOWUP_EMAIL_PROVIDER": "sendpulse",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
     "MCP_METRICS_SAMPLE_RATE": "0.1",
     "AUDIT_ARCHIVE_ENABLED": "0",

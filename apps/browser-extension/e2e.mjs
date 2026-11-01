@@ -149,7 +149,7 @@ const ref = (snap, role, name) => {
 
 // ---- the extension, as installed with one site already allowed --------------
 const ext = fs.mkdtempSync(path.join(os.tmpdir(), "ra-ext-"));
-for (const f of fs.readdirSync(here)) if (/\.(js|json|html|css)$/.test(f) && f !== "e2e.mjs" && f !== "test.mjs") fs.copyFileSync(path.join(here, f), path.join(ext, f));
+for (const f of fs.readdirSync(here)) if (/\.(js|json|html|css|png)$/.test(f) && f !== "e2e.mjs" && f !== "test.mjs") fs.copyFileSync(path.join(here, f), path.join(ext, f));
 const manifest = JSON.parse(fs.readFileSync(path.join(ext, "manifest.json"), "utf8"));
 // Stands in for the user having clicked Allow for 127.0.0.1 in Chrome's prompt.
 manifest.host_permissions.push("http://127.0.0.1/*");

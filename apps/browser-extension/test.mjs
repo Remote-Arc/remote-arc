@@ -254,6 +254,13 @@ assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storag
 // Sites are granted one at a time through Chrome's own prompt; nothing is
 // granted up front except the Remote Arc relay.
 assert.deepEqual(manifest.host_permissions, ["https://mcp.remotearc.app/*"]);
+// The Remote Arc logo, at every size Chrome and the Web Store use.
+for (const [size, file] of Object.entries({ ...manifest.icons, ...manifest.action.default_icon })) {
+  const png = fs.readFileSync(new URL("./" + file, import.meta.url));
+  assert.equal(png.readUInt32BE(16), Number(size), file + " width");
+  assert.equal(png.readUInt32BE(20), Number(size), file + " height");
+}
+assert.deepEqual(Object.keys(manifest.icons), ["16", "32", "48", "128"]);
 assert.deepEqual(manifest.optional_host_permissions.sort(), ["http://*/*", "https://*/*"]);
 assert.equal(manifest.permissions.includes("debugger") || manifest.permissions.includes("cookies") || manifest.permissions.includes("history"), false);
 assert.match(workerSource, /SUBMIT_EFFECT_REQUIRED/);

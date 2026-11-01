@@ -2,16 +2,16 @@
   "version": 1,
   "repository": "Remote-Arc/remote-arc",
   "source": {
-    "runId": 41277351337,
-    "sha": "43478ff35325728c2534702654a0a73fa0203af7",
-    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/41277351337",
-    "measuredAt": "2026-11-01T05:48:41Z"
+    "runId": 41278511995,
+    "sha": "df659c5b44c3207cc3ef7c078d9860dc5e4dd014",
+    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/41278511995",
+    "measuredAt": "2026-11-01T06:07:10Z"
   },
   "scope": "Production TypeScript/TSX and Linux Go module statements; Apps/Relay are overlapping breakouts.",
   "target": 90,
   "overall": {
-    "covered": 38703,
-    "total": 59343,
+    "covered": 38702,
+    "total": 59345,
     "pct": 65.22
   },
   "scopes": {
@@ -39,14 +39,14 @@
     },
     "typescript": {
       "statements": {
-        "covered": 29800,
-        "total": 49568,
+        "covered": 29802,
+        "total": 49570,
         "pct": 60.12
       },
       "branches": {
-        "covered": 12061,
-        "total": 14719,
-        "pct": 81.94
+        "covered": 12063,
+        "total": 14720,
+        "pct": 81.95
       },
       "functions": {
         "covered": 1188,
@@ -54,21 +54,21 @@
         "pct": 83.14
       },
       "lines": {
-        "covered": 29800,
-        "total": 49568,
+        "covered": 29802,
+        "total": 49570,
         "pct": 60.12
       }
     },
     "relay": {
       "statements": {
-        "covered": 24199,
-        "total": 26808,
+        "covered": 24201,
+        "total": 26810,
         "pct": 90.27
       },
       "branches": {
         "covered": 11096,
-        "total": 13279,
-        "pct": 83.56
+        "total": 13280,
+        "pct": 83.55
       },
       "functions": {
         "covered": 984,
@@ -76,16 +76,16 @@
         "pct": 96.66
       },
       "lines": {
-        "covered": 24199,
-        "total": 26808,
+        "covered": 24201,
+        "total": 26810,
         "pct": 90.27
       }
     },
     "agent": {
       "statements": {
-        "covered": 6780,
+        "covered": 6777,
         "total": 7502,
-        "pct": 90.38
+        "pct": 90.34
       }
     },
     "core": {

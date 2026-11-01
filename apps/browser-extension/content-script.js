@@ -282,13 +282,10 @@
     element.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  // fromSecret: the value is a one-time secret the user entered in Remote Arc
-  // for this site, so a password-type field (where API keys often go) may
-  // take it. Payment, CAPTCHA, code and file fields stay blocked.
-  function fillElement(snapshotId, ref, rawValue, allowCodes = false, fromSecret = false) {
+  function fillElement(snapshotId, ref, rawValue, allowCodes = false) {
     const element = resolveElement(snapshotId, ref);
     const secret = secretKind(element);
-    if (secret && !(secret === "code" && allowCodes) && !(secret === "password" && fromSecret)) {
+    if (secret && !(secret === "code" && allowCodes)) {
       throw new Error(secret === "code" ? "BROWSER_AUTH_REQUIRED: enter the verification code in your browser yourself, then resume the same task." : "Remote Arc blocks filling password, payment, CAPTCHA response token, and file fields.");
     }
     if (!fillable(element)) {
@@ -474,7 +471,7 @@
     const action = String(args.action || "");
     const allowCodes = args.allow_codes !== false;
     if (action === "fill") {
-      return fillElement(args.snapshot_id, args.ref, args.value, allowCodes, args.from_secret === true);
+      return fillElement(args.snapshot_id, args.ref, args.value, allowCodes);
     }
     if (action === "select") {
       const element = resolveElement(args.snapshot_id, args.ref);

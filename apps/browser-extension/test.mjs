@@ -196,29 +196,6 @@ const staleClick = await call("browser_click", {
 });
 assert.match(staleClick.error, /Snapshot is stale/);
 
-// A one-time secret the user entered for this site may go into a
-// password-type field, where sites often take API keys. Card fields stay
-// blocked, and without the extension's mark a password field stays blocked.
-{
-  const keyField = new HTMLInputElement({ type: "password", placeholder: "API token" });
-  const cardField = new HTMLInputElement({ autocomplete: "cc-number", placeholder: "Card" });
-  let listen = null;
-  const pageContext = vm.createContext({
-    ...Object.fromEntries(["console", "HTMLElement", "HTMLInputElement", "HTMLTextAreaElement", "HTMLSelectElement", "Event", "setTimeout", "clearTimeout", "Date", "Map", "Set", "Array", "String", "Number", "Boolean", "Object", "Error", "getComputedStyle", "getSelection", "location"].map((k) => [k, context[k]])),
-    chrome: { runtime: { onMessage: { addListener(fn) { listen = fn; } } } },
-    document: { body: { innerText: "Tokens" }, querySelectorAll: (selector) => selector === "h1,h2,h3" ? [] : [keyField, cardField] },
-  });
-  vm.runInContext(contentScript, pageContext);
-  const send = (tool, args) => new Promise((resolve) => listen({ source: "remote-arc-browser", tool, arguments: args }, {}, resolve));
-  const page = await send("browser_read_page", {});
-  assert.match((await send("ra_act", { action: "fill", snapshot_id: page.snapshotId, ref: "e1", value: "typed" })).error, /blocks filling password/);
-  const filled = await send("ra_act", { action: "fill", snapshot_id: page.snapshotId, ref: "e1", value: "cf-token-123", from_secret: true });
-  assert.equal(filled.ok, true);
-  assert.equal(keyField.value, "cf-token-123");
-  assert.equal(JSON.stringify(filled).includes("cf-token"), false, "the fill result does not echo the value");
-  assert.match((await send("ra_act", { action: "fill", snapshot_id: page.snapshotId, ref: "e2", value: "4242", from_secret: true })).error, /blocks filling/);
-}
-
 // A long site sidebar comes before the page's own controls in the document,
 // as on the Cloudflare dashboard. The snapshot lists an open dialog first,
 // then the page content, then navigation, and says what it left out.
@@ -484,15 +461,9 @@ assert.equal((await workerContext.windowShareTargets(7)).tabs, 1, "once shared, 
   const filled = await run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle });
   const act = sentToPage.find((m) => m.tool === "ra_act").arguments;
   assert.equal(act.value, "sk-cf-123456", "the page receives the value");
-  assert.equal(act.from_secret, true);
   assert.equal(act.secret, undefined);
   assert.equal(JSON.stringify(filled).includes("sk-cf"), false, "the result returned to the AI holds no value");
   await assert.rejects(run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle }), /SECRET_NOT_FOUND/, "a secret is filled once");
-
-  // Only the extension marks a value as a secret.
-  sentToPage.length = 0;
-  await run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", value: "typed", from_secret: true });
-  assert.equal(sentToPage.find((m) => m.tool === "ra_act").arguments.from_secret, undefined);
 
   // Tampered ciphertext is refused, and an unused secret expires.
   const other = "sec_bbbbbbbbbbbbbbbbbbbbbbbb";

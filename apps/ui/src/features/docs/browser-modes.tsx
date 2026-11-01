@@ -52,7 +52,7 @@ export function BrowserModes({ primary = false }: { primary?: boolean }) {
       ],
       limits: [
         tr("Must be installed. It is an unpacked beta that does not update itself; Dashboard Devices shows when a newer version is out.", "需要安装。目前是解压安装的 Beta，不会自动更新；有新版本时 Dashboard 的设备列表会提示。"),
-        tr("Never fills passwords, card numbers, CAPTCHA tokens or file pickers with a value your AI supplies, so it cannot upload files.", "不会用 AI 提供的值填写密码、卡号、人机验证令牌或文件选择框，所以不能上传文件。"),
+        tr("Never fills password, card-number, CAPTCHA or file-picker fields, not even with a one-time secret, so it cannot upload files.", "从不填写密码、卡号、人机验证和文件选择字段，一次性密钥也不行，所以不能上传文件。"),
         tr("Clicks and keys are page events; a few sites that accept only real input ignore them.", "点击和按键是网页事件，少数只接受真实输入的网站不会响应。"),
         tr("A page snapshot lists up to 250 controls: open dialogs and the page's own content come first, site navigation last.", "页面快照最多列出 250 个控件：先列弹窗和页面正文，最后才是网站导航。"),
         tr("A shared tab stops being shared when it moves to another site you have not allowed, and sharing ends when Chrome restarts.", "共享的标签页跳到你没有允许的其他网站时会停止共享；Chrome 重启后共享也会结束。"),

@@ -66,7 +66,7 @@ document.getElementById("post").onclick = async () => {
   }
   if (url.pathname === "/form2") return send(page("Apply 2", `<h1>Step 2</h1><p>Hello ${url.searchParams.get("name") || ""}</p>`));
   if (url.pathname === "/search") return send(page("Search", `<h1>Results for ${url.searchParams.get("q") || ""}</h1>`));
-  if (url.pathname === "/token") return send(page("API token", `<h1>New API token</h1><label>Token <input type="password" id="token" autocomplete="off"></label>`));
+  if (url.pathname === "/token") return send(page("API token", `<h1>New API token</h1><label>Token <input type="text" id="token" autocomplete="off"></label><label>Account password <input type="password" id="password"></label>`));
   if (url.pathname === "/dash") {
     const links = Array.from({ length: 300 }, (_, i) => `<li><a href="/dash?n=${i}">Section ${i}</a></li>`).join("");
     return send(page("Dashboard", `<nav><ul>${links}</ul></nav><main><h1>DNS records</h1><button>Edit SPF record</button><button>Edit DKIM record</button></main>`));
@@ -323,8 +323,8 @@ try {
   assert.equal((await ok("browser_list_tabs")).tabs.some((t) => t.tabId === sharedDash.tabId), false, "closing a shared tab ends its access");
 
   // A one-time secret: the Relay prepares a key in the browser, the user's
-  // page encrypts to it, and a fill spends it once on its own site, here a
-  // password-type field.
+  // page encrypts to it, and a fill spends it once on its own site. Password
+  // fields stay blocked for it, and a refused fill leaves it for a retry.
   const subtle = globalThis.crypto.subtle;
   const handle = "sec_e2eaaaaaaaaaaaaaaaaaaaaa";
   const prepared = await ok("secret_prepare", { handle, site: BASE + "/token" });
@@ -338,6 +338,7 @@ try {
   await ok("secret_deliver", { handle, epk: b64(new Uint8Array(await subtle.exportKey("raw", eph.publicKey))), iv: b64(iv), ciphertext: b64(new Uint8Array(sealed)) });
   const tokenTab = await ok("browser_open_tab", { url: BASE + "/token" });
   const field = ref(tokenTab.snapshot, "textbox", "token");
+  await fails("browser_fill", { tab_id: tokenTab.tabId, snapshot_id: tokenTab.snapshot.snapshotId, ref: ref(tokenTab.snapshot, "textbox", "password"), secret: handle }, /blocks filling password/);
   const filledSecret = await ok("browser_fill", { tab_id: tokenTab.tabId, snapshot_id: tokenTab.snapshot.snapshotId, ref: field, secret: handle });
   assert.equal(JSON.stringify(filledSecret).includes("cf-e2e-token"), false, "the AI never sees the value");
   const tokenPage = context.pages().find((p) => p.url() === BASE + "/token");

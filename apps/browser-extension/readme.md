@@ -39,10 +39,9 @@ browser, on sites the user allowed, or on single tabs the user shares.
   (memory, out of reach of web pages and content scripts), is bound to the
   site named in the request, is filled once by `shared_tab_fill` or
   `shared_tab_act` with `secret`, and expires after 10 minutes. The AI holds
-  only the handle. Such a value may go into a password-type field, where sites
-  often take API keys; payment, CAPTCHA, code and file fields stay blocked.
-- Password, payment-card and file-picker fields are never filled with a value
-  the AI supplies. Public MCP
+  only the handle. It is filled like any other value, so password, payment,
+  CAPTCHA, code and file fields stay blocked for it too.
+- Password, payment-card and file-picker fields are never filled. Public MCP
   connections require the user to complete sign-in, verification codes and
   CAPTCHAs in their browser, then resume the same task. Authentication automation
   is disabled for all Relay calls, including internal calls and legacy approvals. See

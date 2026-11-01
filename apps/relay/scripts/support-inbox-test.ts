@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import {createWorkerFixture,ADMIN,MCP} from './worker-fixture.js';
 import {handleAdminServiceRequest} from '../src/admin/admin-service.js';
-import {handleInboundSupportEmail,ingestSupportMessage} from '../src/admin/support-inbox.js';
+import {handleInboundSupportEmail,ingestSupportMessage,renderSupportReplyHtml} from '../src/admin/support-inbox.js';
 const {sql,env,addUser,sessionCookie}=createWorkerFixture();
+const supportHtml=renderSupportReplyHtml('Hello <script>alert("oops")</script> & team');
+assert(supportHtml.includes('https://remotearc.app/remote-arc-192.png'),'Use the same public brand logo as OTP emails');
+assert(supportHtml.includes('&lt;script&gt;alert(&quot;oops&quot;)&lt;/script&gt; &amp; team'),'Escape untrusted operator text');
+assert(!supportHtml.includes('<script>'),'No executable HTML from user-written replies');
 addUser('support-operator','admin');
 addUser('ordinary-user');
 Object.assign(env,{APP_TOKEN_KEY:Buffer.alloc(32,4).toString('base64'),SENDPULSE_API_KEY:'fixture-sendpulse',FOLLOWUP_EMAIL_PROVIDER:'sendpulse',SUPPORT_FORWARD_TO:'verified-inbox@example.test'});

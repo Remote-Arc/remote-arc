@@ -18,6 +18,25 @@ export type SupportEnv={
   SENDPULSE_MONTHLY_EMAIL_LIMIT?:string;
 };
 const SUPPORT='support@remotearc.app';
+/** Compact, email-client-safe branding for personal support replies.
+ * This is an in-message logo, not a Gmail inbox sender avatar (BIMI).
+ * Keep the operator's exact message and escape untrusted HTML. */
+export function renderSupportReplyHtml(message:string):string{
+  const safe=message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="color-scheme" content="light"></head>
+<body style="margin:0;padding:22px 12px;background:#f6f8fa;color:#182b36;font:16px/1.65 Arial,Helvetica,sans-serif">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;border-collapse:separate;border-spacing:0">
+<tr><td style="padding:20px 24px;background:#0d1d29;border-radius:12px 12px 0 0">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td style="padding-right:13px" valign="middle"><img src="https://remotearc.app/remote-arc-192.png" alt="Remote Arc" width="40" height="40" style="width:40px;height:40px;display:block;border:0;border-radius:9px"></td>
+<td valign="middle" style="color:#fff;font-size:18px;font-weight:700">Remote Arc <span style="display:block;font-size:12px;color:#b4d2dd;font-weight:400">Support</span></td>
+</tr></table></td></tr>
+<tr><td style="padding:28px 24px;background:#fff;border:1px solid #dce5eb;border-top:0">
+<div style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;line-height:1.7;color:#182b36">${safe}</div>
+<div style="border-top:1px solid #e6ebef;margin-top:28px;padding-top:16px;font-size:12px;line-height:1.6;color:#5d6a72">Remote Arc Support<br><a href="https://remotearc.app" style="color:#0b658a;text-decoration:none">remotearc.app</a></div>
+</td></tr></table></body></html>`;
+}
 const emailPattern=/^[^\s@<>\r\n]+@[^\s@<>\r\n]+\.[^\s@<>\r\n]+$/;
 const safeAddress=(input:string)=>{const value=input.trim().toLowerCase();return value.length<=254&&emailPattern.test(value)?value:null;};
 const normalizeSubject=(input:string)=>input.replace(/[\r\n\0]/g,' ').replace(/\s+/g,' ').trim().slice(0,230)||'(no subject)';
@@ -168,7 +187,7 @@ export async function handleAdminSupportInbox(request:Request,env:SupportEnv,ope
   if(!claimed)return error('support_email_capacity_exhausted',429);
   let outcome:{status:string;providerId:string|null;errorCode:string|null};
   try{
-    const html='<div style="font:16px/1.6 Arial,sans-serif;white-space:pre-wrap">'+message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
+    const html=renderSupportReplyHtml(message);
     outcome=await deliverEmail(sender,{idempotencyKey:requestId,to,subject,html,text:message},12500);
   }catch{outcome={status:'unknown',providerId:null,errorCode:'delivery_uncertain'};}
   await env.DB.prepare("UPDATE support_messages SET delivery_status=?1,provider_id=?2,error_code=?3 WHERE id=?4")

@@ -17,7 +17,7 @@ function seedFollowups(count:number,provider='resend'){
 }
 const reset=()=>{sql.exec('DELETE FROM email_otp_deliveries; DELETE FROM user_followup_messages');};
 type Sent={provider:string;code:string;email:string;from:string};let sent:Sent[]=[];
-let rejectResend=false,uncertain:'timeout'|'malformed'|'server'|null=null;
+let rejectResend=false,rejectSendPulse=false,uncertain:'timeout'|'malformed'|'server'|null=null,uncertainProvider:string|null=null;
 const originalFetch=globalThis.fetch;
 globalThis.fetch=async(url,init)=>{
  assert.equal(init?.method,'POST');assert(init?.signal);
@@ -30,9 +30,11 @@ globalThis.fetch=async(url,init)=>{
  if(code){assert.match(text,/one-time Remote Arc code/);assert(!message.reply_to,'OTP never inherits the support reply mailbox');}
  sent.push({provider,code,email:provider==='resend'?message.to[0]:message.to[0].email,from});
  if(provider==='resend'&&rejectResend)return Response.json({error:'quota exceeded'},{status:429});
- if(uncertain==='timeout')throw Error('private-provider-error');
- if(uncertain==='malformed')return Response.json({accepted:true});
- if(uncertain==='server')return Response.json({error:'private-provider-error'},{status:503});
+ if(provider==='sendpulse'&&rejectSendPulse)return Response.json({result:false});
+ const mode=!uncertainProvider||uncertainProvider===provider?uncertain:null;
+ if(mode==='timeout')throw Error('private-provider-error');
+ if(mode==='malformed')return Response.json({accepted:true});
+ if(mode==='server')return Response.json({error:'private-provider-error'},{status:503});
  return provider==='resend'?Response.json({id:'resend-fixture'}):Response.json({result:true,id:'sendpulse-fixture'});
 };
 try{
@@ -56,14 +58,41 @@ try{
  assert.deepEqual(sql.prepare('SELECT provider,status FROM email_otp_deliveries ORDER BY rowid').all().map(row=>({...row})),[{provider:'resend',status:'failed'},{provider:'sendpulse',status:'sent'}]);
  rejectResend=false;
 
+ const ledger=()=>sql.prepare('SELECT provider,status FROM email_otp_deliveries ORDER BY rowid').all().map(row=>({...row}));
+ const verifySent=async(message:string)=>assert.equal((await form('/auth/email/verify',{email:sent[0].email,code:sent[0].code})).status,303,message);
+ // An outage on the first account must not strand sign-in. A duplicate repeats
+ // the same code, so it is safe to try the second account.
  for(const mode of ['timeout','malformed','server'] as const){
-  reset();sent=[];uncertain=mode;
-  assert.equal((await requestOtp()).status,200);assert.equal(sent.length,1,'Ambiguous delivery never tries another provider');
-  assert.equal(sql.prepare('SELECT status FROM email_otp_deliveries').get()?.status,'unknown');
-  assert.equal((await form('/auth/email/request',{email:sent[0].email})).status,200);assert.equal(sent.length,1,'Mailbox cooldown survives uncertainty');
-  assert.equal((await form('/auth/email/verify',{email:sent[0].email,code:sent[0].code})).status,303,'The possibly delivered code stays valid');
+  reset();sent=[];uncertain=mode;uncertainProvider='resend';
+  assert.equal((await requestOtp()).status,200);
+  assert.deepEqual(sent.map(item=>item.provider),['resend','sendpulse']);assert.equal(sent[0].code,sent[1].code,'Uncertain fallback keeps the same code');
+  assert.deepEqual(ledger(),[{provider:'resend',status:'unknown'},{provider:'sendpulse',status:'sent'}]);
+  await verifySent('The fallback code signs in');
  }
- uncertain=null;
+ // Neither account confirmed: the code may have arrived, so it stays valid.
+ for(const mode of ['timeout','malformed','server'] as const){
+  reset();sent=[];uncertain=mode;uncertainProvider=null;
+  assert.equal((await requestOtp()).status,200);assert.deepEqual(sent.map(item=>item.provider),['resend','sendpulse']);
+  assert.deepEqual(ledger(),[{provider:'resend',status:'unknown'},{provider:'sendpulse',status:'unknown'}]);
+  assert.equal((await form('/auth/email/request',{email:sent[0].email})).status,200);assert.equal(sent.length,2,'Mailbox cooldown survives uncertainty');
+  await verifySent('The possibly delivered code stays valid');
+ }
+ // A later rejection, a full account or a ledger outage cannot undo an earlier
+ // send that may have arrived.
+ uncertain='server';uncertainProvider='resend';
+ reset();sent=[];rejectSendPulse=true;
+ assert.equal((await requestOtp()).status,200);rejectSendPulse=false;
+ assert.deepEqual(ledger(),[{provider:'resend',status:'unknown'},{provider:'sendpulse',status:'failed'}]);
+ await verifySent('A second-account rejection keeps the first uncertain code');
+ reset();seedOtp('sendpulse',50);sent=[];
+ assert.equal((await requestOtp()).status,200);assert.deepEqual(sent.map(item=>item.provider),['resend']);
+ await verifySent('A full second account keeps the first uncertain code');
+ reset();sent=[];
+ sql.exec("CREATE TRIGGER otp_ledger_down BEFORE INSERT ON email_otp_deliveries WHEN NEW.provider='sendpulse' BEGIN SELECT RAISE(ABORT,'fixture ledger outage'); END");
+ assert.equal((await requestOtp()).status,200);sql.exec('DROP TRIGGER otp_ledger_down');
+ assert.deepEqual(sent.map(item=>item.provider),['resend']);
+ await verifySent('A second-account ledger outage keeps the first uncertain code');
+ uncertain=null;uncertainProvider=null;
  // Daily, hourly and monthly caps are real account caps, shared with follow-ups.
  reset();sent=[];seedOtp('resend',100);seedOtp('sendpulse',50);
  assert.equal((await requestOtp()).status,503);assert.equal(sent.length,0);
@@ -92,5 +121,5 @@ try{
  env.RESEND_API_KEY='fixture-otp-resend';
  seedOtp('resend',5,33*86400000);seedOtp('resend',7,30*86400000);await purgeEmailCapacity(typed());
  assert.equal(sql.prepare("SELECT SUM(units) n FROM email_otp_deliveries WHERE provider='resend'").get()?.n,7,'Cleanup keeps every row still needed for the monthly ceiling');
- console.log('PASS: OTP borrows follow-up allocations above reserve floors, automatically spills to SendPulse, finishes signup, uses one code after confirmed rejection, preserves uncertain challenges without duplicate sends, and enforces shared daily/monthly/hourly quotas under concurrent OTP and marketing requests. No real emails or paid capacity.');
+ console.log('PASS: OTP borrows follow-up allocations above reserve floors, automatically spills to SendPulse, finishes signup, uses one code across rejected and uncertain sends, keeps possibly delivered codes valid, and enforces shared daily/monthly/hourly quotas under concurrent OTP and marketing requests. No real emails or paid capacity.');
 }finally{await Promise.all(fixture.pending);globalThis.fetch=originalFetch;sql.close();}

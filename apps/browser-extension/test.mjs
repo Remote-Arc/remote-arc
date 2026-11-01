@@ -196,6 +196,29 @@ const staleClick = await call("browser_click", {
 });
 assert.match(staleClick.error, /Snapshot is stale/);
 
+// A one-time secret the user entered for this site may go into a
+// password-type field, where sites often take API keys. Card fields stay
+// blocked, and without the extension's mark a password field stays blocked.
+{
+  const keyField = new HTMLInputElement({ type: "password", placeholder: "API token" });
+  const cardField = new HTMLInputElement({ autocomplete: "cc-number", placeholder: "Card" });
+  let listen = null;
+  const pageContext = vm.createContext({
+    ...Object.fromEntries(["console", "HTMLElement", "HTMLInputElement", "HTMLTextAreaElement", "HTMLSelectElement", "Event", "setTimeout", "clearTimeout", "Date", "Map", "Set", "Array", "String", "Number", "Boolean", "Object", "Error", "getComputedStyle", "getSelection", "location"].map((k) => [k, context[k]])),
+    chrome: { runtime: { onMessage: { addListener(fn) { listen = fn; } } } },
+    document: { body: { innerText: "Tokens" }, querySelectorAll: (selector) => selector === "h1,h2,h3" ? [] : [keyField, cardField] },
+  });
+  vm.runInContext(contentScript, pageContext);
+  const send = (tool, args) => new Promise((resolve) => listen({ source: "remote-arc-browser", tool, arguments: args }, {}, resolve));
+  const page = await send("browser_read_page", {});
+  assert.match((await send("ra_act", { action: "fill", snapshot_id: page.snapshotId, ref: "e1", value: "typed" })).error, /blocks filling password/);
+  const filled = await send("ra_act", { action: "fill", snapshot_id: page.snapshotId, ref: "e1", value: "cf-token-123", from_secret: true });
+  assert.equal(filled.ok, true);
+  assert.equal(keyField.value, "cf-token-123");
+  assert.equal(JSON.stringify(filled).includes("cf-token"), false, "the fill result does not echo the value");
+  assert.match((await send("ra_act", { action: "fill", snapshot_id: page.snapshotId, ref: "e2", value: "4242", from_secret: true })).error, /blocks filling/);
+}
+
 // A long site sidebar comes before the page's own controls in the document,
 // as on the Cloudflare dashboard. The snapshot lists an open dialog first,
 // then the page content, then navigation, and says what it left out.
@@ -247,7 +270,7 @@ assert.match(workerSource, /const grants = new Map\(\)/);
 assert.doesNotMatch(workerSource, /MAX_SHARED_TABS|sharedTabsLimit|grantLimit/);
 
 const manifest = JSON.parse(fs.readFileSync(new URL("./manifest.json", import.meta.url), "utf8"));
-assert.equal(manifest.version, "0.4.3");
+assert.equal(manifest.version, "0.4.4");
 // tabs lets Share all tabs see which sites a window's tabs are on, so Chrome
 // can be asked for them in one prompt. The AI still sees only shared tabs.
 assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storage", "tabGroups", "tabs"].sort());
@@ -269,19 +292,22 @@ assert.match(workerSource, /SITE_NOT_ALLOWED/);
 // Exercise the worker against asynchronous Chrome-like storage. Calls may
 // overlap across different tabs, and storage reads return independent copies.
 const disk = {};
-const event = () => ({ listeners:[],addListener(listener){this.listeners.push(listener);} });
+const event = () => ({ listeners:[],addListener(listener){this.listeners.push(listener);},removeListener(listener){this.listeners=this.listeners.filter(l=>l!==listener);} });
+const sentToPage = [];
+let pageAnswer = null;
 const fakeTabs = new Map();
 const injected = new Set();
 const badges = new Map();
 const tabUpdated = event();
 const deniedPatterns = new Set();
+const sessionDisk = {};
 const workerContext = vm.createContext({
-  console, URL, setTimeout, clearTimeout, setInterval, clearInterval,
+  console, URL, setTimeout, clearTimeout, setInterval, clearInterval, crypto: globalThis.crypto, TextEncoder, TextDecoder, atob, btoa,
   chrome: {
     runtime: { id:"fixture",getManifest:()=>({version:"0.4.0"}),getURL:part=>"chrome-extension://fixture/"+part,onMessage:event(),onStartup:event(),onInstalled:event() },
     storage: {
       local: { async get(){await Promise.resolve();return structuredClone(disk);},async set(values){await Promise.resolve();Object.assign(disk,structuredClone(values));} },
-      session: {async get(){return{};},async set(){}},onChanged:event()
+      session: {async get(key){return key in sessionDisk?{[key]:structuredClone(sessionDisk[key])}:{};},async set(values){Object.assign(sessionDisk,structuredClone(values));}},onChanged:event()
     },
     permissions: {onAdded:event(),onRemoved:event(),async contains({origins}){return !deniedPatterns.has(origins?.[0]);}},
     action: {async setBadgeText({tabId,text}){badges.set(tabId,text);},async setBadgeBackgroundColor(){}},
@@ -292,7 +318,9 @@ const workerContext = vm.createContext({
       async query({windowId}){return [...fakeTabs.values()].filter(tab=>tab.windowId===windowId);},
       async sendMessage(tabId,message){
         if(!injected.has(tabId)) throw new Error("Could not establish connection.");
-        return message.tool==="ra_ping"?{ok:true}:{text:"page text"};
+        sentToPage.push(message);
+        if(message.tool==="ra_act" && pageAnswer) return pageAnswer(message);
+        return message.tool==="ra_ping"?{ok:true}:message.tool==="ra_act"?{ok:true,action:"fill",length:String(message.arguments.value??"").length}:{text:"page text"};
       }
     }
   }
@@ -416,4 +444,68 @@ fakeTabs.get(20).url = "https://dash.cloudflare.com/acct/dns/records";
 assert.equal((await workerContext.resolveSharedTab(20)).grant.url, "https://dash.cloudflare.com/acct/dns/records");
 assert.equal((await workerContext.windowShareTargets(7)).tabs, 1, "once shared, only the blocked tab is left");
 
-process.stdout.write("Remote Arc browser capability, concurrent submit, durable ledger, shared tab navigation, snapshot order and share-all tests passed\n");
+// One-time secrets: the Relay prepares a key here, the user's browser encrypts
+// to it, and a fill spends the value once, only on its own site.
+{
+  const subtle = globalThis.crypto.subtle;
+  const b64 = (bytes) => Buffer.from(bytes).toString("base64url");
+  const info = (h) => new TextEncoder().encode("remote-arc one-time secret v1 " + h);
+  const seal = async (publicKey, h, value) => {
+    const device = await subtle.importKey("raw", Buffer.from(publicKey, "base64url"), { name: "ECDH", namedCurve: "P-256" }, false, []);
+    const eph = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+    const bits = await subtle.deriveBits({ name: "ECDH", public: device }, eph.privateKey, 256);
+    const ikm = await subtle.importKey("raw", bits, "HKDF", false, ["deriveKey"]);
+    const key = await subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: info(h) }, ikm, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(h) }, key, new TextEncoder().encode(value));
+    return { epk: b64(await subtle.exportKey("raw", eph.publicKey)), iv: b64(iv), ciphertext: b64(new Uint8Array(ciphertext)) };
+  };
+  const run = (tool, args) => workerContext.executeTool(tool, args, {});
+  const handle = "sec_abcdefghijklmnopqrstuvwx";
+  await assert.rejects(run("secret_prepare", { handle }), /needs a handle and the site/);
+  const { public_key } = await run("secret_prepare", { handle, site: "https://dash.cloudflare.com/profile" });
+  await assert.rejects(run("secret_prepare", { handle, site: "https://dash.cloudflare.com" }), /SECRET_EXISTS/);
+  assert.equal(JSON.stringify(sessionDisk).includes("sk-cf"), false);
+  await run("secret_deliver", { handle, ...(await seal(public_key, handle, "sk-cf-123456")) });
+  await assert.rejects(run("secret_deliver", { handle, ...(await seal(public_key, handle, "again")) }), /SECRET_NOT_FOUND/, "a request is delivered once");
+
+  share(30, "https://dash.cloudflare.com/acct/workers", ["read", "interact"]);
+  share(31, "https://evil.example.net/login", ["read", "interact"]);
+  injected.add(30); injected.add(31);
+  await assert.rejects(run("browser_fill", { tab_id: 31, snapshot_id: "s", ref: "e1", secret: handle }), /SECRET_WRONG_SITE[^]*dash\.cloudflare\.com/);
+  await assert.rejects(run("browser_act", { tab_id: 30, action: "fill", snapshot_id: "s", ref: "e1", value: "x", secret: handle }), /in place of value/);
+  await assert.rejects(run("browser_act", { tab_id: 30, action: "click", snapshot_id: "s", ref: "e1", secret: handle }), /only with action=fill/);
+
+  // A fill the page refuses (a stale ref) keeps the value for a retry.
+  pageAnswer = () => ({ error: "Snapshot is stale" });
+  await assert.rejects(run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle }), /stale/);
+  pageAnswer = null;
+  sentToPage.length = 0;
+  const filled = await run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle });
+  const act = sentToPage.find((m) => m.tool === "ra_act").arguments;
+  assert.equal(act.value, "sk-cf-123456", "the page receives the value");
+  assert.equal(act.from_secret, true);
+  assert.equal(act.secret, undefined);
+  assert.equal(JSON.stringify(filled).includes("sk-cf"), false, "the result returned to the AI holds no value");
+  await assert.rejects(run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle }), /SECRET_NOT_FOUND/, "a secret is filled once");
+
+  // Only the extension marks a value as a secret.
+  sentToPage.length = 0;
+  await run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", value: "typed", from_secret: true });
+  assert.equal(sentToPage.find((m) => m.tool === "ra_act").arguments.from_secret, undefined);
+
+  // Tampered ciphertext is refused, and an unused secret expires.
+  const other = "sec_bbbbbbbbbbbbbbbbbbbbbbbb";
+  const prepared = await run("secret_prepare", { handle: other, site: "https://dash.cloudflare.com" });
+  const sealed = await seal(prepared.public_key, other, "value");
+  await assert.rejects(run("secret_deliver", { handle: other, ...sealed, ciphertext: sealed.ciphertext.slice(0, -2) + "AA" }), /SECRET_UNREADABLE/);
+  await assert.rejects(run("secret_deliver", { handle: other, ...sealed }), /SECRET_NOT_FOUND/, "a failed delivery cannot be retried with the same key");
+  const third = "sec_cccccccccccccccccccccccc";
+  const thirdKey = await run("secret_prepare", { handle: third, site: "https://dash.cloudflare.com" });
+  await run("secret_deliver", { handle: third, ...(await seal(thirdKey.public_key, third, "value")) });
+  sessionDisk.raSecrets[third].expires = Date.now() - 1;
+  await assert.rejects(run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: third }), /SECRET_NOT_FOUND/);
+  assert.equal(sessionDisk.raSecrets[third], undefined, "expired secrets are removed");
+}
+
+process.stdout.write("Remote Arc browser capability, concurrent submit, durable ledger, shared tab navigation, snapshot order, share-all and one-time secret tests passed\n");

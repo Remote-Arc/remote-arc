@@ -1,6 +1,6 @@
 # Connect 远程工具清单
 
-当前源代码注册 44 个远程 MCP 工具。Apps 的具体操作收拢在三个 Apps 工具中，不额外计入 44 个工具。
+当前源代码注册 45 个远程 MCP 工具。Apps 的具体操作收拢在三个 Apps 工具中，不额外计入 45 个工具。
 
 全部 Connect 工具能力向 Free 开放，每月仍为 10,000 次调用。Free 每月含 2 GB 二进制传输，`read_binary_file` 与临时文件链接的每次下载共用；付费套餐不限传输量。具体连接显示哪些工具还取决于部署开关、授权和设备能力。Arc 托管模型资格、Credits、第三方服务费用和所有现有额度保持原样。
 
@@ -37,6 +37,12 @@
 | `process_status` | 查询由 Remote Arc 管理的后台进程状态。 |
 | `start_process` | 执行终端命令，或启动可查询、可停止的后台进程；部署、迁移、云管理等技术任务优先使用 CLI/API。 |
 | `stop_process` | 停止指定受管进程及其子进程。 |
+
+## 密钥（1）
+
+| Tool | 用途 |
+| --- | --- |
+| `request_secret` | 通过 Remote Arc 页面向用户索取 API Key、Token 等密钥，不经过聊天。值在用户浏览器里加密到目标设备，AI 只拿到一次性句柄，用于 `start_process` 的 `stdin_secret`，或浏览器里指定网站上的 `shared_tab_fill` / `shared_tab_act` 填写；10 分钟内有效，只能用一次。 |
 
 ## 后台与定时任务（4）
 

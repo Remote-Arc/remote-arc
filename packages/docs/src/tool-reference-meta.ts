@@ -33,7 +33,7 @@ export function toolGroup(name: string): ToolGroup {
     return "goals";
   if (name.includes("automation")) return "tasks";
   if (
-    ["list_devices", "device_tools", "remote_arc_status"].includes(name) ||
+    ["list_devices", "device_tools", "remote_arc_status", "request_secret"].includes(name) ||
     name.startsWith("fleet_")
   )
     return "devices";
@@ -147,6 +147,10 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   list_processes: {
     zh: "查看操作系统当前进程列表。",
     summary: "Inspect the computer's operating-system process list.",
+  },
+  request_secret: {
+    zh: "通过 Remote Arc 页面向用户索取 API Key、Token 等密钥，不经过聊天；AI 只拿到一次性句柄，用于命令的标准输入或指定网站上的填写。",
+    summary: "Ask the user for an API key or token on a Remote Arc page instead of the chat; the AI gets a one-time handle for a command's stdin or a fill on one site.",
   },
   start_process: {
     zh: "执行终端命令，或启动可查询、可停止的后台进程；部署、迁移、云管理等技术任务优先使用 CLI/API。",

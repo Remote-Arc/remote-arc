@@ -122,7 +122,7 @@ export async function runFollowupBatches(env:FollowupEnv,options:{pause?:(ms:num
     const value=await result.json() as {status?:string;error?:string;errorCode?:string};
     status=value.status==='sent'?'sent':value.status==='unknown'||value.status==='sending'?'unknown':value.status==='failed'?'failed':'skipped';error=value.errorCode||value.error||null;
     if(error==='daily_email_budget_reached')status='pending';
-    else if(error==='provider_429'&&item.attempts<4){
+    else if(error==='provider_429'&&sender.provider==='resend'&&item.attempts<4){
      await env.DB.prepare(`UPDATE user_followup_messages SET status='draft',error_code=NULL WHERE id=?1 AND status='failed'`).bind(item.message_id).run();status='pending';
     }
    }

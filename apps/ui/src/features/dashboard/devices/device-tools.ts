@@ -27,3 +27,8 @@ export function toggledDeviceTools(
 /** browser_runner is on only when every tool is listed explicitly, as the Relay requires. */
 export const browserRunnerEnabled = (allowed: readonly string[] | null | undefined) =>
   BROWSER_RUNNER_TOOLS.every((tool) => (allowed || []).includes(tool));
+
+// Tools that follow another switch, so they get none of their own: tab opening
+// and actions follow Click & fill, and one-time secrets follow start_process
+// or Click & fill.
+export const INTERNAL_DEVICE_TOOLS: ReadonlySet<string> = new Set(["browser_open_tab", "browser_act", "secret_prepare", "secret_deliver"]);

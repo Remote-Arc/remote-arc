@@ -34,7 +34,15 @@ export type SharedTabDeps = {
   oauthToolMeta: (scope: Scope) => unknown;
   textResult: (value: unknown) => ToolResult;
   callDevice: (identity: OAuthIdentity, deviceId: string, tool: DeviceTool, args: Record<string, unknown>) => Promise<unknown>;
+  /** One-time secrets from request_secret: checked before a fill, marked used after it. */
+  secrets?: {
+    check: (identity: OAuthIdentity, deviceId: string, handle: string) => Promise<unknown>;
+    used: (handle: string) => Promise<void>;
+  };
 };
+
+const secretHandle = z.string().regex(/^sec_[a-z2-7]{24}$/);
+const secretNote = "secret is a handle from request_secret: the value the user entered there is filled once, only on the site it was requested for, and you never see it. Pass value or secret, not both.";
 
 const scopeNote =
   " Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. Prefer it on sites where the user is signed in or that show human verification: it works in a normal tab of the user's own browser. Without the extension, browser_runner_* runs multi-step work in a separate Remote Arc window on a linked computer.";
@@ -75,6 +83,10 @@ export function registerSharedTabTools(server: McpServer, deps: SharedTabDeps) {
     return { identity };
   };
   const tab = (tab_id: number | undefined) => (tab_id !== undefined ? { tab_id } : {});
+  const checkSecret = async (identity: OAuthIdentity, device: string, handle: string) => {
+    if (!deps.secrets) throw new Error("One-time secrets are not available here.");
+    await deps.secrets.check(identity, device, handle);
+  };
 
   registerMcpTool(server, "shared_tab_list", {
     title: "List the user's shared browser tabs",
@@ -168,7 +180,7 @@ export function registerSharedTabTools(server: McpServer, deps: SharedTabDeps) {
   registerMcpTool(server, "shared_tab_act", {
     title: "Act in a tab in the user's browser",
     description:
-      "Do one thing in a tab of the user's own browser, on a tab Remote Arc opened or one the user shared with Click & fill on. With snapshot_id + ref from the latest snapshot: click, fill (value; also rich text boxes), select (option value or label), check, uncheck, press (key: Enter, Tab, Escape, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, Space, PageDown, PageUp, Home, End, Backspace), scroll (ref, or value up|down|top|bottom). fill_form fills many fields from one snapshot: fields=[{ref, action: fill|select|check|uncheck, value}]; each reports ok or its own error. Without a ref: navigate (url on an allowed site), back, reload, wait (text and/or url_contains, timeout_ms up to 30000), close (only tabs Remote Arc opened). snapshot=true returns the page as the action left it. Each action waits for what it started (a page load, or the page to stop changing). Passwords, card numbers, CAPTCHA response tokens and file pickers are never filled. For login and registration challenges, ask the user to finish authentication in their browser. Do not retrieve or transmit OTP codes or other authentication secrets through model tools. OTP and CAPTCHA automation are disabled for public MCP calls even when enabled in Dashboard; use user takeover for authentication challenges. A click or Enter that sends something on the user's behalf (place order, pay, buy, post, comment, reply, send, submit, apply, delete, 提交, 支付, 购买, 下单, 发布, 评论...) is a final submit: confirm with the user first, then pass effect=submit and a stable idempotency_key. It is sent once (SUBMIT_KEY_USED for a used key), and the same form and button is refused under a new key (SUBMIT_ALREADY_RECORDED) until you settle it with action=confirm, idempotency_key and outcome=succeeded|failed after checking the page. Clicks and keys run as page events, so a few sites that only accept real input may ignore them; use browser_runner_* there." +
+      "Do one thing in a tab of the user's own browser, on a tab Remote Arc opened or one the user shared with Click & fill on. With snapshot_id + ref from the latest snapshot: click, fill (value; also rich text boxes), select (option value or label), check, uncheck, press (key: Enter, Tab, Escape, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, Space, PageDown, PageUp, Home, End, Backspace), scroll (ref, or value up|down|top|bottom). fill_form fills many fields from one snapshot: fields=[{ref, action: fill|select|check|uncheck, value}]; each reports ok or its own error. For fill, secret=<handle from request_secret> replaces value: the value the user entered is filled once, only on its site, and you never see it. Without a ref: navigate (url on an allowed site), back, reload, wait (text and/or url_contains, timeout_ms up to 30000), close (only tabs Remote Arc opened). snapshot=true returns the page as the action left it. Each action waits for what it started (a page load, or the page to stop changing). Passwords, card numbers, CAPTCHA response tokens and file pickers are never filled. For login and registration challenges, ask the user to finish authentication in their browser. Do not retrieve or transmit OTP codes or other authentication secrets through model tools. OTP and CAPTCHA automation are disabled for public MCP calls even when enabled in Dashboard; use user takeover for authentication challenges. A click or Enter that sends something on the user's behalf (place order, pay, buy, post, comment, reply, send, submit, apply, delete, 提交, 支付, 购买, 下单, 发布, 评论...) is a final submit: confirm with the user first, then pass effect=submit and a stable idempotency_key. It is sent once (SUBMIT_KEY_USED for a used key), and the same form and button is refused under a new key (SUBMIT_ALREADY_RECORDED) until you settle it with action=confirm, idempotency_key and outcome=succeeded|failed after checking the page. Clicks and keys run as page events, so a few sites that only accept real input may ignore them; use browser_runner_* there." +
       scopeNote,
     inputSchema: z.object({
       device_id: deviceId,
@@ -187,6 +199,7 @@ export function registerSharedTabTools(server: McpServer, deps: SharedTabDeps) {
       idempotency_key: z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/).optional(),
       outcome: z.enum(["succeeded", "failed"]).optional(),
       snapshot: z.boolean().optional(),
+      secret: secretHandle.optional(),
     }),
     annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
     _meta: deps.oauthToolMeta("browser:interact"),
@@ -195,8 +208,13 @@ export function registerSharedTabTools(server: McpServer, deps: SharedTabDeps) {
     if (!g.identity) return g.denied;
     const { device_id, ...args } = input as { device_id: string } & Record<string, unknown>;
     for (const key of Object.keys(args)) if (args[key] === undefined) delete args[key];
+    const secret = typeof args.secret === "string" ? args.secret : undefined;
+    if (secret && (args.action !== "fill" || args.value !== undefined)) throw new Error("secret works only with action=fill, in place of value.");
+    if (secret) await checkSecret(g.identity, device_id, secret);
     try {
-      return deps.textResult(await deps.callDevice(g.identity, device_id, "browser_act", args));
+      const result = await deps.callDevice(g.identity, device_id, "browser_act", args);
+      if (secret) await deps.secrets?.used(secret);
+      return deps.textResult(result);
     } catch (error) {
       throw extensionUpdateError("browser_act", error);
     }
@@ -205,21 +223,26 @@ export function registerSharedTabTools(server: McpServer, deps: SharedTabDeps) {
   registerMcpTool(server, "shared_tab_fill", {
     title: "Fill a field in a shared browser tab",
     description:
-      "Fill one field (ref) from the latest shared_tab_read snapshot with Click & fill enabled. Ask the user to enter OTP codes and other authentication secrets directly in their browser. Never pass passwords, OTP codes, payment-card details, CAPTCHA tokens or file-picker contents as model tool arguments." +
+      "Fill one field (ref) from the latest shared_tab_read snapshot with Click & fill enabled. Ask the user to enter OTP codes and other authentication secrets directly in their browser. Never pass passwords, OTP codes, payment-card details, CAPTCHA tokens or file-picker contents as model tool arguments. For an API key or token the user must give you, use request_secret and pass its handle as secret. " + secretNote +
       scopeNote,
     inputSchema: z.object({
       device_id: deviceId,
       tab_id: tabId,
       snapshot_id: z.string().min(1).max(120),
       ref: z.string().regex(/^e[1-9]\d*$/),
-      value: z.string().max(20000),
+      value: z.string().max(20000).optional(),
+      secret: secretHandle.optional(),
     }),
     annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: false },
     _meta: deps.oauthToolMeta("browser:interact"),
-  }, async ({ device_id, tab_id, snapshot_id, ref, value }: { device_id: string; tab_id?: number; snapshot_id: string; ref: string; value: string }) => {
+  }, async ({ device_id, tab_id, snapshot_id, ref, value, secret }: { device_id: string; tab_id?: number; snapshot_id: string; ref: string; value?: string; secret?: string }) => {
+    if ((value === undefined) === (secret === undefined)) throw new Error("Pass either value or secret (a handle from request_secret).");
     const g = await guard("browser:interact");
     if (!g.identity) return g.denied;
-    return deps.textResult(await deps.callDevice(g.identity, device_id, "browser_fill", { ...tab(tab_id), snapshot_id, ref, value }));
+    if (secret) await checkSecret(g.identity, device_id, secret);
+    const result = await deps.callDevice(g.identity, device_id, "browser_fill", { ...tab(tab_id), snapshot_id, ref, ...(secret ? { secret } : { value }) });
+    if (secret) await deps.secrets?.used(secret);
+    return deps.textResult(result);
   });
 }
 

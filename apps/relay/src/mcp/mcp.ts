@@ -35,6 +35,7 @@ import { registerMcpTool } from "./mcp-errors.js";
 import { CLAUDE_TOOL_DESCRIPTIONS } from "./mcp-claude-descriptions.js";
 import type { McpClientProfile } from "./mcp-client-profile.js";
 import { registerBrowserRunnerTools } from "./browser-runner-mcp.js";
+import { SECRET_HANDLE, assertSecretUsable, createSecretRequest, markSecretUsed } from "../devices/secret-requests.js";
 import { LEGACY_ALIAS_META_KEY, registerLegacySharedTabAliases, registerSharedTabTools } from "./shared-tab-mcp.js";
 import { binaryTransferLimit, requireFeatures } from "../billing/entitlements.js";
 import { assertBinaryAllowance, binaryBytesRead, meterBinaryBytes } from "../billing/plus-usage.js";
@@ -556,6 +557,10 @@ export function createRemoteLinkMcp(
       textResult,
       callDevice: (current: OAuthIdentity, device: string, tool: Parameters<typeof callDevice>[3], args: Record<string, unknown>) =>
         callPublicBrowserDevice(env, current, device, tool, args),
+      secrets: {
+        check: (current: OAuthIdentity, device: string, handle: string) => assertSecretUsable(env, current.userId, device, handle),
+        used: (handle: string) => markSecretUsed(env, handle),
+      },
     };
     registerSharedTabTools(server, sharedTabDeps);
     registerLegacySharedTabAliases(server, sharedTabDeps);
@@ -803,24 +808,54 @@ export function createRemoteLinkMcp(
           timeout_ms: z.number().int().positive().default(5000),
           cwd: z.string().optional(),
           background: z.boolean().default(false),
+          stdin_secret: z.string().regex(SECRET_HANDLE).optional().describe("A handle from request_secret. The value the user entered is given to the command on standard input, once, and shown as [secret] in its output. Use it for a command that reads a secret from stdin, such as wrangler secret put NAME."),
         }),
         annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
         _meta: oauthToolMeta("computer:write"),
       },
-      async ({ device_id, command, timeout_ms, cwd, background }) => {
+      async ({ device_id, command, timeout_ms, cwd, background, stdin_secret }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
           return authRequired(env, "computer:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
-        return textResult(
-          await callDevice(env, identity, device_id, "start_process", {
-            command,
-            timeout_ms,
-            ...(cwd ? { cwd } : {}),
-            background,
-          }),
-        );
+        if (stdin_secret) await assertSecretUsable(env, identity.userId, device_id, stdin_secret);
+        const result = await callDevice(env, identity, device_id, "start_process", {
+          command,
+          timeout_ms,
+          ...(cwd ? { cwd } : {}),
+          background,
+          ...(stdin_secret ? { stdin_secret } : {}),
+        });
+        if (stdin_secret) await markSecretUsed(env, stdin_secret);
+        return textResult(result);
+      },
+    );
+
+    registerMcpTool(server,
+      "request_secret",
+      {
+        title: "Ask the user for a secret without seeing it",
+        description:
+          "Ask the user for an API key, token or password that a task needs, without it passing through this chat. Never ask the user to paste a secret in chat. Returns a link for the user and a handle; you never see the value. On a computer, spend the handle with start_process stdin_secret, which gives the value to the command on standard input (for example wrangler secret put NAME, gh secret set NAME, or any CLI that reads a secret from stdin). In the user's browser (a device with platform browser), pass site, the https address of the page with the field, and spend it with shared_tab_fill or shared_tab_act action=fill and secret=<handle>; it is filled only on that site. The value is encrypted in the user's browser to a key made on the device for this request, so Remote Arc relays only ciphertext. It works once, on that device only, and expires 10 minutes after the user enters it.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          purpose: z.string().min(3).max(300).describe("What the value is and what it will do, shown to the user, for example: SendPulse API key, to save as the SENDPULSE_API_KEY secret of the remote-link-relay Worker."),
+          site: z.string().url().max(2000).optional().describe("Browser devices only: the https page the secret will be filled on."),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:write"),
+      },
+      async ({ device_id, purpose, site }) => {
+        const platform = (await env.DB.prepare("SELECT platform FROM devices WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL")
+          .bind(device_id, identity?.userId ?? "").first<{ platform: string }>())?.platform;
+        const scope = platform === "browser" ? "browser:interact" : "computer:write";
+        if (!identity || !hasScope(identity, scope)) {
+          return authRequired(env, scope, identity);
+        }
+        const usageError = await consume(env, identity);
+        if (usageError) return usageError;
+        return textResult(await createSecretRequest(env, identity, { deviceId: device_id, purpose, ...(site ? { site } : {}) }));
       },
     );
 

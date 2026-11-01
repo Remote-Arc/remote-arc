@@ -1981,6 +1981,43 @@
       ]
     },
     {
+      "name": "request_secret",
+      "title": "Ask the user for a secret without seeing it",
+      "description": "Ask the user for an API key, token or password that a task needs, without it passing through this chat. Never ask the user to paste a secret in chat. Returns a link for the user and a handle; you never see the value. On a computer, spend the handle with start_process stdin_secret, which gives the value to the command on standard input (for example wrangler secret put NAME, gh secret set NAME, or any CLI that reads a secret from stdin). In the user's browser (a device with platform browser), pass site, the https address of the page with the field, and spend it with shared_tab_fill or shared_tab_act action=fill and secret=<handle>; it is filled only on that site. The value is encrypted in the user's browser to a key made on the device for this request, so Remote Arc relays only ciphertext. It works once, on that device only, and expires 10 minutes after the user enters it.",
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "device_id": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300,
+            "description": "What the value is and what it will do, shown to the user, for example: SendPulse API key, to save as the SENDPULSE_API_KEY secret of the remote-link-relay Worker."
+          },
+          "site": {
+            "description": "Browser devices only: the https page the secret will be filled on.",
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          }
+        },
+        "required": [
+          "device_id",
+          "purpose"
+        ]
+      },
+      "scopes": [
+        "computer:write"
+      ],
+      "readOnly": false,
+      "group": "devices",
+      "summary": "Ask the user for an API key or token on a Remote Arc page instead of the chat; the AI gets a one-time handle for a command's stdin or a fill on one site.",
+      "zh": "通过 Remote Arc 页面向用户索取 API Key、Token 等密钥，不经过聊天；AI 只拿到一次性句柄，用于命令的标准输入或指定网站上的填写。"
+    },
+    {
       "name": "revoke_file_resource",
       "title": "Revoke a temporary file resource",
       "description": "Revoke a previously created temporary file resource before its 10-minute expiry.",
@@ -2124,7 +2161,7 @@
     {
       "name": "shared_tab_act",
       "title": "Act in a tab in the user's browser",
-      "description": "Do one thing in a tab of the user's own browser, on a tab Remote Arc opened or one the user shared with Click & fill on. With snapshot_id + ref from the latest snapshot: click, fill (value; also rich text boxes), select (option value or label), check, uncheck, press (key: Enter, Tab, Escape, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, Space, PageDown, PageUp, Home, End, Backspace), scroll (ref, or value up|down|top|bottom). fill_form fills many fields from one snapshot: fields=[{ref, action: fill|select|check|uncheck, value}]; each reports ok or its own error. Without a ref: navigate (url on an allowed site), back, reload, wait (text and/or url_contains, timeout_ms up to 30000), close (only tabs Remote Arc opened). snapshot=true returns the page as the action left it. Each action waits for what it started (a page load, or the page to stop changing). Passwords, card numbers, CAPTCHA response tokens and file pickers are never filled. For login and registration challenges, ask the user to finish authentication in their browser. Do not retrieve or transmit OTP codes or other authentication secrets through model tools. OTP and CAPTCHA automation are disabled for public MCP calls even when enabled in Dashboard; use user takeover for authentication challenges. A click or Enter that sends something on the user's behalf (place order, pay, buy, post, comment, reply, send, submit, apply, delete, 提交, 支付, 购买, 下单, 发布, 评论...) is a final submit: confirm with the user first, then pass effect=submit and a stable idempotency_key. It is sent once (SUBMIT_KEY_USED for a used key), and the same form and button is refused under a new key (SUBMIT_ALREADY_RECORDED) until you settle it with action=confirm, idempotency_key and outcome=succeeded|failed after checking the page. Clicks and keys run as page events, so a few sites that only accept real input may ignore them; use browser_runner_* there. Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. Prefer it on sites where the user is signed in or that show human verification: it works in a normal tab of the user's own browser. Without the extension, browser_runner_* runs multi-step work in a separate Remote Arc window on a linked computer.",
+      "description": "Do one thing in a tab of the user's own browser, on a tab Remote Arc opened or one the user shared with Click & fill on. With snapshot_id + ref from the latest snapshot: click, fill (value; also rich text boxes), select (option value or label), check, uncheck, press (key: Enter, Tab, Escape, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, Space, PageDown, PageUp, Home, End, Backspace), scroll (ref, or value up|down|top|bottom). fill_form fills many fields from one snapshot: fields=[{ref, action: fill|select|check|uncheck, value}]; each reports ok or its own error. For fill, secret=<handle from request_secret> replaces value: the value the user entered is filled once, only on its site, and you never see it. Without a ref: navigate (url on an allowed site), back, reload, wait (text and/or url_contains, timeout_ms up to 30000), close (only tabs Remote Arc opened). snapshot=true returns the page as the action left it. Each action waits for what it started (a page load, or the page to stop changing). Passwords, card numbers, CAPTCHA response tokens and file pickers are never filled. For login and registration challenges, ask the user to finish authentication in their browser. Do not retrieve or transmit OTP codes or other authentication secrets through model tools. OTP and CAPTCHA automation are disabled for public MCP calls even when enabled in Dashboard; use user takeover for authentication challenges. A click or Enter that sends something on the user's behalf (place order, pay, buy, post, comment, reply, send, submit, apply, delete, 提交, 支付, 购买, 下单, 发布, 评论...) is a final submit: confirm with the user first, then pass effect=submit and a stable idempotency_key. It is sent once (SUBMIT_KEY_USED for a used key), and the same form and button is refused under a new key (SUBMIT_ALREADY_RECORDED) until you settle it with action=confirm, idempotency_key and outcome=succeeded|failed after checking the page. Clicks and keys run as page events, so a few sites that only accept real input may ignore them; use browser_runner_* there. Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. Prefer it on sites where the user is signed in or that show human verification: it works in a normal tab of the user's own browser. Without the extension, browser_runner_* runs multi-step work in a separate Remote Arc window on a linked computer.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2258,6 +2295,10 @@
           },
           "snapshot": {
             "type": "boolean"
+          },
+          "secret": {
+            "type": "string",
+            "pattern": "^sec_[a-z2-7]{24}$"
           }
         },
         "required": [
@@ -2318,7 +2359,7 @@
     {
       "name": "shared_tab_fill",
       "title": "Fill a field in a shared browser tab",
-      "description": "Fill one field (ref) from the latest shared_tab_read snapshot with Click & fill enabled. Ask the user to enter OTP codes and other authentication secrets directly in their browser. Never pass passwords, OTP codes, payment-card details, CAPTCHA tokens or file-picker contents as model tool arguments. Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. Prefer it on sites where the user is signed in or that show human verification: it works in a normal tab of the user's own browser. Without the extension, browser_runner_* runs multi-step work in a separate Remote Arc window on a linked computer.",
+      "description": "Fill one field (ref) from the latest shared_tab_read snapshot with Click & fill enabled. Ask the user to enter OTP codes and other authentication secrets directly in their browser. Never pass passwords, OTP codes, payment-card details, CAPTCHA tokens or file-picker contents as model tool arguments. For an API key or token the user must give you, use request_secret and pass its handle as secret. secret is a handle from request_secret: the value the user entered there is filled once, only on the site it was requested for, and you never see it. Pass value or secret, not both. Works through the Remote Arc Browser extension in the user's own browser (a device with platform browser): on tabs the user shared, and on sites the user allowed, where shared_tab_open opens tabs. Prefer it on sites where the user is signed in or that show human verification: it works in a normal tab of the user's own browser. Without the extension, browser_runner_* runs multi-step work in a separate Remote Arc window on a linked computer.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2345,13 +2386,16 @@
           "value": {
             "type": "string",
             "maxLength": 20000
+          },
+          "secret": {
+            "type": "string",
+            "pattern": "^sec_[a-z2-7]{24}$"
           }
         },
         "required": [
           "device_id",
           "snapshot_id",
-          "ref",
-          "value"
+          "ref"
         ]
       },
       "scopes": [
@@ -2502,6 +2546,11 @@
           "background": {
             "default": false,
             "type": "boolean"
+          },
+          "stdin_secret": {
+            "description": "A handle from request_secret. The value the user entered is given to the command on standard input, once, and shown as [secret] in its output. Use it for a command that reads a secret from stdin, such as wrangler secret put NAME.",
+            "type": "string",
+            "pattern": "^sec_[a-z2-7]{24}$"
           }
         },
         "required": [
@@ -12720,6 +12769,11 @@
           "background": {
             "type": "boolean",
             "default": false
+          },
+          "stdin_secret": {
+            "type": "string",
+            "pattern": "^sec_[a-z2-7]{24}$",
+            "description": "A one-time secret handle from request_secret. The value the user entered is given to the command on standard input, once, and is shown as [secret] in its output."
           }
         },
         "required": [

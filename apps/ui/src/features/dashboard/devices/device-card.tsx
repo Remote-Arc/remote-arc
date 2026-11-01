@@ -1,4 +1,4 @@
-import { BROWSER_RUNNER_TOOLS, browserRunnerEnabled, isBrowserRunnerTool } from "./device-tools.js";
+import { BROWSER_RUNNER_TOOLS, INTERNAL_DEVICE_TOOLS, browserRunnerEnabled, isBrowserRunnerTool } from "./device-tools.js";
 import { DeviceCapacity } from "./device-fleet-overview.js";
 import { ProductIcon } from "../../../components/product-icon.js";
 import { isOlderRelease, goUpdateCommands } from "../../install/agent-update-guide.js";
@@ -17,7 +17,7 @@ export function deviceFacts(device: Device, m: DashboardModel) {
   const advertisedTools = device.available_tools || device.tools;
   const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
   // Extension 0.4.0 tab opening and actions follow its click & fill switch.
-  const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools])).filter((tool) => !isBrowserRunnerTool(tool) && tool !== "browser_open_tab" && tool !== "browser_act");
+  const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools])).filter((tool) => !isBrowserRunnerTool(tool) && !INTERNAL_DEVICE_TOOLS.has(tool));
   const runnerAdvertised = device.status !== "online" || BROWSER_RUNNER_TOOLS.every((tool) => advertisedTools.includes(tool));
   const runnerEnabled = browserRunnerEnabled(device.allowed_tools);
   const runnerVisible = device.platform !== "browser" && (runnerEnabled || BROWSER_RUNNER_TOOLS.some((tool) => advertisedTools.includes(tool)) || device.status === "online");

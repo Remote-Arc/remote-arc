@@ -66,6 +66,7 @@ document.getElementById("post").onclick = async () => {
   }
   if (url.pathname === "/form2") return send(page("Apply 2", `<h1>Step 2</h1><p>Hello ${url.searchParams.get("name") || ""}</p>`));
   if (url.pathname === "/search") return send(page("Search", `<h1>Results for ${url.searchParams.get("q") || ""}</h1>`));
+  if (url.pathname === "/token") return send(page("API token", `<h1>New API token</h1><label>Token <input type="password" id="token" autocomplete="off"></label>`));
   if (url.pathname === "/dash") {
     const links = Array.from({ length: 300 }, (_, i) => `<li><a href="/dash?n=${i}">Section ${i}</a></li>`).join("");
     return send(page("Dashboard", `<nav><ul>${links}</ul></nav><main><h1>DNS records</h1><button>Edit SPF record</button><button>Edit DKIM record</button></main>`));
@@ -172,7 +173,7 @@ try {
   }, [`ws://127.0.0.1:${relay.address().port}`]);
   for (let i = 0; i < 100 && !hello; i++) await new Promise((r) => setTimeout(r, 100));
   assert.ok(hello, "extension did not connect to the Relay");
-  assert.equal(hello.device.agentVersion, "browser-0.4.3");
+  assert.equal(hello.device.agentVersion, "browser-0.4.4");
   assert.ok(hello.tools.includes("browser_open_tab") && hello.tools.includes("browser_act"));
   assert.ok(hello.capabilities.includes("browser_act_v1"));
 
@@ -320,6 +321,29 @@ try {
   await userTab.close();
   for (let i = 0; i < 50 && (await ok("browser_list_tabs")).tabs.some((t) => t.tabId === sharedDash.tabId); i++) await new Promise((r) => setTimeout(r, 50));
   assert.equal((await ok("browser_list_tabs")).tabs.some((t) => t.tabId === sharedDash.tabId), false, "closing a shared tab ends its access");
+
+  // A one-time secret: the Relay prepares a key in the browser, the user's
+  // page encrypts to it, and a fill spends it once on its own site, here a
+  // password-type field.
+  const subtle = globalThis.crypto.subtle;
+  const handle = "sec_e2eaaaaaaaaaaaaaaaaaaaaa";
+  const prepared = await ok("secret_prepare", { handle, site: BASE + "/token" });
+  const device = await subtle.importKey("raw", Buffer.from(prepared.public_key, "base64url"), { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const eph = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const ikm = await subtle.importKey("raw", await subtle.deriveBits({ name: "ECDH", public: device }, eph.privateKey, 256), "HKDF", false, ["deriveKey"]);
+  const aes = await subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: new TextEncoder().encode("remote-arc one-time secret v1 " + handle) }, ikm, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const sealed = await subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(handle) }, aes, new TextEncoder().encode("cf-e2e-token-42"));
+  const b64 = (bytes) => Buffer.from(bytes).toString("base64url");
+  await ok("secret_deliver", { handle, epk: b64(new Uint8Array(await subtle.exportKey("raw", eph.publicKey))), iv: b64(iv), ciphertext: b64(new Uint8Array(sealed)) });
+  const tokenTab = await ok("browser_open_tab", { url: BASE + "/token" });
+  const field = ref(tokenTab.snapshot, "textbox", "token");
+  const filledSecret = await ok("browser_fill", { tab_id: tokenTab.tabId, snapshot_id: tokenTab.snapshot.snapshotId, ref: field, secret: handle });
+  assert.equal(JSON.stringify(filledSecret).includes("cf-e2e-token"), false, "the AI never sees the value");
+  const tokenPage = context.pages().find((p) => p.url() === BASE + "/token");
+  assert.equal(await tokenPage.locator("#token").inputValue(), "cf-e2e-token-42", "the page field holds the value");
+  await fails("browser_fill", { tab_id: tokenTab.tabId, snapshot_id: tokenTab.snapshot.snapshotId, ref: field, secret: handle }, /SECRET_NOT_FOUND/);
+  await ok("browser_act", { tab_id: tokenTab.tabId, action: "close" });
 
   // Only tabs Remote Arc opened can be closed by the AI.
   await ok("browser_act", { tab_id: tab, action: "close" });

@@ -3,6 +3,7 @@ package execution
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -21,6 +22,14 @@ func TestProcessHelper(t *testing.T) {
 		time.Sleep(20 * time.Second)
 	case "large":
 		fmt.Print(strings.Repeat("x", MaxCaptureBytes+8192))
+	case "stdin":
+		// Echoes what it was given, as a careless command might.
+		in, _ := io.ReadAll(os.Stdin)
+		fmt.Printf("got %s ok", in)
+		fmt.Fprintf(os.Stderr, "length %d %s", len(in), in)
+		if os.Getenv("REMOTEARC_TEST_STAY") == "1" {
+			time.Sleep(20 * time.Second)
+		}
 	case "fail":
 		fmt.Fprint(os.Stderr, "failure")
 		os.Exit(7)

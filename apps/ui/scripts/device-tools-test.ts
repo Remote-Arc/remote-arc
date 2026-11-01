@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { BROWSER_RUNNER_TOOLS, browserRunnerEnabled, toggledDeviceTools } from "../src/features/dashboard/devices/device-tools.js";
+import { BROWSER_RUNNER_TOOLS, INTERNAL_DEVICE_TOOLS, browserRunnerEnabled, toggledDeviceTools } from "../src/features/dashboard/devices/device-tools.js";
 
 const advertised = ["read_file", "write_file", ...BROWSER_RUNNER_TOOLS];
 
@@ -33,3 +33,7 @@ console.log("PASS: Browser Runner device switch");
   assert.equal(browserExtensionUpdate({ platform: "browser", agent_version: null }), null, "an unknown version is not guessed");
   assert.equal(browserExtensionUpdate({ platform: "darwin", agent_version: "0.3.0" }), null, "computers keep their own update notice");
 }
+
+// Internal tools follow another switch and never get a switch of their own.
+for (const tool of ["secret_prepare", "secret_deliver", "browser_open_tab", "browser_act"]) assert.ok(INTERNAL_DEVICE_TOOLS.has(tool), tool);
+assert.equal(INTERNAL_DEVICE_TOOLS.has("start_process"), false);

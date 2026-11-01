@@ -144,7 +144,10 @@ export async function callDevice(
     // Extension 0.4.0 actions are covered by the click & fill permission an
     // already-paired browser has; each site is still allowed in the browser.
     // New read-only tools reuse existing read grants for upgrade compatibility.
-    const permissionTool = tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool === "goal_workspace" ? "start_process" : tool === "list_agent_sessions" ? "read_file" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : tool;
+    // A one-time secret is only spent by start_process on a computer, or by
+    // a fill in the browser, so it needs that permission.
+    const secretTool = tool === "secret_prepare" || tool === "secret_deliver";
+    const permissionTool = tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool === "goal_workspace" ? "start_process" : tool === "list_agent_sessions" ? "read_file" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : secretTool ? (ownedDevice.platform === "browser" ? "browser_click" : "start_process") : tool;
     if (!allowedTools.includes(permissionTool)) {
       throw new Error('tool "' + tool + '" is disabled for this device');
     }

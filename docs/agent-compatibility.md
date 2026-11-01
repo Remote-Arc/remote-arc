@@ -37,11 +37,13 @@ capability.
 | `runner_view_v1` | 0.6.5 | Live view returns 409 with "Update Agent to enable live view" |
 | `browser_auth_policy_v1` | 0.6.5 | Filling sign-in fields is refused with `BROWSER_AUTH_UPDATE_REQUIRED` |
 | `runner_video_v1` | 0.6.5 | Live video is unavailable |
+| `one_time_secret_v1` | Unreleased (after 0.6.5) | `request_secret` fails with `SECRET_UNSUPPORTED` and asks the user to update the Agent; it also needs terminal mode |
 | `go_agent_v1` | 0.6.0 | Reported only; identifies the Go runtime |
 | `native_core_v1` | 0.3.9 | Reported only; identifies the native Execution Core |
 
 The Chrome Companion reports its own capabilities, such as
-`browser_auth_policy_v1`, and the same gate applies to it.
+`browser_auth_policy_v1` and `one_time_secret_v1` (extension 0.4.4), and the
+same gate applies to it.
 
 ## Tools
 

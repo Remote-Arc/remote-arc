@@ -23,7 +23,8 @@ function shortUrl(value) {
 }
 
 async function render() {
-  const state = await send("browser-state");
+  const win = await chrome.windows.getCurrent().catch(() => null);
+  const state = await send("browser-state", { windowId: win?.id });
 
   connection.innerHTML = state.connected
     ? `<div class="permission"><span>Remote Arc</span><span class="on">Connected</span></div>
@@ -150,9 +151,11 @@ async function render() {
     await render();
   });
 
+  const windowShare = state.windowShare;
   sharedTabs.innerHTML = `
     <div class="permission"><span>Shared tabs</span><span>${count}</span></div>
-    <p class="hint">Remote Arc does not impose a tab-count cap. Each tab is still shared explicitly.</p>
+    ${windowShare?.tabs ? `<button class="primary" id="share-window" ${state.connected ? "" : "disabled"}>Share all ${windowShare.tabs} tab${windowShare.tabs === 1 ? "" : "s"} in this window</button>
+    <p class="hint">Turns on read and Click & fill for every web page in this window, and keeps it while each tab stays on its site. Chrome asks once for the sites. They then appear under Allowed sites, where your AI can also open tabs, until you remove them.</p>` : ""}
     <div class="shared-list">
       ${grants.map((grant) => {
         const grantInteract = grant.permissions?.includes("interact");
@@ -168,6 +171,34 @@ async function render() {
     </div>
     ${count > 1 ? '<button class="secondary top-gap" id="revoke-all">Stop access on all shared tabs</button>' : ""}
   `;
+
+  document.querySelector("#share-window")?.addEventListener("click", () => {
+    const share = async () => {
+      const result = await send("share-window-tabs", { windowId: win?.id });
+      if (result?.error) {
+        status.textContent = result.error;
+        return;
+      }
+      status.textContent = "Shared " + result.shared + " tab" + (result.shared === 1 ? "" : "s") + " with read and Click & fill."
+        + (result.skipped?.length ? " Not allowed: " + result.skipped.map(shortUrl).join(", ") + "." : "");
+      await render();
+    };
+    const fail = (error) => {
+      status.textContent = error instanceof Error ? error.message : String(error);
+    };
+    if (!windowShare.sites.length) {
+      share().catch(fail);
+      return;
+    }
+    // Requested straight from the click, as Chrome requires.
+    chrome.permissions.request({ origins: windowShare.sites }).then((granted) => {
+      if (!granted) {
+        status.textContent = "Not allowed.";
+        return;
+      }
+      return share();
+    }).catch(fail);
+  });
 
   for (const button of sharedTabs.querySelectorAll("[data-revoke-tab]")) {
     button.addEventListener("click", async () => {

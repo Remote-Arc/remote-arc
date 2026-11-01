@@ -98,21 +98,32 @@ async function siteAllowed(origin) {
   }
 }
 
+// Chrome reports a grant of several sites while Share all tabs records the
+// same sites, so changes to the list run one at a time and none is lost.
+let siteUpdates = Promise.resolve();
+function updateSites(change) {
+  const next = siteUpdates.then(async () => {
+    const sites = await siteList();
+    if (change(sites) !== false) await storageSet({ raSites: sites });
+  });
+  siteUpdates = next.catch(() => undefined);
+  return next;
+}
+
 async function rememberSite(origin) {
   const key = siteKey(origin);
   if (!key) return;
-  const sites = await siteList();
-  if (!sites[key]) {
+  await updateSites((sites) => {
+    if (sites[key]) return false;
     sites[key] = { grantedAt: new Date().toISOString() };
-    await storageSet({ raSites: sites });
-  }
+  });
 }
 
 async function forgetSite(origin) {
   const key = siteKey(origin);
-  const sites = await siteList();
-  delete sites[key];
-  await storageSet({ raSites: sites });
+  await updateSites((sites) => {
+    delete sites[key];
+  });
   try {
     await chrome.permissions.remove({ origins: [patternOf(origin)] });
   } catch {
@@ -126,9 +137,9 @@ chrome.permissions.onAdded.addListener(async ({ origins }) => {
   for (const pattern of origins || []) await rememberSite(pattern.replace(/\/\*$/, "/"));
 });
 chrome.permissions.onRemoved.addListener(async ({ origins }) => {
-  const sites = await siteList();
-  for (const pattern of origins || []) delete sites[siteKey(pattern.replace(/\/\*$/, "/"))];
-  await storageSet({ raSites: sites });
+  await updateSites((sites) => {
+    for (const pattern of origins || []) delete sites[siteKey(pattern.replace(/\/\*$/, "/"))];
+  });
 });
 
 const prompted = new Map();
@@ -147,7 +158,7 @@ async function askForSite(origin) {
 
 // ---- Connection ----------------------------------------------------------
 
-async function currentState() {
+async function currentState(windowId) {
   await restored;
   const creds = await credentials();
   const tab = await activeTab();
@@ -163,6 +174,7 @@ async function currentState() {
     grants: Array.from(grants.values()),
     version: VERSION,
     allowCodes: await allowCodes(),
+    windowShare: windowId !== undefined ? await windowShareTargets(windowId) : null,
   };
 }
 
@@ -680,6 +692,61 @@ async function grantCurrentTab() {
   return grant;
 }
 
+// ---- Share all tabs in a window ---------------------------------------------
+
+// Web pages in a window that are not yet shared with Click & fill. Browser and
+// extension pages are never shared.
+async function windowTabs(windowId) {
+  const tabs = await chrome.tabs.query({ windowId: Number(windowId) });
+  return tabs.filter((tab) => tab.id !== undefined && originOf(tab.url || "") && grants.get(tab.id)?.mode !== "site");
+}
+
+// What the popup asks Chrome for, straight from the click: one prompt that
+// names every site still needed for this window's tabs.
+async function windowShareTargets(windowId) {
+  await restored;
+  const tabs = await windowTabs(windowId);
+  const sites = new Set();
+  for (const tab of tabs) {
+    const origin = originOf(tab.url);
+    if (!(await siteAllowed(origin))) sites.add(patternOf(origin));
+  }
+  return { tabs: tabs.length, sites: Array.from(sites) };
+}
+
+// After Chrome granted the sites, shares every web page in the window like a
+// tab on an allowed site: read and Click & fill, kept across its site. Tabs on
+// a site Chrome did not grant are left out and reported.
+async function shareWindowTabs(windowId) {
+  await restored;
+  let shared = 0;
+  const skipped = new Set();
+  for (const tab of await windowTabs(windowId)) {
+    const origin = originOf(tab.url);
+    const granted = await chrome.permissions.contains({ origins: [patternOf(origin)] }).catch(() => false);
+    if (granted) await rememberSite(origin);
+    if (!granted || !(await siteAllowed(origin))) {
+      skipped.add(origin);
+      continue;
+    }
+    const grant = {
+      ...grants.get(tab.id),
+      tabId: tab.id,
+      title: tab.title || "",
+      url: tab.url,
+      origin,
+      mode: "site",
+      grantedAt: new Date().toISOString(),
+      permissions: ["read", "interact"],
+    };
+    grants.set(tab.id, grant);
+    await showBadge(grant);
+    shared += 1;
+  }
+  await persistGrants();
+  return { ok: true, shared, skipped: Array.from(skipped) };
+}
+
 async function showBadge(grant) {
   await chrome.action.setBadgeText({ tabId: grant.tabId, text: grant.permissions?.includes("interact") ? "AI+" : "AI" }).catch(() => undefined);
   await chrome.action.setBadgeBackgroundColor({ tabId: grant.tabId, color: "#76b900" }).catch(() => undefined);
@@ -782,9 +849,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const fromExtensionPage = !sender?.tab || String(sender?.url || "").startsWith(chrome.runtime.getURL(""));
   if (sender?.id !== chrome.runtime.id || !fromExtensionPage) return false;
   (async () => {
-    if (message?.type === "browser-state") return currentState();
+    if (message?.type === "browser-state") return currentState(message.windowId);
     if (message?.type === "start-pairing") return startPairing();
     if (message?.type === "grant-current-tab") return grantCurrentTab();
+    if (message?.type === "share-window-tabs") return shareWindowTabs(message.windowId);
     if (message?.type === "set-tab-interact") return setTabInteract(message.tabId, Boolean(message.enabled));
     if (message?.type === "site-allowed") {
       const origin = originOf(String(message.origin || ""));

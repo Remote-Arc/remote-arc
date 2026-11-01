@@ -1,12 +1,15 @@
 # Remote Arc Browser
 
-Chrome companion for Remote Arc (0.4.0). It lets an AI work in the user's own
+Chrome companion for Remote Arc (0.4.3). It lets an AI work in the user's own
 browser, on sites the user allowed, or on single tabs the user shares.
 
 ## Security model
 
 - No `<all_urls>` host permission, no Chrome `debugger` / CDP permission, no
-  `tabs`, cookies, history or password access.
+  cookies, history or password access. The `tabs` permission lets **Share all
+  tabs in this window** see which sites the window's tabs are on, so Chrome
+  can ask for them in one prompt; tab addresses stay in the extension and the
+  AI still sees only tabs that are shared.
 - The only fixed host permission is the Remote Arc relay. Every other site is
   an optional host permission the user grants one site at a time through
   Chrome's own prompt (from the popup, or from the approval page the
@@ -22,6 +25,13 @@ browser, on sites the user allowed, or on single tabs the user shares.
   enabled, while it stays on the same origin. It loses access when it moves to
   another site, unless that site is allowed. Chrome's `activeTab` has the same
   limit.
+- **Share all tabs in this window** asks Chrome once for the sites of every
+  web page in the window, then shares each of those tabs with read and Click &
+  fill, as on an allowed site. The sites stay in Allowed sites until the user
+  removes them. Browser pages and tabs in other windows are left out.
+- A snapshot lists at most 250 controls: an open dialog first, then the page's
+  own content, then site navigation, headers and footers. `omittedElements`
+  says how many were left out.
 - Password, payment-card and file-picker fields are never filled. Public MCP
   connections require the user to complete sign-in, verification codes and
   CAPTCHAs in their browser, then resume the same task. Authentication automation

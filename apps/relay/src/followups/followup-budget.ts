@@ -1,8 +1,8 @@
 import type {FollowupEnv} from './followup-common.js';
 
-// Follow-ups and sign-in codes share one sending account (Resend's free plan
-// allows 100 emails a day). Follow-ups stop at their own daily cap so a bulk
-// send never uses up the codes' share.
+// A separate daily cap limits follow-up traffic regardless of provider.
+// The original 60/day default also reserves Resend capacity for sign-in mail
+// until follow-ups are explicitly switched to SendPulse.
 export const DEFAULT_FOLLOWUP_DAILY_LIMIT=60;
 export function followupDailyLimit(env:FollowupEnv){
  const value=Number(env.FOLLOWUP_DAILY_EMAIL_LIMIT);

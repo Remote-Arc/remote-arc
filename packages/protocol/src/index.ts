@@ -112,6 +112,8 @@ export type DeviceExecutionPolicy = {
 };
 
 export type AgentCallMessage = {
+  /** Relay reply deadline; a waking Agent refuses buffered calls past it. */
+  expires_at?: string;
   type: "call";
   id: string;
   tool: string;

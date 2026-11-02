@@ -5,6 +5,8 @@ import {validateAppAccess} from '../apps/apps.js';
 import {sha256Hex} from '../auth/auth.js';
 import {ArcError,arcSession,appendArcMessage,wakeArcRun,type ArcEnv,type ArcRun} from './arc-chat.js';
 import type {ArcAppConnectionRequest} from '@remotearc/protocol';
+import {GOOGLE_APP_DATA_POLICY} from '../apps/google-app-policy.js';
+import {googleAppBetaState,googleAppBetaAllowed} from '../apps/google-app-beta.js';
 
 export const arcConnectAppInput=z.object({provider:providerSchema,operation:z.string().min(1).max(150).optional(),reconnect:z.boolean().optional()}).strict();
 type Row={id:string;user_id:string;source_run_id:string;source_step:number;provider:AppProvider;required_operation:string|null;status:'pending'|'resumed'|'cancelled';connection_id:string|null;remaining_ms:number;expires_at:string;session_id:string};
@@ -16,7 +18,11 @@ async function owned(env:ArcEnv,owner:string,id:string){
 }
 async function publicRequest(env:ArcEnv,row:Row):Promise<ArcAppConnectionRequest>{
  const app=APP_CATALOG[row.provider];
- return{id:row.id,sourceRunId:row.source_run_id,provider:row.provider,name:app.name,brand:app.brand,auth:app.auth||'oauth',configured:env.ENABLE_APPS==='1'&&appConfigured(env,row.provider),status:row.status==='pending'&&Date.parse(row.expires_at)<=Date.now()?'expired':row.status,expiresAt:row.expires_at};
+  const google=app.credential==='GOOGLE';
+  const existing=google?await env.DB.prepare("SELECT id FROM app_connections WHERE user_id=?1 AND provider=?2 AND status!='disconnected' LIMIT 1").bind(row.user_id,row.provider).first():null;
+  const requiresBetaApproval=google&&!googleAppBetaAllowed(await googleAppBetaState(env,row.user_id),row.provider,Boolean(existing));
+  const permission=row.required_operation?appOperation(row.provider,row.required_operation).permission:'read';
+  return{id:row.id,sourceRunId:row.source_run_id,provider:row.provider,name:app.name,brand:app.brand,auth:app.auth||'oauth',configured:env.ENABLE_APPS==='1'&&appConfigured(env,row.provider),status:row.status==='pending'&&Date.parse(row.expires_at)<=Date.now()?'expired':row.status,expiresAt:row.expires_at,...(google?{requiresBetaApproval,dataPolicy:GOOGLE_APP_DATA_POLICY,permissions:permission==='write'?['read','write']:['read']}:{} )};
 }
 export async function listArcAppConnections(env:ArcEnv,owner:string,sessionId:string){
  const rows=(await env.DB.prepare(`SELECT q.*,r.session_id FROM arc_app_connection_requests q JOIN arc_chat_runs r ON r.id=q.source_run_id WHERE r.session_id=?1 AND q.user_id=?2 ORDER BY q.created_at DESC,q.id DESC LIMIT 50`).bind(sessionId,owner).all<Row>()).results;

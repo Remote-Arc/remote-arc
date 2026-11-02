@@ -17,6 +17,7 @@ const origin='https://agent.remotearc.app',at=new Date().toISOString(),future=ne
 for(const user of ['owner','other']){sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(user,user,user+'@example.invalid',at);sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex('session-'+user),user,future,at);}
 let models=0,wakes=0,writes=0,reads=0,archived=false;const decisions:any[]=[];
 const env={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,DASHBOARD_ORIGIN:origin,ENABLE_APPS:'1',APP_TOKEN_KEY:Buffer.alloc(32,2).toString('base64'),APP_NOTION_CLIENT_ID:'client',APP_NOTION_CLIENT_SECRET:'secret',APP_GOOGLE_CLIENT_ID:'google-client',APP_GOOGLE_CLIENT_SECRET:'google-secret',ARC_CHAT_ENABLED:'1',ARC_RUNTIME:{getByName:()=>({fetch:async()=>{wakes++;return Response.json({queued:true});}})},MODEL_GATEWAY:{DB:db,enabled:true,models:ARC_MODELS,adapters:{openai:async()=>{models++;assert(decisions.length,'Unexpected model inference');return{value:decisions.shift(),usage:{inputTokens:100,outputTokens:100,cachedInputTokens:0,cacheWriteTokens:0,reasoningTokens:0},providerRequestId:'fixture'};}}}} as unknown as ArcEnv;
+Object.assign(env,{GOOGLE_APPS_ACCESS_MODE:'public'});
 const request=(path:string,method='GET',body?:unknown,user='owner',requestOrigin=origin)=>new Request(origin+path,{method,headers:{cookie:'rl_session=session-'+user,origin:requestOrigin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});
 const api=(path:string,method='GET',body?:unknown,user='owner')=>handleArcChat(request('/api/arc/'+path,method,body,user),env);
 async function json(response:Response,status=200){const value=await response.json() as any;assert.equal(response.status,status,JSON.stringify(value));return value;}
@@ -35,7 +36,7 @@ const provider:typeof fetch=async(input,init={})=>{
  if(url==='https://api.notion.com/v1/pages/'+pageId){if(init.method==='PATCH'){assert.deepEqual(JSON.parse(String(init.body)),{in_trash:true});writes++;archived=true;}else reads++;return Response.json({id:pageId,in_trash:archived,url:'https://www.notion.so/'+pageId,properties:{title:{title:[{plain_text:'周报'}]}}});}
  throw Error('Unexpected provider call '+url);
 };
-async function authorize(target:any,providerId:string){return json(await handleApps(request('/api/apps/authorize','POST',{provider:providerId,chatRequestId:target.card.id}),env,provider));}
+async function authorize(target:any,providerId:string){return json(await handleApps(request('/api/apps/authorize','POST',{provider:providerId,chatRequestId:target.card.id,permissions:target.card.permissions,...(target.card.dataPolicy?{dataConsent:target.card.dataPolicy.version}:{})}),env,provider));}
 async function callback(target:any,providerId:string,error=false){const auth=await authorize(target,providerId),state=new URL(auth.authorizationUrl).searchParams.get('state');return handleApps(request('/api/apps/oauth/'+providerId+'/callback?state='+state+(error?'&error=access_denied':'&code=fixture')),env,provider);}
 const previousFetch=globalThis.fetch;globalThis.fetch=provider;
 try{

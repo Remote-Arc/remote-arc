@@ -1,4 +1,5 @@
 import {appOperation} from '../src/apps/app-catalog.js';
+import {validateAppAccess} from '../src/apps/apps.js';
 import {unseal} from '../src/apps/app-oauth.js';
 import {arcVerificationToolError} from '../src/arc/arc-verification.js';
 import {SKILL_LIBRARY} from '../../../packages/skills/src/library.js';
@@ -233,6 +234,9 @@ try{
 // this is not evidence of a live model's task-completion quality.
 const inboxConnection=crypto.randomUUID(),mailScope='https://www.googleapis.com/auth/gmail.readonly';
 sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at) VALUES(?,'owner','gmail','fixture-inbox','Inbox','active','["read"]',?,?,?,?)`).run(inboxConnection,JSON.stringify([mailScope]),await seal(env,{accessToken:'fixture-mail-key',scopes:[mailScope],expiresAt:null},`app-token:owner:gmail:${inboxConnection}`),now,now);
+await assert.rejects(()=>validateAppAccess(env,'owner',inboxConnection,'messages.get'),(error:any)=>error.code==='google_app_data_consent_required');
+const googleConsent=JSON.stringify({googleDataConsent:{version:'2026-11-02',acceptedAt:now}});
+sql.prepare('UPDATE app_connections SET connection_metadata_json=? WHERE id=?').run(googleConsent,inboxConnection);
 const inboxSession=await create(),inboxRun=await send(inboxSession,'Summarize recent inbox messages and highlight what needs attention.');
 const inboxFetch=globalThis.fetch;let mailGets=0,mailLists=0;
 globalThis.fetch=(async(url,init)=>{
@@ -394,6 +398,7 @@ const largeObservation={status:'succeeded',result:{items:Array.from({length:10},
 for(const limit of [16000,3500,750]){const serialized=arcObservationText(largeObservation,limit),parsed=JSON.parse(serialized);assert(new TextEncoder().encode(serialized).length<=limit);assert(parsed.shortened);assert(serialized.includes('calendar-next-page'),'Pagination is retained instead of a broken JSON prefix');}
 const calendarConnection=crypto.randomUUID();
 sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at) VALUES(?,'owner','google_calendar','fixture-calendar','Calendar','active','["read"]',?,?,?,?)`).run(calendarConnection,JSON.stringify(['https://www.googleapis.com/auth/calendar.readonly']),await seal(env,{accessToken:'fixture-calendar-key'},`app-token:owner:google_calendar:${calendarConnection}`),now,now);
+sql.prepare('UPDATE app_connections SET connection_metadata_json=? WHERE id=?').run(googleConsent,calendarConnection);
 const contentSession=await create(),contentRun=await send(contentSession,'Read two Gmail pages and the calendar, then deliver a sourced brief.');
 const sourceFetch=globalThis.fetch;let sourceTurn=0,sourceReads=0,contextRead=false;
 globalThis.fetch=(async(url,init)=>{const target=new URL(String(url));assert.equal(init?.method,'GET','A multi-source summary only reads authorized sources');sourceReads++;

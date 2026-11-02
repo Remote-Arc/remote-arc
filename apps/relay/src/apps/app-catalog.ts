@@ -1,4 +1,5 @@
 import { z } from "zod";
+import {minimizeGoogleScopes} from './google-app-policy.js';
 import {FOLLOWTHROUGH_OPERATIONS,WRITE_SCOPE_ADDITIONS} from './app-followthrough.js';
 import type {PlatformLaunchEnv} from '../platform/platform-launch.js';
 import { SLACK_SCOPES, SLACK_OPERATIONS } from "./app-slack.js";
@@ -9,7 +10,7 @@ export const CORE_APP_PROVIDERS = ["github", "slack", "gmail", "outlook", "googl
 export const APP_PROVIDERS = [...CORE_APP_PROVIDERS, ...EXTRA_PROVIDER_IDS] as const;
 export type AppProvider = typeof APP_PROVIDERS[number];
 export type AppPermission = "read" | "write";
-export type AppEnv = PlatformLaunchEnv & { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; DASHBOARD_ORIGIN?: string; ENABLE_APPS?: string; APP_TOKEN_KEY?: string; APP_VERCEL_INTEGRATION_SLUG?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string; APP_PLATFORM_FUNDED_COSTS?:string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
+export type AppEnv = PlatformLaunchEnv & { DB: D1Database; PUBLIC_ORIGIN: string; APP_ORIGIN?: string; DASHBOARD_ORIGIN?: string; ENABLE_APPS?: string; GOOGLE_APPS_ACCESS_MODE?:'beta'|'public'; APP_TOKEN_KEY?: string; APP_VERCEL_INTEGRATION_SLUG?: string; APP_META_GRAPH_VERSION?: string; APP_GOOGLE_ADS_DEVELOPER_TOKEN?: string; APP_DAILY_PROVIDER_LIMIT?: string; APP_PLATFORM_FUNDED_COSTS?:string } & Partial<Record<`APP_${string}_CLIENT_${"ID" | "SECRET"}`, string>>;
 export class AppError extends Error {
   constructor(public code: string, public status = 400) { super(code); }
 }
@@ -38,7 +39,10 @@ export function credentials(env: AppEnv, provider: AppProvider) {
   if (!id || !secret || !env.APP_TOKEN_KEY) throw new AppError("app_not_configured", 503);
   return { id, secret };
 }
-export const appScopes = (provider: AppProvider, permissions: AppPermission[]) => [...new Set(permissions.flatMap(p => APP_CATALOG[provider].scopes[p]))];
+export const appScopes = (provider: AppProvider, permissions: AppPermission[]) => {
+  const scopes=[...new Set(permissions.flatMap(p=>APP_CATALOG[provider].scopes[p]))];
+  return APP_CATALOG[provider].credential==='GOOGLE'?minimizeGoogleScopes(scopes):scopes;
+};
 for(const [provider,scopes] of Object.entries(WRITE_SCOPE_ADDITIONS))APP_CATALOG[provider as AppProvider].scopes.write=[...new Set([...APP_CATALOG[provider as AppProvider].scopes.write,...scopes])];
 
 const text = z.string().min(1).max(4000);

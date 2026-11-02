@@ -31,6 +31,7 @@ export function adminApiMethods(path: string): readonly string[] | null {
   if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/reply$/.test(path))return ['POST'];
   if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/status$/.test(path))return ['PATCH'];
   if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/reconcile$/.test(path))return ['PATCH'];
+  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/google-beta$/.test(path))return ['PATCH'];
   if(path==='/api/admin/analytics')return ['GET'];
   if(path==='/api/admin/feedback-rewards')return ['GET'];
   if(path==='/api/admin/feedback-rewards/config'||/^\/api\/admin\/feedback-rewards\/claims\/[a-f0-9-]{36}\/(approve|reject)$/.test(path))return ['POST'];

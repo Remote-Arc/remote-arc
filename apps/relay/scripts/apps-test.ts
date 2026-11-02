@@ -9,6 +9,7 @@ import { callApp, handleApps, listApps, validateAppAccess } from "../src/apps/ap
 import { loadAppReview, verifyAppReview, reviewRead } from "../src/apps/app-review.js";
 import { sha256Hex } from "../src/auth/auth.js";
 import { registrationPack } from "./apps-registration.js";
+import {GOOGLE_APP_DATA_POLICY} from '../src/apps/google-app-policy.js';
 
 const sql = new DatabaseSync(":memory:");
 sql.exec("PRAGMA foreign_keys=ON");
@@ -29,6 +30,7 @@ for(const id of ["one","two"]) {
   sql.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)").run(await sha256Hex("session-"+id),id,future,stamp);
 }
 const env:AppEnv={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,ENABLE_APPS:"1",APP_TOKEN_KEY:Buffer.alloc(32,7).toString("base64")};
+Object.assign(env,{GOOGLE_APPS_ACCESS_MODE:'public'});
 for(const credential of ["GITHUB","SLACK","GOOGLE","MICROSOFT"]) {
   env[`APP_${credential}_CLIENT_ID`]="client-"+credential;
   env[`APP_${credential}_CLIENT_SECRET`]="server-secret-"+credential;
@@ -85,7 +87,7 @@ await deny(()=>unseal({...env,APP_TOKEN_KEY:"wrong"},cipher,"owner"),"app_vault_
 const connections=new Map<AppProvider,string>();
 async function connect(provider:AppProvider,permissions:string[]|undefined=undefined) {
   activeProvider=provider;
-  const start=await api("/api/apps/authorize","POST",{provider,permissions});
+  const start=await api("/api/apps/authorize","POST",{provider,permissions,...(APP_CATALOG[provider].credential==='GOOGLE'?{dataConsent:GOOGLE_APP_DATA_POLICY.version}:{})});
   assert.equal(start.status,200);
   const location=new URL((await start.json() as any).authorizationUrl);
   assert.equal(location.searchParams.get("redirect_uri"),callbackUrl(env,provider));

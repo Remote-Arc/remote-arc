@@ -52,6 +52,7 @@ jobs:
         run: |
           pnpm test:seo
           pnpm --filter @remotearc/ui test:onboarding-browser
+          pnpm --filter @remotearc/ui test:google-app-beta
       - uses: actions/upload-artifact@v7
         if: always()
         with:

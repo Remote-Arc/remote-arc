@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 import { APP_CATALOG, APP_PROVIDERS, appScopes } from "../src/apps/app-catalog.js";
 import { callbackUrl } from "../src/apps/app-oauth.js";
 import {SLACK_BOT_SCOPES} from '../src/slack/slack-bot-common.js';
+import {GOOGLE_APPS_BETA_PROVIDERS,GOOGLE_APP_DATA_POLICY} from '../src/apps/google-app-policy.js';
 
 export function registrationPack(value: string) {
   const origin = new URL(value);
@@ -10,7 +11,7 @@ export function registrationPack(value: string) {
   }
   const env = { APP_ORIGIN: origin.origin, PUBLIC_ORIGIN: origin.origin } as Parameters<typeof callbackUrl>[0];
   const callbacks = Object.fromEntries(APP_PROVIDERS.filter(provider => APP_CATALOG[provider].auth !== "api_key").map(provider => [provider, callbackUrl(env, provider)]));
-  const declaredScopes = (providers: typeof APP_PROVIDERS[number][]) => [...new Set(providers.flatMap(provider => appScopes(provider, ["read", "write"])))];
+  const declaredScopes = (providers: typeof APP_PROVIDERS[number][]) => [...new Set(providers.flatMap(provider => [...appScopes(provider,["read"]),...appScopes(provider,["read","write"])]))];
   const googleProviders = APP_PROVIDERS.filter(provider => APP_CATALOG[provider].credential === "GOOGLE");
   const additions = Object.fromEntries([
     ["dropbox","DROPBOX","https://www.dropbox.com/developers/apps"],
@@ -85,6 +86,7 @@ export function registrationPack(value: string) {
       apiServices: ["gmail.googleapis.com", "calendar-json.googleapis.com", "youtube.googleapis.com", "drive.googleapis.com", "docs.googleapis.com", "sheets.googleapis.com", "slides.googleapis.com", "searchconsole.googleapis.com", "analyticsadmin.googleapis.com", "analyticsdata.googleapis.com", "googleads.googleapis.com"],
       authorizedRedirectUris: googleProviders.map(provider => callbacks[provider]),
       declaredScopes: declaredScopes(googleProviders),
+      beta:{providers:[...GOOGLE_APPS_BETA_PROVIDERS],declaredScopes:declaredScopes([...GOOGLE_APPS_BETA_PROVIDERS]),consoleDeclaredScopes:declaredScopes([...GOOGLE_APPS_BETA_PROVIDERS]).map(scope=>scope==='email'?'https://www.googleapis.com/auth/userinfo.email':scope),authorizedRedirectUris:GOOGLE_APPS_BETA_PROVIDERS.map(provider=>callbacks[provider]),dataPolicy:GOOGLE_APP_DATA_POLICY,admission:'Signed-in application → private support inbox → manually add Google test user → Admin opens Beta access. No automatic email or test-user addition.'},
       audience: "External; start in Testing with explicit test users. Complete applicable verification before public launch.",
       clientIdSecretName: "APP_GOOGLE_CLIENT_ID",
       clientSecretSecretName: "APP_GOOGLE_CLIENT_SECRET",
@@ -115,7 +117,7 @@ export function registrationPack(value: string) {
       vaultSecretName: "APP_TOKEN_KEY",
       vaultFormat: "Base64 encoding of 32 cryptographically random bytes; keep the same key while existing encrypted connections remain.",
       requestedPermissions: "Connecting enables implemented read and write tools within the granted provider scopes. Remote Arc does not add a separate per-action approval; writes require apps:write in the AI client's MCP grant.",
-      note: "Registration declares the available scopes. Per-user authorization requests the complete declared scope set. Existing connections need renewed provider consent for newly added scopes.",
+      note: "Registration declares scopes for supported read and write flows. Authorization requests the minimum set for selected permissions, omitting redundant narrower scopes when a requested broader scope covers them. Newly added scopes require renewed provider consent.",
     },
   };
 }

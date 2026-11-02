@@ -29,6 +29,7 @@ import {billingEnabled} from './platform/platform-launch.js';
 import {stripeConfigured} from './billing/stripe-client.js';
 import {commercialCatalog} from './arc/arc-commercial-config.js';
 import {purgeDeletedArcContent} from './arc/arc-retention.js';
+import {purgeExpiredGoogleAppContent} from './apps/app-retention.js';
 export { ArcChatRuntime } from "./arc/arc-chat-object.js";
 import type { AppEnv } from "./apps/app-catalog.js";
 import { handleDeviceTaskSettings } from "./devices/device-task-settings.js";
@@ -1160,6 +1161,7 @@ export default {
       ctx.waitUntil(runApprovalMaintenance(env));
       ctx.waitUntil(ensureOperatorAllowance(env).catch((error) => console.error("operator_allowance_failed", { message: error instanceof Error ? error.message : String(error) })));
       ctx.waitUntil(purgeDeletedArcContent(env));
+      ctx.waitUntil(purgeExpiredGoogleAppContent(env));
       if (env.AUDIT_ARCHIVE_ENABLED === "1") {
         ctx.waitUntil(archiveOldAudit(env).then(({ archived, batches }) => {
           if (archived) console.info("audit_archive_completed", { archived, batches });

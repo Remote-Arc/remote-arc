@@ -37,3 +37,6 @@
 .adminSupportCompose button:disabled{opacity:.5;cursor:not-allowed}
 .adminSupportNotice{padding:11px;border-radius:8px;border:1px solid #8885}
 @media(max-width:800px){.adminSupportLayout{grid-template-columns:1fr}.adminSupportList,.adminSupportConversation{min-height:unset}.adminSupportCompose>div{align-items:stretch;flex-direction:column}}
+/* Beta applications share the existing private support conversation. */
+.adminSupportBeta{padding:18px;margin:16px;border:1px solid var(--admin-border,#34343d);border-radius:12px;background:var(--admin-panel,#16161b)}
+.adminSupportBeta p{overflow-wrap:anywhere}.adminSupportBeta a{color:#9ac9ff}.adminSupportBeta>div{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}

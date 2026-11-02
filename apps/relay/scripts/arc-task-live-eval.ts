@@ -10,7 +10,7 @@ import {activateArcTrial} from '../src/arc/arc-trial.js';
 import {handleArcChat,arcMessages,arcContext,type ArcEnv,type ArcRun} from '../src/arc/arc-chat.js';
 import {executeArcTool,runArcStep} from '../src/arc/arc-chat-runtime.js';
 import {ARC_MODELS} from '../src/arc/arc-chat-model.js';
-import {APP_OPERATIONS} from '../src/apps/app-catalog.js';
+import {APP_CATALOG,APP_OPERATIONS} from '../src/apps/app-catalog.js';
 import {openAiAdapter} from '../src/arc/model-provider-adapters.js';
 import {sha256Hex} from '../src/auth/auth.js';
 import {saveArcSkill} from '../src/arc/arc-skills.js';
@@ -153,6 +153,10 @@ try{
   if(item.id==='managed-process')sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,last_seen,allowed_tools,workspace_roots) VALUES(?,?,?,\'linux\',?,?,?,?,?)').run('eval-build-device',id,'Synthetic build computer','synthetic-device-credential',at,at,JSON.stringify(processTools),JSON.stringify(['/fixture/project']));
   sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at) VALUES(?,?,?,'fixture','Synthetic account','active',?,?,?,?,?)`).run(connectionId,id,item.provider,JSON.stringify(item.provider==='github'?['read','write']:['read']),JSON.stringify(item.scopes),await seal(env,{accessToken:'fixture-oauth',scopes:item.scopes,expiresAt:null},`app-token:${id}:${item.provider}:${connectionId}`),at,at);
   if(item.id.startsWith('attention')){const calendarId=crypto.randomUUID(),scopes=['https://www.googleapis.com/auth/calendar.readonly'];sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at) VALUES(?,?,'google_calendar','fixture-calendar','Synthetic calendar','active','["read"]',?,?,?,?)`).run(calendarId,id,JSON.stringify(scopes),await seal(env,{accessToken:'fixture-calendar-token',scopes,expiresAt:null},`app-token:${id}:google_calendar:${calendarId}`),at,at);}
+  // Synthetic provider accounts represent users who completed the real consent UI.
+  const consent=JSON.stringify({googleDataConsent:{version:'2026-11-02',acceptedAt:at}});
+  if(APP_CATALOG[item.provider].credential==='GOOGLE')sql.prepare('UPDATE app_connections SET connection_metadata_json=? WHERE id=?').run(consent,connectionId);
+  if(item.id.startsWith('attention'))sql.prepare("UPDATE app_connections SET connection_metadata_json=? WHERE user_id=? AND provider='google_calendar'").run(consent,id);
   await activateArcTrial(env,id);
   const skill=item.id==='skill'?await saveArcSkill(env,id,{name:'Release verification',description:'Create the release evidence issue.',content:'# Release verification\nFor the requested issue in example/project, use exactly the title "Skill release verification" and include verified-smoke-7A in the body. Return the acknowledged issue link. Never claim a created issue without a provider response.'}):null;
   const verification:ArcVerification|undefined=item.id==='verified-mail'?{kind:'inbox',connectionId,limit:2}:item.id==='verified-issue'?{kind:'github_issue',connectionId,repo:'example/project',title:'Verified release checklist',body:'Verify smoke tests and attach the actual result.'}:item.id==='verified-deployment'?{kind:'deployment',connectionId,deploymentId:'dpl_fixture'}:undefined;

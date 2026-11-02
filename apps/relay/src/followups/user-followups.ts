@@ -73,11 +73,50 @@ export async function handleUserFollowups(request:Request,env:FollowupEnv){
   return json({error:'method_not_allowed'},405);
  }catch(error){if(/UNIQUE constraint failed: user_followup_messages.user_id/.test(String(error)))return json({error:'contact_cooldown_or_in_progress'},409);if(error instanceof z.ZodError||error instanceof SyntaxError||error instanceof Error&&['request_too_large','invalid_request'].includes(error.message))return json({error:'invalid_request'},400);throw error;}
 }
+const unsubscribePageHeaders={
+ 'content-type':'text/html; charset=utf-8',
+ 'cache-control':'private, no-store',
+ 'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+ 'referrer-policy':'no-referrer',
+ 'x-robots-tag':'noindex, nofollow',
+};
+/** Public email preference pages intentionally use English only. */
+function unsubscribePage(state:'confirm'|'success'|'already',token:string){
+ const title=state==='confirm'?'Stop follow-up emails?':state==='already'?"You're already unsubscribed":"You're unsubscribed";
+ const description=state==='confirm'
+  ?'You can stop receiving personal follow-up emails from Remote Arc.'
+  :state==='already'
+   ?"You're no longer receiving personal follow-up emails from Remote Arc."
+   :"You've successfully stopped personal follow-up emails from Remote Arc.";
+ const form=state==='confirm'
+  ?'<form method="post" action="?token='+escapeAuthHtml(token)+'"><button type="submit" style="display:inline-block;border:0;border-radius:9px;background:#17212f;color:#fff;font:600 16px/1.3 system-ui,sans-serif;padding:13px 20px;cursor:pointer">Stop follow-up emails</button></form>'
+  :'';
+ const html=[
+  '<!doctype html><html lang="en"><head><meta charset="utf-8">',
+  '<meta name="viewport" content="width=device-width,initial-scale=1">',
+  '<meta name="robots" content="noindex,nofollow">',
+  '<title>Remote Arc | Email preferences</title></head>',
+  '<body style="margin:0;background:#f8fafc;color:#17212f;font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">',
+  '<main style="max-width:540px;margin:clamp(48px,11vh,120px) auto;padding:28px">',
+  '<p style="font-size:14px;font-weight:700;letter-spacing:.04em;color:#475569;margin:0 0 22px">REMOTE ARC</p>',
+  '<h1 style="font-size:clamp(27px,5vw,34px);line-height:1.2;margin:0 0 22px">'+title+'</h1>',
+  '<p style="margin:0 0 15px">'+description+'</p>',
+  '<p style="margin:0 0 30px;color:#475569">Your account and essential sign-in emails will not be affected.</p>',
+  form,
+  '<p style="font-size:14px;margin:32px 0 0;color:#64748b">Need help? <a href="mailto:support@remotearc.app" style="color:#145a86">Contact support</a>.</p>',
+  '</main></body></html>',
+ ].join('');
+ return new Response(html,{headers:unsubscribePageHeaders});
+}
 export async function handleFollowupUnsubscribe(request:Request,env:FollowupEnv){
  const token=new URL(request.url).searchParams.get('token')||'';
- if(!/^[0-9a-f-]{36}$/i.test(token))return new Response('Invalid link',{status:400});
- if(!['GET','POST'].includes(request.method))return new Response('Method not allowed',{status:405});
- const contact=await env.DB.prepare('SELECT user_id FROM user_followup_contacts WHERE unsubscribe_token=?1').bind(token).first();if(!contact)return new Response('Invalid link',{status:404});
- if(request.method==='POST'){await env.DB.prepare('UPDATE user_followup_contacts SET suppressed_at=COALESCE(suppressed_at,?2),next_followup_at=NULL,updated_at=?2 WHERE unsubscribe_token=?1').bind(token,stamp()).run();return new Response('Follow-up emails stopped. / 已停止回访邮件。',{headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store'}});}
- return new Response(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Remote Arc · Email preferences</title><body style="font:16px/1.8 system-ui;max-width:540px;margin:12vh auto;padding:24px;color:#242428"><h1>Stop follow-up emails?</h1><p>不再接收 Remote Arc 回访邮件？</p><p>Your account and essential sign-in emails will stay available.<br>账号和必要的登录邮件不受影响。</p><form method="post" action="?token=${escapeAuthHtml(token)}"><button style="padding:12px 20px;border-radius:8px;border:0;background:#242428;color:white;cursor:pointer">Stop follow-ups / 停止回访</button></form></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",'referrer-policy':'no-referrer'}});
+ if(!/^[0-9a-f-]{36}$/i.test(token))return new Response('Invalid unsubscribe link',{status:400,headers:{'cache-control':'no-store','x-robots-tag':'noindex'}});
+ if(!['GET','POST'].includes(request.method))return new Response('Method not allowed',{status:405,headers:{'cache-control':'no-store','allow':'GET, POST'}});
+ const contact=await env.DB.prepare('SELECT user_id,suppressed_at FROM user_followup_contacts WHERE unsubscribe_token=?1').bind(token).first<{user_id:string;suppressed_at:string|null}>();
+ if(!contact)return new Response('Invalid unsubscribe link',{status:404,headers:{'cache-control':'no-store','x-robots-tag':'noindex'}});
+ if(request.method==='POST'){
+  await env.DB.prepare('UPDATE user_followup_contacts SET suppressed_at=COALESCE(suppressed_at,?2),next_followup_at=NULL,updated_at=?2 WHERE unsubscribe_token=?1').bind(token,stamp()).run();
+  return unsubscribePage('success',token);
+ }
+ return unsubscribePage(contact.suppressed_at?'already':'confirm',token);
 }

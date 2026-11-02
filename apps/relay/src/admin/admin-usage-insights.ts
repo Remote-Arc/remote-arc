@@ -1,4 +1,5 @@
 import { getSessionUser } from "../auth/auth.js";
+import {adminUsageQuality} from './admin-usage-quality.js';
 
 /** Admin-only, metadata-only diagnosis. Charged calls and audited device dispatches
  * are separate populations: neither is a task-completion or retry metric. */
@@ -14,7 +15,7 @@ export async function handleAdminUsageInsights(request: Request, env: { DB: D1Da
   const month = new Date().toISOString().slice(0, 7);
   const from = month + "-01T00:00:00.000Z";
   const until = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 1)).toISOString();
-  const [charged, summary, daily, tools, outcomes] = await Promise.all([
+  const [charged, summary, daily, tools, outcomes,quality] = await Promise.all([
     env.DB.prepare("SELECT tool_calls AS total FROM user_monthly_usage WHERE user_id=?1 AND month_key=?2").bind(userId, month).first<{total:number}>(),
     env.DB.prepare(`SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN success=1 THEN 1 ELSE 0 END),0) AS succeeded,
       COALESCE(SUM(CASE WHEN success=0 THEN 1 ELSE 0 END),0) AS failed
@@ -34,6 +35,7 @@ export async function handleAdminUsageInsights(request: Request, env: { DB: D1Da
       FROM audit_events WHERE user_id=?1 AND event_type='mcp.tool_call' AND created_at>=?2 AND created_at<?3
       GROUP BY outcome ORDER BY calls DESC LIMIT 8`)
       .bind(userId, from, until).all<{outcome:string;calls:number}>(),
+    adminUsageQuality(env.DB,userId,from,until),
   ]);
   return Response.json({
     userId, month, timeZone: "UTC", chargedCalls: charged?.total ?? 0,
@@ -41,5 +43,6 @@ export async function handleAdminUsageInsights(request: Request, env: { DB: D1Da
     daily: daily.results ?? [], tools: tools.results ?? [], outcomes: outcomes.results ?? [],
     scope: "Audited device dispatches only; charged calls may include Apps, Arc and other MCP requests.",
     taskSuccessAvailable: false, retriesAvailable: false,
+    ...quality,
   }, { headers: { "cache-control": "private, no-store" } });
 }

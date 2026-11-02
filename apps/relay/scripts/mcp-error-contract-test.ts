@@ -39,6 +39,11 @@ const expectedCases: Array<[Error, string]> = [
 for (const [error, code] of expectedCases) {
   assert.equal(classifyExpectedMcpError(error)?.code, code);
 }
+const timeoutHint=classifyExpectedMcpError(new Error('device call timed out: private-timeout-canary'));
+assert.match(timeoutHint!.message,/may have executed/);assert.match(timeoutHint!.message,/before retrying/);
+assert(!timeoutHint!.message.includes('private-timeout-canary'));
+const expired=classifyExpectedMcpError(Error('DEVICE_CALL_EXPIRED: private-expiry-canary'));
+assert.equal(expired?.code,'DEVICE_CALL_EXPIRED');assert.match(expired!.message,/No operation was started/);assert(!expired!.message.includes('private-expiry-canary'));
 
 const quota = new Error("Monthly Remote Arc tool-call limit reached (10000/10000).") as Error & { code?: string };
 quota.code = "MONTHLY_LIMIT_REACHED";

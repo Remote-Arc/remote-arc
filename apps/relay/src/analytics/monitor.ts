@@ -1,6 +1,7 @@
 import { getSessionUser, nowIso } from "../auth/auth.js";
 import { diagnosticError, diagnosticRoute } from "../platform/diagnostics.js";
 import { readDeviceReliability, evaluateDeviceReliability, purgeDeviceReliability } from './device-reliability.js';
+import {readDeviceExecutionHealth} from './device-execution-health.js';
 
 type EmailBinding = {
   send(message: {
@@ -219,7 +220,7 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
   const t1h = new Date(now - 60 * 60_000).toISOString();
   const t24h = new Date(now - 24 * 60 * 60_000).toISOString();
 
-  const [counts, recent, accountCounts, alertState, deviceReliability] = await Promise.all([
+  const [counts, recent, accountCounts, alertState, deviceReliability,deviceExecution] = await Promise.all([
     env.DB.prepare(
       `SELECT
         SUM(CASE WHEN created_at >= ?1 THEN 1 ELSE 0 END) AS errors_15m,
@@ -249,6 +250,7 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
       "SELECT alert_key, last_sent_at, last_status_code, last_path FROM service_alert_state ORDER BY updated_at DESC LIMIT 5",
     ).all(),
     readDeviceReliability(env),
+    readDeviceExecutionHealth(env,now),
   ]);
 
   let durableObjectStatus = "operational";
@@ -270,13 +272,14 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
     errors15m > 0 || durableObjectStatus !== "operational"
       ? "degraded"
       : "operational";
-  const status = workerStatus === 'degraded' || ['firing','recovering'].includes(deviceReliability.signal?.phase||'') ? 'degraded' : 'operational';
+  const status = workerStatus === 'degraded' || deviceExecution.status==='degraded' || ['firing','recovering'].includes(deviceReliability.signal?.phase||'') ? 'degraded' : 'operational';
 
   return Response.json({
     status,
     checkedAt: nowIso(),
     deployment: /^[a-f0-9]{40}$/.test(env.DEPLOYMENT_SHA||'') ? env.DEPLOYMENT_SHA : null,
     deviceReliability,
+    deviceExecution,
     worker: {
       status: workerStatus,
       errors15m,

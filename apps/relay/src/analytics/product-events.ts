@@ -7,6 +7,7 @@ export const eventIdentity=(v:unknown)=>typeof v==='string'&&/^[A-Za-z0-9_:-]{1,
 export function eventContext(request:Request){return{traceId:uuid(request.headers.get('x-ra-trace-id'))?request.headers.get('x-ra-trace-id')!:crypto.randomUUID(),journeyId:uuid(request.headers.get('x-ra-journey-id'))?request.headers.get('x-ra-journey-id'):null};}
 export function safeEventError(value:unknown){
  const code=typeof value==='string'?value:'';
+ if(['DEVICE_TIMEOUT','DEVICE_OFFLINE','DEVICE_SIGNAL_STALE','DEVICE_KEEP_AWAKE_FAILED'].includes(code))return code;
  return /^(?:(?:BILLING|ARC|MODEL|PAID|APP|AUTH)_[A-Z_]{1,70}|authorization_pending|unauthorized|forbidden|rate_limited|same_origin_required|invalid_request|internal_error|CLIENT_ERROR|NETWORK_ERROR|PAYMENT_FORM_LOAD_FAILED|CONFIRMATION_TIMEOUT)$/.test(code)?code:'REQUEST_FAILED';
 }
 export function eventStatement(env:EventEnv,event:ProductEvent,at=new Date().toISOString()){

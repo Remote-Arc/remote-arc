@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef,useState } from "react";
 import { useI18n } from "../../../app/i18n.js";
 import { type Device } from "../../../types/app-types.js";
 import type { DashboardDialogs } from "./use-dashboard-dialogs.js";
@@ -18,6 +18,32 @@ export function useDeviceActions({ devices, tr, refreshAll, showNotice, askConfi
   const activity = useDeviceActivity({ devices, tr, refreshAll, showNotice, askConfirm, askPrompt });
   const [managedDeviceId, setManagedDeviceId] = useState<string | null>(null);
   const [devicePanel, setDevicePanel] = useState<"access" | "tasks" | "activity">("access");
+  const recoveryInFlight=useRef(false);
+  const [connectionRecoveryBusyId,setConnectionRecoveryBusyId]=useState<string|null>(null);
+  const [connectionRecoveryMessages,setConnectionRecoveryMessages]=useState<Record<string,string>>({});
+
+  async function recoverDeviceConnection(device:Device){
+    if(recoveryInFlight.current)return;
+    recoveryInFlight.current=true;setConnectionRecoveryBusyId(device.id);
+    setConnectionRecoveryMessages(value=>({...value,[device.id]:''}));
+    try{
+      const response=await fetch('/api/devices/'+encodeURIComponent(device.id)+'/reconnect',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:'{}'});
+      if(!response.ok)throw Error('connection check unavailable');
+      const value=await response.json() as {state?:string};
+      const message=value.state==='connection_present'
+        ?tr('A connection signal is present. Check the earlier operation result before retrying; this does not confirm execution.','已收到连接信号。请先核对此前操作结果，再决定是否重试；连接存在不代表执行已恢复。')
+        :value.state==='reconnect_requested'
+          ?tr('Expired connections cleared. Wake the computer and keep Remote Arc running, then check again. Recovery is not confirmed yet.','已清理过期连接。请唤醒电脑并保持 Remote Arc 运行，再次检查；当前尚未确认恢复。')
+          :value.state==='device_unreachable'
+            ?tr('Wake this computer and confirm Remote Arc is running, then check again. Remote Arc cannot wake a sleeping computer remotely.','请先唤醒电脑并确认 Remote Arc 正在运行，再次检查。无法从这里远程唤醒休眠电脑。')
+            :null;
+      if(!message)throw Error('invalid connection observation');
+      setConnectionRecoveryMessages(current=>({...current,[device.id]:message}));
+      await refreshAll();
+    }catch{
+      setConnectionRecoveryMessages(value=>({...value,[device.id]:tr('Could not check the connection. Wake the computer, confirm Remote Arc is running, and try again.','暂时无法检查连接。请唤醒电脑、确认 Remote Arc 正在运行后再试。')}));
+    }finally{recoveryInFlight.current=false;setConnectionRecoveryBusyId(null);}
+  }
 
   async function revoke(deviceId: string) {
     const device = devices.find((item) => item.id === deviceId);
@@ -68,7 +94,7 @@ export function useDeviceActions({ devices, tr, refreshAll, showNotice, askConfi
     await refreshAll();
   }
 
-  return { ...settings, ...activity, managedDeviceId, setManagedDeviceId, devicePanel, setDevicePanel, revoke, rename };
+  return { ...settings, ...activity, managedDeviceId, setManagedDeviceId, devicePanel, setDevicePanel, revoke, rename,recoverDeviceConnection,connectionRecoveryBusyId,connectionRecoveryMessages };
 }
 
 export type DeviceActions = ReturnType<typeof useDeviceActions>;

@@ -8,15 +8,21 @@ import {classifyExpectedMcpError} from '../src/mcp/mcp-errors.js';
 
 const sent: any[] = [];
 let failSend = false;
+let attachment:any={userId:'owner',deviceId:'device',tools:['start_process','read_file']};
 const socket = {
-  deserializeAttachment: () => ({userId:'owner',deviceId:'device',tools:['start_process','read_file']}),
+  deserializeAttachment: () => attachment,
+  serializeAttachment: (value:unknown) => {attachment=value;},
   send(text: string) { if (failSend) throw Error('socket closed'); sent.push(JSON.parse(text)); },
 };
 const registry = new DeviceRegistry({getWebSockets:()=>[socket]} as unknown as DurableObjectState);
-const request = (timeout_ms?: unknown, tool='start_process') => new Request('https://registry/call', {
+const request = (timeout_ms?: unknown, tool='start_process') => {
+  // These cases isolate reply budgets; an active Agent continues sending
+  // presence between requests. Stale presence is covered in the health suite.
+  attachment={...attachment,lastSignalAt:Date.now()};
+  return new Request('https://registry/call', {
   method:'POST',headers:{'x-remote-link-user-id':'owner','content-type':'application/json'},
   body:JSON.stringify({deviceId:'device',tool,arguments:{command:'synthetic-only',...(timeout_ms===undefined?{}:{timeout_ms})}}),
-});
+});};
 const reply = (id:string) => registry.webSocketMessage(socket as unknown as WebSocket,JSON.stringify({type:'result',id,result:{exit_code:0}}));
 mock.timers.enable({apis:['Date','setTimeout']});
 try {
@@ -24,6 +30,7 @@ try {
   const long = registry.fetch(request(90000)).then(r=>{observed=true;return r;});
   await setImmediate();
   assert.equal(sent.length,1);
+  assert.equal(Date.parse(sent[0].expires_at),Date.now()+95000,'The wire deadline must match the foreground reply budget');
   mock.timers.tick(45000);await setImmediate();
   assert.equal(observed,false,'Relay must not abandon a 90 s command at 45 s');
   mock.timers.tick(45000);reply(sent[0].id);

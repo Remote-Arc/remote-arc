@@ -8,6 +8,7 @@ const AdminApiUsage=lazy(()=>import('./admin-api-usage.js').then(module=>({defau
 const AdminPayments=lazy(()=>import('./payments/admin-payments.js').then(module=>({default:module.AdminPayments})));
 import { useI18n } from "../../app/i18n.js";
 import { AdminOperations } from "./admin-operations.js";
+import {DeviceExecutionHealthPanel,type DeviceExecutionHealth} from './device-execution-health.js';
 import {ProductIcon as Icon,type ProductIconName} from '../../components/product-icon.js';
 import {ProductInstall} from '../../app/product-pwa.js';
 import {useTheme} from '../../app/theme.js';
@@ -21,6 +22,7 @@ type Operations={checkedAt?:string;totals:{users:number;devices:number;online:nu
 type Incident={id:string;created_at:string;severity:string;kind:string;method?:string|null;path?:string|null;message:string;status_code?:number|null;colo?:string|null;ray_id?:string|null};
 type Health={status:"operational"|"degraded";checkedAt:string;worker:{status:string;errors15m:number;errors1h:number;errors24h:number};dependencies:{d1:{status:string};durableObjects:{status:string}};alerts:{emailConfigured:boolean;destination:string|null;recent:Array<{alert_key:string;last_sent_at:string|null;last_status_code:number|null;last_path:string|null}>};account:{users:number;devices:number;activeTokens:number};incidents:Incident[]};
 
+type HealthSnapshot=Health&{deviceExecution?:DeviceExecutionHealth};
 async function readJson<T>(path:string):Promise<T>{
  const response=await fetch(path,{credentials:"same-origin",headers:{"accept":"application/json"}});
  if(!response.ok)throw new Error("HTTP "+response.status);
@@ -74,7 +76,7 @@ function LeadsPanel(){
  </section>;
 }
 
-function HealthPanel({health,loading,reload}:{health:Health|null;loading:boolean;reload:()=>void}) {
+function HealthPanel({health,loading,reload}:{health:HealthSnapshot|null;loading:boolean;reload:()=>void}) {
  const {tr}=useI18n();
  return <section className="adminSurface"><div className="adminSectionHeader"><div><p>{tr("Infrastructure diagnostics, not surveillance of users.","仅用于基础设施排障，不监视用户行为内容。")}</p></div><button className="adminOutlineBtn" disabled={loading} onClick={reload}>{loading?tr("Refreshing…","刷新中…"):tr("Refresh","刷新")} ↻</button></div>
  <div className="adminMetrics adminMetrics--health">
@@ -83,6 +85,7 @@ function HealthPanel({health,loading,reload}:{health:Health|null;loading:boolean
   <div><span>5xx · 1h</span><strong>{health?.worker.errors1h??"—"}</strong></div>
   <div><span>5xx · 24h</span><strong>{health?.worker.errors24h??"—"}</strong></div>
  </div>
+ <DeviceExecutionHealthPanel value={health?.deviceExecution}/>
  <div className="adminDiagnostics">
    <article><h3>{tr("Dependencies","基础设施")}</h3><p>Cloudflare Worker <b>{health?.worker.status||"—"}</b></p><p>D1 <b>{health?.dependencies.d1.status||"—"}</b></p><p>Durable Objects <b>{health?.dependencies.durableObjects.status||"—"}</b></p></article>
    <article><h3>{tr("Alert delivery","告警投递")}</h3><p>{health?.alerts.emailConfigured?tr("Email enabled","邮件已启用"):tr("Email pending","邮件通道待启用")}</p><small>{health?.alerts.destination||"—"}</small><p>{tr("Active OAuth tokens","有效 OAuth Token")} <b>{health?.account.activeTokens??"—"}</b></p></article>
@@ -159,7 +162,11 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
   useEffect(()=>{const restore=()=>updateSection(readSection());window.addEventListener('popstate',restore);return()=>window.removeEventListener('popstate',restore);},[]);
   const [ops,setOps]=useState<Operations|null>(()=>preview?{checkedAt:new Date().toISOString(),totals:{users:128,devices:46,online:19,monthlyCalls:18742,auditLast7d:4261,teams:8,teamMembers:24},activity:Array.from({length:48},(_,i)=>({hour:new Date(Date.now()-(47-i)*3600000).toISOString().slice(0,13),calls:[7,12,5,0,0,2,9,23,34,28,45,37][i%12]!,users:3+i%6}))}:null);
   const [leadOverview,setLeadOverview]=useState<LeadsResponse|null>(()=>preview?{items:[],total:12,page:0,pageSize:20,counts:[]}:null);
-  const [health,setHealth]=useState<Health|null>(()=>preview?{status:'operational',checkedAt:new Date().toISOString(),worker:{status:'healthy',errors15m:0,errors1h:0,errors24h:2},dependencies:{d1:{status:'healthy'},durableObjects:{status:'healthy'}},alerts:{emailConfigured:false,destination:null,recent:[]},account:{users:128,devices:46,activeTokens:39},incidents:[]}:null);
+  const [health,setHealth]=useState<HealthSnapshot|null>(()=>preview?{
+    status:'degraded',checkedAt:new Date().toISOString(),worker:{status:'healthy',errors15m:0,errors1h:0,errors24h:2},dependencies:{d1:{status:'healthy'},durableObjects:{status:'healthy'}},alerts:{emailConfigured:false,destination:null,recent:[]},account:{users:128,devices:46,activeTokens:39},incidents:[],
+    deviceExecution:{sample:true,coverage:'observed',status:'degraded',windowMinutes:15,calls:38,successfulCalls:35,timeouts:3,offlineCalls:0,staleSignals:1,keepAwakeFailures:1,affectedDevices:1,truncated:false,
+      devices:[{deviceId:'sample-mac-device',name:'Example Mac',platform:'darwin',timeouts:3,offlineCalls:0,staleSignals:1,keepAwakeFailures:1,lastFailureAt:new Date(Date.now()-60000).toISOString(),lastSuccessfulCallAt:new Date(Date.now()-120000).toISOString()}]},
+  }:null);
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
  async function refresh(){
@@ -173,13 +180,8 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
    setError(a.status==="rejected"||b.status==="rejected"||c.status==="rejected"?tr("Some metrics could not be loaded. Your other data is still available.","部分数据暂时无法加载，其余数据仍然可以查看。"):"");
   }finally{setLoading(false);}
  }
- useEffect(()=>{void refresh();},[preview]);
- // Refresh aggregate metrics while operators keep the console visible.
- useEffect(()=>{
-   if(preview)return;
-   const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void refresh();},60000);
-   return ()=>window.clearInterval(timer);
- },[preview]);
+ // Load when entering a section; subsequent updates are explicitly requested.
+ useEffect(()=>{void refresh();},[preview,section]);
  const nav:Array<{key:Section;en:string;zh:string}>=[
   {key:"overview",en:"Overview",zh:"业务总览"},
   {key:"leads",en:"Leads & feedback",zh:"线索与反馈"},

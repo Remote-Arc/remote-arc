@@ -2,6 +2,7 @@ import { WorkspaceLoading } from '../../components/workspace-loading.js';
 import { HomeHeroCopy, LandingContent, HomeSecurityIntro } from "./home/landing-content.js";
 import { InstallCommands } from "../../components/install-commands.js";
 import { HomeConnectionScene, type HomeConnectionMode } from "./home/home-connection-scene.js";
+import {RequestVolume} from './home/request-volume.js';
 import { ProductFocus } from "./product-positioning.js";
 import { AgentUseCases } from "./use-cases/agent-use-cases.js";
 import { ProductIcon } from "../../components/product-icon.js";
@@ -46,6 +47,7 @@ export function Landing({ user }: { user?: User | null }) {
         <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
       </section>
 
+      <RequestVolume/>
       <ProductFocus/>
       <HomeSecurityIntro/>
       <AgentUseCases/>

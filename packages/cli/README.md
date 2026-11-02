@@ -65,16 +65,16 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.6.5 — Dashboard browser authentication and reliable process admission**
+**remotelink 0.6.6 — Mac connection recovery and clearer execution health**
 
-Published 2026-10-28
+Published 2026-11-03
 
-- Add per-device, exact-website Dashboard approval and revocation for OTP sign-in/registration and supported CAPTCHA controls. Snapshots report effective authorization; missing approval and outdated clients return actionable errors.
-- Make legacy shared-tab fill and current action tools use the same OTP policy. Approved Runner verification providers expose visible controls and optional cropped challenge images; response tokens stay private, unsupported challenges retain human handoff and final submissions remain separately authorized.
-- Record authentication permission changes without recording code values, and remove authentication codes from resumable URLs.
-- Raise the default running-command limit from 32 to 64, configurable from 1 to 256 with REMOTEARC_MAX_ACTIVE_PROCESSES. Completed jobs no longer occupy running slots; retain at most 128 finished records for up to 30 minutes in both Go and TypeScript runtimes.
-- Publish Remote Arc Browser 0.4.1 with Dashboard OTP enforcement and corrected legacy tool behavior.
-- Promote the qualified Agent changes to the stable 0.6.5 npm/native release.
+- Reconnect the Go Agent after suspension or long peer-signal gaps before reading buffered calls. Reject expired Relay dispatch deadlines before starting an operation, while retaining pairing and legacy compatibility.
+- Request macOS system sleep protection on AC power during explicitly authorized task keep-awake leases. Preserve bounded expiry, renewal and release; allow the display to sleep. A ten-minute closed-lid test passed on the tested Intel Mac; this does not enable an idle always-on mode or guarantee every Mac power state.
+- Package the post-0.6.5 native fixes in a new release: the complete Go runtime, browser cold-start and authorization handoff reliability, Windows file-replacement retries and owner-scoped one-time secret handoff.
+- Show expired device signals and unconfirmed execution responses, provide an owner-only connection recovery check, and surface device timeouts and failed keep-awake leases in Admin separately from HTTP server errors. Never automatically replay an uncertain operation.
+- Add Google Apps Beta requests and operator admission while keeping basic Google sign-in separate. Apply the agreed seven-day Google invocation-content retention policy; Google Apps verification is still separate from Beta access.
+- Add per-user work and partial-cost insights, a compact monthly request estimate on the homepage, clearer support replies and unsubscribe pages, and a retryable task-page error fallback.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->

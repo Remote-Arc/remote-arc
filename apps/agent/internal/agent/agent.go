@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -31,6 +32,9 @@ type Background interface {
 	Enable(context.Context) (service.Status, error)
 	Disable(context.Context) error
 }
+
+var errConnectionSignalGap = errors.New("connection signal expired after system suspension or network interruption")
+
 type Agent struct {
 	Config             config.Config
 	Version            string
@@ -51,6 +55,7 @@ type Agent struct {
 	workspace          workspace.Manager
 	settings           sync.Mutex
 	capacity           *capacityProbe
+	wallClock          func() time.Time
 }
 
 func New(cfg config.Config, version string, background bool, log *journal.Journal) *Agent {
@@ -72,6 +77,12 @@ func (a *Agent) log(level, message string) {
 	if a.Journal != nil {
 		a.Journal.Log(level, CleanMessage(message))
 	}
+}
+func (a *Agent) wallNow() time.Time {
+	if a.wallClock != nil {
+		return a.wallClock()
+	}
+	return time.Now()
 }
 
 var runnerBypass = regexp.MustCompile(`(?i)(playwright|puppeteer|selenium|chromedriver|webdriver)`)
@@ -189,6 +200,12 @@ func (a *Agent) heartbeat(ctx context.Context) error {
 	return e
 }
 func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.Manager) (any, error) {
+	if call.ExpiresAt != "" {
+		deadline, err := time.Parse(time.RFC3339Nano, call.ExpiresAt)
+		if err != nil || !a.wallNow().Before(deadline) {
+			return nil, errors.New("DEVICE_CALL_EXPIRED: the Relay deadline passed before dispatch; no operation was started")
+		}
+	}
 	if !a.identityValid() {
 		return nil, ErrRevoked
 	}
@@ -406,7 +423,11 @@ func (a *Agent) Run(ctx context.Context) error {
 				delay = time.Second
 			}
 			if ctx.Err() == nil {
-				a.log("warn", "Relay disconnected; reconnecting.")
+				if errors.Is(e, errConnectionSignalGap) {
+					a.log("warn", "Connection signal expired after suspension or a network gap; reconnecting without replaying queued calls.")
+				} else {
+					a.log("warn", "Relay disconnected; reconnecting.")
+				}
 			}
 		}
 		if pause(ctx, delay) != nil {
@@ -446,8 +467,27 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 	defer func() { a.mu.Lock(); a.connected = false; a.mu.Unlock() }()
 	a.log("success", fmt.Sprintf("Connected · Go agent %s · session %d", a.Version, sequence))
 	conn.SetReadLimit(32 << 20)
+	// macOS monotonic time can stop during system sleep. Use wall time as well
+	// so buffered calls and pongs cannot make the old transport appear healthy
+	// when the process resumes. No filesystem/process action is replayed.
+	var lastPeerSignal atomic.Int64
+	lastPeerSignal.Store(a.wallNow().UnixMilli())
+	peerSignal := func() error {
+		now := a.wallNow().UnixMilli()
+		gap := now - lastPeerSignal.Load()
+		if gap > 75000 || gap < -5000 {
+			return errConnectionSignalGap
+		}
+		lastPeerSignal.Store(now)
+		return nil
+	}
 	conn.SetReadDeadline(time.Now().Add(75 * time.Second))
-	conn.SetPongHandler(func(string) error { return conn.SetReadDeadline(time.Now().Add(75 * time.Second)) })
+	conn.SetPongHandler(func(string) error {
+		if err := peerSignal(); err != nil {
+			return err
+		}
+		return conn.SetReadDeadline(time.Now().Add(75 * time.Second))
+	})
 	var frames <-chan browserrunner.ViewFrame
 	var videoSignals <-chan browserrunner.VideoSignal
 	if a.Browser != nil {
@@ -480,6 +520,12 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 					cancel()
 				}
 			case <-attention.C:
+				gap := a.wallNow().UnixMilli() - lastPeerSignal.Load()
+				if gap > 75000 || gap < -5000 {
+					cancel()
+					conn.Close()
+					return
+				}
 				if a.Browser != nil {
 					for _, event := range a.Browser.PendingAttention() {
 						if send(event) != nil {
@@ -530,6 +576,9 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 			default:
 				return e
 			}
+		}
+		if e := peerSignal(); e != nil {
+			return e
 		}
 		conn.SetReadDeadline(time.Now().Add(75 * time.Second))
 		var ack browserrunner.Attention

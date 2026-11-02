@@ -65,3 +65,39 @@ func TestHelperFailureAndUnsupportedPlatform(t *testing.T) {
 		t.Fatal("unsupported status", e)
 	}
 }
+func TestDarwinAuthorizedLeaseRequestsSystemProtectionAndReleasesIt(t *testing.T) {
+	m := New()
+	defer m.Close()
+	m.Platform = "darwin"
+	h := &fakeHelper{}
+	launches := 0
+	m.Launch = func(command string, args []string) (Helper, error) {
+		launches++
+		if command != "caffeinate" {
+			t.Fatalf("unexpected power helper %q", command)
+		}
+		flags := " " + strings.Join(args, " ") + " "
+		if !strings.Contains(flags, " -s ") {
+			t.Fatal("Darwin task lease did not request system sleep protection on AC")
+		}
+		if !strings.Contains(flags, " -i ") || !strings.Contains(flags, " -t ") {
+			t.Fatal("task protection must retain a bounded idle-sleep lease")
+		}
+		if strings.Contains(flags, " -d ") || strings.Contains(flags, " -u ") {
+			t.Fatal("task protection must not force the display awake")
+		}
+		return h, nil
+	}
+	if launches != 0 {
+		t.Fatal("power helper started without a task lease")
+	}
+	if status, err := m.Set("authorized-task", 120); err != nil || status["active"] != true || launches != 1 {
+		t.Fatal("authorized task did not acquire protection", status, err)
+	}
+	if _, err := m.Set("authorized-task", 120); err != nil || launches != 1 {
+		t.Fatal("duplicate renewal launched another helper", err)
+	}
+	if status, err := m.Set("authorized-task", 0); err != nil || status["active"] != false || status["leased_tasks"] != 0 || h.stopped != 1 {
+		t.Fatal("ending the task left sleep protection enabled", status, err)
+	}
+}

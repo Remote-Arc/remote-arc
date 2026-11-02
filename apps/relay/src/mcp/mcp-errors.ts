@@ -21,6 +21,8 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
   if (code === "PLAN_UPGRADE_REQUIRED" || /^Remote Arc Plus is required for /i.test(message)) {
     return { code: "PLAN_UPGRADE_REQUIRED", message };
   }
+  if(/device call timed out/i.test(message))return {code:'DEVICE_TIMEOUT',message:'Device response timed out. The operation may have executed and its result is unknown. Check device signals and execution history before retrying. If the computer slept, wake it and re-check; a timeout alone does not establish that a restart is needed.'};
+  if(message.startsWith('DEVICE_CALL_EXPIRED:'))return {code:'DEVICE_CALL_EXPIRED',message:'The request expired before the Agent started it. No operation was started for this request. Check that the computer is awake and its connection is fresh before sending a new request.'};
 
   const rules: Array<[RegExp, string]> = [
     [/requires cwd when multiple Trusted Write Locations/i, "WORKSPACE_CWD_REQUIRED"],
@@ -35,7 +37,6 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     [/disabled for this device\.?$/i, "TOOL_DISABLED"],
     [/Local Undo is disabled for this device/i, "TOOL_DISABLED"],
 
-    [/device call timed out/i, "DEVICE_TIMEOUT"],
     [/device offline/i, "DEVICE_OFFLINE"],
     [/device not found or revoked/i, "DEVICE_NOT_FOUND"],
     [/^device not found\.?$/i, "DEVICE_NOT_FOUND"],

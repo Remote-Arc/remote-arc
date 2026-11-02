@@ -3,6 +3,7 @@ import { DeviceRegistry } from "../src/devices/registry.js";
 import { handleDeviceRuntimeUpdate } from "../src/devices/device.js";
 
 type Attachment = {
+  lastSignalAt:number;
   userId: string;
   deviceId: string;
   device: { id: string; executionPaused: boolean; connectedAt: string };
@@ -10,6 +11,7 @@ type Attachment = {
   capabilities: string[];
 };
 const sample: Attachment = {
+  lastSignalAt:Date.now(),
   userId: "owner-1",
   deviceId: "device-1",
   device: { id: "device-1", executionPaused: true, connectedAt: "2026-10-10T12:00:00Z" },
@@ -18,6 +20,7 @@ const sample: Attachment = {
 };
 const socket = {
   deserializeAttachment() { return sample; },
+  serializeAttachment(value:Attachment) {Object.assign(sample,value);},
   send(raw: string) {
     const msg = JSON.parse(raw) as { type: string; id: string; tool: string };
     if (msg.tool !== "set_device_runtime") throw Error("No execution tool may dispatch to wake-only");

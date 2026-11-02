@@ -458,6 +458,8 @@ export async function getDevicesForUser(
   }
 
   type OnlineDevice = {
+    lastSeen?: string;
+    connection_state?: 'connected'|'stale';
     id: string;
     tools?: string[];
     capabilities?: string[];
@@ -484,14 +486,21 @@ export async function getDevicesForUser(
       headers: { "x-remote-link-user-id": userId },
     });
 
-  const onlineResponse = await env.REGISTRY
-    .getByName("user:" + userId)
-    .fetch(registryRequest());
+  const [onlineResponse,dispatchSignals]=await Promise.all([
+    env.REGISTRY.getByName('user:'+userId).fetch(registryRequest()),
+    (async()=>{try{return await env.DB.prepare(`SELECT device_id,
+      MAX(CASE WHEN outcome='device_timeout' THEN created_at END) lastTimeout,
+      MAX(CASE WHEN success=1 THEN created_at END) lastSuccess
+      FROM audit_events WHERE user_id=?1 AND event_type='mcp.tool_call' AND device_id IS NOT NULL AND created_at>=?2
+      GROUP BY device_id`).bind(userId,new Date(Date.now()-15*60000).toISOString())
+      .all<{device_id:string;lastTimeout:string|null;lastSuccess:string|null}>();}catch{return {results:[]};}})(),
+  ]);
+  const responseByDevice=new Map(dispatchSignals.results.map(row=>[row.device_id,row]));
   const online = onlineResponse.ok
     ? ((await onlineResponse.json()) as OnlineDevice[])
     : [];
 
-  if (online.length < storedDevices.length) {
+  if (online.filter(device=>device.status!=='offline').length < storedDevices.length) {
     // Temporary migration fallback while pre-sharding WebSockets may still
     // be attached to the legacy singleton Durable Object.
     const legacyResponse = await env.REGISTRY
@@ -499,9 +508,10 @@ export async function getDevicesForUser(
       .fetch(registryRequest());
     if (legacyResponse.ok) {
       const legacy = (await legacyResponse.json()) as OnlineDevice[];
-      const seen = new Set(online.map((device) => device.id));
       for (const device of legacy) {
-        if (!seen.has(device.id)) online.push(device);
+        const index=online.findIndex(existing=>existing.id===device.id);
+        if(index<0)online.push(device);
+        else if(online[index]?.status==='offline' && device.status!=='offline')online[index]=device;
       }
     }
   }
@@ -519,6 +529,8 @@ export async function getDevicesForUser(
           }
         : undefined;
     const live = onlineById.get(device.id) || reviewerFixture;
+    const dispatch=responseByDevice.get(device.id);
+    const executionHealth=dispatch?.lastTimeout&&(!dispatch.lastSuccess||dispatch.lastTimeout>=dispatch.lastSuccess)?'response_unknown':dispatch?.lastSuccess?'observed':'unknown';
     const rawAvailableTools = live?.tools || [];
     const capabilities = live?.capabilities || [];
     const internalTools = new Set([
@@ -554,7 +566,11 @@ export async function getDevicesForUser(
       arch: device.arch,
       hostname: device.hostname,
       created_at: device.created_at,
-      last_seen: device.last_seen,
+      last_seen: live?.lastSeen || device.last_seen,
+      connection_state: live?.connection_state ?? null,
+      execution_health:executionHealth,
+      execution_last_timeout_at:dispatch?.lastTimeout??null,
+      execution_last_success_at:dispatch?.lastSuccess??null,
       allowed_tools: allowedTools,
       available_tools: availableTools,
       workspace_roots: parseJsonStringArray(device.workspace_roots),
@@ -608,8 +624,8 @@ export async function getDevicesForUser(
       capacity: live?.capacity ?? null,
       automation_permissions: parseTaskPermissions(device.automation_permissions),
       keep_awake_available: (live?.tools || []).includes("set_task_keep_awake"),
-      status: live ? "online" : "offline",
-      tools,
+      status: live && live.status!=='offline' ? "online" : "offline",
+      tools: live?.status==='offline'?[]:tools,
     };
   });
 }
@@ -1074,12 +1090,41 @@ export async function handleDeviceUndoAction(
 }
 
 
-/**
- * Owner-authenticated runtime state transition. The private device control
- * tool is never exposed through ordinary MCP or accepted from unauthenticated
- * requests. A paused Go worker is wake-only: the Relay routes no execution
- * tools, and the local worker also denies them.
- */
+/** Owner-only stale-transport cleanup. Working connections, processes,
+ * credentials, permissions and previously issued operations are preserved. */
+export async function handleDeviceConnectionRecovery(
+  request:Request,
+  env:DeviceEnv&{DASHBOARD_ORIGIN?:string;APP_ORIGIN?:string;AUTH_RATE_LIMITER?:{limit(input:{key:string}):Promise<{success:boolean}>}},
+){
+  const json=(value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store'}});
+  const user=await getSessionUser(request,env);
+  if(!user)return json({error:'unauthorized'},401);
+  if(request.method!=='POST')return json({error:'method_not_allowed'},405);
+  const url=new URL(request.url),allowed=[env.PUBLIC_ORIGIN,env.DASHBOARD_ORIGIN,env.APP_ORIGIN].filter(Boolean).map(value=>new URL(value!).origin);
+  if(!allowed.includes(url.origin))return json({error:'not_found'},404);
+  if(request.headers.get('origin')!==url.origin)return json({error:'same_origin_required'},403);
+  if(request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json')return json({error:'unsupported_media_type'},415);
+  const deviceId=url.pathname.match(/^\/api\/devices\/([A-Za-z0-9_-]{1,100})\/reconnect$/)?.[1];
+  if(!deviceId)return json({error:'device not found'},404);
+  const owned=await env.DB.prepare('SELECT id FROM devices WHERE id=?1 AND user_id=?2 AND revoked_at IS NULL').bind(deviceId,user.id).first();
+  if(!owned)return json({error:'device not found'},404);
+  if(env.AUTH_RATE_LIMITER&&!(await env.AUTH_RATE_LIMITER.limit({key:'device-reconnect:'+user.id+':'+deviceId})).success)return json({error:'rate_limited'},429);
+  try{
+    const results=await Promise.all(['user:'+user.id,'global'].map(async shard=>{
+      const response=await env.REGISTRY.getByName(shard).fetch(new Request('https://registry/reconnect',{method:'POST',headers:{'content-type':'application/json','x-remote-link-user-id':user.id},body:JSON.stringify({deviceId})}));
+      if(!response.ok)throw Error('registry unavailable');
+      const value=await response.json() as {state:string;connected:number;retired:number};
+      if(!['connection_present','reconnect_requested','device_unreachable'].includes(value.state)||!Number.isInteger(value.connected)||value.connected<0||!Number.isInteger(value.retired)||value.retired<0)throw Error('invalid recovery observation');
+      return value;
+    }));
+    const state=results.some(value=>value.connected>0)?'connection_present':results.some(value=>value.retired>0)?'reconnect_requested':'device_unreachable';
+    await writeAudit(env,{userId:user.id,deviceId,eventType:'device.connection_recovery_checked',outcome:state}).catch(()=>{});
+    return json({ok:true,state,executionConfirmed:false});
+  }catch{return json({error:'recovery_check_unavailable'},503);}
+}
+
+/** Owner-authenticated pause/resume. The private control is not exposed
+ * through ordinary MCP; a paused worker cannot dispatch execution tools. */
 export async function handleDeviceRuntimeUpdate(
   request: Request,
   env: DeviceEnv & { REGISTRY: DurableObjectNamespace },

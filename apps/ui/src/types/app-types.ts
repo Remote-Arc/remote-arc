@@ -12,6 +12,10 @@ export type User = {
 };
 export type DeviceTaskPermissions = { background_tasks: boolean; scheduled_tasks: boolean; adaptive_agent: boolean; source_agent: boolean; keep_awake: boolean };
 export type Device = {
+  connection_state?: 'connected'|'stale'|null;
+  execution_health?:'response_unknown'|'observed'|'unknown';
+  execution_last_timeout_at?:string|null;
+  execution_last_success_at?:string|null;
   capacity?: {observedAt:string;cpuPercent?:number;memoryAvailableMB:number;memoryTotalMB:number;managedProcesses?:number};
   id: string;
   name: string;

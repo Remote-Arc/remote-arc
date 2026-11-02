@@ -2,6 +2,7 @@ import { recordRunnerAttention, type RunnerEnv } from "../browser/runner-attenti
 import { RunnerVideoRelay, type VideoAttachment } from "../browser/runner-video.js";
 import { deviceCallTimeoutMs, processTimeoutError } from './call-timeout.js';
 import { HEARTBEAT_INTERVAL_MS, recordDeviceConnection } from '../analytics/device-reliability.js';
+import {recordProductEvent} from '../analytics/product-events.js';
 import type {
   AgentCallMessage,
   AgentToRelayMessage,
@@ -12,12 +13,15 @@ import type {
 class DeviceReportedError extends Error {}
 
 type PendingCall = {
+  socket: WebSocket;
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
   timeout: ReturnType<typeof setTimeout>;
 };
 
 type SocketAttachment = VideoAttachment & {
+  lastSignalAt?: number;
+  staleRecorded?: boolean;
   viewer?: boolean;
   sessionId?: string;
   heartbeatAt?: number;
@@ -54,8 +58,34 @@ export class DeviceRegistry {
     await this.video?.sweep();
   }
 
-  private preferredSocket(sockets: WebSocket[]) {
-    return [...sockets].sort((a, b) => {
+  private signalAt(attachment: SocketAttachment | null) {
+    const at=attachment?.lastSignalAt ?? Date.parse(attachment?.device?.lastSeen || attachment?.device?.connectedAt || '');
+    return Number.isFinite(at)?at:null;
+  }
+
+  private stale(socket: WebSocket) {
+    const at=this.signalAt(socket.deserializeAttachment() as SocketAttachment | null);
+    // Legacy attachments without a timestamp get the next hello/ping timestamp.
+    return at!==null && (Date.now()-at>120000 || at>Date.now()+5000);
+  }
+
+  private expireSocket(socket: WebSocket,report=true) {
+    const attachment=socket.deserializeAttachment() as SocketAttachment | null;
+    if(!attachment || attachment.viewer || !this.stale(socket))return;
+    if(!attachment.staleRecorded){
+      socket.serializeAttachment({...attachment,staleRecorded:true});
+      if(this.env&&report)this.ctx.waitUntil(recordProductEvent(this.env,{
+        domain:'devices',name:'device.presence.stale',source:'server',outcome:'failed',
+        userId:attachment.userId,entityId:attachment.deviceId,errorCode:'DEVICE_SIGNAL_STALE',
+      }));
+    }
+    // Closing an expired transport lets the existing Agent reconnect on wake.
+    // No tool, process or browser action is retried here.
+    try{socket.close(4002,'device signal stale');}catch{}
+  }
+
+  private preferredSocket(sockets: WebSocket[], includeStale=false) {
+    return [...sockets].filter(socket=>(socket.readyState===undefined || socket.readyState===1) && (includeStale || !this.stale(socket))).sort((a, b) => {
       const left = a.deserializeAttachment() as SocketAttachment | null;
       const right = b.deserializeAttachment() as SocketAttachment | null;
       const leftPolicy = left?.capabilities?.includes("device_policy_v1")
@@ -92,6 +122,7 @@ export class DeviceRegistry {
     if (url.pathname === "/disconnect" && request.method === "POST") {
       return this.handleDisconnect(request);
     }
+    if(url.pathname==='/reconnect'&&request.method==='POST')return this.handleReconnect(request);
 
     return new Response("Not found", { status: 404 });
   }
@@ -257,6 +288,7 @@ export class DeviceRegistry {
     server.serializeAttachment({
       userId,
       deviceId,
+      lastSignalAt: Date.now(),
     } satisfies SocketAttachment);
 
     this.ctx.acceptWebSocket(server, ["user:" + userId, "device:" + deviceId]);
@@ -283,16 +315,18 @@ export class DeviceRegistry {
     for (const socket of this.ctx.getWebSockets("user:" + userId)) {
       const attachment =
         socket.deserializeAttachment() as SocketAttachment | null;
-      if (!attachment?.deviceId) continue;
+      if (!attachment?.deviceId || attachment.userId!==userId || attachment.viewer || (socket.readyState!==undefined && socket.readyState!==1)) continue;
       const sockets = byDevice.get(attachment.deviceId) || [];
       sockets.push(socket);
       byDevice.set(attachment.deviceId, sockets);
     }
 
     return Array.from(byDevice.entries()).map(([deviceId, sockets]) => {
-      const socket = this.preferredSocket(sockets);
+      const liveSocket=this.preferredSocket(sockets);
+      const socket = liveSocket || this.preferredSocket(sockets,true);
       const attachment =
         socket?.deserializeAttachment() as SocketAttachment | null;
+      for(const candidate of sockets)this.expireSocket(candidate,!liveSocket);
       const backgroundSocket = sockets
         .map(
           (candidate) =>
@@ -309,23 +343,39 @@ export class DeviceRegistry {
         ...(attachment?.device || {}),
         tools: attachment?.tools || [],
         capabilities: attachment?.capabilities || [],
-        status: "online",
+        status: liveSocket ? 'online' : 'offline',
+        connection_state: liveSocket ? 'connected' : 'stale',
         execution_paused: attachment?.device?.executionPaused === true,
         recovery_enabled: attachment?.device?.recoveryEnabled,
-        background_guard_active: attachment?.device?.supervisorActive === true,
+        background_guard_active: Boolean(liveSocket) && attachment?.device?.supervisorActive === true,
         background_guard_pid: attachment?.device?.supervisorPid ?? null,
         background_guard_service: attachment?.device?.supervisorService ?? null,
         recovery_bundle_version: attachment?.device?.recoveryVersion ?? null,
         execution_mode: attachment?.device?.backgroundProcess
           ? "background"
           : "foreground",
-        background_active: Boolean(backgroundSocket),
+        background_active: Boolean(liveSocket && backgroundSocket),
         background_pid: backgroundSocket?.device?.pid ?? null,
         background_agent_version:
           backgroundSocket?.device?.agentVersion ?? null,
         background_connected_at: backgroundSocket?.device?.connectedAt ?? null,
       };
     });
+  }
+
+  private async handleReconnect(request:Request):Promise<Response>{
+    const userId=request.headers.get('x-remote-link-user-id');
+    if(!userId)return Response.json({error:'missing user identity'},{status:401});
+    const body=await request.json().catch(()=>null) as {deviceId?:unknown}|null;
+    if(typeof body?.deviceId!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(body.deviceId))return Response.json({error:'invalid deviceId'},{status:400});
+    const sockets=this.ctx.getWebSockets('device:'+body.deviceId).filter(socket=>{
+      const a=socket.deserializeAttachment() as SocketAttachment|null;
+      return a?.userId===userId&&!a.viewer&&(socket.readyState===undefined||socket.readyState===1);
+    });
+    const connected=sockets.filter(socket=>!this.stale(socket)).length;
+    const expired=sockets.filter(socket=>this.stale(socket));
+    for(const socket of expired)this.expireSocket(socket,connected===0);
+    return Response.json({state:connected?'connection_present':expired.length?'reconnect_requested':'device_unreachable',connected,retired:expired.length});
   }
 
   private async handleDisconnect(request: Request): Promise<Response> {
@@ -383,9 +433,12 @@ export class DeviceRegistry {
     const timeoutError = processTimeoutError(body.tool, body.arguments || {});
     if (timeoutError) return Response.json({ error: timeoutError }, { status: 400 });
 
-    const socket = this.preferredSocket(
-      this.ctx.getWebSockets("device:" + body.deviceId),
-    );
+    const sockets=this.ctx.getWebSockets('device:'+body.deviceId).filter(socket=>{
+      const attachment=socket.deserializeAttachment() as SocketAttachment | null;
+      return attachment?.userId===userId && !attachment.viewer;
+    });
+    const socket = this.preferredSocket(sockets);
+    for(const candidate of sockets)this.expireSocket(candidate,!socket);
     if (!socket) {
       return Response.json({ error: "device offline" }, { status: 404 });
     }
@@ -430,6 +483,7 @@ export class DeviceRegistry {
         ? body.requestId
         : crypto.randomUUID();
     const message: AgentCallMessage = {
+      expires_at:new Date(Date.now()+deviceCallTimeoutMs(body.tool,body.arguments||{})).toISOString(),
       type: "call",
       id,
       tool: body.tool,
@@ -443,7 +497,7 @@ export class DeviceRegistry {
         reject(new Error("device call timed out"));
       }, deviceCallTimeoutMs(body.tool!, body.arguments || {}));
 
-      this.pending.set(id, { resolve, reject, timeout });
+      this.pending.set(id, { socket, resolve, reject, timeout });
       try {
         socket.send(JSON.stringify(message));
       } catch (error) {
@@ -517,6 +571,14 @@ export class DeviceRegistry {
           );
       }
       return; // A viewer can never impersonate an Agent or dispatch an action.
+    }
+    if(['hello','ping','result','runner_video','runner_frame','runner_attention'].includes(parsed.type)){
+      const at=Date.now();
+      socket.serializeAttachment({...attachment,lastSignalAt:at,device:{...attachment.device,lastSeen:new Date(at).toISOString()}});
+    }
+    if(parsed.type==='ping'){
+      socket.send(JSON.stringify({type:'pong'}));
+      return;
     }
     if (parsed.type === "runner_video") {
       if (message.length <= 70000 && this.video)
@@ -601,6 +663,8 @@ export class DeviceRegistry {
           : null;
       socket.serializeAttachment({
         ...attachment,
+        lastSignalAt:Date.now(),
+        staleRecorded:false,
         connectionRecorded: true,
         metricWindow,
         device: {
@@ -637,6 +701,11 @@ export class DeviceRegistry {
   }
 
   webSocketClose(socket: WebSocket) {
+    for(const [id,pending] of this.pending){
+      if(pending.socket!==socket)continue;
+      clearTimeout(pending.timeout);this.pending.delete(id);
+      pending.reject(new Error('device call timed out: connection closed; execution result unknown'));
+    }
     const a = socket.deserializeAttachment() as SocketAttachment | null;
     if (a && !a.viewer && a.connectionRecorded && !a.disconnectRecorded && this.env) {
       socket.serializeAttachment({...a,disconnectRecorded:true});

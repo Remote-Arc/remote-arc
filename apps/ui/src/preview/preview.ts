@@ -125,6 +125,12 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     },
   ];
 
+  if(new URL(location.href).searchParams.get('device-signal')==='stale')for(const device of devices){
+    if(device.platform==='darwin')Object.assign(device,{status:'offline',connection_state:'stale',last_seen:previewAgo(180000),agent_version:'0.6.5',background_guard_active:false});
+  }
+  if(new URL(location.href).searchParams.get('device-signal')==='unresponsive')for(const device of devices){
+    if(device.platform==='darwin')Object.assign(device,{execution_health:'response_unknown',execution_last_timeout_at:previewAgo(60000),agent_version:'0.6.5'});
+  }
   // An outdated Chrome extension, to show its update notice.
   if(new URL(location.href).searchParams.get("demo")==="extension-update") devices.push({
     id: "preview-browser", name: "Chrome Browser", platform: "browser", arch: "chrome", hostname: "chrome-extension",
@@ -284,6 +290,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       item.updated_at=previewNow();
       return json({automation:item});
     }
+    if(method==='POST'&&/^\/api\/devices\/[^/]+\/reconnect$/.test(url.pathname))return json({ok:true,state:new URL(location.href).searchParams.get('device-signal')==='unresponsive'?'connection_present':'device_unreachable',executionConfirmed:false});
     if (method !== "GET") {
       return json(
         { error: "PR Preview is read-only. This action is not connected to production." },
@@ -472,8 +479,10 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
     if (url.pathname === "/api/monitor") {
       return json({
-        status: "operational",
+        status: "degraded",
         checkedAt: previewNow(),
+        deviceExecution:{sample:true,coverage:'observed',status:'degraded',windowMinutes:15,calls:38,successfulCalls:35,timeouts:3,offlineCalls:0,staleSignals:1,keepAwakeFailures:1,affectedDevices:1,truncated:false,
+          devices:[{deviceId:'sample-mac-device',name:'Example Mac',platform:'darwin',timeouts:3,offlineCalls:0,staleSignals:1,keepAwakeFailures:1,lastFailureAt:previewAgo(60000),lastSuccessfulCallAt:previewAgo(120000)}]},
         worker: {
           status: "operational",
           errors15m: 0,
@@ -498,6 +507,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
         incidents: [
           {
             id: "preview-incident",
+            severity:'error',kind:'http_5xx',method:'POST',
             status_code: 502,
             path: "/mcp",
             message: "Example recovered upstream error",

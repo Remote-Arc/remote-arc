@@ -1,5 +1,6 @@
 /** Reviewed summaries for the original version history. Full source notes remain available in English. */
 export const releaseChinese: Record<string, { title: string; summary: string }> = {
+  "0.6.6": { title: "Mac 连接恢复与设备执行健康", summary: "改善 Mac 唤醒后的连接恢复和任务期间的接电保活，阻止过期指令执行；新增设备响应诊断，并完善 Apps Beta 申请与用户用量分析。" },
   "0.6.5": { title: "浏览器认证授权与可靠的任务容量", summary: "在 Dashboard 按网站批准 OTP 登录、注册和支持的 CAPTCHA 操作，随时撤销并查看授权状态；默认允许 64 个运行中的命令，完成任务不再占用名额，支持配置到 256 个。同步发布 Agent 0.6.5、扩展 0.4.1 和原生安装包。" },
  "0.6.3": {title:"浏览器工作流、Slack 对话与响应式首页",summary:"Runner 默认在后台隐藏任务窗口，需要接管时在原页面显示，保留已输入内容；扩展 0.4 可在你允许的网站打开标签页并操作，修复并发提交与键盘提交校验。修复 Slack 首次关联、成员查询和处理回执，整理手机与 iPad 的首页对齐，并更新 Connect 接入指南。发布六个平台的 0.6.3 正式客户端、npm、Homebrew 与官网稳定版下载。"},
  "0.6.2": {title:"Browser Runner 与设备集群调度",summary:"新增 Beta 浏览器任务，可连接已打开的 Chrome、填写表单、跨页面继续任务，并在购买和提交前确认；支持本地保存的登录信息及需要机主接管的验证码。改进 Codex、Claude Code 配置与后台升级，增加 CPU、内存状态及设备集群任务分配。发布六个平台的原生二进制、npm 与 Homebrew 安装包，官网默认展示正式版下载。"},

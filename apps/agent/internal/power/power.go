@@ -116,7 +116,9 @@ func (m *Manager) Set(id string, seconds int) (map[string]any, error) {
 			m.helper = nil
 		}
 		command := "caffeinate"
-		args := []string{"-i", "-t", "210"}
+		// System sleep protection is honored on AC power; idle protection
+		// remains task-scoped, with the same expiry and cleanup on battery.
+		args := []string{"-i", "-s", "-t", "210"}
 		if m.Platform == "windows" {
 			command = "powershell.exe"
 			script := `Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class RemoteArcPower { [DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint flags); }'; if ([RemoteArcPower]::SetThreadExecutionState([uint32]2147483649) -eq 0) { exit 1 }; try { Start-Sleep -Seconds 210 } finally { [RemoteArcPower]::SetThreadExecutionState([uint32]2147483648) | Out-Null }`

@@ -89,7 +89,7 @@ export function rankFleetDevices(
     tools.add("stop_process");
   }
   return devices.flatMap((device) => {
-    if (device.status !== "online" || device.execution_paused) return [];
+    if (device.status !== "online" || device.execution_paused || device.execution_health==='response_unknown') return [];
     if (requirements.platform && device.platform !== requirements.platform) return [];
     if ([...tools].some((tool) => !device.tools.includes(tool))) return [];
     const paths = [...(requirements.workspace ? [requirements.workspace] : []), ...(requirements.workspaces || [])];

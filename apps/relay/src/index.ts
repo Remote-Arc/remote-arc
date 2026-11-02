@@ -68,6 +68,7 @@ import {
   handleDeviceDirectoryBrowse,
   handleDeviceBackgroundUpdate,
   handleDeviceRuntimeUpdate,
+  handleDeviceConnectionRecovery,
   handleDeviceExecutionLog,
   handleDeviceManagedProcesses,
   handleDeviceManagedProcessOutput,
@@ -821,6 +822,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return handleDeviceDirectoryBrowse(request, env);
     }
 
+    if(/^\/api\/devices\/[^/]+\/reconnect$/.test(url.pathname))return handleDeviceConnectionRecovery(request,env);
     if (
       /^\/api\/devices\/[^/]+\/runtime$/.test(url.pathname) &&
       request.method === "POST"

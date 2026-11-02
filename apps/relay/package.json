@@ -8,7 +8,7 @@
     "deploy": "node ../../scripts/deploy-relay.mjs --skip-build",
     "typecheck": "tsc --noEmit",
     "test:device-timeout": "tsx scripts/device-call-timeout-test.ts",
-    "test:reliability": "tsx scripts/device-reliability-test.ts",
+    "test:reliability": "tsx scripts/device-reliability-test.ts && tsx scripts/device-execution-health-test.ts && tsx scripts/device-connection-recovery-test.ts",
     "test:scheduling": "tsx scripts/schedule-clock-test.ts && tsx scripts/task-contract-test.ts && tsx scripts/device-task-policy-test.ts && tsx scripts/agent-tools-validation-test.ts && tsx scripts/github-automation-test.ts",
     "test:runner-video": "tsx scripts/runner-video-test.ts",
     "test:seo": "tsx scripts/seo-smoke.mjs",

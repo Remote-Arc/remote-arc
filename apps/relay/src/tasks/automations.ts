@@ -1,4 +1,5 @@
 import { requireTaskPermission } from "../devices/device-task-policy.js";
+import {recordProductEvent} from '../analytics/product-events.js';
 import { selectFleetDevice } from "../devices/fleet-scheduler.js";
 import { binaryTransferLimit, isPlanUpgradeRequiredError, requireEntitledFeatures, requireFeatures, type AccountFeature, type PlanEntitlements } from "../billing/entitlements.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
@@ -2398,11 +2399,16 @@ async function executeAutomation(
   );
 }
 
-async function setTaskKeepAwake(env: AutomationEnv, automation: AutomationRow, seconds: number) {
+export async function setTaskKeepAwake(env: AutomationEnv, automation: AutomationRow, seconds: number) {
   if (!automation.device_id || !parseJson<ActionPlan>(automation.action_json, { steps: [] }).keep_awake) return;
-  const result = await callDevice(env, automationIdentity(automation, env), automation.device_id,
-    "set_task_keep_awake", { task_id: automation.id, seconds }) as { supported?: boolean; active?: boolean };
-  if (seconds > 0 && (!result.supported || !result.active)) throw new Error("This computer could not acquire its task keep-awake lease. Check the local OS power service.");
+  try{
+    const result = await callDevice(env, automationIdentity(automation, env), automation.device_id,
+      "set_task_keep_awake", { task_id: automation.id, seconds }) as { supported?: boolean; active?: boolean };
+    if (seconds > 0 && (!result.supported || !result.active)) throw new Error("This computer could not acquire its task keep-awake lease. Check the local OS power service.");
+  }catch(error){
+    if(seconds>0)await recordProductEvent(env,{domain:'devices',name:'device.keep_awake.failed',source:'server',outcome:'failed',userId:automation.user_id,entityId:automation.device_id,errorCode:'DEVICE_KEEP_AWAKE_FAILED'});
+    throw error;
+  }
 }
 
 async function maintainTaskKeepAwake(env: AutomationEnv) {

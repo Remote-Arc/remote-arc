@@ -1,5 +1,9 @@
 import {recordProductEvent} from '../analytics/product-events.js';
+import {boundedEventJson} from '../analytics/product-observability.js';
 import { z } from "zod";
+import {googleScopeSatisfied,GOOGLE_APP_DATA_POLICY,hasGoogleAppConsent} from './google-app-policy.js';
+import {eraseGoogleAppContent,expireGoogleAppCall,googleAppContentCutoff} from './app-retention.js';
+import {googleAppBetaState,googleAppBetaAllowed,requireGoogleAppBeta,submitGoogleAppBeta} from './google-app-beta.js';
 import {billingEnabled} from '../platform/platform-launch.js';
 import {currentArcPlan} from '../arc/arc-plan.js';
 import { getSessionUser, randomToken, sha256Hex, type OAuthIdentity } from "../auth/auth.js";
@@ -13,27 +17,31 @@ import { loadAppReview, reviewRead, type AppReview } from "./app-review.js";
 import { authorizationUrl, exchangeTokens, newVerifier, providerIdentity, providerJson, revokeProvider, seal, unseal, type AppTokens } from "./app-oauth.js";
 
 type Connection = { id: string; user_id: string; provider: AppProvider; account_id: string; account_label: string; status: string; permissions_json: string; scopes_json: string; token_ciphertext: string | null; expires_at: string | null; generation: number; last_error: string | null; updated_at: string; daily_call_limit: number; connection_metadata_json: string };
-type Call = { id: string; user_id: string; connection_id: string; connection_generation: number; operation: string; permission: AppPermission; request_id: string; input_hash: string; arguments_ciphertext: string; result_ciphertext: string | null; review_ciphertext: string | null; status: string; error_code: string | null; expires_at: string; created_at: string };
+type Call = { id: string; user_id: string; connection_id: string; connection_generation: number; operation: string; permission: AppPermission; request_id: string; input_hash: string; arguments_ciphertext: string; result_ciphertext: string | null; review_ciphertext: string | null; status: string; error_code: string | null; expires_at: string; created_at: string; content_purged_at:string|null };
 const now = () => new Date().toISOString();
 const expires = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
+async function boundedAppJson(request:Request,limit=8192){try{return await boundedEventJson(request,limit);}catch{throw new AppError('invalid_app_request',400);}}
 const response = (data: unknown, status = 200) => Response.json(data, { status, headers: { "cache-control": "no-store" } });
 const tokenContext = (row: Pick<Connection, "id" | "user_id" | "provider">) => `app-token:${row.user_id}:${row.provider}:${row.id}`;
+const safeSettings=(row:Connection)=>Object.fromEntries(Object.entries(JSON.parse(row.connection_metadata_json||'{}')).filter(([key])=>key!=='googleDataConsent'));
 const callContext = (userId: string, id: string, kind: string) => `app-call:${userId}:${id}:${kind}`;
 function enabled(env: AppEnv) { if (env.ENABLE_APPS !== "1") throw new AppError("apps_not_enabled", 503); }
 function sameOrigin(request: Request, env: AppEnv) {
   if (!isTrustedDashboardMutation(request, env)) throw new AppError("same_origin_required", 403);
   if (["POST", "PATCH"].includes(request.method) && request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") throw new AppError("json_required", 415);
 }
-const cleanConnection = (row: Connection) => ({ id: row.id, provider: row.provider, accountLabel: row.account_label, status: row.status, permissions: JSON.parse(row.permissions_json), scopes: JSON.parse(row.scopes_json), expiresAt: row.expires_at, lastError: row.last_error, updatedAt: row.updated_at, dailyCallLimit: row.daily_call_limit, settings: JSON.parse(row.connection_metadata_json || "{}"), toolAccess: connectionToolAccess(row) });
+const cleanConnection = (row: Connection) => ({ id: row.id, provider: row.provider, accountLabel: row.account_label, status: row.status, permissions: JSON.parse(row.permissions_json), scopes: JSON.parse(row.scopes_json), expiresAt: row.expires_at, lastError: row.last_error, updatedAt: row.updated_at, dailyCallLimit: row.daily_call_limit, settings: safeSettings(row), dataConsentRequired:APP_CATALOG[row.provider].credential==='GOOGLE'&&!hasGoogleAppConsent(row.connection_metadata_json), toolAccess: connectionToolAccess(row) });
 async function connection(env: AppEnv, userId: string, id: string) { const row = await env.DB.prepare("SELECT * FROM app_connections WHERE id=?1 AND user_id=?2").bind(id, userId).first<Connection>(); if (!row) throw new AppError("app_connection_not_found", 404); return row; }
 function requirePermission(row: Connection, permission: AppPermission, operation?: AppOperation) {
   if (row.status !== "active" || !row.token_ciphertext) throw new AppError("app_reauthorization_required", 409);
+  if(APP_CATALOG[row.provider].credential==='GOOGLE'&&!hasGoogleAppConsent(row.connection_metadata_json))throw new AppError('google_app_data_consent_required',403);
    // A connected account enables its tools. Provider OAuth scopes remain the
    // authority; legacy local read/write switches do not add a second gate.
   const scopes = new Set<string>((JSON.parse(row.scopes_json) as string[]).map(s=>normalizeScope(s,row.provider)));
   const required = (operation?.requiredScopes ?? appScopes(row.provider, [permission])).map(s=>normalizeScope(s,row.provider)).filter(s => !["offline_access", "offline.access", "refresh_token"].includes(s));
   // Google may replace readonly with the broader modify scope in its response.
   const satisfies = (scope: string) => scopes.has(scope) ||
+    (APP_CATALOG[row.provider].credential==='GOOGLE'&&googleScopeSatisfied(scopes,scope)) ||
     (row.provider === "gmail" && scope.endsWith("/gmail.readonly") && scopes.has("https://www.googleapis.com/auth/gmail.modify")) ||
     (row.provider === "google_drive" && scope === "https://www.googleapis.com/auth/drive.file" && scopes.has("https://www.googleapis.com/auth/drive")) ||
     (scope.endsWith(".readonly") && scopes.has(scope.slice(0, -9))) ||
@@ -58,20 +66,29 @@ function connectionToolAccess(row: Connection) {
 export async function listApps(env: AppEnv, userId: string) {
   if (env.ENABLE_APPS !== "1") return { enabled: false, apps: [], connections: [] };
   const rows = await env.DB.prepare("SELECT * FROM app_connections WHERE user_id=?1 ORDER BY created_at DESC").bind(userId).all<Connection>();
-   return { enabled: true, apps: Object.entries(APP_CATALOG).map(([key, def]) => { const configured = appConfigured(env, key as AppProvider); return { provider: key, name: def.name, brand: def.brand, category: def.category, auth: def.auth || "oauth", payer: def.payer || "provider_rules", billingNote: def.billingNote, connectionNote: def.connectionNote, configured, operations: APP_OPERATIONS.filter(o => o.provider === key).map(o => ({ name: o.name, description: o.description, permission: o.permission, inputSchema: z.toJSONSchema(o.schema) })), permissions: { read: def.scopes.read, write: def.scopes.write }, consentNote: "Connecting enables available tools within the permissions granted by the provider." }; }), connections: (rows.results || []).map(cleanConnection) };
+  const googleBeta=await googleAppBetaState(env,userId);
+  return {enabled:true,googleBeta,apps:Object.entries(APP_CATALOG).map(([key,def])=>({
+    provider:key,name:def.name,brand:def.brand,category:def.category,auth:def.auth||'oauth',payer:def.payer||'provider_rules',billingNote:def.billingNote,connectionNote:def.connectionNote,configured:appConfigured(env,key as AppProvider),
+    operations:APP_OPERATIONS.filter(operation=>operation.provider===key).map(operation=>({name:operation.name,description:operation.description,permission:operation.permission,inputSchema:z.toJSONSchema(operation.schema)})),
+    permissions:{read:def.scopes.read,write:def.scopes.write},
+    ...(def.credential==='GOOGLE'?{dataPolicy:GOOGLE_APP_DATA_POLICY,requiresBetaApproval:!googleAppBetaAllowed(googleBeta,key,(rows.results||[]).some(row=>row.provider===key&&row.status!=='disconnected'))}:{}),
+    consentNote:'Connecting enables available tools within the permissions granted by the provider.',
+  })),connections:(rows.results||[]).map(cleanConnection)};
 }
 async function authorize(request: Request, env: AppEnv, userId: string) {
   sameOrigin(request, env);
-  const body = z.object({ provider: providerSchema, permissions: permissionSchema.default(["read", "write"]), settings: connectionSettingsSchema.optional(), chatRequestId:z.string().regex(/^app-connect-[a-f0-9]{64}$/).optional() }).strict().parse(await request.json());
+  const body = z.object({ provider: providerSchema, permissions: permissionSchema.default(["read", "write"]), settings: connectionSettingsSchema.optional(), chatRequestId:z.string().regex(/^app-connect-[a-f0-9]{64}$/).optional(),dataConsent:z.literal(GOOGLE_APP_DATA_POLICY.version).optional() }).strict().parse(await request.json());
+  await requireGoogleAppBeta(env,userId,body.provider);
+  if(APP_CATALOG[body.provider].credential==='GOOGLE'&&!body.dataConsent)throw new AppError('google_app_data_consent_required',403);
   if(body.chatRequestId)await (await import('../arc/arc-app-connections.js')).chatConnectionReturn(env as import('../arc/arc-chat.js').ArcEnv,userId,body.chatRequestId,body.provider);
   credentials(env, body.provider);
   const context = connectionContext(env, body.provider, body.settings);
   const state = randomToken(); const verifier = newVerifier(); const stateHash = await sha256Hex(state);
   await env.DB.prepare("DELETE FROM app_oauth_states WHERE expires_at<=?1").bind(now()).run();
-  await env.DB.prepare("INSERT INTO app_oauth_states(state_hash,user_id,provider,permissions_json,verifier_ciphertext,expires_at,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7)").bind(stateHash, userId, body.provider, JSON.stringify(body.permissions), await seal(env, { verifier, context,...(body.chatRequestId?{chatRequestId:body.chatRequestId}:{}) }, `app-oauth:${userId}:${stateHash}`), expires(600), now()).run();
+  await env.DB.prepare("INSERT INTO app_oauth_states(state_hash,user_id,provider,permissions_json,verifier_ciphertext,expires_at,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7)").bind(stateHash, userId, body.provider, JSON.stringify(body.permissions), await seal(env, { verifier, context,...(body.chatRequestId?{chatRequestId:body.chatRequestId}:{}),...(body.dataConsent?{googleDataConsent:{version:body.dataConsent,acceptedAt:now()}}:{}) }, `app-oauth:${userId}:${stateHash}`), expires(600), now()).run();
   return response({ authorizationUrl: await authorizationUrl(env, body.provider, body.permissions, state, verifier, context) });
 }
-async function saveConnection(env: AppEnv, userId: string, provider: AppProvider, permissions: AppPermission[], tokens: AppTokens, account: { id: string; label: string }, dailyLimit = 100) {
+async function saveConnection(env: AppEnv, userId: string, provider: AppProvider, permissions: AppPermission[], tokens: AppTokens, account: { id: string; label: string }, dailyLimit = 100,googleDataConsent?:{version:string;acceptedAt:string}) {
   const existing = await env.DB.prepare("SELECT * FROM app_connections WHERE user_id=?1 AND provider=?2 AND account_id=?3").bind(userId, provider, account.id).first<Connection>();
   // Stable identity prevents concurrent first callbacks from encrypting tokens
   // for different row IDs before the unique account constraint resolves the race.
@@ -83,7 +100,7 @@ async function saveConnection(env: AppEnv, userId: string, provider: AppProvider
   const saved=await env.DB.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,expires_at,created_at,updated_at,daily_call_limit,connection_metadata_json)
     SELECT ?1,?2,?3,?4,?5,'active',?6,?7,?8,?9,?10,?10,?11,?12 WHERE (?13=0 OR EXISTS(SELECT 1 FROM app_connections WHERE id=?1 AND user_id=?2 AND status!='disconnected') OR (SELECT COUNT(*) FROM app_connections WHERE user_id=?2 AND status!='disconnected')<?14)
     ON CONFLICT(user_id,provider,account_id) DO UPDATE SET account_label=excluded.account_label,status='active',permissions_json=excluded.permissions_json,scopes_json=excluded.scopes_json,token_ciphertext=excluded.token_ciphertext,expires_at=excluded.expires_at,generation=app_connections.generation+1,refresh_lease=NULL,refresh_lease_until=NULL,last_error=NULL,updated_at=excluded.updated_at,daily_call_limit=excluded.daily_call_limit,connection_metadata_json=excluded.connection_metadata_json`)
-    .bind(id, userId, provider, account.id, account.label, JSON.stringify(permissions), JSON.stringify(tokens.scopes), cipher, tokens.expiresAt, now(), dailyLimit, JSON.stringify({ shopDomain: tokens.context?.shopDomain, businessAccountId: tokens.context?.businessAccountId, phoneNumberId: tokens.context?.phoneNumberId }),Number(Boolean(plan)),plan?.connectionLimit??100000).run();
+    .bind(id, userId, provider, account.id, account.label, JSON.stringify(permissions), JSON.stringify(tokens.scopes), cipher, tokens.expiresAt, now(), dailyLimit, JSON.stringify({ shopDomain: tokens.context?.shopDomain, businessAccountId: tokens.context?.businessAccountId, phoneNumberId: tokens.context?.phoneNumberId,...(googleDataConsent?{googleDataConsent}:{}) }),Number(Boolean(plan)),plan?.connectionLimit??100000).run();
   if(!saved.meta.changes)throw new AppError('app_connection_limit',402);
   await recordProductEvent(env,{domain:'apps',name:'app.connection.ready',source:'server',outcome:'succeeded',userId,entityId:id,route:'/apps/'+provider});
   return id;
@@ -107,7 +124,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   const stateHash = await sha256Hex(state);
   const row = await env.DB.prepare("DELETE FROM app_oauth_states WHERE state_hash=?1 AND user_id=?2 AND provider=?3 AND expires_at>?4 RETURNING *").bind(stateHash, userId, provider, now()).first<{ permissions_json: string; verifier_ciphertext: string }>();
   if (!row) throw new AppError("invalid_oauth_state");
-  const payload = await unseal<string | { verifier: string; context: import("./app-catalog.js").AppContext;chatRequestId?:string }>(env, row.verifier_ciphertext, `app-oauth:${userId}:${stateHash}`);
+  const payload = await unseal<string | { verifier: string; context: import("./app-catalog.js").AppContext;chatRequestId?:string;googleDataConsent?:{version:string;acceptedAt:string} }>(env, row.verifier_ciphertext, `app-oauth:${userId}:${stateHash}`);
   const chatRequestId=typeof payload==='string'?undefined:payload.chatRequestId;
   const chat=chatRequestId?await import('../arc/arc-app-connections.js'):undefined;
   const destination=chatRequestId?await chat!.arcAppConnectionDestination(env as import('../arc/arc-chat.js').ArcEnv,userId,chatRequestId).catch(()=>((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/dashboard/agent/chat')):undefined;
@@ -115,6 +132,8 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   const retry=()=>{const target=new URL(destination!);target.searchParams.set('connection','retry');return redirect(target.href);};
   if(query.has('error')){if(destination)return retry();if(provider==='slack')return redirect((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/apps?app_error='+(query.get('error')==='invalid_team_for_non_distributed_app'?'slack_distribution_required':'app_authorization_denied'));throw new AppError('app_authorization_denied');}
   try{
+  const consent=typeof payload==='string'?undefined:payload.googleDataConsent;
+  if(APP_CATALOG[provider].credential==='GOOGLE'&&consent?.version!==GOOGLE_APP_DATA_POLICY.version)throw new AppError('google_app_data_consent_required',403);
   const code = query.get("code"); if (!code || code.length > 4096) throw new AppError("missing_oauth_code");
   const verifier = typeof payload === "string" ? payload : payload.verifier;
   const context = typeof payload === "string" ? connectionContext(env, provider) : payload.context;
@@ -123,7 +142,7 @@ async function callback(request: Request, env: AppEnv, userId: string, provider:
   const tokens = await exchangeTokens(env, provider, { code, verifier, context }, fetcher);
   const account = await providerIdentity(provider, tokens, fetcher, env);
   let connectionId:string;
-  try{connectionId=await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account);}catch(error){if(error instanceof AppError&&error.code==='app_connection_limit')await revokeProvider(env,provider,tokens,fetcher).catch(()=>undefined);throw error;}
+  try{connectionId=await saveConnection(env, userId, provider, JSON.parse(row.permissions_json), tokens, account,100,consent);}catch(error){if(error instanceof AppError&&error.code==='app_connection_limit')await revokeProvider(env,provider,tokens,fetcher).catch(()=>undefined);throw error;}
   if(chatRequestId&&destination){await chat!.resumeArcAppConnection(env as import('../arc/arc-chat.js').ArcEnv,userId,chatRequestId,connectionId);return redirect(destination);}
   return new Response(null, { status: 303, headers: { location: (env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/apps?connected=" + provider, "cache-control": "no-store" } });
   }catch(error){if(destination)return retry();if(provider==='slack'&&error instanceof AppError&&error.code==='slack_distribution_required')return redirect((env.DASHBOARD_ORIGIN||env.APP_ORIGIN||env.PUBLIC_ORIGIN)+'/apps?app_error=slack_distribution_required');throw error;}
@@ -210,6 +229,10 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
   }
   if (!call) throw new AppError("app_call_unavailable", 503);
   if (call.input_hash !== hash) throw new AppError("app_request_id_conflict", 409);
+  if(APP_CATALOG[row.provider].credential==='GOOGLE'&&(call.content_purged_at||call.created_at<=googleAppContentCutoff(now()))){
+    if(!call.content_purged_at)call.status=await expireGoogleAppCall(env,identity.userId,call.id)||call.status;
+    return {status:call.status,callId:call.id,replayed:true,contentExpired:true,retryAutomatically:false,guidance:'Saved call content was deleted or expired. Do not repeat a write. Use a new read request to check the provider when needed.'};
+  }
   if (call.status === "succeeded") return { status: "succeeded", callId: call.id, replayed: true, untrustedData: true, result: await unseal(env, call.result_ciphertext!, callContext(identity.userId, call.id, "result")) };
   if (call.status === "pending_approval") {
     await env.DB.prepare("UPDATE app_calls SET status='cancelled',error_code='app_legacy_request_cancelled',updated_at=?1 WHERE id=?2 AND user_id=?3 AND status='pending_approval'").bind(now(),call.id,identity.userId).run();
@@ -244,7 +267,8 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
     const rawResult = await providerJson(plan.url, { method: plan.method, headers: { ...headers, ...plan.headers, ...conditionalHeaders }, body: plan.body === undefined ? undefined : headers["content-type"] === "application/x-www-form-urlencoded" ? new URLSearchParams(Object.entries(plan.body as Record<string,unknown>).map(([k,v]) => [k, String(v)])) : JSON.stringify(plan.body) }, fetcher, plan.responseKind);
     validateAppResult(row.provider, operation.name, rawResult);
     const result = redactProviderCredentials(rawResult,(row.provider==='vercel'&&operation.name.startsWith('env.')||row.provider==='supabase'&&operation.name.startsWith('secrets.'))?['value','decrypted']:[]);
-    const settled=await env.DB.prepare("UPDATE app_calls SET status='succeeded',result_ciphertext=?1,updated_at=?2 WHERE id=?3 AND user_id=?4 AND status='running'").bind(await seal(env, result, callContext(identity.userId, call.id, "result")), now(), call.id, identity.userId).run();
+    const settled=await env.DB.prepare("UPDATE app_calls SET status='succeeded',result_ciphertext=?1,updated_at=?2 WHERE id=?3 AND user_id=?4 AND status='running' AND content_purged_at IS NULL").bind(await seal(env, result, callContext(identity.userId, call.id, "result")), now(), call.id, identity.userId).run();
+    if(!settled.meta.changes)return {status:operation.permission==='write'?'unknown':'cancelled',callId:call.id,error:'app_call_content_deleted',retryAutomatically:false};
     if(settled.meta?.changes)await recordProductEvent(env,{domain:'apps',name:'app.call.succeeded',source:'server',outcome:'succeeded',userId:identity.userId,entityId:call.id});
     return { status: "succeeded", callId: call.id, untrustedData: true, verification: "provider_acknowledged", result };
   } catch (error) {
@@ -257,7 +281,12 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
   }
 }
 async function approvals(request: Request, env: AppEnv, userId: string, id?: string) {
-  if (!id) { const rows = await env.DB.prepare("SELECT * FROM app_calls WHERE user_id=?1 AND permission='write' AND status IN ('pending_approval','approved','running','unknown') ORDER BY created_at DESC LIMIT 50").bind(userId).all<Call>(); return response({ approvals: await Promise.all((rows.results || []).map(async r => ({ id: r.id, connectionId: r.connection_id, operation: r.operation, status: r.status, expiresAt: r.expires_at, arguments: await unseal(env, r.arguments_ciphertext, callContext(userId, r.id, "arguments")), review: r.review_ciphertext ? (await unseal<AppReview>(env, r.review_ciphertext, callContext(userId, r.id, "review"))).target : undefined }))) }); }
+  if(!id){
+    const rows=await env.DB.prepare("SELECT a.*,c.provider FROM app_calls a JOIN app_connections c ON c.id=a.connection_id AND c.user_id=a.user_id WHERE a.user_id=?1 AND a.permission='write' AND a.content_purged_at IS NULL AND a.status IN ('pending_approval','approved','running','unknown') ORDER BY a.created_at DESC LIMIT 50").bind(userId).all<Call&{provider:AppProvider}>();
+    const cutoff=googleAppContentCutoff(now());
+    const visible=(rows.results||[]).filter(row=>APP_CATALOG[row.provider].credential!=='GOOGLE'||row.created_at>cutoff);
+    return response({approvals:await Promise.all(visible.map(async row=>({id:row.id,connectionId:row.connection_id,operation:row.operation,status:row.status,expiresAt:row.expires_at,arguments:await unseal(env,row.arguments_ciphertext,callContext(userId,row.id,'arguments')),review:row.review_ciphertext?(await unseal<AppReview>(env,row.review_ciphertext,callContext(userId,row.id,'review'))).target:undefined})))});
+  }
   sameOrigin(request, env); const { approve } = z.object({ approve: z.boolean() }).strict().parse(await request.json());
   const changed = await env.DB.prepare("UPDATE app_calls SET status=?1,updated_at=?2 WHERE id=?3 AND user_id=?4 AND status='pending_approval' AND expires_at>?2 AND EXISTS(SELECT 1 FROM app_connections c WHERE c.id=app_calls.connection_id AND c.user_id=?4 AND c.generation=app_calls.connection_generation AND c.status='active') RETURNING id").bind(approve ? "approved" : "rejected", now(), id, userId).first();
   if (!changed) throw new AppError("app_approval_unavailable", 409);
@@ -275,6 +304,26 @@ export async function handleApps(request: Request, env: AppEnv, fetcher: typeof 
     const user = await getSessionUser(request, env); if (!user) return response({ error: "unauthorized" }, 401);
     if (path === "/api/apps" && request.method === "GET") return response(await listApps(env, user.id));
     enabled(env);
+    const consent=path.match(/^\/api\/apps\/connections\/([\w-]+)\/data-consent$/);
+    if(consent&&request.method==='POST'){
+      sameOrigin(request,env);const row=await connection(env,user.id,consent[1]!);
+      z.object({dataConsent:z.literal(GOOGLE_APP_DATA_POLICY.version)}).strict().parse(await boundedAppJson(request,1024));
+      if(APP_CATALOG[row.provider].credential!=='GOOGLE')throw new AppError('app_data_consent_not_supported');
+      const metadata={...JSON.parse(row.connection_metadata_json||'{}'),googleDataConsent:{version:GOOGLE_APP_DATA_POLICY.version,acceptedAt:now()}};
+      await env.DB.prepare('UPDATE app_connections SET connection_metadata_json=?1,updated_at=?2 WHERE id=?3 AND user_id=?4').bind(JSON.stringify(metadata),now(),row.id,user.id).run();
+      return response({connection:cleanConnection(await connection(env,user.id,row.id))});
+    }
+    if(path==='/api/apps/google-beta'&&request.method==='POST'){
+      sameOrigin(request,env);return response(await submitGoogleAppBeta(env,user.id,await boundedAppJson(request)));
+    }
+    const deletion=path.match(/^\/api\/apps\/connections\/([\w-]+)\/data-deletion$/);
+    if(deletion&&request.method==='POST'){
+      sameOrigin(request,env);
+      const row=await connection(env,user.id,deletion[1]!);
+      z.object({confirm:z.literal(true)}).strict().parse(await boundedAppJson(request,1024));
+      if(APP_CATALOG[row.provider].credential!=='GOOGLE')throw new AppError('app_data_deletion_not_supported');
+      return response({...await eraseGoogleAppContent(env,user.id,row.id),retentionDays:GOOGLE_APP_DATA_POLICY.retentionDays});
+    }
     if (path === "/api/apps/connections" && request.method === "POST") return await connectApiKey(request, env, user.id, fetcher);
     if (path === "/api/apps/authorize" && request.method === "POST") return await authorize(request, env, user.id);
     const oauth = path.match(/^\/api\/apps\/oauth\/([^/]+)\/callback$/);

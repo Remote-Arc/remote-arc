@@ -116,7 +116,8 @@ async function readThread(env:SupportEnv,id:string){
     body:await unseal<string>(env as Parameters<typeof unseal>[0],m.body_encrypted,'support:message:'+m.id),
     deliveryStatus:m.delivery_status,createdAt:m.created_at,providerId:m.provider_id,
   })));
-  return {thread,messages};
+  const beta=await env.DB.prepare('SELECT google_email,providers_json,status,reviewed_at FROM google_app_beta_requests WHERE support_thread_id=?1').bind(id).first<{google_email:string;providers_json:string;status:string;reviewed_at:string|null}>();
+  return {thread,messages,...(beta?{beta:{googleEmail:beta.google_email,providers:JSON.parse(beta.providers_json),status:beta.status,reviewedAt:beta.reviewed_at}}:{})};
 }
 export async function handleAdminSupportInbox(request:Request,env:SupportEnv,operatorId:string):Promise<Response>{
   const url=new URL(request.url),path=url.pathname;
@@ -128,7 +129,7 @@ export async function handleAdminSupportInbox(request:Request,env:SupportEnv,ope
     ).bind(status).all<Thread>();
     return json({items:rows.results||[]});
   }
-  const match=path.match(/^\/api\/admin\/support-inbox\/([a-f0-9-]{36})(?:\/(reply|status|reconcile))?$/);
+  const match=path.match(/^\/api\/admin\/support-inbox\/([a-f0-9-]{36})(?:\/(reply|status|reconcile|google-beta))?$/);
   if(!match)return error('not_found',404);
   const id=match[1]!;
   if(request.method==='GET'&&!match[2]){
@@ -136,6 +137,13 @@ export async function handleAdminSupportInbox(request:Request,env:SupportEnv,ope
   }
   const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
   if(!body||typeof body!=='object')return error('invalid_request',400);
+  if(request.method==='PATCH'&&match[2]==='google-beta'){
+    if(!['approve','decline'].includes(body.decision as string)||body.decision==='approve'&&body.googleTestUserAdded!==true||Object.keys(body).some(key=>!['decision','googleTestUserAdded'].includes(key)))return error('google_test_user_confirmation_required',400);
+    const status=body.decision==='approve'?'approved':'declined';
+    const changed=await env.DB.prepare("UPDATE google_app_beta_requests SET status=?1,reviewed_by=?2,reviewed_at=?3 WHERE support_thread_id=?4 AND status='pending' RETURNING user_id").bind(status,operatorId,new Date().toISOString(),id).first();
+    if(!changed)return error('beta_request_not_pending',409);
+    return json({status});
+  }
   if(request.method==='PATCH'&&match[2]==='status'){
     if(!['open','waiting','resolved'].includes(body.status as string))return error('invalid_status',400);
     const result=await env.DB.prepare('UPDATE support_threads SET status=?1,updated_at=?2 WHERE id=?3').bind(body.status,new Date().toISOString(),id).run();

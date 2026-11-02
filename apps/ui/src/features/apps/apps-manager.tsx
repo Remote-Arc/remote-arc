@@ -8,25 +8,27 @@ import "./apps-manager.css";
 import {ProductIcon} from "../../components/product-icon.js";
 import directory from "../../data/app-directory.json" with { type: "json" };
 import { AppCredentialForm, type AppCredentialInput } from "./apps-auth-form.js";
+import {GoogleBetaApplication,GoogleConsentDialog,type GoogleBetaState} from './google-app-beta.js';
 
 type Permission = "read" | "write";
 export type AppDefinition = {
   provider: string; name: string; brand: string; configured: boolean;
   category?: string; auth?: "oauth" | "api_key"; billingNote?: string; connectionNote?: string;
   operations: { name: string; description: string; permission: Permission; inputSchema?: unknown }[];
-  permissions: { read: string[]; write: string[] }; consentNote?: string;
+  permissions: { read: string[]; write: string[] }; consentNote?: string;dataPolicy?:{version:string;retentionDays:number};requiresBetaApproval?:boolean;
 };
 export type AppConnection = {
   id: string; provider: string; accountLabel: string; status: string;
   settings?: Record<string, string>; dailyCallLimit?: number;
   permissions: Permission[]; scopes: string[]; expiresAt: string | null; lastError: string | null; updatedAt: string;
   toolAccess?: { available: number; total: number; needsReconnect: boolean };
+  dataConsentRequired?:boolean;
 };
 export type AppConnectionCheck = { connectionId: string; provider: string; accountLabel: string; checkedAt: string; verification: "provider_identity_checked"; toolAccess: { available: number; total: number; needsReconnect: boolean } };
 export type AppApproval = {
   id: string; connectionId: string; operation: string; status: string; expiresAt: string; arguments: Record<string, unknown>; review?: Record<string, unknown>;
 };
-export type AppsSnapshot = { enabled: boolean; apps: AppDefinition[]; connections: AppConnection[] };
+export type AppsSnapshot = { enabled: boolean; apps: AppDefinition[]; connections: AppConnection[];googleBeta?:GoogleBetaState };
 export type AppsRequest = (path: string, init?: RequestInit) => Promise<unknown>;
 
 const brandFiles: Record<string, string> = Object.fromEntries(directory.apps.map(app => [app.brand, app.brand]));
@@ -69,6 +71,8 @@ function errorLabel(code: string, tr: (en: string, zh: string) => string) {
     case "app_authorization_denied": return tr("Slack authorization was cancelled or denied. You can connect again.", "Slack 授权已取消或被拒绝，可以重新连接。");
     case "slack_bot_installation_failed": return tr("Slack Bot installation could not be completed. Try adding it again or contact support@remotearc.app.", "Slack Bot 安装未完成，请重新添加，或联系 support@remotearc.app。");
     case "app_scope_required": return tr("The provider needs additional permissions. Reconnect the account with the access you want.", "应用需要额外授权，请选择所需权限后重新连接账号。");
+    case 'google_apps_beta_invitation_required':return tr('Apply for Google Apps Beta before connecting.','请先申请 Google Apps 内测，获邀后再连接。');
+    case 'google_app_data_consent_required':return tr('Review Google data use in Apps before continuing.','请先在 Apps 查看并同意 Google 数据使用方式。');
     case "app_reauthorization_required": return tr("This account needs authorization again. Reconnect to continue.", "此账号需要重新授权，请重新连接后继续。");
     case "app_account_changed": return tr("The provider returned a different account. Reconnect the intended account.", "服务商返回了不同的账号，请重新授权你要使用的账号。");
     case "app_connection_changed": return tr("This connection changed during the check. Refresh and try again.", "检查期间连接已发生变更，请刷新后重试。");
@@ -88,19 +92,21 @@ function errorLabel(code: string, tr: (en: string, zh: string) => string) {
   }
 }
 
-function ConnectionRow({ app, connection, busy, onAuthorize, onDisconnect, onCheck }: {
+function ConnectionRow({ app, connection, busy, onAuthorize, onDisconnect, onCheck,onConsent,onErase }: {
   app: AppDefinition; connection: AppConnection; busy: boolean;
   onAuthorize: (provider: string, permissions: Permission[], settings?: Record<string, string>) => void;
   onDisconnect: (connection: AppConnection) => void;
   onCheck: (connection: AppConnection) => Promise<AppConnectionCheck | undefined>;
+  onConsent:(connection:AppConnection)=>void;onErase:(connection:AppConnection)=>void;
 }) {
   const { tr } = useI18n();
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [confirmErase,setConfirmErase]=useState(false);
   const [verification, setVerification] = useState<AppConnectionCheck>();
   useEffect(() => { setConfirmDisconnect(false); }, [connection.id, connection.status]);
   useEffect(() => { setVerification(undefined); }, [connection.id, connection.status, connection.updatedAt]);
   const active = connection.status === "active";
-  const needsScopes = connection.toolAccess?.needsReconnect === true;
+  const needsScopes = connection.toolAccess?.needsReconnect === true&&!connection.dataConsentRequired;
   return <article className="appsManagerConnection" data-status={connection.status}>
     <div className="appsManagerConnectionTop"><strong>{connection.accountLabel}</strong><span className="appsManagerStatus" data-status={needsScopes ? "limited" : connection.status}>{needsScopes ? tr("Update access", "需要补充授权") : statusLabel(connection.status, tr)}</span></div>
     {connection.status === "reauthorization_required" && <p className="appsManagerConnectionHint">{tr("Provider access expired or was revoked. Reconnect this account to restore access.", "应用授权已过期或被撤销，请重新连接此账号以恢复访问。")}</p>}
@@ -108,13 +114,16 @@ function ConnectionRow({ app, connection, busy, onAuthorize, onDisconnect, onChe
     {verification && <p className="appsManagerConnectionCheck" role="status"><ProductIcon name="check" size={15}/><span>{tr("Account access verified", "账号访问已验证")} · {verification.toolAccess.available}/{verification.toolAccess.total} {tr("tools authorized", "项工具已授权")}</span></p>}
     <div className="appsManagerConnectionActions">
       {(!active || needsScopes) && <button type="button" className="appsManagerPrimary" disabled={busy || !app.configured} onClick={() => onAuthorize(app.provider, connectedPermissions, connection.settings)}>{tr("Reconnect account", "重新授权账号")}</button>}
-      {active && <button type="button" disabled={busy || !app.configured} onClick={async () => { setVerification(undefined); setVerification(await onCheck(connection)); }}>{tr("Check connection", "检查连接")}</button>}
+      {connection.dataConsentRequired&&<button type="button" disabled={busy} onClick={()=>onConsent(connection)}>{tr('Review data access','查看数据授权')}</button>}
+      {active && !connection.dataConsentRequired&&<button type="button" disabled={busy || !app.configured} onClick={async () => { setVerification(undefined); setVerification(await onCheck(connection)); }}>{tr("Check connection", "检查连接")}</button>}
       {connection.status !== "disconnected" && <button type="button" className="appsManagerTextAction" disabled={busy} onClick={() => setConfirmDisconnect(true)}>{tr("Disconnect", "断开连接")}</button>}
+      {app.dataPolicy&&<button type="button" className="appsManagerTextAction" disabled={busy} onClick={()=>setConfirmErase(true)}>{tr('Delete saved call data','删除保存的调用原文')}</button>}
     </div>
     {confirmDisconnect && <div className="appsManagerDisconnect" role="group" aria-label={tr("Confirm account disconnection", "确认断开账号")}>
       <p>{tr("Disconnect this account? Arc and connected AI clients will lose access.", "断开此账号？Arc 和已连接 AI 客户端将无法再使用此账号。")}</p>
       <div><button type="button" className="appsManagerDanger" disabled={busy} onClick={() => onDisconnect(connection)}>{tr("Confirm disconnect", "确认断开")}</button><button type="button" disabled={busy} onClick={() => setConfirmDisconnect(false)}>{tr("Keep connected", "保持连接")}</button></div>
     </div>}
+    {confirmErase&&<div className="appsManagerDisconnect" role="group" aria-label={tr('Confirm deletion of saved call data','确认删除调用原文')}><p>{tr('Permanently delete background call contents for this account? Waiting calls are cancelled; already dispatched operations may finish. This does not delete chat/task/memory copies or undo changes in Google.','永久删除此账号的后台调用原文？等待中的调用会被取消，已派发的操作可能继续完成。对话、任务和记忆副本需分别删除，Google 中已完成的更改不会被撤销。')}</p><div><button type="button" className="appsManagerDanger" disabled={busy} onClick={()=>{onErase(connection);setConfirmErase(false);}}>{tr('Delete call contents','删除调用原文')}</button><button type="button" disabled={busy} onClick={()=>setConfirmErase(false)}>{tr('Cancel','取消')}</button></div></div>}
   </article>;
 }
 
@@ -192,12 +201,13 @@ function AppTools({ app, connections, busy, onConnect }: {
   </div>;
 }
 
-function AppDetailsPanel({ app, connections, initialTab, onClose, onAuthorize, onDisconnect, onCredential, onCheck, busy, error, notice }: {
+function AppDetailsPanel({ app, connections, initialTab, onClose, onAuthorize, onDisconnect, onCredential, onCheck,onConsent,onErase, busy, error, notice }: {
   app: AppDefinition; connections: AppConnection[]; initialTab: AppPanelTab; onClose: () => void; busy: boolean; error: string; notice: string;
   onAuthorize: (provider: string, permissions: Permission[], settings?: Record<string, string>) => void;
   onDisconnect: (connection: AppConnection) => void;
   onCredential: (provider: string, input: AppCredentialInput) => Promise<boolean>;
   onCheck: (connection: AppConnection) => Promise<AppConnectionCheck | undefined>;
+  onConsent:(connection:AppConnection)=>void;onErase:(connection:AppConnection)=>void;
 }) {
   const { tr } = useI18n();
   const [tab, setTab] = useState(initialTab);
@@ -253,7 +263,7 @@ function AppDetailsPanel({ app, connections, initialTab, onClose, onAuthorize, o
             {tab === "tools" ? <AppTools app={app} connections={connections} busy={busy} onConnect={() => connect(app.provider, connectedPermissions)}/> : <>
               {app.provider === "slack" && <SlackBotPanel/>}
               {summary && <p className="appsPanelIntro">{tr(...summary)}</p>}
-              {connections.length ? <div className="appsPanelAccounts">{connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onDisconnect={onDisconnect} onCheck={onCheck}/>)}</div> : <div className="appsPanelEmpty"><ProductIcon name="link" size={25}/><h3>{tr("Connect your " + app.name + " account", "连接你的 " + app.name + " 账号")}</h3><p>{tr("Your connected AI can use this app with the access you grant.", "连接后，你的 AI 即可在授权范围内使用此应用。")}</p></div>}
+              {connections.length ? <div className="appsPanelAccounts">{connections.map(connection => <ConnectionRow key={connection.id} app={app} connection={connection} busy={busy} onAuthorize={connect} onDisconnect={onDisconnect} onCheck={onCheck} onConsent={onConsent} onErase={onErase}/>)}</div> : <div className="appsPanelEmpty"><ProductIcon name="link" size={25}/><h3>{tr("Connect your " + app.name + " account", "连接你的 " + app.name + " 账号")}</h3><p>{tr("Your connected AI can use this app with the access you grant.", "连接后，你的 AI 即可在授权范围内使用此应用。")}</p></div>}
               {!app.configured ? <p className="appsPanelAvailability">{tr("Account connection is coming soon. You can explore the tools in the meantime.", "账号连接即将开放，你可以先浏览应用工具。")}</p> : <div className="appsPanelConnect">
                 {app.provider === "shopify" ? <form onSubmit={event => { event.preventDefault(); onAuthorize(app.provider, connectedPermissions, {shopDomain}); }}><label className="appsManagerStore">{tr("Store domain", "店铺域名")}<input value={shopDomain} onChange={event => setShopDomain(event.target.value)} placeholder="your-store.myshopify.com" autoComplete="off" required pattern="[a-z0-9][a-z0-9-]*\.myshopify\.com" maxLength={100}/></label><button type="submit" className="appsManagerPrimary" disabled={busy || !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopDomain)}>{tr("Connect store", "连接店铺")}</button></form>
                 : credentialOpen ? <AppCredentialForm provider={app.provider} write={true} busy={busy} onConnect={input => onCredential(app.provider, input)} onCancel={() => setCredentialOpen(false)}/>
@@ -299,6 +309,9 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [betaProvider,setBetaProvider]=useState(()=>new URLSearchParams(window.location.search).get('apply')||'');
+  const [consent,setConsent]=useState<{provider:string;permissions:Permission[];settings?:Record<string,string>;connectionId?:string}|null>(null);
+  const closeBeta=useCallback(()=>setBetaProvider(''),[]),closeConsent=useCallback(()=>setConsent(null),[]);
   const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get("provider") || "");
   const [category, setCategory] = useState(() => new URLSearchParams(window.location.search).get("category") || "all");
   const [connectionView, setConnectionView] = useState<"all" | "available" | "connected">("all");
@@ -335,12 +348,27 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
     finally { mutationLock.current = false; if (mounted.current) setBusy(""); }
   }
   function authorize(provider: string, permissions: Permission[], settings?: Record<string, string>) {
+    const app=snapshot?.apps.find(value=>value.provider===provider);
+    if(app?.requiresBetaApproval){setBetaProvider(provider);return;}
+    if(app?.dataPolicy){setConsent({provider,permissions,settings});return;}
+    authorizeNow(provider,permissions,settings);
+  }
+  function authorizeNow(provider:string,permissions:Permission[],settings?:Record<string,string>,dataConsent?:string){
     void mutate("authorize:" + provider, async () => {
-      const result = await request("/api/apps/authorize", { method: "POST", body: JSON.stringify({ provider, permissions, settings }) }) as { authorizationUrl?: string };
+      const result = await request("/api/apps/authorize", { method: "POST", body: JSON.stringify({ provider, permissions, settings,...(dataConsent?{dataConsent}:{}) }) }) as { authorizationUrl?: string };
       if (!result.authorizationUrl || !/^https:\/\//i.test(result.authorizationUrl)) throw new Error("app_service_unavailable");
       navigate(result.authorizationUrl);
     }, tr("Continue in the provider's authorization page.", "请在应用的授权页面继续。"));
   }
+  function reviewData(connection:AppConnection){setConsent({provider:connection.provider,permissions:connection.permissions,connectionId:connection.id});}
+  function acceptData(){
+    if(!consent)return;const app=snapshot?.apps.find(value=>value.provider===consent.provider);if(!app?.dataPolicy)return;
+    if(consent.connectionId){void mutate('consent:'+consent.connectionId,()=>request('/api/apps/connections/'+encodeURIComponent(consent.connectionId!)+'/data-consent',{method:'POST',body:JSON.stringify({dataConsent:app.dataPolicy!.version})}),tr('Google data access confirmed.','已确认 Google 数据授权。'));}
+    else authorizeNow(consent.provider,consent.permissions,consent.settings,app.dataPolicy.version);
+    setConsent(null);
+  }
+  function eraseData(connection:AppConnection){void mutate('erase:'+connection.id,()=>request('/api/apps/connections/'+encodeURIComponent(connection.id)+'/data-deletion',{method:'POST',body:JSON.stringify({confirm:true})}),tr('Saved call contents deleted. Chat, task and memory copies have separate controls.','已删除后台调用原文，对话、任务和记忆副本需分别删除。'));}
+  function submitBeta(input:{googleEmail:string;providers:string[];useCase:string;betaTerms:true}){void mutate('google-beta',()=>request('/api/apps/google-beta',{method:'POST',body:JSON.stringify(input)}),tr('Beta application received.','已收到内测申请。'));}
   function connectCredential(provider: string, input: AppCredentialInput) {
     return mutate("connect:" + provider, () => request("/api/apps/connections", {method: "POST", body: JSON.stringify({provider, ...input})}), tr("Account validated and connected.", "账号已验证并连接。"));
   }
@@ -372,6 +400,7 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
     <header className="appsManagerHeader"><div><span className="eyebrow">{tr("YOUR AI'S TOOLKIT", "让 AI 开始工作")}</span><h1>{tr("Apps", "应用")}</h1><p>{tr("Your everyday apps. Ready to work with your AI.", "连接你每天使用的应用，让 AI 帮你完成工作。")}</p></div><button type="button" className="appsManagerRefresh" disabled={loading || Boolean(busy)} onClick={() => { setNotice(""); void refresh(); }}><ProductIcon name="refresh" size={16}/>{loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}</button></header>
     {error && <div className="appsManagerMessage appsManagerError" role="alert"><p>{errorLabel(error, tr)}</p>{error === "unauthorized" && <a href="/auth/login?return_to=%2Fapps">{tr("Sign in", "登录")}</a>}<button type="button" onClick={() => setError("")}>{tr("Dismiss", "关闭")}</button></div>}
     {notice && <p className="appsManagerMessage" role="status">{notice}</p>}
+    {snapshot?.googleBeta?.mode==='beta'&&<section className="appsBetaBanner"><strong>Google Apps <span className="appsBetaBadge">Beta</span></strong><p>{tr('By invitation. Apply once, then connect after approval. Google authorization normally expires after 7 days.','申请获邀后即可连接。Google 授权通常在 7 天后需重新连接。')}</p><button type="button" onClick={()=>setBetaProvider('gmail')}>{snapshot.googleBeta.request?tr('View application','查看申请'):tr('Apply to join','申请加入')}</button></section>}
     {loading && !snapshot && <WorkspaceLoading label={tr("Loading app connections…", "正在加载应用连接…")} variant="rows"/>}
     {snapshot && !snapshot.enabled && <section className="appsManagerDisabled"><h2>{tr("Apps are not enabled yet", "应用连接尚未启用")}</h2><p>{tr("An administrator needs to enable Apps and configure the providers before you can connect accounts. Your existing device and AI connections are unchanged.", "管理员启用 Apps 并配置应用授权后，你即可连接账号。现有设备和 AI 连接仍可继续使用。")}</p></section>}
     {snapshot?.enabled && <>
@@ -398,6 +427,8 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
       {!snapshot.apps.length && <p className="appsManagerEmpty">{tr("No app providers are available yet.", "目前还没有可用的应用服务。")}</p>}
 
     </>}
-    {selectedApp && details && <AppDetailsPanel key={selectedApp.provider} app={selectedApp} connections={connections.filter(connection => connection.provider === selectedApp.provider)} initialTab={details.tab} onClose={closeDetails} busy={Boolean(busy) || UI_PREVIEW} error={error} notice={notice} onAuthorize={authorize} onCredential={connectCredential} onDisconnect={disconnect} onCheck={check}/>}
+    {selectedApp && details && <AppDetailsPanel key={selectedApp.provider} app={selectedApp} connections={(snapshot?.connections||[]).filter(connection => connection.provider === selectedApp.provider)} initialTab={details.tab} onClose={closeDetails} busy={Boolean(busy) || UI_PREVIEW} error={error} notice={notice} onAuthorize={authorize} onCredential={connectCredential} onDisconnect={disconnect} onCheck={check} onConsent={reviewData} onErase={eraseData}/>}
+    {betaProvider&&snapshot?.googleBeta&&<GoogleBetaApplication apps={snapshot.apps.filter(app=>app.dataPolicy&&app.configured)} initialProvider={betaProvider} state={snapshot.googleBeta} busy={Boolean(busy)} error={error?errorLabel(error,tr):''} onSubmit={submitBeta} onClose={closeBeta}/>}
+    {consent&&<GoogleConsentDialog provider={consent.provider} name={snapshot?.apps.find(app=>app.provider===consent.provider)?.name||consent.provider} busy={Boolean(busy)} onAccept={acceptData} onClose={closeConsent}/>}
   </div>;
 }

@@ -186,4 +186,4 @@ export type {ArcEmployeeDraft,ArcEmployeeAvatar,ArcEmployeeScope,ArcEmployeeProf
 export type {ArcDelegationProgress} from './arc-teams.js';
 export type {ArcAttachment,ArcLocation} from './arc-inputs.js';
 export const ARC_INPUT_LIMITS={filesPerMessage:3,fileBytes:2*1024*1024,userBytes:32*1024*1024,imageEdge:2048,textChars:16000} as const;
-export type ArcAppConnectionRequest={id:string;sourceRunId:string;provider:string;name:string;brand:string;auth:'oauth'|'api_key';configured:boolean;status:'pending'|'resumed'|'cancelled'|'expired';expiresAt:string};
+export type ArcAppConnectionRequest={id:string;sourceRunId:string;provider:string;name:string;brand:string;auth:'oauth'|'api_key';configured:boolean;status:'pending'|'resumed'|'cancelled'|'expired';expiresAt:string;requiresBetaApproval?:boolean;dataPolicy?:{version:string;retentionDays:number};permissions?:('read'|'write')[]};

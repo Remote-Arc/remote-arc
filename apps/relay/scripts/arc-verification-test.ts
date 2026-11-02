@@ -18,6 +18,8 @@ export async function testArcVerification({sql,env,api,create,decode,decisions,t
  assert(!arcVerificationSchema.safeParse({...issue,extraAuthority:'all'}).success);
  assert(!arcVerificationSchema.safeParse({...inbox,limit:6}).success);
  const session=await create(),requestId=crypto.randomUUID();
+ assert.equal((await api('sessions/'+session+'/messages','POST',{text:'Verify inbox',requestId:crypto.randomUUID(),verification:inbox,skillIds:['arc-verified-inbox']})).status,403,'Verification workflows cannot bypass Google data-use consent');
+ sql.prepare('UPDATE app_connections SET connection_metadata_json=? WHERE id=?').run(JSON.stringify({googleDataConsent:{version:'2026-11-02',acceptedAt:at}}),gmail);
  const send=async(scope:ArcVerification,id:string,request=crypto.randomUUID())=>decode(await api('sessions/'+id+'/messages','POST',{text:'Perform only the selected verification task.',verification:scope,requestId:request,skillIds:[scope.kind==='inbox'?'arc-verified-inbox':scope.kind==='deployment'?'arc-verified-deployment':'arc-verified-issue']}),202);
  assert.equal((await api('sessions/'+session+'/messages','POST',{text:'Verify',requestId,verification:{...issue,connectionId:other}})).status,403,'Account ownership is checked before run creation');
  assert.equal((await api('sessions/'+session+'/messages','POST',{text:'Verify',requestId,verification:{...issue,connectionId:gmail}})).status,403,'Provider must match the selected workflow');

@@ -377,6 +377,10 @@ try {
   assert.deepEqual(chatgptRead.result, result.result);
   assert(rejected(await rpc("tools/call", { name: READ, arguments: action(ids.github, "github.issues.get", { repo: "test/project", number: 17, extra: true }, "chatgpt-read-2") }, undefined, env, identity(), "chatgpt")),
     "ChatGPT's typed schema rejects extra arguments");
+  const beforeConsent=providerRequests.length;
+  assert.equal(data(await invoke(READ, action(ids.gmail,"gmail.messages.get",{id:"message-1"},"before-consent"))).error.code,"google_app_data_consent_required");
+  assert.equal(providerRequests.length,beforeConsent,"Existing Google connections require affirmative data-use consent before dispatch");
+  sql.prepare("UPDATE app_connections SET connection_metadata_json=? WHERE provider='gmail' AND user_id='owner'").run(JSON.stringify({googleDataConsent:{version:'2026-11-02',acceptedAt:new Date().toISOString()}}));
   const msg = data(await invoke(READ, action(ids.gmail, "gmail.messages.get", { id: "message-1" }, "read-mail-1")));
   assert.equal(msg.result.id, "message-1");
   const draft = action(ids.gmail, "gmail.drafts.create", { to: ["test@example.test"], subject: "Subject", body: "Body" }, "create-draft-1");

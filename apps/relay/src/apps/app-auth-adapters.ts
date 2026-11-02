@@ -2,9 +2,11 @@ import { z } from "zod";
 import { APP_CATALOG, AppError, type AppContext, type AppEnv, type AppProvider } from "./app-catalog.js";
 import { providerJson, type AppTokens } from "./app-oauth.js";
 import { sha256Hex } from "../auth/auth.js";
+import {GOOGLE_APPS_BETA_PROVIDERS} from './google-app-policy.js';
 export const connectionSettingsSchema=z.object({shopDomain:z.string().max(100).optional(),businessAccountId:z.string().regex(/^\d{1,30}$/).optional(),phoneNumberId:z.string().regex(/^\d{1,30}$/).optional()}).strict();
 export function appConfigured(env:AppEnv,provider:AppProvider) {
   const def=APP_CATALOG[provider],vars=env as Record<string,unknown>;
+  if(def.credential==='GOOGLE'&&env.GOOGLE_APPS_ACCESS_MODE!=='public'&&!(GOOGLE_APPS_BETA_PROVIDERS as readonly string[]).includes(provider))return false;
   return Boolean(env.APP_TOKEN_KEY && (!def.requiredEnv?.some(key=>!vars[key])) && (def.auth==="api_key" || (vars["APP_"+def.credential+"_CLIENT_ID"]&&vars["APP_"+def.credential+"_CLIENT_SECRET"])));
 }
 export function connectionContext(env:AppEnv,provider:AppProvider,raw:unknown={}):AppContext {

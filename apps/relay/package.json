@@ -12,7 +12,7 @@
     "test:scheduling": "tsx scripts/schedule-clock-test.ts && tsx scripts/task-contract-test.ts && tsx scripts/device-task-policy-test.ts && tsx scripts/agent-tools-validation-test.ts && tsx scripts/github-automation-test.ts",
     "test:runner-video": "tsx scripts/runner-video-test.ts",
     "test:seo": "tsx scripts/seo-smoke.mjs",
-    "test:apps": "tsx scripts/apps-test.ts && tsx scripts/apps-expansion-test.ts && tsx scripts/apps-write-contract-test.ts && tsx scripts/arc-app-connections-test.ts && tsx scripts/apps-connect-preflight-test.ts && tsx scripts/apps-directory.ts --check",
+    "test:apps": "tsx scripts/google-app-data-policy-test.ts && tsx scripts/apps-test.ts && tsx scripts/apps-expansion-test.ts && tsx scripts/apps-write-contract-test.ts && tsx scripts/arc-app-connections-test.ts && tsx scripts/apps-connect-preflight-test.ts && tsx scripts/apps-directory.ts --check",
     "apps:preflight": "tsx scripts/apps-connect-preflight.ts",
     "test:browser-auth": "tsx scripts/browser-auth-test.ts",
     "test:public-mcp": "tsx scripts/agent-downloads-test.ts && tsx scripts/public-mcp-test.ts",

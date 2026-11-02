@@ -4,6 +4,7 @@ import {followthroughArguments} from './apps-followthrough-fixtures.js';
 import fs from "node:fs"; import path from "node:path"; import {fileURLToPath} from "node:url"; import {DatabaseSync} from "node:sqlite"; import {z} from "zod";
 import {APP_CATALOG,APP_OPERATIONS,APP_CATEGORIES,APP_PROVIDERS,AppError,appScopes,appOperation,type AppEnv,type AppProvider} from "../src/apps/app-catalog.js";
 import {EXTRA_PROVIDER_IDS} from "../src/apps/app-integrations.js";
+import {GOOGLE_APP_DATA_POLICY} from '../src/apps/google-app-policy.js';
 import {authorizationUrl,exchangeTokens,providerIdentity,providerJson,revokeProvider,seal,unseal,type AppTokens} from "../src/apps/app-oauth.js";
 import {connectionContext,appConfigured,providerHeaders,endpoint,checkShopifyCallback,extraIdentity,normalizeScope} from "../src/apps/app-auth-adapters.js";
 import {reserveAppDispatch,quoteAppOperation,reviewCreatedAction,dispatchHeaders,validateAppResult,redactProviderCredentials} from "../src/apps/app-connection-policy.js";
@@ -16,6 +17,7 @@ const db={prepare(query:string){const stmt=sql.prepare(query);const b=(values:an
 const origin="https://mcp.remotearc.app",uuid="11111111-1111-4111-8111-111111111111",stamp=new Date().toISOString(),future=new Date(Date.now()+3600000).toISOString();
 for(const user of ["one","two"]){sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'user',?)").run(user,user,user+"@example.invalid",stamp);sql.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)").run(await sha256Hex("session-"+user),user,future,stamp);}
 const env:AppEnv={DB:db,PUBLIC_ORIGIN:origin,APP_ORIGIN:origin,ENABLE_APPS:"1",APP_TOKEN_KEY:Buffer.alloc(32,7).toString("base64"),APP_VERCEL_INTEGRATION_SLUG:"remote-arc-test",APP_META_GRAPH_VERSION:"v26.0",APP_GOOGLE_ADS_DEVELOPER_TOKEN:"operator-ads-token",APP_PLATFORM_FUNDED_COSTS:JSON.stringify({x:{maxCostMicrosPerDispatch:1,dailyPlatformMicros:1000}})};
+Object.assign(env,{GOOGLE_APPS_ACCESS_MODE:'public'});
 for(const def of Object.values(APP_CATALOG)){if(def.credential){env["APP_"+def.credential+"_CLIENT_ID"]="client-"+def.credential;env["APP_"+def.credential+"_CLIENT_SECRET"]="secret-"+def.credential;}}
 const deny=(fn:()=>unknown,code:string)=>assert.rejects(async()=>fn(),(e:any)=>e instanceof AppError&&e.code===code);
 const records:{url:string;method:string;headers:Headers;body:any}[]=[];let active:AppProvider="youtube";
@@ -69,7 +71,7 @@ for(const provider of EXTRA_PROVIDER_IDS){
   assert.equal((await api("/api/apps/connections","POST",body,"one",{origin:"https://evil.invalid"})).status,403);
   response=await api("/api/apps/connections","POST",body);assert.equal(response.status,200,provider+":"+await response.clone().text());
  }else{
-  const started=await api("/api/apps/authorize","POST",{provider,permissions:["read","write"],settings:provider==="shopify"?{shopDomain:"test-shop.myshopify.com"}:{}});
+  const started=await api("/api/apps/authorize","POST",{provider,permissions:["read","write"],settings:provider==="shopify"?{shopDomain:"test-shop.myshopify.com"}:{},...(APP_CATALOG[provider].credential==='GOOGLE'?{dataConsent:GOOGLE_APP_DATA_POLICY.version}:{})});
   assert.equal(started.status,200,provider);
   const auth=new URL((await started.json() as any).authorizationUrl),state=auth.searchParams.get("state");
   if(APP_CATALOG[provider].pkce)assert.equal(auth.searchParams.get("code_challenge_method"),"S256");

@@ -4,7 +4,7 @@ import './support-inbox.css';
 
 type Thread={id:string;sender_email:string;subject:string;status:'open'|'waiting'|'resolved';last_message_at:string};
 type Message={id:string;direction:'inbound'|'outbound';from:string;to:string;subject:string;body:string;deliveryStatus:string;createdAt:string};
-type Detail={thread:Thread;messages:Message[]};
+type Detail={thread:Thread;messages:Message[];beta?:{googleEmail:string;providers:string[];status:'pending'|'approved'|'declined'}};
 const readable=(value:string)=>new Date(value).toLocaleString();
 async function request<T>(path:string,options?:RequestInit):Promise<T>{
   const response=await fetch(path,{...options,credentials:'same-origin',headers:{'accept':'application/json',...(options?.body?{'content-type':'application/json'}:{})}});
@@ -73,11 +73,18 @@ export function AdminSupportInbox(){
       await Promise.all([loadThread(selected),reloadList()]);
     }catch(e){setError(String(e));}finally{setBusy(false);}
   }
+  async function reviewBeta(decision:'approve'|'decline'){
+    if(!selected||busy||!detail?.beta)return;
+    if(decision==='approve'&&!window.confirm(tr('Confirm you have added this exact Google account to the Apps project test-user list: ','确认已将这个 Google 账号加入 Apps 项目测试名单：')+detail.beta.googleEmail))return;
+    setBusy(true);setError('');
+    try{await request('/api/admin/support-inbox/'+selected+'/google-beta',{method:'PATCH',body:JSON.stringify({decision,...(decision==='approve'?{googleTestUserAdded:true}:{})})});await loadThread(selected);setInfo(tr('Beta request updated. No email was sent.','已更新内测申请，未自动发送邮件。'));}
+    catch(e){setError(String(e));}finally{setBusy(false);}
+  }
   const selectThread=(id:string)=>{setSelected(id);setMessage('');setAttempt('');setError('');setInfo('');};
   return <section className="adminSupportInbox adminSurface">
     <header className="adminSectionHeader">
       <div><h2>{tr('Support Inbox','客服收件箱')}</h2>
-        <p>{tr('Customer email, securely captured from Cloudflare Email Routing. Replies are reviewed and submitted through SendPulse.','Cloudflare 安全收录客户来信，人工审阅后通过 SendPulse 回复。')}</p>
+        <p>{tr('Customer email and signed-in Apps Beta requests. Replies are reviewed and submitted through SendPulse.','处理客户来信和已登录用户的 Apps 内测申请，人工审阅后通过 SendPulse 回复。')}</p>
       </div>
       <button className="adminOutlineBtn" onClick={()=>void Promise.all([reloadList(),selected?loadThread(selected):Promise.resolve()]).catch(e=>setError(String(e)))}>{tr('Refresh','刷新')}</button>
     </header>
@@ -93,7 +100,7 @@ export function AdminSupportInbox(){
             <option value="resolved">{tr('Resolved','已解决')}</option>
           </select>
         </label>
-        {threads.length===0&&<p>{tr('No messages in this view. New emails appear after the Email Worker route is activated.','暂无邮件。激活 Email Worker 路由后，新邮件会显示在这里。')}</p>}
+        {threads.length===0&&<p>{tr('No messages or Beta applications in this view. Email ingestion also requires an active Email Worker route.','此筛选下暂无来信或内测申请。邮件接收还需要启用 Email Worker 路由。')}</p>}
         {threads.map(item=><button key={item.id} type="button" className={'adminSupportThread'+(selected===item.id?' active':'')} onClick={()=>selectThread(item.id)}>
           <strong>{item.sender_email}</strong><span>{item.subject}</span>
           <small>{readable(item.last_message_at)} · {item.status}</small>
@@ -109,6 +116,10 @@ export function AdminSupportInbox(){
               <option value="resolved">{tr('Resolved','已解决')}</option>
             </select></label>
           </div>
+          {detail.beta&&<section className="adminSupportBeta" aria-label={tr('Google Apps Beta application','Google Apps 内测申请')}>
+            <strong>Google Apps Beta · {detail.beta.status}</strong><p>{detail.beta.googleEmail} · {detail.beta.providers.join(', ')}</p>
+            {detail.beta.status==='pending'&&<><p>{tr('Add this exact Google account to the Apps project test-user list before opening access.','先将这个 Google 账号加入 Apps 项目的测试名单，再开通。')}</p><a href="https://console.cloud.google.com/auth/audience?project=remote-arc-prod-2026" target="_blank" rel="noreferrer">{tr('Open Google test users','打开 Google 测试名单')}</a><div><button type="button" className="adminPrimaryBtn" disabled={busy} onClick={()=>void reviewBeta('approve')}>{tr('Added to Google — open Beta access','已加入 Google 名单，开通内测')}</button><button type="button" className="adminOutlineBtn" disabled={busy} onClick={()=>void reviewBeta('decline')}>{tr('Decline request','暂不开通')}</button></div></>}
+          </section>}
           <div className="adminSupportMessages">
             {detail.messages.map(m=><article key={m.id} className={'adminSupportMail '+m.direction}>
               <div><strong>{m.from}</strong><time>{readable(m.createdAt)}</time></div>

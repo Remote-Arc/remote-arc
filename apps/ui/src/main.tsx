@@ -41,6 +41,7 @@ import "./features/marketing/home/laptop-hero.css";
 import "./styles/workspace-design.css";
 import "./features/marketing/marketing-design.css";
 import "./features/dashboard/device-fleet-design.css";
+import "./features/dashboard/devices/device-recovery.css";
 import "./styles/product-typography.css";
 import "./styles/arc-product-polish.css";
 import "./components/brand-wordmark.css";

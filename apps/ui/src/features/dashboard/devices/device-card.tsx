@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { BROWSER_RUNNER_TOOLS, INTERNAL_DEVICE_TOOLS, browserRunnerEnabled, isBrowserRunnerTool } from "./device-tools.js";
 import { DeviceCapacity } from "./device-fleet-overview.js";
-import './device-recovery.css';
 import { ProductIcon } from "../../../components/product-icon.js";
 import { isOlderRelease, goUpdateCommands } from "../../install/agent-update-guide.js";
 import { DEVICE_TOOL_CATALOG, deviceAccessPreset, platformLabel } from "./device-presets.js";

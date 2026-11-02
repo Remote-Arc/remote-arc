@@ -2,90 +2,90 @@
   "version": 1,
   "repository": "Remote-Arc/remote-arc",
   "source": {
-    "runId": 41369661793,
-    "sha": "0f04b99c1ccb0e440e374b91f1c39b836a4fe4b5",
-    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/41369661793",
-    "measuredAt": "2026-11-02T01:10:21Z"
+    "runId": 41377348419,
+    "sha": "b54098f97ee26f838c144b0b21070d4e626689c2",
+    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/41377348419",
+    "measuredAt": "2026-11-02T02:35:05Z"
   },
   "scope": "Production TypeScript/TSX and Linux Go module statements; Apps/Relay are overlapping breakouts.",
   "target": 90,
   "overall": {
-    "covered": 39103,
-    "total": 59786,
+    "covered": 39282,
+    "total": 60061,
     "pct": 65.4
   },
   "scopes": {
     "apps": {
       "statements": {
-        "covered": 1353,
-        "total": 1360,
-        "pct": 99.49
+        "covered": 1446,
+        "total": 1446,
+        "pct": 100
       },
       "branches": {
-        "covered": 1445,
-        "total": 1513,
-        "pct": 95.51
+        "covered": 1513,
+        "total": 1590,
+        "pct": 95.16
       },
       "functions": {
-        "covered": 73,
-        "total": 74,
-        "pct": 98.65
+        "covered": 79,
+        "total": 79,
+        "pct": 100
       },
       "lines": {
-        "covered": 1353,
-        "total": 1360,
-        "pct": 99.49
+        "covered": 1446,
+        "total": 1446,
+        "pct": 100
       }
     },
     "typescript": {
       "statements": {
-        "covered": 30198,
-        "total": 50011,
-        "pct": 60.38
+        "covered": 30374,
+        "total": 50286,
+        "pct": 60.4
       },
       "branches": {
-        "covered": 12198,
-        "total": 14910,
-        "pct": 81.81
+        "covered": 12343,
+        "total": 15073,
+        "pct": 81.89
       },
       "functions": {
-        "covered": 1209,
-        "total": 1454,
-        "pct": 83.15
+        "covered": 1224,
+        "total": 1469,
+        "pct": 83.32
       },
       "lines": {
-        "covered": 30198,
-        "total": 50011,
-        "pct": 60.38
+        "covered": 30374,
+        "total": 50286,
+        "pct": 60.4
       }
     },
     "relay": {
       "statements": {
-        "covered": 24438,
-        "total": 27060,
-        "pct": 90.31
+        "covered": 24614,
+        "total": 27228,
+        "pct": 90.4
       },
       "branches": {
-        "covered": 11201,
-        "total": 13414,
-        "pct": 83.5
+        "covered": 11346,
+        "total": 13576,
+        "pct": 83.57
       },
       "functions": {
-        "covered": 991,
-        "total": 1027,
-        "pct": 96.49
+        "covered": 1006,
+        "total": 1041,
+        "pct": 96.64
       },
       "lines": {
-        "covered": 24438,
-        "total": 27060,
-        "pct": 90.31
+        "covered": 24614,
+        "total": 27228,
+        "pct": 90.4
       }
     },
     "agent": {
       "statements": {
-        "covered": 6782,
+        "covered": 6785,
         "total": 7502,
-        "pct": 90.4
+        "pct": 90.44
       }
     },
     "core": {

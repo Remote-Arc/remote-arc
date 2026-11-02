@@ -435,17 +435,19 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     if (url.pathname === "/api/admin/usage-insights") {
       const userId=url.searchParams.get("userId")||"u2";
       const month=new Date().toISOString().slice(0,7);
-      return json({userId,month,timeZone:"UTC",chargedCalls:userId==="u2"?20000:8689,
-        audited:{total:12460,succeeded:11916,failed:544},
-        daily:Array.from({length:new Date().getUTCDate()},(_,i)=>({day:month+"-"+String(i+1).padStart(2,"0"),calls:140+(i%7)*65+(i%3)*24,failures:3+(i%5)*2})),
-        tools:[{tool:"read_file",calls:4410,failures:18},{tool:"list_directory",calls:3008,failures:29},{tool:"process_status",calls:2570,failures:210},{tool:"start_process",calls:1170,failures:180},{tool:"browser_runner_snapshot",calls:760,failures:12},{tool:"edit_block",calls:542,failures:95}],
-        outcomes:[{outcome:"allowed",calls:11916},{outcome:"device_error",calls:544}],taskSuccessAvailable:false,retriesAvailable:false});
+      return json({userId,month,timeZone:"UTC",chargedCalls:userId==="u2"?6405:8689,preview:true,
+        audited:{total:6225,succeeded:5844,failed:381},
+        daily:Array.from({length:new Date().getUTCDate()},(_,i)=>({day:month+"-"+String(i+1).padStart(2,"0"),calls:Math.floor(6225/new Date().getUTCDate())+(i<6225%new Date().getUTCDate()?1:0),failures:Math.floor(381/new Date().getUTCDate())+(i<381%new Date().getUTCDate()?1:0)})),
+        tools:[{tool:"process_status",calls:2010,failures:210},{tool:"read_file",calls:1500,failures:18},{tool:"list_directory",calls:1000,failures:17},{tool:"start_process",calls:750,failures:110},{tool:"browser_runner_wait",calls:560,failures:20},{tool:"edit_block",calls:405,failures:6}],
+        outcomes:[{outcome:"allowed",calls:5844},{outcome:"device_error",calls:381}],taskSuccessAvailable:false,retriesAvailable:false,
+        work:{deviceOperations:3504,stateChecks:2570,apps:{total:180,succeeded:168,failed:8,unknown:4},arc:{total:15,succeeded:12,failed:2,unknown:1},completedGoals:null,retries:null},
+        cost:{currency:'USD',modelCostMicros:userId==='u2'?null:124600,settledRequests:userId==='u2'?0:48,unresolvedRequests:userId==='u2'?0:2,cloudCostMicros:null,totalCostMicros:null,basis:'recorded_usage_and_model_prices'}});
     }
     if (url.pathname === "/api/admin/operations") {
       const day = new Date();
       const sampleUsers = [
         {id:"preview-user",email:"owner@example.com",name:"Operator",role:"admin",plan:"plus",used:1570,extra:0,allowance:null,device_count:2,online_devices:1,created_at:previewAgo(40*86400000),last_activity:previewAgo(600000),has_plus_grant:1},
-        {id:"u2",email:"tester@example.com",name:"Early tester",role:"user",plan:"free",used:20000,extra:10000,allowance:20000,device_count:1,online_devices:1,created_at:previewAgo(3*86400000),last_activity:previewAgo(3600000),has_plus_grant:0},
+        {id:"u2",email:"tester@example.com",name:"Early tester",role:"user",plan:"free",used:6405,extra:0,allowance:10000,device_count:1,online_devices:1,created_at:previewAgo(2*86400000),last_activity:previewAgo(3600000),has_plus_grant:0},
         {id:"u3",email:"builder@example.com",name:"Developer",role:"user",plan:"free",used:8689,extra:0,allowance:10000,device_count:2,online_devices:0,created_at:previewAgo(7*86400000),last_activity:previewAgo(29000000),has_plus_grant:1},
       ];
       const activationPreview = previewActivationUsers(sampleUsers, url);

@@ -45,6 +45,20 @@ export function taskProgress(task: Pick<Task, "state_json">): Progress {
   catch { return {}; }
 }
 
+// A saved plan may be incomplete while a background goal is being initialized.
+export function isPlannedProgress(value: unknown): value is PlannedProgress {
+  if (!value || typeof value !== "object") return false;
+  const p = value as Partial<PlannedProgress>;
+  const plan = p.plan;
+  return typeof p.started_at === "string"
+    && !!plan && typeof plan === "object"
+    && !!plan.time_policy && typeof plan.time_policy === "object"
+    && Array.isArray(plan.phases) && plan.phases.every(phase => phase && typeof phase.id === "string" && typeof phase.objective === "string")
+    && Array.isArray(p.outcomes) && p.outcomes.every(item => item && typeof item.id === "string" && typeof item.outcome === "string")
+    && Array.isArray(p.checks) && p.checks.every(item => item && typeof item.name === "string")
+    && Array.isArray(p.rejected) && p.rejected.every(item => item && typeof item.evidence === "string");
+}
+
 export function taskNeedsAgent(task: Pick<Task, "state_json" | "status">) {
   return task.status === "waiting_for_event" && ["awaiting_agent", "needs_reasoning"].includes(taskProgress(task).phase || "");
 }
@@ -80,6 +94,7 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
   const progress = taskProgress(task);
+  const planned = isPlannedProgress(progress.planned) ? progress.planned : null;
   useEffect(() => {
     if (!linked && !reveal) return;
     setOpen(true);
@@ -122,7 +137,7 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
   return (
     <details ref={details} open={open} className="automationDetails" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>{tr("Progress & results", "进度与结果")}<span aria-hidden="true">›</span></summary>
-      <div className="taskResultsBody">
+      {open && <div className="taskResultsBody">
         {!['completed', 'failed', 'cancelled', 'expired'].includes(task.status) && (
           <div className="taskProgressPanel">
             <strong>{phaseLabel}</strong>
@@ -133,7 +148,8 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
         )}
         {taskNeedsAgent(task) && chatReference}
         {progress.agent?.completion_evidence && <div className="taskEvidence"><strong>{tr("Completion evidence", "完成证据")}</strong><p>{progress.agent.completion_evidence}</p></div>}
-        {progress.planned && <React.Suspense fallback={<WorkspaceLoading label={tr("Loading saved plan…", "正在加载保存的计划…")} variant="rows"/>}><PlannedGoalProgress value={progress.planned} expiresAt={task.expires_at} /></React.Suspense>}
+        {planned && <React.Suspense fallback={<WorkspaceLoading label={tr("Loading saved plan…", "正在加载保存的计划…")} variant="rows"/>}><PlannedGoalProgress value={planned} expiresAt={task.expires_at} /></React.Suspense>}
+        {progress.planned && !planned && <p role="status">{tr("Plan details are still syncing. The task status and run history remain available.", "计划详情仍在同步，任务状态和执行记录仍可查看。")}</p>}
         {task.last_error && <p className="automationLastError">{task.last_error}</p>}
         <div className="taskRunHistory" aria-busy={open && runs === null && !error}>
           <h3>{tr("Recent runs", "最近执行")}</h3>
@@ -166,7 +182,7 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
           </div>
         </details>
         <p className="automationDetailNote"><a href="/docs/long-running-work">{tr("Understand task recovery and completion checks", "了解任务恢复与完成验收")} →</a></p>
-      </div>
+      </div>}
     </details>
   );
 }

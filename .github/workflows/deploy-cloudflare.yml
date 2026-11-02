@@ -109,6 +109,12 @@ jobs:
       # Read production D1 migration history BEFORE any mutation. If nothing
       # is pending, neither backup/export nor D1 apply is needed.
       # Unknown history, permission errors and JSON parsing errors fail closed.
+      - name: "D1: Preview Google retention counts (read-only)"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+        run: node scripts/google-app-retention-check.mjs before
+
       - name: "D1: Create encrypted, restore-tested backup if needed"
         id: d1_backup
         env:
@@ -212,6 +218,13 @@ jobs:
       - name: "Smoke: Verify deployed SHA, URLs, MCP and OAuth"
         timeout-minutes: 5
         run: node scripts/production-smoke.mjs --sha "$GITHUB_SHA"
+
+      - name: "D1: Verify scheduled Google cleanup and retained ledger (read-only)"
+        timeout-minutes: 10
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+        run: node scripts/google-app-retention-check.mjs after
 
       - name: "Optional: Activate hosted OpenAI models (explicit opt-in)"
         if: inputs.enable_openai

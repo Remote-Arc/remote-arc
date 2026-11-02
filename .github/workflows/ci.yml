@@ -87,6 +87,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Check Apps core coverage at 90% for every metric and file
         run: pnpm coverage:apps
+      - name: Check read-only Google retention release verification
+        run: node --test scripts/google-app-retention-check-test.mjs
       - run: pnpm test:coverage-badges
       - run: pnpm coverage:ts
       - run: pnpm build:ui

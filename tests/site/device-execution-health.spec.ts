@@ -3,14 +3,15 @@ import {test,expect} from './fixtures';
 test('Admin health exposes device timeouts even without Worker 5xx',async({page},info)=>{
   const zh=info.project.metadata.language==='zh';
   await page.goto('/admin-preview?section=health');
+  await page.locator('.healthSection').filter({has:page.locator('.deviceExecutionHealth')}).locator('>summary').click();
   const panel=page.getByRole('region',{name:zh?'设备执行健康':'Device execution health',exact:true});
   await expect(panel.getByText('Example Mac',{exact:true})).toBeVisible();
   await expect(panel).toContainText(zh?'3 次超时':'3 timeouts');
   await expect(panel).toContainText(zh?'以下不代表真实设备故障':'not a real device incident');
   await expect(panel).toContainText(zh?'执行结果待确认':'operation result unknown');
   await expect(panel).toContainText(zh?'任务防休眠保障失败':'task keep-awake failures');
-  await expect(page.locator('.adminMetrics--health')).toContainText('degraded');
-  await expect(page.locator('.adminMetrics--health>div').nth(1)).toContainText('0');
+  await expect(page.locator('.healthStatusStrip')).toContainText(zh?'发现异常':'Issues observed');
+  await expect(page.locator('.healthStatusStrip')).toContainText('0 / 0 / 2');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual((page.viewportSize()?.width||0)+1);
 });
 

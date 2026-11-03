@@ -1,3 +1,4 @@
+import {identityTrace} from '../analytics/observation-context.js';
 import {recordProductEvent} from '../analytics/product-events.js';
 import {boundedEventJson} from '../analytics/product-observability.js';
 import { z } from "zod";
@@ -269,13 +270,14 @@ export async function callApp(env: AppEnv, identity: Pick<OAuthIdentity, "userId
     const result = redactProviderCredentials(rawResult,(row.provider==='vercel'&&operation.name.startsWith('env.')||row.provider==='supabase'&&operation.name.startsWith('secrets.'))?['value','decrypted']:[]);
     const settled=await env.DB.prepare("UPDATE app_calls SET status='succeeded',result_ciphertext=?1,updated_at=?2 WHERE id=?3 AND user_id=?4 AND status='running' AND content_purged_at IS NULL").bind(await seal(env, result, callContext(identity.userId, call.id, "result")), now(), call.id, identity.userId).run();
     if(!settled.meta.changes)return {status:operation.permission==='write'?'unknown':'cancelled',callId:call.id,error:'app_call_content_deleted',retryAutomatically:false};
-    if(settled.meta?.changes)await recordProductEvent(env,{domain:'apps',name:'app.call.succeeded',source:'server',outcome:'succeeded',userId:identity.userId,entityId:call.id});
+    if(settled.meta?.changes)await recordProductEvent(env,{domain:'apps',name:'app.call.succeeded',source:'server',outcome:'succeeded',userId:identity.userId,traceId:identityTrace(identity),entityId:call.id,appProvider:row.provider,operation:operation.name});
     return { status: "succeeded", callId: call.id, untrustedData: true, verification: "provider_acknowledged", result };
   } catch (error) {
     const code = error instanceof AppError ? error.code : (error as { code?: string }).code || "app_execution_failed";
     const definiteDenial = ["app_review_changed", "app_scope_required", "app_reauthorization_required", "app_rate_limited", "app_provider_rejected"].includes(code);
     const status = dispatched && operation.permission === "write" && !definiteDenial ? "unknown" : "failed";
     await env.DB.prepare("UPDATE app_calls SET status=?1,error_code=?2,updated_at=?3 WHERE id=?4 AND user_id=?5 AND status='running'").bind(status, code, now(), call.id, identity.userId).run();
+    await recordProductEvent(env,{domain:'apps',name:'app.call.failed',source:'server',outcome:'failed',userId:identity.userId,traceId:identityTrace(identity),entityId:call.id,appProvider:row.provider,operation:operation.name,errorCode:code});
     if (code === "app_reauthorization_required") await markReauthorization(env, row, code);
     throw error;
   }

@@ -48,7 +48,7 @@ export function deviceReadDiagnostic(error: unknown): string {
 
 const ROUTES = [
   "/mcp", "/health", "/api/device", "/api/devices", "/api/slack",
-  "/api/arc", "/api/admin", "/api/apps", "/api/monitor", "/api/me",
+  "/api/billing", "/api/arc", "/api/admin", "/api/apps", "/api/monitor", "/api/me",
   "/oauth", "/auth",
 ];
 

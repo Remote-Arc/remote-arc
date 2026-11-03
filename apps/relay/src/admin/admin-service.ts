@@ -1,3 +1,5 @@
+import {ingestProductEvents} from '../analytics/product-observability.js';
+import {handleServiceHealthMonitoring} from '../analytics/service-health-monitoring.js';
 import {handleAdminEvents} from './admin-events.js';
 import {handleAdminSupportInbox} from './support-inbox.js';
 import {handleBusinessAnalytics} from '../analytics/business-analytics.js';
@@ -17,6 +19,7 @@ import { handleMonitorState, type MonitorEnv } from "../analytics/monitor.js";
 export type AdminServiceEnv = OpsEnv & EngagementEnv & MonitorEnv & FollowupEnv & AdminPaymentsEnv & { ADMIN_ORIGIN?: string; ADMIN_SERVICE_MODE?: string; ADMIN_UI?: { fetch(request: Request): Promise<Response> } };
 export const ADMIN_CONTRACT_VERSION = "1";
 const methods: Record<string, readonly string[]> = {
+  "/api/product-events":["POST"],
   "/api/me": ["GET"], "/api/monitor": ["GET"],
   "/api/admin/operations": ["GET"], "/api/admin/usage-insights": ["GET"], "/api/admin/billing": ["GET"],
   '/api/admin/arc-billing':['GET'],
@@ -35,6 +38,7 @@ export function adminApiMethods(path: string): readonly string[] | null {
   if(path==='/api/admin/analytics')return ['GET'];
   if(path==='/api/admin/feedback-rewards')return ['GET'];
   if(path==='/api/admin/feedback-rewards/config'||/^\/api\/admin\/feedback-rewards\/claims\/[a-f0-9-]{36}\/(approve|reject)$/.test(path))return ['POST'];
+  if(path==='/api/admin/monitoring')return ['GET'];
   if(path==='/api/admin/events'||path==='/api/admin/events/readiness')return ['GET'];
   if(path==='/api/admin/payments')return ['GET'];
   if(path==='/api/admin/payments/trials')return ['GET'];
@@ -83,6 +87,8 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
   if (!user) return failure("unauthorized", 401);
   if (!user.isAdmin) return failure("forbidden", 403);
 
+  if(url.pathname==='/api/product-events')return finish(await ingestProductEvents(request,env));
+  if(url.pathname==='/api/admin/monitoring')return finish(await handleServiceHealthMonitoring(request,env));
   if(url.pathname.startsWith('/api/admin/support-inbox'))return finish(await handleAdminSupportInbox(request,env,user.id));
   if(url.pathname.startsWith('/api/admin/followups')){
     const response=await handleUserFollowups(request,env);

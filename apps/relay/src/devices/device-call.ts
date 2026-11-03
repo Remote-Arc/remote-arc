@@ -1,3 +1,5 @@
+import {identityTrace} from '../analytics/observation-context.js';
+import {classifyExpectedMcpError} from '../mcp/mcp-errors.js';
 import {browserAuthForDevice, NO_BROWSER_AUTH} from "../browser/browser-auth.js";
 import {recordProductEvent} from '../analytics/product-events.js';
 import { processTimeoutError } from './call-timeout.js';
@@ -311,7 +313,7 @@ export async function callDevice(
     : payload.error?.startsWith("Blocked by Remote Arc Safety Guard:")
       ? "safety_guard_block"
       : "device_error";
-  const deviceErrorCode=success?undefined:isDeviceCallTimeoutError(payload.error)?'DEVICE_TIMEOUT':payload.error==='device offline'?'DEVICE_OFFLINE':'REQUEST_FAILED';
+  const deviceErrorCode=success?undefined:isDeviceCallTimeoutError(payload.error)?'DEVICE_TIMEOUT':payload.error==='device offline'?'DEVICE_OFFLINE':classifyExpectedMcpError(payload.error)?.code||'REQUEST_FAILED';
   if(deviceErrorCode==='DEVICE_TIMEOUT')outcome='device_timeout';
   if(deviceErrorCode==='DEVICE_OFFLINE')outcome='device_offline';
 
@@ -353,7 +355,7 @@ export async function callDevice(
     outcome,
   }).catch(() => undefined);
 
-  await recordProductEvent(env,{domain:'devices',name:'device.tool.completed',source:'server',outcome:success?'succeeded':'failed',userId:identity.userId,entityId:deviceId,route:/^[a-z_]{1,80}$/.test(tool)?'/device-tools/'+tool:'/device-tools/:redacted',httpStatus:success?200:502,errorCode:deviceErrorCode,durationMs:Date.now()-started});
+  await recordProductEvent(env,{domain:'devices',name:'device.tool.completed',source:'server',outcome:success?'succeeded':'failed',userId:identity.userId,traceId:identityTrace(identity),entityId:deviceId,deviceId,operation:tool,route:/^[a-z_]{1,80}$/.test(tool)?'/device-tools/'+tool:'/device-tools/:redacted',httpStatus:success?200:502,errorCode:deviceErrorCode,durationMs:Date.now()-started});
 
   recordMcpTelemetry(env, {
     kind: "device_tool",

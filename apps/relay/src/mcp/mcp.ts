@@ -1,3 +1,4 @@
+import {setIdentityTrace} from '../analytics/observation-context.js';
 import {readCommunityResource} from '../arc/arc-community-skills.js';
 import {BUILTIN_SKILL_RESOURCES} from '../../../../packages/skills/src/media-resources.generated.js';
 import { getGoalContext, submitGoalDecision } from "../tasks/source-goals.js";
@@ -31,7 +32,7 @@ import type { OAuthIdentity } from "../auth/auth.js";
 import { callDevice } from "../devices/device-call.js";
 import { consumeToolCall } from "../billing/usage.js";
 import { recordProductEvent } from "../analytics/product-events.js";
-import { registerMcpTool } from "./mcp-errors.js";
+import { registerMcpTool,observeMcpFailures } from "./mcp-errors.js";
 import { CLAUDE_TOOL_DESCRIPTIONS } from "./mcp-claude-descriptions.js";
 import type { McpClientProfile } from "./mcp-client-profile.js";
 import { registerBrowserRunnerTools } from "./browser-runner-mcp.js";
@@ -243,11 +244,12 @@ function installOpenAiToolListAuthMetadata(
 export function createRemoteLinkMcp(
   env: Env,
   identity: OAuthIdentity | null,
-  options: { kickScheduler?: (automationId: string) => void; clientProfile?: McpClientProfile } = {},
+  options: { kickScheduler?: (automationId: string) => void; clientProfile?: McpClientProfile; traceId?:string } = {},
 ) {
   // Claude (Anthropic MCP Directory) gets the same tools without the Skill
   // library: it is an external instruction source that also carries media-
   // generation guidance. Claude descriptions come from mcp-claude-descriptions.
+  if(identity){identity={...identity};if(options.traceId)setIdentityTrace(identity,options.traceId);}
   const claude = options.clientProfile === "claude";
   // ChatGPT's app review requires every App operation's arguments up front, so
   // its App tools keep the typed form; other clients get the compact one.
@@ -260,6 +262,14 @@ export function createRemoteLinkMcp(
         ...(claude ? {} : { instructions: "Remote Arc offers curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed. If your tool list shows browser_list_tabs or browser_read_page but no shared_tab_* or browser_runner_* tools, it is a cached list from an older Remote Arc release: ask the user to refresh or reconnect the Remote Arc connector." + " " + QUOTA_UPGRADE_GUIDANCE }),
       },
     );
+
+    observeMcpFailures(server,async value=>{
+      let deviceId:string|null=null,appProvider:string|null=null,entityId:string|null=null;const input=value.args as {device_id?:unknown;connectionId?:unknown}|null;
+      const mayReadContext=identity&&!['insufficient_scope','unauthorized'].includes(value.code);
+      if(mayReadContext&&typeof input?.device_id==='string'&&/^[A-Za-z0-9_-]{1,180}$/.test(input.device_id))deviceId=(await env.DB.prepare('SELECT id FROM devices WHERE id=?1 AND user_id=?2').bind(input.device_id,identity!.userId).first<{id:string}>())?.id||null;
+      if(mayReadContext&&typeof input?.connectionId==='string'&&/^[a-f0-9-]{36}$/.test(input.connectionId)){const owned=await env.DB.prepare('SELECT id,provider FROM app_connections WHERE id=?1 AND user_id=?2').bind(input.connectionId,identity!.userId).first<{id:string;provider:string}>();appProvider=owned?.provider||null;entityId=owned?.id||null;}
+      await recordProductEvent(env,{domain:'mcp',name:'mcp.tool.failed',source:'server',outcome:'failed',userId:identity?.userId,traceId:options.traceId,deviceId,appProvider,entityId,operation:value.tool,errorCode:value.code,durationMs:value.durationMs,route:'/mcp'});
+    });
 
     if (env.ENABLE_APPS === "1") {
       // A bounded, searchable directory of 37 known providers and 344

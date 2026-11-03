@@ -1,3 +1,4 @@
+import {recordProductEvent} from '../analytics/product-events.js';
 import { randomToken, sha256Hex } from '../auth/auth.js';
 import { arcActive, arcMessages, arcRuntime, createArcConversation, submitArcMessage, wakeArcRun, type ArcRun } from '../arc/arc-chat.js';
 import { seal, unseal } from '../apps/app-oauth.js';
@@ -17,8 +18,9 @@ const notices={
  connection:(zh:boolean,web:string)=>zh?'需要先在 Remote Arc 连接所需的账号，连接后会继续。'+slackLink(web,'去连接'):'Connect the required account in Remote Arc to continue this task. '+slackLink(web,'Connect account'),
 };
 async function saveJob(env:SlackBotEnv,job:SlackJob,status:string,values:{error?:string;delay?:number}={}){
- await env.DB.prepare('UPDATE slack_arc_events SET status=?1,last_error=?2,next_attempt_at=?3,updated_at=?4,lease=NULL,lease_until=NULL WHERE id=?5 AND lease=?6')
+ const settled=await env.DB.prepare('UPDATE slack_arc_events SET status=?1,last_error=?2,next_attempt_at=?3,updated_at=?4,lease=NULL,lease_until=NULL WHERE id=?5 AND lease=?6')
   .bind(status,values.error||null,timeAfter(values.delay||15),slackStamp(),job.id,job.lease).run();
+ if(settled.meta?.changes&&values.error)await recordProductEvent(env,{domain:'apps',name:'slack.job.failed',source:'server',outcome:'failed',userId:job.user_id,entityId:job.id,appProvider:'slack',operation:'background_reply',errorCode:values.error});
 }
 async function linkedOwner(env:SlackBotEnv,job:SlackJob){
  return env.DB.prepare("SELECT user_id FROM slack_arc_links WHERE team_id=?1 AND slack_user_id=?2 AND status='active'").bind(job.team_id,job.slack_user_id).first<{user_id:string}>();

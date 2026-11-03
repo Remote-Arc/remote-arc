@@ -1,3 +1,4 @@
+import {eventStatement} from './product-events.js';
 type TrackingEnv={DB:D1Database};
 export type BusinessScene='email_login'|'google_login'|'device_pairing';
 const stages:Record<BusinessScene,readonly string[]>={email_login:['started','delivered','verification','verified','completed'],google_login:['started','callback','verified','completed'],device_pairing:['started','opened','signed_in','approved','credential','online']};
@@ -22,7 +23,7 @@ export async function advanceBusinessFlow(env:TrackingEnv,id:string,scene:Busine
  }catch{console.warn('business_flow_step_unavailable');}
 }
 export async function failBusinessFlow(env:TrackingEnv,id:string,reason:string){
- try{await env.DB.prepare('UPDATE business_flow_attempts SET failed_at=COALESCE(failed_at,?2),failure_reason=?3 WHERE id=?1 AND succeeded_at IS NULL').bind(id,new Date().toISOString(),reason).run();}catch{console.warn('business_flow_outcome_unavailable');}
+ try{const row=await env.DB.prepare('SELECT scene,user_id FROM business_flow_attempts WHERE id=?1 AND succeeded_at IS NULL AND failed_at IS NULL').bind(id).first<{scene:string;user_id:string|null}>();await env.DB.prepare('UPDATE business_flow_attempts SET failed_at=COALESCE(failed_at,?2),failure_reason=?3 WHERE id=?1 AND succeeded_at IS NULL').bind(id,new Date().toISOString(),reason).run();if(row)await eventStatement(env,{domain:'auth',name:'auth.flow.failed',source:'server',outcome:'failed',userId:row.user_id,entityId:id,errorCode:reason==='delivery_failed'?'AUTH_DELIVERY_FAILED':reason==='account_ineligible'?'AUTH_ACCOUNT_INELIGIBLE':'AUTH_FLOW_FAILED'}).run();}catch{console.warn('business_flow_outcome_unavailable');}
 }
 export async function recordBusinessActivity(env:TrackingEnv,userId:string,at=new Date().toISOString()){
  try{await env.DB.batch([env.DB.prepare(`INSERT INTO business_activity_days(user_id,day,first_at,last_at) VALUES(?1,?2,?3,?3)

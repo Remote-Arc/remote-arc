@@ -5,14 +5,14 @@ const save=(page:import('@playwright/test').Page)=>page.getByRole('button',{name
 const send=(page:import('@playwright/test').Page)=>page.getByRole('button',{name:/^(Send email|发送邮件)$/});
 async function open(page:import('@playwright/test').Page){await page.goto('/admin-preview?section=followups');await page.getByRole('button',{name:/Alex Chen/}).click();await expect(subject(page)).not.toHaveValue('');}
 
-test('Paired computers get a bilingual MCP installation template and direct official links',async({page},testInfo)=>{
+test('Paired computers default to the English MCP installation template and direct official links',async({page})=>{
  await open(page);
  await expect(page.getByRole('combobox',{name:/^(Template|模板)$/})).toHaveValue('finish-mcp');
  await page.getByRole('combobox',{name:/User segment|用户分组/}).selectOption('device-only');
  await expect(page.getByRole('button',{name:/Taylor/})).toHaveCount(0);
  await page.getByRole('button',{name:/^(Preview email|预览邮件)$/}).click();
  const preview=page.locator('iframe.adminFollowupEmailPreview').contentFrame();
- const prefix=testInfo.project.metadata.language==='zh'?'/zh':'';
+ const prefix='';
  for(const client of ['chatgpt','claude','cursor'])await expect(preview.locator('a[href="https://remotearc.app'+prefix+'/install/'+client+'"]').first()).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

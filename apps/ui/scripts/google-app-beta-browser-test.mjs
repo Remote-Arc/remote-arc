@@ -103,6 +103,41 @@ try{
   try{await page.getByRole('heading',{name:'Apps',exact:true}).waitFor({timeout:5000});}
   catch(error){console.error(JSON.stringify({step:'after-scripted-callback',url:page.url().split('?')[0],text:(await page.textContent('body')).slice(0,700),network:networkRecords.slice(-20),cookies:(await user.cookies()).map(cookie=>({name:cookie.name,domain:cookie.domain,sameSite:cookie.sameSite}))}));throw error;}
   assert.equal(JSON.parse(connection.connection_metadata_json).googleDataConsent.version,'2026-11-02');
+  // Existing accounts can require a fresh disclosure; reviewing from inside
+  // the account drawer must leave one usable focus-trapping dialog.
+  f.sql.prepare("UPDATE app_connections SET connection_metadata_json=json_remove(connection_metadata_json,'$.googleDataConsent') WHERE id=?").run(connection.id);
+  await page.reload();
+  await page.locator('.appsManagerCard[data-provider="gmail"]').getByRole('button',{name:'Manage',exact:true}).click();
+  await page.getByRole('button',{name:'Review data access',exact:true}).click();
+  const review=page.getByRole('dialog',{name:'Use Gmail with your AI'});
+  await review.getByRole('checkbox',{name:/I agree to this use and sharing/}).check({timeout:4000});
+  assert.equal(await page.getByRole('dialog').count(),1,'Only the policy dialog owns focus while reviewing access');
+  await picture(page,'apps-review-access');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Review data access',exact:true}).waitFor();
+  assert.equal(await page.getByRole('dialog').count(),1,'Closing the policy restores the existing account drawer');
+  const networkBeforeReview=googleNetwork;
+  await page.getByRole('button',{name:'Review data access',exact:true}).click();
+  await review.getByRole('checkbox',{name:/I agree to this use and sharing/}).check();
+  await review.getByRole('button',{name:'Agree and continue',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'Google data access confirmed.'}).first().waitFor();
+  assert.equal(googleNetwork,networkBeforeReview,'Reviewing an existing account does not start Google OAuth');
+  assert.equal(JSON.parse(f.sql.prepare('SELECT connection_metadata_json FROM app_connections WHERE id=?').get(connection.id).connection_metadata_json).googleDataConsent.version,'2026-11-02');
+  await page.getByRole('button',{name:'Connect another account',exact:true}).click();
+  await review.getByRole('checkbox',{name:/I agree to this use and sharing/}).check();
+  await review.getByRole('button',{name:'Close',exact:true}).click();
+  await page.getByRole('button',{name:'Close app details',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});
+  f.sql.prepare("UPDATE app_connections SET connection_metadata_json=json_remove(connection_metadata_json,'$.googleDataConsent') WHERE id=?").run(connection.id);
+  await page.reload();
+  await page.locator('.appsManagerCard[data-provider="gmail"]').getByRole('button',{name:'Manage',exact:true}).click();
+  await page.getByRole('button',{name:'Review data access',exact:true}).click();
+  await review.getByRole('checkbox',{name:/I agree to this use and sharing/}).check();
+  await overflow(page);await picture(page,'apps-review-access-mobile');
+  await review.getByRole('button',{name:'Agree and continue',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'Google data access confirmed.'}).first().waitFor();
+  await page.getByRole('button',{name:'Close app details',exact:true}).click();
+  await page.setViewportSize({width:1440,height:1000});
   const callId=crypto.randomUUID();
   f.sql.prepare("INSERT INTO app_calls(id,user_id,connection_id,connection_generation,operation,permission,request_id,input_hash,arguments_ciphertext,result_ciphertext,status,expires_at,created_at,updated_at) VALUES(?,'beta-browser',?,1,'messages.get','read',?,'hash','encrypted-input','encrypted-output','succeeded',?,?,?)").run(callId,connection.id,callId,f.now,f.now,f.now);
   await page.locator('.appsManagerCard[data-provider="gmail"]').getByRole('button',{name:'Manage',exact:true}).click();

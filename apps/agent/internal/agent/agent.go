@@ -458,6 +458,11 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 		conn.SetWriteDeadline(time.Now().Add(15 * time.Second))
 		return conn.WriteJSON(v)
 	}
+	// Establish the signal baseline before hello exposes this transport. A
+	// suspension during the hello write must not become the initial baseline
+	// after resume, otherwise the first buffered call can look fresh.
+	var lastPeerSignal atomic.Int64
+	lastPeerSignal.Store(a.wallNow().UnixMilli())
 	if e := send(a.hello(ctx)); e != nil {
 		return e
 	}
@@ -470,8 +475,6 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 	// macOS monotonic time can stop during system sleep. Use wall time as well
 	// so buffered calls and pongs cannot make the old transport appear healthy
 	// when the process resumes. No filesystem/process action is replayed.
-	var lastPeerSignal atomic.Int64
-	lastPeerSignal.Store(a.wallNow().UnixMilli())
 	peerSignal := func() error {
 		now := a.wallNow().UnixMilli()
 		gap := now - lastPeerSignal.Load()

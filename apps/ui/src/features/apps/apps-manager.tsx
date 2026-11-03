@@ -427,7 +427,8 @@ export function AppsManager({ request = requestJson, navigate = (url: string) =>
       {!snapshot.apps.length && <p className="appsManagerEmpty">{tr("No app providers are available yet.", "目前还没有可用的应用服务。")}</p>}
 
     </>}
-    {selectedApp && details && <AppDetailsPanel key={selectedApp.provider} app={selectedApp} connections={(snapshot?.connections||[]).filter(connection => connection.provider === selectedApp.provider)} initialTab={details.tab} onClose={closeDetails} busy={Boolean(busy) || UI_PREVIEW} error={error} notice={notice} onAuthorize={authorize} onCredential={connectCredential} onDisconnect={disconnect} onCheck={check} onConsent={reviewData} onErase={eraseData}/>}
+    {/* Keep one focus trap active. Preserve the selection to reopen details after review. */}
+    {selectedApp && details && !consent && !betaProvider && <AppDetailsPanel key={selectedApp.provider} app={selectedApp} connections={(snapshot?.connections||[]).filter(connection => connection.provider === selectedApp.provider)} initialTab={details.tab} onClose={closeDetails} busy={Boolean(busy) || UI_PREVIEW} error={error} notice={notice} onAuthorize={authorize} onCredential={connectCredential} onDisconnect={disconnect} onCheck={check} onConsent={reviewData} onErase={eraseData}/>}
     {betaProvider&&snapshot?.googleBeta&&<GoogleBetaApplication apps={snapshot.apps.filter(app=>app.dataPolicy&&app.configured)} initialProvider={betaProvider} state={snapshot.googleBeta} busy={Boolean(busy)} error={error?errorLabel(error,tr):''} onSubmit={submitBeta} onClose={closeBeta}/>}
     {consent&&<GoogleConsentDialog provider={consent.provider} name={snapshot?.apps.find(app=>app.provider===consent.provider)?.name||consent.provider} busy={Boolean(busy)} onAccept={acceptData} onClose={closeConsent}/>}
   </div>;

@@ -1,4 +1,4 @@
-import type { DeviceExecutionHealth } from './device-execution-health.js';
+import type { DeviceExecutionHealth } from './device-execution-health-model.js';
 export type Incident = {
     id: string;
     created_at: string;

@@ -79,7 +79,9 @@ type Scope =
 const hasScope = (identity: OAuthIdentity, scope: Scope) =>
   identity.scope.split(/\s+/).includes(scope);
 
-const toolErrorResult = (message: string, code?: string) => ({
+const QUOTA_UPGRADE_GUIDANCE = "If a tool returns MONTHLY_LIMIT_REACHED, show its upgrade_url in chat so the user can review upgrade options or wait for the monthly reset. Do not keep retrying while the allowance is exhausted.";
+
+const toolErrorResult = (message: string, code?: string, upgradeUrl?: string) => ({
   content: [
     {
       type: "text" as const,
@@ -89,6 +91,7 @@ const toolErrorResult = (message: string, code?: string) => ({
           error: {
             code: code || "TOOL_ERROR",
             message,
+            ...(upgradeUrl ? { upgrade_url: upgradeUrl } : {}),
           },
         },
         null,
@@ -105,9 +108,11 @@ const consume = async (env: Env, identity: OAuthIdentity) => {
   } catch (error) {
     const typed = error as Error & { code?: string };
     if (typed.code === "MONTHLY_LIMIT_REACHED") {
+      const upgradeUrl = new URL("/settings?section=billing", env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN).toString();
       return toolErrorResult(
-        "Monthly Remote Arc tool-call limit reached. Try again after the usage window resets.",
+        `Monthly Remote Arc tool-call limit reached. Review upgrade options at ${upgradeUrl}, or wait for the monthly allowance to reset.`,
         typed.code,
+        upgradeUrl,
       );
     }
     throw error;
@@ -252,7 +257,7 @@ export function createRemoteLinkMcp(
       { name: "remotearc", version: "0.4.4" },
       {
         capabilities: claude ? { tools: {} } : { tools: {}, resources: {} },
-        ...(claude ? {} : { instructions: "Remote Arc offers curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed. If your tool list shows browser_list_tabs or browser_read_page but no shared_tab_* or browser_runner_* tools, it is a cached list from an older Remote Arc release: ask the user to refresh or reconnect the Remote Arc connector." }),
+        ...(claude ? {} : { instructions: "Remote Arc offers curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed. If your tool list shows browser_list_tabs or browser_read_page but no shared_tab_* or browser_runner_* tools, it is a cached list from an older Remote Arc release: ask the user to refresh or reconnect the Remote Arc connector." + " " + QUOTA_UPGRADE_GUIDANCE }),
       },
     );
 
@@ -394,7 +399,7 @@ export function createRemoteLinkMcp(
       {
         title: "List Remote Arc devices",
         description:
-          "List computers linked to this Remote Arc account and show whether each device is online. Check existing paired devices before recommending installation. If no computer Agent is paired, recommend the native download at https://remotearc.app/downloads without Node.js. Offer https://remotearc.app/connect-ai for more setup information and https://agent.remotearc.app/devices for the device Dashboard. Terminal installation is an alternative. The account connection does not install or pair the local Agent. Continue in the current AI client after browser pairing; do not assume a specific client.",
+          "List computers linked to this Remote Arc account and show whether each device is online. Check existing paired devices before recommending installation. If no computer Agent is paired, recommend the native download at https://remotearc.app/downloads without Node.js. Offer https://remotearc.app/connect-ai for more setup information and https://agent.remotearc.app/devices for the device Dashboard. Terminal installation is an alternative. The account connection does not install or pair the local Agent. Continue in the current AI client after browser pairing; do not assume a specific client." + " " + QUOTA_UPGRADE_GUIDANCE,
         annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("devices:read"),
       },

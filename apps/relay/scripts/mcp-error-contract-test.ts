@@ -262,3 +262,67 @@ console.log("PASS: MCP error contract, incremental OAuth scopes, and admin/opera
   assert.match(signedOut, /connect Remote Arc/);
   console.log("PASS: missing-scope errors tell the AI what the person should do");
 }
+// A quota-blocked tool must give the person a usable upgrade path without
+// dispatching work, charging another call, or requiring fresh tool metadata.
+{
+  const {createWorkerFixture,AGENT,MCP}=await import('./worker-fixture.js');
+  const fixture=createWorkerFixture();
+  const identity=authIdentity(DEFAULT_MCP_SCOPES.join(' '));
+  fixture.addUser(identity.userId);
+  fixture.env.ARC_BILLING_ENABLED='1';
+  fixture.sql.prepare('INSERT INTO user_monthly_usage(user_id,month_key,tool_calls,updated_at) VALUES(?,?,?,?)')
+    .run(identity.userId,fixture.now.slice(0,7),9999,fixture.now);
+  const profiles=['generic','chatgpt','claude'] as const;
+  async function rpc(profile:typeof profiles[number],method:string,params:unknown,overrides:Record<string,unknown>={}){
+    const handler=createRemoteLinkMcp({...fixture.env,...overrides} as never,identity,{clientProfile:profile});
+    const response=await handler.fetch(new Request(MCP+'/mcp',{
+      method:'POST',headers:{'content-type':'application/json',accept:'application/json, text/event-stream'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),
+    }));
+    const text=await response.text();
+    assert(response.ok,text);
+    const payload=JSON.parse(text.trim().startsWith('{')?text:text.split('\n').find(line=>line.startsWith('data: '))!.slice(6));
+    assert(!payload.error,text);
+    return payload.result;
+  }
+  try{
+    const allowed=await rpc('generic','tools/call',{name:'list_devices',arguments:{}});
+    assert(!JSON.stringify(allowed).includes('MONTHLY_LIMIT_REACHED'),'the last available call still works');
+    const cases=[
+      ['list_devices',{}],
+      ['read_file',{device_id:'33333333-3333-4333-8333-333333333333',path:'/private/quota-canary'}],
+      ['start_process',{device_id:'33333333-3333-4333-8333-333333333333',command:'printf quota-canary'}],
+    ] as const;
+    for(const profile of profiles)for(const [name,args] of cases){
+      const result=await rpc(profile,'tools/call',{name,arguments:args});
+      const payload=JSON.parse(result.content[0].text);
+      assert.equal(payload.error.code,'MONTHLY_LIMIT_REACHED');
+      assert.equal(payload.error.upgrade_url,AGENT+'/settings?section=billing');
+      assert(payload.error.message.includes(payload.error.upgrade_url),'the upgrade link is also readable in the tool text');
+      assert.match(payload.error.message,/reset/i,'waiting for reset remains an option');
+      assert(!JSON.stringify(payload).includes('quota-canary'),'tool arguments do not leak into the upgrade message');
+      assert.equal(fixture.state.calls.length,0,'exhausted requests must not reach a device');
+    }
+    for(const [overrides,origin] of [
+      [{DASHBOARD_ORIGIN:undefined,APP_ORIGIN:'https://legacy.example.test'},'https://legacy.example.test'],
+      [{DASHBOARD_ORIGIN:undefined,APP_ORIGIN:undefined},MCP],
+    ] as const){
+      const result=await rpc('generic','tools/call',{name:'list_devices',arguments:{}},overrides);
+      assert.equal(JSON.parse(result.content[0].text).error.upgrade_url,origin+'/settings?section=billing');
+    }
+    for(const profile of ['generic','chatgpt'] as const){
+      const listed=await rpc(profile,'tools/list',{});
+      assert.match(listed.tools.find((tool:{name:string})=>tool.name==='list_devices').description,/MONTHLY_LIMIT_REACHED.*upgrade_url/);
+      const initialized=await rpc(profile,'initialize',{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'quota-test',version:'1'}});
+      assert.match(initialized.instructions,/MONTHLY_LIMIT_REACHED.*upgrade_url/);
+    }
+    assert.equal((await getMonthlyUsage(fixture.env as never,identity.userId)).used,10000,'rejected calls and metadata reads do not consume more allowance');
+    const page=await fixture.call(AGENT+'/settings?section=billing');
+    assert.equal(page.status,302,'the upgrade URL is a real sign-in-preserving Dashboard route');
+    assert.match(page.headers.get('location')||'',/billing/);
+    console.log('PASS: quota errors carry an actionable upgrade URL in all client profiles without dispatch or extra quota charges');
+  }finally{
+    await Promise.all(fixture.pending);
+    fixture.sql.close();
+  }
+}

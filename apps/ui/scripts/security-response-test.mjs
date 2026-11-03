@@ -14,6 +14,7 @@ const source = (await readFile(new URL("../src/preview/preview.ts", import.meta.
   .replaceAll('"./billing-preview.js"', JSON.stringify(new URL("../src/preview/billing-preview.ts", import.meta.url).href))
   .replaceAll("'./onboarding-preview.js'", JSON.stringify(new URL("../src/preview/onboarding-preview.ts", import.meta.url).href))
   .replaceAll("'./followup-preview.js'", JSON.stringify(new URL("../src/preview/followup-preview.ts", import.meta.url).href))
+  .replaceAll("'./support-preview.js'", JSON.stringify(new URL("../src/preview/support-preview.ts", import.meta.url).href))
   .replaceAll("'./activation-preview.js'", JSON.stringify(new URL("../src/preview/activation-preview.ts", import.meta.url).href));
 const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
@@ -30,6 +31,12 @@ assert.ok(security.grants.length > 0, "Exercise grant-row rendering identities")
 assert.deepEqual(parsePendingApprovals(await (await window.fetch("/api/approvals")).json()), []);
 assert.deepEqual(parsePersistentApprovals(await (await window.fetch("/api/approvals/permissions")).json()), []);
 assert.equal((await window.fetch("/api/security/mcp", { method: "POST" })).status, 403);
+const inbox=await (await window.fetch('/api/admin/support-inbox?source=google-beta')).json();
+assert.equal(inbox.items.length,1,'Support preview loads its real isolated application fixture');
+assert.equal(inbox.items[0].source,'google-beta');
+assert(inbox.items[0].sender_email.endsWith('@example.invalid'),'Preview never loads a real customer mailbox');
+const application=await (await window.fetch('/api/admin/support-inbox/'+inbox.items[0].id)).json();
+assert.notEqual(application.thread.sender_email,application.beta.googleEmail,'Exercise two distinct recipient/account addresses');
 const apps = await (await window.fetch("/api/apps")).json();
 assert.equal(apps.enabled, true);
 assert.ok(apps.apps.length > 0, "Preview must load the actual Apps catalog");

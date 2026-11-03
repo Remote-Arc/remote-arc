@@ -14,9 +14,24 @@ export function DeviceTasksPanel({ m, device, facts }: { m: DashboardModel; devi
     deviceTaskBusy, runtimeTargetPaused, runtimeUpdatingId, saveDeviceTaskPermission, showNotice,
     tr, updateDeviceBackground, updateDeviceRuntime,
   } = m;
-  const { recoveryVersion, runtimeVersion, updateAvailable, updateCommand } = facts;
+  const { recoveryVersion, runtimeVersion, updateAvailable, updateCommand, extensionUpdate } = facts;
   return (
     <section role="tabpanel" id={"device-panel-"+device.id+"-tasks"} aria-labelledby={"device-tab-"+device.id+"-tasks"} aria-label={tr("Background and tasks", "后台与任务")} hidden={devicePanel !== "tasks"}>
+{extensionUpdate && (
+  <div className="deviceBackgroundRow deviceUpdateRow">
+    <div>
+      <strong>{tr("Remote Arc Browser update available", "Remote Arc Browser 有可用更新")}</strong>
+      <span>{tr("Running: ", "运行版本：")}v{extensionUpdate.current} · {tr("Latest: ", "最新版本：")}v{extensionUpdate.latest}</span>
+      <span>{tr("Chrome does not automatically update unpacked extensions.", "解压加载的扩展不会自动更新。")}</span>
+      <ol className="deviceUpdateSteps">
+        <li>{tr("Unzip into the same folder, replacing the files to keep this pairing.", "解压到同一个文件夹并覆盖，保留当前配对。")}</li>
+        <li>{tr("Open chrome://extensions and click Reload on Remote Arc Browser.", "打开 chrome://extensions，在 Remote Arc Browser 上点「重新加载」。")}</li>
+        <li>{tr("Share your tabs again: reloading ends the current sharing.", "重新共享标签页：重新加载会结束当前的共享。")}</li>
+      </ol>
+    </div>
+    <a className="ghostButton small" href="/chrome-extension" target="_blank" rel="noreferrer">{tr("Download the new ZIP", "下载新版 ZIP")}</a>
+  </div>
+)}
 {updateAvailable && (
   <div className="deviceBackgroundRow deviceUpdateRow">
     <div>

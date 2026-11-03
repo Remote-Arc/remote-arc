@@ -40,3 +40,12 @@ pnpm --filter @remotearc/relay test:followups
 pnpm --filter @remotearc/relay typecheck
 pnpm --filter @remotearc/ui typecheck
 ```
+
+
+## Reviewing conversations and Apps applications
+
+The list separates customer email and Google Apps applications using the stored authenticated application record, not the subject line. Filter by source and conversation status. Each mail in a conversation shows its direction, From, To and provider submission status; provider acceptance does not assert delivery. Reply drafts remain attached to their selected recipient during navigation, and late responses cannot replace another customer's conversation.
+
+Google Apps review has three steps: add the exact Google account to the Google project's test users, explicitly confirm and open Remote Arc Beta access, then review and send a reply to the Remote Arc account email. Those two email addresses can differ. Opening access does not send a message; the English notification button only prepares an editable draft. The original web submission remains available in a collapsed record.
+
+The Admin UI preview at `/admin-preview?section=support` uses synthetic browser-local accounts and simulated delivery. It has no real customer mailbox, Google writes or email-provider calls. This change adds no migration and does not modify Google scopes or project publishing status.

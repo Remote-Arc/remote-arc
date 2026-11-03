@@ -1,11 +1,8 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {useI18n} from '../../app/i18n.js';
 import './support-inbox.css';
 
-type Thread={id:string;sender_email:string;subject:string;status:'open'|'waiting'|'resolved';last_message_at:string};
-type Message={id:string;direction:'inbound'|'outbound';from:string;to:string;subject:string;body:string;deliveryStatus:string;createdAt:string};
-type Detail={thread:Thread;messages:Message[];beta?:{googleEmail:string;providers:string[];status:'pending'|'approved'|'declined'}};
-const readable=(value:string)=>new Date(value).toLocaleString();
+import {betaReplyDraft,GOOGLE_BETA_APP_NAMES,type SupportThread as Thread,type SupportDetail as Detail} from './support-inbox-model.js';
 async function request<T>(path:string,options?:RequestInit):Promise<T>{
   const response=await fetch(path,{...options,credentials:'same-origin',headers:{'accept':'application/json',...(options?.body?{'content-type':'application/json'}:{})}});
   const result=await response.json() as T & {error?:string};
@@ -13,25 +10,30 @@ async function request<T>(path:string,options?:RequestInit):Promise<T>{
   return result;
 }
 export function AdminSupportInbox(){
-  const {tr}=useI18n();
+  const {tr,locale}=useI18n();
   const [threads,setThreads]=useState<Thread[]>([]);
   const [selected,setSelected]=useState('');
   const [detail,setDetail]=useState<Detail|null>(null);
-  const [filter,setFilter]=useState('all');
+  const [filter,setFilter]=useState('all'),[source,setSource]=useState('all');
+  const [loading,setLoading]=useState(true);
+  const selectedRef=useRef(''),listVersion=useRef(0),drafts=useRef(new Map<string,{message:string;attempt:string}>());
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [info,setInfo]=useState('');
   const [attempt,setAttempt]=useState('');
   async function reloadList(){
-    const data=await request<{items:Thread[]}>('/api/admin/support-inbox?status='+filter);
-    setThreads(data.items);
+    const version=++listVersion.current;setLoading(true);
+    try{const data=await request<{items:Thread[]}>('/api/admin/support-inbox?'+new URLSearchParams({status:filter,source}));if(version===listVersion.current)setThreads(data.items);}
+    catch{if(version===listVersion.current)setError(tr('Could not load conversations. Refresh to try again.','无法读取会话，请刷新重试。'));}
+    finally{if(version===listVersion.current)setLoading(false);}
   }
   async function loadThread(id:string){
-    setDetail(await request<Detail>('/api/admin/support-inbox/'+id));
+    try{const value=await request<Detail>('/api/admin/support-inbox/'+id);if(selectedRef.current===id)setDetail(value);}
+    catch{if(selectedRef.current===id)setError(tr('Could not load this conversation. Refresh to try again.','无法读取会话内容，请刷新重试。'));}
   }
-  useEffect(()=>{void reloadList().catch(e=>setError(String(e)));},[filter]);
-  useEffect(()=>{if(selected)void loadThread(selected).catch(e=>setError(String(e)));},[selected]);
+  useEffect(()=>{void reloadList();return()=>{listVersion.current++;};},[filter,source]);
+  useEffect(()=>{if(selected)void loadThread(selected);},[selected]);
   async function send(){
     if(!selected||!message.trim()||busy)return;
     // Keep one request ID per attempted message, including a failed network read.
@@ -77,67 +79,60 @@ export function AdminSupportInbox(){
     if(!selected||busy||!detail?.beta)return;
     if(decision==='approve'&&!window.confirm(tr('Confirm you have added this exact Google account to the Apps project test-user list: ','确认已将这个 Google 账号加入 Apps 项目测试名单：')+detail.beta.googleEmail))return;
     setBusy(true);setError('');
-    try{await request('/api/admin/support-inbox/'+selected+'/google-beta',{method:'PATCH',body:JSON.stringify({decision,...(decision==='approve'?{googleTestUserAdded:true}:{})})});await loadThread(selected);setInfo(tr('Beta request updated. No email was sent.','已更新内测申请，未自动发送邮件。'));}
+    try{await request('/api/admin/support-inbox/'+selected+'/google-beta',{method:'PATCH',body:JSON.stringify({decision,...(decision==='approve'?{googleTestUserAdded:true}:{})})});await Promise.all([loadThread(selected),reloadList()]);setInfo(tr('Beta request updated. No email was sent.','已更新内测申请，未自动发送邮件。'));}
     catch(e){setError(String(e));}finally{setBusy(false);}
   }
-  const selectThread=(id:string)=>{setSelected(id);setMessage('');setAttempt('');setError('');setInfo('');};
-  return <section className="adminSupportInbox adminSurface">
-    <header className="adminSectionHeader">
-      <div><h2>{tr('Support Inbox','客服收件箱')}</h2>
-        <p>{tr('Customer email and signed-in Apps Beta requests. Replies are reviewed and submitted through SendPulse.','处理客户来信和已登录用户的 Apps 内测申请，人工审阅后通过 SendPulse 回复。')}</p>
-      </div>
-      <button className="adminOutlineBtn" onClick={()=>void Promise.all([reloadList(),selected?loadThread(selected):Promise.resolve()]).catch(e=>setError(String(e)))}>{tr('Refresh','刷新')}</button>
-    </header>
-    {error&&<p className="adminAlert" role="alert">{error}</p>}
-    {info&&<p className="adminSupportNotice" role="status">{info}</p>}
+  const selectThread=(id:string)=>{
+    if(busy||id===selected)return;
+    if(selected)drafts.current.set(selected,{message,attempt});
+    const saved=drafts.current.get(id);selectedRef.current=id;setSelected(id);setDetail(null);
+    setMessage(saved?.message||'');setAttempt(saved?.attempt||'');setError('');setInfo('');
+  };
+  const statusLabel=(status:string)=>({open:tr('Needs attention','待处理'),waiting:tr('Waiting for customer','等待客户'),resolved:tr('Resolved','已解决')}[status]||status);
+  const betaLabel=(status:string)=>({pending:tr('Pending review','待审核'),approved:tr('Approved','已开通'),declined:tr('Not admitted','暂不开通')}[status]||status);
+  const deliveryLabel=(status:string)=>({sent:tr('Submitted','已提交'),unknown:tr('Verify delivery','待核验'),failed:tr('Not sent','发送失败'),sending:tr('Submitting','提交中')}[status]||status);
+  const readable=(value:string)=>new Date(value).toLocaleString(locale==='zh'?'zh-CN':'en-NZ',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const unconfirmed=detail?.messages.some(mail=>mail.direction==='outbound'&&['unknown','sending'].includes(mail.deliveryStatus));
+  const replied=detail?.messages.some(mail=>mail.direction==='outbound'&&mail.deliveryStatus==='sent'&&(!detail.beta?.reviewedAt||mail.createdAt>=detail.beta.reviewedAt));
+  function prepareBetaReply(){
+    if(!detail?.beta||detail.beta.status!=='approved'||busy||attempt||unconfirmed)return;
+    if(message.trim()&&!window.confirm(tr('Replace this reply draft with the English Beta notification?','用英文内测开通通知替换当前回复草稿？')))return;
+    setMessage(betaReplyDraft(detail));setInfo(tr('English reply prepared. Review the recipient and message before sending.','已准备英文回复，请核对收件人和正文后再发送。'));
+  }
+  return <section className="adminSupportInbox adminSurface" aria-label={tr('Support inbox','客服收件箱')}>
+    <header className="adminSupportToolbar"><p>{tr('Customer mail and Apps applications. Review, reply and follow up here.','查看客户来信与 Apps 申请，在这里处理并跟进回复。')}</p><button type="button" className="adminOutlineBtn" disabled={busy||loading} onClick={()=>void Promise.all([reloadList(),selected?loadThread(selected):Promise.resolve()])}>{tr('Refresh','刷新')}</button></header>
+    {error&&<p className="adminAlert" role="alert">{error}</p>}{info&&<p className="adminSupportNotice" role="status">{info}</p>}
     <div className="adminSupportLayout">
-      <aside className="adminSupportList">
-        <label>{tr('Filter','筛选')}
-          <select value={filter} onChange={e=>setFilter(e.target.value)}>
-            <option value="all">{tr('All','全部')}</option>
-            <option value="open">{tr('Open','待处理')}</option>
-            <option value="waiting">{tr('Waiting for customer','等待客户')}</option>
-            <option value="resolved">{tr('Resolved','已解决')}</option>
-          </select>
-        </label>
-        {threads.length===0&&<p>{tr('No messages or Beta applications in this view. Email ingestion also requires an active Email Worker route.','此筛选下暂无来信或内测申请。邮件接收还需要启用 Email Worker 路由。')}</p>}
-        {threads.map(item=><button key={item.id} type="button" className={'adminSupportThread'+(selected===item.id?' active':'')} onClick={()=>selectThread(item.id)}>
-          <strong>{item.sender_email}</strong><span>{item.subject}</span>
-          <small>{readable(item.last_message_at)} · {item.status}</small>
-        </button>)}
+      <aside className="adminSupportList" aria-label={tr('Conversations','会话列表')}>
+        <div className="adminSupportListTitle"><h2>{tr('Conversations','会话')}</h2><small>{loading?'…':threads.length}</small></div>
+        <div className="adminSupportFilters"><label>{tr('Source','来源')}<select value={source} disabled={busy} onChange={event=>{selectThread('');setSource(event.target.value);}}><option value="all">{tr('All sources','全部来源')}</option><option value="email">{tr('Customer email','客户来信')}</option><option value="google-beta">{tr('Apps application','内测申请')}</option></select></label><label>{tr('Status','处理状态')}<select value={filter} disabled={busy} onChange={event=>{selectThread('');setFilter(event.target.value);}}><option value="all">{tr('All statuses','全部状态')}</option><option value="open">{tr('Needs attention','待处理')}</option><option value="waiting">{tr('Waiting for customer','等待客户')}</option><option value="resolved">{tr('Resolved','已解决')}</option></select></label></div>
+        {loading&&<p className="adminSupportEmpty" role="status">{tr('Loading conversations…','正在读取会话…')}</p>}
+        {!loading&&!threads.length&&<p className="adminSupportEmpty">{tr('No conversations match these filters.','此筛选下暂无会话。')}</p>}
+        <div className="adminSupportThreadList" aria-busy={loading}>{threads.map(item=><button key={item.id} type="button" disabled={busy||loading} aria-pressed={selected===item.id} className={'adminSupportThread'+(selected===item.id?' active':'')} onClick={()=>selectThread(item.id)}>
+          <span className="adminSupportThreadTop"><strong>{item.sender_email}</strong><time dateTime={item.last_message_at}>{readable(item.last_message_at)}</time></span>
+          <span className="adminSupportSubject">{item.subject}</span>
+          <span className="adminSupportThreadMeta"><span className="adminSupportTag" data-source={item.source}>{item.source==='google-beta'?tr('Apps application','内测申请'):tr('Customer email','客户来信')}</span><small>{item.beta_status==='pending'?betaLabel('pending'):item.last_delivery_status==='unknown'?deliveryLabel('unknown'):statusLabel(item.status)}</small></span>
+          <small className="adminSupportLastDirection">{item.last_direction==='outbound'?tr('Support → customer','客服 → 客户'):item.source==='google-beta'?tr('Applicant → support','申请人 → 客服'):tr('Customer → support','客户 → 客服')}</small>
+        </button>)}</div>
       </aside>
-      <div className="adminSupportConversation">
-        {!detail||detail.thread.id!==selected?<div className="adminSupportPlaceholder">{tr('Select a conversation to review or reply.','选择一个会话后查看并回复。')}</div>:<>
-          <div className="adminSupportConversationHead">
-            <div><h3>{detail.thread.subject}</h3><p>{detail.thread.sender_email}</p></div>
-            <label>{tr('Status','状态')}<select value={detail.thread.status} disabled={busy} onChange={e=>void changeStatus(e.target.value as Thread['status'])}>
-              <option value="open">{tr('Open','待处理')}</option>
-              <option value="waiting">{tr('Waiting','等待客户')}</option>
-              <option value="resolved">{tr('Resolved','已解决')}</option>
-            </select></label>
-          </div>
+      <div className="adminSupportConversation" aria-busy={Boolean(selected&&!detail)}>
+        {!detail||detail.thread.id!==selected?<div className="adminSupportPlaceholder"><strong>{selected?tr('Loading conversation…','正在读取会话…'):tr('Select a conversation','选择一个会话')}</strong><p>{tr('See who wrote in, review the request and reply to the right address.','查看来信人、处理申请，并核对收件人后回复。')}</p></div>:<>
+          <header className="adminSupportConversationHead"><div><span className="adminSupportEyebrow">{detail.beta?tr('APPS APPLICATION','APPS 内测申请'):tr('CUSTOMER CONVERSATION','客户会话')}</span><h3>{detail.beta?tr('Google Apps Beta application','Google Apps 内测申请'):detail.thread.subject}</h3><p>{detail.thread.sender_email}</p></div><label>{tr('Conversation status','会话状态')}<select value={detail.thread.status} disabled={busy} onChange={event=>void changeStatus(event.target.value as Thread['status'])}><option value="open">{tr('Needs attention','待处理')}</option><option value="waiting">{tr('Waiting for customer','等待客户')}</option><option value="resolved">{tr('Resolved','已解决')}</option></select></label></header>
           {detail.beta&&<section className="adminSupportBeta" aria-label={tr('Google Apps Beta application','Google Apps 内测申请')}>
-            <strong>Google Apps Beta · {detail.beta.status}</strong><p>{detail.beta.googleEmail} · {detail.beta.providers.join(', ')}</p>
-            {detail.beta.status==='pending'&&<><p>{tr('Add this exact Google account to the Apps project test-user list before opening access.','先将这个 Google 账号加入 Apps 项目的测试名单，再开通。')}</p><a href="https://console.cloud.google.com/auth/audience?project=remote-arc-prod-2026" target="_blank" rel="noreferrer">{tr('Open Google test users','打开 Google 测试名单')}</a><div><button type="button" className="adminPrimaryBtn" disabled={busy} onClick={()=>void reviewBeta('approve')}>{tr('Added to Google — open Beta access','已加入 Google 名单，开通内测')}</button><button type="button" className="adminOutlineBtn" disabled={busy} onClick={()=>void reviewBeta('decline')}>{tr('Decline request','暂不开通')}</button></div></>}
+            <div className="adminSupportBetaHeading"><strong>{tr('Application details','申请信息')}</strong><span className="adminSupportTag" role="status" aria-label={tr('Beta status','内测状态')}>{betaLabel(detail.beta.status)}</span></div>
+            <dl className="adminSupportAddresses"><div><dt>{tr('Remote Arc account · reply to','RA 账号 · 回复此邮箱')}</dt><dd>{detail.thread.sender_email}</dd></div><div><dt>{tr('Google account · add to test list','Google 账号 · 加入测试名单')}</dt><dd>{detail.beta.googleEmail}</dd></div></dl>
+            <div className="adminSupportProviders">{detail.beta.providers.map(provider=><span key={provider}>{GOOGLE_BETA_APP_NAMES[provider]||provider}</span>)}</div>
+            <ol className="adminSupportSteps" aria-label={tr('Application workflow','申请处理流程')}><li data-done={detail.beta.status==='approved'}><span>1</span><div><strong>{tr('Google test users','加入 Google 名单')}</strong><small>{tr('Add the Google account above.','添加上方 Google 账号。')}</small></div></li><li data-done={detail.beta.status==='approved'}><span>2</span><div><strong>{tr('Open Beta access','开通 RA 内测')}</strong><small>{tr('Confirm the Google step first.','确认名单后开通。')}</small></div></li><li data-done={Boolean(replied)}><span>3</span><div><strong>{tr('Reply to applicant','回复申请人')}</strong><small>{replied?tr('Reply submitted','已提交回复'):tr('Review and send the notice.','审阅并发送通知。')}</small></div></li></ol>
+            {detail.beta.status==='pending'?<div className="adminSupportBetaActions"><a className="adminOutlineBtn" href="https://console.cloud.google.com/auth/audience?project=remote-arc-prod-2026" target="_blank" rel="noreferrer">{tr('1 · Open Google test users','1 · 打开 Google 测试名单')} ↗</a><button type="button" className="adminPrimaryBtn" disabled={busy} onClick={()=>void reviewBeta('approve')}>{tr('Added to Google — open Beta access','2 · 确认已加入，开通内测')}</button><button type="button" className="adminOutlineBtn" disabled={busy} onClick={()=>void reviewBeta('decline')}>{tr('Decline request','暂不开通')}</button></div>:detail.beta.status==='approved'?<div className="adminSupportBetaActions"><button type="button" className="adminOutlineBtn" disabled={busy||Boolean(attempt)||Boolean(unconfirmed)} onClick={prepareBetaReply}>{tr('Prepare English notification','准备英文开通通知')}</button><small>{tr('Opening access does not send an email.','开通内测不会自动发邮件。')}</small></div>:<p>{tr('This request was not admitted. You can explain the next steps below.','本次申请暂未开通，可在下方回复说明。')}</p>}
           </section>}
-          <div className="adminSupportMessages">
-            {detail.messages.map(m=><article key={m.id} className={'adminSupportMail '+m.direction}>
-              <div><strong>{m.from}</strong><time>{readable(m.createdAt)}</time></div>
-              <p>{m.body}</p>
-              {m.direction==='outbound'&&<span className="adminSupportDelivery">{m.deliveryStatus==='sent'?tr('Submitted to provider','服务商已接收'):m.deliveryStatus}</span>}
-              {m.direction==='outbound'&&m.deliveryStatus==='unknown'&&<div className="adminSupportReview">
-                <strong>{tr('Verify the SendPulse delivery log before proceeding.','请先核实 SendPulse 投递日志再继续。')}</strong>
-                <button type="button" disabled={busy} onClick={()=>void reconcile(m.id,'sent')}>{tr('Confirmed submitted','核实已提交')}</button>
-                <button type="button" disabled={busy} onClick={()=>void reconcile(m.id,'failed')}>{tr('Confirmed not sent','核实未发送')}</button>
-              </div>}
+          <section className="adminSupportMessages" aria-label={tr('Conversation history','会话记录')}>
+            {detail.messages.map(mail=>mail.source==='application'?<details key={mail.id} className="adminSupportApplicationRecord"><summary>{tr('Original web application','网页申请原始记录')} · {readable(mail.createdAt)}</summary><p>{mail.body}</p></details>:<article key={mail.id} className={'adminSupportMail '+mail.direction} aria-label={mail.direction==='outbound'?tr('Support reply','客服回复'):tr('Customer email','客户来信')}>
+              <header><strong>{mail.direction==='outbound'?tr('Remote Arc support','Remote Arc 客服'):tr('Customer','客户来信')}</strong><time dateTime={mail.createdAt}>{readable(mail.createdAt)}</time></header><dl className="adminSupportMailAddresses"><div><dt>{tr('From','发件人')}</dt><dd>{mail.from}</dd></div><div><dt>{tr('To','收件人')}</dt><dd>{mail.to}</dd></div></dl><p>{mail.body}</p>
+              {mail.direction==='outbound'&&<span className="adminSupportDelivery" data-status={mail.deliveryStatus}>{deliveryLabel(mail.deliveryStatus)}</span>}
+              {mail.direction==='outbound'&&mail.deliveryStatus==='unknown'&&<div className="adminSupportReview"><strong>{tr('Check the SendPulse delivery log before sending another reply.','请先核实 SendPulse 投递日志，再发送新回复。')}</strong><button type="button" disabled={busy} onClick={()=>void reconcile(mail.id,'sent')}>{tr('Confirmed submitted','核实已提交')}</button><button type="button" disabled={busy} onClick={()=>void reconcile(mail.id,'failed')}>{tr('Confirmed not sent','核实未发送')}</button></div>}
             </article>)}
-          </div>
-          <form className="adminSupportCompose" onSubmit={e=>{e.preventDefault();void send();}}>
-            <label htmlFor="admin-support-reply">{tr('Reply as support@remotearc.app','以 support@remotearc.app 回复')}</label>
-            <textarea id="admin-support-reply" value={message} maxLength={15000} rows={6} disabled={busy||!!attempt} onChange={e=>setMessage(e.target.value)} placeholder={tr('Write a personal reply, then review before sending…','填写人工回复内容，确认后再发送…')}/>
-            <div><small>{tr('SendPulse may accept a message before actual delivery. Unknown results are never automatically retried.','SendPulse 接收不等于实际送达；不确定结果绝不自动重发。')}</small>
-              <button className="adminPrimaryBtn" type="submit" disabled={busy||!message.trim()||!!attempt}>{busy?tr('Submitting…','提交中…'):tr('Send reviewed reply','确认发送回复')}</button></div>
-          </form>
+          </section>
+          <form className="adminSupportCompose" onSubmit={event=>{event.preventDefault();void send();}}><div className="adminSupportComposeHead"><label htmlFor="admin-support-reply">{tr('Reply to customer','回复客户')}</label><span>{tr('From','发件人')} support@remotearc.app</span></div><p className="adminSupportRecipient">{tr('To: ','收件人：')}<strong>{detail.thread.sender_email}</strong></p><textarea id="admin-support-reply" value={message} maxLength={15000} rows={5} disabled={busy||Boolean(attempt)||Boolean(unconfirmed)} onChange={event=>setMessage(event.target.value)} placeholder={tr('Write your reply here…','在这里填写回复内容…')}/><div><small>{unconfirmed?tr('Verify the previous submission above first.','请先核验上方的上一次发送。'):tr('Check the recipient before sending. Submitted does not mean delivered.','发送前请核对收件人；已提交不等于已送达。')}</small><button className="adminPrimaryBtn" type="submit" disabled={busy||!message.trim()||Boolean(attempt)||Boolean(unconfirmed)}>{busy?tr('Submitting…','提交中…'):tr('Send reviewed reply','确认发送回复')}</button></div></form>
         </>}
       </div>
     </div>

@@ -4,6 +4,7 @@ import {ARC_PLANS,ARC_TOPUPS,ARC_PREMIUM_MODELS} from '@remotearc/protocol';
 import appDirectory from "../data/app-directory.json" with { type: "json" };
 import {createArcPreview} from "./arc-preview.js";
 import {createBillingPreview} from "./billing-preview.js";
+import {createSupportPreview} from './support-preview.js';
 import {createFollowupPreview} from './followup-preview.js';
 import {createOnboardingPreview} from './onboarding-preview.js';
 import {previewActivationUsers} from './activation-preview.js';
@@ -19,6 +20,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
   const nativeFetch = window.fetch.bind(window);
   const onboardingPreview = createOnboardingPreview(new URL(location.href));
   const followupPreview=createFollowupPreview(window.sessionStorage);
+  const supportPreview=createSupportPreview(window.sessionStorage);
   const previewEmployees=[{id:'preview-developer',name:'开发智能体',responsibility:'技术架构与产品实现'},{id:'preview-designer',name:'设计智能体',responsibility:'产品体验与交互设计'},{id:'preview-business',name:'商务智能体',responsibility:'商业模式与市场验证'},{id:'preview-researcher',name:'领域专家',responsibility:'行业调研与事实核对'}].map(person=>({...person,version:1,status:'active',instructions:'',modelId:'auto',avatar:{kind:'initials',color:'#446655'},scope:{appMode:'none',connectionIds:[],deviceIds:[],deviceTools:[],skillIds:[]},createdAt:previewNow(),updatedAt:previewNow()}));
   const previewConnections=[
         {id:"11111111-1111-4111-8111-111111111111",provider:"github",accountLabel:"Example developer",status:"active",permissions:["read","write"],scopes:[],expiresAt:null,lastError:null,updatedAt:"2026-10-19T00:00:00Z",toolAccess:{available:15,total:15,needsReconnect:false}},
@@ -280,6 +282,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     if(url.pathname.startsWith('/api/billing')&&url.pathname!=='/api/billing/catalog'){
       const result=billingPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined));if(result)return result;
     }
+    if(url.pathname.startsWith('/api/admin/support-inbox'))return supportPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined));
     if(url.pathname.startsWith('/api/admin/followups'))return followupPreview.handle(url,method,init?.body??(input instanceof Request?await input.clone().text():undefined))!;
     const taskAction=url.pathname.match(/^\/api\/automations\/([^/]+)\/(pause|resume|cancel)$/);
     if(method==="POST"&&taskAction){

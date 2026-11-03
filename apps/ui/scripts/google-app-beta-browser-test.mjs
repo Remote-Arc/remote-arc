@@ -80,7 +80,7 @@ try{
   await picture(admin,'apps-beta-support-review');
   admin.once('dialog',dialog=>dialog.accept());
   await admin.getByRole('button',{name:'Added to Google — open Beta access',exact:true}).click();
-  await admin.getByText('Google Apps Beta · approved',{exact:true}).waitFor();
+  await admin.getByRole('status',{name:'Beta status',exact:true}).filter({hasText:'Approved'}).waitFor();
   assert.equal(googleNetwork,0,'local approval sends no email or Google write');
 
   await page.reload();

@@ -1,4 +1,5 @@
 import PostalMime from 'postal-mime';
+import {sha256Hex} from '../auth/auth.js';
 import {seal,unseal} from '../apps/app-oauth.js';
 import {followupEmailSender} from '../platform/email-sender.js';
 import {deliverEmail} from '../platform/email-delivery-provider.js';
@@ -106,17 +107,25 @@ export async function handleInboundSupportEmail(message:ForwardableEmailMessage,
   await message.forward(forward);
 }
 type Thread={id:string;sender_email:string;subject:string;status:string;last_message_at:string};
+// Source comes from the authenticated application record, never the mail subject.
+const threadSelection=`SELECT t.id,t.sender_email,t.subject,t.status,t.last_message_at,
+ CASE WHEN b.user_id IS NULL THEN 'email' ELSE 'google-beta' END source,b.status beta_status,
+ (SELECT direction FROM support_messages m WHERE m.thread_id=t.id ORDER BY created_at DESC,rowid DESC LIMIT 1) last_direction,
+ (SELECT delivery_status FROM support_messages m WHERE m.thread_id=t.id ORDER BY created_at DESC,rowid DESC LIMIT 1) last_delivery_status
+ FROM support_threads t LEFT JOIN google_app_beta_requests b ON b.support_thread_id=t.id`;
 type Msg={id:string;thread_id:string;direction:string;from_address:string;to_address:string;subject:string;body_encrypted:string;external_message_id:string|null;in_reply_to:string|null;provider_id:string|null;delivery_status:string;error_code:string|null;created_at:string};
 async function readThread(env:SupportEnv,id:string){
-  const thread=await env.DB.prepare('SELECT id,sender_email,subject,status,last_message_at FROM support_threads WHERE id=?1').bind(id).first<Thread>();
+  const thread=await env.DB.prepare(threadSelection+' WHERE t.id=?1').bind(id).first<Thread>();
   if(!thread)return null;
   const rows=await env.DB.prepare('SELECT * FROM support_messages WHERE thread_id=?1 ORDER BY created_at ASC LIMIT 100').bind(id).all<Msg>();
+  const beta=await env.DB.prepare('SELECT user_id,google_email,providers_json,status,reviewed_at FROM google_app_beta_requests WHERE support_thread_id=?1').bind(id).first<{user_id:string;google_email:string;providers_json:string;status:string;reviewed_at:string|null}>();
+  const applicationId=beta?'<google-app-beta-'+await sha256Hex('google-app-beta:'+beta.user_id)+'@remotearc.app>':null;
   const messages=await Promise.all((rows.results||[]).map(async m=>({
     id:m.id,direction:m.direction,from:m.from_address,to:m.to_address,subject:m.subject,
+    source:m.direction==='outbound'?'reply':applicationId&&m.external_message_id===applicationId?'application':'email',
     body:await unseal<string>(env as Parameters<typeof unseal>[0],m.body_encrypted,'support:message:'+m.id),
     deliveryStatus:m.delivery_status,createdAt:m.created_at,providerId:m.provider_id,
   })));
-  const beta=await env.DB.prepare('SELECT google_email,providers_json,status,reviewed_at FROM google_app_beta_requests WHERE support_thread_id=?1').bind(id).first<{google_email:string;providers_json:string;status:string;reviewed_at:string|null}>();
   return {thread,messages,...(beta?{beta:{googleEmail:beta.google_email,providers:JSON.parse(beta.providers_json),status:beta.status,reviewedAt:beta.reviewed_at}}:{})};
 }
 export async function handleAdminSupportInbox(request:Request,env:SupportEnv,operatorId:string):Promise<Response>{
@@ -124,9 +133,11 @@ export async function handleAdminSupportInbox(request:Request,env:SupportEnv,ope
   if(path==='/api/admin/support-inbox'&&request.method==='GET'){
     const status=url.searchParams.get('status')||'all';
     if(!['all','open','waiting','resolved'].includes(status))return error('invalid_status',400);
-    const rows=await env.DB.prepare(
-      "SELECT id,sender_email,subject,status,last_message_at FROM support_threads WHERE (?1='all' OR status=?1) ORDER BY last_message_at DESC LIMIT 80"
-    ).bind(status).all<Thread>();
+    const source=url.searchParams.get('source')||'all';
+    if(!['all','email','google-beta'].includes(source))return error('invalid_source',400);
+    const rows=await env.DB.prepare(threadSelection+
+      " WHERE (?1='all' OR t.status=?1) AND (?2='all' OR (?2='email' AND b.user_id IS NULL) OR (?2='google-beta' AND b.user_id IS NOT NULL)) ORDER BY t.last_message_at DESC LIMIT 80"
+    ).bind(status,source).all<Thread>();
     return json({items:rows.results||[]});
   }
   const match=path.match(/^\/api\/admin\/support-inbox\/([a-f0-9-]{36})(?:\/(reply|status|reconcile|google-beta))?$/);

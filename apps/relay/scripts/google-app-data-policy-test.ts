@@ -130,6 +130,12 @@ assert.equal(f.sql.prepare('SELECT COUNT(*) n FROM google_app_beta_requests').ge
 assert.equal(f.sql.prepare('SELECT COUNT(*) n FROM support_threads').get()?.n,1);assert.equal(f.sql.prepare('SELECT COUNT(*) n FROM support_messages').get()?.n,1);
 const beta=f.sql.prepare('SELECT * FROM google_app_beta_requests').get()!;assert.equal(beta.google_email,'tester@example.test');assert.equal(beta.status,'pending');
 assert(!JSON.stringify(f.sql.prepare('SELECT * FROM support_messages').all()).includes('private-use-case-canary'));
+const supportGet=(path:string)=>handleAdminServiceRequest(new Request(ADMIN+'/api/admin/support-inbox'+path,{headers:{cookie:operatorCookie}}),f.env as any);
+const betaList=await (await supportGet('?source=google-beta')).json() as any;
+assert.equal(betaList.items.length,1);assert.equal(betaList.items[0].source,'google-beta');assert.equal(betaList.items[0].beta_status,'pending');assert.equal(betaList.items[0].last_direction,'inbound');
+assert.equal(((await (await supportGet('?source=email')).json()) as any).items.length,0);
+const betaDetail=await (await supportGet('/'+beta.support_thread_id)).json() as any;
+assert.equal(betaDetail.messages[0].source,'application');assert.equal(betaDetail.beta.googleEmail,'tester@example.test');
 const review=(body:unknown,cookie=operatorCookie,origin=ADMIN)=>handleAdminServiceRequest(new Request(ADMIN+'/api/admin/support-inbox/'+beta.support_thread_id+'/google-beta',{method:'PATCH',headers:{cookie,origin,'content-type':'application/json'},body:JSON.stringify(body)}),f.env as any);
 assert.equal((await review({decision:'approve',googleTestUserAdded:true},applicantCookie)).status,403);
 assert.equal((await review({decision:'approve',googleTestUserAdded:true},operatorCookie,'https://evil.test')).status,403);

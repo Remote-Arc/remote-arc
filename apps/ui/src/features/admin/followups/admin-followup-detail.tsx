@@ -27,7 +27,7 @@ function hardBlock(data:ContactDetail|null,suppress=false,now=Date.now()){
 export function FollowupDetail({person,initialDraft,cacheDraft,onUpdate}:{person:Person;initialDraft?:EmailDraft;cacheDraft:(draft:EmailDraft)=>void;onUpdate:()=>void}){
  const {tr,locale}=useI18n();
  const [data,setData]=useState<ContactDetail|null>(null),[refreshing,setRefreshing]=useState(true),[revision,setRevision]=useState(0);
- const [draft,setDraft]=useState<EmailDraft>(()=>initialDraft||newFollowupDraft(person,locale));
+ const [draft,setDraft]=useState<EmailDraft>(()=>initialDraft||newFollowupDraft(person));
  const [tab,setTab]=useState<'email'|'history'|'notes'>('email'),[preview,setPreview]=useState(false);
  const [busy,setBusy]=useState<'draft'|'send'|'contact'|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [review,setReview]=useState(false),[basis,setBasis]=useState(''),[basisNote,setBasisNote]=useState('');

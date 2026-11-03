@@ -3,7 +3,7 @@ import {DEFAULT_FOLLOWUP_DESIGN,type FollowupDesign} from '../../../../../../pac
 export type NextStep='pair_computer'|'connect_ai'|'first_use'|'active';
 // The template that helps with each user's next step.
 export const NEXT_STEP_TEMPLATE:Record<NextStep,string>={pair_computer:'pair-computer',connect_ai:'finish-mcp',first_use:'first-result',active:'experience'};
-export type Person={id:string;email:string;name:string|null;devices:number;computers?:number;next_step?:NextStep;apps:number;calls:number;arc_runs:number;mcp_connections?:number;queued_followups?:number;status:string|null;note:string|null;next_followup_at:string|null;consent_at:string|null;suppressed_at:string|null;last_contact_at:string|null;feedback_count:number};
+export type Person={id:string;email:string;name:string|null;devices:number;computers?:number;next_step?:NextStep;apps:number;calls:number;monthly_calls?:number;monthly_limit?:number|null;arc_runs:number;mcp_connections?:number;queued_followups?:number;status:string|null;note:string|null;next_followup_at:string|null;consent_at:string|null;suppressed_at:string|null;last_contact_at:string|null;feedback_count:number};
 export type Contact={status:string;note:string;next_followup_at:string|null;consent_at:string|null;consent_note:string;suppressed_at:string|null};
 export type Mail={id:string;template_id:string;locale:'en'|'zh';subject:string;body:string;status:string;created_at:string;sent_at:string|null;error_code:string|null;html_body:string|null;design_json:string|null;draft_revision:number;batch_id?:string|null;batch_status?:string|null;batch_recipient_status?:string|null};
 export type ContactDetail={contact:Contact;messages:Mail[];rewardAvailable?:boolean;emailConfigured:boolean;sender?:{from:string;replyTo:string}|null};
@@ -26,7 +26,7 @@ export function followupReason(code:string|null,tr:(en:string,zh:string)=>string
 export const followupTime=(value:string|null)=>value?new Date(value).toLocaleString():'—';
 export const draftFingerprint=(draft:EmailDraft)=>JSON.stringify([draft.templateId,draft.locale,draft.subject.trim(),draft.body.trim(),draft.design]);
 export const draftDirty=(draft:EmailDraft)=>draftFingerprint(draft)!==draft.savedFingerprint;
-export function newFollowupDraft(person:Person,locale:'en'|'zh',templateId=person.next_step?NEXT_STEP_TEMPLATE[person.next_step]:person.devices>0&&person.mcp_connections===0?'finish-mcp':'experience'):EmailDraft{
+export function newFollowupDraft(person:Person,locale:'en'|'zh'='en',templateId=person.next_step?NEXT_STEP_TEMPLATE[person.next_step]:person.devices>0&&person.mcp_connections===0?'finish-mcp':'experience'):EmailDraft{
  const id=crypto.randomUUID(),site='https://remotearc.app'+(locale==='zh'?'/zh':'');
  const text=followupTemplate(templateId,locale,{name:person.name||(locale==='zh'?'朋友':'there'),setupUrl:site+'/connect-ai',feedbackUrl:site+'/feedback?source='+encodeURIComponent('followup:'+id)});
  return{id,templateId,locale,...text,design:{...DEFAULT_FOLLOWUP_DESIGN,highlights:[]},revision:null,savedFingerprint:null,html:null,edited:false};

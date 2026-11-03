@@ -8,7 +8,8 @@ const AdminApiUsage=lazy(()=>import('./admin-api-usage.js').then(module=>({defau
 const AdminPayments=lazy(()=>import('./payments/admin-payments.js').then(module=>({default:module.AdminPayments})));
 import { useI18n } from "../../app/i18n.js";
 import { AdminOperations } from "./admin-operations.js";
-import {DeviceExecutionHealthPanel,type DeviceExecutionHealth} from './device-execution-health.js';
+import {ServiceHealth} from './service-health.js';
+import type {HealthSnapshot} from './service-health-model.js';
 import {ProductIcon as Icon,type ProductIconName} from '../../components/product-icon.js';
 import {ProductInstall} from '../../app/product-pwa.js';
 import {useTheme} from '../../app/theme.js';
@@ -19,10 +20,6 @@ type Section="overview"|"leads"|"operations"|"health"|"followups"|"support"|"pay
 type Submission={id:string;category:"early_access"|"feedback";email:string;name:string;message:string;source:string;status:string;consent_at:string;created_at:string;updated_at:string};
 type LeadsResponse={items:Submission[];total:number;page:number;pageSize:number;counts:Array<{category:string;count:number}>};
 type Operations={checkedAt?:string;totals:{users:number;devices:number;online:number;monthlyCalls:number;auditLast7d:number;teams?:number;teamMembers?:number};activity?:Array<{hour:string;calls:number;users:number}>};
-type Incident={id:string;created_at:string;severity:string;kind:string;method?:string|null;path?:string|null;message:string;status_code?:number|null;colo?:string|null;ray_id?:string|null};
-type Health={status:"operational"|"degraded";checkedAt:string;worker:{status:string;errors15m:number;errors1h:number;errors24h:number};dependencies:{d1:{status:string};durableObjects:{status:string}};alerts:{emailConfigured:boolean;destination:string|null;recent:Array<{alert_key:string;last_sent_at:string|null;last_status_code:number|null;last_path:string|null}>};account:{users:number;devices:number;activeTokens:number};incidents:Incident[]};
-
-type HealthSnapshot=Health&{deviceExecution?:DeviceExecutionHealth};
 async function readJson<T>(path:string):Promise<T>{
  const response=await fetch(path,{credentials:"same-origin",headers:{"accept":"application/json"}});
  if(!response.ok)throw new Error("HTTP "+response.status);
@@ -76,24 +73,6 @@ function LeadsPanel(){
  </section>;
 }
 
-function HealthPanel({health,loading,reload}:{health:HealthSnapshot|null;loading:boolean;reload:()=>void}) {
- const {tr}=useI18n();
- return <section className="adminSurface"><div className="adminSectionHeader"><div><p>{tr("Infrastructure diagnostics, not surveillance of users.","仅用于基础设施排障，不监视用户行为内容。")}</p></div><button className="adminOutlineBtn" disabled={loading} onClick={reload}>{loading?tr("Refreshing…","刷新中…"):tr("Refresh","刷新")} ↻</button></div>
- <div className="adminMetrics adminMetrics--health">
-  <div><span>{tr("Overall","整体状态")}</span><strong>{health?health.status:"—"}</strong></div>
-  <div><span>5xx · 15m</span><strong>{health?.worker.errors15m??"—"}</strong></div>
-  <div><span>5xx · 1h</span><strong>{health?.worker.errors1h??"—"}</strong></div>
-  <div><span>5xx · 24h</span><strong>{health?.worker.errors24h??"—"}</strong></div>
- </div>
- <DeviceExecutionHealthPanel value={health?.deviceExecution}/>
- <div className="adminDiagnostics">
-   <article><h3>{tr("Dependencies","基础设施")}</h3><p>Cloudflare Worker <b>{health?.worker.status||"—"}</b></p><p>D1 <b>{health?.dependencies.d1.status||"—"}</b></p><p>Durable Objects <b>{health?.dependencies.durableObjects.status||"—"}</b></p></article>
-   <article><h3>{tr("Alert delivery","告警投递")}</h3><p>{health?.alerts.emailConfigured?tr("Email enabled","邮件已启用"):tr("Email pending","邮件通道待启用")}</p><small>{health?.alerts.destination||"—"}</small><p>{tr("Active OAuth tokens","有效 OAuth Token")} <b>{health?.account.activeTokens??"—"}</b></p></article>
- </div>
- <div className="adminIncidents"><h3>{tr("Recent recorded incidents","近期服务异常")}</h3>{health?.incidents.map(i=><article key={i.id}><span>{i.severity.toUpperCase()}</span><strong>{i.method||""} {i.path||i.kind}</strong><p>{i.message}</p><small>{time(i.created_at)} · {i.status_code||"ERR"} {i.colo||""}</small></article>)}{health?.incidents.length===0&&<div className="adminNoData">{tr("No incidents recorded.","暂无服务异常记录。")}</div>}{!health&&<div className="adminNoData">{tr("Waiting for service metrics.","等待服务指标。")}</div>}</div>
- </section>;
-}
-
 function AdminGlyph({name}:{name:Section|"arrow"|"refresh"|"shield"|"pulse"}){
   const names:Record<typeof name,ProductIconName>={overview:'overview',leads:'inbox',operations:'users',health:'activity',followups:'chat',support:'inbox',payments:'chart',events:'activity',arrow:'arrowUpRight',refresh:'refresh',shield:'shield',pulse:'activity'};
   return <Icon name={names[name]}/>;
@@ -121,7 +100,7 @@ function MiniActivity({ops}:{ops:Operations|null}){
   <div className="adminChartFooter"><span>{windowHours}h {tr("ago","前")}</span><span>{tr("Now","现在")} · UTC</span></div>
  </section>;
 }
-function AdminOverview({ops,health,leadOverview,setSection,preview=false}:{ops:Operations|null;health:Health|null;leadOverview:LeadsResponse|null;setSection:(s:Section)=>void;preview?:boolean}){
+function AdminOverview({ops,health,leadOverview,setSection,preview=false}:{ops:Operations|null;health:HealthSnapshot|null;leadOverview:LeadsResponse|null;setSection:(s:Section)=>void;preview?:boolean}){
  const {tr}=useI18n();
  const userCount=ops?.totals.users;
  const activeCount=ops?.totals.online;
@@ -173,7 +152,7 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
   if(preview)return;
   setLoading(true);
   try{
-   const [a,b,c]=await Promise.allSettled([readJson<Operations>("/api/admin/operations?page=0"),readJson<Health>("/api/monitor"),readJson<LeadsResponse>("/api/admin/submissions?category=all&page=0")]);
+   const [a,b,c]=await Promise.allSettled([readJson<Operations>("/api/admin/operations?page=0"),readJson<HealthSnapshot>("/api/monitor"),readJson<LeadsResponse>("/api/admin/submissions?category=all&page=0")]);
    if(a.status==="fulfilled")setOps(a.value);
    if(b.status==="fulfilled")setHealth(b.value);
    if(c.status==="fulfilled")setLeadOverview(c.value);
@@ -213,7 +192,7 @@ export function AdminConsole({preview=false}:{preview?:boolean}){
    {section==="overview"&&<AdminOverview preview={preview} ops={ops} health={health} leadOverview={leadOverview} setSection={setSection}/>}
    {section==="leads"&&(preview?<div className="adminNoData">{tr("Preview mode: private submissions are not loaded.","预览环境不加载真实反馈记录。")}</div>:<LeadsPanel/>)}
    {section==="operations"&&<AdminOperations readOnly={preview} embedded/>}
-   {section==="health"&&<HealthPanel health={health} loading={loading} reload={()=>void refresh()}/>}
+   {section==="health"&&<ServiceHealth health={health} loading={loading} reload={()=>void refresh()} preview={preview}/>}
   </main>
  </div>;
 }

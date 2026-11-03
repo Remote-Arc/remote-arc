@@ -228,7 +228,7 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
         SUM(CASE WHEN created_at >= ?2 THEN 1 ELSE 0 END) AS errors_1h,
         SUM(CASE WHEN created_at >= ?3 THEN 1 ELSE 0 END) AS errors_24h
        FROM service_incidents
-       WHERE severity IN ('error', 'critical')`,
+       WHERE severity IN ('error', 'critical') AND created_at>=?3`,
     )
       .bind(t15m, t1h, t24h)
       .first<{ errors_15m: number | null; d1_errors_15m: number | null; errors_1h: number | null; errors_24h: number | null }>(),

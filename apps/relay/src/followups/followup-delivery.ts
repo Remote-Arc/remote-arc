@@ -1,3 +1,4 @@
+import {recordProductEvent} from '../analytics/product-events.js';
 import {renderFollowupEmail} from '../../../../packages/protocol/src/followup-email.js';
 import {feedbackRewardAvailable} from '../billing/connect-rewards.js';
 import {followupEmailSender,followupReplyTo} from '../platform/email-sender.js';
@@ -26,6 +27,7 @@ export async function dispatchFollowup(env:FollowupEnv,id:string,expectedRevisio
     ({status,providerId,errorCode}=await deliverEmail(sender,{idempotencyKey:'followup/'+id,to:contact.email,subject:message.subject,html,text,unsubscribe},timeoutMs));
    }catch{errorCode='delivery_unconfirmed';}
    await env.DB.prepare('UPDATE user_followup_messages SET status=?2,provider_id=?3,sent_at=?4,error_code=?5 WHERE id=?1').bind(id,status,providerId,status==='sent'?now:null,errorCode).run();
+   if(status!=='sent')await recordProductEvent(env,{domain:'notifications',name:'email.delivery.failed',source:'server',outcome:'failed',userId:message.user_id,entityId:id,operation:'followup_email',errorCode:status==='unknown'?'EMAIL_DELIVERY_UNKNOWN':'EMAIL_PROVIDER_REJECTED',httpStatus:errorCode&&/^provider_[1-5][0-9]{2}$/.test(errorCode)?Number(errorCode.slice(9)):undefined});
    if(status==='sent')await env.DB.prepare(`UPDATE user_followup_contacts SET status='contacted',next_followup_at=NULL,updated_at=?2 WHERE user_id=?1`).bind(message.user_id,now).run();
    return json({id,status,providerId,errorCode},status==='sent'?200:502);
 }

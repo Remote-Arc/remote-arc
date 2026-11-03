@@ -1,3 +1,4 @@
+import {classifyExpectedMcpError} from '../mcp/mcp-errors.js';
 import { requireTaskPermission } from "../devices/device-task-policy.js";
 import {recordProductEvent} from '../analytics/product-events.js';
 import { selectFleetDevice } from "../devices/fleet-scheduler.js";
@@ -1282,6 +1283,7 @@ async function persistRuntime(
   extra?: { incrementRun?: boolean; retainLease?: boolean; event?: string; summary?: string },
 ) {
   await checkpointTask(env.DB, automation, state, status, nextRunAt, lastError, extra);
+  if(status==='failed'&&automation.status!=='failed')await recordProductEvent(env,{domain:'automations',name:'automation.run.failed',source:'server',outcome:'failed',userId:automation.user_id,entityId:automation.id,deviceId:automation.device_id,errorCode:classifyExpectedMcpError(lastError)?.code||'AUTOMATION_EXECUTION_FAILED'});
   if (isTerminalStatus(status) || status === "paused" || extra?.incrementRun) {
     await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
   }

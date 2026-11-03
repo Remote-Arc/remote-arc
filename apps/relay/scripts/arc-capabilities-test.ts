@@ -84,8 +84,8 @@ console.log('PASS: Slack mrkdwn answers, one bilingual skill index with quiet su
 
 // Tool annotations do not enforce OAuth scopes. App-only grants must not read
 // imported Skill metadata/content before the devices:read challenge is returned.
-let accountReads = 0;
-const deniedEnv = {PUBLIC_ORIGIN:'https://mcp.example.test',DB:{prepare(){accountReads++;throw new Error('unexpected account read');}},REGISTRY:{}};
+let accountReads = 0,metadataWrites=0;
+const deniedEnv = {PUBLIC_ORIGIN:'https://mcp.example.test',DB:{prepare(sql:string){if(sql.startsWith('INSERT OR IGNORE INTO product_events'))return{bind(...values:unknown[]){assert(!JSON.stringify(values).includes('private'),'Failure metadata must omit Skill search terms and IDs');return{async run(){metadataWrites++;return{meta:{changes:1}};}};}};accountReads++;throw new Error('unexpected account read');}},REGISTRY:{}};
 const appOnly = {userId:'scope-test',clientId:'client',grantId:'grant',scope:'apps:read',resource:'https://mcp.example.test/mcp'};
 for (const [name,args] of [['find_skills',{query:'private'}],['read_skill',{id:'private-skill'}]] as const) {
  const response=await createRemoteLinkMcp(deniedEnv as never,appOnly as never).fetch(new Request('https://mcp.example.test/mcp',{
@@ -97,4 +97,5 @@ for (const [name,args] of [['find_skills',{query:'private'}],['read_skill',{id:'
  assert.match(packet.result._meta['mcp/www_authenticate'][0],/devices:read/);
 }
 assert.equal(accountReads,0,'missing-scope Skill requests must not reach account data');
+assert.equal(metadataWrites,2,'Each rejected call records safe operational metadata only');
 console.log('PASS: public Skill tools enforce devices:read before private account access');

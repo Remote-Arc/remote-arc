@@ -206,6 +206,16 @@ export const expectedMcpFailureResult = (error: ExpectedMcpError) => ({
   ],
 });
 
+export type McpFailureObservation={tool:string;code:string;args:unknown;durationMs:number};
+const failureObservers=new WeakMap<McpServer,(value:McpFailureObservation)=>Promise<unknown>>();
+export function observeMcpFailures(server:McpServer,observer:(value:McpFailureObservation)=>Promise<unknown>){failureObservers.set(server,observer);}
+function resultFailure(result:unknown):string|null{
+ const value=result as {isError?:boolean;content?:Array<{type:string;text?:string}>;_meta?:Record<string,unknown>}|null;
+ if(value?.isError&&Array.isArray(value._meta?.['mcp/www_authenticate']))return 'insufficient_scope';
+ const text=value?.content?.[0]?.type==='text'?value.content[0].text:undefined;
+ if(text&&text.length<=16384)try{const body=JSON.parse(text);if(body?.ok===false||['failed','unknown'].includes(body?.status)&&body?.error)return typeof body.error==='string'?body.error:body.error?.code||'TOOL_ERROR';}catch{}
+ return value?.isError?'TOOL_ERROR':null;
+}
 export function registerMcpTool(
   server: McpServer,
   name: string,
@@ -214,16 +224,16 @@ export function registerMcpTool(
 ) {
   const register = server.registerTool.bind(server) as (...args: any[]) => unknown;
   return register(name, definition, async (...args: any[]) => {
+    const started=Date.now();
+    const report=async(code:string)=>{try{await failureObservers.get(server)?.({tool:name,code,args:args[0],durationMs:Date.now()-started});}catch{/* Observability must not replace a tool result. */}};
     try {
-      return await handler(...args);
+      const result=await handler(...args);const code=resultFailure(result);if(code)await report(code);return result;
     } catch (error) {
       const expected = classifyExpectedMcpError(error);
+      await report(expected?.code||'TOOL_ERROR');
       if (!expected) throw error;
-      console.warn("[Remote Arc MCP expected error]", {
-        tool: name,
-        code: expected.code,
-        message: expected.message,
-      });
+      // No arguments, paths or provider error messages in operational logs.
+      console.warn("[Remote Arc MCP expected error]", {tool:name,code:expected.code});
       return expectedMcpFailureResult(expected);
     }
   });

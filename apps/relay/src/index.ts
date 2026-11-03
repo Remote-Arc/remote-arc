@@ -1,7 +1,8 @@
+import {setObservationActor} from './analytics/observation-context.js';
 import { handleSecretRequestRead, handleSecretRequestSubmit } from "./devices/secret-requests.js";
 import {ingestProductEvents,observeProductRequest,requestEventRoute} from './analytics/product-observability.js';
 import {recordDeviceOnline,purgeBusinessMetrics} from './analytics/business-tracking.js';
-import {eventContext,purgeProductEvents,recordProductEvent} from './analytics/product-events.js';
+import {eventContext,purgeProductEvents} from './analytics/product-events.js';
 import {serveDemoMedia} from './platform/demo-media.js';
 import { handleAgentDownload } from './platform/agent-downloads.js';
 import {handleBrowserAuth} from "./browser/browser-auth.js";
@@ -235,7 +236,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       if (disabled) return disabled;
       const staticAsset = /^\/(?:assets|fonts)\//.test(url.pathname) ||
         /^\/(?:remote-arc(?:-app-icon)?[.]svg|remote-arc-(?:180|192|512)[.]png|favicon[.]ico|(?:admin|manifest)[.]webmanifest|sw[.]js|offline[.]html)$/.test(url.pathname);
-      const adminApi = url.pathname === "/api/me" || url.pathname === "/api/monitor" ||
+      const adminApi = url.pathname === "/api/product-events" || url.pathname === "/api/me" || url.pathname === "/api/monitor" ||
         url.pathname.startsWith("/api/admin/");
       if (adminApi) return handleAdminServiceRequest(request, env, ctx);
       const document = url.pathname === "/" || url.pathname === "/overview";
@@ -915,6 +916,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
           : null;
 
       if (validIdentity) {
+        setObservationActor(request,validIdentity.userId);
         const { success } = await env.MCP_RATE_LIMITER.limit({
           key: validIdentity.userId + ":" + validIdentity.clientId,
         });
@@ -940,7 +942,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       if (eventResponse) return eventResponse;
       const clientProfile = validIdentity ? await mcpClientProfile(env.DB, validIdentity.clientId) : "generic";
       const handler = createRemoteLinkMcp(env, validIdentity, {
-        clientProfile,
+        clientProfile,traceId:eventContext(request).traceId,
         kickScheduler: (automationId) => {
           if (!ctx) return;
           ctx.waitUntil(
@@ -1088,6 +1090,8 @@ export default {
     const observationContext=eventContext(request);
     const isMcpRequest = ["/mcp", "/mcp/"].includes(new URL(request.url).pathname);
     try {
+      const tracedHeaders=new Headers(request.headers);tracedHeaders.set('x-ra-trace-id',observationContext.traceId);
+      request=new Request(request,{headers:tracedHeaders});
       let response = await handleFetch(request, env, ctx);
       if(requestEventRoute(request)){
         ctx.waitUntil(observeProductRequest(request,response,env,started,observationContext));
@@ -1118,7 +1122,7 @@ export default {
         status: 500, durationMs: Date.now() - started, method: request.method,
       });
       const eventSpec=requestEventRoute(request);
-      if(eventSpec)ctx.waitUntil(recordProductEvent(env,{...eventSpec,...observationContext,source:'server',outcome:'failed',errorCode:'internal_error',httpStatus:500,durationMs:Date.now()-started}));
+      if(eventSpec)ctx.waitUntil(observeProductRequest(request,Response.json({error:'internal_error'},{status:500}),env,started,observationContext));
       const message = diagnosticError(error);
       console.error("worker_unhandled_exception", { message });
       ctx.waitUntil(
@@ -1139,7 +1143,7 @@ export default {
         },
         {
           status: 500,
-          headers: { "cache-control": "no-store" },
+          headers: { "cache-control": "no-store", "x-ra-trace-id":observationContext.traceId },
         },
       );
     }

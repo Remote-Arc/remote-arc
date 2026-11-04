@@ -35,3 +35,27 @@ The D1-only token is exposed only to the migration step. The existing Worker
 deploy token remains independent. Production D1 migrations are not dry runs.
 
 Regression tests: pnpm test:deploy-policy.
+
+## Backup size and recovery gate
+
+The production export and encrypted recovery file share a **1 GiB** maximum
+(1,073,741,824 bytes). AES-256-GCM encryption, decryption and SHA-256 hashing
+stream the file; the limit bounds runner disk use and isolated SQLite restore
+resources. The former 256 MiB cap blocked release run `41749720869` after a valid
+export passed SQLite verification. The v1 artifact format and recovery command
+remain compatible with retained backups.
+
+The backup step logs only export byte size and the supported limit. Empty,
+non-file and oversized exports fail before encryption; an oversized encrypted
+artifact fails before recovery. Every accepted production export still requires
+isolated SQLite restore, integrity/history checks, authenticated encryption,
+decryption, a second restore verification and encrypted artifact retention before
+any production migration or deployment. A failed gate must not be bypassed or
+replaced with data deletion. Exports above 1 GiB require a separate recovery and
+runner-capacity change before release.
+
+`pnpm test:deploy-policy` includes an actual 257 MiB SQL export encryption,
+decryption, byte checksum and SQLite restore regression; an exact 1 GiB
+cryptographic round-trip; and authentication, no-overwrite and size-limit
+rejection cases. Tests use generated data only and
+never call Cloudflare.

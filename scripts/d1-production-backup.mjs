@@ -12,9 +12,17 @@ export function backupKey(value){
  if(typeof value!=="string"||!value.trim())throw Error("D1_BACKUP_KEY is required for a recoverable encrypted backup");
  const key=Buffer.from(value.trim(),"base64");if(key.length!==32||key.toString("base64")!==value.trim())throw Error("D1_BACKUP_KEY must encode exactly 32 random bytes");return key;
 }
+// Both directions share a bounded 1 GiB export budget. Encryption and hashing
+// stream the file; the SQL restore and runner disk budget still require a cap.
+const maxBackupBytes=1024*1024*1024;
+function backupSize(file,label){
+ const info=statSync(file);
+ if(!info.isFile()||info.size===0||info.size>maxBackupBytes)throw Error(label+" size is outside the supported range: "+info.size+" bytes (allowed 1-"+maxBackupBytes+" bytes)");
+ return info.size;
+}
 const hashStream=hash=>new Transform({transform(chunk,encoding,callback){hash.update(chunk);callback(null,chunk);}});
 export async function encryptBackup(sqlFile,directory,key){
- if(statSync(sqlFile).size===0||statSync(sqlFile).size>256*1024*1024)throw Error("Backup size is outside the supported range");
+ backupSize(sqlFile,"Backup");
  mkdirSync(directory,{recursive:true,mode:0o700});chmodSync(directory,0o700);
  const iv=randomBytes(12),cipher=createCipheriv("aes-256-gcm",key,iv),hash=createHash("sha256"),encrypted=path.join(directory,"production.sql.enc");
  cipher.setAAD(aad);await pipeline(createReadStream(sqlFile),hashStream(hash),cipher,createWriteStream(encrypted,{flags:"wx",mode:0o600}));
@@ -27,7 +35,7 @@ export async function decryptBackup(directory,key,output){
  const iv=Buffer.from(manifest.iv,"base64"),tag=Buffer.from(manifest.tag,"base64");
  if(iv.length!==12||tag.length!==16)throw Error("Invalid backup authentication metadata");
  const encrypted=path.join(directory,"production.sql.enc");
- if(statSync(encrypted).size>256*1024*1024)throw Error("Encrypted backup is too large");
+ backupSize(encrypted,"Encrypted backup");
  const temporary=output+"."+randomBytes(8).toString("hex")+".part",hash=createHash("sha256");
  try{
   const decipher=createDecipheriv("aes-256-gcm",key,iv);decipher.setAAD(aad);decipher.setAuthTag(tag);
@@ -50,7 +58,9 @@ export async function prepareBackup(directory,keyValue){
  const key=backupKey(keyValue);mkdirSync(directory,{recursive:true,mode:0o700});chmodSync(directory,0o700);
  const sqlFile=path.join(directory,"production.sql"),restored=path.join(directory,"verified-restored.sql");
  try{
-  wrangler(["d1","export",database,"--remote","--output",sqlFile]);chmodSync(sqlFile,0o600);verifySqlBackup(sqlFile,remote);
+  wrangler(["d1","export",database,"--remote","--output",sqlFile]);chmodSync(sqlFile,0o600);
+  console.log("Production D1 export: "+backupSize(sqlFile,"Backup")+" bytes; supported maximum: "+maxBackupBytes+" bytes.");
+  verifySqlBackup(sqlFile,remote);
   await encryptBackup(sqlFile,directory,key);await decryptBackup(directory,key,restored);verifySqlBackup(restored,remote);
   return{needed:true,verified:true,directory,pending};
  }finally{for(const file of [sqlFile,restored])if(existsSync(file))unlinkSync(file);}

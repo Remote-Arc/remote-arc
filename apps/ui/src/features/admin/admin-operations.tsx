@@ -76,7 +76,7 @@ type OperationsData = {
     users: number;
     devices: number;
     online: number;
-    auditRows: number;
+    auditRows: number | null;
     auditLast7d: number;
     monthlyCalls: number;
   };
@@ -173,6 +173,7 @@ export function AdminOperations({
         activation,
         sort,
         query: appliedQuery,
+        auditTotals: section === "costs" ? "1" : "0",
       });
       const res = await fetch("/api/admin/operations?" + parameters, {
         credentials: "same-origin",
@@ -197,7 +198,7 @@ export function AdminOperations({
     return () => {
       requestSequence.current++;
     };
-  }, [page, activation, sort, appliedQuery]);
+  }, [page, activation, sort, appliedQuery, section === "costs"]);
   useEffect(() => {
     const nextQuery = query.trim();
     if (nextQuery === appliedQuery) return;
@@ -1350,7 +1351,7 @@ export function AdminOperations({
             </div>
             <div>
               <span>{tr("D1 audit rows", "D1 审计记录")}</span>
-              <strong>{data ? fmt(data.totals.auditRows) : "—"}</strong>
+              <strong>{data?.totals.auditRows == null ? "—" : fmt(data.totals.auditRows)}</strong>
               <small>
                 {tr("Storage activity, not a currency charge.", "表示数据存量，不是收费金额。")}
               </small>

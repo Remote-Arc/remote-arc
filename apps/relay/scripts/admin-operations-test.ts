@@ -67,7 +67,7 @@ function fakeDB(role = "admin") {
         async all() {
           if (sql.includes("GROUP BY activation_stage"))
             return { results: [{ activation_stage: "activated", count: 1 }] };
-          if (sql.includes("SELECT * FROM matched"))
+          if (sql.includes("SELECT * FROM counted"))
             return {
               results: [
                 {
@@ -85,6 +85,7 @@ function fakeDB(role = "admin") {
                   linked_login: "email_only",
                   first_mcp_client: "ChatGPT",
                   activation_stage: "activated",
+                  __activation_5: 1,
                   mcp_connections: 1,
                   active_mcp_connections: 1,
                   plugin_connections: 0,

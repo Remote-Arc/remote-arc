@@ -10,8 +10,10 @@ for (const name of fs
   .filter((name) => name.endsWith(".sql"))
   .sort())
   sql.exec(fs.readFileSync(new URL("../migrations/" + name, import.meta.url), "utf8"));
+let queries = 0;
 const db = {
   prepare(query: string) {
+    queries++;
     const statement = sql.prepare(query);
     return {
       bind(...args: any[]) {
@@ -174,6 +176,15 @@ sql
   )
   .run(now, now, now);
 let data = await listAdminUsers(db, options);
+assert.equal(
+  queries,
+  1,
+  "A nonempty user page and its global activation facets must share one history aggregation",
+);
+assert(
+  !JSON.stringify(data.users).includes("__activation_"),
+  "Internal query counters must not leak into user records",
+);
 const byId = new Map(data.users.map((user) => [user.id, user]));
 assert.equal(byId.get("registered")?.activation_stage, "registered_only");
 assert.equal(byId.get("plugin")?.activation_stage, "plugin_connected_no_device");
@@ -246,6 +257,13 @@ assert.equal(
   2,
 );
 assert.equal((await listAdminUsers(db, { ...options, query: "returning" })).filteredTotal, 1);
+const beyond = await listAdminUsers(db, { ...options, stage: "activated", page: 999 });
+assert.deepEqual(beyond.users, []);
+assert.equal(beyond.filteredTotal, 4, "An empty page retains the global selected-stage count");
+assert.equal(beyond.activationCounts.activated, 4);
+const missing = await listAdminUsers(db, { ...options, query: "no-such-user" });
+assert.deepEqual(missing.users, []);
+assert.equal(missing.filteredTotal, 0);
 assert.equal(
   (await listAdminUsers(db, { ...options, query: "literal_%" })).filteredTotal,
   1,

@@ -1,8 +1,22 @@
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { monitoringPreview } from "../../apps/ui/src/features/admin/service-health-preview";
+import { sampleServiceMetrics } from "../../apps/ui/src/features/admin/service-metrics-model";
 async function mount(page: Page, fail = false) {
   const requests: string[] = [];
+  await page.route(/\/api\/admin\/analytics(?:\?|$)/, (route) =>
+    route.fulfill({ status: 503, json: { error: "BUSINESS_ANALYTICS_UNAVAILABLE" } }),
+  );
+  await page.route(/\/api\/admin\/metrics(?:\?|$)/, (route) => {
+    const url = new URL(route.request().url());
+    return route.fulfill({
+      json: sampleServiceMetrics(
+        Number(url.searchParams.get("hours") || 24),
+        url.searchParams.get("domain") || "",
+        true,
+      ),
+    });
+  });
   await page.route(/\/api\/admin\/monitoring(?:\?|$)/, async (route) => {
     requests.push(route.request().url());
     const url = new URL(route.request().url());
@@ -110,7 +124,9 @@ test("Monitor failures show unavailable, never a fake zero or stale event detail
 }, testInfo) => {
   const { panel } = await mount(page, true),
     zh = testInfo.project.metadata.language === "zh";
-  await expect(panel.getByRole("alert")).toContainText(zh ? "暂不可用" : "unavailable");
+  await expect(panel.locator(".healthNotice.isError[role=alert]")).toContainText(
+    zh ? "暂不可用" : "unavailable",
+  );
   await expect(panel.locator(".healthIssue")).toHaveCount(0);
   await expect(panel.locator(".healthMetrics strong")).toHaveText(["—", "—", "—", "—"]);
 });

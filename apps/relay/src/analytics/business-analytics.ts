@@ -1,6 +1,7 @@
 import { applicationJson } from "../platform/application-json.js";
 import { getSessionUser } from "../auth/auth.js";
 import type { BillingEnv } from "../billing/stripe-billing.js";
+import type { BusinessHealthMetrics } from "@remotearc/protocol";
 
 type Row = Record<string, any>;
 const DAY = 86400000;
@@ -110,13 +111,19 @@ async function paymentSummary(db: D1Database, from: string, to: string, current 
 async function overview(db: D1Database, from: string, to: string) {
   return await db
     .prepare(
-      `SELECT
+      `WITH new_users AS MATERIALIZED (
+ SELECT u.id FROM users u WHERE ${person} AND u.created_at>=?1 AND u.created_at<?2
+ ), successful_users AS MATERIALIZED (
+ SELECT t.user_id FROM arc_chat_runs t WHERE t.user_id IN (SELECT id FROM new_users) AND t.status='succeeded' AND t.updated_at<?2
+ UNION SELECT a.user_id FROM app_calls a WHERE a.user_id IN (SELECT id FROM new_users) AND a.status='succeeded' AND a.updated_at<?2
+ UNION SELECT p.user_id FROM product_events p WHERE p.user_id IN (SELECT id FROM new_users) AND p.name='device.tool.completed' AND p.outcome='succeeded' AND p.occurred_at<?2
+ ) SELECT
  (SELECT COUNT(*) FROM business_cohort_users WHERE is_demo=0 AND registered_at>=?1 AND registered_at<?2) newUsers,
  (SELECT COUNT(DISTINCT a.user_id) FROM business_activity_days a JOIN users u ON u.id=a.user_id WHERE ${person} AND a.day>=substr(?1,1,10) AND a.day<=substr(?2,1,10) AND a.first_at<?2) activeUsers,
  (SELECT COUNT(DISTINCT r.user_id) FROM arc_payment_receipts r JOIN users u ON u.id=r.user_id LEFT JOIN arc_commercial_versions v ON v.id=r.commercial_version_id WHERE ${person} AND ${live} AND r.state='paid' AND r.amount_cents>0 AND r.verified_at>=?1 AND r.verified_at<?2) payingUsers,
  (SELECT COALESCE(SUM(r.amount_cents),0) FROM arc_payment_receipts r JOIN users u ON u.id=r.user_id LEFT JOIN arc_commercial_versions v ON v.id=r.commercial_version_id WHERE ${person} AND ${live} AND r.state='paid' AND r.amount_cents>0 AND r.verified_at>=?1 AND r.verified_at<?2) paidCents,
  (SELECT COUNT(*) FROM users u WHERE ${person} AND u.created_at>=?1 AND u.created_at<?2 AND EXISTS(SELECT 1 FROM devices d WHERE d.user_id=u.id AND d.platform<>'browser' AND d.created_at<?2)) newPaired,
- (SELECT COUNT(*) FROM users u WHERE ${person} AND u.created_at>=?1 AND u.created_at<?2 AND (EXISTS(SELECT 1 FROM arc_chat_runs t WHERE t.user_id=u.id AND t.status='succeeded' AND t.updated_at<?2) OR EXISTS(SELECT 1 FROM app_calls a WHERE a.user_id=u.id AND a.status='succeeded' AND a.updated_at<?2) OR EXISTS(SELECT 1 FROM product_events p WHERE p.user_id=u.id AND p.name='device.tool.completed' AND p.outcome='succeeded' AND p.occurred_at<?2))) newUsed,
+ (SELECT COUNT(*) FROM new_users u WHERE u.id IN (SELECT user_id FROM successful_users)) newUsed,
  (SELECT COUNT(*) FROM users u WHERE ${person} AND u.created_at>=?1 AND u.created_at<?2 AND EXISTS(SELECT 1 FROM arc_payment_receipts r LEFT JOIN arc_commercial_versions v ON v.id=r.commercial_version_id WHERE r.user_id=u.id AND r.state='paid' AND r.amount_cents>0 AND r.verified_at<?2 AND ${live})) newPaid
  `,
     )
@@ -166,16 +173,11 @@ function finishFlow(input: any) {
   };
 }
 
-async function period(db: D1Database, from: string, to: string, current = false) {
-  const [summary, email, google, device, payment, tasks] = await Promise.all([
-    overview(db, from, to),
-    flowSummary(db, "email_login", from, to),
-    flowSummary(db, "google_login", from, to),
-    flowSummary(db, "device_pairing", from, to),
-    paymentSummary(db, from, to, current),
-    taskSummary(db, from, to),
-  ]);
-  const login = {
+function combinedLogin(
+  email: Awaited<ReturnType<typeof flowSummary>>,
+  google: Awaited<ReturnType<typeof flowSummary>>,
+) {
+  return finishFlow({
     id: "login",
     total: email.total + google.total,
     pending: email.pending + google.pending,
@@ -187,11 +189,76 @@ async function period(db: D1Database, from: string, to: string, current = false)
       { key: "verified", count: email.steps[3]!.count + google.steps[2]!.count },
       { key: "completed", count: email.steps[4]!.count + google.steps[3]!.count },
     ],
+  });
+}
+
+/** Operational flow aggregates only. No growth, activity or retention scans. */
+export async function businessHealthMetrics(
+  db: D1Database,
+  days: number,
+  now = new Date(),
+): Promise<BusinessHealthMetrics> {
+  const checkedAt = now.toISOString();
+  const from = new Date(
+    Date.parse(checkedAt.slice(0, 10) + "T00:00:00.000Z") - (days - 1) * DAY,
+  ).toISOString();
+  const [counts, email, google, devices, payment, tasks] = await Promise.all([
+    db
+      .prepare(
+        `SELECT
+      (SELECT COUNT(*) FROM business_cohort_users WHERE is_demo=0 AND registered_at>=?1 AND registered_at<?2) registrations,
+      (SELECT COUNT(*) FROM arc_payment_receipts r JOIN users u ON u.id=r.user_id LEFT JOIN arc_commercial_versions v ON v.id=r.commercial_version_id
+       WHERE ${person} AND ${live} AND r.state='paid' AND r.amount_cents>0 AND r.verified_at>=?1 AND r.verified_at<?2) payments`,
+      )
+      .bind(from, checkedAt)
+      .first<Row>(),
+    flowSummary(db, "email_login", from, checkedAt),
+    flowSummary(db, "google_login", from, checkedAt),
+    flowSummary(db, "device_pairing", from, checkedAt),
+    paymentSummary(db, from, checkedAt, true),
+    taskSummary(db, from, checkedAt),
+  ]);
+  const flows = [
+    combinedLogin(email, google),
+    finishFlow({ ...devices, id: "devices" }),
+    finishFlow(payment),
+    finishFlow(tasks),
+  ].map((flow) => ({
+    id: flow.id,
+    total: flow.total,
+    completed: flow.completed,
+    pending: flow.pending,
+    failed: flow.failed,
+    incompleteEvidence: flow.incompleteEvidence,
+    rate: flow.rate,
+    steps: flow.steps.map((step: { key: string; count: number }) => ({
+      key: step.key,
+      count: step.count,
+    })),
+  }));
+  return {
+    checkedAt,
+    from,
+    days,
+    registrations: Number(counts?.registrations || 0),
+    payments: Number(counts?.payments || 0),
+    flows,
   };
+}
+
+async function period(db: D1Database, from: string, to: string, current = false) {
+  const [summary, email, google, device, payment, tasks] = await Promise.all([
+    overview(db, from, to),
+    flowSummary(db, "email_login", from, to),
+    flowSummary(db, "google_login", from, to),
+    flowSummary(db, "device_pairing", from, to),
+    paymentSummary(db, from, to, current),
+    taskSummary(db, from, to),
+  ]);
   return {
     summary,
     scenes: [
-      finishFlow(login),
+      combinedLogin(email, google),
       finishFlow({ ...device, id: "devices" }),
       finishFlow(payment),
       finishFlow(tasks),
@@ -231,9 +298,7 @@ export async function businessAnalytics(db: D1Database, days: number, now = new 
       )
       .bind(new Date(midnight - 59 * DAY).toISOString(), to)
       .all<Row>(),
-    db
-      .prepare(`SELECT MIN(occurred_at) firstEvent,COUNT(*) events FROM product_events`)
-      .first<Row>(),
+    db.prepare("SELECT MIN(occurred_at) firstEvent FROM product_events").first<Row>(),
   ]);
   const state = Object.fromEntries(stateRows.results.map((row) => [row.key, row.value]));
   const completeFrom = state.activity_complete_from?.slice(0, 10) || null;
@@ -296,7 +361,9 @@ export async function businessAnalytics(db: D1Database, days: number, now = new 
       flowSince: state.flow_since || null,
       activityCompleteFrom: state.activity_complete_from || null,
       oldestEvent: evidence?.firstEvent || null,
-      recordedEvents: Number(evidence?.events || 0),
+      // The dashboard does not display a lifetime count. Leave it unknown rather
+      // than scanning every historical event for unused metadata on each visit.
+      recordedEvents: null,
       includesInternalAccounts: true,
       preview: false,
     },
@@ -317,9 +384,15 @@ export async function handleBusinessAnalytics(
   if (!user) return json({ error: "unauthorized" }, 401);
   if (!user.isAdmin) return json({ error: "forbidden" }, 403);
   const days = Number(url.searchParams.get("days") || "7");
+  const view = url.searchParams.get("view") || "all";
+  if (!["all", "health"].includes(view)) return json({ error: "invalid_range" }, 400);
   if (![1, 7, 30].includes(days)) return json({ error: "invalid_range" }, 400);
   try {
-    return json(await businessAnalytics(env.DB, days));
+    return json(
+      await (view === "health"
+        ? businessHealthMetrics(env.DB, days)
+        : businessAnalytics(env.DB, days)),
+    );
   } catch {
     return json({ error: "business_analytics_unavailable" }, 503);
   }

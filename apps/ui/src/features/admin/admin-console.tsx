@@ -1,7 +1,7 @@
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { BrandWordmark } from "../../components/brand-wordmark.js";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 const AdminEvents = lazy(() =>
   import("./events/admin-events.js").then((module) => ({ default: module.AdminEvents })),
 );
@@ -61,10 +61,11 @@ type Operations = {
   };
   activity?: Array<{ hour: string; calls: number; users: number }>;
 };
-async function readJson<T>(path: string): Promise<T> {
+async function readJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, {
     credentials: "same-origin",
     headers: { accept: "application/json" },
+    signal,
   });
   if (!response.ok) throw new Error("HTTP " + response.status);
   return response.json().then(canonicalErrorEnvelope) as Promise<T>;
@@ -634,18 +635,34 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const refreshController = useRef<AbortController | null>(null);
   async function refresh() {
     if (preview) return;
+    refreshController.current?.abort();
+    setError("");
+    // Independent sections own their data. Do not scan accounts and audit history
+    // while viewing analytics, mail or payments, or duplicate the users request.
+    if (section !== "overview" && section !== "health") {
+      setLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    refreshController.current = controller;
     setLoading(true);
     try {
       const [a, b, c] = await Promise.allSettled([
-        readJson<Operations>("/api/admin/operations?page=0"),
-        readJson<HealthSnapshot>("/api/monitor"),
-        readJson<LeadsResponse>("/api/admin/submissions?category=all&page=0"),
+        section === "overview"
+          ? readJson<Operations>("/api/admin/operations?page=0&auditTotals=0", controller.signal)
+          : Promise.resolve(null),
+        readJson<HealthSnapshot>("/api/monitor", controller.signal),
+        section === "overview"
+          ? readJson<LeadsResponse>("/api/admin/submissions?category=all&page=0", controller.signal)
+          : Promise.resolve(null),
       ]);
-      if (a.status === "fulfilled") setOps(a.value);
+      if (controller.signal.aborted) return;
+      if (a.status === "fulfilled" && a.value) setOps(a.value);
       if (b.status === "fulfilled") setHealth(b.value);
-      if (c.status === "fulfilled") setLeadOverview(c.value);
+      if (c.status === "fulfilled" && c.value) setLeadOverview(c.value);
       setError(
         a.status === "rejected" || b.status === "rejected" || c.status === "rejected"
           ? tr(
@@ -655,12 +672,13 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
           : "",
       );
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }
   // Load when entering a section; subsequent updates are explicitly requested.
   useEffect(() => {
     void refresh();
+    return () => refreshController.current?.abort();
   }, [preview, section]);
   const nav: Array<{ key: Section; en: string; zh: string }> = [
     { key: "overview", en: "Overview", zh: "业务总览" },
@@ -750,10 +768,12 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
               <AdminGlyph name="shield" />
               {tr("Private console", "私有后台")}
             </span>
-            <button type="button" onClick={() => void refresh()} disabled={loading || preview}>
-              <AdminGlyph name="refresh" />
-              {loading ? tr("Refreshing", "刷新中") : tr("Refresh", "刷新数据")}
-            </button>
+            {section === "overview" && (
+              <button type="button" onClick={() => void refresh()} disabled={loading || preview}>
+                <AdminGlyph name="refresh" />
+                {loading ? tr("Refreshing", "刷新中") : tr("Refresh", "刷新数据")}
+              </button>
+            )}
           </div>
         </div>
         <header className="adminHeading">
@@ -796,8 +816,8 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
                               "管理用户账户、连接设备、用量配额和成本。",
                             )
                           : tr(
-                              "Keep the service stable, with evidence rather than guesswork.",
-                              "以真实基础设施指标及时识别服务问题。",
+                              "Track registration, conversion, payments and business failures.",
+                              "查看注册、转化、支付和业务异常。",
                             )}
           </p>
         </header>

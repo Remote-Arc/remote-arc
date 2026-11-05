@@ -1,6 +1,7 @@
 import { applicationJson } from "../platform/application-json.js";
 import { ingestProductEvents } from "../analytics/product-observability.js";
 import { handleServiceHealthMonitoring } from "../analytics/service-health-monitoring.js";
+import { handleServiceMetrics } from "../analytics/service-metrics.js";
 import { handleAdminEvents } from "./admin-events.js";
 import { handleAdminSupportInbox } from "./support-inbox.js";
 import { handleBusinessAnalytics } from "../analytics/business-analytics.js";
@@ -68,6 +69,7 @@ export function adminApiMethods(path: string): readonly string[] | null {
   )
     return ["POST"];
   if (path === "/api/admin/monitoring") return ["GET"];
+  if (path === "/api/admin/metrics") return ["GET"];
   if (path === "/api/admin/events" || path === "/api/admin/events/readiness") return ["GET"];
   if (path === "/api/admin/payments") return ["GET"];
   if (path === "/api/admin/payments/trials") return ["GET"];
@@ -120,6 +122,10 @@ export async function handleAdminServiceRequest(
     if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json")
       return failure("unsupported_media_type", 415);
   }
+  // Only this aggregate-only endpoint accepts the dedicated exporter token.
+  // The handler independently enforces host, method, scope and session/RBAC.
+  if (url.pathname === "/api/admin/metrics")
+    return finish(await handleServiceMetrics(request, env));
   // Never accept an actor/role forwarded by the browser or caller. Resolve
   // the real shared session on every operation, including role revocation.
   const user = await getSessionUser(request, env);

@@ -5,6 +5,7 @@ import { act, create } from "react-test-renderer";
 import { registerHooks } from "node:module";
 import { I18nProvider } from "../src/app/i18n.js";
 import { monitoringPreview } from "../src/features/admin/service-health-preview.js";
+import { sampleServiceMetrics } from "../src/features/admin/service-metrics-model.js";
 import { groupIncidents } from "../src/features/admin/service-health-model.js";
 const css = registerHooks({
   resolve(specifier, context, next) {
@@ -30,8 +31,20 @@ const original = {
 (globalThis as any).window = { location: (globalThis as any).location };
 (globalThis as any).document = { documentElement: { lang: "en" } };
 const requests: { url: string; resolve: (response: Response) => void }[] = [];
-globalThis.fetch = async (input) =>
-  new Promise<Response>((resolve) => requests.push({ url: String(input), resolve }));
+globalThis.fetch = async (input) => {
+  const url = new URL(String(input), "https://admin.remotearc.app");
+  if (url.pathname === "/api/admin/analytics")
+    return Response.json({ error: "BUSINESS_ANALYTICS_UNAVAILABLE" }, { status: 503 });
+  if (url.pathname === "/api/admin/metrics")
+    return Response.json(
+      sampleServiceMetrics(
+        Number(url.searchParams.get("hours") || 24),
+        url.searchParams.get("domain") || "",
+        true,
+      ),
+    );
+  return new Promise<Response>((resolve) => requests.push({ url: String(input), resolve }));
+};
 let root: any;
 const tree = () => JSON.stringify(root.toJSON());
 const answer = async (index: number, body: unknown, status = 200) =>
@@ -56,7 +69,12 @@ try {
   const stale = monitoringPreview();
   stale.summary.total = 999;
   await answer(0, stale);
-  assert(!tree().includes("999"), "Stale summaries cannot replace the selected period");
+  const summary = root.root
+    .findByProps({ className: "healthMetrics" })
+    .findAllByType("strong")
+    .map((node: any) => node.children.join(""));
+  assert.equal(summary[0], "27");
+  assert(!summary.includes("999"), "Stale summaries cannot replace the selected period");
   const cards = () => root.root.findAllByProps({ className: "healthIssueSummary" });
   await act(async () => cards()[0].props.onClick());
   const firstDetail = requests.length - 1;

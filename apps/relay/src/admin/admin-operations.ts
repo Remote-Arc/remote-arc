@@ -13,6 +13,7 @@ export type OpsEnv = {
   FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
   CF_BILLING_READ_TOKEN?: string;
   CF_BILLING_ACCOUNT_ID?: string;
+  ADMIN_METRICS_TOKEN?: string;
   /** JSON array of operator-verified official plugin OAuth client IDs; never client names. */
   PUBLIC_PLUGIN_OAUTH_CLIENT_IDS?: string;
 };
@@ -68,6 +69,7 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
     return jsonError((error as Error).message, 400);
   }
   const from = new Date(Date.now() - 7 * 86400_000).toISOString();
+  const includeAuditTotals = url.searchParams.get("auditTotals") !== "0";
   const [
     userPage,
     deviceRows,
@@ -108,9 +110,11 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
       total: number;
     }>(),
     env.DB.prepare(
-      `SELECT COUNT(*) AS count,
+      includeAuditTotals
+        ? `SELECT COUNT(*) AS count,
       SUM(CASE WHEN created_at>=?1 THEN 1 ELSE 0 END) AS last7d
-      FROM audit_events`,
+      FROM audit_events`
+        : "SELECT NULL AS count,COUNT(*) AS last7d FROM audit_events WHERE created_at>=?1",
     )
       .bind(from)
       .first<{ count: number; last7d: number }>(),
@@ -177,7 +181,7 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
         users: totalUsers?.total || 0,
         devices: totalDevices?.total || 0,
         online: extended.filter((x) => x.online).length,
-        auditRows: auditSummary?.count || 0,
+        auditRows: includeAuditTotals ? auditSummary?.count || 0 : null,
         auditLast7d: auditSummary?.last7d || 0,
         monthlyCalls: totalMonthlyCalls?.calls || 0,
         teams: teamCount?.total || 0,

@@ -227,6 +227,29 @@ export function ArcBillingPanel() {
     : "";
   const near = (used: number, limit?: number | null) => limit != null && used >= limit * 0.8,
     unlimited = data.plans.find(isConnectOnlyPlan);
+  const overflow = data.usage.freeOverflow,
+    trialEnd = overflow?.trial
+      ? new Date(overflow.trial.endsAt).toLocaleDateString(locale, {
+          month: "short",
+          day: "numeric",
+        })
+      : "";
+  const overflowText = !overflow
+    ? ""
+    : overflow.trial?.active
+      ? tr(
+          `Unlimited trial · full speed until ${trialEnd}`,
+          `Unlimited 试用中 · ${trialEnd} 前保持全速`,
+        )
+      : overflow.trial
+        ? tr(
+            `Slow lane · ${overflow.slowLaneCallsPerMinute} calls per minute until the reset`,
+            `慢速通道 · 重置前每分钟 ${overflow.slowLaneCallsPerMinute} 次`,
+          )
+        : tr(
+            `Your next call starts a ${overflow.trialDays}-day Unlimited trial`,
+            `下一次调用将开启 ${overflow.trialDays} 天 Unlimited 试用`,
+          );
   const paid = data.plan.monthlyPriceCents > 0,
     connect = isConnectOnlyPlan(data.plan),
     subscription = data.subscriptions.find(
@@ -519,6 +542,7 @@ export function ArcBillingPanel() {
           {data.usage.limit !== null && resetText && (
             <small>{tr("Resets ", "重置于 ") + resetText}</small>
           )}
+          {overflowText && <small>{overflowText}</small>}
         </div>
         {data.transfer && (
           <div className="raSettingsSurface">
@@ -567,18 +591,20 @@ export function ArcBillingPanel() {
       ) : !paid ? (
         <section className="raSettingsSurface raBillingNotice">
           <h3>
-            {near(data.usage.used, data.usage.limit) ||
-            near(data.transfer?.used ?? 0, data.transfer?.limit)
-              ? tr("You're close to this month's Free limits", "本月 Free 额度即将用完")
-              : tr("Need more room?", "需要更多额度？")}
+            {overflow
+              ? tr("Keep your agents at full speed", "让你的 agent 保持全速")
+              : near(data.usage.used, data.usage.limit) ||
+                  near(data.transfer?.used ?? 0, data.transfer?.limit)
+                ? tr("You're close to this month's Free limits", "本月 Free 额度即将用完")
+                : tr("Need more room?", "需要更多额度？")}
           </h3>
           <p>
             {(resetText
               ? tr(`Free allowances renew ${resetText}. `, `Free 额度将于 ${resetText} 恢复。`)
               : "") +
               tr(
-                `Connect Unlimited${unlimited ? " (US$" + unlimited.monthlyPriceCents / 100 + "/month)" : ""} removes the monthly call and file-transfer limits and the 2-computer limit. Plus adds Arc-hosted AI with monthly Credits.`,
-                `Connect Unlimited${unlimited ? "（US$" + unlimited.monthlyPriceCents / 100 + "/月）" : ""}取消每月调用次数、文件传输量和 2 台电脑的限制；Plus 还包含 Arc 托管 AI 与月度 Credits。`,
+                `Connect Unlimited${unlimited ? " (US$" + unlimited.monthlyPriceCents / 100 + "/month, about US$" + (unlimited.monthlyPriceCents / 3000).toFixed(2) + " a day)" : ""} keeps your agents running at full speed all month: no call cap, no slow lane, unlimited file transfer and computers. Plus adds Arc-hosted AI with monthly Credits.`,
+                `Connect Unlimited${unlimited ? "（US$" + unlimited.monthlyPriceCents / 100 + "/月，约每天 US$" + (unlimited.monthlyPriceCents / 3000).toFixed(2) + "）" : ""}让你的 agent 整月全速运行：不限调用次数、没有慢速通道，文件传输与电脑数量都不限；Plus 还包含 Arc 托管 AI 与月度 Credits。`,
               )}
           </p>
           <div className="raBillingActions">

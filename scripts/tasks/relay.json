@@ -58,6 +58,7 @@
       ["tsx", "scripts/device-pause-test.ts"],
       ["tsx", "scripts/scalability-guardrails-test.ts"],
       ["tsx", "scripts/admin-operations-test.ts"],
+      ["tsx", "scripts/admin-query-performance-test.ts"],
       ["tsx", "scripts/admin-user-activation-test.ts"],
       ["tsx", "scripts/admin-usage-insights-test.ts"],
       ["tsx", "scripts/engagement-smoke.mjs"],
@@ -146,7 +147,8 @@
       ["tsx", "scripts/product-events-test.ts"],
       ["tsx", "scripts/business-analytics-test.ts"],
       ["tsx", "scripts/error-code-index.ts", "--check"],
-      ["tsx", "scripts/service-health-monitoring-test.ts"]
+      ["tsx", "scripts/service-health-monitoring-test.ts"],
+      ["tsx", "scripts/service-metrics-test.ts"]
     ]
   }
 }

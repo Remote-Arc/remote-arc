@@ -1,0 +1,206 @@
+.serviceMetricPanel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.serviceMetricTotals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--health-line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--health-line);
+  gap: 1px;
+}
+.serviceMetricTotals > div {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px;
+  background: var(--panel, #18181b);
+}
+.serviceMetricTotals span {
+  font-size: 11px;
+  color: var(--health-muted);
+}
+.serviceMetricTotals strong {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 600px) {
+  .serviceMetricTotals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .serviceMetricTotals > div {
+    padding: 15px;
+  }
+  .serviceMetricTotals strong {
+    font-size: 22px;
+  }
+}
+.serviceMetricHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.serviceMetricHeading h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+.serviceMetricHeading p,
+.metricChart figcaption p {
+  margin: 0;
+  color: var(--health-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.serviceMetricHeading a {
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.serviceMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.metricChart {
+  margin: 0;
+  padding: 20px 18px 10px;
+  background: var(--panel, #18181b);
+  border: 1px solid var(--health-line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.metricChart h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.metricChartValues {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 15px;
+  row-gap: 8px;
+  margin: 18px 0 8px;
+  font-size: 11px;
+  min-height: 28px;
+}
+.metricChartValues span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--health-muted);
+}
+.metricChartValues strong {
+  color: var(--text, #eee);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.metricChartValues i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--series-color);
+}
+.metricChartValues small {
+  color: var(--health-muted);
+  font-size: 10px;
+  margin-left: auto;
+}
+.metricPlot {
+  width: 100%;
+  min-width: 0;
+}
+.metricPlot svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  outline-offset: 4px;
+}
+.metricPlot text {
+  fill: var(--health-muted);
+  font-size: 10px;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.metricGridline {
+  stroke: var(--health-line);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.metricCrosshair {
+  stroke: var(--health-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.metricDataTable {
+  font-size: 12px;
+  color: var(--health-muted);
+}
+.metricDataTable > summary {
+  padding: 6px 0;
+}
+.metricDataTable > div {
+  overflow-x: auto;
+  margin-top: 12px;
+  border: 1px solid var(--health-line);
+  border-radius: 10px;
+}
+.metricDataTable table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.metricDataTable td,
+.metricDataTable th {
+  padding: 9px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--health-line);
+}
+.metricDataTable td:first-child,
+.metricDataTable th:first-child {
+  text-align: left;
+}
+.serviceMetricsEmpty {
+  padding: 65px 20px;
+  border: 1px solid var(--health-line);
+  border-radius: 12px;
+  text-align: center;
+  color: var(--health-muted);
+  font-size: 13px;
+}
+@media (max-width: 900px) {
+  .serviceMetricGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 540px) {
+  .metricChart {
+    padding: 16px 10px 8px;
+  }
+  .serviceMetricHeading {
+    align-items: flex-start;
+  }
+  .serviceMetricHeading h2 {
+    font-size: 18px;
+  }
+  .serviceMetricHeading a {
+    padding: 8px;
+  }
+  .metricChartValues {
+    column-gap: 12px;
+  }
+  .metricChartValues small {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}

@@ -480,7 +480,13 @@
     padding: 16px;
   }
   .healthFilters label {
-    flex: 1;
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+  .healthFilters label:nth-of-type(3),
+  .healthFilters .healthAdvanced {
+    flex-basis: 100%;
+    margin-left: 0;
   }
   .healthFilters select {
     min-width: 0;

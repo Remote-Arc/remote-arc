@@ -80,15 +80,17 @@ export async function listAdminUsers(
   ];
   // Source ledgers are intentionally separate from charged calls and login/page views.
   // Device audit success proves an operation, not completion of an end-to-end goal.
-  const cte = (credits: boolean) => `WITH successful_use AS (
-    SELECT user_id,created_at AS at FROM audit_events WHERE event_type='mcp.tool_call' AND success=1 AND device_id IS NOT NULL AND (outcome IS NULL OR outcome='allowed')
-    UNION ALL SELECT user_id,updated_at FROM app_calls WHERE status='succeeded'
-    UNION ALL SELECT user_id,updated_at FROM arc_chat_runs WHERE status='succeeded'
-    UNION ALL SELECT user_id,occurred_at FROM product_events WHERE source='server' AND outcome='succeeded' AND name IN ('device.tool.completed','app.call.succeeded','task.run.succeeded')
-  ), success_summary AS (
+  const cte = (credits: boolean) => `WITH candidates AS MATERIALIZED (
+    SELECT * FROM users WHERE email LIKE ?3 ESCAPE '\\' OR COALESCE(name,'') LIKE ?3 ESCAPE '\\'
+  ), successful_use AS (
+    SELECT user_id,created_at AS at FROM audit_events WHERE user_id IN (SELECT id FROM candidates) AND event_type='mcp.tool_call' AND success=1 AND device_id IS NOT NULL AND (outcome IS NULL OR outcome='allowed')
+    UNION ALL SELECT user_id,updated_at FROM app_calls WHERE user_id IN (SELECT id FROM candidates) AND status='succeeded'
+    UNION ALL SELECT user_id,updated_at FROM arc_chat_runs WHERE user_id IN (SELECT id FROM candidates) AND status='succeeded'
+    UNION ALL SELECT user_id,occurred_at FROM product_events WHERE user_id IN (SELECT id FROM candidates) AND source='server' AND outcome='succeeded' AND name IN ('device.tool.completed','app.call.succeeded','task.run.succeeded')
+  ), success_summary AS MATERIALIZED (
     SELECT user_id,MIN(at) first_success_at,MAX(at) last_success_at,COUNT(DISTINCT substr(at,1,10)) successful_days
     FROM successful_use WHERE at<=?2 GROUP BY user_id
-  ), facts AS (SELECT u.id,u.email,u.name,u.created_at,u.role,u.plan,
+  ), facts AS MATERIALIZED (SELECT u.id,u.email,u.name,u.created_at,u.role,u.plan,
     CASE WHEN u.google_sub LIKE 'email:%' THEN 'email_only' ELSE 'google' END AS linked_login,
     (SELECT COALESCE(NULLIF(c.client_name,''),'MCP client') FROM oauth_tokens t LEFT JOIN oauth_clients c ON c.client_id=t.client_id
       WHERE t.user_id=u.id AND t.resource=?11 ORDER BY t.created_at,t.client_id LIMIT 1) first_mcp_client,
@@ -112,8 +114,8 @@ export async function listAdminUsers(
     (SELECT MAX(created_at) FROM audit_events a WHERE a.user_id=u.id) last_activity,
     EXISTS(SELECT 1 FROM plan_grants g WHERE g.user_id=u.id AND g.plan='plus' AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at>?2)) has_plus_grant,
     ss.first_success_at,ss.last_success_at,COALESCE(ss.successful_days,0) successful_days
-    FROM users u LEFT JOIN user_monthly_usage um ON um.user_id=u.id AND um.month_key=?1 LEFT JOIN success_summary ss ON ss.user_id=u.id
-  ), staged AS (SELECT *,CASE
+    FROM candidates u LEFT JOIN user_monthly_usage um ON um.user_id=u.id AND um.month_key=?1 LEFT JOIN success_summary ss ON ss.user_id=u.id
+  ), staged AS MATERIALIZED (SELECT *,CASE
     WHEN successful_days>=2 AND last_success_at>=?9 THEN 'returning_active'
     WHEN first_success_at IS NOT NULL THEN 'activated'
     WHEN first_computer_online_at IS NOT NULL THEN 'online_no_success'
@@ -132,27 +134,46 @@ export async function listAdminUsers(
     activation_desc: `activation_stage='history_unknown',CASE activation_stage ${ACTIVATION_STAGES.map((stage, index) => `WHEN '${stage.id}' THEN ${index}`).join(" ")} END DESC,created_at DESC,id`,
   }[input.sort];
   async function read(credits: boolean) {
-    const [rows, counts] = await Promise.all([
-      db
-        .prepare(
-          cte(credits) +
-            ` SELECT * FROM matched WHERE ?4='all' OR activation_stage=?4 ORDER BY ${order} LIMIT ?5 OFFSET ?6`,
-        )
-        .bind(...args)
-        .all<AdminUserRow>(),
-      db
+    type CountedUser = AdminUserRow & { [key: `__activation_${number}`]: number };
+    const aliases = ACTIVATION_STAGES.map((_, index) => `__activation_${index}` as const);
+    // Materialized facts prevent correlated evidence lookups being re-evaluated
+    // for each facet. Window counts preserve global facets before pagination.
+    const rows = await db
+      .prepare(
+        cte(credits) +
+          `,
+      counted AS (SELECT *,${ACTIVATION_STAGES.map((stage, index) => `SUM(activation_stage='${stage.id}') OVER() ${aliases[index]}`).join(",")} FROM matched)
+      SELECT * FROM counted WHERE ?4='all' OR activation_stage=?4 ORDER BY ${order} LIMIT ?5 OFFSET ?6`,
+      )
+      .bind(...args)
+      .all<CountedUser>();
+    const activationCounts = Object.fromEntries(
+      ACTIVATION_STAGES.map((stage, index) => [
+        stage.id,
+        Number(rows.results[0]?.[aliases[index]!] || 0),
+      ]),
+    );
+    // An empty selected stage / out-of-range page has no row carrying counts.
+    // Preserve the old global-facet contract with a fallback only in that case.
+    if (!rows.results.length && (input.page > 0 || input.stage !== "all")) {
+      const counts = await db
         .prepare(
           cte(credits) +
             " SELECT activation_stage,COUNT(*) count FROM matched GROUP BY activation_stage",
         )
         .bind(...args)
-        .all<{ activation_stage: string; count: number }>(),
-    ]);
-    const activationCounts = Object.fromEntries(ACTIVATION_STAGES.map((stage) => [stage.id, 0]));
-    for (const row of counts.results || [])
-      activationCounts[row.activation_stage] = Number(row.count);
+        .all<{ activation_stage: string; count: number }>();
+      for (const row of counts.results) activationCounts[row.activation_stage] = Number(row.count);
+    }
     return {
-      users: rows.results || [],
+      users: rows.results.map(
+        (row) =>
+          Object.fromEntries(
+            Object.entries(row).filter(
+              ([key]) => !aliases.includes(key as (typeof aliases)[number]),
+            ),
+          ) as AdminUserRow,
+      ),
       activationCounts,
       filteredTotal:
         input.stage === "all"

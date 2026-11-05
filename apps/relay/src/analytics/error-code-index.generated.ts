@@ -1155,6 +1155,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "analytics/monitor.ts",
   "analytics/product-observability.ts",
   "analytics/service-health-monitoring.ts",
+  "analytics/service-metrics.ts",
   "browser/runner-attention.ts",
   "followups/user-followups.ts"
  ],
@@ -1230,7 +1231,8 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  ],
  "INVALID_FILTER": [
   "admin/admin-events.ts",
-  "analytics/service-health-monitoring.ts"
+  "analytics/service-health-monitoring.ts",
+  "analytics/service-metrics.ts"
  ],
  "INVALID_GOAL_STATE": [
   "mcp/mcp-errors.ts"
@@ -1383,6 +1385,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "analytics/business-analytics.ts",
   "analytics/product-observability.ts",
   "analytics/service-health-monitoring.ts",
+  "analytics/service-metrics.ts",
   "arc/arc-admin-billing.ts",
   "arc/arc-app-connections.ts",
   "arc/arc-attachments.ts",
@@ -1399,6 +1402,9 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "followups/followup-batches.ts",
   "followups/user-followups.ts",
   "skills/cloud-skills.ts"
+ ],
+ "METRICS_UNAVAILABLE": [
+  "analytics/service-metrics.ts"
  ],
  "MISSING_OAUTH_CODE": [
   "apps/apps.ts",
@@ -1528,6 +1534,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "admin/admin-payments.ts",
   "analytics/product-observability.ts",
   "analytics/service-health-monitoring.ts",
+  "analytics/service-metrics.ts",
   "apps/apps.ts",
   "arc/arc-app-connections.ts",
   "arc/arc-chat.ts",
@@ -1777,6 +1784,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "analytics/monitor.ts",
   "analytics/product-observability.ts",
   "analytics/service-health-monitoring.ts",
+  "analytics/service-metrics.ts",
   "apps/apps.ts",
   "apps/google-app-beta.ts",
   "arc/arc-chat.ts",

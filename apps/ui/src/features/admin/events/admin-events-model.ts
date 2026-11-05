@@ -66,7 +66,7 @@ export type Analytics = {
     flowSince: string | null;
     activityCompleteFrom: string | null;
     oldestEvent: string | null;
-    recordedEvents: number;
+    recordedEvents: number | null;
     includesInternalAccounts: boolean;
   };
 };

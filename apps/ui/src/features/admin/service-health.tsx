@@ -12,6 +12,7 @@ import {
   type MonitoringSnapshot,
 } from "./service-health-model.js";
 import "./service-health.css";
+import { ServiceMetricsPanel } from "./service-metrics-panel.js";
 const date = (value: string | null | undefined) => (value ? new Date(value).toLocaleString() : "—");
 async function read<T>(path: string): Promise<T> {
   const response = await fetch(path, {
@@ -43,6 +44,7 @@ export function ServiceHealth({
     [data, setData] = useState<MonitoringSnapshot | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [metricsRevision, setMetricsRevision] = useState(0);
   const [hours, setHours] = useState("24"),
     [domain, setDomain] = useState(""),
     [category, setCategory] = useState(""),
@@ -181,6 +183,7 @@ export function ServiceHealth({
           onClick={() => {
             reload();
             void load();
+            setMetricsRevision((value) => value + 1);
           }}
         >
           {busy || loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")} ↻
@@ -319,6 +322,12 @@ export function ServiceHealth({
           {error}
         </p>
       )}
+      <ServiceMetricsPanel
+        hours={Number(hours)}
+        domain={domain}
+        revision={metricsRevision}
+        preview={preview}
+      />
       <div className="healthMetrics">
         {[
           { label: tr("Failure observations", "失败记录"), value: data?.summary.total },

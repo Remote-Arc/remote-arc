@@ -257,7 +257,8 @@ export function requestEventRoute(request: Request) {
   if (
     method !== "OPTIONS" &&
     !["/api/product-events", "/api/monitor", "/api/device/heartbeat"].includes(path) &&
-    !path.startsWith("/api/admin/monitoring")
+    !path.startsWith("/api/admin/monitoring") &&
+    path !== "/api/admin/metrics"
   ) {
     const families = [
       ["/api/billing", "billing"],

@@ -233,6 +233,11 @@ for (const [index, status] of ["succeeded", "failed", "cancelled", "working", "u
 const data = await businessAnalytics(db, 7, now),
   scene = (id: string) => data.scenes.find((item) => item.id === id)!;
 assert.equal(data.summary?.newUsers, 2, "Reviewer demo account is not real acquisition");
+assert.equal(
+  data.coverage.recordedEvents,
+  null,
+  "Unused lifetime event totals are unknown, not scanned or invented",
+);
 assert.equal(scene("login").total, 4);
 assert.equal(scene("login").completed, 2);
 assert.equal(scene("login").rate, 0.5);

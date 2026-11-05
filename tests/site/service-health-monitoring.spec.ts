@@ -1,8 +1,18 @@
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { monitoringPreview } from "../../apps/ui/src/features/admin/service-health-preview";
+import { sampleServiceMetrics } from "../../apps/ui/src/features/admin/service-metrics-model";
 async function mount(page: Page, fail = false) {
   const requests: string[] = [];
+  await page.route(/\/api\/admin\/metrics(?:\?|$)/, (route) => {
+    const url = new URL(route.request().url());
+    return route.fulfill({
+      json: sampleServiceMetrics(
+        Number(url.searchParams.get("hours") || 24),
+        url.searchParams.get("domain") || "",
+      ),
+    });
+  });
   await page.route(/\/api\/admin\/monitoring(?:\?|$)/, async (route) => {
     requests.push(route.request().url());
     const url = new URL(route.request().url());

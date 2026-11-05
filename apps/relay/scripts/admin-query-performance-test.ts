@@ -1,0 +1,90 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { ADMIN, createWorkerFixture } from "./worker-fixture.js";
+
+const f = createWorkerFixture();
+f.addUser("query-admin", "admin");
+const cookie = await f.sessionCookie("query-admin");
+const now = new Date();
+const recent = new Date(now.getTime() - 86400000).toISOString();
+const old = new Date(now.getTime() - 8 * 86400000).toISOString();
+for (const [id, at] of [
+  ["recent", recent],
+  ["old", old],
+])
+  f.sql
+    .prepare(
+      `INSERT INTO audit_events(id,user_id,device_id,event_type,success,created_at)
+    VALUES(?, 'query-admin','fixture-device','mcp.tool_call',1,?)`,
+    )
+    .run(id!, at!);
+
+const indexes = [
+  "audit_success_user_time",
+  "app_calls_success_user_time",
+  "arc_runs_success_user_time",
+  "product_success_user_time",
+];
+const before = f.sql.prepare("SELECT * FROM audit_events ORDER BY id").all();
+for (const name of indexes) f.sql.exec("DROP INDEX " + name);
+const migration = fs.readFileSync(
+  new URL("../migrations/0078_admin_query_indexes.sql", import.meta.url),
+  "utf8",
+);
+f.sql.exec(migration);
+f.sql.exec(migration);
+assert.deepEqual(
+  f.sql.prepare("SELECT * FROM audit_events ORDER BY id").all(),
+  before,
+  "Applying the indexes to populated legacy rows, twice, preserves stored values",
+);
+const predicates = [
+  "SELECT created_at FROM audit_events WHERE user_id='query-admin' AND event_type='mcp.tool_call' AND success=1 AND device_id IS NOT NULL AND (outcome IS NULL OR outcome='allowed') AND created_at<'2027'",
+  "SELECT updated_at FROM app_calls WHERE user_id='query-admin' AND status='succeeded' AND updated_at<'2027'",
+  "SELECT updated_at FROM arc_chat_runs WHERE user_id='query-admin' AND status='succeeded' AND updated_at<'2027'",
+  "SELECT occurred_at FROM product_events WHERE user_id='query-admin' AND source='server' AND outcome='succeeded' AND name IN ('device.tool.completed','app.call.succeeded','task.run.succeeded') AND occurred_at<'2027'",
+];
+for (const [index, query] of predicates.entries()) {
+  const plan = f.sql.prepare("EXPLAIN QUERY PLAN " + query).all();
+  assert(
+    JSON.stringify(plan).includes(indexes[index]!),
+    "SQLite uses the intended successful-evidence index: " + indexes[index],
+  );
+}
+
+const queries: string[] = [];
+const original = f.env.DB;
+f.env.DB = {
+  ...original,
+  prepare(query: string) {
+    queries.push(query);
+    return original.prepare(query);
+  },
+} as D1Database;
+const response = await f.call(ADMIN + "/api/admin/operations?auditTotals=0", {
+  headers: { cookie },
+});
+assert.equal(response.status, 200);
+const bounded = (await response.json()) as any;
+assert.equal(bounded.totals.auditRows, null, "An omitted lifetime total is unknown, never zero");
+assert.equal(bounded.totals.auditLast7d, 1);
+const audit = queries.filter((query) => query.includes("AS last7d"));
+assert.equal(audit.length, 1);
+const plan = f.sql
+  .prepare("EXPLAIN QUERY PLAN " + audit[0]!)
+  .all(new Date(now.getTime() - 7 * 86400000).toISOString());
+assert(
+  JSON.stringify(plan).includes("SEARCH"),
+  "The seven-day audit count performs a bounded index search",
+);
+const legacy = await f.call(ADMIN + "/api/admin/operations", { headers: { cookie } });
+assert.equal(legacy.status, 200);
+assert.equal(
+  ((await legacy.json()) as any).totals.auditRows,
+  2,
+  "Existing callers retain lifetime totals",
+);
+f.sql.close();
+console.log(
+  "PASS: populated/rerunnable index migration, actual indexed plans, bounded audit reads and legacy Admin totals",
+);

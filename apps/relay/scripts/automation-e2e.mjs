@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import WebSocket from "ws";
+import { flattenDiagnosticMessageText, parseConfigFileTextToJson } from "typescript";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../..");
@@ -167,7 +168,11 @@ const { privateKey } = generateKeyPairSync("rsa", {
   privateKeyEncoding: { type: "pkcs8", format: "pem" },
 });
 
-const baseConfig = JSON.parse(fs.readFileSync(repo + "/apps/relay/wrangler.jsonc", "utf8"));
+const configPath = path.join(relayDir, "wrangler.jsonc");
+const parsedConfig = parseConfigFileTextToJson(configPath, fs.readFileSync(configPath, "utf8"));
+if (parsedConfig.error)
+  throw new Error(flattenDiagnosticMessageText(parsedConfig.error.messageText, "\n"));
+const baseConfig = parsedConfig.config;
 assert(
   baseConfig.triggers?.crons?.includes("* * * * *"),
   "Production must register the every-minute task Cron tested below",

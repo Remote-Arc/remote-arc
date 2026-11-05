@@ -68,7 +68,14 @@ export function ArcPublicPricing({
             </div>
             <div className="hostedPrice">
               <strong>US${p.monthlyPriceCents / 100}</strong>
-              <span>/ {tr("month", "月")}</span>
+              <span>
+                / {tr("month", "月")}
+                {isConnectOnlyPlan(p) &&
+                  tr(
+                    ` · about US$${(p.monthlyPriceCents / 3000).toFixed(2)} a day`,
+                    ` · 约每天 US$${(p.monthlyPriceCents / 3000).toFixed(2)}`,
+                  )}
+              </span>
             </div>
             <p className="planDescription">
               {p.id === "free"

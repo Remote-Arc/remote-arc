@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { registeredToolNames } from "./runtime-surface.mjs";
 
 const relaySource = ["mcp/mcp.ts", "mcp/shared-tab-mcp.ts"]
   .map((file) => fs.readFileSync(new URL("../apps/relay/src/" + file, import.meta.url), "utf8"))
@@ -8,13 +9,7 @@ const submission = JSON.parse(
 );
 const plugin = JSON.parse(fs.readFileSync(new URL("../plugin.json", import.meta.url), "utf8"));
 
-const registered = new Set(
-  [
-    ...relaySource.matchAll(
-      /(?:server\.registerTool\(|registerMcpTool\(server,)\s*[\r\n\t ]*["']([^"']+)["']/g,
-    ),
-  ].map((match) => match[1]),
-);
+const registered = registeredToolNames(relaySource);
 
 const expected = [
   "list_devices",

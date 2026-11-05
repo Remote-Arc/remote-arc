@@ -161,6 +161,10 @@
       ["node", "tools/saas/economics-test.mjs"],
       ["node", "tools/saas/cli.mjs", "--check"]
     ],
+    "test:runtime-surface": [
+      ["node", "scripts/runtime-surface-test.mjs"],
+      ["node", "scripts/runtime-surface-check.mjs"]
+    ],
     "check": [
       ["pnpm", "format:check"],
       ["pnpm", "lint"],

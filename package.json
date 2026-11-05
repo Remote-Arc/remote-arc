@@ -55,7 +55,7 @@
     "docs:tools:check": "pnpm docs:tools --check",
     "docs:architecture:check": "node scripts/architecture-doc-check.mjs",
     "apps:inventory": "pnpm --filter @remotearc/relay exec tsx ../../scripts/app-tool-inventory.ts",
-    "test:runtime-surface": "node scripts/runtime-surface-check.mjs",
+    "test:runtime-surface": "node scripts/run-task.mjs root test:runtime-surface",
     "release:sync": "node scripts/sync-release-docs.mjs --write",
     "release:check": "node scripts/sync-release-docs.mjs --check",
     "release:notes": "node scripts/sync-release-docs.mjs --notes",

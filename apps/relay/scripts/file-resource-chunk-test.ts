@@ -40,9 +40,6 @@ for (const invalid of [
   { ...direct, encoding: "utf8" },
   { ...direct, file_revision: "" },
 ]) {
-  assert.throws(
-    () => fileResourceChunk(invalid),
-    /valid binary file resource descriptor/,
-  );
+  assert.throws(() => fileResourceChunk(invalid), /valid binary file resource descriptor/);
 }
 console.log("File resource binary result normalization: passed");

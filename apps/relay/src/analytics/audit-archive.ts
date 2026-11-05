@@ -56,8 +56,14 @@ export async function archiveOldAudit(
   }
   const retentionDays = daysToKeep(env);
   const cutoff = new Date(at.getTime() - retentionDays * 86_400_000).toISOString();
-  const batchRows = Math.min(Math.max(1, options.batchRows ?? ARCHIVE_BATCH_ROWS), ARCHIVE_BATCH_ROWS);
-  const maxBatches = Math.min(Math.max(1, options.maxBatches ?? ARCHIVE_MAX_BATCHES), ARCHIVE_MAX_BATCHES);
+  const batchRows = Math.min(
+    Math.max(1, options.batchRows ?? ARCHIVE_BATCH_ROWS),
+    ARCHIVE_BATCH_ROWS,
+  );
+  const maxBatches = Math.min(
+    Math.max(1, options.maxBatches ?? ARCHIVE_MAX_BATCHES),
+    ARCHIVE_MAX_BATCHES,
+  );
   let archived = 0;
   let batches = 0;
 
@@ -67,7 +73,9 @@ export async function archiveOldAudit(
               request_id, client_id, grant_id, outcome, created_at
        FROM audit_events WHERE created_at < ?1
        ORDER BY created_at ASC, id ASC LIMIT ?2`,
-    ).bind(cutoff, batchRows).all<ArchivedAuditRow>();
+    )
+      .bind(cutoff, batchRows)
+      .all<ArchivedAuditRow>();
     const rows = result.results || [];
     if (!rows.length) break;
     // Include the exact IDs in the immutable object identity to avoid a
@@ -91,10 +99,18 @@ export async function archiveOldAudit(
     } else {
       await env.AUDIT_ARCHIVE.put(key, bytes, {
         httpMetadata: { contentType: "application/x-ndjson" },
-        customMetadata: { sha256: digest, count: String(rows.length), format: "remotearc.audit.v1" },
+        customMetadata: {
+          sha256: digest,
+          count: String(rows.length),
+          format: "remotearc.audit.v1",
+        },
       });
       const verified = await env.AUDIT_ARCHIVE.head(key);
-      if (!verified || verified.size !== bytes.byteLength || verified.customMetadata?.sha256 !== digest) {
+      if (
+        !verified ||
+        verified.size !== bytes.byteLength ||
+        verified.customMetadata?.sha256 !== digest
+      ) {
         throw new Error("R2 archive verification failed; keeping all D1 rows: " + key);
       }
     }
@@ -103,9 +119,9 @@ export async function archiveOldAudit(
     for (let start = 0; start < rows.length; start += 80) {
       const ids = rows.slice(start, start + 80).map((row) => row.id);
       const params = ids.map((_, index) => "?" + (index + 2)).join(",");
-      await env.DB.prepare(
-        `DELETE FROM audit_events WHERE created_at < ?1 AND id IN (${params})`,
-      ).bind(cutoff, ...ids).run();
+      await env.DB.prepare(`DELETE FROM audit_events WHERE created_at < ?1 AND id IN (${params})`)
+        .bind(cutoff, ...ids)
+        .run();
     }
     archived += rows.length;
     batches++;

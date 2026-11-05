@@ -4,16 +4,16 @@
 
 Stages describe observed progress. Current connection status remains a separately verified registry snapshot.
 
-| Stage | Evidence |
-| --- | --- |
-| Registered only | No observed MCP token issuance, computer pairing or successful use. This is not a plugin classification. |
-| Plugin connected, no computer | Issued MCP OAuth token with a client ID in the operator-verified plugin allowlist; no computer-pairing history. |
-| MCP connected, no computer | Issued MCP OAuth token; official plugin provenance unverified; no computer-pairing history. |
-| Paired, no online record | Computer pairing has complete observed flow coverage since collection began; no successful WebSocket-upgrade step recorded. Never inferred from `last_seen`. |
-| Reached online, no successful use | Authenticated computer WebSocket upgrade recorded; no successful operation/run evidence found. Does not mean currently online. |
-| Activated | A successful device operation, App operation or Arc run is recorded. This is not proof an entire end-user goal completed. |
-| Returning active user | Successful use on two or more distinct UTC dates, latest within the past seven days. Multiple operations in one day do not count as a return. |
-| History incomplete | Prior computer pairing predates collection or lacks observed flow coverage, or charged calls exist without completion evidence. No claim of “never online/used.” |
+| Stage                             | Evidence                                                                                                                                                         |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Registered only                   | No observed MCP token issuance, computer pairing or successful use. This is not a plugin classification.                                                         |
+| Plugin connected, no computer     | Issued MCP OAuth token with a client ID in the operator-verified plugin allowlist; no computer-pairing history.                                                  |
+| MCP connected, no computer        | Issued MCP OAuth token; official plugin provenance unverified; no computer-pairing history.                                                                      |
+| Paired, no online record          | Computer pairing has complete observed flow coverage since collection began; no successful WebSocket-upgrade step recorded. Never inferred from `last_seen`.     |
+| Reached online, no successful use | Authenticated computer WebSocket upgrade recorded; no successful operation/run evidence found. Does not mean currently online.                                   |
+| Activated                         | A successful device operation, App operation or Arc run is recorded. This is not proof an entire end-user goal completed.                                        |
+| Returning active user             | Successful use on two or more distinct UTC dates, latest within the past seven days. Multiple operations in one day do not count as a return.                    |
+| History incomplete                | Prior computer pairing predates collection or lacks observed flow coverage, or charged calls exist without completion evidence. No claim of “never online/used.” |
 
 Success uses server-side product events, successful device audit operations, `app_calls` and `arc_chat_runs` ledgers. Browser events, login/page views, discovery calls, failed/unknown runs and charged-call totals are not success evidence. Historical retention can remove old records: missing evidence does not establish that a user never performed an action. Browser companions are not computers.
 

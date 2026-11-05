@@ -13,11 +13,7 @@ try {
   for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
     // Tests and docs stay out of the user's download.
     if (["test.mjs", "e2e.mjs", "readme.md"].includes(entry.name)) continue;
-    fs.cpSync(
-      path.join(source, entry.name),
-      path.join(staging, entry.name),
-      { recursive: true },
-    );
+    fs.cpSync(path.join(source, entry.name), path.join(staging, entry.name), { recursive: true });
   }
 
   fs.mkdirSync(path.dirname(output), { recursive: true });
@@ -44,21 +40,21 @@ try {
       if (error?.code !== "ENOENT") throw error;
       // Minimal environments may not provide the zip executable.
       // Python's standard library is a dependency-free packaging fallback.
-      execFileSync("python3", [
-        "-c",
-        "from pathlib import Path; from zipfile import ZipFile, ZIP_DEFLATED; import sys; root=Path(sys.argv[1]); out=Path(sys.argv[2]); z=ZipFile(out, 'w', compression=ZIP_DEFLATED); [(z.write(f, f.relative_to(root).as_posix())) for f in sorted(root.rglob('*')) if f.is_file()]; z.close()",
-        staging,
-        output,
-      ], { stdio: "inherit" });
+      execFileSync(
+        "python3",
+        [
+          "-c",
+          "from pathlib import Path; from zipfile import ZipFile, ZIP_DEFLATED; import sys; root=Path(sys.argv[1]); out=Path(sys.argv[2]); z=ZipFile(out, 'w', compression=ZIP_DEFLATED); [(z.write(f, f.relative_to(root).as_posix())) for f in sorted(root.rglob('*')) if f.is_file()]; z.close()",
+          staging,
+          output,
+        ],
+        { stdio: "inherit" },
+      );
     }
   }
 
-  const manifest = JSON.parse(
-    fs.readFileSync(path.join(source, "manifest.json"), "utf8"),
-  );
-  console.log(
-    `Packaged Remote Arc Browser ${manifest.version} → ${path.relative(root, output)}`,
-  );
+  const manifest = JSON.parse(fs.readFileSync(path.join(source, "manifest.json"), "utf8"));
+  console.log(`Packaged Remote Arc Browser ${manifest.version} → ${path.relative(root, output)}`);
 } finally {
   fs.rmSync(staging, { recursive: true, force: true });
 }

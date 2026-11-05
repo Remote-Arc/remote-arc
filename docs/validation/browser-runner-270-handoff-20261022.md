@@ -20,7 +20,7 @@ Two P0 safety gaps appeared in a read-only CTO review:
 
 ## Unresolved acceptance / limitations
 
-- The control-label/HTML-form heuristic is *not* a universal detector for arbitrary JavaScript network effects. A visually ordinary button can invoke custom JS that sends data. True provider-level exactly-once semantics cannot be guaranteed solely by local MCP hints and DOM classification. Do not advertise universal exactly-once until external identity/effect ledger #279 and conservative action approval are fully qualified.
+- The control-label/HTML-form heuristic is _not_ a universal detector for arbitrary JavaScript network effects. A visually ordinary button can invoke custom JS that sends data. True provider-level exactly-once semantics cannot be guaranteed solely by local MCP hints and DOM classification. Do not advertise universal exactly-once until external identity/effect ledger #279 and conservative action approval are fully qualified.
 - Scope-change approval is enforced at Relay for normal Connect clients. The local Go function's `scope_change_approved` field is an internal transport assertion, not a cryptographic proof against a malicious actor already able to invoke arbitrary local Agent commands.
 - Current task isolation is device-local; account/task binding, existing-profile reuse, cross-device continuation and user handoff (#276) still require separate acceptance.
 - Real Mac visible browser acceptance, 3+ source AI client sessions (ChatGPT / Claude / Cursor or Codex), independent Relay test deployment with `ENABLE_BROWSER_RUNNER=1`, and authorized real ATS job submission #271 are not performed by this handoff.

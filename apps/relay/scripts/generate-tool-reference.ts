@@ -2,10 +2,7 @@ import fs from "node:fs";
 import { z } from "zod";
 import { createRemoteLinkMcp } from "../src/mcp/mcp.js";
 import { APP_CATALOG, APP_OPERATIONS } from "../src/apps/app-catalog.js";
-import {
-  TOOL_COPY,
-  toolGroup,
-} from "../../../packages/docs/src/tool-reference-meta.js";
+import { TOOL_COPY, toolGroup } from "../../../packages/docs/src/tool-reference-meta.js";
 
 // The Go Execution Core owns the local tool contract.
 const coreContract = (file: string) =>
@@ -20,8 +17,7 @@ const localDefinitions: {
   description: string;
   inputSchema: unknown;
 }[] = coreContract("tools.json");
-const toolModes: { safe: string[]; developer: string[] } =
-  coreContract("tool_modes.json");
+const toolModes: { safe: string[]; developer: string[] } = coreContract("tool_modes.json");
 
 // Read tool definitions only. No account, live service, model or device is used.
 const env = {
@@ -75,7 +71,8 @@ const publicTools = await listTools("generic");
 const claudeTools = await listTools("claude");
 const claudeToolNames = new Set(claudeTools.map((tool) => tool.name));
 const claudeAppActions = new Set<string>(
-  claudeTools.filter((tool) => tool.name.startsWith("run_app_"))
+  claudeTools
+    .filter((tool) => tool.name.startsWith("run_app_"))
     .flatMap((tool) => tool.inputSchema.properties.operation.properties.action.enum),
 );
 const unavailableIn = (claudeAvailable: boolean) =>
@@ -125,7 +122,11 @@ const documentedSchema = (schema: any) => {
     ...schema,
     properties: {
       ...schema.properties,
-      operation: { ...operation, properties: { ...operation.properties, action }, "x-remotearc-app-actions": actions.length },
+      operation: {
+        ...operation,
+        properties: { ...operation.properties, action },
+        "x-remotearc-app-actions": actions.length,
+      },
     },
   };
 };
@@ -153,9 +154,7 @@ const localTools = local
     title: tool.name,
     readOnly: readOnly.has(tool.name),
     modes: ["safe", "developer", "full"].filter(
-      (mode) =>
-        tool.name === "remote_arc_status" ||
-        localModes[mode]!.includes(tool.name),
+      (mode) => tool.name === "remote_arc_status" || localModes[mode]!.includes(tool.name),
     ),
     ...metadata(tool.name),
   }))
@@ -165,9 +164,7 @@ const apps = Object.entries(APP_CATALOG)
     provider,
     name: definition.name,
     category: definition.category,
-    operations: APP_OPERATIONS.filter(
-      (operation) => operation.provider === provider,
-    )
+    operations: APP_OPERATIONS.filter((operation) => operation.provider === provider)
       .map((operation) => ({
         name: operation.name,
         description: operation.description,
@@ -203,10 +200,7 @@ for (const [path, value] of outputs) {
   const url = new URL(path, import.meta.url),
     expected = JSON.stringify(value, null, 2) + "\n";
   if (process.argv.includes("--check")) {
-    if (
-      !fs.existsSync(url) ||
-      fs.readFileSync(url, "utf8").replace(/\r\n/g, "\n") !== expected
-    ) {
+    if (!fs.existsSync(url) || fs.readFileSync(url, "utf8").replace(/\r\n/g, "\n") !== expected) {
       changed = true;
       console.error(path + " is stale; run pnpm docs:tools");
     }

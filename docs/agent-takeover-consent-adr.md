@@ -33,16 +33,16 @@ Current project/task scope still determines which records are relevant. Cloud
 transfer and paid target use follow the requested operation and current account
 policy; normal local setup does not enable them.
 
-| Scope | Normal workflow trigger | Automatic action within that request | Outside that request |
-| --- | --- | --- | --- |
-| Installed-client discovery | Inspect known executable/package locations | Optional version/capability diagnostic | Reading private session directories |
-| Session metadata | Project/task inspection or continuation request | Read bounded relevant headers and locate matching records | Unrelated chats or upload |
-| Selected history | Continuation of a selected task | Read retained visible user/assistant/tool items; redact before persistence/diagnostics | Hidden reasoning; unrelated chats; complete-history claims |
-| Workspace | Work on the selected project | Read scoped Git/files/artifacts and record hashes | Destructive Git operations or credentials |
-| Local integration | Normal setup command | Back up and apply supported owned bindings with conflict/version checks | Bypassing provider Hook trust; replacing unrelated config |
-| Target execution | Continue the task using the requested target | Reconcile and continue within current policy/budget | Treating source text as grants; blindly retrying unknown writes |
-| Processes | Task diagnosis requiring current process state | Inspect related process state under current policy | Unrelated process control or memory migration |
-| Cloud sync/export | A requested cloud operation | Transfer the bounded redacted task data permitted by current policy | Background transcript/source mirroring or credential export |
+| Scope                      | Normal workflow trigger                         | Automatic action within that request                                                   | Outside that request                                            |
+| -------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Installed-client discovery | Inspect known executable/package locations      | Optional version/capability diagnostic                                                 | Reading private session directories                             |
+| Session metadata           | Project/task inspection or continuation request | Read bounded relevant headers and locate matching records                              | Unrelated chats or upload                                       |
+| Selected history           | Continuation of a selected task                 | Read retained visible user/assistant/tool items; redact before persistence/diagnostics | Hidden reasoning; unrelated chats; complete-history claims      |
+| Workspace                  | Work on the selected project                    | Read scoped Git/files/artifacts and record hashes                                      | Destructive Git operations or credentials                       |
+| Local integration          | Normal setup command                            | Back up and apply supported owned bindings with conflict/version checks                | Bypassing provider Hook trust; replacing unrelated config       |
+| Target execution           | Continue the task using the requested target    | Reconcile and continue within current policy/budget                                    | Treating source text as grants; blindly retrying unknown writes |
+| Processes                  | Task diagnosis requiring current process state  | Inspect related process state under current policy                                     | Unrelated process control or memory migration                   |
+| Cloud sync/export          | A requested cloud operation                     | Transfer the bounded redacted task data permitted by current policy                    | Background transcript/source mirroring or credential export     |
 
 An explicit `takeover --workspace` command is consent to its documented bounded
 metadata read without another prompt. The current discovery command does not

@@ -15,4 +15,3 @@ Recovery: revoked access must be reconnected. An incomplete/failed read cannot p
 Drive with semantic labels: within the named dialog, select Task and Account, set Maximum messages / Optional provider search, then press Run verification. In Chinese use the translated labels. Verify the Execution receipt section and its source-retrieval check, not the assistant's completion wording.
 
 Regression: pnpm --filter @remotearc/relay test:arc exercises real authenticated API, encryption, dispatch and mocked provider HTTP. pnpm --filter @remotearc/ui test:arc-client checks consent/account reset. No real mailbox is used.
-

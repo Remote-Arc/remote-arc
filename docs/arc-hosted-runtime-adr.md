@@ -13,19 +13,19 @@ Deliver this as an **opt-in hosted execution lane** beside the existing **Connec
 - **Connect:** the user's existing ChatGPT/Claude decides what to do. Existing device/MCP OAuth, local permissions, billing and task behavior must remain unchanged.
 - **Arc:** the user converses inside Remote Arc; our backend pays for/model-proxies reasoning, coordinates authorized app/device tools, keeps durable work state and presents approvals and evidence.
 - **No GPU at launch.** OpenAI/Anthropic APIs or metered Workers AI are model providers; do not assume a ChatGPT subscription covers API cost.
-- Existing goals may already use `controller=hosted` and `planAgentTurn` (OpenAI Responses or Workers AI) for a *narrow, device-centric next-action planner*. Do not mistake this for full hosted Chat. Reuse the permission/lease/evidence concepts, not its current one-decision prompt as a general assistant API.
+- Existing goals may already use `controller=hosted` and `planAgentTurn` (OpenAI Responses or Workers AI) for a _narrow, device-centric next-action planner_. Do not mistake this for full hosted Chat. Reuse the permission/lease/evidence concepts, not its current one-decision prompt as a general assistant API.
 
 ## Existing code surfaces inspected
 
-| Existing surface | Use | Constraint |
-|---|---|---|
-| `apps/relay/src/tasks/agent-planner.ts` | structured device action planner, validates allowed tool list | 7 device-oriented tools; no unified app registry or complete per-token model invoice |
-| `apps/relay/src/tasks/planned-goal-runtime.ts` | checkpointed goal progression, source vs hosted controller, quality checks | does not implement a user-facing conversation or agent-level billing |
-| `apps/relay/src/tasks/automation-store.ts` | fenced leases, revisions, durable audit journal | task and lease are currently user-scoped |
-| `apps/relay/src/tasks/task-scheduler.ts` | cron task execution and health checks | a cron tick is not a perpetual inference process |
-| `apps/relay/src/mcp/mcp.ts` | external AI, approved tools, client scopes | must continue to work independently of Arc |
-| `apps/relay/src/auth/auth.ts` | user sessions and existing device grants | personal devices cannot be shared via org membership |
-| `apps/relay/migrations/0027_organization_foundation.sql` | additive private personal workspace | auth remains legacy user_id until explicit grants are implemented |
+| Existing surface                                         | Use                                                                        | Constraint                                                                           |
+| -------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `apps/relay/src/tasks/agent-planner.ts`                  | structured device action planner, validates allowed tool list              | 7 device-oriented tools; no unified app registry or complete per-token model invoice |
+| `apps/relay/src/tasks/planned-goal-runtime.ts`           | checkpointed goal progression, source vs hosted controller, quality checks | does not implement a user-facing conversation or agent-level billing                 |
+| `apps/relay/src/tasks/automation-store.ts`               | fenced leases, revisions, durable audit journal                            | task and lease are currently user-scoped                                             |
+| `apps/relay/src/tasks/task-scheduler.ts`                 | cron task execution and health checks                                      | a cron tick is not a perpetual inference process                                     |
+| `apps/relay/src/mcp/mcp.ts`                              | external AI, approved tools, client scopes                                 | must continue to work independently of Arc                                           |
+| `apps/relay/src/auth/auth.ts`                            | user sessions and existing device grants                                   | personal devices cannot be shared via org membership                                 |
+| `apps/relay/migrations/0027_organization_foundation.sql` | additive private personal workspace                                        | auth remains legacy user_id until explicit grants are implemented                    |
 
 ## Phase 1 contracts (before a hosted public beta)
 
@@ -57,7 +57,7 @@ Deliver this as an **opt-in hosted execution lane** beside the existing **Connec
 
 - All Arc feature switches default OFF: `ARC_CHAT_ENABLED`, `ARC_HOSTED_EXECUTION_ENABLED`, `ARC_EXTERNAL_APPS_ENABLED`, `ARC_ORG_SHARING_ENABLED`.
 - Start with internal single-tenant chat and read-only tools, then a tiny opted-in pilot. No default enrollment of Connect users.
-- Success means an *externally verified* result, not model self-report. Track model cost per verified task, failure/duplicate-action rate, approval-to-action latency, tenant-isolation tests and user activation.
+- Success means an _externally verified_ result, not model self-report. Track model cost per verified task, failure/duplicate-action rate, approval-to-action latency, tenant-isolation tests and user activation.
 - Feature shutdown and budget kill switch must be possible without touching device MCP sessions.
 - Shadow evaluate Auto routing on a fixed 20+ real-task suite before any paid tier. A low-cost model failing tasks can cost more than a capable one.
 - Protect PII, credential tokens, screen recordings and retention/deletion pathways before exposing app connectors.

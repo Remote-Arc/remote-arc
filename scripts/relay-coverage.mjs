@@ -11,7 +11,8 @@ const temp = mkdtempSync(join(tmpdir(), "remotearc-relay-coverage-"));
 const strict = process.argv.includes("--target");
 const thresholds = coverageThresholds("relay", strict);
 const args = [
-  "exec", "c8",
+  "exec",
+  "c8",
   "--all",
   "--include=apps/relay/src/**/*.ts",
   "--reporter=text-summary",
@@ -19,14 +20,23 @@ const args = [
   "--report-dir=" + join(temp, "report"),
   "--check-coverage",
   ...Object.entries(thresholds).map(([key, value]) => "--" + key + "=" + value),
-  "pnpm", "--filter", "@remotearc/relay", "test:coverage",
+  "pnpm",
+  "--filter",
+  "@remotearc/relay",
+  "test:coverage",
 ];
-console.log(strict
-  ? "Relay strict coverage gate: all metrics must reach 90%."
-  : "Relay measured regression floors; full 90% production coverage is NOT yet achieved.");
-let code = 1;
+console.log(
+  strict
+    ? "Relay strict coverage gate: all metrics must reach 90%."
+    : "Relay measured regression floors; full 90% production coverage is NOT yet achieved.",
+);
+let code;
 try {
-  const result = spawnSync("pnpm", args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
+  const result = spawnSync("pnpm", args, {
+    cwd: root,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
   if (result.error) throw result.error;
   code = result.status ?? 1;
 } finally {

@@ -11,9 +11,9 @@ Video/poster bytes live in the remote-arc-public-media R2 bucket under demo-gall
 The Relay and preview Worker expose only approved filenames. GET/HEAD, ETags, immutable caching and single byte ranges support native playback and seeking. Unknown keys cannot expose other bucket objects. A missing binding returns an unavailable response rather than an HTML fallback.
 
 Verify prepared files:
-    node scripts/media-gallery-publish.mjs --directory <local media folder>
+node scripts/media-gallery-publish.mjs --directory <local media folder>
 
 Publish verified files through the existing account:
-    node scripts/media-gallery-publish.mjs --directory <local media folder> --upload
+node scripts/media-gallery-publish.mjs --directory <local media folder> --upload
 
 The publisher checks every local SHA-256 before upload. Use content-hashed filenames and upload before publishing a referencing UI. Keep language, duration, soundtrack, sources and synthetic/schematic claims accurate. Videos are fetched only after a viewer chooses one; closing the native dialog removes the player and restores focus.

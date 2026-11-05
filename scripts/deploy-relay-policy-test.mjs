@@ -6,7 +6,11 @@ import {
 } from "./deploy-relay-policy.mjs";
 
 assert.equal(resolveProductionDeployPolicy({}).allowed, false);
-assert.match(resolveProductionDeployPolicy({}).reason, /explicit GitHub Actions workflow_dispatch/, "manual promotion policy should match the workflow");
+assert.match(
+  resolveProductionDeployPolicy({}).reason,
+  /explicit GitHub Actions workflow_dispatch/,
+  "manual promotion policy should match the workflow",
+);
 assert.equal(
   resolveProductionDeployPolicy({
     GITHUB_ACTIONS: "true",

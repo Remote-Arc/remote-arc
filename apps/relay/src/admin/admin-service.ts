@@ -1,58 +1,92 @@
-import {ingestProductEvents} from '../analytics/product-observability.js';
-import {handleServiceHealthMonitoring} from '../analytics/service-health-monitoring.js';
-import {handleAdminEvents} from './admin-events.js';
-import {handleAdminSupportInbox} from './support-inbox.js';
-import {handleBusinessAnalytics} from '../analytics/business-analytics.js';
-import {handleUserFollowups,type FollowupEnv} from '../followups/user-followups.js';
-import {runFollowupBatches} from '../followups/followup-batches.js';
-import {handleAdminPayments,type AdminPaymentsEnv} from './admin-payments.js';
-import {handleFeedbackRewardAdmin} from '../billing/connect-rewards.js';
+import { applicationJson } from "../platform/application-json.js";
+import { ingestProductEvents } from "../analytics/product-observability.js";
+import { handleServiceHealthMonitoring } from "../analytics/service-health-monitoring.js";
+import { handleAdminEvents } from "./admin-events.js";
+import { handleAdminSupportInbox } from "./support-inbox.js";
+import { handleBusinessAnalytics } from "../analytics/business-analytics.js";
+import { handleUserFollowups, type FollowupEnv } from "../followups/user-followups.js";
+import { runFollowupBatches } from "../followups/followup-batches.js";
+import { handleAdminPayments, type AdminPaymentsEnv } from "./admin-payments.js";
+import { handleFeedbackRewardAdmin } from "../billing/connect-rewards.js";
 import { getSessionUser } from "../auth/auth.js";
-import {handleArcAdminBilling} from '../arc/arc-admin-billing.js';
-import { handleAdminBilling, handleAdminCallCredits, handleAdminOperations, type OpsEnv } from "./admin-operations.js";
+import { handleArcAdminBilling } from "../arc/arc-admin-billing.js";
+import {
+  handleAdminBilling,
+  handleAdminCallCredits,
+  handleAdminOperations,
+  type OpsEnv,
+} from "./admin-operations.js";
 import { handleAdminUsageInsights } from "./admin-usage-insights.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
-import {handleAdminDeviceCapacity,handleAdminDeviceCapacityRevoke} from './device-capacity-admin.js';
-import { listWebsiteSubmissions, updateWebsiteSubmission, type EngagementEnv } from "../domains/engagement.js";
+import {
+  handleAdminDeviceCapacity,
+  handleAdminDeviceCapacityRevoke,
+} from "./device-capacity-admin.js";
+import {
+  listWebsiteSubmissions,
+  updateWebsiteSubmission,
+  type EngagementEnv,
+} from "../domains/engagement.js";
 import { handleMonitorState, type MonitorEnv } from "../analytics/monitor.js";
 
-export type AdminServiceEnv = OpsEnv & EngagementEnv & MonitorEnv & FollowupEnv & AdminPaymentsEnv & { ADMIN_ORIGIN?: string; ADMIN_SERVICE_MODE?: string; ADMIN_UI?: { fetch(request: Request): Promise<Response> } };
+export type AdminServiceEnv = OpsEnv &
+  EngagementEnv &
+  MonitorEnv &
+  FollowupEnv &
+  AdminPaymentsEnv & {
+    ADMIN_ORIGIN?: string;
+    ADMIN_SERVICE_MODE?: string;
+    ADMIN_UI?: { fetch(request: Request): Promise<Response> };
+  };
 export const ADMIN_CONTRACT_VERSION = "1";
 const methods: Record<string, readonly string[]> = {
-  "/api/product-events":["POST"],
-  "/api/me": ["GET"], "/api/monitor": ["GET"],
-  "/api/admin/operations": ["GET"], "/api/admin/usage-insights": ["GET"], "/api/admin/billing": ["GET"],
-  '/api/admin/arc-billing':['GET'],
-  "/api/admin/call-credits": ["POST"], "/api/admin/plan-grants": ["GET", "POST"],
-  "/api/admin/device-capacity": ["GET","POST"],
+  "/api/product-events": ["POST"],
+  "/api/me": ["GET"],
+  "/api/monitor": ["GET"],
+  "/api/admin/operations": ["GET"],
+  "/api/admin/usage-insights": ["GET"],
+  "/api/admin/billing": ["GET"],
+  "/api/admin/arc-billing": ["GET"],
+  "/api/admin/call-credits": ["POST"],
+  "/api/admin/plan-grants": ["GET", "POST"],
+  "/api/admin/device-capacity": ["GET", "POST"],
   "/api/admin/submissions": ["GET"],
 };
 
 export function adminApiMethods(path: string): readonly string[] | null {
-  if(path==='/api/admin/support-inbox')return ['GET'];
-  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}$/.test(path))return ['GET'];
-  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/reply$/.test(path))return ['POST'];
-  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/status$/.test(path))return ['PATCH'];
-  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/reconcile$/.test(path))return ['PATCH'];
-  if(/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/google-beta$/.test(path))return ['PATCH'];
-  if(path==='/api/admin/analytics')return ['GET'];
-  if(path==='/api/admin/feedback-rewards')return ['GET'];
-  if(path==='/api/admin/feedback-rewards/config'||/^\/api\/admin\/feedback-rewards\/claims\/[a-f0-9-]{36}\/(approve|reject)$/.test(path))return ['POST'];
-  if(path==='/api/admin/monitoring')return ['GET'];
-  if(path==='/api/admin/events'||path==='/api/admin/events/readiness')return ['GET'];
-  if(path==='/api/admin/payments')return ['GET'];
-  if(path==='/api/admin/payments/trials')return ['GET'];
-  if(path==='/api/admin/payments/funding')return ['POST'];
-  if(/^\/api\/admin\/payments\/(config|promotions)\/drafts$/.test(path)||/^\/api\/admin\/payments\/(config|promotions)\/[a-f0-9-]{36}\/(publish|disable)$/.test(path))return ['POST'];
-  if(path==='/api/admin/followups')return ['GET'];
-  if(path==='/api/admin/followups/selection')return ['GET'];
-  if(path==='/api/admin/followups/bulk-status')return ['PATCH'];
-  if(path==='/api/admin/followups/batches')return ['GET','POST'];
-  if(/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}$/.test(path))return ['GET'];
-  if(/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}\/(queue|cancel)$/.test(path))return ['POST'];
-  if(path==='/api/admin/followups/drafts')return ['POST'];
-  if(/^\/api\/admin\/followups\/[^/]+\/send$/.test(path))return ['POST'];
-  if(/^\/api\/admin\/followups\/[^/]+$/.test(path))return ['GET','PATCH'];
+  if (path === "/api/admin/support-inbox") return ["GET"];
+  if (/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}$/.test(path)) return ["GET"];
+  if (/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/reply$/.test(path)) return ["POST"];
+  if (/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/status$/.test(path)) return ["PATCH"];
+  if (/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/reconcile$/.test(path)) return ["PATCH"];
+  if (/^\/api\/admin\/support-inbox\/[a-f0-9-]{36}\/google-beta$/.test(path)) return ["PATCH"];
+  if (path === "/api/admin/analytics") return ["GET"];
+  if (path === "/api/admin/feedback-rewards") return ["GET"];
+  if (
+    path === "/api/admin/feedback-rewards/config" ||
+    /^\/api\/admin\/feedback-rewards\/claims\/[a-f0-9-]{36}\/(approve|reject)$/.test(path)
+  )
+    return ["POST"];
+  if (path === "/api/admin/monitoring") return ["GET"];
+  if (path === "/api/admin/events" || path === "/api/admin/events/readiness") return ["GET"];
+  if (path === "/api/admin/payments") return ["GET"];
+  if (path === "/api/admin/payments/trials") return ["GET"];
+  if (path === "/api/admin/payments/funding") return ["POST"];
+  if (
+    /^\/api\/admin\/payments\/(config|promotions)\/drafts$/.test(path) ||
+    /^\/api\/admin\/payments\/(config|promotions)\/[a-f0-9-]{36}\/(publish|disable)$/.test(path)
+  )
+    return ["POST"];
+  if (path === "/api/admin/followups") return ["GET"];
+  if (path === "/api/admin/followups/selection") return ["GET"];
+  if (path === "/api/admin/followups/bulk-status") return ["PATCH"];
+  if (path === "/api/admin/followups/batches") return ["GET", "POST"];
+  if (/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}$/.test(path)) return ["GET"];
+  if (/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}\/(queue|cancel)$/.test(path))
+    return ["POST"];
+  if (path === "/api/admin/followups/drafts") return ["POST"];
+  if (/^\/api\/admin\/followups\/[^/]+\/send$/.test(path)) return ["POST"];
+  if (/^\/api\/admin\/followups\/[^/]+$/.test(path)) return ["GET", "PATCH"];
   if (Object.hasOwn(methods, path)) return methods[path]!;
   if (/^\/api\/admin\/plan-grants\/[a-zA-Z0-9-]+\/revoke$/.test(path)) return ["POST"];
   if (/^\/api\/admin\/device-capacity\/[a-zA-Z0-9-]+\/revoke$/.test(path)) return ["POST"];
@@ -66,11 +100,15 @@ function finish(response: Response): Response {
   headers.set("x-remote-arc-admin-contract", ADMIN_CONTRACT_VERSION);
   return new Response(response.body, { status: response.status, headers });
 }
-const failure = (error: string, status: number) => finish(Response.json({ error }, { status }));
+const failure = (error: string, status: number) => finish(applicationJson({ error }, { status }));
 
 // A dedicated named service entrypoint calls this handler. The public relay
 // keeps its existing host restriction and can be disabled independently.
-export async function handleAdminServiceRequest(request: Request, env: AdminServiceEnv,ctx?:Pick<ExecutionContext,'waitUntil'>): Promise<Response> {
+export async function handleAdminServiceRequest(
+  request: Request,
+  env: AdminServiceEnv,
+  ctx?: Pick<ExecutionContext, "waitUntil">,
+): Promise<Response> {
   const url = new URL(request.url);
   const expectedOrigin = new URL(env.ADMIN_ORIGIN || "https://admin.remotearc.app").origin;
   if (url.origin !== expectedOrigin) return failure("admin_host_required", 404);
@@ -79,7 +117,8 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
   if (!allowed.includes(request.method)) return failure("method_not_allowed", 405);
   if (!["GET", "HEAD"].includes(request.method)) {
     if (request.headers.get("origin") !== expectedOrigin) return failure("invalid_origin", 403);
-    if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") return failure("unsupported_media_type", 415);
+    if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json")
+      return failure("unsupported_media_type", 415);
   }
   // Never accept an actor/role forwarded by the browser or caller. Resolve
   // the real shared session on every operation, including role revocation.
@@ -87,45 +126,88 @@ export async function handleAdminServiceRequest(request: Request, env: AdminServ
   if (!user) return failure("unauthorized", 401);
   if (!user.isAdmin) return failure("forbidden", 403);
 
-  if(url.pathname==='/api/product-events')return finish(await ingestProductEvents(request,env));
-  if(url.pathname==='/api/admin/monitoring')return finish(await handleServiceHealthMonitoring(request,env));
-  if(url.pathname.startsWith('/api/admin/support-inbox'))return finish(await handleAdminSupportInbox(request,env,user.id));
-  if(url.pathname.startsWith('/api/admin/followups')){
-    const response=await handleUserFollowups(request,env);
-    if(ctx&&response.ok&&request.method==='POST'&&/^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}\/queue$/.test(url.pathname))ctx.waitUntil(runFollowupBatches(env));
+  if (url.pathname === "/api/product-events")
+    return finish(await ingestProductEvents(request, env));
+  if (url.pathname === "/api/admin/monitoring")
+    return finish(await handleServiceHealthMonitoring(request, env));
+  if (url.pathname.startsWith("/api/admin/support-inbox"))
+    return finish(await handleAdminSupportInbox(request, env, user.id));
+  if (url.pathname.startsWith("/api/admin/followups")) {
+    const response = await handleUserFollowups(request, env);
+    if (
+      ctx &&
+      response.ok &&
+      request.method === "POST" &&
+      /^\/api\/admin\/followups\/batches\/[a-f0-9-]{36}\/queue$/.test(url.pathname)
+    )
+      ctx.waitUntil(runFollowupBatches(env));
     return finish(response);
   }
-  if(url.pathname==='/api/admin/events'||url.pathname==='/api/admin/events/readiness')return finish(await handleAdminEvents(request,env));
-  if(url.pathname==='/api/admin/analytics')return finish(await handleBusinessAnalytics(request,env));
-  if(url.pathname.startsWith('/api/admin/payments'))return finish(await handleAdminPayments(request,env));
-  if(url.pathname.startsWith('/api/admin/feedback-rewards'))return finish(await handleFeedbackRewardAdmin(request,env));
+  if (url.pathname === "/api/admin/events" || url.pathname === "/api/admin/events/readiness")
+    return finish(await handleAdminEvents(request, env));
+  if (url.pathname === "/api/admin/analytics")
+    return finish(await handleBusinessAnalytics(request, env));
+  if (url.pathname.startsWith("/api/admin/payments"))
+    return finish(await handleAdminPayments(request, env));
+  if (url.pathname.startsWith("/api/admin/feedback-rewards"))
+    return finish(await handleFeedbackRewardAdmin(request, env));
   let response: Response;
   switch (url.pathname) {
-    case "/api/me": response = Response.json({ authenticated: true, user }); break;
-    case "/api/monitor": response = await handleMonitorState(request, env); break;
-    case "/api/admin/operations": response = await handleAdminOperations(request, env); break;
-    case "/api/admin/usage-insights": response = await handleAdminUsageInsights(request, env); break;
-    case "/api/admin/billing": response = await handleAdminBilling(request, env); break;
-    case '/api/admin/arc-billing': response = await handleArcAdminBilling(request,env);break;
-    case "/api/admin/call-credits": response = await handleAdminCallCredits(request, env); break;
-    case "/api/admin/plan-grants": response = await handleAdminPlanGrants(request, env); break;
-    case "/api/admin/device-capacity": response = await handleAdminDeviceCapacity(request, env); break;
-    case "/api/admin/submissions": response = await listWebsiteSubmissions(request, env); break;
+    case "/api/me":
+      response = applicationJson({ authenticated: true, user });
+      break;
+    case "/api/monitor":
+      response = await handleMonitorState(request, env);
+      break;
+    case "/api/admin/operations":
+      response = await handleAdminOperations(request, env);
+      break;
+    case "/api/admin/usage-insights":
+      response = await handleAdminUsageInsights(request, env);
+      break;
+    case "/api/admin/billing":
+      response = await handleAdminBilling(request, env);
+      break;
+    case "/api/admin/arc-billing":
+      response = await handleArcAdminBilling(request, env);
+      break;
+    case "/api/admin/call-credits":
+      response = await handleAdminCallCredits(request, env);
+      break;
+    case "/api/admin/plan-grants":
+      response = await handleAdminPlanGrants(request, env);
+      break;
+    case "/api/admin/device-capacity":
+      response = await handleAdminDeviceCapacity(request, env);
+      break;
+    case "/api/admin/submissions":
+      response = await listWebsiteSubmissions(request, env);
+      break;
     default: {
       const revoke = url.pathname.match(/^\/api\/admin\/plan-grants\/([a-zA-Z0-9-]+)\/revoke$/);
-      const capacityRevoke=url.pathname.match(/^\/api\/admin\/device-capacity\/([a-zA-Z0-9-]+)\/revoke$/);
-      response = capacityRevoke ? await handleAdminDeviceCapacityRevoke(request,env,capacityRevoke[1]!)
-        : revoke ? await handleAdminPlanGrantRevoke(request, env, revoke[1]!)
-        : await updateWebsiteSubmission(request, env, url.pathname.split("/").at(-1)!);
+      const capacityRevoke = url.pathname.match(
+        /^\/api\/admin\/device-capacity\/([a-zA-Z0-9-]+)\/revoke$/,
+      );
+      response = capacityRevoke
+        ? await handleAdminDeviceCapacityRevoke(request, env, capacityRevoke[1]!)
+        : revoke
+          ? await handleAdminPlanGrantRevoke(request, env, revoke[1]!)
+          : await updateWebsiteSubmission(request, env, url.pathname.split("/").at(-1)!);
     }
   }
   return finish(response);
 }
 
-export async function publicAdminResponse(request: Request, env: AdminServiceEnv): Promise<Response | null> {
+export async function publicAdminResponse(
+  request: Request,
+  env: AdminServiceEnv,
+): Promise<Response | null> {
   if (env.ADMIN_SERVICE_MODE === undefined || env.ADMIN_SERVICE_MODE === "legacy") return null;
   if (env.ADMIN_SERVICE_MODE !== "external") return failure("invalid_admin_service_mode", 503);
   if (!env.ADMIN_UI) return failure("admin_ui_binding_missing", 503);
-  try { return finish(await env.ADMIN_UI.fetch(request)); }
-  catch { return failure("admin_ui_unavailable", 503); }
+  try {
+    return finish(await env.ADMIN_UI.fetch(request));
+  } catch {
+    return failure("admin_ui_unavailable", 503);
+  }
 }

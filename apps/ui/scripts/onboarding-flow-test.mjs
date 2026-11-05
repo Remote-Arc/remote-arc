@@ -49,4 +49,6 @@ assert.doesNotMatch(
   "Background recovery support must not block basic onboarding completion.",
 );
 
-console.log("PASS: onboarding keeps workspace selection generic, resumable and requires MCP connection for Connect");
+console.log(
+  "PASS: onboarding keeps workspace selection generic, resumable and requires MCP connection for Connect",
+);

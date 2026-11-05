@@ -4,16 +4,16 @@ Status: **feature branch, not deployed**. This document defines stable module an
 
 ## Product host topology
 
-| Host | Audience | Allowed work | Module |
-|---|---|---|---|
-| `remotearc.app` | public | Website, Arc early-access and feedback submissions | `apps/ui/src/features/marketing/public-engagement.tsx` → `POST /api/public/engagement` |
-| `mcp.remotearc.app` | signed-in customers and MCP providers | Devices, tools, tasks, grants, user billing when launched | Existing Dashboard + relay |
-| **`admin.remotearc.app`** | `role=admin` only | Company health, operational metrics, users, plans/credits, submitted leads, Cloudflare costs | `apps/ui/src/admin` + admin API |
-| `remote-link-relay` Worker (internal implementation today) | service backend | Routing by exact host + contract-specific API handlers | `apps/relay/src/index.ts`, `src/domains/engagement.ts` |
+| Host                                                       | Audience                              | Allowed work                                                                                 | Module                                                                                 |
+| ---------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `remotearc.app`                                            | public                                | Website, Arc early-access and feedback submissions                                           | `apps/ui/src/features/marketing/public-engagement.tsx` → `POST /api/public/engagement` |
+| `mcp.remotearc.app`                                        | signed-in customers and MCP providers | Devices, tools, tasks, grants, user billing when launched                                    | Existing Dashboard + relay                                                             |
+| **`admin.remotearc.app`**                                  | `role=admin` only                     | Company health, operational metrics, users, plans/credits, submitted leads, Cloudflare costs | `apps/ui/src/admin` + admin API                                                        |
+| `remote-link-relay` Worker (internal implementation today) | service backend                       | Routing by exact host + contract-specific API handlers                                       | `apps/relay/src/index.ts`, `src/domains/engagement.ts`                                 |
 
 Today all three hosts can run on **one Worker and shared UI assets**, because that reuses working Cloudflare infrastructure and keeps Phase 0 cost low. **This is a modular monolith, not independent microservices yet.** The split is by hostname, endpoint, module and database responsibility, never by assumptions that every hostname has separate code.
 
-The web boundary is prepared to migrate to separate `apps/marketing`, `apps/customer` and `apps/admin` bundles/Workers, without breaking public contracts. The first independent service candidate is **public engagement / CRM**, followed by subscriptions/payments (with its own ledger), followed by hosted Arc agent orchestration. Do *not* ship extra processes merely because microservices might be needed later.
+The web boundary is prepared to migrate to separate `apps/marketing`, `apps/customer` and `apps/admin` bundles/Workers, without breaking public contracts. The first independent service candidate is **public engagement / CRM**, followed by subscriptions/payments (with its own ledger), followed by hosted Arc agent orchestration. Do _not_ ship extra processes merely because microservices might be needed later.
 
 ## Data and API contracts
 
@@ -45,7 +45,7 @@ Input: `{category:"early_access"|"feedback",email,name,message,source,website:""
 - **Devices**: non-revoked device records; online snapshots are verified separately.
 - **MCP calls**: metered tool call counter; **not** hosted AI tokens.
 - **Cloudflare costs**: actual Cloudflare billable usage when a billing-read token exists, clearly account-wide.
-- **GMV**: only payment-processed merchandise/order volume (may be *not applicable* for SaaS subscriptions).
+- **GMV**: only payment-processed merchandise/order volume (may be _not applicable_ for SaaS subscriptions).
 - **MRR / ARR / revenue / paying customers**: only after checkout, settled invoices, subscription ledger and refund accounting land in Phase 1B. All currently **N/A**, never $0 guessed from missing data.
 - Funnel conversion, usage attribution and AI margin require explicit opt-in event taxonomy and payment source-of-truth; do not claim to know them yet.
 
@@ -54,6 +54,7 @@ Input: `{category:"early_access"|"feedback",email,name,message,source,website:""
 This work is on a **stacked feature PR based on marketing PR #176**. D1 schema number `0028` follows Phase 0 organization's `0027` from **PR #172**.
 
 Release order:
+
 1. Production backup/time-travel bookmark and safe Phase 0 release (#172) with existing-user compatibility checks.
 2. Merge approved marketing pages (#176), optionally separately release.
 3. Merge this engagement/Admin feature only after isolated Preview & CI, security review and explicit owner approval.

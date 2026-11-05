@@ -18,11 +18,7 @@
   "author": {
     "name": "Remote Arc"
   },
-  "keywords": [
-    "remote-computer",
-    "mcp",
-    "developer-tools"
-  ],
+  "keywords": ["remote-computer", "mcp", "developer-tools"],
   "homepage": "https://remotearc.app",
   "repository": "https://github.com/yaohuangguan/remote-arc",
   "license": "Proprietary",

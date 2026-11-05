@@ -13,43 +13,74 @@ import { NO_BROWSER_AUTH } from "../src/browser/browser-auth.js";
 // Only the external provider and device transport are simulated.
 const sql = new DatabaseSync(":memory:");
 sql.exec("PRAGMA foreign_keys=ON");
-for (const file of fs.readdirSync(new URL("../migrations/", import.meta.url)).filter(file => file.endsWith(".sql")).sort()) {
+for (const file of fs
+  .readdirSync(new URL("../migrations/", import.meta.url))
+  .filter((file) => file.endsWith(".sql"))
+  .sort()) {
   sql.exec(fs.readFileSync(new URL("../migrations/" + file, import.meta.url), "utf8"));
 }
 const db = {
   prepare(query: string) {
     const stmt = sql.prepare(query);
     const bound = (values: any[]) => ({
-      async first() { return stmt.get(...values) ?? null; },
-      async all() { return { results: stmt.all(...values) }; },
-      async run() { return { success: true, meta: { changes: Number(stmt.run(...values).changes) } }; },
+      async first() {
+        return stmt.get(...values) ?? null;
+      },
+      async all() {
+        return { results: stmt.all(...values) };
+      },
+      async run() {
+        return { success: true, meta: { changes: Number(stmt.run(...values).changes) } };
+      },
     });
-    return { ...bound([]), bind(...values: any[]) { return bound(values); } };
+    return {
+      ...bound([]),
+      bind(...values: any[]) {
+        return bound(values);
+      },
+    };
   },
 } as unknown as D1Database;
 const stamp = new Date().toISOString();
 for (const id of ["owner", "other", "newcomer"]) {
-  sql.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'admin',?)")
+  sql
+    .prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'admin',?)")
     .run(id, id, id + "@example.test", stamp);
 }
 const dispatches: any[] = [];
 const env = {
-  DB: db, PUBLIC_ORIGIN: "https://mcp.remotearc.app", ENABLE_APPS: "1", ENABLE_BROWSER_RUNNER: "1",
-  ENABLE_EXPERIMENTAL_AGENT_GOALS: "0", APP_TOKEN_KEY: Buffer.alloc(32, 7).toString("base64"),
-  REGISTRY: { getByName: () => ({ fetch: async (request: Request) => {
-    if (request.method === "GET" && new URL(request.url).pathname === "/devices")
-      return Response.json([]);
-    const call = await request.json() as any;
-    dispatches.push(call);
-    if (call.arguments.ref === "e2" || call.arguments.fields?.some((field: any) => field.ref === "e2")) {
-      // The native/extension field classifier supplies this denial when the
-      // server-owned browserAuth policy disables one-time codes.
-      return call.policy.browserAuth.otp
-        ? Response.json({ result: { filled: true } })
-        : Response.json({ error: "BROWSER_AUTH_REQUIRED: OTP needs approval" }, { status: 403 });
-    }
-    return Response.json({ result: { ok: true, snapshot_id: "snapshot-2", authentication: call.policy.browserAuth } });
-  } }) },
+  DB: db,
+  PUBLIC_ORIGIN: "https://mcp.remotearc.app",
+  ENABLE_APPS: "1",
+  ENABLE_BROWSER_RUNNER: "1",
+  ENABLE_EXPERIMENTAL_AGENT_GOALS: "0",
+  APP_TOKEN_KEY: Buffer.alloc(32, 7).toString("base64"),
+  REGISTRY: {
+    getByName: () => ({
+      fetch: async (request: Request) => {
+        if (request.method === "GET" && new URL(request.url).pathname === "/devices")
+          return Response.json([]);
+        const call = (await request.json()) as any;
+        dispatches.push(call);
+        if (
+          call.arguments.ref === "e2" ||
+          call.arguments.fields?.some((field: any) => field.ref === "e2")
+        ) {
+          // The native/extension field classifier supplies this denial when the
+          // server-owned browserAuth policy disables one-time codes.
+          return call.policy.browserAuth.otp
+            ? Response.json({ result: { filled: true } })
+            : Response.json(
+                { error: "BROWSER_AUTH_REQUIRED: OTP needs approval" },
+                { status: 403 },
+              );
+        }
+        return Response.json({
+          result: { ok: true, snapshot_id: "snapshot-2", authentication: call.policy.browserAuth },
+        });
+      },
+    }),
+  },
 } as any;
 const ids = {
   github: "10000000-0000-4000-8000-000000000001",
@@ -66,48 +97,129 @@ for (const [key, provider, user, scopes, status] of [
   ["readonly", "gmail", "owner", ["https://www.googleapis.com/auth/gmail.readonly"], "active"],
 ] as const) {
   const id = ids[key];
-  const cipher = await seal(env, { accessToken: "test-provider-token", expiresAt: null, scopes }, `app-token:${user}:${provider}:${id}`);
-  sql.prepare(`INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(id, user, provider, id, "Test " + key, status, '["read","write"]', JSON.stringify(scopes), cipher, stamp, stamp);
+  const cipher = await seal(
+    env,
+    { accessToken: "test-provider-token", expiresAt: null, scopes },
+    `app-token:${user}:${provider}:${id}`,
+  );
+  sql
+    .prepare(
+      `INSERT INTO app_connections(id,user_id,provider,account_id,account_label,status,permissions_json,scopes_json,token_ciphertext,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
+    )
+    .run(
+      id,
+      user,
+      provider,
+      id,
+      "Test " + key,
+      status,
+      '["read","write"]',
+      JSON.stringify(scopes),
+      cipher,
+      stamp,
+      stamp,
+    );
 }
-const approved = { otp: true, captcha: true, origins: ["https://example.test"], mailbox: "owner@example.test" };
+const approved = {
+  otp: true,
+  captcha: true,
+  origins: ["https://example.test"],
+  mailbox: "owner@example.test",
+};
 for (const [id, platform, tools] of [
   ["computer", "linux", ["browser_runner_snapshot", "browser_runner_act"]],
   ["extension", "browser", ["browser_read_page", "browser_fill", "browser_click"]],
 ] as const) {
-  sql.prepare(`INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,browser_auth_permissions)
-    VALUES(?,'owner',?,?,?, ?,?,?)`).run(id, id, platform, "fixture-" + id, stamp, JSON.stringify(tools), JSON.stringify(approved));
+  sql
+    .prepare(
+      `INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,browser_auth_permissions)
+    VALUES(?,'owner',?,?,?, ?,?,?)`,
+    )
+    .run(id, id, platform, "fixture-" + id, stamp, JSON.stringify(tools), JSON.stringify(approved));
 }
 const identity = (scope = "apps:read apps:write browser:read browser:interact") => ({
-  userId: "owner", clientId: "public-test", grantId: null, resource: env.PUBLIC_ORIGIN + "/mcp", scope,
+  userId: "owner",
+  clientId: "public-test",
+  grantId: null,
+  resource: env.PUBLIC_ORIGIN + "/mcp",
+  scope,
 });
-async function rpc(method: string, params: unknown, scope?: string, options = env, currentIdentity = identity(scope), clientProfile: McpClientProfile = "generic") {
-  const response = await createRemoteLinkMcp(options, currentIdentity, { clientProfile }).fetch(new Request(env.PUBLIC_ORIGIN + "/mcp", {
-    method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  }));
+async function rpc(
+  method: string,
+  params: unknown,
+  scope?: string,
+  options = env,
+  currentIdentity = identity(scope),
+  clientProfile: McpClientProfile = "generic",
+) {
+  const response = await createRemoteLinkMcp(options, currentIdentity, { clientProfile }).fetch(
+    new Request(env.PUBLIC_ORIGIN + "/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    }),
+  );
   const text = await response.text();
   assert(response.ok, text);
-  return JSON.parse(text.trim().startsWith("{") ? text : text.split("\n").find(line => line.startsWith("data: "))!.slice(6));
+  return JSON.parse(
+    text.trim().startsWith("{")
+      ? text
+      : text
+          .split("\n")
+          .find((line) => line.startsWith("data: "))!
+          .slice(6),
+  );
 }
-const invoke = (name: string, args: unknown, scope?: string) => rpc("tools/call", { name, arguments: args }, scope);
+const invoke = (name: string, args: unknown, scope?: string) =>
+  rpc("tools/call", { name, arguments: args }, scope);
 const data = (response: any) => JSON.parse(response.result.content[0].text);
 const rejected = (response: any) => Boolean(response.error || response.result?.isError);
-const emptyDevices = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read", env, { ...identity("devices:read"), userId: "newcomer" });
+const emptyDevices = await rpc(
+  "tools/call",
+  { name: "list_devices", arguments: {} },
+  "devices:read",
+  env,
+  { ...identity("devices:read"), userId: "newcomer" },
+);
 assert.deepEqual(JSON.parse(emptyDevices.result.content[0].text), []);
 const assertFirstRunLinks = (text: string) => {
-  const ordered = ["https://remotearc.app/downloads", "https://remotearc.app/connect-ai", "curl -fsSL https://remotearc.app/install.sh | sh", "npx remotelink@latest"];
-  const positions = ordered.map(value => text.indexOf(value));
-  assert(positions.every(position => position >= 0));
-  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Direct download and optional setup information must precede terminal alternatives");
-  assert(text.includes("https://agent.remotearc.app/devices"), "First-time users get the Dashboard link");
+  const ordered = [
+    "https://remotearc.app/downloads",
+    "https://remotearc.app/connect-ai",
+    "curl -fsSL https://remotearc.app/install.sh | sh",
+    "npx remotelink@latest",
+  ];
+  const positions = ordered.map((value) => text.indexOf(value));
+  assert(positions.every((position) => position >= 0));
+  assert.deepEqual(
+    positions,
+    [...positions].sort((a, b) => a - b),
+    "Direct download and optional setup information must precede terminal alternatives",
+  );
+  assert(
+    text.includes("https://agent.remotearc.app/devices"),
+    "First-time users get the Dashboard link",
+  );
   assert.match(text, /Node.js 20(?:\+| or newer)/);
 };
 assertFirstRunLinks(emptyDevices.result.content[1].text);
-assert(emptyDevices.result.content[1].text.includes("use list_apps") && emptyDevices.result.content[1].text.includes("https://agent.remotearc.app/apps"), "First-time users learn that Apps need no computer");
+assert(
+  emptyDevices.result.content[1].text.includes("use list_apps") &&
+    emptyDevices.result.content[1].text.includes("https://agent.remotearc.app/apps"),
+  "First-time users learn that Apps need no computer",
+);
 for (const clientId of ["chatgpt-client", "claude-client", "codex-client", "unrecognized-client"]) {
-  const response = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read", env,
-    { ...identity("devices:read"), userId: "newcomer", clientId });
+  const response = await rpc(
+    "tools/call",
+    { name: "list_devices", arguments: {} },
+    "devices:read",
+    env,
+    { ...identity("devices:read"), userId: "newcomer", clientId },
+  );
   const text = response.result.content[1].text;
   assertFirstRunLinks(text);
   assert(!text.includes("/install/chatgpt"), "The shared MCP must use a general setup guide");
@@ -115,122 +227,401 @@ for (const clientId of ["chatgpt-client", "claude-client", "codex-client", "unre
   assert(!text.includes("ChatGPT Plugin"));
 }
 
-sql.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools) VALUES(?,'newcomer','Chrome Companion','browser',?, ?,?)").run("browser-only", "test-browser", stamp, "[]");
-const browserOnly = await rpc("tools/call", { name: "list_devices", arguments: {} },
-  "devices:read", env, { ...identity("devices:read"), userId: "newcomer" });
+sql
+  .prepare(
+    "INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools) VALUES(?,'newcomer','Chrome Companion','browser',?, ?,?)",
+  )
+  .run("browser-only", "test-browser", stamp, "[]");
+const browserOnly = await rpc(
+  "tools/call",
+  { name: "list_devices", arguments: {} },
+  "devices:read",
+  env,
+  { ...identity("devices:read"), userId: "newcomer" },
+);
 assert.equal(JSON.parse(browserOnly.result.content[0].text).length, 1);
 assertFirstRunLinks(browserOnly.result.content[1].text);
-const linkedDevices = await rpc("tools/call", { name: "list_devices", arguments: {} }, "devices:read");
+const linkedDevices = await rpc(
+  "tools/call",
+  { name: "list_devices", arguments: {} },
+  "devices:read",
+);
 assert.equal(linkedDevices.result.content.length, 1);
 assert.equal(JSON.parse(linkedDevices.result.content[0].text).length, 2);
-const setupManifest = JSON.parse(fs.readFileSync(new URL("../../../plugin.json", import.meta.url), "utf8"));
+const setupManifest = JSON.parse(
+  fs.readFileSync(new URL("../../../plugin.json", import.meta.url), "utf8"),
+);
 assert.equal(setupManifest.extensions["com.openai"].onboardingSkill, "./skills/setup/SKILL.md");
-assertFirstRunLinks(fs.readFileSync(new URL("../../../skills/setup/SKILL.md", import.meta.url), "utf8"));
-const listDevicesDefinition = ((await rpc("tools/list", {})).result.tools as any[]).find(tool => tool.name === "list_devices");
+assertFirstRunLinks(
+  fs.readFileSync(new URL("../../../skills/setup/SKILL.md", import.meta.url), "utf8"),
+);
+const listDevicesDefinition = ((await rpc("tools/list", {})).result.tools as any[]).find(
+  (tool) => tool.name === "list_devices",
+);
 assert(listDevicesDefinition.description.includes("https://remotearc.app/connect-ai"));
 assert(!listDevicesDefinition.description.includes("/install/chatgpt"));
 const listed = (await rpc("tools/list", {})).result.tools as any[];
 // OAuth registry differentiates real Claude callbacks from arbitrary client_name strings.
-sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("claude-oauth", "Any name", JSON.stringify(["https://claude.ai/api/mcp/auth_callback"]), "none", stamp);
-sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("spoof-oauth", "Claude", JSON.stringify(["https://my-site.example/callback"]), "none", stamp);
+sql
+  .prepare(
+    "INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)",
+  )
+  .run(
+    "claude-oauth",
+    "Any name",
+    JSON.stringify(["https://claude.ai/api/mcp/auth_callback"]),
+    "none",
+    stamp,
+  );
+sql
+  .prepare(
+    "INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)",
+  )
+  .run(
+    "spoof-oauth",
+    "Claude",
+    JSON.stringify(["https://my-site.example/callback"]),
+    "none",
+    stamp,
+  );
 assert.equal(await mcpClientProfile(db, "claude-oauth"), "claude");
 assert.equal(await mcpClientProfile(db, "spoof-oauth"), "generic");
-sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("claude-com-oauth", "Any name", JSON.stringify(["https://claude.com/api/mcp/auth_callback"]), "none", stamp);
-sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("localhost-oauth", "Claude Code", JSON.stringify(["http://localhost:33418/callback"]), "none", stamp);
-sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run("lookalike-oauth", "Claude", JSON.stringify(["https://claude.com.example/api/mcp/auth_callback", "http://claude.ai/api/mcp/auth_callback"]), "none", stamp);
-assert.equal(await mcpClientProfile(db, "claude-com-oauth"), "claude", "Anthropic's claude.com callback is the same Claude connector");
-assert.equal(await mcpClientProfile(db, "localhost-oauth"), "generic", "Local callbacks cannot prove a Claude client");
-assert.equal(await mcpClientProfile(db, "lookalike-oauth"), "generic", "Look-alike hosts and plain HTTP never match");
+sql
+  .prepare(
+    "INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)",
+  )
+  .run(
+    "claude-com-oauth",
+    "Any name",
+    JSON.stringify(["https://claude.com/api/mcp/auth_callback"]),
+    "none",
+    stamp,
+  );
+sql
+  .prepare(
+    "INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)",
+  )
+  .run(
+    "localhost-oauth",
+    "Claude Code",
+    JSON.stringify(["http://localhost:33418/callback"]),
+    "none",
+    stamp,
+  );
+sql
+  .prepare(
+    "INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)",
+  )
+  .run(
+    "lookalike-oauth",
+    "Claude",
+    JSON.stringify([
+      "https://claude.com.example/api/mcp/auth_callback",
+      "http://claude.ai/api/mcp/auth_callback",
+    ]),
+    "none",
+    stamp,
+  );
+assert.equal(
+  await mcpClientProfile(db, "claude-com-oauth"),
+  "claude",
+  "Anthropic's claude.com callback is the same Claude connector",
+);
+assert.equal(
+  await mcpClientProfile(db, "localhost-oauth"),
+  "generic",
+  "Local callbacks cannot prove a Claude client",
+);
+assert.equal(
+  await mcpClientProfile(db, "lookalike-oauth"),
+  "generic",
+  "Look-alike hosts and plain HTTP never match",
+);
 for (const [id, uris] of [
   ["chatgpt-oauth", ["https://chatgpt.com/connector_platform_oauth_redirect"]],
   ["chatgpt-connector-oauth", ["https://chatgpt.com/connector/oauth/callback"]],
   ["chatgpt-legacy-oauth", ["https://chat.openai.com/aip/callback"]],
   ["chatgpt-staging-oauth", ["https://chatgpt-staging.com/connector_platform_oauth_redirect"]],
-  ["chatgpt-http-oauth", ["http://chatgpt.com/connector_platform_oauth_redirect", "https://chatgpt.com.example/callback"]],
-  ["claude-and-chatgpt-oauth", ["https://chatgpt.com/connector_platform_oauth_redirect", "https://claude.ai/api/mcp/auth_callback"]],
-] as const) sql.prepare("INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)").run(id, "Any name", JSON.stringify(uris), "none", stamp);
+  [
+    "chatgpt-http-oauth",
+    [
+      "http://chatgpt.com/connector_platform_oauth_redirect",
+      "https://chatgpt.com.example/callback",
+    ],
+  ],
+  [
+    "claude-and-chatgpt-oauth",
+    [
+      "https://chatgpt.com/connector_platform_oauth_redirect",
+      "https://claude.ai/api/mcp/auth_callback",
+    ],
+  ],
+] as const)
+  sql
+    .prepare(
+      "INSERT INTO oauth_clients(client_id,client_name,redirect_uris,token_endpoint_auth_method,created_at) VALUES(?,?,?,?,?)",
+    )
+    .run(id, "Any name", JSON.stringify(uris), "none", stamp);
 assert.equal(await mcpClientProfile(db, "chatgpt-oauth"), "chatgpt");
 assert.equal(await mcpClientProfile(db, "chatgpt-connector-oauth"), "chatgpt");
 assert.equal(await mcpClientProfile(db, "chatgpt-legacy-oauth"), "chatgpt");
-assert.equal(await mcpClientProfile(db, "chatgpt-staging-oauth"), "chatgpt", "OpenAI's app scan registers from ChatGPT staging");
-assert.equal(await mcpClientProfile(db, "chatgpt-http-oauth"), "generic", "Only HTTPS callbacks on ChatGPT's own hosts match");
-assert.equal(await mcpClientProfile(db, "claude-and-chatgpt-oauth"), "claude", "A Claude callback keeps Claude's restricted profile");
-const claudeListed = (await rpc("tools/list", {}, undefined, env, identity(), "claude")).result.tools as any[];
-const actionText = (tools: any[], name: string) => JSON.stringify(tools.find(t => t.name === name).inputSchema);
-assert(actionText(listed, "run_app_write_action").includes("runway.videos.generate"), "Other clients keep Runway generation");
-assert(actionText(listed, "run_app_read_action").includes("runway."), "Other clients keep Runway reads");
-assert(!actionText(claudeListed, "run_app_write_action").includes("runway."), "Claude writes exclude Runway");
-assert(!actionText(claudeListed, "run_app_read_action").includes("runway."), "Claude reads exclude Runway");
+assert.equal(
+  await mcpClientProfile(db, "chatgpt-staging-oauth"),
+  "chatgpt",
+  "OpenAI's app scan registers from ChatGPT staging",
+);
+assert.equal(
+  await mcpClientProfile(db, "chatgpt-http-oauth"),
+  "generic",
+  "Only HTTPS callbacks on ChatGPT's own hosts match",
+);
+assert.equal(
+  await mcpClientProfile(db, "claude-and-chatgpt-oauth"),
+  "claude",
+  "A Claude callback keeps Claude's restricted profile",
+);
+const claudeListed = (await rpc("tools/list", {}, undefined, env, identity(), "claude")).result
+  .tools as any[];
+const actionText = (tools: any[], name: string) =>
+  JSON.stringify(tools.find((t) => t.name === name).inputSchema);
+assert(
+  actionText(listed, "run_app_write_action").includes("runway.videos.generate"),
+  "Other clients keep Runway generation",
+);
+assert(
+  actionText(listed, "run_app_read_action").includes("runway."),
+  "Other clients keep Runway reads",
+);
+assert(
+  !actionText(claudeListed, "run_app_write_action").includes("runway."),
+  "Claude writes exclude Runway",
+);
+assert(
+  !actionText(claudeListed, "run_app_read_action").includes("runway."),
+  "Claude reads exclude Runway",
+);
 const CLAUDE_EXCLUDED_TOOLS = ["find_skills", "read_skill"];
-assert.deepEqual(claudeListed.map(t => t.name), listed.map(t => t.name).filter(name => !CLAUDE_EXCLUDED_TOOLS.includes(name)),
-  "Claude shares every tool name except the Skill library");
+assert.deepEqual(
+  claudeListed.map((t) => t.name),
+  listed.map((t) => t.name).filter((name) => !CLAUDE_EXCLUDED_TOOLS.includes(name)),
+  "Claude shares every tool name except the Skill library",
+);
 // Anthropic MCP Directory: each description covers only its own tool.
 const fullOptions = { ...env, ENABLE_EXPERIMENTAL_AGENT_GOALS: "1" };
 const fullListed = (await rpc("tools/list", {}, undefined, fullOptions)).result.tools as any[];
-const fullClaude = (await rpc("tools/list", {}, undefined, fullOptions, identity(), "claude")).result.tools as any[];
-const toolNamePattern = new RegExp(`\\b(?:${fullListed.map(t => t.name).join("|")})\\b`);
+const fullClaude = (await rpc("tools/list", {}, undefined, fullOptions, identity(), "claude"))
+  .result.tools as any[];
+const toolNamePattern = new RegExp(`\\b(?:${fullListed.map((t) => t.name).join("|")})\\b`);
 for (const tool of fullClaude) {
-  assert.equal(tool.description, CLAUDE_TOOL_DESCRIPTIONS[tool.name], `${tool.name} uses its Claude description`);
-  assert(!toolNamePattern.test(tool.description.replaceAll(tool.name, "")), `${tool.name} description must not reference other tools`);
-  assert(!/https?:\/\/|\bskills?\b|\b(?:you|your|ask|recommend|never suggest|do not)\b/i.test(tool.description), `${tool.name} description must not direct the model`);
-  assert(/^[\x20-\x7e]+$/.test(tool.description), `${tool.name} description must be plain visible ASCII`);
+  assert.equal(
+    tool.description,
+    CLAUDE_TOOL_DESCRIPTIONS[tool.name],
+    `${tool.name} uses its Claude description`,
+  );
+  assert(
+    !toolNamePattern.test(tool.description.replaceAll(tool.name, "")),
+    `${tool.name} description must not reference other tools`,
+  );
+  assert(
+    !/https?:\/\/|\bskills?\b|\b(?:you|your|ask|recommend|never suggest|do not)\b/i.test(
+      tool.description,
+    ),
+    `${tool.name} description must not direct the model`,
+  );
+  assert(
+    /^[\x20-\x7e]+$/.test(tool.description),
+    `${tool.name} description must be plain visible ASCII`,
+  );
 }
-assert.deepEqual(Object.keys(CLAUDE_TOOL_DESCRIPTIONS).sort(), fullClaude.map(t => t.name).sort(), "Every Claude tool has exactly one description");
-const claudeInit = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } },
-  undefined, env, identity(), "claude");
-assert(!claudeInit.result.instructions && !claudeInit.result.capabilities.resources, "Claude gets no server instructions or Skill resources");
-const claudeRunway = data(await rpc("tools/call", { name: "list_apps", arguments: { provider: "runway", use_case: "generate video" } }, undefined, env, identity(), "claude"));
+assert.deepEqual(
+  Object.keys(CLAUDE_TOOL_DESCRIPTIONS).sort(),
+  fullClaude.map((t) => t.name).sort(),
+  "Every Claude tool has exactly one description",
+);
+const claudeInit = await rpc(
+  "initialize",
+  { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } },
+  undefined,
+  env,
+  identity(),
+  "claude",
+);
+assert(
+  !claudeInit.result.instructions && !claudeInit.result.capabilities.resources,
+  "Claude gets no server instructions or Skill resources",
+);
+const claudeRunway = data(
+  await rpc(
+    "tools/call",
+    { name: "list_apps", arguments: { provider: "runway", use_case: "generate video" } },
+    undefined,
+    env,
+    identity(),
+    "claude",
+  ),
+);
 assert.equal(claudeRunway.operations?.length ?? 0, 0, "Claude cannot discover Runway");
-const rejectedRunway = await rpc("tools/call", { name: "run_app_write_action", arguments: {
-  connectionId: "00000000-0000-4000-8000-000000000001", requestId: "runwayattempt01",
-  operation: { action: "runway.videos.generate", arguments: {} },
-} }, undefined, env, identity(), "claude");
+const rejectedRunway = await rpc(
+  "tools/call",
+  {
+    name: "run_app_write_action",
+    arguments: {
+      connectionId: "00000000-0000-4000-8000-000000000001",
+      requestId: "runwayattempt01",
+      operation: { action: "runway.videos.generate", arguments: {} },
+    },
+  },
+  undefined,
+  env,
+  identity(),
+  "claude",
+);
 assert(rejected(rejectedRunway), "Claude cannot call even manually forged Runway actions");
-assert(claudeListed.every(tool => typeof tool.title === "string" && tool.title.length > 0 && tool.name.length <= 64 &&
-  typeof tool.annotations?.readOnlyHint === "boolean" && typeof tool.annotations?.destructiveHint === "boolean"),
-  "All Claude MCP tools have proper title/readOnlyHint/destructiveHint");
-for (const [name, args] of [["find_skills", { query: "video" }], ["read_skill", { id: "manim-video" }]] as const) {
-  assert(rejected(await rpc("tools/call", { name, arguments: args }, "devices:read", env, identity("devices:read"), "claude")),
-    `Claude cannot call ${name} by name`);
+assert(
+  claudeListed.every(
+    (tool) =>
+      typeof tool.title === "string" &&
+      tool.title.length > 0 &&
+      tool.name.length <= 64 &&
+      typeof tool.annotations?.readOnlyHint === "boolean" &&
+      typeof tool.annotations?.destructiveHint === "boolean",
+  ),
+  "All Claude MCP tools have proper title/readOnlyHint/destructiveHint",
+);
+for (const [name, args] of [
+  ["find_skills", { query: "video" }],
+  ["read_skill", { id: "manim-video" }],
+] as const) {
+  assert(
+    rejected(
+      await rpc(
+        "tools/call",
+        { name, arguments: args },
+        "devices:read",
+        env,
+        identity("devices:read"),
+        "claude",
+      ),
+    ),
+    `Claude cannot call ${name} by name`,
+  );
 }
-const genericSkills = data(await rpc("tools/call", { name: "find_skills", arguments: { query: "image" } },
-  "devices:read", env, identity("devices:read"), "generic"));
-assert(genericSkills.skills.some((skill: any) => skill.id === "image-studio"),
-  "ChatGPT and other clients retain the existing image creation skill");
+const genericSkills = data(
+  await rpc(
+    "tools/call",
+    { name: "find_skills", arguments: { query: "image" } },
+    "devices:read",
+    env,
+    identity("devices:read"),
+    "generic",
+  ),
+);
+assert(
+  genericSkills.skills.some((skill: any) => skill.id === "image-studio"),
+  "ChatGPT and other clients retain the existing image creation skill",
+);
 const claudeResources = await rpc("resources/list", {}, undefined, env, identity(), "claude");
-assert(rejected(claudeResources) || claudeResources.result.resources.length === 0, "Claude gets no Skill resources");
+assert(
+  rejected(claudeResources) || claudeResources.result.resources.length === 0,
+  "Claude gets no Skill resources",
+);
 const genericResources = (await rpc("resources/list", {})).result.resources as any[];
-assert(genericResources.some(resource => resource.uri === "remotearc://skills/image-studio"),
-  "Other clients keep the original resource catalog");
+assert(
+  genericResources.some((resource) => resource.uri === "remotearc://skills/image-studio"),
+  "Other clients keep the original resource catalog",
+);
 // Preserve the exact legacy guidance for every other client.
-assert(listed.find(t => t.name === "find_skills").description.includes("follow its method using the tools you have"),
-  "Non-Claude clients preserve the existing Skills usage guidance");
-assert(listed.find(t => t.name === "read_skill").description.includes("Save those bytes on the authorized user device"),
-  "Non-Claude clients retain the existing helper workflow");
-const legacyCount = data(await rpc("tools/call", { name: "list_apps",
-  arguments: { includeSchemas: true } }));
-assert.equal(legacyCount.operationCatalogSize, APP_OPERATIONS.length, "Non-Claude filtered Apps search retains its global count");
-const claudeCount = data(await rpc("tools/call", { name: "list_apps",
-  arguments: { includeSchemas: true } }, undefined, env, identity(), "claude"));
-assert.equal(claudeCount.operationCatalogSize, APP_OPERATIONS.filter(operation => operation.provider !== "runway").length, "Claude Apps search excludes every Runway operation");
+assert(
+  listed
+    .find((t) => t.name === "find_skills")
+    .description.includes("follow its method using the tools you have"),
+  "Non-Claude clients preserve the existing Skills usage guidance",
+);
+assert(
+  listed
+    .find((t) => t.name === "read_skill")
+    .description.includes("Save those bytes on the authorized user device"),
+  "Non-Claude clients retain the existing helper workflow",
+);
+const legacyCount = data(
+  await rpc("tools/call", { name: "list_apps", arguments: { includeSchemas: true } }),
+);
+assert.equal(
+  legacyCount.operationCatalogSize,
+  APP_OPERATIONS.length,
+  "Non-Claude filtered Apps search retains its global count",
+);
+const claudeCount = data(
+  await rpc(
+    "tools/call",
+    { name: "list_apps", arguments: { includeSchemas: true } },
+    undefined,
+    env,
+    identity(),
+    "claude",
+  ),
+);
+assert.equal(
+  claudeCount.operationCatalogSize,
+  APP_OPERATIONS.filter((operation) => operation.provider !== "runway").length,
+  "Claude Apps search excludes every Runway operation",
+);
 // Claude's default directory keeps the shared paginated provider listing, without Runway.
-const claudeDirectory = data(await rpc("tools/call", { name: "list_apps", arguments: {} }, undefined, env, identity(), "claude"));
+const claudeDirectory = data(
+  await rpc(
+    "tools/call",
+    { name: "list_apps", arguments: {} },
+    undefined,
+    env,
+    identity(),
+    "claude",
+  ),
+);
 const genericDirectory = data(await rpc("tools/call", { name: "list_apps", arguments: {} }));
-assert.equal(claudeDirectory.total, genericDirectory.total - 1, "Claude pages over every provider except Runway");
+assert.equal(
+  claudeDirectory.total,
+  genericDirectory.total - 1,
+  "Claude pages over every provider except Runway",
+);
 assert(!claudeDirectory.apps.some((app: any) => app.provider === "runway"));
-assert.equal(typeof claudeDirectory.nextCursor === "number" || claudeDirectory.nextCursor === null, true);
-const claudeDescription = (name: string) => claudeListed.find(t => t.name === name).description as string;
-assert(claudeDescription("run_app_read_action").includes(`all ${APP_OPERATIONS.filter(o => o.permission === "read" && o.provider !== "runway").length} read action IDs`), "Claude read count matches its schema");
-assert(claudeDescription("run_app_write_action").includes(`all ${APP_OPERATIONS.filter(o => o.permission === "write" && o.provider !== "runway").length} change action IDs`), "Claude write count matches its schema");
+assert.equal(
+  typeof claudeDirectory.nextCursor === "number" || claudeDirectory.nextCursor === null,
+  true,
+);
+const claudeDescription = (name: string) =>
+  claudeListed.find((t) => t.name === name).description as string;
+assert(
+  claudeDescription("run_app_read_action").includes(
+    `all ${APP_OPERATIONS.filter((o) => o.permission === "read" && o.provider !== "runway").length} read action IDs`,
+  ),
+  "Claude read count matches its schema",
+);
+assert(
+  claudeDescription("run_app_write_action").includes(
+    `all ${APP_OPERATIONS.filter((o) => o.permission === "write" && o.provider !== "runway").length} change action IDs`,
+  ),
+  "Claude write count matches its schema",
+);
 const APP_TOOL_NAMES = ["list_apps", "run_app_read_action", "run_app_write_action"];
-const appNames = listed.filter(tool => APP_TOOL_NAMES.includes(tool.name) || tool.name === "call_app").map(tool => tool.name).sort();
-assert.deepEqual(appNames, APP_TOOL_NAMES, "The generic call_app executor is replaced by typed read and write action tools");
-assert(!listed.some(tool => /^(github|gmail|slack|google_slides)_(messages|issues|presentations|channels)_/.test(tool.name)),
-  "Apps should not add hundreds of per-operation MCP tool definitions");
+const appNames = listed
+  .filter((tool) => APP_TOOL_NAMES.includes(tool.name) || tool.name === "call_app")
+  .map((tool) => tool.name)
+  .sort();
+assert.deepEqual(
+  appNames,
+  APP_TOOL_NAMES,
+  "The generic call_app executor is replaced by typed read and write action tools",
+);
+assert(
+  !listed.some((tool) =>
+    /^(github|gmail|slack|google_slides)_(messages|issues|presentations|channels)_/.test(tool.name),
+  ),
+  "Apps should not add hundreds of per-operation MCP tool definitions",
+);
 // Every operation ID is published up front in the action enum; argument
 // schemas come from list_apps, which keeps tools/list small.
 const actionVariants = (name: string) => {
-  const schema = listed.find(tool => tool.name === name).inputSchema;
+  const schema = listed.find((tool) => tool.name === name).inputSchema;
   assert.equal(schema.type, "object");
   assert.equal(schema.additionalProperties, false);
   assert.deepEqual([...schema.required].sort(), ["connectionId", "operation", "requestId"]);
@@ -240,180 +631,594 @@ const actionVariants = (name: string) => {
   assert.equal(operation.properties.arguments.type, "object");
   return operation.properties.action.enum as string[];
 };
-const readActions = actionVariants("run_app_read_action"), writeActions = actionVariants("run_app_write_action");
-const expectedActions = (permission: string) => APP_OPERATIONS.filter(o => o.permission === permission).map(o => o.provider + "." + o.name).sort();
-assert.deepEqual([...readActions].sort(), expectedActions("read"), "The read tool exposes exactly the read operations");
-assert.deepEqual([...writeActions].sort(), expectedActions("write"), "The write tool exposes exactly the write operations");
+const readActions = actionVariants("run_app_read_action"),
+  writeActions = actionVariants("run_app_write_action");
+const expectedActions = (permission: string) =>
+  APP_OPERATIONS.filter((o) => o.permission === permission)
+    .map((o) => o.provider + "." + o.name)
+    .sort();
+assert.deepEqual(
+  [...readActions].sort(),
+  expectedActions("read"),
+  "The read tool exposes exactly the read operations",
+);
+assert.deepEqual(
+  [...writeActions].sort(),
+  expectedActions("write"),
+  "The write tool exposes exactly the write operations",
+);
 assert.equal(readActions.length + writeActions.length, 344);
-assert.equal(new Set([...readActions, ...writeActions]).size, 344, "Action IDs are unique across providers");
-assert(writeActions.includes("gmail.messages.send") && readActions.includes("gmail.messages.get") && !readActions.includes("gmail.messages.send"));
+assert.equal(
+  new Set([...readActions, ...writeActions]).size,
+  344,
+  "Action IDs are unique across providers",
+);
+assert(
+  writeActions.includes("gmail.messages.send") &&
+    readActions.includes("gmail.messages.get") &&
+    !readActions.includes("gmail.messages.send"),
+);
 // ChatGPT keeps the typed form its app review accepted: one variant per
 // operation with its own description and exact arguments, and no lookup.
-const chatgptListed = (await rpc("tools/list", {}, undefined, env, identity(), "chatgpt")).result.tools as any[];
-assert.deepEqual(chatgptListed.map(t => t.name), listed.map(t => t.name), "ChatGPT shares every tool name");
-for (const name of listed.map(t => t.name).filter(name => !APP_TOOL_NAMES.includes(name)))
-  assert.deepEqual(chatgptListed.find(t => t.name === name), listed.find(t => t.name === name), `${name} is the same for ChatGPT`);
+const chatgptListed = (await rpc("tools/list", {}, undefined, env, identity(), "chatgpt")).result
+  .tools as any[];
+assert.deepEqual(
+  chatgptListed.map((t) => t.name),
+  listed.map((t) => t.name),
+  "ChatGPT shares every tool name",
+);
+for (const name of listed.map((t) => t.name).filter((name) => !APP_TOOL_NAMES.includes(name)))
+  assert.deepEqual(
+    chatgptListed.find((t) => t.name === name),
+    listed.find((t) => t.name === name),
+    `${name} is the same for ChatGPT`,
+  );
 const typedVariants = (name: string) => {
-  const schema = chatgptListed.find(tool => tool.name === name).inputSchema;
+  const schema = chatgptListed.find((tool) => tool.name === name).inputSchema;
   const variants = schema.properties.operation.oneOf ?? schema.properties.operation.anyOf;
   for (const variant of variants) {
     assert.equal(variant.additionalProperties, false);
-    assert(variant.description?.length > 10, variant.properties.action.const + " needs its own description");
-    assert.equal(variant.properties.arguments.type, "object", variant.properties.action.const + " needs a typed argument schema");
+    assert(
+      variant.description?.length > 10,
+      variant.properties.action.const + " needs its own description",
+    );
+    assert.equal(
+      variant.properties.arguments.type,
+      "object",
+      variant.properties.action.const + " needs a typed argument schema",
+    );
   }
   return variants.map((variant: any) => variant.properties.action.const as string).sort();
 };
-assert.deepEqual(typedVariants("run_app_read_action"), [...readActions].sort(), "ChatGPT's read tool types exactly the read operations");
-assert.deepEqual(typedVariants("run_app_write_action"), [...writeActions].sort(), "ChatGPT's write tool types exactly the write operations");
-assert(!chatgptListed.find(t => t.name === "list_apps").inputSchema.properties.actions, "ChatGPT's list_apps keeps its reviewed schema");
-assert(chatgptListed.find(t => t.name === "run_app_write_action").description.includes("listed individually in the operation schema"));
+assert.deepEqual(
+  typedVariants("run_app_read_action"),
+  [...readActions].sort(),
+  "ChatGPT's read tool types exactly the read operations",
+);
+assert.deepEqual(
+  typedVariants("run_app_write_action"),
+  [...writeActions].sort(),
+  "ChatGPT's write tool types exactly the write operations",
+);
+assert(
+  !chatgptListed.find((t) => t.name === "list_apps").inputSchema.properties.actions,
+  "ChatGPT's list_apps keeps its reviewed schema",
+);
+assert(
+  chatgptListed
+    .find((t) => t.name === "run_app_write_action")
+    .description.includes("listed individually in the operation schema"),
+);
 for (const name of APP_TOOL_NAMES)
-  assert.deepEqual(chatgptListed.find(t => t.name === name).annotations, listed.find(t => t.name === name).annotations, `${name} annotations match`);
-const discoverySchema = listed.find(tool => tool.name === "list_apps").inputSchema;
-assert(discoverySchema.properties.use_case && discoverySchema.properties.includeSchemas && discoverySchema.properties.actions);
-const appToolBytes = JSON.stringify(listed.filter(tool => APP_TOOL_NAMES.includes(tool.name))).length;
+  assert.deepEqual(
+    chatgptListed.find((t) => t.name === name).annotations,
+    listed.find((t) => t.name === name).annotations,
+    `${name} annotations match`,
+  );
+const discoverySchema = listed.find((tool) => tool.name === "list_apps").inputSchema;
+assert(
+  discoverySchema.properties.use_case &&
+    discoverySchema.properties.includeSchemas &&
+    discoverySchema.properties.actions,
+);
+const appToolBytes = JSON.stringify(
+  listed.filter((tool) => APP_TOOL_NAMES.includes(tool.name)),
+).length;
 assert(appToolBytes < 25_000, `App tools must stay small in tools/list (${appToolBytes} bytes)`);
-const disabled = (await rpc("tools/list", {}, undefined, { ...env, ENABLE_APPS: "0" })).result.tools;
+const disabled = (await rpc("tools/list", {}, undefined, { ...env, ENABLE_APPS: "0" })).result
+  .tools;
 assert(!disabled.some((tool: any) => APP_TOOL_NAMES.includes(tool.name)));
 const accounts = data(await invoke("list_apps", { provider: "gmail", limit: 1 }));
-assert.equal(accounts.connections.length, 2, "Legacy provider lookup retains all matching account connections");
+assert.equal(
+  accounts.connections.length,
+  2,
+  "Legacy provider lookup retains all matching account connections",
+);
 assert.equal(accounts.total, 1, "Legacy provider query totals applications, not operations");
 assert.equal(accounts.nextCursor, null);
 assert.equal(accounts.apps.length, 1);
-assert.equal(accounts.apps[0].operations.length, 15, "Explicit provider lookup remains backwards-compatible");
+assert.equal(
+  accounts.apps[0].operations.length,
+  15,
+  "Explicit provider lookup remains backwards-compatible",
+);
 assert(accounts.connections.every((row: any) => row.provider === "gmail"));
-const slides = data(await invoke("list_apps", { use_case: "create google slides presentation", limit: 10, includeSchemas: true }));
-assert(slides.operations.some((o: any) => o.provider === "google_slides" && o.inputSchema),
-  "Google Slides actions must be discoverable with their fixed schema");
-const slack = data(await invoke("list_apps", { use_case: "send slack message", limit: 10, includeSchemas: true }));
-assert(slack.operations.some((o: any) => o.provider === "slack" && o.inputSchema),
-  "Slack actions must be searchable without thousands of top-level MCP tools");
-const slidesZh = data(await invoke("list_apps", { use_case: "创建 Google Slides 演示文稿", limit: 10 }));
-assert(slidesZh.operations.some((o: any) => o.provider === "google_slides"), "Chinese Slides requests must find operations");
+const slides = data(
+  await invoke("list_apps", {
+    use_case: "create google slides presentation",
+    limit: 10,
+    includeSchemas: true,
+  }),
+);
+assert(
+  slides.operations.some((o: any) => o.provider === "google_slides" && o.inputSchema),
+  "Google Slides actions must be discoverable with their fixed schema",
+);
+const slack = data(
+  await invoke("list_apps", { use_case: "send slack message", limit: 10, includeSchemas: true }),
+);
+assert(
+  slack.operations.some((o: any) => o.provider === "slack" && o.inputSchema),
+  "Slack actions must be searchable without thousands of top-level MCP tools",
+);
+const slidesZh = data(
+  await invoke("list_apps", { use_case: "创建 Google Slides 演示文稿", limit: 10 }),
+);
+assert(
+  slidesZh.operations.some((o: any) => o.provider === "google_slides"),
+  "Chinese Slides requests must find operations",
+);
 const slackZh = data(await invoke("list_apps", { use_case: "给 Slack 发消息", limit: 10 }));
-assert(slackZh.operations.some((o: any) => o.provider === "slack"), "Chinese Slack requests must find operations");
-const gh = data(await invoke("list_apps", { provider: "github", use_case: "create issue", includeSchemas: true }));
-assert(gh.operations.some((o: any) => o.operation === "issues.create" && o.inputSchema),
-  "Search must return the exact operation name and schema");
+assert(
+  slackZh.operations.some((o: any) => o.provider === "slack"),
+  "Chinese Slack requests must find operations",
+);
+const gh = data(
+  await invoke("list_apps", { provider: "github", use_case: "create issue", includeSchemas: true }),
+);
+assert(
+  gh.operations.some((o: any) => o.operation === "issues.create" && o.inputSchema),
+  "Search must return the exact operation name and schema",
+);
 const summary = data(await invoke("list_apps", {}));
 assert.equal(summary.operationCatalogSize, 344);
-assert(!JSON.stringify(summary).includes(ids.other), "Do not expose another owner's connection IDs");
+assert(
+  !JSON.stringify(summary).includes(ids.other),
+  "Do not expose another owner's connection IDs",
+);
 assert(!JSON.stringify(summary).includes("inputSchema"));
-assert(gh.operations.some((o: any) => o.action === "github.issues.create"), "Search returns the typed action ID");
-const exact = data(await invoke("list_apps", { actions: ["github.issues.create", "gmail.messages.send", "nope.missing"] }));
+assert(
+  gh.operations.some((o: any) => o.action === "github.issues.create"),
+  "Search returns the typed action ID",
+);
+const exact = data(
+  await invoke("list_apps", {
+    actions: ["github.issues.create", "gmail.messages.send", "nope.missing"],
+  }),
+);
 assert.equal(exact.mode, "actions");
-assert.deepEqual(exact.operations.map((o: any) => o.action).sort(), ["github.issues.create", "gmail.messages.send"]);
-assert(exact.operations.every((o: any) => o.inputSchema?.type === "object"), "Exact lookup returns each action's argument schema");
+assert.deepEqual(exact.operations.map((o: any) => o.action).sort(), [
+  "github.issues.create",
+  "gmail.messages.send",
+]);
+assert(
+  exact.operations.every((o: any) => o.inputSchema?.type === "object"),
+  "Exact lookup returns each action's argument schema",
+);
 assert.deepEqual(exact.unknownActions, ["nope.missing"]);
-assert(exact.connections.every((row: any) => ["github", "gmail"].includes(row.provider)) && !JSON.stringify(exact).includes(ids.other));
-const claudeExact = data(await rpc("tools/call", { name: "list_apps", arguments: { actions: ["runway.videos.generate"] } }, undefined, env, identity(), "claude"));
+assert(
+  exact.connections.every((row: any) => ["github", "gmail"].includes(row.provider)) &&
+    !JSON.stringify(exact).includes(ids.other),
+);
+const claudeExact = data(
+  await rpc(
+    "tools/call",
+    { name: "list_apps", arguments: { actions: ["runway.videos.generate"] } },
+    undefined,
+    env,
+    identity(),
+    "claude",
+  ),
+);
 assert.equal(claudeExact.operations.length, 0, "Claude cannot look up Runway actions");
-const annotations = (name: string) => listed.find(tool => tool.name === name).annotations;
-assert.deepEqual(annotations("list_apps"), { readOnlyHint: true, openWorldHint: false, destructiveHint: false, idempotentHint: true });
-assert.deepEqual(annotations("run_app_read_action"), { readOnlyHint: true, openWorldHint: true, destructiveHint: false, idempotentHint: true });
-assert.deepEqual(annotations("run_app_write_action"), { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: false });
-assert.equal(listed.find(tool => tool.name === "revoke_file_resource").annotations.destructiveHint, true);
-assert.equal(listed.find(tool => tool.name === "undo_last_change").annotations.destructiveHint, true);
-assert.equal(listed.find(tool => tool.name === "browser_runner_act").annotations.idempotentHint, false);
+const annotations = (name: string) => listed.find((tool) => tool.name === name).annotations;
+assert.deepEqual(annotations("list_apps"), {
+  readOnlyHint: true,
+  openWorldHint: false,
+  destructiveHint: false,
+  idempotentHint: true,
+});
+assert.deepEqual(annotations("run_app_read_action"), {
+  readOnlyHint: true,
+  openWorldHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+});
+assert.deepEqual(annotations("run_app_write_action"), {
+  readOnlyHint: false,
+  openWorldHint: true,
+  destructiveHint: true,
+  idempotentHint: false,
+});
+assert.equal(
+  listed.find((tool) => tool.name === "revoke_file_resource").annotations.destructiveHint,
+  true,
+);
+assert.equal(
+  listed.find((tool) => tool.name === "undo_last_change").annotations.destructiveHint,
+  true,
+);
+assert.equal(
+  listed.find((tool) => tool.name === "browser_runner_act").annotations.idempotentHint,
+  false,
+);
 
 const providerRequests: string[] = [];
 const additionalOperations = [
-  ["repositories.list", ids.github, { limit: 2 }, "GET", "https://api.github.com/user/repos?per_page=2&sort=updated"],
-  ["issues.list", ids.github, { repo: "test/project", limit: 2 }, "GET", "https://api.github.com/repos/test/project/issues?per_page=2"],
-  ["pulls.list", ids.github, { repo: "test/project", limit: 2, state: "open" }, "GET", "https://api.github.com/repos/test/project/pulls?per_page=2&state=open"],
-  ["comments.list", ids.github, { repo: "test/project", number: 17, limit: 2 }, "GET", "https://api.github.com/repos/test/project/issues/17/comments?per_page=2"],
-  ["comments.create", ids.github, { repo: "test/project", number: 17, body: "Test comment" }, "POST", "https://api.github.com/repos/test/project/issues/17/comments"],
-  ["messages.list", ids.gmail, { query: "in:inbox", limit: 2 }, "GET", "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in%3Ainbox&maxResults=2"],
+  [
+    "repositories.list",
+    ids.github,
+    { limit: 2 },
+    "GET",
+    "https://api.github.com/user/repos?per_page=2&sort=updated",
+  ],
+  [
+    "issues.list",
+    ids.github,
+    { repo: "test/project", limit: 2 },
+    "GET",
+    "https://api.github.com/repos/test/project/issues?per_page=2",
+  ],
+  [
+    "pulls.list",
+    ids.github,
+    { repo: "test/project", limit: 2, state: "open" },
+    "GET",
+    "https://api.github.com/repos/test/project/pulls?per_page=2&state=open",
+  ],
+  [
+    "comments.list",
+    ids.github,
+    { repo: "test/project", number: 17, limit: 2 },
+    "GET",
+    "https://api.github.com/repos/test/project/issues/17/comments?per_page=2",
+  ],
+  [
+    "comments.create",
+    ids.github,
+    { repo: "test/project", number: 17, body: "Test comment" },
+    "POST",
+    "https://api.github.com/repos/test/project/issues/17/comments",
+  ],
+  [
+    "messages.list",
+    ids.gmail,
+    { query: "in:inbox", limit: 2 },
+    "GET",
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in%3Ainbox&maxResults=2",
+  ],
 ] as const;
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
   const href = String(url);
   providerRequests.push(href);
-  if (href === "https://api.github.com/repos/test/project/issues" && init.method === "POST") return Response.json({ number: 17, title: "Review", body: "Body" });
-  if (href === "https://api.github.com/repos/test/project/issues/17") return Response.json({ number: 17, title: "Review", body: "Body" });
-  if (href.includes("/messages/message-1")) return Response.json({ id: "message-1", snippet: "Ordinary test email" });
+  if (href === "https://api.github.com/repos/test/project/issues" && init.method === "POST")
+    return Response.json({ number: 17, title: "Review", body: "Body" });
+  if (href === "https://api.github.com/repos/test/project/issues/17")
+    return Response.json({ number: 17, title: "Review", body: "Body" });
+  if (href.includes("/messages/message-1"))
+    return Response.json({ id: "message-1", snippet: "Ordinary test email" });
   if (href.endsWith("/drafts") && init.method === "POST") return Response.json({ id: "draft-1" });
-  const operation = additionalOperations.find(([, , , method, url]) => href === url && init.method === method);
+  const operation = additionalOperations.find(
+    ([, , , method, url]) => href === url && init.method === method,
+  );
   if (operation) return Response.json({ testedOperation: operation[0] });
   throw new Error("Unexpected provider URL in test: " + href);
 };
 try {
   // Typed action calls: { connectionId, requestId, operation: { action, arguments } }.
-  const READ = "run_app_read_action", WRITE = "run_app_write_action";
-  const action = (connectionId: string, id: string, args: unknown, requestId: string) => ({ connectionId, requestId, operation: { action: id, arguments: args } });
+  const READ = "run_app_read_action",
+    WRITE = "run_app_write_action";
+  const action = (connectionId: string, id: string, args: unknown, requestId: string) => ({
+    connectionId,
+    requestId,
+    operation: { action: id, arguments: args },
+  });
   const createArgs = { repo: "test/project", title: "Review", body: "Body" };
   const create = action(ids.github, "github.issues.create", createArgs, "create-issue-1");
   for (const connectionId of [ids.gmail, ids.other, ids.revoked]) {
-    assert(rejected(await invoke(WRITE, { ...create, connectionId })),
-      "Wrong provider, owner or revoked accounts must not dispatch");
+    assert(
+      rejected(await invoke(WRITE, { ...create, connectionId })),
+      "Wrong provider, owner or revoked accounts must not dispatch",
+    );
   }
   assert.equal(providerRequests.length, 0);
-  assert(rejected(await invoke(WRITE, action(ids.github, "gmail.messages.send", { to: ["a@example.test"], subject: "S", body: "B" }, "wrong-provider-1"))),
-    "An action ID must match the connection's provider");
-  assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.unknown", createArgs, "unknown-action-1"))));
+  assert(
+    rejected(
+      await invoke(
+        WRITE,
+        action(
+          ids.github,
+          "gmail.messages.send",
+          { to: ["a@example.test"], subject: "S", body: "B" },
+          "wrong-provider-1",
+        ),
+      ),
+    ),
+    "An action ID must match the connection's provider",
+  );
+  assert(
+    rejected(
+      await invoke(
+        WRITE,
+        action(ids.github, "github.issues.unknown", createArgs, "unknown-action-1"),
+      ),
+    ),
+  );
   assert(rejected(await invoke(READ, create)), "The read-only tool cannot run a write action");
-  assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-via-write-1"))),
-    "The write tool exposes only write actions");
-  assert(rejected(await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, repo: "../escape" }, "escape-1"))));
-  const extraField = await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, extra: true }, "extra-field-1"));
+  assert(
+    rejected(
+      await invoke(
+        WRITE,
+        action(
+          ids.github,
+          "github.issues.get",
+          { repo: "test/project", number: 17 },
+          "read-via-write-1",
+        ),
+      ),
+    ),
+    "The write tool exposes only write actions",
+  );
+  assert(
+    rejected(
+      await invoke(
+        WRITE,
+        action(
+          ids.github,
+          "github.issues.create",
+          { ...createArgs, repo: "../escape" },
+          "escape-1",
+        ),
+      ),
+    ),
+  );
+  const extraField = await invoke(
+    WRITE,
+    action(ids.github, "github.issues.create", { ...createArgs, extra: true }, "extra-field-1"),
+  );
   assert(rejected(extraField), "Arguments are validated against the action's exact schema");
   const extraError = JSON.parse(extraField.result.content[0].text);
   assert.equal(extraError.error.code, "INVALID_APP_ARGUMENTS");
   assert.equal(extraError.action, "github.issues.create");
-  assert(extraError.inputSchema?.properties?.repo, "A rejected call returns the action's schema so the model can retry");
+  assert(
+    extraError.inputSchema?.properties?.repo,
+    "A rejected call returns the action's schema so the model can retry",
+  );
   assert((await invoke(WRITE, create, "apps:read")).result._meta["mcp/www_authenticate"]);
   assert((await invoke(WRITE, create, "apps:write")).result._meta["mcp/www_authenticate"]);
-  assert((await invoke(READ, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-scope-1"), "apps:write")).result._meta["mcp/www_authenticate"]);
-  assert.equal(providerRequests.length, 0, "Invalid operations, inputs or missing OAuth scopes must not dispatch");
+  assert(
+    (
+      await invoke(
+        READ,
+        action(
+          ids.github,
+          "github.issues.get",
+          { repo: "test/project", number: 17 },
+          "read-scope-1",
+        ),
+        "apps:write",
+      )
+    ).result._meta["mcp/www_authenticate"],
+  );
+  assert.equal(
+    providerRequests.length,
+    0,
+    "Invalid operations, inputs or missing OAuth scopes must not dispatch",
+  );
   const result = data(await invoke(WRITE, create));
   assert.equal(result.result.number, 17);
   assert.equal(data(await invoke(WRITE, create)).replayed, true);
   assert.equal(providerRequests.length, 1, "Stable requestId must prevent duplicate writes");
-  assert.equal(data(await invoke(WRITE, action(ids.github, "github.issues.create", { ...createArgs, title: "Changed" }, "create-issue-1"))).error.code, "app_request_id_conflict");
-  const readBack = data(await invoke(READ, action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-issue-1")));
+  assert.equal(
+    data(
+      await invoke(
+        WRITE,
+        action(
+          ids.github,
+          "github.issues.create",
+          { ...createArgs, title: "Changed" },
+          "create-issue-1",
+        ),
+      ),
+    ).error.code,
+    "APP_REQUEST_ID_CONFLICT",
+  );
+  const readBack = data(
+    await invoke(
+      READ,
+      action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "read-issue-1"),
+    ),
+  );
   assert.deepEqual(readBack.result, result.result);
   // The same call shape dispatches through ChatGPT's typed schema.
-  const chatgptRead = data(await rpc("tools/call", { name: READ, arguments: action(ids.github, "github.issues.get", { repo: "test/project", number: 17 }, "chatgpt-read-1") }, undefined, env, identity(), "chatgpt"));
+  const chatgptRead = data(
+    await rpc(
+      "tools/call",
+      {
+        name: READ,
+        arguments: action(
+          ids.github,
+          "github.issues.get",
+          { repo: "test/project", number: 17 },
+          "chatgpt-read-1",
+        ),
+      },
+      undefined,
+      env,
+      identity(),
+      "chatgpt",
+    ),
+  );
   assert.deepEqual(chatgptRead.result, result.result);
-  assert(rejected(await rpc("tools/call", { name: READ, arguments: action(ids.github, "github.issues.get", { repo: "test/project", number: 17, extra: true }, "chatgpt-read-2") }, undefined, env, identity(), "chatgpt")),
-    "ChatGPT's typed schema rejects extra arguments");
-  const beforeConsent=providerRequests.length;
-  assert.equal(data(await invoke(READ, action(ids.gmail,"gmail.messages.get",{id:"message-1"},"before-consent"))).error.code,"google_app_data_consent_required");
-  assert.equal(providerRequests.length,beforeConsent,"Existing Google connections require affirmative data-use consent before dispatch");
-  sql.prepare("UPDATE app_connections SET connection_metadata_json=? WHERE provider='gmail' AND user_id='owner'").run(JSON.stringify({googleDataConsent:{version:'2026-11-02',acceptedAt:new Date().toISOString()}}));
-  const msg = data(await invoke(READ, action(ids.gmail, "gmail.messages.get", { id: "message-1" }, "read-mail-1")));
+  assert(
+    rejected(
+      await rpc(
+        "tools/call",
+        {
+          name: READ,
+          arguments: action(
+            ids.github,
+            "github.issues.get",
+            { repo: "test/project", number: 17, extra: true },
+            "chatgpt-read-2",
+          ),
+        },
+        undefined,
+        env,
+        identity(),
+        "chatgpt",
+      ),
+    ),
+    "ChatGPT's typed schema rejects extra arguments",
+  );
+  const beforeConsent = providerRequests.length;
+  assert.equal(
+    data(
+      await invoke(
+        READ,
+        action(ids.gmail, "gmail.messages.get", { id: "message-1" }, "before-consent"),
+      ),
+    ).error.code,
+    "GOOGLE_APP_DATA_CONSENT_REQUIRED",
+  );
+  assert.equal(
+    providerRequests.length,
+    beforeConsent,
+    "Existing Google connections require affirmative data-use consent before dispatch",
+  );
+  sql
+    .prepare(
+      "UPDATE app_connections SET connection_metadata_json=? WHERE provider='gmail' AND user_id='owner'",
+    )
+    .run(
+      JSON.stringify({
+        googleDataConsent: { version: "2026-11-02", acceptedAt: new Date().toISOString() },
+      }),
+    );
+  const msg = data(
+    await invoke(READ, action(ids.gmail, "gmail.messages.get", { id: "message-1" }, "read-mail-1")),
+  );
   assert.equal(msg.result.id, "message-1");
-  const draft = action(ids.gmail, "gmail.drafts.create", { to: ["test@example.test"], subject: "Subject", body: "Body" }, "create-draft-1");
-  assert(rejected(await invoke(WRITE, { ...draft, connectionId: ids.readonly })), "Provider write scope must be enforced");
+  const draft = action(
+    ids.gmail,
+    "gmail.drafts.create",
+    { to: ["test@example.test"], subject: "Subject", body: "Body" },
+    "create-draft-1",
+  );
+  assert(
+    rejected(await invoke(WRITE, { ...draft, connectionId: ids.readonly })),
+    "Provider write scope must be enforced",
+  );
   assert.equal(data(await invoke(WRITE, draft)).result.id, "draft-1");
-  assert(!providerRequests.some(url => url.endsWith("/send")), "Draft creation must not send mail");
+  assert(
+    !providerRequests.some((url) => url.endsWith("/send")),
+    "Draft creation must not send mail",
+  );
   assert(!JSON.stringify(result).includes("test-provider-token"));
   for (const [operation, connectionId, fields] of additionalOperations) {
     const provider = connectionId === ids.github ? "github" : "gmail";
-    const tool = APP_OPERATIONS.find(o => o.provider === provider && o.name === operation)!.permission === "write" ? WRITE : READ;
-    const reply = data(await invoke(tool, action(connectionId, provider + "." + operation, fields, "router-" + operation.replaceAll(".", "-"))));
-    assert.equal(reply.result.testedOperation, operation, "The fixed registry must dispatch only the selected action");
+    const tool =
+      APP_OPERATIONS.find((o) => o.provider === provider && o.name === operation)!.permission ===
+      "write"
+        ? WRITE
+        : READ;
+    const reply = data(
+      await invoke(
+        tool,
+        action(
+          connectionId,
+          provider + "." + operation,
+          fields,
+          "router-" + operation.replaceAll(".", "-"),
+        ),
+      ),
+    );
+    assert.equal(
+      reply.result.testedOperation,
+      operation,
+      "The fixed registry must dispatch only the selected action",
+    );
   }
-} finally { globalThis.fetch = originalFetch; }
+} finally {
+  globalThis.fetch = originalFetch;
+}
 
 for (const [name, args] of [
-  ["browser_runner_act", { device_id: "computer", session_id: "task", action: "fill", snapshot_id: "s1", ref: "e2", value: "123456" }],
-  ["browser_runner_act", { device_id: "computer", session_id: "task", action: "fill_form", snapshot_id: "s1", fields: [{ ref: "e2", action: "fill", value: "123456" }] }],
+  [
+    "browser_runner_act",
+    {
+      device_id: "computer",
+      session_id: "task",
+      action: "fill",
+      snapshot_id: "s1",
+      ref: "e2",
+      value: "123456",
+    },
+  ],
+  [
+    "browser_runner_act",
+    {
+      device_id: "computer",
+      session_id: "task",
+      action: "fill_form",
+      snapshot_id: "s1",
+      fields: [{ ref: "e2", action: "fill", value: "123456" }],
+    },
+  ],
   ["shared_tab_fill", { device_id: "extension", snapshot_id: "s1", ref: "e2", value: "123456" }],
-  ["shared_tab_act", { device_id: "extension", snapshot_id: "s1", action: "fill", ref: "e2", value: "123456" }],
+  [
+    "shared_tab_act",
+    { device_id: "extension", snapshot_id: "s1", action: "fill", ref: "e2", value: "123456" },
+  ],
   ["browser_fill", { device_id: "extension", snapshot_id: "s1", ref: "e2", value: "123456" }],
 ] as const) {
   const result = data(await invoke(name, args));
   assert.equal(result.error.code, "BROWSER_AUTH_REQUIRED");
   assert.match(result.error.message, /resume the same task/);
-  assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH, name + " cannot inherit Dashboard OTP approval");
+  assert.deepEqual(
+    dispatches.at(-1).policy.browserAuth,
+    NO_BROWSER_AUTH,
+    name + " cannot inherit Dashboard OTP approval",
+  );
 }
-const ordinary = await invoke("shared_tab_fill", { device_id: "extension", snapshot_id: "s1", ref: "e1", value: "Normal text" });
+const ordinary = await invoke("shared_tab_fill", {
+  device_id: "extension",
+  snapshot_id: "s1",
+  ref: "e1",
+  value: "Normal text",
+});
 assert.equal(data(ordinary).ok, true, "Ordinary fields still work");
-await invoke("browser_runner_snapshot", { device_id: "computer", session_id: "task", include_captcha_images: true });
+await invoke("browser_runner_snapshot", {
+  device_id: "computer",
+  session_id: "task",
+  include_captcha_images: true,
+});
 assert(!("include_captcha_images" in dispatches.at(-1).arguments));
 assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH);
-await callDevice(env, { ...identity(), clientId: "dashboard" }, "computer", "browser_runner_snapshot", { session_id: "task" });
-assert.deepEqual(dispatches.at(-1).policy.browserAuth, NO_BROWSER_AUTH, "Internal Dashboard calls also ignore legacy authentication approval");
+await callDevice(
+  env,
+  { ...identity(), clientId: "dashboard" },
+  "computer",
+  "browser_runner_snapshot",
+  { session_id: "task" },
+);
+assert.deepEqual(
+  dispatches.at(-1).policy.browserAuth,
+  NO_BROWSER_AUTH,
+  "Internal Dashboard calls also ignore legacy authentication approval",
+);
 sql.close();
-console.log("PASS: App discovery plus typed read/write action tools listing all 344 operation IDs (typed for ChatGPT) with schemas by lookup, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy");
+console.log(
+  "PASS: App discovery plus typed read/write action tools listing all 344 operation IDs (typed for ChatGPT) with schemas by lookup, owner/provider/scope checks, ledger replay, Slides/Slack search, and browser policy",
+);

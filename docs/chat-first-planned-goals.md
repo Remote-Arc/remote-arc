@@ -180,12 +180,12 @@ goals explicitly select source and never silently switch controllers.
 
 Legacy tool/complete/pause remain. Planned decisions add:
 
-| Decision | `arguments_json` | Result |
-| --- | --- | --- |
-| `revise_plan` | `{phases,reason,adaptive?}` | Durable bounded revision |
-| `execution_slice` | `{steps:[{name,command,cwd?,timeout_seconds}]}` | Save steps before execution |
-| `phase_result` | `{outcome,remaining_work?,blocker?}` | Settle phase; completed still undergoes checks |
-| `needs_reasoning` | `{}` | Preserve context; stop speculative work |
+| Decision          | `arguments_json`                                | Result                                         |
+| ----------------- | ----------------------------------------------- | ---------------------------------------------- |
+| `revise_plan`     | `{phases,reason,adaptive?}`                     | Durable bounded revision                       |
+| `execution_slice` | `{steps:[{name,command,cwd?,timeout_seconds}]}` | Save steps before execution                    |
+| `phase_result`    | `{outcome,remaining_work?,blocker?}`            | Settle phase; completed still undergoes checks |
+| `needs_reasoning` | `{}`                                            | Preserve context; stop speculative work        |
 
 Use expected revision and a stable idempotency key. Complete/phase_result requires
 factual evidence, including partial/blocked results. Duplicate acknowledgement

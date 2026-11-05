@@ -110,22 +110,32 @@ export async function recordPlusUsage(
 }
 
 const transferSize = (bytes: number) =>
-  bytes >= 1024 ** 3 ? (bytes / 1024 ** 3).toFixed(2) + " GB" : (bytes / 1024 ** 2).toFixed(1) + " MB";
+  bytes >= 1024 ** 3
+    ? (bytes / 1024 ** 3).toFixed(2) + " GB"
+    : (bytes / 1024 ** 2).toFixed(1) + " MB";
 
 export class BinaryTransferLimitError extends Error {
   readonly code = "BINARY_TRANSFER_LIMIT_REACHED";
 
-  constructor(readonly limit: number, readonly used: number, readonly requested: number) {
+  constructor(
+    readonly limit: number,
+    readonly used: number,
+    readonly requested: number,
+  ) {
     super(
       `Monthly binary transfer allowance exceeded: ${transferSize(used)} of ${transferSize(limit)} used, ` +
-      `${transferSize(requested)} requested. Free includes ${transferSize(limit)} per month across ` +
-      "read_binary_file and temporary file links; it resets at the start of each UTC month. Paid plans have no transfer limit.",
+        `${transferSize(requested)} requested. Free includes ${transferSize(limit)} per month across ` +
+        "read_binary_file and temporary file links; it resets at the start of each UTC month. Paid plans have no transfer limit.",
     );
     this.name = "BinaryTransferLimitError";
   }
 }
 
-export async function binaryBytesUsed(env: PlusUsageEnv, userId: string, at: Date | string = new Date()) {
+export async function binaryBytesUsed(
+  env: PlusUsageEnv,
+  userId: string,
+  at: Date | string = new Date(),
+) {
   const row = await env.DB.prepare(
     "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ?1 AND month_key = ?2",
   )
@@ -170,7 +180,8 @@ export async function meterBinaryBytes(
   )
     .bind(userId, monthKey(now), binaryBytes, limit, now)
     .first<{ binary_bytes: number }>();
-  if (!row) throw new BinaryTransferLimitError(limit, await binaryBytesUsed(env, userId, now), binaryBytes);
+  if (!row)
+    throw new BinaryTransferLimitError(limit, await binaryBytesUsed(env, userId, now), binaryBytes);
 }
 
 export async function getMonthlyPlusUsage(
@@ -221,10 +232,12 @@ export async function finishAutomationRunWithUsage(
     finished_at: string;
   },
 ) {
-  const { run_id, automation_id, user_id, lease_token, status, exit_code, error, finished_at } = input;
+  const { run_id, automation_id, user_id, lease_token, status, exit_code, error, finished_at } =
+    input;
   await db.batch([
-    db.prepare(
-      `UPDATE automation_runs
+    db
+      .prepare(
+        `UPDATE automation_runs
        SET status = ?1,
            exit_code = ?2,
            error = ?3,
@@ -237,9 +250,11 @@ export async function finishAutomationRunWithUsage(
              AND lease_until > ?4
              AND status IN ('waiting','running','waiting_for_device')
          )`,
-    ).bind(status, exit_code, error, finished_at, run_id, automation_id, lease_token),
-    db.prepare(
-      `INSERT INTO user_monthly_plus_usage (
+      )
+      .bind(status, exit_code, error, finished_at, run_id, automation_id, lease_token),
+    db
+      .prepare(
+        `INSERT INTO user_monthly_plus_usage (
          user_id, month_key, binary_bytes, planner_turns, task_runtime_seconds, updated_at
        )
        SELECT
@@ -258,15 +273,18 @@ export async function finishAutomationRunWithUsage(
        ON CONFLICT(user_id, month_key) DO UPDATE SET
          task_runtime_seconds = task_runtime_seconds + excluded.task_runtime_seconds,
          updated_at = excluded.updated_at`,
-    ).bind(finished_at, run_id, automation_id, user_id),
-    db.prepare(
-      `UPDATE automation_runs
+      )
+      .bind(finished_at, run_id, automation_id, user_id),
+    db
+      .prepare(
+        `UPDATE automation_runs
        SET usage_accounted_at = ?1
        WHERE id = ?2
          AND automation_id = ?3
          AND user_id = ?4
          AND finished_at IS NOT NULL
          AND usage_accounted_at IS NULL`,
-    ).bind(finished_at, run_id, automation_id, user_id),
+      )
+      .bind(finished_at, run_id, automation_id, user_id),
   ]);
 }

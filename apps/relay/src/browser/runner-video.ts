@@ -15,13 +15,7 @@ type Publication = {
 };
 type Subscription = {
   id: string;
-  phase:
-    | "waiting"
-    | "subscribing"
-    | "offer"
-    | "answering"
-    | "connected"
-    | "playing";
+  phase: "waiting" | "subscribing" | "offer" | "answering" | "connected" | "playing";
   resource?: Resource;
 };
 export type VideoAttachment = {
@@ -37,22 +31,16 @@ export type VideoAttachment = {
   tools?: string[];
   capabilities?: string[];
 };
-const data = (socket: WebSocket) =>
-  socket.deserializeAttachment() as VideoAttachment;
+const data = (socket: WebSocket) => socket.deserializeAttachment() as VideoAttachment;
 const put = (socket: WebSocket, patch: Partial<VideoAttachment>) =>
   socket.serializeAttachment({ ...data(socket), ...patch });
-const send = (socket: WebSocket, value: unknown) =>
-  socket.send(JSON.stringify(value));
+const send = (socket: WebSocket, value: unknown) => socket.send(JSON.stringify(value));
 const midOK = (mid: unknown): mid is string =>
   typeof mid === "string" && /^[A-Za-z0-9_-]{1,16}$/.test(mid);
 const resourceOK = (id: unknown): id is string =>
   typeof id === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(id);
-export function videoSDP(
-  sdp: unknown,
-  direction: "sendonly" | "recvonly",
-): sdp is string {
-  if (typeof sdp !== "string" || sdp.length > 65536 || !sdp.startsWith("v=0"))
-    return false;
+export function videoSDP(sdp: unknown, direction: "sendonly" | "recvonly"): sdp is string {
+  if (typeof sdp !== "string" || sdp.length > 65536 || !sdp.startsWith("v=0")) return false;
   const lines = sdp.split(/\r?\n/);
   return (
     lines.filter((line) => line.startsWith("m=")).length === 1 &&
@@ -86,9 +74,7 @@ class SFU {
           "content-type": "application/json",
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        signal: AbortSignal.timeout(
-          path.endsWith("tracks/close") ? 10000 : 5000,
-        ),
+        signal: AbortSignal.timeout(path.endsWith("tracks/close") ? 10000 : 5000),
       },
     );
     const result = (await response.json()) as any;
@@ -115,11 +101,7 @@ class SFU {
     } catch (error) {
       // This ID came from a successful allocation owned by this broker. A 410
       // session_error after disconnect confirms that session has expired/closed.
-      if (
-        error instanceof SFUError &&
-        error.status === 410 &&
-        error.code === "session_error"
-      )
+      if (error instanceof SFUError && error.status === 410 && error.code === "session_error")
         return;
       throw error;
     }
@@ -128,8 +110,7 @@ class SFU {
         (mid) =>
           !result.tracks?.some(
             (track: any) =>
-              track.mid === mid &&
-              (!track.errorCode || track.errorCode === "close_track_error"),
+              track.mid === mid && (!track.errorCode || track.errorCode === "close_track_error"),
           ),
       )
     )
@@ -205,10 +186,7 @@ export class RunnerVideoRelay {
       .first<{ allowed_tools: string | null }>();
     try {
       return Boolean(
-        row &&
-          JSON.parse(row.allowed_tools || "[]").includes(
-            "browser_runner_snapshot",
-          ),
+        row && JSON.parse(row.allowed_tools || "[]").includes("browser_runner_snapshot"),
       );
     } catch {
       return false;
@@ -274,8 +252,7 @@ export class RunnerVideoRelay {
           { sessionDescription: { type: "answer", sdp: value.sdp } },
           "PUT",
         );
-        if (data(socket).video?.id !== subscription.id || !this.fresh(socket))
-          return;
+        if (data(socket).video?.id !== subscription.id || !this.fresh(socket)) return;
         put(socket, { video: { ...subscription, phase: "connected" } });
         send(socket, {
           type: "runner_video",
@@ -320,15 +297,10 @@ export class RunnerVideoRelay {
           return;
         }
         this.savePublication(a, { ...pub, resource });
-        const result = await this.sfu.call(
-          `sessions/${resource.sessionId}/tracks/new`,
-          {
-            sessionDescription: { type: "offer", sdp: value.sdp },
-            tracks: [
-              { location: "local", mid: value.mid, trackName: pub.trackName },
-            ],
-          },
-        );
+        const result = await this.sfu.call(`sessions/${resource.sessionId}/tracks/new`, {
+          sessionDescription: { type: "offer", sdp: value.sdp },
+          tracks: [{ location: "local", mid: value.mid, trackName: pub.trackName }],
+        });
         if (this.publication(a)?.id !== pub.id) {
           await this.close(resource);
           return;
@@ -357,10 +329,7 @@ export class RunnerVideoRelay {
       this.savePublication(a, pub);
       await Promise.all(
         this.viewers(a)
-          .filter(
-            (viewer) =>
-              data(viewer).video?.id === pub!.id && this.fresh(viewer),
-          )
+          .filter((viewer) => data(viewer).video?.id === pub!.id && this.fresh(viewer))
           .map((viewer) => this.subscribe(viewer, pub!)),
       );
     }
@@ -382,21 +351,16 @@ export class RunnerVideoRelay {
       resource = await this.sfu.create();
       if (data(socket).video?.id !== pub.id) return;
       put(socket, { video: { id: pub.id, phase: "subscribing", resource } });
-      const result = await this.sfu.call(
-        `sessions/${resource.sessionId}/tracks/new`,
-        {
-          tracks: [
-            {
-              location: "remote",
-              sessionId: pub.resource.sessionId,
-              trackName: pub.trackName,
-            },
-          ],
-        },
-      );
-      resource.mids = (result.tracks || [])
-        .map((track: any) => track.mid)
-        .filter(midOK);
+      const result = await this.sfu.call(`sessions/${resource.sessionId}/tracks/new`, {
+        tracks: [
+          {
+            location: "remote",
+            sessionId: pub.resource.sessionId,
+            trackName: pub.trackName,
+          },
+        ],
+      });
+      resource.mids = (result.tracks || []).map((track: any) => track.mid).filter(midOK);
       if (
         data(socket).video?.id !== pub.id ||
         !this.fresh(socket) ||
@@ -451,8 +415,7 @@ export class RunnerVideoRelay {
     if (
       subscription &&
       !this.viewers(a).some(
-        (viewer) =>
-          this.fresh(viewer) && data(viewer).video?.id === subscription.id,
+        (viewer) => this.fresh(viewer) && data(viewer).video?.id === subscription.id,
       )
     )
       await this.stopPublication(a, subscription.id);
@@ -521,8 +484,7 @@ export class RunnerVideoRelay {
       await this.close(resource);
     for (const socket of this.ctx.getWebSockets()) {
       const a = data(socket);
-      if (a.viewer && a.video && !this.fresh(socket))
-        await this.stopViewer(socket);
+      if (a.viewer && a.video && !this.fresh(socket)) await this.stopViewer(socket);
     }
     await this.schedule();
   }

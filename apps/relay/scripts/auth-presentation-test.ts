@@ -126,4 +126,6 @@ assert.match(email.html, /839201/);
 assert.match(email.html, /Your one-time Remote Arc sign-in code expires in 10 minutes/);
 assert.match(email.html, /<!doctype html>/i);
 
-console.log("PASS: auth pages, XSS immunity, double-submit CSRF cookie protection and OTP email template formatting");
+console.log(
+  "PASS: auth pages, XSS immunity, double-submit CSRF cookie protection and OTP email template formatting",
+);

@@ -7,10 +7,7 @@ import { RunnerVideoRelay } from "../src/browser/runner-video.js";
 export async function cloudHarness(origin: string) {
   const vars = await readFile(new URL("../.dev.vars", import.meta.url), "utf8");
   const env: any = Object.fromEntries(
-    [...vars.matchAll(/^([A-Z_]+)="([^"\r\n]*)"/gm)].map((match) => [
-      match[1],
-      match[2],
-    ]),
+    [...vars.matchAll(/^([A-Z_]+)="([^"\r\n]*)"/gm)].map((match) => [match[1], match[2]]),
   );
   assert(
     env.RUNNER_VIDEO_APP_ID && env.RUNNER_VIDEO_APP_SECRET,
@@ -102,8 +99,7 @@ export async function cloudHarness(origin: string) {
   );
   const cleanup = new Map<string, any>();
   const context: any = {
-    getWebSockets: (tag?: string) =>
-      tag?.startsWith("runner-view:") ? [viewer] : [agent, viewer],
+    getWebSockets: (tag?: string) => (tag?.startsWith("runner-view:") ? [viewer] : [agent, viewer]),
     storage: {
       setAlarm: async () => {},
       getAlarm: async () => null,
@@ -112,11 +108,7 @@ export async function cloudHarness(origin: string) {
       },
       delete: async (key: string) => cleanup.delete(key),
       list: async ({ prefix, limit }: any) =>
-        new Map(
-          [...cleanup]
-            .filter(([key]) => key.startsWith(prefix))
-            .slice(0, limit),
-        ),
+        new Map([...cleanup].filter(([key]) => key.startsWith(prefix)).slice(0, limit)),
     },
   };
   const fetcher: typeof fetch = async (url, init) => {
@@ -190,11 +182,7 @@ export async function cloudHarness(origin: string) {
       await relay.stopViewer(viewer as any);
       await Promise.all(background);
       if (cleanup.size) await relay.sweep();
-      assert.equal(
-        cleanup.size,
-        0,
-        "Cloud SFU cleanup has unresolved track IDs",
-      );
+      assert.equal(cleanup.size, 0, "Cloud SFU cleanup has unresolved track IDs");
     },
   };
 }

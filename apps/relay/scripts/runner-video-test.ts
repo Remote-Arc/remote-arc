@@ -54,9 +54,7 @@ function harness() {
           first: async () =>
             user === "owner" && device === "device"
               ? {
-                  allowed_tools: JSON.stringify(
-                    allowed ? ["browser_runner_snapshot"] : [],
-                  ),
+                  allowed_tools: JSON.stringify(allowed ? ["browser_runner_snapshot"] : []),
                 }
               : null,
         }),
@@ -82,11 +80,7 @@ function harness() {
       },
       delete: async (key: string) => cleanup.delete(key),
       list: async ({ prefix, limit }: any) =>
-        new Map(
-          [...cleanup]
-            .filter(([key]) => key.startsWith(prefix))
-            .slice(0, limit),
-        ),
+        new Map([...cleanup].filter(([key]) => key.startsWith(prefix)).slice(0, limit)),
     },
   };
   const controls: boolean[] = [];
@@ -109,20 +103,14 @@ function harness() {
       });
     }
     if (path.endsWith("tracks/close") && failClose)
-      return Response.json(
-        { errorCode: "serviceUnavailable" },
-        { status: 503 },
-      );
+      return Response.json({ errorCode: "serviceUnavailable" }, { status: 503 });
     return Response.json({ tracks: [{ mid: "0" }] });
   };
   const relay = () =>
     new RunnerVideoRelay(
       ctx,
       env,
-      (a) =>
-        a.userId === "owner" && a.deviceId === "device"
-          ? (agent as any)
-          : undefined,
+      (a) => (a.userId === "owner" && a.deviceId === "device" ? (agent as any) : undefined),
       (_a, watching) => controls.push(watching),
       fetcher as any,
     );
@@ -159,13 +147,9 @@ async function publish(h: ReturnType<typeof harness>, relay = h.relay()) {
     sdp: sdp("sendonly"),
     mid: "0",
   };
-  await Promise.all([
-    relay.agent(h.agent as any, offer),
-    relay.agent(h.agent as any, offer),
-  ]);
+  await Promise.all([relay.agent(h.agent as any, offer), relay.agent(h.agent as any, offer)]);
   assert.equal(
-    h.calls.filter((value) => value.body?.tracks?.[0]?.location === "local")
-      .length,
+    h.calls.filter((value) => value.body?.tracks?.[0]?.location === "local").length,
     1,
     "duplicate publisher offers allocated twice",
   );
@@ -176,10 +160,7 @@ async function publish(h: ReturnType<typeof harness>, relay = h.relay()) {
 assert(videoSDP(sdp("sendonly"), "sendonly"));
 assert(!videoSDP(sdp("sendonly") + "m=audio 9 RTP/AVP 0\r\n", "sendonly"));
 assert(
-  !videoSDP(
-    sdp("sendonly") + "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n",
-    "sendonly",
-  ),
+  !videoSDP(sdp("sendonly") + "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n", "sendonly"),
 );
 assert(!videoSDP("x".repeat(70000), "sendonly"));
 {
@@ -209,10 +190,7 @@ assert(!videoSDP("x".repeat(70000), "sendonly"));
     stream_id: "old",
     sdp: sdp("recvonly"),
   });
-  assert.equal(
-    h.calls.filter((value) => value.path.endsWith("renegotiate")).length,
-    0,
-  );
+  assert.equal(h.calls.filter((value) => value.path.endsWith("renegotiate")).length, 0);
   await resumed.viewer(h.viewer as any, {
     type: "video_answer",
     stream_id: id,
@@ -234,10 +212,7 @@ assert(!videoSDP("x".repeat(70000), "sendonly"));
     "second viewer started another encoder",
   );
   await resumed.stopViewer(second as any);
-  assert(
-    h.agent.data.publications.task,
-    "one viewer leaving stopped the other",
-  );
+  assert(h.agent.data.publications.task, "one viewer leaving stopped the other");
   h.revoke();
   await resumed.heartbeat(h.viewer as any);
   assert(h.viewer.closed, "revoked reader retained the JPEG viewer socket");

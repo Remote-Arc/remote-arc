@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { RunnerVideoPlayer } from "../src/features/browser-runner/runner-video.js";
-const offer =
-  "v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 106\r\na=sendonly\r\na=rtpmap:106 H264/90000\r\n";
+const offer = "v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 106\r\na=sendonly\r\na=rtpmap:106 H264/90000\r\n";
 class Peer extends EventTarget {
   static peers: Peer[] = [];
   iceGatheringState = "complete";
@@ -81,11 +80,7 @@ function harness() {
   await h.player.signal({ action: "offer", stream_id: "stream", sdp: offer });
   assert.equal(h.sent.at(-1).type, "video_answer");
   h.frame();
-  assert.equal(
-    h.state().live,
-    0,
-    "playback was announced before backend negotiation completed",
-  );
+  assert.equal(h.state().live, 0, "playback was announced before backend negotiation completed");
   await h.player.signal({ action: "connected", stream_id: "old" });
   assert.equal(h.state().live, 0);
   await h.player.signal({ action: "connected", stream_id: "stream" });
@@ -108,11 +103,7 @@ function harness() {
     stream_id: "stream",
     sdp: offer + "m=audio 9 RTP/AVP 0\r\n",
   });
-  assert.equal(
-    Peer.peers.length,
-    before,
-    "audio or data could enter the player",
-  );
+  assert.equal(Peer.peers.length, before, "audio or data could enter the player");
   h.player.close();
 }
 {

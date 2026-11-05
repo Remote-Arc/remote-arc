@@ -20,13 +20,13 @@ Go measurement uses Linux, matching the coverage job. Browser-extension JavaScri
 
 The measured baseline is [master c4bc77f / CI 40998299997](https://github.com/Remote-Arc/remote-arc/actions/runs/40998299997).
 
-| Scope | Measured statements | Enforced regression floor |
-| --- | ---: | --- |
-| Apps core | 99.49% | 90% for every metric and file |
-| Go Execution Core | 90.88% | 90% module statements; protocol 90% |
-| Go Agent | 78.62% | 90% module statements; local MCP 90% |
-| Relay | 90.11%* | 90% lines/statements, 83% branches, 96% functions |
-| TypeScript/TSX | 50.25% | 50% lines/statements, 80% branches, 76% functions |
+| Scope             | Measured statements | Enforced regression floor                         |
+| ----------------- | ------------------: | ------------------------------------------------- |
+| Apps core         |              99.49% | 90% for every metric and file                     |
+| Go Execution Core |              90.88% | 90% module statements; protocol 90%               |
+| Go Agent          |              78.62% | 90% module statements; local MCP 90%              |
+| Relay             |             90.11%* | 90% lines/statements, 83% branches, 96% functions |
+| TypeScript/TSX    |              50.25% | 50% lines/statements, 80% branches, 76% functions |
 
 \* Relay was re-measured after `coverage:relay` switched from the security suite alone to `test:coverage`: the security suite plus the other relay suites CI already runs, with the goal harnesses importing the real sources. Its earlier baseline was 63.76%.
 

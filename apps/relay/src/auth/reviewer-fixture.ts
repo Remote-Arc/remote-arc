@@ -34,7 +34,9 @@ const BASE_FILES: Record<string, string> = {
 };
 
 function normalizeReviewPath(value: unknown) {
-  const raw = String(value || "").trim().replace(/\\/g, "/");
+  const raw = String(value || "")
+    .trim()
+    .replace(/\\/g, "/");
   if (!raw) throw new Error("path is required");
   const path = raw.startsWith("/") ? raw : `${REVIEW_ROOT}/${raw}`;
   const parts = path.split("/").filter(Boolean);
@@ -46,11 +48,7 @@ function normalizeReviewPath(value: unknown) {
   return normalized;
 }
 
-async function overlayFile(
-  env: ReviewerFixtureEnv,
-  userId: string,
-  path: string,
-) {
+async function overlayFile(env: ReviewerFixtureEnv, userId: string, path: string) {
   return env.DB.prepare(
     `SELECT content, updated_at
      FROM reviewer_demo_files
@@ -60,11 +58,7 @@ async function overlayFile(
     .first<{ content: string; updated_at: string }>();
 }
 
-async function readFixtureFile(
-  env: ReviewerFixtureEnv,
-  userId: string,
-  path: string,
-) {
+async function readFixtureFile(env: ReviewerFixtureEnv, userId: string, path: string) {
   const overlay = await overlayFile(env, userId, path);
   if (overlay) return overlay.content;
   const baseContent = BASE_FILES[path];
@@ -89,13 +83,7 @@ async function saveUndo(
        previous_existed = excluded.previous_existed,
        created_at = excluded.created_at`,
   )
-    .bind(
-      userId,
-      path,
-      previousContent,
-      previousExisted ? 1 : 0,
-      new Date().toISOString(),
-    )
+    .bind(userId, path, previousContent, previousExisted ? 1 : 0, new Date().toISOString())
     .run();
 }
 
@@ -134,10 +122,7 @@ function countOccurrences(value: string, needle: string) {
   }
 }
 
-export async function resetReviewerDemoState(
-  env: ReviewerFixtureEnv,
-  userId: string,
-) {
+export async function resetReviewerDemoState(env: ReviewerFixtureEnv, userId: string) {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM reviewer_demo_files WHERE user_id = ?1").bind(userId),
     env.DB.prepare("DELETE FROM reviewer_demo_undo WHERE user_id = ?1").bind(userId),
@@ -166,9 +151,23 @@ export async function reviewerDemoResult(
         .all<{ path: string; content: string }>();
 
       const entries = new Map<string, { name: string; type: string; size?: number }>([
-        ["package.json", { name: "package.json", type: "file", size: byteLength(BASE_FILES["/review-demo/package.json"]!) }],
+        [
+          "package.json",
+          {
+            name: "package.json",
+            type: "file",
+            size: byteLength(BASE_FILES["/review-demo/package.json"]!),
+          },
+        ],
         ["src", { name: "src", type: "directory" }],
-        ["README.md", { name: "README.md", type: "file", size: byteLength(BASE_FILES["/review-demo/README.md"]!) }],
+        [
+          "README.md",
+          {
+            name: "README.md",
+            type: "file",
+            size: byteLength(BASE_FILES["/review-demo/README.md"]!),
+          },
+        ],
       ]);
 
       for (const row of overlay.results || []) {
@@ -185,8 +184,16 @@ export async function reviewerDemoResult(
 
     if (path === `${REVIEW_ROOT}/src`) {
       return [
-        { name: "router.test.ts", type: "file", size: byteLength(BASE_FILES["/review-demo/src/router.test.ts"]!) },
-        { name: "auth.test.ts", type: "file", size: byteLength(BASE_FILES["/review-demo/src/auth.test.ts"]!) },
+        {
+          name: "router.test.ts",
+          type: "file",
+          size: byteLength(BASE_FILES["/review-demo/src/router.test.ts"]!),
+        },
+        {
+          name: "auth.test.ts",
+          type: "file",
+          size: byteLength(BASE_FILES["/review-demo/src/auth.test.ts"]!),
+        },
       ];
     }
 
@@ -249,7 +256,7 @@ export async function reviewerDemoResult(
     }
     const mode = args.mode === "append" ? "append" : "rewrite";
 
-    let previousContent: string | null = null;
+    let previousContent: string | null;
     let previousExisted = false;
     try {
       previousContent = await readFixtureFile(env, userId, path);
@@ -260,9 +267,7 @@ export async function reviewerDemoResult(
 
     await saveUndo(env, userId, path, previousContent, previousExisted);
     const nextContent =
-      mode === "append" && previousContent !== null
-        ? previousContent + content
-        : content;
+      mode === "append" && previousContent !== null ? previousContent + content : content;
     const updatedAt = await writeOverlay(env, userId, path, nextContent);
 
     return {
@@ -285,9 +290,7 @@ export async function reviewerDemoResult(
     const previousContent = await readFixtureFile(env, userId, path);
     const replacements = countOccurrences(previousContent, oldString);
     if (replacements !== expectedReplacements) {
-      throw new Error(
-        `expected ${expectedReplacements} replacement(s), found ${replacements}`,
-      );
+      throw new Error(`expected ${expectedReplacements} replacement(s), found ${replacements}`);
     }
 
     await saveUndo(env, userId, path, previousContent, true);
@@ -322,17 +325,11 @@ export async function reviewerDemoResult(
     if (undo.previous_existed) {
       await writeOverlay(env, userId, undo.path, undo.previous_content || "");
     } else {
-      await env.DB.prepare(
-        "DELETE FROM reviewer_demo_files WHERE user_id = ?1 AND path = ?2",
-      )
+      await env.DB.prepare("DELETE FROM reviewer_demo_files WHERE user_id = ?1 AND path = ?2")
         .bind(userId, undo.path)
         .run();
     }
-    await env.DB.prepare(
-      "DELETE FROM reviewer_demo_undo WHERE user_id = ?1",
-    )
-      .bind(userId)
-      .run();
+    await env.DB.prepare("DELETE FROM reviewer_demo_undo WHERE user_id = ?1").bind(userId).run();
 
     return {
       restored: true,

@@ -1,3 +1,4 @@
+import { applicationJson } from "../platform/application-json.js";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { handleAdminServiceRequest, type AdminServiceEnv } from "./admin-service.js";
 
@@ -5,7 +6,13 @@ import { handleAdminServiceRequest, type AdminServiceEnv } from "./admin-service
 // bound to this named entrypoint can call it; real session/RBAC still applies.
 export class AdminApiService extends WorkerEntrypoint<AdminServiceEnv> {
   async fetch(request: Request): Promise<Response> {
-    try { return await handleAdminServiceRequest(request, this.env, this.ctx); }
-    catch { return Response.json({ error: "admin_service_unavailable" }, { status: 503, headers: { "cache-control": "private, no-store" } }); }
+    try {
+      return await handleAdminServiceRequest(request, this.env, this.ctx);
+    } catch {
+      return applicationJson(
+        { error: "admin_service_unavailable" },
+        { status: 503, headers: { "cache-control": "private, no-store" } },
+      );
+    }
   }
 }

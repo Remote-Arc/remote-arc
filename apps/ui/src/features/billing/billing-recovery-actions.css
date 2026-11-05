@@ -1,0 +1,39 @@
+.billingRecoveryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  max-width: 100%;
+}
+.billingRecoveryActions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 9px 13px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 8px;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.billingRecoveryActions a:hover {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+.billingRecoveryActions a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.appsManagerMessage:has(> .billingRecoveryActions),
+.appsPanelFeedback:has(> .billingRecoveryActions) {
+  display: block;
+}
+.appsManagerMessage:has(> .billingRecoveryActions) > button {
+  display: block;
+  margin: 8px 0 0 auto;
+}

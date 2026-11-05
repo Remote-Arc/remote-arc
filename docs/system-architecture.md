@@ -2,7 +2,6 @@
 
 > 当前整体平台架构请阅读 [Agent platform architecture](agent-platform-architecture.md) 或 [官网中文技术文档](https://remotearc.app/zh/docs/architecture)。本文保留本地执行与 Connect 的工程细节；旧版“托管 Planner 实验”描述不代表当前 Arc Chat 运行时。
 
-
 **适用版本：Remote Arc 0.6.0 系列（2026-10-09 更新）。** 本文是工程架构参考，
 不代表历史设计或实验功能均已正式上线。实际生产能力以
 [官网 Docs](https://remotearc.app/docs)、[发行记录](https://remotearc.app/releases)
@@ -45,11 +44,11 @@ AI 不能自行扩大权限。源控制器不能续接时，任务如实显示�
 
 三层实现责任：
 
-| 层 | 职责 | 运行位置 |
-| --- | --- | --- |
+| 层         | 职责                                                   | 运行位置                                           |
+| ---------- | ------------------------------------------------------ | -------------------------------------------------- |
 | 推理控制器 | 根据目标及观察结果选择下一步、总结事实、提出完成或阻塞 | Work/Codex/Chat 源 Agent，或显式选择的托管 Planner |
-| 任务控制面 | 持久目标、调度、状态、日志、租约、恢复、验收及事件通知 | Cloudflare Worker + D1 |
-| 设备执行面 | 在已授权设备上执行工具，管理进程、路径限制和 Undo | Go Agent + Execution Core |
+| 任务控制面 | 持久目标、调度、状态、日志、租约、恢复、验收及事件通知 | Cloudflare Worker + D1                             |
+| 设备执行面 | 在已授权设备上执行工具，管理进程、路径限制和 Undo      | Go Agent + Execution Core                          |
 
 Plugin/MCP 提供工具连接，不单独决定 AI 宿主的推理寿命。持续推理要由宿主的
 长任务/目标模式，或经过验证的事件续接机制提供。Remote Arc 不会在源 Agent
@@ -78,22 +77,22 @@ flowchart TB
 
 代码目录：
 
-| 目录/模块 | 责任 |
-| --- | --- |
-| `apps/relay/src/index.ts` | HTTP/OAuth/MCP/设备及调度入口 |
-| `apps/relay/src/devices/registry.ts` | 设备在线连接及工具路由 |
-| `apps/relay/src/devices/device-call.ts` | 设备所有权、当前工具策略及执行审计 |
-| `apps/relay/src/tasks/automations.ts` | 持久任务创建、运行、恢复、验收及停止 |
-| `apps/relay/src/tasks/automation-store.ts` | 租约/版本围栏、原子检查点、有序日志 |
-| `apps/relay/src/tasks/source-goals.ts` | 源 Agent 上下文及幂等决策提交 |
-| `apps/relay/src/tasks/agent-planner.ts` | 可选托管模型的结构化决策与错误分类 |
-| `apps/relay/src/tasks/task-events.ts` | MCP Events、密钥保护、签名和有界重试 |
-| `apps/relay/src/devices/device-task-policy.ts` | 每台设备允许的任务能力 |
-| `apps/relay/src/tasks/github-automation.ts` | 明确授权的 GitHub App 云端动作 |
-| `packages/cli` | npm 安装与启动入口，校验并启动 Go Agent |
-| `apps/agent` | Go 设备 Agent：配对、Relay 会话、日志、控制、登录恢复与任务检查点 |
-| `packages/execution-core` | 独立 Go 模块：文件、进程、路径策略与 Undo，和 Agent 编译成一个二进制 |
-| `apps/ui` | 官网知识文档、配对、Dashboard、设备权限与任务管理 |
+| 目录/模块                                      | 责任                                                                 |
+| ---------------------------------------------- | -------------------------------------------------------------------- |
+| `apps/relay/src/index.ts`                      | HTTP/OAuth/MCP/设备及调度入口                                        |
+| `apps/relay/src/devices/registry.ts`           | 设备在线连接及工具路由                                               |
+| `apps/relay/src/devices/device-call.ts`        | 设备所有权、当前工具策略及执行审计                                   |
+| `apps/relay/src/tasks/automations.ts`          | 持久任务创建、运行、恢复、验收及停止                                 |
+| `apps/relay/src/tasks/automation-store.ts`     | 租约/版本围栏、原子检查点、有序日志                                  |
+| `apps/relay/src/tasks/source-goals.ts`         | 源 Agent 上下文及幂等决策提交                                        |
+| `apps/relay/src/tasks/agent-planner.ts`        | 可选托管模型的结构化决策与错误分类                                   |
+| `apps/relay/src/tasks/task-events.ts`          | MCP Events、密钥保护、签名和有界重试                                 |
+| `apps/relay/src/devices/device-task-policy.ts` | 每台设备允许的任务能力                                               |
+| `apps/relay/src/tasks/github-automation.ts`    | 明确授权的 GitHub App 云端动作                                       |
+| `packages/cli`                                 | npm 安装与启动入口，校验并启动 Go Agent                              |
+| `apps/agent`                                   | Go 设备 Agent：配对、Relay 会话、日志、控制、登录恢复与任务检查点    |
+| `packages/execution-core`                      | 独立 Go 模块：文件、进程、路径策略与 Undo，和 Agent 编译成一个二进制 |
+| `apps/ui`                                      | 官网知识文档、配对、Dashboard、设备权限与任务管理                    |
 
 ### 0.6.0 安装与执行边界
 
@@ -111,22 +110,22 @@ Go 不自动接管旧版本仍在运行的 TS 执行者，也不重放已执行�
 
 ## 3. 能力矩阵
 
-| 能力 | 行为 | 关键边界 |
-| --- | --- | --- |
-| 设备发现 | 返回账户拥有的电脑、在线状态及可用工具 | 不跨账户访问 |
-| 文件操作 | 列目录、读取/检查、写入、精确替换 | 设备工具与路径策略 |
-| Undo | 对受支持的文件修改创建与恢复本地快照 | 不是任意命令/第三方操作的回滚 |
-| 终端/进程 | 启动命令、查询状态/输出、停止受管进程 | 真实本地用户权限；非通用 OS 沙箱 |
-| 浏览器上下文 | 读取用户明确共享的标签页、选择文本、链接与表格 | 只读共享上下文；不声称通用 GUI 自动操作 |
+| 能力                                | 行为                                                                                                                 | 关键边界                                                                                                                  |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 设备发现                            | 返回账户拥有的电脑、在线状态及可用工具                                                                               | 不跨账户访问                                                                                                              |
+| 文件操作                            | 列目录、读取/检查、写入、精确替换                                                                                    | 设备工具与路径策略                                                                                                        |
+| Undo                                | 对受支持的文件修改创建与恢复本地快照                                                                                 | 不是任意命令/第三方操作的回滚                                                                                             |
+| 终端/进程                           | 启动命令、查询状态/输出、停止受管进程                                                                                | 真实本地用户权限；非通用 OS 沙箱                                                                                          |
+| 浏览器上下文                        | 读取用户明确共享的标签页、选择文本、链接与表格                                                                       | 只读共享上下文；不声称通用 GUI 自动操作                                                                                   |
 | 进程恢复与登录自启（0.6.x 原生 Go） | launchd / Windows 用户级 supervisor / systemd-user 守护；单执行锁；终端可持续跟随日志；分别显示守护与 Relay 执行状态 | 与 Relay 网络重连独立；强杀执行者后约 15 秒接手；Windows 守护本身需持续运行；依赖用户登录和供电，旧运行实例需先停止或更新 |
-| Long Task | 运行已批准命令并持续跟踪至退出 | 无独立动态推理 |
-| Condition Watch | 匹配 Webhook 后执行确定计划 | 现有回调 URL 是 bearer capability |
-| Schedule Watch | 未来时间或完成后固定间隔执行 | 非日历 cron / 时区 / DST 引擎 |
-| Goal Loop | 重复固定计划及验证命令至达标 | 计划固定；不同于自适应 Agent |
-| Hosted Agent Goal | 模型每轮根据结果重新选择已批准工具 | 明确选择的独立 Planner；非创建对话的同一模型保证 |
-| Source Agent Goal | AI 宿主提交下一步，Remote Arc 执行与保存现场 | 宿主必须能继续运行或通过事件续接 |
-| 任务期间保持唤醒 | 有时限、可续租的系统抑制休眠请求 | 设备及任务双重开启；不防断电、强制休眠或关盖 |
-| GitHub 云端动作 | 安装级短期 token 执行明确指定 PR 合并 | 必须绑定账户/安装/仓库权限；未知结果不盲目重放 |
+| Long Task                           | 运行已批准命令并持续跟踪至退出                                                                                       | 无独立动态推理                                                                                                            |
+| Condition Watch                     | 匹配 Webhook 后执行确定计划                                                                                          | 现有回调 URL 是 bearer capability                                                                                         |
+| Schedule Watch                      | 未来时间或完成后固定间隔执行                                                                                         | 非日历 cron / 时区 / DST 引擎                                                                                             |
+| Goal Loop                           | 重复固定计划及验证命令至达标                                                                                         | 计划固定；不同于自适应 Agent                                                                                              |
+| Hosted Agent Goal                   | 模型每轮根据结果重新选择已批准工具                                                                                   | 明确选择的独立 Planner；非创建对话的同一模型保证                                                                          |
+| Source Agent Goal                   | AI 宿主提交下一步，Remote Arc 执行与保存现场                                                                         | 宿主必须能继续运行或通过事件续接                                                                                          |
+| 任务期间保持唤醒                    | 有时限、可续租的系统抑制休眠请求                                                                                     | 设备及任务双重开启；不防断电、强制休眠或关盖                                                                              |
+| GitHub 云端动作                     | 安装级短期 token 执行明确指定 PR 合并                                                                                | 必须绑定账户/安装/仓库权限；未知结果不盲目重放                                                                            |
 
 Agent Goal 当前可动态选择六种工具：`list_directory`、`read_file`、
 `get_file_info`、`write_file`、`edit_block`、`start_process`。
@@ -140,13 +139,13 @@ Agent Goal 当前可动态选择六种工具：`list_directory`、`read_file`、
 
 Dashboard 的设备任务权限：
 
-| 字段 | 作用 |
-| --- | --- |
+| 字段               | 作用                                       |
+| ------------------ | ------------------------------------------ |
 | `background_tasks` | 允许持久后台工作；关闭会停止本设备相关任务 |
-| `scheduled_tasks` | 允许时间/间隔触发的任务 |
-| `adaptive_agent` | 允许动态判断下一步的 Agent Goal |
-| `source_agent` | 允许 AI 客户端通过续接协议推进目标 |
-| `keep_awake` | 允许任务申请有界唤醒租约 |
+| `scheduled_tasks`  | 允许时间/间隔触发的任务                    |
+| `adaptive_agent`   | 允许动态判断下一步的 Agent Goal            |
+| `source_agent`     | 允许 AI 客户端通过续接协议推进目标         |
+| `keep_awake`       | 允许任务申请有界唤醒租约                   |
 
 现有设备没有保存新配置时，保留已授权的后台/定时/托管 Agent 行为；新增的
 源 Agent 与唤醒能力默认关闭。配置损坏时关闭能力。设置能在线下保存，不需要
@@ -318,17 +317,17 @@ Agent Goal 支持立即、未来时间和固定间隔触发；每次周期运行
 
 ## 12. 存储与隐私
 
-| 存储 | 内容 |
-| --- | --- |
-| `devices` | 账户设备元数据、credential hash、工具/路径/任务权限与后台状态 |
-| OAuth 表 | client、授权及 token hash、scope、期限及撤回状态 |
-| `automations` | 冻结合同、trigger、state、事实记忆、受限观察、期限、租约及 revision |
-| `automation_runs` | 每轮进程 ID、状态、退出码、错误及受限结果摘要 |
-| `automation_journal` | 有序事实事件、revision、run ID、受限摘要；非私有推理 |
-| `automation_decisions` | 幂等提交 hash 及等待消费的决策；消费后清除决策正文 |
-| `automation_events/webhooks` | 条件事件标识、匹配/消费状态、callback secret hash |
-| `task_event_subscriptions/deliveries` | callback、加密 signing secret、有效期及投递元数据 |
-| 本地 Go Execution Core | 受管进程完整输出和文件 Undo 快照 |
+| 存储                                  | 内容                                                                |
+| ------------------------------------- | ------------------------------------------------------------------- |
+| `devices`                             | 账户设备元数据、credential hash、工具/路径/任务权限与后台状态       |
+| OAuth 表                              | client、授权及 token hash、scope、期限及撤回状态                    |
+| `automations`                         | 冻结合同、trigger、state、事实记忆、受限观察、期限、租约及 revision |
+| `automation_runs`                     | 每轮进程 ID、状态、退出码、错误及受限结果摘要                       |
+| `automation_journal`                  | 有序事实事件、revision、run ID、受限摘要；非私有推理                |
+| `automation_decisions`                | 幂等提交 hash 及等待消费的决策；消费后清除决策正文                  |
+| `automation_events/webhooks`          | 条件事件标识、匹配/消费状态、callback secret hash                   |
+| `task_event_subscriptions/deliveries` | callback、加密 signing secret、有效期及投递元数据                   |
+| 本地 Go Execution Core                | 受管进程完整输出和文件 Undo 快照                                    |
 
 持久 Agent Goal 的受限观察可能包含文件内容或进程输出，并会保存在控制面供
 续接使用；不能把“未存完整原始输出”解释为“云端绝无任务内容”。这些观察也
@@ -374,7 +373,6 @@ GitHub deployment-level installation ID 不是用户授权，需单独保存 per
 现有 release HOLD 延续：在 Plugin review / PR41 的发布决策完成之前，不合并、
 不执行生产迁移/部署、不发布 npm、版本 tag 或 Plugin。官网新 Docs 与代码会
 先在 Draft PR 预览中供审查。
-
 
 ## Unified task architecture follow-up (2026-10-05)
 

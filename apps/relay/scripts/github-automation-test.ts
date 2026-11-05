@@ -11,7 +11,10 @@ import {
 assert.equal(githubAutomationConfigured({}), false);
 assert.equal(githubAutomationConfigured({ GITHUB_APP_ID: "123" }), false);
 assert.equal(githubAutomationConfigured({ GITHUB_APP_PRIVATE_KEY: "key" }), false);
-assert.equal(githubAutomationConfigured({ GITHUB_APP_ID: "123", GITHUB_APP_PRIVATE_KEY: "key" }), true);
+assert.equal(
+  githubAutomationConfigured({ GITHUB_APP_ID: "123", GITHUB_APP_PRIVATE_KEY: "key" }),
+  true,
+);
 
 // 2. Unconfigured environment throws
 const spec: GitHubMergeSpec = {
@@ -53,7 +56,11 @@ const env = {
 
 // Missing installation ID throws
 await assert.rejects(
-  async () => mergeGitHubPullRequest({ ...env, GITHUB_APP_INSTALLATION_ID: undefined }, { ...spec, installation_id: undefined }),
+  async () =>
+    mergeGitHubPullRequest(
+      { ...env, GITHUB_APP_INSTALLATION_ID: undefined },
+      { ...spec, installation_id: undefined },
+    ),
   /GitHub installation ID is missing for this automation/,
 );
 
@@ -84,7 +91,11 @@ try {
       const auth = (init?.headers as Record<string, string>)?.authorization;
       assert.equal(auth, "Bearer ghs_mockInstallationToken123");
       sentMergeBody = JSON.parse(String(init?.body));
-      return Response.json({ merged: true, sha: "commit-sha-42", message: "Pull Request successfully merged" });
+      return Response.json({
+        merged: true,
+        sha: "commit-sha-42",
+        message: "Pull Request successfully merged",
+      });
     }
 
     return new Response("Not found", { status: 404 });
@@ -102,13 +113,16 @@ try {
   assert.deepEqual(sentMergeBody, { merge_method: "squash" });
 
   // Merge failure handling
-  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  globalThis.fetch = async (input: RequestInfo | URL, _init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/access_tokens")) {
       return Response.json({ token: "token" });
     }
     if (url.includes("/pulls/42/merge")) {
-      return Response.json({ message: "Base branch was modified. Review and try the merge again." }, { status: 405 });
+      return Response.json(
+        { message: "Base branch was modified. Review and try the merge again." },
+        { status: 405 },
+      );
     }
     return new Response("error", { status: 500 });
   };
@@ -121,4 +135,6 @@ try {
   globalThis.fetch = originalFetch;
 }
 
-console.log("PASS: GitHub App JWT minting, installation tokens, PR merge dispatches and failure handling");
+console.log(
+  "PASS: GitHub App JWT minting, installation tokens, PR merge dispatches and failure handling",
+);

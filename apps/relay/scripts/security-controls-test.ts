@@ -164,13 +164,9 @@ function sessionDb(options?: {
 
   let terminalBlocked = false;
   try {
-    await callDevice(
-      env as never,
-      identity,
-      "device-1",
-      "start_process",
-      { command: "echo hello" },
-    );
+    await callDevice(env as never, identity, "device-1", "start_process", {
+      command: "echo hello",
+    });
   } catch (error) {
     terminalBlocked = String(error).includes("requires a Trusted Write Location");
   }
@@ -216,7 +212,9 @@ function sessionDb(options?: {
     scope: "devices:read computer:read computer:write browser:read offline_access",
     resource: APP_ORIGIN + "/mcp",
   };
-  await callDevice(env as never, fullScopeIdentity, "device-1", "start_process", { command: "echo allowed" });
+  await callDevice(env as never, fullScopeIdentity, "device-1", "start_process", {
+    command: "echo allowed",
+  });
   if (forwarded !== 1) throw new Error("enabled terminal did not reach the registry");
 
   // Simulate Dashboard immediately disabling write + terminal for the same device.
@@ -233,8 +231,11 @@ function sessionDb(options?: {
     }
     if (!denied) throw new Error("Dashboard toggle did not immediately revoke " + tool);
   }
-  if (forwarded !== 1) throw new Error("disabled tools reached the registry after Dashboard toggle");
-  await callDevice(env as never, fullScopeIdentity, "device-1", "read_file", { path: "/trusted/project/file.txt" });
+  if (forwarded !== 1)
+    throw new Error("disabled tools reached the registry after Dashboard toggle");
+  await callDevice(env as never, fullScopeIdentity, "device-1", "read_file", {
+    path: "/trusted/project/file.txt",
+  });
   if (forwarded !== 2) throw new Error("read-only device could not continue reading");
 }
 
@@ -276,13 +277,7 @@ function sessionDb(options?: {
     resource: APP_ORIGIN + "/mcp",
   };
 
-  await callDevice(
-    env as never,
-    identity,
-    "device-1",
-    "start_process",
-    { command: "echo hello" },
-  );
+  await callDevice(env as never, identity, "device-1", "start_process", { command: "echo hello" });
 
   const forwardedArguments =
     forwarded && typeof forwarded.arguments === "object"
@@ -329,13 +324,9 @@ function sessionDb(options?: {
 
   let missingCwdBlocked = false;
   try {
-    await callDevice(
-      env as never,
-      identity,
-      "device-1",
-      "start_process",
-      { command: "echo hello" },
-    );
+    await callDevice(env as never, identity, "device-1", "start_process", {
+      command: "echo hello",
+    });
   } catch (error) {
     missingCwdBlocked = String(error).includes(
       "requires cwd when multiple Trusted Write Locations are configured",
@@ -370,7 +361,7 @@ function sessionDb(options?: {
       getByName() {
         return {
           async fetch(request: Request) {
-            const forwarded = await request.json() as { policy: Record<string, unknown> };
+            const forwarded = (await request.json()) as { policy: Record<string, unknown> };
             postedPolicies.push(forwarded.policy);
             return Response.json({ result: { ok: true } });
           },
@@ -385,46 +376,66 @@ function sessionDb(options?: {
     scope: "computer:read",
     resource: APP_ORIGIN + "/mcp",
   };
-  const save = (enabled: boolean, acknowledged?: boolean) => handleDevicePolicyUpdate(
-    new Request(APP_ORIGIN + "/api/devices/device-1/policy", {
-      method: "POST",
-      headers: { cookie: "rl_session=session-token", "content-type": "application/json" },
-      body: JSON.stringify({
-        workspace_roots: ["/trusted/project"],
-        sensitive_paths: ["/trusted/project/private"],
-        sensitive_allow_paths: [],
-        protect_sensitive_paths: enabled,
-        undo_enabled: true,
-        ...(acknowledged === undefined ? {} : { acknowledge_sensitive_path_risk: acknowledged }),
+  const save = (enabled: boolean, acknowledged?: boolean) =>
+    handleDevicePolicyUpdate(
+      new Request(APP_ORIGIN + "/api/devices/device-1/policy", {
+        method: "POST",
+        headers: { cookie: "rl_session=session-token", "content-type": "application/json" },
+        body: JSON.stringify({
+          workspace_roots: ["/trusted/project"],
+          sensitive_paths: ["/trusted/project/private"],
+          sensitive_allow_paths: [],
+          protect_sensitive_paths: enabled,
+          undo_enabled: true,
+          ...(acknowledged === undefined ? {} : { acknowledge_sensitive_path_risk: acknowledged }),
+        }),
       }),
-    }),
-    env as never,
-  );
-  await callDevice(env as never, identity, "device-1", "read_file", { path: "/trusted/project/file.txt" });
-  if (postedPolicies.at(-1)?.protectSensitivePaths !== true) throw new Error("on-by-default sensitive protection was lost");
+      env as never,
+    );
+  await callDevice(env as never, identity, "device-1", "read_file", {
+    path: "/trusted/project/file.txt",
+  });
+  if (postedPolicies.at(-1)?.protectSensitivePaths !== true)
+    throw new Error("on-by-default sensitive protection was lost");
   const rejected = await save(false);
   if (rejected.status !== 409 || runs.some((r) => r.sql.includes("UPDATE devices"))) {
     throw new Error("sensitive protection disabled without explicit acknowledgement");
   }
   const disabled = await save(false, true);
-  const disabledBody = await disabled.json() as { protect_sensitive_paths: boolean };
-  if (!disabled.ok || disabledBody.protect_sensitive_paths !== false) throw new Error("explicit opt-out was rejected");
+  const disabledBody = (await disabled.json()) as { protect_sensitive_paths: boolean };
+  if (!disabled.ok || disabledBody.protect_sensitive_paths !== false)
+    throw new Error("explicit opt-out was rejected");
   const disabledUpdate = runs.find((r) => r.sql.includes("UPDATE devices"));
-  if (!disabledUpdate || disabledUpdate.args[3] !== 0) throw new Error("disabled sensitive policy was not persisted");
-  if (!runs.some((r) => r.sql.includes("INSERT INTO audit_events") && r.args[9] === "sensitive_protection_off")) {
+  if (!disabledUpdate || disabledUpdate.args[3] !== 0)
+    throw new Error("disabled sensitive policy was not persisted");
+  if (
+    !runs.some(
+      (r) => r.sql.includes("INSERT INTO audit_events") && r.args[9] === "sensitive_protection_off",
+    )
+  ) {
     throw new Error("disabled sensitive-path state was not audited");
   }
   deviceRow.protect_sensitive_paths = 0;
-  await callDevice(env as never, identity, "device-1", "read_file", { path: "/trusted/project/private/key.txt" });
-  if (postedPolicies.at(-1)?.protectSensitivePaths !== false) throw new Error("MCP still forced sensitive protection on");
+  await callDevice(env as never, identity, "device-1", "read_file", {
+    path: "/trusted/project/private/key.txt",
+  });
+  if (postedPolicies.at(-1)?.protectSensitivePaths !== false)
+    throw new Error("MCP still forced sensitive protection on");
   const reenabled = await save(true);
-  const reenabledBody = await reenabled.json() as { protect_sensitive_paths: boolean };
-  if (!reenabled.ok || reenabledBody.protect_sensitive_paths !== true) throw new Error("protection could not be re-enabled");
+  const reenabledBody = (await reenabled.json()) as { protect_sensitive_paths: boolean };
+  if (!reenabled.ok || reenabledBody.protect_sensitive_paths !== true)
+    throw new Error("protection could not be re-enabled");
   const updates = runs.filter((r) => r.sql.includes("UPDATE devices"));
-  if (updates.length !== 2 || updates[1].args[3] !== 1) throw new Error("re-enabled protection was not persisted");
+  if (updates.length !== 2 || updates[1].args[3] !== 1)
+    throw new Error("re-enabled protection was not persisted");
   deviceRow.protect_sensitive_paths = 1;
-  await callDevice(env as never, identity, "device-1", "read_file", { path: "/trusted/project/file.txt" });
-  if (postedPolicies.at(-1)?.protectSensitivePaths !== true) throw new Error("MCP did not restore sensitive protection");
+  await callDevice(env as never, identity, "device-1", "read_file", {
+    path: "/trusted/project/file.txt",
+  });
+  if (postedPolicies.at(-1)?.protectSensitivePaths !== true)
+    throw new Error("MCP did not restore sensitive protection");
 }
 
-console.log("Security grant, workspace-boundary and opt-in sensitive-path toggle regression tests passed");
+console.log(
+  "Security grant, workspace-boundary and opt-in sensitive-path toggle regression tests passed",
+);

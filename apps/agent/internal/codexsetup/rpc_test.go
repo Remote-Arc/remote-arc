@@ -252,14 +252,14 @@ func TestRPCFramingNotificationsAndPrivateErrors(t *testing.T) {
 		t.Fatal(result, err)
 	}
 	err := rpc.call("fixture/error", map[string]any{}, &result)
-	expectCode(t, err, "codex_request_rejected")
+	expectCode(t, err, "CODEX_REQUEST_REJECTED")
 	if strings.Contains(err.Error(), "PRIVATE_VENDOR_DIAGNOSTIC") {
 		t.Fatal("provider diagnostics exposed")
 	}
 }
 
 func TestRPCRejectsProviderPromptsMalformedOversizeAndEOF(t *testing.T) {
-	for mode, code := range map[string]string{"provider_request": "provider_action_required", "invalid": "client_protocol_invalid", "oversize": "client_disconnected", "disconnect": "client_disconnected"} {
+	for mode, code := range map[string]string{"provider_request": "PROVIDER_ACTION_REQUIRED", "invalid": "CLIENT_PROTOCOL_INVALID", "oversize": "CLIENT_DISCONNECTED", "disconnect": "CLIENT_DISCONNECTED"} {
 		t.Run(mode, func(t *testing.T) {
 			t.Setenv("REMOTEARC_CODEX_TEST_MODE", mode)
 			rpc, _ := fixtureRPC(t, nil)
@@ -276,7 +276,7 @@ func TestRPCRejectsProviderPromptsMalformedOversizeAndEOF(t *testing.T) {
 func TestRPCRejectsWrongResponseShape(t *testing.T) {
 	rpc, _ := fixtureRPC(t, map[string][]map[string]any{"fixture/read": {ok("not-an-object")}})
 	var result map[string]any
-	expectCode(t, rpc.call("fixture/read", nil, &result), "client_protocol_invalid")
+	expectCode(t, rpc.call("fixture/read", nil, &result), "CLIENT_PROTOCOL_INVALID")
 }
 
 func TestVersionAndSchemaQualification(t *testing.T) {
@@ -292,7 +292,7 @@ func TestVersionAndSchemaQualification(t *testing.T) {
 	if err != nil || version != "0.163.0-alpha.11" {
 		t.Fatal(version, err)
 	}
-	for mode, code := range map[string]string{"bad_version": "codex_version_unsupported", "old_schema": "codex_capability_unsupported", "schema_failure": "codex_capability_unsupported"} {
+	for mode, code := range map[string]string{"bad_version": "CODEX_VERSION_UNSUPPORTED", "old_schema": "CODEX_CAPABILITY_UNSUPPORTED", "schema_failure": "CODEX_CAPABILITY_UNSUPPORTED"} {
 		t.Setenv("REMOTEARC_CODEX_TEST_MODE", mode)
 		_, err = qualify(ctx, binary, profile)
 		expectCode(t, err, code)
@@ -301,7 +301,7 @@ func TestVersionAndSchemaQualification(t *testing.T) {
 		}
 	}
 	_, err = qualify(ctx, filepath.Join(profile, "missing"), profile)
-	expectCode(t, err, "codex_not_found")
+	expectCode(t, err, "CODEX_NOT_FOUND")
 	var output cappedOutput
 	if _, err = output.Write(make([]byte, 4097)); err != io.ErrShortBuffer {
 		t.Fatal("version output unbounded")
@@ -321,11 +321,11 @@ func TestSchemaBoundsMissingAndMissingConditionalMethod(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"oneOf":[]}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	expectCode(t, checkSchemas(dir), "codex_capability_unsupported")
+	expectCode(t, checkSchemas(dir), "CODEX_CAPABILITY_UNSUPPORTED")
 	if err := os.WriteFile(path, []byte("invalid"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	expectCode(t, checkSchemas(dir), "codex_capability_unsupported")
+	expectCode(t, checkSchemas(dir), "CODEX_CAPABILITY_UNSUPPORTED")
 	if err := os.WriteFile(path, make([]byte, 4<<20), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -335,5 +335,5 @@ func TestSchemaBoundsMissingAndMissingConditionalMethod(t *testing.T) {
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
-	expectCode(t, checkSchemas(dir), "codex_capability_unsupported")
+	expectCode(t, checkSchemas(dir), "CODEX_CAPABILITY_UNSUPPORTED")
 }

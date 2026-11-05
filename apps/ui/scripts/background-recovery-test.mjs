@@ -1,15 +1,34 @@
 import assert from "node:assert/strict";
-import { recoveryConfirmed, waitForAgentOffline, waitForRecoveryState } from "../src/features/dashboard/devices/background-recovery.ts";
+import {
+  recoveryConfirmed,
+  waitForAgentOffline,
+  waitForRecoveryState,
+} from "../src/features/dashboard/devices/background-recovery.ts";
 
 const device = (enabled, active, status = "online") => ({
-  id: "mac-1", status, background_enabled: enabled, background_guard_active: active,
+  id: "mac-1",
+  status,
+  background_enabled: enabled,
+  background_guard_active: active,
 });
 
-assert.equal(recoveryConfirmed(device(true, false), true), false, "a POST-accepted flag is not a running supervisor");
+assert.equal(
+  recoveryConfirmed(device(true, false), true),
+  false,
+  "a POST-accepted flag is not a running supervisor",
+);
 assert.equal(recoveryConfirmed(device(true, true), true), true);
-assert.equal(recoveryConfirmed(device(false, true), false), false, "disable must wait for guard shutdown");
+assert.equal(
+  recoveryConfirmed(device(false, true), false),
+  false,
+  "disable must wait for guard shutdown",
+);
 assert.equal(recoveryConfirmed(device(false, false), false), true);
-assert.equal(recoveryConfirmed(device(true, true, "offline"), true), false, "enabled is not confirmed while offline");
+assert.equal(
+  recoveryConfirmed(device(true, true, "offline"), true),
+  false,
+  "enabled is not confirmed while offline",
+);
 assert.equal(recoveryConfirmed(undefined, true), false);
 
 let calls = 0;
@@ -39,7 +58,10 @@ assert.equal(calls, 3);
 
 calls = 0;
 const failed = await waitForRecoveryState("mac-1", true, {
-  read: async () => { calls++; return [device(true, false)]; },
+  read: async () => {
+    calls++;
+    return [device(true, false)];
+  },
   pause: async () => {},
   attempts: 3,
 });
@@ -48,23 +70,22 @@ assert.equal(calls, 3);
 
 console.log("BACKGROUND_RECOVERY_CONFIRMATION_TEST_PASS");
 
-
-let stopAttempts=0;
-const confirmedStop=await waitForAgentOffline("mac-1", {
+let stopAttempts = 0;
+const confirmedStop = await waitForAgentOffline("mac-1", {
   read: async () => {
     stopAttempts++;
-    if(stopAttempts===1)throw Error("transient");
-    return [stopAttempts<4 ? device(false,false) : device(false,false,"offline")];
+    if (stopAttempts === 1) throw Error("transient");
+    return [stopAttempts < 4 ? device(false, false) : device(false, false, "offline")];
   },
-  pause:async()=>{},
-  attempts:5,
+  pause: async () => {},
+  attempts: 5,
 });
-assert.equal(confirmedStop,true);
-assert.equal(stopAttempts,4,"must wait for Relay offline presence, not disabled recovery");
-const notStopped=await waitForAgentOffline("mac-1", {
-  read:async()=>[device(false,false)],
-  pause:async()=>{},
-  attempts:3,
+assert.equal(confirmedStop, true);
+assert.equal(stopAttempts, 4, "must wait for Relay offline presence, not disabled recovery");
+const notStopped = await waitForAgentOffline("mac-1", {
+  read: async () => [device(false, false)],
+  pause: async () => {},
+  attempts: 3,
 });
-assert.equal(notStopped,false,"off supervisor alone is NOT a stopped device");
+assert.equal(notStopped, false, "off supervisor alone is NOT a stopped device");
 console.log("REMOTE_STOP_OFFLINE_CONFIRMATION_TEST_PASS");

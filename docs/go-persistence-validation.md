@@ -12,20 +12,20 @@ modules are `apps/agent` and `packages/execution-core`.
 
 ## Policy follows the operation, not the filename
 
-| Responsibility | Setting | Current default |
-|---|---|---|
-| Workspace replacement, edit, restored workspace file | `REMOTEARC_FILE_DURABILITY` | Go durable; TS atomic |
-| Undo original bytes, prepared and completed manifest | `REMOTEARC_UNDO_DURABILITY` | Inherits file policy |
-| Go device pairing/config, recovery/service state, local control descriptor, Goal checkpoints | Explicit `config.DurableWrite` | Durable, independent of both environment settings |
-| Execution journal | Existing bounded append/rotation | No per-event disk-sync promise |
+| Responsibility                                                                               | Setting                          | Current default                                   |
+| -------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------- |
+| Workspace replacement, edit, restored workspace file                                         | `REMOTEARC_FILE_DURABILITY`      | Go durable; TS atomic                             |
+| Undo original bytes, prepared and completed manifest                                         | `REMOTEARC_UNDO_DURABILITY`      | Inherits file policy                              |
+| Go device pairing/config, recovery/service state, local control descriptor, Goal checkpoints | Explicit `config.DurableWrite`   | Durable, independent of both environment settings |
+| Execution journal                                                                            | Existing bounded append/rotation | No per-event disk-sync promise                    |
 
 Supported explicit comparison profiles:
 
-| Profile | Workspace | Undo |
-|---|---|---|
-| atomic | atomic | atomic |
-| durable | durable | durable |
-| layered | atomic | durable |
+| Profile | Workspace | Undo    |
+| ------- | --------- | ------- |
+| atomic  | atomic    | atomic  |
+| durable | durable   | durable |
+| layered | atomic    | durable |
 
 To test layered mode, set **both** `REMOTEARC_FILE_DURABILITY=atomic` and
 `REMOTEARC_UNDO_DURABILITY=durable` in the process environment before starting

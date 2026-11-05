@@ -50,16 +50,13 @@ const ref =
 
 function latestRemoteMasterSha() {
   try {
-    const output = execFileSync(
-      "git",
-      ["ls-remote", "origin", "refs/heads/master"],
-      { cwd: repoRoot, encoding: "utf8" },
-    ).trim();
+    const output = execFileSync("git", ["ls-remote", "origin", "refs/heads/master"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    }).trim();
     return output.split(/\s+/)[0] || "";
   } catch {
-    throw new Error(
-      "Could not verify the latest origin/master SHA; refusing production deploy.",
-    );
+    throw new Error("Could not verify the latest origin/master SHA; refusing production deploy.");
   }
 }
 
@@ -68,9 +65,7 @@ function ensureLatestMaster(stage) {
 
   const latestMasterSha = latestRemoteMasterSha();
   if (!latestMasterSha) {
-    throw new Error(
-      "origin/master returned no SHA; refusing production deploy.",
-    );
+    throw new Error("origin/master returned no SHA; refusing production deploy.");
   }
 
   if (
@@ -87,9 +82,7 @@ function ensureLatestMaster(stage) {
     process.exit(0);
   }
 
-  console.log(
-    `Verified latest master at ${stage}: ${latestMasterSha.slice(0, 12)}`,
-  );
+  console.log(`Verified latest master at ${stage}: ${latestMasterSha.slice(0, 12)}`);
 }
 
 const metadata = deploymentMetadata({
@@ -98,9 +91,7 @@ const metadata = deploymentMetadata({
   ref,
 });
 
-console.log(
-  `Remote Arc production deploy allowed: ${policy.source} · ${metadata.tag}`,
-);
+console.log(`Remote Arc production deploy allowed: ${policy.source} · ${metadata.tag}`);
 
 ensureLatestMaster("pre-build");
 

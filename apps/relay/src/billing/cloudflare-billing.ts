@@ -18,9 +18,12 @@ export function summarizeCloudflareBillableUsage(payload: unknown) {
   let total = 0;
   let counted = 0;
   for (const item of result as BillableRow[]) {
-    const amount = typeof item.ContractedCost === "number" && Number.isFinite(item.ContractedCost)
-      ? item.ContractedCost : typeof item.BilledCost === "number" && Number.isFinite(item.BilledCost)
-        ? item.BilledCost : null;
+    const amount =
+      typeof item.ContractedCost === "number" && Number.isFinite(item.ContractedCost)
+        ? item.ContractedCost
+        : typeof item.BilledCost === "number" && Number.isFinite(item.BilledCost)
+          ? item.BilledCost
+          : null;
     if (amount === null) continue;
     counted++;
     const currency = item.BillingCurrency || "USD";
@@ -31,7 +34,12 @@ export function summarizeCloudflareBillableUsage(payload: unknown) {
   }
   if (currencies.size > 1) throw new Error("billing_mixed_currencies");
   if (!counted && result.length) throw new Error("billing_costs_unavailable");
-  return { total: Number(total.toFixed(4)), currency: [...currencies][0] || "USD",
-    services: [...buckets.entries()].map(([name, cost]) => ({ name, cost: Number(cost.toFixed(4)) }))
-      .sort((a,b) => b.cost - a.cost), rows: result.length };
+  return {
+    total: Number(total.toFixed(4)),
+    currency: [...currencies][0] || "USD",
+    services: [...buckets.entries()]
+      .map(([name, cost]) => ({ name, cost: Number(cost.toFixed(4)) }))
+      .sort((a, b) => b.cost - a.cost),
+    rows: result.length,
+  };
 }

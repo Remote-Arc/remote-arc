@@ -36,11 +36,11 @@ This command makes no network requests and reads no secrets. It prints registrat
 
 Use the actual HTTPS App origin of the environment being registered. Production currently uses `https://mcp.remotearc.app`; do not use the marketing domain or a PR preview URL. Register separate development/staging applications where practical and keep credentials, token keys, user connections, and databases isolated. A staging endpoint must be deployed and its login/session flow verified before its callback URLs are offered to users.
 
-| Platform | Connector callbacks at the current production App origin |
-| --- | --- |
-| GitHub | `https://mcp.remotearc.app/api/apps/oauth/github/callback` |
-| Slack | `https://mcp.remotearc.app/api/apps/oauth/slack/callback` |
-| Google | `https://mcp.remotearc.app/api/apps/oauth/gmail/callback`, `https://mcp.remotearc.app/api/apps/oauth/google_calendar/callback` |
+| Platform  | Connector callbacks at the current production App origin                                                                            |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub    | `https://mcp.remotearc.app/api/apps/oauth/github/callback`                                                                          |
+| Slack     | `https://mcp.remotearc.app/api/apps/oauth/slack/callback`                                                                           |
+| Google    | `https://mcp.remotearc.app/api/apps/oauth/gmail/callback`, `https://mcp.remotearc.app/api/apps/oauth/google_calendar/callback`      |
 | Microsoft | `https://mcp.remotearc.app/api/apps/oauth/outlook/callback`, `https://mcp.remotearc.app/api/apps/oauth/microsoft_calendar/callback` |
 
 The original four platform registrations cover six initial connectors. The generated pack covers fifteen identity platforms for 27 OAuth connectors plus two user-owned API credential connectors. The table lists original callbacks; the pack is authoritative for all callbacks and scopes. Standard connection requests the supported read/write scope set. Each user still grants consent on the provider site.
@@ -112,18 +112,18 @@ Vercel also needs `APP_VERCEL_INTEGRATION_SLUG`. Check `/api/apps/status` afterw
 
 Production `/api/apps/status` reports 14 providers ready: GitHub, Slack, Notion, Runway and the ten Google providers (Gmail, Calendar, Drive, Docs, Sheets, Slides, YouTube, Search Console, Analytics and Ads, which share one client). The rest need a client registered in each provider's developer console with the exact callbacks from the generated pack.
 
-| Effort | Platform (providers it unlocks) | What the registration involves |
-| --- | --- | --- |
-| Self-serve, minutes | Atlassian (Jira, Confluence) | OAuth 2.0 (3LO) app in the Atlassian developer console; enable sharing for other sites. |
-| Self-serve, minutes | Linear, Asana, Airtable, Supabase | OAuth application in the provider's developer settings. |
-| Self-serve, minutes | Dropbox | App Console app; development mode has a user cap until production approval. |
-| Self-serve, minutes | HubSpot | Public app in a developer account; Marketplace listing is optional. |
-| Self-serve, minutes | Vercel | Integration in the Vercel dashboard; also set `APP_VERCEL_INTEGRATION_SLUG`. |
-| Medium | Microsoft (Outlook, Outlook Calendar, OneDrive, Excel, Teams, To Do) | Entra registration as above. One client unlocks six providers; work tenants may require admin consent or publisher verification. |
-| Medium | Salesforce | Connected or external client app in a Salesforce org. |
-| Review required | Meta (Facebook, Instagram, Meta Ads) | App Review and business verification for most permissions. |
-| Review required | LinkedIn, Shopify | Product access approval (LinkedIn) or app distribution review (Shopify). |
-| Paid API | X | Developer project with paid API access; calls are billed to Remote Arc. |
+| Effort              | Platform (providers it unlocks)                                      | What the registration involves                                                                                                   |
+| ------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Self-serve, minutes | Atlassian (Jira, Confluence)                                         | OAuth 2.0 (3LO) app in the Atlassian developer console; enable sharing for other sites.                                          |
+| Self-serve, minutes | Linear, Asana, Airtable, Supabase                                    | OAuth application in the provider's developer settings.                                                                          |
+| Self-serve, minutes | Dropbox                                                              | App Console app; development mode has a user cap until production approval.                                                      |
+| Self-serve, minutes | HubSpot                                                              | Public app in a developer account; Marketplace listing is optional.                                                              |
+| Self-serve, minutes | Vercel                                                               | Integration in the Vercel dashboard; also set `APP_VERCEL_INTEGRATION_SLUG`.                                                     |
+| Medium              | Microsoft (Outlook, Outlook Calendar, OneDrive, Excel, Teams, To Do) | Entra registration as above. One client unlocks six providers; work tenants may require admin consent or publisher verification. |
+| Medium              | Salesforce                                                           | Connected or external client app in a Salesforce org.                                                                            |
+| Review required     | Meta (Facebook, Instagram, Meta Ads)                                 | App Review and business verification for most permissions.                                                                       |
+| Review required     | LinkedIn, Shopify                                                    | Product access approval (LinkedIn) or app distribution review (Shopify).                                                         |
+| Paid API            | X                                                                    | Developer project with paid API access; calls are billed to Remote Arc.                                                          |
 
 `APP_TOKEN_KEY` must be base64 encoding of 32 cryptographically random bytes. Generate it in the deployment environment and save it securely without printing it into chat or a build log. Existing encrypted connection and approval records depend on it; changing it without a migration invalidates those records. Separate environments require separate keys.
 
@@ -135,17 +135,17 @@ Production `/api/apps/status` reports 14 providers ready: GitHub, Slack, Notion,
 
 This is a dated configuration/acceptance record, not a claim that all 29 integrations or 221 tools are publicly verified. Tests used the signed-in owner's production Apps connections from a local browser. No model inference, payment, outbound mail, team messages or paid media generation was triggered.
 
-| Provider | Configuration / connection | Actual check completed |
-| --- | --- | --- |
-| GitHub | Organization-owned OAuth client configured; owner connected | `repositories.list` succeeded with a one-item bound. No repository changes. |
-| Google Calendar | Separate Apps OAuth client; API enabled; owner added as an explicit tester | `calendars.list` succeeded with a one-item bound. No calendar changes. |
-| Google Drive | API enabled; owner connected with existing `drive.readonly` / `drive.file` request | `files.list` succeeded with a one-item bound. No full-Drive write scope was requested. |
-| Google Docs | API enabled; owner connected | Created a dedicated private test document, inserted test text using its current revision, then read it back and matched the text. |
-| Google Sheets | API enabled; owner connected | Created a dedicated private blank spreadsheet in the owner's browser, wrote only `A1:B2` through the connector, then read back and matched all four cells. |
-| Notion | Public OAuth client configured with content capabilities; owner connected | Created a dedicated private test page and explicitly added the connection to that page. `pages.get` matched its title. Created/read a test child page; replaying the same write request returned the same page. No workspace search. |
-| Gmail | API enabled; owner OAuth and provider identity check succeeded | No mailbox-content or message-write acceptance. The extra `labels.list` tool is in the pending code release and was not available in the older production runtime. |
-| Slack | Existing owner connection retained | No message reads/sends in this round; expanded scopes and tools need acceptance after the code release. |
-| Outlook / Outlook Calendar | Not configured | Owner has no Remote Arc-controlled Entra tenant; Microsoft setup is explicitly deferred. |
+| Provider                   | Configuration / connection                                                         | Actual check completed                                                                                                                                                                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GitHub                     | Organization-owned OAuth client configured; owner connected                        | `repositories.list` succeeded with a one-item bound. No repository changes.                                                                                                                                                          |
+| Google Calendar            | Separate Apps OAuth client; API enabled; owner added as an explicit tester         | `calendars.list` succeeded with a one-item bound. No calendar changes.                                                                                                                                                               |
+| Google Drive               | API enabled; owner connected with existing `drive.readonly` / `drive.file` request | `files.list` succeeded with a one-item bound. No full-Drive write scope was requested.                                                                                                                                               |
+| Google Docs                | API enabled; owner connected                                                       | Created a dedicated private test document, inserted test text using its current revision, then read it back and matched the text.                                                                                                    |
+| Google Sheets              | API enabled; owner connected                                                       | Created a dedicated private blank spreadsheet in the owner's browser, wrote only `A1:B2` through the connector, then read back and matched all four cells.                                                                           |
+| Notion                     | Public OAuth client configured with content capabilities; owner connected          | Created a dedicated private test page and explicitly added the connection to that page. `pages.get` matched its title. Created/read a test child page; replaying the same write request returned the same page. No workspace search. |
+| Gmail                      | API enabled; owner OAuth and provider identity check succeeded                     | No mailbox-content or message-write acceptance. The extra `labels.list` tool is in the pending code release and was not available in the older production runtime.                                                                   |
+| Slack                      | Existing owner connection retained                                                 | No message reads/sends in this round; expanded scopes and tools need acceptance after the code release.                                                                                                                              |
+| Outlook / Outlook Calendar | Not configured                                                                     | Owner has no Remote Arc-controlled Entra tenant; Microsoft setup is explicitly deferred.                                                                                                                                             |
 
 Google remains **External / Testing**, with the existing basic sign-in client preserved and a separate agent-marked Apps client. The ten declared API scopes cover the five priority Google integrations. Scope declaration, API enablement and a Client ID/Secret pair do not make an unverified app available to arbitrary users; finish applicable branding/data-access verification before public onboarding. Other Google catalog providers still need their own API enablement and acceptance. Do not rotate the existing token vault key to configure these clients.
 
@@ -165,7 +165,6 @@ Protocol mocks and SQLite tests provide development coverage. They do not replac
 [Composio managed auth](https://docs.composio.dev/docs/authentication/custom-app-vs-managed-app) supplies developer OAuth applications for supported integrations. Its customers can skip those registrations, while every end user still grants consent for their own account. Composio stores and refreshes those connected-account credentials. Using a customer's own OAuth client is also supported for branding, scopes, and quotas.
 
 This implementation uses Remote Arc's own direct adapters and credentials. The product follows a comparable user-authorization experience while retaining its own authentication, execution, request journals, and cost controls across Connect and Arc Agent. Neither Lindy nor Composio is part of the runtime or deployment architecture.
-
 
 ## Read-only production readiness preflight
 

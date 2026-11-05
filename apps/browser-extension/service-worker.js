@@ -7,12 +7,7 @@ const READ_TOOLS = [
   "browser_extract_links",
   "browser_extract_table",
 ];
-const INTERACT_TOOLS = [
-  "browser_click",
-  "browser_fill",
-  "browser_open_tab",
-  "browser_act",
-];
+const INTERACT_TOOLS = ["browser_click", "browser_fill", "browser_open_tab", "browser_act"];
 // The Relay calls these when the user enters a one-time secret; the AI only
 // ever holds the handle and spends it through a fill.
 const SECRET_TOOLS = ["secret_prepare", "secret_deliver"];
@@ -154,9 +149,16 @@ async function askForSite(origin) {
   const last = prompted.get(origin) || 0;
   if (Date.now() - last > 60000) {
     prompted.set(origin, Date.now());
-    await chrome.tabs.create({ url: chrome.runtime.getURL("approve.html?origin=" + encodeURIComponent(origin)), active: true });
+    await chrome.tabs.create({
+      url: chrome.runtime.getURL("approve.html?origin=" + encodeURIComponent(origin)),
+      active: true,
+    });
   }
-  throw new Error("SITE_NOT_ALLOWED: " + origin + " is not allowed for AI in this browser yet. Remote Arc opened a page in the user's browser with an Allow button; ask the user to click Allow there (once per site), then call this again.");
+  throw new Error(
+    "SITE_NOT_ALLOWED: " +
+      origin +
+      " is not allowed for AI in this browser yet. Remote Arc opened a page in the user's browser with an Allow button; ask the user to click Allow there (once per site), then call this again.",
+  );
 }
 
 // ---- Connection ----------------------------------------------------------
@@ -190,19 +192,29 @@ async function connectSocket() {
   socket = new WebSocket(url.toString(), ["remotearc", "token." + creds.deviceToken]);
 
   socket.addEventListener("open", () => {
-    socket.send(JSON.stringify({
-      type: "hello",
-      device: {
-        id: creds.deviceId,
-        name: creds.deviceName || "Remote Arc Browser",
-        platform: "browser",
-        arch: "chrome",
-        hostname: "chrome-extension",
-        agentVersion: "browser-" + VERSION,
-      },
-      tools: TOOLS,
-      capabilities: ["browser_tab_grant_v2", "browser_multi_tab_v1", "browser_interact_v1", "browser_site_grants_v1", "browser_act_v1", "browser_auth_policy_v1", "one_time_secret_v1"],
-    }));
+    socket.send(
+      JSON.stringify({
+        type: "hello",
+        device: {
+          id: creds.deviceId,
+          name: creds.deviceName || "Remote Arc Browser",
+          platform: "browser",
+          arch: "chrome",
+          hostname: "chrome-extension",
+          agentVersion: "browser-" + VERSION,
+        },
+        tools: TOOLS,
+        capabilities: [
+          "browser_tab_grant_v2",
+          "browser_multi_tab_v1",
+          "browser_interact_v1",
+          "browser_site_grants_v1",
+          "browser_act_v1",
+          "browser_auth_policy_v1",
+          "one_time_secret_v1",
+        ],
+      }),
+    );
 
     clearInterval(heartbeat);
     heartbeat = setInterval(() => {
@@ -225,11 +237,13 @@ async function connectSocket() {
       const result = await executeTool(message.tool, message.arguments || {}, message.policy || {});
       socket.send(JSON.stringify({ type: "result", id: message.id, result }));
     } catch (error) {
-      socket.send(JSON.stringify({
-        type: "result",
-        id: message.id,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      socket.send(
+        JSON.stringify({
+          type: "result",
+          id: message.id,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
     }
   });
 
@@ -256,7 +270,9 @@ async function resolveSharedTab(tabId) {
   }
 
   if (!grant) {
-    throw new Error("No matching shared tab. A shared tab stops being shared when it moves to another site. Ask the user to choose Share this tab or Allow AI on this site in the Remote Arc Browser popup, or open one with shared_tab_open, then call this again. Do not switch to remote debugging for this page: it asks the user to approve every step.");
+    throw new Error(
+      "No matching shared tab. A shared tab stops being shared when it moves to another site. Ask the user to choose Share this tab or Allow AI on this site in the Remote Arc Browser popup, or open one with shared_tab_open, then call this again. Do not switch to remote debugging for this page: it asks the user to approve every step.",
+    );
   }
 
   const tab = await chrome.tabs.get(grant.tabId).catch(() => null);
@@ -270,7 +286,9 @@ async function resolveSharedTab(tabId) {
     // Without permission for the page the tab moved to, Chrome does not
     // even tell Remote Arc its address.
     if (!origin) {
-      throw new Error("SITE_NOT_ALLOWED: this tab moved to a site that is not allowed for AI. Ask the user to open the Remote Arc Browser popup on that tab and choose Allow AI on this site, then call this again.");
+      throw new Error(
+        "SITE_NOT_ALLOWED: this tab moved to a site that is not allowed for AI. Ask the user to open the Remote Arc Browser popup on that tab and choose Allow AI on this site, then call this again.",
+      );
     }
     if (!(await siteAllowed(origin))) await askForSite(origin);
     if (grant.url !== tab.url || grant.origin !== origin) {
@@ -283,7 +301,9 @@ async function resolveSharedTab(tabId) {
   if (tab.url !== grant.url) {
     const current = await followTab(grant, tab.url, tab.title);
     if (!current) {
-      throw new Error("SITE_NOT_ALLOWED: this tab moved to another site, so it is no longer shared. Ask the user to open the Remote Arc Browser popup on that tab and choose Share this tab or Allow AI on this site, then call this again. Do not switch to remote debugging for this page: it asks the user to approve every step.");
+      throw new Error(
+        "SITE_NOT_ALLOWED: this tab moved to another site, so it is no longer shared. Ask the user to open the Remote Arc Browser popup on that tab and choose Share this tab or Allow AI on this site, then call this again. Do not switch to remote debugging for this page: it asks the user to approve every step.",
+      );
     }
     return { tab, grant: current };
   }
@@ -332,7 +352,8 @@ async function listSharedTabs() {
   return { tabs: items, allowed_sites: Object.keys(await siteList()).sort(), version: VERSION };
 }
 
-const send = (tabId, tool, args = {}) => chrome.tabs.sendMessage(tabId, { source: "remote-arc-browser", tool, arguments: args });
+const send = (tabId, tool, args = {}) =>
+  chrome.tabs.sendMessage(tabId, { source: "remote-arc-browser", tool, arguments: args });
 
 // The page script is injected again after each page load.
 async function ensureInjected(tabId) {
@@ -409,7 +430,9 @@ async function groupTab(tabId) {
         groupId = undefined;
       }
     }
-    groupId = await chrome.tabs.group(groupId !== undefined ? { tabIds: [tabId], groupId } : { tabIds: [tabId] });
+    groupId = await chrome.tabs.group(
+      groupId !== undefined ? { tabIds: [tabId], groupId } : { tabIds: [tabId] },
+    );
     await chrome.tabGroups.update(groupId, { title: "Remote Arc", color: "green" });
     await chrome.storage.session.set({ raGroup: groupId });
   } catch {
@@ -429,7 +452,8 @@ async function openTab(args) {
   } catch {
     throw new Error("url must be a full http(s) address.");
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("url must be a full http(s) address.");
+  if (url.protocol !== "https:" && url.protocol !== "http:")
+    throw new Error("url must be a full http(s) address.");
   if (!(await siteAllowed(url.origin))) await askForSite(url.origin);
   const tab = await chrome.tabs.create({ url: url.href, active: Boolean(args.active) });
   await groupTab(tab.id);
@@ -437,7 +461,11 @@ async function openTab(args) {
   const now = await chrome.tabs.get(tab.id);
   const origin = originOf(now.url || "");
   if (!origin || !(await siteAllowed(origin))) {
-    throw new Error("SITE_NOT_ALLOWED: the page redirected to " + (origin || "a site that is not allowed") + ". Ask the user to allow that site, then open it again.");
+    throw new Error(
+      "SITE_NOT_ALLOWED: the page redirected to " +
+        (origin || "a site that is not allowed") +
+        ". Ask the user to allow that site, then open it again.",
+    );
   }
   await ensureInjected(tab.id);
   const grant = {
@@ -453,7 +481,9 @@ async function openTab(args) {
   grants.set(tab.id, grant);
   await persistGrants();
   await chrome.action.setBadgeText({ tabId: tab.id, text: "AI+" }).catch(() => undefined);
-  await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#76b900" }).catch(() => undefined);
+  await chrome.action
+    .setBadgeBackgroundColor({ tabId: tab.id, color: "#76b900" })
+    .catch(() => undefined);
   const result = { ok: true, tabId: tab.id, url: now.url, title: now.title || "" };
   if (args.snapshot !== false) result.snapshot = await send(tab.id, "browser_read_page");
   return result;
@@ -498,21 +528,55 @@ async function guardFinal(args, effect, tab) {
   return withLedgerLock(async () => {
     const key = String(args.idempotency_key || "");
     if (args.effect !== "submit" || !KEY_PATTERN.test(key)) {
-      throw new Error("SUBMIT_EFFECT_REQUIRED: \"" + effect.label + "\" sends something on the user's behalf (submit, order, pay, post, send). Confirm with the user first, then use shared_tab_act with effect=\"submit\" and a stable idempotency_key for this one action.");
+      throw new Error(
+        'SUBMIT_EFFECT_REQUIRED: "' +
+          effect.label +
+          '" sends something on the user\'s behalf (submit, order, pay, post, send). Confirm with the user first, then use shared_tab_act with effect="submit" and a stable idempotency_key for this one action.',
+      );
     }
     const entries = await ledger();
     if (entries[key]) {
-      throw new Error("SUBMIT_KEY_USED: idempotency_key " + key + " was already sent (" + entries[key].status + "). Read the page to see the result; use a new key only for a new action.");
+      throw new Error(
+        "SUBMIT_KEY_USED: idempotency_key " +
+          key +
+          " was already sent (" +
+          entries[key].status +
+          "). Read the page to see the result; use a new key only for a new action.",
+      );
     }
     const origin = originOf(tab.url || "");
     for (const [other, entry] of Object.entries(entries)) {
-      if (entry.target === effect.target && entry.origin === origin && entry.status === "unverified") {
-        throw new Error("SUBMIT_ALREADY_RECORDED: the same form and button was already sent under idempotency_key " + other + " and is not settled. Read the page, then call shared_tab_act with action=confirm, idempotency_key=" + other + " and outcome=succeeded or failed. Retry the previous action only after failure; a new action needs fresh user approval and a new key.");
+      if (
+        entry.target === effect.target &&
+        entry.origin === origin &&
+        entry.status === "unverified"
+      ) {
+        throw new Error(
+          "SUBMIT_ALREADY_RECORDED: the same form and button was already sent under idempotency_key " +
+            other +
+            " and is not settled. Read the page, then call shared_tab_act with action=confirm, idempotency_key=" +
+            other +
+            " and outcome=succeeded or failed. Retry the previous action only after failure; a new action needs fresh user approval and a new key.",
+        );
       }
     }
-    entries[key] = { target: effect.target, origin, label: effect.label, url: tab.url, at: Date.now(), status: "unverified" };
+    entries[key] = {
+      target: effect.target,
+      origin,
+      label: effect.label,
+      url: tab.url,
+      at: Date.now(),
+      status: "unverified",
+    };
     await saveLedger(entries);
-    return { idempotency_key: key, status: "unverified", next_action: "Check the page for the result, then call shared_tab_act with action=confirm, idempotency_key=" + key + " and outcome=succeeded or failed." };
+    return {
+      idempotency_key: key,
+      status: "unverified",
+      next_action:
+        "Check the page for the result, then call shared_tab_act with action=confirm, idempotency_key=" +
+        key +
+        " and outcome=succeeded or failed.",
+    };
   });
 }
 
@@ -521,7 +585,8 @@ async function confirmSubmit(args) {
     const key = String(args.idempotency_key || "");
     const entries = await ledger();
     if (!entries[key]) throw new Error("No submit was sent with idempotency_key " + key + ".");
-    if (args.outcome !== "succeeded" && args.outcome !== "failed") throw new Error("outcome must be succeeded or failed.");
+    if (args.outcome !== "succeeded" && args.outcome !== "failed")
+      throw new Error("outcome must be succeeded or failed.");
     entries[key] = { ...entries[key], status: args.outcome, confirmedAt: Date.now() };
     await saveLedger(entries);
     return { ok: true, action: "confirm", idempotency_key: key, status: args.outcome };
@@ -543,7 +608,11 @@ const fromB64 = (text) => {
   const binary = atob(String(text).replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(binary, (c) => c.charCodeAt(0));
 };
-const toB64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const toB64 = (bytes) =>
+  btoa(String.fromCharCode(...new Uint8Array(bytes)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 
 let secretUpdates = Promise.resolve();
 function withSecrets(change) {
@@ -551,7 +620,8 @@ function withSecrets(change) {
     const { raSecrets } = await chrome.storage.session.get("raSecrets");
     const items = raSecrets || {};
     const now = Date.now();
-    for (const [handle, item] of Object.entries(items)) if (!(item.expires > now)) delete items[handle];
+    for (const [handle, item] of Object.entries(items))
+      if (!(item.expires > now)) delete items[handle];
     // Saved even when the change fails: a key used in a failed delivery is
     // gone, so the same request cannot be tried again.
     try {
@@ -567,18 +637,33 @@ function withSecrets(change) {
 async function secretKey(privateKey, publicKey, handle) {
   const bits = await subtle.deriveBits({ name: "ECDH", public: publicKey }, privateKey, 256);
   const ikm = await subtle.importKey("raw", bits, "HKDF", false, ["deriveKey"]);
-  return subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: encoder.encode("remote-arc one-time secret v1 " + handle) }, ikm, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  return subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(),
+      info: encoder.encode("remote-arc one-time secret v1 " + handle),
+    },
+    ikm,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["decrypt"],
+  );
 }
 
 async function prepareSecret(args) {
   const handle = String(args.handle || "");
   const site = originOf(String(args.site || ""));
-  if (!SECRET_HANDLE.test(handle) || !site) throw new Error("A one-time secret needs a handle and the site it is for.");
-  const pair = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  if (!SECRET_HANDLE.test(handle) || !site)
+    throw new Error("A one-time secret needs a handle and the site it is for.");
+  const pair = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, [
+    "deriveBits",
+  ]);
   const privateJwk = await subtle.exportKey("jwk", pair.privateKey);
   const publicKey = toB64(await subtle.exportKey("raw", pair.publicKey));
   await withSecrets((items, now) => {
-    if (items[handle]) throw new Error("SECRET_EXISTS: this handle was already prepared in this browser.");
+    if (items[handle])
+      throw new Error("SECRET_EXISTS: this handle was already prepared in this browser.");
     items[handle] = { site, key: privateJwk, expires: now + SECRET_LIFETIME_MS };
   });
   return { handle, public_key: publicKey };
@@ -588,20 +673,41 @@ async function deliverSecret(args) {
   const handle = String(args.handle || "");
   return withSecrets(async (items, now) => {
     const item = items[handle];
-    if (!item?.key) throw new Error("SECRET_NOT_FOUND: this request expired or was already used in this browser. Ask the user to start a new one.");
+    if (!item?.key)
+      throw new Error(
+        "SECRET_NOT_FOUND: this request expired or was already used in this browser. Ask the user to start a new one.",
+      );
     const jwk = item.key;
     delete item.key;
     try {
-      const privateKey = await subtle.importKey("jwk", jwk, { name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]);
-      const epk = await subtle.importKey("raw", fromB64(args.epk), { name: "ECDH", namedCurve: "P-256" }, false, []);
+      const privateKey = await subtle.importKey(
+        "jwk",
+        jwk,
+        { name: "ECDH", namedCurve: "P-256" },
+        false,
+        ["deriveBits"],
+      );
+      const epk = await subtle.importKey(
+        "raw",
+        fromB64(args.epk),
+        { name: "ECDH", namedCurve: "P-256" },
+        false,
+        [],
+      );
       const key = await secretKey(privateKey, epk, handle);
-      const plain = await subtle.decrypt({ name: "AES-GCM", iv: fromB64(args.iv), additionalData: encoder.encode(handle) }, key, fromB64(args.ciphertext));
+      const plain = await subtle.decrypt(
+        { name: "AES-GCM", iv: fromB64(args.iv), additionalData: encoder.encode(handle) },
+        key,
+        fromB64(args.ciphertext),
+      );
       const value = new TextDecoder().decode(plain);
       if (!value) throw new Error("empty");
       Object.assign(item, { value, expires: now + SECRET_LIFETIME_MS });
     } catch {
       delete items[handle];
-      throw new Error("SECRET_UNREADABLE: the encrypted secret could not be opened in this browser. Ask the user to enter it again.");
+      throw new Error(
+        "SECRET_UNREADABLE: the encrypted secret could not be opened in this browser. Ask the user to enter it again.",
+      );
     }
     return { handle, delivered: true };
   });
@@ -612,16 +718,30 @@ async function deliverSecret(args) {
 async function peekSecret(handle, url) {
   return withSecrets((items) => {
     const item = items[handle];
-    if (!item) throw new Error("SECRET_NOT_FOUND: no secret " + handle + " is waiting in this browser. It is used once and expires after 10 minutes; ask the user again with request_secret.");
-    if (item.value === undefined) throw new Error("SECRET_PENDING: the user has not entered " + handle + " yet.");
-    if (originOf(url || "") !== item.site) throw new Error("SECRET_WRONG_SITE: " + handle + " may be filled only on " + item.site + ". Open that site in this tab first.");
+    if (!item)
+      throw new Error(
+        "SECRET_NOT_FOUND: no secret " +
+          handle +
+          " is waiting in this browser. It is used once and expires after 10 minutes; ask the user again with request_secret.",
+      );
+    if (item.value === undefined)
+      throw new Error("SECRET_PENDING: the user has not entered " + handle + " yet.");
+    if (originOf(url || "") !== item.site)
+      throw new Error(
+        "SECRET_WRONG_SITE: " +
+          handle +
+          " may be filled only on " +
+          item.site +
+          ". Open that site in this tab first.",
+      );
     return item.value;
   });
 }
 
-const spendSecret = (handle) => withSecrets((items) => {
-  delete items[handle];
-});
+const spendSecret = (handle) =>
+  withSecrets((items) => {
+    delete items[handle];
+  });
 
 // ---- shared_tab_act --------------------------------------------------------
 
@@ -636,12 +756,15 @@ async function act(args) {
 
   const { tab, grant } = await resolveSharedTab(args.tab_id);
   if (!grant.permissions?.includes("interact")) {
-    throw new Error("Click & fill is not enabled for this tab. Ask the user to enable it in the Remote Arc Browser popup, or to allow the site.");
+    throw new Error(
+      "Click & fill is not enabled for this tab. Ask the user to enable it in the Remote Arc Browser popup, or to allow the site.",
+    );
   }
   const tabId = tab.id;
 
   if (action === "close") {
-    if (!grant.opened) throw new Error("Only tabs Remote Arc opened can be closed. Ask the user to close this tab.");
+    if (!grant.opened)
+      throw new Error("Only tabs Remote Arc opened can be closed. Ask the user to close this tab.");
     await revokeGrant(tabId);
     await chrome.tabs.remove(tabId);
     return { ok: true, action, tabId };
@@ -682,28 +805,50 @@ async function act(args) {
         try {
           await ensureInjected(tabId);
           state = await send(tabId, "ra_state", { text: args.text || "" });
-          met = (!args.text || state?.has_text) && (!args.url_contains || String(state?.url || "").includes(String(args.url_contains)));
+          met =
+            (!args.text || state?.has_text) &&
+            (!args.url_contains || String(state?.url || "").includes(String(args.url_contains)));
         } catch {
           state = null;
         }
         if (!met) await sleep(200);
       }
-      if (!met) throw new Error("WAIT_TIMEOUT: the page did not show " + (args.text ? "\"" + args.text + "\"" : "") + (args.url_contains ? " a URL containing \"" + args.url_contains + "\"" : "") + " within " + limit + " ms.");
+      if (!met)
+        throw new Error(
+          "WAIT_TIMEOUT: the page did not show " +
+            (args.text ? '"' + args.text + '"' : "") +
+            (args.url_contains ? ' a URL containing "' + args.url_contains + '"' : "") +
+            " within " +
+            limit +
+            " ms.",
+        );
       result = { ok: true, action, url: state?.url };
     } else {
       await ensureInjected(tabId);
       const auth = args._auth || {};
-      const contentArgs = { ...args, allow_codes: auth.otp === true && Array.isArray(auth.origins) && auth.origins.includes(originOf(tab.url || "")) && await allowCodes() };
+      const contentArgs = {
+        ...args,
+        allow_codes:
+          auth.otp === true &&
+          Array.isArray(auth.origins) &&
+          auth.origins.includes(originOf(tab.url || "")) &&
+          (await allowCodes()),
+      };
       delete contentArgs._auth;
       // A one-time secret is filled like any value, so password, payment,
       // CAPTCHA, code and file fields stay blocked for it too.
       if (args.secret !== undefined) {
-        if (action !== "fill" || args.value !== undefined) throw new Error("secret works only with action=fill, in place of value.");
+        if (action !== "fill" || args.value !== undefined)
+          throw new Error("secret works only with action=fill, in place of value.");
         contentArgs.value = await peekSecret(String(args.secret), tab.url);
         delete contentArgs.secret;
       }
       if (action === "click" || (action === "press" && ["Enter", "Space"].includes(args.key))) {
-        const kind = await send(tabId, "ra_effect", { snapshot_id: args.snapshot_id, ref: args.ref, key: args.key });
+        const kind = await send(tabId, "ra_effect", {
+          snapshot_id: args.snapshot_id,
+          ref: args.ref,
+          key: args.key,
+        });
         if (kind?.error) throw new Error(kind.error);
         effect = await guardFinal(args, kind, tab);
         const response = await send(tabId, "ra_act", contentArgs);
@@ -720,7 +865,13 @@ async function act(args) {
       }
     }
     const now = await chrome.tabs.get(tabId).catch(() => null);
-    const out = { ...result, tabId, url: now?.url || result?.url, title: now?.title || "", navigated };
+    const out = {
+      ...result,
+      tabId,
+      url: now?.url || result?.url,
+      title: now?.title || "",
+      navigated,
+    };
     if (effect) out.effect = effect;
     if (args.snapshot) out.snapshot = await snapshotOf(tabId);
     return out;
@@ -731,13 +882,13 @@ async function act(args) {
 
 async function executeTool(tool, args, policy = {}) {
   // Policy comes from the authenticated Relay envelope, never tool arguments.
-  args = {...args, _auth: policy.browserAuth || {}};
+  args = { ...args, _auth: policy.browserAuth || {} };
   if (tool === "secret_prepare") return prepareSecret(args);
   if (tool === "secret_deliver") return deliverSecret(args);
   if (tool === "browser_list_tabs") return listSharedTabs();
   if (tool === "browser_open_tab") return openTab(args);
   if (tool === "browser_act") return act(args);
-  if (tool === "browser_fill") return act({...args, action:"fill"});
+  if (tool === "browser_fill") return act({ ...args, action: "fill" });
   if (tool === "browser_click") return act({ ...args, action: "click" });
 
   const { tab, grant } = await resolveSharedTab(args.tab_id);
@@ -753,16 +904,27 @@ async function executeTool(tool, args, policy = {}) {
 
   if (!TOOLS.includes(tool)) throw new Error("Unsupported browser tool: " + tool);
   if (INTERACT_TOOLS.includes(tool) && !grant.permissions?.includes("interact")) {
-    throw new Error("Click/fill is not enabled for this tab. Enable Browser Interact in the Remote Arc Browser popup.");
+    throw new Error(
+      "Click/fill is not enabled for this tab. Enable Browser Interact in the Remote Arc Browser popup.",
+    );
   }
 
   await ensureInjected(tab.id);
   const response = await send(tab.id, tool, args);
 
   if (response?.error) throw new Error(response.error);
-  if (tool==="browser_read_page") {
-    const auth=policy.browserAuth||{};
-    response.authentication={otp:auth.otp===true && Array.isArray(auth.origins) && auth.origins.includes(originOf(tab.url||"")) && await allowCodes(),captcha:false,mailbox:auth.mailbox||"",approval_location:"user takeover"};
+  if (tool === "browser_read_page") {
+    const auth = policy.browserAuth || {};
+    response.authentication = {
+      otp:
+        auth.otp === true &&
+        Array.isArray(auth.origins) &&
+        auth.origins.includes(originOf(tab.url || "")) &&
+        (await allowCodes()),
+      captcha: false,
+      mailbox: auth.mailbox || "",
+      approval_location: "user takeover",
+    };
   }
   return response;
 }
@@ -806,7 +968,9 @@ async function grantCurrentTab() {
 // extension pages are never shared.
 async function windowTabs(windowId) {
   const tabs = await chrome.tabs.query({ windowId: Number(windowId) });
-  return tabs.filter((tab) => tab.id !== undefined && originOf(tab.url || "") && grants.get(tab.id)?.mode !== "site");
+  return tabs.filter(
+    (tab) => tab.id !== undefined && originOf(tab.url || "") && grants.get(tab.id)?.mode !== "site",
+  );
 }
 
 // What the popup asks Chrome for, straight from the click: one prompt that
@@ -831,7 +995,9 @@ async function shareWindowTabs(windowId) {
   const skipped = new Set();
   for (const tab of await windowTabs(windowId)) {
     const origin = originOf(tab.url);
-    const granted = await chrome.permissions.contains({ origins: [patternOf(origin)] }).catch(() => false);
+    const granted = await chrome.permissions
+      .contains({ origins: [patternOf(origin)] })
+      .catch(() => false);
     if (granted) await rememberSite(origin);
     if (!granted || !(await siteAllowed(origin))) {
       skipped.add(origin);
@@ -856,8 +1022,15 @@ async function shareWindowTabs(windowId) {
 }
 
 async function showBadge(grant) {
-  await chrome.action.setBadgeText({ tabId: grant.tabId, text: grant.permissions?.includes("interact") ? "AI+" : "AI" }).catch(() => undefined);
-  await chrome.action.setBadgeBackgroundColor({ tabId: grant.tabId, color: "#76b900" }).catch(() => undefined);
+  await chrome.action
+    .setBadgeText({
+      tabId: grant.tabId,
+      text: grant.permissions?.includes("interact") ? "AI+" : "AI",
+    })
+    .catch(() => undefined);
+  await chrome.action
+    .setBadgeBackgroundColor({ tabId: grant.tabId, color: "#76b900" })
+    .catch(() => undefined);
 }
 
 async function setTabInteract(tabId, enabled) {
@@ -873,7 +1046,9 @@ async function setTabInteract(tabId, enabled) {
   const updated = { ...grant, permissions: Array.from(permissions) };
   grants.set(id, updated);
   await persistGrants();
-  await chrome.action.setBadgeText({ tabId: id, text: enabled ? "AI+" : "AI" }).catch(() => undefined);
+  await chrome.action
+    .setBadgeText({ tabId: id, text: enabled ? "AI+" : "AI" })
+    .catch(() => undefined);
   return updated;
 }
 
@@ -894,7 +1069,8 @@ async function revokeAllGrants() {
 async function removeSite(origin) {
   await forgetSite(origin);
   for (const grant of Array.from(grants.values())) {
-    if (siteKey(grant.origin) === siteKey(origin) && grant.mode === "site") await revokeGrant(grant.tabId);
+    if (siteKey(grant.origin) === siteKey(origin) && grant.mode === "site")
+      await revokeGrant(grant.tabId);
   }
 }
 
@@ -917,36 +1093,39 @@ async function startPairing() {
   await chrome.tabs.create({ url: pair.verification_uri_complete });
 
   clearInterval(pairingTimer);
-  pairingTimer = setInterval(async () => {
-    const tokenResponse = await fetch(API_ORIGIN + "/api/device/token", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        device_code: pair.device_code,
-        device_secret: pair.device_secret,
-      }),
-    }).catch(() => null);
+  pairingTimer = setInterval(
+    async () => {
+      const tokenResponse = await fetch(API_ORIGIN + "/api/device/token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          device_code: pair.device_code,
+          device_secret: pair.device_secret,
+        }),
+      }).catch(() => null);
 
-    if (!tokenResponse || tokenResponse.status === 428) return;
+      if (!tokenResponse || tokenResponse.status === 428) return;
 
-    if (!tokenResponse.ok) {
+      if (!tokenResponse.ok) {
+        clearInterval(pairingTimer);
+        pairingTimer = null;
+        return;
+      }
+
+      const token = await tokenResponse.json();
       clearInterval(pairingTimer);
       pairingTimer = null;
-      return;
-    }
 
-    const token = await tokenResponse.json();
-    clearInterval(pairingTimer);
-    pairingTimer = null;
-
-    await storageSet({
-      deviceId: token.device_id,
-      deviceToken: token.device_token,
-      relayUrl: token.relay_url,
-      deviceName,
-    });
-    await connectSocket();
-  }, Math.max(2000, Number(pair.interval || 2) * 1000));
+      await storageSet({
+        deviceId: token.device_id,
+        deviceToken: token.device_token,
+        relayUrl: token.relay_url,
+        deviceName,
+      });
+      await connectSocket();
+    },
+    Math.max(2000, Number(pair.interval || 2) * 1000),
+  );
 
   return { ok: true };
 }
@@ -954,17 +1133,20 @@ async function startPairing() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Only the extension's own pages (popup, approval page) send these; a
   // message from a script running inside a website is ignored.
-  const fromExtensionPage = !sender?.tab || String(sender?.url || "").startsWith(chrome.runtime.getURL(""));
+  const fromExtensionPage =
+    !sender?.tab || String(sender?.url || "").startsWith(chrome.runtime.getURL(""));
   if (sender?.id !== chrome.runtime.id || !fromExtensionPage) return false;
   (async () => {
     if (message?.type === "browser-state") return currentState(message.windowId);
     if (message?.type === "start-pairing") return startPairing();
     if (message?.type === "grant-current-tab") return grantCurrentTab();
     if (message?.type === "share-window-tabs") return shareWindowTabs(message.windowId);
-    if (message?.type === "set-tab-interact") return setTabInteract(message.tabId, Boolean(message.enabled));
+    if (message?.type === "set-tab-interact")
+      return setTabInteract(message.tabId, Boolean(message.enabled));
     if (message?.type === "site-allowed") {
       const origin = originOf(String(message.origin || ""));
-      if (origin && (await chrome.permissions.contains({ origins: [patternOf(origin)] }))) await rememberSite(origin);
+      if (origin && (await chrome.permissions.contains({ origins: [patternOf(origin)] })))
+        await rememberSite(origin);
       return { ok: true, allowed: await siteAllowed(origin) };
     }
     if (message?.type === "remove-site") {
@@ -998,9 +1180,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return { error: "unknown message" };
   })()
     .then(sendResponse)
-    .catch((error) => sendResponse({
-      error: error instanceof Error ? error.message : String(error),
-    }));
+    .catch((error) =>
+      sendResponse({
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
 
   return true;
 });

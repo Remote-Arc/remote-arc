@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "node ../../scripts/sync-release-docs.mjs --write && pnpm build && node ../../scripts/build-device.mjs --release"
+    "prepublishOnly": "pnpm --dir ../.. task cli prepublishOnly"
   },
   "devDependencies": {
     "@types/node": "^24.13.6",

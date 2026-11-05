@@ -58,7 +58,7 @@ func Run(ctx context.Context, request Request) (result Result, err error) {
 				result.ErrorCode = failure.Code
 				result.Hint = failure.Hint
 			} else {
-				result.ErrorCode = "setup_failed"
+				result.ErrorCode = "SETUP_FAILED"
 				result.Hint = "Local setup could not complete; run doctor."
 			}
 		}

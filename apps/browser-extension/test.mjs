@@ -145,11 +145,7 @@ const call = (tool, args = {}) =>
         resolve(value);
       }
     };
-    listener(
-      { source: "remote-arc-browser", tool, arguments: args },
-      {},
-      finish,
-    );
+    listener({ source: "remote-arc-browser", tool, arguments: args }, {}, finish);
     setTimeout(() => finish(undefined), 20);
   });
 
@@ -157,7 +153,13 @@ const snapshot = await call("browser_read_page");
 assert.match(snapshot.snapshotId, /^s/);
 assert.equal(snapshot.interactiveElements.length, 3);
 assert.equal(
-  JSON.stringify(snapshot.interactiveElements.map(({ ref, canFill, sensitive }) => ({ ref, canFill, sensitive }))),
+  JSON.stringify(
+    snapshot.interactiveElements.map(({ ref, canFill, sensitive }) => ({
+      ref,
+      canFill,
+      sensitive,
+    })),
+  ),
   JSON.stringify([
     { ref: "e1", canFill: true, sensitive: false },
     { ref: "e2", canFill: false, sensitive: true },
@@ -200,19 +202,62 @@ assert.match(staleClick.error, /Snapshot is stale/);
 // as on the Cloudflare dashboard. The snapshot lists an open dialog first,
 // then the page content, then navigation, and says what it left out.
 {
-  const placed = (tag, attrs, region) => Object.assign(new HTMLElement(tag, attrs), {
-    closest(selector) {
-      return region && selector.split(",").map((s) => s.trim()).includes(region) ? { closest: () => null } : null;
-    },
-  });
-  const sidebar = Array.from({ length: 300 }, (_, i) => placed("a", { href: "/nav/" + i, text: "Nav " + i }, "nav"));
+  const placed = (tag, attrs, region) =>
+    Object.assign(new HTMLElement(tag, attrs), {
+      closest(selector) {
+        return region &&
+          selector
+            .split(",")
+            .map((s) => s.trim())
+            .includes(region)
+          ? { closest: () => null }
+          : null;
+      },
+    });
+  const sidebar = Array.from({ length: 300 }, (_, i) =>
+    placed("a", { href: "/nav/" + i, text: "Nav " + i }, "nav"),
+  );
   const pageHeader = placed("button", { text: "Account menu" }, "header");
-  const editButtons = [placed("button", { text: "Edit SPF" }), placed("button", { text: "Edit DKIM" })];
+  const editButtons = [
+    placed("button", { text: "Edit SPF" }),
+    placed("button", { text: "Edit DKIM" }),
+  ];
   const dialogButton = placed("button", { text: "Copy DKIM" }, "[role='dialog']");
   let listen = null;
   const pageContext = vm.createContext({
-    ...Object.fromEntries(["console", "HTMLElement", "HTMLInputElement", "HTMLTextAreaElement", "HTMLSelectElement", "Event", "setTimeout", "clearTimeout", "Date", "Map", "Set", "Array", "String", "Number", "Boolean", "Object", "Error", "getComputedStyle", "getSelection", "location"].map((k) => [k, context[k]])),
-    chrome: { runtime: { onMessage: { addListener(fn) { listen = fn; } } } },
+    ...Object.fromEntries(
+      [
+        "console",
+        "HTMLElement",
+        "HTMLInputElement",
+        "HTMLTextAreaElement",
+        "HTMLSelectElement",
+        "Event",
+        "setTimeout",
+        "clearTimeout",
+        "Date",
+        "Map",
+        "Set",
+        "Array",
+        "String",
+        "Number",
+        "Boolean",
+        "Object",
+        "Error",
+        "getComputedStyle",
+        "getSelection",
+        "location",
+      ].map((k) => [k, context[k]]),
+    ),
+    chrome: {
+      runtime: {
+        onMessage: {
+          addListener(fn) {
+            listen = fn;
+          },
+        },
+      },
+    },
     document: {
       body: { innerText: "DNS records" },
       querySelectorAll(selector) {
@@ -222,18 +267,41 @@ assert.match(staleClick.error, /Snapshot is stale/);
     },
   });
   vm.runInContext(contentScript, pageContext);
-  const page = await new Promise((resolve) => listen({ source: "remote-arc-browser", tool: "browser_read_page", arguments: {} }, {}, resolve));
+  const page = await new Promise((resolve) =>
+    listen({ source: "remote-arc-browser", tool: "browser_read_page", arguments: {} }, {}, resolve),
+  );
   const names = page.interactiveElements.map((e) => e.name);
   assert.equal(page.interactiveElements.length, 250, "the element cap still holds");
-  assert.deepEqual([...names.slice(0, 3)], ["Copy DKIM", "Edit SPF", "Edit DKIM"], "a dialog, then the page's own controls, come before the sidebar");
+  assert.deepEqual(
+    [...names.slice(0, 3)],
+    ["Copy DKIM", "Edit SPF", "Edit DKIM"],
+    "a dialog, then the page's own controls, come before the sidebar",
+  );
   assert.equal(page.interactiveElements[0].region, "dialog");
   assert.equal(page.interactiveElements[1].region, undefined);
   assert.equal(page.interactiveElements[3].region, "navigation");
-  assert.deepEqual([...page.interactiveElements.slice(0, 4).map((e) => e.ref)], ["e1", "e2", "e3", "e4"]);
+  assert.deepEqual(
+    [...page.interactiveElements.slice(0, 4).map((e) => e.ref)],
+    ["e1", "e2", "e3", "e4"],
+  );
   assert.equal(page.omittedElements, 54, "the snapshot says how many controls it left out");
-  assert.equal(names[3], "Account menu", "a site header is ranked with navigation, after the page content");
+  assert.equal(
+    names[3],
+    "Account menu",
+    "a site header is ranked with navigation, after the page content",
+  );
   assert.equal(names.includes("Nav 299"), false, "the end of the sidebar is what is left out");
-  const clickEdit = await new Promise((resolve) => listen({ source: "remote-arc-browser", tool: "browser_click", arguments: { snapshot_id: page.snapshotId, ref: "e3" } }, {}, resolve));
+  const clickEdit = await new Promise((resolve) =>
+    listen(
+      {
+        source: "remote-arc-browser",
+        tool: "browser_click",
+        arguments: { snapshot_id: page.snapshotId, ref: "e3" },
+      },
+      {},
+      resolve,
+    ),
+  );
   assert.equal(clickEdit.ok, true);
   await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(editButtons[1].clickCount, 1, "a ref clicks the control it was listed for");
@@ -250,7 +318,10 @@ const manifest = JSON.parse(fs.readFileSync(new URL("./manifest.json", import.me
 assert.equal(manifest.version, "0.4.4");
 // tabs lets Share all tabs see which sites a window's tabs are on, so Chrome
 // can be asked for them in one prompt. The AI still sees only shared tabs.
-assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storage", "tabGroups", "tabs"].sort());
+assert.deepEqual(
+  manifest.permissions.sort(),
+  ["activeTab", "scripting", "storage", "tabGroups", "tabs"].sort(),
+);
 // Sites are granted one at a time through Chrome's own prompt; nothing is
 // granted up front except the Remote Arc relay.
 assert.deepEqual(manifest.host_permissions, ["https://mcp.remotearc.app/*"]);
@@ -262,14 +333,27 @@ for (const [size, file] of Object.entries({ ...manifest.icons, ...manifest.actio
 }
 assert.deepEqual(Object.keys(manifest.icons), ["16", "32", "48", "128"]);
 assert.deepEqual(manifest.optional_host_permissions.sort(), ["http://*/*", "https://*/*"]);
-assert.equal(manifest.permissions.includes("debugger") || manifest.permissions.includes("cookies") || manifest.permissions.includes("history"), false);
+assert.equal(
+  manifest.permissions.includes("debugger") ||
+    manifest.permissions.includes("cookies") ||
+    manifest.permissions.includes("history"),
+  false,
+);
 assert.match(workerSource, /SUBMIT_EFFECT_REQUIRED/);
 assert.match(workerSource, /SITE_NOT_ALLOWED/);
 
 // Exercise the worker against asynchronous Chrome-like storage. Calls may
 // overlap across different tabs, and storage reads return independent copies.
 const disk = {};
-const event = () => ({ listeners:[],addListener(listener){this.listeners.push(listener);},removeListener(listener){this.listeners=this.listeners.filter(l=>l!==listener);} });
+const event = () => ({
+  listeners: [],
+  addListener(listener) {
+    this.listeners.push(listener);
+  },
+  removeListener(listener) {
+    this.listeners = this.listeners.filter((l) => l !== listener);
+  },
+});
 const sentToPage = [];
 let pageAnswer = null;
 const fakeTabs = new Map();
@@ -279,135 +363,293 @@ const tabUpdated = event();
 const deniedPatterns = new Set();
 const sessionDisk = {};
 const workerContext = vm.createContext({
-  console, URL, setTimeout, clearTimeout, setInterval, clearInterval, crypto: globalThis.crypto, TextEncoder, TextDecoder, atob, btoa,
+  console,
+  URL,
+  setTimeout,
+  clearTimeout,
+  setInterval,
+  clearInterval,
+  crypto: globalThis.crypto,
+  TextEncoder,
+  TextDecoder,
+  atob,
+  btoa,
   chrome: {
-    runtime: { id:"fixture",getManifest:()=>({version:"0.4.0"}),getURL:part=>"chrome-extension://fixture/"+part,onMessage:event(),onStartup:event(),onInstalled:event() },
-    storage: {
-      local: { async get(){await Promise.resolve();return structuredClone(disk);},async set(values){await Promise.resolve();Object.assign(disk,structuredClone(values));} },
-      session: {async get(key){return key in sessionDisk?{[key]:structuredClone(sessionDisk[key])}:{};},async set(values){Object.assign(sessionDisk,structuredClone(values));}},onChanged:event()
+    runtime: {
+      id: "fixture",
+      getManifest: () => ({ version: "0.4.0" }),
+      getURL: (part) => "chrome-extension://fixture/" + part,
+      onMessage: event(),
+      onStartup: event(),
+      onInstalled: event(),
     },
-    permissions: {onAdded:event(),onRemoved:event(),async contains({origins}){return !deniedPatterns.has(origins?.[0]);}},
-    action: {async setBadgeText({tabId,text}){badges.set(tabId,text);},async setBadgeBackgroundColor(){}},
-    scripting: {async executeScript({target}){injected.add(target.tabId);}},
+    storage: {
+      local: {
+        async get() {
+          await Promise.resolve();
+          return structuredClone(disk);
+        },
+        async set(values) {
+          await Promise.resolve();
+          Object.assign(disk, structuredClone(values));
+        },
+      },
+      session: {
+        async get(key) {
+          return key in sessionDisk ? { [key]: structuredClone(sessionDisk[key]) } : {};
+        },
+        async set(values) {
+          Object.assign(sessionDisk, structuredClone(values));
+        },
+      },
+      onChanged: event(),
+    },
+    permissions: {
+      onAdded: event(),
+      onRemoved: event(),
+      async contains({ origins }) {
+        return !deniedPatterns.has(origins?.[0]);
+      },
+    },
+    action: {
+      async setBadgeText({ tabId, text }) {
+        badges.set(tabId, text);
+      },
+      async setBadgeBackgroundColor() {},
+    },
+    scripting: {
+      async executeScript({ target }) {
+        injected.add(target.tabId);
+      },
+    },
     tabs: {
-      onUpdated:tabUpdated,onRemoved:event(),
-      async get(tabId){return fakeTabs.get(tabId)||null;},
-      async query({windowId}){return [...fakeTabs.values()].filter(tab=>tab.windowId===windowId);},
-      async sendMessage(tabId,message){
-        if(!injected.has(tabId)) throw new Error("Could not establish connection.");
+      onUpdated: tabUpdated,
+      onRemoved: event(),
+      async get(tabId) {
+        return fakeTabs.get(tabId) || null;
+      },
+      async query({ windowId }) {
+        return [...fakeTabs.values()].filter((tab) => tab.windowId === windowId);
+      },
+      async sendMessage(tabId, message) {
+        if (!injected.has(tabId)) throw new Error("Could not establish connection.");
         sentToPage.push(message);
-        if(message.tool==="ra_act" && pageAnswer) return pageAnswer(message);
-        return message.tool==="ra_ping"?{ok:true}:message.tool==="ra_act"?{ok:true,action:"fill",length:String(message.arguments.value??"").length}:{text:"page text"};
-      }
-    }
-  }
+        if (message.tool === "ra_act" && pageAnswer) return pageAnswer(message);
+        return message.tool === "ra_ping"
+          ? { ok: true }
+          : message.tool === "ra_act"
+            ? { ok: true, action: "fill", length: String(message.arguments.value ?? "").length }
+            : { text: "page text" };
+      },
+    },
+  },
 });
 vm.runInContext(workerSource, workerContext);
-const tabForSubmit={url:"https://example.com/shop"},effect={kind:"final",target:"order-form",label:"Place order"};
-const submitArgs=key=>({effect:"submit",idempotency_key:key});
-const parallel=await Promise.allSettled([
-  workerContext.guardFinal(submitArgs("one-key"),effect,tabForSubmit),
-  workerContext.guardFinal(submitArgs("one-key"),effect,tabForSubmit)
+const tabForSubmit = { url: "https://example.com/shop" },
+  effect = { kind: "final", target: "order-form", label: "Place order" };
+const submitArgs = (key) => ({ effect: "submit", idempotency_key: key });
+const parallel = await Promise.allSettled([
+  workerContext.guardFinal(submitArgs("one-key"), effect, tabForSubmit),
+  workerContext.guardFinal(submitArgs("one-key"), effect, tabForSubmit),
 ]);
-assert.equal(parallel.filter(result=>result.status==="fulfilled").length,1);
-assert.match(parallel.find(result=>result.status==="rejected").reason.message,/SUBMIT_KEY_USED/);
-await workerContext.confirmSubmit({idempotency_key:"one-key",outcome:"succeeded"});
-const sameTarget=await Promise.allSettled([
-  workerContext.guardFinal(submitArgs("target-a"),effect,tabForSubmit),
-  workerContext.guardFinal(submitArgs("target-b"),effect,tabForSubmit)
+assert.equal(parallel.filter((result) => result.status === "fulfilled").length, 1);
+assert.match(
+  parallel.find((result) => result.status === "rejected").reason.message,
+  /SUBMIT_KEY_USED/,
+);
+await workerContext.confirmSubmit({ idempotency_key: "one-key", outcome: "succeeded" });
+const sameTarget = await Promise.allSettled([
+  workerContext.guardFinal(submitArgs("target-a"), effect, tabForSubmit),
+  workerContext.guardFinal(submitArgs("target-b"), effect, tabForSubmit),
 ]);
-assert.equal(sameTarget.filter(result=>result.status==="fulfilled").length,1);
-assert.match(sameTarget.find(result=>result.status==="rejected").reason.message,/SUBMIT_ALREADY_RECORDED/);
-const unrelated=await Promise.all([
-  workerContext.guardFinal(submitArgs("independent-a"),{...effect,target:"form-a"},tabForSubmit),
-  workerContext.guardFinal(submitArgs("independent-b"),{...effect,target:"form-b"},tabForSubmit)
+assert.equal(sameTarget.filter((result) => result.status === "fulfilled").length, 1);
+assert.match(
+  sameTarget.find((result) => result.status === "rejected").reason.message,
+  /SUBMIT_ALREADY_RECORDED/,
+);
+const unrelated = await Promise.all([
+  workerContext.guardFinal(
+    submitArgs("independent-a"),
+    { ...effect, target: "form-a" },
+    tabForSubmit,
+  ),
+  workerContext.guardFinal(
+    submitArgs("independent-b"),
+    { ...effect, target: "form-b" },
+    tabForSubmit,
+  ),
 ]);
-assert.equal(unrelated.length,2);
-assert(disk.raSubmits["independent-a"]&&disk.raSubmits["independent-b"],"independent reservations do not overwrite one another");
-const old=Date.now()-8*24*3600*1000;
+assert.equal(unrelated.length, 2);
+assert(
+  disk.raSubmits["independent-a"] && disk.raSubmits["independent-b"],
+  "independent reservations do not overwrite one another",
+);
+const old = Date.now() - 8 * 24 * 3600 * 1000;
 await workerContext.saveLedger({
-  settled:{at:old,status:"succeeded",target:"old-form",url:tabForSubmit.url},
-  unresolved:{at:old,status:"unverified",target:"old-pending",origin:"https://example.com"}
+  settled: { at: old, status: "succeeded", target: "old-form", url: tabForSubmit.url },
+  unresolved: {
+    at: old,
+    status: "unverified",
+    target: "old-pending",
+    origin: "https://example.com",
+  },
 });
-assert.deepEqual(disk.raSubmits.settled,{at:old,status:"succeeded"});
-assert.equal(disk.raSubmits.unresolved.target,"old-pending");
-await assert.rejects(workerContext.guardFinal(submitArgs("settled"),effect,tabForSubmit),/SUBMIT_KEY_USED/);
-await assert.rejects(workerContext.guardFinal(submitArgs("new-old-target"),{...effect,target:"old-pending"},tabForSubmit),/SUBMIT_ALREADY_RECORDED/);
+assert.deepEqual(disk.raSubmits.settled, { at: old, status: "succeeded" });
+assert.equal(disk.raSubmits.unresolved.target, "old-pending");
+await assert.rejects(
+  workerContext.guardFinal(submitArgs("settled"), effect, tabForSubmit),
+  /SUBMIT_KEY_USED/,
+);
+await assert.rejects(
+  workerContext.guardFinal(
+    submitArgs("new-old-target"),
+    { ...effect, target: "old-pending" },
+    tabForSubmit,
+  ),
+  /SUBMIT_ALREADY_RECORDED/,
+);
 
 // A shared tab follows its site, ends on another one, and tells the AI to ask
 // the user rather than fall back to remote debugging.
 const grants = vm.runInContext("grants", workerContext);
-const flush = () => new Promise(resolve => setTimeout(resolve, 0));
-const share = (tabId, url, permissions=["read"]) => {
-  grants.set(tabId, {tabId,title:"Inbox",url,origin:new URL(url).origin,mode:"tab",permissions});
-  fakeTabs.set(tabId, {id:tabId,url,title:"Inbox",status:"complete"});
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+const share = (tabId, url, permissions = ["read"]) => {
+  grants.set(tabId, {
+    tabId,
+    title: "Inbox",
+    url,
+    origin: new URL(url).origin,
+    mode: "tab",
+    permissions,
+  });
+  fakeTabs.set(tabId, { id: tabId, url, title: "Inbox", status: "complete" });
 };
 // Chrome reports a tab's address only while the extension may access that page.
-const moveTab = async (tabId, url, status="loading") => {
-  const tab = {id:tabId,url,title:url?"Next":undefined,status};
+const moveTab = async (tabId, url, status = "loading") => {
+  const tab = { id: tabId, url, title: url ? "Next" : undefined, status };
   fakeTabs.set(tabId, tab);
-  for (const listener of tabUpdated.listeners) listener(tabId, {status}, tab);
+  for (const listener of tabUpdated.listeners) listener(tabId, { status }, tab);
   await flush();
 };
 
-share(1, "https://mail.example.com/inbox", ["read","interact"]);
+share(1, "https://mail.example.com/inbox", ["read", "interact"]);
 await moveTab(1, "https://mail.example.com/inbox");
 assert.equal(grants.get(1).url, "https://mail.example.com/inbox", "a reload keeps the tab shared");
 await moveTab(1, "https://mail.example.com/message/42");
-assert.deepEqual({...grants.get(1)}, {tabId:1,title:"Next",url:"https://mail.example.com/message/42",origin:"https://mail.example.com",mode:"tab",permissions:["read","interact"]});
+assert.deepEqual(
+  { ...grants.get(1) },
+  {
+    tabId: 1,
+    title: "Next",
+    url: "https://mail.example.com/message/42",
+    origin: "https://mail.example.com",
+    mode: "tab",
+    permissions: ["read", "interact"],
+  },
+);
 await moveTab(1, "https://mail.example.com/message/42", "complete");
 assert.equal(badges.get(1), "AI+", "Chrome clears the badge on load, so it is shown again");
 
 share(2, "https://mail.example.com/inbox");
 fakeTabs.get(2).url = "https://mail.example.com/search?q=one";
-assert.equal((await workerContext.resolveSharedTab(2)).grant.url, "https://mail.example.com/search?q=one", "a client-side route change is followed without a tab event");
+assert.equal(
+  (await workerContext.resolveSharedTab(2)).grant.url,
+  "https://mail.example.com/search?q=one",
+  "a client-side route change is followed without a tab event",
+);
 assert.equal(grants.get(2).mode, "tab");
-assert.deepEqual([...grants.get(2).permissions], ["read"], "following a page never adds permissions");
+assert.deepEqual(
+  [...grants.get(2).permissions],
+  ["read"],
+  "following a page never adds permissions",
+);
 
 injected.delete(2);
-assert.equal((await workerContext.executeTool("browser_read_page", {tab_id:2}, {})).text, "page text", "the page script returns after a full page load");
+assert.equal(
+  (await workerContext.executeTool("browser_read_page", { tab_id: 2 }, {})).text,
+  "page text",
+  "the page script returns after a full page load",
+);
 assert(injected.has(2));
 
-share(3, "https://mail.example.com/inbox", ["read","interact"]);
+share(3, "https://mail.example.com/inbox", ["read", "interact"]);
 await moveTab(3, "https://other.example.org/");
 assert.equal(grants.has(3), false, "another site ends access");
 assert.equal(badges.get(3), "", "the badge clears with it");
 await moveTab(3, "https://mail.example.com/inbox");
 assert.equal(grants.has(3), false, "coming back does not restore access");
-await assert.rejects(workerContext.resolveSharedTab(3), /No matching shared tab[^]*Share this tab[^]*Do not switch to remote debugging/);
+await assert.rejects(
+  workerContext.resolveSharedTab(3),
+  /No matching shared tab[^]*Share this tab[^]*Do not switch to remote debugging/,
+);
 
 share(4, "https://mail.example.com/inbox");
 await moveTab(4, undefined, "complete");
-assert.equal(grants.has(4), false, "Chrome hid the address, so the tab is on a site Remote Arc cannot reach");
+assert.equal(
+  grants.has(4),
+  false,
+  "Chrome hid the address, so the tab is on a site Remote Arc cannot reach",
+);
 
 share(5, "https://mail.example.com/inbox");
-fakeTabs.set(5, {id:5,title:undefined,url:undefined,status:"complete"});
-await assert.rejects(workerContext.resolveSharedTab(5), /^Error: SITE_NOT_ALLOWED:[^]*Do not switch to remote debugging/);
+fakeTabs.set(5, { id: 5, title: undefined, url: undefined, status: "complete" });
+await assert.rejects(
+  workerContext.resolveSharedTab(5),
+  /^Error: SITE_NOT_ALLOWED:[^]*Do not switch to remote debugging/,
+);
 assert.equal(grants.has(5), false);
 
-disk.raSites = {"https://allowed.example.org":{}};
+disk.raSites = { "https://allowed.example.org": {} };
 share(6, "https://mail.example.com/inbox");
 await moveTab(6, "https://allowed.example.org/start");
 assert.equal(grants.get(6).mode, "site", "an allowed site still takes over the tab");
 assert.equal(grants.get(6).origin, "https://allowed.example.org");
-assert.deepEqual([...grants.get(6).permissions], ["read","interact"]);
+assert.deepEqual([...grants.get(6).permissions], ["read", "interact"]);
 
 // Share all tabs in this window: Chrome is asked once for the sites of the
 // window's web pages, then each of those tabs is shared with read and
 // Click & fill and keeps access as it moves around its site.
-for (const [id, url] of [[20, "https://dash.cloudflare.com/acct/dns"], [21, "https://login.sendpulse.com/settings"], [22, "chrome://extensions/"], [23, "https://blocked.example.net/"], [25, "https://dash.cloudflare.com/acct/email"]]) {
-  fakeTabs.set(id, {id, url, title:"Tab " + id, status:"complete", windowId:7});
+for (const [id, url] of [
+  [20, "https://dash.cloudflare.com/acct/dns"],
+  [21, "https://login.sendpulse.com/settings"],
+  [22, "chrome://extensions/"],
+  [23, "https://blocked.example.net/"],
+  [25, "https://dash.cloudflare.com/acct/email"],
+]) {
+  fakeTabs.set(id, { id, url, title: "Tab " + id, status: "complete", windowId: 7 });
 }
-fakeTabs.set(26, {id:26, url:"https://elsewhere.example.com/", title:"Other window", status:"complete", windowId:8});
+fakeTabs.set(26, {
+  id: 26,
+  url: "https://elsewhere.example.com/",
+  title: "Other window",
+  status: "complete",
+  windowId: 8,
+});
 share(24, "https://login.sendpulse.com/domains");
 fakeTabs.get(24).windowId = 7;
 const targets = await workerContext.windowShareTargets(7);
-assert.deepEqual([...targets.sites].sort(), ["https://blocked.example.net/*", "https://dash.cloudflare.com/*", "https://login.sendpulse.com/*"], "the popup asks Chrome once for every site in this window");
-assert.equal(targets.tabs, 5, "only web pages in this window that are not already fully shared are counted");
+assert.deepEqual(
+  [...targets.sites].sort(),
+  [
+    "https://blocked.example.net/*",
+    "https://dash.cloudflare.com/*",
+    "https://login.sendpulse.com/*",
+  ],
+  "the popup asks Chrome once for every site in this window",
+);
+assert.equal(
+  targets.tabs,
+  5,
+  "only web pages in this window that are not already fully shared are counted",
+);
 deniedPatterns.add("https://blocked.example.net/*");
 const sharedAll = await workerContext.shareWindowTabs(7);
 assert.equal(sharedAll.shared, 4);
-assert.deepEqual([...sharedAll.skipped], ["https://blocked.example.net"], "a site Chrome did not allow is left out and reported");
+assert.deepEqual(
+  [...sharedAll.skipped],
+  ["https://blocked.example.net"],
+  "a site Chrome did not allow is left out and reported",
+);
 for (const id of [20, 21, 24, 25]) {
   assert.equal(grants.get(id).mode, "site");
   assert.deepEqual([...grants.get(id).permissions], ["read", "interact"]);
@@ -416,10 +658,20 @@ for (const id of [20, 21, 24, 25]) {
 assert.equal(grants.has(22), false, "browser pages are never shared");
 assert.equal(grants.has(23), false);
 assert.equal(grants.has(26), false, "tabs in other windows are left alone");
-assert.ok(disk.raSites["https://dash.cloudflare.com"] && disk.raSites["https://login.sendpulse.com"], "the sites appear under Allowed sites, where the user can remove them");
+assert.ok(
+  disk.raSites["https://dash.cloudflare.com"] && disk.raSites["https://login.sendpulse.com"],
+  "the sites appear under Allowed sites, where the user can remove them",
+);
 fakeTabs.get(20).url = "https://dash.cloudflare.com/acct/dns/records";
-assert.equal((await workerContext.resolveSharedTab(20)).grant.url, "https://dash.cloudflare.com/acct/dns/records");
-assert.equal((await workerContext.windowShareTargets(7)).tabs, 1, "once shared, only the blocked tab is left");
+assert.equal(
+  (await workerContext.resolveSharedTab(20)).grant.url,
+  "https://dash.cloudflare.com/acct/dns/records",
+);
+assert.equal(
+  (await workerContext.windowShareTargets(7)).tabs,
+  1,
+  "once shared, only the blocked tab is left",
+);
 
 // One-time secrets: the Relay prepares a key here, the user's browser encrypts
 // to it, and a fill spends the value once, only on its own site.
@@ -428,55 +680,151 @@ assert.equal((await workerContext.windowShareTargets(7)).tabs, 1, "once shared, 
   const b64 = (bytes) => Buffer.from(bytes).toString("base64url");
   const info = (h) => new TextEncoder().encode("remote-arc one-time secret v1 " + h);
   const seal = async (publicKey, h, value) => {
-    const device = await subtle.importKey("raw", Buffer.from(publicKey, "base64url"), { name: "ECDH", namedCurve: "P-256" }, false, []);
-    const eph = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+    const device = await subtle.importKey(
+      "raw",
+      Buffer.from(publicKey, "base64url"),
+      { name: "ECDH", namedCurve: "P-256" },
+      false,
+      [],
+    );
+    const eph = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, [
+      "deriveBits",
+    ]);
     const bits = await subtle.deriveBits({ name: "ECDH", public: device }, eph.privateKey, 256);
     const ikm = await subtle.importKey("raw", bits, "HKDF", false, ["deriveKey"]);
-    const key = await subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: info(h) }, ikm, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+    const key = await subtle.deriveKey(
+      { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: info(h) },
+      ikm,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt"],
+    );
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = await subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(h) }, key, new TextEncoder().encode(value));
-    return { epk: b64(await subtle.exportKey("raw", eph.publicKey)), iv: b64(iv), ciphertext: b64(new Uint8Array(ciphertext)) };
+    const ciphertext = await subtle.encrypt(
+      { name: "AES-GCM", iv, additionalData: new TextEncoder().encode(h) },
+      key,
+      new TextEncoder().encode(value),
+    );
+    return {
+      epk: b64(await subtle.exportKey("raw", eph.publicKey)),
+      iv: b64(iv),
+      ciphertext: b64(new Uint8Array(ciphertext)),
+    };
   };
   const run = (tool, args) => workerContext.executeTool(tool, args, {});
   const handle = "sec_abcdefghijklmnopqrstuvwx";
   await assert.rejects(run("secret_prepare", { handle }), /needs a handle and the site/);
-  const { public_key } = await run("secret_prepare", { handle, site: "https://dash.cloudflare.com/profile" });
-  await assert.rejects(run("secret_prepare", { handle, site: "https://dash.cloudflare.com" }), /SECRET_EXISTS/);
+  const { public_key } = await run("secret_prepare", {
+    handle,
+    site: "https://dash.cloudflare.com/profile",
+  });
+  await assert.rejects(
+    run("secret_prepare", { handle, site: "https://dash.cloudflare.com" }),
+    /SECRET_EXISTS/,
+  );
   assert.equal(JSON.stringify(sessionDisk).includes("sk-cf"), false);
   await run("secret_deliver", { handle, ...(await seal(public_key, handle, "sk-cf-123456")) });
-  await assert.rejects(run("secret_deliver", { handle, ...(await seal(public_key, handle, "again")) }), /SECRET_NOT_FOUND/, "a request is delivered once");
+  await assert.rejects(
+    run("secret_deliver", { handle, ...(await seal(public_key, handle, "again")) }),
+    /SECRET_NOT_FOUND/,
+    "a request is delivered once",
+  );
 
   share(30, "https://dash.cloudflare.com/acct/workers", ["read", "interact"]);
   share(31, "https://evil.example.net/login", ["read", "interact"]);
-  injected.add(30); injected.add(31);
-  await assert.rejects(run("browser_fill", { tab_id: 31, snapshot_id: "s", ref: "e1", secret: handle }), /SECRET_WRONG_SITE[^]*dash\.cloudflare\.com/);
-  await assert.rejects(run("browser_act", { tab_id: 30, action: "fill", snapshot_id: "s", ref: "e1", value: "x", secret: handle }), /in place of value/);
-  await assert.rejects(run("browser_act", { tab_id: 30, action: "click", snapshot_id: "s", ref: "e1", secret: handle }), /only with action=fill/);
+  injected.add(30);
+  injected.add(31);
+  await assert.rejects(
+    run("browser_fill", { tab_id: 31, snapshot_id: "s", ref: "e1", secret: handle }),
+    /SECRET_WRONG_SITE[^]*dash\.cloudflare\.com/,
+  );
+  await assert.rejects(
+    run("browser_act", {
+      tab_id: 30,
+      action: "fill",
+      snapshot_id: "s",
+      ref: "e1",
+      value: "x",
+      secret: handle,
+    }),
+    /in place of value/,
+  );
+  await assert.rejects(
+    run("browser_act", {
+      tab_id: 30,
+      action: "click",
+      snapshot_id: "s",
+      ref: "e1",
+      secret: handle,
+    }),
+    /only with action=fill/,
+  );
 
   // A fill the page refuses (a stale ref) keeps the value for a retry.
   pageAnswer = () => ({ error: "Snapshot is stale" });
-  await assert.rejects(run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle }), /stale/);
+  await assert.rejects(
+    run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle }),
+    /stale/,
+  );
   pageAnswer = null;
   sentToPage.length = 0;
-  const filled = await run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle });
+  const filled = await run("browser_fill", {
+    tab_id: 30,
+    snapshot_id: "s",
+    ref: "e1",
+    secret: handle,
+  });
   const act = sentToPage.find((m) => m.tool === "ra_act").arguments;
   assert.equal(act.value, "sk-cf-123456", "the page receives the value");
   assert.equal(act.secret, undefined);
-  assert.equal(JSON.stringify(filled).includes("sk-cf"), false, "the result returned to the AI holds no value");
-  await assert.rejects(run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle }), /SECRET_NOT_FOUND/, "a secret is filled once");
+  assert.equal(
+    JSON.stringify(filled).includes("sk-cf"),
+    false,
+    "the result returned to the AI holds no value",
+  );
+  await assert.rejects(
+    run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: handle }),
+    /SECRET_NOT_FOUND/,
+    "a secret is filled once",
+  );
 
   // Tampered ciphertext is refused, and an unused secret expires.
   const other = "sec_bbbbbbbbbbbbbbbbbbbbbbbb";
-  const prepared = await run("secret_prepare", { handle: other, site: "https://dash.cloudflare.com" });
+  const prepared = await run("secret_prepare", {
+    handle: other,
+    site: "https://dash.cloudflare.com",
+  });
   const sealed = await seal(prepared.public_key, other, "value");
-  await assert.rejects(run("secret_deliver", { handle: other, ...sealed, ciphertext: sealed.ciphertext.slice(0, -2) + "AA" }), /SECRET_UNREADABLE/);
-  await assert.rejects(run("secret_deliver", { handle: other, ...sealed }), /SECRET_NOT_FOUND/, "a failed delivery cannot be retried with the same key");
+  await assert.rejects(
+    run("secret_deliver", {
+      handle: other,
+      ...sealed,
+      ciphertext: sealed.ciphertext.slice(0, -2) + "AA",
+    }),
+    /SECRET_UNREADABLE/,
+  );
+  await assert.rejects(
+    run("secret_deliver", { handle: other, ...sealed }),
+    /SECRET_NOT_FOUND/,
+    "a failed delivery cannot be retried with the same key",
+  );
   const third = "sec_cccccccccccccccccccccccc";
-  const thirdKey = await run("secret_prepare", { handle: third, site: "https://dash.cloudflare.com" });
-  await run("secret_deliver", { handle: third, ...(await seal(thirdKey.public_key, third, "value")) });
+  const thirdKey = await run("secret_prepare", {
+    handle: third,
+    site: "https://dash.cloudflare.com",
+  });
+  await run("secret_deliver", {
+    handle: third,
+    ...(await seal(thirdKey.public_key, third, "value")),
+  });
   sessionDisk.raSecrets[third].expires = Date.now() - 1;
-  await assert.rejects(run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: third }), /SECRET_NOT_FOUND/);
+  await assert.rejects(
+    run("browser_fill", { tab_id: 30, snapshot_id: "s", ref: "e1", secret: third }),
+    /SECRET_NOT_FOUND/,
+  );
   assert.equal(sessionDisk.raSecrets[third], undefined, "expired secrets are removed");
 }
 
-process.stdout.write("Remote Arc browser capability, concurrent submit, durable ledger, shared tab navigation, snapshot order, share-all and one-time secret tests passed\n");
+process.stdout.write(
+  "Remote Arc browser capability, concurrent submit, durable ledger, shared tab navigation, snapshot order, share-all and one-time secret tests passed\n",
+);

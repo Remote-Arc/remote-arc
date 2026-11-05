@@ -9,16 +9,19 @@ import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 
 // Listed explicitly so only reviewed documents reach the website bundle.
-const documents = import.meta.glob([
-  "../../../../../docs/agent-platform-architecture.md",
-  "../../../../../docs/execution-isolation.md",
-  "../../../../../docs/execution-isolation.en.md",
-  "../../../../../docs/feature-map/*.md",
-  "../../../../../SECURITY.md",
-  "../../../../../benchmarks/README.md",
-  "../../../../../benchmarks/RESULTS-2026-10-09-f68ab09.md",
-  "../../../../../benchmarks/RESULTS-2026-10-09-71cde96.md",
-], { query: "?raw", import: "default" }) as Record<string, () => Promise<string>>;
+const documents = import.meta.glob(
+  [
+    "../../../../../docs/agent-platform-architecture.md",
+    "../../../../../docs/execution-isolation.md",
+    "../../../../../docs/execution-isolation.en.md",
+    "../../../../../docs/feature-map/*.md",
+    "../../../../../SECURITY.md",
+    "../../../../../benchmarks/README.md",
+    "../../../../../benchmarks/RESULTS-2026-10-09-f68ab09.md",
+    "../../../../../benchmarks/RESULTS-2026-10-09-71cde96.md",
+  ],
+  { query: "?raw", import: "default" },
+) as Record<string, () => Promise<string>>;
 
 export function ReferenceDoc({ topic }: { topic: DocTopic }) {
   const { tr, locale } = useI18n();
@@ -30,10 +33,16 @@ export function ReferenceDoc({ topic }: { topic: DocTopic }) {
     setContent(null);
     setFailed(false);
     documents["../../../../../" + source]!().then(
-      (value) => { if (current) setContent(value); },
-      () => { if (current) setFailed(true); },
+      (value) => {
+        if (current) setContent(value);
+      },
+      () => {
+        if (current) setFailed(true);
+      },
     );
-    return () => { current = false; };
+    return () => {
+      current = false;
+    };
   }, [source]);
   const components: Components = {
     // The page header already shows the title.
@@ -41,14 +50,26 @@ export function ReferenceDoc({ topic }: { topic: DocTopic }) {
     a: ({ href, children }) => {
       const target = href ? referenceLink(source, href) : null;
       if (!target) return <>{children}</>;
-      return target.startsWith("/") ? <a href={localizedWebsiteHref(target, locale)}>{children}</a> : <a href={target} target="_blank" rel="noreferrer">{children}</a>;
+      return target.startsWith("/") ? (
+        <a href={localizedWebsiteHref(target, locale)}>{children}</a>
+      ) : (
+        <a href={target} target="_blank" rel="noreferrer">
+          {children}
+        </a>
+      );
     },
-    table: ({ children }) => <div className="docsTableWrap"><table className="articleTable">{children}</table></div>,
+    table: ({ children }) => (
+      <div className="docsTableWrap">
+        <table className="articleTable">{children}</table>
+      </div>
+    ),
     // SystemOverview presents the topology on the site.
     pre: ({ children, node }) => {
       const code = node?.children[0];
       const language = code && "properties" in code ? code.properties.className : undefined;
-      return Array.isArray(language) && language.includes("language-mermaid") ? null : <pre>{children}</pre>;
+      return Array.isArray(language) && language.includes("language-mermaid") ? null : (
+        <pre>{children}</pre>
+      );
     },
   };
   return (
@@ -60,9 +81,24 @@ export function ReferenceDoc({ topic }: { topic: DocTopic }) {
         {locale === "zh" && !topic.reference!.zh && <p>此文档目前只有英文版。</p>}
       </header>
       {topic.slug === "engineering-architecture" && <SystemOverview />}
-      {failed && <p role="alert">{tr("This document could not be loaded. Refresh the page to try again.", "文档加载失败，请刷新页面重试。")}</p>}
-      {!failed && content === null && <WorkspaceLoading label={tr("Loading document…", "正在加载文档…")} variant="rows" />}
-      {content !== null && <article className="technicalArticle"><Markdown remarkPlugins={[remarkGfm]} components={components}>{content}</Markdown></article>}
+      {failed && (
+        <p role="alert">
+          {tr(
+            "This document could not be loaded. Refresh the page to try again.",
+            "文档加载失败，请刷新页面重试。",
+          )}
+        </p>
+      )}
+      {!failed && content === null && (
+        <WorkspaceLoading label={tr("Loading document…", "正在加载文档…")} variant="rows" />
+      )}
+      {content !== null && (
+        <article className="technicalArticle">
+          <Markdown remarkPlugins={[remarkGfm]} components={components}>
+            {content}
+          </Markdown>
+        </article>
+      )}
     </main>
   );
 }

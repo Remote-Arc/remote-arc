@@ -5,12 +5,19 @@ export type RecoveryDeviceSnapshot = {
   background_guard_active?: boolean | null;
 };
 
-export function recoveryConfirmed(device: RecoveryDeviceSnapshot | undefined, expectedEnabled: boolean): boolean {
+export function recoveryConfirmed(
+  device: RecoveryDeviceSnapshot | undefined,
+  expectedEnabled: boolean,
+): boolean {
   if (!device) return false;
   // A successful write is not necessarily an active local launchd/Run service.
   // A stop_current request can intentionally disconnect the execution owner.
   if (expectedEnabled) {
-    return device.status === "online" && device.background_enabled === true && device.background_guard_active === true;
+    return (
+      device.status === "online" &&
+      device.background_enabled === true &&
+      device.background_guard_active === true
+    );
   }
   return device.background_enabled === false && device.background_guard_active !== true;
 }
@@ -29,7 +36,13 @@ export async function waitForRecoveryState(
   for (let i = 0; i < attempts; i++) {
     try {
       const devices = await options.read();
-      if (recoveryConfirmed(devices.find((device) => device.id === deviceId), enabled)) return true;
+      if (
+        recoveryConfirmed(
+          devices.find((device) => device.id === deviceId),
+          enabled,
+        )
+      )
+        return true;
     } catch {
       // Offline transitions and short-term Relay errors do not imply success.
     }

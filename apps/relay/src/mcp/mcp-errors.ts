@@ -1,12 +1,42 @@
 import { McpServer } from "@modelcontextprotocol/server";
+import { billingRecovery } from "../../../../packages/protocol/src/billing-recovery.js";
+import {
+  canonicalErrorCode,
+  canonicalErrorEnvelope,
+} from "../../../../packages/protocol/src/error-codes.js";
+
+/** Guidance is additive to the existing MCP error contract. Only fixed product
+ * links are exposed, and limits that payment cannot solve never get an upsell. */
+export function mcpBillingRecovery(code?: string) {
+  code = canonicalErrorCode(code);
+  const recovery = billingRecovery(code || "");
+  if (!recovery) return {};
+  const actions = recovery.actions.map((action) => ({
+    url: new URL(action.href, "https://agent.remotearc.app").href,
+    label: action.label[0],
+  }));
+  const upgrade =
+    code &&
+    [
+      "MONTHLY_LIMIT_REACHED",
+      "BINARY_TRANSFER_LIMIT_REACHED",
+      "PLAN_UPGRADE_REQUIRED",
+      "APP_CONNECTION_LIMIT",
+      "ARC_CREDITS_EXHAUSTED",
+      "BILLING_CREDITS_EXHAUSTED",
+    ].includes(code);
+  return {
+    recovery: { message: recovery.message[0], actions, retry: recovery.retry },
+    ...(upgrade ? { upgrade_url: "https://agent.remotearc.app/settings?section=billing" } : {}),
+  };
+}
 
 export type ExpectedMcpError = {
   code: string;
   message: string;
 };
 
-const messageOf = (error: unknown) =>
-  error instanceof Error ? error.message : String(error);
+const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 const codeOf = (error: unknown) =>
   typeof error === "object" && error !== null && "code" in error
@@ -17,12 +47,23 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
   const message = messageOf(error);
   const code = codeOf(error);
 
-  if (code === "MONTHLY_LIMIT_REACHED" || code === "BINARY_TRANSFER_LIMIT_REACHED") return { code, message };
+  if (code === "MONTHLY_LIMIT_REACHED" || code === "BINARY_TRANSFER_LIMIT_REACHED")
+    return { code, message };
   if (code === "PLAN_UPGRADE_REQUIRED" || /^Remote Arc Plus is required for /i.test(message)) {
     return { code: "PLAN_UPGRADE_REQUIRED", message };
   }
-  if(/device call timed out/i.test(message))return {code:'DEVICE_TIMEOUT',message:'Device response timed out. The operation may have executed and its result is unknown. Check device signals and execution history before retrying. If the computer slept, wake it and re-check; a timeout alone does not establish that a restart is needed.'};
-  if(message.startsWith('DEVICE_CALL_EXPIRED:'))return {code:'DEVICE_CALL_EXPIRED',message:'The request expired before the Agent started it. No operation was started for this request. Check that the computer is awake and its connection is fresh before sending a new request.'};
+  if (/device call timed out/i.test(message))
+    return {
+      code: "DEVICE_TIMEOUT",
+      message:
+        "Device response timed out. The operation may have executed and its result is unknown. Check device signals and execution history before retrying. If the computer slept, wake it and re-check; a timeout alone does not establish that a restart is needed.",
+    };
+  if (message.startsWith("DEVICE_CALL_EXPIRED:"))
+    return {
+      code: "DEVICE_CALL_EXPIRED",
+      message:
+        "The request expired before the Agent started it. No operation was started for this request. Check that the computer is awake and its connection is fresh before sending a new request.",
+    };
 
   const rules: Array<[RegExp, string]> = [
     [/requires cwd when multiple Trusted Write Locations/i, "WORKSPACE_CWD_REQUIRED"],
@@ -45,10 +86,16 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     [/^Device did not return (?:a process_id|managed process id)/i, "DEVICE_PROTOCOL_ERROR"],
     [/^Device lacks owned checkpoint support/i, "DEVICE_VERSION_UNSUPPORTED"],
     [/^This computer could not acquire its task keep-awake lease/i, "KEEP_AWAKE_UNAVAILABLE"],
-    [/^Trusted Write Locations are enabled\. start_process requires an in-scope cwd/i, "WORKSPACE_CWD_REQUIRED"],
+    [
+      /^Trusted Write Locations are enabled\. start_process requires an in-scope cwd/i,
+      "WORKSPACE_CWD_REQUIRED",
+    ],
     [/^Tool blocked by local permission mode:/i, "TOOL_DISABLED"],
     [/^Managed process not found or its local retention window has expired/i, "PROCESS_NOT_FOUND"],
-    [/^Remote Arc already has the maximum number of managed background processes/i, "PROCESS_LIMIT_REACHED"],
+    [
+      /^Remote Arc already has the maximum number of managed background processes/i,
+      "PROCESS_LIMIT_REACHED",
+    ],
     [/^Invalid managed process duration/i, "INVALID_TOOL_REQUEST"],
     [/^start_process timeout_ms must be an integer/i, "INVALID_TOOL_REQUEST"],
 
@@ -57,7 +104,10 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     [/^Path is not a directory:/i, "PATH_TYPE_MISMATCH"],
     [/^Path is not a file:/i, "PATH_TYPE_MISMATCH"],
     [/^File is too large for read_file/i, "FILE_TOO_LARGE"],
-    [/^Binary file detected\. read_file currently supports text files only/i, "BINARY_FILE_REQUIRES_BINARY_READ"],
+    [
+      /^Binary file detected\. read_file currently supports text files only/i,
+      "BINARY_FILE_REQUIRES_BINARY_READ",
+    ],
     [/^FILE_CHANGED_DURING_READ:/i, "FILE_CHANGED_DURING_READ"],
     [/^length must be a positive byte count/i, "INVALID_TOOL_REQUEST"],
     [/^read_binary_file length cannot exceed/i, "INVALID_TOOL_REQUEST"],
@@ -96,7 +146,10 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     [/^(?:WRONG_ACTION|NO_OPTION|DISABLED|FILL_MISMATCH):/, "BROWSER_ACTION_FAILED"],
     [/^No (?:browser_runner|Browser Runner) session /, "BROWSER_SESSION_NOT_FOUND"],
     [/is not available on (?:a browser extension device|this computer)\./, "WRONG_BROWSER_TOOL"],
-    [/^(?:browser_runner|Browser Runner) (?:needs|requires|uploads only|could not|lost)/, "BROWSER_RUNNER_UNAVAILABLE"],
+    [
+      /^(?:browser_runner|Browser Runner) (?:needs|requires|uploads only|could not|lost)/,
+      "BROWSER_RUNNER_UNAVAILABLE",
+    ],
     [/may have been sent; its effect is unknown/, "UNKNOWN_EFFECT"],
 
     [/^Account not found\.?$/i, "ACCOUNT_NOT_FOUND"],
@@ -121,7 +174,10 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
     [/^GitHub merge actions cannot/i, "INVALID_TOOL_REQUEST"],
     [/^Automation .*must|^Automation .*requires/i, "INVALID_TOOL_REQUEST"],
     [/^Each command must|^cwd must|^Goal .*must|^expected_exit_code must/i, "INVALID_TOOL_REQUEST"],
-    [/^Condition match|^schedule\.at must|^expires_at must|^max_runs must/i, "INVALID_TOOL_REQUEST"],
+    [
+      /^Condition match|^schedule\.at must|^expires_at must|^max_runs must/i,
+      "INVALID_TOOL_REQUEST",
+    ],
     [/^A versioned task contract cannot|^Unsupported automation kind/i, "INVALID_TOOL_REQUEST"],
     [/^device_id is required for device-backed automation/i, "INVALID_TOOL_REQUEST"],
 
@@ -195,8 +251,9 @@ export const expectedMcpFailureResult = (error: ExpectedMcpError) => ({
         {
           ok: false,
           error: {
-            code: error.code,
+            code: canonicalErrorCode(error.code) || error.code,
             message: error.message,
+            ...mcpBillingRecovery(error.code),
           },
         },
         null,
@@ -206,15 +263,63 @@ export const expectedMcpFailureResult = (error: ExpectedMcpError) => ({
   ],
 });
 
-export type McpFailureObservation={tool:string;code:string;args:unknown;durationMs:number};
-const failureObservers=new WeakMap<McpServer,(value:McpFailureObservation)=>Promise<unknown>>();
-export function observeMcpFailures(server:McpServer,observer:(value:McpFailureObservation)=>Promise<unknown>){failureObservers.set(server,observer);}
-function resultFailure(result:unknown):string|null{
- const value=result as {isError?:boolean;content?:Array<{type:string;text?:string}>;_meta?:Record<string,unknown>}|null;
- if(value?.isError&&Array.isArray(value._meta?.['mcp/www_authenticate']))return 'insufficient_scope';
- const text=value?.content?.[0]?.type==='text'?value.content[0].text:undefined;
- if(text&&text.length<=16384)try{const body=JSON.parse(text);if(body?.ok===false||['failed','unknown'].includes(body?.status)&&body?.error)return typeof body.error==='string'?body.error:body.error?.code||'TOOL_ERROR';}catch{}
- return value?.isError?'TOOL_ERROR':null;
+export type McpFailureObservation = {
+  tool: string;
+  code: string;
+  args: unknown;
+  durationMs: number;
+};
+const failureObservers = new WeakMap<
+  McpServer,
+  (value: McpFailureObservation) => Promise<unknown>
+>();
+export function observeMcpFailures(
+  server: McpServer,
+  observer: (value: McpFailureObservation) => Promise<unknown>,
+) {
+  failureObservers.set(server, observer);
+}
+function canonicalMcpResult(result: unknown): unknown {
+  if (!result || typeof result !== "object") return result;
+  const value = result as {
+    isError?: boolean;
+    content?: Array<{ type: string; text?: string }>;
+    structuredContent?: unknown;
+  };
+  const content = value.content?.map((item) => {
+    if (item.type !== "text" || !item.text) return item;
+    try {
+      const body = JSON.parse(item.text),
+        canonical = canonicalErrorEnvelope(body, value.isError);
+      return canonical === body ? item : { ...item, text: JSON.stringify(canonical) };
+    } catch {
+      return item;
+    }
+  });
+  return {
+    ...value,
+    ...(content ? { content } : {}),
+    ...(value.structuredContent
+      ? { structuredContent: canonicalErrorEnvelope(value.structuredContent, value.isError) }
+      : {}),
+  };
+}
+function resultFailure(result: unknown): string | null {
+  const value = result as {
+    isError?: boolean;
+    content?: Array<{ type: string; text?: string }>;
+    _meta?: Record<string, unknown>;
+  } | null;
+  if (value?.isError && Array.isArray(value._meta?.["mcp/www_authenticate"]))
+    return "insufficient_scope";
+  const text = value?.content?.[0]?.type === "text" ? value.content[0].text : undefined;
+  if (text && text.length <= 16384)
+    try {
+      const body = JSON.parse(text);
+      if (body?.ok === false || (["failed", "unknown"].includes(body?.status) && body?.error))
+        return typeof body.error === "string" ? body.error : body.error?.code || "TOOL_ERROR";
+    } catch {}
+  return value?.isError ? "TOOL_ERROR" : null;
 }
 export function registerMcpTool(
   server: McpServer,
@@ -224,16 +329,30 @@ export function registerMcpTool(
 ) {
   const register = server.registerTool.bind(server) as (...args: any[]) => unknown;
   return register(name, definition, async (...args: any[]) => {
-    const started=Date.now();
-    const report=async(code:string)=>{try{await failureObservers.get(server)?.({tool:name,code,args:args[0],durationMs:Date.now()-started});}catch{/* Observability must not replace a tool result. */}};
+    const started = Date.now();
+    const report = async (code: string) => {
+      try {
+        await failureObservers.get(server)?.({
+          tool: name,
+          code,
+          args: args[0],
+          durationMs: Date.now() - started,
+        });
+      } catch {
+        /* Observability must not replace a tool result. */
+      }
+    };
     try {
-      const result=await handler(...args);const code=resultFailure(result);if(code)await report(code);return result;
+      const result = canonicalMcpResult(await handler(...args));
+      const code = resultFailure(result);
+      if (code) await report(code);
+      return result;
     } catch (error) {
       const expected = classifyExpectedMcpError(error);
-      await report(expected?.code||'TOOL_ERROR');
+      await report(expected?.code || "TOOL_ERROR");
       if (!expected) throw error;
       // No arguments, paths or provider error messages in operational logs.
-      console.warn("[Remote Arc MCP expected error]", {tool:name,code:expected.code});
+      console.warn("[Remote Arc MCP expected error]", { tool: name, code: expected.code });
       return expectedMcpFailureResult(expected);
     }
   });

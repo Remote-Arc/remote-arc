@@ -1,9 +1,6 @@
 import type { AgentToolName } from "./agent-planner.js";
 
-export function validateAgentToolArguments(
-  tool: AgentToolName,
-  args: Record<string, unknown>,
-) {
+export function validateAgentToolArguments(tool: AgentToolName, args: Record<string, unknown>) {
   const text = (key: string, max: number) => {
     const value = args[key];
     if (typeof value !== "string" || !value.trim() || value.length > max) {
@@ -22,9 +19,7 @@ export function validateAgentToolArguments(
 
   if (tool === "list_directory") {
     const depthRaw = Number(args.depth ?? 2);
-    const depth = Number.isInteger(depthRaw)
-      ? Math.min(Math.max(depthRaw, 1), 6)
-      : 2;
+    const depth = Number.isInteger(depthRaw) ? Math.min(Math.max(depthRaw, 1), 6) : 2;
     return { path: text("path", 1000), depth };
   }
   if (tool === "read_file") {
@@ -33,10 +28,7 @@ export function validateAgentToolArguments(
     return {
       path: text("path", 1000),
       ...(Number.isInteger(offsetRaw) ? { offset: offsetRaw } : {}),
-      length:
-        Number.isInteger(lengthRaw) && lengthRaw > 0
-          ? Math.min(lengthRaw, 1200)
-          : 240,
+      length: Number.isInteger(lengthRaw) && lengthRaw > 0 ? Math.min(lengthRaw, 1200) : 240,
     };
   }
   if (tool === "read_binary_file") {
@@ -45,10 +37,7 @@ export function validateAgentToolArguments(
     return {
       path: text("path", 1000),
       offset: Number.isInteger(offsetRaw) && offsetRaw >= 0 ? offsetRaw : 0,
-      length:
-        Number.isInteger(lengthRaw) && lengthRaw > 0
-          ? Math.min(lengthRaw, 262144)
-          : 65536,
+      length: Number.isInteger(lengthRaw) && lengthRaw > 0 ? Math.min(lengthRaw, 262144) : 65536,
       ...(typeof args.expected_revision === "string" && args.expected_revision.length <= 128
         ? { expected_revision: args.expected_revision }
         : {}),
@@ -82,9 +71,7 @@ export function validateAgentToolArguments(
       old_string: oldString,
       new_string: newString,
       expected_replacements:
-        Number.isInteger(expectedRaw) && expectedRaw > 0
-          ? Math.min(expectedRaw, 20)
-          : 1,
+        Number.isInteger(expectedRaw) && expectedRaw > 0 ? Math.min(expectedRaw, 20) : 1,
     };
   }
 
@@ -94,4 +81,3 @@ export function validateAgentToolArguments(
     background: true,
   };
 }
-

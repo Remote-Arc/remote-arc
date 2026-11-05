@@ -5,22 +5,14 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const pkg = JSON.parse(
-  await fs.readFile(path.join(root, "packages/cli/package.json"), "utf8"),
-);
-const all =
-  process.argv.includes("--all") || process.argv.includes("--release");
+const pkg = JSON.parse(await fs.readFile(path.join(root, "packages/cli/package.json"), "utf8"));
+const all = process.argv.includes("--all") || process.argv.includes("--release");
 const release = process.argv.includes("--release");
-const hostOS = { win32: "windows", darwin: "darwin", linux: "linux" }[
-  process.platform
-];
+const hostOS = { win32: "windows", darwin: "darwin", linux: "linux" }[process.platform];
 const hostArch = { x64: "amd64", arm64: "arm64" }[process.arch];
-if (!hostOS || !hostArch)
-  throw new Error("Unsupported native Go build target.");
+if (!hostOS || !hostArch) throw new Error("Unsupported native Go build target.");
 const targets = all
-  ? ["windows", "darwin", "linux"].flatMap((os) =>
-      ["amd64", "arm64"].map((arch) => ({ os, arch })),
-    )
+  ? ["windows", "darwin", "linux"].flatMap((os) => ["amd64", "arm64"].map((arch) => ({ os, arch })))
   : [{ os: hostOS, arch: hostArch }];
 const output = path.join(root, "work", "go-device");
 await fs.mkdir(output, { recursive: true });
@@ -54,8 +46,7 @@ for (const { os, arch } of targets) {
     .digest("hex");
   console.log(`Built ${name}`);
 }
-const manifest =
-  JSON.stringify({ version: pkg.version, checksums }, null, 2) + "\n";
+const manifest = JSON.stringify({ version: pkg.version, checksums }, null, 2) + "\n";
 await fs.writeFile(path.join(output, "go-binaries.json"), manifest);
 await fs.writeFile(
   path.join(output, "SHA256SUMS"),
@@ -68,22 +59,19 @@ if (all) {
     const name = `remotelink-v${pkg.version}-${os}-${arch}`;
     return `      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v${pkg.version}/${name}", using: :nounzip\n      sha256 "${checksums[name]}"`;
   };
-  for (const [className, filename, conflict] of [["Remotelink", "remotelink.rb", "remotelink-go"], ["RemotelinkGo", "remotelink-go.rb", "remotelink"]]) {
-  const formula = `class ${className} < Formula\n  desc "Controlled remote computer access for AI"\n  homepage "https://remotearc.app"\n  version "${pkg.version}"\n  conflicts_with "${conflict}", because: "both install remotelink"\n\n  on_macos do\n    on_arm do\n${block("darwin", "arm64")}\n    end\n    on_intel do\n${block("darwin", "amd64")}\n    end\n  end\n  on_linux do\n    on_arm do\n${block("linux", "arm64")}\n    end\n    on_intel do\n${block("linux", "amd64")}\n    end\n  end\n\n  def install\n    bin.install Dir["remotelink-v*"].first => "remotelink"\n    chmod 0755, bin/"remotelink"\n  end\n\n  test do\n    assert_equal "${pkg.version}", shell_output("#{bin}/remotelink --version").strip\n  end\nend\n`;
-  await fs.writeFile(path.join(output, filename), formula);
+  for (const [className, filename, conflict] of [
+    ["Remotelink", "remotelink.rb", "remotelink-go"],
+    ["RemotelinkGo", "remotelink-go.rb", "remotelink"],
+  ]) {
+    const formula = `class ${className} < Formula\n  desc "Controlled remote computer access for AI"\n  homepage "https://remotearc.app"\n  version "${pkg.version}"\n  conflicts_with "${conflict}", because: "both install remotelink"\n\n  on_macos do\n    on_arm do\n${block("darwin", "arm64")}\n    end\n    on_intel do\n${block("darwin", "amd64")}\n    end\n  end\n  on_linux do\n    on_arm do\n${block("linux", "arm64")}\n    end\n    on_intel do\n${block("linux", "amd64")}\n    end\n  end\n\n  def install\n    bin.install Dir["remotelink-v*"].first => "remotelink"\n    chmod 0755, bin/"remotelink"\n  end\n\n  test do\n    assert_equal "${pkg.version}", shell_output("#{bin}/remotelink --version").strip\n  end\nend\n`;
+    await fs.writeFile(path.join(output, filename), formula);
   }
 }
 await fs.mkdir(path.join(root, "packages/cli/dist"), { recursive: true });
-await fs.writeFile(
-  path.join(root, "packages/cli/dist/go-binaries.json"),
-  manifest,
-);
+await fs.writeFile(path.join(root, "packages/cli/dist/go-binaries.json"), manifest);
 if (!release) {
   const name = `remotelink-v${pkg.version}-${hostOS}-${hostArch}${hostOS === "windows" ? ".exe" : ""}`;
   await fs.mkdir(path.join(root, "packages/cli/dist/bin"), { recursive: true });
-  await fs.copyFile(
-    path.join(output, name),
-    path.join(root, "packages/cli/dist/bin", name),
-  );
+  await fs.copyFile(path.join(output, name), path.join(root, "packages/cli/dist/bin", name));
   await fs.chmod(path.join(root, "packages/cli/dist/bin", name), 0o700);
 }

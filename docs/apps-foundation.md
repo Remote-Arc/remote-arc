@@ -7,6 +7,7 @@ Remote Arc runs its own connector infrastructure and calls provider APIs directl
 The registry now contains 29 native API integrations in eight categories: 27 OAuth connectors and two user-owned API credential connectors. See [Apps expansion and release gates](apps-expansion.md) for exact scope and costs. Each operation has a bounded schema and fixed provider URL. There is no arbitrary HTTP execution tool.
 
 The authenticated App host exposes:
+
 - `GET /api/apps`: provider configuration state, available operations and the current user's connections.
 - `POST /api/apps/authorize`: creates an expiring, single-use OAuth request for the selected provider and permissions.
 - `GET /api/apps/oauth/:provider/callback`: consumes that user's state, exchanges the code, identifies the account and encrypts its credentials.

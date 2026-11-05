@@ -15,9 +15,7 @@
           "default": 2
         }
       },
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "additionalProperties": false
     }
   },
@@ -31,9 +29,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "additionalProperties": false
     }
   },
@@ -54,9 +50,7 @@
           "minimum": 1
         }
       },
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "additionalProperties": false
     }
   },
@@ -86,9 +80,7 @@
           "maxLength": 128
         }
       },
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "additionalProperties": false
     }
   },
@@ -102,9 +94,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "additionalProperties": false
     }
   },
@@ -146,17 +136,11 @@
         },
         "mode": {
           "type": "string",
-          "enum": [
-            "rewrite",
-            "append"
-          ],
+          "enum": ["rewrite", "append"],
           "default": "rewrite"
         }
       },
-      "required": [
-        "path",
-        "content"
-      ],
+      "required": ["path", "content"],
       "additionalProperties": false
     }
   },
@@ -181,11 +165,7 @@
           "default": 1
         }
       },
-      "required": [
-        "file_path",
-        "old_string",
-        "new_string"
-      ],
+      "required": ["file_path", "old_string", "new_string"],
       "additionalProperties": false
     }
   },
@@ -215,9 +195,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "action_id"
-      ],
+      "required": ["action_id"],
       "additionalProperties": false
     }
   },
@@ -258,9 +236,7 @@
           "description": "A one-time secret handle from request_secret. The value the user entered is given to the command on standard input, once, and is shown as [secret] in its output."
         }
       },
-      "required": [
-        "command"
-      ],
+      "required": ["command"],
       "additionalProperties": false
     }
   },
@@ -282,9 +258,7 @@
           "maxLength": 500
         }
       },
-      "required": [
-        "process_id"
-      ],
+      "required": ["process_id"],
       "additionalProperties": false
     }
   },
@@ -298,9 +272,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "process_id"
-      ],
+      "required": ["process_id"],
       "additionalProperties": false
     }
   },
@@ -323,9 +295,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "process_id"
-      ],
+      "required": ["process_id"],
       "additionalProperties": false
     }
   }

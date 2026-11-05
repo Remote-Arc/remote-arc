@@ -8,16 +8,18 @@
 // Five additional Relay suites raised its floors to 90/90/83/96.
 // Agent lifecycle, browser protocol/media and setup boundary tests now enforce
 // the full-module 90% statement target, including command entrypoints.
-export const COVERAGE_TARGET=90;
-export const COVERAGE_FLOORS={
- typescript:{lines:50,statements:50,branches:80,functions:75},
- relay:{lines:90,statements:90,branches:83,functions:96},
- agent:{statements:90},
- core:{statements:90},
- apps:{lines:90,statements:90,branches:90,functions:90},
+export const COVERAGE_TARGET = 90;
+export const COVERAGE_FLOORS = {
+  typescript: { lines: 50, statements: 50, branches: 80, functions: 75 },
+  relay: { lines: 90, statements: 90, branches: 83, functions: 96 },
+  agent: { statements: 90 },
+  core: { statements: 90 },
+  apps: { lines: 90, statements: 90, branches: 90, functions: 90 },
 };
-export function coverageThresholds(scope,strict=false){
- const floors=COVERAGE_FLOORS[scope];
- if(!floors)throw Error('Unknown coverage scope: '+scope);
- return Object.fromEntries(Object.entries(floors).map(([metric,value])=>[metric,strict?COVERAGE_TARGET:value]));
+export function coverageThresholds(scope, strict = false) {
+  const floors = COVERAGE_FLOORS[scope];
+  if (!floors) throw Error("Unknown coverage scope: " + scope);
+  return Object.fromEntries(
+    Object.entries(floors).map(([metric, value]) => [metric, strict ? COVERAGE_TARGET : value]),
+  );
 }

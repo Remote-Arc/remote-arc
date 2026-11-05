@@ -5,64 +5,59 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-20",
   "cache": {
-    "enabled": false
+    "enabled": false,
   },
   "observability": {
     "enabled": true,
     "logs": {
       "enabled": true,
       "invocation_logs": true,
-      "head_sampling_rate": 0.1
-    }
+      "head_sampling_rate": 0.1,
+    },
   },
   "triggers": {
-    "crons": [
-      "* * * * *",
-      "*/5 * * * *"
-    ]
+    "crons": ["* * * * *", "*/5 * * * *"],
   },
   "durable_objects": {
     "bindings": [
       {
         "name": "REGISTRY",
-        "class_name": "DeviceRegistry"
+        "class_name": "DeviceRegistry",
       },
       {
         "name": "ARC_RUNTIME",
-        "class_name": "ArcChatRuntime"
-      }
-    ]
+        "class_name": "ArcChatRuntime",
+      },
+    ],
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": [
-        "DeviceRegistry"
-      ]
+      "new_sqlite_classes": ["DeviceRegistry"],
     },
-    { "tag": "v2-arc-chat", "new_sqlite_classes": ["ArcChatRuntime"] }
+    { "tag": "v2-arc-chat", "new_sqlite_classes": ["ArcChatRuntime"] },
   ],
   "routes": [
     {
       "pattern": "remotearc.app",
-      "custom_domain": true
+      "custom_domain": true,
     },
     {
       "pattern": "www.remotearc.app",
-      "custom_domain": true
+      "custom_domain": true,
     },
     {
       "pattern": "mcp.remotearc.app",
-      "custom_domain": true
+      "custom_domain": true,
     },
     {
       "pattern": "agent.remotearc.app",
-      "custom_domain": true
+      "custom_domain": true,
     },
     {
       "pattern": "admin.remotearc.app",
-      "custom_domain": true
-    }
+      "custom_domain": true,
+    },
   ],
   "assets": {
     "directory": "../ui/dist",
@@ -75,18 +70,18 @@
       "!/*.svg",
       "!/*.png",
       "!/manifest.webmanifest",
-      "!/sw.js"
+      "!/sw.js",
     ],
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
   },
-  "r2_buckets": [{"binding":"PUBLIC_MEDIA","bucket_name":"remote-arc-public-media"}],
+  "r2_buckets": [{ "binding": "PUBLIC_MEDIA", "bucket_name": "remote-arc-public-media" }],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "remote-link-auth",
       "database_id": "3cf318cb-99e4-4bc8-af20-55d634e354fd",
-      "migrations_dir": "migrations"
-    }
+      "migrations_dir": "migrations",
+    },
   ],
   "vars": {
     "PUBLIC_ORIGIN": "https://mcp.remotearc.app",
@@ -120,65 +115,69 @@
     "ARC_USER_DAILY_MICROS": "50000",
     "ARC_PAID_USER_DAILY_MICROS": "1000000",
     "ARC_TRIAL_DAILY_MICROS": "100000",
-    "ARC_TRIAL_PREMIUM_MICROS": "250000"
+    "ARC_TRIAL_PREMIUM_MICROS": "250000",
   },
   "ratelimits": [
-    {"name":"PRODUCT_EVENTS_RATE_LIMITER","namespace_id":"41008","simple":{"limit":30,"period":60}},
+    {
+      "name": "PRODUCT_EVENTS_RATE_LIMITER",
+      "namespace_id": "41008",
+      "simple": { "limit": 30, "period": 60 },
+    },
     {
       "name": "MCP_RATE_LIMITER",
       "namespace_id": "41001",
       "simple": {
         "limit": 120,
-        "period": 60
-      }
+        "period": 60,
+      },
     },
     {
       "name": "MCP_EDGE_RATE_LIMITER",
       "namespace_id": "41004",
       "simple": {
         "limit": 3000,
-        "period": 60
-      }
+        "period": 60,
+      },
     },
     {
       "name": "MCP_ANON_RATE_LIMITER",
       "namespace_id": "41005",
       "simple": {
         "limit": 60,
-        "period": 60
-      }
+        "period": 60,
+      },
     },
     {
       "name": "INCIDENT_RATE_LIMITER",
       "namespace_id": "41006",
       "simple": {
         "limit": 6,
-        "period": 60
-      }
+        "period": 60,
+      },
     },
     {
       "name": "ENGAGEMENT_RATE_LIMITER",
       "namespace_id": "41007",
       "simple": {
         "limit": 5,
-        "period": 60
-      }
+        "period": 60,
+      },
     },
     {
       "name": "AUTH_RATE_LIMITER",
       "namespace_id": "41002",
       "simple": {
         "limit": 30,
-        "period": 60
-      }
+        "period": 60,
+      },
     },
     {
       "name": "EMAIL_RATE_LIMITER",
       "namespace_id": "41003",
       "simple": {
         "limit": 3,
-        "period": 60
-      }
-    }
-  ]
+        "period": 60,
+      },
+    },
+  ],
 }

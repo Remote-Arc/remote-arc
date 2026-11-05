@@ -1,8 +1,16 @@
-import {classifyExpectedMcpError} from '../mcp/mcp-errors.js';
+import { applicationJson } from "../platform/application-json.js";
+import { classifyExpectedMcpError } from "../mcp/mcp-errors.js";
 import { requireTaskPermission } from "../devices/device-task-policy.js";
-import {recordProductEvent} from '../analytics/product-events.js';
+import { recordProductEvent } from "../analytics/product-events.js";
 import { selectFleetDevice } from "../devices/fleet-scheduler.js";
-import { binaryTransferLimit, isPlanUpgradeRequiredError, requireEntitledFeatures, requireFeatures, type AccountFeature, type PlanEntitlements } from "../billing/entitlements.js";
+import {
+  binaryTransferLimit,
+  isPlanUpgradeRequiredError,
+  requireEntitledFeatures,
+  requireFeatures,
+  type AccountFeature,
+  type PlanEntitlements,
+} from "../billing/entitlements.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import {
   getSessionUser,
@@ -11,8 +19,18 @@ import {
   sha256Hex,
   type OAuthIdentity,
 } from "../auth/auth.js";
-import { checkpointTask, journalStatement, LeaseLostError, renewTaskLease } from "./automation-store.js";
-import { callDevice, isDeviceCallTimeoutError, UncertainDeviceDispatchError, type DeviceCallEnv } from "../devices/device-call.js";
+import {
+  checkpointTask,
+  journalStatement,
+  LeaseLostError,
+  renewTaskLease,
+} from "./automation-store.js";
+import {
+  callDevice,
+  isDeviceCallTimeoutError,
+  UncertainDeviceDispatchError,
+  type DeviceCallEnv,
+} from "../devices/device-call.js";
 import {
   agentPlannerConfigured,
   planAgentTurn,
@@ -24,11 +42,23 @@ import { takeSourceDecision } from "./source-goals.js";
 import { firstIntervalRun, nextIntervalRun } from "./schedule-clock.js";
 import { nativeArcWork, tickNativeArcWork } from "../arc/arc-work.js";
 import type { ArcEnv } from "../arc/arc-chat.js";
-import {requireArcAccess} from '../arc/arc-trial.js';
+import { requireArcAccess } from "../arc/arc-trial.js";
 import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { taskSchedulerHealth } from "./task-scheduler.js";
-import { binaryBytesRead, finishAutomationRunWithUsage, meterBinaryBytes, recordPlusUsage } from "../billing/plus-usage.js";
-import { sanitizePlan, finishPhase, plannedReport, timeBudget, type GoalPlan, type PlannedState } from "./planned-goals.js";
+import {
+  binaryBytesRead,
+  finishAutomationRunWithUsage,
+  meterBinaryBytes,
+  recordPlusUsage,
+} from "../billing/plus-usage.js";
+import {
+  sanitizePlan,
+  finishPhase,
+  plannedReport,
+  timeBudget,
+  type GoalPlan,
+  type PlannedState,
+} from "./planned-goals.js";
 import { executePlannedGoal } from "./planned-goal-runtime.js";
 import {
   githubAutomationConfigured,
@@ -37,11 +67,7 @@ import {
   type GitHubMergeSpec,
 } from "./github-automation.js";
 
-export type AutomationKind =
-  | "long_task"
-  | "condition_watch"
-  | "schedule_watch"
-  | "goal_loop";
+export type AutomationKind = "long_task" | "condition_watch" | "schedule_watch" | "goal_loop";
 
 export type AutomationCreateKind = AutomationKind | "agent_goal";
 
@@ -56,7 +82,8 @@ export type AutomationStatus =
   | "cancelled"
   | "expired";
 
-export type AutomationEnv = DeviceCallEnv & Partial<ArcEnv> &
+export type AutomationEnv = DeviceCallEnv &
+  Partial<ArcEnv> &
   AgentPlannerEnv &
   GitHubAutomationEnv & {
     PUBLIC_ORIGIN: string;
@@ -102,7 +129,11 @@ export type AgentGoalSpec = {
   allowed_tools: AgentToolName[];
   max_iterations: number;
   plan?: GoalPlan;
-  source_capabilities?: { durable_context: boolean; resume_on_next_turn: boolean; autonomous_event_wakeup: boolean };
+  source_capabilities?: {
+    durable_context: boolean;
+    resume_on_next_turn: boolean;
+    autonomous_event_wakeup: boolean;
+  };
 };
 
 type GoalSpec = CommandGoalSpec | AgentGoalSpec;
@@ -228,7 +259,11 @@ export type CreateAutomationInput = {
     allowed_tools?: AgentToolName[];
     max_iterations?: number;
     plan?: unknown;
-    source_capabilities?: { durable_context: boolean; resume_on_next_turn: boolean; autonomous_event_wakeup: boolean };
+    source_capabilities?: {
+      durable_context: boolean;
+      resume_on_next_turn: boolean;
+      autonomous_event_wakeup: boolean;
+    };
   };
   github_merge?: {
     owner?: string;
@@ -266,14 +301,15 @@ const parseJson = <T>(value: string | null, fallback: T): T => {
   }
 };
 
-export function requiredAutomationFeatures(input: Pick<CreateAutomationInput, "kind" | "schedule" | "keep_awake" | "agent_goal">) {
+export function requiredAutomationFeatures(
+  input: Pick<CreateAutomationInput, "kind" | "schedule" | "keep_awake" | "agent_goal">,
+) {
   const requestedKind = input.kind || "long_task";
   const features: AccountFeature[] =
-    requestedKind === "agent_goal"
-      ? ["planned_agent_goals", "durable_tasks"]
-      : ["durable_tasks"];
+    requestedKind === "agent_goal" ? ["planned_agent_goals", "durable_tasks"] : ["durable_tasks"];
   // Only source-controlled goals use the user's own AI; hosted planning is Arc inference.
-  if (requestedKind === "agent_goal" && input.agent_goal?.controller !== "source") features.push("hosted_planner");
+  if (requestedKind === "agent_goal" && input.agent_goal?.controller !== "source")
+    features.push("hosted_planner");
   if (requestedKind === "schedule_watch" || input.schedule) features.push("scheduled_tasks");
   if (input.keep_awake) features.push("keep_awake");
   return features;
@@ -313,13 +349,10 @@ const stableJson = (value: unknown) => JSON.stringify(value);
 const addSeconds = (iso: string, seconds: number) =>
   new Date(Date.parse(iso) + seconds * 1000).toISOString();
 
-const addHours = (iso: string, hours: number) =>
-  addSeconds(iso, hours * 3600);
+const addHours = (iso: string, hours: number) => addSeconds(iso, hours * 3600);
 
 const isValidIso = (value: string | null | undefined) =>
-  typeof value === "string" &&
-  Number.isFinite(Date.parse(value)) &&
-  value.length <= 64;
+  typeof value === "string" && Number.isFinite(Date.parse(value)) && value.length <= 64;
 
 const clampInterval = (value: unknown, fallback = 300) => {
   const n = Number(value);
@@ -533,7 +566,9 @@ function sanitizeGoal(
     return {
       type: "agent_goal",
       controller: input.agent_goal?.controller === "source" ? "source" : "hosted",
-      ...(input.agent_goal?.controller_client_id ? { controller_client_id: input.agent_goal.controller_client_id } : {}),
+      ...(input.agent_goal?.controller_client_id
+        ? { controller_client_id: input.agent_goal.controller_client_id }
+        : {}),
       objective,
       success_criteria: successCriteria,
       ...(workspace ? { workspace } : {}),
@@ -548,12 +583,26 @@ function sanitizeGoal(
         : {}),
       allowed_tools: allowedTools,
       max_iterations: maxIterations,
-      ...(input.agent_goal?.plan !== undefined ? { plan: sanitizePlan(input.agent_goal.plan, workspace || undefined, allowedTools.includes("start_process")) } : {}),
-      ...(input.agent_goal?.source_capabilities ? { source_capabilities: {
-        durable_context: input.agent_goal.source_capabilities.durable_context === true,
-        resume_on_next_turn: input.agent_goal.source_capabilities.resume_on_next_turn === true,
-        autonomous_event_wakeup: input.agent_goal.source_capabilities.autonomous_event_wakeup === true,
-      } } : {}),
+      ...(input.agent_goal?.plan !== undefined
+        ? {
+            plan: sanitizePlan(
+              input.agent_goal.plan,
+              workspace || undefined,
+              allowedTools.includes("start_process"),
+            ),
+          }
+        : {}),
+      ...(input.agent_goal?.source_capabilities
+        ? {
+            source_capabilities: {
+              durable_context: input.agent_goal.source_capabilities.durable_context === true,
+              resume_on_next_turn:
+                input.agent_goal.source_capabilities.resume_on_next_turn === true,
+              autonomous_event_wakeup:
+                input.agent_goal.source_capabilities.autonomous_event_wakeup === true,
+            },
+          }
+        : {}),
     };
   }
 
@@ -673,10 +722,18 @@ function defaultMaxRuns(kind: AutomationKind, value: unknown) {
 
 async function authorizeGitHubAction(env: AutomationEnv, userId: string, action: GitHubMergeSpec) {
   const installationId = action.installation_id || env.GITHUB_APP_INSTALLATION_ID;
-  const permission = installationId && await env.DB.prepare(`SELECT user_id FROM github_automation_permissions
-    WHERE user_id = ?1 AND installation_id = ?2 AND owner = ?3 COLLATE NOCASE AND repo = ?4 COLLATE NOCASE`)
-    .bind(userId, installationId, action.owner, action.repo).first();
-  if (!permission) throw new Error("GitHub cloud action requires an explicit account/installation/repository permission binding.");
+  const permission =
+    installationId &&
+    (await env.DB.prepare(
+      `SELECT user_id FROM github_automation_permissions
+    WHERE user_id = ?1 AND installation_id = ?2 AND owner = ?3 COLLATE NOCASE AND repo = ?4 COLLATE NOCASE`,
+    )
+      .bind(userId, installationId, action.owner, action.repo)
+      .first());
+  if (!permission)
+    throw new Error(
+      "GitHub cloud action requires an explicit account/installation/repository permission binding.",
+    );
   return { ...action, installation_id: installationId! };
 }
 
@@ -688,7 +745,7 @@ export async function createAutomation(
 ) {
   const typedContract = input.task !== undefined;
   if (typedContract) {
-    if (Object.keys(input).some(key => key !== "task"))
+    if (Object.keys(input).some((key) => key !== "task"))
       throw new Error("A versioned task contract cannot be mixed with legacy automation fields.");
     input = normalizeTaskContract(input.task!);
   }
@@ -713,8 +770,7 @@ export async function createAutomation(
     await requireFeatures(env, userId, requiredFeatures);
   }
 
-  const storedKind: AutomationKind =
-    requestedKind === "agent_goal" ? "goal_loop" : requestedKind;
+  const storedKind: AutomationKind = requestedKind === "agent_goal" ? "goal_loop" : requestedKind;
   const name = (input.name || "").trim();
   if (!name || name.length > 120) {
     throw new Error("Automation name must be between 1 and 120 characters.");
@@ -722,16 +778,21 @@ export async function createAutomation(
 
   const action = sanitizeSteps({ ...input, kind: requestedKind });
   if (input.keep_awake) action.keep_awake = true;
-  const cloudOnly = action.steps.length > 0 &&
-    action.steps.every((step) => step.type === "github_merge_pr");
+  const cloudOnly =
+    action.steps.length > 0 && action.steps.every((step) => step.type === "github_merge_pr");
   let deviceId = (input.device_id || "").trim();
   if (!deviceId && !cloudOnly) {
-    const paths = [input.cwd, input.goal?.cwd, input.agent_goal?.workspace,
-      input.agent_goal?.verify_cwd, ...(input.steps || []).map((step) => step.cwd)]
-      .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
-    const requiredTools = requestedKind === "agent_goal"
-      ? input.agent_goal?.allowed_tools || []
-      : ["start_process", "process_status", "process_output", "stop_process"];
+    const paths = [
+      input.cwd,
+      input.goal?.cwd,
+      input.agent_goal?.workspace,
+      input.agent_goal?.verify_cwd,
+      ...(input.steps || []).map((step) => step.cwd),
+    ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+    const requiredTools =
+      requestedKind === "agent_goal"
+        ? input.agent_goal?.allowed_tools || []
+        : ["start_process", "process_status", "process_output", "stop_process"];
     const selected = await selectFleetDevice(env, userId, {
       requiredTools,
       workspaces: paths,
@@ -751,44 +812,65 @@ export async function createAutomation(
     policy = await devicePolicySnapshot(env, userId, deviceId);
     if (!policy) throw new Error("Device not found or revoked.");
 
-    if (
-      requestedKind !== "agent_goal" &&
-      !policySupportsCommandAutomation(policy)
-    ) {
+    if (requestedKind !== "agent_goal" && !policySupportsCommandAutomation(policy)) {
       throw new Error(
         "This device does not currently allow start_process, process_status and stop_process.",
       );
     }
   }
 
-  if (requestedKind === "agent_goal" && input.agent_goal?.controller !== "source" && !agentPlannerConfigured(env)) {
-    throw new Error(
-      "Durable Agent Goals are not configured on this Remote Arc deployment.",
-    );
+  if (
+    requestedKind === "agent_goal" &&
+    input.agent_goal?.controller !== "source" &&
+    !agentPlannerConfigured(env)
+  ) {
+    throw new Error("Durable Agent Goals are not configured on this Remote Arc deployment.");
   }
   if (
     action.steps.some((step) => step.type === "github_merge_pr") &&
     !githubAutomationConfigured(env)
   ) {
-    throw new Error(
-      "GitHub App automation is not configured on this Remote Arc deployment.",
-    );
+    throw new Error("GitHub App automation is not configured on this Remote Arc deployment.");
   }
 
   for (const step of action.steps) {
-    if (step.type === "github_merge_pr") Object.assign(step, await authorizeGitHubAction(env, userId, step));
+    if (step.type === "github_merge_pr")
+      Object.assign(step, await authorizeGitHubAction(env, userId, step));
   }
   const goal = sanitizeGoal({ ...input, kind: requestedKind }, policy);
   const now = nowIso();
   const { trigger, nextRunAt, initialStatus } = sanitizeTrigger(
-    input.condition ? "condition_watch" : input.schedule ? "schedule_watch" : storedKind, input, now);
-  const awaitingSource = typedContract && goal?.type === "agent_goal" && goal.controller === "source"
-    && !goal.plan?.phases.some(phase => phase.execution_slice?.length) && trigger.type === "immediate";
-  if (!cloudOnly) await requireTaskPermission(env.DB, userId, deviceId, storedKind, goal, trigger, action.keep_awake);
-  const expiresAt = defaultExpiry(requestedKind === "agent_goal" && trigger.type === "interval" ? "schedule_watch" : storedKind,
-    requestedKind === "agent_goal" && trigger.type === "at" ? trigger.at : now, input);
+    input.condition ? "condition_watch" : input.schedule ? "schedule_watch" : storedKind,
+    input,
+    now,
+  );
+  const awaitingSource =
+    typedContract &&
+    goal?.type === "agent_goal" &&
+    goal.controller === "source" &&
+    !goal.plan?.phases.some((phase) => phase.execution_slice?.length) &&
+    trigger.type === "immediate";
+  if (!cloudOnly)
+    await requireTaskPermission(
+      env.DB,
+      userId,
+      deviceId,
+      storedKind,
+      goal,
+      trigger,
+      action.keep_awake,
+    );
+  const expiresAt = defaultExpiry(
+    requestedKind === "agent_goal" && trigger.type === "interval" ? "schedule_watch" : storedKind,
+    requestedKind === "agent_goal" && trigger.type === "at" ? trigger.at : now,
+    input,
+  );
   const maxRuns =
-    requestedKind === "agent_goal" ? (["interval", "webhook"].includes(trigger.type) ? defaultMaxRuns("schedule_watch", input.max_runs) : 1) : defaultMaxRuns(storedKind, input.max_runs);
+    requestedKind === "agent_goal"
+      ? ["interval", "webhook"].includes(trigger.type)
+        ? defaultMaxRuns("schedule_watch", input.max_runs)
+        : 1
+      : defaultMaxRuns(storedKind, input.max_runs);
   const intervalSeconds = clampInterval(
     input.interval_seconds,
     requestedKind === "agent_goal" ? 60 : 300,
@@ -826,7 +908,8 @@ export async function createAutomation(
               agent: {
                 iteration: 0,
                 memory: "",
-                observation: "Initial turn. Inspect the workspace and choose the first bounded action.",
+                observation:
+                  "Initial turn. Inspect the workspace and choose the first bounded action.",
               },
             } satisfies RuntimeState)
           : ({ phase: "idle", step_index: 0 } satisfies RuntimeState),
@@ -857,15 +940,12 @@ export async function createAutomation(
   }
 
   const automation = await getAutomation(env, userId, id);
-  if (automation) await journalStatement(env.DB, automation, "created", "Task contract saved.", undefined).run();
+  if (automation)
+    await journalStatement(env.DB, automation, "created", "Task contract saved.", undefined).run();
   return { automation, webhook };
 }
 
-export async function listAutomations(
-  env: AutomationEnv,
-  userId: string,
-  limit = 100,
-) {
+export async function listAutomations(env: AutomationEnv, userId: string, limit = 100) {
   const safeLimit = Math.min(Math.max(Math.round(limit), 1), 200);
   const result = await env.DB.prepare(
     `SELECT automations.*, (SELECT COUNT(*) FROM automation_runs r
@@ -880,11 +960,7 @@ export async function listAutomations(
   return result.results;
 }
 
-export async function getAutomation(
-  env: AutomationEnv,
-  userId: string,
-  automationId: string,
-) {
+export async function getAutomation(env: AutomationEnv, userId: string, automationId: string) {
   return env.DB.prepare(
     `SELECT *
      FROM automations
@@ -894,11 +970,7 @@ export async function getAutomation(
     .first<AutomationRow>();
 }
 
-export async function listAutomationRuns(
-  env: AutomationEnv,
-  userId: string,
-  automationId: string,
-) {
+export async function listAutomationRuns(env: AutomationEnv, userId: string, automationId: string) {
   const result = await env.DB.prepare(
     `SELECT *
      FROM automation_runs
@@ -936,21 +1008,18 @@ async function updateAutomationStatus(
     .bind(status, nextRunAt, lastError, now, automationId, userId)
     .run();
   const updated = await getAutomation(env, userId, automationId);
-  if (updated) await journalStatement(
-    env.DB,
-    updated,
-    status,
-    journalSummary || "User changed task status to " + status + ".",
-    undefined,
-  ).run();
+  if (updated)
+    await journalStatement(
+      env.DB,
+      updated,
+      status,
+      journalSummary || "User changed task status to " + status + ".",
+      undefined,
+    ).run();
   return updated;
 }
 
-export async function pauseAutomation(
-  env: AutomationEnv,
-  userId: string,
-  automationId: string,
-) {
+export async function pauseAutomation(env: AutomationEnv, userId: string, automationId: string) {
   const automation = await getAutomation(env, userId, automationId);
   if (!automation) throw new Error("Automation not found.");
   if (isTerminalStatus(automation.status)) {
@@ -961,11 +1030,7 @@ export async function pauseAutomation(
   return paused;
 }
 
-export async function resumeAutomation(
-  env: AutomationEnv,
-  userId: string,
-  automationId: string,
-) {
+export async function resumeAutomation(env: AutomationEnv, userId: string, automationId: string) {
   const automation = await getAutomation(env, userId, automationId);
   if (!automation) throw new Error("Automation not found.");
   if (isTerminalStatus(automation.status)) {
@@ -975,16 +1040,23 @@ export async function resumeAutomation(
 
   const state = parseJson<RuntimeState>(automation.state_json, {});
   if (state.inflight_action) {
-    throw new Error("Previous " + state.inflight_action.tool +
-      " outcome is unknown; inspect the device and cancel this task before creating a new one. Blind resume is blocked.");
+    throw new Error(
+      "Previous " +
+        state.inflight_action.tool +
+        " outcome is unknown; inspect the device and cancel this task before creating a new one. Blind resume is blocked.",
+    );
   }
   const trigger = parseJson<TriggerSpec | null>(automation.trigger_json, null);
   let status: AutomationStatus = "waiting";
   const now = nowIso();
   let nextRunAt: string | null = now;
 
-  if (parseJson<AgentGoalSpec | null>(automation.goal_json, null)?.controller === "source"
-      && ["awaiting_agent", "needs_reasoning"].includes(state.phase || "") && !state.process_id && !state.planned) {
+  if (
+    parseJson<AgentGoalSpec | null>(automation.goal_json, null)?.controller === "source" &&
+    ["awaiting_agent", "needs_reasoning"].includes(state.phase || "") &&
+    !state.process_id &&
+    !state.planned
+  ) {
     status = "waiting_for_event";
     nextRunAt = null;
   } else if (trigger?.type === "webhook" && !state.run_id && !state.process_id && !state.trigger) {
@@ -1004,11 +1076,7 @@ export async function resumeAutomation(
   return updateAutomationStatus(env, userId, automationId, status, nextRunAt);
 }
 
-export async function cancelAutomation(
-  env: AutomationEnv,
-  userId: string,
-  automationId: string,
-) {
+export async function cancelAutomation(env: AutomationEnv, userId: string, automationId: string) {
   const automation = await getAutomation(env, userId, automationId);
   if (!automation) throw new Error("Automation not found.");
   if (isTerminalStatus(automation.status)) return automation;
@@ -1083,39 +1151,35 @@ export async function handleAutomationWebhook(
     .first<AutomationRow & { secret_hash: string }>();
 
   if (!hook || (await sha256Hex(token)) !== hook.secret_hash) {
-    return Response.json({ error: "not_found" }, { status: 404 });
+    return applicationJson({ error: "not_found" }, { status: 404 });
   }
   if (parseJson<TriggerSpec | null>(hook.trigger_json, null)?.type !== "webhook") {
-    return Response.json({ error: "not_a_condition_watch" }, { status: 400 });
+    return applicationJson({ error: "not_a_condition_watch" }, { status: 400 });
   }
-  if (
-    hook.status === "paused" ||
-    isTerminalStatus(hook.status)
-  ) {
-    return Response.json({ accepted: false, status: hook.status }, { status: 202 });
+  if (hook.status === "paused" || isTerminalStatus(hook.status)) {
+    return applicationJson({ accepted: false, status: hook.status }, { status: 202 });
   }
 
   const source =
     request.headers.get("x-remotearc-source") ||
     (request.headers.has("x-github-event") ? "github" : "generic");
   const eventName =
-    request.headers.get("x-github-event") ||
-    request.headers.get("x-remotearc-event");
+    request.headers.get("x-github-event") || request.headers.get("x-remotearc-event");
   const deliveryId =
-    request.headers.get("x-github-delivery") ||
-    request.headers.get("x-remotearc-delivery");
+    request.headers.get("x-github-delivery") || request.headers.get("x-remotearc-delivery");
   const payload = await request.json().catch(() => ({}));
-  const trigger = parseJson<Extract<TriggerSpec, { type: "webhook" }>>(
-    hook.trigger_json,
-    { type: "webhook", source: "generic" },
-  );
+  const trigger = parseJson<Extract<TriggerSpec, { type: "webhook" }>>(hook.trigger_json, {
+    type: "webhook",
+    source: "generic",
+  });
 
   const now = nowIso();
   const matched = webhookMatches(trigger, source, eventName, payload);
   const busy =
     hook.status === "waiting" ||
     hook.status === "running" ||
-    hook.status === "waiting_for_device" || Boolean(parseJson<RuntimeState>(hook.state_json, {}).run_id);
+    hook.status === "waiting_for_device" ||
+    Boolean(parseJson<RuntimeState>(hook.state_json, {}).run_id);
   const eventId = crypto.randomUUID();
   const consumedAt = !matched ? now : busy ? null : now;
 
@@ -1126,19 +1190,11 @@ export async function handleAutomationWebhook(
          payload_json, received_at, consumed_at
        ) VALUES (?1, ?2, ?3, ?4, ?5, NULL, ?6, ?7)`,
     )
-      .bind(
-        eventId,
-        automationId,
-        source,
-        eventName,
-        deliveryId,
-        now,
-        consumedAt,
-      )
+      .bind(eventId, automationId, source, eventName, deliveryId, now, consumedAt)
       .run();
   } catch (error) {
     if (deliveryId) {
-      return Response.json({ accepted: true, duplicate: true }, { status: 202 });
+      return applicationJson({ accepted: true, duplicate: true }, { status: 202 });
     }
     throw error;
   }
@@ -1152,14 +1208,11 @@ export async function handleAutomationWebhook(
     .run();
 
   if (!matched) {
-    return Response.json({ accepted: true, matched: false }, { status: 202 });
+    return applicationJson({ accepted: true, matched: false }, { status: 202 });
   }
 
   if (busy) {
-    return Response.json(
-      { accepted: true, matched: true, queued: true },
-      { status: 202 },
-    );
+    return applicationJson({ accepted: true, matched: true, queued: true }, { status: 202 });
   }
 
   const state = parseJson<RuntimeState>(hook.state_json, {});
@@ -1182,13 +1235,10 @@ export async function handleAutomationWebhook(
     .bind(stableJson(state), now, automationId)
     .run();
 
-  return Response.json({ accepted: true, matched: true, queued: false }, { status: 202 });
+  return applicationJson({ accepted: true, matched: true, queued: false }, { status: 202 });
 }
 
-async function takeQueuedEvent(
-  env: AutomationEnv,
-  automationId: string,
-) {
+async function takeQueuedEvent(env: AutomationEnv, automationId: string) {
   const event = await env.DB.prepare(
     `SELECT id, source, event_name, delivery_id
      FROM automation_events
@@ -1223,11 +1273,7 @@ async function takeQueuedEvent(
   } satisfies RuntimeState["trigger"];
 }
 
-async function startRun(
-  env: AutomationEnv,
-  automation: AutomationRow,
-  state: RuntimeState,
-) {
+async function startRun(env: AutomationEnv, automation: AutomationRow, state: RuntimeState) {
   const runId = crypto.randomUUID();
   const now = nowIso();
   const triggerPayload = state.trigger ? stableJson(state.trigger) : null;
@@ -1252,7 +1298,10 @@ async function startRun(
   state.command_output = undefined;
   state.phase = "idle";
   state.step_index = 0;
-  await persistRuntime(env, automation, state, automation.status, now, null, { retainLease: true, event: "run_started" });
+  await persistRuntime(env, automation, state, automation.status, now, null, {
+    retainLease: true,
+    event: "run_started",
+  });
   return state;
 }
 
@@ -1278,119 +1327,239 @@ async function markRunFinished(
 }
 
 async function persistRuntime(
-  env: AutomationEnv, automation: AutomationRow, state: RuntimeState,
-  status: AutomationStatus, nextRunAt: string | null, lastError: string | null = null,
+  env: AutomationEnv,
+  automation: AutomationRow,
+  state: RuntimeState,
+  status: AutomationStatus,
+  nextRunAt: string | null,
+  lastError: string | null = null,
   extra?: { incrementRun?: boolean; retainLease?: boolean; event?: string; summary?: string },
 ) {
   await checkpointTask(env.DB, automation, state, status, nextRunAt, lastError, extra);
-  if(status==='failed'&&automation.status!=='failed')await recordProductEvent(env,{domain:'automations',name:'automation.run.failed',source:'server',outcome:'failed',userId:automation.user_id,entityId:automation.id,deviceId:automation.device_id,errorCode:classifyExpectedMcpError(lastError)?.code||'AUTOMATION_EXECUTION_FAILED'});
+  if (status === "failed" && automation.status !== "failed")
+    await recordProductEvent(env, {
+      domain: "automations",
+      name: "automation.run.failed",
+      source: "server",
+      outcome: "failed",
+      userId: automation.user_id,
+      entityId: automation.id,
+      deviceId: automation.device_id,
+      errorCode: classifyExpectedMcpError(lastError)?.code || "AUTOMATION_EXECUTION_FAILED",
+    });
   if (isTerminalStatus(status) || status === "paused" || extra?.incrementRun) {
     await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
   }
 }
 
-async function automationCall(env: AutomationEnv, automation: AutomationRow,
-  state: RuntimeState, tool: string, args: Record<string, unknown>, phase?: RuntimeState["phase"]) {
+async function automationCall(
+  env: AutomationEnv,
+  automation: AutomationRow,
+  state: RuntimeState,
+  tool: string,
+  args: Record<string, unknown>,
+  phase?: RuntimeState["phase"],
+) {
   await renewTaskLease(env.DB, automation);
   const plan = parseJson<ActionPlan>(automation.action_json, { steps: [] });
-  await requireTaskPermission(env.DB, automation.user_id, automation.device_id!, automation.kind,
-    parseJson<GoalSpec | null>(automation.goal_json, null), parseJson<TriggerSpec | null>(automation.trigger_json, null), plan.keep_awake);
+  await requireTaskPermission(
+    env.DB,
+    automation.user_id,
+    automation.device_id!,
+    automation.kind,
+    parseJson<GoalSpec | null>(automation.goal_json, null),
+    parseJson<TriggerSpec | null>(automation.trigger_json, null),
+    plan.keep_awake,
+  );
   // Recheck the frozen policy immediately before dispatch, including after a
   // slow planner response. The device enforces current local policy again.
   const policy = await devicePolicySnapshot(env, automation.user_id, automation.device_id!);
   if (!policy || stableJson(policy) !== automation.permission_snapshot_json) {
-    throw new Error("Device permission policy changed; automation stopped instead of waiting for approval.");
+    throw new Error(
+      "Device permission policy changed; automation stopped instead of waiting for approval.",
+    );
   }
   const effect = ["start_process", "write_file", "edit_block", "goal_workspace"].includes(tool);
   if (effect && state.planned) {
     const budget = timeBudget(state.planned, nowIso(), automation.expires_at);
-    if (budget.hard_stop || (budget.finalization_due && !state.planned.finalizing) ||
-      (state.planned.finalizing && ["write_file", "edit_block"].includes(tool))) {
-      throw new Error("Planned goal time boundary prevents new effects; finalize the saved checkpoint.");
+    if (
+      budget.hard_stop ||
+      (budget.finalization_due && !state.planned.finalizing) ||
+      (state.planned.finalizing && ["write_file", "edit_block"].includes(tool))
+    ) {
+      throw new Error(
+        "Planned goal time boundary prevents new effects; finalize the saved checkpoint.",
+      );
     }
   }
   if (effect) {
     state.inflight_action = { id: crypto.randomUUID(), tool };
-    await persistRuntime(env, automation, state, automation.status, nowIso(), null,
-      { retainLease: true, event: "action_intent", summary: "Dispatch " + tool + " (outcome not yet acknowledged)." });
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+      retainLease: true,
+      event: "action_intent",
+      summary: "Dispatch " + tool + " (outcome not yet acknowledged).",
+    });
   }
   let result: unknown;
   try {
-    result = unwrapAutomationResult(await callDevice(env, automationIdentity(automation, env), automation.device_id!, tool, args,
-      ["read_file", "read_binary_file", "list_directory", "get_file_info", "write_file", "edit_block", "start_process"].includes(tool) ? state.planned?.workspace?.path : undefined));
+    result = unwrapAutomationResult(
+      await callDevice(
+        env,
+        automationIdentity(automation, env),
+        automation.device_id!,
+        tool,
+        args,
+        [
+          "read_file",
+          "read_binary_file",
+          "list_directory",
+          "get_file_info",
+          "write_file",
+          "edit_block",
+          "start_process",
+        ].includes(tool)
+          ? state.planned?.workspace?.path
+          : undefined,
+      ),
+    );
     if (tool === "read_binary_file") {
-      await meterBinaryBytes(env, automation.user_id, binaryBytesRead(result), await binaryTransferLimit(env, automation.user_id));
+      await meterBinaryBytes(
+        env,
+        automation.user_id,
+        binaryBytesRead(result),
+        await binaryTransferLimit(env, automation.user_id),
+      );
     }
   } catch (error) {
     if (effect) {
       if (isDeviceCallTimeoutError(error)) {
         // The call may have executed before its reply was lost. Preserve the
         // unresolved intent and pause; never re-dispatch a build or file edit.
-        if (state.agent) state.agent.observation = "Unacknowledged " + tool + ": inspect the device before retrying.";
+        if (state.agent)
+          state.agent.observation =
+            "Unacknowledged " + tool + ": inspect the device before retrying.";
         if (state.planned) {
           // Planned goals preserve a fenced, read-only inspection path.
           // No unacknowledged side effect can be replayed automatically.
           state.planned.inspection_required = true;
           state.planned.slice = undefined;
-          state.planned.candidate = { ...state.planned.candidate, status: "unknown",
-            evidence: "Device response timed out after dispatching " + tool + "." };
+          state.planned.candidate = {
+            ...state.planned.candidate,
+            status: "unknown",
+            evidence: "Device response timed out after dispatching " + tool + ".",
+          };
           state.inflight_action = undefined;
-          await persistRuntime(env, automation, state, automation.status, nowIso(), null,
-            { retainLease: true, event: "outcome_unknown",
-              summary: "Unacknowledged " + tool + "; planned goal requires read-only inspection." });
+          await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+            retainLease: true,
+            event: "outcome_unknown",
+            summary: "Unacknowledged " + tool + "; planned goal requires read-only inspection.",
+          });
           throw error;
         }
-        await persistRuntime(env, automation, state, "paused", null,
-          "Device call timed out after dispatching " + tool + "; outcome unknown. Inspect the device before creating another task.",
-          { event: "outcome_unknown", summary: "Paused unacknowledged " + tool + "; no automatic replay." });
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "paused",
+          null,
+          "Device call timed out after dispatching " +
+            tool +
+            "; outcome unknown. Inspect the device before creating another task.",
+          {
+            event: "outcome_unknown",
+            summary: "Paused unacknowledged " + tool + "; no automatic replay.",
+          },
+        );
         throw new UncertainDeviceDispatchError(tool);
       }
       state.inflight_action = undefined;
-      if (state.agent) state.agent.observation = "Tool " + tool + " did not return a successful acknowledgement. Inspect current state before repeating: " + String(error);
+      if (state.agent)
+        state.agent.observation =
+          "Tool " +
+          tool +
+          " did not return a successful acknowledgement. Inspect current state before repeating: " +
+          String(error);
       if (state.planned && !isDeviceOfflineError(error)) {
         state.planned.inspection_required = true;
         state.planned.slice = undefined;
-        state.planned.candidate = { ...state.planned.candidate, status: "unknown",
-          evidence: "Unacknowledged " + tool + ": " + String(error).slice(0, 2000) };
+        state.planned.candidate = {
+          ...state.planned.candidate,
+          status: "unknown",
+          evidence: "Unacknowledged " + tool + ": " + String(error).slice(0, 2000),
+        };
       }
-      await persistRuntime(env, automation, state, automation.status, nowIso(), null,
-        { retainLease: true, event: "action_error", summary: "Dispatch failed or outcome unknown: " + tool });
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+        retainLease: true,
+        event: "action_error",
+        summary: "Dispatch failed or outcome unknown: " + tool,
+      });
     }
     throw error;
   }
-  try { await renewTaskLease(env.DB, automation); }
-  catch (error) {
+  try {
+    await renewTaskLease(env.DB, automation);
+  } catch (error) {
     // A process can start just as cancellation invalidates the lease. Clean up
     // the late handle; never write the stale result back into the task.
     const processId = (result as { process_id?: string })?.process_id;
     if (tool === "start_process" && processId) {
-      await callDevice(env, automationIdentity(automation, env), automation.device_id!,
-        "stop_process", { process_id: processId }).catch(() => undefined);
+      await callDevice(
+        env,
+        automationIdentity(automation, env),
+        automation.device_id!,
+        "stop_process",
+        { process_id: processId },
+      ).catch(() => undefined);
     }
     throw error;
   }
-  if (tool === "start_process" && state.planned && timeBudget(state.planned, nowIso(), automation.expires_at).hard_stop) {
+  if (
+    tool === "start_process" &&
+    state.planned &&
+    timeBudget(state.planned, nowIso(), automation.expires_at).hard_stop
+  ) {
     const pid = (result as { process_id?: string })?.process_id;
-    if (pid) await callDevice(env, automationIdentity(automation, env), automation.device_id!, "stop_process", { process_id: pid }).catch(() => undefined);
+    if (pid)
+      await callDevice(
+        env,
+        automationIdentity(automation, env),
+        automation.device_id!,
+        "stop_process",
+        { process_id: pid },
+      ).catch(() => undefined);
   }
   if (effect) {
     state.inflight_action = undefined;
     if (phase) state.phase = phase;
     if (tool === "start_process") state.process_id = (result as { process_id?: string }).process_id;
-    if (state.agent) state.agent.observation = "Tool " + tool + " result:\n" + agentResultText(result);
-    await persistRuntime(env, automation, state, automation.status, nowIso(), null,
-      { retainLease: true, event: "action_result", summary: "Acknowledged " + tool });
+    if (state.agent)
+      state.agent.observation = "Tool " + tool + " result:\n" + agentResultText(result);
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+      retainLease: true,
+      event: "action_result",
+      summary: "Acknowledged " + tool,
+    });
   }
   return result;
 }
 
 export function unwrapAutomationResult(value: unknown): unknown {
-  const response = value as { isError?: boolean; content?: { type: string; text?: string }[] } | null;
+  const response = value as {
+    isError?: boolean;
+    content?: { type: string; text?: string }[];
+  } | null;
   if (!Array.isArray(response?.content)) return value;
-  const messages = response.content.filter(c => c.type === "text" && typeof c.text === "string").map(c => c.text!);
-  if (response.isError) throw new Error(messages.join("\n").slice(0, 4000) || "Device tool reported an error.");
+  const messages = response.content
+    .filter((c) => c.type === "text" && typeof c.text === "string")
+    .map((c) => c.text!);
+  if (response.isError)
+    throw new Error(messages.join("\n").slice(0, 4000) || "Device tool reported an error.");
   if (messages.length !== 1) return value;
-  try { return JSON.parse(messages[0]!); } catch { return messages[0]; }
+  try {
+    return JSON.parse(messages[0]!);
+  } catch {
+    return messages[0];
+  }
 }
 
 const processStatus = (value: unknown) => {
@@ -1413,14 +1582,12 @@ const isDeviceOfflineError = (error: unknown) =>
 
 // Managed-process polls are separate from the task's recurrence/retry cadence.
 // A short command should not remain "running" for the default five minutes.
-export const managedProcessPollSeconds = (intervalSeconds: number) =>
-  Math.min(intervalSeconds, 30);
+export const managedProcessPollSeconds = (intervalSeconds: number) => Math.min(intervalSeconds, 30);
 
 const isLostProcessError = (error: unknown) => {
   const text = String(error instanceof Error ? error.message : error).toLowerCase();
   return (
-    text.includes("managed process not found") ||
-    text.includes("retention window has expired")
+    text.includes("managed process not found") || text.includes("retention window has expired")
   );
 };
 
@@ -1463,11 +1630,7 @@ async function beginCommand(
   }
 }
 
-function nextScheduleAfterRun(
-  trigger: TriggerSpec,
-  createdAt: string,
-  now: string,
-) {
+function nextScheduleAfterRun(trigger: TriggerSpec, createdAt: string, now: string) {
   if (trigger.type === "interval") return nextIntervalRun(trigger, createdAt, now);
   return null;
 }
@@ -1483,7 +1646,6 @@ const agentResultText = (value: unknown) => {
     return clipAgentText(String(value));
   }
 };
-
 
 async function updateRunSummary(
   env: AutomationEnv,
@@ -1504,14 +1666,20 @@ async function updateRunSummary(
 }
 
 async function retainCommandOutput(
-  env: AutomationEnv, automation: AutomationRow, state: RuntimeState, exitCode: number, verification: boolean,
+  env: AutomationEnv,
+  automation: AutomationRow,
+  state: RuntimeState,
+  exitCode: number,
+  verification: boolean,
 ) {
   const processId = state.process_id;
   if (!processId || !state.run_id) return;
   if (state.command_output?.process_id !== processId) {
     let output: string;
     try {
-      const result = await automationCall(env, automation, state, "process_output", { process_id: processId });
+      const result = await automationCall(env, automation, state, "process_output", {
+        process_id: processId,
+      });
       if (typeof result === "string") output = result;
       else {
         const value = result as { stdout?: unknown; stderr?: unknown } | null;
@@ -1523,39 +1691,68 @@ async function retainCommandOutput(
       }
     } catch (error) {
       if (error instanceof LeaseLostError) throw error;
-      output = "Output could not be retained: " + String(error instanceof Error ? error.message : error).slice(0, 600);
+      output =
+        "Output could not be retained: " +
+        String(error instanceof Error ? error.message : error).slice(0, 600);
     }
-    const heading = verification ? "Goal verification" : "Command step " + ((state.step_index || 0) + 1);
-    const combined = [state.command_output?.summary, heading + " exited with code " + exitCode + ".\n" + output].filter(Boolean).join("\n\n");
-    const summary = combined.length > 6000 ? "[Earlier output truncated]\n" + combined.slice(-5973) : combined;
+    const heading = verification
+      ? "Goal verification"
+      : "Command step " + ((state.step_index || 0) + 1);
+    const combined = [
+      state.command_output?.summary,
+      heading + " exited with code " + exitCode + ".\n" + output,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    const summary =
+      combined.length > 6000 ? "[Earlier output truncated]\n" + combined.slice(-5973) : combined;
     state.command_output = { process_id: processId, summary };
-    await persistRuntime(env, automation, state, automation.status, nowIso(), null,
-      { retainLease: true, event: "command_result", summary: heading + " exited with code " + exitCode + "; bounded output retained." });
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+      retainLease: true,
+      event: "command_result",
+      summary: heading + " exited with code " + exitCode + "; bounded output retained.",
+    });
   }
   await updateRunSummary(env, automation, state.run_id, state.command_output.summary);
 }
 
 async function finishAgentRun(env: AutomationEnv, automation: AutomationRow, state: RuntimeState) {
   const continuation = await nextGoalRun(env, automation, state);
-  await persistRuntime(env, automation, state, continuation.status, continuation.next, null,
-    { incrementRun: true, event: "run_completed", summary: "Goal run completed; see saved run evidence." });
+  await persistRuntime(env, automation, state, continuation.status, continuation.next, null, {
+    incrementRun: true,
+    event: "run_completed",
+    summary: "Goal run completed; see saved run evidence.",
+  });
 }
 
-async function nextGoalRun(env: AutomationEnv, automation: AutomationRow, state: RuntimeState): Promise<{ status: AutomationStatus; next: string | null }> {
+async function nextGoalRun(
+  env: AutomationEnv,
+  automation: AutomationRow,
+  state: RuntimeState,
+): Promise<{ status: AutomationStatus; next: string | null }> {
   const trigger = parseJson<TriggerSpec>(automation.trigger_json, { type: "immediate" });
   const goal = parseJson<AgentGoalSpec | null>(automation.goal_json, null);
   const now = nowIso();
-  const recurring = ["interval", "webhook"].includes(trigger.type)
-    && (automation.max_runs === 0 || automation.run_count + 1 < automation.max_runs)
-    && (!goal?.plan?.time_policy.end_at || goal.plan.time_policy.end_at > now);
+  const recurring =
+    ["interval", "webhook"].includes(trigger.type) &&
+    (automation.max_runs === 0 || automation.run_count + 1 < automation.max_runs) &&
+    (!goal?.plan?.time_policy.end_at || goal.plan.time_policy.end_at > now);
   if (!recurring) return { status: "completed", next: null };
   // Evidence stays in the run history and journal. Each new run receives fresh
   // phase, memory, iteration and elapsed-time budgets.
   state.planned = undefined;
-  state.agent = { iteration: 0, memory: "", observation: "New triggered run. Inspect current workspace state before acting." };
+  state.agent = {
+    iteration: 0,
+    memory: "",
+    observation: "New triggered run. Inspect current workspace state before acting.",
+  };
   state.phase = "idle";
-  state.trigger = trigger.type === "webhook" ? await takeQueuedEvent(env, automation.id) ?? undefined : undefined;
-  return trigger.type === "webhook" ? { status: state.trigger ? "waiting" : "waiting_for_event", next: state.trigger ? now : null }
+  state.trigger =
+    trigger.type === "webhook"
+      ? ((await takeQueuedEvent(env, automation.id)) ?? undefined)
+      : undefined;
+  return trigger.type === "webhook"
+    ? { status: state.trigger ? "waiting" : "waiting_for_event", next: state.trigger ? now : null }
     : { status: "waiting", next: nextScheduleAfterRun(trigger, automation.created_at, now) };
 }
 
@@ -1567,7 +1764,7 @@ async function executeAgentGoal(
 ) {
   if (!automation.device_id) throw new Error("Agent Goal device is missing.");
   const now = nowIso();
-  const identity = automationIdentity(automation, env);
+  automationIdentity(automation, env);
   state.agent ||= {
     iteration: 0,
     memory: "",
@@ -1576,18 +1773,13 @@ async function executeAgentGoal(
 
   if (
     state.process_id &&
-    (state.phase === "agent_process_running" ||
-      state.phase === "agent_verify_running")
+    (state.phase === "agent_process_running" || state.phase === "agent_verify_running")
   ) {
     let rawStatus: unknown;
     try {
-      rawStatus = await automationCall(
-        env,
-        automation,
-        state,
-        "process_status",
-        { process_id: state.process_id },
-      );
+      rawStatus = await automationCall(env, automation, state, "process_status", {
+        process_id: state.process_id,
+      });
     } catch (error) {
       if (error instanceof LeaseLostError) throw error;
       if (isDeviceOfflineError(error)) {
@@ -1604,10 +1796,18 @@ async function executeAgentGoal(
       if (isDeviceCallTimeoutError(error)) {
         // The managed PID is still authoritative. Retry the *read-only*
         // status query on the next tick; never run start_process again.
-        await persistRuntime(env, automation, state, "waiting",
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "waiting",
           addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
           "Device status query timed out; managed process is not known to have failed. Retrying status only.",
-          { event: "process_poll_retry", summary: "Transient status timeout; preserved managed process handle." });
+          {
+            event: "process_poll_retry",
+            summary: "Transient status timeout; preserved managed process handle.",
+          },
+        );
         return;
       }
       if (isLostProcessError(error)) {
@@ -1642,13 +1842,9 @@ async function executeAgentGoal(
 
     const processId = state.process_id;
     const wasVerify = state.phase === "agent_verify_running";
-    const output = await automationCall(
-      env,
-      automation,
-      state,
-      "process_output",
-      { process_id: processId },
-    ).catch((error) => ({ error: String(error) }));
+    const output = await automationCall(env, automation, state, "process_output", {
+      process_id: processId,
+    }).catch((error) => ({ error: String(error) }));
 
     state.process_id = undefined;
     state.phase = "idle";
@@ -1656,7 +1852,9 @@ async function executeAgentGoal(
 
     if (wasVerify && goal.verify && exitCode === goal.verify.expected_exit_code) {
       const evidence =
-        "Deterministic verification succeeded with exit code " + exitCode + ".\n" +
+        "Deterministic verification succeeded with exit code " +
+        exitCode +
+        ".\n" +
         agentResultText(output);
       state.agent.completion_evidence = clipAgentText(evidence, 3000);
       await updateRunSummary(env, automation, state.run_id, evidence);
@@ -1684,40 +1882,41 @@ async function executeAgentGoal(
         " planning iterations without verified completion.";
       await markRunFinished(env, automation, state, "failed", null, message);
       state.run_id = undefined;
-      await persistRuntime(
-        env,
-        automation,
-        state,
-        "failed",
-        null,
-        message,
-        { incrementRun: true },
-      );
+      await persistRuntime(env, automation, state, "failed", null, message, { incrementRun: true });
       return;
     }
 
     await renewTaskLease(env.DB, automation);
-    const decision = goal.controller === "source"
-      ? await takeSourceDecision(env.DB, automation)
-      : await planAgentTurn(env, {
-      objective: goal.objective,
-      successCriteria: goal.success_criteria,
-      workspace: goal.workspace,
-      iteration: state.agent.iteration + 1,
-      maxIterations: goal.max_iterations,
-      allowedTools: goal.allowed_tools,
-      memory: state.agent.memory,
-      observation: state.agent.observation,
-      billing: {userId:automation.user_id,organizationId:"personal:"+automation.user_id,taskId:automation.id,
-        runId:state.run_id||"",operationId:"planner-"+(state.agent.iteration+1),lane:"arc_hosted"},
-    });
+    const decision =
+      goal.controller === "source"
+        ? await takeSourceDecision(env.DB, automation)
+        : await planAgentTurn(env, {
+            objective: goal.objective,
+            successCriteria: goal.success_criteria,
+            workspace: goal.workspace,
+            iteration: state.agent.iteration + 1,
+            maxIterations: goal.max_iterations,
+            allowedTools: goal.allowed_tools,
+            memory: state.agent.memory,
+            observation: state.agent.observation,
+            billing: {
+              userId: automation.user_id,
+              organizationId: "personal:" + automation.user_id,
+              taskId: automation.id,
+              runId: state.run_id || "",
+              operationId: "planner-" + (state.agent.iteration + 1),
+              lane: "arc_hosted",
+            },
+          });
     if (goal.controller !== "source" && decision) {
       await recordPlusUsage(env, automation.user_id, { planner_turns: 1 });
     }
     if (!decision) {
       state.phase = "awaiting_agent";
-      await persistRuntime(env, automation, state, "waiting_for_event", null, null,
-        { event: "needs_agent", summary: "Source agent can read the current context and submit the next decision." });
+      await persistRuntime(env, automation, state, "waiting_for_event", null, null, {
+        event: "needs_agent",
+        summary: "Source agent can read the current context and submit the next decision.",
+      });
       return;
     }
     state.phase = "idle";
@@ -1734,13 +1933,14 @@ async function executeAgentGoal(
         state.agent.iteration +
         ": " +
         decision.decisionSummary +
-        (decision.completionEvidence
-          ? "\nEvidence: " + decision.completionEvidence
-          : ""),
+        (decision.completionEvidence ? "\nEvidence: " + decision.completionEvidence : ""),
     );
 
-    await persistRuntime(env, automation, state, automation.status, nowIso(), null,
-      { retainLease: true, event: "decision", summary: decision.decisionSummary });
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+      retainLease: true,
+      event: "decision",
+      summary: decision.decisionSummary,
+    });
 
     if (decision.decision === "pause") {
       await persistRuntime(
@@ -1756,9 +1956,17 @@ async function executeAgentGoal(
 
     if (decision.decision === "complete") {
       if (!decision.completionEvidence.trim()) {
-        state.agent.observation = "Completion requires concrete evidence for the success criteria. Inspect or verify before completing.";
-        await persistRuntime(env, automation, state, "waiting", addSeconds(now, automation.interval_seconds), null,
-          { event: "verification_required", summary: state.agent.observation });
+        state.agent.observation =
+          "Completion requires concrete evidence for the success criteria. Inspect or verify before completing.";
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "waiting",
+          addSeconds(now, automation.interval_seconds),
+          null,
+          { event: "verification_required", summary: state.agent.observation },
+        );
         return;
       }
       state.agent.completion_evidence = decision.completionEvidence;
@@ -1814,14 +2022,14 @@ async function executeAgentGoal(
     const args = validateAgentToolArguments(decision.tool, decision.arguments);
     if (decision.tool === "start_process") {
       try {
-        const started = await automationCall(
+        const started = (await automationCall(
           env,
           automation,
           state,
           "start_process",
           args,
           "agent_process_running",
-        ) as { process_id?: string };
+        )) as { process_id?: string };
         if (!started.process_id) {
           throw new Error("Device did not return a process_id.");
         }
@@ -1862,13 +2070,7 @@ async function executeAgentGoal(
 
     let result: unknown;
     try {
-      result = await automationCall(
-        env,
-        automation,
-        state,
-        decision.tool,
-        args,
-      );
+      result = await automationCall(env, automation, state, decision.tool, args);
     } catch (error) {
       if (error instanceof LeaseLostError) throw error;
       if (isDeviceOfflineError(error)) {
@@ -1885,15 +2087,24 @@ async function executeAgentGoal(
         return;
       }
       state.agent.observation =
-        "Tool " + decision.tool + " failed or its outcome is unknown. Inspect current state before repeating: " +
+        "Tool " +
+        decision.tool +
+        " failed or its outcome is unknown. Inspect current state before repeating: " +
         String(error instanceof Error ? error.message : error);
-      await persistRuntime(env, automation, state, automation.status, nowIso(), null, { retainLease: true, event: "observation", summary: state.agent.observation });
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+        retainLease: true,
+        event: "observation",
+        summary: state.agent.observation,
+      });
       continue;
     }
 
-    state.agent.observation =
-      "Tool " + decision.tool + " result:\n" + agentResultText(result);
-    await persistRuntime(env, automation, state, automation.status, nowIso(), null, { retainLease: true, event: "observation", summary: "Result available for " + decision.tool });
+    state.agent.observation = "Tool " + decision.tool + " result:\n" + agentResultText(result);
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+      retainLease: true,
+      event: "observation",
+      summary: "Result available for " + decision.tool,
+    });
   }
 
   await persistRuntime(
@@ -1906,10 +2117,7 @@ async function executeAgentGoal(
   );
 }
 
-async function executeAutomation(
-  env: AutomationEnv,
-  automation: AutomationRow,
-) {
+async function executeAutomation(env: AutomationEnv, automation: AutomationRow) {
   const now = nowIso();
 
   if (automation.expires_at && automation.expires_at <= now) {
@@ -1929,20 +2137,35 @@ async function executeAutomation(
     step_index: 0,
   });
   if (nativeArcWork(automation.goal_json)) {
-    if (!env.ARC_RUNTIME || !env.APP_TOKEN_KEY) throw new Error('ARC_NOT_CONFIGURED');
+    if (!env.ARC_RUNTIME || !env.APP_TOKEN_KEY) throw new Error("ARC_NOT_CONFIGURED");
     if (!state.run_id) state = await startRun(env, automation, state);
-    await tickNativeArcWork(env as ArcEnv, automation, state,
-      (status, next, error, done = false) => persistRuntime(env, automation, state, status, next, error,
-        { incrementRun: done, event: done ? 'run_completed' : 'arc_working', summary: error || 'Arc task conversation updated.' }),
-      (status, error) => markRunFinished(env, automation, state, status, null, error));
+    await tickNativeArcWork(
+      env as ArcEnv,
+      automation,
+      state,
+      (status, next, error, done = false) =>
+        persistRuntime(env, automation, state, status, next, error, {
+          incrementRun: done,
+          event: done ? "run_completed" : "arc_working",
+          summary: error || "Arc task conversation updated.",
+        }),
+      (status, error) => markRunFinished(env, automation, state, status, null, error),
+    );
     return;
   }
   const cloudOnly =
-    action.steps.length > 0 &&
-    action.steps.every((step) => step.type === "github_merge_pr");
+    action.steps.length > 0 && action.steps.every((step) => step.type === "github_merge_pr");
 
   if (!cloudOnly) {
-    await requireTaskPermission(env.DB, automation.user_id, automation.device_id!, automation.kind, goal, trigger, action.keep_awake);
+    await requireTaskPermission(
+      env.DB,
+      automation.user_id,
+      automation.device_id!,
+      automation.kind,
+      goal,
+      trigger,
+      action.keep_awake,
+    );
     if (!automation.device_id) {
       await persistRuntime(
         env,
@@ -1955,11 +2178,7 @@ async function executeAutomation(
       return;
     }
 
-    const currentPolicy = await devicePolicySnapshot(
-      env,
-      automation.user_id,
-      automation.device_id,
-    );
+    const currentPolicy = await devicePolicySnapshot(env, automation.user_id, automation.device_id);
     if (!currentPolicy) {
       await persistRuntime(
         env,
@@ -2005,7 +2224,10 @@ async function executeAutomation(
   if (state.inflight_action) {
     const tool = state.inflight_action.tool;
     state.inflight_action = undefined;
-    const message = "Previous dispatch of " + tool + " has an unknown outcome after interruption. Inspect current state before repeating it.";
+    const message =
+      "Previous dispatch of " +
+      tool +
+      " has an unknown outcome after interruption. Inspect current state before repeating it.";
     if (goal?.type === "agent_goal") {
       state.agent ||= { iteration: 0, memory: "", observation: "" };
       state.agent.observation = message;
@@ -2013,15 +2235,23 @@ async function executeAutomation(
         state.planned.needs_reasoning = message;
         state.planned.inspection_required = true;
         state.planned.slice = undefined;
-        state.planned.candidate = { ...state.planned.candidate, status: "unknown", evidence: message };
+        state.planned.candidate = {
+          ...state.planned.candidate,
+          status: "unknown",
+          evidence: message,
+        };
       }
       state.phase = "idle";
-      await persistRuntime(env, automation, state, "waiting", nowIso(), message, { event: "outcome_unknown" });
+      await persistRuntime(env, automation, state, "waiting", nowIso(), message, {
+        event: "outcome_unknown",
+      });
     } else {
       // The intent may already have executed. Pausing retains the evidence
       // without authorizing a second invocation on a later scheduler tick.
-      await persistRuntime(env, automation, state, "paused", null, message,
-        { event: "outcome_unknown", summary: "Manual inspection required before replay." });
+      await persistRuntime(env, automation, state, "paused", null, message, {
+        event: "outcome_unknown",
+        summary: "Manual inspection required before replay.",
+      });
     }
     return;
   }
@@ -2031,10 +2261,18 @@ async function executeAutomation(
   }
 
   if (action.keep_awake) {
-    try { await setTaskKeepAwake(env, automation, 180); }
-    catch (error) {
+    try {
+      await setTaskKeepAwake(env, automation, 180);
+    } catch (error) {
       if (!isDeviceOfflineError(error)) throw error;
-      await persistRuntime(env, automation, state, "waiting_for_device", addSeconds(now, automation.interval_seconds), "Waiting for device to acquire task keep-awake.");
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "waiting_for_device",
+        addSeconds(now, automation.interval_seconds),
+        "Waiting for device to acquire task keep-awake.",
+      );
       return;
     }
   }
@@ -2042,17 +2280,49 @@ async function executeAutomation(
   if (goal?.type === "agent_goal") {
     if (goal.plan) {
       await executePlannedGoal(env, automation, goal, state, {
-        call: (tool, args) => automationCall(env, automation, state, tool, args,
-          tool === "start_process" ? "planned_process_running" : undefined),
-        save: (status, next, error, event, retainLease = false) => persistRuntime(env, automation, state, status, next, error,
-          { event, summary: error || state.agent?.last_decision_summary || event, retainLease }),
+        call: (tool, args) =>
+          automationCall(
+            env,
+            automation,
+            state,
+            tool,
+            args,
+            tool === "start_process" ? "planned_process_running" : undefined,
+          ),
+        save: (status, next, error, event, retainLease = false) =>
+          persistRuntime(env, automation, state, status, next, error, {
+            event,
+            summary: error || state.agent?.last_decision_summary || event,
+            retainLease,
+          }),
         finish: async (summary, status) => {
           await updateRunSummary(env, automation, state.run_id, summary);
-          await markRunFinished(env, automation, state, status, null, status === "completed" ? null : summary.slice(0, 1000));
+          await markRunFinished(
+            env,
+            automation,
+            state,
+            status,
+            null,
+            status === "completed" ? null : summary.slice(0, 1000),
+          );
           state.run_id = undefined;
-          const continuation = status === "completed" ? await nextGoalRun(env, automation, state) : { status, next: null };
-          await persistRuntime(env, automation, state, continuation.status, continuation.next, null,
-            { incrementRun: true, event: status === "completed" ? "run_completed" : status, summary: summary.slice(0, 6000) });
+          const continuation =
+            status === "completed"
+              ? await nextGoalRun(env, automation, state)
+              : { status, next: null };
+          await persistRuntime(
+            env,
+            automation,
+            state,
+            continuation.status,
+            continuation.next,
+            null,
+            {
+              incrementRun: true,
+              event: status === "completed" ? "run_completed" : status,
+              summary: summary.slice(0, 6000),
+            },
+          );
         },
       });
       return;
@@ -2061,7 +2331,7 @@ async function executeAutomation(
     return;
   }
 
-  const identity = automationIdentity(automation, env);
+  automationIdentity(automation, env);
 
   if (
     automation.device_id &&
@@ -2070,13 +2340,9 @@ async function executeAutomation(
   ) {
     let rawStatus: unknown;
     try {
-      rawStatus = await automationCall(
-        env,
-        automation,
-        state,
-        "process_status",
-        { process_id: state.process_id },
-      );
+      rawStatus = await automationCall(env, automation, state, "process_status", {
+        process_id: state.process_id,
+      });
     } catch (error) {
       if (error instanceof LeaseLostError) throw error;
       if (isDeviceOfflineError(error)) {
@@ -2093,10 +2359,18 @@ async function executeAutomation(
       if (isDeviceCallTimeoutError(error)) {
         // The managed PID is still authoritative. Retry the *read-only*
         // status query on the next tick; never run start_process again.
-        await persistRuntime(env, automation, state, "waiting",
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "waiting",
           addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
           "Device status query timed out; managed process is not known to have failed. Retrying status only.",
-          { event: "process_poll_retry", summary: "Transient status timeout; preserved managed process handle." });
+          {
+            event: "process_poll_retry",
+            summary: "Transient status timeout; preserved managed process handle.",
+          },
+        );
         return;
       }
       if (isLostProcessError(error)) {
@@ -2156,15 +2430,9 @@ async function executeAutomation(
       if (goal?.type === "command_exit" && exitCode === goal.expected_exit_code) {
         await markRunFinished(env, automation, state, "completed", exitCode, null);
         state.run_id = undefined;
-        await persistRuntime(
-          env,
-          automation,
-          state,
-          "completed",
-          null,
-          null,
-          { incrementRun: true },
-        );
+        await persistRuntime(env, automation, state, "completed", null, null, {
+          incrementRun: true,
+        });
         return;
       }
 
@@ -2263,13 +2531,20 @@ async function executeAutomation(
       const permitted = await authorizeGitHubAction(env, automation.user_id, step);
       await renewTaskLease(env.DB, automation);
       state.inflight_action = { id: crypto.randomUUID(), tool: "github_merge_pr" };
-      await persistRuntime(env, automation, state, automation.status, nowIso(), null,
-        { retainLease: true, event: "action_intent", summary: "Dispatch authorized GitHub merge; outcome pending." });
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+        retainLease: true,
+        event: "action_intent",
+        summary: "Dispatch authorized GitHub merge; outcome pending.",
+      });
       const result = await mergeGitHubPullRequest(env, permitted);
       await renewTaskLease(env.DB, automation);
       state.inflight_action = undefined;
       state.step_index = stepIndex + 1;
-      await persistRuntime(env, automation, state, automation.status, nowIso(), null, { retainLease: true, event: "action_result", summary: "GitHub merge acknowledged." });
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null, {
+        retainLease: true,
+        event: "action_result",
+        summary: "GitHub merge acknowledged.",
+      });
       await updateRunSummary(
         env,
         automation,
@@ -2282,14 +2557,7 @@ async function executeAutomation(
       );
     } else {
       try {
-        await beginCommand(
-          env,
-          automation,
-          state,
-          step.command,
-          step.cwd,
-          "step_running",
-        );
+        await beginCommand(env, automation, state, step.command, step.cwd, "step_running");
       } catch (error) {
         if (isDeviceOfflineError(error)) {
           await persistRuntime(
@@ -2318,14 +2586,7 @@ async function executeAutomation(
 
   if (goal?.type === "command_exit") {
     try {
-      await beginCommand(
-        env,
-        automation,
-        state,
-        goal.command,
-        goal.cwd,
-        "goal_running",
-      );
+      await beginCommand(env, automation, state, goal.command, goal.cwd, "goal_running");
     } catch (error) {
       if (error instanceof LeaseLostError) throw error;
       if (isDeviceOfflineError(error)) {
@@ -2390,35 +2651,55 @@ async function executeAutomation(
     return;
   }
 
-  await persistRuntime(
-    env,
-    automation,
-    state,
-    "completed",
-    null,
-    null,
-    { incrementRun: true },
-  );
+  await persistRuntime(env, automation, state, "completed", null, null, { incrementRun: true });
 }
 
-export async function setTaskKeepAwake(env: AutomationEnv, automation: AutomationRow, seconds: number) {
-  if (!automation.device_id || !parseJson<ActionPlan>(automation.action_json, { steps: [] }).keep_awake) return;
-  try{
-    const result = await callDevice(env, automationIdentity(automation, env), automation.device_id,
-      "set_task_keep_awake", { task_id: automation.id, seconds }) as { supported?: boolean; active?: boolean };
-    if (seconds > 0 && (!result.supported || !result.active)) throw new Error("This computer could not acquire its task keep-awake lease. Check the local OS power service.");
-  }catch(error){
-    if(seconds>0)await recordProductEvent(env,{domain:'devices',name:'device.keep_awake.failed',source:'server',outcome:'failed',userId:automation.user_id,entityId:automation.device_id,errorCode:'DEVICE_KEEP_AWAKE_FAILED'});
+export async function setTaskKeepAwake(
+  env: AutomationEnv,
+  automation: AutomationRow,
+  seconds: number,
+) {
+  if (
+    !automation.device_id ||
+    !parseJson<ActionPlan>(automation.action_json, { steps: [] }).keep_awake
+  )
+    return;
+  try {
+    const result = (await callDevice(
+      env,
+      automationIdentity(automation, env),
+      automation.device_id,
+      "set_task_keep_awake",
+      { task_id: automation.id, seconds },
+    )) as { supported?: boolean; active?: boolean };
+    if (seconds > 0 && (!result.supported || !result.active))
+      throw new Error(
+        "This computer could not acquire its task keep-awake lease. Check the local OS power service.",
+      );
+  } catch (error) {
+    if (seconds > 0)
+      await recordProductEvent(env, {
+        domain: "devices",
+        name: "device.keep_awake.failed",
+        source: "server",
+        outcome: "failed",
+        userId: automation.user_id,
+        entityId: automation.device_id,
+        errorCode: "DEVICE_KEEP_AWAKE_FAILED",
+      });
     throw error;
   }
 }
 
 async function maintainTaskKeepAwake(env: AutomationEnv) {
-  const active = await env.DB.prepare(`SELECT * FROM automations WHERE device_id IS NOT NULL
+  const active = await env.DB.prepare(
+    `SELECT * FROM automations WHERE device_id IS NOT NULL
     AND status IN ('waiting','running','waiting_for_device','waiting_for_event')
     AND json_extract(action_json,'$.keep_awake') = 1 AND json_extract(state_json,'$.run_id') IS NOT NULL
-    AND (expires_at IS NULL OR expires_at > ?1) ORDER BY updated_at LIMIT 100`)
-    .bind(nowIso()).all<AutomationRow>();
+    AND (expires_at IS NULL OR expires_at > ?1) ORDER BY updated_at LIMIT 100`,
+  )
+    .bind(nowIso())
+    .all<AutomationRow>();
   for (const task of active.results) {
     try {
       await requireAutomationEntitlements(env, task.user_id, task);
@@ -2449,11 +2730,7 @@ async function maintainTaskKeepAwake(env: AutomationEnv) {
   }
 }
 
-async function claimAutomation(
-  env: AutomationEnv,
-  automation: AutomationRow,
-  now: string,
-) {
+async function claimAutomation(env: AutomationEnv, automation: AutomationRow, now: string) {
   const leaseToken = randomToken(12);
   const leaseUntil = addSeconds(now, 150);
   await env.DB.prepare(
@@ -2503,28 +2780,62 @@ export async function runAutomationTick(
     const state = parseJson<RuntimeState>(automation.state_json, {});
     if (state.planned) {
       const planned = state.planned;
-      if (planned.active_phase) finishPhase(planned, "partial", now, "Hard task expiry interrupted unfinished phase.", "Requires inspection after deadline.");
-      planned.finalizing = true; planned.finished_at = now;
-      if (planned.slice) planned.checks.push({ name: "unfinished-final-checks", exit_code: null, passed: false, evidence: "Hard expiry prevents further execution.", at: now });
+      if (planned.active_phase)
+        finishPhase(
+          planned,
+          "partial",
+          now,
+          "Hard task expiry interrupted unfinished phase.",
+          "Requires inspection after deadline.",
+        );
+      planned.finalizing = true;
+      planned.finished_at = now;
+      if (planned.slice)
+        planned.checks.push({
+          name: "unfinished-final-checks",
+          exit_code: null,
+          passed: false,
+          evidence: "Hard expiry prevents further execution.",
+          at: now,
+        });
       planned.slice = undefined;
-      planned.needs_reasoning = "Hard expiry: inspect any unaccepted candidate; pending checks were not executed.";
+      planned.needs_reasoning =
+        "Hard expiry: inspect any unaccepted candidate; pending checks were not executed.";
       planned.report = plannedReport(planned);
     }
-    const expired = await env.DB.prepare(`UPDATE automations SET status = 'expired',
+    const expired = await env.DB.prepare(
+      `UPDATE automations SET status = 'expired',
       next_run_at = NULL, lease_token = NULL, lease_until = NULL,
       state_json = ?3, revision = revision + 1, last_error = 'Automation expired.', updated_at = ?2
       WHERE id = ?1 AND expires_at <= ?2 AND revision = ?4
-        AND status NOT IN ('completed','failed','cancelled','expired')`)
-      .bind(automation.id, now, JSON.stringify(state), automation.revision).run();
+        AND status NOT IN ('completed','failed','cancelled','expired')`,
+    )
+      .bind(automation.id, now, JSON.stringify(state), automation.revision)
+      .run();
     if (!expired.meta.changes) continue;
     await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
-    await env.DB.prepare(`UPDATE automation_runs SET status = 'expired', finished_at = ?2,
-      error = 'Automation expired.' WHERE automation_id = ?1 AND finished_at IS NULL`)
-      .bind(automation.id, now).run();
-    await journalStatement(env.DB, automation, "expired", "Automation expired.", state.run_id, automation.revision + 1).run();
+    await env.DB.prepare(
+      `UPDATE automation_runs SET status = 'expired', finished_at = ?2,
+      error = 'Automation expired.' WHERE automation_id = ?1 AND finished_at IS NULL`,
+    )
+      .bind(automation.id, now)
+      .run();
+    await journalStatement(
+      env.DB,
+      automation,
+      "expired",
+      "Automation expired.",
+      state.run_id,
+      automation.revision + 1,
+    ).run();
     if (state.process_id && automation.device_id) {
-      await callDevice(env, automationIdentity(automation, env), automation.device_id,
-        "stop_process", { process_id: state.process_id }).catch(() => undefined);
+      await callDevice(
+        env,
+        automationIdentity(automation, env),
+        automation.device_id,
+        "stop_process",
+        { process_id: state.process_id },
+      ).catch(() => undefined);
     }
   }
 
@@ -2557,38 +2868,42 @@ export async function runAutomationTick(
       await executeAutomation(env, automation);
       executed += 1;
     } catch (error) {
-      if (error instanceof LeaseLostError || error instanceof UncertainDeviceDispatchError) continue;
+      if (error instanceof LeaseLostError || error instanceof UncertainDeviceDispatchError)
+        continue;
       const message = error instanceof Error ? error.message : String(error);
       const state = parseJson<RuntimeState>(automation.state_json, {});
       if (isPlanUpgradeRequiredError(error) || /^ARC_TRIAL_/.test(message)) {
         await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
-        await persistRuntime(
-          env,
-          automation,
-          state,
-          "paused",
-          null,
-          message.slice(0, 1000),
-          { event: "paused", summary: "Account plan no longer authorizes this Task." },
-        ).catch((failure) => { if (!(failure instanceof LeaseLostError)) throw failure; });
+        await persistRuntime(env, automation, state, "paused", null, message.slice(0, 1000), {
+          event: "paused",
+          summary: "Account plan no longer authorizes this Task.",
+        }).catch((failure) => {
+          if (!(failure instanceof LeaseLostError)) throw failure;
+        });
         continue;
       }
       failed += 1;
       if (error instanceof PlannerTransientError && (state.retry_count || 0) < 5) {
         state.retry_count = (state.retry_count || 0) + 1;
-        await persistRuntime(env, automation, state, "waiting", addSeconds(nowIso(), Math.min(3600, 60 * 2 ** (state.retry_count - 1))),
-          message.slice(0, 1000), { event: "retry", summary: "Transient planner error; retry " + state.retry_count }).catch((failure) => { if (!(failure instanceof LeaseLostError)) throw failure; });
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "waiting",
+          addSeconds(nowIso(), Math.min(3600, 60 * 2 ** (state.retry_count - 1))),
+          message.slice(0, 1000),
+          { event: "retry", summary: "Transient planner error; retry " + state.retry_count },
+        ).catch((failure) => {
+          if (!(failure instanceof LeaseLostError)) throw failure;
+        });
         continue;
       }
       await markRunFinished(env, automation, state, "failed", null, message.slice(0, 1000));
-      await persistRuntime(
-        env,
-        automation,
-        state,
-        "failed",
-        null,
-        message.slice(0, 1000),
-      ).catch((failure) => { if (!(failure instanceof LeaseLostError)) throw failure; });
+      await persistRuntime(env, automation, state, "failed", null, message.slice(0, 1000)).catch(
+        (failure) => {
+          if (!(failure instanceof LeaseLostError)) throw failure;
+        },
+      );
     }
   }
 
@@ -2597,7 +2912,7 @@ export async function runAutomationTick(
 
 function automationErrorResponse(error: unknown) {
   if (isPlanUpgradeRequiredError(error)) {
-    return Response.json(
+    return applicationJson(
       {
         error: error.message,
         code: error.code,
@@ -2607,21 +2922,18 @@ function automationErrorResponse(error: unknown) {
       { status: 403 },
     );
   }
-  return Response.json(
+  return applicationJson(
     { error: error instanceof Error ? error.message : String(error) },
     { status: 400 },
   );
 }
 
-export async function handleAutomationCollection(
-  request: Request,
-  env: AutomationEnv,
-) {
+export async function handleAutomationCollection(request: Request, env: AutomationEnv) {
   const user = await getSessionUser(request, env);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  if (!user) return applicationJson({ error: "unauthorized" }, { status: 401 });
 
   if (request.method === "GET") {
-    return Response.json({
+    return applicationJson({
       automations: await listAutomations(env, user.id),
       capabilities: {
         hosted_planner: agentPlannerConfigured(env),
@@ -2636,7 +2948,7 @@ export async function handleAutomationCollection(
     const body = (await request.json().catch(() => ({}))) as CreateAutomationInput;
     try {
       const created = await createAutomation(env, user.id, body);
-      return Response.json(created, { status: 201 });
+      return applicationJson(created, { status: 201 });
     } catch (error) {
       return automationErrorResponse(error);
     }
@@ -2652,28 +2964,28 @@ export async function handleAutomationItem(
   action?: string,
 ) {
   const user = await getSessionUser(request, env);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  if (!user) return applicationJson({ error: "unauthorized" }, { status: 401 });
 
   try {
     if (request.method === "GET" && !action) {
       const automation = await getAutomation(env, user.id, automationId);
-      if (!automation) return Response.json({ error: "not_found" }, { status: 404 });
+      if (!automation) return applicationJson({ error: "not_found" }, { status: 404 });
       const runs = await listAutomationRuns(env, user.id, automationId);
-      return Response.json({ automation, runs });
+      return applicationJson({ automation, runs });
     }
 
     if (request.method === "POST" && action === "pause") {
-      return Response.json({
+      return applicationJson({
         automation: await pauseAutomation(env, user.id, automationId),
       });
     }
     if (request.method === "POST" && action === "resume") {
-      return Response.json({
+      return applicationJson({
         automation: await resumeAutomation(env, user.id, automationId),
       });
     }
     if (request.method === "POST" && action === "cancel") {
-      return Response.json({
+      return applicationJson({
         automation: await cancelAutomation(env, user.id, automationId),
       });
     }

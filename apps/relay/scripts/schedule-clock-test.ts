@@ -6,13 +6,37 @@ const start = "2026-10-11T11:45:00.000Z";
 const thirtyMinutes = { type: "interval" as const, every_seconds: 1800, start_at: start };
 const next = (after: string) => nextIntervalRun(thirtyMinutes, created, after);
 
-assert.equal(next("2026-10-11T11:46:09.000Z"), "2026-10-11T12:15:00.000Z", "slow first run must not shift the anchor");
-assert.equal(next("2026-10-11T12:16:09.000Z"), "2026-10-11T12:45:00.000Z", "each later run stays on the :15/:45 grid");
-assert.equal(next("2026-10-11T11:45:00.000Z"), "2026-10-11T12:15:00.000Z", "a completed slot must not repeat");
+assert.equal(
+  next("2026-10-11T11:46:09.000Z"),
+  "2026-10-11T12:15:00.000Z",
+  "slow first run must not shift the anchor",
+);
+assert.equal(
+  next("2026-10-11T12:16:09.000Z"),
+  "2026-10-11T12:45:00.000Z",
+  "each later run stays on the :15/:45 grid",
+);
+assert.equal(
+  next("2026-10-11T11:45:00.000Z"),
+  "2026-10-11T12:15:00.000Z",
+  "a completed slot must not repeat",
+);
 assert.equal(next("2026-10-11T11:44:59.000Z"), start, "future first slot is preserved");
-assert.equal(next("2026-10-11T13:20:00.000Z"), "2026-10-11T13:45:00.000Z", "missed slots are skipped without catch-up");
-assert.equal(next("2026-10-11T13:45:00.000Z"), "2026-10-11T14:15:00.000Z", "do not schedule the current occupied slot twice");
-assert.equal(next("2026-10-11T19:45:10.000Z"), "2026-10-11T20:15:00.000Z", "overnight cadence remains anchored after 16 runs");
+assert.equal(
+  next("2026-10-11T13:20:00.000Z"),
+  "2026-10-11T13:45:00.000Z",
+  "missed slots are skipped without catch-up",
+);
+assert.equal(
+  next("2026-10-11T13:45:00.000Z"),
+  "2026-10-11T14:15:00.000Z",
+  "do not schedule the current occupied slot twice",
+);
+assert.equal(
+  next("2026-10-11T19:45:10.000Z"),
+  "2026-10-11T20:15:00.000Z",
+  "overnight cadence remains anchored after 16 runs",
+);
 
 const legacy = { type: "interval" as const, every_seconds: 1800 };
 assert.equal(

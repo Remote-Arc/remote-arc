@@ -4,13 +4,13 @@ Memory is managed by Arc and survives a change of chat or model. It does not rel
 
 The storage layers have separate purposes:
 
-| Layer | Contents and limits |
-| --- | --- |
-| Personal facts | Up to 100 preferences/project/context notes, at most 768 UTF-8 bytes each |
-| Recent work | Up to 40 recaps using excerpts of the existing request/reply, at most 2,048 bytes each; older recaps are evicted |
-| Model recall | Up to 8 relevant records within 4,000 serialized UTF-8 bytes |
-| Device index | Current owner-scoped device name/platform/last-seen records, at most 8 per model context; verify current availability with live tools |
-| Chat/work history | Separate encrypted product history and execution evidence; not copied wholesale into memory |
+| Layer             | Contents and limits                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Personal facts    | Up to 100 preferences/project/context notes, at most 768 UTF-8 bytes each                                                             |
+| Recent work       | Up to 40 recaps using excerpts of the existing request/reply, at most 2,048 bytes each; older recaps are evicted                      |
+| Model recall      | Up to 8 relevant records within 4,000 serialized UTF-8 bytes                                                                          |
+| Device index      | Current owner-scoped device name/platform/last-seen records, at most 8 per model context; verify current availability with live tools |
+| Chat/work history | Separate encrypted product history and execution evidence; not copied wholesale into memory                                           |
 
 At the configured maxima, memory text is at most 158,720 bytes per user (about 155 KiB). Ten thousand fully populated users would hold roughly 1.59 GB of plaintext memory, **before** encryption/base64, rows, indexes, replicas, backups, chat and task storage. This is a sizing bound, not measured storage usage. Text ciphertext has additional overhead. Monitor actual D1 database size; paid capacity/partitioning is needed before reaching its limits. Large artifacts belong in separately controlled object storage or on the user's device, rather than in the memory table.
 

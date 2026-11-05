@@ -16,5 +16,5 @@ export function isTrustedDashboardMutation(request: Request, env: DashboardOrigi
   const accepted = [env.DASHBOARD_ORIGIN, env.APP_ORIGIN || env.PUBLIC_ORIGIN].filter(
     (value): value is string => Boolean(value),
   );
-  return accepted.some(value => new URL(value).origin === requestOrigin);
+  return accepted.some((value) => new URL(value).origin === requestOrigin);
 }

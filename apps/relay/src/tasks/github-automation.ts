@@ -18,8 +18,7 @@ export type GitHubMergeSpec = {
 const API_VERSION = "2026-03-10";
 
 const base64Url = (value: Uint8Array | string) => {
-  const bytes =
-    typeof value === "string" ? new TextEncoder().encode(value) : value;
+  const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
@@ -79,24 +78,16 @@ const githubHeaders = (token: string) => ({
   "user-agent": "Remote-Arc-Automations",
 });
 
-async function installationToken(
-  env: GitHubAutomationEnv,
-  spec: GitHubMergeSpec,
-) {
-  const installationId =
-    spec.installation_id || env.GITHUB_APP_INSTALLATION_ID;
+async function installationToken(env: GitHubAutomationEnv, spec: GitHubMergeSpec) {
+  const installationId = spec.installation_id || env.GITHUB_APP_INSTALLATION_ID;
   if (!installationId) {
-    throw new Error(
-      "GitHub installation ID is missing for this automation.",
-    );
+    throw new Error("GitHub installation ID is missing for this automation.");
   }
 
   const jwt = await githubAppJwt(env);
   const apiBase = (env.GITHUB_API_BASE_URL || "https://api.github.com").replace(/\/$/, "");
   const response = await fetch(
-    apiBase + "/app/installations/" +
-      encodeURIComponent(installationId) +
-      "/access_tokens",
+    apiBase + "/app/installations/" + encodeURIComponent(installationId) + "/access_tokens",
     {
       method: "POST",
       headers: githubHeaders(jwt),
@@ -127,14 +118,12 @@ export function githubAutomationConfigured(env: GitHubAutomationEnv) {
   return Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_PRIVATE_KEY);
 }
 
-export async function mergeGitHubPullRequest(
-  env: GitHubAutomationEnv,
-  spec: GitHubMergeSpec,
-) {
+export async function mergeGitHubPullRequest(env: GitHubAutomationEnv, spec: GitHubMergeSpec) {
   const token = await installationToken(env, spec);
   const apiBase = (env.GITHUB_API_BASE_URL || "https://api.github.com").replace(/\/$/, "");
   const response = await fetch(
-    apiBase + "/repos/" +
+    apiBase +
+      "/repos/" +
       encodeURIComponent(spec.owner) +
       "/" +
       encodeURIComponent(spec.repo) +
@@ -159,8 +148,7 @@ export async function mergeGitHubPullRequest(
 
   if (!response.ok || payload.merged !== true) {
     throw new Error(
-      "GitHub PR merge failed: " +
-        (payload.message || response.status + " " + response.statusText),
+      "GitHub PR merge failed: " + (payload.message || response.status + " " + response.statusText),
     );
   }
 

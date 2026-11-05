@@ -1,0 +1,21 @@
+# Dependencies, build products and local work.
+**/node_modules/
+**/dist/
+**/.wrangler/
+work/
+coverage/
+pnpm-lock.yaml
+
+# Upstream material and machine-generated catalogs are maintained by generators.
+packages/skills/vendor/
+**/*.generated.*
+apps/ui/src/data/app-directory.json
+.agents/
+.claude/
+.gemini/
+/skills/
+
+# Download/install artifacts and binary assets.
+apps/ui/public/downloads/
+assets/
+Formula/

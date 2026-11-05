@@ -17,8 +17,15 @@ function resolveTheme(theme: ThemePreference): "light" | "dark" {
 
 function dashboardSurface() {
   const path = window.location.pathname;
-  return ["mcp.remotearc.app","agent.remotearc.app","admin.remotearc.app"].includes(window.location.hostname) || path === '/admin-preview'
-    || /^\/(dashboard(?:\/|$)|overview\/?$|device\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$|checkout\/?$|chat(?:\/|$)|tasks\/?$|routines\/?$|activity\/?$|skills\/?$)/.test(path);
+  return (
+    ["mcp.remotearc.app", "agent.remotearc.app", "admin.remotearc.app"].includes(
+      window.location.hostname,
+    ) ||
+    path === "/admin-preview" ||
+    /^\/(dashboard(?:\/|$)|overview\/?$|device\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$|checkout\/?$|chat(?:\/|$)|tasks\/?$|routines\/?$|activity\/?$|skills\/?$)/.test(
+      path,
+    )
+  );
 }
 
 function preferenceKey() {
@@ -30,7 +37,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem(preferenceKey());
       return saved === "light" || saved === "dark" || saved === "system" ? saved : "dark";
-    } catch { return "dark"; }
+    } catch {
+      return "dark";
+    }
   });
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(theme));
 
@@ -41,24 +50,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setResolvedTheme(resolved);
       document.documentElement.dataset.theme = resolved;
       document.documentElement.style.colorScheme = resolved;
-      document.querySelector('meta[name="theme-color"]')?.setAttribute(
-        "content",
-        resolved === "light" ? "#fafafa" : "#111113",
-      );
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", resolved === "light" ? "#fafafa" : "#111113");
     };
     apply();
     media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
   }, [theme]);
 
-  const value = useMemo<ThemeContextValue>(() => ({
-    theme,
-    resolvedTheme,
-    setTheme(next) {
-      try { localStorage.setItem(preferenceKey(), next); } catch { /* Keep the in-memory preference when storage is unavailable. */ }
-      setThemeState(next);
-    },
-  }), [theme, resolvedTheme]);
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      theme,
+      resolvedTheme,
+      setTheme(next) {
+        try {
+          localStorage.setItem(preferenceKey(), next);
+        } catch {
+          /* Keep the in-memory preference when storage is unavailable. */
+        }
+        setThemeState(next);
+      },
+    }),
+    [theme, resolvedTheme],
+  );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

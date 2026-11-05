@@ -6,15 +6,15 @@ Current pairing polls explicitly returning `authorization_pending` are recorded 
 
 ## Recorded events
 
-| Area | Authoritative backend events | Browser observations |
-| --- | --- | --- |
-| Login / OAuth | session creation, email request/verification-attempt and invalid-code failure, Google callback, OAuth consent/token HTTP outcomes | None on the sign-in form |
-| Devices | pairing start/token/approval, device mutations, completed device dispatch outcomes | Approved workspace page views |
-| Apps | persisted connection readiness and mutation-request HTTP outcomes (accepted, not proof of provider completion) | Apps workspace views |
-| Tasks | accepted HTTP requests and persisted Arc run terminal states | Task workspace views |
-| Automations | mutation-request HTTP outcomes (accepted, not proof of a finished run) | Workspace navigation |
-| Payments | order creation/abandonment, plan/renewal/payment-method changes, webhook processing/failure, canonical invoice payment failure, verified Credit/plan fulfillment | offer selection, checkout entry/continue, SDK mount/load failure, completion callback, confirmation timeout/display |
-| Client failures | None | failure occurrence without message, stack or URL |
+| Area            | Authoritative backend events                                                                                                                                     | Browser observations                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Login / OAuth   | session creation, email request/verification-attempt and invalid-code failure, Google callback, OAuth consent/token HTTP outcomes                                | None on the sign-in form                                                                                            |
+| Devices         | pairing start/token/approval, device mutations, completed device dispatch outcomes                                                                               | Approved workspace page views                                                                                       |
+| Apps            | persisted connection readiness and mutation-request HTTP outcomes (accepted, not proof of provider completion)                                                   | Apps workspace views                                                                                                |
+| Tasks           | accepted HTTP requests and persisted Arc run terminal states                                                                                                     | Task workspace views                                                                                                |
+| Automations     | mutation-request HTTP outcomes (accepted, not proof of a finished run)                                                                                           | Workspace navigation                                                                                                |
+| Payments        | order creation/abandonment, plan/renewal/payment-method changes, webhook processing/failure, canonical invoice payment failure, verified Credit/plan fulfillment | offer selection, checkout entry/continue, SDK mount/load failure, completion callback, confirmation timeout/display |
+| Client failures | None                                                                                                                                                             | failure occurrence without message, stack or URL                                                                    |
 
 Browser signals are marked `source=browser` and cannot create Stripe or server events. An SDK mount means the SDK mounted; it does not assert that every field finished loading or that a payment succeeded. Accepted requests are separate from terminal execution outcomes.
 

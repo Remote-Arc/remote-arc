@@ -3,24 +3,24 @@ name: Real client MCP qualification
 on:
   push:
     paths:
-      - '.github/workflows/client-mcp-qualification.yml'
-      - 'apps/agent/internal/onboarding/**'
-      - 'apps/agent/internal/codexsetup/**'
-      - 'apps/agent/internal/claudesetup/**'
-      - 'scripts/automatic-client-mcp-*.py'
+      - ".github/workflows/client-mcp-qualification.yml"
+      - "apps/agent/internal/onboarding/**"
+      - "apps/agent/internal/codexsetup/**"
+      - "apps/agent/internal/claudesetup/**"
+      - "scripts/automatic-client-mcp-*.py"
   pull_request:
     paths:
-      - '.github/workflows/client-mcp-qualification.yml'
-      - 'apps/agent/internal/onboarding/**'
-      - 'apps/agent/internal/codexsetup/**'
-      - 'apps/agent/internal/claudesetup/**'
-      - 'scripts/automatic-client-mcp-*.py'
+      - ".github/workflows/client-mcp-qualification.yml"
+      - "apps/agent/internal/onboarding/**"
+      - "apps/agent/internal/codexsetup/**"
+      - "apps/agent/internal/claudesetup/**"
+      - "scripts/automatic-client-mcp-*.py"
   workflow_dispatch:
     inputs:
       public_version:
         description: Published remotelink candidate to qualify
         type: string
-        default: '0.6.2-rc.4'
+        default: "0.6.2-rc.4"
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
           package-manager-cache: false
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: "3.12"
       - uses: actions/setup-go@v7
         with:
           go-version-file: apps/agent/go.mod

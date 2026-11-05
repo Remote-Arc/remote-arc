@@ -21,7 +21,11 @@ import (
 )
 
 //go:embed page.js
-var pageJS string
+var pageSource string
+
+// The formatted file is a function expression statement. Callers compose it
+// into evaluations, so remove its statement terminator before adding arguments.
+var pageJS = strings.TrimSuffix(strings.TrimSpace(pageSource), ";")
 
 const worldName = "remotearc_browser_runner"
 

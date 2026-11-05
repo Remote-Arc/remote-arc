@@ -64,20 +64,20 @@ does not replay previous writes or process launches.
 
 ## Feature map
 
-| Behavior | Go package | Verification |
-| --- | --- | --- |
-| Tool modes, schemas, command guard | `internal/execution`, checked-in JSON | Mode tests and pinned tool results |
-| Text, directories, metadata, bounded binary reads | `internal/execution` | Filesystem tests, revision and metadata checks |
-| Conflict-safe Local Undo and retention | `internal/execution` | Conflicts, failed mutations and restoring records from earlier releases |
-| Sync and managed processes, time budgets, output caps | `internal/execution` | Timeout, cancellation, retention, output limit and process-tree cleanup |
-| Trusted locations, sensitive exceptions, task boundary | `internal/policy` | Traversal, symlinks, narrow exceptions and remote call tests |
-| Pairing, credential revocation, outbound WS and recovery | `internal/agent` | HTTP/WS fixtures, same identity after crash, transient failures |
-| Terminal permission prompts | `internal/agent` | Explicit decision and leave-pending tests |
-| Local MCP | `internal/localmcp` | Official Go SDK client negotiation, schema validation and mode tests |
-| Log persistence, rotation, bounded tail and cursor | `internal/journal` | Concurrent logging, rotation, truncation recovery and secret exclusion |
-| Native background services and shared owner lock | `internal/service`, `internal/lease`, `internal/cli` | Three-OS service fixtures, compromise detection and real supervisor test |
-| Owned goal worktrees and frozen checkpoints | `internal/workspace` | Real Git tests, receipts, candidate rejection and unchanged user checkout |
-| Expiring keep-awake leases | `internal/power` | Three-OS helpers, renewal, expiry and disconnect cleanup |
+| Behavior                                                 | Go package                                           | Verification                                                              |
+| -------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| Tool modes, schemas, command guard                       | `internal/execution`, checked-in JSON                | Mode tests and pinned tool results                                        |
+| Text, directories, metadata, bounded binary reads        | `internal/execution`                                 | Filesystem tests, revision and metadata checks                            |
+| Conflict-safe Local Undo and retention                   | `internal/execution`                                 | Conflicts, failed mutations and restoring records from earlier releases   |
+| Sync and managed processes, time budgets, output caps    | `internal/execution`                                 | Timeout, cancellation, retention, output limit and process-tree cleanup   |
+| Trusted locations, sensitive exceptions, task boundary   | `internal/policy`                                    | Traversal, symlinks, narrow exceptions and remote call tests              |
+| Pairing, credential revocation, outbound WS and recovery | `internal/agent`                                     | HTTP/WS fixtures, same identity after crash, transient failures           |
+| Terminal permission prompts                              | `internal/agent`                                     | Explicit decision and leave-pending tests                                 |
+| Local MCP                                                | `internal/localmcp`                                  | Official Go SDK client negotiation, schema validation and mode tests      |
+| Log persistence, rotation, bounded tail and cursor       | `internal/journal`                                   | Concurrent logging, rotation, truncation recovery and secret exclusion    |
+| Native background services and shared owner lock         | `internal/service`, `internal/lease`, `internal/cli` | Three-OS service fixtures, compromise detection and real supervisor test  |
+| Owned goal worktrees and frozen checkpoints              | `internal/workspace`                                 | Real Git tests, receipts, candidate rejection and unchanged user checkout |
+| Expiring keep-awake leases                               | `internal/power`                                     | Three-OS helpers, renewal, expiry and disconnect cleanup                  |
 
 The journal retains the TS `tool.call`, `tool.done` and `tool.error` event names,
 timestamps and durations. It records request IDs and safe failure categories;

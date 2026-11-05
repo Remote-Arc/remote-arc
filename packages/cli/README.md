@@ -4,6 +4,8 @@
 
 [Website](https://remotearc.app) · [GitHub](https://github.com/Remote-Arc/remote-arc) · [User guide](https://remotearc.app/docs/start-here)
 
+<!-- prettier-ignore-start -->
+
 <!-- github-overview:start -->
 **Agent infrastructure for real work across your apps and computers.**
 
@@ -11,15 +13,17 @@ Arc is your hosted AI agent. Connect brings the same authorized Apps and device 
 
 ## Two ways to work
 
-| Product | Start here | What it does |
-| --- | --- | --- |
-| **Arc** | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines. |
-| **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts, paired devices and your browser from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
+| Product     | Start here                                                           | What it does                                                                                                                        |
+| ----------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Arc**     | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines.             |
+| **Connect** | [Connect your AI](https://remotearc.app/connect-ai)                  | Use authorized cloud accounts, paired devices and your browser from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
 
 Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
 
 Every plan includes every Connect tool. **Free** has monthly Connect call and file-transfer allowances and up to 2 computers. **Connect Unlimited** removes the call and computer limits for people who bring their own AI client; it includes no hosted models. **Plus** and **Pro** add Arc-hosted AI with monthly Credits. Every account can activate a one-time 14-day Arc trial. Users never supply a model API key. Current prices and allowances are on the [pricing page](https://remotearc.app/pricing); third-party App charges are separate. Preview environments use simulated data.
 <!-- github-overview:end -->
+
+<!-- prettier-ignore-end -->
 
 ## Quick start
 
@@ -62,6 +66,8 @@ On first run, `remotelink`:
 No public IP, VPN, router port forwarding, repository clone, or manual token
 copy is required.
 
+<!-- prettier-ignore-start -->
+
 <!-- latest-release:start -->
 ## Latest release
 
@@ -78,6 +84,8 @@ Published 2026-11-03
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->
+
+<!-- prettier-ignore-end -->
 
 ## Connect your AI client
 

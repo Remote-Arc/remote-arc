@@ -24,9 +24,7 @@ const binary = path.join(
   "work/go-device",
   `remotelink-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`,
 );
-const home = await fs.realpath(
-  await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-mcp-")),
-);
+const home = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-mcp-")));
 try {
   for (const mode of ["safe", "developer", "full"]) {
     const client = new Client({ name: "remotearc-local-mcp-smoke", version: "test" });
@@ -46,10 +44,7 @@ try {
     try {
       const { tools } = await client.listTools();
       const names = new Set(tools.map((t) => t.name));
-      assert.equal(
-        names.size,
-        mode === "safe" ? 8 : mode === "developer" ? 12 : 17,
-      );
+      assert.equal(names.size, mode === "safe" ? 8 : mode === "developer" ? 12 : 17);
       for (const tool of ["write_file", "edit_block", "undo_change", "undo_last_change"])
         assert.equal(names.has(tool), mode !== "safe", mode + ": " + tool);
       assert(names.has("list_undo_actions"));

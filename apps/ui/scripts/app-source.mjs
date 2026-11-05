@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 // source text read them together, so moving code between them stays safe.
 export const appModules = [
   "main.tsx",
+  "app/app.tsx",
   "types/app-types.ts",
   "config/app-config.ts",
   "features/dashboard/devices/device-presets.ts",
@@ -38,5 +39,6 @@ export const appModules = [
   "features/dashboard/views/first-run-card.tsx",
 ];
 
-export const readAppModule = (name) => readFileSync(new URL("../src/" + name, import.meta.url), "utf8");
+export const readAppModule = (name) =>
+  readFileSync(new URL("../src/" + name, import.meta.url), "utf8");
 export const appSource = appModules.map(readAppModule).join("\n");

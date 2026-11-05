@@ -1,12 +1,12 @@
-import {billingEnabled,type PlatformLaunchEnv} from '../platform/platform-launch.js';
-import {currentArcPlan} from '../arc/arc-plan.js';
-import {rewardAllowance,consumeRewardCall} from './connect-rewards.js';
+import { billingEnabled, type PlatformLaunchEnv } from "../platform/platform-launch.js";
+import { currentArcPlan } from "../arc/arc-plan.js";
+import { rewardAllowance, consumeRewardCall } from "./connect-rewards.js";
 type UsageEnv = PlatformLaunchEnv & {
   DB: D1Database;
   MONTHLY_TOOL_CALL_LIMIT?: string;
   FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
   OPERATOR_EMAIL?: string;
-  ARC_BILLING_ENABLED?:string;
+  ARC_BILLING_ENABLED?: string;
 };
 
 export type MonthlyUsage = {
@@ -27,10 +27,16 @@ function configuredMonthlyLimit(env: UsageEnv) {
 }
 
 async function monthlyLimitForUser(env: UsageEnv, userId: string) {
-  let user: { role: string | null; email: string | null; plan: string | null; has_plus_grant: number; extra_calls: number } | null;
+  let user: {
+    role: string | null;
+    email: string | null;
+    plan: string | null;
+    has_plus_grant: number;
+    extra_calls: number;
+  } | null;
   try {
     user = await env.DB.prepare(
-    `SELECT u.role, u.email, u.plan,
+      `SELECT u.role, u.email, u.plan,
       EXISTS(
         SELECT 1 FROM plan_grants g WHERE g.user_id = u.id AND g.plan = 'plus'
         AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at > ?2)
@@ -38,9 +44,15 @@ async function monthlyLimitForUser(env: UsageEnv, userId: string) {
       COALESCE((SELECT SUM(extra_calls) FROM user_call_credit_grants c
         WHERE c.user_id = u.id AND c.month_key = ?3), 0) AS extra_calls
      FROM users u WHERE u.id = ?1 LIMIT 1`,
-  )
-    .bind(userId, new Date().toISOString(), monthKey())
-    .first<{ role: string | null; email: string | null; plan: string | null; has_plus_grant: number; extra_calls: number }>();
+    )
+      .bind(userId, new Date().toISOString(), monthKey())
+      .first<{
+        role: string | null;
+        email: string | null;
+        plan: string | null;
+        has_plus_grant: number;
+        extra_calls: number;
+      }>();
   } catch (error) {
     if (!/no such table:\s*user_call_credit_grants/i.test(String(error))) throw error;
     // Migration is not yet deployed: preserve every existing user's base
@@ -51,9 +63,14 @@ async function monthlyLimitForUser(env: UsageEnv, userId: string) {
           AND g.plan='plus' AND g.revoked_at IS NULL
           AND (g.expires_at IS NULL OR g.expires_at > ?2)) AS has_plus_grant
       FROM users u WHERE u.id=?1 LIMIT 1`,
-    ).bind(userId, new Date().toISOString()).first<{
-      role: string | null; email: string | null; plan: string | null; has_plus_grant: number;
-    }>();
+    )
+      .bind(userId, new Date().toISOString())
+      .first<{
+        role: string | null;
+        email: string | null;
+        plan: string | null;
+        has_plus_grant: number;
+      }>();
     user = old ? { ...old, extra_calls: 0 } : null;
   }
 
@@ -64,18 +81,32 @@ async function monthlyLimitForUser(env: UsageEnv, userId: string) {
   ) {
     return null;
   }
-  if(billingEnabled(env)){
-    const plan=await currentArcPlan(env,userId);
-    if(plan.id!=='free')return plan.connectToolCalls===null?null:plan.connectToolCalls+(user?.extra_calls??0);
-    if(user?.plan!=='plus'&&!user?.has_plus_grant){
-      const legacy=await env.DB.prepare('SELECT monthly_calls FROM arc_connect_legacy_allowances WHERE user_id=?1').bind(userId).first<{monthly_calls:number}>();
-      const allowance=plan.connectToolCalls===null?null:Math.max(legacy?.monthly_calls??0,plan.connectToolCalls);return allowance===null?null:allowance+(user?.extra_calls??0);
+  if (billingEnabled(env)) {
+    const plan = await currentArcPlan(env, userId);
+    if (plan.id !== "free")
+      return plan.connectToolCalls === null
+        ? null
+        : plan.connectToolCalls + (user?.extra_calls ?? 0);
+    if (user?.plan !== "plus" && !user?.has_plus_grant) {
+      const legacy = await env.DB.prepare(
+        "SELECT monthly_calls FROM arc_connect_legacy_allowances WHERE user_id=?1",
+      )
+        .bind(userId)
+        .first<{ monthly_calls: number }>();
+      const allowance =
+        plan.connectToolCalls === null
+          ? null
+          : Math.max(legacy?.monthly_calls ?? 0, plan.connectToolCalls);
+      return allowance === null ? null : allowance + (user?.extra_calls ?? 0);
     }
   }
   // Keep existing Plus entitlements. A separate Free budget is explicitly
   // opt-in: absent FREE_MONTHLY_TOOL_CALL_LIMIT means no policy change.
-  if (user?.plan !== "plus" && !user?.has_plus_grant &&
-      env.FREE_MONTHLY_TOOL_CALL_LIMIT !== undefined) {
+  if (
+    user?.plan !== "plus" &&
+    !user?.has_plus_grant &&
+    env.FREE_MONTHLY_TOOL_CALL_LIMIT !== undefined
+  ) {
     const freeLimit = Number(env.FREE_MONTHLY_TOOL_CALL_LIMIT);
     if (!Number.isSafeInteger(freeLimit) || freeLimit < 1) {
       throw new Error("FREE_MONTHLY_TOOL_CALL_LIMIT must be a positive integer");
@@ -101,13 +132,12 @@ function usageSnapshot(month: string, used: number, limit: number | null): Month
   };
 }
 
-export async function getMonthlyUsage(
-  env: UsageEnv,
-  userId: string,
-): Promise<MonthlyUsage> {
+export async function getMonthlyUsage(env: UsageEnv, userId: string): Promise<MonthlyUsage> {
   const month = monthKey();
-  const base = await monthlyLimitForUser(env, userId),reward=base===null?null:await rewardAllowance(env.DB,userId);
-  const limit=base===null?null:base+(reward?.available||0)+(reward?.spentThisMonth||0);
+  const base = await monthlyLimitForUser(env, userId),
+    reward = base === null ? null : await rewardAllowance(env.DB, userId);
+  const limit =
+    base === null ? null : base + (reward?.available || 0) + (reward?.spentThisMonth || 0);
   try {
     const row = await env.DB.prepare(
       "SELECT tool_calls FROM user_monthly_usage WHERE user_id = ?1 AND month_key = ?2",
@@ -126,11 +156,13 @@ export async function consumeToolCall(env: UsageEnv, userId: string) {
   const month = monthKey();
   const limit = await monthlyLimitForUser(env, userId);
   const now = new Date().toISOString();
-  if(limit!==null){
-    const reward=await rewardAllowance(env.DB,userId,now);
-    if((reward?.available||0)>0||(reward?.spentThisMonth||0)>0){
-      if(await consumeRewardCall(env.DB,userId,limit,now))return getMonthlyUsage(env,userId);
-      const error=new Error('Connect call allowance reached.');(error as Error&{code:string}).code='MONTHLY_LIMIT_REACHED';throw error;
+  if (limit !== null) {
+    const reward = await rewardAllowance(env.DB, userId, now);
+    if ((reward?.available || 0) > 0 || (reward?.spentThisMonth || 0) > 0) {
+      if (await consumeRewardCall(env.DB, userId, limit, now)) return getMonthlyUsage(env, userId);
+      const error = new Error("Connect call allowance reached.");
+      (error as Error & { code: string }).code = "MONTHLY_LIMIT_REACHED";
+      throw error;
     }
   }
 

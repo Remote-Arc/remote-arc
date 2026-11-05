@@ -1,7 +1,13 @@
 import { isBrowserRunnerTool } from "./device-tools.js";
 import { type DeviceTaskPermissions } from "../../../types/app-types.js";
 
-export const legacyTaskPermissions: DeviceTaskPermissions = { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: false, keep_awake: false };
+export const legacyTaskPermissions: DeviceTaskPermissions = {
+  background_tasks: true,
+  scheduled_tasks: true,
+  adaptive_agent: true,
+  source_agent: false,
+  keep_awake: false,
+};
 export const DEVICE_TOOL_CATALOG = [
   "read_file",
   "read_binary_file",

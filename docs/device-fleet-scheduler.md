@@ -13,7 +13,7 @@ Fleet scheduling is a **Remote Arc account capability**, not a separate device-l
 
 ## Boundaries and follow-up
 
-This is first-stage *placement*, not distributed shared storage. A path that exists only on a Mac cannot silently be used on Windows, even if Windows is idle. Automatic migration of a running job, workspace replication, battery/CPU/RAM telemetry, and atomic capacity reservations need separate protocols and rollout.
+This is first-stage _placement_, not distributed shared storage. A path that exists only on a Mac cannot silently be used on Windows, even if Windows is idle. Automatic migration of a running job, workspace replication, battery/CPU/RAM telemetry, and atomic capacity reservations need separate protocols and rollout.
 
 The load signal deliberately uses existing D1 tables and a bounded audit window, with no continuously polling loops or per-device scheduling user settings.
 

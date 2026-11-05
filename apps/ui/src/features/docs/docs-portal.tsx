@@ -33,12 +33,7 @@ export function DocsPortal({ path }: { path: string }) {
   const remoteMatch =
     toolQuery &&
     toolIndex.remote.some((tool) =>
-      [
-        tool.name,
-        tool.title,
-        TOOL_COPY[tool.name]?.zh,
-        TOOL_COPY[tool.name]?.summary,
-      ]
+      [tool.name, tool.title, TOOL_COPY[tool.name]?.zh, TOOL_COPY[tool.name]?.summary]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
@@ -47,38 +42,20 @@ export function DocsPortal({ path }: { path: string }) {
   const appMatch =
     toolQuery &&
     toolIndex.apps.some((app) =>
-      [app.name, app.provider, ...app.operations]
-        .join(" ")
-        .toLowerCase()
-        .includes(toolQuery),
+      [app.name, app.provider, ...app.operations].join(" ").toLowerCase().includes(toolQuery),
     );
-  const localMatch =
-    toolQuery && toolIndex.local.some((tool) => tool.name.includes(toolQuery));
+  const localMatch = toolQuery && toolIndex.local.some((tool) => tool.name.includes(toolQuery));
   const topicHref = (slug: string) =>
     href("/docs/" + slug) +
     (slug === "tools" && toolQuery
       ? "?type=" +
-        (remoteMatch
-          ? "remote"
-          : appMatch
-            ? "apps"
-            : localMatch
-              ? "local"
-              : "remote") +
+        (remoteMatch ? "remote" : appMatch ? "apps" : localMatch ? "local" : "remote") +
         "&q=" +
         encodeURIComponent(query.trim())
       : "");
   const filtered = DOC_TOPICS.filter(
     (item) =>
-      (
-        item.title.en +
-        " " +
-        item.title.zh +
-        " " +
-        item.description.en +
-        " " +
-        item.description.zh
-      )
+      (item.title.en + " " + item.title.zh + " " + item.description.en + " " + item.description.zh)
         .toLowerCase()
         .includes(toolQuery) ||
       (item.slug === "tools" && (remoteMatch || appMatch || localMatch)),
@@ -88,12 +65,7 @@ export function DocsPortal({ path }: { path: string }) {
       <main className="docsHub">
         <header>
           <span className="eyebrow">REMOTE ARC / DOCUMENTATION</span>
-          <h1>
-            {tr(
-              "From your first connection to real work.",
-              "从首次连接，到完成工作。",
-            )}
-          </h1>
+          <h1>{tr("From your first connection to real work.", "从首次连接，到完成工作。")}</h1>
           <p>
             {tr(
               "Start with Arc or Connect, then learn how Apps, Skills, memory and Tasks turn a request into a result.",
@@ -104,12 +76,7 @@ export function DocsPortal({ path }: { path: string }) {
         <div className="docsHubStart">
           <div>
             <span>{tr("START HERE", "从这里开始")}</span>
-            <h2>
-              {tr(
-                "Your goal. One connected workspace.",
-                "一个工作空间，推进你的目标。",
-              )}
-            </h2>
+            <h2>{tr("Your goal. One connected workspace.", "一个工作空间，推进你的目标。")}</h2>
             <p>
               {tr(
                 "Use hosted Arc, or bring your own AI through Connect. Choose the guide for the way you work.",
@@ -123,11 +90,7 @@ export function DocsPortal({ path }: { path: string }) {
         </div>
         <SystemOverview />
         <a className="docsHubToolsLink" href={href("/docs/tools")}>
-          {tr(
-            "Looking for a tool? Browse the complete directory",
-            "想找工具？查看完整工具目录",
-          )}{" "}
-          →
+          {tr("Looking for a tool? Browse the complete directory", "想找工具？查看完整工具目录")} →
         </a>
         <label className="docsHubSearch">
           {tr("Find a guide", "查找指南")}
@@ -158,22 +121,13 @@ export function DocsPortal({ path }: { path: string }) {
           ) : null;
         })}
         {!filtered.length && (
-          <p role="status">
-            {tr("No guides match your search.", "没有匹配的指南。")}
-          </p>
+          <p role="status">{tr("No guides match your search.", "没有匹配的指南。")}</p>
         )}
-        <nav
-          className="docsHubReference"
-          aria-label={tr("More references", "更多参考")}
-        >
+        <nav className="docsHubReference" aria-label={tr("More references", "更多参考")}>
           <a href={href("/docs/mcp")}>{tr("MCP reference", "MCP 参考")} ↗</a>
           <a href={href("/docs/tools")}>{tr("All tools", "全部工具")} ↗</a>
-          <a href={href("/docs/long-running-work")}>
-            {tr("Long-running work", "持续工作指南")} ↗
-          </a>
-          <a href={href("/connect-ai")}>
-            {tr("Installation guides", "安装指南")} ↗
-          </a>
+          <a href={href("/docs/long-running-work")}>{tr("Long-running work", "持续工作指南")} ↗</a>
+          <a href={href("/connect-ai")}>{tr("Installation guides", "安装指南")} ↗</a>
         </nav>
       </main>
     );
@@ -197,8 +151,7 @@ export function DocsPortal({ path }: { path: string }) {
           aria-controls="docsTopicNavigation"
           onClick={() => setNavOpen((value) => !value)}
         >
-          {tr("Browse topics", "浏览主题")}{" "}
-          <span aria-hidden="true">{navOpen ? "−" : "+"}</span>
+          {tr("Browse topics", "浏览主题")} <span aria-hidden="true">{navOpen ? "−" : "+"}</span>
         </button>
         <nav
           id="docsTopicNavigation"
@@ -270,10 +223,7 @@ export function DocsPortal({ path }: { path: string }) {
           />
         )}
         {topic.links && (
-          <nav
-            className="docsPortalRelated"
-            aria-label={tr("Related guides", "相关指南")}
-          >
+          <nav className="docsPortalRelated" aria-label={tr("Related guides", "相关指南")}>
             {topic.links.map(([url, en, zh]) => (
               <a key={url} href={href(url!)}>
                 {tr(en!, zh!)} ↗
@@ -285,9 +235,7 @@ export function DocsPortal({ path }: { path: string }) {
           <a href={href("/docs")}>← {tr("Documentation", "文档")}</a>
           <a
             href={href(
-              "/docs/" +
-                DOC_TOPICS[(DOC_TOPICS.indexOf(topic) + 1) % DOC_TOPICS.length]!
-                  .slug,
+              "/docs/" + DOC_TOPICS[(DOC_TOPICS.indexOf(topic) + 1) % DOC_TOPICS.length]!.slug,
             )}
           >
             {tr("Next guide", "下一篇指南")} →

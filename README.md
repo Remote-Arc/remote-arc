@@ -39,10 +39,10 @@ Arc is your hosted AI agent. Connect brings the same authorized Apps and device 
 
 ## Two ways to work
 
-| Product | Start here | What it does |
-| --- | --- | --- |
-| **Arc** | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines. |
-| **Connect** | [Connect your AI](https://remotearc.app/connect-ai) | Use authorized cloud accounts, paired devices and your browser from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
+| Product     | Start here                                                           | What it does                                                                                                                        |
+| ----------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Arc**     | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines.             |
+| **Connect** | [Connect your AI](https://remotearc.app/connect-ai)                  | Use authorized cloud accounts, paired devices and your browser from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
 
 Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
 
@@ -137,6 +137,8 @@ npx remotelink@latest
 
 The npm launcher installs and checksums the native Go Agent and Execution Core. Run `npx remotelink@latest` to upgrade: an older idle Go Agent is replaced automatically, while active work asks for confirmation. Pairing and permissions are preserved. Standalone and Homebrew installations need no Node.js.
 
+<!-- prettier-ignore-start -->
+
 <!-- native-install:start -->
 ### Native downloads and Homebrew
 
@@ -171,6 +173,8 @@ remotelink
 
 The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.
 <!-- native-install:end -->
+
+<!-- prettier-ignore-end -->
 
 For Connect, authorize your compatible AI client against:
 
@@ -698,7 +702,6 @@ Allowed action:       npm publish
 
 Remote computer access is high impact. Remote Arc therefore starts from a
 restricted capability model instead of granting unrestricted terminal access.
-
 
 Current protections include:
 

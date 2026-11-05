@@ -1,9 +1,14 @@
-import {recordProductEvent} from '../analytics/product-events.js';
-import {startBusinessFlow,advanceBusinessFlow,failBusinessFlow} from '../analytics/business-tracking.js';
+import { applicationJson } from "../platform/application-json.js";
+import { recordProductEvent } from "../analytics/product-events.js";
+import {
+  startBusinessFlow,
+  advanceBusinessFlow,
+  failBusinessFlow,
+} from "../analytics/business-tracking.js";
 import { retryTransientD1Read } from "../platform/d1-read-retry.js";
-import {billingEnabled,type PlatformLaunchEnv} from '../platform/platform-launch.js';
-import {currentArcPlan} from '../arc/arc-plan.js';
-import {isReviewerEmail,isReviewerUserId} from './reviewer-identity.js';
+import { billingEnabled, type PlatformLaunchEnv } from "../platform/platform-launch.js";
+import { currentArcPlan } from "../arc/arc-plan.js";
+import { isReviewerEmail, isReviewerUserId } from "./reviewer-identity.js";
 
 type AuthEnv = PlatformLaunchEnv & {
   DB: D1Database;
@@ -65,9 +70,7 @@ export function randomUserCode() {
 
 export async function sha256Hex(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function pkceChallenge(value: string) {
@@ -90,7 +93,14 @@ function cookieValue(request: Request, name: string) {
 export function safeReturnTo(value: string | null, request: Request, env: AuthEnv) {
   const requestOrigin = new URL(request.url).origin;
   const allowedOrigins = new Set(
-    [env.MARKETING_ORIGIN, env.APP_ORIGIN, env.DASHBOARD_ORIGIN, env.ADMIN_ORIGIN, env.PUBLIC_ORIGIN, requestOrigin]
+    [
+      env.MARKETING_ORIGIN,
+      env.APP_ORIGIN,
+      env.DASHBOARD_ORIGIN,
+      env.ADMIN_ORIGIN,
+      env.PUBLIC_ORIGIN,
+      requestOrigin,
+    ]
       .filter(Boolean)
       .map((origin) => new URL(origin as string).origin),
   );
@@ -108,16 +118,14 @@ export function safeReturnTo(value: string | null, request: Request, env: AuthEn
   }
 }
 
-export async function getSessionUser(
-  request: Request,
-  env: AuthEnv,
-): Promise<SessionUser | null> {
+export async function getSessionUser(request: Request, env: AuthEnv): Promise<SessionUser | null> {
   const token = cookieValue(request, "rl_session");
   if (!token) return null;
 
   const tokenHash = await sha256Hex(token);
-  const row = await retryTransientD1Read(() => env.DB.prepare(
-    `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.plan,
+  const row = await retryTransientD1Read(() =>
+    env.DB.prepare(
+      `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.plan,
        EXISTS(
          SELECT 1 FROM plan_grants g
          WHERE g.user_id = u.id
@@ -128,22 +136,23 @@ export async function getSessionUser(
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ?1 AND s.expires_at > ?2`,
-  )
-    .bind(tokenHash, nowIso())
-    .first<{
-      id: string;
-      email: string;
-      name: string | null;
-      avatar_url: string | null;
-      role: "user" | "admin";
-      plan: "free" | "plus" | null;
-      has_plus_grant: number;
-    }>());
+    )
+      .bind(tokenHash, nowIso())
+      .first<{
+        id: string;
+        email: string;
+        name: string | null;
+        avatar_url: string | null;
+        role: "user" | "admin";
+        plan: "free" | "plus" | null;
+        has_plus_grant: number;
+      }>(),
+  );
 
   if (!row) return null;
-  const paidPlan=billingEnabled(env)?await currentArcPlan(env,row.id):null;
-  const hostedPaid=Boolean(paidPlan?.allHostedModels);
-  const connectPaid=Boolean(paidPlan&&paidPlan.id!=='free'&&!hostedPaid);
+  const paidPlan = billingEnabled(env) ? await currentArcPlan(env, row.id) : null;
+  const hostedPaid = Boolean(paidPlan?.allHostedModels);
+  const connectPaid = Boolean(paidPlan && paidPlan.id !== "free" && !hostedPaid);
 
   return {
     id: row.id,
@@ -151,7 +160,12 @@ export async function getSessionUser(
     name: row.name,
     avatarUrl: row.avatar_url,
     role: row.role || "user",
-    plan: row.role === "admin" || row.plan === "plus" || row.has_plus_grant || hostedPaid ? "plus" as const : connectPaid ? "connect" as const : "free" as const,
+    plan:
+      row.role === "admin" || row.plan === "plus" || row.has_plus_grant || hostedPaid
+        ? ("plus" as const)
+        : connectPaid
+          ? ("connect" as const)
+          : ("free" as const),
     isAdmin: row.role === "admin",
   };
 }
@@ -161,15 +175,16 @@ export async function createSession(userId: string, env: AuthEnv) {
   await env.DB.prepare(
     "INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)",
   )
-    .bind(
-      await sha256Hex(token),
-      userId,
-      addSecondsIso(60 * 60 * 24 * 30),
-      nowIso(),
-    )
+    .bind(await sha256Hex(token), userId, addSecondsIso(60 * 60 * 24 * 30), nowIso())
     .run();
 
-  await recordProductEvent(env,{domain:'auth',name:'auth.session.created',source:'server',outcome:'succeeded',userId});
+  await recordProductEvent(env, {
+    domain: "auth",
+    name: "auth.session.created",
+    source: "server",
+    outcome: "succeeded",
+    userId,
+  });
   return token;
 }
 
@@ -192,7 +207,10 @@ type GoogleLoginClient = { clientId: string; clientSecret: string };
 export function googleLoginClients(env: AuthEnv): GoogleLoginClient[] {
   const clients: GoogleLoginClient[] = [];
   if (env.GOOGLE_NEXT_CLIENT_ID && env.GOOGLE_NEXT_CLIENT_SECRET) {
-    clients.push({ clientId: env.GOOGLE_NEXT_CLIENT_ID, clientSecret: env.GOOGLE_NEXT_CLIENT_SECRET });
+    clients.push({
+      clientId: env.GOOGLE_NEXT_CLIENT_ID,
+      clientSecret: env.GOOGLE_NEXT_CLIENT_SECRET,
+    });
   }
   if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
     clients.push({ clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET });
@@ -203,7 +221,9 @@ export function googleLoginClients(env: AuthEnv): GoogleLoginClient[] {
 // A code issued before deployment can belong to the legacy Google client;
 // retry the exchange once with the old pair. Codes cannot be used twice.
 export async function exchangeGoogleLoginCode(
-  code: string, redirectUri: string, env: AuthEnv,
+  code: string,
+  redirectUri: string,
+  env: AuthEnv,
 ): Promise<string | null> {
   for (const client of googleLoginClients(env)) {
     const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -227,7 +247,7 @@ export async function exchangeGoogleLoginCode(
 export async function handleGoogleLogin(request: Request, env: AuthEnv) {
   const [primaryClient] = googleLoginClients(env);
   if (!primaryClient) {
-    return Response.json(
+    return applicationJson(
       {
         error: "google_login_not_configured",
         message: "Google OAuth credentials have not been configured yet.",
@@ -247,11 +267,18 @@ export async function handleGoogleLogin(request: Request, env: AuthEnv) {
     .bind(stateHash, returnTo, addSecondsIso(600), nowIso())
     .run();
 
-  await startBusinessFlow(env,{id:'google:'+stateHash,scene:'google_login',expiresAt:addSecondsIso(600)});
+  await startBusinessFlow(env, {
+    id: "google:" + stateHash,
+    scene: "google_login",
+    expiresAt: addSecondsIso(600),
+  });
 
   const target = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   target.searchParams.set("client_id", primaryClient.clientId);
-  target.searchParams.set("redirect_uri", (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback");
+  target.searchParams.set(
+    "redirect_uri",
+    (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback",
+  );
   target.searchParams.set("response_type", "code");
   target.searchParams.set("scope", "openid email profile");
   target.searchParams.set("state", state);
@@ -269,7 +296,12 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
   const state = url.searchParams.get("state");
   const code = url.searchParams.get("code");
   if (!state || !code) {
-    if(state)await failBusinessFlow(env,'google:'+await sha256Hex(state),url.searchParams.get('error')==='access_denied'?'declined':'callback_incomplete');
+    if (state)
+      await failBusinessFlow(
+        env,
+        "google:" + (await sha256Hex(state)),
+        url.searchParams.get("error") === "access_denied" ? "declined" : "callback_incomplete",
+      );
     return new Response("Missing OAuth code or state", { status: 400 });
   }
 
@@ -280,19 +312,20 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     .bind(stateHash, nowIso())
     .first<{ return_to: string }>();
 
-  await env.DB.prepare(
-    "DELETE FROM google_login_states WHERE state_hash = ?1",
-  )
+  await env.DB.prepare("DELETE FROM google_login_states WHERE state_hash = ?1")
     .bind(stateHash)
     .run();
 
   if (!stateRow) {
-    await failBusinessFlow(env,'google:'+stateHash,'expired');
+    await failBusinessFlow(env, "google:" + stateHash, "expired");
     return new Response("Google login state expired or invalid", { status: 400 });
   }
 
-  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','callback');
-  const loginFailure=async(message:string,status:number)=>{await failBusinessFlow(env,'google:'+stateHash,'verification_failed');return new Response(message,{status});};
+  await advanceBusinessFlow(env, "google:" + stateHash, "google_login", "callback");
+  const loginFailure = async (message: string, status: number) => {
+    await failBusinessFlow(env, "google:" + stateHash, "verification_failed");
+    return new Response(message, { status });
+  };
 
   const accessToken = await exchangeGoogleLoginCode(
     code,
@@ -300,16 +333,15 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     env,
   );
   if (!accessToken) {
-    return loginFailure("Google token exchange failed",502);
+    return loginFailure("Google token exchange failed", 502);
   }
 
-  const userInfoResponse = await fetch(
-    "https://openidconnect.googleapis.com/v1/userinfo",
-    { headers: { Authorization: "Bearer " + accessToken } },
-  );
+  const userInfoResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    headers: { Authorization: "Bearer " + accessToken },
+  });
 
   if (!userInfoResponse.ok) {
-    return loginFailure("Google user lookup failed",502);
+    return loginFailure("Google user lookup failed", 502);
   }
 
   const profile = (await userInfoResponse.json()) as {
@@ -321,11 +353,11 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
   };
 
   if (!profile.sub || !profile.email || profile.email_verified === false) {
-    return loginFailure("Verified Google email is required",403);
+    return loginFailure("Verified Google email is required", 403);
   }
 
   if (isReviewerEmail(env, profile.email)) {
-    return loginFailure("Use the dedicated reviewer sign-in for this account",403);
+    return loginFailure("Use the dedicated reviewer sign-in for this account", 403);
   }
 
   const allowed = (env.ALLOWED_EMAILS || "")
@@ -334,7 +366,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     .filter(Boolean);
 
   if (allowed.length && !allowed.includes(profile.email.toLowerCase())) {
-    return loginFailure("This Google account is not allowed",403);
+    return loginFailure("This Google account is not allowed", 403);
   }
 
   const existing = await env.DB.prepare(
@@ -344,16 +376,19 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
     .first<{ id: string }>();
 
   if (isReviewerUserId(existing?.id)) {
-    return loginFailure("Use the dedicated reviewer sign-in for this account",403);
+    return loginFailure("Use the dedicated reviewer sign-in for this account", 403);
   }
 
   if (!existing && env.ALLOW_SIGNUPS !== "1") {
-    const countRow = await env.DB.prepare(
-      "SELECT COUNT(*) AS count FROM users",
-    ).first<{ count: number }>();
+    const countRow = await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first<{
+      count: number;
+    }>();
 
     if ((countRow?.count || 0) > 0) {
-      return loginFailure("This Remote Arc instance is private. New account registration is disabled.",403);
+      return loginFailure(
+        "This Remote Arc instance is private. New account registration is disabled.",
+        403,
+      );
     }
   }
 
@@ -364,13 +399,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
        SET google_sub = ?1, email = ?2, name = ?3, avatar_url = ?4
        WHERE id = ?5`,
     )
-      .bind(
-        profile.sub,
-        profile.email,
-        profile.name || null,
-        profile.picture || null,
-        userId,
-      )
+      .bind(profile.sub, profile.email, profile.name || null, profile.picture || null, userId)
       .run();
   } else {
     await env.DB.prepare(
@@ -389,9 +418,9 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
       .run();
   }
 
-  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','verified',{userId});
+  await advanceBusinessFlow(env, "google:" + stateHash, "google_login", "verified", { userId });
   const session = await createSession(userId, env);
-  await advanceBusinessFlow(env,'google:'+stateHash,'google_login','completed',{userId});
+  await advanceBusinessFlow(env, "google:" + stateHash, "google_login", "completed", { userId });
   return new Response(null, {
     status: 302,
     headers: {
@@ -438,20 +467,22 @@ export async function authenticateDevice(
   if (!token) return null;
 
   const tokenHash = await sha256Hex(token);
-  const row = await retryTransientD1Read(() => env.DB.prepare(
-    `SELECT id, user_id, name, platform, arch, hostname
+  const row = await retryTransientD1Read(() =>
+    env.DB.prepare(
+      `SELECT id, user_id, name, platform, arch, hostname
      FROM devices
      WHERE credential_hash = ?1 AND revoked_at IS NULL`,
-  )
-    .bind(tokenHash)
-    .first<{
-      id: string;
-      user_id: string;
-      name: string;
-      platform: string;
-      arch: string | null;
-      hostname: string | null;
-    }>());
+    )
+      .bind(tokenHash)
+      .first<{
+        id: string;
+        user_id: string;
+        name: string;
+        platform: string;
+        arch: string | null;
+        hostname: string | null;
+      }>(),
+  );
 
   if (!row) return null;
   // Polling only validates credentials; the regular device heartbeat owns presence.

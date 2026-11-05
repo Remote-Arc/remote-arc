@@ -41,9 +41,17 @@ details button { margin-top:6px }
 `;
 
 export function escapeAuthHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[char] || char);
+  return value.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[char] || char,
+  );
 }
 
 export function authPage(title: string, inner: string): Response {
@@ -58,11 +66,14 @@ export function authPage(title: string, inner: string): Response {
 <p class="foot">Secure access to your computers, with permission controls.<br>
 <a href="https://remotearc.app/privacy">Privacy</a> · <a href="https://remotearc.app/security-model">Security</a></p>
 </div></body></html>`;
-  return new Response(html, { headers: {
-    "content-type":"text/html; charset=utf-8",
-    "cache-control":"no-store",
-    "x-content-type-options":"nosniff",
-    "referrer-policy":"no-referrer",
-    "content-security-policy":"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
-  }});
+  return new Response(html, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "no-referrer",
+      "content-security-policy":
+        "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    },
+  });
 }

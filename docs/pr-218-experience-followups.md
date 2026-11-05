@@ -21,7 +21,6 @@ Admin adds manual user follow-ups with five English/Chinese templates, personali
 
 No production deployment, real model call, email, live payment or production customer-data mutation was performed. The actual NZ Stripe sandbox additionally passed versioned pricing, a one-cycle promotion, hosted test-card Checkout, signed fulfillment and refund revocation. Apply migrations 0040–0045 through the normal release path. The PR preview remains isolated simulation; Admin writes and mail sending stay blocked there.
 
-
 Further billing, models and memory work:
 
 - Runtime commercial terms moved into versioned D1 configuration with Admin drafts, publication, history/restore, exact quote checks and retained subscription/trial terms. Public pricing, checkout, fulfillment and Credits use those versions. Admin Payments includes verified receipts, failed invoices, rated cost, public codes and private one-cycle offers; no real offer was published.

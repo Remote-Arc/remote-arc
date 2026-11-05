@@ -56,7 +56,9 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
   }
 
   const form = await request.formData();
-  const email = String(form.get("email") || "").trim().toLowerCase();
+  const email = String(form.get("email") || "")
+    .trim()
+    .toLowerCase();
   const password = String(form.get("password") || "");
   const returnTo = safeReturnTo(String(form.get("return_to") || "/overview"), request, env);
 
@@ -67,28 +69,34 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
     return new Response("Invalid reviewer credentials", { status: 401 });
   }
   // Reviewer identities and fixture IDs must remain separate across providers.
-  if (reviewers.some((entry) => entry !== reviewer && (
-    entry.email?.trim().toLowerCase() === email ||
-    (reviewer.deviceId && entry.deviceId === reviewer.deviceId)
-  ))) {
+  if (
+    reviewers.some(
+      (entry) =>
+        entry !== reviewer &&
+        (entry.email?.trim().toLowerCase() === email ||
+          (reviewer.deviceId && entry.deviceId === reviewer.deviceId)),
+    )
+  ) {
     return new Response("Reviewer account configuration conflict", { status: 503 });
   }
 
-  let user = await env.DB.prepare(
-    "SELECT id FROM users WHERE lower(email) = ?1 LIMIT 1",
-  ).bind(email).first<{ id: string }>();
+  let user = await env.DB.prepare("SELECT id FROM users WHERE lower(email) = ?1 LIMIT 1")
+    .bind(email)
+    .first<{ id: string }>();
 
   if (user && user.id !== reviewer.userId) {
     return new Response("Reviewer account is not isolated", { status: 503 });
   }
   const reservedUser = await env.DB.prepare("SELECT email FROM users WHERE id = ?1")
-    .bind(reviewer.userId).first<{ email: string }>();
+    .bind(reviewer.userId)
+    .first<{ email: string }>();
   if (reservedUser && reservedUser.email.trim().toLowerCase() !== email) {
     return new Response("Reviewer account configuration conflict", { status: 503 });
   }
   if (reviewer.deviceId) {
     const device = await env.DB.prepare("SELECT user_id FROM devices WHERE id = ?1")
-      .bind(reviewer.deviceId).first<{ user_id: string }>();
+      .bind(reviewer.deviceId)
+      .first<{ user_id: string }>();
     if (device && device.user_id !== reviewer.userId) {
       return new Response("Reviewer device is not isolated", { status: 503 });
     }
@@ -98,14 +106,16 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
     await env.DB.prepare(
       `INSERT INTO users (id, google_sub, email, name, avatar_url, created_at, plan)
        VALUES (?1, ?2, ?3, ?4, NULL, ?5, 'plus') ON CONFLICT DO NOTHING`,
-    ).bind(userId, reviewer.userId, email, reviewer.displayName, nowIso()).run();
-    user = await env.DB.prepare("SELECT id FROM users WHERE lower(email) = ?1 LIMIT 1")
-      .bind(email).first<{ id: string }>();
-    if (user?.id !== userId) return new Response("Reviewer account is not isolated", { status: 503 });
-  } else {
-    await env.DB.prepare("UPDATE users SET plan = 'plus' WHERE id = ?1")
-      .bind(user.id)
+    )
+      .bind(userId, reviewer.userId, email, reviewer.displayName, nowIso())
       .run();
+    user = await env.DB.prepare("SELECT id FROM users WHERE lower(email) = ?1 LIMIT 1")
+      .bind(email)
+      .first<{ id: string }>();
+    if (user?.id !== userId)
+      return new Response("Reviewer account is not isolated", { status: 503 });
+  } else {
+    await env.DB.prepare("UPDATE users SET plan = 'plus' WHERE id = ?1").bind(user.id).run();
   }
 
   if (reviewer.deviceId) {
@@ -142,7 +152,8 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
       )
       .run();
 
-    if (!saved.meta.changes) return new Response("Reviewer device is not isolated", { status: 503 });
+    if (!saved.meta.changes)
+      return new Response("Reviewer device is not isolated", { status: 503 });
 
     await resetReviewerDemoState(env, user.id);
   }

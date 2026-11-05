@@ -11,11 +11,14 @@ export type ConsentGroup = {
 export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[] {
   const scopes = new Set(input);
   const groups: ConsentGroup[] = [];
-  const has = (...items: string[]) => items.some(scope => scopes.has(scope));
+  const has = (...items: string[]) => items.some((scope) => scopes.has(scope));
   if (has("devices:read", "computer:read", "computer:write")) {
     const canWrite = scopes.has("computer:write");
     groups.push({
-      key: "devices", icon: "⌘", title: "Use devices you allow", titleZh: "使用你允许的设备",
+      key: "devices",
+      icon: "⌘",
+      title: "Use devices you allow",
+      titleZh: "使用你允许的设备",
       description: canWrite
         ? "Find computers, read permitted files, edit files and run commands only where device permissions allow."
         : "Find linked computers and read permitted files or device status.",
@@ -27,7 +30,10 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
   if (has("browser:read", "browser:interact")) {
     const canInteract = scopes.has("browser:interact");
     groups.push({
-      key: "browser", icon: "▣", title: "Use shared browser tabs", titleZh: "使用你共享的浏览器标签页",
+      key: "browser",
+      icon: "▣",
+      title: "Use shared browser tabs",
+      titleZh: "使用你共享的浏览器标签页",
       description: canInteract
         ? "Read shared pages and click or fill controls when your browser permissions allow."
         : "Read pages you choose to share through Remote Arc.",
@@ -39,7 +45,10 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
   if (has("apps:read", "apps:write")) {
     const canWrite = scopes.has("apps:write");
     groups.push({
-      key: "apps", icon: "▦", title: "Use services you connect", titleZh: "使用你连接的应用服务",
+      key: "apps",
+      icon: "▦",
+      title: "Use services you connect",
+      titleZh: "使用你连接的应用服务",
       description: canWrite
         ? "Find your linked services, such as GitHub and Gmail. Changes require permissions granted by the connected service and the user request; Remote Arc does not require a separate approval for each App operation."
         : "Find and read services you have separately connected.",
@@ -51,7 +60,10 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
   if (has("automation:read", "automation:write", "agent:write")) {
     const canAct = has("automation:write", "agent:write");
     groups.push({
-      key: "automation", icon: "↻", title: "Manage ongoing tasks", titleZh: "管理持续运行的任务",
+      key: "automation",
+      icon: "↻",
+      title: "Manage ongoing tasks",
+      titleZh: "管理持续运行的任务",
       description: canAct
         ? "Review and manage authorized tasks, including work that continues after this conversation."
         : "Check the status of tasks already set up in Remote Arc.",
@@ -62,8 +74,12 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
   }
   if (scopes.has("offline_access")) {
     groups.push({
-      key: "session", icon: "✓", title: "Stay connected", titleZh: "保持连接",
-      description: "Use a renewable sign-in so you do not have to reconnect every hour; you can revoke access.",
+      key: "session",
+      icon: "✓",
+      title: "Stay connected",
+      titleZh: "保持连接",
+      description:
+        "Use a renewable sign-in so you do not have to reconnect every hour; you can revoke access.",
       descriptionZh: "使用可刷新的登录状态，避免每小时重新连接；你可以撤销授权。",
     });
   }

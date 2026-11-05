@@ -1,6 +1,7 @@
+import { applicationJson } from "../platform/application-json.js";
 import { getSessionUser } from "../auth/auth.js";
 import { summarizeCloudflareBillableUsage } from "../billing/cloudflare-billing.js";
-import { activationOptions, listAdminUsers } from './admin-user-activation.js';
+import { activationOptions, listAdminUsers } from "./admin-user-activation.js";
 
 export type OpsEnv = {
   DB: D1Database;
@@ -17,12 +18,23 @@ export type OpsEnv = {
 };
 
 type OpsDevice = {
-  id: string; user_id: string; name: string; platform: string; arch: string | null;
-  last_seen: string | null; created_at: string;
+  id: string;
+  user_id: string;
+  name: string;
+  platform: string;
+  arch: string | null;
+  last_seen: string | null;
+  created_at: string;
 };
-type LiveDevice = { id: string; status: string; agentVersion?: string | null; background_agent_version?: string | null; recovery_bundle_version?: string | null };
+type LiveDevice = {
+  id: string;
+  status: string;
+  agentVersion?: string | null;
+  background_agent_version?: string | null;
+  recovery_bundle_version?: string | null;
+};
 const month = () => new Date().toISOString().slice(0, 7);
-const jsonError = (error: string, status: number) => Response.json({ error }, { status });
+const jsonError = (error: string, status: number) => applicationJson({ error }, { status });
 const safeLimit = (raw: string | undefined) => {
   const n = Number(raw ?? "10000");
   return Number.isSafeInteger(n) && n > 0 ? n : 10000;
@@ -45,50 +57,102 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
   const utcMonth = month();
   const now = new Date().toISOString();
   const base = safeLimit(env.MONTHLY_TOOL_CALL_LIMIT);
-  const freeBase = env.FREE_MONTHLY_TOOL_CALL_LIMIT === undefined ? base : safeLimit(env.FREE_MONTHLY_TOOL_CALL_LIMIT);
+  const freeBase =
+    env.FREE_MONTHLY_TOOL_CALL_LIMIT === undefined
+      ? base
+      : safeLimit(env.FREE_MONTHLY_TOOL_CALL_LIMIT);
   let selection: ReturnType<typeof activationOptions>;
-  try { selection = activationOptions(url); }
-  catch (error) { return jsonError((error as Error).message, 400); }
+  try {
+    selection = activationOptions(url);
+  } catch (error) {
+    return jsonError((error as Error).message, 400);
+  }
   const from = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const [userPage, deviceRows, chartRows, totalUsers, totalDevices, auditSummary, totalMonthlyCalls, teamCount, teamMembers] = await Promise.all([
-    listAdminUsers(env.DB, { ...selection, now, month: utcMonth, page, pageSize,
-      freeLimit: freeBase, plusLimit: base, pluginOAuthClientIds: env.PUBLIC_PLUGIN_OAUTH_CLIENT_IDS,
-      resource: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + '/mcp' }),
-    env.DB.prepare(`SELECT d.id, d.user_id, d.name, d.platform, d.arch, d.last_seen, d.created_at
+  const [
+    userPage,
+    deviceRows,
+    chartRows,
+    totalUsers,
+    totalDevices,
+    auditSummary,
+    totalMonthlyCalls,
+    teamCount,
+    teamMembers,
+  ] = await Promise.all([
+    listAdminUsers(env.DB, {
+      ...selection,
+      now,
+      month: utcMonth,
+      page,
+      pageSize,
+      freeLimit: freeBase,
+      plusLimit: base,
+      pluginOAuthClientIds: env.PUBLIC_PLUGIN_OAUTH_CLIENT_IDS,
+      resource: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
+    }),
+    env.DB.prepare(
+      `SELECT d.id, d.user_id, d.name, d.platform, d.arch, d.last_seen, d.created_at
       FROM devices d WHERE d.revoked_at IS NULL
-      ORDER BY COALESCE(d.last_seen,d.created_at) DESC LIMIT 200`).all<OpsDevice>(),
-    env.DB.prepare(`SELECT substr(created_at,1,13) AS hour, COUNT(*) AS calls,
+      ORDER BY COALESCE(d.last_seen,d.created_at) DESC LIMIT 200`,
+    ).all<OpsDevice>(),
+    env.DB.prepare(
+      `SELECT substr(created_at,1,13) AS hour, COUNT(*) AS calls,
       COUNT(DISTINCT user_id) AS users
       FROM audit_events WHERE created_at>=?1 AND event_type='mcp.tool_call'
-      GROUP BY substr(created_at,1,13) ORDER BY hour`).bind(from).all<{hour:string;calls:number;users:number}>(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM users").first<{total:number}>(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM devices WHERE revoked_at IS NULL").first<{total:number}>(),
-    env.DB.prepare(`SELECT COUNT(*) AS count,
+      GROUP BY substr(created_at,1,13) ORDER BY hour`,
+    )
+      .bind(from)
+      .all<{ hour: string; calls: number; users: number }>(),
+    env.DB.prepare("SELECT COUNT(*) AS total FROM users").first<{ total: number }>(),
+    env.DB.prepare("SELECT COUNT(*) AS total FROM devices WHERE revoked_at IS NULL").first<{
+      total: number;
+    }>(),
+    env.DB.prepare(
+      `SELECT COUNT(*) AS count,
       SUM(CASE WHEN created_at>=?1 THEN 1 ELSE 0 END) AS last7d
-      FROM audit_events`).bind(from).first<{count:number;last7d:number}>(),
-    env.DB.prepare("SELECT COALESCE(SUM(tool_calls),0) AS calls FROM user_monthly_usage WHERE month_key=?1")
-      .bind(utcMonth).first<{calls:number}>(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM organizations WHERE kind='team'").first<{total:number}>(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM organization_members m JOIN organizations o ON o.id=m.organization_id WHERE o.kind='team' AND m.status='active'").first<{total:number}>(),
+      FROM audit_events`,
+    )
+      .bind(from)
+      .first<{ count: number; last7d: number }>(),
+    env.DB.prepare(
+      "SELECT COALESCE(SUM(tool_calls),0) AS calls FROM user_monthly_usage WHERE month_key=?1",
+    )
+      .bind(utcMonth)
+      .first<{ calls: number }>(),
+    env.DB.prepare("SELECT COUNT(*) AS total FROM organizations WHERE kind='team'").first<{
+      total: number;
+    }>(),
+    env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM organization_members m JOIN organizations o ON o.id=m.organization_id WHERE o.kind='team' AND m.status='active'",
+    ).first<{ total: number }>(),
   ]);
   const users = userPage.users;
   const devices = deviceRows.results || [];
   const byUser = new Map<string, Map<string, LiveDevice>>();
   // Real-time online is queried from the same per-user DO registry used by Devices,
   // not guessed from last_seen. Cap per-refresh DO fan-out.
-  await Promise.all([...new Set([...users.map(u => u.id), ...devices.map(d => d.user_id)])].slice(0, 60).map(async userId => {
-    try {
-      const response = await env.REGISTRY.getByName("user:" + userId).fetch(
-        new Request("https://registry/devices", {
-          headers: { "x-remote-link-user-id": userId },
-        }),
-      );
-      if (!response.ok) return;
-      const rows = await response.json() as LiveDevice[];
-      byUser.set(userId, new Map(rows.filter(row => row.status === "online").map(row => [row.id, row])));
-    } catch { /* unknown is not online */ }
-  }));
-  const extended = devices.map(d => {
+  await Promise.all(
+    [...new Set([...users.map((u) => u.id), ...devices.map((d) => d.user_id)])]
+      .slice(0, 60)
+      .map(async (userId) => {
+        try {
+          const response = await env.REGISTRY.getByName("user:" + userId).fetch(
+            new Request("https://registry/devices", {
+              headers: { "x-remote-link-user-id": userId },
+            }),
+          );
+          if (!response.ok) return;
+          const rows = (await response.json()) as LiveDevice[];
+          byUser.set(
+            userId,
+            new Map(rows.filter((row) => row.status === "online").map((row) => [row.id, row])),
+          );
+        } catch {
+          /* unknown is not online */
+        }
+      }),
+  );
+  const extended = devices.map((d) => {
     const live = byUser.get(d.user_id)?.get(d.id);
     return {
       ...d,
@@ -99,32 +163,58 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
       recovery_bundle_version: live?.recovery_bundle_version || null,
     };
   });
-  return Response.json({
-    checkedAt: now, month: utcMonth, page, pageSize, creditsReady: userPage.creditsReady,
-    filteredTotal: userPage.filteredTotal, activationCounts: userPage.activationCounts,
-    selection,
-    totals: { users: totalUsers?.total || 0, devices: totalDevices?.total || 0,
-      online: extended.filter(x => x.online).length, auditRows: auditSummary?.count || 0,
-      auditLast7d: auditSummary?.last7d || 0, monthlyCalls: totalMonthlyCalls?.calls || 0,
-      teams: teamCount?.total || 0, teamMembers: teamMembers?.total || 0 },
-    limits: { free: freeBase, plus: base },
-    users: users.map(user => {
-      const privileged = user.role === "admin";
-      const baseCalls = privileged ? null : user.plan === "plus" || user.has_plus_grant ? base : freeBase;
-      const liveDevices = [...(byUser.get(user.id)?.values() || [])];
-      return { ...user, online_devices: liveDevices.length,
-        live_status_verified: byUser.has(user.id),
-        live_agent_versions: [...new Set(liveDevices.flatMap(x => x.agentVersion ? [x.agentVersion] : []))],
-        allowance: baseCalls === null ? null : baseCalls + user.extra };
-    }),
-    devices: extended, activity: chartRows.results || [],
-    billing: {
-      currency: "USD", actualUsd: null, source: "unavailable",
-      note: "Cloudflare billing is account-wide; exact cost requires separately authorized Billing Read API access.",
-      billingUrl: "https://dash.cloudflare.com/6b1d0dd4e6f7f30df92753cd1e2ee12d/billing",
-      services: ["Workers Paid", "D1", "Durable Objects", "R2", "KV"],
+  return applicationJson(
+    {
+      checkedAt: now,
+      month: utcMonth,
+      page,
+      pageSize,
+      creditsReady: userPage.creditsReady,
+      filteredTotal: userPage.filteredTotal,
+      activationCounts: userPage.activationCounts,
+      selection,
+      totals: {
+        users: totalUsers?.total || 0,
+        devices: totalDevices?.total || 0,
+        online: extended.filter((x) => x.online).length,
+        auditRows: auditSummary?.count || 0,
+        auditLast7d: auditSummary?.last7d || 0,
+        monthlyCalls: totalMonthlyCalls?.calls || 0,
+        teams: teamCount?.total || 0,
+        teamMembers: teamMembers?.total || 0,
+      },
+      limits: { free: freeBase, plus: base },
+      users: users.map((user) => {
+        const privileged = user.role === "admin";
+        const baseCalls = privileged
+          ? null
+          : user.plan === "plus" || user.has_plus_grant
+            ? base
+            : freeBase;
+        const liveDevices = [...(byUser.get(user.id)?.values() || [])];
+        return {
+          ...user,
+          online_devices: liveDevices.length,
+          live_status_verified: byUser.has(user.id),
+          live_agent_versions: [
+            ...new Set(liveDevices.flatMap((x) => (x.agentVersion ? [x.agentVersion] : []))),
+          ],
+          allowance: baseCalls === null ? null : baseCalls + user.extra,
+        };
+      }),
+      devices: extended,
+      activity: chartRows.results || [],
+      billing: {
+        currency: "USD",
+        actualUsd: null,
+        source: "unavailable",
+        note: "Cloudflare billing is account-wide; exact cost requires separately authorized Billing Read API access.",
+        billingUrl: "https://dash.cloudflare.com/6b1d0dd4e6f7f30df92753cd1e2ee12d/billing",
+        services: ["Workers Paid", "D1", "Durable Objects", "R2", "KV"],
+      },
     },
-  }, { headers: { "cache-control": "private, no-store" } });
+    { headers: { "cache-control": "private, no-store" } },
+  );
 }
 
 /** Explicit admin-only, on-demand billing read. No D1 writes, periodic polling,
@@ -134,33 +224,62 @@ export async function handleAdminBilling(request: Request, env: OpsEnv): Promise
   if (auth.error) return auth.error;
   if (request.method !== "GET") return jsonError("method_not_allowed", 405);
   if (!env.CF_BILLING_READ_TOKEN) {
-    return Response.json({ connected: false, error: "billing_read_token_not_configured" }, { status: 503, headers: { "cache-control": "no-store" } });
+    return applicationJson(
+      { connected: false, error: "billing_read_token_not_configured" },
+      { status: 503, headers: { "cache-control": "no-store" } },
+    );
   }
   const accountId = env.CF_BILLING_ACCOUNT_ID || "6b1d0dd4e6f7f30df92753cd1e2ee12d";
   if (!/^[0-9a-f]{32}$/i.test(accountId)) return jsonError("invalid_billing_account", 503);
-  const from = new Date().toISOString().slice(0,7) + "-01";
-  const to = new Date().toISOString().slice(0,10);
+  const from = new Date().toISOString().slice(0, 7) + "-01";
+  const to = new Date().toISOString().slice(0, 10);
   try {
     const upstream = await fetch(
-      "https://api.cloudflare.com/client/v4/accounts/" + accountId +
-        "/billable-usage?from=" + from + "&to=" + to,
-      { headers: { authorization: "Bearer " + env.CF_BILLING_READ_TOKEN,
-          accept: "application/json" }, signal: AbortSignal.timeout(8000) },
+      "https://api.cloudflare.com/client/v4/accounts/" +
+        accountId +
+        "/billable-usage?from=" +
+        from +
+        "&to=" +
+        to,
+      {
+        headers: {
+          authorization: "Bearer " + env.CF_BILLING_READ_TOKEN,
+          accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      },
     );
     if (!upstream.ok) {
-      return Response.json({ connected: false, error: upstream.status === 403
-        ? "billing_read_permission_required" : "billing_upstream_unavailable",
-        status: upstream.status }, { status: 503, headers: { "cache-control": "no-store" } });
+      return applicationJson(
+        {
+          connected: false,
+          error:
+            upstream.status === 403
+              ? "billing_read_permission_required"
+              : "billing_upstream_unavailable",
+          status: upstream.status,
+        },
+        { status: 503, headers: { "cache-control": "no-store" } },
+      );
     }
-    const json = await upstream.json() as { success?: boolean; result?: unknown };
+    const json = (await upstream.json()) as { success?: boolean; result?: unknown };
     if (json.success !== true) return jsonError("billing_api_rejected_request", 503);
     const totals = summarizeCloudflareBillableUsage(json);
-    return Response.json({ connected: true, ...totals, from, to,
-      source: "Cloudflare Billable Usage API (alpha)",
-      note: "Account-wide usage-based cost, updated daily; not an issued invoice or a Remote Arc-only bill." },
-      { headers: { "cache-control": "private, no-store" } });
+    return applicationJson(
+      {
+        connected: true,
+        ...totals,
+        from,
+        to,
+        source: "Cloudflare Billable Usage API (alpha)",
+        note: "Account-wide usage-based cost, updated daily; not an issued invoice or a Remote Arc-only bill.",
+      },
+      { headers: { "cache-control": "private, no-store" } },
+    );
   } catch (error) {
-    console.error("billing_read_failed", { message: error instanceof Error ? error.message : "unknown" });
+    console.error("billing_read_failed", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
     return jsonError("billing_currently_unavailable", 503);
   }
 }
@@ -171,28 +290,41 @@ export async function handleAdminCallCredits(request: Request, env: OpsEnv) {
   if (request.method !== "POST") return jsonError("method_not_allowed", 405);
   const origin = request.headers.get("origin");
   if (!origin || origin !== new URL(request.url).origin) return jsonError("invalid_origin", 403);
-  const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const userId = typeof body.userId === "string" ? body.userId : "";
   const amount = body.amount;
   const reason = typeof body.reason === "string" ? body.reason.trim() : "";
   const targetMonth = body.month;
-  if (!userId || userId.length > 100 ||
-      !Number.isSafeInteger(amount) || (amount as number) < 1 || (amount as number) > 100000 ||
-      reason.length < 5 || reason.length > 300 || targetMonth !== month()) {
+  if (
+    !userId ||
+    userId.length > 100 ||
+    !Number.isSafeInteger(amount) ||
+    (amount as number) < 1 ||
+    (amount as number) > 100000 ||
+    reason.length < 5 ||
+    reason.length > 300 ||
+    targetMonth !== month()
+  ) {
     return jsonError("invalid_credit_grant", 400);
   }
   const target = await env.DB.prepare("SELECT id, role FROM users WHERE id=?1")
-    .bind(userId).first<{id:string;role:string}>();
+    .bind(userId)
+    .first<{ id: string; role: string }>();
   if (!target) return jsonError("user_not_found", 404);
   if (target.role === "admin") return jsonError("admin_unlimited", 400);
-  const grantId = typeof body.requestId === "string" && /^[0-9a-f-]{36}$/i.test(body.requestId)
-    ? body.requestId : crypto.randomUUID();
+  const grantId =
+    typeof body.requestId === "string" && /^[0-9a-f-]{36}$/i.test(body.requestId)
+      ? body.requestId
+      : crypto.randomUUID();
   try {
-    await env.DB.prepare(`INSERT INTO user_call_credit_grants
+    await env.DB.prepare(
+      `INSERT INTO user_call_credit_grants
       (id,user_id,month_key,extra_calls,reason,granted_by_user_id,created_at)
       VALUES (?1,?2,?3,?4,?5,?6,?7)
-      ON CONFLICT(id) DO NOTHING`)
-      .bind(grantId, userId, targetMonth, amount, reason, auth.user!.id, new Date().toISOString()).run();
+      ON CONFLICT(id) DO NOTHING`,
+    )
+      .bind(grantId, userId, targetMonth, amount, reason, auth.user!.id, new Date().toISOString())
+      .run();
   } catch (error) {
     if (/no such table:\s*user_call_credit_grants/i.test(String(error))) {
       return jsonError("monthly_credit_migration_pending", 503);
@@ -202,11 +334,20 @@ export async function handleAdminCallCredits(request: Request, env: OpsEnv) {
   // Idempotent even if the browser did not receive the first response.
   const saved = await env.DB.prepare(
     "SELECT user_id, month_key, extra_calls, reason FROM user_call_credit_grants WHERE id=?1",
-  ).bind(grantId).first<{user_id:string;month_key:string;extra_calls:number;reason:string}>();
-  if (!saved || saved.user_id !== userId || saved.month_key !== targetMonth ||
-      saved.extra_calls !== amount || saved.reason !== reason) {
+  )
+    .bind(grantId)
+    .first<{ user_id: string; month_key: string; extra_calls: number; reason: string }>();
+  if (
+    !saved ||
+    saved.user_id !== userId ||
+    saved.month_key !== targetMonth ||
+    saved.extra_calls !== amount ||
+    saved.reason !== reason
+  ) {
     return jsonError("credit_request_id_conflict", 409);
   }
-  return Response.json({ ok: true, grantId, userId, amount, month: targetMonth },
-    { status: 201, headers: { "cache-control": "no-store" } });
+  return applicationJson(
+    { ok: true, grantId, userId, amount, month: targetMonth },
+    { status: 201, headers: { "cache-control": "no-store" } },
+  );
 }

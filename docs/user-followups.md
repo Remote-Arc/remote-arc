@@ -45,10 +45,10 @@ Login and registration OTP prefer `RESEND_API_KEY` and use SendPulse for overflo
 
 The production Wrangler configuration explicitly selects `FOLLOWUP_EMAIL_PROVIDER=sendpulse` and `SENDPULSE_OTP_ENABLED=1`: reviewed user follow-ups spend SendPulse capacity first and wait at its limits instead of borrowing Resend's OTP allowance, while OTP prefers Resend and can overflow into SendPulse capacity. `EMAIL_FROM` and the Resend key are unchanged; retain both verified SendPulse senders (`login@remotearc.app` for OTP and `support@remotearc.app` for follow-ups). Keep these selections in the deployment configuration; dashboard-only changes can be replaced by the next normal deployment. Before promotion, complete the live delivery checks below and review pending batches prepared under Resend: the existing sender/provider guard requires preparing them again after the switch. This configuration does not queue new emails or bypass review. The capacity ledger covers Remote Arc only; other projects sharing either provider account still consume its account quota.
 
-| Follow-up provider | Key | Default 1-hour limit | Default 24-hour limit | Default 31-day allocation |
-| --- | --- | --- | --- | --- |
-| `resend` | `RESEND_API_KEY` | 60 | 60 | 1,800 |
-| `sendpulse` | `SENDPULSE_API_KEY` | 50 | 400 | 12,000 |
+| Follow-up provider | Key                 | Default 1-hour limit | Default 24-hour limit | Default 31-day allocation |
+| ------------------ | ------------------- | -------------------- | --------------------- | ------------------------- |
+| `resend`           | `RESEND_API_KEY`    | 60                   | 60                    | 1,800                     |
+| `sendpulse`        | `SENDPULSE_API_KEY` | 50                   | 400                   | 12,000                    |
 
 OTP has priority in a shared account pool. Follow-ups reserve at least 40 daily and 1,200 monthly slots for OTP on either provider, plus 10 hourly slots on SendPulse. These are reservation floors, not OTP ceilings: OTP can take every unused follow-up slot up to the account ceiling. As actual OTP usage exceeds a floor, follow-up capacity shrinks automatically. For example, 80 Resend OTPs leave at most 20 daily follow-ups; when that account fills, OTP can borrow unused SendPulse follow-up capacity. Already accepted emails cannot be preempted, and provider ceilings still apply. No paid plan upgrade or credit purchase happens automatically.
 
@@ -76,6 +76,7 @@ To activate SendPulse:
    ```
 
    Paste the key into Wrangler's prompt, never into a command argument, `echo`, history, GitHub, logs or chat. Check that `SENDPULSE_API_KEY` appears by name only.
+
 3. After confirming a production SMTP Free/paid account, exact sender verification and operator-owned test delivery, set `SENDPULSE_OTP_ENABLED=1` explicitly to enable OTP overflow (leave it unset or `0` for an unapproved/Test account). Follow-ups are independent: explicitly select `FOLLOWUP_EMAIL_PROVIDER=sendpulse` only after their own checks. Check that Admin reports the expected provider, OTP usage and limits. Confirm operator-owned test deliveries, reply routing, unsubscribe, normal OTP and OTP overflow before customer outreach. Development checks mock both providers and do not prove delivery or DNS.
 
 The exact reviewed HTML is UTF-8/base64 encoded for SendPulse, with the same plain-text body, reply mailbox and in-body unsubscribe link. Resend retains its custom one-click unsubscribe headers and idempotency key. SendPulse's documented JSON endpoint does not specify custom message headers or an idempotency key, so those are not claimed for that provider. The persisted once-only claim and conservative unknown state prevent blind retries after ambiguous responses on either provider.

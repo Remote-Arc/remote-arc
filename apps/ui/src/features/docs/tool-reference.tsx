@@ -33,8 +33,7 @@ const AI_CLIENTS = [
   { id: "cursor", name: "Cursor", logo: "/ai-cursor.svg" },
   { id: "gemini", name: "Gemini", logo: "/ai-gemini-four-color-2025.svg" },
 ] as const;
-const availableIn = (entry: Entry, client: string) =>
-  !entry.unavailableIn?.includes(client);
+const availableIn = (entry: Entry, client: string) => !entry.unavailableIn?.includes(client);
 function ClientChip({ client }: { client: (typeof AI_CLIENTS)[number] }) {
   return (
     <span className="toolClient">
@@ -55,12 +54,8 @@ const entries: Record<Interface, Entry[]> = {
       summary: operation.description,
       group: app.category,
       readOnly: operation.permission === "read",
-      scopes:
-        operation.permission === "read"
-          ? ["apps:read"]
-          : ["apps:read", "apps:write"],
-      unavailableIn:
-        "unavailableIn" in operation ? operation.unavailableIn : undefined,
+      scopes: operation.permission === "read" ? ["apps:read"] : ["apps:read", "apps:write"],
+      unavailableIn: "unavailableIn" in operation ? operation.unavailableIn : undefined,
       inputSchema: operation.inputSchema,
     })),
   ),
@@ -81,18 +76,11 @@ const categories: Record<string, { en: string; zh: string }> = {
   finance: { en: "Finance", zh: "财务" },
 };
 function parameters(schema: Schema): { name: string; required: boolean }[] {
-  const variants = [
-    schema,
-    ...([schema.oneOf, schema.anyOf].flat().filter(Boolean) as Schema[]),
-  ];
+  const variants = [schema, ...([schema.oneOf, schema.anyOf].flat().filter(Boolean) as Schema[])];
   const fields = new Map<string, boolean>();
   for (const variant of variants) {
     for (const name of Object.keys((variant.properties || {}) as object)) {
-      fields.set(
-        name,
-        fields.get(name) ||
-          ((variant.required || []) as string[]).includes(name),
-      );
+      fields.set(name, fields.get(name) || ((variant.required || []) as string[]).includes(name));
     }
   }
   return [...fields].map(([name, required]) => ({ name, required }));
@@ -137,16 +125,12 @@ function ToolRow({ entry, kind }: { entry: Entry; kind: Interface }) {
       <p>{locale === "zh" && entry.zh ? entry.zh : entry.summary}</p>
       <div className="toolCatalogBadges">
         <span>
-          {entry.readOnly
-            ? tr("Read only", "只读")
-            : tr("Can change data", "可修改数据")}
+          {entry.readOnly ? tr("Read only", "只读") : tr("Can change data", "可修改数据")}
         </span>
         {entry.group === "browser-runner" && (
           <span>Beta · {tr("Enable per device", "按设备开启")}</span>
         )}
-        {entry.group === "goals" && (
-          <span>{tr("Experimental", "实验能力")}</span>
-        )}
+        {entry.group === "goals" && <span>{tr("Experimental", "实验能力")}</span>}
         {entry.scopes.map((scope) => (
           <code key={scope}>{scope}</code>
         ))}
@@ -157,25 +141,18 @@ function ToolRow({ entry, kind }: { entry: Entry; kind: Interface }) {
       {kind !== "local" && entry.unavailableIn?.length ? (
         <p className="toolClientSupport">
           <span>{tr("Available in", "可用于")}</span>
-          {AI_CLIENTS.filter((client) => availableIn(entry, client.id)).map(
-            (client) => (
-              <ClientChip key={client.id} client={client} />
-            ),
-          )}
+          {AI_CLIENTS.filter((client) => availableIn(entry, client.id)).map((client) => (
+            <ClientChip key={client.id} client={client} />
+          ))}
           <span>{tr("Not available in", "不可用于")}</span>
-          {AI_CLIENTS.filter((client) => !availableIn(entry, client.id)).map(
-            (client) => (
-              <span className="toolClientUnavailable" key={client.id}>
-                <ClientChip client={client} />
-              </span>
-            ),
-          )}
+          {AI_CLIENTS.filter((client) => !availableIn(entry, client.id)).map((client) => (
+            <span className="toolClientUnavailable" key={client.id}>
+              <ClientChip client={client} />
+            </span>
+          ))}
         </p>
       ) : null}
-      <details
-        open={open}
-        onToggle={(event) => setOpen(event.currentTarget.open)}
-      >
+      <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
         <summary>
           {tr("Parameters and contract", "参数与工具定义")}
           {fields.length > 0 && (
@@ -205,10 +182,7 @@ function ToolRow({ entry, kind }: { entry: Entry; kind: Interface }) {
       </details>
       {copyError && (
         <p role="status">
-          {tr(
-            "Select the tool name to copy it manually.",
-            "可选中工具名后手动复制。",
-          )}
+          {tr("Select the tool name to copy it manually.", "可选中工具名后手动复制。")}
         </p>
       )}
     </article>
@@ -227,13 +201,11 @@ export function ToolReference() {
     [provider, setProvider] = useState(initial.get("app") || ""),
     [access, setAccess] = useState(""),
     [client, setClient] = useState(
-      AI_CLIENTS.some((item) => item.id === initial.get("client"))
-        ? initial.get("client")!
-        : "",
+      AI_CLIENTS.some((item) => item.id === initial.get("client")) ? initial.get("client")! : "",
     );
   useEffect(() => {
     const id = location.hash.slice(1);
-    if (id) document.getElementById(id)?.scrollIntoView({block: "start"});
+    if (id) document.getElementById(id)?.scrollIntoView({ block: "start" });
   }, []);
   const needle = query.trim().toLowerCase();
   const source = entries[kind];
@@ -324,7 +296,12 @@ export function ToolReference() {
               if (!keys.includes(event.key)) return;
               event.preventDefault();
               const types: Interface[] = ["remote", "apps", "local"];
-              const next = event.key === "Home" ? 0 : event.key === "End" ? 2 : (types.indexOf(value) + (event.key === "ArrowRight" ? 1 : 2)) % 3;
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? 2
+                    : (types.indexOf(value) + (event.key === "ArrowRight" ? 1 : 2)) % 3;
               switchKind(types[next]!);
               document.getElementById("toolCatalogTab-" + types[next])?.focus();
             }}
@@ -362,11 +339,7 @@ export function ToolReference() {
             role="group"
             aria-label={tr("Show tools for an AI client", "按 AI 客户端查看工具")}
           >
-            <button
-              type="button"
-              aria-pressed={!client}
-              onClick={() => chooseClient("")}
-            >
+            <button type="button" aria-pressed={!client} onClick={() => chooseClient("")}>
               {tr("All AI clients", "全部 AI 客户端")}
             </button>
             {AI_CLIENTS.map((item) => (
@@ -396,10 +369,7 @@ export function ToolReference() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={tr(
-              "e.g. upload, GitHub, process_id…",
-              "例如：上传、GitHub、process_id…",
-            )}
+            placeholder={tr("e.g. upload, GitHub, process_id…", "例如：上传、GitHub、process_id…")}
           />
         </label>
         <label>
@@ -453,11 +423,7 @@ export function ToolReference() {
           `${source.length} 个工具中匹配 ${filtered.length} 个`,
         )}
       </div>
-      <section
-        id="toolCatalogResults"
-        role="tabpanel"
-        aria-labelledby={"toolCatalogTab-" + kind}
-      >
+      <section id="toolCatalogResults" role="tabpanel" aria-labelledby={"toolCatalogTab-" + kind}>
         {filtered.map((entry) => (
           <ToolRow key={kind + entry.id} entry={entry} kind={kind} />
         ))}

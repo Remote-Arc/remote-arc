@@ -285,22 +285,35 @@ func TestVersionAndSchemaQualification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	profile := t.TempDir()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	version, err := qualify(ctx, binary, profile)
-	if err != nil || version != "0.163.0-alpha.11" {
-		t.Fatal(version, err)
-	}
-	for mode, code := range map[string]string{"bad_version": "CODEX_VERSION_UNSUPPORTED", "old_schema": "CODEX_CAPABILITY_UNSUPPORTED", "schema_failure": "CODEX_CAPABILITY_UNSUPPORTED"} {
-		t.Setenv("REMOTEARC_CODEX_TEST_MODE", mode)
-		_, err = qualify(ctx, binary, profile)
-		expectCode(t, err, code)
-		if strings.Contains(err.Error(), "PRIVATE_VENDOR_DIAGNOSTIC") {
-			t.Fatal("version diagnostic exposed")
+	qualifyFixture := func(t *testing.T) (string, error) {
+		t.Helper()
+		// Each probe launches fresh processes that share only this case's deadline.
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+		version, err := qualify(ctx, binary, t.TempDir())
+		if ctx.Err() != nil {
+			t.Fatalf("fixture qualification exceeded its deadline: %v", err)
 		}
+		return version, err
 	}
-	_, err = qualify(ctx, filepath.Join(profile, "missing"), profile)
+	t.Run("supported", func(t *testing.T) {
+		version, err := qualifyFixture(t)
+		if err != nil || version != "0.163.0-alpha.11" {
+			t.Fatal(version, err)
+		}
+	})
+	for mode, code := range map[string]string{"bad_version": "CODEX_VERSION_UNSUPPORTED", "old_schema": "CODEX_CAPABILITY_UNSUPPORTED", "schema_failure": "CODEX_CAPABILITY_UNSUPPORTED"} {
+		t.Run(mode, func(t *testing.T) {
+			t.Setenv("REMOTEARC_CODEX_TEST_MODE", mode)
+			_, err := qualifyFixture(t)
+			expectCode(t, err, code)
+			if strings.Contains(err.Error(), "PRIVATE_VENDOR_DIAGNOSTIC") {
+				t.Fatal("version diagnostic exposed")
+			}
+		})
+	}
+	profile := t.TempDir()
+	_, err = qualify(t.Context(), filepath.Join(profile, "missing"), profile)
 	expectCode(t, err, "CODEX_NOT_FOUND")
 	var output cappedOutput
 	if _, err = output.Write(make([]byte, 4097)); err != io.ErrShortBuffer {

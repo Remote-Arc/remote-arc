@@ -103,7 +103,7 @@ func (c *Client) PromptApproval(ctx context.Context, cfg config.Config, output i
 func (c *Client) PollApprovals(ctx context.Context, cfg config.Config, output io.Writer, ask Ask) {
 	for ctx.Err() == nil {
 		_ = c.PromptApproval(ctx, cfg, output, ask)
-		if pause(ctx, 4*time.Second) != nil {
+		if pause(ctx, 8*time.Second) != nil {
 			return
 		}
 	}

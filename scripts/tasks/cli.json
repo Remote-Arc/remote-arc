@@ -1,0 +1,10 @@
+{
+  "cwd": "packages/cli",
+  "tasks": {
+    "prepublishOnly": [
+      ["node", "../../scripts/sync-release-docs.mjs", "--write"],
+      ["pnpm", "build"],
+      ["node", "../../scripts/build-device.mjs", "--release"]
+    ]
+  }
+}

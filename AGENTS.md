@@ -4,20 +4,27 @@ These project rules come first. The general rules and skills follow them.
 
 ## Commands
 
-| Need | Command |
-| --- | --- |
-| Install | `pnpm install --frozen-lockfile` |
-| Type check | `pnpm typecheck` |
-| Everything CI's main job runs (slow) | `pnpm ci` |
-| One Relay test | `pnpm --filter @remotearc/relay exec tsx scripts/<name>-test.ts` |
-| Relay security suite | `pnpm --filter @remotearc/relay test:security` |
-| Go tests | `go -C apps/agent test ./...` and `go -C packages/execution-core test ./...` |
-| Website tests | `pnpm test:site` |
-| Coverage | `pnpm coverage:relay`, `pnpm coverage:go`, `pnpm coverage:ts` |
-| Test wiring | `pnpm test:wiring` |
+| Need                                 | Command                                                                      |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
+| Install                              | `pnpm install --frozen-lockfile`                                             |
+| Type check                           | `pnpm typecheck`                                                             |
+| Everything CI's main job runs (slow) | `pnpm run ci`                                                                |
+| One Relay test                       | `pnpm --filter @remotearc/relay exec tsx scripts/<name>-test.ts`             |
+| Relay security suite                 | `pnpm --filter @remotearc/relay test:security`                               |
+| Go tests                             | `go -C apps/agent test ./...` and `go -C packages/execution-core test ./...` |
+| Website tests                        | `pnpm test:site`                                                             |
+| Coverage                             | `pnpm coverage:relay`, `pnpm coverage:go`, `pnpm coverage:ts`                |
+| Test wiring                          | `pnpm test:wiring`                                                           |
 
 ## Tests
 
+- Format maintained source with `pnpm format` and run `pnpm check` before
+  finishing. Keep UI components and styles readable; do not compress them into
+  single-line source. Long ordered suites belong in `scripts/tasks/*.json`.
+- Application error identifiers use `UPPER_SNAKE_CASE`. Emit first-party JSON
+  with `applicationJson`, and use `canonicalErrorCode` when reading legacy
+  codes. OAuth standard error values and numeric JSON-RPC codes keep their
+  protocol-defined form; messages and operation/status names are not error codes.
 - Relay tests are plain scripts in `apps/relay/scripts/*-test.ts`. They use
   `node:assert/strict` and end by printing `PASS:` with what they proved.
 - Add every new test file to a package script or workflow. `pnpm test:wiring` fails
@@ -40,6 +47,7 @@ These project rules come first. The general rules and skills follow them.
   `work/` folder. Preserve runtime Undo storage in `.remotearc\undo`.
 
 <!-- agent-playbook:start -->
+
 # Working rules for coding agents
 
 The user's direct requests and this project's own instructions come first.
@@ -49,22 +57,22 @@ The user's direct requests and this project's own instructions come first.
 Before you edit anything, find the row that matches your task, read that file
 and follow its steps in order. If nothing matches, use `implement-change`.
 
-| Task | Read |
-| --- | --- |
-| New repository, or code you have not read yet | `.agents/skills/orient-in-codebase/SKILL.md` |
-| Feature, bug fix or any other code change | `.agents/skills/implement-change/SKILL.md` |
-| Error, crash, failing test or wrong behaviour | `.agents/skills/debug-failure/SKILL.md` |
-| Writing or changing tests | `.agents/skills/write-tests/SKILL.md` |
-| Finding weak or missing tests | `.agents/skills/audit-test-suite/SKILL.md` |
-| A test that sometimes fails | `.agents/skills/fix-flaky-test/SKILL.md` |
-| Moving or restructuring code | `.agents/skills/refactor-safely/SKILL.md` |
-| Schema, migration, backfill or bulk data change | `.agents/skills/change-data-safely/SKILL.md` |
-| Login, permissions, user input, secrets or payments | `.agents/skills/secure-change/SKILL.md` |
-| Third-party library, SDK or API | `.agents/skills/use-external-api/SKILL.md` |
-| Reviewing a diff or pull request | `.agents/skills/review-code/SKILL.md` |
-| Finishing any task | `.agents/skills/verify-and-report/SKILL.md` |
-| Writing a commit or pull request | `.agents/skills/write-pull-request/SKILL.md` |
-| Stopping before the work is finished | `.agents/skills/hand-off-work/SKILL.md` |
+| Task                                                | Read                                         |
+| --------------------------------------------------- | -------------------------------------------- |
+| New repository, or code you have not read yet       | `.agents/skills/orient-in-codebase/SKILL.md` |
+| Feature, bug fix or any other code change           | `.agents/skills/implement-change/SKILL.md`   |
+| Error, crash, failing test or wrong behaviour       | `.agents/skills/debug-failure/SKILL.md`      |
+| Writing or changing tests                           | `.agents/skills/write-tests/SKILL.md`        |
+| Finding weak or missing tests                       | `.agents/skills/audit-test-suite/SKILL.md`   |
+| A test that sometimes fails                         | `.agents/skills/fix-flaky-test/SKILL.md`     |
+| Moving or restructuring code                        | `.agents/skills/refactor-safely/SKILL.md`    |
+| Schema, migration, backfill or bulk data change     | `.agents/skills/change-data-safely/SKILL.md` |
+| Login, permissions, user input, secrets or payments | `.agents/skills/secure-change/SKILL.md`      |
+| Third-party library, SDK or API                     | `.agents/skills/use-external-api/SKILL.md`   |
+| Reviewing a diff or pull request                    | `.agents/skills/review-code/SKILL.md`        |
+| Finishing any task                                  | `.agents/skills/verify-and-report/SKILL.md`  |
+| Writing a commit or pull request                    | `.agents/skills/write-pull-request/SKILL.md` |
+| Stopping before the work is finished                | `.agents/skills/hand-off-work/SKILL.md`      |
 
 ## Rules that always apply
 
@@ -86,4 +94,5 @@ and follow its steps in order. If nothing matches, use `implement-change`.
    and check real docs or source before you use an API.
 10. **Finish with evidence.** Name what you ran, what happened, and what you did
     not check.
+
 <!-- agent-playbook:end -->

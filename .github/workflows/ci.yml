@@ -5,6 +5,21 @@ on:
   pull_request:
 
 jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
   media-intelligence:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -16,7 +31,7 @@ jobs:
           package-manager-cache: false
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Caption parsing, budgets, failures and evidence validation
         run: node --test scripts/media-intelligence-test.mjs
       - name: Install real FFmpeg and FFprobe for the integration test
@@ -217,7 +232,7 @@ jobs:
       - name: User handoff in a visible desktop browser
         if: runner.os != 'Linux'
         env:
-          REMOTEARC_E2E_REQUIRE_WINDOW: '1'
+          REMOTEARC_E2E_REQUIRE_WINDOW: "1"
         run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStartup|TestE2E(Startup|CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)' -count=1 -v
       - name: Install the Linux desktop window manager
         if: runner.os == 'Linux'
@@ -227,7 +242,7 @@ jobs:
       - name: User handoff in a Linux desktop browser
         if: runner.os == 'Linux'
         env:
-          REMOTEARC_E2E_REQUIRE_WINDOW: '1'
+          REMOTEARC_E2E_REQUIRE_WINDOW: "1"
         run: |
           xvfb-run -a --server-args='-screen 0 1920x1080x24' bash -c '
             openbox >"$RUNNER_TEMP/remotearc-window-manager.log" 2>&1 &

@@ -19,6 +19,7 @@ export function mcpBillingRecovery(code?: string) {
     code &&
     [
       "MONTHLY_LIMIT_REACHED",
+      "SLOW_LANE_RATE_LIMITED",
       "BINARY_TRANSFER_LIMIT_REACHED",
       "PLAN_UPGRADE_REQUIRED",
       "APP_CONNECTION_LIMIT",
@@ -47,7 +48,11 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
   const message = messageOf(error);
   const code = codeOf(error);
 
-  if (code === "MONTHLY_LIMIT_REACHED" || code === "BINARY_TRANSFER_LIMIT_REACHED")
+  if (
+    code === "MONTHLY_LIMIT_REACHED" ||
+    code === "SLOW_LANE_RATE_LIMITED" ||
+    code === "BINARY_TRANSFER_LIMIT_REACHED"
+  )
     return { code, message };
   if (code === "PLAN_UPGRADE_REQUIRED" || /^Remote Arc Plus is required for /i.test(message)) {
     return { code: "PLAN_UPGRADE_REQUIRED", message };

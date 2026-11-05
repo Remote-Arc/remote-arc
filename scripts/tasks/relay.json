@@ -118,6 +118,7 @@
     ],
     "test:stripe": [
       ["tsx", "scripts/free-connect-quota-test.ts"],
+      ["tsx", "scripts/connect-free-overflow-test.ts"],
       ["tsx", "scripts/connect-unlimited-test.ts"],
       ["node", "scripts/stripe-worker-test.mjs"],
       ["tsx", "scripts/stripe-billing-test.ts"],

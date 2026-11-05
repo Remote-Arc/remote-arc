@@ -24,7 +24,7 @@ import { currentArcPlan } from "../arc/arc-plan.js";
 import { getSessionUser, randomToken, sha256Hex, type OAuthIdentity } from "../auth/auth.js";
 import { isMcpPaused } from "../platform/security.js";
 import { isTrustedDashboardMutation } from "../auth/dashboard-origin.js";
-import { consumeToolCall } from "../billing/usage.js";
+import { consumeToolCall, SlowLaneRateLimitedError } from "../billing/usage.js";
 import {
   APP_CATALOG,
   APP_OPERATIONS,
@@ -981,6 +981,15 @@ export async function callApp(
       result,
     };
   } catch (error) {
+    if (error instanceof SlowLaneRateLimitedError && !dispatched) {
+      // Nothing ran: release the claim so the same requestId can run after the wait.
+      await env.DB.prepare(
+        "UPDATE app_calls SET status='approved',updated_at=?1 WHERE id=?2 AND user_id=?3 AND status='running'",
+      )
+        .bind(now(), call.id, identity.userId)
+        .run();
+      throw error;
+    }
     const code =
       error instanceof AppError
         ? error.code
@@ -1170,6 +1179,14 @@ export async function handleApps(
   } catch (error) {
     if (error instanceof z.ZodError || error instanceof SyntaxError)
       return response({ error: "invalid_app_request" }, 400);
+    if (error instanceof SlowLaneRateLimitedError)
+      return applicationJson(
+        { error: error.code, retryAfterSeconds: error.retryAfterSeconds },
+        {
+          status: 429,
+          headers: { "cache-control": "no-store", "retry-after": String(error.retryAfterSeconds) },
+        },
+      );
     if (error instanceof Error && "code" in error && error.code === "MONTHLY_LIMIT_REACHED")
       return response({ error: "MONTHLY_LIMIT_REACHED" }, 402);
     return response(

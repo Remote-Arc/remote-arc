@@ -9,6 +9,7 @@ import {
   otpUsageSql,
   followupUsageSql,
   supportUsageSql,
+  lifecycleUsageSql,
 } from "../platform/email-capacity.js";
 
 // Follow-ups have their own caps and yield shared account capacity as OTP grows.
@@ -37,7 +38,7 @@ export function followupBudgetGuard(env: FollowupEnv, now: string) {
     reserve = otpReserve(window.provider);
   const count = (since: string) => followupUsageSql("?6", since);
   const shared = (name: "daily" | "hourly" | "monthly", since: string) =>
-    `${count(since)}+${supportUsageSql("?6", since)}+MAX(${otpUsageSql("?6", since)},${Math.min(reserve[name], limits[name])})<${limits[name]}`;
+    `${count(since)}+${supportUsageSql("?6", since)}+${lifecycleUsageSql("?6", since)}+MAX(${otpUsageSql("?6", since)},${Math.min(reserve[name], limits[name])})<${limits[name]}`;
   return {
     sql: `${count("?8")}<?9 AND ${count("?10")}<?11 AND ${count("?12")}<?13 AND ${shared("daily", "?8")} AND ${shared("hourly", "?10")} AND ${shared("monthly", "?12")}`,
     bindings: [

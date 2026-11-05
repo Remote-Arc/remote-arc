@@ -83,6 +83,7 @@
       ["tsx", "scripts/followup-provider-test.ts"],
       ["tsx", "scripts/otp-capacity-test.ts"],
       ["tsx", "scripts/followup-email-test.ts"],
+      ["tsx", "scripts/lifecycle-email-test.ts"],
       ["tsx", "scripts/feedback-rewards-test.ts"],
       ["node", "scripts/email-provider-worker-test.mjs"]
     ],

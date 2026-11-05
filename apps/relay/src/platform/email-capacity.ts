@@ -51,12 +51,16 @@ export const supportUsageSql = (provider: string, since: string) =>
 export const otpUsageSql = (provider: string, since: string) =>
   `(SELECT COALESCE(SUM(units),0) FROM email_otp_deliveries WHERE provider=${provider} AND status IN ('sending','sent','unknown') AND attempted_at>${since})`;
 
+/** Product lifecycle emails (welcome, trial, plan confirmation) share the account. */
+export const lifecycleUsageSql = (provider: string, since: string) =>
+  `(SELECT COUNT(*) FROM lifecycle_emails WHERE provider=${provider} AND status IN ('sending','sent','unknown') AND attempted_at>${since})`;
+
 export async function emailAccountCapacity(env: EmailCapacityEnv, provider: FollowupEmailProvider) {
   const limits = providerEmailLimits(env, provider),
     windows = emailWindows(),
     reserve = otpReserve(provider);
   const row = await env.DB.prepare(
-    `SELECT ${followupUsageSql("?1", "?2")} daily,${followupUsageSql("?1", "?3")} hourly,${followupUsageSql("?1", "?4")} monthly,${otpUsageSql("?1", "?2")} otp_daily,${otpUsageSql("?1", "?3")} otp_hourly,${otpUsageSql("?1", "?4")} otp_monthly,${supportUsageSql("?1", "?2")} support_daily,${supportUsageSql("?1", "?3")} support_hourly,${supportUsageSql("?1", "?4")} support_monthly`,
+    `SELECT ${followupUsageSql("?1", "?2")} daily,${followupUsageSql("?1", "?3")} hourly,${followupUsageSql("?1", "?4")} monthly,${otpUsageSql("?1", "?2")} otp_daily,${otpUsageSql("?1", "?3")} otp_hourly,${otpUsageSql("?1", "?4")} otp_monthly,${supportUsageSql("?1", "?2")} support_daily,${supportUsageSql("?1", "?3")} support_hourly,${supportUsageSql("?1", "?4")} support_monthly,${lifecycleUsageSql("?1", "?2")} lifecycle_daily,${lifecycleUsageSql("?1", "?3")} lifecycle_hourly,${lifecycleUsageSql("?1", "?4")} lifecycle_monthly`,
   )
     .bind(provider, windows.daySince, windows.hourSince, windows.monthSince)
     .first<Record<string, number>>();
@@ -64,16 +68,18 @@ export async function emailAccountCapacity(env: EmailCapacityEnv, provider: Foll
     const followups = Number(row?.[name] || 0),
       otp = Number(row?.["otp_" + name] || 0),
       support = Number(row?.["support_" + name] || 0),
+      lifecycle = Number(row?.["lifecycle_" + name] || 0),
       limit = limits[name];
     return {
       limit,
       followups,
       otp,
       support,
-      remaining: Math.max(0, limit - followups - support - otp),
+      lifecycle,
+      remaining: Math.max(0, limit - followups - support - lifecycle - otp),
       followupRemaining: Math.max(
         0,
-        limit - followups - support - Math.max(otp, Math.min(reserve[name], limit)),
+        limit - followups - support - lifecycle - Math.max(otp, Math.min(reserve[name], limit)),
       ),
     };
   };
@@ -87,7 +93,7 @@ export async function reserveOtpEmail(env: EmailCapacityEnv, provider: FollowupE
     windows = emailWindows(),
     limits = providerEmailLimits(env, provider);
   const used = (since: string) =>
-    `${followupUsageSql("?1", since)}+${supportUsageSql("?1", since)}+${otpUsageSql("?1", since)}`;
+    `${followupUsageSql("?1", since)}+${supportUsageSql("?1", since)}+${lifecycleUsageSql("?1", since)}+${otpUsageSql("?1", since)}`;
   const row = await env.DB.prepare(
     `INSERT INTO email_otp_deliveries(id,provider,status,attempted_at) SELECT ?2,?1,'sending',?3 WHERE ${used("?4")}<${limits.daily} AND ${used("?5")}<${limits.hourly} AND ${used("?6")}<${limits.monthly} RETURNING id`,
   )

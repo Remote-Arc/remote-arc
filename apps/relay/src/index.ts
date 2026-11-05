@@ -15,6 +15,7 @@ import { handleRunnerRequest } from "./browser/runner-attention.js";
 import { diagnosticError } from "./platform/diagnostics.js";
 import { handleFollowupUnsubscribe } from "./followups/user-followups.js";
 import { runFollowupBatches } from "./followups/followup-batches.js";
+import { runLifecycleEmails } from "./platform/lifecycle-email.js";
 import { purgeEmailCapacity } from "./platform/email-capacity.js";
 import { handleSlackEvents } from "./slack/slack-bot-events.js";
 import { handleSlackBotAccount } from "./slack/slack-bot-install.js";
@@ -193,6 +194,8 @@ type Env = TaskEventEnv &
     FOLLOWUP_EMAIL_PROVIDER?: string;
     SENDPULSE_API_KEY?: string;
     SENDPULSE_OTP_ENABLED?: string;
+    LIFECYCLE_EMAILS_ENABLED?: string;
+    LIFECYCLE_FROM?: string;
     FOLLOWUP_FROM?: string;
     FOLLOWUP_REPLY_TO?: string;
     SUPPORT_FORWARD_TO?: string;
@@ -1306,6 +1309,14 @@ export default {
     }
     if (controller.cron === "* * * * *") ctx.waitUntil(runFollowupBatches(env));
     if (controller.cron === "* * * * *") ctx.waitUntil(runSlackJobs(env));
+    if (controller.cron === "* * * * *")
+      ctx.waitUntil(
+        runLifecycleEmails(env).catch((error) =>
+          console.error("lifecycle_emails_failed", {
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        ),
+      );
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(purgeProductEvents(env));
       ctx.waitUntil(purgeBusinessMetrics(env));

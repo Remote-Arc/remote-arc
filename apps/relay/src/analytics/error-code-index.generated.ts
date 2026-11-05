@@ -1601,6 +1601,9 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  "PROTOCOL_HOST_REQUIRED": [
   "index.ts"
  ],
+ "PROVIDER_TIMEOUT": [
+  "platform/lifecycle-email.ts"
+ ],
  "RATE_LIMITED": [
   "analytics/product-observability.ts",
   "devices/device.ts",

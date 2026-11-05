@@ -9,6 +9,8 @@ import {
 import { CopyButton, aiClients } from "../../../components/public-layout.js";
 import type { DashboardModel } from "../hooks/use-dashboard-model.js";
 
+const clientIcons = new Map(aiClients.map((client) => [client.slug, client.icon] as const));
+
 // AI clients tab: Remote MCP endpoint and per-client setup.
 export function ConnectView({ m }: { m: DashboardModel }) {
   const { devices, locale, mcpEndpoint, navigateTab, tr } = m;
@@ -104,7 +106,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
           <article className="connectClientCard primary">
             <div className="connectClientTop">
               <div className="connectClientIdentity">
-                <img className="monoLogo" src={aiClients[0].icon} alt="" />
+                <img className="monoLogo" src={clientIcons.get("chatgpt")} alt="" />
                 <div>
                   <span className="eyebrow">CHATGPT</span>
                   <h3>ChatGPT</h3>
@@ -144,7 +146,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
           <article className="connectClientCard">
             <div className="connectClientTop">
               <div className="connectClientIdentity">
-                <img className="colorLogo" src={aiClients[1].icon} alt="" />
+                <img className="colorLogo" src={clientIcons.get("claude")} alt="" />
                 <div>
                   <span className="eyebrow">CLAUDE</span>
                   <h3>Claude</h3>
@@ -187,7 +189,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
           <article className="connectClientCard">
             <div className="connectClientTop">
               <div className="connectClientIdentity">
-                <img className="colorLogo" src={aiClients[2].icon} alt="" />
+                <img className="colorLogo" src={clientIcons.get("cursor")} alt="" />
                 <div>
                   <span className="eyebrow">CURSOR</span>
                   <h3>Cursor</h3>

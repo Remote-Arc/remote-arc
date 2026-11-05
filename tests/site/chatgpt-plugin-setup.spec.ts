@@ -2,6 +2,31 @@ import { test, expect } from "./fixtures";
 
 const pluginUrl = "https://chatgpt.com/plugins/plugin_asdk_app_6abc25fd2a348191a4197f6246994090";
 
+test("AI connection cards display the matching client brand", async ({ page }, info) => {
+  await page.goto("/dashboard/connect/clients");
+  for (const [name, icon] of [
+    ["ChatGPT", "/ai-openai.svg"],
+    ["Claude", "/ai-claude.svg"],
+    ["Cursor", "/ai-cursor.svg"],
+  ] as const) {
+    const card = page
+      .locator(".connectClientCard")
+      .filter({ has: page.getByRole("heading", { name, exact: true }) });
+    const image = card.locator(".connectClientIdentity img");
+    await expect(image).toHaveAttribute("src", icon);
+    await expect
+      .poll(() =>
+        image.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0),
+      )
+      .toBe(true);
+  }
+  const cursor = page
+    .locator(".connectClientCard")
+    .filter({ has: page.getByRole("heading", { name: "Cursor", exact: true }) });
+  await cursor.scrollIntoViewIfNeeded();
+  await cursor.screenshot({ path: info.outputPath("cursor-card.png") });
+});
+
 test("Published ChatGPT setup links installation, local pairing and a read-only check", async ({
   page,
 }, info) => {

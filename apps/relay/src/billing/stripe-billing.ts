@@ -33,6 +33,8 @@ import {
   commercialMode,
   approvedCommercialPrice,
   ensureCommercialPrice,
+  billingIntervalSchema,
+  type BillingInterval,
 } from "../arc/arc-commercial-config.js";
 import { ensureStripeCustomer as customer } from "./stripe-customer.js";
 import { checkoutPromotion, invoicePromotion, type Promotion } from "../arc/arc-promotions.js";
@@ -334,12 +336,14 @@ async function invoicePaid(env: BillingEnv, event: Record<string, any>, hash: st
     .run();
   const at = now();
   await env.DB.prepare(
-    `INSERT INTO arc_billing_subscriptions(id,user_id,product_id,status,period_end,cancel_at_period_end,updated_at,commercial_version_id) VALUES(?1,?2,?3,?4,?5,?6,?7,?9) ON CONFLICT(id) DO UPDATE SET
+    `INSERT INTO arc_billing_subscriptions(id,user_id,product_id,status,period_end,cancel_at_period_end,updated_at,commercial_version_id,billing_interval) VALUES(?1,?2,?3,?4,?5,?6,?7,?9,?10) ON CONFLICT(id) DO UPDATE SET
    product_id=CASE WHEN excluded.period_end>=arc_billing_subscriptions.period_end THEN excluded.product_id ELSE arc_billing_subscriptions.product_id END,
    commercial_version_id=CASE WHEN excluded.period_end>=arc_billing_subscriptions.period_end THEN excluded.commercial_version_id ELSE arc_billing_subscriptions.commercial_version_id END,
+   billing_interval=CASE WHEN excluded.period_end>=arc_billing_subscriptions.period_end THEN excluded.billing_interval ELSE arc_billing_subscriptions.billing_interval END,
    status=excluded.status,period_end=MAX(arc_billing_subscriptions.period_end,excluded.period_end),cancel_at_period_end=excluded.cancel_at_period_end,
-   pending_product_id=CASE WHEN arc_billing_subscriptions.pending_product_id=excluded.product_id AND arc_billing_subscriptions.pending_effective_at<=?8 THEN NULL ELSE arc_billing_subscriptions.pending_product_id END,
-   pending_effective_at=CASE WHEN arc_billing_subscriptions.pending_product_id=excluded.product_id AND arc_billing_subscriptions.pending_effective_at<=?8 THEN NULL ELSE arc_billing_subscriptions.pending_effective_at END,
+   pending_product_id=CASE WHEN arc_billing_subscriptions.pending_product_id=excluded.product_id AND COALESCE(arc_billing_subscriptions.pending_billing_interval,'month')=excluded.billing_interval AND arc_billing_subscriptions.pending_effective_at<=?8 THEN NULL ELSE arc_billing_subscriptions.pending_product_id END,
+   pending_effective_at=CASE WHEN arc_billing_subscriptions.pending_product_id=excluded.product_id AND COALESCE(arc_billing_subscriptions.pending_billing_interval,'month')=excluded.billing_interval AND arc_billing_subscriptions.pending_effective_at<=?8 THEN NULL ELSE arc_billing_subscriptions.pending_effective_at END,
+   pending_billing_interval=CASE WHEN arc_billing_subscriptions.pending_product_id=excluded.product_id AND COALESCE(arc_billing_subscriptions.pending_billing_interval,'month')=excluded.billing_interval AND arc_billing_subscriptions.pending_effective_at<=?8 THEN NULL ELSE arc_billing_subscriptions.pending_billing_interval END,
    updated_at=excluded.updated_at`,
   )
     .bind(
@@ -352,6 +356,7 @@ async function invoicePaid(env: BillingEnv, event: Record<string, any>, hash: st
       at,
       start,
       p.versionId,
+      p.interval,
     )
     .run();
   const open = await env.DB.prepare(
@@ -502,7 +507,7 @@ async function endRefundedSubscriptions(env: BillingEnv, intent: string) {
       else await stripeRequest(env, "/v1/subscriptions/" + subscriptionId, "DELETE");
     }
     await env.DB.prepare(
-      "UPDATE arc_billing_subscriptions SET status='canceled',cancel_at_period_end=0,pending_product_id=NULL,pending_effective_at=NULL,revision=revision+1,updated_at=?1 WHERE id=?2 AND status!='canceled'",
+      "UPDATE arc_billing_subscriptions SET status='canceled',cancel_at_period_end=0,pending_product_id=NULL,pending_effective_at=NULL,pending_billing_interval=NULL,revision=revision+1,updated_at=?1 WHERE id=?2 AND status!='canceled'",
     )
       .bind(now(), subscriptionId)
       .run();
@@ -677,8 +682,9 @@ async function changePlan(
   customerId: string,
   sku: unknown,
   quotedVersion?: unknown,
+  interval: BillingInterval = "month",
 ) {
-  const target = commercialOffer(await activeCommercial(env, product(sku).id));
+  const target = commercialOffer(await activeCommercial(env, product(sku).id), interval);
   if (!target.subscription) throw new StripeError("BILLING_INVALID_PRODUCT", 400);
   const paid = await env.DB.prepare(
     "SELECT * FROM arc_billing_subscriptions WHERE user_id=?1 AND period_end>?2 AND status='active' ORDER BY period_end DESC LIMIT 1",
@@ -689,19 +695,29 @@ async function changePlan(
       product_id: string;
       period_end: string;
       pending_product_id: string | null;
+      billing_interval: BillingInterval;
+      pending_billing_interval: BillingInterval | null;
       revision: number;
     }>();
-  if (!paid || (paid.product_id === target.id && !paid.pending_product_id))
+  // A term is a plan and its billing interval; monthly to yearly is a change of term.
+  const current = Boolean(
+      paid && paid.product_id === target.id && paid.billing_interval === target.interval,
+    ),
+    scheduled = { scheduled: true, productId: target.id, interval, effectiveAt: paid?.period_end };
+  if (!paid || (current && !paid.pending_product_id))
     throw new StripeError("BILLING_INVALID_PLAN_CHANGE", 409);
   if (
-    target.id !== paid.product_id &&
+    !current &&
     (quotedVersion !== undefined
       ? quotedVersion !== target.versionId
       : !target.versionId.startsWith("seed:"))
   )
     throw new StripeError("BILLING_PRICE_CHANGED", 409);
-  if (paid.pending_product_id === target.id)
-    return { scheduled: true, productId: target.id, effectiveAt: paid.period_end };
+  if (
+    paid.pending_product_id === target.id &&
+    (paid.pending_billing_interval ?? "month") === target.interval
+  )
+    return scheduled;
   const lease = crypto.randomUUID(),
     at = now();
   const claimed = await env.DB.prepare(
@@ -719,16 +735,13 @@ async function changePlan(
       subscription.items?.data?.length !== 1
     )
       throw new StripeError("BILLING_INVALID_PLAN_CHANGE", 409);
-    const current = subscription.items.data[0];
-    if (
-      current.quantity !== 1 ||
-      (await canonicalProduct(env, current.price)).id !== paid.product_id
-    )
+    const item = subscription.items.data[0],
+      held = item.quantity === 1 ? await canonicalProduct(env, item.price) : null;
+    if (!held || held.id !== paid.product_id || held.interval !== paid.billing_interval)
       throw new StripeError("BILLING_CATALOG_CONFLICT");
-    const price =
-        target.id === paid.product_id
-          ? id(current.price, "price")
-          : await ensureStripePrice(env, target.id, target.versionId),
+    const price = current
+        ? id(item.price, "price")
+        : await ensureStripePrice(env, target.id, target.versionId, target.interval),
       schedule = subscription.schedule
         ? await stripeRequest(
             env,
@@ -756,31 +769,42 @@ async function changePlan(
         proration_behavior: "none",
         "phases[0][start_date]": schedule.current_phase.start_date,
         "phases[0][end_date]": boundary,
-        "phases[0][items][0][price]": id(current.price, "price"),
+        "phases[0][items][0][price]": id(item.price, "price"),
         "phases[0][items][0][quantity]": 1,
         "phases[0][proration_behavior]": "none",
         "phases[1][start_date]": boundary,
-        "phases[1][duration][interval]": "month",
+        // One full period of the new term, then the schedule releases to plain renewal.
+        "phases[1][duration][interval]": target.interval,
         "phases[1][duration][interval_count]": 1,
         "phases[1][items][0][price]": price,
         "phases[1][items][0][quantity]": 1,
         "phases[1][proration_behavior]": "none",
       }),
-      "arc-change:" + (await sha256Hex(paid.id + ":" + paid.revision + ":" + target.id)),
+      "arc-change:" +
+        (await sha256Hex(
+          paid.id +
+            ":" +
+            paid.revision +
+            ":" +
+            target.id +
+            // Monthly keys keep their original form so in-flight retries stay idempotent.
+            (target.interval === "year" ? ":year" : ""),
+        )),
     );
     await env.DB.prepare(
-      "UPDATE arc_billing_subscriptions SET pending_product_id=?1,pending_effective_at=?2,updated_at=?3,revision=revision+1 WHERE id=?4 AND user_id=?5 AND change_lease_token=?6",
+      "UPDATE arc_billing_subscriptions SET pending_product_id=?1,pending_effective_at=?2,pending_billing_interval=?7,updated_at=?3,revision=revision+1 WHERE id=?4 AND user_id=?5 AND change_lease_token=?6",
     )
       .bind(
-        target.id === paid.product_id ? null : target.id,
-        target.id === paid.product_id ? null : paid.period_end,
+        current ? null : target.id,
+        current ? null : paid.period_end,
         now(),
         paid.id,
         userId,
         lease,
+        current ? null : target.interval,
       )
       .run();
-    return { scheduled: true, productId: target.id, effectiveAt: paid.period_end };
+    return scheduled;
   } finally {
     await env.DB.prepare(
       "UPDATE arc_billing_subscriptions SET change_lease_token=NULL,change_lease_until=NULL WHERE id=?1 AND change_lease_token=?2",
@@ -839,7 +863,7 @@ export async function handleBilling(request: Request, env: BillingEnv) {
           binaryBytesUsed(env, user.id),
           binaryTransferLimit(env, user.id),
           env.DB.prepare(
-            "SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at,revision FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10",
+            "SELECT product_id,status,period_end,cancel_at_period_end,pending_product_id,pending_effective_at,billing_interval,pending_billing_interval,revision FROM arc_billing_subscriptions WHERE user_id=?1 ORDER BY period_end DESC LIMIT 10",
           )
             .bind(user.id)
             .all(),
@@ -909,11 +933,12 @@ export async function handleBilling(request: Request, env: BillingEnv) {
       return json({ error: "not_found" }, 404);
     if (
       Object.keys(input).some(
-        (key) => !["productId", "versionId", "promoCode", "uiMode"].includes(key),
+        (key) => !["productId", "versionId", "promoCode", "uiMode", "interval"].includes(key),
       ) ||
       (path === "/api/billing/portal" && Object.keys(input).length)
     )
       throw new StripeError("BILLING_INVALID_REQUEST", 400);
+    const interval = billingIntervalSchema.parse(input.interval ?? "month");
     // Connect Unlimited is sold even while hosted Arc is paused; Arc products are not.
     if (
       path !== "/api/billing/portal" &&
@@ -925,21 +950,25 @@ export async function handleBilling(request: Request, env: BillingEnv) {
     const returnUrl = new URL(
         path === "/api/billing/portal"
           ? "/settings?section=billing"
-          : "/checkout?product=" + encodeURIComponent(String(input.productId)),
+          : "/checkout?product=" +
+              encodeURIComponent(String(input.productId)) +
+              (interval === "year" ? "&interval=year" : ""),
         env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN,
       ).toString(),
       customerId = await customer(env, user.id, user.email);
     if (path === "/api/billing/portal")
       return json({ url: await portal(env, customerId, returnUrl) });
     if (path === "/api/billing/plan/change")
-      return json(await changePlan(env, user.id, customerId, input.productId, input.versionId));
+      return json(
+        await changePlan(env, user.id, customerId, input.productId, input.versionId, interval),
+      );
     if (path !== "/api/billing/checkout") return json({ error: "not_found" }, 404);
     const uiMode = input.uiMode ?? "hosted_page";
     if (!["hosted_page", "embedded_page", "elements"].includes(String(uiMode)))
       throw new StripeError("BILLING_INVALID_REQUEST", 400);
     if (uiMode !== "hosted_page" && !stripePublishableKey(env))
       throw new StripeError("BILLING_EMBEDDED_NOT_CONFIGURED");
-    let p = commercialOffer(await activeCommercial(env, product(input.productId).id));
+    let p = commercialOffer(await activeCommercial(env, product(input.productId).id), interval);
     const at = now(),
       plan = await currentArcPlan(env, user.id);
     if (
@@ -948,7 +977,8 @@ export async function handleBilling(request: Request, env: BillingEnv) {
         : !p.versionId.startsWith("seed:")
     )
       throw new StripeError("BILLING_PRICE_CHANGED", 409);
-    if (!p.subscription && input.promoCode !== undefined)
+    // The yearly price is already the discount; promotions are monthly only.
+    if ((!p.subscription || interval === "year") && input.promoCode !== undefined)
       throw new StripeError("BILLING_INVALID_PROMOTION", 400);
     if (p.subscription) {
       const active = await stripeRequest(
@@ -967,9 +997,9 @@ export async function handleBilling(request: Request, env: BillingEnv) {
       .bind(user.id, at)
       .run();
     const pending = await env.DB.prepare(
-      "SELECT id,session_id,expires_at,commercial_version_id,promotion_id,ui_mode FROM arc_billing_checkouts WHERE user_id=?1 AND product_id=?2 AND status IN ('creating','open') AND expires_at>?3 ORDER BY created_at DESC LIMIT 1",
+      "SELECT id,session_id,expires_at,commercial_version_id,promotion_id,ui_mode FROM arc_billing_checkouts WHERE user_id=?1 AND product_id=?2 AND billing_interval=?4 AND status IN ('creating','open') AND expires_at>?3 ORDER BY created_at DESC LIMIT 1",
     )
-      .bind(user.id, p.id, at)
+      .bind(user.id, p.id, at, interval)
       .first<{
         id: string;
         session_id: string | null;
@@ -988,6 +1018,7 @@ export async function handleBilling(request: Request, env: BillingEnv) {
           env.DB,
           pending.commercial_version_id || `seed:${commercialMode(env)}:${p.id}`,
         ),
+        interval,
       );
       if (pending.promotion_id)
         promo = await env.DB.prepare("SELECT * FROM arc_billing_promotions WHERE id=?1")
@@ -1000,7 +1031,7 @@ export async function handleBilling(request: Request, env: BillingEnv) {
           input.promoCode.trim().toUpperCase() !== promo.code)
       )
         throw new StripeError("BILLING_CHECKOUT_ALREADY_OPEN", 409);
-    } else if (p.subscription)
+    } else if (p.subscription && interval === "month")
       promo = await checkoutPromotion(env, user.id, customerId, p.id, input.promoCode);
     if (pending?.session_id) {
       const session = await stripeRequest(
@@ -1033,7 +1064,7 @@ export async function handleBilling(request: Request, env: BillingEnv) {
     if (!pending)
       try {
         const inserted = await env.DB.prepare(
-          `INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,expires_at,created_at,commercial_version_id,promotion_id,ui_mode) SELECT ?1,?2,?3,?4,'creating',?5,?6,?7,?8,?9 WHERE (SELECT COUNT(*) FROM arc_billing_checkouts WHERE user_id=?2 AND status IN ('creating','open'))<3`,
+          `INSERT INTO arc_billing_checkouts(id,user_id,product_id,kind,status,expires_at,created_at,commercial_version_id,promotion_id,ui_mode,billing_interval) SELECT ?1,?2,?3,?4,'creating',?5,?6,?7,?8,?9,?10 WHERE (SELECT COUNT(*) FROM arc_billing_checkouts WHERE user_id=?2 AND status IN ('creating','open'))<3`,
         )
           .bind(
             checkoutId,
@@ -1045,13 +1076,14 @@ export async function handleBilling(request: Request, env: BillingEnv) {
             p.versionId,
             promo?.id ?? null,
             uiMode,
+            interval,
           )
           .run();
         if (!inserted.meta.changes) throw 0;
       } catch {
         throw new StripeError("BILLING_CHECKOUT_ALREADY_OPEN", 409);
       }
-    const price = await ensureStripePrice(env, p.id, p.versionId),
+    const price = await ensureStripePrice(env, p.id, p.versionId, interval),
       session = await stripeRequest(
         env,
         "/v1/checkout/sessions",

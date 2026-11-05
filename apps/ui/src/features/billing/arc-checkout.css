@@ -69,6 +69,10 @@
   display: grid;
   gap: 12px;
 }
+.arcCheckoutCycle {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: 12px;
+}
 .arcCheckoutChoices button {
   display: flex;
   align-items: center;

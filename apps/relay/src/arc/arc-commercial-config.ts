@@ -16,6 +16,8 @@ export const planConfigSchema = z
     id: z.enum(["free", CONNECT_UNLIMITED_PLAN_ID, "arc-plus-v1", "arc-pro-v1"]),
     label: z.string().trim().min(1).max(40),
     monthlyPriceCents: z.number().int().min(0).max(999900),
+    // Optional yearly price. Absent on every version published before yearly billing.
+    yearlyPriceCents: z.number().int().min(100).max(11998800).nullable().optional(),
     monthlyCredits: z.number().int().min(0).max(100000),
     connectToolCalls: z.number().int().min(1).max(100000000).nullable(),
     deviceLimit: z.number().int().min(1).max(1000).nullable(),
@@ -44,7 +46,16 @@ export const planConfigSchema = z
             p.allHostedModels &&
             p.deviceLimit !== null,
     "Paid plans require a nonzero price and allowance",
+  )
+  .refine(
+    (p) =>
+      p.yearlyPriceCents == null ||
+      // Yearly is a Connect-only offer: Arc plans grant monthly Credits per invoice.
+      (p.id === CONNECT_UNLIMITED_PLAN_ID && p.yearlyPriceCents <= p.monthlyPriceCents * 12),
+    "Only Connect Unlimited has a yearly price, at most twelve monthly payments",
   );
+export type BillingInterval = "month" | "year";
+export const billingIntervalSchema = z.enum(["month", "year"]);
 export type ArcPlanConfig = z.infer<typeof planConfigSchema>;
 const topupConfigSchema = z
   .object({
@@ -68,6 +79,7 @@ export type CommercialRow = {
   mode: "test" | "live";
   config_json: string;
   stripe_price_id: string | null;
+  stripe_yearly_price_id?: string | null;
   base_revision: number;
   published_at: string | null;
   created_at: string;
@@ -132,25 +144,39 @@ export async function commercialCatalog(env: CommercialEnv) {
     trial: versions.find((v) => v.kind === "trial")!.config as z.infer<typeof trialConfigSchema>,
   };
 }
-export function commercialOffer(version: ReturnType<typeof decodeCommercial>) {
+export function commercialOffer(
+  version: ReturnType<typeof decodeCommercial>,
+  interval: BillingInterval = "month",
+) {
   const p = version.config;
   if ("days" in p || ("monthlyPriceCents" in p && p.id === "free"))
+    throw new StripeError("BILLING_INVALID_PRODUCT", 400);
+  // Only a version that published a yearly price can sell or renew one.
+  if (interval === "year" && !("monthlyPriceCents" in p && p.yearlyPriceCents))
     throw new StripeError("BILLING_INVALID_PRODUCT", 400);
   return {
     id: p.id,
     label: "label" in p ? p.label : `${p.credits} Credits`,
-    cents: "monthlyPriceCents" in p ? p.monthlyPriceCents : p.priceCents,
+    cents:
+      "monthlyPriceCents" in p
+        ? interval === "year"
+          ? p.yearlyPriceCents!
+          : p.monthlyPriceCents
+        : p.priceCents,
     credits: "monthlyCredits" in p ? p.monthlyCredits : p.credits,
     subscription: "monthlyPriceCents" in p,
+    interval,
     versionId: version.id,
   };
 }
+const yearlyLookupKey = (versionId: string) => "remote-arc:version:" + versionId + ":year";
 function validateCommercialPrice(
   price: Record<string, any>,
   version: ReturnType<typeof decodeCommercial>,
   active = false,
+  interval: BillingInterval = "month",
 ) {
-  const p = commercialOffer(version),
+  const p = commercialOffer(version, interval),
     legacy = version.id.startsWith("seed:");
   if (
     price.currency !== "usd" ||
@@ -158,26 +184,33 @@ function validateCommercialPrice(
     price.tax_behavior !== "exclusive" ||
     (active && price.active === false) ||
     (p.subscription
-      ? price.recurring?.interval !== "month" || price.recurring?.interval_count !== 1
+      ? price.recurring?.interval !== interval || price.recurring?.interval_count !== 1
       : Boolean(price.recurring)) ||
-    (legacy
-      ? price.lookup_key !== "remote-arc:" + p.id
-      : stripeId(price) !== version.stripe_price_id ||
-        price.lookup_key !== "remote-arc:version:" + version.id ||
-        price.metadata?.remote_arc_version !== version.id)
+    (interval === "year"
+      ? legacy ||
+        stripeId(price) !== version.stripe_yearly_price_id ||
+        price.lookup_key !== yearlyLookupKey(version.id) ||
+        price.metadata?.remote_arc_version !== version.id ||
+        price.metadata?.remote_arc_interval !== "year"
+      : legacy
+        ? price.lookup_key !== "remote-arc:" + p.id
+        : stripeId(price) !== version.stripe_price_id ||
+          price.lookup_key !== "remote-arc:version:" + version.id ||
+          price.metadata?.remote_arc_version !== version.id)
   )
     throw new StripeError("BILLING_CATALOG_CONFLICT");
   return p;
 }
 export async function approvedCommercialPrice(env: CommercialEnv, price: Record<string, any>) {
   const row = await env.DB.prepare(
-    "SELECT * FROM arc_commercial_versions WHERE stripe_price_id=?1 AND mode=?2 AND published_at IS NOT NULL",
+    "SELECT * FROM arc_commercial_versions WHERE (stripe_price_id=?1 OR stripe_yearly_price_id=?1) AND mode=?2 AND published_at IS NOT NULL",
   )
     .bind(stripeId(price), commercialMode(env))
     .first<CommercialRow>();
   if (row) {
-    const version = decodeCommercial(row);
-    return { ...validateCommercialPrice(price, version), version };
+    const version = decodeCommercial(row),
+      interval: BillingInterval = row.stripe_yearly_price_id === stripeId(price) ? "year" : "month";
+    return { ...validateCommercialPrice(price, version, false, interval), version };
   }
   const sku = String(price.lookup_key || "").replace(/^remote-arc:/, "");
   if (![...ARC_PLANS.map((p) => p.id), ...ARC_TOPUPS.map((p) => p.id)].includes(sku as any))
@@ -210,13 +243,25 @@ export async function ensureCommercialPrice(
   env: CommercialEnv,
   productId: string,
   versionId?: string,
+  interval: BillingInterval = "month",
 ) {
   const version = versionId
       ? await commercialVersion(env.DB, versionId)
       : await activeCommercial(env, productId),
-    offer = commercialOffer(version);
+    offer = commercialOffer(version, interval);
   if (version.mode !== commercialMode(env) || version.product_id !== productId)
     throw new StripeError("BILLING_CONFIGURATION_CONFLICT");
+  // Yearly prices exist only once an administrator published them; never created lazily.
+  if (interval === "year") {
+    if (!version.stripe_yearly_price_id) throw new StripeError("BILLING_CATALOG_CONFLICT");
+    validateCommercialPrice(
+      await stripeRequest(env, "/v1/prices/" + version.stripe_yearly_price_id),
+      version,
+      true,
+      "year",
+    );
+    return version.stripe_yearly_price_id;
+  }
   if (version.stripe_price_id) {
     validateCommercialPrice(
       await stripeRequest(env, "/v1/prices/" + version.stripe_price_id),
@@ -314,7 +359,8 @@ export async function publishCommercialDraft(env: CommercialEnv, actorId: string
     current = await activeCommercial(env, row.product_id);
   if (current.revision !== row.base_revision)
     throw new StripeError("BILLING_CONFIGURATION_CHANGED", 409);
-  let priceId: string | null = null;
+  let priceId: string | null = null,
+    yearlyPriceId: string | null = null;
   if (row.kind === "topup" || (row.kind === "plan" && row.product_id !== "free")) {
     stripeLive(env);
     const offer = commercialOffer(version),
@@ -337,6 +383,33 @@ export async function publishCommercialDraft(env: CommercialEnv, actorId: string
     );
     priceId = stripeId(price);
     validateCommercialPrice(price, { ...version, stripe_price_id: priceId }, true);
+    if ("yearlyPriceCents" in version.config && version.config.yearlyPriceCents) {
+      const yearly = commercialOffer(version, "year"),
+        annual = await stripeRequest(
+          env,
+          "/v1/prices",
+          "POST",
+          new URLSearchParams({
+            product,
+            currency: "usd",
+            unit_amount: String(yearly.cents),
+            lookup_key: yearlyLookupKey(id),
+            tax_behavior: "exclusive",
+            "metadata[remote_arc_version]": id,
+            "metadata[remote_arc_sku]": yearly.id,
+            "metadata[remote_arc_interval]": "year",
+            "recurring[interval]": "year",
+          }),
+          "arc-commercial-price:" + id + ":year",
+        );
+      yearlyPriceId = stripeId(annual);
+      validateCommercialPrice(
+        annual,
+        { ...version, stripe_price_id: priceId, stripe_yearly_price_id: yearlyPriceId },
+        true,
+        "year",
+      );
+    }
   }
   const at = new Date().toISOString();
   const result = await env.DB.batch([
@@ -344,8 +417,8 @@ export async function publishCommercialDraft(env: CommercialEnv, actorId: string
       "UPDATE arc_commercial_heads SET version_id=?1,revision=revision+1 WHERE product_id=?2 AND mode=?3 AND revision=?4",
     ).bind(id, row.product_id, row.mode, row.base_revision),
     env.DB.prepare(
-      "UPDATE arc_commercial_versions SET stripe_price_id=?1,published_at=?2 WHERE id=?3 AND published_at IS NULL AND EXISTS(SELECT 1 FROM arc_commercial_heads WHERE version_id=?3)",
-    ).bind(priceId, at, id),
+      "UPDATE arc_commercial_versions SET stripe_price_id=?1,stripe_yearly_price_id=?4,published_at=?2 WHERE id=?3 AND published_at IS NULL AND EXISTS(SELECT 1 FROM arc_commercial_heads WHERE version_id=?3)",
+    ).bind(priceId, at, id, yearlyPriceId),
     env.DB.prepare(
       "INSERT INTO arc_commercial_audit SELECT ?1,?2,'published',?3,?4,?5,?6 WHERE EXISTS(SELECT 1 FROM arc_commercial_heads WHERE version_id=?3)",
     ).bind(

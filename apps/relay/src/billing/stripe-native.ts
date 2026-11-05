@@ -101,7 +101,7 @@ async function renewal(env: BillingEnv, userId: string, input: unknown) {
     if (Boolean(subscription.cancel_at_period_end) !== cancel)
       throw new StripeError("BILLING_SUBSCRIPTION_CHANGED", 409);
     await env.DB.prepare(
-      "UPDATE arc_billing_subscriptions SET status=?1,cancel_at_period_end=?2,pending_product_id=CASE WHEN ?2=1 THEN NULL ELSE pending_product_id END,pending_effective_at=CASE WHEN ?2=1 THEN NULL ELSE pending_effective_at END,revision=revision+1,updated_at=?3 WHERE id=?4 AND user_id=?5 AND change_lease_token=?6",
+      "UPDATE arc_billing_subscriptions SET status=?1,cancel_at_period_end=?2,pending_product_id=CASE WHEN ?2=1 THEN NULL ELSE pending_product_id END,pending_effective_at=CASE WHEN ?2=1 THEN NULL ELSE pending_effective_at END,pending_billing_interval=CASE WHEN ?2=1 THEN NULL ELSE pending_billing_interval END,revision=revision+1,updated_at=?3 WHERE id=?4 AND user_id=?5 AND change_lease_token=?6",
     )
       .bind(subscription.status, Number(cancel), at(), row.id, userId, lease)
       .run();

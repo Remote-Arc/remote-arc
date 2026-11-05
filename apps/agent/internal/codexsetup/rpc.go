@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -21,7 +22,7 @@ type Failure struct {
 }
 
 func (e *Failure) Error() string   { return e.Code + ": " + e.Hint }
-func fail(code, hint string) error { return &Failure{Code: code, Hint: hint} }
+func fail(code, hint string) error { return &Failure{Code: strings.ToUpper(code), Hint: hint} }
 
 type rpcClient struct {
 	cmd    *exec.Cmd
@@ -120,7 +121,7 @@ func (r *rpcClient) call(method string, params, result any) error {
 			continue
 		}
 		if message.Error != nil {
-			return &Failure{Code: "codex_request_rejected", Hint: fmt.Sprintf("Codex rejected %s (code %d); run setup doctor or update Codex. Private provider diagnostics were omitted.", method, message.Error.Code), RPCCode: message.Error.Code}
+			return &Failure{Code: "CODEX_REQUEST_REJECTED", Hint: fmt.Sprintf("Codex rejected %s (code %d); run setup doctor or update Codex. Private provider diagnostics were omitted.", method, message.Error.Code), RPCCode: message.Error.Code}
 		}
 		if len(message.Result) == 0 || json.Unmarshal(message.Result, result) != nil {
 			return fail("client_protocol_invalid", "Codex returned an unsupported response shape; update the client.")

@@ -31,7 +31,7 @@ func (s *memoryStore) load() (*record, error) { return copyRecord(s.record), s.l
 func (s *memoryStore) save(r *record) error {
 	s.saves++
 	if s.failSave == s.saves {
-		return fail("state_save_failed", "synthetic failure")
+		return fail("STATE_SAVE_FAILED", "synthetic failure")
 	}
 	s.record = copyRecord(r)
 	return nil
@@ -60,10 +60,10 @@ func (p *fakeProvider) write(before snapshot, name string, entry json.RawMessage
 	if p.conflict {
 		p.revision++
 		p.conflict = false
-		return fail("codex_request_rejected", "synthetic concurrent revision")
+		return fail("CODEX_REQUEST_REJECTED", "synthetic concurrent revision")
 	}
 	if before.Revision != fmt.Sprint(p.revision) {
-		return fail("revision_conflict", "stale revision")
+		return fail("REVISION_CONFLICT", "stale revision")
 	}
 	p.writes++
 	p.writeName = name
@@ -71,17 +71,17 @@ func (p *fakeProvider) write(before snapshot, name string, entry json.RawMessage
 	p.entry = append(json.RawMessage(nil), entry...)
 	if p.disconnectAfterWrite {
 		p.disconnectAfterWrite = false
-		return fail("client_disconnected", "synthetic unknown acknowledgement")
+		return fail("CLIENT_DISCONNECTED", "synthetic unknown acknowledgement")
 	}
 	return nil
 }
 func (p *fakeProvider) verify(name, workspace string, binding json.RawMessage) error {
 	p.verifies++
 	if p.verificationFailure {
-		return fail("client_verification_failed", "synthetic connection failure")
+		return fail("CLIENT_VERIFICATION_FAILED", "synthetic connection failure")
 	}
 	if !sameJSON(p.entry, binding) {
-		return fail("config_drift", "synthetic drift")
+		return fail("CONFIG_DRIFT", "synthetic drift")
 	}
 	return nil
 }
@@ -149,7 +149,7 @@ func TestInstallRepeatDoctorRepairAndUninstall(t *testing.T) {
 		t.Fatal("missing registration hidden")
 	}
 	var result Result
-	expectCode(t, tr.run("doctor", &result), "registration_missing")
+	expectCode(t, tr.run("doctor", &result), "REGISTRATION_MISSING")
 	if repaired := action(t, tr, "repair"); !*repaired.Changed || !repaired.ToolsVerified {
 		t.Fatal("missing owned entry not repaired")
 	}
@@ -194,13 +194,13 @@ func TestDurableRecordMustPrecedeWriteAndCanRecoverFinalSave(t *testing.T) {
 	tr, s, p := fixtureTransaction(t)
 	s.failSave = 1
 	var result Result
-	expectCode(t, tr.run("install", &result), "state_save_failed")
+	expectCode(t, tr.run("install", &result), "STATE_SAVE_FAILED")
 	if p.writes != 0 {
 		t.Fatal("write dispatched before durable journal")
 	}
 	tr, s, p = fixtureTransaction(t)
 	s.failSave = 2
-	expectCode(t, tr.run("install", &result), "state_save_failed")
+	expectCode(t, tr.run("install", &result), "STATE_SAVE_FAILED")
 	if p.writes != 1 || s.record.Stage != "prepared" {
 		t.Fatal("post-write journal failure not recoverable")
 	}
@@ -214,11 +214,11 @@ func TestVerificationFailureIsNotReportedInstalled(t *testing.T) {
 	tr, s, p := fixtureTransaction(t)
 	p.verificationFailure = true
 	var result Result
-	expectCode(t, tr.run("install", &result), "client_verification_failed")
+	expectCode(t, tr.run("install", &result), "CLIENT_VERIFICATION_FAILED")
 	if result.ToolsVerified || s.record.Stage != "prepared" {
 		t.Fatal("unverified installation marked complete")
 	}
-	expectCode(t, tr.run("doctor", &result), "setup_interrupted")
+	expectCode(t, tr.run("doctor", &result), "SETUP_INTERRUPTED")
 	p.verificationFailure = false
 	action(t, tr, "install")
 	if p.writes != 1 || s.record.Stage != "installed" {
@@ -231,7 +231,7 @@ func TestUnrelatedEntryAndConfigDriftAreNotAdoptedOrDeleted(t *testing.T) {
 	p.entry = json.RawMessage(`{"command":"unrelated-user-tool","env":{"token":"PRIVATE_CANARY"}}`)
 	var result Result
 	err := tr.run("install", &result)
-	expectCode(t, err, "config_drift")
+	expectCode(t, err, "CONFIG_DRIFT")
 	if p.writes != 0 || s.record != nil || strings.Contains(err.Error(), "PRIVATE_CANARY") {
 		t.Fatal("unowned entry overwritten, adopted or exposed")
 	}
@@ -240,7 +240,7 @@ func TestUnrelatedEntryAndConfigDriftAreNotAdoptedOrDeleted(t *testing.T) {
 	original := append(json.RawMessage(nil), p.entry...)
 	p.entry = json.RawMessage(`{"command":"changed-by-user"}`)
 	for _, verb := range []string{"install", "repair", "status", "doctor", "uninstall"} {
-		expectCode(t, tr.run(verb, &result), "config_drift")
+		expectCode(t, tr.run(verb, &result), "CONFIG_DRIFT")
 	}
 	if p.writes != 1 || s.record == nil {
 		t.Fatal("drift overwritten or journal deleted")
@@ -257,7 +257,7 @@ func TestUpgradeInterruptedBeforeAndAfterWritePreservesOwnership(t *testing.T) {
 	tr.binaryHash = "new-hash"
 	p.conflict = true
 	var result Result
-	expectCode(t, tr.run("install", &result), "codex_request_rejected")
+	expectCode(t, tr.run("install", &result), "CODEX_REQUEST_REJECTED")
 	if !sameJSON(s.record.PendingFrom, old) || s.record.Stage != "prepared" {
 		t.Fatal("upgrade baseline lost")
 	}
@@ -276,7 +276,7 @@ func TestInterruptedUninstallAndMissingWorkspace(t *testing.T) {
 	tr.identity = ""
 	p.disconnectAfterWrite = true
 	var result Result
-	expectCode(t, tr.run("uninstall", &result), "client_disconnected")
+	expectCode(t, tr.run("uninstall", &result), "CLIENT_DISCONNECTED")
 	if s.record.Stage != "removing" || !emptyJSON(p.entry) {
 		t.Fatal("interrupted removal state wrong")
 	}
@@ -294,7 +294,7 @@ func TestMissingOrReplacedWorkspaceRequiresExplicitReinstall(t *testing.T) {
 	tr.identity = "replacement"
 	var result Result
 	for _, verb := range []string{"install", "repair", "status", "doctor"} {
-		expectCode(t, tr.run(verb, &result), "workspace_changed")
+		expectCode(t, tr.run(verb, &result), "WORKSPACE_CHANGED")
 	}
 	if p.writes != 1 || s.record == nil {
 		t.Fatal("replacement workspace silently adopted")
@@ -309,16 +309,16 @@ func TestInvalidJournalProviderFailureAndLostLeaseNeverWrite(t *testing.T) {
 	tr, s, p := fixtureTransaction(t)
 	s.record = &record{Contract: "unsupported"}
 	var result Result
-	expectCode(t, tr.run("install", &result), "state_invalid")
+	expectCode(t, tr.run("install", &result), "STATE_INVALID")
 	s.record = nil
-	s.loadErr = fail("state_unavailable", "fixture")
-	expectCode(t, tr.run("install", &result), "state_unavailable")
+	s.loadErr = fail("STATE_UNAVAILABLE", "fixture")
+	expectCode(t, tr.run("install", &result), "STATE_UNAVAILABLE")
 	s.loadErr = nil
-	p.readErr = fail("managed_config", "fixture")
-	expectCode(t, tr.run("install", &result), "managed_config")
+	p.readErr = fail("MANAGED_CONFIG", "fixture")
+	expectCode(t, tr.run("install", &result), "MANAGED_CONFIG")
 	p.readErr = nil
 	tr.held = func() bool { return false }
-	expectCode(t, tr.run("install", &result), "setup_lock_lost")
+	expectCode(t, tr.run("install", &result), "SETUP_LOCK_LOST")
 	if p.writes != 0 || s.record != nil {
 		t.Fatal("invalid or unlocked transaction mutated state")
 	}
@@ -327,9 +327,9 @@ func TestInvalidJournalProviderFailureAndLostLeaseNeverWrite(t *testing.T) {
 func TestRemoveRecordFailureCanBeRetried(t *testing.T) {
 	tr, s, p := fixtureTransaction(t)
 	action(t, tr, "install")
-	s.removeErr = fail("state_cleanup_failed", "fixture")
+	s.removeErr = fail("STATE_CLEANUP_FAILED", "fixture")
 	var result Result
-	expectCode(t, tr.run("uninstall", &result), "state_cleanup_failed")
+	expectCode(t, tr.run("uninstall", &result), "STATE_CLEANUP_FAILED")
 	if !emptyJSON(p.entry) {
 		t.Fatal("entry still installed")
 	}

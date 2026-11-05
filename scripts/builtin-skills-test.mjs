@@ -1,51 +1,99 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
-import {execFileSync} from 'node:child_process';
-import {fileURLToPath} from 'node:url';
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const registry=JSON.parse(fs.readFileSync(path.join(root,'skills/registry.json'),'utf8'));
-assert.equal(registry.schemaVersion,1);
-assert.equal(registry.skills.length,18);
-assert.equal(new Set(registry.skills.map(x=>x.id)).size,18);
-for(const id of ['remotion-video','hyperframes-video','openfilm-video','map-creator'])assert(registry.skills.some(skill=>skill.id===id));
-for(const skill of registry.skills){
- assert.ok(['P0','P1'].includes(skill.priority),skill.id);
- assert.ok(/^https:\/\//.test(skill.upstream),skill.id);
- assert.ok(skill.scopes.length>0 || (skill.id==='authentic-thinking-expression' && skill.engine.startsWith('Guidance only') && skill.requires.length===0),skill.id);
-  const doc=fs.readFileSync(path.join(root,'skills',skill.id,'SKILL.md'),'utf8').replace(/\r\n/g,'\n');
- assert.ok(doc.startsWith('---\n'),skill.id);
- assert.ok(doc.includes(`name: ${skill.id}`),skill.id);
- assert.match(doc,/permission|授权/i,skill.id);
- assert.match(doc,/verify|验证|evidence/i,skill.id);
- assert.doesNotMatch(doc,/(curl\s+\S+\s*\|\s*(?:sh|bash)|wget\s+\S+\s*\|\s*(?:sh|bash))/i,'unreviewed remote execution in '+skill.id);
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import "node:child_process";
+import { fileURLToPath } from "node:url";
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const registry = JSON.parse(fs.readFileSync(path.join(root, "skills/registry.json"), "utf8"));
+assert.equal(registry.schemaVersion, 1);
+assert.equal(registry.skills.length, 18);
+assert.equal(new Set(registry.skills.map((x) => x.id)).size, 18);
+for (const id of ["remotion-video", "hyperframes-video", "openfilm-video", "map-creator"])
+  assert(registry.skills.some((skill) => skill.id === id));
+for (const skill of registry.skills) {
+  assert.ok(["P0", "P1"].includes(skill.priority), skill.id);
+  assert.ok(/^https:\/\//.test(skill.upstream), skill.id);
+  assert.ok(
+    skill.scopes.length > 0 ||
+      (skill.id === "authentic-thinking-expression" &&
+        skill.engine.startsWith("Guidance only") &&
+        skill.requires.length === 0),
+    skill.id,
+  );
+  const doc = fs
+    .readFileSync(path.join(root, "skills", skill.id, "SKILL.md"), "utf8")
+    .replace(/\r\n/g, "\n");
+  assert.ok(doc.startsWith("---\n"), skill.id);
+  assert.ok(doc.includes(`name: ${skill.id}`), skill.id);
+  assert.match(doc, /permission|授权/i, skill.id);
+  assert.match(doc, /verify|验证|evidence/i, skill.id);
+  assert.doesNotMatch(
+    doc,
+    /(curl\s+\S+\s*\|\s*(?:sh|bash)|wget\s+\S+\s*\|\s*(?:sh|bash))/i,
+    "unreviewed remote execution in " + skill.id,
+  );
 }
-const remote=fs.readFileSync(path.join(root,'apps/relay/src/mcp/mcp.ts'),'utf8');
-const local=fs.readFileSync(path.join(root,'apps/agent/internal/localmcp/server.go'),'utf8');
-assert.match(remote,/BUILTIN_SKILLS/);
-assert.match(remote,/registerResource\(/);
-assert.match(remote,/remotearc:\/\/skills\/catalog/);
-assert.doesNotMatch(local,/BUILTIN_SKILLS|remote-arc-skill-catalog/,'local MCP must never package cloud Skills');
-const cli=fs.readFileSync(path.join(root,'packages/cli/src/index.ts'),'utf8');
-assert.doesNotMatch(cli,/handleSkillsCli|BUILTIN_SKILLS/,'device CLI must not bundle Skill instructions');
-const cat=fs.readFileSync(path.join(root,'packages/skills/src/catalog.generated.ts'),'utf8');
-assert.ok(cat.includes('BUILTIN_SKILLS_REVISION'));
-assert.ok(cat.includes('transcribe-subtitles'));
+const remote = fs.readFileSync(path.join(root, "apps/relay/src/mcp/mcp.ts"), "utf8");
+const local = fs.readFileSync(path.join(root, "apps/agent/internal/localmcp/server.go"), "utf8");
+assert.match(remote, /BUILTIN_SKILLS/);
+assert.match(remote, /registerResource\(/);
+assert.match(remote, /remotearc:\/\/skills\/catalog/);
+assert.doesNotMatch(
+  local,
+  /BUILTIN_SKILLS|remote-arc-skill-catalog/,
+  "local MCP must never package cloud Skills",
+);
+const cli = fs.readFileSync(path.join(root, "packages/cli/src/index.ts"), "utf8");
+assert.doesNotMatch(
+  cli,
+  /handleSkillsCli|BUILTIN_SKILLS/,
+  "device CLI must not bundle Skill instructions",
+);
+const cat = fs.readFileSync(path.join(root, "packages/skills/src/catalog.generated.ts"), "utf8");
+assert.ok(cat.includes("BUILTIN_SKILLS_REVISION"));
+assert.ok(cat.includes("transcribe-subtitles"));
 // Ordinary media setup is automatic; large local models retain explicit consent.
-const videoSkill=fs.readFileSync(path.join(root,'skills/video-creator/SKILL.md'),'utf8');
-const qwenSection=videoSkill.split('**Voice-over (Qwen3-TTS')[1]?.split('**Music bed (ACE-Step')[0];
-const aceSection=videoSkill.split('**Music bed (ACE-Step')[1]?.split('**Maps & data')[0];
-assert.ok(qwenSection,'Qwen voice-over section missing');
-assert.match(qwenSection,/ask the user for explicit approval/i,'Qwen must require size-aware download approval');
-assert.match(qwenSection,/do not download Qwen/i,'Qwen must have a no-consent fallback');
-assert.ok(aceSection,'ACE-Step music section missing');
-assert.match(aceSection,/acestep-api --host 127\.0\.0\.1 --port 8001/,'ACE-Step command must force loopback despite inherited environment');
-assert.match(aceSection,/ask for explicit approval/i,'ACE-Step must require size-aware download approval');
-const subtitlesSkill=fs.readFileSync(path.join(root,'skills/transcribe-subtitles/SKILL.md'),'utf8');
-assert.match(subtitlesSkill,/\*\*Default model:\*\* `ggml-base\.bin`/,'Whisper default must be small');
-assert.match(subtitlesSkill,/1\.6 GB\) require explicit size-aware consent/i,'Large Whisper model must not auto-download');
-const cloud=fs.readFileSync(path.join(root,'apps/relay/src/skills/cloud-skills.ts'),'utf8');
-assert.match(cloud,/unauthorized/);
-assert.match(cloud,/mcp.remotearc.app/);
-assert.match(cloud,/BUILTIN_SKILLS_REVISION/);
-console.log(`Cloud Skill Pack contract tests passed: ${registry.skills.length} manifests, cloud resources, no device catalog duplication`);
+const videoSkill = fs.readFileSync(path.join(root, "skills/video-creator/SKILL.md"), "utf8");
+const qwenSection = videoSkill
+  .split("**Voice-over (Qwen3-TTS")[1]
+  ?.split("**Music bed (ACE-Step")[0];
+const aceSection = videoSkill.split("**Music bed (ACE-Step")[1]?.split("**Maps & data")[0];
+assert.ok(qwenSection, "Qwen voice-over section missing");
+assert.match(
+  qwenSection,
+  /ask the user for explicit approval/i,
+  "Qwen must require size-aware download approval",
+);
+assert.match(qwenSection, /do not download Qwen/i, "Qwen must have a no-consent fallback");
+assert.ok(aceSection, "ACE-Step music section missing");
+assert.match(
+  aceSection,
+  /acestep-api --host 127\.0\.0\.1 --port 8001/,
+  "ACE-Step command must force loopback despite inherited environment",
+);
+assert.match(
+  aceSection,
+  /ask for explicit approval/i,
+  "ACE-Step must require size-aware download approval",
+);
+const subtitlesSkill = fs.readFileSync(
+  path.join(root, "skills/transcribe-subtitles/SKILL.md"),
+  "utf8",
+);
+assert.match(
+  subtitlesSkill,
+  /\*\*Default model:\*\* `ggml-base\.bin`/,
+  "Whisper default must be small",
+);
+assert.match(
+  subtitlesSkill,
+  /1\.6 GB\) require explicit size-aware consent/i,
+  "Large Whisper model must not auto-download",
+);
+const cloud = fs.readFileSync(path.join(root, "apps/relay/src/skills/cloud-skills.ts"), "utf8");
+assert.match(cloud, /unauthorized/);
+assert.match(cloud, /mcp.remotearc.app/);
+assert.match(cloud, /BUILTIN_SKILLS_REVISION/);
+console.log(
+  `Cloud Skill Pack contract tests passed: ${registry.skills.length} manifests, cloud resources, no device catalog duplication`,
+);

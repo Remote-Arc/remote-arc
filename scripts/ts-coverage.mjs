@@ -11,7 +11,9 @@ const temp = mkdtempSync(join(tmpdir(), "remotearc-typescript-coverage-"));
 const strict = process.argv.includes("--target");
 const thresholds = coverageThresholds("typescript", strict);
 const args = [
-  "exec", "c8", "--all",
+  "exec",
+  "c8",
+  "--all",
   "--include=apps/**/src/**/*.ts",
   "--include=apps/**/src/**/*.tsx",
   "--include=packages/**/src/**/*.ts",
@@ -21,12 +23,16 @@ const args = [
   "--report-dir=" + join(temp, "report"),
   "--check-coverage",
   ...Object.entries(thresholds).map(([key, value]) => "--" + key + "=" + value),
-  "pnpm", "run", "ci",
+  "pnpm",
+  "run",
+  "ci",
 ];
-console.log(strict
-  ? "Full TypeScript strict coverage gate: all metrics must reach 90%."
-  : "Full TypeScript CI measured regression floors. 90% coverage is NOT yet achieved.");
-let code = 1;
+console.log(
+  strict
+    ? "Full TypeScript strict coverage gate: all metrics must reach 90%."
+    : "Full TypeScript CI measured regression floors. 90% coverage is NOT yet achieved.",
+);
+let code;
 try {
   const result = spawnSync("pnpm", args, { cwd: root, stdio: "inherit" });
   if (result.error) throw result.error;

@@ -1,7 +1,12 @@
+import { applicationJson } from "../platform/application-json.js";
 import { getSessionUser, nowIso } from "../auth/auth.js";
 import { diagnosticError, diagnosticRoute } from "../platform/diagnostics.js";
-import { readDeviceReliability, evaluateDeviceReliability, purgeDeviceReliability } from './device-reliability.js';
-import {readDeviceExecutionHealth} from './device-execution-health.js';
+import {
+  readDeviceReliability,
+  evaluateDeviceReliability,
+  purgeDeviceReliability,
+} from "./device-reliability.js";
+import { readDeviceExecutionHealth } from "./device-execution-health.js";
 
 type EmailBinding = {
   send(message: {
@@ -43,18 +48,35 @@ const ALERT_COOLDOWN_MS = 10 * 60_000;
 // Preserve only operational classifications; never use this for recovery state.
 function safeIncident(input: IncidentInput): IncidentInput {
   const kind = ["http_5xx", "exception", "synthetic_d1_failure"].includes(input.kind)
-    ? input.kind : "exception";
-  const statusCode = typeof input.statusCode === "number" && Number.isInteger(input.statusCode)
-    && input.statusCode >= 500 && input.statusCode <= 599 ? input.statusCode : undefined;
+    ? input.kind
+    : "exception";
+  const statusCode =
+    typeof input.statusCode === "number" &&
+    Number.isInteger(input.statusCode) &&
+    input.statusCode >= 500 &&
+    input.statusCode <= 599
+      ? input.statusCode
+      : undefined;
   return {
     kind,
-    severity: ["warning", "error", "critical"].includes(input.severity ?? "") ? input.severity : "error",
+    severity: ["warning", "error", "critical"].includes(input.severity ?? "")
+      ? input.severity
+      : "error",
     statusCode,
-    method: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].includes(input.method ?? "")
-      ? input.method : undefined,
+    method: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].includes(
+      input.method ?? "",
+    )
+      ? input.method
+      : undefined,
     path: diagnosticRoute(input.path),
-    message: kind === "http_5xx" ? "Remote Arc returned HTTP " + (statusCode ?? 500) : diagnosticError(input.message),
-    rayId: typeof input.rayId === "string" && /^[a-f0-9]{16,32}-[A-Z]{3}$/i.test(input.rayId) ? input.rayId : null,
+    message:
+      kind === "http_5xx"
+        ? "Remote Arc returned HTTP " + (statusCode ?? 500)
+        : diagnosticError(input.message),
+    rayId:
+      typeof input.rayId === "string" && /^[a-f0-9]{16,32}-[A-Z]{3}$/i.test(input.rayId)
+        ? input.rayId
+        : null,
     colo: typeof input.colo === "string" && /^[A-Z]{3}$/.test(input.colo) ? input.colo : null,
   };
 }
@@ -63,11 +85,7 @@ function isAdmin(user: { role?: string | null } | null) {
   return user?.role === "admin";
 }
 
-async function sendIncidentAlert(
-  env: MonitorEnv,
-  incident: IncidentInput,
-  incidentId: string,
-) {
+async function sendIncidentAlert(env: MonitorEnv, incident: IncidentInput, incidentId: string) {
   if (!env.EMAIL || !env.ALERT_EMAIL || !env.ALERT_FROM_EMAIL) return false;
 
   const alertKey = incident.kind === "exception" ? "worker_exception" : "worker_5xx";
@@ -77,10 +95,7 @@ async function sendIncidentAlert(
     .bind(alertKey)
     .first<{ last_sent_at: string | null }>();
 
-  if (
-    state?.last_sent_at &&
-    Date.now() - Date.parse(state.last_sent_at) < ALERT_COOLDOWN_MS
-  ) {
+  if (state?.last_sent_at && Date.now() - Date.parse(state.last_sent_at) < ALERT_COOLDOWN_MS) {
     return false;
   }
 
@@ -123,21 +138,13 @@ async function sendIncidentAlert(
        last_path = excluded.last_path,
        updated_at = excluded.updated_at`,
   )
-    .bind(
-      alertKey,
-      sentAt,
-      incident.statusCode ?? null,
-      incident.path ?? null,
-    )
+    .bind(alertKey, sentAt, incident.statusCode ?? null, incident.path ?? null)
     .run();
 
   return true;
 }
 
-export async function recordServiceIncident(
-  env: MonitorEnv,
-  input: IncidentInput,
-) {
+export async function recordServiceIncident(env: MonitorEnv, input: IncidentInput) {
   // Persistence, email and fallback logs must all use this sanitized copy.
   const incident = safeIncident(input);
   // A 5xx flood must not insert an unbounded number of incident rows into
@@ -212,56 +219,60 @@ export function incidentFromRequest(
 
 export async function handleMonitorState(request: Request, env: MonitorEnv) {
   const user = await getSessionUser(request, env);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
-  if (!isAdmin(user)) return Response.json({ error: "forbidden" }, { status: 403 });
+  if (!user) return applicationJson({ error: "unauthorized" }, { status: 401 });
+  if (!isAdmin(user)) return applicationJson({ error: "forbidden" }, { status: 403 });
 
   const now = Date.now();
   const t15m = new Date(now - 15 * 60_000).toISOString();
   const t1h = new Date(now - 60 * 60_000).toISOString();
   const t24h = new Date(now - 24 * 60 * 60_000).toISOString();
 
-  const [counts, recent, accountCounts, alertState, deviceReliability,deviceExecution] = await Promise.all([
-    env.DB.prepare(
-      `SELECT
+  const [counts, recent, accountCounts, alertState, deviceReliability, deviceExecution] =
+    await Promise.all([
+      env.DB.prepare(
+        `SELECT
         SUM(CASE WHEN created_at >= ?1 THEN 1 ELSE 0 END) AS errors_15m,
         SUM(CASE WHEN created_at >= ?1 AND (kind = 'synthetic_d1_failure' OR message LIKE 'D1_ERROR:%') THEN 1 ELSE 0 END) AS d1_errors_15m,
         SUM(CASE WHEN created_at >= ?2 THEN 1 ELSE 0 END) AS errors_1h,
         SUM(CASE WHEN created_at >= ?3 THEN 1 ELSE 0 END) AS errors_24h
        FROM service_incidents
        WHERE severity IN ('error', 'critical') AND created_at>=?3`,
-    )
-      .bind(t15m, t1h, t24h)
-      .first<{ errors_15m: number | null; d1_errors_15m: number | null; errors_1h: number | null; errors_24h: number | null }>(),
-    env.DB.prepare(
-      `SELECT id, created_at, severity, kind, status_code, method, path, message, ray_id, colo
+      )
+        .bind(t15m, t1h, t24h)
+        .first<{
+          errors_15m: number | null;
+          d1_errors_15m: number | null;
+          errors_1h: number | null;
+          errors_24h: number | null;
+        }>(),
+      env.DB.prepare(
+        `SELECT id, created_at, severity, kind, status_code, method, path, message, ray_id, colo
        FROM service_incidents
        ORDER BY created_at DESC
        LIMIT 40`,
-    ).all(),
-    env.DB.prepare(
-      `SELECT
+      ).all(),
+      env.DB.prepare(
+        `SELECT
         (SELECT COUNT(*) FROM users) AS users,
         (SELECT COUNT(*) FROM devices WHERE revoked_at IS NULL) AS devices,
         (SELECT COUNT(*) FROM oauth_tokens WHERE revoked_at IS NULL AND expires_at > ?1) AS active_tokens`,
-    )
-      .bind(nowIso())
-      .first<{ users: number; devices: number; active_tokens: number }>(),
-    env.DB.prepare(
-      "SELECT alert_key, last_sent_at, last_status_code, last_path FROM service_alert_state ORDER BY updated_at DESC LIMIT 5",
-    ).all(),
-    readDeviceReliability(env),
-    readDeviceExecutionHealth(env,now),
-  ]);
+      )
+        .bind(nowIso())
+        .first<{ users: number; devices: number; active_tokens: number }>(),
+      env.DB.prepare(
+        "SELECT alert_key, last_sent_at, last_status_code, last_path FROM service_alert_state ORDER BY updated_at DESC LIMIT 5",
+      ).all(),
+      readDeviceReliability(env),
+      readDeviceExecutionHealth(env, now),
+    ]);
 
   let durableObjectStatus = "operational";
   try {
-    const probe = await env.REGISTRY
-      .getByName("monitor:health")
-      .fetch(
-        new Request("https://registry/devices", {
-          headers: { "x-remote-link-user-id": "monitor-health" },
-        }),
-      );
+    const probe = await env.REGISTRY.getByName("monitor:health").fetch(
+      new Request("https://registry/devices", {
+        headers: { "x-remote-link-user-id": "monitor-health" },
+      }),
+    );
     if (!probe.ok) durableObjectStatus = "degraded";
   } catch {
     durableObjectStatus = "degraded";
@@ -269,15 +280,18 @@ export async function handleMonitorState(request: Request, env: MonitorEnv) {
 
   const errors15m = counts?.errors_15m || 0;
   const workerStatus =
-    errors15m > 0 || durableObjectStatus !== "operational"
+    errors15m > 0 || durableObjectStatus !== "operational" ? "degraded" : "operational";
+  const status =
+    workerStatus === "degraded" ||
+    deviceExecution.status === "degraded" ||
+    ["firing", "recovering"].includes(deviceReliability.signal?.phase || "")
       ? "degraded"
       : "operational";
-  const status = workerStatus === 'degraded' || deviceExecution.status==='degraded' || ['firing','recovering'].includes(deviceReliability.signal?.phase||'') ? 'degraded' : 'operational';
 
-  return Response.json({
+  return applicationJson({
     status,
     checkedAt: nowIso(),
-    deployment: /^[a-f0-9]{40}$/.test(env.DEPLOYMENT_SHA||'') ? env.DEPLOYMENT_SHA : null,
+    deployment: /^[a-f0-9]{40}$/.test(env.DEPLOYMENT_SHA || "") ? env.DEPLOYMENT_SHA : null,
     deviceReliability,
     deviceExecution,
     worker: {
@@ -318,17 +332,36 @@ export async function runSyntheticMonitor(env: MonitorEnv) {
     return;
   }
   try {
-    const snapshot=await readDeviceReliability(env);
-    const notify=env.EMAIL&&env.ALERT_EMAIL&&env.ALERT_FROM_EMAIL
-      ?async(input:{phase:'firing'|'healthy';counts:{reconnects:number;reconnectingDevices:number};at:string})=>{
-        await env.EMAIL!.send({to:env.ALERT_EMAIL,from:env.ALERT_FROM_EMAIL!,
-          subject:input.phase==='firing'?'[Remote Arc] Device reconnect anomaly':'[Remote Arc] Device reconnect recovery',
-          text:[input.phase==='firing'?'Sustained reconnect churn across multiple devices. This signal is not proof of a platform outage.':'Observed device reconnect churn has remained below the alert threshold.',
-            'Time: '+input.at,'15-minute reconnects (observed lower bound): '+input.counts.reconnects,
-            'Devices with at least three connections: '+input.counts.reconnectingDevices,
-            'Monitor: https://admin.remotearc.app/monitor'].join('\n')});
-      }:undefined;
-    await evaluateDeviceReliability(env,snapshot,notify);
+    const snapshot = await readDeviceReliability(env);
+    const notify =
+      env.EMAIL && env.ALERT_EMAIL && env.ALERT_FROM_EMAIL
+        ? async (input: {
+            phase: "firing" | "healthy";
+            counts: { reconnects: number; reconnectingDevices: number };
+            at: string;
+          }) => {
+            await env.EMAIL!.send({
+              to: env.ALERT_EMAIL,
+              from: env.ALERT_FROM_EMAIL!,
+              subject:
+                input.phase === "firing"
+                  ? "[Remote Arc] Device reconnect anomaly"
+                  : "[Remote Arc] Device reconnect recovery",
+              text: [
+                input.phase === "firing"
+                  ? "Sustained reconnect churn across multiple devices. This signal is not proof of a platform outage."
+                  : "Observed device reconnect churn has remained below the alert threshold.",
+                "Time: " + input.at,
+                "15-minute reconnects (observed lower bound): " + input.counts.reconnects,
+                "Devices with at least three connections: " + input.counts.reconnectingDevices,
+                "Monitor: https://admin.remotearc.app/monitor",
+              ].join("\n"),
+            });
+          }
+        : undefined;
+    await evaluateDeviceReliability(env, snapshot, notify);
     await purgeDeviceReliability(env);
-  }catch{console.warn('device_reliability_monitor_unavailable');}
+  } catch {
+    console.warn("device_reliability_monitor_unavailable");
+  }
 }

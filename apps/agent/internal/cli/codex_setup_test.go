@@ -47,7 +47,7 @@ func TestLocalSetupCommandsDoNotAcquireDeviceExecutionOrPair(t *testing.T) {
 		t.Fatal("missing Codex accepted")
 	}
 	var report codexsetup.Result
-	if e := json.Unmarshal(out.Bytes(), &report); e != nil || report.ErrorCode != "codex_not_found" {
+	if e := json.Unmarshal(out.Bytes(), &report); e != nil || report.ErrorCode != "CODEX_NOT_FOUND" {
 		t.Fatal("missing-client receipt", e)
 	}
 }

@@ -1,85 +1,521 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import {DatabaseSync} from 'node:sqlite';
-import {sha256Hex} from '../src/auth/auth.js';
-import {handleAdminServiceRequest} from '../src/admin/admin-service.js';
-import {runFollowupBatches} from '../src/followups/followup-batches.js';
-import {DEFAULT_FOLLOWUP_DESIGN} from '../../../packages/protocol/src/followup-email.js';
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { sha256Hex } from "../src/auth/auth.js";
+import { handleAdminServiceRequest } from "../src/admin/admin-service.js";
+import { runFollowupBatches } from "../src/followups/followup-batches.js";
+import { DEFAULT_FOLLOWUP_DESIGN } from "../../../packages/protocol/src/followup-email.js";
 
-const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');
-for(const name of fs.readdirSync(new URL('../migrations/',import.meta.url)).filter(n=>n.endsWith('.sql')).sort())sql.exec(fs.readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));
-const db={prepare(query:string){const statement=sql.prepare(query);const bound=(args:unknown[])=>{const run=()=>{const value=statement.run(...args);return{success:true,meta:{changes:Number(value.changes)}};};return{async first(){return statement.get(...args)||null;},async all(){return{results:statement.all(...args)};},async run(){return run();},_run:run,_sql:query};};return{...bound([]),bind(...args:unknown[]){assert(!args.includes(undefined),query);return bound(args);}};},async batch(statements:any[]){sql.exec('BEGIN');try{const result=statements.map(statement=>statement._run());sql.exec('COMMIT');return result;}catch(error){sql.exec('ROLLBACK');throw error;}}} as unknown as D1Database;
-const origin='https://admin.remotearc.app',now=new Date().toISOString(),future=new Date(Date.now()+86400000).toISOString();
-const people=['admin','one','two','stop','cool','unknown','changed','permission','permission-cleared','revoked','rate','cancel','crash','inflight','cancelprep','crashcancel','warm','budget'];
-for(const id of people){sql.prepare('INSERT INTO users(id,google_sub,email,name,role,created_at) VALUES(?,?,?,?,?,?)').run(id,id,id+'@example.invalid',id.toUpperCase(),id==='admin'?'admin':'user',now);sql.prepare('INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)').run(await sha256Hex('batch-'+id),id,future,now);}
-const env={DB:db,PUBLIC_ORIGIN:'https://mcp.remotearc.app',ADMIN_ORIGIN:origin,RESEND_API_KEY:'fixture-key',EMAIL_FROM:'Remote Arc <login@example.invalid>'} as any;
-const req=(path:string,method='GET',value?:unknown,actor='admin',source=origin)=>new Request(origin+'/api/admin/followups'+path,{method,headers:{cookie:'rl_session=batch-'+actor,origin:source,'content-type':'application/json'},...(value===undefined?{}:{body:JSON.stringify(value)})});
-const api=(path:string,method='GET',value?:unknown,actor='admin',source=origin)=>handleAdminServiceRequest(req(path,method,value,actor,source),env);
-const decode=async(response:Response,status=200)=>{const value=await response.json() as any;assert.equal(response.status,status,JSON.stringify(value));return value;};
-const input=(ids:string[],patch={})=>({id:crypto.randomUUID(),title:'Installation follow-up',userIds:ids,templateId:'experience',locale:'en',subject:'Hello {{name}}',body:'Hi {{name}},\n\nPlease share an update: {{feedbackUrl}}\nSetup: {{setupUrl}}',design:{...DEFAULT_FOLLOWUP_DESIGN,highlights:[]},basis:'support',basisNote:'Existing support requests',...patch});
-const create=async(ids:string[],patch={})=>{const value=input(ids,patch);return{value,detail:await decode(await api('/batches','POST',value),201)};};
-const queue=async(id:string)=>decode(await api('/batches/'+id+'/queue','POST',{}),202);
-const get=async(id:string)=>decode(await api('/batches/'+id));
-const run=()=>runFollowupBatches(env,{pause:async()=>{}});
-let payloads:any[]=[];const native=globalThis.fetch;
-globalThis.fetch=async(url,options)=>{assert.equal(String(url),'https://api.resend.com/emails');const value=JSON.parse(String(options?.body));assert.equal(value.from,'Remote Arc <support@remotearc.app>');assert.equal(value.reply_to,'support@remotearc.app');assert.equal(value.to.length,1);assert(!value.cc&&!value.bcc);assert(!value.text.includes('{{'));const key=new Headers(options?.headers).get('idempotency-key');assert(key?.startsWith('followup/'));assert.equal(value.html,sql.prepare('SELECT html_body FROM user_followup_messages WHERE id=?').get(key!.slice('followup/'.length))?.html_body);payloads.push(value);return Response.json({id:'mock-'+payloads.length});};
-try{
- const unauthenticated=req('/batches','POST',input(['one']));unauthenticated.headers.delete('cookie');assert.equal((await handleAdminServiceRequest(unauthenticated,env)).status,401);
- assert.equal((await api('/batches','POST',input(['one']),'one')).status,403);assert.equal((await api('/batches','POST',input(['one']),'admin','https://evil.invalid')).status,403);
- assert.equal((await api('/batches','POST',input(['one','one']))).status,400);assert.equal((await api('/batches','POST',input(Array.from({length:101},(_,i)=>String(i))))).status,400);
- for(const id of ['stop','cool','unknown'])await decode(await api('/'+id));
- sql.prepare('UPDATE user_followup_contacts SET suppressed_at=? WHERE user_id=?').run(now,'stop');
- for(const [id,status] of [['cool','sent'],['unknown','unknown']])sql.prepare('INSERT INTO user_followup_messages(id,user_id,actor_id,template_id,locale,recipient_email,subject,body,status,created_at,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run('seed-'+id,id,'admin','experience','en',id+'@example.invalid','Earlier mail','Earlier support update body',status,now,status==='sent'?now:null);
- const initial=await decode(await api(''));assert.equal(initial.counts.all,people.length);assert.equal(initial.counts.suppressed,1);
- const {value,detail}=await create(['one','two','stop','cool','unknown']);assert.equal(payloads.length,0,'Preparing is never sending');assert.equal(detail.batch.pending,2);assert.equal(detail.batch.skipped,3);assert.equal(detail.preview.subject,'Hello ONE');assert(detail.preview.html_body.includes('ONE'));
- assert.equal((await decode(await api('/batches','POST',value))).batch.id,value.id);assert.equal((await api('/batches','POST',{...value,title:'Changed'})).status,409);
- const owned=detail.recipients.find((person:any)=>person.user_id==='one').message_id;
- assert.equal((await api('/'+owned+'/send','POST',{})).status,409,'Individual send cannot bypass batch confirmation');
- const mail=sql.prepare('SELECT * FROM user_followup_messages WHERE id=?').get(owned)!;assert.equal((await api('/drafts','POST',{id:owned,userId:'one',templateId:'experience',locale:'en',subject:'Edit queued content',body:String(mail.body),expectedRevision:1})).status,409,'Batch snapshots cannot be edited individually');
- await queue(value.id);assert.equal((await decode(await api('/one'))).messages[0].batch_status,'queued');assert.equal((await decode(await api('?query=one'))).items[0].queued_followups,1);await decode(await api('/batches/'+value.id+'/queue','POST',{}));assert.equal(payloads.length,0,'Queueing only authorizes background delivery');
- await Promise.all([run(),run()]);assert.equal(payloads.length,2,'Overlapping workers do not duplicate sends');assert.deepEqual(payloads.map(value=>value.to[0]).sort(),['one@example.invalid','two@example.invalid']);assert.notEqual(payloads[0].text,payloads[1].text,'Each recipient has a personal feedback link');assert.equal((await get(value.id)).batch.status,'completed');await run();assert.equal(payloads.length,2);
- const contacted=await decode(await api('?tab=contacted'));assert(contacted.items.some((person:any)=>person.id==='one'));assert(!((await decode(await api('?tab=pending'))).items.some((person:any)=>person.id==='one')));
- await decode(await api('/bulk-status','PATCH',{userIds:['one','two'],status:'waiting'}));assert.equal((await decode(await api('?tab=waiting'))).total,2);await decode(await api('/bulk-status','PATCH',{userIds:['one'],status:'resolved'}));assert.equal((await decode(await api('?tab=resolved'))).total,1);assert.equal((await decode(await api('/selection?tab=resolved'))).ids[0],'one');
- // Optional notes must not exclude registered users or invent consent.
- const consent=()=>sql.prepare('SELECT consent_at,consent_note FROM user_followup_contacts WHERE user_id=?').get('permission');
- for(const basis of [undefined,null,'','   ','existing']){
-  const prepared=await create(['permission'],{basis});assert.equal(prepared.detail.batch.pending,1);assert.equal(prepared.detail.batch.skipped,0);assert(prepared.detail.preview);assert.equal(prepared.detail.basis,'existing');assert.equal(consent()?.consent_at,null);await decode(await api('/batches/'+prepared.value.id+'/cancel','POST',{}));
- }
- assert.equal((await api('/batches','POST',input(['permission'],{basis:'invented'}))).status,400);
- const noBasis=await create(['permission'],{basis:null});await queue(noBasis.value.id);assert.equal(consent()?.consent_at,null,'Queueing without a basis does not manufacture user agreement');await run();assert.equal((await get(noBasis.value.id)).recipients[0].status,'sent');assert.equal(consent()?.consent_at,null);assert.equal(consent()?.consent_note,'');
- const permission=await create(['permission-cleared']);await queue(permission.value.id);sql.prepare("UPDATE user_followup_contacts SET consent_at=NULL,consent_note='' WHERE user_id=?").run('permission-cleared');await run();assert.equal((await get(permission.value.id)).recipients[0].status,'sent','Optional metadata is not reintroduced as a background send gate');assert.equal(sql.prepare('SELECT consent_at FROM user_followup_contacts WHERE user_id=?').get('permission-cleared')?.consent_at,null);
- const deliveredBeforeFailures=payloads.length;
- const changed=await create(['changed']);await queue(changed.value.id);sql.prepare('UPDATE users SET email=? WHERE id=?').run('changed-address@example.invalid','changed');await run();assert.equal((await get(changed.value.id)).recipients[0].error_code,'recipient_changed');assert.equal(payloads.length,deliveredBeforeFailures);
- const stopped=await create(['revoked']);await queue(stopped.value.id);sql.prepare('UPDATE user_followup_contacts SET suppressed_at=? WHERE user_id=?').run(now,'revoked');await run();assert.equal((await get(stopped.value.id)).recipients[0].error_code,'recipient_suppressed');
- const revoked=await create(['cancel']);await queue(revoked.value.id);sql.prepare("UPDATE users SET role='user' WHERE id='admin'").run();await run();sql.prepare("UPDATE users SET role='admin' WHERE id='admin'").run();assert.equal((await get(revoked.value.id)).recipients[0].error_code,'actor_no_longer_admin');
- const cancelled=await create(['cancel']);await queue(cancelled.value.id);await decode(await api('/batches/'+cancelled.value.id+'/cancel','POST',{}));await run();assert.equal((await get(cancelled.value.id)).recipients[0].status,'cancelled');assert.equal(payloads.length,deliveredBeforeFailures);
- const concurrent=input(['cancel']);const concurrentResponses=await Promise.all([api('/batches','POST',concurrent),api('/batches','POST',concurrent)]);for(const response of concurrentResponses)assert([200,201].includes(response.status));assert.equal(sql.prepare('SELECT COUNT(*) count FROM user_followup_messages WHERE batch_id=?').get(concurrent.id)?.count,1,'Concurrent preparation creates one immutable message');
- const crash=await create(['crash']);await queue(crash.value.id);const crashMessage=crash.detail.recipients[0].message_id;sql.prepare("UPDATE user_followup_messages SET status='sending' WHERE id=?").run(crashMessage);sql.prepare("UPDATE user_followup_batch_recipients SET status='processing' WHERE batch_id=?").run(crash.value.id);await run();assert.equal((await get(crash.value.id)).recipients[0].status,'unknown');assert.equal(sql.prepare('SELECT status FROM user_followup_messages WHERE id=?').get(crashMessage)?.status,'unknown');assert.equal(payloads.length,deliveredBeforeFailures,'A crashed in-flight delivery is never blindly resent');
- const rate=await create(['rate']);await queue(rate.value.id);let attempts=0;const keys:string[]=[];const normal=globalThis.fetch;globalThis.fetch=async(url,options)=>{attempts++;keys.push(new Headers(options?.headers).get('idempotency-key')!);return attempts===1?Response.json({message:'rate limited'},{status:429}):normal(url,options);};await run();assert.equal((await get(rate.value.id)).recipients[0].status,'pending');await run();assert.equal(attempts,1,'A throttled recipient waits for its retry time');sql.prepare('UPDATE user_followup_batch_recipients SET next_attempt_at=? WHERE batch_id=?').run('2000-01-01T00:00:00.000Z',rate.value.id);await run();assert.equal((await get(rate.value.id)).recipients[0].status,'sent');assert.equal(keys[0],keys[1]);globalThis.fetch=normal;
- const inflight=await create(['inflight','cancel']);await queue(inflight.value.id);let release!:()=>void,started!:()=>void;const startedPromise=new Promise<void>(resolve=>{started=resolve;}),hold=new Promise<void>(resolve=>{release=resolve;});globalThis.fetch=async(url,options)=>{started();await hold;return normal(url,options);};const worker=run();await startedPromise;await decode(await api('/batches/'+inflight.value.id+'/cancel','POST',{}));release();await worker;const result=await get(inflight.value.id);assert.equal(result.batch.status,'cancelled');assert.equal(result.batch.sent,1);assert.equal(result.batch.cancelled,1);
- globalThis.fetch=normal;
- const crashcancel=await create(['crashcancel']);await queue(crashcancel.value.id);sql.prepare("UPDATE user_followup_batch_recipients SET status='processing' WHERE batch_id=?").run(crashcancel.value.id);await decode(await api('/batches/'+crashcancel.value.id+'/cancel','POST',{}));await run();assert.equal((await get(crashcancel.value.id)).recipients[0].status,'cancelled','A cancelled pre-claim crash must not leave a pending item behind');
- const originalBatch=db.batch.bind(db);let releasePreparation!:()=>void,preparationStarted!:()=>void;const preparationGate=new Promise<void>(resolve=>{releasePreparation=resolve;}),preparationReady=new Promise<void>(resolve=>{preparationStarted=resolve;});let held=false;
- env.DB={...db,async batch(statements:any[]){if(!held&&statements[0]?._sql.includes('INSERT OR IGNORE INTO user_followup_messages')){held=true;preparationStarted();await preparationGate;}return originalBatch(statements);}};
- const prepInput=input(['cancelprep']),preparing=api('/batches','POST',prepInput);await preparationReady;await decode(await api('/batches/'+prepInput.id+'/cancel','POST',{}));releasePreparation();const prepResult=await decode(await preparing,201);assert.equal(prepResult.batch.status,'cancelled');assert.equal(prepResult.batch.pending,0);assert.equal(sql.prepare('SELECT COUNT(*) count FROM user_followup_messages WHERE batch_id=?').get(prepInput.id)?.count,0,'Cancellation during preparation prevents new email snapshots');env.DB=db;
- const warm=await create(['warm']),tasks:Promise<unknown>[]=[];const before=payloads.length;await handleAdminServiceRequest(req('/batches/'+warm.value.id+'/queue','POST',{}),env,{waitUntil(promise){tasks.push(promise);}});assert.equal(tasks.length,1);await Promise.all(tasks);assert.equal(payloads.length,before+1,'An explicitly queued batch also gets a bounded background warm start');
+const sql = new DatabaseSync(":memory:");
+sql.exec("PRAGMA foreign_keys=ON");
+for (const name of fs
+  .readdirSync(new URL("../migrations/", import.meta.url))
+  .filter((n) => n.endsWith(".sql"))
+  .sort())
+  sql.exec(fs.readFileSync(new URL("../migrations/" + name, import.meta.url), "utf8"));
+const db = {
+  prepare(query: string) {
+    const statement = sql.prepare(query);
+    const bound = (args: unknown[]) => {
+      const run = () => {
+        const value = statement.run(...args);
+        return { success: true, meta: { changes: Number(value.changes) } };
+      };
+      return {
+        async first() {
+          return statement.get(...args) || null;
+        },
+        async all() {
+          return { results: statement.all(...args) };
+        },
+        async run() {
+          return run();
+        },
+        _run: run,
+        _sql: query,
+      };
+    };
+    return {
+      ...bound([]),
+      bind(...args: unknown[]) {
+        assert(!args.includes(undefined), query);
+        return bound(args);
+      },
+    };
+  },
+  async batch(statements: any[]) {
+    sql.exec("BEGIN");
+    try {
+      const result = statements.map((statement) => statement._run());
+      sql.exec("COMMIT");
+      return result;
+    } catch (error) {
+      sql.exec("ROLLBACK");
+      throw error;
+    }
+  },
+} as unknown as D1Database;
+const origin = "https://admin.remotearc.app",
+  now = new Date().toISOString(),
+  future = new Date(Date.now() + 86400000).toISOString();
+const people = [
+  "admin",
+  "one",
+  "two",
+  "stop",
+  "cool",
+  "unknown",
+  "changed",
+  "permission",
+  "permission-cleared",
+  "revoked",
+  "rate",
+  "cancel",
+  "crash",
+  "inflight",
+  "cancelprep",
+  "crashcancel",
+  "warm",
+  "budget",
+];
+for (const id of people) {
+  sql
+    .prepare("INSERT INTO users(id,google_sub,email,name,role,created_at) VALUES(?,?,?,?,?,?)")
+    .run(id, id, id + "@example.invalid", id.toUpperCase(), id === "admin" ? "admin" : "user", now);
+  sql
+    .prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)")
+    .run(await sha256Hex("batch-" + id), id, future, now);
+}
+const env = {
+  DB: db,
+  PUBLIC_ORIGIN: "https://mcp.remotearc.app",
+  ADMIN_ORIGIN: origin,
+  RESEND_API_KEY: "fixture-key",
+  EMAIL_FROM: "Remote Arc <login@example.invalid>",
+} as any;
+const req = (path: string, method = "GET", value?: unknown, actor = "admin", source = origin) =>
+  new Request(origin + "/api/admin/followups" + path, {
+    method,
+    headers: {
+      cookie: "rl_session=batch-" + actor,
+      origin: source,
+      "content-type": "application/json",
+    },
+    ...(value === undefined ? {} : { body: JSON.stringify(value) }),
+  });
+const api = (path: string, method = "GET", value?: unknown, actor = "admin", source = origin) =>
+  handleAdminServiceRequest(req(path, method, value, actor, source), env);
+const decode = async (response: Response, status = 200) => {
+  const value = (await response.json()) as any;
+  assert.equal(response.status, status, JSON.stringify(value));
+  return value;
+};
+const input = (ids: string[], patch = {}) => ({
+  id: crypto.randomUUID(),
+  title: "Installation follow-up",
+  userIds: ids,
+  templateId: "experience",
+  locale: "en",
+  subject: "Hello {{name}}",
+  body: "Hi {{name}},\n\nPlease share an update: {{feedbackUrl}}\nSetup: {{setupUrl}}",
+  design: { ...DEFAULT_FOLLOWUP_DESIGN, highlights: [] },
+  basis: "support",
+  basisNote: "Existing support requests",
+  ...patch,
+});
+const create = async (ids: string[], patch = {}) => {
+  const value = input(ids, patch);
+  return { value, detail: await decode(await api("/batches", "POST", value), 201) };
+};
+const queue = async (id: string) => decode(await api("/batches/" + id + "/queue", "POST", {}), 202);
+const get = async (id: string) => decode(await api("/batches/" + id));
+const run = () => runFollowupBatches(env, { pause: async () => {} });
+const payloads: any[] = [];
+const native = globalThis.fetch;
+globalThis.fetch = async (url, options) => {
+  assert.equal(String(url), "https://api.resend.com/emails");
+  const value = JSON.parse(String(options?.body));
+  assert.equal(value.from, "Remote Arc <support@remotearc.app>");
+  assert.equal(value.reply_to, "support@remotearc.app");
+  assert.equal(value.to.length, 1);
+  assert(!value.cc && !value.bcc);
+  assert(!value.text.includes("{{"));
+  const key = new Headers(options?.headers).get("idempotency-key");
+  assert(key?.startsWith("followup/"));
+  assert.equal(
+    value.html,
+    sql
+      .prepare("SELECT html_body FROM user_followup_messages WHERE id=?")
+      .get(key!.slice("followup/".length))?.html_body,
+  );
+  payloads.push(value);
+  return Response.json({ id: "mock-" + payloads.length });
+};
+try {
+  const unauthenticated = req("/batches", "POST", input(["one"]));
+  unauthenticated.headers.delete("cookie");
+  assert.equal((await handleAdminServiceRequest(unauthenticated, env)).status, 401);
+  assert.equal((await api("/batches", "POST", input(["one"]), "one")).status, 403);
+  assert.equal(
+    (await api("/batches", "POST", input(["one"]), "admin", "https://evil.invalid")).status,
+    403,
+  );
+  assert.equal((await api("/batches", "POST", input(["one", "one"]))).status, 400);
+  assert.equal(
+    (await api("/batches", "POST", input(Array.from({ length: 101 }, (_, i) => String(i))))).status,
+    400,
+  );
+  for (const id of ["stop", "cool", "unknown"]) await decode(await api("/" + id));
+  sql.prepare("UPDATE user_followup_contacts SET suppressed_at=? WHERE user_id=?").run(now, "stop");
+  for (const [id, status] of [
+    ["cool", "sent"],
+    ["unknown", "unknown"],
+  ])
+    sql
+      .prepare(
+        "INSERT INTO user_followup_messages(id,user_id,actor_id,template_id,locale,recipient_email,subject,body,status,created_at,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+      )
+      .run(
+        "seed-" + id,
+        id,
+        "admin",
+        "experience",
+        "en",
+        id + "@example.invalid",
+        "Earlier mail",
+        "Earlier support update body",
+        status,
+        now,
+        status === "sent" ? now : null,
+      );
+  const initial = await decode(await api(""));
+  assert.equal(initial.counts.all, people.length);
+  assert.equal(initial.counts.suppressed, 1);
+  const { value, detail } = await create(["one", "two", "stop", "cool", "unknown"]);
+  assert.equal(payloads.length, 0, "Preparing is never sending");
+  assert.equal(detail.batch.pending, 2);
+  assert.equal(detail.batch.skipped, 3);
+  assert.equal(detail.preview.subject, "Hello ONE");
+  assert(detail.preview.html_body.includes("ONE"));
+  assert.equal((await decode(await api("/batches", "POST", value))).batch.id, value.id);
+  assert.equal((await api("/batches", "POST", { ...value, title: "Changed" })).status, 409);
+  const owned = detail.recipients.find((person: any) => person.user_id === "one").message_id;
+  assert.equal(
+    (await api("/" + owned + "/send", "POST", {})).status,
+    409,
+    "Individual send cannot bypass batch confirmation",
+  );
+  const mail = sql.prepare("SELECT * FROM user_followup_messages WHERE id=?").get(owned)!;
+  assert.equal(
+    (
+      await api("/drafts", "POST", {
+        id: owned,
+        userId: "one",
+        templateId: "experience",
+        locale: "en",
+        subject: "Edit queued content",
+        body: String(mail.body),
+        expectedRevision: 1,
+      })
+    ).status,
+    409,
+    "Batch snapshots cannot be edited individually",
+  );
+  await queue(value.id);
+  assert.equal((await decode(await api("/one"))).messages[0].batch_status, "queued");
+  assert.equal((await decode(await api("?query=one"))).items[0].queued_followups, 1);
+  await decode(await api("/batches/" + value.id + "/queue", "POST", {}));
+  assert.equal(payloads.length, 0, "Queueing only authorizes background delivery");
+  await Promise.all([run(), run()]);
+  assert.equal(payloads.length, 2, "Overlapping workers do not duplicate sends");
+  assert.deepEqual(payloads.map((value) => value.to[0]).sort(), [
+    "one@example.invalid",
+    "two@example.invalid",
+  ]);
+  assert.notEqual(
+    payloads[0].text,
+    payloads[1].text,
+    "Each recipient has a personal feedback link",
+  );
+  assert.equal((await get(value.id)).batch.status, "completed");
+  await run();
+  assert.equal(payloads.length, 2);
+  const contacted = await decode(await api("?tab=contacted"));
+  assert(contacted.items.some((person: any) => person.id === "one"));
+  assert(
+    !(await decode(await api("?tab=pending"))).items.some((person: any) => person.id === "one"),
+  );
+  await decode(await api("/bulk-status", "PATCH", { userIds: ["one", "two"], status: "waiting" }));
+  assert.equal((await decode(await api("?tab=waiting"))).total, 2);
+  await decode(await api("/bulk-status", "PATCH", { userIds: ["one"], status: "resolved" }));
+  assert.equal((await decode(await api("?tab=resolved"))).total, 1);
+  assert.equal((await decode(await api("/selection?tab=resolved"))).ids[0], "one");
+  // Optional notes must not exclude registered users or invent consent.
+  const consent = () =>
+    sql
+      .prepare("SELECT consent_at,consent_note FROM user_followup_contacts WHERE user_id=?")
+      .get("permission");
+  for (const basis of [undefined, null, "", "   ", "existing"]) {
+    const prepared = await create(["permission"], { basis });
+    assert.equal(prepared.detail.batch.pending, 1);
+    assert.equal(prepared.detail.batch.skipped, 0);
+    assert(prepared.detail.preview);
+    assert.equal(prepared.detail.basis, "existing");
+    assert.equal(consent()?.consent_at, null);
+    await decode(await api("/batches/" + prepared.value.id + "/cancel", "POST", {}));
+  }
+  assert.equal(
+    (await api("/batches", "POST", input(["permission"], { basis: "invented" }))).status,
+    400,
+  );
+  const noBasis = await create(["permission"], { basis: null });
+  await queue(noBasis.value.id);
+  assert.equal(
+    consent()?.consent_at,
+    null,
+    "Queueing without a basis does not manufacture user agreement",
+  );
+  await run();
+  assert.equal((await get(noBasis.value.id)).recipients[0].status, "sent");
+  assert.equal(consent()?.consent_at, null);
+  assert.equal(consent()?.consent_note, "");
+  const permission = await create(["permission-cleared"]);
+  await queue(permission.value.id);
+  sql
+    .prepare("UPDATE user_followup_contacts SET consent_at=NULL,consent_note='' WHERE user_id=?")
+    .run("permission-cleared");
+  await run();
+  assert.equal(
+    (await get(permission.value.id)).recipients[0].status,
+    "sent",
+    "Optional metadata is not reintroduced as a background send gate",
+  );
+  assert.equal(
+    sql
+      .prepare("SELECT consent_at FROM user_followup_contacts WHERE user_id=?")
+      .get("permission-cleared")?.consent_at,
+    null,
+  );
+  const deliveredBeforeFailures = payloads.length;
+  const changed = await create(["changed"]);
+  await queue(changed.value.id);
+  sql
+    .prepare("UPDATE users SET email=? WHERE id=?")
+    .run("changed-address@example.invalid", "changed");
+  await run();
+  assert.equal((await get(changed.value.id)).recipients[0].error_code, "RECIPIENT_CHANGED");
+  assert.equal(payloads.length, deliveredBeforeFailures);
+  const stopped = await create(["revoked"]);
+  await queue(stopped.value.id);
+  sql
+    .prepare("UPDATE user_followup_contacts SET suppressed_at=? WHERE user_id=?")
+    .run(now, "revoked");
+  await run();
+  assert.equal((await get(stopped.value.id)).recipients[0].error_code, "RECIPIENT_SUPPRESSED");
+  const revoked = await create(["cancel"]);
+  await queue(revoked.value.id);
+  sql.prepare("UPDATE users SET role='user' WHERE id='admin'").run();
+  await run();
+  sql.prepare("UPDATE users SET role='admin' WHERE id='admin'").run();
+  assert.equal((await get(revoked.value.id)).recipients[0].error_code, "ACTOR_NO_LONGER_ADMIN");
+  const cancelled = await create(["cancel"]);
+  await queue(cancelled.value.id);
+  await decode(await api("/batches/" + cancelled.value.id + "/cancel", "POST", {}));
+  await run();
+  assert.equal((await get(cancelled.value.id)).recipients[0].status, "cancelled");
+  assert.equal(payloads.length, deliveredBeforeFailures);
+  const concurrent = input(["cancel"]);
+  const concurrentResponses = await Promise.all([
+    api("/batches", "POST", concurrent),
+    api("/batches", "POST", concurrent),
+  ]);
+  for (const response of concurrentResponses) assert([200, 201].includes(response.status));
+  assert.equal(
+    sql
+      .prepare("SELECT COUNT(*) count FROM user_followup_messages WHERE batch_id=?")
+      .get(concurrent.id)?.count,
+    1,
+    "Concurrent preparation creates one immutable message",
+  );
+  const crash = await create(["crash"]);
+  await queue(crash.value.id);
+  const crashMessage = crash.detail.recipients[0].message_id;
+  sql.prepare("UPDATE user_followup_messages SET status='sending' WHERE id=?").run(crashMessage);
+  sql
+    .prepare("UPDATE user_followup_batch_recipients SET status='processing' WHERE batch_id=?")
+    .run(crash.value.id);
+  await run();
+  assert.equal((await get(crash.value.id)).recipients[0].status, "unknown");
+  assert.equal(
+    sql.prepare("SELECT status FROM user_followup_messages WHERE id=?").get(crashMessage)?.status,
+    "unknown",
+  );
+  assert.equal(
+    payloads.length,
+    deliveredBeforeFailures,
+    "A crashed in-flight delivery is never blindly resent",
+  );
+  const rate = await create(["rate"]);
+  await queue(rate.value.id);
+  let attempts = 0;
+  const keys: string[] = [];
+  const normal = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    attempts++;
+    keys.push(new Headers(options?.headers).get("idempotency-key")!);
+    return attempts === 1
+      ? Response.json({ message: "rate limited" }, { status: 429 })
+      : normal(url, options);
+  };
+  await run();
+  assert.equal((await get(rate.value.id)).recipients[0].status, "pending");
+  await run();
+  assert.equal(attempts, 1, "A throttled recipient waits for its retry time");
+  sql
+    .prepare("UPDATE user_followup_batch_recipients SET next_attempt_at=? WHERE batch_id=?")
+    .run("2000-01-01T00:00:00.000Z", rate.value.id);
+  await run();
+  assert.equal((await get(rate.value.id)).recipients[0].status, "sent");
+  assert.equal(keys[0], keys[1]);
+  globalThis.fetch = normal;
+  const inflight = await create(["inflight", "cancel"]);
+  await queue(inflight.value.id);
+  let release!: () => void, started!: () => void;
+  const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    }),
+    hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+  globalThis.fetch = async (url, options) => {
+    started();
+    await hold;
+    return normal(url, options);
+  };
+  const worker = run();
+  await startedPromise;
+  await decode(await api("/batches/" + inflight.value.id + "/cancel", "POST", {}));
+  release();
+  await worker;
+  const result = await get(inflight.value.id);
+  assert.equal(result.batch.status, "cancelled");
+  assert.equal(result.batch.sent, 1);
+  assert.equal(result.batch.cancelled, 1);
+  globalThis.fetch = normal;
+  const crashcancel = await create(["crashcancel"]);
+  await queue(crashcancel.value.id);
+  sql
+    .prepare("UPDATE user_followup_batch_recipients SET status='processing' WHERE batch_id=?")
+    .run(crashcancel.value.id);
+  await decode(await api("/batches/" + crashcancel.value.id + "/cancel", "POST", {}));
+  await run();
+  assert.equal(
+    (await get(crashcancel.value.id)).recipients[0].status,
+    "cancelled",
+    "A cancelled pre-claim crash must not leave a pending item behind",
+  );
+  const originalBatch = db.batch.bind(db);
+  let releasePreparation!: () => void, preparationStarted!: () => void;
+  const preparationGate = new Promise<void>((resolve) => {
+      releasePreparation = resolve;
+    }),
+    preparationReady = new Promise<void>((resolve) => {
+      preparationStarted = resolve;
+    });
+  let held = false;
+  env.DB = {
+    ...db,
+    async batch(statements: any[]) {
+      if (!held && statements[0]?._sql.includes("INSERT OR IGNORE INTO user_followup_messages")) {
+        held = true;
+        preparationStarted();
+        await preparationGate;
+      }
+      return originalBatch(statements);
+    },
+  };
+  const prepInput = input(["cancelprep"]),
+    preparing = api("/batches", "POST", prepInput);
+  await preparationReady;
+  await decode(await api("/batches/" + prepInput.id + "/cancel", "POST", {}));
+  releasePreparation();
+  const prepResult = await decode(await preparing, 201);
+  assert.equal(prepResult.batch.status, "cancelled");
+  assert.equal(prepResult.batch.pending, 0);
+  assert.equal(
+    sql
+      .prepare("SELECT COUNT(*) count FROM user_followup_messages WHERE batch_id=?")
+      .get(prepInput.id)?.count,
+    0,
+    "Cancellation during preparation prevents new email snapshots",
+  );
+  env.DB = db;
+  const warm = await create(["warm"]),
+    tasks: Promise<unknown>[] = [];
+  const before = payloads.length;
+  await handleAdminServiceRequest(req("/batches/" + warm.value.id + "/queue", "POST", {}), env, {
+    waitUntil(promise) {
+      tasks.push(promise);
+    },
+  });
+  assert.equal(tasks.length, 1);
+  await Promise.all(tasks);
+  assert.equal(
+    payloads.length,
+    before + 1,
+    "An explicitly queued batch also gets a bounded background warm start",
+  );
 
- // Funnel and next steps: computers (not browser extensions) decide pairing.
- sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)').run('ext-budget','budget','Chrome','browser','cred-ext',now);
- let listed=await decode(await api('?query=budget@'));assert.equal(listed.items[0].next_step,'pair_computer','A browser extension is not a paired computer');assert.equal(listed.items[0].computers,0);
- sql.prepare('INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)').run('mac-budget','budget','Mac','darwin','cred-mac',now);
- listed=await decode(await api('?query=budget@'));assert.equal(listed.items[0].next_step,'connect_ai');
- assert.equal(listed.funnel.registered,people.length);assert.equal(listed.funnel.paired,1);
- const stepTotal=(await decode(await api('?segment=step:pair_computer'))).total;assert.equal(stepTotal,listed.funnel.pair_computer,'The funnel count matches its filter');
- assert.equal((await api('?segment=step:bogus')).status,400);
- // Follow-ups stop at their daily cap so sign-in codes keep their share.
- const used=listed.emailBudget.used;env.FOLLOWUP_DAILY_EMAIL_LIMIT=String(used);
- assert.equal((await decode(await api(''))).emailBudget.remaining,0);
- const budgeted=await create(['budget']);assert.equal(budgeted.detail.emailBudget.remaining,0);await queue(budgeted.value.id);
- const sentBefore=payloads.length;await run();
- assert.equal(payloads.length,sentBefore,'Nothing is sent over the daily cap');assert.equal((await get(budgeted.value.id)).recipients[0].status,'pending','Over-cap recipients wait for the next window');
- env.FOLLOWUP_DAILY_EMAIL_LIMIT=String(used+1);await run();
- assert.equal(payloads.length,sentBefore+1);assert.equal((await get(budgeted.value.id)).recipients[0].status,'sent');
- assert.equal((await decode(await api(''))).emailBudget.remaining,0);delete env.FOLLOWUP_DAILY_EMAIL_LIMIT;
- console.log('PASS: CRM tabs/counts/status/selection; immutable personalized batches; explicit queue; RBAC/CSRF; concurrent preparation/dispatch; optional contact notes without fabricated consent; revalidated suppression/recipient/admin; cancel remaining; crash uncertainty; rate-limit backoff with stable idempotency. Only mocked emails.');
-}finally{globalThis.fetch=native;sql.close();}
+  // Funnel and next steps: computers (not browser extensions) decide pairing.
+  sql
+    .prepare(
+      "INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)",
+    )
+    .run("ext-budget", "budget", "Chrome", "browser", "cred-ext", now);
+  let listed = await decode(await api("?query=budget@"));
+  assert.equal(
+    listed.items[0].next_step,
+    "pair_computer",
+    "A browser extension is not a paired computer",
+  );
+  assert.equal(listed.items[0].computers, 0);
+  sql
+    .prepare(
+      "INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)",
+    )
+    .run("mac-budget", "budget", "Mac", "darwin", "cred-mac", now);
+  listed = await decode(await api("?query=budget@"));
+  assert.equal(listed.items[0].next_step, "connect_ai");
+  assert.equal(listed.funnel.registered, people.length);
+  assert.equal(listed.funnel.paired, 1);
+  const stepTotal = (await decode(await api("?segment=step:pair_computer"))).total;
+  assert.equal(stepTotal, listed.funnel.pair_computer, "The funnel count matches its filter");
+  assert.equal((await api("?segment=step:bogus")).status, 400);
+  // Follow-ups stop at their daily cap so sign-in codes keep their share.
+  const used = listed.emailBudget.used;
+  env.FOLLOWUP_DAILY_EMAIL_LIMIT = String(used);
+  assert.equal((await decode(await api(""))).emailBudget.remaining, 0);
+  const budgeted = await create(["budget"]);
+  assert.equal(budgeted.detail.emailBudget.remaining, 0);
+  await queue(budgeted.value.id);
+  const sentBefore = payloads.length;
+  await run();
+  assert.equal(payloads.length, sentBefore, "Nothing is sent over the daily cap");
+  assert.equal(
+    (await get(budgeted.value.id)).recipients[0].status,
+    "pending",
+    "Over-cap recipients wait for the next window",
+  );
+  env.FOLLOWUP_DAILY_EMAIL_LIMIT = String(used + 1);
+  await run();
+  assert.equal(payloads.length, sentBefore + 1);
+  assert.equal((await get(budgeted.value.id)).recipients[0].status, "sent");
+  assert.equal((await decode(await api(""))).emailBudget.remaining, 0);
+  delete env.FOLLOWUP_DAILY_EMAIL_LIMIT;
+  console.log(
+    "PASS: CRM tabs/counts/status/selection; immutable personalized batches; explicit queue; RBAC/CSRF; concurrent preparation/dispatch; optional contact notes without fabricated consent; revalidated suppression/recipient/admin; cancel remaining; crash uncertainty; rate-limit backoff with stable idempotency. Only mocked emails.",
+  );
+} finally {
+  globalThis.fetch = native;
+  sql.close();
+}

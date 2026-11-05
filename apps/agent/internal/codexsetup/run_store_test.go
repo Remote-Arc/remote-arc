@@ -64,44 +64,44 @@ func TestNativeRunManagedMissingClientInvalidWorkspaceAndCancellation(t *testing
 		t.Fatal(err)
 	}
 	_, err := Run(context.Background(), request)
-	expectCode(t, err, "managed_config")
+	expectCode(t, err, "MANAGED_CONFIG")
 	if err = os.Remove(filepath.Join(profile, "synthetic-state.json")); err != nil {
 		t.Fatal(err)
 	}
 	request.CodexBinary = filepath.Join(profile, "missing-client")
 	result, err := Run(context.Background(), request)
-	expectCode(t, err, "codex_not_found")
-	if result.ErrorCode != "codex_not_found" || result.Status != "action_required" || result.Changed == nil || *result.Changed {
+	expectCode(t, err, "CODEX_NOT_FOUND")
+	if result.ErrorCode != "CODEX_NOT_FOUND" || result.Status != "action_required" || result.Changed == nil || *result.Changed {
 		t.Fatal("missing-client receipt wrong")
 	}
 	request, _, _ = nativeFixture(t)
 	request.Workspace = filepath.Join(request.Workspace, "missing")
 	_, err = Run(context.Background(), request)
-	expectCode(t, err, "workspace_unavailable")
+	expectCode(t, err, "WORKSPACE_UNAVAILABLE")
 	request, _, _ = nativeFixture(t)
 	request.RemoteArcBinary = "relative"
 	_, err = Run(context.Background(), request)
-	expectCode(t, err, "binary_unavailable")
+	expectCode(t, err, "BINARY_UNAVAILABLE")
 	request.RemoteArcBinary = filepath.Join(profile, "missing-go-binary")
 	_, err = Run(context.Background(), request)
-	expectCode(t, err, "binary_unavailable")
+	expectCode(t, err, "BINARY_UNAVAILABLE")
 	request, _, _ = nativeFixture(t)
 	request.Action = "unknown"
 	_, err = Run(context.Background(), request)
-	expectCode(t, err, "action_invalid")
+	expectCode(t, err, "ACTION_INVALID")
 	request.Action = "install"
 	request.Workspace = "relative"
 	_, err = Run(context.Background(), request)
-	expectCode(t, err, "workspace_invalid")
+	expectCode(t, err, "WORKSPACE_INVALID")
 	request, _, _ = nativeFixture(t)
 	t.Setenv("CODEX_HOME", "relative")
 	_, err = Run(context.Background(), request)
-	expectCode(t, err, "profile_invalid")
+	expectCode(t, err, "PROFILE_INVALID")
 	request, _, _ = nativeFixture(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, err = Run(ctx, request)
-	expectCode(t, err, "codex_version_unavailable")
+	expectCode(t, err, "CODEX_VERSION_UNAVAILABLE")
 }
 
 func TestNativeRunCompetingSetupAndBinaryChange(t *testing.T) {
@@ -120,7 +120,7 @@ func TestNativeRunCompetingSetupAndBinaryChange(t *testing.T) {
 	}
 	request.Action = "repair"
 	_, err = Run(context.Background(), request)
-	expectCode(t, err, "setup_busy")
+	expectCode(t, err, "SETUP_BUSY")
 	lock.Release()
 	s := fileStore{files[0]}
 	r, err := s.load()
@@ -133,7 +133,7 @@ func TestNativeRunCompetingSetupAndBinaryChange(t *testing.T) {
 	}
 	request.Action = "doctor"
 	_, err = Run(context.Background(), request)
-	expectCode(t, err, "binary_changed")
+	expectCode(t, err, "BINARY_CHANGED")
 	request.Action = "repair"
 	if result, err := Run(context.Background(), request); err != nil || !result.ToolsVerified {
 		t.Fatal("repair did not refresh native binary fingerprint", err)
@@ -158,7 +158,7 @@ func TestFileStoreRejectsInvalidOversizedLinkedRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = s.load()
-	expectCode(t, err, "state_invalid")
+	expectCode(t, err, "STATE_INVALID")
 	if strings.Contains(err.Error(), "PRIVATE_CANARY") {
 		t.Fatal("invalid state leaked")
 	}
@@ -166,7 +166,7 @@ func TestFileStoreRejectsInvalidOversizedLinkedRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = s.load()
-	expectCode(t, err, "state_invalid")
+	expectCode(t, err, "STATE_INVALID")
 	if err = s.remove(); err != nil {
 		t.Fatal(err)
 	}
@@ -177,18 +177,18 @@ func TestFileStoreRejectsInvalidOversizedLinkedRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = s.load()
-	expectCode(t, err, "state_unavailable")
+	expectCode(t, err, "STATE_UNAVAILABLE")
 	if err = os.WriteFile(filepath.Join(s.path, "retained"), nil, 0600); err != nil {
 		t.Fatal(err)
 	}
-	expectCode(t, s.remove(), "state_cleanup_failed")
+	expectCode(t, s.remove(), "STATE_CLEANUP_FAILED")
 	blocked := fileStore{filepath.Join(dir, "not-a-directory", "entry.json")}
 	if err = os.WriteFile(filepath.Dir(blocked.path), nil, 0600); err != nil {
 		t.Fatal(err)
 	}
-	expectCode(t, blocked.save(r), "state_save_failed")
+	expectCode(t, blocked.save(r), "STATE_SAVE_FAILED")
 	r.Desired = json.RawMessage("invalid-json")
-	expectCode(t, (fileStore{filepath.Join(dir, "invalid.json")}).save(r), "state_save_failed")
+	expectCode(t, (fileStore{filepath.Join(dir, "invalid.json")}).save(r), "STATE_SAVE_FAILED")
 	if _, err = hashFile(filepath.Join(dir, "missing")); err == nil {
 		t.Fatal("missing binary fingerprint succeeded")
 	}

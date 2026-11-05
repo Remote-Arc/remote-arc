@@ -50,24 +50,11 @@ const appOrigin = (env: OAuthEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;
 const mcpResource = (env: OAuthEnv) => appOrigin(env) + "/mcp";
 
 function normalizeScope(value: string | null) {
-  const requested = (value || DEFAULT_MCP_SCOPES.join(" "))
-    .split(/\s+/)
-    .filter(Boolean);
+  const requested = (value || DEFAULT_MCP_SCOPES.join(" ")).split(/\s+/).filter(Boolean);
   const allowed = requested.filter((scope) =>
     (SUPPORTED_SCOPES as readonly string[]).includes(scope),
   );
   return Array.from(new Set(allowed)).join(" ");
-}
-
-function redirectWith(
-  redirectUri: string,
-  values: Record<string, string | undefined>,
-) {
-  const target = new URL(redirectUri);
-  for (const [key, value] of Object.entries(values)) {
-    if (value !== undefined) target.searchParams.set(key, value);
-  }
-  return Response.redirect(target.toString(), 302);
 }
 
 export function protectedResourceMetadata(env: OAuthEnv) {
@@ -102,17 +89,13 @@ function isSupportedRedirectUri(value: unknown): value is string {
     if (url.protocol === "https:") return true;
     // RFC 8252 allows HTTP callbacks on loopback IP literals for native
     // PKCE clients such as Codex. Other HTTP hosts remain unsupported.
-    return url.protocol === "http:" &&
-      (url.hostname === "127.0.0.1" || url.hostname === "[::1]");
+    return url.protocol === "http:" && (url.hostname === "127.0.0.1" || url.hostname === "[::1]");
   } catch {
     return false;
   }
 }
 
-export async function handleDynamicClientRegistration(
-  request: Request,
-  env: OAuthEnv,
-) {
+export async function handleDynamicClientRegistration(request: Request, env: OAuthEnv) {
   const body = (await request.json().catch(() => ({}))) as {
     redirect_uris?: string[];
     client_name?: string;
@@ -144,12 +127,7 @@ export async function handleDynamicClientRegistration(
       (client_id, client_name, redirect_uris, token_endpoint_auth_method, created_at)
      VALUES (?1, ?2, ?3, 'none', ?4)`,
   )
-    .bind(
-      clientId,
-      body.client_name || "MCP client",
-      JSON.stringify(redirectUris),
-      nowIso(),
-    )
+    .bind(clientId, body.client_name || "MCP client", JSON.stringify(redirectUris), nowIso())
     .run();
 
   return Response.json(
@@ -208,9 +186,7 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
   if (!user) {
     const returnTo = url.pathname + url.search;
     return Response.redirect(
-      appOrigin(env) +
-        "/auth/login?return_to=" +
-        encodeURIComponent(returnTo),
+      appOrigin(env) + "/auth/login?return_to=" + encodeURIComponent(returnTo),
       302,
     );
   }
@@ -264,9 +240,7 @@ export async function handleOAuthDecision(request: Request, env: OAuthEnv) {
     typeof body.code_challenge_method === "string" ? body.code_challenge_method : "";
   const state = typeof body.state === "string" ? body.state : undefined;
   const resource =
-    typeof body.resource === "string" && body.resource
-      ? body.resource
-      : mcpResource(env);
+    typeof body.resource === "string" && body.resource ? body.resource : mcpResource(env);
   const scope = normalizeScope(typeof body.scope === "string" ? body.scope : null);
 
   if (
@@ -392,9 +366,7 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
 
-  const client = await env.DB.prepare(
-    "SELECT client_id FROM oauth_clients WHERE client_id = ?1",
-  )
+  const client = await env.DB.prepare("SELECT client_id FROM oauth_clients WHERE client_id = ?1")
     .bind(clientId)
     .first();
 
@@ -437,9 +409,7 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
       return Response.json({ error: "invalid_grant" }, { status: 400 });
     }
 
-    await env.DB.prepare("DELETE FROM oauth_codes WHERE code_hash = ?1")
-      .bind(codeHash)
-      .run();
+    await env.DB.prepare("DELETE FROM oauth_codes WHERE code_hash = ?1").bind(codeHash).run();
 
     return Response.json(
       await issueTokens(env, {
@@ -522,9 +492,7 @@ export function mcpUnauthorized(env: OAuthEnv) {
     status: 401,
     headers: {
       "WWW-Authenticate":
-        'Bearer resource_metadata="' +
-        metadata +
-        '", scope="' + DEFAULT_MCP_SCOPES.join(" ") + '"',
+        'Bearer resource_metadata="' + metadata + '", scope="' + DEFAULT_MCP_SCOPES.join(" ") + '"',
     },
   });
 }

@@ -1,5 +1,10 @@
-import {recordProductEvent,eventContext} from '../analytics/product-events.js';
-import {startBusinessFlow,advanceBusinessFlow,failBusinessFlow} from '../analytics/business-tracking.js';
+import { applicationJson } from "../platform/application-json.js";
+import { recordProductEvent, eventContext } from "../analytics/product-events.js";
+import {
+  startBusinessFlow,
+  advanceBusinessFlow,
+  failBusinessFlow,
+} from "../analytics/business-tracking.js";
 import {
   addSecondsIso,
   createSession,
@@ -11,24 +16,25 @@ import {
 import { authPage, escapeAuthHtml } from "./auth-page.js";
 import { renderOtpEmail } from "../platform/email-template.js";
 import { emailFormToken, validEmailFormToken } from "./email-form-csrf.js";
-import { otpEmailSenders,type EmailSenderEnv } from '../platform/email-sender.js';
-import type {EmailCapacityEnv} from '../platform/email-capacity.js';
-import {deliverOtpEmail} from '../platform/otp-email-delivery.js';
-import { isReviewerEmail, isReviewerUserId } from './reviewer-identity.js';
+import { otpEmailSenders, type EmailSenderEnv } from "../platform/email-sender.js";
+import type { EmailCapacityEnv } from "../platform/email-capacity.js";
+import { deliverOtpEmail } from "../platform/otp-email-delivery.js";
+import { isReviewerEmail, isReviewerUserId } from "./reviewer-identity.js";
 
-type EmailEnv = EmailSenderEnv & EmailCapacityEnv & {
-  DB: D1Database;
-  PUBLIC_ORIGIN: string;
-  APP_ORIGIN?: string;
-  MARKETING_ORIGIN?: string;
-  ALLOW_SIGNUPS?: string;
-  ALLOWED_EMAILS?: string;
-  REVIEWER_EMAIL?: string;
-  ANTHROPIC_REVIEWER_EMAIL?: string;
-  RESEND_API_KEY?: string;
-  EMAIL_AUTH_SECRET?: string;
-  EMAIL_FROM?: string;
-};
+type EmailEnv = EmailSenderEnv &
+  EmailCapacityEnv & {
+    DB: D1Database;
+    PUBLIC_ORIGIN: string;
+    APP_ORIGIN?: string;
+    MARKETING_ORIGIN?: string;
+    ALLOW_SIGNUPS?: string;
+    ALLOWED_EMAILS?: string;
+    REVIEWER_EMAIL?: string;
+    ANTHROPIC_REVIEWER_EMAIL?: string;
+    RESEND_API_KEY?: string;
+    EMAIL_AUTH_SECRET?: string;
+    EMAIL_FROM?: string;
+  };
 
 const MAX_ATTEMPTS = 5;
 const SEND_COOLDOWN_MS = 60_000;
@@ -41,8 +47,12 @@ export function emailLoginEnabled(env: EmailEnv) {
 }
 
 function formPage(email: string, returnTo: string, message = "", request?: Request) {
-  const { token, setCookie } = emailFormToken(request || new Request("https://mcp.remotearc.app/auth/email/request"));
-  const page = authPage("Verify your email", `
+  const { token, setCookie } = emailFormToken(
+    request || new Request("https://mcp.remotearc.app/auth/email/request"),
+  );
+  const page = authPage(
+    "Verify your email",
+    `
     <a class="back" href="/auth/login?return_to=${encodeURIComponent(returnTo)}">← Back to sign in</a>
     <div class="badge">Secure, passwordless sign-in</div>
     <h1>Check your inbox</h1>
@@ -61,7 +71,8 @@ function formPage(email: string, returnTo: string, message = "", request?: Reque
     </form>
     <p class="note">Didn't get the email? Check spam, or <a class="link" href="/auth/login?return_to=${encodeURIComponent(returnTo)}">try again in a minute</a>.
     You can also choose Google sign-in.</p>
-  `);
+  `,
+  );
   if (setCookie) page.headers.append("set-cookie", setCookie);
   return page;
 }
@@ -72,7 +83,12 @@ function formPage(email: string, returnTo: string, message = "", request?: Reque
  * No wildcard, null origin, or unrelated domain is accepted.
  */
 function trustedAuthForm(request: Request, env: EmailEnv) {
-  if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/x-www-form-urlencoded")) return false;
+  if (
+    !(request.headers.get("content-type") || "")
+      .toLowerCase()
+      .startsWith("application/x-www-form-urlencoded")
+  )
+    return false;
   if (request.headers.get("sec-fetch-site") === "cross-site") return false;
   const allowed = new Set([
     new URL(request.url).origin,
@@ -99,37 +115,54 @@ function normalizeEmail(value: unknown) {
 }
 
 async function codeHash(email: string, code: string, secret: string) {
-  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(email + ":" + code));
-  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 }
 
 function numericCode() {
   const bytes = new Uint32Array(1);
   // Reject biased 32-bit values to produce uniform 6-digit OTPs.
   const cap = Math.floor(0x100000000 / 1_000_000) * 1_000_000;
-  do { crypto.getRandomValues(bytes); } while (bytes[0]! >= cap);
+  do {
+    crypto.getRandomValues(bytes);
+  } while (bytes[0]! >= cap);
   return String(bytes[0]! % 1_000_000).padStart(6, "0");
 }
 
 async function lookupUser(env: EmailEnv, email: string) {
   return env.DB.prepare("SELECT id FROM users WHERE lower(email) = ?1 LIMIT 1")
-    .bind(email).first<{ id: string }>();
+    .bind(email)
+    .first<{ id: string }>();
 }
 
 async function eligibleForEmailAuth(env: EmailEnv, email: string) {
   if (isReviewerEmail(env, email)) return false;
-  const allowed = (env.ALLOWED_EMAILS || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  const allowed = (env.ALLOWED_EMAILS || "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
   if (allowed.length && !allowed.includes(email)) return false;
   const user = await lookupUser(env, email);
   if (isReviewerUserId(user?.id)) return false;
   if (user || env.ALLOW_SIGNUPS === "1") return true;
-  const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first<{ count: number }>();
+  const row = await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first<{
+    count: number;
+  }>();
   return (row?.count || 0) === 0;
 }
 
 export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
-  if (!emailLoginEnabled(env)) return Response.json({ error: "email_login_unavailable" }, { status: 503 });
+  if (!emailLoginEnabled(env))
+    return applicationJson({ error: "email_login_unavailable" }, { status: 503 });
   const form = await request.formData();
   if (!trustedAuthForm(request, env) && !validEmailFormToken(request, form)) {
     return new Response("Invalid form origin", { status: 403 });
@@ -160,63 +193,112 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
        daily_count = CASE WHEN window_start < ?6 THEN 1 ELSE daily_count + 1 END,
        window_start = CASE WHEN window_start < ?6 THEN excluded.window_start ELSE window_start END
      WHERE requested_at < ?7 AND (window_start < ?6 OR daily_count < ?8)`,
-  ).bind(email, hash, returnTo, now, addSecondsIso(CODE_TTL_SECONDS), windowBefore, sendBefore, DAILY_SEND_LIMIT).run();
+  )
+    .bind(
+      email,
+      hash,
+      returnTo,
+      now,
+      addSecondsIso(CODE_TTL_SECONDS),
+      windowBefore,
+      sendBefore,
+      DAILY_SEND_LIMIT,
+    )
+    .run();
 
   if ((result.meta?.changes || 0) !== 1) return formPage(email, returnTo, "", request);
 
-  const businessFlow='email:'+await sha256Hex(email+'|'+now);
-  await startBusinessFlow(env,{id:businessFlow,scene:'email_login',at:now,expiresAt:addSecondsIso(CODE_TTL_SECONDS)});
+  const businessFlow = "email:" + (await sha256Hex(email + "|" + now));
+  await startBusinessFlow(env, {
+    id: businessFlow,
+    scene: "email_login",
+    at: now,
+    expiresAt: addSecondsIso(CODE_TTL_SECONDS),
+  });
 
-  let delivery='failed';
+  let delivery = "failed";
   try {
-    delivery=await deliverOtpEmail(env,email,renderOtpEmail(code));
-    if(delivery==='failed')console.warn('email_delivery_failed');
+    delivery = await deliverOtpEmail(env, email, renderOtpEmail(code));
+    if (delivery === "failed") console.warn("email_delivery_failed");
   } catch {
     console.warn("email_delivery_unreachable");
   }
-  if (delivery==='failed') {
-    await failBusinessFlow(env,businessFlow,'delivery_failed');
+  if (delivery === "failed") {
+    await failBusinessFlow(env, businessFlow, "delivery_failed");
     await env.DB.prepare("DELETE FROM email_login_challenges WHERE email = ?1 AND code_hash = ?2")
-      .bind(email, hash).run();
+      .bind(email, hash)
+      .run();
     return new Response("Email service temporarily unavailable. Try again later.", { status: 503 });
   }
-  await advanceBusinessFlow(env,businessFlow,'email_login',delivery==='sent'?'delivered':'delivery_unconfirmed');
+  await advanceBusinessFlow(
+    env,
+    businessFlow,
+    "email_login",
+    delivery === "sent" ? "delivered" : "delivery_unconfirmed",
+  );
   return formPage(email, returnTo, "", request);
 }
 
 export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
-  if (!emailLoginEnabled(env)) return Response.json({ error: "email_login_unavailable" }, { status: 503 });
+  if (!emailLoginEnabled(env))
+    return applicationJson({ error: "email_login_unavailable" }, { status: 503 });
   const form = await request.formData();
   if (!trustedAuthForm(request, env) && !validEmailFormToken(request, form)) {
     return new Response("Invalid form origin", { status: 403 });
   }
   const email = normalizeEmail(form.get("email"));
   const code = String(form.get("code") || "").trim();
-  if (!email || !/^[0-9]{6}$/.test(code)) return new Response("Invalid verification code", { status: 400 });
+  if (!email || !/^[0-9]{6}$/.test(code))
+    return new Response("Invalid verification code", { status: 400 });
   const returnTo = safeReturnTo(String(form.get("return_to") || ""), request, env);
   const hash = await codeHash(email, code, env.EMAIL_AUTH_SECRET!);
   const now = nowIso();
-  let businessFlow:string|null=null;
-  try{
-    const challenge=await env.DB.prepare('SELECT requested_at FROM email_login_challenges WHERE email=?1').bind(email).first<{requested_at:string}>();
-    if(challenge){businessFlow='email:'+await sha256Hex(email+'|'+challenge.requested_at);await advanceBusinessFlow(env,businessFlow,'email_login','verification');}
-  }catch{console.warn('business_login_correlation_unavailable');}
+  let businessFlow: string | null = null;
+  try {
+    const challenge = await env.DB.prepare(
+      "SELECT requested_at FROM email_login_challenges WHERE email=?1",
+    )
+      .bind(email)
+      .first<{ requested_at: string }>();
+    if (challenge) {
+      businessFlow = "email:" + (await sha256Hex(email + "|" + challenge.requested_at));
+      await advanceBusinessFlow(env, businessFlow, "email_login", "verification");
+    }
+  } catch {
+    console.warn("business_login_correlation_unavailable");
+  }
   // The matching challenge is consumed exactly once even under concurrent verify calls.
   const consumed = await env.DB.prepare(
     `UPDATE email_login_challenges SET verified_at = ?3
      WHERE email = ?1 AND code_hash = ?2 AND verified_at IS NULL
        AND expires_at > ?3 AND attempts < ?4`,
-  ).bind(email, hash, now, MAX_ATTEMPTS).run();
+  )
+    .bind(email, hash, now, MAX_ATTEMPTS)
+    .run();
   if ((consumed.meta?.changes || 0) !== 1) {
     await env.DB.prepare(
       "UPDATE email_login_challenges SET attempts = attempts + 1 WHERE email = ?1 AND verified_at IS NULL AND expires_at > ?2 AND attempts < ?3",
-    ).bind(email, now, MAX_ATTEMPTS).run();
-    await recordProductEvent(env,{...eventContext(request),domain:'auth',name:'auth.email.verification_failed',source:'server',outcome:'failed',errorCode:'AUTH_CODE_INVALID_OR_EXPIRED'});
-    return formPage(email, returnTo, "Incorrect, expired, or already used code. Please try again or request a new one.", request);
+    )
+      .bind(email, now, MAX_ATTEMPTS)
+      .run();
+    await recordProductEvent(env, {
+      ...eventContext(request),
+      domain: "auth",
+      name: "auth.email.verification_failed",
+      source: "server",
+      outcome: "failed",
+      errorCode: "AUTH_CODE_INVALID_OR_EXPIRED",
+    });
+    return formPage(
+      email,
+      returnTo,
+      "Incorrect, expired, or already used code. Please try again or request a new one.",
+      request,
+    );
   }
 
   if (!(await eligibleForEmailAuth(env, email))) {
-    if(businessFlow)await failBusinessFlow(env,businessFlow,'account_ineligible');
+    if (businessFlow) await failBusinessFlow(env, businessFlow, "account_ineligible");
     return new Response("Email account is not eligible", { status: 403 });
   }
 
@@ -226,13 +308,17 @@ export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
     // Reserved value is intentionally impossible to confuse with Google's numeric subject.
     await env.DB.prepare(
       "INSERT OR IGNORE INTO users (id, google_sub, email, created_at) VALUES (?1, ?2, ?3, ?4)",
-    ).bind(id, "email:" + id, email, now).run();
+    )
+      .bind(id, "email:" + id, email, now)
+      .run();
     user = await lookupUser(env, email);
   }
   if (!user) return new Response("Unable to create account", { status: 503 });
-  if(businessFlow)await advanceBusinessFlow(env,businessFlow,'email_login','verified',{userId:user.id});
+  if (businessFlow)
+    await advanceBusinessFlow(env, businessFlow, "email_login", "verified", { userId: user.id });
   const token = await createSession(user.id, env);
-  if(businessFlow)await advanceBusinessFlow(env,businessFlow,'email_login','completed',{userId:user.id});
+  if (businessFlow)
+    await advanceBusinessFlow(env, businessFlow, "email_login", "completed", { userId: user.id });
   return new Response(null, {
     status: 303,
     headers: {

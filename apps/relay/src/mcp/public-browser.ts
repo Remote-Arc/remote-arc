@@ -13,11 +13,15 @@ export async function callPublicBrowserDevice(
 ) {
   const { include_captcha_images: _images, ...ordinaryArgs } = args;
   try {
-    return await callDevice(env, identity, deviceId, tool, ordinaryArgs,
-      undefined, undefined, { browserAuthentication: "user" });
+    return await callDevice(env, identity, deviceId, tool, ordinaryArgs, undefined, undefined, {
+      browserAuthentication: "user",
+    });
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("BROWSER_AUTH_REQUIRED:")) {
-      throw new Error("BROWSER_AUTH_REQUIRED: complete the site's authentication in the browser, then resume the same task. Public MCP tools cannot fill OTP or CAPTCHA answers; changing Dashboard approval does not enable them here.");
+      // eslint-disable-next-line preserve-caught-error -- Do not expose private device/provider diagnostics in public errors.
+      throw new Error(
+        "BROWSER_AUTH_REQUIRED: complete the site's authentication in the browser, then resume the same task. Public MCP tools cannot fill OTP or CAPTCHA answers; changing Dashboard approval does not enable them here.",
+      );
     }
     throw error;
   }

@@ -42,18 +42,18 @@ func TestProviderDeclinesManagedOverridesMalformedAndWrongFile(t *testing.T) {
 			profile := t.TempDir()
 			base := layer(profile, map[string]any{})
 			layers := []any{base}
-			code := "config_revision_unavailable"
+			code := "CONFIG_REVISION_UNAVAILABLE"
 			replies := readReplies(layers)
 			switch mode {
 			case "requirements":
 				replies["configRequirements/read"] = []map[string]any{ok(map[string]any{"requirements": map[string]any{"allowedSandboxModes": []string{"readOnly"}}})}
-				code = "managed_config"
+				code = "MANAGED_CONFIG"
 			case "managed_layer":
 				layers = append(layers, map[string]any{"name": map[string]any{"type": "mdm"}, "config": map[string]any{"model": "managed-model"}})
-				code = "managed_config"
+				code = "MANAGED_CONFIG"
 			case "override":
 				layers = append(layers, map[string]any{"name": map[string]any{"type": "project"}, "config": map[string]any{"mcp_servers": map[string]any{"remote_arc_fixture": map[string]any{"command": "override"}}}})
-				code = "config_overridden"
+				code = "CONFIG_OVERRIDDEN"
 			case "wrong_file":
 				base["name"] = map[string]any{"type": "user", "file": filepath.Join(profile, "other.toml")}
 			case "no_revision":
@@ -62,10 +62,10 @@ func TestProviderDeclinesManagedOverridesMalformedAndWrongFile(t *testing.T) {
 				base["disabledReason"] = "Untrusted profile"
 			case "malformed_config":
 				base["config"] = []string{"unexpected"}
-				code = "config_shape_unsupported"
+				code = "CONFIG_SHAPE_UNSUPPORTED"
 			case "malformed_servers":
 				base["config"] = map[string]any{"mcp_servers": []string{"unexpected"}}
-				code = "config_shape_unsupported"
+				code = "CONFIG_SHAPE_UNSUPPORTED"
 			case "no_layer":
 				layers = nil
 			}
@@ -90,7 +90,7 @@ func TestProviderRejectsSymlinkConfig(t *testing.T) {
 	rpc := fixtureRPCProfile(t, profile, readReplies(nil))
 	p := codexProvider{rpc, profile}
 	_, err := p.read("remote_arc_fixture", profile)
-	expectCode(t, err, "config_path_unsupported")
+	expectCode(t, err, "CONFIG_PATH_UNSUPPORTED")
 }
 
 func TestProviderWritesSingleConditionalKeyAndNullRemoval(t *testing.T) {
@@ -105,7 +105,7 @@ func TestProviderWritesSingleConditionalKeyAndNullRemoval(t *testing.T) {
 	if err := p.write(before, "remote_arc_fixture", nil); err != nil {
 		t.Fatal(err)
 	}
-	expectCode(t, p.write(before, "remote_arc_fixture", nil), "config_write_overridden")
+	expectCode(t, p.write(before, "remote_arc_fixture", nil), "CONFIG_WRITE_OVERRIDDEN")
 	b, err := os.ReadFile(log)
 	if err != nil {
 		t.Fatal(err)
@@ -203,11 +203,11 @@ func TestProviderVerificationRejectsWrongConnectionAndChangedScope(t *testing.T)
 			name := "remote_arc_fixture"
 			binding := json.RawMessage(`{"command":"native-go"}`)
 			replies := verificationReplies(profile, workspace, name, binding)
-			code := "client_verification_failed"
+			code := "CLIENT_VERIFICATION_FAILED"
 			switch mode {
 			case "drift":
 				replies["config/read"] = []map[string]any{ok(map[string]any{"layers": []any{layer(profile, map[string]any{})}})}
-				code = "config_drift"
+				code = "CONFIG_DRIFT"
 			case "missing_thread":
 				replies["thread/start"] = []map[string]any{ok(map[string]any{"thread": map[string]any{}})}
 			case "missing_server":

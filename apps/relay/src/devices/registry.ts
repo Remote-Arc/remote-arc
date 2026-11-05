@@ -1,13 +1,10 @@
+import { applicationJson } from "../platform/application-json.js";
 import { recordRunnerAttention, type RunnerEnv } from "../browser/runner-attention.js";
 import { RunnerVideoRelay, type VideoAttachment } from "../browser/runner-video.js";
-import { deviceCallTimeoutMs, processTimeoutError } from './call-timeout.js';
-import { HEARTBEAT_INTERVAL_MS, recordDeviceConnection } from '../analytics/device-reliability.js';
-import {recordProductEvent} from '../analytics/product-events.js';
-import type {
-  AgentCallMessage,
-  AgentToRelayMessage,
-  DeviceMetadata,
-} from "@remotearc/protocol";
+import { deviceCallTimeoutMs, processTimeoutError } from "./call-timeout.js";
+import { HEARTBEAT_INTERVAL_MS, recordDeviceConnection } from "../analytics/device-reliability.js";
+import { recordProductEvent } from "../analytics/product-events.js";
+import type { AgentCallMessage, AgentToRelayMessage, DeviceMetadata } from "@remotearc/protocol";
 
 /** An error the device itself returned for a call, as opposed to no reply. */
 class DeviceReportedError extends Error {}
@@ -59,47 +56,61 @@ export class DeviceRegistry {
   }
 
   private signalAt(attachment: SocketAttachment | null) {
-    const at=attachment?.lastSignalAt ?? Date.parse(attachment?.device?.lastSeen || attachment?.device?.connectedAt || '');
-    return Number.isFinite(at)?at:null;
+    const at =
+      attachment?.lastSignalAt ??
+      Date.parse(attachment?.device?.lastSeen || attachment?.device?.connectedAt || "");
+    return Number.isFinite(at) ? at : null;
   }
 
   private stale(socket: WebSocket) {
-    const at=this.signalAt(socket.deserializeAttachment() as SocketAttachment | null);
+    const at = this.signalAt(socket.deserializeAttachment() as SocketAttachment | null);
     // Legacy attachments without a timestamp get the next hello/ping timestamp.
-    return at!==null && (Date.now()-at>120000 || at>Date.now()+5000);
+    return at !== null && (Date.now() - at > 120000 || at > Date.now() + 5000);
   }
 
-  private expireSocket(socket: WebSocket,report=true) {
-    const attachment=socket.deserializeAttachment() as SocketAttachment | null;
-    if(!attachment || attachment.viewer || !this.stale(socket))return;
-    if(!attachment.staleRecorded){
-      socket.serializeAttachment({...attachment,staleRecorded:true});
-      if(this.env&&report)this.ctx.waitUntil(recordProductEvent(this.env,{
-        domain:'devices',name:'device.presence.stale',source:'server',outcome:'failed',
-        userId:attachment.userId,entityId:attachment.deviceId,errorCode:'DEVICE_SIGNAL_STALE',
-      }));
+  private expireSocket(socket: WebSocket, report = true) {
+    const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+    if (!attachment || attachment.viewer || !this.stale(socket)) return;
+    if (!attachment.staleRecorded) {
+      socket.serializeAttachment({ ...attachment, staleRecorded: true });
+      if (this.env && report)
+        this.ctx.waitUntil(
+          recordProductEvent(this.env, {
+            domain: "devices",
+            name: "device.presence.stale",
+            source: "server",
+            outcome: "failed",
+            userId: attachment.userId,
+            entityId: attachment.deviceId,
+            errorCode: "DEVICE_SIGNAL_STALE",
+          }),
+        );
     }
     // Closing an expired transport lets the existing Agent reconnect on wake.
     // No tool, process or browser action is retried here.
-    try{socket.close(4002,'device signal stale');}catch{}
+    try {
+      socket.close(4002, "device signal stale");
+    } catch {}
   }
 
-  private preferredSocket(sockets: WebSocket[], includeStale=false) {
-    return [...sockets].filter(socket=>(socket.readyState===undefined || socket.readyState===1) && (includeStale || !this.stale(socket))).sort((a, b) => {
-      const left = a.deserializeAttachment() as SocketAttachment | null;
-      const right = b.deserializeAttachment() as SocketAttachment | null;
-      const leftPolicy = left?.capabilities?.includes("device_policy_v1")
-        ? 1
-        : 0;
-      const rightPolicy = right?.capabilities?.includes("device_policy_v1")
-        ? 1
-        : 0;
-      if (leftPolicy !== rightPolicy) return rightPolicy - leftPolicy;
+  private preferredSocket(sockets: WebSocket[], includeStale = false) {
+    return [...sockets]
+      .filter(
+        (socket) =>
+          (socket.readyState === undefined || socket.readyState === 1) &&
+          (includeStale || !this.stale(socket)),
+      )
+      .sort((a, b) => {
+        const left = a.deserializeAttachment() as SocketAttachment | null;
+        const right = b.deserializeAttachment() as SocketAttachment | null;
+        const leftPolicy = left?.capabilities?.includes("device_policy_v1") ? 1 : 0;
+        const rightPolicy = right?.capabilities?.includes("device_policy_v1") ? 1 : 0;
+        if (leftPolicy !== rightPolicy) return rightPolicy - leftPolicy;
 
-      const leftTime = Date.parse(left?.device?.connectedAt || "") || 0;
-      const rightTime = Date.parse(right?.device?.connectedAt || "") || 0;
-      return rightTime - leftTime;
-    })[0];
+        const leftTime = Date.parse(left?.device?.connectedAt || "") || 0;
+        const rightTime = Date.parse(right?.device?.connectedAt || "") || 0;
+        return rightTime - leftTime;
+      })[0];
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -112,7 +123,7 @@ export class DeviceRegistry {
     }
 
     if (url.pathname === "/devices" && request.method === "GET") {
-      return Response.json(this.listDevices(request));
+      return applicationJson(this.listDevices(request));
     }
 
     if (url.pathname === "/call" && request.method === "POST") {
@@ -122,7 +133,8 @@ export class DeviceRegistry {
     if (url.pathname === "/disconnect" && request.method === "POST") {
       return this.handleDisconnect(request);
     }
-    if(url.pathname==='/reconnect'&&request.method==='POST')return this.handleReconnect(request);
+    if (url.pathname === "/reconnect" && request.method === "POST")
+      return this.handleReconnect(request);
 
     return new Response("Not found", { status: 404 });
   }
@@ -159,8 +171,7 @@ export class DeviceRegistry {
           action: watching ? "watch" : "stop",
           jpeg: viewers.some(
             (socket) =>
-              (socket.deserializeAttachment() as SocketAttachment).video
-                ?.phase !== "playing",
+              (socket.deserializeAttachment() as SocketAttachment).video?.phase !== "playing",
           ),
         }),
       );
@@ -174,12 +185,7 @@ export class DeviceRegistry {
     const userId = request.headers.get("x-remote-link-user-id"),
       deviceId = request.headers.get("x-remote-link-device-id"),
       sessionId = request.headers.get("x-runner-session-id");
-    if (
-      !userId ||
-      !deviceId ||
-      !sessionId ||
-      !/^[A-Za-z0-9_-]{1,100}$/.test(sessionId)
-    )
+    if (!userId || !deviceId || !sessionId || !/^[A-Za-z0-9_-]{1,100}$/.test(sessionId))
       return new Response("Forbidden", { status: 403 });
     const device = this.runnerDevice(userId, deviceId);
     if (!device) return new Response("Device offline", { status: 404 });
@@ -210,11 +216,7 @@ export class DeviceRegistry {
       headers: { "cache-control": "no-store" },
     });
   }
-  private forwardRunnerFrame(
-    socket: WebSocket,
-    a: SocketAttachment,
-    value: any,
-  ) {
+  private forwardRunnerFrame(socket: WebSocket, a: SocketAttachment, value: any) {
     if (
       !/^[A-Za-z0-9_-]{1,100}$/.test(value.session_id || "") ||
       typeof value.data !== "string" ||
@@ -227,8 +229,7 @@ export class DeviceRegistry {
     const viewers = this.ctx
       .getWebSockets(this.viewTag({ ...a, sessionId: value.session_id }))
       .filter((viewer) => {
-        const target =
-          viewer.deserializeAttachment() as SocketAttachment | null;
+        const target = viewer.deserializeAttachment() as SocketAttachment | null;
         return (
           target?.viewer &&
           target.userId === a.userId &&
@@ -242,9 +243,7 @@ export class DeviceRegistry {
       return;
     }
     const times = Object.fromEntries(
-      Object.entries(a.frameTimes || {}).filter(
-        ([, time]) => now - time < 30000,
-      ),
+      Object.entries(a.frameTimes || {}).filter(([, time]) => now - time < 30000),
     );
     socket.serializeAttachment({
       ...a,
@@ -257,11 +256,7 @@ export class DeviceRegistry {
       data: value.data,
     });
     for (const viewer of viewers) {
-      if (
-        (viewer.deserializeAttachment() as SocketAttachment).video?.phase ===
-        "playing"
-      )
-        continue;
+      if ((viewer.deserializeAttachment() as SocketAttachment).video?.phase === "playing") continue;
       try {
         viewer.send(frame);
       } catch {
@@ -293,9 +288,7 @@ export class DeviceRegistry {
 
     this.ctx.acceptWebSocket(server, ["user:" + userId, "device:" + deviceId]);
 
-    const requestedProtocols = (
-      request.headers.get("sec-websocket-protocol") || ""
-    )
+    const requestedProtocols = (request.headers.get("sec-websocket-protocol") || "")
       .split(",")
       .map((value) => value.trim());
 
@@ -313,25 +306,26 @@ export class DeviceRegistry {
 
     const byDevice = new Map<string, WebSocket[]>();
     for (const socket of this.ctx.getWebSockets("user:" + userId)) {
-      const attachment =
-        socket.deserializeAttachment() as SocketAttachment | null;
-      if (!attachment?.deviceId || attachment.userId!==userId || attachment.viewer || (socket.readyState!==undefined && socket.readyState!==1)) continue;
+      const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+      if (
+        !attachment?.deviceId ||
+        attachment.userId !== userId ||
+        attachment.viewer ||
+        (socket.readyState !== undefined && socket.readyState !== 1)
+      )
+        continue;
       const sockets = byDevice.get(attachment.deviceId) || [];
       sockets.push(socket);
       byDevice.set(attachment.deviceId, sockets);
     }
 
     return Array.from(byDevice.entries()).map(([deviceId, sockets]) => {
-      const liveSocket=this.preferredSocket(sockets);
-      const socket = liveSocket || this.preferredSocket(sockets,true);
-      const attachment =
-        socket?.deserializeAttachment() as SocketAttachment | null;
-      for(const candidate of sockets)this.expireSocket(candidate,!liveSocket);
+      const liveSocket = this.preferredSocket(sockets);
+      const socket = liveSocket || this.preferredSocket(sockets, true);
+      const attachment = socket?.deserializeAttachment() as SocketAttachment | null;
+      for (const candidate of sockets) this.expireSocket(candidate, !liveSocket);
       const backgroundSocket = sockets
-        .map(
-          (candidate) =>
-            candidate.deserializeAttachment() as SocketAttachment | null,
-        )
+        .map((candidate) => candidate.deserializeAttachment() as SocketAttachment | null)
         .filter((candidate) => candidate?.device?.backgroundProcess === true)
         .sort((left, right) => {
           const leftTime = Date.parse(left?.device?.connectedAt || "") || 0;
@@ -343,58 +337,68 @@ export class DeviceRegistry {
         ...(attachment?.device || {}),
         tools: attachment?.tools || [],
         capabilities: attachment?.capabilities || [],
-        status: liveSocket ? 'online' : 'offline',
-        connection_state: liveSocket ? 'connected' : 'stale',
+        status: liveSocket ? "online" : "offline",
+        connection_state: liveSocket ? "connected" : "stale",
         execution_paused: attachment?.device?.executionPaused === true,
         recovery_enabled: attachment?.device?.recoveryEnabled,
-        background_guard_active: Boolean(liveSocket) && attachment?.device?.supervisorActive === true,
+        background_guard_active:
+          Boolean(liveSocket) && attachment?.device?.supervisorActive === true,
         background_guard_pid: attachment?.device?.supervisorPid ?? null,
         background_guard_service: attachment?.device?.supervisorService ?? null,
         recovery_bundle_version: attachment?.device?.recoveryVersion ?? null,
-        execution_mode: attachment?.device?.backgroundProcess
-          ? "background"
-          : "foreground",
+        execution_mode: attachment?.device?.backgroundProcess ? "background" : "foreground",
         background_active: Boolean(liveSocket && backgroundSocket),
         background_pid: backgroundSocket?.device?.pid ?? null,
-        background_agent_version:
-          backgroundSocket?.device?.agentVersion ?? null,
+        background_agent_version: backgroundSocket?.device?.agentVersion ?? null,
         background_connected_at: backgroundSocket?.device?.connectedAt ?? null,
       };
     });
   }
 
-  private async handleReconnect(request:Request):Promise<Response>{
-    const userId=request.headers.get('x-remote-link-user-id');
-    if(!userId)return Response.json({error:'missing user identity'},{status:401});
-    const body=await request.json().catch(()=>null) as {deviceId?:unknown}|null;
-    if(typeof body?.deviceId!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(body.deviceId))return Response.json({error:'invalid deviceId'},{status:400});
-    const sockets=this.ctx.getWebSockets('device:'+body.deviceId).filter(socket=>{
-      const a=socket.deserializeAttachment() as SocketAttachment|null;
-      return a?.userId===userId&&!a.viewer&&(socket.readyState===undefined||socket.readyState===1);
+  private async handleReconnect(request: Request): Promise<Response> {
+    const userId = request.headers.get("x-remote-link-user-id");
+    if (!userId) return applicationJson({ error: "missing user identity" }, { status: 401 });
+    const body = (await request.json().catch(() => null)) as { deviceId?: unknown } | null;
+    if (typeof body?.deviceId !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(body.deviceId))
+      return applicationJson({ error: "invalid deviceId" }, { status: 400 });
+    const sockets = this.ctx.getWebSockets("device:" + body.deviceId).filter((socket) => {
+      const a = socket.deserializeAttachment() as SocketAttachment | null;
+      return (
+        a?.userId === userId &&
+        !a.viewer &&
+        (socket.readyState === undefined || socket.readyState === 1)
+      );
     });
-    const connected=sockets.filter(socket=>!this.stale(socket)).length;
-    const expired=sockets.filter(socket=>this.stale(socket));
-    for(const socket of expired)this.expireSocket(socket,connected===0);
-    return Response.json({state:connected?'connection_present':expired.length?'reconnect_requested':'device_unreachable',connected,retired:expired.length});
+    const connected = sockets.filter((socket) => !this.stale(socket)).length;
+    const expired = sockets.filter((socket) => this.stale(socket));
+    for (const socket of expired) this.expireSocket(socket, connected === 0);
+    return applicationJson({
+      state: connected
+        ? "connection_present"
+        : expired.length
+          ? "reconnect_requested"
+          : "device_unreachable",
+      connected,
+      retired: expired.length,
+    });
   }
 
   private async handleDisconnect(request: Request): Promise<Response> {
     const userId = request.headers.get("x-remote-link-user-id");
     if (!userId) {
-      return Response.json({ error: "missing user identity" }, { status: 401 });
+      return applicationJson({ error: "missing user identity" }, { status: 401 });
     }
 
     const body = (await request.json().catch(() => ({}))) as {
       deviceId?: string;
     };
     if (!body.deviceId) {
-      return Response.json({ error: "deviceId is required" }, { status: 400 });
+      return applicationJson({ error: "deviceId is required" }, { status: 400 });
     }
 
     let disconnected = 0;
     for (const socket of this.ctx.getWebSockets("device:" + body.deviceId)) {
-      const attachment =
-        socket.deserializeAttachment() as SocketAttachment | null;
+      const attachment = socket.deserializeAttachment() as SocketAttachment | null;
       if (attachment?.userId !== userId) continue;
       if (attachment.publications && this.video)
         this.ctx.waitUntil(this.video.disconnectDevice(socket));
@@ -406,13 +410,13 @@ export class DeviceRegistry {
       }
     }
 
-    return Response.json({ ok: true, disconnected });
+    return applicationJson({ ok: true, disconnected });
   }
 
   private async handleCall(request: Request): Promise<Response> {
     const userId = request.headers.get("x-remote-link-user-id");
     if (!userId) {
-      return Response.json({ error: "missing user identity" }, { status: 401 });
+      return applicationJson({ error: "missing user identity" }, { status: 401 });
     }
 
     const body = (await request.json()) as {
@@ -424,58 +428,61 @@ export class DeviceRegistry {
     };
 
     if (!body.deviceId || !body.tool) {
-      return Response.json(
-        { error: "deviceId and tool are required" },
-        { status: 400 },
-      );
+      return applicationJson({ error: "deviceId and tool are required" }, { status: 400 });
     }
 
     const timeoutError = processTimeoutError(body.tool, body.arguments || {});
-    if (timeoutError) return Response.json({ error: timeoutError }, { status: 400 });
+    if (timeoutError) return applicationJson({ error: timeoutError }, { status: 400 });
 
-    const sockets=this.ctx.getWebSockets('device:'+body.deviceId).filter(socket=>{
-      const attachment=socket.deserializeAttachment() as SocketAttachment | null;
-      return attachment?.userId===userId && !attachment.viewer;
+    const sockets = this.ctx.getWebSockets("device:" + body.deviceId).filter((socket) => {
+      const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+      return attachment?.userId === userId && !attachment.viewer;
     });
     const socket = this.preferredSocket(sockets);
-    for(const candidate of sockets)this.expireSocket(candidate,!socket);
+    for (const candidate of sockets) this.expireSocket(candidate, !socket);
     if (!socket) {
-      return Response.json({ error: "device offline" }, { status: 404 });
+      return applicationJson({ error: "device offline" }, { status: 404 });
     }
 
-    const attachment =
-      socket.deserializeAttachment() as SocketAttachment | null;
+    const attachment = socket.deserializeAttachment() as SocketAttachment | null;
 
     if (!attachment || attachment.userId !== userId) {
-      return Response.json({ error: "device not found" }, { status: 404 });
+      return applicationJson({ error: "device not found" }, { status: 404 });
     }
 
     const tools = attachment.tools || [];
     if (
       attachment.device?.executionPaused === true &&
-      ![
-        "set_device_runtime",
-        "set_background_agent",
-        "background_agent_status",
-      ].includes(body.tool)
+      !["set_device_runtime", "set_background_agent", "background_agent_status"].includes(body.tool)
     ) {
-      return Response.json(
+      return applicationJson(
         { error: "Device is paused. Resume it from Dashboard to use tools." },
         { status: 409 },
       );
     }
     if (!tools.includes(body.tool)) {
-      return Response.json(
+      return applicationJson(
         { error: `tool not available on device: ${body.tool}` },
         { status: 403 },
       );
     }
 
-    const authFill = body.tool === "browser_fill" ||
-      (["browser_act","browser_runner_act"].includes(body.tool) &&
-       ["fill","fill_form"].includes(String(body.arguments?.action)));
-    if (body.policy?.browserAuth && authFill && !attachment.capabilities?.includes("browser_auth_policy_v1")) {
-      return Response.json({error:"BROWSER_AUTH_UPDATE_REQUIRED: update the Remote Arc Agent or Chrome extension before filling fields. This version cannot enforce Dashboard authentication approvals."},{status:409});
+    const authFill =
+      body.tool === "browser_fill" ||
+      (["browser_act", "browser_runner_act"].includes(body.tool) &&
+        ["fill", "fill_form"].includes(String(body.arguments?.action)));
+    if (
+      body.policy?.browserAuth &&
+      authFill &&
+      !attachment.capabilities?.includes("browser_auth_policy_v1")
+    ) {
+      return applicationJson(
+        {
+          error:
+            "BROWSER_AUTH_UPDATE_REQUIRED: update the Remote Arc Agent or Chrome extension before filling fields. This version cannot enforce Dashboard authentication approvals.",
+        },
+        { status: 409 },
+      );
     }
 
     const id =
@@ -483,7 +490,9 @@ export class DeviceRegistry {
         ? body.requestId
         : crypto.randomUUID();
     const message: AgentCallMessage = {
-      expires_at:new Date(Date.now()+deviceCallTimeoutMs(body.tool,body.arguments||{})).toISOString(),
+      expires_at: new Date(
+        Date.now() + deviceCallTimeoutMs(body.tool, body.arguments || {}),
+      ).toISOString(),
       type: "call",
       id,
       tool: body.tool,
@@ -492,10 +501,13 @@ export class DeviceRegistry {
     };
 
     const result = await new Promise<unknown>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error("device call timed out"));
-      }, deviceCallTimeoutMs(body.tool!, body.arguments || {}));
+      const timeout = setTimeout(
+        () => {
+          this.pending.delete(id);
+          reject(new Error("device call timed out"));
+        },
+        deviceCallTimeoutMs(body.tool!, body.arguments || {}),
+      );
 
       this.pending.set(id, { socket, resolve, reject, timeout });
       try {
@@ -510,21 +522,17 @@ export class DeviceRegistry {
       __deviceReported: error instanceof DeviceReportedError,
     }));
 
-    if (
-      typeof result === "object" &&
-      result !== null &&
-      "__remoteLinkError" in result
-    ) {
+    if (typeof result === "object" && result !== null && "__remoteLinkError" in result) {
       const failure = result as { __remoteLinkError: unknown; __deviceReported: boolean };
       // The device answered with an error (missing path, policy refusal…):
       // the request was handled, so it is not a gateway timeout.
-      return Response.json(
+      return applicationJson(
         { error: String(failure.__remoteLinkError) },
         { status: failure.__deviceReported ? 422 : 504 },
       );
     }
 
-    return Response.json({ result });
+    return applicationJson({ result });
   }
 
   webSocketMessage(socket: WebSocket, message: string | ArrayBuffer) {
@@ -538,8 +546,7 @@ export class DeviceRegistry {
     }
 
     if (!parsed || typeof parsed !== "object") return;
-    const attachment =
-      socket.deserializeAttachment() as SocketAttachment | null;
+    const attachment = socket.deserializeAttachment() as SocketAttachment | null;
     if (!attachment) return;
     if (attachment.viewer) {
       if (parsed.type === "ping") {
@@ -549,43 +556,41 @@ export class DeviceRegistry {
         socket.send(JSON.stringify({ type: "pong" }));
         if (current.video)
           this.ctx.waitUntil(
-            this.video
-              ?.heartbeat(socket)
-              .catch(() => this.video?.stopViewer(socket)) || Promise.resolve(),
+            this.video?.heartbeat(socket).catch(() => this.video?.stopViewer(socket)) ||
+              Promise.resolve(),
           );
       } else if (
-        ["video_start", "video_answer", "video_stop", "video_playing"].includes(
-          parsed.type,
-        )
+        ["video_start", "video_answer", "video_stop", "video_playing"].includes(parsed.type)
       ) {
         if (message.length > 70000) return;
         if (this.video)
           this.ctx.waitUntil(
-            this.video
-              .viewer(socket, parsed)
-              .catch(() => this.video?.stopViewer(socket)),
+            this.video.viewer(socket, parsed).catch(() => this.video?.stopViewer(socket)),
           );
-        else
-          socket.send(
-            JSON.stringify({ type: "runner_video", action: "fallback" }),
-          );
+        else socket.send(JSON.stringify({ type: "runner_video", action: "fallback" }));
       }
       return; // A viewer can never impersonate an Agent or dispatch an action.
     }
-    if(['hello','ping','result','runner_video','runner_frame','runner_attention'].includes(parsed.type)){
-      const at=Date.now();
-      socket.serializeAttachment({...attachment,lastSignalAt:at,device:{...attachment.device,lastSeen:new Date(at).toISOString()}});
+    if (
+      ["hello", "ping", "result", "runner_video", "runner_frame", "runner_attention"].includes(
+        parsed.type,
+      )
+    ) {
+      const at = Date.now();
+      socket.serializeAttachment({
+        ...attachment,
+        lastSignalAt: at,
+        device: { ...attachment.device, lastSeen: new Date(at).toISOString() },
+      });
     }
-    if(parsed.type==='ping'){
-      socket.send(JSON.stringify({type:'pong'}));
+    if (parsed.type === "ping") {
+      socket.send(JSON.stringify({ type: "pong" }));
       return;
     }
     if (parsed.type === "runner_video") {
       if (message.length <= 70000 && this.video)
         this.ctx.waitUntil(
-          this.video
-            .agent(socket, parsed)
-            .catch(() => this.video?.disconnectDevice(socket)),
+          this.video.agent(socket, parsed).catch(() => this.video?.disconnectDevice(socket)),
         );
       return;
     }
@@ -597,12 +602,7 @@ export class DeviceRegistry {
       this.attentionChain = this.attentionChain
         .catch(() => {})
         .then(async () => {
-          await recordRunnerAttention(
-            this.env!,
-            attachment.userId,
-            attachment.deviceId,
-            parsed,
-          );
+          await recordRunnerAttention(this.env!, attachment.userId, attachment.deviceId, parsed);
           const event = parsed as unknown as { event_id: string; kind: string };
           socket.send(
             JSON.stringify({
@@ -617,14 +617,23 @@ export class DeviceRegistry {
     }
 
     if (parsed.type === "hello") {
-      const attachment =
-        socket.deserializeAttachment() as SocketAttachment | null;
+      const attachment = socket.deserializeAttachment() as SocketAttachment | null;
       if (!attachment) return;
 
-      const metricWindow = Math.floor(Date.now()/HEARTBEAT_INTERVAL_MS);
-      if (this.env && (!attachment.connectionRecorded || attachment.metricWindow !== metricWindow)) {
-        this.ctx.waitUntil(recordDeviceConnection(this.env,attachment.userId,attachment.deviceId,
-          attachment.connectionRecorded?'heartbeat':'connected',parsed.device || {}));
+      const metricWindow = Math.floor(Date.now() / HEARTBEAT_INTERVAL_MS);
+      if (
+        this.env &&
+        (!attachment.connectionRecorded || attachment.metricWindow !== metricWindow)
+      ) {
+        this.ctx.waitUntil(
+          recordDeviceConnection(
+            this.env,
+            attachment.userId,
+            attachment.deviceId,
+            attachment.connectionRecorded ? "heartbeat" : "connected",
+            parsed.device || {},
+          ),
+        );
       }
 
       // Treat telemetry as untrusted even from an enrolled device. Server timestamps
@@ -663,25 +672,22 @@ export class DeviceRegistry {
           : null;
       socket.serializeAttachment({
         ...attachment,
-        lastSignalAt:Date.now(),
-        staleRecorded:false,
+        lastSignalAt: Date.now(),
+        staleRecorded: false,
         connectionRecorded: true,
         metricWindow,
         device: {
           ...parsed.device,
           id: attachment.deviceId,
           capacity,
-          connectedAt:
-            attachment.device?.connectedAt || new Date().toISOString(),
+          connectedAt: attachment.device?.connectedAt || new Date().toISOString(),
           lastSeen: new Date().toISOString(),
         },
         tools: parsed.tools,
         capabilities: parsed.capabilities || [],
       } satisfies SocketAttachment);
       if (parsed.device?.executionPaused)
-        this.ctx.waitUntil(
-          this.video?.disconnectDevice(socket) || Promise.resolve(),
-        );
+        this.ctx.waitUntil(this.video?.disconnectDevice(socket) || Promise.resolve());
       return;
     }
 
@@ -701,24 +707,26 @@ export class DeviceRegistry {
   }
 
   webSocketClose(socket: WebSocket) {
-    for(const [id,pending] of this.pending){
-      if(pending.socket!==socket)continue;
-      clearTimeout(pending.timeout);this.pending.delete(id);
-      pending.reject(new Error('device call timed out: connection closed; execution result unknown'));
+    for (const [id, pending] of this.pending) {
+      if (pending.socket !== socket) continue;
+      clearTimeout(pending.timeout);
+      this.pending.delete(id);
+      pending.reject(
+        new Error("device call timed out: connection closed; execution result unknown"),
+      );
     }
     const a = socket.deserializeAttachment() as SocketAttachment | null;
     if (a && !a.viewer && a.connectionRecorded && !a.disconnectRecorded && this.env) {
-      socket.serializeAttachment({...a,disconnectRecorded:true});
-      this.ctx.waitUntil(recordDeviceConnection(this.env,a.userId,a.deviceId,'disconnected',a.device||{}));
+      socket.serializeAttachment({ ...a, disconnectRecorded: true });
+      this.ctx.waitUntil(
+        recordDeviceConnection(this.env, a.userId, a.deviceId, "disconnected", a.device || {}),
+      );
     }
     if (a?.viewer) {
       socket.serializeAttachment({ ...a, heartbeatAt: 0 });
-      if (a.video)
-        this.ctx.waitUntil(this.video?.stopViewer(socket) || Promise.resolve());
+      if (a.video) this.ctx.waitUntil(this.video?.stopViewer(socket) || Promise.resolve());
     } else if (a?.publications)
-      this.ctx.waitUntil(
-        this.video?.disconnectDevice(socket) || Promise.resolve(),
-      );
+      this.ctx.waitUntil(this.video?.disconnectDevice(socket) || Promise.resolve());
     if (
       a?.viewer &&
       !this.ctx
@@ -726,9 +734,7 @@ export class DeviceRegistry {
         .some(
           (other) =>
             other !== socket &&
-            Date.now() -
-              ((other.deserializeAttachment() as SocketAttachment)
-                ?.heartbeatAt || 0) <
+            Date.now() - ((other.deserializeAttachment() as SocketAttachment)?.heartbeatAt || 0) <
               30000,
         )
     )

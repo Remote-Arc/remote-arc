@@ -1,12 +1,9 @@
+import { applicationJson } from "../platform/application-json.js";
 import { getSessionUser } from "../auth/auth.js";
 import { isTrustedDashboardMutation } from "../auth/dashboard-origin.js";
 import { callDevice } from "../devices/device-call.js";
 import type { RunnerVideoEnv } from "./runner-video.js";
-import {
-  slackApi,
-  slackInstallation,
-  type SlackBotEnv,
-} from "../slack/slack-bot-common.js";
+import { slackApi, slackInstallation, type SlackBotEnv } from "../slack/slack-bot-common.js";
 
 export type RunnerEnv = SlackBotEnv & RunnerVideoEnv;
 export type RunnerAttentionEvent = {
@@ -19,19 +16,15 @@ export type RunnerAttentionEvent = {
 };
 const idPattern = /^[A-Za-z0-9_-]{1,100}$/;
 const json = (value: unknown, status = 200) =>
-  Response.json(value, { status, headers: { "cache-control": "no-store" } });
-export function parseRunnerAttention(
-  value: unknown,
-): RunnerAttentionEvent | null {
+  applicationJson(value, { status, headers: { "cache-control": "no-store" } });
+export function parseRunnerAttention(value: unknown): RunnerAttentionEvent | null {
   const input = value as Partial<RunnerAttentionEvent> | null;
   if (
     !input ||
     input.type !== "runner_attention" ||
     !idPattern.test(input.session_id || "") ||
     !/^[a-f0-9]{32}$/.test(input.event_id || "") ||
-    !["captcha", "sign_in", "otp", "scope", "reminder", "resolved"].includes(
-      input.kind || "",
-    )
+    !["captcha", "sign_in", "otp", "scope", "reminder", "resolved"].includes(input.kind || "")
   )
     return null;
   try {
@@ -58,10 +51,7 @@ export function parseRunnerAttention(
   }
 }
 export const runnerViewPath = (device: string, session: string) =>
-  "/dashboard/browser/" +
-  encodeURIComponent(device) +
-  "/" +
-  encodeURIComponent(session);
+  "/dashboard/browser/" + encodeURIComponent(device) + "/" + encodeURIComponent(session);
 const actionName = (kind: string) =>
   kind === "captcha"
     ? "complete a verification"
@@ -72,15 +62,28 @@ const actionName = (kind: string) =>
         : "sign in";
 
 async function runnerSessions(env: RunnerEnv, userId: string, deviceId: string) {
-  const result = unwrapRunnerResult(await callDevice(
-    env,
-    { userId, clientId: "dashboard", grantId: null, scope: "browser:read", resource: env.PUBLIC_ORIGIN },
-    deviceId, "browser_runner_status", {},
-  ));
+  const result = unwrapRunnerResult(
+    await callDevice(
+      env,
+      {
+        userId,
+        clientId: "dashboard",
+        grantId: null,
+        scope: "browser:read",
+        resource: env.PUBLIC_ORIGIN,
+      },
+      deviceId,
+      "browser_runner_status",
+      {},
+    ),
+  );
   // An unavailable/malformed reply is not proof that a task ended. Only a
   // successful inventory may hide an old handoff; checkpoints stay on device.
   if (!Array.isArray(result.sessions)) throw new Error("invalid_runner_inventory");
-  const sessions = new Map<string, { browser_running: boolean; state: string; last_url?: string }>();
+  const sessions = new Map<
+    string,
+    { browser_running: boolean; state: string; last_url?: string }
+  >();
   for (const item of result.sessions) {
     if (!item || !idPattern.test(item.session_id || "")) continue;
     if (typeof item.browser_running !== "boolean" || typeof item.state !== "string")
@@ -202,12 +205,9 @@ export async function recordRunnerAttention(
   if (!installation) return;
   // Public mentions must never copy private device activity into the channel.
   const channel =
-    job.event_type === "message"
-      ? job.reply_channel || job.channel_id
-      : job.reply_channel;
+    job.event_type === "message" ? job.reply_channel || job.channel_id : job.reply_channel;
   if (!channel) return;
-  const field =
-    event.kind === "reminder" ? "slack_reminded_at" : "slack_notified_at";
+  const field = event.kind === "reminder" ? "slack_reminded_at" : "slack_notified_at";
   // Claim before posting; an uncertain Slack acknowledgement is never retried.
   const claimed = await env.DB.prepare(
     `UPDATE runner_attention SET ${field}=?1 WHERE id=?2 AND ${field} IS NULL AND resolved_at IS NULL RETURNING id`,
@@ -259,15 +259,24 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
       .all<{ id: string; device_id: string; session_id: string }>();
     const inventories = new Map<string, Awaited<ReturnType<typeof runnerSessions>> | null>();
     // One read per device, not per reminder. Do not scan a page or start a browser.
-    await Promise.all([...new Set(rows.results.map(row => row.device_id))].map(async deviceId => {
-      try { inventories.set(deviceId, await runnerSessions(env, user.id, deviceId)); }
-      catch { inventories.set(deviceId, null); }
-    }));
-    return json({ attention: rows.results.flatMap(row => {
-      const inventory = inventories.get(row.device_id);
-      if (!inventory) return [{ ...row, availability: "unavailable" }];
-      return needsAttention(inventory.get(row.session_id)) ? [{ ...row, availability: "live" }] : [];
-    }) });
+    await Promise.all(
+      [...new Set(rows.results.map((row) => row.device_id))].map(async (deviceId) => {
+        try {
+          inventories.set(deviceId, await runnerSessions(env, user.id, deviceId));
+        } catch {
+          inventories.set(deviceId, null);
+        }
+      }),
+    );
+    return json({
+      attention: rows.results.flatMap((row) => {
+        const inventory = inventories.get(row.device_id);
+        if (!inventory) return [{ ...row, availability: "unavailable" }];
+        return needsAttention(inventory.get(row.session_id))
+          ? [{ ...row, availability: "live" }]
+          : [];
+      }),
+    });
   }
   // Device cards can list active task browsers without a CAPTCHA/sign-in alert.
   // Expose only owner-scoped, bounded metadata; never full URLs, profiles or logins.
@@ -276,11 +285,21 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
     const deviceId = sessionsRoute[1]!;
     const owned = await env.DB.prepare(
       "SELECT allowed_tools FROM devices WHERE id=?1 AND user_id=?2 AND revoked_at IS NULL",
-    ).bind(deviceId, user.id).first<{ allowed_tools: string | null }>();
+    )
+      .bind(deviceId, user.id)
+      .first<{ allowed_tools: string | null }>();
     if (!owned) return json({ error: "forbidden" }, 403);
     let allowed: unknown;
-    try { allowed = JSON.parse(owned.allowed_tools || "[]"); } catch { allowed = []; }
-    if (!Array.isArray(allowed) || !allowed.includes("browser_runner_status") || !allowed.includes("browser_runner_snapshot"))
+    try {
+      allowed = JSON.parse(owned.allowed_tools || "[]");
+    } catch {
+      allowed = [];
+    }
+    if (
+      !Array.isArray(allowed) ||
+      !allowed.includes("browser_runner_status") ||
+      !allowed.includes("browser_runner_snapshot")
+    )
       return json({ error: "runner_disabled" }, 403);
     try {
       const sessions = [...(await runnerSessions(env, user.id, deviceId)).entries()]
@@ -290,8 +309,11 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
           let hostname = "";
           try {
             const parsed = new URL(item.last_url || "");
-            if (parsed.protocol === "https:" || parsed.protocol === "http:") hostname = parsed.hostname.slice(0, 120);
-          } catch { /* Never disclose malformed or untrusted page URLs. */ }
+            if (parsed.protocol === "https:" || parsed.protocol === "http:")
+              hostname = parsed.hostname.slice(0, 120);
+          } catch {
+            /* Never disclose malformed or untrusted page URLs. */
+          }
           return {
             session_id: sessionId,
             state: ["active", "needs_user", "paused"].includes(item.state) ? item.state : "active",
@@ -303,9 +325,7 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
       return json({ error: "device_unavailable" }, 503);
     }
   }
-  const resolve = url.pathname.match(
-    /^\/api\/runner\/attention\/([A-Za-z0-9-]+)\/resolve$/,
-  );
+  const resolve = url.pathname.match(/^\/api\/runner\/attention\/([A-Za-z0-9-]+)\/resolve$/);
   if (resolve && request.method === "POST") {
     const row = await env.DB.prepare(
       "SELECT device_id,session_id,resolved_at FROM runner_attention WHERE id=?1 AND user_id=?2",
@@ -348,7 +368,9 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
       try {
         const current = (await runnerSessions(env, user.id, row.device_id)).get(row.session_id);
         if (!needsAttention(current)) return inactiveAttention(current);
-      } catch { /* An offline device is never treated as an ended task. */ }
+      } catch {
+        /* An offline device is never treated as an ended task. */
+      }
       return json(
         {
           error: "device_unavailable",
@@ -359,9 +381,7 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
       );
     }
   }
-  const settings = url.pathname.match(
-    /^\/api\/runner\/settings\/([A-Za-z0-9_-]+)$/,
-  );
+  const settings = url.pathname.match(/^\/api\/runner\/settings\/([A-Za-z0-9_-]+)$/);
   const session = url.pathname.match(
     /^\/api\/runner\/(view|session)\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]{1,100})$/,
   );
@@ -380,22 +400,16 @@ export async function handleRunnerRequest(request: Request, env: RunnerEnv) {
   if (settings) {
     if (request.method === "GET")
       return json({ runner_attention_mode: owned.runner_attention_mode });
-    if (request.method !== "POST")
-      return json({ error: "method_not_allowed" }, 405);
+    if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
     const input = (await request.json().catch(() => null)) as any;
-    if (
-      !["notify_only", "show_and_notify"].includes(input?.runner_attention_mode)
-    )
+    if (!["notify_only", "show_and_notify"].includes(input?.runner_attention_mode))
       return json({ error: "invalid_mode" }, 400);
-    await env.DB.prepare(
-      "UPDATE devices SET runner_attention_mode=?1 WHERE id=?2 AND user_id=?3",
-    )
+    await env.DB.prepare("UPDATE devices SET runner_attention_mode=?1 WHERE id=?2 AND user_id=?3")
       .bind(input.runner_attention_mode, device, user.id)
       .run();
     return json({ runner_attention_mode: input.runner_attention_mode });
   }
-  if (request.method !== "GET")
-    return json({ error: "method_not_allowed" }, 405);
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
   if (session![1] === "view") {
     let tools: unknown;
     try {

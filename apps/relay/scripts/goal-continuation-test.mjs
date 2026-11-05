@@ -10,9 +10,19 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 const relay = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // Run with tsx: the real relay sources are imported directly, so coverage and
 // stack traces point at apps/relay/src. Module names are unique across folders.
-const relaySources = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-  entry.isDirectory() ? relaySources(path.join(dir, entry.name)) : entry.name.endsWith(".ts") ? [path.join(dir, entry.name)] : []);
-const relayByName = new Map(relaySources(path.join(relay, "src")).map((file) => [path.basename(file, ".ts"), file]));
+const relaySources = (dir) =>
+  fs
+    .readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) =>
+      entry.isDirectory()
+        ? relaySources(path.join(dir, entry.name))
+        : entry.name.endsWith(".ts")
+          ? [path.join(dir, entry.name)]
+          : [],
+    );
+const relayByName = new Map(
+  relaySources(path.join(relay, "src")).map((file) => [path.basename(file, ".ts"), file]),
+);
 const relayModule = (name) => {
   // The shared protocol package, as the relay sources import it.
   if (name === "protocol") return import("@remotearc/protocol");
@@ -34,40 +44,96 @@ const importSource = relayModule;
   const planAdmin = await importSource("plan-admin");
   const billing = await importSource("billing-ledger");
   const sqlite = new DatabaseSync(":memory:");
-  for (const name of fs.readdirSync(path.join(relay, "migrations")).filter(n => n.endsWith(".sql")).sort()) {
+  for (const name of fs
+    .readdirSync(path.join(relay, "migrations"))
+    .filter((n) => n.endsWith(".sql"))
+    .sort()) {
     sqlite.exec(fs.readFileSync(path.join(relay, "migrations", name), "utf8"));
   }
   const db = {
     prepare(sql) {
       const stmt = sqlite.prepare(sql);
-      const bound = args => ({
-        async first() { return stmt.get(...args) || null; },
-        async all() { return { results: stmt.all(...args) }; },
-        async run() { const r = stmt.run(...args); return { success: true, meta: { changes: Number(r.changes) } }; },
-        runSync() { const r = stmt.run(...args); return { success: true, meta: { changes: Number(r.changes) } }; },
+      const bound = (args) => ({
+        async first() {
+          return stmt.get(...args) || null;
+        },
+        async all() {
+          return { results: stmt.all(...args) };
+        },
+        async run() {
+          const r = stmt.run(...args);
+          return { success: true, meta: { changes: Number(r.changes) } };
+        },
+        runSync() {
+          const r = stmt.run(...args);
+          return { success: true, meta: { changes: Number(r.changes) } };
+        },
       });
-      return { ...bound([]), bind(...args) { assert(!args.includes(undefined)); return bound(args); } };
+      return {
+        ...bound([]),
+        bind(...args) {
+          assert(!args.includes(undefined));
+          return bound(args);
+        },
+      };
     },
     async batch(statements) {
       sqlite.exec("BEGIN");
-      try { const results = statements.map(s => s.runSync()); sqlite.exec("COMMIT"); return results; }
-      catch (error) { sqlite.exec("ROLLBACK"); throw error; }
+      try {
+        const results = statements.map((s) => s.runSync());
+        sqlite.exec("COMMIT");
+        return results;
+      } catch (error) {
+        sqlite.exec("ROLLBACK");
+        throw error;
+      }
     },
   };
   const now = new Date().toISOString();
-  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,plan) VALUES(?,?,?,?,\'plus\')").run("owner", "test-owner", "owner@test.invalid", now);
-  const tools = ["read_file", "read_binary_file", "edit_block", "write_file", "start_process", "process_status", "process_output", "stop_process"];
-  sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,workspace_roots) VALUES(?,?,?,?,?,?,?,?)")
-    .run("device", "owner", "Test device", "linux", "fixture-hash", now, JSON.stringify(tools), JSON.stringify(["/workspace"]));
-  sqlite.prepare("UPDATE devices SET automation_permissions = ? WHERE id = 'device'").run(JSON.stringify({
-    background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: false,
-  }));
-  let calls = [], processCounter = 0, keepAwakeSeconds = [];
+  sqlite
+    .prepare("INSERT INTO users(id,google_sub,email,created_at,plan) VALUES(?,?,?,?,'plus')")
+    .run("owner", "test-owner", "owner@test.invalid", now);
+  const tools = [
+    "read_file",
+    "read_binary_file",
+    "edit_block",
+    "write_file",
+    "start_process",
+    "process_status",
+    "process_output",
+    "stop_process",
+  ];
+  sqlite
+    .prepare(
+      "INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,workspace_roots) VALUES(?,?,?,?,?,?,?,?)",
+    )
+    .run(
+      "device",
+      "owner",
+      "Test device",
+      "linux",
+      "fixture-hash",
+      now,
+      JSON.stringify(tools),
+      JSON.stringify(["/workspace"]),
+    );
+  sqlite.prepare("UPDATE devices SET automation_permissions = ? WHERE id = 'device'").run(
+    JSON.stringify({
+      background_tasks: true,
+      scheduled_tasks: true,
+      adaptive_agent: true,
+      source_agent: true,
+      keep_awake: false,
+    }),
+  );
+  let calls = [],
+    processCounter = 0,
+    keepAwakeSeconds = [];
   const binaryFixture = Buffer.from([0, 1, 2, 3]);
   let binaryRevision = "binary-rev-1";
-  let deviceHandler = body => {
+  let deviceHandler = (body) => {
     calls.push(body.tool);
-    if (body.tool === "start_process") return { process_id: "process-" + (++processCounter) };
+    if (body.tool === "start_process") return { process_id: "process-" + ++processCounter };
     if (body.tool === "process_status") return { status: "completed", exit_code: 0 };
     if (body.tool === "process_output") return { stdout: "PASS: acceptance check", stderr: "" };
     if (body.tool === "read_file") return "implementation contents";
@@ -97,103 +163,249 @@ const importSource = relayModule;
     }
     return { ok: true };
   };
-  const env = { DB: db, PUBLIC_ORIGIN: "https://relay.test.invalid", REGISTRY: { getByName() { return {
-    async fetch(request) { return Response.json({ result: await deviceHandler(await request.json()) }); },
-  }; } } };
-  const identity = { userId: "owner", clientId: "source-client", scope: "automation:read automation:write agent:write computer:read", resource: env.PUBLIC_ORIGIN + "/mcp" };
-  const create = async (name, extra = {}) => (await runtime.createAutomation(env, "owner", { name, kind: "agent_goal", device_id: "device", agent_goal: {
-    controller: "source", controller_client_id: identity.clientId, objective: "Fix the implementation", success_criteria: "Acceptance check passes",
-    allowed_tools: ["read_file", "edit_block", "start_process"], verify_command: "verify", max_iterations: 20,
-  }, ...extra })).automation.id;
-  const get = id => runtime.getAutomation(env, "owner", id);
-  const tick = async id => { sqlite.prepare("UPDATE automations SET next_run_at = ? WHERE id = ? AND status != 'waiting_for_event'").run(new Date().toISOString(), id); await runtime.runAutomationTick(env); };
-  const decision = (kind, tool = "none", args = {}, evidence = "") => ({ decision: kind, tool, arguments_json: JSON.stringify(args), decision_summary: "Next bounded action", memory: "Factual checkpoint", completion_evidence: evidence });
+  const env = {
+    DB: db,
+    PUBLIC_ORIGIN: "https://relay.test.invalid",
+    REGISTRY: {
+      getByName() {
+        return {
+          async fetch(request) {
+            return Response.json({ result: await deviceHandler(await request.json()) });
+          },
+        };
+      },
+    },
+  };
+  const identity = {
+    userId: "owner",
+    clientId: "source-client",
+    scope: "automation:read automation:write agent:write computer:read",
+    resource: env.PUBLIC_ORIGIN + "/mcp",
+  };
+  const create = async (name, extra = {}) =>
+    (
+      await runtime.createAutomation(env, "owner", {
+        name,
+        kind: "agent_goal",
+        device_id: "device",
+        agent_goal: {
+          controller: "source",
+          controller_client_id: identity.clientId,
+          objective: "Fix the implementation",
+          success_criteria: "Acceptance check passes",
+          allowed_tools: ["read_file", "edit_block", "start_process"],
+          verify_command: "verify",
+          max_iterations: 20,
+        },
+        ...extra,
+      })
+    ).automation.id;
+  const get = (id) => runtime.getAutomation(env, "owner", id);
+  const tick = async (id) => {
+    sqlite
+      .prepare(
+        "UPDATE automations SET next_run_at = ? WHERE id = ? AND status != 'waiting_for_event'",
+      )
+      .run(new Date().toISOString(), id);
+    await runtime.runAutomationTick(env);
+  };
+  const decision = (kind, tool = "none", args = {}, evidence = "") => ({
+    decision: kind,
+    tool,
+    arguments_json: JSON.stringify(args),
+    decision_summary: "Next bounded action",
+    memory: "Factual checkpoint",
+    completion_evidence: evidence,
+  });
 
   // Completed command output remains in run history, independently of local PID retention.
   const outputHandler = deviceHandler;
   let outputReads = 0;
-  deviceHandler = body => body.tool === "process_output"
-    ? (++outputReads === 1
-      ? { content: [{ type: "text", text: JSON.stringify({stdout:"FIRST_STEP_OUTPUT",stderr:""}) }] }
-      : { stdout: "SECOND_STEP_OUTPUT", stderr: "SECOND_STEP_WARNING" })
-    : outputHandler(body);
-  const outputTask = (await runtime.createAutomation(env, "owner", {
-    name: "Retained multi-step output", device_id: "device", kind: "long_task",
-    steps: [{command:"step-one",cwd:"/workspace"},{command:"step-two",cwd:"/workspace"}],
-  })).automation.id;
-  await tick(outputTask); await tick(outputTask); await tick(outputTask);
-  assert.equal((await get(outputTask)).status,"completed");
-  const retained = (await runtime.listAutomationRuns(env,"owner",outputTask))[0];
-  assert.equal(retained.exit_code,0);
-  assert(retained.output_summary.includes("FIRST_STEP_OUTPUT") && retained.output_summary.includes("SECOND_STEP_OUTPUT"));
-  assert(retained.output_summary.includes("SECOND_STEP_WARNING"));
-  assert.equal(outputReads,2,"Fetch output once per completed command");
+  deviceHandler = (body) =>
+    body.tool === "process_output"
+      ? ++outputReads === 1
+        ? {
+            content: [
+              { type: "text", text: JSON.stringify({ stdout: "FIRST_STEP_OUTPUT", stderr: "" }) },
+            ],
+          }
+        : { stdout: "SECOND_STEP_OUTPUT", stderr: "SECOND_STEP_WARNING" }
+      : outputHandler(body);
+  const outputTask = (
+    await runtime.createAutomation(env, "owner", {
+      name: "Retained multi-step output",
+      device_id: "device",
+      kind: "long_task",
+      steps: [
+        { command: "step-one", cwd: "/workspace" },
+        { command: "step-two", cwd: "/workspace" },
+      ],
+    })
+  ).automation.id;
   await tick(outputTask);
-  assert.equal(outputReads,2,"A settled run must not re-read or duplicate its output");
+  await tick(outputTask);
+  await tick(outputTask);
+  assert.equal((await get(outputTask)).status, "completed");
+  const retained = (await runtime.listAutomationRuns(env, "owner", outputTask))[0];
+  assert.equal(retained.exit_code, 0);
+  assert(
+    retained.output_summary.includes("FIRST_STEP_OUTPUT") &&
+      retained.output_summary.includes("SECOND_STEP_OUTPUT"),
+  );
+  assert(retained.output_summary.includes("SECOND_STEP_WARNING"));
+  assert.equal(outputReads, 2, "Fetch output once per completed command");
+  await tick(outputTask);
+  assert.equal(outputReads, 2, "A settled run must not re-read or duplicate its output");
 
-  deviceHandler = body => body.tool === "process_output"
-    ? {stdout:"A".repeat(12000)+"LAST_OUTPUT_MARKER",stderr:""}
-    : outputHandler(body);
-  const clippedTask = (await runtime.createAutomation(env,"owner",{
-    name:"Bounded command output",device_id:"device",kind:"long_task",command:"large-output",cwd:"/workspace",
-  })).automation.id;
-  await tick(clippedTask); await tick(clippedTask);
-  const clipped = (await runtime.listAutomationRuns(env,"owner",clippedTask))[0].output_summary;
-  assert(clipped.length<=6000 && clipped.includes("LAST_OUTPUT_MARKER") && clipped.includes("truncated"));
+  deviceHandler = (body) =>
+    body.tool === "process_output"
+      ? { stdout: "A".repeat(12000) + "LAST_OUTPUT_MARKER", stderr: "" }
+      : outputHandler(body);
+  const clippedTask = (
+    await runtime.createAutomation(env, "owner", {
+      name: "Bounded command output",
+      device_id: "device",
+      kind: "long_task",
+      command: "large-output",
+      cwd: "/workspace",
+    })
+  ).automation.id;
+  await tick(clippedTask);
+  await tick(clippedTask);
+  const clipped = (await runtime.listAutomationRuns(env, "owner", clippedTask))[0].output_summary;
+  assert(
+    clipped.length <= 6000 &&
+      clipped.includes("LAST_OUTPUT_MARKER") &&
+      clipped.includes("truncated"),
+  );
 
-  deviceHandler = body => { if(body.tool==="process_output")throw new Error("Managed output retention expired");return outputHandler(body); };
-  const missingOutputTask = (await runtime.createAutomation(env,"owner",{
-    name:"Output unavailable preserves exit result",device_id:"device",kind:"long_task",command:"missing-output",cwd:"/workspace",
-  })).automation.id;
-  await tick(missingOutputTask); await tick(missingOutputTask);
-  assert.equal((await get(missingOutputTask)).status,"completed","Missing output must not rerun or fail a successful command");
-  assert((await runtime.listAutomationRuns(env,"owner",missingOutputTask))[0].output_summary.includes("Output could not be retained"));
-
-  deviceHandler = body => body.tool === "process_status"
-    ? {status:"exited",exit_code:7}
-    : body.tool === "process_output" ? {stdout:"FAILED_STEP_OUTPUT",stderr:"FAILURE_DETAIL"} : outputHandler(body);
-  const failedOutputTask = (await runtime.createAutomation(env,"owner",{
-    name:"Failed command output",device_id:"device",kind:"long_task",command:"failing-step",cwd:"/workspace",max_runs:1,
-  })).automation.id;
-  await tick(failedOutputTask); await tick(failedOutputTask);
-  const failedOutput = (await runtime.listAutomationRuns(env,"owner",failedOutputTask))[0];
-  assert.equal((await get(failedOutputTask)).status,"failed");
-  assert.equal(failedOutput.exit_code,7);
-  assert(failedOutput.output_summary.includes("FAILED_STEP_OUTPUT") && failedOutput.output_summary.includes("FAILURE_DETAIL"));
-
-  let cancelOutputTask;
-  deviceHandler = async body => {
-    if(body.tool==="process_output"){await runtime.cancelAutomation(env,"owner",cancelOutputTask);return {stdout:"STALE_OUTPUT",stderr:""};}
+  deviceHandler = (body) => {
+    if (body.tool === "process_output") throw new Error("Managed output retention expired");
     return outputHandler(body);
   };
-  cancelOutputTask = (await runtime.createAutomation(env,"owner",{
-    name:"Cancel while retaining output",device_id:"device",kind:"long_task",command:"cancel-output",cwd:"/workspace",
-  })).automation.id;
-  await tick(cancelOutputTask); await tick(cancelOutputTask);
-  assert.equal((await get(cancelOutputTask)).status,"cancelled");
-  assert(!(await runtime.listAutomationRuns(env,"owner",cancelOutputTask))[0].output_summary?.includes("STALE_OUTPUT"),"A revoked lease must fence late output writes");
+  const missingOutputTask = (
+    await runtime.createAutomation(env, "owner", {
+      name: "Output unavailable preserves exit result",
+      device_id: "device",
+      kind: "long_task",
+      command: "missing-output",
+      cwd: "/workspace",
+    })
+  ).automation.id;
+  await tick(missingOutputTask);
+  await tick(missingOutputTask);
+  assert.equal(
+    (await get(missingOutputTask)).status,
+    "completed",
+    "Missing output must not rerun or fail a successful command",
+  );
+  assert(
+    (await runtime.listAutomationRuns(env, "owner", missingOutputTask))[0].output_summary.includes(
+      "Output could not be retained",
+    ),
+  );
+
+  deviceHandler = (body) =>
+    body.tool === "process_status"
+      ? { status: "exited", exit_code: 7 }
+      : body.tool === "process_output"
+        ? { stdout: "FAILED_STEP_OUTPUT", stderr: "FAILURE_DETAIL" }
+        : outputHandler(body);
+  const failedOutputTask = (
+    await runtime.createAutomation(env, "owner", {
+      name: "Failed command output",
+      device_id: "device",
+      kind: "long_task",
+      command: "failing-step",
+      cwd: "/workspace",
+      max_runs: 1,
+    })
+  ).automation.id;
+  await tick(failedOutputTask);
+  await tick(failedOutputTask);
+  const failedOutput = (await runtime.listAutomationRuns(env, "owner", failedOutputTask))[0];
+  assert.equal((await get(failedOutputTask)).status, "failed");
+  assert.equal(failedOutput.exit_code, 7);
+  assert(
+    failedOutput.output_summary.includes("FAILED_STEP_OUTPUT") &&
+      failedOutput.output_summary.includes("FAILURE_DETAIL"),
+  );
+
+  let cancelOutputTask;
+  deviceHandler = async (body) => {
+    if (body.tool === "process_output") {
+      await runtime.cancelAutomation(env, "owner", cancelOutputTask);
+      return { stdout: "STALE_OUTPUT", stderr: "" };
+    }
+    return outputHandler(body);
+  };
+  cancelOutputTask = (
+    await runtime.createAutomation(env, "owner", {
+      name: "Cancel while retaining output",
+      device_id: "device",
+      kind: "long_task",
+      command: "cancel-output",
+      cwd: "/workspace",
+    })
+  ).automation.id;
+  await tick(cancelOutputTask);
+  await tick(cancelOutputTask);
+  assert.equal((await get(cancelOutputTask)).status, "cancelled");
+  assert(
+    !(await runtime.listAutomationRuns(env, "owner", cancelOutputTask))[0].output_summary?.includes(
+      "STALE_OUTPUT",
+    ),
+    "A revoked lease must fence late output writes",
+  );
   deviceHandler = outputHandler;
 
   // Resume keeps an interval slot that is still ahead; a missed slot runs now.
   const startAt = new Date(Date.now() + 6 * 3600_000).toISOString();
-  const intervalId = (await runtime.createAutomation(env, "owner", {
-    name: "Future interval start", device_id: "device", kind: "schedule_watch", command: "check", cwd: "/workspace",
-    schedule: { every_seconds: 3600, start_at: startAt },
-  })).automation.id;
+  const intervalId = (
+    await runtime.createAutomation(env, "owner", {
+      name: "Future interval start",
+      device_id: "device",
+      kind: "schedule_watch",
+      command: "check",
+      cwd: "/workspace",
+      schedule: { every_seconds: 3600, start_at: startAt },
+    })
+  ).automation.id;
   await runtime.pauseAutomation(env, "owner", intervalId);
   await runtime.resumeAutomation(env, "owner", intervalId);
-  assert.equal((await get(intervalId)).next_run_at, startAt, "Resume must not run an interval task before its start_at");
-  sqlite.prepare("UPDATE automations SET created_at = ?, trigger_json = json_set(trigger_json, '$.start_at', ?) WHERE id = ?")
-    .run(new Date(Date.now() - 6 * 3600_000).toISOString(), new Date(Date.now() - 5.5 * 3600_000).toISOString(), intervalId);
-  sqlite.prepare("UPDATE automations SET last_run_at = ? WHERE id = ?").run(new Date(Date.now() - 600_000).toISOString(), intervalId);
+  assert.equal(
+    (await get(intervalId)).next_run_at,
+    startAt,
+    "Resume must not run an interval task before its start_at",
+  );
+  sqlite
+    .prepare(
+      "UPDATE automations SET created_at = ?, trigger_json = json_set(trigger_json, '$.start_at', ?) WHERE id = ?",
+    )
+    .run(
+      new Date(Date.now() - 6 * 3600_000).toISOString(),
+      new Date(Date.now() - 5.5 * 3600_000).toISOString(),
+      intervalId,
+    );
+  sqlite
+    .prepare("UPDATE automations SET last_run_at = ? WHERE id = ?")
+    .run(new Date(Date.now() - 600_000).toISOString(), intervalId);
   await runtime.pauseAutomation(env, "owner", intervalId);
   await runtime.resumeAutomation(env, "owner", intervalId);
   const nextSlot = Date.parse((await get(intervalId)).next_run_at);
-  assert(nextSlot > Date.now() + 1000 && nextSlot - Date.now() <= 3600_000, "Resume keeps the next grid slot after a recent run");
-  sqlite.prepare("UPDATE automations SET last_run_at = ? WHERE id = ?").run(new Date(Date.now() - 2 * 3600_000).toISOString(), intervalId);
+  assert(
+    nextSlot > Date.now() + 1000 && nextSlot - Date.now() <= 3600_000,
+    "Resume keeps the next grid slot after a recent run",
+  );
+  sqlite
+    .prepare("UPDATE automations SET last_run_at = ? WHERE id = ?")
+    .run(new Date(Date.now() - 2 * 3600_000).toISOString(), intervalId);
   await runtime.pauseAutomation(env, "owner", intervalId);
   await runtime.resumeAutomation(env, "owner", intervalId);
-  assert(Date.parse((await get(intervalId)).next_run_at) <= Date.now(), "A slot missed while paused runs on resume");
+  assert(
+    Date.parse((await get(intervalId)).next_run_at) <= Date.now(),
+    "A slot missed while paused runs on resume",
+  );
   await runtime.cancelAutomation(env, "owner", intervalId);
 
   const downgradeFenceId = await create("Plan downgrade fence");
@@ -202,24 +414,44 @@ const importSource = relayModule;
   const freeGoalId = await create("Free source Agent Goal");
   await runtime.cancelAutomation(env, "owner", freeGoalId);
   await runtime.resumeAutomation(env, "owner", downgradeFenceId);
-  assert.notEqual((await get(downgradeFenceId)).status, "paused", "Free retains source-goal resume access");
+  assert.notEqual(
+    (await get(downgradeFenceId)).status,
+    "paused",
+    "Free retains source-goal resume access",
+  );
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
   await runtime.cancelAutomation(env, "owner", downgradeFenceId);
 
   // Changing to Free retains Connect task and keep-awake capabilities.
-  sqlite.prepare("UPDATE devices SET automation_permissions = json_set(automation_permissions, '$.keep_awake', json('true')) WHERE id = 'device'").run();
+  sqlite
+    .prepare(
+      "UPDATE devices SET automation_permissions = json_set(automation_permissions, '$.keep_awake', json('true')) WHERE id = 'device'",
+    )
+    .run();
   const keepAwakeTaskId = await create("Keep-awake downgrade fence", { keep_awake: true });
-  sqlite.prepare(`UPDATE automations
+  sqlite
+    .prepare(
+      `UPDATE automations
     SET status = 'waiting_for_event',
         next_run_at = NULL,
         state_json = json_set(COALESCE(state_json, '{}'), '$.run_id', 'lease-run')
-    WHERE id = ?`).run(keepAwakeTaskId);
+    WHERE id = ?`,
+    )
+    .run(keepAwakeTaskId);
   await runtime.runAutomationTick(env);
   assert.equal(keepAwakeSeconds.at(-1), 180, "Plus task should renew its keep-awake lease");
   sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
   await runtime.runAutomationTick(env);
-  assert.equal((await get(keepAwakeTaskId)).status, "waiting_for_event", "Free must retain the saved source task");
-  assert.equal(keepAwakeSeconds.at(-1), 180, "Free retains an explicitly authorized keep-awake lease");
+  assert.equal(
+    (await get(keepAwakeTaskId)).status,
+    "waiting_for_event",
+    "Free must retain the saved source task",
+  );
+  assert.equal(
+    keepAwakeSeconds.at(-1),
+    180,
+    "Free retains an explicitly authorized keep-awake lease",
+  );
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
   await runtime.cancelAutomation(env, "owner", keepAwakeTaskId);
 
@@ -233,63 +465,163 @@ const importSource = relayModule;
   const read = decision("tool", "read_file", { path: "/workspace/app.ts", length: 200 });
   const concurrent = await Promise.all([
     source.submitGoalDecision(db, identity, taskId, context.revision, "read-1", read),
-    source.submitGoalDecision(db, identity, taskId, context.revision, "read-1", decision("tool", "read_file", { length: 200, path: "/workspace/app.ts" })),
+    source.submitGoalDecision(
+      db,
+      identity,
+      taskId,
+      context.revision,
+      "read-1",
+      decision("tool", "read_file", { length: 200, path: "/workspace/app.ts" }),
+    ),
   ]);
-  assert.equal(concurrent.filter(result => result.duplicate).length, 1, "Concurrent retry must acknowledge the same decision despite argument key order");
-  assert.equal(sqlite.prepare("SELECT count(*) AS n FROM automation_decisions WHERE automation_id = ?").get(taskId).n, 1);
-  await assert.rejects(source.submitGoalDecision(db, identity, taskId, context.revision, "read-1", decision("tool", "read_file", { path: "/workspace/different.ts" })), /different decision/);
-  assert((await source.submitGoalDecision(db, identity, taskId, context.revision, "read-1", read)).duplicate);
-  await assert.rejects(source.submitGoalDecision(db, identity, taskId, context.revision, "stale", read), /revision/);
+  assert.equal(
+    concurrent.filter((result) => result.duplicate).length,
+    1,
+    "Concurrent retry must acknowledge the same decision despite argument key order",
+  );
+  assert.equal(
+    sqlite
+      .prepare("SELECT count(*) AS n FROM automation_decisions WHERE automation_id = ?")
+      .get(taskId).n,
+    1,
+  );
+  await assert.rejects(
+    source.submitGoalDecision(
+      db,
+      identity,
+      taskId,
+      context.revision,
+      "read-1",
+      decision("tool", "read_file", { path: "/workspace/different.ts" }),
+    ),
+    /different decision/,
+  );
+  assert(
+    (await source.submitGoalDecision(db, identity, taskId, context.revision, "read-1", read))
+      .duplicate,
+  );
+  await assert.rejects(
+    source.submitGoalDecision(db, identity, taskId, context.revision, "stale", read),
+    /revision/,
+  );
   await tick(taskId);
   context = await source.getGoalContext(db, "owner", taskId);
-  assert(context.ready_for_decision && context.latest_observation.includes("implementation contents"));
-  assert.equal(calls.filter(t => t === "read_file").length, 1);
+  assert(
+    context.ready_for_decision && context.latest_observation.includes("implementation contents"),
+  );
+  assert.equal(calls.filter((t) => t === "read_file").length, 1);
   await assert.rejects(source.getGoalContext(db, "stranger", taskId), /not found/);
-  await assert.rejects(source.submitGoalDecision(db, { ...identity, clientId: "other-client" }, taskId, context.revision, "other", read), /another source client/);
-  await assert.rejects(source.submitGoalDecision(db, identity, taskId, context.revision, "no-evidence", decision("complete")), /evidence/);
-  await source.submitGoalDecision(db, identity, taskId, context.revision, "finish", decision("complete", "none", {}, "Implementation inspected; acceptance is ready."));
+  await assert.rejects(
+    source.submitGoalDecision(
+      db,
+      { ...identity, clientId: "other-client" },
+      taskId,
+      context.revision,
+      "other",
+      read,
+    ),
+    /another source client/,
+  );
+  await assert.rejects(
+    source.submitGoalDecision(
+      db,
+      identity,
+      taskId,
+      context.revision,
+      "no-evidence",
+      decision("complete"),
+    ),
+    /evidence/,
+  );
+  await source.submitGoalDecision(
+    db,
+    identity,
+    taskId,
+    context.revision,
+    "finish",
+    decision("complete", "none", {}, "Implementation inspected; acceptance is ready."),
+  );
   await tick(taskId);
   assert.equal((await get(taskId)).status, "running", "Completion must wait for verifier");
   await tick(taskId);
   assert.equal((await get(taskId)).status, "completed");
-  const accountedRun = sqlite.prepare("SELECT usage_accounted_at FROM automation_runs WHERE automation_id = ? ORDER BY started_at DESC LIMIT 1").get(taskId);
-  assert(accountedRun?.usage_accounted_at, "Completed automation run must atomically account runtime usage");
+  const accountedRun = sqlite
+    .prepare(
+      "SELECT usage_accounted_at FROM automation_runs WHERE automation_id = ? ORDER BY started_at DESC LIMIT 1",
+    )
+    .get(taskId);
+  assert(
+    accountedRun?.usage_accounted_at,
+    "Completed automation run must atomically account runtime usage",
+  );
   context = await source.getGoalContext(db, "owner", taskId);
   assert(context.completion_evidence.includes("verification succeeded"));
-  assert(context.journal.some(e => e.event === "needs_agent"));
-  assert(context.journal.some(e => e.event === "run_completed"));
+  assert(context.journal.some((e) => e.event === "needs_agent"));
+  assert(context.journal.some((e) => e.event === "run_completed"));
 
   const cancelledId = await create("Cancel race");
-  sqlite.prepare("UPDATE automations SET lease_token = 'old', lease_until = ?, status = 'running' WHERE id = ?")
+  sqlite
+    .prepare(
+      "UPDATE automations SET lease_token = 'old', lease_until = ?, status = 'running' WHERE id = ?",
+    )
     .run(new Date(Date.now() + 150000).toISOString(), cancelledId);
   const stale = await get(cancelledId);
   await runtime.cancelAutomation(env, "owner", cancelledId);
-  await assert.rejects(store.checkpointTask(db, stale, {}, "running", now, null), store.LeaseLostError);
+  await assert.rejects(
+    store.checkpointTask(db, stale, {}, "running", now, null),
+    store.LeaseLostError,
+  );
   assert.equal((await get(cancelledId)).status, "cancelled");
   const takeoverId = await create("Lease takeover");
-  sqlite.prepare("UPDATE automations SET lease_token = 'old', lease_until = ?,status = 'running' WHERE id = ?")
+  sqlite
+    .prepare(
+      "UPDATE automations SET lease_token = 'old', lease_until = ?,status = 'running' WHERE id = ?",
+    )
     .run(new Date(Date.now() + 150000).toISOString(), takeoverId);
   const oldWorker = await get(takeoverId);
   sqlite.prepare("UPDATE automations SET lease_token = 'new' WHERE id = ?").run(takeoverId);
-  await assert.rejects(store.checkpointTask(db, oldWorker, {}, "running", now, null), store.LeaseLostError);
+  await assert.rejects(
+    store.checkpointTask(db, oldWorker, {}, "running", now, null),
+    store.LeaseLostError,
+  );
   assert.equal((await get(takeoverId)).lease_token, "new");
   await runtime.cancelAutomation(env, "owner", takeoverId);
 
   const uncertainId = await create("Unknown effect");
-  sqlite.prepare("UPDATE automations SET state_json = ? WHERE id = ?")
-    .run(JSON.stringify({ phase: "idle", inflight_action: { id: "crashed", tool: "start_process" }, agent: { iteration: 1, memory: "", observation: "" } }), uncertainId);
+  sqlite.prepare("UPDATE automations SET state_json = ? WHERE id = ?").run(
+    JSON.stringify({
+      phase: "idle",
+      inflight_action: { id: "crashed", tool: "start_process" },
+      agent: { iteration: 1, memory: "", observation: "" },
+    }),
+    uncertainId,
+  );
   const before = calls.length;
   await tick(uncertainId);
   assert.equal(calls.length, before);
-  assert((await source.getGoalContext(db, "owner", uncertainId)).latest_observation.includes("unknown outcome"));
+  assert(
+    (await source.getGoalContext(db, "owner", uncertainId)).latest_observation.includes(
+      "unknown outcome",
+    ),
+  );
   await runtime.cancelAutomation(env, "owner", uncertainId);
 
   const lateId = await create("Late process");
   await tick(lateId);
   context = await source.getGoalContext(db, "owner", lateId);
-  await source.submitGoalDecision(db, identity, lateId, context.revision, "start", decision("tool", "start_process", { command: "slow" }));
+  await source.submitGoalDecision(
+    db,
+    identity,
+    lateId,
+    context.revision,
+    "start",
+    decision("tool", "start_process", { command: "slow" }),
+  );
   const normalHandler = deviceHandler;
-  deviceHandler = async body => { if (body.tool === "start_process") await runtime.cancelAutomation(env, "owner", lateId); return normalHandler(body); };
+  deviceHandler = async (body) => {
+    if (body.tool === "start_process") await runtime.cancelAutomation(env, "owner", lateId);
+    return normalHandler(body);
+  };
   await tick(lateId);
   deviceHandler = normalHandler;
   assert.equal((await get(lateId)).status, "cancelled");
@@ -301,11 +633,22 @@ const importSource = relayModule;
   assert.equal((await get(scheduledId)).next_run_at, future);
   assert.equal((await source.getGoalContext(db, "owner", scheduledId)).ready_for_decision, false);
 
-  const recurringId = await create("Recurring source", { schedule: { every_seconds: 60 }, max_runs: 2 });
+  const recurringId = await create("Recurring source", {
+    schedule: { every_seconds: 60 },
+    max_runs: 2,
+  });
   await tick(recurringId);
   context = await source.getGoalContext(db, "owner", recurringId);
-  await source.submitGoalDecision(db, identity, recurringId, context.revision, "recurring-finish-1", decision("complete", "none", {}, "Ready for verifier"));
-  await tick(recurringId); await tick(recurringId);
+  await source.submitGoalDecision(
+    db,
+    identity,
+    recurringId,
+    context.revision,
+    "recurring-finish-1",
+    decision("complete", "none", {}, "Ready for verifier"),
+  );
+  await tick(recurringId);
+  await tick(recurringId);
   let recurring = await get(recurringId);
   assert.equal(recurring.run_count, 1);
   assert.equal(recurring.status, "waiting");
@@ -313,8 +656,16 @@ const importSource = relayModule;
   assert.equal(JSON.parse(recurring.state_json).agent.iteration, 0);
   await tick(recurringId);
   context = await source.getGoalContext(db, "owner", recurringId);
-  await source.submitGoalDecision(db, identity, recurringId, context.revision, "recurring-finish-2", decision("complete", "none", {}, "Second independent run ready"));
-  await tick(recurringId); await tick(recurringId);
+  await source.submitGoalDecision(
+    db,
+    identity,
+    recurringId,
+    context.revision,
+    "recurring-finish-2",
+    decision("complete", "none", {}, "Second independent run ready"),
+  );
+  await tick(recurringId);
+  await tick(recurringId);
   assert.equal((await get(recurringId)).status, "completed");
   assert.equal((await runtime.listAutomationRuns(env, "owner", recurringId)).length, 2);
 
@@ -322,145 +673,326 @@ const importSource = relayModule;
   const failedCheckId = await create("Failed verification");
   await tick(failedCheckId);
   context = await source.getGoalContext(db, "owner", failedCheckId);
-  await source.submitGoalDecision(db, identity, failedCheckId, context.revision, "failed-check", decision("complete", "none", {}, "Run the acceptance check"));
+  await source.submitGoalDecision(
+    db,
+    identity,
+    failedCheckId,
+    context.revision,
+    "failed-check",
+    decision("complete", "none", {}, "Run the acceptance check"),
+  );
   await tick(failedCheckId);
-  deviceHandler = body => body.tool === "process_status" ? { status: "completed", exit_code: 1 } : normalHandler(body);
-  await tick(failedCheckId); deviceHandler = normalHandler;
+  deviceHandler = (body) =>
+    body.tool === "process_status" ? { status: "completed", exit_code: 1 } : normalHandler(body);
+  await tick(failedCheckId);
+  deviceHandler = normalHandler;
   context = await source.getGoalContext(db, "owner", failedCheckId);
   assert(context.ready_for_decision && context.latest_observation.includes("exit code 1"));
   await runtime.cancelAutomation(env, "owner", failedCheckId);
 
-  const hostedGoal = { controller: "hosted", objective: "Check the result", success_criteria: "Evidence available", allowed_tools: ["read_file"], max_iterations: 10 };
+  const hostedGoal = {
+    controller: "hosted",
+    objective: "Check the result",
+    success_criteria: "Evidence available",
+    allowed_tools: ["read_file"],
+    max_iterations: 10,
+  };
   let providerCalls = 0;
-  sqlite.prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'admin',?)").run("billing-admin","billing-admin","billing-admin@test.invalid",now);
-  for(const [scope_type,scope_id] of [["global","platform"],["organization","personal:owner"],["user","owner"]])
-    for(const [metric,limit] of [["credits",100],["neurons",9000]])
-      await billing.setBillingLimit(db,"billing-admin",{scope_type,scope_id,lane:"arc_hosted",metric,period_key:now.slice(0,10),limit});
-  await billing.configureFreeAiPool(db,"billing-admin",{id:"fixture-pool",period:now.slice(0,10),mode:"dedicated_account",managedPoolAssertion:true,freeNeurons:10000,outsideUsedNeurons:1000});
+  sqlite
+    .prepare("INSERT INTO users(id,google_sub,email,role,created_at) VALUES(?,?,?,'admin',?)")
+    .run("billing-admin", "billing-admin", "billing-admin@test.invalid", now);
+  for (const [scope_type, scope_id] of [
+    ["global", "platform"],
+    ["organization", "personal:owner"],
+    ["user", "owner"],
+  ])
+    for (const [metric, limit] of [
+      ["credits", 100],
+      ["neurons", 9000],
+    ])
+      await billing.setBillingLimit(db, "billing-admin", {
+        scope_type,
+        scope_id,
+        lane: "arc_hosted",
+        metric,
+        period_key: now.slice(0, 10),
+        limit,
+      });
+  await billing.configureFreeAiPool(db, "billing-admin", {
+    id: "fixture-pool",
+    period: now.slice(0, 10),
+    mode: "dedicated_account",
+    managedPoolAssertion: true,
+    freeNeurons: 10000,
+    outsideUsedNeurons: 1000,
+  });
   sqlite.exec(`CREATE TRIGGER fixture_hosted_task_budget AFTER INSERT ON automations BEGIN
     INSERT INTO billing_budgets(scope_type,scope_id,lane,metric,period_key,limit_units,updated_at)
     VALUES('task',NEW.id,'arc_hosted','credits',substr(NEW.created_at,1,10),50,NEW.created_at),
     ('task',NEW.id,'arc_hosted','neurons',substr(NEW.created_at,1,10),9000,NEW.created_at); END;`);
-  env.MODEL_GATEWAY_ENABLED="1";env.MODEL_GATEWAY_FREE_POOL_ID="fixture-pool";
-  env.AI = { async run() { if (++providerCalls === 1) throw new Error("temporary upstream failure"); return { response: decision("complete", "none", {}, "Inspection evidence available"),usage:{prompt_tokens:20,completion_tokens:10} }; } };
+  env.MODEL_GATEWAY_ENABLED = "1";
+  env.MODEL_GATEWAY_FREE_POOL_ID = "fixture-pool";
+  env.AI = {
+    async run() {
+      if (++providerCalls === 1) throw new Error("temporary upstream failure");
+      return {
+        response: decision("complete", "none", {}, "Inspection evidence available"),
+        usage: { prompt_tokens: 20, completion_tokens: 10 },
+      };
+    },
+  };
   const retryId = await create("Provider retry", { agent_goal: hostedGoal });
   await tick(retryId);
-  assert.equal((await get(retryId)).status, "failed","Unknown inference must stop instead of silently spending again");
+  assert.equal(
+    (await get(retryId)).status,
+    "failed",
+    "Unknown inference must stop instead of silently spending again",
+  );
   await tick(retryId);
-  assert.equal(providerCalls,1,"A transport failure keeps its reservation and cannot retry inference");
-  assert.equal(sqlite.prepare("SELECT status FROM billing_reservations WHERE task_id=?").get(retryId).status,"unknown");
-  const healthyId=await create("Authorized fresh hosted task",{agent_goal:hostedGoal});
+  assert.equal(
+    providerCalls,
+    1,
+    "A transport failure keeps its reservation and cannot retry inference",
+  );
+  assert.equal(
+    sqlite.prepare("SELECT status FROM billing_reservations WHERE task_id=?").get(retryId).status,
+    "unknown",
+  );
+  const healthyId = await create("Authorized fresh hosted task", { agent_goal: hostedGoal });
   await tick(healthyId);
-  assert.equal((await get(healthyId)).status,"completed");
+  assert.equal((await get(healthyId)).status, "completed");
   const pausedId = await create("Pause during planner", { agent_goal: hostedGoal });
-  env.AI = { async run() { await runtime.pauseAutomation(env, "owner", pausedId); return { response: decision("tool", "read_file", { path: "/workspace/app.ts" }),usage:{prompt_tokens:20,completion_tokens:10} }; } };
+  env.AI = {
+    async run() {
+      await runtime.pauseAutomation(env, "owner", pausedId);
+      return {
+        response: decision("tool", "read_file", { path: "/workspace/app.ts" }),
+        usage: { prompt_tokens: 20, completion_tokens: 10 },
+      };
+    },
+  };
   const beforePause = calls.length;
   await tick(pausedId);
   assert.equal((await get(pausedId)).status, "paused");
   assert.equal(calls.length, beforePause);
   await runtime.cancelAutomation(env, "owner", pausedId);
-  delete env.AI;delete env.MODEL_GATEWAY_ENABLED;delete env.MODEL_GATEWAY_FREE_POOL_ID;
+  delete env.AI;
+  delete env.MODEL_GATEWAY_ENABLED;
+  delete env.MODEL_GATEWAY_FREE_POOL_ID;
 
   // Account-authenticated device switches cancel only affected modes.
   const sessionToken = "test-only-session";
-  sqlite.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)")
-    .run(createHash("sha256").update(sessionToken).digest("hex"), "owner", new Date(Date.now() + 3600000).toISOString(), now);
-  const permissions = { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: false };
-  const switchRequest = (body, id = "device") => new Request(env.PUBLIC_ORIGIN + "/api/devices/" + id + "/task-permissions", {
-    method: "POST", headers: { cookie: "rl_session=" + sessionToken, "content-type": "application/json" }, body: JSON.stringify(body),
-  });
-  const stopped = await settings.handleDeviceTaskSettings(switchRequest({ ...permissions, source_agent: false }), env);
+  sqlite
+    .prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)")
+    .run(
+      createHash("sha256").update(sessionToken).digest("hex"),
+      "owner",
+      new Date(Date.now() + 3600000).toISOString(),
+      now,
+    );
+  const permissions = {
+    background_tasks: true,
+    scheduled_tasks: true,
+    adaptive_agent: true,
+    source_agent: true,
+    keep_awake: false,
+  };
+  const switchRequest = (body, id = "device") =>
+    new Request(env.PUBLIC_ORIGIN + "/api/devices/" + id + "/task-permissions", {
+      method: "POST",
+      headers: { cookie: "rl_session=" + sessionToken, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const stopped = await settings.handleDeviceTaskSettings(
+    switchRequest({ ...permissions, source_agent: false }),
+    env,
+  );
   assert(stopped.ok);
   assert.equal((await get(scheduledId)).status, "cancelled");
   await assert.rejects(create("Disallowed source"), /disabled/);
-  assert.equal((await settings.handleDeviceTaskSettings(switchRequest(permissions, "foreign-device"), env)).status, 404);
+  assert.equal(
+    (await settings.handleDeviceTaskSettings(switchRequest(permissions, "foreign-device"), env))
+      .status,
+    404,
+  );
   assert((await settings.handleDeviceTaskSettings(switchRequest(permissions), env)).ok);
 
   // Secure callbacks are required and use standard HMAC signatures. Retry
   // keeps the delivery ID; unsubscribe and grant revocation stop delivery.
   const eventTask = await create("Event source");
   const signingSecret = "whsec_" + Buffer.alloc(32, 7).toString("base64");
-  let appRequests = [], callbackCalls = 0, callbackFailure = true;
-  const eventEnv = { ...env, MCP_EVENT_ENCRYPTION_KEY: Buffer.alloc(32, 3).toString("base64"), MCP_EVENT_EGRESS: { async fetch(request) {
-    callbackCalls++;
-    const body = await request.text(), payload = JSON.parse(body);
-    const id = request.headers.get("webhook-id"), timestamp = request.headers.get("webhook-timestamp");
-    const signature = "v1," + createHmac("sha256", Buffer.from(signingSecret.slice(6), "base64")).update(id + "." + timestamp + "." + body).digest("base64");
-    assert(request.headers.get("webhook-signature").split(" ").includes(signature));
-    assert.equal(request.redirect, "error");
-    if (payload.type === "verification") return Response.json({ challenge: payload.challenge });
-    assert.equal(id, payload.eventId);
-    appRequests.push(payload);
-    return new Response(null, { status: callbackFailure ? 503 : 204 });
-  } } };
-  const subscribeParams = { name: "automation.updated", arguments: { automation_id: eventTask }, delivery: { mode: "webhook", url: "https://callbacks.example.com/task", secret: signingSecret } };
+  let appRequests = [],
+    callbackCalls = 0,
+    callbackFailure = true;
+  const eventEnv = {
+    ...env,
+    MCP_EVENT_ENCRYPTION_KEY: Buffer.alloc(32, 3).toString("base64"),
+    MCP_EVENT_EGRESS: {
+      async fetch(request) {
+        callbackCalls++;
+        const body = await request.text(),
+          payload = JSON.parse(body);
+        const id = request.headers.get("webhook-id"),
+          timestamp = request.headers.get("webhook-timestamp");
+        const signature =
+          "v1," +
+          createHmac("sha256", Buffer.from(signingSecret.slice(6), "base64"))
+            .update(id + "." + timestamp + "." + body)
+            .digest("base64");
+        assert(request.headers.get("webhook-signature").split(" ").includes(signature));
+        assert.equal(request.redirect, "error");
+        if (payload.type === "verification") return Response.json({ challenge: payload.challenge });
+        assert.equal(id, payload.eventId);
+        appRequests.push(payload);
+        return new Response(null, { status: callbackFailure ? 503 : 204 });
+      },
+    },
+  };
+  const subscribeParams = {
+    name: "automation.updated",
+    arguments: { automation_id: eventTask },
+    delivery: { mode: "webhook", url: "https://callbacks.example.com/task", secret: signingSecret },
+  };
   const rpc = async (method, params, who = identity, targetEnv = eventEnv) => {
-    const request = new Request(env.PUBLIC_ORIGIN + "/mcp", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+    const request = new Request(env.PUBLIC_ORIGIN + "/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    });
     return (await events.handleTaskEventRpc(request, targetEnv, who)).json();
   };
   assert.equal((await rpc("events/list", {}, null)).error.code, -32001);
   assert(!("events" in (await rpc("server/discover", {}, null, env)).result.capabilities));
   const callbackBefore = callbackCalls;
-  assert((await rpc("events/subscribe", { ...subscribeParams, delivery: { ...subscribeParams.delivery, url: "https://127.0.0.1/private" } })).error);
+  assert(
+    (
+      await rpc("events/subscribe", {
+        ...subscribeParams,
+        delivery: { ...subscribeParams.delivery, url: "https://127.0.0.1/private" },
+      })
+    ).error,
+  );
   assert.equal(callbackCalls, callbackBefore);
-  assert((await rpc("events/subscribe", subscribeParams, { ...identity, userId: "foreign-user" })).error);
+  assert(
+    (await rpc("events/subscribe", subscribeParams, { ...identity, userId: "foreign-user" })).error,
+  );
   const subscription = (await rpc("events/subscribe", subscribeParams)).result;
   assert(subscription.id);
   assert.equal((await rpc("events/subscribe", subscribeParams)).result.id, subscription.id);
-  assert(!sqlite.prepare("SELECT secret_ciphertext FROM task_event_subscriptions WHERE id = ?").get(subscription.id).secret_ciphertext.includes(signingSecret));
-  sqlite.prepare("INSERT INTO oauth_tokens(access_token_hash,client_id,user_id,resource,scope,expires_at,created_at) VALUES(?,?,?,?,?,?,?)")
-    .run("test-access-hash", identity.clientId, "owner", identity.resource, identity.scope, new Date(Date.now() + 3600000).toISOString(), now);
+  assert(
+    !sqlite
+      .prepare("SELECT secret_ciphertext FROM task_event_subscriptions WHERE id = ?")
+      .get(subscription.id)
+      .secret_ciphertext.includes(signingSecret),
+  );
+  sqlite
+    .prepare(
+      "INSERT INTO oauth_tokens(access_token_hash,client_id,user_id,resource,scope,expires_at,created_at) VALUES(?,?,?,?,?,?,?)",
+    )
+    .run(
+      "test-access-hash",
+      identity.clientId,
+      "owner",
+      identity.resource,
+      identity.scope,
+      new Date(Date.now() + 3600000).toISOString(),
+      now,
+    );
   await tick(eventTask);
   assert.equal((await events.deliverTaskEvents(eventEnv)).delivered, 0);
   assert.equal(appRequests.length, 1);
   callbackFailure = false;
-  sqlite.prepare("UPDATE task_event_deliveries SET next_attempt_at = ?").run(new Date().toISOString());
+  sqlite
+    .prepare("UPDATE task_event_deliveries SET next_attempt_at = ?")
+    .run(new Date().toISOString());
   assert.equal((await events.deliverTaskEvents(eventEnv)).delivered, 1);
   assert.equal(appRequests.length, 2);
   assert.equal(appRequests[0].eventId, appRequests[1].eventId);
   assert.equal(appRequests[1].data.event, "needs_agent");
   await rpc("events/unsubscribe", subscribeParams);
-  assert.equal(sqlite.prepare("SELECT active FROM task_event_subscriptions WHERE id = ?").get(subscription.id).active, 0);
+  assert.equal(
+    sqlite.prepare("SELECT active FROM task_event_subscriptions WHERE id = ?").get(subscription.id)
+      .active,
+    0,
+  );
   await rpc("events/subscribe", subscribeParams);
-  sqlite.prepare("UPDATE oauth_tokens SET revoked_at = ? WHERE client_id = ?").run(new Date().toISOString(), identity.clientId);
+  sqlite
+    .prepare("UPDATE oauth_tokens SET revoked_at = ? WHERE client_id = ?")
+    .run(new Date().toISOString(), identity.clientId);
   const beforeRevocation = callbackCalls;
   await events.deliverTaskEvents(eventEnv);
   assert.equal(callbackCalls, beforeRevocation);
-  assert.equal(sqlite.prepare("SELECT active FROM task_event_subscriptions WHERE id = ?").get(subscription.id).active, 0);
+  assert.equal(
+    sqlite.prepare("SELECT active FROM task_event_subscriptions WHERE id = ?").get(subscription.id)
+      .active,
+    0,
+  );
 
   // Power leases are bounded, shared and cleaned up without changing OS policy.
   const deviceCalls = await importSource("device-call");
-  sqlite.prepare("UPDATE devices SET automation_permissions = json_set(automation_permissions, '$.keep_awake', json('false')) WHERE id = 'device'").run();
-  await assert.rejects(deviceCalls.callDevice(env, identity, "device", "set_task_keep_awake", { task_id: taskId, seconds: 180 }), /disabled/);
-  await deviceCalls.callDevice(env, identity, "device", "set_task_keep_awake", { task_id: taskId, seconds: 0 });
-  assert.equal(calls.at(-1), "set_task_keep_awake", "Revoked power permission must still allow releasing an existing lease");
+  sqlite
+    .prepare(
+      "UPDATE devices SET automation_permissions = json_set(automation_permissions, '$.keep_awake', json('false')) WHERE id = 'device'",
+    )
+    .run();
+  await assert.rejects(
+    deviceCalls.callDevice(env, identity, "device", "set_task_keep_awake", {
+      task_id: taskId,
+      seconds: 180,
+    }),
+    /disabled/,
+  );
+  await deviceCalls.callDevice(env, identity, "device", "set_task_keep_awake", {
+    task_id: taskId,
+    seconds: 0,
+  });
+  assert.equal(
+    calls.at(-1),
+    "set_task_keep_awake",
+    "Revoked power permission must still allow releasing an existing lease",
+  );
 
   // Exercise actual MCP SDK registration/HTTP dispatch, not only helpers.
   const mcp = await importSource("mcp");
   let schedulerKicks = 0;
   const callMcp = async (method, params, who = identity) => {
     const handler = mcp.createRemoteLinkMcp(env, who, {
-      kickScheduler: () => { schedulerKicks++; },
+      kickScheduler: () => {
+        schedulerKicks++;
+      },
     });
-    const response = await handler.fetch(new Request(env.PUBLIC_ORIGIN + "/mcp", { method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    }));
+    const response = await handler.fetch(
+      new Request(env.PUBLIC_ORIGIN + "/mcp", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      }),
+    );
     const text = await response.text();
     assert(response.ok, text);
-    const payload = JSON.parse(text.trim().startsWith("{") ? text : text.split("\n").find(line => line.startsWith("data: ")).slice(6));
+    const payload = JSON.parse(
+      text.trim().startsWith("{")
+        ? text
+        : text
+            .split("\n")
+            .find((line) => line.startsWith("data: "))
+            .slice(6),
+    );
     assert(!payload.error, JSON.stringify(payload));
     return payload.result;
   };
   const toolList = await callMcp("tools/list", {});
-  assert(toolList.tools.some(tool => tool.name === "get_goal_context"));
-  const createGoalTool = toolList.tools.find(tool => tool.name === "create_agent_goal");
-  const submitGoalTool = toolList.tools.find(tool => tool.name === "submit_goal_decision");
+  assert(toolList.tools.some((tool) => tool.name === "get_goal_context"));
+  const createGoalTool = toolList.tools.find((tool) => tool.name === "create_agent_goal");
+  const submitGoalTool = toolList.tools.find((tool) => tool.name === "submit_goal_decision");
   assert(createGoalTool?.securitySchemes);
   assert(submitGoalTool?.securitySchemes);
   assert.deepEqual(createGoalTool.securitySchemes[0].scopes, ["automation:write", "agent:write"]);
   assert.deepEqual(submitGoalTool.securitySchemes[0].scopes, ["automation:write", "agent:write"]);
-  assert(toolList.tools.some(tool => tool.name === "read_binary_file"));
+  assert(toolList.tools.some((tool) => tool.name === "read_binary_file"));
 
   const authProbeGoal = {
     name: "OAuth scope probe",
@@ -501,58 +1033,124 @@ const importSource = relayModule;
   );
   assert(deniedDecisionScope.isError);
   assert.deepEqual(
-    new Set(/scope="([^"]+)"/.exec(deniedDecisionScope._meta?.["mcp/www_authenticate"]?.[0] || "")?.[1].split(/\s+/) || []),
+    new Set(
+      /scope="([^"]+)"/
+        .exec(deniedDecisionScope._meta?.["mcp/www_authenticate"]?.[0] || "")?.[1]
+        .split(/\s+/) || [],
+    ),
     new Set(["automation:write", "agent:write", "offline_access"]),
     "submit_goal_decision must challenge the full scope set",
   );
 
-  const usageCount = () => Number(
-    sqlite.prepare("SELECT COALESCE(SUM(tool_calls), 0) AS n FROM user_monthly_usage WHERE user_id = ?").get("owner").n,
-  );
+  const usageCount = () =>
+    Number(
+      sqlite
+        .prepare(
+          "SELECT COALESCE(SUM(tool_calls), 0) AS n FROM user_monthly_usage WHERE user_id = ?",
+        )
+        .get("owner").n,
+    );
 
   // Every Connect task mode is available to Free through the actual MCP boundary.
   sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
   for (const input of [
     { name: "Free long task", kind: "long_task", command: "true" },
-    { name: "Free schedule", kind: "schedule_watch", command: "true", schedule: { every_seconds: 60 } },
-    { name: "Free condition", kind: "condition_watch", command: "true", condition: { source: "generic", event: "check" } },
-    { name: "Free verification loop", kind: "goal_loop", command: "true", goal: { command: "true", cwd: "/workspace" } },
+    {
+      name: "Free schedule",
+      kind: "schedule_watch",
+      command: "true",
+      schedule: { every_seconds: 60 },
+    },
+    {
+      name: "Free condition",
+      kind: "condition_watch",
+      command: "true",
+      condition: { source: "generic", event: "check" },
+    },
+    {
+      name: "Free verification loop",
+      kind: "goal_loop",
+      command: "true",
+      goal: { command: "true", cwd: "/workspace" },
+    },
   ]) {
-    const createdFree = await callMcp("tools/call", { name: "create_automation", arguments: {
-      ...input, device_id: "device", cwd: "/workspace", max_runs: 1, recovery: "fail",
-    } });
+    const createdFree = await callMcp("tools/call", {
+      name: "create_automation",
+      arguments: {
+        ...input,
+        device_id: "device",
+        cwd: "/workspace",
+        max_runs: 1,
+        recovery: "fail",
+      },
+    });
     const createdFreeId = JSON.parse(createdFree.content[0].text).automation?.id;
     assert(createdFreeId, JSON.stringify(createdFree));
     for (const action of ["pause", "resume", "cancel"]) {
-      const managedFree = await callMcp("tools/call", { name: "manage_automation", arguments: {
-        automation_id: createdFreeId, action,
-      } });
-      assert.equal(JSON.parse(managedFree.content[0].text).status, action === "pause" ? "paused" : action === "cancel" ? "cancelled" : JSON.parse(createdFree.content[0].text).automation.status);
+      const managedFree = await callMcp("tools/call", {
+        name: "manage_automation",
+        arguments: {
+          automation_id: createdFreeId,
+          action,
+        },
+      });
+      assert.equal(
+        JSON.parse(managedFree.content[0].text).status,
+        action === "pause"
+          ? "paused"
+          : action === "cancel"
+            ? "cancelled"
+            : JSON.parse(createdFree.content[0].text).automation.status,
+      );
     }
   }
-  const freeGoalMcp = await callMcp("tools/call", { name: "create_agent_goal", arguments: {
-    name: "Free source goal through MCP", device_id: "device", controller: "source",
-    objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"],
-    task_version: 1,
-  } });
+  const freeGoalMcp = await callMcp("tools/call", {
+    name: "create_agent_goal",
+    arguments: {
+      name: "Free source goal through MCP",
+      device_id: "device",
+      controller: "source",
+      objective: "Inspect file",
+      success_criteria: "File inspected",
+      allowed_tools: ["read_file"],
+      task_version: 1,
+    },
+  });
   const freeGoalMcpId = JSON.parse(freeGoalMcp.content[0].text).automation?.id;
   assert(freeGoalMcpId, JSON.stringify(freeGoalMcp));
-  const freeGoalContext = await callMcp("tools/call", { name: "get_goal_context", arguments: { automation_id: freeGoalMcpId } });
+  const freeGoalContext = await callMcp("tools/call", {
+    name: "get_goal_context",
+    arguments: { automation_id: freeGoalMcpId },
+  });
   assert.equal(JSON.parse(freeGoalContext.content[0].text).controller, "source");
-  const freeReadDecision = await callMcp("tools/call", { name: "submit_goal_decision", arguments: {
-    automation_id: freeGoalMcpId, expected_revision: JSON.parse(freeGoalContext.content[0].text).revision,
-    idempotency_key: "free-source-read", decision: "tool", tool: "read_file",
-    arguments_json: JSON.stringify({ path: "/workspace/app.ts" }), decision_summary: "Inspect the approved file",
-  } });
+  const freeReadDecision = await callMcp("tools/call", {
+    name: "submit_goal_decision",
+    arguments: {
+      automation_id: freeGoalMcpId,
+      expected_revision: JSON.parse(freeGoalContext.content[0].text).revision,
+      idempotency_key: "free-source-read",
+      decision: "tool",
+      tool: "read_file",
+      arguments_json: JSON.stringify({ path: "/workspace/app.ts" }),
+      decision_summary: "Inspect the approved file",
+    },
+  });
   assert.equal(JSON.parse(freeReadDecision.content[0].text).accepted, true);
   await tick(freeGoalMcpId);
   const freeReadContext = await source.getGoalContext(db, "owner", freeGoalMcpId);
   assert(freeReadContext.latest_observation.includes("implementation contents"));
-  const freeCompleteDecision = await callMcp("tools/call", { name: "submit_goal_decision", arguments: {
-    automation_id: freeGoalMcpId, expected_revision: freeReadContext.revision,
-    idempotency_key: "free-source-complete", decision: "complete", tool: "none",
-    decision_summary: "Approved file inspected", completion_evidence: "read_file returned implementation contents",
-  } });
+  const freeCompleteDecision = await callMcp("tools/call", {
+    name: "submit_goal_decision",
+    arguments: {
+      automation_id: freeGoalMcpId,
+      expected_revision: freeReadContext.revision,
+      idempotency_key: "free-source-complete",
+      decision: "complete",
+      tool: "none",
+      decision_summary: "Approved file inspected",
+      completion_evidence: "read_file returned implementation contents",
+    },
+  });
   assert.equal(JSON.parse(freeCompleteDecision.content[0].text).accepted, true);
   await tick(freeGoalMcpId);
   assert.equal((await get(freeGoalMcpId)).status, "completed");
@@ -560,86 +1158,180 @@ const importSource = relayModule;
   // Free binary reads retain the normal scope/device/quota checks.
   const usageBeforeFreeBinary = usageCount();
   const callsBeforeFreeBinary = calls.length;
-  const deniedBinaryScope = await callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
-  } }, { ...identity, scope: "devices:read" });
+  const deniedBinaryScope = await callMcp(
+    "tools/call",
+    {
+      name: "read_binary_file",
+      arguments: {
+        device_id: "device",
+        path: "/workspace/image.png",
+        offset: 0,
+        length: 4,
+      },
+    },
+    { ...identity, scope: "devices:read" },
+  );
   assert(deniedBinaryScope.isError, "Free access must still require computer:read");
   assert.equal(usageCount(), usageBeforeFreeBinary, "Rejected scope must not consume usage");
   assert.equal(calls.length, callsBeforeFreeBinary, "Rejected scope must not reach the device");
-  const freeBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
-  } });
+  const freeBinary = await callMcp("tools/call", {
+    name: "read_binary_file",
+    arguments: {
+      device_id: "device",
+      path: "/workspace/image.png",
+      offset: 0,
+      length: 4,
+    },
+  });
   assert(!freeBinary.isError, JSON.stringify(freeBinary));
   const freeBinaryPayload = JSON.parse(freeBinary.content[0].text);
   assert.equal(freeBinaryPayload.data, "AAECAw==");
   assert.equal(freeBinaryPayload.file_revision, binaryRevision);
-  const freeContinuation = await callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", offset: 2, length: 2,
-    expected_revision: freeBinaryPayload.file_revision,
-  } });
+  const freeContinuation = await callMcp("tools/call", {
+    name: "read_binary_file",
+    arguments: {
+      device_id: "device",
+      path: "/workspace/image.png",
+      offset: 2,
+      length: 2,
+      expected_revision: freeBinaryPayload.file_revision,
+    },
+  });
   assert(!freeContinuation.isError, JSON.stringify(freeContinuation));
   assert.equal(JSON.parse(freeContinuation.content[0].text).data, "AgM=");
-  assert.equal(usageCount(), usageBeforeFreeBinary + 2, "Each Free binary chunk consumes one normal call");
+  assert.equal(
+    usageCount(),
+    usageBeforeFreeBinary + 2,
+    "Each Free binary chunk consumes one normal call",
+  );
   assert.equal(calls.length, callsBeforeFreeBinary + 2);
-  assert.equal(Number(sqlite.prepare(
-    "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
-  ).get("owner")?.binary_bytes || 0), 6, "Free binary bytes remain metered");
+  assert.equal(
+    Number(
+      sqlite
+        .prepare(
+          "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
+        )
+        .get("owner")?.binary_bytes || 0,
+    ),
+    6,
+    "Free binary bytes remain metered",
+  );
 
   const usageBeforeGuards = usageCount();
   const callsBeforeGuards = calls.length;
-  const oversizedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", length: 262145,
-  } });
+  const oversizedBinary = await callMcp("tools/call", {
+    name: "read_binary_file",
+    arguments: {
+      device_id: "device",
+      path: "/workspace/image.png",
+      length: 262145,
+    },
+  });
   assert(oversizedBinary.isError, "Free binary reads retain the 256 KiB chunk bound");
   assert.equal(usageCount(), usageBeforeGuards);
   assert.equal(calls.length, callsBeforeGuards);
   env.MONTHLY_TOOL_CALL_LIMIT = String(usageBeforeGuards);
-  const exhaustedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", length: 4,
-  } });
-  assert.equal(JSON.parse(exhaustedBinary.content[0].text).error.code, "MONTHLY_LIMIT_REACHED", "Free binary reads must honor the monthly call quota");
+  const exhaustedBinary = await callMcp("tools/call", {
+    name: "read_binary_file",
+    arguments: {
+      device_id: "device",
+      path: "/workspace/image.png",
+      length: 4,
+    },
+  });
+  assert.equal(
+    JSON.parse(exhaustedBinary.content[0].text).error.code,
+    "MONTHLY_LIMIT_REACHED",
+    "Free binary reads must honor the monthly call quota",
+  );
   assert.equal(usageCount(), usageBeforeGuards);
   assert.equal(calls.length, callsBeforeGuards);
   delete env.MONTHLY_TOOL_CALL_LIMIT;
 
-  sqlite.prepare("UPDATE devices SET allowed_tools = ? WHERE id = 'device'")
-    .run(JSON.stringify(tools.filter(tool => tool !== "read_binary_file")));
-  const disabledBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", length: 4,
-  } });
-  assert(JSON.parse(disabledBinary.content[0].text).error, "Free binary reads must still require the device tool switch");
+  sqlite
+    .prepare("UPDATE devices SET allowed_tools = ? WHERE id = 'device'")
+    .run(JSON.stringify(tools.filter((tool) => tool !== "read_binary_file")));
+  const disabledBinary = await callMcp("tools/call", {
+    name: "read_binary_file",
+    arguments: {
+      device_id: "device",
+      path: "/workspace/image.png",
+      length: 4,
+    },
+  });
+  assert(
+    JSON.parse(disabledBinary.content[0].text).error,
+    "Free binary reads must still require the device tool switch",
+  );
   assert.equal(calls.length, callsBeforeGuards, "Disabled tool must not reach the device");
-  sqlite.prepare("UPDATE devices SET allowed_tools = ? WHERE id = 'device'").run(JSON.stringify(tools));
+  sqlite
+    .prepare("UPDATE devices SET allowed_tools = ? WHERE id = 'device'")
+    .run(JSON.stringify(tools));
 
   // Individual file tools, including temporary links, are available on Free.
-  const freeResourceResult = await callMcp("tools/call", { name: "create_file_resource", arguments: {
-    device_id: "device", path: "/workspace/image.png",
-  } });
+  const freeResourceResult = await callMcp("tools/call", {
+    name: "create_file_resource",
+    arguments: {
+      device_id: "device",
+      path: "/workspace/image.png",
+    },
+  });
   const freeResource = JSON.parse(freeResourceResult.content[0].text);
   assert(freeResource.resource_id, JSON.stringify(freeResourceResult));
   const freeResourceToken = new URL(freeResource.url).pathname.split("/").at(-1);
-  const freeResourceDownload = await fileResources.handleFileResource(new Request(freeResource.url), env, freeResourceToken);
+  const freeResourceDownload = await fileResources.handleFileResource(
+    new Request(freeResource.url),
+    env,
+    freeResourceToken,
+  );
   assert.equal(freeResourceDownload.status, 200);
   assert.deepEqual(Buffer.from(await freeResourceDownload.arrayBuffer()), binaryFixture);
-  const freeRevoke = await callMcp("tools/call", { name: "revoke_file_resource", arguments: {
-    resource_id: freeResource.resource_id,
-  } });
+  const freeRevoke = await callMcp("tools/call", {
+    name: "revoke_file_resource",
+    arguments: {
+      resource_id: freeResource.resource_id,
+    },
+  });
   assert.equal(JSON.parse(freeRevoke.content[0].text).already_revoked, false);
-  assert.equal((await fileResources.handleFileResource(new Request(freeResource.url), env, freeResourceToken)).status, 404);
+  assert.equal(
+    (await fileResources.handleFileResource(new Request(freeResource.url), env, freeResourceToken))
+      .status,
+    404,
+  );
 
   // Free binary transfer is capped per UTC month across chunks and every link download.
   const { FREE_BINARY_BYTES_PER_MONTH: binaryCap } = await importSource("protocol");
-  const binaryUsed = () => Number(sqlite.prepare(
-    "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
-  ).get("owner")?.binary_bytes || 0);
-  const setBinaryUsed = bytes => sqlite.prepare("UPDATE user_monthly_plus_usage SET binary_bytes = ? WHERE user_id = ?").run(bytes, "owner");
-  const errorCode = result => JSON.parse(result.content[0].text).error?.code;
-  const readFourBytes = () => callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
-  } });
-  const createFreeResource = () => callMcp("tools/call", { name: "create_file_resource", arguments: {
-    device_id: "device", path: "/workspace/image.png",
-  } });
+  const binaryUsed = () =>
+    Number(
+      sqlite
+        .prepare(
+          "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
+        )
+        .get("owner")?.binary_bytes || 0,
+    );
+  const setBinaryUsed = (bytes) =>
+    sqlite
+      .prepare("UPDATE user_monthly_plus_usage SET binary_bytes = ? WHERE user_id = ?")
+      .run(bytes, "owner");
+  const errorCode = (result) => JSON.parse(result.content[0].text).error?.code;
+  const readFourBytes = () =>
+    callMcp("tools/call", {
+      name: "read_binary_file",
+      arguments: {
+        device_id: "device",
+        path: "/workspace/image.png",
+        offset: 0,
+        length: 4,
+      },
+    });
+  const createFreeResource = () =>
+    callMcp("tools/call", {
+      name: "create_file_resource",
+      arguments: {
+        device_id: "device",
+        path: "/workspace/image.png",
+      },
+    });
   const meteredBeforeCap = binaryUsed();
   setBinaryUsed(binaryCap - 4);
   const lastBinary = await readFourBytes();
@@ -653,54 +1345,118 @@ const importSource = relayModule;
   assert.equal(errorCode(await createFreeResource()), "BINARY_TRANSFER_LIMIT_REACHED");
   assert.equal(calls.length, callsAtCap, "An exhausted allowance cannot create file links");
   setBinaryUsed(binaryCap - 2);
-  assert.equal(errorCode(await readFourBytes()), "BINARY_TRANSFER_LIMIT_REACHED", "A chunk beyond the remaining allowance is withheld");
+  assert.equal(
+    errorCode(await readFourBytes()),
+    "BINARY_TRANSFER_LIMIT_REACHED",
+    "A chunk beyond the remaining allowance is withheld",
+  );
   assert.equal(binaryUsed(), binaryCap - 2, "Withheld bytes are not metered");
-  const resourceRows = () => sqlite.prepare("SELECT COUNT(*) AS n FROM file_resources WHERE user_id = ?").get("owner").n;
+  const resourceRows = () =>
+    sqlite.prepare("SELECT COUNT(*) AS n FROM file_resources WHERE user_id = ?").get("owner").n;
   const rowsBeforeRefusal = resourceRows();
   setBinaryUsed(binaryCap - 4);
-  assert.equal(errorCode(await createFreeResource()), "BINARY_TRANSFER_LIMIT_REACHED", "A link the allowance cannot deliver in full is refused");
+  assert.equal(
+    errorCode(await createFreeResource()),
+    "BINARY_TRANSFER_LIMIT_REACHED",
+    "A link the allowance cannot deliver in full is refused",
+  );
   assert.equal(resourceRows(), rowsBeforeRefusal, "A refused link is not stored");
   setBinaryUsed(binaryCap - 5);
   const cappedResource = JSON.parse((await createFreeResource()).content[0].text);
   const cappedToken = new URL(cappedResource.url).pathname.split("/").at(-1);
-  const cappedDownload = await fileResources.handleFileResource(new Request(cappedResource.url), env, cappedToken);
+  const cappedDownload = await fileResources.handleFileResource(
+    new Request(cappedResource.url),
+    env,
+    cappedToken,
+  );
   assert.equal(cappedDownload.status, 200);
   assert.deepEqual(Buffer.from(await cappedDownload.arrayBuffer()), binaryFixture);
   assert.equal(binaryUsed(), binaryCap, "Link downloads are metered");
-  const repeatedDownload = await fileResources.handleFileResource(new Request(cappedResource.url), env, cappedToken);
+  const repeatedDownload = await fileResources.handleFileResource(
+    new Request(cappedResource.url),
+    env,
+    cappedToken,
+  );
   assert.equal(repeatedDownload.status, 429, "Repeated link downloads count toward the allowance");
   assert.match(await repeatedDownload.text(), /Monthly binary transfer allowance exceeded/);
-  assert.equal((await fileResources.handleFileResource(new Request(cappedResource.url, { method: "HEAD" }), env, cappedToken)).status, 200, "HEAD transfers no bytes");
+  assert.equal(
+    (
+      await fileResources.handleFileResource(
+        new Request(cappedResource.url, { method: "HEAD" }),
+        env,
+        cappedToken,
+      )
+    ).status,
+    200,
+    "HEAD transfers no bytes",
+  );
   setBinaryUsed(meteredBeforeCap);
   const usageBeforeDenied = usageCount();
 
-  const deniedGoalPlan = await callMcp("tools/call", { name: "create_agent_goal", arguments: {
-    name: "Hosted model access remains separate", device_id: "device", controller: "hosted",
-    objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"],
-  } });
-  assert.equal(JSON.parse(deniedGoalPlan.content[0].text).error.code, "PLAN_UPGRADE_REQUIRED", JSON.stringify(deniedGoalPlan));
-  assert.equal(usageCount(), usageBeforeDenied, "Denied hosted model access must not consume monthly tool usage");
+  const deniedGoalPlan = await callMcp("tools/call", {
+    name: "create_agent_goal",
+    arguments: {
+      name: "Hosted model access remains separate",
+      device_id: "device",
+      controller: "hosted",
+      objective: "Inspect file",
+      success_criteria: "File inspected",
+      allowed_tools: ["read_file"],
+    },
+  });
+  assert.equal(
+    JSON.parse(deniedGoalPlan.content[0].text).error.code,
+    "PLAN_UPGRADE_REQUIRED",
+    JSON.stringify(deniedGoalPlan),
+  );
+  assert.equal(
+    usageCount(),
+    usageBeforeDenied,
+    "Denied hosted model access must not consume monthly tool usage",
+  );
 
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
-  const allowedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
-  } });
+  const allowedBinary = await callMcp("tools/call", {
+    name: "read_binary_file",
+    arguments: {
+      device_id: "device",
+      path: "/workspace/image.png",
+      offset: 0,
+      length: 4,
+    },
+  });
   assert(!allowedBinary.isError, JSON.stringify(allowedBinary));
   const binaryPayload = JSON.parse(allowedBinary.content[0].text);
   assert.equal(binaryPayload.data, "AAECAw==");
   assert.equal(binaryPayload.file_revision, binaryRevision);
-  assert.equal(usageCount(), usageBeforeDenied + 1, "Allowed Plus binary read should consume exactly one MCP call");
-  const continuedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
-    device_id: "device", path: "/workspace/image.png", offset: 2, length: 2,
-    expected_revision: binaryPayload.file_revision,
-  } });
+  assert.equal(
+    usageCount(),
+    usageBeforeDenied + 1,
+    "Allowed Plus binary read should consume exactly one MCP call",
+  );
+  const continuedBinary = await callMcp("tools/call", {
+    name: "read_binary_file",
+    arguments: {
+      device_id: "device",
+      path: "/workspace/image.png",
+      offset: 2,
+      length: 2,
+      expected_revision: binaryPayload.file_revision,
+    },
+  });
   assert(!continuedBinary.isError, JSON.stringify(continuedBinary));
   assert.equal(JSON.parse(continuedBinary.content[0].text).data, "AgM=");
   assert.equal(calls.at(-1), "read_binary_file");
-  const plusUsageAfterBinary = sqlite.prepare(
-    "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
-  ).get("owner");
-  assert.equal(Number(plusUsageAfterBinary?.binary_bytes || 0), 17, "Free binary chunks, file resources and Plus chunks must all meter returned bytes");
+  const plusUsageAfterBinary = sqlite
+    .prepare(
+      "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
+    )
+    .get("owner");
+  assert.equal(
+    Number(plusUsageAfterBinary?.binary_bytes || 0),
+    17,
+    "Free binary chunks, file resources and Plus chunks must all meter returned bytes",
+  );
   setBinaryUsed(binaryCap);
   assert(!(await readFourBytes()).isError, "Paid plans have no binary transfer cap");
   setBinaryUsed(17);
@@ -750,7 +1506,11 @@ const importSource = relayModule;
     env,
     resourceToken,
   );
-  assert.equal(downgradedResource.status, 200, "Free accounts retain individual file resource access");
+  assert.equal(
+    downgradedResource.status,
+    200,
+    "Free accounts retain individual file resource access",
+  );
   assert.deepEqual(Buffer.from(await downgradedResource.arrayBuffer()), binaryFixture);
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
 
@@ -778,53 +1538,145 @@ const importSource = relayModule;
   );
   assert.equal(revokedResource.status, 404, "Revoked resource must stop working before expiry");
 
-  const createdMcp = await callMcp("tools/call", { name: "create_agent_goal", arguments: {
-    name: "MCP source goal", device_id: "device", controller: "source", objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"],
-  } });
+  const createdMcp = await callMcp("tools/call", {
+    name: "create_agent_goal",
+    arguments: {
+      name: "MCP source goal",
+      device_id: "device",
+      controller: "source",
+      objective: "Inspect file",
+      success_criteria: "File inspected",
+      allowed_tools: ["read_file"],
+    },
+  });
   assert(!createdMcp.isError, JSON.stringify(createdMcp));
   const mcpTask = JSON.parse(createdMcp.content[0].text).automation.id;
-  assert.equal(JSON.parse((await runtime.getAutomation(env, "owner", mcpTask)).goal_json).max_iterations, 30, "Legacy MCP default remains unchanged");
+  assert.equal(
+    JSON.parse((await runtime.getAutomation(env, "owner", mcpTask)).goal_json).max_iterations,
+    30,
+    "Legacy MCP default remains unchanged",
+  );
   await tick(mcpTask);
-  const contextMcp = await callMcp("tools/call", { name: "get_goal_context", arguments: { automation_id: mcpTask } });
+  const contextMcp = await callMcp("tools/call", {
+    name: "get_goal_context",
+    arguments: { automation_id: mcpTask },
+  });
   assert(JSON.parse(contextMcp.content[0].text).ready_for_decision);
-  const deniedMcp = await callMcp("tools/call", { name: "submit_goal_decision", arguments: {
-    automation_id: mcpTask, expected_revision: 0, idempotency_key: "denied", decision: "pause", tool: "none", decision_summary: "Blocked",
-  } }, { ...identity, scope: "computer:write" });
+  const deniedMcp = await callMcp(
+    "tools/call",
+    {
+      name: "submit_goal_decision",
+      arguments: {
+        automation_id: mcpTask,
+        expected_revision: 0,
+        idempotency_key: "denied",
+        decision: "pause",
+        tool: "none",
+        decision_summary: "Blocked",
+      },
+    },
+    { ...identity, scope: "computer:write" },
+  );
   assert(deniedMcp.isError);
 
-  const goalArgs = { name: "MCP unified goal", device_id: "device", controller: "source", objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"] };
-  const unifiedMcp = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, task_version: 1, trigger: { type: "now" } } });
+  const goalArgs = {
+    name: "MCP unified goal",
+    device_id: "device",
+    controller: "source",
+    objective: "Inspect file",
+    success_criteria: "File inspected",
+    allowed_tools: ["read_file"],
+  };
+  const unifiedMcp = await callMcp("tools/call", {
+    name: "create_agent_goal",
+    arguments: { ...goalArgs, task_version: 1, trigger: { type: "now" } },
+  });
   assert(!unifiedMcp.isError, JSON.stringify(unifiedMcp));
   const unifiedId = JSON.parse(unifiedMcp.content[0].text).automation.id;
   const unified = await runtime.getAutomation(env, "owner", unifiedId);
   const unifiedGoal = JSON.parse(unified.goal_json);
   assert.equal(unifiedGoal.max_iterations, 720);
   assert.equal(unifiedGoal.plan.time_policy.max_duration_seconds, 86400);
-  assert.equal(unifiedGoal.controller_client_id, identity.clientId, "Unified source goals remain bound to the authorizing OAuth client");
+  assert.equal(
+    unifiedGoal.controller_client_id,
+    identity.clientId,
+    "Unified source goals remain bound to the authorizing OAuth client",
+  );
   assert.equal(unified.next_run_at, null);
-  assert.equal((await runtime.listAutomationRuns(env, "owner", unifiedId)).length, 0, "Saving a goal must not invent an execution record");
-  const unifiedContext = await callMcp("tools/call", { name: "get_goal_context", arguments: { automation_id: unifiedId } });
-  assert(JSON.parse(unifiedContext.content[0].text).ready_for_decision, "An immediate source goal accepts its first decision without a fake scheduler run");
+  assert.equal(
+    (await runtime.listAutomationRuns(env, "owner", unifiedId)).length,
+    0,
+    "Saving a goal must not invent an execution record",
+  );
+  const unifiedContext = await callMcp("tools/call", {
+    name: "get_goal_context",
+    arguments: { automation_id: unifiedId },
+  });
+  assert(
+    JSON.parse(unifiedContext.content[0].text).ready_for_decision,
+    "An immediate source goal accepts its first decision without a fake scheduler run",
+  );
   const kicksBeforeDecision = schedulerKicks;
-  const kickedDecision = await callMcp("tools/call", { name: "submit_goal_decision", arguments: {
-    automation_id: unifiedId, expected_revision: 0, idempotency_key: "kick-source-goal",
-    decision: "pause", tool: "none", decision_summary: "Pause after testing immediate scheduler kick",
-  } });
+  const kickedDecision = await callMcp("tools/call", {
+    name: "submit_goal_decision",
+    arguments: {
+      automation_id: unifiedId,
+      expected_revision: 0,
+      idempotency_key: "kick-source-goal",
+      decision: "pause",
+      tool: "none",
+      decision_summary: "Pause after testing immediate scheduler kick",
+    },
+  });
   assert(!kickedDecision.isError, JSON.stringify(kickedDecision));
-  assert.equal(schedulerKicks, kicksBeforeDecision + 1, "Accepted source decisions must request an immediate scheduler kick");
-  const missingExecutor = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, controller: undefined, task_version: 1 } });
-  assert.equal(JSON.parse(missingExecutor.content[0].text).error.code, "INVALID_TOOL_REQUEST", "New contract requires explicit executor selection");
-  const mixedTrigger = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, trigger: { type: "now" } } });
-  assert.equal(JSON.parse(mixedTrigger.content[0].text).error.code, "INVALID_TOOL_REQUEST", "Legacy and new trigger semantics cannot be silently mixed");
+  assert.equal(
+    schedulerKicks,
+    kicksBeforeDecision + 1,
+    "Accepted source decisions must request an immediate scheduler kick",
+  );
+  const missingExecutor = await callMcp("tools/call", {
+    name: "create_agent_goal",
+    arguments: { ...goalArgs, controller: undefined, task_version: 1 },
+  });
+  assert.equal(
+    JSON.parse(missingExecutor.content[0].text).error.code,
+    "INVALID_TOOL_REQUEST",
+    "New contract requires explicit executor selection",
+  );
+  const mixedTrigger = await callMcp("tools/call", {
+    name: "create_agent_goal",
+    arguments: { ...goalArgs, trigger: { type: "now" } },
+  });
+  assert.equal(
+    JSON.parse(mixedTrigger.content[0].text).error.code,
+    "INVALID_TOOL_REQUEST",
+    "Legacy and new trigger semantics cannot be silently mixed",
+  );
 
-  await assert.rejects(runtime.createAutomation({ ...env, GITHUB_APP_ID: "test", GITHUB_APP_PRIVATE_KEY: "not-used", GITHUB_APP_INSTALLATION_ID: "7" }, "owner", {
-    name: "Unauthorized cloud merge", kind: "condition_watch", github_merge: { owner: "owner", repo: "repo", pull_number: 1 },
-  }), /permission binding/);
+  await assert.rejects(
+    runtime.createAutomation(
+      {
+        ...env,
+        GITHUB_APP_ID: "test",
+        GITHUB_APP_PRIVATE_KEY: "not-used",
+        GITHUB_APP_INSTALLATION_ID: "7",
+      },
+      "owner",
+      {
+        name: "Unauthorized cloud merge",
+        kind: "condition_watch",
+        github_merge: { owner: "owner", repo: "repo", pull_number: 1 },
+      },
+    ),
+    /permission binding/,
+  );
 
   // Early-access Plus provisioning is auditable, expiring and admin-only.
-  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,role,plan) VALUES(?,?,?,?,?,?)")
+  sqlite
+    .prepare("INSERT INTO users(id,google_sub,email,created_at,role,plan) VALUES(?,?,?,?,?,?)")
     .run("plan-admin", "plan-admin-sub", "admin@test.invalid", now, "admin", "free");
-  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,role,plan) VALUES(?,?,?,?,?,?)")
+  sqlite
+    .prepare("INSERT INTO users(id,google_sub,email,created_at,role,plan) VALUES(?,?,?,?,?,?)")
     .run("plan-user", "plan-user-sub", "plus-target@test.invalid", now, "user", "free");
   const adminToken = await authModule.createSession("plan-admin", env);
   const userToken = await authModule.createSession("plan-user", env);
@@ -867,11 +1719,20 @@ const importSource = relayModule;
     new Request(env.PUBLIC_ORIGIN + "/api/me", { headers: { cookie: userHeaders.cookie } }),
     env,
   );
-  assert.equal(grantedSessionUser?.plan, "plus", "Session user should reflect an active grant immediately");
+  assert.equal(
+    grantedSessionUser?.plan,
+    "plus",
+    "Session user should reflect an active grant immediately",
+  );
 
-  sqlite.prepare("UPDATE plan_grants SET expires_at = ? WHERE id = ?")
+  sqlite
+    .prepare("UPDATE plan_grants SET expires_at = ? WHERE id = ?")
     .run(new Date(Date.now() - 60_000).toISOString(), firstGrant.id);
-  assert.equal(await entitlements.getAccountPlan(env, "plan-user"), "free", "Expired grant must stop authorizing Plus");
+  assert.equal(
+    await entitlements.getAccountPlan(env, "plan-user"),
+    "free",
+    "Expired grant must stop authorizing Plus",
+  );
 
   const secondGrantResponse = await planAdmin.handleAdminPlanGrants(
     new Request(env.PUBLIC_ORIGIN + "/api/admin/plan-grants", {
@@ -898,7 +1759,11 @@ const importSource = relayModule;
     secondGrant.id,
   );
   assert.equal(revokeResponse.status, 200);
-  assert.equal(await entitlements.getAccountPlan(env, "plan-user"), "free", "Revoked grant must stop authorizing Plus");
+  assert.equal(
+    await entitlements.getAccountPlan(env, "plan-user"),
+    "free",
+    "Revoked grant must stop authorizing Plus",
+  );
 
   const scheduler = await importSource("task-scheduler");
   sqlite.prepare("DELETE FROM task_scheduler_health").run();
@@ -906,16 +1771,37 @@ const importSource = relayModule;
   const oldConsoleError = console.error;
   try {
     console.error = () => {};
-    const brokenDb = { ...db, prepare(sql) {
-      if (sql.includes("FROM automations")) throw new Error("Injected scheduler dispatch failure");
-      return db.prepare(sql);
-    } };
-    await assert.rejects(scheduler.runScheduledTasks({ ...env, DB: brokenDb }, "* * * * *"), /Injected scheduler dispatch failure/);
-  } finally { console.error = oldConsoleError; }
-  assert.equal((await scheduler.taskSchedulerHealth(db, "owner")).state, "error", "Dispatch failure must be visible instead of a healthy heartbeat");
-  sqlite.prepare("UPDATE task_scheduler_health SET last_error=NULL,last_success_at=?").run(new Date(Date.now() - 4 * 60_000).toISOString());
+    const brokenDb = {
+      ...db,
+      prepare(sql) {
+        if (sql.includes("FROM automations"))
+          throw new Error("Injected scheduler dispatch failure");
+        return db.prepare(sql);
+      },
+    };
+    await assert.rejects(
+      scheduler.runScheduledTasks({ ...env, DB: brokenDb }, "* * * * *"),
+      /Injected scheduler dispatch failure/,
+    );
+  } finally {
+    console.error = oldConsoleError;
+  }
+  assert.equal(
+    (await scheduler.taskSchedulerHealth(db, "owner")).state,
+    "error",
+    "Dispatch failure must be visible instead of a healthy heartbeat",
+  );
+  sqlite
+    .prepare("UPDATE task_scheduler_health SET last_error=NULL,last_success_at=?")
+    .run(new Date(Date.now() - 4 * 60_000).toISOString());
   assert.equal((await scheduler.taskSchedulerHealth(db, "owner")).state, "stale");
-  assert.equal((await scheduler.taskSchedulerHealth(db, "plan-user")).overdue_count, 0, "Due task counts remain scoped to the requesting account");
+  assert.equal(
+    (await scheduler.taskSchedulerHealth(db, "plan-user")).overdue_count,
+    0,
+    "Due task counts remain scoped to the requesting account",
+  );
   sqlite.close();
-  console.log("PASS: source protocol, fences/recovery, verification/retry, recurring goals, device permissions, signed events/retry/revocation, bounded power leases, cloud action ownership");
+  console.log(
+    "PASS: source protocol, fences/recovery, verification/retry, recurring goals, device permissions, signed events/retry/revocation, bounded power leases, cloud action ownership",
+  );
 }

@@ -1,46 +1,105 @@
+import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { ProductIcon } from "../../components/product-icon.js";
 import { CHATGPT_PLUGIN_URL } from "../install/client-links.js";
 import React, { useEffect, useState } from "react";
 import { LanguageSwitcher, useI18n } from "../../app/i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
 import { UI_PREVIEW } from "../../preview/preview-mode.js";
-import { ONBOARDING_PREVIEW_CODE, createOnboardingPreviewDevice, onboardingPreviewStep } from "../../preview/onboarding-preview.js";
+import {
+  ONBOARDING_PREVIEW_CODE,
+  createOnboardingPreviewDevice,
+  onboardingPreviewStep,
+} from "../../preview/onboarding-preview.js";
 import { Brand, CopyButton, HelpTip, ThemeSwitcher } from "../../components/public-layout.js";
-import { APP_ORIGIN, CLAUDE_CONNECTORS_URL, MARKETING_ORIGIN, MCP_ENDPOINT, cursorMcpInstallUrl } from "../../config/app-config.js";
+import {
+  APP_ORIGIN,
+  CLAUDE_CONNECTORS_URL,
+  MARKETING_ORIGIN,
+  MCP_ENDPOINT,
+  cursorMcpInstallUrl,
+} from "../../config/app-config.js";
 import { atComputerLimit, pairingFailureMessage, type PairingFailure } from "./pairing-errors.js";
-import { type Device, type DirectoryBrowser, type Pairing, type User } from "../../types/app-types.js";
-import { SAFE_DEVICE_TOOLS, platformGlyph, platformLabel } from "../dashboard/devices/device-presets.js";
+import {
+  type Device,
+  type DirectoryBrowser,
+  type Pairing,
+  type User,
+} from "../../types/app-types.js";
+import {
+  SAFE_DEVICE_TOOLS,
+  platformGlyph,
+  platformLabel,
+} from "../dashboard/devices/device-presets.js";
 import { AuthProviderModal } from "./auth-pages.js";
 
-function PairingCard({ title, body, children, step = 1 }: {
+function PairingCard({
+  title,
+  body,
+  children,
+  step = 1,
+}: {
   title: string;
   body: string;
   children?: React.ReactNode;
   step?: 1 | 2 | 3;
 }) {
   const { tr, locale } = useI18n();
-  const steps = [tr("Pair computer", "配对电脑"), tr("Permissions", "设置权限"), tr("Connect AI", "连接 AI")];
+  const steps = [
+    tr("Pair computer", "配对电脑"),
+    tr("Permissions", "设置权限"),
+    tr("Connect AI", "连接 AI"),
+  ];
   return (
     <main className="pairingShell workspaceSurface">
       <header className="pairingHeader">
         <Brand compact />
-        <div><LanguageSwitcher compact syncUrl dropdown iconOnly /><ThemeSwitcher compact /></div>
+        <div>
+          <LanguageSwitcher compact syncUrl dropdown iconOnly />
+          <ThemeSwitcher compact />
+        </div>
       </header>
-      {UI_PREVIEW && <aside className="pairingPreview" aria-label={tr("Onboarding preview", "配对流程预览")}>
-        <span>{tr("UI preview · simulated computer", "UI 预览 · 模拟电脑")}</span>
-        <nav>{(["pair", "permissions", "ready"] as const).map((phase, index) => <a key={phase} href={"/device?code=" + ONBOARDING_PREVIEW_CODE + "&demo=" + phase + "&lang=" + locale}>{[tr("Pair", "配对"), tr("Permissions", "权限设置"), tr("Connect AI", "连接 AI")][index]}</a>)}</nav>
-      </aside>}
+      {UI_PREVIEW && (
+        <aside className="pairingPreview" aria-label={tr("Onboarding preview", "配对流程预览")}>
+          <span>{tr("UI preview · simulated computer", "UI 预览 · 模拟电脑")}</span>
+          <nav>
+            {(["pair", "permissions", "ready"] as const).map((phase, index) => (
+              <a
+                key={phase}
+                href={
+                  "/device?code=" + ONBOARDING_PREVIEW_CODE + "&demo=" + phase + "&lang=" + locale
+                }
+              >
+                {
+                  [tr("Pair", "配对"), tr("Permissions", "权限设置"), tr("Connect AI", "连接 AI")][
+                    index
+                  ]
+                }
+              </a>
+            ))}
+          </nav>
+        </aside>
+      )}
       <div className="pairingFlow">
         <ol className="pairingSteps" aria-label={tr("Computer setup", "电脑设置")}>
           {steps.map((label, index) => (
-            <li key={index} data-complete={index + 1 < step} aria-current={index + 1 === step ? "step" : undefined}>
-              <span>{index + 1 < step ? <ProductIcon name="check" size={14} /> : index + 1}</span>{label}
+            <li
+              key={index}
+              data-complete={index + 1 < step}
+              aria-current={index + 1 === step ? "step" : undefined}
+            >
+              <span>{index + 1 < step ? <ProductIcon name="check" size={14} /> : index + 1}</span>
+              {label}
             </li>
           ))}
         </ol>
         <section className="pairingCard" aria-labelledby="pairing-title">
           <header className="pairingTitle">
-            <span className="pairingTitleIcon"><ProductIcon name={step === 3 ? "link" : step === 2 ? "shield" : "device"} size={24} /></span>
+            <span className="pairingTitleIcon">
+              <ProductIcon
+                name={step === 3 ? "link" : step === 2 ? "shield" : "device"}
+                size={24}
+              />
+            </span>
             <h1 id="pairing-title">{title}</h1>
             <p>{body}</p>
           </header>
@@ -48,24 +107,35 @@ function PairingCard({ title, body, children, step = 1 }: {
         </section>
       </div>
       <footer className="pairingFooter">
-        <span><ProductIcon name="shield" size={14} />{tr("Your computer. Your permissions.", "你的电脑，由你掌控权限。")}</span>
-        <a href={MARKETING_ORIGIN + localizedWebsiteHref("/docs", locale)} target="_blank" rel="noreferrer">{tr("Help & guides", "帮助与指南")}<ProductIcon name="arrowUpRight" size={14} /></a>
+        <span>
+          <ProductIcon name="shield" size={14} />
+          {tr("Your computer. Your permissions.", "你的电脑，由你掌控权限。")}
+        </span>
+        <a
+          href={MARKETING_ORIGIN + localizedWebsiteHref("/docs", locale)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {tr("Help & guides", "帮助与指南")}
+          <ProductIcon name="arrowUpRight" size={14} />
+        </a>
       </footer>
     </main>
   );
 }
 export function PairDevice({
   user,
-  onSignedIn,
 }: {
   user: User | null | undefined;
   onSignedIn: () => Promise<void>;
 }) {
   const { tr, locale } = useI18n();
   const previewStep = UI_PREVIEW ? onboardingPreviewStep(new URL(location.href)) : "pair";
-  const previewDevice = UI_PREVIEW && previewStep !== "pair" ? createOnboardingPreviewDevice() : null;
+  const previewDevice =
+    UI_PREVIEW && previewStep !== "pair" ? createOnboardingPreviewDevice() : null;
   const initialCode =
-    new URLSearchParams(location.search).get("code")?.toUpperCase() || (UI_PREVIEW ? ONBOARDING_PREVIEW_CODE : "");
+    new URLSearchParams(location.search).get("code")?.toUpperCase() ||
+    (UI_PREVIEW ? ONBOARDING_PREVIEW_CODE : "");
   const [code, setCode] = useState(initialCode);
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [message, setMessage] = useState("");
@@ -74,11 +144,15 @@ export function PairDevice({
   const [showSignIn, setShowSignIn] = useState(false);
   const [approvedDeviceId, setApprovedDeviceId] = useState(previewDevice?.id || "");
   const [pairedDevice, setPairedDevice] = useState<Device | null>(previewDevice);
-  const [setupStep, setSetupStep] = useState<"permissions" | "workspace" | "done">(previewStep === "ready" ? "done" : "permissions");
+  const [setupStep, setSetupStep] = useState<"permissions" | "workspace" | "done">(
+    previewStep === "ready" ? "done" : "permissions",
+  );
   const [directoryBrowser, setDirectoryBrowser] = useState<DirectoryBrowser | null>(null);
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [workspacePathInput, setWorkspacePathInput] = useState("");
-  const [pendingWorkspaceAction, setPendingWorkspaceAction] = useState<"file-editing" | "terminal" | null>(null);
+  const [pendingWorkspaceAction, setPendingWorkspaceAction] = useState<
+    "file-editing" | "terminal" | null
+  >(null);
   const [setupError, setSetupError] = useState("");
   const [terminalConfirm, setTerminalConfirm] = useState(false);
   const [backgroundRequested, setBackgroundRequested] = useState(true);
@@ -89,8 +163,11 @@ export function PairDevice({
     setMessage("");
     try {
       const response = await fetch("/api/pairing?code=" + encodeURIComponent(targetCode));
-      const payload = (await response.json()) as Pairing & { error?: string };
-      if (!response.ok) throw new Error(payload.error || tr("Pairing code not found", "未找到配对码"));
+      const payload = (await response.json().then(canonicalErrorEnvelope)) as Pairing & {
+        error?: string;
+      };
+      if (!response.ok)
+        throw new Error(payload.error || tr("Pairing code not found", "未找到配对码"));
       setPairing(payload);
     } catch (error) {
       setPairing(null);
@@ -127,7 +204,7 @@ export function PairDevice({
       try {
         const response = await fetch("/api/devices");
         if (!response.ok) return;
-        const devices = (await response.json()) as Device[];
+        const devices = (await response.json().then(canonicalErrorEnvelope)) as Device[];
         const device = devices.find((item) => item.id === approvedDeviceId) || null;
         if (!cancelled && device) {
           setPairedDevice(device);
@@ -157,7 +234,7 @@ export function PairDevice({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ user_code: pairing.user_code }),
       });
-      const payload = (await response.json()) as PairingFailure & {
+      const payload = (await response.json().then(canonicalErrorEnvelope)) as PairingFailure & {
         device?: { id: string; name: string; platform: string; arch: string | null };
       };
       if (!response.ok || !payload.device?.id) {
@@ -210,14 +287,20 @@ export function PairDevice({
           "/directories?path=" +
           encodeURIComponent(path),
       );
-      const payload = (await response.json().catch(() => ({}))) as {
+      const payload = (await response
+        .json()
+        .then(canonicalErrorEnvelope)
+        .catch(() => ({}))) as {
         browser?: DirectoryBrowser;
         error?: string;
       };
       if (!response.ok || !payload.browser) {
         throw new Error(
           payload.error ||
-            tr("Directory browsing is unavailable until the device is online.", "设备上线后才能浏览目录。"),
+            tr(
+              "Directory browsing is unavailable until the device is online.",
+              "设备上线后才能浏览目录。",
+            ),
         );
       }
       setDirectoryBrowser(payload.browser);
@@ -240,9 +323,7 @@ export function PairDevice({
     if (!approvedDeviceId) return false;
     const available = pairedDevice?.available_tools || pairedDevice?.tools || [];
     const supported =
-      available.length > 0
-        ? nextTools.filter((tool) => available.includes(tool))
-        : [...nextTools];
+      available.length > 0 ? nextTools.filter((tool) => available.includes(tool)) : [...nextTools];
 
     const response = await fetch(
       "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/tools",
@@ -253,12 +334,15 @@ export function PairDevice({
       },
     );
     if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      throw new Error(payload.error || tr("Could not save device permissions.", "无法保存设备权限。"));
+      const payload = (await response
+        .json()
+        .then(canonicalErrorEnvelope)
+        .catch(() => ({}))) as { error?: string };
+      throw new Error(
+        payload.error || tr("Could not save device permissions.", "无法保存设备权限。"),
+      );
     }
-    setPairedDevice((current) =>
-      current ? { ...current, allowed_tools: supported } : current,
-    );
+    setPairedDevice((current) => (current ? { ...current, allowed_tools: supported } : current));
     return true;
   }
 
@@ -272,12 +356,7 @@ export function PairDevice({
     setSetupError("");
     try {
       const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
-      await saveTools([
-        ...current,
-        "write_file",
-        "edit_block",
-        "undo_last_change",
-      ]);
+      await saveTools([...current, "write_file", "edit_block", "undo_last_change"]);
     } catch (error) {
       setSetupError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -302,7 +381,10 @@ export function PairDevice({
           "/directories?path=" +
           encodeURIComponent(requestedPath),
       );
-      const browsePayload = (await browseResponse.json().catch(() => ({}))) as {
+      const browsePayload = (await browseResponse
+        .json()
+        .then(canonicalErrorEnvelope)
+        .catch(() => ({}))) as {
         browser?: DirectoryBrowser;
         error?: string;
       };
@@ -332,8 +414,13 @@ export function PairDevice({
         },
       );
       if (!policyResponse.ok) {
-        const payload = (await policyResponse.json().catch(() => ({}))) as { error?: string };
-        throw new Error(payload.error || tr("Could not save Trusted Write Locations.", "无法保存可信写入区域。"));
+        const payload = (await policyResponse
+          .json()
+          .then(canonicalErrorEnvelope)
+          .catch(() => ({}))) as { error?: string };
+        throw new Error(
+          payload.error || tr("Could not save Trusted Write Locations.", "无法保存可信写入区域。"),
+        );
       }
 
       const nextAction = pendingWorkspaceAction;
@@ -344,12 +431,7 @@ export function PairDevice({
 
       if (nextAction === "file-editing") {
         const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
-        await saveTools([
-          ...current,
-          "write_file",
-          "edit_block",
-          "undo_last_change",
-        ]);
+        await saveTools([...current, "write_file", "edit_block", "undo_last_change"]);
       } else if (nextAction === "terminal") {
         const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
         await saveTools([...current, "start_process"]);
@@ -396,15 +478,22 @@ export function PairDevice({
     }
 
     if (backgroundRequested && pairedDevice.background_agent_available !== true) {
-      setSetupError(tr(
-        "Automatic recovery is not available on this client yet. Turn it off to finish setup now, or update remotelink first.",
-        "当前客户端还不支持自动恢复。你可以先关闭此选项完成设置，或先更新 remotelink。",
-      ));
+      setSetupError(
+        tr(
+          "Automatic recovery is not available on this client yet. Turn it off to finish setup now, or update remotelink first.",
+          "当前客户端还不支持自动恢复。你可以先关闭此选项完成设置，或先更新 remotelink。",
+        ),
+      );
       return;
     }
 
     if (backgroundRequested && !pairedDevice.background_recovery_available) {
-      setSetupError(tr("This older client exits its terminal when enabling background mode. Update to the recovery-capable CLI, or turn this option off to finish setup with the current session.", "当前旧版客户端启用后台模式会退出终端。请更新为支持恢复的 CLI，或关闭此选项，以当前会话完成设置。"));
+      setSetupError(
+        tr(
+          "This older client exits its terminal when enabling background mode. Update to the recovery-capable CLI, or turn this option off to finish setup with the current session.",
+          "当前旧版客户端启用后台模式会退出终端。请更新为支持恢复的 CLI，或关闭此选项，以当前会话完成设置。",
+        ),
+      );
       return;
     }
     if (!backgroundRequested && !backgroundActuallyEnabled) {
@@ -424,7 +513,10 @@ export function PairDevice({
           body: JSON.stringify({ enabled: backgroundRequested }),
         },
       );
-      const payload = (await response.json().catch(() => ({}))) as {
+      const payload = (await response
+        .json()
+        .then(canonicalErrorEnvelope)
+        .catch(() => ({}))) as {
         error?: string;
         enabled?: boolean;
         status?: {
@@ -437,15 +529,11 @@ export function PairDevice({
       if (!response.ok) {
         throw new Error(
           payload.error ||
-            tr(
-              "Could not apply the background connection setting.",
-              "无法应用后台连接设置。",
-            ),
+            tr("Could not apply the background connection setting.", "无法应用后台连接设置。"),
         );
       }
 
-      const actualEnabled =
-        payload.enabled === true || payload.status?.enabled === true;
+      const actualEnabled = payload.enabled === true || payload.status?.enabled === true;
       if (backgroundRequested && !actualEnabled) {
         throw new Error(
           payload.status?.detail ||
@@ -461,8 +549,7 @@ export function PairDevice({
           ? {
               ...current,
               background_enabled: actualEnabled,
-              background_service:
-                payload.status?.service || current.background_service || null,
+              background_service: payload.status?.service || current.background_service || null,
               background_seen_at: new Date().toISOString(),
             }
           : current,
@@ -477,9 +564,7 @@ export function PairDevice({
   const availableTools = pairedDevice?.available_tools || pairedDevice?.tools || [];
   const fileEditingSupported =
     pairedDevice?.status === "online" &&
-    ["write_file", "edit_block", "undo_last_change"].every((tool) =>
-      availableTools.includes(tool),
-    );
+    ["write_file", "edit_block", "undo_last_change"].every((tool) => availableTools.includes(tool));
   const terminalSupported =
     pairedDevice?.status === "online" && availableTools.includes("start_process");
   const enabledTools = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
@@ -489,12 +574,16 @@ export function PairDevice({
     enabledTools.includes("undo_last_change");
   const terminalEnabled = enabledTools.includes("start_process");
   const backgroundCapabilityReady =
-    pairedDevice?.status === "online" &&
-    pairedDevice.background_agent_available === true;
+    pairedDevice?.status === "online" && pairedDevice.background_agent_available === true;
   const backgroundActuallyEnabled = pairedDevice?.background_enabled === true;
 
   if (user === undefined) {
-    return <PairingCard title={tr("Loading…", "加载中…")} body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")} />;
+    return (
+      <PairingCard
+        title={tr("Loading…", "加载中…")}
+        body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")}
+      />
+    );
   }
 
   if (!user) {
@@ -502,9 +591,17 @@ export function PairDevice({
       <>
         <PairingCard
           title={tr("Sign in to pair this computer", "登录以配对这台电脑")}
-          body={initialCode
-            ? tr("Choose a Remote Arc account, then confirm the code shown in your terminal.", "选择一个 Remote Arc 账户，然后确认终端中显示的配对码。")
-            : tr("Choose a Remote Arc account before approving this computer.", "授权这台电脑前，请先选择 Remote Arc 账户。")}
+          body={
+            initialCode
+              ? tr(
+                  "Choose a Remote Arc account, then confirm the code shown in your terminal.",
+                  "选择一个 Remote Arc 账户，然后确认终端中显示的配对码。",
+                )
+              : tr(
+                  "Choose a Remote Arc account before approving this computer.",
+                  "授权这台电脑前，请先选择 Remote Arc 账户。",
+                )
+          }
         >
           <button className="primaryButton" type="button" onClick={() => setShowSignIn(true)}>
             {tr("Sign in to Remote Arc", "登录 Remote Arc")} <span>→</span>
@@ -514,7 +611,10 @@ export function PairDevice({
           <AuthProviderModal
             returnTo={location.pathname + location.search}
             title={tr("Choose how to sign in.", "选择登录方式。")}
-            body={tr("Sign in to the Remote Arc account that should own this paired computer.", "登录将拥有这台已配对电脑的 Remote Arc 账户。")}
+            body={tr(
+              "Sign in to the Remote Arc account that should own this paired computer.",
+              "登录将拥有这台已配对电脑的 Remote Arc 账户。",
+            )}
             onClose={() => setShowSignIn(false)}
           />
         )}
@@ -533,7 +633,10 @@ export function PairDevice({
         icon: "/ai-openai.svg",
         href: CHATGPT_PLUGIN_URL,
         guidePath: "/install/chatgpt",
-        detail: tr("Install the published plugin and connect this same Remote Arc account", "安装已上架插件，并连接当前这个 Remote Arc 账号"),
+        detail: tr(
+          "Install the published plugin and connect this same Remote Arc account",
+          "安装已上架插件，并连接当前这个 Remote Arc 账号",
+        ),
         action: tr("Open official plugin", "打开官方插件"),
         copyEndpoint: false,
       },
@@ -563,7 +666,10 @@ export function PairDevice({
         icon: "",
         href: MARKETING_ORIGIN + localizedWebsiteHref("/docs/mcp", locale),
         guidePath: "/remote-mcp",
-        detail: tr("Copy the endpoint and use your client's MCP setup", "复制 Endpoint，并在客户端的 MCP 设置中添加"),
+        detail: tr(
+          "Copy the endpoint and use your client's MCP setup",
+          "复制 Endpoint，并在客户端的 MCP 设置中添加",
+        ),
         action: tr("Copy & open docs", "复制并打开文档"),
         copyEndpoint: true,
       },
@@ -578,16 +684,27 @@ export function PairDevice({
           "电脑已配对。使用 Connect 还必须在 AI 客户端中添加 Remote Arc，并完成 MCP 授权。仅配对电脑，不代表 AI 已经连接。",
         )}
       >
-        <div className="pairConnectStatus"><span><ProductIcon name="check" size={15}/>{tr("Computer paired", "电脑已配对")}</span><strong><ProductIcon name="link" size={15}/>{tr("MCP connection required", "还需完成 MCP 连接")}</strong></div>
+        <div className="pairConnectStatus">
+          <span>
+            <ProductIcon name="check" size={15} />
+            {tr("Computer paired", "电脑已配对")}
+          </span>
+          <strong>
+            <ProductIcon name="link" size={15} />
+            {tr("MCP connection required", "还需完成 MCP 连接")}
+          </strong>
+        </div>
 
         <section className="pairAgentConnect">
           <div className="pairAgentConnectIntro">
             <span className="eyebrow">{tr("REQUIRED FOR CONNECT", "CONNECT 必需步骤")}</span>
             <h3>{tr("Choose your AI client", "选择你的 AI 客户端")}</h3>
-            <p>{tr(
-              "For ChatGPT, open the published Remote Arc plugin and connect the same account used to pair this computer. Other clients can use a custom MCP connection. Then ask your AI to list your computers.",
-              "ChatGPT 用户直接打开已上架的 Remote Arc 插件，并连接配对这台电脑时使用的同一账号。其他客户端仍可使用 Custom MCP。然后让 AI 列出你的电脑。",
-            )}</p>
+            <p>
+              {tr(
+                "For ChatGPT, open the published Remote Arc plugin and connect the same account used to pair this computer. Other clients can use a custom MCP connection. Then ask your AI to list your computers.",
+                "ChatGPT 用户直接打开已上架的 Remote Arc 插件，并连接配对这台电脑时使用的同一账号。其他客户端仍可使用 Custom MCP。然后让 AI 列出你的电脑。",
+              )}
+            </p>
           </div>
 
           <div className="pairAgentGrid">
@@ -609,11 +726,29 @@ export function PairDevice({
                   </div>
                 </div>
                 <div className="pairAgentActions">
-                  <a className="pairAgentGuide" href={MARKETING_ORIGIN + localizedWebsiteHref(agent.guidePath, locale)} target="_blank" rel="noreferrer" aria-label={agent.name + " · " + tr("Installation guide", "安装指南")}>
-                    <ProductIcon name="link" size={15} /><span>{tr("Connect ", "连接 ")}{agent.name}</span><ProductIcon name="arrowUpRight" size={14} />
+                  <a
+                    className="pairAgentGuide"
+                    href={MARKETING_ORIGIN + localizedWebsiteHref(agent.guidePath, locale)}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={agent.name + " · " + tr("Installation guide", "安装指南")}
+                  >
+                    <ProductIcon name="link" size={15} />
+                    <span>
+                      {tr("Connect ", "连接 ")}
+                      {agent.name}
+                    </span>
+                    <ProductIcon name="arrowUpRight" size={14} />
                   </a>
-                  <a className="pairAgentLaunch" href={agent.href} target="_blank" rel="noreferrer" onClick={agent.copyEndpoint ? copyEndpoint : undefined}>
-                    {agent.action}<ProductIcon name="arrowUpRight" size={14} />
+                  <a
+                    className="pairAgentLaunch"
+                    href={agent.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={agent.copyEndpoint ? copyEndpoint : undefined}
+                  >
+                    {agent.action}
+                    <ProductIcon name="arrowUpRight" size={14} />
                   </a>
                 </div>
               </article>
@@ -629,26 +764,46 @@ export function PairDevice({
             </div>
           </details>
         </section>
-        <div className="pairConnectionCheck"><strong>{tr("Check the connection", "确认连接成功")}</strong><p>{tr("After authorization, select Remote Arc in your AI chat and ask for your device list. A successful device result confirms the connection.", "授权后，在 AI 对话中启用 Remote Arc，发送“列出我的设备”。成功返回设备结果，才说明连接已经可用。")}</p></div>
-
-        <details className="pairDeviceSummary"><summary>{tr("Computer paired · review permissions", "电脑已配对 · 查看权限")}</summary>
-        <div className="pairSetupSummary">
-          <div>
-            <span>{tr("Background connection", "后台连接")}</span>
-            <strong>
-              {backgroundActuallyEnabled
-                ? tr("Enabled", "已开启")
-                : tr("Foreground only", "仅前台运行")}
-            </strong>
-          </div>
-          <div><span>{tr("Read access", "读取权限")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
-          <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
-          <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+        <div className="pairConnectionCheck">
+          <strong>{tr("Check the connection", "确认连接成功")}</strong>
+          <p>
+            {tr(
+              "After authorization, select Remote Arc in your AI chat and ask for your device list. A successful device result confirms the connection.",
+              "授权后，在 AI 对话中启用 Remote Arc，发送“列出我的设备”。成功返回设备结果，才说明连接已经可用。",
+            )}
+          </p>
         </div>
+
+        <details className="pairDeviceSummary">
+          <summary>{tr("Computer paired · review permissions", "电脑已配对 · 查看权限")}</summary>
+          <div className="pairSetupSummary">
+            <div>
+              <span>{tr("Background connection", "后台连接")}</span>
+              <strong>
+                {backgroundActuallyEnabled
+                  ? tr("Enabled", "已开启")
+                  : tr("Foreground only", "仅前台运行")}
+              </strong>
+            </div>
+            <div>
+              <span>{tr("Read access", "读取权限")}</span>
+              <strong>{tr("Enabled", "已开启")}</strong>
+            </div>
+            <div>
+              <span>{tr("File editing", "文件编辑")}</span>
+              <strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong>
+            </div>
+            <div>
+              <span>{tr("Terminal", "终端")}</span>
+              <strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong>
+            </div>
+          </div>
         </details>
 
         <div className="pairDoneSecondary">
-          <a href="/connect">{tr("Already connected? Open Connect AI", "已完成连接？打开 Connect AI")} →</a>
+          <a href="/connect">
+            {tr("Already connected? Open Connect AI", "已完成连接？打开 Connect AI")} →
+          </a>
           <a href="/devices">{tr("Manage computer permissions", "管理电脑权限")} →</a>
         </div>
       </PairingCard>
@@ -660,15 +815,17 @@ export function PairDevice({
       <PairingCard
         step={2}
         title={tr("Choose where AI may work", "选择 AI 可以工作的目录")}
-        body={pendingWorkspaceAction === "terminal"
-          ? tr(
-              "Terminal access needs a Trusted Write Location before it can be enabled. Choose a folder on this runtime. Terminal commands still run as your local OS user and are not confined to this folder by an OS sandbox.",
-              "开启终端前需要先设置可信写入区域。请选择这个运行环境上的目录。终端命令仍以本机用户身份执行，并不会被操作系统沙箱限制在这个目录内。",
-            )
-          : tr(
-              "Choose a folder where Remote Arc may create or edit files. You can browse this computer or enter any folder path that this runtime can access.",
-              "选择一个允许 Remote Arc 创建或编辑文件的目录。你可以浏览这台电脑，也可以直接输入这个运行环境能够访问的任意目录路径。",
-            )}
+        body={
+          pendingWorkspaceAction === "terminal"
+            ? tr(
+                "Terminal access needs a Trusted Write Location before it can be enabled. Choose a folder on this runtime. Terminal commands still run as your local OS user and are not confined to this folder by an OS sandbox.",
+                "开启终端前需要先设置可信写入区域。请选择这个运行环境上的目录。终端命令仍以本机用户身份执行，并不会被操作系统沙箱限制在这个目录内。",
+              )
+            : tr(
+                "Choose a folder where Remote Arc may create or edit files. You can browse this computer or enter any folder path that this runtime can access.",
+                "选择一个允许 Remote Arc 创建或编辑文件的目录。你可以浏览这台电脑，也可以直接输入这个运行环境能够访问的任意目录路径。",
+              )
+        }
       >
         <div className="pairWorkspaceManual">
           <label htmlFor="pair-workspace-path">{tr("Folder path", "目录路径")}</label>
@@ -689,49 +846,64 @@ export function PairDevice({
               {directoryLoading ? tr("Opening…", "正在打开…") : tr("Browse", "浏览")}
             </button>
           </div>
-          <small>{tr(
-            "Paths are interpreted by this runtime, so Windows, macOS, Linux and WSL can each use their native filesystem paths.",
-            "路径由当前运行环境解释，因此 Windows、macOS、Linux 和 WSL 都可以使用各自原生的文件系统路径。",
-          )}</small>
+          <small>
+            {tr(
+              "Paths are interpreted by this runtime, so Windows, macOS, Linux and WSL can each use their native filesystem paths.",
+              "路径由当前运行环境解释，因此 Windows、macOS、Linux 和 WSL 都可以使用各自原生的文件系统路径。",
+            )}
+          </small>
         </div>
 
         <div className="pairWorkspacePath">
           <code>{directoryBrowser?.path || tr("Waiting for device…", "等待设备上线…")}</code>
           {directoryBrowser?.parent && (
-            <button className="ghostButton small" onClick={() => void browseWorkspace(directoryBrowser.parent!)}>
+            <button
+              className="ghostButton small"
+              onClick={() => void browseWorkspace(directoryBrowser.parent!)}
+            >
               ↑ {tr("Parent", "上一级")}
             </button>
           )}
         </div>
 
         <div className="pairWorkspaceList">
-          {directoryLoading && <div className="pairSetupEmpty">{tr("Loading folders…", "正在加载目录…")}</div>}
-          {!directoryLoading && directoryBrowser?.directories.map((entry) => (
-            <button key={entry.path} onClick={() => void browseWorkspace(entry.path)}>
-              <span>{entry.type === "symlink" ? "↗" : "▣"}</span>
-              <strong>{entry.name}</strong>
-              <small>›</small>
-            </button>
-          ))}
+          {directoryLoading && (
+            <div className="pairSetupEmpty">{tr("Loading folders…", "正在加载目录…")}</div>
+          )}
+          {!directoryLoading &&
+            directoryBrowser?.directories.map((entry) => (
+              <button key={entry.path} onClick={() => void browseWorkspace(entry.path)}>
+                <span>{entry.type === "symlink" ? "↗" : "▣"}</span>
+                <strong>{entry.name}</strong>
+                <small>›</small>
+              </button>
+            ))}
           {!directoryLoading && directoryBrowser && !directoryBrowser.directories.length && (
-            <div className="pairSetupEmpty">{tr("No visible child folders.", "没有可见的子目录。")}</div>
+            <div className="pairSetupEmpty">
+              {tr("No visible child folders.", "没有可见的子目录。")}
+            </div>
           )}
         </div>
 
         {directoryBrowser && directoryBrowser.protected_entries_omitted > 0 && (
-          <p className="pairSetupNote">{tr(
-            directoryBrowser.protected_entries_omitted + " protected folder(s) are hidden.",
-            "有 " + directoryBrowser.protected_entries_omitted + " 个受保护目录已隐藏。",
-          )}</p>
+          <p className="pairSetupNote">
+            {tr(
+              directoryBrowser.protected_entries_omitted + " protected folder(s) are hidden.",
+              "有 " + directoryBrowser.protected_entries_omitted + " 个受保护目录已隐藏。",
+            )}
+          </p>
         )}
         {setupError && <p className="errorText">{setupError}</p>}
 
         <div className="pairSetupActions">
-          <button className="ghostButton" onClick={() => {
-            setPendingWorkspaceAction(null);
-            setSetupError("");
-            setSetupStep("permissions");
-          }}>
+          <button
+            className="ghostButton"
+            onClick={() => {
+              setPendingWorkspaceAction(null);
+              setSetupError("");
+              setSetupStep("permissions");
+            }}
+          >
             {tr("Back", "返回")}
           </button>
           <button
@@ -852,15 +1024,24 @@ export function PairDevice({
                 <span className="pairPermissionIcon">✎</span>
                 <div>
                   <strong>{tr("File editing", "文件编辑")}</strong>
-                  <small>{tr("Recommended for coding, documents and data", "推荐用于开发、文档和数据任务")}</small>
+                  <small>
+                    {tr(
+                      "Recommended for coding, documents and data",
+                      "推荐用于开发、文档和数据任务",
+                    )}
+                  </small>
                 </div>
               </div>
-              {fileEditingEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
+              {fileEditingEnabled && (
+                <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>
+              )}
             </div>
-            <p>{tr(
-              "Create and edit files with Sensitive Path Protection and Local Undo. Trusted Write Locations define where edits can happen without a per-request approval.",
-              "开启文件创建与编辑，并继续使用 Sensitive Path Protection 和 Local Undo。可信写入区域决定哪些目录可以无需逐次审批地修改。",
-            )}</p>
+            <p>
+              {tr(
+                "Create and edit files with Sensitive Path Protection and Local Undo. Trusted Write Locations define where edits can happen without a per-request approval.",
+                "开启文件创建与编辑，并继续使用 Sensitive Path Protection 和 Local Undo。可信写入区域决定哪些目录可以无需逐次审批地修改。",
+              )}
+            </p>
             {!fileEditingEnabled ? (
               <button
                 className="primaryButton"
@@ -868,7 +1049,9 @@ export function PairDevice({
                 onClick={() => void enableFileEditing()}
               >
                 {fileEditingSupported
-                  ? (busy ? tr("Enabling…", "正在开启…") : tr("Enable file editing", "开启文件编辑"))
+                  ? busy
+                    ? tr("Enabling…", "正在开启…")
+                    : tr("Enable file editing", "开启文件编辑")
                   : tr("Waiting for device capability…", "等待设备能力上线…")}
               </button>
             ) : (
@@ -898,12 +1081,16 @@ export function PairDevice({
                   <small>{tr("Advanced", "高级功能")}</small>
                 </div>
               </div>
-              {terminalEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
+              {terminalEnabled && (
+                <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>
+              )}
             </div>
-            <p>{tr(
-              "Allow AI to run shell commands. Commands can modify local state or external services, and Trusted Write Locations is not a complete OS sandbox.",
-              "允许 AI 执行 Shell 命令。命令可能修改本地状态或外部服务，Trusted Write Locations 也不是完整的操作系统沙箱。",
-            )}</p>
+            <p>
+              {tr(
+                "Allow AI to run shell commands. Commands can modify local state or external services, and Trusted Write Locations is not a complete OS sandbox.",
+                "允许 AI 执行 Shell 命令。命令可能修改本地状态或外部服务，Trusted Write Locations 也不是完整的操作系统沙箱。",
+              )}
+            </p>
             {!terminalEnabled && !terminalConfirm && (
               <button
                 className="ghostButton"
@@ -915,11 +1102,24 @@ export function PairDevice({
             )}
             {!terminalEnabled && terminalConfirm && (
               <div className="pairTerminalConfirm">
-                <span>{tr("Terminal commands can have effects that Local Undo cannot reverse.", "终端命令可能产生 Local Undo 无法撤销的影响。")}</span>
+                <span>
+                  {tr(
+                    "Terminal commands can have effects that Local Undo cannot reverse.",
+                    "终端命令可能产生 Local Undo 无法撤销的影响。",
+                  )}
+                </span>
                 <div>
-                  <button className="ghostButton" onClick={() => setTerminalConfirm(false)}>{tr("Cancel", "取消")}</button>
-                  <button className="dangerConfirmButton" disabled={busy} onClick={() => void enableTerminal()}>
-                    {busy ? tr("Enabling…", "正在开启…") : tr("Confirm terminal access", "确认开启终端")}
+                  <button className="ghostButton" onClick={() => setTerminalConfirm(false)}>
+                    {tr("Cancel", "取消")}
+                  </button>
+                  <button
+                    className="dangerConfirmButton"
+                    disabled={busy}
+                    onClick={() => void enableTerminal()}
+                  >
+                    {busy
+                      ? tr("Enabling…", "正在开启…")
+                      : tr("Confirm terminal access", "确认开启终端")}
                   </button>
                 </div>
               </div>
@@ -930,7 +1130,12 @@ export function PairDevice({
         {setupError && <p className="errorText">{setupError}</p>}
 
         <div className="pairSetupFooter">
-          <span>{tr("You can change every permission later from Devices.", "之后可以在设备页随时修改所有权限。")}</span>
+          <span>
+            {tr(
+              "You can change every permission later from Devices.",
+              "之后可以在设备页随时修改所有权限。",
+            )}
+          </span>
           <button
             className="primaryButton"
             disabled={pairedDevice?.status !== "online" || busy}
@@ -948,7 +1153,10 @@ export function PairDevice({
   return (
     <PairingCard
       title={tr("Pair a computer", "配对电脑")}
-      body={tr("Confirm that the code and computer match what is shown in your terminal.", "确认下面的配对码和设备与终端显示一致。")}
+      body={tr(
+        "Confirm that the code and computer match what is shown in your terminal.",
+        "确认下面的配对码和设备与终端显示一致。",
+      )}
     >
       {!pairing ? (
         <div className="pairLookup">
@@ -970,14 +1178,21 @@ export function PairDevice({
             <div className="deviceIcon large">{platformGlyph(pairing.platform)}</div>
             <div className="pairMeta">
               <strong>{pairing.device_name}</strong>
-              <span>{platformLabel(pairing.platform)} · {pairing.arch || "unknown"}</span>
+              <span>
+                {platformLabel(pairing.platform)} · {pairing.arch || "unknown"}
+              </span>
               {pairing.hostname && <span>{pairing.hostname}</span>}
             </div>
           </div>
           <div className="permissionBox">
             <div>
               <strong>{tr("Read-only access", "只读权限")}</strong>
-              <span>{tr("Files, folders, metadata and process visibility", "文件、目录、元数据与进程可见性")}</span>
+              <span>
+                {tr(
+                  "Files, folders, metadata and process visibility",
+                  "文件、目录、元数据与进程可见性",
+                )}
+              </span>
             </div>
             <span className="permissionBadge">{tr("Safe default", "安全默认")}</span>
           </div>
@@ -989,11 +1204,17 @@ export function PairDevice({
       {message && <p className="errorText">{message}</p>}
       {computerLimitReached && (
         <div className="pairLimitActions">
-          <a className="primaryButton" href={APP_ORIGIN + "/checkout?product=connect-unlimited-v1"}>{tr("Get unlimited computers", "升级，连接更多电脑")} <span>→</span></a>
-          <a className="ghostButton" href={APP_ORIGIN + "/devices"}>{tr("Manage computers", "管理电脑")}</a>
+          <a className="primaryButton" href={APP_ORIGIN + "/checkout?product=connect-unlimited-v1"}>
+            {tr("Get unlimited computers", "升级，连接更多电脑")} <span>→</span>
+          </a>
+          <a className="ghostButton" href={APP_ORIGIN + "/devices"}>
+            {tr("Manage computers", "管理电脑")}
+          </a>
         </div>
       )}
-      <p className="signedInAs">{tr("Signed in as", "当前登录")} {user.email}</p>
+      <p className="signedInAs">
+        {tr("Signed in as", "当前登录")} {user.email}
+      </p>
     </PairingCard>
   );
 }

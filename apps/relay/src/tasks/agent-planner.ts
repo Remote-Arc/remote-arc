@@ -1,14 +1,17 @@
-import {runModelGateway,resolveModelGateway,type ModelGatewayEnv} from "../arc/model-gateway.js";
-import type {BillingContext} from "../billing/billing-ledger.js";
+import {
+  runModelGateway,
+  resolveModelGateway,
+  type ModelGatewayEnv,
+} from "../arc/model-gateway.js";
+import type { BillingContext } from "../billing/billing-ledger.js";
 export type RawDecision = {
-    decision?: unknown;
-    tool?: unknown;
-    arguments_json?: unknown;
-    decision_summary?: unknown;
-    memory?: unknown;
-    completion_evidence?: unknown;
-  };
-
+  decision?: unknown;
+  tool?: unknown;
+  arguments_json?: unknown;
+  decision_summary?: unknown;
+  memory?: unknown;
+  completion_evidence?: unknown;
+};
 
 export class PlannerTransientError extends Error {}
 
@@ -45,7 +48,14 @@ export type AgentPlannerInput = {
 };
 
 export type AgentPlannerDecision = {
-  decision: "tool" | "complete" | "pause" | "revise_plan" | "phase_result" | "execution_slice" | "needs_reasoning";
+  decision:
+    | "tool"
+    | "complete"
+    | "pause"
+    | "revise_plan"
+    | "phase_result"
+    | "execution_slice"
+    | "needs_reasoning";
   tool: AgentToolName | "none";
   arguments: Record<string, unknown>;
   decisionSummary: string;
@@ -59,7 +69,15 @@ const DECISION_SCHEMA = {
   properties: {
     decision: {
       type: "string",
-      enum: ["tool", "complete", "pause", "revise_plan", "phase_result", "execution_slice", "needs_reasoning"],
+      enum: [
+        "tool",
+        "complete",
+        "pause",
+        "revise_plan",
+        "phase_result",
+        "execution_slice",
+        "needs_reasoning",
+      ],
     },
     tool: {
       type: "string",
@@ -119,17 +137,23 @@ const clip = (value: string, max: number) =>
   value.length <= max ? value : value.slice(0, max) + "\n…[truncated]";
 
 export function agentPlannerConfigured(env: AgentPlannerEnv) {
-  const gateway=resolveModelGateway(env);
-  const model=gateway?.models.find(x=>x.id===(env.MODEL_GATEWAY_MODEL_ID||gateway.autoModelId));
-  return Boolean(gateway?.enabled && model && gateway.adapters[model.provider] &&
-    (model.provider==="workers_ai"?gateway.freePoolId:gateway.paidGrantId));
+  const gateway = resolveModelGateway(env);
+  const model = gateway?.models.find(
+    (x) => x.id === (env.MODEL_GATEWAY_MODEL_ID || gateway.autoModelId),
+  );
+  return Boolean(
+    gateway?.enabled &&
+    model &&
+    gateway.adapters[model.provider] &&
+    (model.provider === "workers_ai" ? gateway.freePoolId : gateway.paidGrantId),
+  );
 }
 
 export async function planAgentTurn(
   env: AgentPlannerEnv,
   input: AgentPlannerInput,
 ): Promise<AgentPlannerDecision> {
-  const gateway=resolveModelGateway(env);
+  const gateway = resolveModelGateway(env);
   if (!agentPlannerConfigured(env) || !gateway || !input.billing) {
     throw new Error(
       "Agent planner requires an enabled Model Gateway, verified budget authorization and task billing context.",
@@ -148,26 +172,39 @@ export async function planAgentTurn(
     ...(input.plannedContext ? { planned_context: input.plannedContext } : {}),
   };
   const userText =
-    "Choose the next bounded action for this durable goal.\n\n" +
-    JSON.stringify(userPayload);
+    "Choose the next bounded action for this durable goal.\n\n" + JSON.stringify(userPayload);
 
-
-  try {
-    const result=await runModelGateway(gateway,{
-      context:input.billing,modelId:env.MODEL_GATEWAY_MODEL_ID||"auto",
-      system:SYSTEM_PROMPT,user:userText,schema:DECISION_SCHEMA,
-      maxOutputTokens:input.plannedContext?4096:2200,
-    },value=>validateAgentDecision(value as RawDecision,input.allowedTools));
-    return result.value;
-  } catch(error) {
-    // No provider fallback. An uncertain request keeps its reservation and
-    // the same task operation cannot create another paid inference request.
-    throw error;
-  }
+  // No provider fallback: uncertain work retains its reservation and is not replayed.
+  const result = await runModelGateway(
+    gateway,
+    {
+      context: input.billing,
+      modelId: env.MODEL_GATEWAY_MODEL_ID || "auto",
+      system: SYSTEM_PROMPT,
+      user: userText,
+      schema: DECISION_SCHEMA,
+      maxOutputTokens: input.plannedContext ? 4096 : 2200,
+    },
+    (value) => validateAgentDecision(value as RawDecision, input.allowedTools),
+  );
+  return result.value;
 }
 
-export function validateAgentDecision(raw: RawDecision, allowedTools: AgentToolName[]): AgentPlannerDecision {
-  if (!["tool", "complete", "pause", "revise_plan", "phase_result", "execution_slice", "needs_reasoning"].includes(String(raw.decision))) {
+export function validateAgentDecision(
+  raw: RawDecision,
+  allowedTools: AgentToolName[],
+): AgentPlannerDecision {
+  if (
+    ![
+      "tool",
+      "complete",
+      "pause",
+      "revise_plan",
+      "phase_result",
+      "execution_slice",
+      "needs_reasoning",
+    ].includes(String(raw.decision))
+  ) {
     throw new Error("Agent planner returned an invalid decision.");
   }
 
@@ -179,8 +216,9 @@ export function validateAgentDecision(raw: RawDecision, allowedTools: AgentToolN
     throw new Error("Agent planner returned a tool for a non-tool decision.");
   }
 
-  let args: Record<string, unknown> = {};
-  if (String(raw.arguments_json || "{}").length > 250000) throw new Error("Decision arguments exceed bounded payload budget.");
+  let args: Record<string, unknown>;
+  if (String(raw.arguments_json || "{}").length > 250000)
+    throw new Error("Decision arguments exceed bounded payload budget.");
   try {
     const parsed = JSON.parse(String(raw.arguments_json || "{}"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

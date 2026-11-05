@@ -1,3 +1,4 @@
+import { applicationJson } from "../platform/application-json.js";
 import { getSessionUser, nowIso, type SessionUser } from "../auth/auth.js";
 import { writeAudit } from "../analytics/audit.js";
 
@@ -29,28 +30,28 @@ const isFutureIso = (value: unknown) =>
 async function requireAdmin(
   request: Request,
   env: PlanAdminEnv,
-): Promise<
-  | { user: SessionUser; response?: never }
-  | { response: Response; user?: never }
-> {
+): Promise<{ user: SessionUser; response?: never } | { response: Response; user?: never }> {
   const user = await getSessionUser(request, env);
   if (!user) {
-    return { response: Response.json({ error: "unauthorized" }, { status: 401 }) };
+    return { response: applicationJson({ error: "unauthorized" }, { status: 401 }) };
   }
   if (!user.isAdmin) {
-    return { response: Response.json({ error: "forbidden" }, { status: 403 }) };
+    return { response: applicationJson({ error: "forbidden" }, { status: 403 }) };
   }
   return { user };
 }
 
-export async function handleAdminPlanGrants(request: Request, env: PlanAdminEnv): Promise<Response> {
+export async function handleAdminPlanGrants(
+  request: Request,
+  env: PlanAdminEnv,
+): Promise<Response> {
   const auth = await requireAdmin(request, env);
   if (auth.response !== undefined) return auth.response;
   const admin = auth.user;
 
   if (request.method === "GET") {
-    const email = (new URL(request.url).searchParams.get('email') || '').trim().toLowerCase();
-    if (email.length > 320) return Response.json({error:'invalid_email'}, {status:400});
+    const email = (new URL(request.url).searchParams.get("email") || "").trim().toLowerCase();
+    if (email.length > 320) return applicationJson({ error: "invalid_email" }, { status: 400 });
     const rows = await env.DB.prepare(
       `SELECT g.*, u.email
        FROM plan_grants g
@@ -58,15 +59,17 @@ export async function handleAdminPlanGrants(request: Request, env: PlanAdminEnv)
        WHERE (?1 = '' OR lower(u.email) = ?1)
        ORDER BY g.created_at DESC
        LIMIT 200`,
-    ).bind(email).all<PlanGrantRow & { email: string }>();
-    return Response.json({ grants: rows.results });
+    )
+      .bind(email)
+      .all<PlanGrantRow & { email: string }>();
+    return applicationJson({ grants: rows.results });
   }
 
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const body = await request.json().catch(() => ({})) as {
+  const body = (await request.json().catch(() => ({}))) as {
     email?: unknown;
     plan?: unknown;
     reason?: unknown;
@@ -83,31 +86,39 @@ export async function handleAdminPlanGrants(request: Request, env: PlanAdminEnv)
         : "";
 
   if (!email || email.length > 320) {
-    return Response.json({ error: "A valid account email is required." }, { status: 400 });
+    return applicationJson({ error: "A valid account email is required." }, { status: 400 });
   }
   if (plan !== "plus") {
-    return Response.json({ error: "Only Plus grants are supported." }, { status: 400 });
+    return applicationJson({ error: "Only Plus grants are supported." }, { status: 400 });
   }
   if (reason.length < 3 || reason.length > 500) {
-    return Response.json({ error: "reason must be 3-500 characters." }, { status: 400 });
+    return applicationJson({ error: "reason must be 3-500 characters." }, { status: 400 });
   }
   if (expiresAt !== null && !isFutureIso(expiresAt)) {
-    return Response.json({ error: "expires_at must be a future ISO timestamp or null." }, { status: 400 });
+    return applicationJson(
+      { error: "expires_at must be a future ISO timestamp or null." },
+      { status: 400 },
+    );
   }
 
-  const target = await env.DB.prepare(
-    "SELECT id, email FROM users WHERE lower(email) = ?1 LIMIT 1",
-  ).bind(email).first<{ id: string; email: string }>();
-  if (!target) return Response.json({ error: "account_not_found" }, { status: 404 });
+  const target = await env.DB.prepare("SELECT id, email FROM users WHERE lower(email) = ?1 LIMIT 1")
+    .bind(email)
+    .first<{ id: string; email: string }>();
+  if (!target) return applicationJson({ error: "account_not_found" }, { status: 404 });
 
   const duplicate = await env.DB.prepare(
     `SELECT id FROM plan_grants
      WHERE user_id = ?1 AND plan = 'plus' AND revoked_at IS NULL
        AND (expires_at IS NULL OR expires_at > ?2)
      LIMIT 1`,
-  ).bind(target.id, nowIso()).first<{ id: string }>();
+  )
+    .bind(target.id, nowIso())
+    .first<{ id: string }>();
   if (duplicate) {
-    return Response.json({ error: "active_plus_grant_exists", grant_id: duplicate.id }, { status: 409 });
+    return applicationJson(
+      { error: "active_plus_grant_exists", grant_id: duplicate.id },
+      { status: 409 },
+    );
   }
 
   const id = crypto.randomUUID();
@@ -129,7 +140,7 @@ export async function handleAdminPlanGrants(request: Request, env: PlanAdminEnv)
     success: true,
   }).catch(() => undefined);
 
-  return Response.json(
+  return applicationJson(
     {
       grant: {
         id,
@@ -160,9 +171,11 @@ export async function handleAdminPlanGrantRevoke(
     `UPDATE plan_grants
      SET revoked_at = ?1
      WHERE id = ?2 AND revoked_at IS NULL`,
-  ).bind(revokedAt, grantId).run();
+  )
+    .bind(revokedAt, grantId)
+    .run();
   if (!result.meta.changes) {
-    return Response.json({ error: "grant_not_found_or_already_revoked" }, { status: 404 });
+    return applicationJson({ error: "grant_not_found_or_already_revoked" }, { status: 404 });
   }
 
   await writeAudit(env, {
@@ -173,5 +186,5 @@ export async function handleAdminPlanGrantRevoke(
     success: true,
   }).catch(() => undefined);
 
-  return Response.json({ ok: true, grant_id: grantId, revoked_at: revokedAt });
+  return applicationJson({ ok: true, grant_id: grantId, revoked_at: revokedAt });
 }

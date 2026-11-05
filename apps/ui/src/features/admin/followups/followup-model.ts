@@ -280,7 +280,7 @@ export class FollowupApiError extends Error {
     message: string,
     readonly data: Record<string, unknown> = {},
   ) {
-    super(message);
+    super(canonicalErrorCode(message) || message);
   }
 }
 export async function followupApi<T>(path: string, options?: RequestInit) {
@@ -292,7 +292,7 @@ export async function followupApi<T>(path: string, options?: RequestInit) {
   const data = await response
     .json()
     .then(canonicalErrorEnvelope)
-    .catch(() => ({ error: "invalid_response" }));
-  if (!response.ok) throw new FollowupApiError(data.error || "request_failed", data);
+    .catch(() => ({ error: "INVALID_RESPONSE" }));
+  if (!response.ok) throw new FollowupApiError(data.error || "REQUEST_FAILED", data);
   return data as T;
 }

@@ -136,28 +136,29 @@ test("Switching users retains edits and replacing a template offers save or disc
   await expect(page.locator(".followupHistoryItem")).toContainText("Keep these edits");
 });
 
-test("Stale draft errors keep edits and explain how to recover", async ({ page }) => {
-  await open(page);
-  await save(page).click();
-  await expect(
-    page
-      .getByRole("status")
-      .filter({ hasText: /Draft saved|草稿已保存/ })
-      .first(),
-  ).toBeVisible();
-  await page.evaluate(() => {
-    const native = window.fetch;
-    window.fetch = (async (input, init) =>
-      String(input).endsWith("/followups/drafts")
-        ? Response.json({ error: "draft_conflict" }, { status: 409 })
-        : native(input, init)) as typeof fetch;
+for (const code of ["draft_conflict", "DRAFT_CONFLICT"])
+  test("Stale draft errors keep edits and explain how to recover: " + code, async ({ page }) => {
+    await open(page);
+    await save(page).click();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: /Draft saved|草稿已保存/ })
+        .first(),
+    ).toBeVisible();
+    await page.evaluate((code) => {
+      const native = window.fetch;
+      window.fetch = (async (input, init) =>
+        String(input).endsWith("/followups/drafts")
+          ? Response.json({ error: code }, { status: 409 })
+          : native(input, init)) as typeof fetch;
+    }, code);
+    await subject(page).fill("Unsaved text that must survive");
+    await save(page).click();
+    await expect(page.getByRole("alert")).toContainText(/another tab|其他页面/);
+    await expect(subject(page)).toHaveValue("Unsaved text that must survive");
+    await expect(subject(page)).toBeEditable();
   });
-  await subject(page).fill("Unsaved text that must survive");
-  await save(page).click();
-  await expect(page.getByRole("alert")).toContainText(/another tab|其他页面/);
-  await expect(subject(page)).toHaveValue("Unsaved text that must survive");
-  await expect(subject(page)).toBeEditable();
-});
 
 for (const reason of [
   "email_not_configured",
@@ -192,7 +193,13 @@ for (const reason of [
     await send(page).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator(".adminFollowupSendHint")).toBeVisible();
+    await expect(dialog.locator(".adminFollowupSendHint")).toContainText(
+      {
+        email_not_configured: /not configured|尚未配置/,
+        recipient_suppressed: /stopped follow-ups|停止接收/,
+        delivery_unconfirmed: /in progress or uncertain|发送或投递状态待核实/,
+      }[reason],
+    );
     await expect(
       dialog.getByRole("button", {
         name: /Record basis & send|记录依据并发送|Confirm send|确认发送/,

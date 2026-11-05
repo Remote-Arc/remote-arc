@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { canonicalErrorCode } from "../../../../../../packages/protocol/src/error-codes.js";
 import { useI18n } from "../../../app/i18n.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 import { FOLLOWUP_TEMPLATES } from "../../../../../../packages/protocol/src/followup-templates.js";
@@ -68,7 +69,7 @@ export function FollowupDialog({
   );
 }
 function hardBlock(data: ContactDetail | null, suppress = false, now = Date.now()) {
-  if (!data) return "loading";
+  if (!data) return "LOADING";
   if (data.contact.suppressed_at || suppress) return "RECIPIENT_SUPPRESSED";
   if (!data.emailConfigured) return "EMAIL_NOT_CONFIGURED";
   if (
@@ -78,14 +79,14 @@ function hardBlock(data: ContactDetail | null, suppress = false, now = Date.now(
         ["pending", "processing"].includes(mail.batch_recipient_status || ""),
     )
   )
-    return "batch_pending";
+    return "BATCH_PENDING";
   if (data.messages.some((mail) => ["sending", "unknown"].includes(mail.status)))
     return "DELIVERY_UNCONFIRMED";
   const next = Math.max(
     0,
     ...data.messages.map((mail) => (mail.sent_at ? Date.parse(mail.sent_at) + 72 * 3600000 : 0)),
   );
-  return next > now ? "contact_cooldown" : null;
+  return next > now ? "CONTACT_COOLDOWN" : null;
 }
 
 export function FollowupDetail({
@@ -157,7 +158,7 @@ export function FollowupDetail({
       .catch(() => {
         if (!controller.signal.aborted) {
           setRefreshing(false);
-          setError("history_unavailable");
+          setError("HISTORY_UNAVAILABLE");
         }
       });
     return () => controller.abort();
@@ -170,76 +171,80 @@ export function FollowupDetail({
       mail.sent_at ? Date.parse(mail.sent_at) + 72 * 3600000 : 0,
     ) || []),
   );
-  const errorText = (code: string) =>
-    ({
-      history_unavailable: tr(
-        "Contact history could not be loaded. Refresh and try again.",
-        "无法读取联系记录，请刷新重试。",
-      ),
-      email_not_configured: tr(
-        "The email channel is not configured. Your draft is safe; configure the sender, then recheck.",
-        "发件通道尚未配置。草稿已保留，配置后可重新检查。",
-      ),
-      recipient_suppressed: tr(
-        "This user has stopped follow-ups. Sending is unavailable.",
-        "该用户已停止接收回访，无法发送。",
-      ),
-      contact_cooldown:
-        tr(
-          "A follow-up was sent recently. You can send again at ",
-          "近期已联系过此用户，下次可发送时间：",
-        ) + followupTime(new Date(nextSendAt).toISOString()),
-      contact_cooldown_or_in_progress: tr(
-        "Another email was sent recently or needs delivery verification. Refresh the history.",
-        "近期已有邮件发出，或投递状态待核实，请刷新历史记录。",
-      ),
-      batch_pending: tr(
-        "A bulk email is queued for this user. Manage it in Bulk history before sending another email.",
-        "该用户已有群发邮件排队中，请先在群发记录中处理，再发送其他邮件。",
-      ),
-      delivery_unconfirmed: tr(
-        "A delivery is in progress or uncertain. Check its record before sending another email.",
-        "有邮件正在发送或投递状态待核实，请先查看历史记录。",
-      ),
-      draft_conflict: tr(
-        "This draft changed in another tab. Open the latest saved draft from History before sending. Your current text is kept here.",
-        "草稿已在其他页面修改。请从历史记录打开最新版；当前编辑内容仍保留在这里。",
-      ),
-      draft_not_editable: tr(
-        "This email was already processed. Open History or start a new email.",
-        "这封邮件已处理，请查看历史记录或新建邮件。",
-      ),
-      draft_not_found: tr(
-        "This saved draft is no longer available. Start a new email.",
-        "这份草稿已不存在，请新建邮件。",
-      ),
-      recipient_changed: tr(
-        "The recipient address changed. Start a new draft for the current address.",
-        "收件邮箱已变更，请按当前邮箱新建草稿。",
-      ),
-      contact_permission_required: tr(
-        "Choose the user’s request or agreement below to record it and send.",
-        "请在下方选择用户的联系请求或同意依据，然后发送。",
-      ),
-      permission_note_required: tr(
-        "Add the request or agreement that this follow-up responds to.",
-        "请填写本次回访对应的用户请求或同意记录。",
-      ),
-      invalid_message: tr(
-        "Enter a subject and a message of at least 20 characters.",
-        "请填写主题和至少 20 个字的正文。",
-      ),
-      loading: tr("Checking contact history…", "正在检查联系记录…"),
-    })[code] ||
-    (code.startsWith("provider_")
-      ? tr(
-          "The email service rejected this send. Your message and error are kept in History.",
-          "发信服务未接受这次发送，邮件与错误已保留在历史记录中。",
-        )
-      : tr(
-          "The action could not be confirmed. Your text is kept. Refresh the history before retrying.",
-          "操作结果尚未确认，内容已保留。请先刷新历史记录再重试。",
-        ));
+  const errorText = (value: string) => {
+    const code = canonicalErrorCode(value) || value;
+    return (
+      {
+        HISTORY_UNAVAILABLE: tr(
+          "Contact history could not be loaded. Refresh and try again.",
+          "无法读取联系记录，请刷新重试。",
+        ),
+        EMAIL_NOT_CONFIGURED: tr(
+          "The email channel is not configured. Your draft is safe; configure the sender, then recheck.",
+          "发件通道尚未配置。草稿已保留，配置后可重新检查。",
+        ),
+        RECIPIENT_SUPPRESSED: tr(
+          "This user has stopped follow-ups. Sending is unavailable.",
+          "该用户已停止接收回访，无法发送。",
+        ),
+        CONTACT_COOLDOWN:
+          tr(
+            "A follow-up was sent recently. You can send again at ",
+            "近期已联系过此用户，下次可发送时间：",
+          ) + followupTime(new Date(nextSendAt).toISOString()),
+        CONTACT_COOLDOWN_OR_IN_PROGRESS: tr(
+          "Another email was sent recently or needs delivery verification. Refresh the history.",
+          "近期已有邮件发出，或投递状态待核实，请刷新历史记录。",
+        ),
+        BATCH_PENDING: tr(
+          "A bulk email is queued for this user. Manage it in Bulk history before sending another email.",
+          "该用户已有群发邮件排队中，请先在群发记录中处理，再发送其他邮件。",
+        ),
+        DELIVERY_UNCONFIRMED: tr(
+          "A delivery is in progress or uncertain. Check its record before sending another email.",
+          "有邮件正在发送或投递状态待核实，请先查看历史记录。",
+        ),
+        DRAFT_CONFLICT: tr(
+          "This draft changed in another tab. Open the latest saved draft from History before sending. Your current text is kept here.",
+          "草稿已在其他页面修改。请从历史记录打开最新版；当前编辑内容仍保留在这里。",
+        ),
+        DRAFT_NOT_EDITABLE: tr(
+          "This email was already processed. Open History or start a new email.",
+          "这封邮件已处理，请查看历史记录或新建邮件。",
+        ),
+        DRAFT_NOT_FOUND: tr(
+          "This saved draft is no longer available. Start a new email.",
+          "这份草稿已不存在，请新建邮件。",
+        ),
+        RECIPIENT_CHANGED: tr(
+          "The recipient address changed. Start a new draft for the current address.",
+          "收件邮箱已变更，请按当前邮箱新建草稿。",
+        ),
+        CONTACT_PERMISSION_REQUIRED: tr(
+          "Choose the user’s request or agreement below to record it and send.",
+          "请在下方选择用户的联系请求或同意依据，然后发送。",
+        ),
+        PERMISSION_NOTE_REQUIRED: tr(
+          "Add the request or agreement that this follow-up responds to.",
+          "请填写本次回访对应的用户请求或同意记录。",
+        ),
+        INVALID_MESSAGE: tr(
+          "Enter a subject and a message of at least 20 characters.",
+          "请填写主题和至少 20 个字的正文。",
+        ),
+        LOADING: tr("Checking contact history…", "正在检查联系记录…"),
+      }[code] ||
+      (code.startsWith("PROVIDER_")
+        ? tr(
+            "The email service rejected this send. Your message and error are kept in History.",
+            "发信服务未接受这次发送，邮件与错误已保留在历史记录中。",
+          )
+        : tr(
+            "The action could not be confirmed. Your text is kept. Refresh the history before retrying.",
+            "操作结果尚未确认，内容已保留。请先刷新历史记录再重试。",
+          ))
+    );
+  };
   const noticeText =
     notice === "sent"
       ? tr(
@@ -289,7 +294,7 @@ export function FollowupDetail({
   const startSend = () => {
     setError("");
     if (!draft.subject.trim() || draft.body.trim().length < 20) {
-      setError("invalid_message");
+      setError("INVALID_MESSAGE");
       setTab("email");
       subjectRef.current?.focus();
       return;
@@ -520,7 +525,7 @@ export function FollowupDetail({
             </button>
           </div>
         </div>
-        {block && block !== "loading" && (
+        {block && block !== "LOADING" && (
           <div className="adminFollowupSendHint" role="status">
             <p>{errorText(block)}</p>
             <button

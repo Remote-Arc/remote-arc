@@ -150,11 +150,32 @@ sql
 const callsBefore = providerCalls;
 const checked = await handleApps(
   request("/api/apps/connections/" + connectedId + "/check", "POST", {}),
-  env,
+  { ...env, ARC_BILLING_ENABLED: undefined },
   provider,
 );
 assert.equal(checked.status, 402, "App monthly limits must not become a service outage");
 assert.equal(((await checked.json()) as any).error, "MONTHLY_LIMIT_REACHED");
+// A billed Free account whose reverse trial has ended is paced, not cut off.
+sql
+  .prepare(
+    "INSERT INTO connect_unlimited_trials(user_id,started_at,ends_at,month_key,base_limit) VALUES(?,?,?,?,10000)",
+  )
+  .run("owner", "2000-01-01T00:00:00.000Z", "2000-01-08T00:00:00.000Z", "2000-01");
+sql
+  .prepare(
+    "INSERT INTO connect_slow_lane_usage(user_id,last_call_at,month_key,month_calls,updated_at) VALUES(?,?,?,1,?)",
+  )
+  .run("owner", new Date().toISOString(), now.slice(0, 7), now);
+const paced = await handleApps(
+  request("/api/apps/connections/" + connectedId + "/check", "POST", {}),
+  env,
+  provider,
+);
+assert.equal(paced.status, 429, "the slow lane is a retryable pace, not an outage");
+const pacedBody = (await paced.json()) as any;
+assert.equal(pacedBody.error, "SLOW_LANE_RATE_LIMITED");
+assert.equal(paced.headers.get("retry-after"), String(pacedBody.retryAfterSeconds));
+assert(pacedBody.retryAfterSeconds >= 1 && pacedBody.retryAfterSeconds <= 30);
 const originalFetch = globalThis.fetch;
 globalThis.fetch = provider;
 try {
@@ -207,10 +228,19 @@ try {
         failure = typeof result.error === "object" ? result.error : result;
       assert.equal(
         typeof result.error === "string" ? result.error : result.error.code,
-        "MONTHLY_LIMIT_REACHED",
-        clientProfile + " first attempt and stored failures preserve the allowance code",
+        "SLOW_LANE_RATE_LIMITED",
+        clientProfile + " first attempt and replay both report the slow-lane code",
       );
-      assert.equal(failure.upgrade_url, AGENT + "/settings?section=billing");
+      assert.equal(
+        sql
+          .prepare("SELECT status FROM app_calls WHERE request_id=?")
+          .get("quota-" + clientProfile)!.status,
+        "approved",
+        "a paced App call is not stored as failed, so the same requestId runs after the wait",
+      );
+      assert.equal(failure.upgrade_url, AGENT + "/checkout?product=connect-unlimited-v1");
+      assert(failure.retry_after_seconds >= 1 && failure.retry_after_seconds <= 30);
+      assert.equal(failure.recovery.retry, "later");
       assert(failure.recovery.actions.length);
       assert(!JSON.stringify(failure).includes("private-task-canary"));
     }

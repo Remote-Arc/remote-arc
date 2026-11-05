@@ -11,6 +11,7 @@ import {
   followupUsageSql,
   supportUsageSql,
   otpUsageSql,
+  lifecycleUsageSql,
 } from "../platform/email-capacity.js";
 
 export type SupportEnv = {
@@ -410,7 +411,7 @@ export async function handleAdminSupportInbox(
     limits = providerEmailLimits(env, "sendpulse"),
     reserve = otpReserve("sendpulse");
   const hasSlot = (since: string, name: "daily" | "hourly" | "monthly") =>
-    `${followupUsageSql("'sendpulse'", since)}+${supportUsageSql("'sendpulse'", since)}+MAX(${otpUsageSql("'sendpulse'", since)},${Math.min(limits[name], reserve[name])})<${limits[name]}`;
+    `${followupUsageSql("'sendpulse'", since)}+${supportUsageSql("'sendpulse'", since)}+${lifecycleUsageSql("'sendpulse'", since)}+MAX(${otpUsageSql("'sendpulse'", since)},${Math.min(limits[name], reserve[name])})<${limits[name]}`;
   let claimed;
   try {
     // Single INSERT statement atomically claims capacity with shared OTP and

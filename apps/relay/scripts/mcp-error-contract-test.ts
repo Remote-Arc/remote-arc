@@ -460,7 +460,9 @@ console.log(
   const fixture = createWorkerFixture();
   const identity = authIdentity(DEFAULT_MCP_SCOPES.join(" "));
   fixture.addUser(identity.userId);
-  fixture.env.ARC_BILLING_ENABLED = "1";
+  // The hard monthly limit applies outside platform billing. A billed Free
+  // account gets the reverse trial and slow lane instead; that MCP contract is
+  // covered in connect-free-overflow-test.ts.
   fixture.sql
     .prepare(
       "INSERT INTO user_monthly_usage(user_id,month_key,tool_calls,updated_at) VALUES(?,?,?,?)",

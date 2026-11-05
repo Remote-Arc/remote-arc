@@ -20,6 +20,7 @@ import { otpEmailSenders, type EmailSenderEnv } from "../platform/email-sender.j
 import type { EmailCapacityEnv } from "../platform/email-capacity.js";
 import { deliverOtpEmail } from "../platform/otp-email-delivery.js";
 import { isReviewerEmail, isReviewerUserId } from "./reviewer-identity.js";
+import { requestLocale } from "../platform/request-locale.js";
 
 type EmailEnv = EmailSenderEnv &
   EmailCapacityEnv & {
@@ -307,13 +308,16 @@ export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
     const id = crypto.randomUUID();
     // Reserved value is intentionally impossible to confuse with Google's numeric subject.
     await env.DB.prepare(
-      "INSERT OR IGNORE INTO users (id, google_sub, email, created_at) VALUES (?1, ?2, ?3, ?4)",
+      "INSERT OR IGNORE INTO users (id, google_sub, email, created_at, locale) VALUES (?1, ?2, ?3, ?4, ?5)",
     )
-      .bind(id, "email:" + id, email, now)
+      .bind(id, "email:" + id, email, now, requestLocale(request))
       .run();
     user = await lookupUser(env, email);
   }
   if (!user) return new Response("Unable to create account", { status: 503 });
+  await env.DB.prepare("UPDATE users SET locale=?2 WHERE id=?1 AND locale IS NULL")
+    .bind(user.id, requestLocale(request))
+    .run();
   if (businessFlow)
     await advanceBusinessFlow(env, businessFlow, "email_login", "verified", { userId: user.id });
   const token = await createSession(user.id, env);

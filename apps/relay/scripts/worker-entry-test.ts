@@ -368,8 +368,8 @@ try {
   };
   assert.equal(
     await dispatched("* * * * *"),
-    3,
-    "Every minute: tasks, follow-up batches and Slack jobs",
+    4,
+    "Every minute: tasks, follow-up batches, Slack jobs and lifecycle emails",
   );
   sql
     .prepare(

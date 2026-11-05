@@ -57,8 +57,8 @@ function ToolReference() {
       </p>
       <p>
         {tr(
-          "All Connect tool capabilities are available on every plan, including binary reads, temporary file links, background commands, schedules, condition watches, source-controlled Agent Goals and supported keep-awake. Free retains 10,000 tool calls per month and includes 2 GB of binary transfer per month, shared by binary reads and file link downloads; paid plans have no transfer limit. Account authorization and device permissions still apply; hosted model access and third-party charges are separate. Check Settings → Plan & usage for your current allowance.",
-          "所有套餐均可使用全部 Connect 工具能力，包括二进制读取、临时文件链接、后台命令、定时任务、条件监听、由原 AI 接续的 Agent Goal 和受支持的保持唤醒。Free 每月仍为 10,000 次工具调用，并含每月 2 GB 二进制传输（二进制读取与文件链接下载共用）；付费套餐不限传输量。账号授权和设备权限仍须满足；托管模型和第三方服务费用另计。在设置 → 套餐与用量查看当前额度。",
+          "All Connect tool capabilities are available on every plan, including binary reads, temporary file links, background commands, schedules, condition watches, source-controlled Agent Goals and supported keep-awake. Free retains 10,000 tool calls per month; when they run out, a one-time 7-day Connect Unlimited trial starts automatically, then calls continue at 2 per minute until the monthly reset. Free also includes 2 GB of binary transfer per month, shared by binary reads and file link downloads; paid plans have no transfer limit. Account authorization and device permissions still apply; hosted model access and third-party charges are separate. Check Settings → Plan & usage for your current allowance.",
+          "所有套餐均可使用全部 Connect 工具能力，包括二进制读取、临时文件链接、后台命令、定时任务、条件监听、由原 AI 接续的 Agent Goal 和受支持的保持唤醒。Free 每月仍为 10,000 次工具调用；用完后会自动开启一次 7 天 Connect Unlimited 试用，之后调用以每分钟 2 次继续，直到月度重置。Free 还含每月 2 GB 二进制传输（二进制读取与文件链接下载共用）；付费套餐不限传输量。账号授权和设备权限仍须满足；托管模型和第三方服务费用另计。在设置 → 套餐与用量查看当前额度。",
         )}
       </p>
       <p>

@@ -9,6 +9,7 @@ import { retryTransientD1Read } from "../platform/d1-read-retry.js";
 import { billingEnabled, type PlatformLaunchEnv } from "../platform/platform-launch.js";
 import { currentArcPlan } from "../arc/arc-plan.js";
 import { isReviewerEmail, isReviewerUserId } from "./reviewer-identity.js";
+import { requestLocale } from "../platform/request-locale.js";
 
 type AuthEnv = PlatformLaunchEnv & {
   DB: D1Database;
@@ -396,16 +397,23 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
   if (existing) {
     await env.DB.prepare(
       `UPDATE users
-       SET google_sub = ?1, email = ?2, name = ?3, avatar_url = ?4
+       SET google_sub = ?1, email = ?2, name = ?3, avatar_url = ?4, locale = COALESCE(locale, ?6)
        WHERE id = ?5`,
     )
-      .bind(profile.sub, profile.email, profile.name || null, profile.picture || null, userId)
+      .bind(
+        profile.sub,
+        profile.email,
+        profile.name || null,
+        profile.picture || null,
+        userId,
+        requestLocale(request),
+      )
       .run();
   } else {
     await env.DB.prepare(
       `INSERT INTO users
-       (id, google_sub, email, name, avatar_url, created_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+       (id, google_sub, email, name, avatar_url, created_at, locale)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
     )
       .bind(
         userId,
@@ -414,6 +422,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
         profile.name || null,
         profile.picture || null,
         nowIso(),
+        requestLocale(request),
       )
       .run();
   }

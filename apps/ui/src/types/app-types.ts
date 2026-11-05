@@ -132,12 +132,21 @@ export type AuditEvent = {
   outcome?: string | null;
   created_at: string;
 };
-type MonthlyUsage = {
+/** Present when a Free account has used its allowance or started its reverse
+ * trial; after the trial, calls continue in the slow lane. */
+export type FreeOverflow = {
+  trialDays: number;
+  slowLaneCallsPerMinute: number;
+  trial: { startedAt: string; endsAt: string; active: boolean } | null;
+  slowLaneCallsThisMonth: number;
+};
+export type MonthlyUsage = {
   month: string;
   used: number;
   limit: number | null;
   remaining: number | null;
   unlimited: boolean;
+  freeOverflow?: FreeOverflow;
 };
 export type ProductStatus = {
   googleConfigured: boolean;

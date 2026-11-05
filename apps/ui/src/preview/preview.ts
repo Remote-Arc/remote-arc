@@ -1,7 +1,12 @@
 import { canonicalErrorEnvelope } from "../../../../packages/protocol/src/error-codes.js";
 import { createArcInputPreview } from "./arc-input-preview.js";
 import type { SecurityState } from "@remotearc/protocol";
-import { ARC_PLANS, ARC_TOPUPS, ARC_PREMIUM_MODELS } from "@remotearc/protocol";
+import {
+  ARC_PLANS,
+  ARC_TOPUPS,
+  ARC_PREMIUM_MODELS,
+  CONNECT_FREE_OVERFLOW,
+} from "@remotearc/protocol";
 import appDirectory from "../data/app-directory.json" with { type: "json" };
 import { createArcPreview } from "./arc-preview.js";
 import { createBillingPreview } from "./billing-preview.js";
@@ -12,6 +17,41 @@ import { previewActivationUsers } from "./activation-preview.js";
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
+/** ?quota=full|trial|slow shows the Connect allowance states of a Free account. */
+function previewUsage(quota: string | null) {
+  const month = new Date().toISOString().slice(0, 7);
+  const base = { month, limit: 10000, unlimited: false };
+  const overflow = (trial: { startedAt: string; endsAt: string; active: boolean } | null) => ({
+    trialDays: CONNECT_FREE_OVERFLOW.trialDays,
+    slowLaneCallsPerMinute: CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
+    trial,
+    slowLaneCallsThisMonth: trial && !trial.active ? 214 : 0,
+  });
+  if (quota === "trial")
+    return {
+      ...base,
+      used: 18_420,
+      remaining: 0,
+      freeOverflow: overflow({
+        startedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+        endsAt: new Date(Date.now() + 5 * 86_400_000).toISOString(),
+        active: true,
+      }),
+    };
+  if (quota === "slow")
+    return {
+      ...base,
+      used: 31_050,
+      remaining: 0,
+      freeOverflow: overflow({
+        startedAt: new Date(Date.now() - 9 * 86_400_000).toISOString(),
+        endsAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+        active: false,
+      }),
+    };
+  if (quota === "full") return { ...base, used: 10000, remaining: 0, freeOverflow: overflow(null) };
+  return { ...base, used: 8700, remaining: 1300 };
+}
 const previewNow = () => new Date().toISOString();
 const previewAgo = (milliseconds: number) => new Date(Date.now() - milliseconds).toISOString();
 
@@ -825,13 +865,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             "keep_awake",
           ],
         },
-        usage: {
-          month: new Date().toISOString().slice(0, 7),
-          used: new URL(location.href).searchParams.get("quota") === "full" ? 10000 : 8700,
-          limit: 10000,
-          remaining: new URL(location.href).searchParams.get("quota") === "full" ? 0 : 1300,
-          unlimited: false,
-        },
+        usage: previewUsage(new URL(location.href).searchParams.get("quota")),
       });
     }
 

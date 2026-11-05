@@ -1155,7 +1155,7 @@ const crawlPages: Record<string, CrawlPage> = {
       },
       {
         heading: "Connect tools are available on every plan",
-        text: "Free includes the same Connect tool capabilities: bounded binary reads, temporary revision-pinned file resources, background command Tasks, schedules, condition watches, source-controlled Agent Goals, deterministic verification loops and supported keep-awake leases. Free retains 10,000 monthly tool calls. Account authorization and device policy still apply. Hosted model access and third-party charges remain separate.",
+        text: "Free includes the same Connect tool capabilities: bounded binary reads, temporary revision-pinned file resources, background command Tasks, schedules, condition watches, source-controlled Agent Goals, deterministic verification loops and supported keep-awake leases. Free retains 10,000 monthly tool calls; after they run out, a one-time 7-day Connect Unlimited trial starts, then calls continue at 2 per minute until the monthly reset. Account authorization and device policy still apply. Hosted model access and third-party charges remain separate.",
       },
       {
         heading: "Plan entitlement and usage are separate",

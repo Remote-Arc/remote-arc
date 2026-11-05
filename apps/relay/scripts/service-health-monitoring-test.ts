@@ -202,7 +202,8 @@ const identity = {
   scope: DEFAULT_MCP_SCOPES.join(" "),
   resource: AGENT + "/mcp",
 };
-f.env.ARC_BILLING_ENABLED = "1";
+// Outside platform billing the monthly limit is a hard stop, which gives a
+// deterministic quota failure (billed Free accounts get a trial instead).
 f.sql
   .prepare(
     "INSERT INTO user_monthly_usage(user_id,month_key,tool_calls,updated_at) VALUES(?,?,?,?)",

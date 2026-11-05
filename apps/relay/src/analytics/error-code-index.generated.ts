@@ -1601,6 +1601,9 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  "PROTOCOL_HOST_REQUIRED": [
   "index.ts"
  ],
+ "PROVIDER_TIMEOUT": [
+  "platform/lifecycle-email.ts"
+ ],
  "RATE_LIMITED": [
   "analytics/product-observability.ts",
   "devices/device.ts",
@@ -1749,6 +1752,10 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  ],
  "SLACK_USER_INACTIVE": [
   "slack/slack-bot-jobs.ts"
+ ],
+ "SLOW_LANE_RATE_LIMITED": [
+  "billing/usage.ts",
+  "mcp/mcp-errors.ts"
  ],
  "STALE_REF": [
   "mcp/mcp-errors.ts"

@@ -30,6 +30,13 @@ export const CONNECT_FAIR_USE = {
   computerRegistrationsPerDay: 20,
   browserInstallations: 20,
 } as const;
+/** What Free gets after its monthly Connect calls run out: a one-off reverse
+ * trial of unlimited calls, then a published slow-lane rate until the monthly
+ * reset. Calls are never cut off outright for an eligible Free account. */
+export const CONNECT_FREE_OVERFLOW = {
+  trialDays: 7,
+  slowLaneCallsPerMinute: 2,
+} as const;
 /** Published monthly binary transfer allowance for Free accounts, shared by
  * read_binary_file and temporary file links. Paid plans have no transfer cap. */
 export const FREE_BINARY_BYTES_PER_MONTH = 2 * 1024 ** 3;

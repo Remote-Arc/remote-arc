@@ -1,5 +1,9 @@
 // Keep protocol runtime exports self-contained for native Node type stripping.
-export type { ServiceMetrics, ServiceMetricsPoint } from "./service-metrics.js";
+export type {
+  ServiceMetrics,
+  ServiceMetricsPoint,
+  BusinessHealthMetrics,
+} from "./service-metrics.js";
 /** Bootstrap defaults for migrations, previews and planning. Runtime commercial terms come from versioned D1 configuration. */
 export const ARC_CREDIT_RATE = {
   version: "arc-credits-v1",

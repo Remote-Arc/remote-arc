@@ -3,42 +3,59 @@
   gap: 16px;
   min-width: 0;
 }
-.serviceMetricTotals {
+.businessMetrics header h3 {
+  margin: 0 0 5px;
+  font-size: 14px;
+}
+.businessMetrics header p {
+  margin: 0;
+  color: var(--health-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.businessMetricCards {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.businessMetricCards button {
+  display: grid;
+  gap: 8px;
+  padding: 17px;
   border: 1px solid var(--health-line);
   border-radius: 12px;
-  overflow: hidden;
-  background: var(--health-line);
-  gap: 1px;
-}
-.serviceMetricTotals > div {
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-  padding: 18px;
   background: var(--panel, #18181b);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.serviceMetricTotals span {
-  font-size: 11px;
-  color: var(--health-muted);
+.businessMetricCards button:disabled {
+  cursor: default;
 }
-.serviceMetricTotals strong {
-  font-size: 24px;
+.businessMetricCards button:hover:enabled,
+.businessMetricCards button[aria-pressed="true"] {
+  border-color: var(--accent, #729eff);
+}
+.businessMetricCards button > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.businessMetricCards strong {
+  font-size: 25px;
   font-weight: 600;
-  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
-@media (max-width: 600px) {
-  .serviceMetricTotals {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .serviceMetricTotals > div {
-    padding: 15px;
-  }
-  .serviceMetricTotals strong {
-    font-size: 22px;
-  }
+.businessMetricCards small {
+  color: var(--health-muted);
+  font-size: 11px;
+}
+.businessMetricCards b {
+  color: var(--text, #eee);
+  font-weight: 500;
 }
 .serviceMetricHeading {
   display: flex;

@@ -24,7 +24,7 @@ export function validServiceMetrics(value: unknown): value is ServiceMetrics {
       (n) => n === null || (typeof n === "number" && Number.isFinite(n) && n >= 0),
     );
   return (
-    data.coverage === "recorded_events" &&
+    ["recorded_events", "recorded_business_errors"].includes(data.coverage) &&
     [1, 24, 168].includes(data.hours) &&
     date(data.from) &&
     date(data.checkedAt) &&
@@ -32,6 +32,16 @@ export function validServiceMetrics(value: unknown): value is ServiceMetrics {
     !!data.totals &&
     counts(data.totals) &&
     latency(data.totals) &&
+    Array.isArray(data.modules) &&
+    data.modules.length > 0 &&
+    data.modules.length <= 13 &&
+    data.modules.every(
+      (module) =>
+        !!module &&
+        typeof module.domain === "string" &&
+        [module.failures, module.attention].every((n) => Number.isInteger(n) && n >= 0) &&
+        module.attention <= module.failures,
+    ) &&
     Array.isArray(data.points) &&
     data.points.length > 0 &&
     data.points.length <= 100 &&
@@ -50,7 +60,11 @@ export function validServiceMetrics(value: unknown): value is ServiceMetrics {
 }
 
 /** Only used by the explicitly labelled design preview, never as a failure fallback. */
-export function sampleServiceMetrics(hours: number, domain: string): ServiceMetrics {
+export function sampleServiceMetrics(
+  hours: number,
+  domain: string,
+  business = false,
+): ServiceMetrics {
   const now = Date.now(),
     seconds = hours === 1 ? 60 : hours === 24 ? 1800 : 10800;
   const count = Math.round((hours * 3600) / seconds);
@@ -78,7 +92,18 @@ export function sampleServiceMetrics(hours: number, domain: string): ServiceMetr
     hours,
     domain,
     bucketSeconds: seconds,
-    coverage: "recorded_events",
+    coverage: business ? "recorded_business_errors" : "recorded_events",
+    modules: (domain ? [domain] : ["mcp", "apps", "devices", "tasks", "billing"]).map(
+      (module, index) => ({
+        domain: module,
+        failures: domain
+          ? sum("failures")
+          : Math.floor(sum("failures") / 5) + (index < sum("failures") % 5 ? 1 : 0),
+        attention: domain
+          ? sum("attention")
+          : Math.floor(sum("attention") / 5) + (index < sum("attention") % 5 ? 1 : 0),
+      }),
+    ),
     points,
     totals: {
       requests: sum("requests"),

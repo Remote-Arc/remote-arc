@@ -144,6 +144,95 @@ const weighted = await serviceMetrics(f.env.DB, 24, "tasks", now);
 assert.equal(weighted.totals.requests, 21);
 assert.equal(weighted.totals.p50Ms, 10);
 assert.equal(weighted.totals.p95Ms, 1000);
+for (const [domain, outcome] of [
+  ["mcp", "failed"],
+  ["billing", "failed"],
+  ["mcp", "succeeded"],
+] as const)
+  await eventStatement(
+    f.env as never,
+    {
+      name: domain + ".fixture",
+      domain,
+      source: "server",
+      outcome,
+      userId: "metrics-user",
+      httpStatus: 200,
+      errorCode: outcome === "failed" ? "MONTHLY_LIMIT_REACHED" : undefined,
+    },
+    new Date(now.getTime() - 60000).toISOString(),
+  ).run();
+let metricQueries = 0;
+const measured = {
+  ...f.env.DB,
+  prepare(query: string) {
+    metricQueries++;
+    return f.env.DB.prepare(query);
+  },
+} as D1Database;
+const business = await serviceMetrics(measured, 24, "", now);
+assert.equal(metricQueries, 2, "Business module cards reuse the existing two metric queries");
+metricQueries = 0;
+const errorsOnly = await serviceMetrics(measured, 24, "", now, "business");
+assert.equal(
+  metricQueries,
+  1,
+  "The business dashboard does not calculate unused HTTP request percentiles",
+);
+assert.equal(errorsOnly.coverage, "recorded_business_errors");
+assert.deepEqual(errorsOnly.modules, business.modules);
+assert.equal(errorsOnly.totals.failures, business.totals.failures);
+assert.equal((await api("?view=business")).status, 200);
+assert.equal((await api("?view=unknown")).status, 400);
+assert.equal((await api("?view=business&format=prometheus")).status, 400);
+assert(business.modules, "Service health exposes business module metrics");
+assert.deepEqual(
+  business.modules.find((item) => item.domain === "mcp"),
+  { domain: "mcp", failures: 1, attention: 0 },
+  "An HTTP 200 business failure remains visible, while successes are excluded",
+);
+assert.deepEqual(
+  business.modules.find((item) => item.domain === "apps"),
+  { domain: "apps", failures: 2, attention: 2 },
+);
+assert.deepEqual(
+  business.modules.find((item) => item.domain === "billing"),
+  { domain: "billing", failures: 1, attention: 0 },
+);
+assert.equal(
+  business.modules.reduce((sum, item) => sum + item.failures, 0),
+  business.totals.failures,
+);
+const selected = await serviceMetrics(f.env.DB, 24, "billing", now);
+assert.deepEqual(selected.modules, [{ domain: "billing", failures: 1, attention: 0 }]);
+assert.equal(
+  selected.points.reduce((sum, point) => sum + point.failures, 0),
+  1,
+);
+await eventStatement(
+  f.env as never,
+  {
+    name: "unknown.failed",
+    domain: "PRIVATE-DOMAIN-CANARY",
+    source: "server",
+    outcome: "failed",
+    errorCode: "REQUEST_FAILED",
+  },
+  new Date(now.getTime() - 60000).toISOString(),
+).run();
+const unknown = await serviceMetrics(f.env.DB, 24, "", now);
+assert.deepEqual(
+  unknown.modules.find((item) => item.domain === "other"),
+  { domain: "other", failures: 1, attention: 1 },
+);
+assert(
+  !JSON.stringify(unknown).includes("PRIVATE-DOMAIN-CANARY"),
+  "Stored arbitrary domains never become public metric labels",
+);
+assert.equal(
+  unknown.modules.reduce((sum, item) => sum + item.failures, 0),
+  unknown.totals.failures,
+);
 f.env.ADMIN_METRICS_TOKEN = token;
 const unavailable = await handleServiceMetrics(
   new Request(ADMIN + "/api/admin/metrics?format=prometheus", {

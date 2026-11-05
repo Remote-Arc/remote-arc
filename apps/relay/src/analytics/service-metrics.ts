@@ -32,6 +32,7 @@ export async function serviceMetrics(
   hours: number,
   domain = "",
   now = new Date(),
+  view: "all" | "business" = "all",
 ): Promise<ServiceMetrics> {
   const seconds = bucketSizes[hours];
   if (!seconds || (domain && !METRIC_DOMAINS.includes(domain as never)))
@@ -43,11 +44,19 @@ export async function serviceMetrics(
   const args: (string | number)[] = [from, checkedAt, seconds];
   if (domain) args.push(domain);
   const bucket = "CAST(unixepoch(occurred_at)/?3 AS INTEGER)*?3";
+  const attention =
+    "COALESCE(http_status,0)>=500 OR failure_category IS NULL OR failure_category IN ('dependency','execution','client','unknown')";
+  // Fixed module literals only. Reuse the bounded failure scan for the cards;
+  // never issue a historical query per module or expose arbitrary stored labels.
+  const moduleColumns = METRIC_DOMAINS.flatMap((module) => [
+    `SUM(CASE WHEN domain='${module}' THEN 1 ELSE 0 END) ${module}_failures`,
+    `SUM(CASE WHEN domain='${module}' AND (${attention}) THEN 1 ELSE 0 END) ${module}_attention`,
+  ]).join(",");
   const [failures, requests] = await Promise.all([
     db
       .prepare(
         `SELECT ${bucket} bucket,COUNT(*) failures,
-      SUM(CASE WHEN COALESCE(http_status,0)>=500 OR failure_category IS NULL OR failure_category IN ('dependency','execution','client','unknown') THEN 1 ELSE 0 END) attention,
+      SUM(CASE WHEN ${attention} THEN 1 ELSE 0 END) attention,${moduleColumns},
       COUNT(DISTINCT user_id) affectedUsers,
       COUNT(DISTINCT COALESCE(device_id,CASE WHEN domain='devices' THEN entity_id END)) affectedDevices
       FROM product_events WHERE outcome='failed' AND occurred_at>=?1 AND occurred_at<?2${scope}
@@ -55,9 +64,11 @@ export async function serviceMetrics(
       )
       .bind(...args)
       .all<Row>(),
-    db
-      .prepare(
-        `WITH histogram AS MATERIALIZED (
+    view === "business"
+      ? Promise.resolve({ results: [] as Row[] })
+      : db
+          .prepare(
+            `WITH histogram AS MATERIALIZED (
       SELECT ${bucket} bucket,duration_ms,COUNT(*) samples,
         SUM(http_status>=500) serverErrors,
         SUM(http_status>=400 AND http_status<500) clientErrors,
@@ -86,9 +97,9 @@ export async function serviceMetrics(
         MIN(CASE WHEN position>=CAST((population+1)/2 AS INTEGER) THEN duration_ms END),
         MIN(CASE WHEN position>=CAST((population*95+99)/100 AS INTEGER) THEN duration_ms END)
       FROM overall`,
-      )
-      .bind(...args)
-      .all<Row>(),
+          )
+          .bind(...args)
+          .all<Row>(),
   ]);
   const byBucket = new Map<number, Record<string, number | null>>();
   for (const row of [...failures.results, ...requests.results])
@@ -124,13 +135,34 @@ export async function serviceMetrics(
   const total = (
     key: "requests" | "serverErrors" | "clientErrors" | "slowRequests" | "failures" | "attention",
   ) => points.reduce((sum, point) => sum + point[key], 0);
+  const modules: ServiceMetrics["modules"] = METRIC_DOMAINS.filter(
+    (module) => !domain || module === domain,
+  ).map((module) => ({
+    domain: module,
+    failures: failures.results.reduce(
+      (sum, row) => sum + Number(row[module + "_failures"] || 0),
+      0,
+    ),
+    attention: failures.results.reduce(
+      (sum, row) => sum + Number(row[module + "_attention"] || 0),
+      0,
+    ),
+  }));
+  const otherFailures = total("failures") - modules.reduce((sum, item) => sum + item.failures, 0);
+  if (otherFailures)
+    modules.push({
+      domain: "other",
+      failures: otherFailures,
+      attention: total("attention") - modules.reduce((sum, item) => sum + item.attention, 0),
+    });
   return {
     checkedAt,
     from,
     hours,
     domain,
     bucketSeconds: seconds,
-    coverage: "recorded_events",
+    coverage: view === "business" ? "recorded_business_errors" : "recorded_events",
+    modules,
     totals: {
       requests: total("requests"),
       serverErrors: total("serverErrors"),
@@ -226,14 +258,23 @@ export async function handleServiceMetrics(request: Request, env: Env) {
   }
   const hours = Number(url.searchParams.get("hours") || "24"),
     domain = url.searchParams.get("domain") || "";
+  const view = url.searchParams.get("view") || "all";
   if (
     !bucketSizes[hours] ||
     (domain && !METRIC_DOMAINS.includes(domain as never)) ||
-    !["json", "prometheus"].includes(format)
+    !["json", "prometheus"].includes(format) ||
+    !["all", "business"].includes(view) ||
+    (view === "business" && format === "prometheus")
   )
     return json({ error: "INVALID_FILTER" }, 400);
   try {
-    const data = await serviceMetrics(env.DB, hours, domain);
+    const data = await serviceMetrics(
+      env.DB,
+      hours,
+      domain,
+      new Date(),
+      view === "business" ? "business" : "all",
+    );
     return format === "prometheus"
       ? new Response(prometheusMetrics(data), {
           headers: {

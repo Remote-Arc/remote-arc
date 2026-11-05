@@ -816,8 +816,8 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
                               "管理用户账户、连接设备、用量配额和成本。",
                             )
                           : tr(
-                              "Keep the service stable, with evidence rather than guesswork.",
-                              "以真实基础设施指标及时识别服务问题。",
+                              "Track registration, conversion, payments and business failures.",
+                              "查看注册、转化、支付和业务异常。",
                             )}
           </p>
         </header>

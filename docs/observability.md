@@ -1,8 +1,35 @@
-# Admin service metrics
+# Admin business metrics
 
-Admin → Service health loads a snapshot on entry. Time range, business module and
-Refresh monitoring update the charts. There is no background polling. Failure
-investigation remains available if the metrics request fails.
+Admin → Service health shows operational business outcomes: completed
+registrations, confirmed payment quantities, sign-in/device-pairing/task/purchase
+completion rates, and business error codes. Growth, returning-user and retention
+panels remain in user analytics and are not repeated here. A dedicated
+`/api/admin/analytics?view=health` query reads only current flow aggregates, not
+growth, activity history or retention cohorts. It loads on entry or explicit
+refresh, without background polling. Flow statistics use today / seven days /
+thirty days; error investigation has its own clearly labelled time range.
+
+Confirmed payment quantities count verified, nonzero, live-mode receipts in the
+reporting period. Multiple payments by one account count separately; webhook
+retries do not create extra receipts. Free and test payments are excluded.
+Registration is a count of real accounts created; it is not a visitor conversion
+rate. Login completion covers recorded new and returning-user sign-in flows.
+No visitor-to-registration rate is inferred without its visitor denominator.
+Missing business data shows a dash rather than a false zero.
+
+HTTP request and latency charts are not part of this business dashboard. Use
+Cloudflare's native dashboard for platform metrics. The business error view
+requests `view=business`, which performs only the bounded failure aggregation and
+does not calculate unused HTTP request percentiles. Business analytics and error
+investigation remain usable independently when either source fails.
+
+Business module cards show recorded failures and the subset needing investigation
+for MCP tools, Apps, devices, Arc tasks and billing. Modules with other failures
+also appear. Selecting a card filters both the trend charts and the error
+investigation; selecting it again restores all modules. These cards reuse the
+existing timestamp-bounded failure query, without a separate query per module.
+They include business failures returned with HTTP 200 and do not infer success
+rates from partial records. Unavailable data displays a dash, never a false zero.
 
 The charts aggregate **recorded product events**, not complete Worker traffic.
 Successful GET and MCP requests are not all recorded; failure reporting can also
@@ -63,8 +90,10 @@ remote_arc_observed_server_errors{window="1h",domain="all"}
 remote_arc_observed_duration_p95_seconds{window="1h",domain="all"}
 ```
 
-Each scrape executes two bounded aggregation queries against D1. Start with a
-five-minute interval and monitor database reads before increasing frequency. A
+The optional legacy export executes two bounded aggregation queries against D1.
+The configuration above is an integration example, not a recommendation to
+continuously scrape raw events. Measure the selected window's database reads
+before enabling scheduled collection. A
 separate collector, dashboards and alerting are optional infrastructure and are
 not deployed by this change.
 

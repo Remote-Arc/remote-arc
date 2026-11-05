@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { businessAnalytics, handleBusinessAnalytics } from "../src/analytics/business-analytics.js";
+import {
+  businessAnalytics,
+  businessHealthMetrics,
+  handleBusinessAnalytics,
+} from "../src/analytics/business-analytics.js";
 import {
   startBusinessFlow,
   advanceBusinessFlow,
@@ -266,6 +270,43 @@ assert.equal(
   "Test-mode receipts are excluded from paying users and money",
 );
 assert.equal(data.summary?.paidCents, 1000);
+let healthQueries = 0;
+const healthData = await businessHealthMetrics(
+  {
+    ...db,
+    prepare(query: string) {
+      healthQueries++;
+      return db.prepare(query);
+    },
+  } as D1Database,
+  7,
+  now,
+);
+assert.equal(
+  healthQueries,
+  7,
+  "Business health reads only current flow aggregates, without growth or retention queries",
+);
+assert.equal(healthData.registrations, data.summary?.newUsers);
+assert.equal(healthData.flows.find((flow) => flow.id === "login")?.rate, scene("login").rate);
+assert(
+  !("trend" in healthData) && !("retention" in healthData),
+  "User analytics remains separate from service health",
+);
+assert.equal(
+  healthData.payments,
+  1,
+  "Payment quantities count verified nonzero live receipts, excluding free and test orders",
+);
+receipt("second-payment-same-user", "alpha");
+const repeatedPayment = await businessHealthMetrics(db, 7, now);
+assert.equal(repeatedPayment.payments, 2, "Two confirmed payments remain two transactions");
+assert.equal(
+  (await businessAnalytics(db, 7, now)).summary?.payingUsers,
+  1,
+  "The same payer is still one paying user",
+);
+sql.prepare("DELETE FROM arc_payment_receipts WHERE id='second-payment-same-user'").run();
 assert.equal(scene("tasks").total, 5);
 assert.equal(scene("tasks").completed, 1);
 assert.equal(scene("tasks").rate, 0.2);

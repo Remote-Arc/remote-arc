@@ -1,6 +1,7 @@
 import { applicationJson } from "../platform/application-json.js";
 import { getSessionUser } from "../auth/auth.js";
 import type { BillingEnv } from "../billing/stripe-billing.js";
+import type { BusinessHealthMetrics } from "@remotearc/protocol";
 
 type Row = Record<string, any>;
 const DAY = 86400000;
@@ -172,16 +173,11 @@ function finishFlow(input: any) {
   };
 }
 
-async function period(db: D1Database, from: string, to: string, current = false) {
-  const [summary, email, google, device, payment, tasks] = await Promise.all([
-    overview(db, from, to),
-    flowSummary(db, "email_login", from, to),
-    flowSummary(db, "google_login", from, to),
-    flowSummary(db, "device_pairing", from, to),
-    paymentSummary(db, from, to, current),
-    taskSummary(db, from, to),
-  ]);
-  const login = {
+function combinedLogin(
+  email: Awaited<ReturnType<typeof flowSummary>>,
+  google: Awaited<ReturnType<typeof flowSummary>>,
+) {
+  return finishFlow({
     id: "login",
     total: email.total + google.total,
     pending: email.pending + google.pending,
@@ -193,11 +189,76 @@ async function period(db: D1Database, from: string, to: string, current = false)
       { key: "verified", count: email.steps[3]!.count + google.steps[2]!.count },
       { key: "completed", count: email.steps[4]!.count + google.steps[3]!.count },
     ],
+  });
+}
+
+/** Operational flow aggregates only. No growth, activity or retention scans. */
+export async function businessHealthMetrics(
+  db: D1Database,
+  days: number,
+  now = new Date(),
+): Promise<BusinessHealthMetrics> {
+  const checkedAt = now.toISOString();
+  const from = new Date(
+    Date.parse(checkedAt.slice(0, 10) + "T00:00:00.000Z") - (days - 1) * DAY,
+  ).toISOString();
+  const [counts, email, google, devices, payment, tasks] = await Promise.all([
+    db
+      .prepare(
+        `SELECT
+      (SELECT COUNT(*) FROM business_cohort_users WHERE is_demo=0 AND registered_at>=?1 AND registered_at<?2) registrations,
+      (SELECT COUNT(*) FROM arc_payment_receipts r JOIN users u ON u.id=r.user_id LEFT JOIN arc_commercial_versions v ON v.id=r.commercial_version_id
+       WHERE ${person} AND ${live} AND r.state='paid' AND r.amount_cents>0 AND r.verified_at>=?1 AND r.verified_at<?2) payments`,
+      )
+      .bind(from, checkedAt)
+      .first<Row>(),
+    flowSummary(db, "email_login", from, checkedAt),
+    flowSummary(db, "google_login", from, checkedAt),
+    flowSummary(db, "device_pairing", from, checkedAt),
+    paymentSummary(db, from, checkedAt, true),
+    taskSummary(db, from, checkedAt),
+  ]);
+  const flows = [
+    combinedLogin(email, google),
+    finishFlow({ ...devices, id: "devices" }),
+    finishFlow(payment),
+    finishFlow(tasks),
+  ].map((flow) => ({
+    id: flow.id,
+    total: flow.total,
+    completed: flow.completed,
+    pending: flow.pending,
+    failed: flow.failed,
+    incompleteEvidence: flow.incompleteEvidence,
+    rate: flow.rate,
+    steps: flow.steps.map((step: { key: string; count: number }) => ({
+      key: step.key,
+      count: step.count,
+    })),
+  }));
+  return {
+    checkedAt,
+    from,
+    days,
+    registrations: Number(counts?.registrations || 0),
+    payments: Number(counts?.payments || 0),
+    flows,
   };
+}
+
+async function period(db: D1Database, from: string, to: string, current = false) {
+  const [summary, email, google, device, payment, tasks] = await Promise.all([
+    overview(db, from, to),
+    flowSummary(db, "email_login", from, to),
+    flowSummary(db, "google_login", from, to),
+    flowSummary(db, "device_pairing", from, to),
+    paymentSummary(db, from, to, current),
+    taskSummary(db, from, to),
+  ]);
   return {
     summary,
     scenes: [
-      finishFlow(login),
+      combinedLogin(email, google),
       finishFlow({ ...device, id: "devices" }),
       finishFlow(payment),
       finishFlow(tasks),
@@ -323,9 +384,15 @@ export async function handleBusinessAnalytics(
   if (!user) return json({ error: "unauthorized" }, 401);
   if (!user.isAdmin) return json({ error: "forbidden" }, 403);
   const days = Number(url.searchParams.get("days") || "7");
+  const view = url.searchParams.get("view") || "all";
+  if (!["all", "health"].includes(view)) return json({ error: "invalid_range" }, 400);
   if (![1, 7, 30].includes(days)) return json({ error: "invalid_range" }, 400);
   try {
-    return json(await businessAnalytics(env.DB, days));
+    return json(
+      await (view === "health"
+        ? businessHealthMetrics(env.DB, days)
+        : businessAnalytics(env.DB, days)),
+    );
   } catch {
     return json({ error: "business_analytics_unavailable" }, 503);
   }

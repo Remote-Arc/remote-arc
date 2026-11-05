@@ -13,6 +13,7 @@ import {
 } from "./service-health-model.js";
 import "./service-health.css";
 import { ServiceMetricsPanel } from "./service-metrics-panel.js";
+import { BusinessHealthOverview } from "./business-health-overview.js";
 const date = (value: string | null | undefined) => (value ? new Date(value).toLocaleString() : "—");
 async function read<T>(path: string): Promise<T> {
   const response = await fetch(path, {
@@ -162,6 +163,11 @@ export function ServiceHealth({
     labels[key] ? tr(...labels[key]!) : key;
   return (
     <section className="serviceHealth" aria-label={tr("Service monitoring", "服务监控")}>
+      <BusinessHealthOverview
+        preview={preview}
+        revision={metricsRevision}
+        selectDomain={setDomain}
+      />
       <div className="healthToolbar">
         <div>
           <span className="healthEyebrow">REMOTE ARC / OBSERVABILITY</span>
@@ -323,6 +329,7 @@ export function ServiceHealth({
         </p>
       )}
       <ServiceMetricsPanel
+        selectDomain={setDomain}
         hours={Number(hours)}
         domain={domain}
         revision={metricsRevision}

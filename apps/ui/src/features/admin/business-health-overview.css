@@ -1,0 +1,87 @@
+.businessHealthOverview {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.businessHealthOverview > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.businessHealthOverview h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+.businessHealthOverview p {
+  margin: 0;
+  color: var(--health-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.businessHealthControls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.businessHealthControls button {
+  border: 1px solid var(--health-line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 12px;
+}
+.businessHealthKpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.businessHealthKpis > article,
+.businessHealthKpis > button {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  padding: 18px;
+  background: var(--panel);
+  color: inherit;
+  border: 1px solid var(--health-line);
+  border-radius: 12px;
+  text-align: left;
+  font: inherit;
+}
+.businessHealthKpis strong {
+  font-size: 28px;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.businessHealthKpis span,
+.businessHealthKpis small {
+  color: var(--health-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.businessHealthKpis button:hover:enabled {
+  border-color: var(--accent);
+}
+.businessHealthOverview button:focus-visible,
+.businessHealthOverview select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 650px) {
+  .businessHealthOverview > header {
+    flex-direction: column;
+  }
+  .businessHealthKpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .businessHealthKpis > article,
+  .businessHealthKpis > button {
+    padding: 15px;
+  }
+}

@@ -33,11 +33,14 @@ const original = {
 const requests: { url: string; resolve: (response: Response) => void }[] = [];
 globalThis.fetch = async (input) => {
   const url = new URL(String(input), "https://admin.remotearc.app");
+  if (url.pathname === "/api/admin/analytics")
+    return Response.json({ error: "BUSINESS_ANALYTICS_UNAVAILABLE" }, { status: 503 });
   if (url.pathname === "/api/admin/metrics")
     return Response.json(
       sampleServiceMetrics(
         Number(url.searchParams.get("hours") || 24),
         url.searchParams.get("domain") || "",
+        true,
       ),
     );
   return new Promise<Response>((resolve) => requests.push({ url: String(input), resolve }));

@@ -1,5 +1,6 @@
 import { ProductIcon } from "../../../components/product-icon.js";
 import { UI_PREVIEW } from "../../../preview/preview-mode.js";
+import { RunnerAttentionInbox, type useRunnerAttention } from "../../browser-runner/runner-view.js";
 import { SecurityAuthorizations } from "../../security/security-authorizations.js";
 import { ApprovalRequest, PersistentPermissions } from "../../security/security-approvals.js";
 import { platformLabel } from "../devices/device-presets.js";
@@ -7,7 +8,13 @@ import { timeAgo } from "../format.js";
 import type { DashboardModel } from "../hooks/use-dashboard-model.js";
 
 // Security tab: Remote MCP pause, AI authorizations and approvals.
-export function SecurityView({ m }: { m: DashboardModel }) {
+export function SecurityView({
+  m,
+  browserAttention,
+}: {
+  m: DashboardModel;
+  browserAttention: ReturnType<typeof useRunnerAttention>;
+}) {
   const {
     decidePendingApproval,
     deviceNameById,
@@ -115,6 +122,7 @@ export function SecurityView({ m }: { m: DashboardModel }) {
             </div>
           )}
         </div>
+        <RunnerAttentionInbox attention={browserAttention} />
       </section>
 
       <section className="securityPanel securityGrantsPanel">

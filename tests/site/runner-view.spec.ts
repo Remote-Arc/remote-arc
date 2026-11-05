@@ -113,15 +113,98 @@ test("unavailable handoff is retained without a broken view or completion action
   await expect(page.getByText("careers.example.com", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: zh ? "我已处理完" : "I'm done", exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await expect(
     page.getByText(
       zh
-        ? "暂时无法获取任务状态，请检查电脑连接和浏览器任务权限。"
-        : "Task status unavailable. Check the computer connection and browser task permission.",
+        ? "等待电脑重新连接或恢复浏览器任务权限。"
+        : "Waiting for the computer to reconnect or restore browser task access.",
       { exact: true },
     ),
   ).toBeVisible();
+});
+
+test("browser tasks move to approvals and hidden reminders return when a device reconnects", async ({
+  page,
+}, testInfo) => {
+  const zh = testInfo.project.metadata.language === "zh";
+  const browserTasks = zh ? "浏览器任务" : "Browser tasks";
+  const done = zh ? "我已处理完" : "I'm done";
+  await page.clock.install();
+  await page.goto("/devices");
+  await expect(page.locator(".deviceCard").first()).toBeVisible();
+  await page.evaluate(() => {
+    const original = window.fetch;
+    let online = false;
+    let reads = 0;
+    document.addEventListener("runner-test-reconnect", () => {
+      online = true;
+    });
+    window.fetch = (input, init) => {
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+        location.origin,
+      );
+      if (url.pathname === "/api/runner/attention") {
+        document.documentElement.dataset.runnerReads = String(++reads);
+        const task = {
+          device_id: "preview-mac",
+          device_name: "Studio Mac",
+          kind: "captcha",
+        };
+        return Promise.resolve(
+          Response.json({
+            attention: [
+              { ...task, id: "online", session_id: "online", origin: "https://online.example" },
+              {
+                ...task,
+                id: "offline",
+                session_id: "offline",
+                origin: "https://offline.example",
+                availability: online ? "live" : "unavailable",
+              },
+            ],
+          }),
+        );
+      }
+      return original(input, init);
+    };
+  });
+  await page.clock.runFor(5000);
+  await expect(page.getByText("online.example", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("offline.example", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: browserTasks + " 1", exact: true }).click();
+  await expect(page.getByRole("heading", { name: browserTasks })).toBeVisible();
+  await expect(page.getByText("online.example", { exact: true })).toBeVisible();
+  await expect(page.getByText("offline.example", { exact: true })).toBeHidden();
+  const waiting = page.getByText(zh ? "等待恢复连接或权限 · 1" : "Waiting for access · 1", {
+    exact: true,
+  });
+  await waiting.click();
+  await expect(page.getByText("offline.example", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: done, exact: true })).toHaveCount(1);
+  await page.getByRole("button", { name: zh ? "隐藏提醒" : "Hide reminder", exact: true }).click();
+  await expect(page.getByText("offline.example", { exact: true })).toHaveCount(0);
+  await page.clock.runFor(5000);
+  await expect(page.getByText("offline.example", { exact: true })).toHaveCount(0);
+
+  const readCount = () => page.evaluate(() => Number(document.documentElement.dataset.runnerReads));
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    document.dispatchEvent(new Event("runner-test-reconnect"));
+  });
+  const before = await readCount();
+  await page.clock.runFor(15000);
+  expect(await readCount()).toBe(before);
+  await page.evaluate(() => {
+    Reflect.deleteProperty(document, "hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(page.getByText("offline.example", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: done, exact: true })).toHaveCount(2);
+  expect(await readCount()).toBe(before + 1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("browser session entry exists only inside device management activity and stops loading when leaving", async ({

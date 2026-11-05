@@ -921,7 +921,12 @@ export function ArcNativeChat({
           followLatest.current = area.scrollHeight - area.scrollTop - area.clientHeight < 100;
         }}
       >
-        {chat.current && <RunnerAttentionList arcSessionId={chat.current.session.id} />}
+        {chat.current && (
+          <RunnerAttentionList
+            key={chat.current.session.id}
+            arcSessionId={chat.current.session.id}
+          />
+        )}
         {loadingConversation ? (
           <div className="arcConversationLoading" aria-busy={chat.opening}>
             {chat.opening || !chat.error ? (

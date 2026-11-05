@@ -3,6 +3,26 @@
   position: relative;
   z-index: 1;
 }
+.runnerAttentionInbox {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+.runnerAttentionInbox h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+.runnerAttentionInbox .runnerAttentionList {
+  margin: 0;
+}
+.runnerAttentionWaiting {
+  margin-top: 10px;
+}
+.runnerAttentionWaiting summary {
+  padding-block: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
 .runnerAttention {
   display: flex;
   align-items: center;

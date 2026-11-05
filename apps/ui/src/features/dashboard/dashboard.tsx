@@ -1,5 +1,5 @@
 import React from "react";
-import { RunnerAttentionList } from "../browser-runner/runner-view.js";
+import { useRunnerAttention } from "../browser-runner/runner-view.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { AppsManager } from "../apps/apps-manager.js";
 import { ArcWorkWorkspace } from "../arc/workspace/arc-workspace.js";
@@ -72,6 +72,10 @@ export function Dashboard(props: DashboardProps) {
     user,
     workspace,
   } = m;
+  const onDevices = active === "devices" || active === "agent-devices";
+  const browserAttention = useRunnerAttention({ enabled: onDevices || active === "security" });
+  const browserTaskCount =
+    browserAttention.rows?.filter((row) => row.availability !== "unavailable").length ?? 0;
   const renderWorkspacePicker = (mobile = false) => (
     <WorkspacePicker
       workspace={workspace}
@@ -206,7 +210,6 @@ export function Dashboard(props: DashboardProps) {
       </aside>
 
       <main className="dashboardMain">
-        {active !== "agent-chat" && <RunnerAttentionList />}
         {UI_PREVIEW && (
           <div className="previewModeBanner" role="status">
             <strong>PR PREVIEW</strong>
@@ -335,13 +338,13 @@ export function Dashboard(props: DashboardProps) {
 
         {active === "overview" && <OverviewView m={m} />}
 
-        {(active === "devices" || active === "agent-devices") && <DevicesView m={m} />}
+        {onDevices && <DevicesView m={m} browserTaskCount={browserTaskCount} />}
 
         {(active === "apps" || active === "agent-apps") && <AppsManager />}
 
         {active === "connect" && <ConnectView m={m} />}
 
-        {active === "security" && <SecurityView m={m} />}
+        {active === "security" && <SecurityView m={m} browserAttention={browserAttention} />}
 
         {active === "monitor" && user.isAdmin && <MonitorView m={m} />}
 

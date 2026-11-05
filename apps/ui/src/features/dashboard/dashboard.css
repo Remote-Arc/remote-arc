@@ -18,6 +18,13 @@
   --dash-accent: #79d8f5;
 }
 
+.devicePageActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* Device overview and task creation use progressive disclosure. */
 :root[data-theme] .appFrame .deviceManagementGrid {
   grid-template-columns: minmax(0, 1fr) !important;

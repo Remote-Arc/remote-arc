@@ -100,8 +100,7 @@
   gap: 18px;
   padding: 0 20px 17px;
 }
-.opsToolbar h3,
-.opsUserDetail h3 {
+.opsToolbar h3 {
   margin: 0 0 6px;
   font-size: 19px;
 }
@@ -200,6 +199,45 @@
 .opsOnline {
   color: #139e81;
   font-weight: 750;
+}
+html:has(.opsUserDetailDialog[open]) {
+  overflow: hidden;
+}
+.opsUserDetailDialog {
+  box-sizing: border-box;
+  width: min(1080px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  padding: 0 0 16px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 24px 80px #0005;
+}
+.opsUserDetailDialog::backdrop {
+  background: #0009;
+}
+.opsUserDetailDialog > header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.opsUserDetailDialog > header h3 {
+  margin: 0;
+  font-size: 19px;
+  overflow-wrap: anywhere;
+}
+.opsUserDetailDialog > header button {
+  flex-shrink: 0;
 }
 .opsUserDetail {
   border-top: 1px solid var(--line);

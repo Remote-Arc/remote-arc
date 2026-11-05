@@ -21,17 +21,17 @@ uploads transcripts or creates persistent capture files.
 
 JSON schema identifier: `remotearc.takeover-workspace/v1`.
 
-| Field | Meaning |
-| --- | --- |
-| `workspace` | Canonical selected directory; file hashes never widen a subdirectory selection |
-| `snapshot.repository_root`, `git_directory`, `common_git_directory` | Actual Git paths; linked worktree administration is distinguished from the common repository |
-| `workspace_identity`, `git_directory_identity`, `common_git_directory_identity` | OS directory identities, included in the fingerprint to detect replacement |
-| `head`, `branch`, `detached`, `unborn` | Current local Git state, including initial repositories and detached HEAD |
-| `upstream`, `ahead`, `behind` | Local tracking-ref information when Git provides it; no fetch or claim of current remote state |
-| `changes` | Repository-relative paths in the selected directory, separate staged/unstaged status, bounded raw-byte SHA256 or explicit content gap |
-| `linked_worktrees` | Shared-repository metadata: path, HEAD, branch, bare/detached/locked/prunable flags; no lock reasons or scans of the other worktrees |
-| `git_status_sha256` | Hash of Git's bounded porcelain-v2 status, including staged object IDs and conflict stages |
-| `fingerprint` | Only emitted for `status=ok`, covering the version, selection, directory identities and the matching snapshot |
+| Field                                                                           | Meaning                                                                                                                               |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspace`                                                                     | Canonical selected directory; file hashes never widen a subdirectory selection                                                        |
+| `snapshot.repository_root`, `git_directory`, `common_git_directory`             | Actual Git paths; linked worktree administration is distinguished from the common repository                                          |
+| `workspace_identity`, `git_directory_identity`, `common_git_directory_identity` | OS directory identities, included in the fingerprint to detect replacement                                                            |
+| `head`, `branch`, `detached`, `unborn`                                          | Current local Git state, including initial repositories and detached HEAD                                                             |
+| `upstream`, `ahead`, `behind`                                                   | Local tracking-ref information when Git provides it; no fetch or claim of current remote state                                        |
+| `changes`                                                                       | Repository-relative paths in the selected directory, separate staged/unstaged status, bounded raw-byte SHA256 or explicit content gap |
+| `linked_worktrees`                                                              | Shared-repository metadata: path, HEAD, branch, bare/detached/locked/prunable flags; no lock reasons or scans of the other worktrees  |
+| `git_status_sha256`                                                             | Hash of Git's bounded porcelain-v2 status, including staged object IDs and conflict stages                                            |
+| `fingerprint`                                                                   | Only emitted for `status=ok`, covering the version, selection, directory identities and the matching snapshot                         |
 
 Two complete observations must match to return `status=ok` with
 `consistency=two_matching_reads`. A content edit with the same Git status letters

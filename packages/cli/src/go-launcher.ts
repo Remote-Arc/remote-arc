@@ -17,9 +17,7 @@ export function goAsset(platform = process.platform, arch = process.arch) {
   const target = platforms[platform],
     cpu = architectures[arch];
   if (!target || !cpu)
-    throw new Error(
-      `Go agent binaries are unavailable for ${platform}/${arch}.`,
-    );
+    throw new Error(`Go agent binaries are unavailable for ${platform}/${arch}.`);
   return `remotelink-v${GO_VERSION}-${target}-${cpu}${platform === "win32" ? ".exe" : ""}`;
 }
 function digest(b: Buffer) {
@@ -48,17 +46,13 @@ export async function resolveGoBinary() {
   const explicit = process.env.REMOTEARC_GO_BINARY;
   if (explicit) {
     if (!path.isAbsolute(explicit) || !(await exists(explicit)))
-      throw new Error(
-        "REMOTEARC_GO_BINARY must be an absolute path to a Go agent binary.",
-      );
+      throw new Error("REMOTEARC_GO_BINARY must be an absolute path to a Go agent binary.");
     verifyVersion(explicit);
     return explicit;
   }
   const asset = goAsset();
   // A packaged manifest pins each platform's digest to this npm release.
-  const manifestPath = fileURLToPath(
-    new URL("./go-binaries.json", import.meta.url),
-  );
+  const manifestPath = fileURLToPath(new URL("./go-binaries.json", import.meta.url));
   let manifest: { version: string; checksums: Record<string, string> };
   try {
     manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
@@ -67,21 +61,15 @@ export async function resolveGoBinary() {
       "This npm release has no Go binary manifest. Use REMOTEARC_GO_BINARY with a matching local build, or install a native Go release.",
     );
   }
-  const checksum =
-    manifest.version === GO_VERSION ? manifest.checksums[asset] : undefined;
+  const checksum = manifest.version === GO_VERSION ? manifest.checksums[asset] : undefined;
   if (!checksum || !/^[a-f0-9]{64}$/.test(checksum))
-    throw new Error(
-      "No verified Go binary is listed for this platform in the installed release.",
-    );
+    throw new Error("No verified Go binary is listed for this platform in the installed release.");
   const home = process.env.REMOTEARC_HOME || os.homedir();
   const dir = path.join(home, ".remotearc", "agent", "downloads", GO_VERSION);
   const binary = path.join(dir, asset);
   const bundled = fileURLToPath(new URL(`./bin/${asset}`, import.meta.url));
   for (const candidate of [bundled, binary]) {
-    if (
-      (await exists(candidate)) &&
-      digest(await fs.readFile(candidate)) === checksum
-    ) {
+    if ((await exists(candidate)) && digest(await fs.readFile(candidate)) === checksum) {
       verifyVersion(candidate);
       return candidate;
     }
@@ -91,9 +79,7 @@ export async function resolveGoBinary() {
     signal: AbortSignal.timeout(120_000),
   });
   if (!response.ok || !response.body)
-    throw new Error(
-      `Cannot download the Go agent (HTTP ${response.status}).`,
-    );
+    throw new Error(`Cannot download the Go agent (HTTP ${response.status}).`);
   const reader = response.body.getReader();
   const chunks: Buffer[] = [];
   let size = 0;
@@ -109,9 +95,7 @@ export async function resolveGoBinary() {
   }
   const bytes = Buffer.concat(chunks);
   if (digest(bytes) !== checksum)
-    throw new Error(
-      "Go binary checksum does not match the installed npm release.",
-    );
+    throw new Error("Go binary checksum does not match the installed npm release.");
   await fs.mkdir(dir, { recursive: true, mode: 0o700 });
   const temporary = binary + "." + randomUUID() + ".tmp";
   try {
@@ -120,11 +104,7 @@ export async function resolveGoBinary() {
     try {
       await fs.rename(temporary, binary);
     } catch (error) {
-      if (
-        !(await exists(binary)) ||
-        digest(await fs.readFile(binary)) !== checksum
-      )
-        throw error;
+      if (!(await exists(binary)) || digest(await fs.readFile(binary)) !== checksum) throw error;
     }
   } finally {
     await fs.rm(temporary, { force: true });
@@ -165,10 +145,7 @@ export async function localGoControl(
 ) {
   const home = process.env.REMOTEARC_HOME || os.homedir();
   const config = JSON.parse(
-    await fs.readFile(
-      path.join(home, ".remotearc", "agent", "control.json"),
-      "utf8",
-    ),
+    await fs.readFile(path.join(home, ".remotearc", "agent", "control.json"), "utf8"),
   ) as { url: string; token: string; engine: string; pid: number };
   const url = new URL(config.url);
   if (

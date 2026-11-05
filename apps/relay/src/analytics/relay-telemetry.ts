@@ -14,7 +14,13 @@ export function telemetrySampleRate(env: TelemetryEnv): number {
 }
 export function recordMcpTelemetry(
   env: TelemetryEnv,
-  input: { status: number; durationMs: number; method: string; kind?: "mcp" | "device_tool"; outcome?: string },
+  input: {
+    status: number;
+    durationMs: number;
+    method: string;
+    kind?: "mcp" | "device_tool";
+    outcome?: string;
+  },
   random = Math.random(),
 ): boolean {
   const binding = env.MCP_ANALYTICS;
@@ -30,13 +36,16 @@ export function recordMcpTelemetry(
         input.kind ?? "mcp",
         input.kind === "device_tool" ? "TOOL" : input.method === "POST" ? "POST" : "OTHER",
         String(input.status),
-        input.outcome ?? (input.status >= 500 ? "server_error" : input.status === 429 ? "throttled" :
-          input.status >= 400 ? "client_error" : "ok"),
+        input.outcome ??
+          (input.status >= 500
+            ? "server_error"
+            : input.status === 429
+              ? "throttled"
+              : input.status >= 400
+                ? "client_error"
+                : "ok"),
       ],
-      doubles: [
-        Math.max(0, input.durationMs),
-        input.status >= 400 ? 1 : 1 / rate,
-      ],
+      doubles: [Math.max(0, input.durationMs), input.status >= 400 ? 1 : 1 / rate],
     });
     return true;
   } catch (error) {

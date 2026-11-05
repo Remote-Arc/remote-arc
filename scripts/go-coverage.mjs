@@ -14,7 +14,12 @@ import { join, resolve } from "node:path";
 
 const modules = [
   { name: "Go Agent", dir: "apps/agent", scope: "agent", focus: { "internal/localmcp": 90 } },
-  { name: "Execution Core", dir: "packages/execution-core", scope: "core", focus: { protocol: 90 } },
+  {
+    name: "Execution Core",
+    dir: "packages/execution-core",
+    scope: "core",
+    focus: { protocol: 90 },
+  },
 ];
 const root = resolve(import.meta.dirname, "..");
 const strict = process.argv.includes("--target");
@@ -39,7 +44,7 @@ function summarise(profile, segment = "") {
     total += count;
     if (Number(match[7]) > 0) covered += count;
   }
-  return { covered, total, percent: total ? Number((covered / total * 100).toFixed(1)) : 0 };
+  return { covered, total, percent: total ? Number(((covered / total) * 100).toFixed(1)) : 0 };
 }
 
 try {
@@ -49,13 +54,37 @@ try {
     process.stdout.write("\n## " + module.name + "\n");
     run("go", ["test", "./...", "-coverprofile=" + profile, "-cover"], cwd);
     const all = summarise(profile);
-    console.log(module.name + " statements: " + all.covered + "/" + all.total + " = " + all.percent + "% (target 90%)");
+    console.log(
+      module.name +
+        " statements: " +
+        all.covered +
+        "/" +
+        all.total +
+        " = " +
+        all.percent +
+        "% (target 90%)",
+    );
     const threshold = coverageThresholds(module.scope, strict).statements;
-    if (!all.total || all.covered * 100 < threshold * all.total) failures.push(module.name + " " + all.covered + "/" + all.total + " statements < " + threshold + "%");
+    if (!all.total || all.covered * 100 < threshold * all.total)
+      failures.push(
+        module.name + " " + all.covered + "/" + all.total + " statements < " + threshold + "%",
+      );
     for (const [pkg, minimum] of Object.entries(module.focus)) {
       const result = summarise(profile, pkg);
       console.log("  " + pkg + ": " + result.percent + "% (minimum " + minimum + "%)");
-      if (!result.total || result.covered * 100 < minimum * result.total) failures.push(module.name + "/" + pkg + " " + result.covered + "/" + result.total + " statements < " + minimum + "%");
+      if (!result.total || result.covered * 100 < minimum * result.total)
+        failures.push(
+          module.name +
+            "/" +
+            pkg +
+            " " +
+            result.covered +
+            "/" +
+            result.total +
+            " statements < " +
+            minimum +
+            "%",
+        );
     }
   }
 } finally {
@@ -63,8 +92,11 @@ try {
 }
 
 if (failures.length) {
-  console.error("\nCoverage quality gate failed:\n" + failures.map(x => "- " + x).join("\n"));
+  console.error("\nCoverage quality gate failed:\n" + failures.map((x) => "- " + x).join("\n"));
   process.exitCode = 1;
 } else {
-  console.log("\nGo coverage quality gate passed" + (strict ? " (90% target)." : " (non-regression floors; 90% still required)."));
+  console.log(
+    "\nGo coverage quality gate passed" +
+      (strict ? " (90% target)." : " (non-regression floors; 90% still required)."),
+  );
 }

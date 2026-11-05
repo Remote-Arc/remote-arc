@@ -22,10 +22,7 @@
   "description": "Remote Arc operations, customers and service health.",
   "id": "/",
   "start_url": "/",
-  "categories": [
-    "business",
-    "productivity"
-  ],
+  "categories": ["business", "productivity"],
   "shortcuts": [
     {
       "name": "Overview",

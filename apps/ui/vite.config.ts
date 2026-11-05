@@ -31,7 +31,9 @@ const changelogReleases = releaseMatches.map((current, index) => {
   };
 });
 
-const candidateMatch = cliPackage.version.match(/^(\d+\.\d+\.\d+)-(?:alpha|beta|rc|canary)\.[0-9A-Za-z.-]+$/);
+const candidateMatch = cliPackage.version.match(
+  /^(\d+\.\d+\.\d+)-(?:alpha|beta|rc|canary)\.[0-9A-Za-z.-]+$/,
+);
 if (candidateMatch) {
   // A preview build may use an RC binary, but the dashboard must continue
   // displaying the latest *published* version until stable is released.
@@ -44,26 +46,47 @@ if (candidateMatch) {
   );
 }
 
-export default defineConfig(({mode}) => ({
+export default defineConfig(({ mode }) => ({
   resolve: {
     // The preview fetch mock embeds every fixture and the full Skill catalog
     // (several MB). Outside VITE_UI_PREVIEW builds, main.tsx gets a no-op.
-    alias: (process.env.VITE_UI_PREVIEW ?? loadEnv(mode, process.cwd(), "VITE_").VITE_UI_PREVIEW) === "1" ? [] : [{
-      find: /^\.\/preview\/preview\.js$/,
-      replacement: fileURLToPath(new URL("./src/preview/preview-disabled.ts", import.meta.url)),
-    }],
+    alias:
+      (process.env.VITE_UI_PREVIEW ?? loadEnv(mode, process.cwd(), "VITE_").VITE_UI_PREVIEW) === "1"
+        ? []
+        : [
+            {
+              find: /^\.\/preview\/preview\.js$/,
+              replacement: fileURLToPath(
+                new URL("./src/preview/preview-disabled.ts", import.meta.url),
+              ),
+            },
+          ],
   },
-  plugins: [react(), {
-    name: "local-runtime-config",
-    configureServer(server) {
-      server.middlewares.use("/api/runtime-config", (request, response) => {
-        if (!["GET", "HEAD"].includes(request.method || "")) { response.writeHead(405, {allow:"GET, HEAD"}); response.end(); return; }
-        const env = {...loadEnv(mode, process.cwd(), ""), ...process.env};
-        response.writeHead(200, {"content-type":"application/json", "cache-control":"no-store"});
-        response.end(request.method === "HEAD" ? undefined : JSON.stringify(previewRuntimeConfig(env, "development")));
-      });
+  plugins: [
+    react(),
+    {
+      name: "local-runtime-config",
+      configureServer(server) {
+        server.middlewares.use("/api/runtime-config", (request, response) => {
+          if (!["GET", "HEAD"].includes(request.method || "")) {
+            response.writeHead(405, { allow: "GET, HEAD" });
+            response.end();
+            return;
+          }
+          const env = { ...loadEnv(mode, process.cwd(), ""), ...process.env };
+          response.writeHead(200, {
+            "content-type": "application/json",
+            "cache-control": "no-store",
+          });
+          response.end(
+            request.method === "HEAD"
+              ? undefined
+              : JSON.stringify(previewRuntimeConfig(env, "development")),
+          );
+        });
+      },
     },
-  }],
+  ],
   define: {
     __REMOTEARC_CLI_VERSION__: JSON.stringify(changelogReleases[0]?.version),
     __REMOTEARC_RELEASES__: JSON.stringify(changelogReleases),

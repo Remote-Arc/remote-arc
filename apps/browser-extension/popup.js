@@ -8,9 +8,17 @@ const status = document.querySelector("#status");
 const send = (type, payload = {}) => chrome.runtime.sendMessage({ type, ...payload });
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[c]);
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[c],
+  );
 }
 
 function shortUrl(value) {
@@ -62,17 +70,20 @@ async function render() {
   document.querySelector("#allow-site")?.addEventListener("click", () => {
     const u = new URL(site.origin);
     // Requested straight from the click, as Chrome requires.
-    chrome.permissions.request({ origins: [u.protocol + "//" + u.hostname + "/*"] }).then(async (granted) => {
-      if (!granted) {
-        status.textContent = "Not allowed.";
-        return;
-      }
-      await send("site-allowed", { origin: site.origin });
-      status.textContent = "AI allowed on " + shortUrl(site.origin) + ".";
-      await render();
-    }, (error) => {
-      status.textContent = error instanceof Error ? error.message : String(error);
-    });
+    chrome.permissions.request({ origins: [u.protocol + "//" + u.hostname + "/*"] }).then(
+      async (granted) => {
+        if (!granted) {
+          status.textContent = "Not allowed.";
+          return;
+        }
+        await send("site-allowed", { origin: site.origin });
+        status.textContent = "AI allowed on " + shortUrl(site.origin) + ".";
+        await render();
+      },
+      (error) => {
+        status.textContent = error instanceof Error ? error.message : String(error);
+      },
+    );
   });
 
   document.querySelector("#remove-site")?.addEventListener("click", async () => {
@@ -85,17 +96,25 @@ async function render() {
   sitesBox.innerHTML = `
     <div class="permission"><span>Allowed sites</span><span>${sites.length}</span></div>
     <div class="shared-list">
-      ${sites.map((origin) => `<div class="shared-item">
+      ${
+        sites
+          .map(
+            (origin) => `<div class="shared-item">
           <div class="shared-copy"><strong>${escapeHtml(shortUrl(origin))}</strong><small>${escapeHtml(origin)}</small></div>
           <button class="icon-button" data-remove-site="${escapeHtml(origin)}" aria-label="Remove this site">×</button>
-        </div>`).join("") || '<p class="empty">No sites allowed yet. Your AI asks when it needs one.</p>'}
+        </div>`,
+          )
+          .join("") || '<p class="empty">No sites allowed yet. Your AI asks when it needs one.</p>'
+      }
     </div>
     <label class="permission"><span>Let your AI fill one-time codes</span><input type="checkbox" id="allow-codes" ${state.allowCodes ? "checked" : ""}></label>
     <p class="hint">Remote Arc Browser ${escapeHtml(state.version || "")}</p>`;
 
   document.querySelector("#allow-codes")?.addEventListener("change", async (event) => {
     await send("set-allow-codes", { enabled: event.target.checked });
-    status.textContent = event.target.checked ? "One-time codes can be filled." : "One-time codes stay with you.";
+    status.textContent = event.target.checked
+      ? "One-time codes can be filled."
+      : "One-time codes stay with you.";
   });
 
   for (const button of sitesBox.querySelectorAll("[data-remove-site]")) {
@@ -147,19 +166,27 @@ async function render() {
       status.textContent = result.error;
       return;
     }
-    status.textContent = interact ? "Click & fill disabled for this tab." : "Click & fill enabled for this tab.";
+    status.textContent = interact
+      ? "Click & fill disabled for this tab."
+      : "Click & fill enabled for this tab.";
     await render();
   });
 
   const windowShare = state.windowShare;
   sharedTabs.innerHTML = `
     <div class="permission"><span>Shared tabs</span><span>${count}</span></div>
-    ${windowShare?.tabs ? `<button class="primary" id="share-window" ${state.connected ? "" : "disabled"}>Share all ${windowShare.tabs} tab${windowShare.tabs === 1 ? "" : "s"} in this window</button>
-    <p class="hint">Turns on read and Click & fill for every web page in this window, and keeps it while each tab stays on its site. Chrome asks once for the sites. They then appear under Allowed sites, where your AI can also open tabs, until you remove them.</p>` : ""}
+    ${
+      windowShare?.tabs
+        ? `<button class="primary" id="share-window" ${state.connected ? "" : "disabled"}>Share all ${windowShare.tabs} tab${windowShare.tabs === 1 ? "" : "s"} in this window</button>
+    <p class="hint">Turns on read and Click & fill for every web page in this window, and keeps it while each tab stays on its site. Chrome asks once for the sites. They then appear under Allowed sites, where your AI can also open tabs, until you remove them.</p>`
+        : ""
+    }
     <div class="shared-list">
-      ${grants.map((grant) => {
-        const grantInteract = grant.permissions?.includes("interact");
-        return `<div class="shared-item">
+      ${
+        grants
+          .map((grant) => {
+            const grantInteract = grant.permissions?.includes("interact");
+            return `<div class="shared-item">
           <div class="shared-copy">
             <strong>${escapeHtml(grant.title || shortUrl(grant.url) || "Shared tab")}</strong>
             <span>${escapeHtml(shortUrl(grant.url))}</span>
@@ -167,7 +194,9 @@ async function render() {
           </div>
           <button class="icon-button" data-revoke-tab="${grant.tabId}" aria-label="Stop sharing this tab">×</button>
         </div>`;
-      }).join("") || '<p class="empty">No tabs shared yet.</p>'}
+          })
+          .join("") || '<p class="empty">No tabs shared yet.</p>'
+      }
     </div>
     ${count > 1 ? '<button class="secondary top-gap" id="revoke-all">Stop access on all shared tabs</button>' : ""}
   `;
@@ -179,8 +208,15 @@ async function render() {
         status.textContent = result.error;
         return;
       }
-      status.textContent = "Shared " + result.shared + " tab" + (result.shared === 1 ? "" : "s") + " with read and Click & fill."
-        + (result.skipped?.length ? " Not allowed: " + result.skipped.map(shortUrl).join(", ") + "." : "");
+      status.textContent =
+        "Shared " +
+        result.shared +
+        " tab" +
+        (result.shared === 1 ? "" : "s") +
+        " with read and Click & fill." +
+        (result.skipped?.length
+          ? " Not allowed: " + result.skipped.map(shortUrl).join(", ") + "."
+          : "");
       await render();
     };
     const fail = (error) => {
@@ -191,13 +227,16 @@ async function render() {
       return;
     }
     // Requested straight from the click, as Chrome requires.
-    chrome.permissions.request({ origins: windowShare.sites }).then((granted) => {
-      if (!granted) {
-        status.textContent = "Not allowed.";
-        return;
-      }
-      return share();
-    }).catch(fail);
+    chrome.permissions
+      .request({ origins: windowShare.sites })
+      .then((granted) => {
+        if (!granted) {
+          status.textContent = "Not allowed.";
+          return;
+        }
+        return share();
+      })
+      .catch(fail);
   });
 
   for (const button of sharedTabs.querySelectorAll("[data-revoke-tab]")) {

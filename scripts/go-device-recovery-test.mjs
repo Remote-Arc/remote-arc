@@ -13,18 +13,14 @@ const { WebSocketServer } = require("ws");
 const version = JSON.parse(
   await fs.readFile(path.join(root, "packages/cli/package.json"), "utf8"),
 ).version;
-const platform = { win32: "windows", darwin: "darwin", linux: "linux" }[
-    process.platform
-  ],
+const platform = { win32: "windows", darwin: "darwin", linux: "linux" }[process.platform],
   arch = { x64: "amd64", arm64: "arm64" }[process.arch];
 const binary = path.join(
   root,
   "work/go-device",
   `remotelink-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`,
 );
-const home = await fs.realpath(
-  await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-recovery-")),
-);
+const home = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-recovery-")));
 const env = {
   ...process.env,
   HOME: home,
@@ -54,10 +50,7 @@ function request(tool, args = {}) {
   const socket = connections.at(-1),
     id = "recovery-" + ++nextID;
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(tool + " timed out")),
-      15000,
-    );
+    const timer = setTimeout(() => reject(new Error(tool + " timed out")), 15000);
     pending.set(id, {
       resolve: (v) => {
         clearTimeout(timer);
@@ -109,10 +102,7 @@ try {
   assert(hellos[0].device.backgroundProcess);
   const firstPID = hellos[0].device.pid;
   process.kill(firstPID, "SIGKILL");
-  await waitFor(
-    () => hellos.some((h) => h.device.pid !== firstPID),
-    "crash recovery",
-  );
+  await waitFor(() => hellos.some((h) => h.device.pid !== firstPID), "crash recovery");
   assert.equal(hellos.at(-1).device.id, "recovery-device");
   const heartbeat = path.join(home, "command-heartbeat");
   const helper = path.join(home, "helper.cjs");
@@ -143,10 +133,7 @@ try {
   });
   assert.equal(stopped.desired_enabled, false);
   await waitFor(() => supervisor.exitCode !== null, "disabled supervisor exit");
-  assert.equal(
-    JSON.parse(await fs.readFile(configPath, "utf8")).backgroundEnabled,
-    false,
-  );
+  assert.equal(JSON.parse(await fs.readFile(configPath, "utf8")).backgroundEnabled, false);
   const before = (await fs.stat(heartbeat)).size;
   await new Promise((r) => setTimeout(r, 500));
   assert.equal(
@@ -155,15 +142,11 @@ try {
     "graceful stop must terminate the managed child tree",
   );
   assert.equal(
-    await fs
-      .stat(path.join(home, ".remotearc/agent/execution.lock"))
-      .catch(() => null),
+    await fs.stat(path.join(home, ".remotearc/agent/execution.lock")).catch(() => null),
     null,
   );
   assert.equal(
-    await fs
-      .stat(path.join(home, ".remotearc/agent/supervisor.lock"))
-      .catch(() => null),
+    await fs.stat(path.join(home, ".remotearc/agent/supervisor.lock")).catch(() => null),
     null,
   );
   assert(output.includes("recovery retry"));

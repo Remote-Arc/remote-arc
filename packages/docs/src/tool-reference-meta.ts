@@ -24,12 +24,12 @@ export function toolGroup(name: string): ToolGroup {
   if (name === "list_agent_sessions") return "processes";
   if (name.startsWith("shared_tab_")) return "shared-tabs";
   if (name.startsWith("browser_runner_")) return "browser-runner";
-  if (["list_apps", "run_app_read_action", "run_app_write_action"].includes(name) || /^(github|gmail)_/.test(name)) return "apps";
   if (
-    ["create_agent_goal", "get_goal_context", "submit_goal_decision"].includes(
-      name,
-    )
+    ["list_apps", "run_app_read_action", "run_app_write_action"].includes(name) ||
+    /^(github|gmail)_/.test(name)
   )
+    return "apps";
+  if (["create_agent_goal", "get_goal_context", "submit_goal_decision"].includes(name))
     return "goals";
   if (name.includes("automation")) return "tasks";
   if (
@@ -43,50 +43,83 @@ export function toolGroup(name: string): ToolGroup {
 export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   find_skills: {
     zh: "按任务搜索内置、社区、工作流及个人导入的 Skill；搜索结果不代表执行器或模型已安装。",
-    summary: "Find relevant instructions across the Skill library; execution tools and dependencies must be checked separately.",
+    summary:
+      "Find relevant instructions across the Skill library; execution tools and dependencies must be checked separately.",
   },
   read_skill: {
     zh: "读取指定 Skill 的完整说明与辅助资源；执行仍受设备权限和安装条件约束。",
-    summary: "Read a Skill's instructions and helper resources without granting execution permissions.",
+    summary:
+      "Read a Skill's instructions and helper resources without granting execution permissions.",
   },
   browser_runner_wait: {
     zh: "等待用户交接、页面、文本、网址、上传或网络空闲条件，最长 40 秒；等待完成不代表提交成功。",
-    summary: "Wait for a user handoff or page/upload/network condition for up to 40 seconds without confirming a submit.",
+    summary:
+      "Wait for a user handoff or page/upload/network condition for up to 40 seconds without confirming a submit.",
   },
   list_agent_sessions: {
     zh: "查看 Codex、Claude Code 任务的工作目录、活动时间与 Git 元数据；需要设备 Agent 0.6.4 或更新版本。",
-    summary: "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
+    summary:
+      "Inspect coding-agent session metadata and worktrees on a computer with Agent 0.6.4 or later.",
   },
   list_apps: {
     zh: "列出已连接的应用账号（connectionId），并按任务搜索 37 个应用的固定操作目录；只读，不执行任何操作。",
-    summary: "List connected App accounts and search the fixed App action catalog by task. Read-only; never runs an action.",
+    summary:
+      "List connected App accounts and search the fixed App action catalog by task. Read-only; never runs an action.",
   },
   run_app_read_action: {
     zh: "在已连接账号中执行一个只读操作；全部读取操作 ID 都列在工具定义中，参数 Schema 可通过 list_apps 按 ID 查询，不会修改任何数据。",
-    summary: "Run one read-only App action. Every read action ID is listed in the tool definition; list_apps returns its exact argument schema.",
+    summary:
+      "Run one read-only App action. Every read action ID is listed in the tool definition; list_apps returns its exact argument schema.",
   },
   run_app_write_action: {
     zh: "在已连接账号中执行一个用户明确要求的更改（发送、发布、创建、更新或删除）；全部写入操作 ID 都列在工具定义中，受账号权限、OAuth Scope 和写入去重保护。",
-    summary: "Run one user-requested App change, such as send, publish, create, update or delete. Each write action ID is listed in the tool definition and protected by ownership, scopes and replay checks.",
+    summary:
+      "Run one user-requested App change, such as send, publish, create, update or delete. Each write action ID is listed in the tool definition and protected by ownership, scopes and replay checks.",
   },
-  github_repositories_list: { zh: "列出所选 GitHub 账号可访问的仓库。", summary: "List repositories accessible to the selected GitHub account." },
-  github_issues_list: { zh: "列出指定仓库的 Issue。", summary: "List issues in a specified repository." },
+  github_repositories_list: {
+    zh: "列出所选 GitHub 账号可访问的仓库。",
+    summary: "List repositories accessible to the selected GitHub account.",
+  },
+  github_issues_list: {
+    zh: "列出指定仓库的 Issue。",
+    summary: "List issues in a specified repository.",
+  },
   github_issues_get: { zh: "读取指定仓库中的一个 Issue。", summary: "Read one repository issue." },
-  github_pulls_list: { zh: "列出指定仓库的 Pull Request。", summary: "List repository pull requests." },
-  github_comments_list: { zh: "读取指定 Issue 或 Pull Request 的评论。", summary: "Read issue or pull request comments." },
-  github_issues_create: { zh: "按指定标题与内容创建一个 GitHub Issue。", summary: "Create a GitHub issue with the specified title and body." },
-  github_comments_create: { zh: "在指定 Issue 或 Pull Request 中发布评论。", summary: "Publish a comment on an issue or pull request." },
-  gmail_messages_list: { zh: "在所选 Gmail 账号中搜索邮件，返回邮件 ID。", summary: "Search Gmail messages and return message IDs." },
-  gmail_messages_get: { zh: "读取所选 Gmail 账号中的一封邮件。", summary: "Read one Gmail message." },
-  gmail_drafts_create: { zh: "在所选 Gmail 账号中创建草稿，不发送邮件。", summary: "Create a Gmail draft without sending it." },
+  github_pulls_list: {
+    zh: "列出指定仓库的 Pull Request。",
+    summary: "List repository pull requests.",
+  },
+  github_comments_list: {
+    zh: "读取指定 Issue 或 Pull Request 的评论。",
+    summary: "Read issue or pull request comments.",
+  },
+  github_issues_create: {
+    zh: "按指定标题与内容创建一个 GitHub Issue。",
+    summary: "Create a GitHub issue with the specified title and body.",
+  },
+  github_comments_create: {
+    zh: "在指定 Issue 或 Pull Request 中发布评论。",
+    summary: "Publish a comment on an issue or pull request.",
+  },
+  gmail_messages_list: {
+    zh: "在所选 Gmail 账号中搜索邮件，返回邮件 ID。",
+    summary: "Search Gmail messages and return message IDs.",
+  },
+  gmail_messages_get: {
+    zh: "读取所选 Gmail 账号中的一封邮件。",
+    summary: "Read one Gmail message.",
+  },
+  gmail_drafts_create: {
+    zh: "在所选 Gmail 账号中创建草稿，不发送邮件。",
+    summary: "Create a Gmail draft without sending it.",
+  },
   list_devices: {
     zh: "查看账号下的电脑、在线状态与设备能力。",
     summary: "Find your linked computers and their current connection state.",
   },
   device_tools: {
     zh: "查看指定设备可用的工具、参数和当前权限。",
-    summary:
-      "Inspect the actual tool contract and permissions on one computer.",
+    summary: "Inspect the actual tool contract and permissions on one computer.",
   },
   fleet_dispatch: {
     zh: "根据系统、权限、工作目录和负载选择设备，并派发受支持操作。",
@@ -150,11 +183,13 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   },
   request_secret: {
     zh: "通过 Remote Arc 页面向用户索取 API Key、Token 等密钥，不经过聊天；AI 只拿到一次性句柄，用于命令的标准输入或指定网站上的填写。",
-    summary: "Ask the user for an API key or token on a Remote Arc page instead of the chat; the AI gets a one-time handle for a command's stdin or a fill on one site.",
+    summary:
+      "Ask the user for an API key or token on a Remote Arc page instead of the chat; the AI gets a one-time handle for a command's stdin or a fill on one site.",
   },
   start_process: {
     zh: "执行终端命令，或启动可查询、可停止的后台进程；部署、迁移、云管理等技术任务优先使用 CLI/API。",
-    summary: "Run a shell command or managed process; prefer CLI/API for technical tasks such as deployments and migrations.",
+    summary:
+      "Run a shell command or managed process; prefer CLI/API for technical tasks such as deployments and migrations.",
   },
   process_status: {
     zh: "查询由 Remote Arc 管理的后台进程状态。",
@@ -198,17 +233,16 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   },
   browser_runner_start: {
     zh: "为实际网页交互开始或恢复有站点范围限制的浏览器任务；技术任务优先使用 CLI/API。",
-    summary: "Start or resume a scoped browser for webpage interaction; prefer CLI/API for technical tasks.",
+    summary:
+      "Start or resume a scoped browser for webpage interaction; prefer CLI/API for technical tasks.",
   },
   browser_runner_snapshot: {
     zh: "读取任务页面快照、元素引用与需要用户处理的阻碍。",
-    summary:
-      "Read the task page, element references and human-action blockers.",
+    summary: "Read the task page, element references and human-action blockers.",
   },
   browser_runner_act: {
     zh: "使用页面引用进行填写、点击、导航和上传等动作。",
-    summary:
-      "Fill, click, navigate, upload or perform another task-browser action.",
+    summary: "Fill, click, navigate, upload or perform another task-browser action.",
   },
   browser_runner_status: {
     zh: "查看浏览器任务、保存的检查点、资料和提交回执。",
@@ -224,8 +258,7 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   },
   create_automation: {
     zh: "保存获授权的确定性任务、定时工作或条件监听。",
-    summary:
-      "Save authorized deterministic work, a schedule or a condition watch.",
+    summary: "Save authorized deterministic work, a schedule or a condition watch.",
   },
   list_automations: {
     zh: "查看账号下保存的任务及状态。",
@@ -241,8 +274,7 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   },
   create_agent_goal: {
     zh: "创建可保留目标、上下文与检查点的实验性 Agent 工作。",
-    summary:
-      "Create an experimental goal with durable context and checkpoints.",
+    summary: "Create an experimental goal with durable context and checkpoints.",
   },
   get_goal_context: {
     zh: "读取目标当前状态及下一步决策所需上下文。",
@@ -250,8 +282,7 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   },
   submit_goal_decision: {
     zh: "向已有目标提交下一步决策，仍受执行契约限制。",
-    summary:
-      "Submit a next-step decision within an existing goal's execution contract.",
+    summary: "Submit a next-step decision within an existing goal's execution contract.",
   },
   remote_arc_status: {
     zh: "查看本地 MCP 的权限模式与原生执行后端。",

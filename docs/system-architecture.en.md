@@ -2,7 +2,6 @@
 
 > Current platform topology: [Agent platform architecture](agent-platform-architecture.md). This older reference describes the native execution and Connect design. Its experimental hosted-planner language does not describe the current Arc Chat runtime.
 
-
 **Status:** Architecture reference for the Remote Arc 0.6.0 product line, updated 9 October 2026. This is an architectural description, **not a statement that every prototype described below is available in production**. See [product documentation](https://remotearc.app/docs), [releases](https://remotearc.app/releases), and [the Chinese reference](system-architecture.md).
 
 Some Source Agent goals, MCP event-driven wakeup, hosted planning, adaptive continuation and isolation features are experimental or conditional on host integrations. A saved Task is not an immortal AI session. The current shipping contract is best understood through the [long-running work guide](https://remotearc.app/docs/long-running-work) and the actual installed Agent version. For implementation checkpoints see [PLAN.md](../PLAN.md) and the [engineering progress log](long-running-work-progress.md).
@@ -15,17 +14,17 @@ The user interacts with an existing chat or coding host. Ordinary file reads, su
 
 Three system responsibilities must not be conflated:
 
-| Layer | Role | Where it runs |
-| --- | --- | --- |
-| Reasoning controller | Select actions from observations, decide whether work has finished and explain blockers | An active Chat / Work / Codex / compatible host, or an explicitly selected experimental hosted planner |
-| Hosted control plane | Authenticate, route, persist deterministic work, schedules, checkpoints, leases and audit events | Cloudflare Worker, Durable Objects and D1 |
-| Device execution plane | Enforce local capabilities and execute files, processes, terminal operations and supported Local Undo | Go Agent + independent Go Execution Core on the paired computer |
+| Layer                  | Role                                                                                                  | Where it runs                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Reasoning controller   | Select actions from observations, decide whether work has finished and explain blockers               | An active Chat / Work / Codex / compatible host, or an explicitly selected experimental hosted planner |
+| Hosted control plane   | Authenticate, route, persist deterministic work, schedules, checkpoints, leases and audit events      | Cloudflare Worker, Durable Objects and D1                                                              |
+| Device execution plane | Enforce local capabilities and execute files, processes, terminal operations and supported Local Undo | Go Agent + independent Go Execution Core on the paired computer                                        |
 
 An MCP integration does **not** grant Remote Arc the ability to keep the original AI host thinking after its session ends. Deterministic work can continue without continuous model inference; new judgment needs a supported active controller.
 
 ## 2. End-to-end architecture
 
-~~~mermaid
+```mermaid
 flowchart TB
   User[User and device policy] --> AI[ChatGPT / Claude / Codex / MCP client]
   User --> UI[Remote Arc Dashboard]
@@ -39,23 +38,23 @@ flowchart TB
   Agent --> Core[Independent Go Execution Core]
   Core --> OS[Local files / terminal / processes / Undo]
   Agent --> Logs[Local journal and Undo snapshots]
-~~~
+```
 
 The Worker validates account identity, OAuth grants, entitlement and device policy. A Durable Object owns routing to the connected device. D1 stores persistent metadata, not a live operating-system session. The Go Agent and Core are distinct modules **compiled into one native executable**; there is no extra Agent-to-Core network hop.
 
 ### Repository map
 
-| Location | Responsibility |
-| --- | --- |
-| apps/relay/src/index.ts | HTTP, OAuth, MCP, device and automation entry points |
-| apps/relay/src/devices/registry.ts / device-call.ts | Connection routing, authorization and device-call audit |
-| apps/relay/src/tasks/automations.ts / automation-store.ts | Bounded durable task state, leases, runs and journal |
-| apps/relay/src/tasks/source-goals.ts | Experimental source-controller context and idempotent decisions |
-| apps/relay/src/tasks/task-events.ts | Event subscription and callback integration subject to safe egress deployment |
-| apps/agent | Native Go pairing, session, control endpoint, startup recovery and logs |
-| packages/execution-core | Go filesystem, process, policy and Undo module |
-| packages/cli | npm/npx launcher that verifies and starts the Go Agent |
-| apps/ui | Public documentation, pairing, Dashboard and device-policy UI |
+| Location                                                  | Responsibility                                                                |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| apps/relay/src/index.ts                                   | HTTP, OAuth, MCP, device and automation entry points                          |
+| apps/relay/src/devices/registry.ts / device-call.ts       | Connection routing, authorization and device-call audit                       |
+| apps/relay/src/tasks/automations.ts / automation-store.ts | Bounded durable task state, leases, runs and journal                          |
+| apps/relay/src/tasks/source-goals.ts                      | Experimental source-controller context and idempotent decisions               |
+| apps/relay/src/tasks/task-events.ts                       | Event subscription and callback integration subject to safe egress deployment |
+| apps/agent                                                | Native Go pairing, session, control endpoint, startup recovery and logs       |
+| packages/execution-core                                   | Go filesystem, process, policy and Undo module                                |
+| packages/cli                                              | npm/npx launcher that verifies and starts the Go Agent                        |
+| apps/ui                                                   | Public documentation, pairing, Dashboard and device-policy UI                 |
 
 ### Release 0.6.x installation
 
@@ -63,19 +62,19 @@ A standalone signed/checksummed release binary or Homebrew install runs without 
 
 ## 3. Capability matrix
 
-| Capability | Scope and limitations |
-| --- | --- |
-| Device discovery | Account-owned paired devices only; online status does not itself grant execution |
-| File tools | Read, inspect, write and exact replacements subject to per-device skills and path policy |
-| Local Undo | Supported file edits snapshot the prior state on-device, check revision conflicts before restoring; **not** a rollback for shell, deployments or third-party APIs |
-| Terminal and managed processes | Execute under the local OS user when separately authorized; working-directory limits **are not an OS sandbox** |
-| Chrome Companion | Explicitly shared tabs; read-only by default, independently authorized click/fill on selected tabs |
-| Background Agent recovery | User-login service or supervisor and single execution owner; requires available power, login and networking |
-| Deterministic long Tasks | Execute approved known commands, monitor status and record the result; no independent new AI reasoning |
-| Schedule / condition watch | Trigger approved work at a future time, interval or supported event; not a full calendar cron engine |
-| Adaptive hosted / source goals | Controller-dependent or experimental; verify current capability before claiming autonomous continuation |
-| Keep-awake | Short, scoped operating-system power requests; cannot defeat shutdown, forced sleep or power loss |
-| Cloud-side GitHub actions | Separate explicitly authorized integration; ambiguous external effects cannot be blindly replayed |
+| Capability                     | Scope and limitations                                                                                                                                             |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Device discovery               | Account-owned paired devices only; online status does not itself grant execution                                                                                  |
+| File tools                     | Read, inspect, write and exact replacements subject to per-device skills and path policy                                                                          |
+| Local Undo                     | Supported file edits snapshot the prior state on-device, check revision conflicts before restoring; **not** a rollback for shell, deployments or third-party APIs |
+| Terminal and managed processes | Execute under the local OS user when separately authorized; working-directory limits **are not an OS sandbox**                                                    |
+| Chrome Companion               | Explicitly shared tabs; read-only by default, independently authorized click/fill on selected tabs                                                                |
+| Background Agent recovery      | User-login service or supervisor and single execution owner; requires available power, login and networking                                                       |
+| Deterministic long Tasks       | Execute approved known commands, monitor status and record the result; no independent new AI reasoning                                                            |
+| Schedule / condition watch     | Trigger approved work at a future time, interval or supported event; not a full calendar cron engine                                                              |
+| Adaptive hosted / source goals | Controller-dependent or experimental; verify current capability before claiming autonomous continuation                                                           |
+| Keep-awake                     | Short, scoped operating-system power requests; cannot defeat shutdown, forced sleep or power loss                                                                 |
+| Cloud-side GitHub actions      | Separate explicitly authorized integration; ambiguous external effects cannot be blindly replayed                                                                 |
 
 ## 4. Authentication, policy and trust boundaries
 
@@ -95,7 +94,7 @@ For actual operator guidance, see the [security model](https://remotearc.app/sec
 
 A durable contract records the target device, approved tools and locations, known command or goal, success criteria, optional verification, schedule/trigger, owner, limits and expiry.
 
-~~~mermaid
+```mermaid
 stateDiagram-v2
   [*] --> waiting
   waiting --> running: Due and lease acquired
@@ -108,7 +107,7 @@ stateDiagram-v2
   running --> failed: Nonrecoverable error or exhausted budget
   waiting --> cancelled: User cancellation or revoked permission
   waiting --> expired: Deadline exceeded
-~~~
+```
 
 A Task can persist while a user closes a chat. That does not guarantee a model is still deciding its next step. An unverified completion claim is different from an independent test; where practical, configure a verification command and keep the evidence with the result.
 
@@ -163,13 +162,13 @@ Useful debugging signals include Relay routing and connection status, device ses
 
 ## 12. Storage and privacy model
 
-| Storage area | Example data |
-| --- | --- |
-| D1 accounts / devices / OAuth | Ownership, device credential hashes, grants, expiries and policies |
-| D1 Tasks / runs / journal | Approved contracts, bounded observations, checkpoints, leases, factual progress and results |
-| D1 event subscriptions (when enabled) | Callback metadata, encrypted signing secrets and delivery bookkeeping |
-| Durable Objects | Live user/device routing and transient connection ownership |
-| Local Agent data | Device pairing material, process state, local journal and bounded Undo snapshots |
+| Storage area                          | Example data                                                                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| D1 accounts / devices / OAuth         | Ownership, device credential hashes, grants, expiries and policies                          |
+| D1 Tasks / runs / journal             | Approved contracts, bounded observations, checkpoints, leases, factual progress and results |
+| D1 event subscriptions (when enabled) | Callback metadata, encrypted signing secrets and delivery bookkeeping                       |
+| Durable Objects                       | Live user/device routing and transient connection ownership                                 |
+| Local Agent data                      | Device pairing material, process state, local journal and bounded Undo snapshots            |
 
 File contents, tool arguments and command output may **transit through** the hosted Relay and the selected AI provider during active execution. HTTPS/WSS transport is not zero-knowledge end-to-end encryption. Routine audit logs aim to store operational metadata rather than raw file content; saved Tasks may intentionally retain bounded command output or observations as part of their contract. Always review the [privacy policy](https://remotearc.app/privacy).
 
@@ -183,4 +182,4 @@ A release is not complete merely because a binary compiles: test real permission
 
 ---
 
-*This reference describes trust boundaries and engineering contracts. Check the deployed product and your own Agent version for feature availability. Historical prototypes and test mocks do not make host-controlled AI continuation or event wakeup a guaranteed shipped capability.*
+_This reference describes trust boundaries and engineering contracts. Check the deployed product and your own Agent version for feature availability. Historical prototypes and test mocks do not make host-controlled AI continuation or event wakeup a guaranteed shipped capability._

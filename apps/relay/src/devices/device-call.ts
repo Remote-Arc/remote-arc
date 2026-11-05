@@ -1,8 +1,8 @@
-import {identityTrace} from '../analytics/observation-context.js';
-import {classifyExpectedMcpError} from '../mcp/mcp-errors.js';
-import {browserAuthForDevice, NO_BROWSER_AUTH} from "../browser/browser-auth.js";
-import {recordProductEvent} from '../analytics/product-events.js';
-import { processTimeoutError } from './call-timeout.js';
+import { identityTrace } from "../analytics/observation-context.js";
+import { classifyExpectedMcpError } from "../mcp/mcp-errors.js";
+import { browserAuthForDevice, NO_BROWSER_AUTH } from "../browser/browser-auth.js";
+import { recordProductEvent } from "../analytics/product-events.js";
+import { processTimeoutError } from "./call-timeout.js";
 import type { OAuthIdentity } from "../auth/auth.js";
 import { writeAudit } from "../analytics/audit.js";
 import { recordMcpTelemetry } from "../analytics/relay-telemetry.js";
@@ -24,7 +24,11 @@ export function isDeviceCallTimeoutError(error: unknown): boolean {
 
 export class UncertainDeviceDispatchError extends Error {
   constructor(readonly tool: string) {
-    super("Device did not acknowledge " + tool + "; the operation may still be running. Inspect the device before any new dispatch.");
+    super(
+      "Device did not acknowledge " +
+        tool +
+        "; the operation may still be running. Inspect the device before any new dispatch.",
+    );
     this.name = "UncertainDeviceDispatchError";
   }
 }
@@ -50,8 +54,7 @@ const parseStoredStringArray = (value: string | null) => {
   }
 };
 
-const registry = (env: DeviceCallEnv, userId: string) =>
-  env.REGISTRY.getByName("user:" + userId);
+const registry = (env: DeviceCallEnv, userId: string) => env.REGISTRY.getByName("user:" + userId);
 
 export async function callDevice(
   env: DeviceCallEnv,
@@ -93,17 +96,30 @@ export async function callDevice(
   // the call reaches a device that cannot serve it.
   if (isBrowserRunnerTool(tool) && ownedDevice.platform === "browser") {
     throw new Error(
-      'tool "' + tool + '" is not available on a browser extension device. browser_runner runs on a linked computer; for this shared tab use shared_tab_read, shared_tab_click or shared_tab_fill.',
+      'tool "' +
+        tool +
+        '" is not available on a browser extension device. browser_runner runs on a linked computer; for this shared tab use shared_tab_read, shared_tab_click or shared_tab_fill.',
     );
   }
-  if (/^browser_(?!runner_)/.test(tool) && ownedDevice.platform && ownedDevice.platform !== "browser") {
+  if (
+    /^browser_(?!runner_)/.test(tool) &&
+    ownedDevice.platform &&
+    ownedDevice.platform !== "browser"
+  ) {
     throw new Error(
-      'tool "' + tool + '" is not available on this computer. Shared-tab tools need the browser extension device; for a background browser task on this computer use browser_runner_start.',
+      'tool "' +
+        tool +
+        '" is not available on this computer. Shared-tab tools need the browser extension device; for a background browser task on this computer use browser_runner_start.',
     );
   }
 
-  if ([env.REVIEWER_DEMO_DEVICE_ID, env.ANTHROPIC_REVIEWER_DEMO_DEVICE_ID].some((id) => id && id === deviceId)) {
-    if (!isReviewerFixture(env, identity.userId, deviceId)) throw new Error("review fixture owner mismatch");
+  if (
+    [env.REVIEWER_DEMO_DEVICE_ID, env.ANTHROPIC_REVIEWER_DEMO_DEVICE_ID].some(
+      (id) => id && id === deviceId,
+    )
+  ) {
+    if (!isReviewerFixture(env, identity.userId, deviceId))
+      throw new Error("review fixture owner mismatch");
     if (!REVIEWER_DEMO_TOOLS.includes(tool as (typeof REVIEWER_DEMO_TOOLS)[number])) {
       throw new Error('tool "' + tool + '" is disabled for the isolated review fixture');
     }
@@ -149,7 +165,20 @@ export async function callDevice(
     // A one-time secret is only spent by start_process on a computer, or by
     // a fill in the browser, so it needs that permission.
     const secretTool = tool === "secret_prepare" || tool === "secret_deliver";
-    const permissionTool = tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool === "goal_workspace" ? "start_process" : tool === "list_agent_sessions" ? "read_file" : tool === "browser_open_tab" || tool === "browser_act" ? "browser_click" : secretTool ? (ownedDevice.platform === "browser" ? "browser_click" : "start_process") : tool;
+    const permissionTool =
+      tool === "browser_runner_wait"
+        ? "browser_runner_snapshot"
+        : tool === "goal_workspace"
+          ? "start_process"
+          : tool === "list_agent_sessions"
+            ? "read_file"
+            : tool === "browser_open_tab" || tool === "browser_act"
+              ? "browser_click"
+              : secretTool
+                ? ownedDevice.platform === "browser"
+                  ? "browser_click"
+                  : "start_process"
+                : tool;
     if (!allowedTools.includes(permissionTool)) {
       throw new Error('tool "' + tool + '" is disabled for this device');
     }
@@ -158,30 +187,30 @@ export async function callDevice(
   // browser_runner acts on websites for the user. It is never implied by a
   // legacy device with no stored tool list: each tool must be enabled
   // explicitly for this computer.
-  if (isBrowserRunnerTool(tool) && !parseStoredStringArray(ownedDevice.allowed_tools).includes(tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool)) {
+  if (
+    isBrowserRunnerTool(tool) &&
+    !parseStoredStringArray(ownedDevice.allowed_tools).includes(
+      tool === "browser_runner_wait" ? "browser_runner_snapshot" : tool,
+    )
+  ) {
     throw new Error(
-      'tool "' + tool + '" is disabled for this device. Enable browser_runner for this computer in the Remote Arc dashboard.',
+      'tool "' +
+        tool +
+        '" is disabled for this device. Enable browser_runner for this computer in the Remote Arc dashboard.',
     );
   }
 
   const workspaceRoots = parseStoredStringArray(ownedDevice.workspace_roots);
-  const workspaceRequiredTools = new Set([
-    "undo_last_change",
-    "undo_change",
-    "start_process",
-  ]);
-  if (
-    workspaceRequiredTools.has(tool) &&
-    workspaceRoots.length === 0 &&
-    !taskWorkspaceRoot
-  ) {
-    throw new Error(
-      'tool "' + tool + '" requires a Trusted Write Location on this device',
-    );
+  const workspaceRequiredTools = new Set(["undo_last_change", "undo_change", "start_process"]);
+  if (workspaceRequiredTools.has(tool) && workspaceRoots.length === 0 && !taskWorkspaceRoot) {
+    throw new Error('tool "' + tool + '" requires a Trusted Write Location on this device');
   }
 
   const requestId = crypto.randomUUID();
-  const scopeChange = tool === "browser_runner_start" && typeof args.scope_change_reason === "string" && args.scope_change_reason.trim().length > 0;
+  const scopeChange =
+    tool === "browser_runner_start" &&
+    typeof args.scope_change_reason === "string" &&
+    args.scope_change_reason.trim().length > 0;
   const mutationTarget = approvalTargetPath(tool, args);
   const approvedWrite = mutationTarget
     ? await findApprovedWriteApproval(env, identity, deviceId, tool, args)
@@ -191,15 +220,14 @@ export async function callDevice(
   // needed before any new site reaches the Go Agent.
   if (scopeChange && !approvedWrite) {
     const approval = await requestWriteApproval(env, { identity, deviceId, requestId, tool, args });
-    throw new Error("SCOPE_CHANGE_REQUIRED: approve the exact sites in Dashboard Security & access / Pending approvals (" + (approval?.id ?? "pending") + ") and retry the same request.");
+    throw new Error(
+      "SCOPE_CHANGE_REQUIRED: approve the exact sites in Dashboard Security & access / Pending approvals (" +
+        (approval?.id ?? "pending") +
+        ") and retry the same request.",
+    );
   }
 
-  if (
-    mutationTarget &&
-    workspaceRoots.length === 0 &&
-    !approvedWrite &&
-    !taskWorkspaceRoot
-  ) {
+  if (mutationTarget && workspaceRoots.length === 0 && !approvedWrite && !taskWorkspaceRoot) {
     const approval = await requestWriteApproval(env, {
       identity,
       deviceId,
@@ -209,10 +237,7 @@ export async function callDevice(
     });
     throw new Error(
       approval
-        ? "Remote Arc approval required (" +
-            approval.id +
-            ") before writing " +
-            mutationTarget
+        ? "Remote Arc approval required (" + approval.id + ") before writing " + mutationTarget
         : "Remote Arc approval required before this out-of-scope write",
     );
   }
@@ -227,17 +252,14 @@ export async function callDevice(
   ]);
   const effectiveWorkspaceRoots = readOnlyPathTools.has(tool)
     ? []
-    : [
-        ...workspaceRoots,
-        ...(approvedWrite && !scopeChange ? [approvedWrite.target_path] : []),
-      ];
+    : [...workspaceRoots, ...(approvedWrite && !scopeChange ? [approvedWrite.target_path] : [])];
 
-  let effectiveArgs = tool === "browser_runner_start"
-    ? { ...args, scope_change_approved: scopeChange && !!approvedWrite }
-    : args;
+  let effectiveArgs =
+    tool === "browser_runner_start"
+      ? { ...args, scope_change_approved: scopeChange && !!approvedWrite }
+      : args;
   if (tool === "start_process") {
-    const explicitCwd =
-      typeof args.cwd === "string" && args.cwd.trim() ? args.cwd : undefined;
+    const explicitCwd = typeof args.cwd === "string" && args.cwd.trim() ? args.cwd : undefined;
     const implicitCwd =
       !explicitCwd && taskWorkspaceRoot
         ? taskWorkspaceRoot
@@ -259,16 +281,20 @@ export async function callDevice(
   if (isBrowserRunnerTool(tool) && identity.clientId !== "dashboard") {
     const sessionId = tool === "browser_runner_start" ? args.task_id : args.session_id;
     if (typeof sessionId === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(sessionId)) {
-      await env.DB.prepare("INSERT INTO runner_session_links(user_id,device_id,session_id,run_id) VALUES(?1,?2,?3,?4) ON CONFLICT(user_id,device_id,session_id) DO UPDATE SET run_id=excluded.run_id")
-        .bind(identity.userId,deviceId,sessionId,runnerRunId || null).run();
+      await env.DB.prepare(
+        "INSERT INTO runner_session_links(user_id,device_id,session_id,run_id) VALUES(?1,?2,?3,?4) ON CONFLICT(user_id,device_id,session_id) DO UPDATE SET run_id=excluded.run_id",
+      )
+        .bind(identity.userId, deviceId, sessionId, runnerRunId || null)
+        .run();
     }
   }
 
-  const browserAuth = (isBrowserRunnerTool(tool) || /^browser_/.test(tool))
-    ? options.browserAuthentication === "user"
-      ? { ...NO_BROWSER_AUTH, origins: [] }
-      : await browserAuthForDevice(env, identity.userId, deviceId)
-    : undefined;
+  const browserAuth =
+    isBrowserRunnerTool(tool) || /^browser_/.test(tool)
+      ? options.browserAuthentication === "user"
+        ? { ...NO_BROWSER_AUTH, origins: [] }
+        : await browserAuthForDevice(env, identity.userId, deviceId)
+      : undefined;
   const registryRequest = () =>
     new Request("https://registry/call", {
       method: "POST",
@@ -282,7 +308,7 @@ export async function callDevice(
         tool,
         arguments: effectiveArgs,
         policy: {
-          ...(browserAuth ? {browserAuth} : {}),
+          ...(browserAuth ? { browserAuth } : {}),
           ...(taskWorkspaceRoot ? { taskWorkspaceRoot } : {}),
           workspaceRoots: effectiveWorkspaceRoots,
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
@@ -294,9 +320,15 @@ export async function callDevice(
           // Background origin is established by server-side identity/run routing,
           // never by arguments supplied by the model. Routines/Arc runs must not
           // interrupt a person who happens to be using the destination computer.
-          runnerAttentionMode: identity.clientId.startsWith("automation:") || runnerRunId || ownedDevice.runner_attention_mode === "notify_only"
-            ? "notify_only" : "show_and_notify",
-          browserRunnerEnabled: parseStoredStringArray(ownedDevice.allowed_tools).includes("browser_runner_act"),
+          runnerAttentionMode:
+            identity.clientId.startsWith("automation:") ||
+            runnerRunId ||
+            ownedDevice.runner_attention_mode === "notify_only"
+              ? "notify_only"
+              : "show_and_notify",
+          browserRunnerEnabled: parseStoredStringArray(ownedDevice.allowed_tools).includes(
+            "browser_runner_act",
+          ),
         },
       }),
     });
@@ -313,18 +345,22 @@ export async function callDevice(
     : payload.error?.startsWith("Blocked by Remote Arc Safety Guard:")
       ? "safety_guard_block"
       : "device_error";
-  const deviceErrorCode=success?undefined:isDeviceCallTimeoutError(payload.error)?'DEVICE_TIMEOUT':payload.error==='device offline'?'DEVICE_OFFLINE':classifyExpectedMcpError(payload.error)?.code||'REQUEST_FAILED';
-  if(deviceErrorCode==='DEVICE_TIMEOUT')outcome='device_timeout';
-  if(deviceErrorCode==='DEVICE_OFFLINE')outcome='device_offline';
+  const deviceErrorCode = success
+    ? undefined
+    : isDeviceCallTimeoutError(payload.error)
+      ? "DEVICE_TIMEOUT"
+      : payload.error === "device offline"
+        ? "DEVICE_OFFLINE"
+        : classifyExpectedMcpError(payload.error)?.code || "REQUEST_FAILED";
+  if (deviceErrorCode === "DEVICE_TIMEOUT") outcome = "device_timeout";
+  if (deviceErrorCode === "DEVICE_OFFLINE") outcome = "device_offline";
 
   if (
     !success &&
     mutationTarget &&
     !approvedWrite &&
-    (
-      payload.error?.startsWith("Blocked by Remote Arc Trusted Write Locations:") ||
-      payload.error?.startsWith("Blocked by Remote Arc Workspace Scope:")
-    )
+    (payload.error?.startsWith("Blocked by Remote Arc Trusted Write Locations:") ||
+      payload.error?.startsWith("Blocked by Remote Arc Workspace Scope:"))
   ) {
     const approval = await requestWriteApproval(env, {
       identity,
@@ -335,10 +371,7 @@ export async function callDevice(
     });
     if (approval) {
       payload.error =
-        "Remote Arc approval required (" +
-        approval.id +
-        ") before writing " +
-        mutationTarget;
+        "Remote Arc approval required (" + approval.id + ") before writing " + mutationTarget;
       outcome = "approval_required";
     }
   }
@@ -355,7 +388,21 @@ export async function callDevice(
     outcome,
   }).catch(() => undefined);
 
-  await recordProductEvent(env,{domain:'devices',name:'device.tool.completed',source:'server',outcome:success?'succeeded':'failed',userId:identity.userId,traceId:identityTrace(identity),entityId:deviceId,deviceId,operation:tool,route:/^[a-z_]{1,80}$/.test(tool)?'/device-tools/'+tool:'/device-tools/:redacted',httpStatus:success?200:502,errorCode:deviceErrorCode,durationMs:Date.now()-started});
+  await recordProductEvent(env, {
+    domain: "devices",
+    name: "device.tool.completed",
+    source: "server",
+    outcome: success ? "succeeded" : "failed",
+    userId: identity.userId,
+    traceId: identityTrace(identity),
+    entityId: deviceId,
+    deviceId,
+    operation: tool,
+    route: /^[a-z_]{1,80}$/.test(tool) ? "/device-tools/" + tool : "/device-tools/:redacted",
+    httpStatus: success ? 200 : 502,
+    errorCode: deviceErrorCode,
+    durationMs: Date.now() - started,
+  });
 
   recordMcpTelemetry(env, {
     kind: "device_tool",

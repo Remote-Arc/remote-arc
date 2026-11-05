@@ -14,12 +14,8 @@ for (const [running, published, expected] of [
   assert.equal(isOlderRelease(running, published), expected, running + " vs " + published);
 }
 
-assert.deepEqual(goUpdateCommands("0.6.3", true), [
-  "npx -y remotelink@0.6.3 --background",
-]);
-assert.deepEqual(goUpdateCommands("0.6.3", false), [
-  "npx -y remotelink@0.6.3 --foreground",
-]);
+assert.deepEqual(goUpdateCommands("0.6.3", true), ["npx -y remotelink@0.6.3 --background"]);
+assert.deepEqual(goUpdateCommands("0.6.3", false), ["npx -y remotelink@0.6.3 --foreground"]);
 for (const bad of ["", "latest;rm -rf", "0.6.1-rc.5", "https://example.com"]) {
   assert.throws(() => goUpdateCommands(bad, true), /Invalid stable/);
 }

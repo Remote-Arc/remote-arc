@@ -15,17 +15,38 @@ export function useDashboardDialogs({ tr }: { tr: Translate }) {
     if (!dialog || !dialogElement.current) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const host = dialogElement.current;
-    const controls = () => Array.from(host.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]')).filter(item => item.getClientRects().length);
-    (dialog.kind === 'prompt' ? host.querySelector<HTMLInputElement>('input') : controls()[0])?.focus();
+    const controls = () =>
+      Array.from(
+        host.querySelectorAll<HTMLElement>(
+          "button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]",
+        ),
+      ).filter((item) => item.getClientRects().length);
+    (dialog.kind === "prompt"
+      ? host.querySelector<HTMLInputElement>("input")
+      : controls()[0]
+    )?.focus();
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); settleDialog(dialog.kind === 'notice' ? true : null); }
-      if (event.key !== 'Tab') return;
-      const items = controls(), first = items[0], last = items.at(-1);
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        settleDialog(dialog.kind === "notice" ? true : null);
+      }
+      if (event.key !== "Tab") return;
+      const items = controls(),
+        first = items[0],
+        last = items.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     };
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('keydown', onKey); if (previous?.isConnected) previous.focus(); };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (previous?.isConnected) previous.focus();
+    };
   }, [dialog]);
 
   function settleDialog(value: boolean | string | null) {
@@ -76,8 +97,7 @@ export function useDashboardDialogs({ tr }: { tr: Translate }) {
     confirmLabel = tr("Save", "保存"),
   ) {
     return new Promise<string | null>((resolve) => {
-      dialogResolver.current = (value) =>
-        resolve(typeof value === "string" ? value : null);
+      dialogResolver.current = (value) => resolve(typeof value === "string" ? value : null);
       setDialogValue(initialValue);
       setDialog({
         kind: "prompt",
@@ -91,7 +111,18 @@ export function useDashboardDialogs({ tr }: { tr: Translate }) {
     });
   }
 
-  return { dialog, setDialog, dialogValue, setDialogValue, dialogResolver, dialogElement, settleDialog, showNotice, askConfirm, askPrompt };
+  return {
+    dialog,
+    setDialog,
+    dialogValue,
+    setDialogValue,
+    dialogResolver,
+    dialogElement,
+    settleDialog,
+    showNotice,
+    askConfirm,
+    askPrompt,
+  };
 }
 
 export type DashboardDialogs = ReturnType<typeof useDashboardDialogs>;

@@ -16,21 +16,21 @@ There is **no backup confirmation field**. When pending D1 migrations exist, the
 
 ## What's included
 
-| Target | Actual action |
-| --- | --- |
-| `remote-link-auth` D1 | Inspect the remote migration ledger. If new migrations are pending, perform verified encrypted backup, apply SQL migrations, and verify no pending entries remain. No pending migrations means no database writes. |
-| `remote-link-relay` Worker | Build and publish current `master` Relay code, MCP, Apps/OAuth, device pairing and Admin APIs. |
-| Website + Dashboards | Build and publish static assets for `remotearc.app`, `agent.remotearc.app`, `admin.remotearc.app`, `mcp.remotearc.app` through the Worker. |
-| Apps vault | Ensure required secret exists; do not rotate an existing vault key. |
-| Production smoke | Verify deployed commit SHA and public marketing, Connect, MCP, OAuth and dashboard behavior. |
+| Target                     | Actual action                                                                                                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `remote-link-auth` D1      | Inspect the remote migration ledger. If new migrations are pending, perform verified encrypted backup, apply SQL migrations, and verify no pending entries remain. No pending migrations means no database writes. |
+| `remote-link-relay` Worker | Build and publish current `master` Relay code, MCP, Apps/OAuth, device pairing and Admin APIs.                                                                                                                     |
+| Website + Dashboards       | Build and publish static assets for `remotearc.app`, `agent.remotearc.app`, `admin.remotearc.app`, `mcp.remotearc.app` through the Worker.                                                                         |
+| Apps vault                 | Ensure required secret exists; do not rotate an existing vault key.                                                                                                                                                |
+| Production smoke           | Verify deployed commit SHA and public marketing, Connect, MCP, OAuth and dashboard behavior.                                                                                                                       |
 
 **Not included:** publishing the `remotelink` npm package or updating local Go Agents on Windows/macOS/Linux.
 
 ## Optional switches
 
-**enable_stripe**: additional **live payment activation** only *after successful smoke*. Turning it off **does not disable previously enabled payments** and is not required for normal code deployments. This step uses existing audited activation scripts and readiness checks.
+**enable_stripe**: additional **live payment activation** only _after successful smoke_. Turning it off **does not disable previously enabled payments** and is not required for normal code deployments. This step uses existing audited activation scripts and readiness checks.
 
-**enable_openai**: additional **hosted model and trial activation** only *after successful smoke*, with existing funding/budget checks. Turning it off **does not disable previously enabled models**. Do not enable during an ordinary Connect-only release.
+**enable_openai**: additional **hosted model and trial activation** only _after successful smoke_, with existing funding/budget checks. Turning it off **does not disable previously enabled models**. Do not enable during an ordinary Connect-only release.
 
 ## Troubleshooting
 

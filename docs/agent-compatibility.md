@@ -25,21 +25,21 @@ from this table.
 "First release" is the first stable `remotelink` release containing the
 capability.
 
-| Capability | First release | With an older Agent |
-| --- | --- | --- |
-| `device_policy_v1` | 0.3.9 | The dashboard reports that policy enforcement is unavailable on this device |
-| `undo_history_v1` | 0.3.9 | Local Undo history is unavailable in the dashboard |
-| `background_agent_v1` | 0.4.0 | The background option is unavailable unless the device was previously seen in the background |
-| `background_recovery_v2` | 0.4.4 | Background recovery controls are unavailable |
-| `device_stop_v1` | 0.6.1 | Stopping the Agent from the dashboard is unavailable |
-| `device_pause_v1` | 0.6.1 | Pausing the Agent from the dashboard is unavailable |
-| `browser_runner_v1` | 0.6.2 | Reported only; the task browser depends on the device advertising its tools |
-| `runner_view_v1` | 0.6.5 | Live view returns 409 with "Update Agent to enable live view" |
-| `browser_auth_policy_v1` | 0.6.5 | Filling sign-in fields is refused with `BROWSER_AUTH_UPDATE_REQUIRED` |
-| `runner_video_v1` | 0.6.5 | Live video is unavailable |
-| `one_time_secret_v1` | Unreleased (after 0.6.5) | `request_secret` fails with `SECRET_UNSUPPORTED` and asks the user to update the Agent; it also needs terminal mode |
-| `go_agent_v1` | 0.6.0 | Reported only; identifies the Go runtime |
-| `native_core_v1` | 0.3.9 | Reported only; identifies the native Execution Core |
+| Capability               | First release            | With an older Agent                                                                                                 |
+| ------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `device_policy_v1`       | 0.3.9                    | The dashboard reports that policy enforcement is unavailable on this device                                         |
+| `undo_history_v1`        | 0.3.9                    | Local Undo history is unavailable in the dashboard                                                                  |
+| `background_agent_v1`    | 0.4.0                    | The background option is unavailable unless the device was previously seen in the background                        |
+| `background_recovery_v2` | 0.4.4                    | Background recovery controls are unavailable                                                                        |
+| `device_stop_v1`         | 0.6.1                    | Stopping the Agent from the dashboard is unavailable                                                                |
+| `device_pause_v1`        | 0.6.1                    | Pausing the Agent from the dashboard is unavailable                                                                 |
+| `browser_runner_v1`      | 0.6.2                    | Reported only; the task browser depends on the device advertising its tools                                         |
+| `runner_view_v1`         | 0.6.5                    | Live view returns 409 with "Update Agent to enable live view"                                                       |
+| `browser_auth_policy_v1` | 0.6.5                    | Filling sign-in fields is refused with `BROWSER_AUTH_UPDATE_REQUIRED`                                               |
+| `runner_video_v1`        | 0.6.5                    | Live video is unavailable                                                                                           |
+| `one_time_secret_v1`     | Unreleased (after 0.6.5) | `request_secret` fails with `SECRET_UNSUPPORTED` and asks the user to update the Agent; it also needs terminal mode |
+| `go_agent_v1`            | 0.6.0                    | Reported only; identifies the Go runtime                                                                            |
+| `native_core_v1`         | 0.3.9                    | Reported only; identifies the native Execution Core                                                                 |
 
 The Chrome Companion reports its own capabilities, such as
 `browser_auth_policy_v1` and `one_time_secret_v1` (extension 0.4.4), and the

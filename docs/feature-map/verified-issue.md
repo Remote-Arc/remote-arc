@@ -15,4 +15,3 @@ Recovery: an acknowledged creation without read-back is partial, never complete.
 Drive using dialog labels above and the named Create issue and verify button. Inspect Execution receipt → Evidence and changes, then compare the acknowledged result with GitHub if doing a separately authorized live test.
 
 Regression: arc-verification-test.ts covers frozen scope, preflight read permission, exact full-body verification, restored decisions, false completion, acknowledgement-only partial success and unknown-write stopping. Automated tests use synthetic repository/provider responses.
-

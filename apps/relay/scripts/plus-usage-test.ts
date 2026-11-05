@@ -17,7 +17,10 @@ const { db, sql, now, addUser } = createWorkerFixture();
 addUser("alice");
 addUser("bob");
 addUser("carol");
-sql.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)")
+sql
+  .prepare(
+    "INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at) VALUES(?,?,?,?,?,?)",
+  )
   .run("laptop", "alice", "Laptop", "darwin", "hash-laptop", now);
 
 // 1. Binary chunk normalization & envelope parsing
@@ -50,10 +53,7 @@ assert.equal(binaryChunkResult({ content: [{ type: "image", data: "..." }] }), n
 assert.equal(binaryChunkResult({ content: [{ type: "text", text: "invalid-json" }] }), null);
 
 const wrappedValid = {
-  content: [
-    { type: "other" },
-    { type: "text", text: JSON.stringify(directValid) },
-  ],
+  content: [{ type: "other" }, { type: "text", text: JSON.stringify(directValid) }],
 };
 const parsedWrapped = binaryChunkResult(wrappedValid);
 assert.ok(parsedWrapped);
@@ -72,7 +72,11 @@ await assert.rejects(
 );
 
 // Zero delta is a no-op
-await recordPlusUsage({ DB: db }, "alice", { binary_bytes: 0, planner_turns: 0, task_runtime_seconds: 0 });
+await recordPlusUsage({ DB: db }, "alice", {
+  binary_bytes: 0,
+  planner_turns: 0,
+  task_runtime_seconds: 0,
+});
 let usage = await getMonthlyPlusUsage({ DB: db }, "alice", "2026-10-15T00:00:00Z");
 assert.equal(usage.binary_bytes, 0);
 assert.equal(usage.planner_turns, 0);
@@ -105,15 +109,21 @@ assert.equal(usage.planner_turns, 3);
 assert.equal(usage.task_runtime_seconds, 90);
 
 // Active tasks count reflection
-sql.prepare(
-  "INSERT INTO automations(id,user_id,kind,action_json,status,name,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)"
-).run("auto-1", "alice", "long_task", "{}", "running", "Task 1", "laptop", now, now);
-sql.prepare(
-  "INSERT INTO automations(id,user_id,kind,action_json,status,name,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)"
-).run("auto-2", "alice", "long_task", "{}", "waiting_for_device", "Task 2", "laptop", now, now);
-sql.prepare(
-  "INSERT INTO automations(id,user_id,kind,action_json,status,name,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)"
-).run("auto-3", "alice", "long_task", "{}", "completed", "Task 3", "laptop", now, now);
+sql
+  .prepare(
+    "INSERT INTO automations(id,user_id,kind,action_json,status,name,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+  )
+  .run("auto-1", "alice", "long_task", "{}", "running", "Task 1", "laptop", now, now);
+sql
+  .prepare(
+    "INSERT INTO automations(id,user_id,kind,action_json,status,name,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+  )
+  .run("auto-2", "alice", "long_task", "{}", "waiting_for_device", "Task 2", "laptop", now, now);
+sql
+  .prepare(
+    "INSERT INTO automations(id,user_id,kind,action_json,status,name,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+  )
+  .run("auto-3", "alice", "long_task", "{}", "completed", "Task 3", "laptop", now, now);
 
 usage = await getMonthlyPlusUsage({ DB: db }, "alice", "2026-10-31T00:00:00Z");
 assert.equal(usage.active_tasks, 2, "Only waiting/running automations count toward active tasks");
@@ -167,13 +177,29 @@ bobUsage = await getMonthlyPlusUsage({ DB: db }, "bob");
 assert.equal(bobUsage.binary_bytes, 3048, "Usage remains unchanged on rejection");
 
 // 5. finishAutomationRunWithUsage settlement
-sql.prepare(
-  "INSERT INTO automations(id,user_id,kind,action_json,status,lease_token,lease_until,name,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)"
-).run("auto-settle", "alice", "long_task", "{}", "running", "lease-123", "2026-11-01T12:00:00Z", "Settle test", "laptop", now, now);
+sql
+  .prepare(
+    "INSERT INTO automations(id,user_id,kind,action_json,status,lease_token,lease_until,name,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+  )
+  .run(
+    "auto-settle",
+    "alice",
+    "long_task",
+    "{}",
+    "running",
+    "lease-123",
+    "2026-11-01T12:00:00Z",
+    "Settle test",
+    "laptop",
+    now,
+    now,
+  );
 
-sql.prepare(
-  "INSERT INTO automation_runs(id,automation_id,user_id,attempt,status,started_at) VALUES(?,?,?,?,?,?)"
-).run("run-1", "auto-settle", "alice", 1, "running", "2026-10-31T10:00:00Z");
+sql
+  .prepare(
+    "INSERT INTO automation_runs(id,automation_id,user_id,attempt,status,started_at) VALUES(?,?,?,?,?,?)",
+  )
+  .run("run-1", "auto-settle", "alice", 1, "running", "2026-10-31T10:00:00Z");
 
 await finishAutomationRunWithUsage(db, {
   run_id: "run-1",
@@ -186,7 +212,10 @@ await finishAutomationRunWithUsage(db, {
   finished_at: "2026-10-31T10:05:00Z", // 300 seconds later
 });
 
-const runRow = sql.prepare("SELECT * FROM automation_runs WHERE id='run-1'").get() as Record<string, any>;
+const runRow = sql.prepare("SELECT * FROM automation_runs WHERE id='run-1'").get() as Record<
+  string,
+  any
+>;
 assert.equal(runRow.status, "completed");
 assert.equal(runRow.exit_code, 0);
 assert.equal(runRow.finished_at, "2026-10-31T10:05:00Z");
@@ -208,6 +237,12 @@ await finishAutomationRunWithUsage(db, {
   finished_at: "2026-10-31T10:05:00Z",
 });
 usage = await getMonthlyPlusUsage({ DB: db }, "alice", "2026-10-31T00:00:00Z");
-assert.equal(usage.task_runtime_seconds, 390, "Runtime seconds are not double counted on idempotent replay");
+assert.equal(
+  usage.task_runtime_seconds,
+  390,
+  "Runtime seconds are not double counted on idempotent replay",
+);
 
-console.log("PASS: plus usage metering, binary envelope parsing, allowance checks and run settlement");
+console.log(
+  "PASS: plus usage metering, binary envelope parsing, allowance checks and run settlement",
+);

@@ -1,4 +1,9 @@
-import { BROWSER_RUNNER_TOOLS, INTERNAL_DEVICE_TOOLS, browserRunnerEnabled, isBrowserRunnerTool } from "./device-tools.js";
+import {
+  BROWSER_RUNNER_TOOLS,
+  INTERNAL_DEVICE_TOOLS,
+  browserRunnerEnabled,
+  isBrowserRunnerTool,
+} from "./device-tools.js";
 import { DeviceCapacity } from "./device-fleet-overview.js";
 import { ProductIcon } from "../../../components/product-icon.js";
 import { isOlderRelease, goUpdateCommands } from "../../install/agent-update-guide.js";
@@ -17,10 +22,18 @@ export function deviceFacts(device: Device, m: DashboardModel) {
   const advertisedTools = device.available_tools || device.tools;
   const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
   // Extension 0.4.0 tab opening and actions follow its click & fill switch.
-  const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools])).filter((tool) => !isBrowserRunnerTool(tool) && !INTERNAL_DEVICE_TOOLS.has(tool));
-  const runnerAdvertised = device.status !== "online" || BROWSER_RUNNER_TOOLS.every((tool) => advertisedTools.includes(tool));
+  const allTools = Array.from(
+    new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools]),
+  ).filter((tool) => !isBrowserRunnerTool(tool) && !INTERNAL_DEVICE_TOOLS.has(tool));
+  const runnerAdvertised =
+    device.status !== "online" ||
+    BROWSER_RUNNER_TOOLS.every((tool) => advertisedTools.includes(tool));
   const runnerEnabled = browserRunnerEnabled(device.allowed_tools);
-  const runnerVisible = device.platform !== "browser" && (runnerEnabled || BROWSER_RUNNER_TOOLS.some((tool) => advertisedTools.includes(tool)) || device.status === "online");
+  const runnerVisible =
+    device.platform !== "browser" &&
+    (runnerEnabled ||
+      BROWSER_RUNNER_TOOLS.some((tool) => advertisedTools.includes(tool)) ||
+      device.status === "online");
   const accessPreset = deviceAccessPreset(enabledTools, advertisedTools);
   const executionLog = executionLogsByDevice[device.id];
   const executionLogError = executionLogErrors[device.id];
@@ -39,7 +52,22 @@ export function deviceFacts(device: Device, m: DashboardModel) {
       ? goUpdateCommands(LATEST_AGENT_VERSION, true).join("\n")
       : goUpdateCommands(LATEST_AGENT_VERSION, false).join("\n");
   const extensionUpdate = browserExtensionUpdate(device);
-  return { advertisedTools, enabledTools, allTools, runnerAdvertised, runnerEnabled, runnerVisible, accessPreset, executionLog, executionLogError, runtimeVersion, recoveryVersion, updateAvailable, updateCommand, extensionUpdate };
+  return {
+    advertisedTools,
+    enabledTools,
+    allTools,
+    runnerAdvertised,
+    runnerEnabled,
+    runnerVisible,
+    accessPreset,
+    executionLog,
+    executionLogError,
+    runtimeVersion,
+    recoveryVersion,
+    updateAvailable,
+    updateCommand,
+    extensionUpdate,
+  };
 }
 
 export type DeviceFacts = ReturnType<typeof deviceFacts>;
@@ -47,69 +75,242 @@ export type DeviceFacts = ReturnType<typeof deviceFacts>;
 // One device in the Devices tab: summary, management tabs and their panels.
 export function DeviceCard({ m, device }: { m: DashboardModel; device: Device }) {
   const {
-    devicePanel, executionLogLoading, loadDeviceExecutionLog, managedDeviceId, revoke,
-    setDevicePanel, setManagedDeviceId, tr,
+    devicePanel,
+    executionLogLoading,
+    loadDeviceExecutionLog,
+    managedDeviceId,
+    revoke,
+    setDevicePanel,
+    setManagedDeviceId,
+    tr,
   } = m;
   const facts = deviceFacts(device, m);
-  const { accessPreset, executionLog, recoveryVersion, runtimeVersion, updateAvailable, extensionUpdate } = facts;
-  const responseUnknown=device.execution_health==='response_unknown'&&!device.execution_paused;
-  const badgeClass=device.status==='online'&&(responseUnknown||device.execution_paused)?'uncertain':device.status;
-  const badgeLabel=device.connection_state==='stale'?tr('Signal expired','信号已过期'):device.status==='offline'?tr('Offline','离线'):device.execution_paused?tr('Paused','已暂停'):responseUnknown?tr('Response unconfirmed','响应待确认'):tr('Online','在线');
+  const {
+    accessPreset,
+    executionLog,
+    recoveryVersion,
+    runtimeVersion,
+    updateAvailable,
+    extensionUpdate,
+  } = facts;
+  const responseUnknown =
+    device.execution_health === "response_unknown" && !device.execution_paused;
+  const badgeClass =
+    device.status === "online" && (responseUnknown || device.execution_paused)
+      ? "uncertain"
+      : device.status;
+  const badgeLabel =
+    device.connection_state === "stale"
+      ? tr("Signal expired", "信号已过期")
+      : device.status === "offline"
+        ? tr("Offline", "离线")
+        : device.execution_paused
+          ? tr("Paused", "已暂停")
+          : responseUnknown
+            ? tr("Response unconfirmed", "响应待确认")
+            : tr("Online", "在线");
   return (
     <article className={"deviceCard managed " + device.status}>
       <div className="deviceTop">
         <div className="deviceIdentity">
-          <div className="deviceIcon large"><ProductIcon name="device"/></div>
-          <div><h3>{device.name}</h3><span>{platformLabel(device.platform)} · {device.hostname || tr("No hostname", "未提供主机名")}</span></div>
+          <div className="deviceIcon large">
+            <ProductIcon name="device" />
+          </div>
+          <div>
+            <h3>{device.name}</h3>
+            <span>
+              {platformLabel(device.platform)} ·{" "}
+              {device.hostname || tr("No hostname", "未提供主机名")}
+            </span>
+          </div>
         </div>
         <div className="deviceOverviewActions">
-          {updateAvailable && <span className="badge updateAvailable"><i/>{tr("Update available", "可更新")}</span>}
-          <span className={"badge " + badgeClass}><i/>{badgeLabel}</span>
-          {(device.status==='offline'||responseUnknown)&&<button type="button" className="ghostButton" disabled={Boolean(m.connectionRecoveryBusyId)} onClick={()=>void m.recoverDeviceConnection(device)}>{m.connectionRecoveryBusyId===device.id?tr('Checking…','检查中…'):tr('Check & reconnect','检查并恢复')}</button>}
-          <button className="ghostButton" aria-expanded={managedDeviceId === device.id} aria-controls={"device-management-" + device.id} aria-label={tr("Manage " + device.name, "管理 " + device.name)} onClick={() => { setManagedDeviceId(managedDeviceId === device.id ? null : device.id); setDevicePanel("access"); }}>{managedDeviceId === device.id ? tr("Close", "收起") : tr("Manage", "管理")}</button>
+          {updateAvailable && (
+            <span className="badge updateAvailable">
+              <i />
+              {tr("Update available", "可更新")}
+            </span>
+          )}
+          <span className={"badge " + badgeClass}>
+            <i />
+            {badgeLabel}
+          </span>
+          {(device.status === "offline" || responseUnknown) && (
+            <button
+              type="button"
+              className="ghostButton"
+              disabled={Boolean(m.connectionRecoveryBusyId)}
+              onClick={() => void m.recoverDeviceConnection(device)}
+            >
+              {m.connectionRecoveryBusyId === device.id
+                ? tr("Checking…", "检查中…")
+                : tr("Check & reconnect", "检查并恢复")}
+            </button>
+          )}
+          <button
+            className="ghostButton"
+            aria-expanded={managedDeviceId === device.id}
+            aria-controls={"device-management-" + device.id}
+            aria-label={tr("Manage " + device.name, "管理 " + device.name)}
+            onClick={() => {
+              setManagedDeviceId(managedDeviceId === device.id ? null : device.id);
+              setDevicePanel("access");
+            }}
+          >
+            {managedDeviceId === device.id ? tr("Close", "收起") : tr("Manage", "管理")}
+          </button>
         </div>
       </div>
 
-      <DeviceCapacity device={device} tr={tr}/>
+      <DeviceCapacity device={device} tr={tr} />
       <div className="deviceOverviewFacts">
-        <span><ProductIcon name="shield" size={13}/>{accessPreset === "safe" ? tr("Read only", "只读访问") : accessPreset === "developer" ? tr("Read & edit", "读取与编辑") : accessPreset === "full" ? tr("Terminal enabled", "已启用终端") : tr("Custom permissions", "自定义权限")}</span>
-        <span className="deviceRuntimeVersion"><ProductIcon name="activity" size={13}/>{device.platform === "browser" ? tr("Browser", "浏览器") : tr("Running", "运行中")} {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}{device.platform !== "browser" && recoveryVersion && recoveryVersion !== runtimeVersion ? " · " + tr("Recovery", "恢复包") + " v" + recoveryVersion : ""}{updateAvailable ? " · " + tr("Latest", "最新") + " v" + LATEST_AGENT_VERSION : ""}{extensionUpdate ? " · " + tr("Latest", "最新") + " v" + extensionUpdate.latest : ""}</span>
-        <span>{(device.workspace_roots || []).length} {tr("trusted folders", "个可信目录")}</span>
-        <span>{device.background_guard_active ? tr("Recovery supervisor running", "恢复守护运行中") : device.background_enabled ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认") : tr("Automatic recovery off", "自动恢复关闭")}</span>
-        <span>{tr("Seen ", "最后在线：")}{timeAgo(device.last_seen)}</span>
+        <span>
+          <ProductIcon name="shield" size={13} />
+          {accessPreset === "safe"
+            ? tr("Read only", "只读访问")
+            : accessPreset === "developer"
+              ? tr("Read & edit", "读取与编辑")
+              : accessPreset === "full"
+                ? tr("Terminal enabled", "已启用终端")
+                : tr("Custom permissions", "自定义权限")}
+        </span>
+        <span className="deviceRuntimeVersion">
+          <ProductIcon name="activity" size={13} />
+          {device.platform === "browser" ? tr("Browser", "浏览器") : tr("Running", "运行中")}{" "}
+          {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}
+          {device.platform !== "browser" && recoveryVersion && recoveryVersion !== runtimeVersion
+            ? " · " + tr("Recovery", "恢复包") + " v" + recoveryVersion
+            : ""}
+          {updateAvailable ? " · " + tr("Latest", "最新") + " v" + LATEST_AGENT_VERSION : ""}
+          {extensionUpdate ? " · " + tr("Latest", "最新") + " v" + extensionUpdate.latest : ""}
+        </span>
+        <span>
+          {(device.workspace_roots || []).length} {tr("trusted folders", "个可信目录")}
+        </span>
+        <span>
+          {device.background_guard_active
+            ? tr("Recovery supervisor running", "恢复守护运行中")
+            : device.background_enabled
+              ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认")
+              : tr("Automatic recovery off", "自动恢复关闭")}
+        </span>
+        <span>
+          {tr("Seen ", "最后在线：")}
+          {timeAgo(device.last_seen)}
+        </span>
       </div>
-      {device.status === "offline" && <p className="deviceOfflineHint">{device.connection_state==='stale'?tr('No recent device signal. Wake this computer to reconnect; a timed-out operation may still have executed.','设备近期没有响应，唤醒后会重新连接；此前超时的操作仍可能已经执行。'):tr("Tasks wait until this computer reconnects. Remote Arc cannot power it on.", "任务会等待这台电脑重新连接，Remote Arc 无法远程开机。")}</p>}
-      {responseUnknown&&device.status==='online'&&<p className="deviceOfflineHint">{tr('The connection has a signal, but a recent operation did not reply. Its result is unknown; inspect it before retrying.','连接仍有信号，但近期操作没有收到回复。执行结果待确认，请先核查再重试。')}</p>}
-      {m.connectionRecoveryMessages?.[device.id]&&<p className="deviceOfflineHint" role="status">{m.connectionRecoveryMessages[device.id]}</p>}
-      <div id={"device-management-" + device.id} hidden={managedDeviceId !== device.id} className="deviceManagementPanel">
-        {managedDeviceId === device.id && <>
-          <div className="deviceManagementTabs" role="tablist" aria-label={tr("Device settings", "设备设置")}>
-            {([ ["access", tr("Access & files", "权限与文件")], ["tasks", tr("Background & tasks", "后台与任务")], ["activity", tr("Activity & details", "活动与详情")] ] as const).map(([panel, label]) => <button key={panel} type="button" role="tab" id={"device-tab-"+device.id+"-"+panel} aria-controls={"device-panel-"+device.id+"-"+panel} aria-selected={devicePanel === panel} tabIndex={devicePanel===panel?0:-1} className={devicePanel === panel ? "active" : ""} onKeyDown={event=>{const tabs=Array.from(event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('[role=tab]'));const index=tabs.indexOf(event.currentTarget);const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index+tabs.length-1)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:null;if(next!==null){event.preventDefault();tabs[next]?.focus();tabs[next]?.click();}}} onClick={() => {
-              setDevicePanel(panel);
-              if (
-                panel === "activity" &&
-                device.status === "online" &&
-                !executionLog &&
-                executionLogLoading !== device.id
-              ) {
-                void loadDeviceExecutionLog(device);
-              }
-            }}>{label}</button>)}
-          </div>
-          <DeviceAccessPanel m={m} device={device} facts={facts} />
-          <DeviceTasksPanel m={m} device={device} facts={facts} />
-          <DeviceActivityPanel m={m} device={device} facts={facts} />
-      <div className="deviceDangerZone">
-        <div>
-          <strong>{tr("Forget device", "删除设备")}</strong>
-          <span>{tr(
-            "Remove this pairing from Remote Arc. Local files stay untouched, and this runtime can be paired again later.",
-            "从 Remote Arc 删除这条设备配对。本机文件不会被删除，之后仍可以重新配对这个运行环境。",
-          )}</span>
-        </div>
-        <button className="dangerButton" onClick={() => void revoke(device.id)}>{tr("Forget device", "删除设备")}</button>
-      </div>
-        </>}
+      {device.status === "offline" && (
+        <p className="deviceOfflineHint">
+          {device.connection_state === "stale"
+            ? tr(
+                "No recent device signal. Wake this computer to reconnect; a timed-out operation may still have executed.",
+                "设备近期没有响应，唤醒后会重新连接；此前超时的操作仍可能已经执行。",
+              )
+            : tr(
+                "Tasks wait until this computer reconnects. Remote Arc cannot power it on.",
+                "任务会等待这台电脑重新连接，Remote Arc 无法远程开机。",
+              )}
+        </p>
+      )}
+      {responseUnknown && device.status === "online" && (
+        <p className="deviceOfflineHint">
+          {tr(
+            "The connection has a signal, but a recent operation did not reply. Its result is unknown; inspect it before retrying.",
+            "连接仍有信号，但近期操作没有收到回复。执行结果待确认，请先核查再重试。",
+          )}
+        </p>
+      )}
+      {m.connectionRecoveryMessages?.[device.id] && (
+        <p className="deviceOfflineHint" role="status">
+          {m.connectionRecoveryMessages[device.id]}
+        </p>
+      )}
+      <div
+        id={"device-management-" + device.id}
+        hidden={managedDeviceId !== device.id}
+        className="deviceManagementPanel"
+      >
+        {managedDeviceId === device.id && (
+          <>
+            <div
+              className="deviceManagementTabs"
+              role="tablist"
+              aria-label={tr("Device settings", "设备设置")}
+            >
+              {(
+                [
+                  ["access", tr("Access & files", "权限与文件")],
+                  ["tasks", tr("Background & tasks", "后台与任务")],
+                  ["activity", tr("Activity & details", "活动与详情")],
+                ] as const
+              ).map(([panel, label]) => (
+                <button
+                  key={panel}
+                  type="button"
+                  role="tab"
+                  id={"device-tab-" + device.id + "-" + panel}
+                  aria-controls={"device-panel-" + device.id + "-" + panel}
+                  aria-selected={devicePanel === panel}
+                  tabIndex={devicePanel === panel ? 0 : -1}
+                  className={devicePanel === panel ? "active" : ""}
+                  onKeyDown={(event) => {
+                    const tabs = Array.from(
+                      event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>(
+                        "[role=tab]",
+                      ),
+                    );
+                    const index = tabs.indexOf(event.currentTarget);
+                    const next =
+                      event.key === "ArrowRight"
+                        ? (index + 1) % tabs.length
+                        : event.key === "ArrowLeft"
+                          ? (index + tabs.length - 1) % tabs.length
+                          : event.key === "Home"
+                            ? 0
+                            : event.key === "End"
+                              ? tabs.length - 1
+                              : null;
+                    if (next !== null) {
+                      event.preventDefault();
+                      tabs[next]?.focus();
+                      tabs[next]?.click();
+                    }
+                  }}
+                  onClick={() => {
+                    setDevicePanel(panel);
+                    if (
+                      panel === "activity" &&
+                      device.status === "online" &&
+                      !executionLog &&
+                      executionLogLoading !== device.id
+                    ) {
+                      void loadDeviceExecutionLog(device);
+                    }
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <DeviceAccessPanel m={m} device={device} facts={facts} />
+            <DeviceTasksPanel m={m} device={device} facts={facts} />
+            <DeviceActivityPanel m={m} device={device} facts={facts} />
+            <div className="deviceDangerZone">
+              <div>
+                <strong>{tr("Forget device", "删除设备")}</strong>
+                <span>
+                  {tr(
+                    "Remove this pairing from Remote Arc. Local files stay untouched, and this runtime can be paired again later.",
+                    "从 Remote Arc 删除这条设备配对。本机文件不会被删除，之后仍可以重新配对这个运行环境。",
+                  )}
+                </span>
+              </div>
+              <button className="dangerButton" onClick={() => void revoke(device.id)}>
+                {tr("Forget device", "删除设备")}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </article>
   );

@@ -1,4 +1,9 @@
-import { handleDynamicClientRegistration, handleOAuthAuthorize, handleOAuthDecision, handleOAuthToken } from "../src/auth/oauth.js";
+import {
+  handleDynamicClientRegistration,
+  handleOAuthAuthorize,
+  handleOAuthDecision,
+  handleOAuthToken,
+} from "../src/auth/oauth.js";
 
 const APP_ORIGIN = "https://mcp.remotearc.app";
 const REDIRECT_URI = "https://client.example/callback";
@@ -51,7 +56,8 @@ async function registerRedirects(redirectUris: unknown[], method = "none") {
   const registrations: unknown[][] = [];
   const db = {
     prepare(sql: string) {
-      if (!sql.includes("INSERT INTO oauth_clients")) throw new Error("Unexpected registration query");
+      if (!sql.includes("INSERT INTO oauth_clients"))
+        throw new Error("Unexpected registration query");
       return {
         bind(...args: unknown[]) {
           return {
@@ -64,11 +70,18 @@ async function registerRedirects(redirectUris: unknown[], method = "none") {
       };
     },
   } as unknown as D1Database;
-  const response = await handleDynamicClientRegistration(new Request(APP_ORIGIN + "/oauth/register", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ redirect_uris: redirectUris, client_name: "Codex test", token_endpoint_auth_method: method }),
-  }), { ...envBase, DB: db });
+  const response = await handleDynamicClientRegistration(
+    new Request(APP_ORIGIN + "/oauth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        redirect_uris: redirectUris,
+        client_name: "Codex test",
+        token_endpoint_auth_method: method,
+      }),
+    }),
+    { ...envBase, DB: db },
+  );
   return { response, registrations };
 }
 
@@ -79,12 +92,19 @@ for (const redirect of [
 ]) {
   const { response, registrations } = await registerRedirects([redirect]);
   if (response.status !== 201) throw new Error("Supported OAuth callback rejected: " + redirect);
-  const payload = await response.json() as { redirect_uris: string[]; token_endpoint_auth_method: string };
-  if (JSON.stringify(payload.redirect_uris) !== JSON.stringify([redirect]) ||
-      registrations.length !== 1 || registrations[0][2] !== JSON.stringify([redirect])) {
+  const payload = (await response.json()) as {
+    redirect_uris: string[];
+    token_endpoint_auth_method: string;
+  };
+  if (
+    JSON.stringify(payload.redirect_uris) !== JSON.stringify([redirect]) ||
+    registrations.length !== 1 ||
+    registrations[0][2] !== JSON.stringify([redirect])
+  ) {
     throw new Error("Registered OAuth callback was not preserved exactly: " + redirect);
   }
-  if (payload.token_endpoint_auth_method !== "none") throw new Error("Native callback changed the public PKCE client contract");
+  if (payload.token_endpoint_auth_method !== "none")
+    throw new Error("Native callback changed the public PKCE client contract");
 }
 
 for (const redirect of [
@@ -101,7 +121,9 @@ for (const redirect of [
   "http://127.0.0.1:49152/callback#fragment",
   "javascript:alert(1)",
   "not-a-url",
-  42, null, {},
+  42,
+  null,
+  {},
 ]) {
   const { response, registrations } = await registerRedirects([redirect]);
   if (response.status !== 400 || registrations.length !== 0) {
@@ -110,8 +132,12 @@ for (const redirect of [
 }
 
 {
-  const { response, registrations } = await registerRedirects(["http://127.0.0.1:49152/callback"], "client_secret_post");
-  if (response.status !== 400 || registrations.length !== 0) throw new Error("Loopback registration accepted a confidential client");
+  const { response, registrations } = await registerRedirects(
+    ["http://127.0.0.1:49152/callback"],
+    "client_secret_post",
+  );
+  if (response.status !== 400 || registrations.length !== 0)
+    throw new Error("Loopback registration accepted a confidential client");
 }
 
 function authUrl(extra = "") {
@@ -156,18 +182,21 @@ function authUrl(extra = "") {
   const { DEFAULT_MCP_SCOPES } = await import("../src/auth/oauth.js");
   const expected = [...DEFAULT_MCP_SCOPES];
   if (JSON.stringify(scopes) !== JSON.stringify(expected)) {
-    throw new Error("new client should request the complete baseline scope bundle: " + scopes.join(" "));
+    throw new Error(
+      "new client should request the complete baseline scope bundle: " + scopes.join(" "),
+    );
   }
 }
 
 {
   // A client explicitly requesting read-only must remain read-only.
   const { db } = fakeDb();
-  const response = await handleOAuthAuthorize(new Request(
-    authUrl("scope=devices%3Aread+computer%3Aread"), {
+  const response = await handleOAuthAuthorize(
+    new Request(authUrl("scope=devices%3Aread+computer%3Aread"), {
       headers: { cookie: "rl_session=session-token" },
-    },
-  ), { ...envBase, DB: db as unknown as D1Database });
+    }),
+    { ...envBase, DB: db as unknown as D1Database },
+  );
   const scopes = new URL(response.headers.get("location") || "").searchParams.get("scope");
   if (scopes !== "devices:read computer:read") {
     throw new Error("explicit read-only authorization was widened: " + scopes);
@@ -285,7 +314,7 @@ function authUrl(extra = "") {
   for (let attempt = 0; attempt < 2; attempt++) {
     const response = await handleOAuthToken(refreshRequest(), { ...envBase, DB: db });
     if (!response.ok) throw new Error("overlapping refresh attempt was rejected");
-    const token = await response.json() as { scope: string };
+    const token = (await response.json()) as { scope: string };
     if (token.scope !== "devices:read computer:read") {
       throw new Error("refresh upgraded an existing read-only token: " + token.scope);
     }
@@ -313,9 +342,12 @@ function authUrl(extra = "") {
 {
   const { mcpUnauthorized, DEFAULT_MCP_SCOPES } = await import("../src/auth/oauth.js");
   if (!DEFAULT_MCP_SCOPES.includes("apps:read") || !DEFAULT_MCP_SCOPES.includes("apps:write")) {
-    throw new Error("new MCP clients must have Apps discovery and approval-request scopes by default");
+    throw new Error(
+      "new MCP clients must have Apps discovery and approval-request scopes by default",
+    );
   }
-  const challenge = mcpUnauthorized({ ...envBase, DB: {} as D1Database }).headers.get("WWW-Authenticate") || "";
+  const challenge =
+    mcpUnauthorized({ ...envBase, DB: {} as D1Database }).headers.get("WWW-Authenticate") || "";
   if (!challenge.includes('scope="' + DEFAULT_MCP_SCOPES.join(" ") + '"')) {
     throw new Error("first unauthenticated MCP challenge did not request baseline scopes");
   }

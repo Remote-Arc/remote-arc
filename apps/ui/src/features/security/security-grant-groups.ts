@@ -23,13 +23,20 @@ export function groupAuthorizations(grants: SecurityGrant[]): Group[] {
     if (grant.status === "refreshable") group.refreshable++;
     group.latest = Math.max(group.latest, Date.parse(grant.lastTokenIssuedAt) || 0);
   }
-  return [...groups.values()].map((group) => ({
-    ...group,
-    grants: [...group.grants].sort((a, b) =>
-      (a.status === "active" ? 0 : a.status === "refreshable" ? 1 : 2)
-      - (b.status === "active" ? 0 : b.status === "refreshable" ? 1 : 2)
-      || Date.parse(b.lastTokenIssuedAt) - Date.parse(a.lastTokenIssuedAt)),
-  })).sort((a, b) => Number(b.active > 0) - Number(a.active > 0)
-    || Number(b.refreshable > 0) - Number(a.refreshable > 0)
-    || b.latest - a.latest);
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      grants: [...group.grants].sort(
+        (a, b) =>
+          (a.status === "active" ? 0 : a.status === "refreshable" ? 1 : 2) -
+            (b.status === "active" ? 0 : b.status === "refreshable" ? 1 : 2) ||
+          Date.parse(b.lastTokenIssuedAt) - Date.parse(a.lastTokenIssuedAt),
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.active > 0) - Number(a.active > 0) ||
+        Number(b.refreshable > 0) - Number(a.refreshable > 0) ||
+        b.latest - a.latest,
+    );
 }

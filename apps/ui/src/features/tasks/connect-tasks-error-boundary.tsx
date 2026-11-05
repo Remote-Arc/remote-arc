@@ -24,7 +24,12 @@ export class ConnectTasksErrorBoundary extends React.Component<Props, State> {
         <div className="connectTasksNotice">
           <div>
             <h2>{tr("Tasks couldn't be displayed", "任务页面暂时无法显示")}</h2>
-            <p>{tr("Your saved tasks have not been changed. Reload to restore this view.", "已保存的任务没有被修改。重新加载页面即可恢复查看。")}</p>
+            <p>
+              {tr(
+                "Your saved tasks have not been changed. Reload to restore this view.",
+                "已保存的任务没有被修改。重新加载页面即可恢复查看。",
+              )}
+            </p>
           </div>
           <button type="button" className="ghostButton" onClick={() => window.location.reload()}>
             {tr("Reload page", "重新加载页面")}

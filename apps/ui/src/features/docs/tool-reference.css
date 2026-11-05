@@ -196,7 +196,10 @@
     margin-top: 22px;
     gap: 0;
   }
-  .toolCatalogTabs small { margin-left: 4px; font-size: 10px; }
+  .toolCatalogTabs small {
+    margin-left: 4px;
+    font-size: 10px;
+  }
   .toolCatalogTabs button {
     flex: 1 0 auto;
     padding: 11px 6px;
@@ -299,9 +302,14 @@
 .toolClientUnavailable .toolClient img {
   filter: grayscale(1);
 }
-:root[data-theme="dark"] :is(.toolClientFilter, .toolClient) img:is([src="/ai-openai.svg"], [src="/ai-cursor.svg"]) {
+:root[data-theme="dark"]
+  :is(.toolClientFilter, .toolClient)
+  img:is([src="/ai-openai.svg"], [src="/ai-cursor.svg"]) {
   filter: invert(1);
 }
-:root[data-theme="dark"] .toolClientUnavailable .toolClient img:is([src="/ai-openai.svg"], [src="/ai-cursor.svg"]) {
+:root[data-theme="dark"]
+  .toolClientUnavailable
+  .toolClient
+  img:is([src="/ai-openai.svg"], [src="/ai-cursor.svg"]) {
   filter: invert(1) grayscale(1);
 }

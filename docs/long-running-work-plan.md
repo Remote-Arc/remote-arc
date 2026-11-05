@@ -27,17 +27,17 @@ session is an experience reference, not a hard product SLA.
 
 ## 2. Entire PR #43 baseline
 
-| Area | Already in the draft | Remaining work |
-| --- | --- | --- |
-| Device presence | login background service, outbound WebSocket reconnect, ping watchdog, pairing policy | task-scoped sleep prevention and real reconnect acceptance |
-| Execution core | local file/process tools, managed processes, policy and undo boundary | durable action identity/recovery without blind replay |
-| Relay | authenticated Durable Object routing, account/device/OAuth isolation | fenced task writes and action dispatch |
-| Durable engine | D1 tasks/runs/webhook events, one-minute cron, long tasks, condition/schedule watches, deterministic goal loop | crash checkpoints, retry handling, controller continuation |
-| Adaptive goals | compact working memory, six approved tools, hosted Workers AI or OpenAI planner | source-agent controller, durable handoff context, stronger completion evidence |
-| GitHub action | installation-token-based cloud PR merge | user/repository authorization; fail closed until explicit binding exists |
-| MCP/Plugin | create/list/get/manage tools, separate automation and agent scopes | context/decision protocol and authenticated event subscriptions |
-| UI/site | automations dashboard, releases, existing Docs/security content | accurate formal architecture and practical overnight knowledge |
-| Delivery | CI/build/native smoke tests and UI preview | failure-injection tests; actual Plugin/Chat/Work/device overnight test |
+| Area            | Already in the draft                                                                                           | Remaining work                                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Device presence | login background service, outbound WebSocket reconnect, ping watchdog, pairing policy                          | task-scoped sleep prevention and real reconnect acceptance                     |
+| Execution core  | local file/process tools, managed processes, policy and undo boundary                                          | durable action identity/recovery without blind replay                          |
+| Relay           | authenticated Durable Object routing, account/device/OAuth isolation                                           | fenced task writes and action dispatch                                         |
+| Durable engine  | D1 tasks/runs/webhook events, one-minute cron, long tasks, condition/schedule watches, deterministic goal loop | crash checkpoints, retry handling, controller continuation                     |
+| Adaptive goals  | compact working memory, six approved tools, hosted Workers AI or OpenAI planner                                | source-agent controller, durable handoff context, stronger completion evidence |
+| GitHub action   | installation-token-based cloud PR merge                                                                        | user/repository authorization; fail closed until explicit binding exists       |
+| MCP/Plugin      | create/list/get/manage tools, separate automation and agent scopes                                             | context/decision protocol and authenticated event subscriptions                |
+| UI/site         | automations dashboard, releases, existing Docs/security content                                                | accurate formal architecture and practical overnight knowledge                 |
+| Delivery        | CI/build/native smoke tests and UI preview                                                                     | failure-injection tests; actual Plugin/Chat/Work/device overnight test         |
 
 Keep these implementations and their identities. Do not introduce a second
 device registry or task engine. Existing Long Task and deterministic Goal Loop
@@ -228,21 +228,21 @@ release version merely to obtain a new PR number.
 
 ## 11. Validation matrix
 
-| Scenario | Required proof |
-| --- | --- |
-| Cancel/pause during slow planner | stale write rejected; no next action |
-| Lease takeover during in-flight tick | old worker cannot mutate newer lease/state |
-| Crash after dispatch intent/result | unknown result surfaced; no blind replay |
-| Planner 429/5xx/timeout | bounded retry, same context, eventual stop/recovery |
-| New conversation/host | complete bounded context and ordered journal |
-| Stale/duplicate source decision | conflict or same idempotent result; no duplicate effect |
-| Final verification fails | controller receives failure and can revise |
-| Device disconnect/reconnect | waiting then actual completion, no user continuation |
-| Scheduled agent run | no early execution; fresh context on each run; no overlap |
-| Signed event delivery | valid signature, retries, dedup, revoke/expiry/unsubscribe |
-| Account isolation | foreign task/decision/subscription cannot be read or executed |
-| Keep awake | bounded lease/cleanup on supported OS; honest unavailable behavior |
-| Real overnight goal | user absent, adaptive decisions, completion proof/report |
+| Scenario                             | Required proof                                                     |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| Cancel/pause during slow planner     | stale write rejected; no next action                               |
+| Lease takeover during in-flight tick | old worker cannot mutate newer lease/state                         |
+| Crash after dispatch intent/result   | unknown result surfaced; no blind replay                           |
+| Planner 429/5xx/timeout              | bounded retry, same context, eventual stop/recovery                |
+| New conversation/host                | complete bounded context and ordered journal                       |
+| Stale/duplicate source decision      | conflict or same idempotent result; no duplicate effect            |
+| Final verification fails             | controller receives failure and can revise                         |
+| Device disconnect/reconnect          | waiting then actual completion, no user continuation               |
+| Scheduled agent run                  | no early execution; fresh context on each run; no overlap          |
+| Signed event delivery                | valid signature, retries, dedup, revoke/expiry/unsubscribe         |
+| Account isolation                    | foreign task/decision/subscription cannot be read or executed      |
+| Keep awake                           | bounded lease/cleanup on supported OS; honest unavailable behavior |
+| Real overnight goal                  | user absent, adaptive decisions, completion proof/report           |
 
 Run focused tests for each behavior, then `pnpm run ci`, `pnpm build:ui`,
 `pnpm test:automations`, `pnpm build:cli`, and `git diff --check`. Fake devices,
@@ -255,6 +255,7 @@ The original PR #43 remains stacked on #41 and on HOLD for Plugin review / the
 branch commits and CI/preview. Do not apply production D1 migrations, deploy
 production, merge, publish npm, tag v0.4.0 or ship plugin metadata. Record the
 remaining release acceptance separately from implementation completion.
+
 # Active extension (2026-10-03)
 
 PR55 on `feat/chat-first-planned-goals` extends Agent Goal, stacked on PR44.

@@ -13,37 +13,37 @@ OAuth 决定谁授权账号，账单取决于凭证所属的项目及上游合�
 
 ## 当前 29 个应用
 
-| 应用 | 当前连接方式 | 费用类别 | 归属与条件 |
-| --- | --- | --- | --- |
-| GitHub | OAuth | 用户账号/套餐 | 账号与组织 API 额度；仓库/Actions 等资源按用户账号规则。平台仍承担 OAuth 应用维护与分发责任。 |
-| Slack | OAuth | 用户账号/套餐 | 工作区套餐和应用分发/Marketplace 限制分别处理；不能将新建个人 App 当作商业分发审核的替代。 |
-| Gmail | OAuth | 平台项目/混合 | 用户邮箱账号；开发者 Cloud 项目额度，规模化 API 费用或受限 scope 安全审核成本可能由 Remote Arc 承担。 |
-| Outlook | OAuth | 用户账号/套餐 | 用户 Microsoft 账号/租户权限和套餐；所用 Graph 端点的计量规则需单独核查，不能把所有 Graph API 归为免费。 |
-| Google Calendar | OAuth | 平台项目/混合 | 用户日历账号；开发者项目额度，规模化调用可能产生项目侧费用。 |
-| Outlook Calendar | OAuth | 用户账号/套餐 | 用户 Microsoft 账号/租户、日历权限及适用套餐。 |
-| Google Drive | OAuth | 平台项目/混合 | 用户 Drive 账号/存储套餐；开发者项目 API 额度与规模化使用费用另算。 |
-| Google Docs | OAuth | 平台项目/混合 | 用户文档账号/Workspace 权益；开发者项目 API 额度。不要从 OAuth 推断调用费用必由用户承担。 |
-| Google Sheets | OAuth | 平台项目/混合 | 用户表格账号/Workspace 权益；开发者项目 API 额度及后续规则。 |
-| Confluence | OAuth | 用户账号/套餐 | 用户 Atlassian 站点的套餐/产品权限和 API 速率限制；平台负责 OAuth 分发。 |
-| Notion | OAuth | 用户账号/套餐 | 用户 Workspace 套餐、区块与连接速率限制；API 限额和 Workspace 限额是两套规则。 |
-| Vercel | OAuth Integration 安装 | 用户按量/资源 | 用户选择账号/团队和项目；部署、计算、存储费用按其 Vercel 套餐。平台负责 Integration 客户端、权限和分发。 |
-| Supabase | OAuth Management API | 用户按量/资源 | 用户选择授权组织，项目计算、数据库和存储按该组织套餐。平台 OAuth scopes 固定配置，本地只读仍阻止 SQL 写入。 |
-| Linear | OAuth + PKCE | 用户账号/套餐 | 用户选择工作区；Workspace 套餐和 API 限额归用户。以授权用户身份执行，支持 refresh token。 |
-| Jira | OAuth | 用户账号/套餐 | 用户 Atlassian 站点套餐、账号权限与 API 限额；不能读取未授权站点。 |
-| WhatsApp Business | 用户 API 凭证 + Business 设置 | 用户按量/资源 | 消息费用按实际 WABA/Business 账单、消息类别与市场处理；当前不提供 Remote Arc 代付号码。公共商用流程另需 Meta Business/Embedded Signup 配置。 |
-| YouTube | OAuth | 平台项目/混合 | 数据访问授予用户账号；YouTube Data API 日额度通常归开发者项目，扩容/审核是平台责任。 |
-| Facebook | OAuth | 平台项目/混合 | 用户 Page/Business 权限；平台应用分发、权限审核和版本维护。是否计量收费以实际产品合同为准。 |
-| Instagram | OAuth | 平台项目/混合 | 合格专业账号及关联 Page；平台需完成相关 Meta 权限与分发审核，不能支持任意个人账号。 |
-| X | 平台托管 OAuth + PKCE | 平台项目/混合 | API 调用消耗 Remote Arc 的 X 开发者项目积分，与用户 X Premium 不同；平台必须明确配置资金和上限，不自动充值。 |
-| LinkedIn | OAuth | 用户账号/套餐（访问资格待平台确认） | 用户账号及获批产品权限；平台开发者应用的产品准入/审核不等于用户付费订阅自动包含 API 访问。 |
-| Runway | 用户 API Key | 用户按量/资源 | 用户 Runway Dev API 项目的生成积分；网页工作区和 API 项目不同，符合条件的组织可能支持积分转移。Remote Arc 不提供共享生成 Key。 |
-| Google Search Console | OAuth | 平台项目/混合 | 用户站点授权；开发者项目/用户/API 额度需分别监测。 |
-| Google Analytics | OAuth | 平台项目/混合 | 用户 Analytics Property 权限及套餐；Data/Admin API 项目与属性级额度按实际规则处理。 |
-| Google Ads | OAuth + 平台 developer token | 平台项目/混合 | 广告支出属于用户广告账号；API developer token、访问级别与额度由平台负责。读取报表不等于购买广告。 |
-| Meta Ads | OAuth | 平台项目/混合 | 广告支出属于连接的广告账号；平台承担开发者应用、Marketing API 权限审核与限额管理。 |
-| Shopify | OAuth | 用户账号/套餐 | 店铺套餐、资源和受保护客户数据访问规则；当前操作创建商品草稿，不提供代购或代付。 |
-| HubSpot | OAuth | 用户账号/套餐 | 用户 Portal 产品套餐和 API 限额；平台负责公有应用分发与 token 生命周期。 |
-| Salesforce | OAuth | 用户账号/套餐 | 用户 Org 的 API 访问资格、Edition、日额度及额外许可；不是所有 Salesforce 账号都可直接启用 API。 |
+| 应用                  | 当前连接方式                  | 费用类别                            | 归属与条件                                                                                                                                   |
+| --------------------- | ----------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub                | OAuth                         | 用户账号/套餐                       | 账号与组织 API 额度；仓库/Actions 等资源按用户账号规则。平台仍承担 OAuth 应用维护与分发责任。                                                |
+| Slack                 | OAuth                         | 用户账号/套餐                       | 工作区套餐和应用分发/Marketplace 限制分别处理；不能将新建个人 App 当作商业分发审核的替代。                                                   |
+| Gmail                 | OAuth                         | 平台项目/混合                       | 用户邮箱账号；开发者 Cloud 项目额度，规模化 API 费用或受限 scope 安全审核成本可能由 Remote Arc 承担。                                        |
+| Outlook               | OAuth                         | 用户账号/套餐                       | 用户 Microsoft 账号/租户权限和套餐；所用 Graph 端点的计量规则需单独核查，不能把所有 Graph API 归为免费。                                     |
+| Google Calendar       | OAuth                         | 平台项目/混合                       | 用户日历账号；开发者项目额度，规模化调用可能产生项目侧费用。                                                                                 |
+| Outlook Calendar      | OAuth                         | 用户账号/套餐                       | 用户 Microsoft 账号/租户、日历权限及适用套餐。                                                                                               |
+| Google Drive          | OAuth                         | 平台项目/混合                       | 用户 Drive 账号/存储套餐；开发者项目 API 额度与规模化使用费用另算。                                                                          |
+| Google Docs           | OAuth                         | 平台项目/混合                       | 用户文档账号/Workspace 权益；开发者项目 API 额度。不要从 OAuth 推断调用费用必由用户承担。                                                    |
+| Google Sheets         | OAuth                         | 平台项目/混合                       | 用户表格账号/Workspace 权益；开发者项目 API 额度及后续规则。                                                                                 |
+| Confluence            | OAuth                         | 用户账号/套餐                       | 用户 Atlassian 站点的套餐/产品权限和 API 速率限制；平台负责 OAuth 分发。                                                                     |
+| Notion                | OAuth                         | 用户账号/套餐                       | 用户 Workspace 套餐、区块与连接速率限制；API 限额和 Workspace 限额是两套规则。                                                               |
+| Vercel                | OAuth Integration 安装        | 用户按量/资源                       | 用户选择账号/团队和项目；部署、计算、存储费用按其 Vercel 套餐。平台负责 Integration 客户端、权限和分发。                                     |
+| Supabase              | OAuth Management API          | 用户按量/资源                       | 用户选择授权组织，项目计算、数据库和存储按该组织套餐。平台 OAuth scopes 固定配置，本地只读仍阻止 SQL 写入。                                  |
+| Linear                | OAuth + PKCE                  | 用户账号/套餐                       | 用户选择工作区；Workspace 套餐和 API 限额归用户。以授权用户身份执行，支持 refresh token。                                                    |
+| Jira                  | OAuth                         | 用户账号/套餐                       | 用户 Atlassian 站点套餐、账号权限与 API 限额；不能读取未授权站点。                                                                           |
+| WhatsApp Business     | 用户 API 凭证 + Business 设置 | 用户按量/资源                       | 消息费用按实际 WABA/Business 账单、消息类别与市场处理；当前不提供 Remote Arc 代付号码。公共商用流程另需 Meta Business/Embedded Signup 配置。 |
+| YouTube               | OAuth                         | 平台项目/混合                       | 数据访问授予用户账号；YouTube Data API 日额度通常归开发者项目，扩容/审核是平台责任。                                                         |
+| Facebook              | OAuth                         | 平台项目/混合                       | 用户 Page/Business 权限；平台应用分发、权限审核和版本维护。是否计量收费以实际产品合同为准。                                                  |
+| Instagram             | OAuth                         | 平台项目/混合                       | 合格专业账号及关联 Page；平台需完成相关 Meta 权限与分发审核，不能支持任意个人账号。                                                          |
+| X                     | 平台托管 OAuth + PKCE         | 平台项目/混合                       | API 调用消耗 Remote Arc 的 X 开发者项目积分，与用户 X Premium 不同；平台必须明确配置资金和上限，不自动充值。                                 |
+| LinkedIn              | OAuth                         | 用户账号/套餐（访问资格待平台确认） | 用户账号及获批产品权限；平台开发者应用的产品准入/审核不等于用户付费订阅自动包含 API 访问。                                                   |
+| Runway                | 用户 API Key                  | 用户按量/资源                       | 用户 Runway Dev API 项目的生成积分；网页工作区和 API 项目不同，符合条件的组织可能支持积分转移。Remote Arc 不提供共享生成 Key。               |
+| Google Search Console | OAuth                         | 平台项目/混合                       | 用户站点授权；开发者项目/用户/API 额度需分别监测。                                                                                           |
+| Google Analytics      | OAuth                         | 平台项目/混合                       | 用户 Analytics Property 权限及套餐；Data/Admin API 项目与属性级额度按实际规则处理。                                                          |
+| Google Ads            | OAuth + 平台 developer token  | 平台项目/混合                       | 广告支出属于用户广告账号；API developer token、访问级别与额度由平台负责。读取报表不等于购买广告。                                            |
+| Meta Ads              | OAuth                         | 平台项目/混合                       | 广告支出属于连接的广告账号；平台承担开发者应用、Marketing API 权限审核与限额管理。                                                           |
+| Shopify               | OAuth                         | 用户账号/套餐                       | 店铺套餐、资源和受保护客户数据访问规则；当前操作创建商品草稿，不提供代购或代付。                                                             |
+| HubSpot               | OAuth                         | 用户账号/套餐                       | 用户 Portal 产品套餐和 API 限额；平台负责公有应用分发与 token 生命周期。                                                                     |
+| Salesforce            | OAuth                         | 用户账号/套餐                       | 用户 Org 的 API 访问资格、Edition、日额度及额外许可；不是所有 Salesforce 账号都可直接启用 API。                                              |
 
 ## 重点费用来源
 

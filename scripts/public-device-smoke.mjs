@@ -6,15 +6,12 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const version = process.env.REMOTEARC_PUBLIC_VERSION || JSON.parse(
-  await fs.readFile(path.join(root, "packages/cli/package.json"), "utf8"),
-).version;
+const version =
+  process.env.REMOTEARC_PUBLIC_VERSION ||
+  JSON.parse(await fs.readFile(path.join(root, "packages/cli/package.json"), "utf8")).version;
 assert.match(version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/);
 const home = await fs.mkdtemp(path.join(os.tmpdir(), "ra-public-install-"));
-const npmCLI = path.join(
-  path.dirname(process.execPath),
-  "node_modules/npm/bin/npm-cli.js",
-);
+const npmCLI = path.join(path.dirname(process.execPath), "node_modules/npm/bin/npm-cli.js");
 // Node's standard installers put npm alongside node; hosted Unix runners expose
 // npm as a symlink instead. Resolve the entry point from npm's own executable.
 import { execFileSync } from "node:child_process";

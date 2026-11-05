@@ -10,7 +10,6 @@ There are **35 OAuth connectors across 18 identity platforms**: GitHub, Slack, G
 
 **Two** connectors accept the user's API credentials: Runway and WhatsApp Business. Credentials are submitted only through the authenticated Apps form, validated against the provider, then encrypted with account-bound AES-GCM. API keys are not passed to an MCP model. X uses a managed confidential OAuth application, not user-supplied API tokens; its developer-project API consumption is billed to Remote Arc.
 
-
 Shopify validates a strict myshopify.com tenant and callback HMAC. Its initial support creates draft products, never automatically publishes them. Reading orders requires Shopify's applicable protected-customer-data approval. Atlassian uses Remote Arc's own 3LO application and authorized cloud IDs. Notion requires integration capabilities and user-selected shared pages. Instagram requires an eligible professional account linked to a Facebook Page. WhatsApp requires the user's Cloud API business account and owned phone number; free-form text remains subject to the provider's conversation-window rules.
 
 Pin a supported Meta Graph API version using `APP_META_GRAPH_VERSION`. Google Ads uses v26. Its access level belongs to the Google Cloud project owning the OAuth client. Developer tokens were sunset on September 9, 2026 and are no longer mandatory; a configured legacy token is optional. Project access approval and the account OAuth grant remain required. Request only the documented scopes/capabilities for the actual supported operations. Provider reviews, business verification and distribution approval cannot be replaced by adding an icon or enabling a flag.
@@ -38,7 +37,6 @@ Remote Arc still pays for its Workers/database/storage, development, maintenance
 ## Release gates
 
 Apps runtime is now enabled in production, but individual provider readiness is explicitly configuration-gated. An enabled Apps directory does **not** mean individual OAuth clients are registered, publicly approved or live-account tested. The public `/api/apps/status` endpoint reports metadata-only provider readiness, not successful OAuth or API execution. For a read-only operational checklist, run `pnpm --filter @remotearc/relay apps:preflight`; `--json` produces a machine-readable summary and `--require-p0` exits nonzero when the priority five identity platforms still have unconfigured providers. Never dump real client secrets into reports.
-
 
 Apply migrations 0030 and 0031 together in an isolated staging database first. Migration 0031 rebuilds both the provider table and its dependent call table, retaining existing IDs, encrypted credentials, action records and foreign keys. The upgrade test starts with populated 0030 tables, commits the migration and checks existing data and foreign-key integrity.
 

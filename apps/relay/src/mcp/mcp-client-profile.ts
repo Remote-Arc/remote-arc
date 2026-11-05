@@ -15,24 +15,35 @@ const CHATGPT_CALLBACK_HOSTS = new Set(["chatgpt.com", "chatgpt-staging.com", "c
  * that controls that callback.
  */
 export async function mcpClientProfile(
-  db: Pick<D1Database, "prepare">, clientId: string,
+  db: Pick<D1Database, "prepare">,
+  clientId: string,
 ): Promise<McpClientProfile> {
   const cached = profileCache.get(clientId);
   if (cached && cached.expires > Date.now()) return cached.profile;
-  const record = await db.prepare("SELECT redirect_uris FROM oauth_clients WHERE client_id = ?1")
-    .bind(clientId).first<{ redirect_uris: string }>();
+  const record = await db
+    .prepare("SELECT redirect_uris FROM oauth_clients WHERE client_id = ?1")
+    .bind(clientId)
+    .first<{ redirect_uris: string }>();
   if (!record) return "generic";
   let uris: unknown;
-  try { uris = JSON.parse(record.redirect_uris); } catch { return "generic"; }
+  try {
+    uris = JSON.parse(record.redirect_uris);
+  } catch {
+    return "generic";
+  }
   if (!Array.isArray(uris)) return "generic";
   const callbacks = uris.flatMap((entry) => {
     if (typeof entry !== "string") return [];
     try {
       const uri = new URL(entry);
       return uri.protocol === "https:" && !uri.username && !uri.password ? [uri] : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
-  const claude = callbacks.some((uri) => CLAUDE_CALLBACK_HOSTS.has(uri.hostname) && uri.pathname === "/api/mcp/auth_callback");
+  const claude = callbacks.some(
+    (uri) => CLAUDE_CALLBACK_HOSTS.has(uri.hostname) && uri.pathname === "/api/mcp/auth_callback",
+  );
   const chatgpt = callbacks.some((uri) => CHATGPT_CALLBACK_HOSTS.has(uri.hostname));
   const profile: McpClientProfile = claude ? "claude" : chatgpt ? "chatgpt" : "generic";
   // This hot-isolate cache avoids one extra D1 read on most tool calls.

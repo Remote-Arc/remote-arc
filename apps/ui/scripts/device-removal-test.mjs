@@ -15,8 +15,16 @@ assert.match(
   /<DeviceActivityPanel [^>]*\/>\s*<div className="deviceDangerZone">/,
   "Forget device must stay visible outside the currently selected device settings tab.",
 );
-for (const panel of ["device-access-panel.tsx", "device-tasks-panel.tsx", "device-activity-panel.tsx"]) {
-  assert.doesNotMatch(readAppModule("features/dashboard/devices/" + panel), /deviceDangerZone/, `${panel} must not hold Forget device`);
+for (const panel of [
+  "device-access-panel.tsx",
+  "device-tasks-panel.tsx",
+  "device-activity-panel.tsx",
+]) {
+  assert.doesNotMatch(
+    readAppModule("features/dashboard/devices/" + panel),
+    /deviceDangerZone/,
+    `${panel} must not hold Forget device`,
+  );
 }
 assert.match(source, /tr\("Forget device", "删除设备"\)/);
 

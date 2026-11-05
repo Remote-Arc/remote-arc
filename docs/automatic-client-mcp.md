@@ -91,13 +91,13 @@ published rc.4 behavior from the source-only Windows fix and records WSL evidenc
 
 ## Troubleshooting
 
-| Result | Next step |
-| --- | --- |
-| No supported executable found with npm-only clients on rc.4 | Use a later candidate containing the Windows npm discovery fix, or install the provider's native executable. |
-| Claude connection inspection fails on Windows | Check the provider's Git Bash prerequisite; use `CLAUDE_CODE_GIT_BASH_PATH` if Git Bash is installed outside its normal location. |
-| Existing MCP/Connector kept | Restart the client if needed. Automatic setup preserves its name, scope and enabled state. |
-| Managed settings, unknown connector inventory or config conflict | Follow the provider's account/managed settings. Remote Link continues to connect; automatic setup can retry on a later start. |
-| Registration changed but an open client has no tools | Restart that client, then optionally run `setup doctor --global --agent all`. |
+| Result                                                           | Next step                                                                                                                         |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| No supported executable found with npm-only clients on rc.4      | Use a later candidate containing the Windows npm discovery fix, or install the provider's native executable.                      |
+| Claude connection inspection fails on Windows                    | Check the provider's Git Bash prerequisite; use `CLAUDE_CODE_GIT_BASH_PATH` if Git Bash is installed outside its normal location. |
+| Existing MCP/Connector kept                                      | Restart the client if needed. Automatic setup preserves its name, scope and enabled state.                                        |
+| Managed settings, unknown connector inventory or config conflict | Follow the provider's account/managed settings. Remote Link continues to connect; automatic setup can retry on a later start.     |
+| Registration changed but an open client has no tools             | Restart that client, then optionally run `setup doctor --global --agent all`.                                                     |
 
 ## Reproduce checks
 

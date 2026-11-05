@@ -1,6 +1,7 @@
 # Admin Operations Monitor
 
 The new admin-only section within `/monitor` displays:
+
 - Account totals, monthly MCP tool calls and recent tool-audit activity.
 - Paginated users with Free/Plus status, usage allowance and per-user live-device count.
 - Up to 200 non-revoked devices with real-time online status obtained from their per-account registry Durable Object, **not inferred** from `last_seen`. The results identify unverified registry queries.

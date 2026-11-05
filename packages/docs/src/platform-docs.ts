@@ -1,128 +1,250 @@
-import type {DocTopic} from './catalog.js';
+import type { DocTopic } from "./catalog.js";
 
-const overview:DocTopic={slug:'start-here',group:'start',title:{en:'How Remote Arc gets work done',zh:'Remote Arc 如何完成工作'},description:{en:'Start with an outcome. Connect your tools, reuse a skill and keep the result with the work.',zh:'从目标出发，连接工具、复用技能，让结果随工作保留。'},sections:[
- {heading:{en:'Choose your workspace',zh:'选择工作入口'},text:{en:'Open Arc at agent.remotearc.app to work with the hosted personal agent. Activate the 14-day Auto trial, or choose Plus / Pro on the dedicated checkout page linked from Plan & usage. You do not need a model API key. If you prefer an existing ChatGPT, Claude or coding client, use Connect to expose your authorized Apps and computers through MCP. Both entrances use the same account connections and execution controls.',zh:'打开 agent.remotearc.app，使用 Arc 托管个人智能体。开启 14 天 Auto 试用，或从“套餐与用量”进入独立支付页选择 Plus / Pro，无需模型 API Key。如果更习惯已有的 ChatGPT、Claude 或编程客户端，可通过 Connect 的 MCP 接口使用已授权的 Apps 和电脑。两种入口共用账号连接与执行控制。'}},
- {heading:{en:'Connect the capability your goal needs',zh:'连接目标所需的能力'},text:{en:'For email or a repository, connect the relevant account in Apps. Cloud App actions do not require a computer. For local files, commands or installed software, pair a computer and choose its allowed tools and workspace. Describe a concrete result: “Summarize recent inbox messages and give me the actions”, or “Check the latest deployment of my web project”. Arc needs actual message content or deployment evidence to answer; a connection check alone is not completion.',zh:'邮件或代码仓库工作先在 Apps 连接对应账号；云端应用操作无需电脑。处理本地文件、命令或已安装软件时，配对电脑并选择允许的工具和目录。明确结果，例如“汇总最近收件箱的重点和待办”，或“检查 web 项目最新部署”。Arc 需要实际邮件内容或部署证据才能回答，连接检查成功不等于工作完成。'}},
- {heading:{en:'Reference Apps and Skills with @',zh:'用 @ 引用应用与技能'},text:{en:'Open Skills for a result-focused workflow or import a SKILL.md. Type @ in Chat to choose Skills or active App accounts as badges, then describe your goal. Choosing a workflow does not paste instructions into your message. The selected reference is saved with your message and Arc reads its instructions. A skill supplies a method; it does not install engines, repository files or dependencies. Image or video creation still needs a connected, supported generation capability.',zh:'打开 Skills，选择围绕实际结果设计的工作流或导入 SKILL.md。聊天时输入 @，用 badge 引用技能或已连接的应用账号，再描述目标。选择工作流不会向输入框粘贴内部指令。技能引用随消息保存，Arc 会读取其指令。技能提供工作方法，不会自动安装引擎、仓库文件或依赖。图片、视频创作仍需已连接且受支持的生成能力。'}},
- {heading:{en:'Use Tasks for work that should persist',zh:'持续工作交给 Tasks'},text:{en:'Ask Arc to save a one-off task or a repeating routine, with the goal, accounts and timing. For a daily routine include the time and timezone. Tasks keeps saved work, next runs and results together. Each run checks current access, permissions and budgets. If a run fails or an action cannot be confirmed, repeating work pauses for inspection. Creating a schedule is not evidence that its first run succeeded.',zh:'告诉 Arc 保存一次性任务或重复 Routine，并说明目标、账号与时间。每日工作还需时间和时区。Tasks 统一保存工作、下次运行与结果，每轮检查当前权限和预算。运行失败或操作结果不明时，重复工作会暂停等待检查。创建计划成功不等于首轮已经完成。'}},
- {heading:{en:'See results and stay in control',zh:'查看结果并掌控执行'},text:{en:'Chat shows a compact working indicator and the final answer. Open Activity for execution details when needed. Check returned links, files or provider results before relying on important work. Arc reports missing permissions, unavailable devices, missing engines and exhausted budgets as blockers. Stop prevents further dispatch; an action already in flight may finish. Review and remove personal memories in Settings, and revoke App or device access independently.',zh:'Chat 用简洁的工作状态和最终答复展示结果，需要时到 Activity 查看执行详情。重要工作应核对返回的链接、文件或服务商结果。权限不足、设备离线、缺少引擎或预算耗尽会作为阻碍报告。停止会阻止新的派发，已经发出的操作仍可能完成。可在设置中查看、删除个人记忆，也可分别撤销应用或设备访问。'}}
-],links:[['/docs/arc','Arc workspace','Arc 工作空间'],['/docs/apps','Connect Apps','连接 Apps'],['/docs/tasks','Tasks and routines','任务与 Routine'],['/docs/architecture','Technical architecture','技术架构'],['/docs/trust','Verified results','结果核验']]};
-
-const architecture:DocTopic={slug:'architecture',group:'understand',title:{en:'Platform architecture',zh:'平台技术架构'},description:{en:'How models, the Arc runtime, Apps, persistent tasks and device execution cooperate.',zh:'模型、Arc 运行时、Apps、持久任务和设备执行如何协作。'},sections:[
- {heading:{en:'Models reason; Arc coordinates execution',zh:'模型推理，Arc 组织执行'},text:{en:'Remote Arc is an agent platform with a hosted workspace and a Connect entry point. Model APIs interpret requests, plan, select tools, assess observations and compose answers. Arc supplies the runtime around those decisions: account context, skill references, memory retrieval, authorization, schemas, dispatch, persistence, scheduling and cost accounting. Models do not execute an App API or a local command by themselves. Completion needs evidence returned through the execution path; model claims alone are insufficient.',zh:'Remote Arc 是包含托管工作空间和 Connect 入口的 Agent 平台。模型 API 理解需求、规划、选择工具、判断观察结果并组织答复。Arc 提供围绕这些决策的运行环境：账号上下文、技能引用、记忆检索、授权、Schema、派发、持久化、调度和成本核算。模型本身不执行应用 API 或本地命令；完成需要执行链路返回的证据，仅有模型声明并不足够。'}},
- {heading:{en:'From a request to a result',zh:'从请求到结果'},text:{en:'A signed-in request creates a persisted run. Arc assembles bounded conversation state, prior observations, available connections and relevant memories. A validated model decision selects a tool. The server checks ownership, entitlement, operation arguments and current permissions before dispatch. Provider responses or device observations become the next decision’s context. The loop ends with a final answer or a recorded failure, limit or uncertain outcome. A successful individual tool call does not prove the entire user goal was achieved.',zh:'登录请求创建持久运行记录。Arc 组装有界对话状态、先前观察、可用连接和相关记忆。经校验的模型决策选择工具；服务端在派发前核对归属、额度、参数和当前权限。服务商响应或设备观察进入下一轮决策，直到生成最终答复，或记录失败、上限及不确定结果。一次工具调用成功不证明用户整个目标已经达成。'}},
- {heading:{en:'Cloud control and App execution',zh:'云端控制与应用执行'},text:{en:'Cloudflare Workers serve authenticated APIs and MCP. Durable Objects serialize Arc chat execution and route live device connections. D1 stores account authorization, encrypted conversation content, skills, selected memories, task state and usage ledgers. App adapters validate typed operations and use server-held encrypted credentials within provider scopes. They preserve stable request identities, account boundaries and unknown outcomes. Raw App data and skill text remain untrusted observations, not new instructions or permissions.',zh:'Cloudflare Worker 提供认证 API 和 MCP；Durable Object 串行推进 Arc 对话运行，并路由实时设备连接。D1 保存账户授权、加密对话、技能、选择性记忆、任务状态与用量账本。App 适配器校验类型化操作，在服务商 Scope 内使用服务端保存的加密凭证，并保留稳定请求标识、账户边界和未知结果。应用数据与技能文本属于不可信观察，不是新的指令或授权。'}},
- {heading:{en:'Persistent work and device placement',zh:'持久工作与设备调度'},text:{en:'The leased scheduler advances saved work independently of an open browser tab. Arc routines start bounded hosted model runs; Connect deterministic tasks retain approved execution contracts. Device placement first filters ownership, online status, tools, platform and workspace, then considers fresh capacity and active work. The Go Agent establishes an outbound authenticated WebSocket and its local Execution Core enforces tool, path and OS boundaries. Selection does not move projects, wake a powered-off machine or replay an unconfirmed write elsewhere.',zh:'带租约的调度器推进已保存工作，无需浏览器标签页一直打开。Arc Routine 启动有界的托管模型运行；Connect 确定性任务保留已批准执行契约。设备调度先筛选归属、在线状态、工具、平台和工作目录，再考虑实时负载和活动工作。Go Agent 主动建立认证出站 WebSocket，本地 Execution Core 执行工具、路径和操作系统边界。调度不会搬迁项目、启动已关机设备或在别处重放结果未确认的写入。'}},
- {heading:{en:'Context, memory and operating cost',zh:'上下文、记忆与运营成本'},text:{en:'Within a chat, Arc retains relevant goals, arguments, observations and discovered IDs; short-lived discovery reuse reduces repeat calls while action authorization remains live. Cross-chat memory consists of bounded personal notes and recent work summaries that users can inspect and delete. It does not mirror every device or send all history on every model call. Model requests reserve budget before dispatch and settle reported usage afterwards; uncertain calls retain a hold. Paid and sponsored operating pools, user Credits and run limits bound costs without automatic provider recharge.',zh:'同一对话保留相关目标、参数、观察和已发现 ID，短期复用发现结果以减少重复调用，实际动作仍重新核验权限。跨对话记忆由有界个人笔记和近期工作摘要组成，用户可查看和删除；不会镜像全部设备，也不会每次把所有历史发给模型。模型请求先预留预算，再按报告用量结算；不确定调用保留预留。付费与赞助运营资金池、用户 Credits 和单次运行限制共同控制成本，不会自动给服务商充值。'}},
- {heading:{en:'Current boundaries and verification',zh:'当前边界与验证'},text:{en:'Arc Chat, Apps, skill imports, persistent tasks and routines are implemented. Each App supports its published operations, not every feature of its provider. Generation requires a real supported backend. AI teams, agent profiles, direct chats and group conversations are available as Beta; they use scoped account access and shared Credits. Deterministic tests cover permissions, schema correction, duplicate prevention, interrupted runs, schedules and budgets. Protected acceptance also runs a real model against synthetic mail, GitHub issues, ready/failed deployments, a saved Task through scheduled execution, and a selected imported Skill producing its specified result. Such fixtures validate the tested execution paths, not all customer accounts, provider incidents or possible goals.',zh:'Arc Chat、Apps、技能导入、持久任务与 Routine 已实现。每个 App 支持已公布操作，不代表覆盖服务商全部功能；生成任务需有真实受支持后端。AI 团队、智能体资料、单聊与群聊已提供 Beta，遵循受限账号权限并使用共享 Credits。确定性测试覆盖权限、参数修正、防重复、中断、调度和预算；受保护验收还使用真实模型处理模拟邮件、GitHub Issue、成功与失败部署，并检查已保存 Task 的调度执行，以及被引用的导入 Skill 是否产出规定结果。这些用例验证所测执行链路，不能证明所有客户账号、服务商故障情形或任意目标都能成功。'}}
-],links:[['/docs/start-here','User guide','用户指南'],['/docs/security','Security controls','安全控制'],['/docs/engineering-architecture','Engineering reference','工程参考']]};
-
-const trust:DocTopic={
-  "slug": "trust",
-  "group": "understand",
-  "title": {
-    "en": "Verified results and execution receipts",
-    "zh": "结果核验与执行回执"
+const overview: DocTopic = {
+  slug: "start-here",
+  group: "start",
+  title: { en: "How Remote Arc gets work done", zh: "Remote Arc 如何完成工作" },
+  description: {
+    en: "Start with an outcome. Connect your tools, reuse a skill and keep the result with the work.",
+    zh: "从目标出发，连接工具、复用技能，让结果随工作保留。",
   },
-  "description": {
-    "en": "Choose exact checks, keep execution within scope and inspect the evidence.",
-    "zh": "先选定检查，限定执行范围，再查看结果证据。"
-  },
-  "sections": [
+  sections: [
     {
-      "heading": {
-        "en": "Choose the result before starting",
-        "zh": "开始前选择核验结果"
+      heading: { en: "Choose your workspace", zh: "选择工作入口" },
+      text: {
+        en: "Open Arc at agent.remotearc.app to work with the hosted personal agent. Activate the 14-day Auto trial, or choose Plus / Pro on the dedicated checkout page linked from Plan & usage. You do not need a model API key. If you prefer an existing ChatGPT, Claude or coding client, use Connect to expose your authorized Apps and computers through MCP. Both entrances use the same account connections and execution controls.",
+        zh: "打开 agent.remotearc.app，使用 Arc 托管个人智能体。开启 14 天 Auto 试用，或从“套餐与用量”进入独立支付页选择 Plus / Pro，无需模型 API Key。如果更习惯已有的 ChatGPT、Claude 或编程客户端，可通过 Connect 的 MCP 接口使用已授权的 Apps 和电脑。两种入口共用账号连接与执行控制。",
       },
-      "text": {
-        "en": "In Arc Chat, choose Verified task. Select a connected account and review the exact action before sending: read 1–5 inbox excerpts, create and read back one exact GitHub issue, or check one exact Vercel deployment. Opening the form does not execute. All runs still use your current access and usage allowance.",
-        "zh": "在 Arc Chat 点击“核验任务”，选择已连接账户，核对具体动作后发送：读取 1–5 封邮箱摘录、创建并回读一个准确的 GitHub Issue，或检查指定 Vercel 部署。打开表单不会执行，运行仍受当前权限和用量额度限制。"
-      }
     },
     {
-      "heading": {
-        "en": "What each check proves",
-        "zh": "每类检查证明什么"
+      heading: { en: "Connect the capability your goal needs", zh: "连接目标所需的能力" },
+      text: {
+        en: "For email or a repository, connect the relevant account in Apps. Cloud App actions do not require a computer. For local files, commands or installed software, pair a computer and choose its allowed tools and workspace. Describe a concrete result: “Summarize recent inbox messages and give me the actions”, or “Check the latest deployment of my web project”. Arc needs actual message content or deployment evidence to answer; a connection check alone is not completion.",
+        zh: "邮件或代码仓库工作先在 Apps 连接对应账号；云端应用操作无需电脑。处理本地文件、命令或已安装软件时，配对电脑并选择允许的工具和目录。明确结果，例如“汇总最近收件箱的重点和待办”，或“检查 web 项目最新部署”。Arc 需要实际邮件内容或部署证据才能回答，连接检查成功不等于工作完成。",
       },
-      "text": {
-        "en": "Inbox checks verify that the requested excerpt bodies were retrieved, not that every summary judgment is correct. Issue checks require a real creation acknowledgement plus an independent read-back matching the exact title and full body. Deployment checks require the selected ID, READY state and HTTPS URL; application behavior needs separate tests.",
-        "zh": "邮箱检查证明所选范围的正文摘录已读取，不证明摘要中的每项判断都准确。Issue 检查需要实际创建确认，再独立回读，核对准确标题与完整正文。部署检查需要指定 ID、READY 状态和 HTTPS URL；应用功能还需另外测试。"
-      }
     },
     {
-      "heading": {
-        "en": "Read the receipt",
-        "zh": "查看执行回执"
+      heading: { en: "Reference Apps and Skills with @", zh: "用 @ 引用应用与技能" },
+      text: {
+        en: "Open Skills for a result-focused workflow or import a SKILL.md. Type @ in Chat to choose Skills or active App accounts as badges, then describe your goal. Choosing a workflow does not paste instructions into your message. The selected reference is saved with your message and Arc reads its instructions. A skill supplies a method; it does not install engines, repository files or dependencies. Image or video creation still needs a connected, supported generation capability.",
+        zh: "打开 Skills，选择围绕实际结果设计的工作流或导入 SKILL.md。聊天时输入 @，用 badge 引用技能或已连接的应用账号，再描述目标。选择工作流不会向输入框粘贴内部指令。技能引用随消息保存，Arc 会读取其指令。技能提供工作方法，不会自动安装引擎、仓库文件或依赖。图片、视频创作仍需已连接且受支持的生成能力。",
       },
-      "text": {
-        "en": "The receipt shows declared-check status, acknowledged App changes, evidence IDs/times/links and the next action. Missing evidence remains pending; an acknowledged change with missing checks can be partial. A normal run without selected checks is not certified as a completed goal. Assistant wording cannot override observed mismatches.",
-        "zh": "回执展示声明检查的状态、已确认的 App 变更、证据编号／时间／链接和下一步。证据缺失仍是待验证；已有变更但检查不全时可能是部分完成。未选择明确检查的普通运行不会被认证为目标已完成，模型措辞不能覆盖实际不一致的结果。"
-      }
     },
     {
-      "heading": {
-        "en": "Keep authority narrow",
-        "zh": "保持明确的授权边界"
+      heading: { en: "Use Tasks for work that should persist", zh: "持续工作交给 Tasks" },
+      text: {
+        en: "Ask Arc to save a one-off task or a repeating routine, with the goal, accounts and timing. For a daily routine include the time and timezone. Tasks keeps saved work, next runs and results together. Each run checks current access, permissions and budgets. If a run fails or an action cannot be confirmed, repeating work pauses for inspection. Creating a schedule is not evidence that its first run succeeded.",
+        zh: "告诉 Arc 保存一次性任务或重复 Routine，并说明目标、账号与时间。每日工作还需时间和时区。Tasks 统一保存工作、下次运行与结果，每轮检查当前权限和预算。运行失败或操作结果不明时，重复工作会暂停等待检查。创建计划成功不等于首轮已经完成。",
       },
-      "text": {
-        "en": "The selected account, resource and allowed actions are enforced by the server, including after a restart. All needed read/write permissions are checked before creating a verified task. Email, issue and skill content cannot add authority. Selecting a handbook with @ alone does not create a verification scope.",
-        "zh": "所选账户、资源与动作范围由服务端强制执行，重启后仍有效。创建核验任务前检查所需读写权限。邮件、Issue 和技能内容不能增加授权，仅用 @ 选择手册也不会创建验证范围。"
-      }
     },
     {
-      "heading": {
-        "en": "Recover without duplicate effects",
-        "zh": "恢复时避免重复效果"
+      heading: { en: "See results and stay in control", zh: "查看结果并掌控执行" },
+      text: {
+        en: "Chat shows a compact working indicator and the final answer. Open Activity for execution details when needed. Check returned links, files or provider results before relying on important work. Arc reports missing permissions, unavailable devices, missing engines and exhausted budgets as blockers. Stop prevents further dispatch; an action already in flight may finish. Review and remove personal memories in Settings, and revoke App or device access independently.",
+        zh: "Chat 用简洁的工作状态和最终答复展示结果，需要时到 Activity 查看执行详情。重要工作应核对返回的链接、文件或服务商结果。权限不足、设备离线、缺少引擎或预算耗尽会作为阻碍报告。停止会阻止新的派发，已经发出的操作仍可能完成。可在设置中查看、删除个人记忆，也可分别撤销应用或设备访问。",
       },
-      "text": {
-        "en": "An issue creation without read-back is partial. Inspect its existing link before doing anything again. Unknown effects stop for inspection; Arc does not create a replacement automatically or silently close an issue. A BUILDING deployment remains pending. Review failures, limits and missing access before continuing.",
-        "zh": "Issue 创建后没有回读属于部分完成，先检查现有链接再决定后续操作。效果不明时停止并要求核对，Arc 不会自动创建替代 Issue 或静默关闭它。BUILDING 部署保持待验证。继续前应核对失败、额度和缺失权限。"
-      }
     },
-    {
-      "heading": {
-        "en": "Pay on a dedicated page",
-        "zh": "在独立页面付款"
-      },
-      "text": {
-        "en": "Plan & usage links to the dedicated checkout page. Review the account, server price and offer before continuing to Stripe. Returning from Stripe checks saved payment status and cannot grant Credits or start a second payment by itself.",
-        "zh": "“套餐与用量”提供独立支付页入口，核对账户、服务端价格与套餐后再前往 Stripe。支付回跳只核对已保存的状态，本身不会发放 Credits 或发起第二次付款。"
-      }
-    }
   ],
-  "links": [
-    [
-      "/docs/skills",
-      "Reusable handbooks",
-      "可复用任务手册"
-    ],
-    [
-      "/docs/architecture",
-      "Technical architecture",
-      "技术架构"
-    ],
-    [
-      "/docs/feature-map",
-      "Feature map and regressions",
-      "功能地图与回归路径"
-    ]
-  ]
+  links: [
+    ["/docs/arc", "Arc workspace", "Arc 工作空间"],
+    ["/docs/apps", "Connect Apps", "连接 Apps"],
+    ["/docs/tasks", "Tasks and routines", "任务与 Routine"],
+    ["/docs/architecture", "Technical architecture", "技术架构"],
+    ["/docs/trust", "Verified results", "结果核验"],
+  ],
+};
+
+const architecture: DocTopic = {
+  slug: "architecture",
+  group: "understand",
+  title: { en: "Platform architecture", zh: "平台技术架构" },
+  description: {
+    en: "How models, the Arc runtime, Apps, persistent tasks and device execution cooperate.",
+    zh: "模型、Arc 运行时、Apps、持久任务和设备执行如何协作。",
+  },
+  sections: [
+    {
+      heading: { en: "Models reason; Arc coordinates execution", zh: "模型推理，Arc 组织执行" },
+      text: {
+        en: "Remote Arc is an agent platform with a hosted workspace and a Connect entry point. Model APIs interpret requests, plan, select tools, assess observations and compose answers. Arc supplies the runtime around those decisions: account context, skill references, memory retrieval, authorization, schemas, dispatch, persistence, scheduling and cost accounting. Models do not execute an App API or a local command by themselves. Completion needs evidence returned through the execution path; model claims alone are insufficient.",
+        zh: "Remote Arc 是包含托管工作空间和 Connect 入口的 Agent 平台。模型 API 理解需求、规划、选择工具、判断观察结果并组织答复。Arc 提供围绕这些决策的运行环境：账号上下文、技能引用、记忆检索、授权、Schema、派发、持久化、调度和成本核算。模型本身不执行应用 API 或本地命令；完成需要执行链路返回的证据，仅有模型声明并不足够。",
+      },
+    },
+    {
+      heading: { en: "From a request to a result", zh: "从请求到结果" },
+      text: {
+        en: "A signed-in request creates a persisted run. Arc assembles bounded conversation state, prior observations, available connections and relevant memories. A validated model decision selects a tool. The server checks ownership, entitlement, operation arguments and current permissions before dispatch. Provider responses or device observations become the next decision’s context. The loop ends with a final answer or a recorded failure, limit or uncertain outcome. A successful individual tool call does not prove the entire user goal was achieved.",
+        zh: "登录请求创建持久运行记录。Arc 组装有界对话状态、先前观察、可用连接和相关记忆。经校验的模型决策选择工具；服务端在派发前核对归属、额度、参数和当前权限。服务商响应或设备观察进入下一轮决策，直到生成最终答复，或记录失败、上限及不确定结果。一次工具调用成功不证明用户整个目标已经达成。",
+      },
+    },
+    {
+      heading: { en: "Cloud control and App execution", zh: "云端控制与应用执行" },
+      text: {
+        en: "Cloudflare Workers serve authenticated APIs and MCP. Durable Objects serialize Arc chat execution and route live device connections. D1 stores account authorization, encrypted conversation content, skills, selected memories, task state and usage ledgers. App adapters validate typed operations and use server-held encrypted credentials within provider scopes. They preserve stable request identities, account boundaries and unknown outcomes. Raw App data and skill text remain untrusted observations, not new instructions or permissions.",
+        zh: "Cloudflare Worker 提供认证 API 和 MCP；Durable Object 串行推进 Arc 对话运行，并路由实时设备连接。D1 保存账户授权、加密对话、技能、选择性记忆、任务状态与用量账本。App 适配器校验类型化操作，在服务商 Scope 内使用服务端保存的加密凭证，并保留稳定请求标识、账户边界和未知结果。应用数据与技能文本属于不可信观察，不是新的指令或授权。",
+      },
+    },
+    {
+      heading: { en: "Persistent work and device placement", zh: "持久工作与设备调度" },
+      text: {
+        en: "The leased scheduler advances saved work independently of an open browser tab. Arc routines start bounded hosted model runs; Connect deterministic tasks retain approved execution contracts. Device placement first filters ownership, online status, tools, platform and workspace, then considers fresh capacity and active work. The Go Agent establishes an outbound authenticated WebSocket and its local Execution Core enforces tool, path and OS boundaries. Selection does not move projects, wake a powered-off machine or replay an unconfirmed write elsewhere.",
+        zh: "带租约的调度器推进已保存工作，无需浏览器标签页一直打开。Arc Routine 启动有界的托管模型运行；Connect 确定性任务保留已批准执行契约。设备调度先筛选归属、在线状态、工具、平台和工作目录，再考虑实时负载和活动工作。Go Agent 主动建立认证出站 WebSocket，本地 Execution Core 执行工具、路径和操作系统边界。调度不会搬迁项目、启动已关机设备或在别处重放结果未确认的写入。",
+      },
+    },
+    {
+      heading: { en: "Context, memory and operating cost", zh: "上下文、记忆与运营成本" },
+      text: {
+        en: "Within a chat, Arc retains relevant goals, arguments, observations and discovered IDs; short-lived discovery reuse reduces repeat calls while action authorization remains live. Cross-chat memory consists of bounded personal notes and recent work summaries that users can inspect and delete. It does not mirror every device or send all history on every model call. Model requests reserve budget before dispatch and settle reported usage afterwards; uncertain calls retain a hold. Paid and sponsored operating pools, user Credits and run limits bound costs without automatic provider recharge.",
+        zh: "同一对话保留相关目标、参数、观察和已发现 ID，短期复用发现结果以减少重复调用，实际动作仍重新核验权限。跨对话记忆由有界个人笔记和近期工作摘要组成，用户可查看和删除；不会镜像全部设备，也不会每次把所有历史发给模型。模型请求先预留预算，再按报告用量结算；不确定调用保留预留。付费与赞助运营资金池、用户 Credits 和单次运行限制共同控制成本，不会自动给服务商充值。",
+      },
+    },
+    {
+      heading: { en: "Current boundaries and verification", zh: "当前边界与验证" },
+      text: {
+        en: "Arc Chat, Apps, skill imports, persistent tasks and routines are implemented. Each App supports its published operations, not every feature of its provider. Generation requires a real supported backend. AI teams, agent profiles, direct chats and group conversations are available as Beta; they use scoped account access and shared Credits. Deterministic tests cover permissions, schema correction, duplicate prevention, interrupted runs, schedules and budgets. Protected acceptance also runs a real model against synthetic mail, GitHub issues, ready/failed deployments, a saved Task through scheduled execution, and a selected imported Skill producing its specified result. Such fixtures validate the tested execution paths, not all customer accounts, provider incidents or possible goals.",
+        zh: "Arc Chat、Apps、技能导入、持久任务与 Routine 已实现。每个 App 支持已公布操作，不代表覆盖服务商全部功能；生成任务需有真实受支持后端。AI 团队、智能体资料、单聊与群聊已提供 Beta，遵循受限账号权限并使用共享 Credits。确定性测试覆盖权限、参数修正、防重复、中断、调度和预算；受保护验收还使用真实模型处理模拟邮件、GitHub Issue、成功与失败部署，并检查已保存 Task 的调度执行，以及被引用的导入 Skill 是否产出规定结果。这些用例验证所测执行链路，不能证明所有客户账号、服务商故障情形或任意目标都能成功。",
+      },
+    },
+  ],
+  links: [
+    ["/docs/start-here", "User guide", "用户指南"],
+    ["/docs/security", "Security controls", "安全控制"],
+    ["/docs/engineering-architecture", "Engineering reference", "工程参考"],
+  ],
+};
+
+const trust: DocTopic = {
+  slug: "trust",
+  group: "understand",
+  title: {
+    en: "Verified results and execution receipts",
+    zh: "结果核验与执行回执",
+  },
+  description: {
+    en: "Choose exact checks, keep execution within scope and inspect the evidence.",
+    zh: "先选定检查，限定执行范围，再查看结果证据。",
+  },
+  sections: [
+    {
+      heading: {
+        en: "Choose the result before starting",
+        zh: "开始前选择核验结果",
+      },
+      text: {
+        en: "In Arc Chat, choose Verified task. Select a connected account and review the exact action before sending: read 1–5 inbox excerpts, create and read back one exact GitHub issue, or check one exact Vercel deployment. Opening the form does not execute. All runs still use your current access and usage allowance.",
+        zh: "在 Arc Chat 点击“核验任务”，选择已连接账户，核对具体动作后发送：读取 1–5 封邮箱摘录、创建并回读一个准确的 GitHub Issue，或检查指定 Vercel 部署。打开表单不会执行，运行仍受当前权限和用量额度限制。",
+      },
+    },
+    {
+      heading: {
+        en: "What each check proves",
+        zh: "每类检查证明什么",
+      },
+      text: {
+        en: "Inbox checks verify that the requested excerpt bodies were retrieved, not that every summary judgment is correct. Issue checks require a real creation acknowledgement plus an independent read-back matching the exact title and full body. Deployment checks require the selected ID, READY state and HTTPS URL; application behavior needs separate tests.",
+        zh: "邮箱检查证明所选范围的正文摘录已读取，不证明摘要中的每项判断都准确。Issue 检查需要实际创建确认，再独立回读，核对准确标题与完整正文。部署检查需要指定 ID、READY 状态和 HTTPS URL；应用功能还需另外测试。",
+      },
+    },
+    {
+      heading: {
+        en: "Read the receipt",
+        zh: "查看执行回执",
+      },
+      text: {
+        en: "The receipt shows declared-check status, acknowledged App changes, evidence IDs/times/links and the next action. Missing evidence remains pending; an acknowledged change with missing checks can be partial. A normal run without selected checks is not certified as a completed goal. Assistant wording cannot override observed mismatches.",
+        zh: "回执展示声明检查的状态、已确认的 App 变更、证据编号／时间／链接和下一步。证据缺失仍是待验证；已有变更但检查不全时可能是部分完成。未选择明确检查的普通运行不会被认证为目标已完成，模型措辞不能覆盖实际不一致的结果。",
+      },
+    },
+    {
+      heading: {
+        en: "Keep authority narrow",
+        zh: "保持明确的授权边界",
+      },
+      text: {
+        en: "The selected account, resource and allowed actions are enforced by the server, including after a restart. All needed read/write permissions are checked before creating a verified task. Email, issue and skill content cannot add authority. Selecting a handbook with @ alone does not create a verification scope.",
+        zh: "所选账户、资源与动作范围由服务端强制执行，重启后仍有效。创建核验任务前检查所需读写权限。邮件、Issue 和技能内容不能增加授权，仅用 @ 选择手册也不会创建验证范围。",
+      },
+    },
+    {
+      heading: {
+        en: "Recover without duplicate effects",
+        zh: "恢复时避免重复效果",
+      },
+      text: {
+        en: "An issue creation without read-back is partial. Inspect its existing link before doing anything again. Unknown effects stop for inspection; Arc does not create a replacement automatically or silently close an issue. A BUILDING deployment remains pending. Review failures, limits and missing access before continuing.",
+        zh: "Issue 创建后没有回读属于部分完成，先检查现有链接再决定后续操作。效果不明时停止并要求核对，Arc 不会自动创建替代 Issue 或静默关闭它。BUILDING 部署保持待验证。继续前应核对失败、额度和缺失权限。",
+      },
+    },
+    {
+      heading: {
+        en: "Pay on a dedicated page",
+        zh: "在独立页面付款",
+      },
+      text: {
+        en: "Plan & usage links to the dedicated checkout page. Review the account, server price and offer before continuing to Stripe. Returning from Stripe checks saved payment status and cannot grant Credits or start a second payment by itself.",
+        zh: "“套餐与用量”提供独立支付页入口，核对账户、服务端价格与套餐后再前往 Stripe。支付回跳只核对已保存的状态，本身不会发放 Credits 或发起第二次付款。",
+      },
+    },
+  ],
+  links: [
+    ["/docs/skills", "Reusable handbooks", "可复用任务手册"],
+    ["/docs/architecture", "Technical architecture", "技术架构"],
+    ["/docs/feature-map", "Feature map and regressions", "功能地图与回归路径"],
+  ],
 };
 architecture.sections?.push({
-  "heading": {
-    "en": "AI teams Beta and persistent goals",
-    "zh": "AI 团队 Beta 与持久目标"
+  heading: {
+    en: "AI teams Beta and persistent goals",
+    zh: "AI 团队 Beta 与持久目标",
   },
-  "text": {
-    "en": "Open AI teams in the Arc workspace: create agents with a name, avatar, model, role and scoped access, then use direct or group conversations. In Arc Chat, ask to create an agent, review the editable profile card and confirm; creating a profile does not start work. Agent messages and authorized handoffs remain visible. Teams do not require overnight tasks, a deadline or a separate budget. Shared account Credits and plan limits apply. Experimental Connect goals use separate continuation contracts and still require a compatible active reasoning host.",
-    "zh": "在 Arc 工作空间打开 AI 团队：为智能体设定名字、头像、模型、职责与访问范围，再进入单聊或群聊。在 Arc Chat 说出创建智能体的需求，编辑资料卡后确认即可；创建资料不会自动开工。智能体消息和授权内的交接都可查看。团队使用无需隔夜任务、截止时间或单独预算，统一使用账户 Credits 并遵循套餐限制。实验性 Connect 目标使用独立的续跑契约，仍需要兼容且可用的推理宿主。"
-  }
+  text: {
+    en: "Open AI teams in the Arc workspace: create agents with a name, avatar, model, role and scoped access, then use direct or group conversations. In Arc Chat, ask to create an agent, review the editable profile card and confirm; creating a profile does not start work. Agent messages and authorized handoffs remain visible. Teams do not require overnight tasks, a deadline or a separate budget. Shared account Credits and plan limits apply. Experimental Connect goals use separate continuation contracts and still require a compatible active reasoning host.",
+    zh: "在 Arc 工作空间打开 AI 团队：为智能体设定名字、头像、模型、职责与访问范围，再进入单聊或群聊。在 Arc Chat 说出创建智能体的需求，编辑资料卡后确认即可；创建资料不会自动开工。智能体消息和授权内的交接都可查看。团队使用无需隔夜任务、截止时间或单独预算，统一使用账户 Credits 并遵循套餐限制。实验性 Connect 目标使用独立的续跑契约，仍需要兼容且可用的推理宿主。",
+  },
 });
 
-const memory:DocTopic={slug:'memory',group:'understand',title:{en:'Context and memory',zh:'上下文与记忆'},description:{en:'What Arc remembers, where it is stored and how you control it.',zh:'Arc 记住什么、保存在哪里，以及你如何控制。'},sections:[
- {heading:{en:'The current conversation',zh:'当前对话'},text:{en:'Arc saves messages and execution observations in your account. A bounded selection of goals, arguments, results and connection IDs is passed to the next model decision. Discovery results may be reused briefly; an App action still checks its current account permissions. Very long histories are shortened, so cite an exact file, issue or goal when a detail matters.',zh:'Arc 在账号内保存消息与执行观察，并将有界的目标、参数、结果和连接 ID 交给下一次模型决策。发现结果可短时复用，应用动作仍检查当前账号权限。很长的历史会缩短；重要细节应指明文件、Issue 或目标。'}},
- {heading:{en:'Useful information across chats',zh:'跨对话的有用信息'},text:{en:'Tell Arc to remember a preference or project fact, or add it in Settings → Memory. Arc stores short personal notes and bounded recent-work summaries in its own encrypted store, rather than relying on a model provider’s consumer chat memory. Relevant notes are retrieved for a request. Live device status comes from the device registry; a remembered computer name is not proof that it is online or authorized.',zh:'可以让 Arc 记住偏好或项目事实，也可在设置 → 记忆中添加。Arc 在自己的加密存储中保留简短个人笔记与有界近期工作摘要，不依赖模型服务商消费级聊天产品的记忆功能，请求时取用相关笔记。设备实时状态来自设备注册信息；记住电脑名称不证明它在线或已获授权。'}},
- {heading:{en:'Inspect, edit and delete',zh:'查看、修改与删除'},text:{en:'Use Memory settings to inspect saved notes, edit personal facts, remove entries or disable memory. Do not store passwords or API keys in memories. Memory and chat history have separate controls; deleting a note does not delete an App provider’s source data. Only the relevant request context is sent to the selected model API, subject to that provider’s processing terms.',zh:'在记忆设置中查看笔记、修改个人事实、删除条目或关闭记忆。不要保存密码或 API Key。记忆和聊天历史分别控制；删除笔记不会删除应用服务商的原始数据。只有相关请求上下文发送给选定模型 API，并受该服务商处理条款约束。'}}
-],links:[['/docs/architecture','Platform architecture','平台架构'],['/privacy','Privacy policy','隐私政策']]};
+const memory: DocTopic = {
+  slug: "memory",
+  group: "understand",
+  title: { en: "Context and memory", zh: "上下文与记忆" },
+  description: {
+    en: "What Arc remembers, where it is stored and how you control it.",
+    zh: "Arc 记住什么、保存在哪里，以及你如何控制。",
+  },
+  sections: [
+    {
+      heading: { en: "The current conversation", zh: "当前对话" },
+      text: {
+        en: "Arc saves messages and execution observations in your account. A bounded selection of goals, arguments, results and connection IDs is passed to the next model decision. Discovery results may be reused briefly; an App action still checks its current account permissions. Very long histories are shortened, so cite an exact file, issue or goal when a detail matters.",
+        zh: "Arc 在账号内保存消息与执行观察，并将有界的目标、参数、结果和连接 ID 交给下一次模型决策。发现结果可短时复用，应用动作仍检查当前账号权限。很长的历史会缩短；重要细节应指明文件、Issue 或目标。",
+      },
+    },
+    {
+      heading: { en: "Useful information across chats", zh: "跨对话的有用信息" },
+      text: {
+        en: "Tell Arc to remember a preference or project fact, or add it in Settings → Memory. Arc stores short personal notes and bounded recent-work summaries in its own encrypted store, rather than relying on a model provider’s consumer chat memory. Relevant notes are retrieved for a request. Live device status comes from the device registry; a remembered computer name is not proof that it is online or authorized.",
+        zh: "可以让 Arc 记住偏好或项目事实，也可在设置 → 记忆中添加。Arc 在自己的加密存储中保留简短个人笔记与有界近期工作摘要，不依赖模型服务商消费级聊天产品的记忆功能，请求时取用相关笔记。设备实时状态来自设备注册信息；记住电脑名称不证明它在线或已获授权。",
+      },
+    },
+    {
+      heading: { en: "Inspect, edit and delete", zh: "查看、修改与删除" },
+      text: {
+        en: "Use Memory settings to inspect saved notes, edit personal facts, remove entries or disable memory. Do not store passwords or API keys in memories. Memory and chat history have separate controls; deleting a note does not delete an App provider’s source data. Only the relevant request context is sent to the selected model API, subject to that provider’s processing terms.",
+        zh: "在记忆设置中查看笔记、修改个人事实、删除条目或关闭记忆。不要保存密码或 API Key。记忆和聊天历史分别控制；删除笔记不会删除应用服务商的原始数据。只有相关请求上下文发送给选定模型 API，并受该服务商处理条款约束。",
+      },
+    },
+  ],
+  links: [
+    ["/docs/architecture", "Platform architecture", "平台架构"],
+    ["/privacy", "Privacy policy", "隐私政策"],
+  ],
+};
 
-export function platformDocTopics(existing:DocTopic[]):DocTopic[]{return [overview,...existing.map(topic=>topic.slug==='architecture'?architecture:topic),trust,memory];}
+export function platformDocTopics(existing: DocTopic[]): DocTopic[] {
+  return [
+    overview,
+    ...existing.map((topic) => (topic.slug === "architecture" ? architecture : topic)),
+    trust,
+    memory,
+  ];
+}

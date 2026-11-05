@@ -14,18 +14,14 @@ const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const version = JSON.parse(
   await fs.readFile(path.join(repository, "packages/cli/package.json"), "utf8"),
 ).version;
-const platform = { win32: "windows", darwin: "darwin", linux: "linux" }[
-  process.platform
-];
+const platform = { win32: "windows", darwin: "darwin", linux: "linux" }[process.platform];
 const arch = { x64: "amd64", arm64: "arm64" }[process.arch];
 const binary = path.join(
   repository,
   "work/go-device",
   `remotelink-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`,
 );
-const temp = await fs.realpath(
-  await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-compat-")),
-);
+const temp = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-compat-")));
 const env = {
   ...process.env,
   REMOTEARC_HOME: temp,
@@ -36,16 +32,18 @@ const env = {
   NO_COLOR: "1",
 };
 const children: ChildProcess[] = [];
-const pending = new Map<
-  string,
-  { resolve: (v: any) => void; reject: (e: Error) => void }
->();
+const pending = new Map<string, { resolve: (v: any) => void; reject: (e: Error) => void }>();
 let socket: WebSocket | undefined;
 let nextID = 0;
 let hello: any;
 const goBrowserRunnerTools = [
-  "browser_runner_start", "browser_runner_snapshot", "browser_runner_act",
-  "browser_runner_status", "browser_runner_confirm", "browser_runner_close", "browser_runner_wait",
+  "browser_runner_start",
+  "browser_runner_snapshot",
+  "browser_runner_act",
+  "browser_runner_status",
+  "browser_runner_confirm",
+  "browser_runner_close",
+  "browser_runner_wait",
 ];
 let stderr = "";
 const server = http.createServer((_req, res) => {
@@ -62,16 +60,12 @@ sockets.on("connection", (s, req) => {
     else if (m.type === "result") {
       const receiver = pending.get(m.id);
       pending.delete(m.id);
-      if (receiver)
-        m.error
-          ? receiver.reject(new Error(m.error))
-          : receiver.resolve(m.result);
+      if (receiver) m.error ? receiver.reject(new Error(m.error)) : receiver.resolve(m.result);
     }
   });
 });
 await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-const origin =
-  "http://127.0.0.1:" + (server.address() as { port: number }).port;
+const origin = "http://127.0.0.1:" + (server.address() as { port: number }).port;
 const configPath = path.join(temp, ".remotearc/config.json");
 await fs.mkdir(path.dirname(configPath), { recursive: true });
 await fs.writeFile(
@@ -92,23 +86,14 @@ const agent = spawn(binary, ["--foreground"], {
 });
 children.push(agent);
 agent.stderr!.on("data", (b) => (stderr += b.toString()));
-const waitFor = async (
-  predicate: () => boolean,
-  description: string,
-  timeout = 30000,
-) => {
+const waitFor = async (predicate: () => boolean, description: string, timeout = 30000) => {
   const end = Date.now() + timeout;
   while (!predicate()) {
-    if (Date.now() > end)
-      throw new Error(description + " timed out: " + stderr);
+    if (Date.now() > end) throw new Error(description + " timed out: " + stderr);
     await new Promise((r) => setTimeout(r, 50));
   }
 };
-async function go(
-  name: string,
-  args: Record<string, unknown> = {},
-  policy?: Policy,
-): Promise<any> {
+async function go(name: string, args: Record<string, unknown> = {}, policy?: Policy): Promise<any> {
   const id = "compat-" + ++nextID;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -125,9 +110,7 @@ async function go(
         reject(e);
       },
     });
-    socket!.send(
-      JSON.stringify({ type: "call", id, tool: name, arguments: args, policy }),
-    );
+    socket!.send(JSON.stringify({ type: "call", id, tool: name, arguments: args, policy }));
   });
 }
 function decode(result: any): any {
@@ -139,11 +122,7 @@ function decode(result: any): any {
     return text;
   }
 }
-async function run(
-  command: string,
-  args: string[],
-  extraEnv: Record<string, string> = {},
-) {
+async function run(command: string, args: string[], extraEnv: Record<string, string> = {}) {
   const child = spawn(command, args, {
     env: { ...env, ...extraEnv },
     windowsHide: true,
@@ -172,7 +151,11 @@ try {
     ),
   ).map((tool: { name: string }) => tool.name);
   assert.deepEqual(
-    new Set(hello.tools.filter((tool: string) => tool !== "set_device_runtime" && !goBrowserRunnerTools.includes(tool))),
+    new Set(
+      hello.tools.filter(
+        (tool: string) => tool !== "set_device_runtime" && !goBrowserRunnerTools.includes(tool),
+      ),
+    ),
     new Set([
       ...coreTools,
       "background_agent_status",
@@ -209,9 +192,7 @@ try {
         : Array.isArray(v)
           ? v.map(visit)
           : v && typeof v === "object"
-            ? Object.fromEntries(
-                Object.entries(v).map(([k, item]) => [k, visit(item)]),
-              )
+            ? Object.fromEntries(Object.entries(v).map(([k, item]) => [k, visit(item)]))
             : v;
     return visit(value);
   };
@@ -231,13 +212,17 @@ try {
     { path: root },
     "Directory: ROOT\nDepth: 2\n\n[DIR] child\n[FILE] fixture.txt\n\n[Remote Arc omitted 1 protected or out-of-scope entry.]",
   );
-  await expectTool("browse_directories", { path: root }, {
-    directories: [{ name: "child", path: "ROOT/child", type: "directory" }],
-    parent: "TEMP",
-    path: "ROOT",
-    protected_entries_omitted: 0,
-    truncated: false,
-  });
+  await expectTool(
+    "browse_directories",
+    { path: root },
+    {
+      directories: [{ name: "child", path: "ROOT/child", type: "directory" }],
+      parent: "TEMP",
+      path: "ROOT",
+      protected_entries_omitted: 0,
+      truncated: false,
+    },
+  );
   await expectTool(
     "read_file",
     { path: path.join(root, "fixture.txt"), offset: -2, length: 1 },
@@ -274,9 +259,7 @@ try {
   assert.equal(info.modified_at, "2026-01-01T00:00:00.200Z");
   assert.equal(info.accessed_at, "2026-01-01T00:00:00.100Z");
   assert(!Number.isNaN(Date.parse(info.created_at)));
-  const revision = decode(
-    await go("read_binary_file", { path: shared }),
-  ).file_revision;
+  const revision = decode(await go("read_binary_file", { path: shared })).file_revision;
   await fs.appendFile(shared, Buffer.from([5]));
   await assert.rejects(
     () => go("read_binary_file", { path: shared, expected_revision: revision }),
@@ -324,17 +307,13 @@ try {
     }),
   );
   let actions = decode(await go("list_undo_actions", { limit: 100 }));
-  let receipt = actions.find(
-    (r: any) => r.path.toLowerCase() === cross.toLowerCase(),
-  );
+  let receipt = actions.find((r: any) => r.path.toLowerCase() === cross.toLowerCase());
   assert(receipt?.can_undo, "Undo records from earlier releases stay restorable");
   await go("undo_change", { action_id: receipt.id });
   assert.equal(await fs.readFile(cross, "utf8"), "original");
   await go("write_file", { path: cross, content: "Go edit" });
   actions = decode(await go("list_undo_actions", { limit: 100 }));
-  receipt = actions.find(
-    (r: any) => r.path.toLowerCase() === cross.toLowerCase(),
-  );
+  receipt = actions.find((r: any) => r.path.toLowerCase() === cross.toLowerCase());
   assert(receipt?.can_undo);
   await go("undo_change", { action_id: receipt.id });
   assert.equal(await fs.readFile(cross, "utf8"), "original");
@@ -352,27 +331,16 @@ try {
     },
     { undoEnabled: false },
   );
+  await assert.rejects(() => go("read_file", { path: path.join(root, ".env") }), /Sensitive/);
   await assert.rejects(
-    () => go("read_file", { path: path.join(root, ".env") }),
-    /Sensitive/,
-  );
-  await assert.rejects(
-    () =>
-      go(
-        "write_file",
-        { path: cross, content: "escape" },
-        { workspaceRoots: [root] },
-      ),
+    () => go("write_file", { path: cross, content: "escape" }, { workspaceRoots: [root] }),
     /Trusted Write/,
   );
   await assert.rejects(
     () => go("read_file", { path: cross }, { taskWorkspaceRoot: root }),
     /Task Workspace/,
   );
-  await assert.rejects(
-    () => go("start_process", { command: "rm -rf /" }),
-    /Safety Guard/,
-  );
+  await assert.rejects(() => go("start_process", { command: "rm -rf /" }), /Safety Guard/);
   await assert.rejects(
     () => go("start_process", { command: "shutdown /s /t 0" }),
     /^Error: Blocked by Remote Arc Safety Guard: system shutdown or reboot\. Run this action manually on the device if you intentionally need it\.$/,
@@ -400,40 +368,100 @@ try {
     const subtle = globalThis.crypto.subtle;
     const handle = "sec_wirewirewirewirewirewire";
     const prepared = await go("secret_prepare", { handle });
-    const device = await subtle.importKey("raw", Buffer.from(prepared.public_key, "base64url"), { name: "ECDH", namedCurve: "P-256" }, false, []);
-    const eph = await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]) as CryptoKeyPair;
-    const ikm = await subtle.importKey("raw", await subtle.deriveBits({ name: "ECDH", public: device }, eph.privateKey, 256), "HKDF", false, ["deriveKey"]);
-    const key = await subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: new Uint8Array(), info: new TextEncoder().encode("remote-arc one-time secret v1 " + handle) }, ikm, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+    const device = await subtle.importKey(
+      "raw",
+      Buffer.from(prepared.public_key, "base64url"),
+      { name: "ECDH", namedCurve: "P-256" },
+      false,
+      [],
+    );
+    const eph = (await subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, [
+      "deriveBits",
+    ])) as CryptoKeyPair;
+    const ikm = await subtle.importKey(
+      "raw",
+      await subtle.deriveBits({ name: "ECDH", public: device }, eph.privateKey, 256),
+      "HKDF",
+      false,
+      ["deriveKey"],
+    );
+    const key = await subtle.deriveKey(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: new Uint8Array(),
+        info: new TextEncoder().encode("remote-arc one-time secret v1 " + handle),
+      },
+      ikm,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt"],
+    );
     const iv = globalThis.crypto.getRandomValues(new Uint8Array(12));
-    const sealed = await subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(handle) }, key, new TextEncoder().encode("wire-secret-7788"));
-    const b64 = (bytes: ArrayBuffer | Uint8Array) => Buffer.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)).toString("base64url");
-    assert.equal((await go("secret_deliver", { handle, epk: b64(await subtle.exportKey("raw", eph.publicKey)), iv: b64(iv), ciphertext: b64(sealed) })).delivered, true);
-    const secretRun = decode(await go("start_process", {
-      command: `"${process.execPath}" -e "process.stdin.on('data',d=>process.stdout.write('got '+d))"`,
-      stdin_secret: handle,
-      timeout_ms: 20000,
-    }));
+    const sealed = await subtle.encrypt(
+      { name: "AES-GCM", iv, additionalData: new TextEncoder().encode(handle) },
+      key,
+      new TextEncoder().encode("wire-secret-7788"),
+    );
+    const b64 = (bytes: ArrayBuffer | Uint8Array) =>
+      Buffer.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)).toString(
+        "base64url",
+      );
+    assert.equal(
+      (
+        await go("secret_deliver", {
+          handle,
+          epk: b64(await subtle.exportKey("raw", eph.publicKey)),
+          iv: b64(iv),
+          ciphertext: b64(sealed),
+        })
+      ).delivered,
+      true,
+    );
+    const secretRun = decode(
+      await go("start_process", {
+        command: `"${process.execPath}" -e "process.stdin.on('data',d=>process.stdout.write('got '+d))"`,
+        stdin_secret: handle,
+        timeout_ms: 20000,
+      }),
+    );
     assert.equal(secretRun.stdout, "got [secret]");
     assert.equal(JSON.stringify(secretRun).includes("wire-secret"), false);
-    await assert.rejects(() => go("start_process", { command: "echo again", stdin_secret: handle }), /SECRET_NOT_FOUND/);
+    await assert.rejects(
+      () => go("start_process", { command: "echo again", stdin_secret: handle }),
+      /SECRET_NOT_FOUND/,
+    );
   }
-  const waitingProcess = decode(await go("start_process", {
-    command: `"${process.execPath}" -e "setTimeout(()=>console.log('native-wait-ready'),350);setTimeout(()=>process.exit(0),1200)"`,
-    background: true,
-  }));
-  const outputReady = decode(await go("process_status", {
-    process_id: waitingProcess.process_id, wait_ms: 60000, until_text: "native-wait-ready",
-  }));
+  const waitingProcess = decode(
+    await go("start_process", {
+      command: `"${process.execPath}" -e "setTimeout(()=>console.log('native-wait-ready'),350);setTimeout(()=>process.exit(0),1200)"`,
+      background: true,
+    }),
+  );
+  const outputReady = decode(
+    await go("process_status", {
+      process_id: waitingProcess.process_id,
+      wait_ms: 60000,
+      until_text: "native-wait-ready",
+    }),
+  );
   assert.equal(outputReady.wait_reason, "text");
-  const waitedOutput = decode(await go("process_output", {process_id: waitingProcess.process_id}));
+  const waitedOutput = decode(
+    await go("process_output", { process_id: waitingProcess.process_id }),
+  );
   assert.match(waitedOutput.stdout, /native-wait-ready/);
   assert.match(outputReady.note, /40000/, "large device-side waits report their cap");
-  const processExited = decode(await go("process_status", {
-    process_id: waitingProcess.process_id, wait_ms: 4000,
-  }));
+  const processExited = decode(
+    await go("process_status", {
+      process_id: waitingProcess.process_id,
+      wait_ms: 4000,
+    }),
+  );
   assert.equal(processExited.wait_reason, "exited");
   assert.equal(processExited.exit_code, 0);
-  await assert.rejects(() => go("process_status", {process_id: waitingProcess.process_id, wait_ms: -1}));
+  await assert.rejects(() =>
+    go("process_status", { process_id: waitingProcess.process_id, wait_ms: -1 }),
+  );
   const bg = decode(
     await go("start_process", {
       command: `"${process.execPath}" -e "setTimeout(()=>{},15000)"`,
@@ -441,23 +469,12 @@ try {
       max_duration_seconds: 10,
     }),
   );
-  assert.equal(
-    decode(await go("process_status", { process_id: bg.process_id })).status,
-    "running",
-  );
+  assert.equal(decode(await go("process_status", { process_id: bg.process_id })).status, "running");
   assert(
-    decode(await go("list_managed_processes")).some(
-      (p: any) => p.process_id === bg.process_id,
-    ),
+    decode(await go("list_managed_processes")).some((p: any) => p.process_id === bg.process_id),
   );
-  assert.equal(
-    decode(await go("stop_process", { process_id: bg.process_id })).stopped,
-    true,
-  );
-  assert.equal(
-    decode(await go("process_output", { process_id: bg.process_id })).status,
-    "exited",
-  );
+  assert.equal(decode(await go("stop_process", { process_id: bg.process_id })).stopped, true);
+  assert.equal(decode(await go("process_output", { process_id: bg.process_id })).status, "exited");
   const expired = decode(
     await go("start_process", {
       command: `"${process.execPath}" -e "setTimeout(()=>{},30000)"`,
@@ -480,7 +497,11 @@ try {
     REMOTEARC_GO_BINARY: binary,
   });
   assert.equal(selection.code, 0, selection.output);
-  assert.equal(JSON.parse(selection.output).agent.engine, "go", "the default CLI must inspect the Go owner");
+  assert.equal(
+    JSON.parse(selection.output).agent.engine,
+    "go",
+    "the default CLI must inspect the Go owner",
+  );
   selection = await run(process.execPath, [cliEntry, "--go", "--version"], {
     REMOTEARC_GO_BINARY: "",
   });
@@ -497,11 +518,7 @@ try {
     selection = await run(process.execPath, [cliEntry, "--go", "--version"], {
       REMOTEARC_GO_BINARY: "",
     });
-    assert.equal(
-      selection.code,
-      0,
-      "verified cache should launch: " + selection.output,
-    );
+    assert.equal(selection.code, 0, "verified cache should launch: " + selection.output);
     const preload = path.join(temp, "download-fixture.mjs");
     await fs.writeFile(
       preload,
@@ -523,16 +540,11 @@ try {
     });
     assert.equal(selection.code, 1);
     assert.match(selection.output, /checksum/);
-    selection = await run(
-      process.execPath,
-      [cliEntry, "--go", "--version"],
-      downloadEnv,
-    );
+    selection = await run(process.execPath, [cliEntry, "--go", "--version"], downloadEnv);
     assert.equal(
       selection.code,
       0,
-      "verified download should atomically replace corrupt cache: " +
-        selection.output,
+      "verified download should atomically replace corrupt cache: " + selection.output,
     );
     assert.equal(selection.output.trim(), version);
   } finally {
@@ -553,25 +565,13 @@ try {
   assert(executionLog.lines.some((line: string) => line.includes("tool.done")));
   assert(!JSON.stringify(executionLog).includes("fixture-token"));
   assert.equal((await go("background_agent_status")).desired_enabled, false);
-  assert.equal(
-    (await go("set_task_keep_awake", { task_id: "fixture", seconds: 0 }))
-      .active,
-    false,
-  );
+  assert.equal((await go("set_task_keep_awake", { task_id: "fixture", seconds: 0 })).active, false);
   const repo = path.join(temp, "owned-repo");
   await fs.mkdir(repo);
   const git = (args: string[]) => {
     const r = spawnSync(
       "git",
-      [
-        "-c",
-        "core.hooksPath=",
-        "-c",
-        "commit.gpgSign=false",
-        "-C",
-        repo,
-        ...args,
-      ],
+      ["-c", "core.hooksPath=", "-c", "commit.gpgSign=false", "-C", repo, ...args],
       {
         env: {
           ...env,
@@ -599,26 +599,62 @@ try {
   const claudeSessions = path.join(env.CLAUDE_CONFIG_DIR, "projects", "fixture-project");
   await fs.mkdir(codexSessions, { recursive: true });
   await fs.mkdir(claudeSessions, { recursive: true });
-  await fs.writeFile(path.join(codexSessions, "rollout-fixture.jsonl"),
-    JSON.stringify({type:"session_meta",payload:{id:"codex-fixture-task",cwd:sessionWorktree}})+"\n"+
-    JSON.stringify({type:"response_item",payload:{role:"user",content:"PRIVATE_PROMPT_TEXT"}})+"\n");
-  await fs.writeFile(path.join(claudeSessions, "claude-fixture.jsonl"),
-    JSON.stringify({sessionId:"claude-fixture-task",cwd:repo,message:{content:"PRIVATE_PROMPT_TEXT"}})+"\n");
-  await fs.writeFile(path.join(env.CODEX_HOME, "auth.json"), JSON.stringify({token:"PRIVATE_FIXTURE_TOKEN"}));
-  const sessions = await go("list_agent_sessions", {source:"all",limit:10,git:true});
-  const sessionRows = new Map(sessions.sessions.map((row:any) => [row.id,row]));
-  assert.equal(sessionRows.size, 2, "native WebSocket route finds both synthetic client sources on Windows too");
-  const codexTask:any = sessionRows.get("codex-fixture-task");
-  assert.equal(path.normalize(codexTask.working_directory).toLowerCase(), path.normalize(sessionWorktree).toLowerCase());
+  await fs.writeFile(
+    path.join(codexSessions, "rollout-fixture.jsonl"),
+    JSON.stringify({
+      type: "session_meta",
+      payload: { id: "codex-fixture-task", cwd: sessionWorktree },
+    }) +
+      "\n" +
+      JSON.stringify({
+        type: "response_item",
+        payload: { role: "user", content: "PRIVATE_PROMPT_TEXT" },
+      }) +
+      "\n",
+  );
+  await fs.writeFile(
+    path.join(claudeSessions, "claude-fixture.jsonl"),
+    JSON.stringify({
+      sessionId: "claude-fixture-task",
+      cwd: repo,
+      message: { content: "PRIVATE_PROMPT_TEXT" },
+    }) + "\n",
+  );
+  await fs.writeFile(
+    path.join(env.CODEX_HOME, "auth.json"),
+    JSON.stringify({ token: "PRIVATE_FIXTURE_TOKEN" }),
+  );
+  const sessions = await go("list_agent_sessions", { source: "all", limit: 10, git: true });
+  const sessionRows = new Map(sessions.sessions.map((row: any) => [row.id, row]));
+  assert.equal(
+    sessionRows.size,
+    2,
+    "native WebSocket route finds both synthetic client sources on Windows too",
+  );
+  const codexTask: any = sessionRows.get("codex-fixture-task");
+  assert.equal(
+    path.normalize(codexTask.working_directory).toLowerCase(),
+    path.normalize(sessionWorktree).toLowerCase(),
+  );
   assert.equal(codexTask.recent_activity, true);
-  const sessionGit = sessions.workspaces.find((row:any) => row.branch === "session-feature");
-  assert(sessionGit?.is_linked_worktree, "session discovery resolves the actual linked Git worktree");
+  const sessionGit = sessions.workspaces.find((row: any) => row.branch === "session-feature");
+  assert(
+    sessionGit?.is_linked_worktree,
+    "session discovery resolves the actual linked Git worktree",
+  );
   assert.equal(sessionGit.changed_files, 1);
-  assert(!/PRIVATE_PROMPT_TEXT|PRIVATE_FIXTURE_TOKEN|auth\.json/.test(JSON.stringify(sessions)), "session metadata must not leak conversation or credentials");
-  const filtered = await go("list_agent_sessions", {source:"codex",workspace:sessionWorktree,git:false});
+  assert(
+    !/PRIVATE_PROMPT_TEXT|PRIVATE_FIXTURE_TOKEN|auth\.json/.test(JSON.stringify(sessions)),
+    "session metadata must not leak conversation or credentials",
+  );
+  const filtered = await go("list_agent_sessions", {
+    source: "codex",
+    workspace: sessionWorktree,
+    git: false,
+  });
   assert.equal(filtered.sessions.length, 1);
   assert.equal(filtered.workspaces.length, 0);
-  await assert.rejects(() => go("list_agent_sessions", {source:"cursor"}), /source/);
+  await assert.rejects(() => go("list_agent_sessions", { source: "cursor" }), /source/);
 
   const workspacePolicy = { workspaceRoots: [repo] };
   const task = (action: string, extra = {}) =>
@@ -669,10 +705,7 @@ try {
   } finally {
     await fs.rmdir(olderLease);
   }
-  assert.equal(
-    JSON.parse(await fs.readFile(configPath, "utf8")).deviceId,
-    "compat-device",
-  );
+  assert.equal(JSON.parse(await fs.readFile(configPath, "utf8")).deviceId, "compat-device");
   console.log(
     "Go agent OK: tools, files, binary revision, metadata, Undo including older records, policy, processes, native process waits, coding-session/worktree discovery without private text, logs, runtime selection, retired --ts and shared execution lease.",
   );

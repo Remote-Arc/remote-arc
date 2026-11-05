@@ -17,15 +17,15 @@ An AI host's own sandbox does not automatically cover remote MCP actions. When a
 
 ## Current protections
 
-| Boundary | What it guarantees | What it does not guarantee |
-| --- | --- | --- |
-| OAuth, ownership and revocation | An authorized client reaches only its own account and unrevoked devices | Isolation of the OS user once execution is allowed |
-| Allowed tools and `--safe` | Control over read, edit and terminal tools | Isolation of arbitrary commands once the terminal is allowed |
+| Boundary                                    | What it guarantees                                                                                                                                                                                        | What it does not guarantee                                                                                           |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| OAuth, ownership and revocation             | An authorized client reaches only its own account and unrevoked devices                                                                                                                                   | Isolation of the OS user once execution is allowed                                                                   |
+| Allowed tools and `--safe`                  | Control over read, edit and terminal tools                                                                                                                                                                | Isolation of arbitrary commands once the terminal is allowed                                                         |
 | Trusted Write Locations and Approval Broker | Ordinary non-sensitive files can be read. Supported persistent writes stay in trusted locations, out-of-scope writes ask for narrow approval first, and terminal calls need an in-scope working directory | A shell can still reference outside paths, credentials, child processes or the network, so this is not an OS sandbox |
-| Sensitive Path Policy | File tools protect sensitive locations, with narrow exceptions | Interception of file access inside a shell |
-| Safety Guard | Resolves where terminal deletes would land and refuses catastrophic commands, as defense in depth | Analysis of arbitrary scripts, or a complete command sandbox |
-| Task contract and policy snapshot | Freezes the goal, tools and limits. A policy change stops the old task | Every OS side effect, or rollback |
-| Local Undo | Conflict-safe recovery of edits made by supported file tools | Rollback of shell commands, databases, deployments or publishing |
+| Sensitive Path Policy                       | File tools protect sensitive locations, with narrow exceptions                                                                                                                                            | Interception of file access inside a shell                                                                           |
+| Safety Guard                                | Resolves where terminal deletes would land and refuses catastrophic commands, as defense in depth                                                                                                         | Analysis of arbitrary scripts, or a complete command sandbox                                                         |
+| Task contract and policy snapshot           | Freezes the goal, tools and limits. A policy change stops the old task                                                                                                                                    | Every OS side effect, or rollback                                                                                    |
+| Local Undo                                  | Conflict-safe recovery of edits made by supported file tools                                                                                                                                              | Rollback of shell commands, databases, deployments or publishing                                                     |
 
 Go process execution uses `os/exec` to start a local shell, which inherits the local user's permissions. There is no namespace, container, VM or AppContainer execution path today.
 
@@ -41,9 +41,9 @@ Containers are not an automatic safety switch. Docker's own documentation explai
 
 Configure the execution environment under Dashboard → Devices, rather than adding a switch with no executor behind it:
 
-| Setting | What it means | Status |
-| --- | --- | --- |
-| Local execution | Uses this computer's tools and OS user permissions | Implemented |
+| Setting            | What it means                                                                            | Status          |
+| ------------------ | ---------------------------------------------------------------------------------------- | --------------- |
+| Local execution    | Uses this computer's tools and OS user permissions                                       | Implemented     |
 | Isolated execution | Uses a verified isolated environment that exposes only explicit folders and capabilities | Future proposal |
 
 A device would report its executor type, version, actual isolation boundaries and limits. Isolation could be selected only when that detection succeeds. A task contract would freeze the execution setting, mapped folders, network and credential grants, and resource limits. It could not silently fall back to local execution. If the isolated executor is unavailable, changes or is lost in a restart, the task stops or waits and records why.

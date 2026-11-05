@@ -22,10 +22,7 @@
   "description": "Connect your AI to apps and your own computers.",
   "id": "/overview",
   "start_url": "/dashboard/connect/overview",
-  "categories": [
-    "productivity",
-    "utilities"
-  ],
+  "categories": ["productivity", "utilities"],
   "shortcuts": [
     {
       "name": "Overview",

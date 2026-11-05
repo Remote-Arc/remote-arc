@@ -1,6 +1,6 @@
 # Remote Arc: production scale & cost runbook
 
-This runbook covers the *current* Cloudflare Worker + single D1 + per-user
+This runbook covers the _current_ Cloudflare Worker + single D1 + per-user
 Durable Object architecture. All actions that delete data or change product
 limits must be explicitly enabled; do not confuse staging tests with production
 capacity certification.
@@ -12,7 +12,7 @@ capacity certification.
 - Login/OAuth/device pairing: rate-limit identity now prefers Cloudflare's real IP rather than caller-supplied `client_id`. Existing auth/email budgets remain.
 - Optional `MCP_ANALYTICS` emits sampled anonymous MCP HTTP latency/status and device-tool latency/outcome **once Analytics Engine has been enabled and the dataset binding deployed**. Default sampling is 10% of successful requests, **100% of errors**; no tokens, IPs, device names, file names, prompts or tool parameters. The sampling rate is tunable with `MCP_METRICS_SAMPLE_RATE`.
 - `AUDIT_ARCHIVE_ENABLED=0` by default: no audit deletion until a private R2 bucket, migration and verification are ready.
-- Optional `FREE_MONTHLY_TOOL_CALL_LIMIT` lets the operator give free accounts a lower budget than Plus; *absent it*, current 10,000-call behavior is unchanged. Admin stays exempt. Existing valid Plus grants count as Plus.
+- Optional `FREE_MONTHLY_TOOL_CALL_LIMIT` lets the operator give free accounts a lower budget than Plus; _absent it_, current 10,000-call behavior is unchanged. Admin stays exempt. Existing valid Plus grants count as Plus.
 - Existing global account security pause, device permission system, Undo, and device call timeouts are unchanged. Device calls time out after 45 seconds; a foreground `start_process` waits for its `timeout_ms` plus 5 seconds, up to 125 seconds.
 
 ## Read current D1 activity (safe)
@@ -53,17 +53,18 @@ After activation, use Cloudflare Analytics Engine dataset
 `remote_arc_mcp_health` once traffic has generated points.
 The dataset schema is:
 
-| Column | Value |
-| --- | --- |
-| blob1 | `mcp` for HTTP requests or `device_tool` for dispatched tools |
-| blob2 | `POST` / `OTHER` / `TOOL` |
-| blob3 | HTTP status or synthetic device-tool status |
-| blob4 | `ok`, `throttled`, `client_error`, `server_error`, or device tool outcome |
-| double1 | end-to-end elapsed milliseconds |
-| double2 | client-side sampling weight, 1 for errors |
-| index1 | `mcp` (low-cardinality shared index) |
+| Column  | Value                                                                     |
+| ------- | ------------------------------------------------------------------------- |
+| blob1   | `mcp` for HTTP requests or `device_tool` for dispatched tools             |
+| blob2   | `POST` / `OTHER` / `TOOL`                                                 |
+| blob3   | HTTP status or synthetic device-tool status                               |
+| blob4   | `ok`, `throttled`, `client_error`, `server_error`, or device tool outcome |
+| double1 | end-to-end elapsed milliseconds                                           |
+| double2 | client-side sampling weight, 1 for errors                                 |
+| index1  | `mcp` (low-cardinality shared index)                                      |
 
 Query over 15 minutes using the Analytics Engine SQL API (read-only):
+
 ```sql
 SELECT
   blob1 AS kind,
@@ -75,6 +76,7 @@ GROUP BY blob1
 ```
 
 To analyze errors and throttle rates:
+
 ```sql
 SELECT
   blob1 AS kind,
@@ -118,14 +120,14 @@ granted and the bucket is created.**
 5. Set `AUDIT_ARCHIVE_ENABLED=1` and `AUDIT_RETENTION_DAYS=30`, then deploy.
    A cron every five minutes processes up to four batches of 1,000 old rows,
    **only when enabled**. This bounds the backlog at roughly 34.5 million
-   records per 30 days *if every cron executes and succeeds*. Monitor actual
+   records per 30 days _if every cron executes and succeeds_. Monitor actual
    throughput and database size.
 6. Track `audit_archive_completed` and `audit_archive_failed` invocation
    logs; test restoration from a JSONL object in staging before relying on it.
 
 The archival algorithm selects only records older than the retention cutoff,
 writes JSONL to R2, requires a matching R2 `head` size + SHA-256 metadata,
-then deletes *only the exact archived IDs* from D1 in bounded batches.
+then deletes _only the exact archived IDs_ from D1 in bounded batches.
 R2 failure means **D1 is unchanged**. Concurrent retries can create duplicate
 archive objects but are not allowed to silently delete unarchived records.
 Archived objects include user IDs and audit metadata: keep R2 private and
@@ -137,7 +139,7 @@ for querying old records; rehydration remains an operator procedure.
 
 ## Rate limiting vs DDoS
 
-Workers Rate Limiting bindings are called *after* a Worker invocation starts.
+Workers Rate Limiting bindings are called _after_ a Worker invocation starts.
 They protect D1 from most untrusted bursts but **do not remove the cost of
 a distributed request flood before Worker execution**.
 
@@ -156,6 +158,7 @@ attacker can cycle that value without changing IP.
 An unrestricted `ALLOW_SIGNUPS=1` plus 10,000 free MCP tool calls per new
 account is an open-ended subsidy. Avoid advertising "unlimited" calls.
 Recommended policy to discuss and explicitly roll out:
+
 - Free: ~500-1,000 tool calls/month, one or few devices, existing 120/min
   user/client rate limit remains a separate protection;
 - Plus: existing 10,000 tool calls/month, higher device/task allowances.
@@ -171,7 +174,7 @@ keeps the existing plan while the flag is absent.
 The existing month counter still performs a D1 write per tool invocation.
 That is correct for strict quota enforcement but creates a shared hot spot.
 Before migrating, inspect production D1 read/write metrics and P95; if needed
-move *per-user quota counters* to sharded per-user Durable Objects with
+move _per-user quota counters_ to sharded per-user Durable Objects with
 durable storage plus reconciliation. Preserve hard quota correctness and
 idempotency under concurrent requests.
 

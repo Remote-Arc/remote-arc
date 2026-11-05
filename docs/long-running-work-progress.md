@@ -116,6 +116,7 @@ log; do not infer overnight host support from the transport mocks.
 - `docs/system-architecture.md` and website Docs are implemented locally.
 - Power availability must be verified on a real target device; do not imply
   login background service alone prevents sleep.
+
 # 2026-10-03 — stacked planned-goal follow-up
 
 ## Runtime/UI checkpoint — PR55

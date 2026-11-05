@@ -1,10 +1,21 @@
 import { authPage, escapeAuthHtml } from "./auth-page.js";
 
 /** Login presentation shared by the server route and browser visual checks. */
-export function renderLoginPage({returnTo,googleHref,reviewerEnabled,emailEnabled,emailCsrf}:{
-  returnTo:string;googleHref:string;reviewerEnabled:boolean;emailEnabled:boolean;emailCsrf:string;
+export function renderLoginPage({
+  returnTo,
+  googleHref,
+  reviewerEnabled,
+  emailEnabled,
+  emailCsrf,
+}: {
+  returnTo: string;
+  googleHref: string;
+  reviewerEnabled: boolean;
+  emailEnabled: boolean;
+  emailCsrf: string;
 }) {
-  const reviewerForm = reviewerEnabled ? `
+  const reviewerForm = reviewerEnabled
+    ? `
     <details>
       <summary>Reviewer access</summary>
       <form method="post" action="/auth/reviewer">
@@ -16,9 +27,12 @@ export function renderLoginPage({returnTo,googleHref,reviewerEnabled,emailEnable
         <button class="primary" type="submit">Sign in to review account</button>
       </form>
     </details>
-  ` : "";
+  `
+    : "";
 
-  return authPage("Sign in", `
+  return authPage(
+    "Sign in",
+    `
     <p class="eyebrow">Your computer, your control</p>
     <h1>Welcome to Remote Arc</h1>
     <p class="lead">Sign in or create an account to connect your AI to your own computers. No password needed.</p>
@@ -26,7 +40,9 @@ export function renderLoginPage({returnTo,googleHref,reviewerEnabled,emailEnable
       <img src="/google-g.svg" alt="" width="22" height="22">
       <span>Continue with Google</span>
     </a>
-    ${emailEnabled ? `
+    ${
+      emailEnabled
+        ? `
       <div class="divider"><span>or continue with email</span></div>
       <form action="/auth/email/request" method="post">
         <input type="hidden" name="email_csrf" value="${emailCsrf}">
@@ -36,7 +52,10 @@ export function renderLoginPage({returnTo,googleHref,reviewerEnabled,emailEnable
         <button class="primary" type="submit">Continue with email →</button>
       </form>
       <p class="note">We'll email a one-time code. New accounts are created automatically after verification.</p>
-    ` : `<p class="note">Email sign-in is temporarily unavailable. Continue securely with Google.</p>`}
+    `
+        : `<p class="note">Email sign-in is temporarily unavailable. Continue securely with Google.</p>`
+    }
     ${reviewerForm}
-  `);
+  `,
+  );
 }

@@ -15,4 +15,3 @@ Recovery: retain observed state and URL after a failed/unfinished deployment. Re
 Drive by the dialog's labels and inspect Execution receipt for the READY check, evidence ID/time and deployment URL. Confirm that a BUILDING fixture remains pending even if the assistant says it is ready.
 
 Regression: arc-verification-test.ts covers READY, BUILDING, ERROR, wrong ID and unsafe URLs through real App dispatch with synthetic HTTP.
-

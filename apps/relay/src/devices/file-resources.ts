@@ -10,9 +10,10 @@ import {
   meterBinaryBytes,
 } from "../billing/plus-usage.js";
 
-type FileResourceEnv = DeviceCallEnv & PlatformLaunchEnv & {
-  PUBLIC_ORIGIN: string;
-};
+type FileResourceEnv = DeviceCallEnv &
+  PlatformLaunchEnv & {
+    PUBLIC_ORIGIN: string;
+  };
 
 type BinaryChunk = NonNullable<ReturnType<typeof binaryChunkResult>>;
 
@@ -21,8 +22,12 @@ type BinaryChunk = NonNullable<ReturnType<typeof binaryChunkResult>>;
 // be used for creating resources and for each streamed chunk.
 export function fileResourceChunk(value: unknown): BinaryChunk {
   const chunk = binaryChunkResult(value);
-  if (!chunk || !chunk.file_revision || !Number.isSafeInteger(chunk.size) ||
-      typeof chunk.data !== "string") {
+  if (
+    !chunk ||
+    !chunk.file_revision ||
+    !Number.isSafeInteger(chunk.size) ||
+    typeof chunk.data !== "string"
+  ) {
     throw new Error("Device did not return a valid binary file resource descriptor.");
   }
   return chunk;
@@ -46,10 +51,7 @@ const MAX_RESOURCE_BYTES = 512 * 1024 * 1024;
 const CHUNK_BYTES = 256 * 1024;
 
 const sha256 = async (value: string) => {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
@@ -81,18 +83,17 @@ export async function createFileResource(
   filePath: string,
   limit?: number | null,
 ) {
-  const transferLimit = limit === undefined ? await binaryTransferLimit(env, identity.userId) : limit;
-  const first = fileResourceChunk(await callDevice(
-    env,
-    identity,
-    deviceId,
-    "read_binary_file",
-    { path: filePath, offset: 0, length: 1 },
-  ));
+  const transferLimit =
+    limit === undefined ? await binaryTransferLimit(env, identity.userId) : limit;
+  const first = fileResourceChunk(
+    await callDevice(env, identity, deviceId, "read_binary_file", {
+      path: filePath,
+      offset: 0,
+      length: 1,
+    }),
+  );
   if (first.size > MAX_RESOURCE_BYTES) {
-    throw new Error(
-      "File is too large for a temporary Remote Arc resource (maximum 512 MiB).",
-    );
+    throw new Error("File is too large for a temporary Remote Arc resource (maximum 512 MiB).");
   }
 
   await meterBinaryBytes(env, identity.userId, binaryBytesRead(first), transferLimit);
@@ -216,11 +217,7 @@ function requestedRange(request: Request, size: number) {
   return { start, endExclusive, partial: true };
 }
 
-export async function handleFileResource(
-  request: Request,
-  env: FileResourceEnv,
-  token: string,
-) {
+export async function handleFileResource(request: Request, env: FileResourceEnv, token: string) {
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -247,10 +244,7 @@ export async function handleFileResource(
     "accept-ranges": "bytes",
   });
   if (range.partial) {
-    headers.set(
-      "content-range",
-      `bytes ${range.start}-${range.endExclusive - 1}/${resource.size}`,
-    );
+    headers.set("content-range", `bytes ${range.start}-${range.endExclusive - 1}/${resource.size}`);
   }
   const status = range.partial ? 206 : 200;
   if (request.method === "HEAD") return new Response(null, { status, headers });
@@ -284,18 +278,14 @@ export async function handleFileResource(
         return;
       }
       try {
-        const chunk = fileResourceChunk(await callDevice(
-          env,
-          identity,
-          resource.device_id,
-          "read_binary_file",
-          {
+        const chunk = fileResourceChunk(
+          await callDevice(env, identity, resource.device_id, "read_binary_file", {
             path: resource.path,
             offset,
             length: Math.min(CHUNK_BYTES, range.endExclusive - offset),
             expected_revision: resource.file_revision,
-          },
-        ));
+          }),
+        );
 
         if (
           chunk.file_revision !== resource.file_revision ||

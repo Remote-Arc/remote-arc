@@ -13,18 +13,18 @@ from retained material, with its derivation and uncertainty. **U — unavailable
 missing, omitted, inaccessible or unsupported. Every captured field carries its
 own state; an absent value must not be replaced by model invention.
 
-| Work fact | Codex local | Claude Code local | Codex Cloud import | Independent check |
-| --- | --- | --- | --- | --- |
-| Original goal | O retained user input; I active intent | O retained user input; I active intent | O authorized task/export; otherwise U | User reviews current goal |
-| Visible conversation | O retained items; U missing pages | O retained chain; U missing ancestry | O supported export only; otherwise U | Record range and omissions |
-| Tool observations | O recorded outputs; I current effect | O recorded outputs; I current effect | O available output; otherwise U | Read current resource state |
-| Branch / HEAD / worktree | O separate local Git read | O separate local Git read | O exported commit; U hidden checkout | Inspect actual selected worktree |
-| Dirty / untracked files | O scoped local files | O scoped local files | O explicit export; otherwise U | Hash covered files; retain exclusions |
-| Artifact bytes | O scoped existing artifact | O scoped existing artifact | O authorized download/export | Existence, size and digest |
-| Live process state | U from transcript; O separate process grant | U from transcript; O separate process grant | U unless authorized interface exposes it | Current handle and process probe |
-| External write outcome | O acknowledgement; U uncertain dispatch | O acknowledgement; U uncertain dispatch | O supported receipt; U uncertain dispatch | Independent provider read-back |
-| Credentials / sign-ins | U: excluded | U: excluded | U: excluded | Reauthorize destination separately |
-| Hidden model state | U | U | U | No full-state transfer claim |
+| Work fact                | Codex local                                 | Claude Code local                           | Codex Cloud import                        | Independent check                     |
+| ------------------------ | ------------------------------------------- | ------------------------------------------- | ----------------------------------------- | ------------------------------------- |
+| Original goal            | O retained user input; I active intent      | O retained user input; I active intent      | O authorized task/export; otherwise U     | User reviews current goal             |
+| Visible conversation     | O retained items; U missing pages           | O retained chain; U missing ancestry        | O supported export only; otherwise U      | Record range and omissions            |
+| Tool observations        | O recorded outputs; I current effect        | O recorded outputs; I current effect        | O available output; otherwise U           | Read current resource state           |
+| Branch / HEAD / worktree | O separate local Git read                   | O separate local Git read                   | O exported commit; U hidden checkout      | Inspect actual selected worktree      |
+| Dirty / untracked files  | O scoped local files                        | O scoped local files                        | O explicit export; otherwise U            | Hash covered files; retain exclusions |
+| Artifact bytes           | O scoped existing artifact                  | O scoped existing artifact                  | O authorized download/export              | Existence, size and digest            |
+| Live process state       | U from transcript; O separate process grant | U from transcript; O separate process grant | U unless authorized interface exposes it  | Current handle and process probe      |
+| External write outcome   | O acknowledgement; U uncertain dispatch     | O acknowledgement; U uncertain dispatch     | O supported receipt; U uncertain dispatch | Independent provider read-back        |
+| Credentials / sign-ins   | U: excluded                                 | U: excluded                                 | U: excluded                               | Reauthorize destination separately    |
+| Hidden model state       | U                                           | U                                           | U                                         | No full-state transfer claim          |
 
 These are classification rules, not assertions that every source retains each
 field. Transcript statements that a test passed remain source observations.
@@ -71,13 +71,13 @@ does not qualify full history reconstruction or stable private-file schemas.
 
 ## Version and platform qualification
 
-| Environment | Direct evidence | Qualification / gap |
-| --- | --- | --- |
-| Windows amd64 | Installed Codex 0.163.0-alpha.11; generated local protocol schema; 196 readable headers | Metadata record versions 0.162.0-alpha.17.2, 0.163.0-alpha.10.2 and 0.163.0-alpha.11 observed |
-| macOS amd64 | Installed Codex 0.155.0-alpha.16.4; 4 readable local headers; 310 generated schema files; native tests and real discovery passed | Metadata record versions 0.147.0-alpha.1.2, 0.147.0-alpha.6.5 and 0.148.0-alpha.9 observed; full history/native continuation require separate qualification |
-| Claude on Windows/macOS | Two synthetic record fixtures | Local CLI/SDK/session availability not established; no production qualification |
-| WSL / Linux | No real source smoke in this research | Do not reinterpret `C:\\...`, `/mnt/c/...` or UNC strings automatically; require explicit distro/mount mapping and canonical containment |
-| Cloud-managed workspaces | Official interface review only | No full runtime export qualified; see cloud verdict below |
+| Environment              | Direct evidence                                                                                                                  | Qualification / gap                                                                                                                                         |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows amd64            | Installed Codex 0.163.0-alpha.11; generated local protocol schema; 196 readable headers                                          | Metadata record versions 0.162.0-alpha.17.2, 0.163.0-alpha.10.2 and 0.163.0-alpha.11 observed                                                               |
+| macOS amd64              | Installed Codex 0.155.0-alpha.16.4; 4 readable local headers; 310 generated schema files; native tests and real discovery passed | Metadata record versions 0.147.0-alpha.1.2, 0.147.0-alpha.6.5 and 0.148.0-alpha.9 observed; full history/native continuation require separate qualification |
+| Claude on Windows/macOS  | Two synthetic record fixtures                                                                                                    | Local CLI/SDK/session availability not established; no production qualification                                                                             |
+| WSL / Linux              | No real source smoke in this research                                                                                            | Do not reinterpret `C:\\...`, `/mnt/c/...` or UNC strings automatically; require explicit distro/mount mapping and canonical containment                    |
+| Cloud-managed workspaces | Official interface review only                                                                                                   | No full runtime export qualified; see cloud verdict below                                                                                                   |
 
 Observed versions refer to a bounded sample, not a supported range. Unknown or
 newer versions are not silently declared compatible. Prefer method/schema

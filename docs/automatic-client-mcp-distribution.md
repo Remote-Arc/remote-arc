@@ -6,14 +6,14 @@ credentials and an actual device file read. No account credentials or model
 turns are used. Codex verifies tools through its app-server; Claude verifies a
 connection with `mcp get`, not a tool call through a Claude model session.
 
-| Runtime and entry point | Evidence | Result |
-| --- | --- | --- |
-| Windows x64, public rc.4 npm launcher, native client executables discoverable | [JSON](validation/automatic-client-mcp-windows-rc4-npm.json) | Passed; public binary SHA256 `6b52d0fc89646fd6213109caff15a5bb505c1a6fa6a3d0e95adb8bda5ed075ca` |
-| Ubuntu on actual WSL2, public rc.4 npm launcher, Linux clients | [JSON](validation/automatic-client-mcp-wsl-rc4-npm.json) | Passed; public binary SHA256 `44bab23a870afe96ed15885f3424f63d72bde1d59cf116b46b5b7966254205ee` |
-| Windows x64, source fix, PATH has only npm client shims plus OS/Git tools | [JSON](validation/automatic-client-mcp-windows-npm-source.json) | Passed; source build, not the published rc.4 binary |
-| Windows x64, actual global npm installation with nested native dependencies | [JSON](validation/automatic-client-mcp-windows-global-npm-source.json) | Passed; source fix prefers the actual native package over bundled wrapper stubs |
-| macOS ARM64, actual clients with source/native/public npm entry points | [CI receipts](https://github.com/Remote-Arc/remote-arc/actions/runs/39754908632) | All three cases passed; public binary SHA256 `b47d8a56df85057142b3f3d8682c700ba8b3ce731f5446a45f72202439c8f281` |
-| Public rc.4, Windows x64, only npm client shims | [Baseline](validation/automatic-client-mcp-windows-npm-baseline.json) | Reproduced failure: inspection finds both shims but setup reports both clients as `not_found` |
+| Runtime and entry point                                                       | Evidence                                                                         | Result                                                                                                          |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Windows x64, public rc.4 npm launcher, native client executables discoverable | [JSON](validation/automatic-client-mcp-windows-rc4-npm.json)                     | Passed; public binary SHA256 `6b52d0fc89646fd6213109caff15a5bb505c1a6fa6a3d0e95adb8bda5ed075ca`                 |
+| Ubuntu on actual WSL2, public rc.4 npm launcher, Linux clients                | [JSON](validation/automatic-client-mcp-wsl-rc4-npm.json)                         | Passed; public binary SHA256 `44bab23a870afe96ed15885f3424f63d72bde1d59cf116b46b5b7966254205ee`                 |
+| Windows x64, source fix, PATH has only npm client shims plus OS/Git tools     | [JSON](validation/automatic-client-mcp-windows-npm-source.json)                  | Passed; source build, not the published rc.4 binary                                                             |
+| Windows x64, actual global npm installation with nested native dependencies   | [JSON](validation/automatic-client-mcp-windows-global-npm-source.json)           | Passed; source fix prefers the actual native package over bundled wrapper stubs                                 |
+| macOS ARM64, actual clients with source/native/public npm entry points        | [CI receipts](https://github.com/Remote-Arc/remote-arc/actions/runs/39754908632) | All three cases passed; public binary SHA256 `b47d8a56df85057142b3f3d8682c700ba8b3ce731f5446a45f72202439c8f281` |
+| Public rc.4, Windows x64, only npm client shims                               | [Baseline](validation/automatic-client-mcp-windows-npm-baseline.json)            | Reproduced failure: inspection finds both shims but setup reports both clients as `not_found`                   |
 
 Successful cases cover ordinary background registration, a simultaneous device
 read, safe MCP catalog/status, repeated config hashes, custom/disabled entries,

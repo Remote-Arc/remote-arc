@@ -18,33 +18,33 @@ Reviewed against master `dbb3ac8e2b5d01da5255a3d14538516f7db93f3c`, the publishe
 
 Both languages use the same reviewed topic and tool sources. Unchanged instructions were checked rather than rewritten without a reason.
 
-| Public guide | Review basis / result |
-| --- | --- |
-| `/docs/start-here` | Arc vs Connect, Apps without a computer, Skills, saved Tasks; retained |
-| `/docs/install-app` | PWA manifests, browser install paths and separate native Agent lifecycle; retained |
-| `/docs/connect` | Native install, required OAuth, separate pairing; linked complete directory |
-| `/docs/tools` | New generated, searchable contract directory |
-| `/docs/codex` | New official desktop/CLI/IDE setup guidance |
-| `/docs/devices` | Device switches, local safe ceiling, trusted paths; retained |
-| `/docs/device-fleet` | Eligibility, capacity freshness, WSL host grouping; retained |
-| `/docs/apps` | Provider authentication, enabled operations, stable request IDs and revocation; retained |
-| `/docs/slack` | New bot/App distinction, identity linking, thread mapping and allowance guidance |
-| `/docs/files` | Sensitive paths, file-only Undo and conflict checks; retained |
-| `/docs/processes` | Process handles vs durable Tasks; retained |
-| `/docs/browser` | Runner and shared tabs, published vs pending capabilities; replaced old Chrome-only guide |
-| `/docs/tasks` | Hosted Tasks/Routines, IANA timezone/DST, failure pause and bounded runs; retained |
-| `/docs/skills` | Imported instructions vs executable tools and selected references; retained |
-| `/docs/arc` | Hosted workspace, trial, plan details; updated billing location and AI teams/Slack |
-| `/docs/usage-and-costs` | External provider billing plus Arc Credits/Connect allowance distinction |
-| `/docs/security` | Local execution boundary and hosted data; updated shared detailed reference |
-| `/docs/architecture` | Runtime, scheduling, persistence and AI teams; corrected contradictions |
-| `/docs/trust` | Evidence receipts, unknown effects, no duplicate writes and checkout; retained |
-| `/docs/memory` | Encrypted bounded notes, retrieval and independent deletion controls; retained |
-| `/docs/troubleshooting` | Device/tool policy, reasoning limits and unknown effects; updated shared availability text |
-| `/docs/reference` | Shared full product guide; aligned recovery, hosted work and tool inventory |
-| `/docs/mcp` | OAuth/scopes, App dispatch, browser setup and generated tools |
-| `/docs/long-running-work` | Hosted vs deterministic work and experimental continuation; corrected |
-| `/install/chatgpt`, `/install/claude`, `/install/gemini`, `/install/cursor` | Current primary-source setup paths checked; stale instructions corrected |
+| Public guide                                                                | Review basis / result                                                                      |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `/docs/start-here`                                                          | Arc vs Connect, Apps without a computer, Skills, saved Tasks; retained                     |
+| `/docs/install-app`                                                         | PWA manifests, browser install paths and separate native Agent lifecycle; retained         |
+| `/docs/connect`                                                             | Native install, required OAuth, separate pairing; linked complete directory                |
+| `/docs/tools`                                                               | New generated, searchable contract directory                                               |
+| `/docs/codex`                                                               | New official desktop/CLI/IDE setup guidance                                                |
+| `/docs/devices`                                                             | Device switches, local safe ceiling, trusted paths; retained                               |
+| `/docs/device-fleet`                                                        | Eligibility, capacity freshness, WSL host grouping; retained                               |
+| `/docs/apps`                                                                | Provider authentication, enabled operations, stable request IDs and revocation; retained   |
+| `/docs/slack`                                                               | New bot/App distinction, identity linking, thread mapping and allowance guidance           |
+| `/docs/files`                                                               | Sensitive paths, file-only Undo and conflict checks; retained                              |
+| `/docs/processes`                                                           | Process handles vs durable Tasks; retained                                                 |
+| `/docs/browser`                                                             | Runner and shared tabs, published vs pending capabilities; replaced old Chrome-only guide  |
+| `/docs/tasks`                                                               | Hosted Tasks/Routines, IANA timezone/DST, failure pause and bounded runs; retained         |
+| `/docs/skills`                                                              | Imported instructions vs executable tools and selected references; retained                |
+| `/docs/arc`                                                                 | Hosted workspace, trial, plan details; updated billing location and AI teams/Slack         |
+| `/docs/usage-and-costs`                                                     | External provider billing plus Arc Credits/Connect allowance distinction                   |
+| `/docs/security`                                                            | Local execution boundary and hosted data; updated shared detailed reference                |
+| `/docs/architecture`                                                        | Runtime, scheduling, persistence and AI teams; corrected contradictions                    |
+| `/docs/trust`                                                               | Evidence receipts, unknown effects, no duplicate writes and checkout; retained             |
+| `/docs/memory`                                                              | Encrypted bounded notes, retrieval and independent deletion controls; retained             |
+| `/docs/troubleshooting`                                                     | Device/tool policy, reasoning limits and unknown effects; updated shared availability text |
+| `/docs/reference`                                                           | Shared full product guide; aligned recovery, hosted work and tool inventory                |
+| `/docs/mcp`                                                                 | OAuth/scopes, App dispatch, browser setup and generated tools                              |
+| `/docs/long-running-work`                                                   | Hosted vs deterministic work and experimental continuation; corrected                      |
+| `/install/chatgpt`, `/install/claude`, `/install/gemini`, `/install/cursor` | Current primary-source setup paths checked; stale instructions corrected                   |
 
 ## Evidence and maintenance
 

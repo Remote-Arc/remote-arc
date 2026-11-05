@@ -15,14 +15,21 @@ if (!releases.length) throw new Error("No release sections found in CHANGELOG.md
 
 const cliPackage = JSON.parse(readFileSync(cliPackagePath, "utf8"));
 const latest = releases[0];
-const candidateMatch = cliPackage.version.match(/^(\d+\.\d+\.\d+)-(?:alpha|beta|rc|canary)\.[0-9A-Za-z.-]+$/);
+const candidateMatch = cliPackage.version.match(
+  /^(\d+\.\d+\.\d+)-(?:alpha|beta|rc|canary)\.[0-9A-Za-z.-]+$/,
+);
 if (candidateMatch) {
   // An RC is not the published "Latest release": keep stable docs untouched.
   if (!changelog.includes("## " + candidateMatch[1] + " - Unreleased")) {
     throw new Error("Candidate " + cliPackage.version + " needs an unreleased CHANGELOG section.");
   }
 } else if (latest.version !== cliPackage.version) {
-  throw new Error("Latest CHANGELOG version " + latest.version + " does not match remotelink package version " + cliPackage.version);
+  throw new Error(
+    "Latest CHANGELOG version " +
+      latest.version +
+      " does not match remotelink package version " +
+      cliPackage.version,
+  );
 }
 
 const mode = process.argv[2] || "--write";
@@ -38,7 +45,12 @@ if (mode === "--notes") {
     const title = section.match(/^###\s+(.+)$/m)?.[1];
     const changes = [...section.matchAll(/^-\s+(.+)$/gm)].map((match) => match[1].trim());
     if (!title || !changes.length) throw new Error("Candidate release notes are incomplete.");
-    release = { version: requested, title: requested + " — " + title, date: new Date().toISOString().slice(0, 10), changes };
+    release = {
+      version: requested,
+      title: requested + " — " + title,
+      date: new Date().toISOString().slice(0, 10),
+      changes,
+    };
   }
   if (!release) throw new Error("Release " + requested + " was not found in CHANGELOG.md");
   process.stdout.write(releaseNotesMarkdown(release));
@@ -80,40 +92,107 @@ const rootReadme = readFileSync(rootReadmePath, "utf8").replaceAll("\r\n", "\n")
 const overviewStart = "<!-- github-overview:start -->";
 const overviewEnd = "<!-- github-overview:end -->";
 const introduction = rootReadme.match(/^# Remote Arc\n\n([\s\S]*?)\n\n\[Website\]/m)?.[1];
-const productSection = rootReadme.match(/## Two ways to work\n[\s\S]*?(?=\n## From a goal to a result)/)?.[0];
-if (!introduction || !productSection || !expected.includes(overviewStart) || !expected.includes(overviewEnd)) {
+const productSection = rootReadme.match(
+  /## Two ways to work\n[\s\S]*?(?=\n## From a goal to a result)/,
+)?.[0];
+if (
+  !introduction ||
+  !productSection ||
+  !expected.includes(overviewStart) ||
+  !expected.includes(overviewEnd)
+) {
   throw new Error("GitHub/npm product overview markers or source sections are missing");
 }
-const overviewBlock = [overviewStart, introduction, "", productSection.trimEnd(), overviewEnd].join("\n");
+const overviewBlock = [overviewStart, introduction, "", productSection.trimEnd(), overviewEnd].join(
+  "\n",
+);
 const overviewIndex = expected.indexOf(overviewStart);
-expected = expected.slice(0, overviewIndex) + overviewBlock + expected.slice(expected.indexOf(overviewEnd, overviewIndex) + overviewEnd.length);
-if (cliPackage.license !== "SEE LICENSE IN LICENSE") throw new Error("npm must reference the bundled custom LICENSE");
+expected =
+  expected.slice(0, overviewIndex) +
+  overviewBlock +
+  expected.slice(expected.indexOf(overviewEnd, overviewIndex) + overviewEnd.length);
+if (cliPackage.license !== "SEE LICENSE IN LICENSE")
+  throw new Error("npm must reference the bundled custom LICENSE");
 const installStart = "<!-- native-install:start -->";
 const installEnd = "<!-- native-install:end -->";
 const nativeVersion = latest.version;
 const installerPath = new URL("apps/ui/public/install.sh", root);
 const installer = readFileSync(installerPath, "utf8");
-if (!installer.includes("releases/latest/download/go-binaries.json") || !installer.includes("REMOTEARC_INSTALL_VERSION")) throw new Error("Native installer must follow the stable channel and support explicit version pins");
-const nativeRelease = "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v" + nativeVersion + "/";
+if (
+  !installer.includes("releases/latest/download/go-binaries.json") ||
+  !installer.includes("REMOTEARC_INSTALL_VERSION")
+)
+  throw new Error(
+    "Native installer must follow the stable channel and support explicit version pins",
+  );
+const nativeRelease =
+  "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v" + nativeVersion + "/";
 const nativeTargets = [
-  ["macOS Apple Silicon", "darwin", "arm64"], ["macOS Intel", "darwin", "amd64"],
-  ["Windows x64", "windows", "amd64"], ["Windows ARM64", "windows", "arm64"],
-  ["Linux x64", "linux", "amd64"], ["Linux ARM64", "linux", "arm64"],
+  ["macOS Apple Silicon", "darwin", "arm64"],
+  ["macOS Intel", "darwin", "amd64"],
+  ["Windows x64", "windows", "amd64"],
+  ["Windows ARM64", "windows", "arm64"],
+  ["Linux x64", "linux", "amd64"],
+  ["Linux ARM64", "linux", "arm64"],
 ];
-const nativeBlock = [installStart, "### Native downloads and Homebrew", "",
-  "Standalone " + nativeVersion + " needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).", "",
-  "On macOS or Linux (including WSL), install without Node.js:", "",
-  "```sh", "curl -fsSL https://remotearc.app/install.sh | sh", "remotelink", "```", "",
-  "The script verifies SHA256, installs to ~/.local/bin without sudo, and leaves pairing and permissions for the first launch. Set REMOTEARC_INSTALL_DIR to an absolute path to choose another directory. Rerun the installer to upgrade after stopping the Agent.", "",
-  "| Platform | Download |", "| --- | --- |",
-  ...nativeTargets.map(([label, os, arch]) => "| " + label + " | [remotelink](" + nativeRelease + "remotelink-v" + nativeVersion + "-" + os + "-" + arch + (os === "windows" ? ".exe" : "") + ") |"),
-  "", "[SHA256SUMS](" + nativeRelease + "SHA256SUMS) · [Release notes](https://github.com/yaohuangguan/remote-arc/releases/tag/remotelink-v" + nativeVersion + ")", "",
-  "```bash", "brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc", "if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi", "brew install yaohuangguan/remote-arc/remotelink", "remotelink", "```", "",
-  "The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.", installEnd,
+const nativeBlock = [
+  installStart,
+  "### Native downloads and Homebrew",
+  "",
+  "Standalone " +
+    nativeVersion +
+    " needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).",
+  "",
+  "On macOS or Linux (including WSL), install without Node.js:",
+  "",
+  "```sh",
+  "curl -fsSL https://remotearc.app/install.sh | sh",
+  "remotelink",
+  "```",
+  "",
+  "The script verifies SHA256, installs to ~/.local/bin without sudo, and leaves pairing and permissions for the first launch. Set REMOTEARC_INSTALL_DIR to an absolute path to choose another directory. Rerun the installer to upgrade after stopping the Agent.",
+  "",
+  "| Platform | Download |",
+  "| --- | --- |",
+  ...nativeTargets.map(
+    ([label, os, arch]) =>
+      "| " +
+      label +
+      " | [remotelink](" +
+      nativeRelease +
+      "remotelink-v" +
+      nativeVersion +
+      "-" +
+      os +
+      "-" +
+      arch +
+      (os === "windows" ? ".exe" : "") +
+      ") |",
+  ),
+  "",
+  "[SHA256SUMS](" +
+    nativeRelease +
+    "SHA256SUMS) · [Release notes](https://github.com/yaohuangguan/remote-arc/releases/tag/remotelink-v" +
+    nativeVersion +
+    ")",
+  "",
+  "```bash",
+  "brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc",
+  "if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi",
+  "brew install yaohuangguan/remote-arc/remotelink",
+  "remotelink",
+  "```",
+  "",
+  "The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.",
+  installEnd,
 ].join("\n");
-if (!rootReadme.includes(installStart) || !rootReadme.includes(installEnd)) throw new Error("Root README native install markers are missing");
+if (!rootReadme.includes(installStart) || !rootReadme.includes(installEnd))
+  throw new Error("Root README native install markers are missing");
 const rootStart = rootReadme.indexOf(installStart);
-const expectedRootReadme = rootReadme.slice(0, rootStart) + nativeBlock + rootReadme.slice(rootReadme.indexOf(installEnd, rootStart) + installEnd.length);
+const expectedRootReadme =
+  rootReadme.slice(0, rootStart) +
+  nativeBlock +
+  rootReadme.slice(rootReadme.indexOf(installEnd, rootStart) + installEnd.length);
 
 if (mode === "--check") {
   if (expected !== readme || expectedRootReadme !== rootReadme || cliLicense !== rootLicense) {

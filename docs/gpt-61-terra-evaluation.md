@@ -16,10 +16,10 @@ functions and hosted web search; the new model needs no transport or prompt chan
 
 Standard USD per million tokens:
 
-| Model | Uncached input | Cached input | Cache write, 30 minutes | Output |
-| --- | ---: | ---: | ---: | ---: |
-| GPT-6 Luna | $0.10 | $0.01 | $0.125 | $0.50 |
-| GPT-6.1 Terra | $1.00 | $0.05 | $1.25 | $5.00 |
+| Model         | Uncached input | Cached input | Cache write, 30 minutes | Output |
+| ------------- | -------------: | -----------: | ----------------------: | -----: |
+| GPT-6 Luna    |          $0.10 |        $0.01 |                  $0.125 |  $0.50 |
+| GPT-6.1 Terra |          $1.00 |        $0.05 |                   $1.25 |  $5.00 |
 
 Terra costs 10 times Luna for uncached input and output, and 5 times for cache
 reads. At 8,000 uncached input and 1,000 output tokens per inference, Luna costs

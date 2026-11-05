@@ -16,7 +16,8 @@ const zh = (navigator.language || "").toLowerCase().startsWith("zh");
 const text = zh
   ? {
       title: "允许 AI 在这个网站上工作？",
-      explain: "你的 AI 请求在你的浏览器里打开并使用这个网站，使用你已登录的状态。允许后，它可以在这个网站上打开标签页、读取页面、点击和填写。它看不到你的其他标签页和其他网站，Chrome 还会请你再确认一次。",
+      explain:
+        "你的 AI 请求在你的浏览器里打开并使用这个网站，使用你已登录的状态。允许后，它可以在这个网站上打开标签页、读取页面、点击和填写。它看不到你的其他标签页和其他网站，Chrome 还会请你再确认一次。",
       once: "购买、发布和提交只会发送一次，AI 发送前应先征求你的同意。",
       secrets: "AI 从不输入密码和卡号。",
       revoke: "随时可以在 Remote Arc Browser 弹窗里移除这个网站。",
@@ -59,19 +60,22 @@ if (!site) {
 allow.addEventListener("click", () => {
   if (!site) return;
   // Called directly from the click, as Chrome requires for its prompt.
-  chrome.permissions.request({ origins: [site.protocol + "//" + site.hostname + "/*"] }).then(async (granted) => {
-    if (!granted) {
-      status.textContent = text.denied;
-      return;
-    }
-    await chrome.runtime.sendMessage({ type: "site-allowed", origin: site.origin });
-    status.textContent = text.done;
-    allow.disabled = true;
-    deny.disabled = true;
-    setTimeout(() => window.close(), 1500);
-  }, (error) => {
-    status.textContent = error instanceof Error ? error.message : String(error);
-  });
+  chrome.permissions.request({ origins: [site.protocol + "//" + site.hostname + "/*"] }).then(
+    async (granted) => {
+      if (!granted) {
+        status.textContent = text.denied;
+        return;
+      }
+      await chrome.runtime.sendMessage({ type: "site-allowed", origin: site.origin });
+      status.textContent = text.done;
+      allow.disabled = true;
+      deny.disabled = true;
+      setTimeout(() => window.close(), 1500);
+    },
+    (error) => {
+      status.textContent = error instanceof Error ? error.message : String(error);
+    },
+  );
 });
 
 deny.addEventListener("click", () => {

@@ -24,7 +24,7 @@ Their full filenames are different and are ordered lexicographically.
    immediately before deployment. The workflow's `BACKUP_VERIFIED` input is a
    human attestation, **not** a backup operation.
 3. From the exact current `master`, compare `wrangler d1 migrations list
-   remote-link-auth --remote` against expected **two** pending migrations:
+remote-link-auth --remote` against expected **two** pending migrations:
    `0027_organization_foundation.sql` and `0028_engagement_submissions.sql`.
    The marketing migration must **not** be pending.
 4. Deploy only with GitHub Actions' protected manual production workflow, not

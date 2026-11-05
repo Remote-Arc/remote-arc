@@ -67,71 +67,71 @@ extension open authenticated outbound WebSockets to their owner's Durable Object
 
 ## Components
 
-| Component | Path | Runtime | Responsibility |
-| --- | --- | --- | --- |
-| Relay | `apps/relay` | Cloudflare Worker (`src/index.ts`) | Every hosted surface: website and dashboard assets, auth, OAuth, MCP, Arc runtime, Apps, Tasks, billing, admin APIs, crons |
-| Dashboard and website | `apps/ui` | React + Vite, served as Worker static assets | Website, docs, Arc and Connect dashboards, checkout, admin console |
-| Go Agent | `apps/agent` | Native binary `remotelink` | Pairing, relay session, background recovery, journals, task browser, local MCP setup for Claude/Codex |
-| Go Execution Core | `packages/execution-core` | Go module compiled into the Agent | File and process tools, path policy, Safety Guard, Local Undo |
-| CLI launcher | `packages/cli` | npm `remotelink` | Downloads and SHA-verifies the Go binary, then starts it |
-| Browser Companion | `apps/browser-extension` | Chrome MV3 | Shared tabs and allowed sites in the user's own browser |
-| Protocol | `packages/protocol` | Shared TS | Wire types, plan defaults (`ARC_PLANS`), features, published limits |
-| Skills | `skills/`, `packages/skills` | Markdown + generated catalog | First-party and community Skills (for example `safe-cleanup`) |
-| Docs data | `packages/docs` | Generated JSON + TS | Docs catalog and the generated tool index used by the website |
-| MCP integration tests | `apps/mcp` | Node, test only | Runs the official MCP client against the Go Agent's local MCP server |
+| Component             | Path                         | Runtime                                      | Responsibility                                                                                                             |
+| --------------------- | ---------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Relay                 | `apps/relay`                 | Cloudflare Worker (`src/index.ts`)           | Every hosted surface: website and dashboard assets, auth, OAuth, MCP, Arc runtime, Apps, Tasks, billing, admin APIs, crons |
+| Dashboard and website | `apps/ui`                    | React + Vite, served as Worker static assets | Website, docs, Arc and Connect dashboards, checkout, admin console                                                         |
+| Go Agent              | `apps/agent`                 | Native binary `remotelink`                   | Pairing, relay session, background recovery, journals, task browser, local MCP setup for Claude/Codex                      |
+| Go Execution Core     | `packages/execution-core`    | Go module compiled into the Agent            | File and process tools, path policy, Safety Guard, Local Undo                                                              |
+| CLI launcher          | `packages/cli`               | npm `remotelink`                             | Downloads and SHA-verifies the Go binary, then starts it                                                                   |
+| Browser Companion     | `apps/browser-extension`     | Chrome MV3                                   | Shared tabs and allowed sites in the user's own browser                                                                    |
+| Protocol              | `packages/protocol`          | Shared TS                                    | Wire types, plan defaults (`ARC_PLANS`), features, published limits                                                        |
+| Skills                | `skills/`, `packages/skills` | Markdown + generated catalog                 | First-party and community Skills (for example `safe-cleanup`)                                                              |
+| Docs data             | `packages/docs`              | Generated JSON + TS                          | Docs catalog and the generated tool index used by the website                                                              |
+| MCP integration tests | `apps/mcp`                   | Node, test only                              | Runs the official MCP client against the Go Agent's local MCP server                                                       |
 
 ### Relay map (`apps/relay/src`)
 
 `index.ts` is the Worker entry. Every other module lives in one domain folder.
 
-| Area | Folder | Main files |
-| --- | --- | --- |
-| Worker entry | `src/` | `index.ts` |
-| Hosts and shared infrastructure | `src/platform/` | `host-routing.ts`, `security.ts`, `d1-read-retry.ts` |
-| Sign-in, sessions and OAuth | `src/auth/` | `auth.ts`, `email-auth.ts`, `dashboard-origin.ts`, `oauth.ts` |
-| MCP server and tool surfaces | `src/mcp/` | `mcp.ts`, `mcp-edge-guard.ts`, `mcp-errors.ts`, `mcp-client-profile.ts`, `browser-runner-mcp.ts`, `shared-tab-mcp.ts`, `mcp-app-actions.ts` |
-| Devices and files | `src/devices/` | `device.ts` (pairing, limits), `registry.ts` (`DeviceRegistry` DO), `device-call.ts`, `call-timeout.ts` (foreground reply budget), `fleet-scheduler.ts`, `file-resources.ts` |
-| Browser authentication and Runner | `src/browser/` | `browser-auth.ts`, `runner-attention.ts` |
-| Tasks, goals and crons | `src/tasks/` | `automations.ts`, `automation-store.ts`, `source-goals.ts`, `planned-goal-runtime.ts`, `task-events.ts`, `task-scheduler.ts` |
-| Arc runtime, plans and credits | `src/arc/` | `arc-chat-object.ts` (`ArcChatRuntime` DO), `arc-chat-runtime.ts`, `arc-dispatcher.ts`, `model-gateway.ts`, `arc-memory.ts`, `arc-teams.ts`, `arc-plan.ts`, `arc-credits.ts` |
-| Apps | `src/apps/` | `apps.ts`, `app-catalog.ts`, `app-oauth.ts`, `app-discovery.ts` |
-| Skills | `src/skills/` | `cloud-skills.ts`, `skill-index.ts` |
-| Usage and billing | `src/billing/` | `entitlements.ts`, `usage.ts`, `plus-usage.ts`, `stripe-billing.ts`, `stripe-native.ts`, `billing-ledger.ts` |
-| Admin | `src/admin/` | `admin-*.ts`, `plan-admin.ts` |
-| Analytics, audit and telemetry | `src/analytics/` | `product-events.ts`, `business-analytics.ts`, `audit.ts`, `monitor.ts`, `device-reliability.ts` (bounded connection counters and alert state) |
-| Slack, follow-ups, website | `src/slack/`, `src/followups/`, `src/site/` | `slack-bot-events.ts`, `user-followups.ts`, `seo.ts` |
-| Schema | `apps/relay/migrations/*.sql` | D1, additive, numbered |
+| Area                              | Folder                                      | Main files                                                                                                                                                                   |
+| --------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Worker entry                      | `src/`                                      | `index.ts`                                                                                                                                                                   |
+| Hosts and shared infrastructure   | `src/platform/`                             | `host-routing.ts`, `security.ts`, `d1-read-retry.ts`                                                                                                                         |
+| Sign-in, sessions and OAuth       | `src/auth/`                                 | `auth.ts`, `email-auth.ts`, `dashboard-origin.ts`, `oauth.ts`                                                                                                                |
+| MCP server and tool surfaces      | `src/mcp/`                                  | `mcp.ts`, `mcp-edge-guard.ts`, `mcp-errors.ts`, `mcp-client-profile.ts`, `browser-runner-mcp.ts`, `shared-tab-mcp.ts`, `mcp-app-actions.ts`                                  |
+| Devices and files                 | `src/devices/`                              | `device.ts` (pairing, limits), `registry.ts` (`DeviceRegistry` DO), `device-call.ts`, `call-timeout.ts` (foreground reply budget), `fleet-scheduler.ts`, `file-resources.ts` |
+| Browser authentication and Runner | `src/browser/`                              | `browser-auth.ts`, `runner-attention.ts`                                                                                                                                     |
+| Tasks, goals and crons            | `src/tasks/`                                | `automations.ts`, `automation-store.ts`, `source-goals.ts`, `planned-goal-runtime.ts`, `task-events.ts`, `task-scheduler.ts`                                                 |
+| Arc runtime, plans and credits    | `src/arc/`                                  | `arc-chat-object.ts` (`ArcChatRuntime` DO), `arc-chat-runtime.ts`, `arc-dispatcher.ts`, `model-gateway.ts`, `arc-memory.ts`, `arc-teams.ts`, `arc-plan.ts`, `arc-credits.ts` |
+| Apps                              | `src/apps/`                                 | `apps.ts`, `app-catalog.ts`, `app-oauth.ts`, `app-discovery.ts`                                                                                                              |
+| Skills                            | `src/skills/`                               | `cloud-skills.ts`, `skill-index.ts`                                                                                                                                          |
+| Usage and billing                 | `src/billing/`                              | `entitlements.ts`, `usage.ts`, `plus-usage.ts`, `stripe-billing.ts`, `stripe-native.ts`, `billing-ledger.ts`                                                                 |
+| Admin                             | `src/admin/`                                | `admin-*.ts`, `plan-admin.ts`                                                                                                                                                |
+| Analytics, audit and telemetry    | `src/analytics/`                            | `product-events.ts`, `business-analytics.ts`, `audit.ts`, `monitor.ts`, `device-reliability.ts` (bounded connection counters and alert state)                                |
+| Slack, follow-ups, website        | `src/slack/`, `src/followups/`, `src/site/` | `slack-bot-events.ts`, `user-followups.ts`, `seo.ts`                                                                                                                         |
+| Schema                            | `apps/relay/migrations/*.sql`               | D1, additive, numbered                                                                                                                                                       |
 
 ### Website and dashboard source (`apps/ui/src`)
 
 `apps/ui/src` is grouped by feature. `main.tsx` stays the only entry point: it
 imports the global stylesheets in cascade order, picks a route and mounts the app.
 
-| Folder | Holds |
-| --- | --- |
-| `app/` | App-wide providers and shell services: `i18n.tsx`, `theme.tsx`, `product-pwa.tsx` |
-| `components/` | UI shared across features: `public-layout.tsx`, `product-icon.tsx`, `brand-wordmark.tsx`, `workspace-loading.tsx`, `install-commands.tsx` |
-| `config/`, `types/`, `data/`, `lib/` | Runtime config, shared types, the App catalog JSON, and framework-free helpers such as `apps/ui/src/lib/marketing-paths.ts` and `apps/ui/src/lib/dashboard-workspaces.ts` (route maps) |
-| `styles/` | Global stylesheets imported once by `main.tsx` |
-| `preview/` | The `VITE_UI_PREVIEW` fetch mock and its fixtures; production pages never import it |
-| `features/marketing/` | Public website: `home/` (landing page), `arc/` (Arc product page), `use-cases/`, plus pricing, trust, releases and integrations pages |
-| `features/blog/`, `features/docs/`, `features/install/` | Blog articles, the docs portal and tool reference, client and native install guides |
-| `features/auth/` | Sign-in, OAuth consent and device pairing |
-| `features/dashboard/` | Connect and Arc dashboard shell (see below) |
-| `features/arc/` | Arc agent: `chat/`, `composer/`, `skills/`, `teams/`, `workspace/` |
-| `features/apps/`, `features/billing/`, `features/security/`, `features/settings/`, `features/tasks/`, `features/browser-runner/` | Product areas used by the dashboard |
-| `features/admin/` | `admin.remotearc.app` console: `events/`, `followups/`, `payments/` |
+| Folder                                                                                                                           | Holds                                                                                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/`                                                                                                                           | App-wide providers and shell services: `i18n.tsx`, `theme.tsx`, `product-pwa.tsx`                                                                                                      |
+| `components/`                                                                                                                    | UI shared across features: `public-layout.tsx`, `product-icon.tsx`, `brand-wordmark.tsx`, `workspace-loading.tsx`, `install-commands.tsx`                                              |
+| `config/`, `types/`, `data/`, `lib/`                                                                                             | Runtime config, shared types, the App catalog JSON, and framework-free helpers such as `apps/ui/src/lib/marketing-paths.ts` and `apps/ui/src/lib/dashboard-workspaces.ts` (route maps) |
+| `styles/`                                                                                                                        | Global stylesheets imported once by `main.tsx`                                                                                                                                         |
+| `preview/`                                                                                                                       | The `VITE_UI_PREVIEW` fetch mock and its fixtures; production pages never import it                                                                                                    |
+| `features/marketing/`                                                                                                            | Public website: `home/` (landing page), `arc/` (Arc product page), `use-cases/`, plus pricing, trust, releases and integrations pages                                                  |
+| `features/blog/`, `features/docs/`, `features/install/`                                                                          | Blog articles, the docs portal and tool reference, client and native install guides                                                                                                    |
+| `features/auth/`                                                                                                                 | Sign-in, OAuth consent and device pairing                                                                                                                                              |
+| `features/dashboard/`                                                                                                            | Connect and Arc dashboard shell (see below)                                                                                                                                            |
+| `features/arc/`                                                                                                                  | Arc agent: `chat/`, `composer/`, `skills/`, `teams/`, `workspace/`                                                                                                                     |
+| `features/apps/`, `features/billing/`, `features/security/`, `features/settings/`, `features/tasks/`, `features/browser-runner/` | Product areas used by the dashboard                                                                                                                                                    |
+| `features/admin/`                                                                                                                | `admin.remotearc.app` console: `events/`, `followups/`, `payments/`                                                                                                                    |
 
 `apps/ui/src/features/dashboard/dashboard.tsx` is the Connect and Arc dashboard shell: sidebar,
 header and tab switching. Its state and actions live in hooks under
 `apps/ui/src/features/dashboard/hooks/`, and each tab or device panel is its own component.
 
-| Concern | Files |
-| --- | --- |
+| Concern           | Files                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | State and actions | `apps/ui/src/features/dashboard/hooks/use-dashboard-model.ts` composes `apps/ui/src/features/dashboard/hooks/use-dashboard-dialogs.ts`, `apps/ui/src/features/dashboard/hooks/use-dashboard-security.ts` and `apps/ui/src/features/dashboard/hooks/use-device-actions.ts`, which uses `apps/ui/src/features/dashboard/hooks/use-device-settings.ts` and `apps/ui/src/features/dashboard/hooks/use-device-activity.ts` |
-| Tabs | `apps/ui/src/features/dashboard/views/overview-view.tsx`, `devices-view.tsx`, `connect-view.tsx`, `security-view.tsx`, `monitor-view.tsx`, `settings-view.tsx` |
-| Device card | `apps/ui/src/features/dashboard/devices/device-card.tsx` with `device-access-panel.tsx`, `device-tasks-panel.tsx`, `device-activity-panel.tsx` |
-| Dialogs | `apps/ui/src/features/dashboard/views/dashboard-overlays.tsx` |
+| Tabs              | `apps/ui/src/features/dashboard/views/overview-view.tsx`, `devices-view.tsx`, `connect-view.tsx`, `security-view.tsx`, `monitor-view.tsx`, `settings-view.tsx`                                                                                                                                                                                                                                                        |
+| Device card       | `apps/ui/src/features/dashboard/devices/device-card.tsx` with `device-access-panel.tsx`, `device-tasks-panel.tsx`, `device-activity-panel.tsx`                                                                                                                                                                                                                                                                        |
+| Dialogs           | `apps/ui/src/features/dashboard/views/dashboard-overlays.tsx`                                                                                                                                                                                                                                                                                                                                                         |
 
 ## Request paths
 
@@ -157,6 +157,7 @@ header and tab switching. Its state and actions live in hooks under
 
    The core then executes the tool and records a Local Undo snapshot for
    supported edits.
+
 6. The result returns along the same path. Activity and audit metadata are
    recorded, and the client sees the observation. A timeout means the Relay did
    not see a reply, not that nothing ran.
@@ -205,12 +206,12 @@ Every kind of persistent work is a row in the same `automations` table, with the
 same statuses, leases and revisions. The kinds differ only in who makes the next
 decision:
 
-| Work | Next decision comes from |
-| --- | --- |
-| Long task, schedule watch, condition watch, goal loop | The approved contract; nothing new is decided |
-| Agent Goal, `source` controller | The external AI, through `submit_goal_decision` |
-| Agent Goal, `hosted` controller | A hosted planner, within its budget |
-| Arc Work (`goal_json.native_arc`) | An Arc run in `ArcChatRuntime` |
+| Work                                                  | Next decision comes from                        |
+| ----------------------------------------------------- | ----------------------------------------------- |
+| Long task, schedule watch, condition watch, goal loop | The approved contract; nothing new is decided   |
+| Agent Goal, `source` controller                       | The external AI, through `submit_goal_decision` |
+| Agent Goal, `hosted` controller                       | A hosted planner, within its budget             |
+| Arc Work (`goal_json.native_arc`)                     | An Arc run in `ArcChatRuntime`                  |
 
 Add new behaviour as a controller on this model, not as a second state machine.
 
@@ -256,13 +257,13 @@ retention and cannot reconstruct historical uptime.
 
 ## Data and state
 
-| Store | Holds |
-| --- | --- |
-| D1 (`DB`) | Accounts, sessions, OAuth grants, devices (credential hashes) and policies, Tasks and leases, encrypted Arc messages and memory, App connections, usage counters, commercial configuration, billing records, audit metadata |
-| `DeviceRegistry` Durable Object | Live device and extension sockets for one user; forwarding only |
-| `ArcChatRuntime` Durable Object | In-flight Arc runs, team rooms and Slack event processing |
-| R2 (`PUBLIC_MEDIA`) | Public demo and gallery media |
-| The user's computer | Device credential, Agent journals and logs, managed process state, Local Undo (`~/.remotearc/undo`, 7 days, 200 MB cap), Browser Runner sign-ins |
+| Store                           | Holds                                                                                                                                                                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1 (`DB`)                       | Accounts, sessions, OAuth grants, devices (credential hashes) and policies, Tasks and leases, encrypted Arc messages and memory, App connections, usage counters, commercial configuration, billing records, audit metadata |
+| `DeviceRegistry` Durable Object | Live device and extension sockets for one user; forwarding only                                                                                                                                                             |
+| `ArcChatRuntime` Durable Object | In-flight Arc runs, team rooms and Slack event processing                                                                                                                                                                   |
+| R2 (`PUBLIC_MEDIA`)             | Public demo and gallery media                                                                                                                                                                                               |
+| The user's computer             | Device credential, Agent journals and logs, managed process state, Local Undo (`~/.remotearc/undo`, 7 days, 200 MB cap), Browser Runner sign-ins                                                                            |
 
 Tool input and output pass through the Relay and the user's chosen AI provider
 while a call is running. Transport is encrypted, but this is not zero-knowledge
@@ -291,12 +292,12 @@ running behind.
 
 ## Hosts
 
-| Host | Serves |
-| --- | --- |
-| `remotearc.app` | Website, docs, pricing |
-| `agent.remotearc.app` | Dashboard (Arc and Connect) and checkout |
-| `admin.remotearc.app` | Admin console |
-| `mcp.remotearc.app` | MCP, OAuth and device APIs; `/mcp`, `/health` |
+| Host                  | Serves                                        |
+| --------------------- | --------------------------------------------- |
+| `remotearc.app`       | Website, docs, pricing                        |
+| `agent.remotearc.app` | Dashboard (Arc and Connect) and checkout      |
+| `admin.remotearc.app` | Admin console                                 |
+| `mcp.remotearc.app`   | MCP, OAuth and device APIs; `/mcp`, `/health` |
 
 All four are served by the same Worker, and `host-routing.ts` decides what each
 host serves.
@@ -315,11 +316,11 @@ or off.
 
 **Versions.** Three versions move independently:
 
-| Version | Source | Answers |
-| --- | --- | --- |
-| `master` commit | Git | Is the code merged? |
-| Worker deployment | Cloudflare version tag, Production Release run | Is the cloud updated? |
-| Device Agent | The Agent version reported by each device | Can this computer use the feature? |
+| Version           | Source                                         | Answers                            |
+| ----------------- | ---------------------------------------------- | ---------------------------------- |
+| `master` commit   | Git                                            | Is the code merged?                |
+| Worker deployment | Cloudflare version tag, Production Release run | Is the cloud updated?              |
+| Device Agent      | The Agent version reported by each device      | Can this computer use the feature? |
 
 **Limits that are easy to misread:**
 
@@ -341,13 +342,13 @@ or off.
 The same symptom can come from different layers, so identify which one produced
 the error first:
 
-| Symptom | Usually |
-| --- | --- |
-| A tool is missing from the client | Scope or deployment switch, or the client's cached tool list, before the tool code |
-| Permission denied | Three separate gates: OAuth scope (cloud), device tool switch (cloud), path policy (device) |
-| Device unavailable | The Agent's outbound connection, not the tool |
-| A Task is stuck | Its lease and `waiting_for_device` state before the command itself |
-| A shipped feature does not work | Flags, an unapplied migration, or an older Agent (see the three versions above) |
+| Symptom                           | Usually                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------- |
+| A tool is missing from the client | Scope or deployment switch, or the client's cached tool list, before the tool code          |
+| Permission denied                 | Three separate gates: OAuth scope (cloud), device tool switch (cloud), path policy (device) |
+| Device unavailable                | The Agent's outbound connection, not the tool                                               |
+| A Task is stuck                   | Its lease and `waiting_for_device` state before the command itself                          |
+| A shipped feature does not work   | Flags, an unapplied migration, or an older Agent (see the three versions above)             |
 
 ## Working in this repository
 

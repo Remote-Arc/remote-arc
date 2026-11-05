@@ -21,12 +21,26 @@ const grants = [
   sample("Codex", "expired", "e", 30),
 ];
 const groups = groupAuthorizations(grants);
-assert.equal(groups.length, 3, "re-authorized clients must not occupy another full-size client card");
+assert.equal(
+  groups.length,
+  3,
+  "re-authorized clients must not occupy another full-size client card",
+);
 assert.equal(groups[0].name, "ChatGPT");
-assert.deepEqual(groups[0].grants.map(g => g.grantId), ["a", "d", "c"], "each OAuth grant stays independently addressable");
+assert.deepEqual(
+  groups[0].grants.map((g) => g.grantId),
+  ["a", "d", "c"],
+  "each OAuth grant stays independently addressable",
+);
 assert.equal(groups[0].active, 1);
 assert.equal(groups[0].refreshable, 1);
 assert.equal(groups[1].name, "Claude");
 assert.equal(groups[2].name, "Codex");
-assert.deepEqual(grants.map(g => g.grantId), ["b", "c", "a", "d", "e"], "grouping must not mutate original security response");
-console.log("PASS: grouped OAuth authorizations preserve identity, status and independent revocation scope");
+assert.deepEqual(
+  grants.map((g) => g.grantId),
+  ["b", "c", "a", "d", "e"],
+  "grouping must not mutate original security response",
+);
+console.log(
+  "PASS: grouped OAuth authorizations preserve identity, status and independent revocation scope",
+);

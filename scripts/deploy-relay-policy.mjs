@@ -1,8 +1,5 @@
 export function resolveProductionDeployPolicy(env = process.env) {
-  if (
-    env.GITHUB_ACTIONS === "true" &&
-    env.REMOTEARC_PRODUCTION_DEPLOY === "github-actions"
-  ) {
+  if (env.GITHUB_ACTIONS === "true" && env.REMOTEARC_PRODUCTION_DEPLOY === "github-actions") {
     return { allowed: true, source: "github-actions" };
   }
 
@@ -20,12 +17,7 @@ export function resolveProductionDeployPolicy(env = process.env) {
   };
 }
 
-export function shouldSkipStaleProductionDeploy({
-  source,
-  ref,
-  requestedSha,
-  latestMasterSha,
-}) {
+export function shouldSkipStaleProductionDeploy({ source, ref, requestedSha, latestMasterSha }) {
   const normalizedRef = (ref || "").replace(/^refs\/heads\//, "");
   return (
     source === "github-actions" &&
@@ -36,11 +28,7 @@ export function shouldSkipStaleProductionDeploy({
   );
 }
 
-export function deploymentMetadata({
-  source,
-  sha,
-  ref,
-}) {
+export function deploymentMetadata({ source, sha, ref }) {
   const shortSha = (sha || "unknown").slice(0, 12);
   const safeRef = (ref || "unknown")
     .replace(/^refs\/heads\//, "")

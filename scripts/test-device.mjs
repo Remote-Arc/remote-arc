@@ -8,13 +8,25 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 // Distribution tests start the ordinary Agent entry point, whose optional
 // integrations must never register into the developer's real client profiles.
 const clientTempRoot = realpathSync(tmpdir());
-const clientProfiles = realpathSync(mkdtempSync(path.join(clientTempRoot, "remotearc-device-clients-")));
+const clientProfiles = realpathSync(
+  mkdtempSync(path.join(clientTempRoot, "remotearc-device-clients-")),
+);
 process.env.CODEX_HOME = path.join(clientProfiles, "codex");
 process.env.CLAUDE_CONFIG_DIR = path.join(clientProfiles, "claude");
-for (const key of ["OPENAI_API_KEY", "CODEX_API_KEY", "CHATGPT_AUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDECODE"])
+for (const key of [
+  "OPENAI_API_KEY",
+  "CODEX_API_KEY",
+  "CHATGPT_AUTH_TOKEN",
+  "ANTHROPIC_API_KEY",
+  "CLAUDE_CODE_OAUTH_TOKEN",
+  "CLAUDECODE",
+])
   delete process.env[key];
 process.on("exit", () => {
-  if (path.dirname(clientProfiles) !== clientTempRoot || !path.basename(clientProfiles).startsWith("remotearc-device-clients-"))
+  if (
+    path.dirname(clientProfiles) !== clientTempRoot ||
+    !path.basename(clientProfiles).startsWith("remotearc-device-clients-")
+  )
     throw new Error("Refusing to clean a client fixture outside its temporary root.");
   rmSync(clientProfiles, { recursive: true, force: true });
 });
@@ -35,9 +47,7 @@ const formatted = spawnSync("gofmt", ["-l", "cmd", "internal"], {
   windowsHide: true,
 });
 if (formatted.error || formatted.status !== 0 || formatted.stdout.trim())
-  throw (
-    formatted.error ?? new Error("Go files need gofmt: " + formatted.stdout)
-  );
+  throw formatted.error ?? new Error("Go files need gofmt: " + formatted.stdout);
 const coreDirectory = path.join(root, "packages/execution-core");
 const coreFormat = spawnSync("gofmt", ["-l", "config", "policy", "protocol", "execution"], {
   cwd: coreDirectory,
@@ -58,9 +68,7 @@ run("go", ["test", "-race", "-count=1", "./..."], {
   env: {
     ...process.env,
     CGO_ENABLED: "1",
-    ...(process.env.REMOTEARC_TEST_CC
-      ? { CC: process.env.REMOTEARC_TEST_CC }
-      : {}),
+    ...(process.env.REMOTEARC_TEST_CC ? { CC: process.env.REMOTEARC_TEST_CC } : {}),
   },
 });
 const require = createRequire(path.join(root, "packages/cli/package.json"));

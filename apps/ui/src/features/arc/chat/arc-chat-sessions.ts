@@ -25,42 +25,69 @@ export const arcChatStorageKey = (accountId: string) => "arc-chat-drafts-v1:" + 
 export function loadArcChatSessions(accountId: string): ArcChatSession[] {
   try {
     if (!accountId || typeof sessionStorage === "undefined") return [];
-    const data: unknown = JSON.parse(sessionStorage.getItem(arcChatStorageKey(accountId)) || "null");
+    const data: unknown = JSON.parse(
+      sessionStorage.getItem(arcChatStorageKey(accountId)) || "null",
+    );
     if (!data || typeof data !== "object" || Array.isArray(data)) return [];
     const record = data as { version?: unknown; sessions?: unknown };
     if (record.version !== SESSION_VERSION || !Array.isArray(record.sessions)) return [];
-    return record.sessions.slice(0, MAX_SESSIONS).filter((value): value is ArcChatSession => {
-      if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-      const session = value as ArcChatSession;
-      return typeof session.id === "string" && session.id.length <= 80
-        && typeof session.title === "string" && session.title.length <= 90
-        && typeof session.objective === "string" && session.objective.length <= MAX_MESSAGE_LENGTH
-        && typeof session.criteria === "string" && session.criteria.length <= 2000
-        && Number.isFinite(session.createdAt) && Number.isFinite(session.updatedAt)
-        && Array.isArray(session.messages) && session.messages.length <= MAX_MESSAGES
-        && session.messages.every(message => message && typeof message.id === "string" && message.id.length <= 80
-          && (message.role === "user" || message.role === "assistant")
-          && typeof message.content === "string" && message.content.length <= MAX_MESSAGE_LENGTH);
-    }).sort((a, b) => b.updatedAt - a.updatedAt);
-  } catch { return []; }
+    return record.sessions
+      .slice(0, MAX_SESSIONS)
+      .filter((value): value is ArcChatSession => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+        const session = value as ArcChatSession;
+        return (
+          typeof session.id === "string" &&
+          session.id.length <= 80 &&
+          typeof session.title === "string" &&
+          session.title.length <= 90 &&
+          typeof session.objective === "string" &&
+          session.objective.length <= MAX_MESSAGE_LENGTH &&
+          typeof session.criteria === "string" &&
+          session.criteria.length <= 2000 &&
+          Number.isFinite(session.createdAt) &&
+          Number.isFinite(session.updatedAt) &&
+          Array.isArray(session.messages) &&
+          session.messages.length <= MAX_MESSAGES &&
+          session.messages.every(
+            (message) =>
+              message &&
+              typeof message.id === "string" &&
+              message.id.length <= 80 &&
+              (message.role === "user" || message.role === "assistant") &&
+              typeof message.content === "string" &&
+              message.content.length <= MAX_MESSAGE_LENGTH,
+          )
+        );
+      })
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  } catch {
+    return [];
+  }
 }
 
 export function saveArcChatSessions(accountId: string, sessions: ArcChatSession[]) {
   try {
     if (!accountId || typeof sessionStorage === "undefined") return;
-    sessionStorage.setItem(arcChatStorageKey(accountId), JSON.stringify({
-      version: SESSION_VERSION,
-      sessions: sessions.slice(0, MAX_SESSIONS).map(session => ({
-        ...session,
-        title: session.title.slice(0, 90),
-        objective: session.objective.slice(0, MAX_MESSAGE_LENGTH),
-        criteria: session.criteria.slice(0, 2000),
-        messages: session.messages.slice(-MAX_MESSAGES).map(message => ({
-          ...message, content: message.content.slice(0, MAX_MESSAGE_LENGTH),
+    sessionStorage.setItem(
+      arcChatStorageKey(accountId),
+      JSON.stringify({
+        version: SESSION_VERSION,
+        sessions: sessions.slice(0, MAX_SESSIONS).map((session) => ({
+          ...session,
+          title: session.title.slice(0, 90),
+          objective: session.objective.slice(0, MAX_MESSAGE_LENGTH),
+          criteria: session.criteria.slice(0, 2000),
+          messages: session.messages.slice(-MAX_MESSAGES).map((message) => ({
+            ...message,
+            content: message.content.slice(0, MAX_MESSAGE_LENGTH),
+          })),
         })),
-      })),
-    }));
-  } catch { /* Private browsing or storage quota: keep this tab's in-memory state. */ }
+      }),
+    );
+  } catch {
+    /* Private browsing or storage quota: keep this tab's in-memory state. */
+  }
 }
 
 export function arcChatTitle(objective: string) {

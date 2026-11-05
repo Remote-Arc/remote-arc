@@ -44,12 +44,12 @@ Migration 0046 stores a cumulative $3 rated-cost budget and $0.50 shared daily l
 
 ## Plans and usage
 
-| Plan | Monthly price | Arc Credits | Connect calls | Parallel runs | Run time |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Free | $0 | One explicit 14-day trial with 200 Credits | 10,000 | 1 | 3 minutes |
-| Plus | $39 | 1,500 / billing period | Unlimited | 2 | 10 minutes |
-| Pro | $79 | 5,000 / billing period | Unlimited | 5 | 30 minutes |
-| Enterprise | Contract | Negotiated | Negotiated | Negotiated | Negotiated |
+| Plan       | Monthly price |                                Arc Credits | Connect calls | Parallel runs |   Run time |
+| ---------- | ------------: | -----------------------------------------: | ------------: | ------------: | ---------: |
+| Free       |            $0 | One explicit 14-day trial with 200 Credits |        10,000 |             1 |  3 minutes |
+| Plus       |           $39 |                     1,500 / billing period |     Unlimited |             2 | 10 minutes |
+| Pro        |           $79 |                     5,000 / billing period |     Unlimited |             5 | 30 minutes |
+| Enterprise |      Contract |                                 Negotiated |    Negotiated |    Negotiated | Negotiated |
 
 Plus and Pro allow every configured premium model. Pro buys more capacity, not exclusive model access. Trial access has a time limit; remaining trial Credits are retained after that limit and can be used with a subsequent active paid entitlement. Monthly Credits expire at the paid period end. A $10 top-up adds 500 non-expiring Credits; an active paid subscription is required to use them. Credits do not provide an unlimited run: token, step, time, concurrency, routine, account and platform spending caps apply. There are no automatic overage charges. Every Free account receives 10,000 Connect calls per calendar month; account creation date does not reduce this allowance. Historical higher allowances and additional grants are preserved. Existing manually granted Plus access is preserved.
 
@@ -83,7 +83,6 @@ Use Stripe’s event delivery Dashboard to resend failed events after correcting
 Emergency Arc pause blocks new purchases and inference while preserving existing customers’ access to the Stripe portal for payment details and cancellation. It must not trap a customer in a renewing subscription. Keep billing credentials available for verified payment events and subscription management during an inference outage.
 
 Paid Connect calls have no monthly cap. Existing per-request, concurrency, rate and provider limits remain independent. Arc model usage still consumes finite Credits. The economics calculator uses an editable expected Connect volume; unlimited calls have no finite worst-case cost.
-
 
 ## Optional open-model route
 

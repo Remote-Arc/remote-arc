@@ -35,11 +35,10 @@ const env = {
   NO_COLOR: "1",
 };
 assert.equal(
-  spawnSync(
-    process.execPath,
-    ["-e", "console.log(require('node:os').homedir())"],
-    { env, encoding: "utf8" },
-  ).stdout.trim(),
+  spawnSync(process.execPath, ["-e", "console.log(require('node:os').homedir())"], {
+    env,
+    encoding: "utf8",
+  }).stdout.trim(),
   temp,
   "The test must use an isolated home before starting any CLI",
 );
@@ -91,18 +90,13 @@ const start = (...args: string[]) => {
   });
   children.push(child);
   output.set(child, "");
-  child.stdout!.on("data", (data) =>
-    output.set(child, output.get(child)! + data),
-  );
-  child.stderr!.on("data", (data) =>
-    output.set(child, output.get(child)! + data),
-  );
+  child.stdout!.on("data", (data) => output.set(child, output.get(child)! + data));
+  child.stderr!.on("data", (data) => output.set(child, output.get(child)! + data));
   return child;
 };
 const waitFor = async (test: () => boolean, description: string) => {
   const deadline = Date.now() + 10_000;
-  while (!test() && Date.now() < deadline)
-    await new Promise((r) => setTimeout(r, 100));
+  while (!test() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 100));
   assert(test(), description + "\n" + [...output.values()].join("\n"));
 };
 try {
@@ -113,21 +107,14 @@ try {
   assert.equal(retired.status, 1, "--ts must not fall back to Go");
   assert.match(retired.stderr, /TypeScript runtime was retired/);
   const owner = start();
-  await waitFor(
-    () => toolDone,
-    "Normal CLI must stay attached and execute tools",
-  );
+  await waitFor(() => toolDone, "Normal CLI must stay attached and execute tools");
   assert.equal(owner.exitCode, null);
   const viewer = start();
   await waitFor(
     () => output.get(viewer)!.includes("tool.done get_file_info"),
     "Second terminal must follow the executing Agent's operation journal",
   );
-  assert.equal(
-    hellos,
-    1,
-    "A log viewer must not open a second execution connection",
-  );
+  assert.equal(hellos, 1, "A log viewer must not open a second execution connection");
   const safe = start("--safe");
   await waitFor(
     () => safe.exitCode !== null,
@@ -149,9 +136,7 @@ try {
   spawnSync(binary, ["--stop"], { env, windowsHide: true, timeout: 20_000 });
   for (const child of children)
     if (child.exitCode === null && child.signalCode === null) {
-      const closed = new Promise<boolean>((resolve) =>
-        child.once("close", () => resolve(true)),
-      );
+      const closed = new Promise<boolean>((resolve) => child.once("close", () => resolve(true)));
       if (process.platform === "win32")
         spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
           windowsHide: true,

@@ -10,13 +10,21 @@ export function IntentDrivenComputingArticlePage({ user }: { user?: User | null 
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href={localizedWebsiteHref("/blogs", locale)}>← {tr("All posts", "全部文章")}</a>
+          <a className="blogBack" href={localizedWebsiteHref("/blogs", locale)}>
+            ← {tr("All posts", "全部文章")}
+          </a>
           <span className="eyebrow">{tr("PERSONAL NOTES", "随想")}</span>
           <h1>{tr(INTENT_ESSAY.title.en, INTENT_ESSAY.title.zh)}</h1>
           <p className="blogDeck">{tr(INTENT_ESSAY.deck.en, INTENT_ESSAY.deck.zh)}</p>
           <div className="blogByline">
             <span className="blogAuthorMark">SY</span>
-            <div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")} · {INTENT_ESSAY.date} · {tr("7 min read", "约 7 分钟")}</span></div>
+            <div>
+              <strong>Sam Yao</strong>
+              <span>
+                {tr("Creator of Remote Arc", "Remote Arc 创建者")} · {INTENT_ESSAY.date} ·{" "}
+                {tr("7 min read", "约 7 分钟")}
+              </span>
+            </div>
           </div>
         </header>
         <div className="blogArticleBody">
@@ -32,8 +40,16 @@ export function IntentDrivenComputingArticlePage({ user }: { user?: User | null 
             </section>
           ))}
           <footer className="blogArticleFooter">
-            <div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div>
-            <a href={localizedWebsiteHref("/docs/architecture", locale)}>{tr("How Remote Arc works", "Remote Arc 的架构")} →</a>
+            <div>
+              <span className="blogAuthorMark">SY</span>
+              <div>
+                <strong>Sam Yao</strong>
+                <span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span>
+              </div>
+            </div>
+            <a href={localizedWebsiteHref("/docs/architecture", locale)}>
+              {tr("How Remote Arc works", "Remote Arc 的架构")} →
+            </a>
           </footer>
         </div>
       </article>

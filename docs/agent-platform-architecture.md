@@ -6,14 +6,14 @@ Updated 22 October 2026. This is the current platform reference. The native devi
 
 Remote Arc is infrastructure for agents to act on authorized cloud accounts and user-owned computers. **Arc** is the hosted personal-agent workspace. **Connect** lets compatible external AI clients use the same execution layer over MCP. MCP is an interoperability interface within the platform.
 
-| Responsibility | Model API / external reasoning host | Remote Arc |
-| --- | --- | --- |
-| Understand and plan | Interpret the goal, select tools, assess observations, summarize | Build bounded context and expose validated tool contracts |
-| Authorization | Propose an action; cannot grant itself authority | Verify account, OAuth scopes, entitlement, connection/device ownership and local policy |
-| Execute | Return structured decisions | Dispatch App operations or device tools and retain acknowledgements |
-| Continuity | Make fresh decisions when invoked | Persist conversations, steps, references, task schedules, leases and outcomes |
-| Memory | Use relevant supplied context | Store, retrieve and delete bounded account-owned notes and work summaries |
-| Cost | Report model usage | Reserve and settle funds/Credits; enforce run, account and operating limits |
+| Responsibility      | Model API / external reasoning host                              | Remote Arc                                                                              |
+| ------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Understand and plan | Interpret the goal, select tools, assess observations, summarize | Build bounded context and expose validated tool contracts                               |
+| Authorization       | Propose an action; cannot grant itself authority                 | Verify account, OAuth scopes, entitlement, connection/device ownership and local policy |
+| Execute             | Return structured decisions                                      | Dispatch App operations or device tools and retain acknowledgements                     |
+| Continuity          | Make fresh decisions when invoked                                | Persist conversations, steps, references, task schedules, leases and outcomes           |
+| Memory              | Use relevant supplied context                                    | Store, retrieve and delete bounded account-owned notes and work summaries               |
+| Cost                | Report model usage                                               | Reserve and settle funds/Credits; enforce run, account and operating limits             |
 
 OpenAI or Anthropic APIs supply reasoning. They do not independently connect a user's Gmail, operate the user's computer, persist Arc routines or manage Arc's account memory. Arc's runtime organizes those capabilities around model decisions. Model output remains fallible: a completed run is a terminal runtime state, **not a formal proof that the user goal is satisfied**. Answers must cite real observations or artifacts and distinguish partial work and blockers.
 
@@ -122,29 +122,29 @@ Stripe Checkout collects payment; verified webhook/payment state grants the subs
 
 ## Security, observability and acceptance
 
-| Area | Evidence and boundary |
-| --- | --- |
-| Tenant isolation | Authenticated account ownership on conversation, App, device, skill and memory access |
-| Device control | Read-oriented initial setup; explicit local tools, trusted roots, sensitive paths and OS user authority |
-| Uncertainty | Persisted dispatch state; no blind replay after an unconfirmed effect |
-| User experience | One working indicator and final answer in chat; execution details fetched on demand in Activity |
-| Operations | Model usage and funding pools, trials, payment records, reviewed rewards and service health in Admin |
-| Tests | Shared provider contracts, argument correction, duplicate prevention, context reuse, task scheduling, memory isolation, funding and billing lifecycle |
+| Area                 | Evidence and boundary                                                                                                                                                                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tenant isolation     | Authenticated account ownership on conversation, App, device, skill and memory access                                                                                                                                                                            |
+| Device control       | Read-oriented initial setup; explicit local tools, trusted roots, sensitive paths and OS user authority                                                                                                                                                          |
+| Uncertainty          | Persisted dispatch state; no blind replay after an unconfirmed effect                                                                                                                                                                                            |
+| User experience      | One working indicator and final answer in chat; execution details fetched on demand in Activity                                                                                                                                                                  |
+| Operations           | Model usage and funding pools, trials, payment records, reviewed rewards and service health in Admin                                                                                                                                                             |
+| Tests                | Shared provider contracts, argument correction, duplicate prevention, context reuse, task scheduling, memory isolation, funding and billing lifecycle                                                                                                            |
 | Protected acceptance | Real model calls against synthetic mail, GitHub creation, successful/failed deployments, a scheduled Task through completion, and a selected imported Skill that creates its specified result; the evaluation enforces its explicit operator-approved ledger cap |
 
 Fixtures test actual adapters/controller paths with controlled provider responses; they do not certify every real customer account, provider outage or all possible task categories. A production release must pass exact-commit CI and the applicable acceptance checks. Real customer actions require their authorization. Full two-way multi-agent collaboration, arbitrary engine installation and unconditional exactly-once third-party writes are not claimed.
 
 ## Code map and validation
 
-| Location | Purpose |
-| --- | --- |
-| `apps/relay/src/arc-chat*.ts`, `arc-task-state.ts` | Authenticated chat, state, bounded model/tool loop and context |
-| `apps/relay/src/arc/model-gateway.ts`, `billing-ledger.ts`, `arc-funding.ts` | Cost reservations, usage settlement and funding gates |
-| `apps/relay/src/apps/` (`app-*.ts`, `apps.ts`) | Typed provider operations, credential vault and dispatch |
-| `apps/relay/src/arc/arc-work.ts`, `automations.ts`, `fleet-*.ts` | Hosted routines, persistent scheduler and placement |
-| `apps/relay/src/arc/arc-memory.ts`, `arc-skills.ts`, `cloud-skills.ts` | Memory and reusable skill instructions/workflows |
-| `apps/agent`, `packages/execution-core` | Native local execution and policy |
-| `apps/ui`, `packages/docs/src` | Arc / Connect / Admin surfaces and bilingual public documentation |
+| Location                                                                     | Purpose                                                           |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `apps/relay/src/arc-chat*.ts`, `arc-task-state.ts`                           | Authenticated chat, state, bounded model/tool loop and context    |
+| `apps/relay/src/arc/model-gateway.ts`, `billing-ledger.ts`, `arc-funding.ts` | Cost reservations, usage settlement and funding gates             |
+| `apps/relay/src/apps/` (`app-*.ts`, `apps.ts`)                               | Typed provider operations, credential vault and dispatch          |
+| `apps/relay/src/arc/arc-work.ts`, `automations.ts`, `fleet-*.ts`             | Hosted routines, persistent scheduler and placement               |
+| `apps/relay/src/arc/arc-memory.ts`, `arc-skills.ts`, `cloud-skills.ts`       | Memory and reusable skill instructions/workflows                  |
+| `apps/agent`, `packages/execution-core`                                      | Native local execution and policy                                 |
+| `apps/ui`, `packages/docs/src`                                               | Arc / Connect / Admin surfaces and bilingual public documentation |
 
 ```sh
 pnpm install --frozen-lockfile

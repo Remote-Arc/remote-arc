@@ -4,13 +4,13 @@
  * Keep recovery confined to admin.remotearc.app: do not alter user devices,
  * browser sessions, or any other Remote Arc subdomain.
  */
-import {currentProductWorker, PRODUCT_CACHE} from '../../config/pwa-config.js';
+import { currentProductWorker, PRODUCT_CACHE } from "../../config/pwa-config.js";
 
 type LegacyServiceWorker = {
   scope: string;
-  active?: {scriptURL: string} | null;
-  waiting?: {scriptURL: string} | null;
-  installing?: {scriptURL: string} | null;
+  active?: { scriptURL: string } | null;
+  waiting?: { scriptURL: string } | null;
+  installing?: { scriptURL: string } | null;
   unregister(): Promise<boolean>;
 };
 export type AdminClientRecovery = {
@@ -29,11 +29,17 @@ export async function recoverLegacyAdminClient(input: AdminClientRecovery): Prom
   if (input.hostname !== "admin.remotearc.app") return false;
   let unregistered = 0;
   try {
-    const registrations = await input.getRegistrations?.() ?? [];
+    const registrations = (await input.getRegistrations?.()) ?? [];
     for (const registration of registrations) {
       if (new URL(registration.scope).origin !== input.origin) continue;
-      const workers = [registration.active, registration.waiting, registration.installing].filter(Boolean);
-      if (workers.length && workers.every(worker => currentProductWorker(worker!.scriptURL, input.origin))) continue;
+      const workers = [registration.active, registration.waiting, registration.installing].filter(
+        Boolean,
+      );
+      if (
+        workers.length &&
+        workers.every((worker) => currentProductWorker(worker!.scriptURL, input.origin))
+      )
+        continue;
       if (await registration.unregister()) unregistered++;
     }
   } catch {
@@ -41,7 +47,7 @@ export async function recoverLegacyAdminClient(input: AdminClientRecovery): Prom
   }
 
   try {
-    const keys = await input.cacheKeys?.() ?? [];
+    const keys = (await input.cacheKeys?.()) ?? [];
     for (const key of keys) {
       if (key.startsWith("remote-arc-") && key !== PRODUCT_CACHE) await input.deleteCache?.(key);
     }
@@ -51,7 +57,13 @@ export async function recoverLegacyAdminClient(input: AdminClientRecovery): Prom
 
   // Removing a registration does not detach the active controller of this page.
   // Reload once, and only once per tab, if an old controller was still active.
-  if (unregistered > 0 && input.controlled && input.reload && input.getAttempt && input.setAttempt) {
+  if (
+    unregistered > 0 &&
+    input.controlled &&
+    input.reload &&
+    input.getAttempt &&
+    input.setAttempt
+  ) {
     try {
       if (input.getAttempt?.() !== "1") {
         input.setAttempt?.("1");
@@ -75,7 +87,7 @@ export function recoverAdminBrowser(): Promise<boolean> {
     cacheKeys: typeof caches === "undefined" ? undefined : () => caches.keys(),
     deleteCache: typeof caches === "undefined" ? undefined : (key) => caches.delete(key),
     getAttempt: () => sessionStorage.getItem("ra-admin-recovery-v1"),
-    setAttempt: value => sessionStorage.setItem("ra-admin-recovery-v1", value),
+    setAttempt: (value) => sessionStorage.setItem("ra-admin-recovery-v1", value),
     reload: () => location.reload(),
   });
 }

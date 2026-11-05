@@ -42,9 +42,7 @@ export class RunnerVideoPlayer {
           !/^[A-Za-z0-9_-]{1,100}$/.test(value.stream_id) ||
           typeof value.sdp !== "string" ||
           value.sdp.length > 65536 ||
-          value.sdp
-            .split(/\r?\n/)
-            .filter((line: string) => line.startsWith("m=")).length !== 1 ||
+          value.sdp.split(/\r?\n/).filter((line: string) => line.startsWith("m=")).length !== 1 ||
           !value.sdp.includes("m=video ") ||
           !value.sdp.includes("a=sendonly")
         )
@@ -55,10 +53,7 @@ export class RunnerVideoPlayer {
         });
         this.pc = pc;
         pc.onconnectionstatechange = () => {
-          if (
-            ["failed", "disconnected", "closed"].includes(pc.connectionState) &&
-            !this.closed
-          )
+          if (["failed", "disconnected", "closed"].includes(pc.connectionState) && !this.closed)
             this.fail();
         };
         pc.ontrack = (event) => {
@@ -106,8 +101,7 @@ export class RunnerVideoPlayer {
     return this.chain;
   }
   private markPlaying() {
-    if (!this.negotiated || !this.hasFrame || this.closed || this.playing)
-      return;
+    if (!this.negotiated || !this.hasFrame || this.closed || this.playing) return;
     clearTimeout(this.deadline);
     this.playing = true;
     this.send({ type: "video_playing", stream_id: this.streamId });

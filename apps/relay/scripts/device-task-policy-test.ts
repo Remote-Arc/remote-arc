@@ -28,13 +28,15 @@ legacy.background_tasks = false;
 assert.equal(LEGACY_TASK_PERMISSIONS.background_tasks, true);
 
 // Valid JSON parsing with strict boolean checks
-const parsed = parseTaskPermissions(JSON.stringify({
-  background_tasks: true,
-  scheduled_tasks: "true", // Non-boolean -> false
-  adaptive_agent: 1, // Non-boolean -> false
-  source_agent: true,
-  keep_awake: false,
-}));
+const parsed = parseTaskPermissions(
+  JSON.stringify({
+    background_tasks: true,
+    scheduled_tasks: "true", // Non-boolean -> false
+    adaptive_agent: 1, // Non-boolean -> false
+    source_agent: true,
+    keep_awake: false,
+  }),
+);
 assert.deepEqual(parsed, {
   background_tasks: true,
   scheduled_tasks: false,
@@ -111,26 +113,42 @@ const fullyAllowed = {
 };
 assert.equal(taskPermissionError(fullyAllowed, "long_task", null, null), null);
 assert.equal(
-  taskPermissionError(fullyAllowed, "schedule_watch", { type: "agent_goal", controller: "source" }, { type: "interval" }, true),
+  taskPermissionError(
+    fullyAllowed,
+    "schedule_watch",
+    { type: "agent_goal", controller: "source" },
+    { type: "interval" },
+    true,
+  ),
   null,
 );
 
 // 3. requireTaskPermission against real D1 SQLite
-sql.prepare(
-  "INSERT INTO devices(id,user_id,name,platform,credential_hash,automation_permissions,created_at) VALUES(?,?,?,?,?,?,?)"
-).run(
-  "dev-1",
-  "owner",
-  "Dev 1",
-  "linux",
-  "hash-1",
-  JSON.stringify({ background_tasks: true, scheduled_tasks: false, adaptive_agent: true, source_agent: false, keep_awake: false }),
-  now,
-);
+sql
+  .prepare(
+    "INSERT INTO devices(id,user_id,name,platform,credential_hash,automation_permissions,created_at) VALUES(?,?,?,?,?,?,?)",
+  )
+  .run(
+    "dev-1",
+    "owner",
+    "Dev 1",
+    "linux",
+    "hash-1",
+    JSON.stringify({
+      background_tasks: true,
+      scheduled_tasks: false,
+      adaptive_agent: true,
+      source_agent: false,
+      keep_awake: false,
+    }),
+    now,
+  );
 
-sql.prepare(
-  "INSERT INTO devices(id,user_id,name,platform,credential_hash,automation_permissions,created_at,revoked_at) VALUES(?,?,?,?,?,?,?,?)"
-).run("dev-revoked", "owner", "Dev Revoked", "linux", "hash-2", null, now, now);
+sql
+  .prepare(
+    "INSERT INTO devices(id,user_id,name,platform,credential_hash,automation_permissions,created_at,revoked_at) VALUES(?,?,?,?,?,?,?,?)",
+  )
+  .run("dev-revoked", "owner", "Dev Revoked", "linux", "hash-2", null, now, now);
 
 // Device lookup invariants: not found, revoked, or intruder access rejected
 await assert.rejects(
@@ -155,4 +173,6 @@ await assert.rejects(
 // Device found and permission granted
 await requireTaskPermission(db, "owner", "dev-1", "long_task", null, null);
 
-console.log("PASS: device task permission parsing, boundary rejections, multi-tenant isolation and D1 verification");
+console.log(
+  "PASS: device task permission parsing, boundary rejections, multi-tenant isolation and D1 verification",
+);

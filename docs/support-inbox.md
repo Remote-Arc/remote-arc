@@ -41,7 +41,6 @@ pnpm --filter @remotearc/relay typecheck
 pnpm --filter @remotearc/ui typecheck
 ```
 
-
 ## Reviewing conversations and Apps applications
 
 The list separates customer email and Google Apps applications using the stored authenticated application record, not the subject line. Filter by source and conversation status. Each mail in a conversation shows its direction, From, To and provider submission status; provider acceptance does not assert delivery. Reply drafts remain attached to their selected recipient during navigation, and late responses cannot replace another customer's conversation.

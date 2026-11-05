@@ -28,15 +28,21 @@ export type BrowserRunnerTool = (typeof BROWSER_RUNNER_TOOLS)[number];
 export const isBrowserRunnerTool = (tool: string): tool is BrowserRunnerTool =>
   (BROWSER_RUNNER_TOOLS as readonly string[]).includes(tool);
 
-import {extractCaptchaImages} from "../browser/browser-auth-result.js";
+import { extractCaptchaImages } from "../browser/browser-auth-result.js";
 
 type Scope = "browser:read" | "browser:interact";
-type ToolResult = { content: ({ type: "text"; text: string } | {type:"image";data:string;mimeType:string})[]; isError?: boolean };
+type ToolResult = {
+  content: ({ type: "text"; text: string } | { type: "image"; data: string; mimeType: string })[];
+  isError?: boolean;
+};
 
-export function browserRunnerResult(value:unknown,textResult:(value:unknown)=>ToolResult):ToolResult {
- const {clean,images}=extractCaptchaImages(value);
- const result=textResult(clean);
- return {...result,content:[...result.content,...images]};
+export function browserRunnerResult(
+  value: unknown,
+  textResult: (value: unknown) => ToolResult,
+): ToolResult {
+  const { clean, images } = extractCaptchaImages(value);
+  const result = textResult(clean);
+  return { ...result, content: [...result.content, ...images] };
 }
 export type BrowserRunnerDeps = {
   identity: OAuthIdentity | null;
@@ -45,7 +51,12 @@ export type BrowserRunnerDeps = {
   consume: (identity: OAuthIdentity) => Promise<unknown>;
   oauthToolMeta: (scope: Scope) => unknown;
   textResult: (value: unknown) => ToolResult;
-  callDevice: (identity: OAuthIdentity, deviceId: string, tool: BrowserRunnerTool, args: Record<string, unknown>) => Promise<unknown>;
+  callDevice: (
+    identity: OAuthIdentity,
+    deviceId: string,
+    tool: BrowserRunnerTool,
+    args: Record<string, unknown>,
+  ) => Promise<unknown>;
   /** An online Remote Arc Browser extension of this user that can open tabs, or null. */
   browserTabDevice?: (identity: OAuthIdentity) => Promise<string | null>;
 };
@@ -74,7 +85,8 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     title: "Start or resume a browser task",
     description:
       "Use this for actual webpage interaction. For deployments, migrations, cloud administration, configuration, builds, logs and database work, prefer available CLI tools or documented APIs through start_process; a web dashboard alone is not a reason to open a browser. Honor explicit user tool preferences. Start, or resume with the same task_id, a task browser on a linked computer. allowed_origins lists every site the task may visit (for example https://jobs.example.com or https://*.greenhouse.io); redirects, links and popups outside them are blocked and page content can never add sites. Adding sites to an existing task requires scope_change_reason AND a one-time approval for the exact origins in Dashboard Security / Boundary requests; giving the model a reason does not grant permission. Re-run the same start call only after the user approves. profile is the browser profile, which keeps sign-ins and cookies between tasks: use one profile per person and reuse it (for example profile=jenny), so a site signed into once stays signed in for later tasks and new conversations; browser_runner_status without session_id lists the profiles on the computer and the sites used in each. The task browser works out of sight so it never interrupts the user: a hidden window that does not take focus (headless=true, the default for every new task). Do not show it to watch progress. After submit/navigation, visible challenges are detected automatically: needs_user raises the task window and notifies the user (unless they chose notify_only). Use browser_runner_wait until=user_done; do not sleep and poll or repeat a submit. The window goes back out of sight after the user finishes. A computer without a display has no window to show. Leaving headless out keeps a running task as it is. Resuming reopens the last page and reports unconfirmed submits." +
-      " Use browser=your_chrome only when the user explicitly asks to use their own Chrome; never suggest or choose it yourself. It requires Chrome 144+ with remote debugging enabled at chrome://inspect/#remote-debugging. Leave profile and headless out: this mode uses the user's current sign-ins and is always visible. Chrome asks Allow for each new connection; tasks share one connection so follow-up tasks do not ask again while it stays connected. If YOUR_CHROME_NOT_ENABLED, ask the user to enable the switch in the page opened on their computer. If YOUR_CHROME_WAITING, ask them to click Allow and retry with the same task_id; the request stays open for 3 minutes. YOUR_CHROME_DENIED means the request was declined or expired. Without browser or profile, a resumed task keeps its original browser and profile." + what,
+      " Use browser=your_chrome only when the user explicitly asks to use their own Chrome; never suggest or choose it yourself. It requires Chrome 144+ with remote debugging enabled at chrome://inspect/#remote-debugging. Leave profile and headless out: this mode uses the user's current sign-ins and is always visible. Chrome asks Allow for each new connection; tasks share one connection so follow-up tasks do not ask again while it stays connected. If YOUR_CHROME_NOT_ENABLED, ask the user to enable the switch in the page opened on their computer. If YOUR_CHROME_WAITING, ask them to click Allow and retry with the same task_id; the request stays open for 3 minutes. YOUR_CHROME_DENIED means the request was declined or expired. Without browser or profile, a resumed task keeps its original browser and profile." +
+      what,
     input: z.object({
       device_id: deviceId,
       task_id: id,
@@ -85,7 +97,12 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
       headless: z.boolean().optional(),
       scope_change_reason: z.string().min(1).max(200).optional(),
     }),
-    annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: {
+      readOnlyHint: false,
+      openWorldHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+    },
   },
   browser_runner_snapshot: {
     scope: "browser:read",
@@ -109,7 +126,19 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
     input: z.object({
       device_id: deviceId,
       session_id: id,
-      action: z.enum(["click", "fill", "select", "check", "uncheck", "press", "upload", "navigate", "wait", "fill_form", "fill_secret"]),
+      action: z.enum([
+        "click",
+        "fill",
+        "select",
+        "check",
+        "uncheck",
+        "press",
+        "upload",
+        "navigate",
+        "wait",
+        "fill_form",
+        "fill_secret",
+      ]),
       snapshot_id: snapshotId.optional(),
       ref: ref.optional(),
       value: z.string().max(10000).optional(),
@@ -125,7 +154,10 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
         .max(40)
         .optional(),
       snapshot: z.boolean().optional(),
-      secret: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.@-]{0,99}$/).optional(),
+      secret: z
+        .string()
+        .regex(/^[A-Za-z0-9][A-Za-z0-9_.@-]{0,99}$/)
+        .optional(),
       part: z.enum(["username", "password"]).optional(),
       key: z.enum(["Enter", "Tab", "Escape", "ArrowDown", "ArrowUp", "Space"]).optional(),
       path: z.string().min(1).max(1000).optional(),
@@ -136,13 +168,27 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
       effect: z.enum(["none", "navigation", "submit"]).optional(),
       idempotency_key: idempotencyKey.optional(),
     }),
-    annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: false },
+    annotations: {
+      readOnlyHint: false,
+      openWorldHint: true,
+      destructiveHint: true,
+      idempotentHint: false,
+    },
   },
   browser_runner_wait: {
     scope: "browser:read",
     title: "Wait for a browser task",
-    description: "Wait on the device for user_done (two clear blocker scans), page_change, text, url_contains, upload_done or idle. Uses no sleep/poll turns. timeout_ms defaults to 30000 and is capped at 40000 even if a larger value is supplied. Returns met, timeout or needs_user. On timeout call wait again. Waiting never retries or authorizes a submit; inspect and confirm the existing effect after the user finishes. snapshot=true optionally returns the resulting page.",
-    input: z.object({ device_id: deviceId, session_id: id, until: z.enum(["user_done", "page_change", "text", "url_contains", "upload_done", "idle"]), text: z.string().min(1).max(200).optional(), url_contains: z.string().min(1).max(300).optional(), timeout_ms: z.number().int().min(1000).optional(), snapshot: z.boolean().optional() }),
+    description:
+      "Wait on the device for user_done (two clear blocker scans), page_change, text, url_contains, upload_done or idle. Uses no sleep/poll turns. timeout_ms defaults to 30000 and is capped at 40000 even if a larger value is supplied. Returns met, timeout or needs_user. On timeout call wait again. Waiting never retries or authorizes a submit; inspect and confirm the existing effect after the user finishes. snapshot=true optionally returns the resulting page.",
+    input: z.object({
+      device_id: deviceId,
+      session_id: id,
+      until: z.enum(["user_done", "page_change", "text", "url_contains", "upload_done", "idle"]),
+      text: z.string().min(1).max(200).optional(),
+      url_contains: z.string().min(1).max(300).optional(),
+      timeout_ms: z.number().int().min(1000).optional(),
+      snapshot: z.boolean().optional(),
+    }),
     annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
   },
   browser_runner_status: {
@@ -166,14 +212,25 @@ const definitions: Record<BrowserRunnerTool, Definition> = {
       evidence: z.string().min(4).max(300),
       user_confirmed: z.boolean().optional(),
     }),
-    annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false, idempotentHint: true },
+    annotations: {
+      readOnlyHint: false,
+      openWorldHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+    },
   },
   browser_runner_close: {
     scope: "browser:interact",
     title: "Close a browser task",
     description:
       "Close the task browser and keep its checkpoint so the task can be resumed. RUNNER_USER_ACTION_PENDING refuses to close during user handoff or an unresolved submit: wait and confirm first. Deliberate abandonment requires force=true and reason and records a receipt. In your_chrome mode, close only the task's tab; the user's other tabs and profile are kept. If already disconnected, tab_left_open=true means the user can close the remaining task window manually. The shared Chrome connection disconnects 5 minutes after the last task detaches. forget=true also deletes the checkpoint and, for a dedicated Runner task profile, its sign-ins.",
-    input: z.object({ device_id: deviceId, session_id: id, forget: z.boolean().optional(), force: z.boolean().optional(), reason: z.string().min(1).max(200).optional() }),
+    input: z.object({
+      device_id: deviceId,
+      session_id: id,
+      forget: z.boolean().optional(),
+      force: z.boolean().optional(),
+      reason: z.string().min(1).max(200).optional(),
+    }),
     annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
   },
 };
@@ -193,13 +250,26 @@ export function registerBrowserRunnerTools(server: McpServer, deps: BrowserRunne
       },
       async (input: Record<string, unknown>) => {
         const { identity } = deps;
-        if (!identity || !deps.hasScope(identity, def.scope)) return deps.authRequired(def.scope, identity);
+        if (!identity || !deps.hasScope(identity, def.scope))
+          return deps.authRequired(def.scope, identity);
         const usageError = await deps.consume(identity);
         if (usageError) return usageError;
         const { device_id, ...args } = input;
-        const call: DeviceCall = (name, callArgs) => deps.callDevice(identity, String(device_id), name, callArgs);
-        const out=tool === "browser_runner_act" ? await runAct(call, args) : tool === "browser_runner_start" ? await runStart(call, args) : await call(tool, args);
-        return browserRunnerResult(await offerUsersBrowser(out, () => deps.browserTabDevice?.(identity) ?? Promise.resolve(null)), deps.textResult);
+        const call: DeviceCall = (name, callArgs) =>
+          deps.callDevice(identity, String(device_id), name, callArgs);
+        const out =
+          tool === "browser_runner_act"
+            ? await runAct(call, args)
+            : tool === "browser_runner_start"
+              ? await runStart(call, args)
+              : await call(tool, args);
+        return browserRunnerResult(
+          await offerUsersBrowser(
+            out,
+            () => deps.browserTabDevice?.(identity) ?? Promise.resolve(null),
+          ),
+          deps.textResult,
+        );
       },
     );
   }
@@ -217,8 +287,12 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
 // Runner stops for the user and the user's Remote Arc Browser is online, the
 // page moves to a normal new tab there. Scope blocks stay with the Runner, and
 // a task already in the user's Chrome has nowhere better to go.
-export async function offerUsersBrowser(out: unknown, browserTabDevice: () => Promise<string | null>): Promise<unknown> {
-  if (!isRecord(out) || out.session_state !== "needs_user" || out.browser === "your_chrome") return out;
+export async function offerUsersBrowser(
+  out: unknown,
+  browserTabDevice: () => Promise<string | null>,
+): Promise<unknown> {
+  if (!isRecord(out) || out.session_state !== "needs_user" || out.browser === "your_chrome")
+    return out;
   const needs = typeof out.needs_user === "string" ? out.needs_user : "";
   if (!/^The page needs the user/.test(needs)) return out;
   const device = await browserTabDevice().catch(() => null);
@@ -226,8 +300,17 @@ export async function offerUsersBrowser(out: unknown, browserTabDevice: () => Pr
   const url = typeof out.url === "string" && /^https?:\/\//.test(out.url) ? out.url : undefined;
   return {
     ...out,
-    continue_in_users_browser: { tool: "shared_tab_open", device_id: device, ...(url ? { url } : {}) },
-    next_action: "The user's own browser is online with Remote Arc Browser. Continue there in a normal new tab, where the user is usually signed in and human checks are rarer: call shared_tab_open with device_id=" + device + " and url=" + (url || "this task's current URL (browser_runner_status)") + ", then work with shared_tab_act. If it returns SITE_NOT_ALLOWED, ask the user to click Allow on the page it opened, then call it again. Then end this Runner task with browser_runner_close with force=true and reason=\"continued in the user's browser\". If shared_tab_open fails otherwise, ask the user to finish in the Runner window and use browser_runner_wait until=user_done.",
+    continue_in_users_browser: {
+      tool: "shared_tab_open",
+      device_id: device,
+      ...(url ? { url } : {}),
+    },
+    next_action:
+      "The user's own browser is online with Remote Arc Browser. Continue there in a normal new tab, where the user is usually signed in and human checks are rarer: call shared_tab_open with device_id=" +
+      device +
+      " and url=" +
+      (url || "this task's current URL (browser_runner_status)") +
+      ', then work with shared_tab_act. If it returns SITE_NOT_ALLOWED, ask the user to click Allow on the page it opened, then call it again. Then end this Runner task with browser_runner_close with force=true and reason="continued in the user\'s browser". If shared_tab_open fails otherwise, ask the user to finish in the Runner window and use browser_runner_wait until=user_done.',
   };
 }
 
@@ -236,7 +319,9 @@ export async function offerUsersBrowser(out: unknown, browserTabDevice: () => Pr
 export async function runStart(call: DeviceCall, args: Record<string, unknown>): Promise<unknown> {
   const out = await call("browser_runner_start", args);
   if (args.browser === "your_chrome" && (!isRecord(out) || out.browser !== "your_chrome")) {
-    throw new Error("YOUR_CHROME_UNSUPPORTED: this computer's Agent does not support connecting your Chrome. Update the Agent before retrying. It opened a separate Runner instead; no connection to your Chrome was made.");
+    throw new Error(
+      "YOUR_CHROME_UNSUPPORTED: this computer's Agent does not support connecting your Chrome. Update the Agent before retrying. It opened a separate Runner instead; no connection to your Chrome was made.",
+    );
   }
   return out;
 }
@@ -260,10 +345,18 @@ export async function runAct(call: DeviceCall, args: Record<string, unknown>): P
     if (args.action !== "fill_form" || !FILL_FORM_UNKNOWN.test(messageOf(error))) throw error;
     out = await fillFormOneByOne(call, args);
   }
-  if (args.snapshot === true && isRecord(out) && !("snapshot" in out) && !("snapshot_error" in out)) {
+  if (
+    args.snapshot === true &&
+    isRecord(out) &&
+    !("snapshot" in out) &&
+    !("snapshot_error" in out)
+  ) {
     const result: Record<string, unknown> = out;
     try {
-      return { ...result, snapshot: await call("browser_runner_snapshot", { session_id: args.session_id }) };
+      return {
+        ...result,
+        snapshot: await call("browser_runner_snapshot", { session_id: args.session_id }),
+      };
     } catch (error) {
       return { ...result, snapshot_error: messageOf(error) + " Call browser_runner_snapshot." };
     }
@@ -280,18 +373,25 @@ async function fillFormOneByOne(call: DeviceCall, args: Record<string, unknown>)
   let stopped: string | undefined;
   let page: Record<string, unknown> = {};
   for (const [i, field] of fields.entries()) {
-    const single: Record<string, unknown> = { session_id: args.session_id, snapshot_id: args.snapshot_id, ref: field.ref, action: field.action };
+    const single: Record<string, unknown> = {
+      session_id: args.session_id,
+      snapshot_id: args.snapshot_id,
+      ref: field.ref,
+      action: field.action,
+    };
     if (field.value !== undefined) single.value = field.value;
     try {
       const out = await call("browser_runner_act", single);
       page = isRecord(out) ? out : {};
       const result: Record<string, unknown> = { ref: field.ref, action: field.action, ok: true };
-      for (const key of ["label", "selected", "checked", "value_length", "frame"]) if (key in page) result[key] = page[key];
+      for (const key of ["label", "selected", "checked", "value_length", "frame"])
+        if (key in page) result[key] = page[key];
       results.push(result);
       entered++;
       if (page.navigated === true) {
         navigated = true;
-        if (i + 1 < fields.length) stopped = `The page navigated after fields[${i}]; the remaining fields were not entered. Take a new snapshot.`;
+        if (i + 1 < fields.length)
+          stopped = `The page navigated after fields[${i}]; the remaining fields were not entered. Take a new snapshot.`;
         break;
       }
     } catch (error) {
@@ -310,13 +410,18 @@ async function fillFormOneByOne(call: DeviceCall, args: Record<string, unknown>)
     entered,
     failed,
     navigated,
-    compatibility: "This computer's Remote Arc Agent is older than 0.6.2-rc.8, so the fields were entered one call at a time. Updating the Agent makes forms faster.",
+    compatibility:
+      "This computer's Remote Arc Agent is older than 0.6.2-rc.8, so the fields were entered one call at a time. Updating the Agent makes forms faster.",
   };
-  if (results.length < fields.length) out.not_entered = fields.slice(results.length).map((f) => f.ref);
+  if (results.length < fields.length)
+    out.not_entered = fields.slice(results.length).map((f) => f.ref);
   if (stopped) out.stopped = stopped;
-  if (failed > 0) out.next_action = "Fix the fields with an error (see each error), then continue. Fields marked ok hold their values.";
+  if (failed > 0)
+    out.next_action =
+      "Fix the fields with an error (see each error), then continue. Fields marked ok hold their values.";
   for (const key of ["url", "title", "session_id"]) if (key in page) out[key] = page[key];
-  if (navigated) out.note = "The page changed; earlier refs are stale. Take a new browser_runner_snapshot.";
+  if (navigated)
+    out.note = "The page changed; earlier refs are stale. Take a new browser_runner_snapshot.";
   return out;
 }
 

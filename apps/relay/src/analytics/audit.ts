@@ -52,11 +52,7 @@ export async function writeAudit(
     .run();
 }
 
-export async function readAudit(
-  env: AuditEnv,
-  userId: string,
-  limit = 20,
-) {
+export async function readAudit(env: AuditEnv, userId: string, limit = 20) {
   const rows = await env.DB.prepare(
     `SELECT a.id, a.device_id, a.event_type, a.tool_name, a.success,
             a.request_id, a.client_id, c.client_name, a.grant_id, a.outcome,

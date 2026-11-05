@@ -4,13 +4,13 @@ D1 is the source of truth for runtime plan prices, monthly Credits, Connect allo
 
 ## Storage boundaries
 
-| Location | Values |
-| --- | --- |
-| D1 commercial versions and heads | Price, Credits, trial duration, capacity and execution terms |
-| D1 promotion records | Public code or target user, discount, expiry, redemption cap and status |
-| D1 receipts, subscriptions and trials | Immutable commercial version used for that purchase or activation |
-| Worker Secrets | Stripe/model API keys, signing secrets and the existing encryption key |
-| Worker vars / activation Secrets | Environment identity, release flags, emergency pause and hard spending ceilings |
+| Location                              | Values                                                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------- |
+| D1 commercial versions and heads      | Price, Credits, trial duration, capacity and execution terms                    |
+| D1 promotion records                  | Public code or target user, discount, expiry, redemption cap and status         |
+| D1 receipts, subscriptions and trials | Immutable commercial version used for that purchase or activation               |
+| Worker Secrets                        | Stripe/model API keys, signing secrets and the existing encryption key          |
+| Worker vars / activation Secrets      | Environment identity, release flags, emergency pause and hard spending ceilings |
 
 This is sufficient for the present service. Apollo or a second distributed configuration service would add dependencies without solving the critical transactional link between an order and its allowance. Add a short-lived cache only when measured D1 reads justify it; the present commercial reads use the active D1 head directly. Public catalog responses use `no-store`, and the UI refreshes within 30 seconds/focus; checkout independently rejects a stale version quote.
 

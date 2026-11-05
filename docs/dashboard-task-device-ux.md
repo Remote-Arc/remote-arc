@@ -9,14 +9,14 @@ The Dashboard saves the instructions supplied in its form. It does not read a
 ChatGPT conversation, start a chat or wake an AI client. Chat-created tasks and
 Dashboard-created tasks use the same persisted task model and task IDs.
 
-| User intent | Existing API kind | Behavior without a chat |
-| --- | --- | --- |
-| Run a command once | `long_task` | Queued immediately; the relay starts the saved command when the device is available. |
-| Run on a timer | `schedule_watch` | First run follows the configured interval, then repeats until stopped or limited. |
-| Run after an event | `condition_watch` | Waits for a matching webhook. Creating the task alone does not send that event. |
-| Repeat until a check passes | `goal_loop` | Runs the same work and verification commands, bounded by the saved run/expiry policy. It does not invent improvements. |
-| Work toward an AI goal | `agent_goal`, hosted | A configured hosted model chooses subsequent actions within approved tools and limits. No source chat is required. |
-| Continue with a chat's AI | `agent_goal`, source | A manually created goal without submitted decisions waits for an authorized source AI. Saved authorized command slices can execute without another reasoning turn; new decisions require the source runtime. |
+| User intent                 | Existing API kind    | Behavior without a chat                                                                                                                                                                                      |
+| --------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Run a command once          | `long_task`          | Queued immediately; the relay starts the saved command when the device is available.                                                                                                                         |
+| Run on a timer              | `schedule_watch`     | First run follows the configured interval, then repeats until stopped or limited.                                                                                                                            |
+| Run after an event          | `condition_watch`    | Waits for a matching webhook. Creating the task alone does not send that event.                                                                                                                              |
+| Repeat until a check passes | `goal_loop`          | Runs the same work and verification commands, bounded by the saved run/expiry policy. It does not invent improvements.                                                                                       |
+| Work toward an AI goal      | `agent_goal`, hosted | A configured hosted model chooses subsequent actions within approved tools and limits. No source chat is required.                                                                                           |
+| Continue with a chat's AI   | `agent_goal`, source | A manually created goal without submitted decisions waits for an authorized source AI. Saved authorized command slices can execute without another reasoning turn; new decisions require the source runtime. |
 
 Tasks require Plus, applicable OAuth scopes for MCP access, device permissions
 and matching local capabilities. Hosted planning and GitHub merge additionally

@@ -6,8 +6,8 @@
   "claude_version": "2.1.118",
   "isolated_profiles": true,
   "private_go_override": false,
-  "inspection": {"codex": "candidate_found", "claude": "candidate_found"},
-  "automatic_setup": {"codex": "not_found", "claude": "not_found"},
+  "inspection": { "codex": "candidate_found", "claude": "candidate_found" },
+  "automatic_setup": { "codex": "not_found", "claude": "not_found" },
   "model_turns": 0,
   "result": "reproduced npm native executable discovery gap"
 }

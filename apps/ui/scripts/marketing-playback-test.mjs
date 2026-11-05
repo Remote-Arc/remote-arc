@@ -6,7 +6,12 @@ import { useMarketingPlayback } from "../src/features/marketing/home/use-marketi
 
 // Render the actual hook. Browser events and time are deterministic, so the
 // lifecycle checks do not depend on elapsed wall time or implementation text.
-const originalGlobals = new Map(["window", "document", "IntersectionObserver", "IS_REACT_ACT_ENVIRONMENT"].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+const originalGlobals = new Map(
+  ["window", "document", "IntersectionObserver", "IS_REACT_ACT_ENVIRONMENT"].map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(globalThis, name),
+  ]),
+);
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let current;
 function Harness({ intervalMs } = {}) {
@@ -24,50 +29,107 @@ function browserEnvironment({ reduced = false, hidden = false, observer = true }
   const node = { name: "marketing-demo" };
   const media = {
     matches: reduced,
-    addEventListener(type, listener) { assert.equal(type, "change"); mediaListeners.add(listener); },
-    removeEventListener(type, listener) { assert.equal(type, "change"); mediaListeners.delete(listener); },
+    addEventListener(type, listener) {
+      assert.equal(type, "change");
+      mediaListeners.add(listener);
+    },
+    removeEventListener(type, listener) {
+      assert.equal(type, "change");
+      mediaListeners.delete(listener);
+    },
   };
   const document = {
     visibilityState: hidden ? "hidden" : "visible",
-    addEventListener(type, listener) { assert.equal(type, "visibilitychange"); visibilityListeners.add(listener); },
-    removeEventListener(type, listener) { assert.equal(type, "visibilitychange"); visibilityListeners.delete(listener); },
+    addEventListener(type, listener) {
+      assert.equal(type, "visibilitychange");
+      visibilityListeners.add(listener);
+    },
+    removeEventListener(type, listener) {
+      assert.equal(type, "visibilitychange");
+      visibilityListeners.delete(listener);
+    },
   };
   globalThis.window = {
-    matchMedia(query) { assert.equal(query, "(prefers-reduced-motion: reduce)"); return media; },
-    setTimeout(callback, delay) { const id = ++nextId; timers.set(id, { callback, at: time + delay }); return id; },
-    clearTimeout(id) { timers.delete(id); },
+    matchMedia(query) {
+      assert.equal(query, "(prefers-reduced-motion: reduce)");
+      return media;
+    },
+    setTimeout(callback, delay) {
+      const id = ++nextId;
+      timers.set(id, { callback, at: time + delay });
+      return id;
+    },
+    clearTimeout(id) {
+      timers.delete(id);
+    },
   };
   globalThis.document = document;
   if (observer) {
     globalThis.IntersectionObserver = class {
-      constructor(callback) { this.callback = callback; this.disconnected = false; observers.push(this); }
-      observe(element) { this.element = element; }
-      disconnect() { this.disconnected = true; }
+      constructor(callback) {
+        this.callback = callback;
+        this.disconnected = false;
+        observers.push(this);
+      }
+      observe(element) {
+        this.element = element;
+      }
+      disconnect() {
+        this.disconnected = true;
+      }
     };
   } else {
     delete globalThis.IntersectionObserver;
   }
   return {
-    node, timers, observers, mediaListeners, visibilityListeners,
-    nextDelay() { return Math.min(...[...timers.values()].map(timer => timer.at - time)); },
+    node,
+    timers,
+    observers,
+    mediaListeners,
+    visibilityListeners,
+    nextDelay() {
+      return Math.min(...[...timers.values()].map((timer) => timer.at - time));
+    },
     tick(milliseconds) {
       const target = time + milliseconds;
-      const due = [...timers.entries()].filter(([, timer]) => timer.at <= target).sort((left, right) => left[1].at - right[1].at);
-      for (const [id, timer] of due) { if (timers.delete(id)) { time = timer.at; timer.callback(); } }
+      const due = [...timers.entries()]
+        .filter(([, timer]) => timer.at <= target)
+        .sort((left, right) => left[1].at - right[1].at);
+      for (const [id, timer] of due) {
+        if (timers.delete(id)) {
+          time = timer.at;
+          timer.callback();
+        }
+      }
       time = target;
     },
-    intersect(visible) { for (const instance of observers) if (!instance.disconnected) instance.callback([{ isIntersecting: visible }]); },
-    setHidden(value) { document.visibilityState = value ? "hidden" : "visible"; for (const listener of visibilityListeners) listener(); },
-    setReduced(value) { media.matches = value; for (const listener of mediaListeners) listener(); },
+    intersect(visible) {
+      for (const instance of observers)
+        if (!instance.disconnected) instance.callback([{ isIntersecting: visible }]);
+    },
+    setHidden(value) {
+      document.visibilityState = value ? "hidden" : "visible";
+      for (const listener of visibilityListeners) listener();
+    },
+    setReduced(value) {
+      media.matches = value;
+      for (const listener of mediaListeners) listener();
+    },
   };
 }
 
 async function mount(environment, intervalMs) {
   let renderer;
-  await act(() => { renderer = create(React.createElement(Harness, { intervalMs }), { createNodeMock: () => environment.node }); });
+  await act(() => {
+    renderer = create(React.createElement(Harness, { intervalMs }), {
+      createNodeMock: () => environment.node,
+    });
+  });
   return renderer;
 }
-async function change(callback) { await act(callback); }
+async function change(callback) {
+  await act(callback);
+}
 function assertStopped(environment) {
   assert.equal(current.running, false);
   assert.equal(environment.timers.size, 0, "A stopped demo must not retain a scheduled frame");
@@ -90,7 +152,11 @@ try {
     await change(() => browser.tick(1000));
     assert.equal(current.step, expected, "Playback should advance one story beat");
   }
-  assert.equal(browser.nextDelay(), 1700, "Leave the result visible longer than intermediate steps");
+  assert.equal(
+    browser.nextDelay(),
+    1700,
+    "Leave the result visible longer than intermediate steps",
+  );
   await change(() => browser.tick(1699));
   assert.equal(current.step, 3);
   await change(() => browser.tick(1));
@@ -100,7 +166,10 @@ try {
   assertStopped(browser);
   await change(() => browser.tick(5000));
   assert.equal(current.step, 0, "User pause must keep the chosen step");
-  await change(() => { current.setStep(2); current.setPlaying(true); });
+  await change(() => {
+    current.setStep(2);
+    current.setPlaying(true);
+  });
   assert.equal(current.step, 2);
   assert.equal(current.running, true);
 
@@ -137,7 +206,11 @@ try {
   assert.equal(browser.timers.size, 0, "Unmount clears the pending clock");
   assert.equal(browser.mediaListeners.size, 0, "Unmount removes the motion preference listener");
   assert.equal(browser.visibilityListeners.size, 0, "Unmount removes the page visibility listener");
-  assert.equal(browser.observers[0].disconnected, true, "Unmount disconnects the viewport observer");
+  assert.equal(
+    browser.observers[0].disconnected,
+    true,
+    "Unmount disconnects the viewport observer",
+  );
 
   const reduced = browserEnvironment({ reduced: true });
   renderer = await mount(reduced);
@@ -169,7 +242,9 @@ try {
   assert.equal(renderToString(React.createElement(Harness)), "<div></div>");
   assert.equal(current.step, 0, "Server rendering has a stable initial state");
   assert.equal(current.reducedMotion, false);
-  console.log("PASS: real React marketing playback lifecycle, result timing, pause, visibility, reduced motion, observer fallback and cleanup");
+  console.log(
+    "PASS: real React marketing playback lifecycle, result timing, pause, visibility, reduced motion, observer fallback and cleanup",
+  );
 } finally {
   if (renderer) await act(() => renderer.unmount());
   for (const [name, descriptor] of originalGlobals) {

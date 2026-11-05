@@ -37,7 +37,6 @@ All notable changes to Remote Arc are documented here.
 - Add OpenFilm/HyperFrames video, map and Whisper guidance with size-aware download permission rules. Windows synthetic video/map/subtitle outputs were verified; Qwen/ACE, other OS media paths and production host discovery remain pending in #350.
 - The earlier 0.6.5-rc.1 prerelease qualified the tool-capability changes; this release updates stable downloads, npm latest and Homebrew formulas to 0.6.5.
 
-
 ### Video uploads and clearer setup on Windows and WSL
 
 - Browser Runner can attach video (mp4, mov, m4v, webm, up to 2 GB), audio (mp3, wav, m4a, up to 512 MB) and more document/image types (csv, xlsx, pptx, gif, webp). Rejections now return `UNSUPPORTED_UPLOAD_TYPE` or `UPLOAD_SIZE_LIMIT`.
@@ -162,7 +161,6 @@ All notable changes to Remote Arc are documented here.
 - Hide experimental Agent Goal/source-decision tools from the production MCP surface while retaining the implementation behind an explicit deployment flag for continued research.
 - Keep core device discovery and computer tool calls compatible with production databases that have not yet received the optional background/task-permission migrations.
 - Let the deploy workflow continue with the schema-compatible Worker when the configured Cloudflare token can deploy Workers but lacks D1 migration scope (error 7403); pending D1 migrations still require separately authorized credentials.
-
 
 ## 0.4.5 - 2026-10-06
 

@@ -1,26 +1,167 @@
-import {FOLLOWUP_UPGRADE_URL} from './followup-templates.js';
-export type FollowupDesign={layout:'letter'|'spotlight'|'digest';accent:string;eyebrow:string;headline:string;intro:string;buttonLabel:string;highlights:{title:string;body:string}[]};
-export const DEFAULT_FOLLOWUP_DESIGN:FollowupDesign={layout:'spotlight',accent:'#242428',eyebrow:'',headline:'',intro:'',buttonLabel:'',highlights:[]};
-type FollowupEmail={subject:string;body:string;templateId:string;locale:'en'|'zh';setupUrl:string;feedbackUrl:string;unsubscribeUrl:string;replyTo:string;rewardAvailable?:boolean;design?:Partial<FollowupDesign>};
-const escape=(value:string)=>value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
-const contrastInk=(hex:string)=>{const channels=[1,3,5].map(start=>parseInt(hex.slice(start,start+2),16)/255).map(c=>c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)),l=.2126*channels[0]!+.7152*channels[1]!+.0722*channels[2]!;return (l+.05)/.05>=1.05/(l+.05)?'#000000':'#ffffff';};
-export function renderFollowupEmail(value:FollowupEmail){
- const zh=value.locale==='zh',tr=(en:string,cn:string)=>zh?cn:en;
- const links=[value.setupUrl,value.feedbackUrl,value.unsubscribeUrl].map(link=>{const url=new URL(link);if(url.protocol!=='https:'||url.hostname!=='remotearc.app'||url.username||url.password)throw Error('invalid_followup_link');return url.href;});
- const design={...DEFAULT_FOLLOWUP_DESIGN,...value.design},accent=/^#[\da-f]{6}$/i.test(design.accent)?design.accent:'#242428',ink=contrastInk(accent);
- const installation=value.templateId==='finish-mcp',upgrade=value.templateId==='quota-upgrade';
- const setup=installation||['first-connection','first-result'].includes(value.templateId),href=upgrade?FOLLOWUP_UPGRADE_URL:installation?new URL((zh?'/zh':'')+'/install/chatgpt',links[0]!).href:links[setup?0:1]!,label=design.buttonLabel|| (upgrade?tr('Review upgrade options','查看升级方案'):installation?tr('Open installation instructions','查看安装指南'):setup?tr('Open the setup guide','查看开始指南'):value.templateId==='use-case'?tr('Share your use case','分享使用场景'):tr('Share your feedback','填写体验反馈'));
- const prose=value.body.split(/\n\s*\n/).map(part=>part.trim()).filter(Boolean);
- const linkify=(text:string)=>text.split(/(https?:\/\/[^\s<>]+)/g).map(part=>{
-  if(/^https?:\/\//.test(part)){try{const url=new URL(part);if(url.protocol==='https:'&&(url.hostname==='remotearc.app'||url.href===FOLLOWUP_UPGRADE_URL)&&!url.username&&!url.password)return '<a href="'+escape(url.href)+'" style="color:#245b8f;text-decoration:underline;overflow-wrap:anywhere">'+escape(part)+'</a>';}catch{/* Leave invalid URLs as readable text. */}}
-  return /^https?:\/\//.test(part)?'':escape(part).replaceAll('\n','<br>');
- }).join('');
- const rewardNote=!setup&&!upgrade&&value.rewardAvailable?tr('Feedback rewards are available. Sign in on the feedback page to see the current offer and eligibility. Approved feedback can earn extra Connect calls.','反馈奖励现已开放。登录反馈页面查看当前奖励规则与资格，有效反馈经审核后可获得额外 Connect 调用次数。'):'';
- const paragraphs=prose.map(part=>'<p style="margin:0 0 20px;font-size:16px;line-height:1.8;color:#42424a">'+linkify(part)+'</p>').join('');
- const highlights=(design.highlights||[]).slice(0,3).map((card,index)=>'<tr><td style="padding:18px 20px;border:1px solid #e7e7eb;border-bottom:3px solid '+accent+';border-radius:8px"><p style="margin:0 0 8px;font-size:11px;color:#73737e">0'+(index+1)+'</p><h2 style="margin:0 0 8px;color:#222228;font-size:17px;line-height:1.5">'+escape(card.title)+'</h2><p style="margin:0;color:#52525b;font-size:14px;line-height:1.8">'+escape(card.body)+'</p></td></tr><tr><td height="12"></td></tr>').join('');
- const unsubscribe=links[2]!,title=escape(design.headline||value.subject),reply=escape(value.replyTo),lang=zh?'zh-CN':'en',eyebrow=escape(design.eyebrow||tr('A NOTE FROM YOUR PRODUCT TEAM','来自 Remote Arc 团队'));
- const text=[design.headline,design.intro,value.body,...design.highlights.flatMap(card=>[card.title,card.body]),rewardNote,label+': '+href,'—','Remote Arc · '+value.replyTo,tr('Stop follow-up emails:','停止接收回访邮件：'),unsubscribe].filter(Boolean).join('\n\n');
- const hero=design.layout==='spotlight'?'background:'+accent+';color:'+ink+';':'color:#222228;',heroMuted=design.layout==='spotlight'?ink:'#73737e';
- const html=`<!doctype html><html lang="${lang}" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(value.subject)}</title></head><body style="margin:0;padding:0;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',Arial,sans-serif"><div lang="${lang}" dir="ltr"><div style="display:none;max-height:0;overflow:hidden" aria-hidden="true">${escape(design.intro||value.subject)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:32px 16px"><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#fff;border:1px solid #e7e7eb;border-radius:14px;overflow:hidden"><tr><td style="padding:24px 28px"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td><img src="https://remotearc.app/remote-arc-192.png" width="32" height="32" alt="" style="display:block;border:0"></td><td style="padding-left:10px;color:#222228;font-size:19px;font-weight:bold">Remote Arc</td></tr></table></td></tr><tr><td style="padding:32px 28px;${hero}"><p style="margin:0 0 14px;color:${heroMuted};font-size:11px;letter-spacing:1.5px">${eyebrow}</p><h1 style="margin:0;font-size:28px;line-height:1.35;font-weight:600;overflow-wrap:anywhere">${title}</h1>${design.intro?'<p style="margin:18px 0 0;font-size:15px;line-height:1.8">'+escape(design.intro)+'</p>':''}</td></tr><tr><td style="padding:28px">${paragraphs}${highlights?'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0">'+highlights+'</table>':''}${rewardNote?'<p style="padding:16px;background:#f5f5f7;border:1px solid #e7e7eb;border-radius:8px;color:#42424a;font-size:14px;line-height:1.8">'+escape(rewardNote)+'</p>':''}<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 12px"><tr><td bgcolor="${accent}" style="border-radius:8px"><a href="${escape(href)}" style="display:inline-block;padding:15px 24px;color:${ink};text-decoration:none;font-size:15px;font-weight:bold;border:1px solid ${accent};border-radius:8px">${escape(label)} &rarr;</a></td></tr></table><p style="margin:0 0 28px;color:#73737e;font-size:12px;line-height:1.6">${tr('This button opens our official website:','按钮将打开我们的官方网站：')} ${escape(new URL(href).hostname)}</p><p style="margin:0;padding-top:22px;border-top:1px solid #eeeef1;color:#52525b;font-size:14px;line-height:1.7">${tr('You can also reply to this email. We read every reply.','也可以直接回复这封邮件，告诉我们你的情况。')}<br><strong>${tr('The Remote Arc team','Remote Arc 团队')}</strong></p></td></tr><tr><td style="padding:22px 28px;background:#fafafa;border-top:1px solid #eeeef1;color:#73737e;font-size:12px;line-height:1.8">Remote Arc · ${reply}<br>${tr('You received this personal follow-up because you requested help or agreed to be contacted.','你收到这封回访邮件，是因为你曾请求帮助或同意我们就此联系。')}<br><a href="${escape(unsubscribe)}" style="color:#52525b;text-decoration:underline">${tr('Stop follow-up emails','停止回访邮件')}</a> &nbsp;·&nbsp; <a href="https://remotearc.app${zh?'/zh':''}/privacy" style="color:#52525b;text-decoration:underline">${tr('Privacy','隐私政策')}</a></td></tr></table></td></tr></table></div></body></html>`;
- return{html,text,action:{href,label}};
+import { FOLLOWUP_UPGRADE_URL } from "./followup-templates.js";
+export type FollowupDesign = {
+  layout: "letter" | "spotlight" | "digest";
+  accent: string;
+  eyebrow: string;
+  headline: string;
+  intro: string;
+  buttonLabel: string;
+  highlights: { title: string; body: string }[];
+};
+export const DEFAULT_FOLLOWUP_DESIGN: FollowupDesign = {
+  layout: "spotlight",
+  accent: "#242428",
+  eyebrow: "",
+  headline: "",
+  intro: "",
+  buttonLabel: "",
+  highlights: [],
+};
+type FollowupEmail = {
+  subject: string;
+  body: string;
+  templateId: string;
+  locale: "en" | "zh";
+  setupUrl: string;
+  feedbackUrl: string;
+  unsubscribeUrl: string;
+  replyTo: string;
+  rewardAvailable?: boolean;
+  design?: Partial<FollowupDesign>;
+};
+const escape = (value: string) =>
+  value.replace(
+    /[&<>"']/g,
+    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!,
+  );
+const contrastInk = (hex: string) => {
+  const channels = [1, 3, 5]
+      .map((start) => parseInt(hex.slice(start, start + 2), 16) / 255)
+      .map((c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))),
+    l = 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+  return (l + 0.05) / 0.05 >= 1.05 / (l + 0.05) ? "#000000" : "#ffffff";
+};
+export function renderFollowupEmail(value: FollowupEmail) {
+  const zh = value.locale === "zh",
+    tr = (en: string, cn: string) => (zh ? cn : en);
+  const links = [value.setupUrl, value.feedbackUrl, value.unsubscribeUrl].map((link) => {
+    const url = new URL(link);
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== "remotearc.app" ||
+      url.username ||
+      url.password
+    )
+      throw Error("invalid_followup_link");
+    return url.href;
+  });
+  const design = { ...DEFAULT_FOLLOWUP_DESIGN, ...value.design },
+    accent = /^#[\da-f]{6}$/i.test(design.accent) ? design.accent : "#242428",
+    ink = contrastInk(accent);
+  const installation = value.templateId === "finish-mcp",
+    upgrade = value.templateId === "quota-upgrade";
+  const setup = installation || ["first-connection", "first-result"].includes(value.templateId),
+    href = upgrade
+      ? FOLLOWUP_UPGRADE_URL
+      : installation
+        ? new URL((zh ? "/zh" : "") + "/install/chatgpt", links[0]!).href
+        : links[setup ? 0 : 1]!,
+    label =
+      design.buttonLabel ||
+      (upgrade
+        ? tr("Review upgrade options", "查看升级方案")
+        : installation
+          ? tr("Open installation instructions", "查看安装指南")
+          : setup
+            ? tr("Open the setup guide", "查看开始指南")
+            : value.templateId === "use-case"
+              ? tr("Share your use case", "分享使用场景")
+              : tr("Share your feedback", "填写体验反馈"));
+  const prose = value.body
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const linkify = (text: string) =>
+    text
+      .split(/(https?:\/\/[^\s<>]+)/g)
+      .map((part) => {
+        if (/^https?:\/\//.test(part)) {
+          try {
+            const url = new URL(part);
+            if (
+              url.protocol === "https:" &&
+              (url.hostname === "remotearc.app" || url.href === FOLLOWUP_UPGRADE_URL) &&
+              !url.username &&
+              !url.password
+            )
+              return (
+                '<a href="' +
+                escape(url.href) +
+                '" style="color:#245b8f;text-decoration:underline;overflow-wrap:anywhere">' +
+                escape(part) +
+                "</a>"
+              );
+          } catch {
+            /* Leave invalid URLs as readable text. */
+          }
+        }
+        return /^https?:\/\//.test(part) ? "" : escape(part).replaceAll("\n", "<br>");
+      })
+      .join("");
+  const rewardNote =
+    !setup && !upgrade && value.rewardAvailable
+      ? tr(
+          "Feedback rewards are available. Sign in on the feedback page to see the current offer and eligibility. Approved feedback can earn extra Connect calls.",
+          "反馈奖励现已开放。登录反馈页面查看当前奖励规则与资格，有效反馈经审核后可获得额外 Connect 调用次数。",
+        )
+      : "";
+  const paragraphs = prose
+    .map(
+      (part) =>
+        '<p style="margin:0 0 20px;font-size:16px;line-height:1.8;color:#42424a">' +
+        linkify(part) +
+        "</p>",
+    )
+    .join("");
+  const highlights = (design.highlights || [])
+    .slice(0, 3)
+    .map(
+      (card, index) =>
+        '<tr><td style="padding:18px 20px;border:1px solid #e7e7eb;border-bottom:3px solid ' +
+        accent +
+        ';border-radius:8px"><p style="margin:0 0 8px;font-size:11px;color:#73737e">0' +
+        (index + 1) +
+        '</p><h2 style="margin:0 0 8px;color:#222228;font-size:17px;line-height:1.5">' +
+        escape(card.title) +
+        '</h2><p style="margin:0;color:#52525b;font-size:14px;line-height:1.8">' +
+        escape(card.body) +
+        '</p></td></tr><tr><td height="12"></td></tr>',
+    )
+    .join("");
+  const unsubscribe = links[2]!,
+    title = escape(design.headline || value.subject),
+    reply = escape(value.replyTo),
+    lang = zh ? "zh-CN" : "en",
+    eyebrow = escape(design.eyebrow || tr("A NOTE FROM YOUR PRODUCT TEAM", "来自 Remote Arc 团队"));
+  const text = [
+    design.headline,
+    design.intro,
+    value.body,
+    ...design.highlights.flatMap((card) => [card.title, card.body]),
+    rewardNote,
+    label + ": " + href,
+    "—",
+    "Remote Arc · " + value.replyTo,
+    tr("Stop follow-up emails:", "停止接收回访邮件："),
+    unsubscribe,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const hero =
+      design.layout === "spotlight"
+        ? "background:" + accent + ";color:" + ink + ";"
+        : "color:#222228;",
+    heroMuted = design.layout === "spotlight" ? ink : "#73737e";
+  const html = `<!doctype html><html lang="${lang}" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(value.subject)}</title></head><body style="margin:0;padding:0;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',Arial,sans-serif"><div lang="${lang}" dir="ltr"><div style="display:none;max-height:0;overflow:hidden" aria-hidden="true">${escape(design.intro || value.subject)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:32px 16px"><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#fff;border:1px solid #e7e7eb;border-radius:14px;overflow:hidden"><tr><td style="padding:24px 28px"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td><img src="https://remotearc.app/remote-arc-192.png" width="32" height="32" alt="" style="display:block;border:0"></td><td style="padding-left:10px;color:#222228;font-size:19px;font-weight:bold">Remote Arc</td></tr></table></td></tr><tr><td style="padding:32px 28px;${hero}"><p style="margin:0 0 14px;color:${heroMuted};font-size:11px;letter-spacing:1.5px">${eyebrow}</p><h1 style="margin:0;font-size:28px;line-height:1.35;font-weight:600;overflow-wrap:anywhere">${title}</h1>${design.intro ? '<p style="margin:18px 0 0;font-size:15px;line-height:1.8">' + escape(design.intro) + "</p>" : ""}</td></tr><tr><td style="padding:28px">${paragraphs}${highlights ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0">' + highlights + "</table>" : ""}${rewardNote ? '<p style="padding:16px;background:#f5f5f7;border:1px solid #e7e7eb;border-radius:8px;color:#42424a;font-size:14px;line-height:1.8">' + escape(rewardNote) + "</p>" : ""}<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 12px"><tr><td bgcolor="${accent}" style="border-radius:8px"><a href="${escape(href)}" style="display:inline-block;padding:15px 24px;color:${ink};text-decoration:none;font-size:15px;font-weight:bold;border:1px solid ${accent};border-radius:8px">${escape(label)} &rarr;</a></td></tr></table><p style="margin:0 0 28px;color:#73737e;font-size:12px;line-height:1.6">${tr("This button opens our official website:", "按钮将打开我们的官方网站：")} ${escape(new URL(href).hostname)}</p><p style="margin:0;padding-top:22px;border-top:1px solid #eeeef1;color:#52525b;font-size:14px;line-height:1.7">${tr("You can also reply to this email. We read every reply.", "也可以直接回复这封邮件，告诉我们你的情况。")}<br><strong>${tr("The Remote Arc team", "Remote Arc 团队")}</strong></p></td></tr><tr><td style="padding:22px 28px;background:#fafafa;border-top:1px solid #eeeef1;color:#73737e;font-size:12px;line-height:1.8">Remote Arc · ${reply}<br>${tr("You received this personal follow-up because you requested help or agreed to be contacted.", "你收到这封回访邮件，是因为你曾请求帮助或同意我们就此联系。")}<br><a href="${escape(unsubscribe)}" style="color:#52525b;text-decoration:underline">${tr("Stop follow-up emails", "停止回访邮件")}</a> &nbsp;·&nbsp; <a href="https://remotearc.app${zh ? "/zh" : ""}/privacy" style="color:#52525b;text-decoration:underline">${tr("Privacy", "隐私政策")}</a></td></tr></table></td></tr></table></div></body></html>`;
+  return { html, text, action: { href, label } };
 }

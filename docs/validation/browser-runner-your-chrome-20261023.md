@@ -14,7 +14,7 @@ It remains stacked on #310 (`perf/browser-runner-fast-forms`).
 - HTTP/WebSocket fixtures cover a delayed Allow shared by retries, denial,
   and cancelling an in-progress handshake when the Agent stops.
 - `REMOTEARC_YOUR_CHROME_LIVE=1 go test ./internal/browserrunner -run
-  '^TestLiveYourChrome$' -count=1 -v -timeout 5m` passed against the actual
+'^TestLiveYourChrome$' -count=1 -v -timeout 5m` passed against the actual
   running Chrome. Two example.com tasks shared one connection, read their
   page titles and followed the public Learn more link. Their task windows
   were then closed and the connection disconnected. This test is opt-in;

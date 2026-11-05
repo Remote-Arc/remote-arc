@@ -1,7 +1,5 @@
-
-
 export type User = {
-  arcAvailable?:boolean;
+  arcAvailable?: boolean;
   id: string;
   email: string;
   name: string | null;
@@ -10,13 +8,25 @@ export type User = {
   plan: "free" | "connect" | "plus";
   isAdmin: boolean;
 };
-export type DeviceTaskPermissions = { background_tasks: boolean; scheduled_tasks: boolean; adaptive_agent: boolean; source_agent: boolean; keep_awake: boolean };
+export type DeviceTaskPermissions = {
+  background_tasks: boolean;
+  scheduled_tasks: boolean;
+  adaptive_agent: boolean;
+  source_agent: boolean;
+  keep_awake: boolean;
+};
 export type Device = {
-  connection_state?: 'connected'|'stale'|null;
-  execution_health?:'response_unknown'|'observed'|'unknown';
-  execution_last_timeout_at?:string|null;
-  execution_last_success_at?:string|null;
-  capacity?: {observedAt:string;cpuPercent?:number;memoryAvailableMB:number;memoryTotalMB:number;managedProcesses?:number};
+  connection_state?: "connected" | "stale" | null;
+  execution_health?: "response_unknown" | "observed" | "unknown";
+  execution_last_timeout_at?: string | null;
+  execution_last_success_at?: string | null;
+  capacity?: {
+    observedAt: string;
+    cpuPercent?: number;
+    memoryAvailableMB: number;
+    memoryTotalMB: number;
+    managedProcesses?: number;
+  };
   id: string;
   name: string;
   platform: string;
@@ -169,13 +179,33 @@ export type MonitorState = {
   checkedAt: string;
   deployment?: string | null;
   deviceReliability?: {
-    coverage: 'observed' | 'no_samples' | 'unavailable';
-    scope: 'none' | 'single_device' | 'multiple_devices';
-    windows: Array<{ minutes: number; counts: { connections: number; disconnects: number; heartbeats: number; observedDevices: number; reconnects: number; reconnectingDevices: number } }>;
-    groups: Array<{ platform: string; agentVersion: string; connections: number; reconnects: number; observedDevices: number }>;
+    coverage: "observed" | "no_samples" | "unavailable";
+    scope: "none" | "single_device" | "multiple_devices";
+    windows: Array<{
+      minutes: number;
+      counts: {
+        connections: number;
+        disconnects: number;
+        heartbeats: number;
+        observedDevices: number;
+        reconnects: number;
+        reconnectingDevices: number;
+      };
+    }>;
+    groups: Array<{
+      platform: string;
+      agentVersion: string;
+      connections: number;
+      reconnects: number;
+      observedDevices: number;
+    }>;
     groupsTruncated: boolean;
     trend: Array<{ minute: string; connections: number; disconnects: number; heartbeats: number }>;
-    signal: { phase: 'healthy' | 'pending' | 'firing' | 'recovering'; last_evaluated_at: string; last_notification_at: string | null } | null;
+    signal: {
+      phase: "healthy" | "pending" | "firing" | "recovering";
+      last_evaluated_at: string;
+      last_notification_at: string | null;
+    } | null;
   };
   worker: {
     status: "operational" | "degraded";
@@ -207,11 +237,24 @@ export type MonitorState = {
 };
 type AutomationKind = "long_task" | "condition_watch" | "schedule_watch" | "goal_loop";
 export type AutomationCreateKind = AutomationKind | "agent_goal";
-type AgentGoalTool = "list_directory" | "read_file" | "read_binary_file" | "get_file_info" | "write_file" | "edit_block" | "start_process";
+type AgentGoalTool =
+  | "list_directory"
+  | "read_file"
+  | "read_binary_file"
+  | "get_file_info"
+  | "write_file"
+  | "edit_block"
+  | "start_process";
 export type AutomationStatus =
-  | "waiting" | "running" | "waiting_for_device" | "waiting_for_event"
-  | "paused" | "completed" | "failed"
-  | "cancelled" | "expired";
+  | "waiting"
+  | "running"
+  | "waiting_for_device"
+  | "waiting_for_event"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "expired";
 export type Automation = {
   id: string;
   user_id: string;

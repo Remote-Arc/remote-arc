@@ -1,8 +1,23 @@
 export type DashboardWorkspace = "connect" | "agent";
 
 export type DashboardTab =
-  | "overview" | "devices" | "automations" | "apps" | "connect" | "security" | "monitor" | "settings"
-  | "agent-teams" | "agent-apps" | "agent-devices" | "agent-chat" | "agent-goals" | "agent-routines" | "agent-skills" | "agent-activity" | "agent-settings";
+  | "overview"
+  | "devices"
+  | "automations"
+  | "apps"
+  | "connect"
+  | "security"
+  | "monitor"
+  | "settings"
+  | "agent-teams"
+  | "agent-apps"
+  | "agent-devices"
+  | "agent-chat"
+  | "agent-goals"
+  | "agent-routines"
+  | "agent-skills"
+  | "agent-activity"
+  | "agent-settings";
 
 // Canonical dashboard URLs are namespaced. Legacy deep links remain usable.
 export const DASHBOARD_PATHS: Record<DashboardTab, string> = {
@@ -42,8 +57,11 @@ export const LEGACY_DASHBOARD_PATHS: Record<string, DashboardTab> = {
 
 export function dashboardTabFromPath(pathname: string): DashboardTab {
   const clean = pathname.replace(/\/+$/, "") || "/";
-  const tab = (Object.entries(DASHBOARD_PATHS).find(([, path]) => path === clean)?.[0] as DashboardTab | undefined)
-    ?? LEGACY_DASHBOARD_PATHS[clean] ?? "overview";
+  const tab =
+    (Object.entries(DASHBOARD_PATHS).find(([, path]) => path === clean)?.[0] as
+      DashboardTab | undefined) ??
+    LEGACY_DASHBOARD_PATHS[clean] ??
+    "overview";
   return tab === "agent-routines" ? "agent-goals" : tab;
 }
 
@@ -86,8 +104,12 @@ export function isAgentRoutineAutomation(task: WorkspaceAutomation): boolean {
 }
 
 export function isNativeArcAutomation(task: WorkspaceAutomation): boolean {
-  try { const goal = JSON.parse(task.goal_json || "null"); return goal?.type === "agent_goal" && goal.native_arc?.version === 1; }
-  catch { return false; }
+  try {
+    const goal = JSON.parse(task.goal_json || "null");
+    return goal?.type === "agent_goal" && goal.native_arc?.version === 1;
+  } catch {
+    return false;
+  }
 }
 
 export function isVisibleInWorkspace(task: WorkspaceAutomation, tab: DashboardTab): boolean {

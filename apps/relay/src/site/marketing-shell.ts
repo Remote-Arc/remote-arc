@@ -22,14 +22,26 @@ export const marketingShellStyle = `<style id="marketing-shell-style">
 export function marketingShell(content: string, chinese: boolean) {
   const home = chinese ? "/zh" : "/";
   const destinations = [
-    ["/connect-ai", "Connect"], ["/integrations", chinese ? "应用" : "Apps"],
-    ["/arc", "Arc"], ["/pricing", chinese ? "价格" : "Pricing"],
+    ["/connect-ai", "Connect"],
+    ["/integrations", chinese ? "应用" : "Apps"],
+    ["/arc", "Arc"],
+    ["/pricing", chinese ? "价格" : "Pricing"],
     ["/docs", chinese ? "文档" : "Docs"],
   ];
-  const links = destinations.map(([path, name]) =>
-    '<a href="' + (chinese ? '/zh' : '') + path + '">' + name + '</a>').join('');
-  return '<div class="marketingShell"><header class="marketingShellHeader">' +
-    '<a class="marketingShellBrand" href="' + home + '"><img src="/remote-arc.svg" alt="" width="28" height="28" />Remote Arc</a>' +
-    '<nav aria-label="' + (chinese ? '主导航' : 'Main navigation') + '">' + links + '</nav></header>' +
-    content.replace('class="seo-blog-shell"', 'class="marketingContent"') + '</div>';
+  const links = destinations
+    .map(([path, name]) => '<a href="' + (chinese ? "/zh" : "") + path + '">' + name + "</a>")
+    .join("");
+  return (
+    '<div class="marketingShell"><header class="marketingShellHeader">' +
+    '<a class="marketingShellBrand" href="' +
+    home +
+    '"><img src="/remote-arc.svg" alt="" width="28" height="28" />Remote Arc</a>' +
+    '<nav aria-label="' +
+    (chinese ? "主导航" : "Main navigation") +
+    '">' +
+    links +
+    "</nav></header>" +
+    content.replace('class="seo-blog-shell"', 'class="marketingContent"') +
+    "</div>"
+  );
 }

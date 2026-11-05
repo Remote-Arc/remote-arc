@@ -54,15 +54,15 @@ window, software H.264 encoder, and a second headless browser were tested. The
 cloud test uses the actual `RunnerVideoRelay` and `RunnerVideoPlayer` modules,
 with synthetic owner/device identities and real Cloudflare SFU resources.
 
-| Measurement | Local WebRTC | Cloudflare SFU and production player |
-| --- | ---: | ---: |
-| Encoded video | H.264 | H.264 |
-| Decoded size | 1134×720 | 1134×720 |
-| Playback FPS | 15.0 | 15.0 |
-| Distinct source updates per second | 13.6 | 13.6 |
-| First decoded frame | 1,522 ms | 5,894 ms |
-| Capture-to-playback latency, median | 236 ms | 252 ms |
-| Capture-to-playback latency, p95 | 268 ms | 289 ms |
+| Measurement                         | Local WebRTC | Cloudflare SFU and production player |
+| ----------------------------------- | -----------: | -----------------------------------: |
+| Encoded video                       |        H.264 |                                H.264 |
+| Decoded size                        |     1134×720 |                             1134×720 |
+| Playback FPS                        |         15.0 |                                 15.0 |
+| Distinct source updates per second  |         13.6 |                                 13.6 |
+| First decoded frame                 |     1,522 ms |                             5,894 ms |
+| Capture-to-playback latency, median |       236 ms |                               252 ms |
+| Capture-to-playback latency, p95    |       268 ms |                               289 ms |
 
 Ten-second moving-page samples; these are measured observations, not performance
 guarantees. A timestamp encoded into black/white blocks on the source page is
@@ -74,13 +74,13 @@ The sampled cloud run recorded the following process working sets and mean CPU
 over their observed lifetimes. `100%` CPU means one logical CPU core. Shared
 memory may be counted in more than one process's working set.
 
-| Component | Mean CPU | Peak resident working set |
-| --- | ---: | ---: |
-| Agent test process | 5.6% | 84.8 MB |
-| FFmpeg encoder | 8.4% | 35.3 MB |
-| Source browser | 134.5% | 587.0 MB |
-| Viewer browser | 25.6% | 565.3 MB |
-| Node signaling test backend | 2.1% | 142.0 MB |
+| Component                   | Mean CPU | Peak resident working set |
+| --------------------------- | -------: | ------------------------: |
+| Agent test process          |     5.6% |                   84.8 MB |
+| FFmpeg encoder              |     8.4% |                   35.3 MB |
+| Source browser              |   134.5% |                  587.0 MB |
+| Viewer browser              |    25.6% |                  565.3 MB |
+| Node signaling test backend |     2.1% |                  142.0 MB |
 
 The synthetic source repaints a full canvas at display rate, so its cost is not
 representative of a static form. There is no idle/JPEG baseline yet. No encoder

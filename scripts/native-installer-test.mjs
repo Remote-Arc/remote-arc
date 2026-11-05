@@ -1,28 +1,61 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, symlinkSync, rmSync, existsSync, statSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  symlinkSync,
+  rmSync,
+  existsSync,
+  statSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 if (process.platform === "win32") {
-  console.log("Shell installer fixtures run on macOS/Linux; Windows native install has its own CI.");
+  console.log(
+    "Shell installer fixtures run on macOS/Linux; Windows native install has its own CI.",
+  );
   process.exit(0);
 }
 const installer = readFileSync(new URL("../apps/ui/public/install.sh", import.meta.url), "utf8");
 // Fixture versions deliberately do not depend on the deployed website build.
-const version = '1.2.3';
+const version = "1.2.3";
 const root = mkdtempSync(join(tmpdir(), "remote-arc-installer-test-"));
 try {
-  const bin = join(root, "bin"), fixtures = join(root, "fixtures");
-  mkdirSync(bin); mkdirSync(fixtures);
+  const bin = join(root, "bin"),
+    fixtures = join(root, "fixtures");
+  mkdirSync(bin);
+  mkdirSync(fixtures);
   // Restricted PATH deliberately has no Node, npm or npx.
-  for (const tool of ["sh", "awk", "cat", "chmod", "cp", "mkdir", "mktemp", "mv", "rm", "rmdir", "shasum"]) {
-    const path = spawnSync("/bin/sh", ["-c", "command -v " + tool], { encoding: "utf8" }).stdout.trim();
+  for (const tool of [
+    "sh",
+    "awk",
+    "cat",
+    "chmod",
+    "cp",
+    "mkdir",
+    "mktemp",
+    "mv",
+    "rm",
+    "rmdir",
+    "shasum",
+  ]) {
+    const path = spawnSync("/bin/sh", ["-c", "command -v " + tool], {
+      encoding: "utf8",
+    }).stdout.trim();
     assert.ok(path, tool + " is required by these tests");
     symlinkSync(path, join(bin, tool));
   }
-  writeFileSync(join(bin, "uname"), '#!/bin/sh\ncase "$1" in -s) echo "$TEST_OS";; -m) echo "$TEST_ARCH";; esac\n', { mode: 0o755 });
-  writeFileSync(join(bin, "curl"), `#!/bin/sh
+  writeFileSync(
+    join(bin, "uname"),
+    '#!/bin/sh\ncase "$1" in -s) echo "$TEST_OS";; -m) echo "$TEST_ARCH";; esac\n',
+    { mode: 0o755 },
+  );
+  writeFileSync(
+    join(bin, "curl"),
+    `#!/bin/sh
 case "$1 $2 $3 $4" in "--proto =https --tlsv1.2 -fsSL") ;; *) exit 51;; esac
 url=$5
 [ "$6" = -o ] || exit 52
@@ -32,33 +65,69 @@ case "$url" in
   https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v$TEST_VERSION/remotelink-v$TEST_VERSION-*) cp "$TEST_FIXTURES/agent" "$7" ;;
   *) exit 53 ;;
 esac
-`, { mode: 0o755 });
-  const native = "#!/bin/sh\n[ \"$1\" = --version ] || exit 42\necho " + version + "\n";
+`,
+    { mode: 0o755 },
+  );
+  const native = '#!/bin/sh\n[ "$1" = --version ] || exit 42\necho ' + version + "\n";
   const hash = createHash("sha256").update(native).digest("hex");
   writeFileSync(join(fixtures, "agent"), native);
   let count = 0;
-  function run({ os = "Linux", arch = "x86_64", checksum, dir, script = installer, env = {}, latestVersion = version, manifest } = {}) {
+  function run({
+    os = "Linux",
+    arch = "x86_64",
+    checksum,
+    dir,
+    script = installer,
+    env = {},
+    latestVersion = version,
+    manifest,
+  } = {}) {
     count++;
     const selectedVersion = env.REMOTEARC_INSTALL_VERSION || latestVersion;
-    writeFileSync(join(fixtures, 'latest.json'), manifest ?? JSON.stringify({ version: latestVersion }, null, 2));
-    const selectedNative = native.replace('echo ' + version, 'echo ' + selectedVersion);
-    writeFileSync(join(fixtures, 'agent'), selectedNative);
-    const selectedHash = createHash('sha256').update(selectedNative).digest('hex');
-    writeFileSync(join(fixtures, "SHA256SUMS"), checksum ?? selectedHash + "  remotelink-v" + selectedVersion + "-" + (os === "Darwin" ? "darwin" : "linux") + "-" + (/^(arm64|aarch64)$/.test(arch) ? "arm64" : "amd64") + "\n");
-    return spawnSync("/bin/sh", [], { input: script, encoding: "utf8",
-      env: { PATH: bin, HOME: join(root, "home " + count), TMPDIR: root,
-        TEST_OS: os, TEST_ARCH: arch, TEST_FIXTURES: fixtures, TEST_VERSION: selectedVersion,
-        ...(dir ? { REMOTEARC_INSTALL_DIR: dir } : {}), ...env },
+    writeFileSync(
+      join(fixtures, "latest.json"),
+      manifest ?? JSON.stringify({ version: latestVersion }, null, 2),
+    );
+    const selectedNative = native.replace("echo " + version, "echo " + selectedVersion);
+    writeFileSync(join(fixtures, "agent"), selectedNative);
+    const selectedHash = createHash("sha256").update(selectedNative).digest("hex");
+    writeFileSync(
+      join(fixtures, "SHA256SUMS"),
+      checksum ??
+        selectedHash +
+          "  remotelink-v" +
+          selectedVersion +
+          "-" +
+          (os === "Darwin" ? "darwin" : "linux") +
+          "-" +
+          (/^(arm64|aarch64)$/.test(arch) ? "arm64" : "amd64") +
+          "\n",
+    );
+    return spawnSync("/bin/sh", [], {
+      input: script,
+      encoding: "utf8",
+      env: {
+        PATH: bin,
+        HOME: join(root, "home " + count),
+        TMPDIR: root,
+        TEST_OS: os,
+        TEST_ARCH: arch,
+        TEST_FIXTURES: fixtures,
+        TEST_VERSION: selectedVersion,
+        ...(dir ? { REMOTEARC_INSTALL_DIR: dir } : {}),
+        ...env,
+      },
     });
   }
-  for (const os of ["Linux", "Darwin"]) for (const arch of ["x86_64", "arm64", "aarch64"]) {
-    const dir = join(root, os + " " + arch);
-    const result = run({ os, arch, dir });
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(readFileSync(join(dir, "remotelink"), "utf8"), native);
-    assert.equal(statSync(join(dir, "remotelink")).mode & 0o777, 0o755);
-    assert.match(result.stdout, /Start the Agent to pair/);
-  }
+  for (const os of ["Linux", "Darwin"])
+    for (const arch of ["x86_64", "arm64", "aarch64"]) {
+      const dir = join(root, os + " " + arch);
+      const result = run({ os, arch, dir });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(readFileSync(join(dir, "remotelink"), "utf8"), native);
+      assert.equal(statSync(join(dir, "remotelink")).mode & 0o777, 0o755);
+      assert.match(result.stdout, /Start the Agent to pair/);
+    }
   const defaultResult = run();
   assert.equal(defaultResult.status, 0, defaultResult.stderr);
   assert.ok(existsSync(join(root, "home " + count, ".local/bin/remotelink")));
@@ -76,40 +145,63 @@ esac
     assert.notEqual(result.status, 0);
     assert.equal(readFileSync(target, "utf8"), "previous version");
   }
-  const pinnedDir = join(root, 'pinned-stable');
-  assert.equal(run({ dir: pinnedDir, env: { REMOTEARC_INSTALL_VERSION: '0.0.1' } }).status, 0);
-  assert.match(readFileSync(join(pinnedDir, 'remotelink'), 'utf8'), /echo 0\.0\.1/);
-  const freshDir = join(root, 'new-stable-without-web-redeploy');
-  assert.equal(run({ dir: freshDir, latestVersion: '1.2.4' }).status, 0);
-  assert.match(readFileSync(join(freshDir, 'remotelink'), 'utf8'), /echo 1\.2\.4/);
-  const pinnedWithoutChannel = join(root, 'explicit-version-offline-channel');
-  assert.equal(run({ dir: pinnedWithoutChannel, env: { REMOTEARC_INSTALL_VERSION: '0.0.1', TEST_MANIFEST_FAIL: '1' } }).status, 0);
+  const pinnedDir = join(root, "pinned-stable");
+  assert.equal(run({ dir: pinnedDir, env: { REMOTEARC_INSTALL_VERSION: "0.0.1" } }).status, 0);
+  assert.match(readFileSync(join(pinnedDir, "remotelink"), "utf8"), /echo 0\.0\.1/);
+  const freshDir = join(root, "new-stable-without-web-redeploy");
+  assert.equal(run({ dir: freshDir, latestVersion: "1.2.4" }).status, 0);
+  assert.match(readFileSync(join(freshDir, "remotelink"), "utf8"), /echo 1\.2\.4/);
+  const pinnedWithoutChannel = join(root, "explicit-version-offline-channel");
+  assert.equal(
+    run({
+      dir: pinnedWithoutChannel,
+      env: { REMOTEARC_INSTALL_VERSION: "0.0.1", TEST_MANIFEST_FAIL: "1" },
+    }).status,
+    0,
+  );
   for (const extra of [
-    { env: { TEST_MANIFEST_FAIL: '1' } },
-    { manifest: '{}' },
+    { env: { TEST_MANIFEST_FAIL: "1" } },
+    { manifest: "{}" },
     { manifest: '{"version":"1.2.4-rc.1"}' },
     { manifest: '{"version":"../other"}' },
   ]) {
     const result = run({ dir: installed, ...extra });
-    assert.notEqual(result.status, 0, 'An unavailable or invalid stable channel must not fall back to an old version');
-    assert.equal(readFileSync(target, 'utf8'), 'previous version');
+    assert.notEqual(
+      result.status,
+      0,
+      "An unavailable or invalid stable channel must not fall back to an old version",
+    );
+    assert.equal(readFileSync(target, "utf8"), "previous version");
   }
-  for (const selected of ['0.6.2-rc.7', 'latest', '1.2', '01.2.3', '1.2.3.4', '1.2.3/other']) {
-    assert.notEqual(run({ dir: installed, env: { REMOTEARC_INSTALL_VERSION: selected } }).status, 0);
-    assert.equal(readFileSync(target, 'utf8'), 'previous version');
+  for (const selected of ["0.6.2-rc.7", "latest", "1.2", "01.2.3", "1.2.3.4", "1.2.3/other"]) {
+    assert.notEqual(
+      run({ dir: installed, env: { REMOTEARC_INSTALL_VERSION: selected } }).status,
+      0,
+    );
+    assert.equal(readFileSync(target, "utf8"), "previous version");
   }
   assert.notEqual(run({ os: "FreeBSD" }).status, 0);
   assert.notEqual(run({ arch: "riscv64" }).status, 0);
   assert.notEqual(run({ dir: "relative/path" }).status, 0);
   assert.notEqual(run({ dir: "/" }).status, 0);
   const symlinkDir = join(root, "symlink");
-  mkdirSync(symlinkDir); symlinkSync(target, join(symlinkDir, "remotelink"));
+  mkdirSync(symlinkDir);
+  symlinkSync(target, join(symlinkDir, "remotelink"));
   assert.notEqual(run({ dir: symlinkDir }).status, 0);
   assert.equal(readFileSync(target, "utf8"), "previous version");
-  const truncated = run({ dir: join(root, "truncated"), script: installer.slice(0, installer.lastIndexOf("remote_arc_install")) });
+  const truncated = run({
+    dir: join(root, "truncated"),
+    script: installer.slice(0, installer.lastIndexOf("remote_arc_install")),
+  });
   assert.equal(truncated.status, 0);
   assert.ok(!existsSync(join(root, "truncated")));
   writeFileSync(join(bin, "sha256sum"), '#!/bin/sh\nexec shasum -a 256 "$@"\n', { mode: 0o755 });
   assert.equal(run({ dir: join(root, "sha256sum") }).status, 0);
-  console.log("PASS: " + count + " native installer scenarios, SHA256, atomic updates, symlink protection and no Node in PATH");
-} finally { rmSync(root, { recursive: true, force: true }); }
+  console.log(
+    "PASS: " +
+      count +
+      " native installer scenarios, SHA256, atomic updates, symlink protection and no Node in PATH",
+  );
+} finally {
+  rmSync(root, { recursive: true, force: true });
+}

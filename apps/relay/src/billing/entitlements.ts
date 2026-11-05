@@ -5,8 +5,8 @@ import {
   type AccountFeature,
   type AccountPlan,
 } from "@remotearc/protocol";
-import {billingEnabled,type PlatformLaunchEnv} from '../platform/platform-launch.js';
-import {currentArcPlan} from '../arc/arc-plan.js';
+import { billingEnabled, type PlatformLaunchEnv } from "../platform/platform-launch.js";
+import { currentArcPlan } from "../arc/arc-plan.js";
 
 export type { AccountFeature, AccountPlan };
 
@@ -31,9 +31,7 @@ export class PlanUpgradeRequiredError extends Error {
   }
 }
 
-export function isPlanUpgradeRequiredError(
-  error: unknown,
-): error is PlanUpgradeRequiredError {
+export function isPlanUpgradeRequiredError(error: unknown): error is PlanUpgradeRequiredError {
   return (
     error instanceof PlanUpgradeRequiredError ||
     (typeof error === "object" &&
@@ -54,10 +52,7 @@ export function planEntitlements(plan: AccountPlan): PlanEntitlements {
   };
 }
 
-export async function getAccountPlan(
-  env: EntitlementEnv,
-  userId: string,
-): Promise<AccountPlan> {
+export async function getAccountPlan(env: EntitlementEnv, userId: string): Promise<AccountPlan> {
   const row = await env.DB.prepare(
     `SELECT u.plan, u.role,
        EXISTS(
@@ -79,11 +74,11 @@ export async function getAccountPlan(
   // Admin is an operational override; base plan and active grants share one
   // effective-plan calculation so billing/promo/workspace sources can coexist.
   if (row.role === "admin" || row.has_plus_grant) return "plus";
-  if(billingEnabled(env)){
-    const plan=await currentArcPlan(env,userId);
+  if (billingEnabled(env)) {
+    const plan = await currentArcPlan(env, userId);
     // Only plans that include hosted models unlock hosted features.
-    if(plan.allHostedModels)return 'plus';
-    if(plan.id!=='free'&&normalizeAccountPlan(row.plan)!=='plus')return 'connect';
+    if (plan.allHostedModels) return "plus";
+    if (plan.id !== "free" && normalizeAccountPlan(row.plan) !== "plus") return "connect";
   }
   return normalizeAccountPlan(row.plan);
 }
@@ -91,7 +86,7 @@ export async function getAccountPlan(
 /** Free accounts have a published monthly binary transfer allowance; paid
  * plans, Plus grants and administrators are uncapped. */
 export async function binaryTransferLimit(env: EntitlementEnv, userId: string) {
-  return await getAccountPlan(env, userId) === "free" ? FREE_BINARY_BYTES_PER_MONTH : null;
+  return (await getAccountPlan(env, userId)) === "free" ? FREE_BINARY_BYTES_PER_MONTH : null;
 }
 
 export async function getAccountEntitlements(
@@ -101,11 +96,7 @@ export async function getAccountEntitlements(
   return planEntitlements(await getAccountPlan(env, userId));
 }
 
-export async function hasFeature(
-  env: EntitlementEnv,
-  userId: string,
-  feature: AccountFeature,
-) {
+export async function hasFeature(env: EntitlementEnv, userId: string, feature: AccountFeature) {
   return (await getAccountEntitlements(env, userId)).features.has(feature);
 }
 
@@ -126,16 +117,9 @@ export async function requireFeatures(
   userId: string,
   features: readonly AccountFeature[],
 ) {
-  return requireEntitledFeatures(
-    await getAccountEntitlements(env, userId),
-    features,
-  );
+  return requireEntitledFeatures(await getAccountEntitlements(env, userId), features);
 }
 
-export async function requireFeature(
-  env: EntitlementEnv,
-  userId: string,
-  feature: AccountFeature,
-) {
+export async function requireFeature(env: EntitlementEnv, userId: string, feature: AccountFeature) {
   return requireFeatures(env, userId, [feature]);
 }

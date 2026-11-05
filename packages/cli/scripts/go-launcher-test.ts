@@ -14,19 +14,14 @@ import {
 
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const binary = path.join(repository, "work/go-device", goAsset());
-const temp = await fs.realpath(
-  await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-launcher-")),
-);
+const temp = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-launcher-")));
 const original = {
   argv: process.argv,
   binary: process.env.REMOTEARC_GO_BINARY,
   home: process.env.REMOTEARC_HOME,
 };
 const writeControl = (descriptor: Record<string, unknown>) =>
-  fs.writeFile(
-    path.join(temp, ".remotearc/agent/control.json"),
-    JSON.stringify(descriptor),
-  );
+  fs.writeFile(path.join(temp, ".remotearc/agent/control.json"), JSON.stringify(descriptor));
 try {
   assert.equal(goAsset("linux", "x64"), `remotelink-v${GO_VERSION}-linux-amd64`);
   assert.equal(goAsset("darwin", "arm64"), `remotelink-v${GO_VERSION}-darwin-arm64`);

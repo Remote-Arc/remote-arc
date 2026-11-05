@@ -50,6 +50,80 @@ async function requestJSON(path: string, init?: RequestInit) {
   return response.json().then(canonicalErrorEnvelope);
 }
 
+export function useRunnerAttention({
+  enabled = true,
+  arcSessionId,
+}: {
+  enabled?: boolean;
+  arcSessionId?: string;
+} = {}) {
+  const [rows, setRows] = useState<Attention[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [hidden, setHidden] = useState<string[]>([]);
+  useEffect(() => {
+    if (!enabled) return;
+    let timer: ReturnType<typeof setTimeout>;
+    let request: AbortController | undefined;
+    const stop = () => {
+      clearTimeout(timer);
+      request?.abort();
+      request = undefined;
+    };
+    const load = async () => {
+      if (document.hidden || request) return;
+      clearTimeout(timer);
+      const current = new AbortController();
+      request = current;
+      try {
+        const data = await requestJSON(
+          "/api/runner/attention" +
+            (arcSessionId ? "?arc_session_id=" + encodeURIComponent(arcSessionId) : ""),
+          { signal: current.signal },
+        );
+        if (!Array.isArray(data.attention)) throw new Error("Invalid browser task list");
+        if (!current.signal.aborted) {
+          const incoming: Attention[] = data.attention;
+          setRows(incoming);
+          setFailed(false);
+          setHidden((ids) =>
+            ids.filter((id) =>
+              incoming.some((row) => row.id === id && row.availability === "unavailable"),
+            ),
+          );
+        }
+      } catch {
+        if (!current.signal.aborted) {
+          setFailed(true);
+          setRows(
+            (previous) => previous?.map((row) => ({ ...row, availability: "unavailable" })) ?? null,
+          );
+        }
+      } finally {
+        if (request === current) {
+          request = undefined;
+          timer = setTimeout(load, 5000);
+        }
+      }
+    };
+    const syncVisibility = () => {
+      if (document.hidden) stop();
+      else void load();
+    };
+    document.addEventListener("visibilitychange", syncVisibility);
+    syncVisibility();
+    return () => {
+      document.removeEventListener("visibilitychange", syncVisibility);
+      stop();
+    };
+  }, [arcSessionId, enabled]);
+  return {
+    rows: rows?.filter((row) => row.availability !== "unavailable" || !hidden.includes(row.id)),
+    failed,
+    hideUnavailable: (id: string) => setHidden((ids) => [...ids, id]),
+    remove: (id: string) => setRows((current) => current?.filter((row) => row.id !== id) ?? null),
+  };
+}
+
 export function RunnerAttentionList({
   arcSessionId,
   deviceId,
@@ -59,40 +133,60 @@ export function RunnerAttentionList({
   deviceId?: string;
   sessionId?: string;
 }) {
-  const { tr } = useI18n();
-  const [rows, setRows] = useState<Attention[]>([]);
-  const [pending, setPending] = useState<string | null>(null);
-  const [notice, setNotice] = useState("");
-  useEffect(() => {
-    let disposed = false;
-    let timer: ReturnType<typeof setTimeout>;
-    const load = async () => {
-      try {
-        const data = await requestJSON(
-          "/api/runner/attention" +
-            (arcSessionId ? "?arc_session_id=" + encodeURIComponent(arcSessionId) : ""),
-        );
-        if (!disposed) {
-          setRows(data.attention || []);
-          setNotice("");
-        }
-      } catch {
-        if (!disposed)
-          setRows((current) => current.map((row) => ({ ...row, availability: "unavailable" })));
-      } finally {
-        if (!disposed) timer = setTimeout(load, 5000);
-      }
-    };
-    void load();
-    return () => {
-      disposed = true;
-      clearTimeout(timer);
-    };
-  }, [arcSessionId]);
-  const visible = rows.filter(
+  const { rows, remove } = useRunnerAttention({ arcSessionId });
+  const visible = (rows ?? []).filter(
     (row) =>
       (!deviceId || row.device_id === deviceId) && (!sessionId || row.session_id === sessionId),
   );
+  return <RunnerAttentionRows rows={visible} remove={remove} showLiveView={!sessionId} />;
+}
+
+export function RunnerAttentionInbox({
+  attention,
+}: {
+  attention: ReturnType<typeof useRunnerAttention>;
+}) {
+  const { tr } = useI18n();
+  const { rows, failed, hideUnavailable, remove } = attention;
+  return (
+    <section className="runnerAttentionInbox" aria-labelledby="runner-attention-heading">
+      <h3 id="runner-attention-heading">{tr("Browser tasks", "浏览器任务")}</h3>
+      {failed && (
+        <p className="runnerNotice" role="status">
+          {tr("Could not refresh browser tasks.", "暂无法刷新浏览器任务。")}
+        </p>
+      )}
+      {!failed && !rows?.length && (
+        <p className="runnerNotice">
+          {rows
+            ? tr("No browser tasks need your attention.", "暂无需要你处理的浏览器任务。")
+            : tr("Loading browser tasks…", "正在加载浏览器任务…")}
+        </p>
+      )}
+      <RunnerAttentionRows
+        rows={rows ?? []}
+        remove={remove}
+        showLiveView
+        hideUnavailable={hideUnavailable}
+      />
+    </section>
+  );
+}
+
+function RunnerAttentionRows({
+  rows,
+  remove,
+  showLiveView,
+  hideUnavailable,
+}: {
+  rows: Attention[];
+  remove: (id: string) => void;
+  showLiveView: boolean;
+  hideUnavailable?: (id: string) => void;
+}) {
+  const { tr } = useI18n();
+  const [pending, setPending] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
   async function done(row: Attention) {
     setPending(row.id);
     setNotice("");
@@ -102,7 +196,7 @@ export function RunnerAttentionList({
         { method: "POST" },
       );
       if (result.resolved) {
-        setRows((current) => current.filter((item) => item.id !== row.id));
+        remove(row.id);
         setNotice(
           result.state === "not_running"
             ? tr(
@@ -131,50 +225,65 @@ export function RunnerAttentionList({
       setPending(null);
     }
   }
-  if (!visible.length && !notice) return null;
+  if (!rows.length && !notice) return null;
+  const waiting = hideUnavailable ? rows.filter((row) => row.availability === "unavailable") : [];
+  const active = hideUnavailable ? rows.filter((row) => row.availability !== "unavailable") : rows;
+  const renderRow = (row: Attention) => (
+    <div className="runnerAttention" key={row.id}>
+      <span className="runnerAttentionDot" aria-hidden="true" />
+      <div className="runnerAttentionCopy">
+        <strong>{new URL(row.origin).hostname}</strong>
+        <span>
+          {row.kind === "captcha"
+            ? tr("Needs you to complete a verification", "需要你完成人机验证")
+            : row.kind === "otp"
+              ? tr("Needs a verification code", "需要你输入验证码")
+              : row.kind === "scope"
+                ? tr("Needs a site permission", "需要你确认网站权限")
+                : tr("Needs you to sign in", "需要你登录")}{" "}
+          · {row.device_name}
+        </span>
+        {row.availability === "unavailable" && (
+          <small role="status">
+            {tr(
+              "Waiting for the computer to reconnect or restore browser task access.",
+              "等待电脑重新连接或恢复浏览器任务权限。",
+            )}
+          </small>
+        )}
+      </div>
+      {row.availability !== "unavailable" ? (
+        <div className="runnerAttentionActions">
+          {showLiveView && <a href={viewPath(row)}>{tr("Open live view", "打开实时画面")} ↗</a>}
+          <button type="button" disabled={pending !== null} onClick={() => void done(row)}>
+            {pending === row.id ? tr("Checking…", "检查中…") : tr("I'm done", "我已处理完")}
+          </button>
+        </div>
+      ) : (
+        hideUnavailable && (
+          <div className="runnerAttentionActions">
+            <button type="button" onClick={() => hideUnavailable(row.id)}>
+              {tr("Hide reminder", "隐藏提醒")}
+            </button>
+          </div>
+        )
+      )}
+    </div>
+  );
   return (
     <div
       className="runnerAttentionList"
       aria-label={tr("Browser tasks needing you", "需要你处理的浏览器任务")}
     >
-      {visible.map((row) => (
-        <div className="runnerAttention" key={row.id}>
-          <span className="runnerAttentionDot" aria-hidden="true" />
-          <div className="runnerAttentionCopy">
-            <strong>{new URL(row.origin).hostname}</strong>
-            <span>
-              {row.kind === "captcha"
-                ? tr("Needs you to complete a verification", "需要你完成人机验证")
-                : row.kind === "otp"
-                  ? tr("Needs a verification code", "需要你输入验证码")
-                  : row.kind === "scope"
-                    ? tr("Needs a site permission", "需要你确认网站权限")
-                    : tr("Needs you to sign in", "需要你登录")}{" "}
-              · {row.device_name}
-            </span>
-            {row.availability === "unavailable" && (
-              <small role="status">
-                {tr(
-                  "Task status unavailable. Check the computer connection and browser task permission.",
-                  "暂时无法获取任务状态，请检查电脑连接和浏览器任务权限。",
-                )}
-              </small>
-            )}
-          </div>
-          <div className="runnerAttentionActions">
-            {!sessionId && row.availability !== "unavailable" && (
-              <a href={viewPath(row)}>{tr("Open live view", "打开实时画面")} ↗</a>
-            )}
-            <button
-              type="button"
-              disabled={pending !== null || row.availability === "unavailable"}
-              onClick={() => void done(row)}
-            >
-              {pending === row.id ? tr("Checking…", "检查中…") : tr("I'm done", "我已处理完")}
-            </button>
-          </div>
-        </div>
-      ))}
+      {active.map(renderRow)}
+      {waiting.length > 0 && (
+        <details className="runnerAttentionWaiting">
+          <summary>
+            {tr("Waiting for access", "等待恢复连接或权限")} · {waiting.length}
+          </summary>
+          {waiting.map(renderRow)}
+        </details>
+      )}
       {notice && (
         <p className="runnerNotice" role="status">
           {notice}

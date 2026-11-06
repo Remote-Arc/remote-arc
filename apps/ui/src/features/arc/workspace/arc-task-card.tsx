@@ -1,5 +1,6 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
-import "./arc-task-card.css";
+import "../../../styles/arc/workspace/arc-task-card.css";
 export type ArcWork = {
   id: string;
   name: string;
@@ -19,21 +20,24 @@ export type ArcWork = {
   originSessionId?: string;
   latestRun?: { id: string; status: string; error: string | null; createdAt: string } | null;
 };
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
+const weekdays = [
+  "arc.workspace.arcTaskCard.weekday.sun",
+  "arc.workspace.arcTaskCard.weekday.mon",
+  "arc.workspace.arcTaskCard.weekday.tue",
+  "arc.workspace.arcTaskCard.weekday.wed",
+  "arc.workspace.arcTaskCard.weekday.thu",
+  "arc.workspace.arcTaskCard.weekday.fri",
+  "arc.workspace.arcTaskCard.weekday.sat",
+] as const;
 export function arcWorkSchedule(work: ArcWork, tr: Tr) {
   const schedule = work.schedule;
   if (schedule.type === "interval")
-    return tr(`Every ${schedule.everyMinutes} minutes`, `每 ${schedule.everyMinutes} 分钟`);
-  if (schedule.type !== "daily") return tr("One-off task", "一次性任务");
+    return tr("arc.workspace.arcTaskCard.everyMinutes", { everyMinutes: schedule.everyMinutes });
+  if (schedule.type !== "daily") return tr("arc.workspace.arcTaskCard.oneOffTask");
   const days =
-    schedule.weekdays
-      ?.map((day) =>
-        tr(
-          ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day]!,
-          ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][day]!,
-        ),
-      )
-      .join(" / ") || tr("Every day", "每天");
+    schedule.weekdays?.map((day) => (weekdays[day] ? tr(weekdays[day]) : "")).join(" / ") ||
+    tr("arc.workspace.arcTaskCard.everyDay");
   return `${days} · ${schedule.time} · ${schedule.timezone}`;
 }
 export function ArcTaskCard({
@@ -55,18 +59,18 @@ export function ArcTaskCard({
     ["failed", "unknown", "paused"].includes(work.status) ||
     Boolean(latest && ["failed", "unknown"].includes(latest.status));
   const status = attention
-    ? tr("Needs attention", "需要处理")
+    ? tr("arc.workspace.arcTaskCard.needsAttention")
     : work.status === "waiting"
-      ? tr("Scheduled", "已安排")
+      ? tr("arc.workspace.arcTaskCard.scheduled")
       : work.status === "running"
-        ? tr("Running", "执行中")
+        ? tr("arc.workspace.arcTaskCard.running")
         : work.status === "completed"
-          ? tr("Finished", "已结束")
+          ? tr("arc.workspace.arcTaskCard.finished")
           : work.status === "cancelled"
-            ? tr("Cancelled", "已取消")
+            ? tr("arc.workspace.arcTaskCard.cancelled")
             : work.status;
   const when = (date: string) =>
-    new Date(date).toLocaleString(tr("en-NZ", "zh-CN"), {
+    new Date(date).toLocaleString(tr("arc.workspace.arcTaskCard.enNz"), {
       ...(work.schedule.timezone ? { timeZone: work.schedule.timezone } : {}),
       month: "short",
       day: "numeric",
@@ -78,12 +82,14 @@ export function ArcTaskCard({
       className="arcTaskCard arcWorkCard"
       data-task-id={work.id}
       data-attention={attention}
-      aria-label={tr("Task", "任务") + ": " + work.name}
+      aria-label={tr("arc.workspace.arcTaskCard.task") + ": " + work.name}
     >
       <header>
         <span className="arcTaskCardKind">
           <Icon name={work.kind === "routine" ? "routine" : "tasks"} size={16} />
-          {current ? tr("Task conversation", "任务对话") : tr("Saved task", "已保存任务")}
+          {current
+            ? tr("arc.workspace.arcTaskCard.taskConversation")
+            : tr("arc.workspace.arcTaskCard.savedTask")}
         </span>
         <span className="arcTaskCardStatus">{status}</span>
       </header>
@@ -91,34 +97,24 @@ export function ArcTaskCard({
       <p className="arcTaskCardSchedule">{arcWorkSchedule(work, tr)}</p>
       <p>
         {work.nextRunAt
-          ? tr("Next run", "下次执行") + " · " + when(work.nextRunAt)
-          : tr("No next run scheduled", "尚无下次执行安排")}
+          ? tr("arc.workspace.arcTaskCard.nextRun") + " · " + when(work.nextRunAt)
+          : tr("arc.workspace.arcTaskCard.noNextRunScheduled")}
       </p>
       {latest ? (
         <p className="arcTaskCardOutcome">
           <Icon name={attention ? "history" : "activity"} size={14} />
-          {tr("Last run", "上次执行")} · {when(latest.createdAt)} ·{" "}
+          {tr("arc.workspace.arcTaskCard.lastRun")} · {when(latest.createdAt)} ·{" "}
           {["failed", "unknown"].includes(latest.status)
-            ? tr("Incomplete — review results", "未完成，请检查结果")
+            ? tr("arc.workspace.arcTaskCard.incompleteReviewResults")
             : latest.status === "succeeded"
-              ? tr("Run finished — review the answer", "本轮已结束，请查看答复")
-              : tr("In progress", "执行中")}
+              ? tr("arc.workspace.arcTaskCard.runFinishedReviewTheAnswer")
+              : tr("arc.workspace.arcTaskCard.inProgress")}
         </p>
       ) : (
-        <p>
-          {tr(
-            "No runs yet. This conversation will receive the results.",
-            "尚未执行，结果将保存在这个任务对话中。",
-          )}
-        </p>
+        <p>{tr("arc.workspace.arcTaskCard.noRunsYetThisConversationWill")}</p>
       )}
       {attention && (
-        <p role="status">
-          {tr(
-            "Review the last result before retrying. The schedule may be paused.",
-            "请先检查上次结果再重试，任务安排可能已暂停。",
-          )}
-        </p>
+        <p role="status">{tr("arc.workspace.arcTaskCard.reviewTheLastResultBeforeRetrying")}</p>
       )}
       <footer>
         {!current && work.conversationId && (
@@ -127,28 +123,28 @@ export function ArcTaskCard({
             className="arcTaskCardPrimary"
             onClick={() => onOpen(work.conversationId!)}
           >
-            {tr("Open task conversation", "打开任务对话")}
+            {tr("arc.workspace.arcTaskCard.openTaskConversation")}
             <Icon name="arrowUpRight" size={14} />
           </button>
         )}
         {current && work.originSessionId && (
           <button type="button" onClick={() => onOpen(work.originSessionId!)}>
-            {tr("Original request", "查看原始需求")}
+            {tr("arc.workspace.arcTaskCard.originalRequest")}
           </button>
         )}
         <button
           type="button"
           onClick={() =>
             onManage(
-              tr(
-                `Review task "${work.name}" (ID ${work.id}), its last result and schedule. Explain what succeeded and failed before proposing changes or retrying.`,
-                `检查任务“${work.name}”（ID ${work.id}）的上次结果和安排，先说明哪些已完成、哪些失败，再建议修改或重试。`,
-              ),
+              tr("arc.workspace.arcTaskCard.reviewTaskIdItsLastResult", {
+                name: work.name,
+                id: work.id,
+              }),
               work.originSessionId,
             )
           }
         >
-          {tr("Review / manage", "检查与管理")}
+          {tr("arc.workspace.arcTaskCard.reviewManage")}
         </button>
       </footer>
     </article>

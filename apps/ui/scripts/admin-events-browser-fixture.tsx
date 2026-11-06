@@ -1,9 +1,11 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider } from "../src/app/i18n.js";
+import { loadLocale } from "../src/locales/locale-catalog.js";
+import { initialLocale } from "../src/locales/locale-preference.js";
 import { AdminEvents } from "../src/features/admin/events/admin-events.js";
-import "../src/features/admin/admin-console.css";
-import "../src/features/admin/admin-design.css";
+import "../src/styles/admin/admin-console.css";
+import "../src/styles/admin/admin-design.css";
 // Browser-only local regression fixture. This file is not a production entrypoint.
 const nativeFetch = (window as Window & { eventsTestFetch?: typeof fetch }).eventsTestFetch;
 if (nativeFetch) window.fetch = nativeFetch;
@@ -28,6 +30,7 @@ Object.assign(host.style, {
 document.getElementById("root")!.hidden = true;
 document.body.append(shell);
 shell.append(host);
+await loadLocale(initialLocale(), "all");
 createRoot(host).render(
   <I18nProvider>
     <AdminEvents />

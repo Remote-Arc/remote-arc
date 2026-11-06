@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useI18n } from "../../../app/i18n.js";
-import { arcRequest } from "../chat/use-arc-chat.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
+import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
-import "./arc-memory-panel.css";
+import "../../../styles/arc/workspace/arc-memory-panel.css";
 
 type Memory = {
   id: string;
@@ -37,7 +37,7 @@ export function ArcMemoryPanel() {
     const controller = new AbortController();
     void load(controller.signal).catch(() => {
       if (!controller.signal.aborted)
-        setError(tr("Could not load memory. Please retry.", "暂时无法获取记忆，请重试。"));
+        setError(tr("arc.workspace.arcMemoryPanel.couldNotLoadMemoryPleaseRetry"));
     });
     return () => controller.abort();
   }, [load, tr]);
@@ -56,13 +56,10 @@ export function ArcMemoryPanel() {
       const code = e instanceof Error ? e.message : "";
       setError(
         code === "ARC_MEMORY_DUPLICATE"
-          ? tr("This note is already saved.", "这条记忆已经存在。")
+          ? tr("arc.workspace.arcMemoryPanel.thisNoteIsAlreadySaved")
           : code === "ARC_MEMORY_DISABLED"
-            ? tr("Enable memory before adding a note.", "请先开启记忆，再添加内容。")
-            : tr(
-                "Could not save the change. Use a shorter note without passwords or API keys, then retry.",
-                "未能保存。请使用更短的内容，不要填写密码或 API 密钥，然后重试。",
-              ),
+            ? tr("arc.workspace.arcMemoryPanel.enableMemoryBeforeAddingANote")
+            : tr("arc.workspace.arcMemoryPanel.couldNotSaveTheChangeUse"),
       );
       return false;
     } finally {
@@ -83,12 +80,12 @@ export function ArcMemoryPanel() {
   }
   const label = (value: string) =>
     value === "preference"
-      ? tr("Preference", "偏好")
+      ? tr("arc.workspace.arcMemoryPanel.preference")
       : value === "project"
-        ? tr("Project", "项目")
+        ? tr("arc.workspace.arcMemoryPanel.project")
         : value === "work"
-          ? tr("Recent work", "近期工作")
-          : tr("Context", "背景");
+          ? tr("arc.workspace.arcMemoryPanel.recentWork")
+          : tr("arc.workspace.arcMemoryPanel.context");
   if (!data)
     return error ? (
       <section className="raSettingsSurface">
@@ -101,11 +98,11 @@ export function ArcMemoryPanel() {
               .catch(() => {})
           }
         >
-          {tr("Retry", "重试")}
+          {tr("arc.workspace.arcMemoryPanel.retry")}
         </button>
       </section>
     ) : (
-      <WorkspaceLoading label={tr("Loading memory…", "正在获取记忆…")} />
+      <WorkspaceLoading label={tr("arc.workspace.arcMemoryPanel.loadingMemory")} />
     );
   const memories = data.memories.filter(
     (m) => m.kind === kind && m.content.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
@@ -114,49 +111,44 @@ export function ArcMemoryPanel() {
     <div className="raSettingsSections arcMemoryPanel">
       <section className="raSettingsSurface arcMemorySwitch">
         <div>
-          <h3>{tr("Continuity across conversations", "让每次对话都接得上")}</h3>
-          <p>
-            {tr(
-              "Arc can reuse saved preferences, project context and recent work when you start another chat or choose a different model.",
-              "开始新对话或更换模型时，Arc 可以继续使用已保存的偏好、项目背景与近期工作。",
-            )}
-          </p>
+          <h3>{tr("arc.workspace.arcMemoryPanel.continuityAcrossConversations")}</h3>
+          <p>{tr("arc.workspace.arcMemoryPanel.arcCanReuseSavedPreferencesProject")}</p>
         </div>
         <button
           type="button"
           className="raSettingsButton"
           role="switch"
           aria-checked={data.enabled}
-          aria-label={tr("Personal memory", "个人记忆")}
+          aria-label={tr("arc.workspace.arcMemoryPanel.personalMemory")}
           disabled={busy}
           onClick={() => void action("memory/settings", "POST", { enabled: !data.enabled })}
         >
-          {data.enabled ? tr("On", "已开启") : tr("Off", "已关闭")}
+          {data.enabled
+            ? tr("arc.workspace.arcMemoryPanel.on")
+            : tr("arc.workspace.arcMemoryPanel.off")}
         </button>
       </section>
       <section className="raSettingsSurface">
-        <h3>{tr("What Arc keeps", "Arc 会记住什么")}</h3>
-        <p>
-          {tr(
-            "Useful notes and compact conversation recaps. Device access and current status come from your connected computers; your files stay where they are. Older recaps make room for new work.",
-            "有用的简短笔记与对话摘要。设备权限和当前状态来自已连接的电脑，文件保留在原处；较早的工作摘要会逐步让位于新工作。",
-          )}
-        </p>
+        <h3>{tr("arc.workspace.arcMemoryPanel.whatArcKeeps")}</h3>
+        <p>{tr("arc.workspace.arcMemoryPanel.usefulNotesAndCompactConversationRecaps")}</p>
         <p className="raSettingsPlanCaption">
-          {tr(
-            `${data.memories.filter((m) => m.kind === "fact").length} / ${data.limits.facts} personal notes · ${data.memories.filter((m) => m.kind === "work").length} / ${data.limits.work} recent recaps · ${(data.bytes / 1024).toFixed(1)} KB of text`,
-            `${data.memories.filter((m) => m.kind === "fact").length} / ${data.limits.facts} 条个人记忆 · ${data.memories.filter((m) => m.kind === "work").length} / ${data.limits.work} 条近期摘要 · ${(data.bytes / 1024).toFixed(1)} KB 文本`,
-          )}
+          {tr("arc.workspace.arcMemoryPanel.personalNotesRecentRecapsKbOf", {
+            length: data.memories.filter((m) => m.kind === "fact").length,
+            facts: data.limits.facts,
+            length2: data.memories.filter((m) => m.kind === "work").length,
+            work: data.limits.work,
+            toFixed: (data.bytes / 1024).toFixed(1),
+          })}
         </p>
       </section>
       <form className="raSettingsSurface arcMemoryForm" onSubmit={submit}>
         <h3>
           {editing
-            ? tr("Edit a memory", "编辑记忆")
-            : tr("Something worth remembering", "值得记住的事")}
+            ? tr("arc.workspace.arcMemoryPanel.editAMemory")
+            : tr("arc.workspace.arcMemoryPanel.somethingWorthRemembering")}
         </h3>
         <label htmlFor="arc-memory-content">
-          {tr("A preference or useful project fact", "一条偏好或有用的项目背景")}
+          {tr("arc.workspace.arcMemoryPanel.aPreferenceOrUsefulProjectFact")}
         </label>
         <textarea
           id="arc-memory-content"
@@ -164,20 +156,14 @@ export function ArcMemoryPanel() {
           onChange={(event) => setContent(event.target.value)}
           maxLength={600}
           required
-          placeholder={tr(
-            "For example: I prefer concise replies in English.",
-            "例如：请用简洁的中文回复我。",
-          )}
+          placeholder={tr("arc.workspace.arcMemoryPanel.forExampleIPreferConciseReplies")}
         />
         <p className="raSettingsPlanCaption">
-          {tr(
-            "Keep notes brief. Do not save passwords, API keys or other secrets.",
-            "请保持简短，不要保存密码、API 密钥或其他机密。",
-          )}
+          {tr("arc.workspace.arcMemoryPanel.keepNotesBriefDoNotSave")}
         </p>
         <div>
           <label htmlFor="arc-memory-category" className="srOnly">
-            {tr("Category", "分类")}
+            {tr("arc.workspace.arcMemoryPanel.category")}
           </label>
           <select
             id="arc-memory-category"
@@ -200,7 +186,7 @@ export function ArcMemoryPanel() {
                 setContent("");
               }}
             >
-              {tr("Cancel", "取消")}
+              {tr("arc.workspace.arcMemoryPanel.cancel")}
             </button>
           )}
           <button
@@ -213,7 +199,7 @@ export function ArcMemoryPanel() {
               new TextEncoder().encode(content).length > data.limits.factBytes
             }
           >
-            {tr("Save memory", "保存记忆")}
+            {tr("arc.workspace.arcMemoryPanel.saveMemory")}
           </button>
         </div>
       </form>
@@ -224,7 +210,7 @@ export function ArcMemoryPanel() {
       )}
       <section className="raSettingsSurface arcMemoryList">
         <div className="arcMemoryListHeader">
-          <div role="group" aria-label={tr("Memory type", "记忆类型")}>
+          <div role="group" aria-label={tr("arc.workspace.arcMemoryPanel.memoryType")}>
             {(["fact", "work"] as const).map((value) => (
               <button
                 type="button"
@@ -233,15 +219,15 @@ export function ArcMemoryPanel() {
                 onClick={() => setKind(value)}
               >
                 {value === "fact"
-                  ? tr("Personal notes", "个人记忆")
-                  : tr("Recent work", "近期工作")}
+                  ? tr("arc.workspace.arcMemoryPanel.personalNotes")
+                  : tr("arc.workspace.arcMemoryPanel.recentWork")}
               </button>
             ))}
           </div>
           <input
             type="search"
-            aria-label={tr("Search memory", "搜索记忆")}
-            placeholder={tr("Search notes…", "搜索记忆…")}
+            aria-label={tr("arc.workspace.arcMemoryPanel.searchMemory")}
+            placeholder={tr("arc.workspace.arcMemoryPanel.searchNotes")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -249,16 +235,10 @@ export function ArcMemoryPanel() {
         {!memories.length ? (
           <p className="arcMemoryEmpty">
             {query
-              ? tr("No matching notes.", "没有匹配的记忆。")
+              ? tr("arc.workspace.arcMemoryPanel.noMatchingNotes")
               : kind === "fact"
-                ? tr(
-                    "Add a note here, or ask Arc to remember something in chat.",
-                    "可以在这里添加，也可以在对话里让 Arc 记住一件事。",
-                  )
-                : tr(
-                    "Conversation recaps appear here after Arc finishes work.",
-                    "Arc 完成工作后，对话摘要会出现在这里。",
-                  )}
+                ? tr("arc.workspace.arcMemoryPanel.addANoteHereOrAsk")
+                : tr("arc.workspace.arcMemoryPanel.conversationRecapsAppearHereAfterArc")}
           </p>
         ) : (
           memories.map((memory) => (
@@ -278,7 +258,8 @@ export function ArcMemoryPanel() {
                       encodeURIComponent(memory.source_session_id)
                     }
                   >
-                    {tr("Source conversation", "来源对话")} <Icon name="arrowUpRight" size={12} />
+                    {tr("arc.workspace.arcMemoryPanel.sourceConversation")}{" "}
+                    <Icon name="arrowUpRight" size={12} />
                   </a>
                 )}
                 <span />
@@ -302,7 +283,7 @@ export function ArcMemoryPanel() {
                       )?.focus();
                     }}
                   >
-                    {tr("Edit", "编辑")}
+                    {tr("arc.workspace.arcMemoryPanel.edit")}
                   </button>
                 )}
                 <button
@@ -310,7 +291,7 @@ export function ArcMemoryPanel() {
                   className="raSettingsButton"
                   disabled={busy}
                   onClick={() => void action("memory/" + encodeURIComponent(memory.id), "DELETE")}
-                  aria-label={tr("Delete memory", "删除记忆")}
+                  aria-label={tr("arc.workspace.arcMemoryPanel.deleteMemory")}
                 >
                   <Icon name="trash" size={15} />
                 </button>
@@ -320,27 +301,22 @@ export function ArcMemoryPanel() {
         )}
       </section>
       <section className="raSettingsSurface">
-        <h3>{tr("Your memory, your control", "记忆由你掌控")}</h3>
-        <p>
-          {tr(
-            "Turning memory off stops new saves and recall. Clearing removes saved notes and recaps. Chat history is managed separately. Existing model requests cannot be recalled after they have been sent.",
-            "关闭后将停止保存和调用记忆。清除会删除已保存的个人记忆和工作摘要；聊天记录独立管理，已经发送给模型的请求无法撤回。",
-          )}
-        </p>
+        <h3>{tr("arc.workspace.arcMemoryPanel.yourMemoryYourControl")}</h3>
+        <p>{tr("arc.workspace.arcMemoryPanel.turningMemoryOffStopsNewSaves")}</p>
         {clear ? (
           <div
             className="arcMemoryClear"
             role="group"
-            aria-label={tr("Confirm clearing memory", "确认清除记忆")}
+            aria-label={tr("arc.workspace.arcMemoryPanel.confirmClearingMemory")}
           >
-            <span>{tr("Clear all saved memory?", "清除所有已保存记忆？")}</span>
+            <span>{tr("arc.workspace.arcMemoryPanel.clearAllSavedMemory")}</span>
             <button
               type="button"
               className="raSettingsButton"
               disabled={busy}
               onClick={() => setClear(false)}
             >
-              {tr("Cancel", "取消")}
+              {tr("arc.workspace.arcMemoryPanel.cancel")}
             </button>
             <button
               type="button"
@@ -358,7 +334,7 @@ export function ArcMemoryPanel() {
                 )
               }
             >
-              {tr("Clear all", "全部清除")}
+              {tr("arc.workspace.arcMemoryPanel.clearAll")}
             </button>
           </div>
         ) : (
@@ -368,7 +344,7 @@ export function ArcMemoryPanel() {
             disabled={busy || !data.memories.length}
             onClick={() => setClear(true)}
           >
-            {tr("Clear saved memory", "清除已保存记忆")}
+            {tr("arc.workspace.arcMemoryPanel.clearSavedMemory")}
           </button>
         )}
       </section>

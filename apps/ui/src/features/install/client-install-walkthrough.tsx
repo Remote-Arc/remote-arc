@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
-import "./client-install-walkthrough.css";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/install/client-install-walkthrough.css";
 
 type Client = "claude" | "gemini";
 type StepKind =
@@ -65,94 +65,52 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
   }[] = [
     {
       kind: "add",
-      group: tr("SET UP", "添加连接"),
-      title: tr("Add a custom connector", "添加自定义连接器"),
-      detail: tr(
-        "In Claude, open Customize → Connectors. Click + Add in the top-right corner and choose Add custom connector. Name it Remote Arc and paste the MCP URL above, then Continue.",
-        "在 Claude 的 Customize → Connectors 页面，点击右上角 + Add → Add custom connector。名称填写 Remote Arc，粘贴上面的 MCP 地址并点击 Continue。",
-      ),
-      note: tr(
-        "The URL must end in /mcp. Do not paste an npx command.",
-        "URL 必须包含 /mcp；不要填入 npx 命令。",
-      ),
+      group: tr("install.clientInstallWalkthrough.setUp"),
+      title: tr("install.clientInstallWalkthrough.addACustomConnector"),
+      detail: tr("install.clientInstallWalkthrough.inClaudeOpenCustomizeConnectorsClick"),
+      note: tr("install.clientInstallWalkthrough.theUrlMustEndInMcp"),
     },
     {
       kind: "auth",
-      group: tr("SET UP", "添加连接"),
-      title: tr("Choose OAuth sign-in", "选择 OAuth 登录"),
-      detail: tr(
-        "Select Sign in now under Authentication, then Use Claude's published identity under OAuth client (recommended). Click Add.",
-        "Authentication 选择 Sign in now；OAuth client 选择 Use Claude's published identity（推荐）。最后点击 Add。",
-      ),
-      note: tr(
-        "Do not choose No sign-in just because Claude labels it Detected. Remote Arc requires account authorization.",
-        "即使 No sign-in 显示 Detected，也不要选它。Remote Arc 需要账户 OAuth 授权。",
-      ),
+      group: tr("install.clientInstallWalkthrough.setUp"),
+      title: tr("install.clientInstallWalkthrough.chooseOauthSignIn"),
+      detail: tr("install.clientInstallWalkthrough.selectSignInNowUnderAuthentication"),
+      note: tr("install.clientInstallWalkthrough.doNotChooseNoSignIn"),
     },
     {
       kind: "connect",
-      group: tr("SET UP", "添加连接"),
-      title: tr("Connect your Remote Arc account", "连接 Remote Arc 账户"),
-      detail: tr(
-        "Open the new Remote Arc connector and click Connect. Complete the Remote Arc authorization in the browser.",
-        "打开新建的 Remote Arc Connector，点击 Connect，在浏览器中完成 Remote Arc 账户登录与授权。",
-      ),
-      note: tr(
-        "Connecting the account does not pair your computer. Keep the Remote Arc agent online on the device you want to use.",
-        "登录账户不等于电脑已配对。目标设备还需要保持 Remote Arc Agent 在线。",
-      ),
+      group: tr("install.clientInstallWalkthrough.setUp"),
+      title: tr("install.clientInstallWalkthrough.connectYourRemoteArcAccount"),
+      detail: tr("install.clientInstallWalkthrough.openTheNewRemoteArcConnector"),
+      note: tr("install.clientInstallWalkthrough.connectingTheAccountDoesNotPair"),
     },
     {
       kind: "tools",
-      group: tr("PERMISSIONS", "工具权限"),
-      title: tr("Review tool permissions", "检查工具权限"),
-      detail: tr(
-        "After connection, Claude shows the Remote Arc tools. Choose whether it asks before individual tool calls. Keep approval on for sensitive actions.",
-        "连接后，Claude 会列出 Remote Arc 工具。你可以设置每个工具是否需要 Claude 端授权；敏感操作建议保留审批。",
-      ),
-      note: tr(
-        "Claude's tool permissions do not override Remote Arc's device-side Safety Guard or workspace restrictions.",
-        "Claude 端权限不会绕过 Remote Arc 设备端 Safety Guard 或 Workspace 限制。",
-      ),
+      group: tr("install.clientInstallWalkthrough.permissions"),
+      title: tr("install.clientInstallWalkthrough.reviewToolPermissions"),
+      detail: tr("install.clientInstallWalkthrough.afterConnectionClaudeShowsTheRemote"),
+      note: tr("install.clientInstallWalkthrough.claudeSToolPermissionsDoNot"),
     },
     {
       kind: "approval",
-      group: tr("TRY IT", "开始使用"),
-      title: tr("Approve the first tool call", "批准第一次工具调用"),
-      detail: tr(
-        "Enable Remote Arc from the chat’s + → Connectors menu, then ask Claude to use it. Review any tool approval shown before the first call.",
-        "在对话的 ＋ → Connectors 菜单中启用 Remote Arc，再让 Claude 使用它。首次调用时检查出现的工具授权提示。",
-      ),
-      note: tr(
-        "For a safer first test, start with read-only operations such as listing devices.",
-        "第一次测试建议从列设备等只读操作开始。",
-      ),
+      group: tr("install.clientInstallWalkthrough.tryIt"),
+      title: tr("install.clientInstallWalkthrough.approveTheFirstToolCall"),
+      detail: tr("install.clientInstallWalkthrough.enableRemoteArcFromTheChat"),
+      note: tr("install.clientInstallWalkthrough.forASaferFirstTestStart"),
     },
     {
       kind: "running",
-      group: tr("TRY IT", "开始使用"),
-      title: tr("Let Claude work on your computer", "让 Claude 开始执行"),
-      detail: tr(
-        "For example, ask Claude why your Windows C: drive is using space. Remote Arc can inspect permitted folders without modifying them.",
-        "例如，让 Claude 分析 Windows C 盘空间占用。Remote Arc 可以在授权范围内只读检查目录，而无需修改文件。",
-      ),
-      note: tr(
-        "Disk scans can take a while. A slow response does not mean the connection failed.",
-        "磁盘扫描可能需要一点时间，响应较慢不代表连接失败。",
-      ),
+      group: tr("install.clientInstallWalkthrough.tryIt"),
+      title: tr("install.clientInstallWalkthrough.letClaudeWorkOnYourComputer"),
+      detail: tr("install.clientInstallWalkthrough.forExampleAskClaudeWhyYour"),
+      note: tr("install.clientInstallWalkthrough.diskScansCanTakeAWhile"),
     },
     {
       kind: "result",
-      group: tr("TRY IT", "开始使用"),
-      title: tr("Review the results", "查看执行结果"),
-      detail: tr(
-        "Claude returns a folder-by-folder breakdown. Confirm that the result is read-only before approving any cleanup or changes.",
-        "Claude 会汇总各目录占用空间。要清理文件之前，先确认结果并单独审核任何写入操作。",
-      ),
-      note: tr(
-        "The example numbers are illustrative, not a live scan of your device.",
-        "示例数值仅用于说明，并非你的设备实时扫描结果。",
-      ),
+      group: tr("install.clientInstallWalkthrough.tryIt"),
+      title: tr("install.clientInstallWalkthrough.reviewTheResults"),
+      detail: tr("install.clientInstallWalkthrough.claudeReturnsAFolderByFolder"),
+      note: tr("install.clientInstallWalkthrough.theExampleNumbersAreIllustrativeNot"),
     },
   ];
   const geminiSteps: {
@@ -164,68 +122,38 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
   }[] = [
     {
       kind: "gemini-url",
-      group: tr("CONNECT", "添加连接"),
-      title: tr("Add the Remote Arc MCP URL", "添加 Remote Arc MCP 地址"),
-      detail: tr(
-        "In Gemini on the web, open Settings → Connected Apps (sometimes under Personal Intelligence). Under Custom apps, add https://mcp.remotearc.app/mcp and select Next.",
-        "在 Gemini 网页版进入 Settings → Connected Apps（部分账号在 Personal Intelligence 下），在 Custom apps 中添加 https://mcp.remotearc.app/mcp 并点击 Next。",
-      ),
-      note: tr(
-        "Enter the complete HTTPS URL including /mcp. No API key or local command is needed in Gemini.",
-        "填写包含 /mcp 的完整 HTTPS 地址；Gemini 中不需要 API Key 或本地命令。",
-      ),
+      group: tr("install.clientInstallWalkthrough.connect"),
+      title: tr("install.clientInstallWalkthrough.addTheRemoteArcMcpUrl"),
+      detail: tr("install.clientInstallWalkthrough.inGeminiOnTheWebOpen"),
+      note: tr("install.clientInstallWalkthrough.enterTheCompleteHttpsUrlIncluding"),
     },
     {
       kind: "gemini-auth",
-      group: tr("AUTHORIZE", "授权连接"),
-      title: tr("Review Google account linking", "核对 Google 账户关联授权"),
-      detail: tr(
-        "Google displays the account linking permission screen. Read the requested scopes carefully before proceeding with Remote Arc authorization.",
-        "Google 会展示账户关联与权限确认页面。继续授权 Remote Arc 前，先核对页面列出的权限范围。",
-      ),
-      note: tr(
-        "Only authorize a connector you trust. Google explicitly warns that custom connected apps have not been reviewed.",
-        "只授权你信任的连接器；Google 会明确提示自定义连接器未经审核。",
-      ),
+      group: tr("install.clientInstallWalkthrough.authorize"),
+      title: tr("install.clientInstallWalkthrough.reviewGoogleAccountLinking"),
+      detail: tr("install.clientInstallWalkthrough.googleDisplaysTheAccountLinkingPermission"),
+      note: tr("install.clientInstallWalkthrough.onlyAuthorizeAConnectorYouTrust"),
     },
     {
       kind: "gemini-connect",
-      group: tr("CONNECT", "完成连接"),
-      title: tr("Name and connect the custom app", "命名并连接自定义 App"),
-      detail: tr(
-        "After linking, name the custom app Remote Arc. Review the available MCP actions, then select Connect.",
-        "完成账户关联后将自定义应用命名为 Remote Arc，核对列出的 MCP 工具，然后点击 Connect。",
-      ),
-      note: tr(
-        "Visible actions reflect the MCP server, not blanket permission to bypass the local device policy.",
-        "列出的工具来自 MCP 服务，不代表可以绕过设备端权限策略。",
-      ),
+      group: tr("install.clientInstallWalkthrough.connect2"),
+      title: tr("install.clientInstallWalkthrough.nameAndConnectTheCustomApp"),
+      detail: tr("install.clientInstallWalkthrough.afterLinkingNameTheCustomApp"),
+      note: tr("install.clientInstallWalkthrough.visibleActionsReflectTheMcpServer"),
     },
     {
       kind: "gemini-use",
-      group: tr("START", "开始使用"),
-      title: tr("Select Remote Arc with @", "用 @ 选择 Remote Arc"),
-      detail: tr(
-        "In a Gemini chat, enter @ and select Remote Arc. Some versions also offer Use now from the custom app details.",
-        "在 Remote Arc 连接器详情页打开更多菜单，用 @ 选择 Remote Arc，即可在 Gemini 中开始使用。",
-      ),
-      note: tr(
-        "Keep your computer online with npx remotelink before requesting device tools.",
-        "调用设备工具前，请确保目标电脑正在运行 npx remotelink 并在线。",
-      ),
+      group: tr("install.clientInstallWalkthrough.start"),
+      title: tr("install.clientInstallWalkthrough.selectRemoteArcWith"),
+      detail: tr("install.clientInstallWalkthrough.inAGeminiChatEnterAnd"),
+      note: tr("install.clientInstallWalkthrough.keepYourComputerOnlineWithNpx"),
     },
     {
       kind: "gemini-ready",
-      group: tr("TRY IT", "验证连接"),
-      title: tr("Try a read-only task in Gemini", "在 Gemini 中进行只读测试"),
-      detail: tr(
-        "Ask Gemini to list your paired Remote Arc devices and available tools. Start with read-only operations to confirm the connector is working.",
-        "让 Gemini 列出已配对的 Remote Arc 设备和可用工具，先用只读操作确认连接正常。",
-      ),
-      note: tr(
-        "A connected app still needs an online, explicitly paired device for real computer access.",
-        "连接器显示成功后，仍需要电脑在线并完成设备配对才能操作真实电脑。",
-      ),
+      group: tr("install.clientInstallWalkthrough.tryIt2"),
+      title: tr("install.clientInstallWalkthrough.tryAReadOnlyTaskIn"),
+      detail: tr("install.clientInstallWalkthrough.askGeminiToListYourPaired"),
+      note: tr("install.clientInstallWalkthrough.aConnectedAppStillNeedsAn"),
     },
   ];
   const steps = client === "claude" ? claudeSteps : geminiSteps;
@@ -240,16 +168,11 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
     <div className="claudeWalkthrough">
       <div className="claudeGuideIntro">
         <div>
-          <span className="eyebrow">{tr("REAL SCREENSHOT WALKTHROUGH", "真实截图操作指南")}</span>
-          <h3>
-            {tr("Set up Remote Arc in " + clientName, "在 " + clientName + " 中连接 Remote Arc")}
-          </h3>
-          <p>
-            {tr(
-              "Step-by-step with original screenshots. Select a step above the image or open it at full size.",
-              "全部使用真实界面截图。点击顶部步骤切换，点击截图放大或查看原始尺寸。",
-            )}
-          </p>
+          <span className="eyebrow">
+            {tr("install.clientInstallWalkthrough.realScreenshotWalkthrough")}
+          </span>
+          <h3>{tr("install.clientInstallWalkthrough.setUpRemoteArcIn", { clientName })}</h3>
+          <p>{tr("install.clientInstallWalkthrough.stepByStepWithOriginalScreenshots")}</p>
         </div>
         <span className="claudeGuideCount" aria-live="polite">
           {String(selected + 1).padStart(2, "0")} <span>/ {String(count).padStart(2, "0")}</span>
@@ -258,7 +181,7 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
       <div className="claudeGuideLayout">
         <nav
           className="claudeGuideNav"
-          aria-label={tr(clientName + " installation steps", clientName + " 安装步骤")}
+          aria-label={tr("install.clientInstallWalkthrough.installationSteps", { clientName })}
         >
           {steps.map((item, index) => (
             <button
@@ -279,7 +202,7 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
         <div className="claudeGuideMain">
           <div className="claudeGuideText">
             <span>
-              {tr("STEP", "步骤")} {String(selected + 1).padStart(2, "0")}
+              {tr("install.clientInstallWalkthrough.step")} {String(selected + 1).padStart(2, "0")}
             </span>
             <h4>{step.title}</h4>
             <p>{step.detail}</p>
@@ -288,11 +211,11 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
             className="claudeGuidePreview"
             type="button"
             onClick={() => setExpanded(true)}
-            aria-label={tr("Enlarge the original screenshot", "放大真实截图")}
+            aria-label={tr("install.clientInstallWalkthrough.enlargeTheOriginalScreenshot")}
           >
             <GuideScreenshot client={client} src={src} alt={step.title} />
             <span className="claudeGuidePreviewCaption">
-              ↗ {tr("Click to enlarge screenshot", "点击查看大图")}
+              ↗ {tr("install.clientInstallWalkthrough.clickToEnlargeScreenshot")}
             </span>
           </button>
           <p className="claudeGuideHint">
@@ -301,7 +224,7 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
           </p>
           <div className="claudeGuideControls">
             <button type="button" onClick={() => move(selected - 1)} disabled={selected === 0}>
-              ← {tr("Previous", "上一步")}
+              ← {tr("install.clientInstallWalkthrough.previous")}
             </button>
             <span className="claudeGuideProgress" aria-hidden="true">
               <i style={{ width: ((selected + 1) / count) * 100 + "%" }} />
@@ -311,7 +234,7 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
               onClick={() => move(selected + 1)}
               disabled={selected === count - 1}
             >
-              {tr("Next step", "下一步")} →
+              {tr("install.clientInstallWalkthrough.nextStep")} →
             </button>
           </div>
         </div>
@@ -331,12 +254,12 @@ export function ClientInstallWalkthrough({ client }: { client: Client }) {
               </strong>
               <div className="claudeGuideModalActions">
                 <a href={src} target="_blank" rel="noopener noreferrer">
-                  {tr("Open original ↗", "查看原图 ↗")}
+                  {tr("install.clientInstallWalkthrough.openOriginal")}
                 </a>
                 <button
                   type="button"
                   onClick={() => setExpanded(false)}
-                  aria-label={tr("Close", "关闭")}
+                  aria-label={tr("install.clientInstallWalkthrough.close")}
                 >
                   ×
                 </button>

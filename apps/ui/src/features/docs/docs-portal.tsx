@@ -15,14 +15,14 @@ import { DOC_TOPICS, docTopic } from "../../../../../packages/docs/src/catalog.j
 import { Documentation } from "./product-docs.js";
 import { SystemOverview } from "./docs-system-overview.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
-import { useI18n } from "../../app/i18n.js";
-import "./docs-portal.css";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/docs/docs-portal.css";
 const groups = [
-  { id: "start", en: "Get started", zh: "开始使用" },
-  { id: "work", en: "Get work done", zh: "执行工作" },
-  { id: "understand", en: "Understand the platform", zh: "了解平台" },
-  { id: "reference", en: "Engineering reference", zh: "工程参考" },
-];
+  { id: "start", label: "docs.docsPortal.group.start" },
+  { id: "work", label: "docs.docsPortal.group.work" },
+  { id: "understand", label: "docs.docsPortal.group.understand" },
+  { id: "reference", label: "docs.docsPortal.group.reference" },
+] as const;
 export function DocsPortal({ path }: { path: string }) {
   const { tr, locale } = useI18n(),
     [query, setQuery] = useState(""),
@@ -65,47 +65,37 @@ export function DocsPortal({ path }: { path: string }) {
       <main className="docsHub">
         <header>
           <span className="eyebrow">REMOTE ARC / DOCUMENTATION</span>
-          <h1>{tr("From your first connection to real work.", "从首次连接，到完成工作。")}</h1>
-          <p>
-            {tr(
-              "Start with Arc or Connect, then learn how Apps, Skills, memory and Tasks turn a request into a result.",
-              "从 Arc 或 Connect 开始，了解 Apps、Skills、记忆与 Tasks 如何把需求变成结果。",
-            )}
-          </p>
+          <h1>{tr("docs.docsPortal.fromYourFirstConnectionToReal")}</h1>
+          <p>{tr("docs.docsPortal.startWithArcOrConnectThen")}</p>
         </header>
         <div className="docsHubStart">
           <div>
-            <span>{tr("START HERE", "从这里开始")}</span>
-            <h2>{tr("Your goal. One connected workspace.", "一个工作空间，推进你的目标。")}</h2>
-            <p>
-              {tr(
-                "Use hosted Arc, or bring your own AI through Connect. Choose the guide for the way you work.",
-                "使用托管 Arc，或通过 Connect 接入已有 AI，按你的工作方式开始。",
-              )}
-            </p>
+            <span>{tr("docs.docsPortal.startHere")}</span>
+            <h2>{tr("docs.docsPortal.yourGoalOneConnectedWorkspace")}</h2>
+            <p>{tr("docs.docsPortal.useHostedArcOrBringYour")}</p>
           </div>
           <a className="primaryButton" href={href("/docs/start-here")}>
-            {tr("Start with a goal", "从目标开始")} →
+            {tr("docs.docsPortal.startWithAGoal")} →
           </a>
         </div>
         <SystemOverview />
         <a className="docsHubToolsLink" href={href("/docs/tools")}>
-          {tr("Looking for a tool? Browse the complete directory", "想找工具？查看完整工具目录")} →
+          {tr("docs.docsPortal.lookingForAToolBrowseThe")} →
         </a>
         <label className="docsHubSearch">
-          {tr("Find a guide", "查找指南")}
+          {tr("docs.docsPortal.findAGuide")}
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={tr("Search documentation…", "搜索文档…")}
+            placeholder={tr("docs.docsPortal.searchDocumentation")}
           />
         </label>
         {groups.map((group) => {
           const items = filtered.filter((item) => item.group === group.id && item.listed !== false);
           return items.length ? (
             <section className="docsHubGroup" key={group.id}>
-              <h2>{tr(group.en, group.zh)}</h2>
+              <h2>{tr(group.label)}</h2>
               <div>
                 {items.map((item) => (
                   <a key={item.slug} href={topicHref(item.slug)}>
@@ -120,29 +110,27 @@ export function DocsPortal({ path }: { path: string }) {
             </section>
           ) : null;
         })}
-        {!filtered.length && (
-          <p role="status">{tr("No guides match your search.", "没有匹配的指南。")}</p>
-        )}
-        <nav className="docsHubReference" aria-label={tr("More references", "更多参考")}>
-          <a href={href("/docs/mcp")}>{tr("MCP reference", "MCP 参考")} ↗</a>
-          <a href={href("/docs/tools")}>{tr("All tools", "全部工具")} ↗</a>
-          <a href={href("/docs/long-running-work")}>{tr("Long-running work", "持续工作指南")} ↗</a>
-          <a href={href("/connect-ai")}>{tr("Installation guides", "安装指南")} ↗</a>
+        {!filtered.length && <p role="status">{tr("docs.docsPortal.noGuidesMatchYourSearch")}</p>}
+        <nav className="docsHubReference" aria-label={tr("docs.docsPortal.moreReferences")}>
+          <a href={href("/docs/mcp")}>{tr("docs.docsPortal.mcpReference")} ↗</a>
+          <a href={href("/docs/tools")}>{tr("docs.docsPortal.allTools")} ↗</a>
+          <a href={href("/docs/long-running-work")}>{tr("docs.docsPortal.longRunningWork")} ↗</a>
+          <a href={href("/connect-ai")}>{tr("docs.docsPortal.installationGuides")} ↗</a>
         </nav>
       </main>
     );
   if (!topic)
     return (
       <main className="technicalDoc">
-        <h1>{tr("Guide not found", "未找到指南")}</h1>
-        <a href={href("/docs")}>{tr("All documentation", "全部文档")} →</a>
+        <h1>{tr("docs.docsPortal.guideNotFound")}</h1>
+        <a href={href("/docs")}>{tr("docs.docsPortal.allDocumentation")} →</a>
       </main>
     );
   return (
     <div className="docsPortal">
       <aside>
         <a className="docsPortalHome" href={href("/docs")}>
-          ← {tr("All documentation", "全部文档")}
+          ← {tr("docs.docsPortal.allDocumentation")}
         </a>
         <button
           type="button"
@@ -151,17 +139,17 @@ export function DocsPortal({ path }: { path: string }) {
           aria-controls="docsTopicNavigation"
           onClick={() => setNavOpen((value) => !value)}
         >
-          {tr("Browse topics", "浏览主题")} <span aria-hidden="true">{navOpen ? "−" : "+"}</span>
+          {tr("docs.docsPortal.browseTopics")} <span aria-hidden="true">{navOpen ? "−" : "+"}</span>
         </button>
         <nav
           id="docsTopicNavigation"
           className="docsPortalTopicNav"
           data-expanded={navOpen}
-          aria-label={tr("Documentation topics", "文档主题")}
+          aria-label={tr("docs.docsPortal.documentationTopics")}
         >
           {groups.map((group) => (
             <div key={group.id}>
-              <strong>{tr(group.en, group.zh)}</strong>
+              <strong>{tr(group.label)}</strong>
               {DOC_TOPICS.filter((item) => item.group === group.id && item.listed !== false).map(
                 (item) => (
                   <a
@@ -182,7 +170,7 @@ export function DocsPortal({ path }: { path: string }) {
           <React.Suspense
             fallback={
               <main className="technicalDoc">
-                <p>{tr("Loading tools…", "正在加载工具…")}</p>
+                <p>{tr("docs.docsPortal.loadingTools")}</p>
               </main>
             }
           >
@@ -192,7 +180,7 @@ export function DocsPortal({ path }: { path: string }) {
           <React.Suspense
             fallback={
               <main className="technicalDoc">
-                <p>{tr("Loading document…", "正在加载文档…")}</p>
+                <p>{tr("docs.docsPortal.loadingDocument")}</p>
               </main>
             }
           >
@@ -201,7 +189,7 @@ export function DocsPortal({ path }: { path: string }) {
         ) : topic.sections ? (
           <main className="technicalDoc">
             <header className="articleHeader">
-              <span className="eyebrow">{tr("DOCUMENTATION", "文档")}</span>
+              <span className="eyebrow">{tr("docs.docsPortal.documentation")}</span>
               <h1>{tr(topic.title.en, topic.title.zh)}</h1>
               <p>{tr(topic.description.en, topic.description.zh)}</p>
             </header>
@@ -223,7 +211,7 @@ export function DocsPortal({ path }: { path: string }) {
           />
         )}
         {topic.links && (
-          <nav className="docsPortalRelated" aria-label={tr("Related guides", "相关指南")}>
+          <nav className="docsPortalRelated" aria-label={tr("docs.docsPortal.relatedGuides")}>
             {topic.links.map(([url, en, zh]) => (
               <a key={url} href={href(url!)}>
                 {tr(en!, zh!)} ↗
@@ -232,13 +220,13 @@ export function DocsPortal({ path }: { path: string }) {
           </nav>
         )}
         <footer className="docsPortalFooter">
-          <a href={href("/docs")}>← {tr("Documentation", "文档")}</a>
+          <a href={href("/docs")}>← {tr("docs.docsPortal.documentation2")}</a>
           <a
             href={href(
               "/docs/" + DOC_TOPICS[(DOC_TOPICS.indexOf(topic) + 1) % DOC_TOPICS.length]!.slug,
             )}
           >
-            {tr("Next guide", "下一篇指南")} →
+            {tr("docs.docsPortal.nextGuide")} →
           </a>
         </footer>
       </div>

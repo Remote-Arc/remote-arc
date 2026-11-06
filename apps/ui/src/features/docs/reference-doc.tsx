@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import type { DocTopic } from "../../../../../packages/docs/src/catalog.js";
 import { referenceLink } from "../../../../../packages/docs/src/reference-docs.js";
 import { SystemOverview } from "./docs-system-overview.js";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 
@@ -75,22 +75,15 @@ export function ReferenceDoc({ topic }: { topic: DocTopic }) {
   return (
     <main className="technicalDoc referenceDoc">
       <header className="articleHeader">
-        <span className="eyebrow">{tr("ENGINEERING REFERENCE", "工程参考")}</span>
+        <span className="eyebrow">{tr("docs.referenceDoc.engineeringReference")}</span>
         <h1>{tr(topic.title.en, topic.title.zh)}</h1>
         <p>{tr(topic.description.en, topic.description.zh)}</p>
-        {locale === "zh" && !topic.reference!.zh && <p>此文档目前只有英文版。</p>}
+        {locale === "zh" && !topic.reference!.zh && <p>{tr("docs.referenceDoc.englishOnly")}</p>}
       </header>
       {topic.slug === "engineering-architecture" && <SystemOverview />}
-      {failed && (
-        <p role="alert">
-          {tr(
-            "This document could not be loaded. Refresh the page to try again.",
-            "文档加载失败，请刷新页面重试。",
-          )}
-        </p>
-      )}
+      {failed && <p role="alert">{tr("docs.referenceDoc.thisDocumentCouldNotBeLoaded")}</p>}
       {!failed && content === null && (
-        <WorkspaceLoading label={tr("Loading document…", "正在加载文档…")} variant="rows" />
+        <WorkspaceLoading label={tr("docs.referenceDoc.loadingDocument")} variant="rows" />
       )}
       {content !== null && (
         <article className="technicalArticle">

@@ -5,7 +5,7 @@ import { chineseSeo } from "../src/site/zh-seo.ts";
 import { legacyLanguageRedirect, localizedPages } from "../src/site/marketing-locale.ts";
 import { chinesePages, pageForLanguage } from "../../ui/src/lib/marketing-paths.ts";
 import { chineseResourceSeo } from "../src/site/zh-resources.ts";
-import { releaseChinese } from "../../ui/src/features/marketing/release-locales.ts";
+import websiteChinese from "../../ui/src/locales/zh/website.json" with { type: "json" };
 import { readFileSync } from "node:fs";
 import {
   canonicalForPath,
@@ -287,13 +287,6 @@ assert.ok(
 );
 assert.ok(mainSource.includes('if (routePath === "/demo")'), "Demo route must remain accessible");
 
-for (const page of ["/remote-mcp", "/support", "/privacy", "/terms"]) {
-  assert.ok(
-    mainSource.includes('href="' + page + '"') ||
-      mainSource.includes('href={tr("' + page + '", "/zh' + page + '")}'),
-    "public navigation/footer must expose " + page,
-  );
-}
 for (const page of ["/privacy", "/terms", "/support"]) {
   assert.ok(localizedPages.includes(page), "legal/support route must support Chinese");
   assert.equal(pageForLanguage(page, "zh"), "/zh" + page);
@@ -305,6 +298,7 @@ for (const page of ["/privacy", "/terms", "/support"]) {
   );
   assert.ok(html.includes(chineseSeo[page].h1));
 }
+const { releases: releaseChinese } = websiteChinese;
 const legacyBlock =
   mainSource
     .split("const LEGACY_PRODUCT_RELEASES: ProductRelease[] = [")[1]

@@ -1,6 +1,28 @@
 import { test, expect } from "./fixtures";
 
-test("Changing Admin language preserves the email being edited", async ({ page }) => {
+test("Changing Admin language preserves the email being edited", async ({ page }, info) => {
+  const initial = info.project.metadata.language === "zh" ? "zh" : "en";
+  const next = initial === "en" ? "zh" : "en";
+  let markRequested = () => {};
+  let releasePack = () => {};
+  const requested = new Promise<void>((resolve) => {
+    markRequested = resolve;
+  });
+  const release = new Promise<void>((resolve) => {
+    releasePack = resolve;
+  });
+  const requests = new Set<string>();
+  page.on("request", (request) => {
+    const dictionary = new URL(request.url()).pathname.match(
+      /\/src\/locales\/((?:en|zh)\/\w+)\.json$/,
+    );
+    if (dictionary?.[1]) requests.add(dictionary[1]);
+  });
+  await page.route(new RegExp("/src/locales/" + next + "/admin\\.json(?:\\?|$)"), async (route) => {
+    markRequested();
+    await release;
+    await route.continue();
+  });
   await page.goto("/admin-preview?section=followups");
   await page.getByRole("button", { name: /Alex Chen/ }).click();
   const subject = page.getByRole("textbox", { name: /^(Subject|主题)$/ });
@@ -10,7 +32,17 @@ test("Changing Admin language preserves the email being edited", async ({ page }
   await message.fill(
     "Keep this carefully edited customer message when the interface language changes.",
   );
-  await page.locator(".adminPreferenceRow button").click();
+  expect([...requests].sort()).toEqual([initial + "/admin", initial + "/common"]);
+  try {
+    await page.locator(".adminPreferenceRow button").click();
+    await requested;
+    await expect(page.locator("html")).toHaveAttribute("lang", initial === "zh" ? "zh-CN" : "en");
+    await expect(subject).toHaveValue("Custom support follow-up");
+  } finally {
+    releasePack();
+  }
+  await expect(page.locator("html")).toHaveAttribute("lang", next === "zh" ? "zh-CN" : "en");
+  expect([...requests].sort()).toEqual(["en/admin", "en/common", "zh/admin", "zh/common"]);
   await expect(subject).toHaveValue("Custom support follow-up");
   await expect(message).toHaveValue(
     "Keep this carefully edited customer message when the interface language changes.",

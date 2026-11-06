@@ -51,7 +51,15 @@ try {
   response = await call(MCP + "/api/admin/operations");
   assert.equal(response.status, 404);
   assert.equal((await json(response)).error, "ADMIN_HOST_REQUIRED");
-  assert.equal(location(await call(MCP + "/monitor")), ADMIN + "/");
+  for (const origin of [MCP, AGENT]) {
+    for (const path of ["/monitor", "/dashboard/connect/monitor/"]) {
+      for (const method of ["GET", "HEAD"]) {
+        const retired = await call(origin + path, { method });
+        assert.equal(retired.status, 302);
+        assert.equal(location(retired), ADMIN + "/");
+      }
+    }
+  }
 
   // Canonical public URLs.
   assert.equal(location(await call("http://remotearc.app/docs")), SITE + "/docs");

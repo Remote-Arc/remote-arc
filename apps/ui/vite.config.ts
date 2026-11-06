@@ -1,7 +1,15 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import {
+  chooseLocale,
+  chooseLocaleSurface,
+  LOCALE_KEY,
+  workspacePaths,
+} from "./src/locales/locale-preference.js";
+import { isWebsiteLocation } from "./src/lib/website-origin.js";
 import { previewRuntimeConfig } from "./src/preview/preview-config.js";
 
 const cliPackage = JSON.parse(
@@ -46,49 +54,118 @@ if (candidateMatch) {
   );
 }
 
-export default defineConfig(({ mode }) => ({
-  resolve: {
-    // The preview fetch mock embeds every fixture and the full Skill catalog
-    // (several MB). Outside VITE_UI_PREVIEW builds, main.tsx gets a no-op.
-    alias:
-      (process.env.VITE_UI_PREVIEW ?? loadEnv(mode, process.cwd(), "VITE_").VITE_UI_PREVIEW) === "1"
-        ? []
-        : [
-            {
-              find: /^\.\/preview\/preview\.js$/,
-              replacement: fileURLToPath(
-                new URL("./src/preview/preview-disabled.ts", import.meta.url),
-              ),
-            },
-          ],
-  },
-  plugins: [
-    react(),
-    {
-      name: "local-runtime-config",
-      configureServer(server) {
-        server.middlewares.use("/api/runtime-config", (request, response) => {
-          if (!["GET", "HEAD"].includes(request.method || "")) {
-            response.writeHead(405, { allow: "GET, HEAD" });
-            response.end();
-            return;
-          }
-          const env = { ...loadEnv(mode, process.cwd(), ""), ...process.env };
-          response.writeHead(200, {
-            "content-type": "application/json",
-            "cache-control": "no-store",
-          });
-          response.end(
-            request.method === "HEAD"
-              ? undefined
-              : JSON.stringify(previewRuntimeConfig(env, "development")),
-          );
-        });
-      },
+export default defineConfig(({ mode }) => {
+  let localePreloader: string | undefined;
+  return {
+    resolve: {
+      // The preview fetch mock embeds every fixture and the full Skill catalog
+      // (several MB). Outside VITE_UI_PREVIEW builds, main.tsx gets a no-op.
+      alias:
+        (process.env.VITE_UI_PREVIEW ?? loadEnv(mode, process.cwd(), "VITE_").VITE_UI_PREVIEW) ===
+        "1"
+          ? []
+          : [
+              {
+                find: /^\.\/preview\/preview\.js$/,
+                replacement: fileURLToPath(
+                  new URL("./src/preview/preview-disabled.ts", import.meta.url),
+                ),
+              },
+            ],
     },
-  ],
-  define: {
-    __REMOTEARC_CLI_VERSION__: JSON.stringify(changelogReleases[0]?.version),
-    __REMOTEARC_RELEASES__: JSON.stringify(changelogReleases),
-  },
-}));
+    plugins: [
+      react(),
+      {
+        name: "preload-active-locale",
+        generateBundle: {
+          order: "pre",
+          handler(_options, bundle) {
+            const chunks = Object.values(bundle).filter((file) => file.type === "chunk");
+            const dictionaries = Object.fromEntries(
+              ["en", "zh"].map((locale) => [
+                locale,
+                Object.fromEntries(
+                  ["common", "website", "dashboard", "admin"].map((surface) => {
+                    const chunk = chunks.find((file) =>
+                      file.facadeModuleId?.endsWith("/locales/" + locale + "/" + surface + ".ts"),
+                    );
+                    if (!chunk) throw new Error("Missing locale chunk: " + locale + "/" + surface);
+                    return [surface, "/" + chunk.fileName];
+                  }),
+                ),
+              ]),
+            );
+            const preview =
+              (process.env.VITE_UI_PREVIEW ??
+                loadEnv(mode, process.cwd(), "VITE_").VITE_UI_PREVIEW) === "1";
+            const source = [
+              "(() => {",
+              "const chooseLocale = " + chooseLocale.toString() + ";",
+              "const chooseSurface = " + chooseLocaleSurface.toString() + ";",
+              "const routes = " + JSON.stringify(workspacePaths) + ";",
+              "const isWebsiteLocation = " + isWebsiteLocation.toString() + ";",
+              "let saved = null;",
+              "try { saved = localStorage.getItem(" + JSON.stringify(LOCALE_KEY) + "); } catch {}",
+              "const locale = chooseLocale(location.pathname, location.search, saved,",
+              "navigator.languages?.[0] || navigator.language,",
+              "isWebsiteLocation(location.hostname, location.port), routes);",
+              "const surface = chooseSurface(location.pathname, location.hostname, " +
+                preview +
+                ", routes);",
+              "const packs = " + JSON.stringify(dictionaries) + "[locale];",
+              "for (const href of [packs.common, packs[surface]]) {",
+              '  const preload = document.createElement("link");',
+              '  preload.rel = "modulepreload";',
+              "  preload.href = href;",
+              "  document.head.append(preload);",
+              "}",
+              "})();",
+            ].join("\n");
+            const hash = createHash("sha256").update(source).digest("hex").slice(0, 16);
+            localePreloader = "assets/locale-preload-" + hash + ".js";
+            this.emitFile({ type: "asset", fileName: localePreloader, source });
+          },
+        },
+        transformIndexHtml: {
+          order: "post",
+          handler(_html, { bundle }) {
+            if (!bundle || !localePreloader) return [];
+            return [
+              {
+                tag: "script",
+                attrs: { async: true, src: "/" + localePreloader },
+                injectTo: "head-prepend",
+              },
+            ];
+          },
+        },
+      },
+      {
+        name: "local-runtime-config",
+        configureServer(server) {
+          server.middlewares.use("/api/runtime-config", (request, response) => {
+            if (!["GET", "HEAD"].includes(request.method || "")) {
+              response.writeHead(405, { allow: "GET, HEAD" });
+              response.end();
+              return;
+            }
+            const env = { ...loadEnv(mode, process.cwd(), ""), ...process.env };
+            response.writeHead(200, {
+              "content-type": "application/json",
+              "cache-control": "no-store",
+            });
+            response.end(
+              request.method === "HEAD"
+                ? undefined
+                : JSON.stringify(previewRuntimeConfig(env, "development")),
+            );
+          });
+        },
+      },
+    ],
+    define: {
+      __REMOTEARC_CLI_VERSION__: JSON.stringify(changelogReleases[0]?.version),
+      __REMOTEARC_RELEASES__: JSON.stringify(changelogReleases),
+    },
+  };
+});

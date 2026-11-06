@@ -1,11 +1,11 @@
 import { useId, useState, type CSSProperties, type FormEvent } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 import { arcChatHref } from "../../../../../../packages/docs/src/arc-use-cases.js";
-import "./arc-connected-previews.css";
-import "./arc-connected-workspace.css";
-import "./connected-video-edit.css";
+import "../../../styles/marketing/arc/arc-connected-previews.css";
+import "../../../styles/marketing/arc/arc-connected-workspace.css";
+import "../../../styles/marketing/arc/connected-video-edit.css";
 
 export const previewDevices = [
   {
@@ -42,10 +42,10 @@ export function DeviceFleetPreview({ compact = false }: { compact?: boolean }) {
       <div className="connectedFleetSummary">
         <span>
           <i className="connectedOnlineDot" />
-          {tr("3 online", "3 台在线")}
+          {tr("marketing.arc.arcConnectedPreviews.online")}
         </span>
-        <span>{tr("1 offline", "1 台离线")}</span>
-        <span>{tr("4 devices", "4 台设备")}</span>
+        <span>{tr("marketing.arc.arcConnectedPreviews.offline")}</span>
+        <span>{tr("marketing.arc.arcConnectedPreviews.devices")}</span>
       </div>
       <div className="connectedDeviceList">
         {previewDevices.slice(0, compact ? 3 : 4).map((device) => (
@@ -63,18 +63,18 @@ export function DeviceFleetPreview({ compact = false }: { compact?: boolean }) {
               <small>
                 {device.system} ·{" "}
                 {device.state === "online"
-                  ? tr("Connected", "已连接")
-                  : tr("Last seen 2h ago", "2 小时前在线")}
+                  ? tr("marketing.arc.arcConnectedPreviews.connected")
+                  : tr("marketing.arc.arcConnectedPreviews.lastSeenHAgo")}
               </small>
             </div>
             <span className="connectedDeviceState">
               {device.state === "online" ? (
                 <>
                   <i className="connectedOnlineDot" />
-                  {tr("Online", "在线")}
+                  {tr("marketing.arc.arcConnectedPreviews.online2")}
                 </>
               ) : (
-                tr("Offline", "离线")
+                tr("marketing.arc.arcConnectedPreviews.offline2")
               )}
             </span>
           </div>
@@ -94,24 +94,38 @@ export function PerformancePreview({ compact = false }: { compact?: boolean }) {
         </span>
         <div>
           <strong>Build PC</strong>
-          <small>{tr("Performance snapshot", "性能快照")}</small>
+          <small>{tr("marketing.arc.arcConnectedPreviews.performanceSnapshot")}</small>
         </div>
         <span>
           <i className="connectedOnlineDot" />
-          {tr("Online", "在线")}
+          {tr("marketing.arc.arcConnectedPreviews.online2")}
         </span>
       </div>
       <div className="connectedMetrics">
         {[
           { label: "CPU", value: "68", unit: "%", width: 68 },
-          { label: tr("Memory", "内存"), value: "21.4", unit: "/ 64 GB", width: 33 },
-          { label: tr("Disk", "磁盘"), value: "426", unit: "GB free", width: 58 },
+          {
+            label: tr("marketing.arc.arcConnectedPreviews.memory"),
+            value: "21.4",
+            unit: "/ 64 GB",
+            width: 33,
+          },
+          {
+            label: tr("marketing.arc.arcConnectedPreviews.disk"),
+            value: "426",
+            unit: "GB free",
+            width: 58,
+          },
         ].map((metric) => (
           <div key={metric.label}>
             <small>{metric.label}</small>
             <strong>
               {metric.value}
-              <span>{metric.unit === "GB free" ? tr("GB free", "GB 可用") : metric.unit}</span>
+              <span>
+                {metric.unit === "GB free"
+                  ? tr("marketing.arc.arcConnectedPreviews.gbFree")
+                  : metric.unit}
+              </span>
             </strong>
             <span className="connectedMetricTrack">
               <i style={{ "--metric-width": metric.width + "%" } as CSSProperties} />
@@ -122,13 +136,13 @@ export function PerformancePreview({ compact = false }: { compact?: boolean }) {
       {!compact && (
         <div className="connectedChart">
           <div>
-            <span>{tr("CPU activity", "CPU 活动")}</span>
-            <span>{tr("Last 60 seconds · example", "最近 60 秒 · 示例")}</span>
+            <span>{tr("marketing.arc.arcConnectedPreviews.cpuActivity")}</span>
+            <span>{tr("marketing.arc.arcConnectedPreviews.lastSecondsExample")}</span>
           </div>
           <svg
             viewBox="0 0 500 100"
             role="img"
-            aria-label={tr("Example CPU activity chart", "CPU 活动示例图表")}
+            aria-label={tr("marketing.arc.arcConnectedPreviews.exampleCpuActivityChart")}
             preserveAspectRatio="none"
           >
             <path className="connectedChartGrid" d="M0 20H500M0 50H500M0 80H500" />
@@ -154,24 +168,18 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
   const [result, setResult] = useState(false);
   const projects = [
     {
-      name: tr("Website project", "官网项目"),
+      name: tr("marketing.arc.arcConnectedPreviews.websiteProject"),
       folder: "remote-arc",
-      task: tr(
-        "Fix the login button layout, then run the project tests.",
-        "修复登录按钮的布局，然后运行项目测试。",
-      ),
+      task: tr("marketing.arc.arcConnectedPreviews.fixTheLoginButtonLayoutThen"),
       output: "login-fix.md",
-      checks: tr("12 tests passed", "12 项测试通过"),
+      checks: tr("marketing.arc.arcConnectedPreviews.testsPassed"),
     },
     {
-      name: tr("Sales report", "销售报表"),
+      name: tr("marketing.arc.arcConnectedPreviews.salesReport"),
       folder: "sales-report",
-      task: tr(
-        "Summarize this month’s orders and generate an Excel report.",
-        "汇总本月订单，生成一份 Excel 销售报表。",
-      ),
+      task: tr("marketing.arc.arcConnectedPreviews.summarizeThisMonthSOrdersAnd"),
       output: "monthly-sales.xlsx",
-      checks: tr("Totals reconciled", "订单合计已核对"),
+      checks: tr("marketing.arc.arcConnectedPreviews.totalsReconciled"),
     },
   ];
   const current = projects[project]!;
@@ -182,12 +190,12 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
       <div className="connectedWorkspaceFlow">
         <div className="connectedWorkspaceStep">
           <span>01</span>
-          <strong>{tr("Choose a project", "选择项目")}</strong>
+          <strong>{tr("marketing.arc.arcConnectedPreviews.chooseAProject")}</strong>
         </div>
         <div
           className="connectedProjectChoices"
           role="group"
-          aria-label={tr("Example project", "示例项目")}
+          aria-label={tr("marketing.arc.arcConnectedPreviews.exampleProject")}
         >
           {projects.map((item, index) => (
             <button
@@ -206,12 +214,12 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
         </div>
         <div className="connectedWorkspaceStep">
           <span>02</span>
-          <strong>{tr("Choose the computer", "选择执行电脑")}</strong>
+          <strong>{tr("marketing.arc.arcConnectedPreviews.chooseTheComputer")}</strong>
         </div>
         <div
           className="connectedWorkspaceMachines"
           role="group"
-          aria-label={tr("Example workspace computer", "示例工作区电脑")}
+          aria-label={tr("marketing.arc.arcConnectedPreviews.exampleWorkspaceComputer")}
         >
           {(["mac", "windows"] as const).map((value) => (
             <button
@@ -238,12 +246,12 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
           <header>
             <Icon name="panel" size={14} />
             <code>{directory}</code>
-            <span>{tr("WORKSPACE", "当前工作区")}</span>
+            <span>{tr("marketing.arc.arcConnectedPreviews.workspace")}</span>
           </header>
           <div>
             <span className="connectedWorkspaceStep">
               <span>03</span>
-              <strong>{tr("Tell Arc what to do here", "交代这个项目里的任务")}</strong>
+              <strong>{tr("marketing.arc.arcConnectedPreviews.tellArcWhatToDoHere")}</strong>
             </span>
             <p>
               <img src="/remote-arc.svg" width={22} height={22} alt="Arc" />
@@ -254,7 +262,9 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
               type="button"
               onClick={() => setResult(!result)}
             >
-              {result ? tr("Back to task", "返回任务") : tr("See example result", "查看示例结果")}
+              {result
+                ? tr("marketing.arc.arcConnectedPreviews.backToTask")
+                : tr("marketing.arc.arcConnectedPreviews.seeExampleResult")}
               <Icon name={result ? "refresh" : "arrowUpRight"} size={13} />
             </button>
           </div>
@@ -270,12 +280,7 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
             ) : (
               <>
                 <Icon name="shield" size={14} />
-                <span>
-                  {tr(
-                    "Arc works in this project folder, with its own files and context.",
-                    "Arc 在这个项目目录里工作，文件和上下文随项目保留。",
-                  )}
-                </span>
+                <span>{tr("marketing.arc.arcConnectedPreviews.arcWorksInThisProjectFolder")}</span>
               </>
             )}
           </footer>
@@ -293,21 +298,21 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
       {[
         {
           name: "remote-arc",
-          detail: tr("App & website", "应用与网站"),
+          detail: tr("marketing.arc.arcConnectedPreviews.appWebsite"),
           path: "~/Projects/remote-arc",
           branch: "main",
           color: "blue",
         },
         {
           name: "design-system",
-          detail: tr("Components & brand", "组件与品牌"),
+          detail: tr("marketing.arc.arcConnectedPreviews.componentsBrand"),
           path: "~/Projects/design-system",
           branch: "design/v2",
           color: "violet",
         },
         {
           name: "research",
-          detail: tr("Notes & browser work", "笔记与浏览器任务"),
+          detail: tr("marketing.arc.arcConnectedPreviews.notesBrowserWork"),
           path: "~/Work/research",
           branch: "—",
           color: "green",
@@ -329,7 +334,7 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
       {!compact && (
         <div className="connectedWorkspaceNote">
           <Icon name="link" size={14} />
-          {tr("The right project. On the right computer.", "选对项目，交给合适的电脑。")}
+          {tr("marketing.arc.arcConnectedPreviews.theRightProjectOnTheRight")}
         </div>
       )}
     </div>
@@ -349,7 +354,7 @@ export function VideoEditingPreview() {
           <i />
         </span>
         <span>weekend-cut</span>
-        <small>{tr("LOCAL PROJECT", "本地项目")}</small>
+        <small>{tr("marketing.arc.arcConnectedPreviews.localProject")}</small>
       </header>
       <div className="connectedEditStage" data-format={portrait ? "portrait" : "landscape"}>
         <div className="connectedEditPicture" aria-hidden="true">
@@ -363,7 +368,7 @@ export function VideoEditingPreview() {
           <small>00:12 / 00:30</small>
         </div>
         <span className="connectedEditCaption">
-          {tr("Keep the moments that matter.", "留下值得记住的瞬间。")}
+          {tr("marketing.arc.arcConnectedPreviews.keepTheMomentsThatMatter")}
         </span>
       </div>
       <div className="connectedEditTracks">
@@ -372,7 +377,10 @@ export function VideoEditingPreview() {
           <span>00:15</span>
           <span>00:30</span>
         </div>
-        <div className="connectedEditClips" aria-label={tr("Three example clips", "三个示例片段")}>
+        <div
+          className="connectedEditClips"
+          aria-label={tr("marketing.arc.arcConnectedPreviews.threeExampleClips")}
+        >
           {["01", "02", "03"].map((clip, index) => (
             <span key={clip} data-clip={index}>
               <Icon name="panel" size={13} />
@@ -382,12 +390,12 @@ export function VideoEditingPreview() {
         </div>
         <div className="connectedEditSubtitles">
           <Icon name="chat" size={12} />
-          {tr("Subtitle track", "字幕轨道")}
+          {tr("marketing.arc.arcConnectedPreviews.subtitleTrack")}
           <span>00:00 — 00:30</span>
         </div>
       </div>
       <div className="connectedEditControls">
-        <div role="group" aria-label={tr("Video format", "视频画幅")}>
+        <div role="group" aria-label={tr("marketing.arc.arcConnectedPreviews.videoFormat")}>
           {[false, true].map((value) => (
             <button
               type="button"
@@ -403,7 +411,9 @@ export function VideoEditingPreview() {
           ))}
         </div>
         <button className="connectedEditReview" type="button" onClick={() => setReview(!review)}>
-          {review ? tr("Adjust the edit", "调整剪辑") : tr("Review export plan", "查看导出方案")}
+          {review
+            ? tr("marketing.arc.arcConnectedPreviews.adjustTheEdit")
+            : tr("marketing.arc.arcConnectedPreviews.reviewExportPlan")}
           <Icon name={review ? "refresh" : "arrowUpRight"} size={13} />
         </button>
       </div>
@@ -411,14 +421,10 @@ export function VideoEditingPreview() {
         <Icon name={review ? "check" : "device"} size={15} />
         <span>
           {review
-            ? tr(
-                `Export plan: 30s MP4 · ${portrait ? "1080 × 1920" : "1920 × 1080"} · subtitles.`,
-                `导出方案：30 秒 MP4 · ${portrait ? "1080 × 1920" : "1920 × 1080"} · 字幕。`,
-              )
-            : tr(
-                "Trim, combine and subtitle on your computer.",
-                "在你的电脑上裁剪、合并并添加字幕。",
-              )}
+            ? tr("marketing.arc.arcConnectedPreviews.exportPlanSMp4Subtitles", {
+                portrait: portrait ? "1080 × 1920" : "1920 × 1080",
+              })
+            : tr("marketing.arc.arcConnectedPreviews.trimCombineAndSubtitleOnYour")}
         </span>
       </div>
     </div>
@@ -433,9 +439,9 @@ export function SlackAgentPreview() {
   const [customQuestion, setCustomQuestion] = useState("");
   const [unsupported, setUnsupported] = useState(false);
   const questions = [
-    tr("How are my devices doing?", "我的设备现在怎么样？"),
-    tr("Check the performance of my Build PC.", "看看 Build PC 的性能情况。"),
-    tr("Show me my connected workspaces.", "查看我已连接的工作区。"),
+    tr("marketing.arc.arcConnectedPreviews.howAreMyDevicesDoing"),
+    tr("marketing.arc.arcConnectedPreviews.checkThePerformanceOfMyBuild"),
+    tr("marketing.arc.arcConnectedPreviews.showMeMyConnectedWorkspaces"),
   ];
   const select = (index: number) => {
     setScenario(index);
@@ -462,18 +468,18 @@ export function SlackAgentPreview() {
   return (
     <div
       className="slackAgentPreview"
-      aria-label={tr("Slack-style Remote Arc chat demo", "Slack 风格的 Remote Arc 对话演示")}
+      aria-label={tr("marketing.arc.arcConnectedPreviews.slackStyleRemoteArcChatDemo")}
     >
       <header className="slackTitlebar">
         <a
           href={localizedWebsiteHref("/integrations?provider=slack", locale)}
-          aria-label={tr("Explore Slack integration", "了解 Slack 集成")}
+          aria-label={tr("marketing.arc.arcConnectedPreviews.exploreSlackIntegration")}
         >
           <img src="/app-brands/slack.svg" width={16} height={16} alt="Slack" />
         </a>
         <span>
           <Icon name="search" size={12} />
-          {tr("Search your workspace", "搜索你的工作空间")}
+          {tr("marketing.arc.arcConnectedPreviews.searchYourWorkspace")}
         </span>
         <span className="connectedWindowDots" aria-hidden="true">
           <i />
@@ -489,12 +495,14 @@ export function SlackAgentPreview() {
           </div>
           <a href={localizedWebsiteHref("/arc", locale)}>
             <Icon name="inbox" size={14} />
-            {tr("Activity", "动态")}
+            {tr("marketing.arc.arcConnectedPreviews.activity")}
           </a>
-          <small>{tr("CHANNELS", "频道")}</small>
-          <span className="slackChannel"># {tr("general", "日常交流")}</span>
-          <span className="slackChannel"># {tr("device-ops", "设备运维")}</span>
-          <small>{tr("DIRECT MESSAGES", "私信")}</small>
+          <small>{tr("marketing.arc.arcConnectedPreviews.channels")}</small>
+          <span className="slackChannel"># {tr("marketing.arc.arcConnectedPreviews.general")}</span>
+          <span className="slackChannel">
+            # {tr("marketing.arc.arcConnectedPreviews.deviceOps")}
+          </span>
+          <small>{tr("marketing.arc.arcConnectedPreviews.directMessages")}</small>
           <div className="slackSelectedDm">
             <img src="/remote-arc.svg" alt="" width={17} height={17} />
             Remote Arc
@@ -502,7 +510,7 @@ export function SlackAgentPreview() {
           </div>
           <div className="slackSidebarFooter">
             <i className="connectedOnlineDot" />
-            {tr("Your fleet, one message away.", "一句话，连接你的设备。")}
+            {tr("marketing.arc.arcConnectedPreviews.yourFleetOneMessageAway")}
           </div>
         </aside>
         <div className="slackConversation">
@@ -515,7 +523,7 @@ export function SlackAgentPreview() {
                 <strong>Remote Arc</strong>
                 <small>
                   <i className="connectedOnlineDot" />
-                  {tr("Your personal agent", "你的个人智能体")}
+                  {tr("marketing.arc.arcConnectedPreviews.yourPersonalAgent")}
                 </small>
               </div>
             </a>
@@ -523,13 +531,13 @@ export function SlackAgentPreview() {
           </header>
           <div className="slackMessages" aria-live="polite">
             <div className="slackDayDivider">
-              <span>{tr("Today", "今天")}</span>
+              <span>{tr("marketing.arc.arcConnectedPreviews.today")}</span>
             </div>
             <div className="slackMessage">
               <span className="slackUserAvatar">Y</span>
               <div>
                 <div className="slackMessageAuthor">
-                  <strong>{tr("You", "你")}</strong>
+                  <strong>{tr("marketing.arc.arcConnectedPreviews.you")}</strong>
                   <time>9:41</time>
                 </div>
                 <p>{customQuestion || questions[scenario]}</p>
@@ -548,23 +556,13 @@ export function SlackAgentPreview() {
                 <p>
                   {unsupported
                     ? tr(
-                        "This preview supports device status, performance and workspaces. Open Arc to continue with your own request.",
-                        "此预览支持设备状态、性能和工作区。打开 Arc 可继续处理你的实际请求。",
+                        "marketing.arc.arcConnectedPreviews.thisPreviewSupportsDeviceStatusPerformance",
                       )
                     : scenario === 0
-                      ? tr(
-                          "Your fleet is looking good. Here’s the overview.",
-                          "设备集群状态良好，这是当前概览。",
-                        )
+                      ? tr("marketing.arc.arcConnectedPreviews.yourFleetIsLookingGoodHere")
                       : scenario === 1
-                        ? tr(
-                            "Here’s the latest snapshot for your Build PC.",
-                            "这是 Build PC 的最新性能快照。",
-                          )
-                        : tr(
-                            "Here are the workspaces on your Studio Mac.",
-                            "这是 Studio Mac 上的工作区。",
-                          )}
+                        ? tr("marketing.arc.arcConnectedPreviews.hereSTheLatestSnapshotFor")
+                        : tr("marketing.arc.arcConnectedPreviews.hereAreTheWorkspacesOnYour")}
                 </p>
                 {!unsupported && (
                   <div className="slackResultCard">
@@ -583,12 +581,12 @@ export function SlackAgentPreview() {
           <div
             className="slackQuickPrompts"
             role="group"
-            aria-label={tr("Try a device question", "试试设备问题")}
+            aria-label={tr("marketing.arc.arcConnectedPreviews.tryADeviceQuestion")}
           >
             {[
-              tr("Device status", "设备状态"),
-              tr("Performance", "查看性能"),
-              tr("Workspaces", "工作区"),
+              tr("marketing.arc.arcConnectedPreviews.deviceStatus"),
+              tr("marketing.arc.arcConnectedPreviews.performance"),
+              tr("marketing.arc.arcConnectedPreviews.workspaces"),
             ].map((label, index) => (
               <button
                 type="button"
@@ -602,13 +600,13 @@ export function SlackAgentPreview() {
           </div>
           <form className="slackComposer" onSubmit={submit}>
             <label htmlFor={uid} className="srOnly">
-              {tr("Message Remote Arc demo", "给 Remote Arc 发送演示消息")}
+              {tr("marketing.arc.arcConnectedPreviews.messageRemoteArcDemo")}
             </label>
             <input
               id={uid}
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder={tr("Ask about your devices…", "问问你的设备情况…")}
+              placeholder={tr("marketing.arc.arcConnectedPreviews.askAboutYourDevices")}
               maxLength={500}
             />
             <div>
@@ -620,16 +618,16 @@ export function SlackAgentPreview() {
               <button
                 type="submit"
                 disabled={!input.trim()}
-                aria-label={tr("Send demo message", "发送演示消息")}
+                aria-label={tr("marketing.arc.arcConnectedPreviews.sendDemoMessage")}
               >
                 <Icon name="arrowUp" size={15} />
               </button>
             </div>
           </form>
           <footer className="slackPreviewFootnote">
-            <span>{tr("Interactive preview · Example data", "交互预览 · 示例数据")}</span>
+            <span>{tr("marketing.arc.arcConnectedPreviews.interactivePreviewExampleData")}</span>
             <a href={arcChatHref(customQuestion || questions[scenario]!, "homepage-slack-preview")}>
-              {tr("Try in Arc", "在 Arc 中体验")}
+              {tr("marketing.arc.arcConnectedPreviews.tryInArc")}
               <Icon name="arrowUpRight" size={11} />
             </a>
           </footer>

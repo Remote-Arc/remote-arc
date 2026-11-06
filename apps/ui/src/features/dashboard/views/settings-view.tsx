@@ -1,6 +1,6 @@
 import { DashboardSettings } from "../../settings/dashboard-settings.js";
 import { MARKETING_ORIGIN } from "../../../config/app-config.js";
-import type { DashboardModel } from "../hooks/use-dashboard-model.js";
+import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 
 // Settings tab.
 export function SettingsView({ m }: { m: DashboardModel }) {
@@ -22,14 +22,9 @@ export function SettingsView({ m }: { m: DashboardModel }) {
     <>
       <section className="pageHeader dashboardUtilityHeader">
         <div>
-          <span className="eyebrow">{tr("ACCOUNT & WORKSPACE", "账号与工作空间")}</span>
-          <h1>{tr("Settings", "设置")}</h1>
-          <p>
-            {tr(
-              "Manage your account, workspaces, connections and plan in one place.",
-              "集中管理账号、工作空间、连接权限和订阅方案。",
-            )}
-          </p>
+          <span className="eyebrow">{tr("dashboard.views.settingsView.accountWorkspace")}</span>
+          <h1>{tr("dashboard.views.settingsView.settings")}</h1>
+          <p>{tr("dashboard.views.settingsView.manageYourAccountWorkspacesConnectionsAnd")}</p>
         </div>
       </section>
       <DashboardSettings

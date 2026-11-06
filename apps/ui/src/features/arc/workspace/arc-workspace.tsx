@@ -1,7 +1,8 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { ArcTaskCard, type ArcWork } from "./arc-task-card.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { useEffect, useState } from "react";
-import { arcRequest } from "../chat/use-arc-chat.js";
+import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
 import { ArcExecutionLog } from "./arc-execution-log.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 type Work = ArcWork;
@@ -23,7 +24,7 @@ export function ArcWorkWorkspace({
   onChat,
 }: {
   view: "tasks" | "routines" | "activity";
-  tr: (en: string, zh: string) => string;
+  tr: Translate;
   onChat: (prompt?: string, sessionId?: string) => void;
   onOpenTeams?: () => void;
 }) {
@@ -58,73 +59,58 @@ export function ArcWorkWorkspace({
       clearTimeout(timer);
     };
   }, [revision]);
-  const title = view === "activity" ? tr("Activity", "活动") : tr("Tasks", "任务");
+  const title =
+    view === "activity"
+      ? tr("arc.workspace.arcWorkspace.activity")
+      : tr("arc.workspace.arcWorkspace.tasks");
   const description =
     view === "activity"
-      ? tr("Every execution, its conversation and its result.", "每次执行，都有对应的对话和结果。")
-      : tr(
-          "One place for work you delegate. Once, later, or on repeat.",
-          "交给 Arc 的工作，都在这里。现在做、稍后做，或定期做。",
-        );
-  const prompt = tr(
-    "Help me create and maintain a task. Clarify the outcome, timing, timezone and required accounts only where missing. Check existing work to avoid duplicates, save it with the appropriate schedule, and report its ID and next run only after creation succeeds.",
-    "帮我创建并维护一项任务。仅补齐缺失的结果要求、执行时间、时区及所需账号。检查已有工作避免重复，按合适的时间安排保存，创建成功后再返回任务 ID 与下次执行时间。",
-  );
+      ? tr("arc.workspace.arcWorkspace.everyExecutionItsConversationAndIts")
+      : tr("arc.workspace.arcWorkspace.onePlaceForWorkYouDelegate");
+  const prompt = tr("arc.workspace.arcWorkspace.helpMeCreateAndMaintainA");
   const starters = [
     {
       icon: "routine" as const,
-      name: tr("Morning brief", "晨间简报"),
-      detail: tr("Every weekday · email & calendar", "每个工作日 · 邮件与日程"),
-      prompt: tr(
-        "Every weekday at 9, prepare my morning email and calendar brief. Ask for my timezone and accounts, save a recurring task, and report each result in its conversation.",
-        "每个工作日早上 9 点整理邮件和日程简报。先确认我的时区与账号，保存为重复任务，每次结果留在任务对话里。",
-      ),
+      name: tr("arc.workspace.arcWorkspace.morningBrief"),
+      detail: tr("arc.workspace.arcWorkspace.everyWeekdayEmailCalendar"),
+      prompt: tr("arc.workspace.arcWorkspace.everyWeekdayAtPrepareMyMorning"),
     },
     {
       icon: "tasks" as const,
-      name: tr("Release readiness", "发布检查"),
-      detail: tr("One time · GitHub & project checks", "一次性 · GitHub 与项目检查"),
-      prompt: tr(
-        "Create a one-off task to review release readiness. Ask which GitHub repository and target release, check changes and test evidence, and report blockers without publishing anything.",
-        "创建一次性发布检查任务。先确认 GitHub 仓库和目标版本，检查改动与测试证据，汇总阻碍发布的问题。",
-      ),
+      name: tr("arc.workspace.arcWorkspace.releaseReadiness"),
+      detail: tr("arc.workspace.arcWorkspace.oneTimeGithubProjectChecks"),
+      prompt: tr("arc.workspace.arcWorkspace.createAOneOffTaskTo"),
     },
     {
       icon: "activity" as const,
-      name: tr("Weekly project review", "每周项目回顾"),
-      detail: tr("Weekly · progress & next steps", "每周 · 进展与下一步"),
-      prompt: tr(
-        "Every Friday, summarize progress and open issues across my chosen connected project apps. Ask for the time, timezone and sources, then save a recurring task with results in its conversation.",
-        "每周五汇总选定项目应用中的进展与未解决问题。先确认时间、时区和数据来源，再保存重复任务，结果留在任务对话里。",
-      ),
+      name: tr("arc.workspace.arcWorkspace.weeklyProjectReview"),
+      detail: tr("arc.workspace.arcWorkspace.weeklyProgressNextSteps"),
+      prompt: tr("arc.workspace.arcWorkspace.everyFridaySummarizeProgressAndOpen"),
     },
     {
       icon: "device" as const,
-      name: tr("Computer check-in", "电脑状态检查"),
-      detail: tr("One time · devices & ongoing work", "一次性 · 设备与进行中的工作"),
-      prompt: tr(
-        "Create a one-off task to inspect connected computer availability and ongoing processes using read-only tools. Summarize anything needing my attention with evidence.",
-        "创建一次性任务，用只读工具检查已连接电脑的在线状态与正在运行的进程，附上证据汇总需要我关注的事项。",
-      ),
+      name: tr("arc.workspace.arcWorkspace.computerCheckIn"),
+      detail: tr("arc.workspace.arcWorkspace.oneTimeDevicesOngoingWork"),
+      prompt: tr("arc.workspace.arcWorkspace.createAOneOffTaskTo2"),
     },
   ];
   const status = (value: string) =>
     ({
-      succeeded: tr("Run finished", "本轮已结束"),
-      completed: tr("Run finished", "本轮已结束"),
-      waiting: tr("Scheduled", "已安排"),
-      queued: tr("Queued", "排队中"),
-      thinking: tr("Thinking", "思考中"),
-      working: tr("Working", "执行中"),
-      running: tr("Working", "执行中"),
-      paused: tr("Paused", "已暂停"),
-      cancelled: tr("Stopped", "已停止"),
-      failed: tr("Needs attention", "需要关注"),
-      unknown: tr("Check result", "待核实"),
+      succeeded: tr("arc.workspace.arcWorkspace.runFinished"),
+      completed: tr("arc.workspace.arcWorkspace.runFinished"),
+      waiting: tr("arc.workspace.arcWorkspace.scheduled"),
+      queued: tr("arc.workspace.arcWorkspace.queued"),
+      thinking: tr("arc.workspace.arcWorkspace.thinking"),
+      working: tr("arc.workspace.arcWorkspace.working"),
+      running: tr("arc.workspace.arcWorkspace.working"),
+      paused: tr("arc.workspace.arcWorkspace.paused"),
+      cancelled: tr("arc.workspace.arcWorkspace.stopped"),
+      failed: tr("arc.workspace.arcWorkspace.needsAttention"),
+      unknown: tr("arc.workspace.arcWorkspace.checkResult"),
     })[value] || value;
   const when = (value: string | null) =>
     value
-      ? new Date(value).toLocaleString(tr("en-US", "zh-CN"), {
+      ? new Date(value).toLocaleString(tr("arc.workspace.arcWorkspace.enUs"), {
           month: "short",
           day: "numeric",
           hour: "2-digit",
@@ -156,7 +142,7 @@ export function ArcWorkWorkspace({
           onClick={() => onChat(view === "activity" ? undefined : prompt)}
         >
           <Icon name="add" />
-          {tr("Create with Arc", "让 Arc 创建")}
+          {tr("arc.workspace.arcWorkspace.createWithArc")}
         </button>
       </header>
       {view !== "activity" && (
@@ -169,7 +155,7 @@ export function ArcWorkWorkspace({
             }}
           >
             <label htmlFor="arc-work-request">
-              {tr("What can Arc take off your hands?", "想把什么工作交给 Arc？")}
+              {tr("arc.workspace.arcWorkspace.whatCanArcTakeOffYour")}
             </label>
             <textarea
               id="arc-work-request"
@@ -177,28 +163,23 @@ export function ArcWorkWorkspace({
               maxLength={4000}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={tr(
-                "“Every weekday at 9, prepare my morning brief…”",
-                "“每个工作日早上 9 点，整理我的晨间简报……”",
-              )}
+              placeholder={tr("arc.workspace.arcWorkspace.everyWeekdayAtPrepareMyMorning2")}
             />
             <footer>
-              <span>
-                {tr(
-                  "Describe it. Arc sets it up, follows through and keeps the result.",
-                  "说出需求，Arc 负责创建、执行与保存结果。",
-                )}
-              </span>
+              <span>{tr("arc.workspace.arcWorkspace.describeItArcSetsItUp")}</span>
               <button className="arcRadiantCta" type="submit" disabled={!draft.trim()}>
-                {tr("Continue with Arc", "与 Arc 继续")}
+                {tr("arc.workspace.arcWorkspace.continueWithArc")}
                 <Icon name="arrowUpRight" size={14} />
               </button>
             </footer>
           </form>
-          <section className="arcTaskStarters" aria-label={tr("Task starters", "任务模板")}>
+          <section
+            className="arcTaskStarters"
+            aria-label={tr("arc.workspace.arcWorkspace.taskStarters")}
+          >
             <div className="arcWorkSectionHeader">
-              <h2>{tr("Start with a little inspiration", "从一个现成的想法开始")}</h2>
-              <span>{tr("Personalize in conversation", "在对话中按需调整")}</span>
+              <h2>{tr("arc.workspace.arcWorkspace.startWithALittleInspiration")}</h2>
+              <span>{tr("arc.workspace.arcWorkspace.personalizeInConversation")}</span>
             </div>
             <div>
               {starters.map((starter) => (
@@ -211,11 +192,15 @@ export function ArcWorkWorkspace({
               ))}
             </div>
           </section>
-          <div className="arcTaskKinds" role="group" aria-label={tr("Task frequency", "任务频率")}>
+          <div
+            className="arcTaskKinds"
+            role="group"
+            aria-label={tr("arc.workspace.arcWorkspace.taskFrequency")}
+          >
             {[
-              ["all", tr("All tasks", "全部任务")],
-              ["task", tr("One-off", "一次性")],
-              ["routine", tr("Recurring", "重复执行")],
+              ["all", tr("arc.workspace.arcWorkspace.allTasks")],
+              ["task", tr("arc.workspace.arcWorkspace.oneOff")],
+              ["routine", tr("arc.workspace.arcWorkspace.recurring")],
             ].map(([value, label]) => (
               <button
                 type="button"
@@ -237,18 +222,18 @@ export function ArcWorkWorkspace({
           <Icon name="search" />
           <input
             type="search"
-            aria-label={tr("Search work", "搜索工作")}
-            placeholder={tr("Search work…", "搜索工作…")}
+            aria-label={tr("arc.workspace.arcWorkspace.searchWork")}
+            placeholder={tr("arc.workspace.arcWorkspace.searchWork2")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
-        <div role="group" aria-label={tr("Filter work", "筛选工作")}>
+        <div role="group" aria-label={tr("arc.workspace.arcWorkspace.filterWork")}>
           {[
-            ["all", tr("All", "全部")],
-            ["active", tr("Active", "进行中")],
-            ["attention", tr("Attention", "待关注")],
-            ["finished", tr("Finished", "已结束")],
+            ["all", tr("arc.workspace.arcWorkspace.all")],
+            ["active", tr("arc.workspace.arcWorkspace.active")],
+            ["attention", tr("arc.workspace.arcWorkspace.attention")],
+            ["finished", tr("arc.workspace.arcWorkspace.finished")],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -263,37 +248,27 @@ export function ArcWorkWorkspace({
       </div>
       {error && data && (
         <div className="arcWorkRefreshError" role="alert">
-          <p>
-            {tr(
-              "Could not refresh your work. Showing the last loaded results.",
-              "暂时无法刷新，下面保留上次加载的工作。",
-            )}
-          </p>
+          <p>{tr("arc.workspace.arcWorkspace.couldNotRefreshYourWorkShowing")}</p>
           <button
             type="button"
             className="ghostButton"
             onClick={() => setRevision((value) => value + 1)}
           >
-            {tr("Try again", "重试")}
+            {tr("arc.workspace.arcWorkspace.tryAgain")}
           </button>
         </div>
       )}
       {error && !data ? (
         <div className="arcWorkEmpty" role="alert">
           <Icon name="history" size={28} />
-          <h2>{tr("Work is unavailable right now", "暂时无法加载工作")}</h2>
-          <p>
-            {tr(
-              "Could not load your work. Check your connection and try again.",
-              "未能加载工作，请检查网络后重试。",
-            )}
-          </p>
+          <h2>{tr("arc.workspace.arcWorkspace.workIsUnavailableRightNow")}</h2>
+          <p>{tr("arc.workspace.arcWorkspace.couldNotLoadYourWorkCheck")}</p>
           <button className="ghostButton" onClick={() => setRevision((value) => value + 1)}>
-            {tr("Try again", "重试")}
+            {tr("arc.workspace.arcWorkspace.tryAgain")}
           </button>
         </div>
       ) : !data ? (
-        <WorkspaceLoading label={tr("Loading your work…", "正在加载工作…")} />
+        <WorkspaceLoading label={tr("arc.workspace.arcWorkspace.loadingYourWork")} />
       ) : (
         <>
           {view !== "activity" && (
@@ -312,13 +287,8 @@ export function ArcWorkWorkspace({
           {view === "activity" && runs.length > 0 && (
             <div className="arcWorkRuns">
               <div className="arcWorkSectionHeader">
-                <h2>{tr("Execution history", "执行历史")}</h2>
-                <span>
-                  {tr(
-                    "Review the answer and returned evidence to confirm the outcome",
-                    "查看答复与结果证据，确认目标是否达成",
-                  )}
-                </span>
+                <h2>{tr("arc.workspace.arcWorkspace.executionHistory")}</h2>
+                <span>{tr("arc.workspace.arcWorkspace.reviewTheAnswerAndReturnedEvidence")}</span>
               </div>
               {runs.map((r) => {
                 const job = data?.work.find((w) => w.id === r.automation_id);
@@ -344,16 +314,16 @@ export function ArcWorkWorkspace({
                       </span>
                       <span>
                         <strong>
-                          {job?.name || r.title || tr("Arc conversation", "Arc 对话")}
+                          {job?.name || r.title || tr("arc.workspace.arcWorkspace.arcConversation")}
                         </strong>
                         <small>
                           {job
                             ? job.kind === "routine"
-                              ? tr("Routine run", "Routine 执行")
-                              : tr("Task run", "任务执行")
-                            : tr("Chat run", "对话执行")}{" "}
-                          · {when(r.created_at)} · {r.step} {tr("steps", "步")} ·{" "}
-                          {r.tokens_used.toLocaleString()} tokens
+                              ? tr("arc.workspace.arcWorkspace.routineRun")
+                              : tr("arc.workspace.arcWorkspace.taskRun")
+                            : tr("arc.workspace.arcWorkspace.chatRun")}{" "}
+                          · {when(r.created_at)} · {r.step} {tr("arc.workspace.arcWorkspace.steps")}{" "}
+                          · {r.tokens_used.toLocaleString()} tokens
                         </small>
                       </span>
                       <span className={"arcWorkStatus " + r.status}>{status(r.status)}</span>
@@ -377,36 +347,27 @@ export function ArcWorkWorkspace({
               </span>
               <h2>
                 {query || filter !== "all"
-                  ? tr("No matching work", "没有匹配工作")
+                  ? tr("arc.workspace.arcWorkspace.noMatchingWork")
                   : view === "routines"
-                    ? tr("Make room in your day.", "把每天的琐事，交出去。")
+                    ? tr("arc.workspace.arcWorkspace.makeRoomInYourDay")
                     : view === "activity"
-                      ? tr("Every run leaves a clear trail.", "每次执行，都有迹可循。")
-                      : tr("Good work starts with a conversation.", "好的工作，从一句话开始。")}
+                      ? tr("arc.workspace.arcWorkspace.everyRunLeavesAClearTrail")
+                      : tr("arc.workspace.arcWorkspace.goodWorkStartsWithAConversation")}
               </h2>
               <p>
                 {query || filter !== "all"
-                  ? tr("Try a different search or filter.", "试试其他搜索词或筛选条件。")
+                  ? tr("arc.workspace.arcWorkspace.tryADifferentSearchOrFilter")
                   : view === "routines"
-                    ? tr(
-                        "“Every weekday at 9, summarize my inbox and calendar.”",
-                        "“每个工作日早上 9 点，汇总我的邮件和日程。”",
-                      )
+                    ? tr("arc.workspace.arcWorkspace.everyWeekdayAtSummarizeMyInbox")
                     : view === "activity"
-                      ? tr(
-                          "Completed and ongoing chat, task and routine runs will appear here.",
-                          "对话、任务与 Routine 的执行历史会出现在这里。",
-                        )
-                      : tr(
-                          "Describe a task above or choose a starter. Arc helps set it up, follows its execution and saves the result.",
-                          "在上方描述任务或选择模板，让 Arc 协助创建、跟踪执行并保存结果。",
-                        )}
+                      ? tr("arc.workspace.arcWorkspace.completedAndOngoingChatTaskAnd")
+                      : tr("arc.workspace.arcWorkspace.describeATaskAboveOrChoose")}
               </p>
               <button
                 className="ghostButton"
                 onClick={() => onChat(view === "activity" ? undefined : prompt)}
               >
-                {tr("Start a conversation", "开始对话")}
+                {tr("arc.workspace.arcWorkspace.startAConversation")}
                 <Icon name="arrowUpRight" size={15} />
               </button>
             </div>

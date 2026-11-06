@@ -1,3 +1,4 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import {
   healthVerdict,
@@ -9,8 +10,10 @@ import type {
   MonitoringSnapshot,
 } from "../src/features/admin/service-health-model.js";
 
-const en = (english: string) => english;
-const zh = (_english: string, chinese: string) => chinese;
+await loadLocale("en", "all");
+const en = createTranslator("en");
+await loadLocale("zh", "all");
+const zh = createTranslator("zh");
 
 function health(overrides: Partial<HealthSnapshot["worker"]> = {}): HealthSnapshot {
   return {

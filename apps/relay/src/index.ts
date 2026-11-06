@@ -310,7 +310,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
   }
   if (
     !isAdminHost &&
-    url.pathname === "/monitor" &&
+    ["/monitor", "/dashboard/connect/monitor"].includes(url.pathname.replace(/\/+$/, "")) &&
     (request.method === "GET" || request.method === "HEAD")
   ) {
     return Response.redirect(adminOrigin + "/", 302);

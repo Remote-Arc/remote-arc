@@ -1,4 +1,5 @@
-type Copy = readonly [string, string];
+import type { MessageKey } from "../../../locales/locale-catalog.js";
+type Copy = MessageKey;
 type Trace = {
   tool: "list_apps" | "call_app";
   provider?: string;
@@ -34,20 +35,11 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
   {
     id: "release",
     connectionProvider: "vercel",
-    label: ["GitHub + Vercel", "GitHub + Vercel"],
-    title: ["Know what shipped. Catch what didn’t.", "哪些已发布，哪些卡住了，一眼掌握。"],
-    request: [
-      "“Check our merged GitHub PRs against the latest Vercel deployments, then post a release update with source links to our Slack channel.”",
-      "“对照 GitHub 已合并的 PR 和最新 Vercel 部署，把附有来源链接的发布进展发到 Slack 频道。”",
-    ],
-    result: [
-      "Four merged PRs checked, one failing preview identified, and a release update posted to Slack with source links.",
-      "已核对 4 个合并 PR，发现 1 个失败的预览部署，并将附有来源链接的发布进展发到 Slack。",
-    ],
-    permission: [
-      "Connected GitHub, Vercel and Slack accounts",
-      "已授权的 GitHub、Vercel 与 Slack 账号",
-    ],
+    label: "marketing.home.appWorkflowExamples.githubVercel",
+    title: "marketing.home.appWorkflowExamples.knowWhatShippedCatchWhat",
+    request: "marketing.home.appWorkflowExamples.checkOurMergedGithubPrs",
+    result: "marketing.home.appWorkflowExamples.fourMergedPrsCheckedOne",
+    permission: "marketing.home.appWorkflowExamples.connectedGithubVercelAndSlack",
     brands: [
       { brand: "github", name: "GitHub" },
       { brand: "vercel", name: "Vercel" },
@@ -57,11 +49,8 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
       {
         tool: "list_apps",
         input: { provider: "vercel" },
-        output: [
-          "Vercel account and available operation schemas found",
-          "已找到 Vercel 账号与可用操作",
-        ],
-        working: ["Checking connected deployment tools…", "正在检查部署工具连接…"],
+        output: "marketing.home.appWorkflowExamples.vercelAccountAndAvailableOperation",
+        working: "marketing.home.appWorkflowExamples.checkingConnectedDeploymentTools",
       },
       {
         tool: "call_app",
@@ -72,8 +61,8 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
           { repo: "team/product", state: "closed", limit: 30 },
           "demo-release-prs",
         ),
-        output: ["4 merged pull requests · source links retained", "4 个已合并 PR · 保留来源链接"],
-        working: ["Reading merged changes and their source links…", "正在读取合并记录与来源链接…"],
+        output: "marketing.home.appWorkflowExamples.mergedPullRequestsSourceLinks",
+        working: "marketing.home.appWorkflowExamples.readingMergedChangesAndTheir",
       },
       {
         tool: "call_app",
@@ -84,8 +73,8 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
           { projectId: "example-project", limit: 5 },
           "demo-release-deployments",
         ),
-        output: ["Production: READY · latest preview: ERROR", "生产部署：READY · 最新预览：ERROR"],
-        working: ["Cross-checking deployment status…", "正在交叉核对部署状态…"],
+        output: "marketing.home.appWorkflowExamples.productionReadyLatestPreviewError",
+        working: "marketing.home.appWorkflowExamples.crossCheckingDeploymentStatus",
       },
       {
         tool: "call_app",
@@ -99,34 +88,19 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
           },
           "demo-release-update",
         ),
-        output: [
-          "Message posted to #product · source links included",
-          "消息已发送至 #product · 已附来源链接",
-        ],
-        working: [
-          "Posting the release update and source links to Slack…",
-          "正在将发布进展与来源链接发到 Slack…",
-        ],
+        output: "marketing.home.appWorkflowExamples.messagePostedToProductSource",
+        working: "marketing.home.appWorkflowExamples.postingTheReleaseUpdateAnd",
       },
     ],
   },
   {
     id: "knowledge",
     connectionProvider: "google_drive",
-    label: ["Drive + Notion", "Drive + Notion"],
-    title: ["Turn scattered files into shared knowledge.", "把散落的资料，变成团队知识。"],
-    request: [
-      "“Find the launch brief in Google Drive, summarize the decisions and next steps, and create a Notion page with a link to the source.”",
-      "“找到 Google Drive 里的发布资料，提炼决策与下一步，并创建一篇附有原文链接的 Notion 页面。”",
-    ],
-    result: [
-      "Created a Notion page with the launch decisions, next steps and a link back to the original Drive document.",
-      "已创建 Notion 页面，包含发布决策、下一步，以及 Google Drive 原文链接。",
-    ],
-    permission: [
-      "Connected Google Drive and Notion accounts",
-      "已授权的 Google Drive 与 Notion 账号",
-    ],
+    label: "marketing.home.appWorkflowExamples.driveNotion",
+    title: "marketing.home.appWorkflowExamples.turnScatteredFilesIntoShared",
+    request: "marketing.home.appWorkflowExamples.findTheLaunchBriefIn",
+    result: "marketing.home.appWorkflowExamples.createdANotionPageWith",
+    permission: "marketing.home.appWorkflowExamples.connectedGoogleDriveAndNotion",
     brands: [
       { brand: "googledrive", name: "Google Drive" },
       { brand: "notion", name: "Notion" },
@@ -135,11 +109,8 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
       {
         tool: "list_apps",
         input: { provider: "google_drive" },
-        output: [
-          "Google Drive account and document operations found",
-          "已找到 Google Drive 账号与文档操作",
-        ],
-        working: ["Finding the authorized document tools…", "正在查找已授权的文档工具…"],
+        output: "marketing.home.appWorkflowExamples.googleDriveAccountAndDocument",
+        working: "marketing.home.appWorkflowExamples.findingTheAuthorizedDocumentTools",
       },
       {
         tool: "call_app",
@@ -153,11 +124,8 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
           },
           "demo-knowledge-find",
         ),
-        output: [
-          "Launch brief found · original document link retained",
-          "找到发布资料 · 保留原文链接",
-        ],
-        working: ["Locating the launch brief…", "正在定位发布资料…"],
+        output: "marketing.home.appWorkflowExamples.launchBriefFoundOriginalDocument",
+        working: "marketing.home.appWorkflowExamples.locatingTheLaunchBrief",
       },
       {
         tool: "call_app",
@@ -168,11 +136,8 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
           { id: "example-launch-document" },
           "demo-knowledge-read",
         ),
-        output: [
-          "Original brief read · decisions and next steps extracted",
-          "已读取原始资料 · 提炼决策与下一步",
-        ],
-        working: ["Reading the source and organizing the summary…", "正在读取来源并整理摘要…"],
+        output: "marketing.home.appWorkflowExamples.originalBriefReadDecisionsAnd",
+        working: "marketing.home.appWorkflowExamples.readingTheSourceAndOrganizing",
       },
       {
         tool: "call_app",
@@ -187,19 +152,11 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
           },
           "demo-knowledge-page",
         ),
-        output: [
-          "Notion page created · source link and next steps saved",
-          "Notion 页面已创建 · 来源链接与下一步已保存",
-        ],
-        working: [
-          "Creating the Notion page with its source and action items…",
-          "正在创建包含来源与行动项的 Notion 页面…",
-        ],
+        output: "marketing.home.appWorkflowExamples.notionPageCreatedSourceLink",
+        working: "marketing.home.appWorkflowExamples.creatingTheNotionPageWith",
       },
     ],
   },
 ];
 export const findAppWorkflow = (id: string) =>
   APP_WORKFLOW_EXAMPLES.find((example) => example.id === id);
-export const translateCopy = (copy: Copy, tr: (en: string, zh: string) => string) =>
-  tr(copy[0], copy[1]);

@@ -1,3 +1,4 @@
+import type { MessageKey } from "../../locales/locale-catalog.js";
 import type { DeviceExecutionHealth } from "./device-execution-health-model.js";
 export type Incident = {
   id: string;
@@ -10,6 +11,35 @@ export type Incident = {
   status_code?: number | null;
   colo?: string | null;
   ray_id?: string | null;
+};
+export type DeviceReliabilityHealth = {
+  coverage: "observed" | "no_samples" | "unavailable";
+  scope: "none" | "single_device" | "multiple_devices";
+  windows: Array<{
+    minutes: number;
+    counts: {
+      connections: number;
+      disconnects: number;
+      heartbeats: number;
+      observedDevices: number;
+      reconnects: number;
+      reconnectingDevices: number;
+    };
+  }>;
+  groups: Array<{
+    platform: string;
+    agentVersion: string;
+    connections: number;
+    reconnects: number;
+    observedDevices: number;
+  }>;
+  groupsTruncated: boolean;
+  trend: Array<{ minute: string; connections: number; disconnects: number; heartbeats: number }>;
+  signal: {
+    phase: "healthy" | "pending" | "firing" | "recovering";
+    last_evaluated_at: string;
+    last_notification_at: string | null;
+  } | null;
 };
 export type HealthSnapshot = {
   status: string;
@@ -40,6 +70,7 @@ export type HealthSnapshot = {
   };
   incidents: Incident[];
   deviceExecution?: DeviceExecutionHealth;
+  deviceReliability?: DeviceReliabilityHealth;
 };
 export type ErrorDefinition = {
   code: string;
@@ -110,29 +141,29 @@ export type MonitoringSnapshot = {
   nextCursor: string | null;
   showEvents: boolean;
 };
-export const categoryLabels: Record<string, [string, string]> = {
-  quota: ["Usage & capacity", "额度与容量"],
-  access: ["Access & permissions", "授权与权限"],
-  validation: ["Requests & configuration", "请求与配置"],
-  conflict: ["State conflicts", "状态冲突"],
-  dependency: ["Services & dependencies", "服务与依赖"],
-  execution: ["Execution", "执行异常"],
-  client: ["Browser reports", "前端异常"],
-  unknown: ["Unclassified", "未分类"],
+export const categoryLabels: Record<string, MessageKey> = {
+  quota: "admin.serviceHealthModel.usageCapacity",
+  access: "admin.serviceHealthModel.accessPermissions",
+  validation: "admin.serviceHealthModel.requestsConfiguration",
+  conflict: "admin.serviceHealthModel.stateConflicts",
+  dependency: "admin.serviceHealthModel.servicesDependencies",
+  execution: "admin.serviceHealthModel.execution",
+  client: "admin.serviceHealthModel.browserReports",
+  unknown: "admin.serviceHealthModel.unclassified",
 };
-export const domainLabels: Record<string, [string, string]> = {
-  billing: ["Billing", "支付与套餐"],
-  auth: ["Sign-in", "账号登录"],
-  oauth: ["OAuth", "OAuth 授权"],
-  devices: ["Devices & browsers", "设备与浏览器"],
-  apps: ["Apps", "App 连接"],
-  tasks: ["Arc work", "Arc 任务"],
-  automations: ["Automations", "自动化"],
-  client: ["Web client", "网页端"],
-  mcp: ["MCP tools", "MCP 工具"],
-  admin: ["Admin", "管理后台"],
-  platform: ["Platform", "平台接口"],
-  notifications: ["Email delivery", "邮件投递"],
+export const domainLabels: Record<string, MessageKey> = {
+  billing: "admin.serviceHealthModel.billing",
+  auth: "admin.serviceHealthModel.signIn",
+  oauth: "admin.serviceHealthModel.oauth",
+  devices: "admin.serviceHealthModel.devicesBrowsers",
+  apps: "admin.serviceHealthModel.apps",
+  tasks: "admin.serviceHealthModel.arcWork",
+  automations: "admin.serviceHealthModel.automations",
+  client: "admin.serviceHealthModel.webClient",
+  mcp: "admin.serviceHealthModel.mcpTools",
+  admin: "admin.serviceHealthModel.admin",
+  platform: "admin.serviceHealthModel.platform",
+  notifications: "admin.serviceHealthModel.emailDelivery",
 };
 export function groupIncidents(items: Incident[]) {
   const groups = new Map<

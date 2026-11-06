@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { appSource } from "./app-source.mjs";
+import { appSource, readLocaleMessages } from "./app-source.mjs";
 
 const source = appSource;
 
@@ -33,9 +33,9 @@ assert.match(
   /nextAction === "terminal"/,
   "Workspace selection must resume terminal enablement after the folder is saved.",
 );
-assert.match(
-  source,
-  /REQUIRED FOR CONNECT/,
+assert.equal(
+  readLocaleMessages("en", "common")["auth.pairDevice.requiredForConnect"],
+  "REQUIRED FOR CONNECT",
   "Device pairing must lead into the required MCP connection step for Connect.",
 );
 assert.match(

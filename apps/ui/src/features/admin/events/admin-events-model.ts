@@ -1,4 +1,6 @@
-export type Translate = (en: string, zh: string) => string;
+import type { MessageKey } from "../../../locales/locale-catalog.js";
+import type { Translate } from "../../../locales/locale-catalog.js";
+export type { Translate } from "../../../locales/locale-catalog.js";
 export type SceneId = "login" | "devices" | "payment" | "tasks";
 export type Step = {
   key: string;
@@ -90,52 +92,55 @@ export function sceneName(id: string, tr: Translate) {
   return (
     (
       {
-        login: tr("Sign-in", "登录"),
-        devices: tr("Connect a device", "连接设备"),
-        payment: tr("Purchase", "支付购买"),
-        tasks: tr("Run a task", "任务执行"),
-        email_login: tr("Email code", "邮箱验证码"),
-        google_login: tr("Google sign-in", "Google 登录"),
+        login: tr("admin.events.adminEventsModel.signIn"),
+        devices: tr("admin.events.adminEventsModel.connectADevice"),
+        payment: tr("admin.events.adminEventsModel.purchase"),
+        tasks: tr("admin.events.adminEventsModel.runATask"),
+        email_login: tr("admin.events.adminEventsModel.emailCode"),
+        google_login: tr("admin.events.adminEventsModel.googleSignIn"),
       } as Record<string, string>
     )[id] || id
   );
 }
 export function stepName(scene: string, key: string, tr: Translate) {
-  const labels: Record<string, Record<string, [string, string]>> = {
+  const labels: Record<string, Record<string, MessageKey>> = {
     login: {
-      started: ["Started sign-in", "发起登录"],
-      verification: ["Entered verification", "进入验证"],
-      verified: ["Identity verified", "验证通过"],
-      completed: ["Signed in", "登录成功"],
+      started: "admin.events.adminEventsModel.startedSignIn",
+      verification: "admin.events.adminEventsModel.enteredVerification",
+      verified: "admin.events.adminEventsModel.identityVerified",
+      completed: "admin.events.adminEventsModel.signedIn",
     },
     email_login: {
-      started: ["Code requested", "请求验证码"],
-      delivered: ["Email accepted by sender", "邮件服务已接收"],
-      verification: ["Code submitted", "提交验证码"],
-      verified: ["Code verified", "校验通过"],
-      completed: ["Signed in", "登录成功"],
+      started: "admin.events.adminEventsModel.codeRequested",
+      delivered: "admin.events.adminEventsModel.emailAcceptedBySender",
+      verification: "admin.events.adminEventsModel.codeSubmitted",
+      verified: "admin.events.adminEventsModel.codeVerified",
+      completed: "admin.events.adminEventsModel.signedIn",
     },
     google_login: {
-      started: ["Started Google sign-in", "发起 Google 登录"],
-      callback: ["Returned from Google", "从 Google 返回"],
-      verified: ["Identity verified", "验证通过"],
-      completed: ["Signed in", "登录成功"],
+      started: "admin.events.adminEventsModel.startedGoogleSignIn",
+      callback: "admin.events.adminEventsModel.returnedFromGoogle",
+      verified: "admin.events.adminEventsModel.identityVerified",
+      completed: "admin.events.adminEventsModel.signedIn",
     },
     devices: {
-      started: ["Pairing started", "发起配对"],
-      approved: ["Connection approved", "用户确认授权"],
-      online: ["Device connected", "设备真正上线"],
+      started: "admin.events.adminEventsModel.pairingStarted",
+      approved: "admin.events.adminEventsModel.connectionApproved",
+      online: "admin.events.adminEventsModel.deviceConnected",
     },
     payment: {
-      entered: ["Opened purchase page", "进入购买页"],
-      ordered: ["Order created", "创建订单"],
-      paid: ["Payment confirmed", "付款已确认"],
-      fulfilled: ["Access delivered", "权益已到账"],
+      entered: "admin.events.adminEventsModel.openedPurchasePage",
+      ordered: "admin.events.adminEventsModel.orderCreated",
+      paid: "admin.events.adminEventsModel.paymentConfirmed",
+      fulfilled: "admin.events.adminEventsModel.accessDelivered",
     },
-    tasks: { started: ["Task created", "发起任务"], succeeded: ["Task succeeded", "成功完成"] },
+    tasks: {
+      started: "admin.events.adminEventsModel.taskCreated",
+      succeeded: "admin.events.adminEventsModel.taskSucceeded",
+    },
   };
   const label = labels[scene]?.[key];
-  return label ? tr(...label) : key;
+  return label ? tr(label) : key;
 }
 export function biggestDrop(scene: Scene | undefined) {
   return (
@@ -149,13 +154,13 @@ export function biggestDrop(scene: Scene | undefined) {
 }
 export function retentionState(cell: RetentionCell | undefined, tr: Translate) {
   return !cell
-    ? tr("Unavailable", "暂不可用")
+    ? tr("admin.events.adminEventsModel.unavailable")
     : cell.status === "observing"
-      ? tr("Still observing", "观察中")
+      ? tr("admin.events.adminEventsModel.stillObserving")
       : cell.status === "not_collected"
-        ? tr("Not collected", "尚未采集")
+        ? tr("admin.events.adminEventsModel.notCollected")
         : !cell.eligible
-          ? tr("No eligible users", "暂无到期样本")
+          ? tr("admin.events.adminEventsModel.noEligibleUsers")
           : "";
 }
 export function validAnalytics(value: unknown): value is Analytics {

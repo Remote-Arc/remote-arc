@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 export const appModules = [
   "main.tsx",
   "app/app.tsx",
+  "hooks/use-app-session.ts",
   "types/app-types.ts",
   "config/app-config.ts",
   "features/dashboard/devices/device-presets.ts",
@@ -16,12 +17,12 @@ export const appModules = [
   "features/blog/blog-pages.tsx",
   "features/marketing/releases-page.tsx",
   "features/dashboard/dashboard.tsx",
-  "features/dashboard/hooks/use-dashboard-model.ts",
-  "features/dashboard/hooks/use-dashboard-dialogs.ts",
-  "features/dashboard/hooks/use-dashboard-security.ts",
-  "features/dashboard/hooks/use-device-actions.ts",
-  "features/dashboard/hooks/use-device-settings.ts",
-  "features/dashboard/hooks/use-device-activity.ts",
+  "hooks/dashboard/use-dashboard-model.ts",
+  "hooks/dashboard/use-dashboard-dialogs.ts",
+  "hooks/dashboard/use-dashboard-security.ts",
+  "hooks/dashboard/use-device-actions.ts",
+  "hooks/dashboard/use-device-settings.ts",
+  "hooks/dashboard/use-device-activity.ts",
   "features/dashboard/format.ts",
   "features/dashboard/views/overview-view.tsx",
   "features/dashboard/views/devices-view.tsx",
@@ -31,8 +32,6 @@ export const appModules = [
   "features/dashboard/devices/device-activity-panel.tsx",
   "features/dashboard/views/connect-view.tsx",
   "features/dashboard/views/security-view.tsx",
-  "features/dashboard/views/monitor-view.tsx",
-  "features/dashboard/views/monitor-reliability.tsx",
   "features/dashboard/views/settings-view.tsx",
   "features/dashboard/views/dashboard-overlays.tsx",
   "features/dashboard/views/add-device-dialog.tsx",
@@ -42,3 +41,6 @@ export const appModules = [
 export const readAppModule = (name) =>
   readFileSync(new URL("../src/" + name, import.meta.url), "utf8");
 export const appSource = appModules.map(readAppModule).join("\n");
+
+export const readLocaleMessages = (locale, pack) =>
+  JSON.parse(readAppModule("locales/" + locale + "/" + pack + ".json")).messages;

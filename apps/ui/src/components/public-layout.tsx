@@ -1,10 +1,12 @@
 import { ProductIcon } from "./product-icon.js";
-import { usePlatformCatalog } from "../lib/use-platform-catalog.js";
+import { usePlatformCatalog } from "../hooks/use-platform-catalog.js";
 import React, { useEffect, useRef, useState } from "react";
-import { LanguageSwitcher, useI18n } from "../app/i18n.js";
-import { isWebsite, localizedWebsiteHref } from "../lib/marketing-paths.js";
+import { LanguageSwitcher } from "../app/i18n.js";
+import { useI18n, useMessages } from "../hooks/use-i18n.js";
+import { should } from "../lib/ui-access.js";
+import { isWebsite, localizedWebsiteHref, pageForLanguage } from "../lib/marketing-paths.js";
 import { BrandWordmark } from "./brand-wordmark.js";
-import { useTheme } from "../app/theme.js";
+import { useTheme } from "../hooks/use-theme.js";
 import { APP_ORIGIN, MARKETING_ORIGIN, dashboardHref } from "../config/app-config.js";
 import { type User } from "../types/app-types.js";
 
@@ -37,13 +39,13 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
     return (
       <div className="languageSetting themeSetting">
         <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}>
-          {tr("Light", "浅色")}
+          {tr("components.publicLayout.light")}
         </button>
         <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>
-          {tr("Dark", "深色")}
+          {tr("components.publicLayout.dark")}
         </button>
         <button className={theme === "system" ? "active" : ""} onClick={() => setTheme("system")}>
-          {tr("System", "跟随系统")}
+          {tr("components.publicLayout.system")}
         </button>
       </div>
     );
@@ -57,18 +59,23 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
       onClick={() => setTheme(nextTheme)}
       aria-label={
         resolvedTheme === "dark"
-          ? tr("Switch to light mode", "切换到浅色模式")
-          : tr("Switch to dark mode", "切换到深色模式")
+          ? tr("components.publicLayout.switchToLightMode")
+          : tr("components.publicLayout.switchToDarkMode")
       }
-      title={resolvedTheme === "dark" ? tr("Light mode", "浅色模式") : tr("Dark mode", "深色模式")}
+      title={
+        resolvedTheme === "dark"
+          ? tr("components.publicLayout.lightMode")
+          : tr("components.publicLayout.darkMode")
+      }
     >
       <span aria-hidden="true">{resolvedTheme === "dark" ? "☼" : "◐"}</span>
     </button>
   );
 }
 function PublicHeader({ user }: { user?: User | null }) {
-  const { tr, locale } = useI18n();
-  const arcAvailable = usePlatformCatalog()?.arcAvailable === true;
+  const { locale } = useI18n();
+  const labels = useMessages("website");
+  const arcAvailable = should("arcAvailable", usePlatformCatalog());
   const [openMenu, setOpenMenu] = useState<"mcp" | "resources" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
@@ -113,7 +120,7 @@ function PublicHeader({ user }: { user?: User | null }) {
         <button
           type="button"
           className="publicMobileMenu"
-          aria-label={tr("Open navigation", "打开导航")}
+          aria-label={labels.openNavigation}
           aria-expanded={mobileOpen}
           aria-controls="public-navigation"
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -125,7 +132,7 @@ function PublicHeader({ user }: { user?: User | null }) {
           id="public-navigation"
           className="publicNavLinks"
           data-expanded={mobileOpen}
-          aria-label={tr("Main navigation", "主导航")}
+          aria-label={labels.mainNavigation}
         >
           <div className="publicNavMenu" data-open={openMenu === "mcp"}>
             <button
@@ -135,28 +142,20 @@ function PublicHeader({ user }: { user?: User | null }) {
               aria-controls="public-nav-product"
               onClick={() => setOpenMenu(openMenu === "mcp" ? null : "mcp")}
             >
-              {tr("Product", "产品")} {arrow}
+              {labels.product} {arrow}
             </button>
             <div id="public-nav-product" className="publicNavDropdown productDropdown">
               <section className="publicNavGroup">
-                <span className="publicNavGroupLabel">
-                  {tr("ONE PLATFORM. YOUR WAY TO WORK.", "一个平台，选择你的工作方式。")}
-                </span>
+                <span className="publicNavGroupLabel">{labels.productGroup}</span>
                 <a className="publicProductEntry" href={navHref("/arc")}>
                   <span className="publicProductIcon publicProductLogo">
                     <img src="/remote-arc.svg" alt="" />
                   </span>
                   <span className="publicProductCopy">
                     <strong>
-                      Arc{" "}
-                      <em>{arcAvailable ? tr("Live", "已上线") : tr("Coming soon", "即将上线")}</em>
+                      Arc <em>{arcAvailable ? labels.live : labels.comingSoon}</em>
                     </strong>
-                    <small>
-                      {tr(
-                        "Your personal agent, working with your apps and computers",
-                        "你的个人智能体，协同应用与电脑工作",
-                      )}
-                    </small>
+                    <small>{labels.arcDescription}</small>
                   </span>
                   <ProductIcon name="arrowUpRight" size={15} />
                 </a>
@@ -166,11 +165,9 @@ function PublicHeader({ user }: { user?: User | null }) {
                   </span>
                   <span className="publicProductCopy">
                     <strong>
-                      Connect <em>{tr("Live", "已上线")}</em>
+                      Connect <em>{labels.live}</em>
                     </strong>
-                    <small>
-                      {tr("Your tools, in the AI you already use", "把你的工具，带入你常用的 AI")}
-                    </small>
+                    <small>{labels.connectDescription}</small>
                   </span>
                   <ProductIcon name="arrowUpRight" size={15} />
                 </a>
@@ -196,9 +193,9 @@ function PublicHeader({ user }: { user?: User | null }) {
               </div>
             </div>
           </div>
-          <a href={navHref("/use-cases")}>{tr("Use cases", "使用场景")}</a>
-          <a href={navHref("/integrations")}>{tr("Apps", "应用")}</a>
-          <a href={navHref("/pricing")}>{tr("Pricing", "价格")}</a>
+          <a href={navHref("/use-cases")}>{labels.useCases}</a>
+          <a href={navHref("/integrations")}>{labels.apps}</a>
+          <a href={navHref("/pricing")}>{labels.pricing}</a>
           <div className="publicNavMenu" data-open={openMenu === "resources"}>
             <button
               type="button"
@@ -207,50 +204,46 @@ function PublicHeader({ user }: { user?: User | null }) {
               aria-controls="public-nav-resources"
               onClick={() => setOpenMenu(openMenu === "resources" ? null : "resources")}
             >
-              {tr("Resources", "资源")} {arrow}
+              {labels.resources} {arrow}
             </button>
             <div id="public-nav-resources" className="publicNavDropdown resourceDropdown">
               <div className="publicNavDropdownColumns">
                 <section className="publicNavGroup">
-                  <span className="publicNavGroupLabel">{tr("GET STARTED", "开始使用")}</span>
+                  <span className="publicNavGroupLabel">{labels.startGroup}</span>
                   <a href={navHref("/docs")}>
-                    <strong>{tr("Documentation", "文档")}</strong>
-                    <small>
-                      {tr("Connections, tools and product guides", "连接、工具与产品指南")}
-                    </small>
+                    <strong>{labels.documentation}</strong>
+                    <small>{labels.documentationDescription}</small>
                   </a>
                   <a href={navHref("/docs/tools")}>
-                    <strong>{tr("All tools", "全部工具")}</strong>
-                    <small>
-                      {tr("Search tools, actions and parameters", "查找工具、操作与参数")}
-                    </small>
+                    <strong>{labels.allTools}</strong>
+                    <small>{labels.toolsDescription}</small>
                   </a>
                   <a href={navHref("/downloads")}>
-                    <strong>{tr("Downloads", "下载")}</strong>
+                    <strong>{labels.downloads}</strong>
                     <small>Windows · macOS · Linux</small>
                   </a>
                   <a href={navHref("/chrome-extension")}>
-                    <strong>{tr("Browser extension", "浏览器扩展")}</strong>
-                    <small>{tr("Share selected browser context", "共享选定的浏览器上下文")}</small>
+                    <strong>{labels.browserExtension}</strong>
+                    <small>{labels.browserDescription}</small>
                   </a>
                   <a href={navHref("/security-model")}>
-                    <strong>{tr("Security", "安全")}</strong>
-                    <small>{tr("Your devices, your rules", "自己的设备，自己的规则")}</small>
+                    <strong>{labels.security}</strong>
+                    <small>{labels.securityDescription}</small>
                   </a>
                 </section>
                 <section className="publicNavGroup">
-                  <span className="publicNavGroupLabel">{tr("FOLLOW ALONG", "关注进展")}</span>
+                  <span className="publicNavGroupLabel">{labels.updatesGroup}</span>
                   <a href={navHref("/blogs")}>
-                    <strong>{tr("Blog", "博客")}</strong>
-                    <small>{tr("Ideas from the team", "团队思考与分享")}</small>
+                    <strong>{labels.blog}</strong>
+                    <small>{labels.blogDescription}</small>
                   </a>
                   <a href={navHref("/releases")}>
-                    <strong>{tr("Changelog", "更新日志")}</strong>
-                    <small>{tr("What shipped recently", "近期产品更新")}</small>
+                    <strong>{labels.changelog}</strong>
+                    <small>{labels.changelogDescription}</small>
                   </a>
                   <a href={navHref("/roadmap")}>
-                    <strong>{tr("Roadmap", "路线图")}</strong>
-                    <small>{tr("What we are building next", "我们正在打造什么")}</small>
+                    <strong>{labels.roadmap}</strong>
+                    <small>{labels.roadmapDescription}</small>
                   </a>
                 </section>
               </div>
@@ -262,15 +255,15 @@ function PublicHeader({ user }: { user?: User | null }) {
           <ThemeSwitcher compact />
           {user ? (
             <a className="navDashboard" href={dashboardHref("/dashboard/connect/overview")}>
-              {tr("Dashboard", "控制台")} <span>↗</span>
+              {labels.dashboard} <span>↗</span>
             </a>
           ) : (
             <a
               className="navLogin installNavCta"
               href={APP_ORIGIN + "/dashboard/connect/overview"}
-              title={tr("Sign in with Google or email", "使用 Google 或邮箱登录")}
+              title={labels.signInDescription}
             >
-              {tr("Get started", "开始使用")} <ProductIcon name="arrowUpRight" size={14} />
+              {labels.getStarted} <ProductIcon name="arrowUpRight" size={14} />
             </a>
           )}
         </div>
@@ -306,18 +299,15 @@ export function CopyButton({ value, label }: { value: string; label?: string }) 
       onClick={() => void copy()}
       title={
         copyState === "failed"
-          ? tr(
-              "Clipboard access was blocked. Select and copy the text manually.",
-              "剪贴板访问被阻止，请选中文字手动复制。",
-            )
+          ? tr("components.publicLayout.clipboardAccessWasBlockedSelectAnd")
           : undefined
       }
     >
       {copyState === "copied"
-        ? tr("Copied", "已复制")
+        ? tr("components.publicLayout.copied")
         : copyState === "failed"
-          ? tr("Copy manually", "手动复制")
-          : label || tr("Copy", "复制")}
+          ? tr("components.publicLayout.copyManually")
+          : label || tr("components.publicLayout.copy")}
     </button>
   );
 }
@@ -348,7 +338,7 @@ export function PublicLayout({
   children: React.ReactNode;
   user?: User | null;
 }) {
-  const { tr } = useI18n();
+  const { locale, tr } = useI18n();
   return (
     <main className="landing publicPage">
       <PublicHeader user={user} />
@@ -357,23 +347,25 @@ export function PublicLayout({
         <Brand compact />
         <nav
           className="publicFooterLinks"
-          aria-label={tr("Remote Arc guides", "Remote Arc 使用指南")}
+          aria-label={tr("components.publicLayout.remoteArcGuides")}
         >
-          <a href="/remote-mcp">{tr("Remote MCP guide", "Remote MCP 指南")}</a>
+          <a href="/remote-mcp">{tr("components.publicLayout.remoteMcpGuide")}</a>
           <a href="/chatgpt-computer-access">ChatGPT</a>
           <a href="/claude-computer-access">Claude</a>
           <a href="/install/gemini">Gemini</a>
-          <a href="/docs/mcp">{tr("MCP Docs", "MCP 文档")}</a>
-          <a href="/security-model">{tr("Security", "安全")}</a>
-          <a href={tr("/arc", "/zh/arc")}>{tr("Arc", "Arc 助手")}</a>
-          <a href={tr("/roadmap", "/zh/roadmap")}>{tr("Roadmap", "路线图")}</a>
-          <a href={tr("/feedback", "/zh/feedback")}>{tr("Feedback", "用户反馈")}</a>
-          <a href={tr("/support", "/zh/support")}>{tr("Support", "支持")}</a>
-          <a href={tr("/privacy", "/zh/privacy")}>{tr("Privacy", "隐私")}</a>
-          <a href={tr("/terms", "/zh/terms")}>{tr("Terms", "条款")}</a>
+          <a href="/docs/mcp">{tr("components.publicLayout.mcpDocs")}</a>
+          <a href="/security-model">{tr("components.publicLayout.security")}</a>
+          <a href={pageForLanguage("/arc", locale)}>{tr("components.publicLayout.arc")}</a>
+          <a href={pageForLanguage("/roadmap", locale)}>{tr("components.publicLayout.roadmap")}</a>
+          <a href={pageForLanguage("/feedback", locale)}>
+            {tr("components.publicLayout.feedback")}
+          </a>
+          <a href={pageForLanguage("/support", locale)}>{tr("components.publicLayout.support")}</a>
+          <a href={pageForLanguage("/privacy", locale)}>{tr("components.publicLayout.privacy")}</a>
+          <a href={pageForLanguage("/terms", locale)}>{tr("components.publicLayout.terms")}</a>
         </nav>
         <div className="publicFooterMeta">
-          <span>© 2026 Remote Arc · {tr("Proprietary", "专有软件")}</span>
+          <span>© 2026 Remote Arc · {tr("components.publicLayout.proprietary")}</span>
           <a href="https://github.com/Remote-Arc/remote-arc">GitHub</a>
         </div>
       </footer>

@@ -14,7 +14,7 @@ import { DeviceActivityPanel } from "./device-activity-panel.js";
 import { browserExtensionUpdate } from "./browser-extension-update.js";
 import { LATEST_AGENT_VERSION, timeAgo } from "../format.js";
 import type { Device } from "../../../types/app-types.js";
-import type { DashboardModel } from "../hooks/use-dashboard-model.js";
+import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 
 // Values derived once per device card and shared with its panels.
 export function deviceFacts(device: Device, m: DashboardModel) {
@@ -101,14 +101,14 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
       : device.status;
   const badgeLabel =
     device.connection_state === "stale"
-      ? tr("Signal expired", "信号已过期")
+      ? tr("dashboard.devices.deviceCard.signalExpired")
       : device.status === "offline"
-        ? tr("Offline", "离线")
+        ? tr("dashboard.devices.deviceCard.offline")
         : device.execution_paused
-          ? tr("Paused", "已暂停")
+          ? tr("dashboard.devices.deviceCard.paused")
           : responseUnknown
-            ? tr("Response unconfirmed", "响应待确认")
-            : tr("Online", "在线");
+            ? tr("dashboard.devices.deviceCard.responseUnconfirmed")
+            : tr("dashboard.devices.deviceCard.online");
   return (
     <article className={"deviceCard managed " + device.status}>
       <div className="deviceTop">
@@ -120,7 +120,7 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
             <h3>{device.name}</h3>
             <span>
               {platformLabel(device.platform)} ·{" "}
-              {device.hostname || tr("No hostname", "未提供主机名")}
+              {device.hostname || tr("dashboard.devices.deviceCard.noHostname")}
             </span>
           </div>
         </div>
@@ -128,7 +128,7 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
           {updateAvailable && (
             <span className="badge updateAvailable">
               <i />
-              {tr("Update available", "可更新")}
+              {tr("dashboard.devices.deviceCard.updateAvailable")}
             </span>
           )}
           <span className={"badge " + badgeClass}>
@@ -143,21 +143,23 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
               onClick={() => void m.recoverDeviceConnection(device)}
             >
               {m.connectionRecoveryBusyId === device.id
-                ? tr("Checking…", "检查中…")
-                : tr("Check & reconnect", "检查并恢复")}
+                ? tr("dashboard.devices.deviceCard.checking")
+                : tr("dashboard.devices.deviceCard.checkReconnect")}
             </button>
           )}
           <button
             className="ghostButton"
             aria-expanded={managedDeviceId === device.id}
             aria-controls={"device-management-" + device.id}
-            aria-label={tr("Manage " + device.name, "管理 " + device.name)}
+            aria-label={tr("dashboard.devices.deviceCard.manage", { name: device.name })}
             onClick={() => {
               setManagedDeviceId(managedDeviceId === device.id ? null : device.id);
               setDevicePanel("access");
             }}
           >
-            {managedDeviceId === device.id ? tr("Close", "收起") : tr("Manage", "管理")}
+            {managedDeviceId === device.id
+              ? tr("dashboard.devices.deviceCard.close")
+              : tr("dashboard.devices.deviceCard.manage2")}
           </button>
         </div>
       </div>
@@ -167,57 +169,57 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
         <span>
           <ProductIcon name="shield" size={13} />
           {accessPreset === "safe"
-            ? tr("Read only", "只读访问")
+            ? tr("dashboard.devices.deviceCard.readOnly")
             : accessPreset === "developer"
-              ? tr("Read & edit", "读取与编辑")
+              ? tr("dashboard.devices.deviceCard.readEdit")
               : accessPreset === "full"
-                ? tr("Terminal enabled", "已启用终端")
-                : tr("Custom permissions", "自定义权限")}
+                ? tr("dashboard.devices.deviceCard.terminalEnabled")
+                : tr("dashboard.devices.deviceCard.customPermissions")}
         </span>
         <span className="deviceRuntimeVersion">
           <ProductIcon name="activity" size={13} />
-          {device.platform === "browser" ? tr("Browser", "浏览器") : tr("Running", "运行中")}{" "}
-          {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}
+          {device.platform === "browser"
+            ? tr("dashboard.devices.deviceCard.browser")
+            : tr("dashboard.devices.deviceCard.running")}{" "}
+          {runtimeVersion
+            ? "v" + runtimeVersion
+            : tr("dashboard.devices.deviceCard.versionUnknown")}
           {device.platform !== "browser" && recoveryVersion && recoveryVersion !== runtimeVersion
-            ? " · " + tr("Recovery", "恢复包") + " v" + recoveryVersion
+            ? " · " + tr("dashboard.devices.deviceCard.recovery") + " v" + recoveryVersion
             : ""}
-          {updateAvailable ? " · " + tr("Latest", "最新") + " v" + LATEST_AGENT_VERSION : ""}
-          {extensionUpdate ? " · " + tr("Latest", "最新") + " v" + extensionUpdate.latest : ""}
+          {updateAvailable
+            ? " · " + tr("dashboard.devices.deviceCard.latest") + " v" + LATEST_AGENT_VERSION
+            : ""}
+          {extensionUpdate
+            ? " · " + tr("dashboard.devices.deviceCard.latest") + " v" + extensionUpdate.latest
+            : ""}
         </span>
         <span>
-          {(device.workspace_roots || []).length} {tr("trusted folders", "个可信目录")}
+          {(device.workspace_roots || []).length}{" "}
+          {tr("dashboard.devices.deviceCard.trustedFolders")}
         </span>
         <span>
           {device.background_guard_active
-            ? tr("Recovery supervisor running", "恢复守护运行中")
+            ? tr("dashboard.devices.deviceCard.recoverySupervisorRunning")
             : device.background_enabled
-              ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认")
-              : tr("Automatic recovery off", "自动恢复关闭")}
+              ? tr("dashboard.devices.deviceCard.startupConfiguredRecoveryUnconfirmed")
+              : tr("dashboard.devices.deviceCard.automaticRecoveryOff")}
         </span>
         <span>
-          {tr("Seen ", "最后在线：")}
+          {tr("dashboard.devices.deviceCard.seen")}
           {timeAgo(device.last_seen)}
         </span>
       </div>
       {device.status === "offline" && (
         <p className="deviceOfflineHint">
           {device.connection_state === "stale"
-            ? tr(
-                "No recent device signal. Wake this computer to reconnect; a timed-out operation may still have executed.",
-                "设备近期没有响应，唤醒后会重新连接；此前超时的操作仍可能已经执行。",
-              )
-            : tr(
-                "Tasks wait until this computer reconnects. Remote Arc cannot power it on.",
-                "任务会等待这台电脑重新连接，Remote Arc 无法远程开机。",
-              )}
+            ? tr("dashboard.devices.deviceCard.noRecentDeviceSignalWakeThis")
+            : tr("dashboard.devices.deviceCard.tasksWaitUntilThisComputerReconnects")}
         </p>
       )}
       {responseUnknown && device.status === "online" && (
         <p className="deviceOfflineHint">
-          {tr(
-            "The connection has a signal, but a recent operation did not reply. Its result is unknown; inspect it before retrying.",
-            "连接仍有信号，但近期操作没有收到回复。执行结果待确认，请先核查再重试。",
-          )}
+          {tr("dashboard.devices.deviceCard.theConnectionHasASignalBut")}
         </p>
       )}
       {m.connectionRecoveryMessages?.[device.id] && (
@@ -235,13 +237,13 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
             <div
               className="deviceManagementTabs"
               role="tablist"
-              aria-label={tr("Device settings", "设备设置")}
+              aria-label={tr("dashboard.devices.deviceCard.deviceSettings")}
             >
               {(
                 [
-                  ["access", tr("Access & files", "权限与文件")],
-                  ["tasks", tr("Background & tasks", "后台与任务")],
-                  ["activity", tr("Activity & details", "活动与详情")],
+                  ["access", tr("dashboard.devices.deviceCard.accessFiles")],
+                  ["tasks", tr("dashboard.devices.deviceCard.backgroundTasks")],
+                  ["activity", tr("dashboard.devices.deviceCard.activityDetails")],
                 ] as const
               ).map(([panel, label]) => (
                 <button
@@ -297,16 +299,11 @@ export function DeviceCard({ m, device }: { m: DashboardModel; device: Device })
             <DeviceActivityPanel m={m} device={device} facts={facts} />
             <div className="deviceDangerZone">
               <div>
-                <strong>{tr("Forget device", "删除设备")}</strong>
-                <span>
-                  {tr(
-                    "Remove this pairing from Remote Arc. Local files stay untouched, and this runtime can be paired again later.",
-                    "从 Remote Arc 删除这条设备配对。本机文件不会被删除，之后仍可以重新配对这个运行环境。",
-                  )}
-                </span>
+                <strong>{tr("dashboard.devices.deviceCard.forgetDevice")}</strong>
+                <span>{tr("dashboard.devices.deviceCard.removeThisPairingFromRemoteArc")}</span>
               </div>
               <button className="dangerButton" onClick={() => void revoke(device.id)}>
-                {tr("Forget device", "删除设备")}
+                {tr("dashboard.devices.deviceCard.forgetDevice")}
               </button>
             </div>
           </>

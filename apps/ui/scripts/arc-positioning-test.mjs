@@ -1,3 +1,4 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -25,12 +26,13 @@ function attributes(value) {
 }
 
 for (const locale of ["en", "zh"]) {
+  await loadLocale(locale, "all");
   const prefix = locale === "zh" ? "/zh" : "";
   const connectHref = prefix + "/connect-ai?source=why-arc&path=connect";
   const arcHref = "https://agent.remotearc.app/dashboard/agent/chat?source=why-arc&path=hosted";
   const html = renderToStaticMarkup(
     React.createElement(ArcWhy, {
-      tr: (en, zh) => (locale === "zh" ? zh : en),
+      tr: createTranslator(locale),
       connectHref,
       arcHref,
     }),

@@ -1,4 +1,4 @@
-import type { DashboardModel } from "../hooks/use-dashboard-model.js";
+import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 
 // Modal dialogs rendered above every tab.
 export function DirectoryPickerDialog({ m }: { m: DashboardModel }) {
@@ -14,19 +14,13 @@ export function DirectoryPickerDialog({ m }: { m: DashboardModel }) {
         <button className="modalClose" onClick={() => setDirectoryPicker(null)}>
           ×
         </button>
-        <span className="eyebrow">{tr("CHOOSE WORKSPACE", "选择工作区")}</span>
+        <span className="eyebrow">{tr("dashboard.views.dashboardOverlays.chooseWorkspace")}</span>
         <h2>
-          {tr(
-            "Choose a folder on " + directoryPicker.device.name,
-            "选择 " + directoryPicker.device.name + " 上的目录",
-          )}
+          {tr("dashboard.views.dashboardOverlays.chooseAFolderOn", {
+            name: directoryPicker.device.name,
+          })}
         </h2>
-        <p>
-          {tr(
-            "Remote Arc will add the selected folder to Trusted Write Locations. Sensitive paths remain protected.",
-            "Remote Arc 会把所选目录加入可信写入区域；敏感路径保护仍然生效。",
-          )}
-        </p>
+        <p>{tr("dashboard.views.dashboardOverlays.remoteArcWillAddTheSelected")}</p>
 
         {directoryPicker.browser && (
           <div className="directoryPickerPath">
@@ -41,7 +35,7 @@ export function DirectoryPickerDialog({ m }: { m: DashboardModel }) {
                   )
                 }
               >
-                ↑ {tr("Parent", "上一级")}
+                ↑ {tr("dashboard.views.dashboardOverlays.parent")}
               </button>
             )}
           </div>
@@ -49,7 +43,9 @@ export function DirectoryPickerDialog({ m }: { m: DashboardModel }) {
 
         <div className="directoryPickerList">
           {directoryPicker.loading && (
-            <div className="directoryPickerEmpty">{tr("Loading folders…", "正在加载目录…")}</div>
+            <div className="directoryPickerEmpty">
+              {tr("dashboard.views.dashboardOverlays.loadingFolders")}
+            </div>
           )}
           {!directoryPicker.loading && !!directoryPicker.error && (
             <div className="policyWarning">{directoryPicker.error}</div>
@@ -72,33 +68,29 @@ export function DirectoryPickerDialog({ m }: { m: DashboardModel }) {
             directoryPicker.browser &&
             !directoryPicker.browser.directories.length && (
               <div className="directoryPickerEmpty">
-                {tr("No visible child folders.", "没有可见的子目录。")}
+                {tr("dashboard.views.dashboardOverlays.noVisibleChildFolders")}
               </div>
             )}
         </div>
 
         {directoryPicker.browser && directoryPicker.browser.protected_entries_omitted > 0 && (
           <p className="directoryPickerNote">
-            {tr(
-              directoryPicker.browser.protected_entries_omitted +
-                " protected folder(s) are hidden by Sensitive Path Policy.",
-              "有 " +
-                directoryPicker.browser.protected_entries_omitted +
-                " 个受保护目录已被 Sensitive Path Policy 隐藏。",
-            )}
+            {tr("dashboard.views.dashboardOverlays.protectedFolderSAreHiddenBy", {
+              protected_entries_omitted: directoryPicker.browser.protected_entries_omitted,
+            })}
           </p>
         )}
 
         <div className="dialogActions">
           <button className="ghostButton" onClick={() => setDirectoryPicker(null)}>
-            {tr("Cancel", "取消")}
+            {tr("dashboard.views.dashboardOverlays.cancel")}
           </button>
           <button
             className="primaryButton"
             disabled={!directoryPicker.browser || directoryPicker.loading}
             onClick={() => void addCurrentWorkspace()}
           >
-            {tr("Use this folder", "使用当前目录")}
+            {tr("dashboard.views.dashboardOverlays.useThisFolder")}
           </button>
         </div>
       </section>
@@ -124,17 +116,17 @@ export function DashboardDialogHost({ m }: { m: DashboardModel }) {
       >
         <button
           className="modalClose"
-          aria-label={tr("Close", "关闭")}
+          aria-label={tr("dashboard.views.dashboardOverlays.close")}
           onClick={() => settleDialog(dialog.kind === "notice" ? true : null)}
         >
           ×
         </button>
         <span className="eyebrow">
           {dialog.kind === "prompt"
-            ? tr("INPUT REQUIRED", "需要输入")
+            ? tr("dashboard.views.dashboardOverlays.inputRequired")
             : dialog.tone === "danger"
-              ? tr("CONFIRM ACTION", "确认操作")
-              : tr("REMOTE ARC", "REMOTE ARC")}
+              ? tr("dashboard.views.dashboardOverlays.confirmAction")
+              : tr("dashboard.views.dashboardOverlays.remoteArc")}
         </span>
         <h2 id="dashboard-dialog-title">{dialog.title}</h2>
         <p>{dialog.message}</p>
@@ -154,7 +146,7 @@ export function DashboardDialogHost({ m }: { m: DashboardModel }) {
         <div className="dialogActions">
           {dialog.kind !== "notice" && (
             <button className="ghostButton" onClick={() => settleDialog(null)}>
-              {dialog.cancelLabel || tr("Cancel", "取消")}
+              {dialog.cancelLabel || tr("dashboard.views.dashboardOverlays.cancel")}
             </button>
           )}
           <button

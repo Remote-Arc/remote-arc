@@ -1,6 +1,7 @@
+import type { MessageKey, Translate } from "../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { ProductIcon } from "../../components/product-icon.js";
 import { AdminUserUsageInsights } from "./user-usage-insights.js";
 import {
@@ -10,7 +11,7 @@ import {
   type ActivationStage,
 } from "../../../../../packages/protocol/src/admin-activation.js";
 import { UserActivationBadge, UserActivationEvidence } from "./user-activation.js";
-import "./admin-operations.css";
+import "../../styles/admin/admin-operations.css";
 
 type DeviceCapacityGrant = {
   id: string;
@@ -109,22 +110,22 @@ type LiveBilling = {
 };
 type Section = "users" | "devices" | "activity" | "costs";
 type OperationsSection = "users" | "devices" | "totals" | "activity";
-const relative = (value: string | null, locale: string) => {
+const relative = (value: string | null, tr: Translate) => {
   if (!value) return "—";
   const diff = Date.now() - Date.parse(value);
   if (!Number.isFinite(diff)) return "—";
-  if (diff < 60_000) return locale === "zh" ? "刚刚" : "Just now";
+  if (diff < 60_000) return tr("admin.adminOperations.justNow");
   if (diff < 3600_000) return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86400_000) return `${Math.floor(diff / 3600_000)}h ago`;
   return `${Math.floor(diff / 86400_000)}d ago`;
 };
 const fmt = (v: number) => new Intl.NumberFormat("en").format(v);
 const count = (v: number | null | undefined) => (v == null ? "—" : fmt(v));
-const sectionNames: Record<OperationsSection, [string, string]> = {
-  users: ["users", "用户列表"],
-  devices: ["devices", "设备"],
-  totals: ["totals", "汇总数字"],
-  activity: ["activity", "活跃趋势"],
+const sectionNames: Record<OperationsSection, MessageKey> = {
+  users: "admin.adminOperations.unavailableUsers",
+  devices: "admin.adminOperations.unavailableDevices",
+  totals: "admin.adminOperations.unavailableTotals",
+  activity: "admin.adminOperations.unavailableActivity",
 };
 
 export function AdminOperations({
@@ -187,7 +188,7 @@ export function AdminOperations({
         sort,
         query: appliedQuery,
         auditTotals: section === "costs" ? "1" : "0",
-        // The 7-day chart reads audit history, so only the Activity tab asks for it.
+        // Only the Activity tab reads the chart history.
         activity: section === "activity" ? "1" : "0",
       });
       const res = await fetch("/api/admin/operations?" + parameters, {
@@ -195,7 +196,7 @@ export function AdminOperations({
       });
       if (!res.ok)
         throw new Error(
-          tr("Admin metrics could not be loaded", "无法加载管理员指标") + " · " + res.status,
+          tr("admin.adminOperations.adminMetricsCouldNotBeLoaded") + " · " + res.status,
         );
       const result = (await res.json().then(canonicalErrorEnvelope)) as OperationsData;
       if (sequence !== requestSequence.current) return;
@@ -352,9 +353,7 @@ export function AdminOperations({
       if (!response.ok) throw Error();
       setArcBilling(await response.json().then(canonicalErrorEnvelope));
     } catch {
-      setArcBillingError(
-        tr("Arc billing data is temporarily unavailable.", "暂时无法获取 Arc 计费数据。"),
-      );
+      setArcBillingError(tr("admin.adminOperations.arcBillingDataIsTemporarilyUnavailable"));
     } finally {
       setArcBillingLoading(false);
     }
@@ -368,20 +367,16 @@ export function AdminOperations({
       amount > 100000 ||
       reason.trim().length < 5
     ) {
-      setNotice(
-        tr(
-          "Enter 1–100,000 calls and a reason (at least five characters).",
-          "请输入 1–100,000 次额度，并填写至少五个字的原因。",
-        ),
-      );
+      setNotice(tr("admin.adminOperations.enterCallsAndAReasonAt"));
       return;
     }
     if (
       !window.confirm(
-        tr(
-          `Give ${chosen.email} +${fmt(amount)} calls for ${data.month}?`,
-          `确定给 ${chosen.email} 在 ${data.month} 追加 ${fmt(amount)} 次工具调用吗？`,
-        ),
+        tr("admin.adminOperations.giveCallsFor", {
+          email: chosen.email,
+          amount: fmt(amount),
+          month: data.month,
+        }),
       )
     )
       return;
@@ -408,7 +403,7 @@ export function AdminOperations({
       if (!response.ok) throw new Error(payload.error || "Unable to grant credits");
       pendingCreditRequest.current = null;
       setReason("");
-      setNotice(tr("Monthly bonus granted and recorded.", "已追加本月额度并记录管理员操作。"));
+      setNotice(tr("admin.adminOperations.monthlyBonusGrantedAndRecorded"));
       await refresh();
     } catch (err) {
       setNotice(err instanceof Error ? err.message : String(err));
@@ -432,18 +427,18 @@ export function AdminOperations({
     const amount = Number(deviceExtra),
       reason = deviceReason.trim();
     if (!Number.isSafeInteger(amount) || amount < 1 || amount > 20) {
-      setDeviceNotice(tr("Choose 1–20 additional computers.", "请选择追加 1–20 台电脑。"));
+      setDeviceNotice(tr("admin.adminOperations.chooseAdditionalComputers"));
       return;
     }
     if (reason.length < 3 || reason.length > 500) {
-      setDeviceNotice(tr("Enter a reason (3–500 characters).", "请填写 3–500 字的原因。"));
+      setDeviceNotice(tr("admin.adminOperations.enterAReasonCharacters"));
       return;
     }
     let expiresAt: string | null = null;
     if (deviceDuration === "custom") {
       const timestamp = Date.parse(deviceUntil);
       if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
-        setDeviceNotice(tr("Choose a future expiry.", "请选择未来的到期时间。"));
+        setDeviceNotice(tr("admin.adminOperations.chooseAFutureExpiry"));
         return;
       }
       expiresAt = new Date(timestamp).toISOString();
@@ -452,22 +447,11 @@ export function AdminOperations({
     }
     if (
       !window.confirm(
-        tr(
-          "Add " +
-            amount +
-            " computers for " +
-            chosen.email +
-            " until " +
-            (expiresAt || "revoked") +
-            "?",
-          "确认给 " +
-            chosen.email +
-            " 追加 " +
-            amount +
-            " 台电脑，有效期至 " +
-            (expiresAt || "手动撤销") +
-            "？",
-        ),
+        tr("admin.adminOperations.addComputersForUntil", {
+          amount,
+          email: chosen.email,
+          expiresAt: expiresAt || tr("admin.adminOperations.manualRevocation"),
+        }),
       )
     )
       return;
@@ -488,9 +472,7 @@ export function AdminOperations({
       const payload = (await response.json().then(canonicalErrorEnvelope)) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Could not add devices");
       await Promise.all([refreshDeviceGrants(chosen.email), refresh()]);
-      setDeviceNotice(
-        tr("Extra computers granted and audited.", "已追加电脑名额并记录管理员操作。"),
-      );
+      setDeviceNotice(tr("admin.adminOperations.extraComputersGrantedAndAudited"));
     } catch (error) {
       setDeviceNotice(error instanceof Error ? error.message : String(error));
     } finally {
@@ -499,8 +481,7 @@ export function AdminOperations({
   }
   async function revokeDeviceCapacity(id: string) {
     if (!chosen || readOnly || deviceBusy) return;
-    if (!window.confirm(tr("Revoke this extra computer allocation?", "确认撤销此项额外电脑名额？")))
-      return;
+    if (!window.confirm(tr("admin.adminOperations.revokeThisExtraComputerAllocation"))) return;
     setDeviceBusy(true);
     setDeviceNotice("");
     try {
@@ -516,7 +497,7 @@ export function AdminOperations({
       const payload = (await response.json().then(canonicalErrorEnvelope)) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Could not revoke devices");
       await Promise.all([refreshDeviceGrants(chosen.email), refresh()]);
-      setDeviceNotice(tr("Extra computer capacity revoked.", "已撤销额外电脑名额。"));
+      setDeviceNotice(tr("admin.adminOperations.extraComputerCapacityRevoked"));
     } catch (error) {
       setDeviceNotice(error instanceof Error ? error.message : String(error));
     } finally {
@@ -535,14 +516,14 @@ export function AdminOperations({
     if (!chosen || readOnly || plusBusy || activePlusGrant) return;
     const reason = plusReason.trim();
     if (reason.length < 3 || reason.length > 500) {
-      setPlusNotice(tr("Enter a reason (3–500 characters).", "请输入 3–500 字的开通原因。"));
+      setPlusNotice(tr("admin.adminOperations.enterAReasonCharacters2"));
       return;
     }
     let expiresAt: string | null = null;
     if (plusDuration === "custom") {
       const timestamp = Date.parse(plusCustomUntil);
       if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
-        setPlusNotice(tr("Choose a future expiry.", "请选择未来的到期时间。"));
+        setPlusNotice(tr("admin.adminOperations.chooseAFutureExpiry"));
         return;
       }
       expiresAt = new Date(timestamp).toISOString();
@@ -551,10 +532,10 @@ export function AdminOperations({
     }
     if (
       !window.confirm(
-        tr(
-          "Grant Plus to " + chosen.email + " until " + (expiresAt || "revoked") + "?",
-          "确认给 " + chosen.email + " 开通 Plus，有效期至 " + (expiresAt || "手动撤销") + "？",
-        ),
+        tr("admin.adminOperations.grantPlusToUntil", {
+          email: chosen.email,
+          expiresAt: expiresAt || tr("admin.adminOperations.manualRevocation"),
+        }),
       )
     )
       return;
@@ -570,12 +551,7 @@ export function AdminOperations({
       const payload = (await response.json().then(canonicalErrorEnvelope)) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Plus grant failed");
       await Promise.all([refreshPlusGrants(chosen.email), refresh()]);
-      setPlusNotice(
-        tr(
-          "Plus granted. The expiry and administrator are audited.",
-          "Plus 已开通，期限与管理员操作已记录。",
-        ),
-      );
+      setPlusNotice(tr("admin.adminOperations.plusGrantedTheExpiryAndAdministrator"));
     } catch (err) {
       setPlusNotice(err instanceof Error ? err.message : String(err));
     } finally {
@@ -585,12 +561,7 @@ export function AdminOperations({
   async function revokePlus() {
     if (!chosen || !activePlusGrant || readOnly || plusBusy) return;
     if (
-      !window.confirm(
-        tr(
-          "Revoke this Plus grant for " + chosen.email + "?",
-          "确认撤销 " + chosen.email + " 的此项 Plus 授权吗？",
-        ),
-      )
+      !window.confirm(tr("admin.adminOperations.revokeThisPlusGrantFor", { email: chosen.email }))
     )
       return;
     setPlusBusy(true);
@@ -608,7 +579,7 @@ export function AdminOperations({
       const payload = (await response.json().then(canonicalErrorEnvelope)) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Revoke failed");
       await Promise.all([refreshPlusGrants(chosen.email), refresh()]);
-      setPlusNotice(tr("Plus grant revoked.", "Plus 授权已撤销。"));
+      setPlusNotice(tr("admin.adminOperations.plusGrantRevoked"));
     } catch (err) {
       setPlusNotice(err instanceof Error ? err.message : String(err));
     } finally {
@@ -616,11 +587,11 @@ export function AdminOperations({
     }
   }
 
-  const tabs: Array<[Section, string, string]> = [
-    ["users", "Users", "用户"],
-    ["devices", "Devices", "设备"],
-    ["activity", "Activity", "活跃度"],
-    ["costs", "Cost & billing", "成本与账单"],
+  const tabs: Array<[Section, MessageKey]> = [
+    ["users", "admin.adminOperations.section.users"],
+    ["devices", "admin.adminOperations.section.devices"],
+    ["activity", "admin.adminOperations.section.activity"],
+    ["costs", "admin.adminOperations.section.costs"],
   ];
   return (
     <section className="opsWrap">
@@ -628,27 +599,22 @@ export function AdminOperations({
         <div>
           {!embedded && (
             <>
-              <span className="eyebrow">
-                {tr("OPERATIONS · ADMIN ONLY", "运营中心 · 仅管理员")}
-              </span>
-              <h2>{tr("Users, devices & capacity", "用户、设备与容量")}</h2>
+              <span className="eyebrow">{tr("admin.adminOperations.operationsAdminOnly")}</span>
+              <h2>{tr("admin.adminOperations.usersDevicesCapacity")}</h2>
             </>
           )}
-          <p>
-            {tr(
-              "Live sessions, usage, recent demand and account-wide cost visibility.",
-              "在线会话、工具使用量、活跃时段与 Cloudflare 账户级成本。",
-            )}
-          </p>
+          <p>{tr("admin.adminOperations.liveSessionsUsageRecentDemandAnd")}</p>
         </div>
         <div className="opsFresh">
           <small>
             {data
-              ? tr("Last checked", "最近检查") + " " + new Date(data.checkedAt).toLocaleTimeString()
+              ? tr("admin.adminOperations.lastChecked") +
+                " " +
+                new Date(data.checkedAt).toLocaleTimeString()
               : ""}
           </small>
           <button className="ghostButton" onClick={() => void refresh()} disabled={loading}>
-            {tr("Refresh", "刷新")}
+            {tr("admin.adminOperations.refresh")}
           </button>
         </div>
       </div>
@@ -659,38 +625,38 @@ export function AdminOperations({
       )}
       {!error && missing.length > 0 && (
         <div className="opsNotice" role="alert">
-          {tr("Some data could not be loaded: ", "以下数据暂时无法加载：") +
-            missing.map((key) => tr(sectionNames[key][0], sectionNames[key][1])).join(" · ") +
-            tr(". Refresh to try again.", "。可稍后刷新重试。")}
+          {tr("admin.adminOperations.someDataCouldNotBeLoaded") +
+            missing.map((key) => tr(sectionNames[key])).join(" · ") +
+            tr("admin.adminOperations.refreshToTryAgain")}
         </div>
       )}
       <div className="opsStats">
         <div>
-          <span>{tr("Registered users", "注册用户")}</span>
+          <span>{tr("admin.adminOperations.registeredUsers")}</span>
           <strong>{count(data?.totals.users)}</strong>
         </div>
         <div>
-          <span>{tr("Paired devices", "已配对设备")}</span>
+          <span>{tr("admin.adminOperations.pairedDevices")}</span>
           <strong>{count(data?.totals.devices)}</strong>
         </div>
         <div>
-          <span>{tr("Online now", "当前在线")}</span>
+          <span>{tr("admin.adminOperations.onlineNow")}</span>
           <strong>{count(data?.totals.online)}</strong>
-          <small>{tr("Verified against device connections", "根据实际设备连接核实")}</small>
+          <small>{tr("admin.adminOperations.verifiedAgainstDeviceConnections")}</small>
         </div>
         <div>
-          <span>{tr("Tool calls this month", "本月工具调用")}</span>
+          <span>{tr("admin.adminOperations.toolCallsThisMonth")}</span>
           <strong>{count(data?.totals.monthlyCalls)}</strong>
         </div>
       </div>
-      <nav className="opsTabs" aria-label={tr("Operational views", "运营视图")}>
-        {tabs.map(([id, en, zh]) => (
+      <nav className="opsTabs" aria-label={tr("admin.adminOperations.operationalViews")}>
+        {tabs.map(([id, label]) => (
           <button
             key={id}
             className={section === id ? "active" : ""}
             onClick={() => setSection(id)}
           >
-            {tr(en, zh)}
+            {tr(label)}
           </button>
         ))}
       </nav>
@@ -699,19 +665,14 @@ export function AdminOperations({
         <div className="opsContent">
           <div className="opsToolbar">
             <div>
-              <h3>{tr("User management", "用户管理")}</h3>
-              <p>
-                {tr(
-                  "Select a user to inspect usage and grant extra calls for the current month.",
-                  "选择用户查看使用情况、在线设备并追加本月额度。",
-                )}
-              </p>
+              <h3>{tr("admin.adminOperations.userManagement")}</h3>
+              <p>{tr("admin.adminOperations.selectAUserToInspectUsage")}</p>
             </div>
             <div className="opsUsageControls">
               <label>
-                {tr("Activation stage", "激活阶段")}
+                {tr("admin.adminOperations.activationStage")}
                 <select
-                  aria-label={tr("Activation stage", "激活阶段")}
+                  aria-label={tr("admin.adminOperations.activationStage")}
                   value={activation}
                   onChange={(e) => {
                     setActivation(e.target.value as ActivationStage | "all");
@@ -719,7 +680,7 @@ export function AdminOperations({
                     setSelectedUser(null);
                   }}
                 >
-                  <option value="all">{tr("All stages", "全部阶段")}</option>
+                  <option value="all">{tr("admin.adminOperations.allStages")}</option>
                   {ACTIVATION_STAGES.map((stage) => (
                     <option key={stage.id} value={stage.id}>
                       {tr(stage.en, stage.zh)}
@@ -729,9 +690,9 @@ export function AdminOperations({
                 </select>
               </label>
               <label>
-                {tr("Sort users", "用户排序")}
+                {tr("admin.adminOperations.sortUsers")}
                 <select
-                  aria-label={tr("Sort users", "用户排序")}
+                  aria-label={tr("admin.adminOperations.sortUsers")}
                   value={sort}
                   onChange={(e) => {
                     setSort(e.target.value as ActivationSort);
@@ -739,20 +700,20 @@ export function AdminOperations({
                     setSelectedUser(null);
                   }}
                 >
-                  <option value="usage">{tr("Highest usage first", "高用量优先")}</option>
-                  <option value="recent">{tr("Newest registered", "最近注册优先")}</option>
+                  <option value="usage">{tr("admin.adminOperations.highestUsageFirst")}</option>
+                  <option value="recent">{tr("admin.adminOperations.newestRegistered")}</option>
                   <option value="activation_asc">
-                    {tr("Activation: early stages first", "激活阶段：流失前段优先")}
+                    {tr("admin.adminOperations.activationEarlyStagesFirst")}
                   </option>
                   <option value="activation_desc">
-                    {tr("Activation: later stages first", "激活阶段：后段优先")}
+                    {tr("admin.adminOperations.activationLaterStagesFirst")}
                   </option>
                 </select>
               </label>
               <label>
-                {tr("Search users", "搜索用户")}
+                {tr("admin.adminOperations.searchUsers")}
                 <input
-                  placeholder={tr("Search name or email", "搜索姓名或邮箱")}
+                  placeholder={tr("admin.adminOperations.searchNameOrEmail")}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -760,28 +721,24 @@ export function AdminOperations({
             </div>
           </div>
           <p className="opsHelp opsActivationHelp">
-            {tr(
-              "Activation filtering, search and sorting cover all users before pagination. A 0/0 device count is not plugin attribution. Client names alone are unverified.",
-              "激活筛选、搜索和排序作用于全部用户，再进行分页。设备 0/0 不能证明插件来源，客户端名称本身也未经核实。",
-            )}
+            {tr("admin.adminOperations.activationFilteringSearchAndSortingCover")}
           </p>
           <div className="opsResultStatus" role="status" aria-live="polite">
             {loading
-              ? tr("Loading users…", "正在读取用户…")
-              : tr(
-                  `${data?.filteredTotal || 0} matching users`,
-                  `共 ${data?.filteredTotal || 0} 位匹配用户`,
-                )}
+              ? tr("admin.adminOperations.loadingUsers")
+              : tr("admin.adminOperations.matchingUsers", {
+                  filteredTotal: data?.filteredTotal || 0,
+                })}
           </div>
           <div
             className="opsUsagePulse"
-            aria-label={tr("Usage status on this page", "当前页用量状况")}
+            aria-label={tr("admin.adminOperations.usageStatusOnThisPage")}
           >
             <div>
               <strong>
                 {filtered.filter((u) => u.allowance !== null && u.used >= u.allowance).length}
               </strong>
-              <span>{tr("At limit", "额度已满")}</span>
+              <span>{tr("admin.adminOperations.atLimit")}</span>
             </div>
             <div>
               <strong>
@@ -792,31 +749,26 @@ export function AdminOperations({
                   ).length
                 }
               </strong>
-              <span>{tr("80% or more", "已用超过 80%")}</span>
+              <span>{tr("admin.adminOperations.orMore")}</span>
             </div>
             <div>
               <strong>{filtered.filter((u) => u.extra > 0).length}</strong>
-              <span>{tr("With bonus calls", "已赠送额度")}</span>
+              <span>{tr("admin.adminOperations.withBonusCalls")}</span>
             </div>
-            <small>
-              {tr(
-                "Filtered users on this page · not all accounts",
-                "仅当前页筛选用户 · 非全站统计",
-              )}
-            </small>
+            <small>{tr("admin.adminOperations.filteredUsersOnThisPageNot")}</small>
           </div>
           <div className="opsTableScroll">
             <table className="opsTable">
               <thead>
                 <tr>
-                  <th>{tr("Account", "账户")}</th>
-                  <th>{tr("Activation", "激活状态")}</th>
-                  <th>{tr("Plan", "套餐")}</th>
-                  <th>{tr("Calls this month", "本月调用")}</th>
-                  <th>{tr("Devices", "设备")}</th>
-                  <th>{tr("Login / MCP client", "登录方式 / MCP 客户端")}</th>
-                  <th>{tr("Agent version", "运行版本")}</th>
-                  <th>{tr("Last activity", "最近活动")}</th>
+                  <th>{tr("admin.adminOperations.account")}</th>
+                  <th>{tr("admin.adminOperations.activation")}</th>
+                  <th>{tr("admin.adminOperations.plan")}</th>
+                  <th>{tr("admin.adminOperations.callsThisMonth")}</th>
+                  <th>{tr("admin.adminOperations.devices")}</th>
+                  <th>{tr("admin.adminOperations.loginMcpClient")}</th>
+                  <th>{tr("admin.adminOperations.agentVersion")}</th>
+                  <th>{tr("admin.adminOperations.lastActivity")}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -831,10 +783,10 @@ export function AdminOperations({
                       <UserActivationBadge evidence={u} />
                       <small>
                         {u.first_success_at
-                          ? tr("Success recorded", "有成功记录")
+                          ? tr("admin.adminOperations.successRecorded")
                           : u.mcp_connections > 0
-                            ? tr("OAuth recorded", "有 OAuth 记录")
-                            : tr("No success recorded", "无成功记录")}
+                            ? tr("admin.adminOperations.oauthRecorded")
+                            : tr("admin.adminOperations.noSuccessRecorded")}
                       </small>
                     </td>
                     <td>
@@ -863,15 +815,15 @@ export function AdminOperations({
                         {u.live_status_verified ? u.online_devices : "—"} / {u.device_count}
                       </span>
                       {!u.live_status_verified && (
-                        <small>{tr("Live status unverified", "实时在线未核实")}</small>
+                        <small>{tr("admin.adminOperations.liveStatusUnverified")}</small>
                       )}
                     </td>
                     <td>
                       <strong>{u.linked_login === "google" ? "Google" : "Email"}</strong>
                       <small>
                         {u.first_mcp_client
-                          ? tr("Reported client: ", "客户端自报：") + u.first_mcp_client
-                          : tr("No MCP connection recorded", "无 MCP 连接记录")}
+                          ? tr("admin.adminOperations.reportedClient") + u.first_mcp_client
+                          : tr("admin.adminOperations.noMcpConnectionRecorded")}
                       </small>
                     </td>
                     <td>
@@ -879,7 +831,7 @@ export function AdminOperations({
                         {u.live_agent_versions?.length ? u.live_agent_versions.join(", ") : "—"}
                       </small>
                     </td>
-                    <td>{relative(u.last_activity, locale)}</td>
+                    <td>{relative(u.last_activity, tr)}</td>
                     <td>
                       <button
                         type="button"
@@ -889,7 +841,7 @@ export function AdminOperations({
                           setNotice("");
                         }}
                       >
-                        {tr("Details", "详情")}
+                        {tr("admin.adminOperations.details")}
                       </button>
                     </td>
                   </tr>
@@ -898,11 +850,8 @@ export function AdminOperations({
                   <tr>
                     <td colSpan={9}>
                       {missing.includes("users")
-                        ? tr(
-                            "The user list could not be loaded. Refresh to try again.",
-                            "用户列表暂时无法加载，可稍后刷新重试。",
-                          )
-                        : tr("No users match these filters.", "没有符合筛选条件的用户。")}
+                        ? tr("admin.adminOperations.theUserListCouldNotBeLoaded")
+                        : tr("admin.adminOperations.noUsersMatchTheseFilters")}
                     </td>
                   </tr>
                 )}
@@ -926,7 +875,7 @@ export function AdminOperations({
                   className="ghostButton"
                   disabled={userDetailBusy}
                   onClick={() => userDetailDialog.current?.close()}
-                  aria-label={tr("Close", "关闭")}
+                  aria-label={tr("admin.adminOperations.close")}
                 >
                   <ProductIcon name="close" size={16} />
                 </button>
@@ -941,36 +890,31 @@ export function AdminOperations({
               <div className="opsUserDetail">
                 <div>
                   <p>
-                    {chosen.email} · {tr("Joined", "注册于")}{" "}
+                    {chosen.email} · {tr("admin.adminOperations.joined")}{" "}
                     {new Date(chosen.created_at).toLocaleDateString()}
                   </p>
                   <p>
-                    {tr("Monthly plan quota", "本月基础额度")}:{" "}
+                    {tr("admin.adminOperations.monthlyPlanQuota")}:{" "}
                     {chosen.allowance === null ? "∞" : fmt(chosen.allowance - chosen.extra)} ·{" "}
-                    {tr("Extra granted", "额外赠送")}: {fmt(chosen.extra)}
+                    {tr("admin.adminOperations.extraGranted")}: {fmt(chosen.extra)}
                   </p>
                   <UserActivationEvidence evidence={chosen} />
                 </div>
                 <div className="opsPlusGrant">
                   <div>
-                    <h4>{tr("Additional computer slots", "追加电脑名额")}</h4>
-                    <p>
-                      {tr(
-                        "Extra slots add to the plan's computer limit. Browser companions are counted separately. Expiry prevents new pairings but does not disconnect already-paired computers.",
-                        "额外名额叠加到套餐电脑上限，不占用浏览器扩展名额。",
-                      )}
-                    </p>
+                    <h4>{tr("admin.adminOperations.additionalComputerSlots")}</h4>
+                    <p>{tr("admin.adminOperations.extraSlotsAddToThePlan")}</p>
                     <p>
                       <strong>
-                        {tr("Active extra slots", "当前额外名额")}: +{activeDeviceExtra}
+                        {tr("admin.adminOperations.activeExtraSlots")}: +{activeDeviceExtra}
                       </strong>
                       {" · "}
-                      {tr("Computers currently registered", "已注册电脑")}:{" "}
+                      {tr("admin.adminOperations.computersCurrentlyRegistered")}:{" "}
                       {chosen.computer_count ?? chosen.device_count}
                     </p>
                   </div>
                   <label>
-                    {tr("Add computers", "追加数量")}
+                    {tr("admin.adminOperations.addComputers")}
                     <input
                       type="number"
                       min={1}
@@ -981,23 +925,23 @@ export function AdminOperations({
                     />
                   </label>
                   <label>
-                    {tr("Duration", "生效时长")}
+                    {tr("admin.adminOperations.duration")}
                     <select
                       value={deviceDuration}
                       disabled={deviceBusy || readOnly}
                       onChange={(e) => setDeviceDuration(e.target.value)}
                     >
-                      <option value="7">{tr("7 days", "7 天")}</option>
-                      <option value="30">{tr("30 days", "30 天")}</option>
-                      <option value="90">{tr("90 days", "90 天")}</option>
-                      <option value="365">{tr("365 days", "365 天")}</option>
-                      <option value="never">{tr("Until revoked", "永久（直到撤销）")}</option>
-                      <option value="custom">{tr("Custom expiry", "自定义到期时间")}</option>
+                      <option value="7">{tr("admin.adminOperations.days")}</option>
+                      <option value="30">{tr("admin.adminOperations.days2")}</option>
+                      <option value="90">{tr("admin.adminOperations.days3")}</option>
+                      <option value="365">{tr("admin.adminOperations.days4")}</option>
+                      <option value="never">{tr("admin.adminOperations.untilRevoked")}</option>
+                      <option value="custom">{tr("admin.adminOperations.customExpiry")}</option>
                     </select>
                   </label>
                   {deviceDuration === "custom" && (
                     <label>
-                      {tr("Expires at (local time)", "到期时间（本地时区）")}
+                      {tr("admin.adminOperations.expiresAtLocalTime")}
                       <input
                         type="datetime-local"
                         value={deviceUntil}
@@ -1007,7 +951,7 @@ export function AdminOperations({
                     </label>
                   )}
                   <label>
-                    {tr("Reason (audited)", "追加原因（审计记录）")}
+                    {tr("admin.adminOperations.reasonAudited")}
                     <input
                       value={deviceReason}
                       maxLength={500}
@@ -1023,8 +967,8 @@ export function AdminOperations({
                       onClick={() => void addDeviceCapacity()}
                     >
                       {deviceBusy
-                        ? tr("Saving…", "处理中…")
-                        : tr("Grant extra slots", "追加设备名额")}
+                        ? tr("admin.adminOperations.saving")
+                        : tr("admin.adminOperations.grantExtraSlots")}
                     </button>
                   </div>
                   {activeDeviceGrants.length > 0 && (
@@ -1035,7 +979,7 @@ export function AdminOperations({
                             +{g.extra_devices} ·{" "}
                             {g.expires_at
                               ? new Date(g.expires_at).toLocaleDateString()
-                              : tr("Until revoked", "直到撤销")}{" "}
+                              : tr("admin.adminOperations.untilRevoked2")}{" "}
                             · {g.reason}
                           </span>
                           <button
@@ -1044,7 +988,7 @@ export function AdminOperations({
                             disabled={deviceBusy || readOnly}
                             onClick={() => void revokeDeviceCapacity(g.id)}
                           >
-                            {tr("Revoke", "撤销")}
+                            {tr("admin.adminOperations.revoke")}
                           </button>
                         </div>
                       ))}
@@ -1054,45 +998,38 @@ export function AdminOperations({
                 </div>
                 <div className="opsPlusGrant">
                   <div>
-                    <h4>{tr("Plus membership", "Plus 会员管理")}</h4>
-                    <p>
-                      {tr(
-                        "Grant Connect Plus with a chosen expiry. Hosted Arc model Credits are managed separately under Payments.",
-                        "为用户开通指定有效期的 Connect Plus；Arc 托管模型 Credits 在支付管理中独立管理。",
-                      )}
-                    </p>
+                    <h4>{tr("admin.adminOperations.plusMembership")}</h4>
+                    <p>{tr("admin.adminOperations.grantConnectPlusWithAChosen")}</p>
                     {activePlusGrant ? (
                       <p>
-                        <strong>{tr("Active Plus grant", "当前有效的 Plus 授权")}</strong> ·{" "}
+                        <strong>{tr("admin.adminOperations.activePlusGrant")}</strong> ·{" "}
                         {activePlusGrant.expires_at
                           ? new Date(activePlusGrant.expires_at).toLocaleString()
-                          : tr("Until revoked", "手动撤销前有效")}
+                          : tr("admin.adminOperations.untilRevoked3")}
                       </p>
                     ) : (
-                      <p>
-                        {tr("No active administrator Plus grant", "暂无有效的管理员 Plus 授权")}
-                      </p>
+                      <p>{tr("admin.adminOperations.noActiveAdministratorPlusGrant")}</p>
                     )}
                   </div>
                   <label>
-                    {tr("Duration", "开通时长")}
+                    {tr("admin.adminOperations.duration2")}
                     <select
-                      aria-label={tr("Plus duration", "Plus 开通时长")}
+                      aria-label={tr("admin.adminOperations.plusDuration")}
                       value={plusDuration}
                       disabled={plusBusy || !!activePlusGrant}
                       onChange={(e) => setPlusDuration(e.target.value)}
                     >
-                      <option value="7">{tr("7 days", "7 天")}</option>
-                      <option value="30">{tr("30 days", "30 天")}</option>
-                      <option value="90">{tr("90 days", "90 天")}</option>
-                      <option value="365">{tr("365 days", "365 天")}</option>
-                      <option value="never">{tr("Until revoked", "永久（直到撤销）")}</option>
-                      <option value="custom">{tr("Custom expiry", "自定义到期时间")}</option>
+                      <option value="7">{tr("admin.adminOperations.days")}</option>
+                      <option value="30">{tr("admin.adminOperations.days2")}</option>
+                      <option value="90">{tr("admin.adminOperations.days3")}</option>
+                      <option value="365">{tr("admin.adminOperations.days4")}</option>
+                      <option value="never">{tr("admin.adminOperations.untilRevoked")}</option>
+                      <option value="custom">{tr("admin.adminOperations.customExpiry")}</option>
                     </select>
                   </label>
                   {plusDuration === "custom" && (
                     <label>
-                      {tr("Expires at (local time)", "到期时间（本地时区）")}
+                      {tr("admin.adminOperations.expiresAtLocalTime")}
                       <input
                         type="datetime-local"
                         value={plusCustomUntil}
@@ -1102,7 +1039,7 @@ export function AdminOperations({
                     </label>
                   )}
                   <label>
-                    {tr("Reason (audited)", "开通原因（审计记录）")}
+                    {tr("admin.adminOperations.reasonAudited2")}
                     <input
                       value={plusReason}
                       onChange={(e) => setPlusReason(e.target.value)}
@@ -1119,7 +1056,9 @@ export function AdminOperations({
                         readOnly || plusBusy || !!activePlusGrant || chosen.role === "admin"
                       }
                     >
-                      {plusBusy ? tr("Saving…", "处理中…") : tr("Grant Plus", "开通 Plus")}
+                      {plusBusy
+                        ? tr("admin.adminOperations.saving")
+                        : tr("admin.adminOperations.grantPlus")}
                     </button>
                     {activePlusGrant && (
                       <button
@@ -1128,7 +1067,7 @@ export function AdminOperations({
                         onClick={() => void revokePlus()}
                         disabled={readOnly || plusBusy}
                       >
-                        {tr("Revoke grant", "撤销授权")}
+                        {tr("admin.adminOperations.revokeGrant")}
                       </button>
                     )}
                   </div>
@@ -1136,7 +1075,7 @@ export function AdminOperations({
                 </div>
                 <div className="opsCreditForm">
                   <label>
-                    {tr("Add calls this month", "本月追加调用次数")}
+                    {tr("admin.adminOperations.addCallsThisMonth")}
                     <input
                       type="number"
                       min={1}
@@ -1146,10 +1085,10 @@ export function AdminOperations({
                     />
                   </label>
                   <label>
-                    {tr("Reason (audited)", "原因（可审计）")}
+                    {tr("admin.adminOperations.reasonAudited3")}
                     <input
                       maxLength={300}
-                      placeholder={tr("e.g. Early access feedback", "例如：早期体验反馈奖励")}
+                      placeholder={tr("admin.adminOperations.eGEarlyAccessFeedback")}
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                     />
@@ -1160,16 +1099,11 @@ export function AdminOperations({
                     onClick={() => void grantCredits()}
                   >
                     {saving
-                      ? tr("Saving…", "正在提交…")
-                      : tr("Grant monthly calls", "追加本月额度")}
+                      ? tr("admin.adminOperations.saving2")
+                      : tr("admin.adminOperations.grantMonthlyCalls")}
                   </button>
                   {!data?.creditsReady && (
-                    <small>
-                      {tr(
-                        "Credit grants will be available after the database migration.",
-                        "额度追加将在数据库迁移完成后开放。",
-                      )}
-                    </small>
+                    <small>{tr("admin.adminOperations.creditGrantsWillBeAvailableAfter")}</small>
                   )}
                   {notice && <small role="status">{notice}</small>}
                 </div>
@@ -1184,7 +1118,7 @@ export function AdminOperations({
                 setSelectedUser(null);
               }}
             >
-              {tr("Previous", "上一页")}
+              {tr("admin.adminOperations.previous")}
             </button>
             <span>
               {page + 1} /{" "}
@@ -1197,7 +1131,7 @@ export function AdminOperations({
                 setSelectedUser(null);
               }}
             >
-              {tr("Next", "下一页")}
+              {tr("admin.adminOperations.next")}
             </button>
           </div>
         </div>
@@ -1207,25 +1141,20 @@ export function AdminOperations({
         <div className="opsContent">
           <div className="opsToolbar">
             <div>
-              <h3>{tr("Connected computers", "设备运行情况")}</h3>
-              <p>
-                {tr(
-                  "Online is checked from active WebSocket sessions. Last seen is historical.",
-                  "在线状态来自实时 WebSocket，会话断开后仍保留最后连接时间。",
-                )}
-              </p>
+              <h3>{tr("admin.adminOperations.connectedComputers")}</h3>
+              <p>{tr("admin.adminOperations.onlineIsCheckedFromActiveWebsocket")}</p>
             </div>
           </div>
           <div className="opsTableScroll">
             <table className="opsTable">
               <thead>
                 <tr>
-                  <th>{tr("Device", "设备")}</th>
-                  <th>{tr("Owner", "所属用户")}</th>
-                  <th>{tr("Platform", "平台")}</th>
-                  <th>{tr("Status", "在线状态")}</th>
-                  <th>{tr("remotelink version", "remotelink 版本")}</th>
-                  <th>{tr("Last seen", "最后连接")}</th>
+                  <th>{tr("admin.adminOperations.device")}</th>
+                  <th>{tr("admin.adminOperations.owner")}</th>
+                  <th>{tr("admin.adminOperations.platform")}</th>
+                  <th>{tr("admin.adminOperations.status")}</th>
+                  <th>{tr("admin.adminOperations.remotelinkVersion")}</th>
+                  <th>{tr("admin.adminOperations.lastSeen")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1242,21 +1171,22 @@ export function AdminOperations({
                     <td>
                       <span className={device.online ? "opsOnline" : ""}>
                         {!device.statusVerified
-                          ? tr("Unverified", "未核实")
+                          ? tr("admin.adminOperations.unverified")
                           : device.online
-                            ? tr("Online", "在线")
-                            : tr("Offline", "离线")}
+                            ? tr("admin.adminOperations.online")
+                            : tr("admin.adminOperations.offline")}
                       </span>
                     </td>
                     <td>
                       <strong>{device.agent_version || "—"}</strong>
                       {device.background_agent_version && (
                         <small>
-                          {tr("Background", "后台")}: {device.background_agent_version}
+                          {tr("admin.adminOperations.background")}:{" "}
+                          {device.background_agent_version}
                         </small>
                       )}
                     </td>
-                    <td>{relative(device.last_seen, locale)}</td>
+                    <td>{relative(device.last_seen, tr)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1269,19 +1199,14 @@ export function AdminOperations({
         <div className="opsContent">
           <div className="opsToolbar">
             <div>
-              <h3>{tr("Tool activity · last 48 hours", "工具活跃趋势 · 最近 48 小时")}</h3>
-              <p>
-                {tr(
-                  "Hourly audit events, UTC. Use repeated quiet periods to help plan deployments, not as guaranteed availability.",
-                  "按 UTC 小时统计审计活动；可辅助选择低峰发版，但不代表绝对安全时段。",
-                )}
-              </p>
+              <h3>{tr("admin.adminOperations.toolActivityLastHours")}</h3>
+              <p>{tr("admin.adminOperations.hourlyAuditEventsUtcUseRepeated")}</p>
             </div>
           </div>
           <div
             className="opsChart"
             role="img"
-            aria-label={tr("Hourly tool call activity", "每小时工具调用趋势")}
+            aria-label={tr("admin.adminOperations.hourlyToolCallActivity")}
           >
             {hours.map((h, i) => (
               <div className="opsChartBar" key={h.hour} title={h.hour + " UTC · " + h.calls}>
@@ -1291,30 +1216,18 @@ export function AdminOperations({
             ))}
           </div>
           <p className="opsHelp">
-            {tr("Tool calls in the last 48 hours: ", "最近 48 小时工具调用：") +
+            {tr("admin.adminOperations.toolCallsInTheLastHours") +
               count(data?.activity ? hours.reduce((sum, h) => sum + h.calls, 0) : null)}
           </p>
           <p className="opsHelp">
             {quietWindow
-              ? tr(
-                  "Lower-activity hours in the last 48 hours (Auckland time): ",
-                  "最近 48 小时较低活跃的奥克兰时段：",
-                ) +
+              ? tr("admin.adminOperations.lowerActivityHoursInTheLastHours") +
                 quietWindow.join(" · ") +
-                tr(
-                  ". Treat as a planning hint, not a guaranteed safe deployment window.",
-                  "。仅供安排发版参考，不保证在线用户为零。",
-                )
-              : tr(
-                  "Not enough activity in the last 48 hours to suggest a release window.",
-                  "最近 48 小时的活跃记录不足，暂不建议自动推荐发版时段。",
-                )}
+                tr("admin.adminOperations.treatAsAPlanningHintNot")
+              : tr("admin.adminOperations.notEnoughActivityInTheLastHours")}
           </p>
           <p className="opsHelp">
-            {tr(
-              "Counts derive from recorded audit events; sampled telemetry and production billing may differ.",
-              "此图来自审计事件，不等于 Cloudflare 的实际计费请求或完整流量指标。",
-            )}
+            {tr("admin.adminOperations.countsDeriveFromRecordedAuditEvents")}
           </p>
         </div>
       )}
@@ -1323,13 +1236,8 @@ export function AdminOperations({
         <div className="opsContent">
           <div className="opsToolbar">
             <div>
-              <h3>{tr("Arc subscriptions & model usage", "Arc 订阅与模型用量")}</h3>
-              <p>
-                {tr(
-                  "Verified receipts, rated model costs and unresolved payment events.",
-                  "已核验收款、模型计量成本与待处理支付事件。",
-                )}
-              </p>
+              <h3>{tr("admin.adminOperations.arcSubscriptionsModelUsage")}</h3>
+              <p>{tr("admin.adminOperations.verifiedReceiptsRatedModelCostsAnd")}</p>
             </div>
             <button
               className="ghostButton"
@@ -1337,8 +1245,8 @@ export function AdminOperations({
               onClick={() => void loadArcBilling()}
             >
               {arcBillingLoading
-                ? tr("Loading…", "读取中…")
-                : tr("Fetch Arc billing", "读取 Arc 计费")}
+                ? tr("admin.adminOperations.loading")
+                : tr("admin.adminOperations.fetchArcBilling")}
             </button>
           </div>
           {arcBillingError && <p role="alert">{arcBillingError}</p>}
@@ -1346,33 +1254,29 @@ export function AdminOperations({
             <>
               <div className="opsCostGrid">
                 <div>
-                  <span>{tr("Paid receipt value · ", "已付收款金额 · ") + arcBilling.month}</span>
+                  <span>{tr("admin.adminOperations.paidReceiptValue") + arcBilling.month}</span>
                   <strong>${arcBilling.paidRevenueUsd.toFixed(2)}</strong>
-                  <small>{tr("Excludes tax and refunded receipts.", "不含税和已退款收据。")}</small>
+                  <small>{tr("admin.adminOperations.excludesTaxAndRefundedReceipts")}</small>
                 </div>
                 <div>
-                  <span>{tr("Rated model usage", "模型计量成本")}</span>
+                  <span>{tr("admin.adminOperations.ratedModelUsage")}</span>
                   <strong>${arcBilling.modelRatedCostUsd.toFixed(2)}</strong>
-                  <small>{tr("Provider invoices can differ.", "供应商实际账单可能有差异。")}</small>
+                  <small>{tr("admin.adminOperations.providerInvoicesCanDiffer")}</small>
                 </div>
                 <div>
-                  <span>{tr("Pending model maximum", "待确认模型费用上限")}</span>
+                  <span>{tr("admin.adminOperations.pendingModelMaximum")}</span>
                   <strong>${arcBilling.heldModelMaximumUsd.toFixed(2)}</strong>
                   <small>{arcBilling.creditsPending.toLocaleString()} Credits</small>
                 </div>
               </div>
-              <p className="opsHelp">
-                {tr(
-                  "These figures are not gross margin. Include payment, hosting, Apps, support and Free-user costs in the repository SaaS economics tool.",
-                  "以上不等于毛利；请在仓库 SaaS 测算工具中计入支付、托管、Apps、支持及免费用户成本。",
-                )}
-              </p>
+              <p className="opsHelp">{tr("admin.adminOperations.theseFiguresAreNotGrossMargin")}</p>
               {arcBilling.unresolvedPayments.length > 0 && (
                 <div>
-                  <h4>{tr("Payments needing review", "待核查支付")}</h4>
+                  <h4>{tr("admin.adminOperations.paymentsNeedingReview")}</h4>
                   {arcBilling.unresolvedPayments.map((event) => (
                     <p key={event.id}>
-                      <code>{event.id}</code> · {event.error_code || tr("Processing", "处理中")}
+                      <code>{event.id}</code> ·{" "}
+                      {event.error_code || tr("admin.adminOperations.processing")}
                     </p>
                   ))}
                 </div>
@@ -1381,22 +1285,17 @@ export function AdminOperations({
           )}
           <div className="opsToolbar">
             <div>
-              <h3>{tr("Cloudflare account cost visibility", "Cloudflare 账户成本")}</h3>
-              <p>
-                {tr(
-                  "Billing covers the entire moviegoer Cloudflare account. Any other resources on that account share the same quotas.",
-                  "账单以 moviegoer Cloudflare 账户为单位；如果该账户还部署其他资源，额度与费用会合并计算。",
-                )}
-              </p>
+              <h3>{tr("admin.adminOperations.cloudflareAccountCostVisibility")}</h3>
+              <p>{tr("admin.adminOperations.billingCoversTheEntireMoviegoerCloudflare")}</p>
             </div>
           </div>
           <div className="opsCostGrid">
             <div>
-              <span>{tr("Current account usage cost", "本月账户用量成本")}</span>
+              <span>{tr("admin.adminOperations.currentAccountUsageCost")}</span>
               <strong>
                 {liveBilling
                   ? liveBilling.currency + " " + liveBilling.total.toFixed(2)
-                  : tr("Not connected", "未连接")}
+                  : tr("admin.adminOperations.notConnected")}
               </strong>
               <small>
                 {liveBilling
@@ -1404,32 +1303,19 @@ export function AdminOperations({
                     " – " +
                     liveBilling.to +
                     " · " +
-                    tr(
-                      "Cloudflare daily-updated usage, not invoice",
-                      "Cloudflare 按日更新用量，非正式账单",
-                    )
-                  : tr(
-                      "Billing Read token required; no fabricated cost estimate.",
-                      "需要 Billing Read 只读令牌；不展示虚构费用。",
-                    )}
+                    tr("admin.adminOperations.cloudflareDailyUpdatedUsageNotInvoice")
+                  : tr("admin.adminOperations.billingReadTokenRequiredNoFabricated")}
               </small>
             </div>
             <div>
-              <span>{tr("D1 audit rows", "D1 审计记录")}</span>
+              <span>{tr("admin.adminOperations.d1AuditRows")}</span>
               <strong>{data?.totals.auditRows == null ? "—" : fmt(data.totals.auditRows)}</strong>
-              <small>
-                {tr("Storage activity, not a currency charge.", "表示数据存量，不是收费金额。")}
-              </small>
+              <small>{tr("admin.adminOperations.storageActivityNotACurrencyCharge")}</small>
             </div>
             <div>
-              <span>{tr("Monthly MCP tool calls", "本月 MCP 工具调用")}</span>
+              <span>{tr("admin.adminOperations.monthlyMcpToolCalls")}</span>
               <strong>{count(data?.totals.monthlyCalls)}</strong>
-              <small>
-                {tr(
-                  "Tracked by Remote Arc D1, not equal to billable Worker requests.",
-                  "由 Remote Arc D1 统计，不等于 Worker 实际计费请求量。",
-                )}
-              </small>
+              <small>{tr("admin.adminOperations.trackedByRemoteArcD1Not")}</small>
             </div>
           </div>
           <div className="opsToolbar">
@@ -1439,16 +1325,13 @@ export function AdminOperations({
               disabled={billingLoading}
             >
               {billingLoading
-                ? tr("Loading billing…", "读取账单中…")
-                : tr("Fetch Cloudflare cost", "读取 Cloudflare 实际费用")}
+                ? tr("admin.adminOperations.loadingBilling")
+                : tr("admin.adminOperations.fetchCloudflareCost")}
             </button>
             {billingError && (
               <small role="status">
                 {billingError === "BILLING_READ_TOKEN_NOT_CONFIGURED"
-                  ? tr(
-                      "Add a dedicated Billing Read API token to the Worker first.",
-                      "需要先为 Worker 配置独立的 Billing Read 只读令牌。",
-                    )
+                  ? tr("admin.adminOperations.addADedicatedBillingReadApi")
                   : billingError}
               </small>
             )}
@@ -1463,26 +1346,16 @@ export function AdminOperations({
               <small>{liveBilling.note}</small>
             </div>
           )}
-          <p className="opsHelp">
-            {tr(
-              "Relay currently uses Workers, D1 and Durable Objects. R2 is an account storage service; audit archive is disabled until explicitly activated. No KV binding is configured for this Worker.",
-              "Relay 当前使用 Workers、D1 和 Durable Objects。R2 属于账户级存储，审计归档尚未启用；本 Worker 当前没有配置 KV 绑定。",
-            )}
-          </p>
+          <p className="opsHelp">{tr("admin.adminOperations.relayCurrentlyUsesWorkersD1And")}</p>
           <a
             className="opsBillingLink"
             href={data?.billing.billingUrl || "https://dash.cloudflare.com/"}
             target="_blank"
             rel="noreferrer"
           >
-            {tr("Open actual Cloudflare billing", "打开 Cloudflare 真实账单")} ↗
+            {tr("admin.adminOperations.openActualCloudflareBilling")} ↗
           </a>
-          <p className="opsHelp">
-            {tr(
-              "No additional paid billing API or monitoring service has been enabled by this dashboard.",
-              "此 Dashboard 没有自动启用任何新的付费账单 API 或监控服务。",
-            )}
-          </p>
+          <p className="opsHelp">{tr("admin.adminOperations.noAdditionalPaidBillingApiOr")}</p>
         </div>
       )}
     </section>

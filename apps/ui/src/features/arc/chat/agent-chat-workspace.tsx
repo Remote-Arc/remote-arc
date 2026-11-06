@@ -1,3 +1,4 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -7,9 +8,8 @@ import {
   type ArcChatSession,
   type ArcChatMessage,
 } from "./arc-chat-sessions.js";
-import "./agent-chat-workspace.css";
+import "../../../styles/arc/chat/agent-chat-workspace.css";
 
-type Translate = (english: string, chinese: string) => string;
 type Props = {
   tr: Translate;
   accountId: string;
@@ -187,39 +187,27 @@ export function AgentChatWorkspace({
   const examples = [
     {
       icon: "device" as const,
-      title: tr("Check my computers", "检查电脑状态"),
-      detail: tr("Devices & ongoing work", "设备与持续工作"),
-      text: tr(
-        "Check my connected computers and summarize what needs attention.",
-        "检查已连接的电脑，整理需要处理的问题。",
-      ),
+      title: tr("arc.chat.agentChatWorkspace.checkMyComputers"),
+      detail: tr("arc.chat.agentChatWorkspace.devicesOngoingWork"),
+      text: tr("arc.chat.agentChatWorkspace.checkMyConnectedComputersAndSummarize"),
     },
     {
       icon: "chat" as const,
-      title: tr("Move a project forward", "推进项目工作"),
-      detail: tr("Code, files & updates", "代码、文件与进展"),
-      text: tr(
-        "Inspect my project, identify the next useful step and explain the expected result.",
-        "检查我的项目，找到下一步最有用的工作，并说明预期结果。",
-      ),
+      title: tr("arc.chat.agentChatWorkspace.moveAProjectForward"),
+      detail: tr("arc.chat.agentChatWorkspace.codeFilesUpdates"),
+      text: tr("arc.chat.agentChatWorkspace.inspectMyProjectIdentifyTheNext"),
     },
     {
       icon: "history" as const,
-      title: tr("Plan a routine", "安排例行工作"),
-      detail: tr("Work that repeats", "持续推进例行任务"),
-      text: tr(
-        "Set up a recurring check of my project and connected devices.",
-        "安排定期检查项目和已连接设备的工作。",
-      ),
+      title: tr("arc.chat.agentChatWorkspace.planARoutine"),
+      detail: tr("arc.chat.agentChatWorkspace.workThatRepeats"),
+      text: tr("arc.chat.agentChatWorkspace.setUpARecurringCheckOf"),
     },
     {
       icon: "apps" as const,
-      title: tr("Organize my work", "整理工作资料"),
-      detail: tr("A clear next step", "形成清晰的下一步"),
-      text: tr(
-        "Review my working directory and prepare a useful summary and next steps.",
-        "检查我的工作目录，整理摘要与后续步骤。",
-      ),
+      title: tr("arc.chat.agentChatWorkspace.organizeMyWork"),
+      detail: tr("arc.chat.agentChatWorkspace.aClearNextStep"),
+      text: tr("arc.chat.agentChatWorkspace.reviewMyWorkingDirectoryAndPrepare"),
     },
   ];
 
@@ -256,13 +244,7 @@ export function AgentChatWorkspace({
         criteria: "",
         messages: [
           newMessage("user", value),
-          newMessage(
-            "assistant",
-            tr(
-              "I can prepare this as an approved goal. What result would count as success? Once you tell me, we'll review its execution details before running anything.",
-              "我可以将它整理成需要确认的目标。什么样的结果算完成？告诉我之后，我们再审核执行方案，确认前不会运行任何操作。",
-            ),
-          ),
+          newMessage("assistant", tr("arc.chat.agentChatWorkspace.iCanPrepareThisAsAn")),
         ],
       };
       setSessions((previous) => [created, ...previous].slice(0, 30));
@@ -283,14 +265,8 @@ export function AgentChatWorkspace({
                 newMessage(
                   "assistant",
                   session.criteria
-                    ? tr(
-                        "I've added that to the success criteria. Review the goal when you're ready.",
-                        "已把这条要求补充进成功标准。准备好后可以检查执行方案。",
-                      )
-                    : tr(
-                        "Got it. Your goal draft is ready to review. Nothing will run until you approve the execution details.",
-                        "明白了。目标草稿已准备好审核，只有确认执行细节后才会开始操作。",
-                      ),
+                    ? tr("arc.chat.agentChatWorkspace.iVeAddedThatToThe")
+                    : tr("arc.chat.agentChatWorkspace.gotItYourGoalDraftIs"),
                 ),
               ].slice(-32),
             };
@@ -312,22 +288,22 @@ export function AgentChatWorkspace({
     <div className={"arcChatNavigation" + (mobile ? " arcChatNavigationMobile" : "")}>
       <button type="button" className="arcSidebarPrimary" onClick={beginNew}>
         <Icon name="plus" />
-        <span>{tr("New chat", "新对话")}</span>
+        <span>{tr("arc.chat.agentChatWorkspace.newChat")}</span>
         <span className="arcSidebarShortcut" aria-hidden="true">
           ↵
         </span>
       </button>
       <button type="button" className="arcSidebarAction" onClick={() => setSearchOpen(!searchOpen)}>
         <Icon name="search" />
-        <span>{tr("Search chats", "搜索对话")}</span>
+        <span>{tr("arc.chat.agentChatWorkspace.searchChats")}</span>
       </button>
       {searchOpen && (
         <label className="arcSidebarSearch">
-          <span className="arcSrOnly">{tr("Search your chats", "搜索你的对话")}</span>
+          <span className="arcSrOnly">{tr("arc.chat.agentChatWorkspace.searchYourChats")}</span>
           <input
             autoFocus
             type="search"
-            placeholder={tr("Search chats…", "搜索对话…")}
+            placeholder={tr("arc.chat.agentChatWorkspace.searchChats2")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -335,28 +311,28 @@ export function AgentChatWorkspace({
       )}
       <button type="button" className="arcSidebarAction" onClick={onOpenGoals}>
         <Icon name="history" />
-        <span>{tr("Tasks", "任务")}</span>
+        <span>{tr("arc.chat.agentChatWorkspace.tasks")}</span>
       </button>
       <button type="button" className="arcSidebarAction" onClick={onOpenActivity}>
         <Icon name="activity" />
-        <span>{tr("Activity", "活动")}</span>
+        <span>{tr("arc.chat.agentChatWorkspace.activity")}</span>
       </button>
-      <div className="arcSidebarSectionTitle">{tr("TOOLS", "工具")}</div>
+      <div className="arcSidebarSectionTitle">{tr("arc.chat.agentChatWorkspace.tools")}</div>
       <button type="button" className="arcSidebarAction" onClick={onManageApps}>
         <Icon name="apps" />
-        <span>{tr("Apps", "应用")}</span>
+        <span>{tr("arc.chat.agentChatWorkspace.apps")}</span>
       </button>
       <button type="button" className="arcSidebarAction" onClick={onManageDevices}>
         <Icon name="device" />
-        <span>{tr("Devices", "设备")}</span>
+        <span>{tr("arc.chat.agentChatWorkspace.devices")}</span>
       </button>
       {onManageSkills && (
         <button type="button" className="arcSidebarAction" onClick={onManageSkills}>
           <Icon name="spark" />
-          <span>{tr("Skills", "技能")}</span>
+          <span>{tr("arc.chat.agentChatWorkspace.skills")}</span>
         </button>
       )}
-      <div className="arcSidebarSectionTitle">{tr("RECENT CHATS", "最近对话")}</div>
+      <div className="arcSidebarSectionTitle">{tr("arc.chat.agentChatWorkspace.recentChats")}</div>
       <div className="arcSessionList">
         {sessions.filter((session) =>
           session.title.toLowerCase().includes(search.trim().toLowerCase()),
@@ -381,7 +357,9 @@ export function AgentChatWorkspace({
                 <button
                   type="button"
                   className="arcSessionDelete"
-                  aria-label={tr("Delete local chat", "删除本地对话") + ": " + session.title}
+                  aria-label={
+                    tr("arc.chat.agentChatWorkspace.deleteLocalChat") + ": " + session.title
+                  }
                   onClick={() => removeSession(session.id)}
                 >
                   <Icon name="trash" />
@@ -391,18 +369,18 @@ export function AgentChatWorkspace({
         ) : (
           <div className="arcSidebarEmpty">
             {search
-              ? tr("No matching chats", "没有匹配的对话")
-              : tr("Your drafts will appear here", "你的对话草稿会出现在这里")}
+              ? tr("arc.chat.agentChatWorkspace.noMatchingChats")
+              : tr("arc.chat.agentChatWorkspace.yourDraftsWillAppearHere")}
           </div>
         )}
       </div>
       <div className="arcSidebarLocalNotice">
-        {tr("Drafts are saved in this browser tab.", "对话草稿仅保存在当前浏览器标签页。")}
+        {tr("arc.chat.agentChatWorkspace.draftsAreSavedInThisBrowser")}
       </div>
       {mobile && (
         <button type="button" className="arcSidebarAction" onClick={onOpenSettings}>
           <Icon name="settings" />
-          <span>{tr("Settings", "设置")}</span>
+          <span>{tr("arc.chat.agentChatWorkspace.settings")}</span>
         </button>
       )}
     </div>
@@ -412,7 +390,7 @@ export function AgentChatWorkspace({
     <div className="arcChatBottom">
       <form className="arcChatComposer" onSubmit={submit}>
         <label className="arcSrOnly" htmlFor="arc-chat-input">
-          {tr("Message Arc Agent", "发送消息给 Arc Agent")}
+          {tr("arc.chat.agentChatWorkspace.messageArcAgent")}
         </label>
         <textarea
           ref={editor}
@@ -423,9 +401,9 @@ export function AgentChatWorkspace({
           placeholder={
             current
               ? current.criteria
-                ? tr("Add more success details…", "补充成功标准…")
-                : tr("Describe what success looks like…", "描述什么样的结果算完成…")
-              : tr("Message Arc Agent…", "向 Arc Agent 发送消息…")
+                ? tr("arc.chat.agentChatWorkspace.addMoreSuccessDetails")
+                : tr("arc.chat.agentChatWorkspace.describeWhatSuccessLooksLike")
+              : tr("arc.chat.agentChatWorkspace.messageArcAgent2")
           }
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
@@ -435,32 +413,31 @@ export function AgentChatWorkspace({
             <button
               type="button"
               onClick={onManageDevices}
-              title={tr("Manage device fleet", "管理设备集群")}
+              title={tr("arc.chat.agentChatWorkspace.manageDeviceFleet")}
             >
               <span className={"arcChatOnline" + (onlineDevices ? " online" : "")} />
               {onlineDevices}{" "}
-              {onlineDevices === 1 ? tr("device", "台设备") : tr("devices", "台设备")}
+              {onlineDevices === 1
+                ? tr("arc.chat.agentChatWorkspace.device")
+                : tr("arc.chat.agentChatWorkspace.devices2")}
             </button>
             <button type="button" onClick={onManageApps}>
               <Icon name="apps" />
-              {tr("Apps", "应用")}
+              {tr("arc.chat.agentChatWorkspace.apps")}
             </button>
           </div>
           <button
             type="submit"
             className="arcChatSend"
             disabled={!draft.trim()}
-            aria-label={tr("Send message", "发送消息")}
+            aria-label={tr("arc.chat.agentChatWorkspace.sendMessage")}
           >
             <Icon name="arrow" />
           </button>
         </div>
       </form>
       <p className="arcChatDisclaimer">
-        {tr(
-          "Goal draft mode · AI conversations are still being connected.",
-          "目标草稿模式 · AI 对话连接仍在开发中。",
-        )}
+        {tr("arc.chat.agentChatWorkspace.goalDraftModeAiConversationsAre")}
       </p>
     </div>
   );
@@ -469,7 +446,7 @@ export function AgentChatWorkspace({
     <section
       className="arcChatShell"
       data-state={current ? "conversation" : "welcome"}
-      aria-label={tr("Arc Agent chat", "Arc Agent 对话")}
+      aria-label={tr("arc.chat.agentChatWorkspace.arcAgentChat")}
     >
       {sidebarMount && createPortal(sidebar(false), sidebarMount)}
       <header className="arcChatTopbar">
@@ -477,24 +454,24 @@ export function AgentChatWorkspace({
           <button
             type="button"
             className="arcChatMobileMenu"
-            aria-label={tr("Open chat history", "打开对话历史")}
+            aria-label={tr("arc.chat.agentChatWorkspace.openChatHistory")}
             onClick={() => setMobileOpen(true)}
           >
             <Icon name="menu" />
           </button>
           <span className="arcChatBrand">Arc</span>
-          <span className="arcChatBeta">{tr("Draft mode", "草稿模式")}</span>
+          <span className="arcChatBeta">{tr("arc.chat.agentChatWorkspace.draftMode")}</span>
         </div>
         <div className="arcChatTopRight">
           <button type="button" className="arcChatTopLink" onClick={onOpenGoals}>
             <Icon name="history" />
-            {tr("Tasks", "任务")}
+            {tr("arc.chat.agentChatWorkspace.tasks")}
           </button>
           <button
             type="button"
             className="arcChatTopNew"
             onClick={beginNew}
-            aria-label={tr("New chat", "新对话")}
+            aria-label={tr("arc.chat.agentChatWorkspace.newChat")}
           >
             <Icon name="plus" />
           </button>
@@ -507,13 +484,8 @@ export function AgentChatWorkspace({
             <div className="arcChatStar" aria-hidden="true">
               <img src="/remote-arc.svg" alt="" />
             </div>
-            <h1>{tr("Let’s get to work.", "一起，把事情做好。")}</h1>
-            <p>
-              {tr(
-                "Your apps, your computers, your next step. All in one conversation.",
-                "连接你的应用与电脑，在一次对话里推进工作。",
-              )}
-            </p>
+            <h1>{tr("arc.chat.agentChatWorkspace.letSGetToWork")}</h1>
+            <p>{tr("arc.chat.agentChatWorkspace.yourAppsYourComputersYourNext")}</p>
             {composer}
             <div className="arcChatIdeas">
               {examples.map((example) => (
@@ -542,7 +514,7 @@ export function AgentChatWorkspace({
           <div
             className="arcChatMessages"
             role="log"
-            aria-label={tr("Chat messages", "对话消息")}
+            aria-label={tr("arc.chat.agentChatWorkspace.chatMessages")}
             aria-live="polite"
           >
             {current.messages.map((message) => (
@@ -561,12 +533,12 @@ export function AgentChatWorkspace({
               <div className="arcChatReviewPanel">
                 <div className="arcChatReviewTop">
                   <Icon name="check" />
-                  <strong>{tr("Goal ready for review", "目标已准备好审核")}</strong>
+                  <strong>{tr("arc.chat.agentChatWorkspace.goalReadyForReview")}</strong>
                 </div>
                 <div className="arcChatReviewSummary">
-                  <strong>{tr("Objective", "目标")}</strong>
+                  <strong>{tr("arc.chat.agentChatWorkspace.objective")}</strong>
                   <p>{current.objective}</p>
-                  <strong>{tr("Success criteria", "成功标准")}</strong>
+                  <strong>{tr("arc.chat.agentChatWorkspace.successCriteria")}</strong>
                   <p>{current.criteria}</p>
                 </div>
                 <button
@@ -574,14 +546,10 @@ export function AgentChatWorkspace({
                   className="arcChatReviewButton"
                   onClick={() => onPrepareGoal(current.objective, current.criteria)}
                 >
-                  {tr("Review execution", "审核执行方案")} <span aria-hidden="true">↗</span>
+                  {tr("arc.chat.agentChatWorkspace.reviewExecution")}{" "}
+                  <span aria-hidden="true">↗</span>
                 </button>
-                <p>
-                  {tr(
-                    "Device, permissions and cost must be reviewed before any execution.",
-                    "执行前仍需确认设备、权限和费用。",
-                  )}
-                </p>
+                <p>{tr("arc.chat.agentChatWorkspace.devicePermissionsAndCostMustBe")}</p>
               </div>
             )}
           </div>
@@ -601,14 +569,14 @@ export function AgentChatWorkspace({
             className="arcChatMobileDrawer"
             role="dialog"
             aria-modal="true"
-            aria-label={tr("Chat history", "对话历史")}
+            aria-label={tr("arc.chat.agentChatWorkspace.chatHistory")}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="arcMobileDrawerHeader">
               <strong>Arc Agent</strong>
               <button
                 type="button"
-                aria-label={tr("Close", "关闭")}
+                aria-label={tr("arc.chat.agentChatWorkspace.close")}
                 onClick={() => setMobileOpen(false)}
               >
                 <Icon name="close" />

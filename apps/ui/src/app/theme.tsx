@@ -1,14 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-
-export type ThemePreference = "light" | "dark" | "system";
-
-type ThemeContextValue = {
-  theme: ThemePreference;
-  resolvedTheme: "light" | "dark";
-  setTheme: (theme: ThemePreference) => void;
-};
-
-const ThemeContext = createContext<ThemeContextValue | null>(null);
+import { ThemeContext, type ThemeContextValue, type ThemePreference } from "./theme-context.js";
+import React, { useEffect, useMemo, useState } from "react";
 
 function resolveTheme(theme: ThemePreference): "light" | "dark" {
   if (theme !== "system") return theme;
@@ -76,10 +67,4 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-}
-
-export function useTheme() {
-  const value = useContext(ThemeContext);
-  if (!value) throw new Error("useTheme must be used inside ThemeProvider");
-  return value;
 }

@@ -1,5 +1,6 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 type ArcWhyProps = {
-  tr: (en: string, zh: string) => string;
+  tr: Translate;
   connectHref: string;
   arcHref: string;
 };
@@ -7,71 +8,49 @@ type ArcWhyProps = {
 export function ArcWhy({ tr, connectHref, arcHref }: ArcWhyProps) {
   const reasons = [
     {
-      title: tr("Manage your device fleet.", "集中管理你的设备集群。"),
-      detail: tr(
-        "Bring Windows, macOS and Linux into one device view. Work with the projects, installed tools and environments already on your computers.",
-        "把 Windows、macOS 和 Linux 放进同一个设备视图，沿用电脑里已有的项目、软件和运行环境。",
-      ),
-      status: tr("CONNECT · AVAILABLE TODAY", "CONNECT · 现已可用"),
+      title: tr("marketing.arc.arcWhy.manageYourDeviceFleet"),
+      detail: tr("marketing.arc.arcWhy.bringWindowsMacosAndLinuxInto"),
+      status: tr("marketing.arc.arcWhy.connectAvailableToday"),
     },
     {
-      title: tr("Set the rules on each machine.", "每台电脑，都有自己的执行边界。"),
-      detail: tr(
-        "Choose tools and file-write locations per device, review activity, and pause or revoke access. Terminal access is a separate permission.",
-        "按设备选择工具、限定文件写入目录、审阅操作记录，并随时暂停或撤销访问。终端权限单独授予。",
-      ),
-      status: tr("CONNECT · AVAILABLE TODAY", "CONNECT · 现已可用"),
+      title: tr("marketing.arc.arcWhy.setTheRulesOnEachMachine"),
+      detail: tr("marketing.arc.arcWhy.chooseToolsAndFileWriteLocations"),
+      status: tr("marketing.arc.arcWhy.connectAvailableToday"),
     },
     {
-      title: tr("Build agents around repeatable work.", "围绕长期工作，创建你的 AI 智能体。"),
-      detail: tr(
-        "Use Arc’s workspace for conversations, Skills, tasks and scheduled routines, with visible results and model usage. Start with Auto in your trial, then choose Plus or Pro for more Credits and configured premium models.",
-        "在 Arc 工作空间中使用对话、Skills、任务和定时 Routine，查看执行结果与模型用量。先用试用期的 Auto，再按需选择 Plus 或 Pro，获得更多 Credits 与已配置的高级模型。",
-      ),
-      status: tr("ARC · AVAILABLE TODAY", "ARC · 现已可用"),
+      title: tr("marketing.arc.arcWhy.buildAgentsAroundRepeatableWork"),
+      detail: tr("marketing.arc.arcWhy.useArcSWorkspaceForConversations"),
+      status: tr("marketing.arc.arcWhy.arcAvailableToday"),
     },
   ];
   const devices = [
     {
       brand: "windows",
       name: "Windows",
-      task: tr("Run the existing test suite", "运行项目已有的测试"),
+      task: tr("marketing.arc.arcWhy.runTheExistingTestSuite"),
       folder: "~/projects/release",
     },
     {
       brand: "macos",
       name: "macOS",
-      task: tr("Check the build artifacts", "检查构建产物"),
+      task: tr("marketing.arc.arcWhy.checkTheBuildArtifacts"),
       folder: "~/work/release",
     },
     {
       brand: "linux",
       name: "Linux",
-      task: tr("Collect the service logs", "收集服务日志"),
+      task: tr("marketing.arc.arcWhy.collectTheServiceLogs"),
       folder: "~/services/app",
     },
   ];
   return (
     <section className="arcWhy" id="why-arc" aria-labelledby="arcWhyTitle">
       <header className="arcWhyIntro">
-        <span className="arcV3Eyebrow">{tr("WHY ARC", "为什么选择 ARC")}</span>
-        <h2 id="arcWhyTitle">
-          {tr(
-            "Already use ChatGPT? Here’s where Arc fits.",
-            "ChatGPT 已经很好用，为什么还需要 Arc？",
-          )}
-        </h2>
-        <p>
-          {tr(
-            "ChatGPT already connects apps such as GitHub and email, uses tools and carries out multi-step work. Keep using it for the work it handles well. Arc gives people a dedicated place to manage their own device fleet and AI agents.",
-            "ChatGPT 已经能连接 GitHub、邮箱，使用工具并完成多步骤工作。如果它已经能完成你的任务，继续用它就好。Arc 面向的是希望把自己的设备集群和 AI 智能体，组织成专门工作环境的人。",
-          )}
-        </p>
+        <span className="arcV3Eyebrow">{tr("marketing.arc.arcWhy.whyArc")}</span>
+        <h2 id="arcWhyTitle">{tr("marketing.arc.arcWhy.alreadyUseChatgptHereSWhere")}</h2>
+        <p>{tr("marketing.arc.arcWhy.chatgptAlreadyConnectsAppsSuchAs")}</p>
         <strong className="arcWhyThesis">
-          {tr(
-            "Your machines. Your working rules. Your choice of AI.",
-            "设备归你，规则由你设定，AI 由你选择。",
-          )}
+          {tr("marketing.arc.arcWhy.yourMachinesYourWorkingRulesYour")}
         </strong>
       </header>
       <div className="arcWhyFocus">
@@ -89,21 +68,16 @@ export function ArcWhy({ tr, connectHref, arcHref }: ArcWhyProps) {
         </ol>
         <figure className="arcWhyExample">
           <figcaption>
-            <span>{tr("ONE RELEASE · YOUR OWN COMPUTERS", "一次发布 · 你自己的多台电脑")}</span>
-            <small>{tr("ILLUSTRATION", "场景示意")}</small>
+            <span>{tr("marketing.arc.arcWhy.oneReleaseYourOwnComputers")}</span>
+            <small>{tr("marketing.arc.arcWhy.illustration")}</small>
           </figcaption>
           <div className="arcWhyRequest">
             <span className="arcWhyGithub">
               <img src="/app-brands/github.svg" alt="" width="23" height="23" />
             </span>
             <div>
-              <span>{tr("START WITH THE RELEASE ISSUE", "从发布 ISSUE 开始")}</span>
-              <p>
-                {tr(
-                  "“Run this project’s checks on my Windows PC and Mac. Collect the logs and leave a release checklist for review.”",
-                  "「在我的 Windows 和 Mac 上运行项目检查，收集日志，整理发布清单给我审核。」",
-                )}
-              </p>
+              <span>{tr("marketing.arc.arcWhy.startWithTheReleaseIssue")}</span>
+              <p>{tr("marketing.arc.arcWhy.runThisProjectSChecksOn")}</p>
             </div>
           </div>
           <div className="arcWhyDeviceList">
@@ -136,76 +110,50 @@ export function ArcWhy({ tr, connectHref, arcHref }: ArcWhyProps) {
               <path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 12h6m-6 4h6" />
             </svg>
             <div>
-              <strong>{tr("One reviewable release report", "汇成一份可审核的发布报告")}</strong>
-              <span>
-                {tr(
-                  "Checks, logs, artifacts and the next decision.",
-                  "检查结果、日志、产物，以及下一步决策。",
-                )}
-              </span>
+              <strong>{tr("marketing.arc.arcWhy.oneReviewableReleaseReport")}</strong>
+              <span>{tr("marketing.arc.arcWhy.checksLogsArtifactsAndTheNext")}</span>
             </div>
           </div>
           <p className="arcWhyExampleScope">
-            {tr(
-              "Illustrative workflow. Actual results depend on your connected devices, permissions and available apps. App connections require provider setup and account authorization.",
-              "流程示意。实际结果取决于已连接设备、授予的权限与可用应用；应用连接需要平台配置与账号授权。",
-            )}
+            {tr("marketing.arc.arcWhy.illustrativeWorkflowActualResultsDependOn")}
           </p>
         </figure>
       </div>
       <div className="arcWhyChoose">
-        <h3>{tr("Choose the setup that fits your work.", "按你的工作方式来选择。")}</h3>
+        <h3>{tr("marketing.arc.arcWhy.chooseTheSetupThatFitsYour")}</h3>
         <div className="arcWhyOptions">
           <article className="arcWhyOption" aria-labelledby="arcWhyChatgpt">
             <span className="arcWhyOptionLabel">
-              {tr("KEEP YOUR EXISTING SETUP", "沿用现有工具")}
+              {tr("marketing.arc.arcWhy.keepYourExistingSetup")}
             </span>
             <h4 id="arcWhyChatgpt">ChatGPT</h4>
-            <p>
-              {tr(
-                "Your existing apps, tools and tasks already cover the job. You don’t need to switch just to connect another app.",
-                "现有应用、工具和任务已经足够完成工作，不必为了再连接一个应用而更换平台。",
-              )}
-            </p>
+            <p>{tr("marketing.arc.arcWhy.yourExistingAppsToolsAndTasks")}</p>
             <a href="https://learn.chatgpt.com/docs/use-chatgpt" target="_blank" rel="noreferrer">
-              {tr("ChatGPT’s capabilities", "查看 ChatGPT 的能力")} ↗
+              {tr("marketing.arc.arcWhy.chatgptSCapabilities")} ↗
             </a>
           </article>
           <article className="arcWhyOption" aria-labelledby="arcWhyConnect">
-            <span className="arcWhyOptionLabel">{tr("AVAILABLE TODAY", "现已可用")}</span>
+            <span className="arcWhyOptionLabel">{tr("marketing.arc.arcWhy.availableToday")}</span>
             <h4 id="arcWhyConnect">Remote Arc Connect</h4>
-            <p>
-              {tr(
-                "Keep ChatGPT, Claude or another compatible AI. Connect available apps and approved tools across your own computers. Each app requires provider setup and account authorization.",
-                "保留 ChatGPT、Claude 等兼容 AI，连接可用应用与多台电脑上已授权的工具；每个应用都需要平台配置与账号授权。",
-              )}
-            </p>
-            <a href={connectHref}>{tr("Connect your existing AI", "连接你现有的 AI")} ↗</a>
+            <p>{tr("marketing.arc.arcWhy.keepChatgptClaudeOrAnotherCompatible")}</p>
+            <a href={connectHref}>{tr("marketing.arc.arcWhy.connectYourExistingAi")} ↗</a>
           </article>
           <article className="arcWhyOption" aria-labelledby="arcWhyHosted">
-            <span className="arcWhyOptionLabel">{tr("AVAILABLE TODAY", "现已可用")}</span>
+            <span className="arcWhyOptionLabel">{tr("marketing.arc.arcWhy.availableToday")}</span>
             <h4 id="arcWhyHosted">Arc</h4>
-            <p>
-              {tr(
-                "A workspace for conversations, Skills, tasks and routines using your connected apps and computers. The trial includes Auto. Plus and Pro add Credits and configured premium models; model usage has limits.",
-                "在专门的工作空间中，通过对话、Skills、任务与 Routine 使用已连接的应用和电脑。试用包含 Auto；Plus 与 Pro 提供更多 Credits 和已配置的高级模型，模型使用有额度限制。",
-              )}
-            </p>
-            <a href={arcHref}>{tr("Open Arc", "打开 Arc")} ↗</a>
+            <p>{tr("marketing.arc.arcWhy.aWorkspaceForConversationsSkillsTasks")}</p>
+            <a href={arcHref}>{tr("marketing.arc.arcWhy.openArc")} ↗</a>
           </article>
         </div>
       </div>
       <p className="arcWhyContext">
-        {tr(
-          "These products have overlapping capabilities. Arc’s focus is the working environment above; actual availability depends on the product and plan.",
-          "这些产品的能力存在重叠。Arc 聚焦的是上述工作环境，具体可用能力取决于产品与套餐。",
-        )}{" "}
+        {tr("marketing.arc.arcWhy.theseProductsHaveOverlappingCapabilitiesArc")}{" "}
         <a
           href="https://learn.chatgpt.com/docs/dots/computers-and-apps"
           target="_blank"
           rel="noreferrer"
         >
-          {tr("OpenAI’s current computer and app documentation", "OpenAI 当前的电脑与应用文档")} ↗
+          {tr("marketing.arc.arcWhy.openaiSCurrentComputerAndApp")} ↗
         </a>
       </p>
     </section>

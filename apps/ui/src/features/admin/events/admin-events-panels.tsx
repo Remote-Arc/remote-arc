@@ -19,37 +19,32 @@ export function GrowthChart({ data, tr }: { data: Analytics | null; tr: Translat
     <section className="businessPanel businessGrowth">
       <header>
         <div>
-          <h2>{tr("Are more people coming back?", "用户有没有增长、有没有回来？")}</h2>
-          <p>
-            {tr("Daily registrations and real product activity.", "按天看新注册和真实使用的变化。")}
-          </p>
+          <h2>{tr("admin.events.adminEventsPanels.areMorePeopleComingBack")}</h2>
+          <p>{tr("admin.events.adminEventsPanels.dailyRegistrationsAndRealProductActivity")}</p>
         </div>
         <select
-          aria-label={tr("Trend metric", "趋势指标")}
+          aria-label={tr("admin.events.adminEventsPanels.trendMetric")}
           value={metric}
           onChange={(event) => setMetric(event.target.value as typeof metric)}
         >
-          <option value="activeUsers">{tr("Active users", "活跃用户")}</option>
-          <option value="payingUsers">{tr("Paying users", "付费用户")}</option>
+          <option value="activeUsers">{tr("admin.events.adminEventsPanels.activeUsers")}</option>
+          <option value="payingUsers">{tr("admin.events.adminEventsPanels.payingUsers")}</option>
         </select>
       </header>
       {data ? (
         <>
           <div className="businessLegend">
-            <span data-series="new">{tr("New users", "新增用户")}</span>
+            <span data-series="new">{tr("admin.events.adminEventsPanels.newUsers")}</span>
             <span data-series="active">
               {metric === "activeUsers"
-                ? tr("Recorded active users", "有记录的活跃用户")
-                : tr("Verified paying users", "已确认付费用户")}
+                ? tr("admin.events.adminEventsPanels.recordedActiveUsers")
+                : tr("admin.events.adminEventsPanels.verifiedPayingUsers")}
             </span>
           </div>
           <svg
             viewBox={`0 0 ${width} ${height}`}
             role="img"
-            aria-label={tr(
-              "Daily user trend; exact values in the table below",
-              "每日用户趋势，准确数值可在下方表格查看",
-            )}
+            aria-label={tr("admin.events.adminEventsPanels.dailyUserTrendExactValuesIn")}
           >
             {[0, 0.5, 1].map((fraction) => (
               <g key={fraction}>
@@ -94,15 +89,15 @@ export function GrowthChart({ data, tr }: { data: Analytics | null; tr: Translat
             ))}
           </svg>
           <details className="businessSource">
-            <summary>{tr("Daily figures", "查看每日数值")}</summary>
+            <summary>{tr("admin.events.adminEventsPanels.dailyFigures")}</summary>
             <div className="businessTableScroll">
               <table>
                 <thead>
                   <tr>
-                    <th>{tr("Date · UTC", "日期 · UTC")}</th>
-                    <th>{tr("New", "新增")}</th>
-                    <th>{tr("Recorded active", "有记录的活跃")}</th>
-                    <th>{tr("Paid", "已付费")}</th>
+                    <th>{tr("admin.events.adminEventsPanels.dateUtc")}</th>
+                    <th>{tr("admin.events.adminEventsPanels.new")}</th>
+                    <th>{tr("admin.events.adminEventsPanels.recordedActive")}</th>
+                    <th>{tr("admin.events.adminEventsPanels.paid")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -121,7 +116,7 @@ export function GrowthChart({ data, tr }: { data: Analytics | null; tr: Translat
         </>
       ) : (
         <div className="businessChartEmpty">
-          {tr("Real user trends appear after data loads.", "读取真实数据后显示用户趋势。")}
+          {tr("admin.events.adminEventsPanels.realUserTrendsAppearAfterData")}
         </div>
       )}
     </section>
@@ -136,15 +131,12 @@ export function RetentionPanel({ data, tr }: { data: Analytics | null; tr: Trans
     <section className="businessPanel businessRetention">
       <header>
         <div>
-          <h2>{tr("Do new users stay?", "新用户留下来了吗？")}</h2>
-          <p>
-            {tr(
-              "Registration cohorts over 60 days. Returns on the exact next, 7th and 30th day.",
-              "最近 60 天注册的用户，在注册后的第 1、7、30 天是否再次使用。",
-            )}
-          </p>
+          <h2>{tr("admin.events.adminEventsPanels.doNewUsersStay")}</h2>
+          <p>{tr("admin.events.adminEventsPanels.registrationCohortsOverDaysReturnsOn")}</p>
         </div>
-        <span className="businessTag">{tr("Registration cohorts", "按注册批次")}</span>
+        <span className="businessTag">
+          {tr("admin.events.adminEventsPanels.registrationCohorts")}
+        </span>
       </header>
       <div className="businessRetentionSummary">
         {[1, 7, 30].map((day) => {
@@ -153,14 +145,14 @@ export function RetentionPanel({ data, tr }: { data: Analytics | null; tr: Trans
             <article key={day}>
               <span>
                 {day === 1
-                  ? tr("Next-day retention", "次日留存")
-                  : day + tr("-day retention", " 日留存")}
+                  ? tr("admin.events.adminEventsPanels.nextDayRetention")
+                  : day + tr("admin.events.adminEventsPanels.dayRetention")}
               </span>
               <strong>{percent(cell?.rate)}</strong>
               <small>
                 {cell?.status === "ready"
                   ? `${cell.returned} / ${cell.eligible} ` +
-                    tr("eligible users returned", "位到期用户回访")
+                    tr("admin.events.adminEventsPanels.eligibleUsersReturned")
                   : retentionState(cell, tr)}
               </small>
             </article>
@@ -171,11 +163,11 @@ export function RetentionPanel({ data, tr }: { data: Analytics | null; tr: Trans
         <table className="businessCohorts">
           <thead>
             <tr>
-              <th>{tr("Registered", "注册日期")}</th>
-              <th>{tr("New users", "注册人数")}</th>
-              <th>{tr("Day 1", "次日")}</th>
-              <th>{tr("Day 7", "第 7 天")}</th>
-              <th>{tr("Day 30", "第 30 天")}</th>
+              <th>{tr("admin.events.adminEventsPanels.registered")}</th>
+              <th>{tr("admin.events.adminEventsPanels.newUsers2")}</th>
+              <th>{tr("admin.events.adminEventsPanels.day")}</th>
+              <th>{tr("admin.events.adminEventsPanels.day2")}</th>
+              <th>{tr("admin.events.adminEventsPanels.day3")}</th>
             </tr>
           </thead>
           <tbody>
@@ -202,7 +194,7 @@ export function RetentionPanel({ data, tr }: { data: Analytics | null; tr: Trans
                       {cell.status === "ready"
                         ? `${cell.returned} / ${cell.eligible}`
                         : cell.returned
-                          ? cell.returned + tr(" returns recorded", " 人有回访记录")
+                          ? cell.returned + tr("admin.events.adminEventsPanels.returnsRecorded")
                           : "—"}
                     </small>
                   </td>
@@ -215,32 +207,29 @@ export function RetentionPanel({ data, tr }: { data: Analytics | null; tr: Trans
       {!cohorts.length && (
         <p className="businessNoCohort">
           {data
-            ? tr("No new users registered in these cohorts.", "这些注册批次中暂无用户。")
-            : tr("Waiting for real registration cohorts.", "等待真实注册批次数据。")}
+            ? tr("admin.events.adminEventsPanels.noNewUsersRegisteredInThese")
+            : tr("admin.events.adminEventsPanels.waitingForRealRegistrationCohorts")}
         </p>
       )}
       {cohorts.length > 7 && (
         <div className="businessPager">
           <span>
             {page * 7 + 1}–{Math.min(page * 7 + 7, cohorts.length)} / {cohorts.length}{" "}
-            {tr("cohorts", "个注册批次")}
+            {tr("admin.events.adminEventsPanels.cohorts")}
           </span>
           <button disabled={!page} onClick={() => setPage((value) => value - 1)}>
-            {tr("Newer", "较新批次")}
+            {tr("admin.events.adminEventsPanels.newer")}
           </button>
           <button
             disabled={(page + 1) * 7 >= cohorts.length}
             onClick={() => setPage((value) => value + 1)}
           >
-            {tr("Older", "较早批次")}
+            {tr("admin.events.adminEventsPanels.older")}
           </button>
         </div>
       )}
       <p className="businessFootnote">
-        {tr(
-          "Only fully observed return days enter the rate. Future days are still observing; days before complete collection are not treated as lost users. UTC dates.",
-          "只用已完整观察的批次计算留存率。尚未到期显示“观察中”，历史未采集不当作用户流失。日期按 UTC。",
-        )}
+        {tr("admin.events.adminEventsPanels.onlyFullyObservedReturnDaysEnter")}
       </p>
     </section>
   );

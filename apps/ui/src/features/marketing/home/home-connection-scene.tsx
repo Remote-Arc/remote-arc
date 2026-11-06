@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useAmbientMotion } from "../../../hooks/marketing/use-ambient-motion.js";
+import { useId, useState, type CSSProperties } from "react";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
 import directory from "../../../data/app-directory.json" with { type: "json" };
-import "./home-connection-scene.css";
+import "../../../styles/marketing/home/home-connection-scene.css";
 
 type AiClient = { name: string; slug: string; icon: string; tone: string };
 export type HomeConnectionMode = "connect" | "arc";
@@ -39,37 +40,6 @@ const aiPositionsFour = [
   { x: 345, y: 32 },
   { x: 436, y: 51 },
 ];
-
-function useAmbientMotion() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [running, setRunning] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let inView = typeof IntersectionObserver === "undefined";
-    const update = () =>
-      setRunning(inView && document.visibilityState === "visible" && !media.matches);
-    const observer =
-      typeof IntersectionObserver === "undefined"
-        ? null
-        : new IntersectionObserver(
-            (entries) => {
-              inView = entries.some((entry) => entry.isIntersecting);
-              update();
-            },
-            { threshold: 0.08 },
-          );
-    if (ref.current) observer?.observe(ref.current);
-    media.addEventListener("change", update);
-    document.addEventListener("visibilitychange", update);
-    update();
-    return () => {
-      observer?.disconnect();
-      media.removeEventListener("change", update);
-      document.removeEventListener("visibilitychange", update);
-    };
-  }, []);
-  return { ref, running };
-}
 
 function connectionPath(node: OrbitNode) {
   const dx = node.x - 300;
@@ -118,11 +88,11 @@ export function HomeConnectionScene({
       aria-labelledby={headlineId}
     >
       <header className="hcsHeader">
-        <h2 id={headlineId}>{tr("FROM CHAT TO ACTION", "让对话变成行动")}</h2>
+        <h2 id={headlineId}>{tr("marketing.home.homeConnectionScene.fromChatToAction")}</h2>
         <div
           className="hcsModeSwitch"
           role="tablist"
-          aria-label={tr("Explore Remote Arc modes", "查看 Remote Arc 两种模式")}
+          aria-label={tr("marketing.home.homeConnectionScene.exploreRemoteArcModes")}
         >
           <span className="hcsModeSlider" aria-hidden="true" />
           {(["connect", "arc"] as const).map((value) => (
@@ -157,7 +127,9 @@ export function HomeConnectionScene({
                 <>
                   Arc
                   {!arcAvailable && (
-                    <span className="hcsSoonLabel">{tr("Check availability", "查看状态")}</span>
+                    <span className="hcsSoonLabel">
+                      {tr("marketing.home.homeConnectionScene.checkAvailability")}
+                    </span>
                   )}
                 </>
               )}
@@ -168,19 +140,13 @@ export function HomeConnectionScene({
       <div className="hcsModeIntroduction" id={descriptionId} aria-live="polite">
         <strong>
           {arc
-            ? tr("An AI agent of your own.", "创建属于你的 AI 智能体。")
-            : tr("Your favorite AI. Connected to your world.", "熟悉的 AI，连接你的整个世界。")}
+            ? tr("marketing.home.homeConnectionScene.anAiAgentOfYourOwn")
+            : tr("marketing.home.homeConnectionScene.yourFavoriteAiConnectedToYour")}
         </strong>
         <span>
           {arc
-            ? tr(
-                "Built with Connect by AI. Describe the work; Arc uses your apps and devices.",
-                "AI 通过 Connect 写出的智能体。说出要做的事，Arc 来调用你的应用与设备。",
-              )
-            : tr(
-                "Bring ChatGPT, Claude or Cursor. Connect links your tools.",
-                "接入 ChatGPT、Claude 或 Cursor，让 Connect 连通工具与设备。",
-              )}
+            ? tr("marketing.home.homeConnectionScene.builtWithConnectByAiDescribe")
+            : tr("marketing.home.homeConnectionScene.bringChatgptClaudeOrCursorConnect")}
         </span>
       </div>
       <div
@@ -289,7 +255,7 @@ export function HomeConnectionScene({
                 key={client.slug}
                 href={localizedWebsiteHref("/install/" + client.slug, locale)}
                 tabIndex={arc ? -1 : 0}
-                aria-label={tr("Connect " + client.name, "连接 " + client.name)}
+                aria-label={tr("marketing.home.homeConnectionScene.connect", { name: client.name })}
                 style={position(at.x, at.y, index * -1.7)}
               >
                 <span className="hcsLogoTile">
@@ -309,7 +275,7 @@ export function HomeConnectionScene({
               You
             </span>
             <span>
-              {tr("Plan my week. Bring everything together.", "规划我的一周，把所有事情串联起来。")}
+              {tr("marketing.home.homeConnectionScene.planMyWeekBringEverythingTogether")}
             </span>
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <path d="M10 15V5m-4 4 4-4 4 4" />
@@ -337,10 +303,10 @@ export function HomeConnectionScene({
             )}
             aria-label={
               node.kind === "skill"
-                ? tr("Explore local video and image creation", "查看本地视频与图片创作")
+                ? tr("marketing.home.homeConnectionScene.exploreLocalVideoAndImageCreation")
                 : node.kind === "app"
-                  ? tr("Explore ", "查看应用连接：") + node.name
-                  : tr("Connect ", "连接设备：") + node.name
+                  ? tr("marketing.home.homeConnectionScene.explore") + node.name
+                  : tr("marketing.home.homeConnectionScene.connect2") + node.name
             }
           >
             <span
@@ -356,7 +322,9 @@ export function HomeConnectionScene({
               )}
             </span>
             <span className="hcsNodeLabel">
-              {node.kind === "skill" ? tr("Video & images", "视频与图片") : node.name}
+              {node.kind === "skill"
+                ? tr("marketing.home.homeConnectionScene.videoImages")
+                : node.name}
             </span>
           </a>
         ))}
@@ -369,8 +337,8 @@ export function HomeConnectionScene({
             href={localizedWebsiteHref(arc ? "/arc" : "/connect-ai", locale)}
             aria-label={
               arc
-                ? tr("Explore Arc Agent", "认识 Arc Agent")
-                : tr("Explore Remote Arc Connect", "认识 Remote Arc Connect")
+                ? tr("marketing.home.homeConnectionScene.exploreArcAgent")
+                : tr("marketing.home.homeConnectionScene.exploreRemoteArcConnect")
             }
           >
             <div className="hcsPowerCore">
@@ -401,20 +369,20 @@ export function HomeConnectionScene({
           <strong>{arc ? "Arc Agent" : "Remote Arc"}</strong>
           <span>
             {arc
-              ? tr("Your AI agent.", "你的专属 AI 智能体。")
-              : tr("Your AI. Your rules.", "你的 AI，你的权限。")}
+              ? tr("marketing.home.homeConnectionScene.yourAiAgent")
+              : tr("marketing.home.homeConnectionScene.yourAiYourRules")}
           </span>
         </div>
       </div>
       <ul
         className="hcsFoundation"
-        aria-label={tr("Shared platform capabilities", "统一的平台能力")}
+        aria-label={tr("marketing.home.homeConnectionScene.sharedPlatformCapabilities")}
       >
         {[
-          tr("Skills", "专业技能"),
-          tr("Execution", "任务执行"),
-          tr("Approvals", "操作审批"),
-          tr("Verified Results", "结果验证"),
+          tr("marketing.home.homeConnectionScene.skills"),
+          tr("marketing.home.homeConnectionScene.execution"),
+          tr("marketing.home.homeConnectionScene.approvals"),
+          tr("marketing.home.homeConnectionScene.verifiedResults"),
         ].map((label) => (
           <li key={label}>{label}</li>
         ))}
@@ -424,20 +392,19 @@ export function HomeConnectionScene({
           <i aria-hidden="true" />
           {arc
             ? arcAvailable
-              ? tr("Arc Agent · Available now", "Arc Agent · 现已可用")
-              : tr("Arc Agent · Check workspace access", "Arc Agent · 查看工作空间权限")
-            : tr("Connect available now", "Connect 现已可用")}
+              ? tr("marketing.home.homeConnectionScene.arcAgentAvailableNow")
+              : tr("marketing.home.homeConnectionScene.arcAgentCheckWorkspaceAccess")
+            : tr("marketing.home.homeConnectionScene.connectAvailableNow")}
         </span>
         <a href={localizedWebsiteHref(arc ? "/arc" : "/connect-ai", locale)}>
-          {arc ? tr("Meet Arc", "认识 Arc") : tr("Connect your AI", "连接你的 AI")}{" "}
+          {arc
+            ? tr("marketing.home.homeConnectionScene.meetArc")
+            : tr("marketing.home.homeConnectionScene.connectYourAi")}{" "}
           <span aria-hidden="true">↗</span>
         </a>
       </footer>
       <p className="hcsPlatformScope">
-        {tr(
-          "Choose the accounts and computers your AI can use.",
-          "由你选择 AI 可以使用的账号与电脑。",
-        )}
+        {tr("marketing.home.homeConnectionScene.chooseTheAccountsAndComputersYour")}
       </p>
     </div>
   );

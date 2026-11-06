@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 import { FollowupEmailPreview } from "./followup-email-preview.js";
 import {
@@ -75,17 +75,17 @@ export function FollowupBatchHistory({
   }, [id, revision, previewUser]);
   const status = (value: string) =>
     ({
-      preparing: tr("Preparing", "准备中"),
-      draft: tr("Ready for review", "待确认"),
-      queued: tr("Sending", "发送中"),
-      completed: tr("Completed", "已完成"),
-      cancelled: tr("Cancelled", "已取消"),
-      pending: tr("Queued", "待发送"),
-      processing: tr("Sending", "发送中"),
-      sent: tr("Submitted", "已提交发送"),
-      failed: tr("Failed", "发送失败"),
-      unknown: tr("Check delivery", "投递待核实"),
-      skipped: tr("Excluded", "已排除"),
+      preparing: tr("admin.followups.followupBatchHistory.preparing"),
+      draft: tr("admin.followups.followupBatchHistory.readyForReview"),
+      queued: tr("admin.followups.followupBatchHistory.sending"),
+      completed: tr("admin.followups.followupBatchHistory.completed"),
+      cancelled: tr("admin.followups.followupBatchHistory.cancelled"),
+      pending: tr("admin.followups.followupBatchHistory.queued"),
+      processing: tr("admin.followups.followupBatchHistory.sending"),
+      sent: tr("admin.followups.followupBatchHistory.submitted"),
+      failed: tr("admin.followups.followupBatchHistory.failed"),
+      unknown: tr("admin.followups.followupBatchHistory.checkDelivery"),
+      skipped: tr("admin.followups.followupBatchHistory.excluded"),
     })[value] || value;
   async function action(action: "queue" | "cancel") {
     if (!id || busy) return;
@@ -107,14 +107,16 @@ export function FollowupBatchHistory({
     }
   }
   return (
-    <section className="followupBatchHistory" aria-label={tr("Bulk follow-up history", "群发记录")}>
+    <section
+      className="followupBatchHistory"
+      aria-label={tr("admin.followups.followupBatchHistory.bulkFollowUpHistory")}
+    >
       <div className="followupCrmSectionHeading">
         <div>
-          <h2>{tr("Bulk follow-ups", "群发记录")}</h2>
+          <h2>{tr("admin.followups.followupBatchHistory.bulkFollowUps")}</h2>
           <p>
             {tr(
-              "Reviewed emails, individual results. Sending continues when this page is closed.",
-              "已确认的邮件在后台继续发送，每位用户都有独立结果。",
+              "admin.followups.followupBatchHistory.reviewedEmailsIndividualResultsSendingContinues",
             )}
           </p>
         </div>
@@ -124,7 +126,7 @@ export function FollowupBatchHistory({
           onClick={() => setRevision((value) => value + 1)}
         >
           <Icon name="refresh" size={14} />
-          {tr("Refresh", "刷新")}
+          {tr("admin.followups.followupBatchHistory.refresh")}
         </button>
       </div>
       {error && (
@@ -135,7 +137,7 @@ export function FollowupBatchHistory({
       {id ? (
         <>
           <button type="button" className="adminOutlineBtn" onClick={() => setId(null)}>
-            ← {tr("All batches", "全部群发记录")}
+            ← {tr("admin.followups.followupBatchHistory.allBatches")}
           </button>
           {detail ? (
             <>
@@ -155,9 +157,11 @@ export function FollowupBatchHistory({
                       disabled={busy || !detail.batch.pending || !detail.emailConfigured}
                       onClick={() => void action("queue")}
                     >
-                      {tr("Confirm & send ", "确认群发 ") +
+                      {tr("admin.followups.followupBatchHistory.confirmSend") +
                         detail.batch.pending +
-                        tr(detail.batch.pending === 1 ? " email" : " emails", " 封邮件")}
+                        (detail.batch.pending === 1
+                          ? tr("admin.followups.followupBatchHistory.email")
+                          : tr("admin.followups.followupBatchHistory.emails"))}
                     </button>
                   )}
                   {["preparing", "draft", "queued"].includes(detail.batch.status) && (
@@ -167,7 +171,7 @@ export function FollowupBatchHistory({
                       disabled={busy}
                       onClick={() => void action("cancel")}
                     >
-                      {tr("Cancel remaining", "取消尚未发送的邮件")}
+                      {tr("admin.followups.followupBatchHistory.cancelRemaining")}
                     </button>
                   )}
                 </div>
@@ -175,45 +179,39 @@ export function FollowupBatchHistory({
               <div className="followupBatchReviewStats">
                 <div>
                   <strong>{detail.batch.sent}</strong>
-                  <span>{tr("Submitted", "已提交发送")}</span>
+                  <span>{tr("admin.followups.followupBatchHistory.submitted")}</span>
                 </div>
                 <div>
                   <strong>{detail.batch.pending + detail.batch.processing}</strong>
-                  <span>{tr("Remaining", "待发送")}</span>
+                  <span>{tr("admin.followups.followupBatchHistory.remaining")}</span>
                 </div>
                 <div>
                   <strong>{detail.batch.failed + detail.batch.unknown}</strong>
-                  <span>{tr("Needs attention", "需检查")}</span>
+                  <span>{tr("admin.followups.followupBatchHistory.needsAttention")}</span>
                 </div>
                 <div>
                   <strong>{detail.batch.skipped + detail.batch.cancelled}</strong>
-                  <span>{tr("Excluded / cancelled", "排除 / 取消")}</span>
+                  <span>{tr("admin.followups.followupBatchHistory.excludedCancelled")}</span>
                 </div>
               </div>
               {!detail.emailConfigured && detail.batch.status === "queued" && (
                 <p className="adminAlert">
-                  {tr(
-                    "Waiting for the email channel. Sending will continue when it is available.",
-                    "正在等待发信通道，恢复后会继续发送。",
-                  )}
+                  {tr("admin.followups.followupBatchHistory.waitingForTheEmailChannelSending")}
                 </p>
               )}
               {detail.batch.status === "cancelled" && (
                 <p className="followupCrmHint">
-                  {tr(
-                    "Unsent emails are cancelled. An email already being submitted may still finish.",
-                    "尚未发送的邮件已取消，正在提交的邮件仍可能完成。",
-                  )}
+                  {tr("admin.followups.followupBatchHistory.unsentEmailsAreCancelledAnEmail")}
                 </p>
               )}
               <div className="followupCrmTableWrap">
                 <table className="followupCrmTable">
                   <thead>
                     <tr>
-                      <th>{tr("User", "用户")}</th>
-                      <th>{tr("Subject", "主题")}</th>
-                      <th>{tr("Result", "发送结果")}</th>
-                      <th>{tr("Detail", "详情")}</th>
+                      <th>{tr("admin.followups.followupBatchHistory.user")}</th>
+                      <th>{tr("admin.followups.followupBatchHistory.subject")}</th>
+                      <th>{tr("admin.followups.followupBatchHistory.result")}</th>
+                      <th>{tr("admin.followups.followupBatchHistory.detail")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -243,9 +241,9 @@ export function FollowupBatchHistory({
               </div>
               {detail.preview && (
                 <details className="followupBatchSavedPreview">
-                  <summary>{tr("View a saved email", "查看已保存邮件")}</summary>
+                  <summary>{tr("admin.followups.followupBatchHistory.viewASavedEmail")}</summary>
                   <label className="followupPreviewRecipient">
-                    {tr("Preview recipient", "预览收件人")}
+                    {tr("admin.followups.followupBatchHistory.previewRecipient")}
                     <select
                       value={detail.preview.user_id}
                       onChange={(event) => setPreviewUser(event.target.value)}
@@ -261,13 +259,13 @@ export function FollowupBatchHistory({
                   </label>
                   <FollowupEmailPreview
                     html={detail.preview.html_body}
-                    title={tr("Saved bulk email", "已保存的群发邮件")}
+                    title={tr("admin.followups.followupBatchHistory.savedBulkEmail")}
                   />
                 </details>
               )}
             </>
           ) : (
-            <p role="status">{tr("Loading batch…", "正在读取群发任务…")}</p>
+            <p role="status">{tr("admin.followups.followupBatchHistory.loadingBatch")}</p>
           )}
         </>
       ) : (
@@ -277,18 +275,10 @@ export function FollowupBatchHistory({
               <Icon name="chat" size={30} />
               <h3>
                 {loading
-                  ? tr("Loading batches…", "正在读取群发记录…")
-                  : tr(
-                      "Your first bulk follow-up starts with a selection.",
-                      "从选择用户开始第一次群发。",
-                    )}
+                  ? tr("admin.followups.followupBatchHistory.loadingBatches")
+                  : tr("admin.followups.followupBatchHistory.yourFirstBulkFollowUpStarts")}
               </h3>
-              <p>
-                {tr(
-                  "Select users in Contacts, then choose Bulk email to personalize and review each message.",
-                  "在用户列表中勾选用户，点击群发邮件，即可编辑模板并逐人预览。",
-                )}
-              </p>
+              <p>{tr("admin.followups.followupBatchHistory.selectUsersInContactsThenChoose")}</p>
             </div>
           )}
           <div className="followupBatchCards">
@@ -311,16 +301,19 @@ export function FollowupBatchHistory({
                 </div>
                 <h3>{batch.title}</h3>
                 <p>
-                  {batch.total} {tr("users", "位用户")} · {batch.sent} {tr("submitted", "已提交")} ·{" "}
-                  {batch.failed + batch.unknown} {tr("need checking", "需检查")}
+                  {batch.total} {tr("admin.followups.followupBatchHistory.users")} · {batch.sent}{" "}
+                  {tr("admin.followups.followupBatchHistory.submitted2")} ·{" "}
+                  {batch.failed + batch.unknown}{" "}
+                  {tr("admin.followups.followupBatchHistory.needChecking")}
                 </p>
                 <progress
-                  aria-label={tr("Batch progress", "群发进度")}
+                  aria-label={tr("admin.followups.followupBatchHistory.batchProgress")}
                   max={Math.max(1, batch.total)}
                   value={batch.total - batch.pending - batch.processing}
                 />
                 <span>
-                  {tr("View results", "查看结果")} <Icon name="chevron" size={13} />
+                  {tr("admin.followups.followupBatchHistory.viewResults")}{" "}
+                  <Icon name="chevron" size={13} />
                 </span>
               </button>
             ))}

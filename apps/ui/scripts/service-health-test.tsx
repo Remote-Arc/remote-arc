@@ -1,3 +1,5 @@
+import { loadLocale } from "../src/locales/locale-catalog.js";
+import { initialLocale } from "../src/locales/locale-preference.js";
 import assert from "node:assert/strict";
 import React from "react";
 // @ts-expect-error Test renderer is provided by this workspace.
@@ -53,6 +55,7 @@ const answer = async (index: number, body: unknown, status = 200) =>
   });
 try {
   await act(async () => {
+    await loadLocale(initialLocale(), "all");
     root = create(
       <I18nProvider>
         <ServiceHealth health={null} loading={false} reload={() => {}} />

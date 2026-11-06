@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { arcChatHref } from "../../../../../../packages/docs/src/arc-use-cases.js";
 import { IMAGE_DEMOS, type ImageDemo } from "../../../../../../packages/docs/src/image-gallery.js";
 import { mediaDemoPath } from "../../../../../../packages/docs/src/media-gallery.js";
-import "./media-demo-gallery.css";
-import "./image-demo-gallery.css";
+import "../../../styles/marketing/use-cases/media-demo-gallery.css";
+import "../../../styles/marketing/use-cases/image-demo-gallery.css";
 
 export function ImageDemoGallery() {
   const { tr, locale } = useI18n(),
@@ -32,21 +32,22 @@ export function ImageDemoGallery() {
     >
       <header className="mediaGalleryHeader">
         <div>
-          <span className="eyebrow">{tr("THE IMAGE GALLERY", "图片参考作品")}</span>
-          <h2 id="image-gallery-heading">{tr("An idea, drawn in code.", "把想法，画成作品。")}</h2>
+          <span className="eyebrow">
+            {tr("marketing.useCases.imageDemoGallery.theImageGallery")}
+          </span>
+          <h2 id="image-gallery-heading">
+            {tr("marketing.useCases.imageDemoGallery.anIdeaDrawnInCode")}
+          </h2>
           <p>
-            {tr(
-              "Posters, editorial illustration and generative art, rendered on a personal computer. Open an example, then use its brief as a starting point.",
-              "海报、编辑插画与生成艺术，全部在个人电脑上渲染。点开参考图，借用创作需求开始自己的作品。",
-            )}
+            {tr("marketing.useCases.imageDemoGallery.postersEditorialIllustrationAndGenerativeArt")}
           </p>
         </div>
         <div className="mediaGalleryStamp">
           <strong>{String(IMAGE_DEMOS.length).padStart(2, "0")}</strong>
           <span>
-            {tr("ORIGINAL EXAMPLES", "原创示例")}
+            {tr("marketing.useCases.imageDemoGallery.originalExamples")}
             <br />
-            {tr("RENDERED LOCALLY", "本地渲染")}
+            {tr("marketing.useCases.imageDemoGallery.renderedLocally")}
           </span>
         </div>
       </header>
@@ -56,7 +57,7 @@ export function ImageDemoGallery() {
             <button
               type="button"
               className="imageDemoPreview"
-              aria-label={tr("View image: ", "查看图片：") + item.title[locale]}
+              aria-label={tr("marketing.useCases.imageDemoGallery.viewImage") + item.title[locale]}
               onClick={(event) => {
                 opener.current = event.currentTarget;
                 setSelected(item);
@@ -74,7 +75,7 @@ export function ImageDemoGallery() {
             </button>
             <div className="mediaDemoCopy">
               <div className="mediaDemoCategory">
-                {tr("CODE GRAPHICS", "代码绘图")}
+                {tr("marketing.useCases.imageDemoGallery.codeGraphics")}
                 <span>{item.engine}</span>
               </div>
               <h3>{item.title[locale]}</h3>
@@ -87,19 +88,14 @@ export function ImageDemoGallery() {
                   setSelected(item);
                 }}
               >
-                {tr("View reference", "查看参考图")} ↗
+                {tr("marketing.useCases.imageDemoGallery.viewReference")} ↗
               </button>
             </div>
           </article>
         ))}
       </div>
       <footer className="mediaGalleryFooter">
-        <p>
-          {tr(
-            "These examples use code, local fonts and seeded algorithms. No image model is required. Photographic image generation uses a separately configured local ComfyUI backend.",
-            "这些示例使用代码、本地字体与固定种子算法，无需绘图模型。照片级图片生成则使用另行配置的本地 ComfyUI 后端。",
-          )}
-        </p>
+        <p>{tr("marketing.useCases.imageDemoGallery.theseExamplesUseCodeLocalFonts")}</p>
       </footer>
       <dialog
         ref={dialog}
@@ -117,12 +113,12 @@ export function ImageDemoGallery() {
         {selected && (
           <div className="mediaPlayerShell">
             <div className="mediaPlayerTop">
-              <span>{tr("IMAGE REFERENCE", "图片参考")}</span>
+              <span>{tr("marketing.useCases.imageDemoGallery.imageReference")}</span>
               <button
                 type="button"
                 className="mediaPlayerClose"
                 autoFocus
-                aria-label={tr("Close image", "关闭图片")}
+                aria-label={tr("marketing.useCases.imageDemoGallery.closeImage")}
                 onClick={close}
               >
                 ×
@@ -149,14 +145,14 @@ export function ImageDemoGallery() {
                 className="mediaPlayerCreate"
                 href={arcChatHref(selected.prompt[locale], "image-demo:" + selected.id)}
               >
-                {tr("Make something like this", "制作类似图片")} ↗
+                {tr("marketing.useCases.imageDemoGallery.makeSomethingLikeThis")} ↗
               </a>
             </div>
             {failed && (
               <p className="mediaPlayerError" role="alert">
-                {tr("This image could not load.", "图片暂时无法加载。")}{" "}
+                {tr("marketing.useCases.imageDemoGallery.thisImageCouldNotLoad")}{" "}
                 <a href={src(selected.image)} target="_blank" rel="noreferrer">
-                  {tr("Open image", "打开图片")}
+                  {tr("marketing.useCases.imageDemoGallery.openImage")}
                 </a>
               </p>
             )}

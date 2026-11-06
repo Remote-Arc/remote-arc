@@ -1,7 +1,7 @@
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
-import { useI18n } from "../../app/i18n.js";
-import "./pricing.css";
-import { usePlatformCatalog } from "../../lib/use-platform-catalog.js";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/marketing/pricing.css";
+import { usePlatformCatalog } from "../../hooks/use-platform-catalog.js";
 import { ArcPublicPricing } from "./arc-public-pricing.js";
 
 export function PricingContent({
@@ -20,13 +20,13 @@ export function PricingContent({
   return (
     <main className="pricingContent">
       <header className="pricingIntro">
-        <h1>{tr("A plan for your work.", "适合你的工作方式。")}</h1>
+        <h1>{tr("marketing.pricing.aPlanForYourWork")}</h1>
         <WorkspaceLoading
-          label={tr("Loading current prices and allowances…", "正在获取最新价格与额度…")}
+          label={tr("marketing.pricing.loadingCurrentPricesAndAllowances")}
           variant="cards"
         />
         <a className="primaryButton" href={usageHref}>
-          {tr("View plans in your workspace", "前往工作空间查看套餐")} →
+          {tr("marketing.pricing.viewPlansInYourWorkspace")} →
         </a>
       </header>
     </main>

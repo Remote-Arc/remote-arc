@@ -1,3 +1,4 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -7,12 +8,12 @@ import {
   type ChatMessage,
   type ChatRun,
   type ChatService,
-} from "../chat/use-arc-chat.js";
+} from "../../../hooks/arc/use-arc-chat.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { billingRecovery } from "../../../../../../packages/protocol/src/billing-recovery.js";
 import { BillingRecoveryActions } from "../../billing/billing-recovery-actions.js";
 
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
 type RoomMessage = ChatMessage & {
   recipients?: { id: string; name: string }[];
   employeeId: string | null;
@@ -55,20 +56,10 @@ import { TeamAvatar } from "./arc-team-avatar.js";
 function failure(code: string, tr: Tr) {
   const recovery = billingRecovery(code);
   if (recovery) return tr(...recovery.message);
-  if (/PAID_MODEL/.test(code))
-    return tr(
-      "Your account needs an eligible model allowance to continue. Your messages are saved.",
-      "账户需要可用模型额度才能继续，消息已保存。",
-    );
+  if (/PAID_MODEL/.test(code)) return tr("arc.teams.arcTeamChat.yourAccountNeedsAnEligibleModel");
   if (/MEMBER|ACCESS_REVOKED|SCOPE/.test(code))
-    return tr(
-      "An agent’s access changed. Review their profile before continuing.",
-      "智能体权限已变化，请先核对资料。",
-    );
-  return tr(
-    "Could not complete this request. Your draft and conversation are saved.",
-    "请求未完成，草稿和会话仍保留。",
-  );
+    return tr("arc.teams.arcTeamChat.anAgentSAccessChangedReview");
+  return tr("arc.teams.arcTeamChat.couldNotCompleteThisRequestYour");
 }
 export function ArcTeamChat({
   accountId,
@@ -302,15 +293,15 @@ export function ArcTeamChat({
     <section className="arcTeamConversation">
       <header className="arcTeamConversationHeader">
         <button type="button" className="ghostButton" onClick={onBack}>
-          ← {tr("Conversations", "会话")}
+          ← {tr("arc.teams.arcTeamChat.conversations")}
         </button>
         <div>
-          <h1>{snapshot?.room.name || tr("Conversation", "会话")}</h1>
+          <h1>{snapshot?.room.name || tr("arc.teams.arcTeamChat.conversation")}</h1>
           {snapshot && <p>{snapshot.employees.map((employee) => employee.name).join(" · ")}</p>}
         </div>
         {snapshot && (
           <details className="arcTeamRoomDetails">
-            <summary>{tr("Details", "详情")}</summary>
+            <summary>{tr("arc.teams.arcTeamChat.details")}</summary>
             <div>
               {snapshot.employees.map((employee) => (
                 <p key={employee.id}>
@@ -318,12 +309,7 @@ export function ArcTeamChat({
                   <span>{employee.responsibility}</span>
                 </p>
               ))}
-              <small>
-                {tr(
-                  "Messages, agent handoffs and actual tool observations stay in this conversation.",
-                  "消息、智能体交接和实际工具返回均保存在会话中。",
-                )}
-              </small>
+              <small>{tr("arc.teams.arcTeamChat.messagesAgentHandoffsAndActualTool")}</small>
             </div>
           </details>
         )}
@@ -333,12 +319,12 @@ export function ArcTeamChat({
           <p>{failure(error, tr)}</p>
           <BillingRecoveryActions code={error} tr={tr} />
           <button type="button" onClick={() => setRevision((value) => value + 1)}>
-            {tr("Refresh status", "刷新状态")}
+            {tr("arc.teams.arcTeamChat.refreshStatus")}
           </button>
         </div>
       )}
       {!snapshot ? (
-        <WorkspaceLoading variant="rows" label={tr("Opening conversation…", "正在打开会话…")} />
+        <WorkspaceLoading variant="rows" label={tr("arc.teams.arcTeamChat.openingConversation")} />
       ) : (
         <>
           <div
@@ -351,7 +337,7 @@ export function ArcTeamChat({
             role="log"
             aria-live="polite"
             aria-relevant="additions"
-            aria-label={tr("Conversation messages", "会话消息")}
+            aria-label={tr("arc.teams.arcTeamChat.conversationMessages")}
           >
             {(earlier?.hasMore ?? snapshot.hasMore) && (
               <button
@@ -361,26 +347,21 @@ export function ArcTeamChat({
                 onClick={() => void loadEarlier()}
               >
                 {loadingEarlier
-                  ? tr("Loading…", "加载中…")
-                  : tr("Load earlier messages", "查看更早消息")}
+                  ? tr("arc.teams.arcTeamChat.loading")
+                  : tr("arc.teams.arcTeamChat.loadEarlierMessages")}
               </button>
             )}
             {!messages.length && (
               <div className="arcTeamConversationEmpty">
-                <h2>{tr("Start a conversation.", "说点什么，开始交流。")}</h2>
-                <p>
-                  {tr(
-                    "Ask a question, share an idea or give your team an outcome to work on.",
-                    "可以提问、讨论想法，也可以交给团队一个共同目标。",
-                  )}
-                </p>
+                <h2>{tr("arc.teams.arcTeamChat.startAConversation")}</h2>
+                <p>{tr("arc.teams.arcTeamChat.askAQuestionShareAnIdea")}</p>
               </div>
             )}
             {messages.map((message) => {
               const author =
                   message.role === "user"
-                    ? tr("You", "你")
-                    : message.speaker?.name || tr("Agent", "智能体"),
+                    ? tr("arc.teams.arcTeamChat.you")
+                    : message.speaker?.name || tr("arc.teams.arcTeamChat.agent"),
                 handoff = ["message_employee", "delegate_work"].includes(message.tool || ""),
                 assignment = handoff ? handoffResult(message.result) : null,
                 target = handoff
@@ -396,15 +377,15 @@ export function ArcTeamChat({
                       <span>{author}</span> · {message.text || message.tool}
                       <small>
                         {message.status === "completed"
-                          ? tr("Returned", "已返回")
+                          ? tr("arc.teams.arcTeamChat.returned")
                           : message.status === "running"
-                            ? tr("Working", "执行中")
-                            : tr("Needs review", "待核查")}
+                            ? tr("arc.teams.arcTeamChat.working")
+                            : tr("arc.teams.arcTeamChat.needsReview")}
                       </small>
                     </summary>
-                    <p>{tr("Input", "输入")}</p>
+                    <p>{tr("arc.teams.arcTeamChat.input")}</p>
                     <pre>{JSON.stringify(message.arguments, null, 2)}</pre>
-                    <p>{tr("Observation", "实际返回")}</p>
+                    <p>{tr("arc.teams.arcTeamChat.observation")}</p>
                     <pre>
                       {typeof message.result === "string"
                         ? message.result
@@ -421,7 +402,9 @@ export function ArcTeamChat({
                         {author}
                         {handoff &&
                           " → " +
-                            (target?.name || assignment?.target?.name || tr("Agent", "智能体"))}
+                            (target?.name ||
+                              assignment?.target?.name ||
+                              tr("arc.teams.arcTeamChat.agent"))}
                       </strong>
                       <time dateTime={message.created_at}>
                         {new Date(message.created_at).toLocaleTimeString(undefined, {
@@ -463,8 +446,8 @@ export function ArcTeamChat({
                       <div className="arcTeamHandoffStatus">
                         <span>
                           {assignment?.queued
-                            ? tr("Work handed off", "已交接工作")
-                            : tr("Handoff needs attention", "交接需要处理")}
+                            ? tr("arc.teams.arcTeamChat.workHandedOff")
+                            : tr("arc.teams.arcTeamChat.handoffNeedsAttention")}
                         </span>
                         {assignment?.queued && assignment.roomId && (
                           <a
@@ -484,7 +467,7 @@ export function ArcTeamChat({
                               }
                             }}
                           >
-                            {tr("Open conversation", "查看会话")} →
+                            {tr("arc.teams.arcTeamChat.openConversation")} →
                           </a>
                         )}
                       </div>
@@ -499,11 +482,11 @@ export function ArcTeamChat({
                 <details className="arcTeamRunProblem" key={run.id}>
                   <summary>
                     {snapshot.employees.find((employee) => employee.id === run.employeeId)?.name ||
-                      tr("Agent", "智能体")}{" "}
+                      tr("arc.teams.arcTeamChat.agent")}{" "}
                     ·{" "}
                     {run.status === "unknown"
-                      ? tr("Result needs checking", "结果待核查")
-                      : tr("Work needs attention", "执行需要处理")}
+                      ? tr("arc.teams.arcTeamChat.resultNeedsChecking")
+                      : tr("arc.teams.arcTeamChat.workNeedsAttention")}
                   </summary>
                   <p>{failure(run.error || "", tr)}</p>
                   <BillingRecoveryActions code={run.error || ""} tr={tr} />
@@ -515,37 +498,31 @@ export function ArcTeamChat({
             {active && (
               <p className="arcTeamLiveStatus" role="status">
                 <span className="arcTeamPulse" aria-hidden="true" />
-                {working?.name || tr("An agent", "智能体")}
+                {working?.name || tr("arc.teams.arcTeamChat.anAgent")}
                 {active.status === "working"
-                  ? tr(" is working", "正在执行")
-                  : tr(" is thinking", "正在思考")}
+                  ? tr("arc.teams.arcTeamChat.isWorking")
+                  : tr("arc.teams.arcTeamChat.isThinking")}
               </p>
             )}
             <div ref={bottom} />
           </div>
           {service && !service.access.canUse && service.access.status !== "eligible" && (
             <p className="arcTeamAlert" role="status">
-              {tr(
-                "Your account needs an active plan or available Credits to continue. Your conversation is saved.",
-                "账户需要有效套餐或可用 Credits 才能继续，会话已保存。",
-              )}{" "}
-              <a href="/checkout">{tr("View plans", "查看套餐")}</a>
+              {tr("arc.teams.arcTeamChat.yourAccountNeedsAnActivePlan")}{" "}
+              <a href="/checkout">{tr("arc.teams.arcTeamChat.viewPlans")}</a>
             </p>
           )}
           {paused && (
             <div className="arcTeamAlert">
-              {tr(
-                "This conversation has paused. Check account access, then resume when ready.",
-                "会话已暂停。核对账户权限后，可以继续。",
-              )}
+              {tr("arc.teams.arcTeamChat.thisConversationHasPausedCheckAccount")}
               <button type="button" disabled={busy} onClick={() => void action("resume")}>
-                {tr("Resume", "继续")}
+                {tr("arc.teams.arcTeamChat.resume")}
               </button>
             </div>
           )}
           <form className="arcTeamComposer" onSubmit={(event) => void send(event)}>
             <label className="srOnly" htmlFor="arc-team-message">
-              {tr("Message", "消息")}
+              {tr("arc.teams.arcTeamChat.message")}
             </label>
             {mentions.length > 0 && (
               <div className="arcTeamMentionBadges">
@@ -553,11 +530,11 @@ export function ArcTeamChat({
                   const employee = snapshot.employees.find((employee) => employee.id === id);
                   return (
                     <span key={id}>
-                      @{employee?.name || tr("Agent", "智能体")}
+                      @{employee?.name || tr("arc.teams.arcTeamChat.agent")}
                       <button
                         type="button"
                         aria-label={
-                          tr("Remove mention", "移除引用") + ": " + (employee?.name || id)
+                          tr("arc.teams.arcTeamChat.removeMention") + ": " + (employee?.name || id)
                         }
                         onClick={() =>
                           setMentions((current) => current.filter((value) => value !== id))
@@ -575,7 +552,7 @@ export function ArcTeamChat({
                 className="arcTeamMentionMenu"
                 role="listbox"
                 id="arc-team-mentions"
-                aria-label={tr("Mention an agent", "引用智能体")}
+                aria-label={tr("arc.teams.arcTeamChat.mentionAnAgent")}
               >
                 {mentionChoices.slice(0, 8).map((employee, index) => (
                   <button
@@ -608,10 +585,7 @@ export function ArcTeamChat({
               maxLength={6000}
               value={text}
               onChange={(event) => edit(event.target.value, event.target.selectionStart)}
-              placeholder={tr(
-                "Talk to your team. Type @ to bring in an agent…",
-                "和团队说点什么，输入 @ 选择智能体…",
-              )}
+              placeholder={tr("arc.teams.arcTeamChat.talkToYourTeamTypeTo")}
               onKeyDown={(event) => {
                 if (query && mentionChoices.length) {
                   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -644,9 +618,9 @@ export function ArcTeamChat({
             />
             <footer>
               <label>
-                {tr("To", "发送给")}{" "}
+                {tr("arc.teams.arcTeamChat.to")}{" "}
                 <select
-                  aria-label={tr("Message recipients", "消息接收人")}
+                  aria-label={tr("arc.teams.arcTeamChat.messageRecipients")}
                   value={mentions.length ? "mentions" : recipient}
                   onChange={(event) => {
                     setRecipient(event.target.value);
@@ -654,13 +628,13 @@ export function ArcTeamChat({
                   }}
                 >
                   {mentions.length > 0 && (
-                    <option value="mentions">{tr("Mentioned agents", "已引用的智能体")}</option>
+                    <option value="mentions">{tr("arc.teams.arcTeamChat.mentionedAgents")}</option>
                   )}
-                  <option value="auto">{tr("Auto", "自动分派")}</option>
+                  <option value="auto">{tr("arc.teams.arcTeamChat.auto")}</option>
                   <option value="all">
                     {snapshot.room.kind === "direct"
                       ? snapshot.employees[0]?.name
-                      : tr("Everyone", "全体成员")}
+                      : tr("arc.teams.arcTeamChat.everyone")}
                   </option>
                   {snapshot.room.kind !== "direct" &&
                     snapshot.employees.map((employee) => (
@@ -670,7 +644,7 @@ export function ArcTeamChat({
                     ))}
                 </select>
               </label>
-              <span>{tr("Uses your existing Credits.", "使用账户现有 Credits。")}</span>
+              <span>{tr("arc.teams.arcTeamChat.usesYourExistingCredits")}</span>
               {active && (
                 <button
                   type="button"
@@ -678,7 +652,7 @@ export function ArcTeamChat({
                   onClick={() => void action("stop")}
                   disabled={busy}
                 >
-                  {tr("Stop", "停止")}
+                  {tr("arc.teams.arcTeamChat.stop")}
                 </button>
               )}
               {service?.access.status === "eligible" ? (
@@ -688,7 +662,7 @@ export function ArcTeamChat({
                   onClick={() => void action("trial")}
                   disabled={busy}
                 >
-                  {tr("Start trial", "开始试用")}
+                  {tr("arc.teams.arcTeamChat.startTrial")}
                 </button>
               ) : (
                 <button
@@ -702,7 +676,7 @@ export function ArcTeamChat({
                     !service.access.canUse
                   }
                 >
-                  {busy ? tr("Sending…", "发送中…") : tr("Send", "发送")} ↑
+                  {busy ? tr("arc.teams.arcTeamChat.sending") : tr("arc.teams.arcTeamChat.send")} ↑
                 </button>
               )}
             </footer>

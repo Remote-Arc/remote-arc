@@ -1,3 +1,4 @@
+import { loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 import React from "react";
@@ -16,6 +17,7 @@ const previousWindow = globalThis.window;
 const previousLocation = globalThis.location;
 try {
   for (const locale of ["en", "zh"]) {
+    await loadLocale(locale, "all");
     globalThis.location = {
       origin: "https://remotearc.app",
       hostname: "remotearc.app",

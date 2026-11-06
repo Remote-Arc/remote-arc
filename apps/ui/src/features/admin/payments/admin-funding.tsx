@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 type Pool = {
   limit: number;
   dailyLimit: number;
@@ -67,34 +67,31 @@ export function AdminFunding({
     <section className="adminSurface">
       <div className="adminSectionHeader">
         <div>
-          <span className="adminLeadStatus">{tr("MODEL OPERATIONS", "模型运营")}</span>
-          <h2>{tr("Free trials and model funding.", "免费试用与模型预算。")}</h2>
-          <p>
-            {tr(
-              "Automatic mode funds free trials from your acquisition budget and paid usage from verified receipts. Every account still has its own Credit and task limits.",
-              "自动模式下，免费试用使用获客预算，付费用量由已确认付款支持；每个账号仍受 Credits 和任务限额约束。",
-            )}
-          </p>
+          <span className="adminLeadStatus">
+            {tr("admin.payments.adminFunding.modelOperations")}
+          </span>
+          <h2>{tr("admin.payments.adminFunding.freeTrialsAndModelFunding")}</h2>
+          <p>{tr("admin.payments.adminFunding.automaticModeFundsFreeTrialsFrom")}</p>
         </div>
       </div>
       {funding.alert && (
         <p className="adminAlert" role="status">
-          {tr(
-            "Model calls are paused or a shared budget has reached 80%. Check provider balances and funding before raising limits.",
-            "模型已暂停或共享预算已达 80%。提高上限前请核对供应商余额与资金。",
-          )}
+          {tr("admin.payments.adminFunding.modelCallsArePausedOrA")}
         </p>
       )}
       <div className="adminMetrics adminMetrics--overview">
         {[
-          { label: tr("Active trials", "有效试用"), value: funding.trials.active },
-          { label: tr("Trials started today", "今日新试用"), value: funding.trials.startedToday },
+          { label: tr("admin.payments.adminFunding.activeTrials"), value: funding.trials.active },
           {
-            label: tr("Rated spend + reserved", "计价成本 + 预留"),
+            label: tr("admin.payments.adminFunding.trialsStartedToday"),
+            value: funding.trials.startedToday,
+          },
+          {
+            label: tr("admin.payments.adminFunding.ratedSpendReserved"),
             value: usd(funding.spent) + " + " + usd(funding.reserved),
           },
           {
-            label: tr("Today / daily cap", "今日 / 每日共享上限"),
+            label: tr("admin.payments.adminFunding.todayDailyCap"),
             value:
               usd(funding.dailyUsed) +
               " / " +
@@ -110,7 +107,7 @@ export function AdminFunding({
         ))}
       </div>
       <p>
-        {tr("Remaining cumulative budget", "剩余累计预算")}{" "}
+        {tr("admin.payments.adminFunding.remainingCumulativeBudget")}{" "}
         {usd(
           Math.max(
             0,
@@ -119,17 +116,13 @@ export function AdminFunding({
               funding.reserved,
           ),
         )}{" "}
-        ·{" "}
-        {tr(
-          "This is an Arc operating cap, not a live provider balance. Unknown requests keep their reservation; resuming never resets spending.",
-          "这是 Arc 的运营上限，不是供应商实时余额。结果不明的请求保留预留费用；恢复不会清零用量。",
-        )}
+        · {tr("admin.payments.adminFunding.thisIsAnArcOperatingCap")}
       </p>
       {pools && (
         <div className="adminFundingPools">
           {[
-            ["sponsored", tr("Free-trial acquisition budget", "免费试用获客预算")],
-            ["paid", tr("Verified-payment funding", "已确认付款支持的预算")],
+            ["sponsored", tr("admin.payments.adminFunding.freeTrialAcquisitionBudget")],
+            ["paid", tr("admin.payments.adminFunding.verifiedPaymentFunding")],
           ].map(([key, label]) => {
             const pool = pools[key as "sponsored" | "paid"];
             return (
@@ -139,17 +132,15 @@ export function AdminFunding({
                   {usd(pool.spent + pool.reserved)} / {usd(pool.limit)}
                 </p>
                 <small>
-                  {tr("Today: ", "今日：") + usd(pool.dailyUsed) + " / " + usd(pool.dailyLimit)}
+                  {tr("admin.payments.adminFunding.today") +
+                    usd(pool.dailyUsed) +
+                    " / " +
+                    usd(pool.dailyLimit)}
                 </small>
               </article>
             );
           })}
-          <p>
-            {tr(
-              "Free daily capacity follows active trials within the acquisition cap. Paid daily capacity follows paying accounts; receipt amounts exclude tax and are before fees. These are operating limits, not provider cash balances or automatic recharges.",
-              "免费每日容量随有效试用增长，始终受获客总预算约束。付费每日容量随付费账号增长；收款金额不含税、未扣手续费。这些是运营上限，不代表供应商现金余额，也不会自动充值。",
-            )}
-          </p>
+          <p>{tr("admin.payments.adminFunding.freeDailyCapacityFollowsActiveTrials")}</p>
         </div>
       )}
       <form
@@ -160,7 +151,7 @@ export function AdminFunding({
       >
         <div className="adminPaymentForm">
           <label className="adminPaymentField">
-            {tr("Budget mode", "预算模式")}
+            {tr("admin.payments.adminFunding.budgetMode")}
             <select
               value={mode}
               onChange={(event) => {
@@ -169,15 +160,15 @@ export function AdminFunding({
               }}
             >
               <option value="automatic">
-                {tr("Automatic · separate trial and paid funding", "自动 · 试用与付费分开")}
+                {tr("admin.payments.adminFunding.automaticSeparateTrialAndPaidFunding")}
               </option>
-              <option value="manual">{tr("Fixed shared budget", "固定共享预算")}</option>
+              <option value="manual">{tr("admin.payments.adminFunding.fixedSharedBudget")}</option>
             </select>
           </label>
           <label className="adminPaymentField">
             {mode === "automatic"
-              ? tr("Trial acquisition budget · USD", "试用获客累计预算 · 美元")
-              : tr("Cumulative budget · USD", "累计成本上限 · 美元")}
+              ? tr("admin.payments.adminFunding.trialAcquisitionBudgetUsd")
+              : tr("admin.payments.adminFunding.cumulativeBudgetUsd")}
             <input
               type="number"
               min="0.001"
@@ -192,8 +183,8 @@ export function AdminFunding({
           </label>
           <label className="adminPaymentField">
             {mode === "automatic"
-              ? tr("Trial daily baseline · USD", "试用每日基准 · 美元")
-              : tr("Daily shared cap · USD", "每日共享上限 · 美元")}
+              ? tr("admin.payments.adminFunding.trialDailyBaselineUsd")
+              : tr("admin.payments.adminFunding.dailySharedCapUsd")}
             <input
               type="number"
               min="0.001"
@@ -208,7 +199,7 @@ export function AdminFunding({
           </label>
           {mode === "automatic" && (
             <label className="adminPaymentField">
-              {tr("Daily cap per paying account · USD", "每个付费账号每日上限 · 美元")}
+              {tr("admin.payments.adminFunding.dailyCapPerPayingAccountUsd")}
               <input
                 type="number"
                 min="0.001"
@@ -223,7 +214,7 @@ export function AdminFunding({
             </label>
           )}
           <label className="adminPaymentField">
-            {tr("Allow model calls", "允许模型调用")}
+            {tr("admin.payments.adminFunding.allowModelCalls")}
             <input
               type="checkbox"
               checked={enabled}
@@ -235,21 +226,19 @@ export function AdminFunding({
           </label>
         </div>
         <button className="adminOutlineBtn" disabled={busy || preview || !funding.managed}>
-          {tr("Review budget change", "核对预算更改")}
+          {tr("admin.payments.adminFunding.reviewBudgetChange")}
         </button>
       </form>
       {review && (
         <div className="adminPaymentReview">
           <p>
-            {enabled ? tr("Calls enabled", "允许调用") : tr("Calls paused", "暂停调用")} · ${total}{" "}
-            {tr("cumulative", "累计")} · ${daily} / {tr("day", "天")}
+            {enabled
+              ? tr("admin.payments.adminFunding.callsEnabled")
+              : tr("admin.payments.adminFunding.callsPaused")}{" "}
+            · ${total} {tr("admin.payments.adminFunding.cumulative")} · ${daily} /{" "}
+            {tr("admin.payments.adminFunding.day")}
           </p>
-          <p>
-            {tr(
-              "Raising this cap does not recharge a provider. Confirm the available provider funds first.",
-              "提高上限不会给供应商充值，请先核对可用资金。",
-            )}
-          </p>
+          <p>{tr("admin.payments.adminFunding.raisingThisCapDoesNotRecharge")}</p>
           <button
             className="adminOutlineBtn"
             disabled={busy || preview}
@@ -264,7 +253,7 @@ export function AdminFunding({
               })
             }
           >
-            {tr("Publish this budget", "发布此预算")}
+            {tr("admin.payments.adminFunding.publishThisBudget")}
           </button>
         </div>
       )}
@@ -273,11 +262,11 @@ export function AdminFunding({
           <thead>
             <tr>
               {[
-                tr("Date", "日期"),
-                tr("Model", "模型"),
-                tr("Calls / users", "调用 / 用户"),
-                tr("Rated spend", "计价成本"),
-                tr("Reserved", "预留"),
+                tr("admin.payments.adminFunding.date"),
+                tr("admin.payments.adminFunding.model"),
+                tr("admin.payments.adminFunding.callsUsers"),
+                tr("admin.payments.adminFunding.ratedSpend"),
+                tr("admin.payments.adminFunding.reserved"),
               ].map((label) => (
                 <th key={label}>{label}</th>
               ))}
@@ -302,7 +291,7 @@ export function AdminFunding({
         </table>
       </div>
       <details>
-        <summary>{tr("Budget audit history", "预算操作记录")}</summary>
+        <summary>{tr("admin.payments.adminFunding.budgetAuditHistory")}</summary>
         {funding.audit.map((row) => (
           <p key={row.id}>
             {new Date(row.created_at).toLocaleString()} · {row.actor_email || "—"} · {row.action}

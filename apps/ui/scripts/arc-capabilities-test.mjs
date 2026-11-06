@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { readLocaleMessages } from "./app-source.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arc = readFileSync(
   path.join(root, "src/features/marketing/arc/arc-capabilities.tsx"),
@@ -17,15 +18,20 @@ const adminOperations = readFileSync(
   path.join(root, "src/features/admin/admin-operations.tsx"),
   "utf8",
 );
-const landingCss = readFileSync(
-  path.join(root, "src/features/marketing/arc/arc-future.css"),
-  "utf8",
-);
+const landingCss = readFileSync(path.join(root, "src/styles/marketing/arc/arc-future.css"), "utf8");
 const appCss = readFileSync(
-  path.join(root, "src/features/marketing/arc/arc-capabilities.css"),
+  path.join(root, "src/styles/marketing/arc/arc-capabilities.css"),
   "utf8",
 );
 const directory = JSON.parse(readFileSync(path.join(root, "src/data/app-directory.json"), "utf8"));
+const copy = Object.fromEntries(
+  Object.entries(readLocaleMessages("en", "website")).filter(
+    ([key]) =>
+      key.startsWith("marketing.arc.arcFuture.") ||
+      key.startsWith("marketing.arc.arcCapabilities."),
+  ),
+);
+const arcCopy = Object.values(copy).join("\n");
 const expected = [...new Set(directory.apps.map((app) => app.brand))];
 assert.equal(directory.apps.length, 37);
 assert.equal(directory.categories.length, 8);
@@ -37,14 +43,13 @@ for (const key of expected) {
 assert.match(arc, /<AppsDirectory id="arc-apps"/);
 assert.match(arc, /<AppWorkflowShowcase/);
 assert.doesNotMatch(
-  arc,
+  arcCopy,
   /Phase\s+[234]\b|阶段\s*[234]/i,
   "Arc feature page must not present roadmap phases",
 );
 for (const token of ["Routines", "Skills", "Teach Arc", "Workspace", "billing", "approvals"]) {
   assert.ok(
-    arc.toLowerCase().includes(token.toLowerCase()) ||
-      landing.toLowerCase().includes(token.toLowerCase()),
+    arcCopy.toLowerCase().includes(token.toLowerCase()),
     "missing product capability: " + token,
   );
 }
@@ -54,22 +59,22 @@ assert.match(
   "Honor current runtime availability and supplied workspace destination",
 );
 assert.match(
-  landing,
+  copy["marketing.arc.arcFuture.illustrativeProductDemoOpenArcTo"],
   /Illustrative product demo/,
   "Example execution must remain clearly labelled",
 );
 assert.match(
-  landing,
+  copy["marketing.arc.arcFuture.illustrativeDemoCheckYourWorkspaceFor"],
   /Check your workspace for current Arc access and allowance/,
   "Unavailable fallback must describe current access honestly",
 );
 assert.doesNotMatch(
-  landing,
+  arcCopy,
   /Arc Chat is not open yet|14-day Arc trial is planned for launch/,
   "Do not retain obsolete launch restrictions",
 );
 assert.doesNotMatch(
-  arc,
+  arcCopy,
   /Not yet connectable|PLANNED INTEGRATION/,
   "Use the executable Apps directory and its explicit release gates",
 );

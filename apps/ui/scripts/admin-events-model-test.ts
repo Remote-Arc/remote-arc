@@ -1,3 +1,4 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import {
   percent,
@@ -8,7 +9,8 @@ import {
   validAnalytics,
   type Scene,
 } from "../src/features/admin/events/admin-events-model.js";
-const zh = (_en: string, chinese: string) => chinese;
+await loadLocale("zh", "all");
+const zh = createTranslator("zh");
 assert.equal(percent(rate(0, 0)), "—", "No denominator is not a 0% success rate");
 assert.equal(percent(rate(0, 10)), "0%", "Observed failures with a real denominator can be zero");
 assert.equal(percent(rate(3, 4)), "75%");

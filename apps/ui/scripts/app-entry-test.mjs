@@ -39,7 +39,9 @@ assert.ok(
   "Dashboard shell exceeds its syntax budget; move tab content into dashboard/",
 );
 for (const name of appModules.filter(
-  (name) => name.startsWith("features/dashboard/") && name !== "features/dashboard/dashboard.tsx",
+  (name) =>
+    (name.startsWith("features/dashboard/") && name !== "features/dashboard/dashboard.tsx") ||
+    name.startsWith("hooks/dashboard/"),
 )) {
   assert.ok(
     syntaxSize(readAppModule(name)) <= 3000,

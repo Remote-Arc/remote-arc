@@ -1,3 +1,4 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import { APP_WORKFLOW_EXAMPLES } from "../src/features/marketing/home/app-workflow-examples.ts";
 import { APP_CATALOG, appOperation } from "../../relay/src/apps/app-catalog.ts";
@@ -7,8 +8,11 @@ assert.deepEqual(
   APP_WORKFLOW_EXAMPLES.map((example) => example.id),
   ["release", "knowledge"],
 );
+await Promise.all([loadLocale("en", "website"), loadLocale("zh", "website")]);
+const en = createTranslator("en");
+const zh = createTranslator("zh");
 for (const example of APP_WORKFLOW_EXAMPLES) {
-  assert(example.request[0] && example.request[1] && example.result[0] && example.result[1]);
+  assert(en(example.request) && zh(example.request) && en(example.result) && zh(example.result));
   assert(
     APP_CATALOG[example.connectionProvider],
     "Connection CTA must identify an implemented provider",
@@ -32,7 +36,7 @@ for (const example of APP_WORKFLOW_EXAMPLES) {
       assert.equal(new URL(operation.request(args).url).searchParams.get("state"), "closed");
     if (operation.permission === "write") {
       writes++;
-      assert.doesNotMatch(trace.output.join(" "), /pending_approval|等待审批/);
+      assert.doesNotMatch(en(trace.output) + " " + zh(trace.output), /pending_approval|等待审批/);
     }
   }
   assert.equal(

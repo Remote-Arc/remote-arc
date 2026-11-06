@@ -1,3 +1,4 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 import React from "react";
@@ -9,6 +10,7 @@ registerHooks({
       : next(url, context);
   },
 });
+await loadLocale("en", "all");
 const { ArcHomeBrief } = await import("../src/features/arc/chat/arc-home-brief.tsx");
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const original = globalThis.fetch;
@@ -65,7 +67,7 @@ const props = {
   enabled: true,
   onlineDevices: 1,
   totalDevices: 2,
-  tr: (en) => en,
+  tr: createTranslator("en"),
   onTasks: () => (navigated = "tasks"),
   onRoutines: () => (navigated = "routines"),
   onDevices: () => (navigated = "devices"),

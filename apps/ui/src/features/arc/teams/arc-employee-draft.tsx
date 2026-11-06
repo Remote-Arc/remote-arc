@@ -1,11 +1,12 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../../packages/protocol/src/error-codes.js";
 import { useRef, useState, useEffect } from "react";
 import type { ArcEmployeeDraft, ArcEmployee } from "@remotearc/protocol";
-import { arcRequest } from "../chat/use-arc-chat.js";
+import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
 import { EmployeeEditor, EmployeeAvatar, type EmployeeEditorData } from "./arc-teams-page.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
-import "./arc-employee-draft.css";
-type Tr = (en: string, zh: string) => string;
+import "../../../styles/arc/teams/arc-employee-draft.css";
+type Tr = Translate;
 export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; tr: Tr }) {
   const [updated, setUpdated] = useState<ArcEmployeeDraft | null>(null),
     [data, setData] = useState<EmployeeEditorData | null>(null),
@@ -36,13 +37,7 @@ export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; t
       });
       if (live.current) setUpdated(value.draft);
     } catch {
-      if (live.current)
-        setError(
-          tr(
-            "Could not create this agent. Your profile is saved; try again.",
-            "未能创建智能体，资料已保存，请重试。",
-          ),
-        );
+      if (live.current) setError(tr("arc.teams.arcEmployeeDraft.couldNotCreateThisAgentYour"));
     } finally {
       lock.current = false;
       if (live.current) setBusy(false);
@@ -85,12 +80,7 @@ export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; t
         if (!controller.signal.aborted) {
           setLoading(false);
           setReview(false);
-          setError(
-            tr(
-              "Could not load your models and access. Your draft is saved; try again.",
-              "无法加载模型与权限，草稿已保存，请重试。",
-            ),
-          );
+          setError(tr("arc.teams.arcEmployeeDraft.couldNotLoadYourModelsAnd"));
         }
       })
       .finally(() => {
@@ -110,10 +100,7 @@ export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; t
       });
       if (live.current) setUpdated(value.draft);
     } catch {
-      if (live.current)
-        setError(
-          tr("Could not cancel. Your draft is saved; try again.", "取消失败，草稿已保存，请重试。"),
-        );
+      if (live.current) setError(tr("arc.teams.arcEmployeeDraft.couldNotCancelYourDraftIs"));
     } finally {
       lock.current = false;
       if (live.current) setBusy(false);
@@ -122,19 +109,22 @@ export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; t
 
   if (current.status === "confirmed")
     return (
-      <div className="arcCreatedTeammate" aria-label={tr("Created agent", "已创建智能体")}>
+      <div
+        className="arcCreatedTeammate"
+        aria-label={tr("arc.teams.arcEmployeeDraft.createdAgent")}
+      >
         <EmployeeAvatar employee={profile} size={28} />
         <div>
           <strong>{profile.name}</strong>
           <span>{profile.responsibility}</span>
         </div>
-        <small>{tr("Created", "已创建")}</small>
+        <small>{tr("arc.teams.arcEmployeeDraft.created")}</small>
       </div>
     );
   return (
     <section
       className="arcEmployeeDraft"
-      aria-label={tr("Agent profile", "智能体资料")}
+      aria-label={tr("arc.teams.arcEmployeeDraft.agentProfile")}
       data-status={current.status}
     >
       <header>
@@ -142,10 +132,10 @@ export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; t
         <div>
           <span>
             {current.status === "pending"
-              ? tr("Agent profile", "智能体资料")
+              ? tr("arc.teams.arcEmployeeDraft.agentProfile")
               : current.status === "expired"
-                ? tr("Draft expired", "草稿已过期")
-                : tr("Draft cancelled", "草稿已取消")}
+                ? tr("arc.teams.arcEmployeeDraft.draftExpired")
+                : tr("arc.teams.arcEmployeeDraft.draftCancelled")}
           </span>
           <h3>{profile.name}</h3>
         </div>
@@ -153,33 +143,24 @@ export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; t
       <p>{profile.responsibility}</p>
       <dl>
         <div>
-          <dt>{tr("Model", "模型")}</dt>
+          <dt>{tr("arc.teams.arcEmployeeDraft.model")}</dt>
           <dd>{profile.modelId === "auto" ? "Auto" : profile.modelId}</dd>
         </div>
         <div>
-          <dt>{tr("Access", "权限")}</dt>
+          <dt>{tr("arc.teams.arcEmployeeDraft.access")}</dt>
           <dd>
             {profile.scope.connectionIds.length || profile.scope.deviceIds.length
-              ? tr(
-                  profile.scope.connectionIds.length +
-                    " apps · " +
-                    profile.scope.deviceIds.length +
-                    " computers",
-                  profile.scope.connectionIds.length +
-                    " 个应用 · " +
-                    profile.scope.deviceIds.length +
-                    " 台电脑",
-                )
-              : tr("No apps or computers assigned", "尚未分配应用或电脑")}
+              ? tr("arc.teams.arcEmployeeDraft.appsComputers", {
+                  length: profile.scope.connectionIds.length,
+                  length2: profile.scope.deviceIds.length,
+                })
+              : tr("arc.teams.arcEmployeeDraft.noAppsOrComputersAssigned")}
           </dd>
         </div>
       </dl>
       {current.status === "pending" && (
         <p className="arcEmployeeDraftNote">
-          {tr(
-            "Create this agent now, or edit the profile first. You can assign app and computer access later.",
-            "直接创建智能体，也可以先编辑资料。应用与电脑权限可稍后分配。",
-          )}
+          {tr("arc.teams.arcEmployeeDraft.createThisAgentNowOrEdit")}
         </p>
       )}
       {error && <p role="alert">{error}</p>}
@@ -192,7 +173,9 @@ export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; t
               disabled={busy || loading}
               onClick={() => void create()}
             >
-              {busy ? tr("Creating…", "创建中…") : tr("Create agent", "创建智能体")}
+              {busy
+                ? tr("arc.teams.arcEmployeeDraft.creating")
+                : tr("arc.teams.arcEmployeeDraft.createAgent")}
             </button>
             <button
               type="button"
@@ -203,18 +186,20 @@ export function ArcEmployeeDraftCard({ draft, tr }: { draft: ArcEmployeeDraft; t
                 setReview(true);
               }}
             >
-              {tr("Edit profile", "编辑资料")}
+              {tr("arc.teams.arcEmployeeDraft.editProfile")}
             </button>
             <button type="button" disabled={busy || loading} onClick={() => void cancel()}>
-              {tr("Cancel draft", "取消草稿")}
+              {tr("arc.teams.arcEmployeeDraft.cancelDraft")}
             </button>
           </>
         ) : null}
         <a href="/dashboard/agent/settings?section=teammates">
-          {tr("Agent settings", "智能体设置")} ↗
+          {tr("arc.teams.arcEmployeeDraft.agentSettings")} ↗
         </a>
       </footer>
-      {loading && <WorkspaceLoading label={tr("Loading profile options…", "正在加载资料选项…")} />}{" "}
+      {loading && (
+        <WorkspaceLoading label={tr("arc.teams.arcEmployeeDraft.loadingProfileOptions")} />
+      )}{" "}
       {review && data && (
         <EmployeeEditor
           initial={null}

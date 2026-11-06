@@ -1,14 +1,14 @@
 # Latest measured coverage
 
-Source: [5fa043e](https://github.com/Remote-Arc/remote-arc/commit/5fa043e370ccf3a99b8072c37f1e11093f5c2a3e) · [CI run](https://github.com/Remote-Arc/remote-arc/actions/runs/42289598669) · 2026-11-06T20:54:49Z
+Source: [111998c](https://github.com/Remote-Arc/remote-arc/commit/111998c76540a2ff2ed78076fd94a0f697767703) · [CI run](https://github.com/Remote-Arc/remote-arc/actions/runs/42300557868) · 2026-11-06T22:14:44Z
 
-**Combined statement coverage: 57.27% (78297/136708). Target: ≥90%.**
+**Combined statement coverage: 59.77% (77728/130041). Target: ≥90%.**
 
 Production TypeScript/TSX and Linux Go module statements; Apps/Relay are overlapping breakouts.
 
 | Scope | Statements | Branches | Functions | Lines |
 | --- | ---: | ---: | ---: | ---: |
-| TypeScript / TSX | 54.67% | 82.27% | 83.27% | 54.67% |
+| TypeScript / TSX | 57.22% | 82.21% | 82.80% | 57.22% |
 | Relay | 93.07% | 84.36% | 97.10% | 93.07% |
 | Apps core | 99.45% | 95.25% | 100.00% | 99.45% |
 | Go Agent | 90.32% | — | — | — |

@@ -1,0 +1,374 @@
+/* Admin overview: what needs action first, then the four numbers that matter. */
+.adminShell .ovRoot {
+  --ovGood: #3b9a78;
+  --ovWarn: #c58a1d;
+  --ovBad: #d0574f;
+  --ovInfo: var(--accent);
+  display: grid;
+  gap: 16px;
+}
+
+.adminShell .ovSectionTitle,
+.adminShell .ovPanelHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adminShell .ovSectionTitle {
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.adminShell .ovSectionTitle h2,
+.adminShell .ovPanelHead h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+}
+
+.adminShell .ovPanelHead p {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.adminShell .ovCount {
+  min-width: 20px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--panel);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Attention */
+.adminShell .ovAttention ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adminShell .ovAttentionItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ovInfo);
+  border-radius: 9px;
+  background: var(--panel);
+}
+
+.adminShell .ovAttentionItem.is-warning {
+  border-left-color: var(--ovWarn);
+}
+
+.adminShell .ovAttentionItem.is-critical {
+  border-left-color: var(--ovBad);
+}
+
+.adminShell .ovDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ovInfo);
+}
+
+.adminShell .is-warning .ovDot {
+  background: var(--ovWarn);
+}
+
+.adminShell .is-critical .ovDot {
+  background: var(--ovBad);
+}
+
+.adminShell .ovAttentionItem strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.adminShell .ovAttentionItem small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.adminShell .ovAttentionItem button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.adminShell .ovAttentionItem button:hover {
+  background: var(--surface);
+}
+
+.adminShell .ovAllClear {
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.adminShell .ovAllClear.is-clear {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--ovGood) 35%, var(--line));
+  background: color-mix(in srgb, var(--ovGood) 6%, var(--panel));
+  color: var(--text);
+}
+
+/* KPIs */
+.adminShell .ovKpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.adminShell .ovKpi,
+.adminShell .ovPanel {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel);
+}
+
+.adminShell .ovKpi {
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+  min-height: 132px;
+  padding: 17px 18px;
+}
+
+.adminShell .ovKpiHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.adminShell .ovKpiHead button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.adminShell .ovKpiHead button:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.adminShell .ovKpi > strong {
+  font-size: 30px;
+  font-weight: 550;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.adminShell .ovKpiFoot {
+  display: grid;
+  gap: 4px;
+}
+
+.adminShell .ovKpiFoot small {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.adminShell .ovTrend {
+  font-size: 11px;
+  font-weight: 550;
+  color: var(--muted);
+}
+
+.adminShell .ovTrend em {
+  font-style: normal;
+  font-weight: 400;
+}
+
+.adminShell .ovTrend.is-good {
+  color: var(--ovGood);
+}
+
+.adminShell .ovTrend.is-bad {
+  color: var(--ovBad);
+}
+
+/* Chart and vitals */
+.adminShell .ovGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+  gap: 12px;
+}
+
+.adminShell .ovPanel {
+  padding: 20px;
+}
+
+.adminShell .ovBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 170px;
+  margin-top: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.adminShell .ovBar {
+  position: relative;
+  flex: 1;
+  min-width: 2px;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 3px 3px 0 0;
+  background: color-mix(in srgb, var(--accent) 55%, var(--panel));
+}
+
+.adminShell .ovBar:hover {
+  background: color-mix(in srgb, var(--accent) 80%, var(--text));
+}
+
+.adminShell .ovBar span {
+  width: 100%;
+  border-radius: 0;
+  background: var(--ovBad);
+}
+
+.adminShell .ovChartFoot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.adminShell .ovLegend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.adminShell .ovLegend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 6px;
+  border-radius: 2px;
+}
+
+.adminShell .ovLegend .is-calls {
+  background: color-mix(in srgb, var(--accent) 55%, var(--panel));
+}
+
+.adminShell .ovLegend .is-failed {
+  background: var(--ovBad);
+}
+
+.adminShell .ovVitals {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.adminShell .ovVitals dl {
+  display: grid;
+  margin: 0;
+}
+
+.adminShell .ovVitals dl > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+
+.adminShell .ovVitals dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.adminShell .ovVitals dd {
+  margin: 0;
+  text-align: right;
+}
+
+.adminShell .ovVitals dd strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 550;
+}
+
+.adminShell .ovVitals dd small {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.adminShell .ovVitals .adminOutlineBtn {
+  justify-self: start;
+}
+
+@media (max-width: 1100px) {
+  .adminShell .ovKpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adminShell .ovGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .adminShell .ovKpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adminShell .ovAttentionItem {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .adminShell .ovAttentionItem button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .adminShell .ovBars {
+    gap: 1px;
+  }
+
+  .adminShell .ovLegend {
+    display: none;
+  }
+}

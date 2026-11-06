@@ -17,6 +17,7 @@ import {
   handleAdminOperations,
   type OpsEnv,
 } from "./admin-operations.js";
+import { handleAdminOverview } from "./admin-overview.js";
 import { handleAdminUsageInsights } from "./admin-usage-insights.js";
 import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import {
@@ -45,6 +46,7 @@ const methods: Record<string, readonly string[]> = {
   "/api/me": ["GET"],
   "/api/monitor": ["GET"],
   "/api/admin/operations": ["GET"],
+  "/api/admin/overview": ["GET"],
   "/api/admin/usage-insights": ["GET"],
   "/api/admin/billing": ["GET"],
   "/api/admin/arc-billing": ["GET"],
@@ -167,6 +169,9 @@ export async function handleAdminServiceRequest(
       break;
     case "/api/admin/operations":
       response = await handleAdminOperations(request, env);
+      break;
+    case "/api/admin/overview":
+      response = await handleAdminOverview(request, env);
       break;
     case "/api/admin/usage-insights":
       response = await handleAdminUsageInsights(request, env);

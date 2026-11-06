@@ -21,7 +21,7 @@ const observed = {
   },
 };
 for (const scenario of ["observed", "single", "unavailable", "no_samples"])
-  test("Monitor reliability: " + scenario, async ({ page }, testInfo) => {
+  test("Admin connection reliability: " + scenario, async ({ page }, testInfo) => {
     const zh = testInfo.project.metadata.language === "zh";
     const data =
       scenario === "observed"
@@ -36,19 +36,35 @@ for (const scenario of ["observed", "single", "unavailable", "no_samples"])
     let reads = 0;
     await page.route("**/api/monitor", (route) => {
       reads++;
-      return route.fulfill({ json: { deviceReliability: data } });
+      return route.fulfill({
+        json: {
+          status: "operational",
+          checkedAt: "2026-10-31T00:00:00.000Z",
+          worker: { status: "operational", errors15m: 0, errors1h: 0, errors24h: 0 },
+          dependencies: {
+            d1: { status: "operational" },
+            durableObjects: { status: "operational" },
+          },
+          alerts: { emailConfigured: true, destination: null, recent: [] },
+          account: { users: 0, devices: 0, activeTokens: 0 },
+          incidents: [],
+          deviceReliability: data,
+        },
+      });
     });
     await page.addInitScript(() => {
-      (window as Window & { monitorTestFetch?: typeof fetch }).monitorTestFetch =
+      (window as Window & { metricsTestFetch?: typeof fetch }).metricsTestFetch =
         window.fetch.bind(window);
     });
-    await page.goto("/admin-preview");
+    await page.goto("/admin-preview?section=health");
     await expect(page.locator(".adminShell")).toBeVisible();
     await page.addScriptTag({
       type: "module",
-      url: "/scripts/monitor-reliability-browser-fixture.tsx",
+      url: "/scripts/admin-console-browser-fixture.tsx",
     });
-    const panel = page.locator("#monitor-browser-fixture");
+    const devices = page.locator('#admin-console-fixture [data-health-anchor="devices"]');
+    await devices.locator("> summary").click();
+    const panel = devices.locator(".monitorReliability");
     if (scenario === "observed") {
       await expect(panel).toContainText(zh ? "持续重连异常" : "Sustained reconnect anomaly");
       await expect(panel).toContainText(

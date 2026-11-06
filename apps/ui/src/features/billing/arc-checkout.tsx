@@ -1,6 +1,6 @@
 import { trackProductEvent } from "../../lib/product-events.js";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import {
   billingRequest,
@@ -12,9 +12,9 @@ import {
   type BillingInterval,
   type NativePaymentSession,
 } from "./arc-billing-client.js";
-import "../settings/dashboard-settings.css";
-import "./arc-billing-panel.css";
-import "./arc-checkout.css";
+import "../../styles/settings/dashboard-settings.css";
+import "../../styles/billing/arc-billing-panel.css";
+import "../../styles/billing/arc-checkout.css";
 import { BillingRecoveryActions } from "./billing-recovery-actions.js";
 import {
   billingRecovery,
@@ -234,7 +234,7 @@ export function ArcCheckout({ email }: { email: string }) {
     price = amount === undefined ? "" : usd(amount),
     // "US$8.25/month, billed yearly": the yearly price as a monthly equivalent.
     yearlyAsMonthly = yearlyCents
-      ? "US" + usd(Math.round(yearlyCents / 12)) + tr("/month, billed yearly", "／月，按年付费")
+      ? "US" + usd(Math.round(yearlyCents / 12)) + tr("billing.arcCheckout.monthBilledYearly")
       : "",
     orderLabel = plan
       ? connect
@@ -242,7 +242,7 @@ export function ArcCheckout({ email }: { email: string }) {
         : "Arc " + plan.label
       : topup
         ? topup.credits.toLocaleString() + " Credits"
-        : tr("Offer unavailable", "套餐暂不可用"),
+        : tr("billing.arcCheckout.offerUnavailable"),
     code =
       failure instanceof Error && /^[\w]{1,100}$/.test(failure.message)
         ? failure.message
@@ -253,13 +253,8 @@ export function ArcCheckout({ email }: { email: string }) {
         {import.meta.env.VITE_UI_PREVIEW === "1" && (
           <div className="arcCheckoutPreviewNotice" role="status">
             <strong>PR PREVIEW</strong>
-            <span>
-              {tr(
-                "Simulated orders and payments. No real accounts or charges.",
-                "订单与付款均为模拟，不连接真实账户，不扣款。",
-              )}
-            </span>
-            <a href="/checkout?demo=new">{tr("Preview a new purchase", "重新预览新购")}</a>
+            <span>{tr("billing.arcCheckout.simulatedOrdersAndPaymentsNoReal")}</span>
+            <a href="/checkout?demo=new">{tr("billing.arcCheckout.previewANewPurchase")}</a>
           </div>
         )}
         <header className="arcCheckoutHeader">
@@ -267,39 +262,33 @@ export function ArcCheckout({ email }: { email: string }) {
             <img src="/remote-arc.svg" width={30} height={30} alt="" />
             Remote Arc
           </a>
-          <a href="/settings?section=billing">← {tr("Plan & usage", "套餐与用量")}</a>
+          <a href="/settings?section=billing">← {tr("billing.arcCheckout.planUsage")}</a>
         </header>
         <div className={"arcCheckoutIntro" + (embedded ? " arcCheckoutIntroPayment" : "")}>
           <span className="eyebrow">ARC BILLING</span>
           <h1>
             {result === "success"
-              ? tr("Your payment status", "支付状态")
+              ? tr("billing.arcCheckout.yourPaymentStatus")
               : embedded
-                ? tr("Complete your payment", "完成付款")
-                : tr("A plan for the work ahead.", "为接下来的工作选好套餐。")}
+                ? tr("billing.arcCheckout.completeYourPayment")
+                : tr("billing.arcCheckout.aPlanForTheWorkAhead")}
           </h1>
           <p>
             {embedded
-              ? tr(
-                  "Pay securely with a card or an available wallet. Your payment details go directly to Stripe.",
-                  "使用银行卡或可用的钱包安全付款，付款信息由 Stripe 直接处理。",
-                )
-              : tr(
-                  "Choose your plan and pay securely here. Stripe protects your payment details.",
-                  "在这里选择套餐并安全付款，支付信息由 Stripe 保护。",
-                )}
+              ? tr("billing.arcCheckout.paySecurelyWithACardOr")
+              : tr("billing.arcCheckout.chooseYourPlanAndPaySecurely")}
           </p>
           <small>{email}</small>
         </div>
         {result !== "success" && (
-          <ol className="arcCheckoutSteps" aria-label={tr("Checkout progress", "付款步骤")}>
+          <ol className="arcCheckoutSteps" aria-label={tr("billing.arcCheckout.checkoutProgress")}>
             <li aria-current={!embedded ? "step" : undefined}>
               <span>{embedded ? "✓" : "1"}</span>
-              {tr("Choose your offer", "选择套餐")}
+              {tr("billing.arcCheckout.chooseYourOffer")}
             </li>
             <li aria-current={embedded ? "step" : undefined}>
               <span>2</span>
-              {tr("Secure payment", "安全付款")}
+              {tr("billing.arcCheckout.securePayment")}
             </li>
           </ol>
         )}
@@ -313,16 +302,16 @@ export function ArcCheckout({ email }: { email: string }) {
                   className="raSettingsButton"
                   href={paymentStatusHref(embedded?.sessionId || session || undefined)}
                 >
-                  {tr("Check this payment status", "核对此订单付款状态")}
+                  {tr("billing.arcCheckout.checkThisPaymentStatus")}
                 </a>
               )}
             {code === "UNAUTHORIZED" && (
               <a className="raSettingsButton" href="/auth/login?return_to=%2Fcheckout">
-                {tr("Sign in", "登录")}
+                {tr("billing.arcCheckout.signIn")}
               </a>
             )}
             <details>
-              <summary>{tr("Reference details", "排查编号")}</summary>
+              <summary>{tr("billing.arcCheckout.referenceDetails")}</summary>
               <code>
                 {code}
                 {failure instanceof BillingFailure && failure.reference
@@ -338,16 +327,13 @@ export function ArcCheckout({ email }: { email: string }) {
                   setRevision((value) => value + 1);
                 }}
               >
-                {tr("Refresh status", "刷新状态")}
+                {tr("billing.arcCheckout.refreshStatus")}
               </button>
             )}
           </div>
         )}
         {!data && !failure && (
-          <WorkspaceLoading
-            label={tr("Loading your offers…", "正在读取可用套餐…")}
-            variant="cards"
-          />
+          <WorkspaceLoading label={tr("billing.arcCheckout.loadingYourOffers")} variant="cards" />
         )}
         {data && embedded && result !== "success" ? (
           <section className="arcCheckoutEmbedded">
@@ -356,20 +342,11 @@ export function ArcCheckout({ email }: { email: string }) {
                 <h2>{orderLabel}</h2>
                 <p>
                   {connect
-                    ? tr(
-                        "Unlimited Connect · Manage renewal in settings",
-                        "无限 Connect · 可在设置管理续费",
-                      )
+                    ? tr("billing.arcCheckout.unlimitedConnectManageRenewalInSettings")
                     : plan
                       ? plan.monthlyCredits.toLocaleString() +
-                        tr(
-                          " Credits every month · Manage renewal in settings",
-                          " Credits／月 · 可在设置管理续费",
-                        )
-                      : tr(
-                          "One-time top-up · Credits do not expire",
-                          "一次性充值 · Credits 不设到期日",
-                        )}
+                        tr("billing.arcCheckout.creditsEveryMonthManageRenewalIn")
+                      : tr("billing.arcCheckout.oneTimeTopUpCreditsDo")}
                 </p>
               </div>
               <button
@@ -379,28 +356,18 @@ export function ArcCheckout({ email }: { email: string }) {
                 onClick={() => void back()}
               >
                 {busy
-                  ? tr("Closing order…", "正在关闭订单…")
-                  : tr("Back to offers", "返回套餐选择")}
+                  ? tr("billing.arcCheckout.closingOrder")
+                  : tr("billing.arcCheckout.backToOffers")}
               </button>
             </header>
             <div className="arcCheckoutPaymentNote">
-              <span>
-                {tr(
-                  "Available express payment options appear in the form below.",
-                  "可用的快捷支付方式会在下方表单中显示。",
-                )}
-              </span>
-              <span>
-                {tr(
-                  "Prices in USD · Review the final total before paying",
-                  "以美元计价 · 请核对最终金额后付款",
-                )}
-              </span>
+              <span>{tr("billing.arcCheckout.availableExpressPaymentOptionsAppearIn")}</span>
+              <span>{tr("billing.arcCheckout.pricesInUsdReviewTheFinal")}</span>
             </div>
             <Suspense
               fallback={
                 <WorkspaceLoading
-                  label={tr("Loading secure payment…", "正在加载安全付款表单…")}
+                  label={tr("billing.arcCheckout.loadingSecurePayment")}
                   variant="compact"
                 />
               }
@@ -417,25 +384,16 @@ export function ArcCheckout({ email }: { email: string }) {
                     total: price,
                     cadence: plan
                       ? billed === "year"
-                        ? tr(" / year", "／年")
-                        : tr(" / month", "／月")
-                      : tr(" one time", "，一次性"),
+                        ? tr("billing.arcCheckout.year")
+                        : tr("billing.arcCheckout.month")
+                      : tr("billing.arcCheckout.oneTime"),
                     recurringNote: plan
                       ? billed === "year"
-                        ? tr(
-                            "Renews yearly until cancelled. No monthly Credits.",
-                            "按年续订，可随时取消。不含月度 Credits。",
-                          )
+                        ? tr("billing.arcCheckout.renewsYearlyUntilCancelledNoMonthly")
                         : connect
-                          ? tr(
-                              "Renews monthly until cancelled. No monthly Credits.",
-                              "按月续订，可随时取消。不含月度 Credits。",
-                            )
-                          : tr(
-                              "Renews monthly until cancelled. Monthly Credits expire at the end of each billing period.",
-                              "按月续订，可随时取消。月度 Credits 在账期结束时到期。",
-                            )
-                      : tr("Top-up Credits do not expire.", "充值 Credits 不设到期日。"),
+                          ? tr("billing.arcCheckout.renewsMonthlyUntilCancelledNoMonthly")
+                          : tr("billing.arcCheckout.renewsMonthlyUntilCancelledMonthlyCredits")
+                      : tr("billing.arcCheckout.topUpCreditsDoNotExpire"),
                   }}
                 />
               ) : (
@@ -447,53 +405,47 @@ export function ArcCheckout({ email }: { email: string }) {
           <section className="arcCheckoutResult" role="status">
             <h2>
               {payment === "confirmed"
-                ? tr("Payment confirmed", "支付已确认")
+                ? tr("billing.arcCheckout.paymentConfirmed")
                 : payment === "waiting"
-                  ? tr("Confirmation is taking longer", "支付确认时间较长")
-                  : tr("Confirming your payment…", "正在核实支付…")}
+                  ? tr("billing.arcCheckout.confirmationIsTakingLonger")
+                  : tr("billing.arcCheckout.confirmingYourPayment")}
             </h2>
             <p>
               {payment === "confirmed"
-                ? tr(
-                    "Your verified payment and updated allowance are available in Plan & usage.",
-                    "已核验的支付与最新额度可在“套餐与用量”查看。",
-                  )
-                : tr(
-                    "We are checking the saved payment status. You can refresh safely; this page does not charge you again.",
-                    "正在核对已保存的支付状态，可以安全刷新，此页面不会再次扣费。",
-                  )}
+                ? tr("billing.arcCheckout.yourVerifiedPaymentAndUpdatedAllowance")
+                : tr("billing.arcCheckout.weAreCheckingTheSavedPayment")}
             </p>
             <a
               className="raSettingsButton raSettingsButtonPrimary"
               href="/settings?section=billing"
             >
-              {tr("View plan & usage", "查看套餐与用量")}
+              {tr("billing.arcCheckout.viewPlanUsage")}
             </a>
             <a className="raSettingsButton" href="/dashboard/agent/chat">
-              {tr("Open Arc", "打开 Arc")}
+              {tr("billing.arcCheckout.openArc")}
             </a>
           </section>
         ) : (
           data && (
             <div className="arcCheckoutLayout">
-              <section className="arcCheckoutOptions" aria-label={tr("Choose a plan", "选择套餐")}>
+              <section
+                className="arcCheckoutOptions"
+                aria-label={tr("billing.arcCheckout.chooseAPlan")}
+              >
                 <h2>
                   {topup
-                    ? tr("Top up your Credits", "补充 Credits")
-                    : tr("Choose your plan", "选择套餐")}
+                    ? tr("billing.arcCheckout.topUpYourCredits")
+                    : tr("billing.arcCheckout.chooseYourPlan")}
                 </h2>
                 {result === "cancelled" && (
                   <p className="arcCheckoutQuiet" role="status">
-                    {tr(
-                      "Checkout was closed. Review your choice whenever you are ready.",
-                      "结账已关闭，可在准备好后核对并继续。",
-                    )}
+                    {tr("billing.arcCheckout.checkoutWasClosedReviewYourChoice")}
                   </p>
                 )}
                 <div
                   className="arcCheckoutChoices"
                   role="group"
-                  aria-label={tr("Available offers", "可用套餐")}
+                  aria-label={tr("billing.arcCheckout.availableOffers")}
                 >
                   {(topup
                     ? data.topups
@@ -514,11 +466,11 @@ export function ArcCheckout({ email }: { email: string }) {
                         </strong>
                         <small>
                           {"monthlyCredits" in offer && isConnectOnlyPlan(offer)
-                            ? tr("Your own AI · unlimited computers", "自带 AI · 不限电脑")
+                            ? tr("billing.arcCheckout.yourOwnAiUnlimitedComputers")
                             : "monthlyCredits" in offer
                               ? offer.monthlyCredits.toLocaleString() +
-                                tr(" Credits / month", " Credits／月")
-                              : tr("One-time top-up", "一次性充值")}
+                                tr("billing.arcCheckout.creditsMonth")
+                              : tr("billing.arcCheckout.oneTimeTopUp")}
                         </small>
                       </span>
                       <span className="arcCheckoutOfferPrice">
@@ -528,8 +480,8 @@ export function ArcCheckout({ email }: { email: string }) {
                           : offer.priceCents) / 100}
                         <small>
                           {"monthlyPriceCents" in offer
-                            ? tr("/ month", "／月")
-                            : tr("one time", "一次")}
+                            ? tr("billing.arcCheckout.month2")
+                            : tr("billing.arcCheckout.oneTime2")}
                         </small>
                       </span>
                     </button>
@@ -539,7 +491,7 @@ export function ArcCheckout({ email }: { email: string }) {
                   <div
                     className="arcCheckoutCycle"
                     role="radiogroup"
-                    aria-label={tr("Billing period", "付费周期")}
+                    aria-label={tr("billing.arcCheckout.billingPeriod")}
                   >
                     <button
                       type="button"
@@ -549,12 +501,12 @@ export function ArcCheckout({ email }: { email: string }) {
                       onClick={() => chooseCycle("month")}
                     >
                       <span>
-                        <strong>{tr("Monthly", "按月")}</strong>
-                        <small>{tr("Cancel renewal anytime", "可随时取消续费")}</small>
+                        <strong>{tr("billing.arcCheckout.monthly")}</strong>
+                        <small>{tr("billing.arcCheckout.cancelRenewalAnytime")}</small>
                       </span>
                       <span className="arcCheckoutOfferPrice">
                         {"US" + usd(plan!.monthlyPriceCents)}
-                        <small>{tr("/ month", "／月")}</small>
+                        <small>{tr("billing.arcCheckout.month2")}</small>
                       </span>
                     </button>
                     <button
@@ -565,12 +517,12 @@ export function ArcCheckout({ email }: { email: string }) {
                       onClick={() => chooseCycle("year")}
                     >
                       <span>
-                        <strong>{tr("Yearly", "按年")}</strong>
+                        <strong>{tr("billing.arcCheckout.yearly")}</strong>
                         <small>{yearlyAsMonthly}</small>
                       </span>
                       <span className="arcCheckoutOfferPrice">
                         {"US" + usd(yearlyCents)}
-                        <small>{tr("/ year", "／年")}</small>
+                        <small>{tr("billing.arcCheckout.year2")}</small>
                       </span>
                     </button>
                   </div>
@@ -584,43 +536,34 @@ export function ArcCheckout({ email }: { email: string }) {
                 )}
                 {plan && !connect && (
                   <ul className="arcCheckoutFeatures">
-                    <li>
-                      {tr(
-                        "Hosted personal agent across your apps and computers",
-                        "托管个人智能体，连接你的应用与电脑",
-                      )}
-                    </li>
-                    <li>{tr("All configured premium models", "全部已配置高级模型")}</li>
+                    <li>{tr("billing.arcCheckout.hostedPersonalAgentAcrossYourApps")}</li>
+                    <li>{tr("billing.arcCheckout.allConfiguredPremiumModels")}</li>
                     <li>
                       {plan.connectToolCalls === null
-                        ? tr("Unlimited Connect calls", "无限 Connect 调用")
+                        ? tr("billing.arcCheckout.unlimitedConnectCalls")
                         : plan.connectToolCalls.toLocaleString() +
-                          tr(" Connect calls / month", " 次 Connect 调用／月")}
+                          tr("billing.arcCheckout.connectCallsMonth")}
                     </li>
                     <li>
-                      {plan.concurrentRuns} {tr("concurrent runs", "个并行工作")} ·{" "}
-                      {tr("Up to ", "单次最长 ")}
-                      {plan.maxSeconds / 60} {tr("minutes per run", "分钟")}
+                      {plan.concurrentRuns} {tr("billing.arcCheckout.concurrentRuns")} ·{" "}
+                      {tr("billing.arcCheckout.upTo")}
+                      {plan.maxSeconds / 60} {tr("billing.arcCheckout.minutesPerRun")}
                     </li>
                   </ul>
                 )}
-                {topup && (
-                  <p>
-                    {tr(
-                      "Top-up Credits do not expire. Using them requires an active paid Arc plan.",
-                      "充值 Credits 不设到期日，使用时需有有效的 Arc 付费套餐。",
-                    )}
-                  </p>
-                )}
+                {topup && <p>{tr("billing.arcCheckout.topUpCreditsDoNotExpire2")}</p>}
                 <a href={topup ? "/checkout" : "/settings?section=billing"}>
                   {topup
-                    ? tr("View Arc plans", "查看 Arc 套餐")
-                    : tr("Keep my current plan", "保留当前套餐")}{" "}
+                    ? tr("billing.arcCheckout.viewArcPlans")
+                    : tr("billing.arcCheckout.keepMyCurrentPlan")}{" "}
                   →
                 </a>
               </section>
-              <aside className="arcCheckoutSummary" aria-label={tr("Order summary", "订单摘要")}>
-                <span className="raSettingsFieldLabel">{tr("YOUR ORDER", "你的订单")}</span>
+              <aside
+                className="arcCheckoutSummary"
+                aria-label={tr("billing.arcCheckout.orderSummary")}
+              >
+                <span className="raSettingsFieldLabel">{tr("billing.arcCheckout.yourOrder")}</span>
                 <h2>{orderLabel}</h2>
                 {amount !== undefined && (
                   <p className="arcCheckoutTotal">
@@ -628,9 +571,9 @@ export function ArcCheckout({ email }: { email: string }) {
                     <small>
                       {plan
                         ? billed === "year"
-                          ? tr(" USD / year", " 美元／年")
-                          : tr(" USD / month", " 美元／月")
-                        : tr(" USD one time", " 美元，一次")}
+                          ? tr("billing.arcCheckout.usdYear")
+                          : tr("billing.arcCheckout.usdMonth")
+                        : tr("billing.arcCheckout.usdOneTime")}
                     </small>
                   </p>
                 )}
@@ -638,33 +581,17 @@ export function ArcCheckout({ email }: { email: string }) {
                 {plan && (
                   <p>
                     {billed === "year"
-                      ? tr(
-                          "Renews yearly until cancelled. Cancel renewal anytime and keep the paid year. No monthly Credits; after the free Arc trial, Arc-hosted AI needs Plus.",
-                          "按年续订，可随时取消续费，已付费的一年保留。不含月度 Credits；Arc 免费试用结束后，Arc 托管 AI 需要 Plus。",
-                        )
+                      ? tr("billing.arcCheckout.renewsYearlyUntilCancelledCancelRenewal")
                       : connect
-                        ? tr(
-                            "Renews monthly until cancelled. Cancel renewal anytime. No monthly Credits; after the free Arc trial, Arc-hosted AI needs Plus. Upgrading is always your choice.",
-                            "按月续订，可随时取消续费。不含月度 Credits；Arc 免费试用结束后，Arc 托管 AI 需要 Plus。是否升级始终由你决定。",
-                          )
-                        : tr(
-                            "Renews monthly until cancelled. Cancel renewal anytime. Monthly Credits expire at the end of the billing period.",
-                            "按月续订，可随时取消续费；月度 Credits 在账期结束时到期。",
-                          )}
+                        ? tr("billing.arcCheckout.renewsMonthlyUntilCancelledCancelRenewal")
+                        : tr("billing.arcCheckout.renewsMonthlyUntilCancelledCancelRenewal2")}
                   </p>
                 )}
-                {paid && plan && (
-                  <p>
-                    {tr(
-                      "Plan changes take effect at your next billing period. No charge today.",
-                      "套餐变更在下个账期生效，今天不额外扣费。",
-                    )}
-                  </p>
-                )}
+                {paid && plan && <p>{tr("billing.arcCheckout.planChangesTakeEffectAtYour")}</p>}
                 {!paid && plan && !connect && (
                   <details className="arcCheckoutPromo">
-                    <summary>{tr("Have a promo code?", "有优惠码？")}</summary>
-                    <label htmlFor="checkout-promo">{tr("Promo code", "优惠码")}</label>
+                    <summary>{tr("billing.arcCheckout.haveAPromoCode")}</summary>
+                    <label htmlFor="checkout-promo">{tr("billing.arcCheckout.promoCode")}</label>
                     <input
                       id="checkout-promo"
                       maxLength={32}
@@ -674,22 +601,19 @@ export function ArcCheckout({ email }: { email: string }) {
                       autoComplete="off"
                     />
                     <small>
-                      {tr(
-                        "Eligible private offers apply automatically. Verify the final amount in the payment form.",
-                        "符合条件的定向优惠自动应用，请在付款表单核对最终金额。",
-                      )}
+                      {tr("billing.arcCheckout.eligiblePrivateOffersApplyAutomaticallyVerify")}
                     </small>
                   </details>
                 )}
                 {scheduled ? (
                   <div role="status">
                     <p>
-                      {tr("Plan change scheduled for ", "套餐将于 ") +
+                      {tr("billing.arcCheckout.planChangeScheduledFor") +
                         new Date(scheduled).toLocaleDateString()}
-                      {tr(". No charge today.", " 生效，今天不额外扣费。")}
+                      {tr("billing.arcCheckout.noChargeToday")}
                     </p>
                     <a className="raSettingsButton" href="/settings?section=billing">
-                      {tr("Return to plan & usage", "返回套餐与用量")}
+                      {tr("billing.arcCheckout.returnToPlanUsage")}
                     </a>
                   </div>
                 ) : (
@@ -711,46 +635,32 @@ export function ArcCheckout({ email }: { email: string }) {
                     onClick={() => void proceed()}
                   >
                     {busy
-                      ? tr("Preparing payment…", "正在准备安全付款…")
+                      ? tr("billing.arcCheckout.preparingPayment")
                       : paid && plan
-                        ? tr("Confirm plan change", "确认变更套餐")
-                        : tr("Continue to payment", "继续付款")}
+                        ? tr("billing.arcCheckout.confirmPlanChange")
+                        : tr("billing.arcCheckout.continueToPayment")}
                   </button>
                 )}
                 {!available && (
-                  <p role="status">
-                    {tr("Checkout is temporarily unavailable.", "支付暂不可用。")}
-                  </p>
+                  <p role="status">{tr("billing.arcCheckout.checkoutIsTemporarilyUnavailable")}</p>
                 )}
-                {topup && !arcPaid && (
-                  <p>
-                    {tr(
-                      "Choose a paid Arc plan before adding Credits.",
-                      "请先选择 Arc 付费套餐，再补充 Credits。",
-                    )}
-                  </p>
-                )}
-                <small>
-                  {tr(
-                    "Applicable tax, eligible discounts and the final total are shown by Stripe before you pay.",
-                    "Stripe 会在付款前展示适用税费、优惠及最终金额。",
-                  )}
-                </small>
+                {topup && !arcPaid && <p>{tr("billing.arcCheckout.chooseAPaidArcPlanBefore")}</p>}
+                <small>{tr("billing.arcCheckout.applicableTaxEligibleDiscountsAndThe")}</small>
               </aside>
             </div>
           )
         )}
         <footer className="arcCheckoutFooter">
-          <span>{tr("Secure billing by Stripe", "Stripe 安全支付")}</span>
+          <span>{tr("billing.arcCheckout.secureBillingByStripe")}</span>
           <div>
             <a href={"https://remotearc.app" + (locale === "zh" ? "/zh" : "") + "/terms"}>
-              {tr("Terms", "条款")}
+              {tr("billing.arcCheckout.terms")}
             </a>
             <a href={"https://remotearc.app" + (locale === "zh" ? "/zh" : "") + "/privacy"}>
-              {tr("Privacy", "隐私")}
+              {tr("billing.arcCheckout.privacy")}
             </a>
             <a href="https://remotearc.app/support?topic=billing">
-              {tr("Billing help", "支付帮助")}
+              {tr("billing.arcCheckout.billingHelp")}
             </a>
           </div>
         </footer>

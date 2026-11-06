@@ -1,7 +1,8 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import React, { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import type { PlannedProgress } from "./planned-goal-view.js";
 const PlannedGoalProgress = React.lazy(() =>
   import("./planned-goal-view.js").then((module) => ({ default: module.PlannedGoalProgress })),
@@ -90,39 +91,36 @@ export function taskNeedsAttention(task: Pick<Task, "state_json" | "status">) {
 
 export function taskActivity(
   task: Pick<Task, "status" | "state_json" | "kind" | "next_run_at">,
-  tr: (en: string, zh: string) => string,
+  tr: Translate,
 ) {
-  if (task.status === "completed")
-    return tr("Completed · view run history", "已完成，查看执行记录");
-  if (task.status === "failed")
-    return tr("Execution failed · inspect the error", "执行失败，请查看错误");
+  if (task.status === "completed") return tr("tasks.dashboardTaskView.completedViewRunHistory");
+  if (task.status === "failed") return tr("tasks.dashboardTaskView.executionFailedInspectTheError");
   if (task.status === "cancelled")
-    return tr("Cancelled · orchestration stopped", "已取消，编排已停止");
+    return tr("tasks.dashboardTaskView.cancelledOrchestrationStopped");
   if (task.status === "expired")
-    return tr("Time limit reached · inspect the outcome", "已到期限，请查看实际成果");
-  if (task.status === "paused") return tr("Paused · resume when ready", "已暂停，可手动恢复");
+    return tr("tasks.dashboardTaskView.timeLimitReachedInspectTheOutcome");
+  if (task.status === "paused") return tr("tasks.dashboardTaskView.pausedResumeWhenReady");
   if (task.status === "waiting_for_device")
-    return tr("Waiting for the computer to reconnect", "等待电脑重新连接");
-  if (taskNeedsAgent(task))
-    return tr("Waiting for an AI decision in chat", "等待聊天中的 AI 提交决策");
+    return tr("tasks.dashboardTaskView.waitingForTheComputerToReconnect");
+  if (taskNeedsAgent(task)) return tr("tasks.dashboardTaskView.waitingForAnAiDecisionIn");
   if (task.status === "waiting_for_event")
-    return tr("Waiting for a matching webhook", "等待匹配的 Webhook 事件");
+    return tr("tasks.dashboardTaskView.waitingForAMatchingWebhook");
   const progress = taskProgress(task);
   if (progress.planned?.finalizing)
-    return tr("Finalizing and checking the outcome", "正在收尾并检查成果");
+    return tr("tasks.dashboardTaskView.finalizingAndCheckingTheOutcome");
   if (["agent_verify_running", "goal_running"].includes(progress.phase || ""))
-    return tr("Verifying the result", "正在验证结果");
+    return tr("tasks.dashboardTaskView.verifyingTheResult");
   if (
     ["agent_process_running", "step_running", "planned_process_running"].includes(
       progress.phase || "",
     ) ||
     progress.process_id
   )
-    return tr("Saved command is running", "保存的命令正在执行");
-  if (task.status === "running") return tr("Working through the next step", "正在推进下一步");
+    return tr("tasks.dashboardTaskView.savedCommandIsRunning");
+  if (task.status === "running") return tr("tasks.dashboardTaskView.workingThroughTheNextStep");
   if (task.next_run_at && Date.parse(task.next_run_at) > Date.now())
-    return tr("Waiting for the next scheduled run", "等待下一次计划执行");
-  return tr("Queued · starts when the device is available", "已排队，设备可用后启动");
+    return tr("tasks.dashboardTaskView.waitingForTheNextScheduledRun");
+  return tr("tasks.dashboardTaskView.queuedStartsWhenTheDeviceIs");
 }
 
 export function TaskResults({
@@ -200,15 +198,10 @@ export function TaskResults({
   }
   const chatReference = (
     <div className="taskChatReference">
-      <strong>{tr("Reference this saved task", "引用已保存的任务")}</strong>
+      <strong>{tr("tasks.dashboardTaskView.referenceThisSavedTask")}</strong>
       {referenceControl}
       <code>{task.id}</code>
-      <p>
-        {tr(
-          "Use a client connected to the same Remote Arc account with task-reading tools and permissions. The reference retrieves saved task context, not the original chat. Continuing an AI goal also requires decision tools and a runtime that can keep working. If the client lacks these tools, it must report that instead of looking for a checkpoint file.",
-          "需要客户端连接同一 Remote Arc 账号，且具有任务读取工具及权限。引用读取的是已保存的任务上下文，不会转移原聊天。继续 AI 目标还需要决策工具和能够持续工作的运行环境。客户端缺少工具时应明确说明，不应寻找本地检查点文件。",
-        )}
-      </p>
+      <p>{tr("tasks.dashboardTaskView.useAClientConnectedToThe")}</p>
     </div>
   );
 
@@ -220,7 +213,7 @@ export function TaskResults({
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary>
-        {tr("Progress & results", "进度与结果")}
+        {tr("tasks.dashboardTaskView.progressResults")}
         <span aria-hidden="true">›</span>
       </summary>
       {open && (
@@ -230,26 +223,21 @@ export function TaskResults({
               <strong>{phaseLabel}</strong>
               {progress.agent && (
                 <span>
-                  {tr("Planning turn", "规划轮次")} {progress.agent.iteration || 0}
+                  {tr("tasks.dashboardTaskView.planningTurn")} {progress.agent.iteration || 0}
                 </span>
               )}
               {progress.agent?.last_decision_summary && (
                 <p>{progress.agent.last_decision_summary}</p>
               )}
               {taskNeedsAgent(task) && (
-                <p>
-                  {tr(
-                    "The source AI must read the latest context and submit the next decision. If you created this goal here, copy its reference into your connected AI chat. Closing this page does not wake that AI.",
-                    "来源 AI 需要读取最新上下文并提交下一步决策。如果目标是在这里创建的，请将任务引用复制到已连接的 AI 聊天。关闭此页面不会唤起 AI。",
-                  )}
-                </p>
+                <p>{tr("tasks.dashboardTaskView.theSourceAiMustReadThe")}</p>
               )}
             </div>
           )}
           {taskNeedsAgent(task) && chatReference}
           {progress.agent?.completion_evidence && (
             <div className="taskEvidence">
-              <strong>{tr("Completion evidence", "完成证据")}</strong>
+              <strong>{tr("tasks.dashboardTaskView.completionEvidence")}</strong>
               <p>{progress.agent.completion_evidence}</p>
             </div>
           )}
@@ -257,7 +245,7 @@ export function TaskResults({
             <React.Suspense
               fallback={
                 <WorkspaceLoading
-                  label={tr("Loading saved plan…", "正在加载保存的计划…")}
+                  label={tr("tasks.dashboardTaskView.loadingSavedPlan")}
                   variant="rows"
                 />
               }
@@ -266,56 +254,47 @@ export function TaskResults({
             </React.Suspense>
           )}
           {progress.planned && !planned && (
-            <p role="status">
-              {tr(
-                "Plan details are still syncing. The task status and run history remain available.",
-                "计划详情仍在同步，任务状态和执行记录仍可查看。",
-              )}
-            </p>
+            <p role="status">{tr("tasks.dashboardTaskView.planDetailsAreStillSyncingThe")}</p>
           )}
           {task.last_error && <p className="automationLastError">{task.last_error}</p>}
           <div className="taskRunHistory" aria-busy={open && runs === null && !error}>
-            <h3>{tr("Recent runs", "最近执行")}</h3>
+            <h3>{tr("tasks.dashboardTaskView.recentRuns")}</h3>
             {error && (
               <p role="status">
-                {tr("Run history could not be loaded.", "执行记录加载失败。 ")}{" "}
+                {tr("tasks.dashboardTaskView.runHistoryCouldNotBeLoaded")}{" "}
                 <button className="ghostButton" onClick={() => setRetry((value) => value + 1)}>
-                  {tr("Retry", "重试")}
+                  {tr("tasks.dashboardTaskView.retry")}
                 </button>
               </p>
             )}
             {open && runs === null && !error && (
-              <WorkspaceLoading label={tr("Loading results…", "正在加载结果…")} variant="rows" />
+              <WorkspaceLoading
+                label={tr("tasks.dashboardTaskView.loadingResults")}
+                variant="rows"
+              />
             )}
-            {runs?.length === 0 && (
-              <p>
-                {tr(
-                  "No run has started. Saving a task is not execution. Check its executor, trigger and scheduling status above.",
-                  "尚未开始任何执行。保存任务不等于执行，请检查上方的执行器、启动条件与调度状态。",
-                )}
-              </p>
-            )}
+            {runs?.length === 0 && <p>{tr("tasks.dashboardTaskView.noRunHasStartedSavingA")}</p>}
             {runs?.map((run) => (
               <details className="taskRun" key={run.id}>
                 <summary>
                   <strong>
-                    {tr("Run", "执行")} {run.attempt}
+                    {tr("tasks.dashboardTaskView.run")} {run.attempt}
                   </strong>
                   <span>
                     {run.status === "completed"
-                      ? tr("Completed", "已完成")
+                      ? tr("tasks.dashboardTaskView.completed")
                       : run.status === "running"
-                        ? tr("Running", "运行中")
+                        ? tr("tasks.dashboardTaskView.running")
                         : run.status === "failed"
-                          ? tr("Failed", "失败")
+                          ? tr("tasks.dashboardTaskView.failed")
                           : run.status === "cancelled"
-                            ? tr("Cancelled", "已取消")
+                            ? tr("tasks.dashboardTaskView.cancelled")
                             : run.status}
                   </span>
                   <time dateTime={run.started_at}>{timestamp(run.started_at)}</time>
                   {run.exit_code !== null && (
                     <span>
-                      {tr("Exit", "退出码")} {run.exit_code}
+                      {tr("tasks.dashboardTaskView.exit")} {run.exit_code}
                     </span>
                   )}
                 </summary>
@@ -323,49 +302,51 @@ export function TaskResults({
                 {run.output_summary ? (
                   <pre>{run.output_summary.slice(0, 12000)}</pre>
                 ) : (
-                  <p>{tr("No output recorded yet.", "暂时没有输出记录。")}</p>
+                  <p>{tr("tasks.dashboardTaskView.noOutputRecordedYet")}</p>
                 )}
               </details>
             ))}
           </div>
           <details className="taskTechnicalDetails">
-            <summary>{tr("Timing & chat reference", "时间与聊天引用")}</summary>
+            <summary>{tr("tasks.dashboardTaskView.timingChatReference")}</summary>
             <div className="automationDetailGrid">
               <div>
-                <span>{tr("Created", "创建时间")}</span>
+                <span>{tr("tasks.dashboardTaskView.created")}</span>
                 <strong>{timestamp(task.created_at)}</strong>
               </div>
               <div>
-                <span>{tr("Last run", "上次执行")}</span>
+                <span>{tr("tasks.dashboardTaskView.lastRun")}</span>
                 <strong>{timestamp(task.last_run_at)}</strong>
               </div>
               <div>
-                <span>{tr("Expires", "到期时间")}</span>
+                <span>{tr("tasks.dashboardTaskView.expires")}</span>
                 <strong>
-                  {task.expires_at ? timestamp(task.expires_at) : tr("No expiry", "未设置")}
+                  {task.expires_at
+                    ? timestamp(task.expires_at)
+                    : tr("tasks.dashboardTaskView.noExpiry")}
                 </strong>
               </div>
               <div>
-                <span>{tr("Check interval", "检查间隔")}</span>
+                <span>{tr("tasks.dashboardTaskView.checkInterval")}</span>
                 <strong>
-                  {Math.round(task.interval_seconds / 60)} {tr("min", "分钟")}
+                  {Math.round(task.interval_seconds / 60)} {tr("tasks.dashboardTaskView.min")}
                 </strong>
               </div>
             </div>
             {!taskNeedsAgent(task) && chatReference}
             <div className="taskSavedInstructions">
-              <strong>{tr("Saved instructions", "已保存的指令")}</strong>
+              <strong>{tr("tasks.dashboardTaskView.savedInstructions")}</strong>
               {instructions.objective ? (
                 <>
                   <p>{instructions.objective}</p>
                   <p>
-                    {tr("Success criteria", "成功标准")}: {instructions.success_criteria}
+                    {tr("tasks.dashboardTaskView.successCriteria")}: {instructions.success_criteria}
                   </p>
                   <p>
-                    {tr("Decision executor", "决策执行器")}:{" "}
+                    {tr("tasks.dashboardTaskView.decisionExecutor")}:{" "}
                     {instructions.controller === "source"
-                      ? tr("Connected AI client", "已连接 AI 客户端")
-                      : tr("Hosted AI", "托管 AI")}
+                      ? tr("tasks.dashboardTaskView.connectedAiClient")
+                      : tr("tasks.dashboardTaskView.hostedAi")}
                   </p>
                 </>
               ) : (
@@ -373,7 +354,7 @@ export function TaskResults({
                   step.command ? (
                     <div key={index}>
                       <p>
-                        {tr("Shell command · executed verbatim", "Shell 命令 · 原样执行")}
+                        {tr("tasks.dashboardTaskView.shellCommandExecutedVerbatim")}
                         {step.cwd ? ` · ${step.cwd}` : ""}
                       </p>
                       <pre>{step.command}</pre>
@@ -387,7 +368,7 @@ export function TaskResults({
           </details>
           <p className="automationDetailNote">
             <a href="/docs/long-running-work">
-              {tr("Understand task recovery and completion checks", "了解任务恢复与完成验收")} →
+              {tr("tasks.dashboardTaskView.understandTaskRecoveryAndCompletionChecks")} →
             </a>
           </p>
         </div>

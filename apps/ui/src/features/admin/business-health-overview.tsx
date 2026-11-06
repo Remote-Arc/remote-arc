@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import type { BusinessHealthMetrics } from "@remotearc/protocol";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { percent } from "./events/admin-events-model.js";
-import "./business-health-overview.css";
+import "../../styles/admin/business-health-overview.css";
 
 const flowLabels = {
-  login: ["Sign-in completion", "登录完成率", "auth"],
-  devices: ["Device pairing completion", "设备配对完成率", "devices"],
-  tasks: ["Task completion", "任务完成率", "tasks"],
-  payment: ["Purchase completion", "购买流程完成率", "billing"],
+  login: ["admin.businessHealthOverview.signInCompletion", "auth"],
+  devices: ["admin.businessHealthOverview.devicePairingCompletion", "devices"],
+  tasks: ["admin.businessHealthOverview.taskCompletion", "tasks"],
+  payment: ["admin.businessHealthOverview.purchaseCompletion", "billing"],
 } as const;
 
 function valid(value: unknown): value is BusinessHealthMetrics {
@@ -90,89 +90,79 @@ export function BusinessHealthOverview({
   return (
     <section
       className="businessHealthOverview"
-      aria-label={tr("Business flow health", "业务链路健康")}
+      aria-label={tr("admin.businessHealthOverview.businessFlowHealth")}
       aria-busy={busy}
     >
       <header>
         <div>
-          <h2>{tr("Business flow health", "业务链路健康")}</h2>
-          <p>
-            {tr(
-              "Registration, sign-in, device pairing, task execution and payment outcomes.",
-              "查看注册、登录、设备配对、任务执行和支付流程是否正常。",
-            )}
-          </p>
+          <h2>{tr("admin.businessHealthOverview.businessFlowHealth")}</h2>
+          <p>{tr("admin.businessHealthOverview.registrationSignInDevicePairingTask")}</p>
         </div>
         <div className="businessHealthControls">
           <select
-            aria-label={tr("Business period", "业务统计周期")}
+            aria-label={tr("admin.businessHealthOverview.businessPeriod")}
             value={days}
             onChange={(event) => setDays(Number(event.target.value))}
           >
-            <option value={1}>{tr("Today · UTC", "今天 · UTC")}</option>
-            <option value={7}>{tr("Last 7 days", "近 7 天")}</option>
-            <option value={30}>{tr("Last 30 days", "近 30 天")}</option>
+            <option value={1}>{tr("admin.businessHealthOverview.todayUtc")}</option>
+            <option value={7}>{tr("admin.businessHealthOverview.lastDays")}</option>
+            <option value={30}>{tr("admin.businessHealthOverview.lastDays2")}</option>
           </select>
           <button
             type="button"
             disabled={preview || busy}
             onClick={() => setRefresh((value) => value + 1)}
           >
-            {tr("Refresh business metrics", "刷新业务指标")}
+            {tr("admin.businessHealthOverview.refreshBusinessMetrics")}
           </button>
         </div>
       </header>
       {failed && (
         <p className="healthNotice businessHealthError" role="alert">
-          {tr(
-            "Business flow metrics are unavailable. Refresh to retry; error investigation remains available.",
-            "业务流程指标暂时无法读取，请刷新重试；错误码排查仍可使用。",
-          )}
+          {tr("admin.businessHealthOverview.businessFlowMetricsAreUnavailableRefresh")}
         </p>
       )}
       <div className="businessHealthKpis">
         <article>
-          <span>{tr("Completed registrations", "注册成功数")}</span>
+          <span>{tr("admin.businessHealthOverview.completedRegistrations")}</span>
           <strong>{count(data?.registrations)}</strong>
-          <small>{tr("Real accounts created in this period", "所选周期内创建的真实账号")}</small>
+          <small>{tr("admin.businessHealthOverview.realAccountsCreatedInThisPeriod")}</small>
         </article>
         <article>
-          <span>{tr("Confirmed payments", "已确认付款笔数")}</span>
+          <span>{tr("admin.businessHealthOverview.confirmedPayments")}</span>
           <strong>{count(data?.payments)}</strong>
           <small>
-            {tr(
-              "Verified nonzero live payments; retries count once",
-              "已核验的正式非零付款，重试不重复计数",
-            )}
+            {tr("admin.businessHealthOverview.verifiedNonzeroLivePaymentsRetriesCount")}
           </small>
         </article>
         {(Object.keys(flowLabels) as (keyof typeof flowLabels)[]).map((id) => {
-          const labels = flowLabels[id];
+          const [labelKey, domain] = flowLabels[id];
+          const label = tr(labelKey);
           const flow = data?.flows.find((item) => item.id === id);
           return (
             <button
               type="button"
               key={id}
               disabled={!data}
-              onClick={() => selectDomain(labels[2])}
-              aria-label={tr(`Inspect ${labels[0]}`, `排查${labels[1]}`)}
+              onClick={() => selectDomain(domain)}
+              aria-label={tr("admin.businessHealthOverview.inspect", { label })}
             >
-              <span>{tr(labels[0], labels[1])} →</span>
+              <span>{label} →</span>
               <strong>{percent(flow?.rate)}</strong>
               <small>
                 {flow
                   ? flow.incompleteEvidence
-                    ? tr("Incomplete outcome evidence", "结果证据尚不完整")
+                    ? tr("admin.businessHealthOverview.incompleteOutcomeEvidence")
                     : count(flow.completed) +
                       " / " +
                       count(flow.total) +
                       " " +
-                      tr("completed", "已完成")
-                  : tr("Waiting for business data", "等待业务数据")}
+                      tr("admin.businessHealthOverview.completed")
+                  : tr("admin.businessHealthOverview.waitingForBusinessData")}
               </small>
               <small>
-                {tr("Failed", "失败")} {count(flow?.failed)} · {tr("Pending", "等待中")}{" "}
-                {count(flow?.pending)}
+                {tr("admin.businessHealthOverview.failed")} {count(flow?.failed)} ·{" "}
+                {tr("admin.businessHealthOverview.pending")} {count(flow?.pending)}
               </small>
             </button>
           );

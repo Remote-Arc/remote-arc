@@ -1,7 +1,7 @@
 import React from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
-import "./docs-system-overview.css";
+import "../../styles/docs/docs-system-overview.css";
 
 /**
  * Public "how Remote Arc runs" overview for /docs and /docs/architecture.
@@ -14,139 +14,115 @@ export function SystemOverview({ guideLink = true }: { guideLink?: boolean }) {
   const href = (path: string) => localizedWebsiteHref(path, locale);
   const lanes = [
     {
-      label: tr("DECIDE", "决策"),
+      label: tr("docs.docsSystemOverview.decide"),
       nodes: [
-        [tr("Your AI client", "你的 AI 客户端"), "ChatGPT · Claude · Codex · MCP"],
+        [tr("docs.docsSystemOverview.yourAiClient"), "ChatGPT · Claude · Codex · MCP"],
         [
-          tr("Arc workspace", "Arc 工作空间"),
-          tr("Hosted models, Credits budget", "托管模型 · Credits 预算"),
+          tr("docs.docsSystemOverview.arcWorkspace"),
+          tr("docs.docsSystemOverview.hostedModelsCreditsBudget"),
         ],
       ],
     },
     {
-      label: tr("CONTROL PLANE", "控制面"),
+      label: tr("docs.docsSystemOverview.controlPlane"),
       nodes: [
         [
-          tr("Sign-in and OAuth", "登录与 OAuth"),
-          tr("Sessions, scoped client grants", "会话 · 按 Scope 授权的客户端"),
+          tr("docs.docsSystemOverview.signInAndOauth"),
+          tr("docs.docsSystemOverview.sessionsScopedClientGrants"),
         ],
         [
-          tr("Plans and policy", "套餐与策略"),
-          tr("Allowances, device ownership, tool policy", "额度 · 设备所有权 · 工具策略"),
+          tr("docs.docsSystemOverview.plansAndPolicy"),
+          tr("docs.docsSystemOverview.allowancesDeviceOwnershipToolPolicy"),
         ],
         [
-          tr("Tasks and scheduler", "任务与调度"),
-          tr("Stored contracts, leases, revisions", "保存的契约 · 租约 · 版本"),
+          tr("docs.docsSystemOverview.tasksAndScheduler"),
+          tr("docs.docsSystemOverview.storedContractsLeasesRevisions"),
         ],
         [
-          tr("Per-account routing", "按账号路由"),
-          tr("Durable Objects, forwarding only", "Durable Object · 只转发不存储"),
+          tr("docs.docsSystemOverview.perAccountRouting"),
+          tr("docs.docsSystemOverview.durableObjectsForwardingOnly"),
         ],
       ],
     },
     {
-      label: tr("EXECUTE", "执行"),
+      label: tr("docs.docsSystemOverview.execute"),
       nodes: [
         [
-          tr("Connected Apps", "已连接应用"),
-          tr("Typed operations on your provider accounts", "在你的服务账号上执行类型化操作"),
+          tr("docs.docsSystemOverview.connectedApps"),
+          tr("docs.docsSystemOverview.typedOperationsOnYourProviderAccounts"),
         ],
         [
-          tr("Your computer", "你的电脑"),
-          tr("Go Agent + Execution Core", "Go Agent + Execution Core"),
+          tr("docs.docsSystemOverview.yourComputer"),
+          tr("docs.docsSystemOverview.goAgentExecutionCore"),
         ],
         [
-          tr("Your browser", "你的浏览器"),
-          tr("Chrome Companion, task browser", "Chrome Companion · 任务浏览器"),
+          tr("docs.docsSystemOverview.yourBrowser"),
+          tr("docs.docsSystemOverview.chromeCompanionTaskBrowser"),
         ],
       ],
     },
   ];
   const steps = [
     [
-      tr("Authenticate", "认证"),
-      tr(
-        "The AI client calls the MCP endpoint with an OAuth token scoped to the work it may do.",
-        "AI 客户端携带 OAuth 令牌调用 MCP 端点，令牌的 Scope 决定它能做哪类工作。",
-      ),
+      tr("docs.docsSystemOverview.authenticate"),
+      tr("docs.docsSystemOverview.theAiClientCallsTheMcp"),
       "OAuth 2.1 · PKCE",
     ],
     [
-      tr("Authorize", "授权"),
-      tr(
-        "The control plane checks the scope, the account's allowance, device ownership and revocation, and the device's saved tool switches.",
-        "控制面检查 Scope、账号额度、设备所有权与撤销状态，以及该设备保存的工具开关。",
-      ),
-      tr("scope · plan · device", "Scope · 套餐 · 设备"),
+      tr("docs.docsSystemOverview.authorize"),
+      tr("docs.docsSystemOverview.theControlPlaneChecksTheScope"),
+      tr("docs.docsSystemOverview.scopePlanDevice"),
     ],
     [
-      tr("Route", "路由"),
-      tr(
-        "Your account's Durable Object forwards the call over the connection your computer opened outward. It keeps no copy of the payload.",
-        "账号专属的 Durable Object 通过电脑主动建立的出站连接转发调用，不保存调用内容。",
-      ),
-      tr("outbound WSS", "出站 WSS"),
+      tr("docs.docsSystemOverview.route"),
+      tr("docs.docsSystemOverview.yourAccountSDurableObjectForwards"),
+      tr("docs.docsSystemOverview.outboundWss"),
     ],
     [
-      tr("Check locally", "本机复核"),
-      tr(
-        "The Agent re-checks the permission mode, Trusted Write Locations and sensitive paths. For terminal commands, Safety Guard checks where every delete would land.",
-        "Agent 在本机再次检查权限模式、可信写入区域与敏感路径；终端命令还要经过 Safety Guard 检查每个删除的实际落点。",
-      ),
-      tr("paths · Safety Guard", "路径 · Safety Guard"),
+      tr("docs.docsSystemOverview.checkLocally"),
+      tr("docs.docsSystemOverview.theAgentReChecksThePermission"),
+      tr("docs.docsSystemOverview.pathsSafetyGuard"),
     ],
     [
-      tr("Execute and record", "执行并记录"),
-      tr(
-        "The Execution Core runs the tool and keeps a Local Undo snapshot for supported edits. Usage and activity are recorded.",
-        "Execution Core 执行工具，并为受支持的文件修改保留本机 Undo 快照；用量与活动记录在案。",
-      ),
-      tr("Undo · activity", "Undo · 活动记录"),
+      tr("docs.docsSystemOverview.executeAndRecord"),
+      tr("docs.docsSystemOverview.theExecutionCoreRunsTheTool"),
+      tr("docs.docsSystemOverview.undoActivity"),
     ],
     [
-      tr("Decide again", "再次决策"),
-      tr(
-        "The AI sees the real result and chooses the next step. A lost reply is treated as unknown and inspected, never silently retried.",
-        "AI 看到真实结果再决定下一步。回复丢失时按「结果未知」处理并先检查，绝不静默重试。",
-      ),
-      tr("evidence, not assumptions", "以证据为准"),
+      tr("docs.docsSystemOverview.decideAgain"),
+      tr("docs.docsSystemOverview.theAiSeesTheRealResult"),
+      tr("docs.docsSystemOverview.evidenceNotAssumptions"),
     ],
   ];
   const paths = [
     [
-      tr("Live tool call", "实时工具调用"),
-      tr("Your AI client, turn by turn", "你的 AI 客户端，逐轮决定"),
-      tr("Nothing beyond the result and activity", "结果与活动记录"),
+      tr("docs.docsSystemOverview.liveToolCall"),
+      tr("docs.docsSystemOverview.yourAiClientTurnByTurn"),
+      tr("docs.docsSystemOverview.nothingBeyondTheResultAndActivity"),
     ],
     [
-      tr("Arc run", "Arc 运行"),
-      tr("Arc's hosted model, inside a Credits budget", "Arc 托管模型，在 Credits 预算内"),
-      tr("Encrypted conversation, memory and run history", "加密的对话、记忆与运行记录"),
+      tr("docs.docsSystemOverview.arcRun"),
+      tr("docs.docsSystemOverview.arcSHostedModelInsideA"),
+      tr("docs.docsSystemOverview.encryptedConversationMemoryAndRunHistory"),
     ],
     [
-      tr("Durable Task", "持久任务"),
-      tr(
-        "The approved contract; fresh judgment only where configured",
-        "已批准的契约；仅在配置时引入新的判断",
-      ),
-      tr("Contract, schedule, lease and bounded results", "契约、计划、租约与有界结果"),
+      tr("docs.docsSystemOverview.durableTask"),
+      tr("docs.docsSystemOverview.theApprovedContractFreshJudgmentOnly"),
+      tr("docs.docsSystemOverview.contractScheduleLeaseAndBoundedResults"),
     ],
   ];
   return (
     <section className="systemOverview" id="docs-how-it-runs" aria-labelledby="systemOverviewTitle">
       <header>
-        <span className="eyebrow">{tr("HOW REMOTE ARC RUNS", "REMOTE ARC 如何运行")}</span>
-        <h2 id="systemOverviewTitle">
-          {tr("From an AI decision to an authorized action.", "从 AI 的决定，到经过授权的操作。")}
-        </h2>
-        <p>
-          {tr(
-            "Remote Arc is not remote-desktop software, and it is more than an MCP server. The model decides what to do; Remote Arc decides whether it may, routes it to the right account or computer, checks it again where it runs, and records what happened.",
-            "Remote Arc 不是远程桌面软件，也不只是一个 MCP Server。模型决定要做什么；Remote Arc 判断它能不能做，把操作送到正确的账号或电脑，在执行处再次检查，并记录实际发生了什么。",
-          )}
-        </p>
+        <span className="eyebrow">{tr("docs.docsSystemOverview.howRemoteArcRuns")}</span>
+        <h2 id="systemOverviewTitle">{tr("docs.docsSystemOverview.fromAnAiDecisionToAn")}</h2>
+        <p>{tr("docs.docsSystemOverview.remoteArcIsNotRemoteDesktop")}</p>
       </header>
-      <div className="systemLanes" role="list" aria-label={tr("System components", "系统组件")}>
+      <div
+        className="systemLanes"
+        role="list"
+        aria-label={tr("docs.docsSystemOverview.systemComponents")}
+      >
         {lanes.map((lane, index) => (
           <React.Fragment key={lane.label}>
             {index > 0 && (
@@ -167,18 +143,10 @@ export function SystemOverview({ guideLink = true }: { guideLink?: boolean }) {
         ))}
       </div>
       <p className="systemNote">
-        {tr(
-          "Computers and the browser extension connect outward. There is no inbound port, VPN or desktop stream, and AI clients and computers can each be revoked on their own.",
-          "电脑和浏览器扩展都是主动向外连接：没有入站端口、VPN 或桌面串流；AI 客户端和电脑都可以分别撤销。",
-        )}
+        {tr("docs.docsSystemOverview.computersAndTheBrowserExtensionConnect")}
       </p>
-      <p>
-        {tr(
-          "Operations use connection counts grouped by platform and Agent version, without recording tool payloads. Missing observations do not prove healthy devices.",
-          "运维按平台与 Agent 版本汇总连接次数，不记录工具调用内容。缺少观测不能证明设备正常。",
-        )}
-      </p>
-      <h3>{tr("The life of one tool call", "一次工具调用的完整过程")}</h3>
+      <p>{tr("docs.docsSystemOverview.operationsUseConnectionCountsGroupedBy")}</p>
+      <h3>{tr("docs.docsSystemOverview.theLifeOfOneToolCall")}</h3>
       <ol className="systemSteps">
         {steps.map(([title, text, gate], index) => (
           <li key={title}>
@@ -191,14 +159,14 @@ export function SystemOverview({ guideLink = true }: { guideLink?: boolean }) {
           </li>
         ))}
       </ol>
-      <h3>{tr("Three ways work runs", "三种工作运行方式")}</h3>
+      <h3>{tr("docs.docsSystemOverview.threeWaysWorkRuns")}</h3>
       <div className="docsTableWrap">
         <table className="articleTable">
           <thead>
             <tr>
-              <th>{tr("Path", "方式")}</th>
-              <th>{tr("Who decides", "由谁决策")}</th>
-              <th>{tr("What persists", "保存什么")}</th>
+              <th>{tr("docs.docsSystemOverview.path")}</th>
+              <th>{tr("docs.docsSystemOverview.whoDecides")}</th>
+              <th>{tr("docs.docsSystemOverview.whatPersists")}</th>
             </tr>
           </thead>
           <tbody>
@@ -212,18 +180,18 @@ export function SystemOverview({ guideLink = true }: { guideLink?: boolean }) {
           </tbody>
         </table>
       </div>
-      <p className="systemNote">
-        {tr(
-          "All three paths pass the same authorization and local checks. None of them is an operating-system sandbox: commands that are allowed run as your OS user.",
-          "三种方式都经过同样的授权与本机检查。但它们都不是操作系统沙箱：被允许的命令以你的 OS 用户身份运行。",
-        )}
-      </p>
-      <nav className="systemLinks" aria-label={tr("Architecture references", "架构参考")}>
+      <p className="systemNote">{tr("docs.docsSystemOverview.allThreePathsPassTheSame")}</p>
+      <nav
+        className="systemLinks"
+        aria-label={tr("docs.docsSystemOverview.architectureReferences")}
+      >
         {guideLink && (
-          <a href={href("/docs/architecture")}>{tr("Architecture deep dive", "架构技术详解")} →</a>
+          <a href={href("/docs/architecture")}>
+            {tr("docs.docsSystemOverview.architectureDeepDive")} →
+          </a>
         )}
-        <a href={href("/security-model")}>{tr("Security model", "安全模型")} →</a>
-        <a href={href("/docs/tools")}>{tr("All tools", "全部工具")} →</a>
+        <a href={href("/security-model")}>{tr("docs.docsSystemOverview.securityModel")} →</a>
+        <a href={href("/docs/tools")}>{tr("docs.docsSystemOverview.allTools")} →</a>
       </nav>
     </section>
   );

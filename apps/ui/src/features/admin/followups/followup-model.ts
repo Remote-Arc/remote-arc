@@ -1,3 +1,4 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import {
   canonicalErrorEnvelope,
   canonicalErrorCode,
@@ -186,58 +187,38 @@ export const followupStatus = (person: Person) =>
   person.suppressed_at
     ? "suppressed"
     : person.status || (person.last_contact_at ? "contacted" : "new");
-export function followupReason(code: string | null, tr: (en: string, zh: string) => string) {
+export function followupReason(code: string | null, tr: Translate) {
   return (
     (
       {
-        RECIPIENT_SUPPRESSED: tr("Follow-ups stopped", "已停止接收"),
-        CONTACT_PERMISSION_REQUIRED: tr("No recorded contact basis", "尚无联系依据"),
-        CONTACT_COOLDOWN: tr("Contacted within 72 hours", "72 小时内已联系"),
+        RECIPIENT_SUPPRESSED: tr("admin.followups.followupModel.followUpsStopped"),
+        CONTACT_PERMISSION_REQUIRED: tr("admin.followups.followupModel.noRecordedContactBasis"),
+        CONTACT_COOLDOWN: tr("admin.followups.followupModel.contactedWithinHours"),
         CONTACT_COOLDOWN_OR_IN_PROGRESS: tr(
-          "Recently contacted or sending",
-          "近期已联系或正在发送",
+          "admin.followups.followupModel.recentlyContactedOrSending",
         ),
-        DELIVERY_UNCONFIRMED: tr("Delivery needs checking", "投递状态待核实"),
-        RECIPIENT_CHANGED: tr("Recipient address changed", "收件邮箱已变更"),
-        EMAIL_NOT_CONFIGURED: tr("Email channel unavailable", "发信通道未配置"),
-        ACTOR_NO_LONGER_ADMIN: tr("Operator access changed", "操作员权限已变更"),
-        SENDER_CHANGED: tr(
-          "Sender configuration changed; prepare again",
-          "发件配置已变更，请重新准备",
-        ),
-        BATCH_CANCELLED: tr("Cancelled", "已取消"),
-        BATCH_NOT_QUEUED: tr("Batch cancelled or not queued", "任务已取消或未入队"),
-        PROVIDER_429: tr("Waiting for email service capacity", "等待发信服务恢复额度"),
-        NO_ELIGIBLE_RECIPIENTS: tr("No eligible recipients in this batch", "本批次暂无可发送用户"),
-        BATCH_NOT_READY: tr("Batch is not ready to send", "任务尚未准备完成"),
-        BATCH_CONFLICT: tr(
-          "This batch changed. Prepare a new batch.",
-          "任务内容已变更，请重新准备",
-        ),
-        BATCH_MANAGED_MESSAGE: tr(
-          "Manage this email in Bulk history.",
-          "请在群发记录中管理此邮件。",
-        ),
-        DAILY_EMAIL_BUDGET_REACHED: tr(
-          "The daily follow-up limit is reached. Your draft is kept; queued emails continue when capacity returns.",
-          "跟进邮件已达每日上限，草稿已保留，排队邮件会在额度恢复后继续发送。",
-        ),
-        HOURLY_EMAIL_BUDGET_REACHED: tr(
-          "The hourly follow-up limit is reached. Queued emails continue when capacity returns.",
-          "跟进邮件已达小时上限，排队邮件会在额度恢复后继续发送。",
-        ),
+        DELIVERY_UNCONFIRMED: tr("admin.followups.followupModel.deliveryNeedsChecking"),
+        RECIPIENT_CHANGED: tr("admin.followups.followupModel.recipientAddressChanged"),
+        EMAIL_NOT_CONFIGURED: tr("admin.followups.followupModel.emailChannelUnavailable"),
+        ACTOR_NO_LONGER_ADMIN: tr("admin.followups.followupModel.operatorAccessChanged"),
+        SENDER_CHANGED: tr("admin.followups.followupModel.senderConfigurationChangedPrepareAgain"),
+        BATCH_CANCELLED: tr("admin.followups.followupModel.cancelled"),
+        BATCH_NOT_QUEUED: tr("admin.followups.followupModel.batchCancelledOrNotQueued"),
+        PROVIDER_429: tr("admin.followups.followupModel.waitingForEmailServiceCapacity"),
+        NO_ELIGIBLE_RECIPIENTS: tr("admin.followups.followupModel.noEligibleRecipientsInThisBatch"),
+        BATCH_NOT_READY: tr("admin.followups.followupModel.batchIsNotReadyToSend"),
+        BATCH_CONFLICT: tr("admin.followups.followupModel.thisBatchChangedPrepareANew"),
+        BATCH_MANAGED_MESSAGE: tr("admin.followups.followupModel.manageThisEmailInBulkHistory"),
+        DAILY_EMAIL_BUDGET_REACHED: tr("admin.followups.followupModel.theDailyFollowUpLimitIs"),
+        HOURLY_EMAIL_BUDGET_REACHED: tr("admin.followups.followupModel.theHourlyFollowUpLimitIs"),
         MONTHLY_EMAIL_BUDGET_REACHED: tr(
-          "The monthly follow-up allocation is used. Queued emails wait for capacity.",
-          "跟进邮件已达月度额度，排队邮件将等待额度恢复。",
+          "admin.followups.followupModel.theMonthlyFollowUpAllocationIs",
         ),
       } as Record<string, string>
     )[canonicalErrorCode(code) || ""] ||
     (canonicalErrorCode(code)?.startsWith("PROVIDER_")
-      ? tr("Email service rejected the request", "发信服务未接受此请求")
-      : tr(
-          "Could not confirm the action. Your work is kept.",
-          "暂时无法确认操作结果，内容已保留。",
-        ))
+      ? tr("admin.followups.followupModel.emailServiceRejectedTheRequest")
+      : tr("admin.followups.followupModel.couldNotConfirmTheActionYour"))
   );
 }
 export const followupTime = (value: string | null) =>

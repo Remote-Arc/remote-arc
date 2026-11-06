@@ -1,3 +1,4 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import {
   canonicalErrorEnvelope,
   canonicalErrorCode,
@@ -5,7 +6,7 @@ import {
 import { CONNECT_FAIR_USE, CONNECT_UNLIMITED_PLAN_ID } from "@remotearc/protocol";
 import { productRequestHeaders } from "../../lib/product-events.js";
 import { billingRecovery } from "../../../../../packages/protocol/src/billing-recovery.js";
-import type { ArcAccess } from "../arc/chat/use-arc-chat.js";
+import type { ArcAccess } from "../../hooks/arc/use-arc-chat.js";
 import type { FreeOverflow } from "../../types/app-types.js";
 export type BillingPlan = {
   versionId?: string;
@@ -144,48 +145,23 @@ export const transferSize = (bytes: number) =>
     : Math.round(bytes / 1024 ** 2) + " MB";
 /** Connect Unlimited: paid remote execution; no monthly Credits or hosted Arc beyond the one-time trial. */
 export const isConnectOnlyPlan = (plan: { id: string }) => plan.id === CONNECT_UNLIMITED_PLAN_ID;
-export function connectPlanFeatures(tr: (en: string, zh: string) => string) {
+export function connectPlanFeatures(tr: Translate) {
   const registrationsPerDay = CONNECT_FAIR_USE.computerRegistrationsPerDay;
   return [
-    tr(
-      "Your agents at full speed all month · no call cap, no slow lane",
-      "agent 整月全速运行 · 不限调用次数，没有慢速通道",
-    ),
-    tr(
-      "Unlimited Connect calls · published fair-use rate limits only",
-      "无限 Connect 调用 · 仅有公开的合理使用速率限制",
-    ),
-    tr(
-      "Unlimited registered computers, each authenticated and revocable",
-      "不限已注册电脑数量，每台独立认证、可随时撤销",
-    ),
-    tr("Unlimited file transfer", "不限文件传输量"),
-    tr(
-      `Up to ${registrationsPerDay} new computers per day · runs follow each computer’s own capacity`,
-      `每天最多新增 ${registrationsPerDay} 台电脑 · 运行并发取决于每台电脑自身容量`,
-    ),
-    tr(
-      "Local terminal, files, browser, Fleet and connected Apps",
-      "本地终端、文件、浏览器、Fleet 与已连接应用",
-    ),
-    tr(
-      "Bring your own ChatGPT, Claude or Codex · no monthly Credits; Arc after the free trial needs Plus",
-      "使用你自己的 ChatGPT、Claude 或 Codex · 不含月度 Credits；免费试用后使用 Arc 需要 Plus",
-    ),
+    tr("billing.arcBillingClient.yourAgentsAtFullSpeedAll"),
+    tr("billing.arcBillingClient.unlimitedConnectCallsPublishedFairUse"),
+    tr("billing.arcBillingClient.unlimitedRegisteredComputersEachAuthenticatedAnd"),
+    tr("billing.arcBillingClient.unlimitedFileTransfer"),
+    tr("billing.arcBillingClient.upToNewComputersPerDay", { registrationsPerDay }),
+    tr("billing.arcBillingClient.localTerminalFilesBrowserFleetAnd"),
+    tr("billing.arcBillingClient.bringYourOwnChatgptClaudeOr"),
   ];
 }
-export function billingFailureMessage(error: unknown, tr: (en: string, zh: string) => string) {
+export function billingFailureMessage(error: unknown, tr: Translate) {
   const code = error instanceof Error ? canonicalErrorCode(error.message) || error.message : "";
-  if (code === "UNAUTHORIZED")
-    return tr(
-      "Your session expired. Sign in again before continuing.",
-      "登录状态已过期，请重新登录后继续。",
-    );
+  if (code === "UNAUTHORIZED") return tr("billing.arcBillingClient.yourSessionExpiredSignInAgain");
   const recovery = billingRecovery(code);
   return recovery
     ? tr(...recovery.message)
-    : tr(
-        "This billing request could not be completed. Check your current payment status before retrying, and keep the error reference if you need help.",
-        "支付请求未能完成。请先核对当前付款状态再重试，如需帮助请保留错误编号。",
-      );
+    : tr("billing.arcBillingClient.thisBillingRequestCouldNotBe");
 }

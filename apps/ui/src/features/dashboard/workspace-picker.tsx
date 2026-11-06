@@ -1,3 +1,4 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import {
   useCallback,
   useEffect,
@@ -8,7 +9,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import "./workspace-picker.css";
+import "../../styles/dashboard/workspace-picker.css";
 import { ProductIcon as Icon } from "../../components/product-icon.js";
 
 type Workspace = "connect" | "agent";
@@ -16,7 +17,7 @@ type Props = {
   arcAvailable?: boolean;
   workspace: Workspace;
   mobile?: boolean;
-  tr: (english: string, chinese: string) => string;
+  tr: Translate;
   onNavigate: (tab: "overview" | "agent-chat") => void;
 };
 
@@ -168,7 +169,7 @@ export function WorkspacePicker({
           ref={triggerRef}
           type="button"
           className="workspacePickerTrigger"
-          aria-label={tr("Switch workspace", "切换工作空间")}
+          aria-label={tr("dashboard.workspacePicker.switchWorkspace")}
           aria-haspopup="menu"
           aria-controls={open ? menuId : undefined}
           aria-expanded={open}
@@ -178,7 +179,7 @@ export function WorkspacePicker({
             <ProductIcon workspace={workspace} />
           </span>
           <span className="workspacePickerCopy">
-            <small>{tr("WORKSPACE", "工作空间")}</small>
+            <small>{tr("dashboard.workspacePicker.workspace")}</small>
             <strong>{workspace === "connect" ? "Connect" : "Arc"}</strong>
           </span>
           <span className="workspacePickerChevron" aria-hidden="true">
@@ -204,11 +205,11 @@ export function WorkspacePicker({
             ref={menuRef}
             style={menuStyle}
             role="menu"
-            aria-label={tr("Choose workspace", "选择工作空间")}
+            aria-label={tr("dashboard.workspacePicker.chooseWorkspace")}
             onKeyDown={handleMenuKeyDown}
           >
             <div className="workspacePickerMenuCaption">
-              {tr("SWITCH WORKSPACE", "切换工作空间")}
+              {tr("dashboard.workspacePicker.switchWorkspace2")}
             </div>
             <button
               type="button"
@@ -222,7 +223,7 @@ export function WorkspacePicker({
               </span>
               <span className="workspaceOptionDescription">
                 <strong>Connect</strong>
-                <small>{tr("Bring tools to the AI you use", "为你常用的 AI 连接工具")}</small>
+                <small>{tr("dashboard.workspacePicker.bringToolsToTheAiYou")}</small>
               </span>
               <span className="workspaceOptionCheck">
                 <Icon name={workspace === "connect" ? "check" : "arrowUpRight"} size={15} />
@@ -241,18 +242,20 @@ export function WorkspacePicker({
               </span>
               <span className="workspaceOptionDescription">
                 <strong>Arc</strong>
-                <small>{tr("Your personal AI workspace", "你的个人 AI 工作空间")}</small>
+                <small>{tr("dashboard.workspacePicker.yourPersonalAiWorkspace")}</small>
               </span>
               {arcAvailable ? (
                 <span className="workspaceOptionCheck">
                   <Icon name={workspace === "agent" ? "check" : "arrowUpRight"} size={15} />
                 </span>
               ) : (
-                <span className="workspaceComingSoon">{tr("Coming soon", "即将上线")}</span>
+                <span className="workspaceComingSoon">
+                  {tr("dashboard.workspacePicker.comingSoon")}
+                </span>
               )}
             </button>
             <div className="workspacePickerMenuFoot">
-              {tr("One account. Shared apps and devices.", "同一个账号，共享已连接的应用与设备。")}
+              {tr("dashboard.workspacePicker.oneAccountSharedAppsAndDevices")}
             </div>
           </div>,
           document.body,

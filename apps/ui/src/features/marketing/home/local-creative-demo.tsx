@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
 import {
   PUBLISHED_MEDIA_DEMOS,
   mediaDemoPath,
 } from "../../../../../../packages/docs/src/media-gallery.js";
 import { IMAGE_DEMOS } from "../../../../../../packages/docs/src/image-gallery.js";
-import "./local-creative-demo.css";
+import "../../../styles/marketing/home/local-creative-demo.css";
 
 export const creativeMediaSrc = (file: string) =>
   (import.meta.env?.VITE_MEDIA_GALLERY_BASE_URL || "").replace(/\/$/, "") + mediaDemoPath(file);
@@ -25,7 +25,7 @@ export function LocalCreativeResult({ kind }: { kind: "video" | "image" }) {
   return (
     <article className="localCreativeResult" data-kind={kind}>
       <header>
-        <span>{tr("REAL WORK · RENDERED LOCALLY", "真实作品 · 本地渲染")}</span>
+        <span>{tr("marketing.home.localCreativeDemo.realWorkRenderedLocally")}</span>
         <span>{kind === "video" ? "MP4 · 60s" : "PNG · 1200 × 1500"}</span>
       </header>
       {kind === "video" && film ? (
@@ -46,7 +46,7 @@ export function LocalCreativeResult({ kind }: { kind: "video" | "image" }) {
             <button
               type="button"
               onClick={() => setPlaying(true)}
-              aria-label={tr("Play ", "播放：") + film.title[locale]}
+              aria-label={tr("marketing.home.localCreativeDemo.play") + film.title[locale]}
             >
               <img
                 src={creativeMediaSrc(film.poster)}
@@ -59,18 +59,10 @@ export function LocalCreativeResult({ kind }: { kind: "video" | "image" }) {
             </button>
           )}
           <strong>{film.title[locale]}</strong>
-          <p>
-            {tr(
-              "60 seconds · connected scenes · music · no voiceover",
-              "60 秒 · 连贯分镜 · 配乐 · 无旁白",
-            )}
-          </p>
+          <p>{tr("marketing.home.localCreativeDemo.secondsConnectedScenesMusicNoVoiceover")}</p>
           {failed && (
             <p role="alert">
-              {tr(
-                "Video unavailable. Open the gallery to try again.",
-                "视频暂时无法播放，可打开画廊重试。",
-              )}
+              {tr("marketing.home.localCreativeDemo.videoUnavailableOpenTheGalleryTo")}
             </p>
           )}
         </div>
@@ -93,10 +85,10 @@ export function LocalCreativeResult({ kind }: { kind: "video" | "image" }) {
       <footer>
         <span>
           {kind === "video"
-            ? tr("Vibe Knowledge Film · editable project", "Vibe Knowledge Film · 可编辑工程")
-            : tr("Code graphics · editable drawing sources", "代码绘图 · 可编辑源码")}
+            ? tr("marketing.home.localCreativeDemo.vibeKnowledgeFilmEditableProject")
+            : tr("marketing.home.localCreativeDemo.codeGraphicsEditableDrawingSources")}
         </span>
-        <a href={href}>{tr("Explore the gallery", "查看作品画廊")} ↗</a>
+        <a href={href}>{tr("marketing.home.localCreativeDemo.exploreTheGallery")} ↗</a>
       </footer>
     </article>
   );
@@ -117,7 +109,7 @@ export function CreativeDirectoryPreviews() {
             loading="lazy"
           />
           <span>
-            {tr("Video creation", "视频制作")} <small>60s · MP4</small>
+            {tr("marketing.home.localCreativeDemo.videoCreation")} <small>60s · MP4</small>
           </span>
           <b aria-hidden="true">▶</b>
         </a>
@@ -132,7 +124,7 @@ export function CreativeDirectoryPreviews() {
             loading="lazy"
           />
           <span>
-            {tr("Image creation", "图片创作")} <small>PNG</small>
+            {tr("marketing.home.localCreativeDemo.imageCreation")} <small>PNG</small>
           </span>
           <b aria-hidden="true">↗</b>
         </a>

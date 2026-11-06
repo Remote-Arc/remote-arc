@@ -1,6 +1,6 @@
 import { canonicalErrorEnvelope } from "../../../../../../packages/protocol/src/error-codes.js";
 import { useEffect, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 import { GrowthChart, RetentionPanel } from "./admin-events-panels.js";
 import {
@@ -15,7 +15,7 @@ import {
   type Analytics,
   type SceneId,
 } from "./admin-events-model.js";
-import "./admin-events.css";
+import "../../../styles/admin/events/admin-events.css";
 
 export function AdminEvents({ preview = false }: { preview?: boolean }) {
   const { tr, locale } = useI18n();
@@ -56,11 +56,11 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
   const changed = (current: number | undefined, before: number | undefined) =>
     typeof current === "number" && typeof before === "number"
       ? current === before
-        ? tr("Unchanged from previous period", "与上期相同")
-        : tr("vs previous period ", "较上期 ") +
+        ? tr("admin.events.adminEvents.unchangedFromPreviousPeriod")
+        : tr("admin.events.adminEvents.vsPreviousPeriod") +
           (current > before ? "+" : "") +
           format(current - before)
-      : tr("No comparison yet", "暂无可比数据");
+      : tr("admin.events.adminEvents.noComparisonYet");
   const payment = data?.scenes.find((item) => item.id === "payment"),
     d7 = data?.retention.find((item) => item.day === 7);
   const scene =
@@ -75,42 +75,43 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
     points = percentagePoints(scene?.rate, previous?.rate);
   const metrics = [
     {
-      label: tr("New users", "新增用户"),
+      label: tr("admin.events.adminEvents.newUsers"),
       value: format(data?.summary.newUsers),
       note: changed(data?.summary.newUsers, data?.previous.summary.newUsers),
     },
     {
-      label: tr("Active users", "活跃用户"),
+      label: tr("admin.events.adminEvents.activeUsers"),
       value: format(data?.summary.activeUsers),
-      note: tr("Accounts with recorded real usage", "有真实使用记录的去重账号"),
+      note: tr("admin.events.adminEvents.accountsWithRecordedRealUsage"),
     },
     {
-      label: tr("New-user device pairing", "新用户设备配对率"),
+      label: tr("admin.events.adminEvents.newUserDevicePairing"),
       value: data ? percent(rate(data.summary.newPaired, data.summary.newUsers)) : "—",
       note: data
         ? `${data.summary.newPaired} / ${data.summary.newUsers} ` +
-          tr("new users approved computer pairing", "位新用户已确认配对")
-        : tr("Waiting for real data", "等待真实数据"),
+          tr("admin.events.adminEvents.newUsersApprovedComputerPairing")
+        : tr("admin.events.adminEvents.waitingForRealData"),
     },
     {
-      label: tr("Purchase conversion", "购买转化率"),
+      label: tr("admin.events.adminEvents.purchaseConversion"),
       value: percent(payment?.rate),
       note: payment
         ? `${payment.completed} / ${payment.total} ` +
-          tr("purchase visits completed", "次购买访问完成")
-        : tr("Payment and access must both be verified", "付款与权益均确认才计入成功"),
+          tr("admin.events.adminEvents.purchaseVisitsCompleted")
+        : tr("admin.events.adminEvents.paymentAndAccessMustBothBe"),
     },
     {
-      label: tr("Verified paying users", "已确认付费用户"),
+      label: tr("admin.events.adminEvents.verifiedPayingUsers"),
       value: format(data?.summary.payingUsers),
       note: changed(data?.summary.payingUsers, data?.previous.summary.payingUsers),
     },
     {
-      label: tr("Day-7 retention", "7 日留存"),
+      label: tr("admin.events.adminEvents.dayRetention"),
       value: percent(d7?.rate),
       note:
         d7?.status === "ready"
-          ? `${d7.returned} / ${d7.eligible} ` + tr("eligible users returned", "位到期用户回访")
+          ? `${d7.returned} / ${d7.eligible} ` +
+            tr("admin.events.adminEvents.eligibleUsersReturned")
           : retentionState(d7, tr),
     },
   ];
@@ -119,23 +120,23 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
       <div className="businessHeading">
         <div>
           <span className="businessEyebrow">
-            {tr("GROWTH · CONVERSION · RETENTION", "增长 · 转化 · 留存")}
+            {tr("admin.events.adminEvents.growthConversionRetention")}
           </span>
-          <h2>{tr("Is the product growing?", "增长有没有发生，用户有没有留下？")}</h2>
-          <p>
-            {tr(
-              "Real accounts, process outcomes and registration cohorts.",
-              "看新增用户、关键流程成功率，以及新用户留存。",
-            )}
-          </p>
+          <h2>{tr("admin.events.adminEvents.isTheProductGrowing")}</h2>
+          <p>{tr("admin.events.adminEvents.realAccountsProcessOutcomesAndRegistration")}</p>
         </div>
         <div className="businessControls">
-          <div className="businessRange" aria-label={tr("Reporting period", "统计周期")}>
+          <div
+            className="businessRange"
+            aria-label={tr("admin.events.adminEvents.reportingPeriod")}
+          >
             {[1, 7, 30].map((value) => (
               <button key={value} aria-pressed={days === value} onClick={() => setDays(value)}>
                 {value === 1
-                  ? tr("Today", "今天")
-                  : tr("Last ", "近 ") + value + tr(" days", " 天")}
+                  ? tr("admin.events.adminEvents.today")
+                  : tr("admin.events.adminEvents.last") +
+                    value +
+                    tr("admin.events.adminEvents.days")}
               </button>
             ))}
           </div>
@@ -145,7 +146,7 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
             onClick={() => setRevision((value) => value + 1)}
           >
             <Icon name="refresh" size={14} />
-            {tr("Refresh", "刷新")}
+            {tr("admin.events.adminEvents.refresh")}
           </button>
         </div>
       </div>
@@ -153,41 +154,39 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
         <span>
           <i />
           {data
-            ? tr("Production data", "生产真实数据")
+            ? tr("admin.events.adminEvents.productionData")
             : preview
-              ? tr("Preview · no invented figures", "设计预览 · 不填充示例经营数据")
+              ? tr("admin.events.adminEvents.previewNoInventedFigures")
               : loading
-                ? tr("Loading production data…", "正在读取生产数据…")
-                : tr("Data unavailable", "数据暂不可用")}
+                ? tr("admin.events.adminEvents.loadingProductionData")
+                : tr("admin.events.adminEvents.dataUnavailable")}
         </span>
         {data && (
           <time dateTime={data.checkedAt}>
-            {tr("Updated ", "更新于 ")}
+            {tr("admin.events.adminEvents.updated")}
             {new Date(data.checkedAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-US", {
               month: "numeric",
               day: "numeric",
               hour: "2-digit",
               minute: "2-digit",
             })}{" "}
-            · {tr("UTC reporting days", "按 UTC 统计日")}
+            · {tr("admin.events.adminEvents.utcReportingDays")}
           </time>
         )}
       </div>
       {error && (
         <div className="businessLoadError" role="alert">
-          <strong>{tr("Business data could not load", "经营数据暂时无法读取")}</strong>
-          <p>
-            {tr(
-              "Figures are unavailable; this is not zero users or a zero success rate.",
-              "当前无法取得真实指标，不代表用户数或成功率为零。",
-            )}
-          </p>
+          <strong>{tr("admin.events.adminEvents.businessDataCouldNotLoad")}</strong>
+          <p>{tr("admin.events.adminEvents.figuresAreUnavailableThisIsNot")}</p>
           <button onClick={() => setRevision((value) => value + 1)}>
-            {tr("Retry", "重新读取")}
+            {tr("admin.events.adminEvents.retry")}
           </button>
         </div>
       )}
-      <section className="businessKpis" aria-label={tr("Business overview", "经营概览")}>
+      <section
+        className="businessKpis"
+        aria-label={tr("admin.events.adminEvents.businessOverview")}
+      >
         {metrics.map((item) => (
           <article key={item.label}>
             <span>{item.label}</span>
@@ -198,29 +197,21 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
       </section>
       {data && (
         <p className="businessScopeNote">
-          {tr(
-            "Started-period cohorts followed through now. Includes real internal usage; reviewer demos and test orders excluded. Earlier activity history may be incomplete.",
-            "按所选期间发起的流程，跟踪到当前结果。包含内部账号的真实使用，剔除评审演示账号和测试订单；早期活跃记录可能不完整。",
-          )}
+          {tr("admin.events.adminEvents.startedPeriodCohortsFollowedThroughNow")}
         </p>
       )}
       <GrowthChart data={data} tr={tr} />
       <section className="businessPanel businessFlows">
         <header>
           <div>
-            <h2>{tr("Can people finish the key journeys?", "关键流程，用户走得通吗？")}</h2>
-            <p>
-              {tr(
-                "Each rate follows its own starting cohort. Repeated requests are not extra attempts.",
-                "按同一批流程计算完成率，重复点击和轮询不重复计数。",
-              )}
-            </p>
+            <h2>{tr("admin.events.adminEvents.canPeopleFinishTheKeyJourneys")}</h2>
+            <p>{tr("admin.events.adminEvents.eachRateFollowsItsOwnStarting")}</p>
           </div>
         </header>
         <div
           className="businessSceneTabs"
           role="tablist"
-          aria-label={tr("Business journeys", "业务场景")}
+          aria-label={tr("admin.events.adminEvents.businessJourneys")}
         >
           {(["login", "devices", "payment", "tasks"] as SceneId[]).map((id) => {
             const item = data?.scenes.find((value) => value.id === id);
@@ -264,8 +255,9 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
                 <strong>{percent(item?.rate)}</strong>
                 <small>
                   {item
-                    ? `${format(item.completed)} / ${format(item.total)} ` + tr("completed", "完成")
-                    : tr("Waiting for data", "等待真实数据")}
+                    ? `${format(item.completed)} / ${format(item.total)} ` +
+                      tr("admin.events.adminEvents.completed")
+                    : tr("admin.events.adminEvents.waitingForData")}
                 </small>
               </button>
             );
@@ -281,29 +273,30 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
             <div>
               <h3>
                 {sceneName(scene?.id || selected, tr)}
-                {tr(" completion", "完成率")}
+                {tr("admin.events.adminEvents.completion")}
               </h3>
               <strong>{percent(scene?.rate)}</strong>
               <span>
                 {scene
-                  ? `${format(scene.completed)} / ${format(scene.total)} ` + tr("completed", "完成")
-                  : tr("Waiting for real process data", "等待真实流程数据")}
+                  ? `${format(scene.completed)} / ${format(scene.total)} ` +
+                    tr("admin.events.adminEvents.completed")
+                  : tr("admin.events.adminEvents.waitingForRealProcessData")}
               </span>
               {points !== null && (
                 <small className="businessComparison">
                   {points > 0 ? "+" : ""}
-                  {points} {tr("percentage points vs previous period", "个百分点 · 较上期")}
+                  {points} {tr("admin.events.adminEvents.percentagePointsVsPreviousPeriod")}
                 </small>
               )}
             </div>
             {selected === "login" && (
               <select
-                aria-label={tr("Sign-in method", "登录方式")}
+                aria-label={tr("admin.events.adminEvents.signInMethod")}
                 value={method}
                 onChange={(event) => setMethod(event.target.value)}
               >
-                <option value="all">{tr("All sign-in methods", "全部登录方式")}</option>
-                <option value="email_login">{tr("Email code", "邮箱验证码")}</option>
+                <option value="all">{tr("admin.events.adminEvents.allSignInMethods")}</option>
+                <option value="email_login">{tr("admin.events.adminEvents.emailCode")}</option>
                 <option value="google_login">Google</option>
               </select>
             )}
@@ -333,15 +326,15 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
                 </div>
                 {index > 0 ? (
                   <small>
-                    {tr("From previous step ", "上一步通过率 ")}
+                    {tr("admin.events.adminEvents.fromPreviousStep")}
                     <b>{percent(step.previousRate)}</b>
                     <span>
-                      {tr("Not completed at this step: ", "在这一步未完成 ")}
+                      {tr("admin.events.adminEvents.notCompletedAtThisStep")}
                       {scene ? format(step.dropoff) : "—"}
                     </span>
                   </small>
                 ) : (
-                  <small>{tr("Starting cohort · deduplicated", "同一批发起流程，去重统计")}</small>
+                  <small>{tr("admin.events.adminEvents.startingCohortDeduplicated")}</small>
                 )}
               </article>
             ))}
@@ -350,22 +343,22 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
             <div className="businessFlowOutcome">
               <span>
                 <i data-tone="good" />
-                {tr("Completed ", "已完成 ")}
+                {tr("admin.events.adminEvents.completed2")}
                 <b>{format(scene.completed)}</b>
               </span>
               <span>
                 <i />
-                {tr("In progress ", "进行中 ")}
+                {tr("admin.events.adminEvents.inProgress")}
                 <b>{format(scene.pending)}</b>
               </span>
               <span>
                 <i data-tone="muted" />
-                {tr("Not completed ", "尚未完成 ")}
+                {tr("admin.events.adminEvents.notCompleted")}
                 <b>{format(scene.unfinished)}</b>
               </span>
               {selected === "tasks" && (
                 <span>
-                  {tr("Failed / cancelled / unknown: ", "失败 / 取消 / 结果待确认：")}
+                  {tr("admin.events.adminEvents.failedCancelledUnknown")}
                   {scene.failed} / {scene.cancelled || 0} / {scene.unknown || 0}
                 </span>
               )}
@@ -373,107 +366,74 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
           )}
           {scene?.incompleteEvidence ? (
             <p className="businessInsight">
-              {tr(
-                "Some journeys have missing intermediate evidence; their completion rate is unavailable.",
-                "部分已完成流程缺少中间记录，完成率暂不展示，避免得出错误结论。",
-              )}
+              {tr("admin.events.adminEvents.someJourneysHaveMissingIntermediateEvidence")}
             </p>
           ) : (
             drop && (
               <p className="businessInsight">
                 <Icon name="activity" size={16} />
                 <span>
-                  {tr("Largest drop-off: ", "主要流失环节：")}
+                  {tr("admin.events.adminEvents.largestDropOff")}
                   <strong>{stepName(scene!.id, drop.key, tr)}</strong>
-                  {tr(" · ", "，")}
+                  {tr("admin.events.adminEvents.label")}
                   {format(drop.dropoff)}
-                  {tr(" attempts have not reached this step.", " 次流程尚未走到这一步。")}
-                  {scene!.pending > 0 &&
-                    tr(" Some are still in progress.", " 其中部分流程仍在进行中。")}
+                  {tr("admin.events.adminEvents.attemptsHaveNotReachedThisStep")}
+                  {scene!.pending > 0 && tr("admin.events.adminEvents.someAreStillInProgress")}
                 </span>
               </p>
             )
           )}
           {scene?.total === 0 && (
             <p className="businessEmptySample">
-              {tr(
-                "No attempts recorded for this cohort. A success rate cannot be calculated yet.",
-                "这段时间还没有这个场景的发起记录，暂时不能计算成功率。",
-              )}
+              {tr("admin.events.adminEvents.noAttemptsRecordedForThisCohort")}
             </p>
           )}
           {!!scene?.historyUnmeasured && (
             <p className="businessFootnote">
-              {tr("Historical pairing attempts: ", "另有历史配对 ")}
+              {tr("admin.events.adminEvents.historicalPairingAttempts")}
               {scene.historyUnmeasured}
-              {tr(
-                ". Their original connection outcome was not recorded, so they are excluded from this completion rate.",
-                " 次。没有当时的完整上线记录，未混入完成率分母。",
-              )}
+              {tr("admin.events.adminEvents.theirOriginalConnectionOutcomeWasNot")}
             </p>
           )}
           {selected === "payment" && payment?.orders && (
             <div className="businessOrderMetrics">
               <div>
-                <span>{tr("Order completion rate", "订单完成率")}</span>
+                <span>{tr("admin.events.adminEvents.orderCompletionRate")}</span>
                 <strong>{percent(rate(payment.orders.fulfilled, payment.orders.total))}</strong>
                 <small>
                   {payment.orders.fulfilled} / {payment.orders.total}{" "}
-                  {tr("live-mode orders completed", "笔正式订单完成")}
+                  {tr("admin.events.adminEvents.liveModeOrdersCompleted")}
                 </small>
               </div>
               <div>
-                <span>{tr("Payment confirmed", "已确认付款")}</span>
+                <span>{tr("admin.events.adminEvents.paymentConfirmed")}</span>
                 <strong>{payment.orders.paid}</strong>
-                <small>
-                  {tr("Verified payment, not a page return", "以付款记录为准，不以页面返回判断")}
-                </small>
+                <small>{tr("admin.events.adminEvents.verifiedPaymentNotAPageReturn")}</small>
               </div>
               <div>
-                <span>{tr("Orders awaiting completion", "订单待完成")}</span>
+                <span>{tr("admin.events.adminEvents.ordersAwaitingCompletion")}</span>
                 <strong>{Math.max(0, payment.orders.total - payment.orders.fulfilled)}</strong>
                 <small>
-                  {payment.orders.pending}{" "}
-                  {tr(
-                    "still open; leaving is not a failed charge",
-                    "笔仍在有效期内，离开页面不等于扣款失败",
-                  )}
+                  {payment.orders.pending} {tr("admin.events.adminEvents.stillOpenLeavingIsNotA")}
                 </small>
               </div>
               <div>
-                <span>{tr("Confirmed receipts · USD", "确认收款金额 · 美元")}</span>
+                <span>{tr("admin.events.adminEvents.confirmedReceiptsUsd")}</span>
                 <strong>${((data?.summary.paidCents || 0) / 100).toFixed(2)}</strong>
-                <small>
-                  {tr(
-                    "Excludes zero-price and refunded receipts",
-                    "按本期核验入账，剔除零元和已退款记录",
-                  )}
-                </small>
+                <small>{tr("admin.events.adminEvents.excludesZeroPriceAndRefundedReceipts")}</small>
               </div>
             </div>
           )}
           <details className="businessSource">
-            <summary>{tr("How this rate is calculated", "这个比例怎么算")}</summary>
+            <summary>{tr("admin.events.adminEvents.howThisRateIsCalculated")}</summary>
             <p>
               {selected === "login"
-                ? tr(
-                    "One issued email challenge or Google authorization is one attempt. Email acceptance is not proof of inbox delivery. Success requires a created login session.",
-                    "一次受理的验证码请求或 Google 授权为一次流程。“邮件服务已接收”不代表已送达收件箱；建立登录会话才算成功，授权返回本身不算成功。",
-                  )
+                ? tr("admin.events.adminEvents.oneIssuedEmailChallengeOrGoogle")
                 : selected === "devices"
-                  ? tr(
-                      "One pairing code is one attempt. The device must establish an authenticated connection. Polling never increases the denominator.",
-                      "一个配对码为一次流程。用户确认授权后，设备还需要建立经过身份验证的连接，才算真正上线；配对轮询不增加分母。",
-                    )
+                  ? tr("admin.events.adminEvents.onePairingCodeIsOneAttempt")
                   : selected === "payment"
-                    ? tr(
-                        "The same account and browser visit are followed into linked live-mode orders. Verified payment and delivered access are required. Unattributed orders appear in the independent order rate. Zero-price offers do not add paid users or revenue.",
-                        "购买转化跟踪同一账号、同一购买访问及其关联正式订单，付款确认且权益到账才算完成。没有访问归因的订单仍计入独立的订单完成率。测试订单不计；零元优惠可完成订单，但不计付费用户和收款金额。",
-                      )
-                    : tr(
-                        "Each saved Arc task counts once. Only a confirmed successful result counts as completion. Request acceptance does not.",
-                        "每个实际创建的 Arc 任务统计一次。只有任务结果确认为成功才计入完成，接收到请求不算成功；进行中、失败、取消和未知结果分别保留。",
-                      )}
+                    ? tr("admin.events.adminEvents.theSameAccountAndBrowserVisit")
+                    : tr("admin.events.adminEvents.eachSavedArcTaskCountsOnce")}
             </p>
           </details>
         </div>
@@ -481,30 +441,31 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
       <section className="businessPanel businessActivation">
         <header>
           <div>
-            <h2>{tr("Are new users reaching value?", "新增用户，有没有真正用起来？")}</h2>
-            <p>
-              {tr(
-                "The same registration cohort; each goal uses new users as its denominator.",
-                "同一批新注册用户，分别看三个达成率；截至当前，不把这些目标强行当作先后步骤。",
-              )}
-            </p>
+            <h2>{tr("admin.events.adminEvents.areNewUsersReachingValue")}</h2>
+            <p>{tr("admin.events.adminEvents.theSameRegistrationCohortEachGoal")}</p>
           </div>
         </header>
         <div>
           {[
             {
-              label: tr("Approved computer pairing", "已配对电脑"),
+              label: tr("admin.events.adminEvents.approvedComputerPairing"),
               count: data?.summary.newPaired,
             },
-            { label: tr("First successful use", "已成功使用"), count: data?.summary.newUsed },
-            { label: tr("Became a paying user", "已成为付费用户"), count: data?.summary.newPaid },
+            {
+              label: tr("admin.events.adminEvents.firstSuccessfulUse"),
+              count: data?.summary.newUsed,
+            },
+            {
+              label: tr("admin.events.adminEvents.becameAPayingUser"),
+              count: data?.summary.newPaid,
+            },
           ].map((item) => (
             <article key={item.label}>
               <span>{item.label}</span>
               <strong>{data ? percent(rate(item.count || 0, data.summary.newUsers)) : "—"}</strong>
               <small>
                 {format(item.count)} / {format(data?.summary.newUsers)}{" "}
-                {tr("new users", "位新用户")}
+                {tr("admin.events.adminEvents.newUsers2")}
               </small>
             </article>
           ))}
@@ -512,32 +473,21 @@ export function AdminEvents({ preview = false }: { preview?: boolean }) {
       </section>
       <RetentionPanel key={data?.coverage.activityCompleteFrom || "none"} data={data} tr={tr} />
       <footer className="businessDefinitions">
-        <h3>{tr("Data coverage", "数据从哪里来")}</h3>
-        <p>
-          {tr(
-            "Accounts, sign-ins, foreground visits and real business calls; no heartbeats or pairing polls. Purchases use live order and payment ledgers. UTC reporting days; today is incomplete.",
-            "新增来自真实注册账号；活跃来自登录、前台访问和真实业务调用，不含设备心跳和配对轮询。购买结果来自正式订单及支付账本。按 UTC 划分日期，今天尚未结束。",
-          )}
-        </p>
+        <h3>{tr("admin.events.adminEvents.dataCoverage")}</h3>
+        <p>{tr("admin.events.adminEvents.accountsSignInsForegroundVisitsAnd")}</p>
         {data?.coverage.flowSince && (
           <p>
-            {tr(
-              "Complete sign-in and connection funnels collected since ",
-              "完整登录与连接链路开始采集于 ",
-            )}
+            {tr("admin.events.adminEvents.completeSignInAndConnectionFunnels")}
             {new Date(data.coverage.flowSince).toLocaleDateString(
               locale === "zh" ? "zh-CN" : "en-US",
             )}
-            {tr(
-              ". Earlier unrecorded steps are not reconstructed.",
-              "，此前没有记录的步骤不补造。",
-            )}
+            {tr("admin.events.adminEvents.earlierUnrecordedStepsAreNotReconstructed")}
             {data.coverage.activityCompleteFrom && (
               <>
                 {" "}
-                {tr("Fully observed activity days begin ", "完整活跃观察日从 ")}
+                {tr("admin.events.adminEvents.fullyObservedActivityDaysBegin")}
                 {data.coverage.activityCompleteFrom.slice(0, 10)}
-                {tr("; retention fills as cohorts mature.", " 开始，批次到期后自动形成留存率。")}
+                {tr("admin.events.adminEvents.retentionFillsAsCohortsMature")}
               </>
             )}
           </p>

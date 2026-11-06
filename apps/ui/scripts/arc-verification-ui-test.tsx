@@ -1,3 +1,4 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import React from "react";
 // @ts-expect-error Test renderer is provided by this workspace.
@@ -9,7 +10,8 @@ import {
 } from "../src/features/arc/chat/arc-verification-ui.js";
 import type { ArcVerification } from "@remotearc/protocol";
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-const tr = (en: string) => en,
+await loadLocale("en", "all");
+const tr = createTranslator("en"),
   connections = [
     { id: "mail", provider: "gmail", accountLabel: "Mailbox", status: "active" },
     { id: "gh", provider: "github", accountLabel: "Repository", status: "active" },

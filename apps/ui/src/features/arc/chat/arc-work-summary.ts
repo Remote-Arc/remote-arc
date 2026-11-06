@@ -1,30 +1,31 @@
-export function workStepLabel(tool: string | undefined, tr: (en: string, zh: string) => string) {
+import type { Translate } from "../../../locales/locale-catalog.js";
+export function workStepLabel(tool: string | undefined, tr: Translate) {
   return (
     (
       {
-        read_skill: tr("Choose a suitable skill", "选择合适的技能"),
-        read_skill_resource: tr("Read skill resources", "读取技能资源"),
-        prepare_skill: tr("Prepare task resources", "准备任务资源"),
-        prepare_employee: tr("Organize an agent", "组织智能体"),
-        create_team: tr("Organize the team", "组织队伍"),
-        delegate_work: tr("Assign work", "分派工作"),
-        message_employee: tr("Coordinate agents", "协调智能体"),
-        list_teammates: tr("Find suitable agents", "匹配合适智能体"),
-        call_app: tr("Work with a connected app", "处理已连接应用中的工作"),
-        read_inbox: tr("Read recent messages", "读取最近消息"),
-        device_tool: tr("Work on your computer", "处理电脑上的工作"),
-        list_devices: tr("Find an available computer", "选择可用电脑"),
-        create_task: tr("Arrange a task", "安排任务"),
-        create_routine: tr("Arrange recurring work", "安排例行工作"),
-        manage_work: tr("Update the work plan", "更新工作安排"),
+        read_skill: tr("arc.chat.arcWorkSummary.chooseASuitableSkill"),
+        read_skill_resource: tr("arc.chat.arcWorkSummary.readSkillResources"),
+        prepare_skill: tr("arc.chat.arcWorkSummary.prepareTaskResources"),
+        prepare_employee: tr("arc.chat.arcWorkSummary.organizeAnAgent"),
+        create_team: tr("arc.chat.arcWorkSummary.organizeTheTeam"),
+        delegate_work: tr("arc.chat.arcWorkSummary.assignWork"),
+        message_employee: tr("arc.chat.arcWorkSummary.coordinateAgents"),
+        list_teammates: tr("arc.chat.arcWorkSummary.findSuitableAgents"),
+        call_app: tr("arc.chat.arcWorkSummary.workWithAConnectedApp"),
+        read_inbox: tr("arc.chat.arcWorkSummary.readRecentMessages"),
+        device_tool: tr("arc.chat.arcWorkSummary.workOnYourComputer"),
+        list_devices: tr("arc.chat.arcWorkSummary.findAnAvailableComputer"),
+        create_task: tr("arc.chat.arcWorkSummary.arrangeATask"),
+        create_routine: tr("arc.chat.arcWorkSummary.arrangeRecurringWork"),
+        manage_work: tr("arc.chat.arcWorkSummary.updateTheWorkPlan"),
       } as Record<string, string>
-    )[tool || ""] || tr("Work step", "工作步骤")
+    )[tool || ""] || tr("arc.chat.arcWorkSummary.workStep")
   );
 }
-export function workStepStatus(status: string | undefined, tr: (en: string, zh: string) => string) {
+export function workStepStatus(status: string | undefined, tr: Translate) {
   return status === "completed"
-    ? tr("Finished", "已完成")
+    ? tr("arc.chat.arcWorkSummary.finished")
     : status === "running"
-      ? tr("Working", "处理中")
-      : tr("Needs attention", "需要关注");
+      ? tr("arc.chat.arcWorkSummary.working")
+      : tr("arc.chat.arcWorkSummary.needsAttention");
 }

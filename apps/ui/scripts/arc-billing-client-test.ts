@@ -1,3 +1,4 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import {
   billingRequest,
@@ -11,7 +12,8 @@ import {
   billingRecovery,
   paymentStatusHref,
 } from "../../../packages/protocol/src/billing-recovery.js";
-const en = (english: string, _chinese: string) => english;
+await loadLocale("en", "all");
+const en = createTranslator("en");
 assert.equal(new BillingFailure("unauthorized").message, "UNAUTHORIZED");
 assert.match(billingFailureMessage(Error("unauthorized"), en), /Sign in again/);
 assert.match(

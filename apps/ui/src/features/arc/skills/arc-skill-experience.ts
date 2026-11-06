@@ -1,71 +1,42 @@
-type Tr = (en: string, zh: string) => string;
+import type { Translate } from "../../../locales/locale-catalog.js";
+type Tr = Translate;
 export function workflowExperience(id: string, tr: Tr) {
   return (
     {
       "arc-verified-inbox": {
-        title: tr("Summarize my inbox", "整理邮件重点"),
-        result: tr(
-          "A concise summary with source messages and links.",
-          "交付重点摘要、原邮件来源与链接。",
-        ),
-        needs: tr("Gmail or Outlook", "Gmail 或 Outlook"),
+        title: tr("arc.skills.arcSkillExperience.summarizeMyInbox"),
+        result: tr("arc.skills.arcSkillExperience.aConciseSummaryWithSourceMessages"),
+        needs: tr("arc.skills.arcSkillExperience.gmailOrOutlook"),
         providers: ["gmail", "outlook"],
-        prompt: tr(
-          "Summarize the important recent emails in my connected inbox. Use a reasonable small batch, read the actual content, link the source messages, and tell me if anything needs my attention. Ask only if the account is ambiguous.",
-          "整理已连接邮箱中最近的重要邮件，默认读取少量实际正文，附上来源链接，告诉我有哪些需要处理。仅在账号不明确时询问。",
-        ),
+        prompt: tr("arc.skills.arcSkillExperience.summarizeTheImportantRecentEmailsIn"),
       },
       "arc-verified-issue": {
-        title: tr("Turn a problem into an issue", "把问题整理成 Issue"),
-        result: tr(
-          "A real issue link, checked against its saved title and content.",
-          "交付真实 Issue 链接，并核对保存后的标题和内容。",
-        ),
+        title: tr("arc.skills.arcSkillExperience.turnAProblemIntoAnIssue"),
+        result: tr("arc.skills.arcSkillExperience.aRealIssueLinkCheckedAgainst"),
         needs: "GitHub",
         providers: ["github"],
-        prompt: tr(
-          "Help me turn a problem into a clear GitHub issue in my chosen repository. Use the problem I describe next, create it when the repository and intent are clear, then read it back and return the verified link.",
-          "把我接下来描述的问题整理成清晰的 GitHub Issue。在仓库和创建意图明确后直接创建，再读回核对并返回链接。",
-        ),
+        prompt: tr("arc.skills.arcSkillExperience.helpMeTurnAProblemInto"),
       },
       "arc-verified-deployment": {
-        title: tr("Check a deployment", "检查发布结果"),
-        result: tr(
-          "The observed deployment status and its actual preview URL.",
-          "交付实际部署状态和可打开的预览链接。",
-        ),
+        title: tr("arc.skills.arcSkillExperience.checkADeployment"),
+        result: tr("arc.skills.arcSkillExperience.theObservedDeploymentStatusAndIts"),
         needs: "Vercel",
         providers: ["vercel"],
-        prompt: tr(
-          "Check the deployment I identify next in my connected account, report its actual state and preview URL, and distinguish provider readiness from application verification.",
-          "检查我接下来指定的部署，返回实际状态和预览链接，区分服务商已就绪与应用本身已验证。",
-        ),
+        prompt: tr("arc.skills.arcSkillExperience.checkTheDeploymentIIdentifyNext"),
       },
       "arc-website": {
-        title: tr("Build a working website", "制作可用的网站"),
-        result: tr(
-          "Saved site files and a preview that has actually opened.",
-          "交付已保存的网站文件，以及实际打开检查过的预览。",
-        ),
-        needs: tr("A connected computer", "已连接电脑"),
+        title: tr("arc.skills.arcSkillExperience.buildAWorkingWebsite"),
+        result: tr("arc.skills.arcSkillExperience.savedSiteFilesAndAPreview"),
+        needs: tr("arc.skills.arcSkillExperience.aConnectedComputer"),
         providers: [],
-        prompt: tr(
-          "Build the website I describe next in an authorized workspace, run a preview, check the layout and links, and return the files and observed preview URL. Choose sensible defaults and ask only for essential missing content.",
-          "按我接下来描述的需求，在可用工作目录制作网站，运行预览并检查布局与链接，返回文件和实际预览地址。自行选择合理默认值，仅补齐必要内容。",
-        ),
+        prompt: tr("arc.skills.arcSkillExperience.buildTheWebsiteIDescribeNext"),
       },
       "arc-report": {
-        title: tr("Create a useful report", "生成可用的报告"),
-        result: tr(
-          "A saved report with checked source data and a real file path.",
-          "交付核对过来源数据的报告文件和真实保存路径。",
-        ),
-        needs: tr("Source material and a computer", "资料与已连接电脑"),
+        title: tr("arc.skills.arcSkillExperience.createAUsefulReport"),
+        result: tr("arc.skills.arcSkillExperience.aSavedReportWithCheckedSource"),
+        needs: tr("arc.skills.arcSkillExperience.sourceMaterialAndAComputer"),
         providers: [],
-        prompt: tr(
-          "Create a report from the sources I identify next. Read the actual source material, check figures and provenance, save a usable report and return its real file path.",
-          "根据我接下来提供的资料生成报告。读取实际来源，核对数字与出处，保存可用文件并返回真实路径。",
-        ),
+        prompt: tr("arc.skills.arcSkillExperience.createAReportFromTheSources"),
       },
     } as Record<
       string,

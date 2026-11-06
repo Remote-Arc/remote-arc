@@ -1,6 +1,8 @@
+import type { MessageKey } from "../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
+import { MonitorReliability } from "./monitor-reliability.js";
 import { DeviceExecutionHealthPanel } from "./device-execution-health.js";
 import {
   categoryLabels,
@@ -11,7 +13,7 @@ import {
   type HealthSnapshot,
   type MonitoringSnapshot,
 } from "./service-health-model.js";
-import "./service-health.css";
+import "../../styles/admin/service-health.css";
 import { ServiceMetricsPanel } from "./service-metrics-panel.js";
 import { BusinessHealthOverview } from "./business-health-overview.js";
 import { healthVerdict, type Problem, type Verdict } from "./service-health-verdict.js";
@@ -40,7 +42,7 @@ function VerdictPanel({
         <span className="healthVerdictLight" aria-hidden="true" />
         <div>
           <h2 id="health-verdict-title">
-            {loading ? tr("Checking service health…", "正在检查服务状态…") : verdict.headline}
+            {loading ? tr("admin.serviceHealth.checkingServiceHealth") : verdict.headline}
           </h2>
           {!loading && <p>{verdict.summary}</p>}
           <small>{scope}</small>
@@ -56,8 +58,8 @@ function VerdictPanel({
               </div>
               <button type="button" onClick={() => open(problem)}>
                 {problem.target === "group"
-                  ? tr("See who and when", "查看用户与时间")
-                  : tr("Open details", "查看详情")}{" "}
+                  ? tr("admin.serviceHealth.seeWhoAndWhen")
+                  : tr("admin.serviceHealth.openDetails")}{" "}
                 ↓
               </button>
             </li>
@@ -66,10 +68,9 @@ function VerdictPanel({
       )}
       {!loading && verdict.expected > 0 && (
         <p className="healthExpected">
-          {tr(
-            `${verdict.expected.toLocaleString()} more recorded failures are expected product limits (for example a used-up monthly allowance or a missing permission). They are not faults.`,
-            `另有 ${verdict.expected.toLocaleString()} 次记录属于正常的业务限制（例如月度额度用完、缺少授权），不是故障。`,
-          )}
+          {tr("admin.serviceHealth.moreRecordedFailuresAreExpectedProduct", {
+            expected: verdict.expected.toLocaleString(),
+          })}
         </p>
       )}
     </section>
@@ -152,16 +153,10 @@ export function ServiceHealth({
         setData(null);
         setError(
           failure instanceof Error && failure.message === "INVALID_FILTER"
-            ? tr(
-                "Check the error code, email and identifiers in your filters.",
-                "请检查筛选条件中的错误码、邮箱和标识。",
-              )
+            ? tr("admin.serviceHealth.checkTheErrorCodeEmailAnd")
             : failure instanceof Error && failure.message === "admin_required"
-              ? tr("Sign in with a current administrator account.", "请使用有效的管理员账号登录。")
-              : tr(
-                  "Monitoring data is unavailable. Retry after checking admin access and migrations.",
-                  "监控数据暂不可用，请检查管理员权限和迁移后重试。",
-                ),
+              ? tr("admin.serviceHealth.signInWithACurrentAdministrator")
+              : tr("admin.serviceHealth.monitoringDataIsUnavailableRetryAfter"),
         );
       }
     } finally {
@@ -196,7 +191,7 @@ export function ServiceHealth({
         );
     } catch {
       if (current === detailGeneration.current)
-        setDetailError(tr("Could not load failure details.", "异常详情加载失败。"));
+        setDetailError(tr("admin.serviceHealth.couldNotLoadFailureDetails"));
     } finally {
       if (current === detailGeneration.current) setDetailBusy(false);
     }
@@ -217,18 +212,19 @@ export function ServiceHealth({
             ).catalog,
       );
     } catch {
-      setCatalogError(tr("Could not load the error catalog.", "错误目录加载失败。"));
+      setCatalogError(tr("admin.serviceHealth.couldNotLoadTheErrorCatalog"));
     }
   }
-  const label = (labels: Record<string, [string, string]>, key: string) =>
-    labels[key] ? tr(...labels[key]!) : key;
+  const label = (labels: Record<string, MessageKey>, key: string) =>
+    labels[key] ? tr(labels[key]!) : key;
   const verdict = healthVerdict(health, data, tr);
   const scope =
-    tr("Error codes: ", "错误码范围：") +
-    ({ "1": tr("last hour", "最近 1 小时"), "168": tr("last 7 days", "最近 7 天") }[hours] ||
-      tr("last 24 hours", "最近 24 小时")) +
+    tr("admin.serviceHealth.errorCodes") +
+    ({ "1": tr("admin.serviceHealth.lastHour"), "168": tr("admin.serviceHealth.lastDays") }[
+      hours
+    ] || tr("admin.serviceHealth.lastHours")) +
     (domain ? " · " + label(domainLabels, domain) : "") +
-    tr(" · Server errors and computers: live", " · 服务器错误与电脑状态：实时");
+    tr("admin.serviceHealth.serverErrorsAndComputersLive");
   // Anchors are looked up inside this component, never by global id, so a
   // second copy of the console on the page cannot capture the jump.
   const anchor = (name: string) =>
@@ -248,7 +244,11 @@ export function ServiceHealth({
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   return (
-    <section ref={root} className="serviceHealth" aria-label={tr("Service monitoring", "服务监控")}>
+    <section
+      ref={root}
+      className="serviceHealth"
+      aria-label={tr("admin.serviceHealth.serviceMonitoring")}
+    >
       <VerdictPanel
         verdict={verdict}
         scope={scope}
@@ -263,19 +263,14 @@ export function ServiceHealth({
       <div className="healthToolbar">
         <div>
           <span className="healthEyebrow">REMOTE ARC / OBSERVABILITY</span>
-          <p>
-            {tr(
-              "Operational failures, with the context needed to investigate.",
-              "统一查看业务与执行异常，关联排查所需信息。",
-            )}
-          </p>
+          <p>{tr("admin.serviceHealth.operationalFailuresWithTheContextNeeded")}</p>
           <small>
-            {tr("Updated ", "更新于 ")}
-            {date(data?.checkedAt || health?.checkedAt)} · {tr("Manual refresh", "手动刷新")}
+            {tr("admin.serviceHealth.updated")}
+            {date(data?.checkedAt || health?.checkedAt)} · {tr("admin.serviceHealth.manualRefresh")}
           </small>
         </div>
         <button
-          aria-label={tr("Refresh monitoring", "刷新监控")}
+          aria-label={tr("admin.serviceHealth.refreshMonitoring")}
           className="adminOutlineBtn"
           disabled={busy || loading}
           onClick={() => {
@@ -284,41 +279,39 @@ export function ServiceHealth({
             setMetricsRevision((value) => value + 1);
           }}
         >
-          {busy || loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")} ↻
+          {busy || loading
+            ? tr("admin.serviceHealth.refreshing")
+            : tr("admin.serviceHealth.refresh")}{" "}
+          ↻
         </button>
       </div>
       {preview && (
-        <p className="healthNotice">
-          {tr(
-            "Fictional sample data. No real user incidents or provider calls.",
-            "虚构示例数据，不代表真实用户异常，不调用外部服务。",
-          )}
-        </p>
+        <p className="healthNotice">{tr("admin.serviceHealth.fictionalSampleDataNoRealUser")}</p>
       )}
       <div className="healthStatusStrip">
         <div>
           <span
             className={"healthDot " + (health?.worker.status === "degraded" ? "isWarning" : "")}
           />
-          <span>{tr("Platform", "平台服务")}</span>
+          <span>{tr("admin.serviceHealth.platform")}</span>
           <strong>
             {!health
               ? "—"
               : health.worker.status === "degraded"
-                ? tr("Needs attention", "需要排查")
-                : tr("Reachable", "可访问")}
+                ? tr("admin.serviceHealth.needsAttention")
+                : tr("admin.serviceHealth.reachable")}
           </strong>
         </div>
         <div>
-          <span>{tr("Device signals · 15m", "设备信号 · 15 分钟")}</span>
+          <span>{tr("admin.serviceHealth.deviceSignalsM")}</span>
           <strong>
             {!health?.deviceExecution || health.deviceExecution.coverage === "no_samples"
-              ? tr("Awaiting observations", "等待观测")
+              ? tr("admin.serviceHealth.awaitingObservations")
               : health.deviceExecution.coverage === "unavailable"
-                ? tr("Unavailable", "不可用")
+                ? tr("admin.serviceHealth.unavailable")
                 : health?.deviceExecution?.affectedDevices
-                  ? tr("Issues observed", "发现异常")
-                  : tr("No recent issues recorded", "未记录近期异常")}
+                  ? tr("admin.serviceHealth.issuesObserved")
+                  : tr("admin.serviceHealth.noRecentIssuesRecorded")}
           </strong>
         </div>
         <div>
@@ -332,25 +325,25 @@ export function ServiceHealth({
       </div>
       <div className="healthFilters">
         <label>
-          {tr("Period", "时间范围")}
+          {tr("admin.serviceHealth.period")}
           <select
-            aria-label={tr("Period", "时间范围")}
+            aria-label={tr("admin.serviceHealth.period")}
             value={hours}
             onChange={(e) => setHours(e.target.value)}
           >
-            <option value="1">{tr("Last hour", "最近 1 小时")}</option>
-            <option value="24">{tr("Last 24 hours", "最近 24 小时")}</option>
-            <option value="168">{tr("Last 7 days", "最近 7 天")}</option>
+            <option value="1">{tr("admin.serviceHealth.lastHour2")}</option>
+            <option value="24">{tr("admin.serviceHealth.lastHours2")}</option>
+            <option value="168">{tr("admin.serviceHealth.lastDays2")}</option>
           </select>
         </label>
         <label>
-          {tr("Module", "业务模块")}
+          {tr("admin.serviceHealth.module")}
           <select
-            aria-label={tr("Module", "业务模块")}
+            aria-label={tr("admin.serviceHealth.module")}
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
           >
-            <option value="">{tr("All modules", "全部模块")}</option>
+            <option value="">{tr("admin.serviceHealth.allModules")}</option>
             {Object.keys(domainLabels).map((key) => (
               <option key={key} value={key}>
                 {label(domainLabels, key)}
@@ -359,19 +352,19 @@ export function ServiceHealth({
           </select>
         </label>
         <label>
-          {tr("Triage", "排查范围")}
+          {tr("admin.serviceHealth.triage")}
           <select
-            aria-label={tr("Triage", "排查范围")}
+            aria-label={tr("admin.serviceHealth.triage")}
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
-            <option value="">{tr("All recorded failures", "所有失败记录")}</option>
-            <option value="attention">{tr("Needs investigation", "需要排查")}</option>
-            <option value="expected">{tr("Business limits & guards", "业务限制与拦截")}</option>
+            <option value="">{tr("admin.serviceHealth.allRecordedFailures")}</option>
+            <option value="attention">{tr("admin.serviceHealth.needsInvestigation")}</option>
+            <option value="expected">{tr("admin.serviceHealth.businessLimitsGuards")}</option>
           </select>
         </label>
         <details className="healthAdvanced">
-          <summary>{tr("Find a user, device or request", "定位用户、设备或请求")}</summary>
+          <summary>{tr("admin.serviceHealth.findAUserDeviceOrRequest")}</summary>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -379,7 +372,7 @@ export function ServiceHealth({
             }}
           >
             <label>
-              {tr("Account email", "用户邮箱")}
+              {tr("admin.serviceHealth.accountEmail")}
               <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
             </label>
             <label>
@@ -391,14 +384,14 @@ export function ServiceHealth({
               <input value={trace} onChange={(e) => setTrace(e.target.value)} />
             </label>
             <label>
-              {tr("Error code", "错误码")}
+              {tr("admin.serviceHealth.errorCode")}
               <input
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="BILLING_INVALID_PLAN_CHANGE"
               />
             </label>
-            <button className="adminOutlineBtn">{tr("Apply", "应用")}</button>
+            <button className="adminOutlineBtn">{tr("admin.serviceHealth.apply")}</button>
             <button
               type="button"
               className="adminOutlineBtn"
@@ -410,7 +403,7 @@ export function ServiceHealth({
                 setApplied({ email: "", deviceId: "", trace: "", code: "" });
               }}
             >
-              {tr("Clear", "清空")}
+              {tr("admin.serviceHealth.clear")}
             </button>
           </form>
         </details>
@@ -429,10 +422,13 @@ export function ServiceHealth({
       />
       <div className="healthMetrics">
         {[
-          { label: tr("Failure observations", "失败记录"), value: data?.summary.total },
-          { label: tr("Needs investigation", "需要排查"), value: data?.summary.attention },
-          { label: tr("Affected accounts", "关联用户"), value: data?.summary.affectedUsers },
-          { label: tr("Affected devices", "关联设备"), value: data?.summary.affectedDevices },
+          { label: tr("admin.serviceHealth.failureObservations"), value: data?.summary.total },
+          { label: tr("admin.serviceHealth.needsInvestigation"), value: data?.summary.attention },
+          { label: tr("admin.serviceHealth.affectedAccounts"), value: data?.summary.affectedUsers },
+          {
+            label: tr("admin.serviceHealth.affectedDevices"),
+            value: data?.summary.affectedDevices,
+          },
         ].map((item) => (
           <div key={item.label}>
             <span>{item.label}</span>
@@ -441,15 +437,12 @@ export function ServiceHealth({
         ))}
       </div>
       <p className="healthBoundary">
-        {tr(
-          "Counts are observations across stages, not unique incidents or failed user goals. Browser reports are unverified. Intake limits can reduce counts; missing history is not proof of health.",
-          "统计跨阶段的失败记录，不等于独立故障数或用户任务失败数。前端报告未经服务端确认，限流可能减少记录，缺少历史记录不代表正常。",
-        )}
+        {tr("admin.serviceHealth.countsAreObservationsAcrossStagesNot")}
       </p>
       <div className="healthWorkspace">
-        <nav className="healthCategories" aria-label={tr("Failure categories", "异常分类")}>
+        <nav className="healthCategories" aria-label={tr("admin.serviceHealth.failureCategories")}>
           {[
-            ["", tr("All categories", "全部分类")],
+            ["", tr("admin.serviceHealth.allCategories")],
             ...Object.keys(categoryLabels).map((key) => [key, label(categoryLabels, key)]),
           ].map(([key, title]) => (
             <button key={key} aria-pressed={category === key} onClick={() => setCategory(key!)}>
@@ -464,17 +457,17 @@ export function ServiceHealth({
         </nav>
         <div className="healthIssueList">
           <header>
-            <h3>{tr("Business & execution issues", "业务与执行异常")}</h3>
-            <small>{tr("Grouped by error code", "按错误码聚合")}</small>
+            <h3>{tr("admin.serviceHealth.businessExecutionIssues")}</h3>
+            <small>{tr("admin.serviceHealth.groupedByErrorCode")}</small>
           </header>
           {busy && (
             <p className="healthEmpty" role="status">
-              {tr("Loading observations…", "加载记录…")}
+              {tr("admin.serviceHealth.loadingObservations")}
             </p>
           )}
           {!busy && data?.groups.length === 0 && (
             <p className="healthEmpty">
-              {tr("No matching failures recorded in this period.", "当前范围未记录匹配的失败。")}
+              {tr("admin.serviceHealth.noMatchingFailuresRecordedInThis")}
             </p>
           )}
           {!busy &&
@@ -514,8 +507,8 @@ export function ServiceHealth({
                   <span className="healthIssueCount">
                     <strong>{group.total.toLocaleString()}</strong>
                     <small>
-                      {group.affectedUsers} {tr("accounts", "位用户")} · {group.affectedDevices}{" "}
-                      {tr("devices", "台设备")}
+                      {group.affectedUsers} {tr("admin.serviceHealth.accounts")} ·{" "}
+                      {group.affectedDevices} {tr("admin.serviceHealth.devices")}
                     </small>
                     <small>{date(group.lastSeen)}</small>
                   </span>
@@ -525,27 +518,27 @@ export function ServiceHealth({
                   selected.category === group.category && (
                     <div className="healthIssueDetail">
                       <p>
-                        <b>{tr("Next check", "排查建议")}</b>{" "}
+                        <b>{tr("admin.serviceHealth.nextCheck")}</b>{" "}
                         {tr(
                           group.definition.actionEn || group.definition.action,
                           group.definition.action,
                         )}
                       </p>
                       <small>
-                        {tr("First seen: ", "首次记录：")}
-                        {date(group.firstSeen)} · {tr("Last seen: ", "最近记录：")}
+                        {tr("admin.serviceHealth.firstSeen")}
+                        {date(group.firstSeen)} · {tr("admin.serviceHealth.lastSeen")}
                         {date(group.lastSeen)}
                       </small>
                       {detailError && (
                         <p role="alert">
                           {detailError}
                           <button onClick={() => void openGroup(group)}>
-                            {tr("Retry", "重试")}
+                            {tr("admin.serviceHealth.retry")}
                           </button>
                         </p>
                       )}
                       {detailBusy && !detail && (
-                        <p role="status">{tr("Loading details…", "加载详情…")}</p>
+                        <p role="status">{tr("admin.serviceHealth.loadingDetails")}</p>
                       )}
                       {detail?.events.map((event) => (
                         <article className="healthEvent" key={event.id}>
@@ -553,27 +546,27 @@ export function ServiceHealth({
                             <strong>
                               {event.userName ||
                                 event.userEmail ||
-                                tr("Unidentified account", "未识别账号")}
+                                tr("admin.serviceHealth.unidentifiedAccount")}
                             </strong>
                             <time>{date(event.occurred_at)}</time>
                           </header>
                           <small>
                             {event.userEmail ||
                               event.user_id ||
-                              tr("No authenticated account recorded", "未记录已认证账号")}
+                              tr("admin.serviceHealth.noAuthenticatedAccountRecorded")}
                           </small>
                           <dl>
                             <div>
-                              <dt>{tr("Device", "设备")}</dt>
+                              <dt>{tr("admin.serviceHealth.device")}</dt>
                               <dd>
                                 {event.deviceName ||
-                                  tr("Not recorded / not applicable", "未记录／不适用")}
+                                  tr("admin.serviceHealth.notRecordedNotApplicable")}
                                 {event.devicePlatform ? " · " + event.devicePlatform : ""}
                                 {event.device_id && <small>{event.device_id}</small>}
                               </dd>
                             </div>
                             <div>
-                              <dt>{tr("Stage / operation", "阶段／操作")}</dt>
+                              <dt>{tr("admin.serviceHealth.stageOperation")}</dt>
                               <dd>
                                 {event.name}
                                 {event.operation ? " · " + event.operation : ""}
@@ -581,13 +574,13 @@ export function ServiceHealth({
                               </dd>
                             </div>
                             <div>
-                              <dt>{tr("Evidence", "记录来源")}</dt>
+                              <dt>{tr("admin.serviceHealth.evidence")}</dt>
                               <dd>
                                 {event.source === "browser"
-                                  ? tr("Browser report · unverified", "前端报告 · 未经确认")
+                                  ? tr("admin.serviceHealth.browserReportUnverified")
                                   : event.source === "stripe"
-                                    ? tr("Payment backend", "支付服务端")
-                                    : tr("Server observation", "服务端记录")}
+                                    ? tr("admin.serviceHealth.paymentBackend")
+                                    : tr("admin.serviceHealth.serverObservation")}
                                 {event.http_status ? " · HTTP " + event.http_status : ""}
                                 {event.duration_ms != null ? " · " + event.duration_ms + " ms" : ""}
                               </dd>
@@ -605,7 +598,7 @@ export function ServiceHealth({
                                       .catch(() => {})
                                   }
                                 >
-                                  {tr("Copy", "复制")}
+                                  {tr("admin.serviceHealth.copy")}
                                 </button>
                               </dd>
                             </div>
@@ -618,10 +611,11 @@ export function ServiceHealth({
                               </div>
                             )}
                             <div>
-                              <dt>{tr("Deployment / route", "部署／接口")}</dt>
+                              <dt>{tr("admin.serviceHealth.deploymentRoute")}</dt>
                               <dd>
-                                {event.deployment?.slice(0, 12) || tr("Unknown", "未知")} ·{" "}
-                                {event.route || "—"}
+                                {event.deployment?.slice(0, 12) ||
+                                  tr("admin.serviceHealth.unknown")}{" "}
+                                · {event.route || "—"}
                               </dd>
                             </div>
                           </dl>
@@ -633,11 +627,11 @@ export function ServiceHealth({
                           className="adminOutlineBtn"
                           onClick={() => void openGroup(group, detail.nextCursor!)}
                         >
-                          {tr("Load more records", "加载更多记录")}
+                          {tr("admin.serviceHealth.loadMoreRecords")}
                         </button>
                       )}
                       <details className="healthSource">
-                        <summary>{tr("Code locations", "代码位置")}</summary>
+                        <summary>{tr("admin.serviceHealth.codeLocations")}</summary>
                         {group.definition.sources.map((source) => (
                           <code key={source}>{source}</code>
                         ))}
@@ -648,29 +642,23 @@ export function ServiceHealth({
             ))}
           {data?.groupsTruncated && (
             <p className="healthBoundary">
-              {tr(
-                "Showing 200 groups. Narrow the period or module to inspect more.",
-                "当前最多展示 200 组，请缩小时间或业务模块后查看。",
-              )}
+              {tr("admin.serviceHealth.showingGroupsNarrowThePeriodOr")}
             </p>
           )}
         </div>
       </div>
       <details className="healthSection" data-health-anchor="devices">
         <summary>
-          <span>{tr("Device execution", "设备执行")}</span>
-          <small>
-            {tr("15-minute signals and affected computers", "最近 15 分钟的执行信号与设备")}
-          </small>
+          <span>{tr("admin.serviceHealth.deviceExecution")}</span>
+          <small>{tr("admin.serviceHealth.minuteSignalsAndAffectedComputers")}</small>
         </summary>
         <DeviceExecutionHealthPanel value={health?.deviceExecution} />
+        <MonitorReliability state={health?.deviceReliability} tr={tr} />
       </details>
       <details className="healthSection" data-health-anchor="infrastructure">
         <summary>
-          <span>{tr("Infrastructure & alert delivery", "基础设施与告警")}</span>
-          <small>
-            {tr("Dependency probes and grouped service incidents", "依赖检测与分类服务异常")}
-          </small>
+          <span>{tr("admin.serviceHealth.infrastructureAlertDelivery")}</span>
+          <small>{tr("admin.serviceHealth.dependencyProbesAndGroupedServiceIncidents")}</small>
         </summary>
         <div className="healthDependencies">
           <div>
@@ -683,11 +671,11 @@ export function ServiceHealth({
             Durable Objects <b>{health?.dependencies.durableObjects.status || "—"}</b>
           </div>
           <div>
-            {tr("Email alerts", "邮件告警")}{" "}
+            {tr("admin.serviceHealth.emailAlerts")}{" "}
             <b>
               {health?.alerts.emailConfigured
-                ? tr("Configured", "已配置")
-                : tr("Not configured", "未配置")}
+                ? tr("admin.serviceHealth.configured")
+                : tr("admin.serviceHealth.notConfigured")}
             </b>
           </div>
         </div>
@@ -695,10 +683,10 @@ export function ServiceHealth({
           <details className="healthIncidentGroup" key={group.key}>
             <summary>
               {group.key === "database"
-                ? tr("Database errors", "数据库异常")
+                ? tr("admin.serviceHealth.databaseErrors")
                 : group.key === "exceptions"
-                  ? tr("Unhandled exceptions", "未捕获异常")
-                  : tr("HTTP server errors", "HTTP 服务异常")}
+                  ? tr("admin.serviceHealth.unhandledExceptions")
+                  : tr("admin.serviceHealth.httpServerErrors")}
               <b>{group.count}</b>
             </summary>
             {group.items.map((item) => (
@@ -716,10 +704,7 @@ export function ServiceHealth({
           </details>
         ))}
         <p className="healthBoundary">
-          {tr(
-            "The latest 40 sanitized infrastructure records are grouped here. Device issues and business guards do not by themselves prove a platform outage.",
-            "此处分类展示最近 40 条脱敏基础设施记录。设备异常或业务拦截本身不代表平台故障。",
-          )}
+          {tr("admin.serviceHealth.theLatestSanitizedInfrastructureRecordsAre")}
         </p>
       </details>
       <details
@@ -729,24 +714,24 @@ export function ServiceHealth({
         }}
       >
         <summary>
-          <span>{tr("Error reference", "错误码说明")}</span>
-          <small>{tr("Meaning, triage and code locations", "含义、排查建议与代码位置")}</small>
+          <span>{tr("admin.serviceHealth.errorReference")}</span>
+          <small>{tr("admin.serviceHealth.meaningTriageAndCodeLocations")}</small>
         </summary>
         <input
           className="healthCatalogSearch"
-          aria-label={tr("Search error reference", "搜索错误码说明")}
-          placeholder={tr("Search a code or meaning…", "搜索错误码或说明…")}
+          aria-label={tr("admin.serviceHealth.searchErrorReference")}
+          placeholder={tr("admin.serviceHealth.searchACodeOrMeaning")}
           value={catalogSearch}
           onChange={(e) => setCatalogSearch(e.target.value)}
         />
         {catalogError && (
           <p role="alert">
             {catalogError}
-            <button onClick={() => void loadCatalog()}>{tr("Retry", "重试")}</button>
+            <button onClick={() => void loadCatalog()}>{tr("admin.serviceHealth.retry")}</button>
           </p>
         )}
         <small>
-          {catalog?.length ?? "—"} {tr("catalogued codes", "个已收录错误码")}
+          {catalog?.length ?? "—"} {tr("admin.serviceHealth.cataloguedCodes")}
         </small>
         <div className="healthCatalog">
           {catalog
@@ -773,17 +758,11 @@ export function ServiceHealth({
             ))}
         </div>
         <p className="healthBoundary">
-          {tr(
-            "Showing up to 60 matching definitions. Search to locate a specific code. Unknown errors are grouped without storing their original text.",
-            "最多显示 60 条匹配说明，可搜索定位具体错误码。未识别错误统一归类，不保存原始文本。",
-          )}
+          {tr("admin.serviceHealth.showingUpToMatchingDefinitionsSearch")}
         </p>
       </details>
       <p className="healthBoundary">
-        {tr(
-          "30-day operational metadata retention. No message bodies, files, tool arguments, credentials or payment details. Account and device names are visible only to administrators.",
-          "运维元数据保留 30 天。不采集正文、文件、工具参数、凭据或支付详情，用户与设备名称仅管理员可见。",
-        )}
+        {tr("admin.serviceHealth.dayOperationalMetadataRetentionNoMessage")}
       </p>
     </section>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { arcChatHref } from "../../../../../../packages/docs/src/arc-use-cases.js";
 import {
   PUBLISHED_MEDIA_DEMOS,
@@ -8,8 +8,8 @@ import {
   type MediaDemo,
   type MediaCategory,
 } from "../../../../../../packages/docs/src/media-gallery.js";
-import "./media-demo-gallery.css";
-import "./image-demo-gallery.css";
+import "../../../styles/marketing/use-cases/media-demo-gallery.css";
+import "../../../styles/marketing/use-cases/image-demo-gallery.css";
 
 export function MediaDemoGallery() {
   const { tr, locale } = useI18n(),
@@ -39,10 +39,10 @@ export function MediaDemoGallery() {
     MEDIA_CATEGORIES.find((item) => item.id === value)![locale];
   const sound = (value: MediaDemo["audio"]) =>
     value === "silent"
-      ? tr("Silent original", "原版无声")
+      ? tr("marketing.useCases.mediaDemoGallery.silentOriginal")
       : value === "narration"
-        ? tr("Narration & sound", "解说与声音")
-        : tr("Music", "配乐");
+        ? tr("marketing.useCases.mediaDemoGallery.narrationSound")
+        : tr("marketing.useCases.mediaDemoGallery.music");
   return (
     <section
       className="mediaDemoGallery"
@@ -51,21 +51,20 @@ export function MediaDemoGallery() {
     >
       <header className="mediaGalleryHeader">
         <div>
-          <span className="eyebrow">{tr("THE VIDEO GALLERY", "视频作品画廊")}</span>
-          <h2 id="video-gallery-heading">{tr("A prompt. A real film.", "一句想法，一支成片。")}</h2>
-          <p>
-            {tr(
-              "Sports, science, products, data and places. Explore films made through Remote Arc on personal computers.",
-              "从运动、科普，到产品、数据与地图。看看 Remote Arc 在个人电脑上制作的真实作品。",
-            )}
-          </p>
+          <span className="eyebrow">
+            {tr("marketing.useCases.mediaDemoGallery.theVideoGallery")}
+          </span>
+          <h2 id="video-gallery-heading">
+            {tr("marketing.useCases.mediaDemoGallery.aPromptARealFilm")}
+          </h2>
+          <p>{tr("marketing.useCases.mediaDemoGallery.sportsScienceProductsDataAndPlaces")}</p>
         </div>
         <div className="mediaGalleryStamp">
           <strong>{String(visible.length).padStart(2, "0")}</strong>
           <span>
-            {tr("REAL DEMOS", "真实作品")}
+            {tr("marketing.useCases.mediaDemoGallery.realDemos")}
             <br />
-            {tr("RENDERED LOCALLY", "本地渲染")}
+            {tr("marketing.useCases.mediaDemoGallery.renderedLocally")}
           </span>
         </div>
       </header>
@@ -75,7 +74,7 @@ export function MediaDemoGallery() {
             <button
               className="mediaDemoPreview"
               type="button"
-              aria-label={tr("Play ", "播放：") + item.title[locale]}
+              aria-label={tr("marketing.useCases.mediaDemoGallery.play") + item.title[locale]}
               onClick={(event) => {
                 opener.current = event.currentTarget;
                 setSelected(item);
@@ -113,29 +112,23 @@ export function MediaDemoGallery() {
                   setSelected(item);
                 }}
               >
-                {tr("Watch film", "观看作品")} <span aria-hidden="true">↗</span>
+                {tr("marketing.useCases.mediaDemoGallery.watchFilm")}{" "}
+                <span aria-hidden="true">↗</span>
               </button>
             </div>
           </article>
         ))}
       </div>
       <footer className="mediaGalleryFooter">
-        <p>
-          {tr(
-            "Open a finished film, explore its details and use the brief to make your own. Every example is rendered on a personal computer.",
-            "打开成片查看细节，也可以沿用创作需求制作自己的作品。每支示例都在个人电脑上渲染。",
-          )}
-        </p>
+        <p>{tr("marketing.useCases.mediaDemoGallery.openAFinishedFilmExploreIts")}</p>
         <a
           href={arcChatHref(
-            tr(
-              "Help me make a finished video on my computer. Ask for the topic and format, then check my available local tools.",
-              "帮我在自己的电脑上制作一支成片。先明确主题和画幅，再检查可用的本地工具。",
-            ),
+            tr("marketing.useCases.mediaDemoGallery.helpMeMakeAFinishedVideo"),
             "video-gallery",
           )}
         >
-          {tr("Make your own film", "制作你的作品")} <span aria-hidden="true">→</span>
+          {tr("marketing.useCases.mediaDemoGallery.makeYourOwnFilm")}{" "}
+          <span aria-hidden="true">→</span>
         </a>
       </footer>
       <dialog
@@ -160,7 +153,7 @@ export function MediaDemoGallery() {
                 type="button"
                 className="mediaPlayerClose"
                 autoFocus
-                aria-label={tr("Close video", "关闭视频")}
+                aria-label={tr("marketing.useCases.mediaDemoGallery.closeVideo")}
                 onClick={close}
               >
                 ×
@@ -187,21 +180,23 @@ export function MediaDemoGallery() {
                 <span className="mediaPlayerMeta">
                   {selected.engine} · {selected.width} × {selected.height} ·{" "}
                   {Math.round(selected.duration)}s · {sound(selected.audio)} ·{" "}
-                  {selected.language === "en" ? tr("English", "英文") : tr("Chinese", "中文")}
+                  {selected.language === "en"
+                    ? tr("marketing.useCases.mediaDemoGallery.english")
+                    : tr("marketing.useCases.mediaDemoGallery.chinese")}
                 </span>
               </div>
               <a
                 className="mediaPlayerCreate"
                 href={arcChatHref(selected.prompt[locale], "video-demo:" + selected.id)}
               >
-                {tr("Make something like this", "制作类似视频")} ↗
+                {tr("marketing.useCases.mediaDemoGallery.makeSomethingLikeThis")} ↗
               </a>
             </div>
             {failed && (
               <p className="mediaPlayerError" role="alert">
-                {tr("This video could not load. ", "视频暂时无法加载。")}
+                {tr("marketing.useCases.mediaDemoGallery.thisVideoCouldNotLoad")}
                 <a href={src(selected.video)} target="_blank" rel="noreferrer">
-                  {tr("Open the video file", "打开视频文件")}
+                  {tr("marketing.useCases.mediaDemoGallery.openTheVideoFile")}
                 </a>
               </p>
             )}

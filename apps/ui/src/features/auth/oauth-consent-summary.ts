@@ -1,10 +1,9 @@
+import type { MessageKey } from "../../locales/locale-catalog.js";
 export type ConsentGroup = {
   key: string;
   icon: string;
-  title: string;
-  titleZh: string;
-  description: string;
-  descriptionZh: string;
+  title: MessageKey;
+  description: MessageKey;
 };
 
 // Labels are presentation-only: the server still enforces the exact OAuth scopes.
@@ -17,14 +16,11 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
     groups.push({
       key: "devices",
       icon: "⌘",
-      title: "Use devices you allow",
-      titleZh: "使用你允许的设备",
+      title: "auth.oauthConsentSummary.devices.title",
+
       description: canWrite
-        ? "Find computers, read permitted files, edit files and run commands only where device permissions allow."
-        : "Find linked computers and read permitted files or device status.",
-      descriptionZh: canWrite
-        ? "查找已连接电脑、读取允许的文件；仅能在设备开放对应权限时修改文件或运行命令。"
-        : "查找已连接电脑，在设备允许范围内查看文件或设备状态。",
+        ? "auth.oauthConsentSummary.devices.withWrite"
+        : "auth.oauthConsentSummary.devices.read",
     });
   }
   if (has("browser:read", "browser:interact")) {
@@ -32,14 +28,11 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
     groups.push({
       key: "browser",
       icon: "▣",
-      title: "Use shared browser tabs",
-      titleZh: "使用你共享的浏览器标签页",
+      title: "auth.oauthConsentSummary.browser.title",
+
       description: canInteract
-        ? "Read shared pages and click or fill controls when your browser permissions allow."
-        : "Read pages you choose to share through Remote Arc.",
-      descriptionZh: canInteract
-        ? "读取共享页面，并在浏览器权限和安全限制允许时点击或填写内容。"
-        : "只读取你通过 Remote Arc 共享的浏览器页面。",
+        ? "auth.oauthConsentSummary.browser.withWrite"
+        : "auth.oauthConsentSummary.browser.read",
     });
   }
   if (has("apps:read", "apps:write")) {
@@ -47,14 +40,11 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
     groups.push({
       key: "apps",
       icon: "▦",
-      title: "Use services you connect",
-      titleZh: "使用你连接的应用服务",
+      title: "auth.oauthConsentSummary.apps.title",
+
       description: canWrite
-        ? "Find your linked services, such as GitHub and Gmail. Changes require permissions granted by the connected service and the user request; Remote Arc does not require a separate approval for each App operation."
-        : "Find and read services you have separately connected.",
-      descriptionZh: canWrite
-        ? "查找你连接的 GitHub、Gmail 等服务。写入操作须符合已授权的服务权限和你的任务指令，Remote Arc 不再逐次审批每项操作。"
-        : "查找、读取你独立授权的服务，不会自动连接新账号。",
+        ? "auth.oauthConsentSummary.apps.withWrite"
+        : "auth.oauthConsentSummary.apps.read",
     });
   }
   if (has("automation:read", "automation:write", "agent:write")) {
@@ -62,25 +52,20 @@ export function summarizeConsentScopes(input: readonly string[]): ConsentGroup[]
     groups.push({
       key: "automation",
       icon: "↻",
-      title: "Manage ongoing tasks",
-      titleZh: "管理持续运行的任务",
+      title: "auth.oauthConsentSummary.automation.title",
+
       description: canAct
-        ? "Review and manage authorized tasks, including work that continues after this conversation."
-        : "Check the status of tasks already set up in Remote Arc.",
-      descriptionZh: canAct
-        ? "查看并管理你允许的持续任务，部分任务可在聊天结束后继续运行。"
-        : "查看 Remote Arc 中已有任务的运行状态。",
+        ? "auth.oauthConsentSummary.automation.withWrite"
+        : "auth.oauthConsentSummary.automation.read",
     });
   }
   if (scopes.has("offline_access")) {
     groups.push({
       key: "session",
       icon: "✓",
-      title: "Stay connected",
-      titleZh: "保持连接",
-      description:
-        "Use a renewable sign-in so you do not have to reconnect every hour; you can revoke access.",
-      descriptionZh: "使用可刷新的登录状态，避免每小时重新连接；你可以撤销授权。",
+      title: "auth.oauthConsentSummary.session.title",
+
+      description: "auth.oauthConsentSummary.session.description",
     });
   }
   return groups;

@@ -1,114 +1,131 @@
+import type { MessageKey } from "../../../locales/locale-catalog.js";
 import { CreativeDirectoryPreviews } from "./local-creative-demo.js";
 import { useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
 import directory from "../../../data/app-directory.json" with { type: "json" };
-import "./apps-directory.css";
-import "./apps-directory-compact.css";
+import "../../../styles/marketing/home/apps-directory.css";
+import "../../../styles/marketing/home/apps-directory-compact.css";
 
-type SkillLink = { name: string; nameZh: string; href: string };
+type SkillLink = { name: MessageKey; keywords: MessageKey; href: string };
 type Showcase = {
   id: string;
-  name: string;
-  nameZh: string;
-  description: string;
-  descriptionZh: string;
+  name: MessageKey;
+  description: MessageKey;
   categories: string[];
-  prompt: string;
-  promptZh: string;
+  prompt: MessageKey;
   href: string;
-  keywords: string;
+  keywords: MessageKey;
   skills: SkillLink[];
 };
 const showcase: Showcase[] = [
   {
     id: "email_calendar",
-    name: "Email & calendar",
-    nameZh: "邮件与日程",
-    description: "Catch up, draft replies and find time to meet.",
-    descriptionZh: "整理收件箱、准备回复、安排会议。",
+    name: "marketing.home.appsDirectory.email_calendar.name",
+    description: "marketing.home.appsDirectory.email_calendar.description",
     categories: ["email_calendar"],
-    prompt: "Find a meeting time across my Google and Outlook calendars.",
-    promptZh: "对照我的 Google 和 Outlook 日历，找个开会时间。",
+    prompt: "marketing.home.appsDirectory.email_calendar.prompt",
     href: "/integrations?category=email_calendar",
-    keywords: "email calendar 邮件 日历",
+    keywords: "marketing.home.appsDirectory.email_calendar.search",
     skills: [],
   },
   {
     id: "docs_files",
-    name: "Documents & data",
-    nameZh: "文档与数据",
-    description: "Find the source. Turn it into a useful document.",
-    descriptionZh: "找到资料，把它变成表格、演示文稿和报告。",
+    name: "marketing.home.appsDirectory.docs_files.name",
+    description: "marketing.home.appsDirectory.docs_files.description",
     categories: ["docs_files"],
-    prompt: "Turn these files into an Excel report and a presentation.",
-    promptZh: "把这些资料整理成 Excel 报告和演示文稿。",
+    prompt: "marketing.home.appsDirectory.docs_files.prompt",
     href: "/use-cases/spreadsheet-report",
-    keywords: "word excel powerpoint ppt pdf spreadsheet 文档 表格 数据",
+    keywords: "marketing.home.appsDirectory.docs_files.search",
     skills: [
-      { name: "Word", nameZh: "Word", href: "/use-cases/word-documents" },
-      { name: "Excel", nameZh: "Excel", href: "/use-cases/spreadsheet-report" },
-      { name: "PowerPoint", nameZh: "PowerPoint", href: "/use-cases/presentation-deck" },
-      { name: "PDF", nameZh: "PDF", href: "/use-cases/pdf-workflows" },
+      {
+        name: "marketing.home.appsDirectory.skill.word",
+        keywords: "marketing.home.appsDirectory.skillSearch.word",
+        href: "/use-cases/word-documents",
+      },
+      {
+        name: "marketing.home.appsDirectory.skill.excel",
+        keywords: "marketing.home.appsDirectory.skillSearch.excel",
+        href: "/use-cases/spreadsheet-report",
+      },
+      {
+        name: "marketing.home.appsDirectory.skill.powerpoint",
+        keywords: "marketing.home.appsDirectory.skillSearch.powerpoint",
+        href: "/use-cases/presentation-deck",
+      },
+      {
+        name: "marketing.home.appsDirectory.skill.pdf",
+        keywords: "marketing.home.appsDirectory.skillSearch.pdf",
+        href: "/use-cases/pdf-workflows",
+      },
     ],
   },
   {
     id: "development",
-    name: "Build & ship",
-    nameZh: "开发与交付",
-    description: "Work on code, test the interface and check deployments.",
-    descriptionZh: "修改代码、测试界面、检查部署。",
+    name: "marketing.home.appsDirectory.development.name",
+    description: "marketing.home.appsDirectory.development.description",
     categories: ["development"],
-    prompt: "Read the GitHub issue, fix it and run the relevant checks.",
-    promptZh: "读取 GitHub Issue，修复问题并运行相关检查。",
+    prompt: "marketing.home.appsDirectory.development.prompt",
     href: "/integrations?category=development",
-    keywords: "react frontend playwright web testing 开发 测试 网页 前端",
-    skills: [{ name: "Web testing", nameZh: "网页测试", href: "/use-cases/webapp-testing" }],
+    keywords: "marketing.home.appsDirectory.development.search",
+    skills: [
+      {
+        name: "marketing.home.appsDirectory.skill.web-testing",
+        keywords: "marketing.home.appsDirectory.skillSearch.web-testing",
+        href: "/use-cases/webapp-testing",
+      },
+    ],
   },
   {
     id: "communication",
-    name: "Teams & business",
-    nameZh: "团队与业务",
-    description: "Keep conversations, customers and campaigns moving.",
-    descriptionZh: "串起团队沟通、客户记录与营销进展。",
+    name: "marketing.home.appsDirectory.communication.name",
+    description: "marketing.home.appsDirectory.communication.description",
     categories: ["communication", "social", "marketing", "sales_commerce"],
-    prompt: "Summarize the customer updates and prepare a Slack message.",
-    promptZh: "汇总客户进展，准备一条 Slack 团队消息。",
+    prompt: "marketing.home.appsDirectory.communication.prompt",
     href: "/integrations",
-    keywords: "teams slack marketing sales social 团队 社交 营销 销售",
+    keywords: "marketing.home.appsDirectory.communication.search",
     skills: [],
   },
   {
     id: "creative",
-    name: "Video & design",
-    nameZh: "视频与设计",
-    description: "Make videos, posters and illustrations on your computer.",
-    descriptionZh: "在你的电脑上制作视频、海报与插画。",
+    name: "marketing.home.appsDirectory.creative.name",
+    description: "marketing.home.appsDirectory.creative.description",
     categories: [],
-    prompt: "Edit my clips, add subtitles and export the finished video.",
-    promptZh: "剪辑我的素材，加上字幕，导出成片。",
+    prompt: "marketing.home.appsDirectory.creative.prompt",
     href: "/use-cases/video-creation#video-gallery",
-    keywords:
-      "creative local video image poster illustration vibe remotion subtitles 本地 创意 视频 剪辑 字幕 生图 图片 海报 插画",
+    keywords: "marketing.home.appsDirectory.creative.search",
     skills: [
-      { name: "Vibe Knowledge Film", nameZh: "Vibe 知识短片", href: "/use-cases/video-creation" },
-      { name: "Subtitles", nameZh: "字幕转录", href: "/use-cases/audio-transcription" },
+      {
+        name: "marketing.home.appsDirectory.skill.vibe-knowledge-film",
+        keywords: "marketing.home.appsDirectory.skillSearch.vibe-knowledge-film",
+        href: "/use-cases/video-creation",
+      },
+      {
+        name: "marketing.home.appsDirectory.skill.subtitles",
+        keywords: "marketing.home.appsDirectory.skillSearch.subtitles",
+        href: "/use-cases/audio-transcription",
+      },
     ],
   },
   {
     id: "research",
-    name: "Research & thinking",
-    nameZh: "研究与思考",
-    description: "Compare evidence and build reusable ways to think.",
-    descriptionZh: "比较资料与证据，沉淀可复用的思维方法。",
+    name: "marketing.home.appsDirectory.research.name",
+    description: "marketing.home.appsDirectory.research.description",
     categories: [],
-    prompt: "Research this topic and build a reusable thinking framework.",
-    promptZh: "研究这个主题，整理出有来源的报告和可复用思维框架。",
+    prompt: "marketing.home.appsDirectory.research.prompt",
     href: "/use-cases/research-reports",
-    keywords: "research reports nuwa thinking framework 女娲 研究 调研 报告 思维 框架",
+    keywords: "marketing.home.appsDirectory.research.search",
     skills: [
-      { name: "Research & Reports", nameZh: "研究报告", href: "/use-cases/research-reports" },
-      { name: "Nuwa", nameZh: "女娲 Nuwa", href: "/use-cases/research-reports" },
+      {
+        name: "marketing.home.appsDirectory.skill.research-reports",
+        keywords: "marketing.home.appsDirectory.skillSearch.research-reports",
+        href: "/use-cases/research-reports",
+      },
+      {
+        name: "marketing.home.appsDirectory.skill.nuwa",
+        keywords: "marketing.home.appsDirectory.skillSearch.nuwa",
+        href: "/use-cases/research-reports",
+      },
     ],
   },
 ];
@@ -127,12 +144,8 @@ export function AppsDirectory({ id = "apps" }: { id?: string } = {}) {
       (group) =>
         !search ||
         [
-          group.name,
-          group.nameZh,
-          group.description,
-          group.descriptionZh,
-          group.keywords,
-          ...group.skills.flatMap((skill) => [skill.name, skill.nameZh]),
+          tr(group.keywords),
+          ...group.skills.map((skill) => tr(skill.keywords)),
           ...group.apps.flatMap((app) => [app.name, app.provider]),
         ]
           .join(" ")
@@ -142,31 +155,28 @@ export function AppsDirectory({ id = "apps" }: { id?: string } = {}) {
   return (
     <section className="appsDirectory sectionBlock" id={id} aria-labelledby={id + "DirectoryTitle"}>
       <header className="modernSectionIntro">
-        <span className="eyebrow">{tr("APPS + BUILT-IN SKILLS", "应用 + 内置技能")}</span>
+        <span className="eyebrow">{tr("marketing.home.appsDirectory.appsBuiltInSkills")}</span>
         <h2 id={id + "DirectoryTitle"}>
-          {tr("Your apps. More ways to get work done.", "你的应用，加上会做事的技能。")}
+          {tr("marketing.home.appsDirectory.yourAppsMoreWaysToGet")}
         </h2>
-        <p>
-          {tr(
-            "Bring connected accounts, local files and built-in skills into the work you already do.",
-            "把已连接的账号、本地文件和内置技能，用进每天的工作。",
-          )}
-        </p>
+        <p>{tr("marketing.home.appsDirectory.bringConnectedAccountsLocalFilesAnd")}</p>
       </header>
       <div className="appsDirectoryToolbar">
         <span>
           <strong>{nativeApps.length}</strong>{" "}
-          {tr("app integrations + built-in skills", "个应用集成 + 内置技能")}
+          {tr("marketing.home.appsDirectory.appIntegrationsBuiltInSkills")}
         </span>
         <div className="appsDirectoryActions">
-          <a href={localizedWebsiteHref("/integrations", locale)}>{tr("All apps", "全部应用")} ↗</a>
+          <a href={localizedWebsiteHref("/integrations", locale)}>
+            {tr("marketing.home.appsDirectory.allApps")} ↗
+          </a>
           <label>
-            <span className="srOnly">{tr("Search apps and skills", "搜索应用与技能")}</span>
+            <span className="srOnly">{tr("marketing.home.appsDirectory.searchAppsAndSkills")}</span>
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={tr("Find an app or skill…", "查找应用或技能…")}
+              placeholder={tr("marketing.home.appsDirectory.findAnAppOrSkill")}
             />
           </label>
         </div>
@@ -178,11 +188,11 @@ export function AppsDirectory({ id = "apps" }: { id?: string } = {}) {
               <span className="appsDirectoryIndex">
                 {String(showcase.findIndex((item) => item.id === group.id) + 1).padStart(2, "0")}
               </span>
-              <h3>{tr(group.name, group.nameZh)}</h3>
+              <h3>{tr(group.name)}</h3>
             </header>
-            <p>{tr(group.description, group.descriptionZh)}</p>
+            <p>{tr(group.description)}</p>
             <ul className="appsDirectoryExamples">
-              <li>{tr(group.prompt, group.promptZh)}</li>
+              <li>{tr(group.prompt)}</li>
             </ul>
             {!!group.apps.length && (
               <div className="appsDirectoryBrands">
@@ -212,7 +222,7 @@ export function AppsDirectory({ id = "apps" }: { id?: string } = {}) {
                   <a
                     className="appsDirectoryMore"
                     href={localizedWebsiteHref("/integrations", locale)}
-                    aria-label={tr("Browse all applications", "浏览全部应用")}
+                    aria-label={tr("marketing.home.appsDirectory.browseAllApplications")}
                   >
                     +{group.apps.length - 6}
                   </a>
@@ -220,10 +230,13 @@ export function AppsDirectory({ id = "apps" }: { id?: string } = {}) {
               </div>
             )}
             {!!group.skills.length && (
-              <div className="appsDirectorySkills" aria-label={tr("Built-in skills", "内置技能")}>
+              <div
+                className="appsDirectorySkills"
+                aria-label={tr("marketing.home.appsDirectory.builtInSkills")}
+              >
                 {group.skills.map((skill) => (
                   <a key={skill.name} href={localizedWebsiteHref(skill.href, locale)}>
-                    {tr(skill.name, skill.nameZh)}
+                    {tr(skill.name)}
                   </a>
                 ))}
               </div>
@@ -231,21 +244,18 @@ export function AppsDirectory({ id = "apps" }: { id?: string } = {}) {
             {group.id === "creative" && <CreativeDirectoryPreviews />}
             <a className="appsDirectoryExplore" href={localizedWebsiteHref(group.href, locale)}>
               {group.skills.length
-                ? tr("Explore this workflow", "查看工作流")
-                : tr("Explore connections", "查看连接")}
+                ? tr("marketing.home.appsDirectory.exploreThisWorkflow")
+                : tr("marketing.home.appsDirectory.exploreConnections")}
               <span aria-hidden="true">↗</span>
             </a>
           </article>
         ))}
       </div>
       {!groups.length && (
-        <p role="status">{tr("No apps or skills match your search.", "没有匹配的应用或技能。")}</p>
+        <p role="status">{tr("marketing.home.appsDirectory.noAppsOrSkillsMatchYour")}</p>
       )}
       <p className="appsDirectoryFootnote">
-        {tr(
-          "Apps use the accounts and permissions you connect. Local skills need an online computer and their supporting tools; provider usage limits and fees still apply.",
-          "应用使用你连接的账号与授权。本地技能需要在线电脑及相应工具；第三方服务的额度和费用仍按各平台规则执行。",
-        )}
+        {tr("marketing.home.appsDirectory.appsUseTheAccountsAndPermissions")}
       </p>
     </section>
   );

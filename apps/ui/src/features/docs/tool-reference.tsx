@@ -1,12 +1,13 @@
+import type { MessageKey } from "../../locales/locale-catalog.js";
 import React, { useEffect, useState } from "react";
 import data from "./tool-reference-data.generated.json" with { type: "json" };
 import {
   TOOL_GROUPS,
   type ToolGroup,
 } from "../../../../../packages/docs/src/tool-reference-meta.js";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
-import "./tool-reference.css";
+import "../../styles/docs/tool-reference.css";
 
 type Interface = "remote" | "apps" | "local";
 type Schema = Record<string, unknown>;
@@ -65,15 +66,25 @@ const entries: Record<Interface, Entry[]> = {
     scopes: [],
   })),
 };
-const categories: Record<string, { en: string; zh: string }> = {
-  development: { en: "Development", zh: "开发" },
-  communication: { en: "Communication", zh: "沟通" },
-  productivity: { en: "Productivity", zh: "效率" },
-  design: { en: "Design", zh: "设计" },
-  marketing: { en: "Marketing", zh: "营销" },
-  data: { en: "Data", zh: "数据" },
-  media: { en: "Media", zh: "媒体" },
-  finance: { en: "Finance", zh: "财务" },
+const categoryAliases: Record<string, MessageKey> = {
+  development: "docs.toolReference.categorySearch.development",
+  communication: "docs.toolReference.categorySearch.communication",
+  productivity: "docs.toolReference.categorySearch.productivity",
+  design: "docs.toolReference.categorySearch.design",
+  marketing: "docs.toolReference.categorySearch.marketing",
+  data: "docs.toolReference.categorySearch.data",
+  media: "docs.toolReference.categorySearch.media",
+  finance: "docs.toolReference.categorySearch.finance",
+};
+const categories: Record<string, MessageKey> = {
+  development: "docs.toolReference.category.development",
+  communication: "docs.toolReference.category.communication",
+  productivity: "docs.toolReference.category.productivity",
+  design: "docs.toolReference.category.design",
+  marketing: "docs.toolReference.category.marketing",
+  data: "docs.toolReference.category.data",
+  media: "docs.toolReference.category.media",
+  finance: "docs.toolReference.category.finance",
 };
 function parameters(schema: Schema): { name: string; required: boolean }[] {
   const variants = [schema, ...([schema.oneOf, schema.anyOf].flat().filter(Boolean) as Schema[])];
@@ -117,20 +128,22 @@ function ToolRow({ entry, kind }: { entry: Entry; kind: Interface }) {
         <button
           type="button"
           onClick={() => void copy()}
-          aria-label={tr("Copy tool name: ", "复制工具名：") + entry.name}
+          aria-label={tr("docs.toolReference.copyToolName") + entry.name}
         >
-          {copied ? tr("Copied", "已复制") : tr("Copy", "复制")}
+          {copied ? tr("docs.toolReference.copied") : tr("docs.toolReference.copy")}
         </button>
       </div>
       <p>{locale === "zh" && entry.zh ? entry.zh : entry.summary}</p>
       <div className="toolCatalogBadges">
         <span>
-          {entry.readOnly ? tr("Read only", "只读") : tr("Can change data", "可修改数据")}
+          {entry.readOnly
+            ? tr("docs.toolReference.readOnly")
+            : tr("docs.toolReference.canChangeData")}
         </span>
         {entry.group === "browser-runner" && (
-          <span>Beta · {tr("Enable per device", "按设备开启")}</span>
+          <span>Beta · {tr("docs.toolReference.enablePerDevice")}</span>
         )}
-        {entry.group === "goals" && <span>{tr("Experimental", "实验能力")}</span>}
+        {entry.group === "goals" && <span>{tr("docs.toolReference.experimental")}</span>}
         {entry.scopes.map((scope) => (
           <code key={scope}>{scope}</code>
         ))}
@@ -140,11 +153,11 @@ function ToolRow({ entry, kind }: { entry: Entry; kind: Interface }) {
       </div>
       {kind !== "local" && entry.unavailableIn?.length ? (
         <p className="toolClientSupport">
-          <span>{tr("Available in", "可用于")}</span>
+          <span>{tr("docs.toolReference.availableIn")}</span>
           {AI_CLIENTS.filter((client) => availableIn(entry, client.id)).map((client) => (
             <ClientChip key={client.id} client={client} />
           ))}
-          <span>{tr("Not available in", "不可用于")}</span>
+          <span>{tr("docs.toolReference.notAvailableIn")}</span>
           {AI_CLIENTS.filter((client) => !availableIn(entry, client.id)).map((client) => (
             <span className="toolClientUnavailable" key={client.id}>
               <ClientChip client={client} />
@@ -154,7 +167,7 @@ function ToolRow({ entry, kind }: { entry: Entry; kind: Interface }) {
       ) : null}
       <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
         <summary>
-          {tr("Parameters and contract", "参数与工具定义")}
+          {tr("docs.toolReference.parametersAndContract")}
           {fields.length > 0 && (
             <small>
               {fields
@@ -168,23 +181,14 @@ function ToolRow({ entry, kind }: { entry: Entry; kind: Interface }) {
         {open && (
           <div className="toolCatalogContract">
             {kind !== "apps" && <p>{entry.description}</p>}
-            <p>
-              {tr(
-                "An asterisk marks a required parameter. Actions may require further fields; the full schema below is the reference.",
-                "星号表示必填参数。不同动作可能还需要其他字段，完整定义见下方。",
-              )}
-            </p>
+            <p>{tr("docs.toolReference.anAsteriskMarksARequiredParameter")}</p>
             <pre>
               <code>{JSON.stringify(entry.inputSchema, null, 2)}</code>
             </pre>
           </div>
         )}
       </details>
-      {copyError && (
-        <p role="status">
-          {tr("Select the tool name to copy it manually.", "可选中工具名后手动复制。")}
-        </p>
-      )}
+      {copyError && <p role="status">{tr("docs.toolReference.selectTheToolNameToCopy")}</p>}
     </article>
   );
 }
@@ -225,7 +229,7 @@ export function ToolReference() {
           entry.zh,
           TOOL_GROUPS[entry.group as ToolGroup]?.zh,
           TOOL_GROUPS[entry.group as ToolGroup]?.en,
-          categories[entry.group]?.zh,
+          categorySearchAlias(entry.group),
           ...entry.scopes,
           ...parameters(entry.inputSchema).map((field) => field.name),
         ]
@@ -234,6 +238,11 @@ export function ToolReference() {
           .toLowerCase()
           .includes(needle)),
   );
+  function categorySearchAlias(id: string) {
+    const category = categories[id];
+    if (!category) return "";
+    return tr(categoryAliases[id]!);
+  }
   function switchKind(value: Interface) {
     setKind(value);
     setGroup("");
@@ -254,33 +263,29 @@ export function ToolReference() {
     history.replaceState(history.state, "", url);
   }
   function groupName(id: string) {
-    const copy = TOOL_GROUPS[id as ToolGroup] || categories[id];
-    return copy ? tr(copy.en, copy.zh) : id;
+    const copy = TOOL_GROUPS[id as ToolGroup];
+    const category = categories[id];
+    return copy ? tr(copy.en, copy.zh) : category ? tr(category) : id;
   }
   return (
     <main className="technicalDoc toolCatalog">
       <header className="articleHeader">
         <span className="eyebrow">REMOTE ARC / TOOLS</span>
-        <h1>{tr("Every tool, in one place.", "所有工具，一处查全。")}</h1>
-        <p>
-          {tr(
-            "Search by name, task, app or parameter. Open a tool to inspect its permissions and exact input contract.",
-            "按名称、用途、应用或参数搜索，展开即可查看权限与准确的输入定义。",
-          )}
-        </p>
+        <h1>{tr("docs.toolReference.everyToolInOnePlace")}</h1>
+        <p>{tr("docs.toolReference.searchByNameTaskAppOr")}</p>
         <div className="articleMetaLinks">
           <a href={localizedWebsiteHref("/docs/mcp", locale)}>
-            {tr("Connect your AI", "连接你的 AI")} →
+            {tr("docs.toolReference.connectYourAi")} →
           </a>
           <a href={localizedWebsiteHref("/docs/apps", locale)}>
-            {tr("Connect an app", "连接应用账号")} →
+            {tr("docs.toolReference.connectAnApp")} →
           </a>
         </div>
       </header>
       <div
         className="toolCatalogTabs"
         role="tablist"
-        aria-label={tr("Tool connection type", "工具连接方式")}
+        aria-label={tr("docs.toolReference.toolConnectionType")}
       >
         {(["remote", "apps", "local"] as Interface[]).map((value) => (
           <button
@@ -310,37 +315,31 @@ export function ToolReference() {
             {value === "remote"
               ? "Remote MCP"
               : value === "apps"
-                ? tr("App actions", "Apps 操作")
-                : tr("Local MCP", "本地 MCP")}
+                ? tr("docs.toolReference.appActions")
+                : tr("docs.toolReference.localMcp")}
             <small>{entries[value].length}</small>
           </button>
         ))}
       </div>
       <p className="toolCatalogExplanation">
         {kind === "remote"
-          ? tr(
-              "Tools exposed by Remote Arc's remote MCP server. What your AI can use depends on your authorization, plan, device version and enabled capabilities. Its current tool list is the final reference.",
-              "Remote Arc 远程 MCP 服务提供的工具。实际可用范围取决于授权、套餐、设备版本及已开启能力，以你的 AI 当前看到的工具列表为准。",
-            )
+          ? tr("docs.toolReference.toolsExposedByRemoteArcS")
           : kind === "apps"
-            ? tr(
-                `Arc's App library contains ${entries.apps.length} operations across ${data.apps.length} apps. The remote MCP lists every operation ID in two tools: run_app_read_action for reads and run_app_write_action for changes. list_apps returns your connection IDs, searches actions by use_case and returns an action's exact arguments. Provider setup and account permissions still apply.`,
-                `Arc 的 Apps 库包含 ${data.apps.length} 个应用、${entries.apps.length} 个操作。远程 MCP 在两个工具中列出每个操作 ID：run_app_read_action 负责读取，run_app_write_action 负责更改；list_apps 返回连接 ID、按 use_case 搜索操作，并返回某个操作的准确参数；可用性仍取决于服务商配置和账号授权。`,
-              )
-            : tr(
-                "Local stdio MCP runs on the computer that starts it: remotelink --mcp --safe. Safe, developer and full modes expose different subsets. A workspace-only connection is narrower still. It does not provide cloud App or Browser Runner tools.",
-                "本地 stdio MCP 在启动它的电脑上执行：remotelink --mcp --safe。safe、developer、full 模式开放不同工具子集，限定工作区的连接范围更窄，不提供云端 Apps 或 Browser Runner 工具。",
-              )}
+            ? tr("docs.toolReference.arcSAppLibraryContainsOperations", {
+                length: entries.apps.length,
+                length2: data.apps.length,
+              })
+            : tr("docs.toolReference.localStdioMcpRunsOnThe")}
       </p>
       {kind !== "local" && (
         <div className="toolClientLegend">
           <div
             className="toolClientFilter"
             role="group"
-            aria-label={tr("Show tools for an AI client", "按 AI 客户端查看工具")}
+            aria-label={tr("docs.toolReference.showToolsForAnAiClient")}
           >
             <button type="button" aria-pressed={!client} onClick={() => chooseClient("")}>
-              {tr("All AI clients", "全部 AI 客户端")}
+              {tr("docs.toolReference.allAiClients")}
             </button>
             {AI_CLIENTS.map((item) => (
               <button
@@ -354,32 +353,27 @@ export function ToolReference() {
               </button>
             ))}
           </div>
-          <p>
-            {tr(
-              "Every tool works in ChatGPT, Claude, Cursor, Gemini and other MCP clients unless its entry lists the clients it is available in. Claude means Remote Arc added as a connector in Claude on the web, desktop or mobile: the Skill library and Runway actions are not offered there.",
-              "除非条目单独标注了可用客户端，所有工具都可在 ChatGPT、Claude、Cursor、Gemini 及其他 MCP 客户端中使用。Claude 指在网页版、桌面版或移动版 Claude 中添加的 Remote Arc 连接器：其中不提供 Skill 库和 Runway 操作。",
-            )}
-          </p>
+          <p>{tr("docs.toolReference.everyToolWorksInChatgptClaude")}</p>
         </div>
       )}
       <div className="toolCatalogFilters">
         <label className="toolCatalogSearch">
-          <span>{tr("Find a tool", "查找工具")}</span>
+          <span>{tr("docs.toolReference.findATool")}</span>
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={tr("e.g. upload, GitHub, process_id…", "例如：上传、GitHub、process_id…")}
+            placeholder={tr("docs.toolReference.eGUploadGithubProcessId")}
           />
         </label>
         <label>
-          <span>{tr("Category", "分类")}</span>
+          <span>{tr("docs.toolReference.category")}</span>
           <select
-            aria-label={tr("Category", "分类")}
+            aria-label={tr("docs.toolReference.category")}
             value={group}
             onChange={(event) => setGroup(event.target.value)}
           >
-            <option value="">{tr("All categories", "全部分类")}</option>
+            <option value="">{tr("docs.toolReference.allCategories")}</option>
             {groups.map((value) => (
               <option key={value} value={value}>
                 {groupName(value)}
@@ -389,13 +383,13 @@ export function ToolReference() {
         </label>
         {kind === "apps" && (
           <label>
-            <span>{tr("App", "应用")}</span>
+            <span>{tr("docs.toolReference.app")}</span>
             <select
-              aria-label={tr("App", "应用")}
+              aria-label={tr("docs.toolReference.app")}
               value={provider}
               onChange={(event) => setProvider(event.target.value)}
             >
-              <option value="">{tr("All apps", "全部应用")}</option>
+              <option value="">{tr("docs.toolReference.allApps")}</option>
               {data.apps.map((app) => (
                 <option key={app.provider} value={app.provider}>
                   {app.name}
@@ -405,46 +399,33 @@ export function ToolReference() {
           </label>
         )}
         <label>
-          <span>{tr("Access", "操作类型")}</span>
+          <span>{tr("docs.toolReference.access")}</span>
           <select
-            aria-label={tr("Access", "操作类型")}
+            aria-label={tr("docs.toolReference.access")}
             value={access}
             onChange={(event) => setAccess(event.target.value)}
           >
-            <option value="">{tr("All operations", "全部操作")}</option>
-            <option value="read">{tr("Read only", "只读")}</option>
-            <option value="write">{tr("Can change data", "可修改数据")}</option>
+            <option value="">{tr("docs.toolReference.allOperations")}</option>
+            <option value="read">{tr("docs.toolReference.readOnly")}</option>
+            <option value="write">{tr("docs.toolReference.canChangeData")}</option>
           </select>
         </label>
       </div>
       <div className="toolCatalogCount" role="status">
-        {tr(
-          `${filtered.length} of ${source.length} tools`,
-          `${source.length} 个工具中匹配 ${filtered.length} 个`,
-        )}
+        {tr("docs.toolReference.ofTools", { length: filtered.length, length2: source.length })}
       </div>
       <section id="toolCatalogResults" role="tabpanel" aria-labelledby={"toolCatalogTab-" + kind}>
         {filtered.map((entry) => (
           <ToolRow key={kind + entry.id} entry={entry} kind={kind} />
         ))}
         {!filtered.length && (
-          <p className="toolCatalogEmpty">
-            {tr(
-              "No matches. Try a tool name, another category or another connection type.",
-              "没有匹配结果。试试工具名、其他分类或其他连接方式。",
-            )}
-          </p>
+          <p className="toolCatalogEmpty">{tr("docs.toolReference.noMatchesTryAToolName")}</p>
         )}
       </section>
       <footer className="toolCatalogFootnote">
-        <p>
-          {tr(
-            "Read/write labels describe capability, not permission to act. Connected app changes require apps:write; computer and browser actions follow device policy. Skills are workflow guidance and do not add tools or grant access.",
-            "读写标记描述工具能力，不代表自动获得执行授权。应用写入需要 apps:write，电脑与浏览器动作遵循设备策略。Skill 提供工作方法，不会增加工具或授予权限。",
-          )}
-        </p>
+        <p>{tr("docs.toolReference.readWriteLabelsDescribeCapabilityNot")}</p>
         <a href={localizedWebsiteHref("/docs/troubleshooting", locale)}>
-          {tr("A tool is missing in your AI?", "AI 里找不到工具？")} →
+          {tr("docs.toolReference.aToolIsMissingInYour")} →
         </a>
       </footer>
     </main>

@@ -1,7 +1,7 @@
 import { canonicalErrorEnvelope } from "../../../../../../packages/protocol/src/error-codes.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { useEffect, useState, type FormEvent } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 type Trial = {
   user_id: string;
   email: string;
@@ -47,21 +47,16 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
       })
       .catch(() => {
         if (!controller.signal.aborted)
-          setError(
-            tr(
-              "Could not load trial users. Retry after checking admin access.",
-              "无法读取试用用户，请检查管理员权限后重试。",
-            ),
-          );
+          setError(tr("admin.payments.adminTrials.couldNotLoadTrialUsersRetry"));
       });
     return () => controller.abort();
   }, [preview, query, status, page, revision, tr]);
   const labels: Record<string, string> = {
-    all: tr("All trials", "全部试用"),
-    active: tr("Active", "试用中"),
-    expired: tr("Expired", "已到期"),
-    exhausted: tr("Allowance used", "额度已用完"),
-    paid: tr("Now paid", "已转付费"),
+    all: tr("admin.payments.adminTrials.allTrials"),
+    active: tr("admin.payments.adminTrials.active"),
+    expired: tr("admin.payments.adminTrials.expired"),
+    exhausted: tr("admin.payments.adminTrials.allowanceUsed"),
+    paid: tr("admin.payments.adminTrials.nowPaid"),
   };
   const date = (value: string | null) => (value ? new Date(value).toLocaleString() : "—");
   function submit(event: FormEvent) {
@@ -73,29 +68,24 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
     <section className="adminSurface adminTrials">
       <div className="adminSectionHeader">
         <div>
-          <h2>{tr("People trying Arc", "Arc 试用用户")}</h2>
-          <p>
-            {tr(
-              "Recorded when a user explicitly activates a trial. Trial Credits are separate from later paid allowances; work counts include all Arc runs.",
-              "用户主动开启试用时记录。试用 Credits 与后续付费额度分开；工作次数统计该账号全部 Arc 运行。",
-            )}
-          </p>
+          <h2>{tr("admin.payments.adminTrials.peopleTryingArc")}</h2>
+          <p>{tr("admin.payments.adminTrials.recordedWhenAUserExplicitlyActivates")}</p>
         </div>
       </div>
       <form className="adminTrialFilters" onSubmit={submit}>
         <label>
-          <span className="arcSrOnly">{tr("Search trial users", "搜索试用用户")}</span>
+          <span className="arcSrOnly">{tr("admin.payments.adminTrials.searchTrialUsers")}</span>
           <input
             type="search"
             value={search}
             maxLength={100}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={tr("Name or email", "姓名或邮箱")}
+            placeholder={tr("admin.payments.adminTrials.nameOrEmail")}
           />
         </label>
-        <button className="adminOutlineBtn">{tr("Search", "搜索")}</button>
+        <button className="adminOutlineBtn">{tr("admin.payments.adminTrials.search")}</button>
         <label>
-          <span className="arcSrOnly">{tr("Trial status", "试用状态")}</span>
+          <span className="arcSrOnly">{tr("admin.payments.adminTrials.trialStatus")}</span>
           <select
             value={status}
             onChange={(event) => {
@@ -115,7 +105,7 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
           className="adminOutlineBtn"
           onClick={() => setRevision((value) => value + 1)}
         >
-          {tr("Refresh", "刷新")}
+          {tr("admin.payments.adminTrials.refresh")}
         </button>
       </form>
       {error && (
@@ -124,14 +114,18 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
         </p>
       )}
       {!data && !error && (
-        <WorkspaceLoading label={tr("Loading trial users…", "正在读取试用用户…")} variant="rows" />
+        <WorkspaceLoading
+          label={tr("admin.payments.adminTrials.loadingTrialUsers")}
+          variant="rows"
+        />
       )}
       {data && (
         <>
           <p>
-            {tr("Total", "共")} {data.total} {tr("trial users", "位试用用户")}
+            {tr("admin.payments.adminTrials.total")} {data.total}{" "}
+            {tr("admin.payments.adminTrials.trialUsers")}
             {preview
-              ? " · " + tr("Preview; no private user records loaded.", "预览，不加载真实用户记录。")
+              ? " · " + tr("admin.payments.adminTrials.previewNoPrivateUserRecordsLoaded")
               : ""}
           </p>
           <div className="adminPaymentTable">
@@ -139,12 +133,12 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
               <thead>
                 <tr>
                   {[
-                    tr("User", "用户"),
-                    tr("Status", "状态"),
-                    tr("Trial period", "试用时间"),
-                    tr("Trial Credits", "试用 Credits"),
-                    tr("Arc work", "Arc 工作"),
-                    tr("Last work", "最近工作"),
+                    tr("admin.payments.adminTrials.user"),
+                    tr("admin.payments.adminTrials.status"),
+                    tr("admin.payments.adminTrials.trialPeriod"),
+                    tr("admin.payments.adminTrials.trialCredits"),
+                    tr("admin.payments.adminTrials.arcWork"),
+                    tr("admin.payments.adminTrials.lastWork"),
                   ].map((title) => (
                     <th key={title}>{title}</th>
                   ))}
@@ -160,18 +154,21 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
                     <td>{labels[user.status] || user.status}</td>
                     <td>
                       {date(user.started_at)}
-                      <small>{tr("Until ", "至 ") + date(user.expires_at)}</small>
+                      <small>
+                        {tr("admin.payments.adminTrials.until") + date(user.expires_at)}
+                      </small>
                     </td>
                     <td>
                       {user.spentCredits.toLocaleString()} / {user.grantedCredits.toLocaleString()}
                       <small>
-                        {user.reservedCredits.toLocaleString()} {tr("reserved", "预留")}
+                        {user.reservedCredits.toLocaleString()}{" "}
+                        {tr("admin.payments.adminTrials.reserved")}
                       </small>
                     </td>
                     <td>
                       {user.runs}
                       <small>
-                        {user.succeeded} {tr("completed", "已完成")}
+                        {user.succeeded} {tr("admin.payments.adminTrials.completed")}
                       </small>
                     </td>
                     <td>{date(user.last_run_at)}</td>
@@ -181,7 +178,7 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
             </table>
             {data.items.length === 0 && (
               <p className="adminNoData">
-                {tr("No trial users match these filters.", "当前筛选条件下没有试用用户。")}
+                {tr("admin.payments.adminTrials.noTrialUsersMatchTheseFilters")}
               </p>
             )}
           </div>
@@ -191,7 +188,7 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
               disabled={page === 0}
               onClick={() => setPage((value) => value - 1)}
             >
-              {tr("Previous", "上一页")}
+              {tr("admin.payments.adminTrials.previous")}
             </button>
             <span>{page + 1}</span>
             <button
@@ -199,7 +196,7 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
               disabled={(page + 1) * data.pageSize >= data.total}
               onClick={() => setPage((value) => value + 1)}
             >
-              {tr("Next", "下一页")}
+              {tr("admin.payments.adminTrials.next")}
             </button>
           </div>
         </>

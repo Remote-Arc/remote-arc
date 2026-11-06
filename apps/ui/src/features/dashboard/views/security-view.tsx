@@ -1,11 +1,12 @@
 import { ProductIcon } from "../../../components/product-icon.js";
 import { UI_PREVIEW } from "../../../preview/preview-mode.js";
-import { RunnerAttentionInbox, type useRunnerAttention } from "../../browser-runner/runner-view.js";
+import { RunnerAttentionInbox } from "../../browser-runner/runner-view.js";
+import type { useRunnerAttention } from "../../../hooks/use-runner-attention.js";
 import { SecurityAuthorizations } from "../../security/security-authorizations.js";
 import { ApprovalRequest, PersistentPermissions } from "../../security/security-approvals.js";
 import { platformLabel } from "../devices/device-presets.js";
 import { timeAgo } from "../format.js";
-import type { DashboardModel } from "../hooks/use-dashboard-model.js";
+import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 
 // Security tab: Remote MCP pause, AI authorizations and approvals.
 export function SecurityView({
@@ -38,8 +39,8 @@ export function SecurityView({
     <>
       <section className="securityTopbar">
         <div>
-          <span className="eyebrow">{tr("SECURITY", "安全")}</span>
-          <h1>{tr("Security center", "安全中心")}</h1>
+          <span className="eyebrow">{tr("dashboard.views.securityView.security")}</span>
+          <h1>{tr("dashboard.views.securityView.securityCenter")}</h1>
         </div>
         <div className="securityTopActions">
           <button
@@ -48,27 +49,22 @@ export function SecurityView({
             onClick={() => void setMcpPaused(!securityState?.mcpPaused)}
           >
             {securityState?.mcpPaused
-              ? tr("Resume AI MCP access", "恢复 AI MCP 访问")
-              : tr("Pause AI MCP access", "暂停 AI MCP 访问")}
+              ? tr("dashboard.views.securityView.resumeAiMcpAccess")
+              : tr("dashboard.views.securityView.pauseAiMcpAccess")}
           </button>
         </div>
       </section>
 
       {securityError && (
         <section className="policyWarning" role="alert">
-          <strong>{tr("Could not load security data", "无法加载安全数据")}</strong>
-          <p>
-            {tr(
-              "Your current access state could not be verified. Refresh to try again.",
-              "当前访问状态暂无法确认，请刷新后重试。",
-            )}
-          </p>
+          <strong>{tr("dashboard.views.securityView.couldNotLoadSecurityData")}</strong>
+          <p>{tr("dashboard.views.securityView.yourCurrentAccessStateCouldNot")}</p>
           <button
             className="ghostButton"
             disabled={securityBusy}
             onClick={() => void refreshSecurity()}
           >
-            {tr("Retry", "重试")}
+            {tr("dashboard.views.securityView.retry")}
           </button>
         </section>
       )}
@@ -76,10 +72,10 @@ export function SecurityView({
       <section className="securityPanel securityGrantsPanel">
         <div className="securityPanelHeader">
           <div>
-            <span className="eyebrow">{tr("PENDING APPROVALS", "待审批")}</span>
+            <span className="eyebrow">{tr("dashboard.views.securityView.pendingApprovals")}</span>
             <div className="headingWithHelp">
               <h2>
-                {tr("Pending approvals", "待审批请求")}{" "}
+                {tr("dashboard.views.securityView.pendingApprovals2")}{" "}
                 <span className="approvalCount">{pendingApprovals.length}</span>
               </h2>
             </div>
@@ -89,7 +85,7 @@ export function SecurityView({
             disabled={securityBusy}
             onClick={() => void refreshSecurity()}
           >
-            {tr("Refresh", "刷新")}
+            {tr("dashboard.views.securityView.refresh")}
           </button>
         </div>
         <div className="securityGrantList">
@@ -106,18 +102,13 @@ export function SecurityView({
             <div className="securityEmptyState compact">
               <strong>
                 {securityState
-                  ? tr("No pending approvals", "暂无待审批请求")
+                  ? tr("dashboard.views.securityView.noPendingApprovals")
                   : securityError
-                    ? tr("Approvals unavailable", "暂无法获取审批请求")
-                    : tr("Loading approvals…", "正在加载审批请求…")}
+                    ? tr("dashboard.views.securityView.approvalsUnavailable")
+                    : tr("dashboard.views.securityView.loadingApprovals")}
               </strong>
               {securityState && (
-                <span>
-                  {tr(
-                    "Out-of-scope file changes will appear here and in an interactive remotelink terminal.",
-                    "超出可信写入范围的文件修改会显示在这里，也会显示在交互式 remotelink 终端中。",
-                  )}
-                </span>
+                <span>{tr("dashboard.views.securityView.outOfScopeFileChangesWill")}</span>
               )}
             </div>
           )}
@@ -128,9 +119,9 @@ export function SecurityView({
       <section className="securityPanel securityGrantsPanel">
         <div className="securityPanelHeader">
           <div>
-            <span className="eyebrow">{tr("CONNECTED AI ACCESS", "已连接 AI 访问")}</span>
+            <span className="eyebrow">{tr("dashboard.views.securityView.connectedAiAccess")}</span>
             <div className="headingWithHelp">
-              <h2>{tr("AI authorizations", "AI 授权")}</h2>
+              <h2>{tr("dashboard.views.securityView.aiAuthorizations")}</h2>
             </div>
           </div>
           <button
@@ -138,7 +129,7 @@ export function SecurityView({
             disabled={securityBusy}
             onClick={() => void refreshSecurity()}
           >
-            {tr("Refresh", "刷新")}
+            {tr("dashboard.views.securityView.refresh")}
           </button>
         </div>
         {securityState && securityState.grants.length > 0 && (
@@ -152,9 +143,9 @@ export function SecurityView({
         )}
         {securityState && !securityState.grants.length && (
           <div className="securityEmptyState compact">
-            <strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong>
+            <strong>{tr("dashboard.views.securityView.noAiAuthorizations")}</strong>
             <button className="ghostButton" onClick={() => navigateTab("connect")}>
-              {tr("Connect AI", "连接 AI")}
+              {tr("dashboard.views.securityView.connectAi")}
             </button>
           </div>
         )}
@@ -162,8 +153,8 @@ export function SecurityView({
           <div className="securityEmptyState compact">
             <strong>
               {securityError
-                ? tr("Authorizations unavailable", "暂无法获取授权")
-                : tr("Loading access grants…", "正在加载访问授权…")}
+                ? tr("dashboard.views.securityView.authorizationsUnavailable")
+                : tr("dashboard.views.securityView.loadingAccessGrants")}
             </strong>
           </div>
         )}
@@ -182,11 +173,11 @@ export function SecurityView({
         <article className="securityPanel securityExposurePanel">
           <div className="securityPanelHeader">
             <div>
-              <span className="eyebrow">{tr("DEVICES", "设备")}</span>
-              <h2>{tr("Device permissions", "设备权限")}</h2>
+              <span className="eyebrow">{tr("dashboard.views.securityView.devices")}</span>
+              <h2>{tr("dashboard.views.securityView.devicePermissions")}</h2>
             </div>
             <button className="ghostButton" onClick={() => navigateTab("devices")}>
-              {tr("Manage", "管理")}
+              {tr("dashboard.views.securityView.manage")}
             </button>
           </div>
           <div className="securityDeviceList">
@@ -208,12 +199,12 @@ export function SecurityView({
                       <strong>{device.name}</strong>
                       <span>
                         {platformLabel(device.platform)} ·{" "}
-                        {device.hostname || tr("No hostname", "无 Hostname")}
+                        {device.hostname || tr("dashboard.views.securityView.noHostname")}
                       </span>
                     </div>
                     <div className="securityExposureMeta">
                       <strong>{enabledCount}</strong>
-                      <span>{tr("tools enabled", "个工具已启用")}</span>
+                      <span>{tr("dashboard.views.securityView.toolsEnabled")}</span>
                     </div>
                     <span className={"badge " + device.status}>
                       <i />
@@ -224,9 +215,9 @@ export function SecurityView({
               })}
             {!devices.length && (
               <div className="securityEmptyState">
-                <strong>{tr("No paired devices", "暂无配对设备")}</strong>
+                <strong>{tr("dashboard.views.securityView.noPairedDevices")}</strong>
                 <button className="ghostButton" onClick={() => setShowAdd(true)}>
-                  {tr("Add device", "添加设备")}
+                  {tr("dashboard.views.securityView.addDevice")}
                 </button>
               </div>
             )}
@@ -238,8 +229,8 @@ export function SecurityView({
         <article className="securityPanel">
           <div className="securityPanelHeader">
             <div>
-              <span className="eyebrow">{tr("AUDIT ACTIVITY", "审计活动")}</span>
-              <h2>{tr("Recent access", "最近访问")}</h2>
+              <span className="eyebrow">{tr("dashboard.views.securityView.auditActivity")}</span>
+              <h2>{tr("dashboard.views.securityView.recentAccess")}</h2>
             </div>
           </div>
           <div className="securityAuditList">
@@ -253,21 +244,25 @@ export function SecurityView({
                   <span>
                     {event.client_name ||
                       event.client_id?.slice(0, 12) ||
-                      tr("Unknown client", "未知客户端")}{" "}
+                      tr("dashboard.views.securityView.unknownClient")}{" "}
                     ·{" "}
                     {event.device_id
                       ? deviceNameById.get(event.device_id) || event.device_id.slice(0, 8)
-                      : tr("Account", "账户")}{" "}
+                      : tr("dashboard.views.securityView.account")}{" "}
                     · {timeAgo(event.created_at)}
                     {event.request_id ? " · req " + event.request_id.slice(0, 8) : ""}
                   </span>
                 </div>
-                <b>{event.success ? tr("Allowed", "已允许") : tr("Failed", "失败")}</b>
+                <b>
+                  {event.success
+                    ? tr("dashboard.views.securityView.allowed")
+                    : tr("dashboard.views.securityView.failed")}
+                </b>
               </div>
             ))}
             {!status?.recentActivity?.length && (
               <div className="securityEmptyState compact">
-                <strong>{tr("No audit events yet", "暂无审计事件")}</strong>
+                <strong>{tr("dashboard.views.securityView.noAuditEventsYet")}</strong>
               </div>
             )}
           </div>

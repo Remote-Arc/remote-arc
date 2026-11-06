@@ -1,9 +1,10 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ProductIcon } from "../../../components/product-icon.js";
-import type { useArcComposerInputs } from "./arc-composer-inputs.js";
-import type { ArcMention } from "./arc-skill-mentions.js";
-type Tr = (en: string, zh: string) => string;
+import type { useArcComposerInputs } from "../../../hooks/arc/use-arc-composer-inputs.js";
+import type { ArcMention } from "../../../hooks/arc/use-arc-skill-mentions.js";
+type Tr = Translate;
 export function ComposerGlyph({ name }: { name: "image" | "file" | "pin" | "mic" }) {
   return (
     <svg
@@ -139,7 +140,7 @@ export function ArcComposerMenu({
         ref={button}
         type="button"
         className="arcComposerPlus"
-        aria-label={tr("Add to message", "添加到消息")}
+        aria-label={tr("arc.composer.arcComposerMenu.addToMessage")}
         aria-expanded={view !== "closed"}
         aria-haspopup="menu"
         disabled={disabled}
@@ -153,15 +154,15 @@ export function ArcComposerMenu({
             {view === "location" ? (
               <div className="arcComposerLocation">
                 <button type="button" className="arcComposerBack" onClick={() => setView("main")}>
-                  ← {tr("Add a place", "添加地点")}
+                  ← {tr("arc.composer.arcComposerMenu.addAPlace")}
                 </button>
                 <label>
-                  {tr("Place or address", "地点或地址")}
+                  {tr("arc.composer.arcComposerMenu.placeOrAddress")}
                   <input
                     value={place}
                     onChange={(e) => setPlace(e.target.value)}
                     maxLength={200}
-                    placeholder={tr("Auckland, New Zealand", "例如：新西兰奥克兰")}
+                    placeholder={tr("arc.composer.arcComposerMenu.aucklandNewZealand")}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && place.trim()) {
                         e.preventDefault();
@@ -175,7 +176,7 @@ export function ArcComposerMenu({
                   disabled={!place.trim()}
                   onClick={() => action(() => inputs.setLocation({ label: place.trim() }))}
                 >
-                  {tr("Attach place", "附上地点")}
+                  {tr("arc.composer.arcComposerMenu.attachPlace")}
                 </button>
                 <button
                   type="button"
@@ -186,11 +187,11 @@ export function ArcComposerMenu({
                   }}
                 >
                   <ComposerGlyph name="pin" />
-                  {tr("Use current location", "使用当前位置")}
+                  {tr("arc.composer.arcComposerMenu.useCurrentLocation")}
                 </button>
               </div>
             ) : (
-              <div role="menu" aria-label={tr("Message extensions", "消息扩展")}>
+              <div role="menu" aria-label={tr("arc.composer.arcComposerMenu.messageExtensions")}>
                 <button
                   type="button"
                   role="menuitem"
@@ -198,8 +199,8 @@ export function ArcComposerMenu({
                 >
                   <ComposerGlyph name="image" />
                   <span>
-                    {tr("Add photos", "添加照片")}
-                    <small>{tr("Upload, paste or drop", "上传、粘贴或拖入")}</small>
+                    {tr("arc.composer.arcComposerMenu.addPhotos")}
+                    <small>{tr("arc.composer.arcComposerMenu.uploadPasteOrDrop")}</small>
                   </span>
                 </button>
                 <button
@@ -209,13 +210,13 @@ export function ArcComposerMenu({
                 >
                   <ComposerGlyph name="file" />
                   <span>
-                    {tr("Add files", "添加文件")}
-                    <small>{tr("PDF, Word, text and code", "PDF、Word、文本和代码")}</small>
+                    {tr("arc.composer.arcComposerMenu.addFiles")}
+                    <small>{tr("arc.composer.arcComposerMenu.pdfWordTextAndCode")}</small>
                   </span>
                 </button>
                 <button type="button" role="menuitem" onClick={() => setView("location")}>
                   <ComposerGlyph name="pin" />
-                  <span>{tr("Add a place", "添加地点")}</span>
+                  <span>{tr("arc.composer.arcComposerMenu.addAPlace")}</span>
                 </button>
                 <hr />
                 {(["app", "employee", "skill"] as const).map((kind) => (
@@ -230,10 +231,10 @@ export function ArcComposerMenu({
                     />
                     <span>
                       {kind === "app"
-                        ? tr("Apps", "应用")
+                        ? tr("arc.composer.arcComposerMenu.apps")
                         : kind === "employee"
-                          ? tr("Agents", "智能体")
-                          : tr("Skills", "技能")}
+                          ? tr("arc.composer.arcComposerMenu.agents")
+                          : tr("arc.composer.arcComposerMenu.skills")}
                     </span>
                     <ProductIcon name="chevron" size={14} />
                   </button>
@@ -246,15 +247,12 @@ export function ArcComposerMenu({
                   onClick={() => action(inputs.toggleVoice)}
                   title={
                     !inputs.voiceSupported
-                      ? tr(
-                          "Voice input is not supported by this browser",
-                          "此浏览器暂不支持语音输入",
-                        )
+                      ? tr("arc.composer.arcComposerMenu.voiceInputIsNotSupportedBy")
                       : undefined
                   }
                 >
                   <ComposerGlyph name="mic" />
-                  <span>{tr("Voice input", "语音输入")}</span>
+                  <span>{tr("arc.composer.arcComposerMenu.voiceInput")}</span>
                 </button>
               </div>
             )}
@@ -288,7 +286,7 @@ export function ArcComposerAttachments({
                 <strong>{item.file.name}</strong>
                 <small>
                   {item.status === "uploading"
-                    ? tr("Uploading…", "正在上传…")
+                    ? tr("arc.composer.arcComposerMenu.uploading")
                     : item.status === "error"
                       ? item.error
                       : Math.max(1, Math.round((item.attachment?.size || item.file.size) / 1024)) +
@@ -296,14 +294,16 @@ export function ArcComposerAttachments({
                 </small>
                 {item.status === "error" && (
                   <button type="button" onClick={() => inputs.retry(item.key)}>
-                    {tr("Retry", "重试")}
+                    {tr("arc.composer.arcComposerMenu.retry")}
                   </button>
                 )}
               </div>
               <button
                 type="button"
                 className="arcUploadRemove"
-                aria-label={tr("Remove attachment", "移除附件") + ": " + item.file.name}
+                aria-label={
+                  tr("arc.composer.arcComposerMenu.removeAttachment") + ": " + item.file.name
+                }
                 onClick={() => inputs.remove(item.key)}
               >
                 <ProductIcon name="close" size={12} />
@@ -323,7 +323,7 @@ export function ArcComposerAttachments({
               </span>
               <button
                 type="button"
-                aria-label={tr("Remove location", "移除地点")}
+                aria-label={tr("arc.composer.arcComposerMenu.removeLocation")}
                 onClick={() => inputs.setLocation(undefined)}
               >
                 <ProductIcon name="close" size={12} />
@@ -334,18 +334,18 @@ export function ArcComposerAttachments({
       )}
       {inputs.locating && (
         <p className="arcInputStatus" role="status">
-          {tr("Finding your location…", "正在获取位置…")}{" "}
+          {tr("arc.composer.arcComposerMenu.findingYourLocation")}{" "}
           <button type="button" onClick={() => inputs.setLocation(undefined)}>
-            {tr("Cancel", "取消")}
+            {tr("arc.composer.arcComposerMenu.cancel")}
           </button>
         </p>
       )}
       {inputs.listening && (
         <div className="arcVoiceStatus" role="status">
           <span />
-          {inputs.interim || tr("Listening…", "正在聆听…")}
+          {inputs.interim || tr("arc.composer.arcComposerMenu.listening")}
           <button type="button" onClick={inputs.toggleVoice}>
-            {tr("Done", "完成")}
+            {tr("arc.composer.arcComposerMenu.done")}
           </button>
         </div>
       )}
@@ -355,7 +355,7 @@ export function ArcComposerAttachments({
           <button
             type="button"
             onClick={() => inputs.setError("")}
-            aria-label={tr("Dismiss", "关闭")}
+            aria-label={tr("arc.composer.arcComposerMenu.dismiss")}
           >
             ×
           </button>

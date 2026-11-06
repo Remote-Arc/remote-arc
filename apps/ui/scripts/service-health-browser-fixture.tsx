@@ -1,10 +1,12 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider } from "../src/app/i18n.js";
+import { loadLocale } from "../src/locales/locale-catalog.js";
+import { initialLocale } from "../src/locales/locale-preference.js";
 import { ServiceHealth } from "../src/features/admin/service-health.js";
 import type { HealthSnapshot } from "../src/features/admin/service-health-model.js";
-import "../src/features/admin/admin-console.css";
-import "../src/features/admin/admin-design.css";
+import "../src/styles/admin/admin-console.css";
+import "../src/styles/admin/admin-design.css";
 // Local regression entry only; never bundled into the production app.
 const nativeFetch = (window as Window & { healthTestFetch?: typeof fetch }).healthTestFetch;
 if (nativeFetch) window.fetch = nativeFetch;
@@ -49,6 +51,7 @@ const health: HealthSnapshot = {
     },
   ],
 };
+await loadLocale(initialLocale(), "all");
 createRoot(host).render(
   <I18nProvider>
     <ServiceHealth health={health} loading={false} reload={() => {}} />

@@ -1,11 +1,11 @@
 import { ArcBillingPanel, ArcAccountPlan } from "../billing/arc-billing-panel.js";
 import { ArcMemoryPanel } from "../arc/workspace/arc-memory-panel.js";
 import { Fragment, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { useTheme } from "../../app/theme.js";
-import { useI18n } from "../../app/i18n.js";
+import { useTheme } from "../../hooks/use-theme.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { OrganizationSettings } from "./organization-settings.js";
 import { ProductInstall } from "../../app/product-pwa.js";
-import "./dashboard-settings.css";
+import "../../styles/settings/dashboard-settings.css";
 const TeammateSettings = lazy(() =>
   import("../arc/teams/arc-teams-page.js").then((module) => ({ default: module.ArcTeamsPage })),
 );
@@ -162,75 +162,68 @@ export function DashboardSettings({
     history.pushState({}, "", url);
   }
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
-  const displayName = currentName?.trim() || currentEmail.split("@")[0] || tr("Account", "账号");
+  const displayName =
+    currentName?.trim() || currentEmail.split("@")[0] || tr("settings.dashboardSettings.account");
   const nav: {
     id: Section;
     icon: "user" | "appearance" | "team" | "link" | "billing";
     title: string;
   }[] = [
-    { id: "account", icon: "user", title: tr("Profile", "个人资料") },
-    { id: "appearance", icon: "appearance", title: tr("Appearance", "外观与语言") },
-    { id: "memory", icon: "user", title: tr("Memory", "记忆") },
+    { id: "account", icon: "user", title: tr("settings.dashboardSettings.profile") },
+    { id: "appearance", icon: "appearance", title: tr("settings.dashboardSettings.appearance") },
+    { id: "memory", icon: "user", title: tr("settings.dashboardSettings.memory") },
     ...(accountId
-      ? [{ id: "teammates" as const, icon: "team" as const, title: tr("Agents", "智能体") }]
+      ? [
+          {
+            id: "teammates" as const,
+            icon: "team" as const,
+            title: tr("settings.dashboardSettings.agents"),
+          },
+        ]
       : []),
-    { id: "workspaces", icon: "team", title: tr("Workspaces", "工作空间") },
-    { id: "connections", icon: "link", title: tr("Connections & security", "连接与安全") },
-    { id: "billing", icon: "billing", title: tr("Plan & usage", "套餐与用量") },
+    { id: "workspaces", icon: "team", title: tr("settings.dashboardSettings.workspaces") },
+    {
+      id: "connections",
+      icon: "link",
+      title: tr("settings.dashboardSettings.connectionsSecurity"),
+    },
+    { id: "billing", icon: "billing", title: tr("settings.dashboardSettings.planUsage") },
   ];
   const titles = {
     teammates: {
-      eyebrow: tr("OPTIONAL SETTINGS", "可选设置"),
-      title: tr("Agent profiles", "智能体资料"),
-      detail: tr(
-        "Arc Chat is where you organize work. Manage saved identities and access here.",
-        "工作统一在 Arc Chat 组织，这里只维护常驻资料和访问设置。",
-      ),
+      eyebrow: tr("settings.dashboardSettings.optionalSettings"),
+      title: tr("settings.dashboardSettings.agentProfiles"),
+      detail: tr("settings.dashboardSettings.arcChatIsWhereYouOrganize"),
     },
     account: {
-      eyebrow: tr("PERSONAL SETTINGS", "个人设置"),
-      title: tr("Your profile", "个人资料"),
-      detail: tr(
-        "The account you use across Arc and Connect.",
-        "在 Arc 与 Connect 中使用同一个账号。",
-      ),
+      eyebrow: tr("settings.dashboardSettings.personalSettings"),
+      title: tr("settings.dashboardSettings.yourProfile"),
+      detail: tr("settings.dashboardSettings.theAccountYouUseAcrossArc"),
     },
     appearance: {
-      eyebrow: tr("PERSONAL SETTINGS", "个人设置"),
-      title: tr("Make it yours", "调整为你喜欢的样子"),
-      detail: tr(
-        "Choose how your workspace looks and the language you use.",
-        "选择工作空间的外观与使用语言。",
-      ),
+      eyebrow: tr("settings.dashboardSettings.personalSettings"),
+      title: tr("settings.dashboardSettings.makeItYours"),
+      detail: tr("settings.dashboardSettings.chooseHowYourWorkspaceLooksAnd"),
     },
     memory: {
-      eyebrow: tr("PERSONAL CONTEXT", "个人背景"),
-      title: tr("Memory", "记忆"),
-      detail: tr(
-        "Useful context that follows you across conversations and models.",
-        "让有用的背景信息随你跨越对话与模型。",
-      ),
+      eyebrow: tr("settings.dashboardSettings.personalContext"),
+      title: tr("settings.dashboardSettings.memory"),
+      detail: tr("settings.dashboardSettings.usefulContextThatFollowsYouAcross"),
     },
     workspaces: {
-      eyebrow: tr("COLLABORATION", "协作空间"),
-      title: tr("Workspaces", "工作空间"),
-      detail: tr(
-        "Keep personal access private and organize your team.",
-        "让个人设备保持私有，同时与团队安全协作。",
-      ),
+      eyebrow: tr("settings.dashboardSettings.collaboration"),
+      title: tr("settings.dashboardSettings.workspaces"),
+      detail: tr("settings.dashboardSettings.keepPersonalAccessPrivateAndOrganize"),
     },
     connections: {
-      eyebrow: tr("ACCESS CONTROL", "访问控制"),
-      title: tr("Connections & security", "连接与安全"),
-      detail: tr(
-        "Manage the devices, apps and permissions available to your AI.",
-        "管理 AI 可访问的设备、应用和权限边界。",
-      ),
+      eyebrow: tr("settings.dashboardSettings.accessControl"),
+      title: tr("settings.dashboardSettings.connectionsSecurity"),
+      detail: tr("settings.dashboardSettings.manageTheDevicesAppsAndPermissions"),
     },
     billing: {
-      eyebrow: tr("SUBSCRIPTION", "订阅方案"),
-      title: tr("Plan & usage", "套餐与用量"),
-      detail: tr("Understand your plan and available capacity.", "查看当前套餐与可用调用额度。"),
+      eyebrow: tr("settings.dashboardSettings.subscription"),
+      title: tr("settings.dashboardSettings.planUsage"),
+      detail: tr("settings.dashboardSettings.understandYourPlanAndAvailableCapacity"),
     },
   };
   const active = titles[section];
@@ -246,14 +239,17 @@ export function DashboardSettings({
 
   return (
     <div className="raSettings">
-      <aside className="raSettingsAside" aria-label={tr("Settings navigation", "设置导航")}>
-        <div className="raSettingsAsideLabel">{tr("PERSONAL", "个人")}</div>
+      <aside
+        className="raSettingsAside"
+        aria-label={tr("settings.dashboardSettings.settingsNavigation")}
+      >
+        <div className="raSettingsAsideLabel">{tr("settings.dashboardSettings.personal")}</div>
         <nav className="raSettingsNav">
           {nav.map((item, index) => (
             <Fragment key={item.id}>
               {index === 2 && (
                 <div className="raSettingsAsideLabel raSettingsGroupLabel">
-                  {tr("WORKSPACE", "工作空间")}
+                  {tr("settings.dashboardSettings.workspace")}
                 </div>
               )}
               <button
@@ -271,12 +267,7 @@ export function DashboardSettings({
         </nav>
         <div className="raSettingsAsideFoot">
           <Icon name="shield" size={17} />
-          <span>
-            {tr(
-              "Your personal devices and credentials stay private.",
-              "你的个人设备与凭证始终保持私有。",
-            )}
-          </span>
+          <span>{tr("settings.dashboardSettings.yourPersonalDevicesAndCredentialsStay")}</span>
         </div>
       </aside>
 
@@ -288,7 +279,7 @@ export function DashboardSettings({
         </header>
 
         {section === "teammates" && accountId && (
-          <Suspense fallback={<p>{tr("Loading agents…", "正在读取智能体…")}</p>}>
+          <Suspense fallback={<p>{tr("settings.dashboardSettings.loadingAgents")}</p>}>
             <TeammateSettings accountId={accountId} tr={tr} />
           </Suspense>
         )}
@@ -300,38 +291,32 @@ export function DashboardSettings({
                 {displayName.slice(0, 1).toUpperCase()}
               </div>
               <div className="raSettingsIdentityText">
-                <span className="raSettingsFieldLabel">{tr("SIGNED IN AS", "当前登录账号")}</span>
+                <span className="raSettingsFieldLabel">
+                  {tr("settings.dashboardSettings.signedInAs")}
+                </span>
                 <h3>{displayName}</h3>
                 <p>{currentEmail}</p>
               </div>
-              <span className="raSettingsQuietPill">{tr("Personal account", "个人账号")}</span>
+              <span className="raSettingsQuietPill">
+                {tr("settings.dashboardSettings.personalAccount")}
+              </span>
             </section>
             <section className="raSettingsSurface">
               <div className="raSettingsRow raSettingsRowLast">
                 <div className="raSettingsRowInfo">
-                  <h4>{tr("Session", "登录会话")}</h4>
-                  <p>
-                    {tr(
-                      "Sign out of this browser when you're finished.",
-                      "在共享设备或使用结束后退出当前登录。",
-                    )}
-                  </p>
+                  <h4>{tr("settings.dashboardSettings.session")}</h4>
+                  <p>{tr("settings.dashboardSettings.signOutOfThisBrowserWhen")}</p>
                 </div>
                 <button className="raSettingsButton" type="button" onClick={() => void onSignOut()}>
-                  {tr("Sign out", "退出登录")}
+                  {tr("settings.dashboardSettings.signOut")}
                 </button>
               </div>
             </section>
             <section className="raSettingsSurface">
               <div className="raSettingsRow raSettingsRowLast">
                 <div className="raSettingsRowInfo">
-                  <h4>{tr("Remote Arc on your device", "设备上的 Remote Arc")}</h4>
-                  <p>
-                    {tr(
-                      "Keep your workspace a click away with the installable app.",
-                      "安装为独立应用，随时打开工作空间。",
-                    )}
-                  </p>
+                  <h4>{tr("settings.dashboardSettings.remoteArcOnYourDevice")}</h4>
+                  <p>{tr("settings.dashboardSettings.keepYourWorkspaceAClickAway")}</p>
                 </div>
                 <ProductInstall />
               </div>
@@ -344,14 +329,14 @@ export function DashboardSettings({
             <section className="raSettingsSurface">
               <div className="raSettingsSurfaceHeader">
                 <div>
-                  <h3>{tr("Theme", "显示主题")}</h3>
-                  <p>{tr("A comfortable workspace, day or night.", "白天与夜晚，都舒适清晰。")}</p>
+                  <h3>{tr("settings.dashboardSettings.theme")}</h3>
+                  <p>{tr("settings.dashboardSettings.aComfortableWorkspaceDayOrNight")}</p>
                 </div>
               </div>
               <div
                 className="raThemeChoices"
                 role="group"
-                aria-label={tr("Workspace theme", "工作空间主题")}
+                aria-label={tr("settings.dashboardSettings.workspaceTheme")}
               >
                 {(["light", "dark", "system"] as const).map((value) => (
                   <button
@@ -374,10 +359,10 @@ export function DashboardSettings({
                     </span>
                     <span>
                       {value === "light"
-                        ? tr("Light", "浅色")
+                        ? tr("settings.dashboardSettings.light")
                         : value === "dark"
-                          ? tr("Dark", "深色")
-                          : tr("System", "跟随系统")}
+                          ? tr("settings.dashboardSettings.dark")
+                          : tr("settings.dashboardSettings.system")}
                       <i>{theme === value ? "✓" : ""}</i>
                     </span>
                   </button>
@@ -387,14 +372,14 @@ export function DashboardSettings({
             <section className="raSettingsSurface">
               <div className="raSettingsRow raSettingsRowLast">
                 <div className="raSettingsRowInfo">
-                  <h4>{tr("Language", "语言")}</h4>
-                  <p>{tr("Choose the language for your workspace.", "选择工作空间的显示语言。")}</p>
+                  <h4>{tr("settings.dashboardSettings.language")}</h4>
+                  <p>{tr("settings.dashboardSettings.chooseTheLanguageForYourWorkspace")}</p>
                 </div>
                 <div className="raSettingsRowControl">
                   <div
                     className="languageSetting"
                     role="group"
-                    aria-label={tr("Dashboard language", "控制台语言")}
+                    aria-label={tr("settings.dashboardSettings.dashboardLanguage")}
                   >
                     <button
                       type="button"
@@ -417,10 +402,7 @@ export function DashboardSettings({
               </div>
             </section>
             <p className="raSettingsFootnote">
-              {tr(
-                "Preferences are saved on this device and apply to both Arc and Connect.",
-                "偏好保存在当前设备，并同时应用于 Arc 和 Connect。",
-              )}
+              {tr("settings.dashboardSettings.preferencesAreSavedOnThisDevice")}
             </p>
           </div>
         )}
@@ -436,13 +418,8 @@ export function DashboardSettings({
             <section className="raSettingsSurface">
               <div className="raSettingsSurfaceHeader">
                 <div>
-                  <h3>{tr("Remote MCP endpoint", "远程 MCP 地址")}</h3>
-                  <p>
-                    {tr(
-                      "Add this URL in a supported AI client to connect Remote Arc.",
-                      "在支持 MCP 的 AI 客户端中添加此地址即可连接 Remote Arc。",
-                    )}
-                  </p>
+                  <h3>{tr("settings.dashboardSettings.remoteMcpEndpoint")}</h3>
+                  <p>{tr("settings.dashboardSettings.addThisUrlInASupported")}</p>
                 </div>
               </div>
               <div className="raSettingsEndpoint">
@@ -453,28 +430,22 @@ export function DashboardSettings({
                   onClick={() => void copyEndpoint()}
                 >
                   <Icon name={copyStatus === "copied" ? "check" : "copy"} size={16} />
-                  {copyStatus === "copied" ? tr("Copied", "已复制") : tr("Copy URL", "复制地址")}
+                  {copyStatus === "copied"
+                    ? tr("settings.dashboardSettings.copied")
+                    : tr("settings.dashboardSettings.copyUrl")}
                 </button>
               </div>
               {copyStatus === "error" && (
                 <p className="raSettingsInlineError" role="alert">
-                  {tr(
-                    "Couldn't copy automatically. Select the address above to copy it.",
-                    "复制失败，请选中上方地址手动复制。",
-                  )}
+                  {tr("settings.dashboardSettings.couldnTCopyAutomaticallySelectThe")}
                 </p>
               )}
             </section>
             <section className="raSettingsSurface">
               <div className="raSettingsSurfaceHeader">
                 <div>
-                  <h3>{tr("Access management", "访问权限管理")}</h3>
-                  <p>
-                    {tr(
-                      "Manage the accounts and computers your AI can access.",
-                      "管理 AI 可访问的账号与电脑。",
-                    )}
-                  </p>
+                  <h3>{tr("settings.dashboardSettings.accessManagement")}</h3>
+                  <p>{tr("settings.dashboardSettings.manageTheAccountsAndComputersYour")}</p>
                 </div>
               </div>
               {(
@@ -482,35 +453,26 @@ export function DashboardSettings({
                   [
                     "devices",
                     "device",
-                    tr("Devices & tools", "设备与工具"),
-                    tr("Manage paired computers and tool permissions", "管理已配对电脑和工具权限"),
+                    tr("settings.dashboardSettings.devicesTools"),
+                    tr("settings.dashboardSettings.managePairedComputersAndToolPermissions"),
                   ],
                   [
                     "apps",
                     "apps",
-                    tr("Connected apps", "已连接应用"),
-                    tr(
-                      "Review integrations and their available actions",
-                      "查看应用集成及其操作能力",
-                    ),
+                    tr("settings.dashboardSettings.connectedApps"),
+                    tr("settings.dashboardSettings.reviewIntegrationsAndTheirAvailableActions"),
                   ],
                   [
                     "security",
                     "shield",
-                    tr("Security & activity", "安全与活动记录"),
-                    tr(
-                      "Review grants, access controls and audit events",
-                      "检查授权、访问控制和审计记录",
-                    ),
+                    tr("settings.dashboardSettings.securityActivity"),
+                    tr("settings.dashboardSettings.reviewGrantsAccessControlsAndAudit"),
                   ],
                   [
                     "connect",
                     "link",
-                    tr("Connection setup", "连接配置"),
-                    tr(
-                      "Get started with ChatGPT, Claude and more",
-                      "查看 ChatGPT、Claude 等客户端连接指南",
-                    ),
+                    tr("settings.dashboardSettings.connectionSetup"),
+                    tr("settings.dashboardSettings.getStartedWithChatgptClaudeAnd"),
                   ],
                 ] as const
               ).map(([destination, icon, title, description]) => (

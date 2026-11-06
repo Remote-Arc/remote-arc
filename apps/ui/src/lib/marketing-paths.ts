@@ -1,3 +1,4 @@
+import { isWebsiteLocation } from "./website-origin.js";
 import { SKILL_USE_CASES } from "../../../../packages/docs/src/skill-use-cases.js";
 import { DOC_PATHS } from "../../../../packages/docs/src/catalog.js";
 export type SiteLocale = "en" | "zh";
@@ -54,15 +55,7 @@ export const chinesePages = new Set([
   "/use-cases/job-applications",
 ]);
 // Public PR previews serve the same marketing pages as the production website.
-const isMarketingPreview = (hostname: string) =>
-  /^pr-[0-9]+-remote-arc-ui-preview[.]nzp[.]workers[.]dev$/.test(hostname) ||
-  hostname === "remote-arc-video-gallery-preview.nzp.workers.dev";
-export const isWebsite = () =>
-  location.hostname === "remotearc.app" ||
-  location.hostname === "www.remotearc.app" ||
-  isMarketingPreview(location.hostname) ||
-  ((location.hostname === "localhost" || location.hostname === "127.0.0.1") &&
-    Boolean(location.port));
+export const isWebsite = () => isWebsiteLocation(location.hostname, location.port);
 export function baseMarketingPath(path: string): string {
   return path === "/zh" ? "/" : path.startsWith("/zh/") ? path.slice(3) : path;
 }

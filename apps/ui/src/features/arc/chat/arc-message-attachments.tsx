@@ -1,7 +1,8 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { useEffect, useState } from "react";
 import type { ArcAttachment, ArcLocation } from "@remotearc/protocol";
 import { ComposerGlyph } from "../composer/arc-composer-menu.js";
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
 function Attachment({ file, tr }: { file: ArcAttachment; tr: Tr }) {
   const [preview, setPreview] = useState(""),
     [failed, setFailed] = useState(false),
@@ -56,7 +57,7 @@ function Attachment({ file, tr }: { file: ArcAttachment; tr: Tr }) {
       className={"arcMessageAttachment" + (file.kind === "image" ? " isImage" : "")}
       disabled={busy || failed}
       onClick={() => void download()}
-      title={tr("Download attachment", "下载附件")}
+      title={tr("arc.chat.arcMessageAttachments.downloadAttachment")}
       aria-label={file.name}
     >
       {preview ? (
@@ -68,12 +69,12 @@ function Attachment({ file, tr }: { file: ArcAttachment; tr: Tr }) {
         <strong>{file.name}</strong>
         <small>
           {failed
-            ? tr("File unavailable", "文件已不可用")
+            ? tr("arc.chat.arcMessageAttachments.fileUnavailable")
             : busy
-              ? tr("Preparing…", "正在准备…")
+              ? tr("arc.chat.arcMessageAttachments.preparing")
               : Math.max(1, Math.round(file.size / 1024)) +
                 " KB" +
-                (file.truncated ? " · " + tr("Excerpt", "节选") : "")}
+                (file.truncated ? " · " + tr("arc.chat.arcMessageAttachments.excerpt") : "")}
         </small>
       </span>
     </button>

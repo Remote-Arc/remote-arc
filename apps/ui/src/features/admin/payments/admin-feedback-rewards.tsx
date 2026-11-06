@@ -1,7 +1,7 @@
 import { canonicalErrorEnvelope } from "../../../../../../packages/protocol/src/error-codes.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { useEffect, useState, type FormEvent } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 type Policy = {
   id: string;
   revision: number;
@@ -80,7 +80,7 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
       })
       .catch(() => {
         if (!controller.signal.aborted)
-          setError(tr("Reward data could not be loaded.", "无法读取奖励配置。"));
+          setError(tr("admin.payments.adminFeedbackRewards.rewardDataCouldNotBeLoaded"));
       });
     return () => controller.abort();
   }, [preview, revision, tr]);
@@ -97,15 +97,10 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
         body: JSON.stringify(body),
       });
       if (!response.ok) throw Error();
-      setNotice(tr("Saved. Reward grants are recorded once.", "已保存，奖励只会记录和发放一次。"));
+      setNotice(tr("admin.payments.adminFeedbackRewards.savedRewardGrantsAreRecordedOnce"));
       setRevision((value) => value + 1);
     } catch {
-      setError(
-        tr(
-          "Could not apply this change. Refresh to check policy limits, claim status and current admin access.",
-          "操作未完成，请刷新核对配置限额、申请状态和管理员权限。",
-        ),
-      );
+      setError(tr("admin.payments.adminFeedbackRewards.couldNotApplyThisChangeRefresh"));
     } finally {
       setBusy(false);
     }
@@ -118,20 +113,15 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
     <section className="adminSurface adminFeedbackRewards">
       <div className="adminSectionHeader">
         <div>
-          <h2>{tr("Reward useful feedback.", "奖励有帮助的反馈。")}</h2>
-          <p>
-            {tr(
-              "A signed-in user submits feedback, you review it, and Connect calls are granted once. Rewards expire without resetting at a new month. Paid unlimited plans stay unlimited.",
-              "用户登录后提交反馈，由你审核，再一次性发放 Connect 调用次数。奖励到期失效，跨月不会重置；付费无限套餐仍保持无限。",
-            )}
-          </p>
+          <h2>{tr("admin.payments.adminFeedbackRewards.rewardUsefulFeedback")}</h2>
+          <p>{tr("admin.payments.adminFeedbackRewards.aSignedInUserSubmitsFeedback")}</p>
         </div>
         <button
           className="adminOutlineBtn"
           type="button"
           onClick={() => setRevision((value) => value + 1)}
         >
-          {tr("Refresh", "刷新")}
+          {tr("admin.payments.adminFeedbackRewards.refresh")}
         </button>
       </div>
       {error && (
@@ -142,7 +132,7 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
       {notice && <p role="status">{notice}</p>}
       {!data && !error && (
         <WorkspaceLoading
-          label={tr("Loading reward settings…", "正在读取奖励配置…")}
+          label={tr("admin.payments.adminFeedbackRewards.loadingRewardSettings")}
           variant="rows"
         />
       )}
@@ -150,12 +140,18 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
         <>
           <div className="adminMetrics adminMetrics--overview">
             {[
-              { label: tr("Rewards granted", "已发放奖励"), value: data.totals.grants },
               {
-                label: tr("Calls awarded / campaign cap", "已发放调用 / 活动上限"),
+                label: tr("admin.payments.adminFeedbackRewards.rewardsGranted"),
+                value: data.totals.grants,
+              },
+              {
+                label: tr("admin.payments.adminFeedbackRewards.callsAwardedCampaignCap"),
                 value: data.totals.grantedCalls + " / " + data.policy.total_calls_cap,
               },
-              { label: tr("Reward calls used", "已使用奖励调用"), value: data.totals.spentCalls },
+              {
+                label: tr("admin.payments.adminFeedbackRewards.rewardCallsUsed"),
+                value: data.totals.spentCalls,
+              },
             ].map((item) => (
               <article className="adminMetricCard" key={item.label}>
                 <span>{item.label}</span>
@@ -166,7 +162,7 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
           <form onSubmit={change}>
             <div className="adminPaymentForm">
               <label className="adminPaymentField">
-                {tr("Calls per approved feedback", "每次有效反馈奖励调用")}
+                {tr("admin.payments.adminFeedbackRewards.callsPerApprovedFeedback")}
                 <input
                   type="number"
                   min={1}
@@ -179,7 +175,7 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
                 />
               </label>
               <label className="adminPaymentField">
-                {tr("Validity after grant · days", "发放后有效期 · 天")}
+                {tr("admin.payments.adminFeedbackRewards.validityAfterGrantDays")}
                 <input
                   type="number"
                   min={1}
@@ -192,7 +188,7 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
                 />
               </label>
               <label className="adminPaymentField">
-                {tr("Rewards per account", "每账号领取次数")}
+                {tr("admin.payments.adminFeedbackRewards.rewardsPerAccount")}
                 <input
                   type="number"
                   min={1}
@@ -205,7 +201,7 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
                 />
               </label>
               <label className="adminPaymentField">
-                {tr("Total campaign calls", "活动总调用额度")}
+                {tr("admin.payments.adminFeedbackRewards.totalCampaignCalls")}
                 <input
                   type="number"
                   min={calls}
@@ -218,7 +214,7 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
                 />
               </label>
               <label className="adminPaymentField">
-                {tr("Offer feedback rewards", "启用反馈奖励")}
+                {tr("admin.payments.adminFeedbackRewards.offerFeedbackRewards")}
                 <input
                   type="checkbox"
                   checked={enabled}
@@ -230,20 +226,23 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
               </label>
             </div>
             <button className="adminOutlineBtn" disabled={busy || preview}>
-              {tr("Review reward terms", "核对奖励规则")}
+              {tr("admin.payments.adminFeedbackRewards.reviewRewardTerms")}
             </button>
           </form>
           {review && (
             <div className="adminPaymentReview">
               <p>
-                {enabled ? tr("Enabled", "启用") : tr("Paused", "暂停")} · {calls}{" "}
-                {tr("calls", "次调用")} · {days} {tr("days", "天")} · {perUser} /{" "}
-                {tr("account", "账号")} · {cap} {tr("total calls", "总调用额度")}
+                {enabled
+                  ? tr("admin.payments.adminFeedbackRewards.enabled")
+                  : tr("admin.payments.adminFeedbackRewards.paused")}{" "}
+                · {calls} {tr("admin.payments.adminFeedbackRewards.calls")} · {days}{" "}
+                {tr("admin.payments.adminFeedbackRewards.days")} · {perUser} /{" "}
+                {tr("admin.payments.adminFeedbackRewards.account")} · {cap}{" "}
+                {tr("admin.payments.adminFeedbackRewards.totalCalls")}
               </p>
               <p>
                 {tr(
-                  "Accepted applications keep their original amount and validity. The current campaign cap and per-person limit still apply at approval.",
-                  "已受理申请保留原奖励数量与有效期；审核发放时仍检查当前活动总额度与每人上限。",
+                  "admin.payments.adminFeedbackRewards.acceptedApplicationsKeepTheirOriginalAmount",
                 )}
               </p>
               <button
@@ -260,7 +259,7 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
                   })
                 }
               >
-                {tr("Publish these terms", "发布此规则")}
+                {tr("admin.payments.adminFeedbackRewards.publishTheseTerms")}
               </button>
             </div>
           )}
@@ -269,11 +268,11 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
               <thead>
                 <tr>
                   {[
-                    tr("User", "用户"),
-                    tr("Feedback", "反馈"),
-                    tr("Reward", "奖励"),
-                    tr("Status", "状态"),
-                    tr("Review", "审核"),
+                    tr("admin.payments.adminFeedbackRewards.user"),
+                    tr("admin.payments.adminFeedbackRewards.feedback"),
+                    tr("admin.payments.adminFeedbackRewards.reward"),
+                    tr("admin.payments.adminFeedbackRewards.status"),
+                    tr("admin.payments.adminFeedbackRewards.review"),
                   ].map((label) => (
                     <th key={label}>{label}</th>
                   ))}
@@ -288,17 +287,20 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
                     </td>
                     <td>
                       <details>
-                        <summary>{tr("Read submitted feedback", "查看已提交反馈")}</summary>
+                        <summary>
+                          {tr("admin.payments.adminFeedbackRewards.readSubmittedFeedback")}
+                        </summary>
                         <p style={{ whiteSpace: "pre-wrap", maxWidth: 360 }}>
-                          {claim.message || tr("Submission removed", "提交内容已删除")}
+                          {claim.message ||
+                            tr("admin.payments.adminFeedbackRewards.submissionRemoved")}
                         </p>
                       </details>
                       <small>{new Date(claim.created_at).toLocaleString()}</small>
                     </td>
                     <td>
-                      {claim.calls} {tr("calls", "次调用")}
+                      {claim.calls} {tr("admin.payments.adminFeedbackRewards.calls")}
                       <small>
-                        {claim.valid_days} {tr("days", "天")}
+                        {claim.valid_days} {tr("admin.payments.adminFeedbackRewards.days")}
                         {claim.expires_at
                           ? " · " + new Date(claim.expires_at).toLocaleDateString()
                           : ""}
@@ -306,10 +308,10 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
                     </td>
                     <td>
                       {claim.status === "pending"
-                        ? tr("Awaiting review", "待审核")
+                        ? tr("admin.payments.adminFeedbackRewards.awaitingReview")
                         : claim.status === "granted"
-                          ? tr("Granted", "已发放")
-                          : tr("Rejected", "未通过")}
+                          ? tr("admin.payments.adminFeedbackRewards.granted")
+                          : tr("admin.payments.adminFeedbackRewards.rejected")}
                     </td>
                     <td>
                       {claim.status === "pending" && (
@@ -319,14 +321,14 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
                             disabled={busy || preview || !data.policy.enabled}
                             onClick={() => void action("claims/" + claim.id + "/approve", {})}
                           >
-                            {tr("Approve & grant", "确认并发放")}
+                            {tr("admin.payments.adminFeedbackRewards.approveGrant")}
                           </button>
                           <button
                             className="adminOutlineBtn"
                             disabled={busy || preview}
                             onClick={() => void action("claims/" + claim.id + "/reject", {})}
                           >
-                            {tr("Reject", "不通过")}
+                            {tr("admin.payments.adminFeedbackRewards.reject")}
                           </button>
                         </>
                       )}
@@ -336,7 +338,9 @@ export function AdminFeedbackRewards({ preview = false }: { preview?: boolean })
               </tbody>
             </table>
             {data.claims.length === 0 && (
-              <p className="adminNoData">{tr("No reward applications yet.", "暂无奖励申请。")}</p>
+              <p className="adminNoData">
+                {tr("admin.payments.adminFeedbackRewards.noRewardApplicationsYet")}
+              </p>
             )}
           </div>
         </>

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { canonicalErrorCode } from "../../../../../../packages/protocol/src/error-codes.js";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 import { FOLLOWUP_TEMPLATES } from "../../../../../../packages/protocol/src/followup-templates.js";
 import {
@@ -64,7 +64,7 @@ export function FollowupDialog({
           className="adminOutlineBtn"
           disabled={busy}
           onClick={onClose}
-          aria-label={tr("Close", "关闭")}
+          aria-label={tr("admin.followups.adminFollowupDetail.close")}
         >
           <Icon name="close" size={16} />
         </button>
@@ -181,88 +181,49 @@ export function FollowupDetail({
     return (
       {
         HISTORY_UNAVAILABLE: tr(
-          "Contact history could not be loaded. Refresh and try again.",
-          "无法读取联系记录，请刷新重试。",
+          "admin.followups.adminFollowupDetail.contactHistoryCouldNotBeLoaded",
         ),
         EMAIL_NOT_CONFIGURED: tr(
-          "The email channel is not configured. Your draft is safe; configure the sender, then recheck.",
-          "发件通道尚未配置。草稿已保留，配置后可重新检查。",
+          "admin.followups.adminFollowupDetail.theEmailChannelIsNotConfigured",
         ),
-        RECIPIENT_SUPPRESSED: tr(
-          "This user has stopped follow-ups. Sending is unavailable.",
-          "该用户已停止接收回访，无法发送。",
-        ),
+        RECIPIENT_SUPPRESSED: tr("admin.followups.adminFollowupDetail.thisUserHasStoppedFollowUps"),
         CONTACT_COOLDOWN:
-          tr(
-            "A follow-up was sent recently. You can send again at ",
-            "近期已联系过此用户，下次可发送时间：",
-          ) + followupTime(new Date(nextSendAt).toISOString()),
+          tr("admin.followups.adminFollowupDetail.aFollowUpWasSentRecently") +
+          followupTime(new Date(nextSendAt).toISOString()),
         CONTACT_COOLDOWN_OR_IN_PROGRESS: tr(
-          "Another email was sent recently or needs delivery verification. Refresh the history.",
-          "近期已有邮件发出，或投递状态待核实，请刷新历史记录。",
+          "admin.followups.adminFollowupDetail.anotherEmailWasSentRecentlyOr",
         ),
-        BATCH_PENDING: tr(
-          "A bulk email is queued for this user. Manage it in Bulk history before sending another email.",
-          "该用户已有群发邮件排队中，请先在群发记录中处理，再发送其他邮件。",
-        ),
-        DELIVERY_UNCONFIRMED: tr(
-          "A delivery is in progress or uncertain. Check its record before sending another email.",
-          "有邮件正在发送或投递状态待核实，请先查看历史记录。",
-        ),
-        DRAFT_CONFLICT: tr(
-          "This draft changed in another tab. Open the latest saved draft from History before sending. Your current text is kept here.",
-          "草稿已在其他页面修改。请从历史记录打开最新版；当前编辑内容仍保留在这里。",
-        ),
+        BATCH_PENDING: tr("admin.followups.adminFollowupDetail.aBulkEmailIsQueuedFor"),
+        DELIVERY_UNCONFIRMED: tr("admin.followups.adminFollowupDetail.aDeliveryIsInProgressOr"),
+        DRAFT_CONFLICT: tr("admin.followups.adminFollowupDetail.thisDraftChangedInAnotherTab"),
         DRAFT_NOT_EDITABLE: tr(
-          "This email was already processed. Open History or start a new email.",
-          "这封邮件已处理，请查看历史记录或新建邮件。",
+          "admin.followups.adminFollowupDetail.thisEmailWasAlreadyProcessedOpen",
         ),
-        DRAFT_NOT_FOUND: tr(
-          "This saved draft is no longer available. Start a new email.",
-          "这份草稿已不存在，请新建邮件。",
-        ),
+        DRAFT_NOT_FOUND: tr("admin.followups.adminFollowupDetail.thisSavedDraftIsNoLonger"),
         RECIPIENT_CHANGED: tr(
-          "The recipient address changed. Start a new draft for the current address.",
-          "收件邮箱已变更，请按当前邮箱新建草稿。",
+          "admin.followups.adminFollowupDetail.theRecipientAddressChangedStartA",
         ),
         CONTACT_PERMISSION_REQUIRED: tr(
-          "Choose the user’s request or agreement below to record it and send.",
-          "请在下方选择用户的联系请求或同意依据，然后发送。",
+          "admin.followups.adminFollowupDetail.chooseTheUserSRequestOr",
         ),
         PERMISSION_NOTE_REQUIRED: tr(
-          "Add the request or agreement that this follow-up responds to.",
-          "请填写本次回访对应的用户请求或同意记录。",
+          "admin.followups.adminFollowupDetail.addTheRequestOrAgreementThat",
         ),
-        INVALID_MESSAGE: tr(
-          "Enter a subject and a message of at least 20 characters.",
-          "请填写主题和至少 20 个字的正文。",
-        ),
-        LOADING: tr("Checking contact history…", "正在检查联系记录…"),
+        INVALID_MESSAGE: tr("admin.followups.adminFollowupDetail.enterASubjectAndAMessage"),
+        LOADING: tr("admin.followups.adminFollowupDetail.checkingContactHistory"),
       }[code] ||
       (code.startsWith("PROVIDER_")
-        ? tr(
-            "The email service rejected this send. Your message and error are kept in History.",
-            "发信服务未接受这次发送，邮件与错误已保留在历史记录中。",
-          )
-        : tr(
-            "The action could not be confirmed. Your text is kept. Refresh the history before retrying.",
-            "操作结果尚未确认，内容已保留。请先刷新历史记录再重试。",
-          ))
+        ? tr("admin.followups.adminFollowupDetail.theEmailServiceRejectedThisSend")
+        : tr("admin.followups.adminFollowupDetail.theActionCouldNotBeConfirmed"))
     );
   };
   const noticeText =
     notice === "sent"
-      ? tr(
-          "Email submitted to the sender. You can follow its status in History.",
-          "邮件已提交给发信服务，可在历史记录查看。",
-        )
+      ? tr("admin.followups.adminFollowupDetail.emailSubmittedToTheSenderYou")
       : notice === "notes"
-        ? tr("Contact notes saved.", "跟进记录已保存。")
+        ? tr("admin.followups.adminFollowupDetail.contactNotesSaved")
         : notice === "draft"
-          ? tr(
-              "Draft saved. You can keep editing or send it now.",
-              "草稿已保存，可以继续编辑或立即发送。",
-            )
+          ? tr("admin.followups.adminFollowupDetail.draftSavedYouCanKeepEditing")
           : "";
   const site = "https://remotearc.app" + (draft.locale === "zh" ? "/zh" : "");
   const generated = renderFollowupEmail({
@@ -436,18 +397,21 @@ export function FollowupDetail({
     data?.messages.filter((mail) => mail.status === "draft" && !mail.batch_id).length || 0;
   const mailStatus = (status: string) =>
     ({
-      batch_draft: tr("Bulk draft", "群发草稿"),
-      queued: tr("Queued", "已排队"),
-      cancelled: tr("Cancelled", "已取消"),
-      skipped: tr("Excluded", "已排除"),
-      draft: tr("Draft", "草稿"),
-      sent: tr("Submitted", "已提交发送"),
-      sending: tr("Sending", "发送中"),
-      unknown: tr("Check delivery", "投递待核实"),
-      failed: tr("Send failed", "发送失败"),
+      batch_draft: tr("admin.followups.adminFollowupDetail.bulkDraft"),
+      queued: tr("admin.followups.adminFollowupDetail.queued"),
+      cancelled: tr("admin.followups.adminFollowupDetail.cancelled"),
+      skipped: tr("admin.followups.adminFollowupDetail.excluded"),
+      draft: tr("admin.followups.adminFollowupDetail.draft"),
+      sent: tr("admin.followups.adminFollowupDetail.submitted"),
+      sending: tr("admin.followups.adminFollowupDetail.sending"),
+      unknown: tr("admin.followups.adminFollowupDetail.checkDelivery"),
+      failed: tr("admin.followups.adminFollowupDetail.sendFailed"),
     })[status] || status;
   return (
-    <section className="adminFollowupDetail" aria-label={tr("Follow-up email", "跟进邮件")}>
+    <section
+      className="adminFollowupDetail"
+      aria-label={tr("admin.followups.adminFollowupDetail.followUpEmail")}
+    >
       <header className="followupDetailHeader">
         <div>
           <h3>{person.name || person.email}</h3>
@@ -460,10 +424,13 @@ export function FollowupDetail({
           onClick={() => replaceDraft(newFollowupDraft(person, draft.locale))}
         >
           <Icon name="add" size={14} />
-          {tr("New email", "新建邮件")}
+          {tr("admin.followups.adminFollowupDetail.newEmail")}
         </button>
       </header>
-      <nav className="followupTabs" aria-label={tr("Follow-up workspace", "跟进工作区")}>
+      <nav
+        className="followupTabs"
+        aria-label={tr("admin.followups.adminFollowupDetail.followUpWorkspace")}
+      >
         {(["email", "history", "notes"] as const).map((value) => (
           <button
             type="button"
@@ -472,10 +439,11 @@ export function FollowupDetail({
             onClick={() => setTab(value)}
           >
             {value === "email"
-              ? tr("Write email", "撰写邮件")
+              ? tr("admin.followups.adminFollowupDetail.writeEmail")
               : value === "history"
-                ? tr("Drafts & history", "草稿与历史") + (draftCount ? " · " + draftCount : "")
-                : tr("Contact notes", "跟进记录")}
+                ? tr("admin.followups.adminFollowupDetail.draftsHistory") +
+                  (draftCount ? " · " + draftCount : "")
+                : tr("admin.followups.adminFollowupDetail.contactNotes")}
           </button>
         ))}
       </nav>
@@ -490,7 +458,7 @@ export function FollowupDetail({
               setError("");
             }}
           >
-            {tr("Refresh history", "刷新记录")}
+            {tr("admin.followups.adminFollowupDetail.refreshHistory")}
           </button>
         </div>
       )}
@@ -512,12 +480,12 @@ export function FollowupDetail({
         <div className="followupComposeToolbar">
           <span role="status">
             {busy === "draft"
-              ? tr("Saving…", "正在保存…")
+              ? tr("admin.followups.adminFollowupDetail.saving")
               : draft.revision === null
-                ? tr("New draft", "新草稿")
+                ? tr("admin.followups.adminFollowupDetail.newDraft")
                 : dirty
-                  ? tr("Unsaved changes", "有未保存的更改")
-                  : tr("Draft saved", "草稿已保存")}
+                  ? tr("admin.followups.adminFollowupDetail.unsavedChanges")
+                  : tr("admin.followups.adminFollowupDetail.draftSaved")}
           </span>
           <div>
             <button
@@ -526,7 +494,7 @@ export function FollowupDetail({
               disabled={Boolean(busy)}
               onClick={() => void saveDraft()}
             >
-              {tr("Save draft", "保存草稿")}
+              {tr("admin.followups.adminFollowupDetail.saveDraft")}
             </button>
             <button
               type="button"
@@ -534,7 +502,9 @@ export function FollowupDetail({
               disabled={Boolean(busy) || refreshing || !data}
               onClick={startSend}
             >
-              {busy === "send" ? tr("Sending…", "正在发送…") : tr("Send email", "发送邮件")}
+              {busy === "send"
+                ? tr("admin.followups.adminFollowupDetail.sending2")
+                : tr("admin.followups.adminFollowupDetail.sendEmail")}
               <Icon name="arrowUpRight" size={14} />
             </button>
           </div>
@@ -550,44 +520,35 @@ export function FollowupDetail({
                 onUpdate();
               }}
             >
-              {tr("Recheck", "重新检查")}
+              {tr("admin.followups.adminFollowupDetail.recheck")}
             </button>
           </div>
         )}
         {person.next_step === "pair_computer" && (
           <p className="followupSuggestion">
             <Icon name="add" size={16} />
-            {tr(
-              "No computer paired yet. The pairing template includes the install command and the Windows download.",
-              "尚未配对电脑。“配对你的电脑”模板附带安装命令和 Windows 下载链接。",
-            )}
+            {tr("admin.followups.adminFollowupDetail.noComputerPairedYetThePairing")}
           </p>
         )}
         {(person.next_step === "connect_ai" ||
           (!person.next_step && person.devices > 0 && person.mcp_connections === 0)) && (
           <p className="followupSuggestion">
             <Icon name="link" size={16} />
-            {tr(
-              "Computer paired; no active MCP authorization. The installation template helps complete the connection.",
-              "设备已配对，尚无有效 MCP 授权。可使用安装引导模板帮助用户完成连接。",
-            )}
+            {tr("admin.followups.adminFollowupDetail.computerPairedNoActiveMcpAuthorization")}
           </p>
         )}
         {person.next_step === "first_use" && (
           <p className="followupSuggestion">
             <Icon name="activity" size={16} />
-            {tr(
-              "Connected but not used yet. Suggest a first task they can verify.",
-              "已连接但还没使用。可以推荐一个能检查结果的第一个任务。",
-            )}
+            {tr("admin.followups.adminFollowupDetail.connectedButNotUsedYetSuggest")}
           </p>
         )}
         <fieldset disabled={Boolean(busy)} className="followupEditor">
           <div className="adminFollowupTwo">
             <label>
-              {tr("Template", "模板")}
+              {tr("admin.followups.adminFollowupDetail.template")}
               <select
-                aria-label={tr("Template", "模板")}
+                aria-label={tr("admin.followups.adminFollowupDetail.template")}
                 value={draft.templateId}
                 onChange={(event) =>
                   replaceDraft(newFollowupDraft(person, draft.locale, event.target.value))
@@ -601,9 +562,9 @@ export function FollowupDetail({
               </select>
             </label>
             <label>
-              {tr("Email language", "邮件语言")}
+              {tr("admin.followups.adminFollowupDetail.emailLanguage")}
               <select
-                aria-label={tr("Email language", "邮件语言")}
+                aria-label={tr("admin.followups.adminFollowupDetail.emailLanguage")}
                 value={draft.locale}
                 onChange={(event) =>
                   replaceDraft(
@@ -617,7 +578,7 @@ export function FollowupDetail({
             </label>
           </div>
           <label htmlFor={subjectId}>
-            {tr("Subject", "主题")}
+            {tr("admin.followups.adminFollowupDetail.subject")}
             <input
               ref={subjectRef}
               id={subjectId}
@@ -627,7 +588,7 @@ export function FollowupDetail({
             />
           </label>
           <label htmlFor={bodyId}>
-            {tr("Message", "正文")}
+            {tr("admin.followups.adminFollowupDetail.message")}
             <textarea
               id={bodyId}
               value={draft.body}
@@ -638,25 +599,27 @@ export function FollowupDetail({
           </label>
           <details className="adminFollowupDesign">
             <summary>
-              {tr("Email appearance", "邮件样式")}
-              <span>{tr("Optional", "可选")}</span>
+              {tr("admin.followups.adminFollowupDetail.emailAppearance")}
+              <span>{tr("admin.followups.adminFollowupDetail.optional")}</span>
             </summary>
             <div className="adminFollowupTwo">
               <label>
-                {tr("Layout", "版式")}
+                {tr("admin.followups.adminFollowupDetail.layout")}
                 <select
                   value={draft.design.layout}
                   onChange={(event) =>
                     updateDesign({ layout: event.target.value as FollowupDesign["layout"] })
                   }
                 >
-                  <option value="spotlight">{tr("Spotlight", "品牌主视觉")}</option>
-                  <option value="letter">{tr("Letter", "简洁书信")}</option>
-                  <option value="digest">{tr("Digest", "内容摘要")}</option>
+                  <option value="spotlight">
+                    {tr("admin.followups.adminFollowupDetail.spotlight")}
+                  </option>
+                  <option value="letter">{tr("admin.followups.adminFollowupDetail.letter")}</option>
+                  <option value="digest">{tr("admin.followups.adminFollowupDetail.digest")}</option>
                 </select>
               </label>
               <label>
-                {tr("Brand color", "品牌颜色")}
+                {tr("admin.followups.adminFollowupDetail.brandColor")}
                 <input
                   type="color"
                   value={draft.design.accent}
@@ -665,7 +628,7 @@ export function FollowupDetail({
               </label>
             </div>
             <label>
-              {tr("Headline", "主标题")}
+              {tr("admin.followups.adminFollowupDetail.headline")}
               <input
                 value={draft.design.headline}
                 maxLength={200}
@@ -674,7 +637,7 @@ export function FollowupDetail({
               />
             </label>
             <label>
-              {tr("Introduction", "导语")}
+              {tr("admin.followups.adminFollowupDetail.introduction")}
               <textarea
                 rows={2}
                 value={draft.design.intro}
@@ -683,7 +646,7 @@ export function FollowupDetail({
               />
             </label>
             <label>
-              {tr("Button label", "按钮文案")}
+              {tr("admin.followups.adminFollowupDetail.buttonLabel")}
               <input
                 value={draft.design.buttonLabel}
                 maxLength={80}
@@ -691,7 +654,7 @@ export function FollowupDetail({
               />
             </label>
             <label>
-              {tr("Eyebrow", "顶部短标题")}
+              {tr("admin.followups.adminFollowupDetail.eyebrow")}
               <input
                 value={draft.design.eyebrow}
                 maxLength={100}
@@ -701,10 +664,12 @@ export function FollowupDetail({
             {draft.design.highlights.map((card, index) => (
               <fieldset key={index}>
                 <legend>
-                  {tr("Content card", "内容卡片")} {index + 1}
+                  {tr("admin.followups.adminFollowupDetail.contentCard")} {index + 1}
                 </legend>
                 <input
-                  aria-label={tr("Card title", "卡片标题") + " " + (index + 1)}
+                  aria-label={
+                    tr("admin.followups.adminFollowupDetail.cardTitle") + " " + (index + 1)
+                  }
                   value={card.title}
                   maxLength={100}
                   onChange={(event) =>
@@ -716,7 +681,9 @@ export function FollowupDetail({
                   }
                 />
                 <textarea
-                  aria-label={tr("Card text", "卡片正文") + " " + (index + 1)}
+                  aria-label={
+                    tr("admin.followups.adminFollowupDetail.cardText") + " " + (index + 1)
+                  }
                   value={card.body}
                   maxLength={600}
                   onChange={(event) =>
@@ -736,7 +703,7 @@ export function FollowupDetail({
                     })
                   }
                 >
-                  {tr("Remove card", "移除卡片")}
+                  {tr("admin.followups.adminFollowupDetail.removeCard")}
                 </button>
               </fieldset>
             ))}
@@ -748,7 +715,7 @@ export function FollowupDetail({
                 updateDesign({ highlights: [...draft.design.highlights, { title: "", body: "" }] })
               }
             >
-              {tr("Add content card", "添加内容卡片")}
+              {tr("admin.followups.adminFollowupDetail.addContentCard")}
             </button>
           </details>
         </fieldset>
@@ -760,37 +727,37 @@ export function FollowupDetail({
             onClick={() => setPreview((value) => !value)}
           >
             <Icon name="panel" size={15} />
-            {preview ? tr("Hide preview", "收起预览") : tr("Preview email", "预览邮件")}
+            {preview
+              ? tr("admin.followups.adminFollowupDetail.hidePreview")
+              : tr("admin.followups.adminFollowupDetail.previewEmail")}
           </button>
-          <span>
-            {tr(
-              "Reply address and unsubscribe link are included automatically.",
-              "自动附上回复地址和退订链接。",
-            )}
-          </span>
+          <span>{tr("admin.followups.adminFollowupDetail.replyAddressAndUnsubscribeLinkAre")}</span>
         </div>
         <div hidden={!preview}>
-          <FollowupEmailPreview html={reviewedHtml} title={tr("Email preview", "邮件预览")} />
+          <FollowupEmailPreview
+            html={reviewedHtml}
+            title={tr("admin.followups.adminFollowupDetail.emailPreview")}
+          />
         </div>
       </div>
       {tab === "history" && (
         <section className="adminFollowupHistory">
           <div className="followupHistoryHeading">
-            <h4>{tr("Drafts & contact history", "草稿与联系历史")}</h4>
+            <h4>{tr("admin.followups.adminFollowupDetail.draftsContactHistory")}</h4>
             <button
               type="button"
               className="adminOutlineBtn"
               onClick={() => setRevision((value) => value + 1)}
             >
               <Icon name="refresh" size={14} />
-              {tr("Refresh history", "刷新记录")}
+              {tr("admin.followups.adminFollowupDetail.refreshHistory")}
             </button>
           </div>
           {data && <FollowupLifecycleHistory emails={data.lifecycleEmails} />}
           <h4 className="followupHistorySubheading">{tr("Follow-up email", "跟进邮件")}</h4>
           {data?.messages.length === 0 && (
             <p className="adminNoData">
-              {tr("No saved drafts or emails yet.", "还没有保存的草稿或邮件。")}
+              {tr("admin.followups.adminFollowupDetail.noSavedDraftsOrEmailsYet")}
             </p>
           )}
           {data?.messages.map((mail) => (
@@ -815,12 +782,7 @@ export function FollowupDetail({
                 </span>
               </header>
               {mail.batch_id && (
-                <small>
-                  {tr(
-                    "Part of a bulk follow-up · manage in Bulk history",
-                    "来自群发任务 · 可在群发记录中管理",
-                  )}
-                </small>
+                <small>{tr("admin.followups.adminFollowupDetail.partOfABulkFollowUp")}</small>
               )}
               {mail.status === "draft" && !mail.batch_id ? (
                 <button
@@ -829,27 +791,22 @@ export function FollowupDetail({
                   disabled={Boolean(busy)}
                   onClick={() => replaceDraft(savedFollowupDraft(mail))}
                 >
-                  {tr("Continue editing", "继续编辑")}
+                  {tr("admin.followups.adminFollowupDetail.continueEditing")}
                 </button>
               ) : (
                 <details>
-                  <summary>{tr("View email", "查看邮件")}</summary>
+                  <summary>{tr("admin.followups.adminFollowupDetail.viewEmail")}</summary>
                   <pre>{mail.body}</pre>
                   {mail.html_body && (
                     <FollowupEmailPreview
                       html={mail.html_body}
-                      title={tr("Saved email", "已保存邮件")}
+                      title={tr("admin.followups.adminFollowupDetail.savedEmail")}
                     />
                   )}
                 </details>
               )}
               {["sending", "unknown"].includes(mail.status) && (
-                <p>
-                  {tr(
-                    "Verify the sender’s delivery log before another send. This email will not be resent automatically.",
-                    "请先核实发信服务的投递记录，这封邮件不会自动重发。",
-                  )}
-                </p>
+                <p>{tr("admin.followups.adminFollowupDetail.verifyTheSenderSDeliveryLog")}</p>
               )}
               {mail.error_code && (
                 <p className="adminAlert">
@@ -862,17 +819,12 @@ export function FollowupDetail({
       )}
       {tab === "notes" && (
         <section className="adminFollowupProfile">
-          <h4>{tr("Contact notes", "跟进记录")}</h4>
-          <p>
-            {tr(
-              "Notes and reminders are separate from saving or sending an email.",
-              "内部记录和提醒单独保存，不会锁定邮件草稿。",
-            )}
-          </p>
+          <h4>{tr("admin.followups.adminFollowupDetail.contactNotes")}</h4>
+          <p>{tr("admin.followups.adminFollowupDetail.notesAndRemindersAreSeparateFrom")}</p>
           <fieldset disabled={Boolean(busy) || !data} className="followupEditor">
             <div className="adminFollowupTwo">
               <label>
-                {tr("Status", "状态")}
+                {tr("admin.followups.adminFollowupDetail.status")}
                 <select
                   value={notes.status}
                   onChange={(event) =>
@@ -880,10 +832,10 @@ export function FollowupDetail({
                   }
                 >
                   {[
-                    ["new", tr("New", "待联系")],
-                    ["contacted", tr("Contacted", "已联系")],
-                    ["waiting", tr("Waiting for reply", "等待回复")],
-                    ["resolved", tr("Resolved", "已完成")],
+                    ["new", tr("admin.followups.adminFollowupDetail.new")],
+                    ["contacted", tr("admin.followups.adminFollowupDetail.contacted")],
+                    ["waiting", tr("admin.followups.adminFollowupDetail.waitingForReply")],
+                    ["resolved", tr("admin.followups.adminFollowupDetail.resolved")],
                   ].map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -892,7 +844,7 @@ export function FollowupDetail({
                 </select>
               </label>
               <label>
-                {tr("Remind me in Admin", "后台提醒时间")}
+                {tr("admin.followups.adminFollowupDetail.remindMeInAdmin")}
                 <input
                   type="datetime-local"
                   value={notes.due}
@@ -901,7 +853,7 @@ export function FollowupDetail({
               </label>
             </div>
             <label>
-              {tr("Internal note", "内部记录")}
+              {tr("admin.followups.adminFollowupDetail.internalNote")}
               <textarea
                 rows={4}
                 value={notes.note}
@@ -911,11 +863,9 @@ export function FollowupDetail({
             </label>
             <p>
               {data?.contact.consent_at
-                ? tr("Saved contact basis: ", "已有联系依据：") + data.contact.consent_note
-                : tr(
-                    "Contact basis can be recorded when you send the first email.",
-                    "首次发送时，可直接补充联系依据。",
-                  )}
+                ? tr("admin.followups.adminFollowupDetail.savedContactBasis") +
+                  data.contact.consent_note
+                : tr("admin.followups.adminFollowupDetail.contactBasisCanBeRecordedWhen")}
             </p>
             <label className="adminFollowupCheck">
               <input
@@ -926,17 +876,17 @@ export function FollowupDetail({
                   setNotes((value) => ({ ...value, suppress: event.target.checked }))
                 }
               />
-              <span>{tr("Stop follow-ups to this user", "停止向此用户发送回访")}</span>
+              <span>{tr("admin.followups.adminFollowupDetail.stopFollowUpsToThisUser")}</span>
             </label>
             <button type="button" className="adminOutlineBtn" onClick={() => void saveNotes()}>
-              {tr("Save notes", "保存记录")}
+              {tr("admin.followups.adminFollowupDetail.saveNotes")}
             </button>
           </fieldset>
         </section>
       )}
       {review && (
         <FollowupDialog
-          title={tr("Send this email", "发送这封邮件")}
+          title={tr("admin.followups.adminFollowupDetail.sendThisEmail")}
           busy={Boolean(busy)}
           onClose={() => {
             setReview(false);
@@ -945,13 +895,17 @@ export function FollowupDetail({
         >
           <div className="followupReviewBody">
             <dl>
-              <dt>{tr("To", "收件人")}</dt>
+              <dt>{tr("admin.followups.adminFollowupDetail.to")}</dt>
               <dd>{person.email}</dd>
-              <dt>{tr("From", "发件人")}</dt>
-              <dd>{data?.sender?.from || tr("Not configured", "未配置")}</dd>
-              <dt>{tr("Reply to", "回复地址")}</dt>
-              <dd>{data?.sender?.replyTo || tr("Not configured", "未配置")}</dd>
-              <dt>{tr("Subject", "主题")}</dt>
+              <dt>{tr("admin.followups.adminFollowupDetail.from")}</dt>
+              <dd>
+                {data?.sender?.from || tr("admin.followups.adminFollowupDetail.notConfigured")}
+              </dd>
+              <dt>{tr("admin.followups.adminFollowupDetail.replyTo")}</dt>
+              <dd>
+                {data?.sender?.replyTo || tr("admin.followups.adminFollowupDetail.notConfigured")}
+              </dd>
+              <dt>{tr("admin.followups.adminFollowupDetail.subject")}</dt>
               <dd>{draft.subject}</dd>
             </dl>
             {block ? (
@@ -963,18 +917,13 @@ export function FollowupDetail({
                   disabled={Boolean(busy)}
                   onClick={() => setRevision((value) => value + 1)}
                 >
-                  {tr("Recheck", "重新检查")}
+                  {tr("admin.followups.adminFollowupDetail.recheck")}
                 </button>
               </div>
             ) : !data?.contact.consent_at ? (
               <fieldset disabled={Boolean(busy)} className="followupBasis">
-                <legend>{tr("Contact basis (optional)", "联系依据（可选）")}</legend>
-                <p>
-                  {tr(
-                    "You can leave this blank and send. Add a request or agreement only if it exists.",
-                    "可以留空并发送；已有用户请求或同意记录时再补充。",
-                  )}
-                </p>
+                <legend>{tr("admin.followups.adminFollowupDetail.contactBasisOptional")}</legend>
+                <p>{tr("admin.followups.adminFollowupDetail.youCanLeaveThisBlankAnd")}</p>
                 <label>
                   <input
                     type="radio"
@@ -983,7 +932,7 @@ export function FollowupDetail({
                     checked={basis === ""}
                     onChange={() => setBasis("")}
                   />
-                  {tr("Do not add a contact basis", "暂不记录联系依据")}
+                  {tr("admin.followups.adminFollowupDetail.doNotAddAContactBasis")}
                 </label>
                 <label>
                   <input
@@ -993,10 +942,7 @@ export function FollowupDetail({
                     checked={basis === "support"}
                     onChange={() => setBasis("support")}
                   />
-                  {tr(
-                    "The user requested installation or product support",
-                    "用户请求安装或使用支持",
-                  )}
+                  {tr("admin.followups.adminFollowupDetail.theUserRequestedInstallationOrProduct")}
                 </label>
                 <label>
                   <input
@@ -1006,14 +952,14 @@ export function FollowupDetail({
                     checked={basis === "followup"}
                     onChange={() => setBasis("followup")}
                   />
-                  {tr("The user agreed to this product follow-up", "用户已同意本次产品回访")}
+                  {tr("admin.followups.adminFollowupDetail.theUserAgreedToThisProduct")}
                 </label>
                 <label className="followupBasisNote">
-                  {tr("Reference or note (optional)", "来源或备注（可选）")}
+                  {tr("admin.followups.adminFollowupDetail.referenceOrNoteOptional")}
                   <input
                     value={basisNote}
                     maxLength={350}
-                    placeholder={tr("For example, a support ticket", "例如：支持工单或邮件记录")}
+                    placeholder={tr("admin.followups.adminFollowupDetail.forExampleASupportTicket")}
                     onChange={(event) => setBasisNote(event.target.value)}
                   />
                 </label>
@@ -1021,7 +967,8 @@ export function FollowupDetail({
             ) : (
               <p className="followupBasisSaved">
                 <Icon name="check" size={15} />
-                {tr("Contact basis saved: ", "已有联系依据：") + data.contact.consent_note}
+                {tr("admin.followups.adminFollowupDetail.contactBasisSaved") +
+                  data.contact.consent_note}
               </p>
             )}
             {error && (
@@ -1030,8 +977,11 @@ export function FollowupDetail({
               </p>
             )}
             <details className="followupReviewContent">
-              <summary>{tr("Review email content", "检查邮件内容")}</summary>
-              <FollowupEmailPreview html={reviewedHtml} title={tr("Email to send", "待发送邮件")} />
+              <summary>{tr("admin.followups.adminFollowupDetail.reviewEmailContent")}</summary>
+              <FollowupEmailPreview
+                html={reviewedHtml}
+                title={tr("admin.followups.adminFollowupDetail.emailToSend")}
+              />
             </details>
           </div>
           <footer>
@@ -1044,7 +994,7 @@ export function FollowupDetail({
                 setError("");
               }}
             >
-              {tr("Keep editing", "继续编辑")}
+              {tr("admin.followups.adminFollowupDetail.keepEditing")}
             </button>
             {!block && (
               <button
@@ -1054,10 +1004,10 @@ export function FollowupDetail({
                 onClick={() => void send()}
               >
                 {busy === "send"
-                  ? tr("Sending…", "正在发送…")
+                  ? tr("admin.followups.adminFollowupDetail.sending2")
                   : data?.contact.consent_at || !basis
-                    ? tr("Confirm send", "确认发送")
-                    : tr("Record basis & send", "记录依据并发送")}
+                    ? tr("admin.followups.adminFollowupDetail.confirmSend")
+                    : tr("admin.followups.adminFollowupDetail.recordBasisSend")}
               </button>
             )}
           </footer>
@@ -1065,17 +1015,12 @@ export function FollowupDetail({
       )}
       {replacement && (
         <FollowupDialog
-          title={tr("Keep your changes?", "保留当前修改？")}
+          title={tr("admin.followups.adminFollowupDetail.keepYourChanges")}
           busy={Boolean(busy)}
           onClose={() => setReplacement(null)}
         >
           <div className="followupReviewBody">
-            <p>
-              {tr(
-                "This email has unsaved changes. Save them before opening another email, or discard only these edits.",
-                "当前邮件有未保存的修改。可以先保存再切换，或放弃这些修改。",
-              )}
-            </p>
+            <p>{tr("admin.followups.adminFollowupDetail.thisEmailHasUnsavedChangesSave")}</p>
             {error && (
               <p className="adminAlert" role="alert">
                 {errorText(error)}
@@ -1088,7 +1033,7 @@ export function FollowupDetail({
               disabled={Boolean(busy)}
               onClick={() => setReplacement(null)}
             >
-              {tr("Cancel", "取消")}
+              {tr("admin.followups.adminFollowupDetail.cancel")}
             </button>
             <button
               className="adminOutlineBtn"
@@ -1100,7 +1045,7 @@ export function FollowupDetail({
                 setError("");
               }}
             >
-              {tr("Discard edits", "放弃修改")}
+              {tr("admin.followups.adminFollowupDetail.discardEdits")}
             </button>
             <button
               className="adminPrimaryBtn"
@@ -1124,7 +1069,7 @@ export function FollowupDetail({
                   });
               }}
             >
-              {tr("Save & continue", "保存并继续")}
+              {tr("admin.followups.adminFollowupDetail.saveContinue")}
             </button>
           </footer>
         </FollowupDialog>

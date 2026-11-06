@@ -3,7 +3,7 @@ import {
   type FollowupUsageFilter,
 } from "../../../../../../packages/protocol/src/followup-usage.js";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 import { FollowupDetail } from "./admin-followup-detail.js";
@@ -23,7 +23,7 @@ import {
   type FollowupList,
   type FollowupTab,
 } from "./followup-model.js";
-import "./admin-followups.css";
+import "../../../styles/admin/followups/admin-followups.css";
 
 export function AdminFollowups() {
   const { tr, locale } = useI18n();
@@ -77,9 +77,7 @@ export function AdminFollowups() {
           .catch(() => {
             if (!controller.signal.aborted) {
               setLoading(false);
-              setError(
-                locale === "zh" ? "无法加载用户，请重试。" : "Could not load users. Try again.",
-              );
+              setError(tr("admin.followups.adminFollowups.couldNotLoadUsers"));
             }
           }),
       150,
@@ -91,31 +89,31 @@ export function AdminFollowups() {
   }, [params, revision, locale, view]);
   const stepLabel = (step: NextStep) =>
     ({
-      pair_computer: tr("Pair a computer", "配对电脑"),
-      connect_ai: tr("Connect an AI client", "连接 AI 客户端"),
-      first_use: tr("First task", "完成第一个任务"),
-      active: tr("Active", "已在使用"),
+      pair_computer: tr("admin.followups.adminFollowups.pairAComputer"),
+      connect_ai: tr("admin.followups.adminFollowups.connectAnAiClient"),
+      first_use: tr("admin.followups.adminFollowups.firstTask"),
+      active: tr("admin.followups.adminFollowups.active"),
     })[step];
   const filters = [
-    ["all", tr("All product activity", "全部使用情况")],
+    ["all", tr("admin.followups.adminFollowups.allProductActivity")],
     ...(["pair_computer", "connect_ai", "first_use"] as NextStep[]).map((step) => [
       "step:" + step,
-      tr("Next step: ", "下一步：") + stepLabel(step),
+      tr("admin.followups.adminFollowups.nextStep") + stepLabel(step),
     ]),
-    ["device-only", tr("Computer paired · no MCP", "已配对设备 · 未连接 MCP")],
-    ["unconnected", tr("No connections", "尚未连接")],
-    ["unused", tr("No recorded usage", "暂无使用记录")],
-    ["active", tr("Has used Arc / Connect", "已有使用记录")],
-    ["due", tr("Reminder due", "提醒已到期")],
-    ["suppressed", tr("Do not contact", "不再联系")],
+    ["device-only", tr("admin.followups.adminFollowups.computerPairedNoMcp")],
+    ["unconnected", tr("admin.followups.adminFollowups.noConnections")],
+    ["unused", tr("admin.followups.adminFollowups.noRecordedUsage")],
+    ["active", tr("admin.followups.adminFollowups.hasUsedArcConnect")],
+    ["due", tr("admin.followups.adminFollowups.reminderDue")],
+    ["suppressed", tr("admin.followups.adminFollowups.doNotContact")],
   ];
   const tabs: [FollowupTab, string][] = [
-    ["all", tr("All users", "全部用户")],
-    ["pending", tr("To follow up", "待跟进")],
-    ["contacted", tr("Contacted", "已跟进")],
-    ["waiting", tr("Waiting for reply", "等待回复")],
-    ["resolved", tr("Resolved", "已完成")],
-    ["suppressed", tr("Stopped", "已停止")],
+    ["all", tr("admin.followups.adminFollowups.allUsers")],
+    ["pending", tr("admin.followups.adminFollowups.toFollowUp")],
+    ["contacted", tr("admin.followups.adminFollowups.contacted")],
+    ["waiting", tr("admin.followups.adminFollowups.waitingForReply")],
+    ["resolved", tr("admin.followups.adminFollowups.resolved")],
+    ["suppressed", tr("admin.followups.adminFollowups.stopped")],
   ];
   const shortTime = (value: string) =>
     new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en", {
@@ -126,11 +124,11 @@ export function AdminFollowups() {
     });
   const statusLabel = (status: string) =>
     ({
-      new: tr("To follow up", "待跟进"),
-      contacted: tr("Contacted", "已跟进"),
-      waiting: tr("Waiting for reply", "等待回复"),
-      resolved: tr("Resolved", "已完成"),
-      suppressed: tr("Stopped", "已停止"),
+      new: tr("admin.followups.adminFollowups.toFollowUp"),
+      contacted: tr("admin.followups.adminFollowups.contacted"),
+      waiting: tr("admin.followups.adminFollowups.waitingForReply"),
+      resolved: tr("admin.followups.adminFollowups.resolved"),
+      suppressed: tr("admin.followups.adminFollowups.stopped"),
     })[status] || status;
   const reset = () => {
     selectionEpoch.current++;
@@ -143,7 +141,7 @@ export function AdminFollowups() {
       ? [...new Set([...checked, ...ids])]
       : checked.filter((id) => !ids.includes(id));
     if (next.length > 100) {
-      setError(tr("Select up to 100 users per batch.", "每批最多选择 100 位用户，可分批发送。"));
+      setError(tr("admin.followups.adminFollowups.selectUpToUsersPerBatch"));
       return;
     }
     setChecked(next);
@@ -174,7 +172,7 @@ export function AdminFollowups() {
         body: JSON.stringify({ userIds: checked, status: bulkStatus }),
       });
       setChecked([]);
-      setNotice(tr("Contact status updated.", "跟进状态已更新。"));
+      setNotice(tr("admin.followups.adminFollowups.contactStatusUpdated"));
       setBulkStatus("");
       refresh();
     } catch (err) {
@@ -186,7 +184,7 @@ export function AdminFollowups() {
   const choice = (person: Person) => (
     <input
       type="checkbox"
-      aria-label={tr("Select ", "选择 ") + (person.name || person.email)}
+      aria-label={tr("admin.followups.adminFollowups.select") + (person.name || person.email)}
       checked={checked.includes(person.id)}
       disabled={loading || busy}
       onChange={(event) => toggle([person.id], event.target.checked)}
@@ -204,19 +202,14 @@ export function AdminFollowups() {
       <div className="followupCrmTopbar">
         <p>
           <span className="followupCrmLiveDot" />
-          {tr(
-            "Contact history, current status and reminders.",
-            "按联系记录、处理状态和提醒管理用户。",
-          )}
+          {tr("admin.followups.adminFollowups.contactHistoryCurrentStatusAndReminders")}
           {data?.emailBudget && (
             <span
               className="followupBudget"
-              title={tr(
-                "Sending pauses at these limits. Sign-in emails have a separate allocation.",
-                "达到上限后暂停发送，登录邮件保留单独额度。",
-              )}
+              title={tr("admin.followups.adminFollowups.sendingPausesAtTheseLimitsSign")}
             >
-              {followupBudgetSummary(data.emailBudget)} · {tr("Available now ", "当前可发 ")}
+              {followupBudgetSummary(data.emailBudget)} ·{" "}
+              {tr("admin.followups.adminFollowups.availableNow")}
               {data.emailBudget.remaining}
             </span>
           )}
@@ -232,7 +225,7 @@ export function AdminFollowups() {
                 reset();
               }}
             >
-              {data!.counts.due} {tr("reminders due", "项提醒已到期")} ↗
+              {data!.counts.due} {tr("admin.followups.adminFollowups.remindersDue")} ↗
             </button>
           )}
         </p>
@@ -246,17 +239,30 @@ export function AdminFollowups() {
           }}
         >
           <Icon name="chat" size={15} />
-          {view === "batches" ? tr("User list", "用户列表") : tr("Bulk history", "群发记录")}
+          {view === "batches"
+            ? tr("admin.followups.adminFollowups.userList")
+            : tr("admin.followups.adminFollowups.bulkHistory")}
         </button>
       </div>
       {data?.funnel && view === "contacts" && (
-        <ol className="followupFunnel" aria-label={tr("Activation funnel", "激活漏斗")}>
+        <ol
+          className="followupFunnel"
+          aria-label={tr("admin.followups.adminFollowups.activationFunnel")}
+        >
           {(
             [
-              [tr("Registered", "已注册"), data.funnel.registered, null],
-              [tr("Computer paired", "已配对电脑"), data.funnel.paired, "pair_computer"],
-              [tr("AI client connected", "已连接 AI"), data.funnel.connected, "connect_ai"],
-              [tr("Used Remote Arc", "已使用"), data.funnel.used, "first_use"],
+              [tr("admin.followups.adminFollowups.registered"), data.funnel.registered, null],
+              [
+                tr("admin.followups.adminFollowups.computerPaired"),
+                data.funnel.paired,
+                "pair_computer",
+              ],
+              [
+                tr("admin.followups.adminFollowups.aiClientConnected"),
+                data.funnel.connected,
+                "connect_ai",
+              ],
+              [tr("admin.followups.adminFollowups.usedRemoteArc"), data.funnel.used, "first_use"],
             ] as [string, number, NextStep | null][]
           ).map(([label, count, stuck]) => (
             <li key={label}>
@@ -274,7 +280,7 @@ export function AdminFollowups() {
                     reset();
                   }}
                 >
-                  {tr("Stuck before this: ", "卡在这一步：")}
+                  {tr("admin.followups.adminFollowups.stuckBeforeThis")}
                   {data.funnel![stuck]} →
                 </button>
               )}
@@ -288,7 +294,7 @@ export function AdminFollowups() {
       <div
         className="followupCrmTabs"
         role="tablist"
-        aria-label={tr("Follow-up status", "跟进状态")}
+        aria-label={tr("admin.followups.adminFollowups.followUpStatus")}
       >
         {tabs.map(([value, label]) => (
           <button
@@ -317,8 +323,8 @@ export function AdminFollowups() {
               <Icon name="search" size={16} />
               <input
                 type="search"
-                aria-label={tr("Search users", "搜索用户")}
-                placeholder={tr("Search name or email…", "搜索姓名或邮箱…")}
+                aria-label={tr("admin.followups.adminFollowups.searchUsers")}
+                placeholder={tr("admin.followups.adminFollowups.searchNameOrEmail")}
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value);
@@ -327,7 +333,7 @@ export function AdminFollowups() {
               />
             </label>
             <select
-              aria-label={tr("User segment", "用户分组")}
+              aria-label={tr("admin.followups.adminFollowups.userSegment")}
               value={segment}
               onChange={(event) => {
                 setSegment(event.target.value);
@@ -341,7 +347,7 @@ export function AdminFollowups() {
               ))}
             </select>
             <select
-              aria-label={tr("Monthly usage", "本月用量")}
+              aria-label={tr("admin.followups.adminFollowups.monthlyUsage")}
               value={usage}
               onChange={(event) => {
                 setUsage(event.target.value as FollowupUsageFilter);
@@ -356,22 +362,24 @@ export function AdminFollowups() {
               ))}
             </select>
             <select
-              aria-label={tr("Sort users", "用户排序")}
+              aria-label={tr("admin.followups.adminFollowups.sortUsers")}
               value={sort}
               onChange={(event) => {
                 setSort(event.target.value);
                 setPage(0);
               }}
             >
-              <option value="due">{tr("Next action first", "优先待办")}</option>
-              <option value="recent">{tr("Newest users", "最近注册")}</option>
-              <option value="last-contact">{tr("Recently contacted", "最近联系")}</option>
-              <option value="name">{tr("Name", "姓名")}</option>
+              <option value="due">{tr("admin.followups.adminFollowups.nextActionFirst")}</option>
+              <option value="recent">{tr("admin.followups.adminFollowups.newestUsers")}</option>
+              <option value="last-contact">
+                {tr("admin.followups.adminFollowups.recentlyContacted")}
+              </option>
+              <option value="name">{tr("admin.followups.adminFollowups.name")}</option>
             </select>
             <button
               type="button"
               className="adminOutlineBtn"
-              aria-label={tr("Refresh users", "刷新用户")}
+              aria-label={tr("admin.followups.adminFollowups.refreshUsers")}
               onClick={refresh}
             >
               <Icon name="refresh" size={15} />
@@ -381,7 +389,7 @@ export function AdminFollowups() {
             <p className="adminAlert" role="alert">
               {error}
               <button type="button" className="adminOutlineBtn" onClick={refresh}>
-                {tr("Retry", "重试")}
+                {tr("admin.followups.adminFollowups.retry")}
               </button>
             </p>
           )}
@@ -395,15 +403,17 @@ export function AdminFollowups() {
             <label>
               <input
                 type="checkbox"
-                aria-label={tr("Select users on this page", "选择本页用户")}
+                aria-label={tr("admin.followups.adminFollowups.selectUsersOnThisPage")}
                 checked={allPage}
                 disabled={loading || busy}
                 onChange={(event) => toggle(pageIds, event.target.checked)}
               />
               <span>
                 {checked.length
-                  ? tr("Selected ", "已选 ") + checked.length + tr(" users", " 位用户")
-                  : (data?.total ?? "—") + tr(" users", " 位用户")}
+                  ? tr("admin.followups.adminFollowups.selected") +
+                    checked.length +
+                    tr("admin.followups.adminFollowups.users")
+                  : (data?.total ?? "—") + tr("admin.followups.adminFollowups.users")}
               </span>
             </label>
             {checked.length ? (
@@ -415,8 +425,8 @@ export function AdminFollowups() {
                   onClick={() => void selectMatching()}
                 >
                   {(data?.total || 0) > 100
-                    ? tr("Select first 100 matches", "选择前 100 位匹配用户")
-                    : tr("Select all matches", "选择全部匹配用户")}
+                    ? tr("admin.followups.adminFollowups.selectFirstMatches")
+                    : tr("admin.followups.adminFollowups.selectAllMatches")}
                 </button>
                 <button
                   type="button"
@@ -424,16 +434,16 @@ export function AdminFollowups() {
                   disabled={busy}
                   onClick={() => setChecked([])}
                 >
-                  {tr("Clear", "清除")}
+                  {tr("admin.followups.adminFollowups.clear")}
                 </button>
                 <div className="followupSelectionActions">
                   <select
-                    aria-label={tr("Set follow-up status", "设置跟进状态")}
+                    aria-label={tr("admin.followups.adminFollowups.setFollowUpStatus")}
                     value={bulkStatus}
                     disabled={busy}
                     onChange={(event) => setBulkStatus(event.target.value)}
                   >
-                    <option value="">{tr("Change status…", "更改状态…")}</option>
+                    <option value="">{tr("admin.followups.adminFollowups.changeStatus")}</option>
                     {["new", "contacted", "waiting", "resolved"].map((value) => (
                       <option key={value} value={value}>
                         {statusLabel(value)}
@@ -446,7 +456,7 @@ export function AdminFollowups() {
                     disabled={busy || !bulkStatus}
                     onClick={() => void updateStatus()}
                   >
-                    {tr("Apply", "更新状态")}
+                    {tr("admin.followups.adminFollowups.apply")}
                   </button>
                   <button
                     type="button"
@@ -454,33 +464,28 @@ export function AdminFollowups() {
                     disabled={busy || loading || !data?.emailConfigured}
                     onClick={() => setBulk(true)}
                   >
-                    {tr("Bulk email", "群发邮件")} · {checked.length}
+                    {tr("admin.followups.adminFollowups.bulkEmail")} · {checked.length}
                     <Icon name="arrowUpRight" size={14} />
                   </button>
                 </div>
               </>
             ) : (
               <span className="followupCrmHint">
-                {tr(
-                  "Select users to send a bulk email or update their status.",
-                  "勾选用户，即可群发邮件或批量更新跟进状态。",
-                )}
+                {tr("admin.followups.adminFollowups.selectUsersToSendABulk")}
               </span>
             )}
           </div>
           {!data && !error && (
-            <WorkspaceLoading label={tr("Loading users…", "正在加载用户…")} variant="rows" />
+            <WorkspaceLoading
+              label={tr("admin.followups.adminFollowups.loadingUsers")}
+              variant="rows"
+            />
           )}
           {data?.items.length === 0 && (
             <div className="followupCrmEmpty">
               <Icon name="users" size={30} />
-              <h3>{tr("No users in this view.", "当前视图暂无用户。")}</h3>
-              <p>
-                {tr(
-                  "Try another status or clear the search and activity filter.",
-                  "可以切换跟进状态，或清除搜索与使用情况筛选。",
-                )}
-              </p>
+              <h3>{tr("admin.followups.adminFollowups.noUsersInThisView")}</h3>
+              <p>{tr("admin.followups.adminFollowups.tryAnotherStatusOrClearThe")}</p>
               <button
                 type="button"
                 className="adminOutlineBtn"
@@ -492,7 +497,7 @@ export function AdminFollowups() {
                   reset();
                 }}
               >
-                {tr("Show all users", "查看全部用户")}
+                {tr("admin.followups.adminFollowups.showAllUsers")}
               </button>
             </div>
           )}
@@ -500,10 +505,10 @@ export function AdminFollowups() {
             {selected ? (
               <aside
                 className="followupCrmContacts"
-                aria-label={tr("Users to follow up", "跟进用户")}
+                aria-label={tr("admin.followups.adminFollowups.usersToFollowUp")}
               >
                 <button type="button" className="adminOutlineBtn" onClick={() => setSelected(null)}>
-                  ← {tr("Back to full list", "返回完整列表")}
+                  ← {tr("admin.followups.adminFollowups.backToFullList")}
                 </button>
                 {data?.items.map((person) => (
                   <div
@@ -530,18 +535,20 @@ export function AdminFollowups() {
               <div className="followupCrmTableWrap">
                 <table
                   className="followupCrmTable"
-                  aria-label={tr("User follow-up list", "用户跟进列表")}
+                  aria-label={tr("admin.followups.adminFollowups.userFollowUpList")}
                 >
                   <thead>
                     <tr>
                       <th className="followupCheckCell">
-                        <span className="followupSrOnly">{tr("Select", "选择")}</span>
+                        <span className="followupSrOnly">
+                          {tr("admin.followups.adminFollowups.select2")}
+                        </span>
                       </th>
-                      <th>{tr("User", "用户")}</th>
-                      <th>{tr("Follow-up status", "跟进状态")}</th>
-                      <th>{tr("Product activity", "使用情况")}</th>
-                      <th>{tr("Last contact", "上次联系")}</th>
-                      <th>{tr("Next action", "下一步")}</th>
+                      <th>{tr("admin.followups.adminFollowups.user")}</th>
+                      <th>{tr("admin.followups.adminFollowups.followUpStatus")}</th>
+                      <th>{tr("admin.followups.adminFollowups.productActivity")}</th>
+                      <th>{tr("admin.followups.adminFollowups.lastContact")}</th>
+                      <th>{tr("admin.followups.adminFollowups.nextAction")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -568,25 +575,27 @@ export function AdminFollowups() {
                             {statusLabel(followupStatus(person))}
                           </span>
                           {Boolean(person.queued_followups) && (
-                            <small>{tr("Bulk email queued", "群发邮件已排队")}</small>
+                            <small>{tr("admin.followups.adminFollowups.bulkEmailQueued")}</small>
                           )}
                           {person.feedback_count > 0 && (
                             <small>
-                              {person.feedback_count} {tr("feedback items", "条反馈")}
+                              {person.feedback_count}{" "}
+                              {tr("admin.followups.adminFollowups.feedbackItems")}
                             </small>
                           )}
                         </td>
                         <td>
                           <span>
-                            {person.devices} {tr("devices", "台设备")} ·{" "}
-                            {person.calls.toLocaleString()} {tr("calls", "次调用")}
+                            {person.devices} {tr("admin.followups.adminFollowups.devices")} ·{" "}
+                            {person.calls.toLocaleString()}{" "}
+                            {tr("admin.followups.adminFollowups.calls")}
                           </span>
                           {person.monthly_calls !== undefined && (
                             <small>
-                              {tr("This month: ", "本月：")}
+                              {tr("admin.followups.adminFollowups.thisMonth")}
                               {person.monthly_calls.toLocaleString()}
                               {person.monthly_limit === null
-                                ? tr(" · unlimited", " · 无固定上限")
+                                ? tr("admin.followups.adminFollowups.unlimited")
                                 : person.monthly_limit !== undefined
                                   ? " / " + person.monthly_limit.toLocaleString()
                                   : ""}
@@ -594,7 +603,7 @@ export function AdminFollowups() {
                           )}
                           {person.devices > 0 && person.mcp_connections === 0 ? (
                             <small className="followupMcpLabel">
-                              {tr("MCP setup incomplete", "待完成 MCP 连接")}
+                              {tr("admin.followups.adminFollowups.mcpSetupIncomplete")}
                             </small>
                           ) : (
                             <small>
@@ -605,12 +614,12 @@ export function AdminFollowups() {
                             person.next_step !== "active" &&
                             !person.suppressed_at && (
                               <small className="followupNextStep">
-                                {tr("Next: ", "下一步：")}
+                                {tr("admin.followups.adminFollowups.next")}
                                 {stepLabel(person.next_step)}
                               </small>
                             )}
                         </td>
-                        <td data-label={tr("Last contact", "上次联系")}>
+                        <td data-label={tr("admin.followups.adminFollowups.lastContact")}>
                           {person.last_contact_at ? (
                             <time
                               dateTime={person.last_contact_at}
@@ -620,14 +629,14 @@ export function AdminFollowups() {
                             </time>
                           ) : (
                             <span className="followupCrmMuted">
-                              {tr("Not contacted", "尚未联系")}
+                              {tr("admin.followups.adminFollowups.notContacted")}
                             </span>
                           )}
                         </td>
-                        <td data-label={tr("Next action", "下一步")}>
+                        <td data-label={tr("admin.followups.adminFollowups.nextAction")}>
                           {person.suppressed_at ? (
                             <span className="followupCrmMuted">
-                              {tr("No further outreach", "已停止回访")}
+                              {tr("admin.followups.adminFollowups.noFurtherOutreach")}
                             </span>
                           ) : person.next_followup_at ? (
                             <span className={due(person) ? "followupDueDate" : ""}>
@@ -642,8 +651,8 @@ export function AdminFollowups() {
                           ) : (
                             <span className="followupCrmMuted">
                               {person.status === "resolved"
-                                ? tr("Complete", "已完成")
-                                : tr("No reminder set", "未设置提醒")}
+                                ? tr("admin.followups.adminFollowups.complete")
+                                : tr("admin.followups.adminFollowups.noReminderSet")}
                             </span>
                           )}
                         </td>
@@ -683,7 +692,7 @@ export function AdminFollowups() {
                   setSelected(null);
                 }}
               >
-                {tr("Previous", "上一页")}
+                {tr("admin.followups.adminFollowups.previous")}
               </button>
               <button
                 type="button"
@@ -694,16 +703,13 @@ export function AdminFollowups() {
                   setSelected(null);
                 }}
               >
-                {tr("Next", "下一页")}
+                {tr("admin.followups.adminFollowups.next2")}
               </button>
             </div>
           </div>
           {!data?.emailConfigured && data && (
             <p className="followupCrmHint">
-              {tr(
-                "Email sending is unavailable. You can still manage contacts and save drafts.",
-                "发信通道暂不可用，仍可管理跟进记录和保存草稿。",
-              )}
+              {tr("admin.followups.adminFollowups.emailSendingIsUnavailableYouCan")}
             </p>
           )}
         </>

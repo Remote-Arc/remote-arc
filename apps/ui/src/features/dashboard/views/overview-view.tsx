@@ -6,7 +6,7 @@ import { platformLabel } from "../devices/device-presets.js";
 import { CopyButton } from "../../../components/public-layout.js";
 import { timeAgo } from "../format.js";
 import { FirstRunCard } from "./first-run-card.js";
-import type { DashboardModel } from "../hooks/use-dashboard-model.js";
+import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 
 // Overview tab: status cards, recent devices and activity.
 export function OverviewView({ m }: { m: DashboardModel }) {
@@ -33,22 +33,17 @@ export function OverviewView({ m }: { m: DashboardModel }) {
     <>
       <section className="overviewTopbar">
         <div>
-          <span className="eyebrow">{tr("OVERVIEW", "概览")}</span>
+          <span className="eyebrow">{tr("dashboard.views.overviewView.overview")}</span>
           <OverviewGreeting name={user.name} tr={tr} />
-          <p>
-            {tr(
-              "Your connections, recent work and everything that needs your attention.",
-              "连接状态、最近的工作，以及所有需要你关注的事。",
-            )}
-          </p>
+          <p>{tr("dashboard.views.overviewView.yourConnectionsRecentWorkAndEverything")}</p>
         </div>
         <div className="overviewActions">
           <button className="ghostButton" onClick={() => setShowAdd(true)}>
-            + {tr("Add device", "添加设备")}
+            + {tr("dashboard.views.overviewView.addDevice")}
           </button>
           <button className="addButton arcRadiantCta" onClick={() => navigateTab("connect")}>
             <ProductIcon name="link" />
-            {tr("Connect your AI", "连接你的 AI")}
+            {tr("dashboard.views.overviewView.connectYourAi")}
           </button>
         </div>
       </section>
@@ -67,29 +62,33 @@ export function OverviewView({ m }: { m: DashboardModel }) {
       <section className="overviewStatusGrid">
         <article className="overviewStatusCard">
           <div className="statusCardHead">
-            <span>{tr("Devices online", "在线设备")}</span>
+            <span>{tr("dashboard.views.overviewView.devicesOnline")}</span>
             <i className={"healthDot " + ((status?.onlineDevices ?? 0) > 0 ? "good" : "idle")} />
           </div>
           <strong>
             {status?.onlineDevices ?? 0} / {status?.totalDevices ?? devices.length}
           </strong>
-          <small>{tr("Ready for MCP calls", "可接受 MCP 调用")}</small>
+          <small>{tr("dashboard.views.overviewView.readyForMcpCalls")}</small>
         </article>
         <article className="overviewStatusCard">
           <div className="statusCardHead">
-            <span>{tr("Connected Apps", "应用连接")}</span>
+            <span>{tr("dashboard.views.overviewView.connectedApps")}</span>
             <ProductIcon name="apps" />
           </div>
-          <strong>{tr("Your tools", "你的工具")}</strong>
+          <strong>{tr("dashboard.views.overviewView.yourTools")}</strong>
           <button className="ghostButton overviewManageLink" onClick={() => navigateTab("apps")}>
-            {tr("Manage connections", "管理连接")}
+            {tr("dashboard.views.overviewView.manageConnections")}
             <ProductIcon name="arrowUpRight" size={14} />
           </button>
         </article>
         <article className="overviewStatusCard">
           <div className="statusCardHead">
-            <span>{tr("Monthly usage", "本月用量")}</span>
-            <span>{usage?.unlimited ? tr("Unlimited", "无限") : Math.round(usagePct) + "%"}</span>
+            <span>{tr("dashboard.views.overviewView.monthlyUsage")}</span>
+            <span>
+              {usage?.unlimited
+                ? tr("dashboard.views.overviewView.unlimited")
+                : Math.round(usagePct) + "%"}
+            </span>
           </div>
           <strong>{(usage?.used ?? 0).toLocaleString()}</strong>
           <div className="miniUsageBar">
@@ -97,20 +96,24 @@ export function OverviewView({ m }: { m: DashboardModel }) {
           </div>
           <small>
             {usage?.unlimited
-              ? tr("Unlimited Connect calls", "无限 Connect 调用")
-              : tr("of", "共") + " " + usageLimitLabel + " " + tr("hosted calls", "次托管调用")}
+              ? tr("dashboard.views.overviewView.unlimitedConnectCalls")
+              : tr("dashboard.views.overviewView.of") +
+                " " +
+                usageLimitLabel +
+                " " +
+                tr("dashboard.views.overviewView.hostedCalls")}
           </small>
         </article>
         <article className="overviewStatusCard endpoint">
           <div className="statusCardHead">
             <span>Remote MCP</span>
-            <span className="privacyPill">{tr("Secure", "安全")}</span>
+            <span className="privacyPill">{tr("dashboard.views.overviewView.secure")}</span>
           </div>
           <code>{mcpEndpoint}</code>
           <div className="statusCardActions">
-            <CopyButton value={mcpEndpoint} label={tr("Copy", "复制")} />
+            <CopyButton value={mcpEndpoint} label={tr("dashboard.views.overviewView.copy")} />
             <button className="ghostButton" onClick={() => navigateTab("connect")}>
-              {tr("Manage", "管理")}
+              {tr("dashboard.views.overviewView.manage")}
             </button>
           </div>
         </article>
@@ -118,15 +121,15 @@ export function OverviewView({ m }: { m: DashboardModel }) {
 
       <section className="overviewQuickGrid">
         <article className="overviewQuickCard">
-          <span className="eyebrow">{tr("QUICK ACTIONS", "快捷操作")}</span>
+          <span className="eyebrow">{tr("dashboard.views.overviewView.quickActions")}</span>
           <div className="quickActionList">
             <button onClick={() => setShowAdd(true)}>
               <span>
                 <ProductIcon name="add" />
               </span>
               <div>
-                <strong>{tr("Pair a computer", "配对电脑")}</strong>
-                <small>{tr("Add Windows, macOS or Linux", "添加 Windows、macOS 或 Linux")}</small>
+                <strong>{tr("dashboard.views.overviewView.pairAComputer")}</strong>
+                <small>{tr("dashboard.views.overviewView.addWindowsMacosOrLinux")}</small>
               </div>
             </button>
             <button onClick={() => navigateTab("connect")}>
@@ -134,7 +137,7 @@ export function OverviewView({ m }: { m: DashboardModel }) {
                 <ProductIcon name="link" />
               </span>
               <div>
-                <strong>{tr("Connect an AI client", "连接 AI 客户端")}</strong>
+                <strong>{tr("dashboard.views.overviewView.connectAnAiClient")}</strong>
                 <small>ChatGPT · Claude · Remote MCP</small>
               </div>
             </button>
@@ -143,10 +146,8 @@ export function OverviewView({ m }: { m: DashboardModel }) {
                 <ProductIcon name="shield" />
               </span>
               <div>
-                <strong>{tr("Review security", "检查安全设置")}</strong>
-                <small>
-                  {tr("Sessions, scopes and device policies", "会话、Scope 与设备权限")}
-                </small>
+                <strong>{tr("dashboard.views.overviewView.reviewSecurity")}</strong>
+                <small>{tr("dashboard.views.overviewView.sessionsScopesAndDevicePolicies")}</small>
               </div>
             </button>
             <button onClick={() => navigateTab("apps")}>
@@ -154,33 +155,26 @@ export function OverviewView({ m }: { m: DashboardModel }) {
                 <ProductIcon name="apps" />
               </span>
               <div>
-                <strong>{tr("Connect your apps", "连接应用")}</strong>
+                <strong>{tr("dashboard.views.overviewView.connectYourApps")}</strong>
                 <small>
-                  {tr(
-                    "One account connection, available to your AI",
-                    "连接账号，让 AI 可以使用你的应用",
-                  )}
+                  {tr("dashboard.views.overviewView.oneAccountConnectionAvailableToYour")}
                 </small>
               </div>
             </button>
           </div>
         </article>
         <article className="overviewAttentionCard">
-          <span className="eyebrow">{tr("ATTENTION", "需要关注")}</span>
+          <span className="eyebrow">{tr("dashboard.views.overviewView.attention")}</span>
           <div className="attentionList">
             {!!automationAttentionCount && (
               <button onClick={() => navigateTab("automations")}>
                 <i className="attentionIcon warn">!</i>
                 <div>
                   <strong>
-                    {automationAttentionCount} {tr("task(s) need attention", "项任务需要处理")}
+                    {automationAttentionCount}{" "}
+                    {tr("dashboard.views.overviewView.taskSNeedAttention")}
                   </strong>
-                  <small>
-                    {tr(
-                      "Ask your connected AI to review saved work and continue it.",
-                      "让已连接的 AI 检查保存的工作并继续处理。",
-                    )}
-                  </small>
+                  <small>{tr("dashboard.views.overviewView.askYourConnectedAiToReview")}</small>
                 </div>
               </button>
             )}
@@ -188,8 +182,8 @@ export function OverviewView({ m }: { m: DashboardModel }) {
               <button onClick={() => void refreshAutomations()}>
                 <i className="attentionIcon warn">!</i>
                 <div>
-                  <strong>{tr("Task status unavailable", "任务状态暂不可用")}</strong>
-                  <small>{tr("Retry to see current progress.", "点击重试以查看当前进度。")}</small>
+                  <strong>{tr("dashboard.views.overviewView.taskStatusUnavailable")}</strong>
+                  <small>{tr("dashboard.views.overviewView.retryToSeeCurrentProgress")}</small>
                 </div>
               </button>
             )}
@@ -197,13 +191,8 @@ export function OverviewView({ m }: { m: DashboardModel }) {
               <button onClick={() => setShowAdd(true)}>
                 <i className="attentionIcon warn">!</i>
                 <div>
-                  <strong>{tr("No computer paired", "还没有配对电脑")}</strong>
-                  <small>
-                    {tr(
-                      "Pair your first device to start using Remote Arc.",
-                      "先配对第一台设备即可开始使用 Remote Arc。",
-                    )}
-                  </small>
+                  <strong>{tr("dashboard.views.overviewView.noComputerPaired")}</strong>
+                  <small>{tr("dashboard.views.overviewView.pairYourFirstDeviceToStart")}</small>
                 </div>
               </button>
             )}
@@ -211,10 +200,10 @@ export function OverviewView({ m }: { m: DashboardModel }) {
               <button onClick={() => navigateTab("devices")}>
                 <i className="attentionIcon idle">•</i>
                 <div>
-                  <strong>{tr("Some devices are offline", "部分设备离线")}</strong>
+                  <strong>{tr("dashboard.views.overviewView.someDevicesAreOffline")}</strong>
                   <small>
                     {devices.filter((device) => device.status === "offline").length}{" "}
-                    {tr("device(s) unavailable for MCP calls", "台设备当前无法接受 MCP 调用")}
+                    {tr("dashboard.views.overviewView.deviceSUnavailableForMcpCalls")}
                   </small>
                 </div>
               </button>
@@ -223,10 +212,10 @@ export function OverviewView({ m }: { m: DashboardModel }) {
               <button onClick={() => navigateTab("settings")}>
                 <i className="attentionIcon warn">!</i>
                 <div>
-                  <strong>{tr("Usage is getting high", "本月额度使用较高")}</strong>
+                  <strong>{tr("dashboard.views.overviewView.usageIsGettingHigh")}</strong>
                   <small>
                     {Math.round(usagePct)}%{" "}
-                    {tr("of your monthly hosted allowance is used", "的每月托管额度已使用")}
+                    {tr("dashboard.views.overviewView.ofYourMonthlyHostedAllowanceIs")}
                   </small>
                 </div>
               </button>
@@ -235,13 +224,8 @@ export function OverviewView({ m }: { m: DashboardModel }) {
               <div className="attentionClear">
                 <i>✓</i>
                 <div>
-                  <strong>{tr("Everything looks good", "当前状态良好")}</strong>
-                  <small>
-                    {tr(
-                      "Devices are online and no tasks need attention.",
-                      "设备在线，目前没有待处理任务。",
-                    )}
-                  </small>
+                  <strong>{tr("dashboard.views.overviewView.everythingLooksGood")}</strong>
+                  <small>{tr("dashboard.views.overviewView.devicesAreOnlineAndNoTasks")}</small>
                 </div>
               </div>
             )}
@@ -253,11 +237,11 @@ export function OverviewView({ m }: { m: DashboardModel }) {
         <div className="panelBlock overviewDevicesPanel">
           <div className="blockHeader">
             <div>
-              <span className="eyebrow">{tr("DEVICES", "设备")}</span>
-              <h2>{tr("Device status", "设备状态")}</h2>
+              <span className="eyebrow">{tr("dashboard.views.overviewView.devices")}</span>
+              <h2>{tr("dashboard.views.overviewView.deviceStatus")}</h2>
             </div>
             <button className="ghostButton" onClick={() => navigateTab("devices")}>
-              {tr("Manage", "管理")}
+              {tr("dashboard.views.overviewView.manage")}
             </button>
           </div>
           <div className="overviewDeviceList">
@@ -278,7 +262,7 @@ export function OverviewView({ m }: { m: DashboardModel }) {
                     <strong>{device.name}</strong>
                     <span>
                       {platformLabel(device.platform)} ·{" "}
-                      {device.hostname || tr("No hostname", "无 Hostname")}
+                      {device.hostname || tr("dashboard.views.overviewView.noHostname")}
                     </span>
                   </div>
                   <div className="overviewDeviceMeta">
@@ -287,7 +271,9 @@ export function OverviewView({ m }: { m: DashboardModel }) {
                   </div>
                   <span className={"badge " + device.status}>
                     <i />
-                    {device.status === "online" ? tr("Online", "在线") : tr("Offline", "离线")}
+                    {device.status === "online"
+                      ? tr("dashboard.views.overviewView.online")
+                      : tr("dashboard.views.overviewView.offline")}
                   </span>
                 </button>
               ))}
@@ -295,10 +281,8 @@ export function OverviewView({ m }: { m: DashboardModel }) {
               <button className="overviewDeviceRow empty" onClick={() => setShowAdd(true)}>
                 <div className="deviceIcon">＋</div>
                 <div>
-                  <strong>{tr("Add your first computer", "添加第一台电脑")}</strong>
-                  <span>
-                    {tr("One command, then approve in your browser", "一条命令，然后在浏览器确认")}
-                  </span>
+                  <strong>{tr("dashboard.views.overviewView.addYourFirstComputer")}</strong>
+                  <span>{tr("dashboard.views.overviewView.oneCommandThenApproveInYour")}</span>
                 </div>
               </button>
             )}
@@ -308,10 +292,12 @@ export function OverviewView({ m }: { m: DashboardModel }) {
         <div className="panelBlock overviewActivityPanel">
           <div className="blockHeader">
             <div>
-              <span className="eyebrow">{tr("RECENT ACTIVITY", "最近活动")}</span>
-              <h2>{tr("What Remote Arc did", "Remote Arc 最近做了什么")}</h2>
+              <span className="eyebrow">{tr("dashboard.views.overviewView.recentActivity")}</span>
+              <h2>{tr("dashboard.views.overviewView.whatRemoteArcDid")}</h2>
             </div>
-            <span className="privacyPill">{tr("Arguments not logged", "不记录参数")}</span>
+            <span className="privacyPill">
+              {tr("dashboard.views.overviewView.argumentsNotLogged")}
+            </span>
           </div>
           <div className="activityList">
             {(status?.recentActivity || []).map((event) => (
@@ -324,11 +310,11 @@ export function OverviewView({ m }: { m: DashboardModel }) {
                   <span>
                     {event.client_name ||
                       event.client_id?.slice(0, 12) ||
-                      tr("Unknown client", "未知客户端")}{" "}
+                      tr("dashboard.views.overviewView.unknownClient")}{" "}
                     ·{" "}
                     {event.device_id
                       ? deviceNameById.get(event.device_id) || event.device_id.slice(0, 8)
-                      : tr("Account", "账户")}{" "}
+                      : tr("dashboard.views.overviewView.account")}{" "}
                     · {timeAgo(event.created_at)}
                     {event.request_id ? " · req " + event.request_id.slice(0, 8) : ""}
                   </span>
@@ -337,13 +323,8 @@ export function OverviewView({ m }: { m: DashboardModel }) {
             ))}
             {!status?.recentActivity?.length && (
               <div className="activityEmpty">
-                <strong>{tr("No activity yet", "暂无活动")}</strong>
-                <span>
-                  {tr(
-                    "Pair a device or call a tool from your AI client.",
-                    "配对设备或从 AI 客户端发起工具调用。",
-                  )}
-                </span>
+                <strong>{tr("dashboard.views.overviewView.noActivityYet")}</strong>
+                <span>{tr("dashboard.views.overviewView.pairADeviceOrCallA")}</span>
               </div>
             )}
           </div>

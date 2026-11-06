@@ -1,6 +1,6 @@
 import { DeviceFleetOverview } from "../devices/device-fleet-overview.js";
 import { ProductIcon } from "../../../components/product-icon.js";
-import type { DashboardModel } from "../hooks/use-dashboard-model.js";
+import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 import { DeviceCard } from "../devices/device-card.js";
 
 // Devices tab: the device list and the per-device management panel.
@@ -28,25 +28,20 @@ export function DevicesView({
     <>
       <section className="overviewTopbar devicesPageHeader">
         <div>
-          <span className="eyebrow">{tr("DEVICES", "设备")}</span>
-          <h1>{tr("Your device fleet", "你的设备集群")}</h1>
-          <p>
-            {tr(
-              "Your computers, their capabilities, and where the next task should run.",
-              "查看电脑、可用能力，以及下一项任务适合在哪里执行。",
-            )}
-          </p>
+          <span className="eyebrow">{tr("dashboard.views.devicesView.devices")}</span>
+          <h1>{tr("dashboard.views.devicesView.yourDeviceFleet")}</h1>
+          <p>{tr("dashboard.views.devicesView.yourComputersTheirCapabilitiesAndWhere")}</p>
         </div>
         <div className="devicePageActions">
           {browserTaskCount > 0 && (
             <button type="button" className="ghostButton" onClick={() => navigateTab("security")}>
-              {tr("Browser tasks", "浏览器任务")}{" "}
+              {tr("dashboard.views.devicesView.browserTasks")}{" "}
               <span className="approvalCount">{browserTaskCount}</span>
             </button>
           )}
           <button className="addButton arcRadiantCta" onClick={() => setShowAdd(true)}>
             <ProductIcon name="add" />
-            {tr("Add device", "添加设备")}
+            {tr("dashboard.views.devicesView.addDevice")}
           </button>
         </div>
       </section>
@@ -56,13 +51,7 @@ export function DevicesView({
         tr={tr}
         onChat={
           arcAvailable
-            ? () =>
-                openArcChat(
-                  tr(
-                    "Choose a suitable computer for my next task. Check my fleet capabilities and load, and ask what I need done.",
-                    "为我的下一项任务选择合适电脑，先检查设备能力和负载，再确认我要做什么。",
-                  ),
-                )
+            ? () => openArcChat(tr("dashboard.views.devicesView.chooseASuitableComputerForMy"))
             : undefined
         }
       />
@@ -70,16 +59,16 @@ export function DevicesView({
         <div className="deviceSearch">
           <ProductIcon name="search" />
           <input
-            aria-label={tr("Search devices", "搜索设备")}
+            aria-label={tr("dashboard.views.devicesView.searchDevices")}
             value={deviceQuery}
             onChange={(event) => setDeviceQuery(event.target.value)}
-            placeholder={tr("Search devices, hostname or ID", "搜索设备、Hostname 或 ID")}
+            placeholder={tr("dashboard.views.devicesView.searchDevicesHostnameOrId")}
           />
         </div>
         <div
           className="deviceFilters"
           role="group"
-          aria-label={tr("Device status filter", "设备状态筛选")}
+          aria-label={tr("dashboard.views.devicesView.deviceStatusFilter")}
         >
           {(["all", "online", "offline"] as const).map((filter) => (
             <button
@@ -89,10 +78,10 @@ export function DevicesView({
               onClick={() => setDeviceFilter(filter)}
             >
               {filter === "all"
-                ? tr("All", "全部")
+                ? tr("dashboard.views.devicesView.all")
                 : filter === "online"
-                  ? tr("Online", "在线")
-                  : tr("Offline", "离线")}
+                  ? tr("dashboard.views.devicesView.online")
+                  : tr("dashboard.views.devicesView.offline")}
               <span>
                 {filter === "all"
                   ? devices.length
@@ -111,35 +100,25 @@ export function DevicesView({
         {!devices.length && (
           <article className="emptyCard wide deviceEmptyState">
             <div className="emptyIcon">⌁</div>
-            <h3>{tr("No paired computers", "暂无已配对电脑")}</h3>
-            <p>
-              {tr(
-                "Windows, macOS and Linux are supported. No public IP or port forwarding required.",
-                "支持 Windows、macOS 与 Linux，无需公网 IP 或端口映射。",
-              )}
-            </p>
+            <h3>{tr("dashboard.views.devicesView.noPairedComputers")}</h3>
+            <p>{tr("dashboard.views.devicesView.windowsMacosAndLinuxAreSupported")}</p>
             <button className="goldButton" onClick={() => setShowAdd(true)}>
-              + {tr("Add your first device", "添加第一台设备")}
+              + {tr("dashboard.views.devicesView.addYourFirstDevice")}
             </button>
           </article>
         )}
         {!!devices.length && !filteredDevices.length && (
           <article className="emptyCard wide">
             <div className="emptyIcon">⌕</div>
-            <h3>{tr("No matching devices", "没有匹配设备")}</h3>
-            <p>
-              {tr(
-                "Try another search or clear the status filter.",
-                "尝试其他搜索词，或清除状态筛选。",
-              )}
-            </p>
+            <h3>{tr("dashboard.views.devicesView.noMatchingDevices")}</h3>
+            <p>{tr("dashboard.views.devicesView.tryAnotherSearchOrClearThe")}</p>
             <button
               onClick={() => {
                 setDeviceQuery("");
                 setDeviceFilter("all");
               }}
             >
-              {tr("Clear filters", "清除筛选")}
+              {tr("dashboard.views.devicesView.clearFilters")}
             </button>
           </article>
         )}

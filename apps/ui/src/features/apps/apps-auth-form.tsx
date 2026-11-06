@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 export type AppCredentialInput = {
   credential: string;
   permissions: ("read" | "write")[];
@@ -46,11 +46,11 @@ export function AppCredentialForm({
   return (
     <form className="appsCredentialForm" onSubmit={(event) => void submit(event)}>
       <fieldset disabled={busy}>
-        <legend>{tr("Connect your API account", "连接你的 API 账号")}</legend>
+        <legend>{tr("apps.appsAuthForm.connectYourApiAccount")}</legend>
         <label>
           {provider === "x"
-            ? tr("OAuth 2.0 user access token", "OAuth 2.0 用户访问令牌")
-            : tr("API key or access token", "API 密钥或访问令牌")}
+            ? tr("apps.appsAuthForm.oauthUserAccessToken")
+            : tr("apps.appsAuthForm.apiKeyOrAccessToken")}
           <input
             type="password"
             name="api-credential"
@@ -66,7 +66,7 @@ export function AppCredentialForm({
         {provider === "whatsapp" && (
           <>
             <label>
-              {tr("WhatsApp Business account ID", "WhatsApp Business 账号 ID")}
+              {tr("apps.appsAuthForm.whatsappBusinessAccountId")}
               <input
                 value={businessAccountId}
                 onChange={(e) => setBusinessAccountId(e.target.value)}
@@ -76,7 +76,7 @@ export function AppCredentialForm({
               />
             </label>
             <label>
-              {tr("Phone number ID", "电话号码 ID")}
+              {tr("apps.appsAuthForm.phoneNumberId")}
               <input
                 value={phoneNumberId}
                 onChange={(e) => setPhoneNumberId(e.target.value)}
@@ -88,7 +88,7 @@ export function AppCredentialForm({
           </>
         )}
         <label>
-          {tr("Daily operation limit", "每日操作上限")}
+          {tr("apps.appsAuthForm.dailyOperationLimit")}
           <input
             type="number"
             value={dailyCallLimit}
@@ -105,27 +105,17 @@ export function AppCredentialForm({
             onChange={(e) => setConsent(e.target.checked)}
             required
           />
-          <span>
-            {tr(
-              "I authorize account validation and API usage within this daily limit, including actions that make changes. Provider charges apply to my account.",
-              "我授权进行账号验证，并在此每日上限内使用 API，包括更改操作。服务费用按我的账号计费。",
-            )}
-          </span>
+          <span>{tr("apps.appsAuthForm.iAuthorizeAccountValidationAndApi")}</span>
         </label>
       </fieldset>
-      <p>
-        {tr(
-          "Your credential is encrypted on the server and never included in AI tool arguments.",
-          "凭据在服务端加密保存，不会作为 AI 工具参数。",
-        )}
-      </p>
+      <p>{tr("apps.appsAuthForm.yourCredentialIsEncryptedOnThe")}</p>
       <div>
         <button
           className="appsManagerPrimary"
           type="submit"
           disabled={busy || !consent || !credential.trim()}
         >
-          {tr("Validate & connect", "验证并连接")}
+          {tr("apps.appsAuthForm.validateConnect")}
         </button>
         <button
           type="button"
@@ -135,7 +125,7 @@ export function AppCredentialForm({
             onCancel();
           }}
         >
-          {tr("Cancel", "取消")}
+          {tr("apps.appsAuthForm.cancel")}
         </button>
       </div>
     </form>

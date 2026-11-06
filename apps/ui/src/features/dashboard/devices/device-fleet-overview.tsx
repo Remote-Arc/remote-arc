@@ -1,3 +1,4 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 type FleetDevice = {
   status: string;
@@ -14,7 +15,6 @@ type FleetDevice = {
     managedProcesses?: number;
   };
 };
-type Translate = (en: string, zh: string) => string;
 export function DeviceFleetOverview({
   devices,
   tr,
@@ -36,41 +36,34 @@ export function DeviceFleetOverview({
           <Icon name="device" size={23} />
         </span>
         <div>
-          <strong>
-            {tr("One fleet. Work in the right place.", "一个设备集群，让工作在合适的地方执行。")}
-          </strong>
-          <p>
-            {tr(
-              "Your connected AI can match work to tools, operating systems, trusted workspaces and current capacity.",
-              "让已连接的 AI 根据工具、操作系统、可信工作目录和实时负载匹配设备。",
-            )}
-          </p>
+          <strong>{tr("dashboard.devices.deviceFleetOverview.oneFleetWorkInTheRight")}</strong>
+          <p>{tr("dashboard.devices.deviceFleetOverview.yourConnectedAiCanMatchWork")}</p>
         </div>
         {onChat && (
           <button className="ghostButton" onClick={onChat}>
-            {tr("Ask Arc to choose", "让 Arc 选择设备")}
+            {tr("dashboard.devices.deviceFleetOverview.askArcToChoose")}
             <Icon name="arrowUpRight" size={14} />
           </button>
         )}
       </div>
       <div className="fleetOverviewMetrics">
         <div>
-          <span>{tr("Connected computers", "已连接电脑")}</span>
+          <span>{tr("dashboard.devices.deviceFleetOverview.connectedComputers")}</span>
           <strong>{devices.length}</strong>
         </div>
         <div>
-          <span>{tr("Online & available", "在线且未暂停")}</span>
+          <span>{tr("dashboard.devices.deviceFleetOverview.onlineAvailable")}</span>
           <strong>
             {available.length}
             <i className={available.length ? "online" : ""} />
           </strong>
         </div>
         <div>
-          <span>{tr("Operating systems", "操作系统")}</span>
+          <span>{tr("dashboard.devices.deviceFleetOverview.operatingSystems")}</span>
           <strong>{platforms.size}</strong>
         </div>
         <div>
-          <span>{tr("Ready for execution", "已配置终端与目录")}</span>
+          <span>{tr("dashboard.devices.deviceFleetOverview.readyForExecution")}</span>
           <strong>
             {
               available.filter(
@@ -95,11 +88,8 @@ export function DeviceCapacity({ device, tr }: { device: FleetDevice; tr: Transl
       <div className="deviceCapacityUnavailable">
         <Icon name="activity" size={14} />
         {device.status === "offline"
-          ? tr(
-              "Capacity available when this computer reconnects.",
-              "电脑重新连接后可查看实时负载。",
-            )
-          : tr("Waiting for a fresh capacity signal.", "等待最新负载数据。")}
+          ? tr("dashboard.devices.deviceFleetOverview.capacityAvailableWhenThisComputerReconnects")
+          : tr("dashboard.devices.deviceFleetOverview.waitingForAFreshCapacitySignal")}
       </div>
     );
   const cpu = sample.cpuPercent,
@@ -117,16 +107,16 @@ export function DeviceCapacity({ device, tr }: { device: FleetDevice; tr: Transl
         </i>
       </div>
       <div>
-        <span>{tr("Memory", "内存")}</span>
+        <span>{tr("dashboard.devices.deviceFleetOverview.memory")}</span>
         <strong>{memory === null ? "—" : Math.round(memory) + "%"}</strong>
         <i>
           <b style={{ width: (memory ?? 0) + "%" }} />
         </i>
       </div>
       <div>
-        <span>{tr("Managed processes", "受管进程")}</span>
+        <span>{tr("dashboard.devices.deviceFleetOverview.managedProcesses")}</span>
         <strong>{sample.managedProcesses ?? "—"}</strong>
-        <small>{tr("Live signal", "实时数据")}</small>
+        <small>{tr("dashboard.devices.deviceFleetOverview.liveSignal")}</small>
       </div>
     </div>
   );

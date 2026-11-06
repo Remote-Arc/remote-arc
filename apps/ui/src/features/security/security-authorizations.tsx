@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import type { SecurityGrant } from "@remotearc/protocol";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { groupAuthorizations } from "./security-grant-groups.js";
-import "./security-authorizations.css";
+import "../../styles/security/security-authorizations.css";
 
 type Props = {
   grants: SecurityGrant[];
@@ -19,10 +19,10 @@ export function SecurityAuthorizations({ grants, busy, preview, timeAgo, revoke 
   const countRefreshable = grants.filter((grant) => grant.status === "refreshable").length;
   const statusName = (status: SecurityGrant["status"]) =>
     status === "active"
-      ? tr("Access valid", "访问有效")
+      ? tr("security.securityAuthorizations.accessValid")
       : status === "refreshable"
-        ? tr("Can refresh", "可刷新")
-        : tr("Expired", "已过期");
+        ? tr("security.securityAuthorizations.canRefresh")
+        : tr("security.securityAuthorizations.expired");
   const dateTime = (value: string) =>
     new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-NZ", {
       year: "numeric",
@@ -38,25 +38,25 @@ export function SecurityAuthorizations({ grants, busy, preview, timeAgo, revoke 
           month: "short",
           day: "numeric",
         })
-      : tr("Not issued", "未签发");
+      : tr("security.securityAuthorizations.notIssued");
 
   return (
     <div className="aiAuthCompact">
       <div className="aiAuthStats">
         <span>
-          <strong>{groups.length}</strong> {tr("AI clients", "AI 客户端")}
+          <strong>{groups.length}</strong> {tr("security.securityAuthorizations.aiClients")}
         </span>
         <span>
-          <strong>{grants.length}</strong> {tr("authorizations", "份授权")}
+          <strong>{grants.length}</strong> {tr("security.securityAuthorizations.authorizations")}
         </span>
         <span>
           <i className="aiAuthDot active" />
-          {countActive} {tr("valid access tokens", "份有效访问 Token")}
+          {countActive} {tr("security.securityAuthorizations.validAccessTokens")}
         </span>
         {countRefreshable > 0 && (
           <span>
             <i className="aiAuthDot refreshable" />
-            {countRefreshable} {tr("refreshable", "份可刷新")}
+            {countRefreshable} {tr("security.securityAuthorizations.refreshable")}
           </span>
         )}
       </div>
@@ -75,16 +75,16 @@ export function SecurityAuthorizations({ grants, busy, preview, timeAgo, revoke 
                     <strong>{group.name}</strong>
                     <small>
                       {group.grants.length}{" "}
-                      {tr(
-                        group.grants.length === 1 ? "authorization" : "authorizations",
-                        "份独立授权",
-                      )}
+                      {group.grants.length === 1
+                        ? tr("security.securityAuthorizations.authorization")
+                        : tr("security.securityAuthorizations.authorizations2")}
                     </small>
                   </span>
                 </span>
                 <span className={"grantState " + overallStatus}>{statusName(overallStatus)}</span>
                 <span className="aiAuthActivity">
-                  {tr("Last token", "最近签发")} · {timeAgo(new Date(group.latest).toISOString())}
+                  {tr("security.securityAuthorizations.lastToken")} ·{" "}
+                  {timeAgo(new Date(group.latest).toISOString())}
                 </span>
                 <span className="aiAuthExpand" aria-hidden="true">
                   ⌄
@@ -96,17 +96,19 @@ export function SecurityAuthorizations({ grants, busy, preview, timeAgo, revoke 
                     <summary className="aiAuthGrantSummary">
                       <span className="aiAuthGrantId">
                         <strong>
-                          {tr("Authorization", "授权")} · {grant.grantId.slice(0, 10)}…
+                          {tr("security.securityAuthorizations.authorization2")} ·{" "}
+                          {grant.grantId.slice(0, 10)}…
                         </strong>
                         <small>
-                          {tr("Issued", "最近签发")} {timeAgo(grant.lastTokenIssuedAt)}
+                          {tr("security.securityAuthorizations.issued")}{" "}
+                          {timeAgo(grant.lastTokenIssuedAt)}
                         </small>
                       </span>
                       <span className={"grantState " + grant.status}>
                         {statusName(grant.status)}
                       </span>
                       <span className="aiAuthScopeCount">
-                        {grant.scopes.length} {tr("permissions", "项权限")}
+                        {grant.scopes.length} {tr("security.securityAuthorizations.permissions")}
                       </span>
                       <span className="aiAuthExpand" aria-hidden="true">
                         ⌄
@@ -115,28 +117,30 @@ export function SecurityAuthorizations({ grants, busy, preview, timeAgo, revoke 
                     <div className="aiAuthGrantBody">
                       <dl className="aiAuthGrantMeta">
                         <div>
-                          <dt>{tr("First authorized", "首次授权")}</dt>
+                          <dt>{tr("security.securityAuthorizations.firstAuthorized")}</dt>
                           <dd>{dateTime(grant.authorizedAt)}</dd>
                         </div>
                         <div>
-                          <dt>{tr("Last access token issued", "最近签发访问 Token")}</dt>
+                          <dt>{tr("security.securityAuthorizations.lastAccessTokenIssued")}</dt>
                           <dd>{dateTime(grant.lastTokenIssuedAt)}</dd>
                         </div>
                         <div>
-                          <dt>{tr("Access token expires", "访问 Token 到期")}</dt>
+                          <dt>{tr("security.securityAuthorizations.accessTokenExpires")}</dt>
                           <dd>{dateTime(grant.accessExpiresAt)}</dd>
                         </div>
                         <div>
-                          <dt>{tr("Refresh authorization expires", "刷新授权到期")}</dt>
+                          <dt>
+                            {tr("security.securityAuthorizations.refreshAuthorizationExpires")}
+                          </dt>
                           <dd>{expiryDate(grant.refreshExpiresAt)}</dd>
                         </div>
                         <div>
-                          <dt>{tr("OAuth client ID", "OAuth 客户端 ID")}</dt>
+                          <dt>{tr("security.securityAuthorizations.oauthClientId")}</dt>
                           <dd title={grant.clientId}>{grant.clientId.slice(0, 14)}…</dd>
                         </div>
                       </dl>
                       <div className="aiAuthPermissions">
-                        <strong>{tr("Granted permissions", "已授予权限")}</strong>
+                        <strong>{tr("security.securityAuthorizations.grantedPermissions")}</strong>
                         <div className="securityGrantScopes">
                           {grant.scopes.map((scope) => (
                             <code key={scope}>{scope}</code>
@@ -152,8 +156,8 @@ export function SecurityAuthorizations({ grants, busy, preview, timeAgo, revoke 
                           onClick={() => void revoke(grant)}
                         >
                           {grant.status === "expired"
-                            ? tr("Remove expired authorization", "移除过期授权")
-                            : tr("Disconnect this authorization", "断开这份授权")}
+                            ? tr("security.securityAuthorizations.removeExpiredAuthorization")
+                            : tr("security.securityAuthorizations.disconnectThisAuthorization")}
                         </button>
                       </div>
                     </div>

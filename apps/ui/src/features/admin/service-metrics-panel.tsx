@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { ServiceMetrics } from "@remotearc/protocol";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { MetricChart } from "./metric-chart.js";
 import { BusinessMetricCards } from "./business-metric-cards.js";
 import { sampleServiceMetrics, validServiceMetrics } from "./service-metrics-model.js";
-import "./service-metrics.css";
+import "../../styles/admin/service-metrics.css";
 
 export function ServiceMetricsPanel({
   hours,
@@ -59,64 +59,58 @@ export function ServiceMetricsPanel({
     <section
       className="serviceMetricPanel"
       id="business-error-metrics"
-      aria-label={tr("Business error metrics", "业务错误指标")}
+      aria-label={tr("admin.serviceMetricsPanel.businessErrorMetrics")}
       aria-busy={busy}
     >
       <header className="serviceMetricHeading">
         <div>
-          <h2>{tr("Business error metrics", "业务错误指标")}</h2>
-          <p>
-            {tr(
-              "Errors and business limits by module, with trends and request details below.",
-              "按业务模块查看错误、额度拦截及变化趋势，并关联下方排查明细。",
-            )}
-          </p>
+          <h2>{tr("admin.serviceMetricsPanel.businessErrorMetrics")}</h2>
+          <p>{tr("admin.serviceMetricsPanel.errorsAndBusinessLimitsByModule")}</p>
         </div>
       </header>
       <p className="healthBoundary">
-        {tr(
-          "Includes business failures returned with HTTP 200. Records are not unique failed users or orders; missing records do not prove business success.",
-          "包含 HTTP 200 中的业务失败。记录数不等于失败用户数或订单数，缺少记录不代表业务成功。",
-        )}
+        {tr("admin.serviceMetricsPanel.includesBusinessFailuresReturnedWithHttp")}
       </p>
       <BusinessMetricCards data={data} domain={domain} selectDomain={selectDomain} />
       {failed ? (
         <div className="healthNotice" role="alert">
-          {tr(
-            "Business error metrics could not be read. Refresh to retry; the error investigation remains available.",
-            "业务错误指标暂时无法读取，请刷新重试；下方错误排查仍可独立使用。",
-          )}
+          {tr("admin.serviceMetricsPanel.businessErrorMetricsCouldNotBe")}
         </div>
       ) : !data ? (
         <div className="serviceMetricsEmpty" role="status">
-          {tr("Reading business errors…", "正在读取业务错误指标…")}
+          {tr("admin.serviceMetricsPanel.readingBusinessErrors")}
         </div>
       ) : (
         <>
           <MetricChart
-            title={tr("Business failures", "业务失败趋势")}
-            note={tr(
-              "Recorded failures and the subset needing investigation",
-              "失败记录及其中需要排查的记录",
-            )}
+            title={tr("admin.serviceMetricsPanel.businessFailures")}
+            note={tr("admin.serviceMetricsPanel.recordedFailuresAndTheSubsetNeeding")}
             points={data.points}
-            unit={tr("Events", "条记录")}
+            unit={tr("admin.serviceMetricsPanel.events")}
             locale={locale}
             series={[
-              { key: "failures", label: tr("Failures", "失败记录"), color: "#ef8290" },
-              { key: "attention", label: tr("Investigate", "需要排查"), color: "#e6b56b" },
+              {
+                key: "failures",
+                label: tr("admin.serviceMetricsPanel.failures"),
+                color: "#ef8290",
+              },
+              {
+                key: "attention",
+                label: tr("admin.serviceMetricsPanel.investigate"),
+                color: "#e6b56b",
+              },
             ]}
           />
           <details className="metricDataTable">
-            <summary>{tr("Exact interval values · UTC", "查看每个时间段的准确数值 · UTC")}</summary>
+            <summary>{tr("admin.serviceMetricsPanel.exactIntervalValuesUtc")}</summary>
             <div>
               <table>
                 <thead>
                   <tr>
                     <th>UTC</th>
-                    <th>{tr("Failures", "失败")}</th>
-                    <th>{tr("Investigate", "需要排查")}</th>
-                    <th>{tr("Affected users", "关联用户")}</th>
+                    <th>{tr("admin.serviceMetricsPanel.failures2")}</th>
+                    <th>{tr("admin.serviceMetricsPanel.investigate")}</th>
+                    <th>{tr("admin.serviceMetricsPanel.affectedUsers")}</th>
                   </tr>
                 </thead>
                 <tbody>

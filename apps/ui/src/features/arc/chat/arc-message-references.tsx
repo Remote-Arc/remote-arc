@@ -1,16 +1,11 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { communityExperience } from "../skills/arc-community-experience.js";
 import { ArcReferenceIcon } from "../composer/arc-reference-icon.js";
-import type { ArcMention } from "../composer/arc-skill-mentions.js";
+import type { ArcMention } from "../../../hooks/arc/use-arc-skill-mentions.js";
 import { workflowExperience } from "../skills/arc-skill-experience.js";
-import type { ChatMessage } from "./use-arc-chat.js";
+import type { ChatMessage } from "../../../hooks/arc/use-arc-chat.js";
 
-export function ArcMessageReferences({
-  message,
-  tr,
-}: {
-  message: ChatMessage;
-  tr: (en: string, zh: string) => string;
-}) {
+export function ArcMessageReferences({ message, tr }: { message: ChatMessage; tr: Translate }) {
   const items: ArcMention[] = [
     ...(message.teammates || []).map((person) => ({
       kind: "employee" as const,

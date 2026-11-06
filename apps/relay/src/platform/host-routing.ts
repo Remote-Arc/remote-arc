@@ -38,7 +38,6 @@ const dashboardPaths = new Set([
   "/security",
   "/settings",
   "/checkout",
-  "/monitor",
 ]);
 
 export function publicWebsiteRedirect(

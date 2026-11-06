@@ -1,5 +1,6 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import {
   billingRequest,
@@ -11,20 +12,20 @@ import {
   type BillingDetails,
   type NativePaymentSession,
 } from "./arc-billing-client.js";
-import "./arc-billing-panel.css";
+import "../../styles/billing/arc-billing-panel.css";
 import { BillingRecoveryActions } from "./billing-recovery-actions.js";
 const PaymentMethodForm = lazy(() =>
   import("./stripe-embedded.js").then((module) => ({ default: module.StripePaymentMethod })),
 );
-const planTitle = (data: ArcBilling, tr: (en: string, zh: string) => string) =>
+const planTitle = (data: ArcBilling, tr: Translate) =>
   isConnectOnlyPlan(data.plan)
     ? data.plan.label
     : data.plan.monthlyPriceCents > 0
       ? "Arc " + data.plan.label
       : data.access?.status === "active"
-        ? tr("Arc trial", "Arc 试用中")
+        ? tr("billing.arcBillingPanel.arcTrial")
         : data.access?.status === "expired"
-          ? tr("Arc trial ended", "Arc 试用已结束")
+          ? tr("billing.arcBillingPanel.arcTrialEnded")
           : "Connect Free";
 export function ArcAccountPlan({ onManage }: { onManage: () => void }) {
   const { tr } = useI18n(),
@@ -42,18 +43,18 @@ export function ArcAccountPlan({ onManage }: { onManage: () => void }) {
     <section className="raSettingsSurface">
       <div className="raSettingsRow raSettingsRowLast">
         <div className="raSettingsRowInfo">
-          <h4>{data ? planTitle(data, tr) : tr("Your plan", "你的套餐")}</h4>
+          <h4>{data ? planTitle(data, tr) : tr("billing.arcBillingPanel.yourPlan")}</h4>
           <p>
             {data?.access?.status === "active"
-              ? tr(
-                  `${data.access.daysRemaining} days remaining · Auto · ${data.credits.available.toLocaleString()} Credits`,
-                  `剩余 ${data.access.daysRemaining} 天 · Auto · ${data.credits.available.toLocaleString()} Credits`,
-                )
-              : tr("View your access, Credits and subscription.", "查看使用权限、Credits 与订阅。")}
+              ? tr("billing.arcBillingPanel.daysRemainingAutoCredits", {
+                  daysRemaining: data.access.daysRemaining,
+                  available: data.credits.available.toLocaleString(),
+                })
+              : tr("billing.arcBillingPanel.viewYourAccessCreditsAndSubscription")}
           </p>
         </div>
         <button type="button" className="raSettingsButton" onClick={onManage}>
-          {tr("Plan & usage", "套餐与用量")}
+          {tr("billing.arcBillingPanel.planUsage")}
         </button>
       </div>
     </section>
@@ -108,7 +109,7 @@ export function ArcBillingPanel() {
           const clean = new URL(location.href);
           clean.searchParams.delete("setup_intent");
           history.replaceState(history.state, "", clean.pathname + clean.search);
-          setNotice(tr("Payment method updated.", "付款方式已更新。"));
+          setNotice(tr("billing.arcBillingPanel.paymentMethodUpdated"));
           setRevision((value) => value + 1);
         }
       })
@@ -149,14 +150,8 @@ export function ArcBillingPanel() {
       if (mounted.current) {
         setNotice(
           action === "cancel"
-            ? tr(
-                "Renewal cancelled. Your paid access continues until the end of this billing period.",
-                "已取消续费，已付费权限保留至当前账期结束。",
-              )
-            : tr(
-                "Renewal restored. Your subscription will renew at the next billing date.",
-                "续费已恢复，订阅将在下个账单日期续订。",
-              ),
+            ? tr("billing.arcBillingPanel.renewalCancelledYourPaidAccessContinues")
+            : tr("billing.arcBillingPanel.renewalRestoredYourSubscriptionWillRenew"),
         );
         setRevision((value) => value + 1);
       }
@@ -184,7 +179,7 @@ export function ArcBillingPanel() {
         await billingRequest("payment-method/confirm", { setupIntentId: session.id });
         if (mounted.current) {
           setupRequest.current = crypto.randomUUID();
-          setNotice(tr("Payment method updated.", "付款方式已更新。"));
+          setNotice(tr("billing.arcBillingPanel.paymentMethodUpdated"));
           setRevision((value) => value + 1);
         }
       } else if (mounted.current) setSetup(session);
@@ -206,15 +201,15 @@ export function ArcBillingPanel() {
             className="raSettingsButton"
             href="/auth/login?return_to=%2Fsettings%3Fsection%3Dbilling"
           >
-            {tr("Sign in", "登录")}
+            {tr("billing.arcBillingPanel.signIn")}
           </a>
         )}
         <button className="raSettingsButton" onClick={() => setRevision((v) => v + 1)}>
-          {tr("Refresh status", "刷新状态")}
+          {tr("billing.arcBillingPanel.refreshStatus")}
         </button>
       </section>
     ) : (
-      <WorkspaceLoading label={tr("Loading billing…", "正在获取账单…")} variant="cards" />
+      <WorkspaceLoading label={tr("billing.arcBillingPanel.loadingBilling")} variant="cards" />
     );
   // A cancelled subscription (ended early, e.g. after a refund) no longer has a renewal or access date.
   const resetText = data.usage.month
@@ -237,19 +232,12 @@ export function ArcBillingPanel() {
   const overflowText = !overflow
     ? ""
     : overflow.trial?.active
-      ? tr(
-          `Unlimited trial · full speed until ${trialEnd}`,
-          `Unlimited 试用中 · ${trialEnd} 前保持全速`,
-        )
+      ? tr("billing.arcBillingPanel.unlimitedTrialFullSpeedUntil", { trialEnd })
       : overflow.trial
-        ? tr(
-            `Slow lane · ${overflow.slowLaneCallsPerMinute} calls per minute until the reset`,
-            `慢速通道 · 重置前每分钟 ${overflow.slowLaneCallsPerMinute} 次`,
-          )
-        : tr(
-            `Your next call starts a ${overflow.trialDays}-day Unlimited trial`,
-            `下一次调用将开启 ${overflow.trialDays} 天 Unlimited 试用`,
-          );
+        ? tr("billing.arcBillingPanel.slowLaneCallsPerMinuteUntil", {
+            slowLaneCallsPerMinute: overflow.slowLaneCallsPerMinute,
+          })
+        : tr("billing.arcBillingPanel.yourNextCallStartsADay", { trialDays: overflow.trialDays });
   const paid = data.plan.monthlyPriceCents > 0,
     connect = isConnectOnlyPlan(data.plan),
     subscription = data.subscriptions.find(
@@ -261,39 +249,37 @@ export function ArcBillingPanel() {
     <div className="raBilling">
       <section className="raSettingsSurface raBillingSummary">
         <div>
-          <span className="raSettingsFieldLabel">{tr("YOUR PLAN", "当前套餐")}</span>
+          <span className="raSettingsFieldLabel">{tr("billing.arcBillingPanel.yourPlan2")}</span>
           <h3>{planTitle(data, tr)}</h3>
           {data.access?.status === "active" && !paid && (
             <p>
-              {tr(
-                `${data.access.daysRemaining} days remaining in your trial. No subscription starts automatically.`,
-                `试用剩余 ${data.access.daysRemaining} 天，不会自动开启订阅。`,
-              )}
+              {tr("billing.arcBillingPanel.daysRemainingInYourTrialNo", {
+                daysRemaining: data.access.daysRemaining,
+              })}
             </p>
           )}
           {paid && (
             <p>
-              US${data.plan.monthlyPriceCents / 100} / {tr("month", "月")} ·{" "}
+              US${data.plan.monthlyPriceCents / 100} / {tr("billing.arcBillingPanel.month")} ·{" "}
               {connect
-                ? tr(
-                    "Unlimited Connect calls and computers · no monthly Credits",
-                    "无限 Connect 调用与电脑 · 不含月度 Credits",
-                  )
+                ? tr("billing.arcBillingPanel.unlimitedConnectCallsAndComputersNo")
                 : data.plan.monthlyCredits.toLocaleString() + " Credits"}
             </p>
           )}
           {subscription && (
             <p>
-              {tr(
-                subscription.cancel_at_period_end ? "Available until " : "Renews ",
-                subscription.cancel_at_period_end ? "可用至 " : "下次续费：",
-              ) + new Date(subscription.period_end).toLocaleDateString()}
+              {(subscription.cancel_at_period_end
+                ? tr("billing.arcBillingPanel.availableUntil")
+                : tr("billing.arcBillingPanel.renews")) +
+                new Date(subscription.period_end).toLocaleDateString()}
             </p>
           )}
         </div>
         <div className="raBillingActions">
           <a className="raSettingsButton raSettingsButtonPrimary" href="/checkout">
-            {paid ? tr("Change plan", "更换套餐") : tr("Choose a plan", "选择套餐")}
+            {paid
+              ? tr("billing.arcBillingPanel.changePlan")
+              : tr("billing.arcBillingPanel.chooseAPlan")}
           </a>
           {data.hasCustomer && (
             <button
@@ -303,8 +289,8 @@ export function ArcBillingPanel() {
               onClick={() => setManaging((value) => !value)}
             >
               {managing
-                ? tr("Hide subscription details", "收起订阅详情")
-                : tr("Manage subscription", "管理订阅")}
+                ? tr("billing.arcBillingPanel.hideSubscriptionDetails")
+                : tr("billing.arcBillingPanel.manageSubscription")}
             </button>
           )}
         </div>
@@ -316,45 +302,35 @@ export function ArcBillingPanel() {
       )}
       {subscription && ["past_due", "unpaid", "incomplete"].includes(subscription.status) && (
         <section className="raSettingsSurface raBillingNotice" role="alert">
-          <h3>{tr("Your payment needs attention", "付款需要处理")}</h3>
-          <p>
-            {tr(
-              "Review your invoice and payment method before purchasing another plan. Updating a payment method does not itself confirm that an overdue invoice has been paid.",
-              "请先核对账单及付款方式，再决定是否购买新套餐。更新付款方式本身不代表欠付账单已完成支付。",
-            )}
-          </p>
+          <h3>{tr("billing.arcBillingPanel.yourPaymentNeedsAttention")}</h3>
+          <p>{tr("billing.arcBillingPanel.reviewYourInvoiceAndPaymentMethod")}</p>
           <button className="raSettingsButton" type="button" onClick={() => setManaging(true)}>
-            {tr("Review invoice & payment method", "查看账单与付款方式")}
+            {tr("billing.arcBillingPanel.reviewInvoicePaymentMethod")}
           </button>
         </section>
       )}
       {managing && (
         <section
           className="raSettingsSurface raBillingManagement"
-          aria-label={tr("Subscription management", "订阅管理")}
+          aria-label={tr("billing.arcBillingPanel.subscriptionManagement")}
         >
-          <h3>{tr("Manage your subscription", "管理你的订阅")}</h3>
+          <h3>{tr("billing.arcBillingPanel.manageYourSubscription")}</h3>
           {subscription &&
             ["active", "trialing", "past_due", "unpaid"].includes(subscription.status) && (
               <div className="raBillingRenewal">
                 <div>
                   <h4>
                     {subscription.cancel_at_period_end
-                      ? tr("Renewal is off", "自动续费已关闭")
-                      : tr("Monthly renewal", "按月自动续费")}
+                      ? tr("billing.arcBillingPanel.renewalIsOff")
+                      : tr("billing.arcBillingPanel.monthlyRenewal")}
                   </h4>
                   <p>
-                    {tr(
-                      subscription.cancel_at_period_end
-                        ? "Your current access ends on "
-                        : "Your next billing date is ",
-                      subscription.cancel_at_period_end ? "当前权益保留至 " : "下次账单日期：",
-                    ) + new Date(subscription.period_end).toLocaleDateString()}
+                    {(subscription.cancel_at_period_end
+                      ? tr("billing.arcBillingPanel.currentAccessEndsOn")
+                      : tr("billing.arcBillingPanel.nextBillingDateIs")) +
+                      new Date(subscription.period_end).toLocaleDateString()}
                     {subscription.pending_product_id
-                      ? tr(
-                          ". Cancelling renewal also removes the pending plan change.",
-                          "。取消续费也会移除待生效的套餐变更。",
-                        )
+                      ? tr("billing.arcBillingPanel.cancellingRenewalAlsoRemovesThePending")
                       : ""}
                   </p>
                 </div>
@@ -367,14 +343,14 @@ export function ArcBillingPanel() {
                   }
                 >
                   {subscription.cancel_at_period_end
-                    ? tr("Resume renewal", "恢复续费")
-                    : tr("Cancel renewal", "取消续费")}
+                    ? tr("billing.arcBillingPanel.resumeRenewal")
+                    : tr("billing.arcBillingPanel.cancelRenewal")}
                 </button>
               </div>
             )}
           <div className="raBillingRenewal">
             <div>
-              <h4>{tr("Payment method", "付款方式")}</h4>
+              <h4>{tr("billing.arcBillingPanel.paymentMethod")}</h4>
               <p>
                 {details?.paymentMethod
                   ? details.paymentMethod.type === "card"
@@ -392,11 +368,8 @@ export function ArcBillingPanel() {
                       details.paymentMethod.expYear
                     : details.paymentMethod.type === "link"
                       ? "Link"
-                      : tr("Saved payment method", "已保存的付款方式")
-                  : tr(
-                      "Manage the payment method used for your invoices.",
-                      "管理用于支付账单的付款方式。",
-                    )}
+                      : tr("billing.arcBillingPanel.savedPaymentMethod")
+                  : tr("billing.arcBillingPanel.manageThePaymentMethodUsedFor")}
               </p>
             </div>
             <button
@@ -405,14 +378,14 @@ export function ArcBillingPanel() {
               disabled={busy || Boolean(setup) || data.embeddedCheckoutEnabled === false}
               onClick={() => void paymentMethod()}
             >
-              {tr("Update payment method", "更新付款方式")}
+              {tr("billing.arcBillingPanel.updatePaymentMethod")}
             </button>
           </div>
           {setup && (
             <Suspense
               fallback={
                 <WorkspaceLoading
-                  label={tr("Loading secure form…", "正在加载安全表单…")}
+                  label={tr("billing.arcBillingPanel.loadingSecureForm")}
                   variant="compact"
                 />
               }
@@ -425,13 +398,13 @@ export function ArcBillingPanel() {
                 onSaved={() => {
                   setSetup(null);
                   setupRequest.current = crypto.randomUUID();
-                  setNotice(tr("Payment method updated.", "付款方式已更新。"));
+                  setNotice(tr("billing.arcBillingPanel.paymentMethodUpdated"));
                   setRevision((value) => value + 1);
                 }}
               />
             </Suspense>
           )}
-          <h4>{tr("Recent invoices", "最近的账单")}</h4>
+          <h4>{tr("billing.arcBillingPanel.recentInvoices")}</h4>
           {detailsError ? (
             <p role="alert">
               {detailsError}{" "}
@@ -440,12 +413,12 @@ export function ArcBillingPanel() {
                 className="raSettingsButton"
                 onClick={() => setRevision((value) => value + 1)}
               >
-                {tr("Retry", "重试")}
+                {tr("billing.arcBillingPanel.retry")}
               </button>
             </p>
           ) : !details ? (
             <WorkspaceLoading
-              label={tr("Loading invoice details…", "正在读取账单详情…")}
+              label={tr("billing.arcBillingPanel.loadingInvoiceDetails")}
               variant="compact"
             />
           ) : details.invoices.length ? (
@@ -453,10 +426,10 @@ export function ArcBillingPanel() {
               <table>
                 <thead>
                   <tr>
-                    <th>{tr("Date", "日期")}</th>
-                    <th>{tr("Invoice", "账单")}</th>
-                    <th>{tr("Amount", "金额")}</th>
-                    <th>{tr("Status", "状态")}</th>
+                    <th>{tr("billing.arcBillingPanel.date")}</th>
+                    <th>{tr("billing.arcBillingPanel.invoice")}</th>
+                    <th>{tr("billing.arcBillingPanel.amount")}</th>
+                    <th>{tr("billing.arcBillingPanel.status")}</th>
                     <th>PDF</th>
                   </tr>
                 </thead>
@@ -477,21 +450,21 @@ export function ArcBillingPanel() {
                       </td>
                       <td>
                         {invoice.status === "refunded"
-                          ? tr("Refunded", "已退款")
+                          ? tr("billing.arcBillingPanel.refunded")
                           : invoice.status === "paid"
-                            ? tr("Paid", "已付")
+                            ? tr("billing.arcBillingPanel.paid")
                             : invoice.status === "open"
-                              ? tr("Due", "待付")
+                              ? tr("billing.arcBillingPanel.due")
                               : invoice.status === "void"
-                                ? tr("Void", "已作废")
+                                ? tr("billing.arcBillingPanel.void")
                                 : invoice.status === "draft"
-                                  ? tr("Draft", "草稿")
-                                  : tr("Uncollectible", "无法收取")}
+                                  ? tr("billing.arcBillingPanel.draft")
+                                  : tr("billing.arcBillingPanel.uncollectible")}
                       </td>
                       <td>
                         {invoice.pdfUrl && (
                           <a href={invoice.pdfUrl} target="_blank" rel="noopener noreferrer">
-                            {tr("Download", "下载")}
+                            {tr("billing.arcBillingPanel.download")}
                           </a>
                         )}
                       </td>
@@ -500,73 +473,68 @@ export function ArcBillingPanel() {
                 </tbody>
               </table>
               {details.hasMore && (
-                <p>{tr("Showing the 10 most recent invoices.", "显示最近 10 张账单。")}</p>
+                <p>{tr("billing.arcBillingPanel.showingTheMostRecentInvoices")}</p>
               )}
             </div>
           ) : (
-            <p>{tr("No invoices yet.", "还没有账单。")}</p>
+            <p>{tr("billing.arcBillingPanel.noInvoicesYet")}</p>
           )}
         </section>
       )}
       <section className="raBillingBalances">
         <div className="raSettingsSurface">
-          <span>{tr("Available Credits", "可用 Credits")}</span>
+          <span>{tr("billing.arcBillingPanel.availableCredits")}</span>
           <strong>
             {data.credits.available.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </strong>
-          <small>{tr("For Arc model usage.", "用于 Arc 模型用量。")}</small>
+          <small>{tr("billing.arcBillingPanel.forArcModelUsage")}</small>
         </div>
         <div className="raSettingsSurface">
-          <span>{tr("Reserved for work", "工作预留额度")}</span>
+          <span>{tr("billing.arcBillingPanel.reservedForWork")}</span>
           <strong>
             {data.credits.pending.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </strong>
-          <small>
-            {tr(
-              "Uncertain work retains its reservation until settled.",
-              "结果未确认的工作会保留预留额度，直至结算。",
-            )}
-          </small>
+          <small>{tr("billing.arcBillingPanel.uncertainWorkRetainsItsReservationUntil")}</small>
         </div>
         <div className="raSettingsSurface">
-          <span>{tr("Connect calls this month", "本月 Connect 调用")}</span>
+          <span>{tr("billing.arcBillingPanel.connectCallsThisMonth")}</span>
           <strong>
             {data.usage.used.toLocaleString()}{" "}
             <small>
               /{" "}
               {data.usage.limit === null
-                ? tr("Unlimited", "无限")
+                ? tr("billing.arcBillingPanel.unlimited")
                 : data.usage.limit.toLocaleString()}
             </small>
           </strong>
           {data.usage.limit !== null && resetText && (
-            <small>{tr("Resets ", "重置于 ") + resetText}</small>
+            <small>{tr("billing.arcBillingPanel.resets") + resetText}</small>
           )}
           {overflowText && <small>{overflowText}</small>}
         </div>
         {data.transfer && (
           <div className="raSettingsSurface">
-            <span>{tr("File transfer this month", "本月文件传输")}</span>
+            <span>{tr("billing.arcBillingPanel.fileTransferThisMonth")}</span>
             <strong>
               {transferSize(data.transfer.used)}{" "}
               <small>
                 /{" "}
                 {data.transfer.limit === null
-                  ? tr("Unlimited", "无限")
+                  ? tr("billing.arcBillingPanel.unlimited")
                   : transferSize(data.transfer.limit)}
               </small>
             </strong>
             {data.transfer.limit !== null && resetText && (
-              <small>{tr("Resets ", "重置于 ") + resetText}</small>
+              <small>{tr("billing.arcBillingPanel.resets") + resetText}</small>
             )}
           </div>
         )}
       </section>
       {subscription?.pending_product_id && (
         <p className="raBillingNotice">
-          {tr("Plan change scheduled for ", "套餐变更将于 ") +
+          {tr("billing.arcBillingPanel.planChangeScheduledFor") +
             new Date(subscription.pending_effective_at!).toLocaleDateString()}{" "}
-          · <a href="/checkout">{tr("Review plan choices", "查看套餐选择")}</a>
+          · <a href="/checkout">{tr("billing.arcBillingPanel.reviewPlanChoices")}</a>
         </p>
       )}
       {error && (
@@ -577,35 +545,32 @@ export function ArcBillingPanel() {
       )}
       {connect ? (
         <section className="raSettingsSurface raBillingNotice">
-          <h3>{tr("Want Arc to do the work?", "想让 Arc 代你完成工作？")}</h3>
-          <p>
-            {tr(
-              "Connect Unlimited runs your own AI on your computers. You can try Arc free for a limited time; after the trial, Arc-hosted AI, Arc Chat and monthly Credits are part of Plus. Upgrading is never automatic and takes effect at your next billing period.",
-              "Connect Unlimited 在你的电脑上运行你自己的 AI。你可以限时免费试用 Arc；试用结束后，Arc 托管 AI、Arc Chat 与月度 Credits 属于 Plus。升级不会自动发生，并在下个账期生效。",
-            )}
-          </p>
+          <h3>{tr("billing.arcBillingPanel.wantArcToDoTheWork")}</h3>
+          <p>{tr("billing.arcBillingPanel.connectUnlimitedRunsYourOwnAi")}</p>
           <a className="raSettingsButton" href="/checkout?product=arc-plus-v1">
-            {tr("Compare with Plus", "对比 Plus")} →
+            {tr("billing.arcBillingPanel.compareWithPlus")} →
           </a>
         </section>
       ) : !paid ? (
         <section className="raSettingsSurface raBillingNotice">
           <h3>
             {overflow
-              ? tr("Keep your agents at full speed", "让你的 agent 保持全速")
+              ? tr("billing.arcBillingPanel.keepYourAgentsAtFullSpeed")
               : near(data.usage.used, data.usage.limit) ||
                   near(data.transfer?.used ?? 0, data.transfer?.limit)
-                ? tr("You're close to this month's Free limits", "本月 Free 额度即将用完")
-                : tr("Need more room?", "需要更多额度？")}
+                ? tr("billing.arcBillingPanel.youReCloseToThisMonth")
+                : tr("billing.arcBillingPanel.needMoreRoom")}
           </h3>
           <p>
-            {(resetText
-              ? tr(`Free allowances renew ${resetText}. `, `Free 额度将于 ${resetText} 恢复。`)
-              : "") +
-              tr(
-                `Connect Unlimited${unlimited ? " (US$" + unlimited.monthlyPriceCents / 100 + "/month, about US$" + (unlimited.monthlyPriceCents / 3000).toFixed(2) + " a day)" : ""} keeps your agents running at full speed all month: no call cap, no slow lane, unlimited file transfer and computers. Plus adds Arc-hosted AI with monthly Credits.`,
-                `Connect Unlimited${unlimited ? "（US$" + unlimited.monthlyPriceCents / 100 + "/月，约每天 US$" + (unlimited.monthlyPriceCents / 3000).toFixed(2) + "）" : ""}让你的 agent 整月全速运行：不限调用次数、没有慢速通道，文件传输与电脑数量都不限；Plus 还包含 Arc 托管 AI 与月度 Credits。`,
-              )}
+            {(resetText ? tr("billing.arcBillingPanel.freeAllowancesRenew", { resetText }) : "") +
+              tr("billing.arcBillingPanel.connectUnlimitedKeepsYourAgentsRunning", {
+                price: unlimited
+                  ? tr("billing.arcBillingPanel.connectPriceDetail", {
+                      monthly: unlimited.monthlyPriceCents / 100,
+                      daily: (unlimited.monthlyPriceCents / 3000).toFixed(2),
+                    })
+                  : "",
+              })}
           </p>
           <div className="raBillingActions">
             {unlimited && (
@@ -613,23 +578,18 @@ export function ArcBillingPanel() {
                 className="raSettingsButton"
                 href={"/checkout?product=" + encodeURIComponent(unlimited.id)}
               >
-                {tr("Choose ", "选择 ") + unlimited.label} →
+                {tr("billing.arcBillingPanel.choose") + unlimited.label} →
               </a>
             )}
             <a className="raSettingsButton" href="/checkout?product=arc-plus-v1">
-              {tr("Compare with Plus", "对比 Plus")} →
+              {tr("billing.arcBillingPanel.compareWithPlus")} →
             </a>
           </div>
         </section>
       ) : (
         <section className="raSettingsSurface raBillingNotice">
-          <h3>{tr("Need more Credits?", "需要更多 Credits？")}</h3>
-          <p>
-            {tr(
-              "Review top-ups on the payment page. Top-ups do not expire and require an active paid Arc plan. Monthly plan Credits expire with their billing period.",
-              "可前往支付页查看充值。充值额度不设到期日，使用时需有有效的 Arc 付费套餐；套餐 Credits 在账期结束时到期。",
-            )}
-          </p>
+          <h3>{tr("billing.arcBillingPanel.needMoreCredits")}</h3>
+          <p>{tr("billing.arcBillingPanel.reviewTopUpsOnThePayment")}</p>
           {data.topups.map((product) => (
             <a
               className="raSettingsButton"
@@ -642,20 +602,15 @@ export function ArcBillingPanel() {
         </section>
       )}
       <section className="raSettingsSurface raBillingNotice">
-        <h3>{tr("How models use Credits", "模型如何消耗 Credits")}</h3>
-        <p>
-          {tr(
-            "Credits track rated input, output, reasoning and cache usage. Every agent step counts. No automatic overage charges.",
-            "Credits 按输入、输出、推理和缓存用量计价，每个智能体步骤都会计量，不会自动收取超额费用。",
-          )}
-        </p>
+        <h3>{tr("billing.arcBillingPanel.howModelsUseCredits")}</h3>
+        <p>{tr("billing.arcBillingPanel.creditsTrackRatedInputOutputReasoning")}</p>
         <div className="raBillingTable">
           <table>
             <thead>
               <tr>
-                <th>{tr("Model", "模型")}</th>
-                <th>{tr("Input / 1k tokens", "输入 / 千 tokens")}</th>
-                <th>{tr("Output / 1k tokens", "输出 / 千 tokens")}</th>
+                <th>{tr("billing.arcBillingPanel.model")}</th>
+                <th>{tr("billing.arcBillingPanel.inputKTokens")}</th>
+                <th>{tr("billing.arcBillingPanel.outputKTokens")}</th>
               </tr>
             </thead>
             <tbody>

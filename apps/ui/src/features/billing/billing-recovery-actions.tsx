@@ -1,19 +1,14 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import { billingRecovery } from "../../../../../packages/protocol/src/billing-recovery.js";
-import "./billing-recovery-actions.css";
+import "../../styles/billing/billing-recovery-actions.css";
 
-export function BillingRecoveryActions({
-  code,
-  tr,
-}: {
-  code: string;
-  tr: (en: string, zh: string) => string;
-}) {
+export function BillingRecoveryActions({ code, tr }: { code: string; tr: Translate }) {
   const recovery = billingRecovery(code);
   return recovery ? (
     <span
       className="billingRecoveryActions"
       role="group"
-      aria-label={tr("Ways to continue", "继续操作")}
+      aria-label={tr("billing.billingRecoveryActions.waysToContinue")}
     >
       {recovery.actions.map((action) => (
         <a key={action.href} href={action.href}>

@@ -9,6 +9,7 @@ import { ProductIcon as Icon } from "../../../components/product-icon.js";
 import { FollowupDetail } from "./admin-followup-detail.js";
 import { FollowupBulk } from "./followup-bulk.js";
 import { FollowupBatchHistory } from "./followup-batch-history.js";
+import { FollowupLifecyclePanel } from "./followup-lifecycle.js";
 import {
   followupApi,
   followupTime,
@@ -56,6 +57,8 @@ export function AdminFollowups() {
     page: String(page),
   }).toString();
   useEffect(() => {
+    // Bulk history loads and refreshes its own data; the user list is read again on return.
+    if (view === "batches") return;
     const controller = new AbortController();
     setLoading(true);
     const timer = setTimeout(
@@ -84,11 +87,6 @@ export function AdminFollowups() {
       controller.abort();
     };
   }, [params, revision, locale, view]);
-  useEffect(() => {
-    if (view !== "batches") return;
-    const timer = window.setInterval(refresh, 10000);
-    return () => clearInterval(timer);
-  }, [view, refresh]);
   const stepLabel = (step: NextStep) =>
     ({
       pair_computer: tr("admin.followups.adminFollowups.pairAComputer"),
@@ -289,6 +287,9 @@ export function AdminFollowups() {
             </li>
           ))}
         </ol>
+      )}
+      {view === "contacts" && data && (
+        <FollowupLifecyclePanel summary={data.lifecycle} budget={data.emailBudget} />
       )}
       <div
         className="followupCrmTabs"

@@ -262,3 +262,117 @@ test("Funnel shows where users stop and filters to them with the matching templa
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
 });
+
+async function withLifecycleData(page: import("@playwright/test").Page) {
+  await page.evaluate(() => {
+    const hour = 3600_000;
+    const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+    const counts = { list: 0, batches: 0 };
+    (window as Window & { followupCalls?: typeof counts }).followupCalls = counts;
+    const fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const input = args[0];
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+        location.origin,
+      );
+      const response = await fetch(...args);
+      if (url.pathname === "/api/admin/followups") counts.list++;
+      if (url.pathname.startsWith("/api/admin/followups/batches")) counts.batches++;
+      if (!url.pathname.startsWith("/api/admin/followups") || !response.ok) return response;
+      const value = await response.clone().json();
+      if (url.pathname === "/api/admin/followups") {
+        value.lifecycle = {
+          delivery: "off",
+          queued: 3,
+          oldestQueuedAt: ago(5 * hour),
+          since: ago(7 * 24 * hour),
+          recent: [
+            { kind: "welcome", status: "sent", count: 4 },
+            { kind: "welcome", status: "queued", count: 3 },
+            { kind: "connect_trial_ending", status: "failed", count: 1 },
+          ],
+        };
+        if (value.emailBudget)
+          value.emailBudget.lifecycleUsage = { daily: 4, hourly: 1, monthly: 40 };
+      } else if (/^\/api\/admin\/followups\/[^/]+$/.test(url.pathname) && value.contact) {
+        value.lifecycleEmails = [
+          {
+            id: "lifecycle-welcome",
+            kind: "welcome",
+            status: "sent",
+            error_code: null,
+            created_at: ago(hour),
+            attempted_at: ago(hour),
+            sent_at: ago(hour),
+          },
+          {
+            id: "lifecycle-trial",
+            kind: "connect_trial_ending",
+            status: "skipped",
+            error_code: "SUPPRESSED",
+            created_at: ago(30 * hour),
+            attempted_at: null,
+            sent_at: null,
+          },
+        ];
+      }
+      return Response.json(value, { status: response.status });
+    };
+  });
+}
+
+test("Automated lifecycle emails show on the follow-up page and in each person's history", async ({
+  page,
+}) => {
+  await open(page);
+  await withLifecycleData(page);
+  await page.getByRole("button", { name: /Refresh users|刷新用户/ }).click();
+  const panel = page.locator(".followupLifecycle");
+  await expect(panel.locator(".followupLifecycleState")).toHaveText(/Paused|未开启/);
+  await expect(panel.locator(".followupLifecycleWarning").first()).toContainText(
+    /sending is off: 3 queued|自动发送未开启：3 封排队中/,
+  );
+  await expect(panel.locator(".followupLifecycleWarning").nth(1)).toContainText(
+    /7 days, 1 failed|最近 7 天有 1 封发送失败/,
+  );
+  const welcome = panel.locator("tbody tr").filter({ hasText: /Welcome after sign-up|注册欢迎/ });
+  await expect(welcome.locator("td")).toHaveText(["4", "3", "0", "0"]);
+  const ending = panel.locator("tbody tr").filter({ hasText: /Connect trial ending|试用即将结束/ });
+  await expect(ending.locator("td[data-attention]")).toHaveText("1");
+  await expect(panel).toContainText(/4 automated emails went out|发出 4 封自动邮件/);
+
+  await page.getByRole("button", { name: /Alex Chen/ }).click();
+  await expect(page.locator(".adminFollowupDetail .followupLifecycleWarning")).toContainText(
+    /Welcome after sign-up|注册欢迎/,
+  );
+  await page.getByRole("button", { name: /^(Drafts & history|草稿与历史)/ }).click();
+  const history = page.locator(".followupLifecycleHistory");
+  await expect(history.locator("article")).toHaveCount(2);
+  await expect(history.locator("article").first()).toContainText(/Sent|已发送/);
+  await expect(history.locator("article").nth(1)).toContainText(
+    /unsubscribed from follow-up email|用户已退订跟进邮件/,
+  );
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true);
+});
+
+test("Bulk history refreshes itself without reloading the user list", async ({ page }) => {
+  await open(page);
+  await page.clock.install();
+  await withLifecycleData(page);
+  await page.getByRole("button", { name: /^(Bulk history|群发记录)$/ }).click();
+  const calls = () =>
+    page.evaluate(
+      () =>
+        (window as Window & { followupCalls?: { list: number; batches: number } }).followupCalls!,
+    );
+  await expect.poll(async () => (await calls()).batches).toBeGreaterThan(0);
+  const before = await calls();
+  await page.clock.runFor(35000);
+  await expect.poll(async () => (await calls()).batches).toBeGreaterThan(before.batches);
+  expect((await calls()).list, "The hidden user list is not polled").toBe(before.list);
+  await page.getByRole("button", { name: /^(User list|用户列表)$/ }).click();
+  await expect.poll(async () => (await calls()).list).toBe(before.list + 1);
+});

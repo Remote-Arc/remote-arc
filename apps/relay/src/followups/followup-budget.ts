@@ -98,6 +98,12 @@ export async function followupEmailBudget(env: FollowupEnv) {
       hourly: account.hourly.otp,
       monthly: account.monthly.otp,
     },
+    // Automated lifecycle emails sent through this same account.
+    lifecycleUsage: {
+      daily: account.daily.lifecycle,
+      hourly: account.hourly.lifecycle,
+      monthly: account.monthly.lifecycle,
+    },
   };
 }
 export const followupBudgetError = (budget: Awaited<ReturnType<typeof followupEmailBudget>>) =>

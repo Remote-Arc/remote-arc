@@ -20,6 +20,7 @@ import {
 import { dispatchFollowup } from "./followup-delivery.js";
 import { listFollowupPeople } from "./followup-crm.js";
 import { handleFollowupBatches } from "./followup-batches.js";
+import { lifecycleEmailsForUser } from "./lifecycle-admin.js";
 const json = (value: unknown, status = 200) =>
   applicationJson(value, { status, headers: { "cache-control": "private, no-store" } });
 async function input(request: Request, maxBytes = 24000) {
@@ -196,19 +197,25 @@ export async function handleUserFollowups(request: Request, env: FollowupEnv) {
       return dispatchFollowup(env, id, options.expectedRevision);
     }
     if (request.method === "GET") {
-      const [contact, messages] = await Promise.all([
+      const [contact, messages, lifecycle] = await Promise.all([
         ensureContact(env, id),
         env.DB.prepare(
           "SELECT m.id,m.template_id,m.locale,m.subject,m.body,m.status,m.provider_id,m.created_at,m.sent_at,COALESCE(m.error_code,r.error_code) error_code,m.design_json,m.html_body,m.draft_revision,m.batch_id,b.status batch_status,r.status batch_recipient_status FROM user_followup_messages m LEFT JOIN user_followup_batches b ON b.id=m.batch_id LEFT JOIN user_followup_batch_recipients r ON r.message_id=m.id WHERE m.user_id=?1 ORDER BY m.created_at DESC LIMIT 50",
         )
           .bind(id)
           .all(),
+        // Automated emails are context for the operator; their absence must not hide the contact.
+        lifecycleEmailsForUser(env, id).catch((error) => {
+          console.error("lifecycle_history_failed", String(error).slice(0, 200));
+          return null;
+        }),
       ]);
       const sender = followupEmailSender(env);
       return contact
         ? json({
             contact,
             messages: messages.results.map((row) => canonicalErrorEnvelope(row)),
+            lifecycleEmails: lifecycle,
             emailConfigured: Boolean(sender),
             sender: sender ? { from: sender.from, replyTo: sender.replyTo } : null,
             rewardAvailable: await feedbackRewardAvailable(env.DB),

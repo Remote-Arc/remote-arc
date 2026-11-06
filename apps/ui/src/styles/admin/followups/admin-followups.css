@@ -1633,3 +1633,102 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* Automated lifecycle emails */
+.followupLifecycle {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.followupLifecycle > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.followupLifecycle h4,
+.followupLifecycleHistory h4,
+.followupHistorySubheading {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.followupLifecycleState {
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.followupLifecycleState[data-state="on"] {
+  color: var(--text);
+}
+.followupLifecycleState[data-state="off"],
+.followupLifecycleState[data-state="no_sender"] {
+  border-color: rgba(200, 140, 40, 0.55);
+  color: #a86b12;
+}
+:root[data-theme="dark"] .followupLifecycleState[data-state="off"],
+:root[data-theme="dark"] .followupLifecycleState[data-state="no_sender"] {
+  color: #e0b468;
+}
+.followupLifecycleNote {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.followupLifecycleWarning {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border: 1px solid rgba(200, 140, 40, 0.45);
+  border-radius: 10px;
+  background: rgba(200, 140, 40, 0.07);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.followupLifecycleTable {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+.followupLifecycleTable table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.followupLifecycleTable caption {
+  text-align: left;
+  color: var(--muted);
+  padding-bottom: 6px;
+}
+.followupLifecycleTable th,
+.followupLifecycleTable td {
+  padding: 7px 8px;
+  border-top: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.followupLifecycleTable th:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+.followupLifecycleTable thead th {
+  color: var(--muted);
+  font-weight: 500;
+}
+.followupLifecycleTable td[data-attention] {
+  color: #c86161;
+  font-weight: 600;
+}
+.followupLifecycleHistory {
+  padding-bottom: 12px;
+}
+.followupLifecycleHistory .followupHistoryItem:last-child {
+  padding-bottom: 8px;
+}
+.followupHistorySubheading {
+  padding-top: 12px;
+}

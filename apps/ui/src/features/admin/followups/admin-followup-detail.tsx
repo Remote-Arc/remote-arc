@@ -20,6 +20,11 @@ import {
   type ContactDetail,
   type EmailDraft,
 } from "./followup-model.js";
+import {
+  FollowupLifecycleHistory,
+  lifecycleKindLabel,
+  recentLifecycleEmail,
+} from "./followup-lifecycle.js";
 
 export function FollowupDialog({
   title,
@@ -387,6 +392,7 @@ export function FollowupDetail({
       setBusy(null);
     }
   }
+  const recentAutomated = recentLifecycleEmail(data?.lifecycleEmails);
   const draftCount =
     data?.messages.filter((mail) => mail.status === "draft" && !mail.batch_id).length || 0;
   const mailStatus = (status: string) =>
@@ -460,6 +466,16 @@ export function FollowupDetail({
         <p className="adminFollowupNotice" role="status">
           <Icon name="check" size={15} />
           {noticeText}
+        </p>
+      )}
+      {recentAutomated && tab === "email" && (
+        <p className="followupLifecycleWarning" role="status">
+          {tr("admin.followups.adminFollowupDetail.automatedEmailSentRecently", {
+            kind: lifecycleKindLabel(recentAutomated.kind, tr),
+            time: followupTime(
+              recentAutomated.sent_at || recentAutomated.attempted_at || recentAutomated.created_at,
+            ),
+          })}
         </p>
       )}
       <div hidden={tab !== "email"} className="adminFollowupComposer">
@@ -739,6 +755,10 @@ export function FollowupDetail({
               {tr("admin.followups.adminFollowupDetail.refreshHistory")}
             </button>
           </div>
+          {data && <FollowupLifecycleHistory emails={data.lifecycleEmails} />}
+          <h4 className="followupHistorySubheading">
+            {tr("admin.followups.adminFollowupDetail.followUpEmail")}
+          </h4>
           {data?.messages.length === 0 && (
             <p className="adminNoData">
               {tr("admin.followups.adminFollowupDetail.noSavedDraftsOrEmailsYet")}

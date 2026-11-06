@@ -1681,6 +1681,9 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  "SENSITIVE_PATH_BLOCKED": [
   "mcp/mcp-errors.ts"
  ],
+ "SERVICE_UNAVAILABLE": [
+  "index.ts"
+ ],
  "SESSION_NOT_FOUND": [
   "browser/runner-attention.ts"
  ],

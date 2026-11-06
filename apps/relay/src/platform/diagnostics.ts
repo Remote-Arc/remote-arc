@@ -5,7 +5,9 @@ const D1_ERROR_CLASSES: [RegExp, string][] = [
   [/no such (?:table|column)|has no column named/i, "schema"],
   [/too (?:big|many)|limit exceeded|SQLITE_TOOBIG/i, "limit"],
   [
-    /network connection lost|overloaded|internal error|timed? ?out|reset|unavailable|storage operation exceeded/i,
+    // Cloudflare documents these as retryable D1 failures:
+    // https://developers.cloudflare.com/d1/observability/debug-d1/#list-of-d1_errors
+    /network connection lost|overloaded|internal error|timed? ?out|reset|unavailable|storage operation exceeded|transient issue on remote node|replica disconnected|client disconnected/i,
     "unavailable",
   ],
 ];
@@ -22,6 +24,11 @@ export function diagnosticError(error: unknown): string {
   if (error instanceof TypeError) return "TypeError: details omitted";
   if (error instanceof RangeError) return "RangeError: details omitted";
   return "Error: details omitted";
+}
+
+/** A retryable D1 outage: the request may succeed when the client retries. */
+export function isUnavailableD1Error(error: unknown): boolean {
+  return diagnosticError(error) === "D1_ERROR: unavailable (details omitted)";
 }
 
 // The Go Agent reports raw os errors, so the path comes first and the reason

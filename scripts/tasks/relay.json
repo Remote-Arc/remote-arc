@@ -37,6 +37,8 @@
       ["tsx", "scripts/organization-management-test.ts"],
       ["tsx", "scripts/organization-flow-test.ts"],
       ["tsx", "scripts/worker-entry-test.ts"],
+      ["tsx", "scripts/activity-limit-test.ts"],
+      ["tsx", "scripts/d1-transient-status-test.ts"],
       ["tsx", "scripts/device-management-test.ts"],
       ["pnpm", "test:apps"],
       ["tsx", "scripts/google-oauth-cutover-test.ts"],

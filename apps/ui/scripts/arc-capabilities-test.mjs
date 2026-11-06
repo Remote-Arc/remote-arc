@@ -13,6 +13,10 @@ const scene = readFileSync(
   "utf8",
 );
 const admin = readFileSync(path.join(root, "src/features/admin/admin-console.tsx"), "utf8");
+const adminOperations = readFileSync(
+  path.join(root, "src/features/admin/admin-operations.tsx"),
+  "utf8",
+);
 const landingCss = readFileSync(
   path.join(root, "src/features/marketing/arc/arc-future.css"),
   "utf8",
@@ -86,8 +90,8 @@ assert.match(
   /@media\s*\(prefers-reduced-motion:\s*reduce\)/,
   "motion accessibility fallback required",
 );
-assert.match(admin, /adminOverview/);
-assert.match(admin, /api\/admin\/operations/);
+assert.match(admin, /<AdminOverview\b/, "admin shell must render the overview");
+assert.match(adminOperations, /api\/admin\/operations/);
 assert.match(admin, /api\/admin\/submissions/);
 assert.match(admin, /api\/monitor/);
 assert.match(admin, /AdminOperations/, "existing admin operations must be preserved");

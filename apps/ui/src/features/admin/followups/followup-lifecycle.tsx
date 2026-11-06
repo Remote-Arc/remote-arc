@@ -1,5 +1,6 @@
 import { useId } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
+import type { Translate } from "../../../locales/locale-catalog.js";
 import {
   followupTime,
   type EmailBudget,
@@ -8,8 +9,6 @@ import {
   type LifecycleStatus,
   type LifecycleSummary,
 } from "./followup-model.js";
-
-type Translate = (en: string, zh: string) => string;
 
 const KINDS: LifecycleKind[] = [
   "welcome",
@@ -24,41 +23,38 @@ const SLOW_QUEUE_MINUTES = 30;
 
 export const lifecycleKindLabel = (kind: LifecycleKind, tr: Translate) =>
   ({
-    welcome: tr("Welcome after sign-up", "注册欢迎"),
-    connect_trial_started: tr("Connect trial started", "Connect 试用开始"),
-    connect_trial_ending: tr("Connect trial ending", "试用即将结束"),
-    plan_started: tr("Paid plan confirmation", "付费开通确认"),
+    welcome: tr("admin.followups.followupLifecycle.welcomeAfterSignUp"),
+    connect_trial_started: tr("admin.followups.followupLifecycle.connectTrialStarted"),
+    connect_trial_ending: tr("admin.followups.followupLifecycle.connectTrialEnding"),
+    plan_started: tr("admin.followups.followupLifecycle.paidPlanConfirmation"),
   })[kind] || kind;
 
 const statusLabel = (status: LifecycleStatus, tr: Translate) =>
   ({
-    queued: tr("Queued", "排队中"),
-    sending: tr("Sending", "发送中"),
-    sent: tr("Sent", "已发送"),
-    failed: tr("Send failed", "发送失败"),
-    unknown: tr("Check delivery", "投递待核实"),
-    skipped: tr("Skipped", "已跳过"),
+    queued: tr("admin.followups.followupLifecycle.statusQueued"),
+    sending: tr("admin.followups.followupLifecycle.statusSending"),
+    sent: tr("admin.followups.followupLifecycle.statusSent"),
+    failed: tr("admin.followups.followupLifecycle.statusFailed"),
+    unknown: tr("admin.followups.followupLifecycle.statusUnknown"),
+    skipped: tr("admin.followups.followupLifecycle.statusSkipped"),
   })[status] || status;
 
 const reasonLabel = (code: string, tr: Translate) =>
   ({
-    NO_RECIPIENT: tr("No usable email address", "没有可用的邮箱地址"),
-    STALE: tr("Queued for more than 3 days, so it was not sent", "排队超过 3 天未发出，已放弃发送"),
-    SUPPRESSED: tr("The person unsubscribed from follow-up email", "用户已退订跟进邮件"),
-    ALREADY_PAID: tr("The person already has a paid plan", "用户已经是付费用户"),
-    TRIAL_ENDED: tr("The trial had already ended", "试用已经结束"),
-    PROVIDER_TIMEOUT: tr(
-      "The email service timed out; it may still have been delivered",
-      "发信服务超时，邮件可能已送达",
-    ),
+    NO_RECIPIENT: tr("admin.followups.followupLifecycle.reasonNoRecipient"),
+    STALE: tr("admin.followups.followupLifecycle.reasonStale"),
+    SUPPRESSED: tr("admin.followups.followupLifecycle.reasonSuppressed"),
+    ALREADY_PAID: tr("admin.followups.followupLifecycle.reasonAlreadyPaid"),
+    TRIAL_ENDED: tr("admin.followups.followupLifecycle.reasonTrialEnded"),
+    PROVIDER_TIMEOUT: tr("admin.followups.followupLifecycle.reasonProviderTimeout"),
   })[code] || code;
 
 function age(from: string, tr: Translate) {
   const minutes = Math.max(0, Math.round((Date.now() - Date.parse(from)) / 60000));
-  if (minutes < 60) return tr(minutes + " min", minutes + " 分钟");
+  if (minutes < 60) return tr("admin.followups.followupLifecycle.ageMinutes", { count: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 48) return tr(hours + " h", hours + " 小时");
-  return tr(Math.round(hours / 24) + " days", Math.round(hours / 24) + " 天");
+  if (hours < 48) return tr("admin.followups.followupLifecycle.ageHours", { count: hours });
+  return tr("admin.followups.followupLifecycle.ageDays", { count: Math.round(hours / 24) });
 }
 
 /** The latest automated email this person received in the last three days, if any. */
@@ -85,12 +81,9 @@ export function FollowupLifecyclePanel({
   if (summary === null)
     return (
       <section className="followupLifecycle" aria-labelledby={title}>
-        <h4 id={title}>{tr("Automated emails", "自动邮件")}</h4>
+        <h4 id={title}>{tr("admin.followups.followupLifecycle.automatedEmails")}</h4>
         <p className="followupLifecycleNote">
-          {tr(
-            "Automated email status could not be loaded. Refresh to try again.",
-            "自动邮件状态暂时无法加载，可稍后刷新重试。",
-          )}
+          {tr("admin.followups.followupLifecycle.statusUnavailable")}
         </p>
       </section>
     );
@@ -100,6 +93,7 @@ export function FollowupLifecyclePanel({
       .reduce((sum, row) => sum + row.count, 0);
   const troubled = KINDS.reduce((sum, kind) => sum + count(kind, ["failed", "unknown"]), 0);
   const oldest = summary.oldestQueuedAt;
+  const waited = oldest ? age(oldest, tr) : "";
   const slow =
     summary.delivery === "on" &&
     oldest !== null &&
@@ -107,44 +101,26 @@ export function FollowupLifecyclePanel({
   const warnings = [
     summary.delivery === "off" &&
       summary.queued > 0 &&
-      tr(
-        `Automated sending is off: ${summary.queued} queued, the oldest for ${age(oldest!, tr)}. Emails queued for more than 3 days are skipped.`,
-        `自动发送未开启：${summary.queued} 封排队中，最早一封已等待 ${age(oldest!, tr)}。排队超过 3 天的邮件会被跳过。`,
-      ),
+      tr("admin.followups.followupLifecycle.warningOff", { queued: summary.queued, age: waited }),
     summary.delivery === "no_sender" &&
-      tr(
-        `Sending is turned on, but the SendPulse sender is not configured. ${summary.queued} queued.`,
-        `已开启自动发送，但没有配置 SendPulse 发件信息。${summary.queued} 封排队中。`,
-      ),
+      tr("admin.followups.followupLifecycle.warningNoSender", { queued: summary.queued }),
     slow &&
-      tr(
-        `${summary.queued} queued, the oldest for ${age(oldest!, tr)}. The shared sending budget may be used up.`,
-        `${summary.queued} 封排队中，最早一封已等待 ${age(oldest!, tr)}，可能是共用的发送额度用完了。`,
-      ),
-    troubled > 0 &&
-      tr(
-        `In the last 7 days, ${troubled} failed or need a delivery check.`,
-        `最近 7 天有 ${troubled} 封发送失败或投递待核实。`,
-      ),
+      tr("admin.followups.followupLifecycle.warningSlow", { queued: summary.queued, age: waited }),
+    troubled > 0 && tr("admin.followups.followupLifecycle.warningFailures", { count: troubled }),
   ].filter((value): value is string => Boolean(value));
   return (
     <section className="followupLifecycle" aria-labelledby={title}>
       <header>
-        <h4 id={title}>{tr("Automated emails", "自动邮件")}</h4>
+        <h4 id={title}>{tr("admin.followups.followupLifecycle.automatedEmails")}</h4>
         <span className="followupLifecycleState" data-state={summary.delivery}>
           {summary.delivery === "on"
-            ? tr("Sending", "正在发送")
+            ? tr("admin.followups.followupLifecycle.deliveryOn")
             : summary.delivery === "off"
-              ? tr("Paused", "未开启")
-              : tr("Sender not configured", "发件服务未配置")}
+              ? tr("admin.followups.followupLifecycle.deliveryOff")
+              : tr("admin.followups.followupLifecycle.deliveryNoSender")}
         </span>
       </header>
-      <p className="followupLifecycleNote">
-        {tr(
-          "Sent by the product after sign-up, trial changes and payment. They share the sending budget with follow-up email.",
-          "注册、试用变化和付费后由系统自动发送，与跟进邮件共用发送额度。",
-        )}
-      </p>
+      <p className="followupLifecycleNote">{tr("admin.followups.followupLifecycle.intro")}</p>
       {warnings.map((warning) => (
         <p key={warning} className="followupLifecycleWarning" role="status">
           {warning}
@@ -152,14 +128,14 @@ export function FollowupLifecyclePanel({
       ))}
       <div className="followupLifecycleTable">
         <table>
-          <caption>{tr("Last 7 days", "最近 7 天")}</caption>
+          <caption>{tr("admin.followups.followupLifecycle.last7Days")}</caption>
           <thead>
             <tr>
-              <th scope="col">{tr("Email", "邮件")}</th>
-              <th scope="col">{tr("Sent", "已发送")}</th>
-              <th scope="col">{tr("Queued", "排队中")}</th>
-              <th scope="col">{tr("Skipped", "已跳过")}</th>
-              <th scope="col">{tr("Failed", "失败")}</th>
+              <th scope="col">{tr("admin.followups.followupLifecycle.columnEmail")}</th>
+              <th scope="col">{tr("admin.followups.followupLifecycle.columnSent")}</th>
+              <th scope="col">{tr("admin.followups.followupLifecycle.columnQueued")}</th>
+              <th scope="col">{tr("admin.followups.followupLifecycle.columnSkipped")}</th>
+              <th scope="col">{tr("admin.followups.followupLifecycle.columnFailed")}</th>
             </tr>
           </thead>
           <tbody>
@@ -179,10 +155,9 @@ export function FollowupLifecyclePanel({
       </div>
       {budget?.lifecycleUsage && (
         <p className="followupLifecycleNote">
-          {tr(
-            `${budget.lifecycleUsage.daily} automated emails went out through this sending account in the last 24 hours.`,
-            `最近 24 小时通过同一发信账户发出 ${budget.lifecycleUsage.daily} 封自动邮件。`,
-          )}
+          {tr("admin.followups.followupLifecycle.sentThroughAccount", {
+            count: budget.lifecycleUsage.daily,
+          })}
         </p>
       )}
     </section>
@@ -198,16 +173,12 @@ export function FollowupLifecycleHistory({
   const { tr } = useI18n();
   return (
     <section className="followupLifecycleHistory">
-      <h4>{tr("Automated emails", "自动邮件")}</h4>
+      <h4>{tr("admin.followups.followupLifecycle.automatedEmails")}</h4>
       {emails === null && (
-        <p className="adminNoData">
-          {tr("Automated emails could not be loaded.", "自动邮件记录暂时无法加载。")}
-        </p>
+        <p className="adminNoData">{tr("admin.followups.followupLifecycle.historyUnavailable")}</p>
       )}
       {emails?.length === 0 && (
-        <p className="adminNoData">
-          {tr("No automated emails for this person yet.", "这位用户还没有自动邮件。")}
-        </p>
+        <p className="adminNoData">{tr("admin.followups.followupLifecycle.historyEmpty")}</p>
       )}
       {emails?.map((email) => (
         <article className="followupHistoryItem" key={email.id} data-kind="lifecycle">
@@ -215,7 +186,7 @@ export function FollowupLifecycleHistory({
             <div>
               <strong>{lifecycleKindLabel(email.kind, tr)}</strong>
               <small>
-                {tr("Automated", "自动") +
+                {tr("admin.followups.followupLifecycle.automated") +
                   " · " +
                   followupTime(email.sent_at || email.attempted_at || email.created_at)}
               </small>

@@ -470,10 +470,12 @@ export function FollowupDetail({
       )}
       {recentAutomated && tab === "email" && (
         <p className="followupLifecycleWarning" role="status">
-          {tr(
-            `An automated "${lifecycleKindLabel(recentAutomated.kind, tr)}" email went to this person on ${followupTime(recentAutomated.sent_at || recentAutomated.attempted_at || recentAutomated.created_at)}. Check it in Drafts & history before writing.`,
-            `系统已在 ${followupTime(recentAutomated.sent_at || recentAutomated.attempted_at || recentAutomated.created_at)} 给这位用户自动发送了「${lifecycleKindLabel(recentAutomated.kind, tr)}」邮件，可先在「草稿与历史」中查看。`,
-          )}
+          {tr("admin.followups.adminFollowupDetail.automatedEmailSentRecently", {
+            kind: lifecycleKindLabel(recentAutomated.kind, tr),
+            time: followupTime(
+              recentAutomated.sent_at || recentAutomated.attempted_at || recentAutomated.created_at,
+            ),
+          })}
         </p>
       )}
       <div hidden={tab !== "email"} className="adminFollowupComposer">
@@ -754,7 +756,9 @@ export function FollowupDetail({
             </button>
           </div>
           {data && <FollowupLifecycleHistory emails={data.lifecycleEmails} />}
-          <h4 className="followupHistorySubheading">{tr("Follow-up email", "跟进邮件")}</h4>
+          <h4 className="followupHistorySubheading">
+            {tr("admin.followups.adminFollowupDetail.followUpEmail")}
+          </h4>
           {data?.messages.length === 0 && (
             <p className="adminNoData">
               {tr("admin.followups.adminFollowupDetail.noSavedDraftsOrEmailsYet")}

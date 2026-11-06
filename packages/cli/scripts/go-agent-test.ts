@@ -290,14 +290,17 @@ try {
   // TypeScript runtime. This is that runtime's exact on-disk record.
   const cross = path.join(temp, "cross-undo.txt");
   await fs.writeFile(cross, "older edit");
-  const olderRecord = path.join(temp, ".remotearc/undo/1793339035453-5a3821ef");
+  // Keep the fixture within the retention window regardless of the run date.
+  const olderCreatedAt = new Date(Date.now() - 60_000);
+  const olderId = olderCreatedAt.getTime() + "-5a3821ef";
+  const olderRecord = path.join(temp, ".remotearc/undo", olderId);
   await fs.mkdir(olderRecord, { recursive: true });
   await fs.writeFile(path.join(olderRecord, "content.bin"), "original");
   await fs.writeFile(
     path.join(olderRecord, "manifest.json"),
     JSON.stringify({
-      id: "1793339035453-5a3821ef",
-      createdAt: "2026-10-30T05:43:55.453Z",
+      id: olderId,
+      createdAt: olderCreatedAt.toISOString(),
       tool: "write_file",
       targetPath: process.platform === "win32" ? cross.toLowerCase() : cross,
       existed: true,

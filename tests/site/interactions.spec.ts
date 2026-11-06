@@ -227,17 +227,30 @@ test("Connect Unlimited checkout is Connect-only, without monthly Credits or pro
 
 test("Pricing separates Connect Unlimited from Arc plans", async ({ page }, testInfo) => {
   await page.goto((testInfo.project.metadata.language === "zh" ? "/zh" : "") + "/pricing");
-  const card = page.locator(".planCard").filter({ hasText: "CONNECT ONLY" });
+  const card = page.locator(".planCard.featuredPlan");
   await expect(page.locator(".pricingPlans--saas .planCard")).toHaveCount(4);
+  await expect(card).toHaveCount(1);
+  // Bring-your-own-AI plans first, with Connect Unlimited featured; Arc's agent plans second.
+  const groups = page.locator(".planGroup");
+  await expect(groups).toHaveCount(2);
+  await expect(groups.nth(0).locator(".planCard")).toHaveCount(2);
+  await expect(groups.nth(0).locator(".planCard.featuredPlan")).toHaveCount(1);
+  await expect(groups.nth(1).locator(".planCard").filter({ hasText: "ARC + CONNECT" })).toHaveCount(
+    2,
+  );
   await expect(page.locator(".pricingEnterprise").getByRole("link")).toHaveAttribute(
     "href",
     /topic=enterprise/,
   );
-  await expect(card.locator(".hostedPrice strong")).toHaveText("US$19");
-  await expect(card.locator(".hostedPriceNote")).toHaveText([/US\$0\.63/, /US\$99/]);
-  await expect(card).toContainText(/Unlimited registered computers|不限已注册电脑数量/);
-  await expect(card.getByRole("link")).toHaveAttribute("href", /product=connect-unlimited-v1/);
-  await expect(page.locator(".planCard").filter({ hasText: "ARC + CONNECT" })).toHaveCount(2);
+  // The yearly price leads; the monthly price stays visible beside it.
+  await expect(card.locator(".hostedPrice strong")).toHaveText("US$8.25");
+  await expect(card.locator(".hostedPriceNote")).toHaveText([/US\$99.*57%/, /US\$19/]);
+  await expect(card).toContainText(/Unlimited computers|不限电脑数量/);
+  await expect(card.getByRole("link").first()).toHaveAttribute(
+    "href",
+    /product=connect-unlimited-v1/,
+  );
+  await expect(page.locator(".pricingFinePrint")).toContainText(/fair-use|合理使用/);
 
   for (const width of [320, 390, 621, 1101, 1440, 1760]) {
     await page.setViewportSize({ width, height: 900 });

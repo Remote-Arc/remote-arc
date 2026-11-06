@@ -1,7 +1,7 @@
-import { CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
+import { CONNECT_FAIR_USE, CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
 import { useI18n } from "../../app/i18n.js";
 import type { PlatformCatalog } from "../../lib/use-platform-catalog.js";
-import { connectPlanFeatures, isConnectOnlyPlan } from "../billing/arc-billing-client.js";
+import { isConnectOnlyPlan } from "../billing/arc-billing-client.js";
 export function ArcPublicPricing({
   catalog,
   startHref,
@@ -51,106 +51,201 @@ export function ArcPublicPricing({
         </a>
       </section>
       <section className="pricingPlans pricingPlans--saas">
-        {catalog.plans.map((p) => (
-          <article
-            className={
-              "planCard " + (p.id === "free" ? "freePlan" : p.label === "Plus" ? "plusPlan" : "")
-            }
-            key={p.id}
-          >
-            <div className="planHeader">
-              <span>{p.label.toUpperCase()}</span>
-              {p.id !== "free" && (
-                <span className="plusBadge">
-                  {isConnectOnlyPlan(p) ? "CONNECT ONLY" : "ARC + CONNECT"}
-                </span>
-              )}
+        {[
+          {
+            key: "own",
+            title: tr("Bring your own AI", "用你自己的 AI"),
+            note: tr(
+              "Connect ChatGPT, Claude or Codex to your computers.",
+              "把 ChatGPT、Claude 或 Codex 连接到你的电脑。",
+            ),
+            plans: catalog.plans.filter((p) => p.id === "free" || isConnectOnlyPlan(p)),
+          },
+          {
+            key: "arc",
+            title: tr("Arc’s own agent", "Arc 智能体"),
+            note: tr(
+              "Arc runs the AI for you, with model Credits included.",
+              "由 Arc 为你运行 AI，含模型 Credits。",
+            ),
+            plans: catalog.plans.filter((p) => p.id !== "free" && !isConnectOnlyPlan(p)),
+          },
+        ].map((group) => (
+          <div className="planGroup" key={group.key}>
+            <header className="planGroupHeader">
+              <h2>{group.title}</h2>
+              <p>{group.note}</p>
+            </header>
+            <div className="planGroupCards">
+              {group.plans.map((p) => {
+                const connect = isConnectOnlyPlan(p),
+                  yearly = connect && p.yearlyPriceCents ? p.yearlyPriceCents : null,
+                  checkout = billing + "?product=" + encodeURIComponent(p.id);
+                return (
+                  <article
+                    className={
+                      "planCard " +
+                      (p.id === "free" ? "freePlan" : connect ? "featuredPlan" : "arcPlan")
+                    }
+                    key={p.id}
+                  >
+                    {connect && <span className="planRibbon">{tr("RECOMMENDED", "推荐")}</span>}
+                    <div className="planHeader">
+                      <span>{p.label.toUpperCase()}</span>
+                      {!connect && p.id !== "free" && (
+                        <span className="plusBadge">ARC + CONNECT</span>
+                      )}
+                    </div>
+                    <div className="hostedPrice">
+                      <strong>
+                        {yearly ? (
+                          <>
+                            US${Math.floor(yearly / 1200)}
+                            <small>.{(yearly / 1200).toFixed(2).split(".")[1]}</small>
+                          </>
+                        ) : (
+                          "US$" + p.monthlyPriceCents / 100
+                        )}
+                      </strong>
+                      <span>/ {tr("month", "月")}</span>
+                    </div>
+                    {yearly ? (
+                      <>
+                        <p className="hostedPriceNote">
+                          {tr(`Billed yearly at US$${yearly / 100}`, `按年付费 US$${yearly / 100}`)}{" "}
+                          <span className="planSaveTag">
+                            {tr("Save ", "省 ") +
+                              Math.round((1 - yearly / (p.monthlyPriceCents * 12)) * 100) +
+                              "%"}
+                          </span>
+                        </p>
+                        <p className="hostedPriceNote">
+                          {tr(
+                            `or US$${p.monthlyPriceCents / 100} month to month`,
+                            `或按月付费 US$${p.monthlyPriceCents / 100}`,
+                          )}
+                        </p>
+                      </>
+                    ) : connect ? (
+                      <p className="hostedPriceNote">
+                        {tr(
+                          `About US$${(p.monthlyPriceCents / 3000).toFixed(2)} a day`,
+                          `约每天 US$${(p.monthlyPriceCents / 3000).toFixed(2)}`,
+                        )}
+                      </p>
+                    ) : null}
+                    <p className="planDescription">
+                      {p.id === "free"
+                        ? tr("Your AI, connected to your world.", "让已有的 AI 连接你的世界。")
+                        : connect
+                          ? tr(
+                              "Your own AI on every computer, at full speed all month.",
+                              "用你自己的 AI 连接每一台电脑，整月全速运行。",
+                            )
+                          : p.label === "Plus"
+                            ? tr(
+                                "Arc handles your everyday work, with Credits included.",
+                                "由 Arc 处理日常工作，含模型 Credits。",
+                              )
+                            : tr(
+                                "More Credits and capacity for ongoing work.",
+                                "更多 Credits 与容量，适合持续工作。",
+                              )}
+                    </p>
+                    <ul className="planIncluded">
+                      {(connect
+                        ? [
+                            tr(
+                              "Your agents at full speed all month · no call cap, no slow lane",
+                              "agent 整月全速运行 · 不限调用次数，没有慢速通道",
+                            ),
+                            tr("Unlimited computers and file transfer", "不限电脑数量与文件传输"),
+                            tr(
+                              "Terminal, files, browser, Fleet and connected Apps",
+                              "终端、文件、浏览器、Fleet 与已连接应用",
+                            ),
+                            tr(
+                              "Works with your own ChatGPT, Claude or Codex",
+                              "使用你自己的 ChatGPT、Claude 或 Codex",
+                            ),
+                          ]
+                        : p.id === "free"
+                          ? [
+                              (catalog.connectFreeCalls === null
+                                ? tr("Unlimited", "无限")
+                                : catalog.connectFreeCalls.toLocaleString()) +
+                                tr(" Connect calls / month", " 次 Connect 调用 / 月"),
+                              tr(
+                                `Run out? A one-time ${CONNECT_FREE_OVERFLOW.trialDays}-day Unlimited trial, then a ${CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute}-calls-a-minute slow lane. Never cut off`,
+                                `额度用完？先送一次 ${CONNECT_FREE_OVERFLOW.trialDays} 天 Unlimited 试用，之后进入每分钟 ${CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute} 次的慢速通道，不会断`,
+                              ),
+                              tr("Up to 2 computers", "最多连接 2 台电脑"),
+                              tr("2 GB file transfer / month", "每月 2 GB 文件传输"),
+                              tr("Device permissions and local Undo", "设备权限与本地撤销"),
+                            ]
+                          : [
+                              p.monthlyCredits.toLocaleString() +
+                                tr(" Credits / month", " Credits / 月"),
+                              tr("All configured premium models", "全部已配置的高级模型"),
+                              tr("One-off and recurring tasks", "一次性与重复任务"),
+                              p.concurrentRuns + tr(" concurrent runs", " 个并行工作"),
+                              tr("Up to ", "单次最长 ") +
+                                p.maxSeconds / 60 +
+                                tr(" minutes per run", " 分钟"),
+                              (p.id === "arc-plus-v1"
+                                ? 10
+                                : (p.deviceLimit ?? tr("Unlimited", "无限"))) +
+                                tr(" connected computers", " 台连接电脑"),
+                              p.connectToolCalls === null
+                                ? tr("Unlimited Connect calls", "无限 Connect 调用")
+                                : p.connectToolCalls.toLocaleString() +
+                                  tr(" Connect calls / month", " 次 Connect 调用 / 月"),
+                            ]
+                      ).map((item) => (
+                        <li key={item}>
+                          <span aria-hidden="true">✓</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="planActions">
+                      <a
+                        className={connect ? "primaryButton" : "ghostButton"}
+                        href={
+                          p.id === "free"
+                            ? startHref
+                            : checkout +
+                              (yearly && catalog.billingAvailable ? "&interval=year" : "")
+                        }
+                      >
+                        {p.id === "free"
+                          ? tr("Start free", "免费开始")
+                          : !catalog.billingAvailable
+                            ? tr("View billing availability", "查看付费开放状态")
+                            : yearly
+                              ? tr("Choose yearly", "选择按年付费")
+                              : tr("Choose " + p.label, "选择 " + p.label)}{" "}
+                        →
+                      </a>
+                      {yearly && catalog.billingAvailable ? (
+                        <a className="planAltLink" href={checkout}>
+                          {tr("Or pay monthly", "或按月付费")} →
+                        </a>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-            <div className="hostedPrice">
-              <strong>US${p.monthlyPriceCents / 100}</strong>
-              <span>/ {tr("month", "月")}</span>
-            </div>
-            {isConnectOnlyPlan(p) && (
-              <p className="hostedPriceNote">
-                {tr(
-                  `About US$${(p.monthlyPriceCents / 3000).toFixed(2)} a day`,
-                  `约每天 US$${(p.monthlyPriceCents / 3000).toFixed(2)}`,
-                )}
-              </p>
-            )}
-            {isConnectOnlyPlan(p) && p.yearlyPriceCents ? (
-              <p className="hostedPriceNote">
-                {tr(
-                  `or US$${(p.yearlyPriceCents / 1200).toFixed(2)}/month, billed yearly (US$${p.yearlyPriceCents / 100}/year)`,
-                  `或 US$${(p.yearlyPriceCents / 1200).toFixed(2)}／月，按年付费（US$${p.yearlyPriceCents / 100}／年）`,
-                )}
-              </p>
-            ) : null}
-            <p className="planDescription">
-              {p.id === "free"
-                ? tr("Your AI, connected to your world.", "让已有的 AI 连接你的世界。")
-                : isConnectOnlyPlan(p)
-                  ? tr(
-                      "Your own AI on every computer, at full speed all month.",
-                      "用你自己的 AI 连接每一台电脑，整月全速运行。",
-                    )
-                  : p.label === "Plus"
-                    ? tr("Your agent for everyday work.", "处理日常工作的个人智能体。")
-                    : tr("More capacity for ongoing work.", "为持续工作提供更多容量。")}
-            </p>
-            <ul className="planIncluded">
-              {(isConnectOnlyPlan(p)
-                ? connectPlanFeatures(tr)
-                : p.id === "free"
-                  ? [
-                      (catalog.connectFreeCalls === null
-                        ? tr("Unlimited", "无限")
-                        : catalog.connectFreeCalls.toLocaleString()) +
-                        tr(" Connect calls / month", " 次 Connect 调用 / 月"),
-                      tr(
-                        `Run out? A one-time ${CONNECT_FREE_OVERFLOW.trialDays}-day Unlimited trial, then a ${CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute}-calls-a-minute slow lane. Never cut off`,
-                        `额度用完？先送一次 ${CONNECT_FREE_OVERFLOW.trialDays} 天 Unlimited 试用，之后进入每分钟 ${CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute} 次的慢速通道，不会断`,
-                      ),
-                      tr("Up to 2 computers", "最多连接 2 台电脑"),
-                      tr("2 GB file transfer / month", "每月 2 GB 文件传输"),
-                      tr("Device permissions and local Undo", "设备权限与本地撤销"),
-                    ]
-                  : [
-                      p.monthlyCredits.toLocaleString() + tr(" Credits / month", " Credits / 月"),
-                      (p.id === "arc-plus-v1" ? 10 : (p.deviceLimit ?? tr("Unlimited", "无限"))) +
-                        tr(" connected computers", " 台连接电脑"),
-                      tr("All configured premium models", "全部已配置的高级模型"),
-                      p.connectToolCalls === null
-                        ? tr("Unlimited Connect calls", "无限 Connect 调用")
-                        : p.connectToolCalls.toLocaleString() +
-                          tr(" Connect calls / month", " 次 Connect 调用 / 月"),
-                      p.concurrentRuns + tr(" concurrent runs", " 个并行工作"),
-                      tr("Up to ", "单次最长 ") +
-                        p.maxSeconds / 60 +
-                        tr(" minutes per run", " 分钟"),
-                      tr("One-off and recurring tasks", "一次性与重复任务"),
-                    ]
-              ).map((item) => (
-                <li key={item}>
-                  <span aria-hidden="true">✓</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <a
-              className={p.label === "Plus" ? "primaryButton" : "ghostButton"}
-              href={p.id === "free" ? startHref : billing + "?product=" + encodeURIComponent(p.id)}
-            >
-              {p.id === "free"
-                ? tr("Start free", "免费开始")
-                : catalog.billingAvailable
-                  ? tr("Choose " + p.label, "选择 " + p.label)
-                  : tr("View billing availability", "查看付费开放状态")}{" "}
-              →
-            </a>
-          </article>
+          </div>
         ))}
       </section>
+      <p className="pricingFinePrint">
+        {tr(
+          `Connect Unlimited follows published fair-use rate limits: up to ${CONNECT_FAIR_USE.computerRegistrationsPerDay} new computers a day, and each computer runs within its own capacity. It has no monthly Credits; Arc’s own agent needs Plus or Pro after its free trial.`,
+          `Connect Unlimited 遵守公开的合理使用速率限制：每天最多新增 ${CONNECT_FAIR_USE.computerRegistrationsPerDay} 台电脑，运行并发取决于每台电脑自身容量。它不含月度 Credits；Arc 智能体的免费试用结束后需要 Plus 或 Pro。`,
+        )}
+      </p>
       <section className="pricingEnterprise" aria-label="Enterprise">
         <div>
           <span className="planHeader">ENTERPRISE</span>

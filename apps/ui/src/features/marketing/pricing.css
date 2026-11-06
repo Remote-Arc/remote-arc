@@ -52,7 +52,8 @@
 .freePlan {
   background: var(--panel);
 }
-.plusPlan {
+.plusPlan,
+.featuredPlan {
   background: linear-gradient(
     150deg,
     color-mix(in srgb, var(--panel) 93%, #269bbb 7%),
@@ -152,7 +153,9 @@
   color: #269bbb;
 }
 .planCard > .primaryButton,
-.planCard > .ghostButton {
+.planCard > .ghostButton,
+.planActions > .primaryButton,
+.planActions > .ghostButton {
   margin-top: auto;
   min-height: 50px;
   display: inline-flex;
@@ -431,10 +434,91 @@
   }
 }
 /* Shared launch catalog; the prelaunch Connect presentation remains available. */
-/* Free, Connect Unlimited, Plus and Pro share one row; Enterprise is a slim bar below. */
+/* Two groups side by side: bring your own AI (Free, Connect Unlimited) and
+   Arc’s own agent (Plus, Pro). Enterprise is a slim bar below. */
 .pricingPlans.pricingPlans--saas {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+.planGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.planGroupHeader h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.planGroupHeader p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--pricing-muted);
+}
+.planGroupCards {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.featuredPlan {
+  position: relative;
+  border-color: color-mix(in srgb, #269bbb 55%, var(--line));
+}
+/* Sits on the card's top edge so the plan name and price stay aligned with the other cards. */
+.planRibbon {
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 780;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: #1d7f99;
+  white-space: nowrap;
+}
+.hostedPrice > strong > small {
+  font-size: 0.5em;
+  letter-spacing: -0.02em;
+}
+.planSaveTag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 760;
+  color: var(--text);
+  background: color-mix(in srgb, #269bbb 22%, transparent);
+  white-space: nowrap;
+}
+.planActions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.planAltLink {
+  font-size: 14px;
+  color: var(--pricing-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.planAltLink:hover {
+  color: var(--text);
+}
+.pricingFinePrint {
+  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--pricing-muted);
 }
 .pricingEnterprise {
   display: flex;
@@ -522,11 +606,12 @@
 }
 @media (max-width: 1100px) {
   .pricingPlans.pricingPlans--saas {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 }
 @media (max-width: 620px) {
-  .pricingPlans.pricingPlans--saas {
+  .planGroupCards {
     grid-template-columns: 1fr;
   }
 }

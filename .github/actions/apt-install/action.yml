@@ -1,0 +1,64 @@
+name: Install apt packages from cache
+description: >-
+  Installs Ubuntu packages from cached .deb files so CI does not depend on a
+  fast Ubuntu mirror. The cache is keyed on the runner image version and the
+  package list, so a new runner image downloads once and later jobs reuse it.
+inputs:
+  packages:
+    description: Space-separated package names, installed without recommends.
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: key
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+      run: |
+        hash=$(printf '%s' "$PACKAGES" | tr ' ' '\n' | sort -u | sha256sum | cut -c1-16)
+        echo "key=apt-debs-${ImageOS:-unknown}-${ImageVersion:-unknown}-$hash" >> "$GITHUB_OUTPUT"
+        echo "dir=$RUNNER_TEMP/apt-debs" >> "$GITHUB_OUTPUT"
+    - id: restore
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ steps.key.outputs.dir }}
+        key: ${{ steps.key.outputs.key }}
+    - name: Download the packages on a cache miss
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      timeout-minutes: 8
+      env:
+        PACKAGES: ${{ inputs.packages }}
+        DEBS: ${{ steps.key.outputs.dir }}
+      run: |
+        set -euo pipefail
+        # The Azure mirror can stall on large codec downloads; use the other mirrors.
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          sudo sed -i '\|^http://azure\.archive\.ubuntu\.com/ubuntu/|d' /etc/apt/apt-mirrors.txt
+        fi
+        apt_opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30)
+        sudo apt-get "${apt_opts[@]}" update -qq
+        sudo rm -f /var/cache/apt/archives/*.deb
+        # shellcheck disable=SC2086
+        sudo apt-get "${apt_opts[@]}" install -y --no-install-recommends --download-only $PACKAGES
+        mkdir -p "$DEBS"
+        cp /var/cache/apt/archives/*.deb "$DEBS"/ 2>/dev/null || true
+        ls "$DEBS"
+    - name: Save the downloaded packages
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ steps.key.outputs.dir }}
+        key: ${{ steps.key.outputs.key }}
+    - name: Install the packages
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+        DEBS: ${{ steps.key.outputs.dir }}
+      run: |
+        set -euo pipefail
+        if compgen -G "$DEBS/*.deb" > /dev/null; then
+          sudo dpkg -i "$DEBS"/*.deb
+        fi
+        # shellcheck disable=SC2086
+        dpkg -s $PACKAGES > /dev/null

@@ -537,13 +537,14 @@ export function ArcCheckout({ email }: { email: string }) {
                 </div>
                 {yearlyCents !== null && (
                   <div
-                    className="arcCheckoutChoices arcCheckoutCycle"
-                    role="group"
+                    className="arcCheckoutCycle"
+                    role="radiogroup"
                     aria-label={tr("Billing period", "付费周期")}
                   >
                     <button
                       type="button"
-                      aria-pressed={billed === "month"}
+                      role="radio"
+                      aria-checked={billed === "month"}
                       disabled={busy}
                       onClick={() => chooseCycle("month")}
                     >
@@ -558,7 +559,8 @@ export function ArcCheckout({ email }: { email: string }) {
                     </button>
                     <button
                       type="button"
-                      aria-pressed={billed === "year"}
+                      role="radio"
+                      aria-checked={billed === "year"}
                       disabled={busy}
                       onClick={() => chooseCycle("year")}
                     >

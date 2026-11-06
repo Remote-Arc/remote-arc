@@ -303,8 +303,9 @@ export function AdminOperations({
   const peak = Math.max(1, ...hours.map((h) => h.calls));
   const quietWindow = useMemo(() => {
     const list = data?.activity || [];
+    // The chart covers 48 hours, so each hour of the day appears at most twice.
     const days = new Set(list.map((item) => item.hour.slice(0, 10)));
-    if (days.size < 3 || list.reduce((sum, item) => sum + item.calls, 0) < 100) return null;
+    if (days.size < 2 || list.reduce((sum, item) => sum + item.calls, 0) < 100) return null;
     const totals = Array.from({ length: 24 }, (_, i) => ({ hour: i, calls: 0 }));
     list.forEach((item) => {
       const index = Number(item.hour.slice(11, 13));
@@ -1290,14 +1291,14 @@ export function AdminOperations({
             ))}
           </div>
           <p className="opsHelp">
-            {tr("Audit events in the last 7 days: ", "最近 7 天审计事件：") +
-              count(data?.totals.auditLast7d)}
+            {tr("Tool calls in the last 48 hours: ", "最近 48 小时工具调用：") +
+              count(data?.activity ? hours.reduce((sum, h) => sum + h.calls, 0) : null)}
           </p>
           <p className="opsHelp">
             {quietWindow
               ? tr(
-                  "Observed lower-activity hours (Auckland time): ",
-                  "近期观察到较低活跃的奥克兰时段：",
+                  "Lower-activity hours in the last 48 hours (Auckland time): ",
+                  "最近 48 小时较低活跃的奥克兰时段：",
                 ) +
                 quietWindow.join(" · ") +
                 tr(
@@ -1305,8 +1306,8 @@ export function AdminOperations({
                   "。仅供安排发版参考，不保证在线用户为零。",
                 )
               : tr(
-                  "Not enough multi-day activity for a reliable release window yet.",
-                  "目前还缺少足够的多天活跃记录，暂不建议自动推荐发版时段。",
+                  "Not enough activity in the last 48 hours to suggest a release window.",
+                  "最近 48 小时的活跃记录不足，暂不建议自动推荐发版时段。",
                 )}
           </p>
           <p className="opsHelp">

@@ -71,8 +71,10 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
     return jsonError((error as Error).message, 400);
   }
   const from = new Date(Date.now() - 7 * 86400_000).toISOString();
-  // The lifetime audit count and the 7-day activity reads scan audit history, so they
-  // run only for the views that show them. Omitting a parameter keeps the old response.
+  // The chart shows the current hour and the 47 before it, and reads only those.
+  const chartFrom = new Date((Math.floor(Date.now() / 3600_000) - 47) * 3600_000).toISOString();
+  // The lifetime audit count and the hourly chart read audit history, so they run
+  // only for the views that show them. Omitting a parameter includes them.
   const includeAuditTotals = url.searchParams.get("auditTotals") !== "0";
   const includeActivity = url.searchParams.get("activity") !== "0";
   const one = <T>(sql: string, ...args: unknown[]) =>
@@ -131,22 +133,23 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
           FROM audit_events WHERE created_at>=?1 AND event_type='mcp.tool_call'
           GROUP BY substr(created_at,1,13) ORDER BY hour`,
             )
-              .bind(from)
+              .bind(chartFrom)
               .all<{ hour: string; calls: number; users: number }>()
           : null,
-        one<{ count: number | null; last7d: number }>(
-          includeAuditTotals
-            ? `SELECT COUNT(*) AS count,
+        // The lifetime count is already a full read, so its 7-day share costs nothing extra.
+        includeAuditTotals
+          ? one<{ count: number; last7d: number }>(
+              `SELECT COUNT(*) AS count,
           SUM(CASE WHEN created_at>=?1 THEN 1 ELSE 0 END) AS last7d
-          FROM audit_events`
-            : "SELECT NULL AS count,COUNT(*) AS last7d FROM audit_events WHERE created_at>=?1",
-          from,
-        ),
+          FROM audit_events`,
+              from,
+            )
+          : null,
       ]);
       return {
         hourly: chart ? chart.results || [] : null,
-        auditRows: includeAuditTotals ? audit?.count || 0 : null,
-        auditLast7d: audit?.last7d || 0,
+        auditRows: audit ? audit.count || 0 : null,
+        auditLast7d: audit ? audit.last7d || 0 : null,
       };
     },
   };

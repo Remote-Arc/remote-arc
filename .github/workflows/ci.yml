@@ -22,7 +22,8 @@ jobs:
 
   media-intelligence:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Allow a cold cache download and the bounded real-media integration to finish.
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -35,13 +36,10 @@ jobs:
       - name: Caption parsing, budgets, failures and evidence validation
         run: node --test scripts/media-intelligence-test.mjs
       - name: Install real FFmpeg and FFprobe for the integration test
-        run: |
-          # The Azure mirror can stall on codec downloads for the entire job budget.
-          sudo sed -i '\|^http://azure\.archive\.ubuntu\.com/ubuntu/|d' /etc/apt/apt-mirrors.txt
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ffmpeg
-          ffmpeg -version
-          ffprobe -version
+        uses: ./.github/actions/apt-install
+        with:
+          packages: ffmpeg
+      - run: ffmpeg -version && ffprobe -version
       - name: Real yt-dlp, HTTP captions, bounded FFmpeg and cited report
         run: node scripts/media-intelligence-integration.mjs --workspace "$RUNNER_TEMP/ra-media-intelligence"
 
@@ -128,10 +126,10 @@ jobs:
             apps/agent/go.sum
             packages/execution-core/go.sum
       - name: Install real H264 encoder for video transport tests
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
-          ffmpeg -version
+        uses: ./.github/actions/apt-install
+        with:
+          packages: ffmpeg
+      - run: ffmpeg -version
       - name: Check Go coverage target and protected packages
         run: node scripts/go-coverage.mjs --target
       - name: Check synthetic takeover source fixtures
@@ -238,9 +236,9 @@ jobs:
         run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStartup|TestE2E(Startup|CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)' -count=1 -v
       - name: Install the Linux desktop window manager
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y xvfb xauth openbox
+        uses: ./.github/actions/apt-install
+        with:
+          packages: xvfb xauth openbox
       - name: User handoff in a Linux desktop browser
         if: runner.os == 'Linux'
         env:

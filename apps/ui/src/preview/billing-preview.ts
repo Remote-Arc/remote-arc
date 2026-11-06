@@ -47,7 +47,12 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
   save();
   const period = () => new Date(Date.now() + 30 * 86400000).toISOString(),
     plan = () => ARC_PLANS.find((p) => p.id === state.planId) || ARC_PLANS[0];
-  const plans = ARC_PLANS.map((p) => ({ ...p, versionId: "preview:" + p.id })),
+  const plans = ARC_PLANS.map((p) => ({
+      ...p,
+      versionId: "preview:" + p.id,
+      // Preview the yearly Connect Unlimited offer (US$99/year).
+      ...(p.id === CONNECT_UNLIMITED_PLAN_ID ? { yearlyPriceCents: 9900 } : {}),
+    })),
     topups = ARC_TOPUPS.map((p) => ({ ...p, versionId: "preview:" + p.id }));
   return {
     handle(url: URL, method: string, body: unknown): Response | null {

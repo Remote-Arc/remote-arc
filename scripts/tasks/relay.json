@@ -121,6 +121,7 @@
       ["tsx", "scripts/free-connect-quota-test.ts"],
       ["tsx", "scripts/connect-free-overflow-test.ts"],
       ["tsx", "scripts/connect-unlimited-test.ts"],
+      ["tsx", "scripts/connect-unlimited-yearly-test.ts"],
       ["node", "scripts/stripe-worker-test.mjs"],
       ["tsx", "scripts/stripe-billing-test.ts"],
       ["tsx", "scripts/stripe-native-test.ts"],

@@ -103,6 +103,11 @@
   font-size: 17px;
   color: var(--pricing-muted);
 }
+.hostedYearly {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--pricing-muted);
+}
 .plusPrice {
   display: flex;
   flex-direction: column;

@@ -9,6 +9,7 @@ import {
   connectPlanFeatures,
   isConnectOnlyPlan,
   type ArcBilling,
+  type BillingInterval,
   type NativePaymentSession,
 } from "./arc-billing-client.js";
 import "../settings/dashboard-settings.css";
@@ -40,6 +41,9 @@ export function ArcCheckout({ email }: { email: string }) {
       new URLSearchParams(location.search).get("product") ||
       new URLSearchParams(location.search).get("plan") ||
       "",
+  );
+  const [cycle, setCycle] = useState<BillingInterval>(() =>
+    new URLSearchParams(location.search).get("interval") === "year" ? "year" : "month",
   );
   const [payment, setPayment] = useState<"pending" | "confirmed" | "waiting">("pending"),
     sending = useRef(false),
@@ -121,6 +125,17 @@ export function ArcCheckout({ email }: { email: string }) {
     url.searchParams.delete("plan");
     history.replaceState({}, "", url);
   }
+  function chooseCycle(value: BillingInterval) {
+    if (busy) return;
+    trackProductEvent("billing.offer.selected", { entityId: selected + ":" + value });
+    setCycle(value);
+    setFailure(null);
+    setScheduled(null);
+    const url = new URL(location.href);
+    if (value === "year") url.searchParams.set("interval", "year");
+    else url.searchParams.delete("interval");
+    history.replaceState({}, "", url);
+  }
   const plan = data?.plans.find(
       (product) => product.id === selected && product.monthlyPriceCents > 0,
     ),
@@ -131,6 +146,11 @@ export function ArcCheckout({ email }: { email: string }) {
   const connect = Boolean(plan && isConnectOnlyPlan(plan)),
     arcPaid = paid && !isConnectOnlyPlan(data!.plan),
     available = connect ? (data?.connectEnabled ?? data?.enabled) : data?.enabled;
+  // Yearly is offered only for Connect Unlimited, and only once its price is published.
+  const yearlyCents = connect ? plan?.yearlyPriceCents || null : null,
+    billed: BillingInterval = yearlyCents && cycle === "year" ? "year" : "month",
+    active = data?.subscriptions.find((s) => s.status === "active"),
+    pendingChange = Boolean(data?.subscriptions.some((s) => s.pending_product_id));
   async function proceed() {
     if (sending.current || !available || !product || result === "success") return;
     sending.current = true;
@@ -143,6 +163,7 @@ export function ArcCheckout({ email }: { email: string }) {
       >(paid && plan ? "plan/change" : "checkout", {
         productId: product.id,
         versionId: product.versionId,
+        ...(plan ? { interval: billed } : {}),
         ...(!(paid && plan) ? { uiMode: "elements" } : {}),
         ...(!paid && plan && !connect && promo.trim() ? { promoCode: promo.trim() } : {}),
       });
@@ -175,6 +196,7 @@ export function ArcCheckout({ email }: { email: string }) {
       location.assign(
         "/checkout?product=" +
           encodeURIComponent(selected) +
+          (billed === "year" ? "&interval=year" : "") +
           "&checkout=success&session_id=" +
           encodeURIComponent(embedded.sessionId),
       );
@@ -202,15 +224,18 @@ export function ArcCheckout({ email }: { email: string }) {
       if (mounted.current) setBusy(false);
     }
   }
-  const amount = plan?.monthlyPriceCents ?? topup?.priceCents,
-    price =
-      amount === undefined
-        ? ""
-        : new Intl.NumberFormat(locale === "zh" ? "zh-CN" : "en-US", {
-            style: "currency",
-            currency: "USD",
-            currencyDisplay: "narrowSymbol",
-          }).format(amount / 100),
+  const usd = (cents: number) =>
+      new Intl.NumberFormat(locale === "zh" ? "zh-CN" : "en-US", {
+        style: "currency",
+        currency: "USD",
+        currencyDisplay: "narrowSymbol",
+      }).format(cents / 100),
+    amount = billed === "year" ? yearlyCents! : (plan?.monthlyPriceCents ?? topup?.priceCents),
+    price = amount === undefined ? "" : usd(amount),
+    // "US$8.25/month, billed yearly": the yearly price as a monthly equivalent.
+    yearlyAsMonthly = yearlyCents
+      ? "US" + usd(Math.round(yearlyCents / 12)) + tr("/month, billed yearly", "／月，按年付费")
+      : "",
     orderLabel = plan
       ? connect
         ? plan.label
@@ -390,17 +415,26 @@ export function ArcCheckout({ email }: { email: string }) {
                     label: orderLabel,
                     subtotal: price,
                     total: price,
-                    cadence: plan ? tr(" / month", "／月") : tr(" one time", "，一次性"),
+                    cadence: plan
+                      ? billed === "year"
+                        ? tr(" / year", "／年")
+                        : tr(" / month", "／月")
+                      : tr(" one time", "，一次性"),
                     recurringNote: plan
-                      ? connect
+                      ? billed === "year"
                         ? tr(
-                            "Renews monthly until cancelled. No monthly Credits.",
-                            "按月续订，可随时取消。不含月度 Credits。",
+                            "Renews yearly until cancelled. No monthly Credits.",
+                            "按年续订，可随时取消。不含月度 Credits。",
                           )
-                        : tr(
-                            "Renews monthly until cancelled. Monthly Credits expire at the end of each billing period.",
-                            "按月续订，可随时取消。月度 Credits 在账期结束时到期。",
-                          )
+                        : connect
+                          ? tr(
+                              "Renews monthly until cancelled. No monthly Credits.",
+                              "按月续订，可随时取消。不含月度 Credits。",
+                            )
+                          : tr(
+                              "Renews monthly until cancelled. Monthly Credits expire at the end of each billing period.",
+                              "按月续订，可随时取消。月度 Credits 在账期结束时到期。",
+                            )
                       : tr("Top-up Credits do not expire.", "充值 Credits 不设到期日。"),
                   }}
                 />
@@ -501,6 +535,46 @@ export function ArcCheckout({ email }: { email: string }) {
                     </button>
                   ))}
                 </div>
+                {yearlyCents !== null && (
+                  <div
+                    className="arcCheckoutCycle"
+                    role="radiogroup"
+                    aria-label={tr("Billing period", "付费周期")}
+                  >
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={billed === "month"}
+                      disabled={busy}
+                      onClick={() => chooseCycle("month")}
+                    >
+                      <span>
+                        <strong>{tr("Monthly", "按月")}</strong>
+                        <small>{tr("Cancel renewal anytime", "可随时取消续费")}</small>
+                      </span>
+                      <span className="arcCheckoutOfferPrice">
+                        {"US" + usd(plan!.monthlyPriceCents)}
+                        <small>{tr("/ month", "／月")}</small>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={billed === "year"}
+                      disabled={busy}
+                      onClick={() => chooseCycle("year")}
+                    >
+                      <span>
+                        <strong>{tr("Yearly", "按年")}</strong>
+                        <small>{yearlyAsMonthly}</small>
+                      </span>
+                      <span className="arcCheckoutOfferPrice">
+                        {"US" + usd(yearlyCents)}
+                        <small>{tr("/ year", "／年")}</small>
+                      </span>
+                    </button>
+                  </div>
+                )}
                 {plan && connect && (
                   <ul className="arcCheckoutFeatures">
                     {connectPlanFeatures(tr).map((item) => (
@@ -552,21 +626,31 @@ export function ArcCheckout({ email }: { email: string }) {
                   <p className="arcCheckoutTotal">
                     {price}
                     <small>
-                      {plan ? tr(" USD / month", " 美元／月") : tr(" USD one time", " 美元，一次")}
+                      {plan
+                        ? billed === "year"
+                          ? tr(" USD / year", " 美元／年")
+                          : tr(" USD / month", " 美元／月")
+                        : tr(" USD one time", " 美元，一次")}
                     </small>
                   </p>
                 )}
+                {billed === "year" && <p className="arcCheckoutQuiet">{yearlyAsMonthly}</p>}
                 {plan && (
                   <p>
-                    {connect
+                    {billed === "year"
                       ? tr(
-                          "Renews monthly until cancelled. Cancel renewal anytime. No monthly Credits; after the free Arc trial, Arc-hosted AI needs Plus. Upgrading is always your choice.",
-                          "按月续订，可随时取消续费。不含月度 Credits；Arc 免费试用结束后，Arc 托管 AI 需要 Plus。是否升级始终由你决定。",
+                          "Renews yearly until cancelled. Cancel renewal anytime and keep the paid year. No monthly Credits; after the free Arc trial, Arc-hosted AI needs Plus.",
+                          "按年续订，可随时取消续费，已付费的一年保留。不含月度 Credits；Arc 免费试用结束后，Arc 托管 AI 需要 Plus。",
                         )
-                      : tr(
-                          "Renews monthly until cancelled. Cancel renewal anytime. Monthly Credits expire at the end of the billing period.",
-                          "按月续订，可随时取消续费；月度 Credits 在账期结束时到期。",
-                        )}
+                      : connect
+                        ? tr(
+                            "Renews monthly until cancelled. Cancel renewal anytime. No monthly Credits; after the free Arc trial, Arc-hosted AI needs Plus. Upgrading is always your choice.",
+                            "按月续订，可随时取消续费。不含月度 Credits；Arc 免费试用结束后，Arc 托管 AI 需要 Plus。是否升级始终由你决定。",
+                          )
+                        : tr(
+                            "Renews monthly until cancelled. Cancel renewal anytime. Monthly Credits expire at the end of the billing period.",
+                            "按月续订，可随时取消续费；月度 Credits 在账期结束时到期。",
+                          )}
                   </p>
                 )}
                 {paid && plan && (
@@ -620,7 +704,8 @@ export function ArcCheckout({ email }: { email: string }) {
                       Boolean(
                         paid &&
                         plan?.id === data.plan.id &&
-                        !data.subscriptions.some((subscription) => subscription.pending_product_id),
+                        billed === (active?.billing_interval ?? "month") &&
+                        !pendingChange,
                       )
                     }
                     onClick={() => void proceed()}

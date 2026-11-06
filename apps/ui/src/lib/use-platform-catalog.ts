@@ -4,6 +4,8 @@ export type CatalogPlan = {
   id: string;
   label: string;
   monthlyPriceCents: number;
+  /** Connect Unlimited only, once a yearly price is published. */
+  yearlyPriceCents?: number | null;
   monthlyCredits: number;
   connectToolCalls: number | null;
   concurrentRuns: number;

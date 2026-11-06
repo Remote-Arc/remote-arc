@@ -191,7 +191,14 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
   const configs = data ? [...data.catalog.plans, ...data.catalog.topups, data.catalog.trial] : [],
     current = configs.find((p) => p.id === selected);
   useEffect(() => {
-    setEditing(current ? { ...current } : null);
+    // Connect Unlimited may add a yearly price; blank keeps it monthly-only.
+    setEditing(
+      current
+        ? current.id === CONNECT_UNLIMITED_PLAN_ID
+          ? { yearlyPriceCents: null, ...current }
+          : { ...current }
+        : null,
+    );
     setDraft(null);
   }, [current?.versionId, selected]);
   async function mutate(path: string, value: unknown) {
@@ -267,6 +274,10 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
   const label = (key: string) =>
     ({
       monthlyPriceCents: tr("Monthly price · USD", "月费 · 美元"),
+      yearlyPriceCents: tr(
+        "Yearly price · USD · blank = monthly only",
+        "年费 · 美元 · 留空表示仅按月",
+      ),
       priceCents: tr("Price · USD", "价格 · 美元"),
       monthlyCredits: tr("Monthly Credits", "月度 Credits"),
       credits: "Credits",
@@ -529,6 +540,7 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                   .filter((k) =>
                     [
                       "monthlyPriceCents",
+                      "yearlyPriceCents",
                       "priceCents",
                       "monthlyCredits",
                       "credits",
@@ -552,7 +564,8 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                           setEditing({
                             ...editing,
                             [key]:
-                              key === "connectToolCalls" && e.target.value === ""
+                              (key === "connectToolCalls" || key === "yearlyPriceCents") &&
+                              e.target.value === ""
                                 ? null
                                 : Math.round(
                                     Number(e.target.value) * (key.endsWith("Cents") ? 100 : 1),
@@ -572,6 +585,7 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                       (k) =>
                         ![
                           "monthlyPriceCents",
+                          "yearlyPriceCents",
                           "priceCents",
                           "monthlyCredits",
                           "credits",
@@ -629,7 +643,11 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
               <p>
                 {review.label || review.id} ·{" "}
                 {review.monthlyPriceCents !== undefined
-                  ? money(review.monthlyPriceCents) + tr(" / month", " / 月")
+                  ? money(review.monthlyPriceCents) +
+                    tr(" / month", " / 月") +
+                    (review.yearlyPriceCents
+                      ? " · " + money(review.yearlyPriceCents) + tr(" / year", " / 年")
+                      : "")
                   : review.priceCents !== undefined
                     ? money(review.priceCents)
                     : review.days + tr(" days", " 天")}{" "}

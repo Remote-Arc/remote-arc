@@ -77,6 +77,14 @@ export function ArcPublicPricing({
                   )}
               </span>
             </div>
+            {isConnectOnlyPlan(p) && p.yearlyPriceCents ? (
+              <p className="hostedYearly">
+                {tr(
+                  `or US$${(p.yearlyPriceCents / 1200).toFixed(2)}/month, billed yearly (US$${p.yearlyPriceCents / 100}/year)`,
+                  `或 US$${(p.yearlyPriceCents / 1200).toFixed(2)}／月，按年付费（US$${p.yearlyPriceCents / 100}／年）`,
+                )}
+              </p>
+            ) : null}
             <p className="planDescription">
               {p.id === "free"
                 ? tr("Your AI, connected to your world.", "让已有的 AI 连接你的世界。")

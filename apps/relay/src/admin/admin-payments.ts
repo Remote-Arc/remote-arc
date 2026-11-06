@@ -59,7 +59,7 @@ export async function paymentOverview(env: AdminPaymentsEnv) {
       .bind(mode, from)
       .all(),
     env.DB.prepare(
-      `SELECT COUNT(DISTINCT s.user_id) customers,COALESCE(SUM(json_extract(v.config_json,'$.monthlyPriceCents')),0) cents FROM arc_billing_subscriptions s JOIN arc_commercial_versions v ON v.id=COALESCE(s.commercial_version_id,'seed:live:'||s.product_id) WHERE v.mode=?1 AND s.status='active' AND s.cancel_at_period_end=0 AND s.period_end>?2`,
+      `SELECT COUNT(DISTINCT s.user_id) customers,COALESCE(SUM(CASE WHEN s.billing_interval='year' THEN json_extract(v.config_json,'$.yearlyPriceCents')/12 ELSE json_extract(v.config_json,'$.monthlyPriceCents') END),0) cents FROM arc_billing_subscriptions s JOIN arc_commercial_versions v ON v.id=COALESCE(s.commercial_version_id,'seed:live:'||s.product_id) WHERE v.mode=?1 AND s.status='active' AND s.cancel_at_period_end=0 AND s.period_end>?2`,
     )
       .bind(mode, at)
       .first(),

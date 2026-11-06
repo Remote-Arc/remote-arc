@@ -12,6 +12,8 @@ export type BillingPlan = {
   id: string;
   label: string;
   monthlyPriceCents: number;
+  /** Connect Unlimited only, once a yearly price is published. */
+  yearlyPriceCents?: number | null;
   monthlyCredits: number;
   connectToolCalls: number | null;
   concurrentRuns: number;
@@ -19,6 +21,7 @@ export type BillingPlan = {
   deviceLimit?: number | null;
   allHostedModels?: boolean;
 };
+export type BillingInterval = "month" | "year";
 export type NativePaymentSession = {
   clientSecret: string;
   publishableKey: string;
@@ -78,6 +81,8 @@ export type ArcBilling = {
     cancel_at_period_end: number;
     pending_product_id?: string | null;
     pending_effective_at?: string | null;
+    billing_interval?: BillingInterval;
+    pending_billing_interval?: BillingInterval | null;
   }[];
 };
 export class BillingFailure extends Error {

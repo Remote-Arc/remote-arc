@@ -11,7 +11,7 @@ behaviour changes into a move makes that impossible to review.
 ## When to use
 
 The goal is better structure with the same behaviour. If behaviour must change too,
-do it in a separate commit.
+do it in a separate commit. Use `structure-code` to decide the target layout.
 
 ## Steps
 

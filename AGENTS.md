@@ -46,6 +46,30 @@ These project rules come first. The general rules and skills follow them.
   and worktrees in `E:\Coding\.ra\worktrees\<task>`. Elsewhere, use the git-ignored
   `work/` folder. Preserve runtime Undo storage in `.remotearc\undo`.
 
+## Frontend (`apps/ui/src`)
+
+Follow `structure-code` with these project locations. `ARCHITECTURE.md` has the
+full folder map; update it when you add a folder.
+
+- Interface text goes in `locales/<en|zh>/<common|website|dashboard|admin>.json`,
+  with the same key in both languages. Call `tr("feature.area.key", { name })` from
+  `useI18n()`. Do not add new two-argument `tr(english, chinese)` calls or
+  `locale === "zh"` branches; existing ones are legacy.
+- State, requests and actions go in `hooks/`: shared hooks at the top,
+  feature hooks in `hooks/<feature>/`. Components under `features/<feature>/`
+  render.
+- Check UI permissions with `usePermission(user).can("<area>:<action>")` and
+  feature flags with `should(...)` from `lib/ui-access.ts`. Add a new permission
+  there instead of comparing roles in a component. Relay still authorizes every
+  request.
+- App-wide values come from providers in `app/` through `useI18n()` and
+  `useTheme()`. Keep the context object in `app/*-context.ts`.
+- Feature styles go in `styles/<feature>/`, mirroring `features/`. Do not add rules
+  to `styles/styles.css` or the other large global sheets.
+- Files such as `features/apps/apps-manager.tsx` and
+  `features/admin/admin-operations.tsx` are already over 1,300 lines. Put new
+  logic in a hook or a new component instead of growing them.
+
 <!-- agent-playbook:start -->
 
 # Working rules for coding agents
@@ -65,6 +89,7 @@ and follow its steps in order. If nothing matches, use `implement-change`.
 | Writing or changing tests                           | `.agents/skills/write-tests/SKILL.md`        |
 | Finding weak or missing tests                       | `.agents/skills/audit-test-suite/SKILL.md`   |
 | A test that sometimes fails                         | `.agents/skills/fix-flaky-test/SKILL.md`     |
+| New files, or a file or folder grown too large      | `.agents/skills/structure-code/SKILL.md`     |
 | Moving or restructuring code                        | `.agents/skills/refactor-safely/SKILL.md`    |
 | Schema, migration, backfill or bulk data change     | `.agents/skills/change-data-safely/SKILL.md` |
 | Login, permissions, user input, secrets or payments | `.agents/skills/secure-change/SKILL.md`      |

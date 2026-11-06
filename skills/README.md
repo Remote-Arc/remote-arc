@@ -4,6 +4,8 @@ Remote Arc includes **versioned, curated Skill instructions** (`SKILL.md`) organ
 
 ## Built-in catalog
 
+- P0: agent-playbook (engineering procedures for coding through Remote Arc: where new code goes, tests, debugging, refactors, reviews and verified reports; the MIT Agent Playbook procedures ship as `skills/<name>/SKILL.md` resources, copied from `.agents/skills` by the generator)
+
 - P0: safe-cleanup (plan, hash approval, then exact permanent deletion via the packaged scripts/safe-cleanup.mjs; not an OS sandbox, and Local Undo cannot restore deletions)
 
 - P0: browser-operator (agent-browser + Microsoft Playwright MCP workflow)

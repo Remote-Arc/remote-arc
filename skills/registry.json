@@ -164,6 +164,22 @@
       "optIn": false
     },
     {
+      "id": "agent-playbook",
+      "name": "Agent Playbook",
+      "priority": "P0",
+      "category": "development",
+      "description": "Follow step-by-step engineering procedures when writing, fixing, refactoring, testing or reviewing code: small files, grouped folders, interface text in message catalogs, shared permission hooks, verified results.",
+      "engine": "Guidance only, using existing file and process tools",
+      "requires": [],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/yaohuangguan/agent-playbook",
+      "license": "MIT",
+      "optIn": false
+    },
+    {
       "id": "authentic-thinking-expression",
       "name": "Authentic Thinking & Expression",
       "priority": "P1",

@@ -358,7 +358,7 @@ export function createRemoteLinkMcp(
           ? {}
           : {
               instructions:
-                "Remote Arc offers curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed. If your tool list shows browser_list_tabs or browser_read_page but no shared_tab_* or browser_runner_* tools, it is a cached list from an older Remote Arc release: ask the user to refresh or reconnect the Remote Arc connector." +
+                "Remote Arc offers curated cloud-hosted Skills at MCP Resources remotearc://skills/catalog and remotearc://skills/<id>. Consult a relevant Skill for domain workflows when your client exposes MCP Resources. Before writing or changing code on a linked computer, read_skill agent-playbook and follow its procedure. Skills are instructions, not new execution tools: use the existing authorized device/browser/automation tools, honor explicit approvals, and verify output. Never assume external executors, model weights or premium APIs are installed. If your tool list shows browser_list_tabs or browser_read_page but no shared_tab_* or browser_runner_* tools, it is a cached list from an older Remote Arc release: ask the user to refresh or reconnect the Remote Arc connector." +
                 " " +
                 QUOTA_UPGRADE_GUIDANCE,
             }),
@@ -633,7 +633,7 @@ export function createRemoteLinkMcp(
         {
           title: "Find Remote Arc skills for a task",
           description:
-            "Search Remote Arc's skill library (built-in, community, workflow and the user's imported skills) for a task, in any language: documents, spreadsheets, slides, PDFs, video, subtitles, images, browser work, data analysis, charts, websites, testing and schedules. Returns the best matches; read one with read_skill and follow its method using the tools you have. A skill is instructions only: it installs nothing and grants no permission.",
+            "Search Remote Arc's skill library (built-in, community, workflow and the user's imported skills) for a task, in any language: coding, documents, spreadsheets, slides, PDFs, video, subtitles, images, browser work, data analysis, charts, websites, testing and schedules. Returns the best matches; read one with read_skill and follow its method using the tools you have. A skill is instructions only: it installs nothing and grants no permission.",
           inputSchema: z.object({
             query: z.string().max(300).optional(),
             limit: z.number().int().min(1).max(25).optional(),
@@ -1375,7 +1375,7 @@ export function createRemoteLinkMcp(
       {
         title: "Write a file on a remote computer",
         description:
-          "Write or append text on a linked computer when the write_file skill is enabled. Supported CLI versions create a local-only undo snapshot before the change.",
+          "Write or append text on a linked computer when the write_file skill is enabled. Supported CLI versions create a local-only undo snapshot before the change. When writing or changing source code, call read_skill with id agent-playbook once per task and follow the procedure it routes you to.",
         inputSchema: z.object({
           device_id: z.string(),
           path: z.string(),
@@ -1407,7 +1407,7 @@ export function createRemoteLinkMcp(
       {
         title: "Edit text on a remote computer",
         description:
-          "Apply a targeted search-and-replace edit to a file on a linked computer. Supported CLI versions create a local-only undo snapshot before the change.",
+          "Apply a targeted search-and-replace edit to a file on a linked computer. Supported CLI versions create a local-only undo snapshot before the change. When writing or changing source code, call read_skill with id agent-playbook once per task and follow the procedure it routes you to.",
         inputSchema: z.object({
           device_id: z.string(),
           file_path: z.string(),

@@ -29,7 +29,8 @@ For a failure with an unknown cause, start with `debug-failure`.
 
 4. **Choose the smallest design.** Reuse existing helpers and patterns. Do not
    add options, abstractions or dependencies the task did not ask for. Write the
-   plan as a short list of files and what changes in each.
+   plan as a short list of files and what changes in each. Place new files by
+   `structure-code`.
 
 5. **Open the matching skill.** Use `secure-change` for permissions, input or
    secrets, `change-data-safely` for stored data, and `use-external-api` for a

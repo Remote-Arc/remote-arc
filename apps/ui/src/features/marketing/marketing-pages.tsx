@@ -1,5 +1,5 @@
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
-import { HomeHeroCopy, LandingContent, HomeSecurityIntro } from "./home/landing-content.js";
+import { HomeHeroCopy, LandingContent } from "./home/landing-content.js";
 import { InstallCommands } from "../../components/install-commands.js";
 import { HomeConnectionScene, type HomeConnectionMode } from "./home/home-connection-scene.js";
 import { RequestVolume } from "./home/request-volume.js";
@@ -81,7 +81,6 @@ export function Landing({ user }: { user?: User | null }) {
 
       <RequestVolume />
       <ProductFocus />
-      <HomeSecurityIntro />
       <AgentUseCases />
 
       <LandingContent />

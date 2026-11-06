@@ -4,6 +4,18 @@ test.beforeEach(async ({ page }, info) => {
   await page.goto(info.project.metadata.language === "zh" ? "/zh" : "/");
 });
 
+test("Homepage security sits directly above the questions", async ({ page }, info) => {
+  const zh = info.project.metadata.language === "zh";
+  const security = page.getByRole("region", { name: zh ? "权限与安全" : "Control and security" });
+  await expect(security).toHaveCount(1);
+  await expect(security.getByRole("link")).toHaveAttribute("href", /\/security-model$/);
+  await expect(
+    page.locator(".homeSecurityIntro + .landingQuestions").getByRole("heading", {
+      name: zh ? "真正需要了解的问题。" : "The questions that matter.",
+    }),
+  ).toBeVisible();
+});
+
 test("The constellation switches with a shared slider and every brand opens a valid local destination", async ({
   page,
 }) => {

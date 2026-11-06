@@ -137,7 +137,7 @@ export function HomeHeroCopy({
   );
 }
 
-export function HomeSecurityIntro() {
+function HomeSecurityIntro() {
   const { tr } = useI18n();
   return (
     <section className="homeSecurityIntro" aria-label={tr("Control and security", "权限与安全")}>
@@ -1047,6 +1047,8 @@ export function LandingContent() {
           <a href="/docs#docs-sandbox">{tr("Execution boundaries", "执行边界")} →</a>
         </div>
       </section>
+
+      <HomeSecurityIntro />
 
       <section className="landingQuestions sectionBlock">
         <header className="modernSectionIntro">
